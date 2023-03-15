@@ -71,6 +71,33 @@ entry:
   ret i1 %0
 }
 
+define i1 @not_issignaling_f(float %x) {
+; CHECK-32-LABEL: not_issignaling_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; CHECK-32-NEXT:    setge %cl
+; CHECK-32-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; CHECK-32-NEXT:    setl %al
+; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_issignaling_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; CHECK-64-NEXT:    setge %cl
+; CHECK-64-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; CHECK-64-NEXT:    setl %al
+; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1022)  ; ~"snan"
+  ret i1 %0
+}
+
 define i1 @isquiet_f(float %x) {
 ; CHECK-32-LABEL: isquiet_f:
 ; CHECK-32:       # %bb.0: # %entry
@@ -92,6 +119,27 @@ entry:
   ret i1 %0
 }
 
+define i1 @not_isquiet_f(float %x) {
+; CHECK-32-LABEL: not_isquiet_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; CHECK-32-NEXT:    setl %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_isquiet_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; CHECK-64-NEXT:    setl %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1021)  ; ~"qnan"
+  ret i1 %0
+}
+
 define i1 @isinf_f(float %x) {
 ; CHECK-32-LABEL: isinf_f:
 ; CHECK-32:       # %bb.0: # %entry
@@ -110,6 +158,27 @@ define i1 @isinf_f(float %x) {
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 516)  ; 0x204 = "inf"
+  ret i1 %0
+}
+
+define i1 @not_isinf_f(float %x) {
+; CHECK-32-LABEL: not_isinf_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-32-NEXT:    setne %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_isinf_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    setne %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 507)  ; ~0x204 = "~inf"
   ret i1 %0
 }
 
@@ -149,6 +218,24 @@ entry:
   ret i1 %0
 }
 
+define i1 @not_is_minus_inf_f(float %x) {
+; CHECK-32-LABEL: not_is_minus_inf_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    cmpl $-8388608, {{[0-9]+}}(%esp) # imm = 0xFF800000
+; CHECK-32-NEXT:    setne %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_is_minus_inf_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    cmpl $-8388608, %eax # imm = 0xFF800000
+; CHECK-64-NEXT:    setne %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1019)  ; ~"-inf"
+  ret i1 %0
+}
+
 define i1 @isfinite_f(float %x) {
 ; CHECK-32-LABEL: isfinite_f:
 ; CHECK-32:       # %bb.0: # %entry
@@ -170,6 +257,27 @@ entry:
   ret i1 %0
 }
 
+define i1 @not_isfinite_f(float %x) {
+; CHECK-32-LABEL: not_isfinite_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-32-NEXT:    setge %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_isfinite_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    setge %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 519)  ; ~0x1f8 = "~finite"
+  ret i1 %0
+}
+
 define i1 @is_plus_finite_f(float %x) {
 ; CHECK-32-LABEL: is_plus_finite_f:
 ; CHECK-32:       # %bb.0: # %entry
@@ -185,6 +293,24 @@ define i1 @is_plus_finite_f(float %x) {
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 448)  ; 0x1c0 = "+finite"
+  ret i1 %0
+}
+
+define i1 @not_is_plus_finite_f(float %x) {
+; CHECK-32-LABEL: not_is_plus_finite_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    cmpl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
+; CHECK-32-NEXT:    setae %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_is_plus_finite_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    setae %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 575)  ; ~0x1c0 = ~"+finite"
   ret i1 %0
 }
 
@@ -215,7 +341,34 @@ entry:
   ret i1 %0
 }
 
-define i1 @isnormal_f(float %x) {
+define i1 @not_is_minus_finite_f(float %x) {
+; CHECK-32-LABEL: not_is_minus_finite_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    testl %eax, %eax
+; CHECK-32-NEXT:    setns %cl
+; CHECK-32-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-32-NEXT:    setge %al
+; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_is_minus_finite_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    testl %eax, %eax
+; CHECK-64-NEXT:    setns %cl
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    setge %al
+; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 967)  ; ~0x38 = ~"-finite"
+  ret i1 %0
+}
+
+define i1 @isnormal_f(float %x) #1 {
 ; CHECK-32-LABEL: isnormal_f:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
@@ -235,6 +388,29 @@ define i1 @isnormal_f(float %x) {
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 264)  ; 0x108 = "normal"
+  ret i1 %0
+}
+
+define i1 @not_isnormal_f(float %x) #1 {
+; CHECK-32-LABEL: not_isnormal_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-32-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-32-NEXT:    setae %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_isnormal_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-64-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-64-NEXT:    setae %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 759)  ; ~0x108 = "~normal"
   ret i1 %0
 }
 
@@ -336,6 +512,75 @@ entry:
   ret i1 %0
 }
 
+define i1 @not_issubnormal_f(float %x) {
+; CHECK-32-LABEL: not_issubnormal_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    decl %eax
+; CHECK-32-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; CHECK-32-NEXT:    setae %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_issubnormal_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    decl %eax
+; CHECK-64-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; CHECK-64-NEXT:    setae %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 879)  ; ~0x90 = "~subnormal"
+  ret i1 %0
+}
+
+define i1 @not_issubnormal_f_daz(float %x) #0 {
+; CHECK-32-LABEL: not_issubnormal_f_daz:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    decl %eax
+; CHECK-32-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; CHECK-32-NEXT:    setae %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_issubnormal_f_daz:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    decl %eax
+; CHECK-64-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; CHECK-64-NEXT:    setae %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 879)  ; ~0x90 = "~subnormal"
+  ret i1 %0
+}
+
+define i1 @not_issubnormal_f_maybe_daz(float %x) #1 {
+; CHECK-32-LABEL: not_issubnormal_f_maybe_daz:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    decl %eax
+; CHECK-32-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; CHECK-32-NEXT:    setae %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_issubnormal_f_maybe_daz:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    decl %eax
+; CHECK-64-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; CHECK-64-NEXT:    setae %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 879)  ; ~0x90 = "~subnormal"
+  ret i1 %0
+}
+
 define i1 @is_plus_subnormal_f(float %x) {
 ; CHECK-32-LABEL: is_plus_subnormal_f:
 ; CHECK-32:       # %bb.0: # %entry
@@ -354,6 +599,27 @@ define i1 @is_plus_subnormal_f(float %x) {
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 128)  ; 0x80 = "+subnormal"
+  ret i1 %0
+}
+
+define i1 @not_is_plus_subnormal_f(float %x) {
+; CHECK-32-LABEL: not_is_plus_subnormal_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    decl %eax
+; CHECK-32-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; CHECK-32-NEXT:    setae %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_is_plus_subnormal_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    decl %eax
+; CHECK-64-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; CHECK-64-NEXT:    setae %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 895)  ; ~0x80 = ~"+subnormal"
   ret i1 %0
 }
 
@@ -383,6 +649,35 @@ define i1 @is_minus_subnormal_f(float %x) {
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 16)  ; 0x10 = "-subnormal"
+  ret i1 %0
+}
+
+define i1 @not_is_minus_subnormal_f(float %x) {
+; CHECK-32-LABEL: not_is_minus_subnormal_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    testl %eax, %eax
+; CHECK-32-NEXT:    setns %cl
+; CHECK-32-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    decl %eax
+; CHECK-32-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; CHECK-32-NEXT:    setae %al
+; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_is_minus_subnormal_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    testl %eax, %eax
+; CHECK-64-NEXT:    setns %cl
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    decl %eax
+; CHECK-64-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; CHECK-64-NEXT:    setae %al
+; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1007)  ; ~0x10 = ~"-subnormal"
   ret i1 %0
 }
 
@@ -446,6 +741,69 @@ define i1 @iszero_f_maybe_daz(float %x) #1 {
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 96)  ; 0x60 = "zero"
+  ret i1 %0
+}
+
+define i1 @not_iszero_f(float %x) {
+; CHECK-32-LABEL: not_iszero_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-32-NEXT:    fldz
+; CHECK-32-NEXT:    fucompp
+; CHECK-32-NEXT:    fnstsw %ax
+; CHECK-32-NEXT:    # kill: def $ah killed $ah killed $ax
+; CHECK-32-NEXT:    sahf
+; CHECK-32-NEXT:    setp %cl
+; CHECK-32-NEXT:    setne %al
+; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_iszero_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    xorps %xmm1, %xmm1
+; CHECK-64-NEXT:    cmpneqss %xmm0, %xmm1
+; CHECK-64-NEXT:    movd %xmm1, %eax
+; CHECK-64-NEXT:    andl $1, %eax
+; CHECK-64-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 927)  ; ~0x60 = "~zero"
+  ret i1 %0
+}
+
+define i1 @not_iszero_f_daz(float %x) #0 {
+; CHECK-32-LABEL: not_iszero_f_daz:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    testl $2147483647, {{[0-9]+}}(%esp) # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    setne %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_iszero_f_daz:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    setne %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 927)  ; ~0x60 = "~zero"
+  ret i1 %0
+}
+
+define i1 @not_iszero_f_maybe_daz(float %x) #1 {
+; CHECK-32-LABEL: not_iszero_f_maybe_daz:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    testl $2147483647, {{[0-9]+}}(%esp) # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    setne %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_iszero_f_maybe_daz:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    setne %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 927)  ; ~0x60 = "~zero"
   ret i1 %0
 }
 
@@ -530,6 +888,93 @@ entry:
   ret i1 %0
 }
 
+define i1 @not_issubnormal_or_zero_f(float %x) {
+; CHECK-32-LABEL: not_issubnormal_or_zero_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-32-NEXT:    setge %cl
+; CHECK-32-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-32-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-32-NEXT:    setb %al
+; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_issubnormal_or_zero_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    setge %cl
+; CHECK-64-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-64-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-64-NEXT:    setb %al
+; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 783)  ; ~0xf0 = "~(subnormal|zero)"
+  ret i1 %0
+}
+
+define i1 @not_issubnormal_or_zero_f_daz(float %x) #0 {
+; CHECK-32-LABEL: not_issubnormal_or_zero_f_daz:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-32-NEXT:    setge %cl
+; CHECK-32-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-32-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-32-NEXT:    setb %al
+; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_issubnormal_or_zero_f_daz:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    setge %cl
+; CHECK-64-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-64-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-64-NEXT:    setb %al
+; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 783)  ; ~0xf0 = "~(subnormal|zero)"
+  ret i1 %0
+}
+
+define i1 @not_issubnormal_or_zero_f_maybe_daz(float %x) #1 {
+; CHECK-32-LABEL: not_issubnormal_or_zero_f_maybe_daz:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-32-NEXT:    setge %cl
+; CHECK-32-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-32-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-32-NEXT:    setb %al
+; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_issubnormal_or_zero_f_maybe_daz:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    setge %cl
+; CHECK-64-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-64-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-64-NEXT:    setb %al
+; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 783)  ; ~0xf0 = "~(subnormal|zero)"
+  ret i1 %0
+}
+
 define i1 @is_plus_zero_f(float %x) {
 ; CHECK-32-LABEL: is_plus_zero_f:
 ; CHECK-32:       # %bb.0: # %entry
@@ -545,6 +990,24 @@ define i1 @is_plus_zero_f(float %x) {
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 64)  ; 0x40 = "+zero"
+  ret i1 %0
+}
+
+define i1 @not_is_plus_zero_f(float %x) {
+; CHECK-32-LABEL: not_is_plus_zero_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; CHECK-32-NEXT:    setne %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_is_plus_zero_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    testl %eax, %eax
+; CHECK-64-NEXT:    setne %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 959)  ; ~0x40 = ~"+zero"
   ret i1 %0
 }
 
@@ -566,7 +1029,23 @@ entry:
   ret i1 %0
 }
 
-
+define i1 @not_is_minus_zero_f(float %x) {
+; CHECK-32-LABEL: not_is_minus_zero_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    cmpl $-2147483648, {{[0-9]+}}(%esp) # imm = 0x80000000
+; CHECK-32-NEXT:    setne %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_is_minus_zero_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    cmpl $-2147483648, %eax # imm = 0x80000000
+; CHECK-64-NEXT:    setne %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 991)  ; ~0x20 = ~"-zero"
+  ret i1 %0
+}
 
 define i1 @isnan_f_strictfp(float %x) strictfp {
 ; CHECK-32-LABEL: isnan_f_strictfp:
@@ -586,6 +1065,27 @@ define i1 @isnan_f_strictfp(float %x) strictfp {
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 3)  ; "nan"
+  ret i1 %0
+}
+
+define i1 @not_isnan_f_strictfp(float %x) strictfp {
+; CHECK-32-LABEL: not_isnan_f_strictfp:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; CHECK-32-NEXT:    setl %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_isnan_f_strictfp:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; CHECK-64-NEXT:    setl %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1020)  ; ~"nan"
   ret i1 %0
 }
 
@@ -610,6 +1110,27 @@ entry:
   ret i1 %0
 }
 
+define i1 @not_isfinite_f_strictfp(float %x) strictfp {
+; CHECK-32-LABEL: not_isfinite_f_strictfp:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-32-NEXT:    setge %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_isfinite_f_strictfp:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    setge %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 519)  ; ~0x1f8 = ~"finite"
+  ret i1 %0
+}
+
 define i1 @iszero_f_strictfp(float %x) strictfp {
 ; CHECK-32-LABEL: iszero_f_strictfp:
 ; CHECK-32:       # %bb.0: # %entry
@@ -628,6 +1149,23 @@ entry:
   ret i1 %0
 }
 
+define i1 @not_iszero_f_strictfp(float %x) strictfp {
+; CHECK-32-LABEL: not_iszero_f_strictfp:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    testl $2147483647, {{[0-9]+}}(%esp) # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    setne %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_iszero_f_strictfp:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    testl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    setne %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 927)  ; ~0x60 = ~"zero"
+  ret i1 %0
+}
 
 define i1 @isnan_d(double %x) {
 ; CHECK-32-LABEL: isnan_d:
@@ -1129,6 +1667,433 @@ entry:
 }
 
 
+define i1 @iszero_or_nan_f(float %x) {
+; CHECK-32-LABEL: iszero_or_nan_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; CHECK-32-NEXT:    setge %cl
+; CHECK-32-NEXT:    testl %eax, %eax
+; CHECK-32-NEXT:    sete %al
+; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: iszero_or_nan_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; CHECK-64-NEXT:    setge %cl
+; CHECK-64-NEXT:    testl %eax, %eax
+; CHECK-64-NEXT:    sete %al
+; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 99)  ; 0x60|0x3 = "zero|nan"
+  ret i1 %0
+}
+
+define i1 @iszero_or_nan_f_daz(float %x) #0 {
+; CHECK-32-LABEL: iszero_or_nan_f_daz:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; CHECK-32-NEXT:    setge %cl
+; CHECK-32-NEXT:    testl %eax, %eax
+; CHECK-32-NEXT:    sete %al
+; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: iszero_or_nan_f_daz:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; CHECK-64-NEXT:    setge %cl
+; CHECK-64-NEXT:    testl %eax, %eax
+; CHECK-64-NEXT:    sete %al
+; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 99)  ; 0x60|0x3 = "zero|nan"
+  ret i1 %0
+}
+
+define i1 @iszero_or_nan_f_maybe_daz(float %x) #1 {
+; CHECK-32-LABEL: iszero_or_nan_f_maybe_daz:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; CHECK-32-NEXT:    setge %cl
+; CHECK-32-NEXT:    testl %eax, %eax
+; CHECK-32-NEXT:    sete %al
+; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: iszero_or_nan_f_maybe_daz:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; CHECK-64-NEXT:    setge %cl
+; CHECK-64-NEXT:    testl %eax, %eax
+; CHECK-64-NEXT:    sete %al
+; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 99)  ; 0x60|0x3 = "zero|nan"
+  ret i1 %0
+}
+
+define i1 @not_iszero_or_nan_f(float %x) {
+; CHECK-32-LABEL: not_iszero_or_nan_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-32-NEXT:    sete %cl
+; CHECK-32-NEXT:    leal -1(%eax), %edx
+; CHECK-32-NEXT:    cmpl $8388607, %edx # imm = 0x7FFFFF
+; CHECK-32-NEXT:    setb %dl
+; CHECK-32-NEXT:    orb %cl, %dl
+; CHECK-32-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-32-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-32-NEXT:    setb %al
+; CHECK-32-NEXT:    orb %dl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_iszero_or_nan_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    sete %cl
+; CHECK-64-NEXT:    leal -1(%rax), %edx
+; CHECK-64-NEXT:    cmpl $8388607, %edx # imm = 0x7FFFFF
+; CHECK-64-NEXT:    setb %dl
+; CHECK-64-NEXT:    orb %cl, %dl
+; CHECK-64-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-64-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-64-NEXT:    setb %al
+; CHECK-64-NEXT:    orb %dl, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 924)  ; ~0x60 = "~(zero|nan)"
+  ret i1 %0
+}
+
+define i1 @not_iszero_or_nan_f_daz(float %x) #0 {
+; CHECK-32-LABEL: not_iszero_or_nan_f_daz:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-32-NEXT:    sete %cl
+; CHECK-32-NEXT:    leal -1(%eax), %edx
+; CHECK-32-NEXT:    cmpl $8388607, %edx # imm = 0x7FFFFF
+; CHECK-32-NEXT:    setb %dl
+; CHECK-32-NEXT:    orb %cl, %dl
+; CHECK-32-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-32-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-32-NEXT:    setb %al
+; CHECK-32-NEXT:    orb %dl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_iszero_or_nan_f_daz:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    sete %cl
+; CHECK-64-NEXT:    leal -1(%rax), %edx
+; CHECK-64-NEXT:    cmpl $8388607, %edx # imm = 0x7FFFFF
+; CHECK-64-NEXT:    setb %dl
+; CHECK-64-NEXT:    orb %cl, %dl
+; CHECK-64-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-64-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-64-NEXT:    setb %al
+; CHECK-64-NEXT:    orb %dl, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 924)  ; ~(0x60|0x3) = "~(zero|nan)"
+  ret i1 %0
+}
+
+define i1 @not_iszero_or_nan_f_maybe_daz(float %x) #1 {
+; CHECK-32-LABEL: not_iszero_or_nan_f_maybe_daz:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-32-NEXT:    sete %cl
+; CHECK-32-NEXT:    leal -1(%eax), %edx
+; CHECK-32-NEXT:    cmpl $8388607, %edx # imm = 0x7FFFFF
+; CHECK-32-NEXT:    setb %dl
+; CHECK-32-NEXT:    orb %cl, %dl
+; CHECK-32-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-32-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-32-NEXT:    setb %al
+; CHECK-32-NEXT:    orb %dl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_iszero_or_nan_f_maybe_daz:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    sete %cl
+; CHECK-64-NEXT:    leal -1(%rax), %edx
+; CHECK-64-NEXT:    cmpl $8388607, %edx # imm = 0x7FFFFF
+; CHECK-64-NEXT:    setb %dl
+; CHECK-64-NEXT:    orb %cl, %dl
+; CHECK-64-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-64-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-64-NEXT:    setb %al
+; CHECK-64-NEXT:    orb %dl, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 924)  ; ~(0x60|0x3) = "~(zero|nan)"
+  ret i1 %0
+}
+
+define i1 @iszero_or_qnan_f(float %x) {
+; CHECK-32-LABEL: iszero_or_qnan_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; CHECK-32-NEXT:    setge %cl
+; CHECK-32-NEXT:    testl %eax, %eax
+; CHECK-32-NEXT:    sete %al
+; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: iszero_or_qnan_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; CHECK-64-NEXT:    setge %cl
+; CHECK-64-NEXT:    testl %eax, %eax
+; CHECK-64-NEXT:    sete %al
+; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 98)  ; 0x60|0x2 = "zero|qnan"
+  ret i1 %0
+}
+
+define i1 @iszero_or_snan_f(float %x) {
+; CHECK-32-LABEL: iszero_or_snan_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; CHECK-32-NEXT:    setl %cl
+; CHECK-32-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; CHECK-32-NEXT:    setge %dl
+; CHECK-32-NEXT:    andb %cl, %dl
+; CHECK-32-NEXT:    testl %eax, %eax
+; CHECK-32-NEXT:    sete %al
+; CHECK-32-NEXT:    orb %dl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: iszero_or_snan_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; CHECK-64-NEXT:    setl %cl
+; CHECK-64-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; CHECK-64-NEXT:    setge %dl
+; CHECK-64-NEXT:    andb %cl, %dl
+; CHECK-64-NEXT:    testl %eax, %eax
+; CHECK-64-NEXT:    sete %al
+; CHECK-64-NEXT:    orb %dl, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 97)  ; 0x60|0x1 = "zero|snan"
+  ret i1 %0
+}
+
+define i1 @not_iszero_or_qnan_f(float %x) {
+; CHECK-32-LABEL: not_iszero_or_qnan_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; CHECK-32-NEXT:    setl %cl
+; CHECK-32-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; CHECK-32-NEXT:    setge %dl
+; CHECK-32-NEXT:    andb %cl, %dl
+; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-32-NEXT:    sete %cl
+; CHECK-32-NEXT:    orb %dl, %cl
+; CHECK-32-NEXT:    leal -1(%eax), %edx
+; CHECK-32-NEXT:    cmpl $8388607, %edx # imm = 0x7FFFFF
+; CHECK-32-NEXT:    setb %dl
+; CHECK-32-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-32-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-32-NEXT:    setb %al
+; CHECK-32-NEXT:    orb %dl, %al
+; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_iszero_or_qnan_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; CHECK-64-NEXT:    setl %cl
+; CHECK-64-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; CHECK-64-NEXT:    setge %dl
+; CHECK-64-NEXT:    andb %cl, %dl
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    sete %cl
+; CHECK-64-NEXT:    orb %dl, %cl
+; CHECK-64-NEXT:    leal -1(%rax), %edx
+; CHECK-64-NEXT:    cmpl $8388607, %edx # imm = 0x7FFFFF
+; CHECK-64-NEXT:    setb %dl
+; CHECK-64-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-64-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-64-NEXT:    setb %al
+; CHECK-64-NEXT:    orb %dl, %al
+; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 925)  ; ~(0x60|0x2) = "~(zero|qnan)"
+  ret i1 %0
+}
+
+define i1 @not_iszero_or_snan_f(float %x) {
+; CHECK-32-LABEL: not_iszero_or_snan_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; CHECK-32-NEXT:    setge %cl
+; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-32-NEXT:    sete %dl
+; CHECK-32-NEXT:    orb %cl, %dl
+; CHECK-32-NEXT:    leal -1(%eax), %ecx
+; CHECK-32-NEXT:    cmpl $8388607, %ecx # imm = 0x7FFFFF
+; CHECK-32-NEXT:    setb %cl
+; CHECK-32-NEXT:    orb %dl, %cl
+; CHECK-32-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-32-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-32-NEXT:    setb %al
+; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_iszero_or_snan_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; CHECK-64-NEXT:    setge %cl
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    sete %dl
+; CHECK-64-NEXT:    orb %cl, %dl
+; CHECK-64-NEXT:    leal -1(%rax), %ecx
+; CHECK-64-NEXT:    cmpl $8388607, %ecx # imm = 0x7FFFFF
+; CHECK-64-NEXT:    setb %cl
+; CHECK-64-NEXT:    orb %dl, %cl
+; CHECK-64-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
+; CHECK-64-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
+; CHECK-64-NEXT:    setb %al
+; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 926)  ; ~(0x60|0x1) = "~(zero|snan)"
+  ret i1 %0
+}
+
+define i1 @isinf_or_nan_f(float %x) {
+; CHECK-32-LABEL: isinf_or_nan_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-32-NEXT:    setge %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: isinf_or_nan_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    setge %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 519)  ; 0x204|0x3 = "inf|nan"
+  ret i1 %0
+}
+
+define i1 @not_isinf_or_nan_f(float %x) {
+; CHECK-32-LABEL: not_isinf_or_nan_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-32-NEXT:    setl %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_isinf_or_nan_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    setl %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 504)  ; ~(0x204|0x3) = "~(inf|nan)"
+  ret i1 %0
+}
+
+define i1 @isfinite_or_nan_f(float %x) {
+; CHECK-32-LABEL: isfinite_or_nan_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-32-NEXT:    setne %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: isfinite_or_nan_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    setne %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 507)  ; 0x1f8|0x3 = "finite|nan"
+  ret i1 %0
+}
+
+define i1 @not_isfinite_or_nan_f(float %x) {
+; CHECK-32-LABEL: not_isfinite_or_nan_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-32-NEXT:    sete %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: not_isfinite_or_nan_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movd %xmm0, %eax
+; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    sete %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 516)  ; ~(0x1f8|0x3) = "~(finite|nan)"
+  ret i1 %0
+}
 
 declare i1 @llvm.is.fpclass.f32(float, i32)
 declare i1 @llvm.is.fpclass.f64(double, i32)

@@ -441,9 +441,20 @@ namespace mlir {
 /// AffineForOp.
 bool isAffineForInductionVar(Value val);
 
+/// Returns true if `val` is the induction variable of an AffineParallelOp.
+bool isAffineParallelInductionVar(Value val);
+
+/// Returns true if the provided value is the induction variable of an
+/// AffineForOp or AffineParallelOp.
+bool isAffineInductionVar(Value val);
+
 /// Returns the loop parent of an induction variable. If the provided value is
 /// not an induction variable, then return nullptr.
 AffineForOp getForInductionVarOwner(Value val);
+
+/// Returns true if the provided value is among the induction variables of an
+/// AffineParallelOp.
+AffineParallelOp getAffineParallelInductionVarOwner(Value val);
 
 /// Extracts the induction variables from a list of AffineForOps and places them
 /// in the output argument `ivs`.

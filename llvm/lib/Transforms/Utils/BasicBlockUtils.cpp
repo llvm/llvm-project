@@ -1600,12 +1600,8 @@ void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
   }
 }
 
-/// Insert a for (int i = 0; i < End; i++) loop structure (with the exception
-/// that \p End is assumed > 0, and thus not checked on entry) at \p
-/// SplitBefore.  Returns the first insert point in the loop body, and the
-/// PHINode for the induction variable (i.e. "i" above).
-static std::pair<Instruction*, Value*>
-SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore) {
+std::pair<Instruction*, Value*>
+llvm::SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore) {
   BasicBlock *LoopPred = SplitBefore->getParent();
   BasicBlock *LoopBody = SplitBlock(SplitBefore->getParent(), SplitBefore);
   BasicBlock *LoopExit = SplitBlock(SplitBefore->getParent(), SplitBefore);

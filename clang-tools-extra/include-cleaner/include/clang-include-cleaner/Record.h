@@ -55,7 +55,7 @@ public:
   /// Returns true if the given #include of the main-file should never be
   /// removed.
   bool shouldKeep(unsigned HashLineNumber) const {
-    return ShouldKeep.find(HashLineNumber) != ShouldKeep.end();
+    return ShouldKeep.contains(HashLineNumber);
   }
 
   /// Returns the public mapping include for the given physical header file.

@@ -64,7 +64,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "function-specialization"
 
-STATISTIC(NumFuncSpecialized, "Number of functions specialized");
+STATISTIC(NumSpecsCreated, "Number of specializations created");
 
 static cl::opt<bool> ForceFunctionSpecialization(
     "force-function-specialization", cl::init(false), cl::Hidden,
@@ -234,7 +234,7 @@ static void removeSSACopy(Function &F) {
 
 /// Remove any ssa_copy intrinsics that may have been introduced.
 void FunctionSpecializer::cleanUpSSA() {
-  for (Function *F : SpecializedFuncs)
+  for (Function *F : Specializations)
     removeSSACopy(*F);
 }
 
@@ -252,6 +252,16 @@ template <> struct llvm::DenseMapInfo<SpecSig> {
     return LHS == RHS;
   }
 };
+
+FunctionSpecializer::~FunctionSpecializer() {
+  LLVM_DEBUG(
+    if (NumSpecsCreated > 0)
+      dbgs() << "FnSpecialization: Created " << NumSpecsCreated
+             << " specializations in module " << M.getName() << "\n");
+  // Eliminate dead code.
+  removeDeadFunctions();
+  cleanUpSSA();
+}
 
 /// Attempt to specialize functions in the module to enable constant
 /// propagation across function boundaries.
@@ -358,11 +368,6 @@ bool FunctionSpecializer::run() {
   }
 
   promoteConstantStackValues();
-  LLVM_DEBUG(if (NbFunctionsSpecialized) dbgs()
-             << "FnSpecialization: Specialized " << NbFunctionsSpecialized
-             << " functions in module " << M.getName() << "\n");
-
-  NumFuncSpecialized += NbFunctionsSpecialized;
   return true;
 }
 
@@ -506,7 +511,7 @@ bool FunctionSpecializer::isCandidateFunction(Function *F) {
     return false;
 
   // Do not specialize the cloned function again.
-  if (SpecializedFuncs.contains(F))
+  if (Specializations.contains(F))
     return false;
 
   // If we're optimizing the function for size, we shouldn't specialize it.
@@ -540,8 +545,8 @@ Function *FunctionSpecializer::createSpecialization(Function *F, const SpecSig &
   Solver.markBlockExecutable(&Clone->front());
 
   // Mark all the specialized functions
-  SpecializedFuncs.insert(Clone);
-  NbFunctionsSpecialized++;
+  Specializations.insert(Clone);
+  ++NumSpecsCreated;
 
   return Clone;
 }

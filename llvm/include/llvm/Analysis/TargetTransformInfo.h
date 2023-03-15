@@ -279,6 +279,51 @@ public:
              ArrayRef<const Value *> Operands,
              TargetCostKind CostKind = TCK_SizeAndLatency) const;
 
+  /// Describe known properties for a set of pointers.
+  struct PointersChainInfo {
+    /// All the GEPs in a set have same base address.
+    unsigned IsSameBaseAddress : 1;
+    /// These properties only valid if SameBaseAddress is set.
+    /// True if distance between any two neigbouring pointers is same value.
+    unsigned IsUniformStride : 1;
+    /// True if distance between any two neigbouring pointers is a known value.
+    unsigned IsKnownStride : 1;
+    unsigned Reserved : 29;
+
+    bool isSameBase() const { return IsSameBaseAddress; }
+    bool isUniformStride() const {
+      return IsSameBaseAddress && IsUniformStride;
+    }
+    bool isKnownStride() const { return IsSameBaseAddress && IsKnownStride; }
+
+    static PointersChainInfo getKnownUniformStrided() {
+      return {/*IsSameBaseAddress=*/1, /*IsUniformStride=*/1,
+              /*IsKnownStride=*/1, 0};
+    }
+    static PointersChainInfo getUniformStrided() {
+      return {/*IsSameBaseAddress=*/1, /*IsUniformStride=*/1,
+              /*IsKnownStride=*/0, 0};
+    }
+    static PointersChainInfo getKnownNonUniformStrided() {
+      return {/*IsSameBaseAddress=*/1, /*IsUniformStride=*/0,
+              /*IsKnownStride=*/1, 0};
+    }
+    static PointersChainInfo getNonUniformStrided() {
+      return {/*IsSameBaseAddress=*/1, /*IsUniformStride=*/0,
+              /*IsKnownStride=*/0, 0};
+    }
+  };
+  static_assert(sizeof(PointersChainInfo) == 4, "Was size increase justified?");
+
+  /// Estimate the cost of a chain of pointers (typically pointer operands of a
+  /// chain of loads or stores within same block) operations set when lowered.
+  InstructionCost
+  getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
+                       const PointersChainInfo &Info,
+                       TargetCostKind CostKind = TTI::TCK_RecipThroughput
+
+  ) const;
+
   /// \returns A value by which our inlining threshold should be multiplied.
   /// This is primarily used to bump up the inlining threshold wholesale on
   /// targets where calls are unusually expensive.
@@ -1612,6 +1657,10 @@ public:
   virtual InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
                                      ArrayRef<const Value *> Operands,
                                      TTI::TargetCostKind CostKind) = 0;
+  virtual InstructionCost
+  getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
+                       const TTI::PointersChainInfo &Info,
+                       TTI::TargetCostKind CostKind) = 0;
   virtual unsigned getInliningThresholdMultiplier() = 0;
   virtual unsigned adjustInliningThreshold(const CallBase *CB) = 0;
   virtual int getInlinerVectorBonusPercent() = 0;
@@ -1969,6 +2018,12 @@ public:
              ArrayRef<const Value *> Operands,
              TargetTransformInfo::TargetCostKind CostKind) override {
     return Impl.getGEPCost(PointeeType, Ptr, Operands, CostKind);
+  }
+  InstructionCost getPointersChainCost(ArrayRef<const Value *> Ptrs,
+                                       const Value *Base,
+                                       const PointersChainInfo &Info,
+                                       TargetCostKind CostKind) override {
+    return Impl.getPointersChainCost(Ptrs, Base, Info, CostKind);
   }
   unsigned getInliningThresholdMultiplier() override {
     return Impl.getInliningThresholdMultiplier();

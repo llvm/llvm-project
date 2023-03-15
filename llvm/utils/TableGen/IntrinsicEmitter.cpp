@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenIntrinsics.h"
-#include "CodeGenTarget.h"
 #include "SequenceToOffsetTable.h"
 #include "TableGenBackends.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -37,6 +36,7 @@
 #include <utility>
 #include <vector>
 using namespace llvm;
+using namespace llvm::tmp;
 
 cl::OptionCategory GenIntrinsicCat("Options for -gen-intrinsic-enums");
 cl::opt<std::string>

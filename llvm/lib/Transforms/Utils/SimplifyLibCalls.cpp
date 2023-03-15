@@ -2588,7 +2588,7 @@ static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
   return true;
 }
 
-Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, IRBuilderBase &B) {
+Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBase &B) {
   // Make sure the prototype is as expected, otherwise the rest of the
   // function is probably invalid and likely to abort.
   if (!isTrigLibCall(CI))
@@ -2627,7 +2627,7 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, IRBuilderBase &B) {
   replaceTrigInsts(CosCalls, Cos);
   replaceTrigInsts(SinCosCalls, SinCos);
 
-  return nullptr;
+  return IsSin ? Sin : Cos;
 }
 
 void LibCallSimplifier::classifyArgUse(
@@ -3470,9 +3470,10 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   switch (Func) {
   case LibFunc_sinpif:
   case LibFunc_sinpi:
+    return optimizeSinCosPi(CI, /*IsSin*/true, Builder);
   case LibFunc_cospif:
   case LibFunc_cospi:
-    return optimizeSinCosPi(CI, Builder);
+    return optimizeSinCosPi(CI, /*IsSin*/false, Builder);
   case LibFunc_powf:
   case LibFunc_pow:
   case LibFunc_powl:
