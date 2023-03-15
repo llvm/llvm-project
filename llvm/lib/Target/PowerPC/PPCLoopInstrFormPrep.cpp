@@ -910,7 +910,7 @@ bool PPCLoopInstrFormPrep::prepareBaseForDispFormChain(Bucket &BucketChain,
       unsigned Remainder = cast<SCEVConstant>(BucketChain.Elements[j].Offset)
                                ->getAPInt()
                                .urem(Form);
-      if (RemainderOffsetInfo.find(Remainder) == RemainderOffsetInfo.end())
+      if (!RemainderOffsetInfo.contains(Remainder))
         RemainderOffsetInfo[Remainder] = std::make_pair(j, 1);
       else
         RemainderOffsetInfo[Remainder].second++;
@@ -933,7 +933,7 @@ bool PPCLoopInstrFormPrep::prepareBaseForDispFormChain(Bucket &BucketChain,
   // 1 X form.
   unsigned MaxCountRemainder = 0;
   for (unsigned j = 0; j < (unsigned)Form; j++)
-    if ((RemainderOffsetInfo.find(j) != RemainderOffsetInfo.end()) &&
+    if ((RemainderOffsetInfo.contains(j)) &&
         RemainderOffsetInfo[j].second >
             RemainderOffsetInfo[MaxCountRemainder].second)
       MaxCountRemainder = j;
