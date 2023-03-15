@@ -415,6 +415,22 @@ public:
     return Info->get(Inst.getOpcode()).isPseudo();
   }
 
+  /// Return true if the relocation type needs to be registered in the function.
+  /// These code relocations are used in disassembly to better understand code.
+  ///
+  /// For ARM, they help us decode instruction operands unambiguously, but
+  /// sometimes we might discard them because we already have the necessary
+  /// information in the instruction itself (e.g. we don't need to record CALL
+  /// relocs in ARM because we can fully decode the target from the call
+  /// operand).
+  ///
+  /// For X86, they might be used in scanExternalRefs when we want to skip
+  /// a function but still patch references inside it.
+  virtual bool shouldRecordCodeRelocation(uint64_t RelType) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   /// Creates x86 pause instruction.
   virtual void createPause(MCInst &Inst) const {
     llvm_unreachable("not implemented");
