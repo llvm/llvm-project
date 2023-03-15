@@ -1,5 +1,6 @@
 // REQUIRES: x86-registered-target
 // UNSUPPORTED: target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}
+// XFAIL: target={{.*-ps(4|5)}}
 
 //
 // Generate all the types of files we can bundle.
