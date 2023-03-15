@@ -264,13 +264,12 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         // deinterleaves of 2 vectors can be lowered into the following
         // sequences
         if (EltTp.getScalarSizeInBits() < ST->getELEN()) {
-          auto InterleaveMask = createInterleaveMask(Mask.size() / 2, 2);
           // Example sequence:
           //   vsetivli     zero, 4, e8, mf4, ta, ma (ignored)
           //   vwaddu.vv    v10, v8, v9
           //   li       a0, -1                   (ignored)
           //   vwmaccu.vx   v10, a0, v9
-          if (ShuffleVectorInst::isInterleaveMask(Mask, 2, Mask.size() * 2))
+          if (ShuffleVectorInst::isInterleaveMask(Mask, 2, Mask.size()))
             return 2 * LT.first * getLMULCost(LT.second);
 
           if (Mask[0] == 0 || Mask[0] == 1) {
