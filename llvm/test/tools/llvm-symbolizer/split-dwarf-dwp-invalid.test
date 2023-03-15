@@ -24,10 +24,10 @@ CHECK: warning: DWARF unit at offset 0x00000000 has unsupported version 255, sup
 CHECK: warning: DWARF unit at offset 0x00000000 has unsupported version 255, supported are 2-5
 
 CHECK: other()
-CHECK: /usr/local/google/home/blaikie/dev/scratch/other.cpp:1:16
+CHECK: /usr/local/google/home/blaikie/dev/scratch{{[/\\]}}other.cpp:1:16
 
 CHECK: main
-CHECK: /usr/local/google/home/blaikie/dev/scratch/test.cpp:5:0
+CHECK: /usr/local/google/home/blaikie/dev/scratch{{[/\\]}}test.cpp:5:0
 
 CHECK: main
-CHECK: /usr/local/google/home/blaikie/dev/scratch/test.cpp:5:0
+CHECK: /usr/local/google/home/blaikie/dev/scratch{{[/\\]}}test.cpp:5:0
