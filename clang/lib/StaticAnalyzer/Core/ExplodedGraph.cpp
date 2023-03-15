@@ -488,7 +488,7 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     const ExplodedNode *N = WL2.pop_back_val();
 
     // Skip this node if we have already processed it.
-    if (Pass2.find(N) != Pass2.end())
+    if (Pass2.contains(N))
       continue;
 
     // Create the corresponding node in the new graph and record the mapping

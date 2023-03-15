@@ -1232,8 +1232,7 @@ Error OffloadBundler::UnbundleArchive() {
 
           // For inserting <CompatibleTarget, list<CodeObject>> entry in
           // OutputArchivesMap.
-          if (OutputArchivesMap.find(CompatibleTarget) ==
-              OutputArchivesMap.end()) {
+          if (!OutputArchivesMap.contains(CompatibleTarget)) {
 
             std::vector<NewArchiveMember> ArchiveMembers;
             ArchiveMembers.push_back(NewArchiveMember(MemBufRef));

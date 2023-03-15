@@ -63,7 +63,7 @@ bool Multilib::operator==(const Multilib &Other) const {
     MyFlags.insert(Flag);
 
   for (const auto &Flag : Other.Flags)
-    if (MyFlags.find(Flag) == MyFlags.end())
+    if (!MyFlags.contains(Flag))
       return false;
 
   if (osSuffix() != Other.osSuffix())
