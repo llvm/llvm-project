@@ -36,7 +36,8 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
 
   const auto &STI = MF.getSubtarget<RISCVSubtarget>();
-  Register RAReg = STI.getRegisterInfo()->getRARegister();
+  const llvm::RISCVRegisterInfo *TRI = STI.getRegisterInfo();
+  Register RAReg = TRI->getRARegister();
 
   // Do not save RA to the SCS if it's not saved to the regular stack,
   // i.e. RA is not at risk of being overwritten.
@@ -77,6 +78,26 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
       .addReg(SCSPReg, RegState::Define)
       .addReg(SCSPReg)
       .addImm(SlotSize)
+      .setMIFlag(MachineInstr::FrameSetup);
+
+  // Emit a CFI instruction that causes SlotSize to be subtracted from the value
+  // of the shadow stack pointer when unwinding past this frame.
+  char DwarfSCSReg = TRI->getDwarfRegNum(SCSPReg, /*IsEH*/ true);
+  assert(DwarfSCSReg < 32 && "SCS Register should be < 32 (X18).");
+
+  char Offset = static_cast<char>(-SlotSize) & 0x7f;
+  const char CFIInst[] = {
+      dwarf::DW_CFA_val_expression,
+      DwarfSCSReg, // register
+      2,           // length
+      static_cast<char>(unsigned(dwarf::DW_OP_breg0 + DwarfSCSReg)),
+      Offset, // addend (sleb128)
+  };
+
+  unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createEscape(
+      nullptr, StringRef(CFIInst, sizeof(CFIInst))));
+  BuildMI(MBB, MI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+      .addCFIIndex(CFIIndex)
       .setMIFlag(MachineInstr::FrameSetup);
 }
 
@@ -128,6 +149,12 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
       .addReg(SCSPReg)
       .addImm(-SlotSize)
       .setMIFlag(MachineInstr::FrameDestroy);
+  // Restore the SCS pointer
+  unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createRestore(
+      nullptr, STI.getRegisterInfo()->getDwarfRegNum(SCSPReg, /*IsEH*/ true)));
+  BuildMI(MBB, MI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+      .addCFIIndex(CFIIndex)
+      .setMIFlags(MachineInstr::FrameDestroy);
 }
 
 // Get the ID of the libcall used for spilling and restoring callee saved

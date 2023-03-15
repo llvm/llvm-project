@@ -9954,6 +9954,7 @@ cc_library(
         ":ControlFlowDialect",
         ":DialectUtils",
         ":FuncDialect",
+        ":GPUDialect",
         ":IR",
         ":InferTypeOpInterface",
         ":LoopLikeInterface",

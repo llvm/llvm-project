@@ -13426,7 +13426,8 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   }
 
   // (zext (shl (zext x), cst)) -> (shl (zext x), cst)
-  if (N0.getOpcode() == ISD::SHL || N0.getOpcode() == ISD::SRL) {
+  if ((N0.getOpcode() == ISD::SHL || N0.getOpcode() == ISD::SRL) &&
+      !TLI.isZExtFree(N0, VT)) {
     SDValue ShVal = N0.getOperand(0);
     SDValue ShAmt = N0.getOperand(1);
     if (auto *ShAmtC = dyn_cast<ConstantSDNode>(ShAmt)) {

@@ -64,6 +64,7 @@ public:
     case msf_error_code::stream_directory_overflow:
       return true;
     }
+    llvm_unreachable("msf error code not implemented");
   }
 
   static char ID;

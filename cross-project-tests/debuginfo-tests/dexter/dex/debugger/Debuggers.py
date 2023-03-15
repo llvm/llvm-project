@@ -114,6 +114,14 @@ def add_debugger_tool_arguments(parser, context, defaults):
         action='store_true',
         default=False,
         help='pass the debugger paths relative to --source-root-dir')
+    parser.add_argument(
+        '--target-run-args',
+        type=str,
+        metavar='<flags>',
+        default='',
+        help='command line arguments for the test program, in addition to any '
+             'provided by DexCommandLine')
+
 
 def handle_debugger_tool_base_options(context, defaults):  # noqa
     options = context.options

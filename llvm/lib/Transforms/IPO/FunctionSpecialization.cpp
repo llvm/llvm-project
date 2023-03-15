@@ -66,40 +66,37 @@ using namespace llvm;
 
 STATISTIC(NumSpecsCreated, "Number of specializations created");
 
-static cl::opt<bool> ForceFunctionSpecialization(
-    "force-function-specialization", cl::init(false), cl::Hidden,
-    cl::desc("Force function specialization for every call site with a "
-             "constant argument"));
+static cl::opt<bool> ForceSpecialization(
+    "force-specialization", cl::init(false), cl::Hidden, cl::desc(
+    "Force function specialization for every call site with a constant "
+    "argument"));
 
-static cl::opt<unsigned> MaxClonesThreshold(
-    "func-specialization-max-clones", cl::Hidden,
-    cl::desc("The maximum number of clones allowed for a single function "
-             "specialization"),
-    cl::init(3));
+static cl::opt<unsigned> MaxClones(
+    "funcspec-max-clones", cl::init(3), cl::Hidden, cl::desc(
+    "The maximum number of clones allowed for a single function "
+    "specialization"));
 
-static cl::opt<unsigned> SmallFunctionThreshold(
-    "func-specialization-size-threshold", cl::Hidden,
-    cl::desc("Don't specialize functions that have less than this theshold "
-             "number of instructions"),
-    cl::init(100));
+static cl::opt<unsigned> MinFunctionSize(
+    "funcspec-min-function-size", cl::init(100), cl::Hidden, cl::desc(
+    "Don't specialize functions that have less than this number of "
+    "instructions"));
 
-static cl::opt<unsigned>
-    AvgLoopIterationCount("func-specialization-avg-iters-cost", cl::Hidden,
-                          cl::desc("Average loop iteration count cost"),
-                          cl::init(10));
+static cl::opt<unsigned> AvgLoopIters(
+    "funcspec-avg-loop-iters", cl::init(10), cl::Hidden, cl::desc(
+    "Average loop iteration count"));
 
-static cl::opt<bool> SpecializeOnAddresses(
-    "func-specialization-on-address", cl::init(false), cl::Hidden,
-    cl::desc("Enable function specialization on the address of global values"));
+static cl::opt<bool> SpecializeOnAddress(
+    "funcspec-on-address", cl::init(false), cl::Hidden, cl::desc(
+    "Enable function specialization on the address of global values"));
 
 // Disabled by default as it can significantly increase compilation times.
 //
 // https://llvm-compile-time-tracker.com
 // https://github.com/nikic/llvm-compile-time-tracker
-static cl::opt<bool> EnableSpecializationForLiteralConstant(
-    "function-specialization-for-literal-constant", cl::init(false), cl::Hidden,
-    cl::desc("Enable specialization of functions that take a literal constant "
-             "as an argument."));
+static cl::opt<bool> SpecializeLiteralConstant(
+    "funcspec-for-literal-constant", cl::init(false), cl::Hidden, cl::desc(
+    "Enable specialization of functions that take a literal constant as an "
+    "argument"));
 
 Constant *FunctionSpecializer::getPromotableAlloca(AllocaInst *Alloca,
                                                    CallInst *Call) {
@@ -310,7 +307,7 @@ bool FunctionSpecializer::run() {
     return AllSpecs[I].Gain > AllSpecs[J].Gain;
   };
   const unsigned NSpecs =
-      std::min(NumCandidates * MaxClonesThreshold, unsigned(AllSpecs.size()));
+      std::min(NumCandidates * MaxClones, unsigned(AllSpecs.size()));
   SmallVector<unsigned> BestSpecs(NSpecs + 1);
   std::iota(BestSpecs.begin(), BestSpecs.begin() + NSpecs, 0);
   if (AllSpecs.size() > NSpecs) {
@@ -482,7 +479,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, InstructionCost Cost,
             getSpecializationBonus(A.Formal, A.Actual, Solver.getLoopInfo(*F));
 
       // Discard unprofitable specialisations.
-      if (!ForceFunctionSpecialization && Gain <= 0)
+      if (!ForceSpecialization && Gain <= 0)
         continue;
 
       // Create a new specialisation entry.
@@ -559,9 +556,8 @@ InstructionCost FunctionSpecializer::getSpecializationCost(Function *F) {
   // Or if the lines of codes implies that this function is easy to get
   // inlined so that we shouldn't specialize it.
   if (Metrics.notDuplicatable || !Metrics.NumInsts.isValid() ||
-      (!ForceFunctionSpecialization &&
-       !F->hasFnAttribute(Attribute::NoInline) &&
-       Metrics.NumInsts < SmallFunctionThreshold))
+      (!ForceSpecialization && !F->hasFnAttribute(Attribute::NoInline) &&
+       Metrics.NumInsts < MinFunctionSize))
     return InstructionCost::getInvalid();
 
   // Otherwise, set the specialization cost to be the cost of all the
@@ -583,7 +579,7 @@ static InstructionCost getUserBonus(User *U, llvm::TargetTransformInfo &TTI,
 
   // Increase the cost if it is inside the loop.
   unsigned LoopDepth = LI.getLoopDepth(I->getParent());
-  Cost *= std::pow((double)AvgLoopIterationCount, LoopDepth);
+  Cost *= std::pow((double)AvgLoopIters, LoopDepth);
 
   // Traverse recursively if there are more uses.
   // TODO: Any other instructions to be added here?
@@ -678,7 +674,7 @@ bool FunctionSpecializer::isArgumentInteresting(Argument *A) {
 
   // Specialization of integer and floating point types needs to be explicitly
   // enabled.
-  if (!EnableSpecializationForLiteralConstant &&
+  if (!SpecializeLiteralConstant &&
       (ArgTy->isIntegerTy() || ArgTy->isFloatingPointTy()))
     return false;
 
@@ -714,7 +710,7 @@ Constant *FunctionSpecializer::getCandidateConstant(Value *V) {
   if (auto *GV = dyn_cast<GlobalVariable>(V)) {
     // Check if we want to specialize on the address of non-constant
     // global values.
-    if (!GV->isConstant() && !SpecializeOnAddresses)
+    if (!GV->isConstant() && !SpecializeOnAddress)
       return nullptr;
 
     if (!GV->getValueType()->isSingleValueType())

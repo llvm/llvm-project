@@ -250,6 +250,8 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
 
     def launch(self, cmdline):
         cmdline_str = ' '.join(cmdline)
+        if self.context.options.target_run_args:
+          cmdline_str += f" {self.context.options.target_run_args}"
 
         # In a slightly baroque manner, lookup the VS project that runs when
         # you click "run", and set its command line options to the desired
