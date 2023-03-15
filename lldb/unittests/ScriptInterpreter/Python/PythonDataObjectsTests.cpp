@@ -802,10 +802,13 @@ def main():
 
   PythonScript lol(script2);
 
-  EXPECT_THAT_EXPECTED(lol(),
-                       llvm::Failed<PythonException>(testing::Property(
-                           &PythonException::ReadBacktrace,
-                           testing::ContainsRegex("unprintable MyError"))));
+  EXPECT_THAT_EXPECTED(
+      lol(),
+      llvm::Failed<PythonException>(testing::Property(
+          &PythonException::ReadBacktrace,
+          testing::AnyOf(
+              testing::ContainsRegex("MyError: <exception str\\(\\) failed>"),
+              testing::ContainsRegex("unprintable MyError")))));
 
 #endif
 }
