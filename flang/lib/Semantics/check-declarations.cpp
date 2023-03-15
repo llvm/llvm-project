@@ -115,6 +115,7 @@ private:
   }
   bool IsResultOkToDiffer(const FunctionResult &);
   void CheckGlobalName(const Symbol &);
+  void CheckExplicitSave(const Symbol &);
   void CheckBindC(const Symbol &);
   void CheckBindCFunctionResult(const Symbol &);
   // Check functions for defined I/O procedures
@@ -256,6 +257,10 @@ void CheckHelper::Check(const Symbol &symbol) {
   }
   if (symbol.attrs().test(Attr::BIND_C)) {
     CheckBindC(symbol);
+  }
+  if (symbol.attrs().test(Attr::SAVE) &&
+      !symbol.implicitAttrs().test(Attr::SAVE)) {
+    CheckExplicitSave(symbol);
   }
   CheckGlobalName(symbol);
   if (isDone) {
@@ -399,20 +404,10 @@ void CheckHelper::Check(const Symbol &symbol) {
       messages_.Say(
           "A dummy argument may not also be a named constant"_err_en_US);
     }
-    if (!symbol.test(Symbol::Flag::InDataStmt) /*caught elsewhere*/ &&
-        IsSaved(symbol)) {
-      messages_.Say(
-          "A dummy argument may not have the SAVE attribute"_err_en_US);
-    }
   } else if (IsFunctionResult(symbol)) {
     if (IsNamedConstant(symbol)) {
       messages_.Say(
           "A function result may not also be a named constant"_err_en_US);
-    }
-    if (!symbol.test(Symbol::Flag::InDataStmt) /*caught elsewhere*/ &&
-        IsSaved(symbol)) {
-      messages_.Say(
-          "A function result may not have the SAVE attribute"_err_en_US);
     }
     CheckBindCFunctionResult(symbol);
   }
@@ -450,6 +445,38 @@ void CheckHelper::CheckCommonBlock(const Symbol &symbol) {
   CheckGlobalName(symbol);
   if (symbol.attrs().test(Attr::BIND_C)) {
     CheckBindC(symbol);
+  }
+}
+
+// C859, C860
+void CheckHelper::CheckExplicitSave(const Symbol &symbol) {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  if (ultimate.test(Symbol::Flag::InDataStmt)) {
+    // checked elsewhere
+  } else if (symbol.has<UseDetails>()) {
+    messages_.Say(
+        "The USE-associated name '%s' may not have an explicit SAVE attribute"_err_en_US,
+        symbol.name());
+  } else if (IsDummy(ultimate)) {
+    messages_.Say(
+        "The dummy argument '%s' may not have an explicit SAVE attribute"_err_en_US,
+        symbol.name());
+  } else if (IsFunctionResult(ultimate)) {
+    messages_.Say(
+        "The function result variable '%s' may not have an explicit SAVE attribute"_err_en_US,
+        symbol.name());
+  } else if (const Symbol * common{FindCommonBlockContaining(ultimate)}) {
+    messages_.Say(
+        "The entity '%s' in COMMON block /%s/ may not have an explicit SAVE attribute"_err_en_US,
+        symbol.name(), common->name());
+  } else if (IsAutomatic(ultimate)) {
+    messages_.Say(
+        "The automatic object '%s' may not have an explicit SAVE attribute"_err_en_US,
+        symbol.name());
+  } else if (!evaluate::IsVariable(ultimate) && !IsProcedurePointer(ultimate)) {
+    messages_.Say(
+        "The entity '%s' with an explicit SAVE attribute must be a variable, procedure pointer, or COMMON block"_err_en_US,
+        symbol.name());
   }
 }
 
@@ -954,10 +981,6 @@ void CheckHelper::CheckProcEntity(
             symbol.name()); // C1517
       }
     }
-  } else if (IsSave(symbol)) {
-    messages_.Say(
-        "Procedure '%s' with SAVE attribute must also have POINTER attribute"_err_en_US,
-        symbol.name());
   }
   CheckExternal(symbol);
 }
