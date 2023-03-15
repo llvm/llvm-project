@@ -873,8 +873,11 @@ static void RearrangeArguments(const characteristics::Procedure &proc,
         actuals.size(), proc.dummyArguments.size());
   }
   std::map<std::string, evaluate::ActualArgument> kwArgs;
+  bool anyKeyword{false};
+  int which{1};
   for (auto &x : actuals) {
-    if (x && x->keyword()) {
+    if (!x) {
+    } else if (x->keyword()) {
       auto emplaced{
           kwArgs.try_emplace(x->keyword()->ToString(), std::move(*x))};
       if (!emplaced.second) {
@@ -883,7 +886,13 @@ static void RearrangeArguments(const characteristics::Procedure &proc,
             *x->keyword());
       }
       x.reset();
+      anyKeyword = true;
+    } else if (anyKeyword) {
+      messages.Say(x ? x->sourceLocation() : std::nullopt,
+          "Actual argument #%d without a keyword may not follow any actual argument with a keyword"_err_en_US,
+          which);
     }
+    ++which;
   }
   if (!kwArgs.empty()) {
     int index{0};
