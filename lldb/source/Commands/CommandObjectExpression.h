@@ -53,7 +53,7 @@ public:
     lldb::LanguageType language;
     LanguageRuntimeDescriptionDisplayVerbosity m_verbosity;
     LazyBool auto_apply_fixits;
-    LazyBool suppress_persistent_result;
+    bool suppress_persistent_result;
   };
 
   CommandObjectExpression(CommandInterpreter &interpreter);
