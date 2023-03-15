@@ -157,7 +157,7 @@ public:
   virtual void emitTextAttribute(unsigned Attribute, StringRef String);
   virtual void emitIntTextAttribute(unsigned Attribute, unsigned IntValue,
                                     StringRef StringValue = "");
-  virtual void emitFPU(unsigned FPU);
+  virtual void emitFPU(ARM::FPUKind FPU);
   virtual void emitArch(ARM::ArchKind Arch);
   virtual void emitArchExtension(uint64_t ArchExt);
   virtual void emitObjectArch(ARM::ArchKind Arch);
