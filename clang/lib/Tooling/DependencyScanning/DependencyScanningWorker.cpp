@@ -435,15 +435,12 @@ public:
           std::move(Opts), ScanInstance, Consumer, Controller,
           OriginalInvocation, OptimizeArgs, EagerLoadModules);
       ScanInstance.addDependencyCollector(MDC);
-      if (CacheFS) {
-        ScanInstance.setGenModuleActionWrapper(
-            [CacheFS = CacheFS, &Controller = Controller](
-                const FrontendOptions &Opts,
-                std::unique_ptr<FrontendAction> Wrapped) {
-              return std::make_unique<WrapScanModuleBuildAction>(
-                  std::move(Wrapped), Controller);
-            });
-      }
+      ScanInstance.setGenModuleActionWrapper(
+          [&Controller = Controller](const FrontendOptions &Opts,
+                                     std::unique_ptr<FrontendAction> Wrapped) {
+            return std::make_unique<WrapScanModuleBuildAction>(
+                std::move(Wrapped), Controller);
+          });
       break;
     }
 

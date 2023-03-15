@@ -19,7 +19,8 @@ class CachingOnDiskFileSystem;
 namespace clang::tooling::dependencies {
 
 std::unique_ptr<DependencyActionController>
-createIncludeTreeActionController(cas::ObjectStore &DB,
+createIncludeTreeActionController(LookupModuleOutputCallback LookupModuleOutput,
+                                  cas::ObjectStore &DB,
                                   DepscanPrefixMapping PrefixMapping);
 
 std::unique_ptr<DependencyActionController>
