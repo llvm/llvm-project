@@ -80,7 +80,10 @@ namespace {
         const SmallPtrSetImpl<const Value *> &EphValues, bool ReturnCaptures)
         : EphValues(EphValues), ReturnCaptures(ReturnCaptures) {}
 
-    void tooManyUses() override { Captured = true; }
+    void tooManyUses() override {
+      LLVM_DEBUG(dbgs() << "Captured due to too many uses\n");
+      Captured = true;
+    }
 
     bool captured(const Use *U) override {
       if (isa<ReturnInst>(U->getUser()) && !ReturnCaptures)
@@ -88,6 +91,8 @@ namespace {
 
       if (EphValues.contains(U->getUser()))
         return false;
+
+      LLVM_DEBUG(dbgs() << "Captured by: " << *U->getUser() << "\n");
 
       Captured = true;
       return true;
@@ -233,12 +238,16 @@ bool llvm::PointerMayBeCaptured(const Value *V, bool ReturnCaptures,
   // take advantage of this.
   (void)StoreCaptures;
 
+  LLVM_DEBUG(dbgs() << "Captured?: " << *V << " = ");
+
   SimpleCaptureTracker SCT(EphValues, ReturnCaptures);
   PointerMayBeCaptured(V, &SCT, MaxUsesToExplore);
   if (SCT.Captured)
     ++NumCaptured;
-  else
+  else {
     ++NumNotCaptured;
+    LLVM_DEBUG(dbgs() << "not captured\n");
+  }
   return SCT.Captured;
 }
 
