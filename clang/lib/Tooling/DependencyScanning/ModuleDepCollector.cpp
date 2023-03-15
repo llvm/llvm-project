@@ -471,6 +471,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
           << *ID << MD.ID.ModuleName;
     }
   }
+  MD.IncludeTreeID = M->getIncludeTreeID();
 
   ModuleMap &ModMapInfo =
       MDC.ScanInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();

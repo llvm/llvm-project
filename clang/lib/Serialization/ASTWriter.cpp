@@ -801,6 +801,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(INPUT_FILE_OFFSETS);
   RECORD(MODULE_CACHE_KEY);
   RECORD(CASFS_ROOT_ID);
+  RECORD(CAS_INCLUDE_TREE_ID);
 
   BLOCK(OPTIONS_BLOCK);
   RECORD(LANGUAGE_OPTIONS);
@@ -1363,6 +1364,15 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
       Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
       unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
       RecordData::value_type Record[] = {CASFS_ROOT_ID};
+      Stream.EmitRecordWithBlob(AbbrevCode, Record, *ID);
+    }
+    // CAS include-tree id, for the scanner.
+    if (auto ID = WritingModule->getIncludeTreeID()) {
+      auto Abbrev = std::make_shared<BitCodeAbbrev>();
+      Abbrev->Add(BitCodeAbbrevOp(CAS_INCLUDE_TREE_ID));
+      Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+      unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
+      RecordData::value_type Record[] = {CAS_INCLUDE_TREE_ID};
       Stream.EmitRecordWithBlob(AbbrevCode, Record, *ID);
     }
   }

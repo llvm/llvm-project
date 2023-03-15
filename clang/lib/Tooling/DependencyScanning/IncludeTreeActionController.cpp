@@ -25,8 +25,9 @@ class IncludeTreeBuilder;
 class IncludeTreeActionController : public CallbackActionController {
 public:
   IncludeTreeActionController(cas::ObjectStore &DB,
-                              DepscanPrefixMapping PrefixMapping)
-      : CallbackActionController(nullptr), DB(DB),
+                              DepscanPrefixMapping PrefixMapping,
+                              LookupModuleOutputCallback LookupOutput)
+      : CallbackActionController(LookupOutput), DB(DB),
         PrefixMapping(std::move(PrefixMapping)) {}
 
   Expected<cas::IncludeTreeRoot> getIncludeTree();
@@ -34,13 +35,17 @@ public:
 private:
   Error initialize(CompilerInstance &ScanInstance,
                    CompilerInvocation &NewInvocation) override;
+  Error finalize(CompilerInstance &ScanInstance,
+                 CompilerInvocation &NewInvocation) override;
+
+  Error initializeModuleBuild(CompilerInstance &ModuleScanInstance) override;
+  Error finalizeModuleBuild(CompilerInstance &ModuleScanInstance) override;
+  Error finalizeModuleInvocation(CompilerInvocation &CI,
+                                 const ModuleDeps &MD) override;
 
   const DepscanPrefixMapping *getPrefixMapping() override {
     return &PrefixMapping;
   }
-
-  Error finalize(CompilerInstance &ScanInstance,
-                 CompilerInvocation &NewInvocation) override;
 
 private:
   IncludeTreeBuilder &current() {
@@ -226,6 +231,8 @@ Error IncludeTreeActionController::initialize(
       });
   ScanInstance.addDependencyCollector(std::move(DC));
 
+  // Enable caching in the resulting commands.
+  ScanInstance.getFrontendOpts().CacheCompileJob = true;
   CASOpts = ScanInstance.getCASOpts();
 
   return Error::success();
@@ -249,6 +256,51 @@ Error IncludeTreeActionController::finalize(CompilerInstance &ScanInstance,
 
   DepscanPrefixMapping::remapInvocationPaths(NewInvocation, PrefixMapper);
 
+  return Error::success();
+}
+
+Error IncludeTreeActionController::initializeModuleBuild(
+    CompilerInstance &ModuleScanInstance) {
+  BuilderStack.push_back(
+      std::make_unique<IncludeTreeBuilder>(DB, PrefixMapper));
+
+  // Attach callbacks for the IncludeTree of the module. The preprocessor
+  // does not exist yet, so we need to indirect this via DependencyCollector.
+  auto DC = std::make_shared<PPCallbacksDependencyCollector>(
+      [&Builder = current()](Preprocessor &PP) {
+        return std::make_unique<IncludeTreePPCallbacks>(Builder, PP);
+      });
+  ModuleScanInstance.addDependencyCollector(std::move(DC));
+
+  return Error::success();
+}
+
+Error IncludeTreeActionController::finalizeModuleBuild(
+    CompilerInstance &ModuleScanInstance) {
+  // FIXME: the scan invocation is incorrect here; we need the `NewInvocation`
+  // from `finalizeModuleInvocation` to finish the tree.
+  auto Builder = BuilderStack.pop_back_val();
+  auto Tree = Builder->finishIncludeTree(ModuleScanInstance,
+                                         ModuleScanInstance.getInvocation());
+  if (!Tree)
+    return Tree.takeError();
+
+  Module *M = ModuleScanInstance.getPreprocessor().getCurrentModule();
+  assert(M && "finalizing without a module");
+  M->setIncludeTreeID(Tree->getID().toString());
+
+  return Error::success();
+}
+
+Error IncludeTreeActionController::finalizeModuleInvocation(
+    CompilerInvocation &CI, const ModuleDeps &MD) {
+  if (auto ID = MD.IncludeTreeID) {
+    configureInvocationForCaching(CI, CASOpts, std::move(*ID),
+                                  /*CASFSWorkingDir=*/"",
+                                  /*ProduceIncludeTree=*/true);
+  }
+
+  DepscanPrefixMapping::remapInvocationPaths(CI, PrefixMapper);
   return Error::success();
 }
 
@@ -416,6 +468,15 @@ Expected<cas::ObjectRef> IncludeTreeBuilder::getObjectForFile(Preprocessor &PP,
     }
     return *PredefinesBufferRef;
   }
+  if (!FI.getContentCache().OrigEntry &&
+      FI.getName() == Module::getModuleInputBufferName()) {
+    // Virtual <module-includes> buffer
+    if (!ModuleIncludesBufferRef) {
+      if (Error E = getObjectForBuffer(FI).moveInto(ModuleIncludesBufferRef))
+        return std::move(E);
+    }
+    return *ModuleIncludesBufferRef;
+  }
   assert(FI.getContentCache().OrigEntry);
   auto &FileRef = ObjectForFile[FI.getContentCache().OrigEntry];
   if (!FileRef) {
@@ -506,7 +567,8 @@ IncludeTreeBuilder::createIncludeFile(StringRef Filename,
 
 std::unique_ptr<DependencyActionController>
 dependencies::createIncludeTreeActionController(
-    cas::ObjectStore &DB, DepscanPrefixMapping PrefixMapping) {
+    LookupModuleOutputCallback LookupModuleOutput, cas::ObjectStore &DB,
+    DepscanPrefixMapping PrefixMapping) {
   return std::make_unique<IncludeTreeActionController>(
-      DB, std::move(PrefixMapping));
+      DB, std::move(PrefixMapping), LookupModuleOutput);
 }

@@ -190,10 +190,11 @@ DependencyScanningTool::getDependencyTreeFromCompilerInvocation(
 
 Expected<cas::IncludeTreeRoot> DependencyScanningTool::getIncludeTree(
     cas::ObjectStore &DB, const std::vector<std::string> &CommandLine,
-    StringRef CWD, const DepscanPrefixMapping &PrefixMapping) {
+    StringRef CWD, LookupModuleOutputCallback LookupModuleOutput,
+    const DepscanPrefixMapping &PrefixMapping) {
   GetIncludeTree Consumer(DB);
-  auto Controller =
-      createIncludeTreeActionController(DB, std::move(PrefixMapping));
+  auto Controller = createIncludeTreeActionController(LookupModuleOutput, DB,
+                                                      std::move(PrefixMapping));
   llvm::Error Result =
       Worker.computeDependencies(CWD, CommandLine, Consumer, *Controller);
   if (Result)
@@ -204,12 +205,13 @@ Expected<cas::IncludeTreeRoot> DependencyScanningTool::getIncludeTree(
 Expected<cas::IncludeTreeRoot>
 DependencyScanningTool::getIncludeTreeFromCompilerInvocation(
     cas::ObjectStore &DB, std::shared_ptr<CompilerInvocation> Invocation,
-    StringRef CWD, const DepscanPrefixMapping &PrefixMapping,
+    StringRef CWD, LookupModuleOutputCallback LookupModuleOutput,
+    const DepscanPrefixMapping &PrefixMapping,
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
     bool DiagGenerationAsCompilation) {
   GetIncludeTree Consumer(DB);
-  auto Controller =
-      createIncludeTreeActionController(DB, std::move(PrefixMapping));
+  auto Controller = createIncludeTreeActionController(LookupModuleOutput, DB,
+                                                      std::move(PrefixMapping));
   Worker.computeDependenciesFromCompilerInvocation(
       std::move(Invocation), CWD, Consumer, *Controller, DiagsConsumer,
       VerboseOS, DiagGenerationAsCompilation);
@@ -310,6 +312,7 @@ TranslationUnitDeps FullDependencyConsumer::takeTranslationUnitDeps() {
   TU.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
   TU.Commands = std::move(Commands);
   TU.CASFileSystemRootID = std::move(CASFileSystemRootID);
+  TU.IncludeTreeID = std::move(IncludeTreeID);
 
   for (auto &&M : ClangModuleDeps) {
     auto &MD = M.second;
@@ -348,7 +351,8 @@ DependencyScanningTool::createActionController(
     LookupModuleOutputCallback LookupModuleOutput,
     DepscanPrefixMapping PrefixMapping) {
   if (Worker.getScanningFormat() == ScanningOutputFormat::FullIncludeTree)
-    return createIncludeTreeActionController(*Worker.getCAS(), std::move(PrefixMapping));
+    return createIncludeTreeActionController(
+        LookupModuleOutput, *Worker.getCAS(), std::move(PrefixMapping));
   if (auto CacheFS = Worker.getCASFS())
     return createCASFSActionController(LookupModuleOutput, *CacheFS,
                                        std::move(PrefixMapping));

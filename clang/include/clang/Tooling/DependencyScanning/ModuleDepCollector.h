@@ -139,6 +139,9 @@ struct ModuleDeps {
   /// The CASID for the module input dependency tree, if any.
   std::optional<llvm::cas::CASID> CASFileSystemRootID;
 
+  /// The CASID for the module include-tree, if any.
+  std::optional<std::string> IncludeTreeID;
+
   /// The \c ActionCache key for this module, if any.
   std::optional<std::string> ModuleCacheKey;
 
