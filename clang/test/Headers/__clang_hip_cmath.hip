@@ -18,12 +18,12 @@
 
 // DEFAULT-LABEL: @test_fma_f16(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract half @__ocml_fma_f16(half noundef [[X:%.*]], half noundef [[Y:%.*]], half noundef [[Z:%.*]]) #[[ATTR6:[0-9]+]]
+// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract half @__ocml_fma_f16(half noundef [[X:%.*]], half noundef [[Y:%.*]], half noundef [[Z:%.*]]) #[[ATTR4:[0-9]+]]
 // DEFAULT-NEXT:    ret half [[CALL_I]]
 //
 // FINITEONLY-LABEL: @test_fma_f16(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract half @__ocml_fma_f16(half noundef [[X:%.*]], half noundef [[Y:%.*]], half noundef [[Z:%.*]]) #[[ATTR6:[0-9]+]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) half @__ocml_fma_f16(half noundef nofpclass(nan inf) [[X:%.*]], half noundef nofpclass(nan inf) [[Y:%.*]], half noundef nofpclass(nan inf) [[Z:%.*]]) #[[ATTR4:[0-9]+]]
 // FINITEONLY-NEXT:    ret half [[CALL_I]]
 //
 extern "C" __device__ _Float16 test_fma_f16(_Float16 x, _Float16 y,
@@ -33,12 +33,12 @@ extern "C" __device__ _Float16 test_fma_f16(_Float16 x, _Float16 y,
 
 // DEFAULT-LABEL: @test_pow_f16(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract half @__ocml_pown_f16(half noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR7:[0-9]+]]
+// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract half @__ocml_pown_f16(half noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR5:[0-9]+]]
 // DEFAULT-NEXT:    ret half [[CALL_I]]
 //
 // FINITEONLY-LABEL: @test_pow_f16(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract half @__ocml_pown_f16(half noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR7:[0-9]+]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) half @__ocml_pown_f16(half noundef nofpclass(nan inf) [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR5:[0-9]+]]
 // FINITEONLY-NEXT:    ret half [[CALL_I]]
 //
 extern "C" __device__ _Float16 test_pow_f16(_Float16 x, int y) {
