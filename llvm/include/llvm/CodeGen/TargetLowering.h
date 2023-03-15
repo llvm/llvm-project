@@ -3717,7 +3717,8 @@ public:
   /// Convert x+y to (VT)((SmallVT)x+(SmallVT)y) if the casts are free.  This
   /// uses isZExtFree and ZERO_EXTEND for the widening cast, but it could be
   /// generalized for targets with other types of implicit widening casts.
-  bool ShrinkDemandedOp(SDValue Op, unsigned BitWidth, const APInt &Demanded,
+  bool ShrinkDemandedOp(SDValue Op, unsigned BitWidth,
+                        const APInt &DemandedBits,
                         TargetLoweringOpt &TLO) const;
 
   /// Look at Op.  At this point, we know that only the DemandedBits bits of the

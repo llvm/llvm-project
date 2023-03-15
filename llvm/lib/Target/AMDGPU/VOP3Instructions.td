@@ -263,7 +263,7 @@ let SchedRW = [Write64Bit] in {
 
 def : GCNPat<
   (i32 (DivergentUnaryFrag<sext> i16:$src)),
-  (i32 (V_BFE_I32_e64 $src, (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10))))
+  (i32 (V_BFE_I32_e64 i16:$src, (i32 0), (i32 0x10)))
 >;
 
 let isReMaterializable = 1 in {

@@ -191,13 +191,13 @@ void AbstractSparseDataFlowAnalysis::visitBlock(Block *block) {
             dyn_cast<BranchOpInterface>(predecessor->getTerminator())) {
       SuccessorOperands operands =
           branch.getSuccessorOperands(it.getSuccessorIndex());
-      for (auto &it : llvm::enumerate(argLattices)) {
-        if (Value operand = operands[it.index()]) {
-          join(it.value(), *getLatticeElementFor(block, operand));
+      for (auto [idx, lattice] : llvm::enumerate(argLattices)) {
+        if (Value operand = operands[idx]) {
+          join(lattice, *getLatticeElementFor(block, operand));
         } else {
           // Conservatively consider internally produced arguments as entry
           // points.
-          setAllToEntryStates(it.value());
+          setAllToEntryStates(lattice);
         }
       }
     } else {
