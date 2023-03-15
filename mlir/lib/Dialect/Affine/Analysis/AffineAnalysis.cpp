@@ -287,14 +287,6 @@ static LogicalResult getOpIndexSet(Operation *op,
   return getIndexSet(ops, indexSet);
 }
 
-/// Returns true if `val` is an induction of an affine.parallel op.
-static bool isAffineParallelInductionVar(Value val) {
-  auto ivArg = val.dyn_cast<BlockArgument>();
-  if (!ivArg)
-    return false;
-  return isa<AffineParallelOp>(ivArg.getOwner()->getParentOp());
-}
-
 // Returns the number of outer loop common to 'src/dstDomain'.
 // Loops common to 'src/dst' domains are added to 'commonLoops' if non-null.
 static unsigned

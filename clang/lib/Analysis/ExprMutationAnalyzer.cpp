@@ -605,7 +605,7 @@ FunctionParmMutationAnalyzer::FunctionParmMutationAnalyzer(
     for (const CXXCtorInitializer *Init : Ctor->inits()) {
       ExprMutationAnalyzer InitAnalyzer(*Init->getInit(), Context);
       for (const ParmVarDecl *Parm : Ctor->parameters()) {
-        if (Results.find(Parm) != Results.end())
+        if (Results.contains(Parm))
           continue;
         if (const Stmt *S = InitAnalyzer.findMutation(Parm))
           Results[Parm] = S;

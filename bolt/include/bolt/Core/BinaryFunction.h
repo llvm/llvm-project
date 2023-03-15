@@ -1233,96 +1233,11 @@ public:
     return InputOffsetToAddressMap;
   }
 
-  void addRelocationAArch64(uint64_t Offset, MCSymbol *Symbol, uint64_t RelType,
-                            uint64_t Addend, uint64_t Value, bool IsCI) {
-    std::map<uint64_t, Relocation> &Rels =
-        (IsCI) ? Islands->Relocations : Relocations;
-    switch (RelType) {
-    case ELF::R_AARCH64_ABS64:
-    case ELF::R_AARCH64_ABS32:
-    case ELF::R_AARCH64_ABS16:
-    case ELF::R_AARCH64_ADD_ABS_LO12_NC:
-    case ELF::R_AARCH64_ADR_GOT_PAGE:
-    case ELF::R_AARCH64_ADR_PREL_LO21:
-    case ELF::R_AARCH64_ADR_PREL_PG_HI21:
-    case ELF::R_AARCH64_ADR_PREL_PG_HI21_NC:
-    case ELF::R_AARCH64_LD64_GOT_LO12_NC:
-    case ELF::R_AARCH64_LDST8_ABS_LO12_NC:
-    case ELF::R_AARCH64_LDST16_ABS_LO12_NC:
-    case ELF::R_AARCH64_LDST32_ABS_LO12_NC:
-    case ELF::R_AARCH64_LDST64_ABS_LO12_NC:
-    case ELF::R_AARCH64_LDST128_ABS_LO12_NC:
-    case ELF::R_AARCH64_TLSDESC_ADD_LO12:
-    case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
-    case ELF::R_AARCH64_TLSDESC_ADR_PREL21:
-    case ELF::R_AARCH64_TLSDESC_LD64_LO12:
-    case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
-    case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
-    case ELF::R_AARCH64_MOVW_UABS_G0:
-    case ELF::R_AARCH64_MOVW_UABS_G0_NC:
-    case ELF::R_AARCH64_MOVW_UABS_G1:
-    case ELF::R_AARCH64_MOVW_UABS_G1_NC:
-    case ELF::R_AARCH64_MOVW_UABS_G2:
-    case ELF::R_AARCH64_MOVW_UABS_G2_NC:
-    case ELF::R_AARCH64_MOVW_UABS_G3:
-    case ELF::R_AARCH64_PREL16:
-    case ELF::R_AARCH64_PREL32:
-    case ELF::R_AARCH64_PREL64:
-      Rels[Offset] = Relocation{Offset, Symbol, RelType, Addend, Value};
-      return;
-    case ELF::R_AARCH64_CALL26:
-    case ELF::R_AARCH64_JUMP26:
-    case ELF::R_AARCH64_TSTBR14:
-    case ELF::R_AARCH64_CONDBR19:
-    case ELF::R_AARCH64_TLSDESC_CALL:
-    case ELF::R_AARCH64_TLSLE_ADD_TPREL_HI12:
-    case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
-      return;
-    default:
-      llvm_unreachable("Unexpected AArch64 relocation type in code");
-    }
-  }
-
-  void addRelocationX86(uint64_t Offset, MCSymbol *Symbol, uint64_t RelType,
-                        uint64_t Addend, uint64_t Value) {
-    switch (RelType) {
-    case ELF::R_X86_64_8:
-    case ELF::R_X86_64_16:
-    case ELF::R_X86_64_32:
-    case ELF::R_X86_64_32S:
-    case ELF::R_X86_64_64:
-    case ELF::R_X86_64_PC8:
-    case ELF::R_X86_64_PC32:
-    case ELF::R_X86_64_PC64:
-    case ELF::R_X86_64_GOTPCRELX:
-    case ELF::R_X86_64_REX_GOTPCRELX:
-      Relocations[Offset] = Relocation{Offset, Symbol, RelType, Addend, Value};
-      return;
-    case ELF::R_X86_64_PLT32:
-    case ELF::R_X86_64_GOTPCREL:
-    case ELF::R_X86_64_TPOFF32:
-    case ELF::R_X86_64_GOTTPOFF:
-      return;
-    default:
-      llvm_unreachable("Unexpected x86 relocation type in code");
-    }
-  }
-
   /// Register relocation type \p RelType at a given \p Address in the function
   /// against \p Symbol.
   /// Assert if the \p Address is not inside this function.
   void addRelocation(uint64_t Address, MCSymbol *Symbol, uint64_t RelType,
-                     uint64_t Addend, uint64_t Value) {
-    assert(Address >= getAddress() && Address < getAddress() + getMaxSize() &&
-           "address is outside of the function");
-    uint64_t Offset = Address - getAddress();
-    if (BC.isAArch64()) {
-      return addRelocationAArch64(Offset, Symbol, RelType, Addend, Value,
-                                  isInConstantIsland(Address));
-    }
-
-    return addRelocationX86(Offset, Symbol, RelType, Addend, Value);
-  }
+                     uint64_t Addend, uint64_t Value);
 
   /// Return the name of the section this function originated from.
   std::optional<StringRef> getOriginSectionName() const {

@@ -475,6 +475,13 @@ void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
                                    MDNode *BranchWeights = nullptr,
                                    DomTreeUpdater *DTU = nullptr);
 
+/// Insert a for (int i = 0; i < End; i++) loop structure (with the exception
+/// that \p End is assumed > 0, and thus not checked on entry) at \p
+/// SplitBefore.  Returns the first insert point in the loop body, and the
+/// PHINode for the induction variable (i.e. "i" above).
+std::pair<Instruction*, Value*>
+SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore);
+
 /// Utility function for performing a given action on each lane of a vector
 /// with \p EC elements.  To simplify porting legacy code, this defaults to
 /// unrolling the implied loop for non-scalable element counts, but this is
