@@ -4802,7 +4802,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     // the proper cpu features (and it won't cause code generation issues due to
     // function based code generation).
     if (TargetDecl->hasAttr<AlwaysInlineAttr>() &&
-        TargetDecl->hasAttr<TargetAttr>())
+        (TargetDecl->hasAttr<TargetAttr>() ||
+         (CurFuncDecl && CurFuncDecl->hasAttr<TargetAttr>())))
       checkTargetFeatures(Loc, FD);
 
     // Some architectures (such as x86-64) have the ABI changed based on
