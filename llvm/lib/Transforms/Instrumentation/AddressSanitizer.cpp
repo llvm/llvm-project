@@ -667,7 +667,7 @@ struct AddressSanitizer {
     assert(this->UseAfterReturn != AsanDetectStackUseAfterReturnMode::Invalid);
   }
 
-  uint64_t getAllocaSizeInBytes(const AllocaInst &AI) const {
+  TypeSize getAllocaSizeInBytes(const AllocaInst &AI) const {
     uint64_t ArraySize = 1;
     if (AI.isArrayAllocation()) {
       const ConstantInt *CI = dyn_cast<ConstantInt>(AI.getArraySize());
@@ -675,7 +675,7 @@ struct AddressSanitizer {
       ArraySize = CI->getZExtValue();
     }
     Type *Ty = AI.getAllocatedType();
-    uint64_t SizeInBytes =
+    TypeSize SizeInBytes =
         AI.getModule()->getDataLayout().getTypeAllocSize(Ty);
     return SizeInBytes * ArraySize;
   }
@@ -1040,7 +1040,9 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
 
   /// Collect Alloca instructions we want (and can) handle.
   void visitAllocaInst(AllocaInst &AI) {
-    if (!ASan.isInterestingAlloca(AI)) {
+    // FIXME: Handle scalable vectors instead of ignoring them.
+    if (!ASan.isInterestingAlloca(AI) ||
+        isa<ScalableVectorType>(AI.getAllocatedType())) {
       if (AI.isStaticAlloca()) {
         // Skip over allocas that are present *before* the first instrumented
         // alloca, we don't want to move those around.
@@ -1254,7 +1256,7 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
   bool IsInteresting =
       (AI.getAllocatedType()->isSized() &&
        // alloca() may be called with 0 size, ignore it.
-       ((!AI.isStaticAlloca()) || getAllocaSizeInBytes(AI) > 0) &&
+       ((!AI.isStaticAlloca()) || !getAllocaSizeInBytes(AI).isZero()) &&
        // We are only interested in allocas not promotable to registers.
        // Promotable allocas are common under -O0.
        (!ClSkipPromotableAllocas || !isAllocaPromotable(&AI)) &&
@@ -3492,6 +3494,10 @@ void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
 // constant inbounds index.
 bool AddressSanitizer::isSafeAccess(ObjectSizeOffsetVisitor &ObjSizeVis,
                                     Value *Addr, TypeSize TypeStoreSize) const {
+  if (TypeStoreSize.isScalable())
+    // TODO: We can use vscale_range to convert a scalable value to an
+    // upper bound on the access size.
+    return false;
   SizeOffsetType SizeOffset = ObjSizeVis.compute(Addr);
   if (!ObjSizeVis.bothKnown(SizeOffset)) return false;
   uint64_t Size = SizeOffset.first.getZExtValue();
