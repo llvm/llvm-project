@@ -36,10 +36,12 @@ void tooling::dependencies::configureInvocationForCaching(
     FrontendOpts.CASIncludeTreeID = std::move(RootID);
     FrontendOpts.Inputs.clear();
     // Preserve sysroot path to accommodate lookup for 'SDKSettings.json' during
-    // availability checking.
-    std::string OriginalSysroot = CI.getHeaderSearchOpts().Sysroot;
-    CI.getHeaderSearchOpts() = HeaderSearchOptions();
-    CI.getHeaderSearchOpts().Sysroot = OriginalSysroot;
+    // availability checking, and module files.
+    HeaderSearchOptions &HSOpts = CI.getHeaderSearchOpts();
+    HeaderSearchOptions OriginalHSOpts;
+    std::swap(HSOpts, OriginalHSOpts);
+    HSOpts.Sysroot = std::move(OriginalHSOpts.Sysroot);
+    HSOpts.PrebuiltModuleFiles = std::move(OriginalHSOpts.PrebuiltModuleFiles);
     auto &PPOpts = CI.getPreprocessorOpts();
     // We don't need this because we save the contents of the PCH file in the
     // include tree root.
@@ -254,7 +256,8 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
   if (ProduceIncludeTree) {
     if (Error E = Tool.getIncludeTreeFromCompilerInvocation(
                           DB, std::move(ScanInvocation), WorkingDirectory,
-                          PrefixMapping, DiagsConsumer, VerboseOS,
+                          /*LookupModuleOutput=*/nullptr, PrefixMapping,
+                          DiagsConsumer, VerboseOS,
                           /*DiagGenerationAsCompilation*/ true)
                       .moveInto(Root))
       return std::move(E);
