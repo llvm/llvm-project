@@ -9,7 +9,71 @@
 // RUN:   -format experimental-include-tree-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps.json
 
-// RUN: FileCheck %s -input-file %t/deps.json  -DPREFIX=%/t
+// Extract the include-tree commands
+// RUN: %deps-to-rsp %t/deps.json --module-name Top > %t/Top.rsp
+// RUN: %deps-to-rsp %t/deps.json --module-name Left > %t/Left.rsp
+// RUN: %deps-to-rsp %t/deps.json --module-name Right > %t/Right.rsp
+// RUN: %deps-to-rsp %t/deps.json --tu-index 0 > %t/tu.rsp
+
+// Extract include-tree casids
+// RUN: cat %t/Top.rsp | sed -E 's|.*"-fcas-include-tree" "(llvmcas://[[:xdigit:]]+)".*|\1|' > %t/Top.casid
+// RUN: cat %t/Left.rsp | sed -E 's|.*"-fcas-include-tree" "(llvmcas://[[:xdigit:]]+)".*|\1|' > %t/Left.casid
+// RUN: cat %t/Right.rsp | sed -E 's|.*"-fcas-include-tree" "(llvmcas://[[:xdigit:]]+)".*|\1|' > %t/Right.casid
+// RUN: cat %t/tu.rsp | sed -E 's|.*"-fcas-include-tree" "(llvmcas://[[:xdigit:]]+)".*|\1|' > %t/tu.casid
+
+// RUN: echo "MODULE Top" > %t/result.txt
+// RUN: clang-cas-test -cas %t/cas -print-include-tree @%t/Top.casid >> %t/result.txt
+// RUN: echo "MODULE Left" >> %t/result.txt
+// RUN: clang-cas-test -cas %t/cas -print-include-tree @%t/Left.casid >> %t/result.txt
+// RUN: echo "MODULE Right" >> %t/result.txt
+// RUN: clang-cas-test -cas %t/cas -print-include-tree @%t/Right.casid >> %t/result.txt
+// RUN: echo "TRANSLATION UNIT" >> %t/result.txt
+// RUN: clang-cas-test -cas %t/cas -print-include-tree @%t/tu.casid >> %t/result.txt
+// RUN: cat %t/deps.json >> %t/result.txt
+
+// RUN: FileCheck %s -input-file %t/result.txt -DPREFIX=%/t
+
+// CHECK-LABEL: MODULE Top
+// CHECK: <module-includes> llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 1:1 <built-in> llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 2:1 [[PREFIX]]/Top.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: Module Map: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
+// CHECK: Files:
+// CHECK: [[PREFIX]]/Top.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
+
+// CHECK-LABEL: MODULE Left
+// CHECK: <module-includes> llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 1:1 <built-in> llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 2:1 [[PREFIX]]/Left.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK:   2:1 (Module) Top
+// CHECK: Module Map: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
+// CHECK: Files:
+// CHECK: [[PREFIX]]/Left.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
+// CHECK: [[PREFIX]]/Top.h llvmcas://{{[[:xdigit:]]+}}
+
+// CHECK-LABEL: MODULE Right
+// CHECK: <module-includes> llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 1:1 <built-in> llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 2:1 [[PREFIX]]/Right.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK:   2:1 (Module) Top
+// CHECK: Module Map: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
+// CHECK: Files:
+// CHECK: [[PREFIX]]/Right.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
+// CHECK: [[PREFIX]]/Top.h llvmcas://{{[[:xdigit:]]+}}
+
+// CHECK-LABEL: TRANSLATION UNIT
+// CHECK: [[PREFIX]]/tu.c llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 1:1 <built-in> llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 2:1 (Module) Left
+// CHECK: 3:1 (Module) Right
+// CHECK: Files:
+// CHECK: [[PREFIX]]/Left.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
+// CHECK: [[PREFIX]]/Top.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: [[PREFIX]]/Right.h llvmcas://{{[[:xdigit:]]+}}
 
 // CHECK:      {
 // CHECK-NEXT   "modules": [
@@ -162,11 +226,30 @@
 // CHECK-NEXT:   ]
 // CHECK-NEXT: }
 
+// Build the include-tree commands
+// RUN: %clang @%t/Top.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_MISS
+// Ensure the pcm comes from the action cache
+// RUN: rm -rf %t/outputs
+// RUN: %clang @%t/Left.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_MISS
+// RUN: rm -rf %t/outputs
+// RUN: %clang @%t/Right.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_MISS
+// RUN: rm -rf %t/outputs
+// RUN: %clang @%t/tu.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_MISS
+
+// Check cache hits
+// RUN: %clang @%t/Top.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_HIT
+// RUN: %clang @%t/Left.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_HIT
+// RUN: %clang @%t/Right.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_HIT
+// RUN: %clang @%t/tu.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_HIT
+
+// CACHE_MISS: compile job cache miss
+// CACHE_HIT: compile job cache hit
+
 //--- cdb.json.template
 [{
   "file": "DIR/tu.c",
   "directory": "DIR",
-  "command": "clang -fsyntax-only DIR/tu.c -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=DIR/module-cache"
+  "command": "clang -fsyntax-only DIR/tu.c -I DIR -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=DIR/module-cache -Rcompile-job-cache"
 }]
 
 //--- module.modulemap
@@ -182,21 +265,19 @@ struct Top {
 void top(void);
 
 //--- Left.h
-#pragma once
 #include "Top.h"
 void left(void);
 
 //--- Right.h
-#pragma once
 #include "Top.h"
 void right(void);
 
 //--- tu.c
-#include "Left.h"
-#include "Right.h"
+#import "Left.h"
+#import <Right.h>
 
 void tu(void) {
+  top();
   left();
   right();
-  top();
 }
