@@ -1886,8 +1886,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   LLDB_LOGF(log, "Processing command: %s", command_line);
   LLDB_SCOPED_TIMERF("Processing command: %s.", command_line);
 
-  if (WasInterrupted()) {
-    result.AppendError("interrupted");
+  if (GetDebugger().InterruptRequested()) {
+    result.AppendError("... Interrupted");
     return false;
   }
 
@@ -2555,7 +2555,7 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
     m_debugger.SetAsyncExecution(false);
   }
 
-  for (size_t idx = 0; idx < num_lines && !WasInterrupted(); idx++) {
+  for (size_t idx = 0; idx < num_lines; idx++) {
     const char *cmd = commands.GetStringAtIndex(idx);
     if (cmd[0] == '\0')
       continue;
@@ -3035,6 +3035,9 @@ bool CommandInterpreter::InterruptCommand() {
 }
 
 bool CommandInterpreter::WasInterrupted() const {
+  if (!m_debugger.IsIOHandlerThreadCurrentThread())
+    return false;
+
   bool was_interrupted =
       (m_command_state == CommandHandlingState::eInterrupted);
   lldbassert(!was_interrupted || m_iohandler_nesting_level > 0);
@@ -3048,7 +3051,8 @@ void CommandInterpreter::PrintCommandOutput(IOHandler &io_handler,
   lldb::StreamFileSP stream = is_stdout ? io_handler.GetOutputStreamFileSP()
                                         : io_handler.GetErrorStreamFileSP();
   // Split the output into lines and poll for interrupt requests
-  while (!str.empty() && !WasInterrupted()) {
+  bool had_output = !str.empty();
+  while (!str.empty()) {
     llvm::StringRef line;
     std::tie(line, str) = str.split('\n');
     {
@@ -3059,7 +3063,7 @@ void CommandInterpreter::PrintCommandOutput(IOHandler &io_handler,
   }
 
   std::lock_guard<std::recursive_mutex> guard(io_handler.GetOutputMutex());
-  if (!str.empty())
+  if (had_output && GetDebugger().InterruptRequested())
     stream->Printf("\n... Interrupted.\n");
   stream->Flush();
 }
@@ -3372,7 +3376,13 @@ CommandInterpreterRunResult CommandInterpreter::RunCommandInterpreter(
   if (options.GetSpawnThread()) {
     m_debugger.StartIOHandlerThread();
   } else {
+    // If the current thread is not managed by a host thread, we won't detect
+    // that this IS the CommandInterpreter IOHandler thread, so make it so:
+    HostThread new_io_handler_thread(Host::GetCurrentThread());
+    HostThread old_io_handler_thread 
+        = m_debugger.SetIOHandlerThread(new_io_handler_thread);
     m_debugger.RunIOHandlers();
+    m_debugger.SetIOHandlerThread(old_io_handler_thread);
 
     if (options.GetAutoHandleEvents())
       m_debugger.StopEventHandlerThread();
