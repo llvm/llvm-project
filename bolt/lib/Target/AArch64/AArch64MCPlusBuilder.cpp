@@ -45,8 +45,6 @@ public:
                                  *AArch64ExprB.getSubExpr(), Comp);
   }
 
-  bool hasEVEXEncoding(const MCInst &) const override { return false; }
-
   bool isMacroOpFusionPair(ArrayRef<MCInst> Insts) const override {
     return false;
   }
@@ -1091,13 +1089,51 @@ public:
     return true;
   }
 
-  bool isMoveMem2Reg(const MCInst &Inst) const override { return false; }
-
-  bool isLeave(const MCInst &Inst) const override { return false; }
-
-  bool isPop(const MCInst &Inst) const override { return false; }
-
-  bool isPrefix(const MCInst &Inst) const override { return false; }
+  bool shouldRecordCodeRelocation(uint64_t RelType) const override {
+    switch (RelType) {
+    case ELF::R_AARCH64_ABS64:
+    case ELF::R_AARCH64_ABS32:
+    case ELF::R_AARCH64_ABS16:
+    case ELF::R_AARCH64_ADD_ABS_LO12_NC:
+    case ELF::R_AARCH64_ADR_GOT_PAGE:
+    case ELF::R_AARCH64_ADR_PREL_LO21:
+    case ELF::R_AARCH64_ADR_PREL_PG_HI21:
+    case ELF::R_AARCH64_ADR_PREL_PG_HI21_NC:
+    case ELF::R_AARCH64_LD64_GOT_LO12_NC:
+    case ELF::R_AARCH64_LDST8_ABS_LO12_NC:
+    case ELF::R_AARCH64_LDST16_ABS_LO12_NC:
+    case ELF::R_AARCH64_LDST32_ABS_LO12_NC:
+    case ELF::R_AARCH64_LDST64_ABS_LO12_NC:
+    case ELF::R_AARCH64_LDST128_ABS_LO12_NC:
+    case ELF::R_AARCH64_TLSDESC_ADD_LO12:
+    case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
+    case ELF::R_AARCH64_TLSDESC_ADR_PREL21:
+    case ELF::R_AARCH64_TLSDESC_LD64_LO12:
+    case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+    case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+    case ELF::R_AARCH64_MOVW_UABS_G0:
+    case ELF::R_AARCH64_MOVW_UABS_G0_NC:
+    case ELF::R_AARCH64_MOVW_UABS_G1:
+    case ELF::R_AARCH64_MOVW_UABS_G1_NC:
+    case ELF::R_AARCH64_MOVW_UABS_G2:
+    case ELF::R_AARCH64_MOVW_UABS_G2_NC:
+    case ELF::R_AARCH64_MOVW_UABS_G3:
+    case ELF::R_AARCH64_PREL16:
+    case ELF::R_AARCH64_PREL32:
+    case ELF::R_AARCH64_PREL64:
+      return true;
+    case ELF::R_AARCH64_CALL26:
+    case ELF::R_AARCH64_JUMP26:
+    case ELF::R_AARCH64_TSTBR14:
+    case ELF::R_AARCH64_CONDBR19:
+    case ELF::R_AARCH64_TLSDESC_CALL:
+    case ELF::R_AARCH64_TLSLE_ADD_TPREL_HI12:
+    case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
+      return false;
+    default:
+      llvm_unreachable("Unexpected AArch64 relocation type in code");
+    }
+  }
 
   bool createReturn(MCInst &Inst) const override {
     Inst.setOpcode(AArch64::RET);

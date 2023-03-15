@@ -693,7 +693,7 @@ void Operator::populateOpStructure() {
     auto verifyTraitValidity = [&](Record *trait) {
       auto *dependentTraits = trait->getValueAsListInit("dependentTraits");
       for (auto *traitInit : *dependentTraits)
-        if (traitSet.find(traitInit) == traitSet.end())
+        if (!traitSet.contains(traitInit))
           PrintFatalError(
               def.getLoc(),
               trait->getValueAsString("trait") + " requires " +

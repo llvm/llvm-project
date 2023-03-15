@@ -660,10 +660,8 @@ static bool mustReachAtInnermost(const MemRefAccess &srcAccess,
 
   unsigned nsLoops =
       getNumCommonSurroundingLoops(*srcAccess.opInst, *destAccess.opInst);
-  FlatAffineValueConstraints dependenceConstraints;
-  DependenceResult result = checkMemrefAccessDependence(
-      srcAccess, destAccess, nsLoops + 1, &dependenceConstraints,
-      /*dependenceComponents=*/nullptr);
+  DependenceResult result =
+      checkMemrefAccessDependence(srcAccess, destAccess, nsLoops + 1);
   return hasDependence(result);
 }
 

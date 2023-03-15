@@ -81,6 +81,43 @@ func.func @reduction2(%arg0 : index, %arg1 : index, %arg2 : index,
 
 // -----
 
+// Check the generation of declaration for arith.muli.
+// Mostly, the same check as above, except for the types,
+// the name of the op and the init value.
+
+// CHECK: omp.reduction.declare @[[$REDI:.*]] : i32
+
+// CHECK: init
+// CHECK: %[[INIT:.*]] = llvm.mlir.constant(1 : i32)
+// CHECK: omp.yield(%[[INIT]] : i32)
+
+// CHECK: combiner
+// CHECK: ^{{.*}}(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32)
+// CHECK: %[[RES:.*]] = arith.muli %[[ARG0]], %[[ARG1]]
+// CHECK: omp.yield(%[[RES]] : i32)
+
+// CHECK-NOT: atomic
+
+// CHECK-LABEL: @reduction_muli
+func.func @reduction_muli(%arg0 : index, %arg1 : index, %arg2 : index,
+                 %arg3 : index, %arg4 : index) {
+  %step = arith.constant 1 : index
+  %one = arith.constant 1 : i32
+  scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
+                            step (%arg4, %step) init (%one) -> (i32) {
+    // CHECK: omp.reduction
+    %pow2 = arith.constant 2 : i32
+    scf.reduce(%pow2) : i32 {
+    ^bb0(%lhs : i32, %rhs: i32):
+      %res = arith.muli %lhs, %rhs : i32
+      scf.reduce.return %res : i32
+    }
+  }
+  return
+}
+
+// -----
+
 // Only check the declaration here, the rest is same as above.
 // CHECK: omp.reduction.declare @{{.*}} : f32
 

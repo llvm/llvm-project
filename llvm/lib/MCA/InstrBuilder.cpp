@@ -612,7 +612,7 @@ InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI,
   unsigned CPUID = STI.getSchedModel().getProcessorID();
   SchedClassID = STI.resolveVariantSchedClass(SchedClassID, &MCI, &MCII, CPUID);
   auto VDKey = std::make_pair(&MCI, SchedClassID);
-  if (VariantDescriptors.find(VDKey) != VariantDescriptors.end())
+  if (VariantDescriptors.contains(VDKey))
     return *VariantDescriptors[VDKey];
 
   return createInstrDescImpl(MCI, IVec);

@@ -583,7 +583,7 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
     // If we could not find the symbol directly in SymbolIndexMap, this symbol
     // could either be a temporary symbol or an undefined symbol. In this case,
     // we would need to have the relocation reference its csect instead.
-    return SymbolIndexMap.find(Sym) != SymbolIndexMap.end()
+    return SymbolIndexMap.contains(Sym)
                ? SymbolIndexMap[Sym]
                : SymbolIndexMap[ContainingCsect->getQualNameSymbol()];
   };

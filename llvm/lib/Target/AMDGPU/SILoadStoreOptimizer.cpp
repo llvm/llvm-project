@@ -2092,7 +2092,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
   // Step1: Find the base-registers and a 64bit constant offset.
   MachineOperand &Base = *TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
   MemAddress MAddr;
-  if (Visited.find(&MI) == Visited.end()) {
+  if (!Visited.contains(&MI)) {
     processBaseWithConstOffset(Base, MAddr);
     Visited[&MI] = MAddr;
   } else
@@ -2155,7 +2155,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     const MachineOperand &BaseNext =
       *TII->getNamedOperand(MINext, AMDGPU::OpName::vaddr);
     MemAddress MAddrNext;
-    if (Visited.find(&MINext) == Visited.end()) {
+    if (!Visited.contains(&MINext)) {
       processBaseWithConstOffset(BaseNext, MAddrNext);
       Visited[&MINext] = MAddrNext;
     } else

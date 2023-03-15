@@ -39,11 +39,11 @@ namespace gpu {
 /// Dynamic, `scf.forall` trip counts are currently not supported.
 /// Dynamic block dim sizes are currently not supported.
 DiagnosedSilenceableFailure mapForallToBlocksImpl(
-    RewriterBase &rewriter, scf::ForallOp forallOp,
+    RewriterBase &rewriter, TransformOpInterface transformOp,
+    scf::ForallOp forallOp, SmallVectorImpl<int64_t> &gridDims,
+    const ArrayRef<DeviceMappingAttrInterface> &mappingAttributes,
     function_ref<void(RewriterBase &, scf::ForallOp, SmallVectorImpl<Value> &)>
-        blockIdGenerator,
-    SmallVectorImpl<int64_t> &gridDims, TransformOpInterface transformOp,
-    const ArrayRef<DeviceMappingAttrInterface> &mappingAttributes);
+        blockIdGenerator);
 
 /// Search `scf.forall` ops nested under `target` and map each such op to GPU
 /// threads. Mapping is one-to-one and the induction variables of `scf.forall`
@@ -54,12 +54,12 @@ DiagnosedSilenceableFailure mapForallToBlocksImpl(
 /// Dynamic, `scf.forall` trip counts are currently not supported.
 /// Dynamic block dim sizes are currently not supported.
 DiagnosedSilenceableFailure mapNestedForallToThreadsImpl(
-    RewriterBase &rewriter, Operation *target,
-    const SmallVectorImpl<int64_t> &kernelBlockDims,
+    RewriterBase &rewriter, std::optional<TransformOpInterface> transformOp,
+    Operation *target, const SmallVectorImpl<int64_t> &kernelBlockDims,
+    bool syncAfterDistribute,
+    const ArrayRef<DeviceMappingAttrInterface> &threadMappingAttributes,
     function_ref<void(RewriterBase &, scf::ForallOp, SmallVectorImpl<Value> &)>
-        threadIdGenerator,
-    bool syncAfterDistribute, std::optional<TransformOpInterface> transformOp,
-    const ArrayRef<DeviceMappingAttrInterface> &threadMappingAttributes);
+        threadIdGenerator);
 
 /// Find the unique top level scf::ForallOp within a given target op.
 DiagnosedSilenceableFailure

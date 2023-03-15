@@ -79,6 +79,7 @@ cc_library(
     deps = [
         "//libc:__support_cpp_limits",
         "//libc:__support_cpp_type_traits",
+        "//libc:errno.__internal__",
         "//libc/test/UnitTest:LibcUnitTest",
     ],
 )

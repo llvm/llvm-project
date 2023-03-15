@@ -161,10 +161,13 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
   }
 
   CXXRecordDecl *contextClass;
-  if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(DC))
+  if (auto *MD = dyn_cast<CXXMethodDecl>(DC))
     contextClass = MD->getParent()->getCanonicalDecl();
-  else
+  else if (auto *RD = dyn_cast<CXXRecordDecl>(DC))
     contextClass = cast<CXXRecordDecl>(DC);
+  else
+    return AbstractInstanceResult ? AbstractInstanceResult
+                                  : IMA_Error_StaticContext;
 
   // [class.mfct.non-static]p3:
   // ...is used in the body of a non-static member function of class X,

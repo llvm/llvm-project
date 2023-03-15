@@ -38,13 +38,13 @@ define void @shuffle() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %lv4i64 = load <4 x i64>, ptr undef, align 32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sv4i64 = shufflevector <4 x i64> %lv4i64, <4 x i64> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lv2f16 = load <2 x half>, ptr undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %sv2f16 = shufflevector <2 x half> %lv2f16, <2 x half> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sv2f16 = shufflevector <2 x half> %lv2f16, <2 x half> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lv4f16 = load <4 x half>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sv4f16 = shufflevector <4 x half> %lv4f16, <4 x half> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lv8f16 = load <8 x half>, ptr undef, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %sv8f16 = shufflevector <8 x half> %lv8f16, <8 x half> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sv8f16 = shufflevector <8 x half> %lv8f16, <8 x half> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %lv16f16 = load <16 x half>, ptr undef, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %sv16f16 = shufflevector <16 x half> %lv16f16, <16 x half> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sv16f16 = shufflevector <16 x half> %lv16f16, <16 x half> undef, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lv2f32 = load <2 x float>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sv2f32 = shufflevector <2 x float> %lv2f32, <2 x float> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lv4f32 = load <4 x float>, ptr undef, align 16
@@ -184,13 +184,13 @@ define <8 x half> @ld1r_8h_float_shuff(ptr nocapture %x) {
 ; CHECK-LABEL: 'ld1r_8h_float_shuff'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp = load half, ptr %x, align 2
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tmp1 = insertelement <8 x half> undef, half %tmp, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %lane = shufflevector <8 x half> %tmp1, <8 x half> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lane = shufflevector <8 x half> %tmp1, <8 x half> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x half> %lane
 ;
 ; CODESIZE-LABEL: 'ld1r_8h_float_shuff'
 ; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp = load half, ptr %x, align 2
 ; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tmp1 = insertelement <8 x half> undef, half %tmp, i32 0
-; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %lane = shufflevector <8 x half> %tmp1, <8 x half> undef, <8 x i32> zeroinitializer
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lane = shufflevector <8 x half> %tmp1, <8 x half> undef, <8 x i32> zeroinitializer
 ; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x half> %lane
 ;
 entry:

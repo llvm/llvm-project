@@ -4556,7 +4556,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   // Count how many trie symbols we'll add to the symbol table
   int trie_symbol_table_augment_count = 0;
   for (auto &e : external_sym_trie_entries) {
-    if (symbols_added.find(e.entry.address) == symbols_added.end())
+    if (!symbols_added.contains(e.entry.address))
       trie_symbol_table_augment_count++;
   }
 
@@ -4603,8 +4603,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   if (function_starts_count > 0) {
     uint32_t num_synthetic_function_symbols = 0;
     for (i = 0; i < function_starts_count; ++i) {
-      if (symbols_added.find(function_starts.GetEntryRef(i).addr) ==
-          symbols_added.end())
+      if (!symbols_added.contains(function_starts.GetEntryRef(i).addr))
         ++num_synthetic_function_symbols;
     }
 
@@ -4616,7 +4615,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       for (i = 0; i < function_starts_count; ++i) {
         const FunctionStarts::Entry *func_start_entry =
             function_starts.GetEntryAtIndex(i);
-        if (symbols_added.find(func_start_entry->addr) == symbols_added.end()) {
+        if (!symbols_added.contains(func_start_entry->addr)) {
           addr_t symbol_file_addr = func_start_entry->addr;
           uint32_t symbol_flags = 0;
           if (func_start_entry->data)

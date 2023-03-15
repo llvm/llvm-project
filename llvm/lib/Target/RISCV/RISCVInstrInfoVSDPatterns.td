@@ -72,7 +72,7 @@ multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m>
             (store_instr VR:$rs2, GPR:$rs1, m.AVL, m.Log2SEW)>;
 }
 
-class VPatBinarySDNode_VV<SDNode vop,
+class VPatBinarySDNode_VV<SDPatternOperator vop,
                           string instruction_name,
                           ValueType result_type,
                           ValueType op_type,
@@ -88,7 +88,7 @@ class VPatBinarySDNode_VV<SDNode vop,
                      op_reg_class:$rs2,
                      avl, sew)>;
 
-class VPatBinarySDNode_XI<SDNode vop,
+class VPatBinarySDNode_XI<SDPatternOperator vop,
                           string instruction_name,
                           string suffix,
                           ValueType result_type,
@@ -107,7 +107,7 @@ class VPatBinarySDNode_XI<SDNode vop,
                      xop_kind:$rs2,
                      avl, sew)>;
 
-multiclass VPatBinarySDNode_VV_VX<SDNode vop, string instruction_name> {
+multiclass VPatBinarySDNode_VV_VX<SDPatternOperator vop, string instruction_name> {
   foreach vti = AllIntegerVectors in {
     def : VPatBinarySDNode_VV<vop, instruction_name,
                               vti.Vector, vti.Vector, vti.Log2SEW,
@@ -119,7 +119,7 @@ multiclass VPatBinarySDNode_VV_VX<SDNode vop, string instruction_name> {
   }
 }
 
-multiclass VPatBinarySDNode_VV_VX_VI<SDNode vop, string instruction_name,
+multiclass VPatBinarySDNode_VV_VX_VI<SDPatternOperator vop, string instruction_name,
                                      Operand ImmType = simm5>
     : VPatBinarySDNode_VV_VX<vop, instruction_name> {
   foreach vti = AllIntegerVectors in {
@@ -131,7 +131,7 @@ multiclass VPatBinarySDNode_VV_VX_VI<SDNode vop, string instruction_name,
   }
 }
 
-class VPatBinarySDNode_VF<SDNode vop,
+class VPatBinarySDNode_VF<SDPatternOperator vop,
                           string instruction_name,
                           ValueType result_type,
                           ValueType vop_type,
@@ -148,7 +148,7 @@ class VPatBinarySDNode_VF<SDNode vop,
                      (xop_type xop_kind:$rs2),
                      avl, sew)>;
 
-multiclass VPatBinaryFPSDNode_VV_VF<SDNode vop, string instruction_name> {
+multiclass VPatBinaryFPSDNode_VV_VF<SDPatternOperator vop, string instruction_name> {
   foreach vti = AllFloatVectors in {
     def : VPatBinarySDNode_VV<vop, instruction_name,
                               vti.Vector, vti.Vector, vti.Log2SEW,
@@ -160,7 +160,7 @@ multiclass VPatBinaryFPSDNode_VV_VF<SDNode vop, string instruction_name> {
   }
 }
 
-multiclass VPatBinaryFPSDNode_R_VF<SDNode vop, string instruction_name> {
+multiclass VPatBinaryFPSDNode_R_VF<SDPatternOperator vop, string instruction_name> {
   foreach fvti = AllFloatVectors in
     def : Pat<(fvti.Vector (vop (fvti.Vector (SplatFPOp fvti.Scalar:$rs2)),
                                 (fvti.Vector fvti.RegClass:$rs1))),
@@ -826,18 +826,18 @@ foreach mti = AllMasks in {
 let Predicates = [HasVInstructionsAnyF] in {
 
 // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
-defm : VPatBinaryFPSDNode_VV_VF<fadd, "PseudoVFADD">;
-defm : VPatBinaryFPSDNode_VV_VF<fsub, "PseudoVFSUB">;
-defm : VPatBinaryFPSDNode_R_VF<fsub, "PseudoVFRSUB">;
+defm : VPatBinaryFPSDNode_VV_VF<any_fadd, "PseudoVFADD">;
+defm : VPatBinaryFPSDNode_VV_VF<any_fsub, "PseudoVFSUB">;
+defm : VPatBinaryFPSDNode_R_VF<any_fsub, "PseudoVFRSUB">;
 
 // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
 defm : VPatWidenBinaryFPSDNode_VV_VF_WV_WF<fadd, "PseudoVFWADD">;
 defm : VPatWidenBinaryFPSDNode_VV_VF_WV_WF<fsub, "PseudoVFWSUB">;
 
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
-defm : VPatBinaryFPSDNode_VV_VF<fmul, "PseudoVFMUL">;
-defm : VPatBinaryFPSDNode_VV_VF<fdiv, "PseudoVFDIV">;
-defm : VPatBinaryFPSDNode_R_VF<fdiv, "PseudoVFRDIV">;
+defm : VPatBinaryFPSDNode_VV_VF<any_fmul, "PseudoVFMUL">;
+defm : VPatBinaryFPSDNode_VV_VF<any_fdiv, "PseudoVFDIV">;
+defm : VPatBinaryFPSDNode_R_VF<any_fdiv, "PseudoVFRDIV">;
 
 // 13.5. Vector Widening Floating-Point Multiply Instructions
 defm : VPatWidenBinaryFPSDNode_VV_VF<fmul, "PseudoVFWMUL">;
