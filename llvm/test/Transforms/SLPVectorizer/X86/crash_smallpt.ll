@@ -99,15 +99,7 @@ define void @test() {
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN78:%.*]], label [[IF_THEN38:%.*]]
 ; CHECK:       if.then38:
 ; CHECK-NEXT:    [[AGG_TMP74663_SROA_0_0_IDX:%.*]] = getelementptr inbounds [[STRUCT_RAY:%.*]], ptr undef, i64 0, i32 1, i32 0
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double 6.000000e-01, double poison>, double 6.000000e-02, i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> <double 5.000000e-01, double 8.000000e-01>, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> <double 2.400000e-02, double 0.000000e+00>, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> <double 9.000000e-01, double 9.100000e-01>, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> <double 9.200000e-01, double 9.300000e-01>, [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> <double 0x3FEE147AE147AE14, double 0x3FEE666666666666>, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> <double 0x3FEEB851EB851EB8, double 0x3FEF0A3D70A3D70A>, [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x double> <double 0x3FEF5C28F5C28F5C, double 0x3FEFAE147AE147AE>, [[TMP6]]
-; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[AGG_TMP74663_SROA_0_0_IDX]], align 8
+; CHECK-NEXT:    store <2 x double> <double 0x3FFA356C1D8A7F76, double 0x3FFDC4F38B38BEF4>, ptr [[AGG_TMP74663_SROA_0_0_IDX]], align 8
 ; CHECK-NEXT:    br label [[IF_THEN78]]
 ; CHECK:       if.then78:
 ; CHECK-NEXT:    ret void
