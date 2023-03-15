@@ -26,8 +26,8 @@ template <typename T> class unique_function;
 
 namespace cas {
 
+struct AsyncProxyValue;
 class ObjectStore;
-
 class ObjectProxy;
 
 /// Content-addressable storage for objects.
@@ -251,8 +251,7 @@ public:
   Expected<std::optional<ObjectProxy>> getProxyIfExists(ObjectRef Ref);
 
   /// Asynchronous version of \c getProxyIfExists.
-  std::future<Expected<std::optional<ObjectProxy>>>
-  getProxyAsync(ObjectRef Ref);
+  std::future<AsyncProxyValue> getProxyAsync(ObjectRef Ref);
 
   /// Read the data from \p Data into \p OS.
   uint64_t readData(ObjectHandle Node, raw_ostream &OS, uint64_t Offset = 0,
@@ -346,6 +345,20 @@ private:
   ObjectStore *CAS;
   ObjectRef Ref;
   ObjectHandle H;
+};
+
+/// This is used to workaround the issue of MSVC needing default-constructible
+/// types for \c std::promise/future.
+struct AsyncProxyValue {
+  Expected<std::optional<ObjectProxy>> take() { return std::move(Value); }
+
+  AsyncProxyValue() : Value(std::nullopt) {}
+  AsyncProxyValue(Error &&E) : Value(std::move(E)) {}
+  AsyncProxyValue(ObjectProxy V) : Value(std::move(V)) {}
+  AsyncProxyValue(std::nullopt_t) : Value(std::nullopt) {}
+
+private:
+  Expected<std::optional<ObjectProxy>> Value;
 };
 
 std::unique_ptr<ObjectStore> createInMemoryCAS();
