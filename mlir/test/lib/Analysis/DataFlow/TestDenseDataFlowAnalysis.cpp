@@ -254,9 +254,9 @@ struct TestLastModifiedPass
       const LastModification *lastMods =
           solver.lookupState<LastModification>(op);
       assert(lastMods && "expected a dense lattice");
-      for (auto &it : llvm::enumerate(op->getOperands())) {
-        os << " operand #" << it.index() << "\n";
-        Value value = getMostUnderlyingValue(it.value(), [&](Value value) {
+      for (auto [index, operand] : llvm::enumerate(op->getOperands())) {
+        os << " operand #" << index << "\n";
+        Value value = getMostUnderlyingValue(operand, [&](Value value) {
           return solver.lookupState<UnderlyingValueLattice>(value);
         });
         assert(value && "expected an underlying value");

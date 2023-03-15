@@ -408,7 +408,7 @@ void Operator::populateTypeInferenceInfo(
 
   // For all results whose types are buildable, initialize their type inference
   // nodes with an edge to themselves. Mark those nodes are fully-inferred.
-  for (auto &[idx, infer] : llvm::enumerate(inference)) {
+  for (auto [idx, infer] : llvm::enumerate(inference)) {
     if (getResult(idx).constraint.getBuilderCall()) {
       infer.sources.emplace_back(InferredResultType::mapResultIndex(idx),
                                  "$_self");

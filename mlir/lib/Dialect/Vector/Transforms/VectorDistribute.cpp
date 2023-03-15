@@ -205,9 +205,10 @@ static WarpExecuteOnLane0Op moveRegionToNewWarpOpAndAppendReturns(
       indices.push_back(yieldValues.size() - 1);
     } else {
       // If the value already exit the region don't create a new output.
-      for (auto &yieldOperand : llvm::enumerate(yieldValues.getArrayRef())) {
-        if (yieldOperand.value() == std::get<0>(newRet)) {
-          indices.push_back(yieldOperand.index());
+      for (auto [idx, yieldOperand] :
+           llvm::enumerate(yieldValues.getArrayRef())) {
+        if (yieldOperand == std::get<0>(newRet)) {
+          indices.push_back(idx);
           break;
         }
       }

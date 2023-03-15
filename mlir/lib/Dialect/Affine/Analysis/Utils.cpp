@@ -127,7 +127,7 @@ void ComputationSliceState::dump() const {
     llvm::errs() << "\t\t" << iv << "\n";
 
   llvm::errs() << "\tLBs:\n";
-  for (auto &en : llvm::enumerate(lbs)) {
+  for (auto en : llvm::enumerate(lbs)) {
     llvm::errs() << "\t\t" << en.value() << "\n";
     llvm::errs() << "\t\tOperands:\n";
     for (Value lbOp : lbOperands[en.index()])
@@ -135,7 +135,7 @@ void ComputationSliceState::dump() const {
   }
 
   llvm::errs() << "\tUBs:\n";
-  for (auto &en : llvm::enumerate(ubs)) {
+  for (auto en : llvm::enumerate(ubs)) {
     llvm::errs() << "\t\t" << en.value() << "\n";
     llvm::errs() << "\t\tOperands:\n";
     for (Value ubOp : ubOperands[en.index()])
