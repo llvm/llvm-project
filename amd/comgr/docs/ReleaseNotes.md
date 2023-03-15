@@ -86,6 +86,9 @@ use C++ features in testing (C++ threading APIs, etc.)
     - Show both user-facing clang options used (Compilation Args) and internal
     driver options (Driver Job Args)
     - Show files linked by linkBitcodeToBitcode()
+- Remove support for code object v2 compilation in tests and test CMAKE due to
+deprecation of code object v2 in LLVM. However, we still test loading and
+metadata querys for code object v2 objects.
 
 New Targets
 -----------

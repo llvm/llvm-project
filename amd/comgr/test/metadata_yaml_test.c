@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
   amd_comgr_metadata_kind_t Mkind = AMD_COMGR_METADATA_KIND_NULL;
 
   // Read input file
-  Size1 = setBuf(TEST_OBJ_DIR "/shared.so", &Buf);
+  Size1 = setBuf(TEST_OBJ_DIR "/shared-v2.so", &Buf);
 
   // Create data object
   {
@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
 
   // Get metadata from data object
   {
-    printf("Get metadata from shared.so\n");
+    printf("Get metadata from shared-v2.so\n");
 
     amd_comgr_metadata_node_t Meta;
     Status = amd_comgr_get_data_metadata(DataIn, &Meta);
