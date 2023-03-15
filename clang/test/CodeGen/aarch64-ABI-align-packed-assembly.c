@@ -86,7 +86,7 @@ struct packed_struct gs_packed_struct;
 __attribute__((noinline)) void named_arg_packed_struct(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, struct packed_struct s_packed_struct) {
-// CHECK: ldr q0, [sp, #16]
+// CHECK: ldur q0, [sp, #8]
     gd = d8;
     gs_packed_struct = s_packed_struct;
 }
@@ -105,10 +105,10 @@ void test_packed_struct() {
     init(1, &s_packed_struct);
 
 // CHECK: mov x8, #4611686018427387904        // =0x4000000000000000
-// CHECK: str q0, [sp, #16]
+// CHECK: stur q0, [sp, #8]
 // CHECK: str x8, [sp]
     named_arg_packed_struct(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, s_packed_struct);
-// CHECK: str q0, [sp, #16]
+// CHECK: stur q0, [sp, #8]
     variadic_packed_struct(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, s_packed_struct);
 }
 
@@ -117,7 +117,7 @@ struct packed_member gs_packed_member;
 __attribute__((noinline)) void named_arg_packed_member(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, struct packed_member s_packed_member) {
-// CHECK: ldr q0, [sp, #16]
+// CHECK: ldur q0, [sp, #8]
     gd = d8;
     gs_packed_member = s_packed_member;
 }
@@ -136,10 +136,10 @@ void test_packed_member() {
     init(1, &s_packed_member);
 
 // CHECK: mov x8, #4611686018427387904        // =0x4000000000000000
-// CHECK: str q0, [sp, #16]
+// CHECK: stur q0, [sp, #8]
 // CHECK: str x8, [sp]
     named_arg_packed_member(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, s_packed_member);
-// CHECK: str q0, [sp, #16]
+// CHECK: stur q0, [sp, #8]
     variadic_packed_member(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, s_packed_member);
 }
 
@@ -210,7 +210,7 @@ struct pragma_packed_struct_8 gs_pragma_packed_struct_8;
 __attribute__((noinline)) void named_arg_pragma_packed_struct_8(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, struct pragma_packed_struct_8 s_pragma_packed_struct_8) {
-// CHECK: ldr q0, [sp, #16]
+// CHECK: ldur q0, [sp, #8]
     gd = d8;
     gs_pragma_packed_struct_8 = s_pragma_packed_struct_8;
 }
@@ -229,10 +229,10 @@ void test_pragma_packed_struct_8() {
     init(1, &s_pragma_packed_struct_8);
 
 // CHECK: mov x8, #4611686018427387904        // =0x4000000000000000
-// CHECK: str q0, [sp, #16]
+// CHECK: stur q0, [sp, #8]
 // CHECK: str x8, [sp]
     named_arg_pragma_packed_struct_8(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, s_pragma_packed_struct_8);
-// CHECK: str q0, [sp, #16]
+// CHECK: stur q0, [sp, #8]
     variadic_pragma_packed_struct_8(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, s_pragma_packed_struct_8);
 }
 
@@ -241,7 +241,7 @@ struct pragma_packed_struct_4 gs_pragma_packed_struct_4;
 __attribute__((noinline)) void named_arg_pragma_packed_struct_4(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, struct pragma_packed_struct_4 s_pragma_packed_struct_4) {
-// CHECK: ldr q0, [sp, #16]
+// CHECK: ldur q0, [sp, #8]
     gd = d8;
     gs_pragma_packed_struct_4 = s_pragma_packed_struct_4;
 }
@@ -260,9 +260,9 @@ void test_pragma_packed_struct_4() {
     init(1, &s_pragma_packed_struct_4);
 
 // CHECK: mov x8, #4611686018427387904        // =0x4000000000000000
-// CHECK: str q0, [sp, #16]
+// CHECK: stur q0, [sp, #8]
 // CHECK: str x8, [sp]
     named_arg_pragma_packed_struct_4(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, s_pragma_packed_struct_4);
-// CHECK: str q0, [sp, #16]
+// CHECK: stur q0, [sp, #8]
     variadic_pragma_packed_struct_4(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, s_pragma_packed_struct_4);
 }
