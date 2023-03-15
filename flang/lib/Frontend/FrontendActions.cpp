@@ -699,7 +699,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   std::optional<llvm::PGOOptions> pgoOpt;
   llvm::StandardInstrumentations si(llvmModule->getContext(),
                                     opts.DebugPassManager);
-  si.registerCallbacks(pic, &fam);
+  si.registerCallbacks(pic, &mam);
   llvm::PassBuilder pb(tm.get(), pto, pgoOpt, &pic);
 
   // Attempt to load pass plugins and register their callbacks with PB.
