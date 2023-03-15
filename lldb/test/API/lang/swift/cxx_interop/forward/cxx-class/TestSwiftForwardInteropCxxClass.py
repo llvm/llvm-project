@@ -6,7 +6,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
-class TestClass(TestBase):
+class TestSwiftForwardInteropCxxClass(TestBase):
 
     @swiftTest
     def test_class(self):

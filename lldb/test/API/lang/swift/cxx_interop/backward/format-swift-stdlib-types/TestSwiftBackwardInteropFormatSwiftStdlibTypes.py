@@ -6,7 +6,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
-class TestFormatSwiftStdlibTypes(TestBase):
+class TestSwiftBackwardInteropFormatSwiftStdlibTypes(TestBase):
     def setup(self, bkpt_str): 
         self.build()
         self.runCmd('setting set target.experimental.swift-enable-cxx-interop true')
