@@ -43,7 +43,6 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 
 #include <map>
