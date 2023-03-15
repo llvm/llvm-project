@@ -37,8 +37,7 @@ Error CompileJobCacheResult::forEachOutput(
 Error CompileJobCacheResult::forEachLoadedOutput(
     llvm::function_ref<Error(Output, std::optional<ObjectProxy>)> Callback) {
   // Kick-off materialization for all outputs concurrently.
-  SmallVector<std::future<Expected<std::optional<ObjectProxy>>>, 4>
-      FutureOutputs;
+  SmallVector<std::future<AsyncProxyValue>, 4> FutureOutputs;
   size_t Count = getNumOutputs();
   for (size_t I = 0; I < Count; ++I) {
     ObjectRef Ref = getOutputObject(I);
@@ -49,7 +48,7 @@ Error CompileJobCacheResult::forEachLoadedOutput(
   std::optional<Error> OccurredError;
   SmallVector<std::optional<ObjectProxy>, 4> Outputs;
   for (auto &FutureOutput : FutureOutputs) {
-    auto Obj = FutureOutput.get();
+    auto Obj = FutureOutput.get().take();
     if (!Obj) {
       if (!OccurredError)
         OccurredError = Obj.takeError();
