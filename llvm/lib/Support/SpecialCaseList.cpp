@@ -175,7 +175,7 @@ bool SpecialCaseList::parse(const MemoryBuffer *MB,
     StringRef Category = SplitRegexp.second;
 
     // Create this section if it has not been seen before.
-    if (SectionsMap.find(Section) == SectionsMap.end()) {
+    if (!SectionsMap.contains(Section)) {
       std::unique_ptr<Matcher> M = std::make_unique<Matcher>();
       std::string REError;
       if (!M->insert(std::string(Section), LineNo, REError)) {
