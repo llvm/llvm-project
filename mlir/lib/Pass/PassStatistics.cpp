@@ -73,8 +73,8 @@ static void printResultsAsList(raw_ostream &os, OpPassManager &pm) {
         for (Pass::Statistic *it : pass->getStatistics())
           passEntry.push_back({it->getName(), it->getDesc(), it->getValue()});
       } else {
-        for (auto &it : llvm::enumerate(pass->getStatistics()))
-          passEntry[it.index()].value += it.value()->getValue();
+        for (auto [idx, statistic] : llvm::enumerate(pass->getStatistics()))
+          passEntry[idx].value += statistic->getValue();
       }
 #endif
       return;

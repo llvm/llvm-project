@@ -467,6 +467,45 @@ void DataAggregator::filterBinaryMMapInfo() {
   }
 }
 
+int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
+                                   PerfProcessErrorCallbackTy Callback) {
+  std::string Error;
+  outs() << "PERF2BOLT: waiting for perf " << Name
+         << " collection to finish...\n";
+  sys::ProcessInfo PI = sys::Wait(Process.PI, std::nullopt, &Error);
+
+  if (!Error.empty()) {
+    errs() << "PERF-ERROR: " << PerfPath << ": " << Error << "\n";
+    deleteTempFiles();
+    exit(1);
+  }
+
+  if (PI.ReturnCode != 0) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorMB =
+        MemoryBuffer::getFileOrSTDIN(Process.StderrPath.data());
+    StringRef ErrBuf = (*ErrorMB)->getBuffer();
+
+    deleteTempFiles();
+    Callback(PI.ReturnCode, ErrBuf);
+    return PI.ReturnCode;
+  }
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+      MemoryBuffer::getFileOrSTDIN(Process.StdoutPath.data());
+  if (std::error_code EC = MB.getError()) {
+    errs() << "Cannot open " << Process.StdoutPath.data() << ": "
+           << EC.message() << "\n";
+    deleteTempFiles();
+    exit(1);
+  }
+
+  FileBuf = std::move(*MB);
+  ParsingBuf = FileBuf->getBuffer();
+  Col = 0;
+  Line = 1;
+  return PI.ReturnCode;
+}
+
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   this->BC = &BC;
 
@@ -483,42 +522,16 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
               "not read one from input binary\n";
   }
 
-  auto prepareToParse = [&](StringRef Name, PerfProcessInfo &Process) {
-    std::string Error;
-    outs() << "PERF2BOLT: waiting for perf " << Name
-           << " collection to finish...\n";
-    sys::ProcessInfo PI = sys::Wait(Process.PI, std::nullopt, &Error);
+  auto ErrorCallback = [](int ReturnCode, StringRef ErrBuf) {
+    errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
+    exit(1);
+  };
 
-    if (!Error.empty()) {
-      errs() << "PERF-ERROR: " << PerfPath << ": " << Error << "\n";
-      deleteTempFiles();
-      exit(1);
-    }
-
-    if (PI.ReturnCode != 0) {
-      ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorMB =
-          MemoryBuffer::getFileOrSTDIN(Process.StderrPath.data());
-      StringRef ErrBuf = (*ErrorMB)->getBuffer();
-
-      errs() << "PERF-ERROR: return code " << PI.ReturnCode << "\n";
-      errs() << ErrBuf;
-      deleteTempFiles();
-      exit(1);
-    }
-
-    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
-        MemoryBuffer::getFileOrSTDIN(Process.StdoutPath.data());
-    if (std::error_code EC = MB.getError()) {
-      errs() << "Cannot open " << Process.StdoutPath.data() << ": "
-             << EC.message() << "\n";
-      deleteTempFiles();
-      exit(1);
-    }
-
-    FileBuf = std::move(*MB);
-    ParsingBuf = FileBuf->getBuffer();
-    Col = 0;
-    Line = 1;
+  auto MemEventsErrorCallback = [&](int ReturnCode, StringRef ErrBuf) {
+    Regex NoData("Samples for '.*' event do not have ADDR attribute set. "
+                 "Cannot print 'addr' field.");
+    if (!NoData.match(ErrBuf))
+      ErrorCallback(ReturnCode, ErrBuf);
   };
 
   if (opts::LinuxKernelMode) {
@@ -537,17 +550,17 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     // in Linux kernel mode.
     opts::IgnoreInterruptLBR = false;
   } else {
-    prepareToParse("mmap events", MMapEventsPPI);
+    prepareToParse("mmap events", MMapEventsPPI, ErrorCallback);
     if (parseMMapEvents())
       errs() << "PERF2BOLT: failed to parse mmap events\n";
   }
 
-  prepareToParse("task events", TaskEventsPPI);
+  prepareToParse("task events", TaskEventsPPI, ErrorCallback);
   if (parseTaskEvents())
     errs() << "PERF2BOLT: failed to parse task events\n";
 
   filterBinaryMMapInfo();
-  prepareToParse("events", MainEventsPPI);
+  prepareToParse("events", MainEventsPPI, ErrorCallback);
 
   if (opts::HeatmapMode) {
     if (std::error_code EC = printLBRHeatMap()) {
@@ -571,38 +584,9 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   }
 
   // Special handling for memory events
-  std::string Error;
-  sys::ProcessInfo PI = sys::Wait(MemEventsPPI.PI, std::nullopt, &Error);
-  if (PI.ReturnCode != 0) {
-    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
-        MemoryBuffer::getFileOrSTDIN(MemEventsPPI.StderrPath.data());
-    StringRef ErrBuf = (*MB)->getBuffer();
-
-    deleteTempFiles();
-
-    Regex NoData("Samples for '.*' event do not have ADDR attribute set. "
-                 "Cannot print 'addr' field.");
-    if (!NoData.match(ErrBuf)) {
-      errs() << "PERF-ERROR: return code " << PI.ReturnCode << "\n";
-      errs() << ErrBuf;
-      exit(1);
-    }
+  if (prepareToParse("mem events", MemEventsPPI, MemEventsErrorCallback))
     return Error::success();
-  }
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
-      MemoryBuffer::getFileOrSTDIN(MemEventsPPI.StdoutPath.data());
-  if (std::error_code EC = MB.getError()) {
-    errs() << "Cannot open " << MemEventsPPI.StdoutPath.data() << ": "
-           << EC.message() << "\n";
-    deleteTempFiles();
-    exit(1);
-  }
-
-  FileBuf = std::move(*MB);
-  ParsingBuf = FileBuf->getBuffer();
-  Col = 0;
-  Line = 1;
   if (const std::error_code EC = parseMemEvents())
     errs() << "PERF2BOLT: failed to parse memory events: " << EC.message()
            << '\n';

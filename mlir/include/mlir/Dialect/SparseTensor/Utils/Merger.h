@@ -437,11 +437,11 @@ public:
   /// for each `TensorLoopId` and passing it the corresponding tensor
   /// identifier, level, and level-type.
   void
-  foreachTensorLoopId(const BitVector &bits,
+  foreachTensorLoopId(LatPointId p,
                       function_ref<void(TensorLoopId, TensorId,
                                         std::optional<Level>, DimLevelType)>
                           callback) const {
-    for (const TensorLoopId b : bits.set_bits())
+    for (const TensorLoopId b : latPoints[p].bits.set_bits())
       callback(b, tensor(b), getLvl(b), getDimLevelType(b));
   }
 

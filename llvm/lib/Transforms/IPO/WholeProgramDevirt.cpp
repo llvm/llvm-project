@@ -764,7 +764,7 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
     return FAM.getResult<DominatorTreeAnalysis>(F);
   };
   if (UseCommandLine) {
-    if (DevirtModule::runForTesting(M, AARGetter, OREGetter, LookupDomTree))
+    if (!DevirtModule::runForTesting(M, AARGetter, OREGetter, LookupDomTree))
       return PreservedAnalyses::all();
     return PreservedAnalyses::none();
   }

@@ -315,7 +315,7 @@ public:
   }
 
   bool isInAllSubCommands() const {
-    return llvm::is_contained(Subs, &SubCommand::getAll());
+    return Subs.contains(&SubCommand::getAll());
   }
 
   //-------------------------------------------------------------------------===

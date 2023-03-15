@@ -16,6 +16,7 @@
 #include <numeric>
 #include <string.h>
 #include <stdlib.h>
+#include <type_traits>
 
 #include "test_macros.h"
 

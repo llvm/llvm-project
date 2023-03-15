@@ -36,6 +36,7 @@ define i32 @f3() shadowcallstack {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    sw ra, 0(s2)
 ; RV32-NEXT:    addi s2, s2, 4
+; RV32-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x7c #
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -45,12 +46,14 @@ define i32 @f3() shadowcallstack {
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    lw ra, -4(s2)
 ; RV32-NEXT:    addi s2, s2, -4
+; RV32-NEXT:    .cfi_restore s2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: f3:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    sd ra, 0(s2)
 ; RV64-NEXT:    addi s2, s2, 8
+; RV64-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 #
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
@@ -60,6 +63,7 @@ define i32 @f3() shadowcallstack {
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ld ra, -8(s2)
 ; RV64-NEXT:    addi s2, s2, -8
+; RV64-NEXT:    .cfi_restore s2
 ; RV64-NEXT:    ret
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
@@ -71,6 +75,7 @@ define i32 @f4() shadowcallstack {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    sw ra, 0(s2)
 ; RV32-NEXT:    addi s2, s2, 4
+; RV32-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x7c #
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -98,12 +103,14 @@ define i32 @f4() shadowcallstack {
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    lw ra, -4(s2)
 ; RV32-NEXT:    addi s2, s2, -4
+; RV32-NEXT:    .cfi_restore s2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: f4:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    sd ra, 0(s2)
 ; RV64-NEXT:    addi s2, s2, 8
+; RV64-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 #
 ; RV64-NEXT:    addi sp, sp, -32
 ; RV64-NEXT:    .cfi_def_cfa_offset 32
 ; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
@@ -131,6 +138,7 @@ define i32 @f4() shadowcallstack {
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    ld ra, -8(s2)
 ; RV64-NEXT:    addi s2, s2, -8
+; RV64-NEXT:    .cfi_restore s2
 ; RV64-NEXT:    ret
   %res1 = call i32 @bar()
   %res2 = call i32 @bar()

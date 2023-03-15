@@ -4,8 +4,8 @@
 // RUN: %clang_cc1 -triple x86_64-mingw32         -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template -DGNU %s
 // RUN: %clang_cc1 -triple i686-windows-itanium   -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template -DWI  %s
 // RUN: %clang_cc1 -triple x86_64-windows-itanium -fsyntax-only -fms-extensions -verify -std=c++1y -Wunsupported-dll-base-class-template -DWI  %s
-// RUN: %clang_cc1 -triple x86_64-scei-ps4        -fsyntax-only -fdeclspec      -verify -std=c++11 -Wunsupported-dll-base-class-template -DWI  %s
-// RUN: %clang_cc1 -triple x86_64-sie-ps5         -fsyntax-only -fdeclspec      -verify -std=c++1y -Wunsupported-dll-base-class-template -DWI  %s
+// RUN: %clang_cc1 -triple x86_64-scei-ps4        -fsyntax-only -fdeclspec      -verify -std=c++11 -Wunsupported-dll-base-class-template -DWI -DPS %s
+// RUN: %clang_cc1 -triple x86_64-sie-ps5         -fsyntax-only -fdeclspec      -verify -std=c++1y -Wunsupported-dll-base-class-template -DWI -DPS %s
 
 // Helper structs to make templates more expressive.
 struct ImplicitInst_Exported {};
@@ -390,13 +390,13 @@ template <typename T> struct __declspec(dllexport) ExplicitlyInstantiatedExporte
 template struct ExplicitlyInstantiatedExportedTemplate<IncompleteType3>; // expected-note{{in instantiation of member function 'ExplicitlyInstantiatedExportedTemplate<IncompleteType3>::f' requested here}}
 
 // In MS mode, instantiate members of class templates that are base classes of exported classes.
-#ifdef MS
+#if defined(MS) || defined(PS)
   // expected-note@+3{{forward declaration of 'IncompleteType4'}}
   // expected-note@+3{{in instantiation of member function 'BaseClassTemplateOfExportedClass<IncompleteType4>::f' requested here}}
 #endif
 struct IncompleteType4;
 template <typename T> struct BaseClassTemplateOfExportedClass {
-#ifdef MS
+#if defined(MS) || defined(PS)
   // expected-error@+2{{invalid application of 'sizeof' to an incomplete type 'IncompleteType4'}}
 #endif
   int f() { return sizeof(T); };
@@ -439,7 +439,7 @@ template <typename T> class __declspec(dllexport) ExportedClassTemplate {};
 template <typename T> class __declspec(dllimport) ImportedClassTemplate {};
 
 template <typename T> struct ExplicitlySpecializedTemplate { void func() {} };
-#ifdef MS
+#if defined(MS) || defined(PS)
 // expected-note@+2{{class template 'ExplicitlySpecializedTemplate<int>' was explicitly specialized here}}
 #endif
 template <> struct ExplicitlySpecializedTemplate<int> { void func() {} };
@@ -449,7 +449,7 @@ template <typename T> struct ExplicitlyImportSpecializedTemplate { void func() {
 template <> struct __declspec(dllimport) ExplicitlyImportSpecializedTemplate<int> { void func() {} };
 
 template <typename T> struct ExplicitlyInstantiatedTemplate { void func() {} };
-#ifdef MS
+#if defined(MS) || defined(PS)
 // expected-note@+2{{class template 'ExplicitlyInstantiatedTemplate<int>' was instantiated here}}
 #endif
 template struct ExplicitlyInstantiatedTemplate<int>;
@@ -488,7 +488,7 @@ class __declspec(dllexport) DerivedFromTemplateB : public ClassTemplate<bool> {}
 // The second derived class doesn't change anything, the attribute that was propagated first wins.
 class __declspec(dllimport) DerivedFromTemplateB2 : public ClassTemplate<bool> {};
 
-#ifdef MS
+#if defined(MS) || defined(PS)
 // expected-warning@+3{{propagating dll attribute to explicitly specialized base class template without dll attribute is not supported}}
 // expected-note@+2{{attribute is here}}
 #endif
@@ -500,7 +500,7 @@ struct __declspec(dllexport) DerivedFromExplicitlyExportSpecializedTemplate : pu
 // Base class already specialized with import attribute.
 struct __declspec(dllexport) DerivedFromExplicitlyImportSpecializedTemplate : public ExplicitlyImportSpecializedTemplate<int> {};
 
-#ifdef MS
+#if defined(MS) || defined(PS)
 // expected-warning@+3{{propagating dll attribute to already instantiated base class template without dll attribute is not supported}}
 // expected-note@+2{{attribute is here}}
 #endif

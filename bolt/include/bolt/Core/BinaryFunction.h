@@ -1754,7 +1754,7 @@ public:
 
   /// Returns if this function is a child of \p Other function.
   bool isChildOf(const BinaryFunction &Other) const {
-    return llvm::is_contained(ParentFragments, &Other);
+    return ParentFragments.contains(&Other);
   }
 
   /// Set the profile data for the number of times the function was called.

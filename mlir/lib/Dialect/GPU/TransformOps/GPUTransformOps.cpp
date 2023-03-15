@@ -124,7 +124,7 @@ checkMappingAttributeTypes(std::optional<TransformOpInterface> transformOp,
 
   DenseSet<Attribute> seen;
   for (Attribute map : forallOp.getMapping()->getValue()) {
-    if (llvm::is_contained(seen, map)) {
+    if (seen.contains(map)) {
       return failureHelper(transformOp, forallOp,
                            "duplicated attribute, cannot map different loops "
                            "to the same processor");

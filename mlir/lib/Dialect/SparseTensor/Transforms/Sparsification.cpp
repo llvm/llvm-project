@@ -1273,18 +1273,18 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
 
   SmallVector<TensorId> tids;
   SmallVector<Level> lvls;
-  env.merger().foreachTensorLoopId(
-      env.lat(l0).bits, [&](TensorLoopId b, TensorId tid,
-                            std::optional<Level> lvl, DimLevelType dlt) {
-        assert(env.merger().loop(b) == idx);
-        if (isDenseDLT(dlt) || isUndefDLT(dlt)) {
-          needsUniv = true;
-        } else {
-          // sparse/singleton levels.
-          tids.push_back(tid);
-          lvls.push_back(*lvl);
-        }
-      });
+  env.merger().foreachTensorLoopId(l0, [&](TensorLoopId b, TensorId tid,
+                                           std::optional<Level> lvl,
+                                           DimLevelType dlt) {
+    assert(env.merger().loop(b) == idx);
+    if (isDenseDLT(dlt) || isUndefDLT(dlt)) {
+      needsUniv = true;
+    } else {
+      // sparse/singleton levels.
+      tids.push_back(tid);
+      lvls.push_back(*lvl);
+    }
+  });
 
   env.emitter().enterNewLoopSeq(builder, env.op().getLoc(), tids, lvls);
 
@@ -1342,7 +1342,6 @@ static bool translateBitsToTidLvlPairs(
     CodegenEnv &env, LatPointId li, LoopId ldx, SmallVectorImpl<TensorId> &tids,
     SmallVectorImpl<Level> &lvls, SmallVectorImpl<TensorId> &affineTids,
     SmallVectorImpl<Level> &affineLvls, SmallVectorImpl<AffineExpr> &exps) {
-  const BitVector &all = env.lat(li).bits;
   const BitVector &simple = env.lat(li).simple;
   const TensorId outTid = env.merger().getOutTensorID();
   const std::optional<Level> outLvl = env.merger().getLvl(outTid, ldx);
@@ -1350,8 +1349,8 @@ static bool translateBitsToTidLvlPairs(
   unsigned numloopCond = 0;
   bool hasNonUnique = false;
   env.merger().foreachTensorLoopId(
-      all, [&, ldx](TensorLoopId b, TensorId tid, std::optional<Level> lvl,
-                    DimLevelType dlt) {
+      li, [&, ldx](TensorLoopId b, TensorId tid, std::optional<Level> lvl,
+                   DimLevelType dlt) {
         if (simple.test(b)) {
           if (isUndefDLT(dlt)) {
             // An undefined dlt in the lattices, we probably mean to

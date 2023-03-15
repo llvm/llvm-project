@@ -1397,7 +1397,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
 
     llvm::ErrorOr<PrecompiledPreamble> NewPreamble = PrecompiledPreamble::Build(
         PreambleInvocationIn, MainFileBuffer.get(), Bounds, *Diagnostics, VFS,
-        PCHContainerOps, /*StoreInMemory=*/false, PreambleStoragePath,
+        PCHContainerOps, StorePreamblesInMemory, PreambleStoragePath,
         Callbacks);
 
     PreambleInvocationIn.getFrontendOpts().SkipFunctionBodies =
@@ -1742,13 +1742,13 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
     const char **ArgBegin, const char **ArgEnd,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags, StringRef ResourceFilesPath,
-    StringRef PreambleStoragePath, bool OnlyLocalDecls,
-    CaptureDiagsKind CaptureDiagnostics, ArrayRef<RemappedFile> RemappedFiles,
-    bool RemappedFilesKeepOriginalName, unsigned PrecompilePreambleAfterNParses,
-    TranslationUnitKind TUKind, bool CacheCodeCompletionResults,
-    bool IncludeBriefCommentsInCodeCompletion, bool AllowPCHWithCompilerErrors,
-    SkipFunctionBodiesScope SkipFunctionBodies, bool SingleFileParse,
-    bool UserFilesAreVolatile, bool ForSerialization,
+    bool StorePreamblesInMemory, StringRef PreambleStoragePath,
+    bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
+    ArrayRef<RemappedFile> RemappedFiles, bool RemappedFilesKeepOriginalName,
+    unsigned PrecompilePreambleAfterNParses, TranslationUnitKind TUKind,
+    bool CacheCodeCompletionResults, bool IncludeBriefCommentsInCodeCompletion,
+    bool AllowPCHWithCompilerErrors, SkipFunctionBodiesScope SkipFunctionBodies,
+    bool SingleFileParse, bool UserFilesAreVolatile, bool ForSerialization,
     bool RetainExcludedConditionalBlocks, std::optional<StringRef> ModuleFormat,
     std::unique_ptr<ASTUnit> *ErrAST,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
@@ -1803,6 +1803,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
     VFS = llvm::vfs::getRealFileSystem();
   VFS = createVFSFromCompilerInvocation(*CI, *Diags, VFS);
   AST->FileMgr = new FileManager(AST->FileSystemOpts, VFS);
+  AST->StorePreamblesInMemory = StorePreamblesInMemory;
   AST->PreambleStoragePath = PreambleStoragePath;
   AST->ModuleCache = new InMemoryModuleCache;
   AST->OnlyLocalDecls = OnlyLocalDecls;
