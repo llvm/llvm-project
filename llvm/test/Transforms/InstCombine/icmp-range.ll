@@ -879,8 +879,7 @@ define i1 @zext_sext_add_icmp_slt_minus_1_no_oneuse(i1 %a, i1 %b) {
 ; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
 ; CHECK-NEXT:    call void @use(i8 [[ADD]])
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[ADD]], -1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %zext.a = zext i1 %a to i8
   %sext.b = sext i1 %b to i8
@@ -896,8 +895,7 @@ define i1 @zext_sext_add_icmp_sgt_1_no_oneuse(i1 %a, i1 %b) {
 ; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
 ; CHECK-NEXT:    call void @use(i8 [[ADD]])
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[ADD]], 1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %zext.a = zext i1 %a to i8
   %sext.b = sext i1 %b to i8
@@ -913,8 +911,7 @@ define i1 @zext_sext_add_icmp_slt_2_no_oneuse(i1 %a, i1 %b) {
 ; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
 ; CHECK-NEXT:    call void @use(i8 [[ADD]])
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[ADD]], 2
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %zext.a = zext i1 %a to i8
   %sext.b = sext i1 %b to i8
@@ -930,8 +927,7 @@ define i1 @zext_sext_add_icmp_sgt_mins_2_no_oneuse(i1 %a, i1 %b) {
 ; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
 ; CHECK-NEXT:    call void @use(i8 [[ADD]])
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[ADD]], -2
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %zext.a = zext i1 %a to i8
   %sext.b = sext i1 %b to i8
