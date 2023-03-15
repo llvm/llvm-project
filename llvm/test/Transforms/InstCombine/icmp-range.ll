@@ -873,6 +873,74 @@ define <2 x i1> @vector_zext_sext_add_icmp_slt_1_poison(<2 x i1> %a, <2 x i1> %b
   ret <2 x i1> %r
 }
 
+define i1 @zext_sext_add_icmp_slt_minus_1_no_oneuse(i1 %a, i1 %b) {
+; CHECK-LABEL: @zext_sext_add_icmp_slt_minus_1_no_oneuse(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    call void @use(i8 [[ADD]])
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[ADD]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %zext.a = zext i1 %a to i8
+  %sext.b = sext i1 %b to i8
+  %add = add i8 %zext.a, %sext.b
+  call void @use(i8 %add)
+  %r = icmp slt i8 %add, -1
+  ret i1 %r
+}
+
+define i1 @zext_sext_add_icmp_sgt_1_no_oneuse(i1 %a, i1 %b) {
+; CHECK-LABEL: @zext_sext_add_icmp_sgt_1_no_oneuse(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    call void @use(i8 [[ADD]])
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[ADD]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %zext.a = zext i1 %a to i8
+  %sext.b = sext i1 %b to i8
+  %add = add i8 %zext.a, %sext.b
+  call void @use(i8 %add)
+  %r = icmp sgt i8 %add, 1
+  ret i1 %r
+}
+
+define i1 @zext_sext_add_icmp_slt_2_no_oneuse(i1 %a, i1 %b) {
+; CHECK-LABEL: @zext_sext_add_icmp_slt_2_no_oneuse(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    call void @use(i8 [[ADD]])
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[ADD]], 2
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %zext.a = zext i1 %a to i8
+  %sext.b = sext i1 %b to i8
+  %add = add i8 %zext.a, %sext.b
+  call void @use(i8 %add)
+  %r = icmp slt i8 %add, 2
+  ret i1 %r
+}
+
+define i1 @zext_sext_add_icmp_sgt_mins_2_no_oneuse(i1 %a, i1 %b) {
+; CHECK-LABEL: @zext_sext_add_icmp_sgt_mins_2_no_oneuse(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i8
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[ZEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    call void @use(i8 [[ADD]])
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[ADD]], -2
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %zext.a = zext i1 %a to i8
+  %sext.b = sext i1 %b to i8
+  %add = add i8 %zext.a, %sext.b
+  call void @use(i8 %add)
+  %r = icmp sgt i8 %add, -2
+  ret i1 %r
+}
+
 ; Negative test, more than one use for icmp LHS
 
 define i1 @zext_sext_add_icmp_slt_1_no_oneuse(i1 %a, i1 %b) {
