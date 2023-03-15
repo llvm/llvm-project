@@ -8,41 +8,23 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
+#include "llvm/Analysis/InlineOrder.h"
+
 namespace llvm {
 
 namespace {
 
 void anchor() {}
 
-static std::string libPath(const std::string Name = "InlineAdvisorPlugin") {
+std::string libPath(const std::string Name = "InlineOrderPlugin") {
   const auto &Argvs = testing::internal::GetArgvs();
   const char *Argv0 =
-      Argvs.size() > 0 ? Argvs[0].c_str() : "PluginInlineAdvisorAnalysisTest";
+      Argvs.size() > 0 ? Argvs[0].c_str() : "PluginInlineOrderAnalysisTest";
   void *Ptr = (void *)(intptr_t)anchor;
   std::string Path = sys::fs::getMainExecutable(Argv0, Ptr);
   llvm::SmallString<256> Buf{sys::path::parent_path(Path)};
   sys::path::append(Buf, (Name + LLVM_PLUGIN_EXT).c_str());
   return std::string(Buf.str());
-}
-
-// Example of a custom InlineAdvisor that only inlines calls to functions called
-// "foo".
-class FooOnlyInlineAdvisor : public InlineAdvisor {
-public:
-  FooOnlyInlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
-                       InlineParams Params, InlineContext IC)
-      : InlineAdvisor(M, FAM, IC) {}
-
-  std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) override {
-    if (CB.getCalledFunction()->getName() == "foo")
-      return std::make_unique<InlineAdvice>(this, CB, getCallerORE(CB), true);
-    return std::make_unique<InlineAdvice>(this, CB, getCallerORE(CB), false);
-  }
-};
-
-static InlineAdvisor *fooOnlyFactory(Module &M, FunctionAnalysisManager &FAM,
-                                     InlineParams Params, InlineContext IC) {
-  return new FooOnlyInlineAdvisor(M, FAM, Params, IC);
 }
 
 struct CompilerInstance {
@@ -58,21 +40,13 @@ struct CompilerInstance {
 
   SMDiagnostic Error;
 
-  // connect the plugin to our compiler instance
+  // Connect the plugin to our compiler instance.
   void setupPlugin() {
     auto PluginPath = libPath();
     ASSERT_NE("", PluginPath);
     Expected<PassPlugin> Plugin = PassPlugin::Load(PluginPath);
     ASSERT_TRUE(!!Plugin) << "Plugin path: " << PluginPath;
     Plugin->registerPassBuilderCallbacks(PB);
-    ASSERT_THAT_ERROR(PB.parsePassPipeline(MPM, "dynamic-inline-advisor"),
-                      Succeeded());
-  }
-
-  // connect the FooOnlyInlineAdvisor to our compiler instance
-  void setupFooOnly() {
-    MAM.registerPass(
-        [&] { return PluginInlineAdvisorAnalysis(fooOnlyFactory); });
   }
 
   CompilerInstance() {
@@ -89,42 +63,26 @@ struct CompilerInstance {
   ~CompilerInstance() {
     // Reset the static variable that tracks if the plugin has been registered.
     // This is needed to allow the test to run multiple times.
-    PluginInlineAdvisorAnalysis::HasBeenRegistered = false;
+    PluginInlineOrderAnalysis::unregister();
   }
 
-  std::string output;
-  std::unique_ptr<Module> outputM;
+  std::string Output;
+  std::unique_ptr<Module> OutputM;
 
-  // run with the default inliner
-  auto run_default(StringRef IR) {
-    PluginInlineAdvisorAnalysis::HasBeenRegistered = false;
-    outputM = parseAssemblyString(IR, Error, Ctx);
-    MPM.run(*outputM, MAM);
-    ASSERT_TRUE(outputM);
-    output.clear();
-    raw_string_ostream o_stream{output};
-    outputM->print(o_stream, nullptr);
-    ASSERT_TRUE(true);
-  }
-
-  // run with the dnamic inliner
-  auto run_dynamic(StringRef IR) {
-    // note typically the constructor for the DynamicInlineAdvisorAnalysis
-    // will automatically set this to true, we controll it here only to
-    // altenate between the default and dynamic inliner in our test
-    PluginInlineAdvisorAnalysis::HasBeenRegistered = true;
-    outputM = parseAssemblyString(IR, Error, Ctx);
-    MPM.run(*outputM, MAM);
-    ASSERT_TRUE(outputM);
-    output.clear();
-    raw_string_ostream o_stream{output};
-    outputM->print(o_stream, nullptr);
+  // Run with the dynamic inline order.
+  auto run(StringRef IR) {
+    OutputM = parseAssemblyString(IR, Error, Ctx);
+    MPM.run(*OutputM, MAM);
+    ASSERT_TRUE(OutputM);
+    Output.clear();
+    raw_string_ostream OStream{Output};
+    OutputM->print(OStream, nullptr);
     ASSERT_TRUE(true);
   }
 };
 
 StringRef TestIRS[] = {
-    // Simple 3 function inline case
+    // Simple 3 function inline case.
     R"(
 define void @f1() {
   call void @foo()
@@ -138,7 +96,7 @@ define void @f3() {
   ret void
 }
   )",
-    // Test that has 5 functions of which 2 are recursive
+    // Test that has 5 functions of which 2 are recursive.
     R"(
 define void @f1() {
   call void @foo()
@@ -161,17 +119,17 @@ define void @f5() {
   ret void
 }
   )",
-    // test with 2 mutually recursive functions and 1 function with a loop
+    // Test with 2 mutually recursive functions and 1 function with a loop.
     R"(
 define void @f1() {
   call void @f2()
   ret void
 }
 define void @f2() {
-  call void @f3()
+  call void @foo()
   ret void
 }
-define void @f3() {
+define void @foo() {
   call void @f1()
   ret void
 }
@@ -185,8 +143,8 @@ define void @f5() {
   ret void
 }
   )",
-    // test that has a function that computes fibonacci in a loop, one in a
-    // recurisve manner, and one that calls both and compares them
+    // Test that has a function that computes fibonacci in a loop, one in a
+    // recursive manner, and one that calls both and compares them.
     R"(
 define i32 @fib_loop(i32 %n){
     %curr = alloca i32
@@ -215,7 +173,7 @@ define i32 @fib_loop(i32 %n){
     ret i32 %curr_val3
 }
 
-define i32 @fib_rec(i32 %n){
+define i32 @foo(i32 %n){
     %cmp = icmp eq i32 %n, 0
     %cmp2 = icmp eq i32 %n, 1
     %or = or i1 %cmp, %cmp2
@@ -224,9 +182,9 @@ define i32 @fib_rec(i32 %n){
     ret i32 1
   if_false:
     %sub = sub i32 %n, 1
-    %call = call i32 @fib_rec(i32 %sub)
+    %call = call i32 @foo(i32 %sub)
     %sub2 = sub i32 %n, 2
-    %call2 = call i32 @fib_rec(i32 %sub2)
+    %call2 = call i32 @foo(i32 %sub2)
     %add = add i32 %call, %call2
     ret i32 %add
 }
@@ -245,7 +203,7 @@ define i32 @fib_check(){
     %i_val2 = load i32, i32* %i
     %call = call i32 @fib_loop(i32 %i_val2)
     %i_val3 = load i32, i32* %i
-    %call2 = call i32 @fib_rec(i32 %i_val3)
+    %call2 = call i32 @foo(i32 %i_val3)
     %cmp2 = icmp ne i32 %call, %call2
     br i1 %cmp2, label %if_true, label %if_false
   if_true:
@@ -266,9 +224,10 @@ define i32 @fib_check(){
 
 } // namespace
 
-// check that loading a plugin works
-// the plugin being loaded acts identically to the default inliner
-TEST(PluginInlineAdvisorTest, PluginLoad) {
+// Check that the behaviour of a custom inline order is correct.
+// The custom order drops any functions named "foo" so all tests
+// should contain at least one function named foo.
+TEST(PluginInlineOrderTest, NoInlineFoo) {
 #if !defined(LLVM_ENABLE_PLUGINS)
   // Skip the test if plugins are disabled.
   GTEST_SKIP();
@@ -277,31 +236,15 @@ TEST(PluginInlineAdvisorTest, PluginLoad) {
   CI.setupPlugin();
 
   for (StringRef IR : TestIRS) {
-    CI.run_default(IR);
-    std::string default_output = CI.output;
-    CI.run_dynamic(IR);
-    std::string dynamic_output = CI.output;
-    ASSERT_EQ(default_output, dynamic_output);
-  }
-}
-
-// check that the behaviour of a custom inliner is correct
-// the custom inliner inlines all functions that are not named "foo"
-// this testdoes not require plugins to be enabled
-TEST(PluginInlineAdvisorTest, CustomAdvisor) {
-  CompilerInstance CI{};
-  CI.setupFooOnly();
-
-  for (StringRef IR : TestIRS) {
-    CI.run_dynamic(IR);
-    CallGraph CGraph = CallGraph(*CI.outputM);
-    for (auto &node : CGraph) {
-      for (auto &edge : *node.second) {
-        if (!edge.first)
-          continue;
-        ASSERT_NE(edge.second->getFunction()->getName(), "foo");
+    bool FoundFoo = false;
+    CI.run(IR);
+    CallGraph CGraph = CallGraph(*CI.OutputM);
+    for (auto &Node : CGraph) {
+      for (auto &Edge : *Node.second) {
+        FoundFoo |= Edge.second->getFunction()->getName() == "foo";
       }
     }
+    ASSERT_TRUE(FoundFoo);
   }
 }
 
