@@ -91,8 +91,8 @@ Error MachineFunctionPassManager::run(Module &M,
 
         // TODO: EmitSizeRemarks
         PreservedAnalyses PassPA = P->run(MF, MFAM);
-        PI.runAfterPass(*P, MF, PassPA);
         MFAM.invalidate(MF, PassPA);
+        PI.runAfterPass(*P, MF, PassPA);
       }
     }
   } while (true);

@@ -153,7 +153,7 @@ public:
 #endif
 
   void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                         FunctionAnalysisManager &FAM);
+                         ModuleAnalysisManager &MAM);
 };
 
 // Base class for classes that report changes to the IR.
@@ -574,7 +574,7 @@ public:
   // Register all the standard instrumentation callbacks. If \p FAM is nullptr
   // then PreservedCFGChecker is not enabled.
   void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                         FunctionAnalysisManager *FAM = nullptr);
+                         ModuleAnalysisManager *MAM = nullptr);
 
   TimePassesHandler &getTimePasses() { return TimePasses; }
 };

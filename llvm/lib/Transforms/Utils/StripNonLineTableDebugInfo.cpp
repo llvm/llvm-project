@@ -17,5 +17,7 @@ using namespace llvm;
 PreservedAnalyses
 StripNonLineTableDebugInfoPass::run(Module &M, ModuleAnalysisManager &AM) {
   llvm::stripNonLineTableDebugInfo(M);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

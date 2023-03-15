@@ -1,4 +1,4 @@
-; RUN: opt -passes='require<demanded-bits>,constraint-elimination,require<demanded-bits>' -disable-verify -verify-cfg-preserved=false -debug-pass-manager -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes='require<demanded-bits>,constraint-elimination,require<demanded-bits>' -disable-verify -verify-analysis-invalidation=false -debug-pass-manager -disable-output %s 2>&1 | FileCheck %s
 
 ; Check that constraint-elimination properly invalidates anlyses.
 

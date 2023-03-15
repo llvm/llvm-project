@@ -395,20 +395,20 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   PrintPassOpts.SkipAnalyses = DebugPM == DebugLogging::Quiet;
   StandardInstrumentations SI(M.getContext(), DebugPM != DebugLogging::None,
                               VerifyEachPass, PrintPassOpts);
-  SI.registerCallbacks(PIC, &FAM);
+  SI.registerCallbacks(PIC, &MAM);
   DebugifyEachInstrumentation Debugify;
   DebugifyStatsMap DIStatsMap;
   DebugInfoPerPass DebugInfoBeforePass;
   if (DebugifyEach) {
     Debugify.setDIStatsMap(DIStatsMap);
     Debugify.setDebugifyMode(DebugifyMode::SyntheticDebugInfo);
-    Debugify.registerCallbacks(PIC);
+    Debugify.registerCallbacks(PIC, FAM);
   } else if (VerifyEachDebugInfoPreserve) {
     Debugify.setDebugInfoBeforePass(DebugInfoBeforePass);
     Debugify.setDebugifyMode(DebugifyMode::OriginalDebugInfo);
     Debugify.setOrigDIVerifyBugsReportFilePath(
       VerifyDIPreserveExport);
-    Debugify.registerCallbacks(PIC);
+    Debugify.registerCallbacks(PIC, FAM);
   }
 
   PipelineTuningOptions PTO;

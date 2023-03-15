@@ -3274,9 +3274,9 @@ void OperationPrinter::printValueUsers(Value value) {
   // One value might be used as the operand of an operation more than once.
   // Only print the operations results once in that case.
   SmallPtrSet<Operation *, 1> userSet;
-  for (auto &indexedUser : enumerate(value.getUsers())) {
-    if (userSet.insert(indexedUser.value()).second)
-      printUserIDs(indexedUser.value(), indexedUser.index());
+  for (auto [index, user] : enumerate(value.getUsers())) {
+    if (userSet.insert(user).second)
+      printUserIDs(user, index);
   }
 }
 

@@ -14,7 +14,6 @@ if (NOT WIN32)
       )
   set_target_properties(InlineAdvisorPlugin PROPERTIES FOLDER "Tests")
 
-  export_executable_symbols_for_plugins(AnalysisTests)
   # The plugin depends on some of the output files of intrinsics_gen, so make sure
   # it is built before the plugin.
   add_dependencies(InlineAdvisorPlugin intrinsics_gen)

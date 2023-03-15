@@ -257,9 +257,9 @@ public:
       return rewriter.notifyMatchFailure(op, "Unsupported vector element type");
 
     SmallVector<int64_t> srcGtOneDims;
-    for (auto &en : llvm::enumerate(srcType.getShape()))
-      if (en.value() > 1)
-        srcGtOneDims.push_back(en.index());
+    for (auto [index, size] : llvm::enumerate(srcType.getShape()))
+      if (size > 1)
+        srcGtOneDims.push_back(index);
 
     if (srcGtOneDims.size() != 2)
       return rewriter.notifyMatchFailure(op, "Unsupported vector type");
