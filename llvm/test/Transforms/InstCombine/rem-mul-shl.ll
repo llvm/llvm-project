@@ -31,10 +31,7 @@ define i8 @urem_1_shl(i8 %X, i8 %Y) {
 
 define <vscale x 16 x i8> @urem_XY_XZ_with_CY_rem_CZ_eq_0_scalable(<vscale x 16 x i8> %X) {
 ; CHECK-LABEL: @urem_XY_XZ_with_CY_rem_CZ_eq_0_scalable(
-; CHECK-NEXT:    [[BO0:%.*]] = mul nuw <vscale x 16 x i8> [[X:%.*]], shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 15, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
-; CHECK-NEXT:    [[BO1:%.*]] = mul <vscale x 16 x i8> [[X]], shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 5, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
-; CHECK-NEXT:    [[R:%.*]] = urem <vscale x 16 x i8> [[BO0]], [[BO1]]
-; CHECK-NEXT:    ret <vscale x 16 x i8> [[R]]
+; CHECK-NEXT:    ret <vscale x 16 x i8> zeroinitializer
 ;
   %BO0 = mul nuw <vscale x 16 x i8> %X, shufflevector(<vscale x 16 x i8> insertelement(<vscale x 16 x i8> poison, i8 15, i64 0) , <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
   %BO1 = mul <vscale x 16 x i8> %X, shufflevector(<vscale x 16 x i8> insertelement(<vscale x 16 x i8> poison, i8 5, i64 0) , <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
@@ -44,10 +41,7 @@ define <vscale x 16 x i8> @urem_XY_XZ_with_CY_rem_CZ_eq_0_scalable(<vscale x 16 
 
 define i8 @urem_XY_XZ_with_CY_rem_CZ_eq_0(i8 %X) {
 ; CHECK-LABEL: @urem_XY_XZ_with_CY_rem_CZ_eq_0(
-; CHECK-NEXT:    [[BO0:%.*]] = mul nuw i8 [[X:%.*]], 15
-; CHECK-NEXT:    [[BO1:%.*]] = mul i8 [[X]], 5
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[BO0]], [[BO1]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %BO0 = mul nuw i8 %X, 15
   %BO1 = mul i8 %X, 5
@@ -70,9 +64,7 @@ define i8 @urem_XY_XZ_with_CY_rem_CZ_eq_0_fail_missing_flag(i8 %X) {
 
 define i8 @urem_XY_XZ_with_CY_lt_CZ(i8 %X) {
 ; CHECK-LABEL: @urem_XY_XZ_with_CY_lt_CZ(
-; CHECK-NEXT:    [[BO0:%.*]] = mul i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[BO1:%.*]] = mul nuw i8 [[X]], 12
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[BO0]], [[BO1]]
+; CHECK-NEXT:    [[R:%.*]] = mul nuw i8 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %BO0 = mul i8 %X, 3
@@ -122,9 +114,7 @@ define i8 @urem_XY_XZ_with_CY_lt_CZ_fail_missing_flag(i8 %X) {
 
 define i8 @urem_XY_XZ_with_CY_gt_CZ(i8 %X) {
 ; CHECK-LABEL: @urem_XY_XZ_with_CY_gt_CZ(
-; CHECK-NEXT:    [[BO0:%.*]] = mul nuw i8 [[X:%.*]], 21
-; CHECK-NEXT:    [[BO1:%.*]] = mul i8 [[X]], 6
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[BO0]], [[BO1]]
+; CHECK-NEXT:    [[R:%.*]] = mul nuw nsw i8 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %BO0 = mul nuw i8 %X, 21
@@ -242,10 +232,7 @@ define i8 @urem_XY_XZ_with_Y_Z_is_mul_X_RemYZ_fail_missing_flags2(i8 %X, i8 %Y, 
 ;; Signed Verions
 define <vscale x 16 x i8> @srem_XY_XZ_with_CY_rem_CZ_eq_0_scalable(<vscale x 16 x i8> %X) {
 ; CHECK-LABEL: @srem_XY_XZ_with_CY_rem_CZ_eq_0_scalable(
-; CHECK-NEXT:    [[BO0:%.*]] = mul nsw <vscale x 16 x i8> [[X:%.*]], shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 15, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
-; CHECK-NEXT:    [[BO1:%.*]] = mul <vscale x 16 x i8> [[X]], shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 5, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
-; CHECK-NEXT:    [[R:%.*]] = srem <vscale x 16 x i8> [[BO0]], [[BO1]]
-; CHECK-NEXT:    ret <vscale x 16 x i8> [[R]]
+; CHECK-NEXT:    ret <vscale x 16 x i8> zeroinitializer
 ;
   %BO0 = mul nsw <vscale x 16 x i8> %X, shufflevector(<vscale x 16 x i8> insertelement(<vscale x 16 x i8> poison, i8 15, i64 0) , <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
   %BO1 = mul <vscale x 16 x i8> %X, shufflevector(<vscale x 16 x i8> insertelement(<vscale x 16 x i8> poison, i8 5, i64 0) , <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
@@ -255,10 +242,7 @@ define <vscale x 16 x i8> @srem_XY_XZ_with_CY_rem_CZ_eq_0_scalable(<vscale x 16 
 
 define i8 @srem_XY_XZ_with_CY_rem_CZ_eq_0(i8 %X) {
 ; CHECK-LABEL: @srem_XY_XZ_with_CY_rem_CZ_eq_0(
-; CHECK-NEXT:    [[BO0:%.*]] = mul nsw i8 [[X:%.*]], 9
-; CHECK-NEXT:    [[BO1:%.*]] = mul i8 [[X]], 3
-; CHECK-NEXT:    [[R:%.*]] = srem i8 [[BO0]], [[BO1]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %BO0 = mul nsw i8 %X, 9
   %BO1 = mul i8 %X, 3
@@ -294,9 +278,7 @@ define <2 x i8> @srem_XY_XZ_with_CY_lt_CZ(<2 x i8> %X) {
 
 define i8 @srem_XY_XZ_with_CY_lt_CZ_with_nuw_out(i8 %X) {
 ; CHECK-LABEL: @srem_XY_XZ_with_CY_lt_CZ_with_nuw_out(
-; CHECK-NEXT:    [[BO0:%.*]] = mul nuw i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[BO1:%.*]] = mul nsw i8 [[X]], 15
-; CHECK-NEXT:    [[R:%.*]] = srem i8 [[BO0]], [[BO1]]
+; CHECK-NEXT:    [[R:%.*]] = mul nuw nsw i8 [[X:%.*]], 5
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %BO0 = mul nuw i8 %X, 5
@@ -346,9 +328,7 @@ define i8 @srem_XY_XZ_with_CY_gt_CZ(i8 %X) {
 
 define i8 @srem_XY_XZ_with_CY_gt_CZ_with_nuw_out(i8 %X) {
 ; CHECK-LABEL: @srem_XY_XZ_with_CY_gt_CZ_with_nuw_out(
-; CHECK-NEXT:    [[BO0:%.*]] = mul nuw nsw i8 [[X:%.*]], 10
-; CHECK-NEXT:    [[BO1:%.*]] = mul nsw i8 [[X]], 6
-; CHECK-NEXT:    [[R:%.*]] = srem i8 [[BO0]], [[BO1]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw i8 [[X:%.*]], 2
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %BO0 = mul nsw nuw i8 %X, 10
