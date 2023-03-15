@@ -59,7 +59,7 @@ FailureOr<OpFoldResult> mlir::tensor::createDimValue(OpBuilder &b, Location loc,
   if (!tensorTy)
     return failure();
   auto shape = tensorTy.getShape();
-  if (dim >= shape.size())
+  if (dim >= static_cast<int64_t>(shape.size()))
     return failure();
   if (ShapedType::isDynamic(shape[dim]))
     return OpFoldResult(b.createOrFold<tensor::DimOp>(loc, rankedTensor, dim));
