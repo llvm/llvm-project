@@ -232,7 +232,8 @@ static bool FindExactlyAttributes(RetainedKnowledgeMap &Map, Value *WasOn,
        }) {
     bool ShouldHaveAttr = Reg.match(Attr, &Matches) && Matches[0] == Attr;
 
-    if (ShouldHaveAttr != (Map.find(RetainedKnowledgeKey{WasOn, Attribute::getAttrKindFromName(Attr)}) != Map.end()))
+    if (ShouldHaveAttr != (Map.contains(RetainedKnowledgeKey{
+                              WasOn, Attribute::getAttrKindFromName(Attr)})))
       return false;
   }
   return true;

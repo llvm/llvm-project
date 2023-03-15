@@ -22,27 +22,13 @@
 // RUN: llvm-ar cr %t.input-archive.a %t.simple.bundle %t.targetID1.bundle %t.targetID2.bundle %t.targetID3.bundle
 
 // Tests to check compatibility between Bundle Entry ID formats i.e. between presence/absence of extra hyphen in case of missing environment field
-// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa--gfx906,openmp-amdgcn-amd-amdhsa-gfx908:sramecc+:xnack+ -inputs=%t.input-archive.a -outputs=%t-archive-gfx906-simple.a,%t-archive-gfx908-simple.a -debug-only=CodeObjectCompatibility 2>&1 | FileCheck %s -check-prefix=BUNDLECOMPATIBILITY
-// BUNDLECOMPATIBILITY: Compatible: Exact match:        [CodeObject: openmp-amdgcn-amd-amdhsa-gfx906]   :       [Target: openmp-amdgcn-amd-amdhsa--gfx906]
-// BUNDLECOMPATIBILITY: Incompatible: Processor mismatch        [CodeObject: openmp-amdgcn-amd-amdhsa-gfx906]   :       [Target: openmp-amdgcn-amd-amdhsa-gfx908:sramecc+:xnack+]
-// BUNDLECOMPATIBILITY: Incompatible: Processor mismatch        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908]  :       [Target: openmp-amdgcn-amd-amdhsa--gfx906]
-// BUNDLECOMPATIBILITY: Compatible: Target IDs are compatible   [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908]  :       [Target: openmp-amdgcn-amd-amdhsa-gfx908:sramecc+:xnack+]
-// BUNDLECOMPATIBILITY: Incompatible: CodeObject has more features than target  [CodeObject: openmp-amdgcn-amd-amdhsa--gfx906:sramecc+:xnack+]  :       [Target: openmp-amdgcn-amd-amdhsa--gfx906]
-// BUNDLECOMPATIBILITY: Incompatible: Processor mismatch        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx906:sramecc+:xnack+]  :       [Target: openmp-amdgcn-amd-amdhsa-gfx908:sramecc+:xnack+]
-// BUNDLECOMPATIBILITY: Incompatible: Processor mismatch        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908:sramecc+:xnack+]  :       [Target: openmp-amdgcn-amd-amdhsa--gfx906]
-// BUNDLECOMPATIBILITY: Compatible: Exact match:        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908:sramecc+:xnack+]  :       [Target: openmp-amdgcn-amd-amdhsa-gfx908:sramecc+:xnack+]
-// BUNDLECOMPATIBILITY: Incompatible: CodeObject has more features than target  [CodeObject: openmp-amdgcn-amd-amdhsa--gfx906:sramecc+:xnack-]  :       [Target: openmp-amdgcn-amd-amdhsa--gfx906]
-// BUNDLECOMPATIBILITY: Incompatible: Processor mismatch        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx906:sramecc+:xnack-]  :       [Target: openmp-amdgcn-amd-amdhsa-gfx908:sramecc+:xnack+]
-// BUNDLECOMPATIBILITY: Incompatible: Processor mismatch        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908:sramecc+:xnack-]  :       [Target: openmp-amdgcn-amd-amdhsa--gfx906]
-// BUNDLECOMPATIBILITY: Incompatible: Value of CodeObject's non-ANY feature is not matching with Target feature's non-ANY value         [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908:sramecc+:xnack-]  :       [Target: openmp-amdgcn-amd-amdhsa-gfx908:sramecc+:xnack+]
-// BUNDLECOMPATIBILITY: Incompatible: CodeObject has more features than target  [CodeObject: openmp-amdgcn-amd-amdhsa--gfx906:xnack-]   :       [Target: openmp-amdgcn-amd-amdhsa--gfx906]
-// BUNDLECOMPATIBILITY: Incompatible: Processor mismatch        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx906:xnack-]   :       [Target: openmp-amdgcn-amd-amdhsa-gfx908:sramecc+:xnack+]
-// BUNDLECOMPATIBILITY: Incompatible: Processor mismatch        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908:xnack-]   :       [Target: openmp-amdgcn-amd-amdhsa--gfx906]
-// BUNDLECOMPATIBILITY: Incompatible: Value of CodeObject's non-ANY feature is not matching with Target feature's non-ANY value         [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908:xnack-]   :       [Target: openmp-amdgcn-amd-amdhsa-gfx908:sramecc+:xnack+]
+// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa--gfx906,openmp-amdgcn-amd-amdhsa-gfx908 -input=%t.input-archive.a -output=%t-archive-gfx906-simple.a -output=%t-archive-gfx908-simple.a -debug-only=CodeObjectCompatibility 2>&1 | FileCheck %s -check-prefix=BUNDLECOMPATIBILITY
+// BUNDLECOMPATIBILITY: Compatible: Exact match:        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx906]  :       [Target: openmp-amdgcn-amd-amdhsa--gfx906]
+// BUNDLECOMPATIBILITY: Compatible: Exact match:        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908]  :       [Target: openmp-amdgcn-amd-amdhsa--gfx908]
 
 // RUN: clang-offload-bundler -unbundle -type=a -targets=hip-amdgcn-amd-amdhsa--gfx906,hipv4-amdgcn-amd-amdhsa-gfx908 -input=%t.input-archive.a -output=%t-hip-archive-gfx906-simple.a -output=%t-hipv4-archive-gfx908-simple.a -hip-openmp-compatible -debug-only=CodeObjectCompatibility 2>&1 | FileCheck %s -check-prefix=HIPOpenMPCOMPATIBILITY
-// HIPOpenMPCOMPATIBILITY: Compatible: Target IDs are compatible        [CodeObject: openmp-amdgcn-amd-amdhsa-gfx906]   :       [Target: hip-amdgcn-amd-amdhsa--gfx906]
-// HIPOpenMPCOMPATIBILITY: Compatible: Target IDs are compatible        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908]  :       [Target: hipv4-amdgcn-amd-amdhsa-gfx908]
+// HIPOpenMPCOMPATIBILITY: Compatible: Target IDs are compatible        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx906]  :       [Target: hip-amdgcn-amd-amdhsa--gfx906]
+// HIPOpenMPCOMPATIBILITY: Compatible: Target IDs are compatible        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908]  :       [Target: hipv4-amdgcn-amd-amdhsa--gfx908]
 
 // Some code so that we can create a binary out of this file.
 int A = 0;

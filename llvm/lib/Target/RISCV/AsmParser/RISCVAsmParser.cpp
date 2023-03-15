@@ -496,7 +496,7 @@ public:
       return isUImm5();
     if (Kind != KindTy::FPImmediate)
       return false;
-    int Idx = RISCVLoadFPImm::getLoadFP64Imm(
+    int Idx = RISCVLoadFPImm::getLoadFPImm(
         APFloat(APFloat::IEEEdouble(), APInt(64, getFPConst())));
     // Don't allow decimal version of the minimum value. It is a different value
     // for each supported data type.
@@ -985,7 +985,7 @@ public:
       return;
     }
 
-    int Imm = RISCVLoadFPImm::getLoadFP64Imm(
+    int Imm = RISCVLoadFPImm::getLoadFPImm(
         APFloat(APFloat::IEEEdouble(), APInt(64, getFPConst())));
     Inst.addOperand(MCOperand::createImm(Imm));
   }

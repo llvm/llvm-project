@@ -293,3 +293,14 @@ func.func @zero_d_memref() {
   }
   return
 }
+
+// CHECK-LABEL: func @affine_parallel
+func.func @affine_parallel(%M: memref<2048x2048xf64>) {
+  affine.parallel (%i) = (0) to (3000) {
+    affine.for %j = 0 to 2048 {
+      affine.load %M[%i, %j] : memref<2048x2048xf64>
+      // expected-error@above {{'affine.load' op memref out of upper bound access along dimension #1}}
+    }
+  }
+  return
+}

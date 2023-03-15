@@ -14,11 +14,13 @@
 // Include all information about LLVM intrinsics.
 include "llvm/IR/Intrinsics.td"
 
+class Predicate; // Forward def
+
 //===----------------------------------------------------------------------===//
 // Register file description - These classes are used to fill in the target
 // description classes.
 
-class HwMode<string FS> {
+class HwMode<string FS, list<Predicate> Ps> {
   // A string representing subtarget features that turn on this HW mode.
   // For example, "+feat1,-feat2" will indicate that the mode is active
   // when "feat1" is enabled and "feat2" is disabled at the same time.
@@ -26,12 +28,15 @@ class HwMode<string FS> {
   // When multiple modes are used, they should be mutually exclusive,
   // otherwise the results are unpredictable.
   string Features = FS;
+
+  // A list of predicates that turn on this HW mode.
+  list<Predicate> Predicates = Ps;
 }
 
 // A special mode recognized by tablegen. This mode is considered active
 // when no other mode is active. For targets that do not use specific hw
 // modes, this is the only mode.
-def DefaultMode : HwMode<"">;
+def DefaultMode : HwMode<"", []>;
 
 // A class used to associate objects with HW modes. It is only intended to
 // be used as a base class, where the derived class should contain a member
@@ -445,8 +450,6 @@ include "llvm/Target/TargetInstrPredicate.td"
 // Pull in the common support for scheduling
 //
 include "llvm/Target/TargetSchedule.td"
-
-class Predicate; // Forward def
 
 class InstructionEncoding {
   // Size of encoded instruction.

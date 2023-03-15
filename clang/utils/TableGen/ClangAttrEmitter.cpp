@@ -2053,7 +2053,7 @@ bool PragmaClangAttributeSupport::isAttributedSupported(
   for (const auto *Subject : Subjects) {
     if (!isSupportedPragmaClangAttributeSubject(*Subject))
       continue;
-    if (SubjectsToRules.find(Subject) == SubjectsToRules.end())
+    if (!SubjectsToRules.contains(Subject))
       return false;
     HasAtLeastOneValidSubject = true;
   }

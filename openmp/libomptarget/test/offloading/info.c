@@ -39,7 +39,7 @@ int main() {
 // INFO: info: Entering OpenMP kernel at info.c:{{[0-9]+}}:{{[0-9]+}} with 1 arguments:
 // INFO: info: firstprivate(val)[4]
 // INFO: info: Launching kernel __omp_offloading_{{.*}}main{{.*}} with {{[0-9]+}} blocks and {{[0-9]+}} threads in Generic mode
-// AMDGPU: AMDGPU device {{[0-9]}} info: SGN:Generic ConstWGSize:{{[0-9]+}} args:{{[0-9]}} teamsXthrds:({{   [0-9]+}}X {{[0-9]+}}) reqd:(   {{[0-9]+}}X   {{[0-9]+}}) lds_usage:{{[0-9]+}}B sgpr_count:{{[0-9]+}} vgpr_count:{{[0-9]+}} sgpr_spill_count:{{[0-9]+}} vgpr_spill_count:{{[0-9]+}} tripcount:{{[0-9]+}} rpc:0 n:__omp_offloading_{{.*}}main{{.*}}
+// AMDGPU: AMDGPU device {{[0-9]}} info: #Args: {{[0-9]}} Teams x Thrds: {{[0-9]+}}x {{[0-9]+}} (MaxFlatWorkGroupSize: {{[0-9]+}}) LDS Usage: {{[0-9]+}}B #SGPRs/VGPRs: {{[0-9]+}}/{{[0-9]+}} #SGPR/VGPR Spills: {{[0-9]+}}/{{[0-9]+}} Tripcount: {{[0-9]+}}
 // INFO: info: OpenMP Host-Device pointer mappings after block at info.c:{{[0-9]+}}:{{[0-9]+}}:
 // INFO: info: Host Ptr           Target Ptr         Size (B) DynRefCount HoldRefCount Declaration
 // INFO: info: {{.*}}             {{.*}}             256      1           0            C[0:64] at info.c:{{[0-9]+}}:{{[0-9]+}}

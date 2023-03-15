@@ -72,6 +72,7 @@ INPUTS["basic"]="BASIC"
 INPUTS["inline"]="INLINE"
 INPUTS["multi"]="MULTI"
 INPUTS["pic"]="BASIC;-pie"
+INPUTS["buildid"]="BASIC;-Wl,-build-id=sha1"
 
 for name in "${!INPUTS[@]}"; do
   IFS=";" read -r src flags <<< "${INPUTS[$name]}"

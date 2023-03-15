@@ -336,7 +336,7 @@ void Simplifier::Context::initialize(Instruction *Exp) {
 
   while (!Q.empty()) {
     Value *V = Q.pop_front_val();
-    if (M.find(V) != M.end())
+    if (M.contains(V))
       continue;
     if (Instruction *U = dyn_cast<Instruction>(V)) {
       if (isa<PHINode>(U) || U->getParent() != Block)

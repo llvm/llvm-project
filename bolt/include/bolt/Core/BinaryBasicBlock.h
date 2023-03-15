@@ -427,10 +427,6 @@ public:
   /// Return branch info corresponding to an edge going to \p Succ basic block.
   const BinaryBranchInfo &getBranchInfo(const BinaryBasicBlock &Succ) const;
 
-  /// Return branch info corresponding to an edge going to a basic block with
-  /// label \p Label.
-  BinaryBranchInfo &getBranchInfo(const MCSymbol *Label);
-
   /// Set branch information for the outgoing edge to block \p Succ.
   void setSuccessorBranchInfo(const BinaryBasicBlock &Succ, uint64_t Count,
                               uint64_t MispredictedCount) {

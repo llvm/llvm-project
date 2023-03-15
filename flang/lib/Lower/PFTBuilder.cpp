@@ -1394,7 +1394,7 @@ private:
   void analyzeLocalEquivalenceSets(const semantics::Scope &scope) {
     if (scope.equivalenceSets().empty())
       return; // no equivalence sets to analyze
-    if (analyzedScopes.find(&scope) != analyzedScopes.end())
+    if (analyzedScopes.contains(&scope))
       return; // equivalence sets already analyzed
 
     analyzedScopes.insert(&scope);
@@ -1542,7 +1542,7 @@ private:
     const semantics::Scope &scope = ultimate.owner();
     // Expect the total number of EQUIVALENCE sets to be small for a typical
     // Fortran program.
-    if (aliasSyms.find(&ultimate) != aliasSyms.end()) {
+    if (aliasSyms.contains(&ultimate)) {
       LLVM_DEBUG(llvm::dbgs() << "found aggregate containing " << &ultimate
                               << " " << ultimate.name() << " in <" << &scope
                               << "> " << scope.GetName() << '\n');
