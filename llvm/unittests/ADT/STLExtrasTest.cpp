@@ -1029,6 +1029,56 @@ TEST(STLExtrasTest, IsContainedInitializerList) {
   static_assert(!is_contained({1, 2, 3, 4}, 5), "It's not there :(");
 }
 
+TEST(STLExtrasTest, IsContainedMemberContains) {
+  // Check that `llvm::is_contained` uses the member `.contains()` when
+  // available. Check that `.contains()` is preferred over `.find()`.
+  struct Foo {
+    bool contains(int) const {
+      ++NumContainsCalls;
+      return ContainsResult;
+    }
+    int *begin() { return nullptr; }
+    int *end() { return nullptr; }
+    int *find(int) { return nullptr; }
+
+    bool ContainsResult = false;
+    mutable unsigned NumContainsCalls = 0;
+  } Container;
+
+  EXPECT_EQ(Container.NumContainsCalls, 0u);
+  EXPECT_FALSE(is_contained(Container, 1));
+  EXPECT_EQ(Container.NumContainsCalls, 1u);
+
+  Container.ContainsResult = true;
+  EXPECT_TRUE(is_contained(Container, 1));
+  EXPECT_EQ(Container.NumContainsCalls, 2u);
+}
+
+TEST(STLExtrasTest, IsContainedMemberFind) {
+  // Check that `llvm::is_contained` uses the member `.find(x)` when available.
+  struct Foo {
+    auto begin() { return Data.begin(); }
+    auto end() { return Data.end(); }
+    auto find(int X) {
+      ++NumFindCalls;
+      return std::find(begin(), end(), X);
+    }
+
+    std::vector<int> Data;
+    mutable unsigned NumFindCalls = 0;
+  } Container;
+
+  Container.Data = {1, 2, 3};
+
+  EXPECT_EQ(Container.NumFindCalls, 0u);
+  EXPECT_TRUE(is_contained(Container, 1));
+  EXPECT_TRUE(is_contained(Container, 3));
+  EXPECT_EQ(Container.NumFindCalls, 2u);
+
+  EXPECT_FALSE(is_contained(Container, 4));
+  EXPECT_EQ(Container.NumFindCalls, 3u);
+}
+
 TEST(STLExtrasTest, addEnumValues) {
   enum A { Zero = 0, One = 1 };
   enum B { IntMax = INT_MAX, ULongLongMax = ULLONG_MAX };
