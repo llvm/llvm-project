@@ -1983,7 +1983,7 @@ void CheckHelper::CheckProcBinding(
         if (FindModuleContaining(dtScope) ==
             FindModuleContaining(overridden->owner())) {
           // types declared in same madule
-          if (overridden->attrs().test(Attr::PUBLIC)) {
+          if (!overridden->attrs().test(Attr::PRIVATE)) {
             SayWithDeclaration(*overridden,
                 "A PRIVATE procedure may not override a PUBLIC procedure"_err_en_US);
           }

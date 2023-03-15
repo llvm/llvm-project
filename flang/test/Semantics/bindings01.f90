@@ -275,6 +275,24 @@ module m10b
   end subroutine
 end module
 
+module m11
+  type t1
+   contains
+    procedure, nopass :: tbp => t1p
+  end type
+  type, extends(t1) :: t2
+   contains
+    private
+    !ERROR: A PRIVATE procedure may not override a PUBLIC procedure
+    procedure, nopass :: tbp => t2p
+  end type
+ contains
+  subroutine t1p
+  end
+  subroutine t2p
+  end
+end
+
 program test
   use m1
   type,extends(t) :: t2
