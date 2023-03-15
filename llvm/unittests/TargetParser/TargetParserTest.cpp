@@ -120,7 +120,7 @@ TEST_P(ARMCPUTestFixture, ARMCPUTests) {
   ARM::ArchKind AK = ARM::parseCPUArch(params.CPUName);
   EXPECT_EQ(params.ExpectedArch, ARM::getArchName(AK));
 
-  unsigned FPUKind = ARM::getDefaultFPU(params.CPUName, AK);
+  ARM::FPUKind FPUKind = ARM::getDefaultFPU(params.CPUName, AK);
   EXPECT_EQ(params.ExpectedFPU, ARM::getFPUName(FPUKind));
 
   uint64_t default_extensions = ARM::getDefaultExtensions(params.CPUName, AK);
@@ -765,10 +765,10 @@ static bool
 testArchExtDependency(const char *ArchExt,
                       const std::initializer_list<const char *> &Expected) {
   std::vector<StringRef> Features;
-  unsigned FPUID;
+  ARM::FPUKind FPUKind;
 
   if (!ARM::appendArchExtFeatures("", ARM::ArchKind::ARMV8_1MMainline, ArchExt,
-                                  Features, FPUID))
+                                  Features, FPUKind))
     return false;
 
   return llvm::all_of(Expected, [&](StringRef Ext) {
