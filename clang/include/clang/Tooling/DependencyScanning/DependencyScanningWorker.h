@@ -45,6 +45,33 @@ class DependencyConsumer {
 public:
   virtual ~DependencyConsumer() {}
 
+  virtual void handleBuildCommand(Command Cmd) {}
+
+  virtual void
+  handleDependencyOutputOpts(const DependencyOutputOptions &Opts) = 0;
+
+  virtual void handleFileDependency(StringRef Filename) = 0;
+
+  virtual void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) = 0;
+
+  virtual void handleModuleDependency(ModuleDeps MD) = 0;
+
+  virtual void handleContextHash(std::string Hash) = 0;
+
+  virtual void handleCASFileSystemRootID(std::string ID) {}
+
+  virtual void handleIncludeTreeID(std::string ID) {}
+};
+
+/// Dependency scanner callbacks that are used during scanning to influence the
+/// behaviour of the scan - for example, to customize the scanned invocations.
+class DependencyActionController {
+public:
+  virtual ~DependencyActionController();
+
+  virtual std::string lookupModuleOutput(const ModuleID &ID,
+                                         ModuleOutputKind Kind) = 0;
+
   virtual llvm::Error initialize(CompilerInstance &ScanInstance,
                                  CompilerInvocation &NewInvocation) {
     return llvm::Error::success();
@@ -70,65 +97,18 @@ public:
     return llvm::Error::success();
   }
 
-  virtual void handleBuildCommand(Command Cmd) = 0;
-
-  virtual void
-  handleDependencyOutputOpts(const DependencyOutputOptions &Opts) = 0;
-
-  virtual void handleFileDependency(StringRef Filename) = 0;
-
-  virtual void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) = 0;
-
-  virtual void handleModuleDependency(ModuleDeps MD) = 0;
-
-  virtual void handleContextHash(std::string Hash) = 0;
-
-  virtual void handleCASFileSystemRootID(cas::CASID ID) = 0;
-
-  virtual std::string lookupModuleOutput(const ModuleID &ID,
-                                         ModuleOutputKind Kind) = 0;
-};
-
-// FIXME: This may need to merge with \p DependencyConsumer in order to support
-// clang modules for the include-tree.
-class PPIncludeActionsConsumer : public DependencyConsumer {
-public:
-  virtual void enteredInclude(Preprocessor &PP, FileID FID) = 0;
+  virtual void enteredInclude(Preprocessor &PP, FileID FID) {}
 
   virtual void exitedInclude(Preprocessor &PP, FileID IncludedBy,
-                             FileID Include, SourceLocation ExitLoc) = 0;
+                             FileID Include, SourceLocation ExitLoc) {}
 
-  virtual void handleHasIncludeCheck(Preprocessor &PP, bool Result) = 0;
+  virtual void handleHasIncludeCheck(Preprocessor &PP, bool Result) {}
 
   /// FIXME: This is temporary until we eliminate the split between consumers in
   /// \p DependencyScanningTool and collectors in \p DependencyScanningWorker
   /// and have them both in the same file. see FIXME in \p
   /// DependencyScanningAction::runInvocation.
-  virtual const DepscanPrefixMapping &getPrefixMapping() = 0;
-
-protected:
-  void handleBuildCommand(Command) override {}
-  void handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {
-    llvm::report_fatal_error("unexpected callback for include-tree");
-  }
-  void handleFileDependency(StringRef Filename) override {
-    llvm::report_fatal_error("unexpected callback for include-tree");
-  }
-  void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {
-    llvm::report_fatal_error("unexpected callback for include-tree");
-  }
-  void handleModuleDependency(ModuleDeps MD) override {
-    llvm::report_fatal_error("unexpected callback for include-tree");
-  }
-  void handleContextHash(std::string Hash) override {
-    llvm::report_fatal_error("unexpected callback for include-tree");
-  }
-  void handleCASFileSystemRootID(cas::CASID ID) override {
-    llvm::report_fatal_error("unexpected callback for include-tree");
-  }
-  std::string lookupModuleOutput(const ModuleID &, ModuleOutputKind) override {
-    llvm::report_fatal_error("unexpected callback for include-tree");
-  }
+  virtual const DepscanPrefixMapping *getPrefixMapping() { return nullptr; }
 };
 
 /// An individual dependency scanning worker that is able to run on its own
@@ -152,16 +132,15 @@ public:
   bool computeDependencies(StringRef WorkingDirectory,
                            const std::vector<std::string> &CommandLine,
                            DependencyConsumer &DepConsumer,
+                           DependencyActionController &Controller,
                            DiagnosticConsumer &DiagConsumer,
                            llvm::Optional<StringRef> ModuleName = None);
   /// \returns A \c StringError with the diagnostic output if clang errors
   /// occurred, success otherwise.
-  llvm::Error computeDependencies(StringRef WorkingDirectory,
-                                  const std::vector<std::string> &CommandLine,
-                                  DependencyConsumer &Consumer,
-                                  llvm::Optional<StringRef> ModuleName = None);
-
-  ScanningOutputFormat getFormat() const { return Format; }
+  llvm::Error computeDependencies(
+      StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
+      DependencyConsumer &Consumer, DependencyActionController &Controller,
+      llvm::Optional<StringRef> ModuleName = None);
 
   /// Scan from a compiler invocation.
   /// If \p DiagGenerationAsCompilation is true it will generate error
@@ -171,15 +150,14 @@ public:
   void computeDependenciesFromCompilerInvocation(
       std::shared_ptr<CompilerInvocation> Invocation,
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
-      DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
-      bool DiagGenerationAsCompilation);
+      DependencyActionController &Controller, DiagnosticConsumer &DiagsConsumer,
+      raw_ostream *VerboseOS, bool DiagGenerationAsCompilation);
 
   ScanningOutputFormat getScanningFormat() const { return Format; }
 
-  llvm::vfs::FileSystem &getRealFS() { return *BaseFS; }
   CachingOnDiskFileSystemPtr getCASFS() { return CacheFS; }
-  bool useCAS() const { return UseCAS; }
   const CASOptions &getCASOpts() const { return CASOpts; }
+  std::shared_ptr<cas::ObjectStore> getCAS() const { return CAS; }
 
   /// If \p DependencyScanningService enabled sharing of \p FileManager this
   /// will return the same instance, otherwise it will create a new one for
@@ -201,16 +179,15 @@ private:
   ScanningOutputFormat Format;
   /// Whether to optimize the modules' command-line arguments.
   bool OptimizeArgs;
+  /// Whether to set up command-lines to load PCM files eagerly.
+  bool EagerLoadModules;
 
   /// The caching file system.
   CachingOnDiskFileSystemPtr CacheFS;
   /// The CAS Dependency Filesytem. This is not set at the sametime as DepFS;
   llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
   CASOptions CASOpts;
-  bool UseCAS;
-
-  /// Whether to set up command-lines to load PCM files eagerly.
-  bool EagerLoadModules;
+  std::shared_ptr<cas::ObjectStore> CAS;
 };
 
 } // end namespace dependencies

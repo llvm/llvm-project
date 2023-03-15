@@ -164,47 +164,17 @@ static void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
   DiagOpts.IgnoreWarnings = true;
 }
 
-struct IncludeTreePPCallbacks : public PPCallbacks {
-  PPIncludeActionsConsumer &Consumer;
-  Preprocessor &PP;
-
-public:
-  IncludeTreePPCallbacks(PPIncludeActionsConsumer &Consumer, Preprocessor &PP)
-      : Consumer(Consumer), PP(PP) {}
-
-  void LexedFileChanged(FileID FID, LexedFileChangeReason Reason,
-                        SrcMgr::CharacteristicKind FileType, FileID PrevFID,
-                        SourceLocation Loc) override {
-    switch (Reason) {
-    case LexedFileChangeReason::EnterFile:
-      Consumer.enteredInclude(PP, FID);
-      break;
-    case LexedFileChangeReason::ExitFile: {
-      Consumer.exitedInclude(PP, FID, PrevFID, Loc);
-      break;
-    }
-    }
-  }
-
-  void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
-                  Optional<FileEntryRef> File,
-                  SrcMgr::CharacteristicKind FileType) override {
-    Consumer.handleHasIncludeCheck(PP, File.has_value());
-  }
-};
-
-class IncludeTreeCollector : public DependencyFileGenerator {
-  PPIncludeActionsConsumer &Consumer;
-  std::unique_ptr<DependencyOutputOptions> Opts;
-  bool EmitDependencyFile = false;
+/// Builds a dependency file after reversing prefix mappings. This allows
+/// emitting a .d file that has real paths where they would otherwise be
+/// canonicalized.
+class ReversePrefixMappingDependencyFileGenerator
+    : public DependencyFileGenerator {
   llvm::PrefixMapper ReverseMapper;
 
 public:
-  IncludeTreeCollector(PPIncludeActionsConsumer &Consumer,
-                       std::unique_ptr<DependencyOutputOptions> Opts,
-                       bool EmitDependencyFile)
-      : DependencyFileGenerator(*Opts), Consumer(Consumer),
-        Opts(std::move(Opts)), EmitDependencyFile(EmitDependencyFile) {}
+  ReversePrefixMappingDependencyFileGenerator(
+      const DependencyOutputOptions &Opts)
+      : DependencyFileGenerator(Opts) {}
 
   Error initialize(const CompilerInvocation &CI,
                    const DepscanPrefixMapping &PrefixMapping) {
@@ -217,11 +187,6 @@ public:
     ReverseMapper.addInverseRange(Mapper.getMappings());
     ReverseMapper.sort();
     return Error::success();
-  }
-
-  void attachToPreprocessor(Preprocessor &PP) override {
-    PP.addPPCallbacks(std::make_unique<IncludeTreePPCallbacks>(Consumer, PP));
-    DependencyFileGenerator::attachToPreprocessor(PP);
   }
 
   void maybeAddDependency(StringRef Filename, bool FromModule, bool IsSystem,
@@ -237,41 +202,36 @@ public:
     return DependencyFileGenerator::maybeAddDependency(
         New, FromModule, IsSystem, IsModuleFile, IsMissing);
   }
-
-  void finishedMainFile(DiagnosticsEngine &Diags) override {
-    if (EmitDependencyFile)
-      DependencyFileGenerator::finishedMainFile(Diags);
-  }
 };
 
 /// See \c WrapScanModuleBuildAction.
 class WrapScanModuleBuildConsumer : public ASTConsumer {
 public:
   WrapScanModuleBuildConsumer(CompilerInstance &CI,
-                              DependencyConsumer &Consumer)
-      : CI(CI), Consumer(Consumer) {}
+                              DependencyActionController &Controller)
+      : CI(CI), Controller(Controller) {}
 
   void HandleTranslationUnit(ASTContext &Ctx) override {
-    if (auto E = Consumer.finalizeModuleBuild(CI))
+    if (auto E = Controller.finalizeModuleBuild(CI))
       Ctx.getDiagnostics().Report(diag::err_cas_depscan_failed) << std::move(E);
   }
 
 private:
   CompilerInstance &CI;
-  DependencyConsumer &Consumer;
+  DependencyActionController &Controller;
 };
 
 /// A wrapper for implicit module build actions in the scanner.
 class WrapScanModuleBuildAction : public WrapperFrontendAction {
 public:
   WrapScanModuleBuildAction(std::unique_ptr<FrontendAction> WrappedAction,
-                            DependencyConsumer &Consumer)
-      : WrapperFrontendAction(std::move(WrappedAction)), DepConsumer(Consumer) {
-  }
+                            DependencyActionController &Controller)
+      : WrapperFrontendAction(std::move(WrappedAction)),
+        Controller(Controller) {}
 
 private:
   bool BeginInvocation(CompilerInstance &CI) override {
-    if (auto E = DepConsumer.initializeModuleBuild(CI)) {
+    if (auto E = Controller.initializeModuleBuild(CI)) {
       CI.getDiagnostics().Report(diag::err_cas_depscan_failed) << std::move(E);
       return false;
     }
@@ -288,7 +248,7 @@ private:
     if (!M)
       return OtherConsumer;
     auto Consumer =
-        std::make_unique<WrapScanModuleBuildConsumer>(CI, DepConsumer);
+        std::make_unique<WrapScanModuleBuildConsumer>(CI, Controller);
     std::vector<std::unique_ptr<ASTConsumer>> Consumers;
     Consumers.push_back(std::move(Consumer));
     Consumers.push_back(std::move(OtherConsumer));
@@ -296,7 +256,7 @@ private:
   }
 
 private:
-  DependencyConsumer &DepConsumer;
+  DependencyActionController &Controller;
 };
 
 /// A clang tool that runs the preprocessor in a mode that's optimized for
@@ -305,6 +265,7 @@ class DependencyScanningAction : public tooling::ToolAction {
 public:
   DependencyScanningAction(
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
+      DependencyActionController &Controller,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
       llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS,
       llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> CacheFS,
@@ -314,6 +275,7 @@ public:
       llvm::Optional<StringRef> ModuleName = None,
       raw_ostream *VerboseOS = nullptr)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
+        Controller(Controller),
         DepFS(std::move(DepFS)), DepCASFS(std::move(DepCASFS)),
         CacheFS(std::move(CacheFS)), Format(Format), OptimizeArgs(OptimizeArgs),
         EagerLoadModules(EagerLoadModules), DisableFree(DisableFree),
@@ -455,29 +417,31 @@ public:
           std::make_shared<DependencyConsumerForwarder>(
               std::move(Opts), WorkingDirectory, Consumer, EmitDependencyFile));
       break;
-    case ScanningOutputFormat::IncludeTree: {
-      auto &IncConsumer = static_cast<PPIncludeActionsConsumer &>(Consumer);
-      auto IncTreeCollector = std::make_shared<IncludeTreeCollector>(
-          IncConsumer, std::move(Opts), EmitDependencyFile);
-      if (Error E = IncTreeCollector->initialize(
-              ScanInstance.getInvocation(), IncConsumer.getPrefixMapping()))
-        return reportError(std::move(E));
-      ScanInstance.addDependencyCollector(std::move(IncTreeCollector));
-      break;
-    }
+    case ScanningOutputFormat::IncludeTree:
     case ScanningOutputFormat::Full:
     case ScanningOutputFormat::FullTree:
+    case ScanningOutputFormat::FullIncludeTree:
+      if (EmitDependencyFile) {
+        auto DFG =
+            std::make_shared<ReversePrefixMappingDependencyFileGenerator>(
+                *Opts);
+        if (auto *Mapping = Controller.getPrefixMapping())
+          if (auto E = DFG->initialize(ScanInstance.getInvocation(), *Mapping))
+            return reportError(std::move(E));
+        ScanInstance.addDependencyCollector(std::move(DFG));
+      }
+
       MDC = std::make_shared<ModuleDepCollector>(
-          std::move(Opts), ScanInstance, Consumer, OriginalInvocation,
-          OptimizeArgs, EagerLoadModules);
+          std::move(Opts), ScanInstance, Consumer, Controller,
+          OriginalInvocation, OptimizeArgs, EagerLoadModules);
       ScanInstance.addDependencyCollector(MDC);
       if (CacheFS) {
         ScanInstance.setGenModuleActionWrapper(
-            [CacheFS = CacheFS,
-             &Consumer = Consumer](const FrontendOptions &Opts,
-                                   std::unique_ptr<FrontendAction> Wrapped) {
+            [CacheFS = CacheFS, &Controller = Controller](
+                const FrontendOptions &Opts,
+                std::unique_ptr<FrontendAction> Wrapped) {
               return std::make_unique<WrapScanModuleBuildAction>(
-                  std::move(Wrapped), Consumer);
+                  std::move(Wrapped), Controller);
             });
       }
       break;
@@ -497,7 +461,7 @@ public:
     else
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
 
-    if (Error E = Consumer.initialize(ScanInstance, OriginalInvocation))
+    if (Error E = Controller.initialize(ScanInstance, OriginalInvocation))
       return reportError(std::move(E));
 
     if (!ScanInstance.ExecuteAction(*Action))
@@ -506,8 +470,16 @@ public:
     if (MDC)
       MDC->applyDiscoveredDependencies(OriginalInvocation);
 
-    if (Error E = Consumer.finalize(ScanInstance, OriginalInvocation))
+    if (Error E = Controller.finalize(ScanInstance, OriginalInvocation))
       return reportError(std::move(E));
+
+    // Forward any CAS results to consumer.
+    std::string ID = OriginalInvocation.getFileSystemOpts().CASFileSystemRootID;
+    if (!ID.empty())
+      Consumer.handleCASFileSystemRootID(std::move(ID));
+    ID = OriginalInvocation.getFrontendOpts().CASIncludeTreeID;
+    if (!ID.empty())
+      Consumer.handleIncludeTreeID(std::move(ID));
 
     LastCC1Arguments = OriginalInvocation.getCC1CommandLine();
 
@@ -540,6 +512,7 @@ public:
 private:
   StringRef WorkingDirectory;
   DependencyConsumer &Consumer;
+  DependencyActionController &Controller;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
   llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> CacheFS;
@@ -564,8 +537,8 @@ DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
     : Format(Service.getFormat()), OptimizeArgs(Service.canOptimizeArgs()),
-      CASOpts(Service.getCASOpts()), UseCAS(Service.useCASScanning()),
-      EagerLoadModules(Service.shouldEagerLoadModules()) {
+      EagerLoadModules(Service.shouldEagerLoadModules()),
+      CASOpts(Service.getCASOpts()), CAS(Service.getCAS()) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   PCHContainerOps->registerReader(
       std::make_unique<ObjectFilePCHContainerReader>());
@@ -574,9 +547,9 @@ DependencyScanningWorker::DependencyScanningWorker(
   PCHContainerOps->registerWriter(
       std::make_unique<ObjectFilePCHContainerWriter>());
 
-  if (Service.useCASScanning()) {
+  if (Service.useCASFS()) {
     CacheFS = Service.getSharedFS().createProxyFS();
-    DepCASFS = new DependencyScanningCASFilesystem(CacheFS, Service.getCache());
+    DepCASFS = new DependencyScanningCASFilesystem(CacheFS, *Service.getCache());
     BaseFS = DepCASFS;
     return;
   }
@@ -601,7 +574,8 @@ DependencyScanningWorker::getOrCreateFileManager() const {
 
 llvm::Error DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
-    DependencyConsumer &Consumer, llvm::Optional<StringRef> ModuleName) {
+    DependencyConsumer &Consumer, DependencyActionController &Controller,
+    llvm::Optional<StringRef> ModuleName) {
   std::vector<const char *> CLI;
   for (const std::string &Arg : CommandLine)
     CLI.push_back(Arg.c_str());
@@ -614,8 +588,8 @@ llvm::Error DependencyScanningWorker::computeDependencies(
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
   TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, DiagOpts.release());
 
-  if (computeDependencies(WorkingDirectory, CommandLine, Consumer, DiagPrinter,
-                          ModuleName))
+  if (computeDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
+                          DiagPrinter, ModuleName))
     return llvm::Error::success();
   return llvm::make_error<llvm::StringError>(DiagnosticsOS.str(),
                                              llvm::inconvertibleErrorCode());
@@ -660,8 +634,8 @@ static bool forEachDriverJob(
 
 bool DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
-    DependencyConsumer &Consumer, DiagnosticConsumer &DC,
-    llvm::Optional<StringRef> ModuleName) {
+    DependencyConsumer &Consumer, DependencyActionController &Controller,
+    DiagnosticConsumer &DC, llvm::Optional<StringRef> ModuleName) {
   // Reset what might have been modified in the previous worker invocation.
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
@@ -717,12 +691,13 @@ bool DependencyScanningWorker::computeDependencies(
   // in-process; preserve the original value, which is
   // always true for a driver invocation.
   bool DisableFree = true;
-  DependencyScanningAction Action(
-      WorkingDirectory, Consumer, DepFS, DepCASFS, CacheFS, Format,
-      OptimizeArgs, EagerLoadModules, DisableFree,
-      /*EmitDependencyFile=*/false,
-      /*DiagGenerationAsCompilation=*/false, getCASOpts(),
-      ModuleName);
+  DependencyScanningAction Action(WorkingDirectory, Consumer, Controller, DepFS,
+                                  DepCASFS, CacheFS,
+                                  Format, OptimizeArgs, EagerLoadModules,
+                                  DisableFree,
+                                  /*EmitDependencyFile=*/false,
+                                  /*DiagGenerationAsCompilation=*/false, getCASOpts(),
+                                  ModuleName);
   bool Success = forEachDriverJob(
       FinalCommandLine, *Diags, *FileMgr, [&](const driver::Command &Cmd) {
         if (StringRef(Cmd.getCreator().getName()) != "clang") {
@@ -761,10 +736,13 @@ bool DependencyScanningWorker::computeDependencies(
   return Success && Action.hasScanned();
 }
 
+DependencyActionController::~DependencyActionController() {}
+
 void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
     std::shared_ptr<CompilerInvocation> Invocation, StringRef WorkingDirectory,
-    DependencyConsumer &DepsConsumer, DiagnosticConsumer &DiagsConsumer,
-    raw_ostream *VerboseOS, bool DiagGenerationAsCompilation) {
+    DependencyConsumer &DepsConsumer, DependencyActionController &Controller,
+    DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
+    bool DiagGenerationAsCompilation) {
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
   // Adjust the invocation.
@@ -791,7 +769,8 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
   // FIXME: EmitDependencyFile should only be set when it's for a real
   // compilation.
   DependencyScanningAction Action(
-      WorkingDirectory, DepsConsumer, DepFS, DepCASFS, CacheFS, Format,
+      WorkingDirectory, DepsConsumer, Controller, DepFS, DepCASFS, CacheFS,
+      Format,
       /*OptimizeArgs=*/false, /*DisableFree=*/false, EagerLoadModules,
       /*EmitDependencyFile=*/!DepFile.empty(), DiagGenerationAsCompilation,
       getCASOpts(),

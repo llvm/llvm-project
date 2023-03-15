@@ -69,7 +69,7 @@ struct TranslationUnitDeps {
   std::vector<ModuleID> ClangModuleDeps;
 
   /// The CASID for input file dependency tree.
-  llvm::Optional<llvm::cas::CASID> CASFileSystemRootID;
+  llvm::Optional<std::string> CASFileSystemRootID;
 
   /// The sequence of commands required to build the translation unit. Commands
   /// should be executed in order.
@@ -180,29 +180,24 @@ public:
     return Worker.getOrCreateFileManager();
   }
 
+  static std::unique_ptr<DependencyActionController>
+  createActionController(DependencyScanningWorker &Worker,
+                         LookupModuleOutputCallback LookupModuleOutput,
+                         DepscanPrefixMapping PrefixMapping);
+
+private:
+  std::unique_ptr<DependencyActionController>
+  createActionController(LookupModuleOutputCallback LookupModuleOutput,
+                         DepscanPrefixMapping PrefixMapping);
+
 private:
   DependencyScanningWorker Worker;
 };
 
 class FullDependencyConsumer : public DependencyConsumer {
 public:
-  FullDependencyConsumer(const llvm::StringSet<> &AlreadySeen,
-                         LookupModuleOutputCallback LookupModuleOutput,
-                         CachingOnDiskFileSystemPtr CacheFS = nullptr,
-                         DepscanPrefixMapping PrefixMapping = {})
-      : CacheFS(std::move(CacheFS)), PrefixMapping(std::move(PrefixMapping)),
-        AlreadySeen(AlreadySeen), LookupModuleOutput(LookupModuleOutput) {}
-
-  llvm::Error initialize(CompilerInstance &ScanInstance,
-                         CompilerInvocation &NewInvocation) override;
-  llvm::Error finalize(CompilerInstance &ScanInstance,
-                       CompilerInvocation &NewInvocation) override;
-  llvm::Error
-  initializeModuleBuild(CompilerInstance &ModuleScanInstance) override;
-  llvm::Error
-  finalizeModuleBuild(CompilerInstance &ModuleScanInstance) override;
-  llvm::Error finalizeModuleInvocation(CompilerInvocation &CI,
-                                       const ModuleDeps &MD) override;
+  FullDependencyConsumer(const llvm::StringSet<> &AlreadySeen)
+      : AlreadySeen(AlreadySeen) {}
 
   void handleBuildCommand(Command Cmd) override {
     Commands.push_back(std::move(Cmd));
@@ -226,17 +221,8 @@ public:
     ContextHash = std::move(Hash);
   }
 
-  void handleCASFileSystemRootID(cas::CASID ID) override {
-    CASFileSystemRootID = ID;
-  }
-
-  Optional<cas::CASID> getCASFileSystemRootID() const {
-    return CASFileSystemRootID;
-  }
-
-  std::string lookupModuleOutput(const ModuleID &ID,
-                                 ModuleOutputKind Kind) override {
-    return LookupModuleOutput(ID, Kind);
+  void handleCASFileSystemRootID(std::string ID) override {
+    CASFileSystemRootID = std::move(ID);
   }
 
   TranslationUnitDeps takeTranslationUnitDeps();
@@ -249,13 +235,33 @@ private:
       ClangModuleDeps;
   std::vector<Command> Commands;
   std::string ContextHash;
-  CachingOnDiskFileSystemPtr CacheFS;
-  DepscanPrefixMapping PrefixMapping;
-  std::optional<llvm::TreePathPrefixMapper> Mapper;
-  CASOptions CASOpts;
-  Optional<cas::CASID> CASFileSystemRootID;
+  Optional<std::string> CASFileSystemRootID;
   std::vector<std::string> OutputPaths;
   const llvm::StringSet<> &AlreadySeen;
+};
+
+/// A simple dependency action controller that uses a callback. If no callback
+/// is provided, it is assumed that looking up module outputs is unreachable.
+class CallbackActionController : public DependencyActionController {
+public:
+  virtual ~CallbackActionController();
+
+  CallbackActionController(LookupModuleOutputCallback LMO)
+      : LookupModuleOutput(std::move(LMO)) {
+    if (!LookupModuleOutput) {
+      LookupModuleOutput = [](const ModuleID &,
+                              ModuleOutputKind) -> std::string {
+        llvm::report_fatal_error("unexpected call to lookupModuleOutput");
+      };
+    }
+  }
+
+  std::string lookupModuleOutput(const ModuleID &ID,
+                                 ModuleOutputKind Kind) override {
+    return LookupModuleOutput(ID, Kind);
+  }
+
+private:
   LookupModuleOutputCallback LookupModuleOutput;
 };
 
