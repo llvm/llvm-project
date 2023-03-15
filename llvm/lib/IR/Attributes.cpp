@@ -266,16 +266,6 @@ bool Attribute::isExistingAttribute(StringRef Name) {
       .Default(false);
 }
 
-/// Returns true if this is a type legal for the 'nofpclass' attribute. This
-/// follows the same type rules as FPMathOperator.
-///
-/// TODO: Consider relaxing to any FP type struct fields.
-static bool isNoFPClassCompatibleType(Type *Ty) {
-  while (ArrayType *ArrTy = dyn_cast<ArrayType>(Ty))
-    Ty = ArrTy->getElementType();
-  return Ty->isFPOrFPVectorTy();
-}
-
 //===----------------------------------------------------------------------===//
 // Attribute Accessor Methods
 //===----------------------------------------------------------------------===//
@@ -1850,6 +1840,9 @@ AttrBuilder &AttrBuilder::addMemoryAttr(MemoryEffects ME) {
 }
 
 AttrBuilder &AttrBuilder::addNoFPClassAttr(FPClassTest Mask) {
+  if (Mask == fcNone)
+    return *this;
+
   return addRawIntAttr(Attribute::NoFPClass, Mask);
 }
 
@@ -1934,6 +1927,16 @@ bool AttrBuilder::operator==(const AttrBuilder &B) const {
 //===----------------------------------------------------------------------===//
 // AttributeFuncs Function Defintions
 //===----------------------------------------------------------------------===//
+
+/// Returns true if this is a type legal for the 'nofpclass' attribute. This
+/// follows the same type rules as FPMathOperator.
+///
+/// TODO: Consider relaxing to any FP type struct fields.
+bool AttributeFuncs::isNoFPClassCompatibleType(Type *Ty) {
+  while (ArrayType *ArrTy = dyn_cast<ArrayType>(Ty))
+    Ty = ArrTy->getElementType();
+  return Ty->isFPOrFPVectorTy();
+}
 
 /// Which attributes cannot be applied to a type.
 AttributeMask AttributeFuncs::typeIncompatible(Type *Ty,

@@ -937,16 +937,31 @@ let WaveSizePredicate = isWave64 in {
 }
 
 class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
-                        bit _IsIU, bit _IsFP8BF8> : VOP3P_Profile<VOPProfile<ArgTy>> {
+                        bit _IsIU, bit _IsFP8BF8>
+    : VOP3P_Profile<VOPProfile<ArgTy>> {
   bit IsIU = _IsIU;
   bit IsFP8BF8 = _IsFP8BF8;
-  bit HasNegLoHi = !not(!or(IsIU, IsFP8BF8));
+  bit IsF16BF16 = !not(!or(IsIU, IsFP8BF8));
 
   int IndexType = _IndexType;
 
   let IsPacked = 1;
   let IsWMMA = !not(_IsSWMMAC);
   let IsSWMMAC = _IsSWMMAC;
+
+  bit IsAB_F16 = !and(IsF16BF16, isFloatType<ArgTy[1]>.ret);
+  bit IsAB_BF16 = !and(IsF16BF16, isIntType<ArgTy[1]>.ret);
+  bit IsC_F32 = !or(!eq(ArgTy[3], v8f32), !eq(ArgTy[3], v4f32));
+  bit IsC_BF16 = !or(!eq(ArgTy[3], v8i16), !eq(ArgTy[3], v4i16));
+  bit IsC_F16 = !or(!eq(ArgTy[3], v8f16), !eq(ArgTy[3], v4f16));
+
+  bit NegLo01 = !or(IsF16BF16, IsIU);
+  bit NegLo2 = !and(!or(IsF16BF16, IsFP8BF8), IsWMMA);
+  bit NegHi01 = IsF16BF16;
+  bit NegHi2 = !and(!or(IsF16BF16, IsFP8BF8), IsWMMA);
+  bit NegLoAny = !or(NegLo01, NegLo2);
+  bit NegHiAny = !or(NegHi01, NegHi2);
+
   let DstRC = !cond(!eq(ArgTy[0], v8f32): VDst_256,
                     !eq(ArgTy[0], v8i32): VDst_256,
                     !eq(ArgTy[0], v8f16): VDst_128,
@@ -981,83 +996,122 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                                      !eq(ArgTy[3], v4i32): VISrc_128_b32,
                                      !eq(ArgTy[3], v4f32): VISrc_128_f32));
 
+  // For f16 and bf16 matrices A and B, each element can be modified by
+  // fneg(neg_lo,neg_hi = 1). For iu4 and iu8 matrices A and B neg_lo is
+  // overloaded to mean unsigned/signed: neg_lo = 0 (u4 and u8) unsigned(zext)
+  // neg_lo = 1 (i4 and i8) signed(sext). For f16, bf16 and f32 matrix C each
+  // element can be modified by fneg(neg_lo = 1) or fabs(neg_hi = 1).
 
-  // fp8bf8 don't have src mods, all other have neg_lo, some also have neg_hi.
-  dag Src0Mods = !if(!eq(IsFP8BF8, 0), (ins PackedF16InputMods:$src0_modifiers), (ins));
-  dag Src0 = (ins Src0RC64:$src0);
-  dag Src1Mods = !if(!eq(IsFP8BF8, 0), (ins PackedF16InputMods:$src1_modifiers), (ins));
-  dag Src1 = (ins Src1RC64:$src1);
-  // src2_modifiers used by opcodes that have neg_hi.
-  dag Src2Mods = !if(!and(HasNegLoHi, IsWMMA), (ins PackedF16InputMods:$src2_modifiers), (ins));
-  dag Src2 = !if(IsSWMMAC, (ins VRegSrc_32:$src2), (ins Src2RC64:$src2));
+  // Opcode             | src0/src1 - matrix A/B | src2 - matrix C or Index
+  // ---------------------------------------------------------------------------
+  // wmma f32_f16       | both neg_lo,neg_hi = 1 | neg_lo = 1  neg C(f32)
+  // wmma f32_bf16      | neg A/B (f16 or bf16)  | neg_hi = 1  abs C(f32)
+  // ---------------------------------------------------------------------------
+  // wmma f16_f16       | both neg_lo,neg_hi = 1 | neg_lo = 1 neg C(f16 or bf16)
+  // wmma bf16_bf16     | neg A/B (f16 or bf16)  | neg_hi = 1 abs C(f16 or bf16)
+  // ---------------------------------------------------------------------------
+  // wmma i32_iu8/iu4   | neg_lo = 0 u4/u8(zext) | not allowed for
+  //                    | neg_lo = 1 i4/i8(sext) | i32 matrices
+  // ---------------------------------------------------------------------------
+  // wmma f32_fp8/bf8   | not allowed for        | neg_lo = 1  neg C(f32)
+  // (4 instructions)   | f8 and bf8 matrices    | neg_hi = 1  abs C(f32)
+  // ---------------------------------------------------------------------------
+  // swmmac f32_f16     | both neg_lo,neg_hi = 1 | not allowed for sparse matrix
+  // swmmac f32_bf16    | neg A/B (f16 or bf16)  | A Index - matrix C is in dst
+  // ---------------------------------------------------------------------------
+  // swmmac f16_f16     | both neg_lo,neg_hi = 1 | not allowed for sparse matrix
+  // swmmac bf16_bf16   | neg A/B (f16 or bf16)  | A Index - matrix C is in dst
+  // ---------------------------------------------------------------------------
+  // swmmac i32_iu8/iu4 | neg_lo = 0 u4/u8(zext) | not allowed for sparse matrix
+  //                    | neg_lo = 1 i4/i8(sext) | A Index - matrix C is in dst
+  // ---------------------------------------------------------------------------
+  // swmmac f32_fp8/bf8 | not allowed for        | not allowed for sparse matrix
+  // (4 instructions)   | f8 and bf8 matrices    | A Index - matrix C is in dst
 
-  dag IndexKey = !cond(!eq(IndexType, 0): (ins),
-                       !eq(IndexType, 8): (ins IndexKey8bit:$index_key_8bit),
+  // pseudo
+
+  // fp8bf8 wmmas don't use src (0 and 1) modifiers, iu use neg_lo, f16 and bf16
+  // use neg_lo and neg_hi. iu wmmas (C is i32) don't use src 2 modifiers,
+  // remaining wmmas(f16, bf16 and f8bf8) use neg_lo and neg_hi for C (C is f32
+  // f16 or bf16). swmmac use index_key and don't use src 2 modifiers.
+
+  dag Src0Mods = !if(IsFP8BF8, (ins), (ins PackedF16InputMods:$src0_modifiers));
+  dag Src1Mods = !if(IsFP8BF8, (ins), (ins PackedF16InputMods:$src1_modifiers));
+  dag Src2Mods = !if(IsIU, (ins), (ins PackedF16InputMods:$src2_modifiers));
+  dag IndexKey = !cond(!eq(IndexType, 0) : (ins),
+                       !eq(IndexType, 8) : (ins IndexKey8bit:$index_key_8bit),
                        !eq(IndexType, 16): (ins IndexKey16bit:$index_key_16bit));
-
   dag Clamp = !if(IsIU, (ins clampmod0:$clamp), (ins));
-  dag SrcTiedDef = !if(IsSWMMAC, (ins DstRC:$srcTiedDef), (ins));
-  dag Neg = !cond(IsFP8BF8   : (ins),
-                  IsIU       : (ins neg_lo0:$neg_lo),
-                  HasNegLoHi : (ins neg_lo0:$neg_lo, neg_hi0:$neg_hi));
-  let InsVOP3P = !con(Src0Mods, Src0, Src1Mods, Src1, SrcTiedDef, Src2Mods, Src2, IndexKey, Clamp, Neg);
+  dag Neg = !cond(!and(NegLoAny, NegHiAny)             : (ins neg_lo0:$neg_lo, neg_hi0:$neg_hi),
+                  !and(NegLoAny, !not(NegHiAny))       : (ins neg_lo0:$neg_lo),
+                  !and(!not(NegLoAny), !not(NegHiAny)) : (ins));
 
-  // operands for isel patterns
+  let InsVOP3P = !con(Src0Mods, (ins Src0RC64:$src0), Src1Mods, (ins Src1RC64:$src1),
+                      !cond(IsWMMA   : !con(Src2Mods, (ins Src2RC64:$src2)),
+                            IsSWMMAC : !con((ins DstRC:$srcTiedDef), (ins VRegSrc_32:$src2), IndexKey)),
+                      Clamp, Neg);
+
+  // asm
+
   string IndexKeyAsm = !cond(!eq(IndexType, 0)  : "",
                              !eq(IndexType, 8)  : "$index_key_8bit",
                              !eq(IndexType, 16) : "$index_key_16bit");
-  string NegAsm = !cond(IsFP8BF8   : "",
-                        IsIU       : "$neg_lo",
-                        HasNegLoHi : "$neg_lo$neg_hi");
   string ClampAsm = !if(IsIU, "$clamp", "");
+  string NegAsm = !cond(!and(NegLoAny, NegHiAny)             : "$neg_lo$neg_hi",
+                        !and(NegLoAny, !not(NegHiAny))       : "$neg_lo",
+                        !and(!not(NegLoAny), !not(NegHiAny)) : "");
+
   let AsmVOP3P = "$vdst, $src0, $src1, $src2"#IndexKeyAsm#NegAsm#ClampAsm;
 
-  dag Src0ModsIn = !cond(!or(IsFP8BF8, HasNegLoHi) : (ins),
-                         IsIU                      : (ins (DotIUVOP3PMods i32:$src0_modifiers)));
-  dag Src0ModsOut = !cond(IsFP8BF8   : (ins),
-                          IsIU       : (ins i32:$src0_modifiers),
-                          HasNegLoHi : (ins (i32 8)));
+  // isel patterns
 
-  dag Src1ModsIn = !cond(!or(IsFP8BF8, HasNegLoHi) : (ins),
-                         IsIU                      : (ins (DotIUVOP3PMods i32:$src1_modifiers)));
-  dag Src1ModsOut = !cond(IsFP8BF8   : (ins),
-                          IsIU       : (ins i32:$src1_modifiers),
-                          HasNegLoHi : (ins (i32 8)));
+  dag Src0InPat  = !cond(IsAB_F16  : (ins (Src0VT (WMMAModsF16Neg Src0VT:$src0, i32:$src0_modifiers))),
+                         IsAB_BF16 : (ins Src0VT:$src0),
+                         IsIU      : (ins (DotIUVOP3PMods i32:$src0_modifiers), Src0VT:$src0),
+                         IsFP8BF8  : (ins Src0VT:$src0));
+  dag Src0OutPat = !cond(IsAB_F16  : (ins i32:$src0_modifiers, Src0VT:$src0),
+                         IsAB_BF16 : (ins (i32 8), Src0VT:$src0),
+                         IsIU      : (ins i32:$src0_modifiers, Src0VT:$src0),
+                         IsFP8BF8  : (ins Src0VT:$src0));
+  dag Src1InPat  = !cond(IsAB_F16  : (ins (Src1VT (WMMAModsF16Neg Src1VT:$src1, i32:$src1_modifiers))),
+                         IsAB_BF16 : (ins Src1VT:$src1),
+                         IsIU      : (ins (DotIUVOP3PMods i32:$src1_modifiers), Src1VT:$src1),
+                         IsFP8BF8  : (ins Src1VT:$src1));
+  dag Src1OutPat = !cond(IsAB_F16  : (ins i32:$src1_modifiers, Src1VT:$src1),
+                         IsAB_BF16 : (ins (i32 8), Src1VT:$src1),
+                         IsIU      : (ins i32:$src1_modifiers, Src1VT:$src1),
+                         IsFP8BF8  : (ins Src1VT:$src1));
+  dag Src2InPatWmma  = !cond(IsC_F32  : (ins (Src2VT (WMMAModsF32NegAbs Src2VT:$src2, i32:$src2_modifiers))),
+                             IsC_F16  : (ins (Src2VT (WMMAModsF16NegAbs Src2VT:$src2, i32:$src2_modifiers))),
+                             IsC_BF16 : (ins Src2VT:$src2),
+                             IsIU     : (ins Src2VT:$src2),
+                             IsSWMMAC : (ins));
+  dag Src2OutPatWmma = !cond(IsC_F32  : (ins i32:$src2_modifiers, Src2VT:$src2),
+                             IsC_F16  : (ins i32:$src2_modifiers, Src2VT:$src2),
+                             IsC_BF16 : (ins (i32 8), Src2VT:$src2),
+                             IsIU     : (ins Src2VT:$src2),
+                             IsSWMMAC : (ins));
+  dag ClampPat = !if(IsIU, (ins i1:$clamp), (ins));
+  dag IndexInPat = !cond(!eq(IndexType, 0) : (ins i32:$src2),
+                         !eq(IndexType, 8) : (ins (i32 (SWMMACIndex8 i32:$src2, i32:$index_key_8bit))),
+                         !eq(IndexType, 16): (ins (i32 (SWMMACIndex16 i32:$src2, i32:$index_key_16bit))));
+  dag IndexOutPat = !cond(!eq(IndexType, 0) : (ins i32:$src2),
+                          !eq(IndexType, 8) : (ins i32:$src2, i32:$index_key_8bit),
+                          !eq(IndexType, 16): (ins i32:$src2, i32:$index_key_16bit));
+  dag Src2InlineInPat = (ins (Src2VT (WMMAVISrc Src2VT:$src2)));
+  dag Src2InlineOutPat = !con(!if(IsIU, (ins), (ins (i32 8))), (ins Src2VT:$src2));
 
-  dag Src2ModsIn = (ins);
-  dag Src2ModsOut = !if(HasNegLoHi, (ins (i32 8)), (ins));
 
-  dag SrcTiedDefIO = !if(IsSWMMAC, (ins Src2VT:$srcTiedDef), (ins));
-  dag ClampIO = !if(IsIU, (ins i1:$clamp), (ins));
+  dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, ClampPat);
+  dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, ClampPat);
 
-  dag Src2IO =  !if(IsSWMMAC , !cond(!eq(IndexType, 0): (ins i32:$src2),
-                                     !eq(IndexType, 8): (ins i32:$src2),
-                                     !eq(IndexType, 16): (ins i32:$src2)),
-                               (ins Src2VT:$src2));
-
-  // default pattern
-  dag InOps  = !con(Src0ModsIn,  (ins Src0VT:$src0), Src1ModsIn,  (ins Src1VT:$src1), SrcTiedDefIO, Src2ModsIn,  Src2IO, ClampIO);
-  dag OutOps = !con(Src0ModsOut, (ins Src0VT:$src0), Src1ModsOut, (ins Src1VT:$src1), SrcTiedDefIO, Src2ModsOut, Src2IO, ClampIO);
-
-  dag InOpsIndexKey = !cond(!eq(IndexType, 0): (ins),
-                            !eq(IndexType, 8): (ins (i32 (SWMMACIndex8 i32:$src2, i32:$index_key_8bit))),
-                            !eq(IndexType, 16): (ins (i32 (SWMMACIndex16 i32:$src2, i32:$index_key_16bit))));
-
-  dag OutOpsIndexKey = !cond(!eq(IndexType, 0): (ins),
-                            !eq(IndexType, 8): (ins i32:$src2, i32:$index_key_8bit),
-                            !eq(IndexType, 16): (ins i32:$src2, i32:$index_key_16bit));
-
-  // swmmac pattern for Index
-  dag InOpsIndex  = !con(Src0ModsIn,  (ins Src0VT:$src0), Src1ModsIn,  (ins Src1VT:$src1), SrcTiedDefIO, InOpsIndexKey, ClampIO);
-  dag OutOpsIndex = !con(Src0ModsOut, (ins Src0VT:$src0), Src1ModsOut, (ins Src1VT:$src1), SrcTiedDefIO, OutOpsIndexKey, ClampIO);
+  dag SwmmacInPat  = !con(Src0InPat, Src1InPat, (ins Src2VT:$srcTiedDef), IndexInPat, ClampPat);
+  dag SwmmacOutPat = !con(Src0OutPat, Src1OutPat, (ins Src2VT:$srcTiedDef), IndexOutPat, ClampPat);
 
   // wmma pattern where src2 is inline imm uses _threeaddr pseudo,
   // can't use _twoaddr since it would violate src2 tied to vdst constraint.
-  dag Src2InlineIn = (ins (Src2VT (WMMAVISrc Src2VT:$src2)));
-  dag Src2InlineOut = (ins Src2VT:$src2);
-
-  dag InOps_threeaddr  = !con(Src0ModsIn,  (ins Src0VT:$src0), Src1ModsIn,  (ins Src1VT:$src1), Src2ModsIn,  Src2InlineIn,  ClampIO);
-  dag OutOps_threeaddr = !con(Src0ModsOut, (ins Src0VT:$src0), Src1ModsOut, (ins Src1VT:$src1), Src2ModsOut, Src2InlineOut, ClampIO);
+  dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat,  ClampPat);
+  dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, ClampPat);
 }
 
 multiclass WMMAInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string PseudoInstrSuffix> {
@@ -1203,19 +1257,20 @@ defm V_SWMMAC_F32_16X16X32_BF8_BF8_w64 : SWMMACInstGFX12<"v_swmmac_f32_16x16x32_
 // IsGFX11OpselIntrinsic: f16_f16 and bf16_bf16 Intrinsics have imm operand that
 // controls opsel. Used by gfx11, removed in gfx12 (operand must be 0).
 multiclass WMMAPat<string Inst, SDPatternOperator node, VOP3PWMMA_Profile P, bit IsGFX11OpselIntrinsic = 0> {
- def : GCNPat <(P.DstVT !setdagop(!con(P.InOps, !if(IsGFX11OpselIntrinsic, (ins 0), (ins))), node)),
-               (P.DstVT !setdagop(P.OutOps, !cast<Instruction>(Inst#"_twoaddr")))>;
- def : GCNPat <(P.DstVT !setdagop(!con(P.InOps_threeaddr, !if(IsGFX11OpselIntrinsic, (ins 0), (ins))), node)),
-               (P.DstVT !setdagop(P.OutOps_threeaddr, !cast<Instruction>(Inst#"_threeaddr")))>;
+  def : GCNPat <(P.DstVT !setdagop(!con(P.WmmaInPat, !if(IsGFX11OpselIntrinsic, (ins 0), (ins))), node)),
+                (P.DstVT !setdagop(P.WmmaOutPat, !cast<Instruction>(Inst#"_twoaddr")))>;
+  let AddedComplexity = 4 in
+  def : GCNPat <(P.DstVT !setdagop(!con(P.WmmaInlineInPat, !if(IsGFX11OpselIntrinsic, (ins 0), (ins))), node)),
+                (P.DstVT !setdagop(P.WmmaInlineOutPat, !cast<Instruction>(Inst#"_threeaddr")))>;
 }
 
 class SWMMACPat<Instruction Inst, SDPatternOperator node, VOP3PWMMA_Profile P> :
-  GCNPat <(P.DstVT !setdagop(P.InOpsIndex, node)),
-          (P.DstVT !setdagop(P.OutOpsIndex, Inst))>;
+  GCNPat <(P.DstVT !setdagop(P.SwmmacInPat, node)),
+          (P.DstVT !setdagop(P.SwmmacOutPat, Inst))>;
 
 class SWMMACPat_w64<Instruction Inst, SDPatternOperator node, VOP3PWMMA_Profile P> :
-  GCNPat <(P.DstVT !setdagop(P.InOpsIndex, node)),
-          (P.DstVT !setdagop(P.OutOpsIndex, Inst))>{
+  GCNPat <(P.DstVT !setdagop(P.SwmmacInPat, node)),
+          (P.DstVT !setdagop(P.SwmmacOutPat, Inst))>{
             let WaveSizePredicate = isWave64;
           }
 
@@ -1238,8 +1293,8 @@ let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12Plus in {
   def : SWMMACPat<V_SWMMAC_BF16_16X16X32_BF16_w32_twoaddr,   int_amdgcn_swmmac_bf16_16x16x32_bf16,   BF16_BF16_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_I32_16X16X32_IU8_w32_twoaddr,     int_amdgcn_swmmac_i32_16x16x32_iu8,     I32_IU8_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_I32_16X16X32_IU4_w32_twoaddr,     int_amdgcn_swmmac_i32_16x16x32_iu4,     I32_IU4X32_SWMMAC_w32>;
-  def : GCNPat <(I32_IU4X64_SWMMAC_w32.DstVT !setdagop(I32_IU4X64_SWMMAC_w32.InOps,  int_amdgcn_swmmac_i32_16x16x64_iu4)),
-                (I32_IU4X64_SWMMAC_w32.DstVT !setdagop(I32_IU4X64_SWMMAC_w32.OutOps, V_SWMMAC_I32_16X16X64_IU4_w32_twoaddr))>;
+  def : GCNPat <(I32_IU4X64_SWMMAC_w32.DstVT !setdagop(I32_IU4X64_SWMMAC_w32.SwmmacInPat,  int_amdgcn_swmmac_i32_16x16x64_iu4)),
+                (I32_IU4X64_SWMMAC_w32.DstVT !setdagop(I32_IU4X64_SWMMAC_w32.SwmmacOutPat, V_SWMMAC_I32_16X16X64_IU4_w32_twoaddr))>;
   def : SWMMACPat<V_SWMMAC_F32_16X16X32_FP8_FP8_w32_twoaddr, int_amdgcn_swmmac_f32_16x16x32_fp8_fp8, F32_FP8BF8_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_F32_16X16X32_FP8_BF8_w32_twoaddr, int_amdgcn_swmmac_f32_16x16x32_fp8_bf8, F32_FP8BF8_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_F32_16X16X32_BF8_FP8_w32_twoaddr, int_amdgcn_swmmac_f32_16x16x32_bf8_fp8, F32_FP8BF8_SWMMAC_w32>;
@@ -1309,7 +1364,8 @@ multiclass VOP3P_Real_Base<GFXGen Gen, bits<7> op, string backing_ps_name = NAME
     VOP3Pe_gfx11_gfx12<op, !cast<VOP3P_Pseudo>(backing_ps_name).Pfl>;
 }
 
-class VOP3PeWmmaIdx<bits<7> op, VOPProfile P, VOP3PWMMA_Profile WMMAP> : VOP3Pe_gfx11_gfx12<op, P>{
+class VOP3PeWmma<bits<7> op, VOPProfile P, VOP3PWMMA_Profile WMMAP>
+    : VOP3Pe_gfx11_gfx12<op, P>{
   // opsel
   let Inst{11} = !cond(!eq(WMMAP.IndexType, 0)  : 0,
                        !eq(WMMAP.IndexType, 8)  : index_key_8bit{0},
@@ -1321,34 +1377,34 @@ class VOP3PeWmmaIdx<bits<7> op, VOPProfile P, VOP3PWMMA_Profile WMMAP> : VOP3Pe_
   let Inst{60} = 1;
   let Inst{14} = 1;
   // neg_lo
-  let Inst{61} = !if(!or(WMMAP.IsIU, !not(WMMAP.IsFP8BF8)), src0_modifiers{0}, 0);
-  let Inst{62} = !if(!or(WMMAP.IsIU, !not(WMMAP.IsFP8BF8)), src1_modifiers{0}, 0);
-  let Inst{63} = !if(!not(!or(WMMAP.IsIU, WMMAP.IsFP8BF8, WMMAP.IsSWMMAC)), src2_modifiers{0}, 0);
+  let Inst{61} = !if(WMMAP.NegLo01, src0_modifiers{0}, 0);
+  let Inst{62} = !if(WMMAP.NegLo01, src1_modifiers{0}, 0);
+  let Inst{63} = !if(WMMAP.NegLo2, src2_modifiers{0}, 0);
   // neg_hi
-  let Inst{8}  = !if(!not(!or(WMMAP.IsIU, WMMAP.IsFP8BF8)), src0_modifiers{1}, 0);
-  let Inst{9}  = !if(!not(!or(WMMAP.IsIU, WMMAP.IsFP8BF8)), src1_modifiers{1}, 0);
-  let Inst{10} = !if(!not(!or(WMMAP.IsIU, WMMAP.IsFP8BF8, WMMAP.IsSWMMAC)), src2_modifiers{1}, 0);
+  let Inst{8}  = !if(WMMAP.NegHi01, src0_modifiers{1}, 0);
+  let Inst{9}  = !if(WMMAP.NegHi01, src1_modifiers{1}, 0);
+  let Inst{10} = !if(WMMAP.NegHi2, src2_modifiers{1}, 0);
   // clamp
   let Inst{15} = !if(WMMAP.IsIU, clamp{0}, 0);
 }
 
-multiclass VOP3P_WMMA_Real_BaseIdx<GFXGen Gen, bits<7> op, VOP3PWMMA_Profile WMMAP,
+multiclass VOP3P_WMMA_Real_Base<GFXGen Gen, bits<7> op, VOP3PWMMA_Profile WMMAP,
                                 string backing_ps_name = NAME,
                                 string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
   def Gen.Suffix :
     VOP3P_Real_Gen<!cast<VOP3P_Pseudo>(backing_ps_name), Gen, asmName>,
-    VOP3PeWmmaIdx<op, !cast<VOP3P_Pseudo>(backing_ps_name).Pfl, WMMAP>;
+    VOP3PeWmma<op, !cast<VOP3P_Pseudo>(backing_ps_name).Pfl, WMMAP>;
 }
 
 multiclass VOP3P_Real_WMMA_gfx12 <bits<7> op, VOP3PWMMA_Profile WMMAP> {
   let WaveSizePredicate = isWave32, DecoderNamespace = "GFX12" in {
-    defm _twoaddr : VOP3P_WMMA_Real_BaseIdx <GFX12Gen, op, WMMAP>;
+    defm _twoaddr : VOP3P_WMMA_Real_Base <GFX12Gen, op, WMMAP>;
   }
 }
 
 multiclass VOP3P_Real_WMMA_gfx12w64 <bits<7> op, VOP3PWMMA_Profile WMMAP> {
   let WaveSizePredicate = isWave64, DecoderNamespace = "WMMAGFX12" in {
-    defm _twoaddr : VOP3P_WMMA_Real_BaseIdx <GFX12Gen, op, WMMAP>;
+    defm _twoaddr : VOP3P_WMMA_Real_Base <GFX12Gen, op, WMMAP>;
   }
 }
 

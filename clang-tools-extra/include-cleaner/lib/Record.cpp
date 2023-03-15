@@ -382,7 +382,7 @@ bool PragmaIncludes::isSelfContained(const FileEntry *FE) const {
 }
 
 bool PragmaIncludes::isPrivate(const FileEntry *FE) const {
-  return IWYUPublic.find(FE->getUniqueID()) != IWYUPublic.end();
+  return IWYUPublic.contains(FE->getUniqueID());
 }
 
 namespace {

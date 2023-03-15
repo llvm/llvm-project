@@ -112,9 +112,9 @@ body: |
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
     ; GFX12-NEXT: V_NOP_e32 implicit $exec
-    ; GFX12-NEXT: early-clobber renamable $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = V_WMMA_F32_16X16X16_FP8_FP8_w32_twoaddr killed $vgpr0_vgpr1, killed $vgpr30_vgpr31, killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39, implicit $exec
+    ; GFX12-NEXT: early-clobber renamable $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = V_WMMA_F32_16X16X16_FP8_FP8_w32_twoaddr killed $vgpr0_vgpr1, killed $vgpr30_vgpr31, 8, killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39, 0, 0, implicit $exec
     early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
-    early-clobber renamable $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = V_WMMA_F32_16X16X16_FP8_FP8_w32_twoaddr killed $vgpr0_vgpr1, killed $vgpr30_vgpr31, killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39, implicit $exec
+    early-clobber renamable $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = V_WMMA_F32_16X16X16_FP8_FP8_w32_twoaddr killed $vgpr0_vgpr1, killed $vgpr30_vgpr31, 8, killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39, 0, 0, implicit $exec
 ...
 
 ---
@@ -128,9 +128,9 @@ body: |
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
     ; GFX12-NEXT: V_NOP_e32 implicit $exec
-    ; GFX12-NEXT: early-clobber renamable $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = V_WMMA_F32_16X16X16_BF8_FP8_w32_twoaddr killed $vgpr28_vgpr29, killed $vgpr0_vgpr1, killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39, implicit $exec
+    ; GFX12-NEXT: early-clobber renamable $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = V_WMMA_F32_16X16X16_BF8_FP8_w32_twoaddr killed $vgpr28_vgpr29, killed $vgpr0_vgpr1, 8, killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39, 0, 0, implicit $exec
     early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
-    early-clobber renamable $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = V_WMMA_F32_16X16X16_BF8_FP8_w32_twoaddr killed $vgpr28_vgpr29, killed $vgpr0_vgpr1, killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39, implicit $exec
+    early-clobber renamable $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = V_WMMA_F32_16X16X16_BF8_FP8_w32_twoaddr killed $vgpr28_vgpr29, killed $vgpr0_vgpr1, 8, killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39, 0, 0, implicit $exec
 ...
 
 ---
@@ -144,9 +144,9 @@ body: |
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
     ; GFX12-NEXT: V_NOP_e32 implicit $exec
-    ; GFX12-NEXT: early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_FP8_BF8_w32_twoaddr killed $vgpr28_vgpr29, killed $vgpr30_vgpr31, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit $exec
+    ; GFX12-NEXT: early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_FP8_BF8_w32_twoaddr killed $vgpr28_vgpr29, killed $vgpr30_vgpr31, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
     early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
-    early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_FP8_BF8_w32_twoaddr killed $vgpr28_vgpr29, killed $vgpr30_vgpr31, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit $exec
+    early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_FP8_BF8_w32_twoaddr killed $vgpr28_vgpr29, killed $vgpr30_vgpr31, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
 ...
 
 ---
@@ -160,9 +160,9 @@ body: |
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
     ; GFX12-NEXT: V_NOP_e32 implicit $exec
-    ; GFX12-NEXT: early-clobber renamable $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = V_WMMA_F32_16X16X16_BF8_BF8_w32_twoaddr killed $vgpr0_vgpr1, killed $vgpr30_vgpr31, killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39, implicit $exec
+    ; GFX12-NEXT: early-clobber renamable $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = V_WMMA_F32_16X16X16_BF8_BF8_w32_twoaddr killed $vgpr0_vgpr1, killed $vgpr30_vgpr31, 8, killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39, 0, 0, implicit $exec
     early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
-    early-clobber renamable $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = V_WMMA_F32_16X16X16_BF8_BF8_w32_twoaddr killed $vgpr0_vgpr1, killed $vgpr30_vgpr31, killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39, implicit $exec
+    early-clobber renamable $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = V_WMMA_F32_16X16X16_BF8_BF8_w32_twoaddr killed $vgpr0_vgpr1, killed $vgpr30_vgpr31, 8, killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39, 0, 0, implicit $exec
 ...
 
 ---

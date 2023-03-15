@@ -330,6 +330,7 @@ public:
   using FunctionT = typename ContextT::FunctionT;
   using ValueRefT = typename ContextT::ValueRefT;
   using ConstValueRefT = typename ContextT::ConstValueRefT;
+  using UseT = typename ContextT::UseT;
   using InstructionT = typename ContextT::InstructionT;
   using DominatorTreeT = typename ContextT::DominatorTreeT;
 
@@ -383,6 +384,8 @@ public:
 
   /// \brief Whether \p Val is divergent at its definition.
   bool isDivergent(ConstValueRefT V) const { return DivergentValues.count(V); }
+
+  bool isDivergentUse(const UseT &U) const;
 
   bool hasDivergentTerminator(const BlockT &B) const {
     return DivergentTermBlocks.contains(&B);
@@ -462,9 +465,9 @@ private:
 
   bool usesValueFromCycle(const InstructionT &I, const CycleT &DefCycle) const;
 
-  /// \brief Whether \p Val is divergent when read in \p ObservingBlock.
+  /// \brief Whether \p Def is divergent when read in \p ObservingBlock.
   bool isTemporalDivergent(const BlockT &ObservingBlock,
-                           ConstValueRefT Val) const;
+                           const InstructionT &Def) const;
 };
 
 template <typename ImplT>
@@ -1092,6 +1095,20 @@ getOutermostDivergentCycle(const CycleT *Cycle, const BlockT *DivTermBlock,
 }
 
 template <typename ContextT>
+bool GenericUniformityAnalysisImpl<ContextT>::isTemporalDivergent(
+    const BlockT &ObservingBlock, const InstructionT &Def) const {
+  const BlockT *DefBlock = Def.getParent();
+  for (const CycleT *Cycle = CI.getCycle(DefBlock);
+       Cycle && !Cycle->contains(&ObservingBlock);
+       Cycle = Cycle->getParentCycle()) {
+    if (DivergentExitCycles.contains(Cycle)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::analyzeControlDivergence(
     const InstructionT &Term) {
   const auto *DivTermBlock = Term.getParent();
@@ -1271,6 +1288,11 @@ bool GenericUniformityInfo<ContextT>::isDivergent(ConstValueRefT V) const {
 template <typename ContextT>
 bool GenericUniformityInfo<ContextT>::isDivergent(const InstructionT *I) const {
   return DA->isDivergent(*I);
+}
+
+template <typename ContextT>
+bool GenericUniformityInfo<ContextT>::isDivergentUse(const UseT &U) const {
+  return DA->isDivergentUse(U);
 }
 
 template <typename ContextT>

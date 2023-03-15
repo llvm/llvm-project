@@ -43,12 +43,14 @@ class MultiAffineFunction;
 class FlatAffineValueConstraints : public presburger::IntegerPolyhedron {
 public:
   /// Constructs a constraint system reserving memory for the specified number
-  /// of constraints and variables.
+  /// of constraints and variables. `valArgs` are the optional SSA values
+  /// associated with each dimension/symbol. These must either be empty or match
+  /// the number of dimensions and symbols.
   FlatAffineValueConstraints(unsigned numReservedInequalities,
                              unsigned numReservedEqualities,
                              unsigned numReservedCols, unsigned numDims,
                              unsigned numSymbols, unsigned numLocals,
-                             ArrayRef<std::optional<Value>> valArgs = {})
+                             ArrayRef<std::optional<Value>> valArgs)
       : IntegerPolyhedron(numReservedInequalities, numReservedEqualities,
                           numReservedCols,
                           presburger::PresburgerSpace::getSetSpace(
@@ -62,11 +64,48 @@ public:
       values.append(valArgs.begin(), valArgs.end());
   }
 
-  /// Constructs a constraint system with the specified number of
+  /// Constructs a constraint system reserving memory for the specified number
+  /// of constraints and variables. `valArgs` are the optional SSA values
+  /// associated with each dimension/symbol. These must either be empty or match
+  /// the number of dimensions and symbols.
+  FlatAffineValueConstraints(unsigned numReservedInequalities,
+                             unsigned numReservedEqualities,
+                             unsigned numReservedCols, unsigned numDims,
+                             unsigned numSymbols, unsigned numLocals,
+                             ArrayRef<Value> valArgs = {})
+      : IntegerPolyhedron(numReservedInequalities, numReservedEqualities,
+                          numReservedCols,
+                          presburger::PresburgerSpace::getSetSpace(
+                              numDims, numSymbols, numLocals)) {
+    assert(numReservedCols >= getNumVars() + 1);
+    assert(valArgs.empty() || valArgs.size() == getNumDimAndSymbolVars());
+    values.reserve(numReservedCols);
+    if (valArgs.empty())
+      values.resize(getNumDimAndSymbolVars(), std::nullopt);
+    else
+      values.append(valArgs.begin(), valArgs.end());
+  }
+
+  /// Constructs a constraint system with the specified number of dimensions
+  /// and symbols. `valArgs` are the optional SSA values associated with each
+  /// dimension/symbol. These must either be empty or match the number of
+  /// dimensions and symbols.
+  FlatAffineValueConstraints(unsigned numDims, unsigned numSymbols,
+                             unsigned numLocals,
+                             ArrayRef<std::optional<Value>> valArgs)
+      : FlatAffineValueConstraints(/*numReservedInequalities=*/0,
+                                   /*numReservedEqualities=*/0,
+                                   /*numReservedCols=*/numDims + numSymbols +
+                                       numLocals + 1,
+                                   numDims, numSymbols, numLocals, valArgs) {}
+
+  /// Constructs a constraint system with the specified number of dimensions
+  /// and symbols. `valArgs` are the optional SSA values associated with each
+  /// dimension/symbol. These must either be empty or match the number of
   /// dimensions and symbols.
   FlatAffineValueConstraints(unsigned numDims = 0, unsigned numSymbols = 0,
                              unsigned numLocals = 0,
-                             ArrayRef<std::optional<Value>> valArgs = {})
+                             ArrayRef<Value> valArgs = {})
       : FlatAffineValueConstraints(/*numReservedInequalities=*/0,
                                    /*numReservedEqualities=*/0,
                                    /*numReservedCols=*/numDims + numSymbols +
@@ -82,11 +121,6 @@ public:
     else
       values.append(valArgs.begin(), valArgs.end());
   }
-
-  /// Create a flat affine constraint system from an AffineValueMap or a list of
-  /// these. The constructed system will only include equalities.
-  explicit FlatAffineValueConstraints(const AffineValueMap &avm);
-  explicit FlatAffineValueConstraints(ArrayRef<const AffineValueMap *> avmRef);
 
   /// Creates an affine constraint system from an IntegerSet.
   explicit FlatAffineValueConstraints(IntegerSet set, ValueRange operands = {});
@@ -111,19 +145,6 @@ public:
   static bool classof(const IntegerRelation *cst) {
     return cst->getKind() == Kind::FlatAffineValueConstraints;
   }
-
-  /// Clears any existing data and reserves memory for the specified
-  /// constraints.
-  void reset(unsigned numReservedInequalities, unsigned numReservedEqualities,
-             unsigned numReservedCols, unsigned numDims, unsigned numSymbols,
-             unsigned numLocals = 0);
-  void reset(unsigned numDims = 0, unsigned numSymbols = 0,
-             unsigned numLocals = 0);
-  void reset(unsigned numReservedInequalities, unsigned numReservedEqualities,
-             unsigned numReservedCols, unsigned numDims, unsigned numSymbols,
-             unsigned numLocals, ArrayRef<Value> valArgs);
-  void reset(unsigned numDims, unsigned numSymbols, unsigned numLocals,
-             ArrayRef<Value> valArgs);
 
   /// Clones this object.
   std::unique_ptr<FlatAffineValueConstraints> clone() const;

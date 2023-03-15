@@ -700,7 +700,7 @@ static bool useFuncSeen(const Constant *C,
       const Function *caller = bb->getParent();
       if (!caller)
         continue;
-      if (seenMap.find(caller) != seenMap.end())
+      if (seenMap.contains(caller))
         return true;
     }
   }
@@ -753,7 +753,7 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
       // If a caller has already been seen, then the caller is
       // appearing in the module before the callee. so print out
       // a declaration for the callee.
-      if (seenMap.find(caller) != seenMap.end()) {
+      if (seenMap.contains(caller)) {
         emitDeclaration(&F, O);
         break;
       }

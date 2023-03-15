@@ -59,6 +59,18 @@ def gi_wmmavisrc :
     GIComplexOperandMatcher<s32, "selectWMMAVISrc">,
     GIComplexPatternEquiv<WMMAVISrc>;
 
+def gi_wmmamods :
+    GIComplexOperandMatcher<s32, "selectWMMAModsF32NegAbs">,
+    GIComplexPatternEquiv<WMMAModsF32NegAbs>;
+
+def gi_wmmamodsf16Neg :
+    GIComplexOperandMatcher<s32, "selectWMMAModsF16Neg">,
+    GIComplexPatternEquiv<WMMAModsF16Neg>;
+
+def gi_wmmamodsf16NegAbs :
+    GIComplexOperandMatcher<s32, "selectWMMAModsF16NegAbs">,
+    GIComplexPatternEquiv<WMMAModsF16NegAbs>;
+
 def gi_swmmacindex8 :
     GIComplexOperandMatcher<s32, "selectSWMMACIndex8">,
     GIComplexPatternEquiv<SWMMACIndex8>;

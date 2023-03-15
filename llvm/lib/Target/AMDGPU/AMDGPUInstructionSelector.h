@@ -192,6 +192,12 @@ private:
   selectWMMAOpSelVOP3PMods(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
+  selectWMMAModsF32NegAbs(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectWMMAModsF16Neg(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectWMMAModsF16NegAbs(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
   selectWMMAVISrc(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectSWMMACIndex8(MachineOperand &Root) const;

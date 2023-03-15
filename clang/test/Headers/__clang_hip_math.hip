@@ -257,7 +257,7 @@ extern "C" __device__ long long test_llabs(long x) {
 //
 // FINITEONLY-LABEL: @test_acosf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_acos_f32(float noundef [[X:%.*]]) #[[ATTR13:[0-9]+]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_acos_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13:[0-9]+]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_acosf(float x) {
@@ -271,7 +271,7 @@ extern "C" __device__ float test_acosf(float x) {
 //
 // FINITEONLY-LABEL: @test_acos(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_acos_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_acos_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_acos(double x) {
@@ -285,7 +285,7 @@ extern "C" __device__ double test_acos(double x) {
 //
 // FINITEONLY-LABEL: @test_acoshf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_acosh_f32(float noundef [[X:%.*]]) #[[ATTR14:[0-9]+]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_acosh_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14:[0-9]+]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_acoshf(float x) {
@@ -299,7 +299,7 @@ extern "C" __device__ float test_acoshf(float x) {
 //
 // FINITEONLY-LABEL: @test_acosh(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_acosh_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_acosh_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_acosh(double x) {
@@ -313,7 +313,7 @@ extern "C" __device__ double test_acosh(double x) {
 //
 // FINITEONLY-LABEL: @test_asinf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_asin_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_asin_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_asinf(float x) {
@@ -327,7 +327,7 @@ extern "C" __device__ float test_asinf(float x) {
 //
 // FINITEONLY-LABEL: @test_asin(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_asin_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_asin_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_asin(double x) {
@@ -342,7 +342,7 @@ extern "C" __device__ double test_asin(double x) {
 //
 // FINITEONLY-LABEL: @test_asinhf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_asinh_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_asinh_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_asinhf(float x) {
@@ -356,7 +356,7 @@ extern "C" __device__ float test_asinhf(float x) {
 //
 // FINITEONLY-LABEL: @test_asinh(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_asinh_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_asinh_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_asinh(double x) {
@@ -370,7 +370,7 @@ extern "C" __device__ double test_asinh(double x) {
 //
 // FINITEONLY-LABEL: @test_atan2f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_atan2_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_atan2_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_atan2f(float x, float y) {
@@ -384,7 +384,7 @@ extern "C" __device__ float test_atan2f(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_atan2(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_atan2_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_atan2_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_atan2(double x, double y) {
@@ -398,7 +398,7 @@ extern "C" __device__ double test_atan2(double x, double y) {
 //
 // FINITEONLY-LABEL: @test_atanf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_atan_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_atan_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_atanf(float x) {
@@ -412,7 +412,7 @@ extern "C" __device__ float test_atanf(float x) {
 //
 // FINITEONLY-LABEL: @test_atan(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_atan_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_atan_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_atan(double x) {
@@ -426,7 +426,7 @@ extern "C" __device__ double test_atan(double x) {
 //
 // FINITEONLY-LABEL: @test_atanhf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_atanh_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_atanh_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_atanhf(float x) {
@@ -440,7 +440,7 @@ extern "C" __device__ float test_atanhf(float x) {
 //
 // FINITEONLY-LABEL: @test_atanh(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_atanh_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_atanh_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_atanh(double x) {
@@ -454,7 +454,7 @@ extern "C" __device__ double test_atanh(double x) {
 //
 // FINITEONLY-LABEL: @test_cbrtf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_cbrt_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_cbrt_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_cbrtf(float x) {
@@ -468,7 +468,7 @@ extern "C" __device__ float test_cbrtf(float x) {
 //
 // FINITEONLY-LABEL: @test_cbrt(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_cbrt_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_cbrt_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_cbrt(double x) {
@@ -482,7 +482,7 @@ extern "C" __device__ double test_cbrt(double x) {
 //
 // FINITEONLY-LABEL: @test_ceilf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_ceil_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_ceil_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_ceilf(float x) {
@@ -496,7 +496,7 @@ extern "C" __device__ float test_ceilf(float x) {
 //
 // FINITEONLY-LABEL: @test_ceil(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_ceil_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_ceil_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_ceil(double x) {
@@ -510,7 +510,7 @@ extern "C" __device__ double test_ceil(double x) {
 //
 // FINITEONLY-LABEL: @test_copysignf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_copysign_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_copysign_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_copysignf(float x, float y) {
@@ -524,7 +524,7 @@ extern "C" __device__ float test_copysignf(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_copysign(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_copysign_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_copysign_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_copysign(double x, double y) {
@@ -538,7 +538,7 @@ extern "C" __device__ double test_copysign(double x, double y) {
 //
 // FINITEONLY-LABEL: @test_cosf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_cos_f32(float noundef [[X:%.*]]) #[[ATTR15:[0-9]+]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_cos_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15:[0-9]+]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_cosf(float x) {
@@ -552,7 +552,7 @@ extern "C" __device__ float test_cosf(float x) {
 //
 // FINITEONLY-LABEL: @test_cos(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_cos_f64(double noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_cos_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_cos(double x) {
@@ -566,7 +566,7 @@ extern "C" __device__ double test_cos(double x) {
 //
 // FINITEONLY-LABEL: @test_coshf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_cosh_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_cosh_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_coshf(float x) {
@@ -580,7 +580,7 @@ extern "C" __device__ float test_coshf(float x) {
 //
 // FINITEONLY-LABEL: @test_cosh(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_cosh_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_cosh_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_cosh(double x) {
@@ -594,7 +594,7 @@ extern "C" __device__ double test_cosh(double x) {
 //
 // FINITEONLY-LABEL: @test_cospif(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_cospi_f32(float noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_cospi_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_cospif(float x) {
@@ -608,7 +608,7 @@ extern "C" __device__ float test_cospif(float x) {
 //
 // FINITEONLY-LABEL: @test_cospi(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_cospi_f64(double noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_cospi_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_cospi(double x) {
@@ -622,7 +622,7 @@ extern "C" __device__ double test_cospi(double x) {
 //
 // FINITEONLY-LABEL: @test_cyl_bessel_i0f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_i0_f32(float noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_i0_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_cyl_bessel_i0f(float x) {
@@ -636,7 +636,7 @@ extern "C" __device__ float test_cyl_bessel_i0f(float x) {
 //
 // FINITEONLY-LABEL: @test_cyl_bessel_i0(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_i0_f64(double noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_i0_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_cyl_bessel_i0(double x) {
@@ -650,7 +650,7 @@ extern "C" __device__ double test_cyl_bessel_i0(double x) {
 //
 // FINITEONLY-LABEL: @test_cyl_bessel_i1f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_i1_f32(float noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_i1_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_cyl_bessel_i1f(float x) {
@@ -664,7 +664,7 @@ extern "C" __device__ float test_cyl_bessel_i1f(float x) {
 //
 // FINITEONLY-LABEL: @test_cyl_bessel_i1(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_i1_f64(double noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_i1_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_cyl_bessel_i1(double x) {
@@ -678,7 +678,7 @@ extern "C" __device__ double test_cyl_bessel_i1(double x) {
 //
 // FINITEONLY-LABEL: @test_erfcf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_erfc_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_erfc_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_erfcf(float x) {
@@ -692,7 +692,7 @@ extern "C" __device__ float test_erfcf(float x) {
 //
 // FINITEONLY-LABEL: @test_erfc(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_erfc_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_erfc_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_erfc(double x) {
@@ -706,7 +706,7 @@ extern "C" __device__ double test_erfc(double x) {
 //
 // FINITEONLY-LABEL: @test_erfinvf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_erfinv_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_erfinv_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_erfinvf(float x) {
@@ -720,7 +720,7 @@ extern "C" __device__ float test_erfinvf(float x) {
 //
 // FINITEONLY-LABEL: @test_erfinv(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_erfinv_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_erfinv_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_erfinv(double x) {
@@ -734,7 +734,7 @@ extern "C" __device__ double test_erfinv(double x) {
 //
 // FINITEONLY-LABEL: @test_exp10f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_exp10_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_exp10_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_exp10f(float x) {
@@ -748,7 +748,7 @@ extern "C" __device__ float test_exp10f(float x) {
 //
 // FINITEONLY-LABEL: @test_exp10(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_exp10_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_exp10_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_exp10(double x) {
@@ -762,14 +762,13 @@ extern "C" __device__ double test_exp10(double x) {
 //
 // FINITEONLY-LABEL: @test_exp2f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_exp2_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_exp2_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_exp2f(float x) {
   return exp2f(x);
 }
 
-//
 // DEFAULT-LABEL: @test_exp2(
 // DEFAULT-NEXT:  entry:
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_exp2_f64(double noundef [[X:%.*]]) #[[ATTR14]]
@@ -777,7 +776,7 @@ extern "C" __device__ float test_exp2f(float x) {
 //
 // FINITEONLY-LABEL: @test_exp2(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_exp2_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_exp2_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_exp2(double x) {
@@ -791,7 +790,7 @@ extern "C" __device__ double test_exp2(double x) {
 //
 // FINITEONLY-LABEL: @test_expf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_exp_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_exp_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_expf(float x) {
@@ -805,7 +804,7 @@ extern "C" __device__ float test_expf(float x) {
 //
 // FINITEONLY-LABEL: @test_exp(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_exp_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_exp_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_exp(double x) {
@@ -819,7 +818,7 @@ extern "C" __device__ double test_exp(double x) {
 //
 // FINITEONLY-LABEL: @test_expm1f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_expm1_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_expm1_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_expm1f(float x) {
@@ -833,7 +832,7 @@ extern "C" __device__ float test_expm1f(float x) {
 //
 // FINITEONLY-LABEL: @test_expm1(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_expm1_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_expm1_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_expm1(double x) {
@@ -875,7 +874,7 @@ extern "C" __device__ double test_fabs(double x) {
 //
 // FINITEONLY-LABEL: @test_fdimf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_fdim_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_fdim_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_fdimf(float x, float y) {
@@ -889,7 +888,7 @@ extern "C" __device__ float test_fdimf(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_fdim(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_fdim_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_fdim_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_fdim(double x, double y) {
@@ -917,7 +916,7 @@ extern "C" __device__ float test_fdividef(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_floorf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_floor_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_floor_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_floorf(float x) {
@@ -931,7 +930,7 @@ extern "C" __device__ float test_floorf(float x) {
 //
 // FINITEONLY-LABEL: @test_floor(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_floor_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_floor_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_floor(double x) {
@@ -945,7 +944,7 @@ extern "C" __device__ double test_floor(double x) {
 //
 // FINITEONLY-LABEL: @test_fmaf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_fma_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_fma_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]], float noundef nofpclass(nan inf) [[Z:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_fmaf(float x, float y, float z) {
@@ -959,7 +958,7 @@ extern "C" __device__ float test_fmaf(float x, float y, float z) {
 //
 // FINITEONLY-LABEL: @test_fma(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_fma_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_fma_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]], double noundef nofpclass(nan inf) [[Z:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_fma(double x, double y, double z) {
@@ -973,7 +972,7 @@ extern "C" __device__ double test_fma(double x, double y, double z) {
 //
 // FINITEONLY-LABEL: @test_fma_rn(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_fma_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_fma_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]], double noundef nofpclass(nan inf) [[Z:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_fma_rn(double x, double y, double z) {
@@ -987,7 +986,7 @@ extern "C" __device__ double test_fma_rn(double x, double y, double z) {
 //
 // FINITEONLY-LABEL: @test_fmaxf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_fmax_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_fmax_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_fmaxf(float x, float y) {
@@ -1001,7 +1000,7 @@ extern "C" __device__ float test_fmaxf(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_fmax(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_fmax_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_fmax_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_fmax(double x, double y) {
@@ -1015,7 +1014,7 @@ extern "C" __device__ double test_fmax(double x, double y) {
 //
 // FINITEONLY-LABEL: @test_fminf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_fmin_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_fmin_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_fminf(float x, float y) {
@@ -1029,7 +1028,7 @@ extern "C" __device__ float test_fminf(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_fmin(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_fmin_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_fmin_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_fmin(double x, double y) {
@@ -1043,7 +1042,7 @@ extern "C" __device__ double test_fmin(double x, double y) {
 //
 // FINITEONLY-LABEL: @test_fmodf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_fmod_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_fmod_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_fmodf(float x, float y) {
@@ -1057,7 +1056,7 @@ extern "C" __device__ float test_fmodf(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_fmod(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_fmod_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_fmod_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_fmod(double x, double y) {
@@ -1078,7 +1077,7 @@ extern "C" __device__ double test_fmod(double x, double y) {
 // FINITEONLY-NEXT:  entry:
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca i32, align 4, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR16:[0-9]+]]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract float @__ocml_frexp_f32(float noundef [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract nofpclass(nan inf) float @__ocml_frexp_f32(float noundef nofpclass(nan inf) [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[TBAA11:![0-9]+]]
 // FINITEONLY-NEXT:    store i32 [[TMP0]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA11]]
 // FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
@@ -1102,7 +1101,7 @@ extern "C" __device__ float test_frexpf(float x, int* y) {
 // FINITEONLY-NEXT:  entry:
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca i32, align 4, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract double @__ocml_frexp_f64(double noundef [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract nofpclass(nan inf) double @__ocml_frexp_f64(double noundef nofpclass(nan inf) [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[TBAA11]]
 // FINITEONLY-NEXT:    store i32 [[TMP0]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA11]]
 // FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
@@ -1119,7 +1118,7 @@ extern "C" __device__ double test_frexp(double x, int* y) {
 //
 // FINITEONLY-LABEL: @test_hypotf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_hypot_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_hypot_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_hypotf(float x, float y) {
@@ -1133,92 +1132,144 @@ extern "C" __device__ float test_hypotf(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_hypot(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_hypot_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_hypot_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_hypot(double x, double y) {
   return hypot(x, y);
 }
 
-// CHECK-LABEL: @test_ilogbf(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_ilogb_f32(float noundef [[X:%.*]]) #[[ATTR13:[0-9]+]]
-// CHECK-NEXT:    ret i32 [[CALL_I]]
+// DEFAULT-LABEL: @test_ilogbf(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_ilogb_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// DEFAULT-NEXT:    ret i32 [[CALL_I]]
+//
+// FINITEONLY-LABEL: @test_ilogbf(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_ilogb_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    ret i32 [[CALL_I]]
 //
 extern "C" __device__ int test_ilogbf(float x) {
   return ilogbf(x);
 }
 
-// CHECK-LABEL: @test_ilogb(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_ilogb_f64(double noundef [[X:%.*]]) #[[ATTR13]]
-// CHECK-NEXT:    ret i32 [[CALL_I]]
+// DEFAULT-LABEL: @test_ilogb(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_ilogb_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// DEFAULT-NEXT:    ret i32 [[CALL_I]]
+//
+// FINITEONLY-LABEL: @test_ilogb(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_ilogb_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    ret i32 [[CALL_I]]
 //
 extern "C" __device__ int test_ilogb(double x) {
   return ilogb(x);
 }
 
-// CHECK-LABEL: @test___finitef(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isfinite_f32(float noundef [[X:%.*]]) #[[ATTR13]]
-// CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
-// CHECK-NEXT:    ret i32 [[CONV]]
+// DEFAULT-LABEL: @test___finitef(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isfinite_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// DEFAULT-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// DEFAULT-NEXT:    ret i32 [[CONV]]
+//
+// FINITEONLY-LABEL: @test___finitef(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isfinite_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
+// FINITEONLY-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// FINITEONLY-NEXT:    ret i32 [[CONV]]
 //
 extern "C" __device__ BOOL_TYPE test___finitef(float x) {
   return __finitef(x);
 }
 
-// CHECK-LABEL: @test___finite(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isfinite_f64(double noundef [[X:%.*]]) #[[ATTR13]]
-// CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
-// CHECK-NEXT:    ret i32 [[CONV]]
+// DEFAULT-LABEL: @test___finite(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isfinite_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// DEFAULT-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// DEFAULT-NEXT:    ret i32 [[CONV]]
+//
+// FINITEONLY-LABEL: @test___finite(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isfinite_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
+// FINITEONLY-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// FINITEONLY-NEXT:    ret i32 [[CONV]]
 //
 extern "C" __device__ BOOL_TYPE test___finite(double x) {
   return __finite(x);
 }
 
-// CHECK-LABEL: @test___isinff(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isinf_f32(float noundef [[X:%.*]]) #[[ATTR13]]
-// CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
-// CHECK-NEXT:    ret i32 [[CONV]]
+// DEFAULT-LABEL: @test___isinff(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isinf_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// DEFAULT-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// DEFAULT-NEXT:    ret i32 [[CONV]]
+//
+// FINITEONLY-LABEL: @test___isinff(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isinf_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
+// FINITEONLY-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// FINITEONLY-NEXT:    ret i32 [[CONV]]
 //
 extern "C" __device__ BOOL_TYPE test___isinff(float x) {
   return __isinff(x);
 }
 
-// CHECK-LABEL: @test___isinf(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isinf_f64(double noundef [[X:%.*]]) #[[ATTR13]]
-// CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
-// CHECK-NEXT:    ret i32 [[CONV]]
+// DEFAULT-LABEL: @test___isinf(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isinf_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// DEFAULT-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// DEFAULT-NEXT:    ret i32 [[CONV]]
+//
+// FINITEONLY-LABEL: @test___isinf(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isinf_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
+// FINITEONLY-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// FINITEONLY-NEXT:    ret i32 [[CONV]]
 //
 extern "C" __device__ BOOL_TYPE test___isinf(double x) {
   return __isinf(x);
 }
 
-// CHECK-LABEL: @test___isnanf(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isnan_f32(float noundef [[X:%.*]]) #[[ATTR13]]
-// CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
-// CHECK-NEXT:    ret i32 [[CONV]]
+// DEFAULT-LABEL: @test___isnanf(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isnan_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// DEFAULT-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// DEFAULT-NEXT:    ret i32 [[CONV]]
+//
+// FINITEONLY-LABEL: @test___isnanf(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isnan_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
+// FINITEONLY-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// FINITEONLY-NEXT:    ret i32 [[CONV]]
 //
 extern "C" __device__ BOOL_TYPE test___isnanf(float x) {
   return __isnanf(x);
 }
 
-// CHECK-LABEL: @test___isnan(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isnan_f64(double noundef [[X:%.*]]) #[[ATTR13]]
-// CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
-// CHECK-NEXT:    ret i32 [[CONV]]
+// DEFAULT-LABEL: @test___isnan(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isnan_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// DEFAULT-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// DEFAULT-NEXT:    ret i32 [[CONV]]
+//
+// FINITEONLY-LABEL: @test___isnan(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isnan_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
+// FINITEONLY-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// FINITEONLY-NEXT:    ret i32 [[CONV]]
 //
 extern "C" __device__ BOOL_TYPE test___isnan(double x) {
   return __isnan(x);
@@ -1231,7 +1282,7 @@ extern "C" __device__ BOOL_TYPE test___isnan(double x) {
 //
 // FINITEONLY-LABEL: @test_j0f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_j0_f32(float noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_j0_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_j0f(float x) {
@@ -1245,7 +1296,7 @@ extern "C" __device__ float test_j0f(float x) {
 //
 // FINITEONLY-LABEL: @test_j0(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_j0_f64(double noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_j0_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_j0(double x) {
@@ -1259,7 +1310,7 @@ extern "C" __device__ double test_j0(double x) {
 //
 // FINITEONLY-LABEL: @test_j1f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_j1_f32(float noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_j1_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_j1f(float x) {
@@ -1273,7 +1324,7 @@ extern "C" __device__ float test_j1f(float x) {
 //
 // FINITEONLY-LABEL: @test_j1(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_j1_f64(double noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_j1_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_j1(double x) {
@@ -1320,14 +1371,14 @@ extern "C" __device__ double test_j1(double x) {
 // FINITEONLY-NEXT:    i32 1, label [[IF_THEN2_I:%.*]]
 // FINITEONLY-NEXT:    ]
 // FINITEONLY:       if.then.i:
-// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract float @__ocml_j0_f32(float noundef [[Y:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_j0_f32(float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    br label [[_ZL3JNFIF_EXIT:%.*]]
 // FINITEONLY:       if.then2.i:
-// FINITEONLY-NEXT:    [[CALL_I20_I:%.*]] = tail call nnan ninf contract float @__ocml_j1_f32(float noundef [[Y]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I20_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_j1_f32(float noundef nofpclass(nan inf) [[Y]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    br label [[_ZL3JNFIF_EXIT]]
 // FINITEONLY:       if.end4.i:
-// FINITEONLY-NEXT:    [[CALL_I21_I:%.*]] = tail call nnan ninf contract float @__ocml_j0_f32(float noundef [[Y]]) #[[ATTR15]]
-// FINITEONLY-NEXT:    [[CALL_I22_I:%.*]] = tail call nnan ninf contract float @__ocml_j1_f32(float noundef [[Y]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I21_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_j0_f32(float noundef nofpclass(nan inf) [[Y]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I22_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_j1_f32(float noundef nofpclass(nan inf) [[Y]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    [[CMP723_I:%.*]] = icmp sgt i32 [[X]], 1
 // FINITEONLY-NEXT:    br i1 [[CMP723_I]], label [[FOR_BODY_I:%.*]], label [[_ZL3JNFIF_EXIT]]
 // FINITEONLY:       for.body.i:
@@ -1390,14 +1441,14 @@ extern "C" __device__ float test_jnf(int x, float y) {
 // FINITEONLY-NEXT:    i32 1, label [[IF_THEN2_I:%.*]]
 // FINITEONLY-NEXT:    ]
 // FINITEONLY:       if.then.i:
-// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract double @__ocml_j0_f64(double noundef [[Y:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_j0_f64(double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    br label [[_ZL2JNID_EXIT:%.*]]
 // FINITEONLY:       if.then2.i:
-// FINITEONLY-NEXT:    [[CALL_I20_I:%.*]] = tail call nnan ninf contract double @__ocml_j1_f64(double noundef [[Y]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I20_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_j1_f64(double noundef nofpclass(nan inf) [[Y]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    br label [[_ZL2JNID_EXIT]]
 // FINITEONLY:       if.end4.i:
-// FINITEONLY-NEXT:    [[CALL_I21_I:%.*]] = tail call nnan ninf contract double @__ocml_j0_f64(double noundef [[Y]]) #[[ATTR15]]
-// FINITEONLY-NEXT:    [[CALL_I22_I:%.*]] = tail call nnan ninf contract double @__ocml_j1_f64(double noundef [[Y]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I21_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_j0_f64(double noundef nofpclass(nan inf) [[Y]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I22_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_j1_f64(double noundef nofpclass(nan inf) [[Y]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    [[CMP723_I:%.*]] = icmp sgt i32 [[X]], 1
 // FINITEONLY-NEXT:    br i1 [[CMP723_I]], label [[FOR_BODY_I:%.*]], label [[_ZL2JNID_EXIT]]
 // FINITEONLY:       for.body.i:
@@ -1427,7 +1478,7 @@ extern "C" __device__ double test_jn(int x, double y) {
 //
 // FINITEONLY-LABEL: @test_ldexpf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_ldexp_f32(float noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_ldexp_f32(float noundef nofpclass(nan inf) [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_ldexpf(float x, int y) {
@@ -1441,7 +1492,7 @@ extern "C" __device__ float test_ldexpf(float x, int y) {
 //
 // FINITEONLY-LABEL: @test_ldexp(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_ldexp_f64(double noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_ldexp_f64(double noundef nofpclass(nan inf) [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_ldexp(double x, int y) {
@@ -1455,7 +1506,7 @@ extern "C" __device__ double test_ldexp(double x, int y) {
 //
 // FINITEONLY-LABEL: @test_lgammaf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_lgamma_f32(float noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_lgamma_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_lgammaf(float x) {
@@ -1469,7 +1520,7 @@ extern "C" __device__ float test_lgammaf(float x) {
 //
 // FINITEONLY-LABEL: @test_lgamma(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_lgamma_f64(double noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_lgamma_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_lgamma(double x) {
@@ -1484,7 +1535,7 @@ extern "C" __device__ double test_lgamma(double x) {
 //
 // FINITEONLY-LABEL: @test_llrintf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_rint_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_rint_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi float [[CALL_I]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
@@ -1500,7 +1551,7 @@ extern "C" __device__ long long int test_llrintf(float x) {
 //
 // FINITEONLY-LABEL: @test_llrint(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_rint_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_rint_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi double [[CALL_I]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
@@ -1516,7 +1567,7 @@ extern "C" __device__ long long int test_llrint(double x) {
 //
 // FINITEONLY-LABEL: @test_llroundf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_round_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_round_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi float [[CALL_I]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
@@ -1532,7 +1583,7 @@ extern "C" __device__ long long int test_llroundf(float x) {
 //
 // FINITEONLY-LABEL: @test_llround(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_round_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_round_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi double [[CALL_I]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
@@ -1547,7 +1598,7 @@ extern "C" __device__ long long int test_llround(double x) {
 //
 // FINITEONLY-LABEL: @test_log10f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_log10_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_log10_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_log10f(float x) {
@@ -1561,7 +1612,7 @@ extern "C" __device__ float test_log10f(float x) {
 //
 // FINITEONLY-LABEL: @test_log10(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_log10_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_log10_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_log10(double x) {
@@ -1575,7 +1626,7 @@ extern "C" __device__ double test_log10(double x) {
 //
 // FINITEONLY-LABEL: @test_log1pf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_log1p_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_log1p_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_log1pf(float x) {
@@ -1589,7 +1640,7 @@ extern "C" __device__ float test_log1pf(float x) {
 //
 // FINITEONLY-LABEL: @test_log1p(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_log1p_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_log1p_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_log1p(double x) {
@@ -1603,7 +1654,7 @@ extern "C" __device__ double test_log1p(double x) {
 //
 // FINITEONLY-LABEL: @test_log2f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_log2_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_log2_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_log2f(float x) {
@@ -1617,7 +1668,7 @@ extern "C" __device__ float test_log2f(float x) {
 //
 // FINITEONLY-LABEL: @test_log2(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_log2_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_log2_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_log2(double x) {
@@ -1631,7 +1682,7 @@ extern "C" __device__ double test_log2(double x) {
 //
 // FINITEONLY-LABEL: @test_logbf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_logb_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_logb_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_logbf(float x) {
@@ -1645,7 +1696,7 @@ extern "C" __device__ float test_logbf(float x) {
 //
 // FINITEONLY-LABEL: @test_logb(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_logb_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_logb_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_logb(double x) {
@@ -1660,7 +1711,7 @@ extern "C" __device__ double test_logb(double x) {
 //
 // FINITEONLY-LABEL: @test_lrintf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_rint_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_rint_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi float [[CALL_I]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
@@ -1676,7 +1727,7 @@ extern "C" __device__ long int test_lrintf(float x) {
 //
 // FINITEONLY-LABEL: @test_lrint(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_rint_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_rint_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi double [[CALL_I]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
@@ -1692,7 +1743,7 @@ extern "C" __device__ long int test_lrint(double x) {
 //
 // FINITEONLY-LABEL: @test_lroundf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_round_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_round_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi float [[CALL_I]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
@@ -1708,7 +1759,7 @@ extern "C" __device__ long int test_lroundf(float x) {
 //
 // FINITEONLY-LABEL: @test_lround(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_round_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_round_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi double [[CALL_I]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
@@ -1730,7 +1781,7 @@ extern "C" __device__ long int test_lround(double x) {
 // FINITEONLY-NEXT:  entry:
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract float @__ocml_modf_f32(float noundef [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract nofpclass(nan inf) float @__ocml_modf_f32(float noundef nofpclass(nan inf) [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[TBAA15:![0-9]+]]
 // FINITEONLY-NEXT:    store float [[TMP0]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA15]]
 // FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
@@ -1754,7 +1805,7 @@ extern "C" __device__ float test_modff(float x, float* y) {
 // FINITEONLY-NEXT:  entry:
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract double @__ocml_modf_f64(double noundef [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract nofpclass(nan inf) double @__ocml_modf_f64(double noundef nofpclass(nan inf) [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[TBAA17:![0-9]+]]
 // FINITEONLY-NEXT:    store double [[TMP0]], ptr [[Y:%.*]], align 8, !tbaa [[TBAA17]]
 // FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
@@ -2000,7 +2051,7 @@ extern "C" __device__ double test_nan_fill() {
 //
 // FINITEONLY-LABEL: @test_nearbyintf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_nearbyint_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_nearbyint_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_nearbyintf(float x) {
@@ -2014,7 +2065,7 @@ extern "C" __device__ float test_nearbyintf(float x) {
 //
 // FINITEONLY-LABEL: @test_nearbyint(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_nearbyint_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_nearbyint_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_nearbyint(double x) {
@@ -2028,7 +2079,7 @@ extern "C" __device__ double test_nearbyint(double x) {
 //
 // FINITEONLY-LABEL: @test_nextafterf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_nextafter_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_nextafter_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_nextafterf(float x, float y) {
@@ -2042,7 +2093,7 @@ extern "C" __device__ float test_nextafterf(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_nextafter(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_nextafter_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_nextafter_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_nextafter(double x, double y) {
@@ -2056,7 +2107,7 @@ extern "C" __device__ double test_nextafter(double x, double y) {
 //
 // FINITEONLY-LABEL: @test_norm3df(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_len3_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_len3_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]], float noundef nofpclass(nan inf) [[Z:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_norm3df(float x, float y, float z) {
@@ -2070,7 +2121,7 @@ extern "C" __device__ float test_norm3df(float x, float y, float z) {
 //
 // FINITEONLY-LABEL: @test_norm3d(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_len3_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_len3_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]], double noundef nofpclass(nan inf) [[Z:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_norm3d(double x, double y, double z) {
@@ -2084,7 +2135,7 @@ extern "C" __device__ double test_norm3d(double x, double y, double z) {
 //
 // FINITEONLY-LABEL: @test_norm4df(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_len4_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]], float noundef [[W:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_len4_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]], float noundef nofpclass(nan inf) [[Z:%.*]], float noundef nofpclass(nan inf) [[W:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_norm4df(float x, float y, float z, float w) {
@@ -2098,7 +2149,7 @@ extern "C" __device__ float test_norm4df(float x, float y, float z, float w) {
 //
 // FINITEONLY-LABEL: @test_norm4d(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_len4_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]], double noundef [[W:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_len4_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]], double noundef nofpclass(nan inf) [[Z:%.*]], double noundef nofpclass(nan inf) [[W:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_norm4d(double x, double y, double z, double w) {
@@ -2112,7 +2163,7 @@ extern "C" __device__ double test_norm4d(double x, double y, double z, double w)
 //
 // FINITEONLY-LABEL: @test_normcdff(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_ncdf_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_ncdf_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_normcdff(float x) {
@@ -2126,7 +2177,7 @@ extern "C" __device__ float test_normcdff(float x) {
 //
 // FINITEONLY-LABEL: @test_normcdf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_ncdf_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_ncdf_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_normcdf(double x) {
@@ -2140,7 +2191,7 @@ extern "C" __device__ double test_normcdf(double x) {
 //
 // FINITEONLY-LABEL: @test_normcdfinvf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_ncdfinv_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_ncdfinv_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_normcdfinvf(float x) {
@@ -2154,7 +2205,7 @@ extern "C" __device__ float test_normcdfinvf(float x) {
 //
 // FINITEONLY-LABEL: @test_normcdfinv(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_ncdfinv_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_ncdfinv_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_normcdfinv(double x) {
@@ -2198,7 +2249,7 @@ extern "C" __device__ double test_normcdfinv(double x) {
 // FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5NORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP19:![0-9]+]]
 // FINITEONLY:       _ZL5normfiPKf.exit:
 // FINITEONLY-NEXT:    [[__R_0_LCSSA_I:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_sqrt_f32(float noundef [[__R_0_LCSSA_I]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_sqrt_f32(float noundef nofpclass(nan inf) [[__R_0_LCSSA_I]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_normf(int x, const float *y) {
@@ -2242,7 +2293,7 @@ extern "C" __device__ float test_normf(int x, const float *y) {
 // FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL4NORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
 // FINITEONLY:       _ZL4normiPKd.exit:
 // FINITEONLY-NEXT:    [[__R_0_LCSSA_I:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_sqrt_f64(double noundef [[__R_0_LCSSA_I]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_sqrt_f64(double noundef nofpclass(nan inf) [[__R_0_LCSSA_I]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_norm(int x, const double *y) {
@@ -2256,7 +2307,7 @@ extern "C" __device__ double test_norm(int x, const double *y) {
 //
 // FINITEONLY-LABEL: @test_powf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_pow_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_pow_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_powf(float x, float y) {
@@ -2270,7 +2321,7 @@ extern "C" __device__ float test_powf(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_pow(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_pow_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_pow_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_pow(double x, double y) {
@@ -2284,7 +2335,7 @@ extern "C" __device__ double test_pow(double x, double y) {
 //
 // FINITEONLY-LABEL: @test_powif(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_pown_f32(float noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_pown_f32(float noundef nofpclass(nan inf) [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_powif(float x, int y) {
@@ -2298,7 +2349,7 @@ extern "C" __device__ float test_powif(float x, int y) {
 //
 // FINITEONLY-LABEL: @test_powi(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_pown_f64(double noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_pown_f64(double noundef nofpclass(nan inf) [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_powi(double x, int y) {
@@ -2312,7 +2363,7 @@ extern "C" __device__ double test_powi(double x, int y) {
 //
 // FINITEONLY-LABEL: @test_rcbrtf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_rcbrt_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_rcbrt_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_rcbrtf(float x) {
@@ -2326,7 +2377,7 @@ extern "C" __device__ float test_rcbrtf(float x) {
 //
 // FINITEONLY-LABEL: @test_rcbrt(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_rcbrt_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_rcbrt_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_rcbrt(double x) {
@@ -2340,7 +2391,7 @@ extern "C" __device__ double test_rcbrt(double x) {
 //
 // FINITEONLY-LABEL: @test_remainderf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_remainder_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_remainder_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_remainderf(float x, float y) {
@@ -2354,7 +2405,7 @@ extern "C" __device__ float test_remainderf(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_remainder(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_remainder_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_remainder_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_remainder(double x, double y) {
@@ -2375,7 +2426,7 @@ extern "C" __device__ double test_remainder(double x, double y) {
 // FINITEONLY-NEXT:  entry:
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca i32, align 4, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract float @__ocml_remquo_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract nofpclass(nan inf) float @__ocml_remquo_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[TBAA11]]
 // FINITEONLY-NEXT:    store i32 [[TMP0]], ptr [[Z:%.*]], align 4, !tbaa [[TBAA11]]
 // FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
@@ -2399,7 +2450,7 @@ extern "C" __device__ float test_remquof(float x, float y, int* z) {
 // FINITEONLY-NEXT:  entry:
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca i32, align 4, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract double @__ocml_remquo_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract nofpclass(nan inf) double @__ocml_remquo_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[TBAA11]]
 // FINITEONLY-NEXT:    store i32 [[TMP0]], ptr [[Z:%.*]], align 4, !tbaa [[TBAA11]]
 // FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
@@ -2416,7 +2467,7 @@ extern "C" __device__ double test_remquo(double x, double y, int* z) {
 //
 // FINITEONLY-LABEL: @test_rhypotf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_rhypot_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_rhypot_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_rhypotf(float x, float y) {
@@ -2430,7 +2481,7 @@ extern "C" __device__ float test_rhypotf(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_rhypot(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_rhypot_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_rhypot_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_rhypot(double x, double y) {
@@ -2444,7 +2495,7 @@ extern "C" __device__ double test_rhypot(double x, double y) {
 //
 // FINITEONLY-LABEL: @test_rintf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_rint_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_rint_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_rintf(float x) {
@@ -2458,7 +2509,7 @@ extern "C" __device__ float test_rintf(float x) {
 //
 // FINITEONLY-LABEL: @test_rint(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_rint_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_rint_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_rint(double x) {
@@ -2502,7 +2553,7 @@ extern "C" __device__ double test_rint(double x) {
 // FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL6RNORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
 // FINITEONLY:       _ZL6rnormfiPKf.exit:
 // FINITEONLY-NEXT:    [[__R_0_LCSSA_I:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_rsqrt_f32(float noundef [[__R_0_LCSSA_I]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_rsqrt_f32(float noundef nofpclass(nan inf) [[__R_0_LCSSA_I]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_rnormf(int x, const float* y) {
@@ -2546,7 +2597,7 @@ extern "C" __device__ float test_rnormf(int x, const float* y) {
 // FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5RNORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
 // FINITEONLY:       _ZL5rnormiPKd.exit:
 // FINITEONLY-NEXT:    [[__R_0_LCSSA_I:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_rsqrt_f64(double noundef [[__R_0_LCSSA_I]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_rsqrt_f64(double noundef nofpclass(nan inf) [[__R_0_LCSSA_I]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_rnorm(int x, const double* y) {
@@ -2560,7 +2611,7 @@ extern "C" __device__ double test_rnorm(int x, const double* y) {
 //
 // FINITEONLY-LABEL: @test_rnorm3df(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_rlen3_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_rlen3_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]], float noundef nofpclass(nan inf) [[Z:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_rnorm3df(float x, float y, float z) {
@@ -2574,7 +2625,7 @@ extern "C" __device__ float test_rnorm3df(float x, float y, float z) {
 //
 // FINITEONLY-LABEL: @test_rnorm3d(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_rlen3_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_rlen3_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]], double noundef nofpclass(nan inf) [[Z:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_rnorm3d(double x, double y, double z) {
@@ -2588,7 +2639,7 @@ extern "C" __device__ double test_rnorm3d(double x, double y, double z) {
 //
 // FINITEONLY-LABEL: @test_rnorm4df(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_rlen4_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]], float noundef [[W:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_rlen4_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]], float noundef nofpclass(nan inf) [[Z:%.*]], float noundef nofpclass(nan inf) [[W:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_rnorm4df(float x, float y, float z, float w) {
@@ -2602,7 +2653,7 @@ extern "C" __device__ float test_rnorm4df(float x, float y, float z, float w) {
 //
 // FINITEONLY-LABEL: @test_rnorm4d(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_rlen4_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]], double noundef [[W:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_rlen4_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]], double noundef nofpclass(nan inf) [[Z:%.*]], double noundef nofpclass(nan inf) [[W:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_rnorm4d(double x, double y, double z, double w) {
@@ -2616,7 +2667,7 @@ extern "C" __device__ double test_rnorm4d(double x, double y, double z, double w
 //
 // FINITEONLY-LABEL: @test_roundf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_round_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_round_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_roundf(float x) {
@@ -2630,7 +2681,7 @@ extern "C" __device__ float test_roundf(float x) {
 //
 // FINITEONLY-LABEL: @test_round(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_round_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_round_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_round(double x) {
@@ -2644,7 +2695,7 @@ extern "C" __device__ double test_round(double x) {
 //
 // FINITEONLY-LABEL: @test_rsqrtf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_rsqrt_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_rsqrt_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_rsqrtf(float x) {
@@ -2658,7 +2709,7 @@ extern "C" __device__ float test_rsqrtf(float x) {
 //
 // FINITEONLY-LABEL: @test_rsqrt(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_rsqrt_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_rsqrt_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_rsqrt(double x) {
@@ -2686,10 +2737,10 @@ extern "C" __device__ double test_rsqrt(double x) {
 // FINITEONLY-NEXT:    br i1 [[CMP_NOT_I]], label [[COND_FALSE_I:%.*]], label [[COND_TRUE_I:%.*]]
 // FINITEONLY:       cond.true.i:
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = trunc i64 [[Y]] to i32
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_scalbn_f32(float noundef [[X:%.*]], i32 noundef [[CONV_I]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_scalbn_f32(float noundef nofpclass(nan inf) [[X:%.*]], i32 noundef [[CONV_I]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    br label [[_ZL8SCALBLNFFL_EXIT:%.*]]
 // FINITEONLY:       cond.false.i:
-// FINITEONLY-NEXT:    [[CALL2_I:%.*]] = tail call nnan ninf contract float @__ocml_scalb_f32(float noundef [[X]], float noundef 0x43E0000000000000) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL2_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_scalb_f32(float noundef nofpclass(nan inf) [[X]], float noundef nofpclass(nan inf) 0x43E0000000000000) #[[ATTR13]]
 // FINITEONLY-NEXT:    br label [[_ZL8SCALBLNFFL_EXIT]]
 // FINITEONLY:       _ZL8scalblnffl.exit:
 // FINITEONLY-NEXT:    [[COND_I:%.*]] = phi nnan ninf contract float [ [[CALL_I]], [[COND_TRUE_I]] ], [ [[CALL2_I]], [[COND_FALSE_I]] ]
@@ -2720,10 +2771,10 @@ extern "C" __device__ float test_scalblnf(float x, long int y) {
 // FINITEONLY-NEXT:    br i1 [[CMP_NOT_I]], label [[COND_FALSE_I:%.*]], label [[COND_TRUE_I:%.*]]
 // FINITEONLY:       cond.true.i:
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = trunc i64 [[Y]] to i32
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_scalbn_f64(double noundef [[X:%.*]], i32 noundef [[CONV_I]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_scalbn_f64(double noundef nofpclass(nan inf) [[X:%.*]], i32 noundef [[CONV_I]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    br label [[_ZL7SCALBLNDL_EXIT:%.*]]
 // FINITEONLY:       cond.false.i:
-// FINITEONLY-NEXT:    [[CALL2_I:%.*]] = tail call nnan ninf contract double @__ocml_scalb_f64(double noundef [[X]], double noundef 0x43E0000000000000) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL2_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_scalb_f64(double noundef nofpclass(nan inf) [[X]], double noundef nofpclass(nan inf) 0x43E0000000000000) #[[ATTR13]]
 // FINITEONLY-NEXT:    br label [[_ZL7SCALBLNDL_EXIT]]
 // FINITEONLY:       _ZL7scalblndl.exit:
 // FINITEONLY-NEXT:    [[COND_I:%.*]] = phi nnan ninf contract double [ [[CALL_I]], [[COND_TRUE_I]] ], [ [[CALL2_I]], [[COND_FALSE_I]] ]
@@ -2740,7 +2791,7 @@ extern "C" __device__ double test_scalbln(double x, long int y) {
 //
 // FINITEONLY-LABEL: @test_scalbnf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_scalbn_f32(float noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_scalbn_f32(float noundef nofpclass(nan inf) [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_scalbnf(float x, int y) {
@@ -2754,30 +2805,44 @@ extern "C" __device__ float test_scalbnf(float x, int y) {
 //
 // FINITEONLY-LABEL: @test_scalbn(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_scalbn_f64(double noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_scalbn_f64(double noundef nofpclass(nan inf) [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_scalbn(double x, int y) {
   return scalbn(x, y);
 }
 
-// CHECK-LABEL: @test___signbitf(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_signbit_f32(float noundef [[X:%.*]]) #[[ATTR13]]
-// CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
-// CHECK-NEXT:    ret i32 [[CONV]]
+// DEFAULT-LABEL: @test___signbitf(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_signbit_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// DEFAULT-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// DEFAULT-NEXT:    ret i32 [[CONV]]
+//
+// FINITEONLY-LABEL: @test___signbitf(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_signbit_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
+// FINITEONLY-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// FINITEONLY-NEXT:    ret i32 [[CONV]]
 //
 extern "C" __device__ BOOL_TYPE test___signbitf(float x) {
   return __signbitf(x);
 }
 
-// CHECK-LABEL: @test___signbit(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_signbit_f64(double noundef [[X:%.*]]) #[[ATTR13]]
-// CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
-// CHECK-NEXT:    ret i32 [[CONV]]
+// DEFAULT-LABEL: @test___signbit(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_signbit_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// DEFAULT-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// DEFAULT-NEXT:    ret i32 [[CONV]]
+//
+// FINITEONLY-LABEL: @test___signbit(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_signbit_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
+// FINITEONLY-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// FINITEONLY-NEXT:    ret i32 [[CONV]]
 //
 extern "C" __device__ BOOL_TYPE test___signbit(double x) {
   return __signbit(x);
@@ -2798,7 +2863,7 @@ extern "C" __device__ BOOL_TYPE test___signbit(double x) {
 // FINITEONLY-NEXT:  entry:
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract float @__ocml_sincos_f32(float noundef [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract nofpclass(nan inf) float @__ocml_sincos_f32(float noundef nofpclass(nan inf) [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    store float [[CALL_I]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA15]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[TBAA15]]
 // FINITEONLY-NEXT:    store float [[TMP0]], ptr [[Z:%.*]], align 4, !tbaa [[TBAA15]]
@@ -2824,7 +2889,7 @@ extern "C" __device__ void test_sincosf(float x, float *y, float *z) {
 // FINITEONLY-NEXT:  entry:
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract double @__ocml_sincos_f64(double noundef [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract nofpclass(nan inf) double @__ocml_sincos_f64(double noundef nofpclass(nan inf) [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    store double [[CALL_I]], ptr [[Y:%.*]], align 8, !tbaa [[TBAA17]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[TBAA17]]
 // FINITEONLY-NEXT:    store double [[TMP0]], ptr [[Z:%.*]], align 8, !tbaa [[TBAA17]]
@@ -2850,7 +2915,7 @@ extern "C" __device__ void test_sincos(double x, double *y, double *z) {
 // FINITEONLY-NEXT:  entry:
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract float @__ocml_sincospi_f32(float noundef [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract nofpclass(nan inf) float @__ocml_sincospi_f32(float noundef nofpclass(nan inf) [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    store float [[CALL_I]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA15]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[TBAA15]]
 // FINITEONLY-NEXT:    store float [[TMP0]], ptr [[Z:%.*]], align 4, !tbaa [[TBAA15]]
@@ -2876,7 +2941,7 @@ extern "C" __device__ void test_sincospif(float x, float *y, float *z) {
 // FINITEONLY-NEXT:  entry:
 // FINITEONLY-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
 // FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[__TMP_I]]) #[[ATTR16]]
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract double @__ocml_sincospi_f64(double noundef [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = call nnan ninf contract nofpclass(nan inf) double @__ocml_sincospi_f64(double noundef nofpclass(nan inf) [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    store double [[CALL_I]], ptr [[Y:%.*]], align 8, !tbaa [[TBAA17]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[TBAA17]]
 // FINITEONLY-NEXT:    store double [[TMP0]], ptr [[Z:%.*]], align 8, !tbaa [[TBAA17]]
@@ -2894,7 +2959,7 @@ extern "C" __device__ void test_sincospi(double x, double *y, double *z) {
 //
 // FINITEONLY-LABEL: @test_sinf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_sin_f32(float noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_sin_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_sinf(float x) {
@@ -2908,7 +2973,7 @@ extern "C" __device__ float test_sinf(float x) {
 //
 // FINITEONLY-LABEL: @test_sin(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_sin_f64(double noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_sin_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_sin(double x) {
@@ -2922,7 +2987,7 @@ extern "C" __device__ double test_sin(double x) {
 //
 // FINITEONLY-LABEL: @test_sinpif(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_sinpi_f32(float noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_sinpi_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_sinpif(float x) {
@@ -2936,7 +3001,7 @@ extern "C" __device__ float test_sinpif(float x) {
 //
 // FINITEONLY-LABEL: @test_sinpi(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_sinpi_f64(double noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_sinpi_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_sinpi(double x) {
@@ -2950,7 +3015,7 @@ extern "C" __device__ double test_sinpi(double x) {
 //
 // FINITEONLY-LABEL: @test_sqrtf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_sqrt_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_sqrt_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_sqrtf(float x) {
@@ -2964,7 +3029,7 @@ extern "C" __device__ float test_sqrtf(float x) {
 //
 // FINITEONLY-LABEL: @test_sqrt(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_sqrt_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_sqrt_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_sqrt(double x) {
@@ -2978,7 +3043,7 @@ extern "C" __device__ double test_sqrt(double x) {
 //
 // FINITEONLY-LABEL: @test_tanf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_tan_f32(float noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_tan_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_tanf(float x) {
@@ -2992,7 +3057,7 @@ extern "C" __device__ float test_tanf(float x) {
 //
 // FINITEONLY-LABEL: @test_tan(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_tan_f64(double noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_tan_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_tan(double x) {
@@ -3006,7 +3071,7 @@ extern "C" __device__ double test_tan(double x) {
 //
 // FINITEONLY-LABEL: @test_tanhf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_tanh_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_tanh_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_tanhf(float x) {
@@ -3020,7 +3085,7 @@ extern "C" __device__ float test_tanhf(float x) {
 //
 // FINITEONLY-LABEL: @test_tanh(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_tanh_f64(double noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_tanh_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_tanh(double x) {
@@ -3034,7 +3099,7 @@ extern "C" __device__ double test_tanh(double x) {
 //
 // FINITEONLY-LABEL: @test_tgammaf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_tgamma_f32(float noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_tgamma_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_tgammaf(float x) {
@@ -3048,7 +3113,7 @@ extern "C" __device__ float test_tgammaf(float x) {
 //
 // FINITEONLY-LABEL: @test_tgamma(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_tgamma_f64(double noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_tgamma_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_tgamma(double x) {
@@ -3062,7 +3127,7 @@ extern "C" __device__ double test_tgamma(double x) {
 //
 // FINITEONLY-LABEL: @test_truncf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_trunc_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_trunc_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_truncf(float x) {
@@ -3076,7 +3141,7 @@ extern "C" __device__ float test_truncf(float x) {
 //
 // FINITEONLY-LABEL: @test_trunc(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_trunc_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_trunc_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_trunc(double x) {
@@ -3090,7 +3155,7 @@ extern "C" __device__ double test_trunc(double x) {
 //
 // FINITEONLY-LABEL: @test_y0f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_y0_f32(float noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_y0_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_y0f(float x) {
@@ -3104,7 +3169,7 @@ extern "C" __device__ float test_y0f(float x) {
 //
 // FINITEONLY-LABEL: @test_y0(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_y0_f64(double noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_y0_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_y0(double x) {
@@ -3118,7 +3183,7 @@ extern "C" __device__ double test_y0(double x) {
 //
 // FINITEONLY-LABEL: @test_y1f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_y1_f32(float noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_y1_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test_y1f(float x) {
@@ -3132,7 +3197,7 @@ extern "C" __device__ float test_y1f(float x) {
 //
 // FINITEONLY-LABEL: @test_y1(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_y1_f64(double noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_y1_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test_y1(double x) {
@@ -3179,14 +3244,14 @@ extern "C" __device__ double test_y1(double x) {
 // FINITEONLY-NEXT:    i32 1, label [[IF_THEN2_I:%.*]]
 // FINITEONLY-NEXT:    ]
 // FINITEONLY:       if.then.i:
-// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract float @__ocml_y0_f32(float noundef [[Y:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_y0_f32(float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    br label [[_ZL3YNFIF_EXIT:%.*]]
 // FINITEONLY:       if.then2.i:
-// FINITEONLY-NEXT:    [[CALL_I20_I:%.*]] = tail call nnan ninf contract float @__ocml_y1_f32(float noundef [[Y]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I20_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_y1_f32(float noundef nofpclass(nan inf) [[Y]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    br label [[_ZL3YNFIF_EXIT]]
 // FINITEONLY:       if.end4.i:
-// FINITEONLY-NEXT:    [[CALL_I21_I:%.*]] = tail call nnan ninf contract float @__ocml_y0_f32(float noundef [[Y]]) #[[ATTR15]]
-// FINITEONLY-NEXT:    [[CALL_I22_I:%.*]] = tail call nnan ninf contract float @__ocml_y1_f32(float noundef [[Y]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I21_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_y0_f32(float noundef nofpclass(nan inf) [[Y]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I22_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_y1_f32(float noundef nofpclass(nan inf) [[Y]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    [[CMP723_I:%.*]] = icmp sgt i32 [[X]], 1
 // FINITEONLY-NEXT:    br i1 [[CMP723_I]], label [[FOR_BODY_I:%.*]], label [[_ZL3YNFIF_EXIT]]
 // FINITEONLY:       for.body.i:
@@ -3249,14 +3314,14 @@ extern "C" __device__ float test_ynf(int x, float y) {
 // FINITEONLY-NEXT:    i32 1, label [[IF_THEN2_I:%.*]]
 // FINITEONLY-NEXT:    ]
 // FINITEONLY:       if.then.i:
-// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract double @__ocml_y0_f64(double noundef [[Y:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_y0_f64(double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    br label [[_ZL2YNID_EXIT:%.*]]
 // FINITEONLY:       if.then2.i:
-// FINITEONLY-NEXT:    [[CALL_I20_I:%.*]] = tail call nnan ninf contract double @__ocml_y1_f64(double noundef [[Y]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I20_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_y1_f64(double noundef nofpclass(nan inf) [[Y]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    br label [[_ZL2YNID_EXIT]]
 // FINITEONLY:       if.end4.i:
-// FINITEONLY-NEXT:    [[CALL_I21_I:%.*]] = tail call nnan ninf contract double @__ocml_y0_f64(double noundef [[Y]]) #[[ATTR15]]
-// FINITEONLY-NEXT:    [[CALL_I22_I:%.*]] = tail call nnan ninf contract double @__ocml_y1_f64(double noundef [[Y]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I21_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_y0_f64(double noundef nofpclass(nan inf) [[Y]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I22_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_y1_f64(double noundef nofpclass(nan inf) [[Y]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    [[CMP723_I:%.*]] = icmp sgt i32 [[X]], 1
 // FINITEONLY-NEXT:    br i1 [[CMP723_I]], label [[FOR_BODY_I:%.*]], label [[_ZL2YNID_EXIT]]
 // FINITEONLY:       for.body.i:
@@ -3286,7 +3351,7 @@ extern "C" __device__ double test_yn(int x, double y) {
 //
 // FINITEONLY-LABEL: @test___cosf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_native_cos_f32(float noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_native_cos_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___cosf(float x) {
@@ -3300,7 +3365,7 @@ extern "C" __device__ float test___cosf(float x) {
 //
 // FINITEONLY-LABEL: @test___exp10f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_native_exp10_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_native_exp10_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___exp10f(float x) {
@@ -3314,7 +3379,7 @@ extern "C" __device__ float test___exp10f(float x) {
 //
 // FINITEONLY-LABEL: @test___expf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_native_exp_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_native_exp_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___expf(float x) {
@@ -3356,7 +3421,7 @@ extern "C" __device__ float test___fdividef(float x, float y) {
 //
 // FINITEONLY-LABEL: @test__fmaf_rn(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_fma_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_fma_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]], float noundef nofpclass(nan inf) [[Z:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test__fmaf_rn(float x, float y, float z) {
@@ -3412,7 +3477,7 @@ extern "C" __device__ float test___frsqrt_rn(float x) {
 //
 // FINITEONLY-LABEL: @test___fsqrt_rn(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_native_sqrt_f32(float noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_native_sqrt_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___fsqrt_rn(float x) {
@@ -3440,7 +3505,7 @@ extern "C" __device__ float test___fsub_rn(float x, float y) {
 //
 // FINITEONLY-LABEL: @test___log10f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_native_log10_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_native_log10_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___log10f(float x) {
@@ -3454,7 +3519,7 @@ extern "C" __device__ float test___log10f(float x) {
 //
 // FINITEONLY-LABEL: @test___log2f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_native_log2_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_native_log2_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___log2f(float x) {
@@ -3468,7 +3533,7 @@ extern "C" __device__ float test___log2f(float x) {
 //
 // FINITEONLY-LABEL: @test___logf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_native_log_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_native_log_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___logf(float x) {
@@ -3482,7 +3547,7 @@ extern "C" __device__ float test___logf(float x) {
 //
 // FINITEONLY-LABEL: @test___powf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_pow_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR14]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_pow_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR14]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___powf(float x, float y) {
@@ -3519,9 +3584,9 @@ extern "C" __device__ float test___saturatef(float x) {
 //
 // FINITEONLY-LABEL: @test___sincosf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_native_sin_f32(float noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_native_sin_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    store float [[CALL_I]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA15]]
-// FINITEONLY-NEXT:    [[CALL1_I:%.*]] = tail call nnan ninf contract float @__ocml_native_cos_f32(float noundef [[X]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL1_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_native_cos_f32(float noundef nofpclass(nan inf) [[X]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    store float [[CALL1_I]], ptr [[Z:%.*]], align 4, !tbaa [[TBAA15]]
 // FINITEONLY-NEXT:    ret void
 //
@@ -3536,7 +3601,7 @@ extern "C" __device__ void test___sincosf(float x, float *y, float *z) {
 //
 // FINITEONLY-LABEL: @test___sinf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_native_sin_f32(float noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_native_sin_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___sinf(float x) {
@@ -3550,7 +3615,7 @@ extern "C" __device__ float test___sinf(float x) {
 //
 // FINITEONLY-LABEL: @test___tanf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract float @__ocml_tan_f32(float noundef [[X:%.*]]) #[[ATTR15]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_tan_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR15]]
 // FINITEONLY-NEXT:    ret float [[CALL_I]]
 //
 extern "C" __device__ float test___tanf(float x) {
@@ -3620,7 +3685,7 @@ extern "C" __device__ double test___drcp_rn(double x) {
 //
 // FINITEONLY-LABEL: @test___dsqrt_rn(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_sqrt_f64(double noundef [[X:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_sqrt_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test___dsqrt_rn(double x) {
@@ -3634,7 +3699,7 @@ extern "C" __device__ double test___dsqrt_rn(double x) {
 //
 // FINITEONLY-LABEL: @test__fma_rn(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract double @__ocml_fma_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_fma_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]], double noundef nofpclass(nan inf) [[Z:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I]]
 //
 extern "C" __device__ double test__fma_rn(double x, double y, double z) {
@@ -3648,7 +3713,7 @@ extern "C" __device__ double test__fma_rn(double x, double y, double z) {
 //
 // FINITEONLY-LABEL: @test_float_min(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract float @__ocml_fmin_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_fmin_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I_I]]
 //
 extern "C" __device__ float test_float_min(float x, float y) {
@@ -3662,7 +3727,7 @@ extern "C" __device__ float test_float_min(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_float_max(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract float @__ocml_fmax_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_fmax_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret float [[CALL_I_I]]
 //
 extern "C" __device__ float test_float_max(float x, float y) {
@@ -3676,7 +3741,7 @@ extern "C" __device__ float test_float_max(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_double_min(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract double @__ocml_fmin_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_fmin_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I_I]]
 //
 extern "C" __device__ double test_double_min(double x, double y) {
@@ -3690,7 +3755,7 @@ extern "C" __device__ double test_double_min(double x, double y) {
 //
 // FINITEONLY-LABEL: @test_double_max(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract double @__ocml_fmax_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR13]]
+// FINITEONLY-NEXT:    [[CALL_I_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_fmax_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR13]]
 // FINITEONLY-NEXT:    ret double [[CALL_I_I]]
 //
 extern "C" __device__ double test_double_max(double x, double y) {

@@ -116,7 +116,7 @@ bool LoopPipelinerInternal::initializeLoopInfo(
 
   // All operations need to have a stage.
   for (Operation &op : forOp.getBody()->without_terminator()) {
-    if (stages.find(&op) == stages.end()) {
+    if (!stages.contains(&op)) {
       op.emitOpError("not assigned a pipeline stage");
       return false;
     }
@@ -144,7 +144,7 @@ bool LoopPipelinerInternal::initializeLoopInfo(
   if (llvm::any_of(forOp.getBody()->getTerminator()->getOperands(),
                    [this](Value operand) {
                      Operation *def = operand.getDefiningOp();
-                     return !def || stages.find(def) == stages.end();
+                     return !def || !stages.contains(def);
                    }))
     return false;
   annotateFn = options.annotateFn;

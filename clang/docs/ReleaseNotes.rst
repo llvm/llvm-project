@@ -132,6 +132,9 @@ Removed Compiler Flags
   or higher to use standard C++ modules instead.
 - The deprecated flag `-fcoroutines-ts` is removed. Please use ``-std=c++20``
   or higher to use standard C++ coroutines instead.
+- The CodeGen flag `-lower-global-dtors-via-cxa-atexit` which affects how global
+  destructors are lowered for MachO is removed without replacement. The default
+  of `-lower-global-dtors-via-cxa-atexit=true` is now the only supported way.
 
 Attribute Changes in Clang
 --------------------------
@@ -199,6 +202,10 @@ Bug Fixes in This Version
   of `CWG2699 <https://wg21.link/CWG2699>_` being accepted by WG21.
 - Fix crash when parsing fold expression containing a delayed typo correction.
   (`#61326 <https://github.com/llvm/llvm-project/issues/61326>`_)
+- Fix crash when dealing with some member accesses outside of class or member
+  function context.
+  (`#37792 <https://github.com/llvm/llvm-project/issues/37792>`_) and
+  (`#48405 <https://github.com/llvm/llvm-project/issues/48405>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -297,6 +304,7 @@ Floating Point Support in Clang
 - Add ``__builtin_elementwise_log2`` builtin for floating point types only.
 - Add ``__builtin_elementwise_exp`` builtin for floating point types only.
 - Add ``__builtin_elementwise_exp2`` builtin for floating point types only.
+- Add ``__builtin_set_flt_rounds`` builtin for X86, x86_64, Arm and AArch64 only.
 
 AST Matchers
 ------------

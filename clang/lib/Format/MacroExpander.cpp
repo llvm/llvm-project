@@ -151,18 +151,16 @@ void MacroExpander::parseDefinition(const std::string &Macro) {
 }
 
 bool MacroExpander::defined(llvm::StringRef Name) const {
-  return FunctionLike.find(Name) != FunctionLike.end() ||
-         ObjectLike.find(Name) != ObjectLike.end();
+  return FunctionLike.contains(Name) || ObjectLike.contains(Name);
 }
 
 bool MacroExpander::objectLike(llvm::StringRef Name) const {
-  return ObjectLike.find(Name) != ObjectLike.end();
+  return ObjectLike.contains(Name);
 }
 
 bool MacroExpander::hasArity(llvm::StringRef Name, unsigned Arity) const {
   auto it = FunctionLike.find(Name);
-  return it != FunctionLike.end() &&
-         (it->second.find(Arity) != it->second.end());
+  return it != FunctionLike.end() && it->second.contains(Arity);
 }
 
 llvm::SmallVector<FormatToken *, 8>

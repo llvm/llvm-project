@@ -172,10 +172,8 @@ bool mlir::isLoopMemoryParallel(AffineForOp forOp) {
     MemRefAccess srcAccess(srcOp);
     for (auto *dstOp : loadAndStoreOps) {
       MemRefAccess dstAccess(dstOp);
-      FlatAffineValueConstraints dependenceConstraints;
-      DependenceResult result = checkMemrefAccessDependence(
-          srcAccess, dstAccess, depth, &dependenceConstraints,
-          /*dependenceComponents=*/nullptr);
+      DependenceResult result =
+          checkMemrefAccessDependence(srcAccess, dstAccess, depth);
       if (result.value != DependenceResult::NoDependence)
         return false;
     }
@@ -260,7 +258,8 @@ LogicalResult mlir::getIndexSet(MutableArrayRef<Operation *> ops,
   }
   extractInductionVars(loopOps, indices);
   // Reset while associating Values in 'indices' to the domain.
-  domain->reset(numDims, /*numSymbols=*/0, /*numLocals=*/0, indices);
+  *domain = FlatAffineValueConstraints(numDims, /*numSymbols=*/0,
+                                       /*numLocals=*/0, indices);
   for (Operation *op : ops) {
     // Add constraints from forOp's bounds.
     if (AffineForOp forOp = dyn_cast<AffineForOp>(op)) {
@@ -285,14 +284,6 @@ static LogicalResult getOpIndexSet(Operation *op,
   SmallVector<Operation *, 4> ops;
   getEnclosingAffineOps(*op, &ops);
   return getIndexSet(ops, indexSet);
-}
-
-/// Returns true if `val` is an induction of an affine.parallel op.
-static bool isAffineParallelInductionVar(Value val) {
-  auto ivArg = val.dyn_cast<BlockArgument>();
-  if (!ivArg)
-    return false;
-  return isa<AffineParallelOp>(ivArg.getOwner()->getParentOp());
 }
 
 // Returns the number of outer loop common to 'src/dstDomain'.
@@ -659,23 +650,24 @@ DependenceResult mlir::checkMemrefAccessDependence(
   // memory locations.
   dstRel.inverse();
   dstRel.compose(srcRel);
-  *dependenceConstraints = dstRel;
 
   // Add 'src' happens before 'dst' ordering constraints.
-  addOrderingConstraints(srcDomain, dstDomain, loopDepth,
-                         dependenceConstraints);
+  addOrderingConstraints(srcDomain, dstDomain, loopDepth, &dstRel);
 
   // Return 'NoDependence' if the solution space is empty: no dependence.
-  if (dependenceConstraints->isEmpty())
+  if (dstRel.isEmpty())
     return DependenceResult::NoDependence;
 
   // Compute dependence direction vector and return true.
   if (dependenceComponents != nullptr)
-    computeDirectionVector(srcDomain, dstDomain, loopDepth,
-                           dependenceConstraints, dependenceComponents);
+    computeDirectionVector(srcDomain, dstDomain, loopDepth, &dstRel,
+                           dependenceComponents);
 
   LLVM_DEBUG(llvm::dbgs() << "Dependence polyhedron:\n");
-  LLVM_DEBUG(dependenceConstraints->dump());
+  LLVM_DEBUG(dstRel.dump());
+
+  if (dependenceConstraints)
+    *dependenceConstraints = dstRel;
   return DependenceResult::HasDependence;
 }
 
@@ -700,12 +692,12 @@ void mlir::getDependenceComponents(
         auto *dstOp = loadAndStoreOps[j];
         MemRefAccess dstAccess(dstOp);
 
-        FlatAffineValueConstraints dependenceConstraints;
         SmallVector<DependenceComponent, 2> depComps;
         // TODO: Explore whether it would be profitable to pre-compute and store
         // deps instead of repeatedly checking.
         DependenceResult result = checkMemrefAccessDependence(
-            srcAccess, dstAccess, d, &dependenceConstraints, &depComps);
+            srcAccess, dstAccess, d, /*dependenceConstraints=*/nullptr,
+            &depComps);
         if (hasDependence(result))
           depCompsVec->push_back(depComps);
       }

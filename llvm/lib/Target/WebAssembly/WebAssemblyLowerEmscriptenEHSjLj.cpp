@@ -580,7 +580,7 @@ Function *WebAssemblyLowerEmscriptenEHSjLj::getInvokeWrapper(CallBase *CI) {
   FunctionType *CalleeFTy = CI->getFunctionType();
 
   std::string Sig = getSignature(CalleeFTy);
-  if (InvokeWrappers.find(Sig) != InvokeWrappers.end())
+  if (InvokeWrappers.contains(Sig))
     return InvokeWrappers[Sig];
 
   // Put the pointer to the callee as first argument

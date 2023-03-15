@@ -416,22 +416,22 @@ v_wmma_f32_16x16x16_fp8_fp8 v[2:5], v0, v1, v[2:5] op_sel_hi:[1,1,0]
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
 v_wmma_f32_16x16x16_fp8_fp8 v[2:5], v0, v1, v[2:5] neg_lo:[1,0,0]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
 
 v_wmma_f32_16x16x16_fp8_fp8 v[2:5], v0, v1, v[2:5] neg_lo:[0,1,0]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
 
 v_wmma_f32_16x16x16_fp8_fp8 v[2:5], v0, v1, v[2:5] neg_lo:[0,0,1]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12: v_wmma_f32_16x16x16_fp8_fp8 v[2:5], v0, v1, v[2:5] neg_lo:[0,0,1] ; encoding: [0x02,0x40,0x46,0xcc,0x00,0x03,0x0a,0x9c]
 
 v_wmma_f32_16x16x16_fp8_fp8 v[2:5], v0, v1, v[2:5] neg_hi:[1,0,0]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
 
 v_wmma_f32_16x16x16_fp8_fp8 v[2:5], v0, v1, v[2:5] neg_hi:[0,1,0]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
 
 v_wmma_f32_16x16x16_fp8_fp8 v[2:5], v0, v1, v[2:5] neg_hi:[0,0,1]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12: v_wmma_f32_16x16x16_fp8_fp8 v[2:5], v0, v1, v[2:5] neg_hi:[0,0,1] ; encoding: [0x02,0x44,0x46,0xcc,0x00,0x03,0x0a,0x1c]
 
 v_wmma_f32_16x16x16_fp8_fp8 v[2:5], s0, v1, v[2:5]
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -481,22 +481,22 @@ v_wmma_f32_16x16x16_fp8_bf8 v[2:5], v0, v1, v[2:5] op_sel_hi:[1,1,0]
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
 v_wmma_f32_16x16x16_fp8_bf8 v[2:5], v0, v1, v[2:5] neg_lo:[1,0,0]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
 
 v_wmma_f32_16x16x16_fp8_bf8 v[2:5], v0, v1, v[2:5] neg_lo:[0,1,0]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
 
 v_wmma_f32_16x16x16_fp8_bf8 v[2:5], v0, v1, v[2:5] neg_lo:[0,0,1]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12: v_wmma_f32_16x16x16_fp8_bf8 v[2:5], v0, v1, v[2:5] neg_lo:[0,0,1] ; encoding: [0x02,0x40,0x47,0xcc,0x00,0x03,0x0a,0x9c]
 
 v_wmma_f32_16x16x16_fp8_bf8 v[2:5], v0, v1, v[2:5] neg_hi:[1,0,0]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
 
 v_wmma_f32_16x16x16_fp8_bf8 v[2:5], v0, v1, v[2:5] neg_hi:[0,1,0]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
 
 v_wmma_f32_16x16x16_fp8_bf8 v[2:5], v0, v1, v[2:5] neg_hi:[0,0,1]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12: v_wmma_f32_16x16x16_fp8_bf8 v[2:5], v0, v1, v[2:5] neg_hi:[0,0,1] ; encoding: [0x02,0x44,0x47,0xcc,0x00,0x03,0x0a,0x1c]
 
 v_wmma_f32_16x16x16_fp8_bf8 v[2:5], s0, v1, v[2:5]
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -546,22 +546,22 @@ v_wmma_f32_16x16x16_bf8_fp8 v[2:5], v0, v1, v[2:5] op_sel_hi:[1,1,0]
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
 v_wmma_f32_16x16x16_bf8_fp8 v[2:5], v0, v1, v[2:5] neg_lo:[1,0,0]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
 
 v_wmma_f32_16x16x16_bf8_fp8 v[2:5], v0, v1, v[2:5] neg_lo:[0,1,0]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
 
 v_wmma_f32_16x16x16_bf8_fp8 v[2:5], v0, v1, v[2:5] neg_lo:[0,0,1]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12: v_wmma_f32_16x16x16_bf8_fp8 v[2:5], v0, v1, v[2:5] neg_lo:[0,0,1] ; encoding: [0x02,0x40,0x48,0xcc,0x00,0x03,0x0a,0x9c]
 
 v_wmma_f32_16x16x16_bf8_fp8 v[2:5], v0, v1, v[2:5] neg_hi:[1,0,0]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
 
 v_wmma_f32_16x16x16_bf8_fp8 v[2:5], v0, v1, v[2:5] neg_hi:[0,1,0]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
 
 v_wmma_f32_16x16x16_bf8_fp8 v[2:5], v0, v1, v[2:5] neg_hi:[0,0,1]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12: v_wmma_f32_16x16x16_bf8_fp8 v[2:5], v0, v1, v[2:5] neg_hi:[0,0,1] ; encoding: [0x02,0x44,0x48,0xcc,0x00,0x03,0x0a,0x1c]
 
 v_wmma_f32_16x16x16_bf8_fp8 v[2:5], s0, v1, v[2:5]
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -611,22 +611,22 @@ v_wmma_f32_16x16x16_bf8_bf8 v[2:5], v0, v1, v[2:5] op_sel_hi:[1,1,0]
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
 v_wmma_f32_16x16x16_bf8_bf8 v[2:5], v0, v1, v[2:5] neg_lo:[1,0,0]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
 
 v_wmma_f32_16x16x16_bf8_bf8 v[2:5], v0, v1, v[2:5] neg_lo:[0,1,0]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
 
 v_wmma_f32_16x16x16_bf8_bf8 v[2:5], v0, v1, v[2:5] neg_lo:[0,0,1]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12: v_wmma_f32_16x16x16_bf8_bf8 v[2:5], v0, v1, v[2:5] neg_lo:[0,0,1] ; encoding: [0x02,0x40,0x49,0xcc,0x00,0x03,0x0a,0x9c]
 
 v_wmma_f32_16x16x16_bf8_bf8 v[2:5], v0, v1, v[2:5] neg_hi:[1,0,0]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
 
 v_wmma_f32_16x16x16_bf8_bf8 v[2:5], v0, v1, v[2:5] neg_hi:[0,1,0]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
 
 v_wmma_f32_16x16x16_bf8_bf8 v[2:5], v0, v1, v[2:5] neg_hi:[0,0,1]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX12: v_wmma_f32_16x16x16_bf8_bf8 v[2:5], v0, v1, v[2:5] neg_hi:[0,0,1] ; encoding: [0x02,0x44,0x49,0xcc,0x00,0x03,0x0a,0x1c]
 
 v_wmma_f32_16x16x16_bf8_bf8 v[2:5], s0, v1, v[2:5]
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

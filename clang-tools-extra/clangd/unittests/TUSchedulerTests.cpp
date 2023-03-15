@@ -1309,6 +1309,13 @@ TEST_F(TUSchedulerTests, PublishWithStalePreamble) {
 
   // Make sure that we have eventual consistency.
   EXPECT_THAT(Collector.diagVersions().back(), Pair(PI.Version, PI.Version));
+
+  // Check that WantDiagnostics::No doesn't emit any diags.
+  PI.Version = "4";
+  PI.Contents = "#define FOO\n" + PI.Version;
+  S.update(File, PI, WantDiagnostics::No);
+  S.blockUntilIdle(timeoutSeconds(5));
+  EXPECT_THAT(Collector.diagVersions().back(), Pair("3", "3"));
 }
 
 // If a header file is missing from the CDB (or inferred using heuristics), and

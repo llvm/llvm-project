@@ -1026,3 +1026,11 @@ namespace PR46637 {
   void *v = x(f); // expected-error {{cannot initialize a variable of type 'void *' with an rvalue of type 'int'}}
   void *w = y(f); // expected-error {{cannot initialize a variable of type 'void *' with an rvalue of type 'int'}}
 }
+
+namespace GH37792 {
+struct A { int x; };
+
+void f() {
+  [](auto t) -> decltype(decltype(t)::x) { return 0; }(A());
+}
+}

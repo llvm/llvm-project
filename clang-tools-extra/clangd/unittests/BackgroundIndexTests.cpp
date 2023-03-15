@@ -69,7 +69,7 @@ public:
   loadShard(llvm::StringRef ShardIdentifier) const override {
     std::lock_guard<std::mutex> Lock(StorageMu);
     AccessedPaths.insert(ShardIdentifier);
-    if (Storage.find(ShardIdentifier) == Storage.end()) {
+    if (!Storage.contains(ShardIdentifier)) {
       return nullptr;
     }
     auto IndexFile =
