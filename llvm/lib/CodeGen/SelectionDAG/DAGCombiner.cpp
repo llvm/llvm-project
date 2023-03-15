@@ -20391,9 +20391,13 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
   }
 
   // If this is a load followed by a store to the same location, then the store
-  // is dead/noop.
+  // is dead/noop. Peek through any truncates if canCombineTruncStore failed.
+  // TODO: Add big-endian truncate support with test coverage.
   // TODO: Can relax for unordered atomics (see D66309)
-  if (LoadSDNode *Ld = dyn_cast<LoadSDNode>(Value)) {
+  SDValue TruncVal = DAG.getDataLayout().isLittleEndian()
+                         ? peekThroughTruncates(Value)
+                         : Value;
+  if (auto *Ld = dyn_cast<LoadSDNode>(TruncVal)) {
     if (Ld->getBasePtr() == Ptr && ST->getMemoryVT() == Ld->getMemoryVT() &&
         ST->isUnindexed() && ST->isSimple() &&
         Ld->getAddressSpace() == ST->getAddressSpace() &&
