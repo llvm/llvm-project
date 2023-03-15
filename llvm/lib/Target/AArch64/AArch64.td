@@ -522,6 +522,12 @@ def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
                                                  "Don't place a BTI instruction "
                                                  "after a return-twice">;
 
+def FeatureCHK : SubtargetFeature<"chk", "HasCHK",
+    "true", "Enable Armv8.0-A Check Feature Status Extension (FEAT_CHK)">;
+
+def FeatureGCS : SubtargetFeature<"gcs", "HasGCS",
+    "true", "Enable Armv9.4-A Guarded Call Stack Extension", [FeatureCHK]>;
+
 def FeatureCLRBHB : SubtargetFeature<"clrbhb", "HasCLRBHB",
     "true", "Enable Clear BHB instruction (FEAT_CLRBHB)">;
 
@@ -603,7 +609,7 @@ def HasV8_8aOps : SubtargetFeature<
 def HasV8_9aOps : SubtargetFeature<
   "v8.9a", "HasV8_9aOps", "true", "Support ARM v8.9a instructions",
   [HasV8_8aOps, FeatureCLRBHB, FeaturePRFM_SLC, FeatureSPECRES2,
-   FeatureCSSC, FeatureRASv2]>;
+   FeatureCSSC, FeatureRASv2, FeatureCHK]>;
 
 def HasV9_0aOps : SubtargetFeature<
   "v9a", "HasV9_0aOps", "true", "Support ARM v9a instructions",
