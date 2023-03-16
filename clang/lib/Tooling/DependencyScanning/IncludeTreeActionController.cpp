@@ -486,6 +486,10 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
       return std::move(E);
   }
 
+  for (StringRef ModuleMap : FrontendOpts.ModuleMapFiles)
+    if (Error E = addFile(ModuleMap))
+      return std::move(E);
+
   auto FinishIncludeTree = [&]() -> Error {
     IntrusiveRefCntPtr<ASTReader> Reader = ScanInstance.getASTReader();
     if (!Reader)
