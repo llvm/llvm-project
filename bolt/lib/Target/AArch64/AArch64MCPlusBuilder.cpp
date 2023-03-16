@@ -45,8 +45,6 @@ public:
                                  *AArch64ExprB.getSubExpr(), Comp);
   }
 
-  bool hasEVEXEncoding(const MCInst &) const override { return false; }
-
   bool isMacroOpFusionPair(ArrayRef<MCInst> Insts) const override {
     return false;
   }
@@ -1090,14 +1088,6 @@ public:
         *Ctx, 0)));
     return true;
   }
-
-  bool isMoveMem2Reg(const MCInst &Inst) const override { return false; }
-
-  bool isLeave(const MCInst &Inst) const override { return false; }
-
-  bool isPop(const MCInst &Inst) const override { return false; }
-
-  bool isPrefix(const MCInst &Inst) const override { return false; }
 
   bool createReturn(MCInst &Inst) const override {
     Inst.setOpcode(AArch64::RET);
