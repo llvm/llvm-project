@@ -270,8 +270,6 @@ TEST(ConstantsTest, AsInstructionsTest) {
   CHECK(ConstantExpr::getFPExtend(P1, DoubleTy),
         "fpext float " P1STR " to double");
 
-  CHECK(ConstantExpr::getSelect(P3, P0, P4),
-        "select i1 " P3STR ", i32 " P0STR ", i32 " P4STR);
   CHECK(ConstantExpr::getICmp(CmpInst::ICMP_EQ, P0, P4),
         "icmp eq i32 " P0STR ", " P4STR);
   CHECK(ConstantExpr::getFCmp(CmpInst::FCMP_ULT, P1, P5),
