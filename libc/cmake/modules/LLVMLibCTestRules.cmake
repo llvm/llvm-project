@@ -497,8 +497,7 @@ function(add_integration_test test_name)
   target_compile_options(${fq_build_target_name}
                          PRIVATE -fpie -ffreestanding ${INTEGRATION_TEST_COMPILE_OPTIONS})
   target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
-  target_link_libraries(${fq_build_target_name}
-                        ${INTEGRATION_TEST_STARTUP} ${fq_target_name}.__libc__
+  target_link_libraries(${fq_build_target_name} ${fq_target_name}.__libc__
                         libc.test.IntegrationTest.test)
   add_dependencies(${fq_build_target_name}
                    libc.test.IntegrationTest.test
