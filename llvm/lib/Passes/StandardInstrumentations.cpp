@@ -1067,6 +1067,23 @@ struct PreservedFunctionHashAnalysis
 
 AnalysisKey PreservedFunctionHashAnalysis::Key;
 
+struct PreservedModuleHashAnalysis
+    : public AnalysisInfoMixin<PreservedModuleHashAnalysis> {
+  static AnalysisKey Key;
+
+  struct ModuleHash {
+    uint64_t Hash;
+  };
+
+  using Result = ModuleHash;
+
+  Result run(Module &F, ModuleAnalysisManager &FAM) {
+    return Result{StructuralHash(F)};
+  }
+};
+
+AnalysisKey PreservedModuleHashAnalysis::Key;
+
 bool PreservedCFGCheckerInstrumentation::CFG::invalidate(
     Function &F, const PreservedAnalyses &PA,
     FunctionAnalysisManager::Invalidator &) {
@@ -1106,6 +1123,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
     if (!Registered) {
       FAM.registerPass([&] { return PreservedCFGCheckerAnalysis(); });
       FAM.registerPass([&] { return PreservedFunctionHashAnalysis(); });
+      MAM.registerPass([&] { return PreservedModuleHashAnalysis(); });
       Registered = true;
     }
 
@@ -1113,6 +1131,11 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
       // Make sure a fresh CFG snapshot is available before the pass.
       FAM.getResult<PreservedCFGCheckerAnalysis>(*F);
       FAM.getResult<PreservedFunctionHashAnalysis>(*F);
+    }
+
+    if (auto *MaybeM = any_cast<const Module *>(&IR)) {
+      Module &M = **const_cast<Module **>(MaybeM);
+      MAM.getResult<PreservedModuleHashAnalysis>(M);
     }
   });
 
@@ -1168,6 +1191,16 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
               FAM.getCachedResult<PreservedCFGCheckerAnalysis>(*F))
         CheckCFG(P, F->getName(), *GraphBefore,
                  CFG(F, /* TrackBBLifetime */ false));
+    }
+    if (auto *MaybeM = any_cast<const Module *>(&IR)) {
+      Module &M = **const_cast<Module **>(MaybeM);
+      if (auto *HashBefore =
+              MAM.getCachedResult<PreservedModuleHashAnalysis>(M)) {
+        if (HashBefore->Hash != StructuralHash(M)) {
+          report_fatal_error(formatv(
+              "Module changed by {0} without invalidating analyses", P));
+        }
+      }
     }
   });
 }
