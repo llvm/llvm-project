@@ -176,57 +176,114 @@ public:
   /// @}
 };
 
+// Iterator for ValueAsMetadata that internally uses direct pointer iteration
+// over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to the
+// ValueAsMetadata .
+class location_op_iterator
+    : public iterator_facade_base<location_op_iterator,
+                                  std::bidirectional_iterator_tag, Value *> {
+  PointerUnion<ValueAsMetadata *, ValueAsMetadata **> I;
+
+public:
+  location_op_iterator(ValueAsMetadata *SingleIter) : I(SingleIter) {}
+  location_op_iterator(ValueAsMetadata **MultiIter) : I(MultiIter) {}
+
+  location_op_iterator(const location_op_iterator &R) : I(R.I) {}
+  location_op_iterator &operator=(const location_op_iterator &R) {
+    I = R.I;
+    return *this;
+  }
+  bool operator==(const location_op_iterator &RHS) const { return I == RHS.I; }
+  const Value *operator*() const {
+    ValueAsMetadata *VAM = I.is<ValueAsMetadata *>()
+                               ? I.get<ValueAsMetadata *>()
+                               : *I.get<ValueAsMetadata **>();
+    return VAM->getValue();
+  };
+  Value *operator*() {
+    ValueAsMetadata *VAM = I.is<ValueAsMetadata *>()
+                               ? I.get<ValueAsMetadata *>()
+                               : *I.get<ValueAsMetadata **>();
+    return VAM->getValue();
+  }
+  location_op_iterator &operator++() {
+    if (I.is<ValueAsMetadata *>())
+      I = I.get<ValueAsMetadata *>() + 1;
+    else
+      I = I.get<ValueAsMetadata **>() + 1;
+    return *this;
+  }
+  location_op_iterator &operator--() {
+    if (I.is<ValueAsMetadata *>())
+      I = I.get<ValueAsMetadata *>() - 1;
+    else
+      I = I.get<ValueAsMetadata **>() - 1;
+    return *this;
+  }
+};
+
+/// Lightweight class that wraps the location operand metadata of a debug
+/// intrinsic. The raw location may be a ValueAsMetadata, an empty MDTuple,
+/// or a DIArgList.
+class RawLocationWrapper {
+  Metadata *RawLocation = nullptr;
+
+public:
+  RawLocationWrapper() = default;
+  explicit RawLocationWrapper(Metadata *RawLocation)
+      : RawLocation(RawLocation) {
+    // Allow ValueAsMetadata, empty MDTuple, DIArgList.
+    assert(RawLocation && "unexpected null RawLocation");
+    assert(isa<ValueAsMetadata>(RawLocation) || isa<DIArgList>(RawLocation) ||
+           (isa<MDNode>(RawLocation) &&
+            !cast<MDNode>(RawLocation)->getNumOperands()));
+  }
+  Metadata *getRawLocation() const { return RawLocation; }
+  /// Get the locations corresponding to the variable referenced by the debug
+  /// info intrinsic.  Depending on the intrinsic, this could be the
+  /// variable's value or its address.
+  iterator_range<location_op_iterator> location_ops() const;
+  Value *getVariableLocationOp(unsigned OpIdx) const;
+  unsigned getNumVariableLocationOps() const {
+    if (hasArgList())
+      return cast<DIArgList>(getRawLocation())->getArgs().size();
+    return 1;
+  }
+  bool hasArgList() const { return isa<DIArgList>(getRawLocation()); }
+  bool isKillLocation(const DIExpression *Expression) const {
+    return (getNumVariableLocationOps() == 0 && !Expression->isComplex()) ||
+           any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
+  }
+
+  friend bool operator==(const RawLocationWrapper &A,
+                         const RawLocationWrapper &B) {
+    return A.RawLocation == B.RawLocation;
+  }
+  friend bool operator!=(const RawLocationWrapper &A,
+                         const RawLocationWrapper &B) {
+    return !(A == B);
+  }
+  friend bool operator>(const RawLocationWrapper &A,
+                        const RawLocationWrapper &B) {
+    return A.RawLocation > B.RawLocation;
+  }
+  friend bool operator>=(const RawLocationWrapper &A,
+                         const RawLocationWrapper &B) {
+    return A.RawLocation >= B.RawLocation;
+  }
+  friend bool operator<(const RawLocationWrapper &A,
+                        const RawLocationWrapper &B) {
+    return A.RawLocation < B.RawLocation;
+  }
+  friend bool operator<=(const RawLocationWrapper &A,
+                         const RawLocationWrapper &B) {
+    return A.RawLocation <= B.RawLocation;
+  }
+};
+
 /// This is the common base class for debug info intrinsics for variables.
 class DbgVariableIntrinsic : public DbgInfoIntrinsic {
 public:
-  // Iterator for ValueAsMetadata that internally uses direct pointer iteration
-  // over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to the
-  // ValueAsMetadata .
-  class location_op_iterator
-      : public iterator_facade_base<location_op_iterator,
-                                    std::bidirectional_iterator_tag, Value *> {
-    PointerUnion<ValueAsMetadata *, ValueAsMetadata **> I;
-
-  public:
-    location_op_iterator(ValueAsMetadata *SingleIter) : I(SingleIter) {}
-    location_op_iterator(ValueAsMetadata **MultiIter) : I(MultiIter) {}
-
-    location_op_iterator(const location_op_iterator &R) : I(R.I) {}
-    location_op_iterator &operator=(const location_op_iterator &R) {
-      I = R.I;
-      return *this;
-    }
-    bool operator==(const location_op_iterator &RHS) const {
-      return I == RHS.I;
-    }
-    const Value *operator*() const {
-      ValueAsMetadata *VAM = I.is<ValueAsMetadata *>()
-                                 ? I.get<ValueAsMetadata *>()
-                                 : *I.get<ValueAsMetadata **>();
-      return VAM->getValue();
-    };
-    Value *operator*() {
-      ValueAsMetadata *VAM = I.is<ValueAsMetadata *>()
-                                 ? I.get<ValueAsMetadata *>()
-                                 : *I.get<ValueAsMetadata **>();
-      return VAM->getValue();
-    }
-    location_op_iterator &operator++() {
-      if (I.is<ValueAsMetadata *>())
-        I = I.get<ValueAsMetadata *>() + 1;
-      else
-        I = I.get<ValueAsMetadata **>() + 1;
-      return *this;
-    }
-    location_op_iterator &operator--() {
-      if (I.is<ValueAsMetadata *>())
-        I = I.get<ValueAsMetadata *>() - 1;
-      else
-        I = I.get<ValueAsMetadata **>() - 1;
-      return *this;
-    }
-  };
-
   /// Get the locations corresponding to the variable referenced by the debug
   /// info intrinsic.  Depending on the intrinsic, this could be the
   /// variable's value or its address.
@@ -251,12 +308,10 @@ public:
   }
 
   unsigned getNumVariableLocationOps() const {
-    if (hasArgList())
-      return cast<DIArgList>(getRawLocation())->getArgs().size();
-    return 1;
+    return getWrappedLocation().getNumVariableLocationOps();
   }
 
-  bool hasArgList() const { return isa<DIArgList>(getRawLocation()); }
+  bool hasArgList() const { return getWrappedLocation().hasArgList(); }
 
   /// Does this describe the address of a local variable. True for dbg.declare,
   /// but not dbg.value, which describes its value, or dbg.assign, which
@@ -278,9 +333,7 @@ public:
   }
 
   bool isKillLocation() const {
-    return (getNumVariableLocationOps() == 0 &&
-            !getExpression()->isComplex()) ||
-           any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
+    return getWrappedLocation().isKillLocation(getExpression());
   }
 
   DILocalVariable *getVariable() const {
@@ -293,6 +346,10 @@ public:
 
   Metadata *getRawLocation() const {
     return cast<MetadataAsValue>(getArgOperand(0))->getMetadata();
+  }
+
+  RawLocationWrapper getWrappedLocation() const {
+    return RawLocationWrapper(getRawLocation());
   }
 
   Metadata *getRawVariable() const {
