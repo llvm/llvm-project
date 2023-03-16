@@ -2096,8 +2096,9 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
   // Set the 5th byte of mandatory field.
   uint32_t SecondHalfOfMandatoryField = 0;
 
-  // Always store back chain.
-  SecondHalfOfMandatoryField |= TracebackTable::IsBackChainStoredMask;
+  SecondHalfOfMandatoryField |= MF->getFrameInfo().getStackSize()
+                                    ? TracebackTable::IsBackChainStoredMask
+                                    : 0;
 
   uint32_t FPRSaved = 0;
   for (unsigned Reg = PPC::F14; Reg <= PPC::F31; ++Reg) {
