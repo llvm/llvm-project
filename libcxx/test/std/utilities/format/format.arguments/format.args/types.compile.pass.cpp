@@ -26,6 +26,3 @@ static_assert(std::is_same_v<std::format_args,
 static_assert(std::is_same_v<std::wformat_args,
                              std::basic_format_args<std::wformat_context>>);
 #endif
-
-// Required for MSVC internal test runner compatibility.
-int main(int, char**) { return 0; }
