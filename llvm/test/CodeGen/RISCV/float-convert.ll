@@ -167,10 +167,8 @@ define i32 @fcvt_wu_s_multiple_use(float %x, ptr %y) nounwind {
 ; CHECKIF-LABEL: fcvt_wu_s_multiple_use:
 ; CHECKIF:       # %bb.0:
 ; CHECKIF-NEXT:    fcvt.wu.s a0, fa0, rtz
-; CHECKIF-NEXT:    bnez a0, .LBB3_2
-; CHECKIF-NEXT:  # %bb.1:
-; CHECKIF-NEXT:    li a0, 1
-; CHECKIF-NEXT:  .LBB3_2:
+; CHECKIF-NEXT:    seqz a1, a0
+; CHECKIF-NEXT:    add a0, a0, a1
 ; CHECKIF-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_wu_s_multiple_use:
@@ -178,10 +176,8 @@ define i32 @fcvt_wu_s_multiple_use(float %x, ptr %y) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    call __fixunssfsi@plt
-; RV32I-NEXT:    bnez a0, .LBB3_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    li a0, 1
-; RV32I-NEXT:  .LBB3_2:
+; RV32I-NEXT:    seqz a1, a0
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -191,10 +187,8 @@ define i32 @fcvt_wu_s_multiple_use(float %x, ptr %y) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __fixunssfsi@plt
-; RV64I-NEXT:    bnez a0, .LBB3_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    li a0, 1
-; RV64I-NEXT:  .LBB3_2:
+; RV64I-NEXT:    seqz a1, a0
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
