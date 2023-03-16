@@ -115,7 +115,7 @@ private:
 
   private:
     VRegListT *insertVRegs(const Value &V) {
-      assert(ValToVRegs.find(&V) == ValToVRegs.end() && "Value already exists");
+      assert(!ValToVRegs.contains(&V) && "Value already exists");
 
       // We placement new using our fast allocator since we never try to free
       // the vectors until translation is finished.
@@ -125,8 +125,7 @@ private:
     }
 
     OffsetListT *insertOffsets(const Value &V) {
-      assert(TypeToOffsets.find(V.getType()) == TypeToOffsets.end() &&
-             "Type already exists");
+      assert(!TypeToOffsets.contains(V.getType()) && "Type already exists");
 
       auto *OffsetList = new (OffsetAlloc.Allocate()) OffsetListT();
       TypeToOffsets[V.getType()] = OffsetList;
