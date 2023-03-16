@@ -2004,7 +2004,7 @@ protected:
             result.GetOutputStream().EOL();
             result.GetOutputStream().EOL();
           }
-          if (m_interpreter.WasInterrupted())
+          if (GetDebugger().InterruptRequested())
             break;
           num_dumped++;
           DumpModuleSymtab(m_interpreter, result.GetOutputStream(),
@@ -2031,7 +2031,7 @@ protected:
                 result.GetOutputStream().EOL();
                 result.GetOutputStream().EOL();
               }
-              if (m_interpreter.WasInterrupted())
+              if (GetDebugger().InterruptRequested())
                 break;
               num_dumped++;
               DumpModuleSymtab(m_interpreter, result.GetOutputStream(),
@@ -2092,7 +2092,7 @@ protected:
       result.GetOutputStream().Format("Dumping sections for {0} modules.\n",
                                       num_modules);
       for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
-        if (m_interpreter.WasInterrupted())
+        if (GetDebugger().InterruptRequested())
           break;
         num_dumped++;
         DumpModuleSections(
@@ -2110,7 +2110,7 @@ protected:
             FindModulesByName(target, arg_cstr, module_list, true);
         if (num_matches > 0) {
           for (size_t i = 0; i < num_matches; ++i) {
-            if (m_interpreter.WasInterrupted())
+            if (GetDebugger().InterruptRequested())
               break;
             Module *module = module_list.GetModulePointerAtIndex(i);
             if (module) {
@@ -2224,7 +2224,7 @@ protected:
       result.GetOutputStream().Format("Dumping clang ast for {0} modules.\n",
                                       num_modules);
       for (ModuleSP module_sp : module_list.ModulesNoLocking()) {
-        if (m_interpreter.WasInterrupted())
+        if (GetDebugger().InterruptRequested())
           break;
         if (SymbolFile *sf = module_sp->GetSymbolFile())
           sf->DumpClangAST(result.GetOutputStream());
@@ -2249,7 +2249,7 @@ protected:
       }
 
       for (size_t i = 0; i < num_matches; ++i) {
-        if (m_interpreter.WasInterrupted())
+        if (GetDebugger().InterruptRequested())
           break;
         Module *m = module_list.GetModulePointerAtIndex(i);
         if (SymbolFile *sf = m->GetSymbolFile())
@@ -2298,7 +2298,7 @@ protected:
       result.GetOutputStream().Format(
           "Dumping debug symbols for {0} modules.\n", num_modules);
       for (ModuleSP module_sp : target_modules.ModulesNoLocking()) {
-        if (m_interpreter.WasInterrupted())
+        if (GetDebugger().InterruptRequested())
           break;
         if (DumpModuleSymbolFile(result.GetOutputStream(), module_sp.get()))
           num_dumped++;
@@ -2314,7 +2314,7 @@ protected:
             FindModulesByName(target, arg_cstr, module_list, true);
         if (num_matches > 0) {
           for (size_t i = 0; i < num_matches; ++i) {
-            if (m_interpreter.WasInterrupted())
+            if (GetDebugger().InterruptRequested())
               break;
             Module *module = module_list.GetModulePointerAtIndex(i);
             if (module) {
@@ -2381,7 +2381,7 @@ protected:
         if (target_modules.GetSize() > 0) {
           uint32_t num_dumped = 0;
           for (ModuleSP module_sp : target_modules.ModulesNoLocking()) {
-            if (m_interpreter.WasInterrupted())
+            if (GetDebugger().InterruptRequested())
               break;
             if (DumpCompileUnitLineTable(
                     m_interpreter, result.GetOutputStream(), module_sp.get(),

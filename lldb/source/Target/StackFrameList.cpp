@@ -9,6 +9,7 @@
 #include "lldb/Target/StackFrameList.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Symbol/Block.h"
@@ -470,7 +471,15 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
   }
 
   StackFrameSP unwind_frame_sp;
+  Debugger &dbg = m_thread.GetProcess()->GetTarget().GetDebugger();
   do {
+    // Check for interruption here when building the frames - this is the
+    // expensive part, Dump later on is cheap.
+    if (dbg.InterruptRequested()) {
+      Log *log = GetLog(LLDBLog::Host);
+      LLDB_LOG(log, "Interrupted %s", __FUNCTION__);
+      break;
+    }
     uint32_t idx = m_concrete_frames_fetched++;
     lldb::addr_t pc = LLDB_INVALID_ADDRESS;
     lldb::addr_t cfa = LLDB_INVALID_ADDRESS;
