@@ -172,3 +172,77 @@ for.body:                                         ; preds = %entry, %for.body
   %tobool.not = icmp eq i32 %dec, 0
   br i1 %tobool.not, label %for.cond.cleanup, label %for.body
 }
+
+; Consider the case where %a points to a buffer exactly 17 bytes long.  The
+; loop below will access bytes: 0, 4, 8, and 16.  The key bit is that we
+; advance the pointer IV by *4* each time, and thus on the iteration we write
+; byte 16, %uglygep2 (the pointer increment) is past the end of the underlying
+; storage and thus violates the inbounds requirements.  As a result, %uglygep2
+; is poison on the final iteration.  If we insert a branch on that value, we
+; have inserted undefined behavior where it did not previously exist.
+; FIXME: miscompile
+define void @inbounds_poison_use(ptr %a) {
+; CHECK-LABEL: @inbounds_poison_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 16
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[A]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store i8 1, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr inbounds i8, ptr [[LSR_IV1]], i64 4
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[UGLYGEP]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %lsr.iv1 = phi ptr [ %uglygep2, %for.body ], [ %a, %entry ]
+  %lsr.iv = phi i32 [ %lsr.iv.next, %for.body ], [ 4, %entry ]
+  store i8 1, ptr %lsr.iv1, align 4
+  %lsr.iv.next = add nsw i32 %lsr.iv, -1
+  %uglygep2 = getelementptr inbounds i8, ptr %lsr.iv1, i64 4
+  %exitcond.not = icmp eq i32 %lsr.iv.next, 0
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+; In this case, the integer IV has a larger bitwidth than the pointer IV.
+; This means that the smaller IV may wrap around multiple times before
+; the original loop exit is taken.
+; FIXME: miscompile
+define void @iv_size(ptr %a, i128 %N) {
+; CHECK-LABEL: @iv_size(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i128 [[N:%.*]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP0]], 2
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 [[TMP1]]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[A]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[UGLYGEP]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %lsr.iv1 = phi ptr [ %uglygep2, %for.body ], [ %a, %entry ]
+  %lsr.iv = phi i128 [ %lsr.iv.next, %for.body ], [ %N, %entry ]
+  store i32 1, ptr %lsr.iv1, align 4
+  %lsr.iv.next = add nsw i128 %lsr.iv, -1
+  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i64 4
+  %exitcond.not = icmp eq i128 %lsr.iv.next, 0
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
