@@ -1044,7 +1044,7 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     // resulting in a conflicting `valueMapping` entry.
     llvm::Instruction *inst = constExpr->getAsInstruction();
     auto guard = llvm::make_scope_exit([&]() {
-      assert(noResultOpMapping.find(inst) == noResultOpMapping.end() &&
+      assert(!noResultOpMapping.contains(inst) &&
              "expected constant expression to return a result");
       valueMapping.erase(inst);
       inst->deleteValue();

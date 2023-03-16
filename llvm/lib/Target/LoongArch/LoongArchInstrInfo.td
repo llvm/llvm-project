@@ -847,6 +847,13 @@ def : PatGprGpr<mulhs, MULH_W>;
 def : PatGprGpr<mulhu, MULH_WU>;
 def : PatGprGpr<rotr, ROTR_W>;
 def : PatGprImm<rotr, ROTRI_W, uimm5>;
+
+foreach Idx = 1...3 in {
+  defvar ShamtA = !mul(8, Idx);
+  defvar ShamtB = !mul(8, !sub(4, Idx));
+  def : Pat<(or (shl GPR:$rk, (i32 ShamtA)), (srl GPR:$rj, (i32 ShamtB))),
+            (BYTEPICK_W GPR:$rj, GPR:$rk, Idx)>;
+}
 } // Predicates = [IsLA32]
 
 let Predicates = [IsLA64] in {
@@ -891,6 +898,24 @@ def : Pat<(add GPR:$rj, simm32_hi16_lo12:$imm),
 def : Pat<(sext_inreg (add GPR:$rj, simm32_hi16_lo12:$imm), i32),
           (ADDI_W (ADDU16I_D GPR:$rj, (HI16ForAddu16idAddiPair $imm)),
                   (LO12 $imm))>;
+
+foreach Idx = 1...7 in {
+  defvar ShamtA = !mul(8, Idx);
+  defvar ShamtB = !mul(8, !sub(8, Idx));
+  def : Pat<(or (shl GPR:$rk, (i64 ShamtA)), (srl GPR:$rj, (i64 ShamtB))),
+            (BYTEPICK_D GPR:$rj, GPR:$rk, Idx)>;
+}
+
+foreach Idx = 1...3 in {
+  defvar ShamtA = !mul(8, Idx);
+  defvar ShamtB = !mul(8, !sub(4, Idx));
+  // NOTE: the srl node would already be transformed into a loongarch_bstrpick
+  // by the time this pattern gets to execute, hence the weird construction.
+  def : Pat<(sext_inreg (or (shl GPR:$rk, (i64 ShamtA)),
+                            (loongarch_bstrpick GPR:$rj, (i64 31),
+                                                         (i64 ShamtB))), i32),
+            (BYTEPICK_W GPR:$rj, GPR:$rk, Idx)>;
+}
 } // Predicates = [IsLA64]
 
 def : PatGprGpr<and, AND>;
