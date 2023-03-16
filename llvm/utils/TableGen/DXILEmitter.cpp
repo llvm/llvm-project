@@ -322,7 +322,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationData> &DXILOps,
   for (auto &DXILOp : DXILOps) {
     OpStrings.add(DXILOp.DXILOp.str());
 
-    if (ClassSet.find(DXILOp.DXILClass) != ClassSet.end())
+    if (ClassSet.contains(DXILOp.DXILClass))
       continue;
     ClassSet.insert(DXILOp.DXILClass);
     OpClassStrings.add(getDXILOpClassName(DXILOp.DXILClass));
