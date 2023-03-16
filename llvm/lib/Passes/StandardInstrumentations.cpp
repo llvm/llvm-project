@@ -24,6 +24,7 @@
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PrintPasses.h"
+#include "llvm/IR/StructuralHash.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -1049,6 +1050,23 @@ public:
 
 AnalysisKey PreservedCFGCheckerAnalysis::Key;
 
+struct PreservedFunctionHashAnalysis
+    : public AnalysisInfoMixin<PreservedFunctionHashAnalysis> {
+  static AnalysisKey Key;
+
+  struct FunctionHash {
+    uint64_t Hash;
+  };
+
+  using Result = FunctionHash;
+
+  Result run(Function &F, FunctionAnalysisManager &FAM) {
+    return Result{StructuralHash(F)};
+  }
+};
+
+AnalysisKey PreservedFunctionHashAnalysis::Key;
+
 bool PreservedCFGCheckerInstrumentation::CFG::invalidate(
     Function &F, const PreservedAnalyses &PA,
     FunctionAnalysisManager::Invalidator &) {
@@ -1063,6 +1081,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
     return;
 
   FAM.registerPass([&] { return PreservedCFGCheckerAnalysis(); });
+  FAM.registerPass([&] { return PreservedFunctionHashAnalysis(); });
 
   PIC.registerBeforeNonSkippedPassCallback(
       [this, &FAM](StringRef P, Any IR) {
@@ -1076,6 +1095,8 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 
         // Make sure a fresh CFG snapshot is available before the pass.
         FAM.getResult<PreservedCFGCheckerAnalysis>(*const_cast<Function *>(*F));
+        FAM.getResult<PreservedFunctionHashAnalysis>(
+            *const_cast<Function *>(*F));
       });
 
   PIC.registerAfterPassInvalidatedCallback(
@@ -1095,9 +1116,19 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 #endif
     (void)this;
 
-    const auto **F = any_cast<const Function *>(&IR);
-    if (!F)
+    const auto **MaybeF = any_cast<const Function *>(&IR);
+    if (!MaybeF)
       return;
+    Function &F = *const_cast<Function *>(*MaybeF);
+
+    if (auto *HashBefore =
+            FAM.getCachedResult<PreservedFunctionHashAnalysis>(F)) {
+      if (HashBefore->Hash != StructuralHash(F)) {
+        report_fatal_error(formatv(
+            "Function @{0} changed by {1} without invalidating analyses",
+            F.getName(), P));
+      }
+    }
 
     auto CheckCFG = [](StringRef Pass, StringRef FuncName,
                        const CFG &GraphBefore, const CFG &GraphAfter) {
@@ -1112,10 +1143,9 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
       report_fatal_error(Twine("CFG unexpectedly changed by ", Pass));
     };
 
-    if (auto *GraphBefore = FAM.getCachedResult<PreservedCFGCheckerAnalysis>(
-            *const_cast<Function *>(*F)))
-      CheckCFG(P, (*F)->getName(), *GraphBefore,
-               CFG(*F, /* TrackBBLifetime */ false));
+    if (auto *GraphBefore = FAM.getCachedResult<PreservedCFGCheckerAnalysis>(F))
+      CheckCFG(P, F.getName(), *GraphBefore,
+               CFG(&F, /* TrackBBLifetime */ false));
   });
 }
 
@@ -2151,18 +2181,17 @@ void StandardInstrumentations::registerCallbacks(
   TimePasses.registerCallbacks(PIC);
   OptNone.registerCallbacks(PIC);
   OptPassGate.registerCallbacks(PIC);
-  if (FAM)
-    PreservedCFGChecker.registerCallbacks(PIC, *FAM);
   PrintChangedIR.registerCallbacks(PIC);
   PseudoProbeVerification.registerCallbacks(PIC);
   if (VerifyEach)
     Verify.registerCallbacks(PIC);
   PrintChangedDiff.registerCallbacks(PIC);
   WebsiteChangeReporter.registerCallbacks(PIC);
-
   ChangeTester.registerCallbacks(PIC);
-
   PrintCrashIR.registerCallbacks(PIC);
+  if (FAM)
+    PreservedCFGChecker.registerCallbacks(PIC, *FAM);
+
   // TimeProfiling records the pass running time cost.
   // Its 'BeforePassCallback' can be appended at the tail of all the
   // BeforeCallbacks by calling `registerCallbacks` in the end.
