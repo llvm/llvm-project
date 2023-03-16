@@ -51,3 +51,11 @@ public func f7<each U, each V>(us: repeat each U, vs: repeat each V, more_us: re
 }
  
 f7(us: a, vs: 1, b, more_us: a, more_vs: 2, b)
+
+//FIXME: Crashes the compiler.
+//struct S<each T> {
+//    let vals : repeat each T
+//}
+//
+//let variadic_struct = S<Int, String, Float>(vals: (23, "hello", 3.14))
+//print("break here")
