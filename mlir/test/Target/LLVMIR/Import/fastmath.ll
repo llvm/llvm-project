@@ -1,7 +1,7 @@
 ; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
 
 ; CHECK-LABEL: @fastmath_inst
-define void @fastmath_inst(float %arg1, float %arg2) {
+define void @fastmath_inst(float %arg1, float %arg2, i1 %arg3) {
   ; CHECK: llvm.fadd %{{.*}}, %{{.*}}  {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
   %1 = fadd nnan ninf float %arg1, %arg2
   ; CHECK: llvm.fsub %{{.*}}, %{{.*}}  {fastmathFlags = #llvm.fastmath<nsz>} : f32
@@ -12,6 +12,8 @@ define void @fastmath_inst(float %arg1, float %arg2) {
   %4 = fdiv afn reassoc float %arg1, %arg2
   ; CHECK: llvm.fneg %{{.*}}  {fastmathFlags = #llvm.fastmath<fast>} : f32
   %5 = fneg fast float %arg1
+  ; CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} {fastmathFlags = #llvm.fastmath<contract>} : i1, f32
+  %6 = select contract i1 %arg3, float %arg1, float %arg2
   ret void
 }
 

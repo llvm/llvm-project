@@ -228,7 +228,7 @@ protected:
           thread->GetIndexID());
       return false;
     }
-    if (m_options.m_extended_backtrace) {
+    if (m_options.m_extended_backtrace && !GetDebugger().InterruptRequested()) {
       DoExtendedBacktrace(thread, result);
     }
 

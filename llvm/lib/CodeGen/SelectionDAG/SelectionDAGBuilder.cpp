@@ -1145,8 +1145,9 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
          It != End; ++It) {
       auto *Var = FnVarLocs->getDILocalVariable(It->VariableID);
       dropDanglingDebugInfo(Var, It->Expr);
-      if (!handleDebugValue(It->V, Var, It->Expr, It->DL, SDNodeOrder,
-                            /*IsVariadic=*/false))
+      SmallVector<Value *> Values(It->Values.location_ops());
+      if (!handleDebugValue(Values, Var, It->Expr, It->DL, SDNodeOrder,
+                            It->Values.hasArgList()))
         addDanglingDebugInfo(It, SDNodeOrder);
     }
   }
@@ -1206,27 +1207,46 @@ void SelectionDAGBuilder::visit(unsigned Opcode, const User &I) {
   }
 }
 
+static bool handleDanglingVariadicDebugInfo(SelectionDAG &DAG,
+                                            DILocalVariable *Variable,
+                                            DebugLoc DL, unsigned Order,
+                                            RawLocationWrapper Values,
+                                            DIExpression *Expression) {
+  if (!Values.hasArgList())
+    return false;
+  // For variadic dbg_values we will now insert an undef.
+  // FIXME: We can potentially recover these!
+  SmallVector<SDDbgOperand, 2> Locs;
+  for (const Value *V : Values.location_ops()) {
+    auto *Undef = UndefValue::get(V->getType());
+    Locs.push_back(SDDbgOperand::fromConst(Undef));
+  }
+  SDDbgValue *SDV = DAG.getDbgValueList(Variable, Expression, Locs, {},
+                                        /*IsIndirect=*/false, DL, Order,
+                                        /*IsVariadic=*/true);
+  DAG.AddDbgValue(SDV, /*isParameter=*/false);
+  return true;
+}
+
 void SelectionDAGBuilder::addDanglingDebugInfo(const VarLocInfo *VarLoc,
                                                unsigned Order) {
-  DanglingDebugInfoMap[VarLoc->V].emplace_back(VarLoc, Order);
+  if (!handleDanglingVariadicDebugInfo(
+          DAG,
+          const_cast<DILocalVariable *>(DAG.getFunctionVarLocs()
+                                            ->getVariable(VarLoc->VariableID)
+                                            .getVariable()),
+          VarLoc->DL, Order, VarLoc->Values, VarLoc->Expr)) {
+    DanglingDebugInfoMap[VarLoc->Values.getVariableLocationOp(0)].emplace_back(
+        VarLoc, Order);
+  }
 }
 
 void SelectionDAGBuilder::addDanglingDebugInfo(const DbgValueInst *DI,
                                                unsigned Order) {
   // We treat variadic dbg_values differently at this stage.
-  if (DI->hasArgList()) {
-    // For variadic dbg_values we will now insert an undef.
-    // FIXME: We can potentially recover these!
-    SmallVector<SDDbgOperand, 2> Locs;
-    for (const Value *V : DI->getValues()) {
-      auto Undef = UndefValue::get(V->getType());
-      Locs.push_back(SDDbgOperand::fromConst(Undef));
-    }
-    SDDbgValue *SDV = DAG.getDbgValueList(
-        DI->getVariable(), DI->getExpression(), Locs, {},
-        /*IsIndirect=*/false, DI->getDebugLoc(), Order, /*IsVariadic=*/true);
-    DAG.AddDbgValue(SDV, /*isParameter=*/false);
-  } else {
+  if (!handleDanglingVariadicDebugInfo(
+          DAG, DI->getVariable(), DI->getDebugLoc(), Order,
+          DI->getWrappedLocation(), DI->getExpression())) {
     // TODO: Dangling debug info will eventually either be resolved or produce
     // an Undef DBG_VALUE. However in the resolution case, a gap may appear
     // between the original dbg.value location and its resolved DBG_VALUE,

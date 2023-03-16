@@ -49,11 +49,12 @@ enum class SparseParallelizationStrategy {
 
 /// Options for the Sparsification pass.
 struct SparsificationOptions {
-  SparsificationOptions(SparseParallelizationStrategy p)
-      : parallelizationStrategy(p) {}
+  SparsificationOptions(SparseParallelizationStrategy p, bool idxReduc)
+      : parallelizationStrategy(p), enableIndexReduction(idxReduc) {}
   SparsificationOptions()
-      : SparsificationOptions(SparseParallelizationStrategy::kNone) {}
+      : SparsificationOptions(SparseParallelizationStrategy::kNone, false) {}
   SparseParallelizationStrategy parallelizationStrategy;
+  bool enableIndexReduction;
 };
 
 /// Sets up sparsification rewriting rules with the given options.

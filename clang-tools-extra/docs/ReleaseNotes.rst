@@ -219,6 +219,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/slicing>` check when warning would be
   emitted in constructor for virtual base class initialization.
 
+- Improved :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` to understand that there is a
+  sequence point between designated initializers.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

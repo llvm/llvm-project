@@ -300,7 +300,7 @@ bool isScalarBoxedRecordType(mlir::Type ty) {
   return false;
 }
 
-static bool isAssumedType(mlir::Type ty) {
+bool isAssumedType(mlir::Type ty) {
   if (auto boxTy = ty.dyn_cast<fir::BoxType>()) {
     if (boxTy.getEleTy().isa<mlir::NoneType>())
       return true;

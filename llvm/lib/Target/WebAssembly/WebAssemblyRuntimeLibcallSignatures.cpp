@@ -501,7 +501,7 @@ struct StaticLibcallNameMap {
       if (NameLibcall.first != nullptr &&
           getRuntimeLibcallSignatures().Table[NameLibcall.second] !=
               unsupported) {
-        assert(Map.find(NameLibcall.first) == Map.end() &&
+        assert(!Map.contains(NameLibcall.first) &&
                "duplicate libcall names in name map");
         Map[NameLibcall.first] = NameLibcall.second;
       }

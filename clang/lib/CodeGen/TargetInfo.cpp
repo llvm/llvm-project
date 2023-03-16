@@ -295,17 +295,13 @@ LLVM_DUMP_METHOD void ABIArgInfo::dump() const {
 static llvm::Value *emitRoundPointerUpToAlignment(CodeGenFunction &CGF,
                                                   llvm::Value *Ptr,
                                                   CharUnits Align) {
-  llvm::Value *PtrAsInt = Ptr;
   // OverflowArgArea = (OverflowArgArea + Align - 1) & -Align;
-  PtrAsInt = CGF.Builder.CreatePtrToInt(PtrAsInt, CGF.IntPtrTy);
-  PtrAsInt = CGF.Builder.CreateAdd(PtrAsInt,
-        llvm::ConstantInt::get(CGF.IntPtrTy, Align.getQuantity() - 1));
-  PtrAsInt = CGF.Builder.CreateAnd(PtrAsInt,
-           llvm::ConstantInt::get(CGF.IntPtrTy, -Align.getQuantity()));
-  PtrAsInt = CGF.Builder.CreateIntToPtr(PtrAsInt,
-                                        Ptr->getType(),
-                                        Ptr->getName() + ".aligned");
-  return PtrAsInt;
+  llvm::Value *RoundUp = CGF.Builder.CreateConstInBoundsGEP1_32(
+      CGF.Builder.getInt8Ty(), Ptr, Align.getQuantity() - 1);
+  return CGF.Builder.CreateIntrinsic(
+      llvm::Intrinsic::ptrmask, {CGF.AllocaInt8PtrTy, CGF.IntPtrTy},
+      {RoundUp, llvm::ConstantInt::get(CGF.IntPtrTy, -Align.getQuantity())},
+      nullptr, Ptr->getName() + ".aligned");
 }
 
 /// Emit va_arg for a platform using the common void* representation,
@@ -9632,7 +9628,7 @@ AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
     return AddrSpace;
 
   // Only promote to address space 4 if VarDecl has constant initialization.
-  if (CGM.isTypeConstant(D->getType(), false) &&
+  if (CGM.isTypeConstant(D->getType(), false, false) &&
       D->hasConstantInitialization()) {
     if (auto ConstAS = CGM.getTarget().getConstantAddressSpace())
       return *ConstAS;

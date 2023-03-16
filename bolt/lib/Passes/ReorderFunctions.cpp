@@ -360,7 +360,7 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
           }
           // Strip LTO suffixes
           if (std::optional<StringRef> CommonName = getLTOCommonName(Function))
-            if (LTOCommonNameMap.find(*CommonName) != LTOCommonNameMap.end())
+            if (LTOCommonNameMap.contains(*CommonName))
               llvm::append_range(FuncAddrs, LTOCommonNameMap[*CommonName]);
         } else {
           FuncAddrs.push_back(BD->getAddress());

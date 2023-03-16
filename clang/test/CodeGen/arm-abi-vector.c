@@ -16,8 +16,7 @@ typedef __attribute__(( ext_vector_type(5) ))  short __short5;
 double varargs_vec_2i(int fixed, ...) {
 // CHECK: varargs_vec_2i
 // CHECK: [[VAR:%.*]] = alloca <2 x i32>, align 8
-// CHECK: [[ALIGN:%.*]] = and i32 {{%.*}}, -8
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i32 [[ALIGN]] to ptr
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr {{%.*}}, i32 -8)
 // CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i32 8
 // CHECK: [[VEC:%.*]] = load <2 x i32>, ptr [[AP_ALIGN]], align 8
 // CHECK: store <2 x i32> [[VEC]], ptr [[VAR]], align 8
@@ -29,8 +28,7 @@ double varargs_vec_2i(int fixed, ...) {
 // APCS-GNU: store <2 x i32> [[VEC]], ptr [[VAR]], align 8
 // ANDROID: varargs_vec_2i
 // ANDROID: [[VAR:%.*]] = alloca <2 x i32>, align 8
-// ANDROID: [[ALIGN:%.*]] = and i32 {{%.*}}, -8
-// ANDROID: [[AP_ALIGN:%.*]] = inttoptr i32 [[ALIGN]] to ptr
+// ANDROID: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr {{%.*}}, i32 -8)
 // ANDROID: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i32 8
 // ANDROID: [[VEC:%.*]] = load <2 x i32>, ptr [[AP_ALIGN]], align 8
 // ANDROID: store <2 x i32> [[VEC]], ptr [[VAR]], align 8
@@ -85,8 +83,7 @@ double test_3c(__char3 *in) {
 double varargs_vec_5c(int fixed, ...) {
 // CHECK: varargs_vec_5c
 // CHECK: [[VAR:%.*]] = alloca <5 x i8>, align 8
-// CHECK: [[ALIGN:%.*]] = and i32 {{%.*}}, -8
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i32 [[ALIGN]] to ptr
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr {{%.*}}, i32 -8)
 // CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i32 8
 // CHECK: [[VEC:%.*]] = load <5 x i8>, ptr [[AP_ALIGN]], align 8
 // CHECK: store <5 x i8> [[VEC]], ptr [[VAR]], align 8
@@ -98,8 +95,7 @@ double varargs_vec_5c(int fixed, ...) {
 // APCS-GNU: store <5 x i8> [[VEC]], ptr [[VAR]], align 8
 // ANDROID: varargs_vec_5c
 // ANDROID: [[VAR:%.*]] = alloca <5 x i8>, align 8
-// ANDROID: [[ALIGN:%.*]] = and i32 {{%.*}}, -8
-// ANDROID: [[AP_ALIGN:%.*]] = inttoptr i32 [[ALIGN]] to ptr
+// ANDROID: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr {{%.*}}, i32 -8)
 // ANDROID: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i32 8
 // ANDROID: [[VEC:%.*]] = load <5 x i8>, ptr [[AP_ALIGN]], align 8
 // ANDROID: store <5 x i8> [[VEC]], ptr [[VAR]], align 8
@@ -125,8 +121,7 @@ double test_5c(__char5 *in) {
 double varargs_vec_9c(int fixed, ...) {
 // CHECK: varargs_vec_9c
 // CHECK: [[VAR:%.*]] = alloca <9 x i8>, align 16
-// CHECK: [[ALIGN:%.*]] = and i32 {{%.*}}, -8
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i32 [[ALIGN]] to ptr
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr {{%.*}}, i32 -8)
 // CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i32 16
 // CHECK: [[T0:%.*]] = load <9 x i8>, ptr [[AP_ALIGN]], align 8
 // CHECK: store <9 x i8> [[T0]], ptr [[VAR]], align 16
@@ -138,8 +133,7 @@ double varargs_vec_9c(int fixed, ...) {
 // APCS-GNU: store <9 x i8> [[VEC]], ptr [[VAR]], align 16
 // ANDROID: varargs_vec_9c
 // ANDROID: [[VAR:%.*]] = alloca <9 x i8>, align 16
-// ANDROID: [[ALIGN:%.*]] = and i32 {{%.*}}, -8
-// ANDROID: [[AP_ALIGN:%.*]] = inttoptr i32 [[ALIGN]] to ptr
+// ANDROID: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr {{%.*}}, i32 -8)
 // ANDROID: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i32 16
 // ANDROID: [[T0:%.*]] = load <9 x i8>, ptr [[AP_ALIGN]], align 8
 // ANDROID: store <9 x i8> [[T0]], ptr [[VAR]], align 16
@@ -194,8 +188,7 @@ double test_19c(__char19 *in) {
 double varargs_vec_3s(int fixed, ...) {
 // CHECK: varargs_vec_3s
 // CHECK: alloca <3 x i16>, align 8
-// CHECK: [[ALIGN:%.*]] = and i32 {{%.*}}, -8
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i32 [[ALIGN]] to ptr
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr {{%.*}}, i32 -8)
 // CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i32 8
 // APCS-GNU: varargs_vec_3s
 // APCS-GNU: [[VAR:%.*]] = alloca <3 x i16>, align 8
@@ -204,8 +197,7 @@ double varargs_vec_3s(int fixed, ...) {
 // APCS-GNU: [[VEC:%.*]] = load <3 x i16>, ptr [[AP]], align 4
 // ANDROID: varargs_vec_3s
 // ANDROID: alloca <3 x i16>, align 8
-// ANDROID: [[ALIGN:%.*]] = and i32 {{%.*}}, -8
-// ANDROID: [[AP_ALIGN:%.*]] = inttoptr i32 [[ALIGN]] to ptr
+// ANDROID: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr {{%.*}}, i32 -8)
 // ANDROID: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i32 8
   va_list ap;
   double sum = fixed;
@@ -229,8 +221,7 @@ double test_3s(__short3 *in) {
 double varargs_vec_5s(int fixed, ...) {
 // CHECK: varargs_vec_5s
 // CHECK: [[VAR_ALIGN:%.*]] = alloca <5 x i16>, align 16
-// CHECK: [[ALIGN:%.*]] = and i32 {{%.*}}, -8
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i32 [[ALIGN]] to ptr
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr {{%.*}}, i32 -8)
 // CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i32 16
 // CHECK: [[VEC:%.*]] = load <5 x i16>, ptr [[AP_ALIGN]], align 8
 // CHECK: store <5 x i16> [[VEC]], ptr [[VAR_ALIGN]], align 16
@@ -241,8 +232,7 @@ double varargs_vec_5s(int fixed, ...) {
 // APCS-GNU: [[VEC:%.*]] = load <5 x i16>, ptr [[AP]], align 4
 // ANDROID: varargs_vec_5s
 // ANDROID: [[VAR_ALIGN:%.*]] = alloca <5 x i16>, align 16
-// ANDROID: [[ALIGN:%.*]] = and i32 {{%.*}}, -8
-// ANDROID: [[AP_ALIGN:%.*]] = inttoptr i32 [[ALIGN]] to ptr
+// ANDROID: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr {{%.*}}, i32 -8)
 // ANDROID: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i32 16
 // ANDROID: [[VEC:%.*]] = load <5 x i16>, ptr [[AP_ALIGN]], align 8
 // ANDROID: store <5 x i16> [[VEC]], ptr [[VAR_ALIGN]], align 16
@@ -274,16 +264,14 @@ typedef struct
 
 double varargs_struct(int fixed, ...) {
 // CHECK: varargs_struct
-// CHECK: [[ALIGN:%.*]] = and i32 {{%.*}}, -8
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i32 [[ALIGN]] to ptr
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr {{%.*}}, i32 -8)
 // CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i32 16
 // APCS-GNU: varargs_struct
 // APCS-GNU: [[VAR_ALIGN:%.*]] = alloca %struct.StructWithVec
 // APCS-GNU: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr {{%.*}}, i32 16
 // APCS-GNU: call void @llvm.memcpy
 // ANDROID: varargs_struct
-// ANDROID: [[ALIGN:%.*]] = and i32 {{%.*}}, -8
-// ANDROID: [[AP_ALIGN:%.*]] = inttoptr i32 [[ALIGN]] to ptr
+// ANDROID: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr {{%.*}}, i32 -8)
 // ANDROID: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i32 16
   va_list ap;
   double sum = fixed;

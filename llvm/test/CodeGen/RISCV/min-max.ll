@@ -719,3 +719,51 @@ define i64 @smin_i64_negone(i64 %a) {
   %c = call i64 @llvm.smin.i64(i64 %a, i64 -1)
   ret i64 %c
 }
+
+define i64 @umax_i64_one(i64 %a, i64 %b) {
+; RV32I-LABEL: umax_i64_one:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    mv a2, a0
+; RV32I-NEXT:    beqz a1, .LBB28_3
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    beqz a1, .LBB28_4
+; RV32I-NEXT:  .LBB28_2:
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB28_3:
+; RV32I-NEXT:    li a0, 1
+; RV32I-NEXT:    bnez a1, .LBB28_2
+; RV32I-NEXT:  .LBB28_4:
+; RV32I-NEXT:    seqz a0, a2
+; RV32I-NEXT:    add a0, a2, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: umax_i64_one:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    seqz a1, a0
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: umax_i64_one:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    mv a2, a0
+; RV32ZBB-NEXT:    li a3, 1
+; RV32ZBB-NEXT:    beqz a1, .LBB28_3
+; RV32ZBB-NEXT:  # %bb.1:
+; RV32ZBB-NEXT:    beqz a1, .LBB28_4
+; RV32ZBB-NEXT:  .LBB28_2:
+; RV32ZBB-NEXT:    ret
+; RV32ZBB-NEXT:  .LBB28_3:
+; RV32ZBB-NEXT:    li a0, 1
+; RV32ZBB-NEXT:    bnez a1, .LBB28_2
+; RV32ZBB-NEXT:  .LBB28_4:
+; RV32ZBB-NEXT:    maxu a0, a2, a3
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: umax_i64_one:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    li a1, 1
+; RV64ZBB-NEXT:    maxu a0, a0, a1
+; RV64ZBB-NEXT:    ret
+  %c = call i64 @llvm.umax.i64(i64 %a, i64 1)
+  ret i64 %c
+}

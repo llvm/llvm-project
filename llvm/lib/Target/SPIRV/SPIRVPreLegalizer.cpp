@@ -85,6 +85,9 @@ static void addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR) {
     Register Reg = MI->getOperand(2).getReg();
     if (RegsAlreadyAddedToDT.find(MI) != RegsAlreadyAddedToDT.end())
       Reg = RegsAlreadyAddedToDT[MI];
+    auto *RC = MRI.getRegClassOrNull(MI->getOperand(0).getReg());
+    if (!MRI.getRegClassOrNull(Reg) && RC)
+      MRI.setRegClass(Reg, RC);
     MRI.replaceRegWith(MI->getOperand(0).getReg(), Reg);
     MI->eraseFromParent();
   }
@@ -201,8 +204,12 @@ Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
                   (Def->getNextNode() ? Def->getNextNode()->getIterator()
                                       : Def->getParent()->end()));
   Register NewReg = MRI.createGenericVirtualRegister(MRI.getType(Reg));
-  if (auto *RC = MRI.getRegClassOrNull(Reg))
+  if (auto *RC = MRI.getRegClassOrNull(Reg)) {
     MRI.setRegClass(NewReg, RC);
+  } else {
+    MRI.setRegClass(NewReg, &SPIRV::IDRegClass);
+    MRI.setRegClass(Reg, &SPIRV::IDRegClass);
+  }
   SpirvTy = SpirvTy ? SpirvTy : GR->getOrCreateSPIRVType(Ty, MIB);
   GR->assignSPIRVTypeToVReg(SpirvTy, Reg, MIB.getMF());
   // This is to make it convenient for Legalizer to get the SPIRVType
@@ -217,7 +224,6 @@ Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
       .addUse(GR->getSPIRVTypeID(SpirvTy))
       .setMIFlags(Flags);
   Def->getOperand(0).setReg(NewReg);
-  MRI.setRegClass(Reg, &SPIRV::ANYIDRegClass);
   return NewReg;
 }
 } // namespace llvm

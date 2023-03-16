@@ -335,10 +335,8 @@ void func43(SA s) {
 }
 
 // CHECK-LABEL: define{{.*}} i32 @f44
-// CHECK: ptrtoint
-// CHECK-NEXT: add i64 %{{[0-9]+}}, 31
-// CHECK-NEXT: and i64 %{{[0-9]+}}, -32
-// CHECK-NEXT: inttoptr
+// CHECK: getelementptr inbounds i8, ptr %{{.+}}, i32 31
+// CHECK-NEXT: call ptr @llvm.ptrmask.p0.i64(ptr %{{[0-9]+}}, i64 -32)
 typedef int T44 __attribute((vector_size(32)));
 struct s44 { T44 x; int y; };
 int f44(int i, ...) {
