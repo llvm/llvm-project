@@ -21,6 +21,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -384,6 +385,19 @@ struct MemTransferInfo {
   ConstantInt *DestIndex = nullptr;
 };
 
+// Checks if the instruction I is a memset user of the alloca AI that we can
+// deal with. Currently, only non-volatile memsets that affect the whole alloca
+// are handled.
+static bool isSupportedMemset(MemSetInst *I, AllocaInst *AI,
+                              const DataLayout &DL) {
+  using namespace PatternMatch;
+  // For now we only care about non-volatile memsets that affect the whole type
+  // (start at index 0 and fill the whole alloca).
+  const unsigned Size = DL.getTypeStoreSize(AI->getAllocatedType());
+  return I->getOperand(0) == AI &&
+         match(I->getOperand(2), m_SpecificInt(Size)) && !I->isVolatile();
+}
+
 static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL,
                                      unsigned MaxVGPRs) {
 
@@ -482,6 +496,12 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL,
       GEPVectorIdx[GEP] = Index;
       for (Use &U : Inst->uses())
         Uses.push_back(&U);
+      continue;
+    }
+
+    if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst);
+        MSI && isSupportedMemset(MSI, Alloca, DL)) {
+      WorkList.push_back(Inst);
       continue;
     }
 
@@ -609,6 +629,11 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL,
         Builder.CreateAlignedStore(NewVecValue, BitCast, Alloca->getAlign());
 
         Inst->eraseFromParent();
+      } else if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst)) {
+        // Ensure the length parameter of the memsets matches the new vector
+        // type's. In general, the type size shouldn't change so this is a
+        // no-op, but it's better to be safe.
+        MSI->setOperand(2, Builder.getInt64(DL.getTypeStoreSize(VectorTy)));
       } else {
         llvm_unreachable("Unsupported call when promoting alloca to vector");
       }
