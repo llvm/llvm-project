@@ -2704,6 +2704,24 @@ void LoopAccessLegacyAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
 }
 
+bool LoopAccessInfoManager::invalidate(
+    Function &F, const PreservedAnalyses &PA,
+    FunctionAnalysisManager::Invalidator &Inv) {
+  // Check whether our analysis is preserved.
+  auto PAC = PA.getChecker<LoopAccessAnalysis>();
+  if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Function>>())
+    // If not, give up now.
+    return true;
+
+  // Check whether the analyses we depend on became invalid for any reason.
+  // Skip checking TargetLibraryAnalysis as it is immutable and can't become
+  // invalid.
+  return Inv.invalidate<AAManager>(F, PA) ||
+         Inv.invalidate<ScalarEvolutionAnalysis>(F, PA) ||
+         Inv.invalidate<LoopAnalysis>(F, PA) ||
+         Inv.invalidate<DominatorTreeAnalysis>(F, PA);
+}
+
 LoopAccessInfoManager LoopAccessAnalysis::run(Function &F,
                                               FunctionAnalysisManager &AM) {
   return LoopAccessInfoManager(
