@@ -59,6 +59,7 @@ set(FLANG_TEST_DEPENDS
   bbc
   llvm-dis
   llvm-objdump
+  llvm-readelf
   split-file
   FortranRuntime
   Fortran_main
