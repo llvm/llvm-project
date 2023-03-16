@@ -578,7 +578,7 @@ public:
   // Check if an entry created for \p Reg in PrologEpilogSGPRSpills. Return true
   // on success and false otherwise.
   bool hasPrologEpilogSGPRSpillEntry(Register Reg) const {
-    return PrologEpilogSGPRSpills.find(Reg) != PrologEpilogSGPRSpills.end();
+    return PrologEpilogSGPRSpills.contains(Reg);
   }
 
   // Get the scratch SGPR if allocated to save/restore \p Reg.
