@@ -184,6 +184,7 @@ TEST(TestOutputSizeLimit, TestOutputSizeLimitText) {
         Succeeded());
 }
 
+#if LLVM_ENABLE_ZLIB
 TEST(TestOutputSizeLimit, TestOutputSizeLimitExtBinaryCompressed) {
   for (size_t OutputSizeLimit :
        {507, 506, 505, 494, 493, 492, 483, 482, 481, 480})
@@ -191,3 +192,4 @@ TEST(TestOutputSizeLimit, TestOutputSizeLimitExtBinaryCompressed) {
                                  llvm::sampleprof::SPF_Ext_Binary, true),
                          Succeeded());
 }
+#endif

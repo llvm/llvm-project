@@ -735,28 +735,22 @@ define i32 @fcvt_wu_h_multiple_use(half %x, ptr %y) nounwind {
 ; CHECKIZFH-LABEL: fcvt_wu_h_multiple_use:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
-; CHECKIZFH-NEXT:    bnez a0, .LBB7_2
-; CHECKIZFH-NEXT:  # %bb.1:
-; CHECKIZFH-NEXT:    li a0, 1
-; CHECKIZFH-NEXT:  .LBB7_2:
+; CHECKIZFH-NEXT:    seqz a1, a0
+; CHECKIZFH-NEXT:    add a0, a0, a1
 ; CHECKIZFH-NEXT:    ret
 ;
 ; RV32IDZFH-LABEL: fcvt_wu_h_multiple_use:
 ; RV32IDZFH:       # %bb.0:
 ; RV32IDZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
-; RV32IDZFH-NEXT:    bnez a0, .LBB7_2
-; RV32IDZFH-NEXT:  # %bb.1:
-; RV32IDZFH-NEXT:    li a0, 1
-; RV32IDZFH-NEXT:  .LBB7_2:
+; RV32IDZFH-NEXT:    seqz a1, a0
+; RV32IDZFH-NEXT:    add a0, a0, a1
 ; RV32IDZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_wu_h_multiple_use:
 ; RV64IDZFH:       # %bb.0:
 ; RV64IDZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
-; RV64IDZFH-NEXT:    bnez a0, .LBB7_2
-; RV64IDZFH-NEXT:  # %bb.1:
-; RV64IDZFH-NEXT:    li a0, 1
-; RV64IDZFH-NEXT:  .LBB7_2:
+; RV64IDZFH-NEXT:    seqz a1, a0
+; RV64IDZFH-NEXT:    add a0, a0, a1
 ; RV64IDZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_wu_h_multiple_use:
@@ -767,10 +761,8 @@ define i32 @fcvt_wu_h_multiple_use(half %x, ptr %y) nounwind {
 ; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __extendhfsf2@plt
 ; RV32I-NEXT:    call __fixunssfsi@plt
-; RV32I-NEXT:    bnez a0, .LBB7_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    li a0, 1
-; RV32I-NEXT:  .LBB7_2:
+; RV32I-NEXT:    seqz a1, a0
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -783,10 +775,8 @@ define i32 @fcvt_wu_h_multiple_use(half %x, ptr %y) nounwind {
 ; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __extendhfsf2@plt
 ; RV64I-NEXT:    call __fixunssfdi@plt
-; RV64I-NEXT:    bnez a0, .LBB7_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    li a0, 1
-; RV64I-NEXT:  .LBB7_2:
+; RV64I-NEXT:    seqz a1, a0
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -795,20 +785,16 @@ define i32 @fcvt_wu_h_multiple_use(half %x, ptr %y) nounwind {
 ; CHECK32-IZFHMIN:       # %bb.0:
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.h ft0, fa0
 ; CHECK32-IZFHMIN-NEXT:    fcvt.wu.s a0, ft0, rtz
-; CHECK32-IZFHMIN-NEXT:    bnez a0, .LBB7_2
-; CHECK32-IZFHMIN-NEXT:  # %bb.1:
-; CHECK32-IZFHMIN-NEXT:    li a0, 1
-; CHECK32-IZFHMIN-NEXT:  .LBB7_2:
+; CHECK32-IZFHMIN-NEXT:    seqz a1, a0
+; CHECK32-IZFHMIN-NEXT:    add a0, a0, a1
 ; CHECK32-IZFHMIN-NEXT:    ret
 ;
 ; CHECK64-IZFHMIN-LABEL: fcvt_wu_h_multiple_use:
 ; CHECK64-IZFHMIN:       # %bb.0:
 ; CHECK64-IZFHMIN-NEXT:    fcvt.s.h ft0, fa0
 ; CHECK64-IZFHMIN-NEXT:    fcvt.wu.s a0, ft0, rtz
-; CHECK64-IZFHMIN-NEXT:    bnez a0, .LBB7_2
-; CHECK64-IZFHMIN-NEXT:  # %bb.1:
-; CHECK64-IZFHMIN-NEXT:    li a0, 1
-; CHECK64-IZFHMIN-NEXT:  .LBB7_2:
+; CHECK64-IZFHMIN-NEXT:    seqz a1, a0
+; CHECK64-IZFHMIN-NEXT:    add a0, a0, a1
 ; CHECK64-IZFHMIN-NEXT:    ret
   %a = fptoui half %x to i32
   %b = icmp eq i32 %a, 0
