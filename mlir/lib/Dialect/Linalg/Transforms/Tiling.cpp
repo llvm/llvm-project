@@ -692,7 +692,7 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
 
   // 4. Clone the tileable op and update its destination operands to use the
   // output bbArgs of the ForallOp.
-  ValueRange tilingResults;
+  SmallVector<Value> tilingResults;
   ArrayRef<BlockArgument> destBbArgs = forallOp.getOutputBlockArguments();
   {
     // 4.a. RAII guard, inserting within forallOp, before terminator.
