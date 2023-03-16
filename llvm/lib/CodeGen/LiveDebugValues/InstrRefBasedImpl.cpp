@@ -3179,7 +3179,7 @@ void InstrRefBasedLDV::buildVLocValueMap(
     SmallPtrSet<MachineBasicBlock *, 32> DefBlocks;
     for (const MachineBasicBlock *ExpMBB : BlocksToExplore) {
       auto &TransferFunc = AllTheVLocs[ExpMBB->getNumber()].Vars;
-      if (TransferFunc.find(Var) != TransferFunc.end())
+      if (TransferFunc.contains(Var))
         DefBlocks.insert(const_cast<MachineBasicBlock *>(ExpMBB));
     }
 
@@ -3295,7 +3295,7 @@ void InstrRefBasedLDV::buildVLocValueMap(
         // to be visited next time around.
         for (auto *s : MBB->successors()) {
           // Ignore out of scope / not-to-be-explored successors.
-          if (LiveInIdx.find(s) == LiveInIdx.end())
+          if (!LiveInIdx.contains(s))
             continue;
 
           if (BBToOrder[s] > BBToOrder[MBB]) {
@@ -3411,7 +3411,7 @@ void InstrRefBasedLDV::initialSetup(MachineFunction &MF) {
   for (MachineBasicBlock *MBB : RPOT)
     processMBB(MBB);
   for (MachineBasicBlock &MBB : MF)
-    if (BBToOrder.find(&MBB) == BBToOrder.end())
+    if (!BBToOrder.contains(&MBB))
       processMBB(&MBB);
 
   // Order value substitutions by their "source" operand pair, for quick lookup.
@@ -4195,7 +4195,7 @@ std::optional<ValueIDNum> InstrRefBasedLDV::resolveDbgPHIsImpl(
     // Are all these things actually defined?
     for (auto &PHIIt : PHI->IncomingValues) {
       // Any undef input means DBG_PHIs didn't dominate the use point.
-      if (Updater.UndefMap.find(&PHIIt.first->BB) != Updater.UndefMap.end())
+      if (Updater.UndefMap.contains(&PHIIt.first->BB))
         return std::nullopt;
 
       ValueIDNum ValueToCheck;

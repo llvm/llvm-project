@@ -493,8 +493,7 @@ Expected<NumericVariable *> Pattern::parseNumericVariableDefinition(
 
   // Detect collisions between string and numeric variables when the latter
   // is created later than the former.
-  if (Context->DefinedVariableTable.find(Name) !=
-      Context->DefinedVariableTable.end())
+  if (Context->DefinedVariableTable.contains(Name))
     return ErrorDiagnostic::get(
         SM, Name, "string variable with name '" + Name + "' already exists");
 
@@ -1072,8 +1071,7 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
 
           // Detect collisions between string and numeric variables when the
           // former is created later than the latter.
-          if (Context->GlobalNumericVariableTable.find(Name) !=
-              Context->GlobalNumericVariableTable.end()) {
+          if (Context->GlobalNumericVariableTable.contains(Name)) {
             SM.PrintMessage(
                 SMLoc::getFromPointer(Name.data()), SourceMgr::DK_Error,
                 "numeric variable with name '" + Name + "' already exists");
@@ -2753,8 +2751,7 @@ Error FileCheckPatternContext::defineCmdlineVariables(
 
       // Detect collisions between string and numeric variables when the former
       // is created later than the latter.
-      if (GlobalNumericVariableTable.find(Name) !=
-          GlobalNumericVariableTable.end()) {
+      if (GlobalNumericVariableTable.contains(Name)) {
         Errs = joinErrors(std::move(Errs),
                           ErrorDiagnostic::get(SM, Name,
                                                "numeric variable with name '" +

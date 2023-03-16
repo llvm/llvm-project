@@ -281,6 +281,13 @@ bool TemplateName::containsUnexpandedParameterPack() const {
   return getDependence() & TemplateNameDependence::UnexpandedPack;
 }
 
+void TemplateName::Profile(llvm::FoldingSetNodeID &ID) {
+  if (auto *TD = getAsTemplateDecl())
+    ID.AddPointer(TD->getCanonicalDecl());
+  else
+    ID.AddPointer(Storage.getOpaqueValue());
+}
+
 void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
                          Qualified Qual) const {
   auto Kind = getKind();

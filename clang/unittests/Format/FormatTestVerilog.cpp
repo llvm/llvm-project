@@ -252,6 +252,12 @@ TEST_F(FormatTestVerilog, Case) {
                Style);
 }
 
+TEST_F(FormatTestVerilog, Coverage) {
+  verifyFormat("covergroup x\n"
+               "    @@(begin x);\n"
+               "endgroup");
+}
+
 TEST_F(FormatTestVerilog, Declaration) {
   verifyFormat("wire mynet;");
   verifyFormat("wire mynet, mynet1;");
@@ -808,6 +814,51 @@ TEST_F(FormatTestVerilog, Primitive) {
                "    (?\?) ? : ? : -;\n"
                "  endtable\n"
                "endprimitive");
+}
+
+TEST_F(FormatTestVerilog, StructuredProcedure) {
+  // Blocks should be indented correctly.
+  verifyFormat("initial begin\n"
+               "end");
+  verifyFormat("initial begin\n"
+               "  x <= x;\n"
+               "  x <= x;\n"
+               "end");
+  verifyFormat("initial\n"
+               "  x <= x;\n"
+               "x <= x;");
+  verifyFormat("always @(x) begin\n"
+               "end");
+  verifyFormat("always @(x) begin\n"
+               "  x <= x;\n"
+               "  x <= x;\n"
+               "end");
+  verifyFormat("always @(x)\n"
+               "  x <= x;\n"
+               "x <= x;");
+  // Various keywords.
+  verifyFormat("always @(x)\n"
+               "  x <= x;");
+  verifyFormat("always @(posedge x)\n"
+               "  x <= x;");
+  verifyFormat("always\n"
+               "  x <= x;");
+  verifyFormat("always @*\n"
+               "  x <= x;");
+  verifyFormat("always @(*)\n"
+               "  x <= x;");
+  verifyFormat("always_comb\n"
+               "  x <= x;");
+  verifyFormat("always_latch @(x)\n"
+               "  x <= x;");
+  verifyFormat("always_ff @(posedge x)\n"
+               "  x <= x;");
+  verifyFormat("initial\n"
+               "  x <= x;");
+  verifyFormat("final\n"
+               "  x <= x;");
+  verifyFormat("forever\n"
+               "  x <= x;");
 }
 } // namespace format
 } // end namespace clang

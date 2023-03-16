@@ -28,7 +28,7 @@ using namespace mlir;
 using namespace mlir::linalg;
 
 FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
-    PatternRewriter &b, LinalgOp op,
+    RewriterBase &b, LinalgOp op,
     const ControlSplitReductionFn &controlSplitReductionFn, bool useAlloc) {
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPoint(op);
@@ -156,10 +156,11 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   newMaps.push_back(AffineMap::get(oldOutputMap.getNumDims() + 1, 0, outputExpr,
                                    op.getContext()));
   SmallVector<utils::IteratorType> newIteratorTypes;
-  for (auto &it : llvm::enumerate(op.getIteratorTypesArray())) {
-    if (insertSplitDimension == it.index())
+  for (auto [index, iteratorType] :
+       llvm::enumerate(op.getIteratorTypesArray())) {
+    if (insertSplitDimension == index)
       newIteratorTypes.push_back(utils::IteratorType::parallel);
-    newIteratorTypes.push_back(it.value());
+    newIteratorTypes.push_back(iteratorType);
   }
   if (insertSplitDimension == op.getIteratorTypesArray().size()) {
     newIteratorTypes.push_back(utils::IteratorType::parallel);
@@ -238,7 +239,7 @@ static AffineMap insertParallelDim(LinalgOp op, OpOperand &opOperand,
 
 /// Core rewrite implementation.
 FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
-    PatternRewriter &b, LinalgOp op,
+    RewriterBase &b, LinalgOp op,
     const ControlSplitReductionFn &controlSplitReductionFn, bool useAlloc) {
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPoint(op);

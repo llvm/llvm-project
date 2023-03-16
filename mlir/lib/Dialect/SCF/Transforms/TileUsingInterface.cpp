@@ -398,7 +398,7 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
 }
 
 FailureOr<scf::SCFReductionTilingResult>
-mlir::scf::tileReductionUsingScf(PatternRewriter &b,
+mlir::scf::tileReductionUsingScf(RewriterBase &b,
                                  PartialReductionOpInterface op,
                                  ArrayRef<OpFoldResult> tileSize) {
   Location loc = op.getLoc();
@@ -423,7 +423,7 @@ mlir::scf::tileReductionUsingScf(PatternRewriter &b,
     return b.notifyMatchFailure(
         op, "only support ops with one reduction dimension.");
   int reductionDim;
-  for (auto &[idx, iteratorType] :
+  for (auto [idx, iteratorType] :
        llvm::enumerate(tilingInterfaceOp.getLoopIteratorTypes())) {
     if (iteratorType == utils::IteratorType::reduction) {
       reductionDim = idx;

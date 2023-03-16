@@ -51,6 +51,7 @@
 #include "llvm/IR/ModuleSummaryIndexYAML.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -1368,11 +1369,27 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
                        F->getAddressSpace(), "", &M);
   replaceCfiUses(F, PlaceholderFn, IsJumpTableCanonical);
 
-  Constant *Target = ConstantExpr::getSelect(
-      ConstantExpr::getICmp(CmpInst::ICMP_NE, F,
-                            Constant::getNullValue(F->getType())),
-      JT, Constant::getNullValue(F->getType()));
-  PlaceholderFn->replaceAllUsesWith(Target);
+  convertUsersOfConstantsToInstructions(PlaceholderFn);
+  // Don't use range based loop, because use list will be modified.
+  while (!PlaceholderFn->use_empty()) {
+    Use &U = *PlaceholderFn->use_begin();
+    auto *InsertPt = dyn_cast<Instruction>(U.getUser());
+    assert(InsertPt && "Non-instruction users should have been eliminated");
+    auto *PN = dyn_cast<PHINode>(InsertPt);
+    if (PN)
+      InsertPt = PN->getIncomingBlock(U)->getTerminator();
+    IRBuilder Builder(InsertPt);
+    Value *ICmp = Builder.CreateICmp(CmpInst::ICMP_NE, F,
+                                     Constant::getNullValue(F->getType()));
+    Value *Select = Builder.CreateSelect(ICmp, JT,
+                                         Constant::getNullValue(F->getType()));
+    // For phi nodes, we need to update the incoming value for all operands
+    // with the same predecessor.
+    if (PN)
+      PN->setIncomingValueForBlock(InsertPt->getParent(), Select);
+    else
+      U.set(Select);
+  }
   PlaceholderFn->eraseFromParent();
 }
 

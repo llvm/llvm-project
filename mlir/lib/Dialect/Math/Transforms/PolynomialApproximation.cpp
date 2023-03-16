@@ -134,7 +134,7 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
   SmallVector<Value> results(maxIndex);
 
   for (int64_t i = 0; i < maxIndex; ++i) {
-    auto offsets = delinearize(strides, i);
+    auto offsets = delinearize(i, strides);
 
     SmallVector<Value> extracted(expandedOperands.size());
     for (const auto &tuple : llvm::enumerate(expandedOperands))
@@ -152,7 +152,7 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
 
   for (int64_t i = 0; i < maxIndex; ++i)
     result = builder.create<vector::InsertOp>(results[i], result,
-                                              delinearize(strides, i));
+                                              delinearize(i, strides));
 
   // Reshape back to the original vector shape.
   return builder.create<vector::ShapeCastOp>(

@@ -117,6 +117,17 @@ std::pair<ArrayAttr, SmallVector<Value>>
 decomposeMixedValues(Builder &b,
                      const SmallVectorImpl<OpFoldResult> &mixedValues);
 
+/// Helper to sort `values` according to matching `keys`.
+SmallVector<Value>
+getValuesSortedByKey(ArrayRef<Attribute> keys, ArrayRef<Value> values,
+                     llvm::function_ref<bool(Attribute, Attribute)> compare);
+SmallVector<OpFoldResult>
+getValuesSortedByKey(ArrayRef<Attribute> keys, ArrayRef<OpFoldResult> values,
+                     llvm::function_ref<bool(Attribute, Attribute)> compare);
+SmallVector<int64_t>
+getValuesSortedByKey(ArrayRef<Attribute> keys, ArrayRef<int64_t> values,
+                     llvm::function_ref<bool(Attribute, Attribute)> compare);
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_STATICVALUEUTILS_H

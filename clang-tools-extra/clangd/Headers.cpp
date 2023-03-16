@@ -262,7 +262,7 @@ bool IncludeInserter::shouldInsertInclude(
   if (FileName == DeclaringHeader || FileName == InsertedHeader.File)
     return false;
   auto Included = [&](llvm::StringRef Header) {
-    return IncludedHeaders.find(Header) != IncludedHeaders.end();
+    return IncludedHeaders.contains(Header);
   };
   return !Included(DeclaringHeader) && !Included(InsertedHeader.File);
 }

@@ -928,7 +928,7 @@ void DWARFLinker::assignAbbrev(DIEAbbrev &Abbrev) {
     Abbreviations.push_back(
         std::make_unique<DIEAbbrev>(Abbrev.getTag(), Abbrev.hasChildren()));
     for (const auto &Attr : Abbrev.getData())
-      Abbreviations.back()->AddAttribute(Attr.getAttribute(), Attr.getForm());
+      Abbreviations.back()->AddAttribute(Attr);
     AbbreviationsSet.InsertNode(Abbreviations.back().get(), InsertToken);
     // Assign the unique abbreviation number.
     Abbrev.setNumber(Abbreviations.size());
@@ -1261,8 +1261,13 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
     }
     if (AttrSpec.Attr == dwarf::DW_AT_declaration && Value)
       Info.IsDeclaration = true;
-    Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
-                 dwarf::Form(AttrSpec.Form), DIEInteger(Value));
+
+    if (AttrSpec.Form == dwarf::DW_FORM_loclistx)
+      Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
+                   dwarf::Form(AttrSpec.Form), DIELocList(Value));
+    else
+      Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
+                   dwarf::Form(AttrSpec.Form), DIEInteger(Value));
     return AttrSize;
   }
 
@@ -1279,6 +1284,27 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
     }
     std::optional<uint64_t> Offset =
         Unit.getOrigUnit().getRnglistOffset(*Index);
+    if (!Offset) {
+      Linker.reportWarning("Cannot read the attribute. Dropping.", File,
+                           &InputDIE);
+      return 0;
+    }
+
+    Value = *Offset;
+    AttrSpec.Form = dwarf::DW_FORM_sec_offset;
+    AttrSize = Unit.getOrigUnit().getFormParams().getDwarfOffsetByteSize();
+  } else if (AttrSpec.Form == dwarf::DW_FORM_loclistx) {
+    // DWARFLinker does not generate .debug_addr table. Thus we need to change
+    // all "addrx" related forms to "addr" version. Change DW_FORM_loclistx
+    // to DW_FORM_sec_offset here.
+    std::optional<uint64_t> Index = Val.getAsSectionOffset();
+    if (!Index) {
+      Linker.reportWarning("Cannot read the attribute. Dropping.", File,
+                           &InputDIE);
+      return 0;
+    }
+    std::optional<uint64_t> Offset =
+        Unit.getOrigUnit().getLoclistOffset(*Index);
     if (!Offset) {
       Linker.reportWarning("Cannot read the attribute. Dropping.", File,
                            &InputDIE);
@@ -1307,6 +1333,7 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
         &InputDIE);
     return 0;
   }
+
   PatchLocation Patch =
       Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
                    dwarf::Form(AttrSpec.Form), DIEInteger(Value));
@@ -1314,13 +1341,10 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
       AttrSpec.Attr == dwarf::DW_AT_start_scope) {
     Unit.noteRangeAttribute(Die, Patch);
     Info.HasRanges = true;
-  }
-  // A more generic way to check for location attributes would be
-  // nice, but it's very unlikely that any other attribute needs a
-  // location list.
-  // FIXME: use DWARFAttribute::mayHaveLocationDescription().
-  else if (AttrSpec.Attr == dwarf::DW_AT_location ||
-           AttrSpec.Attr == dwarf::DW_AT_frame_base) {
+  } else if (DWARFAttribute::mayHaveLocationList(AttrSpec.Attr) &&
+             dwarf::doesFormBelongToClass(AttrSpec.Form,
+                                          DWARFFormValue::FC_SectionOffset,
+                                          Unit.getOrigUnit().getVersion())) {
     Unit.noteLocationAttribute(Patch, Info.PCOffset);
   } else if (AttrSpec.Attr == dwarf::DW_AT_declaration && Value)
     Info.IsDeclaration = true;
@@ -1383,6 +1407,8 @@ unsigned DWARFLinker::DIECloner::cloneAttribute(
   case dwarf::DW_FORM_flag:
   case dwarf::DW_FORM_flag_present:
   case dwarf::DW_FORM_rnglistx:
+  case dwarf::DW_FORM_loclistx:
+  case dwarf::DW_FORM_implicit_const:
     return cloneScalarAttribute(Die, InputDIE, File, Unit, AttrSpec, Val,
                                 AttrSize, Info);
   default:
@@ -1464,6 +1490,12 @@ static bool shouldSkipAttribute(
   case dwarf::DW_AT_str_offsets_base:
     // FIXME: Use the string offset table with Dwarf 5.
     return true;
+  case dwarf::DW_AT_loclists_base:
+    // In case !Update the .debug_addr table is not generated/preserved.
+    // Thus instead of DW_FORM_loclistx the DW_FORM_sec_offset is used.
+    // Since DW_AT_loclists_base is used for only DW_FORM_loclistx the
+    // DW_AT_loclists_base is removed.
+    return !Update;
   case dwarf::DW_AT_location:
   case dwarf::DW_AT_frame_base:
     // FIXME: for some reason dsymutil-classic keeps the location attributes
@@ -1565,7 +1597,7 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
       continue;
     }
 
-    DWARFFormValue Val(AttrSpec.Form);
+    DWARFFormValue Val = AttrSpec.getFormValue();
     uint64_t AttrSize = Offset;
     Val.extractValue(Data, &Offset, U.getFormParams(), &U);
     AttrSize = Offset - AttrSize;
@@ -1730,6 +1762,61 @@ void DWARFLinker::generateUnitRanges(CompileUnit &Unit,
     // Emit ranges footer.
     TheDwarfEmitter->emitDwarfDebugRangeListFooter(Unit, EndLabel);
   }
+}
+
+void DWARFLinker::generateUnitLocations(
+    CompileUnit &Unit, const DWARFFile &File,
+    ExpressionHandlerRef ExprHandler) const {
+  if (LLVM_UNLIKELY(Options.Update))
+    return;
+
+  const LocListAttributesTy &AllLocListAttributes =
+      Unit.getLocationAttributes();
+
+  if (AllLocListAttributes.empty())
+    return;
+
+  // Emit locations list table header.
+  MCSymbol *EndLabel = TheDwarfEmitter->emitDwarfDebugLocListHeader(Unit);
+
+  for (auto &CurLocAttr : AllLocListAttributes) {
+    // Get location expressions vector corresponding to the current attribute
+    // from the source DWARF.
+    Expected<DWARFLocationExpressionsVector> OriginalLocations =
+        Unit.getOrigUnit().findLoclistFromOffset((CurLocAttr.first).get());
+
+    if (!OriginalLocations) {
+      llvm::consumeError(OriginalLocations.takeError());
+      reportWarning("Invalid location attribute ignored.", File);
+      continue;
+    }
+
+    DWARFLocationExpressionsVector LinkedLocationExpressions;
+    for (DWARFLocationExpression &CurExpression : *OriginalLocations) {
+
+      DWARFLocationExpression LinkedExpression;
+
+      if (CurExpression.Range) {
+        // Relocate address range.
+        LinkedExpression.Range = {
+            CurExpression.Range->LowPC + CurLocAttr.second,
+            CurExpression.Range->HighPC + CurLocAttr.second};
+      }
+
+      // Clone expression.
+      LinkedExpression.Expr.reserve(CurExpression.Expr.size());
+      ExprHandler(CurExpression.Expr, LinkedExpression.Expr);
+
+      LinkedLocationExpressions.push_back(LinkedExpression);
+    }
+
+    // Emit locations list table fragment corresponding to the CurLocAttr.
+    TheDwarfEmitter->emitDwarfDebugLocListFragment(
+        Unit, LinkedLocationExpressions, CurLocAttr.first);
+  }
+
+  // Emit locations list table footer.
+  TheDwarfEmitter->emitDwarfDebugLocListFooter(Unit, EndLabel);
 }
 
 /// Insert the new line info sequence \p Seq into the current
@@ -2314,17 +2401,17 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
 
       Linker.generateUnitRanges(*CurrentUnit, File);
 
-      auto ProcessExpr = [&](StringRef Bytes,
-                             SmallVectorImpl<uint8_t> &Buffer) {
+      auto ProcessExpr = [&](SmallVectorImpl<uint8_t> &SrcBytes,
+                             SmallVectorImpl<uint8_t> &OutBytes) {
         DWARFUnit &OrigUnit = CurrentUnit->getOrigUnit();
-        DataExtractor Data(Bytes, IsLittleEndian,
+        DataExtractor Data(SrcBytes, IsLittleEndian,
                            OrigUnit.getAddressByteSize());
         cloneExpression(Data,
                         DWARFExpression(Data, OrigUnit.getAddressByteSize(),
                                         OrigUnit.getFormParams().Format),
-                        File, *CurrentUnit, Buffer);
+                        File, *CurrentUnit, OutBytes);
       };
-      Emitter->emitLocationsForUnit(*CurrentUnit, DwarfContext, ProcessExpr);
+      Linker.generateUnitLocations(*CurrentUnit, File, ProcessExpr);
     }
   }
 
@@ -2433,6 +2520,8 @@ void DWARFLinker::copyInvariantDebugSection(DWARFContext &Dwarf) {
       Dwarf.getDWARFObj().getAddrSection().Data, "debug_addr");
   TheDwarfEmitter->emitSectionContents(
       Dwarf.getDWARFObj().getRnglistsSection().Data, "debug_rnglists");
+  TheDwarfEmitter->emitSectionContents(
+      Dwarf.getDWARFObj().getLoclistsSection().Data, "debug_loclists");
 }
 
 void DWARFLinker::addObjectFile(DWARFFile &File, objFileLoader Loader,
@@ -2513,20 +2602,6 @@ Error DWARFLinker::link() {
     if (!OptContext.File.Dwarf->types_section_units().empty()) {
       reportWarning("type units are not currently supported: file will "
                     "be skipped",
-                    OptContext.File);
-      OptContext.Skip = true;
-      continue;
-    }
-
-    // Check for unsupported sections. Following sections can be referenced
-    // from .debug_info section. Current DWARFLinker implementation does not
-    // support or update references to these tables. Thus we report warning
-    // and skip corresponding object file.
-    if (!OptContext.File.Dwarf->getDWARFObj()
-             .getLoclistsSection()
-             .Data.empty()) {
-      reportWarning("'.debug_loclists' is not currently supported: file "
-                    "will be skipped",
                     OptContext.File);
       OptContext.Skip = true;
       continue;

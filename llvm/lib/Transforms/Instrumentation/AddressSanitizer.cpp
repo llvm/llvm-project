@@ -667,17 +667,8 @@ struct AddressSanitizer {
     assert(this->UseAfterReturn != AsanDetectStackUseAfterReturnMode::Invalid);
   }
 
-  uint64_t getAllocaSizeInBytes(const AllocaInst &AI) const {
-    uint64_t ArraySize = 1;
-    if (AI.isArrayAllocation()) {
-      const ConstantInt *CI = dyn_cast<ConstantInt>(AI.getArraySize());
-      assert(CI && "non-constant array size");
-      ArraySize = CI->getZExtValue();
-    }
-    Type *Ty = AI.getAllocatedType();
-    uint64_t SizeInBytes =
-        AI.getModule()->getDataLayout().getTypeAllocSize(Ty);
-    return SizeInBytes * ArraySize;
+  TypeSize getAllocaSizeInBytes(const AllocaInst &AI) const {
+    return *AI.getAllocationSize(AI.getModule()->getDataLayout());
   }
 
   /// Check if we want (and can) handle this alloca.
@@ -1040,7 +1031,9 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
 
   /// Collect Alloca instructions we want (and can) handle.
   void visitAllocaInst(AllocaInst &AI) {
-    if (!ASan.isInterestingAlloca(AI)) {
+    // FIXME: Handle scalable vectors instead of ignoring them.
+    if (!ASan.isInterestingAlloca(AI) ||
+        isa<ScalableVectorType>(AI.getAllocatedType())) {
       if (AI.isStaticAlloca()) {
         // Skip over allocas that are present *before* the first instrumented
         // alloca, we don't want to move those around.
@@ -1254,7 +1247,7 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
   bool IsInteresting =
       (AI.getAllocatedType()->isSized() &&
        // alloca() may be called with 0 size, ignore it.
-       ((!AI.isStaticAlloca()) || getAllocaSizeInBytes(AI) > 0) &&
+       ((!AI.isStaticAlloca()) || !getAllocaSizeInBytes(AI).isZero()) &&
        // We are only interested in allocas not promotable to registers.
        // Promotable allocas are common under -O0.
        (!ClSkipPromotableAllocas || !isAllocaPromotable(&AI)) &&
@@ -1439,37 +1432,6 @@ static void doInstrumentAddress(AddressSanitizer *Pass, Instruction *I,
                                          IsWrite, nullptr, UseCalls, Exp);
 }
 
-static void SplitBlockAndInsertSimpleForLoop(Value *End,
-                                             Instruction *SplitBefore,
-                                             Instruction *&BodyIP,
-                                             Value *&Index) {
-  BasicBlock *LoopPred = SplitBefore->getParent();
-  BasicBlock *LoopBody = SplitBlock(SplitBefore->getParent(), SplitBefore);
-  BasicBlock *LoopExit = SplitBlock(SplitBefore->getParent(), SplitBefore);
-
-  auto *Ty = End->getType();
-  auto &DL = SplitBefore->getModule()->getDataLayout();
-  const unsigned Bitwidth = DL.getTypeSizeInBits(Ty);
-
-  IRBuilder<> Builder(LoopBody->getTerminator());
-  auto *IV = Builder.CreatePHI(Ty, 2, "iv");
-  auto *IVNext =
-    Builder.CreateAdd(IV, ConstantInt::get(Ty, 1), IV->getName() + ".next",
-                      /*HasNUW=*/true, /*HasNSW=*/Bitwidth != 2);
-  auto *IVCheck = Builder.CreateICmpEQ(IVNext, End,
-                                       IV->getName() + ".check");
-  Builder.CreateCondBr(IVCheck, LoopExit, LoopBody);
-  LoopBody->getTerminator()->eraseFromParent();
-
-  // Populate the IV PHI.
-  IV->addIncoming(ConstantInt::get(Ty, 0), LoopPred);
-  IV->addIncoming(IVNext, LoopBody);
-
-  BodyIP = LoopBody->getFirstNonPHI();
-  Index = IV;
-}
-
-
 static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
                                         const DataLayout &DL, Type *IntptrTy,
                                         Value *Mask, Instruction *I,
@@ -1482,57 +1444,25 @@ static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
   TypeSize ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
   auto Zero = ConstantInt::get(IntptrTy, 0);
 
-  // For fixed length vectors, it's legal to fallthrough into the generic loop
-  // lowering below, but we chose to unroll and specialize instead.  We might want
-  // to revisit this heuristic decision.
-  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
-    unsigned Num = FVTy->getNumElements();
-    for (unsigned Idx = 0; Idx < Num; ++Idx) {
-      Value *InstrumentedAddress = nullptr;
-      Instruction *InsertBefore = I;
-      if (auto *Vector = dyn_cast<ConstantVector>(Mask)) {
-        // dyn_cast as we might get UndefValue
-        if (auto *Masked = dyn_cast<ConstantInt>(Vector->getOperand(Idx))) {
-          if (Masked->isZero())
-            // Mask is constant false, so no instrumentation needed.
-            continue;
-          // If we have a true or undef value, fall through to doInstrumentAddress
-          // with InsertBefore == I
-        }
-      } else {
-        IRBuilder<> IRB(I);
-        Value *MaskElem = IRB.CreateExtractElement(Mask, Idx);
-        Instruction *ThenTerm = SplitBlockAndInsertIfThen(MaskElem, I, false);
-        InsertBefore = ThenTerm;
-      }
-
-      IRBuilder<> IRB(InsertBefore);
-      InstrumentedAddress =
-        IRB.CreateGEP(VTy, Addr, {Zero, ConstantInt::get(IntptrTy, Idx)});
-      doInstrumentAddress(Pass, I, InsertBefore, InstrumentedAddress, Alignment,
-                          Granularity, ElemTypeSize, IsWrite,
-                          SizeArgument, UseCalls, Exp);
+  SplitBlockAndInsertForEachLane(VTy->getElementCount(), IntptrTy, I,
+                                 [&](IRBuilderBase &IRB, Value *Index) {
+    Value *MaskElem = IRB.CreateExtractElement(Mask, Index);
+    if (auto *MaskElemC = dyn_cast<ConstantInt>(MaskElem)) {
+      if (MaskElemC->isZero())
+        // No check
+        return;
+      // Unconditional check
+    } else {
+      // Conditional check
+      Instruction *ThenTerm = SplitBlockAndInsertIfThen(MaskElem, &*IRB.GetInsertPoint(), false);
+      IRB.SetInsertPoint(ThenTerm);
     }
-    return;
-  }
 
-
-  IRBuilder<> IRB(I);
-  Value *NumElements = IRB.CreateElementCount(IntptrTy, VTy->getElementCount());
-
-  Instruction *BodyIP;
-  Value *Index;
-  SplitBlockAndInsertSimpleForLoop(NumElements, I, BodyIP, Index);
-
-  IRB.SetInsertPoint(BodyIP);
-  Value *MaskElem = IRB.CreateExtractElement(Mask, Index);
-  Instruction *ThenTerm = SplitBlockAndInsertIfThen(MaskElem, BodyIP, false);
-  IRB.SetInsertPoint(ThenTerm);
-
-  Value *InstrumentedAddress = IRB.CreateGEP(VTy, Addr, {Zero, Index});
-  doInstrumentAddress(Pass, I, &*IRB.GetInsertPoint(), InstrumentedAddress, Alignment,
-                      Granularity, ElemTypeSize, IsWrite, SizeArgument,
-                      UseCalls, Exp);
+    Value *InstrumentedAddress = IRB.CreateGEP(VTy, Addr, {Zero, Index});
+    doInstrumentAddress(Pass, I, &*IRB.GetInsertPoint(), InstrumentedAddress, Alignment,
+                        Granularity, ElemTypeSize, IsWrite, SizeArgument,
+                        UseCalls, Exp);
+  });
 }
 
 void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
@@ -3555,6 +3485,10 @@ void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
 // constant inbounds index.
 bool AddressSanitizer::isSafeAccess(ObjectSizeOffsetVisitor &ObjSizeVis,
                                     Value *Addr, TypeSize TypeStoreSize) const {
+  if (TypeStoreSize.isScalable())
+    // TODO: We can use vscale_range to convert a scalable value to an
+    // upper bound on the access size.
+    return false;
   SizeOffsetType SizeOffset = ObjSizeVis.compute(Addr);
   if (!ObjSizeVis.bothKnown(SizeOffset)) return false;
   uint64_t Size = SizeOffset.first.getZExtValue();

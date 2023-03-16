@@ -33,7 +33,7 @@ func.func @saxpy2dblock(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  transform.gpu.map_foreach_to_blocks %funcop { gridDim = [12, 9]}
+  transform.gpu.map_forall_to_blocks %funcop { gridDim = [12, 9, 1]}
 }
 
 // -----
@@ -87,7 +87,7 @@ func.func @saxpy2d(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream : !g
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [12, 9] }
+  transform.gpu.map_nested_forall_to_threads %funcop { blockDim = [12, 9, 1] }
 }
 
 // -----
@@ -126,8 +126,8 @@ func.func @saxpy4d(%x: !type4d, %y: !type4d, %alpha : f32) -> !type4d {
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["func.func"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  %gpuLaunch = transform.gpu.map_foreach_to_blocks %funcop { generate_gpu_launch }
-  transform.gpu.map_nested_foreach_to_threads %gpuLaunch { blockDim = [32, 4, 1] }
+  %gpuLaunch = transform.gpu.map_forall_to_blocks %funcop { generate_gpu_launch }
+  transform.gpu.map_nested_forall_to_threads %gpuLaunch { blockDim = [32, 4, 1] }
 }
 
 // -----
@@ -160,7 +160,7 @@ func.func @saxpy2d_no_barrier(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [12, 9, 1], syncAfterDistribute = false }
+  transform.gpu.map_nested_forall_to_threads %funcop { blockDim = [12, 9, 1], syncAfterDistribute = false }
 }
 
 // -----
@@ -192,7 +192,7 @@ func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) 
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [32]}
+  transform.gpu.map_nested_forall_to_threads %funcop { blockDim = [32, 1, 1]}
 }
 
 // -----
@@ -228,7 +228,7 @@ func.func @saxpy3d_fold_id_z(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %s
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [12, 9, 1], syncAfterDistribute = false }
+  transform.gpu.map_nested_forall_to_threads %funcop { blockDim = [12, 9, 1], syncAfterDistribute = false }
 }
 
 // -----
@@ -267,5 +267,5 @@ func.func @map_multi_level(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %str
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [12, 9] }
+  transform.gpu.map_nested_forall_to_threads %funcop { blockDim = [12, 9, 1] }
 }

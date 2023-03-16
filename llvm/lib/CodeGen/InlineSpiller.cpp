@@ -1250,7 +1250,7 @@ void HoistSpillHelper::addToMergeableSpills(MachineInstr &Spill, int StackSlot,
   LiveInterval &OrigLI = LIS.getInterval(Original);
   // save a copy of LiveInterval in StackSlotToOrigLI because the original
   // LiveInterval may be cleared after all its references are spilled.
-  if (StackSlotToOrigLI.find(StackSlot) == StackSlotToOrigLI.end()) {
+  if (!StackSlotToOrigLI.contains(StackSlot)) {
     auto LI = std::make_unique<LiveInterval>(OrigLI.reg(), OrigLI.weight());
     LI->assign(OrigLI, Allocator);
     StackSlotToOrigLI[StackSlot] = std::move(LI);
@@ -1459,7 +1459,7 @@ void HoistSpillHelper::runHoistSpills(
     MachineBasicBlock *Block = (*RIt)->getBlock();
 
     // If Block contains an original spill, simply continue.
-    if (SpillsToKeep.find(*RIt) != SpillsToKeep.end() && !SpillsToKeep[*RIt]) {
+    if (SpillsToKeep.contains(*RIt) && !SpillsToKeep[*RIt]) {
       SpillsInSubTreeMap[*RIt].first.insert(*RIt);
       // SpillsInSubTreeMap[*RIt].second contains the cost of spill.
       SpillsInSubTreeMap[*RIt].second = MBFI.getBlockFreq(Block);
@@ -1469,7 +1469,7 @@ void HoistSpillHelper::runHoistSpills(
     // Collect spills in subtree of current node (*RIt) to
     // SpillsInSubTreeMap[*RIt].first.
     for (MachineDomTreeNode *Child : (*RIt)->children()) {
-      if (SpillsInSubTreeMap.find(Child) == SpillsInSubTreeMap.end())
+      if (!SpillsInSubTreeMap.contains(Child))
         continue;
       // The stmt "SpillsInSubTree = SpillsInSubTreeMap[*RIt].first" below
       // should be placed before getting the begin and end iterators of
@@ -1508,8 +1508,7 @@ void HoistSpillHelper::runHoistSpills(
       for (auto *const SpillBB : SpillsInSubTree) {
         // When SpillBB is a BB contains original spill, insert the spill
         // to SpillsToRm.
-        if (SpillsToKeep.find(SpillBB) != SpillsToKeep.end() &&
-            !SpillsToKeep[SpillBB]) {
+        if (SpillsToKeep.contains(SpillBB) && !SpillsToKeep[SpillBB]) {
           MachineInstr *SpillToRm = SpillBBToSpill[SpillBB];
           SpillsToRm.push_back(SpillToRm);
         }

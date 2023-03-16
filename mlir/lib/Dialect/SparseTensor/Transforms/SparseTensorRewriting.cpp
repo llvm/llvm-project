@@ -377,9 +377,9 @@ public:
       ArrayRef<int64_t> dstShape = dstTp.getShape();
       genReshapeDstShape(loc, rewriter, dstSizes, srcSizes, dstShape,
                          op.getReassociationIndices());
-      for (auto &d : llvm::enumerate(dstShape)) {
-        if (d.value() == ShapedType::kDynamic)
-          dstDynSizes.push_back(dstSizes[d.index()]);
+      for (auto [idx, shape] : llvm::enumerate(dstShape)) {
+        if (shape == ShapedType::kDynamic)
+          dstDynSizes.push_back(dstSizes[idx]);
       }
     }
 
@@ -938,20 +938,21 @@ public:
         ValueRange{input},
         StringAttr::get(getContext(), ForeachOp::getOperationName()));
     loopEmitter.initializeLoopEmit(rewriter, loc);
-    for (Dimension d = 0; d < dimRank; d++) {
+    for (Level l = 0; l < lvlRank; l++) {
       // TODO: provide utility function for loop sequences that only contains
       // one for loop?
-      const Level l = op.getOrder() ? op.getOrder()->getDimPosition(d) : d;
-      loopEmitter.enterNewLoopSeq(rewriter, loc, 0, static_cast<size_t>(l));
+      // FIXME(wrengr): what is this "ld" supposed to be really?
+      const Level ld = op.getOrder() ? op.getOrder()->getDimPosition(l) : l;
+      loopEmitter.enterNewLoopSeq(rewriter, loc, 0, ld);
       // Note that reduc will be taken care of by loop emitter and get updated
       // in place.
 
-      loopEmitter.enterLoopOverTensorAtDim(rewriter, loc, 0, l, reduc);
+      loopEmitter.enterLoopOverTensorAtLvl(rewriter, loc, 0, l, reduc);
     }
 
     SmallVector<Value> lcvs;
     lcvs.reserve(lvlRank);
-    loopEmitter.getCoordinateArray(lcvs);
+    loopEmitter.getLoopIVs(lcvs);
 
     if (op.getOrder()) {
       // FIXME: There is some dim/lvl confusion here since `dimRank != lvlRank`
@@ -962,10 +963,10 @@ public:
       }
     }
     Value vals = loopEmitter.getValBuffer()[0];
-    Value pidx = loopEmitter.getPidxs()[0].back();
+    Value pos = loopEmitter.getPosits()[0].back();
     // Loads the value from sparse tensor using position-index;
     // loads the value from dense tensor using coords.
-    Value val = enc ? rewriter.create<memref::LoadOp>(loc, vals, pidx)
+    Value val = enc ? rewriter.create<memref::LoadOp>(loc, vals, pos)
                     : rewriter.create<memref::LoadOp>(loc, vals, lcvs);
 
     // 2. Inline the block in the foreach operator.

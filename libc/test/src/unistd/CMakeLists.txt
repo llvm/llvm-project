@@ -9,8 +9,8 @@ add_libc_unittest(
   SRCS
     access_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.access
     libc.src.unistd.close
@@ -24,8 +24,8 @@ add_libc_unittest(
   SRCS
     chdir_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.chdir
     libc.src.unistd.close
@@ -41,6 +41,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.dup
@@ -59,6 +60,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.dup2
@@ -77,6 +79,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.dup3
@@ -95,6 +98,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.fchdir
     libc.src.unistd.close
@@ -110,6 +114,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.read
@@ -128,6 +133,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.fsync
@@ -147,6 +153,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.fsync
@@ -164,6 +171,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.link
@@ -179,6 +187,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.linkat
@@ -194,6 +203,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.lseek
@@ -210,6 +220,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.fcntl
+    libc.src.errno.errno
     libc.src.sys.stat.mkdir
     libc.src.unistd.rmdir
 )
@@ -223,6 +234,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.unistd.readlink
     libc.src.unistd.symlink
     libc.src.unistd.unlink
@@ -239,6 +251,7 @@ add_libc_unittest(
     libc.include.errno
     libc.include.fcntl
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.unistd.readlinkat
     libc.src.unistd.symlink
     libc.src.unistd.unlink
@@ -254,6 +267,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.symlink
@@ -269,6 +283,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.symlinkat
@@ -284,6 +299,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.read
@@ -302,6 +318,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.unlink
@@ -316,6 +333,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.fcntl.openat
     libc.src.unistd.close
@@ -362,7 +380,6 @@ add_libc_unittest(
     libc.src.unistd.isatty
     libc.src.fcntl.open
     libc.src.unistd.close
-    libc.include.errno
     libc.src.errno.errno
 )
 

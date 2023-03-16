@@ -1123,8 +1123,119 @@ transformed and loaded back into the JIT pipeline via
 LLVM/OpenMP Target Host Runtime Plugins (``libomptarget.rtl.XXXX``)
 -------------------------------------------------------------------
 
-.. _device_runtime:
+The LLVM/OpenMP target host runtime plugins were recently re-implemented,
+temporarily renamed as the NextGen plugins, and set as the default and only
+plugins' implementation. Currently, these plugins have support for the NVIDIA
+and AMDGPU devices as well as the GenericELF64bit host-simulated device.
 
+The source code of the common infrastructure and the vendor-specific plugins is
+in the ``openmp/libomptarget/nextgen-plugins`` directory in the LLVM project
+repository. The plugin infrastructure aims at unifying the plugin code and logic
+into a generic interface using object-oriented C++. There is a plugin interface
+composed by multiple generic C++ classes which implement the common logic that
+every vendor-specific plugin should provide. In turn, the specific plugins
+inherit from those generic classes and implement the required functions that
+depend on the specific vendor API. As an example, some generic classes that the
+plugin interface define are for representing a device, a device image, an
+efficient resource manager, etc.
+
+With this common plugin infrastructure, several tasks have been simplified:
+adding a new vendor-specific plugin, adding generic features or optimizations
+to all plugins, debugging plugins, etc.
+
+Environment Variables
+^^^^^^^^^^^^^^^^^^^^^
+
+There are several environment variables to change the behavior of the plugins:
+
+* ``LIBOMPTARGET_SHARED_MEMORY_SIZE``
+* ``LIBOMPTARGET_STACK_SIZE``
+* ``LIBOMPTARGET_HEAP_SIZE``
+* ``LIBOMPTARGET_NUM_INITIAL_STREAMS``
+* ``LIBOMPTARGET_NUM_INITIAL_EVENTS``
+* ``LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS``
+* ``LIBOMPTARGET_AMDGPU_NUM_HSA_QUEUES``
+* ``LIBOMPTARGET_AMDGPU_HSA_QUEUE_SIZE``
+* ``LIBOMPTARGET_AMDGPU_TEAMS_PER_CU``
+* ``LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES``
+* ``LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS``
+
+The environment variables ``LIBOMPTARGET_SHARED_MEMORY_SIZE``,
+``LIBOMPTARGET_STACK_SIZE`` and ``LIBOMPTARGET_HEAP_SIZE`` are described in
+:ref:`libopenmptarget_environment_vars`.
+
+LIBOMPTARGET_NUM_INITIAL_STREAMS
+""""""""""""""""""""""""""""""""
+
+This environment variable sets the number of pre-created streams in the plugin
+(if supported) at initialization. More streams will be created dynamically
+throughout the execution if needed. A stream is a queue of asynchronous
+operations (e.g., kernel launches and memory copies) that are executed
+sequentially. Parallelism is achieved by featuring multiple streams. The
+``libomptarget`` leverages streams to exploit parallelism between plugin
+operations. The default value is ``32``.
+
+LIBOMPTARGET_NUM_INITIAL_EVENTS
+"""""""""""""""""""""""""""""""
+
+This environment variable sets the number of pre-created events in the
+plugin (if supported) at initialization. More events will be created
+dynamically throughout the execution if needed. An event is used to synchronize
+a stream with another efficiently. The default value is ``32``.
+
+LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS
+"""""""""""""""""""""""""""""""""""""
+
+This environment variable indicates whether the host buffers mapped by the user
+should be automatically locked/pinned by the plugin. Pinned host buffers allow
+true asynchronous copies between the host and devices. Enabling this feature can
+increase the performance of applications that are intensive in host-device
+memory transfers. The default value is ``false``.
+
+LIBOMPTARGET_AMDGPU_NUM_HSA_QUEUES
+""""""""""""""""""""""""""""""""""
+
+This environment variable controls the number of HSA queues per device in the
+AMDGPU plugin. An HSA queue is a runtime-allocated resource that contains an
+AQL (Architected Queuing Language) packet buffer and is associated with an AQL
+packet processor. HSA queues are used for inserting kernel packets to launching
+kernel executions. A high number of HSA queues may degrade the performance. The
+default value is ``4``.
+
+LIBOMPTARGET_AMDGPU_HSA_QUEUE_SIZE
+""""""""""""""""""""""""""""""""""
+
+This environment variable controls the size of each HSA queue in the AMDGPU
+plugin. The size is the number of AQL packets an HSA queue is expected to hold.
+It is also the number of AQL packets that can be pushed into each queue without
+waiting the driver to process them. The default value is ``512``.
+
+LIBOMPTARGET_AMDGPU_TEAMS_PER_CU
+""""""""""""""""""""""""""""""""
+
+This environment variable controls the default number of teams relative to the
+number of compute units (CUs) of the AMDGPU device. The default number of teams
+is ``#default_teams = #teams_per_CU * #CUs``. The default value of teams per CU
+is ``4``.
+
+LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES
+""""""""""""""""""""""""""""""""""""""""
+
+This environment variable specifies the maximum size in bytes where the memory
+copies are asynchronous operations in the AMDGPU plugin. Up to this transfer
+size, the memory copies are asychronous operations pushed to the corresponding
+stream. For larger transfers, they are synchronous transfers. Memory copies
+involving already locked/pinned host buffers are always asychronous. The default
+value is ``1*1024*1024`` bytes (1 MB).
+
+LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS
+"""""""""""""""""""""""""""""""""""""""""""
+
+This environment variable controls the initial number of HSA signals per device
+in the AMDGPU plugin. There is one resource manager of signals per device
+managing several pre-created signals. These signals are mainly used by AMDGPU
+streams. More HSA signals will be created dynamically throughout the execution
+if needed. The default value is ``64``.
 
 .. _remote_offloading_plugin:
 

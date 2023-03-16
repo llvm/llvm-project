@@ -515,8 +515,8 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
 
   // Add extra constraints for variables that are known positive.
   for (auto &KV : KnownNonNegativeVariables) {
-    if (!KV.second || (Value2Index.find(KV.first) == Value2Index.end() &&
-                       NewIndexMap.find(KV.first) == NewIndexMap.end()))
+    if (!KV.second ||
+        (!Value2Index.contains(KV.first) && !NewIndexMap.contains(KV.first)))
       continue;
     SmallVector<int64_t, 8> C(Value2Index.size() + NewVariables.size() + 1, 0);
     C[GetOrAddIndex(KV.first)] = -1;
@@ -807,7 +807,7 @@ static void generateReproducer(CmpInst *Cond, Module *M,
         continue;
 
       auto *I = dyn_cast<Instruction>(V);
-      if (Value2Index.find(V) != Value2Index.end() || !I ||
+      if (Value2Index.contains(V) || !I ||
           !isa<CmpInst, BinaryOperator, GetElementPtrInst, CastInst>(V)) {
         Old2New[V] = V;
         Args.push_back(V);
@@ -857,7 +857,7 @@ static void generateReproducer(CmpInst *Cond, Module *M,
         continue;
 
       auto *I = dyn_cast<Instruction>(V);
-      if (Value2Index.find(V) == Value2Index.end() && I) {
+      if (!Value2Index.contains(V) && I) {
         Old2New[V] = nullptr;
         ToClone.push_back(I);
         append_range(WorkList, I->operands());

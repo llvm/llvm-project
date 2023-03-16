@@ -321,13 +321,6 @@ void bindSymbols(MLIRContext *ctx, AffineExprTy &e, AffineExprTy2 &...exprs) {
   bindSymbols<N + 1, AffineExprTy2 &...>(ctx, exprs...);
 }
 
-template <typename AffineExprTy>
-void bindSymbolsList(MLIRContext *ctx, SmallVectorImpl<AffineExprTy> &exprs) {
-  int idx = 0;
-  for (AffineExprTy &e : exprs)
-    e = getAffineSymbolExpr(idx++, ctx);
-}
-
 } // namespace detail
 
 /// Bind a list of AffineExpr references to DimExpr at positions:
@@ -337,11 +330,25 @@ void bindDims(MLIRContext *ctx, AffineExprTy &...exprs) {
   detail::bindDims<0>(ctx, exprs...);
 }
 
+template <typename AffineExprTy>
+void bindDimsList(MLIRContext *ctx, MutableArrayRef<AffineExprTy> exprs) {
+  int idx = 0;
+  for (AffineExprTy &e : exprs)
+    e = getAffineDimExpr(idx++, ctx);
+}
+
 /// Bind a list of AffineExpr references to SymbolExpr at positions:
 ///   [0 .. sizeof...(exprs)]
 template <typename... AffineExprTy>
 void bindSymbols(MLIRContext *ctx, AffineExprTy &...exprs) {
   detail::bindSymbols<0>(ctx, exprs...);
+}
+
+template <typename AffineExprTy>
+void bindSymbolsList(MLIRContext *ctx, MutableArrayRef<AffineExprTy> exprs) {
+  int idx = 0;
+  for (AffineExprTy &e : exprs)
+    e = getAffineSymbolExpr(idx++, ctx);
 }
 
 } // namespace mlir

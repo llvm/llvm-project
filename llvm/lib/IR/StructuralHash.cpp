@@ -1,13 +1,10 @@
-//===-- StructuralHash.cpp - IR Hash for expensive checks -------*- C++ -*-===//
+//===-- StructuralHash.cpp - IR Hashing -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-
-#ifdef EXPENSIVE_CHECKS
 
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/IR/Function.h"
@@ -15,19 +12,19 @@
 
 using namespace llvm;
 
-namespace details {
+namespace {
 
 // Basic hashing mechanism to detect structural change to the IR, used to verify
 // pass return status consistency with actual change. Loosely copied from
 // llvm/lib/Transforms/Utils/FunctionComparator.cpp
 
-class StructuralHash {
+class StructuralHashImpl {
   uint64_t Hash = 0x6acaa36bef8325c5ULL;
 
   void update(uint64_t V) { Hash = hashing::detail::hash_16_bytes(Hash, V); }
 
 public:
-  StructuralHash() = default;
+  StructuralHashImpl() = default;
 
   void update(const Function &F) {
     if (F.empty())
@@ -64,18 +61,16 @@ public:
   uint64_t getHash() const { return Hash; }
 };
 
-} // namespace details
+} // namespace
 
 uint64_t llvm::StructuralHash(const Function &F) {
-  ::details::StructuralHash H;
+  StructuralHashImpl H;
   H.update(F);
   return H.getHash();
 }
 
 uint64_t llvm::StructuralHash(const Module &M) {
-  ::details::StructuralHash H;
+  StructuralHashImpl H;
   H.update(M);
   return H.getHash();
 }
-
-#endif

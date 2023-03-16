@@ -1265,6 +1265,10 @@ enum AttributeSafetyKind : uint8_t {
   ASK_ALL = ASK_SAFE_TO_DROP | ASK_UNSAFE_TO_DROP,
 };
 
+/// Returns true if this is a type legal for the 'nofpclass' attribute. This
+/// follows the same type rules as FPMathOperator.
+bool isNoFPClassCompatibleType(Type *Ty);
+
 /// Which attributes cannot be applied to a type. The argument \p ASK indicates,
 /// if only attributes that are known to be safely droppable are contained in
 /// the mask; only attributes that might be unsafe to drop (e.g., ABI-related

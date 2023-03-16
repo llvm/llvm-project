@@ -32,6 +32,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -1596,6 +1597,57 @@ void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
     for (BasicBlock *UniqueOrigSuccessor : UniqueOrigSuccessors)
       Updates.push_back({DominatorTree::Delete, Head, UniqueOrigSuccessor});
     DTU->applyUpdates(Updates);
+  }
+}
+
+std::pair<Instruction*, Value*>
+llvm::SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore) {
+  BasicBlock *LoopPred = SplitBefore->getParent();
+  BasicBlock *LoopBody = SplitBlock(SplitBefore->getParent(), SplitBefore);
+  BasicBlock *LoopExit = SplitBlock(SplitBefore->getParent(), SplitBefore);
+
+  auto *Ty = End->getType();
+  auto &DL = SplitBefore->getModule()->getDataLayout();
+  const unsigned Bitwidth = DL.getTypeSizeInBits(Ty);
+
+  IRBuilder<> Builder(LoopBody->getTerminator());
+  auto *IV = Builder.CreatePHI(Ty, 2, "iv");
+  auto *IVNext =
+    Builder.CreateAdd(IV, ConstantInt::get(Ty, 1), IV->getName() + ".next",
+                      /*HasNUW=*/true, /*HasNSW=*/Bitwidth != 2);
+  auto *IVCheck = Builder.CreateICmpEQ(IVNext, End,
+                                       IV->getName() + ".check");
+  Builder.CreateCondBr(IVCheck, LoopExit, LoopBody);
+  LoopBody->getTerminator()->eraseFromParent();
+
+  // Populate the IV PHI.
+  IV->addIncoming(ConstantInt::get(Ty, 0), LoopPred);
+  IV->addIncoming(IVNext, LoopBody);
+
+  return std::make_pair(LoopBody->getFirstNonPHI(), IV);
+}
+
+void llvm::SplitBlockAndInsertForEachLane(ElementCount EC,
+     Type *IndexTy, Instruction *InsertBefore,
+     std::function<void(IRBuilderBase&, Value*)> Func) {
+
+  IRBuilder<> IRB(InsertBefore);
+
+  if (EC.isScalable()) {
+    Value *NumElements = IRB.CreateElementCount(IndexTy, EC);
+
+    auto [BodyIP, Index] =
+      SplitBlockAndInsertSimpleForLoop(NumElements, InsertBefore);
+
+    IRB.SetInsertPoint(BodyIP);
+    Func(IRB, Index);
+    return;
+  }
+
+  unsigned Num = EC.getFixedValue();
+  for (unsigned Idx = 0; Idx < Num; ++Idx) {
+    IRB.SetInsertPoint(InsertBefore);
+    Func(IRB, ConstantInt::get(IndexTy, Idx));
   }
 }
 

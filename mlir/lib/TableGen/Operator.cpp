@@ -408,7 +408,7 @@ void Operator::populateTypeInferenceInfo(
 
   // For all results whose types are buildable, initialize their type inference
   // nodes with an edge to themselves. Mark those nodes are fully-inferred.
-  for (auto &[idx, infer] : llvm::enumerate(inference)) {
+  for (auto [idx, infer] : llvm::enumerate(inference)) {
     if (getResult(idx).constraint.getBuilderCall()) {
       infer.sources.emplace_back(InferredResultType::mapResultIndex(idx),
                                  "$_self");
@@ -693,7 +693,7 @@ void Operator::populateOpStructure() {
     auto verifyTraitValidity = [&](Record *trait) {
       auto *dependentTraits = trait->getValueAsListInit("dependentTraits");
       for (auto *traitInit : *dependentTraits)
-        if (traitSet.find(traitInit) == traitSet.end())
+        if (!traitSet.contains(traitInit))
           PrintFatalError(
               def.getLoc(),
               trait->getValueAsString("trait") + " requires " +

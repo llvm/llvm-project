@@ -132,6 +132,9 @@ Removed Compiler Flags
   or higher to use standard C++ modules instead.
 - The deprecated flag `-fcoroutines-ts` is removed. Please use ``-std=c++20``
   or higher to use standard C++ coroutines instead.
+- The CodeGen flag `-lower-global-dtors-via-cxa-atexit` which affects how global
+  destructors are lowered for MachO is removed without replacement. The default
+  of `-lower-global-dtors-via-cxa-atexit=true` is now the only supported way.
 
 Attribute Changes in Clang
 --------------------------
@@ -167,6 +170,9 @@ Improvements to Clang's diagnostics
   ``<built-in>``.
 - Clang constexpr evaluator now provides a more concise diagnostic when calling
   function pointer that is known to be null.
+- Clang now avoids duplicate warnings on unreachable ``[[fallthrough]];`` statements
+  previously issued from ``-Wunreachable-code`` and ``-Wunreachable-code-fallthrough``
+  by prioritizing ``-Wunreachable-code-fallthrough``.
 
 Bug Fixes in This Version
 -------------------------
@@ -190,6 +196,16 @@ Bug Fixes in This Version
   (`#60405 <https://github.com/llvm/llvm-project/issues/60405>`_)
 - Fix aggregate initialization inside lambda constexpr.
   (`#60936 <https://github.com/llvm/llvm-project/issues/60936>`_)
+- No longer issue a false positive diagnostic about a catch handler that cannot
+  be reached despite being reachable. This fixes
+  `#61177 <https://github.com/llvm/llvm-project/issues/61177>`_ in anticipation
+  of `CWG2699 <https://wg21.link/CWG2699>_` being accepted by WG21.
+- Fix crash when parsing fold expression containing a delayed typo correction.
+  (`#61326 <https://github.com/llvm/llvm-project/issues/61326>`_)
+- Fix crash when dealing with some member accesses outside of class or member
+  function context.
+  (`#37792 <https://github.com/llvm/llvm-project/issues/37792>`_) and
+  (`#48405 <https://github.com/llvm/llvm-project/issues/48405>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -209,6 +225,8 @@ Bug Fixes to C++ Support
 - Fix an issue about ``decltype`` in the members of class templates derived from
   templates with related parameters.
   (`#58674 <https://github.com/llvm/llvm-project/issues/58674>`_)
+- Fix incorrect deletion of the default constructor of unions in some
+  cases. (`#48416 <https://github.com/llvm/llvm-project/issues/48416>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -221,6 +239,14 @@ Miscellaneous Clang Crashes Fixed
 
 Target Specific Changes
 -----------------------
+
+AMDGPU Support
+^^^^^^^^^^^^^^
+
+- Linking for AMDGPU now uses ``--no-undefined`` by default. This causes
+  undefined symbols in the created module to be a linker error. To prevent this,
+  pass ``-Wl,--undefined`` if compiling directly, or ``-Xoffload-linker
+  --undefined`` if using an offloading language.
 
 X86 Support
 ^^^^^^^^^^^
@@ -280,6 +306,7 @@ Floating Point Support in Clang
 - Add ``__builtin_elementwise_log2`` builtin for floating point types only.
 - Add ``__builtin_elementwise_exp`` builtin for floating point types only.
 - Add ``__builtin_elementwise_exp2`` builtin for floating point types only.
+- Add ``__builtin_set_flt_rounds`` builtin for X86, x86_64, Arm and AArch64 only.
 
 AST Matchers
 ------------
@@ -303,19 +330,18 @@ libclang
 - Introduced the new function ``clang_CXXMethod_isExplicit``,
   which identifies whether a constructor or conversion function cursor
   was marked with the explicit identifier.
-- Added check in ``clang_getFieldDeclBitWidth`` for whether a bit field
-  has an evaluable bit width. Fixes undefined behavior when called on a
-  bit field whose width depends on a template paramter.
-- Added function ``clang_isBitFieldDecl`` to check if a struct/class field is a
-  bit field.
 
 - Introduced the new ``CXIndex`` constructor function
-  ``clang_createIndexWithOptions``, which allows overriding precompiled preamble
-  storage path.
+  ``clang_createIndexWithOptions``, which allows storing precompiled preambles
+  in memory or overriding the precompiled preamble storage path.
 
 - Deprecated two functions ``clang_CXIndex_setGlobalOptions`` and
   ``clang_CXIndex_setInvocationEmissionPathOption`` in favor of the new
   function ``clang_createIndexWithOptions`` in order to improve thread safety.
+
+- Added check in ``clang_getFieldDeclBitWidth`` for whether a bit-field
+  has an evaluable bit width. Fixes undefined behavior when called on a
+  bit-field whose width depends on a template paramter.
 
 Static Analyzer
 ---------------

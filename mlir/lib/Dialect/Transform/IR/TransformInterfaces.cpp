@@ -339,14 +339,7 @@ transform::TransformState::replacePayloadOp(Operation *op,
   }
 
   // Otherwise, replace the pointed-to object of all handles while preserving
-  // their relative order.
-  if (op->getNumResults() != replacement->getNumResults()) {
-    return emitError(op->getLoc())
-           << "cannot replace an op with another op producing a different "
-              "number of results while tracking handles";
-  }
-
-  // Replace the mapped operation if present.
+  // their relative order. First, replace the mapped operation if present.
   for (Value handle : opHandles) {
     Mappings &mappings = getMapping(handle);
     auto it = mappings.direct.find(handle);
@@ -362,9 +355,21 @@ transform::TransformState::replacePayloadOp(Operation *op,
     mappings.reverse[replacement].push_back(handle);
   }
 
-  // Replace the mapped results of the operation.
-  for (auto [origResult, replacementResult, handleList] : llvm::zip(
-           op->getResults(), replacement->getResults(), resultValueHandles)) {
+  // Second, replace the mapped results of the operation.
+  for (auto [origResult, handleList] :
+       llvm::zip(op->getResults(), resultValueHandles)) {
+    // No handles to the value, skip even if there is no replacement.
+    if (handleList.empty())
+      continue;
+
+    unsigned resultNumber = origResult.getResultNumber();
+    if (resultNumber >= replacement->getNumResults()) {
+      return emitError(op->getLoc())
+             << "cannot replace an op with another op producing less results "
+                "while tracking handles";
+    }
+
+    Value replacementResult = replacement->getResult(resultNumber);
     for (Value resultHandle : handleList) {
       Mappings &mappings = getMapping(resultHandle);
       auto it = mappings.values.find(resultHandle);
@@ -964,7 +969,7 @@ void transform::detail::setApplyToOneResults(
       continue;
     assert(transformOp->getNumResults() == partialResults.size() &&
            "expected as many partial results as op as results");
-    for (auto &[i, value] : llvm::enumerate(partialResults))
+    for (auto [i, value] : llvm::enumerate(partialResults))
       transposed[i].push_back(value);
   }
 

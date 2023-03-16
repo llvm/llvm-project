@@ -466,37 +466,26 @@ define <32 x i8> @abd_cmp_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpminub %xmm2, %xmm3, %xmm4
-; AVX1-NEXT:    vpcmpeqb %xmm4, %xmm3, %xmm4
-; AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm5
-; AVX1-NEXT:    vpcmpeqb %xmm5, %xmm0, %xmm5
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm5, %ymm4
-; AVX1-NEXT:    vpsubb %xmm2, %xmm3, %xmm5
-; AVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm6
-; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm6, %ymm5
-; AVX1-NEXT:    vpsubb %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpmaxub %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpsubb %xmm4, %xmm2, %xmm2
+; AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm3
+; AVX1-NEXT:    vpmaxub %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsubb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    vandps %ymm0, %ymm4, %ymm0
-; AVX1-NEXT:    vandnps %ymm5, %ymm4, %ymm1
-; AVX1-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: abd_cmp_v32i8:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpminub %ymm1, %ymm0, %ymm2
-; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm2
-; AVX2-NEXT:    vpsubb %ymm1, %ymm0, %ymm3
-; AVX2-NEXT:    vpsubb %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vpblendvb %ymm2, %ymm0, %ymm3, %ymm0
+; AVX2-NEXT:    vpmaxub %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsubb %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: abd_cmp_v32i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsubb %ymm1, %ymm0, %ymm2
-; AVX512-NEXT:    vpsubb %ymm0, %ymm1, %ymm3
-; AVX512-NEXT:    vpminub %ymm1, %ymm0, %ymm1
-; AVX512-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpblendvb %ymm0, %ymm3, %ymm2, %ymm0
+; AVX512-NEXT:    vpminub %ymm1, %ymm0, %ymm2
+; AVX512-NEXT:    vpmaxub %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpsubb %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %cmp = icmp ugt <32 x i8> %a, %b
   %ab = sub <32 x i8> %a, %b
@@ -510,38 +499,27 @@ define <16 x i16> @abd_cmp_v16i16(<16 x i16> %a, <16 x i16> %b) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpmaxuw %xmm2, %xmm3, %xmm4
-; AVX1-NEXT:    vpcmpeqw %xmm4, %xmm3, %xmm4
-; AVX1-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm5
-; AVX1-NEXT:    vpcmpeqw %xmm5, %xmm0, %xmm5
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm5, %ymm4
-; AVX1-NEXT:    vpsubw %xmm2, %xmm3, %xmm5
-; AVX1-NEXT:    vpsubw %xmm1, %xmm0, %xmm6
-; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm6, %ymm5
-; AVX1-NEXT:    vpsubw %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpminuw %xmm2, %xmm3, %xmm4
+; AVX1-NEXT:    vpmaxuw %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpsubw %xmm4, %xmm2, %xmm2
+; AVX1-NEXT:    vpminuw %xmm1, %xmm0, %xmm3
+; AVX1-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsubw %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    vandnps %ymm0, %ymm4, %ymm0
-; AVX1-NEXT:    vandps %ymm4, %ymm5, %ymm1
-; AVX1-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: abd_cmp_v16i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmaxuw %ymm1, %ymm0, %ymm2
-; AVX2-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm2
-; AVX2-NEXT:    vpsubw %ymm1, %ymm0, %ymm3
-; AVX2-NEXT:    vpsubw %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vpblendvb %ymm2, %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpminuw %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpmaxuw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsubw %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: abd_cmp_v16i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsubw %ymm1, %ymm0, %ymm2
-; AVX512-NEXT:    vpsubw %ymm0, %ymm1, %ymm3
-; AVX512-NEXT:    vpmaxuw %ymm1, %ymm0, %ymm1
-; AVX512-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpblendvb %ymm0, %ymm2, %ymm3, %ymm0
+; AVX512-NEXT:    vpminuw %ymm1, %ymm0, %ymm2
+; AVX512-NEXT:    vpmaxuw %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpsubw %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %cmp = icmp uge <16 x i16> %a, %b
   %ab = sub <16 x i16> %a, %b
@@ -553,36 +531,29 @@ define <16 x i16> @abd_cmp_v16i16(<16 x i16> %a, <16 x i16> %b) nounwind {
 define <8 x i32> @abd_cmp_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 ; AVX1-LABEL: abd_cmp_v8i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmaxud %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; AVX1-NEXT:    vpmaxud %xmm3, %xmm4, %xmm5
-; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm4, %xmm5
-; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm6
-; AVX1-NEXT:    vpsubd %xmm3, %xmm4, %xmm7
-; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendvps %xmm2, %xmm6, %xmm0, %xmm0
-; AVX1-NEXT:    vpsubd %xmm4, %xmm3, %xmm1
-; AVX1-NEXT:    vblendvps %xmm5, %xmm7, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpminud %xmm2, %xmm3, %xmm4
+; AVX1-NEXT:    vpmaxud %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpsubd %xmm4, %xmm2, %xmm2
+; AVX1-NEXT:    vpminud %xmm1, %xmm0, %xmm3
+; AVX1-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsubd %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: abd_cmp_v8i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmaxud %ymm1, %ymm0, %ymm2
-; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm0, %ymm2
-; AVX2-NEXT:    vpsubd %ymm1, %ymm0, %ymm3
-; AVX2-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vblendvps %ymm2, %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpminud %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpmaxud %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsubd %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: abd_cmp_v8i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpltud %ymm1, %ymm0, %k1
-; AVX512-NEXT:    vpsubd %ymm1, %ymm0, %ymm2
-; AVX512-NEXT:    vpsubd %ymm0, %ymm1, %ymm2 {%k1}
-; AVX512-NEXT:    vmovdqa %ymm2, %ymm0
+; AVX512-NEXT:    vpminud %ymm1, %ymm0, %ymm2
+; AVX512-NEXT:    vpmaxud %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpsubd %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %cmp = icmp ult <8 x i32> %a, %b
   %ab = sub <8 x i32> %a, %b
@@ -594,29 +565,29 @@ define <8 x i32> @abd_cmp_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 define <4 x i64> @abd_cmp_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; AVX1-LABEL: abd_cmp_v4i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm3
-; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm4
-; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; AVX1-NEXT:    vpxor %xmm2, %xmm4, %xmm5
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm6
-; AVX1-NEXT:    vpxor %xmm2, %xmm6, %xmm2
-; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm2, %xmm2
-; AVX1-NEXT:    vpsubq %xmm1, %xmm0, %xmm5
-; AVX1-NEXT:    vpsubq %xmm6, %xmm4, %xmm7
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    vpxor %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; AVX1-NEXT:    vpxor %xmm3, %xmm5, %xmm6
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm6, %xmm4
+; AVX1-NEXT:    vpsubq %xmm2, %xmm5, %xmm6
+; AVX1-NEXT:    vpsubq %xmm5, %xmm2, %xmm2
+; AVX1-NEXT:    vblendvpd %xmm4, %xmm6, %xmm2, %xmm2
+; AVX1-NEXT:    vpxor %xmm3, %xmm1, %xmm4
+; AVX1-NEXT:    vpxor %xmm3, %xmm0, %xmm3
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vpsubq %xmm1, %xmm0, %xmm4
 ; AVX1-NEXT:    vpsubq %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendvpd %xmm3, %xmm5, %xmm0, %xmm0
-; AVX1-NEXT:    vpsubq %xmm4, %xmm6, %xmm1
-; AVX1-NEXT:    vblendvpd %xmm2, %xmm7, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vblendvpd %xmm3, %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: abd_cmp_v4i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
-; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm3
-; AVX2-NEXT:    vpxor %ymm2, %ymm1, %ymm2
+; AVX2-NEXT:    vpxor %ymm2, %ymm1, %ymm3
+; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm2
 ; AVX2-NEXT:    vpcmpgtq %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpsubq %ymm1, %ymm0, %ymm3
 ; AVX2-NEXT:    vpsubq %ymm0, %ymm1, %ymm0
@@ -625,15 +596,14 @@ define <4 x i64> @abd_cmp_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ;
 ; AVX512-LABEL: abd_cmp_v4i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpnltuq %ymm1, %ymm0, %k1
-; AVX512-NEXT:    vpsubq %ymm1, %ymm0, %ymm2
-; AVX512-NEXT:    vpsubq %ymm0, %ymm1, %ymm2 {%k1}
-; AVX512-NEXT:    vmovdqa %ymm2, %ymm0
+; AVX512-NEXT:    vpminuq %ymm1, %ymm0, %ymm2
+; AVX512-NEXT:    vpmaxuq %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %cmp = icmp uge <4 x i64> %a, %b
   %ab = sub <4 x i64> %a, %b
   %ba = sub <4 x i64> %b, %a
-  %sel = select <4 x i1> %cmp, <4 x i64> %ba, <4 x i64> %ab
+  %sel = select <4 x i1> %cmp, <4 x i64> %ab, <4 x i64> %ba
   ret <4 x i64> %sel
 }
 

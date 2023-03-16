@@ -42,8 +42,8 @@ STATISTIC(NumDeadBlocks , "Number of basic blocks unreachable");
 STATISTIC(NumInstReplaced,
           "Number of instructions replaced with (simpler) instruction");
 
-static cl::opt<unsigned> FuncSpecializationMaxIters(
-    "func-specialization-max-iters", cl::init(1), cl::Hidden, cl::desc(
+static cl::opt<unsigned> FuncSpecMaxIters(
+    "funcspec-max-iters", cl::init(1), cl::Hidden, cl::desc(
     "The maximum number of iterations function specialization is run"));
 
 static void findReturnsToZap(Function &F,
@@ -158,7 +158,7 @@ static bool runIPSCCP(
 
   if (IsFuncSpecEnabled) {
     unsigned Iters = 0;
-    while (Iters++ < FuncSpecializationMaxIters && Specializer.run());
+    while (Iters++ < FuncSpecMaxIters && Specializer.run());
   }
 
   // Iterate over all of the instructions in the module, replacing them with
@@ -280,7 +280,7 @@ static bool runIPSCCP(
 
     // If there is a known constant range for the return value, add !range
     // metadata to the function's call sites.
-    if (F->getReturnType()->isIntegerTy() && ReturnValue.isConstantRange() &&
+    if (ReturnValue.isConstantRange() &&
         !ReturnValue.getConstantRange().isSingleElement()) {
       // Do not add range metadata if the return value may include undef.
       if (ReturnValue.isConstantRangeIncludingUndef())

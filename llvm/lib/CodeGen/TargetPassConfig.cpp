@@ -878,8 +878,7 @@ void TargetPassConfig::addIRPasses() {
 
   // For MachO, lower @llvm.global_dtors into @llvm.global_ctors with
   // __cxa_atexit() calls to avoid emitting the deprecated __mod_term_func.
-  if (TM->getTargetTriple().isOSBinFormatMachO() &&
-      TM->Options.LowerGlobalDtorsViaCxaAtExit)
+  if (TM->getTargetTriple().isOSBinFormatMachO())
     addPass(createLowerGlobalDtorsLegacyPass());
 
   // Make sure that no unreachable blocks are instruction selected.

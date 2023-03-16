@@ -764,7 +764,7 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
     return FAM.getResult<DominatorTreeAnalysis>(F);
   };
   if (UseCommandLine) {
-    if (DevirtModule::runForTesting(M, AARGetter, OREGetter, LookupDomTree))
+    if (!DevirtModule::runForTesting(M, AARGetter, OREGetter, LookupDomTree))
       return PreservedAnalyses::all();
     return PreservedAnalyses::none();
   }
@@ -895,8 +895,7 @@ static Error checkCombinedSummaryForTesting(ModuleSummaryIndex *Summary) {
   // DevirtIndex::run, not to DevirtModule::run used by opt/runForTesting.
   const auto &ModPaths = Summary->modulePaths();
   if (ClSummaryAction != PassSummaryAction::Import &&
-      ModPaths.find(ModuleSummaryIndex::getRegularLTOModuleName()) ==
-          ModPaths.end())
+      !ModPaths.contains(ModuleSummaryIndex::getRegularLTOModuleName()))
     return createStringError(
         errc::invalid_argument,
         "combined summary should contain Regular LTO module");

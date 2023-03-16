@@ -1311,8 +1311,8 @@ SelectionDAG::SelectionDAG(const TargetMachine &tm, CodeGenOpt::Level OL)
 void SelectionDAG::init(MachineFunction &NewMF,
                         OptimizationRemarkEmitter &NewORE, Pass *PassPtr,
                         const TargetLibraryInfo *LibraryInfo,
-                        LegacyDivergenceAnalysis *Divergence,
-                        ProfileSummaryInfo *PSIin, BlockFrequencyInfo *BFIin,
+                        UniformityInfo *NewUA, ProfileSummaryInfo *PSIin,
+                        BlockFrequencyInfo *BFIin,
                         FunctionVarLocs const *VarLocs) {
   MF = &NewMF;
   SDAGISelPass = PassPtr;
@@ -1321,7 +1321,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
   TSI = getSubtarget().getSelectionDAGInfo();
   LibInfo = LibraryInfo;
   Context = &MF->getFunction().getContext();
-  DA = Divergence;
+  UA = NewUA;
   PSI = PSIin;
   BFI = BFIin;
   FnVarLocs = VarLocs;
@@ -2175,7 +2175,7 @@ SDValue SelectionDAG::getRegister(unsigned RegNo, EVT VT) {
     return SDValue(E, 0);
 
   auto *N = newSDNode<RegisterSDNode>(RegNo, VT);
-  N->SDNodeBits.IsDivergent = TLI->isSDNodeSourceOfDivergence(N, FLI, DA);
+  N->SDNodeBits.IsDivergent = TLI->isSDNodeSourceOfDivergence(N, FLI, UA);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -10659,11 +10659,11 @@ public:
 
 bool SelectionDAG::calculateDivergence(SDNode *N) {
   if (TLI->isSDNodeAlwaysUniform(N)) {
-    assert(!TLI->isSDNodeSourceOfDivergence(N, FLI, DA) &&
+    assert(!TLI->isSDNodeSourceOfDivergence(N, FLI, UA) &&
            "Conflicting divergence information!");
     return false;
   }
-  if (TLI->isSDNodeSourceOfDivergence(N, FLI, DA))
+  if (TLI->isSDNodeSourceOfDivergence(N, FLI, UA))
     return true;
   for (const auto &Op : N->ops()) {
     if (Op.Val.getValueType() != MVT::Other && Op.getNode()->isDivergent())
@@ -11036,6 +11036,12 @@ SDValue llvm::peekThroughOneUseBitcasts(SDValue V) {
 
 SDValue llvm::peekThroughExtractSubvectors(SDValue V) {
   while (V.getOpcode() == ISD::EXTRACT_SUBVECTOR)
+    V = V.getOperand(0);
+  return V;
+}
+
+SDValue llvm::peekThroughTruncates(SDValue V) {
+  while (V.getOpcode() == ISD::TRUNCATE)
     V = V.getOperand(0);
   return V;
 }
@@ -12158,7 +12164,7 @@ void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
   Node->NumOperands = Vals.size();
   Node->OperandList = Ops;
   if (!TLI->isSDNodeAlwaysUniform(Node)) {
-    IsDivergent |= TLI->isSDNodeSourceOfDivergence(Node, FLI, DA);
+    IsDivergent |= TLI->isSDNodeSourceOfDivergence(Node, FLI, UA);
     Node->SDNodeBits.IsDivergent = IsDivergent;
   }
   checkForCycles(Node);

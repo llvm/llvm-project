@@ -102,7 +102,7 @@ namespace utils {
     // N.B. libc might define some of the foo[64] identifiers using macros from
     // foo64 -> foo or vice versa.
 #if defined(_WIN32)
-    using off64_t = int64_t;
+    using off64_t = std::int64_t;
 #elif defined(__MVS__) || defined(__LP64__)
     using off64_t = ::off_t;
 #else

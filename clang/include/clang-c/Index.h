@@ -372,12 +372,18 @@ typedef struct CXIndexOptions {
    * \see clang_createIndex()
    */
   unsigned DisplayDiagnostics : 1;
-  unsigned /*Reserved*/ : 14;
+  /**
+   * Store PCH in memory. If zero, PCH are stored in temporary files.
+   */
+  unsigned StorePreamblesInMemory : 1;
+  unsigned /*Reserved*/ : 13;
 
   /**
    * The path to a directory, in which to store temporary PCH files. If null or
    * empty, the default system temporary directory is used. These PCH files are
    * deleted on clean exit but stay on disk if the program crashes or is killed.
+   *
+   * This option is ignored if \a StorePreamblesInMemory is non-zero.
    *
    * Libclang does not create the directory at the specified path in the file
    * system. Therefore it must exist, or storing PCH files will fail.
@@ -3029,17 +3035,25 @@ CINDEX_LINKAGE unsigned long long
 clang_getEnumConstantDeclUnsignedValue(CXCursor C);
 
 /**
- * Returns non-zero if a field declaration has a bit width expression.
- *
- * If the cursor does not reference a bit field declaration 0 is returned.
+ * Returns non-zero if the cursor specifies a Record member that is a bit-field.
  */
-CINDEX_LINKAGE unsigned clang_isBitFieldDecl(CXCursor C);
+CINDEX_LINKAGE unsigned clang_Cursor_isBitField(CXCursor C);
 
 /**
- * Retrieve the bit width of a bit field declaration as an integer.
+ * Retrieve the bit width of a bit-field declaration as an integer.
  *
- * If the cursor does not reference a bit field, or if the bit field's width
+ * If the cursor does not reference a bit-field, or if the bit-field's width
  * expression cannot be evaluated, -1 is returned.
+ *
+ * For example:
+ * \code
+ * if (clang_Cursor_isBitField(Cursor)) {
+ *   int Width = clang_getFieldDeclBitWidth(Cursor);
+ *   if (Width != -1) {
+ *     // The bit-field width is not value-dependent.
+ *   }
+ * }
+ * \endcode
  */
 CINDEX_LINKAGE int clang_getFieldDeclBitWidth(CXCursor C);
 
@@ -3667,12 +3681,6 @@ CINDEX_LINKAGE CXType clang_Type_getTemplateArgumentAsType(CXType T,
  * or non-C++ declarations, CXRefQualifier_None is returned.
  */
 CINDEX_LINKAGE enum CXRefQualifierKind clang_Type_getCXXRefQualifier(CXType T);
-
-/**
- * Returns non-zero if the cursor specifies a Record member that is a
- *   bitfield.
- */
-CINDEX_LINKAGE unsigned clang_Cursor_isBitField(CXCursor C);
 
 /**
  * Returns 1 if the base class specified by the cursor with kind

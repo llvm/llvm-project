@@ -83,67 +83,76 @@ function(_build_gpu_objects fq_target_name internal_target_name)
   )
 
   set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
+  set(common_compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
 
-  # The packaged version will be built for every target GPU architecture. We do
-  # this so we can support multiple accelerators on the same machine.
-  foreach(gpu_arch ${LIBC_GPU_ARCHITECTURES})
-    set(gpu_target_name ${fq_target_name}.${gpu_arch})
-    set(compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
-    # Derive the triple from the specified architecture.
-    if("${gpu_arch}" IN_LIST all_amdgpu_architectures)
-      set(gpu_target_triple "amdgcn-amd-amdhsa")
-      list(APPEND compile_options "-mcpu=${gpu_arch}")
-    elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
-      set(gpu_target_triple "nvptx64-nvidia-cuda")
-      list(APPEND compile_options "-march=${gpu_arch}")
-    else()
-      message(FATAL_ERROR "Unknown GPU architecture '${gpu_arch}'")
-    endif()
-    list(APPEND compile_options "--target=${gpu_target_triple}")
-    list(APPEND compile_options "-emit-llvm")
+  foreach(add_gpu_obj_src ${ADD_GPU_OBJ_SRCS})
+    # The packaged version will be built for every target GPU architecture. We do
+    # this so we can support multiple accelerators on the same machine.
+    foreach(gpu_arch ${LIBC_GPU_ARCHITECTURES})
+      get_filename_component(src_name ${add_gpu_obj_src} NAME)
+      set(gpu_target_name ${fq_target_name}.${src_name}.${gpu_arch})
+      set(compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
+      # Derive the triple from the specified architecture.
+      if("${gpu_arch}" IN_LIST all_amdgpu_architectures)
+        set(gpu_target_triple "amdgcn-amd-amdhsa")
+        list(APPEND compile_options "-mcpu=${gpu_arch}")
+      elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
+        set(gpu_target_triple "nvptx64-nvidia-cuda")
+        list(APPEND compile_options "-march=${gpu_arch}")
+      else()
+        message(FATAL_ERROR "Unknown GPU architecture '${gpu_arch}'")
+      endif()
+      list(APPEND compile_options "--target=${gpu_target_triple}")
+      list(APPEND compile_options "-emit-llvm")
 
-    # Build the library for this target architecture. We always emit LLVM-IR for
-    # packaged GPU binaries.
-    add_library(${gpu_target_name}
-      EXCLUDE_FROM_ALL
-      OBJECT
-      ${ADD_GPU_OBJ_SRCS}
-      ${ADD_GPU_OBJ_HDRS}
-    )
+      # Build the library for this target architecture. We always emit LLVM-IR for
+      # packaged GPU binaries.
+      add_library(${gpu_target_name}
+        EXCLUDE_FROM_ALL
+        OBJECT
+        ${add_gpu_obj_src}
+        ${ADD_GPU_OBJ_HDRS}
+      )
 
-    target_compile_options(${gpu_target_name} PRIVATE ${compile_options})
-    target_include_directories(${gpu_target_name} PRIVATE ${include_dirs})
-    target_compile_definitions(${gpu_target_name} PRIVATE LIBC_COPT_PUBLIC_PACKAGING)
-    if(ADD_GPU_OBJ_DEPENDS)
-      add_dependencies(${gpu_target_name} ${ADD_GPU_OBJ_DEPENDS})
-    endif()
+      target_compile_options(${gpu_target_name} PRIVATE ${compile_options})
+      target_include_directories(${gpu_target_name} PRIVATE ${include_dirs})
+      target_compile_definitions(${gpu_target_name} PRIVATE LIBC_COPT_PUBLIC_PACKAGING)
+      if(ADD_GPU_OBJ_DEPENDS)
+        add_dependencies(${gpu_target_name} ${ADD_GPU_OBJ_DEPENDS})
+      endif()
 
-    # Append this target to a list of images to package into a single binary.
-    set(input_file $<TARGET_OBJECTS:${gpu_target_name}>)
-    list(APPEND packager_images
-         --image=file=${input_file},arch=${gpu_arch},triple=${gpu_target_triple})
-    list(APPEND gpu_target_names ${gpu_target_name})
+      # Append this target to a list of images to package into a single binary.
+      set(input_file $<TARGET_OBJECTS:${gpu_target_name}>)
+      list(APPEND packager_images
+           --image=file=${input_file},arch=${gpu_arch},triple=${gpu_target_triple})
+      list(APPEND gpu_target_names ${gpu_target_name})
+    endforeach()
+
+    # After building the target for the desired GPUs we must package the output
+    # into a fatbinary, see https://clang.llvm.org/docs/OffloadingDesign.html for
+    # more information.
+    set(packaged_target_name ${fq_target_name}.${src_name}.__gpu__)
+    set(packaged_output_name ${CMAKE_CURRENT_BINARY_DIR}/${fq_target_name}.${src_name}.gpubin)
+
+    add_custom_command(OUTPUT ${packaged_output_name}
+                       COMMAND ${LIBC_CLANG_OFFLOAD_PACKAGER}
+                               ${packager_images} -o ${packaged_output_name}
+                       DEPENDS ${gpu_target_names} ${add_gpu_obj_src} ${ADD_GPU_OBJ_HDRS}
+                       COMMENT "Packaging LLVM offloading binary")
+    add_custom_target(${packaged_target_name} DEPENDS ${packaged_output_name})
+    list(APPEND packaged_gpu_names ${packaged_target_name})
+    list(APPEND packaged_gpu_binaries ${packaged_output_name})
   endforeach()
-
-  # After building the target for the desired GPUs we must package the output
-  # into a fatbinary, see https://clang.llvm.org/docs/OffloadingDesign.html for
-  # more information.
-  set(packaged_target_name ${fq_target_name}.__gpu__)
-  set(packaged_output_name ${CMAKE_CURRENT_BINARY_DIR}/${fq_target_name}.gpubin)
-
-  add_custom_command(OUTPUT ${packaged_output_name}
-                     COMMAND ${LIBC_CLANG_OFFLOAD_PACKAGER}
-                             ${packager_images} -o ${packaged_output_name}
-                     DEPENDS ${gpu_target_names} ${ADD_GPU_OBJ_SRCS} ${ADD_GPU_OBJ_HDRS}
-                     COMMENT "Packaging LLVM offloading binary")
-  add_custom_target(${packaged_target_name} DEPENDS ${packaged_output_name} ${gpu_target_name})
 
   # We create an empty 'stub' file for the host to contain the embedded device
   # code. This will be packaged into 'libcgpu.a'.
   # TODO: In the future we will want to combine every architecture for a target
   #       into a single bitcode file and use that. For now we simply build for
   #       every single one and let the offloading linker handle it.
-  get_filename_component(stub_filename ${ADD_GPU_OBJ_SRCS} NAME)
+  string(FIND ${fq_target_name} "." last_dot_loc REVERSE)
+  math(EXPR name_loc "${last_dot_loc} + 1")
+  string(SUBSTRING ${fq_target_name} ${name_loc} -1 target_name)
+  set(stub_filename "${target_name}.cpp")
   add_custom_command(
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}"
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/stubs/
@@ -161,11 +170,15 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     OBJECT
     ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}
   )
-  target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options}
-                         -nostdlib -Xclang -fembed-offload-object=${packaged_output_name})
+  target_compile_options(${fq_target_name} BEFORE PRIVATE
+                         ${common_compile_options} -nostdlib)
+  foreach(packaged_gpu_binary ${packaged_gpu_binaries})
+    target_compile_options(${fq_target_name} PRIVATE
+                           "SHELL:-Xclang -fembed-offload-object=${packaged_gpu_binary}")
+  endforeach()
   target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
-  add_dependencies(${fq_target_name} 
-                   ${full_deps_list} ${packaged_target_name} ${stub_target_name})
+  add_dependencies(${fq_target_name}
+                   ${full_deps_list} ${packaged_gpu_names} ${stub_target_name})
 
   # We only build the internal target for a single supported architecture.
   if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU OR

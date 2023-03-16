@@ -29,42 +29,42 @@ enum class _LIBCPP_ENUM_VIS chars_format
     general = fixed | scientific
 };
 
-inline _LIBCPP_INLINE_VISIBILITY constexpr chars_format
+inline _LIBCPP_HIDE_FROM_ABI constexpr chars_format
 operator~(chars_format __x) {
-  return chars_format(~_VSTD::__to_underlying(__x));
+  return chars_format(~std::__to_underlying(__x));
 }
 
-inline _LIBCPP_INLINE_VISIBILITY constexpr chars_format
+inline _LIBCPP_HIDE_FROM_ABI constexpr chars_format
 operator&(chars_format __x, chars_format __y) {
-  return chars_format(_VSTD::__to_underlying(__x) &
-                      _VSTD::__to_underlying(__y));
+  return chars_format(std::__to_underlying(__x) &
+                      std::__to_underlying(__y));
 }
 
-inline _LIBCPP_INLINE_VISIBILITY constexpr chars_format
+inline _LIBCPP_HIDE_FROM_ABI constexpr chars_format
 operator|(chars_format __x, chars_format __y) {
-  return chars_format(_VSTD::__to_underlying(__x) |
-                      _VSTD::__to_underlying(__y));
+  return chars_format(std::__to_underlying(__x) |
+                      std::__to_underlying(__y));
 }
 
-inline _LIBCPP_INLINE_VISIBILITY constexpr chars_format
+inline _LIBCPP_HIDE_FROM_ABI constexpr chars_format
 operator^(chars_format __x, chars_format __y) {
-  return chars_format(_VSTD::__to_underlying(__x) ^
-                      _VSTD::__to_underlying(__y));
+  return chars_format(std::__to_underlying(__x) ^
+                      std::__to_underlying(__y));
 }
 
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14 chars_format&
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 chars_format&
 operator&=(chars_format& __x, chars_format __y) {
   __x = __x & __y;
   return __x;
 }
 
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14 chars_format&
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 chars_format&
 operator|=(chars_format& __x, chars_format __y) {
   __x = __x | __y;
   return __x;
 }
 
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14 chars_format&
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 chars_format&
 operator^=(chars_format& __x, chars_format __y) {
   __x = __x ^ __y;
   return __x;

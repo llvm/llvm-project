@@ -254,6 +254,7 @@ private:
   /// 270: r: ar + bi
   ///      i: ai - br
   NodePtr identifyAdd(Instruction *Real, Instruction *Imag);
+  NodePtr identifySymmetricOperation(Instruction *Real, Instruction *Imag);
 
   NodePtr identifyNode(Instruction *I, Instruction *J);
 
@@ -271,8 +272,6 @@ public:
   bool identifyNodes(Instruction *RootI);
 
   /// Perform the actual replacement of the underlying instruction graph.
-  /// Returns false if the deinterleaving operation should be cancelled for the
-  /// current graph.
   void replaceNodes();
 };
 
@@ -598,8 +597,16 @@ ComplexDeinterleavingGraph::identifyPartialMul(Instruction *Real,
        Rotation == ComplexDeinterleavingRotation::Rotation_270)
           ? CommonOperand
           : nullptr);
-  NodePtr CNode = identifyNodeWithImplicitAdd(
-      cast<Instruction>(CR), cast<Instruction>(CI), PartialMatch);
+
+  auto *CRInst = dyn_cast<Instruction>(CR);
+  auto *CIInst = dyn_cast<Instruction>(CI);
+
+  if (!CRInst || !CIInst) {
+    LLVM_DEBUG(dbgs() << "  - Common operands are not instructions.\n");
+    return nullptr;
+  }
+
+  NodePtr CNode = identifyNodeWithImplicitAdd(CRInst, CIInst, PartialMatch);
   if (!CNode) {
     LLVM_DEBUG(dbgs() << "  - No cnode identified\n");
     return nullptr;
@@ -696,6 +703,59 @@ static bool isInstructionPairMul(Instruction *A, Instruction *B) {
   return match(A, Pattern) && match(B, Pattern);
 }
 
+static bool isInstructionPotentiallySymmetric(Instruction *I) {
+  switch (I->getOpcode()) {
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::FNeg:
+    return true;
+  default:
+    return false;
+  }
+}
+
+ComplexDeinterleavingGraph::NodePtr
+ComplexDeinterleavingGraph::identifySymmetricOperation(Instruction *Real,
+                                                       Instruction *Imag) {
+  if (Real->getOpcode() != Imag->getOpcode())
+    return nullptr;
+
+  if (!isInstructionPotentiallySymmetric(Real) ||
+      !isInstructionPotentiallySymmetric(Imag))
+    return nullptr;
+
+  auto *R0 = dyn_cast<Instruction>(Real->getOperand(0));
+  auto *I0 = dyn_cast<Instruction>(Imag->getOperand(0));
+
+  if (!R0 || !I0)
+    return nullptr;
+
+  NodePtr Op0 = identifyNode(R0, I0);
+  NodePtr Op1 = nullptr;
+  if (Op0 == nullptr)
+    return nullptr;
+
+  if (Real->isBinaryOp()) {
+    auto *R1 = dyn_cast<Instruction>(Real->getOperand(1));
+    auto *I1 = dyn_cast<Instruction>(Imag->getOperand(1));
+    if (!R1 || !I1)
+      return nullptr;
+
+    Op1 = identifyNode(R1, I1);
+    if (Op1 == nullptr)
+      return nullptr;
+  }
+
+  auto Node = prepareCompositeNode(ComplexDeinterleavingOperation::Symmetric,
+                                   Real, Imag);
+  Node->addOperand(Op0);
+  if (Real->isBinaryOp())
+    Node->addOperand(Op1);
+
+  return submitCompositeNode(Node);
+}
+
 ComplexDeinterleavingGraph::NodePtr
 ComplexDeinterleavingGraph::identifyNode(Instruction *Real, Instruction *Imag) {
   LLVM_DEBUG(dbgs() << "identifyNode on " << *Real << " / " << *Imag << "\n");
@@ -788,8 +848,10 @@ ComplexDeinterleavingGraph::identifyNode(Instruction *Real, Instruction *Imag) {
     PlaceholderNode->ReplacementNode = RealShuffle->getOperand(0);
     return submitCompositeNode(PlaceholderNode);
   }
-  if (RealShuffle || ImagShuffle)
+  if (RealShuffle || ImagShuffle) {
+    LLVM_DEBUG(dbgs() << " - There's a shuffle where there shouldn't be.\n");
     return nullptr;
+  }
 
   auto *VTy = cast<FixedVectorType>(Real->getType());
   auto *NewVTy =
@@ -807,7 +869,10 @@ ComplexDeinterleavingGraph::identifyNode(Instruction *Real, Instruction *Imag) {
     return identifyAdd(Real, Imag);
   }
 
-  return nullptr;
+  auto Symmetric = identifySymmetricOperation(Real, Imag);
+  LLVM_DEBUG(if (Symmetric == nullptr) dbgs()
+             << "  - Not recognised as a valid pattern.\n");
+  return Symmetric;
 }
 
 bool ComplexDeinterleavingGraph::identifyNodes(Instruction *RootI) {
@@ -839,21 +904,53 @@ bool ComplexDeinterleavingGraph::identifyNodes(Instruction *RootI) {
   return RootNode != nullptr;
 }
 
+static Value *replaceSymmetricNode(ComplexDeinterleavingGraph::RawNodePtr Node,
+                                   Value *InputA, Value *InputB) {
+  Instruction *I = Node->Real;
+  if (I->isUnaryOp())
+    assert(!InputB &&
+           "Unary symmetric operations need one input, but two were provided.");
+  else if (I->isBinaryOp())
+    assert(InputB && "Binary symmetric operations need two inputs, only one "
+                     "was provided.");
+
+  IRBuilder<> B(I);
+
+  switch (I->getOpcode()) {
+  case Instruction::FNeg:
+    return B.CreateFNeg(InputA);
+  case Instruction::FAdd:
+    return B.CreateFAdd(InputA, InputB);
+  case Instruction::FSub:
+    return B.CreateFSub(InputA, InputB);
+  case Instruction::FMul:
+    return B.CreateFMul(InputA, InputB);
+  }
+
+  return nullptr;
+}
+
 Value *ComplexDeinterleavingGraph::replaceNode(
     ComplexDeinterleavingGraph::RawNodePtr Node) {
   if (Node->ReplacementNode)
     return Node->ReplacementNode;
 
   Value *Input0 = replaceNode(Node->Operands[0]);
-  Value *Input1 = replaceNode(Node->Operands[1]);
+  Value *Input1 =
+      Node->Operands.size() > 1 ? replaceNode(Node->Operands[1]) : nullptr;
   Value *Accumulator =
       Node->Operands.size() > 2 ? replaceNode(Node->Operands[2]) : nullptr;
 
-  assert(Input0->getType() == Input1->getType() &&
-         "Node inputs need to be of the same type");
+  if (Input1)
+    assert(Input0->getType() == Input1->getType() &&
+           "Node inputs need to be of the same type");
 
-  Node->ReplacementNode = TL->createComplexDeinterleavingIR(
-      Node->Real, Node->Operation, Node->Rotation, Input0, Input1, Accumulator);
+  if (Node->Operation == ComplexDeinterleavingOperation::Symmetric)
+    Node->ReplacementNode = replaceSymmetricNode(Node, Input0, Input1);
+  else
+    Node->ReplacementNode = TL->createComplexDeinterleavingIR(
+        Node->Real, Node->Operation, Node->Rotation, Input0, Input1,
+        Accumulator);
 
   assert(Node->ReplacementNode && "Target failed to create Intrinsic call.");
   NumComplexTransformations += 1;

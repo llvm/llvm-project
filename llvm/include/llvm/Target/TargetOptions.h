@@ -130,7 +130,7 @@ namespace llvm {
           HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
           GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
           EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
-          LowerGlobalDtorsViaCxaAtExit(false), DisableIntegratedAS(false),
+          DisableIntegratedAS(false),
           RelaxELFRelocations(true), FunctionSections(false),
           DataSections(false), IgnoreXCOFFVisibility(false),
           XCOFFTracebackTable(true), UniqueSectionNames(true),
@@ -246,10 +246,6 @@ namespace llvm {
     /// UseInitArray - Use .init_array instead of .ctors for static
     /// constructors.
     unsigned UseInitArray : 1;
-
-    /// Use __cxa_atexit to register global destructors; determines how
-    /// llvm.global_dtors is lowered.
-    unsigned LowerGlobalDtorsViaCxaAtExit : 1;
 
     /// Disable the integrated assembler.
     unsigned DisableIntegratedAS : 1;

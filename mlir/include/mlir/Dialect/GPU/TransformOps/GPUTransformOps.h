@@ -33,34 +33,35 @@ class DialectRegistry;
 namespace transform {
 namespace gpu {
 
-/// Searches `scf.forall` ops nested under `target` and maps each such
-/// op to GPU threads. Mapping is one-to-one and the induction variables of
-/// `scf.forall` are rewritten to gpu.thread_id according to the
-/// thread_dim_apping attribute. Sibling `scf.forall` are supported in
-/// which case, the union of the number of threads is computed and may result in
-/// predication. Dynamic, `scf.forall` trip counts are currently not
-/// supported. Dynamic block dim sizes are currently not supported.
-DiagnosedSilenceableFailure mapNestedForeachToThreadsImpl(
-    RewriterBase &rewriter, Operation *target,
-    const SmallVectorImpl<int64_t> &blockDim,
+/// Map the top level `scf.forall` op to GPU Thread Blocks.
+/// Mapping is one-to-one and the induction variables of `scf.forall` are
+/// rewritten to gpu.block_id according to the thread_dim_apping attribute.
+/// Dynamic, `scf.forall` trip counts are currently not supported.
+/// Dynamic block dim sizes are currently not supported.
+DiagnosedSilenceableFailure mapForallToBlocksImpl(
+    RewriterBase &rewriter, TransformOpInterface transformOp,
+    scf::ForallOp forallOp, SmallVectorImpl<int64_t> &gridDims,
+    const ArrayRef<DeviceMappingAttrInterface> &mappingAttributes,
     function_ref<void(RewriterBase &, scf::ForallOp, SmallVectorImpl<Value> &)>
-        threadIdGenerator,
-    bool syncAfterDistribute, std::optional<TransformOpInterface> transformOp,
-    const ArrayRef<DeviceMappingAttrInterface> &threadMappingAttributes);
+        blockIdGenerator);
 
-/// Maps the top level `scf.forall` op to GPU Thread Blocks. Mapping is
-/// one-to-one and the induction variables of `scf.forall` are rewritten
-/// to gpu.block_id according to the thread_dim_apping attribute. Dynamic,
-/// `scf.forall` trip counts are currently not supported. Dynamic block
-/// dim sizes are currently not supported.
-DiagnosedSilenceableFailure mapForeachToBlocksImpl(
-    RewriterBase &rewriter, scf::ForallOp forallOp,
+/// Search `scf.forall` ops nested under `target` and map each such op to GPU
+/// threads. Mapping is one-to-one and the induction variables of `scf.forall`
+/// are rewritten to gpu.thread_id according to the thread_dim_mapping
+/// attribute.
+/// Sibling `scf.forall` are supported in which case, the union of the number of
+/// threads is computed and may result in predication.
+/// Dynamic, `scf.forall` trip counts are currently not supported.
+/// Dynamic block dim sizes are currently not supported.
+DiagnosedSilenceableFailure mapNestedForallToThreadsImpl(
+    RewriterBase &rewriter, std::optional<TransformOpInterface> transformOp,
+    Operation *target, const SmallVectorImpl<int64_t> &kernelBlockDims,
+    bool syncAfterDistribute,
+    const ArrayRef<DeviceMappingAttrInterface> &threadMappingAttributes,
     function_ref<void(RewriterBase &, scf::ForallOp, SmallVectorImpl<Value> &)>
-        blockIdGenerator,
-    SmallVectorImpl<int64_t> &gridDims, TransformOpInterface transformOp,
-    const ArrayRef<DeviceMappingAttrInterface> &mappingAttributes);
+        threadIdGenerator);
 
-/// Finds the top level scf::ForallOp of given target.
+/// Find the unique top level scf::ForallOp within a given target op.
 DiagnosedSilenceableFailure
 findTopLevelForallOp(Operation *target, scf::ForallOp &topLevelForallOp,
                      TransformOpInterface transformOp);

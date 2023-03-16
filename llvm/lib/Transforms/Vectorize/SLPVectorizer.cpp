@@ -349,16 +349,16 @@ enum class UseMask {
 static SmallBitVector buildUseMask(int VF, ArrayRef<int> Mask,
                                    UseMask MaskArg) {
   SmallBitVector UseMask(VF, true);
-  for (auto P : enumerate(Mask)) {
-    if (P.value() == UndefMaskElem) {
+  for (auto [Idx, Value] : enumerate(Mask)) {
+    if (Value == UndefMaskElem) {
       if (MaskArg == UseMask::UndefsAsMask)
-        UseMask.reset(P.index());
+        UseMask.reset(Idx);
       continue;
     }
-    if (MaskArg == UseMask::FirstArg && P.value() < VF)
-      UseMask.reset(P.value());
-    else if (MaskArg == UseMask::SecondArg && P.value() >= VF)
-      UseMask.reset(P.value() - VF);
+    if (MaskArg == UseMask::FirstArg && Value < VF)
+      UseMask.reset(Value);
+    else if (MaskArg == UseMask::SecondArg && Value >= VF)
+      UseMask.reset(Value - VF);
   }
   return UseMask;
 }
@@ -3959,7 +3959,7 @@ bool clusterSortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
         return std::get<1>(X) < std::get<1>(Y);
       });
       int InitialOffset = std::get<1>(Vec[0]);
-      AnyConsecutive |= all_of(enumerate(Vec), [InitialOffset](auto &P) {
+      AnyConsecutive |= all_of(enumerate(Vec), [InitialOffset](const auto &P) {
         return std::get<1>(P.value()) == int(P.index()) + InitialOffset;
       });
     }
@@ -6629,7 +6629,8 @@ protected:
         Op = SV->getOperand(1);
     }
     if (auto *OpTy = dyn_cast<FixedVectorType>(Op->getType());
-        !OpTy || !isIdentityMask(Mask, OpTy, SinglePermute)) {
+        !OpTy || !isIdentityMask(Mask, OpTy, SinglePermute) ||
+        ShuffleVectorInst::isZeroEltSplatMask(Mask)) {
       if (IdentityOp) {
         V = IdentityOp;
         assert(Mask.size() == IdentityMask.size() &&
@@ -6661,6 +6662,8 @@ protected:
   static Value *createShuffle(Value *V1, Value *V2, ArrayRef<int> Mask,
                               ShuffleBuilderTy &Builder) {
     assert(V1 && "Expected at least one vector value.");
+    if (V2)
+      Builder.resizeToMatch(V1, V2);
     int VF = Mask.size();
     if (auto *FTy = dyn_cast<FixedVectorType>(V1->getType()))
       VF = FTy->getNumElements();
@@ -6748,6 +6751,15 @@ protected:
           CombinedMask1[I] = CombinedMask2[I] + (Op1 == Op2 ? 0 : VF);
         }
       }
+      const int Limit = CombinedMask1.size() * 2;
+      if (Op1 == Op2 && Limit == 2 * VF &&
+          all_of(CombinedMask1, [=](int Idx) { return Idx < Limit; }) &&
+          (ShuffleVectorInst::isIdentityMask(CombinedMask1) ||
+           (ShuffleVectorInst::isZeroEltSplatMask(CombinedMask1) &&
+            isa<ShuffleVectorInst>(Op1) &&
+            cast<ShuffleVectorInst>(Op1)->getShuffleMask() ==
+                ArrayRef(CombinedMask1))))
+        return Op1;
       return Builder.createShuffleVector(
           Op1, Op1 == Op2 ? PoisonValue::get(Op1->getType()) : Op2,
           CombinedMask1);
@@ -7158,37 +7170,85 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
   // Calculate cost difference from vectorizing set of GEPs.
   // Negative value means vectorizing is profitable.
   auto GetGEPCostDiff = [=](ArrayRef<Value *> Ptrs, Value *BasePtr) {
-    InstructionCost CostSavings = 0;
-    for (Value *V : Ptrs) {
-      if (V == BasePtr)
-        continue;
-      auto *Ptr = dyn_cast<GetElementPtrInst>(V);
-      // GEPs may contain just addresses without instructions, considered free.
-      // GEPs with all constant indices also considered to have zero cost.
-      if (!Ptr || Ptr->hasAllConstantIndices())
-        continue;
+    InstructionCost ScalarCost = 0;
+    InstructionCost VecCost = 0;
+    // Here we differentiate two cases: (1) when Ptrs represent a regular
+    // vectorization tree node (as they are pointer arguments of scattered
+    // loads) or (2) when Ptrs are the arguments of loads or stores being
+    // vectorized as plane wide unit-stride load/store since all the
+    // loads/stores are known to be from/to adjacent locations.
+    assert(E->State == TreeEntry::Vectorize &&
+           "Entry state expected to be Vectorize here.");
+    if (isa<LoadInst, StoreInst>(VL0)) {
+      // Case 2: estimate costs for pointer related costs when vectorizing to
+      // a wide load/store.
+      // Scalar cost is estimated as a set of pointers with known relationship
+      // between them.
+      // For vector code we will use BasePtr as argument for the wide load/store
+      // but we also need to account all the instructions which are going to
+      // stay in vectorized code due to uses outside of these scalar
+      // loads/stores.
+      ScalarCost = TTI->getPointersChainCost(
+          Ptrs, BasePtr, TTI::PointersChainInfo::getKnownUniformStrided(),
+          CostKind);
 
-      // Here we differentiate two cases: when GEPs represent a regular
-      // vectorization tree node (and hence vectorized) and when the set is
-      // arguments of a set of loads or stores being vectorized. In the former
-      // case all the scalar GEPs will be removed as a result of vectorization.
+      SmallVector<const Value *> PtrsRetainedInVecCode;
+      for (Value *V : Ptrs) {
+        if (V == BasePtr) {
+          PtrsRetainedInVecCode.push_back(V);
+          continue;
+        }
+        auto *Ptr = dyn_cast<GetElementPtrInst>(V);
+        // For simplicity assume Ptr to stay in vectorized code if it's not a
+        // GEP instruction. We don't care since it's cost considered free.
+        // TODO: We should check for any uses outside of vectorizable tree
+        // rather than just single use.
+        if (!Ptr || !Ptr->hasOneUse())
+          PtrsRetainedInVecCode.push_back(V);
+      }
+
+      if (PtrsRetainedInVecCode.size() == Ptrs.size()) {
+        // If all pointers stay in vectorized code then we don't have
+        // any savings on that.
+        LLVM_DEBUG(dumpTreeCosts(E, 0, ScalarCost, ScalarCost,
+                                 "Calculated GEPs cost for Tree"));
+        return InstructionCost{TTI::TCC_Free};
+      }
+      VecCost = TTI->getPointersChainCost(
+          PtrsRetainedInVecCode, BasePtr,
+          TTI::PointersChainInfo::getKnownNonUniformStrided(), CostKind);
+    } else {
+      // Case 1: Ptrs are the arguments of loads that we are going to transform
+      // into masked gather load intrinsic.
+      // All the scalar GEPs will be removed as a result of vectorization.
       // For any external uses of some lanes extract element instructions will
-      // be generated (which cost is estimated separately). For the latter case
-      // since the set of GEPs itself is not vectorized those used more than
-      // once will remain staying in vectorized code as well. So we should not
-      // count them as savings.
-      if (!Ptr->hasOneUse() && isa<LoadInst, StoreInst>(VL0))
-        continue;
+      // be generated (which cost is estimated separately).
+      TTI::PointersChainInfo PtrsInfo =
+          all_of(Ptrs,
+                 [](const Value *V) {
+                   auto *Ptr = dyn_cast<GetElementPtrInst>(V);
+                   return Ptr && !Ptr->hasAllConstantIndices();
+                 })
+              ? TTI::PointersChainInfo::getNonUniformStrided()
+              : TTI::PointersChainInfo::getKnownNonUniformStrided();
 
-      // TODO: it is target dependent, so need to implement and then use a TTI
-      // interface.
-      CostSavings += TTI->getArithmeticInstrCost(Instruction::Add,
-                                                 Ptr->getType(), CostKind);
+      ScalarCost = TTI->getPointersChainCost(Ptrs, BasePtr, PtrsInfo, CostKind);
+
+      // Remark: it not quite correct to use scalar GEP cost for a vector GEP,
+      // but it's not clear how to do that without having vector GEP arguments
+      // ready.
+      // Perhaps using just TTI::TCC_Free/TTI::TCC_Basic would be better option.
+      if (const auto *Base = dyn_cast<GetElementPtrInst>(BasePtr)) {
+        SmallVector<const Value *> Indices(Base->indices());
+        VecCost = TTI->getGEPCost(Base->getSourceElementType(),
+                                  Base->getPointerOperand(), Indices, CostKind);
+      }
     }
-    LLVM_DEBUG(dbgs() << "SLP: Calculated GEPs cost savings or Tree:\n";
-               E->dump());
-    LLVM_DEBUG(dbgs() << "SLP:     GEP cost saving = " << CostSavings << "\n");
-    return InstructionCost() - CostSavings;
+
+    LLVM_DEBUG(dumpTreeCosts(E, 0, VecCost, ScalarCost,
+                             "Calculated GEPs cost for Tree"));
+
+    return VecCost - ScalarCost;
   };
 
   switch (ShuffleOrOp) {
@@ -9294,44 +9354,6 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
     }
     return VecBase;
   };
-  auto CreateShuffle = [&](Value *V1, Value *V2, ArrayRef<int> Mask) {
-    unsigned VF1 = cast<FixedVectorType>(V1->getType())->getNumElements();
-    unsigned VF2 = cast<FixedVectorType>(V2->getType())->getNumElements();
-    unsigned VF = std::max(VF1, VF2);
-    if (VF1 != VF2) {
-      SmallVector<int> ExtMask(VF, UndefMaskElem);
-      std::iota(ExtMask.begin(), std::next(ExtMask.begin(), std::min(VF1, VF2)),
-                0);
-      if (VF1 < VF2) {
-        V1 = Builder.CreateShuffleVector(V1, ExtMask);
-        if (auto *I = dyn_cast<Instruction>(V1)) {
-          GatherShuffleExtractSeq.insert(I);
-          CSEBlocks.insert(I->getParent());
-        }
-      } else {
-        V2 = Builder.CreateShuffleVector(V2, ExtMask);
-        if (auto *I = dyn_cast<Instruction>(V2)) {
-          GatherShuffleExtractSeq.insert(I);
-          CSEBlocks.insert(I->getParent());
-        }
-      }
-    }
-    const int Limit = Mask.size() * 2;
-    if (V1 == V2 && Mask.size() == VF &&
-        all_of(Mask, [=](int Idx) { return Idx < Limit; }) &&
-        (ShuffleVectorInst::isIdentityMask(Mask) ||
-         (ShuffleVectorInst::isZeroEltSplatMask(Mask) &&
-          isa<ShuffleVectorInst>(V1) &&
-          cast<ShuffleVectorInst>(V1)->getShuffleMask() == Mask)))
-      return V1;
-    Value *Vec = V1 == V2 ? Builder.CreateShuffleVector(V1, Mask)
-                          : Builder.CreateShuffleVector(V1, V2, Mask);
-    if (auto *I = dyn_cast<Instruction>(Vec)) {
-      GatherShuffleExtractSeq.insert(I);
-      CSEBlocks.insert(I->getParent());
-    }
-    return Vec;
-  };
   auto NeedToDelay = [=](const TreeEntry *E,
                          ArrayRef<const TreeEntry *> Deps) -> Value * {
     // No need to delay emission if all deps are ready.
@@ -9438,28 +9460,20 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
         }
       }
       if (Vec2)
-        Vec1 = CreateShuffle(Vec1, Vec2, ExtractMask);
+        ShuffleBuilder.add(Vec1, Vec2, ExtractMask);
       else if (Vec1)
-        Vec1 = CreateShuffle(Vec1, Vec1, ExtractMask);
+        ShuffleBuilder.add(Vec1, ExtractMask);
       else
-        Vec1 = PoisonValue::get(
-            FixedVectorType::get(ScalarTy, GatheredScalars.size()));
+        ShuffleBuilder.add(PoisonValue::get(FixedVectorType::get(
+                               ScalarTy, GatheredScalars.size())),
+                           ExtractMask);
     }
     if (GatherShuffle) {
-      Vec = CreateShuffle(Entries.front()->VectorizedValue,
-                          Entries.back()->VectorizedValue, Mask);
-      if (Vec1) {
-        // Build final mask.
-        for (auto [I, Idx] : enumerate(Mask)) {
-          if (ExtractMask[I] != UndefMaskElem)
-            Idx = I;
-          else if (Idx != UndefMaskElem)
-            Idx = I + VF;
-        }
-        Vec = CreateShuffle(Vec1, Vec, Mask);
-      }
-    } else {
-      Vec = Vec1;
+      if (Entries.size() == 1)
+        ShuffleBuilder.add(Entries.front()->VectorizedValue, Mask);
+      else
+        ShuffleBuilder.add(Entries.front()->VectorizedValue,
+                           Entries.back()->VectorizedValue, Mask);
     }
   } else if (!allConstant(E->Scalars)) {
     // TODO: remove this code once able to combine shuffled vectors and build
@@ -9555,12 +9569,13 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
     }
     // Gather unique scalars and all constants.
     Vec = gather(GatheredScalars);
+    ShuffleBuilder.add(Vec, ReuseMask);
   } else {
     // Gather all constants.
     Vec = gather(E->Scalars);
+    ShuffleBuilder.add(Vec, ReuseMask);
   }
 
-  ShuffleBuilder.add(Vec, ReuseMask);
   Vec = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
   if (NeedFreeze)
     Vec = Builder.CreateFreeze(Vec);

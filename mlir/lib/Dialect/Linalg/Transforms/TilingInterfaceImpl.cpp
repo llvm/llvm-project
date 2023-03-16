@@ -192,7 +192,7 @@ struct LinalgOpTilingInterface
     }
     for (const auto &resultExpr : llvm::enumerate(indexingMap.getResults())) {
       unsigned dimPosition =
-          resultExpr.value().cast<AffineDimExpr>().getPosition();
+          resultExpr.value().template cast<AffineDimExpr>().getPosition();
       iterationTileOffsets[dimPosition] = offsets[resultExpr.index()];
       iterationTileSizes[dimPosition] = sizes[resultExpr.index()];
     }
@@ -314,7 +314,7 @@ struct LinalgOpPartialReductionInterface
     AffineMap oldOutputMap =
         linalgOp.getMatchingIndexingMap(linalgOp.getDpsInitOperand(0));
     SmallVector<AffineExpr> outputExpr;
-    for (auto &[idx, expr] : llvm::enumerate(oldOutputMap.getResults())) {
+    for (auto [idx, expr] : llvm::enumerate(oldOutputMap.getResults())) {
       if (static_cast<int64_t>(idx) == insertSplitDimension) {
         outputExpr.push_back(b.getAffineDimExpr(reductionDims[0]));
       }

@@ -10,10 +10,10 @@
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/Instructions.h"
 #include <cmath>
 #include <optional>
 using namespace llvm;
@@ -261,21 +261,22 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       if (Mask.size() >= 2 && LT.second.isFixedLengthVector()) {
         MVT EltTp = LT.second.getVectorElementType();
         // If the size of the element is < ELEN then shuffles of interleaves and
-        // deinterleaves of 2 vectors can be lowered into the following sequences
+        // deinterleaves of 2 vectors can be lowered into the following
+        // sequences
         if (EltTp.getScalarSizeInBits() < ST->getELEN()) {
           auto InterleaveMask = createInterleaveMask(Mask.size() / 2, 2);
           // Example sequence:
-          //   vsetivli	zero, 4, e8, mf4, ta, ma (ignored)
-          //   vwaddu.vv	v10, v8, v9
-          //   li		a0, -1                   (ignored)
-          //   vwmaccu.vx	v10, a0, v9
-          if (equal(InterleaveMask, Mask))
+          //   vsetivli     zero, 4, e8, mf4, ta, ma (ignored)
+          //   vwaddu.vv    v10, v8, v9
+          //   li       a0, -1                   (ignored)
+          //   vwmaccu.vx   v10, a0, v9
+          if (ShuffleVectorInst::isInterleaveMask(Mask, 2, Mask.size() * 2))
             return 2 * LT.first * getLMULCost(LT.second);
 
           if (Mask[0] == 0 || Mask[0] == 1) {
             auto DeinterleaveMask = createStrideMask(Mask[0], 2, Mask.size());
             // Example sequence:
-            //   vnsrl.wi	v10, v8, 0
+            //   vnsrl.wi   v10, v8, 0
             if (equal(DeinterleaveMask, Mask))
               return LT.first * getLMULCost(LT.second);
           }
@@ -333,7 +334,12 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // TODO: Multiplying by LT.first implies this legalizes into multiple copies
     // of similar code, but I think we expand through memory.
     return 2 * LT.first * getLMULCost(LT.second);
-  case TTI::SK_Reverse:
+  case TTI::SK_Reverse: {
+    // TODO: Cases to improve here:
+    // * LMUL > 1
+    // * i64 on RV32
+    // * i1 vector
+
     // Most of the cost here is producing the vrgather index register
     // Example sequence:
     //   csrr a0, vlenb
@@ -343,10 +349,15 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     //   vid.v v9
     //   vrsub.vx v10, v9, a0
     //   vrgather.vv v9, v8, v10
+    unsigned LenCost = 3;
+    if (LT.second.isFixedLengthVector())
+      // vrsub.vi has a 5 bit immediate field, otherwise an li suffices
+      LenCost = isInt<5>(LT.second.getVectorNumElements() - 1) ? 0 : 1;
     if (Tp->getElementType()->isIntegerTy(1))
       // Mask operation additionally required extend and truncate
-      return LT.first * 9;
-    return LT.first * 6;
+      return LT.first * (LenCost + 6);
+    return LT.first * (LenCost + 3);
+  }
   }
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
 }
@@ -865,7 +876,9 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::sadd_sat:
   case Intrinsic::ssub_sat:
   case Intrinsic::uadd_sat:
-  case Intrinsic::usub_sat: {
+  case Intrinsic::usub_sat:
+  case Intrinsic::fabs:
+  case Intrinsic::sqrt: {
     auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector())
       return LT.first;
@@ -878,13 +891,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       // vmax.vv v8, v8, v10
       return LT.first * 2;
     }
-    break;
-  }
-  case Intrinsic::fabs:
-  case Intrinsic::sqrt: {
-    auto LT = getTypeLegalizationCost(RetTy);
-    if (ST->hasVInstructions() && LT.second.isVector())
-      return LT.first;
     break;
   }
   // TODO: add more intrinsic

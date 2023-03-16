@@ -12,7 +12,7 @@ define double @test() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP3]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x double> [[TMP6]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = fsub <2 x double> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP7]], zeroinitializer

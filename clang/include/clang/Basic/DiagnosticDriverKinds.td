@@ -716,4 +716,7 @@ def err_drv_riscv_unsupported_with_linker_relaxation : Error<
 
 def err_drv_loongarch_invalid_mfpu_EQ : Error<
   "invalid argument '%0' to -mfpu=; must be one of: 64, 32, none, 0 (alias for none)">;
+
+def err_drv_expand_response_file : Error<
+  "failed to expand response file: %0">;
 }

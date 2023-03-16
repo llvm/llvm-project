@@ -105,7 +105,7 @@ void Flang::addTargetOptions(const ArgList &Args,
   default:
     break;
   case llvm::Triple::aarch64:
-    [[fallthrough]];
+  case llvm::Triple::riscv64:
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     break;

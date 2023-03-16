@@ -1529,14 +1529,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return IntegerType::get(*MS.C, TypeSize);
   }
 
-  /// Flatten a vector type.
-  Type *getShadowTyNoVec(Type *ty) {
-    if (VectorType *vt = dyn_cast<VectorType>(ty))
-      return IntegerType::get(*MS.C,
-                              vt->getPrimitiveSizeInBits().getFixedValue());
-    return ty;
-  }
-
   /// Extract combined shadow of struct elements as a bool
   Value *collapseStructShadow(StructType *Struct, Value *Shadow,
                               IRBuilder<> &IRB) {
@@ -1546,8 +1538,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     for (unsigned Idx = 0; Idx < Struct->getNumElements(); Idx++) {
       // Combine by ORing together each element's bool shadow
       Value *ShadowItem = IRB.CreateExtractValue(Shadow, Idx);
-      Value *ShadowInner = convertShadowToScalar(ShadowItem, IRB);
-      Value *ShadowBool = convertToBool(ShadowInner, IRB);
+      Value *ShadowBool = convertToBool(ShadowItem, IRB);
 
       if (Aggregator != FalseVal)
         Aggregator = IRB.CreateOr(Aggregator, ShadowBool);
@@ -1583,11 +1574,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       return collapseStructShadow(Struct, V, IRB);
     if (ArrayType *Array = dyn_cast<ArrayType>(V->getType()))
       return collapseArrayShadow(Array, V, IRB);
-    Type *Ty = V->getType();
-    Type *NoVecTy = getShadowTyNoVec(Ty);
-    if (Ty == NoVecTy)
-      return V;
-    return IRB.CreateBitCast(V, NoVecTy);
+    if (isa<VectorType>(V->getType())) {
+      unsigned BitWidth =
+        V->getType()->getPrimitiveSizeInBits().getFixedValue();
+      return IRB.CreateBitCast(V, IntegerType::get(*MS.C, BitWidth));
+    }
+    return V;
   }
 
   // Convert a scalar value to an i1 by comparing with 0
@@ -2372,9 +2364,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           Constant *ConstOrigin = dyn_cast<Constant>(OpOrigin);
           // No point in adding something that might result in 0 origin value.
           if (!ConstOrigin || !ConstOrigin->isNullValue()) {
-            Value *FlatShadow = MSV->convertShadowToScalar(OpShadow, IRB);
-            Value *Cond =
-                IRB.CreateICmpNE(FlatShadow, MSV->getCleanShadow(FlatShadow));
+            Value *Cond = MSV->convertToBool(OpShadow, IRB);
             Origin = IRB.CreateSelect(Cond, OpOrigin, Origin);
           }
         }
@@ -3525,8 +3515,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *MaskedPassThruShadow = IRB.CreateAnd(
         getShadow(PassThru), IRB.CreateSExt(IRB.CreateNeg(Mask), ShadowTy));
 
-    Value *ConvertedShadow = convertShadowToScalar(MaskedPassThruShadow, IRB);
-    Value *NotNull = convertToBool(ConvertedShadow, IRB, "_mscmp");
+    Value *NotNull = convertToBool(MaskedPassThruShadow, IRB, "_mscmp");
 
     Value *PtrOrigin = IRB.CreateLoad(MS.OriginTy, OriginPtr);
     Value *Origin = IRB.CreateSelect(NotNull, getOrigin(PassThru), PtrOrigin);
@@ -4396,11 +4385,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // Origins are always i32, so any vector conditions must be flattened.
       // FIXME: consider tracking vector origins for app vectors?
       if (B->getType()->isVectorTy()) {
-        Type *FlatTy = getShadowTyNoVec(B->getType());
-        B = IRB.CreateICmpNE(IRB.CreateBitCast(B, FlatTy),
-                             ConstantInt::getNullValue(FlatTy));
-        Sb = IRB.CreateICmpNE(IRB.CreateBitCast(Sb, FlatTy),
-                              ConstantInt::getNullValue(FlatTy));
+        B = convertToBool(B, IRB);
+        Sb = convertToBool(Sb, IRB);
       }
       // a = select b, c, d
       // Oa = Sb ? Ob : (b ? Oc : Od)

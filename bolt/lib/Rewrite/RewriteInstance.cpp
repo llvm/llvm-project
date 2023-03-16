@@ -4064,6 +4064,13 @@ void RewriteInstance::mapAllocatableSections(RuntimeDyld &RTDyld) {
   // Allocate read-only sections first, then writable sections.
   enum : uint8_t { ST_READONLY, ST_READWRITE };
   for (uint8_t SType = ST_READONLY; SType <= ST_READWRITE; ++SType) {
+    const uint64_t LastNextAvailableAddress = NextAvailableAddress;
+    if (SType == ST_READWRITE) {
+      // Align R+W segment to regular page size
+      NextAvailableAddress = alignTo(NextAvailableAddress, BC->RegularPageSize);
+      NewWritableSegmentAddress = NextAvailableAddress;
+    }
+
     for (BinarySection &Section : BC->allocatableSections()) {
       if (!Section.hasValidSectionID())
         continue;
@@ -4110,6 +4117,21 @@ void RewriteInstance::mapAllocatableSections(RuntimeDyld &RTDyld) {
         NextAvailableAddress += Section.getOutputSize();
       }
     }
+
+    if (SType == ST_READONLY) {
+      if (PHDRTableAddress) {
+        // Segment size includes the size of the PHDR area.
+        NewTextSegmentSize = NextAvailableAddress - PHDRTableAddress;
+      } else {
+        // Existing PHDR table would be updated.
+        NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
+      }
+    } else if (SType == ST_READWRITE) {
+      NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
+      // Restore NextAvailableAddress if no new writable sections
+      if (!NewWritableSegmentSize)
+        NextAvailableAddress = LastNextAvailableAddress;
+    }
   }
 }
 
@@ -4130,16 +4152,32 @@ void RewriteInstance::patchELFPHDRTable() {
   // Write/re-write program headers.
   Phnum = Obj.getHeader().e_phnum;
   if (PHDRTableOffset) {
-    // Writing new pheader table.
-    Phnum += 1; // only adding one new segment
-    // Segment size includes the size of the PHDR area.
-    NewTextSegmentSize = NextAvailableAddress - PHDRTableAddress;
+    // Writing new pheader table and adding one new entry for R+X segment.
+    Phnum += 1;
+    if (NewWritableSegmentSize) {
+      // Adding one more entry for R+W segment.
+      Phnum += 1;
+    }
   } else {
     assert(!PHDRTableAddress && "unexpected address for program header table");
-    // Update existing table.
     PHDRTableOffset = Obj.getHeader().e_phoff;
-    NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
+    if (NewWritableSegmentSize) {
+      errs() << "Unable to add writable segment with UseGnuStack option\n";
+      exit(1);
+    }
   }
+
+  // NOTE Currently .eh_frame_hdr appends to the last segment, recalculate
+  // last segments size based on the NextAvailableAddress variable.
+  if (!NewWritableSegmentSize) {
+    if (PHDRTableAddress)
+      NewTextSegmentSize = NextAvailableAddress - PHDRTableAddress;
+    else
+      NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
+  } else {
+    NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
+  }
+
   OS.seek(PHDRTableOffset);
 
   bool ModdedGnuStack = false;
@@ -4171,6 +4209,19 @@ void RewriteInstance::patchELFPHDRTable() {
     return NewPhdr;
   };
 
+  auto createNewWritableSectionsPhdr = [&]() {
+    ELF64LEPhdrTy NewPhdr;
+    NewPhdr.p_type = ELF::PT_LOAD;
+    NewPhdr.p_offset = getFileOffsetForAddress(NewWritableSegmentAddress);
+    NewPhdr.p_vaddr = NewWritableSegmentAddress;
+    NewPhdr.p_paddr = NewWritableSegmentAddress;
+    NewPhdr.p_filesz = NewWritableSegmentSize;
+    NewPhdr.p_memsz = NewWritableSegmentSize;
+    NewPhdr.p_align = BC->RegularPageSize;
+    NewPhdr.p_flags = ELF::PF_R | ELF::PF_W;
+    return NewPhdr;
+  };
+
   // Copy existing program headers with modifications.
   for (const ELF64LE::Phdr &Phdr : cantFail(Obj.program_headers())) {
     ELF64LE::Phdr NewPhdr = Phdr;
@@ -4199,6 +4250,11 @@ void RewriteInstance::patchELFPHDRTable() {
       ELF64LE::Phdr NewTextPhdr = createNewTextPhdr();
       OS.write(reinterpret_cast<const char *>(&NewTextPhdr),
                sizeof(NewTextPhdr));
+      if (NewWritableSegmentSize) {
+        ELF64LEPhdrTy NewWritablePhdr = createNewWritableSectionsPhdr();
+        OS.write(reinterpret_cast<const char *>(&NewWritablePhdr),
+                 sizeof(NewWritablePhdr));
+      }
       AddedSegment = true;
     }
     OS.write(reinterpret_cast<const char *>(&NewPhdr), sizeof(NewPhdr));
@@ -4208,6 +4264,11 @@ void RewriteInstance::patchELFPHDRTable() {
     // Append the new header to the end of the table.
     ELF64LE::Phdr NewTextPhdr = createNewTextPhdr();
     OS.write(reinterpret_cast<const char *>(&NewTextPhdr), sizeof(NewTextPhdr));
+    if (NewWritableSegmentSize) {
+      ELF64LEPhdrTy NewWritablePhdr = createNewWritableSectionsPhdr();
+      OS.write(reinterpret_cast<const char *>(&NewWritablePhdr),
+               sizeof(NewWritablePhdr));
+    }
   }
 
   assert((!opts::UseGnuStack || ModdedGnuStack) &&

@@ -1300,7 +1300,7 @@ public:
     auto Scalars = InstsToScalarize.find(VF);
     assert(Scalars != InstsToScalarize.end() &&
            "VF not yet analyzed for scalarization profitability");
-    return Scalars->second.find(I) != Scalars->second.end();
+    return Scalars->second.contains(I);
   }
 
   /// Returns true if \p I is known to be uniform after vectorization.
@@ -1344,7 +1344,7 @@ public:
   /// \returns True if instruction \p I can be truncated to a smaller bitwidth
   /// for vectorization factor \p VF.
   bool canTruncateToMinimalBitwidth(Instruction *I, ElementCount VF) const {
-    return VF.isVector() && MinBWs.find(I) != MinBWs.end() &&
+    return VF.isVector() && MinBWs.contains(I) &&
            !isProfitableToScalarize(I, VF) &&
            !isScalarAfterVectorization(I, VF);
   }
@@ -1447,7 +1447,7 @@ public:
   /// that may be vectorized as interleave, gather-scatter or scalarized.
   void collectUniformsAndScalars(ElementCount VF) {
     // Do the analysis once.
-    if (VF.isScalar() || Uniforms.find(VF) != Uniforms.end())
+    if (VF.isScalar() || Uniforms.contains(VF))
       return;
     setCostBasedWideningDecision(VF);
     collectLoopUniforms(VF);
@@ -1831,8 +1831,7 @@ private:
     // the scalars are collected. That should be a safe assumption in most
     // cases, because we check if the operands have vectorizable types
     // beforehand in LoopVectorizationLegality.
-    return Scalars.find(VF) == Scalars.end() ||
-           !isScalarAfterVectorization(I, VF);
+    return !Scalars.contains(VF) || !isScalarAfterVectorization(I, VF);
   };
 
   /// Returns a range containing only operands needing to be extracted.
@@ -6189,8 +6188,7 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
   // instructions to scalarize, there's nothing to do. Collection may already
   // have occurred if we have a user-selected VF and are now computing the
   // expected cost for interleaving.
-  if (VF.isScalar() || VF.isZero() ||
-      InstsToScalarize.find(VF) != InstsToScalarize.end())
+  if (VF.isScalar() || VF.isZero() || InstsToScalarize.contains(VF))
     return;
 
   // Initialize a mapping for VF in InstsToScalalarize. If we find that it's
@@ -6279,7 +6277,7 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
     Instruction *I = Worklist.pop_back_val();
 
     // If we've already analyzed the instruction, there's nothing to do.
-    if (ScalarCosts.find(I) != ScalarCosts.end())
+    if (ScalarCosts.contains(I))
       continue;
 
     // Compute the cost of the vector instruction. Note that this cost already

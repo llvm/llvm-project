@@ -349,20 +349,10 @@ inline static bool isValidRoundingMode(unsigned Mode) {
 namespace RISCVLoadFPImm {
 float getFPImm(unsigned Imm);
 
-/// getLoadFP32Imm - Return a 5-bit binary encoding of the 32-bit
-/// floating-point immediate value. If the value cannot be represented as a
-/// 5-bit binary encoding, then return -1.
-int getLoadFP32Imm(const APFloat &FPImm);
-
-/// getLoadFP64Imm - Return a 5-bit binary encoding of the 64-bit
-/// floating-point immediate value. If the value cannot be represented as a
-/// 5-bit binary encoding, then return -1.
-int getLoadFP64Imm(const APFloat &FPImm);
-
-/// getLoadFP16Imm - Return a 5-bit binary encoding of the 16-bit
-/// floating-point immediate value. If the value cannot be represented as a
-/// 5-bit binary encoding, then return -1.
-int getLoadFP16Imm(const APFloat &FPImm);
+/// getLoadFPImm - Return a 5-bit binary encoding of the floating-point
+/// immediate value. If the value cannot be represented as a 5-bit binary
+/// encoding, then return -1.
+int getLoadFPImm(APFloat FPImm);
 } // namespace RISCVLoadFPImm
 
 namespace RISCVSysReg {

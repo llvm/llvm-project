@@ -52,6 +52,20 @@ SmallVector<Value> mlir::tensor::createDynamicDimValues(OpBuilder &b,
   return dynamicDims;
 }
 
+FailureOr<OpFoldResult> mlir::tensor::createDimValue(OpBuilder &b, Location loc,
+                                                     Value rankedTensor,
+                                                     int64_t dim) {
+  auto tensorTy = rankedTensor.getType().dyn_cast<RankedTensorType>();
+  if (!tensorTy)
+    return failure();
+  auto shape = tensorTy.getShape();
+  if (dim >= static_cast<int64_t>(shape.size()))
+    return failure();
+  if (ShapedType::isDynamic(shape[dim]))
+    return OpFoldResult(b.createOrFold<tensor::DimOp>(loc, rankedTensor, dim));
+  return OpFoldResult(b.getIndexAttr(shape[dim]));
+}
+
 SmallVector<OpFoldResult>
 mlir::tensor::createDimValues(OpBuilder &b, Location loc, Value rankedTensor) {
   auto tensorTy = rankedTensor.getType().cast<RankedTensorType>();

@@ -31,7 +31,7 @@ using namespace mlir::vector;
 static SmallVector<int64_t> getVectorOffset(ArrayRef<int64_t> ratioStrides,
                                             int64_t index,
                                             ArrayRef<int64_t> targetShape) {
-  return computeElementwiseMul(delinearize(ratioStrides, index), targetShape);
+  return computeElementwiseMul(delinearize(index, ratioStrides), targetShape);
 }
 
 /// A functor that accomplishes the same thing as `getVectorOffset` but
@@ -628,7 +628,7 @@ struct UnrollTransposePattern : public OpRewritePattern<vector::TransposeOp> {
       SmallVector<int64_t> permutedOffsets(elementOffsets.size());
       SmallVector<int64_t> permutedShape(elementOffsets.size());
       // Compute the source offsets and shape.
-      for (auto &indices : llvm::enumerate(permutation)) {
+      for (auto indices : llvm::enumerate(permutation)) {
         permutedOffsets[indices.value()] = elementOffsets[indices.index()];
         permutedShape[indices.value()] = (*targetShape)[indices.index()];
       }

@@ -337,7 +337,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       const BinaryBasicBlock *Pred;
       std::tie(Pred, BB) = Stack.top();
       Stack.pop();
-      if (VisitedSet.find(BB) != VisitedSet.end())
+      if (llvm::is_contained(VisitedSet, BB))
         continue;
 
       VisitedSet.insert(BB);
@@ -405,7 +405,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       }
       if (TargetFunc) {
         // Do not instrument edges in the spanning tree
-        if (STOutSet[&BB].find(TargetBB) != STOutSet[&BB].end()) {
+        if (llvm::is_contained(STOutSet[&BB], TargetBB)) {
           auto L = BC.scopeLock();
           createEdgeDescription(*FuncDesc, Function, FromOffset, BBToID[&BB],
                                 Function, ToOffset, BBToID[TargetBB],
@@ -422,7 +422,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       if (IsJumpTable) {
         for (BinaryBasicBlock *&Succ : BB.successors()) {
           // Do not instrument edges in the spanning tree
-          if (STOutSet[&BB].find(&*Succ) != STOutSet[&BB].end()) {
+          if (llvm::is_contained(STOutSet[&BB], &*Succ)) {
             auto L = BC.scopeLock();
             createEdgeDescription(*FuncDesc, Function, FromOffset, BBToID[&BB],
                                   Function, Succ->getInputOffset(),
@@ -465,7 +465,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       FromOffset = *BC.MIB->getOffset(*LastInstr);
 
       // Do not instrument edges in the spanning tree
-      if (STOutSet[&BB].find(FTBB) != STOutSet[&BB].end()) {
+      if (llvm::is_contained(STOutSet[&BB], FTBB)) {
         auto L = BC.scopeLock();
         createEdgeDescription(*FuncDesc, Function, FromOffset, BBToID[&BB],
                               Function, FTBB->getInputOffset(), BBToID[FTBB],

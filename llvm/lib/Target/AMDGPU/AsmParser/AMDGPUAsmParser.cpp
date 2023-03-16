@@ -5263,10 +5263,10 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
 #undef PARSE_BITS_ENTRY
   }
 
-  if (Seen.find(".amdhsa_next_free_vgpr") == Seen.end())
+  if (!Seen.contains(".amdhsa_next_free_vgpr"))
     return TokError(".amdhsa_next_free_vgpr directive is required");
 
-  if (Seen.find(".amdhsa_next_free_sgpr") == Seen.end())
+  if (!Seen.contains(".amdhsa_next_free_sgpr"))
     return TokError(".amdhsa_next_free_sgpr directive is required");
 
   unsigned VGPRBlocks;
@@ -5304,7 +5304,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                   UserSGPRCount);
 
   if (isGFX90A()) {
-    if (Seen.find(".amdhsa_accum_offset") == Seen.end())
+    if (!Seen.contains(".amdhsa_accum_offset"))
       return TokError(".amdhsa_accum_offset directive is required");
     if (AccumOffset < 4 || AccumOffset > 256 || (AccumOffset & 3))
       return TokError("accum_offset should be in range [4..256] in "
@@ -5315,7 +5315,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                     (AccumOffset / 4 - 1));
   }
 
-  if (IVersion.Major == 10) {
+  if (IVersion.Major >= 10) {
     // SharedVGPRCount < 16 checked by PARSE_ENTRY_BITS
     if (SharedVGPRCount && EnableWavefrontSize32) {
       return TokError("shared_vgpr_count directive not valid on "

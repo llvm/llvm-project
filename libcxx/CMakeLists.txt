@@ -543,6 +543,11 @@ function(cxx_add_basic_build_flags target)
   # library.
   target_compile_definitions(${target} PRIVATE -D_LIBCPP_BUILDING_LIBRARY)
 
+  # Make sure the library can be build without transitive includes. This makes
+  # it easier to upgrade the library to a newer language standard without build
+  # errors.
+  target_compile_definitions(${target} PRIVATE -D_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
+
   if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
     target_compile_definitions(${target} PRIVATE -D_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS)
   endif()

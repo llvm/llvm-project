@@ -167,8 +167,9 @@ struct DependenceResult {
 
 DependenceResult checkMemrefAccessDependence(
     const MemRefAccess &srcAccess, const MemRefAccess &dstAccess,
-    unsigned loopDepth, FlatAffineValueConstraints *dependenceConstraints,
-    SmallVector<DependenceComponent, 2> *dependenceComponents,
+    unsigned loopDepth,
+    FlatAffineValueConstraints *dependenceConstraints = nullptr,
+    SmallVector<DependenceComponent, 2> *dependenceComponents = nullptr,
     bool allowRAR = false);
 
 /// Utility function that returns true if the provided DependenceResult

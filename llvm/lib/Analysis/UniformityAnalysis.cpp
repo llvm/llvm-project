@@ -78,6 +78,19 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::usesValueFromCycle(
   return false;
 }
 
+template <>
+bool llvm::GenericUniformityAnalysisImpl<SSAContext>::isDivergentUse(
+    const Use &U) const {
+  const auto *V = U.get();
+  if (isDivergent(V))
+    return true;
+  if (const auto *DefInstr = dyn_cast<Instruction>(V)) {
+    const auto *UseInstr = cast<Instruction>(U.getUser());
+    return isTemporalDivergent(*UseInstr->getParent(), *DefInstr);
+  }
+  return false;
+}
+
 // This ensures explicit instantiation of
 // GenericUniformityAnalysisImpl::ImplDeleter::operator()
 template class llvm::GenericUniformityInfo<SSAContext>;
@@ -122,6 +135,7 @@ UniformityInfoWrapperPass::UniformityInfoWrapperPass() : FunctionPass(ID) {
 INITIALIZE_PASS_BEGIN(UniformityInfoWrapperPass, "uniformity",
                       "Uniformity Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(UniformityInfoWrapperPass, "uniformity",
                     "Uniformity Analysis", true, true)
@@ -129,7 +143,7 @@ INITIALIZE_PASS_END(UniformityInfoWrapperPass, "uniformity",
 void UniformityInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequired<CycleInfoWrapperPass>();
+  AU.addRequiredTransitive<CycleInfoWrapperPass>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
 }
 

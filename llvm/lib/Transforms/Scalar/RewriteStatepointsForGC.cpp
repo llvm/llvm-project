@@ -695,7 +695,7 @@ static Value *findBaseDefiningValue(Value *I, DefiningValueMapTy &Cache,
 /// Returns the base defining value for this value.
 static Value *findBaseDefiningValueCached(Value *I, DefiningValueMapTy &Cache,
                                           IsKnownBaseMapTy &KnownBases) {
-  if (Cache.find(I) == Cache.end()) {
+  if (!Cache.contains(I)) {
     auto *BDV = findBaseDefiningValue(I, Cache, KnownBases);
     Cache[I] = BDV;
     LLVM_DEBUG(dbgs() << "fBDV-cached: " << I->getName() << " -> "
