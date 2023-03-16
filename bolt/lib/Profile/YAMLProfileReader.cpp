@@ -285,10 +285,10 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
 
 bool YAMLProfileReader::mayHaveProfileData(const BinaryFunction &BF) {
   for (StringRef Name : BF.getNames()) {
-    if (ProfileNameToProfile.find(Name) != ProfileNameToProfile.end())
+    if (ProfileNameToProfile.contains(Name))
       return true;
     if (const std::optional<StringRef> CommonName = getLTOCommonName(Name)) {
-      if (LTOCommonNameMap.find(*CommonName) != LTOCommonNameMap.end())
+      if (LTOCommonNameMap.contains(*CommonName))
         return true;
     }
   }

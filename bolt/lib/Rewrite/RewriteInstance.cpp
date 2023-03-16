@@ -5275,8 +5275,7 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
         NewRelA.r_offset = RelOffset;
         NewRelA.r_addend = Addend;
 
-        const bool IsJmpRel =
-            !!(IsJmpRelocation.find(Rel.Type) != IsJmpRelocation.end());
+        const bool IsJmpRel = IsJmpRelocation.contains(Rel.Type);
         uint64_t &Offset = IsJmpRel ? RelPltOffset : RelDynOffset;
         const uint64_t &EndOffset =
             IsJmpRel ? RelPltEndOffset : RelDynEndOffset;

@@ -1703,7 +1703,7 @@ void StaticMatcherHelper::populateStaticMatchers(raw_ostream &os) {
 
     std::string funcName =
         formatv("static_dag_matcher_{0}", staticMatcherCounter++);
-    assert(matcherNames.find(node) == matcherNames.end());
+    assert(!matcherNames.contains(node));
     PatternEmitter(dagInfo.second, &opMap, os, *this)
         .emitStaticMatcher(node, funcName);
     matcherNames[node] = funcName;
