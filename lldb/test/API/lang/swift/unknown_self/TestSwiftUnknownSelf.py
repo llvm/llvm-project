@@ -19,8 +19,6 @@ import unittest2
 
 class TestSwiftUnknownSelf(lldbtest.TestBase):
 
-    mydir = lldbtest.TestBase.compute_mydir(__file__)
-
     def check_class(self, var_self, weak):
         self.expect("v self", substrs=["hello", "world"])
         lldbutil.check_variable(self, var_self, num_children=2)

@@ -11,8 +11,6 @@ from lldbsuite.test.lldbtest import *
 
 class ExprInsideLambdaTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def expectExprError(self, expr : str, expected : str):
         frame = self.thread.GetFrameAtIndex(0)
         value = frame.EvaluateExpression(expr)
