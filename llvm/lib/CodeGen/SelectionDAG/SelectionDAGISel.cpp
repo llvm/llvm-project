@@ -1368,9 +1368,11 @@ static void processSingleLocVars(FunctionLoweringInfo &FuncInfo,
                                  FunctionVarLocs const *FnVarLocs) {
   for (auto It = FnVarLocs->single_locs_begin(),
             End = FnVarLocs->single_locs_end();
-       It != End; ++It)
-    processDbgDeclare(FuncInfo, It->V, It->Expr,
+       It != End; ++It) {
+    assert(!It->Values.hasArgList() && "Single loc variadic ops not supported");
+    processDbgDeclare(FuncInfo, It->Values.getVariableLocationOp(0), It->Expr,
                       FnVarLocs->getDILocalVariable(It->VariableID), It->DL);
+  }
 }
 
 void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
