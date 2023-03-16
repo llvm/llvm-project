@@ -2723,11 +2723,13 @@ bool LoopAccessInfoManager::invalidate(
 }
 
 LoopAccessInfoManager LoopAccessAnalysis::run(Function &F,
-                                              FunctionAnalysisManager &AM) {
-  return LoopAccessInfoManager(
-      AM.getResult<ScalarEvolutionAnalysis>(F), AM.getResult<AAManager>(F),
-      AM.getResult<DominatorTreeAnalysis>(F), AM.getResult<LoopAnalysis>(F),
-      &AM.getResult<TargetLibraryAnalysis>(F));
+                                              FunctionAnalysisManager &FAM) {
+  auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
+  auto &AA = FAM.getResult<AAManager>(F);
+  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+  auto &LI = FAM.getResult<LoopAnalysis>(F);
+  auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
+  return LoopAccessInfoManager(SE, AA, DT, LI, &TLI);
 }
 
 char LoopAccessLegacyAnalysis::ID = 0;
