@@ -476,9 +476,12 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
         << "failed to tile producer op: " << *tileableProducer;
     return {};
   }
+
+#ifndef NDEBUG
   for (auto tiledOp : tileAndFuseResult->tiledOps) {
     LLVM_DEBUG(DBGS() << "tiledProducer: " << *tiledOp << "\n");
   }
+#endif
 
   // Replace the extract op.
   auto maybeRankReduced = tensor::ExtractSliceOp::rankReduceIfNeeded(
