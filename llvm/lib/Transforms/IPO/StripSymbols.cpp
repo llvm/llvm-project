@@ -265,23 +265,31 @@ static bool stripDeadDebugInfoImpl(Module &M) {
 PreservedAnalyses StripSymbolsPass::run(Module &M, ModuleAnalysisManager &AM) {
   StripDebugInfo(M);
   StripSymbolNames(M, false);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 PreservedAnalyses StripNonDebugSymbolsPass::run(Module &M,
                                                 ModuleAnalysisManager &AM) {
   StripSymbolNames(M, true);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 PreservedAnalyses StripDebugDeclarePass::run(Module &M,
                                              ModuleAnalysisManager &AM) {
   stripDebugDeclareImpl(M);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 PreservedAnalyses StripDeadDebugInfoPass::run(Module &M,
                                               ModuleAnalysisManager &AM) {
   stripDeadDebugInfoImpl(M);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
