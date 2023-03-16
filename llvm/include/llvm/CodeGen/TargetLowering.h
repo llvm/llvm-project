@@ -1526,15 +1526,16 @@ public:
   EVT getMemValueType(const DataLayout &DL, Type *Ty,
                       bool AllowUnknown = false) const {
     // Lower scalar pointers to native pointer types.
-    if (PointerType *PTy = dyn_cast<PointerType>(Ty))
+    if (auto *PTy = dyn_cast<PointerType>(Ty))
       return getPointerMemTy(DL, PTy->getAddressSpace());
-    else if (VectorType *VTy = dyn_cast<VectorType>(Ty)) {
-      Type *Elm = VTy->getElementType();
-      if (PointerType *PT = dyn_cast<PointerType>(Elm)) {
-        EVT PointerTy(getPointerMemTy(DL, PT->getAddressSpace()));
-        Elm = PointerTy.getTypeForEVT(Ty->getContext());
+
+    if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+      Type *EltTy = VTy->getElementType();
+      if (auto *PTy = dyn_cast<PointerType>(EltTy)) {
+        EVT PointerTy(getPointerMemTy(DL, PTy->getAddressSpace()));
+        EltTy = PointerTy.getTypeForEVT(Ty->getContext());
       }
-      return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(Elm, false),
+      return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(EltTy, false),
                               VTy->getElementCount());
     }
 
