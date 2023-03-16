@@ -35,6 +35,12 @@ void LoongArchAsmPrinter::emitInstruction(const MachineInstr *MI) {
   if (emitPseudoExpansionLowering(*OutStreamer, MI))
     return;
 
+  switch (MI->getOpcode()) {
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
+    LowerPATCHABLE_FUNCTION_ENTER(*MI);
+    return;
+  }
+
   MCInst TmpInst;
   if (!lowerLoongArchMachineInstrToMCInst(MI, TmpInst, *this))
     EmitToStreamer(*OutStreamer, TmpInst);
@@ -108,6 +114,22 @@ bool LoongArchAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
     return true;
 
   return false;
+}
+
+void LoongArchAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
+    const MachineInstr &MI) {
+  const Function &F = MF->getFunction();
+  if (F.hasFnAttribute("patchable-function-entry")) {
+    unsigned Num;
+    if (F.getFnAttribute("patchable-function-entry")
+            .getValueAsString()
+            .getAsInteger(10, Num))
+      return;
+    emitNops(Num);
+    return;
+  }
+
+  // TODO: Emit sled here once we get support for XRay.
 }
 
 bool LoongArchAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
