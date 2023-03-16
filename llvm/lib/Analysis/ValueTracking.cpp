@@ -1152,7 +1152,7 @@ KnownBits llvm::analyzeKnownBitsFromAndXorOr(
       Query(DL, AC, safeCxtI(I, CxtI), DT, UseInstrInfo, ORE));
 }
 
-static ConstantRange getVScaleRange(const Function *F, unsigned BitWidth) {
+ConstantRange llvm::getVScaleRange(const Function *F, unsigned BitWidth) {
   Attribute Attr = F->getFnAttribute(Attribute::VScaleRange);
   // Without vscale_range, we only know that vscale is non-zero.
   if (!Attr.isValid())
