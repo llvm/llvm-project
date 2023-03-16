@@ -6,13 +6,17 @@
 #include<math.h>
 
 int main() {
-  double x, v1, v2, v3, v4;
+  float x;
+  float v1;
+  float v2;
+  float v3;
+  float v4;
 
   printf("First Example from Detecting Floating-Point Errors via Atomic Conditions\n");
   printf("Enter value of x: ");
-  scanf("%lf", &x);
+  scanf("%f", &x);
 
-  v1 = cos(x);
+  v1 = cosf(x);
   v2 = 1.0-v1;
   v3 = x*x;
   v4 = v2/v3;
@@ -27,7 +31,7 @@ int main() {
   printf("v2 = %0.18e\n", v2);
   printf("v3 = %0.18e\n", v3);
   printf("v4 = %0.18e\n", v4);
-//  fAFfp64markForResult(v4);
+//  fAFfp64markForResult(v2);
 
   return 0;
 }

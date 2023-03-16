@@ -259,11 +259,13 @@ void ACInstrumentation::instrumentCallsForAFComputation(
       IncompletePHINodes.push_back(NULL);
     } else if (isa<Instruction>(BaseInstruction->getOperand(I)) &&
                static_cast<Instruction *>(BaseInstruction->getOperand(I))
-                       ->getOpcode() == Instruction::PHI &&
-               InstructionAFMap.count(BaseInstruction->getOperand(I)) == 0) {
+                       ->getOpcode() == Instruction::PHI) {
       // Case when operand is a phi node.
-      IncompletePHINodes.push_back(instrumentPhiNodeForAF(
-          BaseInstruction->getOperand(I), NumInstrumentedInstructions));
+      if(InstructionAFMap.count(BaseInstruction->getOperand(I)) == 0) {
+        // If Phi node is not yet instrumented, instrument it.
+        IncompletePHINodes.push_back(instrumentPhiNodeForAF(
+            BaseInstruction->getOperand(I), NumInstrumentedInstructions));
+      }
       AFArray.push_back(InstructionAFMap[BaseInstruction->getOperand(I)]);
     } else {
       // Case for when the operand cannot have an associated AF Object.
@@ -279,6 +281,7 @@ void ACInstrumentation::instrumentCallsForAFComputation(
 
   Value *FunctionInstanceIdLoader = InstructionBuilder.CreateLoad(InstructionBuilder.getInt32Ty(),
                                                                   FunctionInstanceCounter);
+  (*InstructionIterator)++;
 
   AFArgs.push_back(InstructionACMap[BaseInstruction]);
   AFArgs.push_back(AllocatedAFArray);
@@ -293,21 +296,9 @@ void ACInstrumentation::instrumentCallsForAFComputation(
   AFComputingCallInstruction =
       InstructionBuilder.CreateCall(AFComputingFunction, AFArgsRef, "AFCall");
 
-  // Setting IncomingValue for the BasicBlock-IncomingValue pair coming from the
-  // Current BasicBlock.
-  for (int I = 0; I < NumOperands; ++I) {
-    if (IncompletePHINodes[I] != NULL &&
-        static_cast<PHINode *>(IncompletePHINodes[I])
-                ->getBasicBlockIndex(AFComputingCallInstruction->getParent()) !=
-            -1)
-      static_cast<PHINode *>(IncompletePHINodes[I])
-          ->setIncomingValueForBlock(AFComputingCallInstruction->getParent(),
-                                     AFComputingCallInstruction);
-  }
-
   // (Get Location + Store Value at Location) * NumOperands +
   // (Allocate for Array + GetArrayLocation) + AFComputation Function Call
-  *NumInstrumentedInstructions += 2 * NumOperands + 3;
+  *NumInstrumentedInstructions += 2 * NumOperands + 4;
   (*InstructionIterator)++;
 
   std::pair<Value *, Value *> InstructionAFPair =
@@ -443,7 +434,7 @@ void ACInstrumentation::instrumentMarkedFunction(BasicBlock::iterator *Instructi
   // Providing a seed value
   srand((unsigned) time(NULL));
 
-  for (int i = 0; i < Evaluations; ++i) {
+  for (int I = 0; I < Evaluations; ++I) {
     std::vector<Value *> Args;
     // Loop through the arguments
     for (Function::arg_iterator ArgumentIterator = FunctionToInstrument->arg_begin(),
@@ -568,6 +559,28 @@ void ACInstrumentation::instrumentBasicBlock(
       static_cast<CallInst *>(CurrentInstruction)
           ->getCalledFunction()->getName().compare(this->FunctionToInstrument->getName()) == 0) {
         instrumentMarkedFunction(&I, NumInstrumentedInstructions);
+    }
+  }
+
+  // Finding and Completing Incomplete Phi Nodes
+  if (this->FunctionToInstrument &&
+      BB->getParent()->getName().compare(this->FunctionToInstrument->getName()) == 0) {
+    for (BasicBlock::phi_iterator I = BB->phis().begin(); I != BB->phis().end(); ++I) {
+      Value *OriginalPHI = &*I;
+
+      if(InstructionAFMap.count(OriginalPHI) == 1) {
+        Value *AFPhi = InstructionAFMap[OriginalPHI];
+
+        // Iterate through all the incoming values of AFPhi and replace null values
+        // with the mapped value of corresponding OriginalPHI from InstructionAFMap
+        for (unsigned J = 0; J < static_cast<PHINode *>(OriginalPHI)->getNumIncomingValues(); J++) {
+          if (isa<ConstantPointerNull>(static_cast<PHINode *>(AFPhi)->getIncomingValue(J))
+              && InstructionAFMap.count(static_cast<PHINode *>(OriginalPHI)->getIncomingValue(J)) == 1) {
+            Value *IncomingValue = InstructionAFMap[static_cast<PHINode *>(OriginalPHI)->getIncomingValue(J)];
+            static_cast<PHINode *>(AFPhi)->setIncomingValue(J, IncomingValue);
+          }
+        }
+      }
     }
   }
 
