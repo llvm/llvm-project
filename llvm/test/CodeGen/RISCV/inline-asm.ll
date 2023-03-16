@@ -93,6 +93,8 @@ define i32 @constraint_m_with_offset(ptr %a) nounwind {
 ;
 ; RV64I-LABEL: constraint_m_with_offset:
 ; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a0, a0, 4
+; RV64I-NEXT:    #APP
 ; RV64I-NEXT:    lw a0, 0(a0)
 ; RV64I-NEXT:    #NO_APP
 ; RV64I-NEXT:    ret
