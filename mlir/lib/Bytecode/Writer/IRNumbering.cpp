@@ -98,8 +98,8 @@ static void groupByDialectPerByte(T range) {
   }
 
   // Assign the entry numbers based on the sort order.
-  for (auto &entry : llvm::enumerate(range))
-    entry.value()->number = entry.index();
+  for (auto [idx, value] : llvm::enumerate(range))
+    value->number = idx;
 }
 
 IRNumberingState::IRNumberingState(Operation *op) {
@@ -132,8 +132,8 @@ IRNumberingState::IRNumberingState(Operation *op) {
   // found, given that the number of dialects on average is small enough to fit
   // within a singly byte (128). If we ever have real world use cases that have
   // a huge number of dialects, this could be made more intelligent.
-  for (auto &it : llvm::enumerate(dialects))
-    it.value().second->number = it.index();
+  for (auto [idx, dialect] : llvm::enumerate(dialects))
+    dialect.second->number = idx;
 
   // Number each of the recorded components within each dialect.
 
@@ -245,7 +245,7 @@ void IRNumberingState::number(Region &region) {
 
   // Number the blocks within this region.
   size_t blockCount = 0;
-  for (auto &it : llvm::enumerate(region)) {
+  for (auto it : llvm::enumerate(region)) {
     blockIDs.try_emplace(&it.value(), it.index());
     number(it.value());
     ++blockCount;
