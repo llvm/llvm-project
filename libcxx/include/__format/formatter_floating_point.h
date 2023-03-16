@@ -16,9 +16,13 @@
 #include <__algorithm/min.h>
 #include <__algorithm/rotate.h>
 #include <__algorithm/transform.h>
+#include <__charconv/chars_format.h>
+#include <__charconv/to_chars_floating_point.h>
+#include <__charconv/to_chars_result.h>
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__errc>
 #include <__format/concepts.h>
 #include <__format/format_parse_context.h>
 #include <__format/formatter.h>
@@ -29,7 +33,8 @@
 #include <__type_traits/conditional.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
-#include <charconv>
+#include <cmath>
+#include <cstddef>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 #  include <locale>
