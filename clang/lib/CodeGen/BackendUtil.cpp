@@ -857,7 +857,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (!CodeGenOpts.DIBugsReportFilePath.empty())
       Debugify.setOrigDIVerifyBugsReportFilePath(
           CodeGenOpts.DIBugsReportFilePath);
-    Debugify.registerCallbacks(PIC, FAM);
+    Debugify.registerCallbacks(PIC, MAM);
   }
   // Attempt to load pass plugins and register their callbacks with PB.
   for (auto &PluginFN : CodeGenOpts.PassPlugins) {
