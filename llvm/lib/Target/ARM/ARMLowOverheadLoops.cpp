@@ -1249,7 +1249,7 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr *MI) {
   const MCInstrDesc &MCID = MI->getDesc();
   bool IsUse = false;
   unsigned LastOpIdx = MI->getNumOperands() - 1;
-  for (auto &Op : enumerate(reverse(MCID.operands()))) {
+  for (const auto &Op : enumerate(reverse(MCID.operands()))) {
     const MachineOperand &MO = MI->getOperand(LastOpIdx - Op.index());
     if (!MO.isReg() || !MO.isUse() || MO.getReg() != ARM::VPR)
       continue;
