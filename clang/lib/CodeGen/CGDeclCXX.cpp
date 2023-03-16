@@ -214,9 +214,11 @@ void CodeGenFunction::EmitCXXGlobalVarDeclInit(const VarDecl &D,
           &D, DeclAddr, D.getAttr<OMPThreadPrivateDeclAttr>()->getLocation(),
           PerformInit, this);
     }
+    bool NeedsDtor =
+        D.needsDestruction(getContext()) == QualType::DK_cxx_destructor;
     if (PerformInit)
       EmitDeclInit(*this, D, DeclAddr);
-    if (CGM.isTypeConstant(D.getType(), true))
+    if (CGM.isTypeConstant(D.getType(), true, !NeedsDtor))
       EmitDeclInvariant(*this, D, DeclPtr);
     else
       EmitDeclDestroy(*this, D, DeclAddr);

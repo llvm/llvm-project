@@ -2,6 +2,11 @@
 ; RUN: llc %s -fast-isel=true -start-after=codegenprepare -stop-before=finalize-isel -experimental-debug-variable-locations=false -o - | FileCheck --check-prefixes=CHECK,FAST %s
 ; RUN: llc %s -global-isel=true -start-after=codegenprepare -stop-before=finalize-isel -experimental-debug-variable-locations=false -o - | FileCheck --check-prefixes=CHECK,GLOBAL %s
 
+;; Run with assignment tracking enabled (use sed to add the module flag).
+; RUN: sed 's/;Uncomment-with-sed//g' < %s \
+; RUN: | llc -global-isel=false -start-after=codegenprepare -stop-before=finalize-isel -experimental-debug-variable-locations=false -o - \
+; RUN: | FileCheck --check-prefixes=CHECK,DAG %s
+
 ;; Test that a dbg.value that uses a DIArgList is correctly converted to a
 ;; DBG_VALUE_LIST that uses the registers corresponding to its operands.
 
@@ -34,7 +39,9 @@ entry:
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5, !6}
+!llvm.module.flags = !{!3, !4, !5,
+;Uncomment-with-sed !19,
+!6}
 !llvm.ident = !{!7}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
@@ -56,3 +63,4 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !16 = !DILocalVariable(name: "c", scope: !8, file: !9, line: 2, type: !12)
 !17 = !DILocation(line: 0, scope: !8)
 !18 = !DILocation(line: 3, scope: !8)
+!19 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

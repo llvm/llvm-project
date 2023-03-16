@@ -410,11 +410,14 @@ define ptr @select_between_constantptrs(i1 %c, ptr %x) {
 define ptr @tautological_select() {
 ; CHECK-LABEL: 'tautological_select'
 ; CHECK-NEXT:  Classifying expressions for: @tautological_select
-; CHECK-NEXT:    %r = getelementptr i8, ptr @constant, i32 0
+; CHECK-NEXT:    %s = select i1 true, ptr @constant, ptr @another_constant
+; CHECK-NEXT:    --> @constant U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    %r = getelementptr i8, ptr %s
 ; CHECK-NEXT:    --> @constant U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:  Determining loop execution counts for: @tautological_select
 ;
-  %r = getelementptr i8, ptr select (i1 true, ptr @constant, ptr @another_constant), i32 0
+  %s = select i1 true, ptr @constant, ptr @another_constant
+  %r = getelementptr i8, ptr %s
   ret ptr %r
 }
 

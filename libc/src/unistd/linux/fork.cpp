@@ -14,6 +14,7 @@
 #include "src/__support/threads/thread.h" // For thread self object
 
 #include "src/errno/libc_errno.h"
+#include <signal.h>      // For SIGCHLD
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace __llvm_libc {
