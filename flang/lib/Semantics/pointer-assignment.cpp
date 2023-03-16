@@ -57,6 +57,7 @@ public:
   PointerAssignmentChecker &set_isContiguous(bool);
   PointerAssignmentChecker &set_isVolatile(bool);
   PointerAssignmentChecker &set_isBoundsRemapping(bool);
+  PointerAssignmentChecker &set_pointerComponentLHS(const Symbol *);
   bool CheckLeftHandSide(const SomeExpr &);
   bool Check(const SomeExpr &);
 
@@ -87,6 +88,7 @@ private:
   bool isContiguous_{false};
   bool isVolatile_{false};
   bool isBoundsRemapping_{false};
+  const Symbol *pointerComponentLHS_{nullptr};
 };
 
 PointerAssignmentChecker &PointerAssignmentChecker::set_lhsType(
@@ -113,6 +115,12 @@ PointerAssignmentChecker &PointerAssignmentChecker::set_isBoundsRemapping(
   return *this;
 }
 
+PointerAssignmentChecker &PointerAssignmentChecker::set_pointerComponentLHS(
+    const Symbol *symbol) {
+  pointerComponentLHS_ = symbol;
+  return *this;
+}
+
 bool PointerAssignmentChecker::CharacterizeProcedure() {
   if (!characterizedProcedure_) {
     characterizedProcedure_ = true;
@@ -126,7 +134,7 @@ bool PointerAssignmentChecker::CharacterizeProcedure() {
 bool PointerAssignmentChecker::CheckLeftHandSide(const SomeExpr &lhs) {
   if (auto whyNot{WhyNotDefinable(context_.messages().at(), scope_,
           DefinabilityFlags{DefinabilityFlag::PointerDefinition}, lhs)}) {
-    if (auto *msg{context_.messages().Say(
+    if (auto *msg{Say(
             "The left-hand side of a pointer assignment is not definable"_err_en_US)}) {
       msg->Attach(std::move(*whyNot));
     }
@@ -153,12 +161,62 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
   if (HasVectorSubscript(rhs)) { // C1025
     Say("An array section with a vector subscript may not be a pointer target"_err_en_US);
     return false;
-  } else if (ExtractCoarrayRef(rhs)) { // C1026
+  }
+  if (ExtractCoarrayRef(rhs)) { // C1026
     Say("A coindexed object may not be a pointer target"_err_en_US);
     return false;
-  } else {
-    return common::visit([&](const auto &x) { return Check(x); }, rhs.u);
   }
+  if (!common::visit([&](const auto &x) { return Check(x); }, rhs.u)) {
+    return false;
+  }
+  if (IsNullPointer(rhs)) {
+    return true;
+  }
+  if (lhs_ && IsProcedure(*lhs_)) {
+    return true;
+  }
+  if (const auto *pureProc{FindPureProcedureContaining(scope_)}) {
+    if (pointerComponentLHS_) { // C1594(4) is a hard error
+      if (const Symbol * object{FindExternallyVisibleObject(rhs, *pureProc)}) {
+        if (auto *msg{Say(
+                "Externally visible object '%s' may not be associated with pointer component '%s' in a pure procedure"_err_en_US,
+                object->name(), pointerComponentLHS_->name())}) {
+          msg->Attach(object->name(), "Object declaration"_en_US)
+              .Attach(
+                  pointerComponentLHS_->name(), "Pointer declaration"_en_US);
+        }
+        return false;
+      }
+    } else if (const Symbol * base{GetFirstSymbol(rhs)}) {
+      if (const char *why{WhyBaseObjectIsSuspicious(
+              base->GetUltimate(), scope_)}) { // C1594(3)
+        evaluate::SayWithDeclaration(context_.messages(), *base,
+            "A pure subprogram may not use '%s' as the target of pointer assignment because it is %s"_err_en_US,
+            base->name(), why);
+        return false;
+      }
+    }
+  }
+  if (isContiguous_) {
+    if (auto contiguous{evaluate::IsContiguous(rhs, context_)}) {
+      if (!*contiguous) {
+        Say("CONTIGUOUS pointer may not be associated with a discontiguous target"_err_en_US);
+        return false;
+      }
+    } else {
+      Say("Target of CONTIGUOUS pointer association is not known to be contiguous"_warn_en_US);
+    }
+  }
+  // Warn about undefinable data targets
+  if (auto because{
+          WhyNotDefinable(context_.messages().at(), scope_, {}, rhs)}) {
+    if (auto *msg{
+            Say("Pointer target is not a definable variable"_warn_en_US)}) {
+      msg->Attach(std::move(*because));
+    }
+    return false;
+  }
+  return true;
 }
 
 bool PointerAssignmentChecker::Check(const evaluate::NullPointer &) {
@@ -221,7 +279,7 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
   const Symbol *base{d.GetBaseObject().symbol()};
   if (!last || !base) {
     // P => "character literal"(1:3)
-    context_.messages().Say("Pointer target is not a named entity"_err_en_US);
+    Say("Pointer target is not a named entity"_err_en_US);
     return false;
   }
   std::optional<std::variant<MessageFixedText, MessageFormattedText>> msg;
@@ -440,8 +498,9 @@ bool CheckPointerAssignment(evaluate::FoldingContext &context,
 
 bool CheckStructConstructorPointerComponent(evaluate::FoldingContext &context,
     const Symbol &lhs, const SomeExpr &rhs, const Scope &scope) {
-  CHECK(IsPointer(lhs));
-  return PointerAssignmentChecker{context, scope, lhs}.Check(rhs);
+  return PointerAssignmentChecker{context, scope, lhs}
+      .set_pointerComponentLHS(&lhs)
+      .Check(rhs);
 }
 
 bool CheckPointerAssignment(evaluate::FoldingContext &context,
