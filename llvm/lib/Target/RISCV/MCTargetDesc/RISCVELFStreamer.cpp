@@ -140,6 +140,10 @@ bool RISCVELFStreamer::requiresFixups(MCContext &C, const MCExpr *Value,
                              MCConstantExpr::create(E.getConstant(), C), C);
   RHS = E.getSymB();
 
+  // Avoid ADD/SUB if Kind is not VK_None, e.g. A@plt - B + C.
+  if (E.getSymA()->getKind() != MCSymbolRefExpr::VK_None)
+    return false;
+
   // If either symbol is in a text section, we need to delay the relocation
   // evaluation as relaxation may alter the size of the symbol.
   //
