@@ -123,7 +123,7 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
   // case value to determine when to print in the string form.
   if (nonKeywordCases.any()) {
     os << "  switch (value) {\n";
-    for (auto &it : llvm::enumerate(cases)) {
+    for (auto it : llvm::enumerate(cases)) {
       if (nonKeywordCases.test(it.index()))
         continue;
       StringRef symbol = it.value().getSymbol();

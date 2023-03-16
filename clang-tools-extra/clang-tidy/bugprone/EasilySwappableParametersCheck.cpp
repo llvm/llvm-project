@@ -1581,7 +1581,7 @@ bool lazyMapOfSetsIntersectionExists(const MapTy &Map, const ElemTy &E1,
     return false;
 
   for (const auto &E1SetElem : E1Iterator->second)
-    if (llvm::is_contained(E2Iterator->second, E1SetElem))
+    if (E2Iterator->second.contains(E1SetElem))
       return true;
 
   return false;

@@ -1827,7 +1827,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
   // Get a string containing all of the cases that can't be represented with a
   // keyword.
   BitVector nonKeywordCases(cases.size());
-  for (auto &it : llvm::enumerate(cases)) {
+  for (auto it : llvm::enumerate(cases)) {
     if (!canFormatStringAsKeyword(it.value().getStr()))
       nonKeywordCases.set(it.index());
   }
@@ -1836,7 +1836,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
   // overlap with other cases. For simplicity sake, only allow cases with a
   // single bit value.
   if (enumAttr.isBitEnum()) {
-    for (auto &it : llvm::enumerate(cases)) {
+    for (auto it : llvm::enumerate(cases)) {
       int64_t value = it.value().getValue();
       if (value < 0 || !llvm::isPowerOf2_64(value))
         nonKeywordCases.set(it.index());
@@ -1849,7 +1849,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
     body << "    switch (caseValue) {\n";
     StringRef cppNamespace = enumAttr.getCppNamespace();
     StringRef enumName = enumAttr.getEnumClassName();
-    for (auto &it : llvm::enumerate(cases)) {
+    for (auto it : llvm::enumerate(cases)) {
       if (nonKeywordCases.test(it.index()))
         continue;
       StringRef symbol = it.value().getSymbol();

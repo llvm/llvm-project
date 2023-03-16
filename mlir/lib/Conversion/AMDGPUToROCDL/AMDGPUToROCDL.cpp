@@ -200,7 +200,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 
     // Indexing (voffset)
     Value voffset;
-    for (auto &pair : llvm::enumerate(adaptor.getIndices())) {
+    for (auto pair : llvm::enumerate(adaptor.getIndices())) {
       size_t i = pair.index();
       Value index = pair.value();
       Value strideOp;

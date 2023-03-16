@@ -1,0 +1,130 @@
+## Test that DWARFv5 DW_FORM_implicit_const is correctly recognized
+## and copied into the result.
+
+# RUN: yaml2obj %s -o %t.o
+
+# RUN: llvm-dwarfutil %t.o %t1
+# RUN: llvm-dwarfdump -verify %t1 | FileCheck %s --check-prefix VERIFY-CHECK
+# RUN: llvm-dwarfdump -a --verbose %t1 | FileCheck %s
+#
+# RUN: llvm-dwarfutil --no-garbage-collection %t.o %t1
+# RUN: llvm-dwarfdump -verify %t1 | FileCheck %s --check-prefix VERIFY-CHECK
+# RUN: llvm-dwarfdump -a --verbose %t1 | FileCheck %s
+#
+# RUN: llvm-dwarfutil --no-garbage-collection --build-accelerator=DWARF %t.o %t1
+# RUN: llvm-dwarfdump -verify %t1 | FileCheck %s --check-prefix VERIFY-CHECK
+# RUN: llvm-dwarfdump -a --verbose %t1 | FileCheck %s
+
+#VERIFY-CHECK: No errors.
+
+#CHECK: .debug_abbrev
+#CHECK: DW_TAG_compile_unit
+#CHECK: DW_TAG_subprogram
+#CHECK: DW_TAG_base_type
+#CHECK: DW_TAG_variable
+#CHECK: DW_AT_name
+#CHECK: DW_AT_const_value       DW_FORM_implicit_const  33
+#CHECK: DW_AT_type
+#CHECK: DW_TAG_compile_unit
+#CHECK:   DW_AT_name {{.*}}"CU1"
+#CHECK:   DW_AT_low_pc
+#CHECK:   DW_AT_high_pc
+#CHECK:   DW_TAG_subprogram
+#CHECK:     DW_AT_name {{.*}}"foo1"
+#CHECK:     DW_AT_low_pc
+#CHECK:     DW_AT_high_pc
+#CHECK:  DW_TAG_variable
+#CHECK:     DW_AT_name {{.*}}"var1"
+#CHECK:     DW_AT_const_value [DW_FORM_implicit_const]      (33)
+#CHECK:     DW_AT_type {{.*}}"int"
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x60
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addrx
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_addr_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addrx
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_implicit_const
+            Value:     33
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+  debug_info:
+    - Version: 5
+      UnitType:   DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU1
+            - Value:  0x0
+            - Value:  0x10
+            - Value:  0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x0
+            - Value: 0x10
+            - Value: 0x3c
+        - AbbrCode: 0
+        - AbbrCode: 3
+          Values:
+            - CStr: int
+        - AbbrCode: 4
+          Values:
+            - CStr: var1
+            - Value:  0x00000000
+            - Value:  0x0000003c
+        - AbbrCode: 0
+  debug_addr:
+    - Version: 5
+      AddressSize: 0x08
+      Entries:
+        - Address: 0x1130
+...

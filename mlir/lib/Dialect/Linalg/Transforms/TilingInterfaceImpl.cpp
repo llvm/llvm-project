@@ -314,7 +314,7 @@ struct LinalgOpPartialReductionInterface
     AffineMap oldOutputMap =
         linalgOp.getMatchingIndexingMap(linalgOp.getDpsInitOperand(0));
     SmallVector<AffineExpr> outputExpr;
-    for (auto &[idx, expr] : llvm::enumerate(oldOutputMap.getResults())) {
+    for (auto [idx, expr] : llvm::enumerate(oldOutputMap.getResults())) {
       if (static_cast<int64_t>(idx) == insertSplitDimension) {
         outputExpr.push_back(b.getAffineDimExpr(reductionDims[0]));
       }

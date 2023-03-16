@@ -185,20 +185,20 @@ getTreePredicates(std::vector<PositionalPredicate> &predList, Value val,
   if (types.size() == 1 && types[0].getType().isa<pdl::RangeType>()) {
     getTreePredicates(predList, types.front(), builder, inputs,
                       builder.getType(builder.getAllResults(opPos)));
-  } else {
-    bool foundVariableLength = false;
-    for (auto &resultIt : llvm::enumerate(types)) {
-      bool isVariadic = resultIt.value().getType().isa<pdl::RangeType>();
-      foundVariableLength |= isVariadic;
+    return;
+  }
 
-      auto *resultPos =
-          foundVariableLength
-              ? builder.getResultGroup(pos, resultIt.index(), isVariadic)
-              : builder.getResult(pos, resultIt.index());
-      predList.emplace_back(resultPos, builder.getIsNotNull());
-      getTreePredicates(predList, resultIt.value(), builder, inputs,
-                        builder.getType(resultPos));
-    }
+  bool foundVariableLength = false;
+  for (auto [idx, typeValue] : llvm::enumerate(types)) {
+    bool isVariadic = typeValue.getType().isa<pdl::RangeType>();
+    foundVariableLength |= isVariadic;
+
+    auto *resultPos = foundVariableLength
+                          ? builder.getResultGroup(pos, idx, isVariadic)
+                          : builder.getResult(pos, idx);
+    predList.emplace_back(resultPos, builder.getIsNotNull());
+    getTreePredicates(predList, typeValue, builder, inputs,
+                      builder.getType(resultPos));
   }
 }
 

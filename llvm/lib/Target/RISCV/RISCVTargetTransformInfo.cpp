@@ -266,17 +266,17 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         if (EltTp.getScalarSizeInBits() < ST->getELEN()) {
           auto InterleaveMask = createInterleaveMask(Mask.size() / 2, 2);
           // Example sequence:
-          //   vsetivli		zero, 4, e8, mf4, ta, ma (ignored)
-          //   vwaddu.vv	v10, v8, v9
-          //   li		a0, -1                   (ignored)
-          //   vwmaccu.vx	v10, a0, v9
-	  if (ShuffleVectorInst::isInterleaveMask(Mask, 2, Mask.size() * 2))
-	    return 2 * LT.first * getLMULCost(LT.second);
+          //   vsetivli     zero, 4, e8, mf4, ta, ma (ignored)
+          //   vwaddu.vv    v10, v8, v9
+          //   li       a0, -1                   (ignored)
+          //   vwmaccu.vx   v10, a0, v9
+          if (ShuffleVectorInst::isInterleaveMask(Mask, 2, Mask.size() * 2))
+            return 2 * LT.first * getLMULCost(LT.second);
 
           if (Mask[0] == 0 || Mask[0] == 1) {
             auto DeinterleaveMask = createStrideMask(Mask[0], 2, Mask.size());
             // Example sequence:
-            //   vnsrl.wi	v10, v8, 0
+            //   vnsrl.wi   v10, v8, 0
             if (equal(DeinterleaveMask, Mask))
               return LT.first * getLMULCost(LT.second);
           }

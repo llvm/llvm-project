@@ -9,6 +9,8 @@
 #ifndef LLVM_DWARFLINKERPARALLEL_DWARFLINKER_H
 #define LLVM_DWARFLINKERPARALLEL_DWARFLINKER_H
 
+#include "llvm/DWARFLinkerParallel/AddressesMap.h"
+
 namespace llvm {
 namespace dwarflinker_parallel {} // end namespace dwarflinker_parallel
 } // end namespace llvm
