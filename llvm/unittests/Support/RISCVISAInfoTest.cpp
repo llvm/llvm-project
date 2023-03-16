@@ -317,16 +317,12 @@ TEST(ParseArchString, RejectsDoubleOrTrailingUnderscore) {
   EXPECT_EQ(
       toString(RISCVISAInfo::parseArchString("rv64i__m", true).takeError()),
       "invalid standard user-level extension '_'");
-  EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rv32ezicsr_", true).takeError()),
-      "extension name missing after separator '_'");
 
-  // FIXME: Trailing underscores after single letter extensions are accepted,
-  // which is inconsistent.
-  ASSERT_THAT_EXPECTED(RISCVISAInfo::parseArchString("rv32i_", true),
-                       Succeeded());
-  ASSERT_THAT_EXPECTED(RISCVISAInfo::parseArchString("rv64im_", true),
-                       Succeeded());
+  for (StringRef Input :
+       {"rv32ezicsr__zifencei", "rv32i_", "rv32izicsr_", "rv64im_"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "extension name missing after separator '_'");
+  }
 }
 
 TEST(ParseArchString, RejectsDuplicateExtensionNames) {
