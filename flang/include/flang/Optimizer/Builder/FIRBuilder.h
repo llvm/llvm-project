@@ -336,7 +336,7 @@ public:
   /// Array entities are boxed with a shape and possibly a shift. Character
   /// entities are boxed with a LEN parameter.
   mlir::Value createBox(mlir::Location loc, const fir::ExtendedValue &exv,
-                        bool isPolymorphic = false);
+                        bool isPolymorphic = false, bool isAssumedType = false);
 
   mlir::Value createBox(mlir::Location loc, mlir::Type boxType,
                         mlir::Value addr, mlir::Value shape, mlir::Value slice,
