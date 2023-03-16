@@ -1143,7 +1143,8 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
 }
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
-  if (STI->getFeatureBits().test(FeatureGFX90AInsts))
+  if (STI->getFeatureBits().test(FeatureGFX90AInsts) ||
+      STI->getFeatureBits().test(FeatureGFX12_10Insts))
     return 512;
   return 256;
 }
@@ -2247,6 +2248,10 @@ bool isGFX12Plus(const MCSubtargetInfo &STI) {
 
 bool isNotGFX12Plus(const MCSubtargetInfo &STI) {
   return !isGFX12Plus(STI);
+}
+
+bool isGFX12_10(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX12_10Insts];
 }
 
 bool isNotGFX11Plus(const MCSubtargetInfo &STI) {

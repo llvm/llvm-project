@@ -650,7 +650,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   //
   unsigned MaxNumVGPRs = ST.getMaxNumVGPRs(MF);
   unsigned MaxNumAGPRs = MaxNumVGPRs;
-  unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
+  unsigned NumArchVGPRs = ST.has512AddressableVGPRs() ? 512 : 256;
 
   // Reserve all the AGPRs if there are no instructions to use it.
   if (!ST.hasMAIInsts()) {
@@ -676,20 +676,22 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       MaxNumVGPRs /= 2;
       MaxNumAGPRs = MaxNumVGPRs;
     } else {
-      if (MaxNumVGPRs > TotalNumVGPRs) {
-        MaxNumAGPRs = MaxNumVGPRs - TotalNumVGPRs;
-        MaxNumVGPRs = TotalNumVGPRs;
+      if (MaxNumVGPRs > NumArchVGPRs) {
+        MaxNumAGPRs = MaxNumVGPRs - NumArchVGPRs;
+        MaxNumVGPRs = NumArchVGPRs;
       } else
         MaxNumAGPRs = 0;
     }
   }
 
+  unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
   for (unsigned i = MaxNumVGPRs; i < TotalNumVGPRs; ++i) {
     unsigned Reg = AMDGPU::VGPR_32RegClass.getRegister(i);
     reserveRegisterTuples(Reserved, Reg);
   }
 
-  for (unsigned i = MaxNumAGPRs; i < TotalNumVGPRs; ++i) {
+  unsigned TotalNumAGPRs = AMDGPU::AGPR_32RegClass.getNumRegs();
+  for (unsigned i = MaxNumAGPRs; i < TotalNumAGPRs; ++i) {
     unsigned Reg = AMDGPU::AGPR_32RegClass.getRegister(i);
     reserveRegisterTuples(Reserved, Reg);
   }

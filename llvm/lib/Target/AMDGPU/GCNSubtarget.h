@@ -1165,6 +1165,8 @@ public:
 
   bool hasBitOp3Insts() const { return HasBitOp3Insts; }
 
+  bool has512AddressableVGPRs() const { return GFX12_10Insts; }
+
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
   unsigned getOccupancyWithNumSGPRs(unsigned SGPRs) const;
