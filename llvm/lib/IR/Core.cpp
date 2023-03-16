@@ -47,6 +47,7 @@ using namespace llvm;
 
 void llvm::initializeCore(PassRegistry &Registry) {
   initializeDominatorTreeWrapperPassPass(Registry);
+  initializeHeterogeneousDebugVerifyLegacyPass(Registry);
   initializePrintModulePassWrapperPass(Registry);
   initializePrintFunctionPassWrapperPass(Registry);
   initializeSafepointIRVerifierPass(Registry);

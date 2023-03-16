@@ -1,4 +1,4 @@
-; RUN: llc < %s -filetype=obj -o - | llvm-dwarfdump -
+; RUN: llc < %s -O0 -filetype=obj -o - | llvm-dwarfdump -
 
 ; CHECK: DW_TAG_variable
 ; CHECK: DW_AT_name ("x")

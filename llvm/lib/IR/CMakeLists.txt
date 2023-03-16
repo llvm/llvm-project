@@ -26,6 +26,7 @@ add_llvm_component_library(LLVMCore
   GCStrategy.cpp
   GVMaterializer.cpp
   Globals.cpp
+  HeterogeneousDebugVerify.cpp
   IRBuilder.cpp
   IRPrintingPasses.cpp
   SSAContext.cpp
