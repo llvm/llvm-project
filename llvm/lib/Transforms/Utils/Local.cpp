@@ -1913,17 +1913,14 @@ void llvm::salvageDebugInfoForDbgValues(
     bool IsValidSalvageExpr = SalvagedExpr->getNumElements() <= MaxExpressionSize;
     if (AdditionalValues.empty() && IsValidSalvageExpr) {
       DII->setExpression(SalvagedExpr);
-    } else if (isa<DbgValueInst>(DII) && !isa<DbgAssignIntrinsic>(DII) &&
-               IsValidSalvageExpr &&
+    } else if (isa<DbgValueInst>(DII) && IsValidSalvageExpr &&
                DII->getNumVariableLocationOps() + AdditionalValues.size() <=
                    MaxDebugArgs) {
       DII->addVariableLocationOps(AdditionalValues, SalvagedExpr);
     } else {
       // Do not salvage using DIArgList for dbg.declare, as it is not currently
-      // supported in those instructions. Do not salvage using DIArgList for
-      // dbg.assign yet. FIXME: support this.
-      // Also do not salvage if the resulting DIArgList would contain an
-      // unreasonably large number of values.
+      // supported in those instructions. Also do not salvage if the resulting
+      // DIArgList would contain an unreasonably large number of values.
       DII->setKillLocation();
     }
     LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
