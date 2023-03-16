@@ -92,8 +92,8 @@ public:
 
 PreservedAnalyses AMDGPUCtorDtorLoweringPass::run(Module &M,
                                                   ModuleAnalysisManager &AM) {
-  lowerCtorsAndDtors(M);
-  return PreservedAnalyses::all();
+  return lowerCtorsAndDtors(M) ? PreservedAnalyses::none()
+                               : PreservedAnalyses::all();
 }
 
 char AMDGPUCtorDtorLoweringLegacy::ID = 0;
