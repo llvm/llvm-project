@@ -106,6 +106,11 @@ public:
       return {};
     };
 
+    auto reportErrorTwine = [&](const llvm::Twine &T) -> std::monostate {
+      return reportError(
+          llvm::createStringError(llvm::inconvertibleErrorCode(), T));
+    };
+
     Expected<cas::IncludeTree::Node> Node =
         IncludeInfo.Tree.getIncludeNode(IncludeInfo.CurIncludeIndex++);
     if (!Node)
@@ -142,7 +147,29 @@ public:
     PP.markIncluded(*FE);
     IncludeStack.push_back(
         {std::move(EnteredTree), SM.getLocForStartOfFile(FID)});
-    return IncludeFile{FID};
+
+    Module *M = nullptr;
+    auto SubmoduleName = EnteredTree.getSubmoduleName();
+    if (!SubmoduleName)
+      return reportError(SubmoduleName.takeError());
+    if (*SubmoduleName) {
+      SmallVector<StringRef> ModuleComponents;
+      (*SubmoduleName)->split(ModuleComponents, '.');
+      M = PP.getHeaderSearchInfo().lookupModule(
+          ModuleComponents[0], IncludeLoc,
+          /*AllowSearch=*/false, /*AllowExtraModuleMapSearch=*/false);
+      if (!M)
+        return reportErrorTwine(llvm::Twine("failed to find module '") +
+                                ModuleComponents[0] + "'");
+      for (StringRef Sub : ArrayRef(ModuleComponents).drop_front()) {
+        M = M->findOrInferSubmodule(Sub);
+        if (!M)
+          return reportErrorTwine(
+              llvm::Twine("failed to find or infer submodule '") + Sub + "'");
+      }
+    }
+
+    return IncludeFile{FID, M};
   }
 
   void exitedFile(Preprocessor &PP, FileID FID) override {

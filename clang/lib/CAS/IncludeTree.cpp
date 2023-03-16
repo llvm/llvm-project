@@ -60,12 +60,15 @@ Expected<IncludeTree::FileInfo> IncludeTree::getBaseFileInfo() {
 llvm::Error IncludeTree::forEachInclude(
     llvm::function_ref<llvm::Error(std::pair<Node, uint32_t>)> Callback) {
   size_t RefI = 0;
+  const size_t IncludeEnd = getNumIncludes();
   return forEachReference([&](ObjectRef Ref) -> llvm::Error {
     if (RefI == 0) {
       ++RefI;
       return llvm::Error::success();
     }
     size_t IncludeI = RefI - 1;
+    if (IncludeI >= IncludeEnd)
+      return llvm::Error::success();
     ++RefI;
     auto Include = getIncludeNode(Ref, getIncludeKind(IncludeI));
     if (!Include)
@@ -74,24 +77,29 @@ llvm::Error IncludeTree::forEachInclude(
   });
 }
 
-Expected<IncludeTree>
-IncludeTree::create(ObjectStore &DB,
-                    SrcMgr::CharacteristicKind FileCharacteristic,
-                    ObjectRef BaseFile, ArrayRef<IncludeInfo> Includes,
-                    llvm::SmallBitVector Checks) {
+Expected<IncludeTree> IncludeTree::create(
+    ObjectStore &DB, SrcMgr::CharacteristicKind FileCharacteristic,
+    ObjectRef BaseFile, ArrayRef<IncludeInfo> Includes,
+    std::optional<ObjectRef> SubmoduleName, llvm::SmallBitVector Checks) {
   // The data buffer is composed of
-  // 1. `uint32_t` offset and `uint8_t` kind for each includes
-  // 2. 1 byte for `CharacteristicKind`
+  // 1. 1 byte for `CharacteristicKind` and IsSubmodule
+  // 2. `uint32_t` offset and `uint8_t` kind for each includes
   // 3. variable number of bitset bytes for `Checks`.
 
   char Kind = FileCharacteristic;
-  assert(Kind == FileCharacteristic && "SrcMgr::CharacteristicKind too big!");
+  assert(Kind == FileCharacteristic && (Kind & IsSubmoduleBit) == 0 &&
+         "SrcMgr::CharacteristicKind too big!");
+  if (SubmoduleName)
+    Kind |= IsSubmoduleBit;
+
   assert(File::isValid(DB, BaseFile));
   SmallVector<ObjectRef, 16> Refs;
-  Refs.reserve(Includes.size() + 1);
+  Refs.reserve(Includes.size() + 2);
   Refs.push_back(BaseFile);
   SmallString<64> Buffer;
   Buffer.reserve(Includes.size() * sizeof(uint32_t) + 1);
+
+  Buffer += Kind;
 
   llvm::raw_svector_ostream BufOS(Buffer);
   llvm::support::endian::Writer Writer(BufOS, llvm::support::little);
@@ -107,7 +115,8 @@ IncludeTree::create(ObjectStore &DB,
     Writer.write(static_cast<uint8_t>(Include.Kind));
   }
 
-  Buffer += Kind;
+  if (SubmoduleName)
+    Refs.push_back(*SubmoduleName);
 
   uintptr_t Store;
   ArrayRef<uintptr_t> BitWords = Checks.getData(Store);
@@ -146,7 +155,7 @@ Expected<IncludeTree> IncludeTree::get(ObjectStore &DB, ObjectRef Ref) {
 
 IncludeTree::NodeKind IncludeTree::getIncludeKind(size_t I) const {
   assert(I < getNumIncludes());
-  StringRef Data = getData();
+  StringRef Data = dataSkippingFlags();
   assert(Data.size() >= (I + 1) * (sizeof(uint32_t) + 1));
   uint8_t K = *(Data.data() + I * (sizeof(uint32_t) + 1) + sizeof(uint32_t));
   return NodeKind(K);
@@ -154,7 +163,7 @@ IncludeTree::NodeKind IncludeTree::getIncludeKind(size_t I) const {
 
 uint32_t IncludeTree::getIncludeOffset(size_t I) const {
   assert(I < getNumIncludes());
-  StringRef Data = getData();
+  StringRef Data = dataSkippingFlags();
   assert(Data.size() >= (I + 1) * sizeof(uint32_t));
   uint32_t Offset =
       llvm::support::endian::read<uint32_t, llvm::support::little>(
@@ -164,7 +173,7 @@ uint32_t IncludeTree::getIncludeOffset(size_t I) const {
 
 bool IncludeTree::getCheckResult(size_t I) const {
   // Skip include offsets and CharacteristicKind.
-  StringRef Data = dataSkippingIncludes().drop_front();
+  StringRef Data = dataSkippingIncludes();
   unsigned ByteIndex = I / CHAR_BIT;
   size_t RemainingIndex = I % CHAR_BIT;
   uint8_t Bits = Data[ByteIndex];
@@ -187,9 +196,11 @@ bool IncludeTree::isValid(const ObjectProxy &Node) {
   if (!IncludeTreeBase::isValid(Node))
     return false;
   IncludeTreeBase Base(Node);
-  if (Base.getNumReferences() == 0)
+  if (Base.getNumReferences() == 0 || Base.getData().empty())
     return false;
   unsigned NumIncludes = Base.getNumReferences() - 1;
+  if (Base.getData().front() & IsSubmoduleBit)
+    NumIncludes -= 1;
   return Base.getData().size() >= NumIncludes * (sizeof(uint32_t) + 1) + 1;
 }
 
@@ -320,6 +331,12 @@ llvm::Error IncludeTree::print(llvm::raw_ostream &OS, unsigned Indent) {
     return IncludeBy.takeError();
   if (llvm::Error E = IncludeBy->print(OS))
     return E;
+
+  auto Submodule = getSubmoduleName();
+  if (!Submodule)
+    return Submodule.takeError();
+  if (*Submodule)
+    OS.indent(Indent) << "Submodule: " << **Submodule << '\n';
 
   llvm::SourceMgr SM;
   auto Blob = IncludeBy->getContents();
