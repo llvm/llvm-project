@@ -11,6 +11,7 @@ add_startup_object(
     libc.src.stdlib.exit
     libc.src.stdlib.atexit
     libc.src.string.memory_utils.memcpy_implementation
+    libc.src.unistd.environ
   COMPILE_OPTIONS
     -fno-omit-frame-pointer
     -ffreestanding # To avoid compiler warnings about calling the main function.
