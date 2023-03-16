@@ -125,7 +125,7 @@ public:
   ///
   ///  `D` must not be assigned a storage location.
   void setStorageLocation(const ValueDecl &D, StorageLocation &Loc) {
-    assert(DeclToLoc.find(&D) == DeclToLoc.end());
+    assert(!DeclToLoc.contains(&D));
     DeclToLoc[&D] = &Loc;
   }
 
@@ -143,7 +143,7 @@ public:
   ///  `E` must not be assigned a storage location.
   void setStorageLocation(const Expr &E, StorageLocation &Loc) {
     const Expr &CanonE = ignoreCFGOmittedNodes(E);
-    assert(ExprToLoc.find(&CanonE) == ExprToLoc.end());
+    assert(!ExprToLoc.contains(&CanonE));
     ExprToLoc[&CanonE] = &Loc;
   }
 
