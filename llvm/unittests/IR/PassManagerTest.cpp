@@ -824,13 +824,10 @@ TEST_F(PassManagerTest, FunctionPassCFGChecker) {
 
   auto *F = M->getFunction("foo");
   FunctionAnalysisManager FAM;
-  ModuleAnalysisManager MAM;
   FunctionPassManager FPM;
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ true);
-  SI.registerCallbacks(PIC, &MAM);
-  MAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
-  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
+  SI.registerCallbacks(PIC, &FAM);
   FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
   FAM.registerPass([&] { return DominatorTreeAnalysis(); });
   FAM.registerPass([&] { return AssumptionAnalysis(); });
@@ -873,13 +870,10 @@ TEST_F(PassManagerTest, FunctionPassCFGCheckerInvalidateAnalysis) {
 
   auto *F = M->getFunction("foo");
   FunctionAnalysisManager FAM;
-  ModuleAnalysisManager MAM;
   FunctionPassManager FPM;
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ true);
-  SI.registerCallbacks(PIC, &MAM);
-  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
-  MAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  SI.registerCallbacks(PIC, &FAM);
   FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
   FAM.registerPass([&] { return DominatorTreeAnalysis(); });
   FAM.registerPass([&] { return AssumptionAnalysis(); });
@@ -941,13 +935,10 @@ TEST_F(PassManagerTest, FunctionPassCFGCheckerWrapped) {
 
   auto *F = M->getFunction("foo");
   FunctionAnalysisManager FAM;
-  ModuleAnalysisManager MAM;
   FunctionPassManager FPM;
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ true);
-  SI.registerCallbacks(PIC, &MAM);
-  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
-  MAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  SI.registerCallbacks(PIC, &FAM);
   FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
   FAM.registerPass([&] { return DominatorTreeAnalysis(); });
   FAM.registerPass([&] { return AssumptionAnalysis(); });
@@ -970,7 +961,7 @@ struct WrongFunctionPass : PassInfoMixin<WrongFunctionPass> {
   static StringRef name() { return "WrongFunctionPass"; }
 };
 
-TEST_F(PassManagerTest, FunctionPassMissedFunctionAnalysisInvalidation) {
+TEST_F(PassManagerTest, FunctionAnalysisMissedInvalidation) {
   LLVMContext Context;
   auto M = parseIR(Context, "define void @foo() {\n"
                             "  %a = add i32 0, 0\n"
@@ -978,12 +969,9 @@ TEST_F(PassManagerTest, FunctionPassMissedFunctionAnalysisInvalidation) {
                             "}\n");
 
   FunctionAnalysisManager FAM;
-  ModuleAnalysisManager MAM;
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ false);
-  SI.registerCallbacks(PIC, &MAM);
-  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
-  MAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  SI.registerCallbacks(PIC, &FAM);
   FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
 
   FunctionPassManager FPM;
@@ -993,39 +981,6 @@ TEST_F(PassManagerTest, FunctionPassMissedFunctionAnalysisInvalidation) {
   EXPECT_DEATH(FPM.run(*F, FAM), "Function @foo changed by WrongFunctionPass without invalidating analyses");
 }
 
-struct WrongModulePass : PassInfoMixin<WrongModulePass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
-    for (Function &F : M)
-      F.getEntryBlock().begin()->eraseFromParent();
-
-    return PreservedAnalyses::all();
-  }
-  static StringRef name() { return "WrongModulePass"; }
-};
-
-TEST_F(PassManagerTest, ModulePassMissedFunctionAnalysisInvalidation) {
-  LLVMContext Context;
-  auto M = parseIR(Context, "define void @foo() {\n"
-                            "  %a = add i32 0, 0\n"
-                            "  ret void\n"
-                            "}\n");
-
-  FunctionAnalysisManager FAM;
-  ModuleAnalysisManager MAM;
-  PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ false);
-  SI.registerCallbacks(PIC, &MAM);
-  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
-  MAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
-  FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
-
-  ModulePassManager MPM;
-  MPM.addPass(WrongModulePass());
-
-  EXPECT_DEATH(
-      MPM.run(*M, MAM),
-      "Function @foo changed by WrongModulePass without invalidating analyses");
-}
-
 #endif
+
 }
