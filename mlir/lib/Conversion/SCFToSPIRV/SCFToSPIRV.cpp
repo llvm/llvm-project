@@ -291,18 +291,28 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     ValueRange operands = adaptor.getOperands();
 
-    // If the region is return values, store each value into the associated
+    Operation *parent = terminatorOp->getParentOp();
+
+    // TODO: Implement conversion for the remaining `scf` ops.
+    if (parent->getDialect()->getNamespace() ==
+            scf::SCFDialect::getDialectNamespace() &&
+        !isa<scf::IfOp, scf::ForOp, scf::WhileOp>(parent))
+      return rewriter.notifyMatchFailure(
+          terminatorOp,
+          llvm::formatv("conversion not supported for parent op: '{0}'",
+                        parent->getName()));
+
+    // If the region return values, store each value into the associated
     // VariableOp created during lowering of the parent region.
     if (!operands.empty()) {
-      auto &allocas =
-          scfToSPIRVContext->outputVars[terminatorOp->getParentOp()];
+      auto &allocas = scfToSPIRVContext->outputVars[parent];
       if (allocas.size() != operands.size())
         return failure();
 
       auto loc = terminatorOp.getLoc();
       for (unsigned i = 0, e = operands.size(); i < e; i++)
         rewriter.create<spirv::StoreOp>(loc, allocas[i], operands[i]);
-      if (isa<spirv::LoopOp>(terminatorOp->getParentOp())) {
+      if (isa<spirv::LoopOp>(parent)) {
         // For loops we also need to update the branch jumping back to the
         // header.
         auto br = cast<spirv::BranchOp>(
