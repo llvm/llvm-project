@@ -58,50 +58,6 @@ public:
   /// externally to this OperationFolder. `op` must be a constant op.
   void notifyRemoval(Operation *op);
 
-  /// Create an operation of specific op type with the given builder,
-  /// and immediately try to fold it. This function populates 'results' with
-  /// the results after folding the operation.
-  template <typename OpTy, typename... Args>
-  void create(OpBuilder &builder, SmallVectorImpl<Value> &results,
-              Location location, Args &&...args) {
-    // The op needs to be inserted only if the fold (below) fails, or the number
-    // of results produced by the successful folding is zero (which is treated
-    // as an in-place fold). Using create methods of the builder will insert the
-    // op, so not using it here.
-    OperationState state(location, OpTy::getOperationName());
-    OpTy::build(builder, state, std::forward<Args>(args)...);
-    Operation *op = Operation::create(state);
-
-    if (failed(tryToFold(builder, op, results)) || results.empty()) {
-      builder.insert(op);
-      results.assign(op->result_begin(), op->result_end());
-      return;
-    }
-    op->destroy();
-  }
-
-  /// Overload to create or fold a single result operation.
-  template <typename OpTy, typename... Args>
-  std::enable_if_t<OpTy::template hasTrait<OpTrait::OneResult>(), Value>
-  create(OpBuilder &builder, Location location, Args &&...args) {
-    SmallVector<Value, 1> results;
-    create<OpTy>(builder, results, location, std::forward<Args>(args)...);
-    return results.front();
-  }
-
-  /// Overload to create or fold a zero result operation.
-  template <typename OpTy, typename... Args>
-  std::enable_if_t<OpTy::template hasTrait<OpTrait::ZeroResults>(), OpTy>
-  create(OpBuilder &builder, Location location, Args &&...args) {
-    auto op = builder.create<OpTy>(location, std::forward<Args>(args)...);
-    SmallVector<Value, 0> unused;
-    (void)tryToFold(op.getOperation(), unused);
-
-    // Folding cannot remove a zero-result operation, so for convenience we
-    // continue to return it.
-    return op;
-  }
-
   /// Clear out any constants cached inside of the folder.
   void clear();
 
