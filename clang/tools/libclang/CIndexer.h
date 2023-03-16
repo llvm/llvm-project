@@ -34,6 +34,7 @@ class IdentifierInfo;
 class CIndexer {
   bool OnlyLocalDecls;
   bool DisplayDiagnostics;
+  bool StorePreamblesInMemory = false;
   unsigned Options; // CXGlobalOptFlags.
 
   std::string ResourcesPath;
@@ -77,6 +78,11 @@ public:
   const std::string &getClangResourcesPath();
 
   StringRef getClangToolchainPath();
+
+  void setStorePreamblesInMemory(bool StoreInMemory) {
+    StorePreamblesInMemory = StoreInMemory;
+  }
+  bool getStorePreamblesInMemory() const { return StorePreamblesInMemory; }
 
   void setPreambleStoragePath(StringRef Str) {
     PreambleStoragePath = Str.str();

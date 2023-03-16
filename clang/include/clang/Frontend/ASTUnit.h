@@ -119,6 +119,7 @@ private:
   std::shared_ptr<PreprocessorOptions>    PPOpts;
   IntrusiveRefCntPtr<ASTReader> Reader;
   bool HadModuleLoaderFatalFailure = false;
+  bool StorePreamblesInMemory = false;
 
   struct ASTWriterData;
   std::unique_ptr<ASTWriterData> WriterData;
@@ -803,9 +804,12 @@ public:
   ///
   /// \param ResourceFilesPath - The path to the compiler resource files.
   ///
+  /// \param StorePreamblesInMemory - Whether to store PCH in memory. If false,
+  /// PCH are stored in temporary files.
+  ///
   /// \param PreambleStoragePath - The path to a directory, in which to create
   /// temporary PCH files. If empty, the default system temporary directory is
-  /// used.
+  /// used. This parameter is ignored if \p StorePreamblesInMemory is true.
   ///
   /// \param ModuleFormat - If provided, uses the specific module format.
   ///
@@ -825,6 +829,7 @@ public:
       const char **ArgBegin, const char **ArgEnd,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags, StringRef ResourceFilesPath,
+      bool StorePreamblesInMemory = false,
       StringRef PreambleStoragePath = StringRef(), bool OnlyLocalDecls = false,
       CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
       ArrayRef<RemappedFile> RemappedFiles = std::nullopt,
