@@ -139,7 +139,8 @@ function(_build_gpu_objects fq_target_name internal_target_name)
                                ${packager_images} -o ${packaged_output_name}
                        DEPENDS ${gpu_target_names} ${add_gpu_obj_src} ${ADD_GPU_OBJ_HDRS}
                        COMMENT "Packaging LLVM offloading binary")
-    add_custom_target(${packaged_target_name} DEPENDS ${packaged_output_name} ${gpu_target_name})
+    add_custom_target(${packaged_target_name} DEPENDS ${packaged_output_name})
+    list(APPEND packaged_gpu_names ${packaged_target_name})
     list(APPEND packaged_gpu_binaries ${packaged_output_name})
   endforeach()
 
@@ -177,7 +178,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
   endforeach()
   target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
   add_dependencies(${fq_target_name}
-                   ${full_deps_list} ${packaged_target_name} ${stub_target_name})
+                   ${full_deps_list} ${packaged_gpu_names} ${stub_target_name})
 
   # We only build the internal target for a single supported architecture.
   if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU OR
