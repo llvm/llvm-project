@@ -1273,17 +1273,37 @@ static Value *matchIsFiniteTest(InstCombiner::BuilderTy &Builder, FCmpInst *LHS,
   return Builder.CreateFCmp(FCmpInst::getOrderedPredicate(PredR), RHS0, RHS1);
 }
 
+/// Return true if it's possible to assume IEEE treatment of input denormals in
+/// \p F for \p Val.
+static bool inputDenormalIsIEEE(const Function &F, const Value *Val) {
+  Type *Ty = Val->getType()->getScalarType();
+  return F.getDenormalMode(Ty->getFltSemantics()).Input == DenormalMode::IEEE;
+}
+
 /// Returns a pair of values, which if passed to llvm.is.fpclass, returns the
 /// same result as an fcmp with the given operands.
 static std::pair<Value *, unsigned> fcmpToClassTest(FCmpInst::Predicate Pred,
+                                                    const Function &F,
                                                     Value *LHS, Value *RHS) {
   const APFloat *ConstRHS;
   if (!match(RHS, m_APFloat(ConstRHS)))
     return {nullptr, 0};
 
   if (ConstRHS->isZero()) {
+    // Compares with 0 are only exactly equal to fcZero if input denormals are
+    // not flushed.
+    if (FCmpInst::isEquality(Pred) && !inputDenormalIsIEEE(F, LHS))
+      return {nullptr, 0};
+
     switch (Pred) {
-    // TODO: Compares eq/ne with 0 depends on the denormal handling mode.
+    case FCmpInst::FCMP_OEQ: // Match x == 0.0
+      return {LHS, fcZero};
+    case FCmpInst::FCMP_UEQ: // Match isnan(x) || (x == 0.0)
+      return {LHS, fcZero | fcNan};
+    case FCmpInst::FCMP_UNE: // Match (x != 0.0)
+      return {LHS, ~fcZero & fcAllFlags};
+    case FCmpInst::FCMP_ONE: // Match !isnan(x) && x != 0.0
+      return {LHS, ~fcNan & ~fcZero & fcAllFlags};
     case FCmpInst::FCMP_ORD:
       // Canonical form of ord/uno is with a zero. We could also handle
       // non-canonical other non-NaN constants or LHS == RHS.
@@ -1501,9 +1521,11 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
   // potentially eliminate 4-6 instructions. If we can represent a test with a
   // single fcmp with fneg and fabs, that's likely a better canonical form.
   if (LHS->hasOneUse() && RHS->hasOneUse()) {
-    auto [ClassValRHS, ClassMaskRHS] = fcmpToClassTest(PredR, RHS0, RHS1);
+    auto [ClassValRHS, ClassMaskRHS] =
+        fcmpToClassTest(PredR, *RHS->getFunction(), RHS0, RHS1);
     if (ClassValRHS) {
-      auto [ClassValLHS, ClassMaskLHS] = fcmpToClassTest(PredL, LHS0, LHS1);
+      auto [ClassValLHS, ClassMaskLHS] =
+          fcmpToClassTest(PredL, *LHS->getFunction(), LHS0, LHS1);
       if (ClassValLHS == ClassValRHS) {
         unsigned CombinedMask = IsAnd ? (ClassMaskLHS & ClassMaskRHS)
                                       : (ClassMaskLHS | ClassMaskRHS);
@@ -1525,8 +1547,9 @@ static bool matchIsFPClassLikeFCmp(Value *Op, Value *&ClassVal,
   if (!FCmp || !FCmp->hasOneUse())
     return false;
 
-  std::tie(ClassVal, ClassMask) = fcmpToClassTest(
-      FCmp->getPredicate(), FCmp->getOperand(0), FCmp->getOperand(1));
+  std::tie(ClassVal, ClassMask) =
+      fcmpToClassTest(FCmp->getPredicate(), *FCmp->getParent()->getParent(),
+                      FCmp->getOperand(0), FCmp->getOperand(1));
   return ClassVal != nullptr;
 }
 
