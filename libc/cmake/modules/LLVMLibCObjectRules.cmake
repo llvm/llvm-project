@@ -173,9 +173,11 @@ function(_build_gpu_objects fq_target_name internal_target_name)
   target_compile_options(${fq_target_name} BEFORE PRIVATE
                          ${common_compile_options} -nostdlib)
   foreach(packaged_gpu_binary ${packaged_gpu_binaries})
+    message(STATUS ${packaged_gpu_binary})
     target_compile_options(${fq_target_name} PRIVATE
-                           -Xclang -fembed-offload-object=${packaged_gpu_binary})
+                           "SHELL:-Xclang -fembed-offload-object=${packaged_gpu_binary}")
   endforeach()
+    message(STATUS "\n")
   target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
   add_dependencies(${fq_target_name}
                    ${full_deps_list} ${packaged_gpu_names} ${stub_target_name})
