@@ -38,12 +38,9 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeGuardWideningLegacyPassPass(Registry);
   initializeLoopGuardWideningLegacyPassPass(Registry);
   initializeGVNLegacyPassPass(Registry);
-  initializeNewGVNLegacyPassPass(Registry);
   initializeEarlyCSELegacyPassPass(Registry);
   initializeEarlyCSEMemSSALegacyPassPass(Registry);
   initializeMakeGuardsExplicitLegacyPassPass(Registry);
-  initializeGVNHoistLegacyPassPass(Registry);
-  initializeGVNSinkLegacyPassPass(Registry);
   initializeFlattenCFGLegacyPassPass(Registry);
   initializeIRCELegacyPassPass(Registry);
   initializeInferAddressSpacesPass(Registry);
@@ -64,7 +61,6 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeLowerMatrixIntrinsicsLegacyPassPass(Registry);
   initializeLowerMatrixIntrinsicsMinimalLegacyPassPass(Registry);
   initializeLowerWidenableConditionLegacyPassPass(Registry);
-  initializeMemCpyOptLegacyPassPass(Registry);
   initializeMergeICmpsLegacyPassPass(Registry);
   initializeMergedLoadStoreMotionLegacyPassPass(Registry);
   initializeNaryReassociateLegacyPassPass(Registry);
@@ -86,7 +82,6 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeStraightLineStrengthReduceLegacyPassPass(Registry);
   initializePlaceBackedgeSafepointsLegacyPassPass(Registry);
   initializePlaceSafepointsLegacyPassPass(Registry);
-  initializeFloat2IntLegacyPassPass(Registry);
   initializeLoopSimplifyCFGLegacyPassPass(Registry);
 }
 
