@@ -69,7 +69,7 @@ _LIBCPP_HIDE_FROM_ABI void __throw_bad_expected_access(_Arg&& __arg) {
   throw bad_expected_access<_Err>(std::forward<_Arg>(__arg));
 #  else
   (void)__arg;
-  std::__libcpp_verbose_abort("bad_expected_access was thrown in -fno-exceptions mode");
+  _LIBCPP_VERBOSE_ABORT("bad_expected_access was thrown in -fno-exceptions mode");
 #  endif
 }
 

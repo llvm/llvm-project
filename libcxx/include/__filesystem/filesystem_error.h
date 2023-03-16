@@ -92,7 +92,7 @@ void __throw_filesystem_error(_Args&&... __args) {
 }
 #else
 void __throw_filesystem_error(_Args&&...) {
-    std::__libcpp_verbose_abort("filesystem_error was thrown in -fno-exceptions mode");
+    _LIBCPP_VERBOSE_ABORT("filesystem_error was thrown in -fno-exceptions mode");
 }
 #endif
 _LIBCPP_AVAILABILITY_FILESYSTEM_POP
