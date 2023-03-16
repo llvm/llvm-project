@@ -316,10 +316,9 @@ BoolValue &DataflowAnalysisContext::substituteBoolValue(
 BoolValue &DataflowAnalysisContext::buildAndSubstituteFlowCondition(
     AtomicBoolValue &Token,
     llvm::DenseMap<AtomicBoolValue *, BoolValue *> Substitutions) {
-  assert(
-      Substitutions.find(&getBoolLiteralValue(true)) == Substitutions.end() &&
-      Substitutions.find(&getBoolLiteralValue(false)) == Substitutions.end() &&
-      "Do not substitute true/false boolean literals");
+  assert(!Substitutions.contains(&getBoolLiteralValue(true)) &&
+         !Substitutions.contains(&getBoolLiteralValue(false)) &&
+         "Do not substitute true/false boolean literals");
   llvm::DenseMap<BoolValue *, BoolValue *> SubstitutionsCache(
       Substitutions.begin(), Substitutions.end());
   return buildAndSubstituteFlowConditionWithCache(Token, SubstitutionsCache);

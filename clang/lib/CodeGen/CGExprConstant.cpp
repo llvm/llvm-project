@@ -1570,7 +1570,7 @@ namespace {
     }
 
     void setLocation(llvm::GlobalVariable *placeholder) {
-      assert(Locations.find(placeholder) == Locations.end() &&
+      assert(!Locations.contains(placeholder) &&
              "already found location for placeholder!");
 
       // Lazily fill in IndexValues with the values from Indices.

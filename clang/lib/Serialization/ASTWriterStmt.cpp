@@ -2698,16 +2698,14 @@ void ASTStmtWriter::VisitOMPTargetParallelGenericLoopDirective(
 //===----------------------------------------------------------------------===//
 
 unsigned ASTWriter::RecordSwitchCaseID(SwitchCase *S) {
-  assert(SwitchCaseIDs.find(S) == SwitchCaseIDs.end() &&
-         "SwitchCase recorded twice");
+  assert(!SwitchCaseIDs.contains(S) && "SwitchCase recorded twice");
   unsigned NextID = SwitchCaseIDs.size();
   SwitchCaseIDs[S] = NextID;
   return NextID;
 }
 
 unsigned ASTWriter::getSwitchCaseID(SwitchCase *S) {
-  assert(SwitchCaseIDs.find(S) != SwitchCaseIDs.end() &&
-         "SwitchCase hasn't been seen yet");
+  assert(SwitchCaseIDs.contains(S) && "SwitchCase hasn't been seen yet");
   return SwitchCaseIDs[S];
 }
 
