@@ -89,7 +89,7 @@ void mlir::linalg::transformIndexOps(
     RewriterBase &b, LinalgOp op, SmallVectorImpl<Value> &ivs,
     const LoopIndexToRangeIndexMap &loopIndexToRangeIndex) {
   SmallVector<Value> allIvs(op.getNumLoops(), nullptr);
-  for (auto &en : enumerate(allIvs)) {
+  for (auto en : enumerate(allIvs)) {
     auto rangeIndex = loopIndexToRangeIndex.find(en.index());
     if (rangeIndex == loopIndexToRangeIndex.end())
       continue;

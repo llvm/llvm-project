@@ -330,8 +330,8 @@ libclang
   was marked with the explicit identifier.
 
 - Introduced the new ``CXIndex`` constructor function
-  ``clang_createIndexWithOptions``, which allows overriding precompiled preamble
-  storage path.
+  ``clang_createIndexWithOptions``, which allows storing precompiled preambles
+  in memory or overriding the precompiled preamble storage path.
 
 - Deprecated two functions ``clang_CXIndex_setGlobalOptions`` and
   ``clang_CXIndex_setInvocationEmissionPathOption`` in favor of the new

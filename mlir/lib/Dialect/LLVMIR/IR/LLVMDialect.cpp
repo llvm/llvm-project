@@ -2438,7 +2438,7 @@ OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
   // Canonicalize any dynamic indices of constant value to constant indices.
   bool changed = false;
   SmallVector<GEPArg> gepArgs;
-  for (auto &iter : llvm::enumerate(indices)) {
+  for (auto iter : llvm::enumerate(indices)) {
     auto integer = iter.value().dyn_cast_or_null<IntegerAttr>();
     // Constant indices can only be int32_t, so if integer does not fit we
     // are forced to keep it dynamic, despite being a constant.

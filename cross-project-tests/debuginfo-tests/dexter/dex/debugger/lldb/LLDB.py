@@ -9,6 +9,7 @@
 
 import imp
 import os
+import shlex
 from subprocess import CalledProcessError, check_output, STDOUT
 import sys
 
@@ -171,6 +172,8 @@ class LLDB(DebuggerBase):
             self._target.BreakpointDelete(id)
 
     def launch(self, cmdline):
+        if self.context.options.target_run_args:
+          cmdline += shlex.split(self.context.options.target_run_args)
         self._process = self._target.LaunchSimple(cmdline, None, os.getcwd())
         if not self._process or self._process.GetNumThreads() == 0:
             raise DebuggerException('could not launch process')

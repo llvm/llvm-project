@@ -151,7 +151,7 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
     bool persist_result =
         OptionArgParser::ToBoolean(option_arg, true, &success);
     if (success)
-      suppress_persistent_result = !persist_result;
+      suppress_persistent_result = !persist_result ? eLazyBoolYes : eLazyBoolNo;
     else
       error.SetErrorStringWithFormat(
           "could not convert \"%s\" to a boolean value.",
@@ -187,7 +187,7 @@ void CommandObjectExpression::CommandOptions::OptionParsingStarting(
   auto_apply_fixits = eLazyBoolCalculate;
   top_level = false;
   allow_jit = true;
-  suppress_persistent_result = false;
+  suppress_persistent_result = eLazyBoolCalculate;
 }
 
 llvm::ArrayRef<OptionDefinition>
@@ -202,8 +202,9 @@ CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
   options.SetCoerceToId(display_opts.use_objc);
   // Explicitly disabling persistent results takes precedence over the
   // m_verbosity/use_objc logic.
-  if (suppress_persistent_result)
-    options.SetSuppressPersistentResult(true);
+  if (suppress_persistent_result != eLazyBoolCalculate)
+    options.SetSuppressPersistentResult(suppress_persistent_result ==
+                                        eLazyBoolYes);
   else if (m_verbosity == eLanguageRuntimeDescriptionDisplayVerbosityCompact)
     options.SetSuppressPersistentResult(display_opts.use_objc);
   options.SetUnwindOnError(unwind_on_error);

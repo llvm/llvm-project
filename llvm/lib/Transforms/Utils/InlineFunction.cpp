@@ -1537,7 +1537,8 @@ static void UpdateCallGraphAfterInlining(CallBase &CB,
 
 static void HandleByValArgumentInit(Type *ByValType, Value *Dst, Value *Src,
                                     Module *M, BasicBlock *InsertBlock,
-                                    InlineFunctionInfo &IFI) {
+                                    InlineFunctionInfo &IFI,
+                                    Function *CalledFunc) {
   IRBuilder<> Builder(InsertBlock, InsertBlock->begin());
 
   Value *Size =
@@ -1546,8 +1547,15 @@ static void HandleByValArgumentInit(Type *ByValType, Value *Dst, Value *Src,
   // Always generate a memcpy of alignment 1 here because we don't know
   // the alignment of the src pointer.  Other optimizations can infer
   // better alignment.
-  Builder.CreateMemCpy(Dst, /*DstAlign*/ Align(1), Src,
-                       /*SrcAlign*/ Align(1), Size);
+  CallInst *CI = Builder.CreateMemCpy(Dst, /*DstAlign*/ Align(1), Src,
+                                      /*SrcAlign*/ Align(1), Size);
+
+  // The verifier requires that all calls of debug-info-bearing functions
+  // from debug-info-bearing functions have a debug location (for inlining
+  // purposes). Assign a dummy location to satisfy the constraint.
+  if (!CI->getDebugLoc() && InsertBlock->getParent()->getSubprogram())
+    if (DISubprogram *SP = CalledFunc->getSubprogram())
+      CI->setDebugLoc(DILocation::get(SP->getContext(), 0, 0, SP));
 }
 
 /// When inlining a call site that has a byval argument,
@@ -2242,7 +2250,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     // Inject byval arguments initialization.
     for (ByValInit &Init : ByValInits)
       HandleByValArgumentInit(Init.Ty, Init.Dst, Init.Src, Caller->getParent(),
-                              &*FirstNewBlock, IFI);
+                              &*FirstNewBlock, IFI, CalledFunc);
 
     std::optional<OperandBundleUse> ParentDeopt =
         CB.getOperandBundle(LLVMContext::OB_deopt);

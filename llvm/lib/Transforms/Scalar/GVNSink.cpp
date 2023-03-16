@@ -154,7 +154,7 @@ public:
 
   void restrictToBlocks(SmallSetVector<BasicBlock *, 4> &Blocks) {
     for (auto II = Insts.begin(); II != Insts.end();) {
-      if (!llvm::is_contained(Blocks, (*II)->getParent())) {
+      if (!Blocks.contains((*II)->getParent())) {
         ActiveBlocks.remove((*II)->getParent());
         II = Insts.erase(II);
       } else {
@@ -272,7 +272,7 @@ public:
     auto VI = Values.begin();
     while (BI != Blocks.end()) {
       assert(VI != Values.end());
-      if (!llvm::is_contained(NewBlocks, *BI)) {
+      if (!NewBlocks.contains(*BI)) {
         BI = Blocks.erase(BI);
         VI = Values.erase(VI);
       } else {
