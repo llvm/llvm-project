@@ -28,11 +28,8 @@ typedef struct {
 long long test_longlong(OneLongLong input, va_list *mylist) {
   // CHECK-LABEL: define{{.*}} i64 @test_longlong(i64 %input
   // CHECK: [[STARTPTR:%.*]] = load ptr, ptr %mylist
-  // CHECK: [[START:%.*]] = ptrtoint ptr [[STARTPTR]] to i32
-
-  // CHECK: [[ALIGN_TMP:%.*]] = add i32 [[START]], 7
-  // CHECK: [[ALIGNED:%.*]] = and i32 [[ALIGN_TMP]], -8
-  // CHECK: [[ALIGNED_ADDR:%.*]] = inttoptr i32 [[ALIGNED]] to ptr
+  // CHECK: [[ALIGN_TMP:%.+]] = getelementptr inbounds i8, ptr [[STARTPTR]], i32 7
+  // CHECK: [[ALIGNED_ADDR:%.+]] = tail call ptr @llvm.ptrmask.p0.i32(ptr nonnull [[ALIGN_TMP]], i32 -8)
   // CHECK: [[NEXT:%.*]] = getelementptr inbounds i8, ptr [[ALIGNED_ADDR]], i32 8
   // CHECK: store ptr [[NEXT]], ptr %mylist
 

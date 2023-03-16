@@ -166,17 +166,15 @@ int f_va_1(char *fmt, ...) {
 // CHECK-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 8
 // CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARGP_CUR]] to i64
-// CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 15
-// CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], -16
-// CHECK-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = inttoptr i64 [[TMP2]] to ptr
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 15
+// CHECK-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[TMP0]], i64 -16)
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR_ALIGNED]], i64 16
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = load fp128, ptr [[ARGP_CUR_ALIGNED]], align 16
-// CHECK-NEXT:    store fp128 [[TMP3]], ptr [[V]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = load fp128, ptr [[ARGP_CUR_ALIGNED]], align 16
+// CHECK-NEXT:    store fp128 [[TMP1]], ptr [[V]], align 16
 // CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
-// CHECK-NEXT:    [[TMP4:%.*]] = load fp128, ptr [[V]], align 16
-// CHECK-NEXT:    ret fp128 [[TMP4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load fp128, ptr [[V]], align 16
+// CHECK-NEXT:    ret fp128 [[TMP2]]
 //
 long double f_va_2(char *fmt, ...) {
   __builtin_va_list va;
@@ -201,32 +199,28 @@ long double f_va_2(char *fmt, ...) {
 // CHECK-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 8
 // CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARGP_CUR]] to i64
-// CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 15
-// CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], -16
-// CHECK-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = inttoptr i64 [[TMP2]] to ptr
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 15
+// CHECK-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[TMP0]], i64 -16)
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR_ALIGNED]], i64 16
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = load fp128, ptr [[ARGP_CUR_ALIGNED]], align 16
-// CHECK-NEXT:    store fp128 [[TMP3]], ptr [[V]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = load fp128, ptr [[ARGP_CUR_ALIGNED]], align 16
+// CHECK-NEXT:    store fp128 [[TMP1]], ptr [[V]], align 16
 // CHECK-NEXT:    [[ARGP_CUR1:%.*]] = load ptr, ptr [[VA]], align 8
 // CHECK-NEXT:    [[ARGP_NEXT2:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR1]], i64 8
 // CHECK-NEXT:    store ptr [[ARGP_NEXT2]], ptr [[VA]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARGP_CUR1]], align 8
-// CHECK-NEXT:    store i32 [[TMP4]], ptr [[W]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARGP_CUR1]], align 8
+// CHECK-NEXT:    store i32 [[TMP2]], ptr [[W]], align 4
 // CHECK-NEXT:    [[ARGP_CUR3:%.*]] = load ptr, ptr [[VA]], align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[ARGP_CUR3]] to i64
-// CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 15
-// CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], -16
-// CHECK-NEXT:    [[ARGP_CUR3_ALIGNED:%.*]] = inttoptr i64 [[TMP7]] to ptr
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR3]], i32 15
+// CHECK-NEXT:    [[ARGP_CUR3_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[TMP3]], i64 -16)
 // CHECK-NEXT:    [[ARGP_NEXT4:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR3_ALIGNED]], i64 16
 // CHECK-NEXT:    store ptr [[ARGP_NEXT4]], ptr [[VA]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = load fp128, ptr [[ARGP_CUR3_ALIGNED]], align 16
-// CHECK-NEXT:    store fp128 [[TMP8]], ptr [[X]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = load fp128, ptr [[ARGP_CUR3_ALIGNED]], align 16
+// CHECK-NEXT:    store fp128 [[TMP4]], ptr [[X]], align 16
 // CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
-// CHECK-NEXT:    [[TMP9:%.*]] = load fp128, ptr [[V]], align 16
-// CHECK-NEXT:    [[TMP10:%.*]] = load fp128, ptr [[X]], align 16
-// CHECK-NEXT:    [[ADD:%.*]] = fadd fp128 [[TMP9]], [[TMP10]]
+// CHECK-NEXT:    [[TMP5:%.*]] = load fp128, ptr [[V]], align 16
+// CHECK-NEXT:    [[TMP6:%.*]] = load fp128, ptr [[X]], align 16
+// CHECK-NEXT:    [[ADD:%.*]] = fadd fp128 [[TMP5]], [[TMP6]]
 // CHECK-NEXT:    ret fp128 [[ADD]]
 //
 long double f_va_3(char *fmt, ...) {
