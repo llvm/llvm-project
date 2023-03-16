@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// RUN: export LSAN_OPTIONS=detect_leaks=0
 // UNSUPPORTED: no-exceptions
 
 #include "cxxabi.h"

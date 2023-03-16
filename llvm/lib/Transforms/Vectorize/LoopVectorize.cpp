@@ -9068,16 +9068,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   VPlanTransforms::optimizeInductions(*Plan, *PSE.getSE());
   VPlanTransforms::removeDeadRecipes(*Plan);
 
-  // Convert masked VPReplicateRecipes to if-then region blocks.
-  VPlanTransforms::addReplicateRegions(*Plan, RecipeBuilder);
-
-  bool ShouldSimplify = true;
-  while (ShouldSimplify) {
-    ShouldSimplify = VPlanTransforms::sinkScalarOperands(*Plan);
-    ShouldSimplify |=
-        VPlanTransforms::mergeReplicateRegionsIntoSuccessors(*Plan);
-    ShouldSimplify |= VPlanTransforms::mergeBlocksIntoPredecessors(*Plan);
-  }
+  VPlanTransforms::createAndOptimizeReplicateRegions(*Plan, RecipeBuilder);
 
   VPlanTransforms::removeRedundantExpandSCEVRecipes(*Plan);
   VPlanTransforms::mergeBlocksIntoPredecessors(*Plan);

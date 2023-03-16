@@ -402,7 +402,6 @@ endfunction(add_libc_fuzzer)
 #     SUITE <the suite to which the test should belong>
 #     SRCS <src1.cpp> [src2.cpp ...]
 #     HDRS [hdr1.cpp ...]
-#     STARTUP <fully qualified startup system target name>
 #     DEPENDS <list of entrypoint or other object targets>
 #     ARGS <list of command line arguments to be passed to the test>
 #     ENV <list of environment variables to set before running the test>
@@ -420,7 +419,7 @@ function(add_integration_test test_name)
   cmake_parse_arguments(
     "INTEGRATION_TEST"
     "" # No optional arguments
-    "SUITE;STARTUP" # Single value arguments
+    "SUITE" # Single value arguments
     "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS" # Multi-value arguments
     ${ARGN}
   )
@@ -428,20 +427,20 @@ function(add_integration_test test_name)
   if(NOT INTEGRATION_TEST_SUITE)
     message(FATAL_ERROR "SUITE not specified for ${fq_target_name}")
   endif()
-  if(NOT INTEGRATION_TEST_STARTUP)
-    message(FATAL_ERROR "The STARTUP to link to the integration test is missing.")
-  endif()
   if(NOT INTEGRATION_TEST_SRCS)
     message(FATAL_ERROR "The SRCS list for add_integration_test is missing.")
+  endif()
+  if(NOT TARGET libc.startup.${LIBC_TARGET_OS}.crt1)
+    message(FATAL_ERROR "The 'crt1' target for the integration test is missing.")
   endif()
 
   get_fq_target_name(${test_name}.libc fq_libc_target_name)
 
   get_fq_deps_list(fq_deps_list ${INTEGRATION_TEST_DEPENDS})
   list(APPEND fq_deps_list
-      # All integration tests need to inherit the same dependencies as the
-      # startup code.
-      ${INTEGRATION_TEST_STARTUP}
+      # All integration tests use the operating system's startup object and need
+      # to inherit the same dependencies.
+      libc.startup.${LIBC_TARGET_OS}.crt1
       # We always add the memory functions objects. This is because the
       # compiler's codegen can emit calls to the C memory functions.
       libc.src.string.bcmp
@@ -498,8 +497,7 @@ function(add_integration_test test_name)
   target_compile_options(${fq_build_target_name}
                          PRIVATE -fpie -ffreestanding ${INTEGRATION_TEST_COMPILE_OPTIONS})
   target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
-  target_link_libraries(${fq_build_target_name}
-                        ${INTEGRATION_TEST_STARTUP} ${fq_target_name}.__libc__
+  target_link_libraries(${fq_build_target_name} ${fq_target_name}.__libc__
                         libc.test.IntegrationTest.test)
   add_dependencies(${fq_build_target_name}
                    libc.test.IntegrationTest.test

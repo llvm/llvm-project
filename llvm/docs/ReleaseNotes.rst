@@ -61,6 +61,15 @@ Changes to the LLVM IR
 
   * ``select``
 
+Changes to LLVM infrastructure
+------------------------------
+
+* The legacy optimization pipeline has been removed.
+
+* Alloca merging in the inliner has been removed, since it only worked with the
+  legacy inliner pass. Backend stack coloring should handle cases alloca
+  merging initially set out to handle.
+
 Changes to building LLVM
 ------------------------
 
