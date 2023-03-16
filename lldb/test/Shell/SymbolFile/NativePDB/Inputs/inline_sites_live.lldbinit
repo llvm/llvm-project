@@ -1,7 +1,7 @@
 br set -p BP_bar -f inline_sites_live.cpp
 br set -p BP_foo -f inline_sites_live.cpp
 run
-p param
+expression param
 continue
-p param
-p local
+expression param
+expression local
