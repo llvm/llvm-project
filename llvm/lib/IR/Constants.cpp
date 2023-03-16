@@ -2397,24 +2397,6 @@ Constant *ConstantExpr::getAlignOf(Type* Ty) {
                      Type::getInt64Ty(Ty->getContext()));
 }
 
-Constant *ConstantExpr::getOffsetOf(StructType* STy, unsigned FieldNo) {
-  return getOffsetOf(STy, ConstantInt::get(Type::getInt32Ty(STy->getContext()),
-                                           FieldNo));
-}
-
-Constant *ConstantExpr::getOffsetOf(Type* Ty, Constant *FieldNo) {
-  // offsetof is implemented as: (i64) gep (Ty*)null, 0, FieldNo
-  // Note that a non-inbounds gep is used, as null isn't within any object.
-  Constant *GEPIdx[] = {
-    ConstantInt::get(Type::getInt64Ty(Ty->getContext()), 0),
-    FieldNo
-  };
-  Constant *GEP = getGetElementPtr(
-      Ty, Constant::getNullValue(PointerType::getUnqual(Ty)), GEPIdx);
-  return getPtrToInt(GEP,
-                     Type::getInt64Ty(Ty->getContext()));
-}
-
 Constant *ConstantExpr::getCompare(unsigned short Predicate, Constant *C1,
                                    Constant *C2, bool OnlyIfReduced) {
   assert(C1->getType() == C2->getType() && "Op types should be identical!");

@@ -1027,16 +1027,6 @@ public:
   ///
   static Constant *getSizeOf(Type *Ty);
 
-  /// getOffsetOf constant expr - computes the offset of a struct field in a
-  /// target independent way (Note: the return type is an i64).
-  ///
-  static Constant *getOffsetOf(StructType *STy, unsigned FieldNo);
-
-  /// getOffsetOf constant expr - This is a generalized form of getOffsetOf,
-  /// which supports any aggregate type, and any Constant index.
-  ///
-  static Constant *getOffsetOf(Type *Ty, Constant *FieldNo);
-
   static Constant *getNeg(Constant *C, bool HasNUW = false,
                           bool HasNSW = false);
   static Constant *getNot(Constant *C);
