@@ -14,11 +14,11 @@
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARGP_CUR]], align 4
-// CHECK-NEXT:    store i32 [[TMP1]], ptr [[V]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARGP_CUR]], align 4
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[V]], align 4
 // CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[V]], align 4
-// CHECK-NEXT:    ret i32 [[TMP2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[V]], align 4
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int test_i32(char *fmt, ...) {
   va_list va;
@@ -40,17 +40,15 @@ int test_i32(char *fmt, ...) {
 // CHECK-NEXT:    store ptr [[FMT]], ptr [[FMT_ADDR]], align 4
 // CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARGP_CUR]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 7
-// CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -8
-// CHECK-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = inttoptr i32 [[TMP2]] to ptr
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 7
+// CHECK-NEXT:    [[ARGP_CUR_ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[TMP0]], i32 -8)
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR_ALIGNED]], i32 8
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[ARGP_CUR_ALIGNED]], align 8
-// CHECK-NEXT:    store i64 [[TMP4]], ptr [[V]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[ARGP_CUR_ALIGNED]], align 8
+// CHECK-NEXT:    store i64 [[TMP1]], ptr [[V]], align 8
 // CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
-// CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[V]], align 8
-// CHECK-NEXT:    ret i64 [[TMP5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[V]], align 8
+// CHECK-NEXT:    ret i64 [[TMP2]]
 //
 long long test_i64(char *fmt, ...) {
   va_list va;
@@ -79,8 +77,8 @@ struct S {
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARGP_CUR]], align 4
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_RESULT]], ptr align 4 [[TMP1]], i32 12, i1 false)
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGP_CUR]], align 4
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_RESULT]], ptr align 4 [[TMP0]], i32 12, i1 false)
 // CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
 // CHECK-NEXT:    ret void
 //
@@ -109,11 +107,11 @@ struct Z {};
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 0
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[U]], ptr align 4 [[ARGP_CUR]], i32 0, i1 false)
-// CHECK-NEXT:    [[ARGP_CUR2:%.*]] = load ptr, ptr [[VA]], align 4
-// CHECK-NEXT:    [[ARGP_NEXT3:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR2]], i32 4
-// CHECK-NEXT:    store ptr [[ARGP_NEXT3]], ptr [[VA]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[ARGP_CUR2]], align 4
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_RESULT]], ptr align 4 [[TMP4]], i32 12, i1 false)
+// CHECK-NEXT:    [[ARGP_CUR1:%.*]] = load ptr, ptr [[VA]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT2:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR1]], i32 4
+// CHECK-NEXT:    store ptr [[ARGP_NEXT2]], ptr [[VA]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGP_CUR1]], align 4
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_RESULT]], ptr align 4 [[TMP0]], i32 12, i1 false)
 // CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
 // CHECK-NEXT:    ret void
 //
