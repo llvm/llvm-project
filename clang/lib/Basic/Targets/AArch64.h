@@ -81,6 +81,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasNoNeon = false;
   bool HasNoSVE = false;
   bool HasFMV = true;
+  bool HasGCS = false;
 
   const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
 
