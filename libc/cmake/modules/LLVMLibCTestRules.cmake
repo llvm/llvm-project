@@ -439,15 +439,9 @@ function(add_integration_test test_name)
 
   get_fq_deps_list(fq_deps_list ${INTEGRATION_TEST_DEPENDS})
   list(APPEND fq_deps_list
-      # All integration tests setup TLS area and the main thread's self object.
-      # So, we need to link in the threads implementation. Likewise, the startup
-      # code also has to run init_array callbacks which potentially register
-      # their own atexit callbacks. So, link in exit and atexit also with all
-      # integration tests.
-      libc.src.__support.threads.thread
-      libc.src.stdlib.atexit
-      libc.src.stdlib.exit
-      libc.src.unistd.environ
+      # All integration tests need to inherit the same dependencies as the
+      # startup code.
+      ${INTEGRATION_TEST_STARTUP}
       # We always add the memory functions objects. This is because the
       # compiler's codegen can emit calls to the C memory functions.
       libc.src.string.bcmp
