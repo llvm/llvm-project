@@ -1982,6 +1982,15 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
       }
       EnterSourceFile(File->FID, nullptr, FilenameTok.getLocation(),
                       /*IsFirstIncludeOfFile*/ true);
+
+      if (Module *SM = File->Submodule) {
+        assert(!CurLexerSubmodule &&
+               "should not have marked this as a module yet");
+        CurLexerSubmodule = SM;
+        EnterSubmodule(SM, EndLoc, /*ForPragma=*/false);
+        EnterAnnotationToken(SourceRange(HashLoc, EndLoc),
+                             tok::annot_module_begin, SM);
+      }
       return;
     }
     if (auto *Import = std::get_if<PPCachedActions::IncludeModule>(&Include)) {

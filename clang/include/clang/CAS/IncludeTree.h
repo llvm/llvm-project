@@ -69,10 +69,31 @@ public:
   Expected<FileInfo> getBaseFileInfo();
 
   SrcMgr::CharacteristicKind getFileCharacteristic() const {
-    return (SrcMgr::CharacteristicKind)dataSkippingIncludes().front();
+    return (SrcMgr::CharacteristicKind)(getData().front() & ~IsSubmoduleBit);
   }
 
-  size_t getNumIncludes() const { return getNumReferences() - 1; }
+  bool isSubmodule() const { return (getData().front() & IsSubmoduleBit) != 0; }
+
+  std::optional<ObjectRef> getSubmoduleNameRef() const {
+    if (isSubmodule())
+      return getReference(getNumReferences() - 1);
+    return std::nullopt;
+  }
+
+  /// If \c getBaseFile() is a modular header, get its submodule name.
+  Expected<std::optional<StringRef>> getSubmoduleName() {
+    auto Ref = getSubmoduleNameRef();
+    if (!Ref)
+      return std::nullopt;
+    auto Node = getCAS().getProxy(*Ref);
+    if (!Node)
+      return Node.takeError();
+    return Node->getData();
+  }
+
+  size_t getNumIncludes() const {
+    return getNumReferences() - (isSubmodule() ? 2 : 1);
+  };
 
   ObjectRef getIncludeRef(size_t I) const {
     assert(I < getNumIncludes());
@@ -131,7 +152,7 @@ public:
   static Expected<IncludeTree>
   create(ObjectStore &DB, SrcMgr::CharacteristicKind FileCharacteristic,
          ObjectRef BaseFile, ArrayRef<IncludeInfo> Includes,
-         llvm::SmallBitVector Checks);
+         std::optional<ObjectRef> SubmoduleName, llvm::SmallBitVector Checks);
 
   static Expected<IncludeTree> get(ObjectStore &DB, ObjectRef Ref);
 
@@ -140,6 +161,8 @@ public:
 private:
   friend class IncludeTreeBase<IncludeTree>;
   friend class IncludeTreeRoot;
+
+  static constexpr char IsSubmoduleBit = 0x80;
 
   explicit IncludeTree(ObjectProxy Node) : IncludeTreeBase(std::move(Node)) {
     assert(isValid(*this));
@@ -154,8 +177,10 @@ private:
 
   Expected<Node> getIncludeNode(ObjectRef Ref, NodeKind Kind);
 
+  StringRef dataSkippingFlags() const { return getData().drop_front(); }
   StringRef dataSkippingIncludes() const {
-    return getData().drop_front(getNumIncludes() * (sizeof(uint32_t) + 1));
+    return dataSkippingFlags().drop_front(getNumIncludes() *
+                                          (sizeof(uint32_t) + 1));
   }
 
   static bool isValid(const ObjectProxy &Node);

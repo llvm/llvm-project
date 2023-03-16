@@ -20,6 +20,7 @@
 namespace clang {
 
 class IdentifierInfo;
+class Module;
 class Preprocessor;
 
 /// This interface provides a way to override the actions of the preprocessor as
@@ -33,6 +34,7 @@ public:
   /// The file that is included by an \c #include directive.
   struct IncludeFile {
     FileID FID;
+    Module *Submodule;
   };
   /// The module that is imported by an \c #include directive or \c @import.
   struct IncludeModule {
