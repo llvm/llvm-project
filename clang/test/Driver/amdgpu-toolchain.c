@@ -6,7 +6,7 @@
 // RUN: %clang -### -g --target=amdgcn-mesa-mesa3d -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
 
 // AS_LINK: "-cc1as"
-// AS_LINK: ld.lld{{.*}} "-shared"
+// AS_LINK: ld.lld{{.*}} "--no-undefined" "-shared"
 
 // DWARF_VER: "-dwarf-version=5"
 
