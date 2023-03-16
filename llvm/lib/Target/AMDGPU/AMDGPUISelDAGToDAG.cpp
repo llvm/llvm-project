@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #ifdef EXPENSIVE_CHECKS
 #include "llvm/Analysis/LoopInfo.h"
@@ -2528,6 +2529,18 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_interp_p1_f16:
     SelectInterpP1F16(N);
     return;
+  case Intrinsic::amdgcn_inverse_ballot:
+    switch (N->getOperand(1).getValueSizeInBits()) {
+    case 32:
+      Opcode = AMDGPU::S_INVERSE_BALLOT_U32;
+      break;
+    case 64:
+      Opcode = AMDGPU::S_INVERSE_BALLOT_U64;
+      break;
+    default:
+      llvm_unreachable("Unsupported size for inverse ballot mask.");
+    }
+    break;
   default:
     SelectCode(N);
     return;
