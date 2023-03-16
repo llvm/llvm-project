@@ -1029,51 +1029,58 @@ static bool isIgnoredPass(StringRef PassID) {
 }
 
 void DebugifyEachInstrumentation::registerCallbacks(
-    PassInstrumentationCallbacks &PIC, FunctionAnalysisManager &FAM) {
-  PIC.registerBeforeNonSkippedPassCallback([this, &FAM](StringRef P, Any IR) {
+    PassInstrumentationCallbacks &PIC, ModuleAnalysisManager &MAM) {
+  PIC.registerBeforeNonSkippedPassCallback([this, &MAM](StringRef P, Any IR) {
     if (isIgnoredPass(P))
       return;
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
-    if (const auto **F = any_cast<const Function *>(&IR)) {
-      applyDebugify(*const_cast<Function *>(*F),
-                    Mode, DebugInfoBeforePass, P);
-      FAM.invalidate(*const_cast<Function *>(*F), PA);
-    } else if (const auto **M = any_cast<const Module *>(&IR)) {
-      applyDebugify(*const_cast<Module *>(*M),
-                    Mode, DebugInfoBeforePass, P);
-      for (Function &F : *const_cast<Module *>(*M))
-        FAM.invalidate(F, PA);
-    }
-  });
-  PIC.registerAfterPassCallback([this](StringRef P, Any IR,
-                                       const PreservedAnalyses &PassPA) {
-    if (isIgnoredPass(P))
-      return;
     if (const auto **CF = any_cast<const Function *>(&IR)) {
-      auto &F = *const_cast<Function *>(*CF);
-      Module &M = *F.getParent();
-      auto It = F.getIterator();
-      if (Mode == DebugifyMode::SyntheticDebugInfo)
-        checkDebugifyMetadata(M, make_range(It, std::next(It)), P,
-                              "CheckFunctionDebugify", /*Strip=*/true, DIStatsMap);
-      else
-        checkDebugInfoMetadata(
-          M, make_range(It, std::next(It)), *DebugInfoBeforePass,
-          "CheckModuleDebugify (original debuginfo)",
-          P, OrigDIVerifyBugsReportFilePath);
+      Function &F = *const_cast<Function *>(*CF);
+      applyDebugify(F, Mode, DebugInfoBeforePass, P);
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
+          .getManager()
+          .invalidate(F, PA);
     } else if (const auto **CM = any_cast<const Module *>(&IR)) {
-      auto &M = *const_cast<Module *>(*CM);
-      if (Mode == DebugifyMode::SyntheticDebugInfo)
-       checkDebugifyMetadata(M, M.functions(), P, "CheckModuleDebugify",
-                            /*Strip=*/true, DIStatsMap);
-      else
-        checkDebugInfoMetadata(
-          M, M.functions(), *DebugInfoBeforePass,
-          "CheckModuleDebugify (original debuginfo)",
-          P, OrigDIVerifyBugsReportFilePath);
+      Module &M = *const_cast<Module *>(*CM);
+      applyDebugify(M, Mode, DebugInfoBeforePass, P);
+      MAM.invalidate(M, PA);
     }
   });
+  PIC.registerAfterPassCallback(
+      [this, &MAM](StringRef P, Any IR, const PreservedAnalyses &PassPA) {
+        if (isIgnoredPass(P))
+          return;
+        PreservedAnalyses PA;
+        PA.preserveSet<CFGAnalyses>();
+        if (const auto **CF = any_cast<const Function *>(&IR)) {
+          auto &F = *const_cast<Function *>(*CF);
+          Module &M = *F.getParent();
+          auto It = F.getIterator();
+          if (Mode == DebugifyMode::SyntheticDebugInfo)
+            checkDebugifyMetadata(M, make_range(It, std::next(It)), P,
+                                  "CheckFunctionDebugify", /*Strip=*/true,
+                                  DIStatsMap);
+          else
+            checkDebugInfoMetadata(M, make_range(It, std::next(It)),
+                                   *DebugInfoBeforePass,
+                                   "CheckModuleDebugify (original debuginfo)",
+                                   P, OrigDIVerifyBugsReportFilePath);
+          MAM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
+              .getManager()
+              .invalidate(F, PA);
+        } else if (const auto **CM = any_cast<const Module *>(&IR)) {
+          Module &M = *const_cast<Module *>(*CM);
+          if (Mode == DebugifyMode::SyntheticDebugInfo)
+            checkDebugifyMetadata(M, M.functions(), P, "CheckModuleDebugify",
+                                  /*Strip=*/true, DIStatsMap);
+          else
+            checkDebugInfoMetadata(M, M.functions(), *DebugInfoBeforePass,
+                                   "CheckModuleDebugify (original debuginfo)",
+                                   P, OrigDIVerifyBugsReportFilePath);
+          MAM.invalidate(M, PA);
+        }
+      });
 }
 
 char DebugifyModulePass::ID = 0;

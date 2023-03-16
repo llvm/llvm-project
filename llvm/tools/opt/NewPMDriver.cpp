@@ -402,13 +402,13 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   if (DebugifyEach) {
     Debugify.setDIStatsMap(DIStatsMap);
     Debugify.setDebugifyMode(DebugifyMode::SyntheticDebugInfo);
-    Debugify.registerCallbacks(PIC, FAM);
+    Debugify.registerCallbacks(PIC, MAM);
   } else if (VerifyEachDebugInfoPreserve) {
     Debugify.setDebugInfoBeforePass(DebugInfoBeforePass);
     Debugify.setDebugifyMode(DebugifyMode::OriginalDebugInfo);
     Debugify.setOrigDIVerifyBugsReportFilePath(
       VerifyDIPreserveExport);
-    Debugify.registerCallbacks(PIC, FAM);
+    Debugify.registerCallbacks(PIC, MAM);
   }
 
   PipelineTuningOptions PTO;
