@@ -171,6 +171,13 @@ TEST(WalkAST, TemplateNames) {
       namespace ns {template <typename> struct S {}; }
       using ns::$explicit^S;)cpp",
            "^S<int> x;");
+  testWalk(R"cpp(
+      namespace ns {
+        template <typename T> struct S { S(T);};
+        template <typename T> S(T t) -> S<T>;
+      }
+      using ns::$explicit^S;)cpp",
+      "^S x(123);");
   testWalk("template<typename> struct $explicit^S {};",
            R"cpp(
       template <template <typename> typename> struct X {};
