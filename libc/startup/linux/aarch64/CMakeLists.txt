@@ -6,6 +6,7 @@ add_startup_object(
     libc.config.linux.app_h
     libc.include.sys_mman
     libc.include.sys_syscall
+    libc.src.__support.threads.thread
     libc.src.__support.OSUtil.osutil
     libc.src.stdlib.exit
     libc.src.stdlib.atexit
