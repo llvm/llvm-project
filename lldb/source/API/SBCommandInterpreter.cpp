@@ -141,7 +141,13 @@ bool SBCommandInterpreter::IsActive() {
 bool SBCommandInterpreter::WasInterrupted() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? m_opaque_ptr->WasInterrupted() : false);
+  return (IsValid() ? m_opaque_ptr->GetDebugger().InterruptRequested() : false);
+}
+
+bool SBCommandInterpreter::InterruptCommand() {
+  LLDB_INSTRUMENT_VA(this);
+  
+  return (IsValid() ? m_opaque_ptr->InterruptCommand() : false);
 }
 
 const char *SBCommandInterpreter::GetIOHandlerControlSequence(char ch) {

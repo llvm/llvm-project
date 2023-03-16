@@ -225,6 +225,8 @@ Bug Fixes to C++ Support
 - Fix an issue about ``decltype`` in the members of class templates derived from
   templates with related parameters.
   (`#58674 <https://github.com/llvm/llvm-project/issues/58674>`_)
+- Fix incorrect deletion of the default constructor of unions in some
+  cases. (`#48416 <https://github.com/llvm/llvm-project/issues/48416>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -267,6 +269,9 @@ Windows Support
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
+
+- Patchable function entry (``-fpatchable-function-entry``) is now supported
+  on LoongArch.
 
 RISC-V Support
 ^^^^^^^^^^^^^^

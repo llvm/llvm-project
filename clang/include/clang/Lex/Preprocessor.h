@@ -2850,7 +2850,7 @@ private:
   /// This boolean state keeps track if the current scanned token (by this PP)
   /// is in an "-Wunsafe-buffer-usage" opt-out region. Assuming PP scans a
   /// translation unit in a linear order.
-  bool InSafeBufferOptOutRegion = 0;
+  bool InSafeBufferOptOutRegion = false;
 
   /// Hold the start location of the current "-Wunsafe-buffer-usage" opt-out
   /// region if PP is currently in such a region.  Hold undefined value

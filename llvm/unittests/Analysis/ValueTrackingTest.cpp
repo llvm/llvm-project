@@ -1157,10 +1157,7 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       {{false, false}, "call noundef i32 @g(i32 %x)"},
       {{true, false}, "fcmp nnan oeq float %fx, %fy"},
       {{false, false}, "fcmp oeq float %fx, %fy"},
-      {{true, false},
-       "ashr <4 x i32> %vx, select (i1 icmp sgt (i32 ptrtoint (i32* @s to "
-       "i32), i32 1), <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 "
-       "2, i32 3>)"},
+      {{true, false}, "ashr i32 %x, ptrtoint (i32* @s to i32)"},
       {{false, false},
        "call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %x, i32 %y)"},
       {{false, false},

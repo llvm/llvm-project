@@ -60,7 +60,7 @@ private:
 
 void RegistryMaps::registerMatcher(
     StringRef MatcherName, std::unique_ptr<MatcherDescriptor> Callback) {
-  assert(Constructors.find(MatcherName) == Constructors.end());
+  assert(!Constructors.contains(MatcherName));
   Constructors[MatcherName] = std::move(Callback);
 }
 

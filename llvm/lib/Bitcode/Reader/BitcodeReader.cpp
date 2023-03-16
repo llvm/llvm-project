@@ -1417,7 +1417,13 @@ static bool isConstExprSupported(const BitcodeConstant *BC) {
   if (Opcode == Instruction::GetElementPtr)
     return ConstantExpr::isSupportedGetElementPtr(BC->SrcElemTy);
 
-  return Opcode != Instruction::FNeg;
+  switch (Opcode) {
+  case Instruction::FNeg:
+  case Instruction::Select:
+    return false;
+  default:
+    return true;
+  }
 }
 
 Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
@@ -1548,9 +1554,6 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
           C = ConstantExpr::getGetElementPtr(BC->SrcElemTy, ConstOps[0],
                                              ArrayRef(ConstOps).drop_front(),
                                              BC->Flags, BC->getInRangeIndex());
-          break;
-        case Instruction::Select:
-          C = ConstantExpr::getSelect(ConstOps[0], ConstOps[1], ConstOps[2]);
           break;
         case Instruction::ExtractElement:
           C = ConstantExpr::getExtractElement(ConstOps[0], ConstOps[1]);

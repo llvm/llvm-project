@@ -41,26 +41,26 @@ createSplitPart(RewriterBase &b, Location loc, TilingInterface op,
   offsetsCopy[dimension] = offset;
 
   // Create the part as it it were a single tile.
-  SmallVector<Operation *> tiled =
+  FailureOr<TilingResult> tilingResult =
       op.getTiledImplementation(b, offsetsCopy, sizesCopy);
-  assert(tiled.size() == 1 && "expected a single result from tiling");
-  auto part = cast<TilingInterface>(tiled.front());
 
   // Insert the results back and populate the `results` list.
-  for (auto i : llvm::seq<unsigned>(0, part->getNumResults())) {
+  for (auto [index, result] : llvm::enumerate(tilingResult->tiledValues)) {
     SmallVector<OpFoldResult> resultOffsets, resultSizes;
-    if (failed(op.getResultTilePosition(b, i, offsetsCopy, sizesCopy,
+    if (failed(op.getResultTilePosition(b, index, offsetsCopy, sizesCopy,
                                         resultOffsets, resultSizes)))
       return nullptr;
     SmallVector<OpFoldResult> resultStrides(resultOffsets.size(),
                                             b.getIndexAttr(1));
     Value inserted = b.create<tensor::InsertSliceOp>(
-        loc, part->getResult(i), resultOperands[i], resultOffsets, resultSizes,
+        loc, result, resultOperands[index], resultOffsets, resultSizes,
         resultStrides);
     results.push_back(inserted);
   }
-
-  return part;
+  // TODO: this part can be generalized maybe to not expect a single op.
+  assert(tilingResult->tiledOps.size() == 1 &&
+         "expected split part to return a single tiled operation");
+  return cast<TilingInterface>(tilingResult->tiledOps[0]);
 }
 
 std::pair<TilingInterface, TilingInterface>

@@ -703,7 +703,7 @@ static Value *findBaseDefiningValueCached(Value *I, DefiningValueMapTy &Cache,
                       << KnownBases[I] << "\n");
   }
   assert(Cache[I] != nullptr);
-  assert(KnownBases.find(Cache[I]) != KnownBases.end() &&
+  assert(KnownBases.contains(Cache[I]) &&
          "Cached value must be present in known bases map");
   return Cache[I];
 }

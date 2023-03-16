@@ -46,7 +46,7 @@ entry:
 ; COMMON-NEXT:                                        # -IsFloatingPointOperationLogOrAbortEnabled
 ; COMMON-NEXT:  .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ; COMMON-NEXT:                                        # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
-; COMMON-NEXT:  .byte   0x85                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 5
+; COMMON-NEXT:  .byte   0x05                            # -IsBackChainStored, -IsFixup, NumOfFPRsSaved = 5
 ; COMMON-NEXT:  .byte   0x04                            # -HasExtensionTable, -HasVectorInfo, NumOfGPRsSaved = 4
 ; COMMON-NEXT:  .byte   0x00                            # NumberOfFixedParms = 0
 ; COMMON-NEXT:  .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
@@ -67,7 +67,7 @@ entry:
 ; COMMON-NEXT:                                         # -IsFloatingPointOperationLogOrAbortEnabled
 ; COMMON-NEXT:  .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ; COMMON-NEXT:                                         # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
-; COMMON-NEXT:  .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
+; COMMON-NEXT:  .byte   0x00                            # -IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
 ; COMMON-NEXT:  .byte   0xc0                            # +HasExtensionTable, +HasVectorInfo, NumOfGPRsSaved = 0
 ; COMMON-NEXT:  .byte   0x00                            # NumberOfFixedParms = 0
 ; COMMON-NEXT:  .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack

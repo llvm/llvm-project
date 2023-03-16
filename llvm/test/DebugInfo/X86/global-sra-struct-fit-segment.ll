@@ -20,10 +20,10 @@
 %struct.BSS1 = type <{ [12 x i8] }>
 
 ;CHECK: @.BSS1.0 = internal unnamed_addr global i32 0, align 32, !dbg ![[GVE1:.*]]
-;CHECK: @.BSS1.1 = internal unnamed_addr global i32 0, align 32, !dbg ![[GVE2:.*]]
+;CHECK: @.BSS1.1 = internal unnamed_addr global i32 0, align 32, !dbg ![[GVE2:.*]], !dbg ![[GVE4:.*]]
 ;CHECK: @.BSS1.2 = internal unnamed_addr global i32 0, align 8, !dbg ![[GVE3:.*]]
 
-@.BSS1 = internal global %struct.BSS1 zeroinitializer, align 32, !dbg !0, !dbg !7, !dbg !10, !dbg !27
+@.BSS1 = internal global %struct.BSS1 zeroinitializer, align 32, !dbg !0, !dbg !7, !dbg !10, !dbg !27, !dbg !29
 @.C330_sub_ = internal constant i32 0
 @.C332_sub_ = internal constant i32 1
 
@@ -82,6 +82,8 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-DAG: ![[GV2]] = distinct !DIGlobalVariable(name: "nodeb"
 ; CHECK-DAG: ![[GVE3]] = !DIGlobalVariableExpression(var: ![[GV3:.*]], expr: !DIExpression())
 ; CHECK-DAG: ![[GV3]] = distinct !DIGlobalVariable(name: "jmax"
+; CHECK-DAG: ![[GVE4]] = !DIGlobalVariableExpression(var: ![[GV4:.*]], expr: !DIExpression(DW_OP_plus_uconst, 2))
+; CHECK-DAG: ![[GV4]] = distinct !DIGlobalVariable(name: "ivar2"
 
 ;; This does not make sense should be removed.
 ; CHECK-NOT: !DIGlobalVariable(name: "doesnotexist"
@@ -92,7 +94,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !3 = !DIFile(filename: "global-sra-struct-fit-segment.f90", directory: "/tmp")
 !4 = distinct !DICompileUnit(language: DW_LANG_Fortran90, file: !3, producer: " F90 Flang - 1.5 2017-05-01", isOptimized: false, flags: "'+flang -g -O0 -S -emit-llvm'", runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !5, globals: !6, imports: !5, nameTableKind: None)
 !5 = !{}
-!6 = !{!0, !7, !10}
+!6 = !{!0, !7, !10, !29}
 !7 = !DIGlobalVariableExpression(var: !8, expr: !DIExpression(DW_OP_plus_uconst, 4))
 !8 = distinct !DIGlobalVariable(name: "nodeb", scope: !2, file: !3, line: 3, type: !9, isLocal: true, isDefinition: true)
 !9 = !DIBasicType(name: "integer", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -115,3 +117,6 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !26 = !DILocation(line: 13, column: 1, scope: !2)
 !27 = !DIGlobalVariableExpression(var: !28, expr: !DIExpression(DW_OP_constu, 4, DW_OP_minus))
 !28 = distinct !DIGlobalVariable(name: "doesnotexist", scope: !2, file: !3, line: 3, type: !9, isLocal: true, isDefinition: true)
+!29 = !DIGlobalVariableExpression(var: !30, expr: !DIExpression(DW_OP_plus_uconst, 6))
+!30 = distinct !DIGlobalVariable(name: "ivar2", scope: !2, file: !3, line: 3, type: !31, isLocal: true, isDefinition: true)
+!31 = !DIBasicType(name: "integer*2", size: 16, align: 16, encoding: DW_ATE_signed)

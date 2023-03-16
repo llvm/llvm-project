@@ -566,20 +566,25 @@ TEST(ScudoReleaseTest, ReleasePartialRegion) {
 TEST(ScudoReleaseTest, BufferPool) {
   constexpr scudo::uptr StaticBufferCount = SCUDO_WORDSIZE - 1;
   constexpr scudo::uptr StaticBufferSize = 512U;
-  scudo::BufferPool<StaticBufferCount, StaticBufferSize> Pool;
+
+  // Allocate the buffer pool on the heap because it is quite large (slightly
+  // more than StaticBufferCount * StaticBufferSize * sizeof(uptr)) and it may
+  // not fit in the stack on some platforms.
+  using BufferPool = scudo::BufferPool<StaticBufferCount, StaticBufferSize>;
+  std::unique_ptr<BufferPool> Pool(new BufferPool());
 
   std::vector<std::pair<scudo::uptr *, scudo::uptr>> Buffers;
   for (scudo::uptr I = 0; I < StaticBufferCount; ++I) {
-    scudo::uptr *P = Pool.getBuffer(StaticBufferSize);
-    EXPECT_TRUE(Pool.isStaticBufferTestOnly(P, StaticBufferSize));
+    scudo::uptr *P = Pool->getBuffer(StaticBufferSize);
+    EXPECT_TRUE(Pool->isStaticBufferTestOnly(P, StaticBufferSize));
     Buffers.emplace_back(P, StaticBufferSize);
   }
 
   // The static buffer is supposed to be used up.
-  scudo::uptr *P = Pool.getBuffer(StaticBufferSize);
-  EXPECT_FALSE(Pool.isStaticBufferTestOnly(P, StaticBufferSize));
+  scudo::uptr *P = Pool->getBuffer(StaticBufferSize);
+  EXPECT_FALSE(Pool->isStaticBufferTestOnly(P, StaticBufferSize));
 
-  Pool.releaseBuffer(P, StaticBufferSize);
+  Pool->releaseBuffer(P, StaticBufferSize);
   for (auto &Buffer : Buffers)
-    Pool.releaseBuffer(Buffer.first, Buffer.second);
+    Pool->releaseBuffer(Buffer.first, Buffer.second);
 }

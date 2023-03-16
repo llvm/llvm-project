@@ -216,7 +216,10 @@ define void @coldcc_tail_call_void_nullary() {
 ; CHECK-NEXT: i32.const $push[[L0:[0-9]+]]=, 2{{$}}
 ; CHECK-NEXT: i32.const $push[[L1:[0-9]+]]=, 3{{$}}
 ; CHECK-NEXT: call .Lvararg_func_bitcast, $pop[[L0]], $pop[[L1]]{{$}}
-; CHECK-NEXT: call other_void_nullary{{$}}
+; CHECK-NEXT: i32.const	$push[[L3:[0-9]+]]=, void_nullary{{$}}
+; CHECK-NEXT: i32.const	$push[[L2:[0-9]+]]=, other_void_nullary{{$}}
+; CHECK-NEXT: i32.add 	$push[[L4:[0-9]+]]=, $pop[[L3]], $pop[[L2]]{{$}}
+; CHECK-NEXT: call_indirect	$pop[[L4]]{{$}}
 ; CHECK-NEXT: call void_nullary{{$}}
 ; CHECK-NEXT: return{{$}}
 declare void @vararg_func(...)
@@ -226,7 +229,7 @@ bb0:
   call void @vararg_func(i32 2, i32 3)
   br label %bb1
 bb1:
-  call void select (i1 0, ptr @void_nullary, ptr @other_void_nullary)()
+  call void getelementptr (i8, ptr @void_nullary, i32 ptrtoint (ptr @other_void_nullary to i32))()
   br label %bb2
 bb2:
   call void inttoptr (i32 ptrtoint (ptr @void_nullary to i32) to ptr)()

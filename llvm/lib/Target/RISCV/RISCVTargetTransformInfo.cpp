@@ -264,13 +264,12 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         // deinterleaves of 2 vectors can be lowered into the following
         // sequences
         if (EltTp.getScalarSizeInBits() < ST->getELEN()) {
-          auto InterleaveMask = createInterleaveMask(Mask.size() / 2, 2);
           // Example sequence:
           //   vsetivli     zero, 4, e8, mf4, ta, ma (ignored)
           //   vwaddu.vv    v10, v8, v9
           //   li       a0, -1                   (ignored)
           //   vwmaccu.vx   v10, a0, v9
-          if (ShuffleVectorInst::isInterleaveMask(Mask, 2, Mask.size() * 2))
+          if (ShuffleVectorInst::isInterleaveMask(Mask, 2, Mask.size()))
             return 2 * LT.first * getLMULCost(LT.second);
 
           if (Mask[0] == 0 || Mask[0] == 1) {
@@ -372,6 +371,59 @@ RISCVTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                         CostKind);
 
   return getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
+}
+
+InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
+    unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+    Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
+    bool UseMaskForCond, bool UseMaskForGaps) {
+  auto *FVTy = cast<FixedVectorType>(VecTy);
+  InstructionCost MemCost =
+      getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
+  unsigned VF = FVTy->getNumElements() / Factor;
+
+  // An interleaved load will look like this for Factor=3:
+  // %wide.vec = load <12 x i32>, ptr %3, align 4
+  // %strided.vec = shufflevector %wide.vec, poison, <4 x i32> <stride mask>
+  // %strided.vec1 = shufflevector %wide.vec, poison, <4 x i32> <stride mask>
+  // %strided.vec2 = shufflevector %wide.vec, poison, <4 x i32> <stride mask>
+  if (Opcode == Instruction::Load) {
+    InstructionCost Cost = MemCost;
+    for (unsigned Index : Indices) {
+      FixedVectorType *SubVecTy =
+          FixedVectorType::get(FVTy->getElementType(), VF);
+      auto Mask = createStrideMask(Index, Factor, VF);
+      InstructionCost ShuffleCost =
+          getShuffleCost(TTI::ShuffleKind::SK_PermuteSingleSrc, SubVecTy, Mask,
+                         CostKind, 0, nullptr, {});
+      Cost += ShuffleCost;
+    }
+    return Cost;
+  }
+
+  // TODO: Model for NF > 2
+  // We'll need to enhance getShuffleCost to model shuffles that are just
+  // inserts and extracts into subvectors, since they won't have the full cost
+  // of a vrgather.
+  // An interleaved store for 3 vectors of 4 lanes will look like
+  // %11 = shufflevector <4 x i32> %4, <4 x i32> %6, <8 x i32> <0...7>
+  // %12 = shufflevector <4 x i32> %9, <4 x i32> poison, <8 x i32> <0...3>
+  // %13 = shufflevector <8 x i32> %11, <8 x i32> %12, <12 x i32> <0...11>
+  // %interleaved.vec = shufflevector %13, poison, <12 x i32> <interleave mask>
+  // store <12 x i32> %interleaved.vec, ptr %10, align 4
+  if (Factor != 2)
+    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+                                             Alignment, AddressSpace, CostKind,
+                                             UseMaskForCond, UseMaskForGaps);
+
+  assert(Opcode == Instruction::Store && "Opcode must be a store");
+  // For an interleaving store of 2 vectors, we perform one large interleaving
+  // shuffle that goes into the wide store
+  auto Mask = createInterleaveMask(VF, Factor);
+  InstructionCost ShuffleCost =
+      getShuffleCost(TTI::ShuffleKind::SK_PermuteSingleSrc, FVTy, Mask,
+                     CostKind, 0, nullptr, {});
+  return MemCost + ShuffleCost;
 }
 
 InstructionCost RISCVTTIImpl::getGatherScatterOpCost(

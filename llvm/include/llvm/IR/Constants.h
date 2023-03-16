@@ -1027,16 +1027,6 @@ public:
   ///
   static Constant *getSizeOf(Type *Ty);
 
-  /// getOffsetOf constant expr - computes the offset of a struct field in a
-  /// target independent way (Note: the return type is an i64).
-  ///
-  static Constant *getOffsetOf(StructType *STy, unsigned FieldNo);
-
-  /// getOffsetOf constant expr - This is a generalized form of getOffsetOf,
-  /// which supports any aggregate type, and any Constant index.
-  ///
-  static Constant *getOffsetOf(Type *Ty, Constant *FieldNo);
-
   static Constant *getNeg(Constant *C, bool HasNUW = false,
                           bool HasNSW = false);
   static Constant *getNot(Constant *C);
@@ -1207,12 +1197,6 @@ public:
 
   /// Return true if this is a compare constant expression
   bool isCompare() const;
-
-  /// Select constant expr
-  ///
-  /// \param OnlyIfReducedTy see \a getWithOperands() docs.
-  static Constant *getSelect(Constant *C, Constant *V1, Constant *V2,
-                             Type *OnlyIfReducedTy = nullptr);
 
   /// get - Return a binary or shift operator constant expression,
   /// folding if possible.

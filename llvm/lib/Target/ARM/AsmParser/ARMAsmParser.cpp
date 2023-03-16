@@ -11766,7 +11766,7 @@ bool ARMAsmParser::parseDirectiveFPU(SMLoc L) {
   SMLoc FPUNameLoc = getTok().getLoc();
   StringRef FPU = getParser().parseStringToEndOfStatement().trim();
 
-  unsigned ID = ARM::parseFPU(FPU);
+  ARM::FPUKind ID = ARM::parseFPU(FPU);
   std::vector<StringRef> Features;
   if (!ARM::getFPUFeatures(ID, Features))
     return Error(FPUNameLoc, "Unknown FPU name");

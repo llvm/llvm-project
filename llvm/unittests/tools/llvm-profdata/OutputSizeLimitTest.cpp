@@ -77,7 +77,8 @@ public:
 /// Note that even though by default samples with fewest total count are dropped
 /// first, this is not a requirement. Samples can be dropped by any order.
 static ExpectedErrorOr<void *> RunTest(StringRef Input, size_t SizeLimit,
-                                       SampleProfileFormat Format) {
+                                       SampleProfileFormat Format,
+                                       bool Compress = false) {
   // Read Input profile.
   auto FS = vfs::getRealFileSystem();
   LLVMContext Context;
@@ -93,6 +94,8 @@ static ExpectedErrorOr<void *> RunTest(StringRef Input, size_t SizeLimit,
   {
     DEF_VAR_RETURN_IF_ERROR(Writer,
                             SampleProfileWriter::create(Temp.path(), Format));
+    if (Compress)
+      Writer->setToCompressAllSections();
     std::error_code EC = Writer->writeWithSizeLimit(OldProfiles, SizeLimit);
     // too_large means no sample could be written because SizeLimit is too
     // small. Otherwise any other error code indicates unexpected failure.
@@ -180,3 +183,13 @@ TEST(TestOutputSizeLimit, TestOutputSizeLimitText) {
         RunTest(Input1, OutputSizeLimit, llvm::sampleprof::SPF_Text),
         Succeeded());
 }
+
+#if LLVM_ENABLE_ZLIB
+TEST(TestOutputSizeLimit, TestOutputSizeLimitExtBinaryCompressed) {
+  for (size_t OutputSizeLimit :
+       {507, 506, 505, 494, 493, 492, 483, 482, 481, 480})
+    ASSERT_THAT_EXPECTED(RunTest(Input1, OutputSizeLimit,
+                                 llvm::sampleprof::SPF_Ext_Binary, true),
+                         Succeeded());
+}
+#endif

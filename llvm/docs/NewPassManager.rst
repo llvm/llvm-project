@@ -420,17 +420,6 @@ for more details.
 Invoking ``opt``
 ================
 
-To use the legacy pass manager:
-
-.. code-block:: shell
-
-  $ opt -enable-new-pm=0 -pass1 -pass2 /tmp/a.ll -S
-
-This will be removed once the legacy pass manager is deprecated and removed for
-the optimization pipeline.
-
-To use the new PM:
-
 .. code-block:: shell
 
   $ opt -passes='pass1,pass2' /tmp/a.ll -S

@@ -762,7 +762,7 @@ struct InsertSliceOpInterface
           return isConstantIntValue(ofr, 0);
         });
     bool sizesMatchDestSizes = llvm::all_of(
-        llvm::enumerate(insertSliceOp.getMixedSizes()), [&](auto &it) {
+        llvm::enumerate(insertSliceOp.getMixedSizes()), [&](const auto &it) {
           return getConstantIntValue(it.value()) ==
                  destType.getDimSize(it.index());
         });

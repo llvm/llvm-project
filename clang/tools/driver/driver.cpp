@@ -307,6 +307,9 @@ static bool SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
   TheDriver.CCPrintProcessStats =
       checkEnvVar<bool>("CC_PRINT_PROC_STAT", "CC_PRINT_PROC_STAT_FILE",
                         TheDriver.CCPrintStatReportFilename);
+  TheDriver.CCPrintInternalStats =
+      checkEnvVar<bool>("CC_PRINT_INTERNAL_STAT", "CC_PRINT_INTERNAL_STAT_FILE",
+                        TheDriver.CCPrintInternalStatReportFilename);
 
   return true;
 }

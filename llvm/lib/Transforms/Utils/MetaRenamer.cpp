@@ -115,7 +115,7 @@ void MetaRename(Function &F) {
 
     for (auto &I : BB)
       if (!I.getType()->isVoidTy())
-        I.setName("inst");
+        I.setName(I.getOpcodeName());
   }
 }
 
