@@ -1297,10 +1297,7 @@ void AssignmentTrackingLowering::emitDbgValue(
   }
 
   if (Kind == LocKind::Val) {
-    /// Get the value component, converting to Undef if it is variadic.
-    Value *Val =
-        Source->hasArgList() ? nullptr : Source->getVariableLocationOp(0);
-    Emit(ValueAsMetadata::get(Val), Source->getExpression());
+    Emit(Source->getRawLocation(), Source->getExpression());
     return;
   }
 
@@ -2126,23 +2123,11 @@ bool AssignmentTrackingLowering::emitPromotedVarLocs(
       // already.
       if (VarsWithStackSlot->contains(getAggregate(DVI)))
         continue;
-      // Wrapper to get a single value (or undef) from DVI.
-      auto GetValue = [DVI]() -> RawLocationWrapper {
-        // We can't handle variadic DIExpressions yet so treat those as
-        // kill locations.
-        Value *V;
-        if (DVI->isKillLocation() || DVI->getValue() == nullptr ||
-            DVI->hasArgList())
-          V = PoisonValue::get(Type::getInt32Ty(DVI->getContext()));
-        else
-          V = DVI->getVariableLocationOp(0);
-        return RawLocationWrapper(ValueAsMetadata::get(V));
-      };
       Instruction *InsertBefore = I.getNextNode();
       assert(InsertBefore && "Unexpected: debug intrinsics after a terminator");
       FnVarLocs->addVarLoc(InsertBefore, DebugVariable(DVI),
                            DVI->getExpression(), DVI->getDebugLoc(),
-                           GetValue());
+                           DVI->getWrappedLocation());
       InsertedAnyIntrinsics = true;
     }
   }
