@@ -3,6 +3,7 @@
 
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
@@ -21,7 +22,7 @@ struct VarLocInfo {
   llvm::VariableID VariableID;
   DIExpression *Expr = nullptr;
   DebugLoc DL;
-  Value *V = nullptr; // TODO: Needs to be value_s_ for variadic expressions.
+  RawLocationWrapper Values = RawLocationWrapper();
 };
 
 /// Data structure describing the variable locations in a function. Used as the

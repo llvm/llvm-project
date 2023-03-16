@@ -28,6 +28,10 @@
   slice = [ (0, 4, 1), (0, 8, 1) ]
 }>
 
+#COO = #sparse_tensor.encoding<{
+  dimLevelType = [ "compressed-nu", "singleton" ]
+}>
+
 #CSR_SLICE_1 = #sparse_tensor.encoding<{
   dimLevelType = [ "dense", "compressed" ],
   slice = [ (0, 4, 2), (0, 4, 1) ]
@@ -35,6 +39,16 @@
 
 #DCSR_SLICE_1 = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed", "compressed" ],
+  slice = [ (0, 4, 2), (1, 4, 1) ]
+}>
+
+#COO_SLICE_1 = #sparse_tensor.encoding<{
+  dimLevelType = [ "compressed-nu", "singleton" ],
+  slice = [ (0, 4, 2), (0, 4, 1) ]
+}>
+
+#COO_SLICE_2 = #sparse_tensor.encoding<{
+  dimLevelType = [ "compressed-nu", "singleton" ],
   slice = [ (0, 4, 2), (1, 4, 1) ]
 }>
 
@@ -47,7 +61,6 @@
   dimLevelType = [ "compressed", "compressed" ],
   slice = [ (?, 4, ?), (?, 4, ?) ]
 }>
-
 
 module {
   func.func private @printMemrefF64(%ptr : tensor<*xf64>)
@@ -101,6 +114,17 @@ module {
     return %D: tensor<4x4xf64, #DCSR>
   }
 
+  //
+  // Computes C = A x B with two COO slices.
+  //
+  func.func @matmul5(%A: tensor<4x4xf64, #COO_SLICE_1>,
+                     %B: tensor<4x4xf64, #COO_SLICE_2>) -> tensor<4x4xf64, #COO> {
+    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #COO>
+    %D = linalg.matmul
+      ins(%A, %B: tensor<4x4xf64, #COO_SLICE_1>, tensor<4x4xf64, #COO_SLICE_2>)
+         outs(%C: tensor<4x4xf64, #COO>) -> tensor<4x4xf64, #COO>
+    return %D: tensor<4x4xf64, #COO>
+  }
   //
   // Main driver.
   //
@@ -186,6 +210,23 @@ module {
     %c4u = tensor.cast %c4 : tensor<4x4xf64> to tensor<*xf64>
     call @printMemrefF64(%c4u) : (tensor<*xf64>) -> ()
 
+    // slice coo x slice coo
+    //
+    // CHECK:      [2.3,   0,   0,   0],
+    // CHECK-NEXT: [6.9,   0,   0,   0],
+    // CHECK-NEXT: [0,   0,   0,   0],
+    // CHECK-NEXT: [12.6,   0,   0,   0]]
+    //
+    %t1_coo = sparse_tensor.convert %sa : tensor<8x8xf64> to tensor<8x8xf64, #COO>
+    %b1_coo = sparse_tensor.convert %sb : tensor<8x4xf64> to tensor<8x4xf64, #COO>
+    %s2_coo = tensor.extract_slice %b1_coo[0, 0][4, 4][2, 1] : tensor<8x4xf64, #COO> to tensor<4x4xf64, #COO_SLICE_1>
+    %s1_coo = tensor.extract_slice %t1_coo[0, 1][4, 4][2, 1] : tensor<8x8xf64, #COO> to tensor<4x4xf64, #COO_SLICE_2>
+    %o_coo = call @matmul5(%s2_coo, %s1_coo) : (tensor<4x4xf64, #COO_SLICE_1>, tensor<4x4xf64, #COO_SLICE_2>) -> tensor<4x4xf64, #COO>
+
+    %c4_coo = sparse_tensor.convert %o_coo : tensor<4x4xf64, #COO> to tensor<4x4xf64>
+    %c4u_coo = tensor.cast %c4_coo : tensor<4x4xf64> to tensor<*xf64>
+    call @printMemrefF64(%c4u_coo) : (tensor<*xf64>) -> ()
+
     // slice x slice (same as above, but with dynamic stride information)
     //
     // CHECK:      [2.3,   0,   0,   0],
@@ -198,7 +239,6 @@ module {
     %dyn_4 = call @matmul_dyn(%s2_dyn, %s1_dyn)
        : (tensor<4x4xf64, #CSR_SLICE_dyn>,
           tensor<4x4xf64, #DCSR_SLICE_dyn>) -> tensor<4x4xf64, #CSR>
-
     %c4_dyn = sparse_tensor.convert %dyn_4 : tensor<4x4xf64, #CSR> to tensor<4x4xf64>
     %c4u_dyn = tensor.cast %c4_dyn : tensor<4x4xf64> to tensor<*xf64>
     call @printMemrefF64(%c4u_dyn) : (tensor<*xf64>) -> ()
@@ -222,6 +262,9 @@ module {
     // Releases resources (we do not need to deallocate slices).
     bufferization.dealloc_tensor %b1 : tensor<8x4xf64, #CSR>
     bufferization.dealloc_tensor %t1 : tensor<8x8xf64, #CSR>
+    bufferization.dealloc_tensor %b1_coo : tensor<8x4xf64, #COO>
+    bufferization.dealloc_tensor %t1_coo : tensor<8x8xf64, #COO>
+    bufferization.dealloc_tensor %o_coo : tensor<4x4xf64, #COO>
     bufferization.dealloc_tensor %b  : tensor<8x4xf64, #DCSR>
     bufferization.dealloc_tensor %tmp: tensor<8x8xf64, #DCSR>
     bufferization.dealloc_tensor %4  : tensor<4x4xf64, #CSR>

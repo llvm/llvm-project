@@ -200,7 +200,7 @@ void TakesVarargs(int i, ...) {
   // WIN64: store i92 %[[LOADV1]], ptr
 
   // WIN32: %[[CUR1:.+]] = load ptr, ptr %[[ARGS]]
-  // WIN32: %[[NEXT1:.+]] = getelementptr inbounds i8, ptr %[[CUR1]], i32 16 
+  // WIN32: %[[NEXT1:.+]] = getelementptr inbounds i8, ptr %[[CUR1]], i32 16
   // WIN32: store ptr %[[NEXT1]], ptr %[[ARGS]]
   // WIN32: %[[LOADV1:.+]] = load i92, ptr %[[CUR1]]
   // WIN32: store i92 %[[LOADV1]], ptr
@@ -289,18 +289,16 @@ void TakesVarargs(int i, ...) {
   // LIN64: %[[AD5:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %[[ARGS]]
   // LIN64: %[[OFAA_P4:.+]] = getelementptr inbounds %struct.__va_list_tag, ptr %[[AD5]], i32 0, i32 2
   // LIN64: %[[OFAA:.+]] = load ptr, ptr %[[OFAA_P4]]
-  // LIN64: %[[TOINT:.+]] = ptrtoint ptr %[[OFAA]] to i64
-  // LIN64: %[[ADD:.+]] = add i64 %[[TOINT]], 31
-  // LIN64: %[[AND:.+]] = and i64 %[[ADD]], -32
-  // LIN64: %[[OFAA_ALIGNED:.+]] = inttoptr i64 %[[AND]] to ptr
+
+  // LIN64: [[OFAA_GEP:%.*]] = getelementptr inbounds i8, ptr %[[OFAA]], i32 31
+  // LIN64: %[[OFAA_ALIGNED:.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[OFAA_GEP]], i64 -32)
   // LIN64: %[[LOADV5:.+]] = load <8 x i32>, ptr %[[OFAA_ALIGNED]]
   // LIN64: store <8 x i32> %[[LOADV5]], ptr
 
   // LIN32: %[[CUR5:.+]] = load ptr, ptr %[[ARGS]]
-  // LIN32: %[[TOINT:.+]] = ptrtoint ptr %[[CUR5]] to i32
-  // LIN32: %[[ADD:.+]] = add i32 %[[TOINT]], 31
-  // LIN32: %[[AND:.+]] = and i32 %[[ADD]], -32
-  // LIN32: %[[CUR5_ALIGNED:.+]] = inttoptr i32 %[[AND]] to ptr
+
+  // LIN32: [[GEP_CUR5:%.*]] = getelementptr inbounds i8, ptr %[[CUR5]], i32 31
+  // LIN32: %[[CUR5_ALIGNED:.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[GEP_CUR5]], i32 -32)
   // LIN32: %[[NEXT5:.+]] = getelementptr inbounds i8, ptr %[[CUR5_ALIGNED]], i32 32
   // LIN32: store ptr %[[NEXT5]], ptr %[[ARGS]]
   // LIN32: %[[LOADV5:.+]] = load <8 x i32>, ptr %[[CUR5_ALIGNED]]

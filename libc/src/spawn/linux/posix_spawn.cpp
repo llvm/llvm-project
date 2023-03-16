@@ -14,6 +14,7 @@
 #include "src/spawn/file_actions.h"
 
 #include <fcntl.h>
+#include <signal.h> // For SIGCHLD
 #include <spawn.h>
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -50,8 +51,15 @@ cpp::optional<int> open(const char *path, int oflags, mode_t mode) {
 
 void close(int fd) { __llvm_libc::syscall_impl(SYS_close, fd); }
 
+// We use dup3 if dup2 is not available, similar to our implementation of dup2
 bool dup2(int fd, int newfd) {
+#ifdef SYS_dup2
   long ret = __llvm_libc::syscall_impl(SYS_dup2, fd, newfd);
+#elif defined(SYS_dup3)
+  long ret = __llvm_libc::syscall_impl(SYS_dup3, fd, newfd, 0);
+#else
+#error "SYS_dup2 and SYS_dup3 not available for the target."
+#endif
   return ret < 0 ? false : true;
 }
 

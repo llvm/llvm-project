@@ -8,6 +8,7 @@
 
 // Forced unwinding causes std::terminate when going through noexcept.
 
+// RUN: export LSAN_OPTIONS=detect_leaks=0
 // UNSUPPORTED: no-exceptions, c++03
 
 // These tests fail on previously released dylibs, investigation needed.

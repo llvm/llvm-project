@@ -93,7 +93,7 @@ class ARMTargetAsmStreamer : public ARMTargetStreamer {
   void emitArch(ARM::ArchKind Arch) override;
   void emitArchExtension(uint64_t ArchExt) override;
   void emitObjectArch(ARM::ArchKind Arch) override;
-  void emitFPU(unsigned FPU) override;
+  void emitFPU(ARM::FPUKind FPU) override;
   void emitInst(uint32_t Inst, char Suffix = '\0') override;
   void finishAttributeSection() override;
 
@@ -248,7 +248,7 @@ void ARMTargetAsmStreamer::emitObjectArch(ARM::ArchKind Arch) {
   OS << "\t.object_arch\t" << ARM::getArchName(Arch) << '\n';
 }
 
-void ARMTargetAsmStreamer::emitFPU(unsigned FPU) {
+void ARMTargetAsmStreamer::emitFPU(ARM::FPUKind FPU) {
   OS << "\t.fpu\t" << ARM::getFPUName(FPU) << "\n";
 }
 
@@ -382,7 +382,7 @@ void ARMTargetAsmStreamer::emitARMWinCFICustom(unsigned Opcode) {
 class ARMTargetELFStreamer : public ARMTargetStreamer {
 private:
   StringRef CurrentVendor;
-  unsigned FPU = ARM::FK_INVALID;
+  ARM::FPUKind FPU = ARM::FK_INVALID;
   ARM::ArchKind Arch = ARM::ArchKind::INVALID;
   ARM::ArchKind EmittedArch = ARM::ArchKind::INVALID;
 
@@ -414,7 +414,7 @@ private:
                             StringRef StringValue) override;
   void emitArch(ARM::ArchKind Arch) override;
   void emitObjectArch(ARM::ArchKind Arch) override;
-  void emitFPU(unsigned FPU) override;
+  void emitFPU(ARM::FPUKind FPU) override;
   void emitInst(uint32_t Inst, char Suffix = '\0') override;
   void finishAttributeSection() override;
   void emitLabel(MCSymbol *Symbol) override;
@@ -928,9 +928,7 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   }
 }
 
-void ARMTargetELFStreamer::emitFPU(unsigned Value) {
-  FPU = Value;
-}
+void ARMTargetELFStreamer::emitFPU(ARM::FPUKind Value) { FPU = Value; }
 
 void ARMTargetELFStreamer::emitFPUDefaultAttributes() {
   ARMELFStreamer &S = getStreamer();

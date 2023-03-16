@@ -181,7 +181,7 @@ struct ArchNames {
   StringRef Name;
   StringRef CPUAttr; // CPU class in build attributes.
   StringRef ArchFeature;
-  unsigned DefaultFPU;
+  FPUKind DefaultFPU;
   uint64_t ArchBaseExtensions;
   ArchKind ID;
   ARMBuildAttrs::CPUArch ArchAttr; // Arch ID in build attributes.
@@ -213,12 +213,12 @@ inline ArchKind &operator--(ArchKind &Kind) {
 }
 
 // Information by ID
-StringRef getFPUName(unsigned FPUKind);
-FPUVersion getFPUVersion(unsigned FPUKind);
-NeonSupportLevel getFPUNeonSupportLevel(unsigned FPUKind);
-FPURestriction getFPURestriction(unsigned FPUKind);
+StringRef getFPUName(FPUKind FPUKind);
+FPUVersion getFPUVersion(FPUKind FPUKind);
+NeonSupportLevel getFPUNeonSupportLevel(FPUKind FPUKind);
+FPURestriction getFPURestriction(FPUKind FPUKind);
 
-bool getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features);
+bool getFPUFeatures(FPUKind FPUKind, std::vector<StringRef> &Features);
 bool getHWDivFeatures(uint64_t HWDivKind, std::vector<StringRef> &Features);
 bool getExtensionFeatures(uint64_t Extensions,
                           std::vector<StringRef> &Features);
@@ -231,11 +231,11 @@ StringRef getArchExtName(uint64_t ArchExtKind);
 StringRef getArchExtFeature(StringRef ArchExt);
 bool appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK, StringRef ArchExt,
                            std::vector<StringRef> &Features,
-                           unsigned &ArgFPUKind);
+                           FPUKind &ArgFPUKind);
 ArchKind convertV9toV8(ArchKind AK);
 
 // Information by Name
-unsigned getDefaultFPU(StringRef CPU, ArchKind AK);
+FPUKind getDefaultFPU(StringRef CPU, ArchKind AK);
 uint64_t getDefaultExtensions(StringRef CPU, ArchKind AK);
 StringRef getDefaultCPU(StringRef Arch);
 StringRef getCanonicalArchName(StringRef Arch);
@@ -243,7 +243,7 @@ StringRef getFPUSynonym(StringRef FPU);
 
 // Parser
 uint64_t parseHWDiv(StringRef HWDiv);
-unsigned parseFPU(StringRef FPU);
+FPUKind parseFPU(StringRef FPU);
 ArchKind parseArch(StringRef Arch);
 uint64_t parseArchExt(StringRef ArchExt);
 ArchKind parseCPUArch(StringRef CPU);

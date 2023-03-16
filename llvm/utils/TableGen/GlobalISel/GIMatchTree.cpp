@@ -338,9 +338,9 @@ void GIMatchTreeBuilder::runStep() {
          "Must always partition into at least one partition");
 
   TreeNode->setNumChildren(Partitioner->getNumPartitions());
-  for (auto &C : enumerate(TreeNode->children())) {
-    SubtreeBuilders.emplace_back(&C.value(), NextInstrID);
-    Partitioner->applyForPartition(C.index(), *this, SubtreeBuilders.back());
+  for (const auto &[Idx, Child] : enumerate(TreeNode->children())) {
+    SubtreeBuilders.emplace_back(&Child, NextInstrID);
+    Partitioner->applyForPartition(Idx, *this, SubtreeBuilders.back());
   }
 
   TreeNode->setPartitioner(std::move(Partitioner));
