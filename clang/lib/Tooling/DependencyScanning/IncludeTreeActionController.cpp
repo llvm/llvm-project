@@ -85,11 +85,17 @@ public:
 
   void moduleImport(Preprocessor &PP, const Module *M, SourceLocation EndLoc);
 
+  void enteredSubmodule(Preprocessor &PP, Module *M, SourceLocation ImportLoc,
+                        bool ForPragma);
+  void exitedSubmodule(Preprocessor &PP, Module *M, SourceLocation ImportLoc,
+                       bool ForPragma);
+
 private:
   struct FilePPState {
     SrcMgr::CharacteristicKind FileCharacteristic;
     cas::ObjectRef File;
     SmallVector<cas::IncludeTree::IncludeInfo, 6> Includes;
+    std::optional<cas::ObjectRef> SubmoduleName;
     llvm::SmallBitVector HasIncludeChecks;
   };
 
@@ -199,6 +205,15 @@ public:
     SourceLocation EndLoc = L.getSourceLocation();
 
     Builder.moduleImport(PP, Imported, EndLoc);
+  }
+
+  void EnteredSubmodule(Module *M, SourceLocation ImportLoc,
+                        bool ForPragma) override {
+    Builder.enteredSubmodule(PP, M, ImportLoc, ForPragma);
+  }
+  void LeftSubmodule(Module *M, SourceLocation ImportLoc,
+                     bool ForPragma) override {
+    Builder.exitedSubmodule(PP, M, ImportLoc, ForPragma);
   }
 };
 } // namespace
@@ -353,7 +368,7 @@ void IncludeTreeBuilder::enteredInclude(Preprocessor &PP, FileID FID) {
     return;
   const SrcMgr::FileInfo &FI =
       PP.getSourceManager().getSLocEntry(FID).getFile();
-  IncludeStack.push_back({FI.getFileCharacteristic(), *FileRef, {}, {}});
+  IncludeStack.push_back({FI.getFileCharacteristic(), *FileRef, {}, {}, {}});
 }
 
 void IncludeTreeBuilder::exitedInclude(Preprocessor &PP, FileID IncludedBy,
@@ -392,6 +407,23 @@ void IncludeTreeBuilder::moduleImport(Preprocessor &PP, const Module *M,
   IncludeStack.back().Includes.push_back(
       {Import->getRef(), EndLocInfo.second,
        cas::IncludeTree::NodeKind::ModuleImport});
+}
+
+void IncludeTreeBuilder::enteredSubmodule(Preprocessor &PP, Module *M,
+                                          SourceLocation ImportLoc,
+                                          bool ForPragma) {
+  if (ForPragma)
+    return; // Will be parsed as normal.
+  if (hasErrorOccurred())
+    return;
+  assert(!IncludeStack.back().SubmoduleName && "repeated enteredSubmodule");
+  auto Ref = check(DB.storeFromString({}, M->getFullModuleName()));
+  IncludeStack.back().SubmoduleName = Ref;
+}
+void IncludeTreeBuilder::exitedSubmodule(Preprocessor &PP, Module *M,
+                                         SourceLocation ImportLoc,
+                                         bool ForPragma) {
+  // Submodule exit is handled automatically when leaving a modular file.
 }
 
 Expected<cas::IncludeTreeRoot>
@@ -614,7 +646,8 @@ IncludeTreeBuilder::addToFileList(FileManager &FM, const FileEntry *FE) {
 Expected<cas::IncludeTree>
 IncludeTreeBuilder::getCASTreeForFileIncludes(FilePPState &&PPState) {
   return cas::IncludeTree::create(DB, PPState.FileCharacteristic, PPState.File,
-                                  PPState.Includes, PPState.HasIncludeChecks);
+                                  PPState.Includes, PPState.SubmoduleName,
+                                  PPState.HasIncludeChecks);
 }
 
 Expected<cas::IncludeTree::File>
