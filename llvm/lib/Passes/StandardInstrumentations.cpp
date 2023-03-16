@@ -1098,10 +1098,6 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
     if (!F)
       return;
 
-    if (!PassPA.allAnalysesInSetPreserved<CFGAnalyses>() &&
-        !PassPA.allAnalysesInSetPreserved<AllAnalysesOn<Function>>())
-      return;
-
     auto CheckCFG = [](StringRef Pass, StringRef FuncName,
                        const CFG &GraphBefore, const CFG &GraphAfter) {
       if (GraphAfter == GraphBefore)
