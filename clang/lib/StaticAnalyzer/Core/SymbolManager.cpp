@@ -398,7 +398,7 @@ void SymbolReaper::markDependentsLive(SymbolRef sym) {
 
   if (const SymbolRefSmallVectorTy *Deps = SymMgr.getDependentSymbols(sym)) {
     for (const auto I : *Deps) {
-      if (TheLiving.find(I) != TheLiving.end())
+      if (TheLiving.contains(I))
         continue;
       markLive(I);
     }
