@@ -2448,6 +2448,10 @@ public:
   /// StartIndexes are the first indexes of each vector being interleaved,
   /// substituting any indexes that were undef
   /// E.g. <4, -1, 2, 5, 1, 3> (Factor=3): StartIndexes=<4, 0, 2>
+  ///
+  /// Note that this does not check if the input vectors are consecutive:
+  /// It will return true for masks such as
+  /// <0, 4, 6, 1, 5, 7> (Factor=3, LaneLen=2)
   static bool isInterleaveMask(ArrayRef<int> Mask, unsigned Factor,
                                unsigned NumInputElts,
                                SmallVectorImpl<unsigned> &StartIndexes);
