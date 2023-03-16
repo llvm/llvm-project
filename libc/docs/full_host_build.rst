@@ -95,8 +95,17 @@ Linux Headers
 =============
 
 If you are using the full libc on Linux, then you will also need to install
-Linux headers in your sysroot. It is left to the reader to figure out the best
-way to install Linux headers on the system they want to use the full libc on.
+Linux headers in your sysroot.  The way to do this varies per system.
+
+These instructions should work on a Debian-based x86_64 system:
+
+.. code-block:: sh
+
+   $> apt download linux-libc-dev
+   $> dpkg -x linux-libc-dev*deb .
+   $> mv usr/include/* /path/to/sysroot/include
+   $> rm -rf usr linux-libc-dev*deb
+   $> ln -s x86_64-linux-gnu/asm ~/Programming/sysroot/include/asm
 
 Using your newly built libc
 ===========================
