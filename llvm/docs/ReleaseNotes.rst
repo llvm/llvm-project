@@ -62,7 +62,7 @@ Changes to the LLVM IR
   * ``select``
 
 Changes to LLVM infrastructure
------------------------------
+------------------------------
 
 * The legacy optimization pipeline has been removed.
 
