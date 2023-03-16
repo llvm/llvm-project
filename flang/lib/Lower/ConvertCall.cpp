@@ -396,9 +396,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
           component->GetFirstSymbol(), &symMap);
       mlir::Value passObject = fir::getBase(pass);
       if (fir::isa_ref_type(passObject.getType()))
-        passObject = builder.create<fir::ConvertOp>(
-            loc, passObject.getType().dyn_cast<fir::ReferenceType>().getEleTy(),
-            passObject);
+        passObject = builder.create<fir::LoadOp>(loc, passObject);
       dispatch = builder.create<fir::DispatchOp>(
           loc, funcType.getResults(), builder.getStringAttr(procName),
           passObject, operands, nullptr);
