@@ -31,6 +31,7 @@ namespace llvm {
     HwMode(Record *R);
     StringRef Name;
     std::string Features;
+    std::string Predicates;
     void dump() const;
   };
 
