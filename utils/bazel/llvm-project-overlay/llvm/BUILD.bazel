@@ -572,6 +572,7 @@ cc_library(
     name = "tblgen",
     srcs = glob([
         "utils/TableGen/*.cpp",
+        "utils/TableGen/*.inc",
         "utils/TableGen/GlobalISel/*.cpp",
 
         # Some tablegen sources include headers from MC, so these have to be
