@@ -250,27 +250,32 @@ operator==(const map<Key, T, Compare, Allocator>& x,
 template <class Key, class T, class Compare, class Allocator>
 bool
 operator< (const map<Key, T, Compare, Allocator>& x,
-           const map<Key, T, Compare, Allocator>& y);
+           const map<Key, T, Compare, Allocator>& y);      // removed in C++20
 
 template <class Key, class T, class Compare, class Allocator>
 bool
 operator!=(const map<Key, T, Compare, Allocator>& x,
-           const map<Key, T, Compare, Allocator>& y);
+           const map<Key, T, Compare, Allocator>& y);      // removed in C++20
 
 template <class Key, class T, class Compare, class Allocator>
 bool
 operator> (const map<Key, T, Compare, Allocator>& x,
-           const map<Key, T, Compare, Allocator>& y);
+           const map<Key, T, Compare, Allocator>& y);      // removed in C++20
 
 template <class Key, class T, class Compare, class Allocator>
 bool
 operator>=(const map<Key, T, Compare, Allocator>& x,
-           const map<Key, T, Compare, Allocator>& y);
+           const map<Key, T, Compare, Allocator>& y);      // removed in C++20
 
 template <class Key, class T, class Compare, class Allocator>
 bool
 operator<=(const map<Key, T, Compare, Allocator>& x,
-           const map<Key, T, Compare, Allocator>& y);
+           const map<Key, T, Compare, Allocator>& y);      // removed in C++20
+
+template<class Key, class T, class Compare, class Allocator>
+  synth-three-way-result<pair<const Key, T>>
+    operator<=>(const map<Key, T, Compare, Allocator>& x,
+                const map<Key, T, Compare, Allocator>& y); // since C++20
 
 // specialized algorithms:
 template <class Key, class T, class Compare, class Allocator>
@@ -491,27 +496,32 @@ operator==(const multimap<Key, T, Compare, Allocator>& x,
 template <class Key, class T, class Compare, class Allocator>
 bool
 operator< (const multimap<Key, T, Compare, Allocator>& x,
-           const multimap<Key, T, Compare, Allocator>& y);
+           const multimap<Key, T, Compare, Allocator>& y);      // removed in C++20
 
 template <class Key, class T, class Compare, class Allocator>
 bool
 operator!=(const multimap<Key, T, Compare, Allocator>& x,
-           const multimap<Key, T, Compare, Allocator>& y);
+           const multimap<Key, T, Compare, Allocator>& y);      // removed in C++20
 
 template <class Key, class T, class Compare, class Allocator>
 bool
 operator> (const multimap<Key, T, Compare, Allocator>& x,
-           const multimap<Key, T, Compare, Allocator>& y);
+           const multimap<Key, T, Compare, Allocator>& y);      // removed in C++20
 
 template <class Key, class T, class Compare, class Allocator>
 bool
 operator>=(const multimap<Key, T, Compare, Allocator>& x,
-           const multimap<Key, T, Compare, Allocator>& y);
+           const multimap<Key, T, Compare, Allocator>& y);      // removed in C++20
 
 template <class Key, class T, class Compare, class Allocator>
 bool
 operator<=(const multimap<Key, T, Compare, Allocator>& x,
-           const multimap<Key, T, Compare, Allocator>& y);
+           const multimap<Key, T, Compare, Allocator>& y);      // removed in C++20
+
+template<class Key, class T, class Compare, class Allocator>
+  synth-three-way-result<pair<const Key, T>>
+    operator<=>(const multimap<Key, T, Compare, Allocator>& x,
+                const multimap<Key, T, Compare, Allocator>& y); // since c++20
 
 // specialized algorithms:
 template <class Key, class T, class Compare, class Allocator>
@@ -530,6 +540,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 
 #include <__algorithm/equal.h>
 #include <__algorithm/lexicographical_compare.h>
+#include <__algorithm/lexicographical_compare_three_way.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__functional/binary_function.h>
@@ -1676,6 +1687,8 @@ operator==(const map<_Key, _Tp, _Compare, _Allocator>& __x,
     return __x.size() == __y.size() && _VSTD::equal(__x.begin(), __x.end(), __y.begin());
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -1720,6 +1733,20 @@ operator<=(const map<_Key, _Tp, _Compare, _Allocator>& __x,
 {
     return !(__y < __x);
 }
+
+#else // #if _LIBCPP_STD_VER <= 17
+
+template<class _Key, class _Tp, class _Compare, class _Allocator>
+inline _LIBCPP_HIDE_FROM_ABI
+__synth_three_way_result<pair<const _Key, _Tp>>
+operator<=>(const map<_Key, _Tp, _Compare, _Allocator>& __x,
+            const map<_Key, _Tp, _Compare, _Allocator>& __y)
+{
+    return std::lexicographical_compare_three_way(
+        __x.begin(), __x.end(), __y.begin(), __y.end(), __synth_three_way);
+}
+
+#endif // #if _LIBCPP_STD_VER <= 17
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -2270,6 +2297,8 @@ operator==(const multimap<_Key, _Tp, _Compare, _Allocator>& __x,
     return __x.size() == __y.size() && _VSTD::equal(__x.begin(), __x.end(), __y.begin());
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -2314,6 +2343,20 @@ operator<=(const multimap<_Key, _Tp, _Compare, _Allocator>& __x,
 {
     return !(__y < __x);
 }
+
+#else // #if _LIBCPP_STD_VER <= 17
+
+template<class _Key, class _Tp, class _Compare, class _Allocator>
+inline _LIBCPP_HIDE_FROM_ABI
+__synth_three_way_result<pair<const _Key, _Tp>>
+operator<=>(const multimap<_Key, _Tp, _Compare, _Allocator>& __x,
+            const multimap<_Key, _Tp, _Compare, _Allocator>& __y)
+{
+    return std::lexicographical_compare_three_way(
+        __x.begin(), __x.end(), __y.begin(), __y.end(), __synth_three_way);
+}
+
+#endif // #if _LIBCPP_STD_VER <= 17
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
