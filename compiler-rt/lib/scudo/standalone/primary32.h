@@ -281,14 +281,14 @@ public:
     return true;
   }
 
-  uptr releaseToOS() {
+  uptr releaseToOS(ReleaseToOS ReleaseType) {
     uptr TotalReleasedBytes = 0;
     for (uptr I = 0; I < NumClasses; I++) {
       if (I == SizeClassMap::BatchClassId)
         continue;
       SizeClassInfo *Sci = getSizeClassInfo(I);
       ScopedLock L(Sci->Mutex);
-      TotalReleasedBytes += releaseToOSMaybe(Sci, I, /*Force=*/true);
+      TotalReleasedBytes += releaseToOSMaybe(Sci, I, ReleaseType);
     }
     return TotalReleasedBytes;
   }
@@ -727,7 +727,8 @@ private:
   }
 
   NOINLINE uptr releaseToOSMaybe(SizeClassInfo *Sci, uptr ClassId,
-                                 bool Force = false) REQUIRES(Sci->Mutex) {
+                                 ReleaseToOS ReleaseType = ReleaseToOS::Normal)
+      REQUIRES(Sci->Mutex) {
     const uptr BlockSize = getSizeByClassId(ClassId);
     const uptr PageSize = getPageSizeCached();
 
@@ -743,16 +744,18 @@ private:
     if (BytesPushed < PageSize)
       return 0; // Nothing new to release.
 
-    const bool CheckDensity = BlockSize < PageSize / 16U;
+    const bool CheckDensity =
+        BlockSize < PageSize / 16U && ReleaseType != ReleaseToOS::ForceAll;
     // Releasing smaller blocks is expensive, so we want to make sure that a
     // significant amount of bytes are free, and that there has been a good
     // amount of batches pushed to the freelist before attempting to release.
     if (CheckDensity) {
-      if (!Force && BytesPushed < Sci->AllocatedUser / 16U)
+      if (ReleaseType == ReleaseToOS::Normal &&
+          BytesPushed < Sci->AllocatedUser / 16U)
         return 0;
     }
 
-    if (!Force) {
+    if (ReleaseType == ReleaseToOS::Normal) {
       const s32 IntervalMs = atomic_load_relaxed(&ReleaseToOsIntervalMs);
       if (IntervalMs < 0)
         return 0;
