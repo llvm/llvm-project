@@ -12,13 +12,13 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:  entry:
 ; TFNONE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
+; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1025, [[TMP1]]
 ; TFNONE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; TFNONE:       vector.ph:
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
-; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
+; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
+; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFNONE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFNONE:       vector.body:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -33,7 +33,7 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; TFNONE:       middle.block:
-; TFNONE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
+; TFNONE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; TFNONE:       scalar.ph:
 ; TFNONE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -46,7 +46,7 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
 ; TFNONE-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFNONE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
+; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFNONE-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; TFNONE:       for.cond.cleanup:
 ; TFNONE-NEXT:    ret void
@@ -82,14 +82,14 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFALWAYS-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; TFALWAYS-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[TMP10]], ptr [[TMP11]], i32 4, <2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFALWAYS-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
-; TFALWAYS-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX_NEXT]], i64 1024)
+; TFALWAYS-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; TFALWAYS-NEXT:    [[TMP12:%.*]] = xor <2 x i1> [[ACTIVE_LANE_MASK_NEXT]], <i1 true, i1 true>
 ; TFALWAYS-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP12]], i32 0
 ; TFALWAYS-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; TFALWAYS:       middle.block:
 ; TFALWAYS-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; TFALWAYS:       scalar.ph:
-; TFALWAYS-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; TFALWAYS-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1026, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; TFALWAYS-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFALWAYS:       for.body:
 ; TFALWAYS-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -99,7 +99,7 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFALWAYS-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
 ; TFALWAYS-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFALWAYS-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; TFALWAYS-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
+; TFALWAYS-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFALWAYS-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; TFALWAYS:       for.cond.cleanup:
 ; TFALWAYS-NEXT:    ret void
@@ -135,14 +135,14 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; TFFALLBACK-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[TMP10]], ptr [[TMP11]], i32 4, <2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFFALLBACK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
-; TFFALLBACK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX_NEXT]], i64 1024)
+; TFFALLBACK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; TFFALLBACK-NEXT:    [[TMP12:%.*]] = xor <2 x i1> [[ACTIVE_LANE_MASK_NEXT]], <i1 true, i1 true>
 ; TFFALLBACK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP12]], i32 0
 ; TFFALLBACK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; TFFALLBACK:       middle.block:
 ; TFFALLBACK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; TFFALLBACK:       scalar.ph:
-; TFFALLBACK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; TFFALLBACK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1026, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; TFFALLBACK-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFFALLBACK:       for.body:
 ; TFFALLBACK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -152,7 +152,7 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
 ; TFFALLBACK-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFFALLBACK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; TFFALLBACK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
+; TFFALLBACK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFFALLBACK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; TFFALLBACK:       for.cond.cleanup:
 ; TFFALLBACK-NEXT:    ret void
@@ -168,7 +168,7 @@ for.body:
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %indvars.iv
   store i64 %call, ptr %arrayidx
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond = icmp eq i64 %indvars.iv.next, 1024
+  %exitcond = icmp eq i64 %indvars.iv.next, 1025
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
 for.cond.cleanup:
@@ -194,7 +194,7 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDVARS_IV]]
 ; TFNONE-NEXT:    store i64 [[TMP2]], ptr [[ARRAYIDX1]], align 8
 ; TFNONE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
+; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFNONE-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; TFNONE:       for.cond.cleanup:
 ; TFNONE-NEXT:    ret void
@@ -216,7 +216,7 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFALWAYS-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDVARS_IV]]
 ; TFALWAYS-NEXT:    store i64 [[TMP2]], ptr [[ARRAYIDX1]], align 8
 ; TFALWAYS-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; TFALWAYS-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
+; TFALWAYS-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFALWAYS-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; TFALWAYS:       for.cond.cleanup:
 ; TFALWAYS-NEXT:    ret void
@@ -238,7 +238,7 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDVARS_IV]]
 ; TFFALLBACK-NEXT:    store i64 [[TMP2]], ptr [[ARRAYIDX1]], align 8
 ; TFFALLBACK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; TFFALLBACK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
+; TFFALLBACK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFFALLBACK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; TFFALLBACK:       for.cond.cleanup:
 ; TFFALLBACK-NEXT:    ret void
@@ -262,7 +262,7 @@ if.end:
   %arrayidx1 = getelementptr inbounds i64, ptr %b, i64 %indvars.iv
   store i64 %2, ptr %arrayidx1, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond = icmp eq i64 %indvars.iv.next, 1024
+  %exitcond = icmp eq i64 %indvars.iv.next, 1025
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
 for.cond.cleanup:
@@ -294,7 +294,7 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDVARS_IV]]
 ; TFNONE-NEXT:    store i64 [[TMP3]], ptr [[ARRAYIDX1]], align 8
 ; TFNONE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
+; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFNONE-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; TFNONE:       for.cond.cleanup:
 ; TFNONE-NEXT:    ret void
@@ -319,7 +319,7 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFALWAYS-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDVARS_IV]]
 ; TFALWAYS-NEXT:    store i64 [[TMP3]], ptr [[ARRAYIDX1]], align 8
 ; TFALWAYS-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; TFALWAYS-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
+; TFALWAYS-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFALWAYS-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; TFALWAYS:       for.cond.cleanup:
 ; TFALWAYS-NEXT:    ret void
@@ -344,7 +344,7 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDVARS_IV]]
 ; TFFALLBACK-NEXT:    store i64 [[TMP3]], ptr [[ARRAYIDX1]], align 8
 ; TFFALLBACK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; TFFALLBACK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
+; TFFALLBACK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFFALLBACK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; TFFALLBACK:       for.cond.cleanup:
 ; TFFALLBACK-NEXT:    ret void
@@ -372,7 +372,7 @@ if.end:
   %arrayidx1 = getelementptr inbounds i64, ptr %b, i64 %indvars.iv
   store i64 %3, ptr %arrayidx1, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond = icmp eq i64 %indvars.iv.next, 1024
+  %exitcond = icmp eq i64 %indvars.iv.next, 1025
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
 for.cond.cleanup:
@@ -387,13 +387,13 @@ define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:  entry:
 ; TFNONE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
+; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1025, [[TMP1]]
 ; TFNONE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; TFNONE:       vector.ph:
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
-; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
+; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
+; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFNONE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFNONE:       vector.body:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -408,7 +408,7 @@ define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; TFNONE:       middle.block:
-; TFNONE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
+; TFNONE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; TFNONE:       scalar.ph:
 ; TFNONE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -421,7 +421,7 @@ define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
 ; TFNONE-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFNONE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
+; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFNONE-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; TFNONE:       for.cond.cleanup:
 ; TFNONE-NEXT:    ret void
@@ -437,7 +437,7 @@ define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFALWAYS-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; TFALWAYS-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFALWAYS-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; TFALWAYS-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
+; TFALWAYS-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFALWAYS-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; TFALWAYS:       for.cond.cleanup:
 ; TFALWAYS-NEXT:    ret void
@@ -446,13 +446,13 @@ define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-NEXT:  entry:
 ; TFFALLBACK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFFALLBACK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFFALLBACK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
+; TFFALLBACK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1025, [[TMP1]]
 ; TFFALLBACK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; TFFALLBACK:       vector.ph:
 ; TFFALLBACK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFFALLBACK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFFALLBACK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
-; TFFALLBACK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
+; TFFALLBACK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
+; TFFALLBACK-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFFALLBACK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFFALLBACK:       vector.body:
 ; TFFALLBACK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -467,7 +467,7 @@ define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFFALLBACK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; TFFALLBACK:       middle.block:
-; TFFALLBACK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
+; TFFALLBACK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, [[N_VEC]]
 ; TFFALLBACK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; TFFALLBACK:       scalar.ph:
 ; TFFALLBACK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -480,7 +480,7 @@ define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
 ; TFFALLBACK-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFFALLBACK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; TFFALLBACK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
+; TFFALLBACK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFFALLBACK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; TFFALLBACK:       for.cond.cleanup:
 ; TFFALLBACK-NEXT:    ret void
@@ -496,7 +496,7 @@ for.body:
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %indvars.iv
   store i64 %call, ptr %arrayidx
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond = icmp eq i64 %indvars.iv.next, 1024
+  %exitcond = icmp eq i64 %indvars.iv.next, 1025
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
 for.cond.cleanup:
@@ -511,13 +511,13 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:  entry:
 ; TFNONE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
+; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1025, [[TMP1]]
 ; TFNONE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; TFNONE:       vector.ph:
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
-; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
-; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
+; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
+; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFNONE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFNONE:       vector.body:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -532,7 +532,7 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; TFNONE:       middle.block:
-; TFNONE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
+; TFNONE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; TFNONE:       scalar.ph:
 ; TFNONE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -545,7 +545,7 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
 ; TFNONE-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFNONE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
+; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFNONE-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; TFNONE:       for.cond.cleanup:
 ; TFNONE-NEXT:    ret void
@@ -581,14 +581,14 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFALWAYS-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; TFALWAYS-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[TMP10]], ptr [[TMP11]], i32 4, <2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFALWAYS-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
-; TFALWAYS-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX_NEXT]], i64 1024)
+; TFALWAYS-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; TFALWAYS-NEXT:    [[TMP12:%.*]] = xor <2 x i1> [[ACTIVE_LANE_MASK_NEXT]], <i1 true, i1 true>
 ; TFALWAYS-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP12]], i32 0
 ; TFALWAYS-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; TFALWAYS:       middle.block:
 ; TFALWAYS-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; TFALWAYS:       scalar.ph:
-; TFALWAYS-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; TFALWAYS-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1026, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; TFALWAYS-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFALWAYS:       for.body:
 ; TFALWAYS-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -598,7 +598,7 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFALWAYS-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
 ; TFALWAYS-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFALWAYS-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; TFALWAYS-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
+; TFALWAYS-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFALWAYS-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; TFALWAYS:       for.cond.cleanup:
 ; TFALWAYS-NEXT:    ret void
@@ -634,14 +634,14 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; TFFALLBACK-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[TMP10]], ptr [[TMP11]], i32 4, <2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFFALLBACK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
-; TFFALLBACK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX_NEXT]], i64 1024)
+; TFFALLBACK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; TFFALLBACK-NEXT:    [[TMP12:%.*]] = xor <2 x i1> [[ACTIVE_LANE_MASK_NEXT]], <i1 true, i1 true>
 ; TFFALLBACK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP12]], i32 0
 ; TFFALLBACK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; TFFALLBACK:       middle.block:
 ; TFFALLBACK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; TFFALLBACK:       scalar.ph:
-; TFFALLBACK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; TFFALLBACK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1026, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; TFFALLBACK-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFFALLBACK:       for.body:
 ; TFFALLBACK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -651,7 +651,7 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
 ; TFFALLBACK-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFFALLBACK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; TFFALLBACK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
+; TFFALLBACK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1025
 ; TFFALLBACK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; TFFALLBACK:       for.cond.cleanup:
 ; TFFALLBACK-NEXT:    ret void
@@ -667,7 +667,7 @@ for.body:
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %indvars.iv
   store i64 %call, ptr %arrayidx
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond = icmp eq i64 %indvars.iv.next, 1024
+  %exitcond = icmp eq i64 %indvars.iv.next, 1025
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
 for.cond.cleanup:
