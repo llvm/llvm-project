@@ -1139,7 +1139,7 @@ unsigned ByteCodeExprGen<Emitter>::allocateLocalPrimitive(DeclTy &&Src,
   if (const auto *VD =
           dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
     assert(!P.getGlobal(VD));
-    assert(Locals.find(VD) == Locals.end());
+    assert(!Locals.contains(VD));
   }
 
   // FIXME: There are cases where Src.is<Expr*>() is wrong, e.g.
@@ -1161,7 +1161,7 @@ ByteCodeExprGen<Emitter>::allocateLocal(DeclTy &&Src, bool IsExtended) {
   if (const auto *VD =
           dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
     assert(!P.getGlobal(VD));
-    assert(Locals.find(VD) == Locals.end());
+    assert(!Locals.contains(VD));
   }
 
   QualType Ty;

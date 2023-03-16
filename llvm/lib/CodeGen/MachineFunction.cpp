@@ -427,8 +427,7 @@ void MachineFunction::deleteMachineInstr(MachineInstr *MI) {
   // be triggered during the implementation of support for the
   // call site info of a new architecture. If the assertion is triggered,
   // back trace will tell where to insert a call to updateCallSiteInfo().
-  assert((!MI->isCandidateForCallSiteEntry() ||
-          CallSitesInfo.find(MI) == CallSitesInfo.end()) &&
+  assert((!MI->isCandidateForCallSiteEntry() || !CallSitesInfo.contains(MI)) &&
          "Call site info was not updated!");
   // Strip it for parts. The operand array and the MI object itself are
   // independently recyclable.

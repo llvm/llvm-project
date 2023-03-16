@@ -270,6 +270,9 @@ Windows Support
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
+- Patchable function entry (``-fpatchable-function-entry``) is now supported
+  on LoongArch.
+
 RISC-V Support
 ^^^^^^^^^^^^^^
 - Added ``-mrvv-vector-bits=`` option to give an upper and lower bound on vector

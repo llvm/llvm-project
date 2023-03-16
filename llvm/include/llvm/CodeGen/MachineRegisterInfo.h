@@ -452,7 +452,7 @@ public:
   }
 
   void insertVRegByName(StringRef Name, Register Reg) {
-    assert((Name.empty() || VRegNames.find(Name) == VRegNames.end()) &&
+    assert((Name.empty() || !VRegNames.contains(Name)) &&
            "Named VRegs Must be Unique.");
     if (!Name.empty()) {
       VRegNames.insert(Name);

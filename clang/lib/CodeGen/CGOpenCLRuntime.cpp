@@ -161,8 +161,7 @@ static const BlockExpr *getBlockExpr(const Expr *E) {
 void CGOpenCLRuntime::recordBlockInfo(const BlockExpr *E,
                                       llvm::Function *InvokeF,
                                       llvm::Value *Block, llvm::Type *BlockTy) {
-  assert(EnqueuedBlockMap.find(E) == EnqueuedBlockMap.end() &&
-         "Block expression emitted twice");
+  assert(!EnqueuedBlockMap.contains(E) && "Block expression emitted twice");
   assert(isa<llvm::Function>(InvokeF) && "Invalid invoke function");
   assert(Block->getType()->isPointerTy() && "Invalid block literal type");
   EnqueuedBlockMap[E].InvokeFunc = InvokeF;
@@ -183,8 +182,7 @@ CGOpenCLRuntime::emitOpenCLEnqueuedBlock(CodeGenFunction &CGF, const Expr *E) {
   // to get the block literal.
   const BlockExpr *Block = getBlockExpr(E);
 
-  assert(EnqueuedBlockMap.find(Block) != EnqueuedBlockMap.end() &&
-         "Block expression not emitted");
+  assert(EnqueuedBlockMap.contains(Block) && "Block expression not emitted");
 
   // Do not emit the block wrapper again if it has been emitted.
   if (EnqueuedBlockMap[Block].KernelHandle) {
