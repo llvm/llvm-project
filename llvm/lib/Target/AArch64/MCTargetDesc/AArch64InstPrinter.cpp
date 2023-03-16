@@ -282,6 +282,23 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
     return;
   }
 
+  auto PrintMovImm = [&](uint64_t Value, int RegWidth) {
+    int64_t SExtVal = SignExtend64(Value, RegWidth);
+    O << "\tmov\t";
+    printRegName(O, MI->getOperand(0).getReg());
+    O << ", " << markup("<imm:") << "#"
+      << formatImm(SExtVal) << markup(">");
+    if (CommentStream) {
+      // Do the opposite to that used for instruction operands.
+      if (getPrintImmHex())
+        *CommentStream << '=' << formatDec(SExtVal) << '\n';
+      else {
+        uint64_t Mask = maskTrailingOnes<uint64_t>(RegWidth);
+        *CommentStream << '=' << formatHex(SExtVal & Mask) << '\n';
+      }
+    }
+  };
+
   // MOVZ, MOVN and "ORR wzr, #imm" instructions are aliases for MOV, but their
   // domains overlap so they need to be prioritized. The chain is "MOVZ lsl #0 >
   // MOVZ lsl #N > MOVN lsl #0 > MOVN lsl #N > ORR". The highest instruction
@@ -295,10 +312,7 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
 
     if (AArch64_AM::isMOVZMovAlias(Value, Shift,
                                    Opcode == AArch64::MOVZXi ? 64 : 32)) {
-      O << "\tmov\t";
-      printRegName(O, MI->getOperand(0).getReg());
-      O << ", " << markup("<imm:") << "#"
-        << formatImm(SignExtend64(Value, RegWidth)) << markup(">");
+      PrintMovImm(Value, RegWidth);
       return;
     }
   }
@@ -312,10 +326,7 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
       Value = Value & 0xffffffff;
 
     if (AArch64_AM::isMOVNMovAlias(Value, Shift, RegWidth)) {
-      O << "\tmov\t";
-      printRegName(O, MI->getOperand(0).getReg());
-      O << ", " << markup("<imm:") << "#"
-        << formatImm(SignExtend64(Value, RegWidth)) << markup(">");
+      PrintMovImm(Value, RegWidth);
       return;
     }
   }
@@ -328,10 +339,7 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
     uint64_t Value = AArch64_AM::decodeLogicalImmediate(
         MI->getOperand(2).getImm(), RegWidth);
     if (!AArch64_AM::isAnyMOVWMovAlias(Value, RegWidth)) {
-      O << "\tmov\t";
-      printRegName(O, MI->getOperand(0).getReg());
-      O << ", " << markup("<imm:") << "#"
-        << formatImm(SignExtend64(Value, RegWidth)) << markup(">");
+      PrintMovImm(Value, RegWidth);
       return;
     }
   }
