@@ -440,6 +440,20 @@ struct AMDGPUKernelTy : public GenericKernelTy {
     // TODO: Read the kernel descriptor for the max threads per block. May be
     // read from the image.
 
+    // Get ConstWGSize for kernel from image
+    std::string WGSizeName(getName());
+    WGSizeName += "_wg_size";
+    GlobalTy HostConstWGSize(WGSizeName, sizeof(decltype(ConstWGSize)),
+                             &ConstWGSize);
+    GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
+    if (auto Err =
+            GHandler.readGlobalFromImage(Device, AMDImage, HostConstWGSize))
+      return Err;
+    // Set the number of preferred and max threads to the ConstWGSize to get the
+    // exact value for kernel launch.
+    PreferredNumThreads = ConstWGSize;
+    MaxNumThreads = ConstWGSize;
+
     // Get additional kernel info read from image
     KernelInfo = AMDImage.getKernelInfo(getName());
     if (!KernelInfo.has_value())
@@ -472,6 +486,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Get group and private segment kernel size.
   uint32_t getGroupSize() const { return GroupSize; }
   uint32_t getPrivateSize() const { return PrivateSize; }
+  uint16_t getConstWGSize() const { return ConstWGSize; }
 
   /// Get the HSA kernel object representing the kernel function.
   uint64_t getKernelObject() const { return KernelObject; }
@@ -490,6 +505,8 @@ private:
 
   /// Additional Info for the AMD GPU Kernel
   std::optional<utils::KernelMetaDataTy> KernelInfo;
+  /// CodeGen generate WGSize
+  uint16_t ConstWGSize;
 };
 
 /// Class representing an HSA signal. Signals are used to define dependencies
@@ -1610,6 +1627,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
             getDeviceAttr(HSA_AMD_AGENT_INFO_COMPUTE_UNIT_COUNT, ComputeUnits))
       return Err;
     GridValues.GV_Default_Num_Teams = ComputeUnits * OMPX_DefaultTeamsPerCU;
+    NumComputeUnits = ComputeUnits;
 
     // Get maximum size of any device queues and maximum number of queues.
     uint32_t MaxQueueSize;
@@ -1736,6 +1754,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   /// See GenericDeviceTy::getComputeUnitKind().
   std::string getComputeUnitKind() const override { return ComputeUnitKind; }
+
+  uint32_t getNumComputeUnits() const override { return NumComputeUnits; }
 
   /// Allocate and construct an AMDGPU kernel.
   Expected<GenericKernelTy *>
@@ -2189,6 +2209,9 @@ private:
 
   /// The GPU architecture.
   std::string ComputeUnitKind;
+
+  /// The number of CUs available in this device
+  uint32_t NumComputeUnits;
 
   /// Reference to the host device.
   AMDHostDeviceTy &HostDevice;

@@ -192,8 +192,13 @@ struct GenericKernelTy {
     case OMP_TGT_EXEC_MODE_GENERIC:
     case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
       return true;
+    // AMD-only execution modes
+    case OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP:
+    case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
+    case OMP_TGT_EXEC_MODE_XTEAM_RED:
+      DP("AMD-only execution mode\n");
+      return true;
     default:
-      //TODO: Add NOLOOP/XTEAM modes
       llvm_unreachable("ExecutionMode not supported yet.");
       return false;
     }
@@ -209,6 +214,13 @@ protected:
       return "Generic";
     case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
       return "Generic-SPMD";
+    // AMD-only execution modes
+    case OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP:
+      return "SPMD-Big-Jump-Loop";
+    case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
+      return "SPMD-No-Loop";
+    case OMP_TGT_EXEC_MODE_XTEAM_RED:
+      return "XTeam-Reductions";
     }
     llvm_unreachable("Unknown execution mode!");
   }
@@ -253,6 +265,15 @@ private:
     return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC;
   }
   bool isSPMDMode() const { return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD; }
+  bool isBigJumpLoopMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP;
+  }
+  bool isNoLoopMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+  }
+  bool isXTeamReductionsMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_XTEAM_RED;
+  }
 
   /// The kernel name.
   const char *Name;
@@ -661,6 +682,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Get target compute unit kind (e.g., sm_80, or gfx908).
   virtual std::string getComputeUnitKind() const { return "unknown"; }
+
+  /// Get the number of compute units
+  virtual uint32_t getNumComputeUnits() const { return 0; }
 
   /// Post processing after jit backend. The ownership of \p MB will be taken.
   virtual Expected<std::unique_ptr<MemoryBuffer>>
