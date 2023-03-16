@@ -948,7 +948,8 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
     // rebuild. Newly built preamble cannot emit diagnostics before this call
     // finishes (ast callbacks are called from astpeer thread), hence we
     // gurantee eventual consistency.
-    if (LatestPreamble && Config::current().Diagnostics.AllowStalePreamble)
+    if (LatestPreamble && WantDiags != WantDiagnostics::No &&
+        Config::current().Diagnostics.AllowStalePreamble)
       generateDiagnostics(std::move(Invocation), std::move(Inputs),
                           std::move(CompilerInvocationDiags));
 

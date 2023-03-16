@@ -40,7 +40,6 @@
 #include "ToolChains/Myriad.h"
 #include "ToolChains/NaCl.h"
 #include "ToolChains/NetBSD.h"
-#include "ToolChains/OHOS.h"
 #include "ToolChains/OpenBSD.h"
 #include "ToolChains/PPCFreeBSD.h"
 #include "ToolChains/PPCLinux.h"
@@ -962,7 +961,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         } else
           TC = &getToolChain(C.getInputArgs(), TT);
         C.addOffloadDeviceToolChain(TC, Action::OFK_OpenMP);
-        if (DerivedArchs.find(TT.getTriple()) != DerivedArchs.end())
+        if (DerivedArchs.contains(TT.getTriple()))
           KnownArchs[TC] = DerivedArchs[TT.getTriple()];
       }
     }
@@ -4324,7 +4323,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
                 : "--no-offload-arch");
   }
 
-  if (KnownArchs.find(TC) != KnownArchs.end())
+  if (KnownArchs.contains(TC))
     return KnownArchs.lookup(TC);
 
   llvm::DenseSet<StringRef> Archs;
@@ -6108,8 +6107,7 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
                                                               Args);
       else if (Target.getArch() == llvm::Triple::ve)
         TC = std::make_unique<toolchains::VEToolChain>(*this, Target, Args);
-      else if (Target.isOHOSFamily())
-        TC = std::make_unique<toolchains::OHOS>(*this, Target, Args);
+
       else
         TC = std::make_unique<toolchains::Linux>(*this, Target, Args);
       break;
@@ -6172,9 +6170,6 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       break;
     case llvm::Triple::Hurd:
       TC = std::make_unique<toolchains::Hurd>(*this, Target, Args);
-      break;
-    case llvm::Triple::LiteOS:
-      TC = std::make_unique<toolchains::OHOS>(*this, Target, Args);
       break;
     case llvm::Triple::ZOS:
       TC = std::make_unique<toolchains::ZOS>(*this, Target, Args);

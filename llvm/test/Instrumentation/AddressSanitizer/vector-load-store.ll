@@ -947,3 +947,67 @@ define void @store.nxv16i32(ptr %p) sanitize_address {
   ret void
 }
 
+declare void @clobber(ptr)
+
+define <vscale x 2 x i32> @local_alloca() sanitize_address {
+; CHECK-LABEL: @local_alloca(
+; CHECK-NEXT:    [[A:%.*]] = alloca <vscale x 2 x i32>, align 8
+; CHECK-NEXT:    call void @clobber(ptr [[A]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 64
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP8]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP9]], 17592186044416
+; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP12]], 0
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP19:%.*]], !prof [[PROF0]]
+; CHECK:       14:
+; CHECK-NEXT:    [[TMP15:%.*]] = and i64 [[TMP8]], 7
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i8
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp sge i8 [[TMP16]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[TMP18:%.*]], label [[TMP19]]
+; CHECK:       18:
+; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP8]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       19:
+; CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 3
+; CHECK-NEXT:    [[TMP22:%.*]] = or i64 [[TMP21]], 17592186044416
+; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
+; CHECK-NEXT:    [[TMP24:%.*]] = load i8, ptr [[TMP23]], align 1
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne i8 [[TMP24]], 0
+; CHECK-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP31:%.*]], !prof [[PROF0]]
+; CHECK:       26:
+; CHECK-NEXT:    [[TMP27:%.*]] = and i64 [[TMP20]], 7
+; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i8
+; CHECK-NEXT:    [[TMP29:%.*]] = icmp sge i8 [[TMP28]], [[TMP24]]
+; CHECK-NEXT:    br i1 [[TMP29]], label [[TMP30:%.*]], label [[TMP31]]
+; CHECK:       30:
+; CHECK-NEXT:    call void @__asan_report_load_n(i64 [[TMP20]], i64 [[TMP3]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       31:
+; CHECK-NEXT:    [[RES:%.*]] = load <vscale x 2 x i32>, ptr [[A]], align 8
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[RES]]
+;
+; CALLS-LABEL: @local_alloca(
+; CALLS-NEXT:    [[A:%.*]] = alloca <vscale x 2 x i32>, align 8
+; CALLS-NEXT:    call void @clobber(ptr [[A]])
+; CALLS-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CALLS-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 64
+; CALLS-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CALLS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
+; CALLS-NEXT:    call void @__asan_loadN(i64 [[TMP4]], i64 [[TMP3]])
+; CALLS-NEXT:    [[RES:%.*]] = load <vscale x 2 x i32>, ptr [[A]], align 8
+; CALLS-NEXT:    ret <vscale x 2 x i32> [[RES]]
+;
+  %a = alloca <vscale x 2 x i32>
+  call void @clobber(ptr %a)
+  %res = load <vscale x 2 x i32>, ptr %a
+  ret <vscale x 2 x i32> %res
+}

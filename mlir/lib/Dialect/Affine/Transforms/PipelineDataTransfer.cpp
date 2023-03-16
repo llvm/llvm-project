@@ -346,7 +346,7 @@ void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
   }
   // Everything else (including compute ops and dma finish) are shifted by one.
   for (auto &op : forOp.getBody()->without_terminator())
-    if (instShiftMap.find(&op) == instShiftMap.end())
+    if (!instShiftMap.contains(&op))
       instShiftMap[&op] = 1;
 
   // Get shifts stored in map.

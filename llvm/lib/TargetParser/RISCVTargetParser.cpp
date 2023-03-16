@@ -103,7 +103,7 @@ bool getCPUFeaturesExceptStdExt(CPUKind Kind,
 
 bool isX18ReservedByDefault(const Triple &TT) {
   // X18 is reserved for the ShadowCallStack ABI (even when not enabled).
-  return TT.isOSFuchsia();
+  return TT.isOSFuchsia() || TT.isAndroid();
 }
 
 } // namespace RISCV

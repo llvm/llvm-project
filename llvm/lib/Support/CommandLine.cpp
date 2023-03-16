@@ -208,8 +208,7 @@ public:
     bool HadErrors = false;
     if (O->hasArgStr()) {
       // If it's a DefaultOption, check to make sure it isn't already there.
-      if (O->isDefaultOption() &&
-          SC->OptionsMap.find(O->ArgStr) != SC->OptionsMap.end())
+      if (O->isDefaultOption() && SC->OptionsMap.contains(O->ArgStr))
         return;
 
       // Add argument to the argument map!
@@ -2758,7 +2757,7 @@ StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
   initCommonOptions();
   auto &Subs = GlobalParser->RegisteredSubCommands;
   (void)Subs;
-  assert(is_contained(Subs, &Sub));
+  assert(Subs.contains(&Sub));
   return Sub.OptionsMap;
 }
 

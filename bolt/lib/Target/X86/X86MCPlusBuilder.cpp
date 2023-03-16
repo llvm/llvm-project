@@ -388,6 +388,29 @@ public:
     return (Desc.TSFlags & X86II::OpPrefixMask) == X86II::PD;
   }
 
+  bool shouldRecordCodeRelocation(uint64_t RelType) const override {
+    switch (RelType) {
+    case ELF::R_X86_64_8:
+    case ELF::R_X86_64_16:
+    case ELF::R_X86_64_32:
+    case ELF::R_X86_64_32S:
+    case ELF::R_X86_64_64:
+    case ELF::R_X86_64_PC8:
+    case ELF::R_X86_64_PC32:
+    case ELF::R_X86_64_PC64:
+    case ELF::R_X86_64_GOTPCRELX:
+    case ELF::R_X86_64_REX_GOTPCRELX:
+      return true;
+    case ELF::R_X86_64_PLT32:
+    case ELF::R_X86_64_GOTPCREL:
+    case ELF::R_X86_64_TPOFF32:
+    case ELF::R_X86_64_GOTTPOFF:
+      return false;
+    default:
+      llvm_unreachable("Unexpected x86 relocation type in code");
+    }
+  }
+
   unsigned getTrapFillValue() const override { return 0xCC; }
 
   struct IndJmpMatcherFrag1 : MCInstMatcher {

@@ -60,7 +60,8 @@ void TestAffineDataCopy::runOnOperation() {
   // Gather all AffineForOps by loop depth.
   std::vector<SmallVector<AffineForOp, 2>> depthToLoops;
   gatherLoops(getOperation(), depthToLoops);
-  assert(!depthToLoops.empty() && "Loop nest not found");
+  if (depthToLoops.empty())
+    return;
 
   // Only support tests with a single loop nest and a single innermost loop
   // for now.

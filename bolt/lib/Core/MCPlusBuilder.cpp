@@ -483,22 +483,12 @@ void MCPlusBuilder::initAliases() {
   });
 }
 
-uint8_t MCPlusBuilder::getRegSize(MCPhysReg Reg) const {
-  // SizeMap caches a mapping of registers to their sizes
-  static std::vector<uint8_t> SizeMap;
-
-  if (SizeMap.size() > 0) {
-    return SizeMap[Reg];
-  }
-  SizeMap = std::vector<uint8_t>(RegInfo->getNumRegs());
+void MCPlusBuilder::initSizeMap() {
+  SizeMap.resize(RegInfo->getNumRegs());
   // Build size map
-  for (auto I = RegInfo->regclass_begin(), E = RegInfo->regclass_end(); I != E;
-       ++I) {
-    for (MCPhysReg Reg : *I)
-      SizeMap[Reg] = I->getSizeInBits() / 8;
-  }
-
-  return SizeMap[Reg];
+  for (auto RC : RegInfo->regclasses())
+    for (MCPhysReg Reg : RC)
+      SizeMap[Reg] = RC.getSizeInBits() / 8;
 }
 
 bool MCPlusBuilder::setOperandToSymbolRef(MCInst &Inst, int OpNum,

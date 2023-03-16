@@ -660,7 +660,7 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle) {
 
     StringRef InvocationKey = NativeSourcePath;
 
-    if (InvocationList.find(InvocationKey) != InvocationList.end())
+    if (InvocationList.contains(InvocationKey))
       return llvm::make_error<IndexError>(
           index_error_code::invocation_list_ambiguous);
 

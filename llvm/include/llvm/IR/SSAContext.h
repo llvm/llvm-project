@@ -44,6 +44,7 @@ public:
   using ValueRefT = Value *;
   using ConstValueRefT = const Value *;
   static Value *ValueRefNull;
+  using UseT = Use;
   using DominatorTreeT = DominatorTreeBase<BlockT, false>;
 
   void setFunction(Function &Fn);

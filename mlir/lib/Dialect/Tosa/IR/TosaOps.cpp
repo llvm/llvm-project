@@ -409,6 +409,16 @@ LogicalResult tosa::RFFT2dOp::inferReturnTypeComponents(
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+
+  return success();
+}
+
+LogicalResult tosa::FFT2dOp::inferReturnTypeComponents(
+    MLIRContext *context, ::std::optional<Location> location,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  inferredReturnShapes.push_back(ShapedTypeComponents(operands.getShape(0)));
+  inferredReturnShapes.push_back(ShapedTypeComponents(operands.getShape(1)));
   return success();
 }
 

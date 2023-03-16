@@ -65,7 +65,8 @@ void mlir::getEnclosingAffineOps(Operation &op,
 LogicalResult
 ComputationSliceState::getSourceAsConstraints(FlatAffineValueConstraints &cst) {
   assert(!ivs.empty() && "Cannot have a slice without its IVs");
-  cst.reset(/*numDims=*/ivs.size(), /*numSymbols=*/0, /*numLocals=*/0, ivs);
+  cst = FlatAffineValueConstraints(/*numDims=*/ivs.size(), /*numSymbols=*/0,
+                                   /*numLocals=*/0, ivs);
   for (Value iv : ivs) {
     AffineForOp loop = getForInductionVarOwner(iv);
     assert(loop && "Expected affine for");
@@ -87,7 +88,7 @@ ComputationSliceState::getAsConstraints(FlatAffineValueConstraints *cst) {
   SmallVector<Value, 4> values(ivs);
   // Append 'ivs' then 'operands' to 'values'.
   values.append(lbOperands[0].begin(), lbOperands[0].end());
-  cst->reset(numDims, numSymbols, 0, values);
+  *cst = FlatAffineValueConstraints(numDims, numSymbols, 0, values);
 
   // Add loop bound constraints for values which are loop IVs of the destination
   // of fusion and equality constraints for symbols which are constants.
@@ -126,7 +127,7 @@ void ComputationSliceState::dump() const {
     llvm::errs() << "\t\t" << iv << "\n";
 
   llvm::errs() << "\tLBs:\n";
-  for (auto &en : llvm::enumerate(lbs)) {
+  for (auto en : llvm::enumerate(lbs)) {
     llvm::errs() << "\t\t" << en.value() << "\n";
     llvm::errs() << "\t\tOperands:\n";
     for (Value lbOp : lbOperands[en.index()])
@@ -134,7 +135,7 @@ void ComputationSliceState::dump() const {
   }
 
   llvm::errs() << "\tUBs:\n";
-  for (auto &en : llvm::enumerate(ubs)) {
+  for (auto en : llvm::enumerate(ubs)) {
     llvm::errs() << "\t\t" << en.value() << "\n";
     llvm::errs() << "\t\tOperands:\n";
     for (Value ubOp : ubOperands[en.index()])
@@ -293,9 +294,9 @@ std::optional<bool> ComputationSliceState::isMaximal() const {
     return isMaximalFastCheck;
 
   // Create constraints for the src loop nest being sliced.
-  FlatAffineValueConstraints srcConstraints;
-  srcConstraints.reset(/*numDims=*/ivs.size(), /*numSymbols=*/0,
-                       /*numLocals=*/0, ivs);
+  FlatAffineValueConstraints srcConstraints(/*numDims=*/ivs.size(),
+                                            /*numSymbols=*/0,
+                                            /*numLocals=*/0, ivs);
   for (Value iv : ivs) {
     AffineForOp loop = getForInductionVarOwner(iv);
     assert(loop && "Expected affine for");
@@ -305,7 +306,7 @@ std::optional<bool> ComputationSliceState::isMaximal() const {
 
   // Create constraints for the slice using the dst loop nest information. We
   // retrieve existing dst loops from the lbOperands.
-  SmallVector<Value, 8> consumerIVs;
+  SmallVector<Value> consumerIVs;
   for (Value lbOp : lbOperands[0])
     if (getForInductionVarOwner(lbOp))
       consumerIVs.push_back(lbOp);
@@ -315,9 +316,9 @@ std::optional<bool> ComputationSliceState::isMaximal() const {
   for (int i = consumerIVs.size(), end = ivs.size(); i < end; ++i)
     consumerIVs.push_back(Value());
 
-  FlatAffineValueConstraints sliceConstraints;
-  sliceConstraints.reset(/*numDims=*/consumerIVs.size(), /*numSymbols=*/0,
-                         /*numLocals=*/0, consumerIVs);
+  FlatAffineValueConstraints sliceConstraints(/*numDims=*/consumerIVs.size(),
+                                              /*numSymbols=*/0,
+                                              /*numLocals=*/0, consumerIVs);
 
   if (failed(sliceConstraints.addDomainFromSliceMaps(lbs, ubs, lbOperands[0])))
     return std::nullopt;
@@ -454,19 +455,17 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   unsigned rank = access.getRank();
 
   LLVM_DEBUG(llvm::dbgs() << "MemRefRegion::compute: " << *op
-                          << "depth: " << loopDepth << "\n";);
+                          << "\ndepth: " << loopDepth << "\n";);
 
   // 0-d memrefs.
   if (rank == 0) {
-    SmallVector<AffineForOp, 4> ivs;
-    getAffineForIVs(*op, &ivs);
+    SmallVector<Value, 4> ivs;
+    getAffineIVs(*op, ivs);
     assert(loopDepth <= ivs.size() && "invalid 'loopDepth'");
     // The first 'loopDepth' IVs are symbols for this region.
     ivs.resize(loopDepth);
-    SmallVector<Value, 4> regionSymbols;
-    extractForInductionVars(ivs, &regionSymbols);
     // A 0-d memref has a 0-d region.
-    cst.reset(rank, loopDepth, /*numLocals=*/0, regionSymbols);
+    cst = FlatAffineValueConstraints(rank, loopDepth, /*numLocals=*/0, ivs);
     return success();
   }
 
@@ -497,29 +496,30 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   // We'll first associate the dims and symbols of the access map to the dims
   // and symbols resp. of cst. This will change below once cst is
   // fully constructed out.
-  cst.reset(numDims, numSymbols, 0, operands);
+  cst = FlatAffineValueConstraints(numDims, numSymbols, 0, operands);
 
   // Add equality constraints.
   // Add inequalities for loop lower/upper bounds.
   for (unsigned i = 0; i < numDims + numSymbols; ++i) {
     auto operand = operands[i];
-    if (auto loop = getForInductionVarOwner(operand)) {
+    if (auto affineFor = getForInductionVarOwner(operand)) {
       // Note that cst can now have more dimensions than accessMap if the
       // bounds expressions involve outer loops or other symbols.
       // TODO: rewrite this to use getInstIndexSet; this way
       // conditionals will be handled when the latter supports it.
-      if (failed(cst.addAffineForOpDomain(loop)))
+      if (failed(cst.addAffineForOpDomain(affineFor)))
         return failure();
-    } else {
-      // Has to be a valid symbol.
-      auto symbol = operand;
-      assert(isValidSymbol(symbol));
+    } else if (auto parallelOp = getAffineParallelInductionVarOwner(operand)) {
+      if (failed(cst.addAffineParallelOpDomain(parallelOp)))
+        return failure();
+    } else if (isValidSymbol(operand)) {
       // Check if the symbol is a constant.
-      if (auto *op = symbol.getDefiningOp()) {
-        if (auto constOp = dyn_cast<arith::ConstantIndexOp>(op)) {
-          cst.addBound(FlatAffineValueConstraints::EQ, symbol, constOp.value());
-        }
-      }
+      Value symbol = operand;
+      if (auto constVal = getConstantIntValue(symbol))
+        cst.addBound(FlatAffineValueConstraints::EQ, symbol, constVal.value());
+    } else {
+      LLVM_DEBUG(llvm::dbgs() << "unknown affine dimensional value");
+      return failure();
     }
   }
 
@@ -552,16 +552,14 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
 
   // Eliminate any loop IVs other than the outermost 'loopDepth' IVs, on which
   // this memref region is symbolic.
-  SmallVector<AffineForOp, 4> enclosingIVs;
-  getAffineForIVs(*op, &enclosingIVs);
+  SmallVector<Value, 4> enclosingIVs;
+  getAffineIVs(*op, enclosingIVs);
   assert(loopDepth <= enclosingIVs.size() && "invalid loop depth");
   enclosingIVs.resize(loopDepth);
   SmallVector<Value, 4> vars;
   cst.getValues(cst.getNumDimVars(), cst.getNumDimAndSymbolVars(), &vars);
-  for (auto var : vars) {
-    AffineForOp iv;
-    if ((iv = getForInductionVarOwner(var)) &&
-        !llvm::is_contained(enclosingIVs, iv)) {
+  for (Value var : vars) {
+    if ((isAffineInductionVar(var)) && !llvm::is_contained(enclosingIVs, var)) {
       cst.projectOut(var);
     }
   }
@@ -1264,21 +1262,19 @@ bool MemRefAccess::operator==(const MemRefAccess &rhs) const {
                       [](AffineExpr e) { return e == 0; });
 }
 
-/// Populates 'loops' with IVs of the surrounding affine.for and affine.parallel
-/// ops ordered from the outermost one to the innermost.
-static void getAffineIVs(Operation &op, SmallVectorImpl<Value> &loops) {
+void mlir::getAffineIVs(Operation &op, SmallVectorImpl<Value> &ivs) {
   auto *currOp = op.getParentOp();
   AffineForOp currAffineForOp;
-  // Traverse up the hierarchy collecting all 'affine.for' operation while
-  // skipping over 'affine.if' operations.
+  // Traverse up the hierarchy collecting all 'affine.for' and affine.parallel
+  // operation while skipping over 'affine.if' operations.
   while (currOp) {
     if (AffineForOp currAffineForOp = dyn_cast<AffineForOp>(currOp))
-      loops.push_back(currAffineForOp.getInductionVar());
+      ivs.push_back(currAffineForOp.getInductionVar());
     else if (auto parOp = dyn_cast<AffineParallelOp>(currOp))
-      llvm::append_range(loops, parOp.getIVs());
+      llvm::append_range(ivs, parOp.getIVs());
     currOp = currOp->getParentOp();
   }
-  std::reverse(loops.begin(), loops.end());
+  std::reverse(ivs.begin(), ivs.end());
 }
 
 /// Returns the number of surrounding loops common to 'loopsA' and 'loopsB',

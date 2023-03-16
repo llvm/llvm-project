@@ -15,7 +15,9 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "clang-include-cleaner/Record.h"
+#include "index/CanonicalIncludes.h"
 #include "support/Logger.h"
+#include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
 #include "clang/AST/DeclTemplate.h"
@@ -27,6 +29,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -42,6 +45,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -50,10 +54,12 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <system_error>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -318,6 +324,8 @@ struct ScannedPreamble {
   // Literal lines of the preamble contents.
   std::vector<llvm::StringRef> Lines;
   PreambleBounds Bounds = {0, false};
+  std::vector<PragmaMark> Marks;
+  MainFileMacros Macros;
 };
 
 /// Scans the preprocessor directives in the preamble section of the file by
@@ -366,12 +374,15 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0]))
     return error("failed BeginSourceFile");
   Preprocessor &PP = Clang->getPreprocessor();
+  const auto &SM = PP.getSourceManager();
   IncludeStructure Includes;
   Includes.collect(*Clang);
   ScannedPreamble SP;
   SP.Bounds = Bounds;
   PP.addPPCallbacks(
       std::make_unique<DirectiveCollector>(PP, SP.TextualDirectives));
+  PP.addPPCallbacks(collectPragmaMarksCallback(SM, SP.Marks));
+  PP.addPPCallbacks(std::make_unique<CollectMainFileMacros>(SM, SP.Macros));
   if (llvm::Error Err = Action.Execute())
     return std::move(Err);
   Action.EndSourceFile();
@@ -849,6 +860,8 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   }
 
   PP.PatchedDiags = patchDiags(Baseline.Diags, *BaselineScan, *ModifiedScan);
+  PP.PatchedMarks = std::move(ModifiedScan->Marks);
+  PP.PatchedMacros = std::move(ModifiedScan->Macros);
   dlog("Created preamble patch: {0}", Patch.str());
   Patch.flush();
   return PP;
@@ -902,15 +915,13 @@ bool PreamblePatch::preserveDiagnostics() const {
 llvm::ArrayRef<PragmaMark> PreamblePatch::marks() const {
   if (PatchContents.empty())
     return Baseline->Marks;
-  // FIXME: Patch pragma marks.
-  return {};
+  return PatchedMarks;
 }
 
-MainFileMacros PreamblePatch::mainFileMacros() const {
+const MainFileMacros &PreamblePatch::mainFileMacros() const {
   if (PatchContents.empty())
     return Baseline->Macros;
-  // FIXME: Patch main file macros.
-  return MainFileMacros();
+  return PatchedMacros;
 }
 } // namespace clangd
 } // namespace clang

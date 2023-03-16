@@ -1712,6 +1712,10 @@ SDValue peekThroughOneUseBitcasts(SDValue V);
 /// If \p V is not an extracted subvector, it is returned as-is.
 SDValue peekThroughExtractSubvectors(SDValue V);
 
+/// Return the non-truncated source operand of \p V if it exists.
+/// If \p V is not a truncation, it is returned as-is.
+SDValue peekThroughTruncates(SDValue V);
+
 /// Returns true if \p V is a bitwise not operation. Assumes that an all ones
 /// constant is canonicalized to be operand 1.
 bool isBitwiseNot(SDValue V, bool AllowUndefs = false);

@@ -520,9 +520,7 @@ void mlir::LLVM::detail::connectPHINodes(Region &region,
     auto phis = llvmBB->phis();
     auto numArguments = bb.getNumArguments();
     assert(numArguments == std::distance(phis.begin(), phis.end()));
-    for (auto &numberedPhiNode : llvm::enumerate(phis)) {
-      auto &phiNode = numberedPhiNode.value();
-      unsigned index = numberedPhiNode.index();
+    for (auto [index, phiNode] : llvm::enumerate(phis)) {
       for (auto *pred : bb.getPredecessors()) {
         // Find the LLVM IR block that contains the converted terminator
         // instruction and use it in the PHI node. Note that this block is not

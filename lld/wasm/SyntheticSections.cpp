@@ -899,6 +899,7 @@ static size_t getHashSize() {
   case BuildIdKind::None:
     return 0;
   }
+  llvm_unreachable("build id kind not implemented");
 }
 
 BuildIdSection::BuildIdSection()

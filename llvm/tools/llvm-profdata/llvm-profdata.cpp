@@ -635,7 +635,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
       }
     }
 
-    if (StaticFuncMap.find(NewName) == StaticFuncMap.end()) {
+    if (!StaticFuncMap.contains(NewName)) {
       StaticFuncMap[NewName] = Name;
     } else {
       StaticFuncMap[NewName] = DuplicateNameStr;

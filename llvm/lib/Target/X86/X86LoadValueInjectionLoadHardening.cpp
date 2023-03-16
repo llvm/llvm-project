@@ -362,7 +362,7 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
     SmallSet<NodeId, 8> UsesVisited, DefsVisited;
     std::function<void(NodeAddr<DefNode *>)> AnalyzeDefUseChain =
         [&](NodeAddr<DefNode *> Def) {
-          if (Transmitters.find(Def.Id) != Transmitters.end())
+          if (Transmitters.contains(Def.Id))
             return; // Already analyzed `Def`
 
           // Use RDF to find all the uses of `Def`

@@ -2462,7 +2462,7 @@ transform::TileOp::apply(TransformResults &transformResults,
   SmallVector<Operation *> tiled;
   SmallVector<SmallVector<Operation *, 4>, 4> loops;
   loops.resize(getLoops().size());
-  for (auto &[i, op] : llvm::enumerate(targets)) {
+  for (auto [i, op] : llvm::enumerate(targets)) {
     auto tilingInterface = dyn_cast<TilingInterface>(op);
     auto dpsInterface = dyn_cast<DestinationStyleOpInterface>(op);
     if (!tilingInterface || !dpsInterface) {
@@ -2865,7 +2865,7 @@ transform::TileToScfForOp::apply(TransformResults &transformResults,
   SmallVector<Operation *> tiled;
   SmallVector<SmallVector<Operation *, 4>, 4> loops;
   loops.resize(getLoops().size());
-  for (auto &en : llvm::enumerate(targets)) {
+  for (auto en : llvm::enumerate(targets)) {
     auto tilingInterfaceOp = dyn_cast<TilingInterface>(en.value());
     if (!tilingInterfaceOp) {
       DiagnosedSilenceableFailure diag =

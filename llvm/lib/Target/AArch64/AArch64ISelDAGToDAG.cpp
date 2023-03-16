@@ -6735,7 +6735,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
     int FI = cast<FrameIndexSDNode>(N)->getIndex();
     // We can only encode VL scaled offsets, so only fold in frame indexes
     // referencing SVE objects.
-    if (FI == 0 || MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+    if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
       Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
       OffImm = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i64);
       return true;
@@ -6770,7 +6770,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
     int FI = cast<FrameIndexSDNode>(Base)->getIndex();
     // We can only encode VL scaled offsets, so only fold in frame indexes
     // referencing SVE objects.
-    if (FI == 0 || MFI.getStackID(FI) == TargetStackID::ScalableVector)
+    if (MFI.getStackID(FI) == TargetStackID::ScalableVector)
       Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
   }
 

@@ -298,12 +298,12 @@ processSTIPredicate(STIPredicateFunction &Fn,
     RecVec Classes = Def->getValueAsListOfDefs("Classes");
     for (const Record *EC : Classes) {
       const Record *Pred = EC->getValueAsDef("Predicate");
-      if (Predicate2Index.find(Pred) == Predicate2Index.end())
+      if (!Predicate2Index.contains(Pred))
         Predicate2Index[Pred] = NumUniquePredicates++;
 
       RecVec Opcodes = EC->getValueAsListOfDefs("Opcodes");
       for (const Record *Opcode : Opcodes) {
-        if (Opcode2Index.find(Opcode) == Opcode2Index.end()) {
+        if (!Opcode2Index.contains(Opcode)) {
           Opcode2Index[Opcode] = OpcodeMappings.size();
           OpcodeMappings.emplace_back(Opcode, OpcodeInfo());
         }

@@ -2614,33 +2614,39 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
     return Plugin::success();
 
   // General Info
-  auto ConstWGSize = getDefaultNumThreads(GenericDevice);
   auto NumGroups = NumBlocks;
-  auto ThreadsPerGroup = getDefaultNumThreads(GenericDevice);
-  auto NumTeams = KernelArgs.NumTeams[0];       // Only first dimension
-  auto ThreadLimit = KernelArgs.ThreadLimit[0]; // Only first dimension
+  auto ThreadsPerGroup = NumThreads;
 
   // Kernel Arguments Info
   auto ArgNum = KernelArgs.NumArgs;
   auto LoopTripCount = KernelArgs.Tripcount;
 
-  // Details for AMDGPU kernels
+  // Details for AMDGPU kernels (read from image)
+  // https://www.llvm.org/docs/AMDGPUUsage.html#code-object-v4-metadata
   auto GroupSegmentSize = (*KernelInfo).GroupSegmentList;
   auto SGPRCount = (*KernelInfo).SGPRCount;
   auto VGPRCount = (*KernelInfo).VGPRCount;
   auto SGPRSpillCount = (*KernelInfo).SGPRSpillCount;
   auto VGPRSpillCount = (*KernelInfo).VGPRSpillCount;
+  auto MaxFlatWorkgroupSize = (*KernelInfo).MaxFlatWorkgroupSize;
 
-  // TODO set correctly once host services available
-  auto HostCallRequired = false;
+  // Prints additional launch info that contains the following.
+  // Num Args: The number of kernel arguments
+  // Teams x Thrds: The number of teams and the number of threads actually
+  // running.
+  // MaxFlatWorkgroupSize: Maximum flat work-group size supported by the
+  // kernel in work-items
+  // LDS Usage: Amount of bytes used in LDS storage
+  // S/VGPR Count: the number of S/V GPRs occupied by the kernel
+  // S/VGPR Spill Count: how many S/VGPRs are spilled by the kernel
+  // Tripcount: loop tripcount for the kernel
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
-       "SGN:%s ConstWGSize:%d args:%d teamsXthrds:(%4luX%4d) "
-       "reqd:(%4dX%4d) lds_usage:%uB sgpr_count:%u vgpr_count:%u "
-       "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu rpc:%d n:%s\n",
-       getExecutionModeName(), ConstWGSize, ArgNum, NumGroups, ThreadsPerGroup,
-       NumTeams, ThreadLimit, GroupSegmentSize, SGPRCount, VGPRCount,
-       SGPRSpillCount, VGPRSpillCount, LoopTripCount, HostCallRequired,
-       getName());
+       "#Args: %d Teams x Thrds: %4lux%4u (MaxFlatWorkGroupSize: %u) LDS "
+       "Usage: %uB #SGPRs/VGPRs: %u/%u #SGPR/VGPR Spills: %u/%u Tripcount: "
+       "%lu\n",
+       ArgNum, NumGroups, ThreadsPerGroup, MaxFlatWorkgroupSize,
+       GroupSegmentSize, SGPRCount, VGPRCount, SGPRSpillCount, VGPRSpillCount,
+       LoopTripCount);
 
   return Plugin::success();
 }

@@ -127,11 +127,7 @@ class FunctionSpecializer {
   std::function<TargetTransformInfo &(Function &)> GetTTI;
   std::function<AssumptionCache &(Function &)> GetAC;
 
-  // The number of functions specialised, used for collecting statistics and
-  // also in the cost model.
-  unsigned NbFunctionsSpecialized = 0;
-
-  SmallPtrSet<Function *, 32> SpecializedFuncs;
+  SmallPtrSet<Function *, 32> Specializations;
   SmallPtrSet<Function *, 32> FullySpecialized;
   DenseMap<Function *, CodeMetrics> FunctionMetrics;
 
@@ -144,13 +140,9 @@ public:
       : Solver(Solver), M(M), FAM(FAM), GetTLI(GetTLI), GetTTI(GetTTI),
         GetAC(GetAC) {}
 
-  ~FunctionSpecializer() {
-    // Eliminate dead code.
-    removeDeadFunctions();
-    cleanUpSSA();
-  }
+  ~FunctionSpecializer();
 
-  bool isClonedFunction(Function *F) { return SpecializedFuncs.count(F); }
+  bool isClonedFunction(Function *F) { return Specializations.count(F); }
 
   bool run();
 

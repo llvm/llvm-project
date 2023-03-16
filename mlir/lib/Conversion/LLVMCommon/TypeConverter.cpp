@@ -228,12 +228,11 @@ Type LLVMTypeConverter::convertFunctionSignature(
                               ? barePtrFuncArgTypeConverter
                               : structFuncArgTypeConverter;
   // Convert argument types one by one and check for errors.
-  for (auto &en : llvm::enumerate(funcTy.getInputs())) {
-    Type type = en.value();
+  for (auto [idx, type] : llvm::enumerate(funcTy.getInputs())) {
     SmallVector<Type, 8> converted;
     if (failed(funcArgConverter(*this, type, converted)))
       return {};
-    result.addInputs(en.index(), converted);
+    result.addInputs(idx, converted);
   }
 
   // If function does not return anything, create the void result type,
