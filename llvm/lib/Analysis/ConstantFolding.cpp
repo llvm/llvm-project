@@ -2636,18 +2636,18 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
     } else if (auto *Op2C = dyn_cast<ConstantInt>(Operands[1])) {
       switch (IntrinsicID) {
       case Intrinsic::is_fpclass: {
-        uint32_t Mask = Op2C->getZExtValue();
+        FPClassTest Mask = static_cast<FPClassTest>(Op2C->getZExtValue());
         bool Result =
           ((Mask & fcSNan) && Op1V.isNaN() && Op1V.isSignaling()) ||
           ((Mask & fcQNan) && Op1V.isNaN() && !Op1V.isSignaling()) ||
-          ((Mask & fcNegInf) && Op1V.isInfinity() && Op1V.isNegative()) ||
+          ((Mask & fcNegInf) && Op1V.isNegInfinity()) ||
           ((Mask & fcNegNormal) && Op1V.isNormal() && Op1V.isNegative()) ||
           ((Mask & fcNegSubnormal) && Op1V.isDenormal() && Op1V.isNegative()) ||
           ((Mask & fcNegZero) && Op1V.isZero() && Op1V.isNegative()) ||
           ((Mask & fcPosZero) && Op1V.isZero() && !Op1V.isNegative()) ||
           ((Mask & fcPosSubnormal) && Op1V.isDenormal() && !Op1V.isNegative()) ||
           ((Mask & fcPosNormal) && Op1V.isNormal() && !Op1V.isNegative()) ||
-          ((Mask & fcPosInf) && Op1V.isInfinity() && !Op1V.isNegative());
+          ((Mask & fcPosInf) && Op1V.isPosInfinity());
         return ConstantInt::get(Ty, Result);
       }
       default:
