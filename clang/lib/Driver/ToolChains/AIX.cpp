@@ -164,14 +164,14 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   auto getCrt0Basename = [&Args, IsArch32Bit] {
-    // Enable gprofiling when "-pg" is specified.
-    if (Args.hasArg(options::OPT_pg))
-      return IsArch32Bit ? "gcrt0.o" : "gcrt0_64.o";
-    // Enable profiling when "-p" is specified.
-    else if (Args.hasArg(options::OPT_p))
+    if (Arg *A = Args.getLastArgNoClaim(options::OPT_p, options::OPT_pg)) {
+      // Enable gprofiling when "-pg" is specified.
+      if (A->getOption().matches(options::OPT_pg))
+        return IsArch32Bit ? "gcrt0.o" : "gcrt0_64.o";
+      // Enable profiling when "-p" is specified.
       return IsArch32Bit ? "mcrt0.o" : "mcrt0_64.o";
-    else
-      return IsArch32Bit ? "crt0.o" : "crt0_64.o";
+    }
+    return IsArch32Bit ? "crt0.o" : "crt0_64.o";
   };
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
@@ -271,7 +271,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     CmdArgs.push_back("-lc");
 
-    if (Args.hasArg(options::OPT_p, options::OPT_pg)) {
+    if (Args.hasArgNoClaim(options::OPT_p, options::OPT_pg)) {
       CmdArgs.push_back(Args.MakeArgString((llvm::Twine("-L") + D.SysRoot) +
                                            "/lib/profiled"));
       CmdArgs.push_back(Args.MakeArgString((llvm::Twine("-L") + D.SysRoot) +
