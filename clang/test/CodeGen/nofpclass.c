@@ -27,8 +27,8 @@ extern dx5x5_t extern_matrix(dx5x5_t);
 
 
 // CFINITEONLY: Function Attrs: noinline nounwind optnone
-// CFINITEONLY-LABEL: define dso_local float @defined_func_f32
-// CFINITEONLY-SAME: (float noundef [[A:%.*]], float noundef [[B:%.*]], float noundef [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+// CFINITEONLY-LABEL: define dso_local nofpclass(nan inf) float @defined_func_f32
+// CFINITEONLY-SAME: (float noundef nofpclass(nan inf) [[A:%.*]], float noundef nofpclass(nan inf) [[B:%.*]], float noundef nofpclass(nan inf) [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 // CFINITEONLY-NEXT:  entry:
 // CFINITEONLY-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CFINITEONLY-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
@@ -44,16 +44,16 @@ extern dx5x5_t extern_matrix(dx5x5_t);
 // CFINITEONLY-NEXT:    ret float [[ADD]]
 //
 // CLFINITEONLY: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-// CLFINITEONLY-LABEL: define dso_local float @defined_func_f32
-// CLFINITEONLY-SAME: (float noundef [[A:%.*]], float noundef [[B:%.*]], float noundef [[C:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CLFINITEONLY-LABEL: define dso_local nofpclass(nan inf) float @defined_func_f32
+// CLFINITEONLY-SAME: (float noundef nofpclass(nan inf) [[A:%.*]], float noundef nofpclass(nan inf) [[B:%.*]], float noundef nofpclass(nan inf) [[C:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CLFINITEONLY-NEXT:  entry:
 // CLFINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf float @llvm.fma.f32(float [[A]], float [[B]], float [[C]])
 // CLFINITEONLY-NEXT:    [[ADD:%.*]] = fadd nnan ninf float [[TMP0]], 4.000000e+00
 // CLFINITEONLY-NEXT:    ret float [[ADD]]
 //
 // NONANS: Function Attrs: noinline nounwind optnone
-// NONANS-LABEL: define dso_local float @defined_func_f32
-// NONANS-SAME: (float noundef [[A:%.*]], float noundef [[B:%.*]], float noundef [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+// NONANS-LABEL: define dso_local nofpclass(nan) float @defined_func_f32
+// NONANS-SAME: (float noundef nofpclass(nan) [[A:%.*]], float noundef nofpclass(nan) [[B:%.*]], float noundef nofpclass(nan) [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 // NONANS-NEXT:  entry:
 // NONANS-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // NONANS-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
@@ -69,8 +69,8 @@ extern dx5x5_t extern_matrix(dx5x5_t);
 // NONANS-NEXT:    ret float [[ADD]]
 //
 // NOINFS: Function Attrs: noinline nounwind optnone
-// NOINFS-LABEL: define dso_local float @defined_func_f32
-// NOINFS-SAME: (float noundef [[A:%.*]], float noundef [[B:%.*]], float noundef [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+// NOINFS-LABEL: define dso_local nofpclass(inf) float @defined_func_f32
+// NOINFS-SAME: (float noundef nofpclass(inf) [[A:%.*]], float noundef nofpclass(inf) [[B:%.*]], float noundef nofpclass(inf) [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 // NOINFS-NEXT:  entry:
 // NOINFS-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // NOINFS-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
@@ -90,8 +90,8 @@ float defined_func_f32(float a, float b, float c) {
 }
 
 // CFINITEONLY: Function Attrs: noinline nounwind optnone
-// CFINITEONLY-LABEL: define dso_local <2 x double> @defined_func_v2f64
-// CFINITEONLY-SAME: (<2 x double> noundef [[A:%.*]], <2 x double> noundef [[B:%.*]], <2 x double> noundef [[C:%.*]]) #[[ATTR2:[0-9]+]] {
+// CFINITEONLY-LABEL: define dso_local nofpclass(nan inf) <2 x double> @defined_func_v2f64
+// CFINITEONLY-SAME: (<2 x double> noundef nofpclass(nan inf) [[A:%.*]], <2 x double> noundef nofpclass(nan inf) [[B:%.*]], <2 x double> noundef nofpclass(nan inf) [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 // CFINITEONLY-NEXT:  entry:
 // CFINITEONLY-NEXT:    [[A_ADDR:%.*]] = alloca <2 x double>, align 16
 // CFINITEONLY-NEXT:    [[B_ADDR:%.*]] = alloca <2 x double>, align 16
@@ -107,16 +107,16 @@ float defined_func_f32(float a, float b, float c) {
 // CFINITEONLY-NEXT:    ret <2 x double> [[ADD]]
 //
 // CLFINITEONLY: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-// CLFINITEONLY-LABEL: define dso_local <2 x double> @defined_func_v2f64
-// CLFINITEONLY-SAME: (<2 x double> noundef [[A:%.*]], <2 x double> noundef [[B:%.*]], <2 x double> noundef [[C:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// CLFINITEONLY-LABEL: define dso_local nofpclass(nan inf) <2 x double> @defined_func_v2f64
+// CLFINITEONLY-SAME: (<2 x double> noundef nofpclass(nan inf) [[A:%.*]], <2 x double> noundef nofpclass(nan inf) [[B:%.*]], <2 x double> noundef nofpclass(nan inf) [[C:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CLFINITEONLY-NEXT:  entry:
 // CLFINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf <2 x double> @llvm.fma.v2f64(<2 x double> [[A]], <2 x double> [[B]], <2 x double> [[C]])
 // CLFINITEONLY-NEXT:    [[ADD:%.*]] = fadd nnan ninf <2 x double> [[TMP0]], <double 4.000000e+00, double 4.000000e+00>
 // CLFINITEONLY-NEXT:    ret <2 x double> [[ADD]]
 //
 // NONANS: Function Attrs: noinline nounwind optnone
-// NONANS-LABEL: define dso_local <2 x double> @defined_func_v2f64
-// NONANS-SAME: (<2 x double> noundef [[A:%.*]], <2 x double> noundef [[B:%.*]], <2 x double> noundef [[C:%.*]]) #[[ATTR2:[0-9]+]] {
+// NONANS-LABEL: define dso_local nofpclass(nan) <2 x double> @defined_func_v2f64
+// NONANS-SAME: (<2 x double> noundef nofpclass(nan) [[A:%.*]], <2 x double> noundef nofpclass(nan) [[B:%.*]], <2 x double> noundef nofpclass(nan) [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 // NONANS-NEXT:  entry:
 // NONANS-NEXT:    [[A_ADDR:%.*]] = alloca <2 x double>, align 16
 // NONANS-NEXT:    [[B_ADDR:%.*]] = alloca <2 x double>, align 16
@@ -132,8 +132,8 @@ float defined_func_f32(float a, float b, float c) {
 // NONANS-NEXT:    ret <2 x double> [[ADD]]
 //
 // NOINFS: Function Attrs: noinline nounwind optnone
-// NOINFS-LABEL: define dso_local <2 x double> @defined_func_v2f64
-// NOINFS-SAME: (<2 x double> noundef [[A:%.*]], <2 x double> noundef [[B:%.*]], <2 x double> noundef [[C:%.*]]) #[[ATTR2:[0-9]+]] {
+// NOINFS-LABEL: define dso_local nofpclass(inf) <2 x double> @defined_func_v2f64
+// NOINFS-SAME: (<2 x double> noundef nofpclass(inf) [[A:%.*]], <2 x double> noundef nofpclass(inf) [[B:%.*]], <2 x double> noundef nofpclass(inf) [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 // NOINFS-NEXT:  entry:
 // NOINFS-NEXT:    [[A_ADDR:%.*]] = alloca <2 x double>, align 16
 // NOINFS-NEXT:    [[B_ADDR:%.*]] = alloca <2 x double>, align 16
@@ -153,8 +153,8 @@ double2 defined_func_v2f64(double2 a, double2 b, double2 c) {
 }
 
 // CFINITEONLY: Function Attrs: noinline nounwind optnone
-// CFINITEONLY-LABEL: define dso_local float @call_extern_func
-// CFINITEONLY-SAME: (float noundef [[A:%.*]], double noundef [[B:%.*]], half noundef [[C:%.*]]) #[[ATTR0]] {
+// CFINITEONLY-LABEL: define dso_local nofpclass(nan inf) float @call_extern_func
+// CFINITEONLY-SAME: (float noundef nofpclass(nan inf) [[A:%.*]], double noundef nofpclass(nan inf) [[B:%.*]], half noundef nofpclass(nan inf) [[C:%.*]]) #[[ATTR0]] {
 // CFINITEONLY-NEXT:  entry:
 // CFINITEONLY-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CFINITEONLY-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
@@ -165,19 +165,19 @@ double2 defined_func_v2f64(double2 a, double2 b, double2 c) {
 // CFINITEONLY-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4
 // CFINITEONLY-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8
 // CFINITEONLY-NEXT:    [[TMP2:%.*]] = load half, ptr [[C_ADDR]], align 2
-// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf float @extern_func(float noundef [[TMP0]], double noundef [[TMP1]], half noundef [[TMP2]])
+// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf nofpclass(nan inf) float @extern_func(float noundef nofpclass(nan inf) [[TMP0]], double noundef nofpclass(nan inf) [[TMP1]], half noundef nofpclass(nan inf) [[TMP2]])
 // CFINITEONLY-NEXT:    ret float [[CALL]]
 //
 // CLFINITEONLY: Function Attrs: convergent norecurse nounwind
-// CLFINITEONLY-LABEL: define dso_local float @call_extern_func
-// CLFINITEONLY-SAME: (float noundef [[A:%.*]], double noundef [[B:%.*]], half noundef [[C:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// CLFINITEONLY-LABEL: define dso_local nofpclass(nan inf) float @call_extern_func
+// CLFINITEONLY-SAME: (float noundef nofpclass(nan inf) [[A:%.*]], double noundef nofpclass(nan inf) [[B:%.*]], half noundef nofpclass(nan inf) [[C:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // CLFINITEONLY-NEXT:  entry:
-// CLFINITEONLY-NEXT:    [[CALL:%.*]] = tail call nnan ninf float @extern_func(float noundef [[A]], double noundef [[B]], half noundef [[C]]) #[[ATTR10:[0-9]+]]
+// CLFINITEONLY-NEXT:    [[CALL:%.*]] = tail call nnan ninf nofpclass(nan inf) float @extern_func(float noundef nofpclass(nan inf) [[A]], double noundef nofpclass(nan inf) [[B]], half noundef nofpclass(nan inf) [[C]]) #[[ATTR10:[0-9]+]]
 // CLFINITEONLY-NEXT:    ret float [[CALL]]
 //
 // NONANS: Function Attrs: noinline nounwind optnone
-// NONANS-LABEL: define dso_local float @call_extern_func
-// NONANS-SAME: (float noundef [[A:%.*]], double noundef [[B:%.*]], half noundef [[C:%.*]]) #[[ATTR0]] {
+// NONANS-LABEL: define dso_local nofpclass(nan) float @call_extern_func
+// NONANS-SAME: (float noundef nofpclass(nan) [[A:%.*]], double noundef nofpclass(nan) [[B:%.*]], half noundef nofpclass(nan) [[C:%.*]]) #[[ATTR0]] {
 // NONANS-NEXT:  entry:
 // NONANS-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // NONANS-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
@@ -188,12 +188,12 @@ double2 defined_func_v2f64(double2 a, double2 b, double2 c) {
 // NONANS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4
 // NONANS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8
 // NONANS-NEXT:    [[TMP2:%.*]] = load half, ptr [[C_ADDR]], align 2
-// NONANS-NEXT:    [[CALL:%.*]] = call nnan float @extern_func(float noundef [[TMP0]], double noundef [[TMP1]], half noundef [[TMP2]])
+// NONANS-NEXT:    [[CALL:%.*]] = call nnan nofpclass(nan) float @extern_func(float noundef nofpclass(nan) [[TMP0]], double noundef nofpclass(nan) [[TMP1]], half noundef nofpclass(nan) [[TMP2]])
 // NONANS-NEXT:    ret float [[CALL]]
 //
 // NOINFS: Function Attrs: noinline nounwind optnone
-// NOINFS-LABEL: define dso_local float @call_extern_func
-// NOINFS-SAME: (float noundef [[A:%.*]], double noundef [[B:%.*]], half noundef [[C:%.*]]) #[[ATTR0]] {
+// NOINFS-LABEL: define dso_local nofpclass(inf) float @call_extern_func
+// NOINFS-SAME: (float noundef nofpclass(inf) [[A:%.*]], double noundef nofpclass(inf) [[B:%.*]], half noundef nofpclass(inf) [[C:%.*]]) #[[ATTR0]] {
 // NOINFS-NEXT:  entry:
 // NOINFS-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // NOINFS-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
@@ -204,7 +204,7 @@ double2 defined_func_v2f64(double2 a, double2 b, double2 c) {
 // NOINFS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4
 // NOINFS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8
 // NOINFS-NEXT:    [[TMP2:%.*]] = load half, ptr [[C_ADDR]], align 2
-// NOINFS-NEXT:    [[CALL:%.*]] = call ninf float @extern_func(float noundef [[TMP0]], double noundef [[TMP1]], half noundef [[TMP2]])
+// NOINFS-NEXT:    [[CALL:%.*]] = call ninf nofpclass(inf) float @extern_func(float noundef nofpclass(inf) [[TMP0]], double noundef nofpclass(inf) [[TMP1]], half noundef nofpclass(inf) [[TMP2]])
 // NOINFS-NEXT:    ret float [[CALL]]
 //
 float call_extern_func(float a, double b, _Float16 c) {
@@ -212,8 +212,8 @@ float call_extern_func(float a, double b, _Float16 c) {
 }
 
 // CFINITEONLY: Function Attrs: noinline nounwind optnone
-// CFINITEONLY-LABEL: define dso_local double @call_extern_func_vec
-// CFINITEONLY-SAME: (double noundef [[A_COERCE:%.*]], <2 x double> noundef [[B:%.*]], i32 noundef [[C_COERCE:%.*]]) #[[ATTR2]] {
+// CFINITEONLY-LABEL: define dso_local nofpclass(nan inf) double @call_extern_func_vec
+// CFINITEONLY-SAME: (double noundef nofpclass(nan inf) [[A_COERCE:%.*]], <2 x double> noundef nofpclass(nan inf) [[B:%.*]], i32 noundef [[C_COERCE:%.*]]) #[[ATTR2]] {
 // CFINITEONLY-NEXT:  entry:
 // CFINITEONLY-NEXT:    [[RETVAL:%.*]] = alloca <2 x float>, align 8
 // CFINITEONLY-NEXT:    [[A:%.*]] = alloca <2 x float>, align 8
@@ -238,7 +238,7 @@ float call_extern_func(float a, double b, _Float16 c) {
 // CFINITEONLY-NEXT:    [[TMP3:%.*]] = load double, ptr [[COERCE]], align 8
 // CFINITEONLY-NEXT:    store <2 x half> [[TMP2]], ptr [[COERCE3]], align 4
 // CFINITEONLY-NEXT:    [[TMP4:%.*]] = load i32, ptr [[COERCE3]], align 4
-// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf double @extern_func_vec(double noundef [[TMP3]], <2 x double> noundef [[TMP1]], i32 noundef [[TMP4]])
+// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf nofpclass(nan inf) double @extern_func_vec(double noundef nofpclass(nan inf) [[TMP3]], <2 x double> noundef nofpclass(nan inf) [[TMP1]], i32 noundef [[TMP4]])
 // CFINITEONLY-NEXT:    store double [[CALL]], ptr [[COERCE4]], align 8
 // CFINITEONLY-NEXT:    [[TMP5:%.*]] = load <2 x float>, ptr [[COERCE4]], align 8
 // CFINITEONLY-NEXT:    store <2 x float> [[TMP5]], ptr [[RETVAL]], align 8
@@ -246,15 +246,15 @@ float call_extern_func(float a, double b, _Float16 c) {
 // CFINITEONLY-NEXT:    ret double [[TMP6]]
 //
 // CLFINITEONLY: Function Attrs: convergent norecurse nounwind
-// CLFINITEONLY-LABEL: define dso_local double @call_extern_func_vec
-// CLFINITEONLY-SAME: (double noundef [[A_COERCE:%.*]], <2 x double> noundef [[B:%.*]], i32 noundef [[C_COERCE:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
+// CLFINITEONLY-LABEL: define dso_local nofpclass(nan inf) double @call_extern_func_vec
+// CLFINITEONLY-SAME: (double noundef nofpclass(nan inf) [[A_COERCE:%.*]], <2 x double> noundef nofpclass(nan inf) [[B:%.*]], i32 noundef [[C_COERCE:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
 // CLFINITEONLY-NEXT:  entry:
-// CLFINITEONLY-NEXT:    [[CALL:%.*]] = tail call nnan ninf double @extern_func_vec(double noundef [[A_COERCE]], <2 x double> noundef [[B]], i32 noundef [[C_COERCE]]) #[[ATTR10]]
+// CLFINITEONLY-NEXT:    [[CALL:%.*]] = tail call nnan ninf nofpclass(nan inf) double @extern_func_vec(double noundef nofpclass(nan inf) [[A_COERCE]], <2 x double> noundef nofpclass(nan inf) [[B]], i32 noundef [[C_COERCE]]) #[[ATTR10]]
 // CLFINITEONLY-NEXT:    ret double [[CALL]]
 //
 // NONANS: Function Attrs: noinline nounwind optnone
-// NONANS-LABEL: define dso_local double @call_extern_func_vec
-// NONANS-SAME: (double noundef [[A_COERCE:%.*]], <2 x double> noundef [[B:%.*]], i32 noundef [[C_COERCE:%.*]]) #[[ATTR2]] {
+// NONANS-LABEL: define dso_local nofpclass(nan) double @call_extern_func_vec
+// NONANS-SAME: (double noundef nofpclass(nan) [[A_COERCE:%.*]], <2 x double> noundef nofpclass(nan) [[B:%.*]], i32 noundef [[C_COERCE:%.*]]) #[[ATTR2]] {
 // NONANS-NEXT:  entry:
 // NONANS-NEXT:    [[RETVAL:%.*]] = alloca <2 x float>, align 8
 // NONANS-NEXT:    [[A:%.*]] = alloca <2 x float>, align 8
@@ -279,7 +279,7 @@ float call_extern_func(float a, double b, _Float16 c) {
 // NONANS-NEXT:    [[TMP3:%.*]] = load double, ptr [[COERCE]], align 8
 // NONANS-NEXT:    store <2 x half> [[TMP2]], ptr [[COERCE3]], align 4
 // NONANS-NEXT:    [[TMP4:%.*]] = load i32, ptr [[COERCE3]], align 4
-// NONANS-NEXT:    [[CALL:%.*]] = call nnan double @extern_func_vec(double noundef [[TMP3]], <2 x double> noundef [[TMP1]], i32 noundef [[TMP4]])
+// NONANS-NEXT:    [[CALL:%.*]] = call nnan nofpclass(nan) double @extern_func_vec(double noundef nofpclass(nan) [[TMP3]], <2 x double> noundef nofpclass(nan) [[TMP1]], i32 noundef [[TMP4]])
 // NONANS-NEXT:    store double [[CALL]], ptr [[COERCE4]], align 8
 // NONANS-NEXT:    [[TMP5:%.*]] = load <2 x float>, ptr [[COERCE4]], align 8
 // NONANS-NEXT:    store <2 x float> [[TMP5]], ptr [[RETVAL]], align 8
@@ -287,8 +287,8 @@ float call_extern_func(float a, double b, _Float16 c) {
 // NONANS-NEXT:    ret double [[TMP6]]
 //
 // NOINFS: Function Attrs: noinline nounwind optnone
-// NOINFS-LABEL: define dso_local double @call_extern_func_vec
-// NOINFS-SAME: (double noundef [[A_COERCE:%.*]], <2 x double> noundef [[B:%.*]], i32 noundef [[C_COERCE:%.*]]) #[[ATTR2]] {
+// NOINFS-LABEL: define dso_local nofpclass(inf) double @call_extern_func_vec
+// NOINFS-SAME: (double noundef nofpclass(inf) [[A_COERCE:%.*]], <2 x double> noundef nofpclass(inf) [[B:%.*]], i32 noundef [[C_COERCE:%.*]]) #[[ATTR2]] {
 // NOINFS-NEXT:  entry:
 // NOINFS-NEXT:    [[RETVAL:%.*]] = alloca <2 x float>, align 8
 // NOINFS-NEXT:    [[A:%.*]] = alloca <2 x float>, align 8
@@ -313,7 +313,7 @@ float call_extern_func(float a, double b, _Float16 c) {
 // NOINFS-NEXT:    [[TMP3:%.*]] = load double, ptr [[COERCE]], align 8
 // NOINFS-NEXT:    store <2 x half> [[TMP2]], ptr [[COERCE3]], align 4
 // NOINFS-NEXT:    [[TMP4:%.*]] = load i32, ptr [[COERCE3]], align 4
-// NOINFS-NEXT:    [[CALL:%.*]] = call ninf double @extern_func_vec(double noundef [[TMP3]], <2 x double> noundef [[TMP1]], i32 noundef [[TMP4]])
+// NOINFS-NEXT:    [[CALL:%.*]] = call ninf nofpclass(inf) double @extern_func_vec(double noundef nofpclass(inf) [[TMP3]], <2 x double> noundef nofpclass(inf) [[TMP1]], i32 noundef [[TMP4]])
 // NOINFS-NEXT:    store double [[CALL]], ptr [[COERCE4]], align 8
 // NOINFS-NEXT:    [[TMP5:%.*]] = load <2 x float>, ptr [[COERCE4]], align 8
 // NOINFS-NEXT:    store <2 x float> [[TMP5]], ptr [[RETVAL]], align 8
@@ -325,8 +325,8 @@ float2 call_extern_func_vec(float2 a, double2 b, half2 c) {
 }
 
 // CFINITEONLY: Function Attrs: noinline nounwind optnone
-// CFINITEONLY-LABEL: define dso_local <2 x float> @defined_complex_func
-// CFINITEONLY-SAME: (<2 x float> noundef [[A_COERCE:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]], <2 x half> noundef [[C_COERCE:%.*]]) #[[ATTR4:[0-9]+]] {
+// CFINITEONLY-LABEL: define dso_local nofpclass(nan inf) <2 x float> @defined_complex_func
+// CFINITEONLY-SAME: (<2 x float> noundef nofpclass(nan inf) [[A_COERCE:%.*]], double noundef nofpclass(nan inf) [[B_COERCE0:%.*]], double noundef nofpclass(nan inf) [[B_COERCE1:%.*]], <2 x half> noundef nofpclass(nan inf) [[C_COERCE:%.*]]) #[[ATTR4:[0-9]+]] {
 // CFINITEONLY-NEXT:  entry:
 // CFINITEONLY-NEXT:    [[RETVAL:%.*]] = alloca { float, float }, align 4
 // CFINITEONLY-NEXT:    [[A:%.*]] = alloca { float, float }, align 4
@@ -372,7 +372,7 @@ float2 call_extern_func_vec(float2 a, double2 b, half2 c) {
 // CFINITEONLY-NEXT:    store half [[C_REAL]], ptr [[COERCE2_REALP]], align 2
 // CFINITEONLY-NEXT:    store half [[C_IMAG]], ptr [[COERCE2_IMAGP]], align 2
 // CFINITEONLY-NEXT:    [[TMP7:%.*]] = load <2 x half>, ptr [[COERCE2]], align 2
-// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf <2 x float> @extern_complex(<2 x float> noundef [[TMP2]], double noundef [[TMP4]], double noundef [[TMP6]], <2 x half> noundef [[TMP7]])
+// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf nofpclass(nan inf) <2 x float> @extern_complex(<2 x float> noundef nofpclass(nan inf) [[TMP2]], double noundef nofpclass(nan inf) [[TMP4]], double noundef nofpclass(nan inf) [[TMP6]], <2 x half> noundef nofpclass(nan inf) [[TMP7]])
 // CFINITEONLY-NEXT:    store <2 x float> [[CALL]], ptr [[COERCE3]], align 4
 // CFINITEONLY-NEXT:    [[COERCE3_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[COERCE3]], i32 0, i32 0
 // CFINITEONLY-NEXT:    [[COERCE3_REAL:%.*]] = load float, ptr [[COERCE3_REALP]], align 4
@@ -386,15 +386,15 @@ float2 call_extern_func_vec(float2 a, double2 b, half2 c) {
 // CFINITEONLY-NEXT:    ret <2 x float> [[TMP8]]
 //
 // CLFINITEONLY: Function Attrs: convergent norecurse nounwind
-// CLFINITEONLY-LABEL: define dso_local <2 x float> @defined_complex_func
-// CLFINITEONLY-SAME: (<2 x float> noundef [[A_COERCE:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]], <2 x half> noundef [[C_COERCE:%.*]]) local_unnamed_addr #[[ATTR6:[0-9]+]] {
+// CLFINITEONLY-LABEL: define dso_local nofpclass(nan inf) <2 x float> @defined_complex_func
+// CLFINITEONLY-SAME: (<2 x float> noundef nofpclass(nan inf) [[A_COERCE:%.*]], double noundef nofpclass(nan inf) [[B_COERCE0:%.*]], double noundef nofpclass(nan inf) [[B_COERCE1:%.*]], <2 x half> noundef nofpclass(nan inf) [[C_COERCE:%.*]]) local_unnamed_addr #[[ATTR6:[0-9]+]] {
 // CLFINITEONLY-NEXT:  entry:
-// CLFINITEONLY-NEXT:    [[CALL:%.*]] = tail call nnan ninf <2 x float> @extern_complex(<2 x float> noundef [[A_COERCE]], double noundef [[B_COERCE0]], double noundef [[B_COERCE1]], <2 x half> noundef [[C_COERCE]]) #[[ATTR10]]
+// CLFINITEONLY-NEXT:    [[CALL:%.*]] = tail call nnan ninf nofpclass(nan inf) <2 x float> @extern_complex(<2 x float> noundef nofpclass(nan inf) [[A_COERCE]], double noundef nofpclass(nan inf) [[B_COERCE0]], double noundef nofpclass(nan inf) [[B_COERCE1]], <2 x half> noundef nofpclass(nan inf) [[C_COERCE]]) #[[ATTR10]]
 // CLFINITEONLY-NEXT:    ret <2 x float> [[CALL]]
 //
 // NONANS: Function Attrs: noinline nounwind optnone
-// NONANS-LABEL: define dso_local <2 x float> @defined_complex_func
-// NONANS-SAME: (<2 x float> noundef [[A_COERCE:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]], <2 x half> noundef [[C_COERCE:%.*]]) #[[ATTR4:[0-9]+]] {
+// NONANS-LABEL: define dso_local nofpclass(nan) <2 x float> @defined_complex_func
+// NONANS-SAME: (<2 x float> noundef nofpclass(nan) [[A_COERCE:%.*]], double noundef nofpclass(nan) [[B_COERCE0:%.*]], double noundef nofpclass(nan) [[B_COERCE1:%.*]], <2 x half> noundef nofpclass(nan) [[C_COERCE:%.*]]) #[[ATTR4:[0-9]+]] {
 // NONANS-NEXT:  entry:
 // NONANS-NEXT:    [[RETVAL:%.*]] = alloca { float, float }, align 4
 // NONANS-NEXT:    [[A:%.*]] = alloca { float, float }, align 4
@@ -440,7 +440,7 @@ float2 call_extern_func_vec(float2 a, double2 b, half2 c) {
 // NONANS-NEXT:    store half [[C_REAL]], ptr [[COERCE2_REALP]], align 2
 // NONANS-NEXT:    store half [[C_IMAG]], ptr [[COERCE2_IMAGP]], align 2
 // NONANS-NEXT:    [[TMP7:%.*]] = load <2 x half>, ptr [[COERCE2]], align 2
-// NONANS-NEXT:    [[CALL:%.*]] = call nnan <2 x float> @extern_complex(<2 x float> noundef [[TMP2]], double noundef [[TMP4]], double noundef [[TMP6]], <2 x half> noundef [[TMP7]])
+// NONANS-NEXT:    [[CALL:%.*]] = call nnan nofpclass(nan) <2 x float> @extern_complex(<2 x float> noundef nofpclass(nan) [[TMP2]], double noundef nofpclass(nan) [[TMP4]], double noundef nofpclass(nan) [[TMP6]], <2 x half> noundef nofpclass(nan) [[TMP7]])
 // NONANS-NEXT:    store <2 x float> [[CALL]], ptr [[COERCE3]], align 4
 // NONANS-NEXT:    [[COERCE3_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[COERCE3]], i32 0, i32 0
 // NONANS-NEXT:    [[COERCE3_REAL:%.*]] = load float, ptr [[COERCE3_REALP]], align 4
@@ -454,8 +454,8 @@ float2 call_extern_func_vec(float2 a, double2 b, half2 c) {
 // NONANS-NEXT:    ret <2 x float> [[TMP8]]
 //
 // NOINFS: Function Attrs: noinline nounwind optnone
-// NOINFS-LABEL: define dso_local <2 x float> @defined_complex_func
-// NOINFS-SAME: (<2 x float> noundef [[A_COERCE:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]], <2 x half> noundef [[C_COERCE:%.*]]) #[[ATTR4:[0-9]+]] {
+// NOINFS-LABEL: define dso_local nofpclass(inf) <2 x float> @defined_complex_func
+// NOINFS-SAME: (<2 x float> noundef nofpclass(inf) [[A_COERCE:%.*]], double noundef nofpclass(inf) [[B_COERCE0:%.*]], double noundef nofpclass(inf) [[B_COERCE1:%.*]], <2 x half> noundef nofpclass(inf) [[C_COERCE:%.*]]) #[[ATTR4:[0-9]+]] {
 // NOINFS-NEXT:  entry:
 // NOINFS-NEXT:    [[RETVAL:%.*]] = alloca { float, float }, align 4
 // NOINFS-NEXT:    [[A:%.*]] = alloca { float, float }, align 4
@@ -501,7 +501,7 @@ float2 call_extern_func_vec(float2 a, double2 b, half2 c) {
 // NOINFS-NEXT:    store half [[C_REAL]], ptr [[COERCE2_REALP]], align 2
 // NOINFS-NEXT:    store half [[C_IMAG]], ptr [[COERCE2_IMAGP]], align 2
 // NOINFS-NEXT:    [[TMP7:%.*]] = load <2 x half>, ptr [[COERCE2]], align 2
-// NOINFS-NEXT:    [[CALL:%.*]] = call ninf <2 x float> @extern_complex(<2 x float> noundef [[TMP2]], double noundef [[TMP4]], double noundef [[TMP6]], <2 x half> noundef [[TMP7]])
+// NOINFS-NEXT:    [[CALL:%.*]] = call ninf nofpclass(inf) <2 x float> @extern_complex(<2 x float> noundef nofpclass(inf) [[TMP2]], double noundef nofpclass(inf) [[TMP4]], double noundef nofpclass(inf) [[TMP6]], <2 x half> noundef nofpclass(inf) [[TMP7]])
 // NOINFS-NEXT:    store <2 x float> [[CALL]], ptr [[COERCE3]], align 4
 // NOINFS-NEXT:    [[COERCE3_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[COERCE3]], i32 0, i32 0
 // NOINFS-NEXT:    [[COERCE3_REAL:%.*]] = load float, ptr [[COERCE3_REALP]], align 4
@@ -520,7 +520,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 
 // CFINITEONLY: Function Attrs: noinline nounwind optnone
 // CFINITEONLY-LABEL: define dso_local { double, double } @defined_complex_func_f64_ret
-// CFINITEONLY-SAME: (double noundef [[C_COERCE0:%.*]], double noundef [[C_COERCE1:%.*]]) #[[ATTR0]] {
+// CFINITEONLY-SAME: (double noundef nofpclass(nan inf) [[C_COERCE0:%.*]], double noundef nofpclass(nan inf) [[C_COERCE1:%.*]]) #[[ATTR0]] {
 // CFINITEONLY-NEXT:  entry:
 // CFINITEONLY-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
 // CFINITEONLY-NEXT:    [[C:%.*]] = alloca { double, double }, align 8
@@ -548,7 +548,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // CFINITEONLY-NEXT:    [[ISNAN_CMP5:%.*]] = fcmp nnan ninf uno double [[MUL_I]], [[MUL_I]]
 // CFINITEONLY-NEXT:    br i1 [[ISNAN_CMP5]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // CFINITEONLY:       complex_mul_libcall:
-// CFINITEONLY-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef [[C_REAL]], double noundef [[C_IMAG]], double noundef [[C_REAL2]], double noundef [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
+// CFINITEONLY-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef nofpclass(nan inf) [[C_REAL]], double noundef nofpclass(nan inf) [[C_IMAG]], double noundef nofpclass(nan inf) [[C_REAL2]], double noundef nofpclass(nan inf) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
 // CFINITEONLY-NEXT:    [[TMP2:%.*]] = extractvalue { double, double } [[CALL]], 0
 // CFINITEONLY-NEXT:    [[TMP3:%.*]] = extractvalue { double, double } [[CALL]], 1
 // CFINITEONLY-NEXT:    br label [[COMPLEX_MUL_CONT]]
@@ -564,7 +564,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 //
 // CLFINITEONLY: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 // CLFINITEONLY-LABEL: define dso_local { double, double } @defined_complex_func_f64_ret
-// CLFINITEONLY-SAME: (double noundef [[C_COERCE0:%.*]], double noundef [[C_COERCE1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CLFINITEONLY-SAME: (double noundef nofpclass(nan inf) [[C_COERCE0:%.*]], double noundef nofpclass(nan inf) [[C_COERCE1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CLFINITEONLY-NEXT:  entry:
 // CLFINITEONLY-NEXT:    [[MUL_AD:%.*]] = fmul nnan ninf double [[C_COERCE0]], [[C_COERCE1]]
 // CLFINITEONLY-NEXT:    [[MUL_I:%.*]] = fadd nnan ninf double [[MUL_AD]], [[MUL_AD]]
@@ -577,7 +577,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 //
 // NONANS: Function Attrs: noinline nounwind optnone
 // NONANS-LABEL: define dso_local { double, double } @defined_complex_func_f64_ret
-// NONANS-SAME: (double noundef [[C_COERCE0:%.*]], double noundef [[C_COERCE1:%.*]]) #[[ATTR0]] {
+// NONANS-SAME: (double noundef nofpclass(nan) [[C_COERCE0:%.*]], double noundef nofpclass(nan) [[C_COERCE1:%.*]]) #[[ATTR0]] {
 // NONANS-NEXT:  entry:
 // NONANS-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
 // NONANS-NEXT:    [[C:%.*]] = alloca { double, double }, align 8
@@ -605,7 +605,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // NONANS-NEXT:    [[ISNAN_CMP5:%.*]] = fcmp nnan uno double [[MUL_I]], [[MUL_I]]
 // NONANS-NEXT:    br i1 [[ISNAN_CMP5]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // NONANS:       complex_mul_libcall:
-// NONANS-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef [[C_REAL]], double noundef [[C_IMAG]], double noundef [[C_REAL2]], double noundef [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
+// NONANS-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef nofpclass(nan) [[C_REAL]], double noundef nofpclass(nan) [[C_IMAG]], double noundef nofpclass(nan) [[C_REAL2]], double noundef nofpclass(nan) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
 // NONANS-NEXT:    [[TMP2:%.*]] = extractvalue { double, double } [[CALL]], 0
 // NONANS-NEXT:    [[TMP3:%.*]] = extractvalue { double, double } [[CALL]], 1
 // NONANS-NEXT:    br label [[COMPLEX_MUL_CONT]]
@@ -621,7 +621,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 //
 // NOINFS: Function Attrs: noinline nounwind optnone
 // NOINFS-LABEL: define dso_local { double, double } @defined_complex_func_f64_ret
-// NOINFS-SAME: (double noundef [[C_COERCE0:%.*]], double noundef [[C_COERCE1:%.*]]) #[[ATTR0]] {
+// NOINFS-SAME: (double noundef nofpclass(inf) [[C_COERCE0:%.*]], double noundef nofpclass(inf) [[C_COERCE1:%.*]]) #[[ATTR0]] {
 // NOINFS-NEXT:  entry:
 // NOINFS-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
 // NOINFS-NEXT:    [[C:%.*]] = alloca { double, double }, align 8
@@ -649,7 +649,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // NOINFS-NEXT:    [[ISNAN_CMP5:%.*]] = fcmp ninf uno double [[MUL_I]], [[MUL_I]]
 // NOINFS-NEXT:    br i1 [[ISNAN_CMP5]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // NOINFS:       complex_mul_libcall:
-// NOINFS-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef [[C_REAL]], double noundef [[C_IMAG]], double noundef [[C_REAL2]], double noundef [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
+// NOINFS-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef nofpclass(inf) [[C_REAL]], double noundef nofpclass(inf) [[C_IMAG]], double noundef nofpclass(inf) [[C_REAL2]], double noundef nofpclass(inf) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
 // NOINFS-NEXT:    [[TMP2:%.*]] = extractvalue { double, double } [[CALL]], 0
 // NOINFS-NEXT:    [[TMP3:%.*]] = extractvalue { double, double } [[CALL]], 1
 // NOINFS-NEXT:    br label [[COMPLEX_MUL_CONT]]
@@ -668,8 +668,8 @@ _Complex double defined_complex_func_f64_ret(_Complex double c) {
 }
 
 // CFINITEONLY: Function Attrs: noinline nounwind optnone
-// CFINITEONLY-LABEL: define dso_local <2 x half> @defined_complex_func_f16_ret
-// CFINITEONLY-SAME: (<2 x half> noundef [[C_COERCE:%.*]]) #[[ATTR4]] {
+// CFINITEONLY-LABEL: define dso_local nofpclass(nan inf) <2 x half> @defined_complex_func_f16_ret
+// CFINITEONLY-SAME: (<2 x half> noundef nofpclass(nan inf) [[C_COERCE:%.*]]) #[[ATTR4]] {
 // CFINITEONLY-NEXT:  entry:
 // CFINITEONLY-NEXT:    [[RETVAL:%.*]] = alloca { half, half }, align 2
 // CFINITEONLY-NEXT:    [[C:%.*]] = alloca { half, half }, align 2
@@ -699,7 +699,7 @@ _Complex double defined_complex_func_f64_ret(_Complex double c) {
 // CFINITEONLY-NEXT:    [[ISNAN_CMP8:%.*]] = fcmp nnan ninf uno float [[MUL_I]], [[MUL_I]]
 // CFINITEONLY-NEXT:    br i1 [[ISNAN_CMP8]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // CFINITEONLY:       complex_mul_libcall:
-// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf <2 x float> @__mulsc3(float noundef [[EXT]], float noundef [[EXT1]], float noundef [[EXT6]], float noundef [[EXT7]]) #[[ATTR7]]
+// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf nofpclass(nan inf) <2 x float> @__mulsc3(float noundef nofpclass(nan inf) [[EXT]], float noundef nofpclass(nan inf) [[EXT1]], float noundef nofpclass(nan inf) [[EXT6]], float noundef nofpclass(nan inf) [[EXT7]]) #[[ATTR7]]
 // CFINITEONLY-NEXT:    store <2 x float> [[CALL]], ptr [[COERCE]], align 4
 // CFINITEONLY-NEXT:    [[COERCE_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[COERCE]], i32 0, i32 0
 // CFINITEONLY-NEXT:    [[COERCE_REAL:%.*]] = load float, ptr [[COERCE_REALP]], align 4
@@ -719,8 +719,8 @@ _Complex double defined_complex_func_f64_ret(_Complex double c) {
 // CFINITEONLY-NEXT:    ret <2 x half> [[TMP0]]
 //
 // CLFINITEONLY: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-// CLFINITEONLY-LABEL: define dso_local <2 x half> @defined_complex_func_f16_ret
-// CLFINITEONLY-SAME: (<2 x half> noundef [[C_COERCE:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
+// CLFINITEONLY-LABEL: define dso_local nofpclass(nan inf) <2 x half> @defined_complex_func_f16_ret
+// CLFINITEONLY-SAME: (<2 x half> noundef nofpclass(nan inf) [[C_COERCE:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 // CLFINITEONLY-NEXT:  entry:
 // CLFINITEONLY-NEXT:    [[C_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x half> [[C_COERCE]], i64 0
 // CLFINITEONLY-NEXT:    [[EXT:%.*]] = fpext half [[C_SROA_0_0_VEC_EXTRACT]] to float
@@ -738,8 +738,8 @@ _Complex double defined_complex_func_f64_ret(_Complex double c) {
 // CLFINITEONLY-NEXT:    ret <2 x half> [[RETVAL_SROA_0_2_VEC_INSERT]]
 //
 // NONANS: Function Attrs: noinline nounwind optnone
-// NONANS-LABEL: define dso_local <2 x half> @defined_complex_func_f16_ret
-// NONANS-SAME: (<2 x half> noundef [[C_COERCE:%.*]]) #[[ATTR4]] {
+// NONANS-LABEL: define dso_local nofpclass(nan) <2 x half> @defined_complex_func_f16_ret
+// NONANS-SAME: (<2 x half> noundef nofpclass(nan) [[C_COERCE:%.*]]) #[[ATTR4]] {
 // NONANS-NEXT:  entry:
 // NONANS-NEXT:    [[RETVAL:%.*]] = alloca { half, half }, align 2
 // NONANS-NEXT:    [[C:%.*]] = alloca { half, half }, align 2
@@ -769,7 +769,7 @@ _Complex double defined_complex_func_f64_ret(_Complex double c) {
 // NONANS-NEXT:    [[ISNAN_CMP8:%.*]] = fcmp nnan uno float [[MUL_I]], [[MUL_I]]
 // NONANS-NEXT:    br i1 [[ISNAN_CMP8]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // NONANS:       complex_mul_libcall:
-// NONANS-NEXT:    [[CALL:%.*]] = call nnan <2 x float> @__mulsc3(float noundef [[EXT]], float noundef [[EXT1]], float noundef [[EXT6]], float noundef [[EXT7]]) #[[ATTR7]]
+// NONANS-NEXT:    [[CALL:%.*]] = call nnan nofpclass(nan) <2 x float> @__mulsc3(float noundef nofpclass(nan) [[EXT]], float noundef nofpclass(nan) [[EXT1]], float noundef nofpclass(nan) [[EXT6]], float noundef nofpclass(nan) [[EXT7]]) #[[ATTR7]]
 // NONANS-NEXT:    store <2 x float> [[CALL]], ptr [[COERCE]], align 4
 // NONANS-NEXT:    [[COERCE_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[COERCE]], i32 0, i32 0
 // NONANS-NEXT:    [[COERCE_REAL:%.*]] = load float, ptr [[COERCE_REALP]], align 4
@@ -789,8 +789,8 @@ _Complex double defined_complex_func_f64_ret(_Complex double c) {
 // NONANS-NEXT:    ret <2 x half> [[TMP0]]
 //
 // NOINFS: Function Attrs: noinline nounwind optnone
-// NOINFS-LABEL: define dso_local <2 x half> @defined_complex_func_f16_ret
-// NOINFS-SAME: (<2 x half> noundef [[C_COERCE:%.*]]) #[[ATTR4]] {
+// NOINFS-LABEL: define dso_local nofpclass(inf) <2 x half> @defined_complex_func_f16_ret
+// NOINFS-SAME: (<2 x half> noundef nofpclass(inf) [[C_COERCE:%.*]]) #[[ATTR4]] {
 // NOINFS-NEXT:  entry:
 // NOINFS-NEXT:    [[RETVAL:%.*]] = alloca { half, half }, align 2
 // NOINFS-NEXT:    [[C:%.*]] = alloca { half, half }, align 2
@@ -820,7 +820,7 @@ _Complex double defined_complex_func_f64_ret(_Complex double c) {
 // NOINFS-NEXT:    [[ISNAN_CMP8:%.*]] = fcmp ninf uno float [[MUL_I]], [[MUL_I]]
 // NOINFS-NEXT:    br i1 [[ISNAN_CMP8]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // NOINFS:       complex_mul_libcall:
-// NOINFS-NEXT:    [[CALL:%.*]] = call ninf <2 x float> @__mulsc3(float noundef [[EXT]], float noundef [[EXT1]], float noundef [[EXT6]], float noundef [[EXT7]]) #[[ATTR7]]
+// NOINFS-NEXT:    [[CALL:%.*]] = call ninf nofpclass(inf) <2 x float> @__mulsc3(float noundef nofpclass(inf) [[EXT]], float noundef nofpclass(inf) [[EXT1]], float noundef nofpclass(inf) [[EXT6]], float noundef nofpclass(inf) [[EXT7]]) #[[ATTR7]]
 // NOINFS-NEXT:    store <2 x float> [[CALL]], ptr [[COERCE]], align 4
 // NOINFS-NEXT:    [[COERCE_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[COERCE]], i32 0, i32 0
 // NOINFS-NEXT:    [[COERCE_REAL:%.*]] = load float, ptr [[COERCE_REALP]], align 4
@@ -844,8 +844,8 @@ _Complex _Float16 defined_complex_func_f16_ret(_Complex _Float16 c) {
 }
 
 // CFINITEONLY: Function Attrs: noinline nounwind optnone
-// CFINITEONLY-LABEL: define dso_local float @call_variadic
-// CFINITEONLY-SAME: (float noundef [[F32:%.*]], double noundef [[F64:%.*]], half noundef [[F16:%.*]], double noundef [[V2F32_COERCE:%.*]], <2 x double> noundef [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef [[CF32_COERCE:%.*]], double noundef [[CF64_COERCE0:%.*]], double noundef [[CF64_COERCE1:%.*]], ptr noundef byval({ half, half }) align 8 [[CF16:%.*]]) #[[ATTR2]] {
+// CFINITEONLY-LABEL: define dso_local nofpclass(nan inf) float @call_variadic
+// CFINITEONLY-SAME: (float noundef nofpclass(nan inf) [[F32:%.*]], double noundef nofpclass(nan inf) [[F64:%.*]], half noundef nofpclass(nan inf) [[F16:%.*]], double noundef nofpclass(nan inf) [[V2F32_COERCE:%.*]], <2 x double> noundef nofpclass(nan inf) [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef nofpclass(nan inf) [[CF32_COERCE:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE0:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE1:%.*]], ptr noundef byval({ half, half }) align 8 [[CF16:%.*]]) #[[ATTR2]] {
 // CFINITEONLY-NEXT:  entry:
 // CFINITEONLY-NEXT:    [[V2F32:%.*]] = alloca <2 x float>, align 8
 // CFINITEONLY-NEXT:    [[V2F16:%.*]] = alloca <2 x half>, align 4
@@ -915,12 +915,12 @@ _Complex _Float16 defined_complex_func_f16_ret(_Complex _Float16 c) {
 // CFINITEONLY-NEXT:    store half [[CF16_REAL]], ptr [[COERCE5_REALP]], align 2
 // CFINITEONLY-NEXT:    store half [[CF16_IMAG]], ptr [[COERCE5_IMAGP]], align 2
 // CFINITEONLY-NEXT:    [[TMP12:%.*]] = load <2 x half>, ptr [[COERCE5]], align 2
-// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf float (float, ...) @variadic(float noundef [[TMP2]], double noundef [[CONV]], double noundef [[TMP4]], half noundef [[TMP5]], double noundef [[TMP9]], <2 x double> noundef [[TMP7]], i32 noundef [[TMP10]], <2 x float> noundef [[TMP11]], ptr noundef byval({ double, double }) align 8 [[INDIRECT_ARG_TEMP]], <2 x half> noundef [[TMP12]])
+// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf nofpclass(nan inf) float (float, ...) @variadic(float noundef nofpclass(nan inf) [[TMP2]], double noundef nofpclass(nan inf) [[CONV]], double noundef nofpclass(nan inf) [[TMP4]], half noundef nofpclass(nan inf) [[TMP5]], double noundef nofpclass(nan inf) [[TMP9]], <2 x double> noundef nofpclass(nan inf) [[TMP7]], i32 noundef [[TMP10]], <2 x float> noundef nofpclass(nan inf) [[TMP11]], ptr noundef byval({ double, double }) align 8 [[INDIRECT_ARG_TEMP]], <2 x half> noundef nofpclass(nan inf) [[TMP12]])
 // CFINITEONLY-NEXT:    ret float [[CALL]]
 //
 // CLFINITEONLY: Function Attrs: convergent norecurse nounwind
-// CLFINITEONLY-LABEL: define dso_local float @call_variadic
-// CLFINITEONLY-SAME: (float noundef [[F32:%.*]], double noundef [[F64:%.*]], half noundef [[F16:%.*]], double noundef [[V2F32_COERCE:%.*]], <2 x double> noundef [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef [[CF32_COERCE:%.*]], double noundef [[CF64_COERCE0:%.*]], double noundef [[CF64_COERCE1:%.*]], ptr nocapture noundef readonly byval({ half, half }) align 8 [[CF16:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// CLFINITEONLY-LABEL: define dso_local nofpclass(nan inf) float @call_variadic
+// CLFINITEONLY-SAME: (float noundef nofpclass(nan inf) [[F32:%.*]], double noundef nofpclass(nan inf) [[F64:%.*]], half noundef nofpclass(nan inf) [[F16:%.*]], double noundef nofpclass(nan inf) [[V2F32_COERCE:%.*]], <2 x double> noundef nofpclass(nan inf) [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef nofpclass(nan inf) [[CF32_COERCE:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE0:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE1:%.*]], ptr nocapture noundef readonly byval({ half, half }) align 8 [[CF16:%.*]]) local_unnamed_addr #[[ATTR5]] {
 // CLFINITEONLY-NEXT:  entry:
 // CLFINITEONLY-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca { double, double }, align 8
 // CLFINITEONLY-NEXT:    [[CONV:%.*]] = fpext float [[F32]] to double
@@ -932,12 +932,12 @@ _Complex _Float16 defined_complex_func_f16_ret(_Complex _Float16 c) {
 // CLFINITEONLY-NEXT:    store double [[CF64_COERCE1]], ptr [[INDIRECT_ARG_TEMP_IMAGP]], align 8
 // CLFINITEONLY-NEXT:    [[COERCE5_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x half> undef, half [[CF16_REAL]], i64 0
 // CLFINITEONLY-NEXT:    [[COERCE5_SROA_0_2_VEC_INSERT:%.*]] = insertelement <2 x half> [[COERCE5_SROA_0_0_VEC_INSERT]], half [[CF16_IMAG]], i64 1
-// CLFINITEONLY-NEXT:    [[CALL:%.*]] = tail call nnan ninf float (float, ...) @variadic(float noundef [[F32]], double noundef [[CONV]], double noundef [[F64]], half noundef [[F16]], double noundef [[V2F32_COERCE]], <2 x double> noundef [[V2F64]], i32 noundef [[V2F16_COERCE]], <2 x float> noundef [[CF32_COERCE]], ptr noundef nonnull byval({ double, double }) align 8 [[INDIRECT_ARG_TEMP]], <2 x half> noundef [[COERCE5_SROA_0_2_VEC_INSERT]]) #[[ATTR10]]
+// CLFINITEONLY-NEXT:    [[CALL:%.*]] = tail call nnan ninf nofpclass(nan inf) float (float, ...) @variadic(float noundef nofpclass(nan inf) [[F32]], double noundef nofpclass(nan inf) [[CONV]], double noundef nofpclass(nan inf) [[F64]], half noundef nofpclass(nan inf) [[F16]], double noundef nofpclass(nan inf) [[V2F32_COERCE]], <2 x double> noundef nofpclass(nan inf) [[V2F64]], i32 noundef [[V2F16_COERCE]], <2 x float> noundef nofpclass(nan inf) [[CF32_COERCE]], ptr noundef nonnull byval({ double, double }) align 8 [[INDIRECT_ARG_TEMP]], <2 x half> noundef nofpclass(nan inf) [[COERCE5_SROA_0_2_VEC_INSERT]]) #[[ATTR10]]
 // CLFINITEONLY-NEXT:    ret float [[CALL]]
 //
 // NONANS: Function Attrs: noinline nounwind optnone
-// NONANS-LABEL: define dso_local float @call_variadic
-// NONANS-SAME: (float noundef [[F32:%.*]], double noundef [[F64:%.*]], half noundef [[F16:%.*]], double noundef [[V2F32_COERCE:%.*]], <2 x double> noundef [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef [[CF32_COERCE:%.*]], double noundef [[CF64_COERCE0:%.*]], double noundef [[CF64_COERCE1:%.*]], ptr noundef byval({ half, half }) align 8 [[CF16:%.*]]) #[[ATTR2]] {
+// NONANS-LABEL: define dso_local nofpclass(nan) float @call_variadic
+// NONANS-SAME: (float noundef nofpclass(nan) [[F32:%.*]], double noundef nofpclass(nan) [[F64:%.*]], half noundef nofpclass(nan) [[F16:%.*]], double noundef nofpclass(nan) [[V2F32_COERCE:%.*]], <2 x double> noundef nofpclass(nan) [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef nofpclass(nan) [[CF32_COERCE:%.*]], double noundef nofpclass(nan) [[CF64_COERCE0:%.*]], double noundef nofpclass(nan) [[CF64_COERCE1:%.*]], ptr noundef byval({ half, half }) align 8 [[CF16:%.*]]) #[[ATTR2]] {
 // NONANS-NEXT:  entry:
 // NONANS-NEXT:    [[V2F32:%.*]] = alloca <2 x float>, align 8
 // NONANS-NEXT:    [[V2F16:%.*]] = alloca <2 x half>, align 4
@@ -1007,12 +1007,12 @@ _Complex _Float16 defined_complex_func_f16_ret(_Complex _Float16 c) {
 // NONANS-NEXT:    store half [[CF16_REAL]], ptr [[COERCE5_REALP]], align 2
 // NONANS-NEXT:    store half [[CF16_IMAG]], ptr [[COERCE5_IMAGP]], align 2
 // NONANS-NEXT:    [[TMP12:%.*]] = load <2 x half>, ptr [[COERCE5]], align 2
-// NONANS-NEXT:    [[CALL:%.*]] = call nnan float (float, ...) @variadic(float noundef [[TMP2]], double noundef [[CONV]], double noundef [[TMP4]], half noundef [[TMP5]], double noundef [[TMP9]], <2 x double> noundef [[TMP7]], i32 noundef [[TMP10]], <2 x float> noundef [[TMP11]], ptr noundef byval({ double, double }) align 8 [[INDIRECT_ARG_TEMP]], <2 x half> noundef [[TMP12]])
+// NONANS-NEXT:    [[CALL:%.*]] = call nnan nofpclass(nan) float (float, ...) @variadic(float noundef nofpclass(nan) [[TMP2]], double noundef nofpclass(nan) [[CONV]], double noundef nofpclass(nan) [[TMP4]], half noundef nofpclass(nan) [[TMP5]], double noundef nofpclass(nan) [[TMP9]], <2 x double> noundef nofpclass(nan) [[TMP7]], i32 noundef [[TMP10]], <2 x float> noundef nofpclass(nan) [[TMP11]], ptr noundef byval({ double, double }) align 8 [[INDIRECT_ARG_TEMP]], <2 x half> noundef nofpclass(nan) [[TMP12]])
 // NONANS-NEXT:    ret float [[CALL]]
 //
 // NOINFS: Function Attrs: noinline nounwind optnone
-// NOINFS-LABEL: define dso_local float @call_variadic
-// NOINFS-SAME: (float noundef [[F32:%.*]], double noundef [[F64:%.*]], half noundef [[F16:%.*]], double noundef [[V2F32_COERCE:%.*]], <2 x double> noundef [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef [[CF32_COERCE:%.*]], double noundef [[CF64_COERCE0:%.*]], double noundef [[CF64_COERCE1:%.*]], ptr noundef byval({ half, half }) align 8 [[CF16:%.*]]) #[[ATTR2]] {
+// NOINFS-LABEL: define dso_local nofpclass(inf) float @call_variadic
+// NOINFS-SAME: (float noundef nofpclass(inf) [[F32:%.*]], double noundef nofpclass(inf) [[F64:%.*]], half noundef nofpclass(inf) [[F16:%.*]], double noundef nofpclass(inf) [[V2F32_COERCE:%.*]], <2 x double> noundef nofpclass(inf) [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef nofpclass(inf) [[CF32_COERCE:%.*]], double noundef nofpclass(inf) [[CF64_COERCE0:%.*]], double noundef nofpclass(inf) [[CF64_COERCE1:%.*]], ptr noundef byval({ half, half }) align 8 [[CF16:%.*]]) #[[ATTR2]] {
 // NOINFS-NEXT:  entry:
 // NOINFS-NEXT:    [[V2F32:%.*]] = alloca <2 x float>, align 8
 // NOINFS-NEXT:    [[V2F16:%.*]] = alloca <2 x half>, align 4
@@ -1082,7 +1082,7 @@ _Complex _Float16 defined_complex_func_f16_ret(_Complex _Float16 c) {
 // NOINFS-NEXT:    store half [[CF16_REAL]], ptr [[COERCE5_REALP]], align 2
 // NOINFS-NEXT:    store half [[CF16_IMAG]], ptr [[COERCE5_IMAGP]], align 2
 // NOINFS-NEXT:    [[TMP12:%.*]] = load <2 x half>, ptr [[COERCE5]], align 2
-// NOINFS-NEXT:    [[CALL:%.*]] = call ninf float (float, ...) @variadic(float noundef [[TMP2]], double noundef [[CONV]], double noundef [[TMP4]], half noundef [[TMP5]], double noundef [[TMP9]], <2 x double> noundef [[TMP7]], i32 noundef [[TMP10]], <2 x float> noundef [[TMP11]], ptr noundef byval({ double, double }) align 8 [[INDIRECT_ARG_TEMP]], <2 x half> noundef [[TMP12]])
+// NOINFS-NEXT:    [[CALL:%.*]] = call ninf nofpclass(inf) float (float, ...) @variadic(float noundef nofpclass(inf) [[TMP2]], double noundef nofpclass(inf) [[CONV]], double noundef nofpclass(inf) [[TMP4]], half noundef nofpclass(inf) [[TMP5]], double noundef nofpclass(inf) [[TMP9]], <2 x double> noundef nofpclass(inf) [[TMP7]], i32 noundef [[TMP10]], <2 x float> noundef nofpclass(inf) [[TMP11]], ptr noundef byval({ double, double }) align 8 [[INDIRECT_ARG_TEMP]], <2 x half> noundef nofpclass(inf) [[TMP12]])
 // NOINFS-NEXT:    ret float [[CALL]]
 //
 float call_variadic(float f32, double f64, _Float16 f16,
@@ -1092,8 +1092,8 @@ float call_variadic(float f32, double f64, _Float16 f16,
 }
 
 // CFINITEONLY: Function Attrs: noinline nounwind optnone
-// CFINITEONLY-LABEL: define dso_local float @call_variadic_indirect
-// CFINITEONLY-SAME: (ptr noundef [[FPTR:%.*]], float noundef [[F32:%.*]], double noundef [[F64:%.*]], half noundef [[F16:%.*]], double noundef [[V2F32_COERCE:%.*]], <2 x double> noundef [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef [[CF32_COERCE:%.*]], double noundef [[CF64_COERCE0:%.*]], double noundef [[CF64_COERCE1:%.*]], ptr noundef byval({ half, half }) align 8 [[CF16:%.*]]) #[[ATTR2]] {
+// CFINITEONLY-LABEL: define dso_local nofpclass(nan inf) float @call_variadic_indirect
+// CFINITEONLY-SAME: (ptr noundef [[FPTR:%.*]], float noundef nofpclass(nan inf) [[F32:%.*]], double noundef nofpclass(nan inf) [[F64:%.*]], half noundef nofpclass(nan inf) [[F16:%.*]], double noundef nofpclass(nan inf) [[V2F32_COERCE:%.*]], <2 x double> noundef nofpclass(nan inf) [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef nofpclass(nan inf) [[CF32_COERCE:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE0:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE1:%.*]], ptr noundef byval({ half, half }) align 8 [[CF16:%.*]]) #[[ATTR2]] {
 // CFINITEONLY-NEXT:  entry:
 // CFINITEONLY-NEXT:    [[V2F32:%.*]] = alloca <2 x float>, align 8
 // CFINITEONLY-NEXT:    [[V2F16:%.*]] = alloca <2 x half>, align 4
@@ -1166,12 +1166,12 @@ float call_variadic(float f32, double f64, _Float16 f16,
 // CFINITEONLY-NEXT:    store half [[CF16_REAL]], ptr [[COERCE5_REALP]], align 2
 // CFINITEONLY-NEXT:    store half [[CF16_IMAG]], ptr [[COERCE5_IMAGP]], align 2
 // CFINITEONLY-NEXT:    [[TMP13:%.*]] = load <2 x half>, ptr [[COERCE5]], align 2
-// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf float (float, ...) [[TMP2]](float noundef [[TMP3]], double noundef [[CONV]], double noundef [[TMP5]], half noundef [[TMP6]], double noundef [[TMP10]], <2 x double> noundef [[TMP8]], i32 noundef [[TMP11]], <2 x float> noundef [[TMP12]], ptr noundef byval({ double, double }) align 8 [[INDIRECT_ARG_TEMP]], <2 x half> noundef [[TMP13]])
+// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf nofpclass(nan inf) float (float, ...) [[TMP2]](float noundef nofpclass(nan inf) [[TMP3]], double noundef nofpclass(nan inf) [[CONV]], double noundef nofpclass(nan inf) [[TMP5]], half noundef nofpclass(nan inf) [[TMP6]], double noundef nofpclass(nan inf) [[TMP10]], <2 x double> noundef nofpclass(nan inf) [[TMP8]], i32 noundef [[TMP11]], <2 x float> noundef nofpclass(nan inf) [[TMP12]], ptr noundef byval({ double, double }) align 8 [[INDIRECT_ARG_TEMP]], <2 x half> noundef nofpclass(nan inf) [[TMP13]])
 // CFINITEONLY-NEXT:    ret float [[CALL]]
 //
 // CLFINITEONLY: Function Attrs: convergent norecurse nounwind
-// CLFINITEONLY-LABEL: define dso_local float @call_variadic_indirect
-// CLFINITEONLY-SAME: (ptr nocapture noundef readonly [[FPTR:%.*]], float noundef [[F32:%.*]], double noundef [[F64:%.*]], half noundef [[F16:%.*]], double noundef [[V2F32_COERCE:%.*]], <2 x double> noundef [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef [[CF32_COERCE:%.*]], double noundef [[CF64_COERCE0:%.*]], double noundef [[CF64_COERCE1:%.*]], ptr nocapture noundef readonly byval({ half, half }) align 8 [[CF16:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// CLFINITEONLY-LABEL: define dso_local nofpclass(nan inf) float @call_variadic_indirect
+// CLFINITEONLY-SAME: (ptr nocapture noundef readonly [[FPTR:%.*]], float noundef nofpclass(nan inf) [[F32:%.*]], double noundef nofpclass(nan inf) [[F64:%.*]], half noundef nofpclass(nan inf) [[F16:%.*]], double noundef nofpclass(nan inf) [[V2F32_COERCE:%.*]], <2 x double> noundef nofpclass(nan inf) [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef nofpclass(nan inf) [[CF32_COERCE:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE0:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE1:%.*]], ptr nocapture noundef readonly byval({ half, half }) align 8 [[CF16:%.*]]) local_unnamed_addr #[[ATTR5]] {
 // CLFINITEONLY-NEXT:  entry:
 // CLFINITEONLY-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca { double, double }, align 8
 // CLFINITEONLY-NEXT:    [[CONV:%.*]] = fpext float [[F32]] to double
@@ -1183,12 +1183,12 @@ float call_variadic(float f32, double f64, _Float16 f16,
 // CLFINITEONLY-NEXT:    store double [[CF64_COERCE1]], ptr [[INDIRECT_ARG_TEMP_IMAGP]], align 8
 // CLFINITEONLY-NEXT:    [[COERCE5_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x half> undef, half [[CF16_REAL]], i64 0
 // CLFINITEONLY-NEXT:    [[COERCE5_SROA_0_2_VEC_INSERT:%.*]] = insertelement <2 x half> [[COERCE5_SROA_0_0_VEC_INSERT]], half [[CF16_IMAG]], i64 1
-// CLFINITEONLY-NEXT:    [[CALL:%.*]] = tail call nnan ninf float (float, ...) [[FPTR]](float noundef [[F32]], double noundef [[CONV]], double noundef [[F64]], half noundef [[F16]], double noundef [[V2F32_COERCE]], <2 x double> noundef [[V2F64]], i32 noundef [[V2F16_COERCE]], <2 x float> noundef [[CF32_COERCE]], ptr noundef nonnull byval({ double, double }) align 8 [[INDIRECT_ARG_TEMP]], <2 x half> noundef [[COERCE5_SROA_0_2_VEC_INSERT]]) #[[ATTR10]]
+// CLFINITEONLY-NEXT:    [[CALL:%.*]] = tail call nnan ninf nofpclass(nan inf) float (float, ...) [[FPTR]](float noundef nofpclass(nan inf) [[F32]], double noundef nofpclass(nan inf) [[CONV]], double noundef nofpclass(nan inf) [[F64]], half noundef nofpclass(nan inf) [[F16]], double noundef nofpclass(nan inf) [[V2F32_COERCE]], <2 x double> noundef nofpclass(nan inf) [[V2F64]], i32 noundef [[V2F16_COERCE]], <2 x float> noundef nofpclass(nan inf) [[CF32_COERCE]], ptr noundef nonnull byval({ double, double }) align 8 [[INDIRECT_ARG_TEMP]], <2 x half> noundef nofpclass(nan inf) [[COERCE5_SROA_0_2_VEC_INSERT]]) #[[ATTR10]]
 // CLFINITEONLY-NEXT:    ret float [[CALL]]
 //
 // NONANS: Function Attrs: noinline nounwind optnone
-// NONANS-LABEL: define dso_local float @call_variadic_indirect
-// NONANS-SAME: (ptr noundef [[FPTR:%.*]], float noundef [[F32:%.*]], double noundef [[F64:%.*]], half noundef [[F16:%.*]], double noundef [[V2F32_COERCE:%.*]], <2 x double> noundef [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef [[CF32_COERCE:%.*]], double noundef [[CF64_COERCE0:%.*]], double noundef [[CF64_COERCE1:%.*]], ptr noundef byval({ half, half }) align 8 [[CF16:%.*]]) #[[ATTR2]] {
+// NONANS-LABEL: define dso_local nofpclass(nan) float @call_variadic_indirect
+// NONANS-SAME: (ptr noundef [[FPTR:%.*]], float noundef nofpclass(nan) [[F32:%.*]], double noundef nofpclass(nan) [[F64:%.*]], half noundef nofpclass(nan) [[F16:%.*]], double noundef nofpclass(nan) [[V2F32_COERCE:%.*]], <2 x double> noundef nofpclass(nan) [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef nofpclass(nan) [[CF32_COERCE:%.*]], double noundef nofpclass(nan) [[CF64_COERCE0:%.*]], double noundef nofpclass(nan) [[CF64_COERCE1:%.*]], ptr noundef byval({ half, half }) align 8 [[CF16:%.*]]) #[[ATTR2]] {
 // NONANS-NEXT:  entry:
 // NONANS-NEXT:    [[V2F32:%.*]] = alloca <2 x float>, align 8
 // NONANS-NEXT:    [[V2F16:%.*]] = alloca <2 x half>, align 4
@@ -1261,12 +1261,12 @@ float call_variadic(float f32, double f64, _Float16 f16,
 // NONANS-NEXT:    store half [[CF16_REAL]], ptr [[COERCE5_REALP]], align 2
 // NONANS-NEXT:    store half [[CF16_IMAG]], ptr [[COERCE5_IMAGP]], align 2
 // NONANS-NEXT:    [[TMP13:%.*]] = load <2 x half>, ptr [[COERCE5]], align 2
-// NONANS-NEXT:    [[CALL:%.*]] = call nnan float (float, ...) [[TMP2]](float noundef [[TMP3]], double noundef [[CONV]], double noundef [[TMP5]], half noundef [[TMP6]], double noundef [[TMP10]], <2 x double> noundef [[TMP8]], i32 noundef [[TMP11]], <2 x float> noundef [[TMP12]], ptr noundef byval({ double, double }) align 8 [[INDIRECT_ARG_TEMP]], <2 x half> noundef [[TMP13]])
+// NONANS-NEXT:    [[CALL:%.*]] = call nnan nofpclass(nan) float (float, ...) [[TMP2]](float noundef nofpclass(nan) [[TMP3]], double noundef nofpclass(nan) [[CONV]], double noundef nofpclass(nan) [[TMP5]], half noundef nofpclass(nan) [[TMP6]], double noundef nofpclass(nan) [[TMP10]], <2 x double> noundef nofpclass(nan) [[TMP8]], i32 noundef [[TMP11]], <2 x float> noundef nofpclass(nan) [[TMP12]], ptr noundef byval({ double, double }) align 8 [[INDIRECT_ARG_TEMP]], <2 x half> noundef nofpclass(nan) [[TMP13]])
 // NONANS-NEXT:    ret float [[CALL]]
 //
 // NOINFS: Function Attrs: noinline nounwind optnone
-// NOINFS-LABEL: define dso_local float @call_variadic_indirect
-// NOINFS-SAME: (ptr noundef [[FPTR:%.*]], float noundef [[F32:%.*]], double noundef [[F64:%.*]], half noundef [[F16:%.*]], double noundef [[V2F32_COERCE:%.*]], <2 x double> noundef [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef [[CF32_COERCE:%.*]], double noundef [[CF64_COERCE0:%.*]], double noundef [[CF64_COERCE1:%.*]], ptr noundef byval({ half, half }) align 8 [[CF16:%.*]]) #[[ATTR2]] {
+// NOINFS-LABEL: define dso_local nofpclass(inf) float @call_variadic_indirect
+// NOINFS-SAME: (ptr noundef [[FPTR:%.*]], float noundef nofpclass(inf) [[F32:%.*]], double noundef nofpclass(inf) [[F64:%.*]], half noundef nofpclass(inf) [[F16:%.*]], double noundef nofpclass(inf) [[V2F32_COERCE:%.*]], <2 x double> noundef nofpclass(inf) [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef nofpclass(inf) [[CF32_COERCE:%.*]], double noundef nofpclass(inf) [[CF64_COERCE0:%.*]], double noundef nofpclass(inf) [[CF64_COERCE1:%.*]], ptr noundef byval({ half, half }) align 8 [[CF16:%.*]]) #[[ATTR2]] {
 // NOINFS-NEXT:  entry:
 // NOINFS-NEXT:    [[V2F32:%.*]] = alloca <2 x float>, align 8
 // NOINFS-NEXT:    [[V2F16:%.*]] = alloca <2 x half>, align 4
@@ -1339,7 +1339,7 @@ float call_variadic(float f32, double f64, _Float16 f16,
 // NOINFS-NEXT:    store half [[CF16_REAL]], ptr [[COERCE5_REALP]], align 2
 // NOINFS-NEXT:    store half [[CF16_IMAG]], ptr [[COERCE5_IMAGP]], align 2
 // NOINFS-NEXT:    [[TMP13:%.*]] = load <2 x half>, ptr [[COERCE5]], align 2
-// NOINFS-NEXT:    [[CALL:%.*]] = call ninf float (float, ...) [[TMP2]](float noundef [[TMP3]], double noundef [[CONV]], double noundef [[TMP5]], half noundef [[TMP6]], double noundef [[TMP10]], <2 x double> noundef [[TMP8]], i32 noundef [[TMP11]], <2 x float> noundef [[TMP12]], ptr noundef byval({ double, double }) align 8 [[INDIRECT_ARG_TEMP]], <2 x half> noundef [[TMP13]])
+// NOINFS-NEXT:    [[CALL:%.*]] = call ninf nofpclass(inf) float (float, ...) [[TMP2]](float noundef nofpclass(inf) [[TMP3]], double noundef nofpclass(inf) [[CONV]], double noundef nofpclass(inf) [[TMP5]], half noundef nofpclass(inf) [[TMP6]], double noundef nofpclass(inf) [[TMP10]], <2 x double> noundef nofpclass(inf) [[TMP8]], i32 noundef [[TMP11]], <2 x float> noundef nofpclass(inf) [[TMP12]], ptr noundef byval({ double, double }) align 8 [[INDIRECT_ARG_TEMP]], <2 x half> noundef nofpclass(inf) [[TMP13]])
 // NOINFS-NEXT:    ret float [[CALL]]
 //
 float call_variadic_indirect(float fptr(float, ...), float f32, double f64, _Float16 f16,
@@ -1352,43 +1352,43 @@ typedef __attribute__((__vector_size__(4 * sizeof(double)))) double __m256d;
 extern __m256d extern_m256d(__m256d, ...);
 
 // CFINITEONLY: Function Attrs: noinline nounwind optnone
-// CFINITEONLY-LABEL: define dso_local <4 x double> @call_m256d
-// CFINITEONLY-SAME: (<4 x double> noundef [[X:%.*]]) #[[ATTR5:[0-9]+]] {
+// CFINITEONLY-LABEL: define dso_local nofpclass(nan inf) <4 x double> @call_m256d
+// CFINITEONLY-SAME: (<4 x double> noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR5:[0-9]+]] {
 // CFINITEONLY-NEXT:  entry:
 // CFINITEONLY-NEXT:    [[X_ADDR:%.*]] = alloca <4 x double>, align 32
 // CFINITEONLY-NEXT:    store <4 x double> [[X]], ptr [[X_ADDR]], align 32
 // CFINITEONLY-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[X_ADDR]], align 32
 // CFINITEONLY-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[X_ADDR]], align 32
-// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf <4 x double> (<4 x double>, ...) @extern_m256d(<4 x double> noundef [[TMP0]], <4 x double> noundef [[TMP1]])
+// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf nofpclass(nan inf) <4 x double> (<4 x double>, ...) @extern_m256d(<4 x double> noundef nofpclass(nan inf) [[TMP0]], <4 x double> noundef nofpclass(nan inf) [[TMP1]])
 // CFINITEONLY-NEXT:    ret <4 x double> [[CALL]]
 //
 // CLFINITEONLY: Function Attrs: convergent norecurse nounwind
-// CLFINITEONLY-LABEL: define dso_local <4 x double> @call_m256d
-// CLFINITEONLY-SAME: (<4 x double> noundef [[X:%.*]]) local_unnamed_addr #[[ATTR8:[0-9]+]] {
+// CLFINITEONLY-LABEL: define dso_local nofpclass(nan inf) <4 x double> @call_m256d
+// CLFINITEONLY-SAME: (<4 x double> noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR8:[0-9]+]] {
 // CLFINITEONLY-NEXT:  entry:
-// CLFINITEONLY-NEXT:    [[CALL:%.*]] = tail call nnan ninf <4 x double> (<4 x double>, ...) @extern_m256d(<4 x double> noundef [[X]], <4 x double> noundef [[X]]) #[[ATTR10]]
+// CLFINITEONLY-NEXT:    [[CALL:%.*]] = tail call nnan ninf nofpclass(nan inf) <4 x double> (<4 x double>, ...) @extern_m256d(<4 x double> noundef nofpclass(nan inf) [[X]], <4 x double> noundef nofpclass(nan inf) [[X]]) #[[ATTR10]]
 // CLFINITEONLY-NEXT:    ret <4 x double> [[CALL]]
 //
 // NONANS: Function Attrs: noinline nounwind optnone
-// NONANS-LABEL: define dso_local <4 x double> @call_m256d
-// NONANS-SAME: (<4 x double> noundef [[X:%.*]]) #[[ATTR5:[0-9]+]] {
+// NONANS-LABEL: define dso_local nofpclass(nan) <4 x double> @call_m256d
+// NONANS-SAME: (<4 x double> noundef nofpclass(nan) [[X:%.*]]) #[[ATTR5:[0-9]+]] {
 // NONANS-NEXT:  entry:
 // NONANS-NEXT:    [[X_ADDR:%.*]] = alloca <4 x double>, align 32
 // NONANS-NEXT:    store <4 x double> [[X]], ptr [[X_ADDR]], align 32
 // NONANS-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[X_ADDR]], align 32
 // NONANS-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[X_ADDR]], align 32
-// NONANS-NEXT:    [[CALL:%.*]] = call nnan <4 x double> (<4 x double>, ...) @extern_m256d(<4 x double> noundef [[TMP0]], <4 x double> noundef [[TMP1]])
+// NONANS-NEXT:    [[CALL:%.*]] = call nnan nofpclass(nan) <4 x double> (<4 x double>, ...) @extern_m256d(<4 x double> noundef nofpclass(nan) [[TMP0]], <4 x double> noundef nofpclass(nan) [[TMP1]])
 // NONANS-NEXT:    ret <4 x double> [[CALL]]
 //
 // NOINFS: Function Attrs: noinline nounwind optnone
-// NOINFS-LABEL: define dso_local <4 x double> @call_m256d
-// NOINFS-SAME: (<4 x double> noundef [[X:%.*]]) #[[ATTR5:[0-9]+]] {
+// NOINFS-LABEL: define dso_local nofpclass(inf) <4 x double> @call_m256d
+// NOINFS-SAME: (<4 x double> noundef nofpclass(inf) [[X:%.*]]) #[[ATTR5:[0-9]+]] {
 // NOINFS-NEXT:  entry:
 // NOINFS-NEXT:    [[X_ADDR:%.*]] = alloca <4 x double>, align 32
 // NOINFS-NEXT:    store <4 x double> [[X]], ptr [[X_ADDR]], align 32
 // NOINFS-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[X_ADDR]], align 32
 // NOINFS-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[X_ADDR]], align 32
-// NOINFS-NEXT:    [[CALL:%.*]] = call ninf <4 x double> (<4 x double>, ...) @extern_m256d(<4 x double> noundef [[TMP0]], <4 x double> noundef [[TMP1]])
+// NOINFS-NEXT:    [[CALL:%.*]] = call ninf nofpclass(inf) <4 x double> (<4 x double>, ...) @extern_m256d(<4 x double> noundef nofpclass(inf) [[TMP0]], <4 x double> noundef nofpclass(inf) [[TMP1]])
 // NOINFS-NEXT:    ret <4 x double> [[CALL]]
 //
 __m256d call_m256d(__m256d x) {

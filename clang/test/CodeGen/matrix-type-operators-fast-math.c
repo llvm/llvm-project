@@ -38,7 +38,7 @@ void subtract_compound_assign_matrix_double(dx5x5_t a, dx5x5_t b) {
 }
 
 void add_matrix_scalar_double_float(dx5x5_t a, float vf) {
-  // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_double_float(<25 x double> noundef %a, float noundef %vf)
+  // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_double_float(<25 x double> noundef %a, float noundef nofpclass(nan inf) %vf)
   // CHECK:       [[MATRIX:%.*]] = load <25 x double>, ptr {{.*}}, align 8
   // CHECK-NEXT:  [[SCALAR:%.*]] = load float, ptr %vf.addr, align 4
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = fpext float [[SCALAR]] to double
@@ -51,7 +51,7 @@ void add_matrix_scalar_double_float(dx5x5_t a, float vf) {
 }
 
 void add_compound_matrix_scalar_double_float(dx5x5_t a, float vf) {
-  // CHECK-LABEL: define{{.*}} void @add_compound_matrix_scalar_double_float(<25 x double> noundef %a, float noundef %vf)
+  // CHECK-LABEL: define{{.*}} void @add_compound_matrix_scalar_double_float(<25 x double> noundef %a, float noundef nofpclass(nan inf) %vf)
   // CHECK:  [[SCALAR:%.*]] = load float, ptr %vf.addr, align 4
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = fpext float [[SCALAR]] to double
   // CHECK-NEXT:  [[MATRIX:%.*]] = load <25 x double>, ptr {{.*}}, align 8
@@ -64,7 +64,7 @@ void add_compound_matrix_scalar_double_float(dx5x5_t a, float vf) {
 }
 
 void subtract_compound_matrix_scalar_double_float(dx5x5_t a, float vf) {
-  // CHECK-LABEL: define{{.*}} void @subtract_compound_matrix_scalar_double_float(<25 x double> noundef %a, float noundef %vf)
+  // CHECK-LABEL: define{{.*}} void @subtract_compound_matrix_scalar_double_float(<25 x double> noundef %a, float noundef nofpclass(nan inf) %vf)
   // CHECK:  [[SCALAR:%.*]] = load float, ptr %vf.addr, align 4
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = fpext float [[SCALAR]] to double
   // CHECK-NEXT:  [[MATRIX:%.*]] = load <25 x double>, ptr {{.*}}, align 8
