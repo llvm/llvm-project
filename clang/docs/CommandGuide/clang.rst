@@ -473,8 +473,10 @@ Code Generation Options
 
 .. option:: -fexceptions
 
-  Enable generation of unwind information. This allows exceptions to be thrown
-  through Clang compiled stack frames.  This is on by default in x86-64.
+  Allow exceptions to be thrown through Clang compiled stack frames (on many
+  targets, this will enable unwind information for functions that might have
+  an exception thrown through them). For most targets, this is enabled by
+  default for C++.
 
 .. option:: -ftrapv
 
