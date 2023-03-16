@@ -494,22 +494,15 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 
   // 15.5.2.7 -- dummy is POINTER
   if (dummyIsPointer) {
-    if (dummyIsContiguous && !actualIsContiguous) {
-      messages.Say(
-          "Actual argument associated with CONTIGUOUS POINTER %s must be simply contiguous"_err_en_US,
-          dummyName);
-    }
-    if (!actualIsPointer) {
-      if (dummy.intent == common::Intent::In) {
-        if (scope) {
-          semantics::CheckPointerAssignment(
-              context, messages.at(), dummyName, dummy, actual, *scope);
-        }
-      } else {
-        messages.Say(
-            "Actual argument associated with POINTER %s must also be POINTER unless INTENT(IN)"_err_en_US,
-            dummyName);
+    if (actualIsPointer || dummy.intent == common::Intent::In) {
+      if (scope) {
+        semantics::CheckPointerAssignment(
+            context, messages.at(), dummyName, dummy, actual, *scope);
       }
+    } else if (!actualIsPointer) {
+      messages.Say(
+          "Actual argument associated with POINTER %s must also be POINTER unless INTENT(IN)"_err_en_US,
+          dummyName);
     }
   }
 
