@@ -23,8 +23,7 @@ constexpr auto OverAligned = __STDCPP_DEFAULT_NEW_ALIGNMENT__ * 2;
 
 struct alignas(OverAligned) A { };
 
-int main(int, char**)
-{
+void f() {
     // Normal versions
     {
         A *a1 = new A; // expected-error-re {{aligned allocation function of type {{.+}} is only available on}}
