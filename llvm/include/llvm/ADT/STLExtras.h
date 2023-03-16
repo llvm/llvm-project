@@ -1906,11 +1906,40 @@ OutputIt move(R &&Range, OutputIt Out) {
   return std::move(adl_begin(Range), adl_end(Range), Out);
 }
 
-/// Wrapper function around std::find to detect if an element exists
-/// in a container.
+namespace detail {
+template <typename Range, typename Element>
+using check_has_member_contains_t =
+    decltype(std::declval<Range &>().contains(std::declval<const Element &>()));
+
+template <typename Range, typename Element>
+static constexpr bool HasMemberContains =
+    is_detected<check_has_member_contains_t, Range, Element>::value;
+
+template <typename Range, typename Element>
+using check_has_member_find_t =
+    decltype(std::declval<Range &>().find(std::declval<const Element &>()) !=
+             std::declval<Range &>().end());
+
+template <typename Range, typename Element>
+static constexpr bool HasMemberFind =
+    is_detected<check_has_member_find_t, Range, Element>::value;
+
+} // namespace detail
+
+/// Returns true if \p Element is found in \p Range. Delegates the check to
+/// either `.contains(Element)`, `.find(Element)`, or `std::find`, in this
+/// order of preference. This is intended as the canonical way to check if an
+/// element exists in a range in generic code or range type that does not
+/// expose a `.contains(Element)` member.
 template <typename R, typename E>
 bool is_contained(R &&Range, const E &Element) {
-  return std::find(adl_begin(Range), adl_end(Range), Element) != adl_end(Range);
+  if constexpr (detail::HasMemberContains<R, E>)
+    return Range.contains(Element);
+  else if constexpr (detail::HasMemberFind<R, E>)
+    return Range.find(Element) != Range.end();
+  else
+    return std::find(adl_begin(Range), adl_end(Range), Element) !=
+           adl_end(Range);
 }
 
 /// Returns true iff \p Element exists in \p Set. This overload takes \p Set as
