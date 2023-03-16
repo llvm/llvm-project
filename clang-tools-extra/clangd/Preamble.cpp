@@ -325,6 +325,7 @@ struct ScannedPreamble {
   std::vector<llvm::StringRef> Lines;
   PreambleBounds Bounds = {0, false};
   std::vector<PragmaMark> Marks;
+  MainFileMacros Macros;
 };
 
 /// Scans the preprocessor directives in the preamble section of the file by
@@ -373,14 +374,15 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0]))
     return error("failed BeginSourceFile");
   Preprocessor &PP = Clang->getPreprocessor();
+  const auto &SM = PP.getSourceManager();
   IncludeStructure Includes;
   Includes.collect(*Clang);
   ScannedPreamble SP;
   SP.Bounds = Bounds;
   PP.addPPCallbacks(
       std::make_unique<DirectiveCollector>(PP, SP.TextualDirectives));
-  PP.addPPCallbacks(
-      collectPragmaMarksCallback(PP.getSourceManager(), SP.Marks));
+  PP.addPPCallbacks(collectPragmaMarksCallback(SM, SP.Marks));
+  PP.addPPCallbacks(std::make_unique<CollectMainFileMacros>(SM, SP.Macros));
   if (llvm::Error Err = Action.Execute())
     return std::move(Err);
   Action.EndSourceFile();
@@ -859,6 +861,7 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
 
   PP.PatchedDiags = patchDiags(Baseline.Diags, *BaselineScan, *ModifiedScan);
   PP.PatchedMarks = std::move(ModifiedScan->Marks);
+  PP.PatchedMacros = std::move(ModifiedScan->Macros);
   dlog("Created preamble patch: {0}", Patch.str());
   Patch.flush();
   return PP;
@@ -915,11 +918,10 @@ llvm::ArrayRef<PragmaMark> PreamblePatch::marks() const {
   return PatchedMarks;
 }
 
-MainFileMacros PreamblePatch::mainFileMacros() const {
+const MainFileMacros &PreamblePatch::mainFileMacros() const {
   if (PatchContents.empty())
     return Baseline->Macros;
-  // FIXME: Patch main file macros.
-  return MainFileMacros();
+  return PatchedMacros;
 }
 } // namespace clangd
 } // namespace clang
