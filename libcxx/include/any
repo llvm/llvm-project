@@ -106,6 +106,7 @@ namespace std {
 #include <__utility/in_place.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
+#include <__verbose_abort>
 #include <cstdlib>
 #include <initializer_list>
 #include <typeinfo>
@@ -134,7 +135,7 @@ void __throw_bad_any_cast()
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw bad_any_cast();
 #else
-    _VSTD::abort();
+    std::__libcpp_verbose_abort("bad_any_cast was thrown in -fno-exceptions mode");
 #endif
 }
 

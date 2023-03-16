@@ -181,6 +181,7 @@ template<class T>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
+#include <__verbose_abort>
 #include <initializer_list>
 #include <new>
 #include <stdexcept>
@@ -220,7 +221,7 @@ void __throw_bad_optional_access() {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         throw bad_optional_access();
 #else
-        _VSTD::abort();
+    std::__libcpp_verbose_abort("bad_optional_access was thrown in -fno-exceptions mode");
 #endif
 }
 

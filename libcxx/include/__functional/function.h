@@ -31,6 +31,7 @@
 #include <__utility/move.h>
 #include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
+#include <__verbose_abort>
 #include <exception>
 #include <new>
 #include <tuple>
@@ -73,7 +74,7 @@ void __throw_bad_function_call()
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw bad_function_call();
 #else
-    _VSTD::abort();
+    std::__libcpp_verbose_abort("bad_function_call was thrown in -fno-exceptions mode");
 #endif
 }
 
