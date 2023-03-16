@@ -16,5 +16,10 @@ add_startup_object(
 get_fq_target_name(crt1 fq_name)
 
 # Ensure that clang uses the correct linker for this object type.
-target_link_libraries(${fq_name} PUBLIC 
-                      "--target=${LIBC_GPU_TARGET_TRIPLE}" "-flto")
+target_link_libraries(
+  ${fq_name}
+  PUBLIC
+  "-mcpu=${LIBC_GPU_TARGET_ARCHITECTURE}"
+  "--target=${LIBC_GPU_TARGET_TRIPLE}"
+  "-flto"
+)
