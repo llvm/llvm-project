@@ -39,6 +39,7 @@ set(ANALYSIS_TEST_SOURCES
   MLModelRunnerTest.cpp
   PhiValuesTest.cpp
   PluginInlineAdvisorAnalysisTest.cpp
+  PluginInlineOrderAnalysisTest.cpp
   ProfileSummaryInfoTest.cpp
   ScalarEvolutionTest.cpp
   VectorFunctionABITest.cpp
@@ -72,4 +73,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "AIX")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-brtl")
 endif()
 
+# Export symbols from the plugins shared objects.
+if(NOT WIN32)
+  export_executable_symbols_for_plugins(AnalysisTests)
+endif()
+
 add_subdirectory(InlineAdvisorPlugin)
+add_subdirectory(InlineOrderPlugin)
