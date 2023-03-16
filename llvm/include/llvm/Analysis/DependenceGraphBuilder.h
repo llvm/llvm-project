@@ -156,7 +156,7 @@ protected:
 
   /// Given an instruction \p I return its associated ordinal number.
   size_t getOrdinal(Instruction &I) {
-    assert(InstOrdinalMap.find(&I) != InstOrdinalMap.end() &&
+    assert(InstOrdinalMap.contains(&I) &&
            "No ordinal computed for this instruction.");
     return InstOrdinalMap[&I];
   }

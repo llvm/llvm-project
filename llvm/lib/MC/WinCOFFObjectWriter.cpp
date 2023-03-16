@@ -716,7 +716,7 @@ void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
   MCSection *MCSec = Fragment->getParent();
 
   // Mark this symbol as requiring an entry in the symbol table.
-  assert(SectionMap.find(MCSec) != SectionMap.end() &&
+  assert(SectionMap.contains(MCSec) &&
          "Section must already have been defined in executePostLayoutBinding!");
 
   COFFSection *Sec = SectionMap[MCSec];
@@ -753,7 +753,7 @@ void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
   if (A.isTemporary()) {
     MCSection *TargetSection = &A.getSection();
     assert(
-        SectionMap.find(TargetSection) != SectionMap.end() &&
+        SectionMap.contains(TargetSection) &&
         "Section must already have been defined in executePostLayoutBinding!");
     COFFSection *Section = SectionMap[TargetSection];
     Reloc.Symb = Section->Symbol;
@@ -774,7 +774,7 @@ void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
     }
   } else {
     assert(
-        SymbolMap.find(&A) != SymbolMap.end() &&
+        SymbolMap.contains(&A) &&
         "Symbol must already have been defined in executePostLayoutBinding!");
     Reloc.Symb = SymbolMap[&A];
   }
@@ -1106,7 +1106,7 @@ uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
       }
 
       MCSection *TargetSection = &S->getSection();
-      assert(SectionMap.find(TargetSection) != SectionMap.end() &&
+      assert(SectionMap.contains(TargetSection) &&
              "Section must already have been defined in "
              "executePostLayoutBinding!");
       encodeULEB128(SectionMap[TargetSection]->Symbol->getIndex(), OS);
