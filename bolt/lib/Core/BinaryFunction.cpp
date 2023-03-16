@@ -987,7 +987,7 @@ size_t BinaryFunction::getSizeOfDataInCodeAt(uint64_t Offset) const {
   if (!Islands)
     return 0;
 
-  if (Islands->DataOffsets.find(Offset) == Islands->DataOffsets.end())
+  if (!llvm::is_contained(Islands->DataOffsets, Offset))
     return 0;
 
   auto Iter = Islands->CodeOffsets.upper_bound(Offset);
