@@ -397,6 +397,7 @@ BUILTIN(__builtin_truncf16, "hh", "Fnc")
 
 // Access to floating point environment
 BUILTIN(__builtin_flt_rounds, "i", "n")
+BUILTIN(__builtin_set_flt_rounds, "vi", "n")
 
 // C99 complex builtins
 BUILTIN(__builtin_cabs, "dXd", "Fne")
