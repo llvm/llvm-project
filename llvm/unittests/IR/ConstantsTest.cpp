@@ -207,7 +207,6 @@ TEST(ConstantsTest, AsInstructionsTest) {
   Type *Int64Ty = Type::getInt64Ty(Context);
   Type *Int32Ty = Type::getInt32Ty(Context);
   Type *Int16Ty = Type::getInt16Ty(Context);
-  Type *Int1Ty = Type::getInt1Ty(Context);
   Type *FloatTy = Type::getFloatTy(Context);
   Type *DoubleTy = Type::getDoubleTy(Context);
 
@@ -219,7 +218,6 @@ TEST(ConstantsTest, AsInstructionsTest) {
   Constant *P0 = ConstantExpr::getPtrToInt(Global, Int32Ty);
   Constant *P1 = ConstantExpr::getUIToFP(P0, FloatTy);
   Constant *P2 = ConstantExpr::getUIToFP(P0, DoubleTy);
-  Constant *P3 = ConstantExpr::getTrunc(P0, Int1Ty);
   Constant *P4 = ConstantExpr::getPtrToInt(Global2, Int32Ty);
   Constant *P5 = ConstantExpr::getUIToFP(P4, FloatTy);
   Constant *P6 = ConstantExpr::getBitCast(P4, FixedVectorType::get(Int16Ty, 2));
