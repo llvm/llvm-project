@@ -6,7 +6,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
-class TestVariadicTemplateTypes(TestBase):
+class TestSwiftForwardInteropVariadicTemplateTypes(TestBase):
 
     @swiftTest
     def test(self):

@@ -6,7 +6,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
-class TestSwiftGenericWithCxxType(TestBase):
+class TestSwiftForwardInteropGenericWithCxxType(TestBase):
 
     @swiftTest
     def test(self):

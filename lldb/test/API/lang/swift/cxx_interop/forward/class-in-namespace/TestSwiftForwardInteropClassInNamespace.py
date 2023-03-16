@@ -6,7 +6,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
-class TestClassInNamespace(TestBase):
+class TestSwiftForwardInteropClassInNamespace(TestBase):
 
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @swiftTest

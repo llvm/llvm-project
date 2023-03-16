@@ -6,7 +6,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
-class TestSwiftFormatSwiftTypesInCxx(TestBase):
+class TestSwiftBackwardInteropFormatSwiftTypesInCxx(TestBase):
 
     def setup(self, bkpt_str):
         self.build()
