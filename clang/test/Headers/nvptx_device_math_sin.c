@@ -10,10 +10,10 @@
 double math(float f, double d) {
   double r = 0;
 // SLOW:  call float @__nv_sinf(float
-// FAST:  call fast float @__nv_fast_sinf(float
+// FAST:  call fast nofpclass(nan inf) float @__nv_fast_sinf(float
   r += sinf(f);
 // SLOW:  call double @__nv_sin(double
-// FAST:  call fast double @__nv_sin(double
+// FAST:  call fast nofpclass(nan inf) double @__nv_sin(double
   r += sin(d);
   return r;
 }

@@ -513,7 +513,7 @@ static LogicalResult processParallelLoop(
                   ensureLaunchIndependent(cloningMap.lookupOrDefault(step))});
           // todo(herhut,ravishankarm): Update the behavior of setMappingAttr
           // when this condition is relaxed.
-          if (bounds.find(processor) != bounds.end()) {
+          if (bounds.contains(processor)) {
             return rewriter.notifyMatchFailure(
                 parallelOp, "cannot redefine the bound for processor " +
                                 Twine(static_cast<int64_t>(processor)));

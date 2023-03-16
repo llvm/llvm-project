@@ -113,6 +113,26 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::usesValueFromCycle(
   return false;
 }
 
+template <>
+bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::isDivergentUse(
+    const MachineOperand &U) const {
+  if (!U.isReg())
+    return false;
+
+  auto Reg = U.getReg();
+  if (isDivergent(Reg))
+    return true;
+
+  const auto &RegInfo = F.getRegInfo();
+  auto *Def = RegInfo.getOneDef(Reg);
+  if (!Def)
+    return true;
+
+  auto *DefInstr = Def->getParent();
+  auto *UseInstr = U.getParent();
+  return isTemporalDivergent(*UseInstr->getParent(), *DefInstr);
+}
+
 // This ensures explicit instantiation of
 // GenericUniformityAnalysisImpl::ImplDeleter::operator()
 template class llvm::GenericUniformityInfo<MachineSSAContext>;

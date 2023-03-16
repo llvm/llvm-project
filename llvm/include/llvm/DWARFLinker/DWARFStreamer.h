@@ -105,6 +105,19 @@ public:
   void emitDwarfDebugRangeListFooter(const CompileUnit &Unit,
                                      MCSymbol *EndLabel) override;
 
+  /// Emit debug locations(.debug_loc, .debug_loclists) header.
+  MCSymbol *emitDwarfDebugLocListHeader(const CompileUnit &Unit) override;
+
+  /// Emit debug ranges(.debug_loc, .debug_loclists) fragment.
+  void emitDwarfDebugLocListFragment(
+      const CompileUnit &Unit,
+      const DWARFLocationExpressionsVector &LinkedLocationExpression,
+      PatchLocation Patch) override;
+
+  /// Emit debug ranges(.debug_loc, .debug_loclists) footer.
+  void emitDwarfDebugLocListFooter(const CompileUnit &Unit,
+                                   MCSymbol *EndLabel) override;
+
   /// Emit .debug_aranges entries for \p Unit
   void emitDwarfDebugArangesTable(const CompileUnit &Unit,
                                   const AddressRanges &LinkedRanges) override;
@@ -114,14 +127,6 @@ public:
   uint64_t getRngListsSectionSize() const override {
     return RngListsSectionSize;
   }
-
-  /// Emit the debug_loc contribution for \p Unit by copying the entries from
-  /// \p Dwarf and offsetting them. Update the location attributes to point to
-  /// the new entries.
-  void emitLocationsForUnit(
-      const CompileUnit &Unit, DWARFContext &Dwarf,
-      std::function<void(StringRef, SmallVectorImpl<uint8_t> &)> ProcessExpr)
-      override;
 
   /// Emit the line table described in \p Rows into the debug_line section.
   void emitLineTableForUnit(MCDwarfLineTableParams Params,
@@ -181,6 +186,10 @@ public:
     return MacroSectionSize;
   }
 
+  uint64_t getLocListsSectionSize() const override {
+    return LocListsSectionSize;
+  }
+
   void emitMacroTables(DWARFContext *Context,
                        const Offset2UnitMap &UnitMacroMap,
                        OffsetsStringPool &StringPool) override;
@@ -210,6 +219,18 @@ private:
                                            const AddressRanges &LinkedRanges,
                                            PatchLocation Patch);
 
+  /// Emit piece of .debug_loc for \p LinkedRanges.
+  void emitDwarfDebugLocTableFragment(
+      const CompileUnit &Unit,
+      const DWARFLocationExpressionsVector &LinkedLocationExpression,
+      PatchLocation Patch);
+
+  /// Emit piece of .debug_loclists for \p LinkedRanges.
+  void emitDwarfDebugLocListsTableFragment(
+      const CompileUnit &Unit,
+      const DWARFLocationExpressionsVector &LinkedLocationExpression,
+      PatchLocation Patch);
+
   /// \defgroup MCObjects MC layer objects constructed by the streamer
   /// @{
   std::unique_ptr<MCRegisterInfo> MRI;
@@ -234,6 +255,7 @@ private:
   uint64_t RangesSectionSize = 0;
   uint64_t RngListsSectionSize = 0;
   uint64_t LocSectionSize = 0;
+  uint64_t LocListsSectionSize = 0;
   uint64_t LineSectionSize = 0;
   uint64_t FrameSectionSize = 0;
   uint64_t DebugInfoSectionSize = 0;

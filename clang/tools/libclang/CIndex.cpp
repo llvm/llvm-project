@@ -3742,6 +3742,7 @@ CXIndex clang_createIndexWithOptions(const CXIndexOptions *options) {
       options->ExcludeDeclarationsFromPCH, options->DisplayDiagnostics,
       options->ThreadBackgroundPriorityForIndexing,
       options->ThreadBackgroundPriorityForEditing);
+  CIdxr->setStorePreamblesInMemory(options->StorePreamblesInMemory);
   CIdxr->setPreambleStoragePath(options->PreambleStoragePath);
   CIdxr->setInvocationEmissionPath(options->InvocationEmissionPath);
   return CIdxr;
@@ -3956,8 +3957,9 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
   std::unique_ptr<ASTUnit> Unit(ASTUnit::LoadFromCommandLine(
       Args->data(), Args->data() + Args->size(),
       CXXIdx->getPCHContainerOperations(), Diags,
-      CXXIdx->getClangResourcesPath(), CXXIdx->getPreambleStoragePath(),
-      CXXIdx->getOnlyLocalDecls(), CaptureDiagnostics, *RemappedFiles.get(),
+      CXXIdx->getClangResourcesPath(), CXXIdx->getStorePreamblesInMemory(),
+      CXXIdx->getPreambleStoragePath(), CXXIdx->getOnlyLocalDecls(),
+      CaptureDiagnostics, *RemappedFiles.get(),
       /*RemappedFilesKeepOriginalName=*/true, PrecompilePreambleAfterNParses,
       TUKind, CacheCodeCompletionResults, IncludeBriefCommentsInCodeCompletion,
       /*AllowPCHWithCompilerErrors=*/true, SkipFunctionBodies, SingleFileParse,

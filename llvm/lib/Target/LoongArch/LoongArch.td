@@ -30,7 +30,7 @@ def IsLA32
                          "LA32 Basic Integer and Privilege Instruction Set">;
 
 defvar LA32 = DefaultMode;
-def LA64 : HwMode<"+64bit">;
+def LA64 : HwMode<"+64bit", [IsLA64]>;
 
 // Single Precision floating point
 def FeatureBasicF

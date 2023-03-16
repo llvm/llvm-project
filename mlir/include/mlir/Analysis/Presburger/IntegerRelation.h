@@ -203,27 +203,27 @@ public:
   /// Get the number of vars of the specified kind.
   unsigned getNumVarKind(VarKind kind) const {
     return space.getNumVarKind(kind);
-  };
+  }
 
   /// Return the index at which the specified kind of vars starts.
   unsigned getVarKindOffset(VarKind kind) const {
     return space.getVarKindOffset(kind);
-  };
+  }
 
   /// Return the index at Which the specified kind of vars ends.
   unsigned getVarKindEnd(VarKind kind) const {
     return space.getVarKindEnd(kind);
-  };
+  }
 
   /// Get the number of elements of the specified kind in the range
   /// [varStart, varLimit).
   unsigned getVarKindOverlap(VarKind kind, unsigned varStart,
                              unsigned varLimit) const {
     return space.getVarKindOverlap(kind, varStart, varLimit);
-  };
+  }
 
   /// Return the VarKind of the var at the specified position.
-  VarKind getVarKindAt(unsigned pos) const { return space.getVarKindAt(pos); };
+  VarKind getVarKindAt(unsigned pos) const { return space.getVarKindAt(pos); }
 
   /// The struct CountsSnapshot stores the count of each VarKind, and also of
   /// each constraint type. getCounts() returns a CountsSnapshot object
@@ -493,7 +493,7 @@ public:
     if (ub)
       *ub = getInt64Vec(ubMPInt);
     if (boundFloorDivisor)
-      *boundFloorDivisor = int64_t(boundFloorDivisorMPInt);
+      *boundFloorDivisor = static_cast<int64_t>(boundFloorDivisorMPInt);
     return llvm::transformOptional(result, int64FromMPInt);
   }
 

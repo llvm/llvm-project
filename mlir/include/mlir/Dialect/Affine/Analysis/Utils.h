@@ -39,6 +39,10 @@ class Value;
 /// from the outermost 'affine.for' operation to the innermost one.
 void getAffineForIVs(Operation &op, SmallVectorImpl<AffineForOp> *loops);
 
+/// Populates 'ivs' with IVs of the surrounding affine.for and affine.parallel
+/// ops ordered from the outermost one to the innermost.
+void getAffineIVs(Operation &op, SmallVectorImpl<Value> &ivs);
+
 /// Populates 'ops' with affine operations enclosing `op` ordered from outermost
 /// to innermost. affine.for, affine.if, or affine.parallel ops comprise such
 /// surrounding affine ops.

@@ -255,54 +255,6 @@ void MemsetRanges::addRange(int64_t Start, int64_t Size, Value *Ptr,
 //                         MemCpyOptLegacyPass Pass
 //===----------------------------------------------------------------------===//
 
-namespace {
-
-class MemCpyOptLegacyPass : public FunctionPass {
-  MemCpyOptPass Impl;
-
-public:
-  static char ID; // Pass identification, replacement for typeid
-
-  MemCpyOptLegacyPass() : FunctionPass(ID) {
-    initializeMemCpyOptLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override;
-
-private:
-  // This transformation requires dominator postdominator info
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addPreserved<AAResultsWrapperPass>();
-    AU.addRequired<MemorySSAWrapperPass>();
-    AU.addPreserved<MemorySSAWrapperPass>();
-  }
-};
-
-} // end anonymous namespace
-
-char MemCpyOptLegacyPass::ID = 0;
-
-/// The public interface to this file...
-FunctionPass *llvm::createMemCpyOptPass() { return new MemCpyOptLegacyPass(); }
-
-INITIALIZE_PASS_BEGIN(MemCpyOptLegacyPass, "memcpyopt", "MemCpy Optimization",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
-INITIALIZE_PASS_END(MemCpyOptLegacyPass, "memcpyopt", "MemCpy Optimization",
-                    false, false)
-
 // Check that V is either not accessible by the caller, or unwinding cannot
 // occur between Start and End.
 static bool mayBeVisibleThroughUnwinding(Value *V, Instruction *Start,
@@ -1729,18 +1681,4 @@ bool MemCpyOptPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
     MSSA_->verifyMemorySSA();
 
   return MadeChange;
-}
-
-/// This is the main transformation entry point for a function.
-bool MemCpyOptLegacyPass::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  auto *TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
-
-  return Impl.runImpl(F, TLI, AA, AC, DT, MSSA);
 }

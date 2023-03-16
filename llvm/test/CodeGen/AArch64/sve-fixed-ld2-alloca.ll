@@ -8,16 +8,19 @@ declare void @def(ptr)
 define void @st1d_fixed(ptr %ptr) #0 {
 ; CHECK-LABEL: st1d_fixed:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #144
-; CHECK-NEXT:    stp x30, x19, [sp, #128] // 16-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #160
+; CHECK-NEXT:    stp x20, x19, [sp, #144] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x0, sp
+; CHECK-NEXT:    str x30, [sp, #128] // 8-byte Folded Spill
+; CHECK-NEXT:    mov x20, sp
 ; CHECK-NEXT:    bl def
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [sp]
+; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x20]
+; CHECK-NEXT:    ldr x30, [sp, #128] // 8-byte Folded Reload
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x19]
-; CHECK-NEXT:    ldp x30, x19, [sp, #128] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #144
+; CHECK-NEXT:    ldp x20, x19, [sp, #144] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #160
 ; CHECK-NEXT:    ret
   %alloc = alloca [16 x double]
   call void @def(ptr %alloc)

@@ -33,3 +33,5 @@ Revert "[SROA] Fix bug where CandidateTys is appended while being iterated"
 
 d0ed9a9d3 [Libomptarget] Remove unused arguments from bitcode compilation
 
+breaks comgr builds undefined _printf_alloc
+Revert "[Clang] Always use --no-undefined when linking AMDGPU images"

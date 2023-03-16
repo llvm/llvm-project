@@ -43,6 +43,7 @@ public:
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__verbose_abort>
 #include <cstdlib>
 #include <exception>
 #include <iosfwd>  // for string forward decl
@@ -223,8 +224,7 @@ void __throw_logic_error(const char*__msg)
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw logic_error(__msg);
 #else
-    ((void)__msg);
-    _VSTD::abort();
+    std::__libcpp_verbose_abort("logic_error was thrown in -fno-exceptions mode with message \"%s\"", __msg);
 #endif
 }
 
@@ -234,8 +234,7 @@ void __throw_domain_error(const char*__msg)
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw domain_error(__msg);
 #else
-    ((void)__msg);
-    _VSTD::abort();
+    std::__libcpp_verbose_abort("domain_error was thrown in -fno-exceptions mode with message \"%s\"", __msg);
 #endif
 }
 
@@ -245,8 +244,7 @@ void __throw_invalid_argument(const char*__msg)
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw invalid_argument(__msg);
 #else
-    ((void)__msg);
-    _VSTD::abort();
+    std::__libcpp_verbose_abort("invalid_argument was thrown in -fno-exceptions mode with message \"%s\"", __msg);
 #endif
 }
 
@@ -256,8 +254,7 @@ void __throw_length_error(const char*__msg)
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw length_error(__msg);
 #else
-    ((void)__msg);
-    _VSTD::abort();
+    std::__libcpp_verbose_abort("length_error was thrown in -fno-exceptions mode with message \"%s\"", __msg);
 #endif
 }
 
@@ -267,8 +264,7 @@ void __throw_out_of_range(const char*__msg)
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw out_of_range(__msg);
 #else
-    ((void)__msg);
-    _VSTD::abort();
+    std::__libcpp_verbose_abort("out_of_range was thrown in -fno-exceptions mode with message \"%s\"", __msg);
 #endif
 }
 
@@ -278,8 +274,7 @@ void __throw_range_error(const char*__msg)
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw range_error(__msg);
 #else
-    ((void)__msg);
-    _VSTD::abort();
+    std::__libcpp_verbose_abort("range_error was thrown in -fno-exceptions mode with message \"%s\"", __msg);
 #endif
 }
 
@@ -289,8 +284,7 @@ void __throw_overflow_error(const char*__msg)
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw overflow_error(__msg);
 #else
-    ((void)__msg);
-    _VSTD::abort();
+    std::__libcpp_verbose_abort("overflow_error was thrown in -fno-exceptions mode with message \"%s\"", __msg);
 #endif
 }
 
@@ -300,8 +294,7 @@ void __throw_underflow_error(const char*__msg)
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw underflow_error(__msg);
 #else
-    ((void)__msg);
-    _VSTD::abort();
+    std::__libcpp_verbose_abort("underflow_error was thrown in -fno-exceptions mode with message \"%s\"", __msg);
 #endif
 }
 

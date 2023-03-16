@@ -485,7 +485,7 @@ reports an error diagnostic and returns `nullptr`.
 For in-tree plugins, there is the CMake flag `FLANG_PLUGIN_SUPPORT`, enabled by
 default, that controls the exporting of executable symbols from `flang-new`,
 which plugins need access to. Additionally, there is the CMake flag
-`FLANG_BUILD_EXAMPLES`, turned off by default, that is used to control if the
+`LLVM_BUILD_EXAMPLES`, turned off by default, that is used to control if the
 example programs are built. This includes plugins that are in the
 `flang/example` directory and added as a `sub_directory` to the
 `flang/examples/CMakeLists.txt`, for example, the `PrintFlangFunctionNames`

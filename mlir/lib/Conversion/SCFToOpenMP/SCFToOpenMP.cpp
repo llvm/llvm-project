@@ -310,6 +310,10 @@ static omp::ReductionDeclareOp declareReduction(PatternRewriter &builder,
     return createDecl(builder, symbolTable, reduce,
                       builder.getFloatAttr(type, 1.0));
   }
+  if (matchSimpleReduction<arith::MulIOp, LLVM::MulOp>(reduction)) {
+    return createDecl(builder, symbolTable, reduce,
+                      builder.getIntegerAttr(type, 1));
+  }
 
   // Match select-based min/max reductions.
   bool isMin;

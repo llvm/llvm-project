@@ -11053,6 +11053,12 @@ SDValue llvm::peekThroughExtractSubvectors(SDValue V) {
   return V;
 }
 
+SDValue llvm::peekThroughTruncates(SDValue V) {
+  while (V.getOpcode() == ISD::TRUNCATE)
+    V = V.getOperand(0);
+  return V;
+}
+
 bool llvm::isBitwiseNot(SDValue V, bool AllowUndefs) {
   if (V.getOpcode() != ISD::XOR)
     return false;

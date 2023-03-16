@@ -167,7 +167,7 @@ public:
   bool isValid() const { return !FoundErrors; }
 
   bool isRegionActive(llvm::StringRef Description) const {
-    return ActiveRegions.find(Description) != ActiveRegions.end();
+    return ActiveRegions.contains(Description);
   }
 };
 
