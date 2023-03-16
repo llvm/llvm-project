@@ -63,13 +63,11 @@ define i64 @test_bswap_i64(i64 %a) nounwind {
 define i48 @test_bswap_i48(i48 %a) nounwind {
 ; LA32-LABEL: test_bswap_i48:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    revb.2h $a1, $a1
-; LA32-NEXT:    rotri.w $a1, $a1, 16
-; LA32-NEXT:    srli.w $a1, $a1, 16
 ; LA32-NEXT:    revb.2h $a0, $a0
 ; LA32-NEXT:    rotri.w $a2, $a0, 16
-; LA32-NEXT:    slli.w $a0, $a2, 16
-; LA32-NEXT:    or $a0, $a1, $a0
+; LA32-NEXT:    revb.2h $a0, $a1
+; LA32-NEXT:    rotri.w $a0, $a0, 16
+; LA32-NEXT:    bytepick.w $a0, $a0, $a2, 2
 ; LA32-NEXT:    srli.w $a1, $a2, 16
 ; LA32-NEXT:    ret
 ;
@@ -91,28 +89,22 @@ define i80 @test_bswap_i80(i80 %a) nounwind {
 ; LA32-NEXT:    ld.w $a3, $a1, 4
 ; LA32-NEXT:    revb.2h $a3, $a3
 ; LA32-NEXT:    rotri.w $a3, $a3, 16
-; LA32-NEXT:    srli.w $a4, $a3, 16
-; LA32-NEXT:    slli.w $a5, $a2, 16
-; LA32-NEXT:    or $a4, $a5, $a4
-; LA32-NEXT:    srli.w $a2, $a2, 16
-; LA32-NEXT:    st.h $a2, $a0, 8
+; LA32-NEXT:    bytepick.w $a4, $a3, $a2, 2
 ; LA32-NEXT:    st.w $a4, $a0, 4
-; LA32-NEXT:    slli.w $a2, $a3, 16
 ; LA32-NEXT:    ld.w $a1, $a1, 8
 ; LA32-NEXT:    revb.2h $a1, $a1
 ; LA32-NEXT:    rotri.w $a1, $a1, 16
-; LA32-NEXT:    srli.w $a1, $a1, 16
-; LA32-NEXT:    or $a1, $a1, $a2
+; LA32-NEXT:    bytepick.w $a1, $a1, $a3, 2
 ; LA32-NEXT:    st.w $a1, $a0, 0
+; LA32-NEXT:    srli.w $a1, $a2, 16
+; LA32-NEXT:    st.h $a1, $a0, 8
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_bswap_i80:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    revb.d $a1, $a1
-; LA64-NEXT:    srli.d $a1, $a1, 48
 ; LA64-NEXT:    revb.d $a2, $a0
-; LA64-NEXT:    slli.d $a0, $a2, 16
-; LA64-NEXT:    or $a0, $a1, $a0
+; LA64-NEXT:    revb.d $a0, $a1
+; LA64-NEXT:    bytepick.d $a0, $a0, $a2, 2
 ; LA64-NEXT:    srli.d $a1, $a2, 48
 ; LA64-NEXT:    ret
   %tmp = call i80 @llvm.bswap.i80(i80 %a)
