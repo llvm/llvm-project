@@ -175,7 +175,7 @@ Where:
 
 **target-triple**
     The target triple of the code object. See `Target Triple
-    <https://clang.llvm.org/docs/CrossCompilation.html#target-triple>.
+    <https://clang.llvm.org/docs/CrossCompilation.html#target-triple>`_.
 
     The bundler accepts target triples with or without the optional environment
     field:
