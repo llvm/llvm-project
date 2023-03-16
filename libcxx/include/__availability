@@ -149,13 +149,6 @@
 // #   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_latch
 // #   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_semaphore
 
-    // This controls the availability of the C++20 format library.
-    // The library is in development and not ABI stable yet. P2216 is
-    // retroactively accepted in C++20. This paper contains ABI breaking
-    // changes.
-#   define _LIBCPP_AVAILABILITY_FORMAT
-// #   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format
-
     // This controls whether the library claims to provide a default verbose
     // termination function, and consequently whether the headers will try
     // to use it when the mechanism isn't overriden at compile-time.
@@ -258,10 +251,6 @@
 #       define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_latch
 #       define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_semaphore
 #   endif
-
-#   define _LIBCPP_AVAILABILITY_FORMAT                                          \
-        __attribute__((unavailable))
-#   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format
 
 #   define _LIBCPP_HAS_NO_VERBOSE_ABORT_IN_LIBRARY
 
