@@ -66,6 +66,12 @@ double f_fp_scalar_2(double x) { return x; }
 //
 long double f_fp_scalar_3(long double x) { return x; }
 
+// LP64-LP64F-LP64D-LABEL: define dso_local half @f_fp_scalar_4
+// LP64-LP64F-LP64D-SAME: (half noundef [[X:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+_Float16 f_fp_scalar_4(_Float16 x) { return x; }
+
 // Empty structs or unions are ignored.
 
 struct empty_s {};
@@ -322,11 +328,11 @@ struct large f_scalar_stack_5(double a, __int128_t b, long double c, v32i8 d,
 }
 
 // LP64-LP64F-LP64D-LABEL: define dso_local signext i32 @f_scalar_stack_6
-// LP64-LP64F-LP64D-SAME: (i32 noundef signext [[A:%.*]], i128 noundef [[B:%.*]], float noundef [[C:%.*]], fp128 noundef [[D:%.*]], ptr noundef [[TMP0:%.*]], i8 noundef zeroext [[F:%.*]], i8 noundef signext [[G:%.*]], i8 noundef zeroext [[H:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D-SAME: (i32 noundef signext [[A:%.*]], i128 noundef [[B:%.*]], float noundef [[C:%.*]], fp128 noundef [[D:%.*]], ptr noundef [[TMP0:%.*]], i8 noundef zeroext [[F:%.*]], i8 noundef signext [[G:%.*]], i8 noundef zeroext [[H:%.*]], half noundef [[I:%.*]]) #[[ATTR0]] {
 // LP64-LP64F-LP64D:  entry:
 //
 int f_scalar_stack_6(int32_t a, __int128_t b, float c, long double d, v32i8 e,
-                     uint8_t f, int8_t g, uint8_t h) {
+                     uint8_t f, int8_t g, uint8_t h, _Float16 i) {
   return g + h;
 }
 
@@ -1479,5 +1485,425 @@ void f_double_u_arg(union double_u a) {}
 union double_u f_ret_double_u(void) {
   return (union double_u){1.0};
 }
+
+// Check that fp, fp+fp, and int+fp structs are lowered correctly. These will
+// be passed in FPR, FPR+FPR, or GPR+FPR regs if sufficient registers are
+// available the widths are <= XLEN and FLEN, and should be expanded to
+// separate arguments in IR. They are passed by the same rules for returns,
+// but will be lowered to simple two-element structs if necessary (as LLVM IR
+// functions cannot return multiple values).
+// FIXME: Essentially all test cases below involving _Float16 in structs
+// aren't lowered according to the rules in the FP calling convention (i.e.
+// are incorrect for lp64f/lp64d).
+
+struct float16_s { _Float16 f; };
+
+// A struct containing just one floating-point real is passed as though it
+// were a standalone floating-point real.
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16_s_arg
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_float16_s_arg(struct float16_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct float16_s f_ret_float16_s(void) {
+  return (struct float16_s){1.0};
+}
+
+// A struct containing a double and any number of zero-width bitfields is
+// passed as though it were a standalone floating-point real.
+
+struct zbf_float16_s { int : 0; _Float16 f; };
+struct zbf_float16_zbf_s { int : 0; _Float16 f; int : 0; };
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_zbf_float16_s_arg
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_zbf_float16_s_arg(struct zbf_float16_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_zbf_float16_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct zbf_float16_s f_ret_zbf_float16_s(void) {
+  return (struct zbf_float16_s){1.0};
+}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_zbf_float16_zbf_s_arg
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_zbf_float16_zbf_s_arg(struct zbf_float16_zbf_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_zbf_float16_zbf_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct zbf_float16_zbf_s f_ret_zbf_float16_zbf_s(void) {
+  return (struct zbf_float16_zbf_s){1.0};
+}
+
+// Check that structs containing two floating point values (FLEN <= width) are
+// expanded provided sufficient FPRs are available.
+
+struct double_float16_s { double f; _Float16 g; };
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_double_float16_s_arg
+// LP64-LP64F-LP64D-SAME: ([2 x i64] [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_double_float16_s_arg(struct double_float16_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local [2 x i64] @f_ret_double_float16_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct double_float16_s f_ret_double_float16_s(void) {
+  return (struct double_float16_s){1.0, 2.0};
+}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_double_float16_s_arg_insufficient_fprs
+// LP64-LP64F-LP64D-SAME: (float noundef [[A:%.*]], double noundef [[B:%.*]], double noundef [[C:%.*]], double noundef [[D:%.*]], double noundef [[E:%.*]], double noundef [[F:%.*]], double noundef [[G:%.*]], [2 x i64] [[H_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_double_float16_s_arg_insufficient_fprs(float a, double b, double c, double d,
+    double e, double f, double g, struct double_float16_s h) {}
+
+// Check that structs containing int+_Float16 values are expanded, provided
+// sufficient FPRs and GPRs are available. The integer components are neither
+// sign or zero-extended.
+
+struct float16_int8_s { _Float16 f; int8_t i; };
+struct float16_uint8_s { _Float16 f; uint8_t i; };
+struct float16_int32_s { _Float16 f; int32_t i; };
+struct float16_int64_s { _Float16 f; int64_t i; };
+struct float16_int64bf_s { _Float16 f; int64_t i : 32; };
+struct float16_int8_zbf_s { _Float16 f; int8_t i; int : 0; };
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16_int8_s_arg
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_float16_int8_s_arg(struct float16_int8_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16_int8_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct float16_int8_s f_ret_float16_int8_s(void) {
+  return (struct float16_int8_s){1.0, 2};
+}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16_uint8_s_arg
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_float16_uint8_s_arg(struct float16_uint8_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16_uint8_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct float16_uint8_s f_ret_float16_uint8_s(void) {
+  return (struct float16_uint8_s){1.0, 2};
+}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16_int32_s_arg
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_float16_int32_s_arg(struct float16_int32_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16_int32_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct float16_int32_s f_ret_float16_int32_s(void) {
+  return (struct float16_int32_s){1.0, 2};
+}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16_int64_s_arg
+// LP64-LP64F-LP64D-SAME: ([2 x i64] [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_float16_int64_s_arg(struct float16_int64_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local [2 x i64] @f_ret_float16_int64_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct float16_int64_s f_ret_float16_int64_s(void) {
+  return (struct float16_int64_s){1.0, 2};
+}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16_int64bf_s_arg
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_float16_int64bf_s_arg(struct float16_int64bf_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16_int64bf_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct float16_int64bf_s f_ret_float16_int64bf_s(void) {
+  return (struct float16_int64bf_s){1.0, 2};
+}
+
+// The zero-width bitfield means the struct can't be passed according to the
+// floating point calling convention.
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16_int8_zbf_s
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_float16_int8_zbf_s(struct float16_int8_zbf_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16_int8_zbf_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct float16_int8_zbf_s f_ret_float16_int8_zbf_s(void) {
+  return (struct float16_int8_zbf_s){1.0, 2};
+}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16_int8_s_arg_insufficient_gprs
+// LP64-LP64F-LP64D-SAME: (i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]], i32 noundef signext [[C:%.*]], i32 noundef signext [[D:%.*]], i32 noundef signext [[E:%.*]], i32 noundef signext [[F:%.*]], i32 noundef signext [[G:%.*]], i32 noundef signext [[H:%.*]], i64 [[I_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_float16_int8_s_arg_insufficient_gprs(int a, int b, int c, int d, int e,
+                                            int f, int g, int h, struct float16_int8_s i) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_struct_float16_int8_insufficient_fprs
+// LP64-LP64F-LP64D-SAME: (float noundef [[A:%.*]], double noundef [[B:%.*]], double noundef [[C:%.*]], double noundef [[D:%.*]], double noundef [[E:%.*]], double noundef [[F:%.*]], double noundef [[G:%.*]], double noundef [[H:%.*]], i64 [[I_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_struct_float16_int8_insufficient_fprs(float a, double b, double c, double d,
+                                             double e, double f, double g, double h, struct float16_int8_s i) {}
+
+// Complex floating-point values or structs containing a single complex
+// floating-point value should be passed as if it were an fp+fp struct.
+
+// LP64-LABEL: define dso_local void @f_float16complex
+// LP64-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_float16complex
+// LP64F-LP64D-SAME: (half noundef [[A_COERCE0:%.*]], half noundef [[A_COERCE1:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
+//
+void f_float16complex(_Float16 __complex__ a) {}
+
+// LP64-LABEL: define dso_local i64 @f_ret_float16complex
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local { half, half } @f_ret_float16complex
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
+//
+_Float16 __complex__ f_ret_float16complex(void) {
+  return 1.0;
+}
+
+struct float16complex_s { _Float16 __complex__ c; };
+
+// LP64-LABEL: define dso_local void @f_float16complex_s_arg
+// LP64-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_float16complex_s_arg
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]], half [[TMP1:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
+//
+void f_float16complex_s_arg(struct float16complex_s a) {}
+
+// LP64-LABEL: define dso_local i64 @f_ret_float16complex_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local { half, half } @f_ret_float16complex_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
+//
+struct float16complex_s f_ret_float16complex_s(void) {
+  return (struct float16complex_s){1.0};
+}
+
+// Test single or two-element structs that need flattening. e.g. those
+// containing nested structs, _Float16 in small arrays, zero-length structs etc.
+
+struct float16arr1_s { _Float16 a[1]; };
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16arr1_s_arg
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_float16arr1_s_arg(struct float16arr1_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16arr1_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct float16arr1_s f_ret_float16arr1_s(void) {
+  return (struct float16arr1_s){{1.0}};
+}
+
+struct float16arr2_s { _Float16 a[2]; };
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16arr2_s_arg
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_float16arr2_s_arg(struct float16arr2_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16arr2_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct float16arr2_s f_ret_float16arr2_s(void) {
+  return (struct float16arr2_s){{1.0, 2.0}};
+}
+
+struct float16arr2_tricky1_s { struct { _Float16 f[1]; } g[2]; };
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16arr2_tricky1_s_arg
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_float16arr2_tricky1_s_arg(struct float16arr2_tricky1_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16arr2_tricky1_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct float16arr2_tricky1_s f_ret_float16arr2_tricky1_s(void) {
+  return (struct float16arr2_tricky1_s){{{{1.0}}, {{2.0}}}};
+}
+
+struct float16arr2_tricky2_s { struct {}; struct { _Float16 f[1]; } g[2]; };
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16arr2_tricky2_s_arg
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_float16arr2_tricky2_s_arg(struct float16arr2_tricky2_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16arr2_tricky2_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct float16arr2_tricky2_s f_ret_float16arr2_tricky2_s(void) {
+  return (struct float16arr2_tricky2_s){{}, {{{1.0}}, {{2.0}}}};
+}
+
+struct float16arr2_tricky3_s { union {}; struct { _Float16 f[1]; } g[2]; };
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16arr2_tricky3_s_arg
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_float16arr2_tricky3_s_arg(struct float16arr2_tricky3_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16arr2_tricky3_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct float16arr2_tricky3_s f_ret_float16arr2_tricky3_s(void) {
+  return (struct float16arr2_tricky3_s){{}, {{{1.0}}, {{2.0}}}};
+}
+
+struct float16arr2_tricky4_s { union {}; struct { struct {}; _Float16 f[1]; } g[2]; };
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16arr2_tricky4_s_arg
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_float16arr2_tricky4_s_arg(struct float16arr2_tricky4_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16arr2_tricky4_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct float16arr2_tricky4_s f_ret_float16arr2_tricky4_s(void) {
+  return (struct float16arr2_tricky4_s){{}, {{{}, {1.0}}, {{}, {2.0}}}};
+}
+
+// Test structs that should be passed according to the normal integer calling
+// convention.
+
+struct int_float16_int_s { int a; _Float16 b; int c; };
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_int_float16_int_s_arg
+// LP64-LP64F-LP64D-SAME: ([2 x i64] [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_int_float16_int_s_arg(struct int_float16_int_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local [2 x i64] @f_ret_int_float16_int_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct int_float16_int_s f_ret_int_float16_int_s(void) {
+  return (struct int_float16_int_s){1, 2.0, 3};
+}
+
+struct int64_float16_s { int64_t a; _Float16 b; };
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_int64_float16_s_arg
+// LP64-LP64F-LP64D-SAME: ([2 x i64] [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_int64_float16_s_arg(struct int64_float16_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local [2 x i64] @f_ret_int64_float16_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct int64_float16_s f_ret_int64_float16_s(void) {
+  return (struct int64_float16_s){1, 2.0};
+}
+
+struct char_char_float16_s { char a; char b; _Float16 c; };
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_char_char_float16_s_arg
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_char_char_float16_s_arg(struct char_char_float16_s a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_char_char_float16_s
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct char_char_float16_s f_ret_char_char_float16_s(void) {
+  return (struct char_char_float16_s){1, 2, 3.0};
+}
+
+// Unions are always passed according to the integer calling convention, even
+// if they can only contain a double.
+
+union float16_u { _Float16 a; };
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16_u_arg
+// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_float16_u_arg(union float16_u a) {}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16_u
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+union float16_u f_ret_float16_u(void) {
+  return (union float16_u){1.0};
+}
+
 //// NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 // LP64F: {{.*}}
