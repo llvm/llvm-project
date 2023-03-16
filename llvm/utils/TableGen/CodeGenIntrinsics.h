@@ -25,6 +25,13 @@ namespace llvm {
 class Record;
 class RecordKeeper;
 
+// FIXME: Sweep this in the near future.
+namespace tmp {
+/// getValueType - Return the MVT::SimpleValueType that the specified TableGen
+/// record corresponds to.
+MVT::SimpleValueType getValueType(Record *Rec);
+} // namespace tmp
+
 struct CodeGenIntrinsic {
   Record *TheDef;             // The actual record defining this intrinsic.
   std::string Name;           // The name of the LLVM function "llvm.bswap.i32"
