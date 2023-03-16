@@ -28,20 +28,20 @@ void *memset(void *ptr, int value, size_t count);
 extern "C" {
 
 int bcmp(const void *lhs, const void *rhs, size_t count) {
-  __llvm_libc::bcmp(lhs, rhs, count);
+  return __llvm_libc::bcmp(lhs, rhs, count);
 }
 void bzero(void *ptr, size_t count) { __llvm_libc::bzero(ptr, count); }
 int memcmp(const void *lhs, const void *rhs, size_t count) {
-  __llvm_libc::memcmp(lhs, rhs, count);
+  return __llvm_libc::memcmp(lhs, rhs, count);
 }
 void *memcpy(void *__restrict dst, const void *__restrict src, size_t count) {
-  __llvm_libc::memcpy(dst, src, count);
+  return __llvm_libc::memcpy(dst, src, count);
 }
 void *memmove(void *dst, const void *src, size_t count) {
-  __llvm_libc::memmove(dst, src, count);
+  return __llvm_libc::memmove(dst, src, count);
 }
 void *memset(void *ptr, int value, size_t count) {
-  __llvm_libc::memset(ptr, value, count);
+  return __llvm_libc::memset(ptr, value, count);
 }
 
 } // extern "C"
