@@ -10,8 +10,6 @@
 
 namespace llvm {
 
-namespace {
-
 void anchor() {}
 
 static std::string libPath(const std::string Name = "InlineAdvisorPlugin") {
@@ -84,12 +82,6 @@ struct CompilerInstance {
     PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
     MPM.addPass(ModuleInlinerPass(IP, InliningAdvisorMode::Default,
                                   ThinOrFullLTOPhase::None));
-  }
-
-  ~CompilerInstance() {
-    // Reset the static variable that tracks if the plugin has been registered.
-    // This is needed to allow the test to run multiple times.
-    PluginInlineAdvisorAnalysis::HasBeenRegistered = false;
   }
 
   std::string output;
@@ -263,8 +255,6 @@ define i32 @fib_check(){
     ret i32 %correct_val
 }
   )"};
-
-} // namespace
 
 // check that loading a plugin works
 // the plugin being loaded acts identically to the default inliner
