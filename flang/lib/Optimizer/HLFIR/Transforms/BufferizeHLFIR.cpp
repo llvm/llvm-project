@@ -27,8 +27,9 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include <mlir/Support/LogicalResult.h>
+#include "llvm/ADT/TypeSwitch.h"
 
 namespace hlfir {
 #define GEN_PASS_DEF_BUFFERIZEHLFIR
@@ -165,6 +166,38 @@ struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
     mlir::Value bufferizedExpr =
         packageBufferizedExpr(loc, builder, temp, cleanup);
     rewriter.replaceOp(asExpr, bufferizedExpr);
+    return mlir::success();
+  }
+};
+
+struct ShapeOfOpConversion
+    : public mlir::OpConversionPattern<hlfir::ShapeOfOp> {
+  using mlir::OpConversionPattern<hlfir::ShapeOfOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::ShapeOfOp shapeOf, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = shapeOf.getLoc();
+    mlir::ModuleOp mod = shapeOf->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(mod));
+
+    mlir::Value shape;
+    hlfir::Entity bufferizedExpr{getBufferizedExprStorage(adaptor.getExpr())};
+    if (bufferizedExpr.isVariable()) {
+      shape = hlfir::genShape(loc, builder, bufferizedExpr);
+    } else {
+      // everything else failed so try to create a shape from static type info
+      hlfir::ExprType exprTy =
+          adaptor.getExpr().getType().dyn_cast_or_null<hlfir::ExprType>();
+      if (exprTy)
+        shape = hlfir::genExprShape(builder, loc, exprTy);
+    }
+    // expected to never happen
+    if (!shape)
+      return emitError(loc,
+                       "Unresolvable hlfir.shape_of where extents are unknown");
+
+    rewriter.replaceOp(shapeOf, shape);
     return mlir::success();
   }
 };
@@ -529,11 +562,11 @@ public:
     auto module = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns
-        .insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
-                AssociateOpConversion, ConcatOpConversion, DestroyOpConversion,
-                ElementalOpConversion, EndAssociateOpConversion,
-                NoReassocOpConversion, SetLengthOpConversion>(context);
+    patterns.insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
+                    AssociateOpConversion, ConcatOpConversion,
+                    DestroyOpConversion, ElementalOpConversion,
+                    EndAssociateOpConversion, NoReassocOpConversion,
+                    SetLengthOpConversion, ShapeOfOpConversion>(context);
     mlir::ConversionTarget target(*context);
     target.addIllegalOp<hlfir::ApplyOp, hlfir::AssociateOp, hlfir::ElementalOp,
                         hlfir::EndAssociateOp, hlfir::SetLengthOp,
