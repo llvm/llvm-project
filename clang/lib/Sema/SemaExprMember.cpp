@@ -164,7 +164,7 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
   if (auto *MD = dyn_cast<CXXMethodDecl>(DC))
     contextClass = MD->getParent()->getCanonicalDecl();
   else if (auto *RD = dyn_cast<CXXRecordDecl>(DC))
-    contextClass = cast<CXXRecordDecl>(DC);
+    contextClass = RD;
   else
     return AbstractInstanceResult ? AbstractInstanceResult
                                   : IMA_Error_StaticContext;
