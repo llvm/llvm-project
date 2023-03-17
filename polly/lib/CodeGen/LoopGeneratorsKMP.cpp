@@ -175,11 +175,7 @@ ParallelLoopGeneratorKMP::createSubFn(Value *SequentialLoopStride,
   std::advance(AI, 1);
   Value *Shared = &*AI;
 
-  Value *UserContext = Builder.CreateBitCast(Shared, StructData->getType(),
-                                             "polly.par.userContext");
-
-  extractValuesFromStruct(Data, StructData->getAllocatedType(), UserContext,
-                          Map);
+  extractValuesFromStruct(Data, StructData->getAllocatedType(), Shared, Map);
 
   const auto Alignment = llvm::Align(is64BitArch() ? 8 : 4);
   Value *ID = Builder.CreateAlignedLoad(Builder.getInt32Ty(), IDPtr, Alignment,

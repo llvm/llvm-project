@@ -276,7 +276,7 @@ void __insertion_sort(_BidirectionalIterator __first, _BidirectionalIterator __l
 
 // Sort the iterator range [__first, __last) using the comparator __comp using
 // the insertion sort algorithm.  Insertion sort has two loops, outer and inner.
-// The implementation below has not bounds check (unguarded) for the inner loop.
+// The implementation below has no bounds check (unguarded) for the inner loop.
 // Assumes that there is an element in the position (__first - 1) and that each
 // element in the input range is greater or equal to the element at __first - 1.
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
