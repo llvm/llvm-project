@@ -1,5 +1,5 @@
 // Test hlfir.matmul operation lowering to fir runtime call
-// RUN: fir-opt %s -bufferize-hlfir | FileCheck %s
+// RUN: fir-opt %s -lower-hlfir-intrinsics | FileCheck %s
 
 func.func @_QPmatmul1(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "lhs"}, %arg1: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "rhs"}, %arg2: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "res"}) {
   %0:2 = hlfir.declare %arg0 {uniq_name = "_QFmatmul1Elhs"} : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
@@ -36,10 +36,10 @@ func.func @_QPmatmul1(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "lh
 // CHECK-NEXT:    %[[SHIFT:.*]] = fir.shape_shift %[[BOX_DIMS]]#0, %[[BOX_DIMS]]#1
 // TODO: fix alias analysis in hlfir.assign bufferization
 // CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) {uniq_name = ".tmp.intrinsic_result"}
-// CHECK:         %[[TUPLE0:.*]] = fir.undefined tuple<!fir.box<!fir.array<?x?xi32>>, i1>
-// CHECK:         %[[TUPLE1:.*]] = fir.insert_value %[[TUPLE0]], %[[TRUE:.*]], [1 : index]
-// CHECK:         %[[TUPLE2:.*]] = fir.insert_value %[[TUPLE1]], %[[TMP]]#0, [0 : index]
-// CHECK:         hlfir.assign %[[TMP]]#0 to %[[RES_VAR]]#0
-// CHECK:         fir.freemem %[[TMP]]#1
+// TODO: add shape information from original intrinsic op
+// CHECK:         %[[TRUE:.*]] = arith.constant true
+// CHECK:         %[[ASEXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move %[[TRUE]] : (!fir.box<!fir.array<?x?xi32>>, i1) -> !hlfir.expr<?x?xi32>
+// CHECK:         hlfir.assign %[[ASEXPR]] to %[[RES_VAR]]#0
+// CHECK:         hlfir.destroy %[[ASEXPR]]
 // CHECK-NEXT:    return
 // CHECK-NEXT:  }
