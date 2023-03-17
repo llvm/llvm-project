@@ -474,13 +474,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::str(const string_type& __s)
                    const_cast<char_type*>(__str_.data()) + __str_.size());
         if (__mode_ & (ios_base::app | ios_base::ate))
         {
-            while (__sz > INT_MAX)
-            {
-                this->pbump(INT_MAX);
-                __sz -= INT_MAX;
-            }
-            if (__sz > 0)
-                this->pbump(__sz);
+            this->__pbump(__sz);
         }
     }
 }
@@ -614,7 +608,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::seekoff(off_type __off,
     if (__wch & ios_base::out)
     {
         this->setp(this->pbase(), this->epptr());
-        this->pbump(__noff);
+        this->__pbump(__noff);
     }
     return pos_type(__noff);
 }
