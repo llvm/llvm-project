@@ -949,9 +949,8 @@ protected:
     uint32_t watch_type = m_option_watchpoint.watch_type;
 
     error.Clear();
-    Watchpoint *wp =
-        target->CreateWatchpoint(addr, size, &compiler_type, watch_type, error)
-            .get();
+    WatchpointSP wp =
+        target->CreateWatchpoint(addr, size, &compiler_type, watch_type, error);
     if (wp) {
       wp->SetWatchSpec(command.GetArgumentAtIndex(0));
       wp->SetWatchVariable(true);
@@ -1117,10 +1116,10 @@ protected:
     CompilerType compiler_type(valobj_sp->GetCompilerType());
 
     Status error;
-    Watchpoint *wp =
-        target->CreateWatchpoint(addr, size, &compiler_type, watch_type, error)
-            .get();
+    WatchpointSP wp =
+        target->CreateWatchpoint(addr, size, &compiler_type, watch_type, error);
     if (wp) {
+      wp->SetWatchSpec(std::string(expr));
       Stream &output_stream = result.GetOutputStream();
       output_stream.Printf("Watchpoint created: ");
       wp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
