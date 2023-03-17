@@ -157,6 +157,7 @@ clang_target_link_libraries(ClangdTests
   clangLex
   clangSema
   clangSerialization
+  clangTesting
   clangTooling
   clangToolingCore
   clangToolingInclusions

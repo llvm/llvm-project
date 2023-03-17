@@ -43,6 +43,7 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -297,6 +298,31 @@ void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
     CommandLine.insert(++CommandLine.begin(),
                        TargetOPT + TargetMode.TargetPrefix);
   }
+}
+
+void addExpandedResponseFiles(std::vector<std::string> &CommandLine,
+                              llvm::StringRef WorkingDir,
+                              llvm::cl::TokenizerCallback Tokenizer,
+                              llvm::vfs::FileSystem &FS) {
+  bool SeenRSPFile = false;
+  llvm::SmallVector<const char *, 20> Argv;
+  Argv.reserve(CommandLine.size());
+  for (auto &Arg : CommandLine) {
+    Argv.push_back(Arg.c_str());
+    if (!Arg.empty())
+      SeenRSPFile |= Arg.front() == '@';
+  }
+  if (!SeenRSPFile)
+    return;
+  llvm::BumpPtrAllocator Alloc;
+  llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer);
+  llvm::Error Err =
+      ECtx.setVFS(&FS).setCurrentDir(WorkingDir).expandResponseFiles(Argv);
+  if (Err)
+    llvm::errs() << Err;
+  // Don't assign directly, Argv aliases CommandLine.
+  std::vector<std::string> ExpandedArgv(Argv.begin(), Argv.end());
+  CommandLine = std::move(ExpandedArgv);
 }
 
 } // namespace tooling
@@ -684,7 +710,7 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
 
   if (!Invocation.run())
     return nullptr;
- 
+
   assert(ASTs.size() == 1);
   return std::move(ASTs[0]);
 }
