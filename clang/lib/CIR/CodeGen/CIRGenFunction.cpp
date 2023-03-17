@@ -269,6 +269,25 @@ mlir::LogicalResult CIRGenFunction::declare(const Decl *var, QualType ty,
   return mlir::success();
 }
 
+mlir::LogicalResult CIRGenFunction::declare(Address addr, const Decl *var,
+                                            QualType ty, mlir::Location loc,
+                                            CharUnits alignment,
+                                            mlir::Value &addrVal,
+                                            bool isParam) {
+  const auto *namedVar = dyn_cast_or_null<NamedDecl>(var);
+  assert(namedVar && "Needs a named decl");
+  assert(!symbolTable.count(var) && "not supposed to be available just yet");
+
+  addrVal = addr.getPointer();
+  if (isParam) {
+    auto allocaOp = cast<mlir::cir::AllocaOp>(addrVal.getDefiningOp());
+    allocaOp.setInitAttr(mlir::UnitAttr::get(builder.getContext()));
+  }
+
+  symbolTable.insert(var, addrVal);
+  return mlir::success();
+}
+
 /// All scope related cleanup needed:
 /// - Patching up unsolved goto's.
 /// - Build all cleanup code and insert yield/returns.

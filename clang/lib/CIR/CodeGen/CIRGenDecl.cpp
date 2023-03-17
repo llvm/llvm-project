@@ -23,67 +23,90 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D) {
   QualType Ty = D.getType();
   // TODO: (|| Ty.getAddressSpace() == LangAS::opencl_private &&
   //        getLangOpts().OpenCL))
+  assert(!UnimplementedFeature::openCL());
+  assert(!UnimplementedFeature::openMP());
   assert(Ty.getAddressSpace() == LangAS::Default);
-
-  assert(!D.isEscapingByref() && "not implemented");
   assert(!Ty->isVariablyModifiedType() && "not implemented");
   assert(!getContext()
               .getLangOpts()
               .OpenMP && // !CGF.getLangOpts().OpenMPIRBuilder
          "not implemented");
-  bool NRVO =
-      getContext().getLangOpts().ElideConstructors && D.isNRVOVariable();
-  assert(!NRVO && "not implemented");
-  assert(Ty->isConstantSizeType() && "not implemented");
   assert(!D.hasAttr<AnnotateAttr>() && "not implemented");
 
+  bool NRVO =
+      getContext().getLangOpts().ElideConstructors && D.isNRVOVariable();
   AutoVarEmission emission(D);
+  bool isEscapingByRef = D.isEscapingByref();
+  emission.IsEscapingByRef = isEscapingByRef;
+
   CharUnits alignment = getContext().getDeclAlign(&D);
-  // TODO: debug info
-  // TODO: use CXXABI
+  assert(!UnimplementedFeature::generateDebugInfo());
+  assert(!UnimplementedFeature::cxxABI());
 
-  // If this value is an array or struct with a statically determinable
-  // constant initializer, there are optimizations we can do.
-  //
-  // TODO: We should constant-evaluate the initializer of any variable,
-  // as long as it is initialized by a constant expression. Currently,
-  // isConstantInitializer produces wrong answers for structs with
-  // reference or bitfield members, and a few other cases, and checking
-  // for POD-ness protects us from some of these.
-  if (D.getInit() && (Ty->isArrayType() || Ty->isRecordType()) &&
-      (D.isConstexpr() ||
-       ((Ty.isPODType(getContext()) ||
-         getContext().getBaseElementType(Ty)->isObjCObjectPointerType()) &&
-        D.getInit()->isConstantInitializer(getContext(), false)))) {
+  Address address = Address::invalid();
+  Address allocaAddr = Address::invalid();
+  Address openMPLocalAddr = Address::invalid();
+  if (getLangOpts().OpenMP && openMPLocalAddr.isValid()) {
+    llvm_unreachable("NYI");
+  } else if (Ty->isConstantSizeType()) {
+    // If this value is an array or struct with a statically determinable
+    // constant initializer, there are optimizations we can do.
+    //
+    // TODO: We should constant-evaluate the initializer of any variable,
+    // as long as it is initialized by a constant expression. Currently,
+    // isConstantInitializer produces wrong answers for structs with
+    // reference or bitfield members, and a few other cases, and checking
+    // for POD-ness protects us from some of these.
+    if (D.getInit() && (Ty->isArrayType() || Ty->isRecordType()) &&
+        (D.isConstexpr() ||
+         ((Ty.isPODType(getContext()) ||
+           getContext().getBaseElementType(Ty)->isObjCObjectPointerType()) &&
+          D.getInit()->isConstantInitializer(getContext(), false)))) {
 
-    // If the variable's a const type, and it's neither an NRVO
-    // candidate nor a __block variable and has no mutable members,
-    // emit it as a global instead.
-    // Exception is if a variable is located in non-constant address space
-    // in OpenCL.
-    // TODO: deal with CGM.getCodeGenOpts().MergeAllConstants
-    // TODO: perhaps we don't need this at all at CIR since this can
-    // be done as part of lowering down to LLVM.
-    if ((!getContext().getLangOpts().OpenCL ||
-         Ty.getAddressSpace() == LangAS::opencl_constant) &&
-        (!NRVO && !D.isEscapingByref() && CGM.isTypeConstant(Ty, true)))
-      assert(0 && "not implemented");
+      // If the variable's a const type, and it's neither an NRVO
+      // candidate nor a __block variable and has no mutable members,
+      // emit it as a global instead.
+      // Exception is if a variable is located in non-constant address space
+      // in OpenCL.
+      // TODO: deal with CGM.getCodeGenOpts().MergeAllConstants
+      // TODO: perhaps we don't need this at all at CIR since this can
+      // be done as part of lowering down to LLVM.
+      if ((!getContext().getLangOpts().OpenCL ||
+           Ty.getAddressSpace() == LangAS::opencl_constant) &&
+          (!NRVO && !D.isEscapingByref() && CGM.isTypeConstant(Ty, true)))
+        assert(0 && "not implemented");
 
-    // Otherwise, tell the initialization code that we're in this case.
-    emission.IsConstantAggregate = true;
+      // Otherwise, tell the initialization code that we're in this case.
+      emission.IsConstantAggregate = true;
+    }
+
+    if (NRVO)
+      llvm_unreachable("NYI");
+    else {
+      if (isEscapingByRef)
+        llvm_unreachable("NYI");
+
+      mlir::Type allocaTy = getTypes().convertTypeForMem(Ty);
+      CharUnits allocaAlignment = alignment;
+      // Create the temp alloca and declare variable using it.
+      mlir::Value addrVal;
+      address = CreateTempAlloca(allocaTy, allocaAlignment,
+                                 getLoc(D.getSourceRange()), D.getName(),
+                                 /*ArraySize=*/nullptr, &allocaAddr);
+      if (failed(declare(address, &D, Ty, getLoc(D.getSourceRange()), alignment,
+                         addrVal))) {
+        CGM.emitError("Cannot declare variable");
+        return emission;
+      }
+      // TODO: what about emitting lifetime markers for MSVC catch parameters?
+      // TODO: something like @llvm.lifetime.start/end here? revisit this later.
+      assert(!UnimplementedFeature::shouldEmitLifetimeMarkers());
+    }
+  } else { // not openmp nor constant sized type
+    llvm_unreachable("NYI");
   }
 
-  // TODO: track source location range...
-  mlir::Value addr;
-  if (failed(declare(&D, Ty, getLoc(D.getSourceRange()), alignment, addr))) {
-    CGM.emitError("Cannot declare variable");
-    return emission;
-  }
-
-  // TODO: what about emitting lifetime markers for MSVC catch parameters?
-  // TODO: something like @llvm.lifetime.start/end here? revisit this later.
-  emission.Addr = Address{addr, alignment};
-
+  emission.Addr = address;
   setAddrOfLocalVar(&D, emission.Addr);
   return emission;
 }
