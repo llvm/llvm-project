@@ -35,6 +35,19 @@ void clang_experimental_cas_Options_setOnDiskPath(CXCASOptions COpts,
   Opts.CASPath = Path;
 }
 
+void clang_experimental_cas_Options_setPluginPath(CXCASOptions COpts,
+                                                  const char *Path) {
+  CASOptions &Opts = *unwrap(COpts);
+  Opts.PluginPath = Path;
+}
+
+void clang_experimental_cas_Options_setPluginOption(CXCASOptions COpts,
+                                                    const char *Name,
+                                                    const char *Value) {
+  CASOptions &Opts = *unwrap(COpts);
+  Opts.PluginOptions.emplace_back(Name, Value);
+}
+
 CXCASDatabases clang_experimental_cas_Databases_create(CXCASOptions COpts,
                                                        CXString *Error) {
   CASOptions &Opts = *unwrap(COpts);

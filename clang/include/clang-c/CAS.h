@@ -70,6 +70,19 @@ CINDEX_LINKAGE void
 clang_experimental_cas_Options_setOnDiskPath(CXCASOptions, const char *Path);
 
 /**
+ * Configure the path to a library that implements the LLVM CAS plugin API.
+ */
+CINDEX_LINKAGE void
+clang_experimental_cas_Options_setPluginPath(CXCASOptions, const char *Path);
+
+/**
+ * Set a value for a named option that the CAS plugin supports.
+ */
+CINDEX_LINKAGE void
+clang_experimental_cas_Options_setPluginOption(CXCASOptions, const char *Name,
+                                               const char *Value);
+
+/**
  * Creates instances for a CAS object store and action cache based on the
  * configuration of a \p CXCASOptions.
  *
