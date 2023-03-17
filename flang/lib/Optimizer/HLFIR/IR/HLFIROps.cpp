@@ -20,6 +20,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <iterator>
 #include <optional>
 #include <tuple>
 
@@ -636,6 +637,52 @@ mlir::LogicalResult hlfir::MatmulOp::verify() {
     return emitOpError("incorrect result shape");
 
   return mlir::success();
+}
+
+mlir::LogicalResult
+hlfir::MatmulOp::canonicalize(MatmulOp matmulOp,
+                              mlir::PatternRewriter &rewriter) {
+  // the only two uses of the transposed matrix should be for the hlfir.matmul
+  // and hlfir.destory
+  auto isOtherwiseUnused = [&](hlfir::TransposeOp transposeOp) -> bool {
+    std::size_t numUses = 0;
+    for (mlir::Operation *user : transposeOp.getResult().getUsers()) {
+      ++numUses;
+      if (user == matmulOp)
+        continue;
+      if (mlir::dyn_cast_or_null<hlfir::DestroyOp>(user))
+        continue;
+      // some other use!
+      return false;
+    }
+    return numUses <= 2;
+  };
+
+  mlir::Value lhs = matmulOp.getLhs();
+  // Rewrite MATMUL(TRANSPOSE(lhs), rhs) => hlfir.matmul_transpose lhs, rhs
+  if (auto transposeOp = lhs.getDefiningOp<hlfir::TransposeOp>()) {
+    if (isOtherwiseUnused(transposeOp)) {
+      mlir::Location loc = matmulOp.getLoc();
+      mlir::Type resultTy = matmulOp.getResult().getType();
+      auto matmulTransposeOp = rewriter.create<hlfir::MatmulTransposeOp>(
+          loc, resultTy, transposeOp.getArray(), matmulOp.getRhs());
+
+      // we don't need to remove any hlfir.destroy because it will be needed for
+      // the new intrinsic result anyway
+      rewriter.replaceOp(matmulOp, matmulTransposeOp.getResult());
+
+      // but we do need to get rid of the hlfir.destroy for the hlfir.transpose
+      // result (which is entirely removed)
+      for (mlir::Operation *user : transposeOp->getResult(0).getUsers())
+        if (auto destroyOp = mlir::dyn_cast_or_null<hlfir::DestroyOp>(user))
+          rewriter.eraseOp(destroyOp);
+      rewriter.eraseOp(transposeOp);
+
+      return mlir::success();
+    }
+  }
+
+  return mlir::failure();
 }
 
 //===----------------------------------------------------------------------===//

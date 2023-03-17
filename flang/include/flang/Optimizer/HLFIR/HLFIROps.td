@@ -382,6 +382,9 @@ def hlfir_MatmulOp : hlfir_Op<"matmul",
     $lhs $rhs attr-dict `:` functional-type(operands, results)
   }];
 
+  // MATMUL(TRANSPOSE(...), ...) => hlfir.matmul_transpose
+  let hasCanonicalizeMethod = 1;
+
   let hasVerifier = 1;
 }
 
