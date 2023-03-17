@@ -25,9 +25,9 @@
 ; IR-NEXT:   %p_tmp2 = ptrtoint ptr %p_add.ptr2 to i64
 ; IR-NEXT:   %p_arrayidx = getelementptr inbounds i64, ptr %A, i64 %p_tmp2
 ; IR-NEXT:   %tmp3_p_scalar_ = load i64, ptr %p_arrayidx, align 8, !alias.scope !0, !noalias !3
-; IR-NEXT:   %tmp4_p_scalar_ = load i64, ptr %uglygep, align 8, !alias.scope !0, !noalias !3
+; IR-NEXT:   %tmp4_p_scalar_ = load i64, ptr %scevgep, align 8, !alias.scope !0, !noalias !3
 ; IR-NEXT:   %p_add4 = add nsw i64 %tmp4_p_scalar_, %tmp3_p_scalar_
-; IR-NEXT:   store i64 %p_add4, ptr %uglygep, align 8, !alias.scope !0, !noalias !3
+; IR-NEXT:   store i64 %p_add4, ptr %scevgep, align 8, !alias.scope !0, !noalias !3
 ; IR-NEXT:   %polly.indvar_next = add nsw i64 %polly.indvar, 1
 ; IR-NEXT:   %polly.loop_cond = icmp sle i64 %polly.indvar_next, 99
 ; IR-NEXT:   br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit
@@ -36,7 +36,7 @@
 ; IR-NEXT:   %14 = add i64 %val, 1
 ; IR-NEXT:   %15 = shl i32 %ptr1, 3
 ; IR-NEXT:   %16 = add i32 %15, 72
-; IR-NEXT:   %uglygep = getelementptr i8, ptr %A, i32 %16
+; IR-NEXT:   %scevgep = getelementptr i8, ptr %A, i32 %16
 ; IR-NEXT:   br label %polly.loop_header
 
 ;

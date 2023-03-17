@@ -8,11 +8,11 @@ target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:3
 %0 = type { i32, double, i32, float }
 
 ; CHECK-LABEL: @lsr_crash_preserve_addrspace_unknown_type(
-; CHECK: %uglygep1 = getelementptr i8, ptr addrspace(3) %tmp, i32 8
-; CHECK: load double, ptr addrspace(3) %uglygep1
+; CHECK: %scevgep1 = getelementptr i8, ptr addrspace(3) %tmp, i32 8
+; CHECK: load double, ptr addrspace(3) %scevgep1
 
-; CHECK: %uglygep = getelementptr i8, ptr addrspace(3) %tmp, i32 16
-; CHECK: %tmp14 = load i32, ptr addrspace(3) %uglygep
+; CHECK: %scevgep = getelementptr i8, ptr addrspace(3) %tmp, i32 16
+; CHECK: %tmp14 = load i32, ptr addrspace(3) %scevgep
 define amdgpu_kernel void @lsr_crash_preserve_addrspace_unknown_type() #0 {
 bb:
   br label %bb1
