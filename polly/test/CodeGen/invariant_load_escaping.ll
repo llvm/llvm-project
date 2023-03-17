@@ -1,4 +1,4 @@
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -S < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -S < %s | FileCheck %s
 ;
 ;    int f(int *A, int *B) {
 ;      // Possible aliasing between A and B but if not then *B would be
@@ -16,9 +16,9 @@
 ;    }
 ;
 ; CHECK: polly.preload.begin:
-; CHECK:   %polly.access.B = getelementptr i32, i32* %B, i64 0
-; CHECK:   %polly.access.B.load = load i32, i32* %polly.access.B
-; CHECK:   store i32 %polly.access.B.load, i32* %tmp.preload.s2a
+; CHECK:   %polly.access.B = getelementptr i32, ptr %B, i64 0
+; CHECK:   %polly.access.B.load = load i32, ptr %polly.access.B
+; CHECK:   store i32 %polly.access.B.load, ptr %tmp.preload.s2a
 ;
 ; CHECK: polly.merge_new_and_old:
 ; CHECK:   %tmp.merge = phi i32 [ %tmp.final_reload, %polly.exiting ], [ %tmp, %do.cond ]
@@ -28,21 +28,21 @@
 ; CHECK:   ret i32 %tmp.merge
 ;
 ; CHECK: polly.loop_exit:
-; CHECK:   %tmp.final_reload = load i32, i32* %tmp.preload.s2a
+; CHECK:   %tmp.final_reload = load i32, ptr %tmp.preload.s2a
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define i32 @f(i32* %A, i32* %B) {
+define i32 @f(ptr %A, ptr %B) {
 entry:
   br label %do.body
 
 do.body:                                          ; preds = %do.cond, %entry
   %indvars.iv = phi i64 [ %indvars.iv.next, %do.cond ], [ 0, %entry ]
-  %tmp = load i32, i32* %B, align 4
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp1 = load i32, i32* %arrayidx, align 4
+  %tmp = load i32, ptr %B, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp1 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %tmp1, %tmp
-  store i32 %add, i32* %arrayidx, align 4
+  store i32 %add, ptr %arrayidx, align 4
   br label %do.cond
 
 do.cond:                                          ; preds = %do.body
