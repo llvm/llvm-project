@@ -756,3 +756,31 @@ TEST(LinkGraphTest, IsCStringBlockTest) {
   EXPECT_TRUE(isCStringBlock(SizeOneZeroFillBlock));
   EXPECT_FALSE(isCStringBlock(LargerZeroFillBlock));
 }
+
+TEST(LinkGraphTest, BasicLayoutHonorsNoAlloc) {
+  // Check that BasicLayout honors NoAlloc.
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
+
+  // Create a regular section and block.
+  auto &Sec1 =
+      G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
+  G.createContentBlock(Sec1, BlockContent.slice(0, 8), orc::ExecutorAddr(), 8,
+                       0);
+
+  // Create a NoAlloc section and block.
+  auto &Sec2 =
+      G.createSection("__metadata", orc::MemProt::Read | orc::MemProt::Write);
+  Sec2.setMemLifetimePolicy(orc::MemLifetimePolicy::NoAlloc);
+  G.createContentBlock(Sec2, BlockContent.slice(0, 8), orc::ExecutorAddr(), 8,
+                       0);
+
+  BasicLayout BL(G);
+
+  EXPECT_EQ(std::distance(BL.segments().begin(), BL.segments().end()), 1U);
+  EXPECT_EQ(BL.segments().begin()->first,
+            orc::MemProt::Read | orc::MemProt::Write);
+  auto &SegInfo = BL.segments().begin()->second;
+  EXPECT_EQ(SegInfo.Alignment, 8U);
+  EXPECT_EQ(SegInfo.ContentSize, 8U);
+}
