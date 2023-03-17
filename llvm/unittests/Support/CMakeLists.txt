@@ -1,3 +1,4 @@
+set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
 set(LLVM_TARGET_DEFINITIONS ${PROJECT_SOURCE_DIR}/include/llvm/CodeGen/ValueTypes.td)
 tablegen(LLVM GenVT.inc -gen-vt)
 
