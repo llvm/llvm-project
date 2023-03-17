@@ -1162,7 +1162,8 @@ enum Symbol : uint32_t {
 
 /// Scan the symbols from a BitcodeFile \p Buffer and record if we need to
 /// extract any symbols from it.
-Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, StringSaver &Saver,
+Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, OffloadKind Kind,
+                                     StringSaver &Saver,
                                      DenseMap<StringRef, Symbol> &Syms) {
   Expected<IRSymtabFile> IRSymtabOrErr = readIRSymtab(Buffer);
   if (!IRSymtabOrErr)
@@ -1182,9 +1183,10 @@ Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, StringSaver &Saver,
           ((OldSym & Sym_Undefined && !(OldSym & Sym_Weak)) &&
            !Sym.isUndefined());
       // We will extract if it defines a new global symbol visible to the host.
+      // This is only necessary for code targeting an offloading language.
       bool NewGlobalSymbol =
           ((NewSymbol || (OldSym & Sym_Undefined)) && !Sym.isUndefined() &&
-           !Sym.canBeOmittedFromSymbolTable() &&
+           !Sym.canBeOmittedFromSymbolTable() && Kind != object::OFK_None &&
            (Sym.getVisibility() != GlobalValue::HiddenVisibility));
       ShouldExtract |= ResolvesStrongReference | NewGlobalSymbol;
 
@@ -1203,7 +1205,8 @@ Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, StringSaver &Saver,
 
 /// Scan the symbols from an ObjectFile \p Obj and record if we need to extract
 /// any symbols from it.
-Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, StringSaver &Saver,
+Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, OffloadKind Kind,
+                                    StringSaver &Saver,
                                     DenseMap<StringRef, Symbol> &Syms) {
   bool ShouldExtract = false;
   for (SymbolRef Sym : Obj.symbols()) {
@@ -1228,9 +1231,11 @@ Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, StringSaver &Saver,
                                    !(*FlagsOrErr & SymbolRef::SF_Undefined);
 
     // We will extract if it defines a new global symbol visible to the host.
-    bool NewGlobalSymbol = ((NewSymbol || (OldSym & Sym_Undefined)) &&
-                            !(*FlagsOrErr & SymbolRef::SF_Undefined) &&
-                            !(*FlagsOrErr & SymbolRef::SF_Hidden));
+    // This is only necessary for code targeting an offloading language.
+    bool NewGlobalSymbol =
+        ((NewSymbol || (OldSym & Sym_Undefined)) &&
+         !(*FlagsOrErr & SymbolRef::SF_Undefined) && Kind != object::OFK_None &&
+         !(*FlagsOrErr & SymbolRef::SF_Hidden));
     ShouldExtract |= ResolvesStrongReference | NewGlobalSymbol;
 
     // Update this symbol in the "table" with the new information.
@@ -1250,18 +1255,18 @@ Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, StringSaver &Saver,
 ///   1) It defines an undefined symbol in a regular object filie.
 ///   2) It defines a global symbol without hidden visibility that has not
 ///      yet been defined.
-Expected<bool> getSymbols(StringRef Image, StringSaver &Saver,
+Expected<bool> getSymbols(StringRef Image, OffloadKind Kind, StringSaver &Saver,
                           DenseMap<StringRef, Symbol> &Syms) {
   MemoryBufferRef Buffer = MemoryBufferRef(Image, "");
   switch (identify_magic(Image)) {
   case file_magic::bitcode:
-    return getSymbolsFromBitcode(Buffer, Saver, Syms);
+    return getSymbolsFromBitcode(Buffer, Kind, Saver, Syms);
   case file_magic::elf_relocatable: {
     Expected<std::unique_ptr<ObjectFile>> ObjFile =
         ObjectFile::createObjectFile(Buffer);
     if (!ObjFile)
       return ObjFile.takeError();
-    return getSymbolsFromObject(**ObjFile, Saver, Syms);
+    return getSymbolsFromObject(**ObjFile, Kind, Saver, Syms);
   }
   default:
     return false;
@@ -1336,8 +1341,9 @@ Expected<SmallVector<OffloadFile>> getDeviceInput(const ArgList &Args) {
         if (IsArchive && !WholeArchive && !Syms.count(Binary))
           continue;
 
-        Expected<bool> ExtractOrErr =
-            getSymbols(Binary.getBinary()->getImage(), Saver, Syms[Binary]);
+        Expected<bool> ExtractOrErr = getSymbols(
+            Binary.getBinary()->getImage(),
+            Binary.getBinary()->getOffloadKind(), Saver, Syms[Binary]);
         if (!ExtractOrErr)
           return ExtractOrErr.takeError();
 
