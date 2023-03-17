@@ -61,6 +61,8 @@ protected:
 private:
   MemoryCache(const MemoryCache &) = delete;
   const MemoryCache &operator=(const MemoryCache &) = delete;
+
+  lldb::DataBufferSP GetL2CacheLine(lldb::addr_t addr, Status &error);
 };
 
     

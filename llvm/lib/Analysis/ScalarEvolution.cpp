@@ -6600,7 +6600,7 @@ const ConstantRange &ScalarEvolution::getRangeRef(
   case scConstant:
     llvm_unreachable("Already handled above.");
   case scVScale:
-    return setRange(S, SignHint, std::move(ConservativeResult));
+    return setRange(S, SignHint, getVScaleRange(&F, BitWidth));
   case scTruncate: {
     const SCEVTruncateExpr *Trunc = cast<SCEVTruncateExpr>(S);
     ConstantRange X = getRangeRef(Trunc->getOperand(), SignHint, Depth + 1);
@@ -8007,6 +8007,8 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         // A start_loop_iterations or llvm.annotation or llvm.prt.annotation is
         // just eqivalent to the first operand for SCEV purposes.
         return getSCEV(II->getArgOperand(0));
+      case Intrinsic::vscale:
+        return getVScale(II->getType());
       default:
         break;
       }
@@ -14305,10 +14307,11 @@ AnalysisKey ScalarEvolutionAnalysis::Key;
 
 ScalarEvolution ScalarEvolutionAnalysis::run(Function &F,
                                              FunctionAnalysisManager &AM) {
-  return ScalarEvolution(F, AM.getResult<TargetLibraryAnalysis>(F),
-                         AM.getResult<AssumptionAnalysis>(F),
-                         AM.getResult<DominatorTreeAnalysis>(F),
-                         AM.getResult<LoopAnalysis>(F));
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+  auto &AC = AM.getResult<AssumptionAnalysis>(F);
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  return ScalarEvolution(F, TLI, AC, DT, LI);
 }
 
 PreservedAnalyses

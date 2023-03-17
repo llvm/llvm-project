@@ -19,9 +19,9 @@ define void @vscale_gep_range(ptr %p) vscale_range(2, 16) {
 ; CHECK-LABEL: 'vscale_gep_range'
 ; CHECK-NEXT:  Classifying expressions for: @vscale_gep_range
 ; CHECK-NEXT:    %1 = getelementptr <vscale x 4 x i32>, ptr null, i32 3
-; CHECK-NEXT:    --> ((48 * vscale) + null) U: [0,-15) S: [-9223372036854775808,9223372036854775793)
+; CHECK-NEXT:    --> ((48 * vscale)<nuw><nsw> + null) U: [96,769) S: [96,769)
 ; CHECK-NEXT:    %2 = getelementptr <vscale x 1 x i64>, ptr %p, i32 1
-; CHECK-NEXT:    --> ((8 * vscale) + %p) U: full-set S: full-set
+; CHECK-NEXT:    --> ((8 * vscale)<nuw><nsw> + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_gep_range
 ;
   getelementptr <vscale x 4 x i32>, ptr null, i32 3
@@ -33,7 +33,7 @@ define i64 @vscale_no_range() {
 ; CHECK-LABEL: 'vscale_no_range'
 ; CHECK-NEXT:  Classifying expressions for: @vscale_no_range
 ; CHECK-NEXT:    %vscale = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    --> %vscale U: [1,0) S: [1,0)
+; CHECK-NEXT:    --> vscale U: [1,0) S: [1,0)
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_no_range
 ;
   %vscale = call i64 @llvm.vscale.i64()
@@ -44,7 +44,7 @@ define i64 @vscale_min_max_range() vscale_range(2, 16) {
 ; CHECK-LABEL: 'vscale_min_max_range'
 ; CHECK-NEXT:  Classifying expressions for: @vscale_min_max_range
 ; CHECK-NEXT:    %vscale = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    --> %vscale U: [1,32) S: [1,32)
+; CHECK-NEXT:    --> vscale U: [2,17) S: [2,17)
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_min_max_range
 ;
   %vscale = call i64 @llvm.vscale.i64()
@@ -55,7 +55,7 @@ define i64 @vscale_min_range() vscale_range(2, 0) {
 ; CHECK-LABEL: 'vscale_min_range'
 ; CHECK-NEXT:  Classifying expressions for: @vscale_min_range
 ; CHECK-NEXT:    %vscale = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    --> %vscale U: [1,0) S: [1,0)
+; CHECK-NEXT:    --> vscale U: [2,0) S: [2,0)
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_min_range
 ;
   %vscale = call i64 @llvm.vscale.i64()
@@ -66,7 +66,7 @@ define i64 @vscale_exact_range() vscale_range(2) {
 ; CHECK-LABEL: 'vscale_exact_range'
 ; CHECK-NEXT:  Classifying expressions for: @vscale_exact_range
 ; CHECK-NEXT:    %vscale = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    --> %vscale U: [2,3) S: [2,3)
+; CHECK-NEXT:    --> vscale U: [2,3) S: [2,3)
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_exact_range
 ;
   %vscale = call i64 @llvm.vscale.i64()

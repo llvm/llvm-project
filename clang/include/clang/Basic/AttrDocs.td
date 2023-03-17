@@ -6938,3 +6938,12 @@ def ReadOnlyPlacementDocs : Documentation {
      ``enforce_read_only_placement`` attribute.
   }];
 }
+
+def WebAssemblyFuncrefDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+Clang supports the ``__funcref`` attribute for the WebAssembly target. 
+This attribute may be attached to a function pointer type, where it modifies 
+its underlying representation to be a WebAssembly ``funcref``.
+  }];
+}

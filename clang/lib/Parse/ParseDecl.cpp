@@ -852,6 +852,22 @@ void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {
   }
 }
 
+void Parser::ParseWebAssemblyFuncrefTypeAttribute(ParsedAttributes &attrs) {
+  assert(Tok.is(tok::kw___funcref));
+  SourceLocation StartLoc = Tok.getLocation();
+  if (!getTargetInfo().getTriple().isWasm()) {
+    ConsumeToken();
+    Diag(StartLoc, diag::err_wasm_funcref_not_wasm);
+    return;
+  }
+
+  IdentifierInfo *AttrName = Tok.getIdentifierInfo();
+  SourceLocation AttrNameLoc = ConsumeToken();
+  attrs.addNew(AttrName, AttrNameLoc, /*ScopeName=*/nullptr,
+               /*ScopeLoc=*/SourceLocation{}, /*Args=*/nullptr, /*numArgs=*/0,
+               ParsedAttr::AS_Keyword);
+}
+
 void Parser::DiagnoseAndSkipExtendedMicrosoftTypeAttributes() {
   SourceLocation StartLoc = Tok.getLocation();
   SourceLocation EndLoc = SkipExtendedMicrosoftTypeAttributes();
@@ -3845,6 +3861,10 @@ void Parser::ParseDeclarationSpecifiers(
       ParseMicrosoftTypeAttributes(DS.getAttributes());
       continue;
 
+    case tok::kw___funcref:
+      ParseWebAssemblyFuncrefTypeAttribute(DS.getAttributes());
+      continue;
+
     // Borland single token adornments.
     case tok::kw___pascal:
       ParseBorlandTypeAttributes(DS.getAttributes());
@@ -5409,7 +5429,7 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw___read_only:
   case tok::kw___read_write:
   case tok::kw___write_only:
-
+  case tok::kw___funcref:
   case tok::kw_groupshared:
     return true;
 
@@ -5674,6 +5694,7 @@ bool Parser::isDeclarationSpecifier(
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
 
+  case tok::kw___funcref:
   case tok::kw_groupshared:
     return true;
 
@@ -5939,6 +5960,12 @@ void Parser::ParseTypeQualifierListOpt(
         continue;
       }
       goto DoneWithTypeQuals;
+
+    case tok::kw___funcref:
+      ParseWebAssemblyFuncrefTypeAttribute(DS.getAttributes());
+      continue;
+      goto DoneWithTypeQuals;
+
     case tok::kw___pascal:
       if (AttrReqs & AR_VendorAttributesParsed) {
         ParseBorlandTypeAttributes(DS.getAttributes());

@@ -18,7 +18,6 @@
 
 namespace llvm {
 struct RISCVExtensionInfo {
-  std::string ExtName;
   unsigned MajorVersion;
   unsigned MinorVersion;
 };

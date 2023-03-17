@@ -19,7 +19,7 @@ def get_pass_name(line, prefix):
 
 def print_chunk(lines, prefix, pass_name):
     global chunk_id
-    fname = str(chunk_id) + "-" + prefix + "-" + pass_name + ".ll"
+    fname = str(chunk_id).zfill(4) + "-" + prefix + "-" + pass_name + ".ll"
     chunk_id = chunk_id + 1
     print("writing chunk " + fname + " (" + str(len(lines)) + " lines)")
     with open(fname, "w") as f:

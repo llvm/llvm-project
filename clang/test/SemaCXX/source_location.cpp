@@ -84,6 +84,7 @@ constexpr bool is_same<T, T> = true;
 static_assert(is_same<decltype(__builtin_LINE()), unsigned>);
 static_assert(is_same<decltype(__builtin_COLUMN()), unsigned>);
 static_assert(is_same<decltype(__builtin_FILE()), const char *>);
+static_assert(is_same<decltype(__builtin_FILE_NAME()), const char *>);
 static_assert(is_same<decltype(__builtin_FUNCTION()), const char *>);
 static_assert(is_same<decltype(__builtin_source_location()), const std::source_location::public_impl_alias *>);
 
@@ -91,6 +92,7 @@ static_assert(is_same<decltype(__builtin_source_location()), const std::source_l
 static_assert(noexcept(__builtin_LINE()));
 static_assert(noexcept(__builtin_COLUMN()));
 static_assert(noexcept(__builtin_FILE()));
+static_assert(noexcept(__builtin_FILE_NAME()));
 static_assert(noexcept(__builtin_FUNCTION()));
 static_assert(noexcept(__builtin_source_location()));
 
@@ -347,6 +349,54 @@ void test_aggr_class() {
 } // namespace test_file
 
 //===----------------------------------------------------------------------===//
+//                            __builtin_FILE_NAME()
+//===----------------------------------------------------------------------===//
+
+namespace test_file_name {
+constexpr const char *test_file_name_simple(
+  const char *__f = __builtin_FILE_NAME()) {
+  return __f;
+}
+void test_function() {
+#line 900
+  static_assert(is_equal(test_file_name_simple(), __FILE_NAME__));
+  static_assert(is_equal(SLF::test_function_filename(), __FILE_NAME__), "");
+  static_assert(is_equal(SLF::test_function_filename_template(42),
+                         __FILE_NAME__), "");
+
+  static_assert(is_equal(SLF::test_function_filename_indirect(),
+                         SLF::global_info_filename), "");
+  static_assert(is_equal(SLF::test_function_filename_template_indirect(42),
+                         SLF::global_info_filename), "");
+
+  static_assert(test_file_name_simple() != nullptr);
+  static_assert(is_equal(test_file_name_simple(), "source_location.cpp"));
+}
+
+void test_class() {
+#line 315
+  using SLF::TestClass;
+  constexpr TestClass Default;
+  constexpr TestClass InParam{42};
+  constexpr TestClass Template{42, 42};
+  constexpr auto *F = Default.info_file_name;
+  constexpr auto Char = F[0];
+  static_assert(is_equal(Default.info_file_name, SLF::FILE_NAME), "");
+  static_assert(is_equal(InParam.info_file_name, SLF::FILE_NAME), "");
+  static_assert(is_equal(InParam.ctor_info_file_name, __FILE_NAME__), "");
+}
+
+void test_aggr_class() {
+  using Agg = SLF::AggrClass<>;
+  constexpr Agg Default{};
+  constexpr Agg InitOne{42};
+  static_assert(is_equal(Default.init_info_file_name, __FILE_NAME__), "");
+  static_assert(is_equal(InitOne.init_info_file_name, __FILE_NAME__), "");
+}
+
+} // namespace test_file_name
+
+//===----------------------------------------------------------------------===//
 //                            __builtin_FUNCTION()
 //===----------------------------------------------------------------------===//
 
@@ -487,6 +537,7 @@ static_assert(SL::current().line() == StartLine + 2);
 #line 44 "test_file.c"
 static_assert(is_equal("test_file.c", __FILE__));
 static_assert(is_equal("test_file.c", __builtin_FILE()));
+static_assert(is_equal("test_file.c", __builtin_FILE_NAME()));
 static_assert(is_equal("test_file.c", SL::current().file()));
 static_assert(is_equal("test_file.c", SLF::test_function().file()));
 static_assert(is_equal(SLF::FILE, SLF::test_function_indirect().file()));

@@ -142,11 +142,11 @@ static cl::opt<size_t>
                        cl::desc("Do not inline functions with a stack size "
                                 "that exceeds the specified limit"));
 
-static cl::opt<size_t>
-    RecurStackSizeThreshold("recursive-inline-max-stacksize", cl::Hidden,
-                       cl::init(InlineConstants::TotalAllocaSizeRecursiveCaller),
-                       cl::desc("Do not inline recursive functions with a stack "
-                                "size that exceeds the specified limit"));
+static cl::opt<size_t> RecurStackSizeThreshold(
+    "recursive-inline-max-stacksize", cl::Hidden,
+    cl::init(InlineConstants::TotalAllocaSizeRecursiveCaller),
+    cl::desc("Do not inline recursive functions with a stack "
+             "size that exceeds the specified limit"));
 
 static cl::opt<bool> OptComputeFullInlineCost(
     "inline-cost-full", cl::Hidden,
@@ -1607,7 +1607,7 @@ bool CallAnalyzer::simplifyIntrinsicCallIsConstant(CallBase &CB) {
 bool CallAnalyzer::simplifyIntrinsicCallObjectSize(CallBase &CB) {
   // As per the langref, "The fourth argument to llvm.objectsize determines if
   // the value should be evaluated at runtime."
-  if(cast<ConstantInt>(CB.getArgOperand(3))->isOne())
+  if (cast<ConstantInt>(CB.getArgOperand(3))->isOne())
     return false;
 
   Value *V = lowerObjectSizeCall(&cast<IntrinsicInst>(CB), DL, nullptr,

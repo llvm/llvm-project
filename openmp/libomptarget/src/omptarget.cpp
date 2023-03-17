@@ -274,6 +274,17 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
         FAILURE_MESSAGE("Consult https://openmp.llvm.org/design/Runtimes.html "
                         "for debugging options.\n");
 
+      if (PM->RTLs.UsedRTLs.empty()) {
+        llvm::SmallVector<llvm::StringRef> Archs;
+        llvm::transform(PM->Images, std::back_inserter(Archs),
+                        [](const auto &x) {
+                          return !x.second.Arch ? "empty" : x.second.Arch;
+                        });
+        FAILURE_MESSAGE(
+            "No images found compatible with the installed hardware. ");
+        fprintf(stderr, "Found (%s)\n", llvm::join(Archs, ",").c_str());
+      }
+
       SourceInfo Info(Loc);
       if (Info.isAvailible())
         fprintf(stderr, "%s:%d:%d: ", Info.getFilename(), Info.getLine(),
