@@ -219,6 +219,16 @@ public:
         SayDeallocateWithImpureFinal(*entity, reason);
       }
     }
+    if (const auto *assignment{GetAssignment(stmt)}) {
+      if (const auto *call{
+              std::get_if<evaluate::ProcedureRef>(&assignment->u)}) {
+        if (auto bad{FindImpureCall(context_.foldingContext(), *call)}) {
+          context_.Say(currentStatementSourcePosition_,
+              "The defined assignment subroutine '%s' is not pure"_err_en_US,
+              *bad);
+        }
+      }
+    }
   }
 
   // Deallocation from a DEALLOCATE statement
@@ -431,10 +441,10 @@ public:
   }
 
   void Check(const parser::ForallAssignmentStmt &stmt) {
-    const evaluate::Assignment *assignment{common::visit(
-        common::visitors{[&](const auto &x) { return GetAssignment(x); }},
-        stmt.u)};
-    if (assignment) {
+    if (const evaluate::Assignment *
+        assignment{common::visit(
+            common::visitors{[&](const auto &x) { return GetAssignment(x); }},
+            stmt.u)}) {
       CheckForallIndexesUsed(*assignment);
       CheckForImpureCall(assignment->lhs);
       CheckForImpureCall(assignment->rhs);
