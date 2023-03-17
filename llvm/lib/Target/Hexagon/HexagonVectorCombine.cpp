@@ -304,6 +304,8 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::AddrInfo &AI) {
 
 LLVM_ATTRIBUTE_UNUSED
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
+  OS << "IsLoad:" << (MG.IsLoad ? "yes" : "no");
+  OS << ", IsHvx:" << (MG.IsHvx ? "yes" : "no") << '\n';
   OS << "Main\n";
   for (Instruction *I : MG.Main)
     OS << "  " << *I << '\n';
@@ -316,8 +318,14 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
 LLVM_ATTRIBUTE_UNUSED
 raw_ostream &operator<<(raw_ostream &OS,
                         const AlignVectors::ByteSpan::Block &B) {
-  OS << "  @" << B.Pos << " [" << B.Seg.Start << ',' << B.Seg.Size << "] "
-     << *B.Seg.Val;
+  OS << "  @" << B.Pos << " [" << B.Seg.Start << ',' << B.Seg.Size << "] ";
+  if (B.Seg.Val == reinterpret_cast<const Value *>(&B)) {
+    OS << "(self:" << B.Seg.Val << ')';
+  } else if (B.Seg.Val != nullptr) {
+    OS << *B.Seg.Val;
+  } else {
+    OS << "(null)";
+  }
   return OS;
 }
 
@@ -814,6 +822,8 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
                                     const ByteSpan &VSpan, int ScLen,
                                     Value *AlignVal, Value *AlignAddr) const
     -> void {
+  LLVM_DEBUG(dbgs() << __func__ << "\n");
+
   Type *SecTy = HVC.getByteTy(ScLen);
   int NumSectors = (VSpan.extent() + ScLen - 1) / ScLen;
   bool DoAlign = !HVC.isZero(AlignVal);
@@ -869,7 +879,7 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
       assert(I != nullptr && "Load used in a non-instruction?");
       // Make sure we only consider at users in this block, but we need
       // to remember if there were users outside the block too. This is
-      // because if there are no users, aligned loads will not be created.
+      // because if no users are found, aligned loads will not be created.
       if (I->getParent() == BaseBlock) {
         if (!isa<PHINode>(I))
           User = std::min(User, I, isEarlier);
@@ -887,6 +897,14 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
           EarliestUser[S.Seg.Val], earliestUser(B.Seg.Val->uses()), isEarlier);
     }
   }
+
+  LLVM_DEBUG({
+    dbgs() << "ASpan:\n" << ASpan << '\n';
+    dbgs() << "Earliest users of ASpan:\n";
+    for (auto &[Val, User] : EarliestUser) {
+      dbgs() << Val << "\n ->" << *User << '\n';
+    }
+  });
 
   auto createLoad = [&](IRBuilderBase &Builder, const ByteSpan &VSpan,
                         int Index) {
@@ -913,11 +931,14 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
   };
 
   // Generate necessary loads at appropriate locations.
+  LLVM_DEBUG(dbgs() << "Creating loads for ASpan sectors\n");
   for (int Index = 0; Index != NumSectors + 1; ++Index) {
     // In ASpan, each block will be either a single aligned load, or a
     // valign of a pair of loads. In the latter case, an aligned load j
     // will belong to the current valign, and the one in the previous
     // block (for j > 0).
+    // Place the load at a location which will dominate the valign, assuming
+    // the valign will be placed right before the earliest user.
     Instruction *PrevAt =
         DoAlign && Index > 0 ? EarliestUser[&ASpan[Index - 1]] : nullptr;
     Instruction *ThisAt =
@@ -925,16 +946,20 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
     if (auto *Where = std::min(PrevAt, ThisAt, isEarlier)) {
       Builder.SetInsertPoint(Where);
       Loads[Index] = createLoad(Builder, VSpan, Index);
-      // We know it's safe to put the load at BasePos, so if it's not safe
-      // to move it from this location to BasePos, then the current location
-      // is not valid.
+      // We know it's safe to put the load at BasePos, but we'd prefer to put
+      // it at "Where". To see if the load is safe to be placed at Where, put
+      // it there first and then check if it's safe to move it to BasePos.
+      // If not, then the load needs to be placed at BasePos.
       // We can't do this check proactively because we need the load to exist
       // in order to check legality.
       if (!HVC.isSafeToMoveBeforeInBB(*Loads[Index], BasePos))
         moveBefore(Loads[Index], &*BasePos);
+      LLVM_DEBUG(dbgs() << "Loads[" << Index << "]:" << *Loads[Index] << '\n');
     }
   }
+
   // Generate valigns if needed, and fill in proper values in ASpan
+  LLVM_DEBUG(dbgs() << "Creating values for ASpan sectors\n");
   for (int Index = 0; Index != NumSectors; ++Index) {
     ASpan[Index].Seg.Val = nullptr;
     if (auto *Where = EarliestUser[&ASpan[Index]]) {
@@ -947,6 +972,7 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
         Val = HVC.vralignb(Builder, Val, NextLoad, AlignVal);
       }
       ASpan[Index].Seg.Val = Val;
+      LLVM_DEBUG(dbgs() << "ASpan[" << Index << "]:" << *Val << '\n');
     }
   }
 
@@ -983,6 +1009,8 @@ auto AlignVectors::realignStoreGroup(IRBuilderBase &Builder,
                                      const ByteSpan &VSpan, int ScLen,
                                      Value *AlignVal, Value *AlignAddr) const
     -> void {
+  LLVM_DEBUG(dbgs() << __func__ << "\n");
+
   Type *SecTy = HVC.getByteTy(ScLen);
   int NumSectors = (VSpan.extent() + ScLen - 1) / ScLen;
   bool DoAlign = !HVC.isZero(AlignVal);
@@ -1050,6 +1078,8 @@ auto AlignVectors::realignStoreGroup(IRBuilderBase &Builder,
 }
 
 auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
+  LLVM_DEBUG(dbgs() << "Realigning group:\n" << Move << '\n');
+
   // TODO: Needs support for masked loads/stores of "scalar" vectors.
   if (!Move.IsHvx)
     return false;
@@ -1154,6 +1184,13 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
   assert(!Move.IsHvx || ScLen == 64 || ScLen == 128);
   assert(Move.IsHvx || ScLen == 4 || ScLen == 8);
 
+  LLVM_DEBUG({
+    dbgs() << "ScLen:  " << ScLen << "\n";
+    dbgs() << "AlignVal:" << *AlignVal << "\n";
+    dbgs() << "AlignAddr:" << *AlignAddr << "\n";
+    dbgs() << "VSpan:\n" << VSpan << '\n';
+  });
+
   if (Move.IsLoad)
     realignLoadGroup(Builder, VSpan, ScLen, AlignVal, AlignAddr);
   else
@@ -1175,8 +1212,17 @@ auto AlignVectors::isSectorTy(Type *Ty) const -> bool {
 }
 
 auto AlignVectors::run() -> bool {
+  LLVM_DEBUG(dbgs() << "Running HVC::AlignVectors\n");
   if (!createAddressGroups())
     return false;
+
+  LLVM_DEBUG({
+    dbgs() << "Address groups(" << AddrGroups.size() << "):\n";
+    for (auto &[In, AL] : AddrGroups) {
+      for (const AddrInfo &AI : AL)
+        dbgs() << "---\n" << AI << '\n';
+    }
+  });
 
   bool Changed = false;
   MoveList LoadGroups, StoreGroups;
@@ -1186,10 +1232,21 @@ auto AlignVectors::run() -> bool {
     llvm::append_range(StoreGroups, createStoreGroups(G.second));
   }
 
+  LLVM_DEBUG({
+    dbgs() << "\nLoad groups(" << LoadGroups.size() << "):\n";
+    for (const MoveGroup &G : LoadGroups)
+      dbgs() << G << "\n";
+    dbgs() << "Store groups(" << StoreGroups.size() << "):\n";
+    for (const MoveGroup &G : StoreGroups)
+      dbgs() << G << "\n";
+  });
+
   for (auto &M : LoadGroups)
     Changed |= move(M);
   for (auto &M : StoreGroups)
     Changed |= move(M);
+
+  LLVM_DEBUG(dbgs() << "After move:\n" << HVC.F);
 
   for (auto &M : LoadGroups)
     Changed |= realignGroup(M);
