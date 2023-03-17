@@ -169,7 +169,6 @@ if(LLVM_ENABLE_PIC)
   target_compile_definitions(mlir_async_runtime PRIVATE mlir_async_runtime_EXPORTS)
 
   if(MLIR_ENABLE_CUDA_RUNNER)
-    find_package(CUDAToolkit)
     # Configure CUDA support. Using check_language first allows us to give a
     # custom error message.
     include(CheckLanguage)
@@ -180,6 +179,9 @@ if(LLVM_ENABLE_PIC)
       message(SEND_ERROR
         "Building the mlir cuda runner requires a working CUDA install")
     endif()
+
+    # We need the libcuda.so library.
+    find_library(CUDA_RUNTIME_LIBRARY cuda)
 
     add_mlir_library(mlir_cuda_runtime
       SHARED
@@ -194,7 +196,7 @@ if(LLVM_ENABLE_PIC)
     )
     target_link_libraries(mlir_cuda_runtime
       PRIVATE
-      CUDA::cuda_driver
+      ${CUDA_RUNTIME_LIBRARY}
     )
   endif()
 
