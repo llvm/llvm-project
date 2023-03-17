@@ -18955,6 +18955,10 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_ref_null_extern);
     return Builder.CreateCall(Callee);
   }
+  case WebAssembly::BI__builtin_wasm_ref_null_func: {
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_ref_null_func);
+    return Builder.CreateCall(Callee);
+  }
   case WebAssembly::BI__builtin_wasm_swizzle_i8x16: {
     Value *Src = EmitScalarExpr(E->getArg(0));
     Value *Indices = EmitScalarExpr(E->getArg(1));

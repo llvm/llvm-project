@@ -1,0 +1,18 @@
+add_header_library(
+  rpc
+  HDRS
+    rpc.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.CPP.atomic
+)
+
+add_object_library(
+  rpc_client
+  SRCS
+    rpc_client.cpp
+  HDRS
+    rpc_client.h
+  DEPENDS
+    .rpc
+)

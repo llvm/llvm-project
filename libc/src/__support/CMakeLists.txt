@@ -204,6 +204,7 @@ add_header_library(
 add_subdirectory(FPUtil)
 add_subdirectory(OSUtil)
 add_subdirectory(StringUtil)
+add_subdirectory(RPC)
 
 # Thread support is used by other "File". So, we add the "threads"
 # before "File".

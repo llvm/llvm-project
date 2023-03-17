@@ -527,11 +527,10 @@ define i1 @foo(float %a, float %b, float %c, <4 x float> %vec, i64 %idx2) {
 ; SSE-LABEL: @foo(
 ; SSE-NEXT:    [[VECEXT_I291_I166:%.*]] = extractelement <4 x float> [[VEC:%.*]], i64 0
 ; SSE-NEXT:    [[SUB14_I167:%.*]] = fsub float undef, [[VECEXT_I291_I166]]
-; SSE-NEXT:    [[VECEXT_I276_I169:%.*]] = extractelement <4 x float> [[VEC]], i64 1
 ; SSE-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A:%.*]], i32 0
 ; SSE-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[C:%.*]], i32 1
-; SSE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[SUB14_I167]], i32 0
-; SSE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[VECEXT_I276_I169]], i32 1
+; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[VEC]], <4 x float> poison, <2 x i32> <i32 undef, i32 1>
+; SSE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[SUB14_I167]], i32 0
 ; SSE-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP2]], [[TMP4]]
 ; SSE-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> <float poison, float 3.000000e+01>, float [[B:%.*]], i32 0
 ; SSE-NEXT:    [[TMP7:%.*]] = fsub <2 x float> [[TMP5]], [[TMP6]]
