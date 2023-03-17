@@ -123,47 +123,26 @@ private:
   Error fixUpBlocks(LinkGraph &G) const override {
     LLVM_DEBUG(dbgs() << "Fixing up blocks:\n");
 
-    for (auto &Sec : G.sections()) {
-      bool NoAllocSection =
-          Sec.getMemLifetimePolicy() == orc::MemLifetimePolicy::NoAlloc;
+    for (auto *B : G.blocks()) {
+      LLVM_DEBUG(dbgs() << "  " << *B << ":\n");
 
-      for (auto *B : Sec.blocks()) {
-        LLVM_DEBUG(dbgs() << "  " << *B << ":\n");
+      // Copy Block data and apply fixups.
+      LLVM_DEBUG(dbgs() << "    Applying fixups.\n");
+      assert((!B->isZeroFill() || all_of(B->edges(),
+                                         [](const Edge &E) {
+                                           return E.getKind() ==
+                                                  Edge::KeepAlive;
+                                         })) &&
+             "Non-KeepAlive edges in zero-fill block?");
+      for (auto &E : B->edges()) {
 
-        // Copy Block data and apply fixups.
-        LLVM_DEBUG(dbgs() << "    Applying fixups.\n");
-        assert((!B->isZeroFill() || all_of(B->edges(),
-                                           [](const Edge &E) {
-                                             return E.getKind() ==
-                                                    Edge::KeepAlive;
-                                           })) &&
-               "Non-KeepAlive edges in zero-fill block?");
+        // Skip non-relocation edges.
+        if (!E.isRelocation())
+          continue;
 
-        // If this is a no-alloc section then copy the block content into
-        // memory allocated on the Graph's allocator (if it hasn't been
-        // already).
-        if (NoAllocSection)
-          (void)B->getMutableContent(G);
-
-        for (auto &E : B->edges()) {
-
-          // Skip non-relocation edges.
-          if (!E.isRelocation())
-            continue;
-
-          // If B is a block in a Standard or Finalize section then make sure
-          // that no edges point to symbols in NoAlloc sections.
-          assert(
-              (NoAllocSection || !E.getTarget().isDefined() ||
-               E.getTarget().getBlock().getSection().getMemLifetimePolicy() !=
-                   orc::MemLifetimePolicy::NoAlloc) &&
-              "Block in allocated section has edge pointing to no-alloc "
-              "section");
-
-          // Dispatch to LinkerImpl for fixup.
-          if (auto Err = impl().applyFixup(G, *B, E))
-            return Err;
-        }
+        // Dispatch to LinkerImpl for fixup.
+        if (auto Err = impl().applyFixup(G, *B, E))
+          return Err;
       }
     }
 

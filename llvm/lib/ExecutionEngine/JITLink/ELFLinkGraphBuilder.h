@@ -319,6 +319,16 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
       continue;
     }
 
+    // Skip non-SHF_ALLOC sections
+    if (!(Sec.sh_flags & ELF::SHF_ALLOC)) {
+      LLVM_DEBUG({
+        dbgs() << "    " << SecIndex << ": \"" << *Name
+               << "\" is not an SHF_ALLOC section: "
+                  "No graph section will be created.\n";
+      });
+      continue;
+    }
+
     LLVM_DEBUG({
       dbgs() << "    " << SecIndex << ": Creating section for \"" << *Name
              << "\"\n";
@@ -333,19 +343,8 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
 
     // Look for existing sections first.
     auto *GraphSec = G->findSectionByName(*Name);
-    if (!GraphSec) {
+    if (!GraphSec)
       GraphSec = &G->createSection(*Name, Prot);
-      // Non-SHF_ALLOC sections get NoAlloc memory lifetimes.
-      if (!(Sec.sh_flags & ELF::SHF_ALLOC)) {
-        GraphSec->setMemLifetimePolicy(orc::MemLifetimePolicy::NoAlloc);
-        LLVM_DEBUG({
-          dbgs() << "    " << SecIndex << ": \"" << *Name
-                 << "\" is not a SHF_ALLOC section. Using NoAlloc lifetime";
-        });
-      }
-      continue;
-    }
-
     assert(GraphSec->getMemProt() == Prot && "MemProt should match");
 
     Block *B = nullptr;
