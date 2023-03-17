@@ -29,12 +29,12 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static void AddWatchpointDescription(Stream *s, Watchpoint *wp,
+static void AddWatchpointDescription(Stream &s, Watchpoint &wp,
                                      lldb::DescriptionLevel level) {
-  s->IndentMore();
-  wp->GetDescription(s, level);
-  s->IndentLess();
-  s->EOL();
+  s.IndentMore();
+  wp.GetDescription(&s, level);
+  s.IndentLess();
+  s.EOL();
 }
 
 static bool CheckTargetForWatchpointOperations(Target *target,
@@ -237,8 +237,8 @@ protected:
       // No watchpoint selected; show info about all currently set watchpoints.
       result.AppendMessage("Current watchpoints:");
       for (size_t i = 0; i < num_watchpoints; ++i) {
-        Watchpoint *wp = watchpoints.GetByIndex(i).get();
-        AddWatchpointDescription(&output_stream, wp, m_options.m_level);
+        WatchpointSP watch_sp = watchpoints.GetByIndex(i);
+        AddWatchpointDescription(output_stream, *watch_sp, m_options.m_level);
       }
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
@@ -252,9 +252,9 @@ protected:
 
       const size_t size = wp_ids.size();
       for (size_t i = 0; i < size; ++i) {
-        Watchpoint *wp = watchpoints.FindByID(wp_ids[i]).get();
-        if (wp)
-          AddWatchpointDescription(&output_stream, wp, m_options.m_level);
+        WatchpointSP watch_sp = watchpoints.FindByID(wp_ids[i]);
+        if (watch_sp)
+          AddWatchpointDescription(output_stream, *watch_sp, m_options.m_level);
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       }
     }
@@ -758,8 +758,8 @@ protected:
     }
 
     if (command.GetArgumentCount() == 0) {
-      WatchpointSP wp_sp = target->GetLastCreatedWatchpoint();
-      wp_sp->SetCondition(m_options.m_condition.c_str());
+      WatchpointSP watch_sp = target->GetLastCreatedWatchpoint();
+      watch_sp->SetCondition(m_options.m_condition.c_str());
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       // Particular watchpoints selected; set condition on them.
@@ -773,9 +773,9 @@ protected:
       int count = 0;
       const size_t size = wp_ids.size();
       for (size_t i = 0; i < size; ++i) {
-        WatchpointSP wp_sp = watchpoints.FindByID(wp_ids[i]);
-        if (wp_sp) {
-          wp_sp->SetCondition(m_options.m_condition.c_str());
+        WatchpointSP watch_sp = watchpoints.FindByID(wp_ids[i]);
+        if (watch_sp) {
+          watch_sp->SetCondition(m_options.m_condition.c_str());
           ++count;
         }
       }
@@ -949,19 +949,19 @@ protected:
     uint32_t watch_type = m_option_watchpoint.watch_type;
 
     error.Clear();
-    WatchpointSP wp =
+    WatchpointSP watch_sp =
         target->CreateWatchpoint(addr, size, &compiler_type, watch_type, error);
-    if (wp) {
-      wp->SetWatchSpec(command.GetArgumentAtIndex(0));
-      wp->SetWatchVariable(true);
+    if (watch_sp) {
+      watch_sp->SetWatchSpec(command.GetArgumentAtIndex(0));
+      watch_sp->SetWatchVariable(true);
       if (var_sp && var_sp->GetDeclaration().GetFile()) {
         StreamString ss;
         // True to show fullpath for declaration file.
         var_sp->GetDeclaration().DumpStopContext(&ss, true);
-        wp->SetDeclInfo(std::string(ss.GetString()));
+        watch_sp->SetDeclInfo(std::string(ss.GetString()));
       }
       output_stream.Printf("Watchpoint created: ");
-      wp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
+      watch_sp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
       output_stream.EOL();
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
@@ -1116,13 +1116,13 @@ protected:
     CompilerType compiler_type(valobj_sp->GetCompilerType());
 
     Status error;
-    WatchpointSP wp =
+    WatchpointSP watch_sp =
         target->CreateWatchpoint(addr, size, &compiler_type, watch_type, error);
-    if (wp) {
-      wp->SetWatchSpec(std::string(expr));
+    if (watch_sp) {
+      watch_sp->SetWatchSpec(std::string(expr));
       Stream &output_stream = result.GetOutputStream();
       output_stream.Printf("Watchpoint created: ");
-      wp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
+      watch_sp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
       output_stream.EOL();
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
