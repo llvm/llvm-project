@@ -5,6 +5,10 @@ add_dependencies(check-libc libc-unit-tests)
 add_custom_target(exhaustive-check-libc)
 add_custom_target(libc-long-running-tests)
 
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  add_subdirectory(UnitTest)
+endif()
+
 add_header_library(
   errno_setter_matcher
   HDRS
@@ -13,13 +17,13 @@ add_header_library(
     libc.src.errno.errno
 )
 
-if(NOT TARGET libc.utils.gpu.loader OR NOT TARGET libc.startup.gpu.crt1)
+if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND
+   (NOT TARGET libc.utils.gpu.loader OR NOT TARGET libc.startup.gpu.crt1))
   message(WARNING "Cannot build libc GPU tests, missing loader implementation")
   return()
 endif()
 
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
-  add_subdirectory(UnitTest)
   add_subdirectory(src)
   add_subdirectory(utils)
 endif()
