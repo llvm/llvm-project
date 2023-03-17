@@ -71,6 +71,8 @@ option(LLDB_NO_INSTALL_DEFAULT_RPATH "Disable default RPATH settings in binaries
 option(LLDB_USE_SYSTEM_DEBUGSERVER "Use the system's debugserver for testing (Darwin only)." OFF)
 option(LLDB_SKIP_STRIP "Whether to skip stripping of binaries when installing lldb." OFF)
 option(LLDB_SKIP_DSYM "Whether to skip generating a dSYM when installing lldb." OFF)
+option(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS
+  "Fail to configure if certain requirements are not met for testing." OFF)
 
 set(LLDB_GLOBAL_INIT_DIRECTORY "" CACHE STRING
   "Path to the global lldbinit directory. Relative paths are resolved relative to the
