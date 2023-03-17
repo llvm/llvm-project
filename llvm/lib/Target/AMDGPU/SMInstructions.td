@@ -132,7 +132,6 @@ class SM_Store_Pseudo <string opName, RegisterClass baseClass,
                                    offsets.Ins, (ins CPol:$cpol)),
               " $sdata, $sbase, " # offsets.Asm # "$cpol"> {
   RegisterClass BaseClass = baseClass;
-  RegisterClass SrcClass = srcClass;
   let mayLoad = 0;
   let mayStore = 1;
   let has_glc = 1;
@@ -472,9 +471,7 @@ multiclass SM_Real_Loads_si<bits<5> op, string ps> {
   }
 
   defvar sgprPs = !cast<SM_Load_Pseudo>(ps#_SGPR);
-  def _SGPR_si : SMRD_Real_si <op, sgprPs> {
-    let InOperandList = (ins sgprPs.BaseClass:$sbase, SReg_32:$soffset, CPol:$cpol);
-  }
+  def _SGPR_si : SMRD_Real_si <op, sgprPs>;
 }
 
 defm S_LOAD_DWORD           : SM_Real_Loads_si <0x00, "S_LOAD_DWORD">;
@@ -541,10 +538,7 @@ class SMEM_Real_vi <bits<8> op, SM_Pseudo ps>
 }
 
 class SMEM_Real_Load_vi<bits<8> op, string ps, OffsetMode offsets>
-    : SMEM_Real_vi<op, !cast<SM_Pseudo>(ps # offsets.Variant)> {
-  RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps # offsets.Variant).BaseClass;
-  let InOperandList = !con((ins BaseClass:$sbase), offsets.Ins, (ins CPol:$cpol));
-}
+    : SMEM_Real_vi<op, !cast<SM_Pseudo>(ps # offsets.Variant)>;
 
 // The alternative GFX9 SGPR encoding using soffset to encode the
 // offset register. Not available in assembler and goes to the GFX9
@@ -575,12 +569,7 @@ class SMEM_Real_Store_Base_vi <bits<8> op, SM_Pseudo ps> : SMEM_Real_vi <op, ps>
 }
 
 class SMEM_Real_Store_vi <bits<8> op, string ps, OffsetMode offsets>
-    : SMEM_Real_Store_Base_vi <op, !cast<SM_Pseudo>(ps # offsets.Variant)> {
-  RegisterClass SrcClass = !cast<SM_Store_Pseudo>(ps # offsets.Variant).SrcClass;
-  RegisterClass BaseClass = !cast<SM_Store_Pseudo>(ps # offsets.Variant).BaseClass;
-  let InOperandList = !con((ins SrcClass:$sdata, BaseClass:$sbase),
-                           offsets.Ins, (ins CPol:$cpol));
-}
+    : SMEM_Real_Store_Base_vi <op, !cast<SM_Pseudo>(ps # offsets.Variant)>;
 
 multiclass SM_Real_Stores_vi<bits<8> op, string ps> {
   def _IMM_vi : SMEM_Real_Store_vi <op, ps, IMM_Offset>;
@@ -980,10 +969,7 @@ class SMEM_Real_gfx10<bits<8> op, SM_Pseudo ps>
 }
 
 class SMEM_Real_Load_gfx10<bits<8> op, string ps, OffsetMode offsets>
-    : SMEM_Real_gfx10<op, !cast<SM_Pseudo>(ps # offsets.Variant)> {
-  RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps # offsets.Variant).BaseClass;
-  let InOperandList = !con((ins BaseClass:$sbase), offsets.Ins, (ins CPol:$cpol));
-}
+    : SMEM_Real_gfx10<op, !cast<SM_Pseudo>(ps # offsets.Variant)>;
 
 multiclass SM_Real_Loads_gfx10<bits<8> op, string ps> {
   def _IMM_gfx10 : SMEM_Real_Load_gfx10<op, ps, IMM_Offset>;
@@ -1000,20 +986,13 @@ class SMEM_Real_Store_gfx10<bits<8> op, SM_Pseudo ps> : SMEM_Real_gfx10<op, ps> 
 
 multiclass SM_Real_Stores_gfx10<bits<8> op, string ps> {
   defvar immPs = !cast<SM_Store_Pseudo>(ps#_IMM);
-  def _IMM_gfx10 : SMEM_Real_Store_gfx10 <op, immPs> {
-    let InOperandList = (ins immPs.SrcClass:$sdata, immPs.BaseClass:$sbase, smem_offset:$offset, CPol:$cpol);
-  }
+  def _IMM_gfx10 : SMEM_Real_Store_gfx10 <op, immPs>;
 
   defvar sgprPs = !cast<SM_Store_Pseudo>(ps#_SGPR);
-  def _SGPR_gfx10 : SMEM_Real_Store_gfx10 <op, sgprPs> {
-    let InOperandList = (ins sgprPs.SrcClass:$sdata, sgprPs.BaseClass:$sbase, SReg_32:$soffset, CPol:$cpol);
-  }
+  def _SGPR_gfx10 : SMEM_Real_Store_gfx10 <op, sgprPs>;
 
   defvar sgprImmPs = !cast<SM_Store_Pseudo>(ps#_SGPR_IMM);
-  def _SGPR_IMM_gfx10 : SMEM_Real_Store_gfx10 <op, sgprImmPs> {
-    let InOperandList = (ins sgprImmPs.SrcClass:$sdata, sgprImmPs.BaseClass:$sbase,
-                             SReg_32:$soffset, smem_offset_mod:$offset, CPol:$cpol);
-  }
+  def _SGPR_IMM_gfx10 : SMEM_Real_Store_gfx10 <op, sgprImmPs>;
 }
 
 defm S_LOAD_DWORD            : SM_Real_Loads_gfx10<0x000, "S_LOAD_DWORD">;
@@ -1184,10 +1163,7 @@ class SMEM_Real_gfx11<bits<8> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
 }
 
 class SMEM_Real_Load_gfx11<bits<8> op, string ps, string opName, OffsetMode offsets> :
-    SMEM_Real_gfx11<op, !cast<SM_Pseudo>(ps # offsets.Variant), opName> {
-  RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps # offsets.Variant).BaseClass;
-  let InOperandList = !con((ins BaseClass:$sbase), offsets.Ins, (ins CPol:$cpol));
-}
+    SMEM_Real_gfx11<op, !cast<SM_Pseudo>(ps # offsets.Variant), opName>;
 
 multiclass SM_Real_Loads_gfx11<bits<8> op, string ps, string opName> {
   def _IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps, opName, IMM_Offset>;

@@ -84,11 +84,7 @@ mlir::makeOptimizingTransformer(unsigned optLevel, unsigned sizeLevel,
     pb.crossRegisterProxies(lam, fam, cgam, mam);
 
     ModulePassManager mpm;
-    if (*ol == OptimizationLevel::O0)
-      mpm.addPass(pb.buildO0DefaultPipeline(*ol));
-    else
-      mpm.addPass(pb.buildPerModuleDefaultPipeline(*ol));
-
+    mpm.addPass(pb.buildPerModuleDefaultPipeline(*ol));
     mpm.run(*m, mam);
     return Error::success();
   };

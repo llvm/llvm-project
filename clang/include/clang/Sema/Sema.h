@@ -13594,6 +13594,7 @@ private:
 
   // WebAssembly builtin handling.
   bool BuiltinWasmRefNullExtern(CallExpr *TheCall);
+  bool BuiltinWasmRefNullFunc(CallExpr *TheCall);
 
 public:
   enum FormatStringType {

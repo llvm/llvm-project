@@ -1026,6 +1026,7 @@ cc_library(
     deps = [
         ":basic",
         ":frontend",
+        "//llvm:MC",
         "//llvm:Support",
         "//third-party/unittest:gtest",
     ],

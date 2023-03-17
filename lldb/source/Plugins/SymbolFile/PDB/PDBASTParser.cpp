@@ -190,8 +190,7 @@ static ConstString GetPDBBuiltinTypeName(const PDBSymbolTypeBuiltin &pdb_type,
   return compiler_type.GetTypeName();
 }
 
-static bool GetDeclarationForSymbol(const PDBSymbol &symbol,
-                                    Declaration &decl) {
+static bool AddSourceInfoToDecl(const PDBSymbol &symbol, Declaration &decl) {
   auto &raw_sym = symbol.getRawSymbol();
   auto first_line_up = raw_sym.getSrcLineOnTypeDefn();
 
@@ -464,7 +463,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (udt->isVolatileType())
       clang_type = clang_type.AddVolatileModifier();
 
-    GetDeclarationForSymbol(type, decl);
+    AddSourceInfoToDecl(type, decl);
     return m_ast.GetSymbolFile()->MakeType(
         type.getSymIndexId(), ConstString(name), udt->getLength(), nullptr,
         LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl, clang_type,
@@ -533,7 +532,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (enum_type->isVolatileType())
       ast_enum = ast_enum.AddVolatileModifier();
 
-    GetDeclarationForSymbol(type, decl);
+    AddSourceInfoToDecl(type, decl);
     return m_ast.GetSymbolFile()->MakeType(
         type.getSymIndexId(), ConstString(name), bytes, nullptr,
         LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl, ast_enum,
@@ -579,7 +578,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (type_def->isVolatileType())
       ast_typedef = ast_typedef.AddVolatileModifier();
 
-    GetDeclarationForSymbol(type, decl);
+    AddSourceInfoToDecl(type, decl);
     std::optional<uint64_t> size;
     if (type_def->getLength())
       size = type_def->getLength();
@@ -659,7 +658,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
         m_ast.CreateFunctionType(return_ast_type, arg_list.data(),
                                  arg_list.size(), is_variadic, type_quals, cc);
 
-    GetDeclarationForSymbol(type, decl);
+    AddSourceInfoToDecl(type, decl);
     return m_ast.GetSymbolFile()->MakeType(
         type.getSymIndexId(), ConstString(name), std::nullopt, nullptr,
         LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,

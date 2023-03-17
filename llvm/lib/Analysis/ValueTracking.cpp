@@ -16,6 +16,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1151,6 +1152,25 @@ KnownBits llvm::analyzeKnownBitsFromAndXorOr(
       Query(DL, AC, safeCxtI(I, CxtI), DT, UseInstrInfo, ORE));
 }
 
+ConstantRange llvm::getVScaleRange(const Function *F, unsigned BitWidth) {
+  Attribute Attr = F->getFnAttribute(Attribute::VScaleRange);
+  // Without vscale_range, we only know that vscale is non-zero.
+  if (!Attr.isValid())
+    return ConstantRange(APInt(BitWidth, 1), APInt::getZero(BitWidth));
+
+  unsigned AttrMin = Attr.getVScaleRangeMin();
+  // Minimum is larger than vscale width, result is always poison.
+  if ((unsigned)llvm::bit_width(AttrMin) > BitWidth)
+    return ConstantRange::getEmpty(BitWidth);
+
+  APInt Min(BitWidth, AttrMin);
+  std::optional<unsigned> AttrMax = Attr.getVScaleRangeMax();
+  if (!AttrMax || (unsigned)llvm::bit_width(*AttrMax) > BitWidth)
+    return ConstantRange(Min, APInt::getZero(BitWidth));
+
+  return ConstantRange(Min, APInt(BitWidth, *AttrMax) + 1);
+}
+
 static void computeKnownBitsFromOperator(const Operator *I,
                                          const APInt &DemandedElts,
                                          KnownBits &Known, unsigned Depth,
@@ -1819,31 +1839,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Known.Zero.setBitsFrom(17);
         break;
       case Intrinsic::vscale: {
-        if (!II->getParent() || !II->getFunction() ||
-            !II->getFunction()->hasFnAttribute(Attribute::VScaleRange))
+        if (!II->getParent() || !II->getFunction())
           break;
 
-        auto Attr = II->getFunction()->getFnAttribute(Attribute::VScaleRange);
-        std::optional<unsigned> VScaleMax = Attr.getVScaleRangeMax();
-
-        if (!VScaleMax)
-          break;
-
-        unsigned VScaleMin = Attr.getVScaleRangeMin();
-
-        // If vscale min = max then we know the exact value at compile time
-        // and hence we know the exact bits.
-        if (VScaleMin == VScaleMax) {
-          Known.One = VScaleMin;
-          Known.Zero = VScaleMin;
-          Known.Zero.flipAllBits();
-          break;
-        }
-
-        unsigned FirstZeroHighBit = llvm::bit_width(*VScaleMax);
-        if (FirstZeroHighBit < BitWidth)
-          Known.Zero.setBitsFrom(FirstZeroHighBit);
-
+        Known = getVScaleRange(II->getFunction(), BitWidth).toKnownBits();
         break;
       }
       }
@@ -4122,6 +4121,381 @@ bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
 
   // Was not able to prove that V never contains NaN
   return false;
+}
+
+/// Return true if it's possible to assume IEEE treatment of input denormals in
+/// \p F for \p Val.
+static bool inputDenormalIsIEEE(const Function &F, const Value *Val) {
+  Type *Ty = Val->getType()->getScalarType();
+  return F.getDenormalMode(Ty->getFltSemantics()).Input == DenormalMode::IEEE;
+}
+
+/// Returns a pair of values, which if passed to llvm.is.fpclass, returns the
+/// same result as an fcmp with the given operands.
+std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
+                                                      const Function &F,
+                                                      Value *LHS, Value *RHS,
+                                                      bool LookThroughSrc) {
+  const APFloat *ConstRHS;
+  if (!match(RHS, m_APFloat(ConstRHS)))
+    return {nullptr, fcNone};
+
+  if (ConstRHS->isZero()) {
+    // Compares with fcNone are only exactly equal to fcZero if input denormals are
+    // not flushed.
+    if (FCmpInst::isEquality(Pred) && !inputDenormalIsIEEE(F, LHS))
+      return {nullptr, fcNone};
+
+    switch (Pred) {
+    case FCmpInst::FCMP_OEQ: // Match x == 0.0
+      return {LHS, fcZero};
+    case FCmpInst::FCMP_UEQ: // Match isnan(x) || (x == 0.0)
+      return {LHS, fcZero | fcNan};
+    case FCmpInst::FCMP_UNE: // Match (x != 0.0)
+      return {LHS, ~fcZero};
+    case FCmpInst::FCMP_ONE: // Match !isnan(x) && x != 0.0
+      return {LHS, ~fcNan & ~fcZero};
+    case FCmpInst::FCMP_ORD:
+      // Canonical form of ord/uno is with a zero. We could also handle
+      // non-canonical other non-NaN constants or LHS == RHS.
+      return {LHS, ~fcNan};
+    case FCmpInst::FCMP_UNO:
+      return {LHS, fcNan};
+    default:
+      break;
+    }
+
+    return {nullptr, fcNone};
+  }
+
+  Value *Src = LHS;
+  const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
+
+  // Compute the test mask that would return true for the ordered comparisons.
+  FPClassTest Mask;
+
+  if (ConstRHS->isInfinity()) {
+    switch (Pred) {
+    case FCmpInst::FCMP_OEQ:
+    case FCmpInst::FCMP_UNE: {
+      // Match __builtin_isinf patterns
+      //
+      //   fcmp oeq x, +inf -> is_fpclass x, fcPosInf
+      //   fcmp oeq fabs(x), +inf -> is_fpclass x, fcInf
+      //   fcmp oeq x, -inf -> is_fpclass x, fcNegInf
+      //   fcmp oeq fabs(x), -inf -> is_fpclass x, 0 -> false
+      //
+      //   fcmp une x, +inf -> is_fpclass x, ~fcPosInf
+      //   fcmp une fabs(x), +inf -> is_fpclass x, ~fcInf
+      //   fcmp une x, -inf -> is_fpclass x, ~fcNegInf
+      //   fcmp une fabs(x), -inf -> is_fpclass x, fcAllFlags -> true
+
+      if (ConstRHS->isNegative()) {
+        Mask = fcNegInf;
+        if (IsFabs)
+          Mask = fcNone;
+      } else {
+        Mask = fcPosInf;
+        if (IsFabs)
+          Mask |= fcNegInf;
+      }
+
+      break;
+    }
+    case FCmpInst::FCMP_ONE:
+    case FCmpInst::FCMP_UEQ: {
+      // Match __builtin_isinf patterns
+      //   fcmp one x, -inf -> is_fpclass x, fcNegInf
+      //   fcmp one fabs(x), -inf -> is_fpclass x, ~fcNegInf & ~fcNan
+      //   fcmp one x, +inf -> is_fpclass x, ~fcNegInf & ~fcNan
+      //   fcmp one fabs(x), +inf -> is_fpclass x, ~fcInf & fcNan
+      //
+      //   fcmp ueq x, +inf -> is_fpclass x, fcPosInf|fcNan
+      //   fcmp ueq (fabs x), +inf -> is_fpclass x, fcInf|fcNan
+      //   fcmp ueq x, -inf -> is_fpclass x, fcNegInf|fcNan
+      //   fcmp ueq fabs(x), -inf -> is_fpclass x, fcNan
+      if (ConstRHS->isNegative()) {
+        Mask = ~fcNegInf & ~fcNan;
+        if (IsFabs)
+          Mask = ~fcNan;
+      } else {
+        Mask = ~fcPosInf & ~fcNan;
+        if (IsFabs)
+          Mask &= ~fcNegInf;
+      }
+
+      break;
+    }
+    case FCmpInst::FCMP_OLT:
+    case FCmpInst::FCMP_UGE: {
+      if (ConstRHS->isNegative()) // TODO
+        return {nullptr, fcNone};
+
+      // fcmp olt fabs(x), +inf -> fcFinite
+      // fcmp uge fabs(x), +inf -> ~fcFinite
+      // fcmp olt x, +inf -> fcFinite|fcNegInf
+      // fcmp uge x, +inf -> ~(fcFinite|fcNegInf)
+      Mask = fcFinite;
+      if (!IsFabs)
+        Mask |= fcNegInf;
+      break;
+    }
+    case FCmpInst::FCMP_OGE:
+    case FCmpInst::FCMP_ULT: {
+      if (ConstRHS->isNegative()) // TODO
+        return {nullptr, fcNone};
+
+      // fcmp oge fabs(x), +inf -> fcInf
+      // fcmp oge x, +inf -> fcPosInf
+      // fcmp ult fabs(x), +inf -> ~fcInf
+      // fcmp ult x, +inf -> ~fcPosInf
+      Mask = fcPosInf;
+      if (IsFabs)
+        Mask |= fcNegInf;
+      break;
+    }
+    default:
+      return {nullptr, fcNone};
+    }
+  } else if (ConstRHS->isSmallestNormalized() && !ConstRHS->isNegative()) {
+    // Match pattern that's used in __builtin_isnormal.
+    switch (Pred) {
+    case FCmpInst::FCMP_OLT:
+    case FCmpInst::FCMP_UGE: {
+      // fcmp olt x, smallest_normal -> fcNegInf|fcNegNormal|fcSubnormal|fcZero
+      // fcmp olt fabs(x), smallest_normal -> fcSubnormal|fcZero
+      // fcmp uge x, smallest_normal -> fcNan|fcPosNormal|fcPosInf
+      // fcmp uge fabs(x), smallest_normal -> ~(fcSubnormal|fcZero)
+      Mask = fcZero | fcSubnormal;
+      if (!IsFabs)
+        Mask |= fcNegNormal | fcNegInf;
+
+      break;
+    }
+    case FCmpInst::FCMP_OGE:
+    case FCmpInst::FCMP_ULT: {
+      // fcmp oge x, smallest_normal -> fcPosNormal | fcPosInf
+      // fcmp oge fabs(x), smallest_normal -> fcInf | fcNormal
+      // fcmp ult x, smallest_normal -> ~(fcPosNormal | fcPosInf)
+      // fcmp ult fabs(x), smallest_normal -> ~(fcInf | fcNormal)
+      Mask = fcPosInf | fcPosNormal;
+      if (IsFabs)
+        Mask |= fcNegInf | fcNegNormal;
+      break;
+    }
+    default:
+      return {nullptr, fcNone};
+    }
+  } else
+    return {nullptr, fcNone};
+
+  // Invert the comparison for the unordered cases.
+  if (FCmpInst::isUnordered(Pred))
+    Mask = ~Mask;
+
+  return {Src, Mask};
+}
+
+static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
+                                                  const Query &Q) {
+  FPClassTest KnownFromAssume = fcNone;
+
+  // Try to restrict the floating-point classes based on information from
+  // assumptions.
+  for (auto &AssumeVH : Q.AC->assumptionsFor(V)) {
+    if (!AssumeVH)
+      continue;
+    CallInst *I = cast<CallInst>(AssumeVH);
+    const Function *F = I->getFunction();
+
+    assert(F == Q.CxtI->getParent()->getParent() &&
+           "Got assumption for the wrong function!");
+    assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
+           "must be an assume intrinsic");
+
+    if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
+      continue;
+
+    CmpInst::Predicate Pred;
+    Value *LHS, *RHS;
+    uint64_t ClassVal = 0;
+    if (match(I->getArgOperand(0), m_FCmp(Pred, m_Value(LHS), m_Value(RHS)))) {
+      auto [TestedValue, TestedMask] =
+          fcmpToClassTest(Pred, *F, LHS, RHS, true);
+      // First see if we can fold in fabs/fneg into the test.
+      if (TestedValue == V)
+        KnownFromAssume |= TestedMask;
+      else {
+        // Try again without the lookthrough if we found a different source
+        // value.
+        auto [TestedValue, TestedMask] =
+            fcmpToClassTest(Pred, *F, LHS, RHS, false);
+        if (TestedValue == V)
+          KnownFromAssume |= TestedMask;
+      }
+    } else if (match(I->getArgOperand(0),
+                     m_Intrinsic<Intrinsic::is_fpclass>(
+                         m_Value(LHS), m_ConstantInt(ClassVal)))) {
+      KnownFromAssume |= static_cast<FPClassTest>(ClassVal);
+    }
+  }
+
+  return KnownFromAssume;
+}
+
+// TODO: Merge implementations of isKnownNeverNaN, isKnownNeverInfinity,
+// CannotBeNegativeZero, cannotBeOrderedLessThanZero into here.
+void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
+                         FPClassTest InterestedClasses, KnownFPClass &Known,
+                         unsigned Depth, const Query &Q,
+                         const TargetLibraryInfo *TLI) {
+  if (!DemandedElts) {
+    // No demanded elts, better to assume we don't know anything.
+    Known.resetAll();
+    return;
+  }
+
+  assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
+
+  const APFloat *C;
+  if (match(V, m_APFloat(C))) {
+    // We know all of the classes for a scalar constant or a splat vector
+    // constant!
+    Known.KnownFPClasses = C->classify();
+    Known.SignBit = C->isNegative();
+    return;
+  }
+
+  FPClassTest KnownNotFromFlags = fcNone;
+  if (const auto *CB = dyn_cast<CallBase>(V))
+    KnownNotFromFlags |= CB->getRetNoFPClass();
+  else if (const auto *Arg = dyn_cast<Argument>(V))
+    KnownNotFromFlags |= Arg->getNoFPClass();
+
+  const Operator *Op = dyn_cast<Operator>(V);
+  if (const FPMathOperator *FPOp = dyn_cast_or_null<FPMathOperator>(Op)) {
+    if (FPOp->hasNoNaNs())
+      KnownNotFromFlags |= fcNan;
+    if (FPOp->hasNoInfs())
+      KnownNotFromFlags |= fcInf;
+  }
+
+  if (Q.AC)
+    KnownNotFromFlags |= computeKnownFPClassFromAssumes(V, Q);
+
+  // We no longer need to find out about these bits from inputs if we can
+  // assume this from flags/attributes.
+  InterestedClasses &= ~KnownNotFromFlags;
+
+  auto ClearClassesFromFlags = make_scope_exit([=, &Known] {
+    Known.knownNot(KnownNotFromFlags);
+  });
+
+  if (!Op)
+    return;
+
+  // All recursive calls that increase depth must come after this.
+  if (Depth == MaxAnalysisRecursionDepth)
+    return;
+
+  switch (Op->getOpcode()) {
+  case Instruction::FNeg: {
+    computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
+                        Known, Depth + 1, Q, TLI);
+    Known.fneg();
+    break;
+  }
+  case Instruction::Select: {
+    KnownFPClass Known2;
+    computeKnownFPClass(Op->getOperand(1), DemandedElts, InterestedClasses,
+                        Known, Depth + 1, Q, TLI);
+    computeKnownFPClass(Op->getOperand(2), DemandedElts, InterestedClasses,
+                        Known2, Depth + 1, Q, TLI);
+    Known |= Known2;
+    break;
+  }
+  case Instruction::Call: {
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Op)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::fabs:
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedClasses, Known, Depth + 1, Q, TLI);
+        Known.fabs();
+        break;
+      case Intrinsic::copysign: {
+        KnownFPClass KnownSign;
+
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedClasses, Known, Depth + 1, Q, TLI);
+        computeKnownFPClass(II->getArgOperand(1), DemandedElts,
+                            InterestedClasses, KnownSign, Depth + 1, Q, TLI);
+        Known.copysign(KnownSign);
+        break;
+      }
+      default:
+        break;
+      }
+    }
+
+    break;
+  }
+  case Instruction::SIToFP:
+  case Instruction::UIToFP: {
+    // Cannot produce nan
+    Known.knownNot(fcNan);
+    if (Op->getOpcode() == Instruction::UIToFP)
+      Known.signBitIsZero();
+
+    if (InterestedClasses & fcInf) {
+      // Get width of largest magnitude integer (remove a bit if signed).
+      // This still works for a signed minimum value because the largest FP
+      // value is scaled by some fraction close to 2.0 (1.0 + 0.xxxx).
+      int IntSize = Op->getOperand(0)->getType()->getScalarSizeInBits();
+      if (Op->getOpcode() == Instruction::SIToFP)
+        --IntSize;
+
+      // If the exponent of the largest finite FP value can hold the largest
+      // integer, the result of the cast must be finite.
+      Type *FPTy = Op->getType()->getScalarType();
+      if (ilogb(APFloat::getLargest(FPTy->getFltSemantics())) >= IntSize)
+        Known.knownNot(fcInf);
+    }
+
+    break;
+  }
+  default:
+    break;
+  }
+
+  // TODO: Handle assumes
+}
+
+KnownFPClass llvm::computeKnownFPClass(
+    const Value *V, const APInt &DemandedElts, const DataLayout &DL,
+    FPClassTest InterestedClasses, unsigned Depth, const TargetLibraryInfo *TLI,
+    AssumptionCache *AC, const Instruction *CxtI, const DominatorTree *DT,
+    OptimizationRemarkEmitter *ORE, bool UseInstrInfo) {
+  KnownFPClass KnownClasses;
+  ::computeKnownFPClass(V, DemandedElts, InterestedClasses, KnownClasses, Depth,
+                        Query(DL, AC, safeCxtI(V, CxtI), DT, UseInstrInfo, ORE),
+                        TLI);
+  return KnownClasses;
+}
+
+KnownFPClass
+llvm::computeKnownFPClass(const Value *V, const DataLayout &DL,
+                          FPClassTest InterestedClasses, unsigned Depth,
+                          const TargetLibraryInfo *TLI, AssumptionCache *AC,
+                          const Instruction *CxtI, const DominatorTree *DT,
+                          OptimizationRemarkEmitter *ORE, bool UseInstrInfo) {
+  KnownFPClass Known;
+  auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
+  APInt DemandedElts =
+      FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
+  ::computeKnownFPClass(V, DemandedElts, InterestedClasses, Known, Depth,
+                        Query(DL, AC, safeCxtI(V, CxtI), DT, UseInstrInfo, ORE),
+                        TLI);
+  return Known;
 }
 
 Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
@@ -7448,6 +7822,10 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II) {
 
     return ConstantRange(APInt::getZero(Width),
                          APInt::getSignedMinValue(Width) + 1);
+  case Intrinsic::vscale:
+    if (!II.getParent() || !II.getFunction())
+      break;
+    return getVScaleRange(II.getFunction(), Width);
   default:
     break;
   }

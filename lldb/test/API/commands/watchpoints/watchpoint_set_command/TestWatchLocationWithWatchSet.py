@@ -46,7 +46,7 @@ class WatchLocationUsingWatchpointSetTestCase(TestBase):
         self.setTearDownCleanup()
 
         exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+        target = self.dbg.CreateTarget(exe)
 
         # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
         lldbutil.run_break_set_by_file_and_line(
@@ -80,6 +80,12 @@ class WatchLocationUsingWatchpointSetTestCase(TestBase):
         # The hit count should be 0 initially.
         self.expect("watchpoint list -v",
                     substrs=['hit_count = 0'])
+
+        # Check the underlying SBWatchpoint.
+        watchpoint = target.GetWatchpointAtIndex(0)
+        self.assertEqual(watchpoint.GetWatchSize(), 1)
+        self.assertEqual(watchpoint.GetHitCount(), 0)
+        self.assertEqual(watchpoint.GetWatchSpec(), "g_char_ptr + 7")
 
         self.runCmd("process continue")
 

@@ -334,20 +334,8 @@ protected:
     else
       return false;
 
-    // Insert an instruction to cast the loaded value to int8_t*
-
-    BitCastInst *bit_cast =
-        new BitCastInst(dereferenced_ptr, GetI8PtrTy(), "", inst);
-
     // Insert an instruction to call the helper with the result
-
-    llvm::Value *arg_array[1];
-
-    arg_array[0] = bit_cast;
-
-    llvm::ArrayRef<llvm::Value *> args(arg_array, 1);
-
-    CallInst::Create(m_valid_pointer_check_func, args, "", inst);
+    CallInst::Create(m_valid_pointer_check_func, dereferenced_ptr, "", inst);
 
     return true;
   }
@@ -425,16 +413,11 @@ protected:
     assert(target_object);
     assert(selector);
 
-    // Insert an instruction to cast the receiver id to int8_t*
-
-    BitCastInst *bit_cast =
-        new BitCastInst(target_object, GetI8PtrTy(), "", inst);
-
     // Insert an instruction to call the helper with the result
 
     llvm::Value *arg_array[2];
 
-    arg_array[0] = bit_cast;
+    arg_array[0] = target_object;
     arg_array[1] = selector;
 
     ArrayRef<llvm::Value *> args(arg_array, 2);

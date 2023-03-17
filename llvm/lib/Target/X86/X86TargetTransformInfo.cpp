@@ -4396,11 +4396,6 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     return ShuffleCost + IntOrFpCost + RegisterFileMoveCost;
   }
 
-  // Add to the base cost if we know that the extracted element of a vector is
-  // destined to be moved to and used in the integer register file.
-  if (Opcode == Instruction::ExtractElement && ScalarType->isPointerTy())
-    RegisterFileMoveCost += 1;
-
   return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1) +
          RegisterFileMoveCost;
 }

@@ -2567,7 +2567,10 @@ template <typename base_ty = uint32_t, base_ty BestState = ~base_ty(0),
           base_ty WorstState = 0>
 struct BitIntegerState
     : public IntegerStateBase<base_ty, BestState, WorstState> {
+  using super = IntegerStateBase<base_ty, BestState, WorstState>;
   using base_t = base_ty;
+  BitIntegerState() = default;
+  BitIntegerState(base_t Assumed) : super(Assumed) {}
 
   /// Return true if the bits set in \p BitsEncoding are "known bits".
   bool isKnown(base_t BitsEncoding) const {
@@ -4832,6 +4835,39 @@ struct AANoUndef
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is AANoUndef
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+struct AANoFPClass
+    : public IRAttribute<
+          Attribute::NoFPClass,
+          StateWrapper<BitIntegerState<uint32_t, fcAllFlags, fcNone>,
+                       AbstractAttribute>> {
+  using Base = StateWrapper<BitIntegerState<uint32_t, fcAllFlags, fcNone>,
+                            AbstractAttribute>;
+
+  AANoFPClass(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// Return true if we assume that the underlying value is nofpclass.
+  FPClassTest getAssumedNoFPClass() const {
+    return static_cast<FPClassTest>(getAssumed());
+  }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANoFPClass &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANoFPClass"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is AANoFPClass
   static bool classof(const AbstractAttribute *AA) {
     return (AA->getIdAddr() == &ID);
   }

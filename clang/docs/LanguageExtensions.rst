@@ -3611,13 +3611,15 @@ Source location builtins
 
 Clang provides builtins to support C++ standard library implementation
 of ``std::source_location`` as specified in C++20.  With the exception
-of ``__builtin_COLUMN``, these builtins are also implemented by GCC.
+of ``__builtin_COLUMN`` and ``__builtin_FILE_NAME``,
+these builtins are also implemented by GCC.
 
 **Syntax**:
 
 .. code-block:: c
 
   const char *__builtin_FILE();
+  const char *__builtin_FILE_NAME(); // Clang only
   const char *__builtin_FUNCTION();
   unsigned    __builtin_LINE();
   unsigned    __builtin_COLUMN(); // Clang only
@@ -3648,11 +3650,11 @@ of ``__builtin_COLUMN``, these builtins are also implemented by GCC.
 
 **Description**:
 
-The builtins ``__builtin_LINE``, ``__builtin_FUNCTION``, and ``__builtin_FILE``
-return the values, at the "invocation point", for ``__LINE__``,
-``__FUNCTION__``, and ``__FILE__`` respectively. ``__builtin_COLUMN`` similarly
-returns the column, though there is no corresponding macro. These builtins are
-constant expressions.
+The builtins ``__builtin_LINE``, ``__builtin_FUNCTION``, ``__builtin_FILE`` and
+``__builtin_FILE_NAME`` return the values, at the "invocation point", for
+``__LINE__``, ``__FUNCTION__``, ``__FILE__`` and ``__FILE_NAME__`` respectively.
+``__builtin_COLUMN`` similarly returns the column,
+though there is no corresponding macro. These builtins are constant expressions.
 
 When the builtins appear as part of a default function argument the invocation
 point is the location of the caller. When the builtins appear as part of a

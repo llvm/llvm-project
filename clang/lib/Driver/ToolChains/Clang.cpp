@@ -1993,7 +1993,7 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
 void Clang::AddPPCTargetArgs(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   const llvm::Triple &T = getToolChain().getTriple();
-  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
+  if (Args.getLastArg(options::OPT_mtune_EQ)) {
     CmdArgs.push_back("-tune-cpu");
     std::string CPU = ppc::getPPCTuneCPU(Args, T);
     CmdArgs.push_back(Args.MakeArgString(CPU));
@@ -5559,22 +5559,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   RenderTargetOptions(Triple, Args, KernelOrKext, CmdArgs);
-
-  // FIXME: For now we want to demote any errors to warnings, when they have
-  // been raised for asking the wrong question of scalable vectors, such as
-  // asking for the fixed number of elements. This may happen because code that
-  // is not yet ported to work for scalable vectors uses the wrong interfaces,
-  // whereas the behaviour is actually correct. Emitting a warning helps bring
-  // up scalable vector support in an incremental way. When scalable vector
-  // support is stable enough, all uses of wrong interfaces should be considered
-  // as errors, but until then, we can live with a warning being emitted by the
-  // compiler. This way, Clang can be used to compile code with scalable vectors
-  // and identify possible issues.
-  if (isa<AssembleJobAction>(JA) || isa<CompileJobAction>(JA) ||
-      isa<BackendJobAction>(JA)) {
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back("-treat-scalable-fixed-error-as-warning");
-  }
 
   // These two are potentially updated by AddClangCLArgs.
   codegenoptions::DebugInfoKind DebugInfoKind = codegenoptions::NoDebugInfo;

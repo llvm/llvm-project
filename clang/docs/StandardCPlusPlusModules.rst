@@ -616,6 +616,50 @@ and add the label ``clang:modules`` (if you have permissions for that).
 
 For higher level support for proposals, you could visit https://clang.llvm.org/cxx_status.html.
 
+Including headers after import is problematic
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For example, the following example can be accept:
+
+.. code-block:: c++
+
+  #include <iostream>
+  import foo; // assume module 'foo' contain the declarations from `<iostream>`
+
+  int main(int argc, char *argv[])
+  {
+      std::cout << "Test\n";
+      return 0;
+  }
+
+but it will get rejected if we reverse the order of ``#include <iostream>`` and
+``import foo;``:
+
+.. code-block:: c++
+
+  import foo; // assume module 'foo' contain the declarations from `<iostream>`
+  #include <iostream>
+
+  int main(int argc, char *argv[])
+  {
+      std::cout << "Test\n";
+      return 0;
+  }
+
+Both of the above examples should be accepted.
+
+This is a limitation in the implementation. In the first example,
+the compiler will see and parse <iostream> first then the compiler will see the import.
+So the ODR Checking and declarations merging will happen in the deserializer.
+In the second example, the compiler will see the import first and the include second.
+As a result, the ODR Checking and declarations merging will happen in the semantic analyzer.
+
+So there is divergence in the implementation path. It might be understandable that why
+the orders matter here in the case.
+(Note that "understandable" is different from "makes sense").
+
+This is tracked in: https://github.com/llvm/llvm-project/issues/61465
+
 Ambiguous deduction guide
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
