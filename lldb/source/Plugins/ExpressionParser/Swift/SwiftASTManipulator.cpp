@@ -94,6 +94,9 @@ void SwiftASTManipulatorBase::DoInitialization() {
     swift::FuncDecl *entrypoint_decl = nullptr;
     /// This is optional.
     swift::FuncDecl *ext_method_decl = nullptr;
+    /// When evaluating a generic expression this is the inner
+    /// function containing the user expression.
+    swift::FuncDecl *user_expr_decl = nullptr;
     /// When evaluating self as generic, this is the trampoline function that
     /// calls the ext_method_decl.
     swift::FuncDecl *trampoline_decl = nullptr;
@@ -128,6 +131,8 @@ void SwiftASTManipulatorBase::DoInitialization() {
         entrypoint_decl = FD;
       else if (FD->getNameStr().equals("$__lldb_sink"))
         sink_decl = FD;
+      else if (FD->getNameStr().equals("$__lldb_user_expr"))
+        user_expr_decl = FD;
       return Action::SkipChildren();
     }
   };
@@ -136,16 +141,17 @@ void SwiftASTManipulatorBase::DoInitialization() {
   m_source_file.walk(func_finder);
 
   m_extension_decl = func_finder.extension_decl;
-  if (m_extension_decl) {
+  if (func_finder.ext_method_decl) {
     m_function_decl = func_finder.ext_method_decl;
     m_entrypoint_decl = func_finder.entrypoint_decl;
-    m_trampoline_decl = func_finder.trampoline_decl;
-    m_sink_decl = func_finder.sink_decl;
-  } else {
+  } else if (func_finder.user_expr_decl) {
+    m_function_decl = func_finder.user_expr_decl;
+    m_entrypoint_decl = func_finder.entrypoint_decl;
+  } else
     m_function_decl = func_finder.entrypoint_decl;
-    m_entrypoint_decl = nullptr;
-  }
-
+  m_entrypoint_decl = func_finder.entrypoint_decl;
+  m_trampoline_decl = func_finder.trampoline_decl;
+  m_sink_decl = func_finder.sink_decl;
   assert(m_function_decl);
 
   // Find the body in the function
@@ -698,23 +704,22 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
   swift::Type result_type;
   for (size_t i = 0; i < num_results; i++) {
     swift::VarDecl *the_decl = m_result_info[i].tmp_var_decl;
-    if (the_decl->hasInterfaceType()) {
-      swift::Type its_type = the_decl->getType();
-      if (result_type.isNull()) {
-        result_type = its_type;
-      } else if (!its_type.getPointer()->isEqual(result_type)) {
-        std::string prev_type_name = result_type.getPointer()->getString();
-        std::string cur_type_name = its_type.getPointer()->getString();
-
-        error.SetErrorStringWithFormat(
-            "Type for %zuth return value is inconsistent, previous type: %s, "
-            "current type: %s.",
-            i, prev_type_name.c_str(), cur_type_name.c_str());
-        return false;
-      }
-    } else {
+    if (!the_decl->hasInterfaceType()) {
       error.SetErrorStringWithFormat(
           "Type of %zuth return value could not be determined.", i);
+      return false;
+    }
+    swift::Type its_type = the_decl->getType();
+    if (result_type.isNull()) {
+      result_type = its_type;
+    } else if (!its_type.getPointer()->isEqual(result_type)) {
+      std::string prev_type_name = result_type.getPointer()->getString();
+      std::string cur_type_name = its_type.getPointer()->getString();
+
+      error.SetErrorStringWithFormat(
+          "Type for %zuth return value is inconsistent, previous type: %s, "
+          "current type: %s.",
+          i, prev_type_name.c_str(), cur_type_name.c_str());
       return false;
     }
   }
@@ -728,7 +733,6 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
   }
 
   swift::ASTContext &ast_context = m_source_file.getASTContext();
-
   CompilerType return_ast_type = ToCompilerType(result_type.getPointer());
   swift::Identifier result_var_name =
       ast_context.getIdentifier(GetResultName());
@@ -864,7 +868,9 @@ swift::FuncDecl *SwiftASTManipulator::GetFunctionToInjectVariableInto(
   // When not binding generic type parameters, we want to inject the metadata
   // pointers in the wrapper, so we can pass them as opaque pointers in the
   // trampoline function later on.
-  if (m_bind_generic_types == lldb::eDontBind && variable.IsMetadataPointer())
+  if (m_bind_generic_types == lldb::eDontBind &&
+      (variable.IsMetadataPointer() || variable.IsPackCount() ||
+       variable.IsUnboundPack()))
     return m_entrypoint_decl;
 
   return m_function_decl;
@@ -877,6 +883,20 @@ llvm::Optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
 
   if (!type_system_swift)
     return {};
+
+  // When injecting a value pack or pack count into the outer
+  // lldb_expr function, treat it as an opaque raw pointer.
+  if (m_bind_generic_types == lldb::eDontBind && variable.IsUnboundPack()) {
+    auto swift_ast_ctx = type_system_swift->GetSwiftASTContext();
+    if (swift_ast_ctx) {
+      auto it = m_type_aliases.find("$__lldb_builtin_ptr_t");
+      if (it == m_type_aliases.end())
+        return {};
+      return swift::Type(it->second);
+    }
+    //swift_ast_ctx->GetBuiltinRawPointerType());
+    return {};
+  }
 
   // This might be a referenced type, which will confuse the type checker.
   // The access pattern for these types is the same as for the referent
@@ -930,16 +950,20 @@ swift::VarDecl *SwiftASTManipulator::GetVarDeclForVariableInFunction(
   const swift::Identifier name = variable.GetName();
   // We may need to mutate the self variable later, so hardcode it to a var
   // in that case.
-  const auto introducer = variable.IsSelf() ? swift::VarDecl::Introducer::Var
-                                            : variable.GetVarIntroducer();
+  const auto introducer = (variable.IsSelf() || variable.IsUnboundPack())
+                              ? swift::VarDecl::Introducer::Var
+                              : variable.GetVarIntroducer();
 
   const swift::ASTContext &ast_context = m_source_file.getASTContext();
   swift::VarDecl *redirected_var_decl = new (ast_context) swift::VarDecl(
-      /*is_staic*/ false, introducer, loc, name, containing_function);
+      /*is_static*/ false, introducer, loc, name, containing_function);
 
   redirected_var_decl->setInterfaceType(swift_type);
   redirected_var_decl->setDebuggerVar(true);
   redirected_var_decl->setImplicit(true);
+  redirected_var_decl->setImplInfo(swift::StorageImplInfo(
+      swift::ReadImplKind::Stored, swift::WriteImplKind::Stored,
+      swift::ReadWriteImplKind::Stored));
 
   // This avoids having local variables filtered out by
   // swift::namelookup::filterForDiscriminator().
@@ -1245,6 +1269,8 @@ SwiftASTManipulator::MakeTypealias(swift::Identifier name, CompilerType &type,
     m_source_file.addTopLevelDecl(type_alias_decl);
   }
 
+  m_type_aliases.insert(
+      {name.str(), type_alias_decl->getStructuralType().getPointer()});
   return type_alias_decl;
 }
 

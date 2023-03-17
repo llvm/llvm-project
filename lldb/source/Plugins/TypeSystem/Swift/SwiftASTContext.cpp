@@ -7677,6 +7677,11 @@ SwiftASTContext::ConvertClangTypeToSwiftType(CompilerType clang_type) {
   return {this->weak_from_this(), ast_type};
 }
 
+CompilerType SwiftASTContext::GetBuiltinIntType() {
+  // FIXME: use target int size!
+  return GetTypeFromMangledTypename(ConstString("$sBi64_D"));
+}
+
 bool SwiftASTContext::TypeHasArchetype(CompilerType type) {
   auto swift_type = GetSwiftType(type);
   if (swift_type)

@@ -1965,12 +1965,18 @@ TypeSystemSwiftTypeRef::RemangleAsType(swift::Demangle::Demangler &dem,
     return {};
 
   using namespace swift::Demangle;
-  assert(node->getKind() == Node::Kind::Type && "expected type node");
-  auto global = dem.createNode(Node::Kind::Global);
-  auto type_mangling = dem.createNode(Node::Kind::TypeMangling);
-  type_mangling->addChild(node, dem);
-  global->addChild(type_mangling, dem);
-  auto mangling = mangleNode(global);
+  if (node->getKind() != Node::Kind::Global) {
+    auto global = dem.createNode(Node::Kind::Global);
+    if (node->getKind() != Node::Kind::TypeMangling) {
+      auto type_mangling = dem.createNode(Node::Kind::TypeMangling);
+      type_mangling->addChild(node, dem);
+      assert(node->getKind() == Node::Kind::Type);
+      node = type_mangling;
+    }
+    global->addChild(node, dem);
+    node = global;
+  }
+  auto mangling = mangleNode(node);
   if (!mangling.isSuccess())
     return {};
   ConstString mangled_element(mangling.result());

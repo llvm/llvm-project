@@ -18,6 +18,13 @@ class TestSwiftVariadicGenerics(TestBase):
         self.expect("frame variable",
                     substrs=["Pack{(a.A, a.B)}", "args", "i = 23", "d = 2.71"])
 
+        # Test that an expression can be set up in a variadic environment.
+        self.expect("expr --bind-generic-types=true -- 0", substrs=["0"])
+        self.expect("expr --bind-generic-types=false -- 0", substrs=["0"])
+        # FIXME: crashes the compiler.
+        #self.expect("expr --bind-generic-params=false -- (repeat each args)",
+        #            substrs=["args"])
+
         # f2(us: a, vs: b)
         process.Continue()
         self.expect("frame variable",
