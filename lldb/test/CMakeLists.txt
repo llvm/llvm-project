@@ -1,5 +1,30 @@
 # Test runner infrastructure for LLDB. This configures the LLDB test trees
 # for use by Lit, and delegates to LLVM's lit test handlers.
+# Lit requires a Python3 interpreter, let's be careful and fail early if it's
+# not present.
+if (NOT DEFINED Python3_EXECUTABLE)
+  message(FATAL_ERROR
+    "LLDB test suite requires a Python3 interpreter but none "
+    "was found. Please install Python3 or disable tests with "
+    "`LLDB_INCLUDE_TESTS=OFF`.")
+endif()
+
+if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
+  message(STATUS "Enforcing strict test requirements for LLDB")
+  set(useful_python_modules
+    psutil # Lit uses psutil to do per-test timeouts.
+  )
+  foreach(module ${useful_python_modules})
+    lldb_find_python_module(${module})
+    if (NOT PY_${module}_FOUND)
+      message(FATAL_ERROR
+        "Python module '${module}' not found. Please install it via pip or via "
+        "your operating system's package manager. Alternatively, disable "
+        "strict testing requirements with "
+        "`LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=OFF`")
+    endif()
+  endforeach()
+endif()
 
 if(LLDB_BUILT_STANDALONE)
   # In order to run check-lldb-* we need the correct map_config directives in
