@@ -846,7 +846,6 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   Value *Src1 = II.getArgOperand(1);
   const ConstantInt *CMask = cast<ConstantInt>(Src1);
   FPClassTest Mask = static_cast<FPClassTest>(CMask->getZExtValue());
-  FPClassTest InvertedMask = ~Mask;
   const bool IsStrict = II.isStrictFP();
 
   Value *FNegSrc;
@@ -880,23 +879,29 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
     return replaceInstUsesWith(II, FCmp);
   }
 
-  if (!IsStrict &&
-      fpclassTestIsFCmp0(static_cast<FPClassTest>(Mask),
-                         *II.getParent()->getParent(), Src0->getType())) {
-    // Equivalent of == 0.
-    Value *FCmp =
-        Builder.CreateFCmpOEQ(Src0, ConstantFP::get(Src0->getType(), 0.0));
+  const bool IsUnordered = (Mask & fcNan) == fcNan;
+  const bool IsOrdered = (Mask & fcNan) == fcNone;
+  const FPClassTest OrderedMask = Mask & ~fcNan;
+  const FPClassTest OrderedInvertedMask = ~OrderedMask & ~fcNan;
 
+  if (!IsStrict && (IsOrdered || IsUnordered) &&
+      fpclassTestIsFCmp0(OrderedMask, *II.getFunction(), Src0->getType())) {
+    Constant *Zero = ConstantFP::getZero(Src0->getType());
+    // Equivalent of == 0.
+    Value *FCmp = IsUnordered ? Builder.CreateFCmpUEQ(Src0, Zero)
+                              : Builder.CreateFCmpOEQ(Src0, Zero);
     FCmp->takeName(&II);
     return replaceInstUsesWith(II, FCmp);
   }
 
-  if (!IsStrict &&
-      fpclassTestIsFCmp0(static_cast<FPClassTest>(InvertedMask),
-                         *II.getParent()->getParent(), Src0->getType())) {
+  if (!IsStrict && (IsOrdered || IsUnordered) &&
+      fpclassTestIsFCmp0(OrderedInvertedMask, *II.getFunction(),
+                         Src0->getType())) {
+    Constant *Zero = ConstantFP::getZero(Src0->getType());
+
     // Equivalent of !(x == 0).
-    Value *FCmp =
-        Builder.CreateFCmpUNE(Src0, ConstantFP::get(Src0->getType(), 0.0));
+    Value *FCmp = IsUnordered ? Builder.CreateFCmpUNE(Src0, Zero)
+                              : Builder.CreateFCmpONE(Src0, Zero);
 
     FCmp->takeName(&II);
     return replaceInstUsesWith(II, FCmp);
