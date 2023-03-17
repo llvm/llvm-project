@@ -1270,12 +1270,6 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
                               .Case("O3", OptimizationLevel::O3)
                               .Case("Os", OptimizationLevel::Os)
                               .Case("Oz", OptimizationLevel::Oz);
-    if (L == OptimizationLevel::O0 && Matches[1] != "thinlto" &&
-        Matches[1] != "lto") {
-      MPM.addPass(buildO0DefaultPipeline(L, Matches[1] == "thinlto-pre-link" ||
-                                                Matches[1] == "lto-pre-link"));
-      return Error::success();
-    }
 
     // This is consistent with old pass manager invoked via opt, but
     // inconsistent with clang. Clang doesn't enable loop vectorization

@@ -652,7 +652,6 @@ Syntax:
 %element = hlfir.apply %array_expr %i, %j: (hlfir.expr<?x?xi32>) -> i32
 ```
 
-
 #### Introducing operations for transformational intrinsic functions
 
 Motivation: Represent transformational intrinsics functions at a high-level so
@@ -700,6 +699,39 @@ call will probably be used since there is little point to keep them high level:
   expressions)
 - selected_char_kind, selected_int_kind, selected_real_kind that returns scalar
   integers
+
+#### Introducing operations for composed intrinsic functions
+
+Motivation: optimize commonly composed intrinsic functions (e.g.
+MATMUL(TRANSPOSE(a), b)). This optimization is implemented in Classic Flang.
+
+An operation and runtime function will be added for each commonly used
+composition of intrinsic functions. The operation will be the canonical way to
+write this chained operation (the MLIR canonicalization pass will rewrite the
+operations for the composed intrinsics into this one operation).
+
+These new operations will be treated as though they were standard
+transformational intrinsic functions.
+
+The composed intrinsic operation will return a hlfir.expr<T>. The arguments
+may be hlfir.expr<T>, boxed arrays, simple scalar types (e.g. i32, f32), or
+variables.
+
+To keep things simple, these operations will only match one form of the composed
+intrinsic functions: therefore there will be no optional arguments.
+
+Syntax:
+```
+%res = hlfir."intrinsic_name" %expr_or_var, ...
+```
+
+The composed intrinsic operation will be lowered to a `fir.call` to the newly
+added runtime implementation of the operation.
+
+These operations should not be added where the only improvement is to avoid
+creating a temporary intermediate buffer which would otherwise be removed by
+intelligent bufferization of a hlfir.expr. Similarly, these should not replace
+profitable uses of hlfir.elemental.
 
 #### Introducing operations for character operations and elemental intrinsic functions
 

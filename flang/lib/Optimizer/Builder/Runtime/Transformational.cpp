@@ -13,6 +13,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Runtime/matmul-transpose.h"
 #include "flang/Runtime/matmul.h"
 #include "flang/Runtime/transformational.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -341,6 +342,23 @@ void fir::runtime::genMatmul(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::Value resultBox, mlir::Value matrixABox,
                              mlir::Value matrixBBox) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(Matmul)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  auto args =
+      fir::runtime::createArguments(builder, loc, fTy, resultBox, matrixABox,
+                                    matrixBBox, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+/// Generate call to MatmulTranspose intrinsic runtime routine.
+void fir::runtime::genMatmulTranspose(fir::FirOpBuilder &builder,
+                                      mlir::Location loc, mlir::Value resultBox,
+                                      mlir::Value matrixABox,
+                                      mlir::Value matrixBBox) {
+  auto func =
+      fir::runtime::getRuntimeFunc<mkRTKey(MatmulTranspose)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
