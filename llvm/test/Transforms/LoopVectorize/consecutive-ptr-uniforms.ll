@@ -481,3 +481,34 @@ for.body:
 for.end:
   ret void
 }
+
+
+; FIXME: Currently %cur.ptr is incorrectly identified as uniform.
+
+; CHECK-LABEL: pr61396_pointer_used_as_both_stored_value_and_pointer_operand_by_store
+; CHECK:    LV: Found uniform instruction: %cur.ptr = getelementptr inbounds ptr, ptr %ary, i64 %iv
+
+; CHECK:       define void @pr61396_pointer_used_as_both_stored_value_and_pointer_operand_by_store(
+; CHECK:       vector.body:
+; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK-NEXT:    [[GEP:%.+]] = getelementptr inbounds ptr, ptr %ary, i64 %index
+; CHECK-NEXT:    [[INS:%.+]] = insertelement <4 x ptr> poison, ptr [[GEP]], i64 0
+; CHECK-NEXT:    [[SPLAT:%.+]] = shufflevector <4 x ptr> %broadcast.splatinsert, <4 x ptr> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    store <4 x ptr> [[SPLAT]], ptr [[GEP]], align 8
+;
+
+define void @pr61396_pointer_used_as_both_stored_value_and_pointer_operand_by_store(ptr %ary) {
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %cur.ptr = getelementptr inbounds ptr, ptr %ary, i64 %iv
+  store ptr %cur.ptr, ptr %cur.ptr, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %done = icmp eq i64 %iv, 10240
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
