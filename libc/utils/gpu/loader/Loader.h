@@ -11,4 +11,4 @@
 /// Generic interface to load the \p image and launch execution of the _start
 /// kernel on the target device. Copies \p argc and \p argv to the device.
 /// Returns the final value of the `main` function on the device.
-int load(int argc, char **argv, void *image, size_t size);
+int load(int argc, char **argv, char **evnp, void *image, size_t size);
