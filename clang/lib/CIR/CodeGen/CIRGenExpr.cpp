@@ -1891,8 +1891,8 @@ Address CIRGenFunction::CreateTempAllocaWithoutCast(mlir::Type Ty,
   return Address(Alloca, Ty, Align);
 }
 
-/// CreateTempAlloca - This creates a alloca and inserts it into the entry
-/// block. The alloca is casted to default address space if necessary.
+/// This creates a alloca and inserts it into the entry block. The alloca is
+/// casted to default address space if necessary.
 Address CIRGenFunction::CreateTempAlloca(mlir::Type Ty, CharUnits Align,
                                          mlir::Location Loc, const Twine &Name,
                                          mlir::Value ArraySize,
@@ -1909,9 +1909,9 @@ Address CIRGenFunction::CreateTempAlloca(mlir::Type Ty, CharUnits Align,
   return Address(V, Ty, Align);
 }
 
-/// CreateTempAlloca - This creates an alloca and inserts it into the entry
-/// block if \p ArraySize is nullptr, otherwise inserts it at the current
-/// insertion point of the builder.
+/// This creates an alloca and inserts it into the entry block if \p ArraySize
+/// is nullptr, otherwise inserts it at the current insertion point of the
+/// builder.
 mlir::cir::AllocaOp CIRGenFunction::CreateTempAlloca(mlir::Type Ty,
                                                      mlir::Location Loc,
                                                      const Twine &Name,

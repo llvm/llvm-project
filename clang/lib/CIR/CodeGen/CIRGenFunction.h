@@ -385,6 +385,12 @@ private:
                               mlir::Location loc, clang::CharUnits alignment,
                               mlir::Value &addr, bool isParam = false);
 
+  /// Declare a variable in the current scope but take an Address as input.
+  mlir::LogicalResult declare(Address addr, const clang::Decl *var,
+                              clang::QualType ty, mlir::Location loc,
+                              clang::CharUnits alignment, mlir::Value &addrVal,
+                              bool isParam = false);
+
 public:
   // FIXME(cir): move this to CIRGenBuider.h
   mlir::Value buildAlloca(llvm::StringRef name, clang::QualType ty,
@@ -945,6 +951,10 @@ public:
     /// True if the variable is of aggregate type and has a constant
     /// initializer.
     bool IsConstantAggregate;
+
+    /// True if the variable is a __block variable that is captured by an
+    /// escaping block.
+    bool IsEscapingByRef = false;
 
     struct Invalid {};
     AutoVarEmission(Invalid) : Variable(nullptr), Addr(Address::invalid()) {}

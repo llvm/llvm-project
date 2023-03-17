@@ -59,6 +59,9 @@ struct UnimplementedFeature {
   static bool peepholeProtection() { return false; }
   static bool attributeNoBuiltin() { return false; }
   static bool CGCapturedStmtInfo() { return false; }
+  static bool cxxABI() { return false; }
+  static bool openCL() { return false; }
+  static bool openMP() { return false; }
 };
 } // namespace cir
 
