@@ -480,6 +480,8 @@ LLVM_16 {
     clang_experimental_cas_Options_create;
     clang_experimental_cas_Options_dispose;
     clang_experimental_cas_Options_setOnDiskPath;
+    clang_experimental_cas_Options_setPluginOption;
+    clang_experimental_cas_Options_setPluginPath;
     clang_experimental_DependencyScannerService_create_v1;
     clang_experimental_DependencyScannerServiceOptions_create;
     clang_experimental_DependencyScannerServiceOptions_dispose;
