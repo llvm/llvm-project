@@ -363,6 +363,7 @@ public:
                            TypeSystemClang &clang_typesystem) override;
 
   CompilerType GetBuiltinRawPointerType() override;
+  CompilerType GetBuiltinIntType();
 
   /// Attempts to convert a Clang type into a Swift type.
   /// For example, int is converted to Int32.

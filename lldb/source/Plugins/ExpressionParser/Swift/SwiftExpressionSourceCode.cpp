@@ -17,15 +17,81 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "swift/Basic/LangOptions.h"
+#include "swift/Demangling/Demangle.h"
+#include "swift/Demangling/Demangler.h"
 
 using namespace lldb;
 using namespace lldb_private;
+
+namespace lldb_private {
+llvm::Optional<std::pair<unsigned, unsigned>>
+ParseSwiftGenericParameter(llvm::StringRef name) {
+  if (!name.consume_front("$τ_"))
+    return {};
+
+  auto pair = name.split('_');
+  auto depth_str = pair.first;
+  auto index_str = pair.second;
+  unsigned depth, index;
+  if (depth_str.getAsInteger(10, depth) || index_str.getAsInteger(10, index))
+    return {};
+  return {{depth, index}};
+}
+} // namespace lldb_private
 
 static const char *GetUserCodeStartMarker() {
   return "/*__LLDB_USER_START__*/\n";
 }
 static const char *GetUserCodeEndMarker() { return "\n/*__LLDB_USER_END__*/"; }
 
+/// Remove SILPacktype and print the name with substitutions applied.
+static std::string TransformPackType(
+    CompilerType type,
+    llvm::SmallDenseMap<std::pair<unsigned, unsigned>, llvm::SmallString<4>>
+        subs) {
+  auto tss = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  if (!tss)
+    return "<unexpected typesystem>";
+  auto &ts = tss->GetTypeSystemSwiftTypeRef();
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodePointer node = ts.GetCanonicalDemangleTree(
+      dem, type.GetMangledTypeName().GetStringRef());
+
+  node = TypeSystemSwiftTypeRef::Transform(dem, node, [](NodePointer n) {
+    if (n->getKind() == Node::Kind::SILPackIndirect && n->getNumChildren() == 1) {
+      n = n->getFirstChild();
+      if (n->getKind() == Node::Kind::Type && n->getNumChildren() == 1)
+        return n->getFirstChild();
+    }
+    //if (n->getKind() == Node::Kind::Pack && n->getNumChildren() == 2) {
+    //  auto pack = dem.createNode(Node::Kind::PackExpansion);
+    //  pack->addChild(n/*->getChild(0)*/, dem);
+    //  //pack->addChild(n->getChild(1), dem);
+    //  return pack;
+    //}
+    return n;
+  });
+
+  ConstString type_name = ts.RemangleAsType(dem, node).GetMangledTypeName();
+  swift::Demangle::DemangleOptions options;
+  options = swift::Demangle::DemangleOptions::SimplifiedUIDemangleOptions();
+  options.DisplayStdlibModule = false;
+  options.DisplayObjCModule = false;
+  options.QualifyEntities = true;
+  options.DisplayModuleNames = true;
+  options.DisplayLocalNameContexts = false;
+  options.DisplayDebuggerGeneratedModule = false;
+  options.GenericParameterName = [&](uint64_t depth,
+                                     uint64_t index) -> std::string {
+    auto it = subs.find({depth, index});
+    if (it != subs.end())
+      return it->second.str().str();
+    return "<unexpected generic parameter>";
+  };
+  return swift::Demangle::demangleSymbolAsString(type_name.GetStringRef(),
+                                                 options);
+}
 
 struct CallsAndArgs {
   std::string lldb_user_expr;
@@ -64,42 +130,107 @@ struct CallsAndArgs {
 /// - And a matching call to the sink function:
 ///
 /// lldb_sink($__lldb_arg, $__lldb_injected_self, $τ_0_0, $τ_0_1, ..., $τ_0_n)
-static CallsAndArgs MakeGenericSignaturesAndCalls(
-    llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables) {
+static llvm::Expected<CallsAndArgs> MakeGenericSignaturesAndCalls(
+    llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables,
+    const llvm::Optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
+    bool needs_object_ptr) {
   llvm::SmallVector<SwiftASTManipulator::VariableInfo> metadata_variables;
   for (auto &var : local_variables)
     if (var.IsOutermostMetadataPointer())
       metadata_variables.push_back(var);
 
-  std::string generic_param_list;
-  llvm::raw_string_ostream generic_param_list_stream(generic_param_list);
-  for (size_t i = 0; i < metadata_variables.size(); ++i)
-    generic_param_list_stream << "T" << i << ",";
+  // The number of metadata variables could be > if the function is in
+  // a generic context.
+  if (generic_sig &&
+      (metadata_variables.size() < generic_sig->dependent_generic_param_count))
+    return llvm::make_error<llvm::StringError>(
+        llvm::inconvertibleErrorCode(), "Inconsistent generic signature");
 
-  if (!generic_param_list.empty())
-    generic_param_list.pop_back();
+  llvm::SmallDenseMap<std::pair<unsigned, unsigned>, llvm::SmallString<4>> subs;
+  std::string generic_params;
+  std::string generic_params_no_packs;
+  llvm::raw_string_ostream s_generic_params(generic_params);
+  llvm::raw_string_ostream s_generic_params_no_packs(generic_params_no_packs);
+  for (size_t i = 0; i < metadata_variables.size(); ++i) {
+    llvm::SmallString<4> archetype_name;
+    llvm::raw_svector_ostream s_archetype_name(archetype_name);
+    bool is_pack = false;
+    unsigned depth, index;
+    if (generic_sig) {
+      auto &gp = generic_sig->generic_params[i];
+      is_pack = gp.is_pack;
+      depth = gp.depth;
+      index = gp.index;
+    } else {
+      auto di =
+          ParseSwiftGenericParameter(metadata_variables[i].GetName().str());
+      if (!di)
+        return llvm::make_error<llvm::StringError>(
+            llvm::inconvertibleErrorCode(), "unexpected metadata variable");
+      depth = di->first;
+      index = di->second;
+    }
+    if (is_pack)
+      s_archetype_name << "each ";
+    s_archetype_name << "T" << i;
+    if (!is_pack)
+      s_generic_params_no_packs << archetype_name << ",";
+    subs.insert({{depth, index}, archetype_name});
+    s_generic_params << archetype_name << ",";
+  }
+
+  if (!generic_params.empty())
+    generic_params.pop_back();
+  if (!generic_params_no_packs.empty())
+    generic_params_no_packs.pop_back();
 
   std::string user_expr; 
   llvm::raw_string_ostream user_expr_stream(user_expr);
-  user_expr_stream << "func $__lldb_user_expr<" << generic_param_list
+  user_expr_stream << "func $__lldb_user_expr<" << generic_params
                    << ">(_ $__lldb_arg: UnsafeMutablePointer<("
-                   << generic_param_list << ")>)";
-
+                   << generic_params_no_packs << ")>";
+  for (auto &var : local_variables)
+    if (var.GetType().GetTypeInfo() & lldb::eTypeIsPack)
+      user_expr_stream << ", _ " << var.GetName() << ": "
+                       << TransformPackType(var.GetType(), subs);
+  user_expr_stream << ")";
 
   std::string trampoline;
   llvm::raw_string_ostream trampoline_stream(trampoline);
-  trampoline_stream << "func $__lldb_trampoline<" << generic_param_list
+  trampoline_stream << "func $__lldb_trampoline<" << generic_params
                     << ">(_ $__lldb_arg: UnsafeMutablePointer<("
-                    << generic_param_list
-                    << ")>, _ $__lldb_injected_self: inout $__lldb_context)";
+                    << generic_params_no_packs << ")>";
+  if (needs_object_ptr)
+    trampoline_stream << ", _ $__lldb_injected_self: inout $__lldb_context";
+  trampoline_stream << ")";
 
   std::string sink;
   std::string call;
   llvm::raw_string_ostream sink_stream(sink);
   llvm::raw_string_ostream call_stream(call);
   sink_stream << "func $__lldb_sink(_ $__lldb_arg : "
-                 "UnsafeMutablePointer<Any>, _: $__lldb_builtin_ptr_t";
-  call_stream << "$__lldb_sink($__lldb_arg, $__lldb_injected_self";
+    "UnsafeMutablePointer<Any>";
+  call_stream << "$__lldb_sink($__lldb_arg";
+  if (needs_object_ptr) {
+    sink_stream << ", _: $__lldb_builtin_ptr_t";
+    call_stream << ", $__lldb_injected_self";
+  }
+  unsigned num_value_packs = 0;
+  for (auto &var : local_variables)
+    if (var.IsUnboundPack()) {
+      ++num_value_packs;
+      sink_stream << ", _: $__lldb_builtin_ptr_t";
+      call_stream << ", " << var.GetName();
+    }
+  // FIXME: This assumes all pack variables are local function arguments.
+  assert(!generic_sig ||
+         num_value_packs == generic_sig->pack_expansions.size());
+
+  if (generic_sig)
+    for (unsigned i = 0; i < generic_sig->num_counts; ++i) {
+      sink_stream << ", _: $__lldb_builtin_int_t";
+      call_stream << ", $pack_count_" << i;
+    }
   for (auto &var : metadata_variables) {
     sink_stream << ", _: $__lldb_builtin_ptr_t";
     call_stream << ", " << var.GetName().str();
@@ -107,15 +238,18 @@ static CallsAndArgs MakeGenericSignaturesAndCalls(
   sink_stream << ")";
   call_stream << ")";
 
-  return {user_expr, trampoline, sink, call};
+  CallsAndArgs retval = {user_expr, trampoline, sink, call};
+  return retval;
 }
 
-void WrapExpression(
+static Status WrapExpression(
     lldb_private::Stream &wrapped_stream, const char *orig_text,
     bool needs_object_ptr, bool static_method, bool is_class, bool weak_self,
     const EvaluateExpressionOptions &options, llvm::StringRef os_version,
     uint32_t &first_body_line,
-    llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables) {
+    llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables,
+    const llvm::Optional<SwiftLanguageRuntime::GenericSignature> &generic_sig) {
+  Status status;
   first_body_line = 0; // set to invalid
   // TODO make the extension private so we're not polluting the class
   static unsigned int counter = 0;
@@ -169,7 +303,7 @@ __builtin_logger_initialize()
                             orig_text);
     }
     first_body_line = 1;
-    return;
+    return status;
   }
 
   assert(!playground && "Playground mode not expected");
@@ -183,7 +317,7 @@ __builtin_logger_initialize()
       wrapped_stream.Printf("%s", orig_text);
     }
     first_body_line = 1;
-    return;
+    return status;
   }
 
   assert(!playground && !repl && "Playground/REPL mode not expected");
@@ -286,7 +420,12 @@ do {
       // FIXME: the current approach names the generic parameter "T", use the
       // user's name for the generic parameter, so they can refer to it in
       // their expression.
-      auto c = MakeGenericSignaturesAndCalls(local_variables);
+      auto c = MakeGenericSignaturesAndCalls(local_variables, generic_sig,
+                                             needs_object_ptr);
+      if (!c) {
+        status.SetErrorString(llvm::toString(c.takeError()));
+        return status;
+      }
       wrapped_stream.Printf(
           R"(
 extension %s$__lldb_context {
@@ -317,10 +456,10 @@ func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
 }
 )",
           optional_extension, availability.c_str(), func_decorator,
-          c.lldb_user_expr.c_str(), wrapped_expr_text.GetData(),
-          availability.c_str(), c.lldb_trampoline.c_str(),
-          availability.c_str(), c.lldb_sink.c_str(), availability.c_str(),
-          c.lldb_call.c_str());
+          c->lldb_user_expr.c_str(), wrapped_expr_text.GetData(),
+          availability.c_str(), c->lldb_trampoline.c_str(),
+          availability.c_str(), c->lldb_sink.c_str(), availability.c_str(),
+          c->lldb_call.c_str());
 
     } else {
       wrapped_stream.Printf(R"(
@@ -345,6 +484,32 @@ func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
                             current_counter);
     }
     first_body_line = 5;
+  } else if (options.GetBindGenericTypes() == lldb::eDontBind) {
+    auto c = MakeGenericSignaturesAndCalls(local_variables, generic_sig,
+                                           needs_object_ptr);
+    if (!c) {
+      status.SetErrorString(llvm::toString(c.takeError()));
+      return status;
+    }
+    wrapped_stream.Printf(R"(
+@LLDBDebuggerFunction %s  %s {
+    %s
+}
+
+@LLDBDebuggerFunction %s
+%s {}
+
+
+@LLDBDebuggerFunction %s
+func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
+  %s
+}
+)",
+                          availability.c_str(), c->lldb_user_expr.c_str(),
+                          wrapped_expr_text.GetData(), availability.c_str(),
+                          c->lldb_sink.c_str(), availability.c_str(),
+                          c->lldb_call.c_str());
+
   } else {
     wrapped_stream.Printf(
         "@LLDBDebuggerFunction %s\n"
@@ -354,6 +519,7 @@ func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
         availability.c_str(), wrapped_expr_text.GetData());
     first_body_line = 4;
   }
+  return status;
 }
 
 /// Format the OS name the way that Swift availability attributes do.
@@ -370,12 +536,14 @@ uint32_t SwiftExpressionSourceCode::GetNumBodyLines() {
   return m_num_body_lines;
 }
 
-bool SwiftExpressionSourceCode::GetText(
+Status SwiftExpressionSourceCode::GetText(
     std::string &text, lldb::LanguageType wrapping_language,
     bool needs_object_ptr, bool static_method, bool is_class, bool weak_self,
-    const EvaluateExpressionOptions &options, ExecutionContext &exe_ctx,
-    uint32_t &first_body_line,
+    const EvaluateExpressionOptions &options,
+    const llvm::Optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
+    ExecutionContext &exe_ctx, uint32_t &first_body_line,
     llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables) const {
+  Status status;
   Target *target = exe_ctx.GetTargetPtr();
 
 
@@ -395,7 +563,8 @@ bool SwiftExpressionSourceCode::GetText(
     }
 
     if (wrapping_language != eLanguageTypeSwift) {
-      return false;
+      status.SetErrorString("language is not Swift");
+      return status;
     }
 
     StreamString wrap_stream;
@@ -429,8 +598,10 @@ bool SwiftExpressionSourceCode::GetText(
         llvm::cast<SwiftPersistentExpressionState>(
             target->GetPersistentExpressionStateForLanguage(
                 lldb::eLanguageTypeSwift));
-    if (!persistent_state)
-      return false;
+    if (!persistent_state) {
+      status.SetErrorString("no persistent state");
+      return status;
+    }
     std::vector<swift::ValueDecl *> persistent_results;
     // Check if we have already declared the playground stub debug functions
     persistent_state->GetSwiftPersistentDecls(ConstString("__builtin_log_with_id"), {},
@@ -443,16 +614,19 @@ bool SwiftExpressionSourceCode::GetText(
     localOptions.SetPreparePlaygroundStubFunctions(need_to_declare_log_functions);
 
     std::string full_body = m_prefix + m_body;
-    WrapExpression(wrap_stream, full_body.c_str(), needs_object_ptr,
-                   static_method, is_class, weak_self, localOptions,
-                   os_vers.str(), first_body_line, local_variables);
+    status = WrapExpression(wrap_stream, full_body.c_str(), needs_object_ptr,
+                            static_method, is_class, weak_self, localOptions,
+                            os_vers.str(), first_body_line, local_variables,
+                            generic_sig);
+    if (status.Fail())
+      return status;
 
     text = wrap_stream.GetString().str();
   } else {
     text.append(m_body);
   }
 
-  return true;
+  return status;
 }
 
 bool SwiftExpressionSourceCode::GetOriginalBodyBounds(
