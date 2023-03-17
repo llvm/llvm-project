@@ -581,26 +581,26 @@ auto AlignVectors::createAdjustedPointer(IRBuilderBase &Builder, Value *Ptr,
     Type *ElemTy = PtrTy->getNonOpaquePointerElementType();
     int ElemSize = HVC.getSizeOf(ElemTy, HVC.Alloc);
     if (Adjust % ElemSize == 0 && Adjust != 0) {
-      Value *Tmp0 =
-          Builder.CreateGEP(ElemTy, Ptr, HVC.getConstInt(Adjust / ElemSize));
-      return Builder.CreatePointerCast(Tmp0, ValTy->getPointerTo());
+      Value *Tmp0 = Builder.CreateGEP(
+          ElemTy, Ptr, HVC.getConstInt(Adjust / ElemSize), "gep");
+      return Builder.CreatePointerCast(Tmp0, ValTy->getPointerTo(), "cst");
     }
   }
 
   PointerType *CharPtrTy = Type::getInt8PtrTy(HVC.F.getContext());
-  Value *Tmp0 = Builder.CreatePointerCast(Ptr, CharPtrTy);
+  Value *Tmp0 = Builder.CreatePointerCast(Ptr, CharPtrTy, "cst");
   Value *Tmp1 = Builder.CreateGEP(Type::getInt8Ty(HVC.F.getContext()), Tmp0,
-                                  HVC.getConstInt(Adjust));
-  return Builder.CreatePointerCast(Tmp1, ValTy->getPointerTo());
+                                  HVC.getConstInt(Adjust), "gep");
+  return Builder.CreatePointerCast(Tmp1, ValTy->getPointerTo(), "cst");
 }
 
 auto AlignVectors::createAlignedPointer(IRBuilderBase &Builder, Value *Ptr,
                                         Type *ValTy, int Alignment) const
     -> Value * {
-  Value *AsInt = Builder.CreatePtrToInt(Ptr, HVC.getIntTy());
+  Value *AsInt = Builder.CreatePtrToInt(Ptr, HVC.getIntTy(), "pti");
   Value *Mask = HVC.getConstInt(-Alignment);
-  Value *And = Builder.CreateAnd(AsInt, Mask);
-  return Builder.CreateIntToPtr(And, ValTy->getPointerTo());
+  Value *And = Builder.CreateAnd(AsInt, Mask, "add");
+  return Builder.CreateIntToPtr(And, ValTy->getPointerTo(), "itp");
 }
 
 auto AlignVectors::createAlignedLoad(IRBuilderBase &Builder, Type *ValTy,
@@ -610,8 +610,9 @@ auto AlignVectors::createAlignedLoad(IRBuilderBase &Builder, Type *ValTy,
   if (HVC.isZero(Mask))
     return PassThru;
   if (Mask == ConstantInt::getTrue(Mask->getType()))
-    return Builder.CreateAlignedLoad(ValTy, Ptr, Align(Alignment));
-  return Builder.CreateMaskedLoad(ValTy, Ptr, Align(Alignment), Mask, PassThru);
+    return Builder.CreateAlignedLoad(ValTy, Ptr, Align(Alignment), "ald");
+  return Builder.CreateMaskedLoad(ValTy, Ptr, Align(Alignment), Mask, PassThru,
+                                  "mld");
 }
 
 auto AlignVectors::createAlignedStore(IRBuilderBase &Builder, Value *Val,
@@ -998,9 +999,9 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
     // but if the mask is not exactly of HVX length, extra handling would be
     // needed to make it work.
     Type *ValTy = getPayload(B.Seg.Val)->getType();
-    Value *Cast = Builder.CreateBitCast(Accum, ValTy);
+    Value *Cast = Builder.CreateBitCast(Accum, ValTy, "cst");
     Value *Sel = Builder.CreateSelect(getMask(B.Seg.Val), Cast,
-                                      getPassThrough(B.Seg.Val));
+                                      getPassThrough(B.Seg.Val), "sel");
     B.Seg.Val->replaceAllUsesWith(Sel);
   }
 }
@@ -1025,7 +1026,7 @@ auto AlignVectors::realignStoreGroup(IRBuilderBase &Builder,
     if (Ty->isVectorTy())
       return Val;
     auto *VecTy = VectorType::get(Ty, 1, /*Scalable=*/false);
-    return Builder.CreateBitCast(Val, VecTy);
+    return Builder.CreateBitCast(Val, VecTy, "cst");
   };
 
   // Create an extra "undef" sector at the beginning and at the end.
@@ -1167,7 +1168,8 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
     // aligned instruction with an address that is not really aligned.
     AlignAddr = createAlignedPointer(Builder, WithMinOffset.Addr,
                                      WithMinOffset.ValTy, MinNeeded.value());
-    AlignVal = Builder.CreatePtrToInt(WithMinOffset.Addr, HVC.getIntTy());
+    AlignVal =
+        Builder.CreatePtrToInt(WithMinOffset.Addr, HVC.getIntTy(), "pti");
   }
 
   ByteSpan VSpan;
@@ -1413,13 +1415,13 @@ auto HvxIdioms::processFxpMul(Instruction &In, const FxpOp &Op) const
 
   auto *ResizeTy = VectorType::get(HVC.getIntTy(Width), VecTy);
   if (Width < ElemWidth) {
-    X = Builder.CreateTrunc(X, ResizeTy);
-    Y = Builder.CreateTrunc(Y, ResizeTy);
+    X = Builder.CreateTrunc(X, ResizeTy, "trn");
+    Y = Builder.CreateTrunc(Y, ResizeTy, "trn");
   } else if (Width > ElemWidth) {
-    X = SignX == Signed ? Builder.CreateSExt(X, ResizeTy)
-                        : Builder.CreateZExt(X, ResizeTy);
-    Y = SignY == Signed ? Builder.CreateSExt(Y, ResizeTy)
-                        : Builder.CreateZExt(Y, ResizeTy);
+    X = SignX == Signed ? Builder.CreateSExt(X, ResizeTy, "sxt")
+                        : Builder.CreateZExt(X, ResizeTy, "zxt");
+    Y = SignY == Signed ? Builder.CreateSExt(Y, ResizeTy, "sxt")
+                        : Builder.CreateZExt(Y, ResizeTy, "zxt");
   };
 
   assert(X->getType() == Y->getType() && X->getType() == ResizeTy);
@@ -1444,8 +1446,8 @@ auto HvxIdioms::processFxpMul(Instruction &In, const FxpOp &Op) const
 
   Value *Cat = HVC.concat(Builder, Results);
   Value *Ext = SignX == Signed || SignY == Signed
-                   ? Builder.CreateSExt(Cat, VecTy)
-                   : Builder.CreateZExt(Cat, VecTy);
+                   ? Builder.CreateSExt(Cat, VecTy, "sxt")
+                   : Builder.CreateZExt(Cat, VecTy, "zxt");
   return Ext;
 }
 
@@ -1491,14 +1493,14 @@ auto HvxIdioms::processFxpMulChopped(IRBuilderBase &Builder, Instruction &In,
     Value *Prod32 = createMul16(Builder, Op.X, Op.Y);
     if (Rounding) {
       Value *RoundVal = HVC.getConstSplat(Prod32->getType(), 1 << *Op.RoundAt);
-      Prod32 = Builder.CreateAdd(Prod32, RoundVal);
+      Prod32 = Builder.CreateAdd(Prod32, RoundVal, "add");
     }
 
     Value *ShiftAmt = HVC.getConstSplat(Prod32->getType(), Op.Frac);
     Value *Shifted = Op.X.Sgn == Signed || Op.Y.Sgn == Signed
-               ? Builder.CreateAShr(Prod32, ShiftAmt)
-               : Builder.CreateLShr(Prod32, ShiftAmt);
-    return Builder.CreateTrunc(Shifted, InpTy);
+                         ? Builder.CreateAShr(Prod32, ShiftAmt, "asr")
+                         : Builder.CreateLShr(Prod32, ShiftAmt, "lsr");
+    return Builder.CreateTrunc(Shifted, InpTy, "trn");
   }
 
   // Width >= 32
@@ -1532,10 +1534,11 @@ auto HvxIdioms::processFxpMulChopped(IRBuilderBase &Builder, Instruction &In,
     if (Src + 1 < End) {
       Value *Hi = WordP[Src + 1];
       WordP[Dst] = Builder.CreateIntrinsic(HvxWordTy, Intrinsic::fshr,
-                                           {Hi, Lo, ShiftAmt});
+                                           {Hi, Lo, ShiftAmt},
+                                           /*FMFSource*/ nullptr, "int");
     } else {
       // The shift of the most significant word.
-      WordP[Dst] = Builder.CreateAShr(Lo, ShiftAmt);
+      WordP[Dst] = Builder.CreateAShr(Lo, ShiftAmt, "asr");
     }
   }
   if (SkipWords != 0)
@@ -1597,8 +1600,8 @@ auto HvxIdioms::createAddCarry(IRBuilderBase &Builder, Value *X, Value *Y,
     }
     Value *Ret = HVC.createHvxIntrinsic(Builder, AddCarry,
                                         /*RetTy=*/nullptr, Args);
-    Value *Result = Builder.CreateExtractValue(Ret, {0});
-    Value *CarryOut = Builder.CreateExtractValue(Ret, {1});
+    Value *Result = Builder.CreateExtractValue(Ret, {0}, "ext");
+    Value *CarryOut = Builder.CreateExtractValue(Ret, {1}, "ext");
     return {Result, CarryOut};
   }
 
@@ -1617,13 +1620,13 @@ auto HvxIdioms::createAddCarry(IRBuilderBase &Builder, Value *X, Value *Y,
     Value *ValueIn =
         HVC.createHvxIntrinsic(Builder, V6_vandqrt, /*RetTy=*/nullptr,
                                {CarryIn, HVC.getConstInt(Mask)});
-    Result1 = Builder.CreateAdd(X, ValueIn);
+    Result1 = Builder.CreateAdd(X, ValueIn, "add");
   }
 
-  Value *CarryOut1 = Builder.CreateCmp(CmpInst::ICMP_ULT, Result1, X);
-  Value *Result2 = Builder.CreateAdd(Result1, Y);
-  Value *CarryOut2 = Builder.CreateCmp(CmpInst::ICMP_ULT, Result2, Y);
-  return {Result2, Builder.CreateOr(CarryOut1, CarryOut2)};
+  Value *CarryOut1 = Builder.CreateCmp(CmpInst::ICMP_ULT, Result1, X, "cmp");
+  Value *Result2 = Builder.CreateAdd(Result1, Y, "add");
+  Value *CarryOut2 = Builder.CreateCmp(CmpInst::ICMP_ULT, Result2, Y, "cmp");
+  return {Result2, Builder.CreateOr(CarryOut1, CarryOut2, "orb")};
 }
 
 auto HvxIdioms::createMul16(IRBuilderBase &Builder, SValue X, SValue Y) const
@@ -1660,15 +1663,16 @@ auto HvxIdioms::createMulH16(IRBuilderBase &Builder, SValue X, SValue Y) const
   }
 
   Type *HvxP16Ty = HVC.getHvxTy(HVC.getIntTy(16), /*Pair=*/true);
-  Value *Pair16 = Builder.CreateBitCast(createMul16(Builder, X, Y), HvxP16Ty);
+  Value *Pair16 =
+      Builder.CreateBitCast(createMul16(Builder, X, Y), HvxP16Ty, "cst");
   unsigned Len = HVC.length(HvxP16Ty) / 2;
 
   SmallVector<int, 128> PickOdd(Len);
   for (int i = 0; i != static_cast<int>(Len); ++i)
     PickOdd[i] = 2 * i + 1;
 
-  return Builder.CreateShuffleVector(HVC.sublo(Builder, Pair16),
-                                     HVC.subhi(Builder, Pair16), PickOdd);
+  return Builder.CreateShuffleVector(
+      HVC.sublo(Builder, Pair16), HVC.subhi(Builder, Pair16), PickOdd, "shf");
 }
 
 auto HvxIdioms::createMul32(IRBuilderBase &Builder, SValue X, SValue Y) const
@@ -1689,8 +1693,8 @@ auto HvxIdioms::createMul32(IRBuilderBase &Builder, SValue X, SValue Y) const
 
   Value *Parts = HVC.createHvxIntrinsic(Builder, V6_vmpy_parts, nullptr,
                                         {X.Val, Y.Val}, {HvxI32Ty});
-  Value *Hi = Builder.CreateExtractValue(Parts, {0});
-  Value *Lo = Builder.CreateExtractValue(Parts, {1});
+  Value *Hi = Builder.CreateExtractValue(Parts, {0}, "ext");
+  Value *Lo = Builder.CreateExtractValue(Parts, {1}, "ext");
   return {Lo, Hi};
 }
 
@@ -1956,7 +1960,7 @@ auto HexagonVectorCombine::insertb(IRBuilderBase &Builder, Value *Dst,
         (Where <= i && i < Where + Length) ? P2Len + Start + (i - Where) : i;
   }
 
-  Value *P2Insert = Builder.CreateShuffleVector(P2Dst, P2Src, SMask);
+  Value *P2Insert = Builder.CreateShuffleVector(P2Dst, P2Src, SMask, "shf");
   return vresize(Builder, P2Insert, DstLen, Undef);
 }
 
@@ -1979,12 +1983,14 @@ auto HexagonVectorCombine::vlalignb(IRBuilderBase &Builder, Value *Lo,
 
   if (VecLen == 4) {
     Value *Pair = concat(Builder, {Lo, Hi});
-    Value *Shift = Builder.CreateLShr(Builder.CreateShl(Pair, Amt), 32);
-    Value *Trunc = Builder.CreateTrunc(Shift, Type::getInt32Ty(F.getContext()));
-    return Builder.CreateBitCast(Trunc, Hi->getType());
+    Value *Shift =
+        Builder.CreateLShr(Builder.CreateShl(Pair, Amt, "shl"), 32, "lsr");
+    Value *Trunc =
+        Builder.CreateTrunc(Shift, Type::getInt32Ty(F.getContext()), "trn");
+    return Builder.CreateBitCast(Trunc, Hi->getType(), "cst");
   }
   if (VecLen == 8) {
-    Value *Sub = Builder.CreateSub(getConstInt(VecLen), Amt);
+    Value *Sub = Builder.CreateSub(getConstInt(VecLen), Amt, "sub");
     return vralignb(Builder, Lo, Hi, Sub);
   }
   llvm_unreachable("Unexpected vector length");
@@ -2008,18 +2014,19 @@ auto HexagonVectorCombine::vralignb(IRBuilderBase &Builder, Value *Lo,
 
   if (VecLen == 4) {
     Value *Pair = concat(Builder, {Lo, Hi});
-    Value *Shift = Builder.CreateLShr(Pair, Amt);
-    Value *Trunc = Builder.CreateTrunc(Shift, Type::getInt32Ty(F.getContext()));
-    return Builder.CreateBitCast(Trunc, Lo->getType());
+    Value *Shift = Builder.CreateLShr(Pair, Amt, "lsr");
+    Value *Trunc =
+        Builder.CreateTrunc(Shift, Type::getInt32Ty(F.getContext()), "trn");
+    return Builder.CreateBitCast(Trunc, Lo->getType(), "cst");
   }
   if (VecLen == 8) {
     Type *Int64Ty = Type::getInt64Ty(F.getContext());
-    Value *Lo64 = Builder.CreateBitCast(Lo, Int64Ty);
-    Value *Hi64 = Builder.CreateBitCast(Hi, Int64Ty);
+    Value *Lo64 = Builder.CreateBitCast(Lo, Int64Ty, "cst");
+    Value *Hi64 = Builder.CreateBitCast(Hi, Int64Ty, "cst");
     Function *FI = Intrinsic::getDeclaration(F.getParent(),
                                              Intrinsic::hexagon_S2_valignrb);
-    Value *Call = Builder.CreateCall(FI, {Hi64, Lo64, Amt});
-    return Builder.CreateBitCast(Call, Lo->getType());
+    Value *Call = Builder.CreateCall(FI, {Hi64, Lo64, Amt}, "cup");
+    return Builder.CreateBitCast(Call, Lo->getType(), "cst");
   }
   llvm_unreachable("Unexpected vector length");
 }
@@ -2042,8 +2049,8 @@ auto HexagonVectorCombine::concat(IRBuilderBase &Builder,
     if (Work[ThisW].size() % 2 != 0)
       Work[ThisW].push_back(UndefValue::get(Ty));
     for (int i = 0, e = Work[ThisW].size(); i < e; i += 2) {
-      Value *Joined = Builder.CreateShuffleVector(Work[ThisW][i],
-                                                  Work[ThisW][i + 1], SMask);
+      Value *Joined = Builder.CreateShuffleVector(
+          Work[ThisW][i], Work[ThisW][i + 1], SMask, "shf");
       Work[OtherW].push_back(Joined);
     }
     std::swap(ThisW, OtherW);
@@ -2055,7 +2062,7 @@ auto HexagonVectorCombine::concat(IRBuilderBase &Builder,
   SMask.resize(Vecs.size() * length(Vecs.front()->getType()));
   std::iota(SMask.begin(), SMask.end(), 0);
   Value *Total = Work[ThisW].front();
-  return Builder.CreateShuffleVector(Total, SMask);
+  return Builder.CreateShuffleVector(Total, SMask, "shf");
 }
 
 auto HexagonVectorCombine::vresize(IRBuilderBase &Builder, Value *Val,
@@ -2074,8 +2081,8 @@ auto HexagonVectorCombine::vresize(IRBuilderBase &Builder, Value *Val,
   SmallVector<int, 128> SMask(NewSize);
   std::iota(SMask.begin(), SMask.begin() + CurSize, 0);
   std::fill(SMask.begin() + CurSize, SMask.end(), CurSize);
-  Value *PadVec = Builder.CreateVectorSplat(CurSize, Pad);
-  return Builder.CreateShuffleVector(Val, PadVec, SMask);
+  Value *PadVec = Builder.CreateVectorSplat(CurSize, Pad, "spt");
+  return Builder.CreateShuffleVector(Val, PadVec, SMask, "shf");
 }
 
 auto HexagonVectorCombine::rescale(IRBuilderBase &Builder, Value *Mask,
@@ -2105,11 +2112,11 @@ auto HexagonVectorCombine::rescale(IRBuilderBase &Builder, Value *Mask,
   // Mask <N x i1> -> sext to <N x FromTy> -> bitcast to <M x ToTy> ->
   // -> trunc to <M x i1>.
   Value *Ext = Builder.CreateSExt(
-      Mask, VectorType::get(FromITy, FromCount, /*Scalable=*/false));
+      Mask, VectorType::get(FromITy, FromCount, /*Scalable=*/false), "sxt");
   Value *Cast = Builder.CreateBitCast(
-      Ext, VectorType::get(ToITy, ToCount, /*Scalable=*/false));
+      Ext, VectorType::get(ToITy, ToCount, /*Scalable=*/false), "cst");
   return Builder.CreateTrunc(
-      Cast, VectorType::get(getBoolTy(), ToCount, /*Scalable=*/false));
+      Cast, VectorType::get(getBoolTy(), ToCount, /*Scalable=*/false), "trn");
 }
 
 // Bitcast to bytes, and return least significant bits.
@@ -2121,10 +2128,10 @@ auto HexagonVectorCombine::vlsb(IRBuilderBase &Builder, Value *Val) const
 
   Value *Bytes = vbytes(Builder, Val);
   if (auto *VecTy = dyn_cast<VectorType>(Bytes->getType()))
-    return Builder.CreateTrunc(Bytes, getBoolTy(getSizeOf(VecTy)));
+    return Builder.CreateTrunc(Bytes, getBoolTy(getSizeOf(VecTy)), "trn");
   // If Bytes is a scalar (i.e. Val was a scalar byte), return i1, not
   // <1 x i1>.
-  return Builder.CreateTrunc(Bytes, getBoolTy());
+  return Builder.CreateTrunc(Bytes, getBoolTy(), "trn");
 }
 
 // Bitcast to bytes for non-bool. For bool, convert i1 -> i8.
@@ -2135,11 +2142,11 @@ auto HexagonVectorCombine::vbytes(IRBuilderBase &Builder, Value *Val) const
     return Val;
 
   if (ScalarTy != getBoolTy())
-    return Builder.CreateBitCast(Val, getByteTy(getSizeOf(Val)));
+    return Builder.CreateBitCast(Val, getByteTy(getSizeOf(Val)), "cst");
   // For bool, return a sext from i1 to i8.
   if (auto *VecTy = dyn_cast<VectorType>(Val->getType()))
-    return Builder.CreateSExt(Val, VectorType::get(getByteTy(), VecTy));
-  return Builder.CreateSExt(Val, getByteTy());
+    return Builder.CreateSExt(Val, VectorType::get(getByteTy(), VecTy), "sxt");
+  return Builder.CreateSExt(Val, getByteTy(), "sxt");
 }
 
 auto HexagonVectorCombine::subvector(IRBuilderBase &Builder, Value *Val,
@@ -2173,7 +2180,7 @@ auto HexagonVectorCombine::vdeal(IRBuilderBase &Builder, Value *Val0,
     Mask[i] = 2 * i;           // Even
     Mask[i + Len] = 2 * i + 1; // Odd
   }
-  return Builder.CreateShuffleVector(Val0, Val1, Mask);
+  return Builder.CreateShuffleVector(Val0, Val1, Mask, "shf");
 }
 
 auto HexagonVectorCombine::vshuff(IRBuilderBase &Builder, Value *Val0,
@@ -2186,7 +2193,7 @@ auto HexagonVectorCombine::vshuff(IRBuilderBase &Builder, Value *Val0,
     Mask[2 * i + 0] = i;       // Val0
     Mask[2 * i + 1] = i + Len; // Val1
   }
-  return Builder.CreateShuffleVector(Val0, Val1, Mask);
+  return Builder.CreateShuffleVector(Val0, Val1, Mask, "shf");
 }
 
 auto HexagonVectorCombine::createHvxIntrinsic(IRBuilderBase &Builder,
@@ -2206,7 +2213,7 @@ auto HexagonVectorCombine::createHvxIntrinsic(IRBuilderBase &Builder,
 
     Type *BoolTy = Type::getInt1Ty(F.getContext());
     if (cast<VectorType>(SrcTy)->getElementType() != BoolTy)
-      return Builder.CreateBitCast(Val, DestTy);
+      return Builder.CreateBitCast(Val, DestTy, "cst");
 
     // Predicate HVX vector.
     unsigned HwLen = HST.getVectorLength();
@@ -2214,7 +2221,7 @@ auto HexagonVectorCombine::createHvxIntrinsic(IRBuilderBase &Builder,
                                    : Intrinsic::hexagon_V6_pred_typecast_128B;
     Function *FI =
         Intrinsic::getDeclaration(F.getParent(), TC, {DestTy, Val->getType()});
-    return Builder.CreateCall(FI, {Val});
+    return Builder.CreateCall(FI, {Val}, "cup");
   };
 
   Function *IntrFn = Intrinsic::getDeclaration(F.getParent(), IntID, ArgTys);
@@ -2230,7 +2237,7 @@ auto HexagonVectorCombine::createHvxIntrinsic(IRBuilderBase &Builder,
       IntrArgs.push_back(A);
     }
   }
-  Value *Call = Builder.CreateCall(IntrFn, IntrArgs);
+  Value *Call = Builder.CreateCall(IntrFn, IntrArgs, "cup");
 
   Type *CallTy = Call->getType();
   if (RetTy == nullptr || CallTy == RetTy)
@@ -2280,7 +2287,7 @@ auto HexagonVectorCombine::splitVectorElements(IRBuilderBase &Builder,
     unsigned Width = Val->getType()->getScalarSizeInBits();
 
     auto *VTy = VectorType::get(getIntTy(Width / 2), 2 * Length, false);
-    Value *VVal = Builder.CreateBitCast(Val, VTy);
+    Value *VVal = Builder.CreateBitCast(Val, VTy, "cst");
 
     Value *Res = vdeal(Builder, sublo(Builder, VVal), subhi(Builder, VVal));
 
@@ -2322,8 +2329,8 @@ auto HexagonVectorCombine::joinVectorElements(IRBuilderBase &Builder,
     // Having too many inputs is ok: drop the high bits (usual wrap-around).
     // If there are too few, fill them with the sign bit.
     Value *Last = Inputs.back();
-    Value *Sign =
-        Builder.CreateAShr(Last, getConstSplat(Last->getType(), Width - 1));
+    Value *Sign = Builder.CreateAShr(
+        Last, getConstSplat(Last->getType(), Width - 1), "asr");
     Inputs.resize(NeedInputs, Sign);
   }
 
@@ -2332,7 +2339,7 @@ auto HexagonVectorCombine::joinVectorElements(IRBuilderBase &Builder,
     auto *VTy = VectorType::get(getIntTy(Width), Length, false);
     for (int i = 0, e = Inputs.size(); i < e; i += 2) {
       Value *Res = vshuff(Builder, Inputs[i], Inputs[i + 1]);
-      Inputs[i / 2] = Builder.CreateBitCast(Res, VTy);
+      Inputs[i / 2] = Builder.CreateBitCast(Res, VTy, "cst");
     }
     Inputs.resize(Inputs.size() / 2);
   }
@@ -2525,7 +2532,7 @@ auto HexagonVectorCombine::getElementRange(IRBuilderBase &Builder, Value *Lo,
   assert(0 <= Start && size_t(Start + Length) < length(Lo) + length(Hi));
   SmallVector<int, 128> SMask(Length);
   std::iota(SMask.begin(), SMask.end(), Start);
-  return Builder.CreateShuffleVector(Lo, Hi, SMask);
+  return Builder.CreateShuffleVector(Lo, Hi, SMask, "shf");
 }
 
 // Pass management.
