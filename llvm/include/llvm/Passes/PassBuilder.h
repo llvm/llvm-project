@@ -260,11 +260,6 @@ public:
   /// optimization and code generation. It is particularly tuned to fit well
   /// when IR coming into the LTO phase was first run through \c
   /// addPreLinkLTODefaultPipeline, and the two coordinate closely.
-  ///
-  /// Note that \p Level cannot be `O0` here. The pipelines produced are
-  /// only intended for use when attempting to optimize code. If frontends
-  /// require some transformations for semantic reasons, they should explicitly
-  /// build them.
   ModulePassManager
   buildThinLTODefaultPipeline(OptimizationLevel Level,
                               const ModuleSummaryIndex *ImportSummary);
@@ -276,11 +271,6 @@ public:
   /// run. It works to minimize the IR which needs to be analyzed without
   /// making irreversible decisions which could be made better during the LTO
   /// run.
-  ///
-  /// Note that \p Level cannot be `O0` here. The pipelines produced are
-  /// only intended for use when attempting to optimize code. If frontends
-  /// require some transformations for semantic reasons, they should explicitly
-  /// build them.
   ModulePassManager buildLTOPreLinkDefaultPipeline(OptimizationLevel Level);
 
   /// Build an LTO default optimization pipeline to a pass manager.
@@ -289,11 +279,6 @@ public:
   /// optimization and code generation. It is particularly tuned to fit well
   /// when IR coming into the LTO phase was first run through \c
   /// addPreLinkLTODefaultPipeline, and the two coordinate closely.
-  ///
-  /// Note that \p Level cannot be `O0` here. The pipelines produced are
-  /// only intended for use when attempting to optimize code. If frontends
-  /// require some transformations for semantic reasons, they should explicitly
-  /// build them.
   ModulePassManager buildLTODefaultPipeline(OptimizationLevel Level,
                                             ModuleSummaryIndex *ExportSummary);
 
