@@ -99,7 +99,8 @@ public:
   static bool isFunctionOfInterest(const Function *Func);
 
   // Other Utilities
-  void mapFloatCastToAFValue(Instruction *Inst);
+  void mapFloatCastToAFValue(Instruction *Inst,
+                             long int *NumInstrumentedInstructions);
 };
 
 } // namespace atomiccondition

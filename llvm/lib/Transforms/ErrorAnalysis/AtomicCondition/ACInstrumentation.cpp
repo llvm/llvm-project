@@ -165,7 +165,7 @@ void ACInstrumentation::instrumentCallsForACComputation(
 
         (*InstructionIterator)++;
         (*NumInstrumentedInstructions)++;
-      } else if(isa<ConstantFP>(BaseInstruction->getOperand(I))){
+      } else if(isa<ConstantFP>(BaseInstruction->getOperand(I))) {
         OperandValue = ConstantFP::get(InstructionBuilder.getDoubleTy(),
                                        APFloat(static_cast<ConstantFP*>(BaseInstruction->getOperand(I))->getValue().convertToDouble()));
       }
@@ -243,28 +243,22 @@ void ACInstrumentation::instrumentCallsForAFComputation(
   if (BaseInstruction->getOpcode() == Instruction::Call)
     NumOperands--;
 
-  // Incomplete phi nodes are those that are to be assigned an incoming value
-  // which is not generated yet.
-  std::vector<Value *> IncompletePHINodes;
   for (int I = 0; I < NumOperands; ++I) {
     if (getFunctionEnum(
             static_cast<Instruction *>(BaseInstruction->getOperand(I))) != -1) {
       assert(InstructionAFMap.count(BaseInstruction->getOperand(I)) == 1);
       AFArray.push_back(InstructionAFMap[BaseInstruction->getOperand(I)]);
-      IncompletePHINodes.push_back(NULL);
     } else if (isFloatToFloatCastOperation(static_cast<const Instruction *>(
                    BaseInstruction->getOperand(I))) &&
                InstructionAFMap.count(BaseInstruction->getOperand(I)) == 1) {
       AFArray.push_back(InstructionAFMap[BaseInstruction->getOperand(I)]);
-      IncompletePHINodes.push_back(NULL);
     } else if (isa<Instruction>(BaseInstruction->getOperand(I)) &&
                static_cast<Instruction *>(BaseInstruction->getOperand(I))
                        ->getOpcode() == Instruction::PHI) {
       // Case when operand is a phi node.
       if(InstructionAFMap.count(BaseInstruction->getOperand(I)) == 0) {
         // If Phi node is not yet instrumented, instrument it.
-        IncompletePHINodes.push_back(instrumentPhiNodeForAF(
-            BaseInstruction->getOperand(I), NumInstrumentedInstructions));
+        instrumentPhiNodeForAF(BaseInstruction->getOperand(I), NumInstrumentedInstructions);
       }
       AFArray.push_back(InstructionAFMap[BaseInstruction->getOperand(I)]);
     } else {
@@ -272,7 +266,6 @@ void ACInstrumentation::instrumentCallsForAFComputation(
       // eg: When operand is constant.
       AFArray.push_back(
           ConstantPointerNull::get(InstructionBuilder.getPtrTy()));
-      IncompletePHINodes.push_back(NULL);
     }
   }
 
@@ -490,7 +483,7 @@ void ACInstrumentation::instrumentBasicBlock(
         BB->getParent()->getName().compare(this->FunctionToInstrument->getName()) == 0) {
       // Branch based on kind of Instruction
       if (isFloatToFloatCastOperation(&*I)) {
-        mapFloatCastToAFValue(&*I);
+        mapFloatCastToAFValue(&*I, NumInstrumentedInstructions);
       } else if (isOtherOperation(&*I)) {
         instrumentCallsToAnalyzeInstruction(CurrentInstruction, &I,
                                             NumInstrumentedInstructions);
@@ -834,17 +827,38 @@ bool ACInstrumentation::isFunctionOfInterest(const Function *Func) {
   return false;
 }
 
-void ACInstrumentation::mapFloatCastToAFValue(Instruction *Inst) {
-  if (Inst->getOpcode() == Instruction::FPTrunc &&
-      InstructionAFMap.count(static_cast<const FPTruncInst *>(Inst)->getOperand(0)) == 1) {
-    std::pair<Value *, Value *> InstructionAFPair =
-        std::make_pair((Value *)Inst, InstructionAFMap[static_cast<const FPTruncInst *>(Inst)->getOperand(0)]);
-    InstructionAFMap.insert(InstructionAFPair);
-  } else if(Inst->getOpcode() == Instruction::FPExt &&
-             InstructionAFMap.count(static_cast<const FPExtInst *>(Inst)->getOperand(0)) == 1) {
-    std::pair<Value *, Value *> InstructionAFPair =
-        std::make_pair((Value *)Inst, InstructionAFMap[static_cast<const FPExtInst *>(Inst)->getOperand(0)]);
-    InstructionAFMap.insert(InstructionAFPair);
+void ACInstrumentation::mapFloatCastToAFValue(Instruction *Inst,
+                                              long *NumInstrumentedInstructions) {
+  if (Inst->getOpcode() == Instruction::FPTrunc) {
+    if (InstructionAFMap.count(static_cast<const FPTruncInst *>(Inst)->getOperand(0)) == 0
+        && isPhiNode(static_cast<const Instruction *>(static_cast<const FPTruncInst *>(Inst)->getOperand(0)))) {
+      // If the operand of the FPTruncInst is a PHINode, then we need to instrument
+      // a corresponding PHINode for the AF value.
+      instrumentPhiNodeForAF(static_cast<const FPTruncInst *>(Inst)->getOperand(0),
+                             NumInstrumentedInstructions);
+    }
+    if (InstructionAFMap.count(static_cast<const FPTruncInst *>(Inst)->getOperand(0)) == 1) {
+      std::pair<Value *, Value *> InstructionAFPair = std::make_pair(
+          (Value *)Inst,
+          InstructionAFMap[static_cast<const FPTruncInst *>(Inst)->getOperand(
+              0)]);
+      InstructionAFMap.insert(InstructionAFPair);
+    }
+  } else if(Inst->getOpcode() == Instruction::FPExt) {
+    if(InstructionAFMap.count(static_cast<const FPExtInst *>(Inst)->getOperand(0)) == 0
+        && isPhiNode(static_cast<const Instruction *>(static_cast<const FPExtInst *>(Inst)->getOperand(0)))) {
+      // If the operand of the FPExtInst is a PHINode, then we need to instrument
+      // a corresponding PHINode for the AF value.
+      instrumentPhiNodeForAF(static_cast<const FPExtInst *>(Inst)->getOperand(0),
+                                 NumInstrumentedInstructions);
+    }
+    if(InstructionAFMap.count(static_cast<const FPExtInst *>(Inst)->getOperand(0)) == 1) {
+      std::pair<Value *, Value *> InstructionAFPair = std::make_pair(
+          (Value *)Inst,
+          InstructionAFMap[static_cast<const FPExtInst *>(Inst)->getOperand(
+              0)]);
+      InstructionAFMap.insert(InstructionAFPair);
+    }
   }
 }
 
