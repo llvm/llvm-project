@@ -29,18 +29,12 @@ void foo() {
 // This used to crash the compiler.
 template<int D>
 int foo(int x) {
-    if constexpr (D > 1)
-        [[clang::noinline]] return foo<D-1>(x + 1);
-    else
-        return x;
+  [[clang::noinline]] return foo<D-1>(x + 1);
 }
 
 // FIXME: This should warn that noinline statement attribute has higher
 // precedence than the always_inline function attribute.
 template<int D> [[clang::always_inline]]
 int bar(int x) {
-    if constexpr (D > 1)
-        [[clang::noinline]] return bar<D-1>(x + 1);
-    else
-        return x;
+  [[clang::noinline]] return bar<D-1>(x + 1);
 }

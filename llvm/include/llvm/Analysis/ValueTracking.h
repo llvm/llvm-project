@@ -217,6 +217,99 @@ unsigned ComputeMaxSignificantBits(const Value *Op, const DataLayout &DL,
 Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
                                       const TargetLibraryInfo *TLI);
 
+/// Returns a pair of values, which if passed to llvm.is.fpclass, returns the
+/// same result as an fcmp with the given operands.
+std::pair<Value *, FPClassTest> fcmpToClassTest(CmpInst::Predicate Pred,
+                                                const Function &F,
+                                                Value *LHS, Value *RHS);
+
+struct KnownFPClass {
+  /// Floating-point classes the value could be one of.
+  FPClassTest KnownFPClasses = fcAllFlags;
+
+  /// std::nullopt if the sign bit is unknown, true if the sign bit is
+  /// definitely set or false if the sign bit is definitely unset.
+  std::optional<bool> SignBit;
+
+  KnownFPClass &operator|=(const KnownFPClass &RHS) {
+    KnownFPClasses = KnownFPClasses | RHS.KnownFPClasses;
+
+    if (SignBit != RHS.SignBit)
+      SignBit = std::nullopt;
+    return *this;
+  }
+
+  void knownNot(FPClassTest RuleOut) {
+    KnownFPClasses = KnownFPClasses & ~RuleOut;
+  }
+
+  void fneg() {
+    KnownFPClasses = llvm::fneg(KnownFPClasses);
+    if (SignBit)
+      SignBit = !*SignBit;
+  }
+
+  void fabs() {
+    KnownFPClasses = llvm::fabs(KnownFPClasses);
+    SignBit = false;
+  }
+
+  /// Assume the sign bit is zero.
+  void signBitIsZero() {
+    KnownFPClasses = (KnownFPClasses & fcPositive) |
+                     (KnownFPClasses & fcNan);
+    SignBit = false;
+  }
+
+  void copysign(const KnownFPClass &Sign) {
+    // Start assuming nothing about the sign.
+    SignBit = Sign.SignBit;
+    if (!SignBit)
+      return;
+
+    if (*SignBit)
+      KnownFPClasses = KnownFPClasses & fcNegative;
+    else
+      KnownFPClasses = KnownFPClasses & fcPositive;
+  }
+
+  void resetAll() { *this = KnownFPClass(); }
+};
+
+inline KnownFPClass operator|(KnownFPClass LHS, const KnownFPClass &RHS) {
+  LHS |= RHS;
+  return LHS;
+}
+
+inline KnownFPClass operator|(const KnownFPClass &LHS, KnownFPClass &&RHS) {
+  RHS |= LHS;
+  return std::move(RHS);
+}
+
+/// Determine which floating-point classes are valid for \p V, and return them
+/// in KnownFPClass bit sets.
+///
+/// This function is defined on values with floating-point type, values vectors
+/// of floating-point type, and arrays of floating-point type.
+
+/// \p InterestedClasses is a compile time optimization hint for which floating
+/// point classes should be queried. Queries not specified in \p
+/// InterestedClasses should be reliable if they are determined during the
+/// query.
+KnownFPClass computeKnownFPClass(
+    const Value *V, const APInt &DemandedElts, const DataLayout &DL,
+    FPClassTest InterestedClasses = fcAllFlags, unsigned Depth = 0,
+    const TargetLibraryInfo *TLI = nullptr, AssumptionCache *AC = nullptr,
+    const Instruction *CxtI = nullptr, const DominatorTree *DT = nullptr,
+    OptimizationRemarkEmitter *ORE = nullptr, bool UseInstrInfo = true);
+
+KnownFPClass computeKnownFPClass(
+    const Value *V, const DataLayout &DL,
+    FPClassTest InterestedClasses = fcAllFlags, unsigned Depth = 0,
+    const TargetLibraryInfo *TLI = nullptr, AssumptionCache *AC = nullptr,
+    const Instruction *CxtI = nullptr, const DominatorTree *DT = nullptr,
+    OptimizationRemarkEmitter *ORE = nullptr, bool UseInstrInfo = true);
+
 /// Return true if we can prove that the specified FP value is never equal to
 /// -0.0.
 bool CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
