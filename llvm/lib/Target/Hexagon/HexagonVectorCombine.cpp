@@ -982,15 +982,27 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
     Value *Accum = UndefValue::get(HVC.getByteTy(B.Seg.Size));
     Builder.SetInsertPoint(cast<Instruction>(B.Seg.Val));
 
+    // We're generating a reduction, where each instruction depends on
+    // the previous one, so we need to order them according to the position
+    // of their inputs in the code.
+    std::vector<ByteSpan::Block *> ABlocks;
     for (ByteSpan::Block &S : ASection) {
-      if (S.Seg.Val == nullptr)
-        continue;
+      if (S.Seg.Val != nullptr)
+        ABlocks.push_back(&S);
+    }
+    llvm::sort(ABlocks,
+               [&](const ByteSpan::Block *A, const ByteSpan::Block *B) {
+                 return isEarlier(cast<Instruction>(A->Seg.Val),
+                                  cast<Instruction>(B->Seg.Val));
+               });
+    for (ByteSpan::Block *S : ABlocks) {
       // The processing of the data loaded by the aligned loads
       // needs to be inserted after the data is available.
-      Instruction *SegI = cast<Instruction>(S.Seg.Val);
+      Instruction *SegI = cast<Instruction>(S->Seg.Val);
       Builder.SetInsertPoint(&*std::next(SegI->getIterator()));
-      Value *Pay = HVC.vbytes(Builder, getPayload(S.Seg.Val));
-      Accum = HVC.insertb(Builder, Accum, Pay, S.Seg.Start, S.Seg.Size, S.Pos);
+      Value *Pay = HVC.vbytes(Builder, getPayload(S->Seg.Val));
+      Accum =
+          HVC.insertb(Builder, Accum, Pay, S->Seg.Start, S->Seg.Size, S->Pos);
     }
     // Instead of casting everything to bytes for the vselect, cast to the
     // original value type. This will avoid complications with casting masks.
