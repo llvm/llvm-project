@@ -509,11 +509,11 @@
     extern void omp_display_env(int verbose);
 
 #   if defined(_OPENMP) && _OPENMP >= 201811
-    #pragma omp begin declare variant match(device={kind(nohost)})
-    static inline int omp_is_initial_device(void) { return 0; }
-    #pragma omp end declare variant
     #pragma omp begin declare variant match(device={kind(host)})
     static inline int omp_is_initial_device(void) { return 1; }
+    #pragma omp end declare variant
+    #pragma omp begin declare variant match(device={kind(nohost)})
+    static inline int omp_is_initial_device(void) { return 0; }
     #pragma omp end declare variant
 #   endif
 
