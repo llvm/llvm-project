@@ -846,6 +846,11 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   Value *Src1 = II.getArgOperand(1);
   const ConstantInt *CMask = cast<ConstantInt>(Src1);
   FPClassTest Mask = static_cast<FPClassTest>(CMask->getZExtValue());
+  const bool IsUnordered = (Mask & fcNan) == fcNan;
+  const bool IsOrdered = (Mask & fcNan) == fcNone;
+  const FPClassTest OrderedMask = Mask & ~fcNan;
+  const FPClassTest OrderedInvertedMask = ~OrderedMask & ~fcNan;
+
   const bool IsStrict = II.isStrictFP();
 
   Value *FNegSrc;
@@ -860,6 +865,37 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   if (match(Src0, m_FAbs(m_Value(FAbsSrc)))) {
     II.setArgOperand(1, ConstantInt::get(Src1->getType(), fabs(Mask)));
     return replaceOperand(II, 0, FAbsSrc);
+  }
+
+  // TODO: is.fpclass(x, fcInf) -> fabs(x) == inf
+
+  if ((OrderedMask == fcPosInf || OrderedMask == fcNegInf) &&
+      (IsOrdered || IsUnordered) && !IsStrict) {
+    // is.fpclass(x, fcPosInf) -> fcmp oeq x, +inf
+    // is.fpclass(x, fcNegInf) -> fcmp oeq x, -inf
+    // is.fpclass(x, fcPosInf|fcNan) -> fcmp ueq x, +inf
+    // is.fpclass(x, fcNegInf|fcNan) -> fcmp ueq x, -inf
+    Constant *Inf =
+        ConstantFP::getInfinity(Src0->getType(), OrderedMask == fcNegInf);
+    Value *EqInf = IsUnordered ? Builder.CreateFCmpUEQ(Src0, Inf)
+                               : Builder.CreateFCmpOEQ(Src0, Inf);
+
+    EqInf->takeName(&II);
+    return replaceInstUsesWith(II, EqInf);
+  }
+
+  if ((OrderedInvertedMask == fcPosInf || OrderedInvertedMask == fcNegInf) &&
+      (IsOrdered || IsUnordered) && !IsStrict) {
+    // is.fpclass(x, ~fcPosInf) -> fcmp one x, +inf
+    // is.fpclass(x, ~fcNegInf) -> fcmp one x, -inf
+    // is.fpclass(x, ~fcPosInf|fcNan) -> fcmp une x, +inf
+    // is.fpclass(x, ~fcNegInf|fcNan) -> fcmp une x, -inf
+    Constant *Inf = ConstantFP::getInfinity(Src0->getType(),
+                                            OrderedInvertedMask == fcNegInf);
+    Value *NeInf = IsUnordered ? Builder.CreateFCmpUNE(Src0, Inf)
+                               : Builder.CreateFCmpONE(Src0, Inf);
+    NeInf->takeName(&II);
+    return replaceInstUsesWith(II, NeInf);
   }
 
   if (Mask == fcNan && !IsStrict) {
@@ -878,11 +914,6 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
     FCmp->takeName(&II);
     return replaceInstUsesWith(II, FCmp);
   }
-
-  const bool IsUnordered = (Mask & fcNan) == fcNan;
-  const bool IsOrdered = (Mask & fcNan) == fcNone;
-  const FPClassTest OrderedMask = Mask & ~fcNan;
-  const FPClassTest OrderedInvertedMask = ~OrderedMask & ~fcNan;
 
   if (!IsStrict && (IsOrdered || IsUnordered) &&
       fpclassTestIsFCmp0(OrderedMask, *II.getFunction(), Src0->getType())) {
