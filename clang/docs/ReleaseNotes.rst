@@ -181,6 +181,8 @@ Improvements to Clang's diagnostics
 - Clang now avoids duplicate warnings on unreachable ``[[fallthrough]];`` statements
   previously issued from ``-Wunreachable-code`` and ``-Wunreachable-code-fallthrough``
   by prioritizing ``-Wunreachable-code-fallthrough``.
+- Clang now correctly diagnoses statement attributes ``[[clang::always_inine]]`` and
+  ``[[clang::noinline]]`` when used on a statement with dependent call expressions.
 
 Bug Fixes in This Version
 -------------------------
