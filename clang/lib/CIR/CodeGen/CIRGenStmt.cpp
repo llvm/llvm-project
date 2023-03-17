@@ -423,52 +423,81 @@ mlir::LogicalResult CIRGenFunction::buildReturnStmt(const ReturnStmt &S) {
   // TODO(cir): LLVM codegen uses a RunCleanupsScope cleanupScope here, we
   // should model this in face of dtors.
 
-  if (const auto *EWC = dyn_cast_or_null<ExprWithCleanups>(RV))
-    assert(0 && "not implemented");
+  bool createNewScope = false;
+  if (const auto *EWC = dyn_cast_or_null<ExprWithCleanups>(RV)) {
+    RV = EWC->getSubExpr();
+    createNewScope = true;
+  }
 
-  if (getContext().getLangOpts().ElideConstructors && S.getNRVOCandidate() &&
-      S.getNRVOCandidate()->isNRVOVariable()) {
-    assert(!UnimplementedFeature::openMP());
-    // Apply the named return value optimization for this return statement,
-    // which means doing nothing: the appropriate result has already been
-    // constructed into the NRVO variable.
+  auto handleReturnVal = [&]() {
+    if (getContext().getLangOpts().ElideConstructors && S.getNRVOCandidate() &&
+        S.getNRVOCandidate()->isNRVOVariable()) {
+      assert(!UnimplementedFeature::openMP());
+      // Apply the named return value optimization for this return statement,
+      // which means doing nothing: the appropriate result has already been
+      // constructed into the NRVO variable.
 
-    // If there is an NRVO flag for this variable, set it to 1 into indicate
-    // that the cleanup code should not destroy the variable.
-    if (auto NRVOFlag = NRVOFlags[S.getNRVOCandidate()])
-      llvm_unreachable("NYI");
-  } else if (!ReturnValue.isValid() || (RV && RV->getType()->isVoidType())) {
-    // Make sure not to return anything, but evaluate the expression
-    // for side effects.
-    if (RV) {
-      assert(0 && "not implemented");
+      // If there is an NRVO flag for this variable, set it to 1 into indicate
+      // that the cleanup code should not destroy the variable.
+      if (auto NRVOFlag = NRVOFlags[S.getNRVOCandidate()])
+        llvm_unreachable("NYI");
+    } else if (!ReturnValue.isValid() || (RV && RV->getType()->isVoidType())) {
+      // Make sure not to return anything, but evaluate the expression
+      // for side effects.
+      if (RV) {
+        assert(0 && "not implemented");
+      }
+    } else if (!RV) {
+      // Do nothing (return value is left uninitialized)
+    } else if (FnRetTy->isReferenceType()) {
+      // If this function returns a reference, take the address of the
+      // expression rather than the value.
+      RValue Result = buildReferenceBindingToExpr(RV);
+      builder.create<mlir::cir::StoreOp>(loc, Result.getScalarVal(),
+                                         ReturnValue.getPointer());
+    } else {
+      mlir::Value V = nullptr;
+      switch (CIRGenFunction::getEvaluationKind(RV->getType())) {
+      case TEK_Scalar:
+        V = buildScalarExpr(RV);
+        builder.create<mlir::cir::StoreOp>(loc, V, *FnRetAlloca);
+        break;
+      case TEK_Complex:
+        llvm_unreachable("NYI");
+        break;
+      case TEK_Aggregate:
+        buildAggExpr(
+            RV, AggValueSlot::forAddr(
+                    ReturnValue, Qualifiers(), AggValueSlot::IsDestructed,
+                    AggValueSlot::DoesNotNeedGCBarriers,
+                    AggValueSlot::IsNotAliased, getOverlapForReturnValue()));
+        break;
+      }
     }
-  } else if (!RV) {
-    // Do nothing (return value is left uninitialized)
-  } else if (FnRetTy->isReferenceType()) {
-    // If this function returns a reference, take the address of the expression
-    // rather than the value.
-    RValue Result = buildReferenceBindingToExpr(RV);
-    builder.create<mlir::cir::StoreOp>(loc, Result.getScalarVal(),
-                                       ReturnValue.getPointer());
-  } else {
-    mlir::Value V = nullptr;
-    switch (CIRGenFunction::getEvaluationKind(RV->getType())) {
-    case TEK_Scalar:
-      V = buildScalarExpr(RV);
-      builder.create<mlir::cir::StoreOp>(loc, V, *FnRetAlloca);
-      break;
-    case TEK_Complex:
-      llvm_unreachable("NYI");
-      break;
-    case TEK_Aggregate:
-      buildAggExpr(RV,
-                   AggValueSlot::forAddr(
-                       ReturnValue, Qualifiers(), AggValueSlot::IsDestructed,
-                       AggValueSlot::DoesNotNeedGCBarriers,
-                       AggValueSlot::IsNotAliased, getOverlapForReturnValue()));
-      break;
-    }
+  };
+
+  if (!createNewScope)
+    handleReturnVal();
+  else {
+    mlir::Location scopeLoc =
+        getLoc(RV ? RV->getSourceRange() : S.getSourceRange());
+    builder.create<mlir::cir::ScopeOp>(
+        scopeLoc, /*scopeBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          SmallVector<mlir::Location, 2> locs;
+          if (loc.isa<mlir::FileLineColLoc>()) {
+            locs.push_back(loc);
+            locs.push_back(loc);
+          } else if (loc.isa<mlir::FusedLoc>()) {
+            auto fusedLoc = loc.cast<mlir::FusedLoc>();
+            locs.push_back(fusedLoc.getLocations()[0]);
+            locs.push_back(fusedLoc.getLocations()[1]);
+          }
+          CIRGenFunction::LexicalScopeContext lexScope{
+              locs[0], locs[1], builder.getInsertionBlock()};
+          CIRGenFunction::LexicalScopeGuard lexScopeGuard{*this, &lexScope};
+          handleReturnVal();
+        });
   }
 
   // Create a new return block (if not existent) and add a branch to
