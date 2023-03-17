@@ -24,6 +24,7 @@
 // still return true.
 #if !__has_builtin(__builtin_LINE) || \
     !__has_builtin(__builtin_FILE) || \
+    !__has_builtin(__builtin_FILE_NAME) || \
     !__has_builtin(__builtin_FUNCTION) || \
     !__has_builtin(__builtin_COLUMN) || \
     !__has_builtin(__builtin_types_compatible_p)
