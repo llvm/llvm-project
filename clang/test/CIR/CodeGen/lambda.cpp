@@ -73,3 +73,20 @@ auto g2() {
 // CHECK-NEXT: cir.store %1, %3 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
 // CHECK-NEXT: %4 = cir.load %0 : cir.ptr <!ty_22class2Eanon223>, !ty_22class2Eanon223
 // CHECK-NEXT: cir.return %4 : !ty_22class2Eanon223
+
+int f() {
+  return g2()();
+}
+
+// CHECK: cir.func @_Z1fv() -> i32 {
+// CHECK-NEXT:   %0 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64}
+// CHECK-NEXT:   cir.scope {
+// CHECK-NEXT:     %2 = cir.alloca !ty_22class2Eanon223, cir.ptr <!ty_22class2Eanon223>, ["ref.tmp0"] {alignment = 8 : i64}
+// CHECK-NEXT:     %3 = cir.call @_Z2g2v() : () -> !ty_22class2Eanon223
+// CHECK-NEXT:     cir.store %3, %2 : !ty_22class2Eanon223, cir.ptr <!ty_22class2Eanon223>
+// CHECK-NEXT:     %4 = cir.call @_ZZ2g2vENK3$_0clEv(%2) : (!cir.ptr<!ty_22class2Eanon223>) -> i32
+// CHECK-NEXT:     cir.store %4, %0 : i32, cir.ptr <i32>
+// CHECK-NEXT:   }
+// CHECK-NEXT:   %1 = cir.load %0 : cir.ptr <i32>, i32
+// CHECK-NEXT:   cir.return %1 : i32
+// CHECK-NEXT: }
