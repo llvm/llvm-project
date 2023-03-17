@@ -16,13 +16,13 @@ module assumed_type_test
 
 contains
 
-  subroutine call_assmued()
+  subroutine call_assumed()
     integer, target :: i
     call assumed(i)
   end subroutine
 
-! CHECK-LABEL: func.func @_QMassumed_type_testPcall_assmued() {
-! CHECK: %[[I:.*]] = fir.alloca i32 {bindc_name = "i", fir.target, uniq_name = "_QMassumed_type_testFcall_assmuedEi"}
+! CHECK-LABEL: func.func @_QMassumed_type_testPcall_assumed() {
+! CHECK: %[[I:.*]] = fir.alloca i32 {bindc_name = "i", fir.target, uniq_name = "_QMassumed_type_testFcall_assumedEi"}
 ! CHECK: %[[BOX_NONE:.*]] = fir.embox %[[I]] : (!fir.ref<i32>) -> !fir.box<none>
 ! CHECK: fir.call @_QPassumed(%[[BOX_NONE]]) fastmath<contract> : (!fir.box<none>) -> ()
 
