@@ -114,3 +114,46 @@ print the assertion expression and exit. It does not implement the semantics
 of the standard ``assert`` macro. Hence, it can be used from any where in the
 libc runtime code without causing any recursive calls or chicken-and-egg
 situations.
+
+Allocations in the libc runtime code
+====================================
+
+Some libc functions allocate memory. For example, the ``strdup`` function
+allocates new memory into which the input string is duplicated. Allocations
+are typically done by calling a function from the ``malloc`` family of
+functions. Such functions can fail and return an error value to indicate
+allocation failure. To conform to standards, the libc should handle
+allocation failures gracefully and surface the error conditions to the user
+code as appropriate. Since LLVM's libc is implemented in C++, we want
+allocations and deallocations to employ C++ operators ``new`` and ``delete``
+as they implicitly invoke constructors and destructors respectively. However,
+if we use the default ``new`` and ``delete`` operators, the libc will end up
+depending on the C++ runtime. To avoid such a dependence, and to handle
+allocation failures gracefully, we use special ``new`` and ``delete`` operators
+defined in
+`src/__support/CPP/new.h <https://github.com/llvm/llvm-project/blob/main/libc/src/__support/CPP/new.h>`_.
+Allocations and deallocations using these operators employ a pattern like
+this:
+
+.. code-block:: c++
+
+   #include "src/__support/CPP/new.h"
+
+   ...
+
+     __llvm_libc::AllocChecker ac;
+     auto *obj = new (ac) Type(...);
+     if (!ac) {
+       // handle allocator failure.
+     }
+     ...
+     delete obj;
+
+The only exception to using the above pattern is if allocating using the
+``realloc`` function is of value. In such cases, prefer to use only the
+``malloc`` family of functions for allocations and deallocations. Allocation
+failures will still need to be handled gracefully. Further, keep in mind that
+these functions do not call the constructors and destructors of the
+allocated/deallocated objects. So, use these functions carefully and only
+when it is absolutely clear that constructor and desctructor invocation is
+not required.

@@ -94,8 +94,9 @@ double test_5c(__char5 *in) {
 double varargs_vec_9c(int fixed, ...) {
 // CHECK: varargs_vec_9c
 // CHECK: alloca <9 x i8>, align 16
-// CHECK: [[ALIGN:%.*]] = and i64 {{%.*}}, -16
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i64 [[ALIGN]] to ptr
+// CHECK: [[AP:%.*]] = load ptr, ptr %ap, align 8
+// CHECK: [[AP_ADD:%.*]] = getelementptr inbounds i8, ptr [[AP]], i32 15
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[AP_ADD]], i64 -16)
 // CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i64 16
   va_list ap;
   double sum = fixed;
@@ -153,8 +154,9 @@ double test_3s(__short3 *in) {
 double varargs_vec_5s(int fixed, ...) {
 // CHECK: varargs_vec_5s
 // CHECK: alloca <5 x i16>, align 16
-// CHECK: [[ALIGN:%.*]] = and i64 {{%.*}}, -16
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i64 [[ALIGN]] to ptr
+// CHECK: [[AP:%.*]] = load ptr, ptr %ap, align 8
+// CHECK: [[AP_ADD:%.*]] = getelementptr inbounds i8, ptr [[AP]], i32 15
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[AP_ADD]], i64 -16)
 // CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i64 16
   va_list ap;
   double sum = fixed;
@@ -174,8 +176,9 @@ double test_5s(__short5 *in) {
 double varargs_vec_3i(int fixed, ...) {
 // CHECK: varargs_vec_3i
 // CHECK: alloca <3 x i32>, align 16
-// CHECK: [[ALIGN:%.*]] = and i64 {{%.*}}, -16
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i64 [[ALIGN]] to ptr
+// CHECK: [[AP:%.*]] = load ptr, ptr %ap, align 8
+// CHECK: [[AP_ADD:%.*]] = getelementptr inbounds i8, ptr [[AP]], i32 15
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[AP_ADD]], i64 -16)
 // CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i64 16
   va_list ap;
   double sum = fixed;
@@ -244,8 +247,11 @@ double varargs_vec(int fixed, ...) {
 // CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_CUR:%.*]], i64 8
   sum = sum + c5.x + c5.y;
   __char9 c9 = va_arg(ap, __char9);
-// CHECK: [[ALIGN:%.*]] = and i64 {{%.*}}, -16
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i64 [[ALIGN]] to ptr
+
+
+// CHECK: [[AP:%.*]] = load ptr, ptr %ap, align 8
+// CHECK: [[AP_ADD:%.*]] = getelementptr inbounds i8, ptr [[AP]], i32 15
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[AP_ADD]], i64 -16)
 // CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i64 16
   sum = sum + c9.x + c9.y;
   __char19 c19 = va_arg(ap, __char19);
@@ -256,13 +262,17 @@ double varargs_vec(int fixed, ...) {
 // CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_CUR:%.*]], i64 8
   sum = sum + s3.x + s3.y;
   __short5 s5 = va_arg(ap, __short5);
-// CHECK: [[ALIGN:%.*]] = and i64 {{%.*}}, -16
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i64 [[ALIGN]] to ptr
+
+// CHECK: [[AP:%.*]] = load ptr, ptr %ap, align 8
+// CHECK: [[AP_ADD:%.*]] = getelementptr inbounds i8, ptr [[AP]], i32 15
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[AP_ADD]], i64 -16)
 // CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i64 16
   sum = sum + s5.x + s5.y;
   __int3 i3 = va_arg(ap, __int3);
-// CHECK: [[ALIGN:%.*]] = and i64 {{%.*}}, -16
-// CHECK: [[AP_ALIGN:%.*]] = inttoptr i64 [[ALIGN]] to ptr
+
+// CHECK: [[AP:%.*]] = load ptr, ptr %ap, align 8
+// CHECK: [[AP_ADD:%.*]] = getelementptr inbounds i8, ptr [[AP]], i32 15
+// CHECK: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[AP_ADD]], i64 -16)
 // CHECK: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP_ALIGN]], i64 16
   sum = sum + i3.x + i3.y;
   __int5 i5 = va_arg(ap, __int5);

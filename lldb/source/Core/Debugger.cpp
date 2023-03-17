@@ -1230,6 +1230,29 @@ StreamSP Debugger::GetAsyncErrorStream() {
   return std::make_shared<StreamAsynchronousIO>(*this, false, GetUseColor());
 }
 
+void Debugger::RequestInterrupt() {
+  std::lock_guard<std::mutex> guard(m_interrupt_mutex);
+  m_interrupt_requested++;
+}
+
+void Debugger::CancelInterruptRequest() {
+  std::lock_guard<std::mutex> guard(m_interrupt_mutex);
+  if (m_interrupt_requested > 0)
+    m_interrupt_requested--;
+}
+
+bool Debugger::InterruptRequested() {
+  // This is the one we should call internally.  This will return true either
+  // if there's a debugger interrupt and we aren't on the IOHandler thread, 
+  // or if we are on the IOHandler thread and there's a CommandInterpreter
+  // interrupt.
+  if (!IsIOHandlerThreadCurrentThread()) {
+    std::lock_guard<std::mutex> guard(m_interrupt_mutex);
+    return m_interrupt_requested != 0;
+  }
+  return GetCommandInterpreter().WasInterrupted();
+}
+
 size_t Debugger::GetNumDebuggers() {
   if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
     std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
@@ -1981,7 +2004,15 @@ void Debugger::HandleDiagnosticEvent(const lldb::EventSP &event_sp) {
   data->Dump(stream.get());
 }
 
-bool Debugger::HasIOHandlerThread() { return m_io_handler_thread.IsJoinable(); }
+bool Debugger::HasIOHandlerThread() const {
+  return m_io_handler_thread.IsJoinable(); 
+}
+
+HostThread Debugger::SetIOHandlerThread(HostThread &new_thread) {
+  HostThread old_host = m_io_handler_thread;
+  m_io_handler_thread = new_thread;
+  return old_host;
+}
 
 bool Debugger::StartIOHandlerThread() {
   if (!m_io_handler_thread.IsJoinable()) {
@@ -2011,6 +2042,12 @@ void Debugger::JoinIOHandlerThread() {
     m_io_handler_thread.Join(&result);
     m_io_handler_thread = LLDB_INVALID_HOST_THREAD;
   }
+}
+
+bool Debugger::IsIOHandlerThreadCurrentThread() const {
+  if (!HasIOHandlerThread())
+    return false;
+  return m_io_handler_thread.EqualsThread(Host::GetCurrentThread());
 }
 
 Target &Debugger::GetSelectedOrDummyTarget(bool prefer_dummy) {

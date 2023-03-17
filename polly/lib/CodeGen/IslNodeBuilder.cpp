@@ -850,7 +850,7 @@ void IslNodeBuilder::generateCopyStmt(
 }
 
 Value *IslNodeBuilder::materializeNonScopLoopInductionVariable(const Loop *L) {
-  assert(OutsideLoopIterations.find(L) == OutsideLoopIterations.end() &&
+  assert(!OutsideLoopIterations.contains(L) &&
          "trying to materialize loop induction variable twice");
   const SCEV *OuterLIV = SE.getAddRecExpr(SE.getUnknown(Builder.getInt64(0)),
                                           SE.getUnknown(Builder.getInt64(1)), L,

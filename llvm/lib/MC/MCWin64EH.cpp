@@ -1089,7 +1089,7 @@ static void ARM64ProcessEpilogs(WinEH::FrameInfo *info,
       FindMatchingEpilog(EpilogInstrs, AddedEpilogs, info);
     int PrologOffset;
     if (MatchingEpilog) {
-      assert(EpilogInfo.find(MatchingEpilog) != EpilogInfo.end() &&
+      assert(EpilogInfo.contains(MatchingEpilog) &&
              "Duplicate epilog not found");
       EpilogInfo[EpilogStart] = EpilogInfo.lookup(MatchingEpilog);
       // Clear the unwind codes in the EpilogMap, so that they don't get output
@@ -2369,7 +2369,7 @@ static void ARMEmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
         FindMatchingEpilog(EpilogInstrs, AddedEpilogs, info);
     int PrologOffset;
     if (MatchingEpilog) {
-      assert(EpilogInfo.find(MatchingEpilog) != EpilogInfo.end() &&
+      assert(EpilogInfo.contains(MatchingEpilog) &&
              "Duplicate epilog not found");
       EpilogInfo[EpilogStart] = EpilogInfo.lookup(MatchingEpilog);
       // Clear the unwind codes in the EpilogMap, so that they don't get output
@@ -2449,7 +2449,7 @@ static void ARMEmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
       else
         OffsetExpr = GetSubDivExpr(streamer, EpilogStart, info->Begin, 2);
 
-      assert(info->EpilogMap.find(EpilogStart) != info->EpilogMap.end());
+      assert(info->EpilogMap.contains(EpilogStart));
       unsigned Condition = info->EpilogMap[EpilogStart].Condition;
       assert(Condition <= 0xf);
 

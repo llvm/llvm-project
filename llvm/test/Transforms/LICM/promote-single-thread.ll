@@ -102,6 +102,75 @@ exit:
   ret void
 }
 
+; if %c is false and %ptr == @g, then this should store 42 to the pointer.
+; However, if we perform load+store promotion, then we would instead store the
+; original value of the global.
+; FIXME: This is a miscompile.
+define void @promote_global_noalias(i1 %c, i1 %c2, ptr noalias %ptr) {
+; MT-LABEL: @promote_global_noalias(
+; MT-NEXT:  entry:
+; MT-NEXT:    [[G_PROMOTED:%.*]] = load i32, ptr @g, align 4
+; MT-NEXT:    br label [[LOOP:%.*]]
+; MT:       loop:
+; MT-NEXT:    [[V_INC2:%.*]] = phi i32 [ [[V_INC1:%.*]], [[LATCH:%.*]] ], [ [[G_PROMOTED]], [[ENTRY:%.*]] ]
+; MT-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; MT:       if:
+; MT-NEXT:    [[V_INC:%.*]] = add i32 [[V_INC2]], 1
+; MT-NEXT:    store i32 [[V_INC]], ptr @g, align 4
+; MT-NEXT:    br label [[LATCH]]
+; MT:       else:
+; MT-NEXT:    store i32 42, ptr [[PTR:%.*]], align 4
+; MT-NEXT:    br label [[LATCH]]
+; MT:       latch:
+; MT-NEXT:    [[V_INC1]] = phi i32 [ [[V_INC2]], [[ELSE]] ], [ [[V_INC]], [[IF]] ]
+; MT-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[LOOP]]
+; MT:       exit:
+; MT-NEXT:    ret void
+;
+; ST-LABEL: @promote_global_noalias(
+; ST-NEXT:  entry:
+; ST-NEXT:    [[G_PROMOTED:%.*]] = load i32, ptr @g, align 4
+; ST-NEXT:    br label [[LOOP:%.*]]
+; ST:       loop:
+; ST-NEXT:    [[V_INC2:%.*]] = phi i32 [ [[V_INC1:%.*]], [[LATCH:%.*]] ], [ [[G_PROMOTED]], [[ENTRY:%.*]] ]
+; ST-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; ST:       if:
+; ST-NEXT:    [[V_INC:%.*]] = add i32 [[V_INC2]], 1
+; ST-NEXT:    br label [[LATCH]]
+; ST:       else:
+; ST-NEXT:    store i32 42, ptr [[PTR:%.*]], align 4
+; ST-NEXT:    br label [[LATCH]]
+; ST:       latch:
+; ST-NEXT:    [[V_INC1]] = phi i32 [ [[V_INC2]], [[ELSE]] ], [ [[V_INC]], [[IF]] ]
+; ST-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[LOOP]]
+; ST:       exit:
+; ST-NEXT:    [[V_INC1_LCSSA:%.*]] = phi i32 [ [[V_INC1]], [[LATCH]] ]
+; ST-NEXT:    store i32 [[V_INC1_LCSSA]], ptr @g, align 4
+; ST-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  br i1 %c, label %if, label %else
+
+if:
+  %v = load i32, ptr @g
+  %v.inc = add i32 %v, 1
+  store i32 %v.inc, ptr @g
+  br label %latch
+
+else:
+  store i32 42, ptr %ptr
+  br label %latch
+
+latch:
+  br i1 %c2, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ; In single-thread mode both loads and stores can be promoted. In multi-thread
 ; mode only loads can be promoted, as a different thread might write to the
 ; captured alloca.

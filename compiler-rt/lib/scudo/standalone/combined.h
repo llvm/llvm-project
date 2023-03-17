@@ -745,9 +745,9 @@ public:
     Str.output();
   }
 
-  void releaseToOS() {
+  void releaseToOS(ReleaseToOS ReleaseType) {
     initThreadMaybe();
-    Primary.releaseToOS();
+    Primary.releaseToOS(ReleaseType);
     Secondary.releaseToOS();
   }
 

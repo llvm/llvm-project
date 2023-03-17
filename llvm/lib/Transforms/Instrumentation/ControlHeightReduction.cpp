@@ -1888,8 +1888,7 @@ void CHR::fixupBranch(Region *R, CHRScope *Scope,
   assert((IsTrueBiased || Scope->FalseBiasedRegions.count(R)) &&
          "Must be truthy or falsy");
   auto *BI = cast<BranchInst>(R->getEntry()->getTerminator());
-  assert(BranchBiasMap.find(R) != BranchBiasMap.end() &&
-         "Must be in the bias map");
+  assert(BranchBiasMap.contains(R) && "Must be in the bias map");
   BranchProbability Bias = BranchBiasMap[R];
   assert(Bias >= getCHRBiasThreshold() && "Must be highly biased");
   // Take the min.
@@ -1931,8 +1930,7 @@ void CHR::fixupSelect(SelectInst *SI, CHRScope *Scope,
   bool IsTrueBiased = Scope->TrueBiasedSelects.count(SI);
   assert((IsTrueBiased ||
           Scope->FalseBiasedSelects.count(SI)) && "Must be biased");
-  assert(SelectBiasMap.find(SI) != SelectBiasMap.end() &&
-         "Must be in the bias map");
+  assert(SelectBiasMap.contains(SI) && "Must be in the bias map");
   BranchProbability Bias = SelectBiasMap[SI];
   assert(Bias >= getCHRBiasThreshold() && "Must be highly biased");
   // Take the min.

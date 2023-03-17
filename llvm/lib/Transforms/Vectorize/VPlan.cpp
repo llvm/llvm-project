@@ -1102,7 +1102,7 @@ VPInterleavedAccessInfo::VPInterleavedAccessInfo(VPlan &Plan,
 }
 
 void VPSlotTracker::assignSlot(const VPValue *V) {
-  assert(Slots.find(V) == Slots.end() && "VPValue already has a slot!");
+  assert(!Slots.contains(V) && "VPValue already has a slot!");
   Slots[V] = NextSlot++;
 }
 

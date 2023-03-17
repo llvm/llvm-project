@@ -188,7 +188,10 @@ INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, int value) {
                               static_cast<scudo::sptr>(value));
     return 1;
   } else if (param == M_PURGE) {
-    SCUDO_ALLOCATOR.releaseToOS();
+    SCUDO_ALLOCATOR.releaseToOS(scudo::ReleaseToOS::Force);
+    return 1;
+  } else if (param == M_PURGE_ALL) {
+    SCUDO_ALLOCATOR.releaseToOS(scudo::ReleaseToOS::ForceAll);
     return 1;
   } else {
     scudo::Option option;

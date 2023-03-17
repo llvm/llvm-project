@@ -13,6 +13,9 @@
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
+
+struct TilingResult;
+
 namespace tensor {
 
 /// Populates `patterns` with patterns to wrap a tensor.pad op with an scf.if op
@@ -26,7 +29,7 @@ void populateSplitPaddingPatterns(RewritePatternSet &patterns,
 /// provide a mechanism to control where the application happens. With use of
 /// transform dialect that control is done within the transform dialect. Other
 /// use cases can inherit from this pattern and add necessary controls.
-FailureOr<Value> replaceExtractSliceWithTiledProducer(
+FailureOr<TilingResult> replaceExtractSliceWithTiledProducer(
     OpBuilder &builder, tensor::ExtractSliceOp sliceOp, OpResult producerOp);
 
 /// Collects patterns to merge consecutive tensor.insert_slice/extract_slice

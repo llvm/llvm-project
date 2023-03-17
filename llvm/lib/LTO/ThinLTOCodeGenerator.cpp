@@ -150,7 +150,7 @@ static StringMap<lto::InputFile *>
 generateModuleMap(std::vector<std::unique_ptr<lto::InputFile>> &Modules) {
   StringMap<lto::InputFile *> ModuleMap;
   for (auto &M : Modules) {
-    assert(ModuleMap.find(M->getName()) == ModuleMap.end() &&
+    assert(!ModuleMap.contains(M->getName()) &&
            "Expect unique Buffer Identifier");
     ModuleMap[M->getName()] = M.get();
   }

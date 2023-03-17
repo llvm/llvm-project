@@ -93,7 +93,7 @@ static OpFoldResult getExpandedOutputDimFromInputShape(
                         .cast<AffineDimExpr>()
                         .getPosition();
   int64_t linearizedStaticDim = 1;
-  for (auto &d :
+  for (auto d :
        llvm::enumerate(dstStaticShape.slice(startPos, endPos - startPos + 1))) {
     if (d.index() + startPos == static_cast<unsigned>(dimIndex))
       continue;
