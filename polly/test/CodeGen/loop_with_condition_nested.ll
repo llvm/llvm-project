@@ -1,5 +1,5 @@
-; RUN: opt -opaque-pointers=0 %loadPolly -basic-aa -polly-print-ast -disable-output < %s | FileCheck %s
-; RUN: opt -opaque-pointers=0 %loadPolly -basic-aa -polly-codegen < %s | opt -opaque-pointers=0 -passes='print<loops>' -disable-output 2>&1 | FileCheck %s -check-prefix=LOOPS
+; RUN: opt %loadPolly -basic-aa -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-codegen < %s | opt -passes='print<loops>' -disable-output 2>&1 | FileCheck %s -check-prefix=LOOPS
 
 
 ;#include <string.h>
@@ -49,8 +49,8 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
-@A = common global [1024 x i32] zeroinitializer, align 16 ; <[1024 x i32]*> [#uses=4]
-@B = common global [1024 x i32] zeroinitializer, align 16 ; <[1024 x i32]*> [#uses=4]
+@A = common global [1024 x i32] zeroinitializer, align 16 ; <ptr> [#uses=4]
+@B = common global [1024 x i32] zeroinitializer, align 16 ; <ptr> [#uses=4]
 
 define void @loop_with_condition() nounwind {
 bb0:
@@ -59,8 +59,8 @@ bb0:
 
 bb1:
   %indvar = phi i64 [ %indvar.next, %bb10 ], [ 0, %bb0 ] ; <i64> [#uses=5]
-  %scevgep = getelementptr [1024 x i32], [1024 x i32]* @A, i64 0, i64 %indvar ; <i32*> [#uses=2]
-  %scevgep1 = getelementptr [1024 x i32], [1024 x i32]* @B, i64 0, i64 %indvar ; <i32*> [#uses=1]
+  %scevgep = getelementptr [1024 x i32], ptr @A, i64 0, i64 %indvar ; <ptr> [#uses=2]
+  %scevgep1 = getelementptr [1024 x i32], ptr @B, i64 0, i64 %indvar ; <ptr> [#uses=1]
   %i.0 = trunc i64 %indvar to i32                 ; <i32> [#uses=2]
   %exitcond = icmp ne i64 %indvar, 1024           ; <i1> [#uses=1]
   br i1 %exitcond, label %bb2, label %bb11
@@ -74,18 +74,18 @@ bb4:
   br i1 %var5, label %bb6, label %bb7
 
 bb6:
-  store i32 1, i32* %scevgep
+  store i32 1, ptr %scevgep
   br label %bb8
 
 bb7:
-  store i32 2, i32* %scevgep
+  store i32 2, ptr %scevgep
   br label %bb8
 
 bb8:
   br label %bb9
 
 bb9:
-  store i32 3, i32* %scevgep1
+  store i32 3, ptr %scevgep1
   br label %bb10
 
 bb10:
@@ -99,20 +99,20 @@ bb11:
 
 define i32 @main() nounwind {
 ; <label>:0
-  call void @llvm.memset.p0i8.i64(i8* bitcast ([1024 x i32]* @A to i8*), i8 0, i64 4096, i32 1, i1 false)
-  call void @llvm.memset.p0i8.i64(i8* bitcast ([1024 x i32]* @B to i8*), i8 0, i64 4096, i32 1, i1 false)
+  call void @llvm.memset.p0.i64(ptr @A, i8 0, i64 4096, i32 1, i1 false)
+  call void @llvm.memset.p0.i64(ptr @B, i8 0, i64 4096, i32 1, i1 false)
   call void @loop_with_condition()
   br label %1
 
 ; <label>:1                                       ; preds = %8, %0
   %indvar1 = phi i64 [ %indvar.next2, %8 ], [ 0, %0 ] ; <i64> [#uses=3]
-  %scevgep3 = getelementptr [1024 x i32], [1024 x i32]* @B, i64 0, i64 %indvar1 ; <i32*> [#uses=1]
+  %scevgep3 = getelementptr [1024 x i32], ptr @B, i64 0, i64 %indvar1 ; <ptr> [#uses=1]
   %i.0 = trunc i64 %indvar1 to i32                ; <i32> [#uses=1]
   %2 = icmp slt i32 %i.0, 1024                    ; <i1> [#uses=1]
   br i1 %2, label %3, label %9
 
 ; <label>:3                                       ; preds = %1
-  %4 = load i32, i32* %scevgep3                        ; <i32> [#uses=1]
+  %4 = load i32, ptr %scevgep3                        ; <i32> [#uses=1]
   %5 = icmp ne i32 %4, 3                          ; <i1> [#uses=1]
   br i1 %5, label %6, label %7
 
@@ -131,7 +131,7 @@ define i32 @main() nounwind {
 
 ; <label>:10                                      ; preds = %37, %9
   %indvar = phi i64 [ %indvar.next, %37 ], [ 0, %9 ] ; <i64> [#uses=3]
-  %scevgep = getelementptr [1024 x i32], [1024 x i32]* @A, i64 0, i64 %indvar ; <i32*> [#uses=3]
+  %scevgep = getelementptr [1024 x i32], ptr @A, i64 0, i64 %indvar ; <ptr> [#uses=3]
   %i.1 = trunc i64 %indvar to i32                 ; <i32> [#uses=6]
   %11 = icmp slt i32 %i.1, 1024                   ; <i1> [#uses=1]
   br i1 %11, label %12, label %38
@@ -145,7 +145,7 @@ define i32 @main() nounwind {
   br i1 %15, label %16, label %20
 
 ; <label>:16                                      ; preds = %14
-  %17 = load i32, i32* %scevgep                        ; <i32> [#uses=1]
+  %17 = load i32, ptr %scevgep                        ; <i32> [#uses=1]
   %18 = icmp ne i32 %17, 1                        ; <i1> [#uses=1]
   br i1 %18, label %19, label %20
 
@@ -161,7 +161,7 @@ define i32 @main() nounwind {
   br i1 %23, label %24, label %28
 
 ; <label>:24                                      ; preds = %22
-  %25 = load i32, i32* %scevgep                        ; <i32> [#uses=1]
+  %25 = load i32, ptr %scevgep                        ; <i32> [#uses=1]
   %26 = icmp ne i32 %25, 2                        ; <i1> [#uses=1]
   br i1 %26, label %27, label %28
 
@@ -173,7 +173,7 @@ define i32 @main() nounwind {
   br i1 %29, label %30, label %34
 
 ; <label>:30                                      ; preds = %28
-  %31 = load i32, i32* %scevgep                        ; <i32> [#uses=1]
+  %31 = load i32, ptr %scevgep                        ; <i32> [#uses=1]
   %32 = icmp ne i32 %31, 0                        ; <i1> [#uses=1]
   br i1 %32, label %33, label %34
 
@@ -201,7 +201,7 @@ define i32 @main() nounwind {
   ret i32 %.0
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i32, i1) nounwind
 
 ; CHECK: for (int c0 = 0; c0 <= 1023; c0 += 1) {
 ; CHECK:   if (c0 <= 20) {

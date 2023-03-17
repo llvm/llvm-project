@@ -1,13 +1,14 @@
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -S < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -S < %s | FileCheck %s
 ;
 ; CHECK-LABEL: polly.preload.begin:
-; CHECK-NEXT:    %polly.access.B = getelementptr i32, i32 addrspace(1)* %B, i64 0
+; CHECK-NEXT:    %polly.access.B = getelementptr i32, ptr addrspace(1) %B, i64 0
 ; CHECK-NOT:     addrspacecast
-; CHECK-NEXT:    %polly.access.B.load = load i32, i32 addrspace(1)* %polly.access.B
+; CHECK-NEXT:    %polly.access.B.load = load i32, ptr addrspace(1) %polly.access.B
 ;
 ; CHECK-LABEL: polly.stmt.bb2:
-; CHECK-NEXT:    %scevgep = getelementptr i32, i32* %A, i64 %polly.indvar
-; CHECK-NEXT:    store i32 %polly.access.B.load, i32* %scevgep, align 4
+; CHECK-NEXT:    %[[offset:.*]] = shl nuw nsw i64 %polly.indvar, 2
+; CHECK-NEXT:    %scevgep = getelementptr i8, ptr %A, i64 %[[offset]]
+; CHECK-NEXT:    store i32 %polly.access.B.load, ptr %scevgep, align 4
 ;
 ;    void f(int *restrict A, int *restrict B) {
 ;      for (int i = 0; i < 1024; i++)
@@ -16,7 +17,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* noalias %A, i32 addrspace(1)* noalias %B) {
+define void @f(ptr noalias %A, ptr addrspace(1) noalias %B) {
 bb:
   br label %bb1
 
@@ -26,9 +27,9 @@ bb1:                                              ; preds = %bb4, %bb
   br i1 %exitcond, label %bb2, label %bb5
 
 bb2:                                              ; preds = %bb1
-  %tmp = load i32, i32 addrspace(1)* %B, align 4
-  %tmp3 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %tmp, i32* %tmp3, align 4
+  %tmp = load i32, ptr addrspace(1) %B, align 4
+  %tmp3 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %tmp, ptr %tmp3, align 4
   br label %bb4
 
 bb4:                                              ; preds = %bb2
