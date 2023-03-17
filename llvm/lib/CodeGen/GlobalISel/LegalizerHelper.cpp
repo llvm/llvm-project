@@ -7359,14 +7359,14 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
   Register SrcReg = MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(DstReg);
   LLT SrcTy = MRI.getType(SrcReg);
-  uint64_t Mask = MI.getOperand(2).getImm();
+  FPClassTest Mask = static_cast<FPClassTest>(MI.getOperand(2).getImm());
 
-  if (Mask == 0) {
+  if (Mask == fcNone) {
     MIRBuilder.buildConstant(DstReg, 0);
     MI.eraseFromParent();
     return Legalized;
   }
-  if ((Mask & fcAllFlags) == fcAllFlags) {
+  if (Mask == fcAllFlags) {
     MIRBuilder.buildConstant(DstReg, 1);
     MI.eraseFromParent();
     return Legalized;
@@ -7426,7 +7426,7 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
   }
 
   // Check for individual classes.
-  if (unsigned PartialCheck = Mask & fcZero) {
+  if (FPClassTest PartialCheck = Mask & fcZero) {
     if (PartialCheck == fcPosZero)
       appendToRes(MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_EQ, DstTy,
                                        AsInt, ZeroC));
@@ -7438,7 +7438,7 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
                                        AsInt, SignBitC));
   }
 
-  if (unsigned PartialCheck = Mask & fcInf) {
+  if (FPClassTest PartialCheck = Mask & fcInf) {
     if (PartialCheck == fcPosInf)
       appendToRes(MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_EQ, DstTy,
                                        AsInt, InfC));
@@ -7453,7 +7453,7 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
     }
   }
 
-  if (unsigned PartialCheck = Mask & fcNan) {
+  if (FPClassTest PartialCheck = Mask & fcNan) {
     auto InfWithQnanBitC = MIRBuilder.buildConstant(IntTy, Inf | QNaNBitMask);
     if (PartialCheck == fcNan) {
       // isnan(V) ==> abs(V) u> int(inf)
@@ -7474,7 +7474,7 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
     }
   }
 
-  if (unsigned PartialCheck = Mask & fcSubnormal) {
+  if (FPClassTest PartialCheck = Mask & fcSubnormal) {
     // issubnormal(V) ==> unsigned(abs(V) - 1) u< (all mantissa bits set)
     // issubnormal(V) && V>0 ==> unsigned(V - 1) u< (all mantissa bits set)
     auto V = (PartialCheck == fcPosSubnormal) ? AsInt : Abs;
@@ -7488,7 +7488,7 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
     appendToRes(SubnormalRes);
   }
 
-  if (unsigned PartialCheck = Mask & fcNormal) {
+  if (FPClassTest PartialCheck = Mask & fcNormal) {
     // isnormal(V) ==> (0 u< exp u< max_exp) ==> (unsigned(exp-1) u<
     // (max_exp-1))
     APInt ExpLSB = ExpMask & ~(ExpMask.shl(1));
