@@ -4734,11 +4734,17 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
             WideningDecision == CM_Interleave);
   };
 
-
   // Returns true if Ptr is the pointer operand of a memory access instruction
-  // I, and I is known to not require scalarization.
+  // I, I is known to not require scalarization, and the pointer is not also
+  // stored.
   auto isVectorizedMemAccessUse = [&](Instruction *I, Value *Ptr) -> bool {
-    return getLoadStorePointerOperand(I) == Ptr && isUniformDecision(I, VF);
+    auto GetStoredValue = [I]() -> Value * {
+      if (!isa<StoreInst>(I))
+        return nullptr;
+      return I->getOperand(0);
+    };
+    return getLoadStorePointerOperand(I) == Ptr && isUniformDecision(I, VF) &&
+           GetStoredValue() != Ptr;
   };
 
   // Holds a list of values which are known to have at least one uniform use.
@@ -4784,8 +4790,8 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
       if (isUniformMemOpUse(&I))
         addToWorklistIfAllowed(&I);
 
-      if (isUniformDecision(&I, VF)) {
-        assert(isVectorizedMemAccessUse(&I, Ptr) && "consistency check");
+      if (isVectorizedMemAccessUse(&I, Ptr)) {
+        assert(isUniformDecision(&I, VF) && "consistency check");
         HasUniformUse.insert(Ptr);
       }
     }
