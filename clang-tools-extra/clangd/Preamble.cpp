@@ -133,6 +133,7 @@ public:
     CanonIncludes.addSystemHeadersMapping(CI.getLangOpts());
     LangOpts = &CI.getLangOpts();
     SourceMgr = &CI.getSourceManager();
+    PP = &CI.getPreprocessor();
     Includes.collect(CI);
     if (Config::current().Diagnostics.UnusedIncludes ==
                 Config::IncludesPolicy::Strict ||
@@ -144,11 +145,11 @@ public:
   }
 
   std::unique_ptr<PPCallbacks> createPPCallbacks() override {
-    assert(SourceMgr && LangOpts &&
-           "SourceMgr and LangOpts must be set at this point");
+    assert(SourceMgr && LangOpts && PP &&
+           "SourceMgr, LangOpts and PP must be set at this point");
 
     return std::make_unique<PPChainedCallbacks>(
-        std::make_unique<CollectMainFileMacros>(*SourceMgr, Macros),
+        std::make_unique<CollectMainFileMacros>(*PP, Macros),
         collectPragmaMarksCallback(*SourceMgr, Marks));
   }
 
@@ -215,6 +216,7 @@ private:
   std::unique_ptr<CommentHandler> IWYUHandler = nullptr;
   const clang::LangOptions *LangOpts = nullptr;
   const SourceManager *SourceMgr = nullptr;
+  const Preprocessor *PP = nullptr;
   PreambleBuildStats *Stats;
   bool ParseForwardingFunctions;
   std::function<void(CompilerInstance &)> BeforeExecuteCallback;
@@ -382,7 +384,7 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
   PP.addPPCallbacks(
       std::make_unique<DirectiveCollector>(PP, SP.TextualDirectives));
   PP.addPPCallbacks(collectPragmaMarksCallback(SM, SP.Marks));
-  PP.addPPCallbacks(std::make_unique<CollectMainFileMacros>(SM, SP.Macros));
+  PP.addPPCallbacks(std::make_unique<CollectMainFileMacros>(PP, SP.Macros));
   if (llvm::Error Err = Action.Execute())
     return std::move(Err);
   Action.EndSourceFile();
