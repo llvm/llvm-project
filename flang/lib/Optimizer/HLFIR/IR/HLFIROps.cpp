@@ -669,6 +669,71 @@ mlir::LogicalResult hlfir::TransposeOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// MatmulTransposeOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::MatmulTransposeOp::verify() {
+  mlir::Value lhs = getLhs();
+  mlir::Value rhs = getRhs();
+  fir::SequenceType lhsTy =
+      hlfir::getFortranElementOrSequenceType(lhs.getType())
+          .cast<fir::SequenceType>();
+  fir::SequenceType rhsTy =
+      hlfir::getFortranElementOrSequenceType(rhs.getType())
+          .cast<fir::SequenceType>();
+  llvm::ArrayRef<int64_t> lhsShape = lhsTy.getShape();
+  llvm::ArrayRef<int64_t> rhsShape = rhsTy.getShape();
+  std::size_t lhsRank = lhsShape.size();
+  std::size_t rhsRank = rhsShape.size();
+  mlir::Type lhsEleTy = lhsTy.getEleTy();
+  mlir::Type rhsEleTy = rhsTy.getEleTy();
+  hlfir::ExprType resultTy = getResult().getType().cast<hlfir::ExprType>();
+  llvm::ArrayRef<int64_t> resultShape = resultTy.getShape();
+  mlir::Type resultEleTy = resultTy.getEleTy();
+
+  // lhs must have rank 2 for the transpose to be valid
+  if ((lhsRank != 2) || ((rhsRank != 1) && (rhsRank != 2)))
+    return emitOpError("array must have either rank 1 or rank 2");
+
+  if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
+      mlir::isa<fir::LogicalType>(rhsEleTy))
+    return emitOpError("if one array is logical, so should the other be");
+
+  // for matmul we compare the last dimension of lhs with the first dimension of
+  // rhs, but for MatmulTranspose, dimensions of lhs are inverted by the
+  // transpose
+  int64_t firstLhsDim = lhsShape[0];
+  int64_t firstRhsDim = rhsShape[0];
+  constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
+  if (firstLhsDim != firstRhsDim)
+    if ((firstLhsDim != unknownExtent) && (firstRhsDim != unknownExtent))
+      return emitOpError(
+          "the first dimension of LHS should match the first dimension of RHS");
+
+  if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
+      mlir::isa<fir::LogicalType>(resultEleTy))
+    return emitOpError("the result type should be a logical only if the "
+                       "argument types are logical");
+
+  llvm::SmallVector<int64_t, 2> expectedResultShape;
+  if (rhsRank == 2) {
+    expectedResultShape.push_back(lhsShape[1]);
+    expectedResultShape.push_back(rhsShape[1]);
+  } else {
+    // rhsRank == 1
+    expectedResultShape.push_back(lhsShape[1]);
+  }
+  if (resultShape.size() != expectedResultShape.size())
+    return emitOpError("incorrect result shape");
+  if (resultShape[0] != expectedResultShape[0])
+    return emitOpError("incorrect result shape");
+  if (resultShape.size() == 2 && resultShape[1] != expectedResultShape[1])
+    return emitOpError("incorrect result shape");
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // AssociateOp
 //===----------------------------------------------------------------------===//
 

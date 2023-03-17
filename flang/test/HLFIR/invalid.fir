@@ -398,6 +398,48 @@ func.func @bad_transpose3(%arg0: !hlfir.expr<2x3xi32>) {
 }
 
 // -----
+func.func @bad_matmultranspose1(%arg0: !hlfir.expr<?x?x?xi32>, %arg1: !hlfir.expr<?x?xi32>) {
+  // expected-error@+1 {{'hlfir.matmul_transpose' op array must have either rank 1 or rank 2}}
+  %0 = hlfir.matmul_transpose %arg0 %arg1 : (!hlfir.expr<?x?x?xi32>, !hlfir.expr<?x?xi32>) -> !hlfir.expr<?x?xi32>
+  return
+}
+
+// -----
+func.func @bad_matmultranspose2(%arg0: !hlfir.expr<?xi32>, %arg1: !hlfir.expr<?xi32>) {
+  // expected-error@+1 {{'hlfir.matmul_transpose' op array must have either rank 1 or rank 2}}
+  %0 = hlfir.matmul_transpose %arg0 %arg1 : (!hlfir.expr<?xi32>, !hlfir.expr<?xi32>) -> !hlfir.expr<?x?xi32>
+  return
+}
+
+// -----
+func.func @bad_matmultranspose3(%arg0: !hlfir.expr<?x?x!fir.logical<4>>, %arg1: !hlfir.expr<?x?xi32>) {
+  // expected-error@+1 {{'hlfir.matmul_transpose' op if one array is logical, so should the other be}}
+  %0 = hlfir.matmul_transpose %arg0 %arg1 : (!hlfir.expr<?x?x!fir.logical<4>>, !hlfir.expr<?x?xi32>) -> !hlfir.expr<?x?xi32>
+  return
+}
+
+// -----
+func.func @bad_matmultranspose5(%arg0: !hlfir.expr<?x?xi32>, %arg1: !hlfir.expr<?x?xi32>) {
+  // expected-error@+1 {{'hlfir.matmul_transpose' op the result type should be a logical only if the argument types are logical}}
+  %0 = hlfir.matmul_transpose %arg0 %arg1 : (!hlfir.expr<?x?xi32>, !hlfir.expr<?x?xi32>) -> !hlfir.expr<?x?x!fir.logical<4>>
+  return
+}
+
+// -----
+func.func @bad_matmultranspose6(%arg0: !hlfir.expr<2x1xi32>, %arg1: !hlfir.expr<2x3xi32>) {
+  // expected-error@+1 {{'hlfir.matmul_transpose' op incorrect result shape}}
+  %0 = hlfir.matmul_transpose %arg0 %arg1 : (!hlfir.expr<2x1xi32>, !hlfir.expr<2x3xi32>) -> !hlfir.expr<10x30xi32>
+  return
+}
+
+// -----
+func.func @bad_matmultranspose7(%arg0: !hlfir.expr<2x1xi32>, %arg1: !hlfir.expr<2xi32>) {
+  // expected-error@+1 {{'hlfir.matmul_transpose' op incorrect result shape}}
+  %0 = hlfir.matmul_transpose %arg0 %arg1 : (!hlfir.expr<2x1xi32>, !hlfir.expr<2xi32>) -> !hlfir.expr<1x3xi32>
+  return
+}
+
+// -----
 func.func @bad_assign_1(%arg0: !fir.box<!fir.array<?xi32>>, %arg1: !fir.box<!fir.array<?xi32>>) {
   // expected-error@+1 {{'hlfir.assign' op lhs must be an allocatable when `realloc` is set}}
   hlfir.assign %arg1 to %arg0 realloc : !fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>
