@@ -44,7 +44,7 @@ option(LIBCXXABI_ENABLE_EXCEPTIONS
   "Provide support for exceptions in the runtime.
   When disabled, libc++abi does not support stack unwinding and other exceptions-related features." ON)
 option(LIBCXXABI_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
-option(LIBCXXABI_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
+option(LIBCXXABI_ENABLE_PEDANTIC "Compile with pedantic enabled." OFF)
 option(LIBCXXABI_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
 option(LIBCXXABI_ENABLE_STATIC_UNWINDER "Statically link the LLVM unwinder." OFF)
@@ -278,41 +278,6 @@ add_definitions(-D_LIBCXXABI_BUILDING_LIBRARY)
 # libcxxabi needs to, for various reasons, include the libcpp headers as if
 # it is being built as part of libcxx.
 add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
-
-add_compile_flags_if_supported(-Werror=return-type)
-
-# Get warning flags
-add_compile_flags_if_supported(-W)
-add_compile_flags_if_supported(-Wall)
-add_compile_flags_if_supported(-Wchar-subscripts)
-add_compile_flags_if_supported(-Wconversion)
-add_compile_flags_if_supported(-Wmismatched-tags)
-add_compile_flags_if_supported(-Wmissing-braces)
-add_compile_flags_if_supported(-Wnewline-eof)
-add_compile_flags_if_supported(-Wunused-function)
-add_compile_flags_if_supported(-Wshadow)
-add_compile_flags_if_supported(-Wshorten-64-to-32)
-add_compile_flags_if_supported(-Wsign-compare)
-add_compile_flags_if_supported(-Wsign-conversion)
-add_compile_flags_if_supported(-Wstrict-aliasing=2)
-add_compile_flags_if_supported(-Wstrict-overflow=4)
-add_compile_flags_if_supported(-Wunused-parameter)
-add_compile_flags_if_supported(-Wunused-variable)
-add_compile_flags_if_supported(-Wwrite-strings)
-add_compile_flags_if_supported(-Wundef)
-
-add_compile_flags_if_supported(-Wno-suggest-override)
-
-if (LIBCXXABI_ENABLE_WERROR)
-  add_compile_flags_if_supported(-Werror)
-  add_compile_flags_if_supported(-WX)
-else()
-  add_compile_flags_if_supported(-Wno-error)
-  add_compile_flags_if_supported(-WX-)
-endif()
-if (LIBCXXABI_ENABLE_PEDANTIC)
-  add_compile_flags_if_supported(-pedantic)
-endif()
 
 # Get feature flags.
 add_compile_flags_if_supported(-fstrict-aliasing)
