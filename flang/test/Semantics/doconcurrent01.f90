@@ -237,3 +237,34 @@ subroutine s7()
     end function pureFunc
 
 end subroutine s7
+
+module m8
+  type t
+   contains
+    procedure tbpAssign
+    generic :: assignment(=) => tbpAssign
+  end type
+  interface assignment(=)
+    module procedure nonTbpAssign
+  end interface
+ contains
+  impure elemental subroutine tbpAssign(to, from)
+    class(t), intent(out) :: to
+    class(t), intent(in) :: from
+    print *, 'impure due to I/O'
+  end
+  impure elemental subroutine nonTbpAssign(to, from)
+    type(t), intent(out) :: to
+    integer, intent(in) :: from
+    print *, 'impure due to I/O'
+  end
+  subroutine test
+    type(t) x, y
+    do concurrent (j=1:1)
+      !ERROR: The defined assignment subroutine 'tbpassign' is not pure
+      x = y
+      !ERROR: The defined assignment subroutine 'nontbpassign' is not pure
+      x = 666
+    end do
+  end
+end
