@@ -4134,7 +4134,8 @@ static bool inputDenormalIsIEEE(const Function &F, const Value *Val) {
 /// same result as an fcmp with the given operands.
 std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
                                                       const Function &F,
-                                                      Value *LHS, Value *RHS) {
+                                                      Value *LHS, Value *RHS,
+                                                      bool LookThroughSrc) {
   const APFloat *ConstRHS;
   if (!match(RHS, m_APFloat(ConstRHS)))
     return {nullptr, fcNone};
@@ -4168,7 +4169,7 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
   }
 
   Value *Src = LHS;
-  const bool IsFabs = match(LHS, m_FAbs(m_Value(Src)));
+  const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
 
   // Compute the test mask that would return true for the ordered comparisons.
   FPClassTest Mask;
@@ -4295,6 +4296,53 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
   return {Src, Mask};
 }
 
+static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
+                                                  const Query &Q) {
+  FPClassTest KnownFromAssume = fcNone;
+
+  // Try to restrict the floating-point classes based on information from
+  // assumptions.
+  for (auto &AssumeVH : Q.AC->assumptionsFor(V)) {
+    if (!AssumeVH)
+      continue;
+    CallInst *I = cast<CallInst>(AssumeVH);
+    const Function *F = I->getFunction();
+
+    assert(F == Q.CxtI->getParent()->getParent() &&
+           "Got assumption for the wrong function!");
+    assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
+           "must be an assume intrinsic");
+
+    if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
+      continue;
+
+    CmpInst::Predicate Pred;
+    Value *LHS, *RHS;
+    uint64_t ClassVal = 0;
+    if (match(I->getArgOperand(0), m_FCmp(Pred, m_Value(LHS), m_Value(RHS)))) {
+      auto [TestedValue, TestedMask] =
+          fcmpToClassTest(Pred, *F, LHS, RHS, true);
+      // First see if we can fold in fabs/fneg into the test.
+      if (TestedValue == V)
+        KnownFromAssume |= TestedMask;
+      else {
+        // Try again without the lookthrough if we found a different source
+        // value.
+        auto [TestedValue, TestedMask] =
+            fcmpToClassTest(Pred, *F, LHS, RHS, false);
+        if (TestedValue == V)
+          KnownFromAssume |= TestedMask;
+      }
+    } else if (match(I->getArgOperand(0),
+                     m_Intrinsic<Intrinsic::is_fpclass>(
+                         m_Value(LHS), m_ConstantInt(ClassVal)))) {
+      KnownFromAssume |= static_cast<FPClassTest>(ClassVal);
+    }
+  }
+
+  return KnownFromAssume;
+}
+
 // TODO: Merge implementations of isKnownNeverNaN, isKnownNeverInfinity,
 // CannotBeNegativeZero, cannotBeOrderedLessThanZero into here.
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
@@ -4331,6 +4379,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if (FPOp->hasNoInfs())
       KnownNotFromFlags |= fcInf;
   }
+
+  if (Q.AC)
+    KnownNotFromFlags |= computeKnownFPClassFromAssumes(V, Q);
 
   // We no longer need to find out about these bits from inputs if we can
   // assume this from flags/attributes.

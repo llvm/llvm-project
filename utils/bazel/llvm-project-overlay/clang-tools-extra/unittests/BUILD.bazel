@@ -29,6 +29,7 @@ cc_test(
         "//clang:frontend",
         "//clang:lex",
         "//clang:serialization",
+        "//clang:testing",
         "//clang:tooling",
         "//clang:tooling_core",
         "//clang:transformer",
