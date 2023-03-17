@@ -198,7 +198,7 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    srli a2, a0, 4
 ; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    and a0, a0, s2
-; RV64I-NEXT:    mulw a0, a0, s3
+; RV64I-NEXT:    mul a0, a0, s3
 ; RV64I-NEXT:    srliw a0, a0, 24
 ; RV64I-NEXT:    bnez a1, .LBB4_1
 ; RV64I-NEXT:  # %bb.2: # %bb7

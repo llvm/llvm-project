@@ -275,7 +275,7 @@ define void @sink_splat_mul_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB7_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a2, 0(a0)
-; CHECK-NEXT:    mulw a2, a2, a1
+; CHECK-NEXT:    mul a2, a2, a1
 ; CHECK-NEXT:    sw a2, 0(a0)
 ; CHECK-NEXT:    addi a3, a3, 1
 ; CHECK-NEXT:    addi a0, a0, 4
