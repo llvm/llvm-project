@@ -1993,7 +1993,7 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
 void Clang::AddPPCTargetArgs(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   const llvm::Triple &T = getToolChain().getTriple();
-  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
+  if (Args.getLastArg(options::OPT_mtune_EQ)) {
     CmdArgs.push_back("-tune-cpu");
     std::string CPU = ppc::getPPCTuneCPU(Args, T);
     CmdArgs.push_back(Args.MakeArgString(CPU));
