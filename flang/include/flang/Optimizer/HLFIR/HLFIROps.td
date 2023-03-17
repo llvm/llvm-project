@@ -402,6 +402,29 @@ def hlfir_TransposeOp : hlfir_Op<"transpose", []> {
   let hasVerifier = 1;
 }
 
+def hlfir_MatmulTransposeOp : hlfir_Op<"matmul_transpose",
+    [DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let summary = "Optimized MATMUL(TRANSPOSE(...), ...)";
+  let description = [{
+    Matrix multiplication where the left hand side is transposed
+  }];
+
+  let arguments = (ins
+    AnyFortranNumericalOrLogicalArrayObject:$lhs,
+    AnyFortranNumericalOrLogicalArrayObject:$rhs,
+    DefaultValuedAttr<Arith_FastMathAttr,
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
+  );
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $lhs $rhs attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
   let summary = "Create a variable from an expression value";
