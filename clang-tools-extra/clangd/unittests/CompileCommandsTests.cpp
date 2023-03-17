@@ -11,6 +11,7 @@
 #include "TestFS.h"
 #include "support/Context.h"
 
+#include "clang/Testing/CommandLineArgs.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -20,6 +21,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/TargetSelect.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -41,15 +43,18 @@ using ::testing::Not;
 // Make use of all features and assert the exact command we get out.
 // Other tests just verify presence/absence of certain args.
 TEST(CommandMangler, Everything) {
+  llvm::InitializeAllTargetInfos(); // As in ClangdMain
+  std::string Target = getAnyTargetForTesting();
   auto Mangler = CommandMangler::forTests();
   Mangler.ClangPath = testPath("fake/clang");
   Mangler.ResourceDir = testPath("fake/resources");
   Mangler.Sysroot = testPath("fake/sysroot");
   tooling::CompileCommand Cmd;
-  Cmd.CommandLine = {"clang++", "--", "foo.cc", "bar.cc"};
+  Cmd.CommandLine = {Target + "-clang++", "--", "foo.cc", "bar.cc"};
   Mangler(Cmd, "foo.cc");
   EXPECT_THAT(Cmd.CommandLine,
-              ElementsAre(testPath("fake/clang++"),
+              ElementsAre(testPath("fake/" + Target + "-clang++"),
+                          "--target=" + Target, "--driver-mode=g++",
                           "-resource-dir=" + testPath("fake/resources"),
                           "-isysroot", testPath("fake/sysroot"), "--",
                           "foo.cc"));
@@ -197,8 +202,26 @@ TEST(CommandMangler, ConfigEdits) {
     Mangler(Cmd, "foo.cc");
   }
   // Edits are applied in given order and before other mangling and they always
-  // go before filename.
-  EXPECT_THAT(Cmd.CommandLine, ElementsAre(_, "--hello", "--", "FOO.CC"));
+  // go before filename. `--driver-mode=g++` here is in lower case because
+  // options inserted by addTargetAndModeForProgramName are not editable,
+  // see discussion in https://reviews.llvm.org/D138546
+  EXPECT_THAT(Cmd.CommandLine,
+              ElementsAre(_, "--driver-mode=g++", "--hello", "--", "FOO.CC"));
+}
+
+TEST(CommandMangler, ExpandedResponseFiles) {
+  SmallString<1024> Path;
+  int FD;
+  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("args", "", FD, Path));
+  llvm::raw_fd_ostream OutStream(FD, true);
+  OutStream << "-Wall";
+  OutStream.close();
+
+  auto Mangler = CommandMangler::forTests();
+  tooling::CompileCommand Cmd;
+  Cmd.CommandLine = {"clang", ("@" + Path).str(), "foo.cc"};
+  Mangler(Cmd, "foo.cc");
+  EXPECT_THAT(Cmd.CommandLine, ElementsAre(_, "-Wall", "--", "foo.cc"));
 }
 
 static std::string strip(llvm::StringRef Arg, llvm::StringRef Argv) {
