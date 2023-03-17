@@ -969,8 +969,7 @@ class SMEM_Real_gfx10<bits<8> op, SM_Pseudo ps>
 }
 
 class SMEM_Real_Load_gfx10<bits<8> op, string ps, OffsetMode offsets>
-    : SMEM_Real_gfx10<op, !cast<SM_Pseudo>(ps # offsets.Variant)> {
-}
+    : SMEM_Real_gfx10<op, !cast<SM_Pseudo>(ps # offsets.Variant)>;
 
 multiclass SM_Real_Loads_gfx10<bits<8> op, string ps> {
   def _IMM_gfx10 : SMEM_Real_Load_gfx10<op, ps, IMM_Offset>;
