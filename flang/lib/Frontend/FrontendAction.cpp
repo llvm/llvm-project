@@ -48,7 +48,7 @@ bool FrontendAction::beginSourceFile(CompilerInstance &ci,
       unsigned diagID;
       if (llvm::vfs::getRealFileSystem()->exists(input.getFile())) {
         ci.getDiagnostics().Report(clang::diag::err_fe_error_reading)
-            << input.getFile();
+            << input.getFile() << "not a regular file";
         diagID = ci.getDiagnostics().getCustomDiagID(
             clang::DiagnosticsEngine::Error, "%0 is not a regular file");
       } else {
