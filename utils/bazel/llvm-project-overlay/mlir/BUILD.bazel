@@ -5,6 +5,7 @@
 # Description:
 #   The MLIR "Multi-Level Intermediate Representation" Compiler Infrastructure
 
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load(":tblgen.bzl", "gentbl_cc_library", "td_library")
 load(":linalggen.bzl", "genlinalg")
 load(
@@ -4031,6 +4032,9 @@ cc_library(
             "lib/Dialect/GPU/Transforms/*.cpp",
             "lib/Dialect/GPU/Transforms/*.h",
         ],
+        exclude = [
+            "lib/Dialect/GPU/Transforms/SerializeToCubin.cpp",
+        ],
     ),
     hdrs = glob(["include/mlir/Dialect/GPU/Transforms/*.h"]),
     includes = ["include"],
@@ -4050,6 +4054,7 @@ cc_library(
         ":ROCDLToLLVMIRTranslation",
         ":SCFDialect",
         ":FuncDialect",
+        ":SerializeToCubin_stub",
         ":SideEffectInterfaces",
         ":Support",
         ":Transforms",
@@ -4060,13 +4065,59 @@ cc_library(
         "//llvm:Support",
         "//llvm:Target",
     ] + if_cuda_available([
-        # Dependencies for SerializeToCubin.cpp with
-        # -DMLIR_GPU_TO_CUBIN_PASS_ENABLE
         ":NVVMToLLVMIRTranslation",
         "//llvm:NVPTXCodeGen",
+    ]),
+)
+
+cc_library(
+    name = "SerializeToCubin",
+    srcs = [
+        "lib/Dialect/GPU/Transforms/SerializeToCubin.cpp",
+    ],
+    local_defines = if_cuda_available(["MLIR_GPU_TO_CUBIN_PASS_ENABLE"]),
+    deps = [
+        ":NVVMToLLVMIRTranslation",
+        ":ToLLVMIRTranslation",
+        ":GPUDialect",
+        ":GPUPassIncGen",
+        ":GPUTransforms",
+        ":Pass",
+        ":Support",
+        "//llvm:Support",
+    ] + if_cuda_available([
         "@cuda//:cuda_headers",
         "@cuda//:libcuda",
-    ]),
+    ])
+)
+
+write_file(
+    name = "SerializeToCubin_stub_cc",
+    out = "SerializeToCubin_stub.cc",
+    content = [
+"""
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
+
+// Provide a weak registration stub in case the real SerializeToCubin is not
+// linked in.
+
+__attribute__((weak)) void mlir::registerGpuSerializeToCubinPass() {}
+"""
+    ]
+)
+
+cc_library(
+    name = "SerializeToCubin_stub",
+    srcs = [":SerializeToCubin_stub_cc"],
+    hdrs = glob(["include/mlir/Dialect/GPU/Transforms/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":GPUDialect",
+        ":GPUPassIncGen",
+        ":Pass",
+        ":Support",
+        "//llvm:Support",
+    ],
 )
 
 td_library(
@@ -7061,6 +7112,7 @@ cc_binary(
         ":OpenMPDialect",
         ":Pass",
         ":QuantOps",
+        ":SerializeToCubin",
         ":SCFToGPU",
         ":Support",
         ":Transforms",
