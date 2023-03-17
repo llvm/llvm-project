@@ -32,6 +32,7 @@ constexpr const char *KERNEL_START = "_start.kd";
 struct kernel_args_t {
   int argc;
   void *argv;
+  void *envp;
   void *ret;
   void *inbox;
   void *outbox;
@@ -164,7 +165,7 @@ hsa_status_t get_agent_memory_pool(hsa_agent_t agent,
   return iterate_agent_memory_pools(agent, cb);
 }
 
-int load(int argc, char **argv, void *image, size_t size) {
+int load(int argc, char **argv, char **envp, void *image, size_t size) {
   // Initialize the HSA runtime used to communicate with the device.
   if (hsa_status_t err = hsa_init())
     handle_error(err);
@@ -299,6 +300,30 @@ int load(int argc, char **argv, void *image, size_t size) {
     static_cast<void **>(dev_argv)[i] = dev_str;
   }
 
+  // Allocate fine-grained memory on the host to hold the pointer array for the
+  // copied environment array and allow the GPU agent to access it.
+  int envc = 0;
+  for (char **env = envp; *env != 0; ++env)
+    ++envc;
+  void *dev_envp;
+  if (hsa_status_t err =
+          hsa_amd_memory_pool_allocate(finegrained_pool, envc * sizeof(char *),
+                                       /*flags=*/0, &dev_envp))
+    handle_error(err);
+  hsa_amd_agents_allow_access(1, &dev_agent, nullptr, dev_envp);
+  for (int i = 0; i < envc; ++i) {
+    size_t size = strlen(envp[i]) + 1;
+    void *dev_str;
+    if (hsa_status_t err = hsa_amd_memory_pool_allocate(finegrained_pool, size,
+                                                        /*flags=*/0, &dev_str))
+      handle_error(err);
+    hsa_amd_agents_allow_access(1, &dev_agent, nullptr, dev_str);
+    // Load the host memory buffer with the pointer values of the newly
+    // allocated strings.
+    std::memcpy(dev_str, envp[i], size);
+    static_cast<void **>(dev_envp)[i] = dev_str;
+  }
+
   // Allocate space for the return pointer and initialize it to zero.
   void *dev_ret;
   if (hsa_status_t err =
@@ -333,6 +358,7 @@ int load(int argc, char **argv, void *image, size_t size) {
   kernel_args_t *kernel_args = reinterpret_cast<kernel_args_t *>(args);
   kernel_args->argc = argc;
   kernel_args->argv = dev_argv;
+  kernel_args->envp = dev_envp;
   kernel_args->ret = dev_ret;
   kernel_args->inbox = server_outbox;
   kernel_args->outbox = server_inbox;
