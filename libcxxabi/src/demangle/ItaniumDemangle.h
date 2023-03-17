@@ -19,6 +19,7 @@
 #include "DemangleConfig.h"
 #include "StringView.h"
 #include "Utility.h"
+#include <__cxxabi_config.h>
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -29,6 +30,11 @@
 #include <new>
 #include <type_traits>
 #include <utility>
+
+#ifdef _LIBCXXABI_COMPILER_CLANG
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-template"
+#endif
 
 DEMANGLE_NAMESPACE_BEGIN
 
@@ -5497,5 +5503,9 @@ struct ManglingParser : AbstractManglingParser<ManglingParser<Alloc>, Alloc> {
 };
 
 DEMANGLE_NAMESPACE_END
+
+#ifdef _LIBCXXABI_COMPILER_CLANG
+#pragma clang diagnostic pop
+#endif
 
 #endif // DEMANGLE_ITANIUMDEMANGLE_H
