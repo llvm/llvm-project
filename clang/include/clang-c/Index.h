@@ -445,7 +445,9 @@ clang_createIndexWithOptions(const CXIndexOptions *options);
 /**
  * Sets general options associated with a CXIndex.
  *
- * This function is DEPRECATED. Set CXIndexOptions::GlobalOptions and call
+ * This function is DEPRECATED. Set
+ * CXIndexOptions::ThreadBackgroundPriorityForIndexing and/or
+ * CXIndexOptions::ThreadBackgroundPriorityForEditing and call
  * clang_createIndexWithOptions() instead.
  *
  * For example:
