@@ -704,11 +704,11 @@ public:
   /// Set the protection flags for this section.
   void setMemProt(orc::MemProt Prot) { this->Prot = Prot; }
 
-  /// Get the memory lifetime policy for this section.
-  orc::MemLifetimePolicy getMemLifetimePolicy() const { return MLP; }
+  /// Get the deallocation policy for this section.
+  orc::MemDeallocPolicy getMemDeallocPolicy() const { return MDP; }
 
-  /// Set the memory lifetime policy for this section.
-  void setMemLifetimePolicy(orc::MemLifetimePolicy MLP) { this->MLP = MLP; }
+  /// Set the deallocation policy for this section.
+  void setMemDeallocPolicy(orc::MemDeallocPolicy MDP) { this->MDP = MDP; }
 
   /// Returns the ordinal for this section.
   SectionOrdinal getOrdinal() const { return SecOrdinal; }
@@ -773,7 +773,7 @@ private:
 
   StringRef Name;
   orc::MemProt Prot;
-  orc::MemLifetimePolicy MLP = orc::MemLifetimePolicy::Standard;
+  orc::MemDeallocPolicy MDP = orc::MemDeallocPolicy::Standard;
   SectionOrdinal SecOrdinal = 0;
   BlockSet Blocks;
   SymbolSet Symbols;
