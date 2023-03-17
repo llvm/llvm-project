@@ -257,6 +257,39 @@ class TransposeOpConversion
   }
 };
 
+struct MatmulTransposeOpConversion
+    : public HlfirIntrinsicConversion<hlfir::MatmulTransposeOp> {
+  using HlfirIntrinsicConversion<
+      hlfir::MatmulTransposeOp>::HlfirIntrinsicConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::MatmulTransposeOp multranspose,
+                  mlir::PatternRewriter &rewriter) const override {
+    fir::KindMapping kindMapping{rewriter.getContext()};
+    fir::FirOpBuilder builder{rewriter, kindMapping};
+    const mlir::Location &loc = multranspose->getLoc();
+
+    mlir::Value lhs = multranspose.getLhs();
+    mlir::Value rhs = multranspose.getRhs();
+    llvm::SmallVector<IntrinsicArgument, 2> inArgs;
+    inArgs.push_back({lhs, lhs.getType()});
+    inArgs.push_back({rhs, rhs.getType()});
+
+    auto *argLowering = fir::getIntrinsicArgumentLowering("matmul");
+    llvm::SmallVector<fir::ExtendedValue, 2> args =
+        lowerArguments(multranspose, inArgs, rewriter, argLowering);
+
+    mlir::Type scalarResultType =
+        hlfir::getFortranElementType(multranspose.getType());
+
+    auto [resultExv, mustBeFreed] = fir::genIntrinsicCall(
+        builder, loc, "matmul_transpose", scalarResultType, args);
+
+    processReturnValue(multranspose, resultExv, mustBeFreed, builder, rewriter);
+    return mlir::success();
+  }
+};
+
 class LowerHLFIRIntrinsics
     : public hlfir::impl::LowerHLFIRIntrinsicsBase<LowerHLFIRIntrinsics> {
 public:
@@ -271,13 +304,14 @@ public:
     mlir::ModuleOp module = this->getOperation();
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<MatmulOpConversion, SumOpConversion, TransposeOpConversion>(
-        context);
+    patterns.insert<MatmulOpConversion, MatmulTransposeOpConversion,
+                    SumOpConversion, TransposeOpConversion>(context);
     mlir::ConversionTarget target(*context);
     target.addLegalDialect<mlir::BuiltinDialect, mlir::arith::ArithDialect,
                            mlir::func::FuncDialect, fir::FIROpsDialect,
                            hlfir::hlfirDialect>();
-    target.addIllegalOp<hlfir::MatmulOp, hlfir::SumOp, hlfir::TransposeOp>();
+    target.addIllegalOp<hlfir::MatmulOp, hlfir::MatmulTransposeOp, hlfir::SumOp,
+                        hlfir::TransposeOp>();
     target.markUnknownOpDynamicallyLegal(
         [](mlir::Operation *) { return true; });
     if (mlir::failed(
