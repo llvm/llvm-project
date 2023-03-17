@@ -233,7 +233,8 @@ static Attr *handleNoInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 
   for (const auto *CallExpr : CEF.getCallExprs()) {
     const Decl *Decl = CallExpr->getCalleeDecl();
-    if (Decl->hasAttr<AlwaysInlineAttr>() || Decl->hasAttr<FlattenAttr>())
+    if (Decl &&
+        (Decl->hasAttr<AlwaysInlineAttr>() || Decl->hasAttr<FlattenAttr>()))
       S.Diag(St->getBeginLoc(), diag::warn_function_stmt_attribute_precedence)
           << A << (Decl->hasAttr<AlwaysInlineAttr>() ? 0 : 1);
   }
@@ -259,7 +260,7 @@ static Attr *handleAlwaysInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 
   for (const auto *CallExpr : CEF.getCallExprs()) {
     const Decl *Decl = CallExpr->getCalleeDecl();
-    if (Decl->hasAttr<NoInlineAttr>() || Decl->hasAttr<FlattenAttr>())
+    if (Decl && (Decl->hasAttr<NoInlineAttr>() || Decl->hasAttr<FlattenAttr>()))
       S.Diag(St->getBeginLoc(), diag::warn_function_stmt_attribute_precedence)
           << A << (Decl->hasAttr<NoInlineAttr>() ? 2 : 1);
   }
