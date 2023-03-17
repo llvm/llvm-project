@@ -57,6 +57,7 @@ protected:
     fir::FirOpBuilder builder{rewriter, kindMapping};
 
     llvm::SmallVector<fir::ExtendedValue, 3> ret;
+    llvm::SmallVector<std::function<void()>, 2> cleanupFns;
 
     for (size_t i = 0; i < args.size(); ++i) {
       mlir::Value arg = args[i].val;
@@ -77,21 +78,21 @@ protected:
         }
         auto [exv, cleanup] = hlfir::convertToValue(loc, builder, entity);
         if (cleanup)
-          TODO(loc, "extended value cleanup");
+          cleanupFns.push_back(*cleanup);
         ret.emplace_back(exv);
       } break;
       case fir::LowerIntrinsicArgAs::Addr: {
         auto [exv, cleanup] =
             hlfir::convertToAddress(loc, builder, entity, desiredType);
         if (cleanup)
-          TODO(loc, "extended value cleanup");
+          cleanupFns.push_back(*cleanup);
         ret.emplace_back(exv);
       } break;
       case fir::LowerIntrinsicArgAs::Box: {
         auto [box, cleanup] =
             hlfir::convertToBox(loc, builder, entity, desiredType);
         if (cleanup)
-          TODO(loc, "extended value cleanup");
+          cleanupFns.push_back(*cleanup);
         ret.emplace_back(box);
       } break;
       case fir::LowerIntrinsicArgAs::Inquired: {
@@ -109,10 +110,18 @@ protected:
         auto [exv, cleanup] =
             hlfir::translateToExtendedValue(loc, builder, entity);
         if (cleanup)
-          TODO(loc, "extended value cleanup");
+          cleanupFns.push_back(*cleanup);
         ret.emplace_back(exv);
       } break;
       }
+    }
+
+    if (cleanupFns.size()) {
+      auto oldInsertionPoint = builder.saveInsertionPoint();
+      builder.setInsertionPointAfter(op);
+      for (std::function<void()> cleanup : cleanupFns)
+        cleanup();
+      builder.restoreInsertionPoint(oldInsertionPoint);
     }
 
     return ret;
