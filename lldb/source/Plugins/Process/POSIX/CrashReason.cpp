@@ -54,7 +54,6 @@ static void AppendFaultAddr(std::string &str, lldb::addr_t addr) {
   str += ss.str();
 }
 
-#if defined(si_lower) && defined(si_upper)
 static void AppendBounds(std::string &str, lldb::addr_t lower_bound,
                          lldb::addr_t upper_bound, lldb::addr_t addr) {
   llvm::raw_string_ostream stream(str);
@@ -71,7 +70,6 @@ static void AppendBounds(std::string &str, lldb::addr_t lower_bound,
   stream << ")";
   stream.flush();
 }
-#endif
 
 static CrashReason GetCrashReasonForSIGSEGV(int code) {
   switch (code) {
