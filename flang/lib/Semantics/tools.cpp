@@ -848,6 +848,9 @@ public:
   template <typename T> bool operator()(const common::Indirection<T> &x) {
     return (*this)(x.value());
   }
+  template <typename A> bool operator()(const parser::Statement<A> &x) {
+    return (*this)(x.statement);
+  }
   bool operator()(const parser::AllocateStmt &stmt) {
     const auto &allocationList{std::get<std::list<parser::Allocation>>(stmt.t)};
     for (const auto &allocation : allocationList) {
@@ -894,8 +897,13 @@ public:
     return std::get<parser::StopStmt::Kind>(stmt.t) ==
         parser::StopStmt::Kind::Stop;
   }
-  bool operator()(const parser::Statement<parser::ActionStmt> &stmt) {
-    return common::visit(*this, stmt.statement.u);
+  bool operator()(const parser::IfStmt &stmt) {
+    return (*this)(
+        std::get<parser::UnlabeledStatement<parser::ActionStmt>>(stmt.t)
+            .statement);
+  }
+  bool operator()(const parser::ActionStmt &stmt) {
+    return common::visit(*this, stmt.u);
   }
 
 private:
