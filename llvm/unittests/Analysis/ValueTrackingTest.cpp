@@ -110,6 +110,18 @@ protected:
   }
 };
 
+class ComputeKnownFPClassTest : public ValueTrackingTest {
+protected:
+  void expectKnownFPClass(unsigned KnownTrue, std::optional<bool> SignBitKnown,
+                          Instruction *TestVal = nullptr) {
+    if (!TestVal)
+      TestVal = A;
+
+    KnownFPClass Known = computeKnownFPClass(TestVal, M->getDataLayout());
+    EXPECT_EQ(KnownTrue, Known.KnownFPClasses);
+    EXPECT_EQ(SignBitKnown, Known.SignBit);
+  }
+};
 }
 
 TEST_F(MatchSelectPatternTest, SimpleFMin) {
@@ -1157,10 +1169,7 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       {{false, false}, "call noundef i32 @g(i32 %x)"},
       {{true, false}, "fcmp nnan oeq float %fx, %fy"},
       {{false, false}, "fcmp oeq float %fx, %fy"},
-      {{true, false},
-       "ashr <4 x i32> %vx, select (i1 icmp sgt (i32 ptrtoint (i32* @s to "
-       "i32), i32 1), <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 "
-       "2, i32 3>)"},
+      {{true, false}, "ashr i32 %x, ptrtoint (i32* @s to i32)"},
       {{false, false},
        "call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %x, i32 %y)"},
       {{false, false},
@@ -1259,6 +1268,276 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownMulBits) {
       "  ret i32 %A\n"
       "}\n");
   expectKnownBits(/*zero*/ 95u, /*one*/ 32u);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectPos0) {
+  parseAssembly(
+      "define float @test(i1 %cond) {\n"
+      "  %A = select i1 %cond, float 0.0, float 0.0"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcPosZero, false);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNeg0) {
+  parseAssembly(
+      "define float @test(i1 %cond) {\n"
+      "  %A = select i1 %cond, float -0.0, float -0.0"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcNegZero, true);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectPosOrNeg0) {
+  parseAssembly(
+      "define float @test(i1 %cond) {\n"
+      "  %A = select i1 %cond, float 0.0, float -0.0"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcZero, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectPosInf) {
+  parseAssembly(
+      "define float @test(i1 %cond) {\n"
+      "  %A = select i1 %cond, float 0x7FF0000000000000, float 0x7FF0000000000000"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcPosInf, false);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNegInf) {
+  parseAssembly(
+      "define float @test(i1 %cond) {\n"
+      "  %A = select i1 %cond, float 0xFFF0000000000000, float 0xFFF0000000000000"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcNegInf, true);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectPosOrNegInf) {
+  parseAssembly(
+      "define float @test(i1 %cond) {\n"
+      "  %A = select i1 %cond, float 0x7FF0000000000000, float 0xFFF0000000000000"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcInf, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNNaN) {
+  parseAssembly(
+      "define float @test(i1 %cond, float %arg0, float %arg1) {\n"
+      "  %A = select nnan i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNan, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNInf) {
+  parseAssembly(
+      "define float @test(i1 %cond, float %arg0, float %arg1) {\n"
+      "  %A = select ninf i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcInf, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNNaNNInf) {
+  parseAssembly(
+      "define float @test(i1 %cond, float %arg0, float %arg1) {\n"
+      "  %A = select nnan ninf i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~(fcNan | fcInf), std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassArgUnionAll) {
+  parseAssembly(
+      "define float @test(i1 %cond, float nofpclass(snan ninf nsub pzero pnorm) %arg0, float nofpclass(qnan nnorm nzero psub pinf) %arg1) {\n"
+      "  %A = select i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcAllFlags, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassArgNoNan) {
+  parseAssembly(
+      "define float @test(i1 %cond, float nofpclass(nan) %arg0, float nofpclass(nan) %arg1) {\n"
+      "  %A = select i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNan, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassArgNoPInf) {
+  parseAssembly(
+      "define float @test(i1 %cond, float nofpclass(inf) %arg0, float nofpclass(pinf) %arg1) {\n"
+      "  %A = select i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcPosInf, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassArgNoNInf) {
+  parseAssembly(
+      "define float @test(i1 %cond, float nofpclass(ninf) %arg0, float nofpclass(inf) %arg1) {\n"
+      "  %A = select i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNegInf, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassCallSiteNoNan) {
+  parseAssembly(
+      "declare float @func()\n"
+      "define float @test() {\n"
+      "  %A = call nofpclass(nan) float @func()\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNan, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassCallSiteNoZeros) {
+  parseAssembly(
+      "declare float @func()\n"
+      "define float @test() {\n"
+      "  %A = call nofpclass(zero) float @func()\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcZero, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassDeclarationNoNan) {
+  parseAssembly(
+      "declare nofpclass(nan) float @no_nans()\n"
+      "define float @test() {\n"
+      "  %A = call float @no_nans()\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNan, std::nullopt);
+}
+
+// Check nofpclass + ninf works on a callsite
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassCallSiteNoZerosNInfFlags) {
+  parseAssembly(
+      "declare float @func()\n"
+      "define float @test() {\n"
+      "  %A = call ninf nofpclass(zero) float @func()\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~(fcZero | fcInf), std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, FNegNInf) {
+  parseAssembly(
+      "define float @test(float %arg) {\n"
+      "  %A = fneg ninf float %arg"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcInf, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, FabsUnknown) {
+  parseAssembly(
+      "declare float @llvm.fabs.f32(float)"
+      "define float @test(float %arg) {\n"
+      "  %A = call float @llvm.fabs.f32(float %arg)"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcAllFlags, false);
+}
+
+TEST_F(ComputeKnownFPClassTest, FNegFabsUnknown) {
+  parseAssembly(
+      "declare float @llvm.fabs.f32(float)"
+      "define float @test(float %arg) {\n"
+      "  %fabs = call float @llvm.fabs.f32(float %arg)"
+      "  %A = fneg float %fabs"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcAllFlags, true);
+}
+
+TEST_F(ComputeKnownFPClassTest, NegFabsNInf) {
+  parseAssembly(
+      "declare float @llvm.fabs.f32(float)"
+      "define float @test(float %arg) {\n"
+      "  %fabs = call ninf float @llvm.fabs.f32(float %arg)"
+      "  %A = fneg float %fabs"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcInf, true);
+}
+
+TEST_F(ComputeKnownFPClassTest, FNegFabsNNaN) {
+  parseAssembly(
+      "declare float @llvm.fabs.f32(float)"
+      "define float @test(float %arg) {\n"
+      "  %fabs = call nnan float @llvm.fabs.f32(float %arg)"
+      "  %A = fneg float %fabs"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNan, true);
+}
+
+TEST_F(ComputeKnownFPClassTest, CopySignNNanSrc0) {
+  parseAssembly(
+      "declare float @llvm.fabs.f32(float)\n"
+      "declare float @llvm.copysign.f32(float, float)\n"
+      "define float @test(float %arg0, float %arg1) {\n"
+      "  %fabs = call nnan float @llvm.fabs.f32(float %arg0)"
+      "  %A = call float @llvm.copysign.f32(float %fabs, float %arg1)"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNan, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, CopySignNInfSrc0_NegSign) {
+  parseAssembly(
+      "declare float @llvm.sqrt.f32(float)\n"
+      "declare float @llvm.copysign.f32(float, float)\n"
+      "define float @test(float %arg0, float %arg1) {\n"
+      "  %ninf = call ninf float @llvm.sqrt.f32(float %arg0)"
+      "  %A = call float @llvm.copysign.f32(float %ninf, float -1.0)"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcNegFinite, true);
+}
+
+TEST_F(ComputeKnownFPClassTest, CopySignNInfSrc0_PosSign) {
+  parseAssembly(
+      "declare float @llvm.sqrt.f32(float)\n"
+      "declare float @llvm.copysign.f32(float, float)\n"
+      "define float @test(float %arg0, float %arg1) {\n"
+      "  %ninf = call ninf float @llvm.sqrt.f32(float %arg0)"
+      "  %A = call float @llvm.copysign.f32(float %ninf, float 1.0)"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcPosFinite, false);
+}
+
+TEST_F(ComputeKnownFPClassTest, UIToFP) {
+  parseAssembly(
+      "define float @test(i32 %arg0, i16 %arg1) {\n"
+      "  %A = uitofp i32 %arg0 to float"
+      "  %A2 = uitofp i16 %arg1 to half"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcPosFinite, false, A);
+  expectKnownFPClass(fcPositive, false, A2);
+}
+
+TEST_F(ComputeKnownFPClassTest, SIToFP) {
+  parseAssembly(
+      "define float @test(i32 %arg0, i16 %arg1, i17 %arg2) {\n"
+      "  %A = sitofp i32 %arg0 to float"
+      "  %A2 = sitofp i16 %arg1 to half"
+      "  %A3 = sitofp i17 %arg2 to half"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcFinite, std::nullopt, A);
+  expectKnownFPClass(fcFinite, std::nullopt, A2);
+  expectKnownFPClass(~fcNan, std::nullopt, A3);
 }
 
 TEST_F(ValueTrackingTest, isNonZeroRecurrence) {

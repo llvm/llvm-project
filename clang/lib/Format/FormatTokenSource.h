@@ -162,7 +162,7 @@ private:
     auto it = Jumps.find(Next);
     if (it != Jumps.end()) {
       Next = it->second;
-      assert(Jumps.find(Next) == Jumps.end());
+      assert(!Jumps.contains(Next));
     }
     return Next;
   }

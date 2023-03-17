@@ -138,8 +138,8 @@ enum class CPUType : uint16_t {
   D3D11_Shader = 0x100,
 };
 
-/// These values correspond to the CV_CFL_LANG enumeration, and are documented
-/// here: https://msdn.microsoft.com/en-us/library/bw3aekw6.aspx
+/// These values correspond to the CV_CFL_LANG enumeration in the Microsoft
+/// Debug Interface Access SDK
 enum SourceLanguage : uint8_t {
   C = 0x00,
   Cpp = 0x01,
@@ -158,6 +158,8 @@ enum SourceLanguage : uint8_t {
   JScript = 0x0e,
   MSIL = 0x0f,
   HLSL = 0x10,
+  ObjC = 0x11,
+  ObjCpp = 0x12,
 
   Rust = 0x15,
 

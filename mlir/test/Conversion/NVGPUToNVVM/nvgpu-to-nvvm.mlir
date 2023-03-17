@@ -333,12 +333,11 @@ func.func @mma_sp_sync_f16_16832(%arg0: vector<4x2xf16>,
   // CHECK-NOT llvm.extractvalue
 
   // CHECK: %[[sparseMetadata:.+]] = llvm.bitcast %{{.+}} : vector<2xi16> to i32
-  // CHECK: %[[sparseSelector:.+]] = llvm.mlir.constant(0 : i32) : i32
 
   // CHECK: %[[d:.+]] = llvm.inline_asm has_side_effects asm_dialect = att
-  // CHECK-SAME: "mma.sp.sync.aligned.m16n8k32.row.col.f16.f16.f16.f16 {$0,$1},{$2,$3,$4,$5},{$6,$7,$8,$9},{$10,$11},$12,$13;"
-  // CHECK-SAME: "=r,=r,r,r,r,r,r,r,r,r,r,r,r,r"
-  // CHECK-SAME: %[[sparseMetadata]], %[[sparseSelector]] :
+  // CHECK-SAME: "mma.sp.sync.aligned.m16n8k32.row.col.f16.f16.f16.f16 {$0,$1},{$2,$3,$4,$5},{$6,$7,$8,$9},{$10,$11},$12,0x0;"
+  // CHECK-SAME: "=r,=r,r,r,r,r,r,r,r,r,r,r,r"
+  // CHECK-SAME: %[[sparseMetadata]] :
   // CHECK-SAME: -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
 
   %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = [16, 8, 32]} :
@@ -372,12 +371,11 @@ func.func @mma_sp_sync_f16_16816(%arg0: vector<2x2xf16>,
   // CHECK-NOT llvm.extractvalue
 
   // CHECK: %[[sparseMetadata:.+]] = llvm.bitcast %{{.+}} : vector<2xi16> to i32
-  // CHECK: %[[sparseSelector:.+]] = llvm.mlir.constant(0 : i32) : i32
 
   // CHECK: %[[d:.+]] = llvm.inline_asm has_side_effects asm_dialect = att
-  // CHECK-SAME: "mma.sp.sync.aligned.m16n8k16.row.col.f16.f16.f16.f16 {$0,$1},{$2,$3},{$4,$5},{$6,$7},$8,$9;"
-  // CHECK-SAME: "=r,=r,r,r,r,r,r,r,r,r"
-  // CHECK-SAME: %[[sparseMetadata]], %[[sparseSelector]] :
+  // CHECK-SAME: "mma.sp.sync.aligned.m16n8k16.row.col.f16.f16.f16.f16 {$0,$1},{$2,$3},{$4,$5},{$6,$7},$8,0x0;"
+  // CHECK-SAME: "=r,=r,r,r,r,r,r,r,r"
+  // CHECK-SAME: %[[sparseMetadata]] :
   // CHECK-SAME: -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
 
   %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = [16, 8, 16]} :
@@ -413,12 +411,11 @@ func.func @mma_sp_sync_i8_16864(%arg0: vector<4x4xi8>,
   // CHECK-NOT llvm.extractvalue
 
   // CHECK: %[[sparseMetadata:.+]] = llvm.bitcast %{{.+}} : vector<2xi16> to i32
-  // CHECK: %[[sparseSelector:.+]] = llvm.mlir.constant(0 : i32) : i32
 
   // CHECK: %[[d:.+]] = llvm.inline_asm has_side_effects asm_dialect = att
-  // CHECK-SAME: "mma.sp.sync.aligned.m16n8k64.row.col.satfinite.s32.s8.s8.s32
-  // CHECK-SAME: "=r,=r,=r,=r,r,r,r,r,r,r,r,r,r,r,r,r,r,r"
-  // CHECK-SAME: %[[sparseMetadata]], %[[sparseSelector]] :
+  // CHECK-SAME: "mma.sp.sync.aligned.m16n8k64.row.col.satfinite.s32.s8.s8.s32 {$0,$1,$2,$3},{$4,$5,$6,$7},{$8,$9,$10,$11},{$12,$13,$14,$15},$16,0x0;"
+  // CHECK-SAME: "=r,=r,=r,=r,r,r,r,r,r,r,r,r,r,r,r,r,r"
+  // CHECK-SAME: %[[sparseMetadata]] :
   // CHECK-SAME: -> !llvm.struct<(i32, i32, i32, i32)
 
   %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = [16, 8, 64]} :

@@ -713,8 +713,8 @@ define i16 @test_reassoc_mul_i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3) {
 define i32 @test_reassoc_mul_i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: test_reassoc_mul_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mulw a0, a0, a1
-; CHECK-NEXT:    mulw a1, a2, a3
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    mul a1, a2, a3
 ; CHECK-NEXT:    mulw a0, a0, a1
 ; CHECK-NEXT:    ret
   %t0 = mul i32 %a0, %a1

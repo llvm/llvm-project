@@ -77,10 +77,8 @@ struct test1 test1va (int x, ...)
 
 // CHECK: define{{.*}} void @test2va(ptr noalias sret(%struct.test2) align 16 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
-// CHECK: %[[TMP0:[^ ]+]] = ptrtoint ptr %[[CUR]] to i64
-// CHECK: %[[TMP1:[^ ]+]] = add i64 %[[TMP0]], 15
-// CHECK: %[[TMP2:[^ ]+]] = and i64 %[[TMP1]], -16
-// CHECK: %[[ALIGN:[^ ]+]] = inttoptr i64 %[[TMP2]] to ptr
+// CHECK: %[[TMP0:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i32 15
+// CHECK: %[[ALIGN:[^ ]+]] = call ptr @llvm.ptrmask.p0.i64(ptr %[[TMP0]], i64 -16)
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[ALIGN]], i64 16
 // CHECK: store ptr %[[NEXT]], ptr %ap
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[AGG_RESULT]], ptr align 16 %[[ALIGN]], i64 16, i1 false)
@@ -96,10 +94,8 @@ struct test2 test2va (int x, ...)
 
 // CHECK: define{{.*}} void @test3va(ptr noalias sret(%struct.test3) align 32 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
-// CHECK: %[[TMP0:[^ ]+]] = ptrtoint ptr %[[CUR]] to i64
-// CHECK: %[[TMP1:[^ ]+]] = add i64 %[[TMP0]], 15
-// CHECK: %[[TMP2:[^ ]+]] = and i64 %[[TMP1]], -16
-// CHECK: %[[ALIGN:[^ ]+]] = inttoptr i64 %[[TMP2]] to ptr
+// CHECK: %[[TMP0:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i32 15
+// CHECK: %[[ALIGN:[^ ]+]] = call ptr @llvm.ptrmask.p0.i64(ptr %[[TMP0]], i64 -16)
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[ALIGN]], i64 32
 // CHECK: store ptr %[[NEXT]], ptr %ap
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 32 %[[AGG_RESULT]], ptr align 16 %[[ALIGN]], i64 32, i1 false)
@@ -178,10 +174,8 @@ struct test_longdouble testva_longdouble (int x, ...)
 
 // CHECK: define{{.*}} void @testva_vector(ptr noalias sret(%struct.test_vector) align 16 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
-// CHECK: %[[TMP0:[^ ]+]] = ptrtoint ptr %[[CUR]] to i64
-// CHECK: %[[TMP1:[^ ]+]] = add i64 %[[TMP0]], 15
-// CHECK: %[[TMP2:[^ ]+]] = and i64 %[[TMP1]], -16
-// CHECK: %[[ALIGN:[^ ]+]] = inttoptr i64 %[[TMP2]] to ptr
+// CHECK: %[[TMP0:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i32 15
+// CHECK: %[[ALIGN:[^ ]+]] = call ptr @llvm.ptrmask.p0.i64(ptr %[[TMP0]], i64 -16)
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[ALIGN]], i64 16
 // CHECK: store ptr %[[NEXT]], ptr %ap
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[AGG_RESULT]], ptr align 16 %[[ALIGN]], i64 16, i1 false)

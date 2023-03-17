@@ -1155,18 +1155,32 @@ void initializerListSequences() {
       int i;
       A a;
     };
-    A a;
-    S1 s1{a.getInt(), std::move(a)};
+    {
+      A a;
+      S1 s1{a.getInt(), std::move(a)};
+    }
+    {
+      A a;
+      S1 s1{.i = a.getInt(), .a = std::move(a)};
+    }
   }
   {
     struct S2 {
       A a;
       int i;
     };
-    A a;
-    S2 s2{std::move(a), a.getInt()};
-    // CHECK-NOTES: [[@LINE-1]]:25: warning: 'a' used after it was moved
-    // CHECK-NOTES: [[@LINE-2]]:11: note: move occurred here
+    {
+      A a;
+      S2 s2{std::move(a), a.getInt()};
+      // CHECK-NOTES: [[@LINE-1]]:27: warning: 'a' used after it was moved
+      // CHECK-NOTES: [[@LINE-2]]:13: note: move occurred here
+    }
+    {
+      A a;
+      S2 s2{.a = std::move(a), .i = a.getInt()};
+      // CHECK-NOTES: [[@LINE-1]]:37: warning: 'a' used after it was moved
+      // CHECK-NOTES: [[@LINE-2]]:13: note: move occurred here
+    }
   }
 }
 

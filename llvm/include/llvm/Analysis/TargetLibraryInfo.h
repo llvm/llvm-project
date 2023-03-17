@@ -138,7 +138,7 @@ public:
     if (StandardNames[F] != Name) {
       setState(F, CustomName);
       CustomNames[F] = std::string(Name);
-      assert(CustomNames.find(F) != CustomNames.end());
+      assert(CustomNames.contains(F));
     } else {
       setState(F, StandardName);
     }

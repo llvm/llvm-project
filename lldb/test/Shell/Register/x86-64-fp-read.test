@@ -9,9 +9,9 @@ process launch
 # CHECK: Process {{.*}} stopped
 
 # fdiv (%rbx) gets encoded into 2 bytes, int3 into 1 byte
-print (void*)($pc-3)
+expression (void*)($pc-3)
 # CHECK: (void *) $0 = [[FDIV:0x[0-9a-f]*]]
-print &zero
+expression &zero
 # CHECK: (uint32_t *) $1 = [[ZERO:0x[0-9a-f]*]]
 
 register read --all
@@ -32,9 +32,9 @@ register read --all
 # CHECK-DAG: st{{(mm)?}}7 = {0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}
 
 # legacy approach, superseded by fip/fdp registers
-print (void*)($fiseg*0x100000000 + $fioff)
+expression (void*)($fiseg*0x100000000 + $fioff)
 # CHECK: (void *) $2 = [[FDIV]]
-print (uint32_t*)($foseg * 0x100000000 + $fooff)
+expression (uint32_t*)($foseg * 0x100000000 + $fooff)
 # CHECK: (uint32_t *) $3 = [[ZERO]]
 
 process continue

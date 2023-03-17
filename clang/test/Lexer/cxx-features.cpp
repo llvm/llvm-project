@@ -356,9 +356,3 @@
 #if defined(NO_EXCEPTIONS) ? check(exceptions, 0, 0, 0, 0, 0, 0) : check(exceptions, 199711, 199711, 199711, 199711, 199711, 199711)
 #error "wrong value for __cpp_exceptions"
 #endif
-
-// --- TS features --
-
-#if check(coroutines, 0, 0, 0, 0, 201703, 201703)
-#error "wrong value for __cpp_coroutines"
-#endif

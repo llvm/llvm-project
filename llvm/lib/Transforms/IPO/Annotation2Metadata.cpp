@@ -66,6 +66,6 @@ static bool convertAnnotation2Metadata(Module &M) {
 
 PreservedAnalyses Annotation2MetadataPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {
-  convertAnnotation2Metadata(M);
-  return PreservedAnalyses::all();
+  return convertAnnotation2Metadata(M) ? PreservedAnalyses::none()
+                                       : PreservedAnalyses::all();
 }

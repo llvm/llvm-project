@@ -1435,7 +1435,7 @@ static bool doImportingForModule(Module &M) {
   if (renameModuleForThinLTO(M, *Index, /*ClearDSOLocalOnDeclarations=*/false,
                              /*GlobalsToImport=*/nullptr)) {
     errs() << "Error renaming module\n";
-    return false;
+    return true;
   }
 
   // Perform the import now.
@@ -1450,10 +1450,10 @@ static bool doImportingForModule(Module &M) {
   if (!Result) {
     logAllUnhandledErrors(Result.takeError(), errs(),
                           "Error importing module: ");
-    return false;
+    return true;
   }
 
-  return *Result;
+  return true;
 }
 
 PreservedAnalyses FunctionImportPass::run(Module &M,

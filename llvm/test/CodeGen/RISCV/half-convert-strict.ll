@@ -173,48 +173,38 @@ define i32 @fcvt_wu_h_multiple_use(half %x, ptr %y) {
 ; CHECKIZFH-LABEL: fcvt_wu_h_multiple_use:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
-; CHECKIZFH-NEXT:    bnez a0, .LBB4_2
-; CHECKIZFH-NEXT:  # %bb.1:
-; CHECKIZFH-NEXT:    li a0, 1
-; CHECKIZFH-NEXT:  .LBB4_2:
+; CHECKIZFH-NEXT:    seqz a1, a0
+; CHECKIZFH-NEXT:    add a0, a0, a1
 ; CHECKIZFH-NEXT:    ret
 ;
 ; RV32IDZFH-LABEL: fcvt_wu_h_multiple_use:
 ; RV32IDZFH:       # %bb.0:
 ; RV32IDZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
-; RV32IDZFH-NEXT:    bnez a0, .LBB4_2
-; RV32IDZFH-NEXT:  # %bb.1:
-; RV32IDZFH-NEXT:    li a0, 1
-; RV32IDZFH-NEXT:  .LBB4_2:
+; RV32IDZFH-NEXT:    seqz a1, a0
+; RV32IDZFH-NEXT:    add a0, a0, a1
 ; RV32IDZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_wu_h_multiple_use:
 ; RV64IDZFH:       # %bb.0:
 ; RV64IDZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
-; RV64IDZFH-NEXT:    bnez a0, .LBB4_2
-; RV64IDZFH-NEXT:  # %bb.1:
-; RV64IDZFH-NEXT:    li a0, 1
-; RV64IDZFH-NEXT:  .LBB4_2:
+; RV64IDZFH-NEXT:    seqz a1, a0
+; RV64IDZFH-NEXT:    add a0, a0, a1
 ; RV64IDZFH-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_wu_h_multiple_use:
 ; CHECK32-IZFHMIN:       # %bb.0:
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.h ft0, fa0
 ; CHECK32-IZFHMIN-NEXT:    fcvt.wu.s a0, ft0, rtz
-; CHECK32-IZFHMIN-NEXT:    bnez a0, .LBB4_2
-; CHECK32-IZFHMIN-NEXT:  # %bb.1:
-; CHECK32-IZFHMIN-NEXT:    li a0, 1
-; CHECK32-IZFHMIN-NEXT:  .LBB4_2:
+; CHECK32-IZFHMIN-NEXT:    seqz a1, a0
+; CHECK32-IZFHMIN-NEXT:    add a0, a0, a1
 ; CHECK32-IZFHMIN-NEXT:    ret
 ;
 ; CHECK64-IZFHMIN-LABEL: fcvt_wu_h_multiple_use:
 ; CHECK64-IZFHMIN:       # %bb.0:
 ; CHECK64-IZFHMIN-NEXT:    fcvt.s.h ft0, fa0
 ; CHECK64-IZFHMIN-NEXT:    fcvt.wu.s a0, ft0, rtz
-; CHECK64-IZFHMIN-NEXT:    bnez a0, .LBB4_2
-; CHECK64-IZFHMIN-NEXT:  # %bb.1:
-; CHECK64-IZFHMIN-NEXT:    li a0, 1
-; CHECK64-IZFHMIN-NEXT:  .LBB4_2:
+; CHECK64-IZFHMIN-NEXT:    seqz a1, a0
+; CHECK64-IZFHMIN-NEXT:    add a0, a0, a1
 ; CHECK64-IZFHMIN-NEXT:    ret
   %a = call i32 @llvm.experimental.constrained.fptoui.i32.f16(half %x, metadata !"fpexcept.strict") strictfp
   %b = icmp eq i32 %a, 0

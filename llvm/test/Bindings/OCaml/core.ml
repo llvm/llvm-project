@@ -333,7 +333,6 @@ let test_constants () =
   group "misc constants";
   (* CHECK: const_size_of{{.*}}getelementptr{{.*}}null
    * CHECK: const_gep{{.*}}getelementptr
-   * CHECK: const_select{{.*}}select
    * CHECK: const_extractelement{{.*}}extractelement
    * CHECK: const_insertelement{{.*}}insertelement
    * CHECK: const_shufflevector = global <4 x i32> <i32 0, i32 1, i32 1, i32 0>
@@ -341,10 +340,6 @@ let test_constants () =
   ignore (define_global "const_size_of" (size_of (pointer_type context)) m);
   ignore (define_global "const_gep" (const_gep i8_type foldbomb_gv [| five |])
           m);
-  ignore (define_global "const_select" (const_select
-    (const_icmp Icmp.Sle foldbomb five)
-    (const_int i8_type (-1))
-    (const_int i8_type 0)) m);
   let zero = const_int i32_type 0 in
   let one  = const_int i32_type 1 in
   ignore (define_global "const_extractelement" (const_extractelement

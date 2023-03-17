@@ -685,8 +685,6 @@ external const_pointercast : llvalue -> lltype -> llvalue
 external const_intcast : llvalue -> lltype -> is_signed:bool -> llvalue
                        = "llvm_const_intcast"
 external const_fpcast : llvalue -> lltype -> llvalue = "llvm_const_fpcast"
-external const_select : llvalue -> llvalue -> llvalue -> llvalue
-                      = "llvm_const_select"
 external const_extractelement : llvalue -> llvalue -> llvalue
                               = "llvm_const_extractelement"
 external const_insertelement : llvalue -> llvalue -> llvalue -> llvalue

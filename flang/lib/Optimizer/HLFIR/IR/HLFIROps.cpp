@@ -20,6 +20,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <iterator>
 #include <optional>
 #include <tuple>
 
@@ -638,6 +639,52 @@ mlir::LogicalResult hlfir::MatmulOp::verify() {
   return mlir::success();
 }
 
+mlir::LogicalResult
+hlfir::MatmulOp::canonicalize(MatmulOp matmulOp,
+                              mlir::PatternRewriter &rewriter) {
+  // the only two uses of the transposed matrix should be for the hlfir.matmul
+  // and hlfir.destory
+  auto isOtherwiseUnused = [&](hlfir::TransposeOp transposeOp) -> bool {
+    std::size_t numUses = 0;
+    for (mlir::Operation *user : transposeOp.getResult().getUsers()) {
+      ++numUses;
+      if (user == matmulOp)
+        continue;
+      if (mlir::dyn_cast_or_null<hlfir::DestroyOp>(user))
+        continue;
+      // some other use!
+      return false;
+    }
+    return numUses <= 2;
+  };
+
+  mlir::Value lhs = matmulOp.getLhs();
+  // Rewrite MATMUL(TRANSPOSE(lhs), rhs) => hlfir.matmul_transpose lhs, rhs
+  if (auto transposeOp = lhs.getDefiningOp<hlfir::TransposeOp>()) {
+    if (isOtherwiseUnused(transposeOp)) {
+      mlir::Location loc = matmulOp.getLoc();
+      mlir::Type resultTy = matmulOp.getResult().getType();
+      auto matmulTransposeOp = rewriter.create<hlfir::MatmulTransposeOp>(
+          loc, resultTy, transposeOp.getArray(), matmulOp.getRhs());
+
+      // we don't need to remove any hlfir.destroy because it will be needed for
+      // the new intrinsic result anyway
+      rewriter.replaceOp(matmulOp, matmulTransposeOp.getResult());
+
+      // but we do need to get rid of the hlfir.destroy for the hlfir.transpose
+      // result (which is entirely removed)
+      for (mlir::Operation *user : transposeOp->getResult(0).getUsers())
+        if (auto destroyOp = mlir::dyn_cast_or_null<hlfir::DestroyOp>(user))
+          rewriter.eraseOp(destroyOp);
+      rewriter.eraseOp(transposeOp);
+
+      return mlir::success();
+    }
+  }
+
+  return mlir::failure();
+}
+
 //===----------------------------------------------------------------------===//
 // TransposeOp
 //===----------------------------------------------------------------------===//
@@ -664,6 +711,71 @@ mlir::LogicalResult hlfir::TransposeOp::verify() {
   if (eleTy != resultEleTy)
     return emitOpError(
         "input and output arrays should have the same element type");
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// MatmulTransposeOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::MatmulTransposeOp::verify() {
+  mlir::Value lhs = getLhs();
+  mlir::Value rhs = getRhs();
+  fir::SequenceType lhsTy =
+      hlfir::getFortranElementOrSequenceType(lhs.getType())
+          .cast<fir::SequenceType>();
+  fir::SequenceType rhsTy =
+      hlfir::getFortranElementOrSequenceType(rhs.getType())
+          .cast<fir::SequenceType>();
+  llvm::ArrayRef<int64_t> lhsShape = lhsTy.getShape();
+  llvm::ArrayRef<int64_t> rhsShape = rhsTy.getShape();
+  std::size_t lhsRank = lhsShape.size();
+  std::size_t rhsRank = rhsShape.size();
+  mlir::Type lhsEleTy = lhsTy.getEleTy();
+  mlir::Type rhsEleTy = rhsTy.getEleTy();
+  hlfir::ExprType resultTy = getResult().getType().cast<hlfir::ExprType>();
+  llvm::ArrayRef<int64_t> resultShape = resultTy.getShape();
+  mlir::Type resultEleTy = resultTy.getEleTy();
+
+  // lhs must have rank 2 for the transpose to be valid
+  if ((lhsRank != 2) || ((rhsRank != 1) && (rhsRank != 2)))
+    return emitOpError("array must have either rank 1 or rank 2");
+
+  if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
+      mlir::isa<fir::LogicalType>(rhsEleTy))
+    return emitOpError("if one array is logical, so should the other be");
+
+  // for matmul we compare the last dimension of lhs with the first dimension of
+  // rhs, but for MatmulTranspose, dimensions of lhs are inverted by the
+  // transpose
+  int64_t firstLhsDim = lhsShape[0];
+  int64_t firstRhsDim = rhsShape[0];
+  constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
+  if (firstLhsDim != firstRhsDim)
+    if ((firstLhsDim != unknownExtent) && (firstRhsDim != unknownExtent))
+      return emitOpError(
+          "the first dimension of LHS should match the first dimension of RHS");
+
+  if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
+      mlir::isa<fir::LogicalType>(resultEleTy))
+    return emitOpError("the result type should be a logical only if the "
+                       "argument types are logical");
+
+  llvm::SmallVector<int64_t, 2> expectedResultShape;
+  if (rhsRank == 2) {
+    expectedResultShape.push_back(lhsShape[1]);
+    expectedResultShape.push_back(rhsShape[1]);
+  } else {
+    // rhsRank == 1
+    expectedResultShape.push_back(lhsShape[1]);
+  }
+  if (resultShape.size() != expectedResultShape.size())
+    return emitOpError("incorrect result shape");
+  if (resultShape[0] != expectedResultShape[0])
+    return emitOpError("incorrect result shape");
+  if (resultShape.size() == 2 && resultShape[1] != expectedResultShape[1])
+    return emitOpError("incorrect result shape");
 
   return mlir::success();
 }
