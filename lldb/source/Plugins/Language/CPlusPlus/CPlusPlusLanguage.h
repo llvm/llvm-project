@@ -153,6 +153,8 @@ public:
   ConstString FindBestAlternateFunctionMangledName(
       const Mangled mangled, const SymbolContext &sym_ctx) const override;
 
+  ConstString GetInstanceVariableName() override { return ConstString("this"); }
+
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 };

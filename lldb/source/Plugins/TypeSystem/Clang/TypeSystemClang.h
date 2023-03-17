@@ -704,8 +704,6 @@ public:
 
   bool SupportsLanguage(lldb::LanguageType language) override;
 
-  ConstString GetInstanceVariableName(lldb::LanguageType language) override;
-
   static llvm::Optional<std::string> GetCXXClassName(const CompilerType &type);
 
   // Type Completion
