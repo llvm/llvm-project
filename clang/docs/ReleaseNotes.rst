@@ -209,6 +209,9 @@ Bug Fixes in This Version
   function context.
   (`#37792 <https://github.com/llvm/llvm-project/issues/37792>`_) and
   (`#48405 <https://github.com/llvm/llvm-project/issues/48405>`_)
+- Fix crash when using ``[[clang::always_inline]]`` or ``[[clang::noinline]]``
+  statement attributes on a call to a template function in the body of a
+  template function.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
