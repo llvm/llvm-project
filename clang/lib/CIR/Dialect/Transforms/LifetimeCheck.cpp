@@ -37,7 +37,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void runOnOperation() override;
 
   void checkOperation(Operation *op);
-  void checkFunc(Operation *op);
+  void checkFunc(cir::FuncOp fnOp);
   void checkBlock(Block &block);
 
   void checkRegionWithScope(Region &region);
@@ -71,6 +71,8 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
 
   // Tracks current module.
   ModuleOp theModule;
+  // Track current function under analysis
+  std::optional<FuncOp> currFunc;
 
   // Common helpers.
   bool isCtorInitPointerFromOwner(CallOp callOp,
@@ -542,7 +544,8 @@ void LifetimeCheckPass::checkRegionWithScope(Region &region) {
     checkBlock(block);
 }
 
-void LifetimeCheckPass::checkFunc(Operation *op) {
+void LifetimeCheckPass::checkFunc(cir::FuncOp fnOp) {
+  currFunc = fnOp;
   // FIXME: perhaps this should be a function pass, but for now make
   // sure we reset the state before looking at other functions.
   if (currPmap)
@@ -557,11 +560,12 @@ void LifetimeCheckPass::checkFunc(Operation *op) {
   // Add a new scope. Note that as part of the scope cleanup process
   // we apply section 2.3 KILL(x) functionality, turning relevant
   // references invalid.
-  for (Region &region : op->getRegions())
+  for (Region &region : fnOp->getRegions())
     checkRegionWithScope(region);
 
   // FIXME: store the pmap result for this function, we
   // could do some interesting IPA stuff using this info.
+  currFunc.reset();
 }
 
 // The join operation between pmap as described in section 2.3.
@@ -1109,8 +1113,11 @@ void LifetimeCheckPass::emitInvalidHistory(mlir::InFlightDiagnostic &D,
         D.attachNote(info.loc) << "at the end of scope or full-expression";
         emittedDanglingTasks.insert(warningLoc);
       } else if (forRetLambda) {
+        assert(currFunc && "expected function");
+        StringRef parent = currFunc->getLambda() ? "lambda" : "function";
         D.attachNote(info.val->getLoc())
-            << "declared here but invalid after function end";
+            << "declared here but invalid after enclosing " << parent
+            << " ends";
       } else {
         StringRef outOfScopeVarName = getVarNameFromValue(*info.val);
         D.attachNote(info.loc) << "pointee '" << outOfScopeVarName
@@ -1532,8 +1539,8 @@ void LifetimeCheckPass::checkOperation(Operation *op) {
   }
 
   // FIXME: we can do better than sequence of dyn_casts.
-  if (isa<cir::FuncOp>(op))
-    return checkFunc(op);
+  if (auto fnOp = dyn_cast<cir::FuncOp>(op))
+    return checkFunc(fnOp);
   if (auto ifOp = dyn_cast<IfOp>(op))
     return checkIf(ifOp);
   if (auto switchOp = dyn_cast<SwitchOp>(op))
