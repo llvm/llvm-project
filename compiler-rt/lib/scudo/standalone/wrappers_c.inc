@@ -54,6 +54,8 @@ INTERFACE WEAK struct SCUDO_MALLINFO SCUDO_PREFIX(mallinfo)(void) {
   return Info;
 }
 
+// On Android, mallinfo2 is an alias of mallinfo, so don't define both.
+#if !SCUDO_ANDROID
 INTERFACE WEAK struct __scudo_mallinfo2 SCUDO_PREFIX(mallinfo2)(void) {
   struct __scudo_mallinfo2 Info = {};
   scudo::StatCounters Stats;
@@ -70,6 +72,7 @@ INTERFACE WEAK struct __scudo_mallinfo2 SCUDO_PREFIX(mallinfo2)(void) {
   Info.fordblks = Info.fsmblks;
   return Info;
 }
+#endif
 
 INTERFACE WEAK void *SCUDO_PREFIX(malloc)(size_t size) {
   return scudo::setErrnoOnNull(SCUDO_ALLOCATOR.allocate(
