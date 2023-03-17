@@ -2,11 +2,12 @@ add_startup_object(
   crt1
   SRC
     start.cpp
+  DEPENDS
+    libc.src.__support.RPC.rpc_client
   COMPILE_OPTIONS
     -ffreestanding # To avoid compiler warnings about calling the main function.
     -fno-builtin
     -nogpulib # Do not include any GPU vendor libraries.
-    -nostdinc
     -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE}
     -emit-llvm # AMDGPU's intermediate object file format is bitcode.
     --target=${LIBC_GPU_TARGET_TRIPLE}
@@ -15,5 +16,10 @@ add_startup_object(
 get_fq_target_name(crt1 fq_name)
 
 # Ensure that clang uses the correct linker for this object type.
-target_link_libraries(${fq_name} PUBLIC 
-                      "--target=${LIBC_GPU_TARGET_TRIPLE}" "-flto")
+target_link_libraries(
+  ${fq_name}
+  PUBLIC
+  "-mcpu=${LIBC_GPU_TARGET_ARCHITECTURE}"
+  "--target=${LIBC_GPU_TARGET_TRIPLE}"
+  "-flto"
+)

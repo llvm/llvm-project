@@ -1,5 +1,5 @@
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-parallel -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-parallel -polly-codegen -S < %s | FileCheck %s -check-prefix=IR
+; RUN: opt %loadPolly -polly-parallel -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
+; RUN: opt %loadPolly -polly-parallel -polly-codegen -S < %s | FileCheck %s -check-prefix=IR
 ;
 ; float A[100];
 ;
@@ -23,18 +23,16 @@
 ; AST:       Stmt_for_body6(c0, c1, c2);
 
 ; IR:      %polly.par.userContext = alloca { i64, i64 }
-; IR: %[[R1:[0-9a-z.]+]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* %polly.par.userContext, i32 0, i32 0
-; IR-NEXT: store i64 %n, i64* %[[R1]]
-; IR-NEXT: %[[R2:[0-9a-z.]+]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* %polly.par.userContext, i32 0, i32 1
-; IR-NEXT: store i64 %polly.indvar, i64* %[[R2]]
-; IR-NEXT: %polly.par.userContext1 = bitcast { i64, i64 }* %polly.par.userContext to i8*
+; IR: %[[R1:[0-9a-z.]+]] = getelementptr inbounds { i64, i64 }, ptr %polly.par.userContext, i32 0, i32 0
+; IR-NEXT: store i64 %n, ptr %[[R1]]
+; IR-NEXT: %[[R2:[0-9a-z.]+]] = getelementptr inbounds { i64, i64 }, ptr %polly.par.userContext, i32 0, i32 1
+; IR-NEXT: store i64 %polly.indvar, ptr %[[R2]]
 
-; IR-LABEL: @loop_references_outer_ids_polly_subfn(i8* %polly.par.userContext)
-; IR:       %polly.par.userContext1 = bitcast i8* %polly.par.userContext to { i64, i64 }*
-; IR-NEXT:  %[[R3:[0-9a-z.]+]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* %polly.par.userContext1, i32 0, i32 0
-; IR-NEXT:  %[[R4:[0-9a-z.]+]] = load i64, i64* %[[R3]]
-; IR-NEXT:  %[[R5:[0-9a-z.]+]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* %polly.par.userContext1, i32 0, i32 1
-; IR-NEXT:  %[[R6:[0-9a-z.]+]] = load i64, i64* %[[R5]]
+; IR-LABEL: @loop_references_outer_ids_polly_subfn(ptr %polly.par.userContext)
+; IR:  %[[R3:[0-9a-z.]+]] = getelementptr inbounds { i64, i64 }, ptr %polly.par.userContext, i32 0, i32 0
+; IR-NEXT:  %[[R4:[0-9a-z.]+]] = load i64, ptr %[[R3]]
+; IR-NEXT:  %[[R5:[0-9a-z.]+]] = getelementptr inbounds { i64, i64 }, ptr %polly.par.userContext, i32 0, i32 1
+; IR-NEXT:  %[[R6:[0-9a-z.]+]] = load i64, ptr %[[R5]]
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -70,10 +68,10 @@ for.body6:                                        ; preds = %for.cond4
   %add7 = add nsw i64 %i.0, %j.0
   %add8 = add nsw i64 %add7, %k.0
   %conv = sitofp i64 %add8 to float
-  %arrayidx = getelementptr inbounds [100 x float], [100 x float]* @A, i64 0, i64 %j.0
-  %tmp = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [100 x float], ptr @A, i64 0, i64 %j.0
+  %tmp = load float, ptr %arrayidx, align 4
   %add9 = fadd float %tmp, %conv
-  store float %add9, float* %arrayidx, align 4
+  store float %add9, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body6

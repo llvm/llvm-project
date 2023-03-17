@@ -1,0 +1,4 @@
+RUN: %cpp_compiler %S/BigFileCopy.cpp -o %t
+RUN: %run %t big-file.txt 2>big-file-out.txt; result=$?
+RUN: %run rm -f big-file.txt big-file-out.txt
+RUN: %run (exit $result)

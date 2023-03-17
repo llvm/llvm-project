@@ -116,6 +116,9 @@ Non-comprehensive list of changes in this release
   optimizations.
 - Clang now supports ``__builtin_nondeterministic_value`` that returns a
   nondeterministic value of the same type as the provided argument.
+- Clang now supports ``__builtin_FILE_NAME()`` which returns the same
+  information as the ``__FILE_NAME__`` macro (the presumed file name
+  from the invocation point, with no path components included).
 
 New Compiler Flags
 ------------------
@@ -206,6 +209,9 @@ Bug Fixes in This Version
   function context.
   (`#37792 <https://github.com/llvm/llvm-project/issues/37792>`_) and
   (`#48405 <https://github.com/llvm/llvm-project/issues/48405>`_)
+- Fix crash when using ``[[clang::always_inline]]`` or ``[[clang::noinline]]``
+  statement attributes on a call to a template function in the body of a
+  template function.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

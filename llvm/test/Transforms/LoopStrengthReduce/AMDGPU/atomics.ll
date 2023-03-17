@@ -7,16 +7,16 @@ target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:3
 ; OPT-LABEL: @test_local_atomicrmw_addressing_loop_uniform_index_max_offset_i32(
 
 ; OPT: .lr.ph.preheader:
-; OPT: %uglygep2 = getelementptr i8, ptr addrspace(3) %arg1, i32 65532
+; OPT: %scevgep2 = getelementptr i8, ptr addrspace(3) %arg1, i32 65532
 ; OPT: br label %.lr.ph
 ; OPT: .lr.ph:
-; OPT: %lsr.iv3 = phi ptr addrspace(3) [ %uglygep4, %.lr.ph ], [ %uglygep2, %.lr.ph.preheader ]
-; OPT: %lsr.iv1 = phi ptr addrspace(3) [ %uglygep, %.lr.ph ], [ %arg0, %.lr.ph.preheader ]
+; OPT: %lsr.iv3 = phi ptr addrspace(3) [ %scevgep4, %.lr.ph ], [ %scevgep2, %.lr.ph.preheader ]
+; OPT: %lsr.iv1 = phi ptr addrspace(3) [ %scevgep, %.lr.ph ], [ %arg0, %.lr.ph.preheader ]
 ; OPT: %lsr.iv = phi i32 [ %lsr.iv.next, %.lr.ph ], [ %n, %.lr.ph.preheader ]
 ; OPT: %tmp4 = atomicrmw add ptr addrspace(3) %lsr.iv3, i32 undef seq_cst, align 4
 ; OPT: %tmp7 = atomicrmw add ptr addrspace(3) %lsr.iv1, i32 undef seq_cst, align 4
 ; OPT: %0 = atomicrmw add ptr addrspace(3) %lsr.iv1, i32 %tmp8 seq_cst, align 4
-; OPT: %uglygep4 = getelementptr i8, ptr addrspace(3) %lsr.iv3, i32 4
+; OPT: %scevgep4 = getelementptr i8, ptr addrspace(3) %lsr.iv3, i32 4
 ; OPT: br i1 %exitcond
 define amdgpu_kernel void @test_local_atomicrmw_addressing_loop_uniform_index_max_offset_i32(ptr addrspace(3) noalias nocapture %arg0, ptr addrspace(3) noalias nocapture readonly %arg1, i32 %n) #0 {
 bb:
@@ -49,14 +49,14 @@ bb:
 ; OPT-LABEL: test_local_cmpxchg_addressing_loop_uniform_index_max_offset_i32(
 
 ; OPT: .lr.ph.preheader:
-; OPT: %uglygep2 = getelementptr i8, ptr addrspace(3)  %arg1, i32 65532
+; OPT: %scevgep2 = getelementptr i8, ptr addrspace(3)  %arg1, i32 65532
 ; OPT: br label %.lr.ph
 ; OPT: .lr.ph:
-; OPT: %lsr.iv3 = phi ptr addrspace(3) [ %uglygep4, %.lr.ph ], [ %uglygep2, %.lr.ph.preheader ]
-; OPT: %lsr.iv1 = phi ptr addrspace(3) [ %uglygep, %.lr.ph ], [ %arg0, %.lr.ph.preheader ]
+; OPT: %lsr.iv3 = phi ptr addrspace(3) [ %scevgep4, %.lr.ph ], [ %scevgep2, %.lr.ph.preheader ]
+; OPT: %lsr.iv1 = phi ptr addrspace(3) [ %scevgep, %.lr.ph ], [ %arg0, %.lr.ph.preheader ]
 ; OPT: %lsr.iv = phi i32 [ %lsr.iv.next, %.lr.ph ], [ %n, %.lr.ph.preheader ]
 ; OPT: %tmp4 =  cmpxchg ptr addrspace(3) %lsr.iv3, i32 undef, i32 undef seq_cst monotonic, align 4
-; OPT: %uglygep4 = getelementptr i8, ptr addrspace(3) %lsr.iv3, i32 4
+; OPT: %scevgep4 = getelementptr i8, ptr addrspace(3) %lsr.iv3, i32 4
 define amdgpu_kernel void @test_local_cmpxchg_addressing_loop_uniform_index_max_offset_i32(ptr addrspace(3) noalias nocapture %arg0, ptr addrspace(3) noalias nocapture readonly %arg1, i32 %n) #0 {
 bb:
   %tmp = icmp sgt i32 %n, 0
@@ -90,15 +90,15 @@ bb:
 ; OPT-LABEL: @test_local_atomicinc_addressing_loop_uniform_index_max_offset_i32(
 
 ; OPT: .lr.ph.preheader:
-; OPT: %uglygep2 = getelementptr i8, ptr addrspace(3)  %arg1, i32 65532
+; OPT: %scevgep2 = getelementptr i8, ptr addrspace(3)  %arg1, i32 65532
 ; OPT: br label %.lr.ph
 ; OPT: .lr.ph:
-; OPT: %lsr.iv3 = phi ptr addrspace(3) [ %uglygep4, %.lr.ph ], [ %uglygep2, %.lr.ph.preheader ]
-; OPT: %lsr.iv1 = phi ptr addrspace(3) [ %uglygep, %.lr.ph ], [ %arg0, %.lr.ph.preheader ]
+; OPT: %lsr.iv3 = phi ptr addrspace(3) [ %scevgep4, %.lr.ph ], [ %scevgep2, %.lr.ph.preheader ]
+; OPT: %lsr.iv1 = phi ptr addrspace(3) [ %scevgep, %.lr.ph ], [ %arg0, %.lr.ph.preheader ]
 ; OPT: %lsr.iv = phi i32 [ %lsr.iv.next, %.lr.ph ], [ %n, %.lr.ph.preheader ]
 ; OPT: %tmp4 = call i32 @llvm.amdgcn.atomic.inc.i32.p3(ptr addrspace(3) %lsr.iv3, i32 undef, i32 0, i32 0, i1 false)
 ; OPT: %tmp7 = call i32 @llvm.amdgcn.atomic.inc.i32.p3(ptr addrspace(3) %lsr.iv1, i32 undef, i32 0, i32 0, i1 false)
-; OPT: %uglygep4 = getelementptr i8, ptr addrspace(3) %lsr.iv3, i32 4
+; OPT: %scevgep4 = getelementptr i8, ptr addrspace(3) %lsr.iv3, i32 4
 define amdgpu_kernel void @test_local_atomicinc_addressing_loop_uniform_index_max_offset_i32(ptr addrspace(3) noalias nocapture %arg0, ptr addrspace(3) noalias nocapture readonly %arg1, i32 %n) #0 {
 bb:
   %tmp = icmp sgt i32 %n, 0
@@ -129,15 +129,15 @@ bb:
 
 ; OPT-LABEL: @test_local_atomicdec_addressing_loop_uniform_index_max_offset_i32(
 ; OPT: .lr.ph.preheader:
-; OPT: %uglygep2 = getelementptr i8, ptr addrspace(3) %arg1, i32 65532
+; OPT: %scevgep2 = getelementptr i8, ptr addrspace(3) %arg1, i32 65532
 ; OPT: br label %.lr.ph
 ; OPT: .lr.ph:
-; OPT: %lsr.iv3 = phi ptr addrspace(3) [ %uglygep4, %.lr.ph ], [ %uglygep2, %.lr.ph.preheader ]
-; OPT: %lsr.iv1 = phi ptr addrspace(3) [ %uglygep, %.lr.ph ], [ %arg0, %.lr.ph.preheader ]
+; OPT: %lsr.iv3 = phi ptr addrspace(3) [ %scevgep4, %.lr.ph ], [ %scevgep2, %.lr.ph.preheader ]
+; OPT: %lsr.iv1 = phi ptr addrspace(3) [ %scevgep, %.lr.ph ], [ %arg0, %.lr.ph.preheader ]
 ; OPT: %lsr.iv = phi i32 [ %lsr.iv.next, %.lr.ph ], [ %n, %.lr.ph.preheader ]
 ; OPT: %tmp4 = call i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) %lsr.iv3, i32 undef, i32 0, i32 0, i1 false)
 ; OPT: %tmp7 = call i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) %lsr.iv1, i32 undef, i32 0, i32 0, i1 false)
-; OPT: %uglygep4 = getelementptr i8, ptr addrspace(3) %lsr.iv3, i32 4
+; OPT: %scevgep4 = getelementptr i8, ptr addrspace(3) %lsr.iv3, i32 4
 define amdgpu_kernel void @test_local_atomicdec_addressing_loop_uniform_index_max_offset_i32(ptr addrspace(3) noalias nocapture %arg0, ptr addrspace(3) noalias nocapture readonly %arg1, i32 %n) #0 {
 bb:
   %tmp = icmp sgt i32 %n, 0

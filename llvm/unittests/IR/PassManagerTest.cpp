@@ -985,6 +985,7 @@ TEST_F(PassManagerTest, FunctionPassMissedFunctionAnalysisInvalidation) {
   MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
   MAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
   FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
 
   FunctionPassManager FPM;
   FPM.addPass(WrongFunctionPass());
@@ -998,7 +999,10 @@ struct WrongModulePass : PassInfoMixin<WrongModulePass> {
     for (Function &F : M)
       F.getEntryBlock().begin()->eraseFromParent();
 
-    return PreservedAnalyses::all();
+    PreservedAnalyses PA;
+    PA.preserveSet<AllAnalysesOn<Function>>();
+    PA.preserve<FunctionAnalysisManagerModuleProxy>();
+    return PA;
   }
   static StringRef name() { return "WrongModulePass"; }
 };
@@ -1018,6 +1022,7 @@ TEST_F(PassManagerTest, ModulePassMissedFunctionAnalysisInvalidation) {
   MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
   MAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
   FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
 
   ModulePassManager MPM;
   MPM.addPass(WrongModulePass());
@@ -1025,6 +1030,44 @@ TEST_F(PassManagerTest, ModulePassMissedFunctionAnalysisInvalidation) {
   EXPECT_DEATH(
       MPM.run(*M, MAM),
       "Function @foo changed by WrongModulePass without invalidating analyses");
+}
+
+struct WrongModulePass2 : PassInfoMixin<WrongModulePass2> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
+    for (Function &F : M)
+      F.getEntryBlock().begin()->eraseFromParent();
+
+    PreservedAnalyses PA;
+    PA.preserveSet<AllAnalysesOn<Module>>();
+    PA.abandon<FunctionAnalysisManagerModuleProxy>();
+    return PA;
+  }
+  static StringRef name() { return "WrongModulePass2"; }
+};
+
+TEST_F(PassManagerTest, ModulePassMissedModuleAnalysisInvalidation) {
+  LLVMContext Context;
+  auto M = parseIR(Context, "define void @foo() {\n"
+                            "  %a = add i32 0, 0\n"
+                            "  ret void\n"
+                            "}\n");
+
+  FunctionAnalysisManager FAM;
+  ModuleAnalysisManager MAM;
+  PassInstrumentationCallbacks PIC;
+  StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ false);
+  SI.registerCallbacks(PIC, &MAM);
+  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
+  MAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
+
+  ModulePassManager MPM;
+  MPM.addPass(WrongModulePass2());
+
+  EXPECT_DEATH(
+      MPM.run(*M, MAM),
+      "Module changed by WrongModulePass2 without invalidating analyses");
 }
 
 #endif

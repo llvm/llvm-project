@@ -1,8 +1,12 @@
-add_subdirectory(UnitTest)
+add_custom_target(check-libc)
+add_custom_target(libc-unit-tests)
+add_dependencies(check-libc libc-unit-tests)
 
-if(LLVM_LIBC_FULL_BUILD AND NOT
-  (LIBC_TARGET_ARCHITECTURE_IS_GPU OR LIBC_TARGET_OS_IS_BAREMETAL))
-  add_subdirectory(IntegrationTest)
+add_custom_target(exhaustive-check-libc)
+add_custom_target(libc-long-running-tests)
+
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  add_subdirectory(UnitTest)
 endif()
 
 add_header_library(
@@ -13,22 +17,28 @@ add_header_library(
     libc.src.errno.errno
 )
 
-add_custom_target(check-libc)
-add_custom_target(libc-unit-tests)
-add_dependencies(check-libc libc-unit-tests)
+if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND
+   (NOT TARGET libc.utils.gpu.loader OR NOT TARGET libc.startup.gpu.crt1))
+  message(WARNING "Cannot build libc GPU tests, missing loader implementation")
+  return()
+endif()
 
-add_custom_target(exhaustive-check-libc)
-add_custom_target(libc-long-running-tests)
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  add_subdirectory(src)
+  add_subdirectory(utils)
+endif()
 
-add_subdirectory(src)
-add_subdirectory(utils)
+if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_BAREMETAL)
+  add_subdirectory(IntegrationTest)
+endif()
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
 
-if(NOT ${LIBC_TARGET_OS} STREQUAL "linux")
-  # Integration tests are currently only available for linux.
+if(NOT ${LIBC_TARGET_OS} STREQUAL "linux" AND
+   NOT ${LIBC_TARGET_OS} STREQUAL "gpu")
+  # Integration tests are currently only available for linux and the GPU.
   return()
 endif()
 add_subdirectory(integration)

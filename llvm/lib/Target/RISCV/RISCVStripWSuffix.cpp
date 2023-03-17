@@ -69,16 +69,18 @@ bool RISCVStripWSuffix::runOnMachineFunction(MachineFunction &MF) {
     for (auto I = MBB.begin(), IE = MBB.end(); I != IE; ++I) {
       MachineInstr &MI = *I;
 
+      unsigned Opc;
       switch (MI.getOpcode()) {
-      case RISCV::ADDW:
-      case RISCV::SLLIW:
-        if (TII.hasAllWUsers(MI, MRI)) {
-          unsigned Opc =
-              MI.getOpcode() == RISCV::ADDW ? RISCV::ADD : RISCV::SLLI;
-          MI.setDesc(TII.get(Opc));
-          MadeChange = true;
-        }
-        break;
+      default:
+        continue;
+      case RISCV::ADDW:  Opc = RISCV::ADD;  break;
+      case RISCV::MULW:  Opc = RISCV::MUL;  break;
+      case RISCV::SLLIW: Opc = RISCV::SLLI; break;
+      }
+
+      if (TII.hasAllWUsers(MI, MRI)) {
+        MI.setDesc(TII.get(Opc));
+        MadeChange = true;
       }
     }
   }
