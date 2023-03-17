@@ -349,6 +349,25 @@ function(lldb_find_system_debugserver path)
   endif()
 endfunction()
 
+function(lldb_find_python_module module)
+  set(MODULE_FOUND PY_${module}_FOUND)
+  if (DEFINED ${MODULE_FOUND})
+    return()
+  endif()
+
+  execute_process(COMMAND "${Python3_EXECUTABLE}" "-c" "import ${module}"
+    RESULT_VARIABLE status
+    ERROR_QUIET)
+
+  if (status)
+    set(${MODULE_FOUND} OFF CACHE BOOL "Failed to find python module '${module}'")
+    message(STATUS "Could NOT find Python module '${module}'")
+  else()
+    set(${MODULE_FOUND} ON CACHE BOOL "Found python module '${module}'")
+    message(STATUS "Found Python module '${module}'")
+  endif()
+endfunction()
+
 # Removes all module flags from the current CMAKE_CXX_FLAGS. Used for
 # the Objective-C++ code in lldb which we don't want to build with modules.
 # Reasons for this are that modules with Objective-C++ would require that
