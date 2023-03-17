@@ -6800,8 +6800,7 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
                            "terminating condition folding.\n");
       continue;
     }
-    const SCEV *S = SE.getSCEV(&PN);
-    const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S);
+    const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(&PN));
     // Only speculate on affine AddRec
     if (!AddRec || !AddRec->isAffine()) {
       LLVM_DEBUG(dbgs() << "SCEV of phi '" << PN
