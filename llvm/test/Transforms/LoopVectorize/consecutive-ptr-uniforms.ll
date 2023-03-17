@@ -482,19 +482,16 @@ for.end:
   ret void
 }
 
-
-; FIXME: Currently %cur.ptr is incorrectly identified as uniform.
-
 ; CHECK-LABEL: pr61396_pointer_used_as_both_stored_value_and_pointer_operand_by_store
-; CHECK:    LV: Found uniform instruction: %cur.ptr = getelementptr inbounds ptr, ptr %ary, i64 %iv
+; CHECK-NOT: LV: Found uniform instruction: %cur.ptr = getelementptr inbounds ptr, ptr %ary, i64 %iv
 
 ; CHECK:       define void @pr61396_pointer_used_as_both_stored_value_and_pointer_operand_by_store(
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK-NEXT:    [[GEP:%.+]] = getelementptr inbounds ptr, ptr %ary, i64 %index
-; CHECK-NEXT:    [[INS:%.+]] = insertelement <4 x ptr> poison, ptr [[GEP]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.+]] = shufflevector <4 x ptr> %broadcast.splatinsert, <4 x ptr> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    store <4 x ptr> [[SPLAT]], ptr [[GEP]], align 8
+; CHECK-NEXT:    [[VEC_IND:%.+]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %vector.ph ], [ %vec.ind.next, %vector.body ]
+; CHECK-NEXT:    [[GEP:%.+]] = getelementptr inbounds ptr, ptr %ary, <4 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[EXT:%.+]] = extractelement <4 x ptr> [[GEP]], i64 0
+; CHECK-NEXT:    store <4 x ptr> [[GEP]], ptr [[EXT]], align 8
 ;
 
 define void @pr61396_pointer_used_as_both_stored_value_and_pointer_operand_by_store(ptr %ary) {
