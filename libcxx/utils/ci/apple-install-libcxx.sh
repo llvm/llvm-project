@@ -119,7 +119,8 @@ for arch in ${architectures}; do
                 -DCMAKE_INSTALL_PREFIX="${build_dir}/${arch}-install" \
                 -DCMAKE_INSTALL_NAME_DIR="/usr/lib" \
                 -DCMAKE_OSX_ARCHITECTURES="${arch}" \
-                -DLIBCXXABI_LIBRARY_VERSION="${version}"
+                -DLIBCXXABI_LIBRARY_VERSION="${version}" \
+                -DLIBCXX_LIBRARY_VERSION="${version}"
 
     if [ "$headers_only" = true ]; then
         xcrun cmake --build "${build_dir}/${arch}" --target install-cxx-headers install-cxxabi-headers -- -v
