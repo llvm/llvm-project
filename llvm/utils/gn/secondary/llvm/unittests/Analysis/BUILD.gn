@@ -41,6 +41,7 @@ unittest("AnalysisTests") {
     "MemorySSATest.cpp",
     "PhiValuesTest.cpp",
     "PluginInlineAdvisorAnalysisTest.cpp",
+    "PluginInlineOrderAnalysisTest.cpp",
     "ProfileSummaryInfoTest.cpp",
     "ScalarEvolutionTest.cpp",
     "SparsePropagation.cpp",
