@@ -182,7 +182,7 @@ template <class Rep1, class Period1, class Rep2, class Period2>
    bool operator==(const duration<Rep1, Period1>& lhs, const duration<Rep2, Period2>& rhs);
 template <class Rep1, class Period1, class Rep2, class Period2>
    constexpr
-   bool operator!=(const duration<Rep1, Period1>& lhs, const duration<Rep2, Period2>& rhs);
+   bool operator!=(const duration<Rep1, Period1>& lhs, const duration<Rep2, Period2>& rhs); // removed in C++20
 template <class Rep1, class Period1, class Rep2, class Period2>
    constexpr
    bool operator< (const duration<Rep1, Period1>& lhs, const duration<Rep2, Period2>& rhs);
@@ -195,6 +195,10 @@ template <class Rep1, class Period1, class Rep2, class Period2>
 template <class Rep1, class Period1, class Rep2, class Period2>
    constexpr
    bool operator>=(const duration<Rep1, Period1>& lhs, const duration<Rep2, Period2>& rhs);
+template<class Rep1, class Period1, class Rep2, class Period2>
+  requires three_way_comparable<typename CT::rep>
+  constexpr auto operator<=>(const duration<Rep1, Period1>& lhs,
+                             const duration<Rep2, Period2>& rhs);                           // since C++20
 
 // duration_cast
 template <class ToDuration, class Rep, class Period>
