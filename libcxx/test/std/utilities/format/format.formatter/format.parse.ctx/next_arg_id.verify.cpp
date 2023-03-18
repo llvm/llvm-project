@@ -12,8 +12,6 @@
 
 #include <format>
 
-#include "test_macros.h"
-
 constexpr bool test() {
   // [format.parse.ctx]/8
   // Let cur-arg-id be the value of next_arg_id_ prior to this call. Call
@@ -25,9 +23,7 @@ constexpr bool test() {
   return true;
 }
 
-int main(int, char**) {
+void f() {
   // expected-error-re@+1 {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
   static_assert(test());
-
-  return 0;
 }

@@ -205,6 +205,9 @@ Changes to the LLVM tools
 ---------------------------------
 * llvm-lib now supports the /def option for generating a Windows import library from a definition file.
 
+* Made significant changes to JSON output format of `llvm-readobj`/`llvm-readelf`
+  to improve correctness and clarity.
+
 Changes to LLDB
 ---------------------------------
 

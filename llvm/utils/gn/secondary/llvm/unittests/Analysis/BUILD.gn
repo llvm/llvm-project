@@ -41,6 +41,7 @@ unittest("AnalysisTests") {
     "MemorySSATest.cpp",
     "PhiValuesTest.cpp",
     "PluginInlineAdvisorAnalysisTest.cpp",
+    "PluginInlineOrderAnalysisTest.cpp",
     "ProfileSummaryInfoTest.cpp",
     "ScalarEvolutionTest.cpp",
     "SparsePropagation.cpp",
@@ -58,7 +59,10 @@ unittest("AnalysisTests") {
   # Otherwise, reconfiguring with plugins disabled will leave behind a stale
   # executable.
   if (host_os != "win") {
-    deps += [ "InlineAdvisorPlugin" ]
+    deps += [
+      "InlineAdvisorPlugin",
+      "InlineOrderPlugin",
+    ]
   }
 
   # Support plugins.

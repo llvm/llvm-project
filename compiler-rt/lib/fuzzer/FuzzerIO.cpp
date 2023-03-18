@@ -65,7 +65,7 @@ std::string FileToString(const std::string &Path) {
 }
 
 void CopyFileToErr(const std::string &Path) {
-  Puts(FileToString(Path).c_str());
+  Printf("%s", FileToString(Path).c_str());
 }
 
 void WriteToFile(const Unit &U, const std::string &Path) {
@@ -149,11 +149,6 @@ void DupAndCloseStderr() {
 
 void CloseStdout() {
   DiscardOutput(1);
-}
-
-void Puts(const char *Str) {
-  fputs(Str, OutputFile);
-  fflush(OutputFile);
 }
 
 void Printf(const char *Fmt, ...) {

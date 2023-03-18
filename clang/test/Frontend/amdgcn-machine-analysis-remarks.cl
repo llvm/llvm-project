@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx908 -Rpass-analysis=kernel-resource-usage -S -O0 -verify %s -o /dev/null
 
 // expected-remark@+9 {{Function Name: foo}}
-// expected-remark@+8 {{    SGPRs: 9}}
+// expected-remark@+8 {{    SGPRs: 13}}
 // expected-remark@+7 {{    VGPRs: 10}}
 // expected-remark@+6 {{    AGPRs: 12}}
 // expected-remark@+5 {{    ScratchSize [bytes/lane]: 0}}
