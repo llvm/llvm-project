@@ -2,7 +2,7 @@
 // REQUIRES: riscv-registered-target
 // RUN: %clang_cc1 -triple riscv64 -target-feature +v -target-feature +xsfvcp -disable-O0-optnone -emit-llvm %s -o - | opt -S -passes=mem2reg | FileCheck --check-prefix=CHECK-RV64 %s
 
-#include <riscv_vector.h>
+#include <sifive_vector.h>
 
 #define p27_26 (0b11)
 #define p11_7  (0b11111)
