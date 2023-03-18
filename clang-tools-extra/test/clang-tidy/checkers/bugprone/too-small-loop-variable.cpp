@@ -373,3 +373,20 @@ void badForLoopWithBitfieldOnLoopVarAndUpperBoundOnPtr() {
   }
 }
 
+void goodForLoopWithBitfieldOnUpperBoundOnly() {
+  struct S {
+    int x : 4;
+  } s;
+
+  for (int i = 10; i > s.x; --i) {
+  }
+}
+
+void goodForLoopWithIntegersOnUpperBoundOnly() {
+  struct S {
+    short x;
+  } s;
+
+  for (int i = 10; i > s.x; --i) {
+  }
+}
