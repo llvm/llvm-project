@@ -712,6 +712,7 @@ private:
   virtual void printZeroSymbolOtherField(const Elf_Sym &Symbol) const;
 
 protected:
+  virtual std::string getGroupSectionHeaderName() const;
   void printSymbolOtherField(const Elf_Sym &Symbol) const;
   virtual void printExpandedRelRelaReloc(const Relocation<ELFT> &R,
                                          StringRef SymbolName,
@@ -721,6 +722,8 @@ protected:
                                         StringRef RelocName);
   virtual void printRelocationSectionInfo(const Elf_Shdr &Sec, StringRef Name,
                                           const unsigned SecNdx);
+  virtual void printSectionGroupMembers(StringRef Name, uint64_t Idx) const;
+  virtual void printEmptyGroupMessage() const;
 
   ScopedPrinter &W;
 };
@@ -734,6 +737,8 @@ public:
   JSONELFDumper(const object::ELFObjectFile<ELFT> &ObjF, ScopedPrinter &Writer)
       : LLVMELFDumper<ELFT>(ObjF, Writer) {}
 
+  std::string getGroupSectionHeaderName() const override;
+
   void printFileSummary(StringRef FileStr, ObjectFile &Obj,
                         ArrayRef<std::string> InputFilenames,
                         const Archive *A) override;
@@ -745,6 +750,10 @@ public:
 
   void printRelocationSectionInfo(const Elf_Shdr &Sec, StringRef Name,
                                   const unsigned SecNdx) override;
+
+  void printSectionGroupMembers(StringRef Name, uint64_t Idx) const override;
+
+  void printEmptyGroupMessage() const override;
 
 private:
   std::unique_ptr<DictScope> FileScope;
@@ -6717,9 +6726,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printGroupSections() {
     W.printNumber("Link", G.Link);
     W.printNumber("Info", G.Info);
     W.printHex("Type", getGroupType(G.Type), G.Type);
-    W.startLine() << "Signature: " << G.Signature << "\n";
+    W.printString("Signature", G.Signature);
 
-    ListScope L(W, "Section(s) in group");
+    ListScope L(W, getGroupSectionHeaderName());
     for (const GroupMember &GM : G.Members) {
       const GroupSection *MainGroup = Map[GM.Index];
       if (MainGroup != &G)
@@ -6729,12 +6738,23 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printGroupSections() {
             Twine(MainGroup->Index) +
             ", was also found in the group section with index " +
             Twine(G.Index));
-      W.startLine() << GM.Name << " (" << GM.Index << ")\n";
+      printSectionGroupMembers(GM.Name, GM.Index);
     }
   }
 
   if (V.empty())
-    W.startLine() << "There are no group sections in the file.\n";
+    printEmptyGroupMessage();
+}
+
+template <class ELFT>
+std::string LLVMELFDumper<ELFT>::getGroupSectionHeaderName() const {
+  return "Section(s) in group";
+}
+
+template <class ELFT>
+void LLVMELFDumper<ELFT>::printSectionGroupMembers(StringRef Name,
+                                                   uint64_t Idx) const {
+  W.startLine() << Name << " (" << Idx << ")\n";
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printRelocations() {
@@ -6785,6 +6805,10 @@ void LLVMELFDumper<ELFT>::printRelocationSectionInfo(const Elf_Shdr &Sec,
                                                      const unsigned SecNdx) {
   DictScope D(W, (Twine("Section (") + Twine(SecNdx) + ") " + Name).str());
   this->printRelocationsHelper(Sec);
+}
+
+template <class ELFT> void LLVMELFDumper<ELFT>::printEmptyGroupMessage() const {
+  W.startLine() << "There are no group sections in the file.\n";
 }
 
 template <class ELFT>
@@ -7732,4 +7756,21 @@ void JSONELFDumper<ELFT>::printRelocationSectionInfo(const Elf_Shdr &Sec,
   this->W.printNumber("SectionIndex", SecNdx);
   ListScope D(this->W, "Relocs");
   this->printRelocationsHelper(Sec);
+}
+
+template <class ELFT>
+std::string JSONELFDumper<ELFT>::getGroupSectionHeaderName() const {
+  return "GroupSections";
+}
+
+template <class ELFT>
+void JSONELFDumper<ELFT>::printSectionGroupMembers(StringRef Name,
+                                                   uint64_t Idx) const {
+  DictScope Grp(this->W);
+  this->W.printString("Name", Name);
+  this->W.printNumber("Index", Idx);
+}
+
+template <class ELFT> void JSONELFDumper<ELFT>::printEmptyGroupMessage() const {
+  // JSON output does not need to print anything for empty groups
 }
