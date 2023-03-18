@@ -68,8 +68,8 @@ public:
   struct NamingStyle {
     NamingStyle() = default;
 
-    NamingStyle(std::optional<CaseType> Case, const std::string &Prefix,
-                const std::string &Suffix, const std::string &IgnoredRegexpStr,
+    NamingStyle(std::optional<CaseType> Case, StringRef Prefix,
+                StringRef Suffix, StringRef IgnoredRegexpStr,
                 HungarianPrefixType HPType);
     NamingStyle(const NamingStyle &O) = delete;
     NamingStyle &operator=(NamingStyle &&O) = default;

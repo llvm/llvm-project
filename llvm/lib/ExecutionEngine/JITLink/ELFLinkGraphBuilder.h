@@ -308,22 +308,20 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
     if (!Name)
       return Name.takeError();
 
+    // Skip null sections.
+    if (Sec.sh_type == ELF::SHT_NULL) {
+      LLVM_DEBUG({
+        dbgs() << "    " << SecIndex << ": has type SHT_NULL. Skipping.\n";
+      });
+      continue;
+    }
+
     // If the name indicates that it's a debug section then skip it: We don't
     // support those yet.
     if (isDwarfSection(*Name)) {
       LLVM_DEBUG({
         dbgs() << "    " << SecIndex << ": \"" << *Name
                << "\" is a debug section: "
-                  "No graph section will be created.\n";
-      });
-      continue;
-    }
-
-    // Skip non-SHF_ALLOC sections
-    if (!(Sec.sh_flags & ELF::SHF_ALLOC)) {
-      LLVM_DEBUG({
-        dbgs() << "    " << SecIndex << ": \"" << *Name
-               << "\" is not an SHF_ALLOC section: "
                   "No graph section will be created.\n";
       });
       continue;
@@ -343,8 +341,18 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
 
     // Look for existing sections first.
     auto *GraphSec = G->findSectionByName(*Name);
-    if (!GraphSec)
+    if (!GraphSec) {
       GraphSec = &G->createSection(*Name, Prot);
+      // Non-SHF_ALLOC sections get NoAlloc memory lifetimes.
+      if (!(Sec.sh_flags & ELF::SHF_ALLOC)) {
+        GraphSec->setMemLifetimePolicy(orc::MemLifetimePolicy::NoAlloc);
+        LLVM_DEBUG({
+          dbgs() << "      " << SecIndex << ": \"" << *Name
+                 << "\" is not a SHF_ALLOC section. Using NoAlloc lifetime.\n";
+        });
+      }
+    }
+
     assert(GraphSec->getMemProt() == Prot && "MemProt should match");
 
     Block *B = nullptr;
