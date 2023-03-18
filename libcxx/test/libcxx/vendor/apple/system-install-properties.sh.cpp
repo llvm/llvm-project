@@ -15,9 +15,10 @@
 //
 // RUN: stat "%{include}/__config"
 
-// Make sure we install libc++.1.dylib in the right location.
+// Make sure we install libc++.1.dylib and libc++experimental.a in the right location.
 //
 // RUN: stat "%{lib}/libc++.1.dylib"
+// RUN: stat "%{lib}/libc++experimental.a"
 
 // Make sure we install a symlink from libc++.dylib to libc++.1.dylib.
 //

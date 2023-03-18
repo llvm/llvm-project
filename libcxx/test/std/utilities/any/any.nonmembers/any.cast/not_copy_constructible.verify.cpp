@@ -33,20 +33,19 @@
 
 #include <any>
 
-struct no_copy
-{
+struct no_copy {
     no_copy() {}
     no_copy(no_copy &&) {}
     no_copy(no_copy const &) = delete;
 };
 
 struct no_move {
-  no_move() {}
-  no_move(no_move&&) = delete;
-  no_move(no_move const&) {}
+    no_move() {}
+    no_move(no_move&&) = delete;
+    no_move(no_move const&) {}
 };
 
-int main(int, char**) {
+void f() {
     std::any a;
     // expected-error-re@any:* {{{{(static_assert|static assertion)}} failed{{.*}}ValueType is required to be an lvalue reference or a CopyConstructible type}}
     std::any_cast<no_copy>(static_cast<std::any&>(a)); // expected-note {{requested here}}
@@ -58,6 +57,4 @@ int main(int, char**) {
 
     // expected-error-re@any:* {{{{(static_assert|static assertion)}} failed{{.*}}ValueType is required to be an rvalue reference or a CopyConstructible type}}
     std::any_cast<no_move>(static_cast<std::any &&>(a));
-
-  return 0;
 }

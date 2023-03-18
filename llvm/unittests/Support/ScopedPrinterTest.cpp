@@ -236,8 +236,8 @@ DoesNotExist: 0x5
 
   const char *JSONExpectedOut = R"({
   "Exists": {
-    "Value": "Name2",
-    "RawValue": 2
+    "Name": "Name2",
+    "Value": 2
   },
   "DoesNotExist": 5
 })";
@@ -345,15 +345,15 @@ FirstSecondThirdByteMask [ (0x333)
 
   const char *JSONExpectedOut = R"({
   "ZeroFlag": {
-    "RawFlags": 0,
+    "Value": 0,
     "Flags": []
   },
   "NoFlag": {
-    "RawFlags": 8,
+    "Value": 8,
     "Flags": []
   },
   "Flag1": {
-    "RawFlags": 1,
+    "Value": 1,
     "Flags": [
       {
         "Name": "Name1",
@@ -362,7 +362,7 @@ FirstSecondThirdByteMask [ (0x333)
     ]
   },
   "Flag1&3": {
-    "RawFlags": 5,
+    "Value": 5,
     "Flags": [
       {
         "Name": "Name1",
@@ -375,30 +375,30 @@ FirstSecondThirdByteMask [ (0x333)
     ]
   },
   "ZeroFlagRaw": {
-    "RawFlags": 0,
+    "Value": 0,
     "Flags": []
   },
   "NoFlagRaw": {
-    "RawFlags": 8,
+    "Value": 8,
     "Flags": [
       8
     ]
   },
   "Flag1Raw": {
-    "RawFlags": 1,
+    "Value": 1,
     "Flags": [
       1
     ]
   },
   "Flag1&3Raw": {
-    "RawFlags": 5,
+    "Value": 5,
     "Flags": [
       1,
       4
     ]
   },
   "FlagSorted": {
-    "RawFlags": 7,
+    "Value": 7,
     "Flags": [
       {
         "Name": "A",
@@ -415,7 +415,7 @@ FirstSecondThirdByteMask [ (0x333)
     ]
   },
   "NoBitMask": {
-    "RawFlags": 4095,
+    "Value": 4095,
     "Flags": [
       {
         "Name": "FirstByte1",
@@ -456,7 +456,7 @@ FirstSecondThirdByteMask [ (0x333)
     ]
   },
   "FirstByteMask": {
-    "RawFlags": 3,
+    "Value": 3,
     "Flags": [
       {
         "Name": "FirstByte3",
@@ -465,7 +465,7 @@ FirstSecondThirdByteMask [ (0x333)
     ]
   },
   "SecondByteMask": {
-    "RawFlags": 48,
+    "Value": 48,
     "Flags": [
       {
         "Name": "SecondByte3",
@@ -474,7 +474,7 @@ FirstSecondThirdByteMask [ (0x333)
     ]
   },
   "ValueOutsideMask": {
-    "RawFlags": 1,
+    "Value": 1,
     "Flags": [
       {
         "Name": "FirstByte1",
@@ -483,11 +483,11 @@ FirstSecondThirdByteMask [ (0x333)
     ]
   },
   "FirstSecondByteMask": {
-    "RawFlags": 255,
+    "Value": 255,
     "Flags": []
   },
   "FirstSecondThirdByteMask": {
-    "RawFlags": 819,
+    "Value": 819,
     "Flags": [
       {
         "Name": "FirstByte3",
@@ -594,8 +594,8 @@ label: value (0)
   "int8_t-min": -128,
   "apsint": 9999999999999999999999,
   "label": {
-    "Value": "value",
-    "RawValue": 0
+    "Name": "value",
+    "Value": 0
   }
 })";
   verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
@@ -761,8 +761,8 @@ HexLabel: Name (0x10)
   const char *JSONExpectedOut = R"({
   "HexNumber": 16,
   "HexLabel": {
-    "Value": "Name",
-    "RawValue": 16
+    "Name": "Name",
+    "Value": 16
   }
 })";
   verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);

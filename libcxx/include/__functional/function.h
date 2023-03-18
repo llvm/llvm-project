@@ -74,7 +74,7 @@ void __throw_bad_function_call()
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw bad_function_call();
 #else
-    std::__libcpp_verbose_abort("bad_function_call was thrown in -fno-exceptions mode");
+    _LIBCPP_VERBOSE_ABORT("bad_function_call was thrown in -fno-exceptions mode");
 #endif
 }
 

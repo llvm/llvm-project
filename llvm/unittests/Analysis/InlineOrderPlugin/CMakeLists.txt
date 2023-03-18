@@ -4,7 +4,9 @@
 # references), so just skip this testcase on Windows.
 if (NOT WIN32)
   unset(LLVM_LINK_COMPONENTS)
-  add_llvm_library(InlineOrderPlugin MODULE BUILDTREE_ONLY InlineOrderPlugin.cpp)
+  add_llvm_library(InlineOrderPlugin MODULE BUILDTREE_ONLY
+    InlineOrderPlugin.cpp
+    )
   # Put PLUGIN next to the unit test executable.
   set_output_directory(InlineOrderPlugin
       BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/../

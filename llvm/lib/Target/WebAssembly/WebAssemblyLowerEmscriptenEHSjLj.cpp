@@ -1217,7 +1217,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
     for (unsigned I = 0, E = LPI->getNumClauses(); I < E; ++I) {
       Constant *Clause = LPI->getClause(I);
       // TODO Handle filters (= exception specifications).
-      // https://bugs.llvm.org/show_bug.cgi?id=50396
+      // https://github.com/llvm/llvm-project/issues/49740
       if (LPI->isCatch(I))
         FMCArgs.push_back(Clause);
     }

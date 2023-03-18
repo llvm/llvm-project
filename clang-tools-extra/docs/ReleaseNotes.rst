@@ -223,6 +223,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/use-after-move>` to understand that there is a
   sequence point between designated initializers.
 
+- Fixed an issue in :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` when specifying an empty
+  string for ``Prefix`` or ``Suffix`` options could result in the style not
+  being used.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

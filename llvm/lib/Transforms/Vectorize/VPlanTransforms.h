@@ -42,8 +42,7 @@ struct VPlanTransforms {
   /// region block and remove the mask operand. Optimize the created regions by
   /// iteratively sinking scalar operands into the region, followed by merging
   /// regions until no improvements are remaining.
-  static void createAndOptimizeReplicateRegions(VPlan &Plan,
-                                                VPRecipeBuilder &Builder);
+  static void createAndOptimizeReplicateRegions(VPlan &Plan);
 
   /// Remove redundant VPBasicBlocks by merging them into their predecessor if
   /// the predecessor has a single successor.

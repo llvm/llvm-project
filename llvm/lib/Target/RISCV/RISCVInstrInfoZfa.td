@@ -93,6 +93,7 @@ class FPUnaryOp_r_rtz<bits<7> funct7, bits<5> rs2val, DAGOperand rdty,
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZfa] in {
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def FLI_S : FPUnaryOp_imm<0b1111000, 0b00001, 0b000, OPC_OP_FP, (outs FPR32:$rd),
             (ins loadfp32imm:$imm), "fli.s", "$rd, $imm">;
 
@@ -107,6 +108,7 @@ def FLEQ_S : FPCmp_rr<0b1010000, 0b100, "fleq.s", FPR32>;
 } // Predicates = [HasStdExtZfa]
 
 let Predicates = [HasStdExtZfa, HasStdExtD] in {
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def FLI_D : FPUnaryOp_imm<0b1111001, 0b00001, 0b000, OPC_OP_FP, (outs FPR64:$rd),
             (ins loadfp64imm:$imm), "fli.d", "$rd, $imm">;
 
@@ -136,6 +138,7 @@ def FMV_X_W_FPR64 : FPUnaryOp_r<0b1110000, 0b00000, 0b000, GPR, FPR64,
 } // Predicates = [HasStdExtZfa, HasStdExtD, IsRV32]
 
 let Predicates = [HasStdExtZfa, HasStdExtZfhOrZvfh] in
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def FLI_H : FPUnaryOp_imm<0b1111010, 0b00001, 0b000, OPC_OP_FP, (outs FPR16:$rd),
             (ins loadfp16imm:$imm), "fli.h", "$rd, $imm">;
 

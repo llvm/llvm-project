@@ -55,10 +55,15 @@ namespace PR45699 {
 }
 
 namespace P0857R0 {
+  template <typename T> static constexpr bool V = true;
+
   void f() {
     auto x = []<bool B> requires B {}; // expected-note {{constraints not satisfied}} expected-note {{false}}
     x.operator()<true>();
     x.operator()<false>(); // expected-error {{no matching member function}}
+
+    auto y = []<typename T> requires V<T> () {};
+    y.operator()<int>(); // OK
   }
 
   template<typename T> concept C = true;

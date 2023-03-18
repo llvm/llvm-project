@@ -276,45 +276,55 @@ int main() {
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS1:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS2:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS3:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP4:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS5:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS8:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS9:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS10:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP11:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS12:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[AND_VAR:%.*]] = alloca i8, align 1
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS15:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS16:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS17:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP18:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS19:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[OR_VAR:%.*]] = alloca i8, align 1
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS22:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS23:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS24:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP25:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS26:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[BIT_VAR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS29:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS30:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS31:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP32:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS33:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS36:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS37:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS38:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP39:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS40:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS43:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS44:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS45:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP46:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS47:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS50:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS51:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS52:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP53:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS54:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS57:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS58:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS59:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP60:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS61:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK1-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr @_ZZ4mainE5sivar, ptr [[TMP0]], align 8
@@ -324,7 +334,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP2]], align 8
 // CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // CHECK1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP5]], align 4
 // CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
@@ -366,7 +375,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP22]], align 8
 // CHECK1-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS2]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS5:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP25]], align 4
 // CHECK1-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
@@ -409,7 +417,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP42]], align 8
 // CHECK1-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS8]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP44:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS9]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS12:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP45]], align 4
 // CHECK1-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 1
@@ -452,7 +459,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP62]], align 8
 // CHECK1-NEXT:    [[TMP63:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS15]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP64:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS16]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS19:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP65]], align 4
 // CHECK1-NEXT:    [[TMP66:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 1
@@ -495,7 +501,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP82]], align 8
 // CHECK1-NEXT:    [[TMP83:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS22]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP84:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS23]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS26:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP85:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS26]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP85]], align 4
 // CHECK1-NEXT:    [[TMP86:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS26]], i32 0, i32 1
@@ -538,7 +543,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP102]], align 8
 // CHECK1-NEXT:    [[TMP103:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS29]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP104:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS30]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS33:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP105:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS33]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP105]], align 4
 // CHECK1-NEXT:    [[TMP106:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS33]], i32 0, i32 1
@@ -580,7 +584,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP122]], align 8
 // CHECK1-NEXT:    [[TMP123:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS36]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP124:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS37]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS40:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP125:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS40]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP125]], align 4
 // CHECK1-NEXT:    [[TMP126:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS40]], i32 0, i32 1
@@ -622,7 +625,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP142]], align 8
 // CHECK1-NEXT:    [[TMP143:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS43]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP144:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS44]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS47:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP145:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS47]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP145]], align 4
 // CHECK1-NEXT:    [[TMP146:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS47]], i32 0, i32 1
@@ -665,7 +667,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP162]], align 8
 // CHECK1-NEXT:    [[TMP163:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS50]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP164:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS51]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS54:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP165:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS54]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP165]], align 4
 // CHECK1-NEXT:    [[TMP166:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS54]], i32 0, i32 1
@@ -708,7 +709,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP182]], align 8
 // CHECK1-NEXT:    [[TMP183:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS57]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP184:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS58]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS61:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP185:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP185]], align 4
 // CHECK1-NEXT:    [[TMP186:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 1
@@ -2119,45 +2119,55 @@ int main() {
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS1:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS2:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS3:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP4:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS5:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS8:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS9:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS10:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP11:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS12:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[AND_VAR:%.*]] = alloca i8, align 1
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS15:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS16:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS17:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP18:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS19:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[OR_VAR:%.*]] = alloca i8, align 1
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS22:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS23:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS24:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP25:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS26:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[BIT_VAR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS29:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS30:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS31:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP32:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS33:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS36:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS37:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS38:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP39:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS40:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS43:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS44:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS45:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP46:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS47:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS50:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS51:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS52:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP53:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS54:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_BASEPTRS57:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS58:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS59:%.*]] = alloca [2 x ptr], align 8
 // CHECK1-NEXT:    [[_TMP60:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[KERNEL_ARGS61:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const._Z5tmainIiET_v.vec, i64 8, i1 false)
 // CHECK1-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
@@ -2168,7 +2178,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP2]], align 8
 // CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // CHECK1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP5]], align 4
 // CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
@@ -2216,7 +2225,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP25]], align 8
 // CHECK1-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS2]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS5:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP28]], align 4
 // CHECK1-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
@@ -2265,7 +2273,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP48]], align 8
 // CHECK1-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS8]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP50:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS9]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS12:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP51]], align 4
 // CHECK1-NEXT:    [[TMP52:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 1
@@ -2314,7 +2321,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP71]], align 8
 // CHECK1-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS15]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP73:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS16]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS19:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP74:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP74]], align 4
 // CHECK1-NEXT:    [[TMP75:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 1
@@ -2363,7 +2369,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP94]], align 8
 // CHECK1-NEXT:    [[TMP95:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS22]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP96:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS23]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS26:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP97:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS26]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP97]], align 4
 // CHECK1-NEXT:    [[TMP98:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS26]], i32 0, i32 1
@@ -2412,7 +2417,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP117]], align 8
 // CHECK1-NEXT:    [[TMP118:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS29]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP119:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS30]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS33:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP120:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS33]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP120]], align 4
 // CHECK1-NEXT:    [[TMP121:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS33]], i32 0, i32 1
@@ -2460,7 +2464,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP140]], align 8
 // CHECK1-NEXT:    [[TMP141:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS36]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP142:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS37]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS40:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP143:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS40]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP143]], align 4
 // CHECK1-NEXT:    [[TMP144:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS40]], i32 0, i32 1
@@ -2508,7 +2511,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP163]], align 8
 // CHECK1-NEXT:    [[TMP164:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS43]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP165:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS44]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS47:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP166:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS47]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP166]], align 4
 // CHECK1-NEXT:    [[TMP167:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS47]], i32 0, i32 1
@@ -2557,7 +2559,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP186]], align 8
 // CHECK1-NEXT:    [[TMP187:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS50]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP188:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS51]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS54:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP189:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS54]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP189]], align 4
 // CHECK1-NEXT:    [[TMP190:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS54]], i32 0, i32 1
@@ -2606,7 +2607,6 @@ int main() {
 // CHECK1-NEXT:    store ptr null, ptr [[TMP209]], align 8
 // CHECK1-NEXT:    [[TMP210:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS57]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP211:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS58]], i32 0, i32 0
-// CHECK1-NEXT:    [[KERNEL_ARGS61:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    [[TMP212:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 2, ptr [[TMP212]], align 4
 // CHECK1-NEXT:    [[TMP213:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 1
@@ -4111,45 +4111,55 @@ int main() {
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS1:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS2:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS3:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP4:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS5:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS8:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS9:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS10:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP11:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS12:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[AND_VAR:%.*]] = alloca i8, align 1
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS15:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS16:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS17:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP18:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS19:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[OR_VAR:%.*]] = alloca i8, align 1
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS22:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS23:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS24:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP25:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS26:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[BIT_VAR:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS29:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS30:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS31:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP32:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS33:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS36:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS37:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS38:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP39:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS40:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS43:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS44:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS45:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP46:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS47:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS50:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS51:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS52:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP53:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS54:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS57:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS58:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS59:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP60:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS61:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK3-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK3-NEXT:    store ptr @_ZZ4mainE5sivar, ptr [[TMP0]], align 4
@@ -4159,7 +4169,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP2]], align 4
 // CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // CHECK3-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP5]], align 4
 // CHECK3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
@@ -4201,7 +4210,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP22]], align 4
 // CHECK3-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS2]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS5:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP25]], align 4
 // CHECK3-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
@@ -4244,7 +4252,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP42]], align 4
 // CHECK3-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS8]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP44:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS9]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS12:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP45]], align 4
 // CHECK3-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 1
@@ -4287,7 +4294,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP62]], align 4
 // CHECK3-NEXT:    [[TMP63:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS15]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP64:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS16]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS19:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP65]], align 4
 // CHECK3-NEXT:    [[TMP66:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 1
@@ -4330,7 +4336,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP82]], align 4
 // CHECK3-NEXT:    [[TMP83:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS22]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP84:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS23]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS26:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP85:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS26]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP85]], align 4
 // CHECK3-NEXT:    [[TMP86:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS26]], i32 0, i32 1
@@ -4373,7 +4378,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP102]], align 4
 // CHECK3-NEXT:    [[TMP103:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS29]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP104:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS30]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS33:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP105:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS33]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP105]], align 4
 // CHECK3-NEXT:    [[TMP106:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS33]], i32 0, i32 1
@@ -4415,7 +4419,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP122]], align 4
 // CHECK3-NEXT:    [[TMP123:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS36]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP124:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS37]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS40:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP125:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS40]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP125]], align 4
 // CHECK3-NEXT:    [[TMP126:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS40]], i32 0, i32 1
@@ -4457,7 +4460,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP142]], align 4
 // CHECK3-NEXT:    [[TMP143:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS43]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP144:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS44]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS47:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP145:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS47]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP145]], align 4
 // CHECK3-NEXT:    [[TMP146:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS47]], i32 0, i32 1
@@ -4500,7 +4502,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP162]], align 4
 // CHECK3-NEXT:    [[TMP163:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS50]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP164:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS51]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS54:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP165:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS54]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP165]], align 4
 // CHECK3-NEXT:    [[TMP166:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS54]], i32 0, i32 1
@@ -4543,7 +4544,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP182]], align 4
 // CHECK3-NEXT:    [[TMP183:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS57]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP184:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS58]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS61:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP185:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP185]], align 4
 // CHECK3-NEXT:    [[TMP186:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 1
@@ -5954,45 +5954,55 @@ int main() {
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 4
 // CHECK3-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS1:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS2:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS3:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP4:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS5:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS8:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS9:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS10:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP11:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS12:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[AND_VAR:%.*]] = alloca i8, align 1
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS15:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS16:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS17:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP18:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS19:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[OR_VAR:%.*]] = alloca i8, align 1
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS22:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS23:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS24:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP25:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS26:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[BIT_VAR:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS29:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS30:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS31:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP32:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS33:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS36:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS37:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS38:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP39:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS40:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS43:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS44:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS45:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP46:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS47:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS50:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS51:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS52:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP53:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS54:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[DOTOFFLOAD_BASEPTRS57:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS58:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS59:%.*]] = alloca [2 x ptr], align 4
 // CHECK3-NEXT:    [[_TMP60:%.*]] = alloca i32, align 4
+// CHECK3-NEXT:    [[KERNEL_ARGS61:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[VEC]], ptr align 4 @__const._Z5tmainIiET_v.vec, i32 8, i1 false)
 // CHECK3-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
@@ -6003,7 +6013,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP2]], align 4
 // CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // CHECK3-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP5]], align 4
 // CHECK3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
@@ -6051,7 +6060,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP25]], align 4
 // CHECK3-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS2]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS5:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP28]], align 4
 // CHECK3-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
@@ -6100,7 +6108,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP48]], align 4
 // CHECK3-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS8]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP50:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS9]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS12:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP51]], align 4
 // CHECK3-NEXT:    [[TMP52:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 1
@@ -6149,7 +6156,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP71]], align 4
 // CHECK3-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS15]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP73:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS16]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS19:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP74:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP74]], align 4
 // CHECK3-NEXT:    [[TMP75:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 1
@@ -6198,7 +6204,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP94]], align 4
 // CHECK3-NEXT:    [[TMP95:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS22]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP96:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS23]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS26:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP97:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS26]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP97]], align 4
 // CHECK3-NEXT:    [[TMP98:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS26]], i32 0, i32 1
@@ -6247,7 +6252,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP117]], align 4
 // CHECK3-NEXT:    [[TMP118:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS29]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP119:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS30]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS33:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP120:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS33]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP120]], align 4
 // CHECK3-NEXT:    [[TMP121:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS33]], i32 0, i32 1
@@ -6295,7 +6299,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP140]], align 4
 // CHECK3-NEXT:    [[TMP141:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS36]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP142:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS37]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS40:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP143:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS40]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP143]], align 4
 // CHECK3-NEXT:    [[TMP144:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS40]], i32 0, i32 1
@@ -6343,7 +6346,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP163]], align 4
 // CHECK3-NEXT:    [[TMP164:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS43]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP165:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS44]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS47:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP166:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS47]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP166]], align 4
 // CHECK3-NEXT:    [[TMP167:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS47]], i32 0, i32 1
@@ -6392,7 +6394,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP186]], align 4
 // CHECK3-NEXT:    [[TMP187:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS50]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP188:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS51]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS54:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP189:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS54]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP189]], align 4
 // CHECK3-NEXT:    [[TMP190:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS54]], i32 0, i32 1
@@ -6441,7 +6442,6 @@ int main() {
 // CHECK3-NEXT:    store ptr null, ptr [[TMP209]], align 4
 // CHECK3-NEXT:    [[TMP210:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS57]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP211:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS58]], i32 0, i32 0
-// CHECK3-NEXT:    [[KERNEL_ARGS61:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK3-NEXT:    [[TMP212:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 2, ptr [[TMP212]], align 4
 // CHECK3-NEXT:    [[TMP213:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 1
