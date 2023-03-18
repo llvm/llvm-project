@@ -1108,8 +1108,13 @@ void LifetimeCheckPass::emitInvalidHistory(mlir::InFlightDiagnostic &D,
     }
     case InvalidStyle::EndOfScope: {
       if (tasks.count(histKey)) {
-        D.attachNote((*info.val).getLoc()) << "coroutine bound to resource "
-                                           << "with expired lifetime";
+        StringRef resource = "resource";
+        if (auto allocaOp = dyn_cast<AllocaOp>(info.val->getDefiningOp())) {
+          if (isLambdaType(allocaOp.getAllocaType()))
+            resource = "lambda";
+        }
+        D.attachNote((*info.val).getLoc())
+            << "coroutine bound to " << resource << " with expired lifetime";
         D.attachNote(info.loc) << "at the end of scope or full-expression";
         emittedDanglingTasks.insert(warningLoc);
       } else if (forRetLambda) {
