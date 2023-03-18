@@ -29,9 +29,9 @@
 # GNU-NEXT: 3: 0000000000000000 0 NOTYPE LOCAL PROTECTED [VARIANT_PCS]      UND foo3
 # GNU-NEXT: 4: 0000000000000000 0 NOTYPE LOCAL PROTECTED                    UND foo4
 
-# JSON:     "Value": "foo1",
+# JSON:     "Name": "foo1",
 # JSON:     "Other": {
-# JSON-NEXT:  "RawFlags": 128,
+# JSON-NEXT:  "Value": 128,
 # JSON-NEXT:  "Flags": [
 # JSON-NEXT:    {
 # JSON-NEXT:      "Name": "STO_AARCH64_VARIANT_PCS",
@@ -40,9 +40,9 @@
 # JSON-NEXT:  ]
 # JSON-NEXT:},
 
-# JSON:     "Value": "foo2",
+# JSON:     "Name": "foo2",
 # JSON:     "Other": {
-# JSON-NEXT:  "RawFlags": 192,
+# JSON-NEXT:  "Value": 192,
 # JSON-NEXT:  "Flags": [
 # JSON-NEXT:    {
 # JSON-NEXT:      "Name": "STO_AARCH64_VARIANT_PCS",
@@ -51,9 +51,9 @@
 # JSON-NEXT:  ]
 # JSON-NEXT:},
 
-# JSON:     "Value": "foo3",
+# JSON:     "Name": "foo3",
 # JSON:     "Other": {
-# JSON-NEXT:  "RawFlags": 131,
+# JSON-NEXT:  "Value": 131,
 # JSON-NEXT:  "Flags": [
 # JSON-NEXT:    {
 # JSON-NEXT:      "Name": "STO_AARCH64_VARIANT_PCS",
@@ -66,9 +66,9 @@
 # JSON-NEXT:  ]
 # JSON-NEXT:},
 
-# JSON:     "Value": "foo4",
+# JSON:     "Name": "foo4",
 # JSON:     "Other": {
-# JSON-NEXT:  "RawFlags": 3,
+# JSON-NEXT:  "Value": 3,
 # JSON-NEXT:  "Flags": [
 # JSON-NEXT:    {
 # JSON-NEXT:      "Name": "STV_PROTECTED",
