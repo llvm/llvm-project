@@ -11,9 +11,8 @@
 
 // XFAIL: LIBCXX-AIX-FIXME
 
-// Aligned allocation was not provided before macosx10.13 and as a result we
-// get availability errors when the deployment target is older than macosx10.13.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
+// We get availability markup errors when aligned allocation is missing
+// XFAIL: availability-aligned_allocation-missing
 
 // Libcxx when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
