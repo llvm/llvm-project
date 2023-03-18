@@ -129,7 +129,7 @@ public:
   /// For example, the following X86_64 assembly code:
   /// \code
   ///   leaq   target_func(%rip), %rax
-  ///	  callq  *%rax
+  ///	callq  *%rax
   /// \endcode
   ///
   /// is transformed to:
