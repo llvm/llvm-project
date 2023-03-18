@@ -9,6 +9,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/ADT/APSInt.h"
 #include "gtest/gtest.h"
+#include <cmath>
 #include <vector>
 
 using namespace llvm;
@@ -553,9 +554,48 @@ TEST_F(ScopedPrinterTest, PrintNumber) {
     W.printNumber("apsint", LargeNum);
 
     W.printNumber("label", "value", 0);
+
+    float MaxFloat = std::numeric_limits<float>::max();
+    float MinFloat = std::numeric_limits<float>::min();
+    float InfFloat = std::numeric_limits<float>::infinity();
+    float NaNFloat = std::nanf("1");
+    W.printNumber("float-max", MaxFloat);
+    W.printNumber("float-min", MinFloat);
+    W.printNumber("float-inf", InfFloat);
+    W.printNumber("float-nan", NaNFloat);
+    W.printNumber("float-42.0", 42.0f);
+    W.printNumber("float-42.5625", 42.5625f);
+
+    double MaxDouble = std::numeric_limits<double>::max();
+    double MinDouble = std::numeric_limits<double>::min();
+    double InfDouble = std::numeric_limits<double>::infinity();
+    double NaNDouble = std::nan("1");
+    W.printNumber("double-max", MaxDouble);
+    W.printNumber("double-min", MinDouble);
+    W.printNumber("double-inf", InfDouble);
+    W.printNumber("double-nan", NaNDouble);
+    W.printNumber("double-42.0", 42.0);
+    W.printNumber("double-42.5625", 42.5625);
   };
 
-  const char *ExpectedOut = R"(uint64_t-max: 18446744073709551615
+  // Make sure when we check floating point representation we avoid
+  // implementation defined behavior. So format the max float/double, instead of
+  // hard coding it in the tests. Note: we can't just use std::to_string(),
+  // since we format the float in PrintNumber(). This isn't required for JSON
+  // formatting, since it uses exponents, which will be consistent.
+
+  // Allocate a buffer large enough to represent large floating point values
+  // and construct the string representation for them there.
+  char Buf[512];
+
+  format("%5.1f", std::numeric_limits<float>::max()).snprint(Buf, sizeof(Buf));
+  std::string MaxFloatStr(Buf);
+
+  format("%5.1f", std::numeric_limits<double>::max()).snprint(Buf, sizeof(Buf));
+  std::string MaxDoubleStr(Buf);
+
+  std::string ExpectedOut = Twine(
+                                R"(uint64_t-max: 18446744073709551615
 uint64_t-min: 0
 uint32_t-max: 4294967295
 uint32_t-min: 0
@@ -573,7 +613,21 @@ int8_t-max: 127
 int8_t-min: -128
 apsint: 9999999999999999999999
 label: value (0)
-)";
+float-max: )" + MaxFloatStr + R"(
+float-min:   0.0
+float-inf:   inf
+float-nan:   nan
+float-42.0:  42.0
+float-42.5625:  42.6
+double-max: )" + MaxDoubleStr +
+                                R"(
+double-min:   0.0
+double-inf:   inf
+double-nan:   nan
+double-42.0:  42.0
+double-42.5625:  42.6
+)")
+                                .str();
 
   const char *JSONExpectedOut = R"({
   "uint64_t-max": 18446744073709551615,
@@ -596,7 +650,19 @@ label: value (0)
   "label": {
     "Name": "value",
     "Value": 0
-  }
+  },
+  "float-max": 3.4028234663852886e+38,
+  "float-min": 1.1754943508222875e-38,
+  "float-inf": inf,
+  "float-nan": nan,
+  "float-42.0": 42,
+  "float-42.5625": 42.5625,
+  "double-max": 1.7976931348623157e+308,
+  "double-min": 2.2250738585072014e-308,
+  "double-inf": inf,
+  "double-nan": nan,
+  "double-42.0": 42,
+  "double-42.5625": 42.5625
 })";
   verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
