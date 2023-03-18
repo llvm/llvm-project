@@ -80,6 +80,9 @@ C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Support for out-of-line definitions of constrained templates has been improved.
   This partially fixes `#49620 <https://github.com/llvm/llvm-project/issues/49620>`_.
+- Lambda templates with a requires clause directly after the template parameters now parse
+  correctly if the requires clause consists of a variable with a dependent type.
+  (`#61278 <https://github.com/llvm/llvm-project/issues/61278>`_)
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^

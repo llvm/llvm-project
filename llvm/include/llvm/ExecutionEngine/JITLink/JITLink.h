@@ -704,11 +704,11 @@ public:
   /// Set the protection flags for this section.
   void setMemProt(orc::MemProt Prot) { this->Prot = Prot; }
 
-  /// Get the deallocation policy for this section.
-  orc::MemDeallocPolicy getMemDeallocPolicy() const { return MDP; }
+  /// Get the memory lifetime policy for this section.
+  orc::MemLifetimePolicy getMemLifetimePolicy() const { return MLP; }
 
-  /// Set the deallocation policy for this section.
-  void setMemDeallocPolicy(orc::MemDeallocPolicy MDP) { this->MDP = MDP; }
+  /// Set the memory lifetime policy for this section.
+  void setMemLifetimePolicy(orc::MemLifetimePolicy MLP) { this->MLP = MLP; }
 
   /// Returns the ordinal for this section.
   SectionOrdinal getOrdinal() const { return SecOrdinal; }
@@ -773,7 +773,7 @@ private:
 
   StringRef Name;
   orc::MemProt Prot;
-  orc::MemDeallocPolicy MDP = orc::MemDeallocPolicy::Standard;
+  orc::MemLifetimePolicy MLP = orc::MemLifetimePolicy::Standard;
   SectionOrdinal SecOrdinal = 0;
   BlockSet Blocks;
   SymbolSet Symbols;
@@ -826,7 +826,7 @@ private:
 
 class LinkGraph {
 private:
-  using SectionList = std::vector<std::unique_ptr<Section>>;
+  using SectionMap = DenseMap<StringRef, std::unique_ptr<Section>>;
   using ExternalSymbolSet = DenseSet<Symbol *>;
   using BlockSet = DenseSet<Block *>;
 
@@ -865,7 +865,7 @@ private:
   }
 
   static iterator_range<Section::const_block_iterator>
-  getSectionConstBlocks(Section &S) {
+  getSectionConstBlocks(const Section &S) {
     return S.blocks();
   }
 
@@ -875,15 +875,27 @@ private:
   }
 
   static iterator_range<Section::const_symbol_iterator>
-  getSectionConstSymbols(Section &S) {
+  getSectionConstSymbols(const Section &S) {
     return S.symbols();
   }
+
+  struct GetSectionMapEntryValue {
+    Section &operator()(SectionMap::value_type &KV) const { return *KV.second; }
+  };
+
+  struct GetSectionMapEntryConstValue {
+    const Section &operator()(const SectionMap::value_type &KV) const {
+      return *KV.second;
+    }
+  };
 
 public:
   using external_symbol_iterator = ExternalSymbolSet::iterator;
 
-  using section_iterator = pointee_iterator<SectionList::iterator>;
-  using const_section_iterator = pointee_iterator<SectionList::const_iterator>;
+  using section_iterator =
+      mapped_iterator<SectionMap::iterator, GetSectionMapEntryValue>;
+  using const_section_iterator =
+      mapped_iterator<SectionMap::const_iterator, GetSectionMapEntryConstValue>;
 
   template <typename OuterItrT, typename InnerItrT, typename T,
             iterator_range<InnerItrT> getInnerRange(
@@ -933,18 +945,17 @@ public:
   };
 
   using defined_symbol_iterator =
-      nested_collection_iterator<const_section_iterator,
-                                 Section::symbol_iterator, Symbol *,
-                                 getSectionSymbols>;
+      nested_collection_iterator<section_iterator, Section::symbol_iterator,
+                                 Symbol *, getSectionSymbols>;
 
   using const_defined_symbol_iterator =
       nested_collection_iterator<const_section_iterator,
                                  Section::const_symbol_iterator, const Symbol *,
                                  getSectionConstSymbols>;
 
-  using block_iterator = nested_collection_iterator<const_section_iterator,
-                                                    Section::block_iterator,
-                                                    Block *, getSectionBlocks>;
+  using block_iterator =
+      nested_collection_iterator<section_iterator, Section::block_iterator,
+                                 Block *, getSectionBlocks>;
 
   using const_block_iterator =
       nested_collection_iterator<const_section_iterator,
@@ -1041,14 +1052,9 @@ public:
 
   /// Create a section with the given name, protection flags, and alignment.
   Section &createSection(StringRef Name, orc::MemProt Prot) {
-    assert(llvm::none_of(Sections,
-                         [&](std::unique_ptr<Section> &Sec) {
-                           return Sec->getName() == Name;
-                         }) &&
-           "Duplicate section name");
+    assert(!Sections.count(Name) && "Duplicate section name");
     std::unique_ptr<Section> Sec(new Section(Name, Prot, Sections.size()));
-    Sections.push_back(std::move(Sec));
-    return *Sections.back();
+    return *Sections.insert(std::make_pair(Name, std::move(Sec))).first->second;
   }
 
   /// Create a content block.
@@ -1207,29 +1213,39 @@ public:
   }
 
   iterator_range<section_iterator> sections() {
-    return make_range(section_iterator(Sections.begin()),
-                      section_iterator(Sections.end()));
+    return make_range(
+        section_iterator(Sections.begin(), GetSectionMapEntryValue()),
+        section_iterator(Sections.end(), GetSectionMapEntryValue()));
   }
 
-  SectionList::size_type sections_size() const { return Sections.size(); }
+  iterator_range<const_section_iterator> sections() const {
+    return make_range(
+        const_section_iterator(Sections.begin(),
+                               GetSectionMapEntryConstValue()),
+        const_section_iterator(Sections.end(), GetSectionMapEntryConstValue()));
+  }
+
+  size_t sections_size() const { return Sections.size(); }
 
   /// Returns the section with the given name if it exists, otherwise returns
   /// null.
   Section *findSectionByName(StringRef Name) {
-    for (auto &S : sections())
-      if (S.getName() == Name)
-        return &S;
-    return nullptr;
+    auto I = Sections.find(Name);
+    if (I == Sections.end())
+      return nullptr;
+    return I->second.get();
   }
 
   iterator_range<block_iterator> blocks() {
-    return make_range(block_iterator(Sections.begin(), Sections.end()),
-                      block_iterator(Sections.end(), Sections.end()));
+    auto Secs = sections();
+    return make_range(block_iterator(Secs.begin(), Secs.end()),
+                      block_iterator(Secs.end(), Secs.end()));
   }
 
   iterator_range<const_block_iterator> blocks() const {
-    return make_range(const_block_iterator(Sections.begin(), Sections.end()),
-                      const_block_iterator(Sections.end(), Sections.end()));
+    auto Secs = sections();
+    return make_range(const_block_iterator(Secs.begin(), Secs.end()),
+                      const_block_iterator(Secs.end(), Secs.end()));
   }
 
   iterator_range<external_symbol_iterator> external_symbols() {
@@ -1241,14 +1257,15 @@ public:
   }
 
   iterator_range<defined_symbol_iterator> defined_symbols() {
-    return make_range(defined_symbol_iterator(Sections.begin(), Sections.end()),
-                      defined_symbol_iterator(Sections.end(), Sections.end()));
+    auto Secs = sections();
+    return make_range(defined_symbol_iterator(Secs.begin(), Secs.end()),
+                      defined_symbol_iterator(Secs.end(), Secs.end()));
   }
 
   iterator_range<const_defined_symbol_iterator> defined_symbols() const {
-    return make_range(
-        const_defined_symbol_iterator(Sections.begin(), Sections.end()),
-        const_defined_symbol_iterator(Sections.end(), Sections.end()));
+    auto Secs = sections();
+    return make_range(const_defined_symbol_iterator(Secs.begin(), Secs.end()),
+                      const_defined_symbol_iterator(Secs.end(), Secs.end()));
   }
 
   /// Make the given symbol external (must not already be external).
@@ -1447,11 +1464,10 @@ public:
   /// Remove a section. The section reference is defunct after calling this
   /// function and should no longer be used.
   void removeSection(Section &Sec) {
-    auto I = llvm::find_if(Sections, [&Sec](const std::unique_ptr<Section> &S) {
-      return S.get() == &Sec;
-    });
-    assert(I != Sections.end() && "Section does not appear in this graph");
-    Sections.erase(I);
+    assert(Sections.count(Sec.getName()) && "Section not found");
+    assert(Sections.find(Sec.getName())->second.get() == &Sec &&
+           "Section map entry invalid");
+    Sections.erase(Sec.getName());
   }
 
   /// Accessor for the AllocActions object for this graph. This can be used to
@@ -1474,7 +1490,7 @@ private:
   unsigned PointerSize;
   support::endianness Endianness;
   GetEdgeKindNameFunction GetEdgeKindName = nullptr;
-  SectionList Sections;
+  DenseMap<StringRef, std::unique_ptr<Section>> Sections;
   ExternalSymbolSet ExternalSymbols;
   ExternalSymbolSet AbsoluteSymbols;
   orc::shared::AllocActions AAs;

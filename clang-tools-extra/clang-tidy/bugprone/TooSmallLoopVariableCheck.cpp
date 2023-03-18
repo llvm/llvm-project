@@ -34,6 +34,11 @@ struct MagnitudeBits {
   bool operator<(const MagnitudeBits &Other) const noexcept {
     return WidthWithoutSignBit < Other.WidthWithoutSignBit;
   }
+
+  bool operator!=(const MagnitudeBits &Other) const noexcept {
+    return WidthWithoutSignBit != Other.WidthWithoutSignBit ||
+           BitFieldWidth != Other.BitFieldWidth;
+  }
 };
 
 } // namespace
@@ -184,13 +189,19 @@ void TooSmallLoopVariableCheck::check(const MatchFinder::MatchResult &Result) {
   if (LoopVar->getType() != LoopIncrement->getType())
     return;
 
-  const QualType LoopVarType = LoopVar->getType();
-  const QualType UpperBoundType = UpperBound->getType();
-
   ASTContext &Context = *Result.Context;
 
+  const QualType LoopVarType = LoopVar->getType();
   const MagnitudeBits LoopVarMagnitudeBits =
       calcMagnitudeBits(Context, LoopVarType, LoopVar);
+
+  const MagnitudeBits LoopIncrementMagnitudeBits =
+      calcMagnitudeBits(Context, LoopIncrement->getType(), LoopIncrement);
+  // We matched the loop variable incorrectly.
+  if (LoopIncrementMagnitudeBits != LoopVarMagnitudeBits)
+    return;
+
+  const QualType UpperBoundType = UpperBound->getType();
   const MagnitudeBits UpperBoundMagnitudeBits =
       calcUpperBoundMagnitudeBits(Context, UpperBound, UpperBoundType);
 

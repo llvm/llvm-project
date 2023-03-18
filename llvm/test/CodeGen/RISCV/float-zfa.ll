@@ -227,3 +227,16 @@ define i32 @fcmp_ueq_q(float %a, float %b) nounwind strictfp {
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
+
+declare void @foo(float, float)
+
+; Make sure we use two fli instructions instead of copying.
+define void @fli_remat() {
+; CHECK-LABEL: fli_remat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa0, 1.0
+; CHECK-NEXT:    fli.s fa1, 1.0
+; CHECK-NEXT:    tail foo@plt
+  tail call void @foo(float 1.000000e+00, float 1.000000e+00)
+  ret void
+}

@@ -17,7 +17,6 @@
 #  error "TEST_HAS_NO_EXCEPTIONS should be defined"
 #endif
 
-int main(int, char**) {
+void f() {
     try { (void)0; } catch (...) { } // expected-error {{exceptions disabled}}
-    return 0;
 }

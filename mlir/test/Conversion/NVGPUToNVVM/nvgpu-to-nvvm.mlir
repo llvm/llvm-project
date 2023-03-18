@@ -385,6 +385,29 @@ func.func @mma_sp_sync_f16_16816(%arg0: vector<2x2xf16>,
 
 // -----
 
+// CHECK-LABEL: func @mma_sp_sync_f16_16816_01(
+func.func @mma_sp_sync_f16_16816_01(%arg0: vector<2x2xf16>,
+                                    %arg1: vector<2x2xf16>,
+                                    %arg2: vector<2x2xf16>,
+                                    %arg3: vector<2xi16>) -> vector<2x2xf16> {
+  //
+  // As above, but with sparsity selection 0x01.
+  //
+  // CHECK: %[[sparseMetadata:.+]] = llvm.bitcast %{{.+}} : vector<2xi16> to i32
+  // CHECK: %[[d:.+]] = llvm.inline_asm has_side_effects asm_dialect = att
+  // CHECK-SAME: "mma.sp.sync.aligned.m16n8k16.row.col.f16.f16.f16.f16 {$0,$1},{$2,$3},{$4,$5},{$6,$7},$8,0x1;"
+  // CHECK-SAME: "=r,=r,r,r,r,r,r,r,r"
+  // CHECK-SAME: %[[sparseMetadata]] :
+  // CHECK-SAME: -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+
+  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3)
+       {mmaShape = [16, 8, 16], sparsitySelector = 1 : i32} :
+       (vector<2x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  return %d : vector<2x2xf16>
+}
+
+// -----
+
 // CHECK-LABEL: func @mma_sp_sync_i8_16864(
 func.func @mma_sp_sync_i8_16864(%arg0: vector<4x4xi8>,
                                 %arg1: vector<4x4xi8>,
