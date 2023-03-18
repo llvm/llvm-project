@@ -169,46 +169,12 @@ if (LIBUNWIND_ENABLE_CET)
   endif()
 endif()
 
-# Get warning flags
-add_compile_flags_if_supported(-W)
-add_compile_flags_if_supported(-Wall)
-add_compile_flags_if_supported(-Wchar-subscripts)
-add_compile_flags_if_supported(-Wconversion)
-add_compile_flags_if_supported(-Wmismatched-tags)
-add_compile_flags_if_supported(-Wmissing-braces)
-add_compile_flags_if_supported(-Wnewline-eof)
-add_compile_flags_if_supported(-Wno-unused-function)
-add_compile_flags_if_supported(-Wshadow)
-add_compile_flags_if_supported(-Wshorten-64-to-32)
-add_compile_flags_if_supported(-Wsign-compare)
-add_compile_flags_if_supported(-Wsign-conversion)
-add_compile_flags_if_supported(-Wstrict-aliasing=2)
-add_compile_flags_if_supported(-Wstrict-overflow=4)
-add_compile_flags_if_supported(-Wunused-parameter)
-add_compile_flags_if_supported(-Wunused-variable)
-add_compile_flags_if_supported(-Wwrite-strings)
-add_compile_flags_if_supported(-Wundef)
-
-add_compile_flags_if_supported(-Wno-suggest-override)
-
 if (WIN32)
   # The headers lack matching dllexport attributes (_LIBUNWIND_EXPORT);
   # silence the warning instead of cluttering the headers (which aren't
   # necessarily the ones that the callers will use anyway) with the
   # attributes.
   add_compile_flags_if_supported(-Wno-dll-attribute-on-redeclaration)
-endif()
-
-if (LIBUNWIND_ENABLE_WERROR)
-  add_compile_flags_if_supported(-Werror)
-  add_compile_flags_if_supported(-WX)
-else()
-  add_compile_flags_if_supported(-Wno-error)
-  add_compile_flags_if_supported(-WX-)
-endif()
-
-if (LIBUNWIND_ENABLE_PEDANTIC)
-  add_compile_flags_if_supported(-pedantic)
 endif()
 
 # Get feature flags.

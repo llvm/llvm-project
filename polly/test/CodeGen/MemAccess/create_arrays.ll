@@ -1,5 +1,5 @@
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-print-scops -polly-print-import-jscop -polly-import-jscop-postfix=transformed -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-codegen -S < %s 2>&1 | FileCheck %s --check-prefix=CODEGEN
+; RUN: opt %loadPolly -polly-print-scops -polly-print-import-jscop -polly-import-jscop-postfix=transformed -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-codegen -S < %s 2>&1 | FileCheck %s --check-prefix=CODEGEN
 ;
 ;  for (i = 0; i < _PB_NI; i++)
 ;    for (j = 0; j < _PB_NJ; j++)
@@ -17,7 +17,7 @@
 ;
 ; CHECK:New access function '{ Stmt_bb12[i0, i1, i2] -> E[i2, i0] }' detected in JSCOP file
 ;
-; CODEGEN:define internal void @create_arrays(i32 %arg, i32 %arg1, i32 %arg2, double %arg3, double %beta, [1056 x double]* %A, [1024 x double]* %B, [1056 x double]* %arg7) #0 {
+; CODEGEN:define internal void @create_arrays(i32 %arg, i32 %arg1, i32 %arg2, double %arg3, double %beta, ptr %A, ptr %B, ptr %arg7) #0 {
 ; CODEGEN:bb:
 ; CODEGEN:  %beta.s2a = alloca double
 ; CODEGEN:  %D = alloca [270336 x double]
@@ -25,12 +25,11 @@
 ; CODEGEN:  %F = alloca [270336 x i64]
 ; CODEGEN:  br label %bb8
 ;
-; CODEGEN:  %beta.s2a.reload = load double, double* %beta.s2a
-; CODEGEN:  %polly.access.cast.E = bitcast [270336 x [200000 x double]]* %E to double*
-; CODEGEN:  %polly.access.mul.E = mul nsw i64 %polly.indvar33, 200000
+; CODEGEN:  %beta.s2a.reload = load double, ptr %beta.s2a
+; CODEGEN:  %polly.access.mul.E = mul nsw i64 %polly.indvar31, 200000
 ; CODEGEN:  %polly.access.add.E = add nsw i64 %polly.access.mul.E, %polly.indvar
-; CODEGEN:  {{%.*}} = load double, double* %polly.access.E, align 8, !alias.scope !0, !noalias !3
-; CODEGEN:  store double {{%.*}}, double* %scevgep36, align 8, !alias.scope !8, !noalias !9
+; CODEGEN:  {{%.*}} = load double, ptr %polly.access.E, align 8, !alias.scope !0, !noalias !3
+; CODEGEN:  store double {{%.*}}, ptr %scevgep34, align 8, !alias.scope !8, !noalias !9
 ;
 ; CODEGEN: !0 = !{!1}
 ; CODEGEN: !1 = distinct !{!1, !2, !"polly.alias.scope.E"}
@@ -47,7 +46,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"
 
 ; Function Attrs: nounwind uwtable
-define internal void @create_arrays(i32 %arg, i32 %arg1, i32 %arg2, double %arg3, double %beta, [1056 x double]* %A, [1024 x double]* %B, [1056 x double]* %arg7) #0 {
+define internal void @create_arrays(i32 %arg, i32 %arg1, i32 %arg2, double %arg3, double %beta, ptr %A, ptr %B, ptr %arg7) #0 {
 bb:
   br label %bb8
 
@@ -64,11 +63,11 @@ bb10:                                             ; preds = %bb20, %bb9
 
 bb12:                                             ; preds = %bb12, %bb10
   %tmp13 = phi i64 [ 0, %bb10 ], [ %tmp18, %bb12 ]
-  %tmp14 = getelementptr inbounds [1024 x double], [1024 x double]* %B, i64 %tmp, i64 %tmp13
-  %tmp15 = load double, double* %tmp14, align 8
+  %tmp14 = getelementptr inbounds [1024 x double], ptr %B, i64 %tmp, i64 %tmp13
+  %tmp15 = load double, ptr %tmp14, align 8
   %tmp16 = fmul double %tmp15, %beta
-  %tmp17 = getelementptr inbounds [1056 x double], [1056 x double]* %A, i64 %tmp, i64 %tmp11
-  store double %tmp16, double* %tmp17, align 8
+  %tmp17 = getelementptr inbounds [1056 x double], ptr %A, i64 %tmp, i64 %tmp11
+  store double %tmp16, ptr %tmp17, align 8
   %tmp18 = add nuw nsw i64 %tmp13, 1
   %tmp19 = icmp ne i64 %tmp18, 1024
   br i1 %tmp19, label %bb12, label %bb20

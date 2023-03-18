@@ -654,8 +654,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // Reserve all the AGPRs if there are no instructions to use it.
   if (!ST.hasMAIInsts()) {
-    for (unsigned i = 0; i < MaxNumAGPRs; ++i) {
-      unsigned Reg = AMDGPU::AGPR_32RegClass.getRegister(i);
+    for (MCRegister Reg : AMDGPU::AGPR_32RegClass) {
       reserveRegisterTuples(Reserved, Reg);
     }
   }

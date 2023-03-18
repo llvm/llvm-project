@@ -125,8 +125,8 @@ DEFAULT_PARAMETERS = [
                  The Standard libraries currently supported are:
                  - llvm-libc++: The 'upstream' libc++ as shipped with LLVM.
                  - apple-libc++: libc++ as shipped by Apple. This is basically like the LLVM one, but
-                                 there are a few differences like installation paths and the use of
-                                 universal dylibs.
+                                 there are a few differences like installation paths, the use of
+                                 universal dylibs and the existence of availability markup.
                  - libstdc++: The GNU C++ library typically shipped with GCC.
                  - msvc: The Microsoft implementation of the C++ Standard Library.
                 """,
@@ -236,11 +236,9 @@ DEFAULT_PARAMETERS += [
     for a given deployment target. For example, this is the case when testing
     availability markup, where we want to make sure that using the annotated
     facility on a deployment target that doesn't support it will fail at compile
-    time, not at runtime. This can be achieved by creating a `.compile.pass.cpp`
-    and XFAILing it for the right deployment target. If the test doesn't fail at
-    compile-time like it's supposed to, the test will XPASS. Another option is to
-    create a `.verify.cpp` test that checks for the right errors, and mark that
-    test as requiring `use_system_cxx_lib && <target>`.
+    time, not at runtime. This can be achieved by creating a `.verify.cpp` test
+    that checks for the right errors, and mark that test as requiring
+    `use_system_cxx_lib && target=<target>`.
     """,
     actions=lambda useSystem: [
       AddFeature('use_system_cxx_lib')

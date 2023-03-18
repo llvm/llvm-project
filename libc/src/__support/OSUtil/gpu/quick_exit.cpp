@@ -11,11 +11,21 @@
 
 #include "quick_exit.h"
 
+#include "src/__support/RPC/rpc_client.h"
 #include "src/__support/macros/properties/architectures.h"
 
 namespace __llvm_libc {
 
 void quick_exit(int status) {
+  // TODO: Support asynchronous calls so we don't wait and exit from the GPU
+  // immediately.
+  rpc::client.run(
+      [&](rpc::Buffer *buffer) {
+        buffer->data[0] = rpc::Opcode::EXIT;
+        buffer->data[1] = status;
+      },
+      [](rpc::Buffer *) {});
+
 #if defined(LIBC_TARGET_ARCH_IS_NVPTX)
   asm("exit" ::: "memory");
 #elif defined(LIBC_TARGET_ARCH_IS_AMDGPU)

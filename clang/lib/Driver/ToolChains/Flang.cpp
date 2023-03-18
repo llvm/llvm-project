@@ -114,6 +114,35 @@ void Flang::addTargetOptions(const ArgList &Args,
   // TODO: Add target specific flags, ABI, mtune option etc.
 }
 
+void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
+                              const JobAction &JA, const ArgList &Args,
+                              ArgStringList &CmdArgs) const {
+  bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
+  bool IsHostOffloadingAction = JA.isHostOffloading(Action::OFK_OpenMP) ||
+                                JA.isHostOffloading(C.getActiveOffloadKinds());
+
+  // Skips the primary input file, which is the input file that the compilation
+  // proccess will be executed upon (e.g. the host bitcode file) and
+  // adds the other secondary input (e.g. device bitcode files for embedding)
+  // to the embed offload object. This is condensed logic from the Clang driver
+  // for embedding offload objects during HostOffloading.
+  if (IsHostOffloadingAction) {
+    for (size_t i = 1; i < Inputs.size(); ++i) {
+      if (Inputs[i].getType() != types::TY_Nothing)
+        CmdArgs.push_back(
+            Args.MakeArgString("-fembed-offload-object=" +
+                               getToolChain().getInputFilename(Inputs[i])));
+    }
+  }
+
+  if (IsOpenMPDevice) {
+    // -fopenmp-is-device is passed along to tell the frontend that it is
+    // generating code for a device, so that only the relevant code is
+    // emitted.
+    CmdArgs.push_back("-fopenmp-is-device");
+  }
+}
+
 static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   StringRef FPContract;
@@ -326,6 +355,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add other compile options
   addOtherOptions(Args, CmdArgs);
+
+  // Offloading related options
+  addOffloadOptions(C, Inputs, JA, Args, CmdArgs);
 
   // Forward -Xflang arguments to -fc1
   Args.AddAllArgValues(CmdArgs, options::OPT_Xflang);

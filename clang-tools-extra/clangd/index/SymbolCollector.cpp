@@ -756,7 +756,8 @@ bool SymbolCollector::handleMacroOccurrence(const IdentifierInfo *Name,
       *PP, *CompletionAllocator, *CompletionTUInfo);
   std::string Signature;
   std::string SnippetSuffix;
-  getSignature(*CCS, &Signature, &SnippetSuffix);
+  getSignature(*CCS, &Signature, &SnippetSuffix, SymbolCompletion.Kind,
+               SymbolCompletion.CursorKind);
   S.Signature = Signature;
   S.CompletionSnippetSuffix = SnippetSuffix;
 
@@ -933,7 +934,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   S.Documentation = Documentation;
   std::string Signature;
   std::string SnippetSuffix;
-  getSignature(*CCS, &Signature, &SnippetSuffix);
+  getSignature(*CCS, &Signature, &SnippetSuffix, SymbolCompletion.Kind,
+               SymbolCompletion.CursorKind);
   S.Signature = Signature;
   S.CompletionSnippetSuffix = SnippetSuffix;
   std::string ReturnType = getReturnType(*CCS);

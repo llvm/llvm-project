@@ -12,6 +12,7 @@
 #include "support/Threading.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CommandLine.h"
 #include <deque>
 #include <optional>
 #include <string>
@@ -50,10 +51,11 @@ struct CommandMangler {
                   llvm::StringRef TargetFile) const;
 
 private:
-  CommandMangler() = default;
+  CommandMangler();
 
   Memoize<llvm::StringMap<std::string>> ResolvedDrivers;
   Memoize<llvm::StringMap<std::string>> ResolvedDriversNoFollow;
+  llvm::cl::TokenizerCallback Tokenizer;
 };
 
 // Removes args from a command-line in a semantically-aware way.

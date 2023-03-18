@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v -force-vector-width=2 -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=VF_2
 ; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v -force-vector-width=4 -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=VF_4
 ; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v -force-vector-width=8 -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=VF_8
