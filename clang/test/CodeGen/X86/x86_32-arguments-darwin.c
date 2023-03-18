@@ -304,9 +304,8 @@ struct s62 { T62 x; int y; } __attribute((packed, aligned(8)));
 void f62(int x, struct s62 y) {}
 
 // CHECK-LABEL: define{{.*}} i32 @f63
-// CHECK: ptrtoint
-// CHECK: and {{.*}}, -16
-// CHECK: inttoptr
+// CHECK: getelementptr inbounds i8, ptr {{.*}}, i32 15
+// CHECK: call ptr @llvm.ptrmask.p0.i32(ptr {{.*}}, i32 -16)
 typedef int T63 __attribute((vector_size(16)));
 struct s63 { T63 x; int y; };
 int f63(int i, ...) {
@@ -326,9 +325,8 @@ struct s65 { signed char a[0]; float b; };
 struct s65 f65(void) { return (struct s65){{},2}; }
 
 // CHECK-LABEL: define{{.*}} <2 x i64> @f66
-// CHECK: ptrtoint
-// CHECK: and {{.*}}, -16
-// CHECK: inttoptr
+// CHECK: getelementptr inbounds i8, ptr {{.*}}, i32 15
+// CHECK: call ptr @llvm.ptrmask.p0.i32(ptr {{.*}}, i32 -16)
 typedef int T66 __attribute((vector_size(16)));
 T66 f66(int i, ...) {
   __builtin_va_list ap;

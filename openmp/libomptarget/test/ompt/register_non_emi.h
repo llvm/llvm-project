@@ -14,15 +14,13 @@
 static ompt_set_callback_t ompt_set_callback = 0;
 
 // Init functions
-int ompt_initialize(
-  ompt_function_lookup_t lookup,
-  int initial_device_num,
-  ompt_data_t *tool_data)
-{
-  ompt_set_callback = (ompt_set_callback_t) lookup("ompt_set_callback");
+int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
+                    ompt_data_t *tool_data) {
+  ompt_set_callback = (ompt_set_callback_t)lookup("ompt_set_callback");
 
-  if (!ompt_set_callback) return 0; // failed
-  
+  if (!ompt_set_callback)
+    return 0; // failed
+
   register_ompt_callback(ompt_callback_device_initialize);
   register_ompt_callback(ompt_callback_device_finalize);
   register_ompt_callback(ompt_callback_device_load);
@@ -30,21 +28,18 @@ int ompt_initialize(
   register_ompt_callback(ompt_callback_target);
   register_ompt_callback(ompt_callback_target_submit);
 
-  return 1; //success
+  return 1; // success
 }
 
-void ompt_finalize(ompt_data_t *tool_data)
-{
-}
+void ompt_finalize(ompt_data_t *tool_data) {}
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-ompt_start_tool_result_t *ompt_start_tool(
-  unsigned int omp_version,
-  const char *runtime_version)
-{
-  static ompt_start_tool_result_t ompt_start_tool_result = {&ompt_initialize,&ompt_finalize, 0};
+ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
+                                          const char *runtime_version) {
+  static ompt_start_tool_result_t ompt_start_tool_result = {&ompt_initialize,
+                                                            &ompt_finalize, 0};
   return &ompt_start_tool_result;
 }
 #ifdef __cplusplus

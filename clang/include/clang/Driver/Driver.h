@@ -198,6 +198,9 @@ public:
   /// The file to log CC_PRINT_PROC_STAT_FILE output to, if enabled.
   std::string CCPrintStatReportFilename;
 
+  /// The file to log CC_PRINT_INTERNAL_STAT_FILE output to, if enabled.
+  std::string CCPrintInternalStatReportFilename;
+
   /// The file to log CC_PRINT_OPTIONS output to, if enabled.
   std::string CCPrintOptionsFilename;
 
@@ -261,6 +264,10 @@ public:
   /// Set CC_PRINT_PROC_STAT mode, which causes the driver to dump
   /// performance report to CC_PRINT_PROC_STAT_FILE or to stdout.
   unsigned CCPrintProcessStats : 1;
+
+  /// Set CC_PRINT_INTERNAL_STAT mode, which causes the driver to dump internal
+  /// performance report to CC_PRINT_INTERNAL_STAT_FILE or to stdout.
+  unsigned CCPrintInternalStats : 1;
 
   /// Pointer to the ExecuteCC1Tool function, if available.
   /// When the clangDriver lib is used through clang.exe, this provides a

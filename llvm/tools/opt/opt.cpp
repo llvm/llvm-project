@@ -68,12 +68,12 @@ static codegen::RegisterCodeGenFlags CFG;
 static cl::list<const PassInfo *, bool, PassNameParser> PassList(cl::desc(
     "Optimizations available (use '-passes=' for the new pass manager)"));
 
-static cl::opt<bool> EnableNewPassManager(
-    "enable-new-pm",
-    cl::desc("Enable the new pass manager, translating "
-             "'opt -foo' to 'opt -passes=foo'. This is strictly for the new PM "
-             "migration, use '-passes=' when possible."),
-    cl::init(true));
+static cl::opt<bool> EnableLegacyPassManager(
+    "bugpoint-enable-legacy-pm",
+    cl::desc(
+        "Enable the legacy pass manager. This is strictly for bugpoint "
+        "due to it not working with the new PM, please do not use otherwise."),
+    cl::init(false));
 
 // This flag specifies a textual description of the optimization pass pipeline
 // to run over the module. This flag switches opt to use the new pass manager
@@ -485,11 +485,8 @@ int main(int argc, char **argv) {
 
   LLVMContext Context;
 
-  // If `-passes=` is specified, use NPM.
-  // If `-enable-new-pm` is specified and there are no codegen passes, use NPM.
-  // e.g. `-enable-new-pm -sroa` will use NPM.
-  // but `-enable-new-pm -codegenprepare` will still revert to legacy PM.
-  const bool UseNPM = (EnableNewPassManager && !shouldForceLegacyPM()) ||
+  // TODO: remove shouldForceLegacyPM().
+  const bool UseNPM = (!EnableLegacyPassManager && !shouldForceLegacyPM()) ||
                       PassPipeline.getNumOccurrences() > 0;
 
   if (UseNPM && !PassList.empty()) {

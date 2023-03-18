@@ -39,15 +39,11 @@ struct VPlanTransforms {
                             ScalarEvolution &SE, const TargetLibraryInfo &TLI);
 
   /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
-  /// region block and remove the mask operand.
-  static void addReplicateRegions(VPlan &Plan, VPRecipeBuilder &Builder);
-
-  static bool sinkScalarOperands(VPlan &Plan);
-
-  /// Merge replicate regions in their successor region, if a replicate region
-  /// is connected to a successor replicate region with the same predicate by a
-  /// single, empty VPBasicBlock.
-  static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan);
+  /// region block and remove the mask operand. Optimize the created regions by
+  /// iteratively sinking scalar operands into the region, followed by merging
+  /// regions until no improvements are remaining.
+  static void createAndOptimizeReplicateRegions(VPlan &Plan,
+                                                VPRecipeBuilder &Builder);
 
   /// Remove redundant VPBasicBlocks by merging them into their predecessor if
   /// the predecessor has a single successor.

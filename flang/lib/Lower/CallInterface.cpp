@@ -965,7 +965,14 @@ private:
     mlir::Type boxType = fir::wrapInClassOrBoxType(
         type, obj.type.type().IsPolymorphic(), obj.type.type().IsAssumedType());
 
-    if (obj.attrs.test(Attrs::Allocatable) || obj.attrs.test(Attrs::Pointer)) {
+    if (obj.type.type().IsAssumedType() && isBindC) {
+      mlir::Type voidPtrType = fir::ReferenceType::get(
+          mlir::NoneType::get(&interface.converter.getMLIRContext()));
+      addFirOperand(voidPtrType, nextPassedArgPosition(), Property::BaseAddress,
+                    attrs);
+      addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
+    } else if (obj.attrs.test(Attrs::Allocatable) ||
+               obj.attrs.test(Attrs::Pointer)) {
       // Pass as fir.ref<fir.box> or fir.ref<fir.class>
       mlir::Type boxRefType = fir::ReferenceType::get(boxType);
       addFirOperand(boxRefType, nextPassedArgPosition(), Property::MutableBox,

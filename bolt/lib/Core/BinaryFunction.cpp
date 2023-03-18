@@ -2589,8 +2589,7 @@ struct CFISnapshotDiff : public CFISnapshot {
       if (RestoredRegs[Reg])
         return true;
       RestoredRegs[Reg] = true;
-      const int32_t CurRegRule =
-          RegRule.find(Reg) != RegRule.end() ? RegRule[Reg] : UNKNOWN;
+      const int32_t CurRegRule = RegRule.contains(Reg) ? RegRule[Reg] : UNKNOWN;
       if (CurRegRule == UNKNOWN) {
         if (Instr.getOperation() == MCCFIInstruction::OpRestore ||
             Instr.getOperation() == MCCFIInstruction::OpSameValue)
@@ -2731,7 +2730,7 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
         Reg = *R;
       }
 
-      if (ToCFITable.RegRule.find(Reg) == ToCFITable.RegRule.end()) {
+      if (!ToCFITable.RegRule.contains(Reg)) {
         FrameInstructions.emplace_back(
             MCCFIInstruction::createRestore(nullptr, Reg));
         if (FromCFITable.isRedundant(FrameInstructions.back())) {

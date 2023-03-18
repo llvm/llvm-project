@@ -41,6 +41,8 @@ public:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
 
+  void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
+
   // tblgen'erated function.
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
                                    const MachineInstr *MI);

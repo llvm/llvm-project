@@ -2805,7 +2805,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case STMT_REF_PTR:
       IsStmtReference = true;
-      assert(StmtEntries.find(Record[0]) != StmtEntries.end() &&
+      assert(StmtEntries.contains(Record[0]) &&
              "No stmt was recorded for this offset reference!");
       S = StmtEntries[Record.readInt()];
       break;

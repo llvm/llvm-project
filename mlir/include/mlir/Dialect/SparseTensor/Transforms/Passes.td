@@ -81,6 +81,9 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
   ];
   // TODO(57514): These enum options are duplicated in Passes.h.
   let options = [
+    Option<"enableIndexReduction", "enable-index-reduction", "bool",
+           "false",
+           "Enable dependent index reduction based algorithm to handle non-trivial index expressions on sparse inputs (experimental features)">,
     Option<"parallelization", "parallelization-strategy", "mlir::SparseParallelizationStrategy",
            "mlir::SparseParallelizationStrategy::kNone",
            "Set the parallelization strategy", [{llvm::cl::values(

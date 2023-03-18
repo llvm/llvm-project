@@ -178,18 +178,17 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                             unsigned OpNo,
                                             const char *ExtraCode,
                                             raw_ostream &OS) {
-  if (!ExtraCode) {
-    const MachineOperand &MO = MI->getOperand(OpNo);
-    // For now, we only support register memory operands in registers and
-    // assume there is no addend
-    if (!MO.isReg())
-      return true;
+  if (ExtraCode)
+    return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, ExtraCode, OS);
 
-    OS << "0(" << RISCVInstPrinter::getRegisterName(MO.getReg()) << ")";
-    return false;
-  }
+  const MachineOperand &MO = MI->getOperand(OpNo);
+  // For now, we only support register memory operands in registers and
+  // assume there is no addend
+  if (!MO.isReg())
+    return true;
 
-  return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, ExtraCode, OS);
+  OS << "0(" << RISCVInstPrinter::getRegisterName(MO.getReg()) << ")";
+  return false;
 }
 
 bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {

@@ -1977,7 +1977,7 @@ void ASTDeclReader::MergeDefinitionData(
     Reader.PendingDefinitions.erase(MergeDD.Definition);
     MergeDD.Definition->setCompleteDefinition(false);
     Reader.mergeDefinitionVisibility(DD.Definition, MergeDD.Definition);
-    assert(Reader.Lookups.find(MergeDD.Definition) == Reader.Lookups.end() &&
+    assert(!Reader.Lookups.contains(MergeDD.Definition) &&
            "already loaded pending lookups for merged definition");
   }
 

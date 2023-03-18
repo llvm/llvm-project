@@ -547,8 +547,6 @@ void llvm::deleteConstant(Constant *C) {
       delete static_cast<CastConstantExpr *>(C);
     else if (isa<BinaryConstantExpr>(C))
       delete static_cast<BinaryConstantExpr *>(C);
-    else if (isa<SelectConstantExpr>(C))
-      delete static_cast<SelectConstantExpr *>(C);
     else if (isa<ExtractElementConstantExpr>(C))
       delete static_cast<ExtractElementConstantExpr *>(C);
     else if (isa<InsertElementConstantExpr>(C))
@@ -1488,8 +1486,6 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
   case Instruction::BitCast:
   case Instruction::AddrSpaceCast:
     return ConstantExpr::getCast(getOpcode(), Ops[0], Ty, OnlyIfReduced);
-  case Instruction::Select:
-    return ConstantExpr::getSelect(Ops[0], Ops[1], Ops[2], OnlyIfReducedTy);
   case Instruction::InsertElement:
     return ConstantExpr::getInsertElement(Ops[0], Ops[1], Ops[2],
                                           OnlyIfReducedTy);
@@ -2401,24 +2397,6 @@ Constant *ConstantExpr::getAlignOf(Type* Ty) {
                      Type::getInt64Ty(Ty->getContext()));
 }
 
-Constant *ConstantExpr::getOffsetOf(StructType* STy, unsigned FieldNo) {
-  return getOffsetOf(STy, ConstantInt::get(Type::getInt32Ty(STy->getContext()),
-                                           FieldNo));
-}
-
-Constant *ConstantExpr::getOffsetOf(Type* Ty, Constant *FieldNo) {
-  // offsetof is implemented as: (i64) gep (Ty*)null, 0, FieldNo
-  // Note that a non-inbounds gep is used, as null isn't within any object.
-  Constant *GEPIdx[] = {
-    ConstantInt::get(Type::getInt64Ty(Ty->getContext()), 0),
-    FieldNo
-  };
-  Constant *GEP = getGetElementPtr(
-      Ty, Constant::getNullValue(PointerType::getUnqual(Ty)), GEPIdx);
-  return getPtrToInt(GEP,
-                     Type::getInt64Ty(Ty->getContext()));
-}
-
 Constant *ConstantExpr::getCompare(unsigned short Predicate, Constant *C1,
                                    Constant *C2, bool OnlyIfReduced) {
   assert(C1->getType() == C2->getType() && "Op types should be identical!");
@@ -2439,23 +2417,6 @@ Constant *ConstantExpr::getCompare(unsigned short Predicate, Constant *C1,
   case CmpInst::ICMP_SLE:
     return getICmp(Predicate, C1, C2, OnlyIfReduced);
   }
-}
-
-Constant *ConstantExpr::getSelect(Constant *C, Constant *V1, Constant *V2,
-                                  Type *OnlyIfReducedTy) {
-  assert(!SelectInst::areInvalidOperands(C, V1, V2)&&"Invalid select operands");
-
-  if (Constant *SC = ConstantFoldSelectInstruction(C, V1, V2))
-    return SC;        // Fold common cases
-
-  if (OnlyIfReducedTy == V1->getType())
-    return nullptr;
-
-  Constant *ArgVec[] = { C, V1, V2 };
-  ConstantExprKeyType Key(Instruction::Select, ArgVec);
-
-  LLVMContextImpl *pImpl = C->getContext().pImpl;
-  return pImpl->ExprConstants.getOrCreate(V1->getType(), Key);
 }
 
 Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
@@ -3439,8 +3400,6 @@ Instruction *ConstantExpr::getAsInstruction(Instruction *InsertBefore) const {
   case Instruction::AddrSpaceCast:
     return CastInst::Create((Instruction::CastOps)getOpcode(), Ops[0],
                             getType(), "", InsertBefore);
-  case Instruction::Select:
-    return SelectInst::Create(Ops[0], Ops[1], Ops[2], "", InsertBefore);
   case Instruction::InsertElement:
     return InsertElementInst::Create(Ops[0], Ops[1], Ops[2], "", InsertBefore);
   case Instruction::ExtractElement:

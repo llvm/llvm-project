@@ -105,6 +105,7 @@ static const EnumEntry<codeview::SourceLanguage> SourceLanguages[] = {
     CV_ENUM_ENT(SourceLanguage, JScript), CV_ENUM_ENT(SourceLanguage, MSIL),
     CV_ENUM_ENT(SourceLanguage, HLSL),    CV_ENUM_ENT(SourceLanguage, D),
     CV_ENUM_ENT(SourceLanguage, Swift),   CV_ENUM_ENT(SourceLanguage, Rust),
+    CV_ENUM_ENT(SourceLanguage, ObjC),    CV_ENUM_ENT(SourceLanguage, ObjCpp),
 };
 
 static const EnumEntry<uint32_t> CompileSym2FlagNames[] = {

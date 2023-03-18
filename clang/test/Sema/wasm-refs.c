@@ -46,6 +46,8 @@ __externref_t *illegal_return_1();   // expected-error {{pointer to WebAssembly 
 __externref_t ***illegal_return_2(); // expected-error {{pointer to WebAssembly reference type is not allowed}}
 
 void varargs(int, ...);
+typedef void (*__funcref funcref_t)();
+typedef void (*__funcref __funcref funcref_fail_t)(); // expected-warning {{attribute '__funcref' is already applied}}
 
 __externref_t func(__externref_t ref) {
   &ref; // expected-error {{cannot take address of WebAssembly reference}}
@@ -66,6 +68,8 @@ __externref_t func(__externref_t ref) {
   _Alignof(__externref_t *);     // expected-error {{pointer to WebAssembly reference type is not allowed}}
   _Alignof(__externref_t ***);   // expected-error {{pointer to WebAssembly reference type is not allowed}};
   varargs(1, ref);               // expected-error {{cannot pass expression of type '__externref_t' to variadic function}}
+
+  funcref_t func = __builtin_wasm_ref_null_func(0); // expected-error {{too many arguments to function call, expected 0, have 1}}
 
   return ref;
 }

@@ -1815,8 +1815,7 @@ replaceArgumentUses(OutlinableRegion &Region,
 
   for (unsigned ArgIdx = 0; ArgIdx < Region.ExtractedFunction->arg_size();
        ArgIdx++) {
-    assert(Region.ExtractedArgToAgg.find(ArgIdx) !=
-               Region.ExtractedArgToAgg.end() &&
+    assert(Region.ExtractedArgToAgg.contains(ArgIdx) &&
            "No mapping from extracted to outlined?");
     unsigned AggArgIdx = Region.ExtractedArgToAgg.find(ArgIdx)->second;
     Argument *AggArg = Group.OutlinedFunction->getArg(AggArgIdx);

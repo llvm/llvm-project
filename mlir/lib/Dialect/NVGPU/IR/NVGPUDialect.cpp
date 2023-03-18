@@ -231,6 +231,9 @@ void MmaSparseSyncOp::build(::mlir::OpBuilder &odsBuilder,
 }
 
 LogicalResult MmaSparseSyncOp::verify() {
+  unsigned sparsitySelector = getSparsitySelector();
+  if (sparsitySelector > 1)
+    return emitOpError() << "sparsity selector should be 0 or 1";
   return verifyMmaSyncOp(this->getOperation(), getMatrixA(), getMatrixB(),
                          getMatrixC(), getMmaShapeAsArray(),
                          getOperation()->hasAttr(getTf32EnabledAttrName()),

@@ -211,7 +211,7 @@ public:
   /// by new MI in the index map.
   /// Return the SlotIndex of the new instruction.
   SlotIndex rematerializeAt(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI, unsigned DestReg,
+                            MachineBasicBlock::iterator MI, Register DestReg,
                             const Remat &RM, const TargetRegisterInfo &,
                             bool Late = false, unsigned SubIdx = 0,
                             MachineInstr *ReplaceIndexMI = nullptr);

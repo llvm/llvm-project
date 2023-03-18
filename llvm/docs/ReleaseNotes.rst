@@ -47,6 +47,11 @@ Non-comprehensive list of changes in this release
 Update on required toolchains to build LLVM
 -------------------------------------------
 
+With LLVM 17.x we raised the version requirement of CMake used to build LLVM.
+The new requirements are as follows:
+
+* CMake >= 3.20.0
+
 Changes to the LLVM IR
 ----------------------
 
@@ -55,6 +60,20 @@ Changes to the LLVM IR
 
 * The ``nofpclass`` attribute was introduced. This allows more
   optimizations around special floating point value comparisons.
+
+* The constant expression variants of the following instructions have been
+  removed:
+
+  * ``select``
+
+Changes to LLVM infrastructure
+------------------------------
+
+* The legacy optimization pipeline has been removed.
+
+* Alloca merging in the inliner has been removed, since it only worked with the
+  legacy inliner pass. Backend stack coloring should handle cases alloca
+  merging initially set out to handle.
 
 Changes to building LLVM
 ------------------------
@@ -161,6 +180,12 @@ Changes to the C API
   These belonged to the no longer supported legacy pass manager.
 * As part of the opaque pointer transition, ``LLVMGetElementType`` no longer
   gives the pointee type of a pointer type.
+* The following functions for creating constant expressions have been removed,
+  because the underlying constant expressions are no longer supported. Instead,
+  an instruction should be created using the ``LLVMBuildXYZ`` APIs, which will
+  constant fold the operands if possible and create an instruction otherwise:
+
+  * ``LLVMConstSelect``
 
 Changes to the FastISel infrastructure
 --------------------------------------
@@ -194,6 +219,9 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 * llvm-lib now supports the /def option for generating a Windows import library from a definition file.
+
+* Made significant changes to JSON output format of `llvm-readobj`/`llvm-readelf`
+  to improve correctness and clarity.
 
 Changes to LLDB
 ---------------------------------

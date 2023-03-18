@@ -1385,13 +1385,6 @@ value llvm_const_fpcast(value CV, value T) {
   return to_val(Value);
 }
 
-/* llvalue -> llvalue -> llvalue -> llvalue */
-value llvm_const_select(value Cond, value IfTrue, value IfFalse) {
-  LLVMValueRef Value =
-      LLVMConstSelect(Value_val(Cond), Value_val(IfTrue), Value_val(IfFalse));
-  return to_val(Value);
-}
-
 /* llvalue -> llvalue -> llvalue */
 value llvm_const_extractelement(value V, value I) {
   LLVMValueRef Value = LLVMConstExtractElement(Value_val(V), Value_val(I));

@@ -6706,8 +6706,8 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   BranchInst *BI = cast<BranchInst>(LoopLatch->getTerminator());
   if (BI->isUnconditional())
     return std::nullopt;
-  Value *TermCond = BI->getCondition();
-  if (!isa<ICmpInst>(TermCond) || !cast<ICmpInst>(TermCond)->isEquality()) {
+  auto *TermCond = dyn_cast<ICmpInst>(BI->getCondition());
+  if (!TermCond || !TermCond->isEquality()) {
     LLVM_DEBUG(dbgs() << "Cannot fold on branching condition that is not an "
                          "ICmpInst::eq / ICmpInst::ne\n");
     return std::nullopt;
@@ -6800,8 +6800,7 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
                            "terminating condition folding.\n");
       continue;
     }
-    const SCEV *S = SE.getSCEV(&PN);
-    const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S);
+    const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(&PN));
     // Only speculate on affine AddRec
     if (!AddRec || !AddRec->isAffine()) {
       LLVM_DEBUG(dbgs() << "SCEV of phi '" << PN

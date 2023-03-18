@@ -73,18 +73,6 @@ using namespace llvm;
 STATISTIC(NumInlined, "Number of functions inlined");
 STATISTIC(NumCallsDeleted, "Number of call sites deleted, not inlined");
 STATISTIC(NumDeleted, "Number of functions deleted because all callers found");
-STATISTIC(NumMergedAllocas, "Number of allocas merged together");
-
-/// Flag to disable manual alloca merging.
-///
-/// Merging of allocas was originally done as a stack-size saving technique
-/// prior to LLVM's code generator having support for stack coloring based on
-/// lifetime markers. It is now in the process of being removed. To experiment
-/// with disabling it and relying fully on lifetime marker based stack
-/// coloring, you can pass this flag to LLVM.
-static cl::opt<bool>
-    DisableInlinedAllocaMerging("disable-inlined-alloca-merging",
-                                cl::init(false), cl::Hidden);
 
 static cl::opt<int> IntraSCCCostMultiplier(
     "intra-scc-cost-multiplier", cl::init(2), cl::Hidden,
@@ -181,121 +169,6 @@ void LegacyInlinerBase::getAnalysisUsage(AnalysisUsage &AU) const {
 
 using InlinedArrayAllocasTy = DenseMap<ArrayType *, std::vector<AllocaInst *>>;
 
-/// Look at all of the allocas that we inlined through this call site.  If we
-/// have already inlined other allocas through other calls into this function,
-/// then we know that they have disjoint lifetimes and that we can merge them.
-///
-/// There are many heuristics possible for merging these allocas, and the
-/// different options have different tradeoffs.  One thing that we *really*
-/// don't want to hurt is SRoA: once inlining happens, often allocas are no
-/// longer address taken and so they can be promoted.
-///
-/// Our "solution" for that is to only merge allocas whose outermost type is an
-/// array type.  These are usually not promoted because someone is using a
-/// variable index into them.  These are also often the most important ones to
-/// merge.
-///
-/// A better solution would be to have real memory lifetime markers in the IR
-/// and not have the inliner do any merging of allocas at all.  This would
-/// allow the backend to do proper stack slot coloring of all allocas that
-/// *actually make it to the backend*, which is really what we want.
-///
-/// Because we don't have this information, we do this simple and useful hack.
-static void mergeInlinedArrayAllocas(Function *Caller, InlineFunctionInfo &IFI,
-                                     InlinedArrayAllocasTy &InlinedArrayAllocas,
-                                     int InlineHistory) {
-  SmallPtrSet<AllocaInst *, 16> UsedAllocas;
-
-  // When processing our SCC, check to see if the call site was inlined from
-  // some other call site.  For example, if we're processing "A" in this code:
-  //   A() { B() }
-  //   B() { x = alloca ... C() }
-  //   C() { y = alloca ... }
-  // Assume that C was not inlined into B initially, and so we're processing A
-  // and decide to inline B into A.  Doing this makes an alloca available for
-  // reuse and makes a callsite (C) available for inlining.  When we process
-  // the C call site we don't want to do any alloca merging between X and Y
-  // because their scopes are not disjoint.  We could make this smarter by
-  // keeping track of the inline history for each alloca in the
-  // InlinedArrayAllocas but this isn't likely to be a significant win.
-  if (InlineHistory != -1) // Only do merging for top-level call sites in SCC.
-    return;
-
-  // Loop over all the allocas we have so far and see if they can be merged with
-  // a previously inlined alloca.  If not, remember that we had it.
-  for (unsigned AllocaNo = 0, E = IFI.StaticAllocas.size(); AllocaNo != E;
-       ++AllocaNo) {
-    AllocaInst *AI = IFI.StaticAllocas[AllocaNo];
-
-    // Don't bother trying to merge array allocations (they will usually be
-    // canonicalized to be an allocation *of* an array), or allocations whose
-    // type is not itself an array (because we're afraid of pessimizing SRoA).
-    ArrayType *ATy = dyn_cast<ArrayType>(AI->getAllocatedType());
-    if (!ATy || AI->isArrayAllocation())
-      continue;
-
-    // Get the list of all available allocas for this array type.
-    std::vector<AllocaInst *> &AllocasForType = InlinedArrayAllocas[ATy];
-
-    // Loop over the allocas in AllocasForType to see if we can reuse one.  Note
-    // that we have to be careful not to reuse the same "available" alloca for
-    // multiple different allocas that we just inlined, we use the 'UsedAllocas'
-    // set to keep track of which "available" allocas are being used by this
-    // function.  Also, AllocasForType can be empty of course!
-    bool MergedAwayAlloca = false;
-    for (AllocaInst *AvailableAlloca : AllocasForType) {
-      Align Align1 = AI->getAlign();
-      Align Align2 = AvailableAlloca->getAlign();
-
-      // The available alloca has to be in the right function, not in some other
-      // function in this SCC.
-      if (AvailableAlloca->getParent() != AI->getParent())
-        continue;
-
-      // If the inlined function already uses this alloca then we can't reuse
-      // it.
-      if (!UsedAllocas.insert(AvailableAlloca).second)
-        continue;
-
-      // Otherwise, we *can* reuse it, RAUW AI into AvailableAlloca and declare
-      // success!
-      LLVM_DEBUG(dbgs() << "    ***MERGED ALLOCA: " << *AI
-                        << "\n\t\tINTO: " << *AvailableAlloca << '\n');
-
-      // Move affected dbg.declare calls immediately after the new alloca to
-      // avoid the situation when a dbg.declare precedes its alloca.
-      if (auto *L = LocalAsMetadata::getIfExists(AI))
-        if (auto *MDV = MetadataAsValue::getIfExists(AI->getContext(), L))
-          for (User *U : MDV->users())
-            if (DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(U))
-              DDI->moveBefore(AvailableAlloca->getNextNode());
-
-      AI->replaceAllUsesWith(AvailableAlloca);
-
-      if (Align1 > Align2)
-        AvailableAlloca->setAlignment(AI->getAlign());
-
-      AI->eraseFromParent();
-      MergedAwayAlloca = true;
-      ++NumMergedAllocas;
-      IFI.StaticAllocas[AllocaNo] = nullptr;
-      break;
-    }
-
-    // If we already nuked the alloca, we're done with it.
-    if (MergedAwayAlloca)
-      continue;
-
-    // If we were unable to merge away the alloca either because there are no
-    // allocas of the right type available or because we reused them all
-    // already, remember that this alloca came from an inlined function and mark
-    // it used so we don't reuse it for other allocas from this inline
-    // operation.
-    AllocasForType.push_back(AI);
-    UsedAllocas.insert(AI);
-  }
-}
-
 /// If it is possible to inline the specified call site,
 /// do so and update the CallGraph for this operation.
 ///
@@ -324,9 +197,6 @@ static InlineResult inlineCallIfPossible(
 
   if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No)
     ImportedFunctionsStats.recordInline(*Caller, *Callee);
-
-  if (!DisableInlinedAllocaMerging)
-    mergeInlinedArrayAllocas(Caller, IFI, InlinedArrayAllocas, InlineHistory);
 
   return IR; // success
 }
@@ -730,8 +600,7 @@ InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
                                 CGSCCInlineReplayFallback,
                                 {CGSCCInlineReplayFormat}},
           /*EmitRemarks=*/true,
-          InlineContext{LTOPhase,
-                              InlinePass::ReplayCGSCCInliner});
+          InlineContext{LTOPhase, InlinePass::ReplayCGSCCInliner});
 
     return *OwnedAdvisor;
   }
@@ -872,8 +741,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
 
       if (InlineHistoryID != -1 &&
           inlineHistoryIncludes(&Callee, InlineHistoryID, InlineHistory)) {
-        LLVM_DEBUG(dbgs() << "Skipping inlining due to history: "
-                          << F.getName() << " -> " << Callee.getName() << "\n");
+        LLVM_DEBUG(dbgs() << "Skipping inlining due to history: " << F.getName()
+                          << " -> " << Callee.getName() << "\n");
         setInlineRemark(*CB, "recursive");
         continue;
       }

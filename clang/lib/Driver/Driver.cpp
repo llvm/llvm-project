@@ -201,8 +201,9 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
       ClangExecutable(ClangExecutable), SysRoot(DEFAULT_SYSROOT),
       DriverTitle(Title), CCCPrintBindings(false), CCPrintOptions(false),
       CCLogDiagnostics(false), CCGenDiagnostics(false),
-      CCPrintProcessStats(false), TargetTriple(TargetTriple), Saver(Alloc),
-      PrependArg(nullptr), CheckInputsExist(true), ProbePrecompiled(true),
+      CCPrintProcessStats(false), CCPrintInternalStats(false),
+      TargetTriple(TargetTriple), Saver(Alloc), PrependArg(nullptr),
+      CheckInputsExist(true), ProbePrecompiled(true),
       SuppressMissingInputWarning(false), NumParallelJobs(1) {
   // Provide a sane fallback if no VFS is specified.
   if (!this->VFS)

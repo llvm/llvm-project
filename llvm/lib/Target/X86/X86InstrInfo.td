@@ -380,6 +380,9 @@ let RenderMethod = "addMemOperands", SuperClasses = [X86MemAsmOperand] in {
   def X86Mem512_RC256XOperand : AsmOperandClass { let Name = "Mem512_RC256X"; }
   def X86Mem256_RC512Operand  : AsmOperandClass { let Name = "Mem256_RC512"; }
   def X86Mem512_RC512Operand  : AsmOperandClass { let Name = "Mem512_RC512"; }
+  def X86Mem512_GR16Operand : AsmOperandClass { let Name = "Mem512_GR16"; }
+  def X86Mem512_GR32Operand : AsmOperandClass { let Name = "Mem512_GR32"; }
+  def X86Mem512_GR64Operand : AsmOperandClass { let Name = "Mem512_GR64"; }
 
   def X86SibMemOperand : AsmOperandClass { let Name = "SibMem"; }
 }
@@ -431,6 +434,11 @@ def f80mem  : X86MemOperand<"printtbytemem",  X86Mem80AsmOperand, 80>;
 def f128mem : X86MemOperand<"printxmmwordmem", X86Mem128AsmOperand, 128>;
 def f256mem : X86MemOperand<"printymmwordmem", X86Mem256AsmOperand, 256>;
 def f512mem : X86MemOperand<"printzmmwordmem", X86Mem512AsmOperand, 512>;
+
+// 32/64 mode specific mem operands
+def i512mem_GR16 : X86MemOperand<"printzmmwordmem", X86Mem512_GR16Operand, 512>;
+def i512mem_GR32 : X86MemOperand<"printzmmwordmem", X86Mem512_GR32Operand, 512>;
+def i512mem_GR64 : X86MemOperand<"printzmmwordmem", X86Mem512_GR64Operand, 512>;
 
 // Gather mem operands
 def vx64mem  : X86VMemOperand<VR128,  "printqwordmem",  X86Mem64_RC128Operand, 64>;

@@ -66,10 +66,8 @@ long long test_i64(char *fmt, ...) {
 //
 // i64 is 8-byte aligned, while this is within O32's stack alignment there's no
 // guarantee that the offset is still 8-byte aligned after earlier reads.
-// O32:   [[TMP1:%.+]] = ptrtoint ptr [[AP_CUR]] to i32
-// O32:   [[TMP2:%.+]] = add i32 [[TMP1]], 7
-// O32:   [[TMP3:%.+]] = and i32 [[TMP2]], -8
-// O32:   [[AP_CUR:%.+]] = inttoptr i32 [[TMP3]] to ptr
+// O32:   [[TMP1:%.+]] = getelementptr inbounds i8, ptr [[AP_CUR]], i32 7
+// O32:   [[AP_CUR:%.+]] = call ptr @llvm.ptrmask.p0.i32(ptr [[TMP1]], i32 -8)
 //
 // ALL:   [[AP_NEXT:%.+]] = getelementptr inbounds i8, ptr [[AP_CUR]], [[$INTPTR_T]] 8
 // ALL:   store ptr [[AP_NEXT]], ptr %va, align [[$PTRALIGN]]
@@ -135,15 +133,16 @@ int test_v4i32(char *fmt, ...) {
 //
 // Vectors are 16-byte aligned, however the O32 ABI has a maximum alignment of
 // 8-bytes since the base of the stack is 8-byte aligned.
-// O32:   [[TMP1:%.+]] = ptrtoint ptr [[AP_CUR]] to i32
-// O32:   [[TMP2:%.+]] = add i32 [[TMP1]], 7
-// O32:   [[TMP3:%.+]] = and i32 [[TMP2]], -8
-// O32:   [[AP_CUR:%.+]] = inttoptr i32 [[TMP3]] to ptr
-//
-// NEW:   [[TMP1:%.+]] = ptrtoint ptr [[AP_CUR]] to [[$INTPTR_T]]
-// NEW:   [[TMP2:%.+]] = add [[$INTPTR_T]] [[TMP1]], 15
-// NEW:   [[TMP3:%.+]] = and [[$INTPTR_T]] [[TMP2]], -16
-// NEW:   [[AP_CUR:%.+]] = inttoptr [[$INTPTR_T]] [[TMP3]] to ptr
+
+// O32:   [[TMP1:%.+]] = getelementptr inbounds i8, ptr [[AP_CUR]], i32 7
+// O32:   [[AP_CUR:%.+]] = call ptr @llvm.ptrmask.p0.i32(ptr [[TMP1]], i32 -8)
+
+// N32:   [[TMP1:%.+]] = getelementptr inbounds i8, ptr [[AP_CUR]], i32 15
+// N32:   [[AP_CUR:%.+]] = call ptr @llvm.ptrmask.p0.i32(ptr [[TMP1]], i32 -16)
+
+// N64:   [[TMP1:%.+]] = getelementptr inbounds i8, ptr [[AP_CUR]], i32 15
+// N64:   [[AP_CUR:%.+]] = call ptr @llvm.ptrmask.p0.i64(ptr [[TMP1]], i64 -16)
+
 //
 // ALL:   [[AP_NEXT:%.+]] = getelementptr inbounds i8, ptr [[AP_CUR]], [[$INTPTR_T]] 16
 // ALL:   store ptr [[AP_NEXT]], ptr %va, align [[$PTRALIGN]]
