@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -triple riscv32 -target-feature +v -target-feature +zfh -target-feature +xsfvcp -disable-O0-optnone -emit-llvm %s -o - | opt -S -passes=mem2reg | FileCheck --check-prefix=CHECK-RV32 %s
 // RUN: %clang_cc1 -triple riscv64 -target-feature +v -target-feature +zfh -target-feature +xsfvcp -disable-O0-optnone -emit-llvm %s -o - | opt -S -passes=mem2reg | FileCheck --check-prefix=CHECK-RV64 %s
 
-#include <riscv_vector.h>
+#include <sifive_vector.h>
 
 #define p27_26 (0b11)
 #define p26    (0b1)
