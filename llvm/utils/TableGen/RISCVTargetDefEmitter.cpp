@@ -27,7 +27,7 @@ using ISAInfoTy = llvm::Expected<std::unique_ptr<RISCVISAInfo>>;
 // get feature name from feature records instead of feature bits.
 static std::string getMArch(const Record &Rec) {
   std::vector<std::string> FeatureVector;
-  int XLen = 32;
+  unsigned XLen = 32;
 
   // Convert features to FeatureVector.
   for (auto *Feature : Rec.getValueAsListOfDefs("Features")) {
