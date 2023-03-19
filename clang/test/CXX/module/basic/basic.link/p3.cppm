@@ -3,7 +3,7 @@
 
 export module M;
 
-// CHECK-NOT: @_ZW1M1a ={{.*}}
+// CHECK: @_ZW1M1a ={{.*}} constant i32 1
 const int a = 1;
 // CHECK: @_ZW1M1b ={{.*}} constant i32 2
 export const int b = 2;
