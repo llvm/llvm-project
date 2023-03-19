@@ -48,6 +48,9 @@ Improvements and New Features
 - ``std::string_view`` now provides iterators that check for out-of-bounds accesses when the safe
   libc++ mode is enabled.
 
+- The performance of ``dynamic_cast`` on its hot paths is greatly improved and is as efficient as the
+  ``libsupc++`` implementation. Note that the performance improvements are shipped in ``libcxxabi``.
+
 Deprecations and Removals
 -------------------------
 
