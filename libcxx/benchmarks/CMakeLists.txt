@@ -176,6 +176,7 @@ set(BENCHMARK_TESTS
     algorithms/sort.bench.cpp
     algorithms/sort_heap.bench.cpp
     algorithms/stable_sort.bench.cpp
+    libcxxabi/dynamic_cast.bench.cpp
     allocation.bench.cpp
     deque.bench.cpp
     deque_iterator.bench.cpp
