@@ -159,7 +159,7 @@ public:
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
   // Calculate target-specific information for a set of outlining candidates.
-  outliner::OutlinedFunction getOutliningCandidateInfo(
+  std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
 
   // Return if/how a given MachineInstr should be outlined.
