@@ -24,12 +24,10 @@ struct WithADL {
   friend constexpr auto iter_move(WithADL&) { return 0; }
 };
 
-int main(int, char**) {
+void f() {
   int* noADL = nullptr;
   std::ranges::iter_move(noADL); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   WithADL adl;
   std::ranges::iter_move(adl); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-  return 0;
 }

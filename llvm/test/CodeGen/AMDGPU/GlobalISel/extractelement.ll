@@ -3061,7 +3061,7 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(ptr addrspace(1) %out, i32 %sel
 ; GPRIDX-NEXT:     gds_segment_byte_size = 0
 ; GPRIDX-NEXT:     kernarg_segment_byte_size = 12
 ; GPRIDX-NEXT:     workgroup_fbarrier_count = 0
-; GPRIDX-NEXT:     wavefront_sgpr_count = 9
+; GPRIDX-NEXT:     wavefront_sgpr_count = 13
 ; GPRIDX-NEXT:     workitem_vgpr_count = 3
 ; GPRIDX-NEXT:     reserved_vgpr_first = 0
 ; GPRIDX-NEXT:     reserved_vgpr_count = 0
@@ -3913,7 +3913,7 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GPRIDX-NEXT:     kernel_code_entry_byte_offset = 256
 ; GPRIDX-NEXT:     kernel_code_prefetch_byte_size = 0
 ; GPRIDX-NEXT:     granulated_workitem_vgpr_count = 0
-; GPRIDX-NEXT:     granulated_wavefront_sgpr_count = 0
+; GPRIDX-NEXT:     granulated_wavefront_sgpr_count = 1
 ; GPRIDX-NEXT:     priority = 0
 ; GPRIDX-NEXT:     float_mode = 240
 ; GPRIDX-NEXT:     priv = 0
@@ -3956,7 +3956,7 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GPRIDX-NEXT:     gds_segment_byte_size = 0
 ; GPRIDX-NEXT:     kernarg_segment_byte_size = 12
 ; GPRIDX-NEXT:     workgroup_fbarrier_count = 0
-; GPRIDX-NEXT:     wavefront_sgpr_count = 6
+; GPRIDX-NEXT:     wavefront_sgpr_count = 10
 ; GPRIDX-NEXT:     workitem_vgpr_count = 2
 ; GPRIDX-NEXT:     reserved_vgpr_first = 0
 ; GPRIDX-NEXT:     reserved_vgpr_count = 0
@@ -4259,7 +4259,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GPRIDX-NEXT:     kernel_code_entry_byte_offset = 256
 ; GPRIDX-NEXT:     kernel_code_prefetch_byte_size = 0
 ; GPRIDX-NEXT:     granulated_workitem_vgpr_count = 0
-; GPRIDX-NEXT:     granulated_wavefront_sgpr_count = 0
+; GPRIDX-NEXT:     granulated_wavefront_sgpr_count = 1
 ; GPRIDX-NEXT:     priority = 0
 ; GPRIDX-NEXT:     float_mode = 240
 ; GPRIDX-NEXT:     priv = 0
@@ -4302,7 +4302,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GPRIDX-NEXT:     gds_segment_byte_size = 0
 ; GPRIDX-NEXT:     kernarg_segment_byte_size = 12
 ; GPRIDX-NEXT:     workgroup_fbarrier_count = 0
-; GPRIDX-NEXT:     wavefront_sgpr_count = 7
+; GPRIDX-NEXT:     wavefront_sgpr_count = 11
 ; GPRIDX-NEXT:     workitem_vgpr_count = 3
 ; GPRIDX-NEXT:     reserved_vgpr_first = 0
 ; GPRIDX-NEXT:     reserved_vgpr_count = 0

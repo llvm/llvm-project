@@ -12,8 +12,6 @@
 
 #include <format>
 
-#include "test_macros.h"
-
 constexpr bool test() {
   // [format.parse.ctx]/11
   // Remarks: Call expressions where id >= num_args_ are not
@@ -24,9 +22,7 @@ constexpr bool test() {
   return true;
 }
 
-int main(int, char**) {
+void f() {
   // expected-error-re@+1 {{{{(static_assert|static assertion)}} expression is not an integral constant expression}}
   static_assert(test());
-
-  return 0;
 }

@@ -17,7 +17,75 @@ declare void @llvm.debugtrap() #1
 
 define amdgpu_kernel void @trap(ptr addrspace(1) nocapture readonly %arg0) {
 ; NOHSA-TRAP-GFX900-V2-LABEL: trap:
-; NOHSA-TRAP-GFX900-V2:       ; %bb.0:
+; NOHSA-TRAP-GFX900-V2:         .amd_kernel_code_t
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_code_version_major = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_code_version_minor = 2
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_machine_kind = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_machine_version_major = 9
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_machine_version_minor = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_machine_version_stepping = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     kernel_code_entry_byte_offset = 256
+; NOHSA-TRAP-GFX900-V2-NEXT:     kernel_code_prefetch_byte_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     granulated_workitem_vgpr_count = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     granulated_wavefront_sgpr_count = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     priority = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     float_mode = 240
+; NOHSA-TRAP-GFX900-V2-NEXT:     priv = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_dx10_clamp = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     debug_mode = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_ieee_mode = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_wgp_mode = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_mem_ordered = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_fwd_progress = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     user_sgpr_count = 4
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_trap_handler = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_workgroup_id_x = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_workgroup_id_y = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_workgroup_id_z = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_workgroup_info = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_vgpr_workitem_id = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_exception_msb = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     granulated_lds_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_exception = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_private_segment_buffer = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_dispatch_ptr = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_queue_ptr = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_kernarg_segment_ptr = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_dispatch_id = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_flat_scratch_init = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_private_segment_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_grid_workgroup_count_x = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_grid_workgroup_count_y = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_grid_workgroup_count_z = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_wavefront_size32 = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_ordered_append_gds = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     private_element_size = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     is_ptr64 = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     is_dynamic_callstack = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     is_debug_enabled = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     is_xnack_enabled = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     workitem_private_segment_byte_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     workgroup_group_segment_byte_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     gds_segment_byte_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     kernarg_segment_byte_size = 44
+; NOHSA-TRAP-GFX900-V2-NEXT:     workgroup_fbarrier_count = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     wavefront_sgpr_count = 8
+; NOHSA-TRAP-GFX900-V2-NEXT:     workitem_vgpr_count = 2
+; NOHSA-TRAP-GFX900-V2-NEXT:     reserved_vgpr_first = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     reserved_vgpr_count = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     reserved_sgpr_first = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     reserved_sgpr_count = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     debug_wavefront_private_segment_offset_sgpr = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     debug_private_segment_buffer_sgpr = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     kernarg_segment_alignment = 4
+; NOHSA-TRAP-GFX900-V2-NEXT:     group_segment_alignment = 4
+; NOHSA-TRAP-GFX900-V2-NEXT:     private_segment_alignment = 4
+; NOHSA-TRAP-GFX900-V2-NEXT:     wavefront_size = 6
+; NOHSA-TRAP-GFX900-V2-NEXT:     call_convention = -1
+; NOHSA-TRAP-GFX900-V2-NEXT:     runtime_loader_kernel_symbol = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:    .end_amd_kernel_code_t
+; NOHSA-TRAP-GFX900-V2-NEXT:  ; %bb.0:
 ; NOHSA-TRAP-GFX900-V2-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; NOHSA-TRAP-GFX900-V2-NEXT:    v_mov_b32_e32 v0, 0
 ; NOHSA-TRAP-GFX900-V2-NEXT:    v_mov_b32_e32 v1, 1
@@ -161,7 +229,7 @@ define amdgpu_kernel void @trap(ptr addrspace(1) nocapture readonly %arg0) {
 ; HSA-TRAP-GFX900-V2-NEXT:     kernel_code_entry_byte_offset = 256
 ; HSA-TRAP-GFX900-V2-NEXT:     kernel_code_prefetch_byte_size = 0
 ; HSA-TRAP-GFX900-V2-NEXT:     granulated_workitem_vgpr_count = 0
-; HSA-TRAP-GFX900-V2-NEXT:     granulated_wavefront_sgpr_count = 0
+; HSA-TRAP-GFX900-V2-NEXT:     granulated_wavefront_sgpr_count = 1
 ; HSA-TRAP-GFX900-V2-NEXT:     priority = 0
 ; HSA-TRAP-GFX900-V2-NEXT:     float_mode = 240
 ; HSA-TRAP-GFX900-V2-NEXT:     priv = 0
@@ -204,7 +272,7 @@ define amdgpu_kernel void @trap(ptr addrspace(1) nocapture readonly %arg0) {
 ; HSA-TRAP-GFX900-V2-NEXT:     gds_segment_byte_size = 0
 ; HSA-TRAP-GFX900-V2-NEXT:     kernarg_segment_byte_size = 8
 ; HSA-TRAP-GFX900-V2-NEXT:     workgroup_fbarrier_count = 0
-; HSA-TRAP-GFX900-V2-NEXT:     wavefront_sgpr_count = 8
+; HSA-TRAP-GFX900-V2-NEXT:     wavefront_sgpr_count = 12
 ; HSA-TRAP-GFX900-V2-NEXT:     workitem_vgpr_count = 2
 ; HSA-TRAP-GFX900-V2-NEXT:     reserved_vgpr_first = 0
 ; HSA-TRAP-GFX900-V2-NEXT:     reserved_vgpr_count = 0
@@ -261,7 +329,7 @@ define amdgpu_kernel void @trap(ptr addrspace(1) nocapture readonly %arg0) {
 ; HSA-NOTRAP-GFX900-V2-NEXT:     kernel_code_entry_byte_offset = 256
 ; HSA-NOTRAP-GFX900-V2-NEXT:     kernel_code_prefetch_byte_size = 0
 ; HSA-NOTRAP-GFX900-V2-NEXT:     granulated_workitem_vgpr_count = 0
-; HSA-NOTRAP-GFX900-V2-NEXT:     granulated_wavefront_sgpr_count = 0
+; HSA-NOTRAP-GFX900-V2-NEXT:     granulated_wavefront_sgpr_count = 1
 ; HSA-NOTRAP-GFX900-V2-NEXT:     priority = 0
 ; HSA-NOTRAP-GFX900-V2-NEXT:     float_mode = 240
 ; HSA-NOTRAP-GFX900-V2-NEXT:     priv = 0
@@ -304,7 +372,7 @@ define amdgpu_kernel void @trap(ptr addrspace(1) nocapture readonly %arg0) {
 ; HSA-NOTRAP-GFX900-V2-NEXT:     gds_segment_byte_size = 0
 ; HSA-NOTRAP-GFX900-V2-NEXT:     kernarg_segment_byte_size = 8
 ; HSA-NOTRAP-GFX900-V2-NEXT:     workgroup_fbarrier_count = 0
-; HSA-NOTRAP-GFX900-V2-NEXT:     wavefront_sgpr_count = 8
+; HSA-NOTRAP-GFX900-V2-NEXT:     wavefront_sgpr_count = 12
 ; HSA-NOTRAP-GFX900-V2-NEXT:     workitem_vgpr_count = 2
 ; HSA-NOTRAP-GFX900-V2-NEXT:     reserved_vgpr_first = 0
 ; HSA-NOTRAP-GFX900-V2-NEXT:     reserved_vgpr_count = 0
@@ -356,7 +424,75 @@ define amdgpu_kernel void @trap(ptr addrspace(1) nocapture readonly %arg0) {
 
 define amdgpu_kernel void @non_entry_trap(ptr addrspace(1) nocapture readonly %arg0) local_unnamed_addr {
 ; NOHSA-TRAP-GFX900-V2-LABEL: non_entry_trap:
-; NOHSA-TRAP-GFX900-V2:       ; %bb.0: ; %entry
+; NOHSA-TRAP-GFX900-V2:         .amd_kernel_code_t
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_code_version_major = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_code_version_minor = 2
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_machine_kind = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_machine_version_major = 9
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_machine_version_minor = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_machine_version_stepping = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     kernel_code_entry_byte_offset = 256
+; NOHSA-TRAP-GFX900-V2-NEXT:     kernel_code_prefetch_byte_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     granulated_workitem_vgpr_count = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     granulated_wavefront_sgpr_count = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     priority = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     float_mode = 240
+; NOHSA-TRAP-GFX900-V2-NEXT:     priv = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_dx10_clamp = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     debug_mode = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_ieee_mode = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_wgp_mode = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_mem_ordered = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_fwd_progress = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     user_sgpr_count = 4
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_trap_handler = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_workgroup_id_x = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_workgroup_id_y = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_workgroup_id_z = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_workgroup_info = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_vgpr_workitem_id = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_exception_msb = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     granulated_lds_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_exception = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_private_segment_buffer = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_dispatch_ptr = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_queue_ptr = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_kernarg_segment_ptr = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_dispatch_id = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_flat_scratch_init = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_private_segment_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_grid_workgroup_count_x = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_grid_workgroup_count_y = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_grid_workgroup_count_z = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_wavefront_size32 = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_ordered_append_gds = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     private_element_size = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     is_ptr64 = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     is_dynamic_callstack = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     is_debug_enabled = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     is_xnack_enabled = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     workitem_private_segment_byte_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     workgroup_group_segment_byte_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     gds_segment_byte_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     kernarg_segment_byte_size = 44
+; NOHSA-TRAP-GFX900-V2-NEXT:     workgroup_fbarrier_count = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     wavefront_sgpr_count = 8
+; NOHSA-TRAP-GFX900-V2-NEXT:     workitem_vgpr_count = 2
+; NOHSA-TRAP-GFX900-V2-NEXT:     reserved_vgpr_first = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     reserved_vgpr_count = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     reserved_sgpr_first = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     reserved_sgpr_count = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     debug_wavefront_private_segment_offset_sgpr = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     debug_private_segment_buffer_sgpr = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     kernarg_segment_alignment = 4
+; NOHSA-TRAP-GFX900-V2-NEXT:     group_segment_alignment = 4
+; NOHSA-TRAP-GFX900-V2-NEXT:     private_segment_alignment = 4
+; NOHSA-TRAP-GFX900-V2-NEXT:     wavefront_size = 6
+; NOHSA-TRAP-GFX900-V2-NEXT:     call_convention = -1
+; NOHSA-TRAP-GFX900-V2-NEXT:     runtime_loader_kernel_symbol = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:    .end_amd_kernel_code_t
+; NOHSA-TRAP-GFX900-V2-NEXT:  ; %bb.0: ; %entry
 ; NOHSA-TRAP-GFX900-V2-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; NOHSA-TRAP-GFX900-V2-NEXT:    v_mov_b32_e32 v0, 0
 ; NOHSA-TRAP-GFX900-V2-NEXT:    s_waitcnt lgkmcnt(0)
@@ -591,7 +727,7 @@ define amdgpu_kernel void @non_entry_trap(ptr addrspace(1) nocapture readonly %a
 ; HSA-TRAP-GFX900-V2-NEXT:     gds_segment_byte_size = 0
 ; HSA-TRAP-GFX900-V2-NEXT:     kernarg_segment_byte_size = 8
 ; HSA-TRAP-GFX900-V2-NEXT:     workgroup_fbarrier_count = 0
-; HSA-TRAP-GFX900-V2-NEXT:     wavefront_sgpr_count = 10
+; HSA-TRAP-GFX900-V2-NEXT:     wavefront_sgpr_count = 12
 ; HSA-TRAP-GFX900-V2-NEXT:     workitem_vgpr_count = 2
 ; HSA-TRAP-GFX900-V2-NEXT:     reserved_vgpr_first = 0
 ; HSA-TRAP-GFX900-V2-NEXT:     reserved_vgpr_count = 0
@@ -712,7 +848,7 @@ define amdgpu_kernel void @non_entry_trap(ptr addrspace(1) nocapture readonly %a
 ; HSA-NOTRAP-GFX900-V2-NEXT:     gds_segment_byte_size = 0
 ; HSA-NOTRAP-GFX900-V2-NEXT:     kernarg_segment_byte_size = 8
 ; HSA-NOTRAP-GFX900-V2-NEXT:     workgroup_fbarrier_count = 0
-; HSA-NOTRAP-GFX900-V2-NEXT:     wavefront_sgpr_count = 10
+; HSA-NOTRAP-GFX900-V2-NEXT:     wavefront_sgpr_count = 12
 ; HSA-NOTRAP-GFX900-V2-NEXT:     workitem_vgpr_count = 2
 ; HSA-NOTRAP-GFX900-V2-NEXT:     reserved_vgpr_first = 0
 ; HSA-NOTRAP-GFX900-V2-NEXT:     reserved_vgpr_count = 0
@@ -792,7 +928,75 @@ ret:
 
 define amdgpu_kernel void @debugtrap(ptr addrspace(1) nocapture readonly %arg0) {
 ; NOHSA-TRAP-GFX900-V2-LABEL: debugtrap:
-; NOHSA-TRAP-GFX900-V2:       ; %bb.0:
+; NOHSA-TRAP-GFX900-V2:         .amd_kernel_code_t
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_code_version_major = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_code_version_minor = 2
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_machine_kind = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_machine_version_major = 9
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_machine_version_minor = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     amd_machine_version_stepping = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     kernel_code_entry_byte_offset = 256
+; NOHSA-TRAP-GFX900-V2-NEXT:     kernel_code_prefetch_byte_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     granulated_workitem_vgpr_count = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     granulated_wavefront_sgpr_count = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     priority = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     float_mode = 240
+; NOHSA-TRAP-GFX900-V2-NEXT:     priv = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_dx10_clamp = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     debug_mode = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_ieee_mode = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_wgp_mode = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_mem_ordered = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_fwd_progress = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     user_sgpr_count = 2
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_trap_handler = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_workgroup_id_x = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_workgroup_id_y = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_workgroup_id_z = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_workgroup_info = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_vgpr_workitem_id = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_exception_msb = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     granulated_lds_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_exception = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_private_segment_buffer = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_dispatch_ptr = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_queue_ptr = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_kernarg_segment_ptr = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_dispatch_id = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_flat_scratch_init = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_private_segment_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_grid_workgroup_count_x = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_grid_workgroup_count_y = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_sgpr_grid_workgroup_count_z = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_wavefront_size32 = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     enable_ordered_append_gds = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     private_element_size = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     is_ptr64 = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     is_dynamic_callstack = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     is_debug_enabled = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     is_xnack_enabled = 1
+; NOHSA-TRAP-GFX900-V2-NEXT:     workitem_private_segment_byte_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     workgroup_group_segment_byte_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     gds_segment_byte_size = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     kernarg_segment_byte_size = 44
+; NOHSA-TRAP-GFX900-V2-NEXT:     workgroup_fbarrier_count = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     wavefront_sgpr_count = 6
+; NOHSA-TRAP-GFX900-V2-NEXT:     workitem_vgpr_count = 3
+; NOHSA-TRAP-GFX900-V2-NEXT:     reserved_vgpr_first = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     reserved_vgpr_count = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     reserved_sgpr_first = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     reserved_sgpr_count = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     debug_wavefront_private_segment_offset_sgpr = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     debug_private_segment_buffer_sgpr = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:     kernarg_segment_alignment = 4
+; NOHSA-TRAP-GFX900-V2-NEXT:     group_segment_alignment = 4
+; NOHSA-TRAP-GFX900-V2-NEXT:     private_segment_alignment = 4
+; NOHSA-TRAP-GFX900-V2-NEXT:     wavefront_size = 6
+; NOHSA-TRAP-GFX900-V2-NEXT:     call_convention = -1
+; NOHSA-TRAP-GFX900-V2-NEXT:     runtime_loader_kernel_symbol = 0
+; NOHSA-TRAP-GFX900-V2-NEXT:    .end_amd_kernel_code_t
+; NOHSA-TRAP-GFX900-V2-NEXT:  ; %bb.0:
 ; NOHSA-TRAP-GFX900-V2-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; NOHSA-TRAP-GFX900-V2-NEXT:    v_mov_b32_e32 v0, 0
 ; NOHSA-TRAP-GFX900-V2-NEXT:    v_mov_b32_e32 v1, 1
@@ -954,7 +1158,7 @@ define amdgpu_kernel void @debugtrap(ptr addrspace(1) nocapture readonly %arg0) 
 ; HSA-TRAP-GFX900-V2-NEXT:     kernel_code_entry_byte_offset = 256
 ; HSA-TRAP-GFX900-V2-NEXT:     kernel_code_prefetch_byte_size = 0
 ; HSA-TRAP-GFX900-V2-NEXT:     granulated_workitem_vgpr_count = 0
-; HSA-TRAP-GFX900-V2-NEXT:     granulated_wavefront_sgpr_count = 0
+; HSA-TRAP-GFX900-V2-NEXT:     granulated_wavefront_sgpr_count = 1
 ; HSA-TRAP-GFX900-V2-NEXT:     priority = 0
 ; HSA-TRAP-GFX900-V2-NEXT:     float_mode = 240
 ; HSA-TRAP-GFX900-V2-NEXT:     priv = 0
@@ -997,7 +1201,7 @@ define amdgpu_kernel void @debugtrap(ptr addrspace(1) nocapture readonly %arg0) 
 ; HSA-TRAP-GFX900-V2-NEXT:     gds_segment_byte_size = 0
 ; HSA-TRAP-GFX900-V2-NEXT:     kernarg_segment_byte_size = 8
 ; HSA-TRAP-GFX900-V2-NEXT:     workgroup_fbarrier_count = 0
-; HSA-TRAP-GFX900-V2-NEXT:     wavefront_sgpr_count = 6
+; HSA-TRAP-GFX900-V2-NEXT:     wavefront_sgpr_count = 10
 ; HSA-TRAP-GFX900-V2-NEXT:     workitem_vgpr_count = 3
 ; HSA-TRAP-GFX900-V2-NEXT:     reserved_vgpr_first = 0
 ; HSA-TRAP-GFX900-V2-NEXT:     reserved_vgpr_count = 0
@@ -1064,7 +1268,7 @@ define amdgpu_kernel void @debugtrap(ptr addrspace(1) nocapture readonly %arg0) 
 ; HSA-NOTRAP-GFX900-V2-NEXT:     kernel_code_entry_byte_offset = 256
 ; HSA-NOTRAP-GFX900-V2-NEXT:     kernel_code_prefetch_byte_size = 0
 ; HSA-NOTRAP-GFX900-V2-NEXT:     granulated_workitem_vgpr_count = 0
-; HSA-NOTRAP-GFX900-V2-NEXT:     granulated_wavefront_sgpr_count = 0
+; HSA-NOTRAP-GFX900-V2-NEXT:     granulated_wavefront_sgpr_count = 1
 ; HSA-NOTRAP-GFX900-V2-NEXT:     priority = 0
 ; HSA-NOTRAP-GFX900-V2-NEXT:     float_mode = 240
 ; HSA-NOTRAP-GFX900-V2-NEXT:     priv = 0
@@ -1107,7 +1311,7 @@ define amdgpu_kernel void @debugtrap(ptr addrspace(1) nocapture readonly %arg0) 
 ; HSA-NOTRAP-GFX900-V2-NEXT:     gds_segment_byte_size = 0
 ; HSA-NOTRAP-GFX900-V2-NEXT:     kernarg_segment_byte_size = 8
 ; HSA-NOTRAP-GFX900-V2-NEXT:     workgroup_fbarrier_count = 0
-; HSA-NOTRAP-GFX900-V2-NEXT:     wavefront_sgpr_count = 6
+; HSA-NOTRAP-GFX900-V2-NEXT:     wavefront_sgpr_count = 10
 ; HSA-NOTRAP-GFX900-V2-NEXT:     workitem_vgpr_count = 3
 ; HSA-NOTRAP-GFX900-V2-NEXT:     reserved_vgpr_first = 0
 ; HSA-NOTRAP-GFX900-V2-NEXT:     reserved_vgpr_count = 0

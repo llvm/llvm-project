@@ -69,7 +69,7 @@ catch:                                            ; preds = %catch.dispatch
 ; Test invoke instruction with filters (functions with throw(...) declaration)
 ; Currently we don't support exception specifications correctly in JS glue code,
 ; so we ignore all filters here.
-; See https://bugs.llvm.org/show_bug.cgi?id=50396.
+; See https://github.com/llvm/llvm-project/issues/49740.
 define void @filter() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @filter(
 entry:

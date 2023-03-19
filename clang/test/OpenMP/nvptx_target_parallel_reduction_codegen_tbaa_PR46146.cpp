@@ -434,7 +434,7 @@ void test() {
 // CHECK1-NEXT:    [[TMP34:%.*]] = load ptr, ptr [[TMP33]], align 8
 // CHECK1-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP4]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP36:%.*]] = load ptr, ptr [[TMP35]], align 8
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP36]], ptr align 4 [[TMP34]], i64 8, i1 false), !tbaa.struct !21
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP36]], ptr align 4 [[TMP34]], i64 8, i1 false), !tbaa.struct [[TBAA_STRUCT21:![0-9]+]]
 // CHECK1-NEXT:    br label [[IFCONT6:%.*]]
 // CHECK1:       else5:
 // CHECK1-NEXT:    br label [[IFCONT6]]
@@ -939,7 +939,7 @@ void test() {
 // CHECK1-NEXT:    [[TMP41:%.*]] = load ptr, ptr [[TMP40]], align 8
 // CHECK1-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP4]], i64 0, i64 0
 // CHECK1-NEXT:    [[TMP43:%.*]] = load ptr, ptr [[TMP42]], align 8
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP43]], ptr align 8 [[TMP41]], i64 16, i1 false), !tbaa.struct !27
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP43]], ptr align 8 [[TMP41]], i64 16, i1 false), !tbaa.struct [[TBAA_STRUCT27:![0-9]+]]
 // CHECK1-NEXT:    br label [[IFCONT6:%.*]]
 // CHECK1:       else5:
 // CHECK1-NEXT:    br label [[IFCONT6]]

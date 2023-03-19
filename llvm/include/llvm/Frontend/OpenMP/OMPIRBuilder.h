@@ -988,6 +988,7 @@ public:
   /// Generate a target region entry call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
+  /// \param AllocaIP The insertion point to be used for alloca instructions.
   /// \param Return Return value of the created function returned by reference.
   /// \param DeviceID Identifier for the device via the 'device' clause.
   /// \param NumTeams Numer of teams for the region via the 'num_teams' clause
@@ -995,7 +996,8 @@ public:
   /// \param NumThreads Number of threads via the 'thread_limit' clause.
   /// \param HostPtr Pointer to the host-side pointer of the target kernel.
   /// \param KernelArgs Array of arguments to the kernel.
-  InsertPointTy emitTargetKernel(const LocationDescription &Loc, Value *&Return,
+  InsertPointTy emitTargetKernel(const LocationDescription &Loc,
+                                 InsertPointTy AllocaIP, Value *&Return,
                                  Value *Ident, Value *DeviceID, Value *NumTeams,
                                  Value *NumThreads, Value *HostPtr,
                                  ArrayRef<Value *> KernelArgs);

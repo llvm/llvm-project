@@ -92,6 +92,9 @@ def PrintIRPass : Pass<"print-ir"> {
     purposes to inspect the IR at a specific point in the pipeline.
   }];
   let constructor = "mlir::createPrintIRPass()";
+  let options = [
+    Option<"label", "label", "std::string", /*default=*/"", "Label">,
+  ];
 }
 
 def GenerateRuntimeVerification : Pass<"generate-runtime-verification"> {

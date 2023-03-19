@@ -135,7 +135,7 @@ void __throw_bad_any_cast()
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw bad_any_cast();
 #else
-    std::__libcpp_verbose_abort("bad_any_cast was thrown in -fno-exceptions mode");
+    _LIBCPP_VERBOSE_ABORT("bad_any_cast was thrown in -fno-exceptions mode");
 #endif
 }
 

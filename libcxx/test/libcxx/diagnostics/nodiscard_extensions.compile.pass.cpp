@@ -183,12 +183,10 @@ void test_nontemplate_cast_wrappers()
 #endif
 }
 
-int main(int, char**) {
+void tests() {
   test_algorithms();
 
   int i = 42;
   test_template_cast_wrappers(i, std::move(i));
   test_nontemplate_cast_wrappers();
-
-  return 0;
 }

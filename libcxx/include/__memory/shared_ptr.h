@@ -137,7 +137,7 @@ void __throw_bad_weak_ptr()
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw bad_weak_ptr();
 #else
-    std::__libcpp_verbose_abort("bad_weak_ptr was thrown in -fno-exceptions mode");
+    _LIBCPP_VERBOSE_ABORT("bad_weak_ptr was thrown in -fno-exceptions mode");
 #endif
 }
 

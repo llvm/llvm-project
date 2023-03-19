@@ -584,6 +584,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // CHECK2-NEXT:    [[N_CASTED7:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTOFFLOAD_BASEPTRS8:%.*]] = alloca [3 x ptr], align 8
 // CHECK2-NEXT:    [[DOTOFFLOAD_PTRS9:%.*]] = alloca [3 x ptr], align 8
@@ -591,6 +592,7 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    [[_TMP11:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_12:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_13:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[KERNEL_ARGS18:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK2-NEXT:    store ptr [[G]], ptr [[G_ADDR]], align 8
 // CHECK2-NEXT:    store i32 1000, ptr [[N]], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[N]], align 4
@@ -650,7 +652,6 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    [[TMP28:%.*]] = zext i32 [[ADD]] to i64
 // CHECK2-NEXT:    [[TMP29:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP23]], 0
 // CHECK2-NEXT:    [[TMP30:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP24]], 0
-// CHECK2-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // CHECK2-NEXT:    [[TMP31:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
 // CHECK2-NEXT:    store i32 2, ptr [[TMP31]], align 4
 // CHECK2-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
@@ -718,7 +719,6 @@ int target_teams_fun(int *g){
 // CHECK2-NEXT:    [[TMP62:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_13]], align 4
 // CHECK2-NEXT:    [[ADD17:%.*]] = add nsw i32 [[TMP62]], 1
 // CHECK2-NEXT:    [[TMP63:%.*]] = zext i32 [[ADD17]] to i64
-// CHECK2-NEXT:    [[KERNEL_ARGS18:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK2-NEXT:    [[TMP64:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS18]], i32 0, i32 0
 // CHECK2-NEXT:    store i32 2, ptr [[TMP64]], align 4
 // CHECK2-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS18]], i32 0, i32 1
@@ -1233,6 +1233,7 @@ int target_teams_fun(int *g){
 // CHECK4-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // CHECK4-NEXT:    [[N_CASTED7:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[DOTOFFLOAD_BASEPTRS8:%.*]] = alloca [3 x ptr], align 4
 // CHECK4-NEXT:    [[DOTOFFLOAD_PTRS9:%.*]] = alloca [3 x ptr], align 4
@@ -1240,6 +1241,7 @@ int target_teams_fun(int *g){
 // CHECK4-NEXT:    [[_TMP11:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[DOTCAPTURE_EXPR_12:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[DOTCAPTURE_EXPR_13:%.*]] = alloca i32, align 4
+// CHECK4-NEXT:    [[KERNEL_ARGS18:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK4-NEXT:    store ptr [[G]], ptr [[G_ADDR]], align 4
 // CHECK4-NEXT:    store i32 1000, ptr [[N]], align 4
 // CHECK4-NEXT:    [[TMP0:%.*]] = load i32, ptr [[N]], align 4
@@ -1299,7 +1301,6 @@ int target_teams_fun(int *g){
 // CHECK4-NEXT:    [[TMP28:%.*]] = zext i32 [[ADD]] to i64
 // CHECK4-NEXT:    [[TMP29:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP23]], 0
 // CHECK4-NEXT:    [[TMP30:%.*]] = insertvalue [3 x i32] zeroinitializer, i32 [[TMP24]], 0
-// CHECK4-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // CHECK4-NEXT:    [[TMP31:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
 // CHECK4-NEXT:    store i32 2, ptr [[TMP31]], align 4
 // CHECK4-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
@@ -1367,7 +1368,6 @@ int target_teams_fun(int *g){
 // CHECK4-NEXT:    [[TMP62:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_13]], align 4
 // CHECK4-NEXT:    [[ADD17:%.*]] = add nsw i32 [[TMP62]], 1
 // CHECK4-NEXT:    [[TMP63:%.*]] = zext i32 [[ADD17]] to i64
-// CHECK4-NEXT:    [[KERNEL_ARGS18:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK4-NEXT:    [[TMP64:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS18]], i32 0, i32 0
 // CHECK4-NEXT:    store i32 2, ptr [[TMP64]], align 4
 // CHECK4-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS18]], i32 0, i32 1

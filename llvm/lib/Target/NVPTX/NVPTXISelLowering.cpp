@@ -2666,7 +2666,9 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
         SmallVector<EVT, 16> vtparts;
 
         ComputePTXValueVTs(*this, DAG.getDataLayout(), Ty, vtparts);
-        assert(vtparts.size() > 0 && "empty aggregate type not expected");
+        if (vtparts.empty())
+          report_fatal_error("Empty parameter types are not supported");
+
         for (unsigned parti = 0, parte = vtparts.size(); parti != parte;
              ++parti) {
           InVals.push_back(DAG.getNode(ISD::UNDEF, dl, Ins[InsIdx].VT));
@@ -2703,7 +2705,9 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       SmallVector<EVT, 16> VTs;
       SmallVector<uint64_t, 16> Offsets;
       ComputePTXValueVTs(*this, DL, Ty, VTs, &Offsets, 0);
-      assert(VTs.size() > 0 && "Unexpected empty type.");
+      if (VTs.empty())
+        report_fatal_error("Empty parameter types are not supported");
+
       auto VectorInfo =
           VectorizePTXValueVTs(VTs, Offsets, DL.getABITypeAlign(Ty));
 
