@@ -1048,9 +1048,9 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
       )cpp",
       // Recursive UsingValueDecl
       R"cpp(
-        template <int> class $Class_def[[X]] {
-          template <int> class $Class_def[[Y]] {
-            using $Class[[Y]]<0>::$Unknown_dependentName[[xxx]];
+        template $Bracket[[<]]int$Bracket[[>]] class $Class_def[[X]] {
+          template $Bracket[[<]]int$Bracket[[>]] class $Class_def[[Y]] {
+            using $Class[[Y]]$Bracket[[<]]0$Bracket[[>]]::$Unknown_dependentName[[xxx]];
           };
         };
     )cpp"};
