@@ -1,4 +1,4 @@
-# TestSwiftMoveFunction.py
+# TestSwiftConsumeOperator.py
 #
 # This source file is part of the Swift.org open source project
 #
@@ -11,7 +11,7 @@
 # ------------------------------------------------------------------------------
 """
 Check that we properly show variables at various points of the CFG while
-stepping with the move function.
+stepping with the consume operator.
 """
 import lldb
 from lldbsuite.test.lldbtest import *
@@ -24,16 +24,16 @@ import unittest2
 def stderr_print(line):
     sys.stderr.write(line + "\n")
 
-class TestSwiftMoveFunctionType(TestBase):
+class TestSwiftConsumeOperatorType(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     # Skip on aarch64 linux: rdar://91005071
     @skipIf(archs=['aarch64'], oslist=['linux'])
     @swiftTest
-    def test_swift_move_function(self):
+    def test_swift_consume_operator(self):
         """Check that we properly show variables at various points of the CFG while
-        stepping with the move function.
+        stepping with the consume operator.
         """
         self.build()
 
@@ -82,7 +82,7 @@ class TestSwiftMoveFunctionType(TestBase):
 
         # Go to breakpoint 3. k should no longer be valid.
         self.process.Continue()
-        self.assertIsNone(varK.value, "K is live but was moved?!")
+        self.assertIsNone(varK.value, "K is live but was consumed?!")
 
         # Run so we hit the next breakpoint to jump to the next test's
         # breakpoint.
@@ -99,7 +99,7 @@ class TestSwiftMoveFunctionType(TestBase):
 
         # Go to breakpoint 3. We invalidated k
         self.process.Continue()
-        self.assertIsNone(varK.value, "K is live but was moved?!")
+        self.assertIsNone(varK.value, "K is live but was consumed?!")
 
         # Go to the last breakpoint and make sure that k is reinitialized
         # properly.
@@ -138,7 +138,7 @@ class TestSwiftMoveFunctionType(TestBase):
 
         # Go to breakpoint 3. K was invalidated.
         self.process.Continue()
-        self.assertIsNone(varK.value, "K is live but was moved?!")
+        self.assertIsNone(varK.value, "K is live but was consumed?!")
 
         # Go to the last breakpoint and make sure that k is reinitialized
         # properly.
@@ -159,7 +159,7 @@ class TestSwiftMoveFunctionType(TestBase):
 
         # Go to breakpoint 3. k should no longer be valid.
         self.process.Continue()
-        #self.assertIsNone(varK.value, "K is live but was moved?!")
+        #self.assertIsNone(varK.value, "K is live but was consumed?!")
 
         # Run so we hit the next breakpoint to jump to the next test's
         # breakpoint.
@@ -176,7 +176,7 @@ class TestSwiftMoveFunctionType(TestBase):
 
         # Go to breakpoint 3. We invalidated k
         self.process.Continue()
-        self.assertIsNone(varK.value, "K is live but was moved?!")
+        self.assertIsNone(varK.value, "K is live but was consumed?!")
 
         # Go to the last breakpoint and make sure that k is reinitialized
         # properly.
@@ -217,7 +217,7 @@ class TestSwiftMoveFunctionType(TestBase):
 
         # Go to breakpoint 3. K was invalidated.
         self.process.Continue()
-        self.assertIsNone(varK.value, "K is live but was moved?!")
+        self.assertIsNone(varK.value, "K is live but was consumed?!")
 
         # Go to the last breakpoint and make sure that k is reinitialized
         # properly.
@@ -296,13 +296,13 @@ class TestSwiftMoveFunctionType(TestBase):
         # Now we have executed the move and we are about to run code using
         # m. Make sure that K is not available!
         self.assertEqual(varK.unsigned, 0,
-                         "varK was already moved! Should be nullptr")
+                         "varK was already consumed! Should be nullptr")
         self.process.Continue()
 
         # We are now out of the conditional lexical block on the line of code
         # that redefines k. k should still be not available.
         self.assertEqual(varK.unsigned, 0,
-                         "varK was already moved! Should be nullptr")
+                         "varK was already consumed! Should be nullptr")
         self.process.Continue()
 
         # Ok, we have now reinit k and are about to call a method on it. We
@@ -328,7 +328,7 @@ class TestSwiftMoveFunctionType(TestBase):
         # Now we have executed the move and we are about to reinit k but have
         # not yet. Make sure we are not available!
         self.assertEqual(varK.unsigned, 0,
-                         "varK was already moved! Should be nullptr")
+                         "varK was already consumed! Should be nullptr")
         self.process.Continue()
 
         # We are now still inside the conditional part of the code, but have
@@ -361,7 +361,7 @@ class TestSwiftMoveFunctionType(TestBase):
         # line. Since this is reachable from the move and we haven't reinit yet,
         # k should not be available.
         self.assertEqual(varK.unsigned, 0,
-                         "varK was already moved! Should be nullptr")
+                         "varK was already consumed! Should be nullptr")
         self.process.Continue()
 
         # Ok, we have now reinit k and are about to call a method on it. We
