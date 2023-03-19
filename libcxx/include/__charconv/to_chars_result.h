@@ -11,7 +11,7 @@
 #define _LIBCPP___CHARCONV_TO_CHARS_RESULT_H
 
 #include <__config>
-#include <__errc>
+#include <__system_error/errc.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
