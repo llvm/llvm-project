@@ -147,7 +147,8 @@ bool BufferPlacementTransformationBase::isLoop(Operation *op) {
 //===----------------------------------------------------------------------===//
 
 FailureOr<memref::GlobalOp>
-bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment) {
+bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment,
+                            Attribute memorySpace) {
   auto type = constantOp.getType().cast<RankedTensorType>();
   auto moduleOp = constantOp->getParentOfType<ModuleOp>();
   if (!moduleOp)
@@ -184,10 +185,13 @@ bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment) {
                     : IntegerAttr();
 
   BufferizeTypeConverter typeConverter;
+  auto memrefType = typeConverter.convertType(type).cast<MemRefType>();
+  if (memorySpace)
+    memrefType = MemRefType::Builder(memrefType).setMemorySpace(memorySpace);
   auto global = globalBuilder.create<memref::GlobalOp>(
       constantOp.getLoc(), (Twine("__constant_") + os.str()).str(),
       /*sym_visibility=*/globalBuilder.getStringAttr("private"),
-      /*type=*/typeConverter.convertType(type).cast<MemRefType>(),
+      /*type=*/memrefType,
       /*initial_value=*/constantOp.getValue().cast<ElementsAttr>(),
       /*constant=*/true,
       /*alignment=*/memrefAlignment);
