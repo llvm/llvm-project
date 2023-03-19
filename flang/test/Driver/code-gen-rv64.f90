@@ -12,6 +12,8 @@
 ! RUN: llvm-readobj -h %t.o | FileCheck %s
 
 ! If Flang failed to emit target-feature info, then Flags will be 0x0.
-! 0x5 means set EF_RISCV_RVC (0x1) and EF_RISCV_FLOAT_ABI_DOUBLE (0x4)
-! CHECK: Flags: 0x5, RVC, double-float ABI
+! CHECK: Flags [ (0x5)
+! CHECK-NEXT: EF_RISCV_FLOAT_ABI_DOUBLE (0x4)
+! CHECK-NEXT: EF_RISCV_RVC (0x1)
+! CHECK-NEXT: ]
 end program
