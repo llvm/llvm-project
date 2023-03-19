@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/BufferUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 
@@ -26,10 +27,11 @@ struct ConstantOpInterface
                           const BufferizationOptions &options) const {
     auto constantOp = cast<arith::ConstantOp>(op);
 
-    // TODO: Implement memory space for this op. E.g., by adding a memory_space
-    // attribute to ConstantOp.
-    if (options.defaultMemorySpace != Attribute())
-      return op->emitError("memory space not implemented yet");
+    Attribute memorySpace;
+    if (options.defaultMemorySpace.has_value())
+      memorySpace = *options.defaultMemorySpace;
+    else
+      return constantOp->emitError("could not infer memory space");
 
     // Only ranked tensors are supported.
     if (!constantOp.getType().isa<RankedTensorType>())
@@ -43,7 +45,7 @@ struct ConstantOpInterface
     // Create global memory segment and replace tensor with memref pointing to
     // that memory segment.
     FailureOr<memref::GlobalOp> globalOp =
-        getGlobalFor(constantOp, options.bufferAlignment);
+        getGlobalFor(constantOp, options.bufferAlignment, memorySpace);
     if (failed(globalOp))
       return failure();
     memref::GlobalOp globalMemref = *globalOp;
