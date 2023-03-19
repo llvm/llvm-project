@@ -71,6 +71,8 @@ $content
 </html>
 """
 
+FILE_URI_PREFIX = "/file/"
+
 class SymcovData:
     def __init__(self, symcov_json):
         self.covered_points = frozenset(symcov_json['covered-points'])
@@ -129,7 +131,7 @@ class ServerHandler(http.server.BaseHTTPRequestHandler):
     src_path = None
 
     def do_GET(self):
-        norm_path = os.path.normpath(urllib.parse.unquote(self.path[1:]))
+        norm_path = os.path.normpath(urllib.parse.unquote(self.path[len(FILE_URI_PREFIX):]))
         if self.path == '/':
             self.send_response(200)
             self.send_header("Content-type", "text/html; charset=utf-8")
@@ -141,8 +143,9 @@ class ServerHandler(http.server.BaseHTTPRequestHandler):
                 if not file_coverage:
                     continue
                 filelist.append(
-                        "<tr><td><a href=\"./{name}\">{name}</a></td>"
+                        "<tr><td><a href=\"{prefix}{name}\">{name}</a></td>"
                         "<td>{coverage}%</td></tr>".format(
+                            prefix=FILE_URI_PREFIX,
                             name=html.escape(filename, quote=True), 
                             coverage=format_pct(file_coverage)))
 
