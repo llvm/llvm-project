@@ -1329,6 +1329,13 @@ void JITDylib::setLinkOrder(JITDylibSearchOrder NewLinkOrder,
   });
 }
 
+void JITDylib::addToLinkOrder(const JITDylibSearchOrder &NewLinks) {
+  ES.runSessionLocked([&]() {
+    LinkOrder.reserve(LinkOrder.size() + NewLinks.size());
+    llvm::append_range(LinkOrder, NewLinks);
+  });
+}
+
 void JITDylib::addToLinkOrder(JITDylib &JD, JITDylibLookupFlags JDLookupFlags) {
   ES.runSessionLocked([&]() { LinkOrder.push_back({&JD, JDLookupFlags}); });
 }
