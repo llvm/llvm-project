@@ -10,9 +10,8 @@
 #define _LIBCPP___EXPECTED_BAD_EXPECTED_ACCESS_H
 
 #include <__config>
+#include <__exception/exception.h>
 #include <__utility/move.h>
-
-#include <exception>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

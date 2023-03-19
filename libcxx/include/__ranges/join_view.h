@@ -22,6 +22,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/iterator_with_data.h>
 #include <__iterator/segmented_iterator.h>
+#include <__memory/addressof.h>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>

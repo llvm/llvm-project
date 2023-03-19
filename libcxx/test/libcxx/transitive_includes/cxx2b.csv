@@ -151,7 +151,6 @@ exception version
 execution version
 expected cstddef
 expected cstdlib
-expected exception
 expected initializer_list
 expected new
 expected version
@@ -277,7 +276,6 @@ functional cstddef
 functional cstdint
 functional cstdlib
 functional cstring
-functional exception
 functional initializer_list
 functional iosfwd
 functional limits
@@ -293,7 +291,6 @@ future cstddef
 future cstdint
 future cstdlib
 future cstring
-future exception
 future initializer_list
 future iosfwd
 future limits
@@ -420,7 +417,6 @@ mutex typeinfo
 mutex version
 new cstddef
 new cstdlib
-new exception
 new version
 numbers version
 numeric cmath
@@ -548,7 +544,6 @@ stack deque
 stack initializer_list
 stack version
 stdexcept cstdlib
-stdexcept exception
 stdexcept iosfwd
 streambuf cstdint
 streambuf ios
@@ -618,7 +613,6 @@ typeindex version
 typeinfo cstddef
 typeinfo cstdint
 typeinfo cstdlib
-typeinfo exception
 unordered_map cmath
 unordered_map compare
 unordered_map cstddef
@@ -663,7 +657,6 @@ variant compare
 variant cstddef
 variant cstdint
 variant cstring
-variant exception
 variant initializer_list
 variant limits
 variant new
