@@ -308,7 +308,6 @@ libcxx/include/cuchar
 libcxx/include/__debug
 libcxx/include/__debug_utils/randomize_range.h
 libcxx/include/deque
-libcxx/include/__errc
 libcxx/include/errno.h
 libcxx/include/execution
 libcxx/include/expected
@@ -611,6 +610,7 @@ libcxx/include/__support/newlib/xlocale.h
 libcxx/include/__support/solaris/xlocale.h
 libcxx/include/__support/win32/locale_win32.h
 libcxx/include/__support/xlocale/__nop_locale_mgmt.h
+libcxx/include/__system_error/errc.h
 libcxx/include/__system_error/error_category.h
 libcxx/include/__system_error/error_code.h
 libcxx/include/__system_error/error_condition.h

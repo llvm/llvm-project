@@ -299,7 +299,6 @@ ext/hash_set limits
 ext/hash_set new
 ext/hash_set string
 ext/hash_set type_traits
-filesystem cerrno
 filesystem compare
 filesystem concepts
 filesystem cstddef

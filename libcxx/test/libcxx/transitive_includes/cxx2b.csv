@@ -201,7 +201,6 @@ ext/hash_set initializer_list
 ext/hash_set limits
 ext/hash_set new
 ext/hash_set string
-filesystem cerrno
 filesystem compare
 filesystem cstddef
 filesystem cstdint
