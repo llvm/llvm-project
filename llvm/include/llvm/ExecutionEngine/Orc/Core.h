@@ -1054,6 +1054,10 @@ public:
   void setLinkOrder(JITDylibSearchOrder NewSearchOrder,
                     bool LinkAgainstThisJITDylibFirst = true);
 
+  /// Append the given JITDylibSearchOrder to the link order for this
+  /// JITDylib.
+  void addToLinkOrder(const JITDylibSearchOrder &NewLinks);
+
   /// Add the given JITDylib to the link order for definitions in this
   /// JITDylib.
   ///
