@@ -544,6 +544,8 @@ struct AbiTagAttr : Node {
 
   template<typename Fn> void match(Fn F) const { F(Base, Tag); }
 
+  StringView getBaseName() const override { return Base->getBaseName(); }
+
   void printLeft(OutputBuffer &OB) const override {
     Base->printLeft(OB);
     OB += "[abi:";

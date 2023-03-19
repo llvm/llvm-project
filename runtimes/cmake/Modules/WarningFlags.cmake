@@ -12,7 +12,6 @@ function(cxx_add_warning_flags target enable_werror enable_pedantic)
   endif()
   # TODO: Should -Wconversion be enabled?
   target_add_compile_flags_if_supported(${target} PRIVATE
-      -Wall
       -Wextra
       -Wnewline-eof
       -Wshadow
