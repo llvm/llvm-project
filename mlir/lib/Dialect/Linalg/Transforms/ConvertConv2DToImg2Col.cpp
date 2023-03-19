@@ -35,11 +35,16 @@ static Value createAdd(Location loc, Value x, Value y, OpBuilder &builder) {
   return builder.create<arith::AddFOp>(loc, x, y);
 }
 
-static Value createMul(Location loc, Value x, Value y, OpBuilder &builder) {
-  bool isInt = x.getType().isa<IntegerType>();
-  if (isInt)
-    return builder.create<arith::MulIOp>(loc, x, y);
-  return builder.create<arith::MulFOp>(loc, x, y);
+static Value createMul(Location loc, Value x, Value y, Type accType,
+                       OpBuilder &builder) {
+  // Linalg named ops specify signed extend for named ops.
+  Value xConvert =
+      convertScalarToDtype(builder, loc, x, accType, /*isUnsignedCast=*/false);
+  Value yConvert =
+      convertScalarToDtype(builder, loc, y, accType, /*isUnsignedCast=*/false);
+  if (accType.isa<IntegerType>())
+    return builder.create<arith::MulIOp>(loc, xConvert, yConvert);
+  return builder.create<arith::MulFOp>(loc, xConvert, yConvert);
 }
 
 // Delinearizes the given composite `index` by the basis specified in `factors`.
@@ -185,7 +190,8 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNhwcHwcfOp convOp) {
       /*outputs=*/ValueRange{reshapedOutput},
       ArrayRef<AffineMap>{lhsMap, rhsMap, resultMap}, genericIterators,
       [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
-        Value mul = createMul(loc, args[0], args[1], nestedBuilder);
+        Value mul =
+            createMul(loc, args[0], args[1], args[2].getType(), nestedBuilder);
         Value add = createAdd(loc, mul, args[2], nestedBuilder);
         nestedBuilder.create<linalg::YieldOp>(nestedLoc, add);
       });
@@ -468,7 +474,8 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp) {
       /*outputs=*/ValueRange{reshapedOutput},
       ArrayRef<AffineMap>{lhsMap, rhsMap, resultMap}, genericIterators,
       [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
-        Value mul = createMul(loc, args[0], args[1], nestedBuilder);
+        Value mul =
+            createMul(loc, args[0], args[1], args[2].getType(), nestedBuilder);
         Value add = createAdd(loc, mul, args[2], nestedBuilder);
         nestedBuilder.create<linalg::YieldOp>(nestedLoc, add);
       });
