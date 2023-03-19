@@ -31,7 +31,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 
 template <class _Ip, class _Sp, class _Pred, class _Proj>
-_LIBCPP_HIDE_FROM_ABI static constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 _Ip __find_if_impl(_Ip __first, _Sp __last, _Pred& __pred, _Proj& __proj) {
   for (; __first != __last; ++__first) {
     if (std::invoke(__pred, std::invoke(__proj, *__first)))
