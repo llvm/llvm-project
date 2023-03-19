@@ -1045,7 +1045,15 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
           auto $LocalVariable_def[[s]] = $Operator[[new]] $Class[[Foo]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]]();
           $Operator[[delete]] $LocalVariable[[s]];
         }
-      )cpp"};
+      )cpp",
+      // Recursive UsingValueDecl
+      R"cpp(
+        template $Bracket[[<]]int$Bracket[[>]] class $Class_def[[X]] {
+          template $Bracket[[<]]int$Bracket[[>]] class $Class_def[[Y]] {
+            using $Class[[Y]]$Bracket[[<]]0$Bracket[[>]]::$Unknown_dependentName[[xxx]];
+          };
+        };
+    )cpp"};
   for (const auto &TestCase : TestCases)
     // Mask off scope modifiers to keep the tests manageable.
     // They're tested separately.
