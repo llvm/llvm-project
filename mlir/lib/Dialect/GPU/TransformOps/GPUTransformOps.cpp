@@ -140,12 +140,15 @@ struct GpuWarpIdBuilder : public GpuIdBuilder {
       OpFoldResult warpIdOfr = makeComposedFoldedAffineApply(
           rewriter, loc, d0.floorDiv(kWarpSize), {linearId});
       Value warpId = getValueOrCreateConstantIndexOp(rewriter, loc, warpIdOfr);
+      // Sizes in [x, y, z] -> [z, y x] order to properly compute strides in
+      // "row-major" order.
       SmallVector<int64_t> reverseBasisSizes(
           llvm::reverse(this->availableMappingSizes));
       SmallVector<int64_t> strides = computeStrides(reverseBasisSizes);
       SmallVector<AffineExpr> delinearizingExprs = delinearize(d0, strides);
       SmallVector<Value> ids;
-      for (AffineExpr e : delinearizingExprs)
+      // Reverse back to be in [x, y, z] order.
+      for (AffineExpr e : llvm::reverse(delinearizingExprs))
         ids.push_back(makeComposedAffineApply(rewriter, loc, e, warpId));
 
       // clang-format off
@@ -191,13 +194,16 @@ struct GpuLinearIdBuilder : public GpuIdBuilder {
       // Build the linear thread id and decompose it in the basis of
       // `forallMappingSizes`.
       Value linearId = buildLinearThreadId(rewriter, loc, this->blockDimsOfr);
+      // Sizes in [x, y, z] -> [z, y x] order to properly compute strides in
+      // "row-major" order.
       SmallVector<int64_t> reverseBasisSizes(llvm::reverse(forallMappingSizes));
       SmallVector<int64_t> strides = computeStrides(reverseBasisSizes);
       AffineExpr d0;
       bindDims(rewriter.getContext(), d0);
       SmallVector<AffineExpr> delinearizingExprs = delinearize(d0, strides);
       SmallVector<Value> ids;
-      for (AffineExpr e : delinearizingExprs)
+      // Reverse back to be in [x, y, z] order.
+      for (AffineExpr e : llvm::reverse(delinearizingExprs))
         ids.push_back(makeComposedAffineApply(rewriter, loc, e, linearId));
 
       // clang-format off
