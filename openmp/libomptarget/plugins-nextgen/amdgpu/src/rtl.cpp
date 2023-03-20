@@ -1886,7 +1886,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                              /* Number of accessible agents (out) */ nullptr,
                              /* Accessible agents */ nullptr);
     if (auto Err = Plugin::check(Status, "Error in hsa_amd_pointer_info: %s"))
-      return Err;
+      return std::move(Err);
 
     // The buffer may be locked or allocated through HSA allocators. Assume that
     // the buffer is host pinned if the runtime reports a HSA type.
