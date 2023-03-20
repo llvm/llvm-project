@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "SwiftExpressionParser.h"
 #include "lldb/Expression/LLVMUserExpression.h"
 #include "lldb/Expression/Materializer.h"
@@ -189,6 +190,7 @@ private:
   SwiftASTContextForExpressions *m_swift_ast_ctx;
   PersistentVariableDelegate m_persistent_variable_delegate;
   std::unique_ptr<SwiftExpressionParser> m_parser;
+  llvm::Optional<SwiftLanguageRuntime::GenericSignature> m_generic_signature;
   Status m_err;
   bool m_runs_in_playground_or_repl;
   bool m_needs_object_ptr = false;
