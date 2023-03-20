@@ -481,8 +481,10 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   // Emit the actual call op.
   auto callLoc = CGM.getLoc(Loc);
   assert(builder.getInsertionBlock() && "expected valid basic block");
-  auto theCall =
-      builder.create<mlir::cir::CallOp>(callLoc, CalleePtr, CIRCallArgs);
+
+  auto fnOp = dyn_cast<mlir::cir::FuncOp>(CalleePtr);
+  assert(fnOp && "only direct call supported");
+  auto theCall = builder.create<mlir::cir::CallOp>(callLoc, fnOp, CIRCallArgs);
 
   if (callOrInvoke)
     callOrInvoke = &theCall;

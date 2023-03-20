@@ -86,9 +86,9 @@ public:
   // Construct a callee. Call this constructor directly when this isn't a direct
   // call.
   CIRGenCallee(const CIRGenCalleeInfo &abstractInfo,
-               mlir::cir::FuncOp functionPtr)
-      : KindOrFunctionPointer(SpecialKind(
-            reinterpret_cast<uintptr_t>(functionPtr.getAsOpaquePointer()))) {
+               mlir::Operation *functionPtr)
+      : KindOrFunctionPointer(
+            SpecialKind(reinterpret_cast<uintptr_t>(functionPtr))) {
     AbstractInfo = abstractInfo;
     assert(functionPtr && "configuring callee without function pointer");
     // TODO: codegen asserts functionPtr is a pointer
@@ -97,7 +97,7 @@ public:
   }
 
   static CIRGenCallee
-  forDirect(mlir::cir::FuncOp functionPtr,
+  forDirect(mlir::Operation *functionPtr,
             const CIRGenCalleeInfo &abstractInfo = CIRGenCalleeInfo()) {
     return CIRGenCallee(abstractInfo, functionPtr);
   }
@@ -135,10 +135,9 @@ public:
   /// callee
   CIRGenCallee prepareConcreteCallee(CIRGenFunction &CGF) const;
 
-  mlir::cir::FuncOp getFunctionPointer() const {
+  mlir::Operation *getFunctionPointer() const {
     assert(isOrdinary());
-    return mlir::cir::FuncOp::getFromOpaquePointer(
-        reinterpret_cast<void *>(KindOrFunctionPointer));
+    return reinterpret_cast<mlir::Operation *>(KindOrFunctionPointer);
   }
 
   CIRGenCalleeInfo getAbstractInfo() const {
