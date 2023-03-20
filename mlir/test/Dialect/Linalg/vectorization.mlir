@@ -14,8 +14,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.dot"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { disable_multi_reduction_to_contract_patterns }
-    : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns }
 }
 
 // -----
@@ -34,8 +33,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matvec"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { disable_multi_reduction_to_contract_patterns }
-    : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns }
 }
 
 // -----
@@ -53,8 +51,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { disable_multi_reduction_to_contract_patterns }
-    : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns }
 }
 
 // -----
@@ -73,8 +70,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.batch_matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { disable_multi_reduction_to_contract_patterns }
-    : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns }
 }
 
 // -----
@@ -114,8 +110,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
-    : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
 }
 
 // -----
@@ -155,8 +150,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
-    : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
 }
 
 // -----
@@ -183,8 +177,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
-    : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
 }
 
 // -----
@@ -224,8 +217,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
-    : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
 }
 
 // -----
@@ -245,8 +237,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { disable_multi_reduction_to_contract_patterns }
-    : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns }
 }
 
 // -----
@@ -270,7 +261,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
@@ -294,7 +285,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
@@ -339,8 +330,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !pdl.operation):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
    %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-   transform.structured.vectorize %1 { vectorize_nd_extract }
-    : (!pdl.operation) -> ()
+   %2 = transform.structured.vectorize %1 { vectorize_nd_extract }
 }
 
 // -----
@@ -357,7 +347,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
@@ -375,7 +365,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
@@ -392,7 +382,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["memref.copy"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
@@ -412,7 +402,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["memref.copy"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
@@ -428,7 +418,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["memref.copy"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
@@ -456,7 +446,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
@@ -485,7 +475,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
@@ -570,8 +560,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { disable_transfer_permutation_map_lowering_patterns }
-    : (!pdl.operation) -> () 
+  %2 = transform.structured.vectorize %1  { disable_transfer_permutation_map_lowering_patterns }
 }
 
 // -----
@@ -662,8 +651,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { disable_transfer_permutation_map_lowering_patterns }
-    : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1 { disable_transfer_permutation_map_lowering_patterns }
 }
 
 // -----
@@ -707,8 +695,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { disable_transfer_permutation_map_lowering_patterns }
-    : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1  { disable_transfer_permutation_map_lowering_patterns }
 }
 
 // -----
@@ -751,8 +738,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { disable_transfer_permutation_map_lowering_patterns }
-    : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1  { disable_transfer_permutation_map_lowering_patterns }
 }
 
 // -----
@@ -784,8 +770,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
-    : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
 }
 
 // -----
@@ -814,7 +799,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { vectorize_padding } : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1 { vectorize_padding }
 }
 
 // -----
@@ -843,7 +828,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { vectorize_padding } : (!pdl.operation) -> () 
+  %2 = transform.structured.vectorize %1  { vectorize_padding }
 }
 
 
@@ -880,7 +865,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { vectorize_padding } : (!pdl.operation) -> () 
+  %2 = transform.structured.vectorize %1  { vectorize_padding }
 }
 
 // -----
@@ -900,7 +885,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { vectorize_padding } : (!pdl.operation) -> () 
+  %2 = transform.structured.vectorize %1  { vectorize_padding }
 }
 
 // -----
@@ -930,7 +915,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { vectorize_padding } : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1 { vectorize_padding }
 }
 
 // -----
@@ -963,7 +948,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %3 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %4 { vectorize_padding } : (!pdl.operation) -> ()
+  %5 = transform.structured.vectorize %4  { vectorize_padding }
 }
 
 
@@ -1000,7 +985,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %3 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %4 { vectorize_padding } : (!pdl.operation) -> ()
+  %5 = transform.structured.vectorize %4 { vectorize_padding }
 }
 
 
@@ -1034,7 +1019,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %3 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %4  { vectorize_padding } : (!pdl.operation) -> ()
+  %5 = transform.structured.vectorize %4  { vectorize_padding }
 }
 
 
@@ -1062,7 +1047,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %3 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %4 : (!pdl.operation) -> ()
+  %5 = transform.structured.vectorize %4
 }
 
 // -----
@@ -1099,7 +1084,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %3 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %4  { vectorize_padding } : (!pdl.operation) -> ()
+  %5 = transform.structured.vectorize %4  { vectorize_padding }
 }
 
 // -----
@@ -1134,7 +1119,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %4 : (!pdl.operation) -> ()
+  %5 = transform.structured.vectorize %4
 }
 
 // -----
@@ -1179,8 +1164,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %4  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
-    : (!pdl.operation) -> ()
+  %5 = transform.structured.vectorize %4  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
 }
 
 // -----
@@ -1210,7 +1194,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %4 { vectorize_padding } : (!pdl.operation) -> ()
+  %5 = transform.structured.vectorize %4 { vectorize_padding }
 }
 
 // -----
@@ -1241,7 +1225,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %4 : (!pdl.operation) -> ()
+  %5 = transform.structured.vectorize %4
 }
 
 // -----
@@ -1271,7 +1255,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %4 : (!pdl.operation) -> ()
+  %5 = transform.structured.vectorize %4
 }
 
 // -----
@@ -1301,7 +1285,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %4 : (!pdl.operation) -> ()
+  %5 = transform.structured.vectorize %4
 }
 
 // -----
@@ -1331,7 +1315,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %4 : (!pdl.operation) -> ()
+  %5 = transform.structured.vectorize %4
 }
 
 // -----
@@ -1361,7 +1345,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %4 : (!pdl.operation) -> ()
+  %5 = transform.structured.vectorize %4
 }
 
 // -----
@@ -1395,7 +1379,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %4 : (!pdl.operation) -> ()
+  %5 = transform.structured.vectorize %4
 }
 
 // -----
@@ -1433,11 +1417,11 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 
   %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %4 = get_closest_isolated_parent %3 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %4 : (!pdl.operation) -> ()
+  %5 = transform.structured.vectorize %4
 }
 
 // -----
@@ -1480,7 +1464,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 
@@ -1511,7 +1495,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
@@ -1550,8 +1534,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
-    : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
 }
 
 // -----
@@ -1587,7 +1570,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
@@ -1623,7 +1606,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !pdl.operation):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
    %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-   transform.structured.vectorize %1 { vectorize_nd_extract } : (!pdl.operation) -> ()
+   %2 = transform.structured.vectorize %1 { vectorize_nd_extract }
  }
 
 // -----
@@ -1662,7 +1645,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { vectorize_nd_extract } : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1 { vectorize_nd_extract }
 }
 
  // -----
@@ -1712,7 +1695,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !pdl.operation):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
    %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-   transform.structured.vectorize %1 { vectorize_nd_extract } : (!pdl.operation) -> ()
+   %2 = transform.structured.vectorize %1 { vectorize_nd_extract }
  }
 
 // -----
@@ -1760,7 +1743,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 { vectorize_nd_extract } : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1 { vectorize_nd_extract }
 }
 // -----
 
@@ -1804,7 +1787,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !pdl.operation):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
    %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-   transform.structured.vectorize %1 { vectorize_nd_extract } : (!pdl.operation) -> ()
+   %2 = transform.structured.vectorize %1 { vectorize_nd_extract }
  }
 
 // -----
@@ -1846,7 +1829,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !pdl.operation):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
    %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-   transform.structured.vectorize %1 { vectorize_nd_extract } : (!pdl.operation) -> ()
+   %2 = transform.structured.vectorize %1 { vectorize_nd_extract }
  }
 
 // -----
@@ -1890,7 +1873,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !pdl.operation):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
    %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-   transform.structured.vectorize %1 { vectorize_nd_extract } : (!pdl.operation) -> ()
+   %2 = transform.structured.vectorize %1 { vectorize_nd_extract }
  }
 
 // -----
@@ -1930,7 +1913,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !pdl.operation):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
    %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-   transform.structured.vectorize %1 { vectorize_nd_extract } : (!pdl.operation) -> ()
+   %2 = transform.structured.vectorize %1 { vectorize_nd_extract }
  }
 
 // -----
@@ -1970,7 +1953,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !pdl.operation):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
    %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-   transform.structured.vectorize %1 { vectorize_nd_extract } : (!pdl.operation) -> ()
+   %2 = transform.structured.vectorize %1 { vectorize_nd_extract }
  }
 
 // -----
@@ -2009,7 +1992,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !pdl.operation):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
    %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-   transform.structured.vectorize %1 { vectorize_nd_extract } : (!pdl.operation) -> ()
+   %2 = transform.structured.vectorize %1 { vectorize_nd_extract }
  }
 
 
@@ -2034,7 +2017,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.map"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
@@ -2053,7 +2036,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.transpose"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
@@ -2076,7 +2059,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.reduce"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
@@ -2327,7 +2310,7 @@ func.func @not_vectorizable(%arg0: tensor<1x?xf32>, %arg1: index, %arg2: index, 
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
   %0 = transform.structured.match ops{["func.func"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %0 : (!pdl.operation) -> ()
+  %1 = transform.structured.vectorize %0
 }
 
 // -----
@@ -2362,7 +2345,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 // CHECK-LABEL: @wrong_reduction_detection
@@ -2391,7 +2374,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %1 : (!pdl.operation) -> ()
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
