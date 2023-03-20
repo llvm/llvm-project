@@ -14886,6 +14886,43 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBCommandInterpreter_UserCommandExists(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBCommandInterpreter *arg1 = (lldb::SBCommandInterpreter *) 0 ;
+  char *arg2 = (char *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 ;
+  char *buf2 = 0 ;
+  int alloc2 = 0 ;
+  PyObject *swig_obj[2] ;
+  bool result;
+  
+  if (!SWIG_Python_UnpackTuple(args, "SBCommandInterpreter_UserCommandExists", 2, 2, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBCommandInterpreter, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBCommandInterpreter_UserCommandExists" "', argument " "1"" of type '" "lldb::SBCommandInterpreter *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBCommandInterpreter * >(argp1);
+  res2 = SWIG_AsCharPtrAndSize(swig_obj[1], &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBCommandInterpreter_UserCommandExists" "', argument " "2"" of type '" "char const *""'");
+  }
+  arg2 = reinterpret_cast< char * >(buf2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)(arg1)->UserCommandExists((char const *)arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return resultobj;
+fail:
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBCommandInterpreter_AliasExists(PyObject *self, PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBCommandInterpreter *arg1 = (lldb::SBCommandInterpreter *) 0 ;
@@ -84338,6 +84375,7 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBCommandInterpreter_GetQuitStatus", _wrap_SBCommandInterpreter_GetQuitStatus, METH_O, "SBCommandInterpreter_GetQuitStatus(SBCommandInterpreter self) -> int"},
 	 { "SBCommandInterpreter_ResolveCommand", _wrap_SBCommandInterpreter_ResolveCommand, METH_VARARGS, "SBCommandInterpreter_ResolveCommand(SBCommandInterpreter self, char const * command_line, SBCommandReturnObject result)"},
 	 { "SBCommandInterpreter_CommandExists", _wrap_SBCommandInterpreter_CommandExists, METH_VARARGS, "SBCommandInterpreter_CommandExists(SBCommandInterpreter self, char const * cmd) -> bool"},
+	 { "SBCommandInterpreter_UserCommandExists", _wrap_SBCommandInterpreter_UserCommandExists, METH_VARARGS, "SBCommandInterpreter_UserCommandExists(SBCommandInterpreter self, char const * cmd) -> bool"},
 	 { "SBCommandInterpreter_AliasExists", _wrap_SBCommandInterpreter_AliasExists, METH_VARARGS, "SBCommandInterpreter_AliasExists(SBCommandInterpreter self, char const * cmd) -> bool"},
 	 { "SBCommandInterpreter_GetBroadcaster", _wrap_SBCommandInterpreter_GetBroadcaster, METH_O, "SBCommandInterpreter_GetBroadcaster(SBCommandInterpreter self) -> SBBroadcaster"},
 	 { "SBCommandInterpreter_GetBroadcasterClass", _wrap_SBCommandInterpreter_GetBroadcasterClass, METH_NOARGS, "SBCommandInterpreter_GetBroadcasterClass() -> char const *"},
@@ -90640,6 +90678,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eTypeIsMetatype",SWIG_From_int(static_cast< int >(lldb::eTypeIsMetatype)));
   SWIG_Python_SetConstant(d, "eTypeHasUnboundGeneric",SWIG_From_int(static_cast< int >(lldb::eTypeHasUnboundGeneric)));
   SWIG_Python_SetConstant(d, "eTypeHasDynamicSelf",SWIG_From_int(static_cast< int >(lldb::eTypeHasDynamicSelf)));
+  SWIG_Python_SetConstant(d, "eTypeIsPack",SWIG_From_int(static_cast< int >(lldb::eTypeIsPack)));
   SWIG_Python_SetConstant(d, "eCommandRequiresTarget",SWIG_From_int(static_cast< int >(lldb::eCommandRequiresTarget)));
   SWIG_Python_SetConstant(d, "eCommandRequiresProcess",SWIG_From_int(static_cast< int >(lldb::eCommandRequiresProcess)));
   SWIG_Python_SetConstant(d, "eCommandRequiresThread",SWIG_From_int(static_cast< int >(lldb::eCommandRequiresThread)));

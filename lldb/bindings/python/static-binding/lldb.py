@@ -1561,6 +1561,8 @@ eTypeHasUnboundGeneric = _lldb.eTypeHasUnboundGeneric
 
 eTypeHasDynamicSelf = _lldb.eTypeHasDynamicSelf
 
+eTypeIsPack = _lldb.eTypeIsPack
+
 eCommandRequiresTarget = _lldb.eCommandRequiresTarget
 
 eCommandRequiresProcess = _lldb.eCommandRequiresProcess
@@ -3162,6 +3164,10 @@ class SBCommandInterpreter(object):
     def CommandExists(self, cmd):
         r"""CommandExists(SBCommandInterpreter self, char const * cmd) -> bool"""
         return _lldb.SBCommandInterpreter_CommandExists(self, cmd)
+
+    def UserCommandExists(self, cmd):
+        r"""UserCommandExists(SBCommandInterpreter self, char const * cmd) -> bool"""
+        return _lldb.SBCommandInterpreter_UserCommandExists(self, cmd)
 
     def AliasExists(self, cmd):
         r"""AliasExists(SBCommandInterpreter self, char const * cmd) -> bool"""
