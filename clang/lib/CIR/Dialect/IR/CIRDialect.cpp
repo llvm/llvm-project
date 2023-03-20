@@ -1404,6 +1404,59 @@ FunctionType CallOp::getCalleeType() {
   return FunctionType::get(getContext(), getOperandTypes(), getResultTypes());
 }
 
+::mlir::ParseResult CallOp::parse(::mlir::OpAsmParser &parser,
+                                  ::mlir::OperationState &result) {
+  mlir::FlatSymbolRefAttr calleeAttr;
+  llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> ops;
+  llvm::SMLoc opsLoc;
+  (void)opsLoc;
+  llvm::ArrayRef<::mlir::Type> operandsTypes;
+  llvm::ArrayRef<::mlir::Type> allResultTypes;
+
+  if (parser.parseCustomAttributeWithFallback(
+          calleeAttr, parser.getBuilder().getType<::mlir::NoneType>(), "callee",
+          result.attributes)) {
+    return ::mlir::failure();
+  }
+  if (parser.parseLParen())
+    return ::mlir::failure();
+
+  opsLoc = parser.getCurrentLocation();
+  if (parser.parseOperandList(ops))
+    return ::mlir::failure();
+  if (parser.parseRParen())
+    return ::mlir::failure();
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return ::mlir::failure();
+  if (parser.parseColon())
+    return ::mlir::failure();
+
+  ::mlir::FunctionType opsFnTy;
+  if (parser.parseType(opsFnTy))
+    return ::mlir::failure();
+  operandsTypes = opsFnTy.getInputs();
+  allResultTypes = opsFnTy.getResults();
+  result.addTypes(allResultTypes);
+  if (parser.resolveOperands(ops, operandsTypes, opsLoc, result.operands))
+    return ::mlir::failure();
+  return ::mlir::success();
+}
+
+void CallOp::print(::mlir::OpAsmPrinter &state) {
+  state << ' ';
+  state.printAttributeWithoutType(getCalleeAttr());
+  state << "(";
+  state << getOperands();
+  state << ")";
+  llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;
+  elidedAttrs.push_back("callee");
+  state.printOptionalAttrDict((*this)->getAttrs(), elidedAttrs);
+  state << ' ' << ":";
+  state << ' ';
+  state.printFunctionalType(getOperands().getTypes(),
+                            getOperation()->getResultTypes());
+}
+
 //===----------------------------------------------------------------------===//
 // UnaryOp
 //===----------------------------------------------------------------------===//
