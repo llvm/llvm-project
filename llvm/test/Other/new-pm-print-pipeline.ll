@@ -101,3 +101,13 @@
 ;; Test function-attrs
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='cgscc(function-attrs<skip-non-recursive>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-29
 ; CHECK-29: cgscc(function-attrs<skip-non-recursive>)
+
+;; Test cgscc -> function adaptor
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='cgscc(function<eager-inv;no-rerun>(no-op-function))' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-30
+; CHECK-30: cgscc(function<eager-inv;no-rerun>(no-op-function))
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='cgscc(function<no-rerun;eager-inv>(no-op-function))' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-31
+; CHECK-31: cgscc(function<eager-inv;no-rerun>(no-op-function))
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='cgscc(function<no-rerun>(no-op-function))' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-32
+; CHECK-32: cgscc(function<no-rerun>(no-op-function))
