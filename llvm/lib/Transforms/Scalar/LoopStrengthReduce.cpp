@@ -6737,35 +6737,12 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   if (!isAlmostDeadIV(ToFold, LoopLatch, TermCond))
     return std::nullopt;
 
-  // If this is an IV which we could replace the terminating condition, return
-  // the final value of the alternative IV on the last iteration.
-  auto getAlternateIVEnd = [&](PHINode &PN) -> const SCEV * {
-    // FIXME: This does not properly account for overflow.
-    const SCEVAddRecExpr *AddRec = cast<SCEVAddRecExpr>(SE.getSCEV(&PN));
-    const SCEV *BECount = SE.getBackedgeTakenCount(L);
-    const SCEV *TermValueS = SE.getAddExpr(
-        AddRec->getOperand(0),
-        SE.getTruncateOrZeroExtend(
-            SE.getMulExpr(
-                AddRec->getOperand(1),
-                SE.getTruncateOrZeroExtend(
-                    SE.getAddExpr(BECount, SE.getOne(BECount->getType())),
-                    AddRec->getOperand(1)->getType())),
-            AddRec->getOperand(0)->getType()));
-    const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
-    SCEVExpander Expander(SE, DL, "lsr_fold_term_cond");
-    if (!Expander.isSafeToExpand(TermValueS)) {
-      LLVM_DEBUG(
-          dbgs() << "Is not safe to expand terminating value for phi node" << PN
-                 << "\n");
-      return nullptr;
-    }
-    return TermValueS;
-  };
+  const SCEV *BECount = SE.getBackedgeTakenCount(L);
+  const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
+  SCEVExpander Expander(SE, DL, "lsr_fold_term_cond");
 
   PHINode *ToHelpFold = nullptr;
   const SCEV *TermValueS = nullptr;
-
   for (PHINode &PN : L->getHeader()->phis()) {
     if (ToFold == &PN)
       continue;
@@ -6785,10 +6762,26 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
       continue;
     }
 
-    if (auto P = getAlternateIVEnd(PN)) {
-      ToHelpFold = &PN;
-      TermValueS = P;
+    // FIXME: This does not properly account for overflow.
+    const SCEV *TermValueSLocal = SE.getAddExpr(
+        AddRec->getOperand(0),
+        SE.getTruncateOrZeroExtend(
+            SE.getMulExpr(
+                AddRec->getOperand(1),
+                SE.getTruncateOrZeroExtend(
+                    SE.getAddExpr(BECount, SE.getOne(BECount->getType())),
+                    AddRec->getOperand(1)->getType())),
+            AddRec->getOperand(0)->getType()));
+    if (!Expander.isSafeToExpand(TermValueSLocal)) {
+      LLVM_DEBUG(
+          dbgs() << "Is not safe to expand terminating value for phi node" << PN
+                 << "\n");
+      continue;
     }
+    // We pick the last legal alternate IV.  We could expore choosing an optimal
+    // alternate IV if we had a decent heuristic to do so.
+    ToHelpFold = &PN;
+    TermValueS = TermValueSLocal;
   }
 
   LLVM_DEBUG(if (ToFold && !ToHelpFold) dbgs()
