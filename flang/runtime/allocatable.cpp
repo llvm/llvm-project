@@ -41,6 +41,30 @@ void RTNAME(AllocatableInitDerived)(Descriptor &descriptor,
       derivedType, nullptr, rank, nullptr, CFI_attribute_allocatable);
 }
 
+void RTNAME(AllocatableInitIntrinsicForAllocate)(Descriptor &descriptor,
+    TypeCategory category, int kind, int rank, int corank) {
+  if (descriptor.IsAllocated()) {
+    return;
+  }
+  RTNAME(AllocatableInitIntrinsic)(descriptor, category, kind, rank, corank);
+}
+
+void RTNAME(AllocatableInitCharacterForAllocate)(Descriptor &descriptor,
+    SubscriptValue length, int kind, int rank, int corank) {
+  if (descriptor.IsAllocated()) {
+    return;
+  }
+  RTNAME(AllocatableInitCharacter)(descriptor, length, kind, rank, corank);
+}
+
+void RTNAME(AllocatableInitDerivedForAllocate)(Descriptor &descriptor,
+    const typeInfo::DerivedType &derivedType, int rank, int corank) {
+  if (descriptor.IsAllocated()) {
+    return;
+  }
+  RTNAME(AllocatableInitDerived)(descriptor, derivedType, rank, corank);
+}
+
 std::int32_t RTNAME(MoveAlloc)(Descriptor &to, Descriptor &from,
     const typeInfo::DerivedType *derivedType, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {

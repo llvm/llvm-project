@@ -571,6 +571,12 @@ class SVE_Shift_DupImm_Any_Predicate_Pat<ValueType vt, SDPatternOperator op,
 : Pat<(vt (op (pt (SVEAnyPredicate)), vt:$Rn, (vt (splat_vector (it (cast i32:$imm)))))),
       (inst $Rn, i32:$imm)>;
 
+class SVE_2_Op_Imm_Pat_Zero<ValueType vt, SDPatternOperator op, ValueType pt,
+                            ValueType it, ComplexPattern cpx, Instruction inst>
+: Pat<(vt (op pt:$Pg, (vselect pt:$Pg, vt:$Op1, (SVEDup0)),
+                      (vt (splat_vector (it (cpx i32:$imm)))))),
+      (inst $Pg, $Op1, i32:$imm)>;
+
 class SVE_2_Op_Fp_Imm_Pat<ValueType vt, SDPatternOperator op,
                           ValueType pt, ValueType it,
                           FPImmLeaf immL, int imm,
@@ -5892,6 +5898,20 @@ multiclass sve_int_bin_pred_zeroing_bhsd<SDPatternOperator op> {
   def : SVE_3_Op_Pat_SelZero<nxv8i16, op, nxv8i1, nxv8i16, nxv8i16, !cast<Pseudo>(NAME # _ZERO_H)>;
   def : SVE_3_Op_Pat_SelZero<nxv4i32, op, nxv4i1, nxv4i32, nxv4i32, !cast<Pseudo>(NAME # _ZERO_S)>;
   def : SVE_3_Op_Pat_SelZero<nxv2i64, op, nxv2i1, nxv2i64, nxv2i64, !cast<Pseudo>(NAME # _ZERO_D)>;
+}
+
+multiclass sve_int_bin_pred_imm_zeroing_bhsd<SDPatternOperator op,
+                                   ComplexPattern imm_b, ComplexPattern imm_h,
+                                   ComplexPattern imm_s, ComplexPattern imm_d> {
+  def _ZERO_B : PredTwoOpImmPseudo<NAME # _B, ZPR8,  Operand<i32>, FalseLanesZero>;
+  def _ZERO_H : PredTwoOpImmPseudo<NAME # _H, ZPR16, Operand<i32>, FalseLanesZero>;
+  def _ZERO_S : PredTwoOpImmPseudo<NAME # _S, ZPR32, Operand<i32>, FalseLanesZero>;
+  def _ZERO_D : PredTwoOpImmPseudo<NAME # _D, ZPR64, Operand<i32>, FalseLanesZero>;
+
+  def : SVE_2_Op_Imm_Pat_Zero<nxv16i8, op, nxv16i1, i32, imm_b, !cast<Pseudo>(NAME # _ZERO_B)>;
+  def : SVE_2_Op_Imm_Pat_Zero<nxv8i16, op, nxv8i1,  i32, imm_h, !cast<Pseudo>(NAME # _ZERO_H)>;
+  def : SVE_2_Op_Imm_Pat_Zero<nxv4i32, op, nxv4i1,  i32, imm_s, !cast<Pseudo>(NAME # _ZERO_S)>;
+  def : SVE_2_Op_Imm_Pat_Zero<nxv2i64, op, nxv2i1,  i64, imm_d, !cast<Pseudo>(NAME # _ZERO_D)>;
 }
 
 multiclass sve_int_bin_pred_shift_wide<bits<3> opc, string asm,

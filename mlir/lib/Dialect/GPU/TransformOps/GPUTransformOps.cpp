@@ -848,6 +848,12 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapNestedForallToThreadsImpl(
   return DiagnosedSilenceableFailure::success();
 }
 
+void transform::MapNestedForallToThreads::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTarget(), effects);
+  modifiesPayload(effects);
+}
+
 DiagnosedSilenceableFailure transform::MapNestedForallToThreads::applyToOne(
     Operation *target, ApplyToEachResultList &results, TransformState &state) {
   LaunchOp gpuLaunch = dyn_cast<LaunchOp>(target);
@@ -880,7 +886,6 @@ DiagnosedSilenceableFailure transform::MapNestedForallToThreads::applyToOne(
       mapNestedForallToThreadsImpl(rewriter, transformOp, gpuLaunch, blockDims,
                                    getWarpDims(), getSyncAfterDistribute());
 
-  results.push_back(gpuLaunch.getOperation());
   return diag;
 }
 
