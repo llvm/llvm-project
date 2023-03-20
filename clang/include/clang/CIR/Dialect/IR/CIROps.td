@@ -1366,6 +1366,13 @@ def CallOp : CIR_Op<"call",
       $_state.addOperands(operands);
       $_state.addAttribute("callee", SymbolRefAttr::get(callee));
       $_state.addTypes(callee.getFunctionType().getResults());
+    }]>,
+    OpBuilder<(ins "Value":$ind_target,
+               "FunctionType":$fn_type,
+               CArg<"ValueRange", "{}">:$operands), [{
+      $_state.addOperands(ValueRange{ind_target});
+      $_state.addOperands(operands);
+      $_state.addTypes(fn_type.getResults());
     }]>];
 
   let extraClassDeclaration = [{
