@@ -94,3 +94,20 @@ TEST(AllocatableTest, AllocateFromScalarSource) {
   EXPECT_EQ(*a->OffsetElement<float>(), 3.4F);
   a->Destroy();
 }
+
+TEST(AllocatableTest, DoubleAllocation) {
+  // CLASS(*), ALLOCATABLE :: r
+  // ALLOCATE(REAL::r)
+  auto r{createAllocatable(TypeCategory::Real, 4, 0)};
+  EXPECT_FALSE(r->IsAllocated());
+  EXPECT_TRUE(r->IsAllocatable());
+  RTNAME(AllocatableAllocate)(*r);
+  EXPECT_TRUE(r->IsAllocated());
+
+  // Make sure AllocatableInitIntrinsicForAllocate doesn't reset the decsriptor
+  // if it is allocated.
+  // ALLOCATE(INTEGER::r)
+  RTNAME(AllocatableInitIntrinsicForAllocate)
+  (*r, Fortran::common::TypeCategory::Integer, 4);
+  EXPECT_TRUE(r->IsAllocated());
+}
