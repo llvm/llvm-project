@@ -4101,7 +4101,13 @@ write_file(
 // Provide a weak registration stub in case the real SerializeToCubin is not
 // linked in.
 
+#if defined(_MSC_VER)
+// This might not work correctly, but it avoids a compilation error because
+// MSVC does not support __attribute__((weak)).
+void mlir::registerGpuSerializeToCubinPass() {}
+#else
 __attribute__((weak)) void mlir::registerGpuSerializeToCubinPass() {}
+#endif
 """,
     ],
 )
