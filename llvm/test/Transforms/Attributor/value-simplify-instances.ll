@@ -401,16 +401,16 @@ define i32 @non_unique_phi_ops(ptr %ptr) {
 ; TUNIT-NEXT:    br label [[HEADER:%.*]]
 ; TUNIT:       header:
 ; TUNIT-NEXT:    [[I:%.*]] = phi i32 [ [[ADD:%.*]], [[F:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; TUNIT-NEXT:    [[P:%.*]] = phi i32 [ [[NON_UNIQUE_INPUT:%.*]], [[F]] ], [ poison, [[ENTRY]] ]
+; TUNIT-NEXT:    [[P:%.*]] = phi i32 [ [[NON_UNIQUE:%.*]], [[F]] ], [ poison, [[ENTRY]] ]
 ; TUNIT-NEXT:    [[ADD]] = add i32 [[I]], 1
 ; TUNIT-NEXT:    [[G:%.*]] = getelementptr i32, ptr [[PTR]], i32 [[I]]
-; TUNIT-NEXT:    [[NON_UNIQUE_INPUT]] = load i32, ptr [[G]], align 4
+; TUNIT-NEXT:    [[NON_UNIQUE_INPUT:%.*]] = load i32, ptr [[G]], align 4
 ; TUNIT-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[I]], [[NON_UNIQUE_INPUT]]
 ; TUNIT-NEXT:    br i1 [[CMP1]], label [[T:%.*]], label [[F]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    br label [[F]]
 ; TUNIT:       f:
-; TUNIT-NEXT:    [[NON_UNIQUE:%.*]] = phi i32 [ [[NON_UNIQUE_INPUT]], [[T]] ], [ [[P]], [[HEADER]] ]
+; TUNIT-NEXT:    [[NON_UNIQUE]] = phi i32 [ [[NON_UNIQUE_INPUT]], [[T]] ], [ [[P]], [[HEADER]] ]
 ; TUNIT-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 42
 ; TUNIT-NEXT:    br i1 [[CMP2]], label [[HEADER]], label [[END:%.*]]
 ; TUNIT:       end:
@@ -423,16 +423,16 @@ define i32 @non_unique_phi_ops(ptr %ptr) {
 ; CGSCC-NEXT:    br label [[HEADER:%.*]]
 ; CGSCC:       header:
 ; CGSCC-NEXT:    [[I:%.*]] = phi i32 [ [[ADD:%.*]], [[F:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; CGSCC-NEXT:    [[P:%.*]] = phi i32 [ [[NON_UNIQUE_INPUT:%.*]], [[F]] ], [ poison, [[ENTRY]] ]
+; CGSCC-NEXT:    [[P:%.*]] = phi i32 [ [[NON_UNIQUE:%.*]], [[F]] ], [ poison, [[ENTRY]] ]
 ; CGSCC-NEXT:    [[ADD]] = add i32 [[I]], 1
 ; CGSCC-NEXT:    [[G:%.*]] = getelementptr i32, ptr [[PTR]], i32 [[I]]
-; CGSCC-NEXT:    [[NON_UNIQUE_INPUT]] = load i32, ptr [[G]], align 4
+; CGSCC-NEXT:    [[NON_UNIQUE_INPUT:%.*]] = load i32, ptr [[G]], align 4
 ; CGSCC-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[I]], [[NON_UNIQUE_INPUT]]
 ; CGSCC-NEXT:    br i1 [[CMP1]], label [[T:%.*]], label [[F]]
 ; CGSCC:       t:
 ; CGSCC-NEXT:    br label [[F]]
 ; CGSCC:       f:
-; CGSCC-NEXT:    [[NON_UNIQUE:%.*]] = phi i32 [ [[NON_UNIQUE_INPUT]], [[T]] ], [ [[P]], [[HEADER]] ]
+; CGSCC-NEXT:    [[NON_UNIQUE]] = phi i32 [ [[NON_UNIQUE_INPUT]], [[T]] ], [ [[P]], [[HEADER]] ]
 ; CGSCC-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 42
 ; CGSCC-NEXT:    br i1 [[CMP2]], label [[HEADER]], label [[END:%.*]]
 ; CGSCC:       end:

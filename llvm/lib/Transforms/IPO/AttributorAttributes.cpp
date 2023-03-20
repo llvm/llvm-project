@@ -197,6 +197,19 @@ ChangeStatus clampStateAndIndicateChange<DerefState>(DerefState &S,
 
 } // namespace llvm
 
+static bool mayBeInCycle(const CycleInfo *CI, const Instruction *I,
+                         bool HeaderOnly, Cycle **CPtr = nullptr) {
+  if (!CI)
+    return true;
+  auto *BB = I->getParent();
+  auto *C = CI->getCycle(BB);
+  if (!C)
+    return false;
+  if (CPtr)
+    *CPtr = C;
+  return !HeaderOnly || BB == C->getHeader();
+}
+
 /// Checks if a type could have padding bytes.
 static bool isDenselyPacked(Type *Ty, const DataLayout &DL) {
   // There is no size information, so be conservative.
@@ -856,7 +869,7 @@ protected:
     for (unsigned Index : LocalList->getSecond()) {
       for (auto &R : AccessList[Index]) {
         Range &= R;
-        if (Range.offsetOrSizeAreUnknown())
+        if (Range.offsetAndSizeAreUnknown())
           break;
       }
     }
@@ -1617,16 +1630,6 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
         return true;
       }
 
-      auto mayBeInCycleHeader = [](const CycleInfo *CI, const Instruction *I) {
-        if (!CI)
-          return true;
-        auto *BB = I->getParent();
-        auto *C = CI->getCycle(BB);
-        if (!C)
-          return false;
-        return BB == C->getHeader();
-      };
-
       // Check if the PHI operand is not dependent on the PHI itself. Every
       // recurrence is a cyclic net of PHIs in the data flow, and has an
       // equivalent Cycle in the control flow. One of those PHIs must be in the
@@ -1634,7 +1637,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       // Cycles reported by CycleInfo. It is sufficient to check the PHIs in
       // every Cycle header; if such a node is marked unknown, this will
       // eventually propagate through the whole net of PHIs in the recurrence.
-      if (mayBeInCycleHeader(CI, cast<Instruction>(Usr))) {
+      if (mayBeInCycle(CI, cast<Instruction>(Usr), /* HeaderOnly */ true)) {
         auto BaseOI = It->getSecond();
         BaseOI.addToAll(Offset.getZExtValue());
         if (IsFirstPHIUser || BaseOI == UsrOI) {
@@ -5563,6 +5566,15 @@ struct AAInstanceInfoImpl : public AAInstanceInfo {
         indicateOptimisticFixpoint();
         return;
       }
+    if (auto *I = dyn_cast<Instruction>(&V)) {
+      const auto *CI =
+          A.getInfoCache().getAnalysisResultForFunction<CycleAnalysis>(
+              *I->getFunction());
+      if (mayBeInCycle(CI, I, /* HeaderOnly */ false)) {
+        indicatePessimisticFixpoint();
+        return;
+      }
+    }
   }
 
   /// See AbstractAttribute::updateImpl(...).
@@ -11048,14 +11060,29 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
 
     if (&PHI == &getAssociatedValue()) {
       LivenessInfo &LI = GetLivenessInfo(*PHI.getFunction());
+      const auto *CI =
+          A.getInfoCache().getAnalysisResultForFunction<CycleAnalysis>(
+              *PHI.getFunction());
+
+      Cycle *C = nullptr;
+      bool CyclePHI = mayBeInCycle(CI, &PHI, /* HeaderOnly */ true, &C);
       for (unsigned u = 0, e = PHI.getNumIncomingValues(); u < e; u++) {
         BasicBlock *IncomingBB = PHI.getIncomingBlock(u);
         if (LI.LivenessAA->isEdgeDead(IncomingBB, PHI.getParent())) {
           LI.AnyDead = true;
           continue;
         }
-        Worklist.push_back(
-            {{*PHI.getIncomingValue(u), IncomingBB->getTerminator()}, II.S});
+        Value *V = PHI.getIncomingValue(u);
+        if (V == &PHI)
+          continue;
+
+        // If the incoming value is not the PHI but an instruction in the same
+        // cycle we might have multiple versions of it flying around.
+        if (CyclePHI && isa<Instruction>(V) &&
+            (!C || C->contains(cast<Instruction>(V)->getParent())))
+          return false;
+
+        Worklist.push_back({{*V, IncomingBB->getTerminator()}, II.S});
       }
       return true;
     }
@@ -11667,8 +11694,17 @@ struct AAUnderlyingObjectsImpl
           continue;
         }
 
-        if (isa<SelectInst>(Obj) || isa<PHINode>(Obj)) {
+        if (isa<SelectInst>(Obj)) {
           Changed |= handleIndirect(A, *Obj, UnderlyingObjects, Scope);
+          continue;
+        }
+        if (auto *PHI = dyn_cast<PHINode>(Obj)) {
+          // Explicitly look through PHIs as we do not care about dynamically
+          // uniqueness.
+          for (unsigned u = 0, e = PHI->getNumIncomingValues(); u < e; u++) {
+            Changed |= handleIndirect(A, *PHI->getIncomingValue(u),
+                                      UnderlyingObjects, Scope);
+          }
           continue;
         }
 
