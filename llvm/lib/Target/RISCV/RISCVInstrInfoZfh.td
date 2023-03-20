@@ -206,15 +206,16 @@ def : InstAlias<"fgt.h $rd, $rs, $rt",
                 (FLT_H GPR:$rd, FPR16:$rt, FPR16:$rs), 0>;
 def : InstAlias<"fge.h $rd, $rs, $rt",
                 (FLE_H GPR:$rd, FPR16:$rt, FPR16:$rs), 0>;
+
+let usesCustomInserter = 1 in {
+def PseudoQuietFLE_H : PseudoQuietFCMP<FPR16>;
+def PseudoQuietFLT_H : PseudoQuietFCMP<FPR16>;
+}
 } // Predicates = [HasStdExtZfh]
 
 let Predicates = [HasStdExtZfhOrZfhmin] in {
 def PseudoFLH  : PseudoFloatLoad<"flh", FPR16>;
 def PseudoFSH  : PseudoStore<"fsh", FPR16>;
-let usesCustomInserter = 1 in {
-def PseudoQuietFLE_H : PseudoQuietFCMP<FPR16>;
-def PseudoQuietFLT_H : PseudoQuietFCMP<FPR16>;
-}
 } // Predicates = [HasStdExtZfhOrZfhmin]
 
 let Predicates = [HasStdExtZhinx] in {
