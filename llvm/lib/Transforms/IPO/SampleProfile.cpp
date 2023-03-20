@@ -35,9 +35,9 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
-#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ReplayInlineAdvisor.h"
@@ -479,7 +479,7 @@ public:
 
   bool doInitialization(Module &M, FunctionAnalysisManager *FAM = nullptr);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM,
-                   ProfileSummaryInfo *_PSI, CallGraph *CG);
+                   ProfileSummaryInfo *_PSI, LazyCallGraph &CG);
 
 protected:
   bool runOnFunction(Function &F, ModuleAnalysisManager *AM);
@@ -520,8 +520,8 @@ protected:
   void promoteMergeNotInlinedContextSamples(
       MapVector<CallBase *, const FunctionSamples *> NonInlinedCallSites,
       const Function &F);
-  std::vector<Function *> buildFunctionOrder(Module &M, CallGraph *CG);
-  std::unique_ptr<ProfiledCallGraph> buildProfiledCallGraph(CallGraph &CG);
+  std::vector<Function *> buildFunctionOrder(Module &M, LazyCallGraph &CG);
+  std::unique_ptr<ProfiledCallGraph> buildProfiledCallGraph(Module &M);
   void generateMDProfMetadata(Function &F);
 
   /// Map from function name to Function *. Used to find the function from
@@ -1821,7 +1821,7 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
 }
 
 std::unique_ptr<ProfiledCallGraph>
-SampleProfileLoader::buildProfiledCallGraph(CallGraph &CG) {
+SampleProfileLoader::buildProfiledCallGraph(Module &M) {
   std::unique_ptr<ProfiledCallGraph> ProfiledCG;
   if (FunctionSamples::ProfileIsCS)
     ProfiledCG = std::make_unique<ProfiledCallGraph>(*ContextTracker);
@@ -1831,18 +1831,17 @@ SampleProfileLoader::buildProfiledCallGraph(CallGraph &CG) {
   // Add all functions into the profiled call graph even if they are not in
   // the profile. This makes sure functions missing from the profile still
   // gets a chance to be processed.
-  for (auto &Node : CG) {
-    const auto *F = Node.first;
-    if (!F || F->isDeclaration() || !F->hasFnAttribute("use-sample-profile"))
+  for (Function &F : M) {
+    if (F.isDeclaration() || !F.hasFnAttribute("use-sample-profile"))
       continue;
-    ProfiledCG->addProfiledFunction(FunctionSamples::getCanonicalFnName(*F));
+    ProfiledCG->addProfiledFunction(FunctionSamples::getCanonicalFnName(F));
   }
 
   return ProfiledCG;
 }
 
 std::vector<Function *>
-SampleProfileLoader::buildFunctionOrder(Module &M, CallGraph *CG) {
+SampleProfileLoader::buildFunctionOrder(Module &M, LazyCallGraph &CG) {
   std::vector<Function *> FunctionOrderList;
   FunctionOrderList.reserve(M.size());
 
@@ -1850,7 +1849,7 @@ SampleProfileLoader::buildFunctionOrder(Module &M, CallGraph *CG) {
     errs() << "WARNING: -use-profiled-call-graph ignored, should be used "
               "together with -sample-profile-top-down-load.\n";
 
-  if (!ProfileTopDownLoad || CG == nullptr) {
+  if (!ProfileTopDownLoad) {
     if (ProfileMergeInlinee) {
       // Disable ProfileMergeInlinee if profile is not loaded in top down order,
       // because the profile for a function may be used for the profile
@@ -1865,8 +1864,6 @@ SampleProfileLoader::buildFunctionOrder(Module &M, CallGraph *CG) {
         FunctionOrderList.push_back(&F);
     return FunctionOrderList;
   }
-
-  assert(&CG->getModule() == &M);
 
   if (UseProfiledCallGraph || (FunctionSamples::ProfileIsCS &&
                                !UseProfiledCallGraph.getNumOccurrences())) {
@@ -1918,7 +1915,7 @@ SampleProfileLoader::buildFunctionOrder(Module &M, CallGraph *CG) {
     // static call edges are not so important when they don't correspond to a
     // context in the profile.
 
-    std::unique_ptr<ProfiledCallGraph> ProfiledCG = buildProfiledCallGraph(*CG);
+    std::unique_ptr<ProfiledCallGraph> ProfiledCG = buildProfiledCallGraph(M);
     scc_iterator<ProfiledCallGraph *> CGI = scc_begin(ProfiledCG.get());
     while (!CGI.isAtEnd()) {
       auto Range = *CGI;
@@ -1935,25 +1932,27 @@ SampleProfileLoader::buildFunctionOrder(Module &M, CallGraph *CG) {
       ++CGI;
     }
   } else {
-    scc_iterator<CallGraph *> CGI = scc_begin(CG);
-    while (!CGI.isAtEnd()) {
-      for (CallGraphNode *Node : *CGI) {
-        auto *F = Node->getFunction();
-        if (F && !F->isDeclaration() && F->hasFnAttribute("use-sample-profile"))
-          FunctionOrderList.push_back(F);
+    CG.buildRefSCCs();
+    for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
+      for (LazyCallGraph::SCC &C : RC) {
+        for (LazyCallGraph::Node &N : C) {
+          Function &F = N.getFunction();
+          if (!F.isDeclaration() && F.hasFnAttribute("use-sample-profile"))
+            FunctionOrderList.push_back(&F);
+        }
       }
-      ++CGI;
     }
   }
 
+  std::reverse(FunctionOrderList.begin(), FunctionOrderList.end());
+
   LLVM_DEBUG({
     dbgs() << "Function processing order:\n";
-    for (auto F : reverse(FunctionOrderList)) {
+    for (auto F : FunctionOrderList) {
       dbgs() << F->getName() << "\n";
     }
   });
 
-  std::reverse(FunctionOrderList.begin(), FunctionOrderList.end());
   return FunctionOrderList;
 }
 
@@ -2205,7 +2204,8 @@ void SampleProfileMatcher::detectProfileMismatch() {
 }
 
 bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
-                                      ProfileSummaryInfo *_PSI, CallGraph *CG) {
+                                      ProfileSummaryInfo *_PSI,
+                                      LazyCallGraph &CG) {
   GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
 
   PSI = _PSI;
@@ -2369,8 +2369,8 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
     return PreservedAnalyses::all();
 
   ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
-  CallGraph &CG = AM.getResult<CallGraphAnalysis>(M);
-  if (!SampleLoader.runOnModule(M, &AM, PSI, &CG))
+  LazyCallGraph &CG = AM.getResult<LazyCallGraphAnalysis>(M);
+  if (!SampleLoader.runOnModule(M, &AM, PSI, CG))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
