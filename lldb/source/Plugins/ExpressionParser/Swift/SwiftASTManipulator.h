@@ -109,17 +109,22 @@ public:
       return m_name.str().startswith("$τ_0_");
     }
     bool IsSelf() const {
-      return !m_name.str().compare("$__lldb_injected_self");
+      return m_name.str().equals("$__lldb_injected_self");
     }
+    bool IsPackCount() const {
+      return m_name.str().startswith("$pack_count_");
+    }
+    bool IsUnboundPack() const { return m_is_unbound_pack; }
 
     VariableInfo() : m_type(), m_name(), m_metadata() {}
 
     VariableInfo(CompilerType &type, swift::Identifier name,
                  VariableMetadataSP metadata,
                  swift::VarDecl::Introducer introducer,
-                 bool is_capture_list = false)
+                 bool is_capture_list = false, bool is_unbound_pack = false)
         : m_type(type), m_name(name), m_var_introducer(introducer),
-          m_is_capture_list(is_capture_list), m_metadata(metadata) {}
+          m_is_capture_list(is_capture_list),
+          m_is_unbound_pack(is_unbound_pack), m_metadata(metadata) {}
 
     void Print(Stream &stream) const;
 
@@ -134,6 +139,7 @@ public:
     swift::VarDecl::Introducer m_var_introducer =
         swift::VarDecl::Introducer::Var;
     bool m_is_capture_list = false;
+    bool m_is_unbound_pack = false;
 
   public:
     VariableMetadataSP m_metadata;
@@ -287,6 +293,7 @@ private:
   void InsertError(swift::VarDecl *error_var, swift::Type &error_type);
 
   std::vector<ResultLocationInfo> m_result_info;
+  llvm::StringMap<swift::TypeBase *> m_type_aliases;
 };
 }
 

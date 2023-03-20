@@ -2473,10 +2473,9 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
              "No scratch context available.");
     return ts.GetTypeFromMangledTypename(mangled_name);
   }
-  CompilerType bound_type =  scratch_ctx->RemangleAsType(dem, node);
-  LLDB_LOGF(GetLog(LLDBLog::Expressions | LLDBLog::Types), "Bound %s -> %s.",
-            mangled_name.GetCString(),
-            bound_type.GetMangledTypeName().GetCString());
+  CompilerType bound_type = scratch_ctx->RemangleAsType(dem, node);
+  LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types), "Bound {0} -> {1}.",
+           mangled_name, bound_type.GetMangledTypeName());
   return bound_type;
 }
 

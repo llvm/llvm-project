@@ -526,6 +526,16 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
                                lldb::BindGenericTypes bind_generic_types) {
   LLDB_SCOPED_TIMER();
 
+  // Alias builtin types, since we can't use them directly in source code.
+  auto builtin_ptr_t = swift_ast_context.GetBuiltinRawPointerType();
+  manipulator.MakeTypealias(
+      swift_ast_context.GetASTContext()->getIdentifier("$__lldb_builtin_ptr_t"),
+      builtin_ptr_t, false);
+  auto builtin_int_t = swift_ast_context.GetBuiltinIntType();
+  manipulator.MakeTypealias(
+      swift_ast_context.GetASTContext()->getIdentifier("$__lldb_builtin_int_t"),
+      builtin_int_t, false);
+  
   // First emit the typealias for "$__lldb_context".
   lldb::VariableSP self_var_sp = SwiftExpressionParser::FindSelfVariable(block);
 
@@ -653,11 +663,6 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
                   "archetype - could not make the $__lldb_context "
                   "typealias.");
   }
-  // Alias the builtin type, since we can't use it directly in source code.
-  auto builtin_ptr_t = swift_ast_context.GetBuiltinRawPointerType();
-  manipulator.MakeTypealias(
-      swift_ast_context.GetASTContext()->getIdentifier("$__lldb_builtin_ptr_t"),
-      builtin_ptr_t, false);
 }
 
 static void ResolveSpecialNames(
@@ -1097,6 +1102,18 @@ AddArchetypesTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
 
   auto &typeref_typesystem = swift_ast_context.GetTypeSystemSwiftTypeRef();
 
+  // Skip this for variadic generic functions.
+  ConstString func_name =
+      stack_frame.GetSymbolContext(lldb::eSymbolContextFunction)
+          .GetFunctionName(Mangled::ePreferMangled);
+  if (auto signature = SwiftLanguageRuntime::GetGenericSignature(
+          func_name.GetStringRef(), typeref_typesystem))
+    if (signature->pack_expansions.size()) {
+      LLDB_LOG(log, "[AddArchetypesTypeAliases] Variadic generic functions are "
+                    "not supported.");
+      return type_aliases;
+    }
+
   struct MetadataPointerInfo {
     unsigned int depth;
     unsigned int index;
@@ -1121,16 +1138,11 @@ AddArchetypesTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
     if (type_name.empty())
       continue;
 
-    auto name = variable.GetName().str();
-    if (!name.consume_front("$τ_"))
+    auto di = ParseSwiftGenericParameter(variable.GetName().str());
+    if (!di)
       continue;
-
-    auto pair = name.split('_');
-    auto depth_str = pair.first;
-    auto index_str = pair.second;
-    unsigned int depth, index;
-    if (depth_str.getAsInteger(10, depth) || index_str.getAsInteger(10, index))
-      continue;
+    unsigned depth = di->first;
+    unsigned index = di->second;
 
     auto it = visible_metadata_pointers.find(type_name);
     if (it != visible_metadata_pointers.end()) {
@@ -1146,7 +1158,7 @@ AddArchetypesTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
     }
   }
 
-  // Creata  a typealias from name -> type for each visible metadata pointer.
+  // Create a typealias from name -> type for each visible metadata pointer.
   for (auto &pair : visible_metadata_pointers) {
     llvm::StringRef &type_name = pair.getFirst();
     MetadataPointerInfo &info = pair.getSecond();
@@ -1333,7 +1345,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
       enable_bare_slash_regex_literals;
   invocation.getLangOptions().EnableExperimentalStringProcessing =
       enable_bare_slash_regex_literals;
-
+  invocation.getLangOptions().Features.insert(swift::Feature::VariadicGenerics);
 
   auto should_use_prestable_abi = [&]() {
     lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
@@ -1490,12 +1502,7 @@ RedirectCallFromSinkToTrampolineFunction(llvm::Module &module,
   }
 
   auto *trampoline_func_decl = manipulator.GetTrampolineDecl();
-  if (!trampoline_func_decl) {
-    log->Printf(
-        "[RedirectCallFromSinkToTrampolineFunction] Could not set the call: no "
-        "trampoline func decl.");
-    return false;
-  }
+  bool have_self = trampoline_func_decl;
 
   auto *sink_decl = manipulator.GetSinkDecl();
   if (!sink_decl) {
@@ -1505,44 +1512,49 @@ RedirectCallFromSinkToTrampolineFunction(llvm::Module &module,
     return false;
   }
 
-  auto expr_func_name = mangler.mangleEntity(entrypoint_decl);
-  auto wrapped_func_name = mangler.mangleEntity(func_decl);
-  auto trampoline_func_name = mangler.mangleEntity(trampoline_func_decl);
-  auto sink_func_name = mangler.mangleEntity(sink_decl);
+  std::string expr_func_name = mangler.mangleEntity(entrypoint_decl);
+  std::string wrapped_func_name = mangler.mangleEntity(func_decl);
+  std::string trampoline_func_name;
+  if (have_self)
+    trampoline_func_name = mangler.mangleEntity(trampoline_func_decl);
+  std::string sink_func_name = mangler.mangleEntity(sink_decl);
 
   llvm::Function *lldb_expr_func = module.getFunction(expr_func_name);
   llvm::Function *wrapped_func = module.getFunction(wrapped_func_name);
-  llvm::Function *trampoline_func = module.getFunction(trampoline_func_name);
+  llvm::Function *trampoline_func = nullptr;
+  if (have_self)
+    trampoline_func = module.getFunction(trampoline_func_name);
   llvm::Function *sink_func = module.getFunction(sink_func_name);
+  llvm::Function *callee_func = have_self ? trampoline_func : wrapped_func;
 
-  assert(lldb_expr_func && wrapped_func && trampoline_func && sink_decl);
-  if (!lldb_expr_func || !wrapped_func || !trampoline_func || !sink_func) {
+  assert(lldb_expr_func && wrapped_func && callee_func && sink_decl);
+  if (!lldb_expr_func || !wrapped_func || !callee_func || !sink_func) {
     log->Printf(
         "[RedirectCallFromSinkToTrampolineFunction] Could not set the call: "
         "could not find one of the required functions in the IR.");
     return false;
   }
 
-  auto *trampoline_func_type = trampoline_func->getFunctionType();
-  auto trampoline_num_params = trampoline_func_type->getNumParams();
+  auto *callee_func_type = callee_func->getFunctionType();
+  auto callee_num_params = callee_func_type->getNumParams();
   // There should be at least 3 params, the raw pointer, the self type, and at
   // least one pointer to metadata.
-  if (trampoline_num_params < 3) {
+  if (callee_num_params < (have_self ? 3 : 2)) {
     log->Printf(
         "[RedirectCallFromSinkToTrampolineFunction] Could not set the call: "
-        "trampoline function has %u parameters",
-        trampoline_num_params);
+        "callee function has %u parameters",
+        callee_num_params);
     return false;
   }
 
   auto *sink_func_type = sink_func->getFunctionType();
   auto sink_num_params = sink_func_type->getNumParams();
 
-  if (trampoline_num_params != sink_num_params) {
+  if (callee_num_params != sink_num_params) {
     log->Printf(
         "[RedirectCallFromSinkToTrampolineFunction] Could not set the call: "
-        "trampoline function has %u parameters but sink has %u parameters.",
-        trampoline_num_params, sink_num_params);
+        "callee function has %u parameters but sink has %u parameters.",
+        callee_num_params, sink_num_params);
     return false;
   }
 
@@ -1596,9 +1608,9 @@ RedirectCallFromSinkToTrampolineFunction(llvm::Module &module,
   // self.
   llvm::Value *lldb_arg_ptr = sink_call->getArgOperand(0);
   llvm::Value *self_load = sink_call->getArgOperand(1);
-  llvm::SmallVector<llvm::Value *> metadata_loads;
-  for (size_t i = 2; i < sink_num_params; ++i)
-    metadata_loads.emplace_back(sink_call->getArgOperand(i));
+  llvm::SmallVector<llvm::Value *> generic_args;
+  for (size_t i = (have_self ? 2 : 1); i < sink_num_params; ++i)
+    generic_args.emplace_back(sink_call->getArgOperand(i));
 
   // Delete the sink since we fished out the values we needed.
   sink_call->eraseFromParent();
@@ -1620,23 +1632,24 @@ RedirectCallFromSinkToTrampolineFunction(llvm::Module &module,
   // new call there.
   llvm::IRBuilder<> builder(&it);
 
-  llvm::Type *lldb_arg_type = trampoline_func_type->getParamType(1);
-  llvm::Type *self_type = trampoline_func_type->getParamType(2);
-
   // Bitcast the operands to the expected types, since they were type-erased
   // in the call to the sink.
-  auto *self_ptr = builder.CreateBitCast(self_opaque_ptr, lldb_arg_type);
-
-  llvm::SmallVector<llvm::Value *> trampoline_call_params;
-  trampoline_call_params.push_back(lldb_arg_ptr);
-  trampoline_call_params.push_back(self_ptr);
-  for (auto &metadata_load : metadata_loads)
-    trampoline_call_params.push_back(
-        builder.CreateBitCast(metadata_load, self_type));
+  llvm::SmallVector<llvm::Value *> call_params;
+  call_params.push_back(lldb_arg_ptr);
+  if (have_self) {
+    llvm::Type *self_type = callee_func_type->getParamType(1);
+    auto *self_ptr = builder.CreateBitCast(self_opaque_ptr, self_type);
+    call_params.push_back(self_ptr);
+  }
+  for (auto &arg : generic_args)
+    call_params.push_back(
+        arg->getType()->isPointerTy()
+            ? builder.CreateBitCast(
+                  arg, callee_func_type->getParamType(call_params.size()))
+            : arg);
 
   // Finally, create the call.
-  builder.CreateCall(trampoline_func_type, trampoline_func,
-                     trampoline_call_params);
+  builder.CreateCall(callee_func_type, callee_func, call_params);
   return true;
 }
 

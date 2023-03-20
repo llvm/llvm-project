@@ -302,15 +302,24 @@ static bool AddVariableInfo(
   if (!stack_frame_sp)
     return true;
 
+  if (!variable_sp || !variable_sp->GetType())
+    return true;
+
   CompilerType target_type;
+  bool is_unbound_pack =
+      bind_generic_types == lldb::eDontBind &&
+      (variable_sp->GetType()->GetForwardCompilerType().GetTypeInfo() &
+       lldb::eTypeIsPack);
 
   // If we're not binding the generic types, we need to set the self type as an
   // opaque pointer type. This is necessary because we don't bind the generic
   // parameters, and we can't have a type with unbound generics in a non-generic
   // function.
-  if (is_self && bind_generic_types == lldb::eDontBind) {
+  if (bind_generic_types == lldb::eDontBind && is_self)
     target_type = ast_context.GetBuiltinRawPointerType();
-  } else {
+  else if (is_unbound_pack)
+    target_type = variable_sp->GetType()->GetForwardCompilerType();
+  else {
     CompilerType var_type = SwiftExpressionParser::ResolveVariable(
         variable_sp, stack_frame_sp, runtime, use_dynamic, bind_generic_types);
 
@@ -329,7 +338,7 @@ static bool AddVariableInfo(
   // If we couldn't fully realize the type, then we aren't going
   // to get very far making a local out of it, so discard it here.
   Log *log = GetLog(LLDBLog::Types | LLDBLog::Expressions);
-  if (!SwiftASTContext::IsFullyRealized(target_type)) {
+  if (!is_unbound_pack && !SwiftASTContext::IsFullyRealized(target_type)) {
     if (log)
       log->Printf("Discarding local %s because we couldn't fully realize it, "
                   "our best attempt was: %s.",
@@ -377,7 +386,8 @@ static bool AddVariableInfo(
       target_type, ast_context.GetASTContext()->getIdentifier(overridden_name),
       metadata_sp,
       variable_sp->IsConstant() ? swift::VarDecl::Introducer::Let
-                                : swift::VarDecl::Introducer::Var);
+                                : swift::VarDecl::Introducer::Var,
+      false, is_unbound_pack);
 
   local_variables.push_back(variable_info);
   processed_variables.insert(overridden_name);
@@ -466,18 +476,22 @@ GetPersistentState(Target *target, ExecutionContext &exe_ctx) {
 /// - The Self type can only have one generic parameter. 
 /// - The Self type has to be the outermost type with unbound generics.
 static bool CanEvaluateExpressionWithoutBindingGenericParams(
-    const llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo>
-        &variables,
+    const llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &variables,
+    const llvm::Optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
     Block *block, StackFrame &stack_frame) {
   // First, find the compiler type of self with the generic parameters not
   // bound.
   auto self_var = SwiftExpressionParser::FindSelfVariable(block);
-  if (!self_var)
-    return false;
+  if (!self_var) {
+    // Freestanding variadic generic functions are also supported.
+    if (generic_sig)
+      return generic_sig->pack_expansions.size();
 
-  lldb::ValueObjectSP self_valobj =
-      stack_frame.GetValueObjectForFrameVariable(self_var,
-                                                     lldb::eNoDynamicValues);
+    return false;
+  }
+
+  lldb::ValueObjectSP self_valobj = stack_frame.GetValueObjectForFrameVariable(
+      self_var, lldb::eNoDynamicValues);
   if (!self_valobj)
     return false;
 
@@ -578,9 +592,18 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
     return ParseResult::retry_no_bind_generic_params;
   }
 
+  if (stack_frame) {
+    // Extract the generic signature of the context.
+    ConstString func_name =
+        stack_frame->GetSymbolContext(lldb::eSymbolContextFunction)
+            .GetFunctionName(Mangled::ePreferMangled);
+    m_generic_signature = SwiftLanguageRuntime::GetGenericSignature(
+        func_name.GetStringRef(), m_swift_ast_ctx->GetTypeSystemSwiftTypeRef());
+  }
+
   if (m_options.GetBindGenericTypes() == lldb::eDontBind &&
       !CanEvaluateExpressionWithoutBindingGenericParams(
-          local_variables, sc.block, *stack_frame.get())) {
+          local_variables, m_generic_signature, sc.block, *stack_frame.get())) {
     diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "Could not evaluate the expression without binding generic types.");
@@ -588,12 +611,15 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
   }
 
   uint32_t first_body_line = 0;
-  if (!source_code->GetText(m_transformed_text, m_options.GetLanguage(),
-                            m_needs_object_ptr, m_in_static_method, m_is_class,
-                            m_is_weak_self, m_options, exe_ctx, first_body_line,
-                            local_variables)) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                 "couldn't construct expression body");
+  Status status = source_code->GetText(
+      m_transformed_text, m_options.GetLanguage(), m_needs_object_ptr,
+      m_in_static_method, m_is_class, m_is_weak_self, m_options,
+      m_generic_signature, exe_ctx, first_body_line, local_variables);
+  if (status.Fail()) {
+    diagnostic_manager.PutString(
+        eDiagnosticSeverityError,
+        "couldn't construct expression body: " +
+            std::string(status.AsCString("<unknown error>")));
     return ParseResult::unrecoverable_error;
   }
 
