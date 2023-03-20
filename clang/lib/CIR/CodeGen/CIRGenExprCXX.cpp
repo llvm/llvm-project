@@ -84,9 +84,10 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorCall(
       *this, MD, This, ImplicitParam, ImplicitParamTy, CE, Args, RtlArgs);
   auto &FnInfo = CGM.getTypes().arrangeCXXMethodCall(
       Args, FPT, CallInfo.ReqArgs, CallInfo.PrefixSize);
+  assert((CE || currSrcLoc) && "expected source location");
+  mlir::Location loc = CE ? getLoc(CE->getExprLoc()) : *currSrcLoc;
   return buildCall(FnInfo, Callee, ReturnValue, Args, nullptr,
-                   CE && CE == MustTailCall,
-                   CE ? CE->getExprLoc() : SourceLocation());
+                   CE && CE == MustTailCall, loc);
 }
 
 RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(

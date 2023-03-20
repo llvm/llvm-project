@@ -652,11 +652,93 @@ void CIRGenFunction::buildImplicitAssignmentOperatorBody(
   const CompoundStmt *RootCS = cast<CompoundStmt>(RootS);
 
   // LexicalScope Scope(*this, RootCS->getSourceRange());
-  // FIXME: add all of the below under a new scope.
+  // FIXME(cir): add all of the below under a new scope.
 
   assert(!UnimplementedFeature::incrementProfileCounter());
   AssignmentMemcpyizer AM(*this, AssignOp, Args);
   for (auto *I : RootCS->body())
     AM.emitAssignment(I);
   AM.finish();
+}
+
+void CIRGenFunction::buildForwardingCallToLambda(
+    const CXXMethodDecl *callOperator, CallArgList &callArgs) {
+  // Get the address of the call operator.
+  const auto &calleeFnInfo =
+      CGM.getTypes().arrangeCXXMethodDeclaration(callOperator);
+  auto calleePtr = CGM.GetAddrOfFunction(
+      GlobalDecl(callOperator), CGM.getTypes().GetFunctionType(calleeFnInfo));
+
+  // Prepare the return slot.
+  const FunctionProtoType *FPT =
+      callOperator->getType()->castAs<FunctionProtoType>();
+  QualType resultType = FPT->getReturnType();
+  ReturnValueSlot returnSlot;
+  if (!resultType->isVoidType() &&
+      calleeFnInfo.getReturnInfo().getKind() == ABIArgInfo::Indirect &&
+      !hasScalarEvaluationKind(calleeFnInfo.getReturnType())) {
+    llvm_unreachable("NYI");
+  }
+
+  // We don't need to separately arrange the call arguments because
+  // the call can't be variadic anyway --- it's impossible to forward
+  // variadic arguments.
+
+  // Now emit our call.
+  auto callee = CIRGenCallee::forDirect(calleePtr, GlobalDecl(callOperator));
+  RValue RV = buildCall(calleeFnInfo, callee, returnSlot, callArgs);
+
+  // If necessary, copy the returned value into the slot.
+  if (!resultType->isVoidType() && returnSlot.isNull()) {
+    if (getLangOpts().ObjCAutoRefCount && resultType->isObjCRetainableType())
+      llvm_unreachable("NYI");
+    buildReturnOfRValue(*currSrcLoc, RV, resultType);
+  } else {
+    llvm_unreachable("NYI");
+  }
+}
+
+void CIRGenFunction::buildLambdaDelegatingInvokeBody(const CXXMethodDecl *MD) {
+  const CXXRecordDecl *Lambda = MD->getParent();
+
+  // Start building arguments for forwarding call
+  CallArgList CallArgs;
+
+  QualType LambdaType = getContext().getRecordType(Lambda);
+  QualType ThisType = getContext().getPointerType(LambdaType);
+  Address ThisPtr =
+      CreateMemTemp(LambdaType, getLoc(MD->getSourceRange()), "unused.capture");
+  CallArgs.add(RValue::get(ThisPtr.getPointer()), ThisType);
+
+  // Add the rest of the parameters.
+  for (auto *Param : MD->parameters())
+    buildDelegateCallArg(CallArgs, Param, Param->getBeginLoc());
+
+  const CXXMethodDecl *CallOp = Lambda->getLambdaCallOperator();
+  // For a generic lambda, find the corresponding call operator specialization
+  // to which the call to the static-invoker shall be forwarded.
+  if (Lambda->isGenericLambda()) {
+    assert(MD->isFunctionTemplateSpecialization());
+    const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
+    FunctionTemplateDecl *CallOpTemplate =
+        CallOp->getDescribedFunctionTemplate();
+    void *InsertPos = nullptr;
+    FunctionDecl *CorrespondingCallOpSpecialization =
+        CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
+    assert(CorrespondingCallOpSpecialization);
+    CallOp = cast<CXXMethodDecl>(CorrespondingCallOpSpecialization);
+  }
+  buildForwardingCallToLambda(CallOp, CallArgs);
+}
+
+void CIRGenFunction::buildLambdaStaticInvokeBody(const CXXMethodDecl *MD) {
+  if (MD->isVariadic()) {
+    // Codgen for LLVM doesn't emit code for this as well, it says:
+    // FIXME: Making this work correctly is nasty because it requires either
+    // cloning the body of the call operator or making the call operator
+    // forward.
+    llvm_unreachable("NYI");
+  }
+
+  buildLambdaDelegatingInvokeBody(MD);
 }

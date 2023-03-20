@@ -90,3 +90,47 @@ int f() {
 // CHECK-NEXT:   %1 = cir.load %0 : cir.ptr <i32>, i32
 // CHECK-NEXT:   cir.return %1 : i32
 // CHECK-NEXT: }
+
+int g3() {
+  auto* fn = +[](int const& i) -> int { return i; };
+  auto task = fn(3);
+  return task;
+}
+
+// lambda operator()
+// CHECK: cir.func lambda internal @_ZZ2g3vENK3$_0clERKi
+
+// lambda __invoke()
+// CHECK:   cir.func internal @_ZZ2g3vEN3$_08__invokeERKi
+
+// lambda operator int (*)(int const&)()
+// CHECK:   cir.func internal @_ZZ2g3vENK3$_0cvPFiRKiEEv
+
+// CHECK: cir.func @_Z2g3v() -> i32 {
+// CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64}
+// CHECK:     %1 = cir.alloca !cir.ptr<(!cir.ptr<i32>) -> i32>, cir.ptr <!cir.ptr<(!cir.ptr<i32>) -> i32>>, ["fn", init] {alignment = 8 : i64}
+// CHECK:     %2 = cir.alloca i32, cir.ptr <i32>, ["task", init] {alignment = 4 : i64}
+
+// 1. Use `operator int (*)(int const&)()` to retrieve the fnptr to `__invoke()`.
+// CHECK:     %3 = cir.scope {
+// CHECK:       %7 = cir.alloca !ty_22class2Eanon224, cir.ptr <!ty_22class2Eanon224>, ["ref.tmp0"] {alignment = 1 : i64}
+// CHECK:       %8 = cir.call @_ZZ2g3vENK3$_0cvPFiRKiEEv(%7) : (!cir.ptr<!ty_22class2Eanon224>) -> !cir.ptr<(!cir.ptr<i32>) -> i32>
+// CHECK:       %9 = cir.unary(plus, %8) : !cir.ptr<(!cir.ptr<i32>) -> i32>, !cir.ptr<(!cir.ptr<i32>) -> i32>
+// CHECK:       cir.yield %9 : !cir.ptr<(!cir.ptr<i32>) -> i32>
+// CHECK:     }
+
+// 2. Load ptr to `__invoke()`.
+// CHECK:     cir.store %3, %1 : !cir.ptr<(!cir.ptr<i32>) -> i32>, cir.ptr <!cir.ptr<(!cir.ptr<i32>) -> i32>>
+// CHECK:     %4 = cir.scope {
+// CHECK:       %7 = cir.alloca i32, cir.ptr <i32>, ["ref.tmp1", init] {alignment = 4 : i64}
+// CHECK:       %8 = cir.load %1 : cir.ptr <!cir.ptr<(!cir.ptr<i32>) -> i32>>, !cir.ptr<(!cir.ptr<i32>) -> i32>
+// CHECK:       %9 = cir.const(3 : i32) : i32
+// CHECK:       cir.store %9, %7 : i32, cir.ptr <i32>
+
+// 3. Call `__invoke()`, which effectively executes `operator()`.
+// CHECK:       %10 = cir.call %8(%7) : (!cir.ptr<(!cir.ptr<i32>) -> i32>, !cir.ptr<i32>) -> i32
+// CHECK:       cir.yield %10 : i32
+// CHECK:     }
+
+// CHECK:   }
+

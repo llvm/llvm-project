@@ -1136,18 +1136,26 @@ void GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 LogicalResult
 GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Verify that the result type underlying pointer type matches the type of the
-  // referenced cir.global op.
-  auto global =
-      symbolTable.lookupNearestSymbolFrom<GlobalOp>(*this, getNameAttr());
-  if (!global)
+  // referenced cir.global or cir.func op.
+  auto op = symbolTable.lookupNearestSymbolFrom(*this, getNameAttr());
+  if (!(isa<GlobalOp>(op) || isa<FuncOp>(op)))
     return emitOpError("'")
-           << getName() << "' does not reference a valid cir.global";
+           << getName()
+           << "' does not reference a valid cir.global or cir.func";
+
+  mlir::Type symTy;
+  if (auto g = dyn_cast<GlobalOp>(op))
+    symTy = g.getSymType();
+  else if (auto f = dyn_cast<FuncOp>(op))
+    symTy = f.getFunctionType();
+  else
+    llvm_unreachable("shall not get here");
 
   auto resultType = getAddr().getType().dyn_cast<PointerType>();
-  if (!resultType || global.getSymType() != resultType.getPointee())
+  if (!resultType || symTy != resultType.getPointee())
     return emitOpError("result type pointee type '")
-           << resultType.getPointee() << "' does not match type "
-           << global.getSymType() << " of the global @" << getName();
+           << resultType.getPointee() << "' does not match type " << symTy
+           << " of the global @" << getName();
   return success();
 }
 
@@ -1365,10 +1373,11 @@ void cir::CallOp::setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
 
 LogicalResult
 cir::CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  // Check that the callee attribute was specified.
+  // Callee attribute only need on indirect calls.
   auto fnAttr = (*this)->getAttrOfType<FlatSymbolRefAttr>("callee");
   if (!fnAttr)
-    return emitOpError("requires a 'callee' symbol reference attribute");
+    return success();
+
   FuncOp fn =
       symbolTable.lookupNearestSymbolFrom<mlir::cir::FuncOp>(*this, fnAttr);
   if (!fn)
@@ -1455,7 +1464,7 @@ void CallOp::print(::mlir::OpAsmPrinter &state) {
     state.printAttributeWithoutType(getCalleeAttr());
   } else { // Indirect calls
     state << ops.front();
-    ops.drop_front();
+    ops = ops.drop_front();
   }
   state << "(";
   state << ops;

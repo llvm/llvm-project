@@ -1482,8 +1482,9 @@ void LifetimeCheckPass::checkCall(CallOp callOp) {
   // Note that we can't reliably know if a function is a coroutine only as
   // part of declaration
 
-  // Indirect calls are not yet supported.
-  assert(callOp.getCallee() && "NYI");
+  // FIXME: Indirect calls are not yet supported.
+  if (!callOp.getCallee())
+    return;
 
   auto fnName = *callOp.getCallee();
   auto calleeFuncOp = getCalleeFromSymbol(theModule, fnName);
