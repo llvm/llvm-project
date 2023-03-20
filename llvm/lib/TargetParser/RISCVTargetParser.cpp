@@ -85,10 +85,5 @@ void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64) {
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 }
 
-bool isX18ReservedByDefault(const Triple &TT) {
-  // X18 is reserved for the ShadowCallStack ABI (even when not enabled).
-  return TT.isOSFuchsia() || TT.isAndroid();
-}
-
 } // namespace RISCV
 } // namespace llvm
