@@ -64,6 +64,41 @@ def GPUWarpMappingAttr : GPU_Attr<"GPUWarpMapping", "warp", [
   }];
 }
 
+def LinearIdEnum : I64EnumAttr<"LinearId", "linear ids for loop mapping", [
+    DimX, DimY, DimZ]> {
+  let cppNamespace = "::mlir::gpu";
+}
+
+def GPULinearIdMapping : GPU_Attr<"GPULinearIdMapping", "linear", [
+  DeclareAttrInterfaceMethods<DeviceMappingAttrInterface> ] >  {
+  let parameters = (ins
+    EnumParameter<LinearIdEnum>:$linear_id
+  );
+  let assemblyFormat = "`<` params `>`";
+  let description = [{
+    An attribute to allow re-interpreting the linear mapping for threads in GPU
+    devices.
+
+    Threads (aka work item) are grouped into a thread block where block may be
+    described by a 1-, 2-, or 3-dimensional rectangular basis.
+    The linear thread id is obtained by linearizing the 1-, 2- or 3-dimensional
+    index. For instance, if the basis is denoted as (BX, BY, BZ) and the thread
+    id is denoted by (tx, ty, tz), the linear thread id is:
+      `linear_id = tx + ty * BX + tz * BX * BY)`.
+    The linear thread id is fixed for the duration of a GPU kernel.
+    
+    This linear id mapping attribute indicates a different linearization relation
+    is applied locally to a loop nest. 
+    
+    For instance, if the new basis is denoted as (LBX, LBY, LBZ) the thread id
+    in the new basis is:
+      `(linear_id mod LBX , (linear_id / LBX) mod * LBY, linear_id / (LBX * LBY))`.
+    This reinterpretation is only fixe for the duration of a loop nest.
+    
+    It can be consumed by lowering to generate GPU code.
+  }];
+}
+
 def BlocksEnum : I64EnumAttr<"Blocks", "threads for loop mapping", [
     DimX, DimY, DimZ]> {
   let cppNamespace = "::mlir::gpu";
