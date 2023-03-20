@@ -143,7 +143,8 @@ bool CodeGenAction::beginSourceFileAction() {
     }
 
     mlirModule = std::make_unique<mlir::ModuleOp>(module.release());
-    setUpTargetMachine();
+    if (!setUpTargetMachine())
+      return false;
     const llvm::DataLayout &dl = tm->createDataLayout();
     setMLIRDataLayout(*mlirModule, dl);
     return true;
@@ -184,7 +185,8 @@ bool CodeGenAction::beginSourceFileAction() {
         *mlirModule, ci.getInvocation().getLangOpts().OpenMPIsDevice);
   }
 
-  setUpTargetMachine();
+  if (!setUpTargetMachine())
+    return false;
   const llvm::DataLayout &dl = tm->createDataLayout();
   setMLIRDataLayout(*mlirModule, dl);
 
@@ -585,7 +587,7 @@ void CodeGenAction::generateLLVMIR() {
 
 }
 
-void CodeGenAction::setUpTargetMachine() {
+bool CodeGenAction::setUpTargetMachine() {
   CompilerInstance &ci = this->getInstance();
 
   const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
@@ -595,7 +597,11 @@ void CodeGenAction::setUpTargetMachine() {
   std::string error;
   const llvm::Target *theTarget =
       llvm::TargetRegistry::lookupTarget(theTriple, error);
-  assert(theTarget && "Failed to create Target");
+  if (!theTarget) {
+    ci.getDiagnostics().Report(clang::diag::err_fe_unable_to_create_target)
+        << error;
+    return false;
+  }
 
   // Create `TargetMachine`
   const auto &CGOpts = ci.getInvocation().getCodeGenOpts();
@@ -611,6 +617,7 @@ void CodeGenAction::setUpTargetMachine() {
       /*Reloc::Model=*/CGOpts.getRelocationModel(),
       /*CodeModel::Model=*/std::nullopt, OptLevel));
   assert(tm && "Failed to create TargetMachine");
+  return true;
 }
 
 static std::unique_ptr<llvm::raw_pwrite_stream>
@@ -799,7 +806,8 @@ void CodeGenAction::executeAction() {
   // Set the triple based on the targetmachine (this comes compiler invocation
   // and the command-line target option if specified, or the default if not
   // given on the command-line).
-  setUpTargetMachine();
+  if (!setUpTargetMachine())
+    return;
   const std::string &theTriple = tm->getTargetTriple().str();
 
   if (llvmModule->getTargetTriple() != theTriple) {
