@@ -347,8 +347,6 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     return new Le64TargetInfo(Triple, Opts);
 
   case llvm::Triple::ppc:
-    if (Triple.isOSDarwin())
-      return new DarwinPPC32TargetInfo(Triple, Opts);
     switch (os) {
     case llvm::Triple::Linux:
       return new LinuxTargetInfo<PPC32TargetInfo>(Triple, Opts);
@@ -377,8 +375,6 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     }
 
   case llvm::Triple::ppc64:
-    if (Triple.isOSDarwin())
-      return new DarwinPPC64TargetInfo(Triple, Opts);
     switch (os) {
     case llvm::Triple::Linux:
       return new LinuxTargetInfo<PPC64TargetInfo>(Triple, Opts);
