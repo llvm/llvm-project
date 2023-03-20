@@ -87,7 +87,7 @@ def AMDGPU_RawBufferLoadOp :
   let assemblyFormat = [{
     attr-dict $memref `[` $indices `]`
       (`sgprOffset` $sgprOffset^)? `:`
-      type($memref) `,` type($indices) `->` type($value)
+      type($memref) (`,` type($indices)^)? `->` type($value)
   }];
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
@@ -130,7 +130,7 @@ def AMDGPU_RawBufferStoreOp :
   let assemblyFormat = [{
     attr-dict $value `->` $memref `[` $indices `]`
       (`sgprOffset` $sgprOffset^)? `:`
-      type($value) `->` type($memref) `,` type($indices)
+      type($value) `->` type($memref) (`,` type($indices)^)?
   }];
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
