@@ -1413,11 +1413,11 @@ FunctionType CallOp::getCalleeType() {
   llvm::ArrayRef<::mlir::Type> operandsTypes;
   llvm::ArrayRef<::mlir::Type> allResultTypes;
 
-  if (parser.parseCustomAttributeWithFallback(
-          calleeAttr, parser.getBuilder().getType<::mlir::NoneType>(), "callee",
-          result.attributes)) {
+  if (!parser.parseOptionalAttribute(calleeAttr, "callee", result.attributes)
+           .has_value()) {
     return ::mlir::failure();
   }
+
   if (parser.parseLParen())
     return ::mlir::failure();
 
@@ -1444,9 +1444,15 @@ FunctionType CallOp::getCalleeType() {
 
 void CallOp::print(::mlir::OpAsmPrinter &state) {
   state << ' ';
-  state.printAttributeWithoutType(getCalleeAttr());
+  auto ops = getOperands();
+
+  if (getCallee()) { // Direct calls
+    state.printAttributeWithoutType(getCalleeAttr());
+  } else {
+    llvm_unreachable("NYI");
+  }
   state << "(";
-  state << getOperands();
+  state << ops;
   state << ")";
   llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;
   elidedAttrs.push_back("callee");
