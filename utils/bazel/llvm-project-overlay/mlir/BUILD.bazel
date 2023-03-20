@@ -9316,7 +9316,10 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Transform/IR/TransformOps.td",
-    deps = [":TransformDialectTdFiles"],
+    deps = [
+        ":CallInterfacesTdFiles",
+        ":TransformDialectTdFiles"
+    ],
 )
 
 gentbl_cc_library(
@@ -9342,6 +9345,7 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/IR/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/IR/*.h"]),
     deps = [
+        ":CallInterfaces",
         ":ControlFlowInterfaces",
         ":IR",
         ":PDLDialect",
