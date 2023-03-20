@@ -460,27 +460,55 @@ GuardWideningImpl::computeWideningScore(Instruction *DominatedInstr,
   if (HoistingOutOfLoop)
     return WS_Positive;
 
-  // Returns true if we might be hoisting above explicit control flow.  Note
-  // that this completely ignores implicit control flow (guards, calls which
-  // throw, etc...).  That choice appears arbitrary.
-  auto MaybeHoistingOutOfIf = [&]() {
-    auto *DominatingBlock = DominatingGuard->getParent();
-    auto *DominatedBlock = DominatedInstr->getParent();
-    if (isGuardAsWidenableBranch(DominatingGuard))
-      DominatingBlock = cast<BranchInst>(DominatingGuard)->getSuccessor(0);
+  // For a given basic block \p BB, return its successor which is guaranteed or
+  // highly likely will be taken as its successor.
+  auto GetLikelySuccessor = [](const BasicBlock * BB)->const BasicBlock * {
+    if (auto *UniqueSucc = BB->getUniqueSuccessor())
+      return UniqueSucc;
+    auto *Term = BB->getTerminator();
+    Value *Cond = nullptr;
+    const BasicBlock *IfTrue = nullptr, *IfFalse = nullptr;
+    using namespace PatternMatch;
+    if (!match(Term, m_Br(m_Value(Cond), m_BasicBlock(IfTrue),
+                          m_BasicBlock(IfFalse))))
+      return nullptr;
+    // For constant conditions, only one dynamical successor is possible
+    if (auto *ConstCond = dyn_cast<ConstantInt>(Cond))
+      return ConstCond->isAllOnesValue() ? IfTrue : IfFalse;
+    // If one of successors ends with deopt, another one is likely.
+    if (IfFalse->getPostdominatingDeoptimizeCall())
+      return IfTrue;
+    if (IfTrue->getPostdominatingDeoptimizeCall())
+      return IfFalse;
+    // TODO: Use branch frequency metatada to allow hoisting through non-deopt
+    // branches?
+    return nullptr;
+  };
+
+  // Returns true if we might be hoisting above explicit control flow into a
+  // considerably hotter block.  Note that this completely ignores implicit
+  // control flow (guards, calls which throw, etc...).  That choice appears
+  // arbitrary (we assume that implicit control flow exits are all rare).
+  auto MaybeHoistingToHotterBlock = [&]() {
+    const auto *DominatingBlock = DominatingGuard->getParent();
+    const auto *DominatedBlock = DominatedInstr->getParent();
+
+    // Descent as low as we can, always taking the likely successor.
+    while (DominatedBlock != DominatingBlock)
+      if (auto *LikelySucc = GetLikelySuccessor(DominatingBlock))
+        DominatingBlock = LikelySucc;
+      else
+        break;
 
     // Same Block?
     if (DominatedBlock == DominatingBlock)
-      return false;
-    // Obvious successor (common loop header/preheader case)
-    if (DominatedBlock == DominatingBlock->getUniqueSuccessor())
       return false;
     // TODO: diamond, triangle cases
     if (!PDT) return true;
     return !PDT->dominates(DominatedBlock, DominatingBlock);
   };
 
-  return MaybeHoistingOutOfIf() ? WS_IllegalOrNegative : WS_Neutral;
+  return MaybeHoistingToHotterBlock() ? WS_IllegalOrNegative : WS_Neutral;
 }
 
 bool GuardWideningImpl::canBeHoistedTo(
