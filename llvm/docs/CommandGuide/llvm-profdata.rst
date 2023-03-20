@@ -161,6 +161,12 @@ OPTIONS
  coverage for the optimized target. This option can only be used with
  sample-based profile in extbinary format.
 
+.. option:: --convert-sample-profile-layout=[nest|flat]
+
+ Convert the merged profile into a profile with a new layout. Supported
+ layout are ``nest``(Nested profile, the input should be CS flat profile) and
+ ``flat``(Profile with nested inlinees flattened out).
+
 .. option:: --supplement-instr-with-sample=<file>
 
  Supplement an instrumentation profile with sample profile. The sample profile
