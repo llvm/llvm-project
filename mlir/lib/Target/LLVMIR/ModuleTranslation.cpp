@@ -79,6 +79,15 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       layoutStream.flush();
       continue;
     }
+    if (key.getValue() == DLTIDialect::kDataLayoutAllocaMemorySpaceKey) {
+      auto value = entry.getValue().cast<IntegerAttr>();
+      if (value != 0) {
+        // Only emit non-default address space.
+        layoutStream << "A" << value;
+        layoutStream.flush();
+      }
+      continue;
+    }
     emitError(*loc) << "unsupported data layout key " << key;
     return failure();
   }
