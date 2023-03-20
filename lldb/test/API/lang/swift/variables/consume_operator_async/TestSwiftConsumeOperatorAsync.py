@@ -1,4 +1,4 @@
-# TestSwiftMoveFunctionAsync.py
+# TestSwiftConsumeOperatorAsync.py
 #
 # This source file is part of the Swift.org open source project
 #
@@ -11,7 +11,7 @@
 # ------------------------------------------------------------------------------
 """
 Check that we properly show variables at various points of the CFG while
-stepping with the move function.
+stepping with the consume operator.
 """
 import lldb
 from lldbsuite.test.lldbtest import *
@@ -24,14 +24,14 @@ import unittest2
 def stderr_print(line):
     sys.stderr.write(line + "\n")
 
-class TestSwiftMoveFunctionAsyncType(TestBase):
+class TestSwiftConsumeOperatorAsyncType(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
-    def test_swift_move_function_async(self):
+    def test_swift_consume_operator_async(self):
         """Check that we properly show variables at various points of the CFG while
-        stepping with the move function.
+        stepping with the consume operator.
         """
         self.build()
 
@@ -89,16 +89,16 @@ class TestSwiftMoveFunctionAsyncType(TestBase):
         varK = self.get_var('k')
         self.assertGreater(varK.unsigned, 0, "varK not initialized?!")
 
-        # We are now at break point 3. We have moved k, it should be empty.
+        # We are now at break point 3. We have consumed k, it should be empty.
         self.continue_to(3)
         varK = self.get_var('k')
-        self.assertIsNone(varK.value, "K is live but was moved?!")
+        self.assertIsNone(varK.value, "K is live but was consumed?!")
 
         # Finally, we are on the other side of the final force split. Make sure
         # the value still isn't available.
         self.continue_to(4)
         varK = self.get_var('k')
-        self.assertIsNone(varK.value, "K is live but was moved?!")
+        self.assertIsNone(varK.value, "K is live but was consumed?!")
 
     def do_check_copyable_var_test(self):
         # Run so we hit the next breakpoint to jump to the next test's
@@ -125,17 +125,17 @@ class TestSwiftMoveFunctionAsyncType(TestBase):
         varK = self.get_var('k')
         self.assertGreater(varK.unsigned, 0, "varK not initialized?!")
 
-        # We are now at break point 8. We have moved k, it should be empty.
+        # We are now at break point 8. We have consumed k, it should be empty.
         self.continue_to(8)
         varK = self.get_var('k')
-        self.assertIsNone(varK.value, "K is live but was moved?!")
+        self.assertIsNone(varK.value, "K is live but was consumed?!")
 
         # Now, we are on the other side of the final force split. Make sure
         # the value still isn't available.
         self.continue_to(9)
         self.runCmd('# On other side of force split')
         varK = self.get_var('k')
-        self.assertIsNone(varK.value, "K is live but was moved?!")
+        self.assertIsNone(varK.value, "K is live but was consumed?!")
 
         # Finally, we have reinitialized k, look for k.
         self.continue_to(10)
