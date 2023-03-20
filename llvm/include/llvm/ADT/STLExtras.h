@@ -2385,10 +2385,16 @@ struct index_stream {
 ///
 template <typename FirstRange, typename... RestRanges>
 auto enumerate(FirstRange &&First, RestRanges &&...Rest) {
-  assert((sizeof...(Rest) == 0 ||
-          all_equal({std::distance(adl_begin(First), adl_end(First)),
-                     std::distance(adl_begin(Rest), adl_end(Rest))...})) &&
-         "Ranges have different length");
+  if constexpr (sizeof...(Rest) != 0) {
+#ifndef NDEBUG
+    // Note: Create an array instead of an initializer list to work around an
+    // Apple clang 14 compiler bug.
+    size_t sizes[] = {
+        static_cast<size_t>(std::distance(adl_begin(First), adl_end(First))),
+        static_cast<size_t>(std::distance(adl_begin(Rest), adl_end(Rest)))...};
+    assert(all_equal(sizes) && "Ranges have different length");
+#endif
+  }
   using enumerator = detail::zippy<detail::zip_enumerator, detail::index_stream,
                                    FirstRange, RestRanges...>;
   return enumerator(detail::index_stream{}, std::forward<FirstRange>(First),
