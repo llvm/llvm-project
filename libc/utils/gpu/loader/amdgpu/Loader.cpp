@@ -43,7 +43,7 @@ static __llvm_libc::rpc::Server server;
 /// Queries the RPC client at least once and performs server-side work if there
 /// are any active requests.
 void handle_server() {
-  while (server.run(
+  while (server.handle(
       [&](__llvm_libc::rpc::Buffer *buffer) {
         switch (static_cast<__llvm_libc::rpc::Opcode>(buffer->data[0])) {
         case __llvm_libc::rpc::Opcode::PRINT_TO_STDERR: {
