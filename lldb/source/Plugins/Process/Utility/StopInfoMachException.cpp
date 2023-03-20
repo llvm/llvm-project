@@ -795,6 +795,19 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
   case 9:  // EXC_RPC_ALERT
   case 10: // EXC_CRASH
     break;
+  case 12: // EXC_GUARD
+    {
+      // Some EXC_GUARD exceptions are fatal, and the process will go away
+      // the next time you allow it to run.  When we get one of those 
+      // exceptions we have to make sure SafeToCallFunctions returns false to
+      // prevent us or other agents running the process.  This has to be set
+      // on the process because even the threads that didn't get the exception
+      // can't run.
+      ProcessSP process_sp(thread.GetProcess());
+      if (process_sp)
+        process_sp->SetSafeToCallFunctions(false);
+      
+    }
   }
 
   return StopInfoSP(new StopInfoMachException(thread, exc_type, exc_data_count,
