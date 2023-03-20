@@ -7,13 +7,13 @@ define void @const_tripcount(ptr %a) {
 ; CHECK-LABEL: @const_tripcount(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 84
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 1600
+; CHECK-NEXT:    [[UGLYGEP4:%.*]] = getelementptr i8, ptr [[A]], i64 1600
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
 ; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
-; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[SCEVGEP]]
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[UGLYGEP4]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -42,13 +42,13 @@ define void @runtime_tripcount(ptr %a, i32 %N) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 84
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
 ; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
-; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[SCEVGEP]]
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[UGLYGEP1]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -79,14 +79,14 @@ define void @ptr_of_ptr_addrec(ptr %ptrptr, i32 %length) {
 ; CHECK-NEXT:    [[START_PTRPTR:%.*]] = getelementptr ptr, ptr [[PTRPTR:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[LENGTH:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[START_PTRPTR]], i64 [[TMP1]]
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[START_PTRPTR]], i64 [[TMP1]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IT_04:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[START_PTRPTR]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[IT_04]], align 8
 ; CHECK-NEXT:    tail call void @foo(ptr [[TMP2]])
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds ptr, ptr [[IT_04]], i64 1
-; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[INCDEC_PTR]], [[SCEVGEP]]
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[INCDEC_PTR]], [[UGLYGEP]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -119,7 +119,7 @@ define void @iv_start_non_preheader(ptr %mark, i32 signext %length) {
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[LENGTH]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[MARK:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[MARK:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
@@ -130,7 +130,7 @@ define void @iv_start_non_preheader(ptr %mark, i32 signext %length) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DST_04]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @foo(ptr [[TMP2]])
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds ptr, ptr [[DST_04]], i64 1
-; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[INCDEC_PTR]], [[SCEVGEP]]
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[INCDEC_PTR]], [[UGLYGEP]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ;
 entry:
@@ -162,13 +162,13 @@ for.body:                                         ; preds = %entry, %for.body
 define void @inbounds_poison_use(ptr %a) {
 ; CHECK-LABEL: @inbounds_poison_use(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 16
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 16
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[A]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i8 1, ptr [[LSR_IV1]], align 4
 ; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr inbounds i8, ptr [[LSR_IV1]], i64 4
-; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[SCEVGEP]]
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[UGLYGEP]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -198,13 +198,13 @@ define void @iv_size(ptr %a, i128 %N) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i128 [[N:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 2
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[A]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
 ; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
-; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[SCEVGEP]]
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[UGLYGEP]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -219,6 +219,215 @@ for.body:                                         ; preds = %for.body, %entry
   %lsr.iv.next = add nsw i128 %lsr.iv, -1
   %uglygep2 = getelementptr i8, ptr %lsr.iv1, i64 4
   %exitcond.not = icmp eq i128 %lsr.iv.next, 0
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+; To check correct folding not equality terminating condition
+; Due to SLE offset must be - 1600
+define void @IcmpSle(ptr %a) {
+; CHECK-LABEL: @IcmpSle(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 84
+; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 1600
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i32 4
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[UGLYGEP1]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %uglygep = getelementptr i8, ptr %a, i32 84
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %lsr.iv1 = phi ptr [ %uglygep2, %for.body ], [ %uglygep, %entry ]
+  %lsr.iv = phi i32 [ %lsr.iv.next, %for.body ], [ 379, %entry ]
+  store i32 1, ptr %lsr.iv1, align 4
+  %lsr.iv.next = add nsw i32 %lsr.iv, -1
+  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i32 4
+  %exitcond.not = icmp sle i32 %lsr.iv.next, 0
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+; Due to SLT offset must be - 1604
+define void @IcmpSlt(ptr %a) {
+; CHECK-LABEL: @IcmpSlt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 84
+; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 1604
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i32 4
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[UGLYGEP1]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %uglygep = getelementptr i8, ptr %a, i32 84
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %lsr.iv1 = phi ptr [ %uglygep2, %for.body ], [ %uglygep, %entry ]
+  %lsr.iv = phi i32 [ %lsr.iv.next, %for.body ], [ 379, %entry ]
+  store i32 1, ptr %lsr.iv1, align 4
+  %lsr.iv.next = add nsw i32 %lsr.iv, -1
+  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i32 4
+  %exitcond.not = icmp slt i32 %lsr.iv.next, 0
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+; Invert predicate and branches
+define void @IcmpSgt(ptr %a) {
+; CHECK-LABEL: @IcmpSgt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 84
+; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 88
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i32 4
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[UGLYGEP1]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %uglygep = getelementptr i8, ptr %a, i32 84
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %lsr.iv1 = phi ptr [ %uglygep2, %for.body ], [ %uglygep, %entry ]
+  %lsr.iv = phi i32 [ %lsr.iv.next, %for.body ], [ 379, %entry ]
+  store i32 1, ptr %lsr.iv1, align 4
+  %lsr.iv.next = add nsw i32 %lsr.iv, -1
+  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i32 4
+  %exitcond.not = icmp sgt i32 0, %lsr.iv.next
+  br i1 %exitcond.not, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+; Invert predicate and branches
+define void @IcmpSgt2(ptr %a) {
+; CHECK-LABEL: @IcmpSgt2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 84
+; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 1600
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i32 4
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[UGLYGEP1]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %uglygep = getelementptr i8, ptr %a, i32 84
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %lsr.iv1 = phi ptr [ %uglygep2, %for.body ], [ %uglygep, %entry ]
+  %lsr.iv = phi i32 [ %lsr.iv.next, %for.body ], [ 379, %entry ]
+  store i32 1, ptr %lsr.iv1, align 4
+  %lsr.iv.next = add nsw i32 %lsr.iv, -1
+  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i32 4
+  %exitcond.not = icmp sgt i32 %lsr.iv.next, 0
+  br i1 %exitcond.not, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+; Invert predicate and branches
+define void @SeveralLoopLatch(ptr %a) {
+; CHECK-LABEL: @SeveralLoopLatch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 84
+; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 1600
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[ANOTHER_BRANCH:%.*]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i32 4
+; CHECK-NEXT:    br label [[ANOTHER_BRANCH]]
+; CHECK:       another.branch:
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[UGLYGEP1]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %uglygep = getelementptr i8, ptr %a, i32 84
+  br label %for.body
+
+for.body:                                         ; preds = %another.branch, %entry
+  %lsr.iv1 = phi ptr [ %uglygep2, %another.branch ], [ %uglygep, %entry ]
+  %lsr.iv = phi i32 [ %lsr.iv.next, %another.branch ], [ 379, %entry ]
+  store i32 1, ptr %lsr.iv1, align 4
+  %lsr.iv.next = add nsw i32 %lsr.iv, -1
+  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i32 4
+  br label %another.branch
+
+another.branch:
+  %exitcond.not = icmp sgt i32 %lsr.iv.next, 0
+  br i1 %exitcond.not, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+; Invert branch in SeveralLoopLatch
+define void @SeveralLoopLatch2(ptr %a) {
+; CHECK-LABEL: @SeveralLoopLatch2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 84
+; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 1600
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[ANOTHER_BRANCH:%.*]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i32 4
+; CHECK-NEXT:    br label [[ANOTHER_BRANCH]]
+; CHECK:       another.branch:
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[UGLYGEP1]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %uglygep = getelementptr i8, ptr %a, i32 84
+  br label %for.body
+
+for.body:                                         ; preds = %another.branch, %entry
+  %lsr.iv1 = phi ptr [ %uglygep2, %another.branch ], [ %uglygep, %entry ]
+  %lsr.iv = phi i32 [ %lsr.iv.next, %another.branch ], [ 379, %entry ]
+  store i32 1, ptr %lsr.iv1, align 4
+  %lsr.iv.next = add nsw i32 %lsr.iv, -1
+  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i32 4
+  br label %another.branch
+
+another.branch:
+  %exitcond.not = icmp sle i32 %lsr.iv.next, 0
   br i1 %exitcond.not, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
