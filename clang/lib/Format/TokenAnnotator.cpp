@@ -1222,7 +1222,8 @@ private:
           next();
         else
           consumeToken();
-        assert(CurrentToken);
+        if (!CurrentToken)
+          break;
         auto Previous = CurrentToken->getPreviousNonComment();
         assert(Previous);
         if (CurrentToken->is(tok::comma) && Previous->isNot(tok::kw_operator))

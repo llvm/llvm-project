@@ -15,6 +15,7 @@
 #ifndef MLIR_IR_ACTION_H
 #define MLIR_IR_ACTION_H
 
+#include "mlir/IR/Unit.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -51,11 +52,19 @@ public:
     os << "Action \"" << getTag() << "\"";
   }
 
+  /// Return the set of IR units that are associated with this action.
+  virtual ArrayRef<IRUnit> getContextIRUnits() const { return irUnits; }
+
 protected:
-  Action(TypeID actionID) : actionID(actionID) {}
+  Action(TypeID actionID, ArrayRef<IRUnit> irUnits)
+      : actionID(actionID), irUnits(irUnits) {}
 
   /// The type of the derived action class, used for `isa`/`dyn_cast`.
   TypeID actionID;
+
+  /// Set of IR units (operations, regions, blocks, values) that are associated
+  /// with this action.
+  ArrayRef<IRUnit> irUnits;
 };
 
 /// CRTP Implementation of an action. This class provides a base class for
@@ -67,7 +76,8 @@ protected:
 template <typename Derived>
 class ActionImpl : public Action {
 public:
-  ActionImpl() : Action(TypeID::get<Derived>()) {}
+  ActionImpl(ArrayRef<IRUnit> irUnits = {})
+      : Action(TypeID::get<Derived>(), irUnits) {}
 
   /// Provide classof to allow casting between action types.
   static bool classof(const Action *action) {

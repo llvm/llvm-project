@@ -8,7 +8,7 @@ transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["tensor.empty"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{Given target is not a gpu.launch}}
-  %1 = transform.gpu.map_nested_forall_to_threads %funcop
+  %1 = transform.gpu.map_nested_forall_to_threads %funcop block_dims = [1, 1, 1]
 }
 
 // -----
@@ -47,9 +47,9 @@ func.func @map_nested_forall_to_threads_excessive_threads(%x: memref<2 x 32 x f3
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  // expected-error @below {{Trying to launch a GPU kernel with gridDim = (1, 1, 1) blockDim = (1200, 9, 1). It is larger than the limits.}}
-  // expected-note @below {{"blockDim" is too large}}
-  transform.gpu.map_nested_forall_to_threads %funcop { blockDim = [1200, 9, 1] }
+  // expected-error @below {{Trying to launch a GPU kernel with grid_dims = (1, 1, 1) block_dims = (1200, 9, 1). It is larger than the limits.}}
+  // expected-note @below {{"block_dims" is too large}}
+  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [1200, 9, 1]
 }
 
 // -----
@@ -90,7 +90,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{Trying to map to fewer GPU threads than loop iterations but overprovisioning is not yet supported. Try additional tiling of the before mapping or map to more threads.}}
-  transform.gpu.map_nested_forall_to_threads %funcop { blockDim = [128, 4, 1] }
+  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [128, 4, 1]
 }
 
 // -----
@@ -116,7 +116,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{unsupported dynamic sizes}}
-  transform.gpu.map_nested_forall_to_threads %funcop { blockDim = [128, 4, 1] }
+  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [128, 4, 1]
 }
 
 // -----
@@ -138,7 +138,7 @@ transform.sequence failures(propagate) {
   %forall, %tiled = transform.structured.tile_to_forall_op %matmul num_threads [10, 20, 30] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{only bufferized scf.forall can be mapped}}
-  transform.gpu.map_nested_forall_to_threads %funcop { blockDim = [128, 4, 1] }
+  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [128, 4, 1]
 }
 
 // -----
@@ -243,8 +243,8 @@ func.func @map_forall_to_blocks_large_loop(%x: memref<2 x 32 x f32>, %y: memref<
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["func.func"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  // expected-error @below {{Trying to launch a GPU kernel with gridDim = (65535, 65535, 1) blockDim = (1, 1, 1). It is larger than the limits.}}
-  %1 = transform.gpu.map_forall_to_blocks %funcop { generate_gpu_launch }
+  // expected-error @below {{Trying to launch a GPU kernel with grid_dims = (65535, 65535, 1) block_dims = (1, 1, 1). It is larger than the limits.}}
+  %1 = transform.gpu.map_forall_to_blocks %funcop generate_gpu_launch
 }
 
 // -----
@@ -271,7 +271,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{duplicated attribute, cannot map different loops to the same processor}}
-  transform.gpu.map_nested_forall_to_threads %funcop { blockDim = [32, 32, 1]}
+  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [32, 32, 1]
 }
 
 // -----
