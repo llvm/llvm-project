@@ -1802,6 +1802,12 @@ static LogicalResult appendMangledType(llvm::raw_string_ostream &ss, Type t) {
         ss << size << "x";
     if (failed(appendMangledType(ss, memref.getElementType())))
       return failure();
+    if (auto as = memref.getMemorySpace()) {
+      if (auto attr = as.dyn_cast<IntegerAttr>())
+        ss << "as" << attr.getInt();
+      else
+        return failure();
+    }
     return success();
   }
   if (auto vec = t.dyn_cast<VectorType>()) {
@@ -1821,10 +1827,18 @@ static LogicalResult appendMangledType(llvm::raw_string_ostream &ss, Type t) {
 std::string mlir::linalg::generateLibraryCallName(Operation *op) {
   assert(isa<LinalgOp>(op));
   std::string name(op->getName().getStringRef().str());
+  std::string fun = "";
+  for (NamedAttribute kv : op->getAttrs()) {
+    if (UnaryFnAttr ufa = kv.getValue().dyn_cast<UnaryFnAttr>()) {
+      fun = stringifyEnum(ufa.getValue()).str() + "_";
+    } else if (BinaryFnAttr bfa = kv.getValue().dyn_cast<BinaryFnAttr>()) {
+      fun = stringifyEnum(bfa.getValue()).str() + "_";
+    }
+  }
   name.reserve(128);
   std::replace(name.begin(), name.end(), '.', '_');
   llvm::raw_string_ostream ss(name);
-  ss << "_";
+  ss << "_" << fun;
   for (Type t : op->getOperandTypes()) {
     if (failed(appendMangledType(ss, t)))
       return std::string();
