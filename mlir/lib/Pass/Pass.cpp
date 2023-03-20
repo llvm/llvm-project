@@ -482,7 +482,7 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
           pass->runOnOperation();
         passFailed = pass->passState->irAndPassFailed.getInt();
       },
-      *pass, op);
+      {op}, *pass);
 
   // Invalidate any non preserved analyses.
   am.invalidate(pass->passState->preservedAnalyses);
