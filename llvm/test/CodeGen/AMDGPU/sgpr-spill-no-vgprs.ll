@@ -214,12 +214,13 @@ define amdgpu_kernel void @partial_no_vgprs_last_sgpr_spill(ptr addrspace(1) %ou
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:  .LBB0_2: ; %ret
 ; GCN-NEXT:    s_or_saveexec_b64 s[24:25], -1
-; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:8 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[24:25]
 ; GCN-NEXT:    s_or_saveexec_b64 s[24:25], -1
-; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[24:25]
-; GCN-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GCN-NEXT:    ; kill: killed $vgpr1
+; GCN-NEXT:    ; kill: killed $vgpr0
 ; GCN-NEXT:    s_endpgm
   call void asm sideeffect "", "~{v[0:7]}" () #0
   call void asm sideeffect "", "~{v[8:15]}" () #0

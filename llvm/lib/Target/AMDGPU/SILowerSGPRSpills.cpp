@@ -283,18 +283,18 @@ void SILowerSGPRSpills::extendWWMVirtRegLiveness(MachineFunction &MF,
   }
 
   // Insert the KILL in the return blocks to extend their liveness untill the
-  // end of function.
+  // end of function. Insert a separate KILL for each VGPR.
   for (MachineBasicBlock *RestoreBlock : RestoreBlocks) {
     MachineBasicBlock::iterator InsertBefore =
         RestoreBlock->getFirstTerminator();
-    auto MIB =
-        BuildMI(*RestoreBlock, *InsertBefore, InsertBefore->getDebugLoc(),
-                TII->get(TargetOpcode::KILL));
-    for (auto Reg : MFI->getSGPRSpillVGPRs())
+    for (auto Reg : MFI->getSGPRSpillVGPRs()) {
+      auto MIB =
+          BuildMI(*RestoreBlock, *InsertBefore, InsertBefore->getDebugLoc(),
+                  TII->get(TargetOpcode::KILL));
       MIB.addReg(Reg);
-
-    if (LIS)
-      LIS->InsertMachineInstrInMaps(*MIB);
+      if (LIS)
+        LIS->InsertMachineInstrInMaps(*MIB);
+    }
   }
 }
 

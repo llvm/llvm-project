@@ -197,7 +197,8 @@ define amdgpu_kernel void @kernel0(i32 addrspace(1)* %out, i32 %in) #1 {
 ; CHECK-NEXT:    v_writelane_b32 v0, s15, 47
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %ret
-; CHECK-NEXT:    ; kill: killed $vgpr23 killed $vgpr0
+; CHECK-NEXT:    ; kill: killed $vgpr23
+; CHECK-NEXT:    ; kill: killed $vgpr0
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .LBB0_2: ; %bb0
 ; CHECK-NEXT:    v_readlane_b32 s0, v23, 0
@@ -372,7 +373,8 @@ define amdgpu_kernel void @kernel0(i32 addrspace(1)* %out, i32 %in) #1 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:15]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ; kill: killed $vgpr23 killed $vgpr0
+; CHECK-NEXT:    ; kill: killed $vgpr23
+; CHECK-NEXT:    ; kill: killed $vgpr0
 ; CHECK-NEXT:    s_endpgm
   call void asm sideeffect "", "~{v[0:7]}" () #0
   call void asm sideeffect "", "~{v[8:15]}" () #0

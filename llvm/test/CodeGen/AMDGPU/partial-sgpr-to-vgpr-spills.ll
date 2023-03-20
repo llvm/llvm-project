@@ -421,15 +421,17 @@ define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(ptr addrspace(1) %out, 
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:  .LBB0_2: ; %ret
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GCN-NEXT:    buffer_load_dword v0, off, s[92:95], 0 offset:12 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v0, off, s[92:95], 0 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
 ; GCN-NEXT:    buffer_load_dword v1, off, s[92:95], 0 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GCN-NEXT:    buffer_load_dword v2, off, s[92:95], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v2, off, s[92:95], 0 offset:12 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
-; GCN-NEXT:    ; kill: killed $vgpr0 killed $vgpr1 killed $vgpr2
+; GCN-NEXT:    ; kill: killed $vgpr2
+; GCN-NEXT:    ; kill: killed $vgpr1
+; GCN-NEXT:    ; kill: killed $vgpr0
 ; GCN-NEXT:    s_endpgm
   %wide.sgpr0 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
   %wide.sgpr1 = call <8 x i32> asm sideeffect "; def $0", "=s" () #0
@@ -693,12 +695,13 @@ define amdgpu_kernel void @split_sgpr_spill_2_vgprs(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:  .LBB1_2: ; %ret
 ; GCN-NEXT:    s_or_saveexec_b64 s[28:29], -1
-; GCN-NEXT:    buffer_load_dword v0, off, s[52:55], 0 offset:8 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v0, off, s[52:55], 0 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[28:29]
 ; GCN-NEXT:    s_or_saveexec_b64 s[28:29], -1
-; GCN-NEXT:    buffer_load_dword v1, off, s[52:55], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v1, off, s[52:55], 0 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[28:29]
-; GCN-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GCN-NEXT:    ; kill: killed $vgpr1
+; GCN-NEXT:    ; kill: killed $vgpr0
 ; GCN-NEXT:    s_endpgm
   %wide.sgpr0 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
   %wide.sgpr1 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
@@ -940,12 +943,13 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:  .LBB2_2: ; %ret
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GCN-NEXT:    buffer_load_dword v0, off, s[52:55], 0 offset:8 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v0, off, s[52:55], 0 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GCN-NEXT:    buffer_load_dword v1, off, s[52:55], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v1, off, s[52:55], 0 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
-; GCN-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GCN-NEXT:    ; kill: killed $vgpr1
+; GCN-NEXT:    ; kill: killed $vgpr0
 ; GCN-NEXT:    s_endpgm
   call void asm sideeffect "", "~{v[0:7]}" () #0
   call void asm sideeffect "", "~{v[8:15]}" () #0
@@ -1196,12 +1200,13 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill_live_v0(i32 %in) #1 {
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:  .LBB3_2: ; %ret
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GCN-NEXT:    buffer_load_dword v0, off, s[52:55], 0 offset:8 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v0, off, s[52:55], 0 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GCN-NEXT:    buffer_load_dword v1, off, s[52:55], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v1, off, s[52:55], 0 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
-; GCN-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GCN-NEXT:    ; kill: killed $vgpr1
+; GCN-NEXT:    ; kill: killed $vgpr0
 ; GCN-NEXT:    s_endpgm
   call void asm sideeffect "", "~{v[0:7]}" () #0
   call void asm sideeffect "", "~{v[8:15]}" () #0
