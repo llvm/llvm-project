@@ -23,87 +23,6 @@
 namespace mlir {
 namespace sparse_tensor {
 
-/// Tensor expression kind.
-///
-/// The `kLoopVar` leaf kind is for representing `linalg::IndexOp`.
-/// That is, its argument is a `LoopId` identifying the loop-variable
-/// in question, and its value will be the current iteration's value
-/// of that loop-variable.  See the `LoopId` documentation for more details.
-//
-// TODO: make this an `enum class` nested in the `TensorExp` class;
-// to improve namespacing, and match the pattern used by other "Kind"
-// enums in MLIR.
-//
-// TODO: Modify this definition so that the numeric values already encode
-// the `ExpArity` (while extending the notion of "arity" to include not
-// just the number of `ExprId` children the node has, but also whether the
-// node has a `Value` and/or `Operation*`).  Doing this will avoid needing
-// to enumerate all the kinds in `getExpArity` and in the `TensorExp` ctor,
-// and should help clean up a few other places as well.
-enum Kind {
-  // Leaf.
-  kTensor = 0,
-  kInvariant,
-  kLoopVar,
-  // Unary operations.
-  kAbsF,
-  kAbsC,
-  kAbsI,
-  kCeilF,
-  kFloorF,
-  kSqrtF,
-  kSqrtC,
-  kExpm1F,
-  kExpm1C,
-  kLog1pF,
-  kLog1pC,
-  kSinF,
-  kSinC,
-  kTanhF,
-  kTanhC,
-  kNegF,
-  kNegC,
-  kNegI,
-  kTruncF,
-  kExtF,
-  kCastFS, // signed
-  kCastFU, // unsigned
-  kCastSF, // signed
-  kCastUF, // unsigned
-  kCastS,  // signed
-  kCastU,  // unsigned
-  kCastIdx,
-  kTruncI,
-  kCIm, // complex.im
-  kCRe, // complex.re
-  kBitCast,
-  kBinaryBranch, // semiring unary branch created from a binary op
-  kUnary,        // semiring unary op
-  kSelect,       // custom selection criteria
-  // Binary operations.
-  kMulF,
-  kMulC,
-  kMulI,
-  kDivF,
-  kDivC, // complex
-  kDivS, // signed
-  kDivU, // unsigned
-  kAddF,
-  kAddC,
-  kAddI,
-  kSubF,
-  kSubC,
-  kSubI,
-  kAndI,
-  kOrI,
-  kXorI,
-  kShrS, // signed
-  kShrU, // unsigned
-  kShlI,
-  kBinary, // semiring binary op
-  kReduce, // semiring reduction op
-};
-
 // TODO: These type aliases currently only serve to make the code more
 // self-documenting, however because they are not type-checked they can
 // do nothing to prevent mixups.  We should really change them from mere
@@ -169,6 +88,8 @@ struct Children {
 
 /// Tensor expression. Represents a MLIR expression in tensor index notation.
 struct TensorExp {
+  enum class Kind;
+
   // The `x` parameter has different types depending on the value of the
   // `k` parameter.  The correspondences are:
   // * `kTensor`    -> `TensorId`
@@ -205,6 +126,83 @@ struct TensorExp {
   /// kBinaryBranch, this holds the YieldOp for the left or right half
   /// to be merged into a nested scf loop.
   Operation *op;
+};
+
+/// Tensor expression kind.
+///
+/// The `kLoopVar` leaf kind is for representing `linalg::IndexOp`.
+/// That is, its argument is a `LoopId` identifying the loop-variable
+/// in question, and its value will be the current iteration's value
+/// of that loop-variable.  See the `LoopId` documentation for more details.
+//
+// TODO: Modify this definition so that the numeric values already encode
+// the `ExpArity` (while extending the notion of "arity" to include not
+// just the number of `ExprId` children the node has, but also whether the
+// node has a `Value` and/or `Operation*`).  Doing this will avoid needing
+// to enumerate all the kinds in `getExpArity` and in the `TensorExp` ctor,
+// and should help clean up a few other places as well.
+enum class TensorExp::Kind {
+  // Leaf.
+  kTensor = 0,
+  kInvariant,
+  kLoopVar,
+  // Unary operations.
+  kAbsF,
+  kAbsC,
+  kAbsI,
+  kCeilF,
+  kFloorF,
+  kSqrtF,
+  kSqrtC,
+  kExpm1F,
+  kExpm1C,
+  kLog1pF,
+  kLog1pC,
+  kSinF,
+  kSinC,
+  kTanhF,
+  kTanhC,
+  kNegF,
+  kNegC,
+  kNegI,
+  kTruncF,
+  kExtF,
+  kCastFS, // signed
+  kCastFU, // unsigned
+  kCastSF, // signed
+  kCastUF, // unsigned
+  kCastS,  // signed
+  kCastU,  // unsigned
+  kCastIdx,
+  kTruncI,
+  kCIm, // complex.im
+  kCRe, // complex.re
+  kBitCast,
+  kBinaryBranch, // semiring unary branch created from a binary op
+  kUnary,        // semiring unary op
+  kSelect,       // custom selection criteria
+  // Binary operations.
+  kMulF,
+  kMulC,
+  kMulI,
+  kDivF,
+  kDivC, // complex
+  kDivS, // signed
+  kDivU, // unsigned
+  kAddF,
+  kAddC,
+  kAddI,
+  kSubF,
+  kSubC,
+  kSubI,
+  kAndI,
+  kOrI,
+  kXorI,
+  kShrS, // signed
+  kShrU, // unsigned
+  kShlI,
+  kBinary, // semiring binary op
+  kReduce, // semiring reduction op
 };
 
 /// Lattice point.  Each lattice point consists of a formal conjunction
@@ -271,12 +269,12 @@ public:
   /// Constructs a new tensor expression, and returns its identifier.
   /// The type of the `e0` argument varies according to the value of the
   /// `k` argument, as described by the `TensorExp` ctor.
-  ExprId addExp(Kind k, unsigned e0, ExprId e1 = kInvalidId, Value v = Value(),
-                Operation *op = nullptr);
-  ExprId addExp(Kind k, ExprId e, Value v, Operation *op = nullptr) {
+  ExprId addExp(TensorExp::Kind k, unsigned e0, ExprId e1 = kInvalidId,
+                Value v = Value(), Operation *op = nullptr);
+  ExprId addExp(TensorExp::Kind k, ExprId e, Value v, Operation *op = nullptr) {
     return addExp(k, e, kInvalidId, v, op);
   }
-  ExprId addExp(Kind k, Value v, Operation *op = nullptr) {
+  ExprId addExp(TensorExp::Kind k, Value v, Operation *op = nullptr) {
     return addExp(k, kInvalidId, kInvalidId, v, op);
   }
 
@@ -290,30 +288,31 @@ public:
   /// of `LoopId` (effectively constructing a larger "intersection" of those
   /// loops) with a newly constructed tensor (sub)expression of given kind.
   /// Returns the identifier of the new lattice point.
-  LatPointId conjLat(Kind kind, LatPointId p0, LatPointId p1,
+  LatPointId conjLat(TensorExp::Kind kind, LatPointId p0, LatPointId p1,
                      Operation *op = nullptr);
 
   /// Conjunctive merge of two lattice sets: `(s0 /\_op s1)`.
   /// Returns the identifier of the new set.
-  LatSetId conjSet(Kind kind, LatSetId s0, LatSetId s1,
+  LatSetId conjSet(TensorExp::Kind kind, LatSetId s0, LatSetId s1,
                    Operation *op = nullptr);
 
   /// Disjunctive merge of two lattice sets: `(s0 /\_op s1, s0, s1)`.
   /// Returns the identifier of the new set.
-  LatSetId disjSet(Kind kind, LatSetId s0, LatSetId s1,
+  LatSetId disjSet(TensorExp::Kind kind, LatSetId s0, LatSetId s1,
                    Operation *op = nullptr);
 
   /// Disjunctive merge of two lattice sets with custom handling of the
   /// overlap, left, and right regions.  Any region may be left missing
   /// in the output.  Returns the identifier of the new set.
-  LatSetId combiSet(Kind kind, LatSetId s0, LatSetId s1, Operation *orig,
-                    bool includeLeft, Kind ltrans, Operation *opleft,
-                    bool includeRight, Kind rtrans, Operation *opright);
+  LatSetId combiSet(TensorExp::Kind kind, LatSetId s0, LatSetId s1,
+                    Operation *orig, bool includeLeft, TensorExp::Kind ltrans,
+                    Operation *opleft, bool includeRight,
+                    TensorExp::Kind rtrans, Operation *opright);
 
   /// Maps the unary operator over the lattice set of the operand, i.e. each
   /// lattice point on an expression E is simply copied over, but with OP E
   /// as new expression. Returns the identifier of the new set.
-  LatSetId mapSet(Kind kind, LatSetId s, Value v = Value(),
+  LatSetId mapSet(TensorExp::Kind kind, LatSetId s, Value v = Value(),
                   Operation *op = nullptr);
 
   /// Optimizes the iteration lattice points in the given set. This
@@ -377,7 +376,8 @@ public:
 
   /// Returns true if the expression is `(kTensor t)`.
   bool expIsTensor(ExprId e, TensorId t) const {
-    return tensorExps[e].kind == kTensor && tensorExps[e].tensor == t;
+    return tensorExps[e].kind == TensorExp::Kind::kTensor &&
+           tensorExps[e].tensor == t;
   }
 
   /// Returns true if the expression contains the tensor as an operand.
