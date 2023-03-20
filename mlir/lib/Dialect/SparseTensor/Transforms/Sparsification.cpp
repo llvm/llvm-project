@@ -762,9 +762,9 @@ static bool computeIterationGraph(CodegenEnv &env, SortMask mask,
   // Iterate over the indexing maps of every tensor in the tensor expression.
   for (OpOperand &t : env.op()->getOpOperands()) {
     // Get map and encoding.
-    const auto map = env.op().getMatchingIndexingMap(&t);
     const auto enc = getSparseTensorEncoding(t.get().getType());
-    assert(map.getNumDims() + getNumNonTrivialIdxExpOnSparseLvls(env.op()) ==
+    assert(env.op().getMatchingIndexingMap(&t).getNumDims() +
+               getNumNonTrivialIdxExpOnSparseLvls(env.op()) ==
            n);
 
     // Skips dense inputs/outputs when not requested.
