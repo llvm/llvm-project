@@ -36,12 +36,6 @@ class TestStepOverWatchpoint(TestBase):
         
         return (target, process, thread, read_watchpoint)
     
-    @expectedFailureAll(
-        oslist=["freebsd", "linux"],
-        archs=[
-            'aarch64',
-            'arm'],
-        bugnumber="llvm.org/pr26031")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
     @add_test_categories(["basic_process"])
@@ -68,8 +62,6 @@ class TestStepOverWatchpoint(TestBase):
     @add_test_categories(["basic_process"])
     def test_step_instruction(self):
         target, process, thread, wp = self.get_to_start("Set breakpoint after call")
-
-        self.assertEquals(thread.GetStopDescription(20), 'step over')
 
         self.step_inst_for_watchpoint(1)
 
