@@ -220,7 +220,6 @@ exception version
 execution version
 expected cstddef
 expected cstdlib
-expected exception
 expected initializer_list
 expected new
 expected version

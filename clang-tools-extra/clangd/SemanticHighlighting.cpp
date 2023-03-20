@@ -156,7 +156,7 @@ std::optional<HighlightingKind> kindForDecl(const NamedDecl *D,
     return HighlightingKind::Concept;
   if (const auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(D)) {
     auto Targets = Resolver->resolveUsingValueDecl(UUVD);
-    if (!Targets.empty()) {
+    if (!Targets.empty() && Targets[0] != UUVD) {
       return kindForDecl(Targets[0], Resolver);
     }
     return HighlightingKind::Unknown;

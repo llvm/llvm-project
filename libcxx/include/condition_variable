@@ -202,7 +202,7 @@ condition_variable_any::wait(_Lock& __lock)
     unique_lock<mutex> __lk(*__mut);
     __lock.unlock();
     unique_ptr<_Lock, __lock_external> __lxx(&__lock);
-    lock_guard<unique_lock<mutex> > __lx(__lk, adopt_lock);
+    lock_guard<unique_lock<mutex> > __lx(__lk, adopt_lock_t());
     __cv_.wait(__lk);
 }  // __mut_.unlock(), __lock.lock()
 
@@ -224,7 +224,7 @@ condition_variable_any::wait_until(_Lock& __lock,
     unique_lock<mutex> __lk(*__mut);
     __lock.unlock();
     unique_ptr<_Lock, __lock_external> __lxx(&__lock);
-    lock_guard<unique_lock<mutex> > __lx(__lk, adopt_lock);
+    lock_guard<unique_lock<mutex> > __lx(__lk, adopt_lock_t());
     return __cv_.wait_until(__lk, __t);
 }  // __mut_.unlock(), __lock.lock()
 
