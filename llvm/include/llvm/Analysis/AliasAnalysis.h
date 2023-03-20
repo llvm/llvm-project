@@ -985,10 +985,6 @@ ImmutablePass *createExternalAAWrapperPass(
 /// getAnalysisUsage.
 AAResults createLegacyPMAAResults(Pass &P, Function &F, BasicAAResult &BAR);
 
-/// A helper for the legacy pass manager to populate \p AU to add uses to make
-/// sure the analyses required by \p createLegacyPMAAResults are available.
-void getAAResultsAnalysisUsage(AnalysisUsage &AU);
-
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_ALIASANALYSIS_H
