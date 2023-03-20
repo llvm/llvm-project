@@ -986,3 +986,17 @@ mlir::LogicalResult CIRGenFunction::buildSwitchStmt(const SwitchStmt &S) {
     terminateCaseRegion(r, swop.getLoc());
   return mlir::success();
 }
+
+void CIRGenFunction::buildReturnOfRValue(mlir::Location loc, RValue RV,
+                                         QualType Ty) {
+  if (RV.isScalar()) {
+    builder.createStore(loc, RV.getScalarVal(), ReturnValue);
+  } else if (RV.isAggregate()) {
+    LValue Dest = makeAddrLValue(ReturnValue, Ty);
+    LValue Src = makeAddrLValue(RV.getAggregateAddress(), Ty);
+    buildAggregateCopy(Dest, Src, Ty, getOverlapForReturnValue());
+  } else {
+    llvm_unreachable("NYI");
+  }
+  buildBranchThroughCleanup(loc, ReturnBlock());
+}

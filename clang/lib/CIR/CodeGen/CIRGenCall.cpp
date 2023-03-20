@@ -290,7 +290,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
                                  ReturnValueSlot ReturnValue,
                                  const CallArgList &CallArgs,
                                  mlir::cir::CallOp *callOrInvoke,
-                                 bool IsMustTail, SourceLocation Loc) {
+                                 bool IsMustTail, mlir::Location loc) {
   auto builder = CGM.getBuilder();
   // FIXME: We no longer need the types from CallArgs; lift up and simplify
 
@@ -300,6 +300,8 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   // would like to return info.
   QualType RetTy = CallInfo.getReturnType();
   const auto &RetAI = CallInfo.getReturnInfo();
+
+  mlir::FunctionType CIRFuncTy = getTypes().GetFunctionType(CallInfo);
 
   const Decl *TargetDecl = Callee.getAbstractInfo().getCalleeDecl().getDecl();
 
@@ -406,7 +408,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
       if (STy && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened()) {
         auto SrcTy = Src.getElementType();
         // FIXME(cir): get proper location for each argument.
-        auto argLoc = CGM.getLoc(Loc);
+        auto argLoc = loc;
 
         // If the source type is smaller than the destination type of the
         // coerce-to logic, copy the source value into a temp alloca the size
@@ -479,12 +481,19 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   // TODO: alignment attributes
 
   // Emit the actual call op.
-  auto callLoc = CGM.getLoc(Loc);
+  auto callLoc = loc;
   assert(builder.getInsertionBlock() && "expected valid basic block");
 
-  auto fnOp = dyn_cast<mlir::cir::FuncOp>(CalleePtr);
-  assert(fnOp && "only direct call supported");
-  auto theCall = builder.create<mlir::cir::CallOp>(callLoc, fnOp, CIRCallArgs);
+  mlir::cir::CallOp theCall;
+  if (auto fnOp = dyn_cast<mlir::cir::FuncOp>(CalleePtr)) {
+    assert(fnOp && "only direct call supported");
+    theCall = builder.create<mlir::cir::CallOp>(callLoc, fnOp, CIRCallArgs);
+  } else if (auto loadOp = dyn_cast<mlir::cir::LoadOp>(CalleePtr)) {
+    theCall = builder.create<mlir::cir::CallOp>(callLoc, loadOp->getResult(0),
+                                                CIRFuncTy, CIRCallArgs);
+  } else {
+    llvm_unreachable("expected call variant to be handled");
+  }
 
   if (callOrInvoke)
     callOrInvoke = &theCall;
@@ -684,7 +693,7 @@ void CIRGenFunction::buildCallArgs(
     CallExpr::const_arg_iterator Arg = ArgRange.begin() + Idx;
     unsigned InitialArgSize = Args.size();
     assert(!isa<ObjCIndirectCopyRestoreExpr>(*Arg) && "NYI");
-    assert(!isa<ObjCMethodDecl>(AC.getDecl()) && "NYI");
+    assert(!isa_and_nonnull<ObjCMethodDecl>(AC.getDecl()) && "NYI");
 
     buildCallArg(Args, *Arg, ArgTypes[Idx]);
     // In particular, we depend on it being the last arg in Args, and the
@@ -898,11 +907,11 @@ void CIRGenFunction::buildDelegateCallArg(CallArgList &args,
   // GetAddrOfLocalVar returns a pointer-to-pointer for references, but the
   // argument needs to be the original pointer.
   if (type->isReferenceType()) {
-
-    llvm_unreachable("NYI");
+    args.add(
+        RValue::get(builder.createLoad(getLoc(param->getSourceRange()), local)),
+        type);
   } else if (getLangOpts().ObjCAutoRefCount) {
     llvm_unreachable("NYI");
-
     // For the most part, we just need to load the alloca, except that aggregate
     // r-values are actually pointers to temporaries.
   } else {
@@ -1035,7 +1044,7 @@ CIRGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *MD) {
     return arrangeCXXMethodType(ThisType, prototype.getTypePtr(), MD);
   }
 
-  llvm_unreachable("NYI");
+  return arrangeFreeFunctionType(prototype);
 }
 
 /// Arrange the argument and result information for a call to an unknown C++

@@ -343,3 +343,43 @@ folly::coro::Task<int> go1_lambda() {
 
 // CHECK: cir.func coroutine lambda internal @_ZZ10go1_lambdavENK3$_0clEv
 // CHECK: cir.func coroutine @_Z10go1_lambdav()
+
+folly::coro::Task<int> go4() {
+  auto* fn = +[](int const& i) -> folly::coro::Task<int> { co_return i; };
+  auto task = fn(3);
+  co_return co_await std::move(task);
+}
+
+// CHECK: cir.func coroutine @_Z3go4v()
+
+// CHECK:   cir.await(init, ready : {
+// CHECK:   }, suspend : {
+// CHECK:   }, resume : {
+// CHECK:   },)
+// CHECK: }
+
+// CHECK: %12 = cir.scope {
+// CHECK:   %17 = cir.alloca !ty_22class2Eanon221, cir.ptr <!ty_22class2Eanon221>, ["ref.tmp1"] {alignment = 1 : i64}
+
+// Get the lambda invoker ptr via `lambda operator folly::coro::Task<int> (*)(int const&)()`
+// CHECK:   %18 = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%17) : (!cir.ptr<!ty_22class2Eanon221>) -> !cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>
+// CHECK:   %19 = cir.unary(plus, %18) : !cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>, !cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>
+// CHECK:   cir.yield %19 : !cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>
+// CHECK: }
+// CHECK: cir.store %12, %3 : !cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>, cir.ptr <!cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>>
+// CHECK: cir.scope {
+// CHECK:   %17 = cir.alloca i32, cir.ptr <i32>, ["ref.tmp2", init] {alignment = 4 : i64}
+// CHECK:   %18 = cir.load %3 : cir.ptr <!cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>>, !cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>
+// CHECK:   %19 = cir.const(3 : i32) : i32
+// CHECK:   cir.store %19, %17 : i32, cir.ptr <i32>
+
+// Call invoker, which calls operator() indirectly.
+// CHECK:   %20 = cir.call %18(%17) : (!cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>, !cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221
+// CHECK:   cir.store %20, %4 : !ty_22struct2Efolly3A3Acoro3A3ATask221, cir.ptr <!ty_22struct2Efolly3A3Acoro3A3ATask221>
+// CHECK: }
+
+// CHECK:   cir.await(user, ready : {
+// CHECK:   }, suspend : {
+// CHECK:   }, resume : {
+// CHECK:   },)
+// CHECK: }

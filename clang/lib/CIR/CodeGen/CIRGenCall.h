@@ -35,6 +35,11 @@ class CIRGenCalleeInfo {
 
 public:
   explicit CIRGenCalleeInfo() : CalleeProtoTy(nullptr), CalleeDecl() {}
+  CIRGenCalleeInfo(const clang::FunctionProtoType *calleeProtoTy,
+                   clang::GlobalDecl calleeDecl)
+      : CalleeProtoTy(calleeProtoTy), CalleeDecl(calleeDecl) {}
+  CIRGenCalleeInfo(const clang::FunctionProtoType *calleeProtoTy)
+      : CalleeProtoTy(calleeProtoTy) {}
   CIRGenCalleeInfo(clang::GlobalDecl calleeDecl)
       : CalleeProtoTy(nullptr), CalleeDecl(calleeDecl) {}
 

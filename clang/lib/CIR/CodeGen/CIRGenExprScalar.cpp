@@ -961,7 +961,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_NonAtomicToAtomic:
     llvm_unreachable("NYI");
   case CK_UserDefinedConversion:
-    llvm_unreachable("NYI");
+    return Visit(const_cast<Expr *>(E));
   case CK_NoOp: {
     auto V = Visit(const_cast<Expr *>(E));
     if (V) {
@@ -983,7 +983,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_ArrayToPointerDecay:
     return CGF.buildArrayToPointerDecay(E).getPointer();
   case CK_FunctionToPointerDecay:
-    llvm_unreachable("NYI");
+    return buildLValue(E).getPointer();
 
   case CK_NullToPointer: {
     // FIXME: use MustVisitNullValue(E) and evaluate expr.

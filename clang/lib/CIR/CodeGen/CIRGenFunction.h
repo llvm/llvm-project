@@ -523,6 +523,11 @@ public:
       LambdaCaptureFields;
   clang::FieldDecl *LambdaThisCaptureField = nullptr;
 
+  void buildForwardingCallToLambda(const CXXMethodDecl *LambdaCallOperator,
+                                   CallArgList &CallArgs);
+  void buildLambdaDelegatingInvokeBody(const CXXMethodDecl *MD);
+  void buildLambdaStaticInvokeBody(const CXXMethodDecl *MD);
+
   /// When generating code for a C++ member function, this will
   /// hold the implicit 'this' declaration.
   clang::ImplicitParamDecl *CXXABIThisDecl = nullptr;
@@ -649,6 +654,8 @@ public:
   // assert where we arne't doing things that we know we should and will crash
   // as soon as we add a DebugInfo type to this class.
   std::nullptr_t *getDebugInfo() { return nullptr; }
+
+  void buildReturnOfRValue(mlir::Location loc, RValue RV, QualType Ty);
 
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const clang::VarDecl *VD, Address Addr) {
@@ -792,7 +799,16 @@ public:
   RValue buildCall(const CIRGenFunctionInfo &CallInfo,
                    const CIRGenCallee &Callee, ReturnValueSlot ReturnValue,
                    const CallArgList &Args, mlir::cir::CallOp *callOrInvoke,
-                   bool IsMustTail, clang::SourceLocation Loc);
+                   bool IsMustTail, mlir::Location loc);
+  RValue buildCall(const CIRGenFunctionInfo &CallInfo,
+                   const CIRGenCallee &Callee, ReturnValueSlot ReturnValue,
+                   const CallArgList &Args,
+                   mlir::cir::CallOp *callOrInvoke = nullptr,
+                   bool IsMustTail = false) {
+    assert(currSrcLoc && "source location must have been set");
+    return buildCall(CallInfo, Callee, ReturnValue, Args, callOrInvoke,
+                     IsMustTail, *currSrcLoc);
+  }
   RValue buildCall(clang::QualType FnType, const CIRGenCallee &Callee,
                    const clang::CallExpr *E, ReturnValueSlot returnValue,
                    mlir::Value Chain = nullptr);

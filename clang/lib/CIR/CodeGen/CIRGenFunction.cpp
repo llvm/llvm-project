@@ -496,7 +496,10 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
       llvm_unreachable("NYI");
     else if (isa<CXXMethodDecl>(FD) &&
              cast<CXXMethodDecl>(FD)->isLambdaStaticInvoker()) {
-      llvm_unreachable("NYI");
+      // The lambda static invoker function is special, because it forwards or
+      // clones the body of the function call operator (but is actually static).
+      SourceLocRAIIObject Loc{*this, FnBeginLoc};
+      buildLambdaStaticInvokeBody(cast<CXXMethodDecl>(FD));
     } else if (FD->isDefaulted() && isa<CXXMethodDecl>(FD) &&
                (cast<CXXMethodDecl>(FD)->isCopyAssignmentOperator() ||
                 cast<CXXMethodDecl>(FD)->isMoveAssignmentOperator())) {
@@ -641,7 +644,7 @@ void CIRGenFunction::buildCXXConstructorCall(
       Args, D, Type, ExtraArgs.Prefix, ExtraArgs.Suffix, PassPrototypeArgs);
   CIRGenCallee Callee = CIRGenCallee::forDirect(CalleePtr, GlobalDecl(D, Type));
   mlir::cir::CallOp C;
-  buildCall(Info, Callee, ReturnValueSlot(), Args, &C, false, Loc);
+  buildCall(Info, Callee, ReturnValueSlot(), Args, &C, false, getLoc(Loc));
 
   assert(CGM.getCodeGenOpts().OptimizationLevel == 0 ||
          ClassDecl->isDynamicClass() || Type == Ctor_Base ||

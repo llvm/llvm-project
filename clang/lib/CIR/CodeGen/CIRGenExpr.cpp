@@ -270,6 +270,27 @@ CIRGenCallee CIRGenFunction::buildCallee(const clang::Expr *E) {
   assert(!dyn_cast<SubstNonTypeTemplateParmExpr>(E) && "NYI");
   assert(!dyn_cast<CXXPseudoDestructorExpr>(E) && "NYI");
 
+  // Otherwise, we have an indirect reference.
+  mlir::Value calleePtr;
+  QualType functionType;
+  if (auto ptrType = E->getType()->getAs<clang::PointerType>()) {
+    calleePtr = buildScalarExpr(E);
+    functionType = ptrType->getPointeeType();
+  } else {
+    functionType = E->getType();
+    calleePtr = buildLValue(E).getPointer();
+  }
+  assert(functionType->isFunctionType());
+
+  GlobalDecl GD;
+  if (const auto *VD =
+          dyn_cast_or_null<VarDecl>(E->getReferencedDeclOfCallee()))
+    GD = GlobalDecl(VD);
+
+  CIRGenCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), GD);
+  CIRGenCallee callee(calleeInfo, calleePtr.getDefiningOp());
+  return callee;
+
   assert(false && "Nothing else supported yet!");
 }
 
@@ -397,6 +418,21 @@ static LValue buildCapturedFieldLValue(CIRGenFunction &CGF, const FieldDecl *FD,
   return CGF.buildLValueForField(LV, FD);
 }
 
+static LValue buildFunctionDeclLValue(CIRGenFunction &CGF, const Expr *E,
+                                      GlobalDecl GD) {
+  const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
+  auto funcOp = buildFunctionDeclPointer(CGF.CGM, GD);
+  auto loc = CGF.getLoc(E->getSourceRange());
+  CharUnits align = CGF.getContext().getDeclAlign(FD);
+
+  auto fnTy = funcOp.getFunctionType();
+  auto ptrTy = mlir::cir::PointerType::get(CGF.getBuilder().getContext(), fnTy);
+  auto addr = CGF.getBuilder().create<mlir::cir::GetGlobalOp>(
+      loc, ptrTy, funcOp.getSymName());
+  return CGF.makeAddrLValue(Address(addr, fnTy, align), E->getType(),
+                            AlignmentSource::Decl);
+}
+
 LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
   const NamedDecl *ND = E->getDecl();
   QualType T = E->getType();
@@ -491,6 +527,16 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
 
     mlir::Value V = symbolTable.lookup(VD);
     assert(V && "Name lookup must succeed");
+
+    return LV;
+  }
+
+  if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
+    LValue LV = buildFunctionDeclLValue(*this, E, FD);
+
+    // Emit debuginfo for the function declaration if the target wants to.
+    if (getContext().getTargetInfo().allowDebugInfoForExternalRef())
+      assert(!UnimplementedFeature::generateDebugInfo());
 
     return LV;
   }
@@ -754,7 +800,7 @@ RValue CIRGenFunction::buildCall(clang::QualType CalleeType,
   assert(!MustTailCall && "Must tail NYI");
   mlir::cir::CallOp callOP = nullptr;
   RValue Call = buildCall(FnInfo, Callee, ReturnValue, Args, &callOP,
-                          E == MustTailCall, E->getExprLoc());
+                          E == MustTailCall, getLoc(E->getExprLoc()));
 
   assert(!getDebugInfo() && "Debug Info NYI");
 
