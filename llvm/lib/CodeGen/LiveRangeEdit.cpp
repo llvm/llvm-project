@@ -286,8 +286,12 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
 
   // Never delete a bundled instruction.
   if (MI->isBundled()) {
+    // TODO: Handle deleting copy bundles
+    LLVM_DEBUG(dbgs() << "Won't delete dead bundled inst: " << Idx << '\t'
+                      << *MI);
     return;
   }
+
   // Never delete inline asm.
   if (MI->isInlineAsm()) {
     LLVM_DEBUG(dbgs() << "Won't delete: " << Idx << '\t' << *MI);
