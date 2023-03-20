@@ -11,17 +11,23 @@
 #include "mlir/IR/Action.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FormatVariadic.h"
 
 namespace mlir {
 /// Encapsulate the "action" of executing a single pass, used for the MLIR
 /// tracing infrastructure.
 struct PassExecutionAction : public tracing::ActionImpl<PassExecutionAction> {
-  PassExecutionAction(const Pass &pass, Operation *op) : pass(pass), op(op) {}
+  using Base = tracing::ActionImpl<PassExecutionAction>;
+  PassExecutionAction(ArrayRef<IRUnit> irUnits, const Pass &pass)
+      : Base(irUnits), pass(pass) {}
   static constexpr StringLiteral tag = "pass-execution-action";
   void print(raw_ostream &os) const override;
   const Pass &getPass() const { return pass; }
-  Operation *getOp() const { return op; }
+  Operation *getOp() const {
+    ArrayRef<IRUnit> irUnits = getContextIRUnits();
+    return irUnits.empty() ? nullptr : irUnits[0].dyn_cast<Operation *>();
+  }
 
 public:
   const Pass &pass;
