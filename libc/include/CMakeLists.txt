@@ -475,6 +475,9 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.wchar_macros
+    .llvm-libc-types.size_t
+    .llvm-libc-types.wint_t
+    .llvm-libc-types.wchar_t
 )
 
 if(NOT LLVM_LIBC_FULL_BUILD)
