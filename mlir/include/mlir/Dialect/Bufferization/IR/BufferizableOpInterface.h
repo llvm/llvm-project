@@ -60,16 +60,16 @@ struct AliasingOpResult {
 template <typename T> class AliasList {
 public:
   /// Create an empty list of aliases.
-  AliasList<T>() = default;
+  AliasList() = default;
 
   /// Create a list of aliases.
-  AliasList<T>(std::initializer_list<T> elems) {
+  AliasList(std::initializer_list<T> elems) {
     for (T alias : elems)
       addAlias(alias);
   }
 
   /// Create a list of aliases.
-  AliasList<T>(SmallVector<T> &&aliases) : aliases(std::move(aliases)) {}
+  AliasList(SmallVector<T> &&aliases) : aliases(std::move(aliases)) {}
 
   ArrayRef<T> getAliases() const { return aliases; }
 
