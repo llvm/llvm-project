@@ -19,5 +19,5 @@ if config.target_arch == 'aarch64':
   scs_arch_cflags += ' -ffixed-x18 '
 config.substitutions.append( ("%clang_scs ", config.clang + ' -O0 -fsanitize=shadow-call-stack ' + scs_arch_cflags + ' ') )
 
-if config.host_os not in ['Linux'] or config.target_arch not in ['aarch64']:
+if config.host_os not in ['Linux'] or config.target_arch not in ['aarch64','riscv64']:
    config.unsupported = True
