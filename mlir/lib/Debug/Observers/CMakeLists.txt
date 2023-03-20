@@ -7,4 +7,5 @@ add_mlir_library(MLIRObservers
   LINK_LIBS PUBLIC
   ${LLVM_PTHREAD_LIB}
   MLIRSupport
+  MLIRIR
 )
