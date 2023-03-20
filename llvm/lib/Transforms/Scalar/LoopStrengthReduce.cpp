@@ -6719,49 +6719,23 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     return std::nullopt;
   }
 
-  // For `IsToFold`, a primary IV can be replaced by other affine AddRec when it
-  // is only used by the terminating condition. To check for this, we may need
-  // to traverse through a chain of use-def until we can examine the final
-  // usage.
-  //         *----------------------*
-  //   *---->|  LoopHeader:         |
-  //   |     |  PrimaryIV = phi ... |
-  //   |     *----------------------*
-  //   |              |
-  //   |              |
-  //   |           chain of
-  //   |          single use
-  // used by          |
-  //  phi             |
-  //   |            Value
-  //   |          /       \
-  //   |     chain of     chain of
-  //   |    single use     single use
-  //   |      /               \
-  //   |     /                 \
-  //   *- Value                Value --> used by terminating condition
-  auto IsToFold = [&](PHINode &PN) -> bool {
-    Value *V = &PN;
+  BinaryOperator *LHS = dyn_cast<BinaryOperator>(TermCond->getOperand(0));
+  Value *RHS = TermCond->getOperand(1);
+  if (!LHS || !L->isLoopInvariant(RHS))
+    // We could pattern match the inverse form of the icmp, but that is
+    // non-canonical, and this pass is running *very* late in the pipeline.
+    return std::nullopt;
 
-    while (V->getNumUses() == 1)
-      V = *V->user_begin();
+  // Find the IV used by the current exit condition.
+  PHINode *ToFold;
+  Value *ToFoldStart, *ToFoldStep;
+  if (!matchSimpleRecurrence(LHS, ToFold, ToFoldStart, ToFoldStep))
+    return std::nullopt;
 
-    if (V->getNumUses() != 2)
-      return false;
-
-    Value *VToPN = nullptr;
-    Value *VToTermCond = nullptr;
-    for (User *U : V->users()) {
-      while (U->getNumUses() == 1) {
-        if (isa<PHINode>(U))
-          VToPN = U;
-        if (U == TermCond)
-          VToTermCond = U;
-        U = *U->user_begin();
-      }
-    }
-    return VToPN && VToTermCond;
-  };
+  // If that IV isn't dead after we rewrite the exit condition in terms of
+  // another IV, there's no point in doing the transform.
+  if (!isAlmostDeadIV(ToFold, LoopLatch, TermCond))
+    return std::nullopt;
 
   // If this is an IV which we could replace the terminating condition, return
   // the final value of the alternative IV on the last iteration.
@@ -6789,11 +6763,13 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     return TermValueS;
   };
 
-  PHINode *ToFold = nullptr;
   PHINode *ToHelpFold = nullptr;
   const SCEV *TermValueS = nullptr;
 
   for (PHINode &PN : L->getHeader()->phis()) {
+    if (ToFold == &PN)
+      continue;
+
     if (!SE.isSCEVable(PN.getType())) {
       LLVM_DEBUG(dbgs() << "IV of phi '" << PN
                         << "' is not SCEV-able, not qualified for the "
@@ -6809,9 +6785,7 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
       continue;
     }
 
-    if (IsToFold(PN))
-      ToFold = &PN;
-    else if (auto P = getAlternateIVEnd(PN)) {
+    if (auto P = getAlternateIVEnd(PN)) {
       ToHelpFold = &PN;
       TermValueS = P;
     }
