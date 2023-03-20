@@ -24,6 +24,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstddef>
+#include <vector>
 
 namespace clang::include_cleaner {
 namespace {
@@ -212,17 +213,34 @@ int x = a + c;
     return std::make_unique<Hook>(PP, PI);
   };
 
-  TestAST AST(Inputs);
-  auto Decls = AST.context().getTranslationUnitDecl()->decls();
-  auto Results =
-      analyze(std::vector<Decl *>{Decls.begin(), Decls.end()},
-              PP.MacroReferences, PP.Includes, &PI, AST.sourceManager(),
-              AST.preprocessor().getHeaderSearchInfo());
+  {
+    TestAST AST(Inputs);
+    auto Decls = AST.context().getTranslationUnitDecl()->decls();
+    auto Results =
+        analyze(std::vector<Decl *>{Decls.begin(), Decls.end()},
+                PP.MacroReferences, PP.Includes, &PI, AST.sourceManager(),
+                AST.preprocessor().getHeaderSearchInfo());
 
-  const Include *B = PP.Includes.atLine(3);
-  ASSERT_EQ(B->Spelled, "b.h");
-  EXPECT_THAT(Results.Missing, ElementsAre("\"c.h\""));
-  EXPECT_THAT(Results.Unused, ElementsAre(B));
+    const Include *B = PP.Includes.atLine(3);
+    ASSERT_EQ(B->Spelled, "b.h");
+    EXPECT_THAT(Results.Missing, ElementsAre("\"c.h\""));
+    EXPECT_THAT(Results.Unused, ElementsAre(B));
+  }
+
+  // Check that umbrella header uses private include.
+  {
+    Inputs.Code = R"cpp(#include "private.h")cpp";
+    Inputs.ExtraFiles["private.h"] =
+        guard("// IWYU pragma: private, include \"public.h\"");
+    Inputs.FileName = "public.h";
+    PP.Includes = {};
+    PI = {};
+    TestAST AST(Inputs);
+    EXPECT_FALSE(PP.Includes.all().empty());
+    auto Results = analyze({}, {}, PP.Includes, &PI, AST.sourceManager(),
+                           AST.preprocessor().getHeaderSearchInfo());
+    EXPECT_THAT(Results.Unused, testing::IsEmpty());
+  }
 }
 
 TEST(FixIncludes, Basic) {

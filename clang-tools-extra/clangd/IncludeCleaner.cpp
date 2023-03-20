@@ -93,8 +93,6 @@ bool isFilteredByConfig(const Config &Cfg, llvm::StringRef HeaderPath) {
 static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
                               const Config &Cfg,
                               const include_cleaner::PragmaIncludes *PI) {
-  if (PI && PI->shouldKeep(Inc.HashLine + 1))
-    return false;
   // FIXME(kirillbobyrev): We currently do not support the umbrella headers.
   // System headers are likely to be standard library headers.
   // Until we have good support for umbrella headers, don't warn about them.
@@ -108,6 +106,20 @@ static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
   auto FE = AST.getSourceManager().getFileManager().getFileRef(
       AST.getIncludeStructure().getRealPath(HID));
   assert(FE);
+  if (PI) {
+    if (PI->shouldKeep(Inc.HashLine + 1))
+      return false;
+    // Check if main file is the public interface for a private header. If so we
+    // shouldn't diagnose it as unused.
+    if(auto PHeader = PI->getPublic(*FE); !PHeader.empty()) {
+      PHeader = PHeader.trim("<>\"");
+      // Since most private -> public mappings happen in a verbatim way, we
+      // check textually here. This might go wrong in presence of symlinks or
+      // header mappings. But that's not different than rest of the places.
+      if(AST.tuPath().endswith(PHeader))
+        return false;
+    }
+  }
   // Headers without include guards have side effects and are not
   // self-contained, skip them.
   if (!AST.getPreprocessor().getHeaderSearchInfo().isFileMultipleIncludeGuarded(
