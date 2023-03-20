@@ -2619,6 +2619,8 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
           CallBase *LastCB = Worklist.pop_back_val();
           if (!Visited.insert(LastCB))
             continue;
+          if (LastCB->getFunction() != getAnchorScope())
+            continue;
           if (!DeletedBarriers.count(LastCB)) {
             A.deleteAfterManifest(*LastCB);
             continue;
