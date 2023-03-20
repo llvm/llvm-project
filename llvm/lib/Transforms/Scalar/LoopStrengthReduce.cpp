@@ -6762,7 +6762,25 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
       continue;
     }
 
-    // FIXME: This does not properly account for overflow.
+    // Check that we can compute the value of AddRec on the exiting iteration
+    // without soundness problems.  There are two cases to be worried about:
+    // 1) BECount could be 255 with type i8.  Simply adding one would be
+    //    incorrect.  We may need one extra bit to represent the unsigned
+    //    trip count.
+    // 2) The multiplication of stride by TC may wrap around.  This is subtle
+    //    because computing the result accounting for wrap is insufficient.
+    //    In order to use the result in an exit test, we must also know that
+    //    AddRec doesn't take the same value on any previous iteration.
+    //    The simplest case to consider is a candidate IV which is narrower
+    //    than the trip count (and thus original IV), but this can also
+    //    happen due to non-unit strides on the candidate IVs.
+    ConstantRange StepCR = SE.getSignedRange(AddRec->getStepRecurrence(SE));
+    ConstantRange BECountCR = SE.getUnsignedRange(BECount);
+    unsigned NoOverflowBitWidth = BECountCR.getActiveBits() + 1 + StepCR.getMinSignedBits();
+    unsigned ARBitWidth = SE.getTypeSizeInBits(AddRec->getType());
+    if (NoOverflowBitWidth > ARBitWidth)
+      continue;
+
     const SCEV *TermValueSLocal = SE.getAddExpr(
         AddRec->getOperand(0),
         SE.getTruncateOrZeroExtend(
