@@ -88,6 +88,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   transform.gpu.map_nested_forall_to_threads %funcop block_dims = [12, 9, 1]
+    : (!pdl.operation) -> ()
 }
 
 // -----
@@ -128,6 +129,7 @@ transform.sequence failures(propagate) {
   %funcop = transform.structured.match ops{["func.func"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   %gpuLaunch = transform.gpu.map_forall_to_blocks %funcop { generate_gpu_launch }
   transform.gpu.map_nested_forall_to_threads %gpuLaunch block_dims = [32, 4, 1]
+    : (!pdl.operation) -> ()
 }
 
 // -----
@@ -161,6 +163,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   transform.gpu.map_nested_forall_to_threads %funcop block_dims = [12, 9, 1] sync_after_distribute = false
+    : (!pdl.operation) -> ()
 }
 
 // -----
@@ -193,6 +196,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   transform.gpu.map_nested_forall_to_threads %funcop block_dims = [32, 1, 1]
+    : (!pdl.operation) -> ()
 }
 
 // -----
@@ -229,6 +233,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   transform.gpu.map_nested_forall_to_threads %funcop block_dims = [12, 9, 1] sync_after_distribute = false
+    : (!pdl.operation) -> ()
 }
 
 // -----
@@ -304,4 +309,5 @@ transform.sequence failures(propagate) {
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
   transform.gpu.map_nested_forall_to_threads %funcop
     block_dims = [12, 11, 1] warp_dims = [2, 2, 1]
+    : (!pdl.operation) -> ()
 }

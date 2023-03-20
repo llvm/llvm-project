@@ -325,11 +325,9 @@ class VectorizeOp:
                vectorize_padding: Union[bool, BoolAttr] = False,
                loc=None,
                ip=None):
-    pdl_operation_type = pdl.OperationType.get()
     if isinstance(vectorize_padding, bool):
       vectorize_padding = UnitAttr.get()
     super().__init__(
-        pdl_operation_type,
         _get_op_result_or_value(target),
         vectorize_padding=vectorize_padding,
         loc=loc,
