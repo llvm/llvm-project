@@ -641,20 +641,14 @@ public:
 
   DoubleAPFloat &operator=(const DoubleAPFloat &RHS);
 
-  DoubleAPFloat &operator=(DoubleAPFloat &&RHS) {
-    if (this != &RHS) {
-      this->~DoubleAPFloat();
-      new (this) DoubleAPFloat(std::move(RHS));
-    }
-    return *this;
-  }
+  DoubleAPFloat &operator=(DoubleAPFloat &&RHS);
 
   bool needsCleanup() const { return Floats != nullptr; }
 
-  APFloat &getFirst() { return Floats[0]; }
-  const APFloat &getFirst() const { return Floats[0]; }
-  APFloat &getSecond() { return Floats[1]; }
-  const APFloat &getSecond() const { return Floats[1]; }
+  APFloat &getFirst();
+  const APFloat &getFirst() const;
+  APFloat &getSecond();
+  const APFloat &getSecond() const;
 
   opStatus add(const DoubleAPFloat &RHS, roundingMode RM);
   opStatus subtract(const DoubleAPFloat &RHS, roundingMode RM);

@@ -4503,6 +4503,19 @@ IEEEFloat frexp(const IEEEFloat &Val, int &Exp, IEEEFloat::roundingMode RM) {
   return scalbn(Val, -Exp, RM);
 }
 
+DoubleAPFloat &DoubleAPFloat::operator=(DoubleAPFloat &&RHS) {
+    if (this != &RHS) {
+      this->~DoubleAPFloat();
+      new (this) DoubleAPFloat(std::move(RHS));
+    }
+    return *this;
+}
+
+APFloat &DoubleAPFloat::getFirst() { return Floats[0]; }
+const APFloat &DoubleAPFloat::getFirst() const { return Floats[0]; }
+APFloat &DoubleAPFloat::getSecond() { return Floats[1]; }
+const APFloat &DoubleAPFloat::getSecond() const { return Floats[1]; }
+
 DoubleAPFloat::DoubleAPFloat(const fltSemantics &S)
     : Semantics(&S),
       Floats(new APFloat[2]{APFloat(semIEEEdouble), APFloat(semIEEEdouble)}) {
