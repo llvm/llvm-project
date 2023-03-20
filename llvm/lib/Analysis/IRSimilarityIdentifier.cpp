@@ -14,6 +14,7 @@
 
 #include "llvm/Analysis/IRSimilarityIdentifier.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/User.h"
@@ -97,7 +98,8 @@ void IRInstructionData::setBranchSuccessors(
 
   int CurrentBlockNumber = static_cast<int>(BBNumIt->second);
 
-  for (BasicBlock *Successor : BI->successors()) {
+  for (Value *V : getBlockOperVals()) {
+    BasicBlock *Successor = cast<BasicBlock>(V);
     BBNumIt = BasicBlockToInteger.find(Successor);
     assert(BBNumIt != BasicBlockToInteger.end() &&
            "Could not find number for BasicBlock!");
@@ -106,6 +108,25 @@ void IRInstructionData::setBranchSuccessors(
     int Relative = OtherBlockNumber - CurrentBlockNumber;
     RelativeBlockLocations.push_back(Relative);
   }
+}
+
+ArrayRef<Value *> IRInstructionData::getBlockOperVals() {
+  assert((isa<BranchInst>(Inst) ||
+         isa<PHINode>(Inst)) && "Instruction must be branch or PHINode");
+  
+  if (BranchInst *BI = dyn_cast<BranchInst>(Inst))
+    return ArrayRef<Value *>(
+      std::next(OperVals.begin(), BI->isConditional() ? 1 : 0),
+      OperVals.end()
+    );
+
+  if (PHINode *PN = dyn_cast<PHINode>(Inst))
+    return ArrayRef<Value *>(
+      std::next(OperVals.begin(), PN->getNumIncomingValues()),
+      OperVals.end()
+    );
+
+  return ArrayRef<Value *>();
 }
 
 void IRInstructionData::setCalleeName(bool MatchByName) {
@@ -158,7 +179,6 @@ void IRInstructionData::setPHIPredecessors(
     int OtherBlockNumber = static_cast<int>(BBNumIt->second);
 
     int Relative = OtherBlockNumber - CurrentBlockNumber;
-    RelativeBlockLocations.push_back(Relative);
     RelativeBlockLocations.push_back(Relative);
   }
 }
@@ -701,8 +721,8 @@ bool IRSimilarityCandidate::compareCommutativeOperandMapping(
 bool IRSimilarityCandidate::checkRelativeLocations(RelativeLocMapping A,
                                                    RelativeLocMapping B) {
   // Get the basic blocks the label refers to.
-  BasicBlock *ABB = static_cast<BasicBlock *>(A.OperVal);
-  BasicBlock *BBB = static_cast<BasicBlock *>(B.OperVal);
+  BasicBlock *ABB = cast<BasicBlock>(A.OperVal);
+  BasicBlock *BBB = cast<BasicBlock>(B.OperVal);
 
   // Get the basic blocks contained in each region.
   DenseSet<BasicBlock *> BasicBlockA;
@@ -715,7 +735,7 @@ bool IRSimilarityCandidate::checkRelativeLocations(RelativeLocMapping A,
   bool BContained = BasicBlockB.contains(BBB);
 
   // Both blocks need to be contained in the region, or both need to be outside
-  // the reigon.
+  // the region.
   if (AContained != BContained)
     return false;
   
@@ -826,12 +846,22 @@ bool IRSimilarityCandidate::compareStructure(
 
     SmallVector<int, 4> &RelBlockLocsA = ItA->RelativeBlockLocations;
     SmallVector<int, 4> &RelBlockLocsB = ItB->RelativeBlockLocations;
+    ArrayRef<Value *> ABL = ItA->getBlockOperVals();
+    ArrayRef<Value *> BBL = ItB->getBlockOperVals();
+
+    // Check to make sure that the number of operands, and branching locations
+    // between BranchInsts is the same.
     if (RelBlockLocsA.size() != RelBlockLocsB.size() &&
-        OperValsA.size() != OperValsB.size())
+        ABL.size() != BBL.size())
       return false;
 
+    assert(RelBlockLocsA.size() == ABL.size() &&
+           "Block information vectors not the same size.");
+    assert(RelBlockLocsB.size() == BBL.size() &&
+           "Block information vectors not the same size.");
+
     ZippedRelativeLocationsT ZippedRelativeLocations =
-        zip(RelBlockLocsA, RelBlockLocsB, OperValsA, OperValsB);
+        zip(RelBlockLocsA, RelBlockLocsB, ABL, BBL);
     if (any_of(ZippedRelativeLocations,
                [&A, &B](std::tuple<int, int, Value *, Value *> R) {
                  return !checkRelativeLocations(
