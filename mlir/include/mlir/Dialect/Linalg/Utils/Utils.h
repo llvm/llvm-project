@@ -11,6 +11,7 @@
 
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "llvm/ADT/StringSet.h"
 #include <optional>
 
@@ -461,18 +462,10 @@ struct GenerateLoopNest {
 /// Returns an attribute list that excludes pre-defined attributes.
 template <typename OpTy>
 SmallVector<NamedAttribute> getPrunedAttributeList(OpTy op) {
-  llvm::StringSet<> elidedAttrs;
-  elidedAttrs.insert(op.getAttributeNames().begin(),
-                     op.getAttributeNames().end());
+  auto elidedAttrs = llvm::to_vector(op.getAttributeNames());
   if (isa<linalg::LinalgOp>(op.getOperation()))
-    elidedAttrs.insert(LinalgDialect::kMemoizedIndexingMapsAttrName);
-  SmallVector<NamedAttribute> attrs;
-  for (auto attr : op->getAttrs()) {
-    if (elidedAttrs.count(attr.getName()))
-      continue;
-    attrs.push_back(attr);
-  }
-  return attrs;
+    elidedAttrs.push_back(LinalgDialect::kMemoizedIndexingMapsAttrName);
+  return getPrunedAttributeList(op, elidedAttrs);
 }
 
 } // namespace linalg
