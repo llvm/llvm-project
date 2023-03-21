@@ -12,10 +12,6 @@
 #include "Debug.h"
 
 namespace {
-enum AMDOpenMPInfoType : uint32_t {
-  // AMD-specific
-  OMP_INFOTYPE_API_TRACE = 0xff000000
-};
 
 namespace detail {
 
@@ -132,7 +128,7 @@ template <typename R, typename... Ts> struct log_t {
   R result;
   log_t(const char *func, Ts &&... args)
       : func(func), args(std::forward<Ts>(args)...) {
-    active = getInfoLevel() & OMP_INFOTYPE_API_TRACE;
+    active = getInfoLevel() & OMP_INFOTYPE_AMD_API_TRACE;
 
     if (!active) {
       return;

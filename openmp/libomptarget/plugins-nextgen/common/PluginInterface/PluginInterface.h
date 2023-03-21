@@ -215,15 +215,17 @@ protected:
     case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
       return "Generic-SPMD";
     // AMD-only execution modes
-    case OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP:
-      return "SPMD-Big-Jump-Loop";
     case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
       return "SPMD-No-Loop";
+    case OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP:
+      return "SPMD-Big-Jump-Loop";
     case OMP_TGT_EXEC_MODE_XTEAM_RED:
       return "XTeam-Reductions";
     }
     llvm_unreachable("Unknown execution mode!");
   }
+
+  OMPTgtExecModeFlags getExecutionModeFlags() const { return ExecutionMode; }
 
   /// Prints generic kernel launch information.
   Error printLaunchInfo(GenericDeviceTy &GenericDevice,
@@ -265,6 +267,8 @@ private:
     return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC;
   }
   bool isSPMDMode() const { return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD; }
+
+  /// AMD-only execution modes
   bool isBigJumpLoopMode() const {
     return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP;
   }

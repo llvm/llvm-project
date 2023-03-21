@@ -472,6 +472,10 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   Error printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                KernelArgsTy &KernelArgs, uint32_t NumThreads,
                                uint64_t NumBlocks) const override;
+  /// Print the "old" AMD KernelTrace single-line format
+  void printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
+                                  KernelArgsTy &KernelArgs, uint32_t NumThreads,
+                                  uint64_t NumBlocks) const;
 
   /// The default number of blocks is common to the whole device.
   uint32_t getDefaultNumBlocks(GenericDeviceTy &GenericDevice) const override {
@@ -2630,10 +2634,39 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  GroupSize, ArgsMemoryManager);
 }
 
+void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
+                                                KernelArgsTy &KernelArgs,
+                                                uint32_t NumThreads,
+                                                uint64_t NumBlocks) const {
+  auto GroupSegmentSize = (*KernelInfo).GroupSegmentList;
+  auto SGPRCount = (*KernelInfo).SGPRCount;
+  auto VGPRCount = (*KernelInfo).VGPRCount;
+  auto SGPRSpillCount = (*KernelInfo).SGPRSpillCount;
+  auto VGPRSpillCount = (*KernelInfo).VGPRSpillCount;
+  auto MaxFlatWorkgroupSize = (*KernelInfo).MaxFlatWorkgroupSize;
+
+  // This line should print exactly as the one in the old plugin.
+  fprintf(stderr,
+          "DEVID: %2d SGN:%d ConstWGSize:%-4d args:%2d teamsXthrds:(%4luX%4d) "
+          "reqd:(%4dX%4d) lds_usage:%uB sgpr_count:%u vgpr_count:%u "
+          "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu rpc:%d n:%s\n",
+          GenericDevice.getDeviceId(), getExecutionModeFlags(), ConstWGSize,
+          KernelArgs.NumArgs, NumBlocks, NumThreads, 0, 0, GroupSegmentSize,
+          SGPRCount, VGPRCount, SGPRSpillCount, VGPRSpillCount,
+          KernelArgs.Tripcount, 0, getName());
+}
+
 Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                              KernelArgsTy &KernelArgs,
                                              uint32_t NumThreads,
                                              uint64_t NumBlocks) const {
+  // When LIBOMPTARGET_KERNEL_TRACE is set, print the single-line kernel trace
+  // info present in the old ASO plugin, and continue with the upstream 2-line
+  // info, should LIBOMPTARGET_INFO be a meaningful value, otherwise return.
+  if (getInfoLevel() & OMP_INFOTYPE_AMD_KERNEL_TRACE)
+    printAMDOneLineKernelTrace(GenericDevice, KernelArgs, NumThreads,
+                               NumBlocks);
+
   // Only do all this when the output is requested
   if (!(getInfoLevel() & OMP_INFOTYPE_PLUGIN_KERNEL))
     return Plugin::success();

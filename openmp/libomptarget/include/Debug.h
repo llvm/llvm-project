@@ -55,6 +55,11 @@ enum OpenMPInfoType : uint32_t {
   OMP_INFOTYPE_PLUGIN_KERNEL = 0x0010,
   // Print whenever data is transferred to the device
   OMP_INFOTYPE_DATA_TRANSFER = 0x0020,
+  // AMD-only flag values (at least for now)
+  // Show kernel launches
+  OMP_INFOTYPE_AMD_KERNEL_TRACE = 0x1000,
+  // Enable also API-level tracing
+  OMP_INFOTYPE_AMD_API_TRACE = 0x200,
   // Enable every flag.
   OMP_INFOTYPE_ALL = 0xffffffff,
 };
@@ -71,10 +76,13 @@ inline std::atomic<uint32_t> &getInfoLevelInternal() {
   std::call_once(KTFlag, []() {
     if (char *EnvStr = getenv("LIBOMPTARGET_KERNEL_TRACE")) {
       auto V = std::stoi(EnvStr);
+      // Match the LIBOMPTARGET_KERNEL_TRACE values and set InfoLevel to the
+      // enum values to keep backward-compatibility for
+      // LIBOMPTARGET_KERNEL_TRACE
       if (V == 1)
-        InfoLevel.store(OMP_INFOTYPE_PLUGIN_KERNEL);
+        InfoLevel.store(OMP_INFOTYPE_AMD_KERNEL_TRACE);
       if (V == 2)
-        InfoLevel.store(OMP_INFOTYPE_PLUGIN_KERNEL |
+        InfoLevel.store(OMP_INFOTYPE_AMD_API_TRACE |
                         /* OMP_INFOTYPE_API_TRACE */ 0xff000000);
     }
   });
