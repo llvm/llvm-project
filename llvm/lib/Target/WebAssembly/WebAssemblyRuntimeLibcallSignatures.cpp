@@ -687,72 +687,72 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(PtrTy);
     break;
   case i64_i64_func_f32:
-#if 0 // TODO: Enable this when wasm gets multiple-return-value support.
-    Rets.push_back(wasm::ValType::I64);
-    Rets.push_back(wasm::ValType::I64);
-#else
-    Params.push_back(PtrTy);
-#endif
+    if (Subtarget.hasMultivalue()) {
+      Rets.push_back(wasm::ValType::I64);
+      Rets.push_back(wasm::ValType::I64);
+    } else {
+      Params.push_back(PtrTy);
+    }
     Params.push_back(wasm::ValType::F32);
     break;
   case i64_i64_func_f64:
-#if 0 // TODO: Enable this when wasm gets multiple-return-value support.
-    Rets.push_back(wasm::ValType::I64);
-    Rets.push_back(wasm::ValType::I64);
-#else
-    Params.push_back(PtrTy);
-#endif
+    if (Subtarget.hasMultivalue()) {
+      Rets.push_back(wasm::ValType::I64);
+      Rets.push_back(wasm::ValType::I64);
+    } else {
+      Params.push_back(PtrTy);
+    }
     Params.push_back(wasm::ValType::F64);
     break;
   case i16_i16_func_i16_i16:
-#if 0 // TODO: Enable this when wasm gets multiple-return-value support.
-    Rets.push_back(wasm::ValType::I32);
-    Rets.push_back(wasm::ValType::I32);
-#else
-    Params.push_back(PtrTy);
-#endif
+    if (Subtarget.hasMultivalue()) {
+      Rets.push_back(wasm::ValType::I32);
+      Rets.push_back(wasm::ValType::I32);
+    } else {
+      Params.push_back(PtrTy);
+    }
     Params.push_back(wasm::ValType::I32);
     Params.push_back(wasm::ValType::I32);
     break;
   case i32_i32_func_i32_i32:
-#if 0 // TODO: Enable this when wasm gets multiple-return-value support.
-    Rets.push_back(wasm::ValType::I32);
-    Rets.push_back(wasm::ValType::I32);
-#else
-    Params.push_back(PtrTy);
-#endif
+    if (Subtarget.hasMultivalue()) {
+      Rets.push_back(wasm::ValType::I32);
+      Rets.push_back(wasm::ValType::I32);
+    } else {
+      Params.push_back(PtrTy);
+    }
     Params.push_back(wasm::ValType::I32);
     Params.push_back(wasm::ValType::I32);
     break;
   case i64_i64_func_i64_i64:
-#if 0 // TODO: Enable this when wasm gets multiple-return-value support.
-    Rets.push_back(wasm::ValType::I64);
-    Rets.push_back(wasm::ValType::I64);
-#else
-    Params.push_back(PtrTy);
-#endif
+    if (Subtarget.hasMultivalue()) {
+      Rets.push_back(wasm::ValType::I64);
+      Rets.push_back(wasm::ValType::I64);
+    } else {
+      Params.push_back(PtrTy);
+    }
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     break;
   case i64_i64_func_i64_i64_i64_i64:
-#if 0 // TODO: Enable this when wasm gets multiple-return-value support.
-    Rets.push_back(wasm::ValType::I64);
-    Rets.push_back(wasm::ValType::I64);
-#else
-    Params.push_back(PtrTy);
-#endif
+    if (Subtarget.hasMultivalue()) {
+      Rets.push_back(wasm::ValType::I64);
+      Rets.push_back(wasm::ValType::I64);
+    } else {
+      Params.push_back(PtrTy);
+    }
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     break;
   case i64_i64_func_i64_i64_i64_i64_iPTR:
-#if 0 // TODO: Enable this when wasm gets multiple-return-value support.
-    Rets.push_back(wasm::ValType::I64);
-    Rets.push_back(wasm::ValType::I64);
-#else
-    Params.push_back(PtrTy);
-#endif
+    if (Subtarget.hasMultivalue()) {
+      Rets.push_back(wasm::ValType::I64);
+      Rets.push_back(wasm::ValType::I64);
+    } else {
+      Params.push_back(PtrTy);
+    }
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
@@ -760,28 +760,28 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(PtrTy);
     break;
   case i64_i64_i64_i64_func_i64_i64_i64_i64:
-#if 0 // TODO: Enable this when wasm gets multiple-return-value support.
-    Rets.push_back(wasm::ValType::I64);
-    Rets.push_back(wasm::ValType::I64);
-    Rets.push_back(wasm::ValType::I64);
-    Rets.push_back(wasm::ValType::I64);
-#else
-    Params.push_back(PtrTy);
-#endif
+    if (Subtarget.hasMultivalue()) {
+      Rets.push_back(wasm::ValType::I64);
+      Rets.push_back(wasm::ValType::I64);
+      Rets.push_back(wasm::ValType::I64);
+      Rets.push_back(wasm::ValType::I64);
+    } else {
+      Params.push_back(PtrTy);
+    }
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     break;
   case i64_i64_func_i64_i64_i32:
-#if 0 // TODO: Enable this when wasm gets multiple-return-value support.
-    Rets.push_back(wasm::ValType::I64);
-    Rets.push_back(wasm::ValType::I64);
-    Rets.push_back(wasm::ValType::I64);
-    Rets.push_back(wasm::ValType::I64);
-#else
-    Params.push_back(PtrTy);
-#endif
+    if (Subtarget.hasMultivalue()) {
+      Rets.push_back(wasm::ValType::I64);
+      Rets.push_back(wasm::ValType::I64);
+      Rets.push_back(wasm::ValType::I64);
+      Rets.push_back(wasm::ValType::I64);
+    } else {
+      Params.push_back(PtrTy);
+    }
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I32);
@@ -893,7 +893,7 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
   }
 }
 
-// TODO: If the RTLIB::Libcall-taking flavor of GetSignature remains unsed
+// TODO: If the RTLIB::Libcall-taking flavor of GetSignature remains unused
 // other than here, just roll its logic into this version.
 void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
                                StringRef Name,
@@ -904,9 +904,9 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
   auto Val = Map.find(Name);
 #ifndef NDEBUG
   if (Val == Map.end()) {
-    auto message = std::string("unexpected runtime library name: ") +
-                   std::string(Name);
-    llvm_unreachable(message.c_str());
+    auto Message =
+        std::string("unexpected runtime library name: ") + std::string(Name);
+    llvm_unreachable(Message.c_str());
   }
 #endif
   return getLibcallSignature(Subtarget, Val->second, Rets, Params);

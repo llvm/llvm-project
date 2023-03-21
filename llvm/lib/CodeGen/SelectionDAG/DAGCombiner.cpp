@@ -2483,16 +2483,14 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
     // constant. Eliminate the binop by pulling the constant math into the
     // select. Example: add (select Cond, CT, CF), CBO --> select Cond, CT +
     // CBO, CF + CBO
-    NewCT = SelOpNo ? DAG.getNode(BinOpcode, DL, VT, CBO, CT)
-                    : DAG.getNode(BinOpcode, DL, VT, CT, CBO);
-    if (!NewCT.isUndef() && !isConstantOrConstantVector(NewCT, true) &&
-        !DAG.isConstantFPBuildVectorOrConstantFP(NewCT))
+    NewCT = SelOpNo ? DAG.FoldConstantArithmetic(BinOpcode, DL, VT, {CBO, CT})
+                    : DAG.FoldConstantArithmetic(BinOpcode, DL, VT, {CT, CBO});
+    if (!NewCT)
       return SDValue();
 
-    NewCF = SelOpNo ? DAG.getNode(BinOpcode, DL, VT, CBO, CF)
-                    : DAG.getNode(BinOpcode, DL, VT, CF, CBO);
-    if (!NewCF.isUndef() && !isConstantOrConstantVector(NewCF, true) &&
-        !DAG.isConstantFPBuildVectorOrConstantFP(NewCF))
+    NewCF = SelOpNo ? DAG.FoldConstantArithmetic(BinOpcode, DL, VT, {CBO, CF})
+                    : DAG.FoldConstantArithmetic(BinOpcode, DL, VT, {CF, CBO});
+    if (!NewCF)
       return SDValue();
   }
 

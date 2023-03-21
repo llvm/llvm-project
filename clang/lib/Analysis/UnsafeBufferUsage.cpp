@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -558,6 +559,56 @@ public:
 };
 } // namespace
 
+// Representing a fixable expression of the form `*(ptr + 123)` or `*(123 +
+// ptr)`:
+class DerefSimplePtrArithFixableGadget : public FixableGadget {
+  static constexpr const char *const BaseDeclRefExprTag = "BaseDRE";
+  static constexpr const char *const DerefOpTag = "DerefOp";
+  static constexpr const char *const AddOpTag = "AddOp";
+  static constexpr const char *const OffsetTag = "Offset";
+
+  const DeclRefExpr *BaseDeclRefExpr = nullptr;
+  const UnaryOperator *DerefOp = nullptr;
+  const BinaryOperator *AddOp = nullptr;
+  const IntegerLiteral *Offset = nullptr;
+
+public:
+  DerefSimplePtrArithFixableGadget(const MatchFinder::MatchResult &Result)
+      : FixableGadget(Kind::DerefSimplePtrArithFixable),
+        BaseDeclRefExpr(
+            Result.Nodes.getNodeAs<DeclRefExpr>(BaseDeclRefExprTag)),
+        DerefOp(Result.Nodes.getNodeAs<UnaryOperator>(DerefOpTag)),
+        AddOp(Result.Nodes.getNodeAs<BinaryOperator>(AddOpTag)),
+        Offset(Result.Nodes.getNodeAs<IntegerLiteral>(OffsetTag)) {}
+
+  static Matcher matcher() {
+    // clang-format off
+    auto ThePtr = expr(hasPointerType(),
+                       ignoringImpCasts(declRefExpr(to(varDecl())).bind(BaseDeclRefExprTag)));
+    auto PlusOverPtrAndInteger = expr(anyOf(
+          binaryOperator(hasOperatorName("+"), hasLHS(ThePtr),
+                         hasRHS(integerLiteral().bind(OffsetTag)))
+                         .bind(AddOpTag),
+          binaryOperator(hasOperatorName("+"), hasRHS(ThePtr),
+                         hasLHS(integerLiteral().bind(OffsetTag)))
+                         .bind(AddOpTag)));
+    return isInUnspecifiedLvalueContext(unaryOperator(
+        hasOperatorName("*"),
+        hasUnaryOperand(ignoringParens(PlusOverPtrAndInteger)))
+        .bind(DerefOpTag));
+    // clang-format on
+  }
+
+  virtual std::optional<FixItList> getFixits(const Strategy &s) const final;
+
+  // TODO remove this method from FixableGadget interface
+  virtual const Stmt *getBaseStmt() const final { return nullptr; }
+
+  virtual DeclUseList getClaimedVarUseSites() const final {
+    return {BaseDeclRefExpr};
+  }
+};
+
 /// Scan the function and return a list of gadgets found with provided kits.
 static std::tuple<FixableGadgetList, WarningGadgetList, DeclUseTracker>
 findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler) {
@@ -810,6 +861,57 @@ static StringRef getExprText(const Expr *E, const SourceManager &SM,
   return Lexer::getSourceText(
       CharSourceRange::getCharRange(E->getBeginLoc(), LastCharLoc), SM,
       LangOpts);
+}
+
+std::optional<FixItList>
+DerefSimplePtrArithFixableGadget::getFixits(const Strategy &s) const {
+  const VarDecl *VD = dyn_cast<VarDecl>(BaseDeclRefExpr->getDecl());
+
+  if (VD && s.lookup(VD) == Strategy::Kind::Span) {
+    ASTContext &Ctx = VD->getASTContext();
+    // std::span can't represent elements before its begin()
+    if (auto ConstVal = Offset->getIntegerConstantExpr(Ctx))
+      if (ConstVal->isNegative())
+        return std::nullopt;
+
+    // note that the expr may (oddly) has multiple layers of parens
+    // example:
+    //   *((..(pointer + 123)..))
+    // goal:
+    //   pointer[123]
+    // Fix-It:
+    //   remove '*('
+    //   replace ' + ' with '['
+    //   replace ')' with ']'
+
+    // example:
+    //   *((..(123 + pointer)..))
+    // goal:
+    //   123[pointer]
+    // Fix-It:
+    //   remove '*('
+    //   replace ' + ' with '['
+    //   replace ')' with ']'
+
+    const Expr *LHS = AddOp->getLHS(), *RHS = AddOp->getRHS();
+    const SourceManager &SM = Ctx.getSourceManager();
+    const LangOptions &LangOpts = Ctx.getLangOpts();
+    CharSourceRange StarWithTrailWhitespace =
+        clang::CharSourceRange::getCharRange(DerefOp->getOperatorLoc(),
+                                             LHS->getBeginLoc());
+    CharSourceRange PlusWithSurroundingWhitespace =
+        clang::CharSourceRange::getCharRange(getPastLoc(LHS, SM, LangOpts),
+                                             RHS->getBeginLoc());
+    CharSourceRange ClosingParenWithPrecWhitespace =
+        clang::CharSourceRange::getCharRange(getPastLoc(AddOp, SM, LangOpts),
+                                             getPastLoc(DerefOp, SM, LangOpts));
+
+    return FixItList{
+        {FixItHint::CreateRemoval(StarWithTrailWhitespace),
+         FixItHint::CreateReplacement(PlusWithSurroundingWhitespace, "["),
+         FixItHint::CreateReplacement(ClosingParenWithPrecWhitespace, "]")}};
+  }
+  return std::nullopt; // something wrong or unsupported, give up
 }
 
 // For a non-null initializer `Init` of `T *` type, this function returns

@@ -17,6 +17,7 @@ target_link_libraries(tco PRIVATE
   ${dialect_libs}
   MLIRIR
   MLIRLLVMDialect
+  MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport
   MLIRPass

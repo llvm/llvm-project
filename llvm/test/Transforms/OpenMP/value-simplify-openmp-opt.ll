@@ -39,6 +39,7 @@ define void @kernel() "kernel" {
 ; CHECK-NEXT:    call void @barrier() #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr addrspace(3) @G, align 4
 ; CHECK-NEXT:    call void @use1(i32 [[L]]) #[[ATTR6]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true)
 ; CHECK-NEXT:    call void @barrier() #[[ATTR6]]
 ; CHECK-NEXT:    br label [[IF_MERGE]]
 ; CHECK:       if.merge:

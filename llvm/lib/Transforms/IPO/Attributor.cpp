@@ -593,7 +593,7 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
                        const AbstractAttribute &QueryingAA,
                        const AA::InstExclusionSetTy *ExclusionSet,
                        std::function<bool(const Function &F)> GoBackwardsCB) {
-  LLVM_DEBUG({
+  DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE, {
     dbgs() << "[AA] isPotentiallyReachable @" << ToFn.getName() << " from "
            << FromI << " [GBCB: " << bool(GoBackwardsCB) << "][#ExS: "
            << (ExclusionSet ? std::to_string(ExclusionSet->size()) : "none")
@@ -3192,6 +3192,10 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
   // Every function might be "no-recurse".
   getOrCreateAAFor<AANoRecurse>(FPos);
+
+  // Every function can be "non-convergent".
+  if (F.hasFnAttribute(Attribute::Convergent))
+    getOrCreateAAFor<AANonConvergent>(FPos);
 
   // Every function might be "readnone/readonly/writeonly/...".
   getOrCreateAAFor<AAMemoryBehavior>(FPos);

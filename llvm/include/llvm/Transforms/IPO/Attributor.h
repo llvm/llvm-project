@@ -5144,6 +5144,37 @@ struct AAInterFnReachability
   static const char ID;
 };
 
+/// An abstract Attribute for determining the necessity of the convergent
+/// attribute.
+struct AANonConvergent : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+
+  AANonConvergent(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANonConvergent &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// Return true if "non-convergent" is assumed.
+  bool isAssumedNotConvergent() const { return getAssumed(); }
+
+  /// Return true if "non-convergent" is known.
+  bool isKnownNotConvergent() const { return getKnown(); }
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANonConvergent"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is AANonConvergent.
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
 /// An abstract interface for struct information.
 struct AAPointerInfo : public AbstractAttribute {
   AAPointerInfo(const IRPosition &IRP) : AbstractAttribute(IRP) {}

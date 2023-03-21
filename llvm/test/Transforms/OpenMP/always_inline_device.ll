@@ -8,9 +8,9 @@
 @llvm.compiler.used = appending global [1 x ptr] [ptr @__omp_offloading_fd02_c0934fc2_foo_l4_exec_mode], section "llvm.metadata"
 @G = external global i8
 
-; Function Attrs: convergent norecurse nounwind
+; Function Attrs: norecurse nounwind
 define weak void @__omp_offloading_fd02_c0934fc2_foo_l4() #0 {
-; CHECK: Function Attrs: convergent norecurse nounwind
+; CHECK: Function Attrs: norecurse nounwind
 ; CHECK-LABEL: @__omp_offloading_fd02_c0934fc2_foo_l4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1:[0-9]+]], i8 2, i1 false)

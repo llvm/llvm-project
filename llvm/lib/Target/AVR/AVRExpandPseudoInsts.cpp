@@ -871,11 +871,20 @@ bool AVRExpandPseudo::expand<AVR::ELPMBRdZ>(Block &MBB, BlockIt MBBI) {
   buildMI(MBB, MBBI, AVR::OUTARr).addImm(STI.getIORegRAMPZ()).addReg(BankReg);
 
   // Load byte.
-  auto MILB = buildMI(MBB, MBBI, AVR::ELPMRdZ)
-                  .addReg(DstReg, RegState::Define)
-                  .addReg(SrcReg, getKillRegState(SrcIsKill));
-
-  MILB.setMemRefs(MI.memoperands());
+  if (STI.hasELPMX()) {
+    auto MILB = buildMI(MBB, MBBI, AVR::ELPMRdZ)
+                    .addReg(DstReg, RegState::Define)
+                    .addReg(SrcReg, getKillRegState(SrcIsKill));
+    MILB.setMemRefs(MI.memoperands());
+  } else {
+    // For the basic 'ELPM' instruction, its operand[0] is the implicit
+    // 'Z' register, and its operand[1] is the implicit 'R0' register.
+    auto MILB = buildMI(MBB, MBBI, AVR::ELPM);
+    buildMI(MBB, MBBI, AVR::MOVRdRr)
+        .addReg(DstReg, RegState::Define)
+        .addReg(AVR::R0, RegState::Kill);
+    MILB.setMemRefs(MI.memoperands());
+  }
 
   MI.eraseFromParent();
   return true;
