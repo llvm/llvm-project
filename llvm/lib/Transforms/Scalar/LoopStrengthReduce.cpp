@@ -6719,81 +6719,34 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     return std::nullopt;
   }
 
-  // For `IsToFold`, a primary IV can be replaced by other affine AddRec when it
-  // is only used by the terminating condition. To check for this, we may need
-  // to traverse through a chain of use-def until we can examine the final
-  // usage.
-  //         *----------------------*
-  //   *---->|  LoopHeader:         |
-  //   |     |  PrimaryIV = phi ... |
-  //   |     *----------------------*
-  //   |              |
-  //   |              |
-  //   |           chain of
-  //   |          single use
-  // used by          |
-  //  phi             |
-  //   |            Value
-  //   |          /       \
-  //   |     chain of     chain of
-  //   |    single use     single use
-  //   |      /               \
-  //   |     /                 \
-  //   *- Value                Value --> used by terminating condition
-  auto IsToFold = [&](PHINode &PN) -> bool {
-    Value *V = &PN;
+  BinaryOperator *LHS = dyn_cast<BinaryOperator>(TermCond->getOperand(0));
+  Value *RHS = TermCond->getOperand(1);
+  if (!LHS || !L->isLoopInvariant(RHS))
+    // We could pattern match the inverse form of the icmp, but that is
+    // non-canonical, and this pass is running *very* late in the pipeline.
+    return std::nullopt;
 
-    while (V->getNumUses() == 1)
-      V = *V->user_begin();
+  // Find the IV used by the current exit condition.
+  PHINode *ToFold;
+  Value *ToFoldStart, *ToFoldStep;
+  if (!matchSimpleRecurrence(LHS, ToFold, ToFoldStart, ToFoldStep))
+    return std::nullopt;
 
-    if (V->getNumUses() != 2)
-      return false;
+  // If that IV isn't dead after we rewrite the exit condition in terms of
+  // another IV, there's no point in doing the transform.
+  if (!isAlmostDeadIV(ToFold, LoopLatch, TermCond))
+    return std::nullopt;
 
-    Value *VToPN = nullptr;
-    Value *VToTermCond = nullptr;
-    for (User *U : V->users()) {
-      while (U->getNumUses() == 1) {
-        if (isa<PHINode>(U))
-          VToPN = U;
-        if (U == TermCond)
-          VToTermCond = U;
-        U = *U->user_begin();
-      }
-    }
-    return VToPN && VToTermCond;
-  };
+  const SCEV *BECount = SE.getBackedgeTakenCount(L);
+  const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
+  SCEVExpander Expander(SE, DL, "lsr_fold_term_cond");
 
-  // If this is an IV which we could replace the terminating condition, return
-  // the final value of the alternative IV on the last iteration.
-  auto getAlternateIVEnd = [&](PHINode &PN) -> const SCEV * {
-    // FIXME: This does not properly account for overflow.
-    const SCEVAddRecExpr *AddRec = cast<SCEVAddRecExpr>(SE.getSCEV(&PN));
-    const SCEV *BECount = SE.getBackedgeTakenCount(L);
-    const SCEV *TermValueS = SE.getAddExpr(
-        AddRec->getOperand(0),
-        SE.getTruncateOrZeroExtend(
-            SE.getMulExpr(
-                AddRec->getOperand(1),
-                SE.getTruncateOrZeroExtend(
-                    SE.getAddExpr(BECount, SE.getOne(BECount->getType())),
-                    AddRec->getOperand(1)->getType())),
-            AddRec->getOperand(0)->getType()));
-    const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
-    SCEVExpander Expander(SE, DL, "lsr_fold_term_cond");
-    if (!Expander.isSafeToExpand(TermValueS)) {
-      LLVM_DEBUG(
-          dbgs() << "Is not safe to expand terminating value for phi node" << PN
-                 << "\n");
-      return nullptr;
-    }
-    return TermValueS;
-  };
-
-  PHINode *ToFold = nullptr;
   PHINode *ToHelpFold = nullptr;
   const SCEV *TermValueS = nullptr;
-
   for (PHINode &PN : L->getHeader()->phis()) {
+    if (ToFold == &PN)
+      continue;
+
     if (!SE.isSCEVable(PN.getType())) {
       LLVM_DEBUG(dbgs() << "IV of phi '" << PN
                         << "' is not SCEV-able, not qualified for the "
@@ -6809,12 +6762,44 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
       continue;
     }
 
-    if (IsToFold(PN))
-      ToFold = &PN;
-    else if (auto P = getAlternateIVEnd(PN)) {
-      ToHelpFold = &PN;
-      TermValueS = P;
+    // Check that we can compute the value of AddRec on the exiting iteration
+    // without soundness problems.  There are two cases to be worried about:
+    // 1) BECount could be 255 with type i8.  Simply adding one would be
+    //    incorrect.  We may need one extra bit to represent the unsigned
+    //    trip count.
+    // 2) The multiplication of stride by TC may wrap around.  This is subtle
+    //    because computing the result accounting for wrap is insufficient.
+    //    In order to use the result in an exit test, we must also know that
+    //    AddRec doesn't take the same value on any previous iteration.
+    //    The simplest case to consider is a candidate IV which is narrower
+    //    than the trip count (and thus original IV), but this can also
+    //    happen due to non-unit strides on the candidate IVs.
+    ConstantRange StepCR = SE.getSignedRange(AddRec->getStepRecurrence(SE));
+    ConstantRange BECountCR = SE.getUnsignedRange(BECount);
+    unsigned NoOverflowBitWidth = BECountCR.getActiveBits() + 1 + StepCR.getMinSignedBits();
+    unsigned ARBitWidth = SE.getTypeSizeInBits(AddRec->getType());
+    if (NoOverflowBitWidth > ARBitWidth)
+      continue;
+
+    const SCEV *TermValueSLocal = SE.getAddExpr(
+        AddRec->getOperand(0),
+        SE.getTruncateOrZeroExtend(
+            SE.getMulExpr(
+                AddRec->getOperand(1),
+                SE.getTruncateOrZeroExtend(
+                    SE.getAddExpr(BECount, SE.getOne(BECount->getType())),
+                    AddRec->getOperand(1)->getType())),
+            AddRec->getOperand(0)->getType()));
+    if (!Expander.isSafeToExpand(TermValueSLocal)) {
+      LLVM_DEBUG(
+          dbgs() << "Is not safe to expand terminating value for phi node" << PN
+                 << "\n");
+      continue;
     }
+    // We pick the last legal alternate IV.  We could expore choosing an optimal
+    // alternate IV if we had a decent heuristic to do so.
+    ToHelpFold = &PN;
+    TermValueS = TermValueSLocal;
   }
 
   LLVM_DEBUG(if (ToFold && !ToHelpFold) dbgs()

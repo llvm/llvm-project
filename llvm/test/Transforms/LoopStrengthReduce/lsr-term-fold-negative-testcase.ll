@@ -106,15 +106,14 @@ define void @NonAddRecIV(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A]], i32 84
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 148
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 1, [[ENTRY]] ]
 ; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = mul nsw i32 [[LSR_IV]], 2
 ; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 65536
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[SCEVGEP]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -144,7 +143,7 @@ define void @NonSCEVableIV(float %init, float* %A, i32 %N) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr @fp_inc, align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP:%.*]], [[FOR_BODY]] ], [ [[A]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[FOR_BODY]] ], [ [[A]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 1, [[ENTRY]] ]
 ; CHECK-NEXT:    [[X_05:%.*]] = phi float [ [[INIT]], [[ENTRY]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    store float [[X_05]], ptr [[LSR_IV1]], align 4
@@ -152,7 +151,7 @@ define void @NonSCEVableIV(float %init, float* %A, i32 %N) {
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[LSR_IV]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 1
-; CHECK-NEXT:    [[UGLYGEP]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -212,12 +211,15 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
+; After LSR, there are three IVs in this loop.  As a result, we have two
+; alternate IVs to chose from.  At the moment, we chose the last, but this
+; is somewhat arbitrary.
 define void @TermCondMoreThanOneUse(ptr %a) {
 ; CHECK-LABEL: define void @TermCondMoreThanOneUse
 ; CHECK-SAME: (ptr [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A]], i64 84
-; CHECK-NEXT:    [[UGLYGEP6:%.*]] = getelementptr i8, ptr [[A]], i64 1600
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 1600
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi i64 [ [[LSR_IV_NEXT3:%.*]], [[FOR_BODY]] ], [ -378, [[ENTRY:%.*]] ]
@@ -227,7 +229,7 @@ define void @TermCondMoreThanOneUse(ptr %a) {
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[LSR_IV2]], 0
 ; CHECK-NEXT:    [[DUMMY:%.*]] = select i1 [[EXITCOND_NOT]], i8 0, i8 1
 ; CHECK-NEXT:    [[LSR_IV_NEXT3]] = add nsw i64 [[LSR_IV2]], 1
-; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[UGLYGEP6]]
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[SCEVGEP]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -280,16 +282,16 @@ define void @ebur128_calc_gating_block(ptr %st, ptr %optional_output) {
 ; CHECK-NEXT:    br i1 [[CMP525_NOT]], label [[FOR_INC11]], label [[FOR_BODY7_LR_PH:%.*]]
 ; CHECK:       for.body7.lr.ph:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[AUDIO_DATA]], align 8
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[LSR_IV1]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[LSR_IV1]]
 ; CHECK-NEXT:    br label [[FOR_BODY7:%.*]]
 ; CHECK:       for.body7:
-; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi ptr [ [[UGLYGEP4:%.*]], [[FOR_BODY7]] ], [ [[UGLYGEP]], [[FOR_BODY7_LR_PH]] ]
+; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi ptr [ [[SCEVGEP4:%.*]], [[FOR_BODY7]] ], [ [[SCEVGEP]], [[FOR_BODY7_LR_PH]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY7]] ], [ [[UMAX]], [[FOR_BODY7_LR_PH]] ]
 ; CHECK-NEXT:    [[CHANNEL_SUM_127:%.*]] = phi double [ [[CHANNEL_SUM_030]], [[FOR_BODY7_LR_PH]] ], [ [[ADD10:%.*]], [[FOR_BODY7]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr [[LSR_IV3]], align 8
 ; CHECK-NEXT:    [[ADD10]] = fadd double [[CHANNEL_SUM_127]], [[TMP4]]
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -1
-; CHECK-NEXT:    [[UGLYGEP4]] = getelementptr i8, ptr [[LSR_IV3]], i64 [[TMP2]]
+; CHECK-NEXT:    [[SCEVGEP4]] = getelementptr i8, ptr [[LSR_IV3]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_INC11_LOOPEXIT:%.*]], label [[FOR_BODY7]]
 ; CHECK:       for.inc11.loopexit:
@@ -369,14 +371,14 @@ define i64 @alac_seek(ptr %0) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 1, 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[DIV]], 1
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 12
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 12
 ; CHECK-NEXT:    br label [[FOR_BODY_I:%.*]]
 ; CHECK:       for.body.i:
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY_I]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP2:%.*]], [[FOR_BODY_I]] ], [ [[SCEVGEP]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY_I]] ], [ [[TMP1]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[LSR_IV1]], align 4
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -1
-; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
+; CHECK-NEXT:    [[SCEVGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
 ; CHECK-NEXT:    [[EXITCOND_NOT_I:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT_I]], label [[ALAC_PAKT_BLOCK_OFFSET_EXIT:%.*]], label [[FOR_BODY_I]]
 ; CHECK:       alac_pakt_block_offset.exit:

@@ -220,7 +220,12 @@ Merger::Merger(unsigned numInputOutputTensors, unsigned numNativeLoops,
       loopToLvl(numTensors,
                 std::vector<std::optional<Level>>(numLoops, std::nullopt)),
       lvlToLoop(numTensors,
-                std::vector<std::optional<LoopId>>(numLoops, std::nullopt)) {}
+                std::vector<std::optional<LoopId>>(numLoops, std::nullopt)),
+      loopToDependencies(numLoops, std::vector<std::optional<Level>>(
+                                       numTensors, std::nullopt)),
+      levelToDependentIdx(numTensors, std::vector<std::vector<LoopId>>(
+                                          numLoops, std::vector<LoopId>())),
+      loopBounds(numLoops, std::make_pair(numTensors, numLoops)) {}
 
 //===----------------------------------------------------------------------===//
 // Lattice methods.
@@ -357,7 +362,8 @@ BitVector Merger::simplifyCond(LatSetId s0, LatPointId p0) {
   }
 
   BitVector simple(latPoints[p0].bits);
-  bool reset = isSingleton && hasAnySparse(simple);
+  bool reset =
+      isSingleton && (hasAnySparse(simple) || hasSparseIdxReduction(simple));
   const TensorLoopId be = simple.size();
   TensorLoopId offset = 0; // relative to the end
   if (!reset)
@@ -374,7 +380,9 @@ BitVector Merger::simplifyCond(LatSetId s0, LatPointId p0) {
   // keep the rightmost bit (which could possibly be a synthetic tensor).
   for (TensorLoopId b = be - 1 - offset, i = 0; i < be;
        b = b == 0 ? be - 1 : b - 1, i++) {
-    if (simple[b]) {
+    // FIXME: better name? also slice on dense level has locate property as
+    // well. Handle it correctly!
+    if (simple[b] && !isLvlWithNonTrivialIdxExp(b)) {
       const auto dlt = getDimLevelType(b);
       if (!isCompressedDLT(dlt) && !isSingletonDLT(dlt)) {
         if (reset)
@@ -402,7 +410,7 @@ bool Merger::latGT(LatPointId i, LatPointId j) const {
 bool Merger::onlyDenseDiff(LatPointId i, LatPointId j) const {
   BitVector tmp(latPoints[j].bits);
   tmp ^= latPoints[i].bits;
-  return !hasAnySparse(tmp);
+  return !hasAnySparse(tmp) && !hasSparseIdxReduction(tmp);
 }
 
 bool Merger::expContainsTensor(ExprId e, TensorId t) const {
@@ -547,6 +555,14 @@ bool Merger::hasAnySparse(const BitVector &bits) const {
       if (isCompressedDLT(dlt) || isSingletonDLT(dlt))
         return true;
     }
+  return false;
+}
+
+bool Merger::hasSparseIdxReduction(const BitVector &bits) const {
+  // TODO: return false on dense levels.
+  for (unsigned b = 0, be = bits.size(); b < be; b++)
+    if (bits[b] && isLvlWithNonTrivialIdxExp(b))
+      return true;
   return false;
 }
 
@@ -762,7 +778,10 @@ void Merger::dumpBits(const BitVector &bits) const {
       const TensorId t = tensor(b);
       const LoopId i = loop(b);
       const auto dlt = lvlTypes[t][i];
-      llvm::dbgs() << " i_" << t << "_" << i << "_" << toMLIRString(dlt);
+      if (isLvlWithNonTrivialIdxExp(b))
+        llvm::dbgs() << " DEP_" << t << "_" << i;
+      else
+        llvm::dbgs() << " i_" << t << "_" << i << "_" << toMLIRString(dlt);
     }
   }
 }

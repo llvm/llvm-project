@@ -65,7 +65,7 @@ static inline char GetRandomChar() {
   static constexpr const uint64_t m = 1ULL << 31;
   static uint64_t seed = 123456789;
   seed = (a * seed + c) % m;
-  return seed;
+  return static_cast<char>(seed);
 }
 
 // Randomize the content of the buffer.

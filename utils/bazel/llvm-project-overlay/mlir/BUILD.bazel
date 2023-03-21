@@ -6755,6 +6755,19 @@ cc_library(
 )
 
 cc_library(
+    name = "OpenMPCommon",
+    srcs = ["lib/Target/LLVMIR/Dialect/OpenMPCommon.cpp"],
+    hdrs = ["include/mlir/Target/LLVMIR/Dialect/OpenMPCommon.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":Support",
+        "//llvm:Core",
+        "//llvm:FrontendOpenMP",
+    ],
+)
+
+cc_library(
     name = "LLVMIRToLLVMTranslation",
     srcs = ["lib/Target/LLVMIR/Dialect/LLVMIR/LLVMIRToLLVMTranslation.cpp"],
     hdrs = ["include/mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMIRToLLVMTranslation.h"],
@@ -6780,6 +6793,7 @@ cc_library(
         ":LLVMDialect",
         ":OpenACCDialect",
         ":OpenACCToLLVM",
+        ":OpenMPCommon",
         ":Support",
         ":ToLLVMIRTranslation",
         "//llvm:Core",
@@ -6795,6 +6809,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":IR",
+        ":OpenMPCommon",
         ":OpenMPDialect",
         ":Support",
         ":ToLLVMIRTranslation",

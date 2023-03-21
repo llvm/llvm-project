@@ -797,6 +797,17 @@ bool isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC = nullptr,
                                const DominatorTree *DT = nullptr,
                                unsigned Depth = 0);
 
+/// Return true if undefined behavior would provable be executed on the path to
+/// OnPathTo if Root produced a posion result.  Note that this doesn't say
+/// anything about whether OnPathTo is actually executed or whether Root is
+/// actually poison.  This can be used to assess whether a new use of Root can
+/// be added at a location which is control equivalent with OnPathTo (such as
+/// immediately before it) without introducing UB which didn't previously
+/// exist.  Note that a false result conveys no information.
+bool mustExecuteUBIfPoisonOnPathTo(Instruction *Root,
+                                   Instruction *OnPathTo,
+                                   DominatorTree *DT);
+
 /// Specific patterns of select instructions we can match.
 enum SelectPatternFlavor {
   SPF_UNKNOWN = 0,

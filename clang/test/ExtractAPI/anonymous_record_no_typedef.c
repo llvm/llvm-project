@@ -94,6 +94,10 @@ struct Vehicle {
           "kind": "typeIdentifier",
           "preciseIdentifier": "c:i",
           "spelling": "unsigned int"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "docComment": {
@@ -241,6 +245,10 @@ struct Vehicle {
         {
           "kind": "identifier",
           "spelling": "Vehicle"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "docComment": {

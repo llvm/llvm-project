@@ -498,11 +498,6 @@ enum OpenMPOffloadingRequiresDirFlags : int64_t {
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/OMP_REQ_DYNAMIC_ALLOCATORS)
 };
 
-enum OpenMPOffloadingReservedDeviceIDs {
-  /// Device ID if the device was not defined, runtime should get it
-  /// from environment variables in the spec.
-  OMP_DEVICEID_UNDEF = -1,
-};
 } // anonymous namespace
 
 /// Describes ident structure that describes a source location.

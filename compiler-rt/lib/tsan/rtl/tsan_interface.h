@@ -32,6 +32,9 @@ extern "C" {
 // before any instrumented code is executed and before any call to malloc.
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_init();
 
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE const char *
+__tsan_default_options();
+
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_flush_memory();
 
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_read1(void *addr);

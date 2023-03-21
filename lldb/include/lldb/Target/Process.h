@@ -311,6 +311,14 @@ public:
       return m_last_natural_stop_event;
     return lldb::EventSP();
   }
+  
+  void SetSafeToCallFunctions(bool safe) {
+    m_safe = safe;
+  }
+  
+  bool GetSafeToCallFunctions() {
+    return m_safe;
+  }
 
 private:
   uint32_t m_stop_id = 0;
@@ -321,6 +329,7 @@ private:
   uint32_t m_running_user_expression = false;
   uint32_t m_running_utility_function = 0;
   lldb::EventSP m_last_natural_stop_event;
+  std::atomic<bool> m_safe = true;
 };
 
 inline bool operator==(const ProcessModID &lhs, const ProcessModID &rhs) {
@@ -459,7 +468,7 @@ public:
     void SetRestarted(bool new_value) { m_restarted = new_value; }
 
     void SetInterrupted(bool new_value) { m_interrupted = new_value; }
-
+    
     void AddRestartedReason(const char *reason) {
       m_restarted_reasons.push_back(reason);
     }
@@ -1250,6 +1259,14 @@ public:
                 DiagnosticManager &diagnostic_manager);
 
   static const char *ExecutionResultAsCString(lldb::ExpressionResults result);
+  
+  void SetSafeToCallFunctions(bool safe) {
+    GetModID().SetSafeToCallFunctions(safe);
+  }
+  
+  bool GetSafeToCallFunctions() {
+    return GetModID().GetSafeToCallFunctions();
+  }
 
   void GetStatus(Stream &ostrm);
 

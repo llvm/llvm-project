@@ -1611,8 +1611,8 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
   ASTContext &Ctx = ND.getASTContext();
   auto &SM = Ctx.getSourceManager();
   SourceLocation NameLoc = nameLocation(ND, Ctx.getSourceManager());
-  SourceLocation BeginLoc = SM.getSpellingLoc(SM.getFileLoc(ND.getBeginLoc()));
-  SourceLocation EndLoc = SM.getSpellingLoc(SM.getFileLoc(ND.getEndLoc()));
+  SourceLocation BeginLoc = SM.getFileLoc(ND.getBeginLoc());
+  SourceLocation EndLoc = SM.getFileLoc(ND.getEndLoc());
   const auto DeclRange =
       toHalfOpenFileRange(SM, Ctx.getLangOpts(), {BeginLoc, EndLoc});
   if (!DeclRange)

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PlatformFreeBSD.h"
+#include "FreeBSDSignals.h"
 #include "lldb/Host/Config.h"
 
 #include <cstdio>
@@ -281,4 +282,8 @@ CompilerType PlatformFreeBSD::GetSiginfoType(const llvm::Triple &triple) {
 
   ast->CompleteTagDeclarationDefinition(siginfo_type);
   return siginfo_type;
+}
+
+lldb::UnixSignalsSP PlatformFreeBSD::CreateUnixSignals() {
+  return std::make_shared<FreeBSDSignals>();
 }

@@ -775,7 +775,7 @@ Expected<void *> PinnedAllocationMapTy::lockHostBuffer(void *HstPtr,
   if (Entry) {
     // An already registered intersecting buffer was found. Register a new use.
     if (auto Err = registerEntryUse(*Entry, HstPtr, Size))
-      return Err;
+      return std::move(Err);
 
     // Return the device accessible pointer with the correct offset.
     return advanceVoidPtr(Entry->DevAccessiblePtr,
@@ -790,7 +790,7 @@ Expected<void *> PinnedAllocationMapTy::lockHostBuffer(void *HstPtr,
 
   // Now insert the new entry into the map.
   if (auto Err = insertEntry(HstPtr, *DevAccessiblePtrOrErr, Size))
-    return Err;
+    return std::move(Err);
 
   // Return the device accessible pointer.
   return *DevAccessiblePtrOrErr;
@@ -957,7 +957,7 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
   // Register allocated buffer as pinned memory if the type is host memory.
   if (Kind == TARGET_ALLOC_HOST)
     if (auto Err = PinnedAllocs.registerHostBuffer(Alloc, Alloc, Size))
-      return Err;
+      return std::move(Err);
 
   return Alloc;
 }

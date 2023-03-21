@@ -8,11 +8,8 @@
 
 #include "Config.h"
 #include "TweakTesting.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <string>
 
 namespace clang {
 namespace clangd {
@@ -33,7 +30,7 @@ namespace one {
 void oo() {}
 template<typename TT> class tt {};
 namespace two {
-enum ee { ee_enum_value };
+enum ee {};
 void ff() {}
 class cc {
 public:
@@ -66,6 +63,9 @@ public:
   EXPECT_UNAVAILABLE(Header + "void fun() { ban::fo^o(); }");
   EXPECT_UNAVAILABLE(Header + "void fun() { ::ban::fo^o(); }");
   EXPECT_AVAILABLE(Header + "void fun() { banana::fo^o(); }");
+
+  // Do not offer code action on typo-corrections.
+  EXPECT_UNAVAILABLE(Header + "/*error-ok*/c^c C;");
 
   // NestedNameSpecifier, but no namespace.
   EXPECT_UNAVAILABLE(Header + "class Foo {}; class F^oo foo;");
@@ -466,37 +466,7 @@ one::v^ec<int> foo;
 using one::vec;
 
 vec<int> foo;
-)cpp"},
-      // Typo correction.
-      {R"cpp(
-// error-ok
-#include "test.hpp"
-c^c C;
-)cpp",
-       R"cpp(
-// error-ok
-#include "test.hpp"
-using one::two::cc;
-
-cc C;
-)cpp"},
-      {R"cpp(
-// error-ok
-#include "test.hpp"
-void foo() {
-  switch(one::two::ee{}) { case two::ee_^one:break; }
-}
-)cpp",
-       R"cpp(
-// error-ok
-#include "test.hpp"
-using one::two::ee_one;
-
-void foo() {
-  switch(one::two::ee{}) { case ee_one:break; }
-}
-)cpp"},
-  };
+)cpp"}};
   llvm::StringMap<std::string> EditedFiles;
   for (const auto &Case : Cases) {
     ExtraFiles["test.hpp"] = R"cpp(

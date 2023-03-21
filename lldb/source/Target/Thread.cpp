@@ -1664,6 +1664,9 @@ addr_t Thread::GetThreadLocalData(const ModuleSP module,
 bool Thread::SafeToCallFunctions() {
   Process *process = GetProcess().get();
   if (process) {
+    if (!process->SafeToCallFunctions())
+      return false;
+
     DynamicLoader *loader = GetProcess()->GetDynamicLoader();
     if (loader && loader->IsFullyInitialized() == false)
       return false;
