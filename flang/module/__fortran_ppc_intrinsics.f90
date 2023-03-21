@@ -157,4 +157,21 @@ module __Fortran_PPC_intrinsics
     procedure :: __ppc_frsqrtes
   end interface frsqrtes
   public :: frsqrtes
+
+! mtfsf, mtfsfi
+  interface mtfsf
+    subroutine __ppc_mtfsf(mask, r)
+      integer(4), intent(in) :: mask
+      real(8), intent(in) :: r
+    end subroutine __ppc_mtfsf
+  end interface mtfsf
+  public :: mtfsf
+
+  interface mtfsfi
+    subroutine __ppc_mtfsfi(bf, i)
+      integer(4), intent(in) :: bf
+      integer(4), intent(in) :: i
+    end subroutine __ppc_mtfsfi
+  end interface mtfsfi
+  public :: mtfsfi
 end module __Fortran_PPC_intrinsics

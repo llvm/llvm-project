@@ -334,6 +334,10 @@ struct IntrinsicLibrary {
   /// is ignored because this is already reflected in the result type.
   mlir::Value genConversion(mlir::Type, llvm::ArrayRef<mlir::Value>);
 
+  // PPC intrinsic handlers.
+  template <bool isImm>
+  void genMtfsf(llvm::ArrayRef<fir::ExtendedValue>);
+
   /// In the template helper below:
   ///  - "FN func" is a callback to generate the related intrinsic runtime call.
   ///  - "FD funcDim" is a callback to generate the "dim" runtime call.
@@ -880,6 +884,18 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/true},
 };
 
+// PPC specific intrinsic handlers.
+static constexpr IntrinsicHandler ppcHandlers[]{
+    {"__ppc_mtfsf",
+     &I::genMtfsf<false>,
+     {{{"mask", asValue}, {"r", asValue}}},
+     /*isElemental=*/false},
+    {"__ppc_mtfsfi",
+     &I::genMtfsf<true>,
+     {{{"bf", asValue}, {"i", asValue}}},
+     /*isElemental=*/false},
+};
+
 static const IntrinsicHandler *findIntrinsicHandler(llvm::StringRef name) {
   auto compare = [](const IntrinsicHandler &handler, llvm::StringRef name) {
     return name.compare(handler.name) > 0;
@@ -887,6 +903,15 @@ static const IntrinsicHandler *findIntrinsicHandler(llvm::StringRef name) {
   auto result = llvm::lower_bound(handlers, name, compare);
   return result != std::end(handlers) && result->name == name ? result
                                                               : nullptr;
+}
+
+static const IntrinsicHandler *findPPCIntrinsicHandler(llvm::StringRef name) {
+  auto compare = [](const IntrinsicHandler &ppcHandler, llvm::StringRef name) {
+    return name.compare(ppcHandler.name) > 0;
+  };
+  auto result = llvm::lower_bound(ppcHandlers, name, compare);
+  return result != std::end(ppcHandlers) && result->name == name ? result
+                                                                 : nullptr;
 }
 
 /// To make fir output more readable for debug, one can outline all intrinsic
@@ -978,6 +1003,20 @@ static mlir::FunctionType genF32F32F32F32FuncType(mlir::MLIRContext *context) {
 static mlir::FunctionType genF64F64F64F64FuncType(mlir::MLIRContext *context) {
   auto t = mlir::FloatType::getF64(context);
   return mlir::FunctionType::get(context, {t, t, t}, {t});
+}
+
+template <int Bits>
+static mlir::FunctionType genVoidIntF64FuncType(mlir::MLIRContext *context) {
+  auto t = mlir::IntegerType::get(context, Bits);
+  auto u = mlir::FloatType::getF64(context);
+  return mlir::FunctionType::get(context, {t, u}, std::nullopt);
+}
+
+template <int BitsA, int BitsB>
+static mlir::FunctionType genVoidIntIntFuncType(mlir::MLIRContext *context) {
+  auto t = mlir::IntegerType::get(context, BitsA);
+  auto u = mlir::IntegerType::get(context, BitsB);
+  return mlir::FunctionType::get(context, {t, u}, std::nullopt);
 }
 
 template <int Bits>
@@ -1865,14 +1904,29 @@ IntrinsicLibrary::genIntrinsicCall(llvm::StringRef specificName,
             this->resultMustBeFreed};
   }
 
-  if (!resultType)
-    // Subroutine should have a handler, they are likely missing for now.
-    crashOnMissingIntrinsic(loc, name);
+  // If targeting PowerPC, check PPC intrinsic handlers.
+  auto mod = builder.getModule();
+  if (fir::getTargetTriple(mod).isPPC()) {
+    if (const IntrinsicHandler *ppcHandler = findPPCIntrinsicHandler(name)) {
+      bool outline = ppcHandler->outline || outlineAllIntrinsics;
+      return {std::visit(
+                  [&](auto &generator) -> fir::ExtendedValue {
+                    return invokeHandler(generator, *ppcHandler, resultType,
+                                         args, outline, *this);
+                  },
+                  ppcHandler->generator),
+              this->resultMustBeFreed};
+    }
+  }
 
   // Try the runtime if no special handler was defined for the
   // intrinsic being called. Maths runtime only has numerical elemental.
   // No optional arguments are expected at this point, the code will
   // crash if it gets absent optional.
+
+  if (!resultType)
+    // Subroutine should have a handler, they are likely missing for now.
+    crashOnMissingIntrinsic(loc, name);
 
   // FIXME: using toValue to get the type won't work with array arguments.
   llvm::SmallVector<mlir::Value> mlirArgs;
@@ -1971,12 +2025,20 @@ static std::string typeToString(mlir::Type t) {
 /// arguments. The mangling pattern is:
 ///    fir.<generic name>.<result type>.<arg type>...
 /// e.g ACOS(COMPLEX(4)) is mangled as fir.acos.z4.z4
+/// For subroutines no result type is return but in order to still provide
+/// a unique mangled name, we use "void" as the return type. As in:
+///    fir.<generic name>.void.<arg type>...
+/// e.g. FREE(INTEGER(4)) is mangled as fir.free.void.i4
 static std::string mangleIntrinsicProcedure(llvm::StringRef intrinsic,
                                             mlir::FunctionType funTy) {
   std::string name = "fir.";
   name.append(intrinsic.str()).append(".");
-  assert(funTy.getNumResults() == 1 && "only function mangling supported");
-  name.append(typeToString(funTy.getResult(0)));
+  if (funTy.getNumResults() == 1)
+    name.append(typeToString(funTy.getResult(0)));
+  else if (funTy.getNumResults() == 0)
+    name.append("void");
+  else
+    llvm_unreachable("more than one result value for function");
   unsigned e = funTy.getNumInputs();
   for (decltype(e) i = 0; i < e; ++i)
     name.append(".").append(typeToString(funTy.getInput(i)));
@@ -5518,6 +5580,31 @@ mlir::Value IntrinsicLibrary::genExtremum(mlir::Type,
     result = builder.create<mlir::arith::SelectOp>(loc, mask, result, arg);
   }
   return result;
+}
+
+//===----------------------------------------------------------------------===//
+// PowerPC specific intrinsic handlers.
+//===----------------------------------------------------------------------===//
+template <bool isImm>
+void IntrinsicLibrary::genMtfsf(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  llvm::SmallVector<mlir::Value> scalarArgs;
+  for (const fir::ExtendedValue &arg : args)
+    if (arg.getUnboxed())
+      scalarArgs.emplace_back(fir::getBase(arg));
+    else
+      mlir::emitError(loc, "nonscalar intrinsic argument");
+
+  mlir::FunctionType libFuncType;
+  mlir::func::FuncOp funcOp;
+  if (isImm) {
+    libFuncType = genVoidIntIntFuncType<32, 32>(builder.getContext());
+    funcOp = builder.addNamedFunction(loc, "llvm.ppc.mtfsfi", libFuncType);
+  } else {
+    libFuncType = genVoidIntF64FuncType<32>(builder.getContext());
+    funcOp = builder.addNamedFunction(loc, "llvm.ppc.mtfsf", libFuncType);
+  }
+  builder.create<fir::CallOp>(loc, funcOp, scalarArgs);
 }
 
 //===----------------------------------------------------------------------===//

@@ -1228,6 +1228,57 @@ bool CheckInterfaceForGeneric(const characteristics::Procedure &proc,
            .AnyFatalError();
 }
 
+bool CheckArgumentIsConstantExprInRange(
+    const evaluate::ActualArguments &actuals, int index, int lowerBound,
+    int upperBound, parser::ContextualMessages &messages) {
+  CHECK(index >= 0 && index < actuals.size());
+
+  const std::optional<evaluate::ActualArgument> &argOptional{actuals[index]};
+  if (!argOptional) {
+    DIE("Actual argument should have value");
+    return false;
+  }
+
+  const evaluate::ActualArgument &arg{argOptional.value()};
+  const evaluate::Expr<evaluate::SomeType> *argExpr{arg.UnwrapExpr()};
+  CHECK(argExpr != nullptr);
+
+  if (!IsConstantExpr(*argExpr)) {
+    messages.Say("Actual argument #%d must be a constant expression"_err_en_US,
+        index + 1);
+    return false;
+  }
+
+  // This does not imply that the kind of the argument is 8. The kind
+  // for the intrinsic's argument should have been check prior. This is just
+  // a conversion so that we can read the constant value.
+  auto scalarValue{evaluate::ToInt64(argExpr)};
+  CHECK(scalarValue.has_value());
+
+  if (*scalarValue < lowerBound || *scalarValue > upperBound) {
+    messages.Say(
+        "Argument #%d must be a constant expression in range %d-%d"_err_en_US,
+        index + 1, lowerBound, upperBound);
+    return false;
+  }
+  return true;
+}
+
+bool CheckPPCIntrinsic(const Symbol &generic, const Symbol &specific,
+    const evaluate::ActualArguments &actuals,
+    evaluate::FoldingContext &context) {
+  parser::ContextualMessages &messages{context.messages()};
+
+  if (specific.name() == "__ppc_mtfsf") {
+    return CheckArgumentIsConstantExprInRange(actuals, 0, 0, 7, messages);
+  }
+  if (specific.name() == "__ppc_mtfsfi") {
+    return CheckArgumentIsConstantExprInRange(actuals, 0, 0, 7, messages) &&
+        CheckArgumentIsConstantExprInRange(actuals, 1, 0, 15, messages);
+  }
+  return false;
+}
+
 bool CheckArguments(const characteristics::Procedure &proc,
     evaluate::ActualArguments &actuals, evaluate::FoldingContext &context,
     const Scope &scope, bool treatingExternalAsImplicit,
