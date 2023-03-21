@@ -1078,8 +1078,6 @@ def StdC : StandardSpec<"stdc"> {
         SizeTType,
         WIntType,
         WCharType,
-        MBStateType,
-        StructTmType,
       ],
       [], // Enumerations
       [
