@@ -9,7 +9,7 @@
 #ifndef LLVM_SUPPORT_X86FOLDTABLESUTILS_H
 #define LLVM_SUPPORT_X86FOLDTABLESUTILS_H
 
-namespace {
+namespace llvm {
 enum {
   // Select which memory operand is being unfolded.
   // (stored in bits 0 - 2)
@@ -55,5 +55,5 @@ enum {
 
   // Unused bits 14-15
 };
-}
+} // namespace llvm
 #endif // LLVM_SUPPORT_X86FOLDTABLESUTILS_H
