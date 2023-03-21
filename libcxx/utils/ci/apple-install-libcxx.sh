@@ -150,6 +150,9 @@ if [ "$headers_only" != true ]; then
     universal_dylib libc++.1.dylib
     universal_dylib libc++abi.dylib
     (cd "${install_dir}/usr/lib" && ln -s "libc++.1.dylib" libc++.dylib)
+
+    experimental_libs=$(for arch in ${architectures}; do echo "${build_dir}/${arch}-install/lib/libc++experimental.a"; done)
+    xcrun lipo -create ${experimental_libs} -output "${install_dir}/usr/lib/libc++experimental.a"
 fi
 
 # Install the headers by copying the headers from one of the built architectures
