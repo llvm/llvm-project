@@ -27,7 +27,7 @@ struct CallGraph : ModulePass {
   void insertCallLogger(IRBuilder<> &Builder, const Function *CallerFunc,
                         const Function *CalleeFunc,
                         FunctionCallee &LogFunc) const;
-  bool isLoggerFunc(StringRef Name) const { return Name == "Logger"; }
+  bool isLoggerFunc(StringRef Name) const { return Name == "_Z6LoggerPclS_l"; }
   bool isLLVMTrap(StringRef Name) const { return Name == "llvm.trap"; }
 
   bool runOnModule(Module &M) override {
@@ -93,7 +93,7 @@ FunctionCallee CallGraph::getCallLogFunc(Module &M,
 
   FunctionType *CallLogFuncType =
       FunctionType::get(RetType, CallParamType, false);
-  FunctionCallee CallLogFunc = M.getOrInsertFunction("Logger", CallLogFuncType);
+  FunctionCallee CallLogFunc = M.getOrInsertFunction("_Z6LoggerPclS_l", CallLogFuncType);
 
   return CallLogFunc;
 }
