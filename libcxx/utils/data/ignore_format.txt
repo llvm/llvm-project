@@ -271,7 +271,6 @@ libcxx/include/__compare/compare_weak_order_fallback.h
 libcxx/include/__compare/ordering.h
 libcxx/include/__compare/partial_order.h
 libcxx/include/__compare/strong_order.h
-libcxx/include/__compare/synth_three_way.h
 libcxx/include/__compare/three_way_comparable.h
 libcxx/include/__compare/weak_order.h
 libcxx/include/complex
