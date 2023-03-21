@@ -175,7 +175,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   };
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
-                   options::OPT_shared)) {
+                   options::OPT_shared, options::OPT_r)) {
     CmdArgs.push_back(
         Args.MakeArgString(ToolChain.GetFilePath(getCrt0Basename())));
 
@@ -235,47 +235,49 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // Add directory to library search path.
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
-  ToolChain.addProfileRTLibs(Args, CmdArgs);
+  if (!Args.hasArg(options::OPT_r)) {
+    ToolChain.addProfileRTLibs(Args, CmdArgs);
 
-  if (getToolChain().ShouldLinkCXXStdlib(Args))
-    getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
+    if (getToolChain().ShouldLinkCXXStdlib(Args))
+      getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
+    if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+      AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 
-    // Add OpenMP runtime if -fopenmp is specified.
-    if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                     options::OPT_fno_openmp, false)) {
-      switch (ToolChain.getDriver().getOpenMPRuntime(Args)) {
-      case Driver::OMPRT_OMP:
-        CmdArgs.push_back("-lomp");
-        break;
-      case Driver::OMPRT_IOMP5:
-        CmdArgs.push_back("-liomp5");
-        break;
-      case Driver::OMPRT_GOMP:
-        CmdArgs.push_back("-lgomp");
-        break;
-      case Driver::OMPRT_Unknown:
-        // Already diagnosed.
-        break;
+      // Add OpenMP runtime if -fopenmp is specified.
+      if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                       options::OPT_fno_openmp, false)) {
+        switch (ToolChain.getDriver().getOpenMPRuntime(Args)) {
+        case Driver::OMPRT_OMP:
+          CmdArgs.push_back("-lomp");
+          break;
+        case Driver::OMPRT_IOMP5:
+          CmdArgs.push_back("-liomp5");
+          break;
+        case Driver::OMPRT_GOMP:
+          CmdArgs.push_back("-lgomp");
+          break;
+        case Driver::OMPRT_Unknown:
+          // Already diagnosed.
+          break;
+        }
       }
-    }
 
-    // Support POSIX threads if "-pthreads" or "-pthread" is present.
-    if (Args.hasArg(options::OPT_pthreads, options::OPT_pthread))
-      CmdArgs.push_back("-lpthreads");
+      // Support POSIX threads if "-pthreads" or "-pthread" is present.
+      if (Args.hasArg(options::OPT_pthreads, options::OPT_pthread))
+        CmdArgs.push_back("-lpthreads");
 
-    if (D.CCCIsCXX())
-      CmdArgs.push_back("-lm");
+      if (D.CCCIsCXX())
+        CmdArgs.push_back("-lm");
 
-    CmdArgs.push_back("-lc");
+      CmdArgs.push_back("-lc");
 
-    if (Args.hasArgNoClaim(options::OPT_p, options::OPT_pg)) {
-      CmdArgs.push_back(Args.MakeArgString((llvm::Twine("-L") + D.SysRoot) +
-                                           "/lib/profiled"));
-      CmdArgs.push_back(Args.MakeArgString((llvm::Twine("-L") + D.SysRoot) +
-                                           "/usr/lib/profiled"));
+      if (Args.hasArgNoClaim(options::OPT_p, options::OPT_pg)) {
+        CmdArgs.push_back(Args.MakeArgString((llvm::Twine("-L") + D.SysRoot) +
+                                             "/lib/profiled"));
+        CmdArgs.push_back(Args.MakeArgString((llvm::Twine("-L") + D.SysRoot) +
+                                             "/usr/lib/profiled"));
+      }
     }
   }
 
