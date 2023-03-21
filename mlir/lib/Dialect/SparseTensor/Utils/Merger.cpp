@@ -210,7 +210,7 @@ LatPoint::LatPoint(unsigned numTensors, unsigned numLoops, TensorId t, LoopId i,
 }
 
 Merger::Merger(unsigned numInputOutputTensors, unsigned numNativeLoops,
-               unsigned numFilterLoops)
+               unsigned numFilterLoops, unsigned maxLvlRank)
     : outTensor(numInputOutputTensors - 1),
       syntheticTensor(numInputOutputTensors),
       numTensors(numInputOutputTensors + 1), numNativeLoops(numNativeLoops),
@@ -220,11 +220,11 @@ Merger::Merger(unsigned numInputOutputTensors, unsigned numNativeLoops,
       loopToLvl(numTensors,
                 std::vector<std::optional<Level>>(numLoops, std::nullopt)),
       lvlToLoop(numTensors,
-                std::vector<std::optional<LoopId>>(numLoops, std::nullopt)),
+                std::vector<std::optional<LoopId>>(maxLvlRank, std::nullopt)),
       loopToDependencies(numLoops, std::vector<std::optional<Level>>(
                                        numTensors, std::nullopt)),
       levelToDependentIdx(numTensors, std::vector<std::vector<LoopId>>(
-                                          numLoops, std::vector<LoopId>())),
+                                          maxLvlRank, std::vector<LoopId>())),
       loopBounds(numLoops, std::make_pair(numTensors, numLoops)) {}
 
 //===----------------------------------------------------------------------===//
