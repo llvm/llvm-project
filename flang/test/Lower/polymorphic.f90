@@ -1112,6 +1112,32 @@ module polymorphic_test
 ! CHECK-SAME: %[[B:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "b"}) {
 ! CHECK: %[[A:.*]] = fir.alloca !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {bindc_name = "a", uniq_name = "_QMpolymorphic_testFclass_with_entryEa"}
 
+  subroutine class_array_with_entry(a)
+    class(p1) :: a(:), b(:)
+    select type (a)
+    type is(p2)
+      print*, a%c
+    class default
+      print*, a%a
+    end select
+    return
+  entry g(b)
+    select type(b)
+    type is(p2)
+      print*,b%c
+    class default
+      print*,b%a
+    end select
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPclass_array_with_entry(
+! CHECK-SAME: %[[A:.*]]: !fir.class<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>> {fir.bindc_name = "a"}) {
+! CHECK: %[[B:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPg(
+! CHECK-SAME: %[[B:.*]]: !fir.class<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>> {fir.bindc_name = "b"}) {
+! CHECK: %[[A:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>
+
 end module
 
 program test

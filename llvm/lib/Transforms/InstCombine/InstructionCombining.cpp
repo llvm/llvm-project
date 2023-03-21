@@ -1044,45 +1044,12 @@ static Constant *constantFoldOperationIntoSelectOperand(
   return ConstantFoldInstOperands(&I, ConstOps, I.getModule()->getDataLayout());
 }
 
-static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
-                                             InstCombiner::BuilderTy &Builder) {
-  if (auto *Cast = dyn_cast<CastInst>(&I))
-    return Builder.CreateCast(Cast->getOpcode(), SO, I.getType());
-
-  if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-    assert(canConstantFoldCallTo(II, cast<Function>(II->getCalledOperand())) &&
-           "Expected constant-foldable intrinsic");
-    Intrinsic::ID IID = II->getIntrinsicID();
-    if (II->arg_size() == 1)
-      return Builder.CreateUnaryIntrinsic(IID, SO);
-
-    // This works for real binary ops like min/max (where we always expect the
-    // constant operand to be canonicalized as op1) and unary ops with a bonus
-    // constant argument like ctlz/cttz.
-    // TODO: Handle non-commutative binary intrinsics as below for binops.
-    assert(II->arg_size() == 2 && "Expected binary intrinsic");
-    assert(isa<Constant>(II->getArgOperand(1)) && "Expected constant operand");
-    return Builder.CreateBinaryIntrinsic(IID, SO, II->getArgOperand(1));
-  }
-
-  if (auto *EI = dyn_cast<ExtractElementInst>(&I))
-    return Builder.CreateExtractElement(SO, EI->getIndexOperand());
-
-  assert(I.isBinaryOp() && "Unexpected opcode for select folding");
-
-  // Figure out if the constant is the left or the right argument.
-  bool ConstIsRHS = isa<Constant>(I.getOperand(1));
-  Constant *ConstOperand = cast<Constant>(I.getOperand(ConstIsRHS));
-
-  Value *Op0 = SO, *Op1 = ConstOperand;
-  if (!ConstIsRHS)
-    std::swap(Op0, Op1);
-
-  Value *NewBO = Builder.CreateBinOp(cast<BinaryOperator>(&I)->getOpcode(), Op0,
-                                     Op1, SO->getName() + ".op");
-  if (auto *NewBOI = dyn_cast<Instruction>(NewBO))
-    NewBOI->copyIRFlags(&I);
-  return NewBO;
+static Value *foldOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
+                                             Value *NewOp, InstCombiner &IC) {
+  Instruction *Clone = I.clone();
+  Clone->replaceUsesOfWith(SI, NewOp);
+  IC.InsertNewInstBefore(Clone, *SI);
+  return Clone;
 }
 
 Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
@@ -1162,9 +1129,9 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
 
   // Create an instruction for the arm that did not fold.
   if (!NewTV)
-    NewTV = foldOperationIntoSelectOperand(Op, TV, Builder);
+    NewTV = foldOperationIntoSelectOperand(Op, SI, TV, *this);
   if (!NewFV)
-    NewFV = foldOperationIntoSelectOperand(Op, FV, Builder);
+    NewFV = foldOperationIntoSelectOperand(Op, SI, FV, *this);
   return SelectInst::Create(SI->getCondition(), NewTV, NewFV, "", nullptr, SI);
 }
 
