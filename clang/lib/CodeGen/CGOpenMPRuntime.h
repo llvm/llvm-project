@@ -508,9 +508,6 @@ protected:
   ///  kmp_int64 st; // stride
   /// };
   QualType KmpDimTy;
-  /// Entity that registers the offloading constants that were emitted so
-  /// far.
-  llvm::OffloadEntriesInfoManager OffloadEntriesInfoManager;
 
   bool ShouldMarkAsGlobal = true;
   /// List of the emitted declarations.
