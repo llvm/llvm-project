@@ -14,6 +14,7 @@ if (current_os == "android") {
     "--target=$llvm_current_triple",
     "--sysroot=$android_ndk_path/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
     "--gcc-toolchain=$android_ndk_path/toolchains/llvm/prebuilt/linux-x86_64",
+    "-fno-emulated-tls",
   ]
   target_ldflags += [
     "-static-libstdc++",
