@@ -156,6 +156,7 @@ PIPE_OPERATOR(AAIsDead)
 PIPE_OPERATOR(AANoUnwind)
 PIPE_OPERATOR(AANoSync)
 PIPE_OPERATOR(AANoRecurse)
+PIPE_OPERATOR(AANonConvergent)
 PIPE_OPERATOR(AAWillReturn)
 PIPE_OPERATOR(AANoReturn)
 PIPE_OPERATOR(AAReturnedValues)
@@ -2929,6 +2930,60 @@ struct AANoRecurseCallSite final : AANoRecurseImpl {
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(norecurse); }
+};
+} // namespace
+
+/// ------------------------ No-Convergent Attribute --------------------------
+
+namespace {
+struct AANonConvergentImpl : public AANonConvergent {
+  AANonConvergentImpl(const IRPosition &IRP, Attributor &A)
+      : AANonConvergent(IRP, A) {}
+
+  /// See AbstractAttribute::getAsStr()
+  const std::string getAsStr() const override {
+    return getAssumed() ? "non-convergent" : "may-be-convergent";
+  }
+};
+
+struct AANonConvergentFunction final : AANonConvergentImpl {
+  AANonConvergentFunction(const IRPosition &IRP, Attributor &A)
+      : AANonConvergentImpl(IRP, A) {}
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // If all function calls are known to not be convergent, we are not convergent.
+    auto CalleeIsNotConvergent = [&](Instruction &Inst) {
+      CallBase &CB = cast<CallBase>(Inst);
+      Function *Callee = CB.getCalledFunction();
+      if (!Callee || Callee->isIntrinsic()) {
+        return false;
+      }
+      if (Callee->isDeclaration()) {
+        return !Callee->hasFnAttribute(Attribute::Convergent);
+      }
+      const auto &ConvergentAA = A.getAAFor<AANonConvergent>(
+          *this, IRPosition::function(*Callee), DepClassTy::REQUIRED);
+      return ConvergentAA.isAssumedNotConvergent();
+    };
+
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllCallLikeInstructions(CalleeIsNotConvergent, *this,
+                                           UsedAssumedInformation)) {
+      return indicatePessimisticFixpoint();
+    }
+    return ChangeStatus::UNCHANGED;
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    if (isKnownNotConvergent() && hasAttr(Attribute::Convergent)) {
+      removeAttrs({Attribute::Convergent});
+      return ChangeStatus::CHANGED;
+    }
+    return ChangeStatus::UNCHANGED;
+  }
+
+  void trackStatistics() const override { STATS_DECLTRACK_FN_ATTR(convergent) }
 };
 } // namespace
 
@@ -11811,6 +11866,7 @@ const char AANoSync::ID = 0;
 const char AANoFree::ID = 0;
 const char AANonNull::ID = 0;
 const char AANoRecurse::ID = 0;
+const char AANonConvergent::ID = 0;
 const char AAWillReturn::ID = 0;
 const char AAUndefinedBehavior::ID = 0;
 const char AANoAlias::ID = 0;
@@ -11961,6 +12017,7 @@ CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAUnderlyingObjects)
 
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAHeapToStack)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAUndefinedBehavior)
+CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANonConvergent)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAIntraFnReachability)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAInterFnReachability)
 
