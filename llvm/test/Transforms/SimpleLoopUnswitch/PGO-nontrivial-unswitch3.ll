@@ -2,11 +2,11 @@
 
 ; RUN: opt < %s -passes='require<profile-summary>,function(loop-mssa(simple-loop-unswitch<nontrivial>))' -S | FileCheck %s
 
-;; Check that non-trivial loop unswitching is applied to a cold loop in a
+;; Check that non-trivial loop unswitching is applied to a non-cold loop in a
 ;; non-cold loop nest.
 
 ;; IR was generated from the following loop nest, profiled when called
-;; with M=1000 and N=0.
+;; with M=1000 and N=10.
 ;; void hotFunction(bool cond, int M, int N, int * A, int *B, int *C) {
 ;;   for (unsigned j = 0; j < M; j++)
 ;;     for (unsigned i=0; i < N; i++) {
@@ -17,13 +17,13 @@
 
 define void @_Z11hotFunctionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, ptr %C) !prof !36 {
 ; CHECK-LABEL: define void @_Z11hotFunctionbiiPiS_S_
-; CHECK-SAME: (i1 [[COND:%.*]], i32 [[M:%.*]], i32 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) !prof [[PROF33:![0-9]+]] {
+; CHECK-SAME: (i1 [[COND:%.*]], i32 [[M:%.*]], i32 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) !prof [[PROF18:![0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP19_NOT:%.*]] = icmp eq i32 [[M]], 0
-; CHECK-NEXT:    br i1 [[CMP19_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND1_PREHEADER_LR_PH:%.*]], !prof [[PROF34:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP19_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND1_PREHEADER_LR_PH:%.*]], !prof [[PROF19:![0-9]+]]
 ; CHECK:       for.cond1.preheader.lr.ph:
 ; CHECK-NEXT:    [[CMP217_NOT:%.*]] = icmp eq i32 [[N]], 0
-; CHECK-NEXT:    br i1 [[CMP217_NOT]], label [[FOR_COND1_PREHEADER_LR_PH_SPLIT_US:%.*]], label [[FOR_COND1_PREHEADER_LR_PH_SPLIT:%.*]], !prof [[PROF35:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP217_NOT]], label [[FOR_COND1_PREHEADER_LR_PH_SPLIT_US:%.*]], label [[FOR_COND1_PREHEADER_LR_PH_SPLIT:%.*]], !prof [[PROF20:![0-9]+]]
 ; CHECK:       for.cond1.preheader.lr.ph.split.us:
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
 ; CHECK:       for.cond1.preheader.us:
@@ -32,7 +32,7 @@ define void @_Z11hotFunctionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, 
 ; CHECK:       for.cond.cleanup3.us:
 ; CHECK-NEXT:    [[INC10_US]] = add nuw i32 [[J_020_US]], 1
 ; CHECK-NEXT:    [[EXITCOND22_NOT_US:%.*]] = icmp eq i32 [[INC10_US]], [[M]]
-; CHECK-NEXT:    br i1 [[EXITCOND22_NOT_US]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT_US:%.*]], label [[FOR_COND1_PREHEADER_US]], !prof [[PROF34]]
+; CHECK-NEXT:    br i1 [[EXITCOND22_NOT_US]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT_US:%.*]], label [[FOR_COND1_PREHEADER_US]], !prof [[PROF19]]
 ; CHECK:       for.cond.cleanup.loopexit.split.us:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
 ; CHECK:       for.cond1.preheader.lr.ph.split:
@@ -45,7 +45,7 @@ define void @_Z11hotFunctionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, 
 ; CHECK:       for.cond.cleanup3.us3:
 ; CHECK-NEXT:    [[INC10_US4]] = add nuw i32 [[J_020_US2]], 1
 ; CHECK-NEXT:    [[EXITCOND22_NOT_US5:%.*]] = icmp eq i32 [[INC10_US4]], [[M]]
-; CHECK-NEXT:    br i1 [[EXITCOND22_NOT_US5]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT_SPLIT_US:%.*]], label [[FOR_COND1_PREHEADER_US1]], !prof [[PROF34]]
+; CHECK-NEXT:    br i1 [[EXITCOND22_NOT_US5]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT_SPLIT_US:%.*]], label [[FOR_COND1_PREHEADER_US1]], !prof [[PROF19]]
 ; CHECK:       for.body4.preheader.us:
 ; CHECK-NEXT:    br label [[FOR_BODY4_PREHEADER_SPLIT_US_US:%.*]]
 ; CHECK:       for.cond.cleanup3.loopexit.us:
@@ -69,7 +69,7 @@ define void @_Z11hotFunctionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, 
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT_US_US:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_US_US]] = add nuw nsw i64 [[INDVARS_IV_US_US]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT_US_US:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_US_US]], [[WIDE_TRIP_COUNT_US_US]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT_US_US]], label [[FOR_COND_CLEANUP3_LOOPEXIT_SPLIT_US_US:%.*]], label [[FOR_BODY4_US_US]], !prof [[PROF35]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT_US_US]], label [[FOR_COND_CLEANUP3_LOOPEXIT_SPLIT_US_US:%.*]], label [[FOR_BODY4_US_US]], !prof [[PROF20]]
 ; CHECK:       for.cond.cleanup3.loopexit.split.us.us:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3_LOOPEXIT_US:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit.split.split.us:
@@ -98,7 +98,7 @@ define void @_Z11hotFunctionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, 
 ; CHECK:       for.cond.cleanup3:
 ; CHECK-NEXT:    [[INC10]] = add nuw i32 [[J_020]], 1
 ; CHECK-NEXT:    [[EXITCOND22_NOT:%.*]] = icmp eq i32 [[INC10]], [[M]]
-; CHECK-NEXT:    br i1 [[EXITCOND22_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT_SPLIT:%.*]], label [[FOR_COND1_PREHEADER]], !prof [[PROF34]]
+; CHECK-NEXT:    br i1 [[EXITCOND22_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT_SPLIT:%.*]], label [[FOR_COND1_PREHEADER]], !prof [[PROF19]]
 ; CHECK:       for.body4:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY4_PREHEADER_SPLIT]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDVARS_IV]]
@@ -113,7 +113,7 @@ define void @_Z11hotFunctionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, 
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP3_LOOPEXIT_SPLIT:%.*]], label [[FOR_BODY4]], !prof [[PROF35]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP3_LOOPEXIT_SPLIT:%.*]], label [[FOR_BODY4]], !prof [[PROF20]]
 ;
 entry:
   %cmp19.not = icmp eq i32 %M, 0
@@ -173,10 +173,12 @@ declare void @_Z12do_somethingv()
 !15 = !{!"IsPartialProfile", i64 0}
 !16 = !{!"PartialProfileRatio", double 0.000000e+00}
 !17 = !{!"DetailedSummary", !18}
-!18 = !{!19, !31, !34}
-!19 = !{i32 10000, i64 1000, i32 1}
-!31 = !{i32 999000, i64 1000, i32 1}
-!34 = !{i32 999999, i64 1, i32 3}
+!18 = !{!19, !29, !30, !32, !34}
+!19 = !{i32 10000, i64 10000, i32 3}
+!29 = !{i32 950000, i64 10000, i32 3}
+!30 = !{i32 990000, i64 1000, i32 4}
+!32 = !{i32 999900, i64 1000, i32 4}
+!34 = !{i32 999999, i64 1, i32 6}
 !36 = !{!"function_entry_count", i64 1}
 !37 = !{!"branch_weights", i32 1, i32 1000}
-!38 = !{!"branch_weights", i32 1000, i32 0}
+!38 = !{!"branch_weights", i32 1000, i32 10000}
