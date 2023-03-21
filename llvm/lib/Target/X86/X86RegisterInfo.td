@@ -433,18 +433,6 @@ def GR64PLTSafe : RegisterClass<"X86", [i64], 64,
                               (add RAX, RCX, RDX, RSI, RDI, R8, R9,
                                    RBX, R14, R15, R12, R13, RBP)>;
 
-// It includes the GPR that are used as scratch register for Linux64 calling
-// convention.
-def GR64_ArgRef: RegisterClass<"X86", [i64], 64, (add R10, R11)> {
-  let GeneratePressureSet = 0;
-}
-
-// It includes the GPR that are used as scratch register for Linux32 calling
-// convention.
-def GR32_ArgRef: RegisterClass<"X86", [i32], 32, (add ECX, EDX)> {
-  let GeneratePressureSet = 0;
-}
-
 // Segment registers for use by MOV instructions (and others) that have a
 //   segment register as one operand.  Always contain a 16-bit segment
 //   descriptor.

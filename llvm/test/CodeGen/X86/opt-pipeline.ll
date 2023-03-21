@@ -116,7 +116,6 @@
 ; CHECK-NEXT:       Machine code sinking
 ; CHECK-NEXT:       Peephole Optimizations
 ; CHECK-NEXT:       Remove dead machine instructions
-; CHECK-NEXT:       Argument Stack Rebase
 ; CHECK-NEXT:       Live Range Shrink
 ; CHECK-NEXT:       X86 Fixup SetCC
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
