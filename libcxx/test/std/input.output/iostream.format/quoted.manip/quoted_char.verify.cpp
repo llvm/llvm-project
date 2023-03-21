@@ -16,9 +16,6 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
-#include <cassert>
-
-#include "test_macros.h"
 
 //  Test that mismatches between strings and wide streams are diagnosed
 
@@ -29,6 +26,6 @@ void round_trip ( const char *p ) {
     ss >> std::quoted(s); // expected-error {{invalid operands to binary expression}}
 }
 
-int main(int, char**) {
+void f() {
     round_trip("Hi Mom");
 }

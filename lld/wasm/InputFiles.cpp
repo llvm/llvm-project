@@ -441,7 +441,7 @@ void ObjFile::parse(bool ignoreComdats) {
   // called directly (i.e. only address taken) don't have to match the defined
   // function's signature.  We cannot do this for directly called functions
   // because those signatures are checked at validation times.
-  // See https://bugs.llvm.org/show_bug.cgi?id=40412
+  // See https://github.com/llvm/llvm-project/issues/39758
   std::vector<bool> isCalledDirectly(wasmObj->getNumberOfSymbols(), false);
   for (const SectionRef &sec : wasmObj->sections()) {
     const WasmSection &section = wasmObj->getWasmSection(sec);
@@ -791,7 +791,8 @@ void BitcodeFile::parse() {
   }
   checkArch(t.getArch());
   std::vector<bool> keptComdats;
-  // TODO Support nodeduplicate https://bugs.llvm.org/show_bug.cgi?id=50531
+  // TODO Support nodeduplicate
+  // https://github.com/llvm/llvm-project/issues/49875
   for (std::pair<StringRef, Comdat::SelectionKind> s : obj->getComdatTable())
     keptComdats.push_back(symtab->addComdat(s.first));
 

@@ -292,11 +292,8 @@ define void @select_alloca_unrelated_ptr(i1 %c, ptr %p, ptr %p2) {
 
 define void @alloca_offset_icmp(ptr %p, i32 %offset) {
 ; CHECK-LABEL: @alloca_offset_icmp(
-; CHECK-NEXT:    [[M:%.*]] = alloca [4 x i8], align 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[M]], i32 [[OFFSET:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[M]], [[P:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[M]], [[G]]
-; CHECK-NEXT:    call void @witness(i1 [[CMP1]], i1 [[CMP2]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[OFFSET:%.*]], 0
+; CHECK-NEXT:    call void @witness(i1 false, i1 [[CMP2]])
 ; CHECK-NEXT:    ret void
 ;
   %m = alloca [4 x i8]

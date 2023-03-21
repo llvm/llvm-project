@@ -966,8 +966,11 @@ void Sema::CompleteLambdaCallOperator(
   if (!Params.empty()) {
     CheckParmsForFunctionDef(Params, /*CheckParameterNames=*/false);
     Method->setParams(Params);
-    for (auto P : Method->parameters())
+    for (auto P : Method->parameters()) {
+      if (!P)
+        continue;
       P->setOwningFunction(Method);
+    }
   }
 
   buildLambdaScopeReturnType(*this, LSI, Method, HasExplicitResultType);

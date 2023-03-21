@@ -222,6 +222,13 @@ public:
   void printStackMap() const override;
   void printMemtag() override;
 
+  // Hash histogram shows statistics of how efficient the hash was for the
+  // dynamic symbol table. The table shows the number of hash buckets for
+  // different lengths of chains as an absolute number and percentage of the
+  // total buckets, and the cumulative coverage of symbols for each set of
+  // buckets.
+  void printHashHistograms() override;
+
   const object::ELFObjectFile<ELFT> &getElfObject() const { return ObjF; };
 
   std::string describe(const Elf_Shdr &Sec) const;
@@ -234,6 +241,9 @@ public:
       return 8;
     return 4;
   }
+
+  std::vector<EnumEntry<unsigned>>
+  getOtherFlagsFromSymbol(const Elf_Ehdr &Header, const Elf_Sym &Symbol) const;
 
   Elf_Dyn_Range dynamic_table() const {
     // A valid .dynamic section contains an array of entries terminated
@@ -300,6 +310,12 @@ protected:
   virtual void printMemtag(
       const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
       const ArrayRef<uint8_t> AndroidNoteDesc) = 0;
+
+  virtual void printHashHistogram(const Elf_Hash &HashTable) const;
+  virtual void printGnuHashHistogram(const Elf_GnuHash &GnuHashTable) const;
+  virtual void printHashHistogramStats(size_t NBucket, size_t MaxChain,
+                                       size_t TotalSyms, ArrayRef<size_t> Count,
+                                       bool IsGnu) const = 0;
 
   Expected<ArrayRef<Elf_Versym>>
   getVersionTable(const Elf_Shdr &Sec, ArrayRef<Elf_Sym> *SymTab,
@@ -569,7 +585,6 @@ public:
   void printVersionSymbolSection(const Elf_Shdr *Sec) override;
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
-  void printHashHistograms() override;
   void printCGProfile() override;
   void printBBAddrMaps() override;
   void printAddrsig() override;
@@ -579,10 +594,11 @@ public:
   void printMemtag(
       const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
       const ArrayRef<uint8_t> AndroidNoteDesc) override;
+  void printHashHistogramStats(size_t NBucket, size_t MaxChain,
+                               size_t TotalSyms, ArrayRef<size_t> Count,
+                               bool IsGnu) const override;
 
 private:
-  void printHashHistogram(const Elf_Hash &HashTable);
-  void printGnuHashHistogram(const Elf_GnuHash &GnuHashTable);
   void printHashTableSymbols(const Elf_Hash &HashTable);
   void printGnuHashTableSymbols(const Elf_GnuHash &GnuHashTable);
 
@@ -676,7 +692,6 @@ public:
   void printVersionSymbolSection(const Elf_Shdr *Sec) override;
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
-  void printHashHistograms() override;
   void printCGProfile() override;
   void printBBAddrMaps() override;
   void printAddrsig() override;
@@ -686,14 +701,17 @@ public:
   void printMemtag(
       const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
       const ArrayRef<uint8_t> AndroidNoteDesc) override;
+  void printSymbolSection(const Elf_Sym &Symbol, unsigned SymIndex,
+                          DataRegion<Elf_Word> ShndxTable) const;
+  void printHashHistogramStats(size_t NBucket, size_t MaxChain,
+                               size_t TotalSyms, ArrayRef<size_t> Count,
+                               bool IsGnu) const override;
 
 private:
   void printRelrReloc(const Elf_Relr &R) override;
   void printRelRelaReloc(const Relocation<ELFT> &R,
                          const RelSymbol<ELFT> &RelSym) override;
 
-  void printSymbolSection(const Elf_Sym &Symbol, unsigned SymIndex,
-                          DataRegion<Elf_Word> ShndxTable) const;
   void printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
                    DataRegion<Elf_Word> ShndxTable,
                    std::optional<StringRef> StrTable, bool IsDynamic,
@@ -706,8 +724,22 @@ private:
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
   void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
   void printMipsABIFlags() override;
+  virtual void printZeroSymbolOtherField(const Elf_Sym &Symbol) const;
 
 protected:
+  virtual std::string getGroupSectionHeaderName() const;
+  void printSymbolOtherField(const Elf_Sym &Symbol) const;
+  virtual void printExpandedRelRelaReloc(const Relocation<ELFT> &R,
+                                         StringRef SymbolName,
+                                         StringRef RelocName);
+  virtual void printDefaultRelRelaReloc(const Relocation<ELFT> &R,
+                                        StringRef SymbolName,
+                                        StringRef RelocName);
+  virtual void printRelocationSectionInfo(const Elf_Shdr &Sec, StringRef Name,
+                                          const unsigned SecNdx);
+  virtual void printSectionGroupMembers(StringRef Name, uint64_t Idx) const;
+  virtual void printEmptyGroupMessage() const;
+
   ScopedPrinter &W;
 };
 
@@ -720,9 +752,23 @@ public:
   JSONELFDumper(const object::ELFObjectFile<ELFT> &ObjF, ScopedPrinter &Writer)
       : LLVMELFDumper<ELFT>(ObjF, Writer) {}
 
+  std::string getGroupSectionHeaderName() const override;
+
   void printFileSummary(StringRef FileStr, ObjectFile &Obj,
                         ArrayRef<std::string> InputFilenames,
                         const Archive *A) override;
+  virtual void printZeroSymbolOtherField(const Elf_Sym &Symbol) const override;
+
+  void printDefaultRelRelaReloc(const Relocation<ELFT> &R,
+                                StringRef SymbolName,
+                                StringRef RelocName) override;
+
+  void printRelocationSectionInfo(const Elf_Shdr &Sec, StringRef Name,
+                                  const unsigned SecNdx) override;
+
+  void printSectionGroupMembers(StringRef Name, uint64_t Idx) const override;
+
+  void printEmptyGroupMessage() const override;
 
 private:
   std::unique_ptr<DictScope> FileScope;
@@ -2651,6 +2697,116 @@ void ELFDumper<ELFT>::printGnuHashTable() {
   W.printHexList("Values", *Chains);
 }
 
+template <typename ELFT> void ELFDumper<ELFT>::printHashHistograms() {
+  // Print histogram for the .hash section.
+  if (this->HashTable) {
+    if (Error E = checkHashTable<ELFT>(*this, this->HashTable))
+      this->reportUniqueWarning(std::move(E));
+    else
+      printHashHistogram(*this->HashTable);
+  }
+
+  // Print histogram for the .gnu.hash section.
+  if (this->GnuHashTable) {
+    if (Error E = checkGNUHashTable<ELFT>(this->Obj, this->GnuHashTable))
+      this->reportUniqueWarning(std::move(E));
+    else
+      printGnuHashHistogram(*this->GnuHashTable);
+  }
+}
+
+template <typename ELFT>
+void ELFDumper<ELFT>::printHashHistogram(const Elf_Hash &HashTable) const {
+  size_t NBucket = HashTable.nbucket;
+  size_t NChain = HashTable.nchain;
+  ArrayRef<Elf_Word> Buckets = HashTable.buckets();
+  ArrayRef<Elf_Word> Chains = HashTable.chains();
+  size_t TotalSyms = 0;
+  // If hash table is correct, we have at least chains with 0 length.
+  size_t MaxChain = 1;
+
+  if (NChain == 0 || NBucket == 0)
+    return;
+
+  std::vector<size_t> ChainLen(NBucket, 0);
+  // Go over all buckets and and note chain lengths of each bucket (total
+  // unique chain lengths).
+  for (size_t B = 0; B < NBucket; ++B) {
+    BitVector Visited(NChain);
+    for (size_t C = Buckets[B]; C < NChain; C = Chains[C]) {
+      if (C == ELF::STN_UNDEF)
+          break;
+      if (Visited[C]) {
+          this->reportUniqueWarning(
+              ".hash section is invalid: bucket " + Twine(C) +
+              ": a cycle was detected in the linked chain");
+          break;
+      }
+      Visited[C] = true;
+      if (MaxChain <= ++ChainLen[B])
+          ++MaxChain;
+    }
+    TotalSyms += ChainLen[B];
+  }
+
+  if (!TotalSyms)
+    return;
+
+  std::vector<size_t> Count(MaxChain, 0);
+  // Count how long is the chain for each bucket.
+  for (size_t B = 0; B < NBucket; B++)
+    ++Count[ChainLen[B]];
+  // Print Number of buckets with each chain lengths and their cumulative
+  // coverage of the symbols.
+  printHashHistogramStats(NBucket, MaxChain, TotalSyms, Count, /*IsGnu=*/false);
+}
+
+template <class ELFT>
+void ELFDumper<ELFT>::printGnuHashHistogram(
+    const Elf_GnuHash &GnuHashTable) const {
+  Expected<ArrayRef<Elf_Word>> ChainsOrErr =
+      getGnuHashTableChains<ELFT>(this->DynSymRegion, &GnuHashTable);
+  if (!ChainsOrErr) {
+    this->reportUniqueWarning("unable to print the GNU hash table histogram: " +
+                              toString(ChainsOrErr.takeError()));
+    return;
+  }
+
+  ArrayRef<Elf_Word> Chains = *ChainsOrErr;
+  size_t Symndx = GnuHashTable.symndx;
+  size_t TotalSyms = 0;
+  size_t MaxChain = 1;
+
+  size_t NBucket = GnuHashTable.nbuckets;
+  if (Chains.empty() || NBucket == 0)
+    return;
+
+  ArrayRef<Elf_Word> Buckets = GnuHashTable.buckets();
+  std::vector<size_t> ChainLen(NBucket, 0);
+  for (size_t B = 0; B < NBucket; ++B) {
+    if (!Buckets[B])
+      continue;
+    size_t Len = 1;
+    for (size_t C = Buckets[B] - Symndx;
+         C < Chains.size() && (Chains[C] & 1) == 0; ++C)
+      if (MaxChain < ++Len)
+          ++MaxChain;
+    ChainLen[B] = Len;
+    TotalSyms += Len;
+  }
+  ++MaxChain;
+
+  if (!TotalSyms)
+    return;
+
+  std::vector<size_t> Count(MaxChain, 0);
+  for (size_t B = 0; B < NBucket; ++B)
+    ++Count[ChainLen[B]];
+  // Print Number of buckets with each chain lengths and their cumulative
+  // coverage of the symbols.
+  printHashHistogramStats(NBucket, MaxChain, TotalSyms, Count, /*IsGnu=*/true);
+}
+
 template <typename ELFT> void ELFDumper<ELFT>::printLoadName() {
   StringRef SOName = "<Not found>";
   if (SONameOffset)
@@ -3268,6 +3424,35 @@ void ELFDumper<ELFT>::printReloc(const Relocation<ELFT> &R, unsigned RelIndex,
                         toString(Target.takeError()));
   else
     printRelRelaReloc(R, *Target);
+}
+
+template <class ELFT>
+std::vector<EnumEntry<unsigned>>
+ELFDumper<ELFT>::getOtherFlagsFromSymbol(const Elf_Ehdr &Header,
+                                         const Elf_Sym &Symbol) const {
+  std::vector<EnumEntry<unsigned>> SymOtherFlags(std::begin(ElfSymOtherFlags),
+                                                 std::end(ElfSymOtherFlags));
+  if (Header.e_machine == EM_MIPS) {
+    // Someone in their infinite wisdom decided to make STO_MIPS_MIPS16
+    // flag overlap with other ST_MIPS_xxx flags. So consider both
+    // cases separately.
+    if ((Symbol.st_other & STO_MIPS_MIPS16) == STO_MIPS_MIPS16)
+      SymOtherFlags.insert(SymOtherFlags.end(),
+                           std::begin(ElfMips16SymOtherFlags),
+                           std::end(ElfMips16SymOtherFlags));
+    else
+      SymOtherFlags.insert(SymOtherFlags.end(),
+                           std::begin(ElfMipsSymOtherFlags),
+                           std::end(ElfMipsSymOtherFlags));
+  } else if (Header.e_machine == EM_AARCH64) {
+    SymOtherFlags.insert(SymOtherFlags.end(),
+                         std::begin(ElfAArch64SymOtherFlags),
+                         std::end(ElfAArch64SymOtherFlags));
+  } else if (Header.e_machine == EM_RISCV) {
+    SymOtherFlags.insert(SymOtherFlags.end(), std::begin(ElfRISCVSymOtherFlags),
+                         std::end(ElfRISCVSymOtherFlags));
+  }
+  return SymOtherFlags;
 }
 
 static inline void printFields(formatted_raw_ostream &OS, StringRef Str1,
@@ -4771,134 +4956,20 @@ void GNUELFDumper<ELFT>::printVersionDependencySection(const Elf_Shdr *Sec) {
 }
 
 template <class ELFT>
-void GNUELFDumper<ELFT>::printHashHistogram(const Elf_Hash &HashTable) {
-  size_t NBucket = HashTable.nbucket;
-  size_t NChain = HashTable.nchain;
-  ArrayRef<Elf_Word> Buckets = HashTable.buckets();
-  ArrayRef<Elf_Word> Chains = HashTable.chains();
-  size_t TotalSyms = 0;
-  // If hash table is correct, we have at least chains with 0 length
-  size_t MaxChain = 1;
+void GNUELFDumper<ELFT>::printHashHistogramStats(size_t NBucket,
+                                                 size_t MaxChain,
+                                                 size_t TotalSyms,
+                                                 ArrayRef<size_t> Count,
+                                                 bool IsGnu) const {
   size_t CumulativeNonZero = 0;
-
-  if (NChain == 0 || NBucket == 0)
-    return;
-
-  std::vector<size_t> ChainLen(NBucket, 0);
-  // Go over all buckets and and note chain lengths of each bucket (total
-  // unique chain lengths).
-  for (size_t B = 0; B < NBucket; B++) {
-    BitVector Visited(NChain);
-    for (size_t C = Buckets[B]; C < NChain; C = Chains[C]) {
-      if (C == ELF::STN_UNDEF)
-        break;
-      if (Visited[C]) {
-        this->reportUniqueWarning(".hash section is invalid: bucket " +
-                                  Twine(C) +
-                                  ": a cycle was detected in the linked chain");
-        break;
-      }
-      Visited[C] = true;
-      if (MaxChain <= ++ChainLen[B])
-        MaxChain++;
-    }
-    TotalSyms += ChainLen[B];
-  }
-
-  if (!TotalSyms)
-    return;
-
-  std::vector<size_t> Count(MaxChain, 0);
-  // Count how long is the chain for each bucket
-  for (size_t B = 0; B < NBucket; B++)
-    ++Count[ChainLen[B]];
-  // Print Number of buckets with each chain lengths and their cumulative
-  // coverage of the symbols
-  OS << "Histogram for bucket list length (total of " << NBucket
-     << " buckets)\n"
+  OS << "Histogram for" << (IsGnu ? " `.gnu.hash'" : "")
+     << " bucket list length (total of " << NBucket << " buckets)\n"
      << " Length  Number     % of total  Coverage\n";
-  for (size_t I = 0; I < MaxChain; I++) {
+  for (size_t I = 0; I < MaxChain; ++I) {
     CumulativeNonZero += Count[I] * I;
     OS << format("%7lu  %-10lu (%5.1f%%)     %5.1f%%\n", I, Count[I],
                  (Count[I] * 100.0) / NBucket,
                  (CumulativeNonZero * 100.0) / TotalSyms);
-  }
-}
-
-template <class ELFT>
-void GNUELFDumper<ELFT>::printGnuHashHistogram(
-    const Elf_GnuHash &GnuHashTable) {
-  Expected<ArrayRef<Elf_Word>> ChainsOrErr =
-      getGnuHashTableChains<ELFT>(this->DynSymRegion, &GnuHashTable);
-  if (!ChainsOrErr) {
-    this->reportUniqueWarning("unable to print the GNU hash table histogram: " +
-                              toString(ChainsOrErr.takeError()));
-    return;
-  }
-
-  ArrayRef<Elf_Word> Chains = *ChainsOrErr;
-  size_t Symndx = GnuHashTable.symndx;
-  size_t TotalSyms = 0;
-  size_t MaxChain = 1;
-  size_t CumulativeNonZero = 0;
-
-  size_t NBucket = GnuHashTable.nbuckets;
-  if (Chains.empty() || NBucket == 0)
-    return;
-
-  ArrayRef<Elf_Word> Buckets = GnuHashTable.buckets();
-  std::vector<size_t> ChainLen(NBucket, 0);
-  for (size_t B = 0; B < NBucket; B++) {
-    if (!Buckets[B])
-      continue;
-    size_t Len = 1;
-    for (size_t C = Buckets[B] - Symndx;
-         C < Chains.size() && (Chains[C] & 1) == 0; C++)
-      if (MaxChain < ++Len)
-        MaxChain++;
-    ChainLen[B] = Len;
-    TotalSyms += Len;
-  }
-  MaxChain++;
-
-  if (!TotalSyms)
-    return;
-
-  std::vector<size_t> Count(MaxChain, 0);
-  for (size_t B = 0; B < NBucket; B++)
-    ++Count[ChainLen[B]];
-  // Print Number of buckets with each chain lengths and their cumulative
-  // coverage of the symbols
-  OS << "Histogram for `.gnu.hash' bucket list length (total of " << NBucket
-     << " buckets)\n"
-     << " Length  Number     % of total  Coverage\n";
-  for (size_t I = 0; I < MaxChain; I++) {
-    CumulativeNonZero += Count[I] * I;
-    OS << format("%7lu  %-10lu (%5.1f%%)     %5.1f%%\n", I, Count[I],
-                 (Count[I] * 100.0) / NBucket,
-                 (CumulativeNonZero * 100.0) / TotalSyms);
-  }
-}
-
-// Hash histogram shows statistics of how efficient the hash was for the
-// dynamic symbol table. The table shows the number of hash buckets for
-// different lengths of chains as an absolute number and percentage of the total
-// buckets, and the cumulative coverage of symbols for each set of buckets.
-template <class ELFT> void GNUELFDumper<ELFT>::printHashHistograms() {
-  // Print histogram for the .hash section.
-  if (this->HashTable) {
-    if (Error E = checkHashTable<ELFT>(*this, this->HashTable))
-      this->reportUniqueWarning(std::move(E));
-    else
-      printHashHistogram(*this->HashTable);
-  }
-
-  // Print histogram for the .gnu.hash section.
-  if (this->GnuHashTable) {
-    if (Error E = checkGNUHashTable<ELFT>(this->Obj, this->GnuHashTable))
-      this->reportUniqueWarning(std::move(E));
-    else
-      printGnuHashHistogram(*this->GnuHashTable);
   }
 }
 
@@ -6666,9 +6737,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printGroupSections() {
     W.printNumber("Link", G.Link);
     W.printNumber("Info", G.Info);
     W.printHex("Type", getGroupType(G.Type), G.Type);
-    W.startLine() << "Signature: " << G.Signature << "\n";
+    W.printString("Signature", G.Signature);
 
-    ListScope L(W, "Section(s) in group");
+    ListScope L(W, getGroupSectionHeaderName());
     for (const GroupMember &GM : G.Members) {
       const GroupSection *MainGroup = Map[GM.Index];
       if (MainGroup != &G)
@@ -6678,12 +6749,23 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printGroupSections() {
             Twine(MainGroup->Index) +
             ", was also found in the group section with index " +
             Twine(G.Index));
-      W.startLine() << GM.Name << " (" << GM.Index << ")\n";
+      printSectionGroupMembers(GM.Name, GM.Index);
     }
   }
 
   if (V.empty())
-    W.startLine() << "There are no group sections in the file.\n";
+    printEmptyGroupMessage();
+}
+
+template <class ELFT>
+std::string LLVMELFDumper<ELFT>::getGroupSectionHeaderName() const {
+  return "Section(s) in group";
+}
+
+template <class ELFT>
+void LLVMELFDumper<ELFT>::printSectionGroupMembers(StringRef Name,
+                                                   uint64_t Idx) const {
+  W.startLine() << Name << " (" << Idx << ")\n";
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printRelocations() {
@@ -6695,17 +6777,49 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printRelocations() {
 
     StringRef Name = this->getPrintableSectionName(Sec);
     unsigned SecNdx = &Sec - &cantFail(this->Obj.sections()).front();
-    W.startLine() << "Section (" << SecNdx << ") " << Name << " {\n";
-    W.indent();
-    this->printRelocationsHelper(Sec);
-    W.unindent();
-    W.startLine() << "}\n";
+    printRelocationSectionInfo(Sec, Name, SecNdx);
   }
 }
 
 template <class ELFT>
 void LLVMELFDumper<ELFT>::printRelrReloc(const Elf_Relr &R) {
   W.startLine() << W.hex(R) << "\n";
+}
+
+template <class ELFT>
+void LLVMELFDumper<ELFT>::printExpandedRelRelaReloc(const Relocation<ELFT> &R,
+                                                    StringRef SymbolName,
+                                                    StringRef RelocName) {
+  DictScope Group(W, "Relocation");
+  W.printHex("Offset", R.Offset);
+  W.printNumber("Type", RelocName, R.Type);
+  W.printNumber("Symbol", !SymbolName.empty() ? SymbolName : "-", R.Symbol);
+  if (R.Addend)
+    W.printHex("Addend", (uintX_t)*R.Addend);
+}
+
+template <class ELFT>
+void LLVMELFDumper<ELFT>::printDefaultRelRelaReloc(const Relocation<ELFT> &R,
+                                                   StringRef SymbolName,
+                                                   StringRef RelocName) {
+  raw_ostream &OS = W.startLine();
+  OS << W.hex(R.Offset) << " " << RelocName << " "
+     << (!SymbolName.empty() ? SymbolName : "-");
+  if (R.Addend)
+    OS << " " << W.hex((uintX_t)*R.Addend);
+  OS << "\n";
+}
+
+template <class ELFT>
+void LLVMELFDumper<ELFT>::printRelocationSectionInfo(const Elf_Shdr &Sec,
+                                                     StringRef Name,
+                                                     const unsigned SecNdx) {
+  DictScope D(W, (Twine("Section (") + Twine(SecNdx) + ") " + Name).str());
+  this->printRelocationsHelper(Sec);
+}
+
+template <class ELFT> void LLVMELFDumper<ELFT>::printEmptyGroupMessage() const {
+  W.startLine() << "There are no group sections in the file.\n";
 }
 
 template <class ELFT>
@@ -6716,19 +6830,9 @@ void LLVMELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
   this->Obj.getRelocationTypeName(R.Type, RelocName);
 
   if (opts::ExpandRelocs) {
-    DictScope Group(W, "Relocation");
-    W.printHex("Offset", R.Offset);
-    W.printNumber("Type", RelocName, R.Type);
-    W.printNumber("Symbol", !SymbolName.empty() ? SymbolName : "-", R.Symbol);
-    if (R.Addend)
-      W.printHex("Addend", (uintX_t)*R.Addend);
+    printExpandedRelRelaReloc(R, SymbolName, RelocName);
   } else {
-    raw_ostream &OS = W.startLine();
-    OS << W.hex(R.Offset) << " " << RelocName << " "
-       << (!SymbolName.empty() ? SymbolName : "-");
-    if (R.Addend)
-      OS << " " << W.hex((uintX_t)*R.Addend);
-    OS << "\n";
+    printDefaultRelRelaReloc(R, SymbolName, RelocName);
   }
 }
 
@@ -6844,6 +6948,22 @@ void LLVMELFDumper<ELFT>::printSymbolSection(
 }
 
 template <class ELFT>
+void LLVMELFDumper<ELFT>::printSymbolOtherField(const Elf_Sym &Symbol) const {
+  std::vector<EnumEntry<unsigned>> SymOtherFlags =
+      this->getOtherFlagsFromSymbol(this->Obj.getHeader(), Symbol);
+  W.printFlags("Other", Symbol.st_other, ArrayRef(SymOtherFlags), 0x3u);
+}
+
+template <class ELFT>
+void LLVMELFDumper<ELFT>::printZeroSymbolOtherField(
+    const Elf_Sym &Symbol) const {
+  assert(Symbol.st_other == 0 && "non-zero Other Field");
+  // Usually st_other flag is zero. Do not pollute the output
+  // by flags enumeration in that case.
+  W.printNumber("Other", 0);
+}
+
+template <class ELFT>
 void LLVMELFDumper<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
                                       DataRegion<Elf_Word> ShndxTable,
                                       std::optional<StringRef> StrTable,
@@ -6864,35 +6984,9 @@ void LLVMELFDumper<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
   else
     W.printEnum("Type", SymbolType, ArrayRef(ElfSymbolTypes));
   if (Symbol.st_other == 0)
-    // Usually st_other flag is zero. Do not pollute the output
-    // by flags enumeration in that case.
-    W.printNumber("Other", 0);
-  else {
-    std::vector<EnumEntry<unsigned>> SymOtherFlags(std::begin(ElfSymOtherFlags),
-                                                   std::end(ElfSymOtherFlags));
-    if (this->Obj.getHeader().e_machine == EM_MIPS) {
-      // Someones in their infinite wisdom decided to make STO_MIPS_MIPS16
-      // flag overlapped with other ST_MIPS_xxx flags. So consider both
-      // cases separately.
-      if ((Symbol.st_other & STO_MIPS_MIPS16) == STO_MIPS_MIPS16)
-        SymOtherFlags.insert(SymOtherFlags.end(),
-                             std::begin(ElfMips16SymOtherFlags),
-                             std::end(ElfMips16SymOtherFlags));
-      else
-        SymOtherFlags.insert(SymOtherFlags.end(),
-                             std::begin(ElfMipsSymOtherFlags),
-                             std::end(ElfMipsSymOtherFlags));
-    } else if (this->Obj.getHeader().e_machine == EM_AARCH64) {
-      SymOtherFlags.insert(SymOtherFlags.end(),
-                           std::begin(ElfAArch64SymOtherFlags),
-                           std::end(ElfAArch64SymOtherFlags));
-    } else if (this->Obj.getHeader().e_machine == EM_RISCV) {
-      SymOtherFlags.insert(SymOtherFlags.end(),
-                           std::begin(ElfRISCVSymOtherFlags),
-                           std::end(ElfRISCVSymOtherFlags));
-    }
-    W.printFlags("Other", Symbol.st_other, ArrayRef(SymOtherFlags), 0x3u);
-  }
+    printZeroSymbolOtherField(Symbol);
+  else
+    printSymbolOtherField(Symbol);
   printSymbolSection(Symbol, SymIndex, ShndxTable);
 }
 
@@ -7068,8 +7162,27 @@ void LLVMELFDumper<ELFT>::printVersionDependencySection(const Elf_Shdr *Sec) {
   }
 }
 
-template <class ELFT> void LLVMELFDumper<ELFT>::printHashHistograms() {
-  W.startLine() << "Hash Histogram not implemented!\n";
+template <class ELFT>
+void LLVMELFDumper<ELFT>::printHashHistogramStats(size_t NBucket,
+                                                  size_t MaxChain,
+                                                  size_t TotalSyms,
+                                                  ArrayRef<size_t> Count,
+                                                  bool IsGnu) const {
+  StringRef HistName = IsGnu ? "GnuHashHistogram" : "HashHistogram";
+  StringRef BucketName = IsGnu ? "Bucket" : "Chain";
+  StringRef ListName = IsGnu ? "Buckets" : "Chains";
+  DictScope Outer(W, HistName);
+  W.printNumber("TotalBuckets", static_cast<uint64_t>(NBucket));
+  ListScope Buckets(W, ListName);
+  size_t CumulativeNonZero = 0;
+  for (size_t I = 0; I < MaxChain; ++I) {
+    CumulativeNonZero += Count[I] * I;
+    DictScope Bucket(W, BucketName);
+    W.printNumber("Length", static_cast<uint64_t>(I));
+    W.printNumber("Count", static_cast<uint64_t>(Count[I]));
+    W.printNumber("Percentage", (float)(Count[I] * 100.0) / NBucket);
+    W.printNumber("Coverage", (float)(CumulativeNonZero * 100.0) / TotalSyms);
+  }
 }
 
 // Returns true if rel/rela section exists, and populates SymbolIndices.
@@ -7648,4 +7761,46 @@ void JSONELFDumper<ELFT>::printFileSummary(StringRef FileStr, ObjectFile &Obj,
       "AddressSize",
       std::string(formatv("{0}bit", 8 * Obj.getBytesInAddress())));
   this->printLoadName();
+}
+
+template <class ELFT>
+void JSONELFDumper<ELFT>::printZeroSymbolOtherField(
+    const Elf_Sym &Symbol) const {
+  // We want the JSON format to be uniform, since it is machine readable, so
+  // always print the `Other` field the same way.
+  this->printSymbolOtherField(Symbol);
+}
+
+template <class ELFT>
+void JSONELFDumper<ELFT>::printDefaultRelRelaReloc(const Relocation<ELFT> &R,
+                                                   StringRef SymbolName,
+                                                   StringRef RelocName) {
+  this->printExpandedRelRelaReloc(R, SymbolName, RelocName);
+}
+
+template <class ELFT>
+void JSONELFDumper<ELFT>::printRelocationSectionInfo(const Elf_Shdr &Sec,
+                                                     StringRef Name,
+                                                     const unsigned SecNdx) {
+  DictScope Group(this->W);
+  this->W.printNumber("SectionIndex", SecNdx);
+  ListScope D(this->W, "Relocs");
+  this->printRelocationsHelper(Sec);
+}
+
+template <class ELFT>
+std::string JSONELFDumper<ELFT>::getGroupSectionHeaderName() const {
+  return "GroupSections";
+}
+
+template <class ELFT>
+void JSONELFDumper<ELFT>::printSectionGroupMembers(StringRef Name,
+                                                   uint64_t Idx) const {
+  DictScope Grp(this->W);
+  this->W.printString("Name", Name);
+  this->W.printNumber("Index", Idx);
+}
+
+template <class ELFT> void JSONELFDumper<ELFT>::printEmptyGroupMessage() const {
+  // JSON output does not need to print anything for empty groups
 }

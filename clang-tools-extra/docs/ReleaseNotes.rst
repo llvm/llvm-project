@@ -201,6 +201,12 @@ Changes in existing checks
   :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check.
 
+- Updated the Hungarian prefixes for enums in C files to match those used in C++
+  files for improved readability, as checked by :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>`. To preserve the previous
+  behavior of using `i` as the prefix for enum tags, set the `EnumConstantPrefix`
+  option to `i` instead of using `EnumConstantHungarianPrefix`.
+
 - Fixed a false positive in :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check when comparing
   ``std::array`` objects to default constructed ones. The behavior for this and
@@ -222,6 +228,11 @@ Changes in existing checks
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` to understand that there is a
   sequence point between designated initializers.
+
+- Fixed an issue in :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` when specifying an empty
+  string for ``Prefix`` or ``Suffix`` options could result in the style not
+  being used.
 
 Removed checks
 ^^^^^^^^^^^^^^

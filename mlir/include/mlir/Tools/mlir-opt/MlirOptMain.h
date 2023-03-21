@@ -74,6 +74,14 @@ public:
   }
   bool shouldEmitBytecode() const { return emitBytecodeFlag; }
 
+  /// Set the filename to use for logging actions, use "-" for stdout.
+  MlirOptMainConfig &logActionsTo(StringRef filename) {
+    logActionsToFlag = filename;
+    return *this;
+  }
+  /// Get the filename to use for logging actions.
+  StringRef getLogActionsTo() const { return logActionsToFlag; }
+
   /// Set the callback to populate the pass manager.
   MlirOptMainConfig &
   setPassPipelineSetupFn(std::function<LogicalResult(PassManager &)> callback) {
@@ -148,6 +156,9 @@ protected:
 
   /// Emit bytecode instead of textual assembly when generating output.
   bool emitBytecodeFlag = false;
+
+  /// Log action execution to the given file (or "-" for stdout)
+  std::string logActionsToFlag;
 
   /// The callback to populate the pass manager.
   std::function<LogicalResult(PassManager &)> passPipelineCallback;

@@ -8583,41 +8583,6 @@ VPRecipeOrVPValueTy VPRecipeBuilder::handleReplication(Instruction *I,
   return toVPRecipeResult(Recipe);
 }
 
-VPRegionBlock *
-VPRecipeBuilder::createReplicateRegion(VPReplicateRecipe *PredRecipe,
-                                       VPlan &Plan) {
-  Instruction *Instr = PredRecipe->getUnderlyingInstr();
-  // Build the triangular if-then region.
-  std::string RegionName = (Twine("pred.") + Instr->getOpcodeName()).str();
-  assert(Instr->getParent() && "Predicated instruction not in any basic block");
-  auto *BlockInMask = PredRecipe->getMask();
-  // Replace predicated replicate recipe with a replicate recipe without a
-  // mask but in the replicate region.
-  auto *RecipeWithoutMask = new VPReplicateRecipe(
-      PredRecipe->getUnderlyingInstr(),
-      make_range(PredRecipe->op_begin(), std::prev(PredRecipe->op_end())),
-      PredRecipe->isUniform());
-  VPPredInstPHIRecipe *PHIRecipe = nullptr;
-  if (PredRecipe->getNumUsers() != 0) {
-    PHIRecipe = new VPPredInstPHIRecipe(RecipeWithoutMask);
-    PredRecipe->replaceAllUsesWith(PHIRecipe);
-    PHIRecipe->setOperand(0, RecipeWithoutMask);
-  }
-  PredRecipe->eraseFromParent();
-  auto *Exiting = new VPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
-  auto *Pred = new VPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
-  auto *BOMRecipe = new VPBranchOnMaskRecipe(BlockInMask);
-  auto *Entry = new VPBasicBlock(Twine(RegionName) + ".entry", BOMRecipe);
-  VPRegionBlock *Region = new VPRegionBlock(Entry, Exiting, RegionName, true);
-
-  // Note: first set Entry as region entry and then connect successors starting
-  // from it in order, to propagate the "parent" of each VPBasicBlock.
-  VPBlockUtils::insertTwoBlocksAfter(Pred, Exiting, Entry);
-  VPBlockUtils::connectBlocks(Pred, Exiting);
-
-  return Region;
-}
-
 VPRecipeOrVPValueTy
 VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
                                         ArrayRef<VPValue *> Operands,
@@ -9074,7 +9039,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   VPlanTransforms::optimizeInductions(*Plan, *PSE.getSE());
   VPlanTransforms::removeDeadRecipes(*Plan);
 
-  VPlanTransforms::createAndOptimizeReplicateRegions(*Plan, RecipeBuilder);
+  VPlanTransforms::createAndOptimizeReplicateRegions(*Plan);
 
   VPlanTransforms::removeRedundantExpandSCEVRecipes(*Plan);
   VPlanTransforms::mergeBlocksIntoPredecessors(*Plan);
@@ -9638,7 +9603,7 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
 
   const auto CreateVecPtr = [&](unsigned Part, Value *Ptr) -> Value * {
     // Calculate the pointer for the specific unroll-part.
-    GetElementPtrInst *PartPtr = nullptr;
+    Value *PartPtr = nullptr;
 
     // Use i32 for the gep index type when the value is constant,
     // or query DataLayout for a more suitable index type otherwise.
@@ -9662,20 +9627,15 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
       // LastLane = 1 - RunTimeVF
       Value *LastLane =
           Builder.CreateSub(ConstantInt::get(IndexTy, 1), RunTimeVF);
+      PartPtr = Builder.CreateGEP(ScalarDataTy, Ptr, NumElt, "", InBounds);
       PartPtr =
-          cast<GetElementPtrInst>(Builder.CreateGEP(ScalarDataTy, Ptr, NumElt));
-      PartPtr->setIsInBounds(InBounds);
-      PartPtr = cast<GetElementPtrInst>(
-          Builder.CreateGEP(ScalarDataTy, PartPtr, LastLane));
-      PartPtr->setIsInBounds(InBounds);
+          Builder.CreateGEP(ScalarDataTy, PartPtr, LastLane, "", InBounds);
       if (isMaskRequired) // Reverse of a null all-one mask is a null mask.
         BlockInMaskParts[Part] =
             Builder.CreateVectorReverse(BlockInMaskParts[Part], "reverse");
     } else {
       Value *Increment = createStepForVF(Builder, IndexTy, State.VF, Part);
-      PartPtr = cast<GetElementPtrInst>(
-          Builder.CreateGEP(ScalarDataTy, Ptr, Increment));
-      PartPtr->setIsInBounds(InBounds);
+      PartPtr = Builder.CreateGEP(ScalarDataTy, Ptr, Increment, "", InBounds);
     }
 
     unsigned AddressSpace = Ptr->getType()->getPointerAddressSpace();

@@ -5,9 +5,9 @@
 // RUN: %clang_cc1 -std=c++20 %t/Module.cppm -triple %itanium_abi_triple -emit-llvm -o - | FileCheck %t/Module.cppm --implicit-check-not unused
 //
 // RUN: %clang_cc1 -std=c++20 %t/Module.cppm -triple %itanium_abi_triple -emit-module-interface -o %t/Module.pcm
-// RUN: %clang_cc1 -std=c++20 %t/module.cpp -triple %itanium_abi_triple -fmodule-file=%t/Module.pcm -emit-llvm -o - | FileCheck %t/module.cpp --implicit-check-not=unused --implicit-check-not=global_module
+// RUN: %clang_cc1 -std=c++20 %t/module.cpp -triple %itanium_abi_triple -fmodule-file=Module=%t/Module.pcm -emit-llvm -o - | FileCheck %t/module.cpp --implicit-check-not=unused --implicit-check-not=global_module
 //
-// RUN: %clang_cc1 -std=c++20 %t/user.cpp -triple %itanium_abi_triple -fmodule-file=%t/Module.pcm -emit-llvm -o - | FileCheck %t/user.cpp --implicit-check-not=unused --implicit-check-not=global_module
+// RUN: %clang_cc1 -std=c++20 %t/user.cpp -triple %itanium_abi_triple -fmodule-file=Module=%t/Module.pcm -emit-llvm -o - | FileCheck %t/user.cpp --implicit-check-not=unused --implicit-check-not=global_module
 
 //--- Module.cppm
 // CHECK-DAG: @extern_var_global_module = external {{(dso_local )?}}global
@@ -30,7 +30,7 @@
 // permitted to run the initializer for this variable.
 // CHECK-DAG: @_ZW6Module25inline_var_module_linkage = linkonce_odr {{(dso_local )?}}global
 // CHECK-DAG: @_ZL25static_var_module_linkage = internal
-// CHECK-DAG: @_ZL24const_var_module_linkage = internal
+// CHECK-DAG: @_ZW6Module24const_var_module_linkage = {{(dso_local )?}}constant
 //
 // CHECK-DAG: @_ZW6Module25unused_var_module_linkage = {{(dso_local )?}}global i32 4
 
@@ -129,7 +129,7 @@ void f(a::b, a::c) {}
 // CHECK-DAG: @_ZW6Module25extern_var_module_linkage = external {{(dso_local )?}}global
 // CHECK-DAG: @_ZW6Module25inline_var_module_linkage = linkonce_odr {{(dso_local )?}}global
 // CHECK-DAG: @_ZL25static_var_module_linkage = internal {{(dso_local )?}}global i32 0,
-// CHECK-DAG: @_ZL24const_var_module_linkage = internal {{(dso_local )?}}constant i32 3,
+// CHECK-DAG: @_ZW6Module24const_var_module_linkage = available_externally {{(dso_local )?}}constant i32 3,
 
 module Module;
 

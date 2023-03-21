@@ -204,7 +204,7 @@ class CodeGenAction : public FrontendAction {
   /// Runs prescan, parsing, sema and lowers to MLIR.
   bool beginSourceFileAction() override;
   /// Sets up LLVM's TargetMachine.
-  void setUpTargetMachine();
+  bool setUpTargetMachine();
   /// Runs the optimization (aka middle-end) pipeline on the LLVM module
   /// associated with this action.
   void runOptimizationPipeline(llvm::raw_pwrite_stream &os);

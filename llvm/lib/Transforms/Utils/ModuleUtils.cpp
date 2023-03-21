@@ -31,11 +31,9 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
   // Get the current set of static global constructors and add the new ctor
   // to the list.
   SmallVector<Constant *, 16> CurrentCtors;
-  StructType *EltTy = StructType::get(
-      IRB.getInt32Ty(), PointerType::get(FnTy, F->getAddressSpace()),
-      IRB.getInt8PtrTy());
-
+  StructType *EltTy;
   if (GlobalVariable *GVCtor = M.getNamedGlobal(ArrayName)) {
+    EltTy = cast<StructType>(GVCtor->getValueType()->getArrayElementType());
     if (Constant *Init = GVCtor->getInitializer()) {
       unsigned n = Init->getNumOperands();
       CurrentCtors.reserve(n + 1);
@@ -43,6 +41,10 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
         CurrentCtors.push_back(cast<Constant>(Init->getOperand(i)));
     }
     GVCtor->eraseFromParent();
+  } else {
+    EltTy = StructType::get(
+        IRB.getInt32Ty(), PointerType::get(FnTy, F->getAddressSpace()),
+        IRB.getInt8PtrTy());
   }
 
   // Build a 3 field global_ctor entry.  We don't take a comdat key.

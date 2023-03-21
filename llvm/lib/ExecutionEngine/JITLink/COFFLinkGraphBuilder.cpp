@@ -152,8 +152,11 @@ Error COFFLinkGraphBuilder::graphifySections() {
 
     // Look for existing sections first.
     auto *GraphSec = G->findSectionByName(SectionName);
-    if (!GraphSec)
+    if (!GraphSec) {
       GraphSec = &G->createSection(SectionName, Prot);
+      if ((*Sec)->Characteristics & COFF::IMAGE_SCN_LNK_REMOVE)
+        GraphSec->setMemLifetimePolicy(orc::MemLifetimePolicy::NoAlloc);
+    }
     if (GraphSec->getMemProt() != Prot)
       return make_error<JITLinkError>("MemProt should match");
 

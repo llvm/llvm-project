@@ -234,6 +234,14 @@ public:
     startLine() << Label << ": " << Value << "\n";
   }
 
+  virtual void printNumber(StringRef Label, float Value) {
+    startLine() << Label << ": " << format("%5.1f", Value) << "\n";
+  }
+
+  virtual void printNumber(StringRef Label, double Value) {
+    startLine() << Label << ": " << format("%5.1f", Value) << "\n";
+  }
+
   template <typename T>
   void printNumber(StringRef Label, StringRef Str, T Value) {
     printNumberImpl(Label, Str, to_string(Value));
@@ -586,6 +594,14 @@ public:
     JOS.attribute(Label, Value);
   }
 
+  void printNumber(StringRef Label, float Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printNumber(StringRef Label, double Value) override {
+    JOS.attribute(Label, Value);
+  }
+
   void printNumber(StringRef Label, const APSInt &Value) override {
     JOS.attributeBegin(Label);
     printAPSInt(Value);
@@ -682,7 +698,7 @@ private:
   void printFlagsImpl(StringRef Label, HexNumber Value,
                       ArrayRef<FlagEntry> Flags) override {
     JOS.attributeObject(Label, [&]() {
-      JOS.attribute("RawFlags", hexNumberToInt(Value));
+      JOS.attribute("Value", hexNumberToInt(Value));
       JOS.attributeArray("Flags", [&]() {
         for (const FlagEntry &Flag : Flags) {
           JOS.objectBegin();
@@ -697,7 +713,7 @@ private:
   void printFlagsImpl(StringRef Label, HexNumber Value,
                       ArrayRef<HexNumber> Flags) override {
     JOS.attributeObject(Label, [&]() {
-      JOS.attribute("RawFlags", hexNumberToInt(Value));
+      JOS.attribute("Value", hexNumberToInt(Value));
       JOS.attributeArray("Flags", [&]() {
         for (const HexNumber &Flag : Flags) {
           JOS.value(Flag.Value);
@@ -728,8 +744,8 @@ private:
 
   void printHexImpl(StringRef Label, StringRef Str, HexNumber Value) override {
     JOS.attributeObject(Label, [&]() {
-      JOS.attribute("Value", Str);
-      JOS.attribute("RawValue", hexNumberToInt(Value));
+      JOS.attribute("Name", Str);
+      JOS.attribute("Value", hexNumberToInt(Value));
     });
   }
 
@@ -744,8 +760,8 @@ private:
   void printNumberImpl(StringRef Label, StringRef Str,
                        StringRef Value) override {
     JOS.attributeObject(Label, [&]() {
-      JOS.attribute("Value", Str);
-      JOS.attributeBegin("RawValue");
+      JOS.attribute("Name", Str);
+      JOS.attributeBegin("Value");
       JOS.rawValueBegin() << Value;
       JOS.rawValueEnd();
       JOS.attributeEnd();

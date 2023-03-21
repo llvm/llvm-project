@@ -1966,8 +1966,9 @@ public:
   }
 
   /// Returns a \p outliner::OutlinedFunction struct containing target-specific
-  /// information for a set of outlining candidates.
-  virtual outliner::OutlinedFunction getOutliningCandidateInfo(
+  /// information for a set of outlining candidates. Returns None if the
+  /// candidates are not suitable for outlining.
+  virtual std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::getOutliningCandidateInfo!");

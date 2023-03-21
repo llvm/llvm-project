@@ -11,6 +11,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/TypeID.h"
+#include "llvm/ADT/ArrayRef.h"
 #include <functional>
 #include <memory>
 #include <vector>
@@ -265,9 +266,10 @@ public:
 
   /// Dispatch the provided action to the handler if any, or just execute it.
   template <typename ActionTy, typename... Args>
-  void executeAction(function_ref<void()> actionFn, Args &&...args) {
+  void executeAction(function_ref<void()> actionFn, ArrayRef<IRUnit> irUnits,
+                     Args &&...args) {
     if (LLVM_UNLIKELY(hasActionHandler()))
-      executeActionInternal<ActionTy, Args...>(actionFn,
+      executeActionInternal<ActionTy, Args...>(actionFn, irUnits,
                                                std::forward<Args>(args)...);
     else
       actionFn();
@@ -286,8 +288,10 @@ private:
   /// avoid calling the ctor for the Action unnecessarily.
   template <typename ActionTy, typename... Args>
   LLVM_ATTRIBUTE_NOINLINE void
-  executeActionInternal(function_ref<void()> actionFn, Args &&...args) {
-    executeActionInternal(actionFn, ActionTy(std::forward<Args>(args)...));
+  executeActionInternal(function_ref<void()> actionFn, ArrayRef<IRUnit> irUnits,
+                        Args &&...args) {
+    executeActionInternal(actionFn,
+                          ActionTy(irUnits, std::forward<Args>(args)...));
   }
 
   const std::unique_ptr<MLIRContextImpl> impl;

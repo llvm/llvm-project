@@ -7151,7 +7151,8 @@ static bool outliningCandidatesV8_3OpsConsensus(const outliner::Candidate &a,
   return SubtargetA.hasV8_3aOps() == SubtargetB.hasV8_3aOps();
 }
 
-outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
+std::optional<outliner::OutlinedFunction>
+AArch64InstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
   unsigned SequenceSize =
@@ -7181,7 +7182,7 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
             }
             return true;
           }) != RepeatedSequenceLocs.end()) {
-    return outliner::OutlinedFunction();
+    return std::nullopt;
   }
 
   // Since at this point all candidates agree on their return address signing
@@ -7259,7 +7260,7 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
 
     // If the sequence doesn't have enough candidates left, then we're done.
     if (RepeatedSequenceLocs.size() < 2)
-      return outliner::OutlinedFunction();
+      return std::nullopt;
   }
 
   // Properties about candidate MBBs that hold for all of them.
@@ -7304,7 +7305,7 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
         C.getMF()->getFrameInstructions();
 
     if (CFICount > 0 && CFICount != CFIInstructions.size())
-      return outliner::OutlinedFunction();
+      return std::nullopt;
   }
 
   // Returns true if an instructions is safe to fix up, false otherwise.
@@ -7506,7 +7507,7 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
     // If we dropped all of the candidates, bail out here.
     if (RepeatedSequenceLocs.size() < 2) {
       RepeatedSequenceLocs.clear();
-      return outliner::OutlinedFunction();
+      return std::nullopt;
     }
   }
 
@@ -7533,7 +7534,7 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
       // We can't fix up the stack. Bail out.
       if (!AllStackInstrsSafe) {
         RepeatedSequenceLocs.clear();
-        return outliner::OutlinedFunction();
+        return std::nullopt;
       }
 
       // Save + restore LR.
@@ -7544,7 +7545,7 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
   // If we have CFI instructions, we can only outline if the outlined section
   // can be a tail call
   if (FrameID != MachineOutlinerTailCall && CFICount > 0)
-    return outliner::OutlinedFunction();
+    return std::nullopt;
 
   return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
                                     NumBytesToCreateFrame, FrameID);

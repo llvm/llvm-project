@@ -37,12 +37,22 @@ function(add_lldb_library name)
   # only supported parameters to this macro are the optional
   # MODULE;SHARED;STATIC library type and source files
   cmake_parse_arguments(PARAM
-    "MODULE;SHARED;STATIC;OBJECT;PLUGIN;FRAMEWORK"
+    "MODULE;SHARED;STATIC;OBJECT;PLUGIN;FRAMEWORK;NO_INTERNAL_DEPENDENCIES"
     "INSTALL_PREFIX;ENTITLEMENTS"
     "EXTRA_CXXFLAGS;DEPENDS;LINK_LIBS;LINK_COMPONENTS;CLANG_LIBS"
     ${ARGN})
   llvm_process_sources(srcs ${PARAM_UNPARSED_ARGUMENTS})
   list(APPEND LLVM_LINK_COMPONENTS ${PARAM_LINK_COMPONENTS})
+
+  if(PARAM_NO_INTERNAL_DEPENDENCIES)
+    foreach(link_lib ${PARAM_LINK_LIBS})
+      if (link_lib MATCHES "^lldb")
+        message(FATAL_ERROR
+          "Library ${name} cannot depend on any other lldb libs "
+          "(Found ${link_lib} in LINK_LIBS)")
+      endif()
+    endforeach()
+  endif()
 
   if(PARAM_PLUGIN)
     set_property(GLOBAL APPEND PROPERTY LLDB_PLUGINS ${name})
@@ -346,6 +356,25 @@ function(lldb_find_system_debugserver path)
       message(WARNING "System debugserver requested, but not found. "
                       "Candidates don't exist: ${path_shared}\n${path_private}")
     endif()
+  endif()
+endfunction()
+
+function(lldb_find_python_module module)
+  set(MODULE_FOUND PY_${module}_FOUND)
+  if (DEFINED ${MODULE_FOUND})
+    return()
+  endif()
+
+  execute_process(COMMAND "${Python3_EXECUTABLE}" "-c" "import ${module}"
+    RESULT_VARIABLE status
+    ERROR_QUIET)
+
+  if (status)
+    set(${MODULE_FOUND} OFF CACHE BOOL "Failed to find python module '${module}'")
+    message(STATUS "Could NOT find Python module '${module}'")
+  else()
+    set(${MODULE_FOUND} ON CACHE BOOL "Found python module '${module}'")
+    message(STATUS "Found Python module '${module}'")
   endif()
 endfunction()
 

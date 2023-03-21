@@ -2483,18 +2483,14 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
     // constant. Eliminate the binop by pulling the constant math into the
     // select. Example: add (select Cond, CT, CF), CBO --> select Cond, CT +
     // CBO, CF + CBO
-    NewCT = SelOpNo ? DAG.getNode(BinOpcode, DL, VT, CBO, CT)
-                    : DAG.getNode(BinOpcode, DL, VT, CT, CBO);
-    if (!CanFoldNonConst && !NewCT.isUndef() &&
-        !isConstantOrConstantVector(NewCT, true) &&
-        !DAG.isConstantFPBuildVectorOrConstantFP(NewCT))
+    NewCT = SelOpNo ? DAG.FoldConstantArithmetic(BinOpcode, DL, VT, {CBO, CT})
+                    : DAG.FoldConstantArithmetic(BinOpcode, DL, VT, {CT, CBO});
+    if (!NewCT)
       return SDValue();
 
-    NewCF = SelOpNo ? DAG.getNode(BinOpcode, DL, VT, CBO, CF)
-                    : DAG.getNode(BinOpcode, DL, VT, CF, CBO);
-    if (!CanFoldNonConst && !NewCF.isUndef() &&
-        !isConstantOrConstantVector(NewCF, true) &&
-        !DAG.isConstantFPBuildVectorOrConstantFP(NewCF))
+    NewCF = SelOpNo ? DAG.FoldConstantArithmetic(BinOpcode, DL, VT, {CBO, CF})
+                    : DAG.FoldConstantArithmetic(BinOpcode, DL, VT, {CF, CBO});
+    if (!NewCF)
       return SDValue();
   }
 
@@ -10621,8 +10617,8 @@ SDValue DAGCombiner::visitABS(SDNode *N) {
   EVT VT = N->getValueType(0);
 
   // fold (abs c1) -> c2
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
-    return DAG.getNode(ISD::ABS, SDLoc(N), VT, N0);
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::ABS, SDLoc(N), VT, {N0}))
+    return C;
   // fold (abs (abs x)) -> (abs x)
   if (N0.getOpcode() == ISD::ABS)
     return N0;
@@ -14227,11 +14223,8 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, N0.getOperand(0));
 
   // fold (truncate c1) -> c1
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0)) {
-    SDValue C = DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, N0);
-    if (C.getNode() != N)
-      return C;
-  }
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::TRUNCATE, SDLoc(N), VT, {N0}))
+    return C;
 
   // fold (truncate (ext x)) -> (ext x) or (truncate x) or x
   if (N0.getOpcode() == ISD::ZERO_EXTEND ||

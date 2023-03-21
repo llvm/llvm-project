@@ -5,6 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file implements a remote procedure call mechanism to communicate between
+// heterogeneous devices that can share an address space atomically. We provide
+// a client and a server to facilitate the remote call. The client makes request
+// to the server using a shared communication channel. We use separate atomic
+// signals to indicate which side, the client or the server is in ownership of
+// the buffer.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC_SUPPORT_RPC_RPC_H
 #define LLVM_LIBC_SRC_SUPPORT_RPC_RPC_H
@@ -55,7 +64,7 @@ struct Client : public Process {
 
 /// The RPC server used to respond to the client.
 struct Server : public Process {
-  template <typename W, typename C> bool run(W work, C clean);
+  template <typename W, typename C> bool handle(W work, C clean);
 };
 
 /// Run the RPC client protocol to communicate with the server. We perform the
@@ -68,27 +77,27 @@ template <typename F, typename U> void Client::run(F fill, U use) {
   bool in = inbox->load(cpp::MemoryOrder::RELAXED);
   bool out = outbox->load(cpp::MemoryOrder::RELAXED);
   atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
-  // Write to buffer then to the outbox.
+  // Apply the \p fill to the buffer and signal the server.
   if (!in & !out) {
     fill(buffer);
     atomic_thread_fence(cpp::MemoryOrder::RELEASE);
     outbox->store(1, cpp::MemoryOrder::RELEASE);
     out = 1;
   }
-  // Wait for the result from the server.
+  // Wait for the server to work on the buffer and respond.
   if (!in & out) {
     while (!in)
       in = inbox->load(cpp::MemoryOrder::RELAXED);
     atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
   }
-  // Read from the buffer and then write to outbox.
+  // Apply \p use to the buffer and signal the server.
   if (in & out) {
     use(buffer);
     atomic_thread_fence(cpp::MemoryOrder::RELEASE);
     outbox->store(0, cpp::MemoryOrder::RELEASE);
     out = 0;
   }
-  // Wait for server to complete the communication.
+  // Wait for the server to signal the end of the protocol.
   if (in & !out) {
     while (in)
       in = inbox->load(cpp::MemoryOrder::RELAXED);
@@ -103,27 +112,27 @@ template <typename F, typename U> void Client::run(F fill, U use) {
 ///   - Apply \p work to the shared buffer and write 1 to the outbox.
 ///   - Wait until the inbox is 0.
 ///   - Apply \p clean to the shared buffer and write 0 to the outbox.
-template <typename W, typename C> bool Server::run(W work, C clean) {
+template <typename W, typename C> bool Server::handle(W work, C clean) {
   bool in = inbox->load(cpp::MemoryOrder::RELAXED);
   bool out = outbox->load(cpp::MemoryOrder::RELAXED);
   atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
-  // No work to do, exit.
+  // There is no work to do, exit early.
   if (!in & !out)
     return false;
-  // Do work then write to the outbox.
+  // Apply \p work to the buffer and signal the client.
   if (in & !out) {
     work(buffer);
     atomic_thread_fence(cpp::MemoryOrder::RELEASE);
     outbox->store(1, cpp::MemoryOrder::RELEASE);
     out = 1;
   }
-  // Wait for the client to read the result.
+  // Wait for the client to use the buffer and respond.
   if (in & out) {
     while (in)
       in = inbox->load(cpp::MemoryOrder::RELAXED);
     atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
   }
-  // Clean up the buffer and signal the client.
+  // Clean up the buffer and signal the end of the protocol.
   if (!in & out) {
     clean(buffer);
     atomic_thread_fence(cpp::MemoryOrder::RELEASE);

@@ -26,8 +26,8 @@
 #include "test_macros.h"
 
 template<typename CharT>
-void test1 ( std::basic_string_view<CharT> sv, size_t n, size_t pos ) {
-    const size_t rlen = std::min ( n, sv.size() - pos );
+void test1 ( std::basic_string_view<CharT> sv, std::size_t n, size_t pos ) {
+    const std::size_t rlen = std::min ( n, sv.size() - pos );
 
     CharT *dest1 = new CharT [rlen + 1];    dest1[rlen] = 0;
     CharT *dest2 = new CharT [rlen + 1];    dest2[rlen] = 0;
@@ -45,7 +45,7 @@ void test1 ( std::basic_string_view<CharT> sv, size_t n, size_t pos ) {
     } else {
         sv.copy(dest1, n, pos);
         std::copy_n(sv.begin() + pos, rlen, dest2);
-        for ( size_t i = 0; i <= rlen; ++i )
+        for ( std::size_t i = 0; i <= rlen; ++i )
             assert ( dest1[i] == dest2[i] );
     }
     delete [] dest1;

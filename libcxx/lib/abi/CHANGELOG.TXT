@@ -187,7 +187,7 @@ Version 14.0
   In fact, any program that would have attempted to refer to that symbol would
   have previously failed to link.
 
-  x86_64-apple-apple-darwin
+  <arch>-apple-darwin
   -------------------------
   Symbol added: _ZNSt3__15ctypeIcE10table_sizeE
 
@@ -366,7 +366,7 @@ Version 12.0
   Those were previously defined in both libc++ and libc++abi, which was an
   ODR violation.
 
-  <arch>-apple-apple-darwin
+  <arch>-apple-darwin
   -------------------------
   The following symbols are now re-exported from libc++abi instead of exported
   by libc++ directly (this should not be an ABI break):
@@ -424,8 +424,8 @@ Version 12.0
   We re-export some symbols that were exported from libc++abi but not from
   libc++. Exporting new symbols is not an ABI break.
 
-  x86_64-apple-apple-darwin
-  -------------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol added: ___cxa_allocate_dependent_exception
   Symbol added: ___cxa_free_dependent_exception
 
@@ -439,12 +439,8 @@ Version 10.0
   adds a few symbols to the dylib. This is backwards-compatible since we're
   just adding new symbols.
 
-  x86_64-unknown-linux-gnu
-  ------------------------
-  TODO
-
-  <arch>-apple-apple-darwin
-  -------------------------
+  All platforms
+  -------------
   Symbol added: __ZNSt3__120__libcpp_atomic_waitEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEEx
   Symbol added: __ZNSt3__120__libcpp_atomic_waitEPVKvx
   Symbol added: __ZNSt3__123__cxx_atomic_notify_allEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEE
@@ -469,12 +465,8 @@ Version 9.0
   against an older version of libc++abi that doesn't provide those symbols,
   however doing so is not supported anyway.
 
-  x86_64-unknown-linux-gnu
-  ------------------------
-  TODO
-
-  x86_64-apple-apple-darwin
-  -------------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol added: ___cxa_throw_bad_array_new_length
   Symbol added: ___cxa_uncaught_exceptions
 
@@ -594,11 +586,10 @@ Version 9.0
   Symbol removed: _ZTSNSt3__124__libcpp_debug_exceptionE
   Symbol removed: _ZTVNSt3__124__libcpp_debug_exceptionE
 
-
-    x86_64-apple-apple-darwin
-    -------------------------
-    Symbol added: __ZNSt3__111__libcpp_db10__insert_cEPvPFPNS_8__c_nodeES1_S1_S3_E
-    Symbol removed: __ZNSt3__111__libcpp_db10__insert_cEPv
+  <arch>-apple-darwin
+  -------------------
+  Symbol added: __ZNSt3__111__libcpp_db10__insert_cEPvPFPNS_8__c_nodeES1_S1_S3_E
+  Symbol removed: __ZNSt3__111__libcpp_db10__insert_cEPv
 
 * r355367 - Fix -fsanitize=vptr badness in <__debug>
 
@@ -626,8 +617,8 @@ Version 8.0
   users couldn't be relying on the functionality because it is marked as being
   unavailable using Clang's availability attribute.
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol removed: __ZNKSt16bad_array_length4whatEv
   Symbol removed: __ZNKSt16bad_array_length4whatEv
   Symbol removed: __ZNSt16bad_array_lengthC1Ev
@@ -706,8 +697,8 @@ Version 8.0
   Symbol removed: _ZNSt3__121__thread_specific_ptrINS_15__thread_structEE16__at_thread_exitEPv
   Symbol removed: _ZNSt3__119__start_std_streamsE
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol removed: __ZNSt3__221__thread_specific_ptrINS_15__thread_structEE16__at_thread_exitEPv
   Symbol removed: __ZNSt3__119__start_std_streamsE
 
@@ -724,8 +715,8 @@ Version 7.0
   Symbol added: _ZNSt3__16__itoa8__u64toaEmPc
   Symbol added: _ZNSt3__16__itoa8__u32toaEjPc
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol added: __ZNSt3__16__itoa8__u64toaEyPc
   Symbol added: __ZNSt3__16__itoa8__u32toaEjPc
 
@@ -753,8 +744,8 @@ Version 5.0
   ----------------
   No changes
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol added: ___cxa_deleted_virtual
 
 * r296729 - Remove std::num_get template methods which should be inline
@@ -785,8 +776,8 @@ Version 5.0
   Symbol removed: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE23__do_get_floating_pointIeEES4_S4_S4_RNS_8ios_baseERjRT_
   Symbol removed: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE23__do_get_floating_pointIfEES4_S4_S4_RNS_8ios_baseERjRT_
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   No changes
 
 -----------
@@ -836,8 +827,8 @@ Version 4.0
   Symbol removed: _ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6appendIPcEENS_9enable_ifIXaasr21__is_forward_iteratorIT_EE5valuesr38__libcpp_string_gets_noexcept_iteratorIS9_EE5valueERS5_E4typeES9_S9_
   Symbol removed: _ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6appendIPwEENS_9enable_ifIXaasr21__is_forward_iteratorIT_EE5valuesr38__libcpp_string_gets_noexcept_iteratorIS9_EE5valueERS5_E4typeES9_S9_
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   No changes
 
 * r285101 - Add -fvisibility-inlines-hidden when building libc++.
@@ -869,8 +860,8 @@ Version 4.0
   Symbol removed: _ZNSt3__120__codecvt_utf8_utf16IDsED0Ev
   Symbol removed: _ZNSt3__120__codecvt_utf8_utf16IwED0Ev
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   No Changes - inline symbols are already hidden
 
 * r284206 - Implement C++17 aligned allocation in <new>
@@ -909,8 +900,7 @@ Version 4.0
   Symbol added: _ZTSSt12bad_any_cast
   Symbol added: _ZTVSt12bad_any_cast
 
-* r295398 - Remove basic_string::insert and basic_string::replace template methods
-    which should be inline.
+* r295398 - Remove basic_string::insert and basic_string::replace template methods which should be inline.
 
   These functions should never have had visible definitions in the dylib but
   since they were previously not specified with 'inline' they accidentally

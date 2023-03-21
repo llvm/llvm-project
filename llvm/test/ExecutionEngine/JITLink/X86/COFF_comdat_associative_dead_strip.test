@@ -6,9 +6,10 @@
 # Check a comdat child block connected by associative selection type is dead strip when
 # parent block is dead.
 #
-# CHECK: section parent:
+# CHECK: Link graph
+# CHECK-DAG: section parent:
 # CHECK-EMPTY:
-# CHECK-NEXT: section child:
+# CHECK-DAG: section child:
 # CHECK-EMPTY:
 
 --- !COFF

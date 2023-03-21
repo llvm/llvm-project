@@ -6,8 +6,6 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -fopenmp-simd -x c -triple x86_64-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp-simd -x c -triple x86_64-unknown-unknown -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
-//
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -256,4 +254,60 @@ void collapsed(int mp) {
 // CHECK:       omp.precond.end:
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3:[0-9]+]], i32 [[TMP0]])
 // CHECK-NEXT:    ret void
+//
+//
+// SIMD-ONLY0-LABEL: define {{[^@]+}}@collapsed
+// SIMD-ONLY0-SAME: (i32 noundef [[MP:%.*]]) #[[ATTR0:[0-9]+]] {
+// SIMD-ONLY0-NEXT:  entry:
+// SIMD-ONLY0-NEXT:    [[MP_ADDR:%.*]] = alloca i32, align 4
+// SIMD-ONLY0-NEXT:    [[J:%.*]] = alloca i32, align 4
+// SIMD-ONLY0-NEXT:    [[I:%.*]] = alloca i32, align 4
+// SIMD-ONLY0-NEXT:    [[I0:%.*]] = alloca i32, align 4
+// SIMD-ONLY0-NEXT:    store i32 [[MP]], ptr [[MP_ADDR]], align 4
+// SIMD-ONLY0-NEXT:    store i32 0, ptr [[J]], align 4
+// SIMD-ONLY0-NEXT:    br label [[FOR_COND:%.*]]
+// SIMD-ONLY0:       for.cond:
+// SIMD-ONLY0-NEXT:    [[TMP0:%.*]] = load i32, ptr [[J]], align 4
+// SIMD-ONLY0-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MP_ADDR]], align 4
+// SIMD-ONLY0-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], [[TMP1]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END12:%.*]]
+// SIMD-ONLY0:       for.body:
+// SIMD-ONLY0-NEXT:    [[TMP2:%.*]] = load i32, ptr [[J]], align 4
+// SIMD-ONLY0-NEXT:    store i32 [[TMP2]], ptr [[I]], align 4
+// SIMD-ONLY0-NEXT:    br label [[FOR_COND1:%.*]]
+// SIMD-ONLY0:       for.cond1:
+// SIMD-ONLY0-NEXT:    [[TMP3:%.*]] = load i32, ptr [[I]], align 4
+// SIMD-ONLY0-NEXT:    [[TMP4:%.*]] = load i32, ptr [[MP_ADDR]], align 4
+// SIMD-ONLY0-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[TMP3]], [[TMP4]]
+// SIMD-ONLY0-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3:%.*]], label [[FOR_END9:%.*]]
+// SIMD-ONLY0:       for.body3:
+// SIMD-ONLY0-NEXT:    store i32 0, ptr [[I0]], align 4
+// SIMD-ONLY0-NEXT:    br label [[FOR_COND4:%.*]]
+// SIMD-ONLY0:       for.cond4:
+// SIMD-ONLY0-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I0]], align 4
+// SIMD-ONLY0-NEXT:    [[CMP5:%.*]] = icmp slt i32 [[TMP5]], 10
+// SIMD-ONLY0-NEXT:    br i1 [[CMP5]], label [[FOR_BODY6:%.*]], label [[FOR_END:%.*]]
+// SIMD-ONLY0:       for.body6:
+// SIMD-ONLY0-NEXT:    br label [[FOR_INC:%.*]]
+// SIMD-ONLY0:       for.inc:
+// SIMD-ONLY0-NEXT:    [[TMP6:%.*]] = load i32, ptr [[I0]], align 4
+// SIMD-ONLY0-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP6]], 1
+// SIMD-ONLY0-NEXT:    store i32 [[INC]], ptr [[I0]], align 4
+// SIMD-ONLY0-NEXT:    br label [[FOR_COND4]], !llvm.loop [[LOOP2:![0-9]+]]
+// SIMD-ONLY0:       for.end:
+// SIMD-ONLY0-NEXT:    br label [[FOR_INC7:%.*]]
+// SIMD-ONLY0:       for.inc7:
+// SIMD-ONLY0-NEXT:    [[TMP7:%.*]] = load i32, ptr [[I]], align 4
+// SIMD-ONLY0-NEXT:    [[INC8:%.*]] = add nsw i32 [[TMP7]], 1
+// SIMD-ONLY0-NEXT:    store i32 [[INC8]], ptr [[I]], align 4
+// SIMD-ONLY0-NEXT:    br label [[FOR_COND1]], !llvm.loop [[LOOP4:![0-9]+]]
+// SIMD-ONLY0:       for.end9:
+// SIMD-ONLY0-NEXT:    br label [[FOR_INC10:%.*]]
+// SIMD-ONLY0:       for.inc10:
+// SIMD-ONLY0-NEXT:    [[TMP8:%.*]] = load i32, ptr [[J]], align 4
+// SIMD-ONLY0-NEXT:    [[INC11:%.*]] = add nsw i32 [[TMP8]], 1
+// SIMD-ONLY0-NEXT:    store i32 [[INC11]], ptr [[J]], align 4
+// SIMD-ONLY0-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP5:![0-9]+]]
+// SIMD-ONLY0:       for.end12:
+// SIMD-ONLY0-NEXT:    ret void
 //

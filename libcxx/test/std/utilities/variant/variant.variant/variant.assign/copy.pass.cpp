@@ -322,7 +322,7 @@ void test_copy_assignment_empty_non_empty() {
 #endif // TEST_HAS_NO_EXCEPTIONS
 }
 
-template <typename T> struct Result { size_t index; T value; };
+template <typename T> struct Result { std::size_t index; T value; };
 
 void test_copy_assignment_same_index() {
   {
@@ -550,7 +550,7 @@ void test_copy_assignment_different_index() {
   }
 }
 
-template <size_t NewIdx, class ValueType>
+template <std::size_t NewIdx, class ValueType>
 constexpr bool test_constexpr_assign_imp(
     std::variant<long, void*, int>&& v, ValueType&& new_value)
 {

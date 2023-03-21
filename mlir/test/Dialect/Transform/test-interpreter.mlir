@@ -1255,3 +1255,82 @@ transform.sequence failures(propagate) {
   %op = transform.get_defining_op %bbarg : (!transform.any_value) -> !transform.any_op
   transform.test_print_remark_at_operand %op, "matched" : !transform.any_op
 }
+
+// -----
+
+module @named_inclusion attributes { transform.with_named_sequence } {
+
+  transform.named_sequence @foo(%arg0: !transform.any_op) -> () {
+    // expected-remark @below {{applying transformation "a"}}
+    transform.test_transform_op "a"
+    transform.yield
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    include @foo failures(propagate) (%arg0) : (!transform.any_op) -> ()
+  }
+}
+
+// -----
+
+module @named_inclusion_in_named attributes { transform.with_named_sequence } {
+
+  transform.named_sequence @foo(%arg0: !transform.any_op) -> () {
+    // expected-remark @below {{applying transformation "a"}}
+    transform.test_transform_op "a"
+    transform.yield
+  }
+
+  transform.named_sequence @bar(%arg0: !transform.any_op) -> () {
+    // expected-remark @below {{applying transformation "b"}}
+    transform.test_transform_op "b"
+    transform.include @foo failures(propagate) (%arg0) : (!transform.any_op) -> ()
+    transform.yield
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    transform.include @bar failures(suppress) (%arg0) : (!transform.any_op) -> ()
+  }
+}
+
+// -----
+
+// expected-remark @below {{operation}}
+module @named_operands attributes { transform.with_named_sequence } {
+
+  transform.named_sequence @foo(%arg0: !transform.any_op, %arg1: !transform.any_value) -> () {
+    transform.test_print_remark_at_operand %arg0, "operation" : !transform.any_op
+    transform.test_print_remark_at_operand_value %arg1, "value" : !transform.any_value
+    transform.yield
+  }
+
+  transform.sequence failures(propagate) {
+  // expected-remark @below {{value}}
+  // expected-note @below {{value handle points to a block argument #0 in block #0 in region #0}}
+  ^bb0(%arg0: !transform.any_op):
+    %0 = transform.test_produce_value_handle_to_self_operand %arg0 : (!transform.any_op) -> !transform.any_value
+    include @foo failures(propagate) (%arg0, %0) : (!transform.any_op, !transform.any_value) -> ()
+  }
+}
+
+// -----
+
+// expected-remark @below {{operation}}
+module @named_return attributes { transform.with_named_sequence } {
+
+  // expected-remark @below {{value}}
+  // expected-note @below {{value handle points to a block argument #0 in block #0 in region #0}}
+  transform.named_sequence @foo(%arg0: !transform.any_op) -> (!transform.any_op, !transform.any_value) {
+    %0 = transform.test_produce_value_handle_to_self_operand %arg0 : (!transform.any_op) -> !transform.any_value
+    transform.yield %arg0, %0 : !transform.any_op, !transform.any_value
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    %0:2 = include @foo failures(propagate) (%arg0) : (!transform.any_op) -> (!transform.any_op, !transform.any_value)
+    transform.test_print_remark_at_operand %0#0, "operation" : !transform.any_op
+    transform.test_print_remark_at_operand_value %0#1, "value" : !transform.any_value
+  }
+}

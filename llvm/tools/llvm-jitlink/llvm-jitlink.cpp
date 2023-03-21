@@ -151,7 +151,8 @@ static cl::list<std::string> AbsoluteDefs(
     cl::cat(JITLinkCategory));
 
 static cl::list<std::string>
-    Aliases("alias", cl::desc("Inject symbol aliases (syntax: <name>=<addr>)"),
+    Aliases("alias",
+            cl::desc("Inject symbol aliases (syntax: <alias-name>=<aliasee>)"),
             cl::cat(JITLinkCategory));
 
 static cl::list<std::string> TestHarnesses("harness", cl::Positional,
@@ -511,8 +512,7 @@ public:
     auto FixedAI = std::move(AI);
     FixedAI.MappingBase -= DeltaAddr;
     for (auto &Seg : FixedAI.Segments)
-      Seg.AG = AllocGroup(MemProt::Read | MemProt::Write,
-                          Seg.AG.getMemDeallocPolicy());
+      Seg.AG = {MemProt::Read | MemProt::Write, Seg.AG.getMemLifetimePolicy()};
     FixedAI.Actions.clear();
     InProcessMemoryMapper::initialize(
         FixedAI, [this, OnInitialized = std::move(OnInitialized)](

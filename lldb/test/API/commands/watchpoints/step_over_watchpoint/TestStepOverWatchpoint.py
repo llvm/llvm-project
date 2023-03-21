@@ -11,36 +11,11 @@ from lldbsuite.test import lldbutil
 class TestStepOverWatchpoint(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(
-        oslist=["freebsd", "linux"],
-        archs=[
-            'aarch64',
-            'arm'],
-        bugnumber="llvm.org/pr26031")
-    # Read-write watchpoints not supported on SystemZ
-    @expectedFailureAll(archs=['s390x'])
-    @expectedFailureAll(
-        oslist=["ios", "watchos", "tvos", "bridgeos", "macosx"],
-        archs=['aarch64', 'arm'],
-        bugnumber="<rdar://problem/34027183>")
-    @add_test_categories(["basic_process"])
-    def test(self):
+    def get_to_start(self, bkpt_text):
         """Test stepping over watchpoints."""
         self.build()
-        target = self.createTestTarget()
-
-        lldbutil.run_break_set_by_symbol(self, 'main')
-
-        process = target.LaunchSimple(None, None,
-                                      self.get_process_working_directory())
-        self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
-        self.assertState(process.GetState(), lldb.eStateStopped,
-                         PROCESS_STOPPED)
-
-        thread = lldbutil.get_stopped_thread(process,
-                                             lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread.IsValid(), "Failed to get thread.")
-
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(self, bkpt_text,
+                                                                       lldb.SBFileSpec("main.c"))
         frame = thread.GetFrameAtIndex(0)
         self.assertTrue(frame.IsValid(), "Failed to get frame.")
 
@@ -55,15 +30,38 @@ class TestStepOverWatchpoint(TestBase):
         self.assertSuccess(error, "Error while setting watchpoint")
         self.assertTrue(read_watchpoint, "Failed to set read watchpoint.")
 
+        # Disable the breakpoint we hit so we don't muddy the waters with
+        # stepping off from the breakpoint:
+        bkpt.SetEnabled(False)
+        
+        return (target, process, thread, frame, read_watchpoint)
+    
+    # Read-write watchpoints not supported on SystemZ
+    @expectedFailureAll(archs=['s390x'])
+    @add_test_categories(["basic_process"])
+    def test_step_over(self):
+        target, process, thread, frame, wp = self.get_to_start("Set a breakpoint here")
+    
         thread.StepOver()
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonWatchpoint,
                         STOPPED_DUE_TO_WATCHPOINT)
         self.assertEquals(thread.GetStopDescription(20), 'watchpoint 1')
 
-        process.Continue()
-        self.assertState(process.GetState(), lldb.eStateStopped,
-                         PROCESS_STOPPED)
-        self.assertEquals(thread.GetStopDescription(20), 'step over')
+    @expectedFailureAll(
+        oslist=["freebsd", "linux"],
+        archs=[
+            'aarch64',
+            'arm'],
+        bugnumber="llvm.org/pr26031")
+    # Read-write watchpoints not supported on SystemZ
+    @expectedFailureAll(archs=['s390x'])
+    @expectedFailureAll(
+        oslist=["ios", "watchos", "tvos", "bridgeos", "macosx"],
+        archs=['aarch64', 'arm'],
+        bugnumber="<rdar://problem/34027183>")
+    @add_test_categories(["basic_process"])
+    def test_step_instruction(self):
+        target, process, thread, frame, wp = self.get_to_start("Set breakpoint after call")
 
         self.step_inst_for_watchpoint(1)
 
@@ -77,6 +75,7 @@ class TestStepOverWatchpoint(TestBase):
         if re.match("^mips", arch) or re.match("powerpc64le", arch):
             self.runCmd("watchpoint delete 1")
 
+        error = lldb.SBError()
         # resolve_location=True, read=False, write=True
         write_watchpoint = write_value.Watch(True, False, True, error)
         self.assertTrue(write_watchpoint, "Failed to set write watchpoint.")

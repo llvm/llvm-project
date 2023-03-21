@@ -84,6 +84,12 @@ Changes to the AArch64 Backend
 
 Changes to the AMDGPU Backend
 -----------------------------
+* More fine-grained synchronization around barriers for newer architectures
+  (gfx90a+, gfx10+). The AMDGPU backend now omits previously automatically
+  generated waitcnt instructions before barriers, allowing for more precise
+  control. Users must now use memory fences to implement fine-grained
+  synchronization strategies around barriers. Refer to `AMDGPU memory model
+  <AMDGPUUsage.html#memory-model>`__.
 
 Changes to the ARM Backend
 --------------------------
@@ -205,12 +211,18 @@ Changes to the LLVM tools
 ---------------------------------
 * llvm-lib now supports the /def option for generating a Windows import library from a definition file.
 
+* Made significant changes to JSON output format of `llvm-readobj`/`llvm-readelf`
+  to improve correctness and clarity.
+
 Changes to LLDB
 ---------------------------------
 
 * In the results of commands such as ``expr`` and ``frame var``, type summaries will now
   omit defaulted template parameters. The full template parameter list can still be
   viewed with ``expr --raw-output``/``frame var --raw-output``. (`D141828 <https://reviews.llvm.org/D141828>`_)
+
+* LLDB is now able to show the subtype of signals found in a core file. For example
+  memory tagging specific segfaults such as ``SIGSEGV: sync tag check fault``.
 
 Changes to Sanitizers
 ---------------------

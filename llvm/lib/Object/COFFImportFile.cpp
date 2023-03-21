@@ -86,7 +86,8 @@ static void writeStringTable(std::vector<uint8_t> &B,
 
   for (const auto &S : Strings) {
     B.resize(Pos + S.length() + 1);
-    strcpy(reinterpret_cast<char *>(&B[Pos]), S.c_str());
+    std::copy(S.begin(), S.end(), std::next(B.begin(), Pos));
+    B[Pos + S.length()] = 0;
     Pos += S.length() + 1;
   }
 

@@ -239,7 +239,10 @@
 #   endif
 
 #   define _LIBCPP_AVAILABILITY_TO_CHARS_FLOATING_POINT                         \
-        __attribute__((unavailable))
+        __attribute__((availability(macos,strict,introduced=13.3)))             \
+        __attribute__((availability(ios,strict,introduced=16.3)))               \
+        __attribute__((availability(tvos,strict,introduced=16.3)))              \
+        __attribute__((availability(watchos,strict,introduced=9.3)))
 
 #   define _LIBCPP_AVAILABILITY_SYNC                                            \
         __attribute__((availability(macos,strict,introduced=11.0)))             \

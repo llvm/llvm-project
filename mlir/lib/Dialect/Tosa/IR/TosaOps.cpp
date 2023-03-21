@@ -422,6 +422,12 @@ LogicalResult tosa::FFT2dOp::inferReturnTypeComponents(
   return success();
 }
 
+bool tosa::ConcatOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
+  if (l.size() != r.size() || l.size() != 1)
+    return false;
+  return succeeded(verifyCompatibleShape(l[0], r[0]));
+}
+
 LogicalResult tosa::ConcatOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
@@ -447,14 +453,17 @@ LogicalResult tosa::ConcatOp::inferReturnTypeComponents(
       if (outputShape[i] == ShapedType::kDynamic)
         outputShape[i] = operandShape.getDimSize(i);
       if (outputShape[i] != operandShape.getDimSize(i))
-        return failure();
+        return emitOptionalError(location,
+                                 "Cannot concat tensors with different sizes"
+                                 " on the non-axis dimension ",
+                                 i);
     }
 
     hasRankedInput = true;
   }
-
+  Type inputType = operands.getType()[0].cast<TensorType>().getElementType();
   if (!hasRankedInput) {
-    inferredReturnShapes.push_back(ShapedTypeComponents());
+    inferredReturnShapes.push_back(ShapedTypeComponents(inputType));
     return success();
   }
 
@@ -475,7 +484,7 @@ LogicalResult tosa::ConcatOp::inferReturnTypeComponents(
 
   outputShape[axis] = concatDimSize;
 
-  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape, inputType));
   return success();
 }
 

@@ -27,7 +27,7 @@ struct Dummy3 {};
 template <>
 struct std::tuple_size<Dummy1> {
 public:
-  static size_t value;
+  static std::size_t value;
 };
 
 template <>

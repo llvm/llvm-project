@@ -60,14 +60,15 @@ uptr TagFromShadowStackFrame(uptr pc) {
 
 #if !SANITIZER_GO
 
-void ExternalAccess(void *addr, uptr caller_pc, void *tag, AccessType typ) {
+void ExternalAccess(void *addr, uptr caller_pc, uptr tsan_caller_pc, void *tag,
+                    AccessType typ) {
   CHECK_LT(tag, atomic_load(&used_tags, memory_order_relaxed));
   ThreadState *thr = cur_thread();
   if (caller_pc) FuncEntry(thr, caller_pc);
   InsertShadowStackFrameForTag(thr, (uptr)tag);
   bool in_ignored_lib;
   if (!caller_pc || !libignore()->IsIgnored(caller_pc, &in_ignored_lib))
-    MemoryAccess(thr, CALLERPC, (uptr)addr, 1, typ);
+    MemoryAccess(thr, tsan_caller_pc, (uptr)addr, 1, typ);
   FuncExit(thr);
   if (caller_pc) FuncExit(thr);
 }
@@ -112,12 +113,12 @@ void __tsan_external_assign_tag(void *addr, void *tag) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_external_read(void *addr, void *caller_pc, void *tag) {
-  ExternalAccess(addr, STRIP_PAC_PC(caller_pc), tag, kAccessRead);
+  ExternalAccess(addr, STRIP_PAC_PC(caller_pc), CALLERPC, tag, kAccessRead);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_external_write(void *addr, void *caller_pc, void *tag) {
-  ExternalAccess(addr, STRIP_PAC_PC(caller_pc), tag, kAccessWrite);
+  ExternalAccess(addr, STRIP_PAC_PC(caller_pc), CALLERPC, tag, kAccessWrite);
 }
 }  // extern "C"
 

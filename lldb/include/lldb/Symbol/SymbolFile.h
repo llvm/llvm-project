@@ -25,6 +25,7 @@
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Errc.h"
 
 #include <mutex>
@@ -146,6 +147,17 @@ public:
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
   /// Return the Xcode SDK comp_unit was compiled against.
   virtual XcodeSDK ParseXcodeSDK(CompileUnit &comp_unit) { return {}; }
+
+  /// This function exists because SymbolFileDWARFDebugMap may extra compile
+  /// units which aren't exposed as "real" compile units. In every other
+  /// case this function should behave identically as ParseLanguage.
+  virtual llvm::SmallSet<lldb::LanguageType, 4>
+  ParseAllLanguages(CompileUnit &comp_unit) {
+    llvm::SmallSet<lldb::LanguageType, 4> langs;
+    langs.insert(ParseLanguage(comp_unit));
+    return langs;
+  }
+
   virtual size_t ParseFunctions(CompileUnit &comp_unit) = 0;
   virtual bool ParseLineTable(CompileUnit &comp_unit) = 0;
   virtual bool ParseDebugMacros(CompileUnit &comp_unit) = 0;

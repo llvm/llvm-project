@@ -404,6 +404,7 @@ class MSBuiltin<string name> {
   string MSBuiltinName = name;
 }
 
+#ifndef TEST_INTRINSICS_SUPPRESS_DEFS
 
 //===--------------- Variable Argument Handling Intrinsics ----------------===//
 //
@@ -1375,7 +1376,7 @@ def int_experimental_guard : DefaultAttrsIntrinsic<[], [llvm_i1_ty, llvm_vararg_
 
 // Supports widenable conditions for guards represented as explicit branches.
 def int_experimental_widenable_condition : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
-        [IntrInaccessibleMemOnly, IntrWillReturn, IntrSpeculatable]>;
+        [IntrInaccessibleMemOnly, IntrWillReturn, IntrSpeculatable, NoUndef<RetIndex>]>;
 
 // NOP: calls/invokes to this intrinsic are removed by codegen
 def int_donothing : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrWillReturn]>;
@@ -2203,3 +2204,5 @@ include "llvm/IR/IntrinsicsSPIRV.td"
 include "llvm/IR/IntrinsicsVE.td"
 include "llvm/IR/IntrinsicsDirectX.td"
 include "llvm/IR/IntrinsicsLoongArch.td"
+
+#endif // TEST_INTRINSICS_SUPPRESS_DEFS

@@ -18,13 +18,13 @@
 #include "test_macros.h"
 
 template <typename CharT>
-void test ( const CharT *s, size_t len ) {
+void test ( const CharT *s, std::size_t len ) {
     typedef std::basic_string_view<CharT> SV;
     SV sv ( s, len );
     ASSERT_SAME_TYPE(decltype(sv[0]), typename SV::const_reference);
     LIBCPP_ASSERT_NOEXCEPT(   sv[0]);
     assert ( sv.length() == len );
-    for ( size_t i = 0; i < len; ++i ) {
+    for ( std::size_t i = 0; i < len; ++i ) {
         assert ( sv[i] == s[i] );
         assert ( &sv[i] == s + i );
         }

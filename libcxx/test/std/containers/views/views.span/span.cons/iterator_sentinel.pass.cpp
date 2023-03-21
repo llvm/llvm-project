@@ -34,7 +34,7 @@ constexpr bool test_ctor() {
   return true;
 }
 
-template <size_t Extent>
+template <std::size_t Extent>
 constexpr void test_constructibility() {
   static_assert(std::is_constructible_v<std::span<int, Extent>, int*, int*>);
   static_assert(!std::is_constructible_v<std::span<int, Extent>, const int*, const int*>);

@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <iterator>
 #include <utility>
 
 namespace llvm {
@@ -40,6 +41,12 @@ template <typename BitVectorT> class const_set_bits_iterator_impl {
   }
 
 public:
+  using iterator_category = std::forward_iterator_tag;
+  using difference_type   = void;
+  using value_type        = int;
+  using pointer           = value_type*;
+  using reference         = value_type&;
+
   const_set_bits_iterator_impl(const BitVectorT &Parent, int Current)
       : Parent(Parent), Current(Current) {}
   explicit const_set_bits_iterator_impl(const BitVectorT &Parent)

@@ -470,7 +470,7 @@ DeclarationFragmentsBuilder::getFragmentsForEnum(const EnumDecl *EnumDecl) {
             getFragmentsForType(IntegerType, EnumDecl->getASTContext(), After))
         .append(std::move(After));
 
-  return Fragments;
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
 }
 
 DeclarationFragments
@@ -493,7 +493,8 @@ DeclarationFragmentsBuilder::getFragmentsForStruct(const RecordDecl *Record) {
   if (!Record->getName().empty())
     Fragments.appendSpace().append(
         Record->getName(), DeclarationFragments::FragmentKind::Identifier);
-  return Fragments;
+
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
 }
 
 DeclarationFragments
@@ -743,7 +744,7 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForTypedef(
       .appendSpace()
       .append(Decl->getName(), DeclarationFragments::FragmentKind::Identifier);
 
-  return Fragments;
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
 }
 
 template <typename FunctionT>

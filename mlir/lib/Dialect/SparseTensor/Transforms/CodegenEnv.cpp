@@ -28,6 +28,23 @@ static bool isMaterializing(Value val) {
          val.getDefiningOp<bufferization::AllocTensorOp>();
 }
 
+/// Makes target array's elements sorted according to the `order` array.
+static void sortArrayBasedOnOrder(std::vector<LoopId> &target,
+                                  ArrayRef<LoopId> order) {
+  std::sort(target.begin(), target.end(), [&order](LoopId l, LoopId r) {
+    assert(l != r);
+    int idxL = -1, idxR = -1;
+    for (int i = 0, e = order.size(); i < e; i++) {
+      if (order[i] == l)
+        idxL = i;
+      if (order[i] == r)
+        idxR = i;
+    }
+    assert(idxL >= 0 && idxR >= 0);
+    return idxL < idxR;
+  });
+}
+
 //===----------------------------------------------------------------------===//
 // Code generation environment constructor and general methods
 //===----------------------------------------------------------------------===//
@@ -57,15 +74,42 @@ void CodegenEnv::startEmit() {
     insChain = sparseOut->get();
     latticeMerger.setHasSparseOut(true);
   }
+
+  // Sort the related loop array such that they are in the same order as they
+  // appears on the topoOrder.
+  // TODO: since we only handle affine addition for slice based codegen, and
+  // addition is assoicative, the order how we evaluate the expression does
+  // not matter. However, to support multiplication, the order of the loop
+  // index should match the evaluation order to the affine expression AST.
+
   // Initialize loop emitter.
-  SmallVector<Value> tensors;
-  for (OpOperand &t : linalgOp->getOpOperands())
+  SmallVector<Value> tensors; // input tensors passed to loop emitter
+  for (OpOperand &t : linalgOp->getOpOperands()) {
     tensors.push_back(t.get());
-  loopEmitter.initialize(tensors,
-                         StringAttr::get(linalgOp.getContext(),
-                                         linalg::GenericOp::getOperationName()),
-                         /*hasOutput=*/true,
-                         /*isSparseOut=*/sparseOut != nullptr, topSort);
+    Level rank = linalgOp.getMatchingIndexingMap(&t).getNumResults();
+    for (Level lvl = 0; lvl < rank; lvl++) {
+      sortArrayBasedOnOrder(
+          latticeMerger.getDependentLoops(t.getOperandNumber(), lvl), topSort);
+    }
+  }
+
+  loopEmitter.initialize(
+      tensors,
+      StringAttr::get(linalgOp.getContext(),
+                      linalg::GenericOp::getOperationName()),
+      /*hasOutput=*/true,
+      /*isSparseOut=*/sparseOut != nullptr, topSort,
+      // TODO: compute the map and pass it to loop emitter directly instead of
+      // passing in a callback.
+      [this](TensorId t, Level lvl) -> std::vector<std::pair<TensorId, Level>> {
+        // Translates from a list of loop index to a list of [tid, dim] pair.
+        std::vector<LoopId> rLoops = this->merger().getDependentLoops(t, lvl);
+        std::vector<std::pair<TensorId, Level>> ret;
+        ret.reserve(rLoops.size());
+        for (LoopId l : rLoops)
+          ret.emplace_back(this->merger().getLoopDefiningLvl(l));
+        return ret;
+      });
 }
 
 std::optional<Operation *> CodegenEnv::genLoopBoundary(

@@ -26,7 +26,7 @@
 
 constexpr bool test() {
   std::format_parse_context context("", 10);
-  for (size_t i = 0; i < 10; ++i)
+  for (std::size_t i = 0; i < 10; ++i)
     context.check_arg_id(i);
 
   return true;
@@ -46,13 +46,13 @@ void test_exception() {
     assert(false);
   }();
 
-  auto test_arg = [](size_t num_args) {
+  auto test_arg = [](std::size_t num_args) {
     std::format_parse_context context("", num_args);
     // Out of bounds access is valid if !std::is_constant_evaluated()
-    for (size_t i = 0; i <= num_args; ++i)
+    for (std::size_t i = 0; i <= num_args; ++i)
       context.check_arg_id(i);
   };
-  for (size_t i = 0; i < 10; ++i)
+  for (std::size_t i = 0; i < 10; ++i)
     test_arg(i);
 }
 

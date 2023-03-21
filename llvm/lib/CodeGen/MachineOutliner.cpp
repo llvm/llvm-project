@@ -655,21 +655,21 @@ void MachineOutliner::findCandidates(
     const TargetInstrInfo *TII =
         CandidatesForRepeatedSeq[0].getMF()->getSubtarget().getInstrInfo();
 
-    OutlinedFunction OF =
+    std::optional<OutlinedFunction> OF =
         TII->getOutliningCandidateInfo(CandidatesForRepeatedSeq);
 
     // If we deleted too many candidates, then there's nothing worth outlining.
     // FIXME: This should take target-specified instruction sizes into account.
-    if (OF.Candidates.size() < 2)
+    if (!OF || OF->Candidates.size() < 2)
       continue;
 
     // Is it better to outline this candidate than not?
-    if (OF.getBenefit() < 1) {
-      emitNotOutliningCheaperRemark(StringLen, CandidatesForRepeatedSeq, OF);
+    if (OF->getBenefit() < 1) {
+      emitNotOutliningCheaperRemark(StringLen, CandidatesForRepeatedSeq, *OF);
       continue;
     }
 
-    FunctionList.push_back(OF);
+    FunctionList.push_back(*OF);
   }
 }
 

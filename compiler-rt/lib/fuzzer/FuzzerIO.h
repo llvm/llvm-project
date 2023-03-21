@@ -58,7 +58,6 @@ void CloseStdout();
 FILE *GetOutputFile();
 void SetOutputFile(FILE *NewOutputFile);
 
-void Puts(const char *Str);
 void Printf(const char *Fmt, ...);
 void VPrintf(bool Verbose, const char *Fmt, ...);
 

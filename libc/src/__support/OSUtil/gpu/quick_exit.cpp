@@ -24,7 +24,7 @@ void quick_exit(int status) {
         buffer->data[0] = rpc::Opcode::EXIT;
         buffer->data[1] = status;
       },
-      [](rpc::Buffer *) {});
+      [](rpc::Buffer *) { /* void */ });
 
 #if defined(LIBC_TARGET_ARCH_IS_NVPTX)
   asm("exit" ::: "memory");

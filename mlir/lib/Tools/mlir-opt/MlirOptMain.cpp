@@ -14,6 +14,8 @@
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/Debug/Counter.h"
+#include "mlir/Debug/ExecutionContext.h"
+#include "mlir/Debug/Observers/ActionLogging.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -71,6 +73,12 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
                  "parsing"),
         cl::location(useExplicitModuleFlag), cl::init(false));
 
+    static cl::opt<std::string, /*ExternalStorage=*/true> logActionsTo{
+        "log-actions-to",
+        cl::desc("Log action execution to a file, or stderr if "
+                 " '-' is passed"),
+        cl::location(logActionsToFlag)};
+
     static cl::opt<bool, /*ExternalStorage=*/true> showDialects(
         "show-dialects",
         cl::desc("Print the list of registered dialects and exit"),
@@ -125,6 +133,41 @@ MlirOptMainConfig &MlirOptMainConfig::setPassPipelineParser(
   };
   return *this;
 }
+
+/// Set the ExecutionContext on the context and handle the observers.
+class InstallDebugHandler {
+public:
+  InstallDebugHandler(MLIRContext &context, const MlirOptMainConfig &config) {
+    if (config.getLogActionsTo().empty()) {
+      if (tracing::DebugCounter::isActivated())
+        context.registerActionHandler(tracing::DebugCounter());
+      return;
+    }
+    if (tracing::DebugCounter::isActivated())
+      emitError(UnknownLoc::get(&context),
+                "Debug counters are incompatible with --log-actions-to option "
+                "and are disabled");
+    std::string errorMessage;
+    logActionsFile = openOutputFile(config.getLogActionsTo(), &errorMessage);
+    if (!logActionsFile) {
+      emitError(UnknownLoc::get(&context),
+                "Opening file for --log-actions-to failed: ")
+          << errorMessage << "\n";
+      return;
+    }
+    logActionsFile->keep();
+    raw_fd_ostream &logActionsStream = logActionsFile->os();
+    actionLogger = std::make_unique<tracing::ActionLogger>(logActionsStream);
+
+    executionContext.registerObserver(actionLogger.get());
+    context.registerActionHandler(executionContext);
+  }
+
+private:
+  std::unique_ptr<llvm::ToolOutputFile> logActionsFile;
+  std::unique_ptr<tracing::ActionLogger> actionLogger;
+  tracing::ExecutionContext executionContext;
+};
 
 /// Perform the actions on the input file indicated by the command line flags
 /// within the specified context.
@@ -213,7 +256,8 @@ static LogicalResult processBuffer(raw_ostream &os,
   context.allowUnregisteredDialects(config.shouldAllowUnregisteredDialects());
   if (config.shouldVerifyDiagnostics())
     context.printOpOnDiagnostic(false);
-  context.registerActionHandler(tracing::DebugCounter());
+
+  InstallDebugHandler installDebugHandler(context, config);
 
   // If we are in verify diagnostics mode then we have a lot of work to do,
   // otherwise just perform the actions without worrying about it.

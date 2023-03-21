@@ -291,6 +291,9 @@ private:
 /// Segment. Clients can obtain a pointer to the working memory and executor
 /// address of that block using the Segment's AllocGroup. Once memory has been
 /// populated, clients can call finalize to finalize the memory.
+///
+/// Note: Segments with MemLifetimePolicy::NoAlloc are not permitted, since
+/// they would not be useful, and their presence is likely to indicate a bug.
 class SimpleSegmentAlloc {
 public:
   /// Describes a segment to be allocated.

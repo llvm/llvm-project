@@ -988,6 +988,7 @@ public:
   /// Generate a target region entry call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
+  /// \param AllocaIP The insertion point to be used for alloca instructions.
   /// \param Return Return value of the created function returned by reference.
   /// \param DeviceID Identifier for the device via the 'device' clause.
   /// \param NumTeams Numer of teams for the region via the 'num_teams' clause
@@ -995,7 +996,8 @@ public:
   /// \param NumThreads Number of threads via the 'thread_limit' clause.
   /// \param HostPtr Pointer to the host-side pointer of the target kernel.
   /// \param KernelArgs Array of arguments to the kernel.
-  InsertPointTy emitTargetKernel(const LocationDescription &Loc, Value *&Return,
+  InsertPointTy emitTargetKernel(const LocationDescription &Loc,
+                                 InsertPointTy AllocaIP, Value *&Return,
                                  Value *Ident, Value *DeviceID, Value *NumTeams,
                                  Value *NumThreads, Value *HostPtr,
                                  ArrayRef<Value *> KernelArgs);
@@ -1094,6 +1096,9 @@ public:
   /// <mangled_name_for_global_var> + ".cache." for cache for threadprivate
   /// variables.
   StringMap<Constant*, BumpPtrAllocator> InternalVars;
+
+  /// Computes the size of type in bytes.
+  Value *getSizeInBytes(Value *BasePtr);
 
   /// Create the global variable holding the offload mappings information.
   GlobalVariable *createOffloadMaptypes(SmallVectorImpl<uint64_t> &Mappings,
@@ -1549,6 +1554,29 @@ public:
                                          StringRef EntryFnName,
                                          StringRef EntryFnIDName,
                                          int32_t NumTeams, int32_t NumThreads);
+
+  /// Generator for '#omp target data'
+  ///
+  /// \param Loc The location where the target data construct was encountered.
+  /// \param CodeGenIP The insertion point at which the target directive code
+  /// should be placed.
+  /// \param MapTypeFlags BitVector storing the mapType flags for the
+  /// mapOperands.
+  /// \param MapNames Names for the mapOperands.
+  /// \param MapperAllocas Pointers to the AllocInsts for the map clause.
+  /// \param IsBegin If true then emits begin mapper call otherwise emits
+  /// end mapper call.
+  /// \param DeviceID Stores the DeviceID from the device clause.
+  /// \param IfCond Value which corresponds to the if clause condition.
+  /// \param ProcessMapOpCB Callback that generates code for the map clause.
+  /// \param BodyGenCB Callback that will generate the region code.
+  OpenMPIRBuilder::InsertPointTy createTargetData(
+      const LocationDescription &Loc, OpenMPIRBuilder::InsertPointTy CodeGenIP,
+      SmallVectorImpl<uint64_t> &MapTypeFlags,
+      SmallVectorImpl<Constant *> &MapNames,
+      struct MapperAllocas &MapperAllocas, bool IsBegin, int64_t DeviceID,
+      Value *IfCond, BodyGenCallbackTy ProcessMapOpCB,
+      BodyGenCallbackTy BodyGenCB = {});
 
   /// Declarations for LLVM-IR types (simple, array, function and structure) are
   /// generated below. Their names are defined and used in OpenMPKinds.def. Here

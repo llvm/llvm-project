@@ -17,6 +17,3 @@
 #ifndef _LIBCPP_VERSION
 #  error _LIBCPP_VERSION not defined
 #endif
-
-// Required for MSVC internal test runner compatibility.
-int main(int, char**) { return 0; }
