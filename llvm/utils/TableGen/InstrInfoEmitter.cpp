@@ -1245,13 +1245,12 @@ void InstrInfoEmitter::emitEnums(raw_ostream &OS) {
   OS << "#endif // GET_INSTRINFO_SCHED_ENUM\n\n";
 }
 
-namespace llvm {
-
-void EmitInstrInfo(RecordKeeper &RK, raw_ostream &OS) {
+static void EmitInstrInfo(RecordKeeper &RK, raw_ostream &OS) {
   RK.startTimer("Analyze DAG patterns");
   InstrInfoEmitter(RK).run(OS);
   RK.startTimer("Emit map table");
   EmitMapTable(RK, OS);
 }
 
-} // end namespace llvm
+static TableGen::Emitter::Opt X("gen-instr-info", EmitInstrInfo,
+                                "Generate instruction descriptions");

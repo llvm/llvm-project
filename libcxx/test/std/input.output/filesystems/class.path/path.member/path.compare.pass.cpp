@@ -131,7 +131,7 @@ void test_compare_basic()
       auto h2 = hash_value(p2);
       assert((h1 == h2) == (p1 == p2));
       // check signature
-      ASSERT_SAME_TYPE(size_t, decltype(hash_value(p1)));
+      ASSERT_SAME_TYPE(std::size_t, decltype(hash_value(p1)));
       ASSERT_NOEXCEPT(hash_value(p1));
     }
     { // check std::hash
@@ -139,7 +139,7 @@ void test_compare_basic()
       auto h2 = std::hash<fs::path>()(p2);
       assert((h1 == h2) == (p1 == p2));
       // check signature
-      ASSERT_SAME_TYPE(size_t, decltype(std::hash<fs::path>()(p1)));
+      ASSERT_SAME_TYPE(std::size_t, decltype(std::hash<fs::path>()(p1)));
       ASSERT_NOEXCEPT(std::hash<fs::path>()(p1));
     }
   }

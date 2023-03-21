@@ -221,6 +221,9 @@ Changes to LLDB
   omit defaulted template parameters. The full template parameter list can still be
   viewed with ``expr --raw-output``/``frame var --raw-output``. (`D141828 <https://reviews.llvm.org/D141828>`_)
 
+* LLDB is now able to show the subtype of signals found in a core file. For example
+  memory tagging specific segfaults such as ``SIGSEGV: sync tag check fault``.
+
 Changes to Sanitizers
 ---------------------
 

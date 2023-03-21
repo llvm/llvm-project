@@ -1,5 +1,6 @@
 // RUN: %clang_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 #include <pthread.h>
+#include <sanitizer/tsan_interface.h>
 #include <stdio.h>
 
 #if (__APPLE__)

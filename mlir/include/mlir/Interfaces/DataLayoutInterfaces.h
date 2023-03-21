@@ -56,6 +56,10 @@ unsigned
 getDefaultPreferredAlignment(Type type, const DataLayout &dataLayout,
                              ArrayRef<DataLayoutEntryInterface> params);
 
+/// Default handler for alloca memory space request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultAllocaMemorySpace(DataLayoutEntryInterface entry);
+
 /// Given a list of data layout entries, returns a new list containing the
 /// entries with keys having the given type ID, i.e. belonging to the same type
 /// class.
@@ -159,6 +163,9 @@ public:
   /// Returns the preferred of the given type in the current scope.
   unsigned getTypePreferredAlignment(Type t) const;
 
+  /// Returns the memory space used for AllocaOps.
+  Attribute getAllocaMemorySpace() const;
+
 private:
   /// Combined layout spec at the given scope.
   const DataLayoutSpecInterface originalLayout;
@@ -180,6 +187,9 @@ private:
   mutable DenseMap<Type, unsigned> bitsizes;
   mutable DenseMap<Type, unsigned> abiAlignments;
   mutable DenseMap<Type, unsigned> preferredAlignments;
+
+  /// Cache for alloca memory space.
+  mutable std::optional<Attribute> allocaMemorySpace;
 };
 
 } // namespace mlir

@@ -26,7 +26,7 @@
 
 constexpr bool test() {
   std::format_parse_context context("", 10);
-  for (size_t i = 0; i < 10; ++i)
+  for (std::size_t i = 0; i < 10; ++i)
     assert(i == context.next_arg_id());
 
   return true;

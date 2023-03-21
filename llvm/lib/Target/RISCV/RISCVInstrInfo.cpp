@@ -1925,7 +1925,8 @@ bool RISCVInstrInfo::shouldOutlineFromFunctionByDefault(
   return MF.getFunction().hasMinSize();
 }
 
-outliner::OutlinedFunction RISCVInstrInfo::getOutliningCandidateInfo(
+std::optional<outliner::OutlinedFunction>
+RISCVInstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
 
   // First we need to filter out candidates where the X5 register (IE t0) can't
@@ -1939,7 +1940,7 @@ outliner::OutlinedFunction RISCVInstrInfo::getOutliningCandidateInfo(
 
   // If the sequence doesn't have enough candidates left, then we're done.
   if (RepeatedSequenceLocs.size() < 2)
-    return outliner::OutlinedFunction();
+    return std::nullopt;
 
   unsigned SequenceSize = 0;
 

@@ -34,7 +34,7 @@ void my_free(void*)
 struct test
     : std::strstreambuf
 {
-    test(void* (*palloc_arg)(size_t), void (*pfree_arg)(void*))
+    test(void* (*palloc_arg)(std::size_t), void (*pfree_arg)(void*))
         : std::strstreambuf(palloc_arg, pfree_arg) {}
     virtual int_type overflow(int_type c)
         {return std::strstreambuf::overflow(c);}

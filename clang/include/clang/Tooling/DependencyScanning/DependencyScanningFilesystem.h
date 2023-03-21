@@ -269,6 +269,32 @@ public:
   }
 };
 
+enum class ScanFile { Yes, No };
+enum class CacheStatFailure { Yes, No };
+
+struct PathPolicy {
+  /// Implies caching of all open and stat results.
+  unsigned Enable : 1;
+  /// Controls whether a file will be scanned for dependency directives.
+  unsigned ScanFile : 1;
+  /// Explicitly disables stat failure caching when false.
+  unsigned CacheStatFailure : 1;
+
+  static PathPolicy fallThrough() { return {false, false, false}; }
+
+  static PathPolicy cache(enum ScanFile SF,
+                          enum CacheStatFailure CSF = CacheStatFailure::Yes) {
+    return {true, SF == ScanFile::Yes, CSF == CacheStatFailure::Yes};
+  }
+
+private:
+  PathPolicy(bool E, bool SF, bool CSF)
+      : Enable(E), ScanFile(SF), CacheStatFailure(CSF) {}
+};
+
+/// Determine caching and scanning behavior based on file extension.
+PathPolicy getPolicy(StringRef Filename);
+
 /// A virtual file system optimized for the dependency discovery.
 ///
 /// It is primarily designed to work with source files whose contents was
@@ -293,24 +319,25 @@ public:
   ///
   /// Attempts to use the local and shared caches first, then falls back to
   /// using the underlying filesystem.
-  llvm::ErrorOr<EntryRef>
-  getOrCreateFileSystemEntry(StringRef Filename,
-                             bool DisableDirectivesScanning = false);
+  llvm::ErrorOr<EntryRef> getOrCreateFileSystemEntry(StringRef Filename) {
+    return getOrCreateFileSystemEntry(Filename, getPolicy(Filename));
+  }
 
 private:
-  /// Check whether the file should be scanned for preprocessor directives.
-  bool shouldScanForDirectives(StringRef Filename);
+  /// Same as the public version, but with explicit PathPolicy parameter.
+  llvm::ErrorOr<EntryRef> getOrCreateFileSystemEntry(StringRef Filename,
+                                                     PathPolicy Policy);
 
   /// For a filename that's not yet associated with any entry in the caches,
   /// uses the underlying filesystem to either look up the entry based in the
   /// shared cache indexed by unique ID, or creates new entry from scratch.
   llvm::ErrorOr<const CachedFileSystemEntry &>
-  computeAndStoreResult(StringRef Filename);
+  computeAndStoreResult(StringRef Filename, PathPolicy Policy);
 
   /// Scan for preprocessor directives for the given entry if necessary and
   /// returns a wrapper object with reference semantics.
   EntryRef scanForDirectivesIfNecessary(const CachedFileSystemEntry &Entry,
-                                        StringRef Filename, bool Disable);
+                                        StringRef Filename, PathPolicy Policy);
 
   /// Represents a filesystem entry that has been stat-ed (and potentially read)
   /// and that's about to be inserted into the cache as `CachedFileSystemEntry`.

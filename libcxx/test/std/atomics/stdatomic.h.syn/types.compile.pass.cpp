@@ -202,7 +202,7 @@ void f() {
 
   static_assert(std::is_same_v<std::atomic<intptr_t>,  ::atomic_intptr_t>);
   static_assert(std::is_same_v<std::atomic<uintptr_t>, ::atomic_uintptr_t>);
-  static_assert(std::is_same_v<std::atomic<size_t>,    ::atomic_size_t>);
+  static_assert(std::is_same_v<std::atomic<std::size_t>,    ::atomic_size_t>);
   static_assert(std::is_same_v<std::atomic<ptrdiff_t>, ::atomic_ptrdiff_t>);
   static_assert(std::is_same_v<std::atomic<intmax_t>,  ::atomic_intmax_t>);
   static_assert(std::is_same_v<std::atomic<uintmax_t>, ::atomic_uintmax_t>);

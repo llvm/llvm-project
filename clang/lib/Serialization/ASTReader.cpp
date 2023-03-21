@@ -654,6 +654,10 @@ static bool checkPreprocessorOptions(
   SmallVector<StringRef, 4> ExistingMacroNames;
   collectMacroDefinitions(ExistingPPOpts, ExistingMacros, &ExistingMacroNames);
 
+  // Use a line marker to enter the <command line> file, as the defines and
+  // undefines here will have come from the command line.
+  SuggestedPredefines += "# 1 \"<command line>\" 1\n";
+
   for (unsigned I = 0, N = ExistingMacroNames.size(); I != N; ++I) {
     // Dig out the macro definition in the existing preprocessor options.
     StringRef MacroName = ExistingMacroNames[I];
@@ -713,6 +717,10 @@ static bool checkPreprocessorOptions(
     }
     return true;
   }
+
+  // Leave the <command line> file and return to <built-in>.
+  SuggestedPredefines += "# 1 \"<built-in>\" 2\n";
+
   if (Validation == OptionValidateStrictMatches) {
     // If strict matches are requested, don't tolerate any extra defines in
     // the AST file that are missing on the command line.
@@ -1579,8 +1587,13 @@ bool ASTReader::ReadSLocEntry(int ID) {
     auto Buffer = ReadBuffer(SLocEntryCursor, Name);
     if (!Buffer)
       return true;
-    SourceMgr.createFileID(std::move(Buffer), FileCharacter, ID,
-                           BaseOffset + Offset, IncludeLoc);
+    FileID FID = SourceMgr.createFileID(std::move(Buffer), FileCharacter, ID,
+                                        BaseOffset + Offset, IncludeLoc);
+    if (Record[3]) {
+      auto &FileInfo =
+          const_cast<SrcMgr::FileInfo &>(SourceMgr.getSLocEntry(FID).getFile());
+      FileInfo.setHasLineDirectives();
+    }
     break;
   }
 

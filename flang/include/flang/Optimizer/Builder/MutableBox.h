@@ -52,7 +52,8 @@ mlir::Value createUnallocatedBox(fir::FirOpBuilder &builder, mlir::Location loc,
 fir::MutableBoxValue createTempMutableBox(fir::FirOpBuilder &builder,
                                           mlir::Location loc, mlir::Type type,
                                           llvm::StringRef name = {},
-                                          mlir::Value sourceBox = {});
+                                          mlir::Value sourceBox = {},
+                                          bool isPolymorphic = false);
 
 /// Update a MutableBoxValue to describe entity \p source (that must be in
 /// memory). If \lbounds is not empty, it is used to defined the MutableBoxValue

@@ -1742,12 +1742,14 @@ let mayLoad = 1, hasSideEffects = 0 in {
                     Requires<[HasELPMX]>;
   }
 
+  // This pseudo is combination of the OUT and ELPM instructions.
+  let Defs = [R0] in
+  def ELPMBRdZ : Pseudo<(outs GPR8:$dst), (ins ZREG:$z, LD8:$p),
+                        "elpmb\t$dst, $z, $p", []>,
+                 Requires<[HasELPM]>;
+
   // These pseudos are combination of the OUT and ELPM instructions.
   let Defs = [R31R30], hasSideEffects = 1 in {
-    def ELPMBRdZ : Pseudo<(outs GPR8:$dst), (ins ZREG:$z, LD8:$p),
-                          "elpmb\t$dst, $z, $p", []>,
-                   Requires<[HasELPMX]>;
-
     let Constraints = "@earlyclobber $dst" in
     def ELPMWRdZ : Pseudo<(outs DREGS:$dst), (ins ZREG:$z, LD8:$p),
                           "elpmw\t$dst, $z, $p", []>,

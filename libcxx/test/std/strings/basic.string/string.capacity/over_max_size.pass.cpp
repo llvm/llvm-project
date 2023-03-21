@@ -31,7 +31,7 @@ test(const S& s)
 {
     assert(s.max_size() >= s.size());
     S s2(s);
-    const size_t sz = s2.max_size() + 1;
+    const std::size_t sz = s2.max_size() + 1;
     try { s2.resize(sz, 'x'); }
     catch ( const std::length_error & ) { return ; }
     assert ( false );

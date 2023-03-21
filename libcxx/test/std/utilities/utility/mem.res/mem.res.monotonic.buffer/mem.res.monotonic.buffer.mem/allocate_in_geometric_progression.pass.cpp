@@ -30,7 +30,7 @@ void test_geometric_progression() {
   std::pmr::memory_resource& r1 = mono1;
 
   assert(globalMemCounter.checkNewCalledEq(0));
-  size_t next_buffer_size = 100;
+  std::size_t next_buffer_size = 100;
   void* ret               = r1.allocate(10, 1);
   assert(ret != nullptr);
   assert(globalMemCounter.checkNewCalledEq(1));

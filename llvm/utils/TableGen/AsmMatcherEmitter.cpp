@@ -100,7 +100,6 @@
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 #include "SubtargetFeatureInfo.h"
-#include "TableGenBackends.h"
 #include "Types.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -108,7 +107,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -3205,6 +3203,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   Record *AsmParser = Target.getAsmParser();
   StringRef ClassName = AsmParser->getValueAsString("AsmParserClassName");
 
+  emitSourceFileHeader("Assembly Matcher Source Fragment", OS);
+
   // Compute the information on the instructions to match.
   AsmMatcherInfo Info(AsmParser, Target, Records);
   Info.buildInfo();
@@ -4002,11 +4002,5 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "#endif // GET_MNEMONIC_CHECKER\n\n";
 }
 
-namespace llvm {
-
-void EmitAsmMatcher(RecordKeeper &RK, raw_ostream &OS) {
-  emitSourceFileHeader("Assembly Matcher Source Fragment", OS);
-  AsmMatcherEmitter(RK).run(OS);
-}
-
-} // end namespace llvm
+static TableGen::Emitter::OptClass<AsmMatcherEmitter>
+    X("gen-asm-matcher", "Generate assembly instruction matcher");

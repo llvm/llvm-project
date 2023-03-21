@@ -24,13 +24,13 @@ int main(int, char**)
     assert(std::stol("-10") == -10);
     assert(std::stol(" 10") == 10);
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         assert(std::stol("10g", &idx, 16) == 16);
         assert(idx == 2);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stol("", &idx);
             assert(false);
@@ -39,7 +39,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stol("  - 8", &idx);
             assert(false);
@@ -48,7 +48,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stol("a1", &idx);
             assert(false);
@@ -57,7 +57,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             // LWG#2009 and PR14919
             (void)std::stol("9999999999999999999999999999999999999999999999999", &idx);
@@ -74,13 +74,13 @@ int main(int, char**)
     assert(std::stol(L"-10") == -10);
     assert(std::stol(L" 10") == 10);
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         assert(std::stol(L"10g", &idx, 16) == 16);
         assert(idx == 2);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stol(L"", &idx);
             assert(false);
@@ -89,7 +89,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stol(L"  - 8", &idx);
             assert(false);
@@ -98,7 +98,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stol(L"a1", &idx);
             assert(false);
@@ -107,7 +107,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             // LWG#2009 and PR14919
             (void)std::stol(L"9999999999999999999999999999999999999999999999999", &idx);

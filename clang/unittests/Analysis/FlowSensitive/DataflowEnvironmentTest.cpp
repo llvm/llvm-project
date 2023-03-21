@@ -134,9 +134,9 @@ TEST_F(EnvironmentTest, IncludeFieldsFromDefaultInitializers) {
 
   std::string Code = R"cc(
      struct S {
-     S() {}
-     int X = 3;
-     int Y = X;
+       S() {}
+       int X = 3;
+       int Y = X;
      };
      S foo();
   )cc";

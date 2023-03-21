@@ -138,7 +138,7 @@ int main(int, char**)
 
 //     int_test<char>();
     signed_test<ptrdiff_t>();
-    unsigned_test<size_t>();
+    unsigned_test<std::size_t>();
 
     return 0;
 }

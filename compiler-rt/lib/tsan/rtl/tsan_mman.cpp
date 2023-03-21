@@ -15,6 +15,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
+#include "tsan_interface.h"
 #include "tsan_mman.h"
 #include "tsan_rtl.h"
 #include "tsan_report.h"

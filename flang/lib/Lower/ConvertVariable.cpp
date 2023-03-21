@@ -1690,12 +1690,18 @@ void Fortran::lower::mapSymbolAttributes(
              "handled above");
       // The box is read right away because lowering code does not expect
       // a non pointer/allocatable symbol to be mapped to a MutableBox.
+      mlir::Type ty = converter.genType(var);
+      bool isPolymorphic = false;
+      if (auto boxTy = ty.dyn_cast<fir::BaseBoxType>()) {
+        isPolymorphic = ty.isa<fir::ClassType>();
+        ty = boxTy.getEleTy();
+      }
       Fortran::lower::genDeclareSymbol(
           converter, symMap, sym,
           fir::factory::genMutableBoxRead(
               builder, loc,
-              fir::factory::createTempMutableBox(builder, loc,
-                                                 converter.genType(var))));
+              fir::factory::createTempMutableBox(builder, loc, ty, {}, {},
+                                                 isPolymorphic)));
       return true;
     }
     return false;

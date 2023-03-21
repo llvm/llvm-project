@@ -97,12 +97,12 @@ auto test_formatted_size =
     []<class CharT, class... Args>(
         std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) {
       {
-        size_t size = std::formatted_size(fmt, std::forward<Args>(args)...);
+        std::size_t size = std::formatted_size(fmt, std::forward<Args>(args)...);
         assert(size == expected.size());
       }
 #ifndef TEST_HAS_NO_LOCALIZATION
       {
-        size_t size = std::formatted_size(std::locale(), fmt, std::forward<Args>(args)...);
+        std::size_t size = std::formatted_size(std::locale(), fmt, std::forward<Args>(args)...);
         assert(size == expected.size());
       }
 #endif // TEST_HAS_NO_LOCALIZATION
@@ -112,7 +112,7 @@ auto test_format_to_n =
     []<class CharT, class... Args>(
         std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) {
       {
-        size_t n = expected.size();
+        std::size_t n = expected.size();
         std::basic_string<CharT> out(n, CharT(' '));
         std::format_to_n_result result = std::format_to_n(out.begin(), n, fmt, std::forward<Args>(args)...);
         assert(result.size == static_cast<ptrdiff_t>(expected.size()));
@@ -121,7 +121,7 @@ auto test_format_to_n =
       }
 #ifndef TEST_HAS_NO_LOCALIZATION
       {
-        size_t n = expected.size();
+        std::size_t n = expected.size();
         std::basic_string<CharT> out(n, CharT(' '));
         std::format_to_n_result result =
             std::format_to_n(out.begin(), n, std::locale(), fmt, std::forward<Args>(args)...);

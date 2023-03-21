@@ -99,7 +99,7 @@ static_assert(!HasGenerateRange<R<int*>, UninvocableGen>);
 static_assert(!HasGenerateRange<InputRangeNotInputOrOutputIterator>);
 static_assert(!HasGenerateRange<R<int*>, IntPtrGen>);
 
-template <class Iter, class Sent, size_t N, class Gen>
+template <class Iter, class Sent, std::size_t N, class Gen>
 constexpr void test_one(const std::array<int, N> input, Gen gen, std::array<int, N> expected) {
   { // (iterator, sentinel) overload.
     auto in = input;
@@ -174,7 +174,7 @@ constexpr bool test() {
     { // (iterator, sentinel) overload.
       int gen_invocations = 0;
       auto gen = [&gen_invocations] { ++gen_invocations; return AssignedOnce(); };
-      constexpr size_t N = 10;
+      constexpr std::size_t N = 10;
       std::array<AssignedOnce, N> in;
 
       std::ranges::generate(in.begin(), in.end(), gen);
@@ -185,7 +185,7 @@ constexpr bool test() {
     { // (range) overload.
       int gen_invocations = 0;
       auto gen = [&gen_invocations] { ++gen_invocations; return AssignedOnce(); };
-      constexpr size_t N = 10;
+      constexpr std::size_t N = 10;
       std::array<AssignedOnce, N> in;
 
       std::ranges::generate(in, gen);

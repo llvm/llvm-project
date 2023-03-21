@@ -24,7 +24,7 @@
 
 int main(int, char**) {
   typedef std::ctype<char> F;
-  const size_t* G = &F::table_size;
+  const std::size_t* G = &F::table_size;
   assert(*G >= 256);
 
   return 0;

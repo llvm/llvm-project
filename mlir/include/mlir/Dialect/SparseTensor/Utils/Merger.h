@@ -23,87 +23,6 @@
 namespace mlir {
 namespace sparse_tensor {
 
-/// Tensor expression kind.
-///
-/// The `kLoopVar` leaf kind is for representing `linalg::IndexOp`.
-/// That is, its argument is a `LoopId` identifying the loop-variable
-/// in question, and its value will be the current iteration's value
-/// of that loop-variable.  See the `LoopId` documentation for more details.
-//
-// TODO: make this an `enum class` nested in the `TensorExp` class;
-// to improve namespacing, and match the pattern used by other "Kind"
-// enums in MLIR.
-//
-// TODO: Modify this definition so that the numeric values already encode
-// the `ExpArity` (while extending the notion of "arity" to include not
-// just the number of `ExprId` children the node has, but also whether the
-// node has a `Value` and/or `Operation*`).  Doing this will avoid needing
-// to enumerate all the kinds in `getExpArity` and in the `TensorExp` ctor,
-// and should help clean up a few other places as well.
-enum Kind {
-  // Leaf.
-  kTensor = 0,
-  kInvariant,
-  kLoopVar,
-  // Unary operations.
-  kAbsF,
-  kAbsC,
-  kAbsI,
-  kCeilF,
-  kFloorF,
-  kSqrtF,
-  kSqrtC,
-  kExpm1F,
-  kExpm1C,
-  kLog1pF,
-  kLog1pC,
-  kSinF,
-  kSinC,
-  kTanhF,
-  kTanhC,
-  kNegF,
-  kNegC,
-  kNegI,
-  kTruncF,
-  kExtF,
-  kCastFS, // signed
-  kCastFU, // unsigned
-  kCastSF, // signed
-  kCastUF, // unsigned
-  kCastS,  // signed
-  kCastU,  // unsigned
-  kCastIdx,
-  kTruncI,
-  kCIm, // complex.im
-  kCRe, // complex.re
-  kBitCast,
-  kBinaryBranch, // semiring unary branch created from a binary op
-  kUnary,        // semiring unary op
-  kSelect,       // custom selection criteria
-  // Binary operations.
-  kMulF,
-  kMulC,
-  kMulI,
-  kDivF,
-  kDivC, // complex
-  kDivS, // signed
-  kDivU, // unsigned
-  kAddF,
-  kAddC,
-  kAddI,
-  kSubF,
-  kSubC,
-  kSubI,
-  kAndI,
-  kOrI,
-  kXorI,
-  kShrS, // signed
-  kShrU, // unsigned
-  kShlI,
-  kBinary, // semiring binary op
-  kReduce, // semiring reduction op
-};
-
 // TODO: These type aliases currently only serve to make the code more
 // self-documenting, however because they are not type-checked they can
 // do nothing to prevent mixups.  We should really change them from mere
@@ -169,6 +88,8 @@ struct Children {
 
 /// Tensor expression. Represents a MLIR expression in tensor index notation.
 struct TensorExp {
+  enum class Kind;
+
   // The `x` parameter has different types depending on the value of the
   // `k` parameter.  The correspondences are:
   // * `kTensor`    -> `TensorId`
@@ -205,6 +126,83 @@ struct TensorExp {
   /// kBinaryBranch, this holds the YieldOp for the left or right half
   /// to be merged into a nested scf loop.
   Operation *op;
+};
+
+/// Tensor expression kind.
+///
+/// The `kLoopVar` leaf kind is for representing `linalg::IndexOp`.
+/// That is, its argument is a `LoopId` identifying the loop-variable
+/// in question, and its value will be the current iteration's value
+/// of that loop-variable.  See the `LoopId` documentation for more details.
+//
+// TODO: Modify this definition so that the numeric values already encode
+// the `ExpArity` (while extending the notion of "arity" to include not
+// just the number of `ExprId` children the node has, but also whether the
+// node has a `Value` and/or `Operation*`).  Doing this will avoid needing
+// to enumerate all the kinds in `getExpArity` and in the `TensorExp` ctor,
+// and should help clean up a few other places as well.
+enum class TensorExp::Kind {
+  // Leaf.
+  kTensor = 0,
+  kInvariant,
+  kLoopVar,
+  // Unary operations.
+  kAbsF,
+  kAbsC,
+  kAbsI,
+  kCeilF,
+  kFloorF,
+  kSqrtF,
+  kSqrtC,
+  kExpm1F,
+  kExpm1C,
+  kLog1pF,
+  kLog1pC,
+  kSinF,
+  kSinC,
+  kTanhF,
+  kTanhC,
+  kNegF,
+  kNegC,
+  kNegI,
+  kTruncF,
+  kExtF,
+  kCastFS, // signed
+  kCastFU, // unsigned
+  kCastSF, // signed
+  kCastUF, // unsigned
+  kCastS,  // signed
+  kCastU,  // unsigned
+  kCastIdx,
+  kTruncI,
+  kCIm, // complex.im
+  kCRe, // complex.re
+  kBitCast,
+  kBinaryBranch, // semiring unary branch created from a binary op
+  kUnary,        // semiring unary op
+  kSelect,       // custom selection criteria
+  // Binary operations.
+  kMulF,
+  kMulC,
+  kMulI,
+  kDivF,
+  kDivC, // complex
+  kDivS, // signed
+  kDivU, // unsigned
+  kAddF,
+  kAddC,
+  kAddI,
+  kSubF,
+  kSubC,
+  kSubI,
+  kAndI,
+  kOrI,
+  kXorI,
+  kShrS, // signed
+  kShrU, // unsigned
+  kShlI,
+  kBinary, // semiring binary op
+  kReduce, // semiring reduction op
 };
 
 /// Lattice point.  Each lattice point consists of a formal conjunction
@@ -271,12 +269,12 @@ public:
   /// Constructs a new tensor expression, and returns its identifier.
   /// The type of the `e0` argument varies according to the value of the
   /// `k` argument, as described by the `TensorExp` ctor.
-  ExprId addExp(Kind k, unsigned e0, ExprId e1 = kInvalidId, Value v = Value(),
-                Operation *op = nullptr);
-  ExprId addExp(Kind k, ExprId e, Value v, Operation *op = nullptr) {
+  ExprId addExp(TensorExp::Kind k, unsigned e0, ExprId e1 = kInvalidId,
+                Value v = Value(), Operation *op = nullptr);
+  ExprId addExp(TensorExp::Kind k, ExprId e, Value v, Operation *op = nullptr) {
     return addExp(k, e, kInvalidId, v, op);
   }
-  ExprId addExp(Kind k, Value v, Operation *op = nullptr) {
+  ExprId addExp(TensorExp::Kind k, Value v, Operation *op = nullptr) {
     return addExp(k, kInvalidId, kInvalidId, v, op);
   }
 
@@ -290,30 +288,31 @@ public:
   /// of `LoopId` (effectively constructing a larger "intersection" of those
   /// loops) with a newly constructed tensor (sub)expression of given kind.
   /// Returns the identifier of the new lattice point.
-  LatPointId conjLat(Kind kind, LatPointId p0, LatPointId p1,
+  LatPointId conjLat(TensorExp::Kind kind, LatPointId p0, LatPointId p1,
                      Operation *op = nullptr);
 
   /// Conjunctive merge of two lattice sets: `(s0 /\_op s1)`.
   /// Returns the identifier of the new set.
-  LatSetId conjSet(Kind kind, LatSetId s0, LatSetId s1,
+  LatSetId conjSet(TensorExp::Kind kind, LatSetId s0, LatSetId s1,
                    Operation *op = nullptr);
 
   /// Disjunctive merge of two lattice sets: `(s0 /\_op s1, s0, s1)`.
   /// Returns the identifier of the new set.
-  LatSetId disjSet(Kind kind, LatSetId s0, LatSetId s1,
+  LatSetId disjSet(TensorExp::Kind kind, LatSetId s0, LatSetId s1,
                    Operation *op = nullptr);
 
   /// Disjunctive merge of two lattice sets with custom handling of the
   /// overlap, left, and right regions.  Any region may be left missing
   /// in the output.  Returns the identifier of the new set.
-  LatSetId combiSet(Kind kind, LatSetId s0, LatSetId s1, Operation *orig,
-                    bool includeLeft, Kind ltrans, Operation *opleft,
-                    bool includeRight, Kind rtrans, Operation *opright);
+  LatSetId combiSet(TensorExp::Kind kind, LatSetId s0, LatSetId s1,
+                    Operation *orig, bool includeLeft, TensorExp::Kind ltrans,
+                    Operation *opleft, bool includeRight,
+                    TensorExp::Kind rtrans, Operation *opright);
 
   /// Maps the unary operator over the lattice set of the operand, i.e. each
   /// lattice point on an expression E is simply copied over, but with OP E
   /// as new expression. Returns the identifier of the new set.
-  LatSetId mapSet(Kind kind, LatSetId s, Value v = Value(),
+  LatSetId mapSet(TensorExp::Kind kind, LatSetId s, Value v = Value(),
                   Operation *op = nullptr);
 
   /// Optimizes the iteration lattice points in the given set. This
@@ -377,7 +376,8 @@ public:
 
   /// Returns true if the expression is `(kTensor t)`.
   bool expIsTensor(ExprId e, TensorId t) const {
-    return tensorExps[e].kind == kTensor && tensorExps[e].tensor == t;
+    return tensorExps[e].kind == TensorExp::Kind::kTensor &&
+           tensorExps[e].tensor == t;
   }
 
   /// Returns true if the expression contains the tensor as an operand.
@@ -399,11 +399,17 @@ public:
   /// to sparse level-type.
   bool hasAnySparse(const BitVector &bits) const;
 
+  /// Returns true if bits contains a dependent index reduction condition on
+  /// sparse levels.
+  bool hasSparseIdxReduction(const BitVector &bits) const;
+
   /// Gets the level-type of the `t`th tensor on `i`th loop.
   DimLevelType getDimLevelType(TensorId t, LoopId i) const {
     assert(t < numTensors && i < numLoops);
     return lvlTypes[t][i];
   }
+
+  /// Gets the level-type of the TensorLoopId.
   DimLevelType getDimLevelType(TensorLoopId b) const {
     return getDimLevelType(tensor(b), loop(b));
   }
@@ -435,18 +441,57 @@ public:
 
   /// Iterates over a set of `TensorLoopId`s, invoking the callback
   /// for each `TensorLoopId` and passing it the corresponding tensor
-  /// identifier, level, and level-type.
-  void
-  foreachTensorLoopId(LatPointId p,
-                      function_ref<void(TensorLoopId, TensorId,
-                                        std::optional<Level>, DimLevelType)>
-                          callback) const {
-    for (const TensorLoopId b : latPoints[p].bits.set_bits())
-      callback(b, tensor(b), getLvl(b), getDimLevelType(b));
+  /// identifier, level, and level-type, following with a boolean value
+  /// indicating whether it is a dependent index reduction loop condition.
+  void foreachTensorLoopId(
+      LatPointId p, function_ref<void(TensorLoopId, TensorId,
+                                      std::optional<Level>, DimLevelType, bool)>
+                        callback) {
+    for (const TensorLoopId b : latPoints[p].bits.set_bits()) {
+      TensorId t = tensor(b);
+      if (isLvlWithNonTrivialIdxExp(b)) {
+        // This must be an undefined level.
+        assert(!getLvl(b).has_value());
+        // Slice the tid along the dependent level to iterate current loop.
+        callback(b, t, loopToDependencies[loop(b)][t], getDimLevelType(b),
+                 /*isIdxReduc=*/true);
+      } else {
+        callback(b, t, getLvl(b), getDimLevelType(b), /*isIdxReduc=*/false);
+      }
+    }
   }
 
   /// Sets whether the output tensor is sparse or not.
   void setHasSparseOut(bool s) { hasSparseOut = s; }
+
+  /// Establishes the two-way map that i <-> <t, lvl>.
+  void setLoopDependentTensorLevel(LoopId i, TensorId t, Level lvl) {
+    assert(lvl < numLoops);
+    loopToDependencies[i][t] = lvl;
+    levelToDependentIdx[t][lvl].push_back(i);
+  }
+
+  /// Whether the loop has dependent slice.
+  bool hasDependentLvl(LoopId i, TensorId tid) {
+    return loopToDependencies[i][tid].has_value();
+  }
+
+  /// Returns the list of loop indices which appear in the non-trivial index
+  /// expression on t_l, e.g., A[i+j] => {i, j}
+  std::vector<LoopId> &getDependentLoops(TensorId t, Level lvl) {
+    return levelToDependentIdx[t][lvl];
+  }
+
+  /// Returns the defining [tid, lvl] for the loop.
+  std::pair<TensorId, Level> getLoopDefiningLvl(LoopId i) const {
+    return loopBounds[i];
+  }
+
+  /// Checks whether the TensorLoopId represents a tensor level with
+  /// non-trivial index expression on it.
+  bool isLvlWithNonTrivialIdxExp(TensorLoopId b) const {
+    return loopToDependencies[loop(b)][tensor(b)].has_value();
+  }
 
   /// Convenience getters to immediately access the stored nodes.
   /// Typically it is inadvisible to keep the reference around, as in
@@ -510,6 +555,20 @@ private:
 
   // Map that converts pair<TensorId, Level> to the corresponding LoopId.
   std::vector<std::vector<std::optional<LoopId>>> lvlToLoop;
+
+  // Map from a loop to its dependencies if any.
+  // The dependencies of a loop is a set of (tensor, level) pairs.
+  // It is currently only set for non-trivial index expressions.
+  // E.g., A[i+j] => i and j will have dependencies {A0} to indicate that
+  // i and j are used in the non-trivial index expression on A0.
+  std::vector<std::vector<std::optional<Level>>> loopToDependencies;
+  // The inverse map of ldxToDependencies from tensor level -> dependent loop
+  // E.g., A[i+j], we have A0 => {i, j}, to indicate that A0 uses both {i, j}
+  // to compute its indices.
+  std::vector<std::vector<std::vector<LoopId>>> levelToDependentIdx;
+
+  // Map from a loop to the [tid, lvl] pair that defines the loop boundary.
+  std::vector<std::pair<TensorId, Level>> loopBounds;
 
   llvm::SmallVector<TensorExp> tensorExps;
   llvm::SmallVector<LatPoint> latPoints;

@@ -4041,6 +4041,77 @@ Constant *OpenMPIRBuilder::registerTargetRegionFunction(
   return OutlinedFnID;
 }
 
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
+    const LocationDescription &Loc, OpenMPIRBuilder::InsertPointTy CodeGenIP,
+    SmallVectorImpl<uint64_t> &MapTypeFlags,
+    SmallVectorImpl<Constant *> &MapNames, struct MapperAllocas &MapperAllocas,
+    bool IsBegin, int64_t DeviceID, Value *IfCond,
+    BodyGenCallbackTy ProcessMapOpCB, BodyGenCallbackTy BodyGenCB) {
+  if (!updateToLocation(Loc))
+    return InsertPointTy();
+
+  Builder.restoreIP(CodeGenIP);
+
+  // LLVM utilities like blocks with terminators.
+  // The UI acts as a resume point for code insertion after the BodyGen
+  auto *UI = Builder.CreateUnreachable();
+  if (IfCond) {
+    auto *ThenTI =
+        SplitBlockAndInsertIfThen(IfCond, UI, /* Unreachable */ false);
+    ThenTI->getParent()->setName("omp_if.then");
+    Builder.SetInsertPoint(ThenTI);
+  } else {
+    Builder.SetInsertPoint(UI);
+  }
+
+  ProcessMapOpCB(Builder.saveIP(), Builder.saveIP());
+
+  uint32_t SrcLocStrSize;
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+  Value *srcLocInfo = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+
+  GlobalVariable *MapTypesGV =
+      createOffloadMaptypes(MapTypeFlags, ".offload_maptypes");
+  Value *MapTypesArg = Builder.CreateConstInBoundsGEP2_32(
+      ArrayType::get(Builder.getInt64Ty(), MapTypeFlags.size()), MapTypesGV,
+      /*Idx0=*/0, /*Idx1=*/0);
+
+  GlobalVariable *MapNamesGV =
+      createOffloadMapnames(MapNames, ".offload_mapnames");
+  Value *MapNamesArg = Builder.CreateConstInBoundsGEP2_32(
+      ArrayType::get(Builder.getInt8PtrTy(), MapNames.size()), MapNamesGV,
+      /*Idx0=*/0, /*Idx1=*/0);
+
+  Function *beginMapperFunc =
+      getOrCreateRuntimeFunctionPtr(omp::OMPRTL___tgt_target_data_begin_mapper);
+  Function *endMapperFunc =
+      getOrCreateRuntimeFunctionPtr(omp::OMPRTL___tgt_target_data_end_mapper);
+
+  if (BodyGenCB) {
+    // Create call to start the data region.
+    emitMapperCall(Builder.saveIP(), beginMapperFunc, srcLocInfo, MapTypesArg,
+                   MapNamesArg, MapperAllocas, DeviceID, MapTypeFlags.size());
+
+    BodyGenCB(Builder.saveIP(), Builder.saveIP());
+
+    Builder.SetInsertPoint(UI->getParent());
+    // Create call to end the data region.
+    emitMapperCall(Builder.saveIP(), endMapperFunc, srcLocInfo, MapTypesArg,
+                   MapNamesArg, MapperAllocas, DeviceID, MapTypeFlags.size());
+  } else {
+    emitMapperCall(Builder.saveIP(), IsBegin ? beginMapperFunc : endMapperFunc,
+                   srcLocInfo, MapTypesArg, MapNamesArg, MapperAllocas,
+                   DeviceID, MapTypeFlags.size());
+  }
+
+  // Update the insertion point and remove the terminator we introduced.
+  Builder.SetInsertPoint(UI->getParent());
+  if (IfCond)
+    UI->getParent()->setName("omp_if.end");
+  UI->eraseFromParent();
+  return Builder.saveIP();
+}
+
 std::string OpenMPIRBuilder::getNameWithSeparators(ArrayRef<StringRef> Parts,
                                                    StringRef FirstSeparator,
                                                    StringRef Separator) {
@@ -4088,6 +4159,15 @@ Value *OpenMPIRBuilder::getOMPCriticalRegionLock(StringRef CriticalName) {
   return getOrCreateInternalVariable(KmpCriticalNameTy, Name);
 }
 
+Value *OpenMPIRBuilder::getSizeInBytes(Value *BasePtr) {
+  LLVMContext &Ctx = Builder.getContext();
+  Value *Null = Constant::getNullValue(BasePtr->getType()->getPointerTo());
+  Value *SizeGep =
+      Builder.CreateGEP(BasePtr->getType(), Null, Builder.getInt32(1));
+  Value *SizePtrToInt = Builder.CreatePtrToInt(SizeGep, Type::getInt64Ty(Ctx));
+  return SizePtrToInt;
+}
+
 GlobalVariable *
 OpenMPIRBuilder::createOffloadMaptypes(SmallVectorImpl<uint64_t> &Mappings,
                                        std::string VarName) {
@@ -4111,9 +4191,12 @@ void OpenMPIRBuilder::createMapperAllocas(const LocationDescription &Loc,
   auto *ArrI8PtrTy = ArrayType::get(Int8Ptr, NumOperands);
   auto *ArrI64Ty = ArrayType::get(Int64, NumOperands);
   Builder.restoreIP(AllocaIP);
-  AllocaInst *ArgsBase = Builder.CreateAlloca(ArrI8PtrTy);
-  AllocaInst *Args = Builder.CreateAlloca(ArrI8PtrTy);
-  AllocaInst *ArgSizes = Builder.CreateAlloca(ArrI64Ty);
+  AllocaInst *ArgsBase = Builder.CreateAlloca(
+      ArrI8PtrTy, /* ArraySize = */ nullptr, ".offload_baseptrs");
+  AllocaInst *Args = Builder.CreateAlloca(ArrI8PtrTy, /* ArraySize = */ nullptr,
+                                          ".offload_ptrs");
+  AllocaInst *ArgSizes = Builder.CreateAlloca(
+      ArrI64Ty, /* ArraySize = */ nullptr, ".offload_sizes");
   Builder.restoreIP(Loc.IP);
   MapperAllocas.ArgsBase = ArgsBase;
   MapperAllocas.Args = Args;

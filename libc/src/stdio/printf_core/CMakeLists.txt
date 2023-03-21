@@ -20,6 +20,7 @@ add_object_library(
     libc.src.__support.ctype_utils
     libc.src.__support.str_to_integer
     libc.src.__support.CPP.bit
+    libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
@@ -37,6 +38,7 @@ add_object_library(
     libc.src.__support.ctype_utils
     libc.src.__support.str_to_integer
     libc.src.__support.CPP.bit
+    libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
@@ -63,6 +65,8 @@ add_object_library(
     writer.cpp
   HDRS
     writer.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
 )
 
 add_object_library(
