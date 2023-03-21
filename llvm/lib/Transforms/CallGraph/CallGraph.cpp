@@ -76,16 +76,18 @@ struct CallGraph : ModulePass {
             // If we meet that edge for the first time, we need to add it to map
             // and print it to file
             if (Nodes.find(FuncAddr) == Nodes.end()) {
-              File << "{} " << &F << " [label = " << FuncName << " ]\n";
+              File << "{} " << reinterpret_cast<int64_t>(&F)
+                   << " [label = " << FuncName << " ]\n";
               Nodes.insert(FuncAddr);
             }
             if (Nodes.find(CalledFunc) == Nodes.end()) {
-              File << "{} " << CalledFunc
+              File << "{} " << reinterpret_cast<int64_t>(CalledFunc)
                    << " [label = " << CalledFunc->getName() << " ]\n";
               Nodes.insert(CalledFunc);
             }
 
-            File << FuncAddr << " -> " << CalledFunc << '\n';
+            File << reinterpret_cast<int64_t>(FuncAddr) << " -> "
+                 << reinterpret_cast<int64_t>(CalledFunc) << '\n';
             Bucket.insert(CalledFunc);
           }
         }
