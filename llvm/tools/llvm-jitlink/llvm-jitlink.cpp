@@ -511,7 +511,8 @@ public:
     auto FixedAI = std::move(AI);
     FixedAI.MappingBase -= DeltaAddr;
     for (auto &Seg : FixedAI.Segments)
-      Seg.AG = {MemProt::Read | MemProt::Write, Seg.AG.getMemLifetimePolicy()};
+      Seg.AG = AllocGroup(MemProt::Read | MemProt::Write,
+                          Seg.AG.getMemDeallocPolicy());
     FixedAI.Actions.clear();
     InProcessMemoryMapper::initialize(
         FixedAI, [this, OnInitialized = std::move(OnInitialized)](

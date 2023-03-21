@@ -132,11 +132,11 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
 #if defined(LLVM_ON_UNIX)
 
     int NativeProt = 0;
-    if ((Segment.RAG.Prot & MemProt::Read) == MemProt::Read)
+    if ((Segment.AG.getMemProt() & MemProt::Read) == MemProt::Read)
       NativeProt |= PROT_READ;
-    if ((Segment.RAG.Prot & MemProt::Write) == MemProt::Write)
+    if ((Segment.AG.getMemProt() & MemProt::Write) == MemProt::Write)
       NativeProt |= PROT_WRITE;
-    if ((Segment.RAG.Prot & MemProt::Exec) == MemProt::Exec)
+    if ((Segment.AG.getMemProt() & MemProt::Exec) == MemProt::Exec)
       NativeProt |= PROT_EXEC;
 
     if (mprotect(Segment.Addr.toPtr<void *>(), Segment.Size, NativeProt))
@@ -144,7 +144,8 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
 
 #elif defined(_WIN32)
 
-    DWORD NativeProt = getWindowsProtectionFlags(Segment.RAG.Prot);
+    DWORD NativeProt =
+        getWindowsProtectionFlags(Segment.AG.getMemProt());
 
     if (!VirtualProtect(Segment.Addr.toPtr<void *>(), Segment.Size, NativeProt,
                         &NativeProt))
@@ -152,7 +153,7 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
 
 #endif
 
-    if ((Segment.RAG.Prot & MemProt::Exec) == MemProt::Exec)
+    if ((Segment.AG.getMemProt() & MemProt::Exec) == MemProt::Exec)
       sys::Memory::InvalidateInstructionCache(Segment.Addr.toPtr<void *>(),
                                               Segment.Size);
   }
