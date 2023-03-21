@@ -51,12 +51,12 @@ static void sortArrayBasedOnOrder(std::vector<LoopId> &target,
 
 CodegenEnv::CodegenEnv(linalg::GenericOp linop, SparsificationOptions opts,
                        unsigned numTensors, unsigned numLoops,
-                       unsigned numFilterLoops)
+                       unsigned numFilterLoops, unsigned maxRank)
     : linalgOp(linop), sparseOptions(opts),
-      latticeMerger(numTensors, numLoops, numFilterLoops), loopEmitter(),
-      topSort(), sparseOut(nullptr), outerParNest(-1u), insChain(), expValues(),
-      expFilled(), expAdded(), expCount(), redVal(), redExp(kInvalidId),
-      redCustom(kInvalidId), redValidLexInsert() {}
+      latticeMerger(numTensors, numLoops, numFilterLoops, maxRank),
+      loopEmitter(), topSort(), sparseOut(nullptr), outerParNest(-1u),
+      insChain(), expValues(), expFilled(), expAdded(), expCount(), redVal(),
+      redExp(kInvalidId), redCustom(kInvalidId), redValidLexInsert() {}
 
 LogicalResult CodegenEnv::initTensorExp() {
   // Builds the tensor expression for the Linalg operation in SSA form.

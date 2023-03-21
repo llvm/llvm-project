@@ -288,12 +288,18 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
     coordinatesBuffers[tid].assign(lvlRank, Value());
     sliceOffsets[tid].assign(lvlRank, Value());
     sliceStrides[tid].assign(lvlRank, Value());
-
     dependentLvlMap[tid].assign(lvlRank,
                                 std::vector<std::pair<TensorId, Level>>());
-    if (dimGetter)
-      for (Level l = 0; l < lvlRank; l++)
+    if (dimGetter) {
+      auto reassoc = collapseReassoc[tid];
+      Level dstRank = reassoc ? reassoc.size() : lvlRank;
+      for (Level l = 0; l < dstRank; l++) {
         dependentLvlMap[tid][l] = dimGetter(tid, l);
+        // TODO: View-base collapse and dependent index reduction are not
+        // compatible right now.
+        assert(!reassoc || dependentLvlMap[tid][l].empty());
+      }
+    }
   }
 
   // Construct the inverse of the `topSort` from the sparsifier.
