@@ -812,7 +812,7 @@ void Environment::dump(raw_ostream &OS) const {
   }
 
   OS << "FlowConditionToken:\n";
-  DACtx->dumpFlowCondition(*FlowConditionToken);
+  DACtx->dumpFlowCondition(*FlowConditionToken, OS);
 }
 
 void Environment::dump() const {
