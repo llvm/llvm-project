@@ -1786,7 +1786,7 @@ LogicalResult transform::PadOp::verify() {
 }
 
 //===---------------------------------------------------------------------===//
-// HoistPadOp
+// PadOp
 //===---------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
@@ -2977,21 +2977,6 @@ void transform::TileToScfForOp::getEffects(
 // VectorizeOp
 //===----------------------------------------------------------------------===//
 
-void transform::VectorizeOp::build(OpBuilder &builder, OperationState &result,
-                                   Value target, bool vectorizePadding,
-                                   bool vectorizeExtract) {
-  result.addOperands(target);
-  if (vectorizePadding) {
-    result.addAttribute(VectorizeOp::getVectorizePaddingAttrName(result.name),
-                        builder.getUnitAttr());
-  }
-  if (vectorizeExtract) {
-    result.addAttribute(VectorizeOp::getVectorizeNdExtractAttrName(result.name),
-                        builder.getUnitAttr());
-  }
-  result.addTypes(pdl::OperationType::get(builder.getContext()));
-}
-
 namespace {
 /// This is an helper only to call vectorize via a pattern inside of
 /// VectorizeOp::applyToOne.
@@ -3050,8 +3035,13 @@ transform::VectorizeOp::applyToOne(Operation *target,
   if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns))))
     return emitDefaultDefiniteFailure(target);
 
-  results.push_back(target);
   return DiagnosedSilenceableFailure::success();
+}
+
+void transform::VectorizeOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getTarget(), effects);
+  transform::modifiesPayload(effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3134,22 +3124,6 @@ SmallVector<OpFoldResult> MaskedVectorizeOp::getMixedVectorSizes() {
 }
 
 //===----------------------------------------------------------------------===//
-// HoistRedundantVectorTransfersOp
-//===----------------------------------------------------------------------===//
-
-DiagnosedSilenceableFailure
-transform::HoistRedundantVectorTransfersOp::applyToOne(
-    func::FuncOp target, transform::ApplyToEachResultList &results,
-    transform::TransformState &state) {
-  // WARNING: This hoisting does not model parallelism and is generally
-  // incorrect when used on distributed loops with memref semantics!
-  // TODO: obsolete and should be retired.
-  linalg::hoistRedundantVectorTransfers(target);
-  results.push_back(target);
-  return DiagnosedSilenceableFailure::success();
-}
-
-//===----------------------------------------------------------------------===//
 // ConvertConv2DToImg2ColOp.
 //===----------------------------------------------------------------------===//
 
@@ -3193,9 +3167,7 @@ transform::HoistRedundantTensorSubsetsOp::applyToOne(
   IRRewriter rewriter(target->getContext());
   auto forOp = dyn_cast<scf::ForOp>(target);
   if (forOp) {
-    scf::ForOp newForOp =
-        linalg::hoistRedundantSubsetExtractInsert(rewriter, forOp);
-    results.push_back(newForOp);
+    linalg::hoistRedundantSubsetExtractInsert(rewriter, forOp);
     return DiagnosedSilenceableFailure::success();
   }
 
@@ -3204,8 +3176,34 @@ transform::HoistRedundantTensorSubsetsOp::applyToOne(
   target->walk([&](scf::ForOp forOp) {
     hoistRedundantSubsetExtractInsert(rewriter, forOp);
   });
-  results.push_back(target);
   return DiagnosedSilenceableFailure::success();
+}
+
+void transform::HoistRedundantTensorSubsetsOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getTarget(), effects);
+  transform::modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// HoistRedundantVectorTransfersOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::HoistRedundantVectorTransfersOp::applyToOne(
+    func::FuncOp target, transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  // WARNING: This hoisting does not model parallelism and is generally
+  // incorrect when used on distributed loops with memref semantics!
+  // TODO: obsolete and should be retired.
+  linalg::hoistRedundantVectorTransfers(target);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::HoistRedundantVectorTransfersOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getTarget(), effects);
+  transform::modifiesPayload(effects);
 }
 
 //===----------------------------------------------------------------------===//
