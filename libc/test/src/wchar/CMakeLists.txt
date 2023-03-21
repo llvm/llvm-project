@@ -7,6 +7,7 @@ add_libc_unittest(
   SRCS
     btowc_test.cpp
   DEPENDS
+    libc.include.stdio
     libc.src.wchar.btowc
 )
 
