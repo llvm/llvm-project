@@ -34,6 +34,7 @@
 #include "mlir/ExecutionEngine/JitRunner.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetSelect.h"
@@ -114,6 +115,7 @@ int main(int argc, char **argv) {
                   mlir::gpu::GPUDialect, mlir::spirv::SPIRVDialect,
                   mlir::func::FuncDialect, mlir::memref::MemRefDialect,
                   mlir::vector::VectorDialect>();
+  mlir::registerBuiltinDialectTranslation(registry);
   mlir::registerLLVMDialectTranslation(registry);
 
   return mlir::JitRunnerMain(argc, argv, registry, jitRunnerConfig);
