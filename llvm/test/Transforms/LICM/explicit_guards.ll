@@ -5,16 +5,27 @@ declare void @llvm.experimental.guard(i1,...)
 declare void @maythrow()
 
 ; Make sure that we do not hoist widenable_cond out of loop.
-define void @hoist_widenable_cond(i1 %cond, i32 %N, i32 %M) {
-; CHECK-LABEL: @hoist_widenable_cond(
+; Widenable conditions don't actually alias anything or throw, however
+; hoisting them is not profitable because it can prevent guard widening
+; in loop.
+; If we want to widen guards in branch form, we need to generate them
+; at the point of widenable_condition call
+; (see https://github.com/llvm/llvm-project/issues/60234). Because of
+; this, hoisting a widenable condition out of loop can make widening of
+; in-loop conditions impossible (e.g. if they depend on loop variant). On
+; the other hand, hoisting of the WC doesn't really see profitable,
+; because it will be optimized away later anyways. So the test checks that
+; LICM will not move it out of loop.
+define void @do_not_hoist_widenable_cond(i1 %cond, i32 %N, i32 %M) {
+; CHECK-LABEL: @do_not_hoist_widenable_cond(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[GUARDED:%.*]] ]
 ; CHECK-NEXT:    [[GUARD_COND:%.*]] = icmp slt i32 [[IV]], [[N:%.*]]
+; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[GUARD_COND]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -40,17 +51,17 @@ exit:
   ret void
 }
 
-define void @hoist_widenable_cond_speculate(i1 %cond, i32 %N, i32 %M) {
-; CHECK-LABEL: @hoist_widenable_cond_speculate(
+define void @do_not_hoist_widenable_cond_speculate(i1 %cond, i32 %N, i32 %M) {
+; CHECK-LABEL: @do_not_hoist_widenable_cond_speculate(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[GUARDED:%.*]] ]
 ; CHECK-NEXT:    [[GUARD_COND:%.*]] = icmp slt i32 [[IV]], [[N:%.*]]
 ; CHECK-NEXT:    call void @maythrow()
+; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[GUARD_COND]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
@@ -81,14 +92,14 @@ exit:
 define void @hoist_invariant_load(i1 %cond, ptr %np, i32 %M) {
 ; CHECK-LABEL: @hoist_invariant_load(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[N:%.*]] = load i32, ptr [[NP:%.*]]
-; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[N:%.*]] = load i32, ptr [[NP:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[GUARDED:%.*]] ]
 ; CHECK-NEXT:    [[GUARD_COND:%.*]] = icmp slt i32 [[IV]], [[N]]
+; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[GUARD_COND]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
