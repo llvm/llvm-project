@@ -523,7 +523,6 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
 
 void X86FoldTablesEmitter::run(raw_ostream &o) {
   formatted_raw_ostream OS(o);
-  emitSourceFileHeader("X86 fold tables", OS);
 
   // Holds all memory instructions
   std::vector<const CodeGenInstruction *> MemInsts;
