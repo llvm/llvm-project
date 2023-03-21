@@ -108,6 +108,10 @@ class DwarfCompileUnit final : public DwarfUnit {
 
   void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) override;
 
+  /// Add info for Wasm-global-based relocation.
+  void addWasmRelocBaseGlobal(DIELoc *Loc, StringRef GlobalName,
+                              uint64_t GlobalIndex);
+
 public:
   DwarfCompileUnit(unsigned UID, const DICompileUnit *Node, AsmPrinter *A,
                    DwarfDebug *DW, DwarfFile *DWU,
