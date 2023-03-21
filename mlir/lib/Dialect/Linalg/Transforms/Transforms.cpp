@@ -541,7 +541,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
 
   // Step 2. Propagate packing to all LinalgOp operands.
   SmallVector<Value> inputsAndInits, results;
-  for (auto operandsList :
+  for (const auto& operandsList :
        {linalgOp.getDpsInputOperands(), linalgOp.getDpsInitOperands()}) {
     for (OpOperand *opOperandPtr : operandsList) {
       int64_t pos = opOperandPtr->getOperandNumber();

@@ -2485,15 +2485,13 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
     // CBO, CF + CBO
     NewCT = SelOpNo ? DAG.getNode(BinOpcode, DL, VT, CBO, CT)
                     : DAG.getNode(BinOpcode, DL, VT, CT, CBO);
-    if (!CanFoldNonConst && !NewCT.isUndef() &&
-        !isConstantOrConstantVector(NewCT, true) &&
+    if (!NewCT.isUndef() && !isConstantOrConstantVector(NewCT, true) &&
         !DAG.isConstantFPBuildVectorOrConstantFP(NewCT))
       return SDValue();
 
     NewCF = SelOpNo ? DAG.getNode(BinOpcode, DL, VT, CBO, CF)
                     : DAG.getNode(BinOpcode, DL, VT, CF, CBO);
-    if (!CanFoldNonConst && !NewCF.isUndef() &&
-        !isConstantOrConstantVector(NewCF, true) &&
+    if (!NewCF.isUndef() && !isConstantOrConstantVector(NewCF, true) &&
         !DAG.isConstantFPBuildVectorOrConstantFP(NewCF))
       return SDValue();
   }
@@ -14227,11 +14225,8 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, N0.getOperand(0));
 
   // fold (truncate c1) -> c1
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0)) {
-    SDValue C = DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, N0);
-    if (C.getNode() != N)
-      return C;
-  }
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::TRUNCATE, SDLoc(N), VT, {N0}))
+    return C;
 
   // fold (truncate (ext x)) -> (ext x) or (truncate x) or x
   if (N0.getOpcode() == ISD::ZERO_EXTEND ||

@@ -250,6 +250,39 @@ TEST_F(FormatTestVerilog, Case) {
                "  end\n"
                "endcase",
                Style);
+  // Other colons should not be mistaken as case colons.
+  Style = getLLVMStyle(FormatStyle::LK_Verilog);
+  Style.BitFieldColonSpacing = FormatStyle::BFCS_None;
+  verifyFormat("case (x[1:0])\n"
+               "endcase",
+               Style);
+  verifyFormat("default:\n"
+               "  x[1:0] = x[1:0];",
+               Style);
+  Style.BitFieldColonSpacing = FormatStyle::BFCS_Both;
+  verifyFormat("case (x[1 : 0])\n"
+               "endcase",
+               Style);
+  verifyFormat("default:\n"
+               "  x[1 : 0] = x[1 : 0];",
+               Style);
+  Style = getLLVMStyle(FormatStyle::LK_Verilog);
+  Style.SpacesInContainerLiterals = true;
+  verifyFormat("case ('{x : x, default : 9})\n"
+               "endcase",
+               Style);
+  verifyFormat("x = '{x : x, default : 9};\n", Style);
+  verifyFormat("default:\n"
+               "  x = '{x : x, default : 9};\n",
+               Style);
+  Style.SpacesInContainerLiterals = false;
+  verifyFormat("case ('{x: x, default: 9})\n"
+               "endcase",
+               Style);
+  verifyFormat("x = '{x: x, default: 9};\n", Style);
+  verifyFormat("default:\n"
+               "  x = '{x: x, default: 9};\n",
+               Style);
 }
 
 TEST_F(FormatTestVerilog, Coverage) {

@@ -20,7 +20,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  %2 = transform.structured.vectorize %1
+  transform.structured.vectorize %1 : (!pdl.operation) -> ()
 }
 
 // -----
@@ -66,7 +66,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  %2 = transform.structured.vectorize %1
+  transform.structured.vectorize %1 : (!pdl.operation) -> ()
 }
 
 // -----
@@ -114,7 +114,9 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  %2 = transform.structured.vectorize %1 {vectorize_padding}
+  transform.structured.vectorize %1 {vectorize_padding} : (!pdl.operation) -> ()
+  // Apply transform twice to ensure %1 is not consumed.
+  transform.structured.vectorize %1 {vectorize_padding} : (!pdl.operation) -> ()
 }
 
 // -----
@@ -131,5 +133,5 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{op requires isolated-from-above targets}}
-  %2 = transform.structured.vectorize %0
+  transform.structured.vectorize %0 : (!pdl.operation) -> ()
 }

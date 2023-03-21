@@ -278,6 +278,11 @@ void arm::setArchNameInTriple(const Driver &D, const ArgList &Args,
 
 void arm::setFloatABIInTriple(const Driver &D, const ArgList &Args,
                               llvm::Triple &Triple) {
+  if (Triple.isOSLiteOS()) {
+    Triple.setEnvironment(llvm::Triple::OpenHOS);
+    return;
+  }
+
   bool isHardFloat =
       (arm::getARMFloatABI(D, Triple, Args) == arm::FloatABI::Hard);
 
@@ -296,6 +301,8 @@ void arm::setFloatABIInTriple(const Driver &D, const ArgList &Args,
   case llvm::Triple::MuslEABIHF:
     Triple.setEnvironment(isHardFloat ? llvm::Triple::MuslEABIHF
                                       : llvm::Triple::MuslEABI);
+    break;
+  case llvm::Triple::OpenHOS:
     break;
   default: {
     arm::FloatABI DefaultABI = arm::getDefaultFloatABI(Triple);
@@ -366,6 +373,8 @@ arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
     return FloatABI::SoftFP;
 
   default:
+    if (Triple.isOHOSFamily())
+      return FloatABI::Soft;
     switch (Triple.getEnvironment()) {
     case llvm::Triple::GNUEABIHF:
     case llvm::Triple::MuslEABIHF:

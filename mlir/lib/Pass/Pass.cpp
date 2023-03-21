@@ -32,6 +32,15 @@ using namespace mlir;
 using namespace mlir::detail;
 
 //===----------------------------------------------------------------------===//
+// PassExecutionAction
+//===----------------------------------------------------------------------===//
+
+void PassExecutionAction::print(raw_ostream &os) const {
+  os << llvm::formatv("`{0}` running `{1}` on Operation `{2}`", tag,
+                      pass.getName(), getOp()->getName());
+}
+
+//===----------------------------------------------------------------------===//
 // Pass
 //===----------------------------------------------------------------------===//
 
@@ -463,12 +472,17 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
   if (pi)
     pi->runBeforePass(pass, op);
 
-  // Invoke the virtual runOnOperation method.
-  if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(pass))
-    adaptor->runOnOperation(verifyPasses);
-  else
-    pass->runOnOperation();
-  bool passFailed = pass->passState->irAndPassFailed.getInt();
+  bool passFailed = false;
+  op->getContext()->executeAction<PassExecutionAction>(
+      [&]() {
+        // Invoke the virtual runOnOperation method.
+        if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(pass))
+          adaptor->runOnOperation(verifyPasses);
+        else
+          pass->runOnOperation();
+        passFailed = pass->passState->irAndPassFailed.getInt();
+      },
+      {op}, *pass);
 
   // Invalidate any non preserved analyses.
   am.invalidate(pass->passState->preservedAnalyses);

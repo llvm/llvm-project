@@ -17,8 +17,9 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
 def LowerVectorsOp : Op<Transform_Dialect, "vector.lower_vectors",
-    [DeclareOpInterfaceMethods<TransformOpInterface>,
-     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     TransformEachOpTrait,
+     TransformOpInterface]> {
   let description = [{
     Indicates that the vector operations nested under the isolated from above op
     `target` should be lowered to finer-grained vector primitives.
@@ -27,10 +28,14 @@ def LowerVectorsOp : Op<Transform_Dialect, "vector.lower_vectors",
 
     This is usally a late step that is run after bufferization as part of the
     process of lowering to e.g. LLVM or NVVM.
+
+    #### Return modes:
+
+    The operation returns nothing.
   }];
 
   // TODO: evolve this to proper enums.
-  let arguments = (ins PDL_Operation:$target,
+  let arguments = (ins TransformHandleTypeInterface:$target,
      DefaultValuedAttr<VectorContractLoweringAttr,
        "vector::VectorContractLowering::OuterProduct">:$contraction_lowering,
      DefaultValuedAttr<VectorMultiReductionLoweringAttr,
@@ -43,7 +48,7 @@ def LowerVectorsOp : Op<Transform_Dialect, "vector.lower_vectors",
      DefaultValuedAttr<BoolAttr, "false">:$transpose_avx2_lowering,
      DefaultValuedAttr<BoolAttr, "true">:$unroll_vector_transfers
   );
-  let results = (outs PDL_Operation:$results);
+  let results = (outs);
 
   let builders = [
     OpBuilder<(ins "Type":$resultType, "Value":$target,
@@ -66,6 +71,14 @@ def LowerVectorsOp : Op<Transform_Dialect, "vector.lower_vectors",
       | `transpose_lowering` `=` $transpose_lowering
     )
     attr-dict
+    `:` functional-type(operands, results)
+  }];
+  
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
   }];
 }
 
