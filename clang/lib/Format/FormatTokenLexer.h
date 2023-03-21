@@ -51,7 +51,6 @@ private:
   void tryMergePreviousTokens();
 
   bool tryMergeLessLess();
-  bool tryMergeGreaterGreater();
   bool tryMergeNSStringLiteral();
   bool tryMergeJSPrivateIdentifier();
   bool tryMergeCSharpStringLiteral();
