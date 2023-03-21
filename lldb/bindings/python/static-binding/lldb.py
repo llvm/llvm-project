@@ -3241,6 +3241,10 @@ class SBCommandInterpreter(object):
         r"""WasInterrupted(SBCommandInterpreter self) -> bool"""
         return _lldb.SBCommandInterpreter_WasInterrupted(self)
 
+    def InterruptCommand(self):
+        r"""InterruptCommand(SBCommandInterpreter self) -> bool"""
+        return _lldb.SBCommandInterpreter_InterruptCommand(self)
+
 # Register SBCommandInterpreter in _lldb:
 _lldb.SBCommandInterpreter_swigregister(SBCommandInterpreter)
 class SBCommandInterpreterRunOptions(object):
@@ -4351,6 +4355,18 @@ class SBDebugger(object):
     def HandleCommand(self, command):
         r"""HandleCommand(SBDebugger self, char const * command)"""
         return _lldb.SBDebugger_HandleCommand(self, command)
+
+    def RequestInterrupt(self):
+        r"""RequestInterrupt(SBDebugger self)"""
+        return _lldb.SBDebugger_RequestInterrupt(self)
+
+    def CancelInterruptRequest(self):
+        r"""CancelInterruptRequest(SBDebugger self)"""
+        return _lldb.SBDebugger_CancelInterruptRequest(self)
+
+    def InterruptRequested(self):
+        r"""InterruptRequested(SBDebugger self) -> bool"""
+        return _lldb.SBDebugger_InterruptRequested(self)
 
     def GetListener(self):
         r"""GetListener(SBDebugger self) -> SBListener"""

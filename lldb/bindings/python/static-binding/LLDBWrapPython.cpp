@@ -15861,6 +15861,33 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBCommandInterpreter_InterruptCommand(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBCommandInterpreter *arg1 = (lldb::SBCommandInterpreter *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  bool result;
+  
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBCommandInterpreter, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBCommandInterpreter_InterruptCommand" "', argument " "1"" of type '" "lldb::SBCommandInterpreter *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBCommandInterpreter * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)(arg1)->InterruptCommand();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *SBCommandInterpreter_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *obj;
   if (!SWIG_Python_UnpackTuple(args, "swigregister", 1, 1, &obj)) return NULL;
@@ -23009,6 +23036,85 @@ SWIGINTERN PyObject *_wrap_SBDebugger_HandleCommand(PyObject *self, PyObject *ar
   return resultobj;
 fail:
   if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBDebugger_RequestInterrupt(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBDebugger *arg1 = (lldb::SBDebugger *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBDebugger, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBDebugger_RequestInterrupt" "', argument " "1"" of type '" "lldb::SBDebugger *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBDebugger * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    (arg1)->RequestInterrupt();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBDebugger_CancelInterruptRequest(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBDebugger *arg1 = (lldb::SBDebugger *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBDebugger, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBDebugger_CancelInterruptRequest" "', argument " "1"" of type '" "lldb::SBDebugger *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBDebugger * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    (arg1)->CancelInterruptRequest();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBDebugger_InterruptRequested(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBDebugger *arg1 = (lldb::SBDebugger *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  bool result;
+  
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBDebugger, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBDebugger_InterruptRequested" "', argument " "1"" of type '" "lldb::SBDebugger *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBDebugger * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)(arg1)->InterruptRequested();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
   return NULL;
 }
 
@@ -84396,6 +84502,7 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBCommandInterpreter_HandleCompletionWithDescriptions", _wrap_SBCommandInterpreter_HandleCompletionWithDescriptions, METH_VARARGS, "SBCommandInterpreter_HandleCompletionWithDescriptions(SBCommandInterpreter self, char const * current_line, uint32_t cursor_pos, int match_start_point, int max_return_elements, SBStringList matches, SBStringList descriptions) -> int"},
 	 { "SBCommandInterpreter_IsActive", _wrap_SBCommandInterpreter_IsActive, METH_O, "SBCommandInterpreter_IsActive(SBCommandInterpreter self) -> bool"},
 	 { "SBCommandInterpreter_WasInterrupted", _wrap_SBCommandInterpreter_WasInterrupted, METH_O, "SBCommandInterpreter_WasInterrupted(SBCommandInterpreter self) -> bool"},
+	 { "SBCommandInterpreter_InterruptCommand", _wrap_SBCommandInterpreter_InterruptCommand, METH_O, "SBCommandInterpreter_InterruptCommand(SBCommandInterpreter self) -> bool"},
 	 { "SBCommandInterpreter_swigregister", SBCommandInterpreter_swigregister, METH_O, NULL},
 	 { "SBCommandInterpreter_swiginit", SBCommandInterpreter_swiginit, METH_VARARGS, NULL},
 	 { "new_SBCommandInterpreterRunOptions", _wrap_new_SBCommandInterpreterRunOptions, METH_NOARGS, "new_SBCommandInterpreterRunOptions() -> SBCommandInterpreterRunOptions"},
@@ -84641,6 +84748,9 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBDebugger_GetErrorFile", _wrap_SBDebugger_GetErrorFile, METH_O, "SBDebugger_GetErrorFile(SBDebugger self) -> SBFile"},
 	 { "SBDebugger_GetCommandInterpreter", _wrap_SBDebugger_GetCommandInterpreter, METH_O, "SBDebugger_GetCommandInterpreter(SBDebugger self) -> SBCommandInterpreter"},
 	 { "SBDebugger_HandleCommand", _wrap_SBDebugger_HandleCommand, METH_VARARGS, "SBDebugger_HandleCommand(SBDebugger self, char const * command)"},
+	 { "SBDebugger_RequestInterrupt", _wrap_SBDebugger_RequestInterrupt, METH_O, "SBDebugger_RequestInterrupt(SBDebugger self)"},
+	 { "SBDebugger_CancelInterruptRequest", _wrap_SBDebugger_CancelInterruptRequest, METH_O, "SBDebugger_CancelInterruptRequest(SBDebugger self)"},
+	 { "SBDebugger_InterruptRequested", _wrap_SBDebugger_InterruptRequested, METH_O, "SBDebugger_InterruptRequested(SBDebugger self) -> bool"},
 	 { "SBDebugger_GetListener", _wrap_SBDebugger_GetListener, METH_O, "SBDebugger_GetListener(SBDebugger self) -> SBListener"},
 	 { "SBDebugger_HandleProcessEvent", _wrap_SBDebugger_HandleProcessEvent, METH_VARARGS, "\n"
 		"SBDebugger_HandleProcessEvent(SBDebugger self, SBProcess process, SBEvent event, SBFile out, SBFile err)\n"

@@ -174,6 +174,9 @@ public:
 
     bool
     WasInterrupted () const;
+
+    bool
+    InterruptCommand();
 };
 
 } // namespace lldb
