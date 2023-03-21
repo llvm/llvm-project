@@ -5869,7 +5869,8 @@ static bool isLRAvailable(const TargetRegisterInfo &TRI,
   return !Live;
 }
 
-outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
+std::optional<outliner::OutlinedFunction>
+ARMBaseInstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
   unsigned SequenceSize =
@@ -5915,7 +5916,7 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
 
     // If the sequence doesn't have enough candidates left, then we're done.
     if (RepeatedSequenceLocs.size() < 2)
-      return outliner::OutlinedFunction();
+      return std::nullopt;
   }
 
   // We expect the majority of the outlining candidates to be in consensus with
@@ -5941,7 +5942,7 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
     RepeatedSequenceLocs.erase(RepeatedSequenceLocs.begin(), NoBTI);
 
   if (RepeatedSequenceLocs.size() < 2)
-    return outliner::OutlinedFunction();
+    return std::nullopt;
 
   // Likewise, partition the candidates according to PAC-RET enablement.
   auto NoPAC =
@@ -5958,7 +5959,7 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
     RepeatedSequenceLocs.erase(RepeatedSequenceLocs.begin(), NoPAC);
 
   if (RepeatedSequenceLocs.size() < 2)
-    return outliner::OutlinedFunction();
+    return std::nullopt;
 
   // At this point, we have only "safe" candidates to outline. Figure out
   // frame + call instruction information.

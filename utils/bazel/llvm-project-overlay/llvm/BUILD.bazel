@@ -570,6 +570,7 @@ cc_library(
 
 cc_library(
     name = "tblgen",
+    alwayslink = True,
     srcs = glob([
         "utils/TableGen/*.cpp",
         "utils/TableGen/*.inc",

@@ -52,6 +52,12 @@ add_header_library(
 )
 
 add_header_library(
+  wctype_utils
+  HDRS
+    wctype_utils.h
+)
+
+add_header_library(
   str_to_num_result
   HDRS
     str_to_num_result.h

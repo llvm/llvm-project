@@ -209,3 +209,46 @@ define double @test_fptr(ptr %fptr, double %p1) {
   %res = fadd double %sin, %cos
   ret double %res
 }
+
+define i1 @test_cospif_used_in_branch_cond() {
+; CHECK-FLOAT-IN-VEC-LABEL: @test_cospif_used_in_branch_cond(
+; CHECK-FLOAT-IN-VEC-NEXT:  entry:
+; CHECK-FLOAT-IN-VEC-NEXT:    [[RES:%.*]] = call float @__cospif(float noundef 0.000000e+00)
+; CHECK-FLOAT-IN-VEC-NEXT:    [[CMP:%.*]] = fcmp uno float [[RES]], 0.000000e+00
+; CHECK-FLOAT-IN-VEC-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-FLOAT-IN-VEC:       then:
+; CHECK-FLOAT-IN-VEC-NEXT:    ret i1 false
+; CHECK-FLOAT-IN-VEC:       else:
+; CHECK-FLOAT-IN-VEC-NEXT:    ret i1 true
+;
+; CHECK-LABEL: @test_cospif_used_in_branch_cond(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call float @__cospif(float noundef 0.000000e+00)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[RES]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 true
+;
+; CHECK-NO-SINCOS-LABEL: @test_cospif_used_in_branch_cond(
+; CHECK-NO-SINCOS-NEXT:  entry:
+; CHECK-NO-SINCOS-NEXT:    [[RES:%.*]] = call float @__cospif(float noundef 0.000000e+00)
+; CHECK-NO-SINCOS-NEXT:    [[CMP:%.*]] = fcmp uno float [[RES]], 0.000000e+00
+; CHECK-NO-SINCOS-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NO-SINCOS:       then:
+; CHECK-NO-SINCOS-NEXT:    ret i1 false
+; CHECK-NO-SINCOS:       else:
+; CHECK-NO-SINCOS-NEXT:    ret i1 true
+;
+entry:
+  %res = call float @__cospif(float noundef 0.000000e+00) #3
+  %cmp = fcmp uno float %res, 0.000000e+00
+  br i1 %cmp, label %then, label %else
+
+then:
+  ret i1 false
+
+else:
+  ret i1 true
+}

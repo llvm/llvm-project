@@ -23,18 +23,18 @@ namespace {
 ///
 
 #define FOREVERY_BINOP(DO)                                                     \
-  DO(mulf, Kind::kMulF)                                                        \
-  DO(mulc, Kind::kMulC)                                                        \
-  DO(muli, Kind::kMulI)                                                        \
-  DO(addf, Kind::kAddF)                                                        \
-  DO(addc, Kind::kAddC)                                                        \
-  DO(addi, Kind::kAddI)                                                        \
-  DO(subf, Kind::kSubF)                                                        \
-  DO(subc, Kind::kSubC)                                                        \
-  DO(subi, Kind::kSubI)                                                        \
-  DO(andi, Kind::kAndI)                                                        \
-  DO(xori, Kind::kXorI)                                                        \
-  DO(ori, Kind::kOrI)
+  DO(mulf, TensorExp::Kind::kMulF)                                             \
+  DO(mulc, TensorExp::Kind::kMulC)                                             \
+  DO(muli, TensorExp::Kind::kMulI)                                             \
+  DO(addf, TensorExp::Kind::kAddF)                                             \
+  DO(addc, TensorExp::Kind::kAddC)                                             \
+  DO(addi, TensorExp::Kind::kAddI)                                             \
+  DO(subf, TensorExp::Kind::kSubF)                                             \
+  DO(subc, TensorExp::Kind::kSubC)                                             \
+  DO(subi, TensorExp::Kind::kSubI)                                             \
+  DO(andi, TensorExp::Kind::kAndI)                                             \
+  DO(xori, TensorExp::Kind::kXorI)                                             \
+  DO(ori, TensorExp::Kind::kOrI)
 
 // TODO: Disjunctive binary operations that need special handling are not
 // included, e.g., Division are not tested (for now) as it need a constant
@@ -82,7 +82,7 @@ namespace {
 
 /// Simple recursive data structure used to match expressions in Mergers.
 struct Pattern {
-  Kind kind;
+  TensorExp::Kind kind;
 
   /// Expressions representing tensors simply have a tensor number.
   unsigned tensorNum;
@@ -94,11 +94,12 @@ struct Pattern {
   /// Constructors.
   /// Rather than using these, please use the readable helper constructor
   /// functions below to make tests more readable.
-  Pattern(unsigned tensorNum) : kind(Kind::kTensor), tensorNum(tensorNum) {}
-  Pattern(Kind kind, const std::shared_ptr<Pattern> &e0,
+  Pattern(unsigned tensorNum)
+      : kind(TensorExp::Kind::kTensor), tensorNum(tensorNum) {}
+  Pattern(TensorExp::Kind kind, const std::shared_ptr<Pattern> &e0,
           const std::shared_ptr<Pattern> &e1)
       : kind(kind), e0(e0), e1(e1) {
-    assert(kind >= Kind::kMulF);
+    assert(kind >= TensorExp::Kind::kMulF);
     assert(e0 && e1);
   }
 };
@@ -134,7 +135,7 @@ protected:
   ///
 
   unsigned tensor(unsigned tensor) {
-    return merger.addExp(Kind::kTensor, tensor);
+    return merger.addExp(TensorExp::Kind::kTensor, tensor);
   }
 
 #define IMPL_BINOP_EXPR(OP, KIND)                                              \
@@ -222,69 +223,69 @@ protected:
       return false;
     switch (tensorExp.kind) {
     // Leaf.
-    case kTensor:
+    case TensorExp::Kind::kTensor:
       return tensorExp.tensor == pattern->tensorNum;
-    case kInvariant:
-    case kLoopVar:
+    case TensorExp::Kind::kInvariant:
+    case TensorExp::Kind::kLoopVar:
       llvm_unreachable("invariant not handled yet");
     // Unary operations.
-    case kAbsF:
-    case kAbsC:
-    case kAbsI:
-    case kCeilF:
-    case kFloorF:
-    case kSqrtF:
-    case kSqrtC:
-    case kExpm1F:
-    case kExpm1C:
-    case kLog1pF:
-    case kLog1pC:
-    case kSinF:
-    case kSinC:
-    case kTanhF:
-    case kTanhC:
-    case kNegF:
-    case kNegC:
-    case kNegI:
-    case kTruncF:
-    case kExtF:
-    case kCastFS:
-    case kCastFU:
-    case kCastSF:
-    case kCastUF:
-    case kCastS:
-    case kCastU:
-    case kCastIdx:
-    case kTruncI:
-    case kCIm:
-    case kCRe:
-    case kBitCast:
-    case kSelect:
-    case kBinaryBranch:
-    case kUnary:
+    case TensorExp::Kind::kAbsF:
+    case TensorExp::Kind::kAbsC:
+    case TensorExp::Kind::kAbsI:
+    case TensorExp::Kind::kCeilF:
+    case TensorExp::Kind::kFloorF:
+    case TensorExp::Kind::kSqrtF:
+    case TensorExp::Kind::kSqrtC:
+    case TensorExp::Kind::kExpm1F:
+    case TensorExp::Kind::kExpm1C:
+    case TensorExp::Kind::kLog1pF:
+    case TensorExp::Kind::kLog1pC:
+    case TensorExp::Kind::kSinF:
+    case TensorExp::Kind::kSinC:
+    case TensorExp::Kind::kTanhF:
+    case TensorExp::Kind::kTanhC:
+    case TensorExp::Kind::kNegF:
+    case TensorExp::Kind::kNegC:
+    case TensorExp::Kind::kNegI:
+    case TensorExp::Kind::kTruncF:
+    case TensorExp::Kind::kExtF:
+    case TensorExp::Kind::kCastFS:
+    case TensorExp::Kind::kCastFU:
+    case TensorExp::Kind::kCastSF:
+    case TensorExp::Kind::kCastUF:
+    case TensorExp::Kind::kCastS:
+    case TensorExp::Kind::kCastU:
+    case TensorExp::Kind::kCastIdx:
+    case TensorExp::Kind::kTruncI:
+    case TensorExp::Kind::kCIm:
+    case TensorExp::Kind::kCRe:
+    case TensorExp::Kind::kBitCast:
+    case TensorExp::Kind::kSelect:
+    case TensorExp::Kind::kBinaryBranch:
+    case TensorExp::Kind::kUnary:
       return compareExpression(tensorExp.children.e0, pattern->e0);
     // Binary operations.
-    case kMulF:
-    case kMulC:
-    case kMulI:
-    case kDivF:
-    case kDivC:
-    case kDivS:
-    case kDivU:
-    case kAddF:
-    case kAddC:
-    case kAddI:
-    case kSubF:
-    case kSubC:
-    case kSubI:
-    case kAndI:
-    case kOrI:
-    case kXorI:
-    case kShrS:
-    case kShrU:
-    case kShlI:
-    case kBinary:
-    case kReduce:
+    case TensorExp::Kind::kMulF:
+    case TensorExp::Kind::kMulC:
+    case TensorExp::Kind::kMulI:
+    case TensorExp::Kind::kDivF:
+    case TensorExp::Kind::kDivC:
+    case TensorExp::Kind::kDivS:
+    case TensorExp::Kind::kDivU:
+    case TensorExp::Kind::kAddF:
+    case TensorExp::Kind::kAddC:
+    case TensorExp::Kind::kAddI:
+    case TensorExp::Kind::kSubF:
+    case TensorExp::Kind::kSubC:
+    case TensorExp::Kind::kSubI:
+    case TensorExp::Kind::kAndI:
+    case TensorExp::Kind::kOrI:
+    case TensorExp::Kind::kXorI:
+    case TensorExp::Kind::kShrS:
+    case TensorExp::Kind::kShrU:
+    case TensorExp::Kind::kShlI:
+    case TensorExp::Kind::kBinary:
+    case TensorExp::Kind::kReduce:
       return compareExpression(tensorExp.children.e0, pattern->e0) &&
              compareExpression(tensorExp.children.e1, pattern->e1);
     }
@@ -312,15 +313,15 @@ protected:
     EXPECT_TRUE(merger.getOutTensorID() == t2);
 
     // Tensor 0: sparse input vector.
-    merger.addExp(Kind::kTensor, t0, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t0, -1u);
     merger.setLevelAndType(t0, l0, 0, DimLevelType::Compressed);
 
     // Tensor 1: sparse input vector.
-    merger.addExp(Kind::kTensor, t1, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t1, -1u);
     merger.setLevelAndType(t1, l0, 0, DimLevelType::Compressed);
 
     // Tensor 2: dense output vector.
-    merger.addExp(Kind::kTensor, t2, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t2, -1u);
     merger.setLevelAndType(t2, l0, 0, DimLevelType::Dense);
   }
 };
@@ -337,19 +338,19 @@ protected:
     EXPECT_TRUE(merger.getOutTensorID() == t3);
 
     // Tensor 0: sparse input vector.
-    merger.addExp(Kind::kTensor, t0, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t0, -1u);
     merger.setLevelAndType(t0, l0, 0, DimLevelType::Compressed);
 
     // Tensor 1: sparse input vector.
-    merger.addExp(Kind::kTensor, t1, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t1, -1u);
     merger.setLevelAndType(t1, l0, 0, DimLevelType::Compressed);
 
     // Tensor 2: sparse input vector
-    merger.addExp(Kind::kTensor, t2, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t2, -1u);
     merger.setLevelAndType(t2, l0, 0, DimLevelType::Compressed);
 
     // Tensor 3: dense output vector
-    merger.addExp(Kind::kTensor, t3, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t3, -1u);
     merger.setLevelAndType(t3, l0, 0, DimLevelType::Dense);
   }
 };
@@ -370,15 +371,15 @@ protected:
     EXPECT_TRUE(merger.getOutTensorID() == t2);
 
     // Tensor 0: sparse input vector.
-    merger.addExp(Kind::kTensor, t0, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t0, -1u);
     merger.setLevelAndType(t0, l0, 0, DimLevelType::Compressed);
 
     // Tensor 1: dense input vector.
-    merger.addExp(Kind::kTensor, t1, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t1, -1u);
     merger.setLevelAndType(t1, l0, 0, DimLevelType::Dense);
 
     // Tensor 2: dense output vector.
-    merger.addExp(Kind::kTensor, t2, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t2, -1u);
     merger.setLevelAndType(t2, l0, 0, DimLevelType::Dense);
   }
 };
@@ -399,19 +400,19 @@ protected:
     EXPECT_TRUE(merger.getOutTensorID() == t3);
 
     // Tensor 0: undef input vector.
-    merger.addExp(Kind::kTensor, t0, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t0, -1u);
     merger.setLevelAndType(t0, l0, 0, DimLevelType::Undef);
 
     // Tensor 1: dense input vector.
-    merger.addExp(Kind::kTensor, t1, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t1, -1u);
     merger.setLevelAndType(t1, l0, 0, DimLevelType::Dense);
 
     // Tensor 2: undef input vector.
-    merger.addExp(Kind::kTensor, t2, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t2, -1u);
     merger.setLevelAndType(t2, l0, 0, DimLevelType::Undef);
 
     // Tensor 3: dense output vector.
-    merger.addExp(Kind::kTensor, t3, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t3, -1u);
     merger.setLevelAndType(t3, l0, 0, DimLevelType::Dense);
   }
 };
@@ -435,15 +436,15 @@ protected:
     merger.setHasSparseOut(true);
 
     // Tensor 0: undef input vector.
-    merger.addExp(Kind::kTensor, t0, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t0, -1u);
     merger.setLevelAndType(t0, l0, 0, DimLevelType::Undef);
 
     // Tensor 1: undef input vector.
-    merger.addExp(Kind::kTensor, t1, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t1, -1u);
     merger.setLevelAndType(t1, l0, 0, DimLevelType::Undef);
 
     // Tensor 2: sparse output vector.
-    merger.addExp(Kind::kTensor, t2, -1u);
+    merger.addExp(TensorExp::Kind::kTensor, t2, -1u);
     merger.setLevelAndType(t2, l0, 0, DimLevelType::Compressed);
   }
 };

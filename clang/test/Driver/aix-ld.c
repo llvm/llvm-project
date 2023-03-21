@@ -1077,3 +1077,22 @@
 // RUN:        -fopenmp=libfoo \
 // RUN:   | FileCheck --check-prefixes=CHECK-FOPENMP-FOO %s
 // CHECK-FOPENMP-FOO: error: unsupported argument 'libfoo' to option '-fopenmp='
+
+// Check powerpc-ibm-aix7.1.0.0. -r does not link object files or libraries
+// RUN: %clang %s 2>&1 -### \
+// RUN:        --target=powerpc-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        --unwindlib=libunwind \
+// RUN:        -L/foo/bar \
+// RUN:        -r \
+// RUN:   | FileCheck --check-prefixes=CHECK-RELOCATABLE %s
+
+// CHECK-RELOCATABLE:     "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
+// CHECK-RELOCATABLE:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-RELOCATABLE:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-RELOCATABLE:     "-r"
+// CHECK-RELOCATABLE:     "-L/foo/bar"
+// CHECK-RELOCATABLE-NOT:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-RELOCATABLE-NOT:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
+// CHECK-RELOCATABLE-NOT:     "-l{{.*}}"
+// CHECK-RELOCATABLE-NOT:     "-L{{.*}}"

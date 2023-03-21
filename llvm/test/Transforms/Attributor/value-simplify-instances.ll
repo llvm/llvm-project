@@ -29,7 +29,7 @@ define internal i1 @recursive_inst_generator(i1 %c, ptr %p) {
 ; TUNIT-NEXT:    [[A:%.*]] = call ptr @geti1Ptr()
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
-; TUNIT-NEXT:    [[R1:%.*]] = call i1 @recursive_inst_comparator(ptr noalias nofree readnone [[A]], ptr noalias nofree readnone [[P]]) #[[ATTR6:[0-9]+]]
+; TUNIT-NEXT:    [[R1:%.*]] = call i1 @recursive_inst_comparator(ptr noalias nofree readnone [[A]], ptr noalias nofree readnone [[P]]) #[[ATTR7:[0-9]+]]
 ; TUNIT-NEXT:    ret i1 [[R1]]
 ; TUNIT:       f:
 ; TUNIT-NEXT:    [[R2:%.*]] = call i1 @recursive_inst_generator(i1 noundef true, ptr nofree [[A]])
@@ -148,7 +148,7 @@ define i1 @recursive_alloca_compare_caller(i1 %c) {
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@recursive_alloca_compare_caller
 ; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR1]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call i1 @recursive_alloca_compare(i1 noundef [[C]], ptr undef) #[[ATTR4:[0-9]+]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i1 @recursive_alloca_compare(i1 noundef [[C]], ptr undef) #[[ATTR5:[0-9]+]]
 ; CGSCC-NEXT:    ret i1 [[CALL]]
 ;
   %call = call i1 @recursive_alloca_compare(i1 %c, ptr undef)
@@ -207,7 +207,7 @@ define i8 @recursive_alloca_load_return_caller(i1 %c) {
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@recursive_alloca_load_return_caller
 ; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR1]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call i8 @recursive_alloca_load_return(i1 noundef [[C]], ptr undef, i8 noundef 42) #[[ATTR4]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i8 @recursive_alloca_load_return(i1 noundef [[C]], ptr undef, i8 noundef 42) #[[ATTR5]]
 ; CGSCC-NEXT:    ret i8 [[CALL]]
 ;
   %call = call i8 @recursive_alloca_load_return(i1 %c, ptr undef, i8 42)
@@ -271,7 +271,7 @@ define i1 @recursive_alloca_compare_caller_global1(i1 %c) {
 ; CGSCC: Function Attrs: nofree nosync nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@recursive_alloca_compare_caller_global1
 ; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call i1 @recursive_alloca_compare_global1(i1 noundef [[C]]) #[[ATTR4]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i1 @recursive_alloca_compare_global1(i1 noundef [[C]]) #[[ATTR5]]
 ; CGSCC-NEXT:    ret i1 [[CALL]]
 ;
   %call = call i1 @recursive_alloca_compare_global1(i1 %c)
@@ -330,7 +330,7 @@ define i1 @recursive_alloca_compare_caller_global2(i1 %c) {
 ; CGSCC: Function Attrs: nofree nosync nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@recursive_alloca_compare_caller_global2
 ; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call i1 @recursive_alloca_compare_global2(i1 noundef [[C]]) #[[ATTR4]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i1 @recursive_alloca_compare_global2(i1 noundef [[C]]) #[[ATTR5]]
 ; CGSCC-NEXT:    ret i1 [[CALL]]
 ;
   %call = call i1 @recursive_alloca_compare_global2(i1 %c)
@@ -386,12 +386,80 @@ define i1 @recursive_inst_compare_caller_global3(i1 %c) {
 ; CGSCC: Function Attrs: nofree nosync nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@recursive_inst_compare_caller_global3
 ; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call i1 @recursive_inst_compare_global3(i1 noundef [[C]]) #[[ATTR4]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i1 @recursive_inst_compare_global3(i1 noundef [[C]]) #[[ATTR5]]
 ; CGSCC-NEXT:    ret i1 [[CALL]]
 ;
   %call = call i1 @recursive_inst_compare_global3(i1 %c)
   ret i1 %call
 }
+
+define i32 @non_unique_phi_ops(ptr %ptr) {
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; TUNIT-LABEL: define {{[^@]+}}@non_unique_phi_ops
+; TUNIT-SAME: (ptr nocapture nofree readonly [[PTR:%.*]]) #[[ATTR6:[0-9]+]] {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    br label [[HEADER:%.*]]
+; TUNIT:       header:
+; TUNIT-NEXT:    [[I:%.*]] = phi i32 [ [[ADD:%.*]], [[F:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; TUNIT-NEXT:    [[P:%.*]] = phi i32 [ [[NON_UNIQUE:%.*]], [[F]] ], [ poison, [[ENTRY]] ]
+; TUNIT-NEXT:    [[ADD]] = add i32 [[I]], 1
+; TUNIT-NEXT:    [[G:%.*]] = getelementptr i32, ptr [[PTR]], i32 [[I]]
+; TUNIT-NEXT:    [[NON_UNIQUE_INPUT:%.*]] = load i32, ptr [[G]], align 4
+; TUNIT-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[I]], [[NON_UNIQUE_INPUT]]
+; TUNIT-NEXT:    br i1 [[CMP1]], label [[T:%.*]], label [[F]]
+; TUNIT:       t:
+; TUNIT-NEXT:    br label [[F]]
+; TUNIT:       f:
+; TUNIT-NEXT:    [[NON_UNIQUE]] = phi i32 [ [[NON_UNIQUE_INPUT]], [[T]] ], [ [[P]], [[HEADER]] ]
+; TUNIT-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 42
+; TUNIT-NEXT:    br i1 [[CMP2]], label [[HEADER]], label [[END:%.*]]
+; TUNIT:       end:
+; TUNIT-NEXT:    ret i32 [[P]]
+;
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; CGSCC-LABEL: define {{[^@]+}}@non_unique_phi_ops
+; CGSCC-SAME: (ptr nocapture nofree readonly [[PTR:%.*]]) #[[ATTR4:[0-9]+]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    br label [[HEADER:%.*]]
+; CGSCC:       header:
+; CGSCC-NEXT:    [[I:%.*]] = phi i32 [ [[ADD:%.*]], [[F:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CGSCC-NEXT:    [[P:%.*]] = phi i32 [ [[NON_UNIQUE:%.*]], [[F]] ], [ poison, [[ENTRY]] ]
+; CGSCC-NEXT:    [[ADD]] = add i32 [[I]], 1
+; CGSCC-NEXT:    [[G:%.*]] = getelementptr i32, ptr [[PTR]], i32 [[I]]
+; CGSCC-NEXT:    [[NON_UNIQUE_INPUT:%.*]] = load i32, ptr [[G]], align 4
+; CGSCC-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[I]], [[NON_UNIQUE_INPUT]]
+; CGSCC-NEXT:    br i1 [[CMP1]], label [[T:%.*]], label [[F]]
+; CGSCC:       t:
+; CGSCC-NEXT:    br label [[F]]
+; CGSCC:       f:
+; CGSCC-NEXT:    [[NON_UNIQUE]] = phi i32 [ [[NON_UNIQUE_INPUT]], [[T]] ], [ [[P]], [[HEADER]] ]
+; CGSCC-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 42
+; CGSCC-NEXT:    br i1 [[CMP2]], label [[HEADER]], label [[END:%.*]]
+; CGSCC:       end:
+; CGSCC-NEXT:    ret i32 [[P]]
+;
+entry:
+  br label %header
+
+header:
+  %i = phi i32 [ %add, %f ], [ 0, %entry ]
+  %p = phi i32 [ %non_unique, %f ], [ poison, %entry ]
+  %add = add i32 %i, 1
+  %g = getelementptr i32, ptr %ptr, i32 %i
+  %non_unique_input = load i32, ptr %g, align 4
+  %cmp1 = icmp eq i32 %i, %non_unique_input
+  br i1 %cmp1, label %t, label %f
+t:
+  br label %f
+f:
+  %non_unique = phi i32 [ %non_unique_input, %t ], [ %p, %header ]
+  %cmp2 = icmp slt i32 %i, 42
+  br i1 %cmp2, label %header, label %end
+
+end:
+  ret i32 %p
+}
+
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind memory(none) }
@@ -399,11 +467,13 @@ define i1 @recursive_inst_compare_caller_global3(i1 %c) {
 ; TUNIT: attributes #[[ATTR3]] = { nofree nosync nounwind memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind }
 ; TUNIT: attributes #[[ATTR5]] = { nofree norecurse nosync nounwind }
-; TUNIT: attributes #[[ATTR6]] = { nounwind }
+; TUNIT: attributes #[[ATTR6]] = { nofree norecurse nosync nounwind willreturn memory(argmem: read) }
+; TUNIT: attributes #[[ATTR7]] = { nounwind }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR3]] = { nofree nosync nounwind }
-; CGSCC: attributes #[[ATTR4]] = { nounwind }
+; CGSCC: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind willreturn memory(argmem: read) }
+; CGSCC: attributes #[[ATTR5]] = { nounwind }
 ;.

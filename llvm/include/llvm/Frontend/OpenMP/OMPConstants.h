@@ -241,6 +241,12 @@ enum class OpenMPOffloadMappingFlags : uint64_t {
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ OMP_MAP_MEMBER_OF)
 };
 
+enum OpenMPOffloadingReservedDeviceIDs {
+  /// Device ID if the device was not defined, runtime should get it
+  /// from environment variables in the spec.
+  OMP_DEVICEID_UNDEF = -1
+};
+
 enum class AddressSpace : unsigned {
   Generic = 0,
   Global = 1,

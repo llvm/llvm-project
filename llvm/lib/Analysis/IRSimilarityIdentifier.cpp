@@ -718,6 +718,34 @@ bool IRSimilarityCandidate::compareCommutativeOperandMapping(
   return true;
 }
 
+bool IRSimilarityCandidate::compareAssignmentMapping(
+    const unsigned InstValA, const unsigned &InstValB,
+    DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMappingA,
+    DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMappingB) {
+  DenseMap<unsigned, DenseSet<unsigned>>::iterator ValueMappingIt;
+  bool WasInserted;
+  std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingA.insert(
+      std::make_pair(InstValA, DenseSet<unsigned>({InstValB})));
+  if (!WasInserted && !ValueMappingIt->second.contains(InstValB))
+    return false;
+  else if (ValueMappingIt->second.size() != 1) {
+    for (unsigned OtherVal : ValueMappingIt->second) {
+      if (OtherVal == InstValB)
+        continue;
+      if (ValueNumberMappingA.find(OtherVal) == ValueNumberMappingA.end())
+        continue;
+      if (!ValueNumberMappingA[OtherVal].contains(InstValA))
+        continue;
+      ValueNumberMappingA[OtherVal].erase(InstValA);
+    }
+    ValueNumberMappingA.erase(ValueMappingIt);
+    std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingA.insert(
+      std::make_pair(InstValA, DenseSet<unsigned>({InstValB})));
+  }
+
+  return true;
+}
+
 bool IRSimilarityCandidate::checkRelativeLocations(RelativeLocMapping A,
                                                    RelativeLocMapping B) {
   // Get the basic blocks the label refers to.
@@ -775,8 +803,6 @@ bool IRSimilarityCandidate::compareStructure(
   // in one candidate to values in the other candidate.  If we create a set with
   // one element, and that same element maps to the original element in the
   // candidate we have a good mapping.
-  DenseMap<unsigned, DenseSet<unsigned>>::iterator ValueMappingIt;
-
 
   // Iterate over the instructions contained in each candidate
   unsigned SectionLength = A.getStartIdx() + A.getLength();
@@ -799,16 +825,13 @@ bool IRSimilarityCandidate::compareStructure(
     unsigned InstValA = A.ValueToNumber.find(IA)->second;
     unsigned InstValB = B.ValueToNumber.find(IB)->second;
 
-    bool WasInserted;
     // Ensure that the mappings for the instructions exists.
-    std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingA.insert(
-        std::make_pair(InstValA, DenseSet<unsigned>({InstValB})));
-    if (!WasInserted && !ValueMappingIt->second.contains(InstValB))
+    if (!compareAssignmentMapping(InstValA, InstValB, ValueNumberMappingA,
+                                  ValueNumberMappingB))
       return false;
-
-    std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingB.insert(
-        std::make_pair(InstValB, DenseSet<unsigned>({InstValA})));
-    if (!WasInserted && !ValueMappingIt->second.contains(InstValA))
+    
+    if (!compareAssignmentMapping(InstValB, InstValA, ValueNumberMappingB,
+                                  ValueNumberMappingA))
       return false;
 
     // We have different paths for commutative instructions and non-commutative

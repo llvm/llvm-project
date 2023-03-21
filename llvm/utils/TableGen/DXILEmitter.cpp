@@ -12,13 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "SequenceToOffsetTable.h"
-#include "TableGenBackends.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/DXILOperationCommon.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TableGenBackend.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -411,9 +411,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationData> &DXILOps,
   OS << "}\n ";
 }
 
-namespace llvm {
-
-void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
+static void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
   std::vector<Record *> Ops = Records.getAllDerivedDefinitions("dxil_op");
   OS << "// Generated code, do not edit.\n";
   OS << "\n";
@@ -439,4 +437,5 @@ void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
   OS << "\n";
 }
 
-} // namespace llvm
+static TableGen::Emitter::Opt X("gen-dxil-operation", EmitDXILOperation,
+                                "Generate DXIL operation information");

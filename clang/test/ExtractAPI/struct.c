@@ -89,6 +89,10 @@ struct Color {
         {
           "kind": "identifier",
           "spelling": "Color"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "docComment": {
