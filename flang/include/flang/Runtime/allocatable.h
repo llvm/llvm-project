@@ -33,6 +33,17 @@ void RTNAME(AllocatableInitCharacter)(Descriptor &, SubscriptValue length = 0,
 void RTNAME(AllocatableInitDerived)(
     Descriptor &, const typeInfo::DerivedType &, int rank = 0, int corank = 0);
 
+// Initializes the descriptor for an allocatable of intrinsic or derived type.
+// These functions are meant to be used in the allocate statement lowering. If
+// the descriptor is allocated, the initialization is skiped so the error
+// handling can be done by AllocatableAllocate.
+void RTNAME(AllocatableInitIntrinsicForAllocate)(
+    Descriptor &, TypeCategory, int kind, int rank = 0, int corank = 0);
+void RTNAME(AllocatableInitCharacterForAllocate)(Descriptor &,
+    SubscriptValue length = 0, int kind = 1, int rank = 0, int corank = 0);
+void RTNAME(AllocatableInitDerivedForAllocate)(
+    Descriptor &, const typeInfo::DerivedType &, int rank = 0, int corank = 0);
+
 // Checks that an allocatable is not already allocated in statements
 // with STAT=.  Use this on a value descriptor before setting bounds or
 // type parameters.  Not necessary on a freshly initialized descriptor.

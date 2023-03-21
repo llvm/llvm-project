@@ -92,6 +92,7 @@ static_library("Driver") {
     "ToolChains/Myriad.cpp",
     "ToolChains/NaCl.cpp",
     "ToolChains/NetBSD.cpp",
+    "ToolChains/OHOS.cpp",
     "ToolChains/OpenBSD.cpp",
     "ToolChains/PPCFreeBSD.cpp",
     "ToolChains/PPCLinux.cpp",

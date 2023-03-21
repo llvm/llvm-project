@@ -323,6 +323,7 @@ enum CPol {
   SC1 = SCC,
   NT = SLC,
   ALL = GLC | SLC | DLC | SCC,
+  SWZ_pregfx12 = 8,
 
   // Below are GFX12+ cache policy bits
 
@@ -355,11 +356,13 @@ enum CPol {
 
   NV = 1 << 5, // Non-volatile bit
 
+  SWZ = 1 << 6, // Swizzle bit
+
   // Helper bits
-  TH_TYPE_LOAD = 1 << 6,   // TH_LOAD policy
-  TH_TYPE_STORE = 1 << 7,  // TH_STORE policy
-  TH_TYPE_ATOMIC = 1 << 8, // TH_ATOMIC policy
-  TH_REAL_BYPASS = 1 << 9, // is TH=3 bypass policy or not
+  TH_TYPE_LOAD = 1 << 7,    // TH_LOAD policy
+  TH_TYPE_STORE = 1 << 8,   // TH_STORE policy
+  TH_TYPE_ATOMIC = 1 << 9,  // TH_ATOMIC policy
+  TH_REAL_BYPASS = 1 << 10, // is TH=3 bypass policy or not
 };
 
 } // namespace CPol

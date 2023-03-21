@@ -80,7 +80,7 @@ transform.with_pdl_patterns {
     transform.structured.tile %0 [4, 4, 4] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
     %1 = pdl_match @pdl_target_attrC in %arg1 : (!pdl.operation) -> !pdl.operation
     %2 = transform.get_closest_isolated_parent %1 : (!pdl.operation) -> !pdl.operation
-    transform.structured.vectorize %2
+    transform.structured.vectorize %2 : (!pdl.operation) -> ()
   }
 }
 
@@ -125,7 +125,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = pdl_match @pdl_target in %arg1 : (!pdl.operation) -> !pdl.operation
     %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-    transform.structured.vectorize %1
+    transform.structured.vectorize %1 : (!pdl.operation) -> ()
   }
 }
 
@@ -150,5 +150,5 @@ func.func @vectorize_all(
 
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
-  transform.structured.vectorize %arg0
+  transform.structured.vectorize %arg0  : (!pdl.operation) -> ()
 }

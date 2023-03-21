@@ -146,8 +146,8 @@ static void genRuntimeInitCharacter(fir::FirOpBuilder &builder,
       box.isPointer()
           ? fir::runtime::getRuntimeFunc<mkRTKey(PointerNullifyCharacter)>(
                 loc, builder)
-          : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableInitCharacter)>(
-                loc, builder);
+          : fir::runtime::getRuntimeFunc<mkRTKey(
+                AllocatableInitCharacterForAllocate)>(loc, builder);
   llvm::ArrayRef<mlir::Type> inputTypes = callee.getFunctionType().getInputs();
   if (inputTypes.size() != 5)
     fir::emitFatalError(
@@ -592,8 +592,8 @@ private:
         box.isPointer()
             ? fir::runtime::getRuntimeFunc<mkRTKey(PointerNullifyDerived)>(
                   loc, builder)
-            : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableInitDerived)>(
-                  loc, builder);
+            : fir::runtime::getRuntimeFunc<mkRTKey(
+                  AllocatableInitDerivedForAllocate)>(loc, builder);
 
     llvm::ArrayRef<mlir::Type> inputTypes =
         callee.getFunctionType().getInputs();
@@ -619,8 +619,8 @@ private:
         box.isPointer()
             ? fir::runtime::getRuntimeFunc<mkRTKey(PointerNullifyIntrinsic)>(
                   loc, builder)
-            : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableInitIntrinsic)>(
-                  loc, builder);
+            : fir::runtime::getRuntimeFunc<mkRTKey(
+                  AllocatableInitIntrinsicForAllocate)>(loc, builder);
 
     llvm::ArrayRef<mlir::Type> inputTypes =
         callee.getFunctionType().getInputs();
