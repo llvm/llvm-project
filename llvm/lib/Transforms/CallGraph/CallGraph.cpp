@@ -6,6 +6,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace llvm;
 
@@ -20,10 +21,13 @@ struct CallGraph : ModulePass {
   static char ID;
   CallGraph() : ModulePass(ID) { std::error_code EC; }
 
-  constexpr StringRef LoggerFuncName = "Z6Loggerll";
+  StringRef LoggerFuncName = "_Z6Loggerll";
 
   // Edges map contains key=caller and value=set_of_calees
   std::unordered_map<const Function *, SmallPtrSet<const Function *, 8>> Edges;
+
+  // Set for storing already existed nodes decl for graphviz
+  std::unordered_set<const Function *> Nodes;
 
   FunctionCallee getCallLogFunc(Module &M, IRBuilder<> &Builder) const;
   void insertCallLogger(IRBuilder<> &Builder, const Function *CallerFunc,
@@ -53,6 +57,7 @@ struct CallGraph : ModulePass {
 
       // Traverse all basic blocks
       for (BasicBlock &B : F) {
+        auto FuncAddr = &F;
         // Traverse all Intructions
         for (Instruction &I : B) {
           if (auto *Call = dyn_cast<CallInst>(&I)) {
@@ -70,8 +75,17 @@ struct CallGraph : ModulePass {
 
             // If we meet that edge for the first time, we need to add it to map
             // and print it to file
-            File << FuncName << &F << " -> " << CalledFunc->getName()
-                 << CalledFunc << '\n';
+            if (Nodes.find(FuncAddr) == Nodes.end()) {
+              File << "{} " << &F << " [label = " << FuncName << " ]\n";
+              Nodes.insert(FuncAddr);
+            }
+            if (Nodes.find(CalledFunc) == Nodes.end()) {
+              File << "{} " << CalledFunc
+                   << " [label = " << CalledFunc->getName() << " ]\n";
+              Nodes.insert(CalledFunc);
+            }
+
+            File << FuncAddr << " -> " << CalledFunc << '\n';
             Bucket.insert(CalledFunc);
           }
         }
@@ -89,13 +103,13 @@ FunctionCallee CallGraph::getCallLogFunc(Module &M,
 
   // Prepare callLogger function
   // Logger func will get 2 params: caller addr, callee addr
-  SmallVector<Type *> CallParamType = {
-      Builder.getInt64Ty(), 
-      Builder.getInt64Ty()};
+  SmallVector<Type *> CallParamType = {Builder.getInt64Ty(),
+                                       Builder.getInt64Ty()};
 
   FunctionType *CallLogFuncType =
       FunctionType::get(RetType, CallParamType, false);
-  FunctionCallee CallLogFunc = M.getOrInsertFunction(LoggerFuncName, CallLogFuncType);
+  FunctionCallee CallLogFunc =
+      M.getOrInsertFunction(LoggerFuncName, CallLogFuncType);
 
   return CallLogFunc;
 }
