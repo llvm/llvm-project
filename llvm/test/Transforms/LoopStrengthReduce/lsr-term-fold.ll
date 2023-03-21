@@ -297,39 +297,6 @@ define void @IcmpSgt(ptr %a) {
 ; CHECK-LABEL: @IcmpSgt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 84
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 88
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
-; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i32 4
-; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[SCEVGEP]]
-; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
-; CHECK:       for.end:
-; CHECK-NEXT:    ret void
-;
-entry:
-  %uglygep = getelementptr i8, ptr %a, i32 84
-  br label %for.body
-
-for.body:                                         ; preds = %for.body, %entry
-  %lsr.iv1 = phi ptr [ %uglygep2, %for.body ], [ %uglygep, %entry ]
-  %lsr.iv = phi i32 [ %lsr.iv.next, %for.body ], [ 379, %entry ]
-  store i32 1, ptr %lsr.iv1, align 4
-  %lsr.iv.next = add nsw i32 %lsr.iv, -1
-  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i32 4
-  %exitcond.not = icmp sgt i32 0, %lsr.iv.next
-  br i1 %exitcond.not, label %for.body, label %for.end
-
-for.end:                                          ; preds = %for.body
-  ret void
-}
-
-; Invert predicate and branches
-define void @IcmpSgt2(ptr %a) {
-; CHECK-LABEL: @IcmpSgt2(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 84
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 1600
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
