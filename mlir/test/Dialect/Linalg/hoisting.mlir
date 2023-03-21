@@ -79,7 +79,10 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["func.func"]} in %arg1
     : (!pdl.operation) -> !pdl.operation
   transform.structured.hoist_redundant_vector_transfers %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!pdl.operation) -> ()
+  // Test we can call the op twice without consuming the handle.
+  transform.structured.hoist_redundant_vector_transfers %0
+    : (!pdl.operation) -> ()
 }
 
 // -----
@@ -168,7 +171,7 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["func.func"]} in %arg1
     : (!pdl.operation) -> !pdl.operation
   transform.structured.hoist_redundant_vector_transfers %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!pdl.operation) -> ()
 }
 
 // -----
@@ -213,7 +216,7 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["func.func"]} in %arg1
     : (!pdl.operation) -> !pdl.operation
   transform.structured.hoist_redundant_vector_transfers %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!pdl.operation) -> ()
 }
 
 // -----
@@ -302,7 +305,10 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["func.func"]} in %arg1
     : (!pdl.operation) -> !pdl.operation
   transform.structured.hoist_redundant_tensor_subsets %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!pdl.operation) -> ()
+  // Test we can call the op twice without consuming the handle.
+  transform.structured.hoist_redundant_tensor_subsets %0
+    : (!pdl.operation) -> ()
 }
 
 // -----
@@ -397,7 +403,7 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["func.func"]} in %arg1
     : (!pdl.operation) -> !pdl.operation
   transform.structured.hoist_redundant_tensor_subsets %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!pdl.operation) -> ()
 }
 
 // -----
@@ -514,7 +520,7 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["func.func"]} in %arg1
     : (!pdl.operation) -> !pdl.operation
   transform.structured.hoist_redundant_tensor_subsets %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!pdl.operation) -> ()
 }
 
 // -----
@@ -561,7 +567,7 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["func.func"]} in %arg1
     : (!pdl.operation) -> !pdl.operation
   transform.structured.hoist_redundant_tensor_subsets %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!pdl.operation) -> ()
 }
 
 // -----
@@ -674,5 +680,5 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["func.func"]} in %arg1
     : (!pdl.operation) -> !pdl.operation
   transform.structured.hoist_redundant_tensor_subsets %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!pdl.operation) -> ()
 }

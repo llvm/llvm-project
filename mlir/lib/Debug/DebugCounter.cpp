@@ -116,6 +116,11 @@ void DebugCounter::registerCLOptions() {
 #endif
 }
 
+bool DebugCounter::isActivated() {
+  return clOptions->counters.getNumOccurrences() ||
+         clOptions->printCounterInfo.getNumOccurrences();
+}
+
 // This is called by the command line parser when it sees a value for the
 // debug-counter option defined above.
 void DebugCounter::applyCLOptions() {

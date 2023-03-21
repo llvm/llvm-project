@@ -4088,22 +4088,28 @@ cc_library(
     ] + if_cuda_available([
         "@cuda//:cuda_headers",
         "@cuda//:libcuda",
-    ])
+    ]),
 )
 
 write_file(
     name = "SerializeToCubin_stub_cc",
     out = "SerializeToCubin_stub.cc",
     content = [
-"""
+        """
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 
 // Provide a weak registration stub in case the real SerializeToCubin is not
 // linked in.
 
+#if defined(_MSC_VER)
+// This might not work correctly, but it avoids a compilation error because
+// MSVC does not support __attribute__((weak)).
+void mlir::registerGpuSerializeToCubinPass() {}
+#else
 __attribute__((weak)) void mlir::registerGpuSerializeToCubinPass() {}
-"""
-    ]
+#endif
+""",
+    ],
 )
 
 cc_library(
@@ -4162,9 +4168,12 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":AffineDialect",
         ":ArithDialect",
         ":AsmParser",
         ":ControlFlowDialect",
+        ":DialectUtils",
+        ":FuncDialect",
         ":GPUDialect",
         ":GPUTransformOpsIncGen",
         ":GPUTransforms",
@@ -7113,8 +7122,8 @@ cc_binary(
         ":OpenMPDialect",
         ":Pass",
         ":QuantOps",
-        ":SerializeToCubin",
         ":SCFToGPU",
+        ":SerializeToCubin",
         ":Support",
         ":Transforms",
         "//llvm:AllTargetsCodeGens",

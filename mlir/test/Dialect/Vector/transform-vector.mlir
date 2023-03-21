@@ -18,9 +18,10 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["linalg.matmul"]} in %module_op : (!pdl.operation) -> !pdl.operation
   %1, %loops:3 = transform.structured.tile %0 [8, 4, 2] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
   %2 = get_closest_isolated_parent %1 : (!pdl.operation) -> !pdl.operation
-  transform.structured.vectorize %2
+  transform.structured.vectorize %2 : (!pdl.operation) -> ()
   transform.bufferization.one_shot_bufferize %module_op
 
   %func = transform.structured.match ops{["func.func"]} in %module_op : (!pdl.operation) -> !pdl.operation
   transform.vector.lower_vectors %func multireduction_lowering = "innerreduction"
+    : (!pdl.operation) -> ()
 }

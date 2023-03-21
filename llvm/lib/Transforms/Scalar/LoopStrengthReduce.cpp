@@ -6707,9 +6707,9 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   if (BI->isUnconditional())
     return std::nullopt;
   auto *TermCond = dyn_cast<ICmpInst>(BI->getCondition());
-  if (!TermCond || !TermCond->isEquality()) {
-    LLVM_DEBUG(dbgs() << "Cannot fold on branching condition that is not an "
-                         "ICmpInst::eq / ICmpInst::ne\n");
+  if (!TermCond) {
+    LLVM_DEBUG(
+        dbgs() << "Cannot fold on branching condition that is not an ICmpInst");
     return std::nullopt;
   }
   if (!TermCond->hasOneUse()) {
@@ -6934,9 +6934,12 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       IRBuilder<> LatchBuilder(LoopLatch->getTerminator());
       // FIXME: We are adding a use of an IV here without account for poison safety.
       // This is incorrect.
-      Value *NewTermCond = LatchBuilder.CreateICmp(
-          OldTermCond->getPredicate(), LoopValue, TermValue,
-          "lsr_fold_term_cond.replaced_term_cond");
+      Value *NewTermCond =
+          LatchBuilder.CreateICmp(CmpInst::ICMP_EQ, LoopValue, TermValue,
+                                  "lsr_fold_term_cond.replaced_term_cond");
+      // Swap successors to exit loop body if IV equals to new TermValue
+      if (BI->getSuccessor(0) == L->getHeader())
+        BI->swapSuccessors();
 
       LLVM_DEBUG(dbgs() << "Old term-cond:\n"
                         << *OldTermCond << "\n"

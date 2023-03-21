@@ -1,3 +1,5 @@
+add_subdirectory(Observers)
+
 add_mlir_library(MLIRDebug
   DebugCounter.cpp
   ExecutionContext.cpp
@@ -10,3 +12,4 @@ add_mlir_library(MLIRDebug
   MLIRIR
   MLIRSupport
 )
+
