@@ -51,7 +51,7 @@
 // Add deprecated support for Comgr on both Windows and Linux
 // This can be removed in favor of genereic [[deprecated]] in C23
 #ifndef AMD_COMGR_DEPRECATED
-#ifdef __GNUC__
+#ifdef __GNUC__ && __GNUC__ > 5
 #define AMD_COMGR_DEPRECATED(msg) __attribute__((deprecated(msg)))
 #elif defined(_MSC_VER)
 //#define AMD_COMGR_DEPRECATED(msg) __declspec(deprecated(msg))
