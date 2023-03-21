@@ -220,7 +220,12 @@ Merger::Merger(unsigned numInputOutputTensors, unsigned numNativeLoops,
       loopToLvl(numTensors,
                 std::vector<std::optional<Level>>(numLoops, std::nullopt)),
       lvlToLoop(numTensors,
-                std::vector<std::optional<LoopId>>(numLoops, std::nullopt)) {}
+                std::vector<std::optional<LoopId>>(numLoops, std::nullopt)),
+      loopToDependencies(numLoops, std::vector<std::optional<Level>>(
+                                       numTensors, std::nullopt)),
+      levelToDependentIdx(numTensors, std::vector<std::vector<LoopId>>(
+                                          numLoops, std::vector<LoopId>())),
+      loopBounds(numLoops, std::make_pair(numTensors, numLoops)) {}
 
 //===----------------------------------------------------------------------===//
 // Lattice methods.
@@ -762,7 +767,10 @@ void Merger::dumpBits(const BitVector &bits) const {
       const TensorId t = tensor(b);
       const LoopId i = loop(b);
       const auto dlt = lvlTypes[t][i];
-      llvm::dbgs() << " i_" << t << "_" << i << "_" << toMLIRString(dlt);
+      if (isLvlWithNonTrivialIdxExp(b))
+        llvm::dbgs() << " DEP_" << t << "_" << i;
+      else
+        llvm::dbgs() << " i_" << t << "_" << i << "_" << toMLIRString(dlt);
     }
   }
 }
