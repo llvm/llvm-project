@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/Passes.h"
+#include "llvm/Support/Debug.h"
 
 namespace mlir {
 namespace {
@@ -15,15 +17,21 @@ namespace {
 #include "mlir/Transforms/Passes.h.inc"
 
 struct PrintIRPass : public impl::PrintIRPassBase<PrintIRPass> {
-  PrintIRPass() = default;
+  using impl::PrintIRPassBase<PrintIRPass>::PrintIRPassBase;
 
-  void runOnOperation() override { getOperation()->dump(); }
+  void runOnOperation() override {
+    llvm::dbgs() << "// -----// IR Dump";
+    if (!this->label.empty())
+      llvm::dbgs() << " " << this->label;
+    llvm::dbgs() << " //----- //\n";
+    getOperation()->dump();
+  }
 };
 
 } // namespace
 
-std::unique_ptr<Pass> createPrintIRPass() {
-  return std::make_unique<PrintIRPass>();
+std::unique_ptr<Pass> createPrintIRPass(const PrintIRPassOptions &options) {
+  return std::make_unique<PrintIRPass>(options);
 }
 
 } // namespace mlir
