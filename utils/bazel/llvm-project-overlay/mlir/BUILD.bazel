@@ -3577,6 +3577,21 @@ cc_library(
 )
 
 cc_library(
+    name = "Observers",
+    srcs = glob([
+        "lib/Debug/Observers/*.cpp",
+        "lib/Debug/Observers/*.h",
+    ]),
+    hdrs = glob(["include/mlir/Debug/Observers/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":Debug",
+        ":IR",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "BreakpointManagers",
     srcs = glob([
         "lib/Debug/BreakpointManagers/*.cpp",
@@ -6935,6 +6950,7 @@ cc_library(
         ":BytecodeWriter",
         ":Debug",
         ":IR",
+        ":Observers",
         ":Parser",
         ":Pass",
         ":Support",
