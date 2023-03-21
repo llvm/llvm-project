@@ -157,16 +157,13 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
   return 0;
 }
 
-int FunctionComparator::cmpRangeMetadata(const MDNode *L,
-                                         const MDNode *R) const {
+int FunctionComparator::cmpMetadata(const MDNode *L, const MDNode *R) const {
   if (L == R)
     return 0;
   if (!L)
     return -1;
   if (!R)
     return 1;
-  // Range metadata is a sequence of numbers. Make sure they are the same
-  // sequence.
   // TODO: Note that as this is metadata, it is possible to drop and/or merge
   // this data when considering functions to merge. Thus this comparison would
   // return 0 (i.e. equivalent), but merging would become more complicated
@@ -176,9 +173,43 @@ int FunctionComparator::cmpRangeMetadata(const MDNode *L,
   if (int Res = cmpNumbers(L->getNumOperands(), R->getNumOperands()))
     return Res;
   for (size_t I = 0; I < L->getNumOperands(); ++I) {
+    // TODO: the following routine coerce the metadata contents into numbers
+    // before comparison.
+    // It ignores any other cases, so that the metadata nodes are considered
+    // equal even though this is not correct.
+    // We should structurally compare the metadata nodes to be perfect here.
     ConstantInt *LLow = mdconst::extract<ConstantInt>(L->getOperand(I));
     ConstantInt *RLow = mdconst::extract<ConstantInt>(R->getOperand(I));
+    if (LLow == RLow)
+      continue;
+    if (!LLow)
+      return -1;
+    if (!RLow)
+      return 1;
     if (int Res = cmpAPInts(LLow->getValue(), RLow->getValue()))
+      return Res;
+  }
+  return 0;
+}
+
+int FunctionComparator::cmpInstMetadata(Instruction const *L,
+                                        Instruction const *R) const {
+  /// These metadata affects the other optimization passes by making assertions
+  /// or constraints.
+  /// Values that carry different expectations should be considered different.
+  SmallVector<std::pair<unsigned, MDNode *>> MDL, MDR;
+  L->getAllMetadataOtherThanDebugLoc(MDL);
+  R->getAllMetadataOtherThanDebugLoc(MDR);
+  if (MDL.size() > MDR.size())
+    return 1;
+  else if (MDL.size() < MDR.size())
+    return -1;
+  for (size_t I = 0, N = MDL.size(); I < N; ++I) {
+    auto const [KeyL, ML] = MDL[I];
+    auto const [KeyR, MR] = MDR[I];
+    if (int Res = cmpNumbers(KeyL, KeyR))
+      return Res;
+    if (int Res = cmpMetadata(ML, MR))
       return Res;
   }
   return 0;
@@ -586,9 +617,7 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     if (int Res = cmpNumbers(LI->getSyncScopeID(),
                              cast<LoadInst>(R)->getSyncScopeID()))
       return Res;
-    return cmpRangeMetadata(
-        LI->getMetadata(LLVMContext::MD_range),
-        cast<LoadInst>(R)->getMetadata(LLVMContext::MD_range));
+    return cmpInstMetadata(L, R);
   }
   if (const StoreInst *SI = dyn_cast<StoreInst>(L)) {
     if (int Res =
@@ -616,8 +645,8 @@ int FunctionComparator::cmpOperations(const Instruction *L,
       if (int Res = cmpNumbers(CI->getTailCallKind(),
                                cast<CallInst>(R)->getTailCallKind()))
         return Res;
-    return cmpRangeMetadata(L->getMetadata(LLVMContext::MD_range),
-                            R->getMetadata(LLVMContext::MD_range));
+    return cmpMetadata(L->getMetadata(LLVMContext::MD_range),
+                       R->getMetadata(LLVMContext::MD_range));
   }
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(L)) {
     ArrayRef<unsigned> LIndices = IVI->getIndices();
