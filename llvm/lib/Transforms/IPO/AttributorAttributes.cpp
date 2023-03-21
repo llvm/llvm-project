@@ -7082,7 +7082,14 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
       ValidUsesOnly = false;
       return true;
     };
-    if (!A.checkForAllUses(Pred, *this, *AI.CB))
+    if (!A.checkForAllUses(Pred, *this, *AI.CB, /* CheckBBLivenessOnly */ false,
+                           DepClassTy::OPTIONAL, /* IgnoreDroppableUses */ true,
+                           [&](const Use &OldU, const Use &NewU) {
+                             auto *SI = dyn_cast<StoreInst>(OldU.getUser());
+                             return !SI || StackIsAccessibleByOtherThreads ||
+                                    AA::isAssumedThreadLocalObject(
+                                        A, *SI->getPointerOperand(), *this);
+                           }))
       return false;
     return ValidUsesOnly;
   };
