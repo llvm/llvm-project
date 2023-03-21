@@ -2485,15 +2485,13 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
     // CBO, CF + CBO
     NewCT = SelOpNo ? DAG.getNode(BinOpcode, DL, VT, CBO, CT)
                     : DAG.getNode(BinOpcode, DL, VT, CT, CBO);
-    if (!CanFoldNonConst && !NewCT.isUndef() &&
-        !isConstantOrConstantVector(NewCT, true) &&
+    if (!NewCT.isUndef() && !isConstantOrConstantVector(NewCT, true) &&
         !DAG.isConstantFPBuildVectorOrConstantFP(NewCT))
       return SDValue();
 
     NewCF = SelOpNo ? DAG.getNode(BinOpcode, DL, VT, CBO, CF)
                     : DAG.getNode(BinOpcode, DL, VT, CF, CBO);
-    if (!CanFoldNonConst && !NewCF.isUndef() &&
-        !isConstantOrConstantVector(NewCF, true) &&
+    if (!NewCF.isUndef() && !isConstantOrConstantVector(NewCF, true) &&
         !DAG.isConstantFPBuildVectorOrConstantFP(NewCF))
       return SDValue();
   }
