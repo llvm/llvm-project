@@ -23,7 +23,7 @@ if (NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB )
     list(APPEND LLDB_SYSTEM_LIBS atomic)
 endif()
 
-add_lldb_library(lldbUtility
+add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   ArchSpec.cpp
   Args.cpp
   Baton.cpp
