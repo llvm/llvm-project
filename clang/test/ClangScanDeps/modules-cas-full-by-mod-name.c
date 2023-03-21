@@ -35,6 +35,7 @@ module transitive { header "transitive.h" }
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {
+// CHECK-NEXT:       "cache-key": "[[DIRECT_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
 // CHECK-NEXT:       "casfs-root-id": "[[LEFT_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
 // CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
@@ -44,6 +45,9 @@ module transitive { header "transitive.h" }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:       "command-line": [
+// CHECK:              "-fmodule-file-cache-key"
+// CHECK-NEXT:         "{{.*transitive-.*\.pcm}}"
+// CHECK-NEXT:         "[[TRANSITIVE_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
@@ -53,7 +57,8 @@ module transitive { header "transitive.h" }
 // CHECK-NEXT:       "name": "direct"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
-// CHECK-NEXT:       "casfs-root-id": "[[LEFT_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
+// CHECK-NEXT:       "cache-key": "[[ROOT_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
+// CHECK-NEXT:       "casfs-root-id": "[[ROOT_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
 // CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "{{.*}}",
@@ -62,6 +67,9 @@ module transitive { header "transitive.h" }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:       "command-line": [
+// CHECK:              "-fmodule-file-cache-key"
+// CHECK-NEXT:         "{{.*direct-.*\.pcm}}"
+// CHECK-NEXT:         "[[DIRECT_CACHE_KEY]]"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
@@ -72,7 +80,8 @@ module transitive { header "transitive.h" }
 // CHECK-NEXT:       "name": "root"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
-// CHECK-NEXT:       "casfs-root-id": "[[LEFT_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
+// CHECK-NEXT:       "cache-key": "[[TRANSITIVE_CACHE_KEY]]"
+// CHECK-NEXT:       "casfs-root-id": "[[LEFT_ROOT_ID]]"
 // CHECK-NEXT:       "clang-module-deps": [],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:       "command-line": [
