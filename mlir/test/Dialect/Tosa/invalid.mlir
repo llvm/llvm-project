@@ -36,4 +36,10 @@ func.func @test_conv2d(%arg0: tensor<1x29x29x4xi8>, %arg1: tensor<16x3x3x4xi8>, 
   return %0 : tensor<1x27x27x16xi8>
 }
 
+// -----
 
+func.func @test_concat(%arg0 : tensor<2x1xf32>, %arg1 : tensor<2x2xf32>) -> tensor<?x?xf32> {
+  // expected-error@+1 {{Cannot concat tensors with different sizes on the non-axis dimension 1}}
+  %0 = "tosa.concat"(%arg0, %arg1) {axis = 0 : i64} : (tensor<2x1xf32>, tensor<2x2xf32>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}

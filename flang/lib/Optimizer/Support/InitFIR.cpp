@@ -7,14 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Support/InitFIR.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 
 void fir::support::registerLLVMTranslation(mlir::MLIRContext &context) {
   mlir::DialectRegistry registry;
   // Register OpenMP dialect interface here as well.
-  mlir::registerOpenMPDialectTranslation(registry);
+  registerOpenMPDialectTranslation(registry);
   // Register LLVM-IR dialect interface.
   registerLLVMDialectTranslation(registry);
+  // Register builtin dialect interface.
+  registerBuiltinDialectTranslation(registry);
   context.appendDialectRegistry(registry);
 }
