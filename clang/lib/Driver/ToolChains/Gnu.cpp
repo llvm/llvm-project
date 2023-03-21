@@ -2431,9 +2431,6 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     static const char *const AArch64AndroidTriples[] = {
         "aarch64-linux-android"};
     static const char *const ARMAndroidTriples[] = {"arm-linux-androideabi"};
-    static const char *const MIPSELAndroidTriples[] = {"mipsel-linux-android"};
-    static const char *const MIPS64ELAndroidTriples[] = {
-        "mips64el-linux-android"};
     static const char *const X86AndroidTriples[] = {"i686-linux-android"};
     static const char *const X86_64AndroidTriples[] = {"x86_64-linux-android"};
 
@@ -2447,22 +2444,6 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     case llvm::Triple::thumb:
       LibDirs.append(begin(ARMLibDirs), end(ARMLibDirs));
       TripleAliases.append(begin(ARMAndroidTriples), end(ARMAndroidTriples));
-      break;
-    case llvm::Triple::mipsel:
-      LibDirs.append(begin(MIPSELLibDirs), end(MIPSELLibDirs));
-      TripleAliases.append(begin(MIPSELAndroidTriples),
-                           end(MIPSELAndroidTriples));
-      BiarchLibDirs.append(begin(MIPS64ELLibDirs), end(MIPS64ELLibDirs));
-      BiarchTripleAliases.append(begin(MIPS64ELAndroidTriples),
-                                 end(MIPS64ELAndroidTriples));
-      break;
-    case llvm::Triple::mips64el:
-      LibDirs.append(begin(MIPS64ELLibDirs), end(MIPS64ELLibDirs));
-      TripleAliases.append(begin(MIPS64ELAndroidTriples),
-                           end(MIPS64ELAndroidTriples));
-      BiarchLibDirs.append(begin(MIPSELLibDirs), end(MIPSELLibDirs));
-      BiarchTripleAliases.append(begin(MIPSELAndroidTriples),
-                                 end(MIPSELAndroidTriples));
       break;
     case llvm::Triple::x86_64:
       LibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
