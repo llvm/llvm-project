@@ -8,6 +8,7 @@
 
 #include "mlir/IR/AffineMap.h"
 #include "AffineMapDetail.h"
+#include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Support/LogicalResult.h"
@@ -15,8 +16,10 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
+#include <iterator>
 #include <numeric>
 #include <optional>
 #include <type_traits>
@@ -467,6 +470,15 @@ AffineMap::replace(const DenseMap<AffineExpr, AffineExpr> &map) const {
   return AffineMap::inferFromExprList(newResults).front();
 }
 
+AffineMap AffineMap::dropResults(const llvm::SmallBitVector &positions) const {
+  auto exprs = llvm::to_vector<4>(getResults());
+  // TODO: this is a pretty terrible API .. is there anything better?
+  for (auto pos = positions.find_last(); pos != -1;
+       pos = positions.find_prev(pos))
+    exprs.erase(exprs.begin() + pos);
+  return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
+}
+
 AffineMap AffineMap::compose(AffineMap map) const {
   assert(getNumDims() == map.getNumResults() && "Number of results mismatch");
   // Prepare `map` by concatenating the symbols and rewriting its exprs.
@@ -806,6 +818,14 @@ llvm::SmallBitVector mlir::getUnusedSymbolsBitVector(ArrayRef<AffineMap> maps) {
     }
   }
   return numSymbolsBitVector;
+}
+
+AffineMap
+mlir::expandDimsToRank(AffineMap map, int64_t rank,
+                       const llvm::SmallBitVector &projectedDimensions) {
+  auto id = AffineMap::getMultiDimIdentityMap(rank, map.getContext());
+  AffineMap proj = id.dropResults(projectedDimensions);
+  return map.compose(proj);
 }
 
 //===----------------------------------------------------------------------===//

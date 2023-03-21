@@ -6,7 +6,7 @@ func.func @fold_static_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg1
   return %1 : f32
 }
 //  CHECK-DAG: #[[MAP0:.+]] = affine_map<()[s0, s1] -> (s0 + s1 * 2)>
-//  CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1] -> (s0  + s1 * 3)>
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1] -> (s0 + s1 * 3)>
 //      CHECK: func @fold_static_stride_subview_with_load
 // CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<12x32xf32>
 // CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
@@ -25,7 +25,7 @@ func.func @fold_dynamic_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg
   %1 = memref.load %0[%arg3, %arg4] : memref<4x4xf32, strided<[?, ?], offset: ?>>
   return %1 : f32
 }
-//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s1 + s2 * s0)>
+//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s0 + s1 * s2)>
 //      CHECK: func @fold_dynamic_stride_subview_with_load
 // CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<12x32xf32>
 // CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
@@ -34,8 +34,8 @@ func.func @fold_dynamic_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg
 // CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:   %[[ARG5:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:   %[[ARG6:[a-zA-Z0-9_]+]]: index
-//  CHECK-DAG:   %[[I1:.+]] = affine.apply #[[MAP]]()[%[[ARG5]], %[[ARG1]], %[[ARG3]]]
-//  CHECK-DAG:   %[[I2:.+]] = affine.apply #[[MAP]]()[%[[ARG6]], %[[ARG2]], %[[ARG4]]]
+//  CHECK-DAG:   %[[I1:.+]] = affine.apply #[[MAP]]()[%[[ARG1]], %[[ARG3]], %[[ARG5]]]
+//  CHECK-DAG:   %[[I2:.+]] = affine.apply #[[MAP]]()[%[[ARG2]], %[[ARG4]], %[[ARG6]]]
 //      CHECK:   memref.load %[[ARG0]][%[[I1]], %[[I2]]]
 
 // -----
@@ -66,7 +66,7 @@ func.func @fold_dynamic_stride_subview_with_store(%arg0 : memref<12x32xf32>, %ar
   memref.store %arg7, %0[%arg3, %arg4] : memref<4x4xf32, strided<[?, ?], offset: ?>>
   return
 }
-//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s1 + s2 * s0)>
+//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s0 + s1 * s2)>
 //      CHECK: func @fold_dynamic_stride_subview_with_store
 // CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<12x32xf32>
 // CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
@@ -75,8 +75,8 @@ func.func @fold_dynamic_stride_subview_with_store(%arg0 : memref<12x32xf32>, %ar
 // CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:   %[[ARG5:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:   %[[ARG6:[a-zA-Z0-9_]+]]: index
-//  CHECK-DAG:   %[[I1:.+]] = affine.apply #[[MAP]]()[%[[ARG5]], %[[ARG1]], %[[ARG3]]]
-//  CHECK-DAG:   %[[I2:.+]] = affine.apply #[[MAP]]()[%[[ARG6]], %[[ARG2]], %[[ARG4]]]
+//  CHECK-DAG:   %[[I1:.+]] = affine.apply #[[MAP]]()[%[[ARG1]], %[[ARG3]], %[[ARG5]]]
+//  CHECK-DAG:   %[[I2:.+]] = affine.apply #[[MAP]]()[%[[ARG2]], %[[ARG4]], %[[ARG6]]]
 //      CHECK:   memref.store %{{.+}}, %[[ARG0]][%[[I1]], %[[I2]]]
 
 // -----
@@ -85,7 +85,7 @@ func.func @fold_subview_with_transfer_read_0d(
   %arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index)
     -> vector<f32> {
   %f1 = arith.constant 1.0 : f32
-  %0 = memref.subview %arg0[%arg1, %arg2][1, 1][2, %arg3] : memref<12x32xf32> to memref<f32, strided<[], offset: ?>>
+  %0 = memref.subview %arg0[%arg1, %arg2][1, 1][1, 1] : memref<12x32xf32> to memref<f32, strided<[], offset: ?>>
   %1 = vector.transfer_read %0[], %f1 : memref<f32, strided<[], offset: ?>>, vector<f32>
   return %1 : vector<f32>
 }
@@ -100,22 +100,14 @@ func.func @fold_subview_with_transfer_read_0d(
 
 func.func @fold_subview_with_transfer_read(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index) -> vector<4xf32> {
   %f1 = arith.constant 1.0 : f32
+
   %0 = memref.subview %arg0[%arg1, %arg2][4, 4][%arg5, %arg6] : memref<12x32xf32> to memref<4x4xf32, strided<[?, ?], offset: ?>>
   %1 = vector.transfer_read %0[%arg3, %arg4], %f1 {in_bounds = [true]} : memref<4x4xf32, strided<[?, ?], offset: ?>>, vector<4xf32>
   return %1 : vector<4xf32>
 }
-//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s1 + s2 * s0)>
 //      CHECK: func @fold_subview_with_transfer_read
-// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<12x32xf32>
-// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
-// CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: index
-// CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: index
-// CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: index
-// CHECK-SAME:   %[[ARG5:[a-zA-Z0-9_]+]]: index
-// CHECK-SAME:   %[[ARG6:[a-zA-Z0-9_]+]]: index
-//  CHECK-DAG:   %[[I1:.+]] = affine.apply #[[MAP]]()[%[[ARG5]], %[[ARG1]], %[[ARG3]]]
-//  CHECK-DAG:   %[[I2:.+]] = affine.apply #[[MAP]]()[%[[ARG6]], %[[ARG2]], %[[ARG4]]]
-//      CHECK:   vector.transfer_read %[[ARG0]][%[[I1]], %[[I2]]]
+// Can't fold this atm since we don't emit the proper vector.extract_strided_slice.
+//   CHECK: memref.subview
 
 // -----
 
@@ -123,7 +115,7 @@ func.func @fold_static_stride_subview_with_transfer_write_0d(
     %arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index,
     %v : vector<f32>) {
   %f1 = arith.constant 1.0 : f32
-  %0 = memref.subview %arg0[%arg1, %arg2][1, 1][2, %arg3] : memref<12x32xf32> to memref<f32, strided<[], offset: ?>>
+  %0 = memref.subview %arg0[%arg1, %arg2][1, 1][1, 1] : memref<12x32xf32> to memref<f32, strided<[], offset: ?>>
   vector.transfer_write %v, %0[] {in_bounds = []} : vector<f32>, memref<f32, strided<[], offset: ?>>
   return
 }
@@ -143,18 +135,9 @@ func.func @fold_static_stride_subview_with_transfer_write(%arg0 : memref<12x32xf
   vector.transfer_write %arg7, %0[%arg3, %arg4] {in_bounds = [true]} : vector<4xf32>, memref<4x4xf32, strided<[?, ?], offset: ?>>
   return
 }
-//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s1 + s2 * s0)>
 //      CHECK: func @fold_static_stride_subview_with_transfer_write
-// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<12x32xf32>
-// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
-// CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: index
-// CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: index
-// CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: index
-// CHECK-SAME:   %[[ARG5:[a-zA-Z0-9_]+]]: index
-// CHECK-SAME:   %[[ARG6:[a-zA-Z0-9_]+]]: index
-//  CHECK-DAG:   %[[I1:.+]] = affine.apply #[[MAP]]()[%[[ARG5]], %[[ARG1]], %[[ARG3]]]
-//  CHECK-DAG:   %[[I2:.+]] = affine.apply #[[MAP]]()[%[[ARG6]], %[[ARG2]], %[[ARG4]]]
-//      CHECK:   vector.transfer_write %{{.+}}, %[[ARG0]][%[[I1]], %[[I2]]]
+// Can't fold this atm since we don't emit the proper vector.extract_strided_slice.
+//   CHECK: memref.subview
 
 // -----
 
@@ -168,7 +151,7 @@ func.func @fold_rank_reducing_subview_with_load
   %1 = memref.load %0[%arg13, %arg14, %arg15, %arg16] : memref<4x1x4x1xf32, strided<[?, ?, ?, ?], offset: ?>>
   return %1 : f32
 }
-//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s1 + s2 * s0)>
+//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1, s2] -> (s0 + s1 * s2)>
 //      CHECK: func @fold_rank_reducing_subview_with_load
 // CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<?x?x?x?x?x?xf32>
 // CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
@@ -187,10 +170,10 @@ func.func @fold_rank_reducing_subview_with_load
 // CHECK-SAME:   %[[ARG14:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:   %[[ARG15:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:   %[[ARG16:[a-zA-Z0-9_]+]]: index
-//  CHECK-DAG:   %[[I0:.+]] = affine.apply #[[MAP]]()[%[[ARG7]], %[[ARG1]], %[[ARG13]]]
-//  CHECK-DAG:   %[[I2:.+]] = affine.apply #[[MAP]]()[%[[ARG9]], %[[ARG3]], %[[ARG14]]]
-//  CHECK-DAG:   %[[I3:.+]] = affine.apply #[[MAP]]()[%[[ARG10]], %[[ARG4]], %[[ARG15]]]
-//  CHECK-DAG:   %[[I4:.+]] = affine.apply #[[MAP]]()[%[[ARG11]], %[[ARG5]], %[[ARG16]]]
+//  CHECK-DAG:   %[[I0:.+]] = affine.apply #[[MAP]]()[%[[ARG1]], %[[ARG13]], %[[ARG7]]]
+//  CHECK-DAG:   %[[I2:.+]] = affine.apply #[[MAP]]()[%[[ARG3]], %[[ARG14]], %[[ARG9]]]
+//  CHECK-DAG:   %[[I3:.+]] = affine.apply #[[MAP]]()[%[[ARG4]], %[[ARG15]], %[[ARG10]]]
+//  CHECK-DAG:   %[[I4:.+]] = affine.apply #[[MAP]]()[%[[ARG5]], %[[ARG16]], %[[ARG11]]]
 //      CHECK:   memref.load %[[ARG0]][%[[I0]], %[[ARG2]], %[[I2]], %[[I3]], %[[I4]], %[[ARG6]]]
 
 // -----
