@@ -22,21 +22,26 @@ def MapNestedForallToThreads :
      TransformEachOpTrait,
      TransformOpInterface]> {
   let description = [{
-      Target the `gpu.launch op` and rewrite all `scf.forall`
-      nested in it to distributed `gpu.thread_id` attribute.
+      Target the `gpu.launch op` and rewrite all `scf.forall` nested in it to 
+      distributed `gpu.thread_id` attribute.
 
-      The operation searches for `scf.forall` ops nested under `target`
-      and maps each such op to GPU threads. Mapping is one-to-one and the
-      induction variables of `scf.forall` are rewritten to
-      `gpu.thread_id` according to the `mapping` attribute.
+      The operation searches for `scf.forall` ops nested under `target` and maps
+      each such op to GPU threads. 
+      
+      `scf.forall` induction variables are rewritten to `gpu.thread_id` according
+      to the `mapping` attribute.
 
-      Sibling `scf.forall` are supported in which case, the union of
-      the number of threads is computed and may result in predication.
-
-      Multiple scf.forall are supported per `gpu.launch` in which case,
-      the max of all the threads is computed and taken for the global
-      `gpu.thread_id`. If necessary, `scf.forall` that do not use the
-      whole thread range result in predicated computations.
+      Different types of mappings attributes are supported:
+        - the block_dims is a list of integers that specifies the number of
+          threads in each dimension. This is a mandatory attribute that is used
+          to constrain the number of threads in each dimension. If an 
+          `scf.forall` op is mapped to fewer threads, predication occurs.
+        - the warp_dims is a list of integers that specifies the number of
+          warps in each dimension. This is an optional attribute that is used
+          to constrain the number of warps in each dimension. When present, this
+          attribute must be specified in a way that is compatible with the 
+          block_dims attribute. If an `scf.forall` op is mapped to fewer warps,
+          predicaiton occurs.
 
       Dynamic `scf.forall` trip counts are currently not supported.
       Dynamic block dim sizes are currently not supported.
@@ -45,10 +50,12 @@ def MapNestedForallToThreads :
       Only `scf.forall` distributed to **at most 3 dimensions** are
       currently supported.
 
-      Barriers are inserted after each scf.forall op for now.
+      The `sync_after_distribute`attribute controls whether a `gpu.barrier` is
+      inserted after each scf.forall op. At this time, this is an all or nothing
+      choice. This will need to be tightened in the future.
 
-      The operation alters the block size of the given gpu_launch using
-      blockDim argument.
+      The operation alters the block size of the given gpu_launch using the 
+      mandatory block_dims argument.
 
       #### Return modes:
 
@@ -83,6 +90,7 @@ def MapNestedForallToThreads :
         gpu.terminator
       }
       ```
+
       is translated to:
 
       ```
@@ -104,11 +112,18 @@ def MapNestedForallToThreads :
     }];
 
   let arguments = (ins PDL_Operation:$target,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$blockDim,
-                   DefaultValuedAttr<BoolAttr, "true">:$syncAfterDistribute);
+                   DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$block_dims,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$warp_dims,
+                   DefaultValuedAttr<BoolAttr, "true">:$sync_after_distribute);
   let results = (outs PDL_Operation:$result);
 
-  let assemblyFormat = "$target attr-dict";
+  let assemblyFormat = [{
+    $target
+    `block_dims` `=` $block_dims
+    (`warp_dims` `=` $warp_dims^)?
+    (`sync_after_distribute` `=` $sync_after_distribute^)?
+    attr-dict
+  }];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation *target,
@@ -116,7 +131,6 @@ def MapNestedForallToThreads :
         ::mlir::transform::TransformState &state);
   }];
 }
-
 
 def MapForallToBlocks :
   Op<Transform_Dialect, "gpu.map_forall_to_blocks",
@@ -142,8 +156,8 @@ def MapForallToBlocks :
     Only scf.forall distributed to **at most 3 dimensions** are
     currently supported.
 
-    The operation alters the block size of the given gpu_launch using
-    gridDim argument.
+    The operation alters the block size of the given gpu_launch using the 
+    grid_dims argument.
 
     #### Return modes:
 
@@ -162,11 +176,16 @@ def MapForallToBlocks :
   }];
 
   let arguments = (ins PDL_Operation:$target,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$gridDim,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$grid_dims,
                    UnitAttr:$generate_gpu_launch);
   let results = (outs PDL_Operation:$result);
 
-  let assemblyFormat = "$target attr-dict";
+  let assemblyFormat = [{
+    $target
+    (`generate_gpu_launch` $generate_gpu_launch^)?
+    (`grid_dims` `=` $grid_dims^)?
+    attr-dict
+  }];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation *target,
