@@ -850,8 +850,23 @@ public:
     __default_init();
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const basic_string& __str);
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const basic_string& __str, const allocator_type& __a);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const basic_string& __str)
+      : __r_(__default_init_tag(), __alloc_traits::select_on_container_copy_construction(__str.__alloc())) {
+    if (!__str.__is_long())
+      __r_.first() = __str.__r_.first();
+    else
+      __init_copy_ctor_external(std::__to_address(__str.__get_long_pointer()), __str.__get_long_size());
+    std::__debug_db_insert_c(this);
+  }
+
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const basic_string& __str, const allocator_type& __a)
+      : __r_(__default_init_tag(), __a) {
+    if (!__str.__is_long())
+      __r_.first() = __str.__r_.first();
+    else
+      __init_copy_ctor_external(std::__to_address(__str.__get_long_pointer()), __str.__get_long_size());
+    std::__debug_db_insert_c(this);
+  }
 
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(basic_string&& __str)
@@ -892,7 +907,12 @@ public:
   }
 
   template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* __s, const _Allocator& __a);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* __s, const _Allocator& __a)
+      : __r_(__default_init_tag(), __a) {
+    _LIBCPP_ASSERT(__s != nullptr, "basic_string(const char*, allocator) detected nullptr");
+    __init(__s, traits_type::length(__s));
+    std::__debug_db_insert_c(this);
+  }
 
 #if _LIBCPP_STD_VER >= 23
   basic_string(nullptr_t) = delete;
@@ -950,10 +970,21 @@ public:
 #endif
 
   template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(size_type __n, _CharT __c, const _Allocator& __a);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(size_type __n, _CharT __c, const _Allocator& __a)
+      : __r_(__default_init_tag(), __a) {
+    __init(__n, __c);
+    std::__debug_db_insert_c(this);
+  }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20
-  basic_string(const basic_string& __str, size_type __pos, size_type __n, const _Allocator& __a = _Allocator());
+  basic_string(const basic_string& __str, size_type __pos, size_type __n, const _Allocator& __a = _Allocator())
+      : __r_(__default_init_tag(), __a) {
+    size_type __str_sz = __str.size();
+    if (__pos > __str_sz)
+      __throw_out_of_range();
+    __init(__str.data() + __pos, std::min(__n, __str_sz - __pos));
+    std::__debug_db_insert_c(this);
+  }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
   basic_string(const basic_string& __str, size_type __pos, const _Allocator& __a = _Allocator())
@@ -967,21 +998,39 @@ public:
 
   template <class _Tp,
             __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                              !__is_same_uncvref<_Tp, basic_string>::value, int> = 0>
+                              !__is_same_uncvref<_Tp, basic_string>::value,
+                          int> = 0>
   _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20
-  basic_string(const _Tp& __t, size_type __pos, size_type __n, const allocator_type& __a = allocator_type());
+  basic_string(const _Tp& __t, size_type __pos, size_type __n, const allocator_type& __a = allocator_type())
+      : __r_(__default_init_tag(), __a) {
+    __self_view __sv0 = __t;
+    __self_view __sv  = __sv0.substr(__pos, __n);
+    __init(__sv.data(), __sv.size());
+    std::__debug_db_insert_c(this);
+  }
 
   template <class _Tp,
             __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                              !__is_same_uncvref<_Tp, basic_string>::value, int> = 0>
-  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit basic_string(
-      const _Tp& __t);
+                              !__is_same_uncvref<_Tp, basic_string>::value,
+                          int> = 0>
+  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit basic_string(const _Tp& __t)
+      : __r_(__default_init_tag(), __default_init_tag()) {
+    __self_view __sv = __t;
+    __init(__sv.data(), __sv.size());
+    std::__debug_db_insert_c(this);
+  }
 
   template <class _Tp,
             __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                              !__is_same_uncvref<_Tp, basic_string>::value, int> = 0>
+                              !__is_same_uncvref<_Tp, basic_string>::value,
+                          int> = 0>
   _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit basic_string(
-      const _Tp& __t, const allocator_type& __a);
+      const _Tp& __t, const allocator_type& __a)
+      : __r_(__default_init_tag(), __a) {
+    __self_view __sv = __t;
+    __init(__sv.data(), __sv.size());
+    std::__debug_db_insert_c(this);
+  }
 
   template <class _InputIterator, __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(_InputIterator __first, _InputIterator __last)
@@ -1012,7 +1061,11 @@ public:
   }
 #endif // _LIBCPP_CXX03_LANG
 
-    inline _LIBCPP_CONSTEXPR_SINCE_CXX20 ~basic_string();
+  inline _LIBCPP_CONSTEXPR_SINCE_CXX20 ~basic_string() {
+    std::__debug_db_erase_c(this);
+    if (__is_long())
+      __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
+  }
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     operator __self_view() const _NOEXCEPT { return __self_view(data(), size()); }
@@ -2050,44 +2103,6 @@ basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, size_ty
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-template <__enable_if_t<__is_allocator<_Allocator>::value, int> >
-_LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>::basic_string(const _CharT* __s, const _Allocator& __a)
-    : __r_(__default_init_tag(), __a)
-{
-    _LIBCPP_ASSERT(__s != nullptr, "basic_string(const char*, allocator) detected nullptr");
-    __init(__s, traits_type::length(__s));
-    std::__debug_db_insert_c(this);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __str)
-    : __r_(__default_init_tag(), __alloc_traits::select_on_container_copy_construction(__str.__alloc()))
-{
-    if (!__str.__is_long())
-        __r_.first() = __str.__r_.first();
-    else
-        __init_copy_ctor_external(std::__to_address(__str.__get_long_pointer()),
-                                  __str.__get_long_size());
-    std::__debug_db_insert_c(this);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>::basic_string(
-    const basic_string& __str, const allocator_type& __a)
-    : __r_(__default_init_tag(), __a)
-{
-    if (!__str.__is_long())
-        __r_.first() = __str.__r_.first();
-    else
-        __init_copy_ctor_external(std::__to_address(__str.__get_long_pointer()),
-                                  __str.__get_long_size());
-    std::__debug_db_insert_c(this);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 void basic_string<_CharT, _Traits, _Allocator>::__init_copy_ctor_external(
     const value_type* __s, size_type __sz) {
@@ -2138,69 +2153,6 @@ basic_string<_CharT, _Traits, _Allocator>::__init(size_type __n, value_type __c)
     }
     traits_type::assign(std::__to_address(__p), __n, __c);
     traits_type::assign(__p[__n], value_type());
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-template <__enable_if_t<__is_allocator<_Allocator>::value, int> >
-_LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>::basic_string(size_type __n, _CharT __c, const _Allocator& __a)
-    : __r_(__default_init_tag(), __a)
-{
-    __init(__n, __c);
-    std::__debug_db_insert_c(this);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __str,
-                                                        size_type __pos, size_type __n,
-                                                        const _Allocator& __a)
-    : __r_(__default_init_tag(), __a)
-{
-    size_type __str_sz = __str.size();
-    if (__pos > __str_sz)
-        __throw_out_of_range();
-    __init(__str.data() + __pos, std::min(__n, __str_sz - __pos));
-    std::__debug_db_insert_c(this);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-template <class _Tp,
-          __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                            !__is_same_uncvref<_Tp, basic_string<_CharT, _Traits, _Allocator> >::value,
-                        int> >
-_LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>::basic_string(
-    const _Tp& __t, size_type __pos, size_type __n, const allocator_type& __a)
-    : __r_(__default_init_tag(), __a) {
-    __self_view __sv0 = __t;
-    __self_view __sv = __sv0.substr(__pos, __n);
-    __init(__sv.data(), __sv.size());
-    std::__debug_db_insert_c(this);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-template <class _Tp,
-          __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                            !__is_same_uncvref<_Tp, basic_string<_CharT, _Traits, _Allocator> >::value,
-                        int> >
-_LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>::basic_string(const _Tp& __t)
-    : __r_(__default_init_tag(), __default_init_tag()) {
-    __self_view __sv = __t;
-    __init(__sv.data(), __sv.size());
-    std::__debug_db_insert_c(this);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-template <class _Tp,
-          __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                            !__is_same_uncvref<_Tp, basic_string<_CharT, _Traits, _Allocator> >::value,
-                        int> >
-_LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>::basic_string(const _Tp& __t, const _Allocator& __a)
-    : __r_(__default_init_tag(), __a) {
-    __self_view __sv = __t;
-    __init(__sv.data(), __sv.size());
-    std::__debug_db_insert_c(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2268,15 +2220,6 @@ basic_string<_CharT, _Traits, _Allocator>::__init(_ForwardIterator __first, _For
         throw;
     }
 #endif  // _LIBCPP_HAS_NO_EXCEPTIONS
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>::~basic_string()
-{
-    std::__debug_db_erase_c(this);
-    if (__is_long())
-        __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
 }
 
 template <class _CharT, class _Traits, class _Allocator>
