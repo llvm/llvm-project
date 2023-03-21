@@ -46,7 +46,8 @@ void __libcpp_verbose_abort(const char *__format, ...);
 #  endif
 
 #  if defined(_LIBCPP_HAS_NO_VERBOSE_ABORT_IN_LIBRARY)
-#    define _LIBCPP_VERBOSE_ABORT(...) __builtin_abort()
+// The decltype is there to suppress -Wunused warnings in this configuration.
+#    define _LIBCPP_VERBOSE_ABORT(...) (decltype(std::__libcpp_verbose_abort(__VA_ARGS__))(), __builtin_abort())
 #  else
 #    define _LIBCPP_VERBOSE_ABORT(...) ::std::__libcpp_verbose_abort(__VA_ARGS__)
 #  endif

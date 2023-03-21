@@ -452,7 +452,7 @@ void __throw_failure(char const* __msg) {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw ios_base::failure(__msg);
 #else
-    std::__libcpp_verbose_abort("ios_base::failure was thrown in -fno-exceptions mode with message \"%s\"", __msg);
+    _LIBCPP_VERBOSE_ABORT("ios_base::failure was thrown in -fno-exceptions mode with message \"%s\"", __msg);
 #endif
 }
 

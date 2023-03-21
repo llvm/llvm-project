@@ -177,7 +177,7 @@ void __throw_bad_array_new_length()
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw bad_array_new_length();
 #else
-    std::__libcpp_verbose_abort("bad_array_new_length was thrown in -fno-exceptions mode");
+    _LIBCPP_VERBOSE_ABORT("bad_array_new_length was thrown in -fno-exceptions mode");
 #endif
 }
 
