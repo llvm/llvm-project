@@ -91,8 +91,7 @@ if(MLIR_ENABLE_CUDA_RUNNER)
     message(SEND_ERROR
       "Building mlir with cuda support requires the NVPTX backend")
   endif()
-  
-  find_package(CUDAToolkit)
+
   # Configure CUDA language support. Using check_language first allows us to
   # give a custom error message.
   include(CheckLanguage)
@@ -116,12 +115,12 @@ if(MLIR_ENABLE_CUDA_RUNNER)
     ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
   )
 
-  #find_library(CUDA_NVPTX_LIBRARY nvptxcompiler_static)
+  find_library(CUDA_DRIVER_LIBRARY cuda)
 
   target_link_libraries(MLIRGPUTransforms
     PRIVATE
     MLIRNVVMToLLVMIRTranslation
-    CUDA::nvptxcompiler_static
+    ${CUDA_DRIVER_LIBRARY}
   )
 
 endif()
