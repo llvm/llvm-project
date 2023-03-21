@@ -1651,13 +1651,11 @@ def TileToScfForOp : Op<Transform_Dialect, "structured.tile_to_scf_for",
 //===----------------------------------------------------------------------===//
 
 def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
-    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-     TransformEachOpTrait,
-     TransformOpInterface]> {
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformEachOpTrait, TransformOpInterface]> {
   let description = [{
     Indicates that the given `target` op all the ops it contains should be
     vectorized with the configuration specified by the attributes of this op.
-
     This vectorization only handles structured ops that operate on shaped types
     and does not vectorize loops or straight-line. Internally, it applies a
     set of rewrite patterns, some of which enable vectorization and some of
@@ -1687,22 +1685,24 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
 
     This operation produces `definiteFailure` if vectorization fails for any
     reason.
-    This operation returns nothing.
+    The operation always returns the handle to the target op that is expected
+    to be isolated from above.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$target,
+  let arguments = (ins PDL_Operation:$target,
                    UnitAttr:$vectorize_padding,
                    UnitAttr:$vectorize_nd_extract,
                    UnitAttr:$disable_multi_reduction_to_contract_patterns,
                    UnitAttr:$disable_transfer_permutation_map_lowering_patterns);
-  let results = (outs);
+  let results = (outs PDL_Operation:$transformed);
 
-  let assemblyFormat = [{
-    $target 
-    attr-dict 
-    `:` functional-type(operands, results)
-  }];
+  let assemblyFormat = "$target attr-dict";
 
+  let builders = [
+    OpBuilder<(ins "Value":$target,
+               CArg<"bool", "false">:$vectorizePadding,
+               CArg<"bool", "false">:$vectorizeNDExtract)>,
+  ];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation *target,
@@ -1710,10 +1710,6 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
         ::mlir::transform::TransformState &state);
   }];
 }
-
-//===----------------------------------------------------------------------===//
-// MaskedVectorizeOp
-//===----------------------------------------------------------------------===//
 
 def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
@@ -1769,9 +1765,8 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
 
 def HoistRedundantVectorTransfersOp :
   Op<Transform_Dialect, "structured.hoist_redundant_vector_transfers",
-    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-     TransformEachOpTrait,
-     TransformOpInterface]> {
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformEachOpTrait, TransformOpInterface]> {
   let description = [{
     Hoist vector.transfer_read / vector.transfer_write pairs out of immediately
     enclosing scf::ForOp iteratively, if the following conditions are true:
@@ -1787,17 +1782,18 @@ def HoistRedundantVectorTransfersOp :
 
     #### Return modes:
 
-    The operation always succeeds and returns nothing.
+    The operation always succeeds and returns a handle to the transformed
+    function op.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs);
-  let assemblyFormat = [{
-    $target 
-    attr-dict 
-    `:` functional-type(operands, results)
-  }];
+  let results = (outs TransformHandleTypeInterface:$transformed);
 
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results) ";
+
+  let builders = [
+    OpBuilder<(ins "Value":$target)>,
+  ];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::func::FuncOp target,
@@ -1888,9 +1884,8 @@ def ConvertConv2DToImg2ColOp : Op<Transform_Dialect,
 
 def HoistRedundantTensorSubsetsOp :
   Op<Transform_Dialect, "structured.hoist_redundant_tensor_subsets",
-    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-     TransformEachOpTrait,
-     TransformOpInterface]> {
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformEachOpTrait, TransformOpInterface]> {
   let description = [{
     Hoists supported tensor subset extract/insert operation pairs out of 
     immediately enclosing loop iteratively, if the following conditions
@@ -1910,18 +1905,18 @@ def HoistRedundantTensorSubsetsOp :
 
     #### Return modes:
 
-    The operation always succeeds and returns nothing.
+    The operation always succeeds and returns a handle to the transformed
+    function op.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs);
+  let results = (outs TransformHandleTypeInterface:$transformed);
 
-  let assemblyFormat = [{
-    $target 
-    attr-dict 
-    `:` functional-type(operands, results)
-  }];
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results) ";
 
+  let builders = [
+    OpBuilder<(ins "Value":$target)>,
+  ];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation *target,
