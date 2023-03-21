@@ -575,6 +575,39 @@ TEST(STLExtrasTest, ADLTestConstexpr) {
   SUCCEED();
 }
 
+struct FooWithMemberSize {
+  size_t size() const { return 42; }
+  auto begin() { return Data.begin(); }
+  auto end() { return Data.end(); }
+
+  std::set<int> Data;
+};
+
+namespace some_namespace {
+struct FooWithFreeSize {
+  auto begin() { return Data.begin(); }
+  auto end() { return Data.end(); }
+
+  std::set<int> Data;
+};
+
+size_t size(const FooWithFreeSize &) { return 13; }
+} // namespace some_namespace
+
+TEST(STLExtrasTest, ADLSizeTest) {
+  FooWithMemberSize foo1;
+  EXPECT_EQ(adl_size(foo1), 42u);
+
+  some_namespace::FooWithFreeSize foo2;
+  EXPECT_EQ(adl_size(foo2), 13u);
+
+  static constexpr int c_arr[] = {1, 2, 3};
+  static_assert(adl_size(c_arr) == 3u);
+
+  static constexpr std::array<int, 4> cpp_arr = {};
+  static_assert(adl_size(cpp_arr) == 4u);
+}
+
 TEST(STLExtrasTest, DropBeginTest) {
   SmallVector<int, 5> vec{0, 1, 2, 3, 4};
 

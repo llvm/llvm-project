@@ -95,7 +95,7 @@ struct SizeIsTen : std::ranges::view_interface<SizeIsTen> {
   int buff[8] = {0, 1, 2, 3, 4, 5, 6, 7};
   constexpr ForwardIter begin() const { return ForwardIter(const_cast<int*>(buff)); }
   constexpr ForwardIter end() const { return ForwardIter(const_cast<int*>(buff) + 8); }
-  constexpr size_t size() const { return 10; }
+  constexpr std::size_t size() const { return 10; }
 };
 static_assert(std::ranges::view<SizeIsTen>);
 
@@ -262,7 +262,7 @@ constexpr bool testSize() {
 }
 
 template<class T>
-concept SubscriptInvocable = requires (T const& obj, size_t n) { obj[n]; };
+concept SubscriptInvocable = requires (T const& obj, std::size_t n) { obj[n]; };
 
 constexpr bool testSubscript() {
   static_assert(!SubscriptInvocable<ForwardRange>);

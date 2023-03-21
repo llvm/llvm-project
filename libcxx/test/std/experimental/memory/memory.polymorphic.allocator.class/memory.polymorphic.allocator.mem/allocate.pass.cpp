@@ -36,7 +36,7 @@
 
 namespace ex = std::experimental::pmr;
 
-template <size_t S, size_t Align>
+template <std::size_t S, size_t Align>
 void testForSizeAndAlign() {
     struct T { alignas(Align) char data[S]; };
     TestResource R;
@@ -52,7 +52,7 @@ void testForSizeAndAlign() {
 }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
-template <size_t S>
+template <std::size_t S>
 void testAllocForSizeThrows() {
     struct T { char data[S]; };
     using Alloc = ex::polymorphic_allocator<T>;
@@ -61,14 +61,14 @@ void testAllocForSizeThrows() {
     Alloc a(&R);
 
     // Test that allocating exactly the max size does not throw.
-    size_t maxSize = Traits::max_size(a);
+    std::size_t maxSize = Traits::max_size(a);
     try {
         a.allocate(maxSize);
     } catch (...) {
         assert(false);
     }
 
-    size_t sizeTypeMax = std::numeric_limits<std::size_t>::max();
+    std::size_t sizeTypeMax = std::numeric_limits<std::size_t>::max();
     if (maxSize != sizeTypeMax)
     {
         // Test that allocating size_t(~0) throws bad_array_new_length.
@@ -79,7 +79,7 @@ void testAllocForSizeThrows() {
         }
 
         // Test that allocating even one more than the max size does throw.
-        size_t overSize = maxSize + 1;
+        std::size_t overSize = maxSize + 1;
         try {
             a.allocate(overSize);
             assert(false);

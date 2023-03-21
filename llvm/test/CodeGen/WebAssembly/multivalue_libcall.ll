@@ -6,58 +6,93 @@
 
 target triple = "wasm32-unknown-unknown"
 
-@c = global i128 0, align 16
-
-define void @multivalue_sdiv(i128 noundef %a, i128 noundef %b) #0 {
+define i128 @multivalue_sdiv(i128 %a, i128 %b) {
 ; MULTIVALUE-LABEL: multivalue_sdiv:
-; MULTIVALUE:         .functype multivalue_sdiv (i64, i64, i64, i64) -> ()
+; MULTIVALUE:         .functype multivalue_sdiv (i64, i64, i64, i64) -> (i64, i64)
 ; MULTIVALUE-NEXT:  # %bb.0:
 ; MULTIVALUE-NEXT:    local.get 0
 ; MULTIVALUE-NEXT:    local.get 1
 ; MULTIVALUE-NEXT:    local.get 2
 ; MULTIVALUE-NEXT:    local.get 3
 ; MULTIVALUE-NEXT:    call __divti3
-; MULTIVALUE-NEXT:    local.set 2
-; MULTIVALUE-NEXT:    local.set 3
-; MULTIVALUE-NEXT:    i32.const c
-; MULTIVALUE-NEXT:    local.get 2
-; MULTIVALUE-NEXT:    i64.store 8
-; MULTIVALUE-NEXT:    i32.const 0
-; MULTIVALUE-NEXT:    local.get 3
-; MULTIVALUE-NEXT:    i64.store c
 ; MULTIVALUE-NEXT:    # fallthrough-return
 ;
 ; NO_MULTIVALUE-LABEL: multivalue_sdiv:
-; NO_MULTIVALUE:         .functype multivalue_sdiv (i64, i64, i64, i64) -> ()
+; NO_MULTIVALUE:         .functype multivalue_sdiv (i32, i64, i64, i64, i64) -> ()
 ; NO_MULTIVALUE-NEXT:    .local i32
 ; NO_MULTIVALUE-NEXT:  # %bb.0:
 ; NO_MULTIVALUE-NEXT:    global.get __stack_pointer
 ; NO_MULTIVALUE-NEXT:    i32.const 16
 ; NO_MULTIVALUE-NEXT:    i32.sub
-; NO_MULTIVALUE-NEXT:    local.tee 4
+; NO_MULTIVALUE-NEXT:    local.tee 5
 ; NO_MULTIVALUE-NEXT:    global.set __stack_pointer
-; NO_MULTIVALUE-NEXT:    local.get 4
-; NO_MULTIVALUE-NEXT:    local.get 0
+; NO_MULTIVALUE-NEXT:    local.get 5
 ; NO_MULTIVALUE-NEXT:    local.get 1
 ; NO_MULTIVALUE-NEXT:    local.get 2
 ; NO_MULTIVALUE-NEXT:    local.get 3
-; NO_MULTIVALUE-NEXT:    call __divti3
-; NO_MULTIVALUE-NEXT:    i32.const c
 ; NO_MULTIVALUE-NEXT:    local.get 4
+; NO_MULTIVALUE-NEXT:    call __divti3
+; NO_MULTIVALUE-NEXT:    local.get 0
+; NO_MULTIVALUE-NEXT:    local.get 5
 ; NO_MULTIVALUE-NEXT:    i32.const 8
 ; NO_MULTIVALUE-NEXT:    i32.add
 ; NO_MULTIVALUE-NEXT:    i64.load 0
 ; NO_MULTIVALUE-NEXT:    i64.store 8
-; NO_MULTIVALUE-NEXT:    i32.const 0
-; NO_MULTIVALUE-NEXT:    local.get 4
+; NO_MULTIVALUE-NEXT:    local.get 0
+; NO_MULTIVALUE-NEXT:    local.get 5
 ; NO_MULTIVALUE-NEXT:    i64.load 0
-; NO_MULTIVALUE-NEXT:    i64.store c
-; NO_MULTIVALUE-NEXT:    local.get 4
+; NO_MULTIVALUE-NEXT:    i64.store 0
+; NO_MULTIVALUE-NEXT:    local.get 5
 ; NO_MULTIVALUE-NEXT:    i32.const 16
 ; NO_MULTIVALUE-NEXT:    i32.add
 ; NO_MULTIVALUE-NEXT:    global.set __stack_pointer
 ; NO_MULTIVALUE-NEXT:    # fallthrough-return
   %div = sdiv i128 %a, %b
-  store i128 %div, ptr @c, align 16
-  ret void
+  ret i128 %div
+}
+
+
+define fp128 @multivalue_fsub(fp128 %a, fp128 %b) {
+; MULTIVALUE-LABEL: multivalue_fsub:
+; MULTIVALUE:         .functype multivalue_fsub (i64, i64, i64, i64) -> (i64, i64)
+; MULTIVALUE-NEXT:  # %bb.0:
+; MULTIVALUE-NEXT:    local.get 0
+; MULTIVALUE-NEXT:    local.get 1
+; MULTIVALUE-NEXT:    local.get 2
+; MULTIVALUE-NEXT:    local.get 3
+; MULTIVALUE-NEXT:    call __subtf3
+; MULTIVALUE-NEXT:    # fallthrough-return
+;
+; NO_MULTIVALUE-LABEL: multivalue_fsub:
+; NO_MULTIVALUE:         .functype multivalue_fsub (i32, i64, i64, i64, i64) -> ()
+; NO_MULTIVALUE-NEXT:    .local i32
+; NO_MULTIVALUE-NEXT:  # %bb.0:
+; NO_MULTIVALUE-NEXT:    global.get __stack_pointer
+; NO_MULTIVALUE-NEXT:    i32.const 16
+; NO_MULTIVALUE-NEXT:    i32.sub
+; NO_MULTIVALUE-NEXT:    local.tee 5
+; NO_MULTIVALUE-NEXT:    global.set __stack_pointer
+; NO_MULTIVALUE-NEXT:    local.get 5
+; NO_MULTIVALUE-NEXT:    local.get 1
+; NO_MULTIVALUE-NEXT:    local.get 2
+; NO_MULTIVALUE-NEXT:    local.get 3
+; NO_MULTIVALUE-NEXT:    local.get 4
+; NO_MULTIVALUE-NEXT:    call __subtf3
+; NO_MULTIVALUE-NEXT:    local.get 0
+; NO_MULTIVALUE-NEXT:    local.get 5
+; NO_MULTIVALUE-NEXT:    i32.const 8
+; NO_MULTIVALUE-NEXT:    i32.add
+; NO_MULTIVALUE-NEXT:    i64.load 0
+; NO_MULTIVALUE-NEXT:    i64.store 8
+; NO_MULTIVALUE-NEXT:    local.get 0
+; NO_MULTIVALUE-NEXT:    local.get 5
+; NO_MULTIVALUE-NEXT:    i64.load 0
+; NO_MULTIVALUE-NEXT:    i64.store 0
+; NO_MULTIVALUE-NEXT:    local.get 5
+; NO_MULTIVALUE-NEXT:    i32.const 16
+; NO_MULTIVALUE-NEXT:    i32.add
+; NO_MULTIVALUE-NEXT:    global.set __stack_pointer
+; NO_MULTIVALUE-NEXT:    # fallthrough-return
+  %sub = fsub fp128 %a, %b
+  ret fp128 %sub
 }

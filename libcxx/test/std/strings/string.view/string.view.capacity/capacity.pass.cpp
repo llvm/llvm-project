@@ -59,7 +59,7 @@ void test1 () {
 }
 
 template<typename CharT>
-void test2 ( const CharT *s, size_t len ) {
+void test2 ( const CharT *s, std::size_t len ) {
     {
     std::basic_string_view<CharT> sv1 ( s );
     assert ( sv1.size() == len );

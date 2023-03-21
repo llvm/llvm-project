@@ -816,7 +816,7 @@ fir::factory::getExtents(mlir::Location loc, fir::FirOpBuilder &builder,
 fir::ExtendedValue fir::factory::readBoxValue(fir::FirOpBuilder &builder,
                                               mlir::Location loc,
                                               const fir::BoxValue &box) {
-  assert(!box.isUnlimitedPolymorphic() && !box.hasAssumedRank() &&
+  assert(!box.hasAssumedRank() &&
          "cannot read unlimited polymorphic or assumed rank fir.box");
   auto addr =
       builder.create<fir::BoxAddrOp>(loc, box.getMemTy(), box.getAddr());
@@ -830,10 +830,15 @@ fir::ExtendedValue fir::factory::readBoxValue(fir::FirOpBuilder &builder,
   }
   if (box.isDerivedWithLenParameters())
     TODO(loc, "read fir.box with length parameters");
+  mlir::Value sourceBox;
+  if (box.isPolymorphic())
+    sourceBox = box.getAddr();
+  if (box.isPolymorphic() && box.rank() == 0)
+    return fir::PolymorphicValue(addr, sourceBox);
   if (box.rank() == 0)
     return addr;
   return fir::ArrayBoxValue(addr, fir::factory::readExtents(builder, loc, box),
-                            box.getLBounds());
+                            box.getLBounds(), sourceBox);
 }
 
 llvm::SmallVector<mlir::Value>

@@ -82,5 +82,5 @@ static_assert(TEST_ALIGNOF(std::deque<char, test_allocator<char> >) == 4, "");
 static_assert(TEST_ALIGNOF(std::deque<char, small_iter_allocator<char> >) == 2, "");
 
 #else
-#  error size_t has an unexpected size
+#  error std::size_t has an unexpected size
 #endif

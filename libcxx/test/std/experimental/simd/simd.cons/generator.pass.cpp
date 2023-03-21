@@ -38,8 +38,8 @@ template <class T>
 void supported_simd128_ctor(...) = delete;
 
 struct identity {
-  template <size_t value>
-  int operator()(std::integral_constant<size_t, value>) const {
+  template <std::size_t value>
+  int operator()(std::integral_constant<std::size_t, value>) const {
     return value;
   }
 };
@@ -52,9 +52,9 @@ void compile_generator() {
 }
 
 struct limited_identity {
-  template <size_t value>
+  template <std::size_t value>
   typename std::conditional<value <= 2, std::int32_t, std::int64_t>::type
-  operator()(std::integral_constant<size_t, value>) const {
+  operator()(std::integral_constant<std::size_t, value>) const {
     return value;
   }
 };

@@ -34,14 +34,14 @@
 
 // This is based on the method found in
 // clang/test/CXX/temp/temp.arg/temp.arg.nontype/p1-cxx20.cpp
-template <size_t N>
+template <std::size_t N>
 struct Tester {
   // This is not part of the real test, but is used the deduce the size of the input.
   constexpr Tester(const char (&r)[N]) { __builtin_memcpy(text, r, N); }
   char text[N];
 
   // The size of the array shouldn't include the NUL character.
-  static const size_t size = N - 1;
+  static const std::size_t size = N - 1;
 
   template <class CharT>
   void test(const std::basic_string<CharT>& expected, const std::basic_string_view<CharT>& fmt) const {
@@ -82,7 +82,7 @@ struct Tester {
   }
 };
 
-template <size_t N>
+template <std::size_t N>
 Tester(const char (&)[N]) -> Tester<N>;
 
 template <Tester t, class CharT>

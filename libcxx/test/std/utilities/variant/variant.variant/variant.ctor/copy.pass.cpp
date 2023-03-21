@@ -223,7 +223,7 @@ void test_copy_ctor_valueless_by_exception() {
 #endif // TEST_HAS_NO_EXCEPTIONS
 }
 
-template <size_t Idx>
+template <std::size_t Idx>
 constexpr bool test_constexpr_copy_ctor_imp(std::variant<long, void*, const int> const& v) {
   auto v2 = v;
   return v2.index() == v.index() &&

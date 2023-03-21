@@ -148,7 +148,7 @@ int main(int, char**)
 
     test<intptr_t>  ();
     test<uintptr_t> ();
-    test<size_t>    ();
+    test<std::size_t>    ();
     test<ptrdiff_t> ();
     test<intmax_t>  ();
     test<uintmax_t> ();

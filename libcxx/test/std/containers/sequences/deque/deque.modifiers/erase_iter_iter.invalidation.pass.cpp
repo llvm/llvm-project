@@ -21,7 +21,7 @@
 #include "test_macros.h"
 
 template <typename C>
-void del_at_start(C c, size_t num)
+void del_at_start(C c, std::size_t num)
 {
     typename C::iterator first = c.begin();
     typename C::iterator last  = first + num;
@@ -41,7 +41,7 @@ void del_at_start(C c, size_t num)
 }
 
 template <typename C>
-void del_at_end(C c, size_t num)
+void del_at_end(C c, std::size_t num)
 {
     typename C::iterator last  = c.end();
     typename C::iterator first = last - num;
@@ -69,7 +69,7 @@ int main(int, char**)
 
     while (queue.size() > 1)
     {
-        for (size_t i = 1; i < queue.size(); ++i)
+        for (std::size_t i = 1; i < queue.size(); ++i)
         {
             del_at_start(queue, i);
             del_at_end  (queue, i);

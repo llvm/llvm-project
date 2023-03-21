@@ -336,7 +336,7 @@ private:
         fs::path const cwd = utils::getcwd();
         fs::path const tmp = fs::temp_directory_path();
         std::string base = cwd.filename().string();
-        size_t i = std::hash<std::string>()(cwd.string());
+        std::size_t i = std::hash<std::string>()(cwd.string());
         fs::path p = tmp / (base + "-static_env." + std::to_string(i));
         while (utils::exists(p.string())) {
             p = tmp / (base + "-static_env." + std::to_string(++i));

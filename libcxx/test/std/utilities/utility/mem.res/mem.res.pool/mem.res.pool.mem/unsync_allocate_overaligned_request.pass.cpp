@@ -21,9 +21,9 @@
 #include "count_new.h"
 #include "test_macros.h"
 
-bool is_aligned_to(void* p, size_t alignment) {
+bool is_aligned_to(void* p, std::size_t alignment) {
   void* p2     = p;
-  size_t space = 1;
+  std::size_t space = 1;
   void* result = std::align(alignment, 1, p2, space);
   return (result == p);
 }
@@ -34,7 +34,7 @@ int main(int, char**) {
   auto unsync1                  = std::pmr::unsynchronized_pool_resource(opts, std::pmr::new_delete_resource());
   std::pmr::memory_resource& r1 = unsync1;
 
-  constexpr size_t big_alignment = 8 * alignof(std::max_align_t);
+  constexpr std::size_t big_alignment = 8 * alignof(std::max_align_t);
   static_assert(big_alignment > 4);
 
   assert(globalMemCounter.checkNewCalledEq(0));

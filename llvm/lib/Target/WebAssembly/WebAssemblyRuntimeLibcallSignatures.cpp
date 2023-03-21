@@ -62,6 +62,8 @@ enum RuntimeLibcallSignature {
   i32_func_i32_i32_iPTR,
   i64_func_i64_i64,
   i64_func_i64_i64_iPTR,
+  i64_i64_func_i32,
+  i64_i64_func_i64,
   i64_i64_func_f32,
   i64_i64_func_f64,
   i16_i16_func_i16_i16,
@@ -71,20 +73,13 @@ enum RuntimeLibcallSignature {
   i64_i64_func_i64_i64_i64_i64_iPTR,
   i64_i64_i64_i64_func_i64_i64_i64_i64,
   i64_i64_func_i64_i64_i32,
+  i64_i64_func_i64_i64_i64_i64_i64_i64,
   iPTR_func_i32,
   iPTR_func_iPTR_i32_iPTR,
   iPTR_func_iPTR_iPTR_iPTR,
   f32_func_f32_f32_f32,
   f64_func_f64_f64_f64,
   func_i64_i64_iPTR_iPTR,
-  func_iPTR_f32,
-  func_iPTR_f64,
-  func_iPTR_i32,
-  func_iPTR_i64,
-  func_iPTR_i64_i64,
-  func_iPTR_i64_i64_i32,
-  func_iPTR_i64_i64_i64_i64,
-  func_iPTR_i64_i64_i64_i64_i64_i64,
   i32_func_i64_i64,
   i32_func_i64_i64_i64_i64,
   iPTR_func_f32,
@@ -156,73 +151,73 @@ struct RuntimeLibcallSignatureTable {
     // All F80 and PPCF128 routines are unsupported.
     Table[RTLIB::ADD_F32] = f32_func_f32_f32;
     Table[RTLIB::ADD_F64] = f64_func_f64_f64;
-    Table[RTLIB::ADD_F128] = func_iPTR_i64_i64_i64_i64;
+    Table[RTLIB::ADD_F128] = i64_i64_func_i64_i64_i64_i64;
     Table[RTLIB::SUB_F32] = f32_func_f32_f32;
     Table[RTLIB::SUB_F64] = f64_func_f64_f64;
-    Table[RTLIB::SUB_F128] = func_iPTR_i64_i64_i64_i64;
+    Table[RTLIB::SUB_F128] = i64_i64_func_i64_i64_i64_i64;
     Table[RTLIB::MUL_F32] = f32_func_f32_f32;
     Table[RTLIB::MUL_F64] = f64_func_f64_f64;
-    Table[RTLIB::MUL_F128] = func_iPTR_i64_i64_i64_i64;
+    Table[RTLIB::MUL_F128] = i64_i64_func_i64_i64_i64_i64;
     Table[RTLIB::DIV_F32] = f32_func_f32_f32;
     Table[RTLIB::DIV_F64] = f64_func_f64_f64;
-    Table[RTLIB::DIV_F128] = func_iPTR_i64_i64_i64_i64;
+    Table[RTLIB::DIV_F128] = i64_i64_func_i64_i64_i64_i64;
     Table[RTLIB::REM_F32] = f32_func_f32_f32;
     Table[RTLIB::REM_F64] = f64_func_f64_f64;
-    Table[RTLIB::REM_F128] = func_iPTR_i64_i64_i64_i64;
+    Table[RTLIB::REM_F128] = i64_i64_func_i64_i64_i64_i64;
     Table[RTLIB::FMA_F32] = f32_func_f32_f32_f32;
     Table[RTLIB::FMA_F64] = f64_func_f64_f64_f64;
-    Table[RTLIB::FMA_F128] = func_iPTR_i64_i64_i64_i64_i64_i64;
+    Table[RTLIB::FMA_F128] = i64_i64_func_i64_i64_i64_i64_i64_i64;
     Table[RTLIB::POWI_F32] = f32_func_f32_i32;
     Table[RTLIB::POWI_F64] = f64_func_f64_i32;
-    Table[RTLIB::POWI_F128] = func_iPTR_i64_i64_i32;
+    Table[RTLIB::POWI_F128] = i64_i64_func_i64_i64_i32;
     Table[RTLIB::SQRT_F32] = f32_func_f32;
     Table[RTLIB::SQRT_F64] = f64_func_f64;
-    Table[RTLIB::SQRT_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::SQRT_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::CBRT_F32] = f32_func_f32;
     Table[RTLIB::CBRT_F64] = f64_func_f64;
-    Table[RTLIB::CBRT_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::CBRT_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::LOG_F32] = f32_func_f32;
     Table[RTLIB::LOG_F64] = f64_func_f64;
-    Table[RTLIB::LOG_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::LOG_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::LOG2_F32] = f32_func_f32;
     Table[RTLIB::LOG2_F64] = f64_func_f64;
-    Table[RTLIB::LOG2_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::LOG2_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::LOG10_F32] = f32_func_f32;
     Table[RTLIB::LOG10_F64] = f64_func_f64;
-    Table[RTLIB::LOG10_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::LOG10_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::EXP_F32] = f32_func_f32;
     Table[RTLIB::EXP_F64] = f64_func_f64;
-    Table[RTLIB::EXP_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::EXP_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::EXP2_F32] = f32_func_f32;
     Table[RTLIB::EXP2_F64] = f64_func_f64;
-    Table[RTLIB::EXP2_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::EXP2_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::SIN_F32] = f32_func_f32;
     Table[RTLIB::SIN_F64] = f64_func_f64;
-    Table[RTLIB::SIN_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::SIN_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::COS_F32] = f32_func_f32;
     Table[RTLIB::COS_F64] = f64_func_f64;
-    Table[RTLIB::COS_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::COS_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::SINCOS_F32] = func_f32_iPTR_iPTR;
     Table[RTLIB::SINCOS_F64] = func_f64_iPTR_iPTR;
     Table[RTLIB::SINCOS_F128] = func_i64_i64_iPTR_iPTR;
     Table[RTLIB::POW_F32] = f32_func_f32_f32;
     Table[RTLIB::POW_F64] = f64_func_f64_f64;
-    Table[RTLIB::POW_F128] = func_iPTR_i64_i64_i64_i64;
+    Table[RTLIB::POW_F128] = i64_i64_func_i64_i64_i64_i64;
     Table[RTLIB::CEIL_F32] = f32_func_f32;
     Table[RTLIB::CEIL_F64] = f64_func_f64;
-    Table[RTLIB::CEIL_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::CEIL_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::TRUNC_F32] = f32_func_f32;
     Table[RTLIB::TRUNC_F64] = f64_func_f64;
-    Table[RTLIB::TRUNC_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::TRUNC_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::RINT_F32] = f32_func_f32;
     Table[RTLIB::RINT_F64] = f64_func_f64;
-    Table[RTLIB::RINT_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::RINT_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::NEARBYINT_F32] = f32_func_f32;
     Table[RTLIB::NEARBYINT_F64] = f64_func_f64;
-    Table[RTLIB::NEARBYINT_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::NEARBYINT_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::ROUND_F32] = f32_func_f32;
     Table[RTLIB::ROUND_F64] = f64_func_f64;
-    Table[RTLIB::ROUND_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::ROUND_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::LROUND_F32] = iPTR_func_f32;
     Table[RTLIB::LROUND_F64] = iPTR_func_f64;
     Table[RTLIB::LROUND_F128] = iPTR_func_i64_i64;
@@ -237,21 +232,21 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::LLRINT_F128] = i64_func_i64_i64;
     Table[RTLIB::FLOOR_F32] = f32_func_f32;
     Table[RTLIB::FLOOR_F64] = f64_func_f64;
-    Table[RTLIB::FLOOR_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::FLOOR_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::COPYSIGN_F32] = f32_func_f32_f32;
     Table[RTLIB::COPYSIGN_F64] = f64_func_f64_f64;
-    Table[RTLIB::COPYSIGN_F128] = func_iPTR_i64_i64_i64_i64;
+    Table[RTLIB::COPYSIGN_F128] = i64_i64_func_i64_i64_i64_i64;
     Table[RTLIB::FMIN_F32] = f32_func_f32_f32;
     Table[RTLIB::FMIN_F64] = f64_func_f64_f64;
-    Table[RTLIB::FMIN_F128] = func_iPTR_i64_i64_i64_i64;
+    Table[RTLIB::FMIN_F128] = i64_i64_func_i64_i64_i64_i64;
     Table[RTLIB::FMAX_F32] = f32_func_f32_f32;
     Table[RTLIB::FMAX_F64] = f64_func_f64_f64;
-    Table[RTLIB::FMAX_F128] = func_iPTR_i64_i64_i64_i64;
+    Table[RTLIB::FMAX_F128] = i64_i64_func_i64_i64_i64_i64;
 
     // Conversion
     // All F80 and PPCF128 routines are unsupported.
-    Table[RTLIB::FPEXT_F64_F128] = func_iPTR_f64;
-    Table[RTLIB::FPEXT_F32_F128] = func_iPTR_f32;
+    Table[RTLIB::FPEXT_F64_F128] = i64_i64_func_f64;
+    Table[RTLIB::FPEXT_F32_F128] = i64_i64_func_f32;
     Table[RTLIB::FPEXT_F32_F64] = f64_func_f32;
     Table[RTLIB::FPEXT_F16_F32] = f32_func_i16;
     Table[RTLIB::FPROUND_F32_F16] = i16_func_f32;
@@ -280,22 +275,22 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::FPTOUINT_F128_I128] = i64_i64_func_i64_i64;
     Table[RTLIB::SINTTOFP_I32_F32] = f32_func_i32;
     Table[RTLIB::SINTTOFP_I32_F64] = f64_func_i32;
-    Table[RTLIB::SINTTOFP_I32_F128] = func_iPTR_i32;
+    Table[RTLIB::SINTTOFP_I32_F128] = i64_i64_func_i32;
     Table[RTLIB::SINTTOFP_I64_F32] = f32_func_i64;
     Table[RTLIB::SINTTOFP_I64_F64] = f64_func_i64;
-    Table[RTLIB::SINTTOFP_I64_F128] = func_iPTR_i64;
+    Table[RTLIB::SINTTOFP_I64_F128] = i64_i64_func_i64;
     Table[RTLIB::SINTTOFP_I128_F32] = f32_func_i64_i64;
     Table[RTLIB::SINTTOFP_I128_F64] = f64_func_i64_i64;
-    Table[RTLIB::SINTTOFP_I128_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::SINTTOFP_I128_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::UINTTOFP_I32_F32] = f32_func_i32;
     Table[RTLIB::UINTTOFP_I32_F64] = f64_func_i64;
-    Table[RTLIB::UINTTOFP_I32_F128] = func_iPTR_i32;
+    Table[RTLIB::UINTTOFP_I32_F128] = i64_i64_func_i32;
     Table[RTLIB::UINTTOFP_I64_F32] = f32_func_i64;
     Table[RTLIB::UINTTOFP_I64_F64] = f64_func_i64;
-    Table[RTLIB::UINTTOFP_I64_F128] = func_iPTR_i64;
+    Table[RTLIB::UINTTOFP_I64_F128] = i64_i64_func_i64;
     Table[RTLIB::UINTTOFP_I128_F32] = f32_func_i64_i64;
     Table[RTLIB::UINTTOFP_I128_F64] = f64_func_i64_i64;
-    Table[RTLIB::UINTTOFP_I128_F128] = func_iPTR_i64_i64;
+    Table[RTLIB::UINTTOFP_I128_F128] = i64_i64_func_i64_i64;
 
     // Comparison
     // ALl F80 and PPCF128 routines are unsupported.
@@ -820,49 +815,6 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(PtrTy);
     Params.push_back(PtrTy);
     break;
-  case func_iPTR_f32:
-    Params.push_back(PtrTy);
-    Params.push_back(wasm::ValType::F32);
-    break;
-  case func_iPTR_f64:
-    Params.push_back(PtrTy);
-    Params.push_back(wasm::ValType::F64);
-    break;
-  case func_iPTR_i32:
-    Params.push_back(PtrTy);
-    Params.push_back(wasm::ValType::I32);
-    break;
-  case func_iPTR_i64:
-    Params.push_back(PtrTy);
-    Params.push_back(wasm::ValType::I64);
-    break;
-  case func_iPTR_i64_i64:
-    Params.push_back(PtrTy);
-    Params.push_back(wasm::ValType::I64);
-    Params.push_back(wasm::ValType::I64);
-    break;
-  case func_iPTR_i64_i64_i32:
-    Params.push_back(PtrTy);
-    Params.push_back(wasm::ValType::I64);
-    Params.push_back(wasm::ValType::I64);
-    Params.push_back(wasm::ValType::I32);
-    break;
-  case func_iPTR_i64_i64_i64_i64:
-    Params.push_back(PtrTy);
-    Params.push_back(wasm::ValType::I64);
-    Params.push_back(wasm::ValType::I64);
-    Params.push_back(wasm::ValType::I64);
-    Params.push_back(wasm::ValType::I64);
-    break;
-  case func_iPTR_i64_i64_i64_i64_i64_i64:
-    Params.push_back(PtrTy);
-    Params.push_back(wasm::ValType::I64);
-    Params.push_back(wasm::ValType::I64);
-    Params.push_back(wasm::ValType::I64);
-    Params.push_back(wasm::ValType::I64);
-    Params.push_back(wasm::ValType::I64);
-    Params.push_back(wasm::ValType::I64);
-    break;
   case i32_func_i64_i64:
     Rets.push_back(wasm::ValType::I32);
     Params.push_back(wasm::ValType::I64);
@@ -886,6 +838,38 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
   case iPTR_func_i64_i64:
     Rets.push_back(PtrTy);
     Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I64);
+    break;
+  case i64_i64_func_i64_i64_i64_i64_i64_i64:
+    if (Subtarget.hasMultivalue()) {
+      Rets.push_back(wasm::ValType::I64);
+      Rets.push_back(wasm::ValType::I64);
+    } else {
+      Params.push_back(PtrTy);
+    }
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I64);
+    break;
+  case i64_i64_func_i32:
+    if (Subtarget.hasMultivalue()) {
+      Rets.push_back(wasm::ValType::I64);
+      Rets.push_back(wasm::ValType::I64);
+    } else {
+      Params.push_back(PtrTy);
+    }
+    Params.push_back(wasm::ValType::I32);
+    break;
+  case i64_i64_func_i64:
+    if (Subtarget.hasMultivalue()) {
+      Rets.push_back(wasm::ValType::I64);
+      Rets.push_back(wasm::ValType::I64);
+    } else {
+      Params.push_back(PtrTy);
+    }
     Params.push_back(wasm::ValType::I64);
     break;
   case unsupported:

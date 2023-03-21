@@ -122,7 +122,7 @@ struct Bar {
   std::max_align_t y;
 };
 
-void test_aligned(void* p, size_t align) {
+void test_aligned(void* p, std::size_t align) {
   assert(reinterpret_cast<uintptr_t>(p) % align == 0);
 }
 

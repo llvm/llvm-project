@@ -27,8 +27,8 @@
 
 template <class T>
 void test() {
-  size_t last_size      = 0;
-  size_t last_alignment = 0;
+  std::size_t last_size      = 0;
+  std::size_t last_alignment = 0;
   TrackingMemRes resource(&last_size, &last_alignment);
 
   std::pmr::polymorphic_allocator<T> allocator(&resource);

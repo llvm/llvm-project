@@ -27,9 +27,9 @@ struct repointable_resource : public std::pmr::memory_resource {
   explicit repointable_resource(std::pmr::memory_resource* res) : which(res) {}
 
 private:
-  void* do_allocate(size_t size, size_t align) override { return which->allocate(size, align); }
+  void* do_allocate(std::size_t size, size_t align) override { return which->allocate(size, align); }
 
-  void do_deallocate(void* p, size_t size, size_t align) override { return which->deallocate(p, size, align); }
+  void do_deallocate(void* p, std::size_t size, size_t align) override { return which->deallocate(p, size, align); }
 
   bool do_is_equal(std::pmr::memory_resource const& rhs) const noexcept override { return which->is_equal(rhs); }
 };
@@ -49,7 +49,7 @@ void test_exception_safety() {
   assert(res != buffer);
   assert(globalMemCounter.checkNewCalledEq(1));
   assert(globalMemCounter.checkDeleteCalledEq(0));
-  const size_t last_new_size = globalMemCounter.last_new_size;
+  const std::size_t last_new_size = globalMemCounter.last_new_size;
 
   upstream.which = std::pmr::null_memory_resource();
   try {
