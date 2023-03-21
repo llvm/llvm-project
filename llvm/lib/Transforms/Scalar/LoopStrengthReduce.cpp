@@ -6763,33 +6763,26 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     }
 
     // Check that we can compute the value of AddRec on the exiting iteration
-    // without soundness problems.  There are two cases to be worried about:
-    // 1) BECount could be 255 with type i8.  Simply adding one would be
-    //    incorrect.  We may need one extra bit to represent the unsigned
-    //    trip count.
-    // 2) The multiplication of stride by TC may wrap around.  This is subtle
-    //    because computing the result accounting for wrap is insufficient.
-    //    In order to use the result in an exit test, we must also know that
-    //    AddRec doesn't take the same value on any previous iteration.
-    //    The simplest case to consider is a candidate IV which is narrower
-    //    than the trip count (and thus original IV), but this can also
-    //    happen due to non-unit strides on the candidate IVs.
+    // without soundness problems.  evaluateAtIteration internally needs
+    // to multiply the stride of the iteration number - which may wrap around.
+    // The issue here is subtle because computing the result accounting for
+    // wrap is insufficient. In order to use the result in an exit test, we
+    // must also know that AddRec doesn't take the same value on any previous
+    // iteration. The simplest case to consider is a candidate IV which is
+    // narrower than the trip count (and thus original IV), but this can
+    // also happen due to non-unit strides on the candidate IVs.
+    // TODO: This check should be replaceable with PostInc->hasNoSelfWrap(),
+    // but in practice we appear to be missing inference for cases we should
+    // be able to catch.
     ConstantRange StepCR = SE.getSignedRange(AddRec->getStepRecurrence(SE));
     ConstantRange BECountCR = SE.getUnsignedRange(BECount);
-    unsigned NoOverflowBitWidth = BECountCR.getActiveBits() + 1 + StepCR.getMinSignedBits();
+    unsigned NoOverflowBitWidth = BECountCR.getActiveBits() + StepCR.getMinSignedBits();
     unsigned ARBitWidth = SE.getTypeSizeInBits(AddRec->getType());
     if (NoOverflowBitWidth > ARBitWidth)
       continue;
 
-    const SCEV *TermValueSLocal = SE.getAddExpr(
-        AddRec->getOperand(0),
-        SE.getTruncateOrZeroExtend(
-            SE.getMulExpr(
-                AddRec->getOperand(1),
-                SE.getTruncateOrZeroExtend(
-                    SE.getAddExpr(BECount, SE.getOne(BECount->getType())),
-                    AddRec->getOperand(1)->getType())),
-            AddRec->getOperand(0)->getType()));
+    const SCEVAddRecExpr *PostInc = AddRec->getPostIncExpr(SE);
+    const SCEV *TermValueSLocal = PostInc->evaluateAtIteration(BECount, SE);
     if (!Expander.isSafeToExpand(TermValueSLocal)) {
       LLVM_DEBUG(
           dbgs() << "Is not safe to expand terminating value for phi node" << PN
