@@ -18,6 +18,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/Platform.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -223,9 +224,10 @@ Status ProcessElfCore::DoLoadCore() {
   ArchSpec target_arch = GetTarget().GetArchitecture();
   ArchSpec core_arch(m_core_module_sp->GetArchitecture());
   target_arch.MergeFrom(core_arch);
-  GetTarget().SetArchitecture(target_arch);
- 
-  SetUnixSignals(UnixSignals::Create(GetArchitecture()));
+  GetTarget().SetArchitecture(target_arch, /* set_platform = */ true);
+
+  if (auto platform_sp = GetTarget().GetPlatform())
+    SetUnixSignals(platform_sp->GetUnixSignals());
 
   // Ensure we found at least one thread that was stopped on a signal.
   bool siginfo_signal_found = false;

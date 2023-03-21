@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PlatformRemoteGDBServer.h"
+#include "GDBRemoteSignals.h"
 #include "lldb/Host/Config.h"
 
 #include "lldb/Breakpoint/BreakpointLocation.h"
@@ -31,7 +32,6 @@
 #include "lldb/Utility/UriParser.h"
 #include "llvm/Support/FormatAdapters.h"
 
-#include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
 #include <optional>
 
@@ -680,16 +680,12 @@ void PlatformRemoteGDBServer::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("_sigtramp"));
 }
 
-const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
+UnixSignalsSP PlatformRemoteGDBServer::GetRemoteUnixSignals() {
   if (!IsConnected())
-    return Platform::GetRemoteUnixSignals();
+    return UnixSignalsSP();
 
   if (m_remote_signals_sp)
     return m_remote_signals_sp;
-
-  // If packet not implemented or JSON failed to parse, we'll guess the signal
-  // set based on the remote architecture.
-  m_remote_signals_sp = UnixSignals::Create(GetRemoteSystemArchitecture());
 
   StringExtractorGDBRemote response;
   auto result =

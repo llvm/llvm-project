@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PlatformNetBSD.h"
+#include "NetBSDSignals.h"
 #include "lldb/Host/Config.h"
 
 #include <cstdio>
@@ -347,4 +348,8 @@ CompilerType PlatformNetBSD::GetSiginfoType(const llvm::Triple &triple) {
 
   ast->CompleteTagDeclarationDefinition(siginfo_type);
   return siginfo_type;
+}
+
+lldb::UnixSignalsSP PlatformNetBSD::CreateUnixSignals() {
+  return std::make_shared<NetBSDSignals>();
 }

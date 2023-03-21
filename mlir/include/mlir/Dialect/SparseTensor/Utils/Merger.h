@@ -399,11 +399,17 @@ public:
   /// to sparse level-type.
   bool hasAnySparse(const BitVector &bits) const;
 
+  /// Returns true if bits contains a dependent index reduction condition on
+  /// sparse levels.
+  bool hasSparseIdxReduction(const BitVector &bits) const;
+
   /// Gets the level-type of the `t`th tensor on `i`th loop.
   DimLevelType getDimLevelType(TensorId t, LoopId i) const {
     assert(t < numTensors && i < numLoops);
     return lvlTypes[t][i];
   }
+
+  /// Gets the level-type of the TensorLoopId.
   DimLevelType getDimLevelType(TensorLoopId b) const {
     return getDimLevelType(tensor(b), loop(b));
   }

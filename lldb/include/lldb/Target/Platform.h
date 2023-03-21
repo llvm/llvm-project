@@ -619,9 +619,11 @@ public:
     return 1;
   }
 
-  virtual const lldb::UnixSignalsSP &GetRemoteUnixSignals();
+  virtual lldb::UnixSignalsSP GetRemoteUnixSignals();
 
   lldb::UnixSignalsSP GetUnixSignals();
+
+  virtual lldb::UnixSignalsSP CreateUnixSignals() = 0;
 
   /// Locate a queue name given a thread's qaddr
   ///

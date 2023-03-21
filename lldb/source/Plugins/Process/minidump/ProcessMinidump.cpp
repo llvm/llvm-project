@@ -206,12 +206,14 @@ Status ProcessMinidump::DoLoadCore() {
                                    arch.GetArchitectureName());
     return error;
   }
-  GetTarget().SetArchitecture(arch, true /*set_platform*/);
+  GetTarget().SetArchitecture(arch, /*set_platform = */ true);
 
   m_thread_list = m_minidump_parser->GetThreads();
   m_active_exception = m_minidump_parser->GetExceptionStream();
 
-  SetUnixSignals(UnixSignals::Create(GetArchitecture()));
+  auto platform_sp = GetTarget().GetPlatform();
+  if (platform_sp)
+    SetUnixSignals(platform_sp->GetUnixSignals());
 
   ReadModuleList();
   if (ModuleSP module = GetTarget().GetExecutableModule())
