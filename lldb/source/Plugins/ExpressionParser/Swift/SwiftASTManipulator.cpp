@@ -894,7 +894,6 @@ llvm::Optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
         return {};
       return swift::Type(it->second);
     }
-    //swift_ast_ctx->GetBuiltinRawPointerType());
     return {};
   }
 
