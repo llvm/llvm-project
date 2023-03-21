@@ -20,6 +20,8 @@ struct CallGraph : ModulePass {
   static char ID;
   CallGraph() : ModulePass(ID) { std::error_code EC; }
 
+  constexpr StringRef LoggerFuncName = "Z6Loggerll";
+
   // Edges map contains key=caller and value=set_of_calees
   std::unordered_map<const Function *, SmallPtrSet<const Function *, 8>> Edges;
 
@@ -27,7 +29,7 @@ struct CallGraph : ModulePass {
   void insertCallLogger(IRBuilder<> &Builder, const Function *CallerFunc,
                         const Function *CalleeFunc,
                         FunctionCallee &LogFunc) const;
-  bool isLoggerFunc(StringRef Name) const { return Name == "_Z6LoggerPclS_l"; }
+  bool isLoggerFunc(StringRef Name) const { return Name == LoggerFuncName; }
   bool isLLVMTrap(StringRef Name) const { return Name == "llvm.trap"; }
 
   bool runOnModule(Module &M) override {
@@ -86,14 +88,14 @@ FunctionCallee CallGraph::getCallLogFunc(Module &M,
   Type *RetType = Type::getVoidTy(M.getContext());
 
   // Prepare callLogger function
-  // Logger func will get 4 params: caller name + addr, callee name + addr
+  // Logger func will get 2 params: caller addr, callee addr
   SmallVector<Type *> CallParamType = {
-      Builder.getInt8PtrTy(), Builder.getInt64Ty(), Builder.getInt8PtrTy(),
+      Builder.getInt64Ty(), 
       Builder.getInt64Ty()};
 
   FunctionType *CallLogFuncType =
       FunctionType::get(RetType, CallParamType, false);
-  FunctionCallee CallLogFunc = M.getOrInsertFunction("_Z6LoggerPclS_l", CallLogFuncType);
+  FunctionCallee CallLogFunc = M.getOrInsertFunction(LoggerFuncName, CallLogFuncType);
 
   return CallLogFunc;
 }
@@ -109,13 +111,11 @@ void CallGraph::insertCallLogger(IRBuilder<> &Builder,
   if (isLoggerFunc(CalleeFuncName) || isLLVMTrap(CalleeFuncName))
     return;
 
-  Value *CalleeName = Builder.CreateGlobalStringPtr(CalleeFuncName);
-  Value *CallerName = Builder.CreateGlobalStringPtr(CallerFunc->getName());
   Value *CallerAddr =
       ConstantInt::get(Builder.getInt64Ty(), int64_t(CallerFunc));
   Value *CalleeAddr =
       ConstantInt::get(Builder.getInt64Ty(), int64_t(CalleeFunc));
-  Value *Args[] = {CallerName, CallerAddr, CalleeName, CalleeAddr};
+  Value *Args[] = {CallerAddr, CalleeAddr};
 
   Builder.CreateCall(LogFunc, Args);
 }
