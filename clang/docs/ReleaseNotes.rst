@@ -368,6 +368,14 @@ libclang
   has an evaluable bit width. Fixes undefined behavior when called on a
   bit-field whose width depends on a template paramter.
 
+- ``clang_parseTranslationUnit`` and ``clang_parseTranslationUnit2`` have been
+  changed to automatically locate the Clang installation directory relative to
+  the location of the libclang binary and use it for system headers installed
+  alongside the Clang installation. It is no longer necessary to manually
+  locate such system headers or use the ``clang_parseTranslationUnit2FullArgv``
+  function for this purpose if libclang has been installed in the default
+  location.
+ 
 Static Analyzer
 ---------------
 - Fix incorrect alignment attribute on the this parameter of certain

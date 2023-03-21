@@ -25,5 +25,5 @@
 #  pragma clang __debug parser_crash
 #endif
 
-// CHECK: {"toolchain":"{{.*}}","libclang.operation":"parse","libclang.opts":1,"args":["clang","-fno-spell-checking","{{.*}}record-parsing-invocation.c","-Xclang","-detailed-preprocessing-record","-fallow-editor-placeholders"]}
-// CHECK-UNSAVED: {"toolchain":"{{.*}}","libclang.operation":"parse","libclang.opts":1,"args":["clang","-fno-spell-checking","{{.*}}record-parsing-invocation.c","-Xclang","-detailed-preprocessing-record","-fallow-editor-placeholders"],"unsaved_file_hashes":[{"name":"{{.*}}record-parsing-invocation.c","md5":"aee23773de90e665992b48209351d70e"}]}
+// CHECK: {"toolchain":"{{.*}}","libclang.operation":"parse","libclang.opts":1,"args":["{{.*}}bin{{.*}}clang","-fno-spell-checking","{{.*}}record-parsing-invocation.c","-Xclang","-detailed-preprocessing-record","-fallow-editor-placeholders"]}
+// CHECK-UNSAVED: {"toolchain":"{{.*}}","libclang.operation":"parse","libclang.opts":1,"args":["{{.*}}bin{{.*}}clang","-fno-spell-checking","{{.*}}record-parsing-invocation.c","-Xclang","-detailed-preprocessing-record","-fallow-editor-placeholders"],"unsaved_file_hashes":[{"name":"{{.*}}record-parsing-invocation.c","md5":"aee23773de90e665992b48209351d70e"}]}
