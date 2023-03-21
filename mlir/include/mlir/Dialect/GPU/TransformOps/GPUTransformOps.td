@@ -17,8 +17,7 @@ include "mlir/IR/OpBase.td"
 
 def MapNestedForallToThreads :
   Op<Transform_Dialect, "gpu.map_nested_forall_to_threads",
-    [FunctionalStyleTransformOpTrait,
-     MemoryEffectsOpInterface,
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      TransformEachOpTrait,
      TransformOpInterface]> {
   let description = [{
@@ -72,9 +71,7 @@ def MapNestedForallToThreads :
       scf.forall operations with mappings other than gpu.thread are
       ignored.
 
-      The returned handle points to the same LaunchOp operand, consuming it and
-      producing a new SSA value to satisfy chaining and linearity of the IR
-      properties.
+      This operation returns nothing.
 
       #### Example:
 
@@ -111,11 +108,11 @@ def MapNestedForallToThreads :
       ```
     }];
 
-  let arguments = (ins PDL_Operation:$target,
+  let arguments = (ins TransformHandleTypeInterface:$target,
                    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$block_dims,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$warp_dims,
                    DefaultValuedAttr<BoolAttr, "true">:$sync_after_distribute);
-  let results = (outs PDL_Operation:$result);
+  let results = (outs);
 
   let assemblyFormat = [{
     $target
@@ -123,6 +120,7 @@ def MapNestedForallToThreads :
     (`warp_dims` `=` $warp_dims^)?
     (`sync_after_distribute` `=` $sync_after_distribute^)?
     attr-dict
+    `:` functional-type(operands, results)
   }];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
