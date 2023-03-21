@@ -893,7 +893,7 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
   }
 }
 
-// TODO: If the RTLIB::Libcall-taking flavor of GetSignature remains unsed
+// TODO: If the RTLIB::Libcall-taking flavor of GetSignature remains unused
 // other than here, just roll its logic into this version.
 void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
                                StringRef Name,
@@ -904,9 +904,9 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
   auto Val = Map.find(Name);
 #ifndef NDEBUG
   if (Val == Map.end()) {
-    auto message =
+    auto Message =
         std::string("unexpected runtime library name: ") + std::string(Name);
-    llvm_unreachable(message.c_str());
+    llvm_unreachable(Message.c_str());
   }
 #endif
   return getLibcallSignature(Subtarget, Val->second, Rets, Params);
