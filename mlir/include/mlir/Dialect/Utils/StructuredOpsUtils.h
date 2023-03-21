@@ -123,6 +123,11 @@ Operation *cloneWithoutRegions(OpBuilder &b, Operation *op,
                                TypeRange newResultTypes,
                                ValueRange newOperands);
 
+// Get the list of attributes associated with the op, ignoring
+// those with the provided name.
+SmallVector<NamedAttribute>
+getPrunedAttributeList(Operation *op, ArrayRef<StringRef> elidedAttrs);
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_STRUCTUREDOPSUTILS_H
