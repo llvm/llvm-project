@@ -116,130 +116,140 @@
 # RUN: llvm-readobj -r --expand-relocs %t64 --elf-output-style=JSON --pretty-print \
 # RUN:   | FileCheck %s --check-prefix=JSON-EXPAND-64
 
-# JSON-EXPAND-64:      "Relocations": [Section (2) .rel.text {
-# JSON-EXPAND-64:        "Relocation": {
-# JSON-EXPAND-64-NEXT:     "Offset": 0,
-# JSON-EXPAND-64-NEXT:     "Type": {
-# JSON-EXPAND-64-NEXT:       "Name": "R_X86_64_NONE",
-# JSON-EXPAND-64-NEXT:       "Value": 0
+# JSON-EXPAND-64:      "Relocations": [
+# JSON-EXPAND-64-NEXT:   {
+# JSON-EXPAND-64-NEXT:   "SectionIndex": 2
+# JSON-EXPAND-64-NEXT:   "Relocs": [
+# JSON-EXPAND-64-NEXT:     {
+# JSON-EXPAND-64-NEXT:       "Relocation": {
+# JSON-EXPAND-64-NEXT:         "Offset": 0,
+# JSON-EXPAND-64-NEXT:         "Type": {
+# JSON-EXPAND-64-NEXT:           "Name": "R_X86_64_NONE",
+# JSON-EXPAND-64-NEXT:           "Value": 0
+# JSON-EXPAND-64-NEXT:         },
+# JSON-EXPAND-64-NEXT:         "Symbol": {
+# JSON-EXPAND-64-NEXT:           "Name": "rel_0",
+# JSON-EXPAND-64-NEXT:           "Value": 1
+# JSON-EXPAND-64-NEXT:         }
+# JSON-EXPAND-64-NEXT:       }
 # JSON-EXPAND-64-NEXT:     },
-# JSON-EXPAND-64-NEXT:     "Symbol": {
-# JSON-EXPAND-64-NEXT:       "Name": "rel_0",
-# JSON-EXPAND-64-NEXT:       "Value": 1
+# JSON-EXPAND-64-NEXT:     {
+# JSON-EXPAND-64-NEXT:       "Relocation": {
+# JSON-EXPAND-64-NEXT:         "Offset": 1,
+# JSON-EXPAND-64-NEXT:         "Type": {
+# JSON-EXPAND-64-NEXT:           "Name": "R_X86_64_PC32",
+# JSON-EXPAND-64-NEXT:           "Value": 2
+# JSON-EXPAND-64-NEXT:         },
+# JSON-EXPAND-64-NEXT:         "Symbol": {
+# JSON-EXPAND-64-NEXT:           "Name": "rel_neg",
+# JSON-EXPAND-64-NEXT:           "Value": 2
+# JSON-EXPAND-64-NEXT:         }
+# JSON-EXPAND-64-NEXT:       }
+# JSON-EXPAND-64-NEXT:     },
+# JSON-EXPAND-64-NEXT:     {
+# JSON-EXPAND-64-NEXT:       "Relocation": {
+# JSON-EXPAND-64-NEXT:         "Offset": 5,
+# JSON-EXPAND-64-NEXT:         "Type": {
+# JSON-EXPAND-64-NEXT:           "Name": "R_X86_64_PLT32",
+# JSON-EXPAND-64-NEXT:           "Value": 4
+# JSON-EXPAND-64-NEXT:         },
+# JSON-EXPAND-64-NEXT:         "Symbol": {
+# JSON-EXPAND-64-NEXT:           "Name": "rel_pos",
+# JSON-EXPAND-64-NEXT:           "Value": 3
+# JSON-EXPAND-64-NEXT:         }
+# JSON-EXPAND-64-NEXT:       }
+# JSON-EXPAND-64-NEXT:     },
+# JSON-EXPAND-64-NEXT:     {
+# JSON-EXPAND-64-NEXT:       "Relocation": {
+# JSON-EXPAND-64-NEXT:         "Offset": 9,
+# JSON-EXPAND-64-NEXT:         "Type": {
+# JSON-EXPAND-64-NEXT:           "Name": "R_X86_64_64",
+# JSON-EXPAND-64-NEXT:           "Value": 1
+# JSON-EXPAND-64-NEXT:         },
+# JSON-EXPAND-64-NEXT:         "Symbol": {
+# JSON-EXPAND-64-NEXT:           "Name": "rel_64",
+# JSON-EXPAND-64-NEXT:           "Value": 4
+# JSON-EXPAND-64-NEXT:         }
+# JSON-EXPAND-64-NEXT:       }
 # JSON-EXPAND-64-NEXT:     }
-# JSON-EXPAND-64-NEXT:   }
-# JSON-EXPAND-64-NEXT: },
-# JSON-EXPAND-64-NEXT: {
-# JSON-EXPAND-64-NEXT:   "Relocation": {
-# JSON-EXPAND-64-NEXT:     "Offset": 1,
-# JSON-EXPAND-64-NEXT:     "Type": {
-# JSON-EXPAND-64-NEXT:       "Name": "R_X86_64_PC32",
-# JSON-EXPAND-64-NEXT:       "Value": 2
+# JSON-EXPAND-64-NEXT:    ]
+# JSON-EXPAND-64-NEXT:   },
+# JSON-EXPAND-64-NEXT:   {
+# JSON-EXPAND-64-NEXT:   "SectionIndex": 3,
+# JSON-EXPAND-64-NEXT:   "Relocs": [
+# JSON-EXPAND-64-NEXT:     {
+# JSON-EXPAND-64-NEXT:       "Relocation": {
+# JSON-EXPAND-64-NEXT:         "Offset": 0,
+# JSON-EXPAND-64-NEXT:         "Type": {
+# JSON-EXPAND-64-NEXT:           "Name": "R_X86_64_NONE",
+# JSON-EXPAND-64-NEXT:           "Value": 0
+# JSON-EXPAND-64-NEXT:         },
+# JSON-EXPAND-64-NEXT:         "Symbol": {
+# JSON-EXPAND-64-NEXT:           "Name": "rela_0",
+# JSON-EXPAND-64-NEXT:           "Value": 5
+# JSON-EXPAND-64-NEXT:         },
+# JSON-EXPAND-64-NEXT:         "Addend": 0
+# JSON-EXPAND-64-NEXT:       }
 # JSON-EXPAND-64-NEXT:     },
-# JSON-EXPAND-64-NEXT:     "Symbol": {
-# JSON-EXPAND-64-NEXT:       "Name": "rel_neg",
-# JSON-EXPAND-64-NEXT:       "Value": 2
+# JSON-EXPAND-64-NEXT:     {
+# JSON-EXPAND-64-NEXT:       "Relocation": {
+# JSON-EXPAND-64-NEXT:         "Offset": 1,
+# JSON-EXPAND-64-NEXT:         "Type": {
+# JSON-EXPAND-64-NEXT:           "Name": "R_X86_64_PC32",
+# JSON-EXPAND-64-NEXT:           "Value": 2
+# JSON-EXPAND-64-NEXT:         },
+# JSON-EXPAND-64-NEXT:         "Symbol": {
+# JSON-EXPAND-64-NEXT:           "Name": "rela_neg",
+# JSON-EXPAND-64-NEXT:           "Value": 6
+# JSON-EXPAND-64-NEXT:         },
+# JSON-EXPAND-64-NEXT:         "Addend": 18446744073709551615
+# JSON-EXPAND-64-NEXT:       }
+# JSON-EXPAND-64-NEXT:     },
+# JSON-EXPAND-64-NEXT:     {
+# JSON-EXPAND-64-NEXT:       "Relocation": {
+# JSON-EXPAND-64-NEXT:         "Offset": 5,
+# JSON-EXPAND-64-NEXT:         "Type": {
+# JSON-EXPAND-64-NEXT:           "Name": "R_X86_64_PLT32",
+# JSON-EXPAND-64-NEXT:           "Value": 4
+# JSON-EXPAND-64-NEXT:         },
+# JSON-EXPAND-64-NEXT:         "Symbol": {
+# JSON-EXPAND-64-NEXT:           "Name": "rela_pos",
+# JSON-EXPAND-64-NEXT:           "Value": 7
+# JSON-EXPAND-64-NEXT:         },
+# JSON-EXPAND-64-NEXT:         "Addend": 2
+# JSON-EXPAND-64-NEXT:       }
+# JSON-EXPAND-64-NEXT:     },
+# JSON-EXPAND-64-NEXT:     {
+# JSON-EXPAND-64-NEXT:       "Relocation": {
+# JSON-EXPAND-64-NEXT:         "Offset": 18446744073709551615,
+# JSON-EXPAND-64-NEXT:         "Type": {
+# JSON-EXPAND-64-NEXT:           "Name": "R_X86_64_64",
+# JSON-EXPAND-64-NEXT:           "Value": 1
+# JSON-EXPAND-64-NEXT:         },
+# JSON-EXPAND-64-NEXT:         "Symbol": {
+# JSON-EXPAND-64-NEXT:           "Name": "rela_minneg",
+# JSON-EXPAND-64-NEXT:           "Value": 8
+# JSON-EXPAND-64-NEXT:         },
+# JSON-EXPAND-64-NEXT:         "Addend": 9223372036854775808
+# JSON-EXPAND-64-NEXT:       }
+# JSON-EXPAND-64-NEXT:     },
+# JSON-EXPAND-64-NEXT:     {
+# JSON-EXPAND-64-NEXT:       "Relocation": {
+# JSON-EXPAND-64-NEXT:         "Offset": 9,
+# JSON-EXPAND-64-NEXT:         "Type": {
+# JSON-EXPAND-64-NEXT:           "Name": "R_X86_64_32S",
+# JSON-EXPAND-64-NEXT:           "Value": 11
+# JSON-EXPAND-64-NEXT:         },
+# JSON-EXPAND-64-NEXT:         "Symbol": {
+# JSON-EXPAND-64-NEXT:           "Name": "rela_maxpos",
+# JSON-EXPAND-64-NEXT:           "Value": 9
+# JSON-EXPAND-64-NEXT:         },
+# JSON-EXPAND-64-NEXT:         "Addend": 9223372036854775807
+# JSON-EXPAND-64-NEXT:       }
 # JSON-EXPAND-64-NEXT:     }
-# JSON-EXPAND-64-NEXT:   }
-# JSON-EXPAND-64-NEXT: },
-# JSON-EXPAND-64-NEXT: {
-# JSON-EXPAND-64-NEXT:   "Relocation": {
-# JSON-EXPAND-64-NEXT:     "Offset": 5,
-# JSON-EXPAND-64-NEXT:     "Type": {
-# JSON-EXPAND-64-NEXT:       "Name": "R_X86_64_PLT32",
-# JSON-EXPAND-64-NEXT:       "Value": 4
-# JSON-EXPAND-64-NEXT:     },
-# JSON-EXPAND-64-NEXT:     "Symbol": {
-# JSON-EXPAND-64-NEXT:       "Name": "rel_pos",
-# JSON-EXPAND-64-NEXT:       "Value": 3
-# JSON-EXPAND-64-NEXT:     }
-# JSON-EXPAND-64-NEXT:   }
-# JSON-EXPAND-64-NEXT: },
-# JSON-EXPAND-64-NEXT: {
-# JSON-EXPAND-64-NEXT:   "Relocation": {
-# JSON-EXPAND-64-NEXT:     "Offset": 9,
-# JSON-EXPAND-64-NEXT:     "Type": {
-# JSON-EXPAND-64-NEXT:       "Name": "R_X86_64_64",
-# JSON-EXPAND-64-NEXT:       "Value": 1
-# JSON-EXPAND-64-NEXT:     },
-# JSON-EXPAND-64-NEXT:     "Symbol": {
-# JSON-EXPAND-64-NEXT:       "Name": "rel_64",
-# JSON-EXPAND-64-NEXT:       "Value": 4
-# JSON-EXPAND-64-NEXT:     }
-# JSON-EXPAND-64-NEXT:   }
-# JSON-EXPAND-64-NEXT: }}
-# JSON-EXPAND-64-NEXT: Section (3) .rela.text {
-# JSON-EXPAND-64-NEXT: ,
-# JSON-EXPAND-64-NEXT: {
-# JSON-EXPAND-64-NEXT:   "Relocation": {
-# JSON-EXPAND-64-NEXT:     "Offset": 0,
-# JSON-EXPAND-64-NEXT:     "Type": {
-# JSON-EXPAND-64-NEXT:       "Name": "R_X86_64_NONE",
-# JSON-EXPAND-64-NEXT:       "Value": 0
-# JSON-EXPAND-64-NEXT:     },
-# JSON-EXPAND-64-NEXT:     "Symbol": {
-# JSON-EXPAND-64-NEXT:       "Name": "rela_0",
-# JSON-EXPAND-64-NEXT:       "Value": 5
-# JSON-EXPAND-64-NEXT:     },
-# JSON-EXPAND-64-NEXT:     "Addend": 0
-# JSON-EXPAND-64-NEXT:   }
-# JSON-EXPAND-64-NEXT: },
-# JSON-EXPAND-64-NEXT: {
-# JSON-EXPAND-64-NEXT:   "Relocation": {
-# JSON-EXPAND-64-NEXT:     "Offset": 1,
-# JSON-EXPAND-64-NEXT:     "Type": {
-# JSON-EXPAND-64-NEXT:       "Name": "R_X86_64_PC32",
-# JSON-EXPAND-64-NEXT:       "Value": 2
-# JSON-EXPAND-64-NEXT:     },
-# JSON-EXPAND-64-NEXT:     "Symbol": {
-# JSON-EXPAND-64-NEXT:       "Name": "rela_neg",
-# JSON-EXPAND-64-NEXT:       "Value": 6
-# JSON-EXPAND-64-NEXT:     },
-# JSON-EXPAND-64-NEXT:     "Addend": 18446744073709551615
-# JSON-EXPAND-64-NEXT:   }
-# JSON-EXPAND-64-NEXT: },
-# JSON-EXPAND-64-NEXT: {
-# JSON-EXPAND-64-NEXT:   "Relocation": {
-# JSON-EXPAND-64-NEXT:     "Offset": 5,
-# JSON-EXPAND-64-NEXT:     "Type": {
-# JSON-EXPAND-64-NEXT:       "Name": "R_X86_64_PLT32",
-# JSON-EXPAND-64-NEXT:       "Value": 4
-# JSON-EXPAND-64-NEXT:     },
-# JSON-EXPAND-64-NEXT:     "Symbol": {
-# JSON-EXPAND-64-NEXT:       "Name": "rela_pos",
-# JSON-EXPAND-64-NEXT:       "Value": 7
-# JSON-EXPAND-64-NEXT:     },
-# JSON-EXPAND-64-NEXT:     "Addend": 2
-# JSON-EXPAND-64-NEXT:   }
-# JSON-EXPAND-64-NEXT: },
-# JSON-EXPAND-64-NEXT: {
-# JSON-EXPAND-64-NEXT:   "Relocation": {
-# JSON-EXPAND-64-NEXT:     "Offset": 18446744073709551615,
-# JSON-EXPAND-64-NEXT:     "Type": {
-# JSON-EXPAND-64-NEXT:       "Name": "R_X86_64_64",
-# JSON-EXPAND-64-NEXT:       "Value": 1
-# JSON-EXPAND-64-NEXT:     },
-# JSON-EXPAND-64-NEXT:     "Symbol": {
-# JSON-EXPAND-64-NEXT:       "Name": "rela_minneg",
-# JSON-EXPAND-64-NEXT:       "Value": 8
-# JSON-EXPAND-64-NEXT:     },
-# JSON-EXPAND-64-NEXT:     "Addend": 9223372036854775808
-# JSON-EXPAND-64-NEXT:   }
-# JSON-EXPAND-64-NEXT: },
-# JSON-EXPAND-64-NEXT: {
-# JSON-EXPAND-64-NEXT:   "Relocation": {
-# JSON-EXPAND-64-NEXT:     "Offset": 9,
-# JSON-EXPAND-64-NEXT:     "Type": {
-# JSON-EXPAND-64-NEXT:       "Name": "R_X86_64_32S",
-# JSON-EXPAND-64-NEXT:       "Value": 11
-# JSON-EXPAND-64-NEXT:     },
-# JSON-EXPAND-64-NEXT:     "Symbol": {
-# JSON-EXPAND-64-NEXT:       "Name": "rela_maxpos",
-# JSON-EXPAND-64-NEXT:       "Value": 9
-# JSON-EXPAND-64-NEXT:     },
-# JSON-EXPAND-64-NEXT:     "Addend": 9223372036854775807
-# JSON-EXPAND-64-NEXT:   }
-# JSON-EXPAND-64-NEXT: }}
+# JSON-EXPAND-64-NEXT:    ]
+# JSON-EXPAND-64-NEXT:  }
+# JSON-EXPAND-64-NEXT: ]
 
 --- !ELF
 FileHeader:
