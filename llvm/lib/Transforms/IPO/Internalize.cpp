@@ -275,7 +275,5 @@ PreservedAnalyses InternalizePass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!internalizeModule(M))
     return PreservedAnalyses::all();
 
-  PreservedAnalyses PA;
-  PA.preserve<CallGraphAnalysis>();
-  return PA;
+  return PreservedAnalyses::none();
 }
