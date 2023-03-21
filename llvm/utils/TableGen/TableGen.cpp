@@ -157,12 +157,12 @@ cl::opt<std::string> Class("class", cl::desc("Print Enum list for this class"),
 bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
   switch (Action) {
   case PrintRecords:
-    OS << Records;              // No argument, dump all contents
+    OS << Records; // No argument, dump all contents
     break;
   case PrintDetailedRecords:
     EmitDetailedRecords(Records, OS);
     break;
-  case NullBackend:             // No backend at all.
+  case NullBackend: // No backend at all.
     break;
   case DumpJSON:
     EmitJSON(Records, OS);
@@ -227,13 +227,12 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     OS << "\n";
     break;
   }
-  case PrintSets:
-  {
+  case PrintSets: {
     SetTheory Sets;
     Sets.addFieldExpander("Set", "Elements");
     for (Record *Rec : Records.getAllDerivedDefinitions("Set")) {
       OS << Rec->getName() << " = [";
-      const std::vector<Record*> *Elts = Sets.expand(Rec);
+      const std::vector<Record *> *Elts = Sets.expand(Rec);
       assert(Elts && "Couldn't expand Set instance");
       for (Record *Elt : *Elts)
         OS << ' ' << Elt->getName();
@@ -290,7 +289,7 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
 
   return false;
 }
-}
+} // namespace
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
