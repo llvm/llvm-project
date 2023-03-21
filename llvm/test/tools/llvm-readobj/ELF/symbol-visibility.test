@@ -31,15 +31,15 @@
 # GNU-NEXT: HIDDEN    UND hidden
 # GNU-NEXT: PROTECTED UND protected
 
-# JSON:      "Value": "default",
+# JSON:      "Name": "default",
 # JSON:      "Other": {
-# JSON-NEXT:   "RawFlags": 0,
+# JSON-NEXT:   "Value": 0,
 # JSON-NEXT:   "Flags": []
 # JSON-NEXT: },
 
-# JSON:      "Value": "internal",
+# JSON:      "Name": "internal",
 # JSON:      "Other": {
-# JSON-NEXT:    "RawFlags": 1,
+# JSON-NEXT:    "Value": 1,
 # JSON-NEXT:    "Flags": [
 # JSON-NEXT:      {
 # JSON-NEXT:        "Name": "STV_INTERNAL",
@@ -48,9 +48,9 @@
 # JSON-NEXT:    ]
 # JSON-NEXT:  },
 
-# JSON:      "Value": "hidden",
+# JSON:      "Name": "hidden",
 # JSON:      "Other": {
-# JSON-NEXT:    "RawFlags": 2,
+# JSON-NEXT:    "Value": 2,
 # JSON-NEXT:    "Flags": [
 # JSON-NEXT:      {
 # JSON-NEXT:        "Name": "STV_HIDDEN",
@@ -59,9 +59,9 @@
 # JSON-NEXT:    ]
 # JSON-NEXT:  },
 
-# JSON:      "Value": "protected",
+# JSON:      "Name": "protected",
 # JSON:      "Other": {
-# JSON-NEXT:    "RawFlags": 3,
+# JSON-NEXT:    "Value": 3,
 # JSON-NEXT:    "Flags": [
 # JSON-NEXT:      {
 # JSON-NEXT:        "Name": "STV_PROTECTED",

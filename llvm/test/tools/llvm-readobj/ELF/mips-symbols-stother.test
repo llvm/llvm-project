@@ -24,9 +24,9 @@
 # MIPS-GNU-NEXT:    1: 00000000     0 NOTYPE  LOCAL  DEFAULT [<other: 0xac>] UND foo
 # MIPS-GNU-NEXT:    2: 00000000     0 NOTYPE  LOCAL  DEFAULT [<other: 0xf0>] UND bar
 
-# MIPS-JSON:      "Value": "foo",
+# MIPS-JSON:      "Name": "foo",
 # MIPS-JSON:      "Other": {
-# MIPS-JSON-NEXT:   "RawFlags": 172,
+# MIPS-JSON-NEXT:   "Value": 172,
 # MIPS-JSON-NEXT:   "Flags": [
 # MIPS-JSON-NEXT:     {
 # MIPS-JSON-NEXT:       "Name": "STO_MIPS_MICROMIPS",
@@ -46,9 +46,9 @@
 # MIPS-JSON-NEXT:     }
 # MIPS-JSON-NEXT:   ]
 # MIPS-JSON-NEXT: },
-# MIPS-JSON:      "Value": "bar",
+# MIPS-JSON:      "Name": "bar",
 # MIPS-JSON:      "Other": {
-# MIPS-JSON-NEXT:   "RawFlags": 240,
+# MIPS-JSON-NEXT:   "Value": 240,
 # MIPS-JSON-NEXT:   "Flags": [
 # MIPS-JSON-NEXT:     {
 # MIPS-JSON-NEXT:       "Name": "STO_MIPS_MIPS16",
