@@ -45,13 +45,14 @@ static const char *GetUserCodeStartMarker() {
 static const char *GetUserCodeEndMarker() { return "\n/*__LLDB_USER_END__*/"; }
 
 /// Remove SILPacktype and print the name with substitutions applied.
-static std::string TransformPackType(
+static llvm::Expected<std::string> TransformPackType(
     CompilerType type,
     llvm::SmallDenseMap<std::pair<unsigned, unsigned>, llvm::SmallString<4>>
         subs) {
   auto tss = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!tss)
-    return "<unexpected typesystem>";
+    return llvm::createStringError(llvm::errc::not_supported,
+                                   "unexpected typesystem");
   auto &ts = tss->GetTypeSystemSwiftTypeRef();
   using namespace swift::Demangle;
   Demangler dem;
@@ -59,20 +60,16 @@ static std::string TransformPackType(
       dem, type.GetMangledTypeName().GetStringRef());
 
   node = TypeSystemSwiftTypeRef::Transform(dem, node, [](NodePointer n) {
-    if (n->getKind() == Node::Kind::SILPackIndirect && n->getNumChildren() == 1) {
+    if (n->getKind() == Node::Kind::SILPackIndirect &&
+        n->getNumChildren() == 1) {
       n = n->getFirstChild();
       if (n->getKind() == Node::Kind::Type && n->getNumChildren() == 1)
         return n->getFirstChild();
     }
-    //if (n->getKind() == Node::Kind::Pack && n->getNumChildren() == 2) {
-    //  auto pack = dem.createNode(Node::Kind::PackExpansion);
-    //  pack->addChild(n/*->getChild(0)*/, dem);
-    //  //pack->addChild(n->getChild(1), dem);
-    //  return pack;
-    //}
     return n;
   });
 
+  bool error = false;
   ConstString type_name = ts.RemangleAsType(dem, node).GetMangledTypeName();
   swift::Demangle::DemangleOptions options;
   options = swift::Demangle::DemangleOptions::SimplifiedUIDemangleOptions();
@@ -87,10 +84,15 @@ static std::string TransformPackType(
     auto it = subs.find({depth, index});
     if (it != subs.end())
       return it->second.str().str();
-    return "<unexpected generic parameter>";
+    error = true;
+    return "$error";
   };
-  return swift::Demangle::demangleSymbolAsString(type_name.GetStringRef(),
-                                                 options);
+  std::string name = swift::Demangle::demangleSymbolAsString(
+      type_name.GetStringRef(), options);
+  if (error)
+    return llvm::createStringError(llvm::errc::not_supported,
+                                   "unexpected generic parameter");
+  return name;
 }
 
 struct CallsAndArgs {
@@ -101,7 +103,7 @@ struct CallsAndArgs {
 };
 
 /// Constructs the signatures for the expression evaluation functions based on
-/// the metadata variables in scope.
+/// the metadata variables in scope and any variadic functiontion parameters.
 /// For every outermost metadata pointer in scope ($τ_0_0, $τ_0_1, etc), we want
 /// to generate:
 ///
@@ -110,15 +112,15 @@ struct CallsAndArgs {
 /// func $__lldb_user_expr<T0, T1, ..., Tn>
 ///     (_ $__lldb_arg: UnsafeMutablePointer<(T0, T1, ..., Tn)>)
 ///
-/// - A $__lldb_trampoline signature like the above, but that also takes in a
-/// pointer to self:
+/// - An optional $__lldb_trampoline signature like the above, but
+///   that also takes in a pointer to self:
 ///
 /// func $__lldb_trampoline<T0, T1, ..., Tn>
 ///      (_ $__lldb_arg: UnsafeMutablePointer<(T0, T1, ..., Tn)>,
 ///       _ $__lldb_injected_self: inout $__lldb_context)
 ///
 /// - A $__lldb_sink signature that matches the number of parameters of the
-/// trampoline:
+///   trampoline:
 ///
 /// func $__lldb_sink(_ $__lldb_arg : UnsafeMutablePointer<Any>,
 ///                   _: $__lldb_builtin_ptr_t, // the self variable
@@ -129,7 +131,8 @@ struct CallsAndArgs {
 ///
 /// - And a matching call to the sink function:
 ///
-/// lldb_sink($__lldb_arg, $__lldb_injected_self, $τ_0_0, $τ_0_1, ..., $τ_0_n)
+/// lldb_sink($__lldb_arg, [$__lldb_injected_self, [pack args, pack counts...]],
+///           $τ_0_0, $τ_0_1, ..., $τ_0_n)
 static llvm::Expected<CallsAndArgs> MakeGenericSignaturesAndCalls(
     llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables,
     const llvm::Optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
@@ -143,8 +146,8 @@ static llvm::Expected<CallsAndArgs> MakeGenericSignaturesAndCalls(
   // a generic context.
   if (generic_sig &&
       (metadata_variables.size() < generic_sig->dependent_generic_param_count))
-    return llvm::make_error<llvm::StringError>(
-        llvm::inconvertibleErrorCode(), "Inconsistent generic signature");
+    return llvm::createStringError(llvm::errc::not_supported,
+                                   "Inconsistent generic signature");
 
   llvm::SmallDenseMap<std::pair<unsigned, unsigned>, llvm::SmallString<4>> subs;
   std::string generic_params;
@@ -165,8 +168,8 @@ static llvm::Expected<CallsAndArgs> MakeGenericSignaturesAndCalls(
       auto di =
           ParseSwiftGenericParameter(metadata_variables[i].GetName().str());
       if (!di)
-        return llvm::make_error<llvm::StringError>(
-            llvm::inconvertibleErrorCode(), "unexpected metadata variable");
+        return llvm::createStringError(llvm::errc::not_supported,
+                                       "unexpected metadata variable");
       depth = di->first;
       index = di->second;
     }
@@ -190,9 +193,13 @@ static llvm::Expected<CallsAndArgs> MakeGenericSignaturesAndCalls(
                    << ">(_ $__lldb_arg: UnsafeMutablePointer<("
                    << generic_params_no_packs << ")>";
   for (auto &var : local_variables)
-    if (var.GetType().GetTypeInfo() & lldb::eTypeIsPack)
+    if (var.GetType().GetTypeInfo() & lldb::eTypeIsPack) {
+      auto pack_type = TransformPackType(var.GetType(), subs);
+      if (!pack_type)
+        return pack_type.takeError();
       user_expr_stream << ", _ " << var.GetName() << ": "
-                       << TransformPackType(var.GetType(), subs);
+                       << *pack_type;
+    }
   user_expr_stream << ")";
 
   std::string trampoline;
