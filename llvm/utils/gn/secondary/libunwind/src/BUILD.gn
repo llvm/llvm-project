@@ -91,6 +91,7 @@ if (libunwind_enable_shared && current_os != "android") {
       ]
     }
     if (current_os == "mac") {
+      cflags += [ "-fno-stack-protector" ]
       ldflags += [
         "-Wl,-compatibility_version,1",
         "-Wl,-install_name,/usr/lib/libunwind.1.dylib",
