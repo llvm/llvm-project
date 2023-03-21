@@ -52,15 +52,21 @@ if(scalar @ARGV == 0){
 
 # retrieve --rocm-path hipcc option from command line.
 # We need to respect this over the env var ROCM_PATH for this compilation.
-sub get_rocm_path_option {
+sub get_path_options {
   my $rocm_path="";
+  my $hip_path="";
   my @CLArgs = @ARGV;
   foreach $arg (@CLArgs) {
     if (index($arg,"--rocm-path=") != -1) {
       ($rocm_path) = $arg=~ /=\s*(.*)\s*$/;
+      next;
+    }
+    if (index($arg,"--hip-path=") != -1) {
+      ($hip_path) = $arg=~ /=\s*(.*)\s*$/;
+      next;
     }
   }
-  return $rocm_path;
+  return ($rocm_path, $hip_path);
 }
 
 $verbose = $ENV{'HIPCC_VERBOSE'} // 0;
@@ -99,13 +105,16 @@ sub delete_temp_dirs {
 }
 
 my $base_dir;
-my $rocmPath;
 BEGIN {
     $base_dir = dirname(Cwd::realpath(__FILE__) );
-    $rocmPath = get_rocm_path_option();
-    if ($rocmPath ne '') {
+    my ($rocm_path, $hip_path) = get_path_options();
+    if ($rocm_path ne '') {
       # --rocm-path takes precedence over ENV{ROCM_PATH}
-      $ENV{ROCM_PATH}=$rocmPath;
+      $ENV{ROCM_PATH}=$rocm_path;
+    }
+    if ($hip_path ne '') {
+      # --rocm-path takes precedence over ENV{ROCM_PATH}
+      $ENV{HIP_PATH}=$hip_path;
     }
 }
 use lib "$base_dir/";
@@ -123,24 +132,9 @@ $HIP_VERSION    =   $hipvars::HIP_VERSION;
 $HIP_ROCCLR_HOME =   $hipvars::HIP_ROCCLR_HOME;
 
 if ($HIP_PLATFORM eq "amd") {
-  # If using ROCclr runtime, need to find HIP_ROCCLR_HOME
-  if (!defined $DEVICE_LIB_PATH and -e "$HIP_ROCCLR_HOME/lib/bitcode") {
-    $DEVICE_LIB_PATH = "$HIP_ROCCLR_HOME/lib/bitcode";
-  }
   $HIP_INCLUDE_PATH = "$HIP_ROCCLR_HOME/include";
   if (!defined $HIP_LIB_PATH) {
     $HIP_LIB_PATH = "$HIP_ROCCLR_HOME/lib";
-  }
-
-  if (!defined $DEVICE_LIB_PATH) {
-    if (-e "$ROCM_PATH/amdgcn/bitcode") {
-      $DEVICE_LIB_PATH = "$ROCM_PATH/amdgcn/bitcode";
-    }
-    else {
-      # This path is to support an older build of the device library
-      # TODO: To be removed in the future.
-      $DEVICE_LIB_PATH = "$ROCM_PATH/lib";
-    }
   }
 }
 
@@ -259,7 +253,12 @@ if($HIP_PLATFORM eq "nvidia"){
     if($ARGV[0] eq "--genco"){
         foreach $isaarg (@ARGV[1..$#ARGV]){
             $ISACMD .= " ";
-            $ISACMD .= $isaarg;
+            # ignore --rocm-path=xxxx on nvcc nvidia platform
+            if ($isaarg !~ /--rocm-path/) {
+              $ISACMD .= $isaarg;
+            } else {
+              print "Ignoring --rocm-path= on nvidia nvcc platform.\n";
+            }
         }
         if ($verbose & 0x1) {
             print "hipcc-cmd: ", $ISACMD, "\n";
@@ -566,8 +565,15 @@ if ($HIP_PLATFORM eq "amd") {
         }
     }
 
+    # If the HIP_PATH env var is defined, pass that path to Clang
+    if ($ENV{'HIP_PATH'}) {
+        my $hip_path_flag = " --hip-path=\"$HIP_PATH\"";
+        $HIPCXXFLAGS .= $hip_path_flag;
+        $HIPLDFLAGS .= $hip_path_flag;
+    }
+
     if ($hasHIP) {
-        if ($DEVICE_LIB_PATH ne "$ROCM_PATH/amdgcn/bitcode") {
+        if (defined $DEVICE_LIB_PATH) {
             $HIPCXXFLAGS .= " --hip-device-lib-path=\"$DEVICE_LIB_PATH\"";
         }
     }

@@ -54,7 +54,7 @@ if ($USE_PERL_SCRIPT) {
         #Invoke hipcc.bin
         system($HIPCC_BIN, @ARGV);
     } else {
-        print "hipcc.bin not present; Install HIPCC binaries before proceeding";
+        print "hipcc.bin not present; install HIPCC binaries before proceeding\n";
         exit(-1);
     }
 }
