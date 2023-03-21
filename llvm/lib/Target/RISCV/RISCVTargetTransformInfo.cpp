@@ -436,6 +436,25 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
       getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
   unsigned VF = FVTy->getNumElements() / Factor;
 
+  // Then interleaved memory access pass with lower interleaved memory ops (i.e
+  // a load and store followed by a specific shuffle) to vlseg/vsseg
+  // intrinsics. In those cases then we can treat it as if it's just one (legal)
+  // memory op
+  if (!UseMaskForCond && !UseMaskForGaps &&
+      Factor <= TLI->getMaxSupportedInterleaveFactor()) {
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(FVTy);
+    // Need to make sure type has't been scalarized
+    if (LT.second.isFixedLengthVector()) {
+      auto *LegalFVTy = FixedVectorType::get(FVTy->getElementType(),
+                                             LT.second.getVectorNumElements());
+      if (TLI->isLegalInterleavedAccessType(LegalFVTy, Factor, DL)) {
+        InstructionCost LegalMemCost = getMemoryOpCost(
+            Opcode, LegalFVTy, Alignment, AddressSpace, CostKind);
+        return LT.first + LegalMemCost;
+      }
+    }
+  }
+
   // An interleaved load will look like this for Factor=3:
   // %wide.vec = load <12 x i32>, ptr %3, align 4
   // %strided.vec = shufflevector %wide.vec, poison, <4 x i32> <stride mask>
