@@ -586,9 +586,9 @@ end
 ! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[C1_LOAD]], ptr %{{.*}}
 ! LLVM: %[[GEP_TDESC_C1:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 7
 ! LLVM: %[[TDESC_C1:.*]] = load ptr, ptr %[[GEP_TDESC_C1]]
-! LLVM: %[[ELEM_SIZE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.}}, i32 0, i32 1
+! LLVM: %[[ELEM_SIZE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 1
 ! LLVM: %[[ELEM_SIZE:.*]] = load i64, ptr %[[ELEM_SIZE_GEP]]
-! LLVM: %[[TYPE_CODE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.}}, i32 0, i32 4
+! LLVM: %[[TYPE_CODE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 4
 ! LLVM: %[[TYPE_CODE:.*]] = load i32, ptr %[[TYPE_CODE_GEP]]
 ! LLVM: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } undef, i64 %[[ELEM_SIZE]], 1
 ! LLVM: %[[TRUNC_TYPE_CODE:.*]] = trunc i32 %[[TYPE_CODE]] to i8 
@@ -600,9 +600,9 @@ end
 ! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD_C2]], ptr %{{.*}}
 ! LLVM: %[[GEP_TDESC_C2:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 7
 ! LLVM: %[[TDESC_C2:.*]] = load ptr, ptr %[[GEP_TDESC_C2]]
-! LLVM: %[[ELEM_SIZE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.}}, i32 0, i32 1
+! LLVM: %[[ELEM_SIZE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 1
 ! LLVM: %[[ELEM_SIZE:.*]] = load i64, ptr %[[ELEM_SIZE_GEP]]
-! LLVM: %[[TYPE_CODE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.}}, i32 0, i32 4
+! LLVM: %[[TYPE_CODE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 4
 ! LLVM: %[[TYPE_CODE:.*]] = load i32, ptr %[[TYPE_CODE_GEP]]
 ! LLVM: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } undef, i64 %[[ELEM_SIZE]], 1
 ! LLVM: %[[TRUNC_TYPE_CODE:.*]] = trunc i32 %[[TYPE_CODE]] to i8 
