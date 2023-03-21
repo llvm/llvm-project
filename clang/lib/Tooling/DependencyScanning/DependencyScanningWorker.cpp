@@ -15,6 +15,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Tool.h"
+#include "clang/Frontend/CompileJobCacheKey.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -479,6 +480,13 @@ public:
 
     LastCC1Arguments = OriginalInvocation.getCC1CommandLine();
 
+    if (ScanInstance.getFrontendOpts().CacheCompileJob) {
+      auto &CAS = ScanInstance.getOrCreateObjectStore();
+      if (auto Key = createCompileJobCacheKey(
+              CAS, ScanInstance.getDiagnostics(), OriginalInvocation))
+        TUCacheKey = Key->toString();
+    }
+
     return true;
   }
 
@@ -492,6 +500,8 @@ public:
     std::swap(Result, LastCC1Arguments); // Reset LastCC1Arguments to empty.
     return Result;
   }
+
+  const std::optional<std::string> &getTUCacheKey() const { return TUCacheKey; }
 
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> getDepScanFS() {
     if (DepFS) {
@@ -523,6 +533,7 @@ private:
   Optional<CompilerInstance> ScanInstanceStorage;
   std::shared_ptr<ModuleDepCollector> MDC;
   std::vector<std::string> LastCC1Arguments;
+  std::optional<std::string> TUCacheKey;
   bool Scanned = false;
   raw_ostream *VerboseOS;
 };
@@ -701,7 +712,8 @@ bool DependencyScanningWorker::computeDependencies(
           // consumer.
           Consumer.handleBuildCommand(
               {Cmd.getExecutable(),
-               {Cmd.getArguments().begin(), Cmd.getArguments().end()}});
+               {Cmd.getArguments().begin(), Cmd.getArguments().end()},
+               /*TUCacheKey=*/std::nullopt});
           return true;
         }
 
@@ -722,7 +734,8 @@ bool DependencyScanningWorker::computeDependencies(
           return false;
 
         std::vector<std::string> Args = Action.takeLastCC1Arguments();
-        Consumer.handleBuildCommand({Cmd.getExecutable(), std::move(Args)});
+        Consumer.handleBuildCommand(
+            {Cmd.getExecutable(), std::move(Args), Action.getTUCacheKey()});
         return true;
       });
 
