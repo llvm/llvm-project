@@ -30,8 +30,7 @@
 struct TestType {};
 struct TestType2 {};
 
-int main(int, char**)
-{
+void f() {
     std::any a;
 
     // expected-error-re@any:* {{{{(static_assert|static assertion)}} failed{{.*}}ValueType is required to be a const lvalue reference or a CopyConstructible type}}
@@ -45,6 +44,4 @@ int main(int, char**)
 
     // expected-error-re@any:* {{{{(static_assert|static assertion)}} failed{{.*}}ValueType is required to be a const lvalue reference or a CopyConstructible type}}
     std::any_cast<TestType2 &&>(static_cast<std::any const&&>(a)); // expected-note {{requested here}}
-
-  return 0;
 }
