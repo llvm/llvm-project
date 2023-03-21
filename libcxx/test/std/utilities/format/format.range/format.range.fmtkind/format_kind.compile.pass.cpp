@@ -47,7 +47,7 @@ struct recursive_range {
   struct iterator {
     using iterator_concept = std::input_iterator_tag;
     using value_type       = recursive_range;
-    using difference_type  = ptrdiff_t;
+    using difference_type  = std::ptrdiff_t;
     using reference        = recursive_range;
 
     reference operator*() const;
