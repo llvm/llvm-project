@@ -10,7 +10,7 @@ define void @blam(ptr %arg, double %load2, i1 %fcmp3) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i1> poison, i1 [[FCMP3]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i1> [[TMP1]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x double> zeroinitializer, <2 x double> [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr poison, align 16
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP0]], double [[LOAD2]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp olt <2 x double> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x double> zeroinitializer, <2 x double> [[TMP0]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp olt <2 x double> [[TMP3]], zeroinitializer
