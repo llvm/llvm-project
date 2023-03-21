@@ -6762,8 +6762,8 @@ cc_library(
     deps = [
         ":IR",
         ":Support",
-        "//third_party/llvm/llvm-project/llvm:Core",
-        "//third_party/llvm/llvm-project/llvm:FrontendOpenMP",
+        "//llvm:Core",
+        "//llvm:FrontendOpenMP",
     ],
 )
 
