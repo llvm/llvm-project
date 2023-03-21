@@ -211,6 +211,9 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
+; After LSR, there are three IVs in this loop.  As a result, we have two
+; alternate IVs to chose from.  At the moment, we chose the last, but this
+; is somewhat arbitrary.
 define void @TermCondMoreThanOneUse(ptr %a) {
 ; CHECK-LABEL: define void @TermCondMoreThanOneUse
 ; CHECK-SAME: (ptr [[A:%.*]]) {
