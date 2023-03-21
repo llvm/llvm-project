@@ -5233,6 +5233,7 @@ cc_library(
     hdrs = ["lib/Conversion/SPIRVCommon/Pattern.h"],
     includes = ["include"],
     deps = [
+        ":IR",
         ":SPIRVDialect",
         ":Transforms",
         "//llvm:Support",
