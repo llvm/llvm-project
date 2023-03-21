@@ -6700,9 +6700,6 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   }
 
   BasicBlock *LoopLatch = L->getLoopLatch();
-
-  // TODO: Can we do something for greater than and less than?
-  // Terminating condition is foldable when it is an eq/ne icmp
   BranchInst *BI = cast<BranchInst>(LoopLatch->getTerminator());
   if (BI->isUnconditional())
     return std::nullopt;
@@ -6948,8 +6945,6 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       BranchInst *BI = cast<BranchInst>(LoopLatch->getTerminator());
       ICmpInst *OldTermCond = cast<ICmpInst>(BI->getCondition());
       IRBuilder<> LatchBuilder(LoopLatch->getTerminator());
-      // FIXME: We are adding a use of an IV here without account for poison safety.
-      // This is incorrect.
       Value *NewTermCond =
           LatchBuilder.CreateICmp(CmpInst::ICMP_EQ, LoopValue, TermValue,
                                   "lsr_fold_term_cond.replaced_term_cond");
