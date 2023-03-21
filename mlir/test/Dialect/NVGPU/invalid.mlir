@@ -130,7 +130,6 @@ func.func @async_cp_memory_space(%dst : memref<16xf32>, %src : memref<16xf32>, %
   nvgpu.device_async_copy %src[%i], %dst[%i], 16 : memref<16xf32> to memref<16xf32>
   return
 }
-
 // -----
 
 func.func @async_cp_memref_type(%dst : memref<16xi32, 3>, %src : memref<16xf32>, %i : index) -> () {
@@ -138,7 +137,6 @@ func.func @async_cp_memref_type(%dst : memref<16xi32, 3>, %src : memref<16xf32>,
   nvgpu.device_async_copy %src[%i], %dst[%i], 16 : memref<16xf32> to memref<16xi32, 3>
   return
 }
-
 // -----
 
 func.func @async_cp_num_src_indices(%dst : memref<16xf32, 3>, %src : memref<16x16xf32>, %i : index) -> () {
@@ -146,7 +144,6 @@ func.func @async_cp_num_src_indices(%dst : memref<16xf32, 3>, %src : memref<16x1
   nvgpu.device_async_copy %src[%i], %dst[%i], 16 : memref<16x16xf32> to memref<16xf32, 3>
   return
 }
-
 // -----
 
 func.func @async_cp_num_dst_indices(%dst : memref<16x16xf32, 3>, %src : memref<16xf32>, %i : index) -> () {
@@ -154,7 +151,6 @@ func.func @async_cp_num_dst_indices(%dst : memref<16x16xf32, 3>, %src : memref<1
   nvgpu.device_async_copy %src[%i], %dst[%i], 16 : memref<16xf32> to memref<16x16xf32, 3>
   return
 }
-
 // -----
 
 func.func @async_cp_num_src_stride(
@@ -166,7 +162,6 @@ func.func @async_cp_num_src_stride(
     memref<200x100xf32, affine_map<(d0, d1) -> (200*d0 + 2*d1)>> to memref<200x100xf32, 3>
   return
 }
-
 // -----
 
 func.func @async_cp_num_dst_stride(
@@ -177,4 +172,16 @@ func.func @async_cp_num_dst_stride(
   nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i], 16 :
     memref<200x100xf32> to memref<200x100xf32, affine_map<(d0, d1) -> (200*d0 + 2*d1)>, 3>
   return
+}
+// -----
+
+// 42 is never the answer!
+func.func @mma_sp_sync_f16_16816(%arg0: vector<2x2xf16>,
+                                 %arg1: vector<2x2xf16>,
+                                 %arg2: vector<2x2xf16>,
+                                 %arg3: vector<2xi16>) -> vector<2x2xf16> {
+  // expected-error @+1 {{'nvgpu.mma.sp.sync' op sparsity selector should be 0 or 1}}
+  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = [16, 8, 16], sparsitySelector = 42 : i32} :
+       (vector<2x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  return %d : vector<2x2xf16>
 }
