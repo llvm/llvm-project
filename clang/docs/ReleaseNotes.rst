@@ -778,6 +778,10 @@ Bug Fixes to Attribute Support
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
+- No longer issue a pre-C++2b compatibility warning in ``-pedantic`` mode
+  regading overloaded `operator[]` with more than one parmeter. (`#61582
+  <https://github.com/llvm/llvm-project/issues/61582>`_)
+
 - Address the thread identification problems in coroutines.
   (`#47177 <https://github.com/llvm/llvm-project/issues/47177>`_,
   `#47179 <https://github.com/llvm/llvm-project/issues/47179>`_)
