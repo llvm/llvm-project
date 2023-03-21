@@ -226,6 +226,11 @@ struct IRInstructionData
   void
   setPHIPredecessors(DenseMap<BasicBlock *, unsigned> &BasicBlockToInteger);
 
+  /// Get the BasicBlock based operands for PHINodes and BranchInsts.
+  ///
+  /// \returns A list of relevant BasicBlocks.
+  ArrayRef<Value *> getBlockOperVals();
+
   /// Hashes \p Value based on its opcode, types, and operand types.
   /// Two IRInstructionData instances produce the same hash when they perform
   /// the same operation.
