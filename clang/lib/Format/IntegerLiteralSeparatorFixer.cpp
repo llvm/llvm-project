@@ -136,13 +136,12 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
       DigitsPerGroup = Hex;
     if (DigitsPerGroup > 0 && checkSeparator(Text, DigitsPerGroup))
       continue;
+    const auto &Formatted = format(Text, DigitsPerGroup);
+    assert(Formatted != Text);
     if (Start > 0)
       Location = Location.getLocWithOffset(Start);
-    if (const auto &Formatted = format(Text, DigitsPerGroup);
-        Formatted != Text) {
-      cantFail(Result.add(
-          tooling::Replacement(SourceMgr, Location, Length, Formatted)));
-    }
+    cantFail(Result.add(
+        tooling::Replacement(SourceMgr, Location, Length, Formatted)));
   }
 
   return {Result, 0};
@@ -159,9 +158,9 @@ bool IntegerLiteralSeparatorFixer::checkSeparator(
         return false;
       I = 0;
     } else {
-      ++I;
       if (I == DigitsPerGroup)
         return false;
+      ++I;
     }
   }
 
