@@ -391,6 +391,7 @@ cc_test(
         "//mlir:AllPassesAndDialects",
         "//mlir:Analysis",
         "//mlir:ArithToLLVM",
+        "//mlir:BuiltinToLLVMIRTranslation",
         "//mlir:ExecutionEngine",
         "//mlir:FuncDialect",
         "//mlir:FuncToLLVM",
