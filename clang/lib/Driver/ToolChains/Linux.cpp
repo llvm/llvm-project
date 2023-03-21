@@ -92,8 +92,6 @@ std::string Linux::getMultiarchTriple(const Driver &D,
   case llvm::Triple::mips:
     return IsMipsR6 ? "mipsisa32r6-linux-gnu" : "mips-linux-gnu";
   case llvm::Triple::mipsel:
-    if (IsAndroid)
-      return "mipsel-linux-android";
     return IsMipsR6 ? "mipsisa32r6el-linux-gnu" : "mipsel-linux-gnu";
   case llvm::Triple::mips64: {
     std::string MT = std::string(IsMipsR6 ? "mipsisa64r6" : "mips64") +
@@ -105,8 +103,6 @@ std::string Linux::getMultiarchTriple(const Driver &D,
     break;
   }
   case llvm::Triple::mips64el: {
-    if (IsAndroid)
-      return "mips64el-linux-android";
     std::string MT = std::string(IsMipsR6 ? "mipsisa64r6el" : "mips64el") +
                      "-linux-" + (IsMipsN32Abi ? "gnuabin32" : "gnuabi64");
     if (D.getVFS().exists(concat(SysRoot, "/lib", MT)))
