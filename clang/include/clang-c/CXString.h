@@ -16,6 +16,7 @@
 
 #include "clang-c/ExternC.h"
 #include "clang-c/Platform.h"
+#include <stddef.h>
 
 LLVM_CLANG_C_EXTERN_C_BEGIN
 
@@ -43,6 +44,14 @@ typedef struct {
   CXString *Strings;
   unsigned Count;
 } CXStringSet;
+
+/**
+ * An array of C strings.
+ */
+typedef struct {
+  const char **Strings;
+  size_t Count;
+} CXCStringArray;
 
 /**
  * Retrieve the character data associated with the given string.
