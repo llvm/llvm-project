@@ -40,13 +40,13 @@
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 96), metadata ![[ID_4]], metadata ptr %S.sroa.0, metadata !DIExpression()), !dbg
 ;; This is the one we care about most in this test: check that a memset->store
 ;; gets a correct dbg.assign.
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32))
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 96), metadata ![[ID_5]], metadata ptr %S.sroa.4, metadata !DIExpression()), !dbg
 
 ;; The load from global+store becomes a load.
 ;; FIXME: In reality it is actually stored again later on.
 ; CHECK-NEXT: %0 = load i32, ptr @Glob, align 4, !dbg !{{.+}}
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg !
+; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32))
 
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
