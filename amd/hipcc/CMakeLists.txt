@@ -18,16 +18,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(ADDITIONAL_SHARED_LIBRARIES_TO_LINK
   libstdc++fs.so)
 
-get_directory_property(HAS_PARENT_SCOPE PARENT_DIRECTORY)
-if(HAS_PARENT_SCOPE)
-  # FIXME(kzhuravl): Do we need these here? If yes, what is the default?
-  set(HIP_VERSION_MAJOR 4 PARENT_SCOPE)
-  set(HIP_VERSION_MINOR 4 PARENT_SCOPE)
-  set(HIP_VERSION_PATCH 4 PARENT_SCOPE)
-else()
-  message(STATUS "Current scope has no parent")
-endif()
-
 set(HIPCC_BIN
   hipcc.bin)
 set(HIPCC_SOURCES
@@ -65,7 +55,7 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 
 # Debian-specific packaging variables.
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libfile-basedir-perl, libfile-copy-recursive-perl, libfile-listing-perl, libfile-which-perl, liburi-encode-perl, perl (>= 5.0)")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "hip-dev, libfile-basedir-perl, libfile-copy-recursive-perl, libfile-listing-perl, libfile-which-perl, liburi-encode-perl, perl (>= 5.0), rocm-llvm")
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/ROCm-Developer-Tools/HIPCC")
 if(DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
   set(CPACK_DEBIAN_PACKAGE_RELEASE $ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
@@ -76,7 +66,7 @@ endif()
 # RPM-specific packaging variables.
 set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
 set(CPACK_RPM_PACKAGE_LICENSE "NCSA")
-set(CPACK_RPM_PACKAGE_REQUIRES "perl >= 5.0, perl-File-BaseDir, perl-File-Listing, perl-File-Which, perl-URI-Encode")
+set(CPACK_RPM_PACKAGE_REQUIRES "hip-dev, perl >= 5.0, perl-File-BaseDir, perl-File-Listing, perl-File-Which, perl-URI-Encode, rocm-llvm")
 if(DEFINED ENV{CPACK_RPM_PACKAGE_RELEASE})
   set(CPACK_RPM_PACKAGE_RELEASE $ENV{CPACK_RPM_PACKAGE_RELEASE})
 else()
