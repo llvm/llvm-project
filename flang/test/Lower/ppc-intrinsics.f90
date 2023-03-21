@@ -137,3 +137,51 @@ subroutine fcfud_test(i)
 ! CHECK-FIR: fir.call @fir.__ppc_fcfud.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.fcfud(double %{{[0-9]}})
 end
+
+! CHECK-LABEL: fnabs_testr(x)
+subroutine fnabs_testr(x)
+  real :: x, y
+  y = fnabs(x)
+! CHECK-FIR: fir.call @fir.__ppc_fnabs.f32.f32
+! CHECK-LLVMIR: call contract float @llvm.ppc.fnabss(float %{{[0-9]}})
+end
+
+! CHECK-LABEL: fnabs_testd(x)
+subroutine fnabs_testd(x)
+  real(8) :: x, y
+  y = fnabs(x)
+! CHECK-FIR: fir.call @fir.__ppc_fnabs.f64.f64
+! CHECK-LLVMIR: call contract double @llvm.ppc.fnabs(double %{{[0-9]}})
+end
+
+!CHECK-LABEL: fre_test(x)
+subroutine fre_test(x)
+  real(8) :: x, y
+  y = fre(x)
+! CHECK-FIR: fir.call @fir.__ppc_fre.f64.f64
+! CHECK-LLVMIR: call contract double @llvm.ppc.fre(double %{{[0-9]}})
+end
+
+!CHECK-LABEL: fres_test(x)
+subroutine fres_test(x)
+  real :: x, y
+  y = fres(x)
+! CHECK-FIR: fir.call @fir.__ppc_fres.f32.f32
+! CHECK-LLVMIR: call contract float @llvm.ppc.fres(float %{{[0-9]}})
+end
+
+!CHECK-LABEL: frsqrte_test(x)
+subroutine frsqrte_test(x)
+  real(8) :: x, y
+  y = frsqrte(x)
+! CHECK-FIR: fir.call @fir.__ppc_frsqrte.f64.f64
+! CHECK-LLVMIR: call contract double @llvm.ppc.frsqrte(double %{{[0-9]}})
+end
+
+!CHECK-LABEL: frsqrtes_test(x)
+subroutine frsqrtes_test(x)
+  real :: x, y
+  y = frsqrtes(x)
+! CHECK-FIR: fir.call @fir.__ppc_frsqrtes.f32.f32
+! CHECK-LLVMIR: call contract float @llvm.ppc.frsqrtes(float %{{[0-9]}})
+end
