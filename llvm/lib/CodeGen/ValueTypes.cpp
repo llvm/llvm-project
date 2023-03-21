@@ -176,6 +176,8 @@ std::string EVT::getEVTString() const {
   case MVT::externref: return "externref";
   case MVT::aarch64svcount:
     return "aarch64svcount";
+  case MVT::spirvbuiltin:
+    return "spirvbuiltin";
   }
 }
 
@@ -583,12 +585,16 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   case Type::DoubleTyID:    return MVT(MVT::f64);
   case Type::X86_FP80TyID:  return MVT(MVT::f80);
   case Type::X86_MMXTyID:   return MVT(MVT::x86mmx);
-  case Type::TargetExtTyID:
-    if (cast<TargetExtType>(Ty)->getName() == "aarch64.svcount")
+  case Type::TargetExtTyID: {
+    TargetExtType *TargetExtTy = cast<TargetExtType>(Ty);
+    if (TargetExtTy->getName() == "aarch64.svcount")
       return MVT(MVT::aarch64svcount);
+    else if (TargetExtTy->getName().starts_with("spirv."))
+      return MVT(MVT::spirvbuiltin);
     if (HandleUnknown)
       return MVT(MVT::Other);
     llvm_unreachable("Unknown target ext type!");
+  }
   case Type::X86_AMXTyID:   return MVT(MVT::x86amx);
   case Type::FP128TyID:     return MVT(MVT::f128);
   case Type::PPC_FP128TyID: return MVT(MVT::ppcf128);
