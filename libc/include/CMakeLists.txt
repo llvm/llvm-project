@@ -184,6 +184,7 @@ add_gen_header(
     .llvm-libc-macros.file_seek_macros
     .llvm-libc-macros.stdio_macros
     .llvm-libc-types.size_t
+    .llvm-libc-types.ssize_t
     .llvm-libc-types.FILE
     .llvm-libc-types.cookie_io_functions_t
 )

@@ -7,5 +7,6 @@ add_entrypoint_object(
     wctob.h
   DEPENDS 
     libc.include.stdio
+    libc.include.wchar
     libc.src.__support.wctype_utils
 )
