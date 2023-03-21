@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/APSInt.h"
 
 namespace mlir {
@@ -226,6 +227,26 @@ SmallVector<int64_t>
 getValuesSortedByKey(ArrayRef<Attribute> keys, ArrayRef<int64_t> values,
                      llvm::function_ref<bool(Attribute, Attribute)> compare) {
   return getValuesSortedByKeyImpl(keys, values, compare);
+}
+
+/// Return the number of iterations for a loop with a lower bound `lb`, upper
+/// bound `ub` and step `step`.
+std::optional<int64_t> constantTripCount(OpFoldResult lb, OpFoldResult ub,
+                                         OpFoldResult step) {
+  if (lb == ub)
+    return 0;
+
+  std::optional<int64_t> lbConstant = getConstantIntValue(lb);
+  if (!lbConstant)
+    return std::nullopt;
+  std::optional<int64_t> ubConstant = getConstantIntValue(ub);
+  if (!ubConstant)
+    return std::nullopt;
+  std::optional<int64_t> stepConstant = getConstantIntValue(step);
+  if (!stepConstant)
+    return std::nullopt;
+
+  return mlir::ceilDiv(*ubConstant - *lbConstant, *stepConstant);
 }
 
 } // namespace mlir

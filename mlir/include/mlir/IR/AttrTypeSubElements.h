@@ -413,16 +413,17 @@ void walkImmediateSubElementsImpl(T derived,
                                   function_ref<void(Attribute)> walkAttrsFn,
                                   function_ref<void(Type)> walkTypesFn) {
   using ImplT = typename T::ImplType;
+  (void)derived;
+  (void)walkAttrsFn;
+  (void)walkTypesFn;
   if constexpr (llvm::is_detected<has_get_as_key, ImplT>::value) {
     auto key = static_cast<ImplT *>(derived.getImpl())->getAsKey();
 
     // If we don't have any sub-elements, there is nothing to do.
-    if constexpr (!has_sub_attr_or_type_v<decltype(key)>) {
+    if constexpr (!has_sub_attr_or_type_v<decltype(key)>)
       return;
-    } else {
-      AttrTypeImmediateSubElementWalker walker(walkAttrsFn, walkTypesFn);
-      AttrTypeSubElementHandler<decltype(key)>::walk(key, walker);
-    }
+    AttrTypeImmediateSubElementWalker walker(walkAttrsFn, walkTypesFn);
+    AttrTypeSubElementHandler<decltype(key)>::walk(key, walker);
   }
 }
 
