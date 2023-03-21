@@ -6700,8 +6700,8 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   }
 
   BasicBlock *LoopLatch = L->getLoopLatch();
-  BranchInst *BI = cast<BranchInst>(LoopLatch->getTerminator());
-  if (BI->isUnconditional())
+  BranchInst *BI = dyn_cast<BranchInst>(LoopLatch->getTerminator());
+  if (!BI || BI->isUnconditional())
     return std::nullopt;
   auto *TermCond = dyn_cast<ICmpInst>(BI->getCondition());
   if (!TermCond) {
