@@ -62,7 +62,7 @@ define <2 x i16> @mgather_v2i16_align1(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i16> %
 ; RV32-NEXT:  .LBB4_3: # %cond.load
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vmv.x.s a1, v8
-; RV32-NEXT:    lb a2, 1(a1)
+; RV32-NEXT:    lbu a2, 1(a1)
 ; RV32-NEXT:    lbu a1, 0(a1)
 ; RV32-NEXT:    slli a2, a2, 8
 ; RV32-NEXT:    or a1, a2, a1
@@ -74,7 +74,7 @@ define <2 x i16> @mgather_v2i16_align1(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i16> %
 ; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 1
 ; RV32-NEXT:    vmv.x.s a0, v8
-; RV32-NEXT:    lb a1, 1(a0)
+; RV32-NEXT:    lbu a1, 1(a0)
 ; RV32-NEXT:    lbu a0, 0(a0)
 ; RV32-NEXT:    slli a1, a1, 8
 ; RV32-NEXT:    or a0, a1, a0
@@ -99,7 +99,7 @@ define <2 x i16> @mgather_v2i16_align1(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i16> %
 ; RV64-NEXT:  .LBB4_3: # %cond.load
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.x.s a1, v8
-; RV64-NEXT:    lb a2, 1(a1)
+; RV64-NEXT:    lbu a2, 1(a1)
 ; RV64-NEXT:    lbu a1, 0(a1)
 ; RV64-NEXT:    slli a2, a2, 8
 ; RV64-NEXT:    or a1, a2, a1
@@ -111,7 +111,7 @@ define <2 x i16> @mgather_v2i16_align1(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i16> %
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64-NEXT:    vmv.x.s a0, v8
-; RV64-NEXT:    lb a1, 1(a0)
+; RV64-NEXT:    lbu a1, 1(a0)
 ; RV64-NEXT:    lbu a0, 0(a0)
 ; RV64-NEXT:    slli a1, a1, 8
 ; RV64-NEXT:    or a0, a1, a0
