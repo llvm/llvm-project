@@ -15,7 +15,7 @@ class TestSwiftForwardInteropExpressions(TestBase):
              self, bkpt_str, lldb.SBFileSpec('main.swift'))
          return thread
 
-    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://106871422")
+    @skipIfLinux # rdar://106871422"
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false')) # rdar://106871275
     @swiftTest
     def test(self):
