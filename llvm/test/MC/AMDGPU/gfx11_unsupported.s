@@ -22,6 +22,9 @@ buffer_atomic_min_f64 v[2:3], off, s[12:15], s4 offset:4095
 buffer_atomic_pk_add_f16 v0, v2, s[4:7], 0 idxen glc
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+buffer_atomic_pk_add_bf16 v5, off, s[8:11], s3 offset:8388607
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 buffer_inv
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
@@ -169,7 +172,13 @@ flat_atomic_min_f64 v[0:1], v[0:1], v[2:3] glc
 flat_atomic_pk_add_bf16 a4, v[2:3], a1 sc0
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+flat_atomic_pk_add_bf16 v1, v[2:3], v2 th:TH_ATOMIC_RETURN
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 flat_atomic_pk_add_f16 a4, v[2:3], a1 sc0
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_atomic_pk_add_f16 v1, v[2:3], v2 th:TH_ATOMIC_RETURN
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off glc
@@ -194,6 +203,9 @@ global_atomic_pk_add_bf16 a4, v[2:3], a1, off sc0
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 global_atomic_pk_add_f16 v0, v[0:1], v2, off glc
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_atomic_pk_add_f16 v1, v0, v2, s[0:1] offset:-64 th:TH_ATOMIC_RETURN
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 global_load_lds_dword v2, s[4:5] offset:4
