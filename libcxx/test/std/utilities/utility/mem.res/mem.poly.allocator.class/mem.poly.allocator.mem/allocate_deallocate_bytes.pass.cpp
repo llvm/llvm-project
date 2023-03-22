@@ -38,10 +38,10 @@ void test() {
     auto ptr                                      = static_cast<char*>(allocation);
     std::fill(ptr, ptr + 13, '0');
     assert(last_size == 13);
-    assert(last_alignment == alignof(max_align_t));
+    assert(last_alignment == alignof(std::max_align_t));
     allocator.deallocate_bytes(allocation, 13);
     assert(last_size == 13);
-    assert(last_alignment == alignof(max_align_t));
+    assert(last_alignment == alignof(std::max_align_t));
   }
   {
     void* allocation = allocator.allocate_bytes(13, 64);

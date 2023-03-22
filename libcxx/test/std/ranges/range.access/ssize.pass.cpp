@@ -71,7 +71,7 @@ constexpr bool test() {
   // This gets converted to ptrdiff_t because it's wider.
   ShortUnsignedReturnType c;
   assert(std::ranges::ssize(c) == 42);
-  ASSERT_SAME_TYPE(decltype(std::ranges::ssize(c)), ptrdiff_t);
+  ASSERT_SAME_TYPE(decltype(std::ranges::ssize(c)), std::ptrdiff_t);
 
   return true;
 }

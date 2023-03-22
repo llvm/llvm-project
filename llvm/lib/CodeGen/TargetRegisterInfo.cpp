@@ -424,8 +424,8 @@ bool TargetRegisterInfo::getRegAllocationHints(
     SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const std::pair<Register, SmallVector<Register, 4>> &Hints_MRI =
-    MRI.getRegAllocationHints(VirtReg);
+  const std::pair<unsigned, SmallVector<Register, 4>> &Hints_MRI =
+      MRI.getRegAllocationHints(VirtReg);
 
   SmallSet<Register, 32> HintedRegs;
   // First hint may be a target hint.

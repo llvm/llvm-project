@@ -3328,7 +3328,7 @@ inline constexpr bool __format::__enable_insertable<vector<wchar_t>> = true;
 template <class _Tp, class CharT>
 // Since is-vector-bool-reference is only used once it's inlined here.
   requires same_as<typename _Tp::__container, vector<bool, typename _Tp::__container::allocator_type>>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<_Tp, CharT> {
+struct _LIBCPP_TEMPLATE_VIS formatter<_Tp, CharT> {
 private:
   formatter<bool, CharT> __underlying_;
 

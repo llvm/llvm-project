@@ -328,6 +328,7 @@ END-SCRIPT
 #include <__concepts/semiregular.h> // expected-error@*:* {{use of private header from outside its module: '__concepts/semiregular.h'}}
 #include <__concepts/swappable.h> // expected-error@*:* {{use of private header from outside its module: '__concepts/swappable.h'}}
 #include <__concepts/totally_ordered.h> // expected-error@*:* {{use of private header from outside its module: '__concepts/totally_ordered.h'}}
+#include <__condition_variable/condition_variable.h> // expected-error@*:* {{use of private header from outside its module: '__condition_variable/condition_variable.h'}}
 #include <__coroutine/coroutine_handle.h> // expected-error@*:* {{use of private header from outside its module: '__coroutine/coroutine_handle.h'}}
 #include <__coroutine/coroutine_traits.h> // expected-error@*:* {{use of private header from outside its module: '__coroutine/coroutine_traits.h'}}
 #include <__coroutine/noop_coroutine_handle.h> // expected-error@*:* {{use of private header from outside its module: '__coroutine/noop_coroutine_handle.h'}}
@@ -505,7 +506,10 @@ END-SCRIPT
 #include <__memory_resource/pool_options.h> // expected-error@*:* {{use of private header from outside its module: '__memory_resource/pool_options.h'}}
 #include <__memory_resource/synchronized_pool_resource.h> // expected-error@*:* {{use of private header from outside its module: '__memory_resource/synchronized_pool_resource.h'}}
 #include <__memory_resource/unsynchronized_pool_resource.h> // expected-error@*:* {{use of private header from outside its module: '__memory_resource/unsynchronized_pool_resource.h'}}
-#include <__mutex_base> // expected-error@*:* {{use of private header from outside its module: '__mutex_base'}}
+#include <__mutex/lock_guard.h> // expected-error@*:* {{use of private header from outside its module: '__mutex/lock_guard.h'}}
+#include <__mutex/mutex.h> // expected-error@*:* {{use of private header from outside its module: '__mutex/mutex.h'}}
+#include <__mutex/tag_types.h> // expected-error@*:* {{use of private header from outside its module: '__mutex/tag_types.h'}}
+#include <__mutex/unique_lock.h> // expected-error@*:* {{use of private header from outside its module: '__mutex/unique_lock.h'}}
 #include <__node_handle> // expected-error@*:* {{use of private header from outside its module: '__node_handle'}}
 #include <__numeric/accumulate.h> // expected-error@*:* {{use of private header from outside its module: '__numeric/accumulate.h'}}
 #include <__numeric/adjacent_difference.h> // expected-error@*:* {{use of private header from outside its module: '__numeric/adjacent_difference.h'}}

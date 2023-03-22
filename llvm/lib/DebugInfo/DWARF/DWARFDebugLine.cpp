@@ -1505,6 +1505,21 @@ DWARFUnit *DWARFDebugLine::SectionParser::prepareToParse(uint64_t Offset) {
   return U;
 }
 
+bool DWARFDebugLine::SectionParser::hasValidVersion(uint64_t Offset) {
+  DataExtractor::Cursor Cursor(Offset);
+  auto [TotalLength, _] = DebugLineData.getInitialLength(Cursor);
+  DWARFDataExtractor HeaderData(DebugLineData, Cursor.tell() + TotalLength);
+  uint16_t Version = HeaderData.getU16(Cursor);
+  if (!Cursor) {
+    // Ignore any error here.
+    // If this is not the end of the section parseNext() will still be
+    // attempted, where this error will occur again (and can be handled).
+    consumeError(Cursor.takeError());
+    return false;
+  }
+  return versionIsSupported(Version);
+}
+
 void DWARFDebugLine::SectionParser::moveToNextTable(uint64_t OldOffset,
                                                     const Prologue &P) {
   // If the length field is not valid, we don't know where the next table is, so
@@ -1518,5 +1533,29 @@ void DWARFDebugLine::SectionParser::moveToNextTable(uint64_t OldOffset,
   Offset = OldOffset + P.TotalLength + P.sizeofTotalLength();
   if (!DebugLineData.isValidOffset(Offset)) {
     Done = true;
+    return;
+  }
+
+  // Heuristic: If the version is valid, then this is probably a line table.
+  // Otherwise, the offset might need alignment (to a 4 or 8 byte boundary).
+  if (hasValidVersion(Offset))
+    return;
+
+  // ARM C/C++ Compiler aligns each line table to word boundaries and pads out
+  // the .debug_line section to a word multiple. Note that in the specification
+  // this does not seem forbidden since each unit has a DW_AT_stmt_list.
+  for (unsigned Align : {4, 8}) {
+    uint64_t AlignedOffset = alignTo(Offset, Align);
+    if (!DebugLineData.isValidOffset(AlignedOffset)) {
+      // This is almost certainly not another line table but some alignment
+      // padding. This assumes the alignments tested are ordered, and are
+      // smaller than the header size (which is true for 4 and 8).
+      Done = true;
+      return;
+    }
+    if (hasValidVersion(AlignedOffset)) {
+      Offset = AlignedOffset;
+      break;
+    }
   }
 }
