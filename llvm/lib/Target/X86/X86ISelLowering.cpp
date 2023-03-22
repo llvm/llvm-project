@@ -44646,6 +44646,23 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
     // Special case for (pre-legalization) vXi1 reductions.
     if (NumElts > 64 || !isPowerOf2_32(NumElts))
       return SDValue();
+    if (Match.getOpcode() == ISD::SETCC) {
+      ISD::CondCode CC = cast<CondCodeSDNode>(Match.getOperand(2))->get();
+      if ((BinOp == ISD::AND && CC == ISD::CondCode::SETEQ) ||
+          (BinOp == ISD::OR && CC == ISD::CondCode::SETNE)) {
+        // If representable as a scalar integer:
+        // For all_of(setcc(x,y,eq)) - use (iX)x == (iX)y.
+        // For any_of(setcc(x,y,ne)) - use (iX)x != (iX)y.
+        EVT VecVT = Match.getOperand(0).getValueType();
+        EVT IntVT = EVT::getIntegerVT(Ctx, VecVT.getSizeInBits());
+        if (TLI.isTypeLegal(IntVT)) {
+          SDValue LHS = DAG.getFreeze(Match.getOperand(0));
+          SDValue RHS = DAG.getFreeze(Match.getOperand(1));
+          return DAG.getSetCC(DL, ExtractVT, DAG.getBitcast(IntVT, LHS),
+                              DAG.getBitcast(IntVT, RHS), CC);
+        }
+      }
+    }
     if (TLI.isTypeLegal(MatchVT)) {
       // If this is a legal AVX512 predicate type then we can just bitcast.
       EVT MovmskVT = EVT::getIntegerVT(Ctx, NumElts);
@@ -44657,20 +44674,7 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
         ISD::CondCode CC = cast<CondCodeSDNode>(Match.getOperand(2))->get();
         if ((BinOp == ISD::AND && CC == ISD::CondCode::SETEQ) ||
             (BinOp == ISD::OR && CC == ISD::CondCode::SETNE)) {
-          EVT VecVT = Match.getOperand(0).getValueType();
-
-          // If representable as a scalar integer:
-          // For all_of(setcc(x,y,eq)) - use (iX)x == (iX)y.
-          // For any_of(setcc(x,y,ne)) - use (iX)x != (iX)y.
-          EVT IntVT = EVT::getIntegerVT(Ctx, VecVT.getSizeInBits());
-          if (TLI.isTypeLegal(IntVT)) {
-            SDValue LHS = DAG.getFreeze(Match.getOperand(0));
-            SDValue RHS = DAG.getFreeze(Match.getOperand(1));
-            return DAG.getSetCC(DL, ExtractVT, DAG.getBitcast(IntVT, LHS),
-                                DAG.getBitcast(IntVT, RHS), CC);
-          }
-
-          EVT VecSVT = VecVT.getScalarType();
+          EVT VecSVT = Match.getOperand(0).getValueType().getScalarType();
           if (VecSVT != MVT::i8 && (VecSVT.getSizeInBits() % 8) == 0) {
             NumElts *= VecSVT.getSizeInBits() / 8;
             EVT CmpVT = EVT::getVectorVT(Ctx, MVT::i8, NumElts);
