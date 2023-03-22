@@ -37,15 +37,6 @@
 # define SANITIZER_WEAK_ATTRIBUTE  __attribute__((weak))
 #endif
 
-// TLS is handled differently on different platforms
-#if SANITIZER_LINUX || SANITIZER_NETBSD || \
-  SANITIZER_FREEBSD
-# define SANITIZER_TLS_INITIAL_EXEC_ATTRIBUTE \
-    __attribute__((tls_model("initial-exec"))) thread_local
-#else
-# define SANITIZER_TLS_INITIAL_EXEC_ATTRIBUTE
-#endif
-
 //--------------------------- WEAK FUNCTIONS ---------------------------------//
 // When working with weak functions, to simplify the code and make it more
 // portable, when possible define a default implementation using this macro:

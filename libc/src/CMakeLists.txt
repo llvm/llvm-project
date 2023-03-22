@@ -8,6 +8,7 @@ add_subdirectory(math)
 add_subdirectory(string)
 add_subdirectory(stdlib)
 add_subdirectory(stdio)
+add_subdirectory(wchar)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(dirent)
