@@ -498,6 +498,12 @@ public:
   /// The GlobalDecl for the current function being compiled.
   clang::GlobalDecl CurGD;
 
+  /// Unified return block.
+  /// Not that for LLVM codegen this is a memeber variable instead.
+  JumpDest ReturnBlock() {
+    return JumpDest(currLexScope->getOrCreateCleanupBlock(builder));
+  }
+
   /// The temporary alloca to hold the return value. This is
   /// invalid iff the function has no return value.
   Address ReturnValue = Address::invalid();
@@ -996,9 +1002,7 @@ public:
   /// is 'Ty'.
   void buildStoreThroughLValue(RValue Src, LValue Dst);
 
-  mlir::LogicalResult buildBranchThroughCleanup(JumpDest &Dest,
-                                                clang::LabelDecl *L,
-                                                mlir::Location Loc);
+  mlir::cir::BrOp buildBranchThroughCleanup(mlir::Location Loc, JumpDest Dest);
 
   /// Given an assignment `*LHS = RHS`, emit a test that checks if \p RHS is
   /// nonnull, if 1\p LHS is marked _Nonnull.
