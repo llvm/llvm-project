@@ -570,13 +570,12 @@ public:
 
   ConstString DeclContextGetScopeQualifiedName(void *opaque_decl_ctx) override;
 
-  bool DeclContextIsClassMethod(void *opaque_decl_ctx,
-                                lldb::LanguageType *language_ptr,
-                                bool *is_instance_method_ptr,
-                                ConstString *language_object_name_ptr) override;
+  bool DeclContextIsClassMethod(void *opaque_decl_ctx) override;
 
   bool DeclContextIsContainedInLookup(void *opaque_decl_ctx,
                                       void *other_opaque_decl_ctx) override;
+
+  lldb::LanguageType DeclContextGetLanguage(void *opaque_decl_ctx) override;
 
   // Clang specific clang::DeclContext functions
 

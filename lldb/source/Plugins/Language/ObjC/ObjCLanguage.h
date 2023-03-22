@@ -155,6 +155,8 @@ public:
       return false;
   }
 
+  ConstString GetInstanceVariableName() override { return ConstString("self"); }
+
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 };
