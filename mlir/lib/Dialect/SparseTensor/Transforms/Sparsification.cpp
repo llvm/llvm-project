@@ -1811,10 +1811,24 @@ public:
     // possible, we can even intermix slice-based and filter-loop based codegen.
     bool idxReducBased = options.enableIndexReduction && numFilterLoops != 0;
 
+    // If we have indexing map like (d0) -> (0, d0), there might be more
+    // levels then loops because of the constant index, that means we can not
+    // use numLoops as the upper bound for ranks of all tensors.
+    // TODO: Constant indices are currently not support on sparse tensor, but
+    // are allowed in non-annotated dense tensor. Support it, it would be
+    // required for sparse tensor slice rank reducing too.
+    Level maxLvlRank = 0;
+    for (auto operand : op.getOperands()) {
+      if (auto rtp = operand.getType().dyn_cast<RankedTensorType>()) {
+        maxLvlRank = std::max(maxLvlRank, SparseTensorType(rtp).getLvlRank());
+      }
+    }
+
     // If we uses slice based algorithm for affine index, we do not need filter
     // loop.
     CodegenEnv env(op, options, numTensors, numLoops,
-                   /*numFilterLoops=*/idxReducBased ? 0 : numFilterLoops);
+                   /*numFilterLoops=*/idxReducBased ? 0 : numFilterLoops,
+                   maxLvlRank);
 
     // Detects sparse annotations and translates the per-level sparsity
     // information for all tensors to loop indices in the kernel.

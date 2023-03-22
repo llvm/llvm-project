@@ -737,6 +737,7 @@ set stdexcept
 set tuple
 set type_traits
 set version
+shared_mutex cerrno
 shared_mutex cstddef
 shared_mutex ctime
 shared_mutex iosfwd

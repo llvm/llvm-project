@@ -11,16 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/MemRef/Transforms/Passes.h"
-
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -72,13 +70,19 @@ resolveSourceIndicesExpandShape(Location loc, PatternRewriter &rewriter,
     AffineExpr srcIndexExpr = linearize(ctx, dims, suffixProduct);
 
     /// Apply permutation and create AffineApplyOp.
-    SmallVector<Value> dynamicIndices(groupSize);
+    SmallVector<OpFoldResult> dynamicIndices(groupSize);
     for (int64_t i = 0; i < groupSize; i++)
       dynamicIndices[i] = indices[groups[i]];
-    sourceIndices.push_back(rewriter.create<AffineApplyOp>(
-        loc,
-        AffineMap::get(/*numDims=*/groupSize, /*numSymbols=*/0, srcIndexExpr),
-        dynamicIndices));
+
+    // Creating maximally folded and composd affine.apply composes better with
+    // other transformations without interleaving canonicalization passes.
+    OpFoldResult ofr = makeComposedFoldedAffineApply(
+        rewriter, loc,
+        AffineMap::get(/*numDims=*/groupSize,
+                       /*numSymbols=*/0, srcIndexExpr),
+        dynamicIndices);
+    sourceIndices.push_back(
+        getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
   }
   return success();
 }
@@ -103,7 +107,7 @@ resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
                                   SmallVectorImpl<Value> &sourceIndices) {
   int64_t cnt = 0;
   SmallVector<Value> tmp(indices.size());
-  SmallVector<Value> dynamicIndices;
+  SmallVector<OpFoldResult> dynamicIndices;
   for (ArrayRef<int64_t> groups : collapseShapeOp.getReassociationIndices()) {
     assert(!groups.empty() && "association indices groups cannot be empty");
     dynamicIndices.push_back(indices[cnt++]);
@@ -121,21 +125,27 @@ resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
     SmallVector<AffineExpr> delinearizingExprs = delinearize(d0, suffixProduct);
 
     // Construct the AffineApplyOp for each delinearizingExpr.
-    for (int64_t i = 0; i < groupSize; i++)
-      sourceIndices.push_back(rewriter.create<AffineApplyOp>(
-          loc,
+    for (int64_t i = 0; i < groupSize; i++) {
+      OpFoldResult ofr = makeComposedFoldedAffineApply(
+          rewriter, loc,
           AffineMap::get(/*numDims=*/1, /*numSymbols=*/0,
                          delinearizingExprs[i]),
-          dynamicIndices));
+          dynamicIndices);
+      sourceIndices.push_back(
+          getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
+    }
     dynamicIndices.clear();
   }
   if (collapseShapeOp.getReassociationIndices().empty()) {
     auto zeroAffineMap = rewriter.getConstantAffineMap(0);
     int64_t srcRank =
         collapseShapeOp.getViewSource().getType().cast<MemRefType>().getRank();
-    for (int64_t i = 0; i < srcRank; i++)
+    for (int64_t i = 0; i < srcRank; i++) {
+      OpFoldResult ofr = makeComposedFoldedAffineApply(
+          rewriter, loc, zeroAffineMap, dynamicIndices);
       sourceIndices.push_back(
-          rewriter.create<AffineApplyOp>(loc, zeroAffineMap, dynamicIndices));
+          getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
+    }
   }
   return success();
 }
@@ -176,7 +186,7 @@ resolveSourceIndicesSubView(Location loc, PatternRewriter &rewriter,
     return failure();
   sourceIndices.resize(useIndices.size());
   for (auto index : llvm::seq<size_t>(0, mixedOffsets.size())) {
-    SmallVector<Value> dynamicOperands;
+    SmallVector<OpFoldResult> dynamicOperands;
     AffineExpr expr = rewriter.getAffineDimExpr(0);
     int64_t numSymbols = 0;
     dynamicOperands.push_back(useIndices[index]);
@@ -197,8 +207,9 @@ resolveSourceIndicesSubView(Location loc, PatternRewriter &rewriter,
       expr = expr + rewriter.getAffineSymbolExpr(numSymbols++);
     }
     Location loc = subViewOp.getLoc();
-    sourceIndices[index] = rewriter.create<AffineApplyOp>(
-        loc, AffineMap::get(1, numSymbols, expr), dynamicOperands);
+    OpFoldResult ofr = makeComposedFoldedAffineApply(
+        rewriter, loc, AffineMap::get(1, numSymbols, expr), dynamicOperands);
+    sourceIndices[index] = getValueOrCreateConstantIndexOp(rewriter, loc, ofr);
   }
   return success();
 }
@@ -367,10 +378,15 @@ static SmallVector<Value>
 calculateExpandedAccessIndices(AffineMap affineMap,
                                const SmallVector<Value> &indices, Location loc,
                                PatternRewriter &rewriter) {
+  SmallVector<OpFoldResult> indicesOfr(llvm::to_vector(
+      llvm::map_range(indices, [](Value v) -> OpFoldResult { return v; })));
   SmallVector<Value> expandedIndices;
-  for (unsigned i = 0, e = affineMap.getNumResults(); i < e; i++)
+  for (unsigned i = 0, e = affineMap.getNumResults(); i < e; i++) {
+    OpFoldResult ofr = makeComposedFoldedAffineApply(
+        rewriter, loc, affineMap.getSubMap({i}), indicesOfr);
     expandedIndices.push_back(
-        rewriter.create<AffineApplyOp>(loc, affineMap.getSubMap({i}), indices));
+        getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
+  }
   return expandedIndices;
 }
 

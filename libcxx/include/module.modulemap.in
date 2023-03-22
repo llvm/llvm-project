@@ -813,6 +813,10 @@ module std [system] {
   module condition_variable {
     header "condition_variable"
     export *
+
+    module __condition_variable {
+      module condition_variable { private header "__condition_variable/condition_variable.h" }
+    }
   }
   module coroutine {
     header "coroutine"
@@ -1174,6 +1178,13 @@ module std [system] {
     @requires_LIBCXX_ENABLE_THREADS@
     header "mutex"
     export *
+
+    module __mutex {
+      module lock_guard  { private header "__mutex/lock_guard.h" }
+      module mutex       { private header "__mutex/mutex.h" }
+      module tag_types   { private header "__mutex/tag_types.h" }
+      module unique_lock { private header "__mutex/unique_lock.h" }
+    }
   }
   module new {
     header "new"
@@ -1695,7 +1706,6 @@ module std [system] {
     private header "__locale" export *
   }
   module __mbstate_t         { private header "__mbstate_t.h"       export * }
-  module __mutex_base        { private header "__mutex_base"        export * }
   module __node_handle       { private header "__node_handle"       export * }
   module __split_buffer      { private header "__split_buffer"      export * }
   module __std_stream        {

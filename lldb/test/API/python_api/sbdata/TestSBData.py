@@ -387,12 +387,13 @@ class SBDataAPICase(TestBase):
         self.assert_data(data2.GetUnsignedInt8, 4, 111)
         self.assert_data(data2.GetUnsignedInt8, 5, 33)
 
-        data2.SetDataFromUInt64Array([1, 2, 3, 4, 5])
+        data2.SetDataFromUInt64Array([1, 2, 3, 4, 5, 2**63])
         self.assert_data(data2.GetUnsignedInt64, 0, 1)
         self.assert_data(data2.GetUnsignedInt64, 8, 2)
         self.assert_data(data2.GetUnsignedInt64, 16, 3)
         self.assert_data(data2.GetUnsignedInt64, 24, 4)
         self.assert_data(data2.GetUnsignedInt64, 32, 5)
+        self.assert_data(data2.GetUnsignedInt64, 40, 2**63)
 
         self.assertEqual(
             data2.uint64[0], 1,

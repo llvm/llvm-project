@@ -32,7 +32,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 /// - is_copy_assignable<F>, and
 /// - is_move_assignable<F>.
 template <class _Tp, class _CharT>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter {
+struct _LIBCPP_TEMPLATE_VIS formatter {
   formatter() = delete;
   formatter(const formatter&) = delete;
   formatter& operator=(const formatter&) = delete;

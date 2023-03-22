@@ -330,7 +330,7 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    mv s0, a0
-; RV32-NEXT:    lb a0, 4(a0)
+; RV32-NEXT:    lbu a0, 4(a0)
 ; RV32-NEXT:    lw a1, 0(s0)
 ; RV32-NEXT:    slli a0, a0, 10
 ; RV32-NEXT:    srli s1, a1, 22
@@ -437,7 +437,7 @@ define void @test_urem_vec(ptr %X) nounwind {
 ;
 ; RV32M-LABEL: test_urem_vec:
 ; RV32M:       # %bb.0:
-; RV32M-NEXT:    lb a1, 4(a0)
+; RV32M-NEXT:    lbu a1, 4(a0)
 ; RV32M-NEXT:    lw a2, 0(a0)
 ; RV32M-NEXT:    slli a1, a1, 10
 ; RV32M-NEXT:    srli a3, a2, 22
@@ -528,7 +528,7 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    slli a2, a1, 10
 ; RV32MV-NEXT:    srli a2, a2, 21
 ; RV32MV-NEXT:    sh a2, 10(sp)
-; RV32MV-NEXT:    lb a2, 4(a0)
+; RV32MV-NEXT:    lbu a2, 4(a0)
 ; RV32MV-NEXT:    slli a2, a2, 10
 ; RV32MV-NEXT:    srli a1, a1, 22
 ; RV32MV-NEXT:    or a1, a1, a2

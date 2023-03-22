@@ -234,8 +234,8 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add directory to library search path.
   Args.AddAllArgs(CmdArgs, options::OPT_L);
-  ToolChain.AddFilePathLibArgs(Args, CmdArgs);
   if (!Args.hasArg(options::OPT_r)) {
+    ToolChain.AddFilePathLibArgs(Args, CmdArgs);
     ToolChain.addProfileRTLibs(Args, CmdArgs);
 
     if (getToolChain().ShouldLinkCXXStdlib(Args))

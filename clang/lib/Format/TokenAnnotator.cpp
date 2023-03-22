@@ -318,9 +318,10 @@ private:
       // export type X = (...);
       Contexts.back().IsExpression = false;
     } else if (OpeningParen.Previous &&
-               (OpeningParen.Previous->isOneOf(tok::kw_static_assert,
-                                               tok::kw_while, tok::l_paren,
-                                               tok::comma, TT_BinaryOperator) ||
+               (OpeningParen.Previous->isOneOf(
+                    tok::kw_static_assert, tok::kw_noexcept, tok::kw_explicit,
+                    tok::kw_while, tok::l_paren, tok::comma,
+                    TT_BinaryOperator) ||
                 OpeningParen.Previous->isIf())) {
       // static_assert, if and while usually contain expressions.
       Contexts.back().IsExpression = true;

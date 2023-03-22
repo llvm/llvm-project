@@ -302,8 +302,9 @@ Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
 Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS, FastMathFlags FMF,
                      const SimplifyQuery &Q);
 
-/// Given a callsite, fold the result or return null.
-Value *simplifyCall(CallBase *Call, const SimplifyQuery &Q);
+/// Given a callsite, callee, and arguments, fold the result or return null.
+Value *simplifyCall(CallBase *Call, Value *Callee, ArrayRef<Value *> Args,
+                    const SimplifyQuery &Q);
 
 /// Given a constrained FP intrinsic call, tries to compute its simplified
 /// version. Returns a simplified result or null.

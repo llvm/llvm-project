@@ -264,7 +264,8 @@ public:
   /// `Val2` imposed by the flow condition.
   bool equivalentBoolValues(BoolValue &Val1, BoolValue &Val2);
 
-  LLVM_DUMP_METHOD void dumpFlowCondition(AtomicBoolValue &Token);
+  LLVM_DUMP_METHOD void dumpFlowCondition(AtomicBoolValue &Token,
+                                          llvm::raw_ostream &OS = llvm::dbgs());
 
   /// Returns the `ControlFlowContext` registered for `F`, if any. Otherwise,
   /// returns null.

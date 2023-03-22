@@ -254,6 +254,9 @@ public:
   /// }
   ///
   /// to filter out coordinates that are not equal to the affine expression.
+  ///
+  /// The maxLvlRank specifies the max level rank of all inputs/output tensors.
+  /// It is used to pre-allocate sufficient memory for internal storage.
   //
   // TODO: we want to make the filter loop more efficient in the future,
   // e.g., by avoiding scanning the full list of stored coordinates (keeping
@@ -264,7 +267,7 @@ public:
   // gave the number of input tensors, instead of the current number of
   // input+output tensors.
   Merger(unsigned numInputOutputTensors, unsigned numNativeLoops,
-         unsigned numFilterLoops);
+         unsigned numFilterLoops, unsigned maxLvlRank);
 
   /// Constructs a new tensor expression, and returns its identifier.
   /// The type of the `e0` argument varies according to the value of the
@@ -280,6 +283,7 @@ public:
 
   /// Constructs a new iteration lattice point, and returns its identifier.
   LatPointId addLat(TensorId t, LoopId i, ExprId e);
+  LatPointId addLat(const BitVector &bits, ExprId e);
 
   /// Constructs a new (initially empty) set, and returns its identifier.
   LatSetId addSet();

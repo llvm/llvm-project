@@ -1556,6 +1556,7 @@ def Tosa_SliceOp: Tosa_Op<"slice", [
     Tosa_Tensor1Dto6D:$output
   );
 
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 
