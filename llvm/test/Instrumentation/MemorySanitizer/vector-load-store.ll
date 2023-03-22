@@ -6,100 +6,210 @@
 target triple = "x86_64-unknown-linux-gnu"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @load.v1i32(ptr %p) sanitize_address {
+define void @load.v1i32(ptr %p) sanitize_memory {
 ; CHECK-LABEL: @load.v1i32(
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i32>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <1 x i32>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; ADDR-LABEL: @load.v1i32(
+; ADDR-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
-; ADDR-NEXT:    [[TMP1:%.*]] = load <1 x i32>, ptr [[P:%.*]], align 4
+; ADDR-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
+; ADDR-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0:![0-9]+]]
+; ADDR:       2:
+; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3:[0-9]+]]
+; ADDR-NEXT:    unreachable
+; ADDR:       3:
+; ADDR-NEXT:    [[TMP4:%.*]] = load <1 x i32>, ptr [[P:%.*]], align 4
+; ADDR-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
+; ADDR-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; ADDR-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; ADDR-NEXT:    [[_MSLD:%.*]] = load <1 x i32>, ptr [[TMP7]], align 4
 ; ADDR-NEXT:    ret void
 ;
 ; ORIGINS-LABEL: @load.v1i32(
 ; ORIGINS-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NEXT:    [[TMP1:%.*]] = load <1 x i32>, ptr [[P:%.*]], align 4
+; ORIGINS-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
+; ORIGINS-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; ORIGINS-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; ORIGINS-NEXT:    [[TMP5:%.*]] = add i64 [[TMP3]], 17592186044416
+; ORIGINS-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ORIGINS-NEXT:    [[_MSLD:%.*]] = load <1 x i32>, ptr [[TMP4]], align 4
+; ORIGINS-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
 ; ORIGINS-NEXT:    ret void
 ;
   load <1 x i32>, ptr %p
   ret void
 }
 
-define void @load.v2i32(ptr %p) sanitize_address {
+define void @load.v2i32(ptr %p) sanitize_memory {
 ; CHECK-LABEL: @load.v2i32(
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <2 x i32>, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    ret void
 ;
 ; ADDR-LABEL: @load.v2i32(
+; ADDR-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
-; ADDR-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 8
+; ADDR-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
+; ADDR-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
+; ADDR:       2:
+; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
+; ADDR-NEXT:    unreachable
+; ADDR:       3:
+; ADDR-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 8
+; ADDR-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
+; ADDR-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; ADDR-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; ADDR-NEXT:    [[_MSLD:%.*]] = load <2 x i32>, ptr [[TMP7]], align 8
 ; ADDR-NEXT:    ret void
 ;
 ; ORIGINS-LABEL: @load.v2i32(
 ; ORIGINS-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 8
+; ORIGINS-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
+; ORIGINS-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; ORIGINS-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; ORIGINS-NEXT:    [[TMP5:%.*]] = add i64 [[TMP3]], 17592186044416
+; ORIGINS-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ORIGINS-NEXT:    [[_MSLD:%.*]] = load <2 x i32>, ptr [[TMP4]], align 8
+; ORIGINS-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 8
 ; ORIGINS-NEXT:    ret void
 ;
   load <2 x i32>, ptr %p
   ret void
 }
 
-define void @load.v4i32(ptr %p) sanitize_address {
+define void @load.v4i32(ptr %p) sanitize_memory {
 ; CHECK-LABEL: @load.v4i32(
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 16
 ; CHECK-NEXT:    ret void
 ;
 ; ADDR-LABEL: @load.v4i32(
+; ADDR-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
-; ADDR-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 16
+; ADDR-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
+; ADDR-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
+; ADDR:       2:
+; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
+; ADDR-NEXT:    unreachable
+; ADDR:       3:
+; ADDR-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 16
+; ADDR-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
+; ADDR-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; ADDR-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; ADDR-NEXT:    [[_MSLD:%.*]] = load <4 x i32>, ptr [[TMP7]], align 16
 ; ADDR-NEXT:    ret void
 ;
 ; ORIGINS-LABEL: @load.v4i32(
 ; ORIGINS-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 16
+; ORIGINS-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
+; ORIGINS-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; ORIGINS-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; ORIGINS-NEXT:    [[TMP5:%.*]] = add i64 [[TMP3]], 17592186044416
+; ORIGINS-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ORIGINS-NEXT:    [[_MSLD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 16
+; ORIGINS-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 16
 ; ORIGINS-NEXT:    ret void
 ;
   load <4 x i32>, ptr %p
   ret void
 }
 
-define void @load.v8i32(ptr %p) sanitize_address {
+define void @load.v8i32(ptr %p) sanitize_memory {
 ; CHECK-LABEL: @load.v8i32(
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[P:%.*]], align 32
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <8 x i32>, ptr [[TMP4]], align 32
 ; CHECK-NEXT:    ret void
 ;
 ; ADDR-LABEL: @load.v8i32(
+; ADDR-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
-; ADDR-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[P:%.*]], align 32
+; ADDR-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
+; ADDR-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
+; ADDR:       2:
+; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
+; ADDR-NEXT:    unreachable
+; ADDR:       3:
+; ADDR-NEXT:    [[TMP4:%.*]] = load <8 x i32>, ptr [[P:%.*]], align 32
+; ADDR-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
+; ADDR-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; ADDR-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; ADDR-NEXT:    [[_MSLD:%.*]] = load <8 x i32>, ptr [[TMP7]], align 32
 ; ADDR-NEXT:    ret void
 ;
 ; ORIGINS-LABEL: @load.v8i32(
 ; ORIGINS-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[P:%.*]], align 32
+; ORIGINS-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
+; ORIGINS-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; ORIGINS-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; ORIGINS-NEXT:    [[TMP5:%.*]] = add i64 [[TMP3]], 17592186044416
+; ORIGINS-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ORIGINS-NEXT:    [[_MSLD:%.*]] = load <8 x i32>, ptr [[TMP4]], align 32
+; ORIGINS-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 32
 ; ORIGINS-NEXT:    ret void
 ;
   load <8 x i32>, ptr %p
   ret void
 }
 
-define void @load.v16i32(ptr %p) sanitize_address {
+define void @load.v16i32(ptr %p) sanitize_memory {
 ; CHECK-LABEL: @load.v16i32(
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr [[P:%.*]], align 64
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <16 x i32>, ptr [[TMP4]], align 64
 ; CHECK-NEXT:    ret void
 ;
 ; ADDR-LABEL: @load.v16i32(
+; ADDR-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
-; ADDR-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr [[P:%.*]], align 64
+; ADDR-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
+; ADDR-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
+; ADDR:       2:
+; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
+; ADDR-NEXT:    unreachable
+; ADDR:       3:
+; ADDR-NEXT:    [[TMP4:%.*]] = load <16 x i32>, ptr [[P:%.*]], align 64
+; ADDR-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[P]] to i64
+; ADDR-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; ADDR-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; ADDR-NEXT:    [[_MSLD:%.*]] = load <16 x i32>, ptr [[TMP7]], align 64
 ; ADDR-NEXT:    ret void
 ;
 ; ORIGINS-LABEL: @load.v16i32(
 ; ORIGINS-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr [[P:%.*]], align 64
+; ORIGINS-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i64
+; ORIGINS-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; ORIGINS-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; ORIGINS-NEXT:    [[TMP5:%.*]] = add i64 [[TMP3]], 17592186044416
+; ORIGINS-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ORIGINS-NEXT:    [[_MSLD:%.*]] = load <16 x i32>, ptr [[TMP4]], align 64
+; ORIGINS-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 64
 ; ORIGINS-NEXT:    ret void
 ;
   load <16 x i32>, ptr %p
@@ -107,7 +217,7 @@ define void @load.v16i32(ptr %p) sanitize_address {
 }
 
 
-define void @store.v1i32(ptr %p) sanitize_address {
+define void @store.v1i32(ptr %p) sanitize_memory {
 ; CHECK-LABEL: @store.v1i32(
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
@@ -118,11 +228,18 @@ define void @store.v1i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    ret void
 ;
 ; ADDR-LABEL: @store.v1i32(
+; ADDR-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
-; ADDR-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; ADDR-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
-; ADDR-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
-; ADDR-NEXT:    store <1 x i32> zeroinitializer, ptr [[TMP3]], align 4
+; ADDR-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
+; ADDR-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
+; ADDR:       2:
+; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
+; ADDR-NEXT:    unreachable
+; ADDR:       3:
+; ADDR-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; ADDR-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
+; ADDR-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ADDR-NEXT:    store <1 x i32> zeroinitializer, ptr [[TMP6]], align 4
 ; ADDR-NEXT:    store <1 x i32> zeroinitializer, ptr [[P]], align 4
 ; ADDR-NEXT:    ret void
 ;
@@ -141,7 +258,7 @@ define void @store.v1i32(ptr %p) sanitize_address {
   ret void
 }
 
-define void @store.v2i32(ptr %p) sanitize_address {
+define void @store.v2i32(ptr %p) sanitize_memory {
 ; CHECK-LABEL: @store.v2i32(
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
@@ -152,11 +269,18 @@ define void @store.v2i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    ret void
 ;
 ; ADDR-LABEL: @store.v2i32(
+; ADDR-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
-; ADDR-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; ADDR-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
-; ADDR-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
-; ADDR-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP3]], align 8
+; ADDR-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
+; ADDR-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
+; ADDR:       2:
+; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
+; ADDR-NEXT:    unreachable
+; ADDR:       3:
+; ADDR-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; ADDR-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
+; ADDR-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ADDR-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP6]], align 8
 ; ADDR-NEXT:    store <2 x i32> zeroinitializer, ptr [[P]], align 8
 ; ADDR-NEXT:    ret void
 ;
@@ -175,7 +299,7 @@ define void @store.v2i32(ptr %p) sanitize_address {
   ret void
 }
 
-define void @store.v4i32(ptr %p) sanitize_address {
+define void @store.v4i32(ptr %p) sanitize_memory {
 ; CHECK-LABEL: @store.v4i32(
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
@@ -186,11 +310,18 @@ define void @store.v4i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    ret void
 ;
 ; ADDR-LABEL: @store.v4i32(
+; ADDR-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
-; ADDR-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; ADDR-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
-; ADDR-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
-; ADDR-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP3]], align 16
+; ADDR-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
+; ADDR-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
+; ADDR:       2:
+; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
+; ADDR-NEXT:    unreachable
+; ADDR:       3:
+; ADDR-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; ADDR-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
+; ADDR-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ADDR-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP6]], align 16
 ; ADDR-NEXT:    store <4 x i32> zeroinitializer, ptr [[P]], align 16
 ; ADDR-NEXT:    ret void
 ;
@@ -209,7 +340,7 @@ define void @store.v4i32(ptr %p) sanitize_address {
   ret void
 }
 
-define void @store.v8i32(ptr %p) sanitize_address {
+define void @store.v8i32(ptr %p) sanitize_memory {
 ; CHECK-LABEL: @store.v8i32(
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
@@ -220,11 +351,18 @@ define void @store.v8i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    ret void
 ;
 ; ADDR-LABEL: @store.v8i32(
+; ADDR-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
-; ADDR-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; ADDR-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
-; ADDR-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
-; ADDR-NEXT:    store <8 x i32> zeroinitializer, ptr [[TMP3]], align 32
+; ADDR-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
+; ADDR-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
+; ADDR:       2:
+; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
+; ADDR-NEXT:    unreachable
+; ADDR:       3:
+; ADDR-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; ADDR-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
+; ADDR-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ADDR-NEXT:    store <8 x i32> zeroinitializer, ptr [[TMP6]], align 32
 ; ADDR-NEXT:    store <8 x i32> zeroinitializer, ptr [[P]], align 32
 ; ADDR-NEXT:    ret void
 ;
@@ -243,7 +381,7 @@ define void @store.v8i32(ptr %p) sanitize_address {
   ret void
 }
 
-define void @store.v16i32(ptr %p) sanitize_address {
+define void @store.v16i32(ptr %p) sanitize_memory {
 ; CHECK-LABEL: @store.v16i32(
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
@@ -254,11 +392,18 @@ define void @store.v16i32(ptr %p) sanitize_address {
 ; CHECK-NEXT:    ret void
 ;
 ; ADDR-LABEL: @store.v16i32(
+; ADDR-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
-; ADDR-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; ADDR-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
-; ADDR-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
-; ADDR-NEXT:    store <16 x i32> zeroinitializer, ptr [[TMP3]], align 64
+; ADDR-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
+; ADDR-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
+; ADDR:       2:
+; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
+; ADDR-NEXT:    unreachable
+; ADDR:       3:
+; ADDR-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; ADDR-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
+; ADDR-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ADDR-NEXT:    store <16 x i32> zeroinitializer, ptr [[TMP6]], align 64
 ; ADDR-NEXT:    store <16 x i32> zeroinitializer, ptr [[P]], align 64
 ; ADDR-NEXT:    ret void
 ;

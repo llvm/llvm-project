@@ -37,6 +37,13 @@ def LEA64r   : RI<0x8D, MRMSrcMem, (outs GR64:$dst), (ins lea64mem:$src),
                   [(set GR64:$dst, lea64addr:$src)]>;
 } // SchedRW
 
+// Pseudo instruction for lea that prevent optimizer from eliminating
+// the instruction.
+let SchedRW = [WriteLEA], isPseudo = true, hasSideEffects = 1 in {
+def PLEA32r   : PseudoI<(outs GR32:$dst), (ins anymem:$src), []>;
+def PLEA64r   : PseudoI<(outs GR64:$dst), (ins anymem:$src), []>;
+}
+
 //===----------------------------------------------------------------------===//
 //  Fixed-Register Multiplication and Division Instructions.
 //

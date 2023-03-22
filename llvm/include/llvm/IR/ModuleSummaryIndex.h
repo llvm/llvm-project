@@ -988,10 +988,20 @@ public:
     return {};
   }
 
+  CallsitesTy &mutableCallsites() {
+    assert(Callsites);
+    return *Callsites;
+  }
+
   ArrayRef<AllocInfo> allocs() const {
     if (Allocs)
       return *Allocs;
     return {};
+  }
+
+  AllocsTy &mutableAllocs() {
+    assert(Allocs);
+    return *Allocs;
   }
 
   friend struct GraphTraits<ValueInfo>;

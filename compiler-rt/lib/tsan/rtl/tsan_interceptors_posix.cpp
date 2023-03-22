@@ -2497,11 +2497,21 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
     res;                                          \
   })
 
+// Ignore interceptors in OnLibraryLoaded()/Unloaded().  These hooks use code
+// (ListOfModules::init, MemoryMappingLayout::DumpListOfModules) that make
+// intercepted calls, which can cause deadlockes with ReportRace() which also
+// uses this code.
 #define COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, handle) \
-  libignore()->OnLibraryLoaded(filename)
+  ({                                                        \
+    ScopedIgnoreInterceptors ignore_interceptors;           \
+    libignore()->OnLibraryLoaded(filename);                 \
+  })
 
-#define COMMON_INTERCEPTOR_LIBRARY_UNLOADED() \
-  libignore()->OnLibraryUnloaded()
+#define COMMON_INTERCEPTOR_LIBRARY_UNLOADED()     \
+  ({                                              \
+    ScopedIgnoreInterceptors ignore_interceptors; \
+    libignore()->OnLibraryUnloaded();             \
+  })
 
 #define COMMON_INTERCEPTOR_ACQUIRE(ctx, u) \
   Acquire(((TsanInterceptorContext *) ctx)->thr, pc, u)

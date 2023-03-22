@@ -94,7 +94,7 @@ define void @test_01(i32 %a, i32 %b) {
 ; CHECK:       %s3 = add i32 %is1, %phi5
 ; CHECK-NEXT:  -->  {{{{}}(59 + (2 * %a) + %b),+,6}<%loop1>,+,2}<nw><%loop2>
 ; CHECK:       %s4 = add i32 %phi2, %is2
-; CHECK-NEXT:  -->  {{{{}}(159 + (2 * %b)),+,2}<%loop1>,+,6}<%loop2>
+; CHECK-NEXT:  -->  {{{{}}(159 + (2 * %b)),+,2}<nw><%loop1>,+,6}<%loop2>
 ; CHECK:       %s5 = add i32 %is1, %is2
 ; CHECK-NEXT:  -->  {{{{}}(165 + (2 * %a) + (2 * %b)),+,6}<%loop1>,+,6}<%loop2>
 ; CHECK:       %s6 = add i32 %is2, %is1

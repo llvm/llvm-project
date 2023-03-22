@@ -45,6 +45,7 @@ class RISCVReg64<RISCVReg32 subreg>
   let SubRegIndices = [sub_32];
 }
 
+let FallbackRegAltNameIndex = NoRegAltName in
 def ABIRegAltName : RegAltNameIndex;
 
 def sub_vrm4_0 : SubRegIndex<256>;
@@ -415,50 +416,45 @@ class VRegList<list<dag> LIn, int start, int nf, int lmul, bit isV0> {
 }
 
 // Vector registers
-let RegAltNameIndices = [ABIRegAltName] in {
-  foreach Index = 0-31 in {
-    def V#Index : RISCVReg<Index, "v"#Index, ["v"#Index]>, DwarfRegNum<[!add(Index, 96)]>;
-  }
-
-  foreach Index = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22,
-                   24, 26, 28, 30] in {
-    def V#Index#M2 : RISCVRegWithSubRegs<Index, "v"#Index,
-                       [!cast<Register>("V"#Index),
-                        !cast<Register>("V"#!add(Index, 1))],
-                       ["v"#Index]>,
-                     DwarfRegAlias<!cast<Register>("V"#Index)> {
-      let SubRegIndices = [sub_vrm1_0, sub_vrm1_1];
-    }
-  }
-
-  foreach Index = [0, 4, 8, 12, 16, 20, 24, 28] in {
-    def V#Index#M4 : RISCVRegWithSubRegs<Index, "v"#Index,
-                       [!cast<Register>("V"#Index#"M2"),
-                        !cast<Register>("V"#!add(Index, 2)#"M2")],
-                       ["v"#Index]>,
-                     DwarfRegAlias<!cast<Register>("V"#Index)> {
-      let SubRegIndices = [sub_vrm2_0, sub_vrm2_1];
-    }
-  }
-
-  foreach Index = [0, 8, 16, 24] in {
-    def V#Index#M8 : RISCVRegWithSubRegs<Index, "v"#Index,
-                       [!cast<Register>("V"#Index#"M4"),
-                        !cast<Register>("V"#!add(Index, 4)#"M4")],
-                       ["v"#Index]>,
-                     DwarfRegAlias<!cast<Register>("V"#Index)> {
-      let SubRegIndices = [sub_vrm4_0, sub_vrm4_1];
-    }
-  }
-
-  def VTYPE  : RISCVReg<0, "vtype", ["vtype"]>;
-  def VL     : RISCVReg<0, "vl", ["vl"]>;
-  def VXSAT  : RISCVReg<0, "vxsat", ["vxsat"]>;
-  def VXRM   : RISCVReg<0, "vxrm", ["vxrm"]>;
-  let isConstant = true in
-  def VLENB  : RISCVReg<0, "vlenb", ["vlenb"]>,
-               DwarfRegNum<[!add(4096, SysRegVLENB.Encoding)]>;
+foreach Index = 0-31 in {
+  def V#Index : RISCVReg<Index, "v"#Index>, DwarfRegNum<[!add(Index, 96)]>;
 }
+
+foreach Index = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22,
+                 24, 26, 28, 30] in {
+  def V#Index#M2 : RISCVRegWithSubRegs<Index, "v"#Index,
+                     [!cast<Register>("V"#Index),
+                      !cast<Register>("V"#!add(Index, 1))]>,
+                   DwarfRegAlias<!cast<Register>("V"#Index)> {
+    let SubRegIndices = [sub_vrm1_0, sub_vrm1_1];
+  }
+}
+
+foreach Index = [0, 4, 8, 12, 16, 20, 24, 28] in {
+  def V#Index#M4 : RISCVRegWithSubRegs<Index, "v"#Index,
+                     [!cast<Register>("V"#Index#"M2"),
+                      !cast<Register>("V"#!add(Index, 2)#"M2")]>,
+                   DwarfRegAlias<!cast<Register>("V"#Index)> {
+    let SubRegIndices = [sub_vrm2_0, sub_vrm2_1];
+  }
+}
+
+foreach Index = [0, 8, 16, 24] in {
+  def V#Index#M8 : RISCVRegWithSubRegs<Index, "v"#Index,
+                     [!cast<Register>("V"#Index#"M4"),
+                      !cast<Register>("V"#!add(Index, 4)#"M4")]>,
+                   DwarfRegAlias<!cast<Register>("V"#Index)> {
+    let SubRegIndices = [sub_vrm4_0, sub_vrm4_1];
+  }
+}
+
+def VTYPE  : RISCVReg<0, "vtype">;
+def VL     : RISCVReg<0, "vl">;
+def VXSAT  : RISCVReg<0, "vxsat">;
+def VXRM   : RISCVReg<0, "vxrm">;
+let isConstant = true in
+def VLENB  : RISCVReg<0, "vlenb">,
+             DwarfRegNum<[!add(4096, SysRegVLENB.Encoding)]>;
 
 def VCSR : RegisterClass<"RISCV", [XLenVT], 32,
                           (add VTYPE, VL, VLENB)> {
@@ -582,15 +578,3 @@ foreach m = LMULList.m in {
 // Special registers
 def FFLAGS : RISCVReg<0, "fflags">;
 def FRM    : RISCVReg<0, "frm">;
-
-// Any type register. Used for .insn directives when we don't know what the
-// register types could be.
-// NOTE: The alignment and size are bogus values. The Size needs to be non-zero
-// or tablegen will use "untyped" to determine the size which will assert.
-let isAllocatable = 0 in
-def AnyReg : RegisterClass<"RISCV", [untyped], 32,
-                           (add (sequence "X%u", 0, 31),
-                                (sequence "F%u_D", 0, 31),
-                                (sequence "V%u", 0, 31))> {
-  let Size = 32;
-}

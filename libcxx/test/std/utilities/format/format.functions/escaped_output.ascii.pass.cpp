@@ -8,6 +8,10 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 
+// TODO FMT This test should not require std::to_chars(floating-point)
+// This test requires std::to_chars(floating-point), which is in the dylib
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0}}
+
 // Force unicode to be disabled.
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_HAS_NO_UNICODE
 
@@ -109,7 +113,7 @@ auto test_format_to_n =
         std::size_t n = expected.size();
         std::basic_string<CharT> out(n, CharT(' '));
         std::format_to_n_result result = std::format_to_n(out.begin(), n, fmt, std::forward<Args>(args)...);
-        assert(result.size == static_cast<ptrdiff_t>(expected.size()));
+        assert(result.size == static_cast<std::ptrdiff_t>(expected.size()));
         assert(result.out == out.end());
         assert(out == expected);
       }
@@ -119,24 +123,24 @@ auto test_format_to_n =
         std::basic_string<CharT> out(n, CharT(' '));
         std::format_to_n_result result =
             std::format_to_n(out.begin(), n, std::locale(), fmt, std::forward<Args>(args)...);
-        assert(result.size == static_cast<ptrdiff_t>(expected.size()));
+        assert(result.size == static_cast<std::ptrdiff_t>(expected.size()));
         assert(result.out == out.end());
         assert(out == expected);
       }
 #endif // TEST_HAS_NO_LOCALIZATION
       {
-        ptrdiff_t n = 0;
+        std::ptrdiff_t n = 0;
         std::basic_string<CharT> out;
         std::format_to_n_result result = std::format_to_n(out.begin(), n, fmt, std::forward<Args>(args)...);
-        assert(result.size == static_cast<ptrdiff_t>(expected.size()));
+        assert(result.size == static_cast<std::ptrdiff_t>(expected.size()));
         assert(result.out == out.end());
         assert(out.empty());
       }
       {
-        ptrdiff_t n = expected.size() / 2;
+        std::ptrdiff_t n = expected.size() / 2;
         std::basic_string<CharT> out(n, CharT(' '));
         std::format_to_n_result result = std::format_to_n(out.begin(), n, fmt, std::forward<Args>(args)...);
-        assert(result.size == static_cast<ptrdiff_t>(expected.size()));
+        assert(result.size == static_cast<std::ptrdiff_t>(expected.size()));
         assert(result.out == out.end());
         assert(out == expected.substr(0, n));
       }

@@ -61,7 +61,7 @@ struct test_atomic<A*, false>
         A a; (void)a;
 #if TEST_STD_VER >= 17
     static_assert((std::is_same_v<typename A::value_type, decltype(a.load())>), "");
-    static_assert((std::is_same_v<typename A::difference_type, ptrdiff_t>), "");
+    static_assert((std::is_same_v<typename A::difference_type, std::ptrdiff_t>), "");
 #endif
     }
 };
@@ -146,10 +146,10 @@ int main(int, char**)
     test< std::int64_t> ();
     test<std::uint64_t> ();
 
-    test<intptr_t>  ();
-    test<uintptr_t> ();
+    test<std::intptr_t>  ();
+    test<std::uintptr_t> ();
     test<std::size_t>    ();
-    test<ptrdiff_t> ();
+    test<std::ptrdiff_t> ();
     test<intmax_t>  ();
     test<uintmax_t> ();
 

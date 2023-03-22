@@ -16,6 +16,7 @@ from dex.debugger.DebuggerControllers.ControllerHelpers import in_source_file, u
 from dex.debugger.DebuggerControllers.DebuggerControllerBase import DebuggerControllerBase
 from dex.debugger.DebuggerBase import DebuggerBase
 from dex.utils.Exceptions import DebuggerException
+from dex.utils.Timeout import Timeout
 
 
 class BreakpointRange:
@@ -140,10 +141,26 @@ class ConditionalController(DebuggerControllerBase):
         time.sleep(self._pause_between_steps)
 
         exit_desired = False
+        timed_out = False
+        total_timeout = Timeout(self.context.options.timeout_total)
 
         while not self.debugger.is_finished:
-            while self.debugger.is_running:
-                pass
+
+            breakpoint_timeout = Timeout(self.context.options.timeout_breakpoint)
+            while self.debugger.is_running and not timed_out:
+                # Check to see whether we've timed out while we're waiting.
+                if total_timeout.timed_out():
+                    self.context.logger.error('Debugger session has been '
+                        f'running for {total_timeout.elapsed}s, timeout reached!')
+                    timed_out = True
+                if breakpoint_timeout.timed_out():
+                    self.context.logger.error(f'Debugger session has not '
+                        f'hit a breakpoint for {breakpoint_timeout.elapsed}s, timeout '
+                        'reached!')
+                    timed_out = True
+
+            if timed_out:
+                break
 
             step_info = self.debugger.get_step_info(self._watches, self._step_index)
             if step_info.current_frame:

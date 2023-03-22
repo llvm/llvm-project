@@ -899,8 +899,13 @@ CINDEX_LINKAGE enum CXErrorCode clang_parseTranslationUnit2(
 
 /**
  * Same as clang_parseTranslationUnit2 but requires a full command line
- * for \c command_line_args including argv[0]. This is useful if the standard
- * library paths are relative to the binary.
+ * for \c command_line_args including argv[0].
+ *
+ * This is useful if the driver uses paths relative to the binary and either
+ * you are targeting libclang versions older than Clang 17, or libclang is
+ * installed to a non-standard location. Clang 17 and newer will automatically
+ * use the correct argv[0] if libclang is installed in the lib directory
+ * parallel to the bin directory where the clang binary is installed.
  */
 CINDEX_LINKAGE enum CXErrorCode clang_parseTranslationUnit2FullArgv(
     CXIndex CIdx, const char *source_filename,

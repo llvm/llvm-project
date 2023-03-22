@@ -10,9 +10,8 @@
 // TODO FMT Evaluate gcc-12 status
 // UNSUPPORTED: gcc-12
 
-// This test requires the dylib support introduced in D92214.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{.+}}
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx11.{{.+}}
+// This test requires std::to_chars(floating-point), which is in the dylib
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0}}
 
 // <format>
 

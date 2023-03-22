@@ -367,12 +367,14 @@ inline orc::ExecutorAddr alignToBlock(orc::ExecutorAddr Addr, Block &B) {
 // must end with a zero, and contain no zeros before the end.
 bool isCStringBlock(Block &B);
 
-/// Describes symbol linkage. This can be used to make resolve definition
-/// clashes.
+/// Describes symbol linkage. This can be used to resolve definition clashes.
 enum class Linkage : uint8_t {
   Strong,
   Weak,
 };
+
+/// Holds target-specific properties for a symbol.
+using TargetFlagsType = uint8_t;
 
 /// For errors and debugging output.
 const char *getLinkageName(Linkage L);
@@ -611,6 +613,17 @@ public:
     this->S = static_cast<uint8_t>(S);
   }
 
+  /// Check wehther the given target flags are set for this Symbol.
+  bool hasTargetFlags(TargetFlagsType Flags) const {
+    return static_cast<TargetFlagsType>(TargetFlags) & Flags;
+  }
+
+  /// Set the target flags for this Symbol.
+  void setTargetFlags(TargetFlagsType Flags) {
+    assert(Flags <= 1 && "Add more bits to store more than single flag");
+    TargetFlags = Flags;
+  }
+
   /// Returns true if this is a weakly referenced external symbol.
   /// This method may only be called on external symbols.
   bool isWeaklyReferenced() const {
@@ -655,12 +668,13 @@ private:
   // FIXME: A char* or SymbolStringPtr may pack better.
   StringRef Name;
   Addressable *Base = nullptr;
-  uint64_t Offset : 58;
+  uint64_t Offset : 57;
   uint64_t L : 1;
   uint64_t S : 2;
   uint64_t IsLive : 1;
   uint64_t IsCallable : 1;
   uint64_t WeakRef : 1;
+  uint64_t TargetFlags : 1;
   size_t Size = 0;
 };
 

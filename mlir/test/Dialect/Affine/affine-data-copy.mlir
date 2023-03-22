@@ -310,3 +310,26 @@ func.func @affine_parallel(%85:memref<2x5x4x2xi64>) {
   // CHECK-NEXT:    affine.parallel
   return
 }
+
+// CHECK-LABEL: func @index_elt_type
+func.func @index_elt_type(%arg0: memref<1x2x4x8xindex>) {
+  affine.for %arg1 = 0 to 1 {
+    affine.for %arg2 = 0 to 2 {
+      affine.for %arg3 = 0 to 4 {
+        affine.for %arg4 = 0 to 8 {
+          affine.store %arg4, %arg0[%arg1, %arg2, %arg3, %arg4] : memref<1x2x4x8xindex>
+        }
+      }
+    }
+  }
+
+  // CHECK:     affine.for %{{.*}} = 0 to 1
+  // CHECK-NEXT:  affine.for %{{.*}} = 0 to 2
+  // CHECK-NEXT:    affine.for %{{.*}} = 0 to 4
+  // CHECK-NEXT:      affine.for %{{.*}} = 0 to 8
+
+  // CHECK:     affine.for %{{.*}} = 0 to 2
+  // CHECK-NEXT:  affine.for %{{.*}} = 0 to 4
+  // CHECK-NEXT:    affine.for %{{.*}} = 0 to 8
+  return
+}
