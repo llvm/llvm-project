@@ -167,7 +167,7 @@ std::optional<std::string> getRelativeIncludeName(const CompilerInstance &CI,
 
 struct LocationFileChecker {
   bool operator()(SourceLocation Loc) {
-    // If the loc refersSourceLocationxpansion we need to first get the file
+    // If the loc refers to a macro expansion we need to first get the file
     // location of the expansion.
     auto &SM = CI.getSourceManager();
     auto FileLoc = SM.getFileLoc(Loc);
