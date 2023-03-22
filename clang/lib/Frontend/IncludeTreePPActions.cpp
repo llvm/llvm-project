@@ -167,6 +167,12 @@ public:
           return reportErrorTwine(
               llvm::Twine("failed to find or infer submodule '") + Sub + "'");
       }
+
+      // Add to known headers for the module.
+      ModuleMap &MMap = PP.getHeaderSearchInfo().getModuleMap();
+      Module::Header H;
+      H.Entry = *FE;
+      MMap.addHeader(M, std::move(H), ModuleMap::NormalHeader);
     }
 
     return IncludeFile{FID, M};

@@ -1565,6 +1565,7 @@ Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
 
   switch (M->Kind) {
   case Module::ModuleMapModule:
+  case Module::IncludeTreeModuleMap:
     // Module map modules have no special linkage semantics.
     return nullptr;
 

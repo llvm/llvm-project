@@ -2980,8 +2980,7 @@ static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
   // emitted when we import the relevant module.
   if (isPartOfPerModuleInitializer(D)) {
     auto *M = D->getImportedOwningModule();
-    if (M && M->Kind == Module::ModuleMapModule &&
-        Ctx.DeclMustBeEmitted(D))
+    if (M && M->isModuleMapModule() && Ctx.DeclMustBeEmitted(D))
       return false;
   }
 

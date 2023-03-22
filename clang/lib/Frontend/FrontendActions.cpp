@@ -831,6 +831,8 @@ static StringRef ModuleKindName(Module::ModuleKind MK) {
   switch (MK) {
   case Module::ModuleMapModule:
     return "Module Map Module";
+  case Module::IncludeTreeModuleMap:
+    return "Include Tree Module";
   case Module::ModuleInterfaceUnit:
     return "Interface Unit";
   case Module::ModulePartitionInterface:
