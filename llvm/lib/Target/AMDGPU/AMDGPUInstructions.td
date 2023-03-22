@@ -611,6 +611,10 @@ defm int_amdgcn_ds_fadd_v2bf16 : noret_op;
 defm int_amdgcn_flat_atomic_cond_sub_u32 : noret_op;
 defm int_amdgcn_global_atomic_cond_sub_u32 : noret_op;
 defm int_amdgcn_global_atomic_ordered_add_b64 : noret_op;
+defm int_amdgcn_flat_atomic_fmin_num : noret_op;
+defm int_amdgcn_flat_atomic_fmax_num : noret_op;
+defm int_amdgcn_global_atomic_fmin_num : noret_op;
+defm int_amdgcn_global_atomic_fmax_num : noret_op;
 
 multiclass noret_binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {
   let HasNoUse = true in
