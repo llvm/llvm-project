@@ -184,7 +184,9 @@ struct AffineCopyOptions {
 /// available for processing this block range. When 'filterMemRef' is specified,
 /// copies are only generated for the provided MemRef. Returns success if the
 /// explicit copying succeeded for all memrefs on which affine load/stores were
-/// encountered.
+/// encountered. For memrefs for whose element types a size in bytes can't be
+/// computed (`index` type), their capacity is not accounted for and the
+/// `fastMemCapacityBytes` copy option would be non-functional in such cases.
 LogicalResult affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
                                      const AffineCopyOptions &copyOptions,
                                      std::optional<Value> filterMemRef,

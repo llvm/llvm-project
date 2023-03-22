@@ -219,6 +219,7 @@ libc_support_library(
     hdrs = ["src/__support/arg_list.h"],
     deps = [
         ":libc_root",
+        ":__support_common",
     ],
 )
 

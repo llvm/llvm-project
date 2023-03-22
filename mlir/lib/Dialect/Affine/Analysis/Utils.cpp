@@ -594,16 +594,21 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   return success();
 }
 
-static unsigned getMemRefEltSizeInBytes(MemRefType memRefType) {
+std::optional<int64_t>
+mlir::getMemRefIntOrFloatEltSizeInBytes(MemRefType memRefType) {
   auto elementType = memRefType.getElementType();
 
   unsigned sizeInBits;
   if (elementType.isIntOrFloat()) {
     sizeInBits = elementType.getIntOrFloatBitWidth();
+  } else if (auto vectorType = elementType.dyn_cast<VectorType>()) {
+    if (vectorType.getElementType().isIntOrFloat())
+      sizeInBits =
+          vectorType.getElementTypeBitWidth() * vectorType.getNumElements();
+    else
+      return std::nullopt;
   } else {
-    auto vectorType = elementType.cast<VectorType>();
-    sizeInBits =
-        vectorType.getElementTypeBitWidth() * vectorType.getNumElements();
+    return std::nullopt;
   }
   return llvm::divideCeil(sizeInBits, 8);
 }
@@ -629,23 +634,29 @@ std::optional<int64_t> MemRefRegion::getRegionSize() {
     LLVM_DEBUG(llvm::dbgs() << "Dynamic shapes not yet supported\n");
     return std::nullopt;
   }
-  return getMemRefEltSizeInBytes(memRefType) * *numElements;
+  auto eltSize = getMemRefIntOrFloatEltSizeInBytes(memRefType);
+  if (!eltSize)
+    return std::nullopt;
+  return *eltSize * *numElements;
 }
 
 /// Returns the size of memref data in bytes if it's statically shaped,
 /// std::nullopt otherwise.  If the element of the memref has vector type, takes
 /// into account size of the vector as well.
 //  TODO: improve/complete this when we have target data.
-std::optional<uint64_t> mlir::getMemRefSizeInBytes(MemRefType memRefType) {
+std::optional<uint64_t>
+mlir::getIntOrFloatMemRefSizeInBytes(MemRefType memRefType) {
   if (!memRefType.hasStaticShape())
     return std::nullopt;
   auto elementType = memRefType.getElementType();
   if (!elementType.isIntOrFloat() && !elementType.isa<VectorType>())
     return std::nullopt;
 
-  uint64_t sizeInBytes = getMemRefEltSizeInBytes(memRefType);
+  auto sizeInBytes = getMemRefIntOrFloatEltSizeInBytes(memRefType);
+  if (!sizeInBytes)
+    return std::nullopt;
   for (unsigned i = 0, e = memRefType.getRank(); i < e; i++) {
-    sizeInBytes = sizeInBytes * memRefType.getDimSize(i);
+    sizeInBytes = *sizeInBytes * memRefType.getDimSize(i);
   }
   return sizeInBytes;
 }
