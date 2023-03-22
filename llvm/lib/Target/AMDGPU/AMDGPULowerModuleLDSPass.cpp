@@ -315,11 +315,11 @@ public:
     DenseSet<GlobalVariable *> VariablesReachableThroughFunctionPointer;
     for (Function &F : M.functions()) {
       if (!isKernelLDS(&F))
-          if (F.hasAddressTaken(nullptr,
-                                /* IgnoreCallbackUses */ false,
-                                /* IgnoreAssumeLikeCalls */ false,
-                                /* IgnoreLLVMUsed */ true,
-                                /* IgnoreArcAttachedCall */ false)) {
+        if (F.hasAddressTaken(nullptr,
+                              /* IgnoreCallbackUses */ false,
+                              /* IgnoreAssumeLikeCalls */ false,
+                              /* IgnoreLLVMUsed */ true,
+                              /* IgnoreArcAttachedCall */ false)) {
           set_union(VariablesReachableThroughFunctionPointer,
                     direct_map_function[&F]);
         }
@@ -476,7 +476,6 @@ public:
     IRBuilder<> Builder(Ctx);
     Type *I32 = Type::getInt32Ty(Ctx);
 
-
     for (size_t Index = 0; Index < ModuleScopeVariables.size(); Index++) {
       auto *GV = ModuleScopeVariables[Index];
 
@@ -503,7 +502,6 @@ public:
             ConstantInt::get(I32, Index),
         };
 
-
         Value *Address = Builder.CreateInBoundsGEP(
             LookupTable->getValueType(), LookupTable, GEPIdx, GV->getName());
 
@@ -523,7 +521,8 @@ public:
 
     DenseSet<Function *> KernelSet;
 
-    if (VariableSet.empty()) return KernelSet;
+    if (VariableSet.empty())
+      return KernelSet;
 
     for (Function &Func : M.functions()) {
       if (Func.isDeclaration() || !isKernelLDS(&Func))
@@ -586,8 +585,9 @@ public:
         // strategy
         continue;
       }
-      CandidateTy Candidate(GV, K.second.size(),
-                      DL.getTypeAllocSize(GV->getValueType()).getFixedValue());
+      CandidateTy Candidate(
+          GV, K.second.size(),
+          DL.getTypeAllocSize(GV->getValueType()).getFixedValue());
       if (MostUsed < Candidate)
         MostUsed = Candidate;
     }
@@ -638,44 +638,42 @@ public:
     // the backend and lowered to a SGPR which can be read from using
     // amdgcn_lds_kernel_id.
 
-      std::vector<Function *> OrderedKernels;
+    std::vector<Function *> OrderedKernels;
 
-        for (Function &Func : M->functions()) {
-          if (Func.isDeclaration())
-            continue;
-          if (!isKernelLDS(&Func))
-            continue;
+    for (Function &Func : M->functions()) {
+      if (Func.isDeclaration())
+        continue;
+      if (!isKernelLDS(&Func))
+        continue;
 
-          if (KernelsThatAllocateTableLDS.contains(&Func)) {
-            assert(Func.hasName()); // else fatal error earlier
-            OrderedKernels.push_back(&Func);
-          }
-        }
+      if (KernelsThatAllocateTableLDS.contains(&Func)) {
+        assert(Func.hasName()); // else fatal error earlier
+        OrderedKernels.push_back(&Func);
+      }
+    }
 
-        // Put them in an arbitrary but reproducible order
-        llvm::sort(OrderedKernels.begin(), OrderedKernels.end(),
-                   [](const Function *lhs, const Function *rhs) -> bool {
-                     return lhs->getName() < rhs->getName();
-                   });
+    // Put them in an arbitrary but reproducible order
+    llvm::sort(OrderedKernels.begin(), OrderedKernels.end(),
+               [](const Function *lhs, const Function *rhs) -> bool {
+                 return lhs->getName() < rhs->getName();
+               });
 
-        // Annotate the kernels with their order in this vector
-        LLVMContext &Ctx = M->getContext();
-        IRBuilder<> Builder(Ctx);
+    // Annotate the kernels with their order in this vector
+    LLVMContext &Ctx = M->getContext();
+    IRBuilder<> Builder(Ctx);
 
-        if (OrderedKernels.size() > UINT32_MAX) {
-          // 32 bit keeps it in one SGPR. > 2**32 kernels won't fit on the GPU
-          report_fatal_error("Unimplemented LDS lowering for > 2**32 kernels");
-        }
+    if (OrderedKernels.size() > UINT32_MAX) {
+      // 32 bit keeps it in one SGPR. > 2**32 kernels won't fit on the GPU
+      report_fatal_error("Unimplemented LDS lowering for > 2**32 kernels");
+    }
 
-        for (size_t i = 0; i < OrderedKernels.size(); i++) {
-          Metadata *AttrMDArgs[1] = {
-              ConstantAsMetadata::get(Builder.getInt32(i)),
-          };
-          OrderedKernels[i]->setMetadata("llvm.amdgcn.lds.kernel.id",
-                                         MDNode::get(Ctx, AttrMDArgs));
-
-        }
-
+    for (size_t i = 0; i < OrderedKernels.size(); i++) {
+      Metadata *AttrMDArgs[1] = {
+          ConstantAsMetadata::get(Builder.getInt32(i)),
+      };
+      OrderedKernels[i]->setMetadata("llvm.amdgcn.lds.kernel.id",
+                                     MDNode::get(Ctx, AttrMDArgs));
+    }
 
     return OrderedKernels;
   }
@@ -979,22 +977,22 @@ public:
       // TODO: Looks like a latent bug, Replacement may not be marked
       // UsedByKernel here
       replaceLDSVariablesWithStruct(M, Vec, Replacement, [](Use &U) {
-                                                           return isa<Instruction>(U.getUser());
+        return isa<Instruction>(U.getUser());
       });
     }
 
     if (!KernelsThatAllocateTableLDS.empty()) {
-        LLVMContext &Ctx = M.getContext();
-        IRBuilder<> Builder(Ctx);
+      LLVMContext &Ctx = M.getContext();
+      IRBuilder<> Builder(Ctx);
 
-    // The ith element of this vector is kernel id i
-    std::vector<Function *> OrderedKernels =
-        assignLDSKernelIDToEachKernel(&M, KernelsThatAllocateTableLDS);
+      // The ith element of this vector is kernel id i
+      std::vector<Function *> OrderedKernels =
+          assignLDSKernelIDToEachKernel(&M, KernelsThatAllocateTableLDS);
 
-    for (size_t i = 0; i < OrderedKernels.size(); i++) {
-      markUsedByKernel(Builder, OrderedKernels[i],
-                       KernelToReplacement[OrderedKernels[i]].SGV);
-    }
+      for (size_t i = 0; i < OrderedKernels.size(); i++) {
+        markUsedByKernel(Builder, OrderedKernels[i],
+                         KernelToReplacement[OrderedKernels[i]].SGV);
+      }
 
       // The order must be consistent between lookup table and accesses to
       // lookup table
