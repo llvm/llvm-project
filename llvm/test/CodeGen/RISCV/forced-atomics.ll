@@ -137,7 +137,7 @@ define i8 @cmpxchg8(ptr %p) nounwind {
 ; RV32-NO-ATOMIC-NEXT:    li a3, 5
 ; RV32-NO-ATOMIC-NEXT:    li a4, 5
 ; RV32-NO-ATOMIC-NEXT:    call __atomic_compare_exchange_1@plt
-; RV32-NO-ATOMIC-NEXT:    lb a0, 11(sp)
+; RV32-NO-ATOMIC-NEXT:    lbu a0, 11(sp)
 ; RV32-NO-ATOMIC-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NO-ATOMIC-NEXT:    addi sp, sp, 16
 ; RV32-NO-ATOMIC-NEXT:    ret
@@ -163,7 +163,7 @@ define i8 @cmpxchg8(ptr %p) nounwind {
 ; RV64-NO-ATOMIC-NEXT:    li a3, 5
 ; RV64-NO-ATOMIC-NEXT:    li a4, 5
 ; RV64-NO-ATOMIC-NEXT:    call __atomic_compare_exchange_1@plt
-; RV64-NO-ATOMIC-NEXT:    lb a0, 7(sp)
+; RV64-NO-ATOMIC-NEXT:    lbu a0, 7(sp)
 ; RV64-NO-ATOMIC-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NO-ATOMIC-NEXT:    addi sp, sp, 16
 ; RV64-NO-ATOMIC-NEXT:    ret

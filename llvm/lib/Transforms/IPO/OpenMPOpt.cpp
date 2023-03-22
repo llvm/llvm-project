@@ -3324,7 +3324,7 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
       auto Remark = [&](OptimizationRemark OR) {
         return OR << "Replaced globalized variable with "
                   << ore::NV("SharedMemory", AllocSize->getZExtValue())
-                  << ((AllocSize->getZExtValue() != 1) ? " bytes " : " byte ")
+                  << (AllocSize->isOne() ? " byte " : " bytes ")
                   << "of shared memory.";
       };
       A.emitRemark<OptimizationRemark>(CB, "OMP111", Remark);
