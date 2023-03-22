@@ -234,6 +234,10 @@ Changes in existing checks
   string for ``Prefix`` or ``Suffix`` options could result in the style not
   being used.
 
+- Fixed an issue in :doc:`google-avoid-underscore-in-googletest-name
+  <clang-tidy/checks/google/avoid-underscore-in-googletest-name>` when using
+  ``DISABLED_`` in the test suite name.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
