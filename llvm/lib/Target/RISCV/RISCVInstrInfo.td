@@ -1090,6 +1090,17 @@ def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF), 0>;
 // .insn directive instructions
 //===----------------------------------------------------------------------===//
 
+def AnyRegOperand : AsmOperandClass {
+  let Name = "AnyRegOperand";
+  let RenderMethod = "addRegOperands";
+  let PredicateMethod = "isAnyReg";
+}
+
+def AnyReg : Operand<XLenVT> {
+  let OperandType = "OPERAND_REGISTER";
+  let ParserMatchClass = AnyRegOperand;
+}
+
 // isCodeGenOnly = 1 to hide them from the tablegened assembly parser.
 let isCodeGenOnly = 1, hasSideEffects = 1, mayLoad = 1, mayStore = 1,
     hasNoSchedulingInfo = 1 in {
