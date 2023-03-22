@@ -2,6 +2,63 @@
 # RUN: llc -mtriple=aarch64-linux-gnu -O0 -run-pass=legalizer %s -o - -global-isel-abort=1 | FileCheck %s
 
 ---
+name:            v8s8
+body: |
+  bb.0:
+    liveins: $q0
+    ; CHECK-LABEL: name: v8s8
+    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK: %val:_(s8) = G_CONSTANT i8 42
+    ; CHECK: [[IVEC:%[0-9]+]]:_(<8 x s8>) = G_INSERT_VECTOR_ELT [[COPY]], %val(s8), [[C]](s32)
+    ; CHECK: $d0 = COPY [[IVEC]](<8 x s8>)
+    ; CHECK: RET_ReallyLR
+    %0:_(<8 x s8>) = COPY $d0
+    %1:_(s32) = G_CONSTANT i32 1
+    %val:_(s8) = G_CONSTANT i8 42
+    %2:_(<8 x s8>) = G_INSERT_VECTOR_ELT %0(<8 x s8>), %val(s8), %1(s32)
+    $d0 = COPY %2(<8 x s8>)
+    RET_ReallyLR
+...
+---
+name:            v16s8
+body: |
+  bb.0:
+    liveins: $q0
+    ; CHECK-LABEL: name: v16s8
+    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK: %val:_(s8) = G_CONSTANT i8 42
+    ; CHECK: [[IVEC:%[0-9]+]]:_(<16 x s8>) = G_INSERT_VECTOR_ELT [[COPY]], %val(s8), [[C]](s32)
+    ; CHECK: $q0 = COPY [[IVEC]](<16 x s8>)
+    ; CHECK: RET_ReallyLR
+    %0:_(<16 x s8>) = COPY $q0
+    %1:_(s32) = G_CONSTANT i32 1
+    %val:_(s8) = G_CONSTANT i8 42
+    %2:_(<16 x s8>) = G_INSERT_VECTOR_ELT %0(<16 x s8>), %val(s8), %1(s32)
+    $q0 = COPY %2(<16 x s8>)
+    RET_ReallyLR
+...
+---
+name:            v4s16
+body: |
+  bb.0:
+    liveins: $q0
+    ; CHECK-LABEL: name: v4s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK: %val:_(s16) = G_CONSTANT i16 42
+    ; CHECK: [[IVEC:%[0-9]+]]:_(<4 x s16>) = G_INSERT_VECTOR_ELT [[COPY]], %val(s16), [[C]](s32)
+    ; CHECK: $d0 = COPY [[IVEC]](<4 x s16>)
+    ; CHECK: RET_ReallyLR
+    %0:_(<4 x s16>) = COPY $d0
+    %1:_(s32) = G_CONSTANT i32 1
+    %val:_(s16) = G_CONSTANT i16 42
+    %2:_(<4 x s16>) = G_INSERT_VECTOR_ELT %0(<4 x s16>), %val(s16), %1(s32)
+    $d0 = COPY %2(<4 x s16>)
+    RET_ReallyLR
+...
+---
 name:            v8s16
 body: |
   bb.0:
