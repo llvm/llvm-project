@@ -871,7 +871,8 @@ int runOrcJIT(const char *ProgName) {
     auto ES = std::make_unique<orc::ExecutionSession>(
         ExitOnErr(orc::SelfExecutorProcessControl::Create()));
     Builder.setLazyCallthroughManager(
-        std::make_unique<orc::LazyCallThroughManager>(*ES, 0, nullptr));
+        std::make_unique<orc::LazyCallThroughManager>(*ES, orc::ExecutorAddr(),
+                                                      nullptr));
     Builder.setExecutionSession(std::move(ES));
   }
 

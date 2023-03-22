@@ -402,7 +402,7 @@ void SimpleRemoteEPC::handleCallWrapper(
                                   ExecutorAddr(), {WFR.data(), WFR.size()}))
                 getExecutionSession().reportError(std::move(Err));
             },
-            TagAddr.getValue(), ArgBytes);
+            TagAddr, ArgBytes);
       },
       "callWrapper task"));
 }

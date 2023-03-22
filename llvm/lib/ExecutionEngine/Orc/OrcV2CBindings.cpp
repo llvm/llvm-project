@@ -184,8 +184,8 @@ static SymbolMap toSymbolMap(LLVMOrcCSymbolMapPairs Syms, size_t NumPairs) {
   SymbolMap SM;
   for (size_t I = 0; I != NumPairs; ++I) {
     JITSymbolFlags Flags = toJITSymbolFlags(Syms[I].Sym.Flags);
-    SM[OrcV2CAPIHelper::moveToSymbolStringPtr(unwrap(Syms[I].Name))] =
-        JITEvaluatedSymbol(Syms[I].Sym.Address, Flags);
+    SM[OrcV2CAPIHelper::moveToSymbolStringPtr(unwrap(Syms[I].Name))] = {
+        ExecutorAddr(Syms[I].Sym.Address), Flags};
   }
   return SM;
 }
@@ -269,8 +269,8 @@ static LLVMOrcSymbolLookupFlags fromSymbolLookupFlags(SymbolLookupFlags SLF) {
 }
 
 static LLVMJITEvaluatedSymbol
-fromJITEvaluatedSymbol(const JITEvaluatedSymbol &S) {
-  return {S.getAddress(), fromJITSymbolFlags(S.getFlags())};
+fromExecutorSymbolDef(const ExecutorSymbolDef &S) {
+  return {S.getAddress().getValue(), fromJITSymbolFlags(S.getFlags())};
 }
 
 } // end anonymous namespace
@@ -385,7 +385,7 @@ void LLVMOrcExecutionSessionLookup(
           for (auto &KV : *Result)
             CResult.push_back(LLVMOrcCSymbolMapPair{
                 wrap(OrcV2CAPIHelper::getRawPoolEntryPtr(KV.first)),
-                fromJITEvaluatedSymbol(KV.second)});
+                fromExecutorSymbolDef(KV.second)});
           HandleResult(LLVMErrorSuccess, CResult.data(), CResult.size(), Ctx);
         } else
           HandleResult(wrap(Result.takeError()), nullptr, 0, Ctx);
@@ -1198,8 +1198,8 @@ LLVMErrorRef LLVMOrcCreateLocalLazyCallThroughManager(
     const char *TargetTriple, LLVMOrcExecutionSessionRef ES,
     LLVMOrcJITTargetAddress ErrorHandlerAddr,
     LLVMOrcLazyCallThroughManagerRef *Result) {
-  auto LCTM = createLocalLazyCallThroughManager(Triple(TargetTriple),
-                                                *unwrap(ES), ErrorHandlerAddr);
+  auto LCTM = createLocalLazyCallThroughManager(
+      Triple(TargetTriple), *unwrap(ES), ExecutorAddr(ErrorHandlerAddr));
 
   if (!LCTM)
     return wrap(LCTM.takeError());
