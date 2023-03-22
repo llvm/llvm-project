@@ -1685,3 +1685,39 @@ loop:
 exit:
   ret i32 0
 }
+
+; TODO: The pointer induction variable can be implied No Self Wrap.
+define void @gep_addrec_nw(ptr %a) {
+; CHECK-LABEL: 'gep_addrec_nw'
+; CHECK-NEXT:  Classifying expressions for: @gep_addrec_nw
+; CHECK-NEXT:    %lsr.iv1 = phi ptr [ %uglygep2, %for.body ], [ %a, %entry ]
+; CHECK-NEXT:    --> {%a,+,4}<%for.body> U: full-set S: full-set Exits: (1512 + %a) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    %lsr.iv = phi i64 [ %lsr.iv.next, %for.body ], [ 379, %entry ]
+; CHECK-NEXT:    --> {379,+,-1}<nsw><%for.body> U: [1,380) S: [1,380) Exits: 1 LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    %lsr.iv.next = add nsw i64 %lsr.iv, -1
+; CHECK-NEXT:    --> {378,+,-1}<nsw><%for.body> U: [0,379) S: [0,379) Exits: 0 LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    %uglygep2 = getelementptr i8, ptr %lsr.iv1, i64 4
+; CHECK-NEXT:    --> {(4 + %a),+,4}<%for.body> U: full-set S: full-set Exits: (1516 + %a) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @gep_addrec_nw
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is 378
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 378
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 378
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 378
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body: Trip multiple is 379
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %lsr.iv1 = phi ptr [ %uglygep2, %for.body ], [ %a, %entry ]
+  %lsr.iv = phi i64 [ %lsr.iv.next, %for.body ], [ 379, %entry ]
+  store i32 1, ptr %lsr.iv1, align 4
+  %lsr.iv.next = add nsw i64 %lsr.iv, -1
+  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i64 4
+  %exitcond.not = icmp eq i64 %lsr.iv.next, 0
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
