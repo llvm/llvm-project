@@ -26,21 +26,15 @@ using namespace mlir::cir;
 /// or with the labeled blocked if already solved.
 ///
 /// Track on scope basis, goto's we need to fix later.
-mlir::LogicalResult
-CIRGenFunction::buildBranchThroughCleanup(JumpDest &Dest, LabelDecl *L,
-                                          mlir::Location Loc) {
+mlir::cir::BrOp CIRGenFunction::buildBranchThroughCleanup(mlir::Location Loc,
+                                                          JumpDest Dest) {
   // Remove this once we go for making sure unreachable code is
   // well modeled (or not).
   assert(builder.getInsertionBlock() && "not yet implemented");
+  assert(!UnimplementedFeature::ehStack());
 
   // Insert a branch: to the cleanup block (unsolved) or to the already
   // materialized label. Keep track of unsolved goto's.
-  mlir::Block *DstBlock = Dest.getBlock();
-  auto G = builder.create<BrOp>(
-      Loc, Dest.isValid() ? DstBlock
-                          : currLexScope->getOrCreateCleanupBlock(builder));
-  if (!Dest.isValid())
-    currLexScope->PendingGotos.push_back(std::make_pair(G, L));
-
-  return mlir::success();
+  return builder.create<BrOp>(Loc, Dest.isValid() ? Dest.getBlock()
+                                                  : ReturnBlock().getBlock());
 }

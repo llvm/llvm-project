@@ -62,6 +62,7 @@ struct UnimplementedFeature {
   static bool cxxABI() { return false; }
   static bool openCL() { return false; }
   static bool openMP() { return false; }
+  static bool ehStack() { return false; }
 };
 } // namespace cir
 

@@ -525,9 +525,9 @@ mlir::LogicalResult CIRGenFunction::buildGotoStmt(const GotoStmt &S) {
 
   // Build a cir.br to the target label.
   auto &JD = LabelMap[S.getLabel()];
-  if (buildBranchThroughCleanup(JD, S.getLabel(), getLoc(S.getSourceRange()))
-          .failed())
-    return mlir::failure();
+  auto brOp = buildBranchThroughCleanup(getLoc(S.getSourceRange()), JD);
+  if (!JD.isValid())
+    currLexScope->PendingGotos.push_back(std::make_pair(brOp, S.getLabel()));
 
   // Insert the new block to continue codegen after goto.
   builder.createBlock(builder.getBlock()->getParent());
