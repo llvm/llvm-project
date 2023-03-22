@@ -54,7 +54,9 @@ public:
   class File;
   class FileList;
   class Node;
+  class Module;
   class ModuleImport;
+  class ModuleMap;
 
   Expected<File> getBaseFile();
 
@@ -381,6 +383,262 @@ private:
   NodeKind K;
 };
 
+/// Module or submodule declaration as part of the \c IncludeTreeRoot module
+/// map structure.
+class IncludeTree::Module : public IncludeTreeBase<Module> {
+public:
+  static constexpr StringRef getNodeKind() { return "Modu"; }
+
+  class ExportList;
+  class LinkLibraryList;
+
+  struct ModuleFlags {
+    bool IsFramework : 1;
+    bool IsExplicit : 1;
+    bool IsExternC : 1;
+    bool IsSystem : 1;
+    ModuleFlags()
+        : IsFramework(false), IsExplicit(false), IsExternC(false),
+          IsSystem(false) {}
+  };
+
+  ModuleFlags getFlags() const;
+
+  /// The name of the current (sub)module.
+  StringRef getName() const { return dataAfterFlags(); }
+
+  size_t getNumSubmodules() const;
+
+  Expected<Module> getSubmodule(size_t I) {
+    assert(I < getNumSubmodules());
+    auto Node = getCAS().getProxy(getReference(I));
+    if (!Node)
+      return Node.takeError();
+    return Module(*Node);
+  }
+
+  llvm::Error forEachSubmodule(llvm::function_ref<llvm::Error(Module)> CB);
+
+  std::optional<ObjectRef> getExportsRef() const {
+    if (std::optional<unsigned> Index = getExportsIndex())
+      return getReference(*Index);
+    return std::nullopt;
+  }
+  std::optional<ObjectRef> getLinkLibrariesRef() const {
+    if (std::optional<unsigned> Index = getLinkLibrariesIndex())
+      return getReference(*Index);
+    return std::nullopt;
+  }
+
+  /// The list of modules that this submodule re-exports.
+  Expected<std::optional<ExportList>> getExports();
+
+  /// The list of modules that this submodule re-exports.
+  Expected<std::optional<LinkLibraryList>> getLinkLibraries();
+
+  llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
+
+  static Expected<Module> create(ObjectStore &DB, StringRef ModuleName,
+                                 ModuleFlags Flags,
+                                 ArrayRef<ObjectRef> Submodules,
+                                 std::optional<ObjectRef> ExportList,
+                                 std::optional<ObjectRef> LinkLibraries);
+
+  static bool isValid(const ObjectProxy &Node) {
+    if (!IncludeTreeBase::isValid(Node))
+      return false;
+    IncludeTreeBase Base(Node);
+    return Base.getData().size() > 1;
+  }
+  static bool isValid(ObjectStore &DB, ObjectRef Ref) {
+    auto Node = DB.getProxy(Ref);
+    if (!Node) {
+      llvm::consumeError(Node.takeError());
+      return false;
+    }
+    return isValid(*Node);
+  }
+
+private:
+  char rawFlags() const { return getData()[0]; }
+  StringRef dataAfterFlags() const { return getData().drop_front(); }
+  bool hasExports() const;
+  bool hasLinkLibraries() const;
+  std::optional<unsigned> getExportsIndex() const;
+  std::optional<unsigned> getLinkLibrariesIndex() const;
+
+  explicit Module(ObjectProxy Node) : IncludeTreeBase(std::move(Node)) {
+    assert(isValid(*this));
+  }
+
+  friend class IncludeTreeBase<Module>;
+  friend class IncludeTreeRoot;
+  friend class ModuleMap;
+};
+
+/// The set of modules re-exported by another module.
+class IncludeTree::Module::ExportList : public IncludeTreeBase<ExportList> {
+public:
+  static constexpr StringRef getNodeKind() { return "ExpL"; }
+
+  /// An explicit export.
+  struct Export {
+    StringRef ModuleName;
+    bool Wildcard;
+  };
+
+  /// Whether this module exports all imported modules (`export *`).
+  bool hasGlobalWildcard() const;
+
+  size_t getNumExplicitExports() const { return getNumReferences(); }
+
+  /// Whether the explicit export at \p I has a wildcard (`export MyModule.*`).
+  bool exportHasWildcard(size_t I) const;
+
+  Expected<Export> getExplicitExport(size_t I);
+
+  /// Calls \p CB for each explicit export declaration.
+  llvm::Error forEachExplicitExport(llvm::function_ref<llvm::Error(Export)> CB);
+
+  llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
+
+  static Expected<ExportList> create(ObjectStore &DB, ArrayRef<Export> Exports,
+                                     bool GlobalWildcard);
+
+  static bool isValid(const ObjectProxy &Node) {
+    if (!IncludeTreeBase::isValid(Node))
+      return false;
+    IncludeTreeBase Base(Node);
+    size_t ExpectedBitSize = Base.getNumReferences() + 1;
+    size_t ExpectedSize =
+        ExpectedBitSize / 8 + (ExpectedBitSize % 8 == 0 ? 0 : 1);
+    return Base.getData().size() == ExpectedSize;
+  }
+  static bool isValid(ObjectStore &DB, ObjectRef Ref) {
+    auto Node = DB.getProxy(Ref);
+    if (!Node) {
+      llvm::consumeError(Node.takeError());
+      return false;
+    }
+    return isValid(*Node);
+  }
+
+private:
+  explicit ExportList(ObjectProxy Node) : IncludeTreeBase(std::move(Node)) {
+    assert(isValid(*this));
+  }
+
+  friend class IncludeTreeBase<ExportList>;
+  friend class Module;
+};
+
+/// The set of libraries to link against when using a module.
+class IncludeTree::Module::LinkLibraryList
+    : public IncludeTreeBase<LinkLibraryList> {
+public:
+  static constexpr StringRef getNodeKind() { return "LnkL"; }
+
+  struct LinkLibrary {
+    StringRef Library;
+    bool IsFramework;
+  };
+
+  size_t getNumLibraries() const { return getNumReferences(); }
+
+  /// Whether the library at \p I is a framework.
+  bool isFramework(size_t I) const;
+
+  ObjectRef getLibraryNameRef(size_t I) const { return getReference(I); }
+
+  Expected<LinkLibrary> getLinkLibrary(size_t I) {
+    auto Name = getCAS().getProxy(getLibraryNameRef(I));
+    if (!Name)
+      return Name.takeError();
+    return LinkLibrary{Name->getData(), isFramework(I)};
+  }
+
+  /// Calls \p CB for each link libary.
+  llvm::Error
+  forEachLinkLibrary(llvm::function_ref<llvm::Error(LinkLibrary)> CB);
+
+  llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
+
+  static Expected<LinkLibraryList> create(ObjectStore &DB,
+                                          ArrayRef<LinkLibrary> Exports);
+
+  static bool isValid(const ObjectProxy &Node) {
+    if (!IncludeTreeBase::isValid(Node))
+      return false;
+    IncludeTreeBase Base(Node);
+    size_t ExpectedBitSize = Base.getNumReferences();
+    size_t ExpectedSize =
+        ExpectedBitSize / 8 + (ExpectedBitSize % 8 == 0 ? 0 : 1);
+    return Base.getData().size() == ExpectedSize;
+  }
+  static bool isValid(ObjectStore &DB, ObjectRef Ref) {
+    auto Node = DB.getProxy(Ref);
+    if (!Node) {
+      llvm::consumeError(Node.takeError());
+      return false;
+    }
+    return isValid(*Node);
+  }
+
+private:
+  explicit LinkLibraryList(ObjectProxy Node)
+      : IncludeTreeBase(std::move(Node)) {
+    assert(isValid(*this));
+  }
+
+  friend class IncludeTreeBase<LinkLibraryList>;
+  friend class Module;
+};
+
+class IncludeTree::ModuleMap : public IncludeTreeBase<ModuleMap> {
+public:
+  static constexpr StringRef getNodeKind() { return "ModM"; }
+
+  size_t getNumModules() const { return getNumReferences(); }
+
+  Expected<Module> getModule(size_t I) {
+    auto Node = getCAS().getProxy(getReference(I));
+    if (!Node)
+      return Node.takeError();
+    return Module(*Node);
+  }
+
+  /// Calls \p CB for each module declaration.
+  llvm::Error forEachModule(llvm::function_ref<llvm::Error(Module)> CB);
+
+  llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
+
+  static Expected<ModuleMap> create(ObjectStore &DB,
+                                    ArrayRef<ObjectRef> Modules);
+
+  static bool isValid(const ObjectProxy &Node) {
+    if (!IncludeTreeBase::isValid(Node))
+      return false;
+    IncludeTreeBase Base(Node);
+    return Base.getData().empty();
+  }
+  static bool isValid(ObjectStore &DB, ObjectRef Ref) {
+    auto Node = DB.getProxy(Ref);
+    if (!Node) {
+      llvm::consumeError(Node.takeError());
+      return false;
+    }
+    return isValid(*Node);
+  }
+
+private:
+  explicit ModuleMap(ObjectProxy Node) : IncludeTreeBase(std::move(Node)) {
+    assert(isValid(*this));
+  }
+
+  friend class IncludeTreeBase<ModuleMap>;
+  friend class IncludeTreeRoot;
+};
+
 /// Represents the include-tree result for a translation unit.
 class IncludeTreeRoot : public IncludeTreeBase<IncludeTreeRoot> {
 public:
@@ -426,12 +684,12 @@ public:
     return std::nullopt;
   }
 
-  Expected<std::optional<IncludeTree::File>> getModuleMapFile() {
+  Expected<std::optional<IncludeTree::ModuleMap>> getModuleMap() {
     if (std::optional<ObjectRef> Ref = getModuleMapRef()) {
       auto Node = getCAS().getProxy(*Ref);
       if (!Node)
         return Node.takeError();
-      return IncludeTree::File(*Node);
+      return IncludeTree::ModuleMap(*Node);
     }
     return std::nullopt;
   }

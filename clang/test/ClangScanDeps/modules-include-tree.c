@@ -39,20 +39,26 @@
 // CHECK: <module-includes> llvmcas://{{[[:xdigit:]]+}}
 // CHECK: 1:1 <built-in> llvmcas://{{[[:xdigit:]]+}}
 // CHECK: 2:1 [[PREFIX]]/Top.h llvmcas://{{[[:xdigit:]]+}}
-// CHECK: Module Map: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
+// CHECK: Module Map:
+// CHECK: Top
+// CHECK:   export *
 // CHECK: Files:
+// CHECK-NOT: [[PREFIX]]/module.modulemap
 // CHECK: [[PREFIX]]/Top.h llvmcas://{{[[:xdigit:]]+}}
-// CHECK: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
+// CHECK-NOT: [[PREFIX]]/module.modulemap
 
 // CHECK-LABEL: MODULE Left
 // CHECK: <module-includes> llvmcas://{{[[:xdigit:]]+}}
 // CHECK: 1:1 <built-in> llvmcas://{{[[:xdigit:]]+}}
 // CHECK: 2:1 [[PREFIX]]/Left.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK:   2:1 (Module) Top
-// CHECK: Module Map: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
+// CHECK: Module Map:
+// CHECK: Left
+// CHECK:   export *
 // CHECK: Files:
+// CHECK-NOT: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
 // CHECK: [[PREFIX]]/Left.h llvmcas://{{[[:xdigit:]]+}}
-// CHECK: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
+// CHECK-NOT: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
 // CHECK: [[PREFIX]]/Top.h llvmcas://{{[[:xdigit:]]+}}
 
 // CHECK-LABEL: MODULE Right
@@ -60,10 +66,13 @@
 // CHECK: 1:1 <built-in> llvmcas://{{[[:xdigit:]]+}}
 // CHECK: 2:1 [[PREFIX]]/Right.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK:   2:1 (Module) Top
-// CHECK: Module Map: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
+// CHECK: Module Map:
+// CHECK: Right
+// CHECK:   export *
 // CHECK: Files:
+// CHECK-NOT: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
 // CHECK: [[PREFIX]]/Right.h llvmcas://{{[[:xdigit:]]+}}
-// CHECK: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
+// CHECK-NOT: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
 // CHECK: [[PREFIX]]/Top.h llvmcas://{{[[:xdigit:]]+}}
 
 // CHECK-LABEL: TRANSLATION UNIT
@@ -76,8 +85,9 @@
 // recorded in the include-tree; it's handled entirely by fmodule-map-file,
 // fmodule-file, and fmodule-file-cache-key options.
 
+// CHECK-NOT: Module Map
 // CHECK: Files:
-// CHECK: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
+// CHECK-NOT: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
 // CHECK: [[PREFIX]]/Left.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK: [[PREFIX]]/Top.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK: [[PREFIX]]/Right.h llvmcas://{{[[:xdigit:]]+}}
@@ -96,7 +106,7 @@
 // CHECK-NEXT:         "-cc1"
 // CHECK:              "-fcas-path"
 // CHECK-NEXT:         "[[PREFIX]]/cas"
-// CHECK:              "-fmodule-map-file=[[PREFIX]]/module.modulemap"
+// CHECK-NOT: -fmodule-map-file
 // CHECK:              "-o"
 // CHECK-NEXT:         "[[PREFIX]]/outputs/{{.*}}/Left-{{.*}}.pcm"
 // CHECK:              "-disable-free"
@@ -131,7 +141,7 @@
 // CHECK-NEXT:         "-cc1"
 // CHECK:              "-fcas-path"
 // CHECK-NEXT:         "[[PREFIX]]/cas"
-// CHECK:              "-fmodule-map-file=[[PREFIX]]/module.modulemap"
+// CHECK-NOT: -fmodule-map-file
 // CHECK:              "-o"
 // CHECK-NEXT:         "[[PREFIX]]/outputs/{{.*}}/Right-{{.*}}.pcm"
 // CHECK:              "-disable-free"
@@ -256,7 +266,7 @@
 // CHECK-NEXT:             "-cc1"
 // CHECK:                  "-fcas-path"
 // CHECK-NEXT:             "[[PREFIX]]/cas"
-// CHECK:                  "-fmodule-map-file=[[PREFIX]]/module.modulemap"
+// CHECK-NOT: -fmodule-map-file
 // CHECK:                  "-disable-free"
 // CHECK:                  "-fcas-include-tree"
 // CHECK-NEXT:             "[[TU_TREE]]"

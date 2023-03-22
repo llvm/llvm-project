@@ -132,7 +132,7 @@ private:
   llvm::SetVector<cas::IncludeTree::FileList::FileEntry> IncludedFiles;
   std::optional<cas::ObjectRef> PredefinesBufferRef;
   std::optional<cas::ObjectRef> ModuleIncludesBufferRef;
-  std::optional<cas::ObjectRef> ModuleMapFileRef;
+  std::optional<cas::ObjectRef> ModuleMapRef;
   /// When the builder is created from an existing tree, the main include tree.
   std::optional<cas::ObjectRef> MainIncludeTreeRef;
   SmallVector<FilePPState> IncludeStack;
@@ -427,6 +427,59 @@ void IncludeTreeBuilder::exitedSubmodule(Preprocessor &PP, Module *M,
   // Submodule exit is handled automatically when leaving a modular file.
 }
 
+static Expected<cas::IncludeTree::Module>
+getIncludeTreeModule(cas::ObjectStore &DB, Module *M) {
+  using ITModule = cas::IncludeTree::Module;
+  SmallVector<cas::ObjectRef> Submodules;
+  for (Module *Sub : M->submodules()) {
+    Expected<ITModule> SubTree = getIncludeTreeModule(DB, Sub);
+    if (!SubTree)
+      return SubTree.takeError();
+    Submodules.push_back(SubTree->getRef());
+  }
+
+  ITModule::ModuleFlags Flags;
+  Flags.IsFramework = M->IsFramework;
+  Flags.IsExplicit = M->IsExplicit;
+  Flags.IsExternC = M->IsExternC;
+  Flags.IsSystem = M->IsSystem;
+
+  bool GlobalWildcardExport = false;
+  SmallVector<ITModule::ExportList::Export> Exports;
+  llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver Saver(Alloc);
+  for (Module::ExportDecl &Export : M->Exports) {
+    if (Export.getPointer() == nullptr && Export.getInt()) {
+      GlobalWildcardExport = true;
+    } else if (Export.getPointer()) {
+      StringRef Name = Saver.save(Export.getPointer()->getFullModuleName());
+      Exports.push_back({Name, Export.getInt()});
+    }
+  }
+  std::optional<cas::ObjectRef> ExportList;
+  if (GlobalWildcardExport || !Exports.empty()) {
+    auto EL = ITModule::ExportList::create(DB, Exports, GlobalWildcardExport);
+    if (!EL)
+      return EL.takeError();
+    ExportList = EL->getRef();
+  }
+
+  SmallVector<ITModule::LinkLibraryList::LinkLibrary> Libraries;
+  for (Module::LinkLibrary &LL : M->LinkLibraries) {
+    Libraries.push_back({LL.Library, LL.IsFramework});
+  }
+  std::optional<cas::ObjectRef> LinkLibraries;
+  if (!Libraries.empty()) {
+    auto LL = ITModule::LinkLibraryList::create(DB, Libraries);
+    if (!LL)
+      return LL.takeError();
+    LinkLibraries = LL->getRef();
+  }
+
+  return ITModule::create(DB, M->Name, Flags, Submodules, ExportList,
+                          LinkLibraries);
+}
+
 Expected<cas::IncludeTreeRoot>
 IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
                                       CompilerInvocation &NewInvocation) {
@@ -475,21 +528,6 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
       return std::move(E);
   }
 
-  auto &FrontendOpts = NewInvocation.getFrontendOpts();
-  if (!FrontendOpts.Inputs.empty() &&
-      FrontendOpts.Inputs[0].getKind().getFormat() == InputKind::ModuleMap) {
-    // FIXME: handle inferred module maps
-    Expected<FileEntryRef> FE = FM.getFileRef(FrontendOpts.Inputs[0].getFile());
-    if (!FE)
-      return FE.takeError();
-    if (Error E = addToFileList(FM, *FE).moveInto(ModuleMapFileRef))
-      return std::move(E);
-  }
-
-  for (StringRef ModuleMap : FrontendOpts.ModuleMapFiles)
-    if (Error E = addFile(ModuleMap))
-      return std::move(E);
-
   auto FinishIncludeTree = [&]() -> Error {
     IntrusiveRefCntPtr<ASTReader> Reader = ScanInstance.getASTReader();
     if (!Reader)
@@ -523,14 +561,49 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
       getCASTreeForFileIncludes(IncludeStack.pop_back_val());
   if (!MainIncludeTree)
     return MainIncludeTree.takeError();
+
+  if (!ScanInstance.getLangOpts().CurrentModule.empty()) {
+    SmallVector<cas::ObjectRef> Modules;
+    auto AddModule = [&](Module *M) -> llvm::Error {
+      Expected<cas::IncludeTree::Module> Mod = getIncludeTreeModule(DB, M);
+      if (!Mod)
+        return Mod.takeError();
+      Modules.push_back(Mod->getRef());
+      return Error::success();
+    };
+    if (Module *M = ScanInstance.getPreprocessor().getCurrentModule()) {
+      if (Error E = AddModule(M))
+        return std::move(E);
+    } else {
+      // When building a TU or PCH, we can have headers files that are part of
+      // both the public and private modules that are included textually. In
+      // that case we need both of those modules.
+      ModuleMap &MMap =
+          ScanInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
+      M = MMap.findModule(ScanInstance.getLangOpts().CurrentModule);
+      assert(M && "missing current module?");
+      if (Error E = AddModule(M))
+        return std::move(E);
+      Module *PM =
+          MMap.findModule(ScanInstance.getLangOpts().ModuleName + "_Private");
+      if (PM)
+        if (Error E = AddModule(M))
+          return std::move(E);
+    }
+
+    auto ModMap = cas::IncludeTree::ModuleMap::create(DB, Modules);
+    if (!ModMap)
+      return ModMap.takeError();
+    ModuleMapRef = ModMap->getRef();
+  }
+
   auto FileList =
       cas::IncludeTree::FileList::create(DB, IncludedFiles.getArrayRef());
   if (!FileList)
     return FileList.takeError();
 
   return cas::IncludeTreeRoot::create(DB, MainIncludeTree->getRef(),
-                                      FileList->getRef(), PCHRef,
-                                      ModuleMapFileRef);
+                                      FileList->getRef(), PCHRef, ModuleMapRef);
 }
 
 Error IncludeTreeBuilder::addModuleInputs(ASTReader &Reader) {

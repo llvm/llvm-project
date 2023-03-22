@@ -35,6 +35,7 @@ void tooling::dependencies::configureInvocationForCaching(
   if (ProduceIncludeTree) {
     FrontendOpts.CASIncludeTreeID = std::move(RootID);
     FrontendOpts.Inputs.clear();
+    FrontendOpts.ModuleMapFiles.clear();
     HeaderSearchOptions &HSOpts = CI.getHeaderSearchOpts();
     HeaderSearchOptions OriginalHSOpts;
     std::swap(HSOpts, OriginalHSOpts);

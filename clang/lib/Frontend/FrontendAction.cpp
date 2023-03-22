@@ -549,6 +549,116 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
   return M;
 }
 
+static Expected<Module *> makeIncludeTreeModule(CompilerInstance &CI,
+                                                cas::IncludeTree::Module Mod,
+                                                Module *Parent) {
+  ModuleMap &MMap = CI.getPreprocessor().getHeaderSearchInfo().getModuleMap();
+  auto Flags = Mod.getFlags();
+  Module *M = nullptr;
+  bool NewModule = false;
+  std::tie(M, NewModule) = MMap.findOrCreateModule(
+      Mod.getName(), Parent, Flags.IsFramework, Flags.IsExplicit);
+  assert(NewModule);
+  M->Kind = Module::IncludeTreeModuleMap;
+  M->IsExternC = Flags.IsExternC;
+  M->IsSystem = Flags.IsSystem;
+
+  auto ExportList = Mod.getExports();
+  if (!ExportList)
+    return ExportList.takeError();
+  if (*ExportList) {
+    if ((*ExportList)->hasGlobalWildcard())
+      M->Exports.push_back(Module::ExportDecl(nullptr, true));
+
+    llvm::Error Err = (*ExportList)->forEachExplicitExport([&](auto Export) {
+      Module::UnresolvedExportDecl UED;
+      SmallVector<StringRef> ModuleComponents;
+      Export.ModuleName.split(ModuleComponents, '.');
+      for (StringRef Name : ModuleComponents)
+        UED.Id.push_back({std::string(Name), SourceLocation()});
+      UED.Wildcard = Export.Wildcard;
+      M->UnresolvedExports.push_back(std::move(UED));
+      return llvm::Error::success();
+    });
+    if (Err)
+      return std::move(Err);
+  }
+
+  auto LinkLibs = Mod.getLinkLibraries();
+  if (!LinkLibs)
+    return LinkLibs.takeError();
+  if (*LinkLibs) {
+    llvm::Error Err = (*LinkLibs)->forEachLinkLibrary([&](auto LL) {
+      M->LinkLibraries.emplace_back(std::string(LL.Library), LL.IsFramework);
+      return llvm::Error::success();
+    });
+    if (Err)
+      return std::move(Err);
+  }
+
+  llvm::Error Err = Mod.forEachSubmodule([&](cas::IncludeTree::Module Sub) {
+    return makeIncludeTreeModule(CI, Sub, M).takeError();
+  });
+  if (Err)
+    return std::move(Err);
+  return M;
+}
+
+/// Loads the include tree modulemap \p MM.
+/// \returns true if there was an error.
+static bool loadIncludeTreeModuleMap(CompilerInstance &CI,
+                                     cas::IncludeTree::ModuleMap MM) {
+  llvm::Error Err = MM.forEachModule([&](auto M) -> llvm::Error {
+    return makeIncludeTreeModule(CI, M, /*Parent=*/nullptr).takeError();
+  });
+  if (Err) {
+    CI.getDiagnostics().Report(diag::err_fe_unable_to_load_include_tree)
+        << CI.getFrontendOpts().CASIncludeTreeID << std::move(Err);
+    return true;
+  }
+  return false;
+}
+
+static Module *prepareToBuildModule(CompilerInstance &CI,
+                                    cas::IncludeTree::ModuleMap MM) {
+  if (CI.getLangOpts().CurrentModule.empty()) {
+    CI.getDiagnostics().Report(diag::err_missing_module_name);
+
+    // FIXME: Eventually, we could consider asking whether there was just
+    // a single module described in the module map, and use that as a
+    // default. Then it would be fairly trivial to just "compile" a module
+    // map with a single module (the common case).
+    return nullptr;
+  }
+
+  if (loadIncludeTreeModuleMap(CI, MM))
+    return nullptr;
+
+  // Dig out the module definition.
+  HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
+  Module *M = HS.lookupModule(CI.getLangOpts().CurrentModule, SourceLocation(),
+                              /*AllowSearch=*/false);
+  if (!M) {
+    CI.getDiagnostics().Report(diag::err_missing_module_include_tree)
+        << CI.getLangOpts().CurrentModule
+        << CI.getFrontendOpts().CASIncludeTreeID;
+
+    return nullptr;
+  }
+
+  if (auto CacheKey = CI.getCompileJobCacheKey())
+    M->setModuleCacheKey(CacheKey->toString());
+
+  // If we're being run from the command-line, the module build stack will not
+  // have been filled in yet, so complete it now in order to allow us to detect
+  // module cycles.
+  SourceManager &SourceMgr = CI.getSourceManager();
+  if (SourceMgr.getModuleBuildStack().empty())
+    SourceMgr.pushModuleBuildStack(CI.getLangOpts().CurrentModule,
+                                   FullSourceLoc(SourceLocation(), SourceMgr));
+  return M;
+}
+
 /// Compute the input buffer that should be used to build the specified module.
 static std::unique_ptr<llvm::MemoryBuffer>
 getInputBufferForModule(CompilerInstance &CI, Module *M) {
@@ -885,6 +995,21 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     if (llvm::Error E =
             IncludeTreeRoot->getPCHBuffer().moveInto(IncludeTreePCHBuffer))
       return reportError(std::move(E));
+
+    auto ModMap = IncludeTreeRoot->getModuleMap();
+    if (!ModMap)
+      return reportError(ModMap.takeError());
+    if (*ModMap) {
+      if (CI.getFrontendOpts().ProgramAction == frontend::GenerateModule) {
+        auto *CurrentModule = prepareToBuildModule(CI, **ModMap);
+        if (!CurrentModule)
+          return false;
+        CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleMap);
+      } else {
+        if (loadIncludeTreeModuleMap(CI, **ModMap))
+          return false;
+      }
+    }
   }
 
   if (!CI.InitializeSourceManager(Input))
@@ -927,25 +1052,10 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       // If the module contents are in the same file, skip to them.
       CI.getPreprocessor().setSkipMainFilePreamble(OffsetToContents, true);
     else {
-      std::unique_ptr<llvm::MemoryBuffer> Buffer;
-      if (Input.isIncludeTree()) {
-        // Get the existing module include buffer from the include-tree.
-        assert(IncludeTreeRoot);
-        auto MainTree = IncludeTreeRoot->getMainFileTree();
-        if (!MainTree)
-          return reportError(MainTree.takeError());
-        auto BaseFile = MainTree->getBaseFile();
-        if (!BaseFile)
-          return reportError(BaseFile.takeError());
-        if (auto E = BaseFile->getMemoryBuffer().moveInto(Buffer))
-          return reportError(std::move(E));
-        assert(Buffer);
-      } else {
-        // Otherwise, convert the module description to a suitable input buffer.
-        Buffer = getInputBufferForModule(CI, CurrentModule);
-        if (!Buffer)
-          return false;
-      }
+      // Otherwise, convert the module description to a suitable input buffer.
+      auto Buffer = getInputBufferForModule(CI, CurrentModule);
+      if (!Buffer)
+        return false;
 
       // Reinitialize the main file entry to refer to the new input.
       auto Kind = CurrentModule->IsSystem ? SrcMgr::C_System : SrcMgr::C_User;

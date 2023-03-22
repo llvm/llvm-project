@@ -111,6 +111,10 @@ public:
     /// of header files.
     ModuleMapModule,
 
+    /// This is a module that was defined by a module map and built out
+    /// of header files as part of an \c IncludeTree.
+    IncludeTreeModuleMap,
+
     /// This is a C++ 20 header unit.
     ModuleHeaderUnit,
 
@@ -204,7 +208,9 @@ public:
 
   bool isPrivateModule() const { return Kind == PrivateModuleFragment; }
 
-  bool isModuleMapModule() const { return Kind == ModuleMapModule; }
+  bool isModuleMapModule() const {
+    return Kind == ModuleMapModule || Kind == IncludeTreeModuleMap;
+  }
 
 private:
   /// The submodules of this module, indexed by name.

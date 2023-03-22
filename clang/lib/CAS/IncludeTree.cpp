@@ -77,6 +77,33 @@ llvm::Error IncludeTree::forEachInclude(
   });
 }
 
+/// Write the bitset \p Bits to \p Writer, filling the final byte with zeros for
+/// any unused values. Note: this does not store the size of the bitset.
+static void writeBitSet(llvm::support::endian::Writer &Writer,
+                        const llvm::SmallBitVector &Bits) {
+  uintptr_t Store;
+  ArrayRef<uintptr_t> BitWords = Bits.getData(Store);
+  size_t RemainingBitsCount = Bits.size();
+  while (RemainingBitsCount > 0) {
+    if (BitWords.size() > 1) {
+      Writer.write(BitWords.front());
+      BitWords = BitWords.drop_front();
+      RemainingBitsCount -= sizeof(uintptr_t) * CHAR_BIT;
+      continue;
+    }
+    assert(RemainingBitsCount <= sizeof(uintptr_t) * CHAR_BIT);
+    uintptr_t LastWord = BitWords.front();
+    unsigned BytesNum = RemainingBitsCount / CHAR_BIT;
+    if (RemainingBitsCount % CHAR_BIT != 0)
+      ++BytesNum;
+    while (BytesNum--) {
+      Writer.write(static_cast<uint8_t>(LastWord & 0xFF));
+      LastWord >>= CHAR_BIT;
+    }
+    break;
+  }
+}
+
 Expected<IncludeTree> IncludeTree::create(
     ObjectStore &DB, SrcMgr::CharacteristicKind FileCharacteristic,
     ObjectRef BaseFile, ArrayRef<IncludeInfo> Includes,
@@ -118,27 +145,7 @@ Expected<IncludeTree> IncludeTree::create(
   if (SubmoduleName)
     Refs.push_back(*SubmoduleName);
 
-  uintptr_t Store;
-  ArrayRef<uintptr_t> BitWords = Checks.getData(Store);
-  size_t RemainingBitsCount = Checks.size();
-  while (RemainingBitsCount > 0) {
-    if (BitWords.size() > 1) {
-      Writer.write(BitWords.front());
-      BitWords = BitWords.drop_front();
-      RemainingBitsCount -= sizeof(uintptr_t) * CHAR_BIT;
-      continue;
-    }
-    assert(RemainingBitsCount <= sizeof(uintptr_t) * CHAR_BIT);
-    uintptr_t LastWord = BitWords.front();
-    unsigned BytesNum = RemainingBitsCount / CHAR_BIT;
-    if (RemainingBitsCount % CHAR_BIT != 0)
-      ++BytesNum;
-    while (BytesNum--) {
-      Buffer.push_back(LastWord & 0xFF);
-      LastWord >>= CHAR_BIT;
-    }
-    break;
-  }
+  writeBitSet(Writer, Checks);
 
   return IncludeTreeBase::create(DB, Refs, Buffer);
 }
@@ -268,6 +275,236 @@ bool IncludeTree::FileList::isValid(const ObjectProxy &Node) {
          Base.getData().size() == NumFiles * sizeof(FileSizeTy);
 }
 
+static constexpr char ModuleFlagFramework = 1 << 0;
+static constexpr char ModuleFlagExplicit = 1 << 1;
+static constexpr char ModuleFlagExternC = 1 << 2;
+static constexpr char ModuleFlagSystem = 1 << 3;
+static constexpr char ModuleFlagHasExports = 1 << 4;
+static constexpr char ModuleFlagHasLinkLibraries = 1 << 5;
+
+IncludeTree::Module::ModuleFlags IncludeTree::Module::getFlags() const {
+  char Raw = rawFlags();
+  ModuleFlags Flags;
+  Flags.IsFramework = Raw & ModuleFlagFramework;
+  Flags.IsExplicit = Raw & ModuleFlagExplicit;
+  Flags.IsExternC = Raw & ModuleFlagExternC;
+  Flags.IsSystem = Raw & ModuleFlagSystem;
+  return Flags;
+}
+
+size_t IncludeTree::Module::getNumSubmodules() const {
+  size_t Count = getNumReferences();
+  if (hasExports())
+    Count -= 1;
+  if (hasLinkLibraries())
+    Count -= 1;
+  return Count;
+}
+
+llvm::Error IncludeTree::Module::forEachSubmodule(
+    llvm::function_ref<llvm::Error(Module)> CB) {
+  size_t Count = getNumSubmodules();
+  return forEachReference([&](ObjectRef Ref) -> llvm::Error {
+    if (Count == 0)
+      return llvm::Error::success();
+    Count -= 1;
+    auto Node = getCAS().getProxy(Ref);
+    if (!Node)
+      return Node.takeError();
+    return CB(Module(*Node));
+  });
+}
+
+Expected<IncludeTree::Module>
+IncludeTree::Module::create(ObjectStore &DB, StringRef ModuleName,
+                            ModuleFlags Flags, ArrayRef<ObjectRef> Submodules,
+                            std::optional<ObjectRef> ExportList,
+                            std::optional<ObjectRef> LinkLibraries) {
+  // Data:
+  // - 1 byte for Flags
+  // - ModuleName (String)
+  // Refs:
+  // - Submodules (IncludeTreeModule)
+  // - (optional) ExportList
+  // - (optional) LinkLibaryList
+
+  char RawFlags = 0;
+  if (Flags.IsFramework)
+    RawFlags |= ModuleFlagFramework;
+  if (Flags.IsExplicit)
+    RawFlags |= ModuleFlagExplicit;
+  if (Flags.IsExternC)
+    RawFlags |= ModuleFlagExternC;
+  if (Flags.IsSystem)
+    RawFlags |= ModuleFlagSystem;
+  if (ExportList)
+    RawFlags |= ModuleFlagHasExports;
+  if (LinkLibraries)
+    RawFlags |= ModuleFlagHasLinkLibraries;
+
+  SmallString<64> Buffer;
+  Buffer.push_back(RawFlags);
+  Buffer.append(ModuleName);
+
+  SmallVector<ObjectRef> Refs(Submodules);
+  if (ExportList)
+    Refs.push_back(*ExportList);
+  if (LinkLibraries)
+    Refs.push_back(*LinkLibraries);
+
+  return IncludeTreeBase::create(DB, Refs, Buffer);
+}
+
+bool IncludeTree::Module::hasExports() const {
+  return rawFlags() & ModuleFlagHasExports;
+}
+bool IncludeTree::Module::hasLinkLibraries() const {
+  return rawFlags() & ModuleFlagHasLinkLibraries;
+}
+
+std::optional<unsigned> IncludeTree::Module::getExportsIndex() const {
+  if (hasExports())
+    return getNumReferences() - (hasLinkLibraries() ? 2 : 1);
+  return std::nullopt;
+}
+std::optional<unsigned> IncludeTree::Module::getLinkLibrariesIndex() const {
+  if (hasLinkLibraries())
+    return getNumReferences() - 1;
+  return std::nullopt;
+}
+
+Expected<std::optional<IncludeTree::Module::ExportList>>
+IncludeTree::Module::getExports() {
+  if (auto Ref = getExportsRef()) {
+    auto N = getCAS().getProxy(*Ref);
+    if (!N)
+      return N.takeError();
+    return ExportList(std::move(*N));
+  }
+  return std::nullopt;
+}
+
+/// The list of modules that this submodule re-exports.
+Expected<std::optional<IncludeTree::Module::LinkLibraryList>>
+IncludeTree::Module::getLinkLibraries() {
+  if (auto Ref = getLinkLibrariesRef()) {
+    auto N = getCAS().getProxy(*Ref);
+    if (!N)
+      return N.takeError();
+    return LinkLibraryList(std::move(*N));
+  }
+  return std::nullopt;
+}
+
+bool IncludeTree::Module::ExportList::hasGlobalWildcard() const {
+  // The bit after explicit exports is global.
+  return exportHasWildcard(getNumExplicitExports());
+}
+bool IncludeTree::Module::ExportList::exportHasWildcard(size_t I) const {
+  assert(I < getNumExplicitExports() + 1);
+  unsigned ByteIndex = I / CHAR_BIT;
+  size_t RemainingIndex = I % CHAR_BIT;
+  uint8_t Bits = getData()[ByteIndex];
+  return Bits & (1 << RemainingIndex);
+}
+Expected<IncludeTree::Module::ExportList::Export>
+IncludeTree::Module::ExportList::getExplicitExport(size_t I) {
+  Expected<ObjectProxy> Name = getCAS().getProxy(getReference(I));
+  if (!Name)
+    return Name.takeError();
+  return Export{Name->getData(), exportHasWildcard(I)};
+}
+llvm::Error IncludeTree::Module::ExportList::forEachExplicitExport(
+    llvm::function_ref<llvm::Error(Export)> CB) {
+  size_t ExportI = 0;
+  return forEachReference([&](ObjectRef Ref) {
+    Expected<ObjectProxy> Name = getCAS().getProxy(Ref);
+    if (!Name)
+      return Name.takeError();
+    return CB(Export{Name->getData(), exportHasWildcard(ExportI)});
+  });
+}
+Expected<IncludeTree::Module::ExportList>
+IncludeTree::Module::ExportList::create(ObjectStore &DB,
+                                        ArrayRef<Export> Exports,
+                                        bool GlobalWildcard) {
+  // Data:
+  // - 1 bit per explicit export for wildcard
+  // - 1 bit for global wildcard
+  // Refs: export names
+  SmallString<64> Buffer;
+  llvm::raw_svector_ostream BufOS(Buffer);
+  llvm::support::endian::Writer Writer(BufOS, llvm::support::little);
+  SmallVector<ObjectRef> Refs;
+  llvm::SmallBitVector WildcardBits;
+  for (Export E : Exports) {
+    auto Ref = DB.storeFromString({}, E.ModuleName);
+    if (!Ref)
+      return Ref.takeError();
+    Refs.push_back(*Ref);
+    WildcardBits.push_back(E.Wildcard);
+  }
+  WildcardBits.push_back(GlobalWildcard);
+  writeBitSet(Writer, WildcardBits);
+
+  return IncludeTreeBase::create(DB, Refs, Buffer);
+}
+
+bool IncludeTree::Module::LinkLibraryList::isFramework(size_t I) const {
+  assert(I < getNumLibraries());
+  unsigned ByteIndex = I / CHAR_BIT;
+  size_t RemainingIndex = I % CHAR_BIT;
+  uint8_t Bits = getData()[ByteIndex];
+  return Bits & (1 << RemainingIndex);
+}
+llvm::Error IncludeTree::Module::LinkLibraryList::forEachLinkLibrary(
+    llvm::function_ref<llvm::Error(LinkLibrary)> CB) {
+  size_t I = 0;
+  return forEachReference([&](ObjectRef Ref) {
+    auto Name = getCAS().getProxy(getLibraryNameRef(I));
+    if (!Name)
+      return Name.takeError();
+    return CB({Name->getData(), isFramework(I++)});
+  });
+}
+Expected<IncludeTree::Module::LinkLibraryList>
+IncludeTree::Module::LinkLibraryList::create(ObjectStore &DB,
+                                             ArrayRef<LinkLibrary> Libraries) {
+  // Data:
+  // - 1 bit per library for IsFramework
+  // Refs: library names
+  SmallString<64> Buffer;
+  llvm::raw_svector_ostream BufOS(Buffer);
+  llvm::support::endian::Writer Writer(BufOS, llvm::support::little);
+  SmallVector<ObjectRef> Refs;
+  llvm::SmallBitVector FrameworkBits;
+  for (LinkLibrary L : Libraries) {
+    auto Ref = DB.storeFromString({}, L.Library);
+    if (!Ref)
+      return Ref.takeError();
+    Refs.push_back(*Ref);
+    FrameworkBits.push_back(L.IsFramework);
+  }
+  writeBitSet(Writer, FrameworkBits);
+
+  return IncludeTreeBase::create(DB, Refs, Buffer);
+}
+
+Expected<IncludeTree::ModuleMap>
+IncludeTree::ModuleMap::create(ObjectStore &DB, ArrayRef<ObjectRef> Modules) {
+  return IncludeTreeBase::create(DB, Modules, {});
+}
+
+llvm::Error IncludeTree::ModuleMap::forEachModule(
+    llvm::function_ref<llvm::Error(Module)> CB) {
+  return forEachReference([&](ObjectRef Ref) {
+    auto N = getCAS().getProxy(Ref);
+    if (!N)
+      return N.takeError();
+    return CB(Module(std::move(*N)));
+  });
+}
+
 static constexpr char HasPCH = 0x01;
 static constexpr char HasModuleMap = 0x02;
 
@@ -277,7 +514,7 @@ IncludeTreeRoot::create(ObjectStore &DB, ObjectRef MainFileTree,
                         std::optional<ObjectRef> ModuleMapRef) {
   assert(IncludeTree::isValid(DB, MainFileTree));
   assert(IncludeTree::FileList::isValid(DB, FileList));
-  assert(!ModuleMapRef || IncludeTree::File::isValid(DB, *ModuleMapRef));
+  assert(!ModuleMapRef || IncludeTree::ModuleMap::isValid(DB, *ModuleMapRef));
 
   std::array<char, 1> Data = {0};
   if (PCHRef)
@@ -376,6 +613,62 @@ llvm::Error IncludeTree::Node::print(llvm::raw_ostream &OS, unsigned Indent) {
   }
 }
 
+llvm::Error IncludeTree::Module::print(llvm::raw_ostream &OS, unsigned Indent) {
+  OS.indent(Indent) << getName();
+  ModuleFlags Flags = getFlags();
+  if (Flags.IsFramework)
+    OS << " (framework)";
+  if (Flags.IsExplicit)
+    OS << " (explicit)";
+  if (Flags.IsExternC)
+    OS << " (extern_c)";
+  if (Flags.IsSystem)
+    OS << " (system)";
+  OS << '\n';
+  auto ExportList = getExports();
+  if (!ExportList)
+    return ExportList.takeError();
+  if (*ExportList)
+    if (llvm::Error E = (*ExportList)->print(OS, Indent + 2))
+      return E;
+  auto LinkLibraries = getLinkLibraries();
+  if (!LinkLibraries)
+    return LinkLibraries.takeError();
+  if (*LinkLibraries)
+    if (llvm::Error E = (*LinkLibraries)->print(OS, Indent + 2))
+      return E;
+  return forEachSubmodule(
+      [&](Module Sub) { return Sub.print(OS, Indent + 2); });
+}
+llvm::Error IncludeTree::Module::ExportList::print(llvm::raw_ostream &OS,
+                                                   unsigned Indent) {
+  if (hasGlobalWildcard())
+    OS.indent(Indent) << "export *\n";
+  return forEachExplicitExport([&](Export E) {
+    OS.indent(Indent) << "export " << E.ModuleName;
+    if (E.Wildcard)
+      OS << ".*";
+    OS << '\n';
+    return llvm::Error::success();
+  });
+}
+
+llvm::Error IncludeTree::Module::LinkLibraryList::print(llvm::raw_ostream &OS,
+                                                        unsigned Indent) {
+  return forEachLinkLibrary([&](LinkLibrary E) {
+    OS.indent(Indent) << "link " << E.Library;
+    if (E.IsFramework)
+      OS << " (framework)";
+    OS << '\n';
+    return llvm::Error::success();
+  });
+}
+
+llvm::Error IncludeTree::ModuleMap::print(llvm::raw_ostream &OS,
+                                          unsigned Indent) {
+  return forEachModule([&](Module M) { return M.print(OS, Indent); });
+}
+
 llvm::Error IncludeTreeRoot::print(llvm::raw_ostream &OS, unsigned Indent) {
   if (std::optional<ObjectRef> PCHRef = getPCHRef()) {
     OS.indent(Indent) << "(PCH) ";
@@ -387,11 +680,11 @@ llvm::Error IncludeTreeRoot::print(llvm::raw_ostream &OS, unsigned Indent) {
     return E;
   if (llvm::Error E = MainTree->print(OS.indent(Indent), Indent))
     return E;
-  std::optional<IncludeTree::File> ModuleMap;
-  if (llvm::Error E = getModuleMapFile().moveInto(ModuleMap))
+  std::optional<IncludeTree::ModuleMap> ModuleMap;
+  if (llvm::Error E = getModuleMap().moveInto(ModuleMap))
     return E;
   if (ModuleMap) {
-    OS.indent(Indent) << "Module Map: ";
+    OS.indent(Indent) << "Module Map:\n";
     if (llvm::Error E = ModuleMap->print(OS, Indent))
       return E;
   }

@@ -84,7 +84,7 @@
 // CHECK-NEXT:             "-cc1"
 // CHECK:                  "-fcas-path"
 // CHECK-NEXT:             "[[PREFIX]]/cas"
-// CHECK:                  "-fmodule-map-file=[[PREFIX]]/module.modulemap"
+// CHECK-NOT: -fmodule-map-file=
 // CHECK:                  "-disable-free"
 // CHECK:                  "-fcas-include-tree"
 // CHECK-NEXT:             "llvmcas://{{[[:xdigit:]]+}}"
