@@ -105,7 +105,7 @@ int main(int, char**)
     int a2[] = {1,       2, 3, 5, 2, 11};
     std::forward_list<PredLWG526> c1(a1, a1 + 8);
     do_unique(c1, std::ref(c1.front()), 2);
-    for (size_t i = 0; i < 6; ++i)
+    for (std::size_t i = 0; i < 6; ++i)
     {
         assert(!c1.empty());
         assert(c1.front() == a2[i]);

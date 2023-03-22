@@ -42,7 +42,7 @@
 #include "test_macros.h"
 #include "template_cost_testing.h"
 
-template <size_t Idx>
+template <std::size_t Idx>
 struct TestType {};
 
 template <class T>
@@ -54,7 +54,7 @@ namespace flat_impl {
 
 struct OverloadBase { void operator()() const; };
 
-template <class Tp, size_t Idx>
+template <class Tp, std::size_t Idx>
 struct Overload {
   auto operator()(Tp, Tp) const -> ID<Tp>;
 };
@@ -65,7 +65,7 @@ struct AllOverloads : OverloadBase, Bases... {};
 template <class IdxSeq>
 struct MakeOverloads;
 
-template <size_t ..._Idx>
+template <std::size_t ..._Idx>
 struct MakeOverloads<std::__tuple_indices<_Idx...> > {
   template <class ...Types>
   using Apply = AllOverloads<Overload<Types, _Idx>...>;

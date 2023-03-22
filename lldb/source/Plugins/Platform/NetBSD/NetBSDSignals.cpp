@@ -8,6 +8,20 @@
 
 #include "NetBSDSignals.h"
 
+#ifdef __NetBSD__
+#include <csignal>
+
+#define ADD_SIGCODE(signal_name, signal_value, code_name, code_value, ...)     \
+  static_assert(signal_name == signal_value,                                   \
+                "Value mismatch for signal number " #signal_name);             \
+  static_assert(code_name == code_value,                                       \
+                "Value mismatch for signal code " #code_name);                 \
+  AddSignalCode(signal_value, code_value, __VA_ARGS__)
+#else
+#define ADD_SIGCODE(signal_name, signal_value, code_name, code_value, ...)     \
+  AddSignalCode(signal_value, code_value, __VA_ARGS__)
+#endif /* ifdef __NetBSD */
+
 using namespace lldb_private;
 
 NetBSDSignals::NetBSDSignals() : UnixSignals() { Reset(); }
@@ -17,34 +31,34 @@ void NetBSDSignals::Reset() {
 
   // clang-format off
   // SIGILL
-  AddSignalCode(4, 1 /*ILL_ILLOPC*/, "illegal opcode");
-  AddSignalCode(4, 2 /*ILL_ILLOPN*/, "illegal operand");
-  AddSignalCode(4, 3 /*ILL_ILLADR*/, "illegal addressing mode");
-  AddSignalCode(4, 4 /*ILL_ILLTRP*/, "illegal trap");
-  AddSignalCode(4, 5 /*ILL_PRVOPC*/, "privileged opcode");
-  AddSignalCode(4, 6 /*ILL_PRVREG*/, "privileged register");
-  AddSignalCode(4, 7 /*ILL_COPROC*/, "coprocessor error");
-  AddSignalCode(4, 8 /*ILL_BADSTK*/, "internal stack error");
+  ADD_SIGCODE(SIGILL, 4, ILL_ILLOPC, 1, "illegal opcode");
+  ADD_SIGCODE(SIGILL, 4, ILL_ILLOPN, 2, "illegal operand");
+  ADD_SIGCODE(SIGILL, 4, ILL_ILLADR, 3, "illegal addressing mode");
+  ADD_SIGCODE(SIGILL, 4, ILL_ILLTRP, 4, "illegal trap");
+  ADD_SIGCODE(SIGILL, 4, ILL_PRVOPC, 5, "privileged opcode");
+  ADD_SIGCODE(SIGILL, 4, ILL_PRVREG, 6, "privileged register");
+  ADD_SIGCODE(SIGILL, 4, ILL_COPROC, 7, "coprocessor error");
+  ADD_SIGCODE(SIGILL, 4, ILL_BADSTK, 8, "internal stack error");
 
   // SIGFPE
-  AddSignalCode(8, 1 /*FPE_INTDIV*/, "integer divide by zero");
-  AddSignalCode(8, 2 /*FPE_INTOVF*/, "integer overflow");
-  AddSignalCode(8, 3 /*FPE_FLTDIV*/, "floating point divide by zero");
-  AddSignalCode(8, 4 /*FPE_FLTOVF*/, "floating point overflow");
-  AddSignalCode(8, 5 /*FPE_FLTUND*/, "floating point underflow");
-  AddSignalCode(8, 6 /*FPE_FLTRES*/, "floating point inexact result");
-  AddSignalCode(8, 7 /*FPE_FLTINV*/, "invalid floating point operation");
-  AddSignalCode(8, 8 /*FPE_FLTSUB*/, "subscript out of range");
+  ADD_SIGCODE(SIGFPE, 8, FPE_INTDIV, 1, "integer divide by zero");
+  ADD_SIGCODE(SIGFPE, 8, FPE_INTOVF, 2, "integer overflow");
+  ADD_SIGCODE(SIGFPE, 8, FPE_FLTDIV, 3, "floating point divide by zero");
+  ADD_SIGCODE(SIGFPE, 8, FPE_FLTOVF, 4, "floating point overflow");
+  ADD_SIGCODE(SIGFPE, 8, FPE_FLTUND, 5, "floating point underflow");
+  ADD_SIGCODE(SIGFPE, 8, FPE_FLTRES, 6, "floating point inexact result");
+  ADD_SIGCODE(SIGFPE, 8, FPE_FLTINV, 7, "invalid floating point operation");
+  ADD_SIGCODE(SIGFPE, 8, FPE_FLTSUB, 8, "subscript out of range");
 
   // SIGBUS
-  AddSignalCode(10, 1 /*BUS_ADRALN*/, "invalid address alignment");
-  AddSignalCode(10, 2 /*BUS_ADRERR*/, "non-existent physical address");
-  AddSignalCode(10, 3 /*BUS_OBJERR*/, "object specific hardware error");
+  ADD_SIGCODE(SIGBUS, 10, BUS_ADRALN, 1, "invalid address alignment");
+  ADD_SIGCODE(SIGBUS, 10, BUS_ADRERR, 2, "non-existent physical address");
+  ADD_SIGCODE(SIGBUS, 10, BUS_OBJERR, 3, "object specific hardware error");
 
   // SIGSEGV
-  AddSignalCode(11, 1 /*SEGV_MAPERR*/, "address not mapped to object",
+  ADD_SIGCODE(SIGSEGV, 11, SEGV_MAPERR, 1, "address not mapped to object",
                 SignalCodePrintOption::Address);
-  AddSignalCode(11, 2 /*SEGV_ACCERR*/, "invalid permissions for mapped object",
+  ADD_SIGCODE(SIGSEGV, 11, SEGV_ACCERR, 2, "invalid permissions for mapped object",
                 SignalCodePrintOption::Address);
 
   //        SIGNO  NAME          SUPPRESS STOP   NOTIFY DESCRIPTION

@@ -234,6 +234,14 @@ public:
     startLine() << Label << ": " << Value << "\n";
   }
 
+  virtual void printNumber(StringRef Label, float Value) {
+    startLine() << Label << ": " << format("%5.1f", Value) << "\n";
+  }
+
+  virtual void printNumber(StringRef Label, double Value) {
+    startLine() << Label << ": " << format("%5.1f", Value) << "\n";
+  }
+
   template <typename T>
   void printNumber(StringRef Label, StringRef Str, T Value) {
     printNumberImpl(Label, Str, to_string(Value));
@@ -583,6 +591,14 @@ public:
   }
 
   void printNumber(StringRef Label, int8_t Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printNumber(StringRef Label, float Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printNumber(StringRef Label, double Value) override {
     JOS.attribute(Label, Value);
   }
 

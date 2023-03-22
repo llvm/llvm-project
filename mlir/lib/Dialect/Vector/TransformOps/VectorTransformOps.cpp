@@ -29,90 +29,98 @@ using namespace mlir::transform;
 
 void transform::LowerVectorsOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
+  consumesHandle(getTarget(), effects);
+  producesHandle(getResults(), effects);
   modifiesPayload(effects);
 }
 
-DiagnosedSilenceableFailure transform::LowerVectorsOp::applyToOne(
-    ::mlir::Operation *target,
-    ::mlir::transform::ApplyToEachResultList &results,
-    ::mlir::transform::TransformState &state) {
+DiagnosedSilenceableFailure transform::LowerVectorsOp::apply(
+    mlir::transform::TransformResults &transformResults,
+    mlir::transform::TransformState &state) {
 
-  // This check can't be part of the verifier because payload IR is
-  // independent from transform IR and may not even exist.
-  if (!target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
-    return mlir::emitDefiniteFailure(target,
-                                     "applies only to isolated-from-above "
-                                     "targets because it needs to apply "
-                                     "patterns greedily");
+  SmallVector<Operation *> results;
+  ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
+  for (Operation *target : payloadOps) {
+    // This check can't be part of the verifier because payload IR is
+    // independent from transform IR and may not even exist.
+    if (!target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
+      return mlir::emitDefiniteFailure(target,
+                                       "applies only to isolated-from-above "
+                                       "targets because it needs to apply "
+                                       "patterns greedily");
+    }
+
+    MLIRContext *ctx = getContext();
+    RewritePatternSet patterns(ctx);
+    vector::VectorTransposeLowering vectorTransposeLowering =
+        getTransposeLowering();
+    vector::VectorMultiReductionLowering vectorMultiReductionLowering =
+        getMultireductionLowering();
+    vector::VectorContractLowering vectorContractLowering =
+        getContractionLowering();
+    vector::VectorTransferSplit vectorTransferSplit = getSplitTransfers();
+
+    vector::VectorTransformsOptions vectorTransformOptions;
+    vectorTransformOptions.setVectorTransformsOptions(vectorContractLowering)
+        .setVectorMultiReductionLowering(vectorMultiReductionLowering)
+        .setVectorTransposeLowering(vectorTransposeLowering)
+        .setVectorTransferSplit(vectorTransferSplit);
+
+    VectorTransferToSCFOptions vectorTransferToSCFOptions =
+        VectorTransferToSCFOptions().enableFullUnroll(
+            getUnrollVectorTransfers());
+
+    int maxTransferRank = 1;
+
+    auto avx2LoweringOptions =
+        x86vector::avx2::LoweringOptions().setTransposeOptions(
+            x86vector::avx2::TransposeLoweringOptions()
+                .lower4x8xf32(getTransposeAvx2Lowering())
+                .lower8x8xf32(getTransposeAvx2Lowering()));
+
+    vector::populateVectorToVectorCanonicalizationPatterns(patterns);
+
+    // In the future we may want to more finely select particular stages.
+    // Stage 1: contraction lowerings.
+    patterns.add<mlir::vector::ContractionOpToOuterProductOpLowering,
+                 mlir::vector::ContractionOpToMatmulOpLowering,
+                 mlir::vector::ContractionOpLowering>(vectorTransformOptions,
+                                                      ctx);
+    vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
+
+    // Stage 2: multi-reduction lowerings.
+    vector::populateVectorMultiReductionLoweringPatterns(
+        patterns, vectorTransformOptions.vectorMultiReductionLowering);
+
+    // Stage 3: Rewrite vector.transfer into full and partial parts.
+    patterns.add<vector::VectorTransferFullPartialRewriter>(
+        ctx, vectorTransformOptions);
+
+    // Stage 4: Lower vector transfers.
+    vector::populateVectorTransferLoweringPatterns(patterns, maxTransferRank);
+
+    // Stage 5: Vector to scf patterns.
+    populateVectorToSCFConversionPatterns(
+        patterns, vectorTransferToSCFOptions.setTargetRank(maxTransferRank));
+
+    // Stage 6: Lower vector.shape_cast.
+    vector::populateVectorShapeCastLoweringPatterns(patterns);
+
+    // Stage 7: Lower vector.transpose.
+    vector::populateVectorTransposeLoweringPatterns(patterns,
+                                                    vectorTransformOptions);
+    if (getTransposeAvx2Lowering())
+      x86vector::avx2::populateSpecializedTransposeLoweringPatterns(
+          patterns, avx2LoweringOptions, /*benefit=*/10);
+
+    // Apply everything.
+    if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns))))
+      return DiagnosedSilenceableFailure::definiteFailure();
+
+    results.push_back(target);
   }
 
-  MLIRContext *ctx = getContext();
-  RewritePatternSet patterns(ctx);
-  vector::VectorTransposeLowering vectorTransposeLowering =
-      getTransposeLowering();
-  vector::VectorMultiReductionLowering vectorMultiReductionLowering =
-      getMultireductionLowering();
-  vector::VectorContractLowering vectorContractLowering =
-      getContractionLowering();
-  vector::VectorTransferSplit vectorTransferSplit = getSplitTransfers();
-
-  vector::VectorTransformsOptions vectorTransformOptions;
-  vectorTransformOptions.setVectorTransformsOptions(vectorContractLowering)
-      .setVectorMultiReductionLowering(vectorMultiReductionLowering)
-      .setVectorTransposeLowering(vectorTransposeLowering)
-      .setVectorTransferSplit(vectorTransferSplit);
-
-  VectorTransferToSCFOptions vectorTransferToSCFOptions =
-      VectorTransferToSCFOptions().enableFullUnroll(getUnrollVectorTransfers());
-
-  int maxTransferRank = 1;
-
-  auto avx2LoweringOptions =
-      x86vector::avx2::LoweringOptions().setTransposeOptions(
-          x86vector::avx2::TransposeLoweringOptions()
-              .lower4x8xf32(getTransposeAvx2Lowering())
-              .lower8x8xf32(getTransposeAvx2Lowering()));
-
-  vector::populateVectorToVectorCanonicalizationPatterns(patterns);
-
-  // In the future we may want to more finely select particular stages.
-  // Stage 1: contraction lowerings.
-  patterns.add<mlir::vector::ContractionOpToOuterProductOpLowering,
-               mlir::vector::ContractionOpToMatmulOpLowering,
-               mlir::vector::ContractionOpLowering>(vectorTransformOptions,
-                                                    ctx);
-  vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
-
-  // Stage 2: multi-reduction lowerings.
-  vector::populateVectorMultiReductionLoweringPatterns(
-      patterns, vectorTransformOptions.vectorMultiReductionLowering);
-
-  // Stage 3: Rewrite vector.transfer into full and partial parts.
-  patterns.add<vector::VectorTransferFullPartialRewriter>(
-      ctx, vectorTransformOptions);
-
-  // Stage 4: Lower vector transfers.
-  vector::populateVectorTransferLoweringPatterns(patterns, maxTransferRank);
-
-  // Stage 5: Vector to scf patterns.
-  populateVectorToSCFConversionPatterns(
-      patterns, vectorTransferToSCFOptions.setTargetRank(maxTransferRank));
-
-  // Stage 6: Lower vector.shape_cast.
-  vector::populateVectorShapeCastLoweringPatterns(patterns);
-
-  // Stage 7: Lower vector.transpose.
-  vector::populateVectorTransposeLoweringPatterns(patterns,
-                                                  vectorTransformOptions);
-  if (getTransposeAvx2Lowering())
-    x86vector::avx2::populateSpecializedTransposeLoweringPatterns(
-        patterns, avx2LoweringOptions, /*benefit=*/10);
-
-  // Apply everything.
-  if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns))))
-    return DiagnosedSilenceableFailure::definiteFailure();
-
+  transformResults.set(getResults().cast<OpResult>(), results);
   return DiagnosedSilenceableFailure::success();
 }
 

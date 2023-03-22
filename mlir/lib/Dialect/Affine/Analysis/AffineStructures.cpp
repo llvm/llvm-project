@@ -537,7 +537,7 @@ void FlatAffineValueConstraints::addInductionVarOrTerminalSymbol(Value val) {
     return;
 
   // Caller is expected to fully compose map/operands if necessary.
-  assert((isTopLevelValue(val) || isAffineForInductionVar(val)) &&
+  assert((isTopLevelValue(val) || isAffineInductionVar(val)) &&
          "non-terminal symbol / loop IV expected");
   // Outer loop IVs could be used in forOp's bounds.
   if (auto loop = getForInductionVarOwner(val)) {
@@ -547,6 +547,14 @@ void FlatAffineValueConstraints::addInductionVarOrTerminalSymbol(Value val) {
           loop.emitWarning("failed to add domain info to constraint system"));
     return;
   }
+  if (auto parallel = getAffineParallelInductionVarOwner(val)) {
+    appendDimVar(parallel.getIVs());
+    if (failed(this->addAffineParallelOpDomain(parallel)))
+      LLVM_DEBUG(parallel.emitWarning(
+          "failed to add domain info to constraint system"));
+    return;
+  }
+
   // Add top level symbol.
   appendSymbolVar(val);
   // Check if the symbol is a constant.

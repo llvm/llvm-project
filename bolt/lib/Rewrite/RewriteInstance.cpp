@@ -1050,6 +1050,16 @@ void RewriteInstance::discoverFileObjects() {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: considering symbol " << UniqueName
                       << " for function\n");
 
+    if (Address == Section->getAddress() + Section->getSize()) {
+      assert(SymbolSize == 0 &&
+             "unexpect non-zero sized symbol at end of section");
+      LLVM_DEBUG(
+          dbgs()
+          << "BOLT-DEBUG: rejecting as symbol points to end of its section\n");
+      registerName(SymbolSize);
+      continue;
+    }
+
     if (!Section->isText()) {
       assert(SymbolType != SymbolRef::ST_Function &&
              "unexpected function inside non-code section");

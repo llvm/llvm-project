@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -108,6 +109,7 @@ gpu::SerializeToBlobPass::optimizeLlvm(llvm::Module &llvmModule,
 
 void gpu::SerializeToBlobPass::getDependentDialects(
     DialectRegistry &registry) const {
+  registerGPUDialectTranslation(registry);
   registerLLVMDialectTranslation(registry);
   OperationPass<gpu::GPUModuleOp>::getDependentDialects(registry);
 }

@@ -16,7 +16,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv, char **envp) {
   if (argc < 2) {
     printf("USAGE: ./loader <device_image> <args>, ...\n");
     return EXIT_SUCCESS;
@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
   fclose(file);
 
   // Drop the loader from the program arguments.
-  int ret = load(argc - 1, &argv[1], image, size);
+  int ret = load(argc - 1, &argv[1], envp, image, size);
 
   free(image);
   return ret;

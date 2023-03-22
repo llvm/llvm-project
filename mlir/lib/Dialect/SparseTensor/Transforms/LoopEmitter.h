@@ -76,6 +76,14 @@ public:
   /// initializing the loop emitter (e.g., to fill a dense output with zeros).
   using OutputUpdater = function_ref<Value(OpBuilder &builder, Location loc,
                                            Value memref, Value tensor)>;
+  // Map from [tid, dim] to a list of dependent [tid, dim] for affine expression
+  // index on sparse tensors.
+  // E.g., for affine index (d0 + d1), it depends on two [tid, dim] that defines
+  // d0 and d1 (for affine expression reduction).
+  // If the list is empty, it means that there is no affine expression on the
+  // input [tid, dim].
+  using DependentLvlGetter =
+      function_ref<std::vector<std::pair<TensorId, Level>>(TensorId, Level)>;
 
   LoopEmitter() = default;
 
@@ -89,11 +97,13 @@ public:
   /// to `LoopId`.
   void initialize(ValueRange tensors, StringAttr loopTag = nullptr,
                   bool hasOutput = false, bool isSparseOut = false,
-                  ArrayRef<LoopId> topSort = {});
+                  ArrayRef<LoopId> topSort = {},
+                  DependentLvlGetter getter = nullptr);
 
   explicit LoopEmitter(ValueRange tensors, StringAttr loopTag = nullptr,
                        bool hasOutput = false, bool isSparseOut = false,
-                       ArrayRef<LoopId> topSort = {});
+                       ArrayRef<LoopId> topSort = {},
+                       DependentLvlGetter getter = nullptr);
 
   /// Starts a loop emitting session by generating all the buffers needed
   /// for iterating over the tensors.
@@ -295,8 +305,8 @@ private:
                    MutableArrayRef<Value> reduc);
 
   /// Exits a while loop, returns the reduction results.
-  void exitCoIterationLoop(OpBuilder &builder, Location loc,
-                           MutableArrayRef<Value> reduc);
+  void exitWhileLoop(OpBuilder &builder, Location loc,
+                     MutableArrayRef<Value> reduc);
 
   //
   // View-based-reshape methods.
@@ -379,6 +389,15 @@ private:
   /// Values related to slices.
   std::vector<std::vector<Value>> sliceOffsets;
   std::vector<std::vector<Value>> sliceStrides;
+
+  // Map from [tid, level] to a list of dependent [tid, level].
+  // See comments for `DependentDimGetter`.
+  std::vector<std::vector<std::vector<std::pair<TensorId, Level>>>>
+      dependentLvlMap;
+
+  //
+  // View based reshape related-fields and methods
+  //
 
   /// Collapse Reassociations related to a specific tensor
   // TODO: support expand.

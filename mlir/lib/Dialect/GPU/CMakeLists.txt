@@ -70,11 +70,13 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRAffineUtils
   MLIRArithDialect
   MLIRAsyncDialect
+  MLIRBuiltinToLLVMIRTranslation
   MLIRDataLayoutInterfaces
   MLIRExecutionEngineUtils
   MLIRGPUOps
   MLIRIR
   MLIRLLVMDialect
+  MLIRGPUToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRMemRefDialect
   MLIRPass

@@ -8,4 +8,7 @@ add_integration_test(
     args_test.cpp
   ARGS
     1 2 3
+  ENV
+    FRANCE=Paris
+    GERMANY=Berlin
 )

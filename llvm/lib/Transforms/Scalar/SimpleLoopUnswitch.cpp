@@ -3493,10 +3493,33 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
   if (L.getHeader()->getParent()->hasOptSize())
     return false;
 
-  // Skip cold loops, as unswitching them brings little benefit
-  // but increases the code size
-  if (PSI && PSI->hasProfileSummary() && BFI &&
-      PSI->isFunctionColdInCallGraph(L.getHeader()->getParent(), *BFI)) {
+  // Returns true if Loop L's loop nest is cold, i.e. if the headers of L,
+  // of the loops L is nested in, and of the loops nested in L are all cold.
+  auto IsLoopNestCold = [&](const Loop *L) {
+    // Check L and all of its parent loops.
+    auto *Parent = L;
+    while (Parent) {
+      if (!PSI->isColdBlock(Parent->getHeader(), BFI))
+        return false;
+      Parent = Parent->getParentLoop();
+    }
+    // Next check all loops nested within L.
+    SmallVector<const Loop *, 4> Worklist;
+    Worklist.insert(Worklist.end(), L->getSubLoops().begin(),
+                    L->getSubLoops().end());
+    while (!Worklist.empty()) {
+      auto *CurLoop = Worklist.pop_back_val();
+      if (!PSI->isColdBlock(CurLoop->getHeader(), BFI))
+        return false;
+      Worklist.insert(Worklist.end(), CurLoop->getSubLoops().begin(),
+                      CurLoop->getSubLoops().end());
+    }
+    return true;
+  };
+
+  // Skip cold loops in cold loop nests, as unswitching them brings little
+  // benefit but increases the code size
+  if (PSI && PSI->hasProfileSummary() && BFI && IsLoopNestCold(&L)) {
     LLVM_DEBUG(dbgs() << " Skip cold loop: " << L << "\n");
     return false;
   }

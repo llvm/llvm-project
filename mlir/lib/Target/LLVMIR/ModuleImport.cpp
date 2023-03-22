@@ -20,6 +20,7 @@
 
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
@@ -179,9 +180,10 @@ mlir::translateDataLayout(const llvm::DataLayout &dataLayout,
   // Remaining unhandled default layout defaults
   // e (little endian if not set)
   // p[n]:64:64:64 (non zero address spaces have 64-bit properties)
+  // Alloca address space defaults to 0.
   std::string append =
       "p:64:64:64-S0-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f16:16:16-f64:"
-      "64:64-f128:128:128-v64:64:64-v128:128:128-a:0:64";
+      "64:64-f128:128:128-v64:64:64-v128:128:128-a:0:64-A0";
   if (layoutstr.empty())
     layoutstr = append;
   else
@@ -227,6 +229,18 @@ mlir::translateDataLayout(const llvm::DataLayout &dataLayout,
           StringAttr::get(context, DLTIDialect::kDataLayoutEndiannessKey),
           value);
       entries.emplace_back(entry);
+    } else if (symbol == 'A') {
+      unsigned addressSpace;
+      if (parameter.getAsInteger(/*Radix=*/10, addressSpace))
+        return nullptr;
+      // Skip storing if generic address space is defined.
+      if (addressSpace != 0) {
+        auto entry = DataLayoutEntryAttr::get(
+            StringAttr::get(context,
+                            DLTIDialect::kDataLayoutAllocaMemorySpaceKey),
+            mlir::Builder(context).getUI32IntegerAttr(addressSpace));
+        entries.emplace_back(entry);
+      }
     }
   }
 

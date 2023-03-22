@@ -36,7 +36,6 @@
 #include "CodeGenTarget.h"
 #include "InfoByHwMode.h"
 #include "SubtargetFeatureInfo.h"
-#include "TableGenBackends.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CodeGenCoverage.h"
 #include "llvm/Support/CommandLine.h"
@@ -6363,8 +6362,5 @@ unsigned OperandMatcher::getInsnVarID() const { return Insn.getInsnVarID(); }
 
 //===----------------------------------------------------------------------===//
 
-namespace llvm {
-void EmitGlobalISel(RecordKeeper &RK, raw_ostream &OS) {
-  GlobalISelEmitter(RK).run(OS);
-}
-} // namespace llvm
+static TableGen::Emitter::OptClass<GlobalISelEmitter>
+    X("gen-global-isel", "Generate GlobalISel selector");

@@ -196,6 +196,13 @@ void simplifyExternals(Module &M) {
     F.eraseFromParent();
   }
 
+  for (GlobalIFunc &I : llvm::make_early_inc_range(M.ifuncs())) {
+    if (I.use_empty())
+      I.eraseFromParent();
+    else
+      assert(I.getResolverFunction() && "ifunc misses its resolver function");
+  }
+
   for (GlobalVariable &GV : llvm::make_early_inc_range(M.globals())) {
     if (GV.isDeclaration() && GV.use_empty()) {
       GV.eraseFromParent();

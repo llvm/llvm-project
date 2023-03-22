@@ -1671,9 +1671,7 @@ parser::CharBlock
 Fortran::lower::pft::FunctionLikeUnit::getStartingSourceLoc() const {
   if (beginStmt)
     return stmtSourceLoc(*beginStmt);
-  if (!evaluationList.empty())
-    return evaluationList.front().position;
-  return stmtSourceLoc(endStmt);
+  return scope->sourceRange();
 }
 
 //===----------------------------------------------------------------------===//

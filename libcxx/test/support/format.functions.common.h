@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstddef>
 #include <charconv>
 #include <format>
 #include <ranges>
@@ -143,7 +144,7 @@ private:
 // The return value is a collection of basic_strings, instead of
 // basic_string_views since the values are temporaries.
 namespace detail {
-template <class CharT, size_t N>
+template <class CharT, std::size_t N>
 std::basic_string<CharT> get_colons() {
   static std::basic_string<CharT> result(N, CharT(':'));
   return result;

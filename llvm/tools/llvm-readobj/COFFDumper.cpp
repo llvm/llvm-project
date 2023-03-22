@@ -544,9 +544,10 @@ const EnumEntry<COFF::DebugType> ImageDebugType[] = {
 
 static const EnumEntry<COFF::WeakExternalCharacteristics>
 WeakExternalCharacteristics[] = {
-  { "NoLibrary", COFF::IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY },
-  { "Library"  , COFF::IMAGE_WEAK_EXTERN_SEARCH_LIBRARY   },
-  { "Alias"    , COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS     }
+  { "NoLibrary"       , COFF::IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY },
+  { "Library"         , COFF::IMAGE_WEAK_EXTERN_SEARCH_LIBRARY   },
+  { "Alias"           , COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS     },
+  { "AntiDependency"  , COFF::IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY  },
 };
 
 const EnumEntry<uint32_t> SubSectionTypes[] = {

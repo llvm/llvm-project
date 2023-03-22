@@ -183,9 +183,8 @@ void InternalizePass::checkComdat(
     Info.External = true;
 }
 
-bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
+bool InternalizePass::internalizeModule(Module &M) {
   bool Changed = false;
-  CallGraphNode *ExternalNode = CG ? CG->getExternalCallingNode() : nullptr;
 
   SmallVector<GlobalValue *, 4> Used;
   collectUsedGlobalVariables(M, Used, false);
@@ -242,10 +241,6 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
       continue;
     Changed = true;
 
-    if (ExternalNode)
-      // Remove a callgraph edge from the external node to this function.
-      ExternalNode->removeOneAbstractEdgeTo((*CG)[&I]);
-
     ++NumFunctions;
     LLVM_DEBUG(dbgs() << "Internalizing func " << I.getName() << "\n");
   }
@@ -277,10 +272,8 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
 InternalizePass::InternalizePass() : MustPreserveGV(PreserveAPIList()) {}
 
 PreservedAnalyses InternalizePass::run(Module &M, ModuleAnalysisManager &AM) {
-  if (!internalizeModule(M, AM.getCachedResult<CallGraphAnalysis>(M)))
+  if (!internalizeModule(M))
     return PreservedAnalyses::all();
 
-  PreservedAnalyses PA;
-  PA.preserve<CallGraphAnalysis>();
-  return PA;
+  return PreservedAnalyses::none();
 }

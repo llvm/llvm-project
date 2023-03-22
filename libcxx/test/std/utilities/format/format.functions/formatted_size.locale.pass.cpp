@@ -32,7 +32,7 @@
 auto test =
     []<class CharT, class... Args>(
         std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) constexpr {
-      size_t size = std::formatted_size(std::locale(), fmt, std::forward<Args>(args)...);
+      std::size_t size = std::formatted_size(std::locale(), fmt, std::forward<Args>(args)...);
       assert(size == expected.size());
     };
 

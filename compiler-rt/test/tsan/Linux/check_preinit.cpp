@@ -12,6 +12,7 @@
 // constructors of the binary which are called after constructors of shared
 // library.
 
+#include <sanitizer/tsan_interface.h>
 #include <stdio.h>
 
 #if BUILD_SO

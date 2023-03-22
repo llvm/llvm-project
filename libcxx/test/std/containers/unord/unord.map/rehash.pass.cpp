@@ -22,7 +22,7 @@
 #include "min_allocator.h"
 
 template <class C>
-void rehash_postcondition(const C& c, size_t n)
+void rehash_postcondition(const C& c, std::size_t n)
 {
     assert(c.bucket_count() >= c.size() / c.max_load_factor() && c.bucket_count() >= n);
 }

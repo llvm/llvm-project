@@ -169,7 +169,7 @@ namespace test8 {
   struct AlmostTinyRange : std::ranges::view_base {
     int* begin() const;
     int* end() const;
-    static size_t size() { return 1; }
+    static std::size_t size() { return 1; }
   };
 
   using View = InputView;
@@ -192,7 +192,7 @@ namespace test9 {
   struct AlmostTinyRange : std::ranges::view_base {
     int* begin() const;
     int* end() const;
-    constexpr static size_t size() { return 2; }
+    constexpr static std::size_t size() { return 2; }
   };
 
   using View = InputView;

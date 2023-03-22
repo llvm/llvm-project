@@ -83,6 +83,9 @@ static Operation *findTopLevelTransform(Operation *root,
   ::mlir::transform::TransformOpInterface topLevelTransform = nullptr;
   WalkResult walkResult = root->walk<WalkOrder::PreOrder>(
       [&](::mlir::transform::TransformOpInterface transformOp) {
+        if (!transformOp
+                 ->hasTrait<transform::PossibleTopLevelTransformOpTrait>())
+          return WalkResult::skip();
         if (!topLevelTransform) {
           topLevelTransform = transformOp;
           return WalkResult::skip();

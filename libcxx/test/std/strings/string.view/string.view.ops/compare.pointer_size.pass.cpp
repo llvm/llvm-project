@@ -23,7 +23,7 @@ int sign ( int x ) { return x > 0 ? 1 : ( x < 0 ? -1 : 0 ); }
 
 template<typename CharT>
 void test1 ( std::basic_string_view<CharT> sv1,
-             size_t pos1, size_t n1, const CharT *s, int expected ) {
+             std::size_t pos1, size_t n1, const CharT *s, int expected ) {
 #ifdef TEST_HAS_NO_EXCEPTIONS
     if (pos1 <= sv1.size())
         assert(sign(sv1.compare(pos1, n1, s)) == sign(expected));
@@ -40,7 +40,7 @@ void test1 ( std::basic_string_view<CharT> sv1,
 
 template<typename CharT>
 void
-test( const CharT *s1, size_t pos1, size_t n1, const CharT *s2, int expected)
+test( const CharT *s1, std::size_t pos1, size_t n1, const CharT *s2, int expected)
 {
     typedef std::basic_string_view<CharT> string_view_t;
     string_view_t sv1 ( s1 );
@@ -378,7 +378,7 @@ int main(int, char**)
     test("abcdefghijklmnopqrst", 5, 5, "", 20);
     test("abcdefghijklmnopqrst", 0, 8, "abcde", 15);
     test("abcdefghijklmnopqrst", 0, 12, "abcdefghij", 10);
-    test("abcdefghijklmnopqrst", 0, static_cast<size_t>(-1), "abcdefghijklmnopqrst", 0);
+    test("abcdefghijklmnopqrst", 0, static_cast<std::size_t>(-1), "abcdefghijklmnopqrst", 0);
     }
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
@@ -398,7 +398,7 @@ int main(int, char**)
     test(L"abcdefghijklmnopqrst", 5, 5, L"", 20);
     test(L"abcdefghijklmnopqrst", 0, 8, L"abcde", 15);
     test(L"abcdefghijklmnopqrst", 0, 12, L"abcdefghij", 10);
-    test(L"abcdefghijklmnopqrst", 0, static_cast<size_t>(-1), L"abcdefghijklmnopqrst", 0);
+    test(L"abcdefghijklmnopqrst", 0, static_cast<std::size_t>(-1), L"abcdefghijklmnopqrst", 0);
     }
 #endif
 
@@ -419,7 +419,7 @@ int main(int, char**)
     test(U"abcdefghijklmnopqrst", 5, 5, U"", 20);
     test(U"abcdefghijklmnopqrst", 0, 8, U"abcde", 15);
     test(U"abcdefghijklmnopqrst", 0, 12, U"abcdefghij", 10);
-    test(U"abcdefghijklmnopqrst", 0, static_cast<size_t>(-1), U"abcdefghijklmnopqrst", 0);
+    test(U"abcdefghijklmnopqrst", 0, static_cast<std::size_t>(-1), U"abcdefghijklmnopqrst", 0);
     }
 
     {
@@ -438,7 +438,7 @@ int main(int, char**)
     test(u"abcdefghijklmnopqrst", 5, 5, u"", 20);
     test(u"abcdefghijklmnopqrst", 0, 8, u"abcde", 15);
     test(u"abcdefghijklmnopqrst", 0, 12, u"abcdefghij", 10);
-    test(u"abcdefghijklmnopqrst", 0, static_cast<size_t>(-1), u"abcdefghijklmnopqrst", 0);
+    test(u"abcdefghijklmnopqrst", 0, static_cast<std::size_t>(-1), u"abcdefghijklmnopqrst", 0);
     }
 #endif
 

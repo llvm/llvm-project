@@ -405,7 +405,7 @@ private:
   struct control_block {
     template <class... Args>
     TEST_CONSTEXPR control_block(Args... args) : content(std::forward<Args>(args)...) {}
-    size_t ref_count = 1;
+    std::size_t ref_count = 1;
     T content;
   };
 

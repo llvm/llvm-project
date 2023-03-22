@@ -119,17 +119,17 @@ static_assert(!HasPartialSortCopyRange<R<NoComparator*>, R<NoComparator*>>);
 
 static_assert(std::is_same_v<std::ranges::partial_sort_copy_result<int, int>, std::ranges::in_out_result<int, int>>);
 
-template <class Iter, class Sent, class OutIter, class OutSent, size_t N>
+template <class Iter, class Sent, class OutIter, class OutSent, std::size_t N>
 constexpr void test_one(
-    std::array<int, N> input, size_t input_size, size_t output_size, std::array<int, N> sorted) {
+    std::array<int, N> input, std::size_t input_size, size_t output_size, std::array<int, N> sorted) {
   assert(input_size <= N);
   assert(output_size <= N + 1); // To support testing the case where output size exceeds input size.
 
   using ResultT = std::ranges::partial_sort_copy_result<Iter, OutIter>;
   // To support testing the case where output size exceeds input size; also makes sure calling `out.data() + int()` is
   // valid.
-  constexpr size_t OutputSize = N + 1;
-  size_t result_size = std::ranges::min(input_size, output_size);
+  constexpr std::size_t OutputSize = N + 1;
+  std::size_t result_size = std::ranges::min(input_size, output_size);
 
   auto begin = input.data();
   auto end = input.data() + input_size;
@@ -167,13 +167,13 @@ constexpr void test_one(
 
 }
 
-template <class Iter, class Sent, class OutIter, class OutSent, size_t N>
+template <class Iter, class Sent, class OutIter, class OutSent, std::size_t N>
 constexpr void test_all_subsequences(const std::array<int, N> input) {
   auto sorted = input;
   std::sort(sorted.begin(), sorted.end());
 
   // Whole input, increasing output size. Also check the case when `output_size` exceeds input size.
-  for (size_t out_size = 0; out_size <= N + 1; ++out_size) {
+  for (std::size_t out_size = 0; out_size <= N + 1; ++out_size) {
     test_one<Iter, Sent, OutIter, OutSent>(input, N, out_size, sorted);
   }
 }

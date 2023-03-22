@@ -20,7 +20,7 @@
 #include "count_new.h"
 #include "test_macros.h"
 
-void test(size_t initial_buffer_size) {
+void test(std::size_t initial_buffer_size) {
   globalMemCounter.reset();
 
   auto mono1 = std::pmr::monotonic_buffer_resource(initial_buffer_size, std::pmr::new_delete_resource());
