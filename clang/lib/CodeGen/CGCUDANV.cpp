@@ -1195,8 +1195,23 @@ llvm::Function *CGNVCUDARuntime::finalizeModule() {
 llvm::GlobalValue *CGNVCUDARuntime::getKernelHandle(llvm::Function *F,
                                                     GlobalDecl GD) {
   auto Loc = KernelHandles.find(F->getName());
-  if (Loc != KernelHandles.end())
-    return Loc->second;
+  if (Loc != KernelHandles.end()) {
+    auto OldHandle = Loc->second;
+    if (KernelStubs[OldHandle] == F)
+      return OldHandle;
+
+    // We've found the function name, but F itself has changed, so we need to
+    // update the references.
+    if (CGM.getLangOpts().HIP) {
+      // For HIP compilation the handle itself does not change, so we only need
+      // to update the Stub value.
+      KernelStubs[OldHandle] = F;
+      return OldHandle;
+    }
+    // For non-HIP compilation, erase the old Stub and fall-through to creating
+    // new entries.
+    KernelStubs.erase(OldHandle);
+  }
 
   if (!CGM.getLangOpts().HIP) {
     KernelHandles[F->getName()] = F;

@@ -202,10 +202,6 @@ public:
   // TypeSystems can support more than one language
   virtual bool SupportsLanguage(lldb::LanguageType language) = 0;
 
-  /// The name of the variable used for explicitly accessing data scoped to the
-  /// current instance (or type). C++ uses "this", ObjC uses "self".
-  virtual ConstString GetInstanceVariableName(lldb::LanguageType language) = 0;
-
   // Type Completion
 
   virtual bool GetCompleteType(lldb::opaque_compiler_type_t type) = 0;
