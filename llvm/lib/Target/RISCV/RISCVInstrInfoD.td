@@ -145,6 +145,7 @@ defm FLT_D : FPCmp_rr_m<0b1010001, 0b001, "flt.d", DINX>;
 defm FLE_D : FPCmp_rr_m<0b1010001, 0b000, "fle.d", DINX>;
 }
 
+let mayRaiseFPException = 0 in
 defm FCLASS_D : FPUnaryOp_r_m<0b1110001, 0b00000, 0b001, XDINX, "fclass.d">,
                 Sched<[WriteFClass64, ReadFClass64]>;
 
