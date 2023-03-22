@@ -60,10 +60,10 @@ TEST(IncludeTree, IncludeTreeScan) {
           .moveInto(Root),
       llvm::Succeeded());
 
-  std::optional<IncludeFile> MainFile;
-  std::optional<IncludeFile> A1File;
-  std::optional<IncludeFile> B1File;
-  std::optional<IncludeFile> SysFile;
+  std::optional<IncludeTree::File> MainFile;
+  std::optional<IncludeTree::File> A1File;
+  std::optional<IncludeTree::File> B1File;
+  std::optional<IncludeTree::File> SysFile;
 
   std::optional<IncludeTree> Main;
   ASSERT_THAT_ERROR(Root->getMainFileTree().moveInto(Main), llvm::Succeeded());
@@ -132,31 +132,31 @@ TEST(IncludeTree, IncludeTreeScan) {
     ASSERT_EQ(Sys->getNumIncludes(), uint32_t(0));
   }
 
-  std::optional<IncludeFileList> FileList;
+  std::optional<IncludeTree::FileList> FileList;
   ASSERT_THAT_ERROR(Root->getFileList().moveInto(FileList), llvm::Succeeded());
   ASSERT_EQ(FileList->getNumFiles(), size_t(4));
   {
-    std::optional<IncludeFile> File;
+    std::optional<IncludeTree::File> File;
     ASSERT_THAT_ERROR(FileList->getFile(0).moveInto(File), llvm::Succeeded());
     EXPECT_EQ(File->getRef(), MainFile->getRef());
     EXPECT_EQ(FileList->getFileSize(0), MainContents.size());
   }
   {
-    std::optional<IncludeFile> File;
+    std::optional<IncludeTree::File> File;
     ASSERT_THAT_ERROR(FileList->getFile(1).moveInto(File), llvm::Succeeded());
     EXPECT_EQ(File->getRef(), A1File->getRef());
     EXPECT_EQ(FileList->getFileSize(1), A1Contents.size());
   }
   {
-    std::optional<IncludeFile> File;
+    std::optional<IncludeTree::File> File;
     ASSERT_THAT_ERROR(FileList->getFile(2).moveInto(File), llvm::Succeeded());
     EXPECT_EQ(File->getRef(), B1File->getRef());
-    EXPECT_EQ(FileList->getFileSize(2), IncludeFileList::FileSizeTy(0));
+    EXPECT_EQ(FileList->getFileSize(2), IncludeTree::FileList::FileSizeTy(0));
   }
   {
-    std::optional<IncludeFile> File;
+    std::optional<IncludeTree::File> File;
     ASSERT_THAT_ERROR(FileList->getFile(3).moveInto(File), llvm::Succeeded());
     EXPECT_EQ(File->getRef(), SysFile->getRef());
-    EXPECT_EQ(FileList->getFileSize(3), IncludeFileList::FileSizeTy(0));
+    EXPECT_EQ(FileList->getFileSize(3), IncludeTree::FileList::FileSizeTy(0));
   }
 }

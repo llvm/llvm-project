@@ -97,8 +97,8 @@ private:
   Expected<cas::ObjectRef> getObjectForBuffer(const SrcMgr::FileInfo &FI);
   Expected<cas::ObjectRef> addToFileList(FileManager &FM, const FileEntry *FE);
   Expected<cas::IncludeTree> getCASTreeForFileIncludes(FilePPState &&PPState);
-  Expected<cas::IncludeFile> createIncludeFile(StringRef Filename,
-                                               cas::ObjectRef Contents);
+  Expected<cas::IncludeTree::File> createIncludeFile(StringRef Filename,
+                                                     cas::ObjectRef Contents);
 
   bool hasErrorOccurred() const { return ErrorToReport.has_value(); }
 
@@ -120,7 +120,7 @@ private:
   // are recorded in the PCH, ordered by \p FileEntry::UID index.
   SmallVector<StringRef> PreIncludedFileNames;
   llvm::BitVector SeenIncludeFiles;
-  SmallVector<cas::IncludeFileList::FileEntry> IncludedFiles;
+  SmallVector<cas::IncludeTree::FileList::FileEntry> IncludedFiles;
   std::optional<cas::ObjectRef> PredefinesBufferRef;
   std::optional<cas::ObjectRef> ModuleIncludesBufferRef;
   std::optional<cas::ObjectRef> ModuleMapFileRef;
@@ -447,7 +447,7 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
       getCASTreeForFileIncludes(IncludeStack.pop_back_val());
   if (!MainIncludeTree)
     return MainIncludeTree.takeError();
-  auto FileList = cas::IncludeFileList::create(DB, IncludedFiles);
+  auto FileList = cas::IncludeTree::FileList::create(DB, IncludedFiles);
   if (!FileList)
     return FileList.takeError();
 
@@ -509,7 +509,8 @@ IncludeTreeBuilder::getObjectForBuffer(const SrcMgr::FileInfo &FI) {
       {}, FI.getContentCache().getBufferIfLoaded()->getBuffer());
   if (!Ref)
     return Ref.takeError();
-  Expected<cas::IncludeFile> FileNode = createIncludeFile(FI.getName(), *Ref);
+  Expected<cas::IncludeTree::File> FileNode =
+      createIncludeFile(FI.getName(), *Ref);
   if (!FileNode)
     return FileNode.takeError();
   return FileNode->getRef();
@@ -531,7 +532,7 @@ IncludeTreeBuilder::addToFileList(FileManager &FM, const FileEntry *FE) {
       return FileNode.takeError();
     IncludedFiles.push_back(
         {FileNode->getRef(),
-         static_cast<cas::IncludeFileList::FileSizeTy>(FE->getSize())});
+         static_cast<cas::IncludeTree::FileList::FileSizeTy>(FE->getSize())});
     return FileNode->getRef();
   };
 
@@ -554,7 +555,7 @@ IncludeTreeBuilder::getCASTreeForFileIncludes(FilePPState &&PPState) {
                                   PPState.Includes, PPState.HasIncludeChecks);
 }
 
-Expected<cas::IncludeFile>
+Expected<cas::IncludeTree::File>
 IncludeTreeBuilder::createIncludeFile(StringRef Filename,
                                       cas::ObjectRef Contents) {
   SmallString<256> MappedPath;
@@ -562,7 +563,7 @@ IncludeTreeBuilder::createIncludeFile(StringRef Filename,
     PrefixMapper.map(Filename, MappedPath);
     Filename = MappedPath;
   }
-  return cas::IncludeFile::create(DB, Filename, std::move(Contents));
+  return cas::IncludeTree::File::create(DB, Filename, std::move(Contents));
 }
 
 std::unique_ptr<DependencyActionController>

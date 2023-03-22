@@ -33,8 +33,9 @@ Expected<NodeT> IncludeTreeBase<NodeT>::create(ObjectStore &DB,
   return NodeT(*Proxy);
 }
 
-Expected<IncludeFile> IncludeFile::create(ObjectStore &DB, StringRef Filename,
-                                          ObjectRef Contents) {
+Expected<IncludeTree::File> IncludeTree::File::create(ObjectStore &DB,
+                                                      StringRef Filename,
+                                                      ObjectRef Contents) {
   auto PathRef = DB.storeFromString({}, Filename);
   if (!PathRef)
     return PathRef.takeError();
@@ -42,11 +43,11 @@ Expected<IncludeFile> IncludeFile::create(ObjectStore &DB, StringRef Filename,
   return IncludeTreeBase::create(DB, Refs, {});
 }
 
-Expected<IncludeFile> IncludeTree::getBaseFile() {
+Expected<IncludeTree::File> IncludeTree::getBaseFile() {
   auto Node = getCAS().getProxy(getBaseFileRef());
   if (!Node)
     return Node.takeError();
-  return IncludeFile(std::move(*Node));
+  return File(std::move(*Node));
 }
 
 Expected<IncludeTree::FileInfo> IncludeTree::getBaseFileInfo() {
@@ -85,7 +86,7 @@ Expected<IncludeTree> IncludeTree::create(
 
   char Kind = FileCharacteristic;
   assert(Kind == FileCharacteristic && "SrcMgr::CharacteristicKind too big!");
-  assert(IncludeFile::isValid(DB, BaseFile));
+  assert(File::isValid(DB, BaseFile));
   SmallVector<ObjectRef, 16> Refs;
   Refs.reserve(Includes.size() + 1);
   Refs.push_back(BaseFile);
@@ -169,7 +170,8 @@ bool IncludeTree::isValid(const ObjectProxy &Node) {
   return Base.getData().size() >= NumIncludes * sizeof(uint32_t) + 1;
 }
 
-IncludeFileList::FileSizeTy IncludeFileList::getFileSize(size_t I) const {
+IncludeTree::FileList::FileSizeTy
+IncludeTree::FileList::getFileSize(size_t I) const {
   assert(I < getNumFiles());
   StringRef Data = getData();
   assert(Data.size() >= (I + 1) * sizeof(FileSizeTy));
@@ -177,8 +179,8 @@ IncludeFileList::FileSizeTy IncludeFileList::getFileSize(size_t I) const {
       Data.data() + I * sizeof(FileSizeTy));
 }
 
-llvm::Error IncludeFileList::forEachFile(
-    llvm::function_ref<llvm::Error(IncludeFile, FileSizeTy)> Callback) {
+llvm::Error IncludeTree::FileList::forEachFile(
+    llvm::function_ref<llvm::Error(File, FileSizeTy)> Callback) {
   size_t I = 0;
   return forEachReference([&](ObjectRef Ref) -> llvm::Error {
     auto Include = getFile(Ref);
@@ -188,8 +190,8 @@ llvm::Error IncludeFileList::forEachFile(
   });
 }
 
-Expected<IncludeFileList> IncludeFileList::create(ObjectStore &DB,
-                                                  ArrayRef<FileEntry> Files) {
+Expected<IncludeTree::FileList>
+IncludeTree::FileList::create(ObjectStore &DB, ArrayRef<FileEntry> Files) {
   SmallVector<ObjectRef, 16> Refs;
   Refs.reserve(Files.size());
   SmallString<256> Buffer;
@@ -199,24 +201,25 @@ Expected<IncludeFileList> IncludeFileList::create(ObjectStore &DB,
   llvm::support::endian::Writer Writer(BufOS, llvm::support::little);
 
   for (const FileEntry &Entry : Files) {
-    assert(IncludeFile::isValid(DB, Entry.FileRef));
+    assert(File::isValid(DB, Entry.FileRef));
     Refs.push_back(Entry.FileRef);
     Writer.write(Entry.Size);
   }
   return IncludeTreeBase::create(DB, Refs, Buffer);
 }
 
-Expected<IncludeFileList> IncludeFileList::get(ObjectStore &DB, ObjectRef Ref) {
+Expected<IncludeTree::FileList> IncludeTree::FileList::get(ObjectStore &DB,
+                                                           ObjectRef Ref) {
   auto Node = DB.getProxy(Ref);
   if (!Node)
     return Node.takeError();
   if (!isValid(*Node))
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "not a IncludeFileList node kind");
-  return IncludeFileList(std::move(*Node));
+  return FileList(std::move(*Node));
 }
 
-bool IncludeFileList::isValid(const ObjectProxy &Node) {
+bool IncludeTree::FileList::isValid(const ObjectProxy &Node) {
   if (!IncludeTreeBase::isValid(Node))
     return false;
   IncludeTreeBase Base(Node);
@@ -229,7 +232,7 @@ Expected<IncludeTreeRoot>
 IncludeTreeRoot::create(ObjectStore &DB, ObjectRef MainFileTree,
                         ObjectRef FileList, std::optional<ObjectRef> PCHRef) {
   assert(IncludeTree::isValid(DB, MainFileTree));
-  assert(IncludeFileList::isValid(DB, FileList));
+  assert(IncludeTree::FileList::isValid(DB, FileList));
   if (PCHRef) {
     return IncludeTreeBase::create(DB, {MainFileTree, FileList, *PCHRef}, {});
   } else {
@@ -247,7 +250,7 @@ Expected<IncludeTreeRoot> IncludeTreeRoot::get(ObjectStore &DB, ObjectRef Ref) {
   return IncludeTreeRoot(std::move(*Node));
 }
 
-llvm::Error IncludeFile::print(llvm::raw_ostream &OS, unsigned Indent) {
+llvm::Error IncludeTree::File::print(llvm::raw_ostream &OS, unsigned Indent) {
   auto Filename = getFilename();
   if (!Filename)
     return Filename.takeError();
@@ -281,8 +284,9 @@ llvm::Error IncludeTree::print(llvm::raw_ostream &OS, unsigned Indent) {
       });
 }
 
-llvm::Error IncludeFileList::print(llvm::raw_ostream &OS, unsigned Indent) {
-  return forEachFile([&](cas::IncludeFile File, FileSizeTy) -> llvm::Error {
+llvm::Error IncludeTree::FileList::print(llvm::raw_ostream &OS,
+                                         unsigned Indent) {
+  return forEachFile([&](File File, FileSizeTy) -> llvm::Error {
     return File.print(OS, Indent);
   });
 }
@@ -299,7 +303,7 @@ llvm::Error IncludeTreeRoot::print(llvm::raw_ostream &OS, unsigned Indent) {
   if (llvm::Error E = MainTree->print(OS.indent(Indent), Indent))
     return E;
   OS.indent(Indent) << "Files:\n";
-  std::optional<cas::IncludeFileList> List;
+  std::optional<IncludeTree::FileList> List;
   if (llvm::Error E = getFileList().moveInto(List))
     return E;
   return List->print(OS, Indent);
@@ -347,7 +351,7 @@ public:
 
   struct FileEntry {
     cas::ObjectRef ContentsRef;
-    IncludeFileList::FileSizeTy Size;
+    IncludeTree::FileList::FileSizeTy Size;
     llvm::sys::fs::UniqueID UniqueID;
   };
 
@@ -450,7 +454,8 @@ cas::createIncludeTreeFileSystem(IncludeTreeRoot &Root) {
   IntrusiveRefCntPtr<IncludeTreeFileSystem> IncludeTreeFS =
       new IncludeTreeFileSystem(Root.getCAS());
   llvm::Error E = FileList->forEachFile(
-      [&](IncludeFile File, IncludeFileList::FileSizeTy Size) -> llvm::Error {
+      [&](IncludeTree::File File,
+          IncludeTree::FileList::FileSizeTy Size) -> llvm::Error {
         auto FilenameBlob = File.getFilename();
         if (!FilenameBlob)
           return FilenameBlob.takeError();

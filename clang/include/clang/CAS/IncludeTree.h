@@ -39,13 +39,8 @@ protected:
     return Node.getData().startswith(NodeT::getNodeKind());
   }
 
-  friend class IncludeFile;
-  friend class IncludeFileList;
-  friend class IncludeTree;
-  friend class IncludeTreeRoot;
+  friend NodeT;
 };
-
-class IncludeFile;
 
 /// Represents a DAG of included files by the preprocessor.
 /// Each node in the DAG represents a particular inclusion of a file that
@@ -56,7 +51,10 @@ class IncludeTree : public IncludeTreeBase<IncludeTree> {
 public:
   static constexpr StringRef getNodeKind() { return "Tree"; }
 
-  Expected<IncludeFile> getBaseFile();
+  class File;
+  class FileList;
+
+  Expected<File> getBaseFile();
 
   /// The include file that resulted in this include-tree.
   ObjectRef getBaseFileRef() const { return getReference(0); }
@@ -152,7 +150,7 @@ private:
 
 /// Represents a \p SourceManager file (or buffer in the case of preprocessor
 /// predefines) that got included by the preprocessor.
-class IncludeFile : public IncludeTreeBase<IncludeFile> {
+class IncludeTree::File : public IncludeTreeBase<File> {
 public:
   static constexpr StringRef getNodeKind() { return "File"; }
 
@@ -167,7 +165,7 @@ public:
     return getCAS().getProxy(getContentsRef());
   }
 
-  Expected<IncludeTree::FileInfo> getFileInfo() {
+  Expected<FileInfo> getFileInfo() {
     auto Filename = getFilename();
     if (!Filename)
       return Filename.takeError();
@@ -177,8 +175,8 @@ public:
     return IncludeTree::FileInfo{Filename->getData(), Contents->getData()};
   }
 
-  static Expected<IncludeFile> create(ObjectStore &DB, StringRef Filename,
-                                      ObjectRef Contents);
+  static Expected<File> create(ObjectStore &DB, StringRef Filename,
+                               ObjectRef Contents);
 
   llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
 
@@ -198,20 +196,20 @@ public:
   }
 
 private:
-  friend class IncludeTreeBase<IncludeFile>;
-  friend class IncludeFileList;
+  friend class IncludeTreeBase<File>;
+  friend class FileList;
   friend class IncludeTree;
   friend class IncludeTreeRoot;
 
-  explicit IncludeFile(ObjectProxy Node) : IncludeTreeBase(std::move(Node)) {
+  explicit File(ObjectProxy Node) : IncludeTreeBase(std::move(Node)) {
     assert(isValid(*this));
   }
 };
 
-/// A flat list of \p IncludeFile entries. This is used along with a simple
+/// A flat list of \c File entries. This is used along with a simple
 /// implementation of a \p vfs::FileSystem produced via
 /// \p createIncludeTreeFileSystem().
-class IncludeFileList : public IncludeTreeBase<IncludeFileList> {
+class IncludeTree::FileList : public IncludeTreeBase<FileList> {
 public:
   static constexpr StringRef getNodeKind() { return "List"; }
 
@@ -224,12 +222,12 @@ public:
     return getReference(I);
   }
 
-  Expected<IncludeFile> getFile(size_t I) { return getFile(getFileRef(I)); }
+  Expected<File> getFile(size_t I) { return getFile(getFileRef(I)); }
   FileSizeTy getFileSize(size_t I) const;
 
-  /// \returns each \p IncludeFile entry along with its file size.
-  llvm::Error forEachFile(
-      llvm::function_ref<llvm::Error(IncludeFile, FileSizeTy)> Callback);
+  /// \returns each \c File entry along with its file size.
+  llvm::Error
+  forEachFile(llvm::function_ref<llvm::Error(File, FileSizeTy)> Callback);
 
   /// We record the file size as well to avoid needing to materialize the
   /// underlying buffer for the \p IncludeTreeFileSystem::status()
@@ -238,27 +236,25 @@ public:
     ObjectRef FileRef;
     FileSizeTy Size;
   };
-  static Expected<IncludeFileList> create(ObjectStore &DB,
-                                          ArrayRef<FileEntry> Files);
+  static Expected<FileList> create(ObjectStore &DB, ArrayRef<FileEntry> Files);
 
-  static Expected<IncludeFileList> get(ObjectStore &CAS, ObjectRef Ref);
+  static Expected<FileList> get(ObjectStore &CAS, ObjectRef Ref);
 
   llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
 
 private:
-  friend class IncludeTreeBase<IncludeFileList>;
+  friend class IncludeTreeBase<FileList>;
   friend class IncludeTreeRoot;
 
-  explicit IncludeFileList(ObjectProxy Node)
-      : IncludeTreeBase(std::move(Node)) {
+  explicit FileList(ObjectProxy Node) : IncludeTreeBase(std::move(Node)) {
     assert(isValid(*this));
   }
 
-  Expected<IncludeFile> getFile(ObjectRef Ref) {
+  Expected<File> getFile(ObjectRef Ref) {
     auto Node = getCAS().getProxy(Ref);
     if (!Node)
       return Node.takeError();
-    return IncludeFile(std::move(*Node));
+    return File(std::move(*Node));
   }
 
   static bool isValid(const ObjectProxy &Node);
@@ -294,11 +290,11 @@ public:
     return IncludeTree(std::move(*Node));
   }
 
-  Expected<IncludeFileList> getFileList() {
+  Expected<IncludeTree::FileList> getFileList() {
     auto Node = getCAS().getProxy(getFileListRef());
     if (!Node)
       return Node.takeError();
-    return IncludeFileList(std::move(*Node));
+    return IncludeTree::FileList(std::move(*Node));
   }
 
   Expected<std::optional<StringRef>> getPCHBuffer() {
