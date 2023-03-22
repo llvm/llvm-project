@@ -566,8 +566,8 @@ bb_exit:
 define i1 @PR60818_ne(i32 %a) {
 ; CHECK-LABEL: @PR60818_ne(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[SUB]], [[A]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[A:%.*]], 2147483647
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP0]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -579,8 +579,8 @@ entry:
 define i1 @PR60818_eq(i32 %a) {
 ; CHECK-LABEL: @PR60818_eq(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SUB]], [[A]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[A:%.*]], 2147483647
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -593,8 +593,8 @@ define i1 @PR60818_eq_commuted(i32 %x) {
 ; CHECK-LABEL: @PR60818_eq_commuted(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = mul i32 [[X:%.*]], 43
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], [[SUB]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[A]], 2147483647
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -607,8 +607,8 @@ entry:
 define <2 x i1> @PR60818_ne_vector(<2 x i32> %a) {
 ; CHECK-LABEL: @PR60818_ne_vector(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> zeroinitializer, [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[SUB]], [[A]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i32> [[A:%.*]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
 entry:
