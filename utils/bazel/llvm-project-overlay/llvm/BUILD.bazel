@@ -569,28 +569,18 @@ cc_library(
 )
 
 cc_library(
-    name = "tblgen",
-    alwayslink = True,
+    name = "LLVMTableGenGlobalISel",
     srcs = glob([
-        "utils/TableGen/*.cpp",
-        "utils/TableGen/*.inc",
         "utils/TableGen/GlobalISel/*.cpp",
-
-        # Some tablegen sources include headers from MC, so these have to be
-        # listed here. MC uses headers produced by tablegen, so it cannot be a
-        # regular dependency.
-        "include/llvm/MC/*.h",
-
+    ]) + [
+        "utils/TableGen/CodeGenInstruction.h",
+    ],
+    hdrs = glob([
         # We have to include these headers here as well as in the `hdrs` below
         # to allow the `.cpp` files to use file-relative-inclusion to find
         # them, even though consumers of this library use inclusion relative to
         # `utils/TableGen` with the `strip_includes_prefix` of this library.
         # This mixture appears to be incompatible with header modules.
-        "utils/TableGen/*.h",
-        "utils/TableGen/GlobalISel/*.h",
-    ]),
-    hdrs = glob([
-        "utils/TableGen/*.h",
         "utils/TableGen/GlobalISel/*.h",
     ]),
     copts = llvm_copts,
@@ -605,10 +595,23 @@ cc_library(
 
 cc_binary(
     name = "llvm-tblgen",
+    srcs = glob([
+        "utils/TableGen/*.cpp",
+        "utils/TableGen/*.inc",
+        "utils/TableGen/*.h",
+
+        # Some tablegen sources include headers from MC, so these have to be
+        # listed here. MC uses headers produced by tablegen, so it cannot be a
+        # regular dependency.
+        "include/llvm/MC/*.h",
+    ]),
     copts = llvm_copts,
     stamp = 0,
     deps = [
-        ":tblgen",
+        ":LLVMTableGenGlobalISel",
+        ":Support",
+        ":TableGen",
+        ":config",
     ],
 )
 
