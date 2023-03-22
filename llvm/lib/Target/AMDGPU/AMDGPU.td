@@ -1512,7 +1512,8 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
    FeaturePseudoScalarTrans,
-   FeatureBitOp3Insts]>;
+   FeatureBitOp3Insts,
+   FeatureSupportsSRAMECC]>;
 
 //===----------------------------------------------------------------------===//
 

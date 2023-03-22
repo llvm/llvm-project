@@ -158,7 +158,7 @@
 ; V3-GFX1103: .amdgcn_target "amdgcn-amd-amdhsa--gfx1103"
 ; V3-GFX1150: .amdgcn_target "amdgcn-amd-amdhsa--gfx1150"
 ; V3-GFX1200: .amdgcn_target "amdgcn-amd-amdhsa--gfx1200"
-; V3-GFX1210: .amdgcn_target "amdgcn-amd-amdhsa--gfx1210"
+; V3-GFX1210: .amdgcn_target "amdgcn-amd-amdhsa--gfx1210+sram-ecc"
 
 
 define amdgpu_kernel void @directive_amdgcn_target() {
