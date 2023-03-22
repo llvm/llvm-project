@@ -48,6 +48,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -779,7 +780,7 @@ bool DWARFContext::verify(raw_ostream &OS, DIDumpOptions DumpOpts) {
   return Success;
 }
 
-void fixupIndex(const DWARFObject &DObj, DWARFContext &C,
+void fixupIndexV4(const DWARFObject &DObj, DWARFContext &C,
                 DWARFUnitIndex &Index) {
   using EntryType = DWARFUnitIndex::Entry::SectionContribution;
   using EntryMap = DenseMap<uint32_t, EntryType>;
@@ -847,14 +848,62 @@ void fixupIndex(const DWARFObject &DObj, DWARFContext &C,
   return;
 }
 
+void fixupIndexV5(const DWARFObject &DObj, DWARFContext &C,
+                  DWARFUnitIndex &Index) {
+  DenseMap<uint64_t, uint64_t> Map;
+
+  DObj.forEachInfoDWOSections([&](const DWARFSection &S) {
+    if (!(C.getParseCUTUIndexManually() ||
+          S.Data.size() >= std::numeric_limits<uint32_t>::max()))
+      return;
+    DWARFDataExtractor Data(DObj, S, C.isLittleEndian(), 0);
+    uint64_t Offset = 0;
+    while (Data.isValidOffset(Offset)) {
+      DWARFUnitHeader Header;
+      if (!Header.extract(C, Data, &Offset, DWARFSectionKind::DW_SECT_INFO)) {
+        logAllUnhandledErrors(
+            createError("Failed to parse unit header in DWP file"), errs());
+        break;
+      }
+      bool CU = Header.getUnitType() == DW_UT_split_compile;
+      uint64_t Sig = CU ? *Header.getDWOId() : Header.getTypeHash();
+      Map[Sig] = Header.getOffset();
+      Offset = Header.getNextUnitOffset();
+    }
+  });
+  for (DWARFUnitIndex::Entry &E : Index.getMutableRows()) {
+    if (!E.isValid())
+      continue;
+    DWARFUnitIndex::Entry::SectionContribution &CUOff = E.getContribution();
+    auto Iter = Map.find(E.getSignature());
+    if (Iter == Map.end()) {
+      logAllUnhandledErrors(
+          createError("Could not find unit with signature 0x" +
+                      Twine::utohexstr(E.getSignature()) + " in the Map"),
+          errs());
+      break;
+    }
+    CUOff.setOffset(Iter->second);
+  }
+}
+
+void fixupIndex(const DWARFObject &DObj, DWARFContext &C,
+                DWARFUnitIndex &Index) {
+  if (Index.getVersion() < 5)
+    fixupIndexV4(DObj, C, Index);
+  else
+    fixupIndexV5(DObj, C, Index);
+}
+
 const DWARFUnitIndex &DWARFContext::getCUIndex() {
   if (CUIndex)
     return *CUIndex;
 
   DataExtractor CUIndexData(DObj->getCUIndexSection(), isLittleEndian(), 0);
   CUIndex = std::make_unique<DWARFUnitIndex>(DW_SECT_INFO);
-  CUIndex->parse(CUIndexData);
-  fixupIndex(*DObj, *this, *CUIndex.get());
+  bool IsParseSuccessful = CUIndex->parse(CUIndexData);
+  if (IsParseSuccessful)
+    fixupIndex(*DObj, *this, *CUIndex);
   return *CUIndex;
 }
 
@@ -868,7 +917,7 @@ const DWARFUnitIndex &DWARFContext::getTUIndex() {
   // If we are parsing TU-index and for .debug_types section we don't need
   // to do anything.
   if (isParseSuccessful && TUIndex->getVersion() != 2)
-    fixupIndex(*DObj, *this, *TUIndex.get());
+    fixupIndex(*DObj, *this, *TUIndex);
   return *TUIndex;
 }
 
