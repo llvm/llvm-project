@@ -54,7 +54,7 @@ namespace test2 {
     int x;
     int* begin() const;
     int* end() const;
-    constexpr static size_t size() { return 1; }
+    constexpr static std::size_t size() { return 1; }
   };
   static_assert( std::ranges::forward_range<TinyView>);
   static_assert( std::ranges::__tiny_range<TinyView>);
@@ -107,7 +107,7 @@ namespace test4 {
   struct EmptyTinyView : std::ranges::view_base {
     int* begin() const;
     int* end() const;
-    constexpr static size_t size() { return 1; }
+    constexpr static std::size_t size() { return 1; }
   };
   static_assert( std::ranges::forward_range<EmptyTinyView>);
   static_assert( std::ranges::__tiny_range<EmptyTinyView>);

@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
+#include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
@@ -175,11 +176,19 @@ static void forwardEmptyOperands(Block *block, transform::TransformState &state,
 static void forwardTerminatorOperands(Block *block,
                                       transform::TransformState &state,
                                       transform::TransformResults &results) {
-  for (const auto &pair : llvm::zip(block->getTerminator()->getOperands(),
-                                    block->getParentOp()->getOpResults())) {
-    Value terminatorOperand = std::get<0>(pair);
-    OpResult result = std::get<1>(pair);
-    results.set(result, state.getPayloadOps(terminatorOperand));
+  for (auto &&[terminatorOperand, result] :
+       llvm::zip(block->getTerminator()->getOperands(),
+                 block->getParentOp()->getOpResults())) {
+    if (result.getType().isa<transform::TransformHandleTypeInterface>()) {
+      results.set(result, state.getPayloadOps(terminatorOperand));
+    } else if (result.getType()
+                   .isa<transform::TransformValueHandleTypeInterface>()) {
+      results.setValues(result, state.getPayloadValues(terminatorOperand));
+    } else {
+      assert(result.getType().isa<transform::TransformParamTypeInterface>() &&
+             "unhandled transform type interface");
+      results.setParams(result, state.getParams(terminatorOperand));
+    }
   }
 }
 
@@ -525,6 +534,177 @@ transform::GetResultOp::apply(transform::TransformResults &results,
 }
 
 //===----------------------------------------------------------------------===//
+// IncludeOp
+//===----------------------------------------------------------------------===//
+
+/// Applies the transform ops contained in `block`. Maps `results` to the same
+/// values as the operands of the block terminator.
+static DiagnosedSilenceableFailure
+applySequenceBlock(Block &block, transform::FailurePropagationMode mode,
+                   transform::TransformState &state,
+                   transform::TransformResults &results) {
+  // Apply the sequenced ops one by one.
+  for (Operation &transform : block.without_terminator()) {
+    DiagnosedSilenceableFailure result =
+        state.applyTransform(cast<transform::TransformOpInterface>(transform));
+    if (result.isDefiniteFailure())
+      return result;
+
+    if (result.isSilenceableFailure()) {
+      if (mode == transform::FailurePropagationMode::Propagate) {
+        // Propagate empty results in case of early exit.
+        forwardEmptyOperands(&block, state, results);
+        return result;
+      }
+      (void)result.silence();
+    }
+  }
+
+  // Forward the operation mapping for values yielded from the sequence to the
+  // values produced by the sequence op.
+  forwardTerminatorOperands(&block, state, results);
+  return DiagnosedSilenceableFailure::success();
+}
+
+DiagnosedSilenceableFailure
+transform::IncludeOp::apply(transform::TransformResults &results,
+                            transform::TransformState &state) {
+  auto callee = SymbolTable::lookupNearestSymbolFrom<NamedSequenceOp>(
+      getOperation(), getTarget());
+  assert(callee && "unverified reference to unknown symbol");
+
+  // Map operands to block arguments.
+  SmallVector<SmallVector<MappedValue>> mappings;
+  detail::prepareValueMappings(mappings, getOperands(), state);
+  auto scope = state.make_isolated_region_scope(callee.getBody());
+  for (auto &&[arg, map] :
+       llvm::zip_equal(callee.getBody().front().getArguments(), mappings)) {
+    if (failed(state.mapBlockArgument(arg, map)))
+      return DiagnosedSilenceableFailure::definiteFailure();
+  }
+
+  DiagnosedSilenceableFailure result = applySequenceBlock(
+      callee.getBody().front(), getFailurePropagationMode(), state, results);
+  mappings.clear();
+  detail::prepareValueMappings(
+      mappings, callee.getBody().front().getTerminator()->getOperands(), state);
+  for (auto &&[result, mapping] : llvm::zip_equal(getResults(), mappings))
+    results.setMappedValues(result, mapping);
+  return result;
+}
+
+/// Appends to `effects` the memory effect instances on `target` with the same
+/// resource and effect as the ones the operation `iface` having on `source`.
+static void
+remapEffects(MemoryEffectOpInterface iface, BlockArgument source, Value target,
+             SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  SmallVector<MemoryEffects::EffectInstance> nestedEffects;
+  iface.getEffectsOnValue(source, nestedEffects);
+  for (const auto &effect : nestedEffects)
+    effects.emplace_back(effect.getEffect(), target, effect.getResource());
+}
+
+/// Appends to `effects` the same effects as the operations of `block` have on
+/// block arguments but associated with `operands.`
+static void
+remapArgumentEffects(Block &block, ValueRange operands,
+                     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  for (Operation &op : block) {
+    auto iface = dyn_cast<MemoryEffectOpInterface>(&op);
+    if (!iface)
+      continue;
+
+    for (auto &&[source, target] : llvm::zip(block.getArguments(), operands)) {
+      remapEffects(iface, source, target, effects);
+    }
+
+    SmallVector<MemoryEffects::EffectInstance> nestedEffects;
+    iface.getEffectsOnResource(transform::PayloadIRResource::get(),
+                               nestedEffects);
+    llvm::append_range(effects, nestedEffects);
+  }
+}
+
+static DiagnosedSilenceableFailure
+verifyNamedSequenceOp(transform::NamedSequenceOp op);
+
+void transform::IncludeOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  // Bail if the callee is unknown. This may run as part of the verification
+  // process before we verified the validity of the callee or of this op.
+  auto target =
+      getOperation()->getAttrOfType<SymbolRefAttr>(getTargetAttrName());
+  if (!target)
+    return;
+  auto callee = SymbolTable::lookupNearestSymbolFrom<NamedSequenceOp>(
+      getOperation(), getTarget());
+  if (!callee)
+    return;
+  DiagnosedSilenceableFailure earlyVerifierResult =
+      verifyNamedSequenceOp(callee);
+  if (!earlyVerifierResult.succeeded()) {
+    (void)earlyVerifierResult.silence();
+    return;
+  }
+
+  // Carry over effects from the callee.
+  remapArgumentEffects(callee.getBody().front(), getOperands(), effects);
+
+  // Proper effects.
+  onlyReadsHandle(getOperands(), effects);
+  producesHandle(getResults(), effects);
+}
+
+template <typename... Tys>
+static bool implementSameInterface(Type t1, Type t2) {
+  return ((isa<Tys>(t1) && isa<Tys>(t2)) || ... || false);
+}
+
+LogicalResult
+transform::IncludeOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // Access through indirection and do additional checking because this may be
+  // running before the main op verifier.
+  auto targetAttr = getOperation()->getAttrOfType<SymbolRefAttr>("target");
+  if (!targetAttr)
+    return emitOpError() << "expects a 'target' symbol reference attribute";
+
+  auto target = symbolTable.lookupNearestSymbolFrom<transform::NamedSequenceOp>(
+      *this, targetAttr);
+  if (!target)
+    return emitOpError() << "does not reference a named transform sequence";
+
+  FunctionType fnType = target.getFunctionType();
+  if (fnType.getNumInputs() != getNumOperands())
+    return emitError("incorrect number of operands for callee");
+
+  for (unsigned i = 0, e = fnType.getNumInputs(); i != e; ++i) {
+    if (getOperand(i).getType() != fnType.getInput(i)) {
+      return emitOpError("operand type mismatch: expected operand type ")
+             << fnType.getInput(i) << ", but provided "
+             << getOperand(i).getType() << " for operand number " << i;
+    }
+  }
+
+  if (fnType.getNumResults() != getNumResults())
+    return emitError("incorrect number of results for callee");
+
+  for (unsigned i = 0, e = fnType.getNumResults(); i != e; ++i) {
+    Type resultType = getResult(i).getType();
+    Type funcType = fnType.getResult(i);
+    if (!implementSameInterface<TransformHandleTypeInterface,
+                                TransformValueHandleTypeInterface,
+                                TransformParamTypeInterface>(resultType,
+                                                             funcType)) {
+      return emitOpError() << "type of result #" << i
+                           << " must implement the same transform dialect "
+                              "interface as the corresponding callee result";
+    }
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // MergeHandlesOp
 //===----------------------------------------------------------------------===//
 
@@ -565,6 +745,105 @@ OpFoldResult transform::MergeHandlesOp::fold(FoldAdaptor adaptor) {
   // If deduplication is not required and there is only one operand, it can be
   // used directly instead of merging.
   return getHandles().front();
+}
+
+//===----------------------------------------------------------------------===//
+// NamedSequenceOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::NamedSequenceOp::apply(transform::TransformResults &results,
+                                  transform::TransformState &state) {
+  // Nothing to do here.
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::NamedSequenceOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {}
+
+ParseResult transform::NamedSequenceOp::parse(OpAsmParser &parser,
+                                              OperationState &result) {
+  return function_interface_impl::parseFunctionOp(
+      parser, result, /*allowVariadic=*/false,
+      getFunctionTypeAttrName(result.name),
+      [](Builder &builder, ArrayRef<Type> inputs, ArrayRef<Type> results,
+         function_interface_impl::VariadicFlag,
+         std::string &) { return builder.getFunctionType(inputs, results); },
+      getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
+}
+
+void transform::NamedSequenceOp::print(OpAsmPrinter &printer) {
+  function_interface_impl::printFunctionOp(
+      printer, cast<FunctionOpInterface>(getOperation()), /*isVariadic=*/false,
+      getFunctionTypeAttrName().getValue(), getArgAttrsAttrName(),
+      getResAttrsAttrName());
+}
+
+/// Verification of a NamedSequenceOp. This does not report the error
+/// immediately, so it can be used to check for op's well-formedness before the
+/// verifier runs, e.g., during trait verification.
+static DiagnosedSilenceableFailure
+verifyNamedSequenceOp(transform::NamedSequenceOp op) {
+  if (op.isExternal())
+    return emitSilenceableFailure(op) << "cannot be empty";
+
+  if (Operation *parent = op->getParentWithTrait<OpTrait::SymbolTable>()) {
+    if (!parent->getAttr(
+            transform::TransformDialect::kWithNamedSequenceAttrName)) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableFailure(op)
+          << "expects the parent symbol table to have the '"
+          << transform::TransformDialect::kWithNamedSequenceAttrName
+          << "' attribute";
+      diag.attachNote(parent->getLoc()) << "symbol table operation";
+      return diag;
+    }
+  }
+
+  if (auto parent = op->getParentOfType<transform::TransformOpInterface>()) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableFailure(op)
+        << "cannot be defined inside another transform op";
+    diag.attachNote(parent.getLoc()) << "ancestor transform op";
+    return diag;
+  }
+
+  if (op.getBody().front().empty())
+    return emitSilenceableFailure(op) << "expected a non-empty body block";
+
+  Operation *terminator = &op.getBody().front().back();
+  if (!isa<transform::YieldOp>(terminator)) {
+    DiagnosedSilenceableFailure diag = emitSilenceableFailure(op)
+                                       << "expected '"
+                                       << transform::YieldOp::getOperationName()
+                                       << "' as terminator";
+    diag.attachNote(terminator->getLoc()) << "terminator";
+    return diag;
+  }
+
+  if (terminator->getNumOperands() != op.getFunctionType().getNumResults()) {
+    return emitSilenceableFailure(terminator)
+           << "expected terminator to have as many operands as the parent op "
+              "has results";
+  }
+  for (auto [i, operandType, resultType] :
+       llvm::zip_equal(llvm::seq<unsigned>(0, terminator->getNumOperands()),
+                       terminator->getOperands().getType(),
+                       op.getFunctionType().getResults())) {
+    if (operandType == resultType)
+      continue;
+    return emitSilenceableFailure(terminator)
+           << "the type of the terminator operand #" << i
+           << " must match the type of the corresponding parent op result ("
+           << operandType << " vs " << resultType << ")";
+  }
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+LogicalResult transform::NamedSequenceOp::verify() {
+  // Actual verification happens in a separate function for reusability.
+  return verifyNamedSequenceOp(*this).checkAndReport();
 }
 
 //===----------------------------------------------------------------------===//
@@ -692,27 +971,8 @@ transform::SequenceOp::apply(transform::TransformResults &results,
   if (failed(mapBlockArguments(state)))
     return DiagnosedSilenceableFailure::definiteFailure();
 
-  // Apply the sequenced ops one by one.
-  for (Operation &transform : getBodyBlock()->without_terminator()) {
-    DiagnosedSilenceableFailure result =
-        state.applyTransform(cast<TransformOpInterface>(transform));
-    if (result.isDefiniteFailure())
-      return result;
-
-    if (result.isSilenceableFailure()) {
-      if (getFailurePropagationMode() == FailurePropagationMode::Propagate) {
-        // Propagate empty results in case of early exit.
-        forwardEmptyOperands(getBodyBlock(), state, results);
-        return result;
-      }
-      (void)result.silence();
-    }
-  }
-
-  // Forward the operation mapping for values yielded from the sequence to the
-  // values produced by the sequence op.
-  forwardTerminatorOperands(getBodyBlock(), state, results);
-  return DiagnosedSilenceableFailure::success();
+  return applySequenceBlock(*getBodyBlock(), getFailurePropagationMode(), state,
+                            results);
 }
 
 static ParseResult parseSequenceOpOperands(
@@ -871,22 +1131,6 @@ LogicalResult transform::SequenceOp::verify() {
   return success();
 }
 
-/// Appends to `effects` the memory effect instances on `target` with the same
-/// resource and effect as the ones the operation `iface` having on `source`.
-static void
-remapEffects(MemoryEffectOpInterface iface, BlockArgument source, Value target,
-             SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  SmallVector<MemoryEffects::EffectInstance> nestedEffects;
-  iface.getEffectsOnValue(source, nestedEffects);
-  for (const auto &effect : nestedEffects)
-    effects.emplace_back(effect.getEffect(), target, effect.getResource());
-}
-
-namespace {
-template <typename T>
-using has_get_extra_bindings = decltype(std::declval<T &>().getExtraBindings());
-} // namespace
-
 /// Populate `effects` with transform dialect memory effects for the potential
 /// top-level operation. Such operations have recursive effects from nested
 /// operations. When they have an operand, we can additionally remap effects on
@@ -911,26 +1155,8 @@ static void getPotentialTopLevelEffects(
 
   // Carry over all effects on arguments of the entry block as those on the
   // operands, this is the same value just remapped.
-  for (Operation &op : *operation.getBodyBlock()) {
-    auto iface = dyn_cast<MemoryEffectOpInterface>(&op);
-    if (!iface)
-      continue;
-
-    remapEffects(iface, operation.getBodyBlock()->getArgument(0),
-                 operation.getRoot(), effects);
-    if constexpr (llvm::is_detected<has_get_extra_bindings, OpTy>::value) {
-      for (auto [source, target] :
-           llvm::zip(operation.getBodyBlock()->getArguments().drop_front(),
-                     operation.getExtraBindings())) {
-        remapEffects(iface, source, target, effects);
-      }
-    }
-
-    SmallVector<MemoryEffects::EffectInstance> nestedEffects;
-    iface.getEffectsOnResource(transform::PayloadIRResource::get(),
-                               nestedEffects);
-    llvm::append_range(effects, nestedEffects);
-  }
+  remapArgumentEffects(*operation.getBodyBlock(), operation->getOperands(),
+                       effects);
 }
 
 void transform::SequenceOp::getEffects(

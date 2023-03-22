@@ -23,7 +23,7 @@ struct throwing_alloc
 {
     typedef T value_type;
     throwing_alloc(const throwing_alloc&);
-    T *allocate(size_t);
+    T *allocate(std::size_t);
     ~throwing_alloc() noexcept(false);
 };
 

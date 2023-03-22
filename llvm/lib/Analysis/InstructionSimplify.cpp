@@ -1411,8 +1411,8 @@ static Value *simplifyShift(Instruction::BinaryOps Opcode, Value *Op0,
   return nullptr;
 }
 
-/// Given operands for an Shl, LShr or AShr, see if we can
-/// fold the result.  If not, this returns null.
+/// Given operands for an LShr or AShr, see if we can fold the result.  If not,
+/// this returns null.
 static Value *simplifyRightShift(Instruction::BinaryOps Opcode, Value *Op0,
                                  Value *Op1, bool IsExact,
                                  const SimplifyQuery &Q, unsigned MaxRecurse) {

@@ -22,13 +22,13 @@
 template <class Sequence>
 struct make_variant_imp;
 
-template <size_t ...Indices>
-struct make_variant_imp<std::integer_sequence<size_t, Indices...>> {
-  template <size_t> using AlwaysChar = char;
+template <std::size_t ...Indices>
+struct make_variant_imp<std::integer_sequence<std::size_t, Indices...>> {
+  template <std::size_t> using AlwaysChar = char;
   using type = std::variant<AlwaysChar<Indices>...>;
 };
 
-template <size_t N>
+template <std::size_t N>
 using make_variant_t = typename make_variant_imp<std::make_index_sequence<N>>::type;
 
 constexpr bool ExpectEqual =

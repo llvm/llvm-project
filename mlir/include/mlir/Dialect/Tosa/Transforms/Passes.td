@@ -84,8 +84,12 @@ def TosaValidation : Pass<"tosa-validate", "func::FuncOp"> {
 
   let options = [
       Option<"profileName", "profile", "std::string",
-      /*default=*/"\"undefined\"",
-      "Validation if ops match for given profile">];
+             /*default=*/"\"undefined\"",
+             "Validate if operations match for the given profile">,
+      Option<"StrictOperationSpecAlignment", "strict-op-spec-alignment", "bool",
+             /*default=*/"false",
+             "Verify if the properties of certain operations align the spec requirement">,
+   ];
 }
 
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_PASSES

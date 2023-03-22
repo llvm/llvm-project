@@ -163,7 +163,7 @@ void test_throwing() {
   struct ThrowingSize {
     char* begin() const { return nullptr; }
     char* end() const { return nullptr; }
-    size_t size() const { throw 42; return 0; }
+    std::size_t size() const { throw 42; return 0; }
   };
   try {
     ThrowingSize x;

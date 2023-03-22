@@ -20,7 +20,7 @@
 #include "test_macros.h"
 
 template<typename CharT>
-void test ( const CharT *s, size_t sz ) {
+void test ( const CharT *s, std::size_t sz ) {
     {
     typedef std::basic_string_view<CharT> SV;
     LIBCPP_ASSERT_NOEXCEPT(SV(s, sz));

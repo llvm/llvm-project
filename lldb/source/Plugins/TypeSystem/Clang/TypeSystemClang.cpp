@@ -3727,22 +3727,6 @@ bool TypeSystemClang::SupportsLanguage(lldb::LanguageType language) {
   return TypeSystemClangSupportsLanguage(language);
 }
 
-ConstString
-TypeSystemClang::GetInstanceVariableName(lldb::LanguageType language) {
-  switch (language) {
-  case LanguageType::eLanguageTypeC_plus_plus:
-  case LanguageType::eLanguageTypeC_plus_plus_03:
-  case LanguageType::eLanguageTypeC_plus_plus_11:
-  case LanguageType::eLanguageTypeC_plus_plus_14:
-    return ConstString("this");
-  case LanguageType::eLanguageTypeObjC:
-  case LanguageType::eLanguageTypeObjC_plus_plus:
-    return ConstString("self");
-  default:
-    return {};
-  }
-}
-
 std::optional<std::string>
 TypeSystemClang::GetCXXClassName(const CompilerType &type) {
   if (!type)

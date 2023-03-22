@@ -203,18 +203,15 @@ void CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
 class InlineFunctionInfo {
 public:
   explicit InlineFunctionInfo(
-      CallGraph *cg = nullptr,
       function_ref<AssumptionCache &(Function &)> GetAssumptionCache = nullptr,
       ProfileSummaryInfo *PSI = nullptr,
       BlockFrequencyInfo *CallerBFI = nullptr,
       BlockFrequencyInfo *CalleeBFI = nullptr, bool UpdateProfile = true)
-      : CG(cg), GetAssumptionCache(GetAssumptionCache), PSI(PSI),
-        CallerBFI(CallerBFI), CalleeBFI(CalleeBFI),
-        UpdateProfile(UpdateProfile) {}
+      : GetAssumptionCache(GetAssumptionCache), PSI(PSI), CallerBFI(CallerBFI),
+        CalleeBFI(CalleeBFI), UpdateProfile(UpdateProfile) {}
 
   /// If non-null, InlineFunction will update the callgraph to reflect the
   /// changes it makes.
-  CallGraph *CG;
   function_ref<AssumptionCache &(Function &)> GetAssumptionCache;
   ProfileSummaryInfo *PSI;
   BlockFrequencyInfo *CallerBFI, *CalleeBFI;

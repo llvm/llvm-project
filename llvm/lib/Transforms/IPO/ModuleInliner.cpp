@@ -213,7 +213,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
     // Setup the data structure used to plumb customization into the
     // `InlineFunction` routine.
     InlineFunctionInfo IFI(
-        /*cg=*/nullptr, GetAssumptionCache, PSI,
+        GetAssumptionCache, PSI,
         &FAM.getResult<BlockFrequencyAnalysis>(*(CB->getCaller())),
         &FAM.getResult<BlockFrequencyAnalysis>(Callee));
 

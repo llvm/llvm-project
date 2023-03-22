@@ -19,7 +19,7 @@
 
 constexpr bool test() {
   int count = 0;
-  std::__for_each_index_sequence(std::make_index_sequence<8>(), [&]<size_t _Index> { count += _Index; });
+  std::__for_each_index_sequence(std::make_index_sequence<8>(), [&]<std::size_t _Index> { count += _Index; });
   assert(count == 28);
 
   return true;

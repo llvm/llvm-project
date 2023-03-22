@@ -39,7 +39,7 @@ auto toUpper(R range) {
   return std::ranges::transform_view(range, [](char c) { return std::toupper(c); });
 }
 
-template<class E1, class E2, size_t N, class Join = std::plus<E1>>
+template<class E1, class E2, std::size_t N, class Join = std::plus<E1>>
 auto joinArrays(E1 (&a)[N], E2 (&b)[N], Join join = Join()) {
   return std::ranges::transform_view(a, [&a, &b, join](auto& x) {
     auto idx = (&x) - a;

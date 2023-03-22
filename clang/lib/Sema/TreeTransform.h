@@ -377,20 +377,41 @@ public:
   /// By default, this routine transforms a statement by delegating to the
   /// appropriate TransformXXXAttr function to transform a specific kind
   /// of attribute. Subclasses may override this function to transform
-  /// attributed statements using some other mechanism.
+  /// attributed statements/types using some other mechanism.
   ///
   /// \returns the transformed attribute
   const Attr *TransformAttr(const Attr *S);
 
-/// Transform the specified attribute.
-///
-/// Subclasses should override the transformation of attributes with a pragma
-/// spelling to transform expressions stored within the attribute.
-///
-/// \returns the transformed attribute.
-#define ATTR(X)
-#define PRAGMA_SPELLING_ATTR(X)                                                \
+  // Transform the given statement attribute.
+  //
+  // Delegates to the appropriate TransformXXXAttr function to transform a
+  // specific kind of statement attribute. Unlike the non-statement taking
+  // version of this, this implements all attributes, not just pragmas.
+  const Attr *TransformStmtAttr(const Stmt *OrigS, const Stmt *InstS,
+                                const Attr *A);
+
+  // Transform the specified attribute.
+  //
+  // Subclasses should override the transformation of attributes with a pragma
+  // spelling to transform expressions stored within the attribute.
+  //
+  // \returns the transformed attribute.
+#define ATTR(X)                                                                \
   const X##Attr *Transform##X##Attr(const X##Attr *R) { return R; }
+#include "clang/Basic/AttrList.inc"
+
+  // Transform the specified attribute.
+  //
+  // Subclasses should override the transformation of attributes to do
+  // transformation and checking of statement attributes. By default, this
+  // delegates to the non-statement taking version.
+  //
+  // \returns the transformed attribute.
+#define ATTR(X)                                                                \
+  const X##Attr *TransformStmt##X##Attr(const Stmt *, const Stmt *,            \
+                                        const X##Attr *A) {                    \
+    return getDerived().Transform##X##Attr(A);                                 \
+  }
 #include "clang/Basic/AttrList.inc"
 
   /// Transform the given expression.
@@ -7551,35 +7572,51 @@ const Attr *TreeTransform<Derived>::TransformAttr(const Attr *R) {
     return R;
 
   switch (R->getKind()) {
-// Transform attributes with a pragma spelling by calling TransformXXXAttr.
-#define ATTR(X)
-#define PRAGMA_SPELLING_ATTR(X)                                                \
+// Transform attributes by calling TransformXXXAttr.
+#define ATTR(X)                                                                \
   case attr::X:                                                                \
     return getDerived().Transform##X##Attr(cast<X##Attr>(R));
 #include "clang/Basic/AttrList.inc"
-  default:
-    return R;
   }
+  return R;
+}
+
+template <typename Derived>
+const Attr *TreeTransform<Derived>::TransformStmtAttr(const Stmt *OrigS,
+                                                      const Stmt *InstS,
+                                                      const Attr *R) {
+  if (!R)
+    return R;
+
+  switch (R->getKind()) {
+// Transform attributes by calling TransformStmtXXXAttr.
+#define ATTR(X)                                                                \
+  case attr::X:                                                                \
+    return getDerived().TransformStmt##X##Attr(OrigS, InstS, cast<X##Attr>(R));
+#include "clang/Basic/AttrList.inc"
+  }
+  return TransformAttr(R);
 }
 
 template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformAttributedStmt(AttributedStmt *S,
                                                 StmtDiscardKind SDK) {
+  StmtResult SubStmt = getDerived().TransformStmt(S->getSubStmt(), SDK);
+  if (SubStmt.isInvalid())
+    return StmtError();
+
   bool AttrsChanged = false;
   SmallVector<const Attr *, 1> Attrs;
 
   // Visit attributes and keep track if any are transformed.
   for (const auto *I : S->getAttrs()) {
-    const Attr *R = getDerived().TransformAttr(I);
+    const Attr *R =
+        getDerived().TransformStmtAttr(S->getSubStmt(), SubStmt.get(), I);
     AttrsChanged |= (I != R);
     if (R)
       Attrs.push_back(R);
   }
-
-  StmtResult SubStmt = getDerived().TransformStmt(S->getSubStmt(), SDK);
-  if (SubStmt.isInvalid())
-    return StmtError();
 
   if (SubStmt.get() == S->getSubStmt() && !AttrsChanged)
     return S;

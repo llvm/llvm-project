@@ -34,7 +34,7 @@
 
 namespace ex = std::experimental::pmr;
 
-template <size_t S, size_t Align>
+template <std::size_t S, size_t Align>
 void testForSizeAndAlign() {
     struct T { alignas(Align) char data[S]; };
 

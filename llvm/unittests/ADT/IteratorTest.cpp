@@ -743,4 +743,65 @@ TEST(RangeTest, Distance) {
   EXPECT_EQ(std::distance(v2.begin(), v2.end()), size(v2));
 }
 
+TEST(RangeSizeTest, CommonRangeTypes) {
+  SmallVector<int> v1 = {1, 2, 3};
+  EXPECT_EQ(range_size(v1), 3u);
+
+  std::map<int, int> m1 = {{1, 1}, {2, 2}};
+  EXPECT_EQ(range_size(m1), 2u);
+
+  auto it_range = llvm::make_range(m1.begin(), m1.end());
+  EXPECT_EQ(range_size(it_range), 2u);
+
+  static constexpr int c_arr[5] = {};
+  static_assert(range_size(c_arr) == 5u);
+
+  static constexpr std::array<int, 6> cpp_arr = {};
+  static_assert(range_size(cpp_arr) == 6u);
+}
+
+struct FooWithMemberSize {
+  size_t size() const { return 42; }
+  auto begin() { return Data.begin(); }
+  auto end() { return Data.end(); }
+
+  std::set<int> Data;
+};
+
+TEST(RangeSizeTest, MemberSize) {
+  // Make sure that member `.size()` is preferred over the free fuction and
+  // `std::distance`.
+  FooWithMemberSize container;
+  EXPECT_EQ(range_size(container), 42u);
+}
+
+struct FooWithFreeSize {
+  friend size_t size(const FooWithFreeSize &) { return 13; }
+  auto begin() { return Data.begin(); }
+  auto end() { return Data.end(); }
+
+  std::set<int> Data;
+};
+
+TEST(RangeSizeTest, FreeSize) {
+  // Make sure that `size(x)` is preferred over `std::distance`.
+  FooWithFreeSize container;
+  EXPECT_EQ(range_size(container), 13u);
+}
+
+struct FooWithDistance {
+  auto begin() { return Data.begin(); }
+  auto end() { return Data.end(); }
+
+  std::set<int> Data;
+};
+
+TEST(RangeSizeTest, Distance) {
+  // Make sure that we can fall back to `std::distance` even the iterator is not
+  // random-access.
+  FooWithDistance container;
+  EXPECT_EQ(range_size(container), 0u);
+  container.Data = {1, 2, 3, 4};
+  EXPECT_EQ(range_size(container), 4u);
+}
 } // anonymous namespace

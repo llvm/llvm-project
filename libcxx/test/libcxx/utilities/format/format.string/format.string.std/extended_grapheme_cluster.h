@@ -78,7 +78,7 @@ struct data {
   /// The offset of the last code units of the extended grapheme clusters in the input.
   ///
   /// The vector has the same number of entries as \ref code_points.
-  std::vector<size_t> breaks;
+  std::vector<std::size_t> breaks;
 };
 
 /// The data for UTF-8.
