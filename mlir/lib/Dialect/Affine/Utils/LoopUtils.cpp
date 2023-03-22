@@ -2181,7 +2181,11 @@ static LogicalResult generateCopy(
     // Record it.
     fastBufferMap[memref] = fastMemRef;
     // fastMemRefType is a constant shaped memref.
-    *sizeInBytes = *getMemRefSizeInBytes(fastMemRefType);
+    auto maySizeInBytes = getIntOrFloatMemRefSizeInBytes(fastMemRefType);
+    // We don't account for things of unknown size.
+    if (!maySizeInBytes)
+      maySizeInBytes = 0;
+
     LLVM_DEBUG(emitRemarkForBlock(*block)
                << "Creating fast buffer of type " << fastMemRefType
                << " and size " << llvm::divideCeil(*sizeInBytes, 1024)
