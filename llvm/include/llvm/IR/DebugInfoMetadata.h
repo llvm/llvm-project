@@ -3817,6 +3817,18 @@ template <> struct DenseMapInfo<DebugVariable> {
   }
 };
 
+/// Identifies a unique instance of a whole variable (discards/ignores fragment
+/// information).
+class DebugVariableAggregate : public DebugVariable {
+public:
+  DebugVariableAggregate(const DbgVariableIntrinsic *DVI);
+  DebugVariableAggregate(const DebugVariable &V)
+      : DebugVariable(V.getVariable(), std::nullopt, V.getInlinedAt()) {}
+};
+
+template <>
+struct DenseMapInfo<DebugVariableAggregate>
+    : public DenseMapInfo<DebugVariable> {};
 } // end namespace llvm
 
 #undef DEFINE_MDNODE_GET_UNPACK_IMPL

@@ -204,7 +204,7 @@ if(FUCHSIA_SDK)
     set(BUILTINS_${target}_CMAKE_SYSROOT ${FUCHSIA_${target}_SYSROOT} CACHE PATH "")
   endforeach()
 
-  foreach(target x86_64-unknown-fuchsia;aarch64-unknown-fuchsia)
+  foreach(target x86_64-unknown-fuchsia;aarch64-unknown-fuchsia;riscv64-unknown-fuchsia)
     # Set the per-target runtimes options.
     list(APPEND RUNTIME_TARGETS "${target}")
     set(RUNTIMES_${target}_CMAKE_SYSTEM_NAME Fuchsia CACHE STRING "")
@@ -276,12 +276,12 @@ if(FUCHSIA_SDK)
 
   set(LLVM_RUNTIME_MULTILIBS "asan;noexcept;compat;asan+noexcept;hwasan;hwasan+noexcept" CACHE STRING "")
 
-  set(LLVM_RUNTIME_MULTILIB_asan_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia" CACHE STRING "")
-  set(LLVM_RUNTIME_MULTILIB_noexcept_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia" CACHE STRING "")
-  set(LLVM_RUNTIME_MULTILIB_compat_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia" CACHE STRING "")
-  set(LLVM_RUNTIME_MULTILIB_asan+noexcept_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia" CACHE STRING "")
-  set(LLVM_RUNTIME_MULTILIB_hwasan_TARGETS "aarch64-unknown-fuchsia" CACHE STRING "")
-  set(LLVM_RUNTIME_MULTILIB_hwasan+noexcept_TARGETS "aarch64-unknown-fuchsia" CACHE STRING "")
+  set(LLVM_RUNTIME_MULTILIB_asan_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia;riscv64-unknown-fuchsia" CACHE STRING "")
+  set(LLVM_RUNTIME_MULTILIB_noexcept_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia;riscv64-unknown-fuchsia" CACHE STRING "")
+  set(LLVM_RUNTIME_MULTILIB_compat_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia;riscv64-unknown-fuchsia" CACHE STRING "")
+  set(LLVM_RUNTIME_MULTILIB_asan+noexcept_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia;riscv64-unknown-fuchsia" CACHE STRING "")
+  set(LLVM_RUNTIME_MULTILIB_hwasan_TARGETS "aarch64-unknown-fuchsia;riscv64-unknown-fuchsia" CACHE STRING "")
+  set(LLVM_RUNTIME_MULTILIB_hwasan+noexcept_TARGETS "aarch64-unknown-fuchsia;riscv64-unknown-fuchsia" CACHE STRING "")
 endif()
 
 set(LLVM_BUILTIN_TARGETS "${BUILTIN_TARGETS}" CACHE STRING "")

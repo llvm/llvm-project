@@ -21,6 +21,7 @@
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/PostOrderIterator.h"
 
 namespace mlir {
 /// This iterator enumerates elements in "reverse" order. It is a wrapper around
@@ -37,7 +38,7 @@ struct ReverseIterator {
 /// This iterator enumerates elements according to their dominance relationship.
 /// Operations and regions are enumerated in "forward" order. Blocks are
 /// enumerated according to their successor relationship. Unreachable blocks are
-/// not enumerated.
+/// not enumerated. Blocks may not be erased during the traversal.
 ///
 /// Note: If `NoGraphRegions` is set to "true", this iterator asserts that each
 /// visited region has SSA dominance. In either case, the ops in such regions
@@ -68,6 +69,44 @@ struct ForwardDominanceIterator {
 
   static MutableArrayRef<Region> makeIterable(Operation &range) {
     return ForwardIterator::makeIterable(range);
+  }
+};
+
+/// This iterator enumerates elements according to their reverse dominance
+/// relationship. Operations and regions are enumerated in "reverse" order.
+/// Blocks are enumerated according to their successor relationship, but
+/// post-order. I.e., a block is visited after its successors have been visited.
+/// Cycles in the block graph are broken in an unspecified way. Unreachable
+/// blocks are not enumerated. Blocks may not be erased during the traversal.
+///
+/// Note: If `NoGraphRegions` is set to "true", this iterator asserts that each
+/// visited region has SSA dominance.
+template <bool NoGraphRegions = false>
+struct ReverseDominanceIterator {
+  // llvm::reverse uses RangeT::rbegin and RangeT::rend.
+  static constexpr auto makeIterable(Block &range) {
+    return llvm::reverse(ForwardIterator::makeIterable(range));
+  }
+
+  static constexpr auto makeIterable(Operation &range) {
+    return llvm::reverse(ForwardIterator::makeIterable(range));
+  }
+
+  static auto makeIterable(Region &region) {
+    if (NoGraphRegions) {
+      // Only regions with SSA dominance are allowed.
+      assert(mayHaveSSADominance(region) && "graph regions are not allowed");
+    }
+
+    // Create post-order iterator. Blocks are enumerated according to their
+    // successor relationship.
+    Block *null = nullptr;
+    auto it = region.empty()
+                  ? llvm::make_range(llvm::po_end(null), llvm::po_end(null))
+                  : llvm::post_order(&region.front());
+
+    // Walk API expects Block references instead of pointers.
+    return llvm::make_pointee_range(it);
   }
 };
 } // namespace mlir

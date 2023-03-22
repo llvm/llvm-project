@@ -13,7 +13,7 @@
 define i8 @load_i8(ptr %p) {
 ; ALL-LABEL: load_i8:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    lb a0, 0(a0)
+; ALL-NEXT:    lbu a0, 0(a0)
 ; ALL-NEXT:    ret
   %res = load i8, ptr %p, align 1
   ret i8 %res
@@ -22,7 +22,7 @@ define i8 @load_i8(ptr %p) {
 define i16 @load_i16(ptr %p) {
 ; NOMISALIGN-LABEL: load_i16:
 ; NOMISALIGN:       # %bb.0:
-; NOMISALIGN-NEXT:    lb a1, 1(a0)
+; NOMISALIGN-NEXT:    lbu a1, 1(a0)
 ; NOMISALIGN-NEXT:    lbu a0, 0(a0)
 ; NOMISALIGN-NEXT:    slli a1, a1, 8
 ; NOMISALIGN-NEXT:    or a0, a1, a0
@@ -41,7 +41,7 @@ define i24 @load_i24(ptr %p) {
 ; NOMISALIGN:       # %bb.0:
 ; NOMISALIGN-NEXT:    lbu a1, 1(a0)
 ; NOMISALIGN-NEXT:    lbu a2, 0(a0)
-; NOMISALIGN-NEXT:    lb a0, 2(a0)
+; NOMISALIGN-NEXT:    lbu a0, 2(a0)
 ; NOMISALIGN-NEXT:    slli a1, a1, 8
 ; NOMISALIGN-NEXT:    or a1, a1, a2
 ; NOMISALIGN-NEXT:    slli a0, a0, 16
@@ -50,7 +50,7 @@ define i24 @load_i24(ptr %p) {
 ;
 ; MISALIGN-LABEL: load_i24:
 ; MISALIGN:       # %bb.0:
-; MISALIGN-NEXT:    lb a1, 2(a0)
+; MISALIGN-NEXT:    lbu a1, 2(a0)
 ; MISALIGN-NEXT:    lhu a0, 0(a0)
 ; MISALIGN-NEXT:    slli a1, a1, 16
 ; MISALIGN-NEXT:    or a0, a0, a1
@@ -60,33 +60,19 @@ define i24 @load_i24(ptr %p) {
 }
 
 define i32 @load_i32(ptr %p) {
-; RV32I-LABEL: load_i32:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    lbu a1, 1(a0)
-; RV32I-NEXT:    lbu a2, 0(a0)
-; RV32I-NEXT:    lbu a3, 2(a0)
-; RV32I-NEXT:    lbu a0, 3(a0)
-; RV32I-NEXT:    slli a1, a1, 8
-; RV32I-NEXT:    or a1, a1, a2
-; RV32I-NEXT:    slli a3, a3, 16
-; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    or a0, a0, a3
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    ret
-;
-; RV64I-LABEL: load_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    lbu a1, 1(a0)
-; RV64I-NEXT:    lbu a2, 0(a0)
-; RV64I-NEXT:    lbu a3, 2(a0)
-; RV64I-NEXT:    lb a0, 3(a0)
-; RV64I-NEXT:    slli a1, a1, 8
-; RV64I-NEXT:    or a1, a1, a2
-; RV64I-NEXT:    slli a3, a3, 16
-; RV64I-NEXT:    slli a0, a0, 24
-; RV64I-NEXT:    or a0, a0, a3
-; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    ret
+; NOMISALIGN-LABEL: load_i32:
+; NOMISALIGN:       # %bb.0:
+; NOMISALIGN-NEXT:    lbu a1, 1(a0)
+; NOMISALIGN-NEXT:    lbu a2, 0(a0)
+; NOMISALIGN-NEXT:    lbu a3, 2(a0)
+; NOMISALIGN-NEXT:    lbu a0, 3(a0)
+; NOMISALIGN-NEXT:    slli a1, a1, 8
+; NOMISALIGN-NEXT:    or a1, a1, a2
+; NOMISALIGN-NEXT:    slli a3, a3, 16
+; NOMISALIGN-NEXT:    slli a0, a0, 24
+; NOMISALIGN-NEXT:    or a0, a0, a3
+; NOMISALIGN-NEXT:    or a0, a0, a1
+; NOMISALIGN-NEXT:    ret
 ;
 ; MISALIGN-LABEL: load_i32:
 ; MISALIGN:       # %bb.0:

@@ -310,7 +310,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32-NEXT:    sw s5, 4(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s6, 0(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    mv s0, a0
-; RV32-NEXT:    lb a0, 12(a0)
+; RV32-NEXT:    lbu a0, 12(a0)
 ; RV32-NEXT:    lw a1, 8(s0)
 ; RV32-NEXT:    slli a2, a0, 30
 ; RV32-NEXT:    lw a3, 4(s0)
@@ -389,7 +389,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    mv s0, a0
-; RV64-NEXT:    lb a0, 12(a0)
+; RV64-NEXT:    lbu a0, 12(a0)
 ; RV64-NEXT:    lwu a1, 8(s0)
 ; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    ld a2, 0(s0)
@@ -460,7 +460,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32M-NEXT:    sw s5, 4(sp) # 4-byte Folded Spill
 ; RV32M-NEXT:    sw s6, 0(sp) # 4-byte Folded Spill
 ; RV32M-NEXT:    mv s0, a0
-; RV32M-NEXT:    lb a0, 12(a0)
+; RV32M-NEXT:    lbu a0, 12(a0)
 ; RV32M-NEXT:    lw a1, 8(s0)
 ; RV32M-NEXT:    slli a2, a0, 30
 ; RV32M-NEXT:    lw a3, 4(s0)
@@ -535,7 +535,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64M-NEXT:    ld a1, 0(a0)
 ; RV64M-NEXT:    lwu a2, 8(a0)
 ; RV64M-NEXT:    srli a3, a1, 2
-; RV64M-NEXT:    lb a4, 12(a0)
+; RV64M-NEXT:    lbu a4, 12(a0)
 ; RV64M-NEXT:    slli a5, a2, 62
 ; RV64M-NEXT:    or a3, a5, a3
 ; RV64M-NEXT:    srai a3, a3, 31
@@ -610,7 +610,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    mv s2, a0
 ; RV32MV-NEXT:    lw a0, 8(a0)
 ; RV32MV-NEXT:    lw a1, 4(s2)
-; RV32MV-NEXT:    lb a2, 12(s2)
+; RV32MV-NEXT:    lbu a2, 12(s2)
 ; RV32MV-NEXT:    slli a3, a0, 31
 ; RV32MV-NEXT:    srli a4, a1, 1
 ; RV32MV-NEXT:    or s3, a4, a3
@@ -712,7 +712,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64MV-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
 ; RV64MV-NEXT:    addi s0, sp, 64
 ; RV64MV-NEXT:    andi sp, sp, -32
-; RV64MV-NEXT:    lb a1, 12(a0)
+; RV64MV-NEXT:    lbu a1, 12(a0)
 ; RV64MV-NEXT:    lwu a2, 8(a0)
 ; RV64MV-NEXT:    slli a1, a1, 32
 ; RV64MV-NEXT:    ld a3, 0(a0)

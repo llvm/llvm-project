@@ -1215,6 +1215,13 @@ DILocalVariableAttr ModuleImport::matchLocalVariableAttr(llvm::Value *value) {
   return debugImporter->translate(node);
 }
 
+FailureOr<SmallVector<SymbolRefAttr>>
+ModuleImport::matchAliasScopeAttrs(llvm::Value *value) {
+  auto *nodeAsVal = cast<llvm::MetadataAsValue>(value);
+  auto *node = cast<llvm::MDNode>(nodeAsVal->getMetadata());
+  return lookupAliasScopeAttrs(node);
+}
+
 Location ModuleImport::translateLoc(llvm::DILocation *loc) {
   return debugImporter->translateLoc(loc);
 }

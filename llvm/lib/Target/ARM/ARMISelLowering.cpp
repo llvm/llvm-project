@@ -1007,6 +1007,14 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
         setLoadExtAction(ISD::SEXTLOAD, VT, Ty, Legal);
       }
     }
+
+    for (auto VT : {MVT::v8i8, MVT::v4i16, MVT::v2i32, MVT::v16i8, MVT::v8i16,
+                    MVT::v4i32}) {
+      setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
+    }
   }
 
   if (Subtarget->hasNEON() || Subtarget->hasMVEIntegerOps()) {
@@ -10271,6 +10279,80 @@ static SDValue LowerVecReduceF(SDValue Op, SelectionDAG &DAG,
   return LowerVecReduce(Op, DAG, ST);
 }
 
+static SDValue LowerVecReduceMinMax(SDValue Op, SelectionDAG &DAG,
+                                    const ARMSubtarget *ST) {
+  if (!ST->hasNEON())
+    return SDValue();
+
+  SDLoc dl(Op);
+  SDValue Op0 = Op->getOperand(0);
+  EVT VT = Op0.getValueType();
+  EVT EltVT = VT.getVectorElementType();
+
+  unsigned PairwiseIntrinsic = 0;
+  switch (Op->getOpcode()) {
+  default:
+    llvm_unreachable("Expected VECREDUCE opcode");
+  case ISD::VECREDUCE_UMIN:
+    PairwiseIntrinsic = Intrinsic::arm_neon_vpminu;
+    break;
+  case ISD::VECREDUCE_UMAX:
+    PairwiseIntrinsic = Intrinsic::arm_neon_vpmaxu;
+    break;
+  case ISD::VECREDUCE_SMIN:
+    PairwiseIntrinsic = Intrinsic::arm_neon_vpmins;
+    break;
+  case ISD::VECREDUCE_SMAX:
+    PairwiseIntrinsic = Intrinsic::arm_neon_vpmaxs;
+    break;
+  }
+  SDValue PairwiseOp = DAG.getConstant(PairwiseIntrinsic, dl, MVT::i32);
+
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned NumActiveLanes = NumElts;
+
+  assert((NumActiveLanes == 16 || NumActiveLanes == 8 || NumActiveLanes == 4 ||
+          NumActiveLanes == 2) &&
+         "Only expected a power 2 vector size");
+
+  // Split 128-bit vectors, since vpmin/max takes 2 64-bit vectors.
+  if (VT.is128BitVector()) {
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = DAG.SplitVector(Op0, dl);
+    VT = Lo.getValueType();
+    Op0 = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, VT, {PairwiseOp, Lo, Hi});
+    NumActiveLanes /= 2;
+  }
+
+  // Use pairwise reductions until one lane remains
+  while (NumActiveLanes > 1) {
+    Op0 = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, VT, {PairwiseOp, Op0, Op0});
+    NumActiveLanes /= 2;
+  }
+
+  SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, Op0,
+                            DAG.getConstant(0, dl, MVT::i32));
+
+  // Result type may be wider than element type.
+  if (EltVT != Op.getValueType()) {
+    unsigned Extend = 0;
+    switch (Op->getOpcode()) {
+    default:
+      llvm_unreachable("Expected VECREDUCE opcode");
+    case ISD::VECREDUCE_UMIN:
+    case ISD::VECREDUCE_UMAX:
+      Extend = ISD::ZERO_EXTEND;
+      break;
+    case ISD::VECREDUCE_SMIN:
+    case ISD::VECREDUCE_SMAX:
+      Extend = ISD::SIGN_EXTEND;
+      break;
+    }
+    Res = DAG.getNode(Extend, dl, Op.getValueType(), Res);
+  }
+  return Res;
+}
+
 static SDValue LowerAtomicLoadStore(SDValue Op, SelectionDAG &DAG) {
   if (isStrongerThanMonotonic(cast<AtomicSDNode>(Op)->getSuccessOrdering()))
     // Acquire/Release load/store is not legal for targets without a dmb or
@@ -10502,6 +10584,11 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAX:
     return LowerVecReduceF(Op, DAG, Subtarget);
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_SMAX:
+    return LowerVecReduceMinMax(Op, DAG, Subtarget);
   case ISD::ATOMIC_LOAD:
   case ISD::ATOMIC_STORE:  return LowerAtomicLoadStore(Op, DAG);
   case ISD::FSINCOS:       return LowerFSINCOS(Op, DAG);

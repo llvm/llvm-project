@@ -489,7 +489,6 @@ libcxx/include/__memory/uninitialized_algorithms.h
 libcxx/include/__memory/unique_ptr.h
 libcxx/include/__memory/uses_allocator.h
 libcxx/include/mutex
-libcxx/include/__mutex_base
 libcxx/include/new
 libcxx/include/__node_handle
 libcxx/include/numbers

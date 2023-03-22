@@ -135,6 +135,11 @@ public:
   /// fails.
   DILocalVariableAttr matchLocalVariableAttr(llvm::Value *value);
 
+  /// Converts `value` to an array of symbol references pointing to alias scope
+  /// operations, or returns failure if the conversion fails.
+  FailureOr<SmallVector<SymbolRefAttr>>
+  matchAliasScopeAttrs(llvm::Value *value);
+
   /// Translates the debug location.
   Location translateLoc(llvm::DILocation *loc);
 

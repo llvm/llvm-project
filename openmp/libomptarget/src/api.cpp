@@ -116,16 +116,13 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
   }
 
   DeviceTy &Device = *PM->Devices[DeviceNum];
-  bool IsLast; // not used
-  bool IsHostPtr;
   // omp_target_is_present tests whether a host pointer refers to storage that
   // is mapped to a given device. However, due to the lack of the storage size,
   // only check 1 byte. Cannot set size 0 which checks whether the pointer (zero
   // lengh array) is mapped instead of the referred storage.
-  TargetPointerResultTy TPR =
-      Device.getTgtPtrBegin(const_cast<void *>(Ptr), 1, IsLast,
-                            /*UpdateRefCount=*/false,
-                            /*UseHoldRefCount=*/false, IsHostPtr);
+  TargetPointerResultTy TPR = Device.getTgtPtrBegin(const_cast<void *>(Ptr), 1,
+                                                    /*UpdateRefCount=*/false,
+                                                    /*UseHoldRefCount=*/false);
   int Rc = TPR.isPresent();
   DP("Call to omp_target_is_present returns %d\n", Rc);
   return Rc;
@@ -360,13 +357,10 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
     return nullptr;
   }
 
-  bool IsLast = false;
-  bool IsHostPtr = false;
   auto &Device = *PM->Devices[DeviceNum];
-  TargetPointerResultTy TPR =
-      Device.getTgtPtrBegin(const_cast<void *>(Ptr), 1, IsLast,
-                            /*UpdateRefCount=*/false,
-                            /*UseHoldRefCount=*/false, IsHostPtr);
+  TargetPointerResultTy TPR = Device.getTgtPtrBegin(const_cast<void *>(Ptr), 1,
+                                                    /*UpdateRefCount=*/false,
+                                                    /*UseHoldRefCount=*/false);
   if (!TPR.isPresent()) {
     DP("Ptr " DPxMOD "is not present on device %d, returning nullptr.\n",
        DPxPTR(Ptr), DeviceNum);

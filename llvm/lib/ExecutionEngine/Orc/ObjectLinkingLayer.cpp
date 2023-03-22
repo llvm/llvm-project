@@ -39,6 +39,10 @@ bool hasInitializerSection(jitlink::LinkGraph &G) {
   return false;
 }
 
+JITTargetAddress getJITSymbolPtrForSymbol(Symbol &Sym) {
+  return Sym.getAddress().getValue();
+}
+
 JITSymbolFlags getJITSymbolFlagsForSymbol(Symbol &Sym) {
   JITSymbolFlags Flags;
 
@@ -215,10 +219,9 @@ public:
     for (auto *Sym : G.defined_symbols())
       if (Sym->hasName() && Sym->getScope() != Scope::Local) {
         auto InternedName = ES.intern(Sym->getName());
+        auto Ptr = getJITSymbolPtrForSymbol(*Sym);
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
-
-        InternedResult[InternedName] =
-            JITEvaluatedSymbol(Sym->getAddress().getValue(), Flags);
+        InternedResult[InternedName] = JITEvaluatedSymbol(Ptr, Flags);
         if (AutoClaim && !MR->getSymbols().count(InternedName)) {
           assert(!ExtraSymbolsToClaim.count(InternedName) &&
                  "Duplicate symbol to claim?");
@@ -229,9 +232,9 @@ public:
     for (auto *Sym : G.absolute_symbols())
       if (Sym->hasName() && Sym->getScope() != Scope::Local) {
         auto InternedName = ES.intern(Sym->getName());
+        auto Ptr = getJITSymbolPtrForSymbol(*Sym);
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
-        InternedResult[InternedName] =
-            JITEvaluatedSymbol(Sym->getAddress().getValue(), Flags);
+        InternedResult[InternedName] = JITEvaluatedSymbol(Ptr, Flags);
         if (AutoClaim && !MR->getSymbols().count(InternedName)) {
           assert(!ExtraSymbolsToClaim.count(InternedName) &&
                  "Duplicate symbol to claim?");
