@@ -186,6 +186,11 @@ public:
     return create<mlir::cir::LoadOp>(loc, addr.getElementType(),
                                      addr.getPointer());
   }
+
+  mlir::cir::StoreOp createStore(mlir::Location loc, mlir::Value val,
+                                 Address dst) {
+    return create<mlir::cir::StoreOp>(loc, val, dst.getPointer());
+  }
 };
 
 } // namespace cir
