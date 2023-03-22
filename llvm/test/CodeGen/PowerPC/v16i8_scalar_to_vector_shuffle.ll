@@ -195,9 +195,9 @@ define <16 x i8> @test_none_v16i8(i8 %arg, ptr nocapture noundef readonly %b) {
 ;
 ; CHECK-LE-P9-LABEL: test_none_v16i8:
 ; CHECK-LE-P9:       # %bb.0: # %entry
-; CHECK-LE-P9-NEXT:    mtfprd f0, r3
+; CHECK-LE-P9-NEXT:    mtvsrd v2, r3
 ; CHECK-LE-P9-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
-; CHECK-LE-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-LE-P9-NEXT:    lxv vs0, 0(r4)
 ; CHECK-LE-P9-NEXT:    addi r3, r3, .LCPI2_0@toc@l
 ; CHECK-LE-P9-NEXT:    lxv vs1, 0(r3)
 ; CHECK-LE-P9-NEXT:    xxperm v2, vs0, vs1
@@ -215,9 +215,9 @@ define <16 x i8> @test_none_v16i8(i8 %arg, ptr nocapture noundef readonly %b) {
 ;
 ; CHECK-BE-P9-LABEL: test_none_v16i8:
 ; CHECK-BE-P9:       # %bb.0: # %entry
-; CHECK-BE-P9-NEXT:    mtfprwz f0, r3
+; CHECK-BE-P9-NEXT:    mtvsrwz v2, r3
 ; CHECK-BE-P9-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
-; CHECK-BE-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-BE-P9-NEXT:    lxv vs0, 0(r4)
 ; CHECK-BE-P9-NEXT:    addi r3, r3, .LCPI2_0@toc@l
 ; CHECK-BE-P9-NEXT:    lxv vs1, 0(r3)
 ; CHECK-BE-P9-NEXT:    xxperm v2, vs0, vs1
@@ -234,9 +234,9 @@ define <16 x i8> @test_none_v16i8(i8 %arg, ptr nocapture noundef readonly %b) {
 ;
 ; CHECK-AIX-64-P9-LABEL: test_none_v16i8:
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
-; CHECK-AIX-64-P9-NEXT:    mtfprwz f0, r3
+; CHECK-AIX-64-P9-NEXT:    mtvsrwz v2, r3
 ; CHECK-AIX-64-P9-NEXT:    ld r3, L..C1(r2) # %const.0
-; CHECK-AIX-64-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-AIX-64-P9-NEXT:    lxv vs0, 0(r4)
 ; CHECK-AIX-64-P9-NEXT:    lxv vs1, 0(r3)
 ; CHECK-AIX-64-P9-NEXT:    xxperm v2, vs0, vs1
 ; CHECK-AIX-64-P9-NEXT:    blr
@@ -443,9 +443,9 @@ define <16 x i8> @test_none_v8i16(i16 %arg, ptr nocapture noundef readonly %b) {
 ;
 ; CHECK-LE-P9-LABEL: test_none_v8i16:
 ; CHECK-LE-P9:       # %bb.0: # %entry
-; CHECK-LE-P9-NEXT:    mtfprd f0, r3
+; CHECK-LE-P9-NEXT:    mtvsrd v2, r3
 ; CHECK-LE-P9-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
-; CHECK-LE-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-LE-P9-NEXT:    lxv vs0, 0(r4)
 ; CHECK-LE-P9-NEXT:    addi r3, r3, .LCPI5_0@toc@l
 ; CHECK-LE-P9-NEXT:    lxv vs1, 0(r3)
 ; CHECK-LE-P9-NEXT:    xxperm v2, vs0, vs1
@@ -463,9 +463,9 @@ define <16 x i8> @test_none_v8i16(i16 %arg, ptr nocapture noundef readonly %b) {
 ;
 ; CHECK-BE-P9-LABEL: test_none_v8i16:
 ; CHECK-BE-P9:       # %bb.0: # %entry
-; CHECK-BE-P9-NEXT:    mtfprwz f0, r3
+; CHECK-BE-P9-NEXT:    mtvsrwz v2, r3
 ; CHECK-BE-P9-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
-; CHECK-BE-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-BE-P9-NEXT:    lxv vs0, 0(r4)
 ; CHECK-BE-P9-NEXT:    addi r3, r3, .LCPI5_0@toc@l
 ; CHECK-BE-P9-NEXT:    lxv vs1, 0(r3)
 ; CHECK-BE-P9-NEXT:    xxperm v2, vs0, vs1
@@ -482,9 +482,9 @@ define <16 x i8> @test_none_v8i16(i16 %arg, ptr nocapture noundef readonly %b) {
 ;
 ; CHECK-AIX-64-P9-LABEL: test_none_v8i16:
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
-; CHECK-AIX-64-P9-NEXT:    mtfprwz f0, r3
+; CHECK-AIX-64-P9-NEXT:    mtvsrwz v2, r3
 ; CHECK-AIX-64-P9-NEXT:    ld r3, L..C2(r2) # %const.0
-; CHECK-AIX-64-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-AIX-64-P9-NEXT:    lxv vs0, 0(r4)
 ; CHECK-AIX-64-P9-NEXT:    lxv vs1, 0(r3)
 ; CHECK-AIX-64-P9-NEXT:    xxperm v2, vs0, vs1
 ; CHECK-AIX-64-P9-NEXT:    blr
