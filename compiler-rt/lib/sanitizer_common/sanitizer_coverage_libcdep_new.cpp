@@ -284,7 +284,10 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_pcs_init, const uptr* beg,
 // E.g., -fsanitize=fuzzer-no-link
 // FIXME: Update Apple deployment target so that thread_local is always
 // supported, and remove the #if.
-#if !SANITIZER_APPLE
+// FIXME: Figure out how this should work on Windows, exported thread_local
+// symbols are not supported:
+// "data with thread storage duration may not have dll interface"
+#if !SANITIZER_APPLE && !SANITIZER_WINDOWS
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 thread_local uptr __sancov_lowest_stack;
 #endif
