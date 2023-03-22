@@ -541,8 +541,8 @@ define i8 @PR39793_bswap_u32_as_u16_trunc(i32 %0) {
 
 define i32 @partial_bswap(i32 %x) {
 ; CHECK-LABEL: @partial_bswap(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.bswap.i32(i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.bswap.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x3 = shl i32 %x, 24
   %a2 = shl i32 %x, 8
@@ -557,8 +557,8 @@ declare i32 @llvm.bswap.i32(i32)
 
 define <2 x i32> @partial_bswap_vector(<2 x i32> %x) {
 ; CHECK-LABEL: @partial_bswap_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[X:%.*]])
-; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %x3 = shl <2 x i32> %x, <i32 24, i32 24>
   %a2 = shl <2 x i32> %x, <i32 8, i32 8>
