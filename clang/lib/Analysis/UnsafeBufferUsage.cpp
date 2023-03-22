@@ -463,6 +463,45 @@ public:
     return {};
   }
 };
+
+class PointerDereferenceGadget : public FixableGadget {
+  static constexpr const char *const BaseDeclRefExprTag = "BaseDRE";
+  static constexpr const char *const OperatorTag = "op";
+
+  const DeclRefExpr *BaseDeclRefExpr = nullptr;
+  const UnaryOperator *Op = nullptr;
+
+public:
+  PointerDereferenceGadget(const MatchFinder::MatchResult &Result)
+      : FixableGadget(Kind::PointerDereference),
+        BaseDeclRefExpr(
+            Result.Nodes.getNodeAs<DeclRefExpr>(BaseDeclRefExprTag)),
+        Op(Result.Nodes.getNodeAs<UnaryOperator>(OperatorTag)) {}
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::PointerDereference;
+  }
+
+  static Matcher matcher() {
+    auto Target =
+        unaryOperator(
+            hasOperatorName("*"),
+            has(expr(ignoringParenImpCasts(
+                declRefExpr(to(varDecl())).bind(BaseDeclRefExprTag)))))
+            .bind(OperatorTag);
+
+    return expr(isInUnspecifiedLvalueContext(Target));
+  }
+
+  DeclUseList getClaimedVarUseSites() const override {
+    return {BaseDeclRefExpr};
+  }
+
+  virtual const Stmt *getBaseStmt() const final { return Op; }
+
+  virtual std::optional<FixItList> getFixits(const Strategy &S) const override;
+};
+
 } // namespace
 
 namespace {
@@ -912,6 +951,37 @@ DerefSimplePtrArithFixableGadget::getFixits(const Strategy &s) const {
          FixItHint::CreateReplacement(ClosingParenWithPrecWhitespace, "]")}};
   }
   return std::nullopt; // something wrong or unsupported, give up
+}
+
+std::optional<FixItList>
+PointerDereferenceGadget::getFixits(const Strategy &S) const {
+  const VarDecl *VD = cast<VarDecl>(BaseDeclRefExpr->getDecl());
+  switch (S.lookup(VD)) {
+  case Strategy::Kind::Span: {
+    ASTContext &Ctx = VD->getASTContext();
+    SourceManager &SM = Ctx.getSourceManager();
+    // Required changes: *(ptr); => (ptr[0]); and *ptr; => ptr[0]
+    // Deletes the *operand
+    CharSourceRange derefRange = clang::CharSourceRange::getCharRange(
+        Op->getBeginLoc(), Op->getBeginLoc().getLocWithOffset(1));
+    // Inserts the [0]
+    std::optional<SourceLocation> endOfOperand =
+        getEndCharLoc(BaseDeclRefExpr, SM, Ctx.getLangOpts());
+    if (endOfOperand) {
+      return FixItList{{FixItHint::CreateRemoval(derefRange),
+                        FixItHint::CreateInsertion(
+                            endOfOperand.value().getLocWithOffset(1), "[0]")}};
+    }
+  }
+  case Strategy::Kind::Iterator:
+  case Strategy::Kind::Array:
+  case Strategy::Kind::Vector:
+    llvm_unreachable("Strategy not implemented yet!");
+  case Strategy::Kind::Wontfix:
+    llvm_unreachable("Invalid strategy!");
+  }
+
+  return std::nullopt;
 }
 
 // For a non-null initializer `Init` of `T *` type, this function returns
