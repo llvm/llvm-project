@@ -1633,9 +1633,9 @@ define i32 @ptr_induction_ult_1(ptr %a, ptr %b) {
 ; CHECK-LABEL: 'ptr_induction_ult_1'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_ult_1
 ; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-; CHECK-NEXT:    --> {%a,+,4}<%loop> U: full-set S: full-set Exits: %a LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,4}<nw><%loop> U: full-set S: full-set Exits: %a LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
-; CHECK-NEXT:    --> {(4 + %a),+,4}<%loop> U: full-set S: full-set Exits: (4 + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(4 + %a),+,4}<nw><%loop> U: full-set S: full-set Exits: (4 + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_ult_1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 0
@@ -1686,18 +1686,17 @@ exit:
   ret i32 0
 }
 
-; TODO: The pointer induction variable can be implied No Self Wrap.
 define void @gep_addrec_nw(ptr %a) {
 ; CHECK-LABEL: 'gep_addrec_nw'
 ; CHECK-NEXT:  Classifying expressions for: @gep_addrec_nw
 ; CHECK-NEXT:    %lsr.iv1 = phi ptr [ %uglygep2, %for.body ], [ %a, %entry ]
-; CHECK-NEXT:    --> {%a,+,4}<%for.body> U: full-set S: full-set Exits: (1512 + %a) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {%a,+,4}<nw><%for.body> U: full-set S: full-set Exits: (1512 + %a) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %lsr.iv = phi i64 [ %lsr.iv.next, %for.body ], [ 379, %entry ]
 ; CHECK-NEXT:    --> {379,+,-1}<nsw><%for.body> U: [1,380) S: [1,380) Exits: 1 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %lsr.iv.next = add nsw i64 %lsr.iv, -1
 ; CHECK-NEXT:    --> {378,+,-1}<nsw><%for.body> U: [0,379) S: [0,379) Exits: 0 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %uglygep2 = getelementptr i8, ptr %lsr.iv1, i64 4
-; CHECK-NEXT:    --> {(4 + %a),+,4}<%for.body> U: full-set S: full-set Exits: (1516 + %a) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {(4 + %a),+,4}<nw><%for.body> U: full-set S: full-set Exits: (1516 + %a) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @gep_addrec_nw
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 378
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 378

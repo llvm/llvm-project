@@ -56,7 +56,6 @@ define void @fill_no_null_opt(i8** %ls1.20, i8** %ls2.21, i8* %cse3.22) #0 {
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8* [[SCEVGEP]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* [[LS2_21_PROMOTED]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, i8* [[LS1_20_PROMOTED]], i64 -1
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %bb1.ph.lver.orig, label %bb1.ph
 ; CHECK:       bb1.ph.lver.orig:
 ;
