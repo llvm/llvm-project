@@ -507,6 +507,43 @@ define i32 @stack_arg_cast(i32 %x) {
   ret i32 %v
 }
 
+; Checks that epilogues are inserted after return calls.
+define i32 @direct_epilogue() {
+; CHECK-LABEL: direct_epilogue:
+; CHECK:         .functype direct_epilogue () -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get $push0=, __stack_pointer
+; CHECK-NEXT:    i32.const $push1=, 256
+; CHECK-NEXT:    i32.sub $push5=, $pop0, $pop1
+; CHECK-NEXT:    local.tee $push4=, $0=, $pop5
+; CHECK-NEXT:    global.set __stack_pointer, $pop4
+; CHECK-NEXT:    i32.const $push2=, 256
+; CHECK-NEXT:    i32.add $push3=, $0, $pop2
+; CHECK-NEXT:    global.set __stack_pointer, $pop3
+; CHECK-NEXT:    return_call direct_epilogue
+  %a = alloca [64 x i32]
+  %v = musttail call i32 @direct_epilogue()
+  ret i32 %v
+}
+
+define i32 @indirect_epilogue(ptr %p) {
+; CHECK-LABEL: indirect_epilogue:
+; CHECK:         .functype indirect_epilogue (i32) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get $push0=, __stack_pointer
+; CHECK-NEXT:    i32.const $push1=, 256
+; CHECK-NEXT:    i32.sub $push5=, $pop0, $pop1
+; CHECK-NEXT:    local.tee $push4=, $1=, $pop5
+; CHECK-NEXT:    global.set __stack_pointer, $pop4
+; CHECK-NEXT:    i32.const $push2=, 256
+; CHECK-NEXT:    i32.add $push3=, $1, $pop2
+; CHECK-NEXT:    global.set __stack_pointer, $pop3
+; CHECK-NEXT:    return_call_indirect , $0, $0
+  %a = alloca [64 x i32]
+  %v = musttail call i32 %p(ptr %p)
+  ret i32 %v
+}
+
 ; Check that the signatures generated for external indirectly
 ; return-called functions include the proper return types
 
