@@ -84,6 +84,18 @@ def CallableOpInterface : OpInterface<"CallableOpInterface"> {
       }],
       "::llvm::ArrayRef<::mlir::Type>", "getCallableResults"
     >,
+    InterfaceMethod<[{
+        Returns the argument attributes for all callable region arguments or
+        null if there are none.
+      }],
+      "::mlir::ArrayAttr", "getCallableArgAttrs"
+    >,
+    InterfaceMethod<[{
+        Returns the result attributes for all callable region results or null
+        if there are none.
+      }],
+      "::mlir::ArrayAttr", "getCallableResAttrs"
+    >
   ];
 }
 
