@@ -30,10 +30,11 @@ namespace impl {
 
 template <typename Derived>
 class ExtractAPIVisitorBase : public RecursiveASTVisitor<Derived> {
-public:
+protected:
   ExtractAPIVisitorBase(ASTContext &Context, APISet &API)
       : Context(Context), API(API) {}
 
+public:
   const APISet &getAPI() const { return API; }
 
   bool VisitVarDecl(const VarDecl *Decl);
@@ -99,7 +100,9 @@ protected:
   }
 
 private:
-  Derived &getConcrete() { return *static_cast<Derived *>(this); }
+  Derived &getDerivedExtractAPIVisitor() {
+    return *static_cast<Derived *>(this);
+  }
 };
 
 template <typename Derived>
@@ -121,7 +124,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitVarDecl(const VarDecl *Decl) {
       Decl->getTemplateSpecializationKind() == TSK_Undeclared)
     return true;
 
-  if (!getConcrete().shouldDeclBeIncluded(Decl))
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
 
   // Collect symbol information.
@@ -131,7 +134,8 @@ bool ExtractAPIVisitorBase<Derived>::VisitVarDecl(const VarDecl *Decl) {
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
   LinkageInfo Linkage = Decl->getLinkageAndVisibility();
   DocComment Comment;
-  if (auto *RawComment = getConcrete().fetchRawCommentForDecl(Decl))
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
     Comment = RawComment->getFormattedLines(Context.getSourceManager(),
                                             Context.getDiagnostics());
 
@@ -183,7 +187,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitFunctionDecl(
     return true;
   }
 
-  if (!getConcrete().shouldDeclBeIncluded(Decl))
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
 
   // Collect symbol information.
@@ -193,7 +197,8 @@ bool ExtractAPIVisitorBase<Derived>::VisitFunctionDecl(
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
   LinkageInfo Linkage = Decl->getLinkageAndVisibility();
   DocComment Comment;
-  if (auto *RawComment = getConcrete().fetchRawCommentForDecl(Decl))
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
     Comment = RawComment->getFormattedLines(Context.getSourceManager(),
                                             Context.getDiagnostics());
 
@@ -214,7 +219,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitFunctionDecl(
 
 template <typename Derived>
 bool ExtractAPIVisitorBase<Derived>::VisitEnumDecl(const EnumDecl *Decl) {
-  if (!getConcrete().shouldDeclBeIncluded(Decl))
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
 
   SmallString<128> QualifiedNameBuffer;
@@ -232,7 +237,8 @@ bool ExtractAPIVisitorBase<Derived>::VisitEnumDecl(const EnumDecl *Decl) {
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
   DocComment Comment;
-  if (auto *RawComment = getConcrete().fetchRawCommentForDecl(Decl))
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
     Comment = RawComment->getFormattedLines(Context.getSourceManager(),
                                             Context.getDiagnostics());
 
@@ -247,7 +253,8 @@ bool ExtractAPIVisitorBase<Derived>::VisitEnumDecl(const EnumDecl *Decl) {
                   Comment, Declaration, SubHeading, isInSystemHeader(Decl));
 
   // Now collect information about the enumerators in this enum.
-  getConcrete().recordEnumConstants(EnumRecord, Decl->enumerators());
+  getDerivedExtractAPIVisitor().recordEnumConstants(EnumRecord,
+                                                    Decl->enumerators());
 
   return true;
 }
@@ -259,7 +266,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
   if (isa<CXXRecordDecl>(Decl))
     return true;
 
-  if (!getConcrete().shouldDeclBeIncluded(Decl))
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
 
   // Collect symbol information.
@@ -273,7 +280,8 @@ bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
   DocComment Comment;
-  if (auto *RawComment = getConcrete().fetchRawCommentForDecl(Decl))
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
     Comment = RawComment->getFormattedLines(Context.getSourceManager(),
                                             Context.getDiagnostics());
 
@@ -288,7 +296,8 @@ bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
                     SubHeading, isInSystemHeader(Decl));
 
   // Now collect information about the fields in this struct.
-  getConcrete().recordStructFields(StructRecord, Decl->fields());
+  getDerivedExtractAPIVisitor().recordStructFields(StructRecord,
+                                                   Decl->fields());
 
   return true;
 }
@@ -296,7 +305,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
 template <typename Derived>
 bool ExtractAPIVisitorBase<Derived>::VisitObjCInterfaceDecl(
     const ObjCInterfaceDecl *Decl) {
-  if (!getConcrete().shouldDeclBeIncluded(Decl))
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
 
   // Collect symbol information.
@@ -306,7 +315,8 @@ bool ExtractAPIVisitorBase<Derived>::VisitObjCInterfaceDecl(
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
   LinkageInfo Linkage = Decl->getLinkageAndVisibility();
   DocComment Comment;
-  if (auto *RawComment = getConcrete().fetchRawCommentForDecl(Decl))
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
     Comment = RawComment->getFormattedLines(Context.getSourceManager(),
                                             Context.getDiagnostics());
 
@@ -329,10 +339,14 @@ bool ExtractAPIVisitorBase<Derived>::VisitObjCInterfaceDecl(
 
   // Record all methods (selectors). This doesn't include automatically
   // synthesized property methods.
-  getConcrete().recordObjCMethods(ObjCInterfaceRecord, Decl->methods());
-  getConcrete().recordObjCProperties(ObjCInterfaceRecord, Decl->properties());
-  getConcrete().recordObjCInstanceVariables(ObjCInterfaceRecord, Decl->ivars());
-  getConcrete().recordObjCProtocols(ObjCInterfaceRecord, Decl->protocols());
+  getDerivedExtractAPIVisitor().recordObjCMethods(ObjCInterfaceRecord,
+                                                  Decl->methods());
+  getDerivedExtractAPIVisitor().recordObjCProperties(ObjCInterfaceRecord,
+                                                     Decl->properties());
+  getDerivedExtractAPIVisitor().recordObjCInstanceVariables(ObjCInterfaceRecord,
+                                                            Decl->ivars());
+  getDerivedExtractAPIVisitor().recordObjCProtocols(ObjCInterfaceRecord,
+                                                    Decl->protocols());
 
   return true;
 }
@@ -340,7 +354,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitObjCInterfaceDecl(
 template <typename Derived>
 bool ExtractAPIVisitorBase<Derived>::VisitObjCProtocolDecl(
     const ObjCProtocolDecl *Decl) {
-  if (!getConcrete().shouldDeclBeIncluded(Decl))
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
 
   // Collect symbol information.
@@ -349,7 +363,8 @@ bool ExtractAPIVisitorBase<Derived>::VisitObjCProtocolDecl(
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
   DocComment Comment;
-  if (auto *RawComment = getConcrete().fetchRawCommentForDecl(Decl))
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
     Comment = RawComment->getFormattedLines(Context.getSourceManager(),
                                             Context.getDiagnostics());
 
@@ -363,9 +378,12 @@ bool ExtractAPIVisitorBase<Derived>::VisitObjCProtocolDecl(
       API.addObjCProtocol(Name, USR, Loc, AvailabilitySet(Decl), Comment,
                           Declaration, SubHeading, isInSystemHeader(Decl));
 
-  getConcrete().recordObjCMethods(ObjCProtocolRecord, Decl->methods());
-  getConcrete().recordObjCProperties(ObjCProtocolRecord, Decl->properties());
-  getConcrete().recordObjCProtocols(ObjCProtocolRecord, Decl->protocols());
+  getDerivedExtractAPIVisitor().recordObjCMethods(ObjCProtocolRecord,
+                                                  Decl->methods());
+  getDerivedExtractAPIVisitor().recordObjCProperties(ObjCProtocolRecord,
+                                                     Decl->properties());
+  getDerivedExtractAPIVisitor().recordObjCProtocols(ObjCProtocolRecord,
+                                                    Decl->protocols());
 
   return true;
 }
@@ -380,7 +398,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitTypedefNameDecl(
   if (!Decl->isDefinedOutsideFunctionOrMethod())
     return true;
 
-  if (!getConcrete().shouldDeclBeIncluded(Decl))
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
 
   PresumedLoc Loc =
@@ -388,7 +406,8 @@ bool ExtractAPIVisitorBase<Derived>::VisitTypedefNameDecl(
   StringRef Name = Decl->getName();
   StringRef USR = API.recordUSR(Decl);
   DocComment Comment;
-  if (auto *RawComment = getConcrete().fetchRawCommentForDecl(Decl))
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
     Comment = RawComment->getFormattedLines(Context.getSourceManager(),
                                             Context.getDiagnostics());
 
@@ -408,7 +427,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitTypedefNameDecl(
 template <typename Derived>
 bool ExtractAPIVisitorBase<Derived>::VisitObjCCategoryDecl(
     const ObjCCategoryDecl *Decl) {
-  if (!getConcrete().shouldDeclBeIncluded(Decl))
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
 
   StringRef Name = Decl->getName();
@@ -416,7 +435,8 @@ bool ExtractAPIVisitorBase<Derived>::VisitObjCCategoryDecl(
   PresumedLoc Loc =
       Context.getSourceManager().getPresumedLoc(Decl->getLocation());
   DocComment Comment;
-  if (auto *RawComment = getConcrete().fetchRawCommentForDecl(Decl))
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
     Comment = RawComment->getFormattedLines(Context.getSourceManager(),
                                             Context.getDiagnostics());
   // Build declaration fragments and sub-heading for the category.
@@ -433,10 +453,14 @@ bool ExtractAPIVisitorBase<Derived>::VisitObjCCategoryDecl(
       Name, USR, Loc, AvailabilitySet(Decl), Comment, Declaration, SubHeading,
       Interface, isInSystemHeader(Decl));
 
-  getConcrete().recordObjCMethods(ObjCCategoryRecord, Decl->methods());
-  getConcrete().recordObjCProperties(ObjCCategoryRecord, Decl->properties());
-  getConcrete().recordObjCInstanceVariables(ObjCCategoryRecord, Decl->ivars());
-  getConcrete().recordObjCProtocols(ObjCCategoryRecord, Decl->protocols());
+  getDerivedExtractAPIVisitor().recordObjCMethods(ObjCCategoryRecord,
+                                                  Decl->methods());
+  getDerivedExtractAPIVisitor().recordObjCProperties(ObjCCategoryRecord,
+                                                     Decl->properties());
+  getDerivedExtractAPIVisitor().recordObjCInstanceVariables(ObjCCategoryRecord,
+                                                            Decl->ivars());
+  getDerivedExtractAPIVisitor().recordObjCProtocols(ObjCCategoryRecord,
+                                                    Decl->protocols());
 
   return true;
 }
@@ -453,7 +477,8 @@ void ExtractAPIVisitorBase<Derived>::recordEnumConstants(
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Constant->getLocation());
     DocComment Comment;
-    if (auto *RawComment = getConcrete().fetchRawCommentForDecl(Constant))
+    if (auto *RawComment =
+            getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Constant))
       Comment = RawComment->getFormattedLines(Context.getSourceManager(),
                                               Context.getDiagnostics());
 
@@ -481,7 +506,8 @@ void ExtractAPIVisitorBase<Derived>::recordStructFields(
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Field->getLocation());
     DocComment Comment;
-    if (auto *RawComment = getConcrete().fetchRawCommentForDecl(Field))
+    if (auto *RawComment =
+            getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Field))
       Comment = RawComment->getFormattedLines(Context.getSourceManager(),
                                               Context.getDiagnostics());
 
@@ -513,7 +539,8 @@ void ExtractAPIVisitorBase<Derived>::recordObjCMethods(
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Method->getLocation());
     DocComment Comment;
-    if (auto *RawComment = getConcrete().fetchRawCommentForDecl(Method))
+    if (auto *RawComment =
+            getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Method))
       Comment = RawComment->getFormattedLines(Context.getSourceManager(),
                                               Context.getDiagnostics());
 
@@ -541,7 +568,8 @@ void ExtractAPIVisitorBase<Derived>::recordObjCProperties(
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Property->getLocation());
     DocComment Comment;
-    if (auto *RawComment = getConcrete().fetchRawCommentForDecl(Property))
+    if (auto *RawComment =
+            getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Property))
       Comment = RawComment->getFormattedLines(Context.getSourceManager(),
                                               Context.getDiagnostics());
 
@@ -585,7 +613,8 @@ void ExtractAPIVisitorBase<Derived>::recordObjCInstanceVariables(
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Ivar->getLocation());
     DocComment Comment;
-    if (auto *RawComment = getConcrete().fetchRawCommentForDecl(Ivar))
+    if (auto *RawComment =
+            getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Ivar))
       Comment = RawComment->getFormattedLines(Context.getSourceManager(),
                                               Context.getDiagnostics());
 
