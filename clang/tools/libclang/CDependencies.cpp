@@ -578,6 +578,14 @@ clang_experimental_DepGraphModule_getBuildArguments(CXDepGraphModule CXDepMod) {
   return unwrap(CXDepMod)->StrMgr.createCStringsRef(ModDeps.BuildArguments);
 }
 
+const char *
+clang_experimental_DepGraphModule_getCacheKey(CXDepGraphModule CXDepMod) {
+  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  if (ModDeps.ModuleCacheKey)
+    return ModDeps.ModuleCacheKey->c_str();
+  return nullptr;
+}
+
 size_t clang_experimental_DepGraph_getNumTUCommands(CXDepGraph Graph) {
   TranslationUnitDeps &TUDeps = unwrap(Graph)->TUDeps;
   return TUDeps.Commands.size();
@@ -603,6 +611,14 @@ CXCStringArray clang_experimental_DepGraphTUCommand_getBuildArguments(
     CXDepGraphTUCommand CXCmd) {
   Command &TUCmd = *unwrap(CXCmd)->TUCmd;
   return unwrap(CXCmd)->StrMgr.createCStringsRef(TUCmd.Arguments);
+}
+
+const char *
+clang_experimental_DepGraphTUCommand_getCacheKey(CXDepGraphTUCommand CXCmd) {
+  Command &TUCmd = *unwrap(CXCmd)->TUCmd;
+  if (TUCmd.TUCacheKey)
+    return TUCmd.TUCacheKey->c_str();
+  return nullptr;
 }
 
 CXCStringArray clang_experimental_DepGraph_getTUFileDeps(CXDepGraph Graph) {
