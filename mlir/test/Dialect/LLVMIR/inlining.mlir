@@ -187,20 +187,6 @@ llvm.func @caller() {
 
 // -----
 
-llvm.func @callee(%ptr : !llvm.ptr {llvm.byval = !llvm.ptr}) -> (!llvm.ptr) {
-  llvm.return %ptr : !llvm.ptr
-}
-
-// CHECK-LABEL: llvm.func @caller
-// CHECK-NEXT: llvm.call @callee
-// CHECK-NEXT: return
-llvm.func @caller(%ptr : !llvm.ptr) -> (!llvm.ptr) {
-  %0 = llvm.call @callee(%ptr) : (!llvm.ptr) -> (!llvm.ptr)
-  llvm.return %0 : !llvm.ptr
-}
-
-// -----
-
 llvm.func @static_alloca() -> f32 {
   %0 = llvm.mlir.constant(4 : i32) : i32
   %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
@@ -348,4 +334,48 @@ llvm.func @test_inline(%cond0 : i1, %cond1 : i1, %funcArg : f32) -> f32 {
   llvm.br ^bb3(%funcArg: f32)
 ^bb3(%blockArg: f32):
   llvm.return %blockArg : f32
+}
+
+// -----
+
+llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) {
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_byval
+// CHECK-SAME: %[[PTR:[a-zA-Z0-9_]+]]: !llvm.ptr
+// CHECK: %[[ALLOCA:.+]] = llvm.alloca %{{.+}} x f64
+// CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[PTR]]
+llvm.func @test_byval(%ptr : !llvm.ptr) {
+  llvm.call @with_byval_arg(%ptr) : (!llvm.ptr) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory = #llvm.memory_effects<other = readwrite, argMem = read, inaccessibleMem = readwrite>} {
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_byval_read_only
+// CHECK-NOT: llvm.call
+// CHECK-NEXT: llvm.return
+llvm.func @test_byval_read_only(%ptr : !llvm.ptr) {
+  llvm.call @with_byval_arg(%ptr) : (!llvm.ptr) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory = #llvm.memory_effects<other = readwrite, argMem = write, inaccessibleMem = readwrite>} {
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_byval_write_only
+// CHECK-SAME: %[[PTR:[a-zA-Z0-9_]+]]: !llvm.ptr
+// CHECK: %[[ALLOCA:.+]] = llvm.alloca %{{.+}} x f64
+// CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[PTR]]
+llvm.func @test_byval_write_only(%ptr : !llvm.ptr) {
+  llvm.call @with_byval_arg(%ptr) : (!llvm.ptr) -> ()
+  llvm.return
 }
