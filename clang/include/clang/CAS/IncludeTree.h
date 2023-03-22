@@ -45,68 +45,7 @@ protected:
   friend class IncludeTreeRoot;
 };
 
-/// Represents a \p SourceManager file (or buffer in the case of preprocessor
-/// predefines) that got included by the preprocessor.
-class IncludeFile : public IncludeTreeBase<IncludeFile> {
-public:
-  static constexpr StringRef getNodeKind() { return "File"; }
-
-  ObjectRef getFilenameRef() const { return getReference(0); }
-  ObjectRef getContentsRef() const { return getReference(1); }
-
-  Expected<ObjectProxy> getFilename() {
-    return getCAS().getProxy(getFilenameRef());
-  }
-
-  Expected<ObjectProxy> getContents() {
-    return getCAS().getProxy(getContentsRef());
-  }
-
-  struct FileInfo {
-    StringRef Filename;
-    StringRef Contents;
-  };
-
-  Expected<FileInfo> getFileInfo() {
-    auto Filename = getFilename();
-    if (!Filename)
-      return Filename.takeError();
-    auto Contents = getContents();
-    if (!Contents)
-      return Contents.takeError();
-    return FileInfo{Filename->getData(), Contents->getData()};
-  }
-
-  static Expected<IncludeFile> create(ObjectStore &DB, StringRef Filename,
-                                      ObjectRef Contents);
-
-  llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
-
-  static bool isValid(const ObjectProxy &Node) {
-    if (!IncludeTreeBase::isValid(Node))
-      return false;
-    IncludeTreeBase Base(Node);
-    return Base.getNumReferences() == 2 && Base.getData().empty();
-  }
-  static bool isValid(ObjectStore &DB, ObjectRef Ref) {
-    auto Node = DB.getProxy(Ref);
-    if (!Node) {
-      llvm::consumeError(Node.takeError());
-      return false;
-    }
-    return isValid(*Node);
-  }
-
-private:
-  friend class IncludeTreeBase<IncludeFile>;
-  friend class IncludeFileList;
-  friend class IncludeTree;
-  friend class IncludeTreeRoot;
-
-  explicit IncludeFile(ObjectProxy Node) : IncludeTreeBase(std::move(Node)) {
-    assert(isValid(*this));
-  }
-};
+class IncludeFile;
 
 /// Represents a DAG of included files by the preprocessor.
 /// Each node in the DAG represents a particular inclusion of a file that
@@ -117,22 +56,17 @@ class IncludeTree : public IncludeTreeBase<IncludeTree> {
 public:
   static constexpr StringRef getNodeKind() { return "Tree"; }
 
-  Expected<IncludeFile> getBaseFile() {
-    auto Node = getCAS().getProxy(getBaseFileRef());
-    if (!Node)
-      return Node.takeError();
-    return IncludeFile(std::move(*Node));
-  }
+  Expected<IncludeFile> getBaseFile();
 
   /// The include file that resulted in this include-tree.
   ObjectRef getBaseFileRef() const { return getReference(0); }
 
-  Expected<IncludeFile::FileInfo> getBaseFileInfo() {
-    auto File = getBaseFile();
-    if (!File)
-      return File.takeError();
-    return File->getFileInfo();
-  }
+  struct FileInfo {
+    StringRef Filename;
+    StringRef Contents;
+  };
+
+  Expected<FileInfo> getBaseFileInfo();
 
   SrcMgr::CharacteristicKind getFileCharacteristic() const {
     return (SrcMgr::CharacteristicKind)dataSkippingIncludes().front();
@@ -213,6 +147,64 @@ private:
       return false;
     }
     return isValid(*Node);
+  }
+};
+
+/// Represents a \p SourceManager file (or buffer in the case of preprocessor
+/// predefines) that got included by the preprocessor.
+class IncludeFile : public IncludeTreeBase<IncludeFile> {
+public:
+  static constexpr StringRef getNodeKind() { return "File"; }
+
+  ObjectRef getFilenameRef() const { return getReference(0); }
+  ObjectRef getContentsRef() const { return getReference(1); }
+
+  Expected<ObjectProxy> getFilename() {
+    return getCAS().getProxy(getFilenameRef());
+  }
+
+  Expected<ObjectProxy> getContents() {
+    return getCAS().getProxy(getContentsRef());
+  }
+
+  Expected<IncludeTree::FileInfo> getFileInfo() {
+    auto Filename = getFilename();
+    if (!Filename)
+      return Filename.takeError();
+    auto Contents = getContents();
+    if (!Contents)
+      return Contents.takeError();
+    return IncludeTree::FileInfo{Filename->getData(), Contents->getData()};
+  }
+
+  static Expected<IncludeFile> create(ObjectStore &DB, StringRef Filename,
+                                      ObjectRef Contents);
+
+  llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
+
+  static bool isValid(const ObjectProxy &Node) {
+    if (!IncludeTreeBase::isValid(Node))
+      return false;
+    IncludeTreeBase Base(Node);
+    return Base.getNumReferences() == 2 && Base.getData().empty();
+  }
+  static bool isValid(ObjectStore &DB, ObjectRef Ref) {
+    auto Node = DB.getProxy(Ref);
+    if (!Node) {
+      llvm::consumeError(Node.takeError());
+      return false;
+    }
+    return isValid(*Node);
+  }
+
+private:
+  friend class IncludeTreeBase<IncludeFile>;
+  friend class IncludeFileList;
+  friend class IncludeTree;
+  friend class IncludeTreeRoot;
+
+  explicit IncludeFile(ObjectProxy Node) : IncludeTreeBase(std::move(Node)) {
+    assert(isValid(*this));
   }
 };
 

@@ -42,6 +42,20 @@ Expected<IncludeFile> IncludeFile::create(ObjectStore &DB, StringRef Filename,
   return IncludeTreeBase::create(DB, Refs, {});
 }
 
+Expected<IncludeFile> IncludeTree::getBaseFile() {
+  auto Node = getCAS().getProxy(getBaseFileRef());
+  if (!Node)
+    return Node.takeError();
+  return IncludeFile(std::move(*Node));
+}
+
+Expected<IncludeTree::FileInfo> IncludeTree::getBaseFileInfo() {
+  auto File = getBaseFile();
+  if (!File)
+    return File.takeError();
+  return File->getFileInfo();
+}
+
 llvm::Error IncludeTree::forEachInclude(
     llvm::function_ref<llvm::Error(std::pair<IncludeTree, uint32_t>)>
         Callback) {
