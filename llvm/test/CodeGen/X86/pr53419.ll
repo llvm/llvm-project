@@ -13,32 +13,12 @@ declare i1 @llvm.vector.reduce.and.v8i1(<8 x i1>)
 ; FIXME: All four versions are semantically equivalent and should produce same asm as scalar version.
 
 define i1 @intrinsic_v2i8(ptr align 1 %arg, ptr align 1 %arg1) {
-; SSE-LABEL: intrinsic_v2i8:
-; SSE:       # %bb.0: # %bb
-; SSE-NEXT:    movzwl (%rdi), %eax
-; SSE-NEXT:    cmpw %ax, (%rsi)
-; SSE-NEXT:    sete %al
-; SSE-NEXT:    retq
-;
-; AVX-LABEL: intrinsic_v2i8:
-; AVX:       # %bb.0: # %bb
-; AVX-NEXT:    movzwl (%rdi), %eax
-; AVX-NEXT:    cmpw %ax, (%rsi)
-; AVX-NEXT:    sete %al
-; AVX-NEXT:    retq
-;
-; AVX512-LABEL: intrinsic_v2i8:
-; AVX512:       # %bb.0: # %bb
-; AVX512-NEXT:    movzwl (%rsi), %eax
-; AVX512-NEXT:    vmovd %eax, %xmm0
-; AVX512-NEXT:    movzwl (%rdi), %eax
-; AVX512-NEXT:    vmovd %eax, %xmm1
-; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0
-; AVX512-NEXT:    knotw %k0, %k0
-; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    testb $3, %al
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    retq
+; X64-LABEL: intrinsic_v2i8:
+; X64:       # %bb.0: # %bb
+; X64-NEXT:    movzwl (%rdi), %eax
+; X64-NEXT:    cmpw %ax, (%rsi)
+; X64-NEXT:    sete %al
+; X64-NEXT:    retq
 ;
 ; X86-LABEL: intrinsic_v2i8:
 ; X86:       # %bb.0: # %bb
@@ -57,30 +37,12 @@ bb:
 }
 
 define i1 @intrinsic_v4i8(ptr align 1 %arg, ptr align 1 %arg1) {
-; SSE-LABEL: intrinsic_v4i8:
-; SSE:       # %bb.0: # %bb
-; SSE-NEXT:    movl (%rdi), %eax
-; SSE-NEXT:    cmpl %eax, (%rsi)
-; SSE-NEXT:    sete %al
-; SSE-NEXT:    retq
-;
-; AVX-LABEL: intrinsic_v4i8:
-; AVX:       # %bb.0: # %bb
-; AVX-NEXT:    movl (%rdi), %eax
-; AVX-NEXT:    cmpl %eax, (%rsi)
-; AVX-NEXT:    sete %al
-; AVX-NEXT:    retq
-;
-; AVX512-LABEL: intrinsic_v4i8:
-; AVX512:       # %bb.0: # %bb
-; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX512-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0
-; AVX512-NEXT:    knotw %k0, %k0
-; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    testb $15, %al
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    retq
+; X64-LABEL: intrinsic_v4i8:
+; X64:       # %bb.0: # %bb
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    cmpl %eax, (%rsi)
+; X64-NEXT:    sete %al
+; X64-NEXT:    retq
 ;
 ; X86-LABEL: intrinsic_v4i8:
 ; X86:       # %bb.0: # %bb
@@ -99,28 +61,12 @@ bb:
 }
 
 define i1 @intrinsic_v8i8(ptr align 1 %arg, ptr align 1 %arg1) {
-; SSE-LABEL: intrinsic_v8i8:
-; SSE:       # %bb.0: # %bb
-; SSE-NEXT:    movq (%rdi), %rax
-; SSE-NEXT:    cmpq %rax, (%rsi)
-; SSE-NEXT:    sete %al
-; SSE-NEXT:    retq
-;
-; AVX-LABEL: intrinsic_v8i8:
-; AVX:       # %bb.0: # %bb
-; AVX-NEXT:    movq (%rdi), %rax
-; AVX-NEXT:    cmpq %rax, (%rsi)
-; AVX-NEXT:    sete %al
-; AVX-NEXT:    retq
-;
-; AVX512-LABEL: intrinsic_v8i8:
-; AVX512:       # %bb.0: # %bb
-; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0
-; AVX512-NEXT:    kortestb %k0, %k0
-; AVX512-NEXT:    setb %al
-; AVX512-NEXT:    retq
+; X64-LABEL: intrinsic_v8i8:
+; X64:       # %bb.0: # %bb
+; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    cmpq %rax, (%rsi)
+; X64-NEXT:    sete %al
+; X64-NEXT:    retq
 ;
 ; X86-LABEL: intrinsic_v8i8:
 ; X86:       # %bb.0: # %bb
