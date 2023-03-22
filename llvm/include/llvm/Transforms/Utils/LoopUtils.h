@@ -175,6 +175,11 @@ bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
                  SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *, bool,
                  bool AllowSpeculation);
 
+/// Return true if the induction variable \p IV in a Loop whose latch is
+/// \p LatchBlock would become dead if the exit test \p Cond were removed.
+/// Conservatively returns false if analysis is insufficient.
+bool isAlmostDeadIV(PHINode *IV, BasicBlock *LatchBlock, Value *Cond);
+
 /// This function deletes dead loops. The caller of this function needs to
 /// guarantee that the loop is infact dead.
 /// The function requires a bunch or prerequisites to be present:

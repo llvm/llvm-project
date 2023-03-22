@@ -50,8 +50,9 @@ public:
   lldb::DataExtractorSP ReadMemoryAtAddress(lldb::addr_t address, size_t size,
                                             Status &error) override;
 
-  size_t WriteMemoryAtAddress(lldb::addr_t addr, lldb::DataExtractorSP data_sp,
-                              Status &error) override;
+  lldb::offset_t WriteMemoryAtAddress(lldb::addr_t addr,
+                                      lldb::DataExtractorSP data_sp,
+                                      Status &error) override;
 
   StructuredData::ArraySP GetLoadedImages() override;
 

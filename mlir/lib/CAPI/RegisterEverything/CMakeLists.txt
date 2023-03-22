@@ -10,6 +10,7 @@ add_mlir_upstream_c_api_library(MLIRCAPIRegisterEverything
   ${translation_libs}
   ${conversion_libs}
 
+  MLIRBuiltinToLLVMIRTranslation
   MLIRCAPIIR
   MLIRLLVMToLLVMIRTranslation
   MLIRCAPITransforms

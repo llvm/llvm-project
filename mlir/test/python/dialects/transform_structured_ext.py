@@ -206,5 +206,5 @@ def testVectorize():
     transform.YieldOp()
   # CHECK-LABEL: TEST: testVectorize
   # CHECK: transform.sequence
-  # CHECK: transform.structured.vectorize
+  # CHECK: = transform.structured.vectorize
   # CHECK: {vectorize_padding}

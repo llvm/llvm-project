@@ -22,6 +22,8 @@ using namespace mlir;
 
 namespace {
 constexpr static llvm::StringLiteral kAttrName = "dltest.layout";
+constexpr static llvm::StringLiteral kAllocaKeyName =
+    "dltest.alloca_memory_space";
 
 /// Trivial array storage for the custom data layout spec attribute, just a list
 /// of entries.
@@ -62,6 +64,9 @@ struct CustomDataLayoutSpec
   }
   DataLayoutEntryListRef getEntries() const { return getImpl()->entries; }
   LogicalResult verifySpec(Location loc) { return success(); }
+  StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
+    return Builder(context).getStringAttr(kAllocaKeyName);
+  }
 };
 
 /// A type subject to data layout that exits the program if it is queried more
@@ -103,6 +108,15 @@ struct SingleQueryType
 
     executed = true;
     return 4;
+  }
+
+  Attribute getAllocaMemorySpace(DataLayoutEntryInterface entry) {
+    static bool executed = false;
+    if (executed)
+      llvm::report_fatal_error("repeated call");
+
+    executed = true;
+    return Attribute();
   }
 };
 
@@ -260,6 +274,8 @@ module {}
   EXPECT_EQ(layout.getTypeABIAlignment(Float16Type::get(&ctx)), 2u);
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 8u);
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 2u);
+
+  EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
 }
 
 TEST(DataLayout, NullSpec) {
@@ -275,6 +291,7 @@ TEST(DataLayout, NullSpec) {
   auto op =
       cast<DataLayoutOpInterface>(module->getBody()->getOperations().front());
   DataLayout layout(op);
+
   EXPECT_EQ(layout.getTypeSize(IntegerType::get(&ctx, 42)), 42u);
   EXPECT_EQ(layout.getTypeSize(Float16Type::get(&ctx)), 16u);
   EXPECT_EQ(layout.getTypeSizeInBits(IntegerType::get(&ctx, 42)), 8u * 42u);
@@ -283,6 +300,8 @@ TEST(DataLayout, NullSpec) {
   EXPECT_EQ(layout.getTypeABIAlignment(Float16Type::get(&ctx)), 16u);
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 128u);
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 32u);
+
+  EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
 }
 
 TEST(DataLayout, EmptySpec) {
@@ -306,13 +325,16 @@ TEST(DataLayout, EmptySpec) {
   EXPECT_EQ(layout.getTypeABIAlignment(Float16Type::get(&ctx)), 16u);
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 128u);
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 32u);
+
+  EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
 }
 
 TEST(DataLayout, SpecWithEntries) {
   const char *ir = R"MLIR(
 "dltest.op_with_layout"() { dltest.layout = #dltest.spec<
   #dlti.dl_entry<i42, 5>,
-  #dlti.dl_entry<i16, 6>
+  #dlti.dl_entry<i16, 6>,
+  #dlti.dl_entry<"dltest.alloca_memory_space", 5 : i32>
 > } : () -> ()
   )MLIR";
 
@@ -341,6 +363,8 @@ TEST(DataLayout, SpecWithEntries) {
   EXPECT_EQ(layout.getTypeABIAlignment(Float32Type::get(&ctx)), 32u);
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 32)), 64u);
   EXPECT_EQ(layout.getTypePreferredAlignment(Float32Type::get(&ctx)), 64u);
+
+  EXPECT_EQ(layout.getAllocaMemorySpace(), Builder(&ctx).getI32IntegerAttr(5));
 }
 
 TEST(DataLayout, Caching) {

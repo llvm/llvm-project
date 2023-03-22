@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/span.h"
 #include "src/string/memmove.h"
+
+#include "memory_utils/memory_check_utils.h"
+#include "src/__support/CPP/span.h"
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -76,24 +78,10 @@ TEST(LlvmLibcMemmoveTest, DstFollowSrc) {
 
 static constexpr int kMaxSize = 512;
 
-char GetRandomChar() {
-  static constexpr const uint64_t A = 1103515245;
-  static constexpr const uint64_t C = 12345;
-  static constexpr const uint64_t M = 1ULL << 31;
-  static uint64_t Seed = 123456789;
-  Seed = (A * Seed + C) % M;
-  return Seed;
-}
-
-void Randomize(span<char> Buffer) {
-  for (auto &current : Buffer)
-    current = GetRandomChar();
-}
-
 TEST(LlvmLibcMemmoveTest, SizeSweep) {
   using LargeBuffer = array<char, 3 * kMaxSize>;
   LargeBuffer GroundTruth;
-  Randomize(GroundTruth);
+  __llvm_libc::Randomize(GroundTruth);
   for (int Size = 0; Size < kMaxSize; ++Size) {
     for (int Offset = -Size; Offset < Size; ++Offset) {
       LargeBuffer Buffer = GroundTruth;

@@ -199,7 +199,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     args.push_back(resource);
 
     // Indexing (voffset)
-    Value voffset;
+    Value voffset = createI32Constant(rewriter, loc, 0);
     for (auto pair : llvm::enumerate(adaptor.getIndices())) {
       size_t i = pair.index();
       Value index = pair.value();
@@ -212,8 +212,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
             createI32Constant(rewriter, loc, strides[i] * elementByteWidth);
       }
       index = rewriter.create<LLVM::MulOp>(loc, index, strideOp);
-      voffset =
-          voffset ? rewriter.create<LLVM::AddOp>(loc, voffset, index) : index;
+      voffset = rewriter.create<LLVM::AddOp>(loc, voffset, index);
     }
     if (adaptor.getIndexOffset()) {
       int32_t indexOffset = *gpuOp.getIndexOffset() * elementByteWidth;

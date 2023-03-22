@@ -55,9 +55,9 @@ public:
     return {};
   }
 
-  virtual size_t WriteMemoryAtAddress(lldb::addr_t addr,
-                                      lldb::DataExtractorSP data_sp,
-                                      Status &error) {
+  virtual lldb::offset_t WriteMemoryAtAddress(lldb::addr_t addr,
+                                              lldb::DataExtractorSP data_sp,
+                                              Status &error) {
     return LLDB_INVALID_OFFSET;
   };
 

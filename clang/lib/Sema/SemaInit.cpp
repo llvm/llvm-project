@@ -5437,7 +5437,7 @@ static void TryOrBuildParenListInitialization(
   }
 
   // Not all of the args have been processed, so there must've been more args
-  // then were required to initialize the element.
+  // than were required to initialize the element.
   if (ArgIndexToProcess < Args.size()) {
     Sequence.SetFailed(InitializationSequence::FK_ParenthesizedListInitFailed);
     if (!VerifyOnly) {

@@ -30,7 +30,7 @@ TEST_CONSTEXPR_CXX20 void
 test1(const S& s)
 {
     S s2(s);
-    const size_t sz = s2.max_size() - 1;
+    const std::size_t sz = s2.max_size() - 1;
     try { s2.resize(sz, 'x'); }
     catch ( const std::bad_alloc & ) { return ; }
     assert ( s2.size() ==  sz );
@@ -41,7 +41,7 @@ TEST_CONSTEXPR_CXX20 void
 test2(const S& s)
 {
     S s2(s);
-    const size_t sz = s2.max_size();
+    const std::size_t sz = s2.max_size();
     try { s2.resize(sz, 'x'); }
     catch ( const std::bad_alloc & ) { return ; }
     assert ( s.size() ==  sz );
@@ -76,7 +76,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 constexpr bool test_constexpr() {
   std::string str;
 
-  size_t size = str.max_size();
+  std::size_t size = str.max_size();
   assert(size > 0);
 
   return true;

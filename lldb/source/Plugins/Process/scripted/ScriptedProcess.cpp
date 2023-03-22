@@ -269,7 +269,7 @@ size_t ScriptedProcess::DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
   if (!data_extractor_sp || !data_extractor_sp->GetByteSize())
     return 0;
 
-  size_t bytes_written =
+  lldb::offset_t bytes_written =
       GetInterface().WriteMemoryAtAddress(vm_addr, data_extractor_sp, error);
 
   if (!bytes_written || bytes_written == LLDB_INVALID_OFFSET)

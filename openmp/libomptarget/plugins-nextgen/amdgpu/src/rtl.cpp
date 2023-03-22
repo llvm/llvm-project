@@ -1863,7 +1863,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     hsa_status_t Status =
         hsa_amd_memory_lock(HstPtr, Size, nullptr, 0, &PinnedPtr);
     if (auto Err = Plugin::check(Status, "Error in hsa_amd_memory_lock: %s\n"))
-      return Err;
+      return std::move(Err);
 
     return PinnedPtr;
   }
@@ -1886,7 +1886,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                              /* Number of accessible agents (out) */ nullptr,
                              /* Accessible agents */ nullptr);
     if (auto Err = Plugin::check(Status, "Error in hsa_amd_pointer_info: %s"))
-      return Err;
+      return std::move(Err);
 
     // The buffer may be locked or allocated through HSA allocators. Assume that
     // the buffer is host pinned if the runtime reports a HSA type.

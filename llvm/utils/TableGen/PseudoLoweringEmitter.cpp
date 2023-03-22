@@ -8,7 +8,6 @@
 
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
-#include "TableGenBackends.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -314,10 +313,5 @@ void PseudoLoweringEmitter::run(raw_ostream &o) {
   emitLoweringEmitter(o);
 }
 
-namespace llvm {
-
-void EmitPseudoLowering(RecordKeeper &RK, raw_ostream &OS) {
-  PseudoLoweringEmitter(RK).run(OS);
-}
-
-} // namespace llvm
+static TableGen::Emitter::OptClass<PseudoLoweringEmitter>
+    X("gen-pseudo-lowering", "Generate pseudo instruction lowering");

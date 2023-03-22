@@ -1295,13 +1295,13 @@ def Tensor_PadOp : Tensor_Op<"pad", [
 
   let builders = [
     // Build a PadOp with mixed static and dynamic entries.
-    OpBuilder<(ins "Value":$source, "ArrayRef<int64_t>":$staticLow,
-      "ArrayRef<int64_t>":$staticHigh, "ValueRange":$low, "ValueRange":$high,
-      CArg<"bool", "false">:$nofold,
+    OpBuilder<(ins "Type":$resultType, "Value":$source,
+      "ArrayRef<int64_t>":$staticLow, "ArrayRef<int64_t>":$staticHigh,
+      "ValueRange":$low, "ValueRange":$high, CArg<"bool", "false">:$nofold,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
     // Build a PadOp with all dynamic entries.
-    OpBuilder<(ins "Value":$source, "ValueRange":$low, "ValueRange":$high,
-      CArg<"bool", "false">:$nofold,
+    OpBuilder<(ins "Type":$resultType, "Value":$source, "ValueRange":$low,
+      "ValueRange":$high, CArg<"bool", "false">:$nofold,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
     // Build a PadOp with mixed static and dynamic entries and custom
     // result type. If the type passed is nullptr, it is inferred.

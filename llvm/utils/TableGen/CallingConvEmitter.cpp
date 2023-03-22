@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenTarget.h"
-#include "TableGenBackends.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -42,6 +41,8 @@ private:
 } // End anonymous namespace
 
 void CallingConvEmitter::run(raw_ostream &O) {
+  emitSourceFileHeader("Calling Convention Implementation Fragment", O);
+
   std::vector<Record *> CCs = Records.getAllDerivedDefinitions("CallingConv");
 
   // Emit prototypes for all of the non-custom CC's so that they can forward ref
@@ -427,11 +428,5 @@ void CallingConvEmitter::EmitArgRegisterLists(raw_ostream &O) {
   }
 }
 
-namespace llvm {
-
-void EmitCallingConv(RecordKeeper &RK, raw_ostream &OS) {
-  emitSourceFileHeader("Calling Convention Implementation Fragment", OS);
-  CallingConvEmitter(RK).run(OS);
-}
-
-} // namespace llvm
+static TableGen::Emitter::OptClass<CallingConvEmitter>
+    X("gen-callingconv", "Generate calling convention descriptions");

@@ -59,6 +59,9 @@ def SizeTType : NamedType<"size_t">;
 def SizeTPtr : PtrType<SizeTType>;
 def RestrictedSizeTPtr : RestrictedPtrType<SizeTType>;
 
+def WCharType : NamedType<"wchar_t">;
+def WIntType : NamedType<"wint_t">;
+
 def LongDoublePtr : PtrType<LongDoubleType>;
 
 def IntMaxTType : NamedType<"intmax_t">;

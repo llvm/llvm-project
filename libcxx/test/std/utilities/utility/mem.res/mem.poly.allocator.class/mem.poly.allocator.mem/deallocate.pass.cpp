@@ -26,7 +26,7 @@
 #include "test_macros.h"
 #include "test_std_memory_resource.h"
 
-template <size_t S, size_t Align>
+template <std::size_t S, size_t Align>
 void testForSizeAndAlign() {
   struct T {
     alignas(Align) std::byte buf[S];

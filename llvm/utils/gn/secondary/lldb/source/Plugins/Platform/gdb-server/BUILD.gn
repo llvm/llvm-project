@@ -16,5 +16,8 @@ static_library("gdb-server") {
 
   # Reaches into Plugins/Process/Utility.
   include_dirs = [ "//lldb/source" ]
-  sources = [ "PlatformRemoteGDBServer.cpp" ]
+  sources = [
+    "GDBRemoteSignals.cpp",
+    "PlatformRemoteGDBServer.cpp",
+  ]
 }
