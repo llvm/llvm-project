@@ -731,6 +731,8 @@ interface section goes as follows:
 *   `CallableOpInterface` - Used to represent the target callee of call.
     -   `Region * getCallableRegion()`
     -   `ArrayRef<Type> getCallableResults()`
+    -   `ArrayAttr getCallableArgAttrs()`
+    -   `ArrayAttr getCallableResAttrs()`
 
 ##### RegionKindInterfaces
 

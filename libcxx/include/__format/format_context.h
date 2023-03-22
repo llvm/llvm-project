@@ -41,7 +41,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _OutIt, class _CharT>
 requires output_iterator<_OutIt, const _CharT&>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT basic_format_context;
+class _LIBCPP_TEMPLATE_VIS basic_format_context;
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 /**
@@ -80,7 +80,6 @@ requires output_iterator<_OutIt, const _CharT&>
 class
     // clang-format off
     _LIBCPP_TEMPLATE_VIS
-    _LIBCPP_AVAILABILITY_FORMAT
     _LIBCPP_PREFERRED_NAME(format_context)
     _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wformat_context))
     // clang-format on
@@ -162,7 +161,7 @@ private:
 // Here the width of an element in input is determined dynamically.
 // Note when the top-level element has no width the retargeting is not needed.
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT
+class _LIBCPP_TEMPLATE_VIS
     basic_format_context<typename __format::__retarget_buffer<_CharT>::__iterator, _CharT> {
 public:
   using iterator  = typename __format::__retarget_buffer<_CharT>::__iterator;

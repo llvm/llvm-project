@@ -4487,3 +4487,126 @@ If the user is using the static CRT (``/MT``), then different runtimes are used
 to produce DLLs and EXEs. To link a DLL, pass
 ``clang_rt.asan_dll_thunk-x86_64.lib``. To link an EXE, pass
 ``-wholearchive:clang_rt.asan-x86_64.lib``.
+
+Windows System Headers and Library Lookup
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+clang-cl uses a set of different approaches to locate the right system libraries
+to link against when building code.  The Windows environment uses libraries from
+three distinct sources:
+
+1. Windows SDK
+2. UCRT (Universal C Runtime)
+3. Visual C++ Tools (VCRuntime)
+
+The Windows SDK provides the import libraries and headers required to build
+programs against the Windows system packages.  Underlying the Windows SDK is the
+UCRT, the universal C runtime.
+
+This difference is best illustrated by the various headers that one would find
+in the different categories.  The WinSDK would contain headers such as
+`WinSock2.h` which is part of the Windows API surface, providing the Windows
+socketing interfaces for networking.  UCRT provides the C library headers,
+including e.g. `stdio.h`.  Finally, the Visual C++ tools provides the underlying
+Visual C++ Runtime headers such as `stdint.h` or `crtdefs.h`.
+
+There are various controls that allow the user control over where clang-cl will
+locate these headers.  The default behaviour for the Windows SDK and UCRT is as
+follows:
+
+1. Consult the command line.
+
+    Anything the user specifies is always given precedence.  The following
+    extensions are part of the clang-cl toolset:
+
+    - `/winsysroot:`
+
+    The `/winsysroot:` is used as an equivalent to `-sysroot` on Unix
+    environments.  It allows the control of an alternate location to be treated
+    as a system root.  When specified, it will be used as the root where the
+    `Windows Kits` is located.
+
+    - `/winsdkversion:`
+    - `/winsdkdir:`
+
+    If `/winsysroot:` is not specified, the `/winsdkdir:` argument is consulted
+    as a location to identify where the Windows SDK is located.  Contrary to
+    `/winsysroot:`, `/winsdkdir:` is expected to be the complete path rather
+    than a root to locate `Windows Kits`.
+
+    The `/winsdkversion:` flag allows the user to specify a version identifier
+    for the SDK to prefer.  When this is specified, no additional validation is
+    performed and this version is preferred.  If the version is not specified,
+    the highest detected version number will be used.
+
+2. Consult the environment.
+
+    TODO: This is not yet implemented.
+
+    This will consult the environment variables:
+
+    - `WindowsSdkDir`
+    - `UCRTVersion`
+
+3. Fallback to the registry.
+
+    If no arguments are used to indicate where the SDK is present, and the
+    compiler is running on Windows, the registry is consulted to locate the
+    installation.
+
+The Visual C++ Toolset has a slightly more elaborate mechanism for detection.
+
+1. Consult the command line.
+
+    - `/winsysroot:`
+
+    The `/winsysroot:` is used as an equivalent to `-sysroot` on Unix
+    environments.  It allows the control of an alternate location to be treated
+    as a system root.  When specified, it will be used as the root where the
+    `VC` directory is located.
+
+    - `/vctoolsdir:`
+    - `/vctoolsversion:`
+
+    If `/winsysroot:` is not specified, the `/vctoolsdir:` argument is consulted
+    as a location to identify where the Visual C++ Tools are located.  If
+    `/vctoolsversion:` is specified, that version is preferred, otherwise, the
+    highest version detected is used.
+
+2. Consult the environment.
+
+    - `/external:[VARIABLE]`
+
+      This specifies a user identified environment variable which is treated as
+      a path delimiter (`;`) separated list of paths to map into `-imsvc`
+      arguments which are treated as `-isystem`.
+
+    - `INCLUDE` and `EXTERNAL_INCLUDE`
+
+      The path delimiter (`;`) separated list of paths will be mapped to
+      `-imsvc` arguments which are treated as `-isystem`.
+
+    - `LIB` (indirectly)
+
+      The linker `link.exe` or `lld-link.exe` will honour the environment
+      variable `LIB` which is a path delimiter (`;`) set of paths to consult for
+      the import libraries to use when linking the final target.
+
+    The following environment variables will be consulted and used to form paths
+    to validate and load content from as appropriate:
+
+      - `VCToolsInstallDir`
+      - `VCINSTALLDIR`
+      - `Path`
+
+3. Consult `ISetupConfiguration` [Windows Only]
+
+    Assuming that the toolchain is built with `USE_MSVC_SETUP_API` defined and
+    is running on Windows, the Visual Studio COM interface `ISetupConfiguration`
+    will be used to locate the installation of the MSVC toolset.
+
+4. Fallback to the registry [DEPRECATED]
+
+    The registry information is used to help locate the installation as a final
+    fallback.  This is only possible for pre-VS2017 installations and is
+    considered deprecated.

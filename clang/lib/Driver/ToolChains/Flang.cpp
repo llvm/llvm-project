@@ -65,6 +65,9 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   if (stackArrays &&
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
+
+  if (Args.hasArg(options::OPT_flang_experimental_hlfir))
+    CmdArgs.push_back("-flang-experimental-hlfir");
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {

@@ -100,7 +100,7 @@ int main(int, char**)
     test_const_container ( sv );
 
     static constexpr int arrA [] { 1, 2, 3 };
-    ASSERT_SAME_TYPE(ptrdiff_t, decltype(std::ssize(arrA)));
+    ASSERT_SAME_TYPE(std::ptrdiff_t, decltype(std::ssize(arrA)));
     static_assert( std::is_signed_v<decltype(std::ssize(arrA))>, "");
     test_const_array ( arrA );
 

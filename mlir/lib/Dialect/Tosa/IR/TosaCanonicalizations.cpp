@@ -519,6 +519,65 @@ void ClampOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ClampClampOptimization>(context);
 }
 
+struct ConcatSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
+  using OpRewritePattern<tosa::SliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::SliceOp sliceOp,
+                                PatternRewriter &rewriter) const override {
+    Value sliceInput = sliceOp.getInput();
+    auto concatOp = sliceInput.getDefiningOp<tosa::ConcatOp>();
+    if (!concatOp)
+      return rewriter.notifyMatchFailure(
+          sliceOp, "slice input must be concat operation");
+
+    OperandRange inputs = concatOp.getInput1();
+    auto concatType = dyn_cast<RankedTensorType>(concatOp.getType());
+    if (!concatType || !concatType.hasStaticShape())
+      return rewriter.notifyMatchFailure(
+          sliceOp, "slice input must be a static ranked tensor");
+    int32_t axis = concatOp.getAxis();
+
+    llvm::SmallVector<int64_t> sliceStart(sliceOp.getStart());
+    llvm::ArrayRef<int64_t> sliceSize = sliceOp.getSize();
+
+    // Validate slice on the concatenated axis. Slicing along this
+    // axis should span only one of the inputs to the concatenate
+    // operation.
+    std::optional<Value> replaceWithSlice;
+    for (auto input : inputs) {
+      auto inputType = dyn_cast<RankedTensorType>(input.getType());
+      if (!inputType || !inputType.hasStaticShape())
+        return rewriter.notifyMatchFailure(
+            sliceOp, "concat input must be a static ranked tensor");
+
+      if (sliceStart[axis] >= 0 &&
+          (sliceStart[axis] + sliceSize[axis]) <= inputType.getDimSize(axis)) {
+        replaceWithSlice =
+            rewriter
+                .create<tosa::SliceOp>(
+                    sliceOp.getLoc(), sliceOp.getType(), input,
+                    rewriter.getDenseI64ArrayAttr(sliceOp.getStart()),
+                    rewriter.getDenseI64ArrayAttr(sliceSize))
+                .getResult();
+        break;
+      }
+      sliceStart[axis] -= inputType.getDimSize(axis);
+    }
+
+    if (!replaceWithSlice)
+      return rewriter.notifyMatchFailure(
+          sliceOp, "corresponding concat input not found for slice");
+
+    rewriter.replaceOp(sliceOp, replaceWithSlice.value());
+    return success();
+  }
+};
+
+void SliceOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                          MLIRContext *context) {
+  results.add<ConcatSliceOptimization>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // Operator Folders.
 //===----------------------------------------------------------------------===//

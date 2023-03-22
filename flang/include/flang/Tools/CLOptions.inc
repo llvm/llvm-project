@@ -14,6 +14,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "flang/Optimizer/CodeGen/CodeGen.h"
+#include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
@@ -72,7 +73,8 @@ DisableOption(BoxedProcedureRewrite, "boxed-procedure-rewrite",
     "rewrite boxed procedures");
 #endif
 
-DisableOption(ExternalNameConversion, "external-name-interop", "convert names with external convention");
+DisableOption(ExternalNameConversion, "external-name-interop",
+    "convert names with external convention");
 
 /// Generic for adding a pass to the pass manager if it is not disabled.
 template <typename F>
@@ -211,6 +213,20 @@ inline void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   pm.addPass(mlir::createCSEPass());
 }
 
+/// Create a pass pipeline for lowering from HLFIR to FIR
+///
+/// \param pm - MLIR pass manager that will hold the pipeline definition
+/// \param optLevel - optimization level used for creating FIR optimization
+///   passes pipeline
+inline void createHLFIRToFIRPassPipeline(
+    mlir::PassManager &pm, llvm::OptimizationLevel optLevel = defaultOptLevel) {
+  if (optLevel.isOptimizingForSpeed())
+    pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(hlfir::createLowerHLFIRIntrinsicsPass());
+  pm.addPass(hlfir::createBufferizeHLFIRPass());
+  pm.addPass(hlfir::createConvertHLFIRtoFIRPass());
+}
+
 #if !defined(FLANG_EXCLUDE_CODEGEN)
 inline void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
     llvm::OptimizationLevel optLevel = defaultOptLevel,
@@ -218,8 +234,7 @@ inline void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   fir::addBoxedProcedurePass(pm);
   pm.addNestedPass<mlir::func::FuncOp>(
       fir::createAbstractResultOnFuncOptPass());
-  pm.addNestedPass<fir::GlobalOp>(
-      fir::createAbstractResultOnGlobalOptPass());
+  pm.addNestedPass<fir::GlobalOp>(fir::createAbstractResultOnGlobalOptPass());
   fir::addCodeGenRewritePass(pm);
   fir::addTargetRewritePass(pm);
   fir::addExternalNameConversionPass(pm, underscoring);
@@ -234,6 +249,8 @@ inline void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
 inline void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
     llvm::OptimizationLevel optLevel = defaultOptLevel,
     bool stackArrays = false, bool underscoring = true) {
+  fir::createHLFIRToFIRPassPipeline(pm, optLevel);
+
   // Add default optimizer pass pipeline.
   fir::createDefaultFIROptimizerPassPipeline(pm, optLevel, stackArrays);
 

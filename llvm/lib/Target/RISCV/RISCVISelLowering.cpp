@@ -1545,9 +1545,11 @@ bool RISCVTargetLowering::isOffsetFoldingLegal(
   return false;
 }
 
-bool RISCVTargetLowering::isLegalZfaFPImm(const APFloat &Imm, EVT VT) const {
+// Returns 0-31 if the fli instruction is available for the type and this is
+// legal FP immediate for the type. Returns -1 otherwise.
+int RISCVTargetLowering::getLegalZfaFPImm(const APFloat &Imm, EVT VT) const {
   if (!Subtarget.hasStdExtZfa())
-    return false;
+    return -1;
 
   bool IsSupportedVT = false;
   if (VT == MVT::f16) {
@@ -1559,7 +1561,10 @@ bool RISCVTargetLowering::isLegalZfaFPImm(const APFloat &Imm, EVT VT) const {
     IsSupportedVT = true;
   }
 
-  return IsSupportedVT && RISCVLoadFPImm::getLoadFPImm(Imm) != -1;
+  if (!IsSupportedVT)
+    return -1;
+
+  return RISCVLoadFPImm::getLoadFPImm(Imm);
 }
 
 bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
@@ -1575,7 +1580,7 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   if (!IsLegalVT)
     return false;
 
-  if (isLegalZfaFPImm(Imm, VT))
+  if (getLegalZfaFPImm(Imm, VT) >= 0)
     return true;
 
   // Cannot create a 64 bit floating-point immediate value for rv32.

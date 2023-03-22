@@ -739,13 +739,13 @@ public:
 };
 
 template <__fmt_char_type _CharT>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<float, _CharT>
+struct _LIBCPP_TEMPLATE_VIS formatter<float, _CharT>
     : public __formatter_floating_point<_CharT> {};
 template <__fmt_char_type _CharT>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<double, _CharT>
+struct _LIBCPP_TEMPLATE_VIS formatter<double, _CharT>
     : public __formatter_floating_point<_CharT> {};
 template <__fmt_char_type _CharT>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<long double, _CharT>
+struct _LIBCPP_TEMPLATE_VIS formatter<long double, _CharT>
     : public __formatter_floating_point<_CharT> {};
 
 #endif //_LIBCPP_STD_VER >= 20

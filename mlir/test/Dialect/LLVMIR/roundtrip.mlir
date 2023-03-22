@@ -596,3 +596,15 @@ llvm.func @stackrestore_opaque_pointers(%arg0: !llvm.ptr)  {
   llvm.intr.stackrestore %arg0 : !llvm.ptr
   llvm.return
 }
+
+// CHECK-LABEL: @experimental_noalias_scope_decl
+llvm.func @experimental_noalias_scope_decl() {
+  // CHECK: llvm.intr.experimental.noalias.scope.decl @metadata::@scope
+  llvm.intr.experimental.noalias.scope.decl @metadata::@scope
+  llvm.return
+}
+
+llvm.metadata @metadata {
+  llvm.alias_scope_domain @domain {description = "The domain"}
+  llvm.alias_scope @scope {domain = @domain, description = "The first scope"}
+}

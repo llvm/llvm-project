@@ -8,6 +8,9 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 
+// This test uses std::filesystem::path, which was introduced in macOS 10.15
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+
 // <format>
 
 // template<ranges::input_range R>
@@ -47,7 +50,7 @@ struct recursive_range {
   struct iterator {
     using iterator_concept = std::input_iterator_tag;
     using value_type       = recursive_range;
-    using difference_type  = ptrdiff_t;
+    using difference_type  = std::ptrdiff_t;
     using reference        = recursive_range;
 
     reference operator*() const;

@@ -326,6 +326,7 @@ class CoroutineBodyStmt final
     OnFallthrough, ///< Handler for control flow falling off the body.
     Allocate,      ///< Coroutine frame memory allocation.
     Deallocate,    ///< Coroutine frame memory deallocation.
+    ResultDecl,    ///< Declaration holding the result of get_return_object.
     ReturnValue,   ///< Return value for thunk function: p.get_return_object().
     ReturnStmt,    ///< Return statement for the thunk function.
     ReturnStmtOnAllocFailure, ///< Return statement if allocation failed.
@@ -352,6 +353,7 @@ public:
     Stmt *OnFallthrough = nullptr;
     Expr *Allocate = nullptr;
     Expr *Deallocate = nullptr;
+    Stmt *ResultDecl = nullptr;
     Expr *ReturnValue = nullptr;
     Stmt *ReturnStmt = nullptr;
     Stmt *ReturnStmtOnAllocFailure = nullptr;
@@ -404,13 +406,13 @@ public:
   Expr *getDeallocate() const {
     return cast_or_null<Expr>(getStoredStmts()[SubStmt::Deallocate]);
   }
+  Stmt *getResultDecl() const { return getStoredStmts()[SubStmt::ResultDecl]; }
   Expr *getReturnValueInit() const {
     return cast<Expr>(getStoredStmts()[SubStmt::ReturnValue]);
   }
   Expr *getReturnValue() const {
-    assert(getReturnStmt());
-    auto *RS = cast<clang::ReturnStmt>(getReturnStmt());
-    return RS->getRetValue();
+    auto *RS = dyn_cast_or_null<clang::ReturnStmt>(getReturnStmt());
+    return RS ? RS->getRetValue() : nullptr;
   }
   Stmt *getReturnStmt() const { return getStoredStmts()[SubStmt::ReturnStmt]; }
   Stmt *getReturnStmtOnAllocFailure() const {

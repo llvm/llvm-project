@@ -88,7 +88,7 @@ int main(int, char**)
     static_assert(!std::is_invocable_v<L, std::int64_t>);
     static_assert(!std::is_invocable_v<L, intmax_t>);
     static_assert(!std::is_invocable_v<L, intptr_t>);
-    static_assert(!std::is_invocable_v<L, ptrdiff_t>);
+    static_assert(!std::is_invocable_v<L, std::ptrdiff_t>);
 
     static_assert(!std::is_invocable_v<L, bool>);
     static_assert(!std::is_invocable_v<L, char>);

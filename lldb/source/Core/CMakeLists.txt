@@ -19,6 +19,7 @@ if (LLDB_ENABLE_CURSES)
   endif()
 endif()
 
+# TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbCore
 add_lldb_library(lldbCore
   Address.cpp
   AddressRange.cpp

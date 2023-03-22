@@ -359,9 +359,9 @@ struct MemRefRegion {
   FlatAffineValueConstraints cst;
 };
 
-/// Returns the size of memref data in bytes if it's statically shaped,
-/// std::nullopt otherwise.
-std::optional<uint64_t> getMemRefSizeInBytes(MemRefType memRefType);
+/// Returns the size of a memref with element type int or float in bytes if it's
+/// statically shaped, std::nullopt otherwise.
+std::optional<uint64_t> getIntOrFloatMemRefSizeInBytes(MemRefType memRefType);
 
 /// Checks a load or store op for an out of bound access; returns failure if the
 /// access is out of bounds along any of the dimensions, success otherwise.
@@ -377,6 +377,10 @@ unsigned getNumCommonSurroundingLoops(Operation &a, Operation &b);
 /// in bytes; if the memory space is unspecified, considers all memory spaces.
 std::optional<int64_t> getMemoryFootprintBytes(AffineForOp forOp,
                                                int memorySpace = -1);
+
+/// Returns the memref's element type's size in bytes where the elemental type
+/// is an int or float or a vector of such types.
+std::optional<int64_t> getMemRefIntOrFloatEltSizeInBytes(MemRefType memRefType);
 
 /// Simplify the integer set by simplifying the underlying affine expressions by
 /// flattening and some simple inference. Also, drop any duplicate constraints.
