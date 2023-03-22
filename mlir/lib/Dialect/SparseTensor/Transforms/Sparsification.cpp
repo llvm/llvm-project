@@ -1045,8 +1045,9 @@ static void genTensorStore(CodegenEnv &env, OpBuilder &builder, ExprId exp,
     if (!rhs) {
       // Only unary and binary are allowed to return uninitialized rhs
       // to indicate missing output.
-      assert(env.exp(exp).kind == kUnary || env.exp(exp).kind == kBinary);
-    } else if (env.exp(exp).kind == kSelect) {
+      assert(env.exp(exp).kind == TensorExp::Kind::kUnary ||
+             env.exp(exp).kind == TensorExp::Kind::kBinary);
+    } else if (env.exp(exp).kind == TensorExp::Kind::kSelect) {
       // Select operation insertion.
       Value chain = env.getInsertionChain();
       scf::IfOp ifOp =
@@ -1114,28 +1115,29 @@ static Value genExp(CodegenEnv &env, RewriterBase &rewriter, ExprId e,
     return Value();
   const TensorExp &exp = env.exp(e);
   const auto kind = exp.kind;
-  if (kind == Kind::kTensor)
+  if (kind == TensorExp::Kind::kTensor)
     return genTensorLoad(env, rewriter, e);
-  if (kind == Kind::kInvariant)
+  if (kind == TensorExp::Kind::kInvariant)
     return genInvariantValue(env, e);
-  if (kind == Kind::kLoopVar)
+  if (kind == TensorExp::Kind::kLoopVar)
     return env.getLoopVar(exp.loop);
 
-  if (kind == Kind::kReduce)
+  if (kind == TensorExp::Kind::kReduce)
     env.startCustomReduc(e); // enter custom
 
   Value v0 = genExp(env, rewriter, exp.children.e0, ldx);
   Value v1 = genExp(env, rewriter, exp.children.e1, ldx);
   Value ee = env.merger().buildExp(rewriter, loc, e, v0, v1);
-  if (ee && (kind == Kind::kUnary || kind == Kind::kBinary ||
-             kind == Kind::kBinaryBranch || kind == Kind::kReduce ||
-             kind == Kind::kSelect))
+  if (ee &&
+      (kind == TensorExp::Kind::kUnary || kind == TensorExp::Kind::kBinary ||
+       kind == TensorExp::Kind::kBinaryBranch ||
+       kind == TensorExp::Kind::kReduce || kind == TensorExp::Kind::kSelect))
     ee = relinkBranch(env, rewriter, ee.getParentBlock(), ee, ldx);
 
-  if (kind == Kind::kReduce)
+  if (kind == TensorExp::Kind::kReduce)
     env.endCustomReduc(); // exit custom
 
-  if (kind == kSelect) {
+  if (kind == TensorExp::Kind::kSelect) {
     assert(!exp.val);
     env.exp(e).val = v0; // Preserve value for later use.
   }
@@ -1148,7 +1150,7 @@ static void genInvariants(CodegenEnv &env, OpBuilder &builder, ExprId exp,
                           LoopId ldx, bool atStart) {
   if (exp == kInvalidId)
     return;
-  if (env.exp(exp).kind == Kind::kTensor) {
+  if (env.exp(exp).kind == TensorExp::Kind::kTensor) {
     // Inspect tensor indices.
     bool isAtLoop = ldx == kInvalidId;
     linalg::GenericOp op = env.op();
@@ -1192,18 +1194,18 @@ static void genInvariants(CodegenEnv &env, OpBuilder &builder, ExprId exp,
       // Start or end loop invariant hoisting of a tensor load.
       env.exp(exp).val = atStart ? genTensorLoad(env, builder, exp) : Value();
     }
-  } else if (env.exp(exp).kind != Kind::kInvariant &&
-             env.exp(exp).kind != Kind::kLoopVar) {
+  } else if (env.exp(exp).kind != TensorExp::Kind::kInvariant &&
+             env.exp(exp).kind != TensorExp::Kind::kLoopVar) {
     // Traverse into the binary operations. Note that we only hoist
     // tensor loads, since subsequent MLIR/LLVM passes know how to
     // deal with all other kinds of derived loop invariants.
-    if (env.exp(exp).kind == Kind::kReduce)
+    if (env.exp(exp).kind == TensorExp::Kind::kReduce)
       env.startCustomReduc(exp); // enter custom
     const ExprId e0 = env.exp(exp).children.e0;
     const ExprId e1 = env.exp(exp).children.e1;
     genInvariants(env, builder, e0, ldx, atStart);
     genInvariants(env, builder, e1, ldx, atStart);
-    if (env.exp(exp).kind == Kind::kReduce)
+    if (env.exp(exp).kind == TensorExp::Kind::kReduce)
       env.endCustomReduc(); // exit custom
   }
 }
