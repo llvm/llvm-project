@@ -862,6 +862,8 @@ td_library(
         "//mlir:include/mlir/Bindings/Python/Attributes.td",
     ],
     deps = [
+        "//mlir:CallInterfacesTdFiles",
+        "//mlir:FunctionInterfacesTdFiles",
         "//mlir:OpBaseTdFiles",
         "//mlir:TransformDialectTdFiles",
     ],
