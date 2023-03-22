@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "TypeDetail.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
@@ -2854,6 +2855,39 @@ static void moveConstantAllocasToEntryBlock(
   }
 }
 
+static Value handleByValArgument(OpBuilder &builder, Operation *callable,
+                                 Value argument,
+                                 NamedAttribute byValAttribute) {
+  auto func = cast<LLVM::LLVMFuncOp>(callable);
+  LLVM::MemoryEffectsAttr memoryEffects = func.getMemoryAttr();
+  // If there is no memory effects attribute, assume that the function is
+  // not read-only.
+  bool isReadOnly = memoryEffects &&
+                    memoryEffects.getArgMem() != ModRefInfo::ModRef &&
+                    memoryEffects.getArgMem() != ModRefInfo::Mod;
+  if (isReadOnly)
+    return argument;
+  // Resolve the pointee type and its size.
+  auto ptrType = cast<LLVM::LLVMPointerType>(argument.getType());
+  Type elementType = cast<TypeAttr>(byValAttribute.getValue()).getValue();
+  unsigned int typeSize =
+      DataLayout(callable->getParentOfType<DataLayoutOpInterface>())
+          .getTypeSize(elementType);
+  // Allocate the new value on the stack.
+  Value one = builder.create<LLVM::ConstantOp>(
+      func.getLoc(), builder.getI64Type(), builder.getI64IntegerAttr(1));
+  Value allocaOp =
+      builder.create<LLVM::AllocaOp>(func.getLoc(), ptrType, elementType, one);
+  // Copy the pointee to the newly allocated value.
+  Value copySize = builder.create<LLVM::ConstantOp>(
+      func.getLoc(), builder.getI64Type(), builder.getI64IntegerAttr(typeSize));
+  Value isVolatile = builder.create<LLVM::ConstantOp>(
+      func.getLoc(), builder.getI1Type(), builder.getBoolAttr(false));
+  builder.create<LLVM::MemcpyOp>(func.getLoc(), allocaOp, argument, copySize,
+                                 isVolatile);
+  return allocaOp;
+}
+
 namespace {
 struct LLVMInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
@@ -2866,8 +2900,19 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(callable);
     if (!callOp || !funcOp)
       return false;
-    // TODO: Handle argument and result attributes;
-    if (funcOp.getArgAttrs() || funcOp.getResAttrs())
+    if (auto attrs = funcOp.getArgAttrs()) {
+      for (Attribute attr : *attrs) {
+        auto attrDict = cast<DictionaryAttr>(attr);
+        for (NamedAttribute attr : attrDict) {
+          if (attr.getName() == LLVMDialect::getByValAttrName())
+            continue;
+          // TODO: Handle all argument attributes;
+          return false;
+        }
+      }
+    }
+    // TODO: Handle result attributes;
+    if (funcOp.getResAttrs())
       return false;
     // TODO: Handle exceptions.
     if (funcOp.getPersonality())
@@ -2940,6 +2985,14 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     for (const auto &[dst, src] :
          llvm::zip(valuesToRepl, returnOp.getOperands()))
       dst.replaceAllUsesWith(src);
+  }
+
+  Value handleArgument(OpBuilder &builder, Operation *call, Operation *callable,
+                       Value argument, Type targetType,
+                       DictionaryAttr argumentAttrs) const final {
+    if (auto attr = argumentAttrs.getNamed(LLVMDialect::getByValAttrName()))
+      return handleByValArgument(builder, callable, argument, *attr);
+    return argument;
   }
 
   void processInlinedCallBlocks(
