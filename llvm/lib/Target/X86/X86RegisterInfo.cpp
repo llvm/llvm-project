@@ -702,6 +702,11 @@ static bool CantUseSP(const MachineFrameInfo &MFI) {
 
 bool X86RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
+  // We have a virtual register to reference argument, and don't need base
+  // pointer.
+  if (X86FI->getStackPtrSaveMI() != nullptr)
+    return false;
+
   if (X86FI->hasPreallocatedCall())
     return true;
 
@@ -776,6 +781,45 @@ static bool isFuncletReturnInstr(MachineInstr &MI) {
     return false;
   }
   llvm_unreachable("impossible");
+}
+
+void X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+                                          unsigned FIOperandNum,
+                                          Register BaseReg,
+                                          int FIOffset) const {
+  MachineInstr &MI = *II;
+  unsigned Opc = MI.getOpcode();
+  if (Opc == TargetOpcode::LOCAL_ESCAPE) {
+    MachineOperand &FI = MI.getOperand(FIOperandNum);
+    FI.ChangeToImmediate(FIOffset);
+    return;
+  }
+
+  MI.getOperand(FIOperandNum).ChangeToRegister(BaseReg, false);
+
+  // The frame index format for stackmaps and patchpoints is different from the
+  // X86 format. It only has a FI and an offset.
+  if (Opc == TargetOpcode::STACKMAP || Opc == TargetOpcode::PATCHPOINT) {
+    assert(BasePtr == FramePtr && "Expected the FP as base register");
+    int64_t Offset = MI.getOperand(FIOperandNum + 1).getImm() + FIOffset;
+    MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+    return;
+  }
+
+  if (MI.getOperand(FIOperandNum + 3).isImm()) {
+    // Offset is a 32-bit integer.
+    int Imm = (int)(MI.getOperand(FIOperandNum + 3).getImm());
+    int Offset = FIOffset + Imm;
+    assert((!Is64Bit || isInt<32>((long long)FIOffset + Imm)) &&
+           "Requesting 64-bit offset in 32-bit immediate!");
+    if (Offset != 0 || !tryOptimizeLEAtoMOV(II))
+      MI.getOperand(FIOperandNum + 3).ChangeToImmediate(Offset);
+  } else {
+    // Offset is symbolic. This is extremely rare.
+    uint64_t Offset =
+        FIOffset + (uint64_t)MI.getOperand(FIOperandNum + 3).getOffset();
+    MI.getOperand(FIOperandNum + 3).setOffset(Offset);
+  }
 }
 
 bool

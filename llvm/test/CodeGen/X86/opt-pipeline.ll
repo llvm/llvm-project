@@ -88,6 +88,7 @@
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Local Dynamic TLS Access Clean-up
 ; CHECK-NEXT:       X86 PIC Global Base Reg Initialization
+; CHECK-NEXT:       Argument Stack Rebase
 ; CHECK-NEXT:        Finalize ISel and expand pseudo-instructions
 ; CHECK-NEXT:       X86 Domain Reassignment Pass
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
