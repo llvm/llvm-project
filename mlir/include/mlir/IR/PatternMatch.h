@@ -624,7 +624,9 @@ public:
 
 protected:
   /// Initialize the builder.
-  explicit RewriterBase(MLIRContext *ctx) : OpBuilder(ctx) {}
+  explicit RewriterBase(MLIRContext *ctx,
+                        OpBuilder::Listener *listener = nullptr)
+      : OpBuilder(ctx, listener) {}
   explicit RewriterBase(const OpBuilder &otherBuilder)
       : OpBuilder(otherBuilder) {}
   virtual ~RewriterBase();
@@ -648,7 +650,8 @@ private:
 /// such as a `PatternRewriter`, is not available.
 class IRRewriter : public RewriterBase {
 public:
-  explicit IRRewriter(MLIRContext *ctx) : RewriterBase(ctx) {}
+  explicit IRRewriter(MLIRContext *ctx, OpBuilder::Listener *listener = nullptr)
+      : RewriterBase(ctx, listener) {}
   explicit IRRewriter(const OpBuilder &builder) : RewriterBase(builder) {}
 };
 

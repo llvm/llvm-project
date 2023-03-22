@@ -496,4 +496,3 @@ func.func @mul_const_affine_dense_dim_2d(%arga: tensor<34x16xf64, #CSR>,
   } -> tensor<32x16xf64>
   return %0 : tensor<32x16xf64>
 }
-

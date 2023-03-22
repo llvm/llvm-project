@@ -128,7 +128,8 @@ class MergerTestBase : public ::testing::Test {
 protected:
   MergerTestBase(unsigned numTensors, unsigned numLoops)
       : numTensors(numTensors), numLoops(numLoops),
-        merger(numTensors, numLoops, /*numFilterLoops=*/0) {}
+        merger(numTensors, numLoops, /*numFilterLoops=*/0,
+               /*maxRank=*/numLoops) {}
 
   ///
   /// Expression construction helpers.

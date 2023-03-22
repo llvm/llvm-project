@@ -1730,12 +1730,22 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
   assert(!FnRetType->isDependentType() &&
          "get_return_object type must no longer be dependent");
 
+  // The call to get_­return_­object is sequenced before the call to
+  // initial_­suspend and is invoked at most once, but there are caveats
+  // regarding on whether the prvalue result object may be initialized
+  // directly/eager or delayed, depending on the types involved.
+  //
+  // More info at https://github.com/cplusplus/papers/issues/1414
+  bool GroMatchesRetType = S.getASTContext().hasSameType(GroType, FnRetType);
+
   if (FnRetType->isVoidType()) {
     ExprResult Res =
         S.ActOnFinishFullExpr(this->ReturnValue, Loc, /*DiscardedValue*/ false);
     if (Res.isInvalid())
       return false;
 
+    if (!GroMatchesRetType)
+      this->ResultDecl = Res.get();
     return true;
   }
 
@@ -1748,11 +1758,60 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
     return false;
   }
 
-  StmtResult ReturnStmt = S.BuildReturnStmt(Loc, ReturnValue);
+  StmtResult ReturnStmt;
+  clang::VarDecl *GroDecl = nullptr;
+  if (GroMatchesRetType) {
+    ReturnStmt = S.BuildReturnStmt(Loc, ReturnValue);
+  } else {
+    GroDecl = VarDecl::Create(
+        S.Context, &FD, FD.getLocation(), FD.getLocation(),
+        &S.PP.getIdentifierTable().get("__coro_gro"), GroType,
+        S.Context.getTrivialTypeSourceInfo(GroType, Loc), SC_None);
+    GroDecl->setImplicit();
+
+    S.CheckVariableDeclarationType(GroDecl);
+    if (GroDecl->isInvalidDecl())
+      return false;
+
+    InitializedEntity Entity = InitializedEntity::InitializeVariable(GroDecl);
+    ExprResult Res =
+        S.PerformCopyInitialization(Entity, SourceLocation(), ReturnValue);
+    if (Res.isInvalid())
+      return false;
+
+    Res = S.ActOnFinishFullExpr(Res.get(), /*DiscardedValue*/ false);
+    if (Res.isInvalid())
+      return false;
+
+    S.AddInitializerToDecl(GroDecl, Res.get(),
+                           /*DirectInit=*/false);
+
+    S.FinalizeDeclaration(GroDecl);
+
+    // Form a declaration statement for the return declaration, so that AST
+    // visitors can more easily find it.
+    StmtResult GroDeclStmt =
+        S.ActOnDeclStmt(S.ConvertDeclToDeclGroup(GroDecl), Loc, Loc);
+    if (GroDeclStmt.isInvalid())
+      return false;
+
+    this->ResultDecl = GroDeclStmt.get();
+
+    ExprResult declRef = S.BuildDeclRefExpr(GroDecl, GroType, VK_LValue, Loc);
+    if (declRef.isInvalid())
+      return false;
+
+    ReturnStmt = S.BuildReturnStmt(Loc, declRef.get());
+  }
+
   if (ReturnStmt.isInvalid()) {
     noteMemberDeclaredHere(S, ReturnValue, Fn);
     return false;
   }
+
+  if (!GroMatchesRetType &&
+      cast<clang::ReturnStmt>(ReturnStmt.get())->getNRVOCandidate() == GroDecl)
+    GroDecl->setNRVOVariable(true);
 
   this->ReturnStmt = ReturnStmt.get();
   return true;

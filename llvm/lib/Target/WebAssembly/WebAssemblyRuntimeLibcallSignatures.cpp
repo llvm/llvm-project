@@ -772,8 +772,6 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     if (Subtarget.hasMultivalue()) {
       Rets.push_back(wasm::ValType::I64);
       Rets.push_back(wasm::ValType::I64);
-      Rets.push_back(wasm::ValType::I64);
-      Rets.push_back(wasm::ValType::I64);
     } else {
       Params.push_back(PtrTy);
     }

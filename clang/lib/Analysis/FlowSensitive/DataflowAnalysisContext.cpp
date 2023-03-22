@@ -342,7 +342,8 @@ BoolValue &DataflowAnalysisContext::buildAndSubstituteFlowConditionWithCache(
   return substituteBoolValue(*ConstraintsIt->second, SubstitutionsCache);
 }
 
-void DataflowAnalysisContext::dumpFlowCondition(AtomicBoolValue &Token) {
+void DataflowAnalysisContext::dumpFlowCondition(AtomicBoolValue &Token,
+                                                llvm::raw_ostream &OS) {
   llvm::DenseSet<BoolValue *> Constraints = {&Token};
   llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
@@ -350,7 +351,7 @@ void DataflowAnalysisContext::dumpFlowCondition(AtomicBoolValue &Token) {
   llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {
       {&getBoolLiteralValue(false), "False"},
       {&getBoolLiteralValue(true), "True"}};
-  llvm::dbgs() << debugString(Constraints, AtomNames);
+  OS << debugString(Constraints, AtomNames);
 }
 
 const ControlFlowContext *
