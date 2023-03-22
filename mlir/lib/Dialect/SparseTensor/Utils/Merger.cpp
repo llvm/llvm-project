@@ -210,7 +210,7 @@ LatPoint::LatPoint(unsigned numTensors, unsigned numLoops, TensorId t, LoopId i,
 }
 
 Merger::Merger(unsigned numInputOutputTensors, unsigned numNativeLoops,
-               unsigned numFilterLoops)
+               unsigned numFilterLoops, unsigned maxLvlRank)
     : outTensor(numInputOutputTensors - 1),
       syntheticTensor(numInputOutputTensors),
       numTensors(numInputOutputTensors + 1), numNativeLoops(numNativeLoops),
@@ -220,11 +220,11 @@ Merger::Merger(unsigned numInputOutputTensors, unsigned numNativeLoops,
       loopToLvl(numTensors,
                 std::vector<std::optional<Level>>(numLoops, std::nullopt)),
       lvlToLoop(numTensors,
-                std::vector<std::optional<LoopId>>(numLoops, std::nullopt)),
+                std::vector<std::optional<LoopId>>(maxLvlRank, std::nullopt)),
       loopToDependencies(numLoops, std::vector<std::optional<Level>>(
                                        numTensors, std::nullopt)),
       levelToDependentIdx(numTensors, std::vector<std::vector<LoopId>>(
-                                          numLoops, std::vector<LoopId>())),
+                                          maxLvlRank, std::vector<LoopId>())),
       loopBounds(numLoops, std::make_pair(numTensors, numLoops)) {}
 
 //===----------------------------------------------------------------------===//
@@ -244,6 +244,13 @@ LatPointId Merger::addLat(TensorId t, LoopId i, ExprId e) {
   assert(t < numTensors && i < numLoops);
   const LatPointId p = latPoints.size();
   latPoints.emplace_back(numTensors, numLoops, t, i, e);
+  return p;
+}
+
+LatPointId Merger::addLat(const BitVector &bits, ExprId e) {
+  assert(bits.size() == numLoops * numTensors);
+  const LatPointId p = latPoints.size();
+  latPoints.emplace_back(bits, e);
   return p;
 }
 
@@ -322,8 +329,7 @@ LatSetId Merger::mapSet(TensorExp::Kind kind, LatSetId s0, Value v,
   const LatSetId s = addSet();
   for (const LatPointId p : latSets[s0]) {
     const ExprId e = addExp(kind, latPoints[p].exp, v, op);
-    latPoints.emplace_back(latPoints[p].bits, e);
-    latSets[s].push_back(latPoints.size() - 1);
+    latSets[s].push_back(addLat(latPoints[p].bits, e));
   }
   return s;
 }

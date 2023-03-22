@@ -322,3 +322,18 @@ bb2:
 }
 
 !0 = !{!"function_entry_count", i64 42}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: dropped instruction: call void @llvm.experimental.noalias.scope.decl(metadata !0)
+define void @unused_scope() {
+  call void @llvm.experimental.noalias.scope.decl(metadata !0)
+  ret void
+}
+
+declare void @llvm.experimental.noalias.scope.decl(metadata)
+
+!0 = !{!1}
+!1 = !{!1, !2}
+!2 = distinct !{!2, !"The domain"}

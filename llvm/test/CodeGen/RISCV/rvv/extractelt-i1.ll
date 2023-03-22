@@ -162,7 +162,7 @@ define i1 @extractelt_nxv128i1(<vscale x 128 x i8>* %x, i64 %idx) nounwind {
 ; RV32-NEXT:    vmv1r.v v0, v8
 ; RV32-NEXT:    vmerge.vim v8, v16, 1, v0
 ; RV32-NEXT:    vs8r.v v8, (a2)
-; RV32-NEXT:    lb a0, 0(a1)
+; RV32-NEXT:    lbu a0, 0(a1)
 ; RV32-NEXT:    addi sp, s0, -80
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
@@ -202,7 +202,7 @@ define i1 @extractelt_nxv128i1(<vscale x 128 x i8>* %x, i64 %idx) nounwind {
 ; RV64-NEXT:    vmv1r.v v0, v8
 ; RV64-NEXT:    vmerge.vim v8, v16, 1, v0
 ; RV64-NEXT:    vs8r.v v8, (a2)
-; RV64-NEXT:    lb a0, 0(a1)
+; RV64-NEXT:    lbu a0, 0(a1)
 ; RV64-NEXT:    addi sp, s0, -80
 ; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
