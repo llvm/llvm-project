@@ -11,6 +11,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IRMapping.h"
+#include "llvm/ADT/StringSet.h"
 
 #include "mlir/Dialect/Utils/DialectUtilsEnums.cpp.inc"
 
@@ -113,4 +114,17 @@ Operation *mlir::cloneWithoutRegions(OpBuilder &b, Operation *op,
   for (size_t cnt = 0, e = op->getNumRegions(); cnt < e; ++cnt)
     state.addRegion();
   return b.create(state);
+}
+
+SmallVector<NamedAttribute>
+mlir::getPrunedAttributeList(Operation *op, ArrayRef<StringRef> elidedAttrs) {
+  llvm::StringSet<> elidedAttrsSet;
+  elidedAttrsSet.insert(elidedAttrs.begin(), elidedAttrs.end());
+  SmallVector<NamedAttribute> attrs;
+  for (auto attr : op->getAttrs()) {
+    if (elidedAttrsSet.count(attr.getName()))
+      continue;
+    attrs.push_back(attr);
+  }
+  return attrs;
 }

@@ -9856,7 +9856,8 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
         // The default for lax vector conversions with Altivec vectors will
         // change, so if we are converting between vector types where
         // at least one is an Altivec vector, emit a warning.
-        if (anyAltivecTypes(RHSType, LHSType) &&
+        if (Context.getTargetInfo().getTriple().isPPC() &&
+            anyAltivecTypes(RHSType, LHSType) &&
             !Context.areCompatibleVectorTypes(RHSType, LHSType))
           Diag(RHS.get()->getExprLoc(), diag::warn_deprecated_lax_vec_conv_all)
               << RHSType << LHSType;
@@ -9873,9 +9874,10 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
       const VectorType *VecType = RHSType->getAs<VectorType>();
       if (VecType && VecType->getNumElements() == 1 &&
           isLaxVectorConversion(RHSType, LHSType)) {
-        if (VecType->getVectorKind() == VectorType::AltiVecVector ||
-            VecType->getVectorKind() == VectorType::AltiVecBool ||
-            VecType->getVectorKind() == VectorType::AltiVecPixel)
+        if (Context.getTargetInfo().getTriple().isPPC() &&
+            (VecType->getVectorKind() == VectorType::AltiVecVector ||
+             VecType->getVectorKind() == VectorType::AltiVecBool ||
+             VecType->getVectorKind() == VectorType::AltiVecPixel))
           Diag(RHS.get()->getExprLoc(), diag::warn_deprecated_lax_vec_conv_all)
               << RHSType << LHSType;
         ExprResult *VecExpr = &RHS;
@@ -10836,7 +10838,8 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
   QualType OtherType = LHSVecType ? RHSType : LHSType;
   ExprResult *OtherExpr = LHSVecType ? &RHS : &LHS;
   if (isLaxVectorConversion(OtherType, VecType)) {
-    if (anyAltivecTypes(RHSType, LHSType) &&
+    if (Context.getTargetInfo().getTriple().isPPC() &&
+        anyAltivecTypes(RHSType, LHSType) &&
         !Context.areCompatibleVectorTypes(RHSType, LHSType))
       Diag(Loc, diag::warn_deprecated_lax_vec_conv_all) << RHSType << LHSType;
     // If we're allowing lax vector conversions, only the total (data) size

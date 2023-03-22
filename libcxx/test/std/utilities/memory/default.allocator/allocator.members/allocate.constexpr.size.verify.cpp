@@ -26,8 +26,8 @@ constexpr bool test()
     A a;
     TEST_IGNORE_NODISCARD a.allocate(AT::max_size(a) + 1);           // just barely too large
     TEST_IGNORE_NODISCARD a.allocate(AT::max_size(a) * 2);           // significantly too large
-    TEST_IGNORE_NODISCARD a.allocate(((size_t) -1) / sizeof(T) + 1); // multiply will overflow
-    TEST_IGNORE_NODISCARD a.allocate((size_t) -1);                   // way too large
+    TEST_IGNORE_NODISCARD a.allocate(((std::size_t) -1) / sizeof(T) + 1); // multiply will overflow
+    TEST_IGNORE_NODISCARD a.allocate((std::size_t) -1);                   // way too large
 
     return true;
 }

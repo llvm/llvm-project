@@ -17,6 +17,7 @@
 #include "AArch64RegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/TypeSize.h"
+#include <optional>
 
 #define GET_INSTRINFO_HEADER
 #include "AArch64GenInstrInfo.inc"
@@ -289,7 +290,7 @@ public:
 
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
-  outliner::OutlinedFunction getOutliningCandidateInfo(
+  std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
   outliner::InstrType
   getOutliningTypeImpl(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;

@@ -14,7 +14,6 @@
 #include "CodeGenSchedule.h"
 #include "CodeGenTarget.h"
 #include "PredicateExpander.h"
-#include "TableGenBackends.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -70,7 +69,7 @@ class SubtargetEmitter {
     }
   };
 
-  const CodeGenTarget &TGT;
+  CodeGenTarget TGT;
   RecordKeeper &Records;
   CodeGenSchedModels &SchedModels;
   std::string Target;
@@ -128,8 +127,8 @@ class SubtargetEmitter {
   void ParseFeaturesFunction(raw_ostream &OS);
 
 public:
-  SubtargetEmitter(RecordKeeper &R, CodeGenTarget &TGT)
-      : TGT(TGT), Records(R), SchedModels(TGT.getSchedModels()),
+  SubtargetEmitter(RecordKeeper &R)
+      : TGT(R), Records(R), SchedModels(TGT.getSchedModels()),
         Target(TGT.getName()) {}
 
   void run(raw_ostream &o);
@@ -1985,11 +1984,5 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   EmitMCInstrAnalysisPredicateFunctions(OS);
 }
 
-namespace llvm {
-
-void EmitSubtarget(RecordKeeper &RK, raw_ostream &OS) {
-  CodeGenTarget CGTarget(RK);
-  SubtargetEmitter(RK, CGTarget).run(OS);
-}
-
-} // end namespace llvm
+static TableGen::Emitter::OptClass<SubtargetEmitter>
+    X("gen-subtarget", "Generate subtarget enumerations");

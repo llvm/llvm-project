@@ -18,6 +18,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Target/LLVMIR/Dialect/OpenMPCommon.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
 #include "llvm/ADT/TypeSwitch.h"
@@ -46,23 +47,6 @@ static constexpr uint64_t kHoldFlag = 0x2000;
 /// Default value for the device id
 static constexpr int64_t kDefaultDevice = -1;
 
-/// Create a constant string location from the MLIR Location information.
-static llvm::Constant *createSourceLocStrFromLocation(Location loc,
-                                                      OpenACCIRBuilder &builder,
-                                                      StringRef name,
-                                                      uint32_t &strLen) {
-  if (auto fileLoc = loc.dyn_cast<FileLineColLoc>()) {
-    StringRef fileName = fileLoc.getFilename();
-    unsigned lineNo = fileLoc.getLine();
-    unsigned colNo = fileLoc.getColumn();
-    return builder.getOrCreateSrcLocStr(name, fileName, lineNo, colNo, strLen);
-  }
-  std::string locStr;
-  llvm::raw_string_ostream locOS(locStr);
-  locOS << loc;
-  return builder.getOrCreateSrcLocStr(locOS.str(), strLen);
-}
-
 /// Create the location struct from the operation location information.
 static llvm::Value *createSourceLocationInfo(OpenACCIRBuilder &builder,
                                              Operation *op) {
@@ -70,22 +54,9 @@ static llvm::Value *createSourceLocationInfo(OpenACCIRBuilder &builder,
   auto funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
   StringRef funcName = funcOp ? funcOp.getName() : "unknown";
   uint32_t strLen;
-  llvm::Constant *locStr =
-      createSourceLocStrFromLocation(loc, builder, funcName, strLen);
+  llvm::Constant *locStr = mlir::LLVM::createSourceLocStrFromLocation(
+      loc, builder, funcName, strLen);
   return builder.getOrCreateIdent(locStr, strLen);
-}
-
-/// Create a constant string representing the mapping information extracted from
-/// the MLIR location information.
-static llvm::Constant *createMappingInformation(Location loc,
-                                                OpenACCIRBuilder &builder) {
-  uint32_t strLen;
-  if (auto nameLoc = loc.dyn_cast<NameLoc>()) {
-    StringRef name = nameLoc.getName();
-    return createSourceLocStrFromLocation(nameLoc.getChildLoc(), builder, name,
-                                          strLen);
-  }
-  return createSourceLocStrFromLocation(loc, builder, "unknown", strLen);
 }
 
 /// Return the runtime function used to lower the given operation.
@@ -105,19 +76,6 @@ static llvm::Function *getAssociatedFunction(OpenACCIRBuilder &builder,
             llvm::omp::OMPRTL___tgt_target_data_update_mapper);
       });
   llvm_unreachable("Unknown OpenACC operation");
-}
-
-/// Computes the size of type in bytes.
-static llvm::Value *getSizeInBytes(llvm::IRBuilderBase &builder,
-                                   llvm::Value *basePtr) {
-  llvm::LLVMContext &ctx = builder.getContext();
-  llvm::Value *null =
-      llvm::Constant::getNullValue(basePtr->getType()->getPointerTo());
-  llvm::Value *sizeGep =
-      builder.CreateGEP(basePtr->getType(), null, builder.getInt32(1));
-  llvm::Value *sizePtrToInt =
-      builder.CreatePtrToInt(sizeGep, llvm::Type::getInt64Ty(ctx));
-  return sizePtrToInt;
 }
 
 /// Extract pointer, size and mapping information from operands
@@ -153,7 +111,7 @@ processOperands(llvm::IRBuilderBase &builder,
     } else if (data.getType().isa<LLVM::LLVMPointerType>()) {
       dataPtrBase = dataValue;
       dataPtr = dataValue;
-      dataSize = getSizeInBytes(builder, dataValue);
+      dataSize = accBuilder->getSizeInBytes(dataValue);
     } else {
       return op->emitOpError()
              << "Data operand must be legalized before translation."
@@ -185,7 +143,7 @@ processOperands(llvm::IRBuilderBase &builder,
 
     flags.push_back(operandFlag);
     llvm::Constant *mapName =
-        createMappingInformation(data.getLoc(), *accBuilder);
+        mlir::LLVM::createMappingInformation(data.getLoc(), *accBuilder);
     names.push_back(mapName);
     ++index;
   }

@@ -366,9 +366,9 @@ mlir::Value fir::factory::createUnallocatedBox(
 
 fir::MutableBoxValue fir::factory::createTempMutableBox(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type type,
-    llvm::StringRef name, mlir::Value typeSourceBox) {
+    llvm::StringRef name, mlir::Value typeSourceBox, bool isPolymorphic) {
   mlir::Type boxType;
-  if (typeSourceBox)
+  if (typeSourceBox || isPolymorphic)
     boxType = fir::ClassType::get(fir::HeapType::get(type));
   else
     boxType = fir::BoxType::get(fir::HeapType::get(type));

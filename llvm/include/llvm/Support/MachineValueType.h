@@ -292,9 +292,10 @@ namespace llvm {
       x86amx         = 194,    // This is an X86 AMX value
       i64x8          = 195,    // 8 Consecutive GPRs (AArch64)
       aarch64svcount = 196,    // AArch64 predicate-as-counter
+      spirvbuiltin   = 197,    // SPIR-V's builtin type
 
       FIRST_VALUETYPE =  1,    // This is always the beginning of the list.
-      LAST_VALUETYPE = aarch64svcount, // This always remains at the end of the list.
+      LAST_VALUETYPE = spirvbuiltin, // This always remains at the end of the list.
       VALUETYPE_SIZE = LAST_VALUETYPE + 1,
 
       // This is the current maximum for LAST_VALUETYPE.
@@ -1143,7 +1144,9 @@ namespace llvm {
       case v2048i32:
       case v2048f32:  return TypeSize::Fixed(65536);
       case funcref:
-      case externref: return TypeSize::Fixed(0); // opaque type
+      case externref:
+      case spirvbuiltin:
+        return TypeSize::Fixed(0); // opaque type
       }
     }
 

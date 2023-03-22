@@ -238,6 +238,7 @@ def x86amx    : ValueType<8192, 194>;  // X86 AMX value
 def i64x8     : ValueType<512,  195>;  // 8 Consecutive GPRs (AArch64)
 def aarch64svcount
               : ValueType<16,   196>;  // AArch64 predicate-as-counter
+def spirvbuiltin : ValueType<0,  197>; // SPIR-V's builtin type
 
 def token      : ValueType<0, 248>;  // TokenTy
 def MetadataVT : ValueType<0, 249>;  // Metadata

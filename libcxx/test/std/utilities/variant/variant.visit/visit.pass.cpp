@@ -347,7 +347,7 @@ void test_caller_accepts_nonconst() {
 struct MyVariant : std::variant<short, long, float> {};
 
 namespace std {
-template <size_t Index>
+template <std::size_t Index>
 void get(const MyVariant&) {
   assert(false);
 }

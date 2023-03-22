@@ -25,7 +25,7 @@ int main(int, char**) {
   auto mono1                    = std::pmr::monotonic_buffer_resource(1024, std::pmr::new_delete_resource());
   std::pmr::memory_resource& r1 = mono1;
 
-  constexpr size_t big_alignment = 8 * alignof(std::max_align_t);
+  constexpr std::size_t big_alignment = 8 * alignof(std::max_align_t);
   static_assert(big_alignment > 4);
 
   void* ret = r1.allocate(2048, big_alignment);

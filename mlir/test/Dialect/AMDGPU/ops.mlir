@@ -18,6 +18,13 @@ func.func @raw_buffer_load_f32_from_rank_4(%src : memref<128x64x32x16xf32>, %off
   func.return %0 : f32
 }
 
+// CHECK-LABEL: func @raw_buffer_load_scalar
+func.func @raw_buffer_load_scalar(%src : memref<f32>) -> f32 {
+  // CHECK: amdgpu.raw_buffer_load {indexOffset = 1 : i32} %{{.*}}[] : memref<f32> -> f32
+  %0 = amdgpu.raw_buffer_load {indexOffset = 1 : i32} %src[] : memref<f32> -> f32
+  func.return %0 : f32
+}
+
 // CHECK-LABEL: func @raw_buffer_load_4xf32_from_rank_4
 func.func @raw_buffer_load_4xf32_from_rank_4(%src : memref<128x64x32x16xf32>, %offset : i32, %idx0 : i32, %idx1 : i32, %idx2 : i32, %idx3 : i32) -> vector<4xf32> {
   // CHECK: amdgpu.raw_buffer_load {indexOffset = 1 : i32} %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] sgprOffset %{{.*}} : memref<128x64x32x16xf32>, i32, i32, i32, i32 -> vector<4xf32>
@@ -43,6 +50,13 @@ func.func @raw_buffer_store_f32_to_rank_4(%value : f32, %dst : memref<128x64x32x
 func.func @raw_buffer_store_4xf32_to_rank_4(%value : vector<4xf32>, %dst : memref<128x64x32x16xf32>, %offset : i32, %idx0 : i32, %idx1 : i32, %idx2 : i32, %idx3 : i32) {
   // CHECK: amdgpu.raw_buffer_store {indexOffset = 1 : i32} %{{.*}} -> %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] sgprOffset %{{.*}} : vector<4xf32> -> memref<128x64x32x16xf32>, i32, i32, i32, i32
   amdgpu.raw_buffer_store {boundsCheck = true, indexOffset = 1 : i32} %value -> %dst[%idx0, %idx1, %idx2, %idx3] sgprOffset %offset : vector<4xf32> -> memref<128x64x32x16xf32>, i32, i32, i32, i32
+  func.return
+}
+
+// CHECK-LABEL: func @raw_buffer_store_scalar
+func.func @raw_buffer_store_scalar(%value : f32, %dst : memref<f32>) {
+  // CHECK: amdgpu.raw_buffer_store {indexOffset = 1 : i32} %{{.*}} -> %{{.*}}[] : f32 -> memref<f32>
+  amdgpu.raw_buffer_store {indexOffset = 1 : i32} %value -> %dst[] : f32 -> memref<f32>
   func.return
 }
 

@@ -46,7 +46,7 @@
 ; CHECK-O3-NEXT: Running pass: CallSiteSplittingPass
 ; CHECK-O-NEXT: Running pass: SampleProfileLoaderPass
 ; CHECK-O-NEXT: Running analysis: ProfileSummaryAnalysis
-; CHECK-O-NEXT: Running analysis: CallGraphAnalysis
+; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
 ; CHECK-O-NEXT: Running pass: PGOIndirectCallPromotion
 ; CHECK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
@@ -64,23 +64,19 @@
 ; CHECK-O-NEXT: Running analysis: TypeBasedAA
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
-; These next two can appear in any order since they are accessed as parameters
-; on the same call to BlockFrequencyInfo::calculate.
-; CHECK-OSZ-DAG: Running analysis: LoopAnalysis on foo
-; CHECK-OSZ-DAG: Running analysis: BranchProbabilityAnalysis on foo
-; CHECK-O123-NEXT: Running analysis: BranchProbabilityAnalysis on foo
+; CHECK-O-NEXT: Running analysis: BranchProbabilityAnalysis on foo
+; CHECK-OSZ-NEXT: Running analysis: LoopAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass on foo
-
 ; CHECK-O-NEXT: Running pass: ModuleInlinerWrapperPass
 ; CHECK-O-NEXT: Running analysis: InlineAdvisorAnalysis
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
 ; CHECK-O-NEXT: Running analysis: GlobalsAA
+; CHECK-O-NEXT: Running analysis: CallGraphAnalysis
 ; CHECK-O-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}AAManager
 ; CHECK-O-NEXT: Invalidating analysis: AAManager
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
-; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: DevirtSCCRepeatedPass

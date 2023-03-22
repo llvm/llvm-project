@@ -19,12 +19,12 @@
 #include <cstddef> // size_t
 
 struct assert_on_compare : public std::pmr::memory_resource {
-  void* do_allocate(size_t, size_t) override {
+  void* do_allocate(std::size_t, size_t) override {
     assert(false);
     return nullptr;
   }
 
-  void do_deallocate(void*, size_t, size_t) override { assert(false); }
+  void do_deallocate(void*, std::size_t, size_t) override { assert(false); }
 
   bool do_is_equal(const std::pmr::memory_resource&) const noexcept override {
     assert(false);

@@ -17,6 +17,7 @@ if (MLIR_ENABLE_SPIRV_CPU_RUNNER)
     ${conversion_libs}
     MLIRAnalysis
     MLIRArithDialect
+    MLIRBuiltinToLLVMIRTranslation
     MLIRExecutionEngine
     MLIRFuncDialect
     MLIRGPUOps

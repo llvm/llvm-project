@@ -86,7 +86,7 @@ func.func @insert_slice_rank_reducing_dynamic_shape(
 
 // CHECK-LABEL: func.func @parallel_insert_slice
 //   CHECK-NOT:   tensor.insert_slice
-//       CHECK:   tensor.parallel_insert_slice %{{.*}} into %{{.*}}[%{{.*}}, %{{.*}}] [1, 1] [1, 1] : tensor<f32> into tensor<1x2xf32>
+//       CHECK:   tensor.parallel_insert_slice %{{.*}} into %{{.*}}[0, %{{.*}}] [1, 1] [1, 1] : tensor<f32> into tensor<1x2xf32>
 func.func @parallel_insert_slice(%t0: tensor<1x2xf32>, %t1: tensor<f32>, %t2: tensor<1x1xf32>) -> tensor<1x2xf32> {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index

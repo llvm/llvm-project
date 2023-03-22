@@ -66,6 +66,10 @@ typedef int MyInt;
         {
           "kind": "identifier",
           "spelling": "MyInt"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {

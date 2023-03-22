@@ -59,14 +59,14 @@ static_assert(!HasSortHeapR<UncheckedRange<int*, SentinelForNotWeaklyEqualityCom
 static_assert(!HasSortHeapR<UncheckedRange<int*>, BadComparator>);
 static_assert(!HasSortHeapR<UncheckedRange<const int*>>); // Doesn't satisfy `sortable`.
 
-template <size_t N, class T, class Iter>
+template <std::size_t N, class T, class Iter>
 constexpr void verify_sorted(const std::array<T, N>& sorted, Iter last, std::array<T, N> expected) {
   assert(sorted == expected);
   assert(base(last) == sorted.data() + sorted.size());
   assert(std::is_sorted(sorted.begin(), sorted.end()));
 }
 
-template <class Iter, class Sent, size_t N>
+template <class Iter, class Sent, std::size_t N>
 constexpr void test_one(const std::array<int, N> input, std::array<int, N> expected) {
   assert(std::is_heap(input.begin(), input.end()));
 

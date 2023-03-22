@@ -21,7 +21,6 @@
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 #include "InfoByHwMode.h"
-#include "TableGenBackends.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
@@ -858,9 +857,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
   // TODO: SignaturesWithConstantForms should be empty here.
 }
 
-namespace llvm {
-
-void EmitFastISel(RecordKeeper &RK, raw_ostream &OS) {
+static void EmitFastISel(RecordKeeper &RK, raw_ostream &OS) {
   CodeGenDAGPatterns CGP(RK);
   const CodeGenTarget &Target = CGP.getTargetInfo();
   emitSourceFileHeader("\"Fast\" Instruction Selector for the " +
@@ -876,4 +873,5 @@ void EmitFastISel(RecordKeeper &RK, raw_ostream &OS) {
   F.printFunctionDefinitions(OS);
 }
 
-} // namespace llvm
+static TableGen::Emitter::Opt X("gen-fast-isel", EmitFastISel,
+                                "Generate a \"fast\" instruction selector");

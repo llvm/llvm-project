@@ -59,8 +59,8 @@ constexpr void test() {
   };
   static_assert(v.size() == vn.size());
 
-  for (size_t i = 0; i < v.size(); ++i) {
-    for (size_t j = 0; j < v.size(); ++j) {
+  for (std::size_t i = 0; i < v.size(); ++i) {
+    for (std::size_t j = 0; j < v.size(); ++j) {
       assert(testOrder(v[i], v[j], i == j ? Ordering::equivalent : i < j ? Ordering::less : Ordering::greater));
 
       assert(testOrder(

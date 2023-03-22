@@ -112,13 +112,13 @@
 
 ## Check that an error is thrown when the input library cannot be found
 ## (since 'lib' and '.a' are added):
-# RUN: llvm-ar cr %t/dirname/file %t-input1.o
-# RUN: not llvm-libtool-darwin -static -o %t.lib -lfile -L%t/dirname 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=NOT-FOUND -DFILE=libfile.a
+# RUN: llvm-ar cr %t/dirname/file-does-exist %t-input1.o
+# RUN: not llvm-libtool-darwin -static -o %t.lib -lfile-does-exist -L%t/dirname 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOT-FOUND -DFILE=libfile-does-exist.a
 
-# RUN: llvm-ar cr %t/dirname/libfile.a %t-input1.o
-# RUN: not llvm-libtool-darwin -static -o %t.lib -llibfile.a -L%t/dirname 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=NOT-FOUND -DFILE=liblibfile.a.a
+# RUN: llvm-ar cr %t/dirname/libfile-does-exist.a %t-input1.o
+# RUN: not llvm-libtool-darwin -static -o %t.lib -llibfile-does-exist.a -L%t/dirname 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOT-FOUND -DFILE=liblibfile-does-exist.a.a
 
 ## Check that an error is thrown when the input library is not valid:
 # RUN: touch %t/dirname/not-valid.o

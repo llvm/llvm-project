@@ -19,7 +19,7 @@
 #include "test_macros.h"
 
 template <typename CharT>
-void test ( const CharT *s, size_t len ) {
+void test ( const CharT *s, std::size_t len ) {
     std::basic_string_view<CharT> sv ( s, len );
     assert ( sv.length() == len );
     assert ( sv.data() == s );

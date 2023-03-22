@@ -46,13 +46,6 @@ lldb::LanguageType CompilerDeclContext::GetLanguage() {
   return {};
 }
 
-ConstString
-CompilerDeclContext::GetInstanceVariableName(lldb::LanguageType language) {
-  if (IsValid())
-    return m_type_system->GetInstanceVariableName(language);
-  return {};
-}
-
 bool CompilerDeclContext::IsContainedInLookup(CompilerDeclContext other) const {
   if (!IsValid())
     return false;

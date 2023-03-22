@@ -46,7 +46,8 @@ using namespace lldb_private;
 // Construct a Thread object with given data
 ThreadElfCore::ThreadElfCore(Process &process, const ThreadData &td)
     : Thread(process, td.tid), m_thread_name(td.name), m_thread_reg_ctx_sp(),
-      m_signo(td.signo), m_gpregset_data(td.gpregset), m_notes(td.notes) {}
+      m_signo(td.signo), m_code(td.code), m_gpregset_data(td.gpregset),
+      m_notes(td.notes) {}
 
 ThreadElfCore::~ThreadElfCore() { DestroyThread(); }
 
@@ -221,11 +222,12 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
 
 bool ThreadElfCore::CalculateStopInfo() {
   ProcessSP process_sp(GetProcess());
-  if (process_sp) {
-    SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, m_signo));
-    return true;
-  }
-  return false;
+  if (!process_sp)
+    return false;
+
+  SetStopInfo(StopInfo::CreateStopReasonWithSignal(
+      *this, m_signo, /*description=*/nullptr, m_code));
+  return true;
 }
 
 // Parse PRSTATUS from NOTE entry
@@ -409,8 +411,8 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch) {
   // properly, because the struct is for the 64 bit version
   offset_t offset = 0;
   si_signo = data.GetU32(&offset);
-  si_code = data.GetU32(&offset);
   si_errno = data.GetU32(&offset);
+  si_code = data.GetU32(&offset);
 
   return error;
 }

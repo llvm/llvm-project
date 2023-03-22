@@ -151,7 +151,8 @@ static cl::list<std::string> AbsoluteDefs(
     cl::cat(JITLinkCategory));
 
 static cl::list<std::string>
-    Aliases("alias", cl::desc("Inject symbol aliases (syntax: <name>=<addr>)"),
+    Aliases("alias",
+            cl::desc("Inject symbol aliases (syntax: <alias-name>=<aliasee>)"),
             cl::cat(JITLinkCategory));
 
 static cl::list<std::string> TestHarnesses("harness", cl::Positional,

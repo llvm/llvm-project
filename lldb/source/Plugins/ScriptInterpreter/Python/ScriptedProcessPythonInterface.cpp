@@ -136,7 +136,7 @@ lldb::DataExtractorSP ScriptedProcessPythonInterface::ReadMemoryAtAddress(
   return data_sp;
 }
 
-size_t ScriptedProcessPythonInterface::WriteMemoryAtAddress(
+lldb::offset_t ScriptedProcessPythonInterface::WriteMemoryAtAddress(
     lldb::addr_t addr, lldb::DataExtractorSP data_sp, Status &error) {
   Status py_error;
   StructuredData::ObjectSP obj =

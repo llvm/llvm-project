@@ -648,7 +648,7 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
           elseOp = createPadOfExtractSlice();
           b.create<scf::YieldOp>(loc, castResult(elseOp->getResult(0)));
         });
-    return TilingResult{{result}, SmallVector<Value>(result->getResults())};
+    return TilingResult{{elseOp}, SmallVector<Value>(result->getResults())};
   }
 
   Operation *newPadOp = createPadOfExtractSlice();

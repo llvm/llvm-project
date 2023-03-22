@@ -22,7 +22,6 @@ namespace lldb_private {
 
 class UnixSignals {
 public:
-  static lldb::UnixSignalsSP Create(const ArchSpec &arch);
   static lldb::UnixSignalsSP CreateForHost();
 
   // Constructors and Destructors
@@ -91,6 +90,8 @@ public:
 
   enum SignalCodePrintOption { None, Address, Bounds };
 
+  // Instead of calling this directly, use a ADD_SIGCODE macro to get compile
+  // time checks when on the native platform.
   void AddSignalCode(
       int signo, int code, const char *description,
       SignalCodePrintOption print_option = SignalCodePrintOption::None);

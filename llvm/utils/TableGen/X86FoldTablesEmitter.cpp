@@ -13,7 +13,6 @@
 
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
-#include "TableGenBackends.h"
 #include "X86RecognizableInstr.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/FormattedStream.h"
@@ -141,7 +140,7 @@ public:
   X86FoldTablesEmitter(RecordKeeper &R) : Records(R), Target(R) {}
 
   // run - Generate the 6 X86 memory fold tables.
-  void run(formatted_raw_ostream &OS);
+  void run(raw_ostream &OS);
 
 private:
   // Decides to which table to add the entry with the given instructions.
@@ -522,8 +521,8 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
   }
 }
 
-void X86FoldTablesEmitter::run(formatted_raw_ostream &OS) {
-  emitSourceFileHeader("X86 fold tables", OS);
+void X86FoldTablesEmitter::run(raw_ostream &o) {
+  formatted_raw_ostream OS(o);
 
   // Holds all memory instructions
   std::vector<const CodeGenInstruction *> MemInsts;
@@ -613,10 +612,5 @@ void X86FoldTablesEmitter::run(formatted_raw_ostream &OS) {
   printTable(Table4, "Table4", OS);
 }
 
-namespace llvm {
-
-void EmitX86FoldTables(RecordKeeper &RK, raw_ostream &o) {
-  formatted_raw_ostream OS(o);
-  X86FoldTablesEmitter(RK).run(OS);
-}
-} // namespace llvm
+static TableGen::Emitter::OptClass<X86FoldTablesEmitter>
+    X("gen-x86-fold-tables", "Generate X86 fold tables");

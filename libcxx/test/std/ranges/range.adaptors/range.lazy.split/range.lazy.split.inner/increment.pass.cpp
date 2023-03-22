@@ -22,7 +22,7 @@
 struct EmptyView : std::ranges::view_base {
   constexpr int* begin() const { return nullptr; }
   constexpr int* end() const { return nullptr; }
-  constexpr static size_t size() { return 0; }
+  constexpr static std::size_t size() { return 0; }
 };
 static_assert(std::ranges::forward_range<EmptyView>);
 static_assert(std::ranges::view<EmptyView>);
