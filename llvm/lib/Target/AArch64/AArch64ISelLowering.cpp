@@ -13953,7 +13953,7 @@ bool AArch64TargetLowering::shouldSinkOperands(
       ConstantInt *ElementConstant =
           dyn_cast<ConstantInt>(Insert->getOperand(2));
       // Check that the insertelement is inserting into element 0
-      if (!ElementConstant || ElementConstant->getZExtValue() != 0)
+      if (!ElementConstant || !ElementConstant->isZero())
         continue;
 
       unsigned Opcode = OperandInstr->getOpcode();
