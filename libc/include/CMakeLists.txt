@@ -468,6 +468,15 @@ add_gen_header(
     .llvm-libc-types.tcflag_t
 )
 
+add_gen_header(
+  wchar
+  DEF_FILE wchar.h.def
+  GEN_HDR wchar.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.wchar_macros
+)
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   # We don't install headers in non-fullbuild mode.
   return()
