@@ -71,7 +71,7 @@ TEST(IncludeTree, IncludeTreeScan) {
     ASSERT_THAT_ERROR(Main->getBaseFile().moveInto(MainFile),
                       llvm::Succeeded());
     EXPECT_EQ(Main->getFileCharacteristic(), SrcMgr::C_User);
-    IncludeFile::FileInfo FI;
+    IncludeTree::FileInfo FI;
     ASSERT_THAT_ERROR(MainFile->getFileInfo().moveInto(FI), llvm::Succeeded());
     EXPECT_EQ(FI.Filename, "t.cpp");
     EXPECT_EQ(FI.Contents, MainContents);
@@ -83,7 +83,7 @@ TEST(IncludeTree, IncludeTreeScan) {
   EXPECT_EQ(Main->getIncludeOffset(0), uint32_t(0));
   {
     EXPECT_EQ(Predef->getFileCharacteristic(), SrcMgr::C_User);
-    IncludeFile::FileInfo FI;
+    IncludeTree::FileInfo FI;
     ASSERT_THAT_ERROR(Predef->getBaseFileInfo().moveInto(FI),
                       llvm::Succeeded());
     EXPECT_EQ(FI.Filename, "<built-in>");
@@ -95,7 +95,7 @@ TEST(IncludeTree, IncludeTreeScan) {
   {
     ASSERT_THAT_ERROR(A1->getBaseFile().moveInto(A1File), llvm::Succeeded());
     EXPECT_EQ(A1->getFileCharacteristic(), SrcMgr::C_User);
-    IncludeFile::FileInfo FI;
+    IncludeTree::FileInfo FI;
     ASSERT_THAT_ERROR(A1File->getFileInfo().moveInto(FI), llvm::Succeeded());
     EXPECT_EQ(FI.Filename, "./a1.h");
     EXPECT_EQ(FI.Contents, A1Contents);
@@ -109,7 +109,7 @@ TEST(IncludeTree, IncludeTreeScan) {
     {
       ASSERT_THAT_ERROR(B1->getBaseFile().moveInto(B1File), llvm::Succeeded());
       EXPECT_EQ(B1->getFileCharacteristic(), SrcMgr::C_User);
-      IncludeFile::FileInfo FI;
+      IncludeTree::FileInfo FI;
       ASSERT_THAT_ERROR(B1->getBaseFileInfo().moveInto(FI), llvm::Succeeded());
       EXPECT_EQ(FI.Filename, "./b1.h");
       EXPECT_EQ(FI.Contents, "");
@@ -124,7 +124,7 @@ TEST(IncludeTree, IncludeTreeScan) {
   {
     ASSERT_THAT_ERROR(Sys->getBaseFile().moveInto(SysFile), llvm::Succeeded());
     EXPECT_EQ(Sys->getFileCharacteristic(), SrcMgr::C_System);
-    IncludeFile::FileInfo FI;
+    IncludeTree::FileInfo FI;
     ASSERT_THAT_ERROR(Sys->getBaseFileInfo().moveInto(FI), llvm::Succeeded());
     EXPECT_EQ(FI.Filename, "sys/sys.h");
     EXPECT_EQ(FI.Contents, "");
