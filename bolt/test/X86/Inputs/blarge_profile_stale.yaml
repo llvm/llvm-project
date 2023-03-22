@@ -37,15 +37,15 @@ functions:
     blocks:
       - bid:             0
         insns:           4
-        hash:            0xE3FEB842A6548CCF
+        hash:            0xb1e5b76571270000
         exec:            20
         succ:            [ { bid: 1, cnt: 0 } ]
       - bid:             1
         insns:           9
-        hash:            0x85948FF2924613B7
+        hash:            0x587e93788b970010
         succ:            [ { bid: 3, cnt: 320, mis: 171 }, { bid: 2, cnt: 0 } ]
       - bid:             3
         insns:           2
-        hash:            0x41D8DB2D2B01F411
+        hash:            0x20e605d745e50039
         succ:            [ { bid: 1, cnt: 300, mis: 33 }, { bid: 4, cnt: 20 } ]
 ...
