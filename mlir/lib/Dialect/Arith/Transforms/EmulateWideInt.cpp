@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -907,6 +908,70 @@ struct ConvertShRSI final : OpConversionPattern<arith::ShRSIOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertUIToFP
+//===----------------------------------------------------------------------===//
+
+struct ConvertUIToFP final : OpConversionPattern<arith::UIToFPOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::UIToFPOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    Type oldTy = op.getIn().getType();
+    auto newTy =
+        dyn_cast_or_null<VectorType>(getTypeConverter()->convertType(oldTy));
+    if (!newTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {0}", oldTy));
+    unsigned newBitWidth = newTy.getElementTypeBitWidth();
+
+    auto [low, hi] = extractLastDimHalves(rewriter, loc, adaptor.getIn());
+    Value lowInt = dropTrailingX1Dim(rewriter, loc, low);
+    Value hiInt = dropTrailingX1Dim(rewriter, loc, hi);
+    Value zeroCst =
+        createScalarOrSplatConstant(rewriter, loc, hiInt.getType(), 0);
+
+    // The final result has the following form:
+    //   if (hi == 0) return uitofp(low)
+    //   else         return uitofp(low) + uitofp(hi) * 2^BW
+    //
+    // where `BW` is the bitwidth of the narrowed integer type. We emit a
+    // select to make it easier to fold-away the `hi` part calculation when it
+    // is known to be zero.
+    //
+    // Note 1: The emulation is precise only for input values that have exact
+    // integer representation in the result floating point type, and may lead
+    // loss of precision otherwise.
+    //
+    // Note 2: We do not strictly need the `hi == 0`, case, but it makes
+    // constant folding easier.
+    Value hiEqZero = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::eq, hiInt, zeroCst);
+
+    Type resultTy = op.getType();
+    Type resultElemTy = getElementTypeOrSelf(resultTy);
+    Value lowFp = rewriter.create<arith::UIToFPOp>(loc, resultTy, lowInt);
+    Value hiFp = rewriter.create<arith::UIToFPOp>(loc, resultTy, hiInt);
+
+    int64_t pow2Int = int64_t(1) << newBitWidth;
+    Attribute pow2Attr =
+        rewriter.getFloatAttr(resultElemTy, static_cast<double>(pow2Int));
+    if (auto vecTy = dyn_cast<VectorType>(resultTy))
+      pow2Attr = SplatElementsAttr::get(vecTy, pow2Attr);
+
+    Value pow2Val = rewriter.create<arith::ConstantOp>(loc, resultTy, pow2Attr);
+
+    Value hiVal = rewriter.create<arith::MulFOp>(loc, hiFp, pow2Val);
+    Value result = rewriter.create<arith::AddFOp>(loc, lowFp, hiVal);
+
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, hiEqZero, lowFp, result);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertTruncI
 //===----------------------------------------------------------------------===//
 
@@ -1080,6 +1145,6 @@ void arith::populateArithWideIntEmulationPatterns(
       ConvertIndexCastIntToIndex<arith::IndexCastOp>,
       ConvertIndexCastIntToIndex<arith::IndexCastUIOp>,
       ConvertIndexCastIndexToInt<arith::IndexCastOp, arith::ExtSIOp>,
-      ConvertIndexCastIndexToInt<arith::IndexCastUIOp, arith::ExtUIOp>>(
-      typeConverter, patterns.getContext());
+      ConvertIndexCastIndexToInt<arith::IndexCastUIOp, arith::ExtUIOp>,
+      ConvertUIToFP>(typeConverter, patterns.getContext());
 }
