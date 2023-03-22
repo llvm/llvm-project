@@ -248,6 +248,10 @@ public:
                     bool IsSystem = false)
       : File(File.str()), IncludeTree(std::move(Tree)), Kind(Kind),
         IsSystem(IsSystem) {}
+  FrontendInputFile(cas::ObjectRef Tree, llvm::MemoryBufferRef Buffer,
+                    InputKind Kind, bool IsSystem = false)
+      : Buffer(Buffer), IncludeTree(std::move(Tree)), Kind(Kind),
+        IsSystem(IsSystem) {}
 
   InputKind getKind() const { return Kind; }
   bool isSystem() const { return IsSystem; }

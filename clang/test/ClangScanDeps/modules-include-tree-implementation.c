@@ -31,10 +31,9 @@
 
 // CHECK: Files:
 // CHECK: [[PREFIX]]/tu.c llvmcas://{{[[:xdigit:]]+}}
+// CHECK-NOT: [[PREFIX]]/module.modulemap
 // CHECK: [[PREFIX]]/Mod.h llvmcas://{{[[:xdigit:]]+}}
-
-// Despite not importing the module, we need its modulemap for submodule info.
-// CHECK: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
+// CHECK-NOT: [[PREFIX]]/module.modulemap
 
 //--- cdb.json.template
 [{
