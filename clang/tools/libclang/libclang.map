@@ -503,6 +503,7 @@ LLVM_16 {
     clang_experimental_DepGraph_getTUModuleDeps;
     clang_experimental_DepGraphModule_dispose;
     clang_experimental_DepGraphModule_getBuildArguments;
+    clang_experimental_DepGraphModule_getCacheKey;
     clang_experimental_DepGraphModule_getContextHash;
     clang_experimental_DepGraphModule_getFileDeps;
     clang_experimental_DepGraphModule_getModuleDeps;
@@ -510,6 +511,7 @@ LLVM_16 {
     clang_experimental_DepGraphModule_getName;
     clang_experimental_DepGraphTUCommand_dispose;
     clang_experimental_DepGraphTUCommand_getBuildArguments;
+    clang_experimental_DepGraphTUCommand_getCacheKey;
     clang_experimental_DepGraphTUCommand_getExecutable;
     clang_getUnqualifiedType;
     clang_getNonReferenceType;
