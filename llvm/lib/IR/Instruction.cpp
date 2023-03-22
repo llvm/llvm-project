@@ -224,7 +224,7 @@ void Instruction::dropPoisonGeneratingMetadata() {
   eraseMetadata(LLVMContext::MD_align);
 }
 
-void Instruction::dropUndefImplyingAttrsAndUnknownMetadata(
+void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
     ArrayRef<unsigned> KnownIDs) {
   dropUnknownNonDebugMetadata(KnownIDs);
   auto *CB = dyn_cast<CallBase>(this);
