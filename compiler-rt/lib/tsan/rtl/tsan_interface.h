@@ -88,6 +88,8 @@ SANITIZER_INTERFACE_ATTRIBUTE void __tsan_func_exit();
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_ignore_thread_begin();
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_ignore_thread_end();
 
+SANITIZER_INTERFACE_ATTRIBUTE void __tsan_on_thread_idle();
+
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__tsan_external_register_tag(const char *object_type);
 SANITIZER_INTERFACE_ATTRIBUTE
