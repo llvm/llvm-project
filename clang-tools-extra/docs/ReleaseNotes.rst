@@ -162,6 +162,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/suspicious-include>` check.
   Global options of the same name should be used instead.
 
+- Improved :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` check to also cover constructor
+  initializers.
+
 - Deprecated check-local options `HeaderFileExtensions`
   in :doc:`google-build-namespaces
   <clang-tidy/checks/google/build-namespaces>` check.
@@ -234,8 +238,8 @@ Changes in existing checks
   string for ``Prefix`` or ``Suffix`` options could result in the style not
   being used.
 
-- Fixed an issue in :doc:`google-avoid-underscore-in-googletest-name
-  <clang-tidy/checks/google/avoid-underscore-in-googletest-name>` when using
+- Fixed an issue in :doc:`google-readability-avoid-underscore-in-googletest-name
+  <clang-tidy/checks/google/readability-avoid-underscore-in-googletest-name>` when using
   ``DISABLED_`` in the test suite name.
 
 Removed checks
