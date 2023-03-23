@@ -39,10 +39,11 @@ define void @runtime_tripcount(ptr %a, i32 %N) {
 ; CHECK-LABEL: @runtime_tripcount(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 84
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 84
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[N:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 88
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
@@ -72,13 +73,14 @@ for.end:                                          ; preds = %for.body
 
 ; In this case, the i8 IVs increment *isn't* nsw.  As a result, a N of 0
 ; is well defined, and thus the post-inc starts at 255.
-; FIXME: miscompile
 define void @wrap_around(ptr %a, i8 %N) {
 ; CHECK-LABEL: @wrap_around(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[N:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[N:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 4
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP3]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[A]], [[ENTRY:%.*]] ]
@@ -112,14 +114,16 @@ define void @ptr_of_ptr_addrec(ptr %ptrptr, i32 %length) {
 ; CHECK-LABEL: @ptr_of_ptr_addrec(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[START_PTRPTR:%.*]] = getelementptr ptr, ptr [[PTRPTR:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[LENGTH:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[START_PTRPTR]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LENGTH:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 8
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[START_PTRPTR]], i64 [[TMP3]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IT_04:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[START_PTRPTR]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[IT_04]], align 8
-; CHECK-NEXT:    tail call void @foo(ptr [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[IT_04]], align 8
+; CHECK-NEXT:    tail call void @foo(ptr [[TMP4]])
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds ptr, ptr [[IT_04]], i64 1
 ; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[INCDEC_PTR]], [[SCEVGEP]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
@@ -152,9 +156,11 @@ define void @iv_start_non_preheader(ptr %mark, i32 signext %length) {
 ; CHECK-NEXT:    [[TOBOOL_NOT3:%.*]] = icmp eq i32 [[LENGTH:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT3]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[LENGTH]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[MARK:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LENGTH]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 8
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[MARK:%.*]], i64 [[TMP3]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
@@ -162,8 +168,8 @@ define void @iv_start_non_preheader(ptr %mark, i32 signext %length) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[DST_04:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[MARK]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DST_04]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @foo(ptr [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DST_04]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = call ptr @foo(ptr [[TMP4]])
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds ptr, ptr [[DST_04]], i64 1
 ; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[INCDEC_PTR]], [[SCEVGEP]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
