@@ -241,8 +241,8 @@ Bug Fixes to C++ Support
 - Fix incorrect deletion of the default constructor of unions in some
   cases. (`#48416 <https://github.com/llvm/llvm-project/issues/48416>`_)
 - No longer issue a pre-C++2b compatibility warning in ``-pedantic`` mode
-  regading overloaded `operator[]` with more than one parmeter. (`#61582
-  <https://github.com/llvm/llvm-project/issues/61582>`_)
+  regading overloaded `operator[]` with more than one parmeter or for static
+  lambdas. (`#61582 <https://github.com/llvm/llvm-project/issues/61582>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
