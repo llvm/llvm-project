@@ -14671,7 +14671,9 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    return DAG.getNode(RISCVISD::TAIL, DL, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(RISCVISD::TAIL, DL, NodeTys, Ops);
+    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
+    return Ret;
   }
 
   Chain = DAG.getNode(RISCVISD::CALL, DL, NodeTys, Ops);
