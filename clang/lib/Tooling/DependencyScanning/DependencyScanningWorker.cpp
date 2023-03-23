@@ -458,6 +458,10 @@ public:
     else
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
 
+    // Normally this would be handled by GeneratePCHAction
+    if (ScanInstance.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
+      ScanInstance.getLangOpts().CompilingPCH = true;
+
     if (Error E = Controller.initialize(ScanInstance, OriginalInvocation))
       return reportError(std::move(E));
 
