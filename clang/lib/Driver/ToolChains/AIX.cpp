@@ -163,19 +163,19 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-bpD:0x110000000");
   }
 
-  auto getCrt0Basename = [&Args, IsArch32Bit] {
-    if (Arg *A = Args.getLastArgNoClaim(options::OPT_p, options::OPT_pg)) {
-      // Enable gprofiling when "-pg" is specified.
-      if (A->getOption().matches(options::OPT_pg))
-        return IsArch32Bit ? "gcrt0.o" : "gcrt0_64.o";
-      // Enable profiling when "-p" is specified.
-      return IsArch32Bit ? "mcrt0.o" : "mcrt0_64.o";
-    }
-    return IsArch32Bit ? "crt0.o" : "crt0_64.o";
-  };
-
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
                    options::OPT_shared, options::OPT_r)) {
+    auto getCrt0Basename = [&Args, IsArch32Bit] {
+      if (Arg *A = Args.getLastArgNoClaim(options::OPT_p, options::OPT_pg)) {
+        // Enable gprofiling when "-pg" is specified.
+        if (A->getOption().matches(options::OPT_pg))
+          return IsArch32Bit ? "gcrt0.o" : "gcrt0_64.o";
+        // Enable profiling when "-p" is specified.
+        return IsArch32Bit ? "mcrt0.o" : "mcrt0_64.o";
+      }
+      return IsArch32Bit ? "crt0.o" : "crt0_64.o";
+    };
+
     CmdArgs.push_back(
         Args.MakeArgString(ToolChain.GetFilePath(getCrt0Basename())));
 
