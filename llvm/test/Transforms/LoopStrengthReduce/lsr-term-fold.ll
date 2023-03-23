@@ -439,3 +439,37 @@ another.branch:
 for.end:                                          ; preds = %for.body
   ret void
 }
+
+
+define void @non_branch_terminator(ptr %a) {
+; CHECK-LABEL: @non_branch_terminator(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 84
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi i64 [ [[LSR_IV_NEXT3:%.*]], [[FOR_BODY]] ], [ 378, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[ENTRY]] ]
+; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
+; CHECK-NEXT:    [[LSR_IV_NEXT3]] = add nsw i64 [[LSR_IV2]], -1
+; CHECK-NEXT:    switch i64 [[LSR_IV2]], label [[FOR_BODY]] [
+; CHECK-NEXT:    i64 0, label [[FOR_END:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %uglygep = getelementptr i8, ptr %a, i64 84
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %lsr.iv1 = phi ptr [ %uglygep2, %for.body ], [ %uglygep, %entry ]
+  %lsr.iv = phi i64 [ %lsr.iv.next, %for.body ], [ 379, %entry ]
+  store i32 1, ptr %lsr.iv1, align 4
+  %lsr.iv.next = add nsw i64 %lsr.iv, -1
+  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i64 4
+  switch i64 %lsr.iv.next, label %for.body [i64 0, label %for.end]
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
