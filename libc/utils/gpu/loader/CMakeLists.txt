@@ -8,6 +8,13 @@ else()
   message(STATUS "Skipping HSA loader for gpu target, no HSA was detected")
 endif()
 
+find_package(CUDAToolkit QUIET)
+if(CUDAToolkit_FOUND)
+  add_subdirectory(nvptx)
+else()
+  message(STATUS "Skipping CUDA loader for gpu target, no CUDA was detected")
+endif()
+
 # Add a custom target to be used for testing.
 if(TARGET amdhsa_loader AND LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
   add_custom_target(libc.utils.gpu.loader)
