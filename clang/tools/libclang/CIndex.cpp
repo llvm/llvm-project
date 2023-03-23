@@ -4013,17 +4013,8 @@ enum CXErrorCode clang_parseTranslationUnit2(
     struct CXUnsavedFile *unsaved_files, unsigned num_unsaved_files,
     unsigned options, CXTranslationUnit *out_TU) {
   noteBottomOfStack();
-
-  if (!CIdx)
-    return CXError_InvalidArguments;
-
-  SmallString<64> ClangPath(
-      static_cast<CIndexer *>(CIdx)->getClangToolchainPath());
-  llvm::sys::path::append(ClangPath, "bin");
-  llvm::sys::path::append(ClangPath, "clang");
-
   SmallVector<const char *, 4> Args;
-  Args.push_back(ClangPath.c_str());
+  Args.push_back("clang");
   Args.append(command_line_args, command_line_args + num_command_line_args);
   return clang_parseTranslationUnit2FullArgv(
       CIdx, source_filename, Args.data(), Args.size(), unsaved_files,
