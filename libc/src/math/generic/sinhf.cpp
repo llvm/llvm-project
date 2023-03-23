@@ -21,7 +21,8 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
 
   // |x| <= 2^-26
   if (LIBC_UNLIKELY(x_abs <= 0x3280'0000U)) {
-    return LIBC_UNLIKELY(x_abs == 0) ? x : (x + 0.25 * x * x * x);
+    return static_cast<float>(
+        LIBC_UNLIKELY(x_abs == 0) ? x : (x + 0.25 * x * x * x));
   }
 
   // When |x| >= 90, or x is inf or nan
@@ -65,11 +66,11 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
     // Therefore, output of Sollya = x * pe;
     double pe = fputil::polyeval(x2, 0.0, 0x1.5555555556583p-3,
                                  0x1.111110d239f1fp-7, 0x1.a02b5a284013cp-13);
-    return fputil::multiply_add(xdbl, pe, xdbl);
+    return static_cast<float>(fputil::multiply_add(xdbl, pe, xdbl));
   }
 
   // sinh(x) = (e^x - e^(-x)) / 2.
-  return exp_pm_eval</*is_sinh*/ true>(x);
+  return static_cast<float>(exp_pm_eval</*is_sinh*/ true>(x));
 }
 
 } // namespace __llvm_libc

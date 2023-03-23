@@ -47,7 +47,7 @@ LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
   // but not too small inputs, such as |x| < 2^-2, or |x| < 2^-3.
 
   // cosh(x) = (e^x + e^(-x)) / 2.
-  return exp_pm_eval</*is_sinh*/ false>(x);
+  return static_cast<float>(exp_pm_eval</*is_sinh*/ false>(x));
 }
 
 } // namespace __llvm_libc

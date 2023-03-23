@@ -261,9 +261,9 @@ LIBC_INLINE I rounded_float_to_signed_integer(F x) {
   }
 
   // For all other cases, if `x` can fit in the integer type `I`,
-  // we just return `x`. Implicit conversion will convert the
-  // floating point value to the exact integer value.
-  return x;
+  // we just return `x`. static_cast will convert the floating
+  // point value to the exact integer value.
+  return static_cast<I>(x);
 }
 
 } // namespace internal
