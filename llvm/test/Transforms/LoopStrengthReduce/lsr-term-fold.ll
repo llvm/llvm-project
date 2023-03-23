@@ -70,6 +70,41 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
+; In this case, the i8 IVs increment *isn't* nsw.  As a result, a N of 0
+; is well defined, and thus the post-inc starts at 255.
+; FIXME: miscompile
+define void @wrap_around(ptr %a, i8 %N) {
+; CHECK-LABEL: @wrap_around(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[N:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[A]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store i8 1, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[SCEVGEP]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %lsr.iv1 = phi ptr [ %uglygep2, %for.body ], [ %a, %entry ]
+  %lsr.iv = phi i8 [ %lsr.iv.next, %for.body ], [ %N, %entry ]
+  store i8 1, ptr %lsr.iv1, align 4
+  %lsr.iv.next = add i8 %lsr.iv, -1
+  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i64 4
+  %exitcond.not = icmp eq i8 %lsr.iv.next, 0
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
 ; The replacing AddRec IV is a complicated AddRec. This tests whether
 ; the fold terminating condition transformation is writing new terminating
 ; condition in the correct type.
