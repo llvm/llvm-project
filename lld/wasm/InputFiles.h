@@ -47,6 +47,7 @@ public:
     SharedKind,
     ArchiveKind,
     BitcodeKind,
+    StubKind,
   };
 
   virtual ~InputFile() {}
@@ -181,6 +182,18 @@ public:
   // Set to true once LTO is complete in order prevent further bitcode objects
   // being added.
   static bool doneLTO;
+};
+
+// Stub libray (See docs/WebAssembly.rst)
+class StubFile : public InputFile {
+public:
+  explicit StubFile(MemoryBufferRef m) : InputFile(StubKind, m) {}
+
+  static bool classof(const InputFile *f) { return f->kind() == StubKind; }
+
+  void parse();
+
+  llvm::DenseMap<StringRef, std::vector<StringRef>> symbolDependencies;
 };
 
 inline bool isBitcode(MemoryBufferRef mb) {
