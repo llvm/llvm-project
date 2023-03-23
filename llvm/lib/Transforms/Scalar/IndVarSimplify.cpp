@@ -914,28 +914,14 @@ static Value *genLoopLimit(PHINode *IndVar, BasicBlock *ExitingBB,
   assert(AR->getStepRecurrence(*SE)->isOne() && "only handles unit stride");
 
   // IVInit may be a pointer while ExitCount is an integer when FindLoopCounter
-  // finds a valid pointer IV. Sign extend ExitCount in order to materialize a
-  // GEP. Avoid running SCEVExpander on a new pointer value, instead reusing
-  // the existing GEPs whenever possible.
+  // finds a valid pointer IV.
   if (IndVar->getType()->isPointerTy()) {
-    // IVOffset will be the new GEP offset that is interpreted by GEP as a
-    // signed value. ExitCount on the other hand represents the loop trip count,
-    // which is an unsigned value. FindLoopCounter only allows induction
-    // variables that have a positive unit stride of one. This means we don't
-    // have to handle the case of negative offsets (yet) and just need to zero
-    // extend ExitCount.
-    Type *OfsTy = SE->getEffectiveSCEVType(IVInit->getType());
-    const SCEV *IVOffset = SE->getTruncateOrZeroExtend(ExitCount, OfsTy);
-    if (UsePostInc)
-      IVOffset = SE->getAddExpr(IVOffset, SE->getOne(OfsTy));
-
-    // Expand the code for the iteration count.
-    assert(SE->isLoopInvariant(IVOffset, L) &&
+    const SCEVAddRecExpr *ARBase = UsePostInc ? AR->getPostIncExpr(*SE) : AR;
+    const SCEV *IVLimit = ARBase->evaluateAtIteration(ExitCount, *SE);
+    assert(SE->isLoopInvariant(IVLimit, L) &&
            "Computed iteration count is not loop invariant!");
-
-    const SCEV *IVLimit = SE->getAddExpr(IVInit, IVOffset);
-    BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
-    return Rewriter.expandCodeFor(IVLimit, IndVar->getType(), BI);
+    return Rewriter.expandCodeFor(IVLimit, IndVar->getType(),
+                                  ExitingBB->getTerminator());
   } else {
     // In any other case, convert both IVInit and ExitCount to integers before
     // comparing. This may result in SCEV expansion of pointers, but in practice
