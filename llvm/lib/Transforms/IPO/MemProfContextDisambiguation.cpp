@@ -1032,13 +1032,13 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     // latter is so that we can specially handle calls that have identical stack
     // id sequences (either due to cloning or artificially because of the MIB
     // context pruning).
-    std::sort(Calls.begin(), Calls.end(),
-              [](const CallContextInfo &A, const CallContextInfo &B) {
-                auto &IdsA = std::get<1>(A);
-                auto &IdsB = std::get<1>(B);
-                return IdsA.size() > IdsB.size() ||
-                       (IdsA.size() == IdsB.size() && IdsA < IdsB);
-              });
+    std::stable_sort(Calls.begin(), Calls.end(),
+                     [](const CallContextInfo &A, const CallContextInfo &B) {
+                       auto &IdsA = std::get<1>(A);
+                       auto &IdsB = std::get<1>(B);
+                       return IdsA.size() > IdsB.size() ||
+                              (IdsA.size() == IdsB.size() && IdsA < IdsB);
+                     });
 
     // Find the node for the last stack id, which should be the same
     // across all calls recorded for this id, and is the id for this
