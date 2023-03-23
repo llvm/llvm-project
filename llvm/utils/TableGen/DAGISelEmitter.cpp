@@ -14,7 +14,6 @@
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
 #include "DAGISelMatcher.h"
-#include "TableGenBackends.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -188,10 +187,5 @@ void DAGISelEmitter::run(raw_ostream &OS) {
   EmitMatcherTable(TheMatcher.get(), CGP, OS);
 }
 
-namespace llvm {
-
-void EmitDAGISel(RecordKeeper &RK, raw_ostream &OS) {
-  DAGISelEmitter(RK).run(OS);
-}
-
-} // namespace llvm
+static TableGen::Emitter::OptClass<DAGISelEmitter>
+    X("gen-dag-isel", "Generate a DAG instruction selector");

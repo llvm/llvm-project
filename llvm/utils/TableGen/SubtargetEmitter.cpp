@@ -14,7 +14,6 @@
 #include "CodeGenSchedule.h"
 #include "CodeGenTarget.h"
 #include "PredicateExpander.h"
-#include "TableGenBackends.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -1985,10 +1984,5 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   EmitMCInstrAnalysisPredicateFunctions(OS);
 }
 
-namespace llvm {
-
-void EmitSubtarget(RecordKeeper &RK, raw_ostream &OS) {
-  SubtargetEmitter(RK).run(OS);
-}
-
-} // end namespace llvm
+static TableGen::Emitter::OptClass<SubtargetEmitter>
+    X("gen-subtarget", "Generate subtarget enumerations");
