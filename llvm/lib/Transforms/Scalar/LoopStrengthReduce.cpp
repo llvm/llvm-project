@@ -6769,14 +6769,7 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     // iteration. The simplest case to consider is a candidate IV which is
     // narrower than the trip count (and thus original IV), but this can
     // also happen due to non-unit strides on the candidate IVs.
-    // TODO: This check should be replaceable with PostInc->hasNoSelfWrap(),
-    // but in practice we appear to be missing inference for cases we should
-    // be able to catch.
-    ConstantRange StepCR = SE.getSignedRange(AddRec->getStepRecurrence(SE));
-    ConstantRange BECountCR = SE.getUnsignedRange(BECount);
-    unsigned NoOverflowBitWidth = BECountCR.getActiveBits() + StepCR.getMinSignedBits();
-    unsigned ARBitWidth = SE.getTypeSizeInBits(AddRec->getType());
-    if (NoOverflowBitWidth > ARBitWidth)
+    if (!AddRec->hasNoSelfWrap())
       continue;
 
     const SCEVAddRecExpr *PostInc = AddRec->getPostIncExpr(SE);
