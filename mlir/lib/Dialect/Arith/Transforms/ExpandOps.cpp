@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -24,8 +25,15 @@ using namespace mlir;
 /// Create an integer or index constant.
 static Value createConst(Location loc, Type type, int value,
                          PatternRewriter &rewriter) {
-  return rewriter.create<arith::ConstantOp>(
-      loc, rewriter.getIntegerAttr(type, value));
+
+  auto elTy = getElementTypeOrSelf(type);
+  auto constantAttr = rewriter.getIntegerAttr(elTy, value);
+
+  if (auto vecTy = llvm::dyn_cast<ShapedType>(type))
+    return rewriter.create<arith::ConstantOp>(
+        loc, vecTy, DenseElementsAttr::get(vecTy, constantAttr));
+
+  return rewriter.create<arith::ConstantOp>(loc, constantAttr);
 }
 
 namespace {
