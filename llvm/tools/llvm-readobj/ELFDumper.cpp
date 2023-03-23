@@ -222,6 +222,13 @@ public:
   void printStackMap() const override;
   void printMemtag() override;
 
+  // Hash histogram shows statistics of how efficient the hash was for the
+  // dynamic symbol table. The table shows the number of hash buckets for
+  // different lengths of chains as an absolute number and percentage of the
+  // total buckets, and the cumulative coverage of symbols for each set of
+  // buckets.
+  void printHashHistograms() override;
+
   const object::ELFObjectFile<ELFT> &getElfObject() const { return ObjF; };
 
   std::string describe(const Elf_Shdr &Sec) const;
@@ -303,6 +310,12 @@ protected:
   virtual void printMemtag(
       const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
       const ArrayRef<uint8_t> AndroidNoteDesc) = 0;
+
+  virtual void printHashHistogram(const Elf_Hash &HashTable) const;
+  virtual void printGnuHashHistogram(const Elf_GnuHash &GnuHashTable) const;
+  virtual void printHashHistogramStats(size_t NBucket, size_t MaxChain,
+                                       size_t TotalSyms, ArrayRef<size_t> Count,
+                                       bool IsGnu) const = 0;
 
   Expected<ArrayRef<Elf_Versym>>
   getVersionTable(const Elf_Shdr &Sec, ArrayRef<Elf_Sym> *SymTab,
@@ -572,7 +585,6 @@ public:
   void printVersionSymbolSection(const Elf_Shdr *Sec) override;
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
-  void printHashHistograms() override;
   void printCGProfile() override;
   void printBBAddrMaps() override;
   void printAddrsig() override;
@@ -582,10 +594,11 @@ public:
   void printMemtag(
       const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
       const ArrayRef<uint8_t> AndroidNoteDesc) override;
+  void printHashHistogramStats(size_t NBucket, size_t MaxChain,
+                               size_t TotalSyms, ArrayRef<size_t> Count,
+                               bool IsGnu) const override;
 
 private:
-  void printHashHistogram(const Elf_Hash &HashTable);
-  void printGnuHashHistogram(const Elf_GnuHash &GnuHashTable);
   void printHashTableSymbols(const Elf_Hash &HashTable);
   void printGnuHashTableSymbols(const Elf_GnuHash &GnuHashTable);
 
@@ -679,7 +692,6 @@ public:
   void printVersionSymbolSection(const Elf_Shdr *Sec) override;
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
-  void printHashHistograms() override;
   void printCGProfile() override;
   void printBBAddrMaps() override;
   void printAddrsig() override;
@@ -691,6 +703,9 @@ public:
       const ArrayRef<uint8_t> AndroidNoteDesc) override;
   void printSymbolSection(const Elf_Sym &Symbol, unsigned SymIndex,
                           DataRegion<Elf_Word> ShndxTable) const;
+  void printHashHistogramStats(size_t NBucket, size_t MaxChain,
+                               size_t TotalSyms, ArrayRef<size_t> Count,
+                               bool IsGnu) const override;
 
 private:
   void printRelrReloc(const Elf_Relr &R) override;
@@ -2680,6 +2695,116 @@ void ELFDumper<ELFT>::printGnuHashTable() {
   }
 
   W.printHexList("Values", *Chains);
+}
+
+template <typename ELFT> void ELFDumper<ELFT>::printHashHistograms() {
+  // Print histogram for the .hash section.
+  if (this->HashTable) {
+    if (Error E = checkHashTable<ELFT>(*this, this->HashTable))
+      this->reportUniqueWarning(std::move(E));
+    else
+      printHashHistogram(*this->HashTable);
+  }
+
+  // Print histogram for the .gnu.hash section.
+  if (this->GnuHashTable) {
+    if (Error E = checkGNUHashTable<ELFT>(this->Obj, this->GnuHashTable))
+      this->reportUniqueWarning(std::move(E));
+    else
+      printGnuHashHistogram(*this->GnuHashTable);
+  }
+}
+
+template <typename ELFT>
+void ELFDumper<ELFT>::printHashHistogram(const Elf_Hash &HashTable) const {
+  size_t NBucket = HashTable.nbucket;
+  size_t NChain = HashTable.nchain;
+  ArrayRef<Elf_Word> Buckets = HashTable.buckets();
+  ArrayRef<Elf_Word> Chains = HashTable.chains();
+  size_t TotalSyms = 0;
+  // If hash table is correct, we have at least chains with 0 length.
+  size_t MaxChain = 1;
+
+  if (NChain == 0 || NBucket == 0)
+    return;
+
+  std::vector<size_t> ChainLen(NBucket, 0);
+  // Go over all buckets and and note chain lengths of each bucket (total
+  // unique chain lengths).
+  for (size_t B = 0; B < NBucket; ++B) {
+    BitVector Visited(NChain);
+    for (size_t C = Buckets[B]; C < NChain; C = Chains[C]) {
+      if (C == ELF::STN_UNDEF)
+          break;
+      if (Visited[C]) {
+          this->reportUniqueWarning(
+              ".hash section is invalid: bucket " + Twine(C) +
+              ": a cycle was detected in the linked chain");
+          break;
+      }
+      Visited[C] = true;
+      if (MaxChain <= ++ChainLen[B])
+          ++MaxChain;
+    }
+    TotalSyms += ChainLen[B];
+  }
+
+  if (!TotalSyms)
+    return;
+
+  std::vector<size_t> Count(MaxChain, 0);
+  // Count how long is the chain for each bucket.
+  for (size_t B = 0; B < NBucket; B++)
+    ++Count[ChainLen[B]];
+  // Print Number of buckets with each chain lengths and their cumulative
+  // coverage of the symbols.
+  printHashHistogramStats(NBucket, MaxChain, TotalSyms, Count, /*IsGnu=*/false);
+}
+
+template <class ELFT>
+void ELFDumper<ELFT>::printGnuHashHistogram(
+    const Elf_GnuHash &GnuHashTable) const {
+  Expected<ArrayRef<Elf_Word>> ChainsOrErr =
+      getGnuHashTableChains<ELFT>(this->DynSymRegion, &GnuHashTable);
+  if (!ChainsOrErr) {
+    this->reportUniqueWarning("unable to print the GNU hash table histogram: " +
+                              toString(ChainsOrErr.takeError()));
+    return;
+  }
+
+  ArrayRef<Elf_Word> Chains = *ChainsOrErr;
+  size_t Symndx = GnuHashTable.symndx;
+  size_t TotalSyms = 0;
+  size_t MaxChain = 1;
+
+  size_t NBucket = GnuHashTable.nbuckets;
+  if (Chains.empty() || NBucket == 0)
+    return;
+
+  ArrayRef<Elf_Word> Buckets = GnuHashTable.buckets();
+  std::vector<size_t> ChainLen(NBucket, 0);
+  for (size_t B = 0; B < NBucket; ++B) {
+    if (!Buckets[B])
+      continue;
+    size_t Len = 1;
+    for (size_t C = Buckets[B] - Symndx;
+         C < Chains.size() && (Chains[C] & 1) == 0; ++C)
+      if (MaxChain < ++Len)
+          ++MaxChain;
+    ChainLen[B] = Len;
+    TotalSyms += Len;
+  }
+  ++MaxChain;
+
+  if (!TotalSyms)
+    return;
+
+  std::vector<size_t> Count(MaxChain, 0);
+  for (size_t B = 0; B < NBucket; ++B)
+    ++Count[ChainLen[B]];
+  // Print Number of buckets with each chain lengths and their cumulative
+  // coverage of the symbols.
+  printHashHistogramStats(NBucket, MaxChain, TotalSyms, Count, /*IsGnu=*/true);
 }
 
 template <typename ELFT> void ELFDumper<ELFT>::printLoadName() {
@@ -4831,134 +4956,20 @@ void GNUELFDumper<ELFT>::printVersionDependencySection(const Elf_Shdr *Sec) {
 }
 
 template <class ELFT>
-void GNUELFDumper<ELFT>::printHashHistogram(const Elf_Hash &HashTable) {
-  size_t NBucket = HashTable.nbucket;
-  size_t NChain = HashTable.nchain;
-  ArrayRef<Elf_Word> Buckets = HashTable.buckets();
-  ArrayRef<Elf_Word> Chains = HashTable.chains();
-  size_t TotalSyms = 0;
-  // If hash table is correct, we have at least chains with 0 length
-  size_t MaxChain = 1;
+void GNUELFDumper<ELFT>::printHashHistogramStats(size_t NBucket,
+                                                 size_t MaxChain,
+                                                 size_t TotalSyms,
+                                                 ArrayRef<size_t> Count,
+                                                 bool IsGnu) const {
   size_t CumulativeNonZero = 0;
-
-  if (NChain == 0 || NBucket == 0)
-    return;
-
-  std::vector<size_t> ChainLen(NBucket, 0);
-  // Go over all buckets and and note chain lengths of each bucket (total
-  // unique chain lengths).
-  for (size_t B = 0; B < NBucket; B++) {
-    BitVector Visited(NChain);
-    for (size_t C = Buckets[B]; C < NChain; C = Chains[C]) {
-      if (C == ELF::STN_UNDEF)
-        break;
-      if (Visited[C]) {
-        this->reportUniqueWarning(".hash section is invalid: bucket " +
-                                  Twine(C) +
-                                  ": a cycle was detected in the linked chain");
-        break;
-      }
-      Visited[C] = true;
-      if (MaxChain <= ++ChainLen[B])
-        MaxChain++;
-    }
-    TotalSyms += ChainLen[B];
-  }
-
-  if (!TotalSyms)
-    return;
-
-  std::vector<size_t> Count(MaxChain, 0);
-  // Count how long is the chain for each bucket
-  for (size_t B = 0; B < NBucket; B++)
-    ++Count[ChainLen[B]];
-  // Print Number of buckets with each chain lengths and their cumulative
-  // coverage of the symbols
-  OS << "Histogram for bucket list length (total of " << NBucket
-     << " buckets)\n"
+  OS << "Histogram for" << (IsGnu ? " `.gnu.hash'" : "")
+     << " bucket list length (total of " << NBucket << " buckets)\n"
      << " Length  Number     % of total  Coverage\n";
-  for (size_t I = 0; I < MaxChain; I++) {
+  for (size_t I = 0; I < MaxChain; ++I) {
     CumulativeNonZero += Count[I] * I;
     OS << format("%7lu  %-10lu (%5.1f%%)     %5.1f%%\n", I, Count[I],
                  (Count[I] * 100.0) / NBucket,
                  (CumulativeNonZero * 100.0) / TotalSyms);
-  }
-}
-
-template <class ELFT>
-void GNUELFDumper<ELFT>::printGnuHashHistogram(
-    const Elf_GnuHash &GnuHashTable) {
-  Expected<ArrayRef<Elf_Word>> ChainsOrErr =
-      getGnuHashTableChains<ELFT>(this->DynSymRegion, &GnuHashTable);
-  if (!ChainsOrErr) {
-    this->reportUniqueWarning("unable to print the GNU hash table histogram: " +
-                              toString(ChainsOrErr.takeError()));
-    return;
-  }
-
-  ArrayRef<Elf_Word> Chains = *ChainsOrErr;
-  size_t Symndx = GnuHashTable.symndx;
-  size_t TotalSyms = 0;
-  size_t MaxChain = 1;
-  size_t CumulativeNonZero = 0;
-
-  size_t NBucket = GnuHashTable.nbuckets;
-  if (Chains.empty() || NBucket == 0)
-    return;
-
-  ArrayRef<Elf_Word> Buckets = GnuHashTable.buckets();
-  std::vector<size_t> ChainLen(NBucket, 0);
-  for (size_t B = 0; B < NBucket; B++) {
-    if (!Buckets[B])
-      continue;
-    size_t Len = 1;
-    for (size_t C = Buckets[B] - Symndx;
-         C < Chains.size() && (Chains[C] & 1) == 0; C++)
-      if (MaxChain < ++Len)
-        MaxChain++;
-    ChainLen[B] = Len;
-    TotalSyms += Len;
-  }
-  MaxChain++;
-
-  if (!TotalSyms)
-    return;
-
-  std::vector<size_t> Count(MaxChain, 0);
-  for (size_t B = 0; B < NBucket; B++)
-    ++Count[ChainLen[B]];
-  // Print Number of buckets with each chain lengths and their cumulative
-  // coverage of the symbols
-  OS << "Histogram for `.gnu.hash' bucket list length (total of " << NBucket
-     << " buckets)\n"
-     << " Length  Number     % of total  Coverage\n";
-  for (size_t I = 0; I < MaxChain; I++) {
-    CumulativeNonZero += Count[I] * I;
-    OS << format("%7lu  %-10lu (%5.1f%%)     %5.1f%%\n", I, Count[I],
-                 (Count[I] * 100.0) / NBucket,
-                 (CumulativeNonZero * 100.0) / TotalSyms);
-  }
-}
-
-// Hash histogram shows statistics of how efficient the hash was for the
-// dynamic symbol table. The table shows the number of hash buckets for
-// different lengths of chains as an absolute number and percentage of the total
-// buckets, and the cumulative coverage of symbols for each set of buckets.
-template <class ELFT> void GNUELFDumper<ELFT>::printHashHistograms() {
-  // Print histogram for the .hash section.
-  if (this->HashTable) {
-    if (Error E = checkHashTable<ELFT>(*this, this->HashTable))
-      this->reportUniqueWarning(std::move(E));
-    else
-      printHashHistogram(*this->HashTable);
-  }
-
-  // Print histogram for the .gnu.hash section.
-  if (this->GnuHashTable) {
-    if (Error E = checkGNUHashTable<ELFT>(this->Obj, this->GnuHashTable))
-      this->reportUniqueWarning(std::move(E));
-    else
-      printGnuHashHistogram(*this->GnuHashTable);
   }
 }
 
@@ -7151,8 +7162,27 @@ void LLVMELFDumper<ELFT>::printVersionDependencySection(const Elf_Shdr *Sec) {
   }
 }
 
-template <class ELFT> void LLVMELFDumper<ELFT>::printHashHistograms() {
-  W.startLine() << "Hash Histogram not implemented!\n";
+template <class ELFT>
+void LLVMELFDumper<ELFT>::printHashHistogramStats(size_t NBucket,
+                                                  size_t MaxChain,
+                                                  size_t TotalSyms,
+                                                  ArrayRef<size_t> Count,
+                                                  bool IsGnu) const {
+  StringRef HistName = IsGnu ? "GnuHashHistogram" : "HashHistogram";
+  StringRef BucketName = IsGnu ? "Bucket" : "Chain";
+  StringRef ListName = IsGnu ? "Buckets" : "Chains";
+  DictScope Outer(W, HistName);
+  W.printNumber("TotalBuckets", NBucket);
+  ListScope Buckets(W, ListName);
+  size_t CumulativeNonZero = 0;
+  for (size_t I = 0; I < MaxChain; ++I) {
+    CumulativeNonZero += Count[I] * I;
+    DictScope Bucket(W, BucketName);
+    W.printNumber("Length", I);
+    W.printNumber("Count", Count[I]);
+    W.printNumber("Percentage", (float)(Count[I] * 100.0) / NBucket);
+    W.printNumber("Coverage", (float)(CumulativeNonZero * 100.0) / TotalSyms);
+  }
 }
 
 // Returns true if rel/rela section exists, and populates SymbolIndices.
