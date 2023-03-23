@@ -77,8 +77,8 @@
 // fmodule-file, and fmodule-file-cache-key options.
 
 // CHECK: Files:
-// CHECK: [[PREFIX]]/Left.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK: [[PREFIX]]/module.modulemap llvmcas://{{[[:xdigit:]]+}}
+// CHECK: [[PREFIX]]/Left.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK: [[PREFIX]]/Top.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK: [[PREFIX]]/Right.h llvmcas://{{[[:xdigit:]]+}}
 

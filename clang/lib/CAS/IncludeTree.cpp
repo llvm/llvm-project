@@ -461,9 +461,8 @@ public:
       Directories{Alloc};
 
   llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override {
-    SmallString<128> FilenameBuffer;
-    StringRef Filename = Path.toStringRef(FilenameBuffer);
-
+    SmallString<128> Filename;
+    getPath(Path, Filename);
     auto FileEntry = Files.find(Filename);
     if (FileEntry != Files.end()) {
       return makeStatus(Filename, FileEntry->second.Size,
@@ -483,8 +482,8 @@ public:
 
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
   openFileForRead(const Twine &Path) override {
-    SmallString<128> FilenameBuffer;
-    StringRef Filename = Path.toStringRef(FilenameBuffer);
+    SmallString<128> Filename;
+    getPath(Path, Filename);
     auto MaterializedFile = materialize(Filename);
     if (!MaterializedFile)
       return llvm::errorToErrorCode(MaterializedFile.takeError());
@@ -505,6 +504,15 @@ public:
       return ContentsBlob.takeError();
 
     return MaterializedFile{ContentsBlob->getData(), Entry->second};
+  }
+
+  /// Produce a filename compatible with our StringMaps. See comment in
+  /// \c createIncludeTreeFileSystem.
+  void getPath(const Twine &Path, SmallVectorImpl<char> &Out) {
+    Path.toVector(Out);
+    // Strip dots, but do not eliminate a path consisting only of '.'
+    if (Out.size() != 1)
+      llvm::sys::path::remove_dots(Out);
   }
 
   static llvm::vfs::Status makeStatus(StringRef Filename, uint64_t Size,
@@ -552,7 +560,11 @@ cas::createIncludeTreeFileSystem(IncludeTreeRoot &Root) {
         auto FilenameBlob = File.getFilename();
         if (!FilenameBlob)
           return FilenameBlob.takeError();
-        StringRef Filename = FilenameBlob->getData();
+        SmallString<128> Filename(FilenameBlob->getData());
+        // Strip './' in the filename to match the behaviour of ASTWriter; we
+        // also strip './' in IncludeTreeFileSystem::getPath.
+        assert(Filename != ".");
+        llvm::sys::path::remove_dots(Filename);
 
         StringRef DirName = llvm::sys::path::parent_path(Filename);
         if (DirName.empty())
