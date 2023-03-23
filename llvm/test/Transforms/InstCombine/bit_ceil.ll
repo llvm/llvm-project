@@ -85,6 +85,7 @@ define i32 @bit_ceil_32_plus_1(i32 %x) {
   ret i32 %sel
 }
 
+; std::bit_ceil<uint32_t>(x + 2)
 define i32 @bit_ceil_plus_2(i32 %x) {
 ; CHECK-LABEL: @bit_ceil_plus_2(
 ; CHECK-NEXT:  entry:
@@ -152,5 +153,150 @@ entry:
   ret i32 %sel
 }
 
+; Commuted select operands should still be recognized.
+define i32 @bit_ceil_commuted_operands(i32 %x) {
+; CHECK-LABEL: @bit_ceil_commuted_operands(
+; CHECK-NEXT:    [[DEC:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[CTLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[DEC]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 32, [[CTLZ]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[SUB]]
+; CHECK-NEXT:    [[UGT_INV:%.*]] = icmp ugt i32 [[X]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[UGT_INV]], i32 [[SHL]], i32 1
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %dec = add i32 %x, -1
+  %ctlz = tail call i32 @llvm.ctlz.i32(i32 %dec, i1 false)
+  %sub = sub i32 32, %ctlz
+  %shl = shl i32 1, %sub
+  %ugt = icmp ule i32 %x, 1
+  %sel = select i1 %ugt, i32 1, i32 %shl
+  ret i32 %sel
+}
+
+; Negative test: wrong select constant
+define i32 @bit_ceil_wrong_select_constant(i32 %x) {
+; CHECK-LABEL: @bit_ceil_wrong_select_constant(
+; CHECK-NEXT:    [[DEC:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[CTLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[DEC]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 32, [[CTLZ]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[SUB]]
+; CHECK-NEXT:    [[UGT_INV:%.*]] = icmp ult i32 [[X]], 2
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[UGT_INV]], i32 2, i32 [[SHL]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %dec = add i32 %x, -1
+  %ctlz = tail call i32 @llvm.ctlz.i32(i32 %dec, i1 false)
+  %sub = sub i32 32, %ctlz
+  %shl = shl i32 1, %sub
+  %ugt = icmp ugt i32 %x, 1
+  %sel = select i1 %ugt, i32 %shl, i32 2
+  ret i32 %sel
+}
+
+; Negative test: select condition != false does not guarantee ctlz being either 0 or 32
+define i32 @bit_ceil_32_wrong_cond(i32 %x) {
+; CHECK-LABEL: @bit_ceil_32_wrong_cond(
+; CHECK-NEXT:    [[DEC:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[CTLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[DEC]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 32, [[CTLZ]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[SUB]]
+; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i32 [[X]], 2
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[UGT]], i32 [[SHL]], i32 1
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %dec = add i32 %x, -1
+  %ctlz = tail call i32 @llvm.ctlz.i32(i32 %dec, i1 false)
+  %sub = sub i32 32, %ctlz
+  %shl = shl i32 1, %sub
+  %ugt = icmp ugt i32 %x, 2
+  %sel = select i1 %ugt, i32 %shl, i32 1
+  ret i32 %sel
+}
+
+; Negative test: wrong sub constant
+define i32 @bit_ceil_wrong_sub_constant(i32 %x) {
+; CHECK-LABEL: @bit_ceil_wrong_sub_constant(
+; CHECK-NEXT:    [[DEC:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[CTLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[DEC]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 33, [[CTLZ]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[SUB]]
+; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i32 [[X]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[UGT]], i32 [[SHL]], i32 1
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %dec = add i32 %x, -1
+  %ctlz = tail call i32 @llvm.ctlz.i32(i32 %dec, i1 false)
+  %sub = sub i32 33, %ctlz
+  %shl = shl i32 1, %sub
+  %ugt = icmp ugt i32 %x, 1
+  %sel = select i1 %ugt, i32 %shl, i32 1
+  ret i32 %sel
+}
+
+; Negative test: the shl result used twice
+define i32 @bit_ceil_32_shl_used_twice(i32 %x, ptr %p) {
+; CHECK-LABEL: @bit_ceil_32_shl_used_twice(
+; CHECK-NEXT:    [[DEC:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[CTLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[DEC]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 32, [[CTLZ]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[SUB]]
+; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i32 [[X]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[UGT]], i32 [[SHL]], i32 1
+; CHECK-NEXT:    store i32 [[SHL]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %dec = add i32 %x, -1
+  %ctlz = tail call i32 @llvm.ctlz.i32(i32 %dec, i1 false)
+  %sub = sub i32 32, %ctlz
+  %shl = shl i32 1, %sub
+  %ugt = icmp ugt i32 %x, 1
+  %sel = select i1 %ugt, i32 %shl, i32 1
+  store i32 %shl, ptr %p, align 4
+  ret i32 %sel
+}
+
+; Negative test: the sub result used twice
+define i32 @bit_ceil_32_sub_used_twice(i32 %x, ptr %p) {
+; CHECK-LABEL: @bit_ceil_32_sub_used_twice(
+; CHECK-NEXT:    [[DEC:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[CTLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[DEC]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 32, [[CTLZ]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[SUB]]
+; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i32 [[X]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[UGT]], i32 [[SHL]], i32 1
+; CHECK-NEXT:    store i32 [[SUB]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %dec = add i32 %x, -1
+  %ctlz = tail call i32 @llvm.ctlz.i32(i32 %dec, i1 false)
+  %sub = sub i32 32, %ctlz
+  %shl = shl i32 1, %sub
+  %ugt = icmp ugt i32 %x, 1
+  %sel = select i1 %ugt, i32 %shl, i32 1
+  store i32 %sub, ptr %p, align 4
+  ret i32 %sel
+}
+
+; a vector version of @bit_ceil_32 above
+define <4 x i32> @bit_ceil_v4i32(<4 x i32> %x) {
+; CHECK-LABEL: @bit_ceil_v4i32(
+; CHECK-NEXT:    [[DEC:%.*]] = add <4 x i32> [[X:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[CTLZ:%.*]] = tail call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[DEC]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw <4 x i32> <i32 32, i32 32, i32 32, i32 32>, [[CTLZ]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <4 x i32> <i32 1, i32 1, i32 1, i32 1>, [[SUB]]
+; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt <4 x i32> [[X]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[UGT]], <4 x i32> [[SHL]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    ret <4 x i32> [[SEL]]
+;
+  %dec = add <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %ctlz = tail call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %dec, i1 false)
+  %sub = sub <4 x i32> <i32 32, i32 32, i32 32, i32 32>, %ctlz
+  %shl = shl <4 x i32> <i32 1, i32 1, i32 1, i32 1>, %sub
+  %ugt = icmp ugt <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
+  %sel = select <4 x i1> %ugt, <4 x i32> %shl, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  ret <4 x i32> %sel
+}
+
 declare i32 @llvm.ctlz.i32(i32, i1 immarg)
 declare i64 @llvm.ctlz.i64(i64, i1 immarg)
+declare <4 x i32> @llvm.ctlz.v4i32(<4 x i32>, i1)
