@@ -213,10 +213,10 @@ define i64 @test8(i64 %0, i64 %1, i64 %2) {
 define i32 @smin(i32 %x) {
 ; CHECK-LABEL: smin:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notl %edi
 ; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    notl %edi
 ; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    cmovsl %edi, %eax
+; CHECK-NEXT:    cmovnsl %edi, %eax
 ; CHECK-NEXT:    retq
   %not_x = xor i32 %x, -1
   %1 = icmp slt i32 %not_x, -1
