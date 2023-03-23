@@ -419,8 +419,7 @@ define <vscale x 2 x i32> @sshl_sat_v2i32_scalable_zeroinitializer(<vscale x 2 x
 define i1 @widenable_condition() {
 ; CHECK-LABEL: @widenable_condition(
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i1 [[WC]]
-; CHECK-NEXT:    ret i1 [[FREEZE]]
+; CHECK-NEXT:    ret i1 [[WC]]
 ;
   %wc = call i1 @llvm.experimental.widenable.condition()
   %freeze = freeze i1 %wc
