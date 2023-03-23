@@ -587,7 +587,7 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
       Module *PM =
           MMap.findModule(ScanInstance.getLangOpts().ModuleName + "_Private");
       if (PM)
-        if (Error E = AddModule(M))
+        if (Error E = AddModule(PM))
           return std::move(E);
     }
 
