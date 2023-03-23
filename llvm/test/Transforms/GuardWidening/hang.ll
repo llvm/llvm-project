@@ -5,11 +5,12 @@
 define i64 @test() {
 ; CHECK-LABEL: define i64 @test() {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 poison, poison
+; CHECK-NEXT:    [[DOTGW_FR:%.*]] = freeze i1 poison
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 poison, [[DOTGW_FR]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    br i1 poison, label [[BB3:%.*]], label [[BB2]]
+; CHECK-NEXT:    br i1 [[DOTGW_FR]], label [[BB3:%.*]], label [[BB2]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i64 (...) @llvm.experimental.deoptimize.i64() [ "deopt"() ]
 ; CHECK-NEXT:    ret i64 [[CALL]]
