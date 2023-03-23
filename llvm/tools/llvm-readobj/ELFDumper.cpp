@@ -7275,14 +7275,14 @@ void LLVMELFDumper<ELFT>::printHashHistogramStats(size_t NBucket,
   StringRef BucketName = IsGnu ? "Bucket" : "Chain";
   StringRef ListName = IsGnu ? "Buckets" : "Chains";
   DictScope Outer(W, HistName);
-  W.printNumber("TotalBuckets", static_cast<uint64_t>(NBucket));
+  W.printNumber("TotalBuckets", NBucket);
   ListScope Buckets(W, ListName);
   size_t CumulativeNonZero = 0;
   for (size_t I = 0; I < MaxChain; ++I) {
     CumulativeNonZero += Count[I] * I;
     DictScope Bucket(W, BucketName);
-    W.printNumber("Length", static_cast<uint64_t>(I));
-    W.printNumber("Count", static_cast<uint64_t>(Count[I]));
+    W.printNumber("Length", I);
+    W.printNumber("Count", Count[I]);
     W.printNumber("Percentage", (float)(Count[I] * 100.0) / NBucket);
     W.printNumber("Coverage", (float)(CumulativeNonZero * 100.0) / TotalSyms);
   }
