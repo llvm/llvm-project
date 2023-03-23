@@ -727,6 +727,9 @@ public:
   /// Returns the ordinal for this section.
   SectionOrdinal getOrdinal() const { return SecOrdinal; }
 
+  /// Returns true if this section is empty (contains no blocks or symbols).
+  bool empty() const { return Blocks.empty(); }
+
   /// Returns an iterator over the blocks defined in this section.
   iterator_range<block_iterator> blocks() {
     return make_range(Blocks.begin(), Blocks.end());
