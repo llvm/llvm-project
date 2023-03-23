@@ -218,6 +218,13 @@ class AMDGPULowerModuleLDS : public ModulePass {
     // llvm.donothing that takes a pointer to the instance and is lowered to a
     // no-op after LDS is allocated, but that is not presently necessary.
 
+    // This intrinsic is eliminated shortly before instruction selection. It
+    // does not suffice to indicate to ISel that a given global which is not
+    // immediately used by the kernel must still be allocated by it. An
+    // equivalent target specific intrinsic which lasts until immediately after
+    // codegen would suffice for that, but one would still need to ensure that
+    // the variables are allocated in the anticpated order.
+
     LLVMContext &Ctx = Func->getContext();
 
     Builder.SetInsertPoint(Func->getEntryBlock().getFirstNonPHI());
@@ -241,7 +248,7 @@ class AMDGPULowerModuleLDS : public ModulePass {
     // This pass specialises LDS variables with respect to the kernel that
     // allocates them.
 
-    // This is semantically equivalent to:
+    // This is semantically equivalent to (the unimplemented as slow):
     // for (auto &F : M.functions())
     //   for (auto &BB : F)
     //     for (auto &I : BB)
@@ -308,11 +315,11 @@ public:
     DenseSet<GlobalVariable *> VariablesReachableThroughFunctionPointer;
     for (Function &F : M.functions()) {
       if (!isKernelLDS(&F))
-          if (F.hasAddressTaken(nullptr,
-                                /* IgnoreCallbackUses */ false,
-                                /* IgnoreAssumeLikeCalls */ false,
-                                /* IgnoreLLVMUsed */ true,
-                                /* IgnoreArcAttachedCall */ false)) {
+        if (F.hasAddressTaken(nullptr,
+                              /* IgnoreCallbackUses */ false,
+                              /* IgnoreAssumeLikeCalls */ false,
+                              /* IgnoreLLVMUsed */ true,
+                              /* IgnoreArcAttachedCall */ false)) {
           set_union(VariablesReachableThroughFunctionPointer,
                     direct_map_function[&F]);
         }
@@ -469,29 +476,6 @@ public:
     IRBuilder<> Builder(Ctx);
     Type *I32 = Type::getInt32Ty(Ctx);
 
-    // Accesses from a function use the amdgcn_lds_kernel_id intrinsic which
-    // lowers to a read from a live in register. Emit it once in the entry
-    // block to spare deduplicating it later.
-
-    DenseMap<Function *, Value *> tableKernelIndexCache;
-    auto getTableKernelIndex = [&](Function *F) -> Value * {
-      if (tableKernelIndexCache.count(F) == 0) {
-        LLVMContext &Ctx = M.getContext();
-        FunctionType *FTy = FunctionType::get(Type::getInt32Ty(Ctx), {});
-        Function *Decl =
-            Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_lds_kernel_id, {});
-
-        BasicBlock::iterator it =
-            F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
-        Instruction &i = *it;
-        Builder.SetInsertPoint(&i);
-
-        tableKernelIndexCache[F] = Builder.CreateCall(FTy, Decl, {});
-      }
-
-      return tableKernelIndexCache[F];
-    };
-
     for (size_t Index = 0; Index < ModuleScopeVariables.size(); Index++) {
       auto *GV = ModuleScopeVariables[Index];
 
@@ -500,7 +484,8 @@ public:
         if (!I)
           continue;
 
-        Value *tableKernelIndex = getTableKernelIndex(I->getFunction());
+        Value *tableKernelIndex =
+            getTableLookupKernelIndex(M, I->getFunction());
 
         // So if the phi uses this value multiple times, what does this look
         // like?
@@ -536,7 +521,8 @@ public:
 
     DenseSet<Function *> KernelSet;
 
-    if (VariableSet.empty()) return KernelSet;
+    if (VariableSet.empty())
+      return KernelSet;
 
     for (Function &Func : M.functions()) {
       if (Func.isDeclaration() || !isKernelLDS(&Func))
@@ -599,8 +585,9 @@ public:
         // strategy
         continue;
       }
-      CandidateTy Candidate(GV, K.second.size(),
-                      DL.getTypeAllocSize(GV->getValueType()).getFixedValue());
+      CandidateTy Candidate(
+          GV, K.second.size(),
+          DL.getTypeAllocSize(GV->getValueType()).getFixedValue());
       if (MostUsed < Candidate)
         MostUsed = Candidate;
     }
@@ -621,175 +608,241 @@ public:
                     MDNode::get(Ctx, {MinC, MaxC}));
   }
 
-  bool runOnModule(Module &M) override {
-    LLVMContext &Ctx = M.getContext();
-    CallGraph CG = CallGraph(M);
-    bool Changed = superAlignLDSGlobals(M);
-
-    Changed |= eliminateConstantExprUsesOfLDSFromAllInstructions(M);
-
-    Changed = true; // todo: narrow this down
-
-    // For each kernel, what variables does it access directly or through
-    // callees
-    LDSUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDS(CG, M);
-
-    // For each variable accessed through callees, which kernels access it
-    VariableFunctionMap LDSToKernelsThatNeedToAccessItIndirectly;
-    for (auto &K : LDSUsesInfo.indirect_access) {
-      Function *F = K.first;
-      assert(isKernelLDS(F));
-      for (GlobalVariable *GV : K.second) {
-        LDSToKernelsThatNeedToAccessItIndirectly[GV].insert(F);
-      }
-    }
-
-    // Partition variables into the different strategies
-    DenseSet<GlobalVariable *> ModuleScopeVariables;
-    DenseSet<GlobalVariable *> TableLookupVariables;
-    DenseSet<GlobalVariable *> KernelAccessVariables;
-
-    {
-      GlobalVariable *HybridModuleRoot =
-          LoweringKindLoc != LoweringKind::hybrid
-              ? nullptr
-              : chooseBestVariableForModuleStrategy(
-                    M.getDataLayout(),
-                    LDSToKernelsThatNeedToAccessItIndirectly);
-
-      DenseSet<Function *> const EmptySet;
-      DenseSet<Function *> const &HybridModuleRootKernels =
-          HybridModuleRoot
-              ? LDSToKernelsThatNeedToAccessItIndirectly[HybridModuleRoot]
-              : EmptySet;
-
-      for (auto &K : LDSToKernelsThatNeedToAccessItIndirectly) {
-        // Each iteration of this loop assigns exactly one global variable to
-        // exactly one of the implementation strategies.
-
-        GlobalVariable *GV = K.first;
-        assert(AMDGPU::isLDSVariableToLower(*GV));
-        assert(K.second.size() != 0);
-
-        switch (LoweringKindLoc) {
-        case LoweringKind::module:
-          ModuleScopeVariables.insert(GV);
-          break;
-
-        case LoweringKind::table:
-          TableLookupVariables.insert(GV);
-          break;
-
-        case LoweringKind::kernel:
-          if (K.second.size() == 1) {
-            KernelAccessVariables.insert(GV);
-          } else {
-            report_fatal_error(
-                "cannot lower LDS '" + GV->getName() +
-                "' to kernel access as it is reachable from multiple kernels");
-          }
-          break;
-
-        case LoweringKind::hybrid: {
-          if (GV == HybridModuleRoot) {
-            assert(K.second.size() != 1);
-            ModuleScopeVariables.insert(GV);
-          } else if (K.second.size() == 1) {
-            KernelAccessVariables.insert(GV);
-          } else if (set_is_subset(K.second, HybridModuleRootKernels)) {
-            ModuleScopeVariables.insert(GV);
-          } else {
-            TableLookupVariables.insert(GV);
-          }
-          break;
-        }
-        }
-      }
-
-      assert(ModuleScopeVariables.size() + TableLookupVariables.size() +
-                 KernelAccessVariables.size() ==
-             LDSToKernelsThatNeedToAccessItIndirectly.size());
-    } // Variables have now been partitioned into the three lowering strategies.
-
-    // If the kernel accesses a variable that is going to be stored in the
-    // module instance through a call then that kernel needs to allocate the
-    // module instance
-    DenseSet<Function *> KernelsThatAllocateModuleLDS =
-        kernelsThatIndirectlyAccessAnyOfPassedVariables(M, LDSUsesInfo,
-                                                        ModuleScopeVariables);
-    DenseSet<Function *> KernelsThatAllocateTableLDS =
-        kernelsThatIndirectlyAccessAnyOfPassedVariables(M, LDSUsesInfo,
-                                                        TableLookupVariables);
-
-    GlobalVariable *MaybeModuleScopeStruct = nullptr;
-    if (!ModuleScopeVariables.empty()) {
-      LDSVariableReplacement ModuleScopeReplacement =
-          createLDSVariableReplacement(M, "llvm.amdgcn.module.lds",
-                                       ModuleScopeVariables);
-      MaybeModuleScopeStruct = ModuleScopeReplacement.SGV;
-      appendToCompilerUsed(M,
-                           {static_cast<GlobalValue *>(
-                               ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-                                   cast<Constant>(ModuleScopeReplacement.SGV),
-                                   Type::getInt8PtrTy(Ctx)))});
-
-      // module.lds will be allocated at zero in any kernel that allocates it
-      recordLDSAbsoluteAddress(&M, ModuleScopeReplacement.SGV, 0);
-
-      // historic
-      removeLocalVarsFromUsedLists(M, ModuleScopeVariables);
-
-      // Replace all uses of module scope variable from non-kernel functions
-      replaceLDSVariablesWithStruct(
-          M, ModuleScopeVariables, ModuleScopeReplacement, [&](Use &U) {
-            Instruction *I = dyn_cast<Instruction>(U.getUser());
-            if (!I) {
-              return false;
-            }
-            Function *F = I->getFunction();
-            return !isKernelLDS(F);
-          });
-
-      // Replace uses of module scope variable from kernel functions that
-      // allocate the module scope variable, otherwise leave them unchanged
-      // Record on each kernel whether the module scope global is used by it
-
+  DenseMap<Function *, Value *> tableKernelIndexCache;
+  Value *getTableLookupKernelIndex(Module &M, Function *F) {
+    // Accesses from a function use the amdgcn_lds_kernel_id intrinsic which
+    // lowers to a read from a live in register. Emit it once in the entry
+    // block to spare deduplicating it later.
+    if (tableKernelIndexCache.count(F) == 0) {
       LLVMContext &Ctx = M.getContext();
       IRBuilder<> Builder(Ctx);
+      FunctionType *FTy = FunctionType::get(Type::getInt32Ty(Ctx), {});
+      Function *Decl =
+          Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_lds_kernel_id, {});
 
-      for (Function &Func : M.functions()) {
-        if (Func.isDeclaration() || !isKernelLDS(&Func))
-          continue;
+      BasicBlock::iterator it =
+          F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+      Instruction &i = *it;
+      Builder.SetInsertPoint(&i);
 
-        if (KernelsThatAllocateModuleLDS.contains(&Func)) {
-          replaceLDSVariablesWithStruct(
-              M, ModuleScopeVariables, ModuleScopeReplacement, [&](Use &U) {
-                Instruction *I = dyn_cast<Instruction>(U.getUser());
-                if (!I) {
-                  return false;
-                }
-                Function *F = I->getFunction();
-                return F == &Func;
-              });
+      tableKernelIndexCache[F] = Builder.CreateCall(FTy, Decl, {});
+    }
 
-          markUsedByKernel(Builder, &Func, ModuleScopeReplacement.SGV);
+    return tableKernelIndexCache[F];
+  }
 
-        } else {
-          Func.addFnAttr("amdgpu-elide-module-lds");
-        }
+  static std::vector<Function *> assignLDSKernelIDToEachKernel(
+      Module *M, DenseSet<Function *> const &KernelsThatAllocateTableLDS) {
+    // Associate kernels in the set with an arbirary but reproducible order and
+    // annotate them with that order in metadata. This metadata is recognised by
+    // the backend and lowered to a SGPR which can be read from using
+    // amdgcn_lds_kernel_id.
+
+    std::vector<Function *> OrderedKernels;
+
+    for (Function &Func : M->functions()) {
+      if (Func.isDeclaration())
+        continue;
+      if (!isKernelLDS(&Func))
+        continue;
+
+      if (KernelsThatAllocateTableLDS.contains(&Func)) {
+        assert(Func.hasName()); // else fatal error earlier
+        OrderedKernels.push_back(&Func);
       }
     }
 
-    // Create a struct for each kernel for the non-module-scope variables
+    // Put them in an arbitrary but reproducible order
+    llvm::sort(OrderedKernels.begin(), OrderedKernels.end(),
+               [](const Function *lhs, const Function *rhs) -> bool {
+                 return lhs->getName() < rhs->getName();
+               });
+
+    // Annotate the kernels with their order in this vector
+    LLVMContext &Ctx = M->getContext();
+    IRBuilder<> Builder(Ctx);
+
+    if (OrderedKernels.size() > UINT32_MAX) {
+      // 32 bit keeps it in one SGPR. > 2**32 kernels won't fit on the GPU
+      report_fatal_error("Unimplemented LDS lowering for > 2**32 kernels");
+    }
+
+    for (size_t i = 0; i < OrderedKernels.size(); i++) {
+      Metadata *AttrMDArgs[1] = {
+          ConstantAsMetadata::get(Builder.getInt32(i)),
+      };
+      OrderedKernels[i]->setMetadata("llvm.amdgcn.lds.kernel.id",
+                                     MDNode::get(Ctx, AttrMDArgs));
+    }
+
+    return OrderedKernels;
+  }
+
+  static void partitionVariablesIntoIndirectStrategies(
+      Module &M, LDSUsesInfoTy const &LDSUsesInfo,
+      VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly,
+      DenseSet<GlobalVariable *> &ModuleScopeVariables,
+      DenseSet<GlobalVariable *> &TableLookupVariables,
+      DenseSet<GlobalVariable *> &KernelAccessVariables) {
+
+    GlobalVariable *HybridModuleRoot =
+        LoweringKindLoc != LoweringKind::hybrid
+            ? nullptr
+            : chooseBestVariableForModuleStrategy(
+                  M.getDataLayout(), LDSToKernelsThatNeedToAccessItIndirectly);
+
+    DenseSet<Function *> const EmptySet;
+    DenseSet<Function *> const &HybridModuleRootKernels =
+        HybridModuleRoot
+            ? LDSToKernelsThatNeedToAccessItIndirectly[HybridModuleRoot]
+            : EmptySet;
+
+    for (auto &K : LDSToKernelsThatNeedToAccessItIndirectly) {
+      // Each iteration of this loop assigns exactly one global variable to
+      // exactly one of the implementation strategies.
+
+      GlobalVariable *GV = K.first;
+      assert(AMDGPU::isLDSVariableToLower(*GV));
+      assert(K.second.size() != 0);
+
+      switch (LoweringKindLoc) {
+      case LoweringKind::module:
+        ModuleScopeVariables.insert(GV);
+        break;
+
+      case LoweringKind::table:
+        TableLookupVariables.insert(GV);
+        break;
+
+      case LoweringKind::kernel:
+        if (K.second.size() == 1) {
+          KernelAccessVariables.insert(GV);
+        } else {
+          report_fatal_error(
+              "cannot lower LDS '" + GV->getName() +
+              "' to kernel access as it is reachable from multiple kernels");
+        }
+        break;
+
+      case LoweringKind::hybrid: {
+        if (GV == HybridModuleRoot) {
+          assert(K.second.size() != 1);
+          ModuleScopeVariables.insert(GV);
+        } else if (K.second.size() == 1) {
+          KernelAccessVariables.insert(GV);
+        } else if (set_is_subset(K.second, HybridModuleRootKernels)) {
+          ModuleScopeVariables.insert(GV);
+        } else {
+          TableLookupVariables.insert(GV);
+        }
+        break;
+      }
+      }
+    }
+
+    // All LDS variables accessed indirectly have now been partitioned into
+    // the distinct lowering strategies.
+    assert(ModuleScopeVariables.size() + TableLookupVariables.size() +
+               KernelAccessVariables.size() ==
+           LDSToKernelsThatNeedToAccessItIndirectly.size());
+  }
+
+  static GlobalVariable *lowerModuleScopeStructVariables(
+      Module &M, DenseSet<GlobalVariable *> const &ModuleScopeVariables,
+      DenseSet<Function *> const &KernelsThatAllocateModuleLDS) {
+    // Create a struct to hold the ModuleScopeVariables
+    // Replace all uses of those variables from non-kernel functions with the
+    // new struct instance Replace only the uses from kernel functions that will
+    // allocate this instance. That is a space optimisation - kernels that use a
+    // subset of the module scope struct and do not need to allocate it for
+    // indirect calls will only allocate the subset they use (they do so as part
+    // of the per-kernel lowering).
+    if (ModuleScopeVariables.empty()) {
+      return nullptr;
+    }
+
+    LLVMContext &Ctx = M.getContext();
+
+    LDSVariableReplacement ModuleScopeReplacement =
+        createLDSVariableReplacement(M, "llvm.amdgcn.module.lds",
+                                     ModuleScopeVariables);
+
+    appendToCompilerUsed(M, {static_cast<GlobalValue *>(
+                                ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+                                    cast<Constant>(ModuleScopeReplacement.SGV),
+                                    Type::getInt8PtrTy(Ctx)))});
+
+    // module.lds will be allocated at zero in any kernel that allocates it
+    recordLDSAbsoluteAddress(&M, ModuleScopeReplacement.SGV, 0);
+
+    // historic
+    removeLocalVarsFromUsedLists(M, ModuleScopeVariables);
+
+    // Replace all uses of module scope variable from non-kernel functions
+    replaceLDSVariablesWithStruct(
+        M, ModuleScopeVariables, ModuleScopeReplacement, [&](Use &U) {
+          Instruction *I = dyn_cast<Instruction>(U.getUser());
+          if (!I) {
+            return false;
+          }
+          Function *F = I->getFunction();
+          return !isKernelLDS(F);
+        });
+
+    // Replace uses of module scope variable from kernel functions that
+    // allocate the module scope variable, otherwise leave them unchanged
+    // Record on each kernel whether the module scope global is used by it
+
+    IRBuilder<> Builder(Ctx);
+
+    for (Function &Func : M.functions()) {
+      if (Func.isDeclaration() || !isKernelLDS(&Func))
+        continue;
+
+      if (KernelsThatAllocateModuleLDS.contains(&Func)) {
+        replaceLDSVariablesWithStruct(
+            M, ModuleScopeVariables, ModuleScopeReplacement, [&](Use &U) {
+              Instruction *I = dyn_cast<Instruction>(U.getUser());
+              if (!I) {
+                return false;
+              }
+              Function *F = I->getFunction();
+              return F == &Func;
+            });
+
+        markUsedByKernel(Builder, &Func, ModuleScopeReplacement.SGV);
+
+      } else {
+        Func.addFnAttr("amdgpu-elide-module-lds");
+      }
+    }
+
+    return ModuleScopeReplacement.SGV;
+  }
+
+  static DenseMap<Function *, LDSVariableReplacement>
+  lowerKernelScopeStructVariables(
+      Module &M, LDSUsesInfoTy &LDSUsesInfo,
+      DenseSet<GlobalVariable *> const &ModuleScopeVariables,
+      DenseSet<Function *> const &KernelsThatAllocateModuleLDS,
+      GlobalVariable *MaybeModuleScopeStruct) {
+
+    // Create a struct for each kernel for the non-module-scope variables.
+
     DenseMap<Function *, LDSVariableReplacement> KernelToReplacement;
     for (Function &Func : M.functions()) {
       if (Func.isDeclaration() || !isKernelLDS(&Func))
         continue;
 
       DenseSet<GlobalVariable *> KernelUsedVariables;
+      // Allocating variables that are used directly in this struct to get
+      // alignment aware allocation and predictable frame size.
       for (auto &v : LDSUsesInfo.direct_access[&Func]) {
         KernelUsedVariables.insert(v);
       }
+
+      // Allocating variables that are accessed indirectly so that a lookup of
+      // this struct instance can find them from nested functions.
       for (auto &v : LDSUsesInfo.indirect_access[&Func]) {
         KernelUsedVariables.insert(v);
       }
@@ -803,7 +856,7 @@ public:
       }
 
       if (KernelUsedVariables.empty()) {
-        // Either used no LDS, or all the LDS it used was also in module
+        // Either used no LDS, or the LDS it used was all in the module struct
         continue;
       }
 
@@ -861,6 +914,55 @@ public:
             return I && I->getFunction() == &Func;
           });
     }
+    return KernelToReplacement;
+  }
+
+  bool runOnModule(Module &M) override {
+    CallGraph CG = CallGraph(M);
+    bool Changed = superAlignLDSGlobals(M);
+
+    Changed |= eliminateConstantExprUsesOfLDSFromAllInstructions(M);
+
+    Changed = true; // todo: narrow this down
+
+    // For each kernel, what variables does it access directly or through
+    // callees
+    LDSUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDS(CG, M);
+
+    // For each variable accessed through callees, which kernels access it
+    VariableFunctionMap LDSToKernelsThatNeedToAccessItIndirectly;
+    for (auto &K : LDSUsesInfo.indirect_access) {
+      Function *F = K.first;
+      assert(isKernelLDS(F));
+      for (GlobalVariable *GV : K.second) {
+        LDSToKernelsThatNeedToAccessItIndirectly[GV].insert(F);
+      }
+    }
+
+    DenseSet<GlobalVariable *> ModuleScopeVariables;
+    DenseSet<GlobalVariable *> TableLookupVariables;
+    DenseSet<GlobalVariable *> KernelAccessVariables;
+    partitionVariablesIntoIndirectStrategies(
+        M, LDSUsesInfo, LDSToKernelsThatNeedToAccessItIndirectly,
+        ModuleScopeVariables, TableLookupVariables, KernelAccessVariables);
+
+    // If the kernel accesses a variable that is going to be stored in the
+    // module instance through a call then that kernel needs to allocate the
+    // module instance
+    DenseSet<Function *> KernelsThatAllocateModuleLDS =
+        kernelsThatIndirectlyAccessAnyOfPassedVariables(M, LDSUsesInfo,
+                                                        ModuleScopeVariables);
+    DenseSet<Function *> KernelsThatAllocateTableLDS =
+        kernelsThatIndirectlyAccessAnyOfPassedVariables(M, LDSUsesInfo,
+                                                        TableLookupVariables);
+
+    GlobalVariable *MaybeModuleScopeStruct = lowerModuleScopeStructVariables(
+        M, ModuleScopeVariables, KernelsThatAllocateModuleLDS);
+
+    DenseMap<Function *, LDSVariableReplacement> KernelToReplacement =
+        lowerKernelScopeStructVariables(M, LDSUsesInfo, ModuleScopeVariables,
+                                        KernelsThatAllocateModuleLDS,
+                                        MaybeModuleScopeStruct);
 
     // Lower zero cost accesses to the kernel instances just created
     for (auto &GV : KernelAccessVariables) {
@@ -872,52 +974,24 @@ public:
       DenseSet<GlobalVariable *> Vec;
       Vec.insert(GV);
 
+      // TODO: Looks like a latent bug, Replacement may not be marked
+      // UsedByKernel here
       replaceLDSVariablesWithStruct(M, Vec, Replacement, [](Use &U) {
-                                                           return isa<Instruction>(U.getUser());
+        return isa<Instruction>(U.getUser());
       });
     }
 
     if (!KernelsThatAllocateTableLDS.empty()) {
-      // Collect the kernels that allocate table lookup LDS
-      std::vector<Function *> OrderedKernels;
-      {
-        for (Function &Func : M.functions()) {
-          if (Func.isDeclaration())
-            continue;
-          if (!isKernelLDS(&Func))
-            continue;
+      LLVMContext &Ctx = M.getContext();
+      IRBuilder<> Builder(Ctx);
 
-          if (KernelsThatAllocateTableLDS.contains(&Func)) {
-            assert(Func.hasName()); // else fatal error earlier
-            OrderedKernels.push_back(&Func);
-          }
-        }
+      // The ith element of this vector is kernel id i
+      std::vector<Function *> OrderedKernels =
+          assignLDSKernelIDToEachKernel(&M, KernelsThatAllocateTableLDS);
 
-        // Put them in an arbitrary but reproducible order
-        llvm::sort(OrderedKernels.begin(), OrderedKernels.end(),
-                   [](const Function *lhs, const Function *rhs) -> bool {
-                     return lhs->getName() < rhs->getName();
-                   });
-
-        // Annotate the kernels with their order in this vector
-        LLVMContext &Ctx = M.getContext();
-        IRBuilder<> Builder(Ctx);
-
-        if (OrderedKernels.size() > UINT32_MAX) {
-          // 32 bit keeps it in one SGPR. > 2**32 kernels won't fit on the GPU
-          report_fatal_error("Unimplemented LDS lowering for > 2**32 kernels");
-        }
-
-        for (size_t i = 0; i < OrderedKernels.size(); i++) {
-          Metadata *AttrMDArgs[1] = {
-              ConstantAsMetadata::get(Builder.getInt32(i)),
-          };
-          OrderedKernels[i]->setMetadata("llvm.amdgcn.lds.kernel.id",
-                                         MDNode::get(Ctx, AttrMDArgs));
-
-          markUsedByKernel(Builder, OrderedKernels[i],
-                           KernelToReplacement[OrderedKernels[i]].SGV);
-        }
+      for (size_t i = 0; i < OrderedKernels.size(); i++) {
+        markUsedByKernel(Builder, OrderedKernels[i],
+                         KernelToReplacement[OrderedKernels[i]].SGV);
       }
 
       // The order must be consistent between lookup table and accesses to
@@ -938,7 +1012,6 @@ public:
 
     for (auto &GV : make_early_inc_range(M.globals()))
       if (AMDGPU::isLDSVariableToLower(GV)) {
-
         // probably want to remove from used lists
         GV.removeDeadConstantUsers();
         if (GV.use_empty())
@@ -1095,7 +1168,7 @@ private:
   }
 
   template <typename PredicateTy>
-  void replaceLDSVariablesWithStruct(
+  static void replaceLDSVariablesWithStruct(
       Module &M, DenseSet<GlobalVariable *> const &LDSVarsToTransformArg,
       LDSVariableReplacement Replacement, PredicateTy Predicate) {
     LLVMContext &Ctx = M.getContext();
@@ -1153,9 +1226,9 @@ private:
     }
   }
 
-  void refineUsesAlignmentAndAA(Value *Ptr, Align A, const DataLayout &DL,
-                                MDNode *AliasScope, MDNode *NoAlias,
-                                unsigned MaxDepth = 5) {
+  static void refineUsesAlignmentAndAA(Value *Ptr, Align A,
+                                       const DataLayout &DL, MDNode *AliasScope,
+                                       MDNode *NoAlias, unsigned MaxDepth = 5) {
     if (!MaxDepth || (A == 1 && !AliasScope))
       return;
 

@@ -11,10 +11,6 @@
 // TODO FMT Fix this test using GCC, it currently times out.
 // UNSUPPORTED: gcc-12
 
-// This test requires the dylib support introduced in D92214.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{.+}}
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx11.{{.+}}
-
 // <format>
 
 // template<class charT, formattable<charT>... Ts>
@@ -61,7 +57,7 @@ void test() {
   test(SV("(1)"), std::tuple<int>{1});
   test(SV("(1, 1)"), std::tuple<int, CharT>{1, CharT('1')});
   test(SV("(1, 1)"), std::pair<int, CharT>{1, CharT('1')});
-  test(SV("(1, 1, 1)"), std::tuple<int, CharT, double>{1, CharT('1'), 1.0});
+  test(SV("(1, 1, true)"), std::tuple<int, CharT, bool>{1, CharT('1'), true});
 }
 
 void test() {

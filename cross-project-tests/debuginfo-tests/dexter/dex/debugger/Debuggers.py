@@ -121,7 +121,21 @@ def add_debugger_tool_arguments(parser, context, defaults):
         default='',
         help='command line arguments for the test program, in addition to any '
              'provided by DexCommandLine')
-
+    parser.add_argument(
+        '--timeout-total',
+        metavar='<seconds>',
+        type=float,
+        default=0.0,
+        help='if >0, debugger session will automatically exit after '
+             'running for <timeout-total> seconds')
+    parser.add_argument(
+        '--timeout-breakpoint',
+        metavar='<seconds>',
+        type=float,
+        default=0.0,
+        help='if >0, debugger session will automatically exit after '
+             'waiting <timeout-breakpoint> seconds without hitting a '
+             'breakpoint')
 
 def handle_debugger_tool_base_options(context, defaults):  # noqa
     options = context.options

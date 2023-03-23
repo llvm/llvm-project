@@ -122,8 +122,13 @@ public:
   void forgetMapping(Region &region);
 
   /// Returns the LLVM metadata corresponding to a symbol reference to an mlir
-  /// LLVM dialect alias scope operation
+  /// LLVM dialect alias scope operation.
   llvm::MDNode *getAliasScope(Operation *op, SymbolRefAttr aliasScopeRef) const;
+
+  /// Returns the LLVM metadata corresponding to an array of symbol references
+  /// to mlir LLVM dialect alias scope operations.
+  llvm::MDNode *getAliasScopes(Operation *op,
+                               ArrayRef<SymbolRefAttr> aliasScopeRefs) const;
 
   // Sets LLVM metadata for memory operations that are in a parallel loop.
   void setAccessGroupsMetadata(AccessGroupOpInterface op,

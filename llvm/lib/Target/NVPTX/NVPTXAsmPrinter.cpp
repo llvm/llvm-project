@@ -429,7 +429,7 @@ bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
         if (MDNode *UnrollCountMD =
                 GetUnrollMetadata(LoopID, "llvm.loop.unroll.count")) {
           if (mdconst::extract<ConstantInt>(UnrollCountMD->getOperand(1))
-                  ->getZExtValue() == 1)
+                  ->isOne())
             return true;
         }
       }

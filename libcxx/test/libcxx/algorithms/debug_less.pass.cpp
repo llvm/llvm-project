@@ -207,7 +207,7 @@ void test_non_const_arg_cmp() {
 struct ValueIterator {
     typedef std::input_iterator_tag iterator_category;
     typedef std::size_t value_type;
-    typedef ptrdiff_t difference_type;
+    typedef std::ptrdiff_t difference_type;
     typedef std::size_t reference;
     typedef std::size_t* pointer;
 

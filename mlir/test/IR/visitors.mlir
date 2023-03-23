@@ -323,6 +323,36 @@ func.func @unordered_cfg_with_loop() {
 // CHECK:       Visiting region 0 from operation 'regionOp0'
 // CHECK:       Visiting region 0 from operation 'func.func'
 
+// CHECK-LABEL: Op reverse dominance post-order visits
+// CHECK:       Visiting op 'func.return'
+// CHECK-NOT:   Visiting op 'op6'
+// CHECK:       Visiting op 'op7'
+// CHECK:       Visiting op 'cf.br'
+// CHECK:       Visiting op 'op5'
+// CHECK:       Visiting op 'cf.br'
+// CHECK:       Visiting op 'op1'
+// CHECK:       Visiting op 'cf.br'
+// CHECK:       Visiting op 'op2'
+// CHECK:       Visiting op 'cf.br'
+// CHECK:       Visiting op 'op3'
+// CHECK:       Visiting op 'cf.cond_br'
+// CHECK:       Visiting op 'op0'
+// CHECK:       Visiting op 'regionOp0'
+// CHECK:       Visiting op 'func.func'
+
+// CHECK-LABEL: Block reverse dominance post-order visits
+// CHECK:       Visiting block ^bb7 from region 0 from operation 'regionOp0'
+// CHECK:       Visiting block ^bb5 from region 0 from operation 'regionOp0'
+// CHECK:       Visiting block ^bb1 from region 0 from operation 'regionOp0'
+// CHECK:       Visiting block ^bb2 from region 0 from operation 'regionOp0'
+// CHECK:       Visiting block ^bb3 from region 0 from operation 'regionOp0'
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'regionOp0'
+// CHECK:       Visiting block ^bb0 from region 0 from operation 'func.func'
+
+// CHECK-LABEL: Region reverse dominance post-order visits
+// CHECK:       Visiting region 0 from operation 'regionOp0'
+// CHECK:       Visiting region 0 from operation 'func.func'
+
 // CHECK-LABEL: Block pre-order erasures (skip)
 // CHECK:       Erasing block ^bb0 from region 0 from operation 'regionOp0'
 // CHECK:       Cannot erase block ^bb0 from region 0 from operation 'regionOp0', still has uses

@@ -1065,16 +1065,22 @@ ModuleTranslation::getAliasScope(Operation *op,
   return aliasScopeMetadataMapping.lookup(aliasScopeOp);
 }
 
+llvm::MDNode *ModuleTranslation::getAliasScopes(
+    Operation *op, ArrayRef<SymbolRefAttr> aliasScopeRefs) const {
+  SmallVector<llvm::Metadata *> nodes;
+  nodes.reserve(aliasScopeRefs.size());
+  for (SymbolRefAttr aliasScopeRef : aliasScopeRefs)
+    nodes.push_back(getAliasScope(op, aliasScopeRef));
+  return llvm::MDNode::get(getLLVMContext(), nodes);
+}
+
 void ModuleTranslation::setAliasScopeMetadata(AliasAnalysisOpInterface op,
                                               llvm::Instruction *inst) {
-  auto populateScopeMetadata = [&](ArrayAttr scopeRefs, unsigned kind) {
-    if (!scopeRefs || scopeRefs.empty())
+  auto populateScopeMetadata = [&](ArrayAttr aliasScopeRefs, unsigned kind) {
+    if (!aliasScopeRefs || aliasScopeRefs.empty())
       return;
-    llvm::Module *module = inst->getModule();
-    SmallVector<llvm::Metadata *> scopeMDs;
-    for (SymbolRefAttr scopeRef : scopeRefs.getAsRange<SymbolRefAttr>())
-      scopeMDs.push_back(getAliasScope(op, scopeRef));
-    llvm::MDNode *node = llvm::MDNode::get(module->getContext(), scopeMDs);
+    llvm::MDNode *node = getAliasScopes(
+        op, llvm::to_vector(aliasScopeRefs.getAsRange<SymbolRefAttr>()));
     inst->setMetadata(kind, node);
   };
 

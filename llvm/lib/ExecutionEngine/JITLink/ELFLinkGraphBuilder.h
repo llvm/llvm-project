@@ -112,6 +112,17 @@ protected:
   Expected<std::pair<Linkage, Scope>>
   getSymbolLinkageAndScope(const typename ELFT::Sym &Sym, StringRef Name);
 
+  /// Set the target flags on the given Symbol.
+  virtual TargetFlagsType makeTargetFlags(const typename ELFT::Sym &Sym) {
+    return TargetFlagsType{};
+  }
+
+  /// Get the physical offset of the symbol on the target platform.
+  virtual orc::ExecutorAddrDiff getRawOffset(const typename ELFT::Sym &Sym,
+                                             TargetFlagsType Flags) {
+    return Sym.getValue();
+  }
+
   Error prepare();
   Error graphifySections();
   Error graphifySymbols();
@@ -478,6 +489,9 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
                  << "\"\n";
         });
 
+        TargetFlagsType Flags = makeTargetFlags(Sym);
+        orc::ExecutorAddrDiff Offset = getRawOffset(Sym, Flags);
+
         // In RISCV, temporary symbols (Used to generate dwarf, eh_frame
         // sections...) will appear in object code's symbol table, and LLVM does
         // not use names on these temporary symbols (RISCV gnu toolchain uses
@@ -485,10 +499,13 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
         // anonymous symbol.
         auto &GSym =
             Name->empty()
-                ? G->addAnonymousSymbol(*B, Sym.getValue(), Sym.st_size,
+                ? G->addAnonymousSymbol(*B, Offset, Sym.st_size,
                                         false, false)
-                : G->addDefinedSymbol(*B, Sym.getValue(), *Name, Sym.st_size, L,
-                                      S, Sym.getType() == ELF::STT_FUNC, false);
+                : G->addDefinedSymbol(*B, Offset, *Name, Sym.st_size, L,
+                                      S, Sym.getType() == ELF::STT_FUNC,
+                                      false);
+
+        GSym.setTargetFlags(Flags);
         setGraphSymbol(SymIndex, GSym);
       }
     } else if (Sym.isUndefined() && Sym.isExternal()) {

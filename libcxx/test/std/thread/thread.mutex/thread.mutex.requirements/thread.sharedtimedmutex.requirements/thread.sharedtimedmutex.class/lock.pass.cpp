@@ -20,12 +20,12 @@
 
 // void lock();
 
-#include <thread>
-
 #include <atomic>
-#include <cstdlib>
 #include <cassert>
+#include <chrono>
+#include <cstdlib>
 #include <shared_mutex>
+#include <thread>
 
 #include "make_test_thread.h"
 #include "test_macros.h"
