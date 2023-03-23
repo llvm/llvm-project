@@ -2469,6 +2469,16 @@ ArrayRef<Type> spirv::FuncOp::getCallableResults() {
   return getFunctionType().getResults();
 }
 
+// CallableOpInterface
+::mlir::ArrayAttr spirv::FuncOp::getCallableArgAttrs() {
+  return getArgAttrs().value_or(nullptr);
+}
+
+// CallableOpInterface
+::mlir::ArrayAttr spirv::FuncOp::getCallableResAttrs() {
+  return getResAttrs().value_or(nullptr);
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.FunctionCall
 //===----------------------------------------------------------------------===//
