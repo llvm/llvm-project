@@ -61,7 +61,6 @@ def RestrictedSizeTPtr : RestrictedPtrType<SizeTType>;
 
 def WCharType : NamedType<"wchar_t">;
 def WIntType : NamedType<"wint_t">;
-def MBStateType : NamedType<"mbstate_t">;
 
 def LongDoublePtr : PtrType<LongDoubleType>;
 
