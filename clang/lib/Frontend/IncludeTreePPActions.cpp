@@ -123,7 +123,7 @@ public:
       Import.getModuleName().split(ModuleComponents, '.');
       for (StringRef Component : ModuleComponents)
         Path.emplace_back(PP.getIdentifierInfo(Component), IncludeLoc);
-      return IncludeModule{std::move(Path)};
+      return IncludeModule{std::move(Path), Import.visibilityOnly()};
     }
 
     assert(Node->getKind() == cas::IncludeTree::NodeKind::Tree);

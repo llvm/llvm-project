@@ -27,7 +27,7 @@
 
 // CHECK: 2:1 [[PREFIX]]/Mod.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK:   Submodule: Mod
-// CHECK: 3:1 (Module) Mod
+// CHECK: 3:1 (Module for visibility only) Mod
 
 // CHECK: Files:
 // CHECK: [[PREFIX]]/tu.c llvmcas://{{[[:xdigit:]]+}}
