@@ -79,8 +79,7 @@ entry:
 define i32@foo6(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-LABEL: foo6:
 ; CHECK:       // %bb.0: // %common.ret
-; CHECK-NEXT:    sub w8, w0, w1
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    subs w8, w0, w1
 ; CHECK-NEXT:    csinc w0, w8, wzr, le
 ; CHECK-NEXT:    ret
   %sub = sub nsw i32 %a, %b
