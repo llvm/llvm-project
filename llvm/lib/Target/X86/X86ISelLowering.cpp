@@ -24192,6 +24192,12 @@ static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
                        DAG.getConstant(0, DL, IntVT));
   }
 
+  // Without PTEST, a masked v2i64 or-reduction is not faster than
+  // scalarization.
+  bool UsePTEST = Subtarget.hasSSE41();
+  if (!UsePTEST && !Mask.isAllOnes() && VT.getScalarSizeInBits() > 32)
+    return SDValue();
+
   // Split down to 128/256-bit vector.
   unsigned TestSize = Subtarget.hasAVX() ? 256 : 128;
   while (VT.getSizeInBits() > TestSize) {
@@ -24200,17 +24206,11 @@ static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
     V = DAG.getNode(ISD::OR, DL, VT, Split.first, Split.second);
   }
 
-  bool UsePTEST = Subtarget.hasSSE41();
   if (UsePTEST) {
     MVT TestVT = VT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
     V = DAG.getBitcast(TestVT, MaskBits(V));
     return DAG.getNode(X86ISD::PTEST, DL, MVT::i32, V, V);
   }
-
-  // Without PTEST, a masked v2i64 or-reduction is not faster than
-  // scalarization.
-  if (!Mask.isAllOnes() && VT.getScalarSizeInBits() > 32)
-    return SDValue();
 
   V = DAG.getBitcast(MVT::v16i8, MaskBits(V));
   V = DAG.getNode(X86ISD::PCMPEQ, DL, MVT::v16i8, V,
