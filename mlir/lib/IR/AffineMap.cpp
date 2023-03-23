@@ -829,7 +829,7 @@ bool MutableAffineMap::isMultipleOf(unsigned idx, int64_t factor) const {
   if (results[idx].isMultipleOf(factor))
     return true;
 
-  // TODO: use simplifyAffineExpr and FlatAffineConstraints to
+  // TODO: use simplifyAffineExpr and FlatAffineValueConstraints to
   // complete this (for a more powerful analysis).
   return false;
 }

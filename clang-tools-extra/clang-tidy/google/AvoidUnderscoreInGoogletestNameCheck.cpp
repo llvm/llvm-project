@@ -51,8 +51,10 @@ public:
     const Token *TestNameToken = Args->getUnexpArgument(1);
     if (!TestCaseNameToken || !TestNameToken)
       return;
-    std::string TestCaseName = PP->getSpelling(*TestCaseNameToken);
-    if (TestCaseName.find('_') != std::string::npos)
+    std::string TestCaseNameMaybeDisabled = PP->getSpelling(*TestCaseNameToken);
+    StringRef TestCaseName = TestCaseNameMaybeDisabled;
+    TestCaseName.consume_front(KDisabledTestPrefix);
+    if (TestCaseName.contains('_'))
       Check->diag(TestCaseNameToken->getLocation(),
                   "avoid using \"_\" in test case name \"%0\" according to "
                   "Googletest FAQ")

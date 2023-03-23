@@ -51,6 +51,8 @@ public:
   const Environment *getEnvironment(const Stmt &S) const override {
     auto BlockIt = CFCtx.getStmtToBlock().find(&ignoreCFGOmittedNodes(S));
     assert(BlockIt != CFCtx.getStmtToBlock().end());
+    if (!CFCtx.isBlockReachable(*BlockIt->getSecond()))
+      return nullptr;
     const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
     assert(State);
     return &State->Env;
