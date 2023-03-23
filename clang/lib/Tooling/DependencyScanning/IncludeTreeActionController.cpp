@@ -398,8 +398,9 @@ void IncludeTreeBuilder::handleHasIncludeCheck(Preprocessor &PP, bool Result) {
 
 void IncludeTreeBuilder::moduleImport(Preprocessor &PP, const Module *M,
                                       SourceLocation EndLoc) {
-  auto Import =
-      check(cas::IncludeTree::ModuleImport::create(DB, M->getFullModuleName()));
+  bool VisibilityOnly = M->isForBuilding(PP.getLangOpts());
+  auto Import = check(cas::IncludeTree::ModuleImport::create(
+      DB, M->getFullModuleName(), VisibilityOnly));
   if (!Import)
     return;
 

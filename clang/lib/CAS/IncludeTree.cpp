@@ -212,9 +212,12 @@ bool IncludeTree::isValid(const ObjectProxy &Node) {
 }
 
 Expected<IncludeTree::ModuleImport>
-IncludeTree::ModuleImport::create(ObjectStore &DB, StringRef ModuleName) {
-  return IncludeTreeBase::create(DB, {},
-                                 llvm::arrayRefFromStringRef<char>(ModuleName));
+IncludeTree::ModuleImport::create(ObjectStore &DB, StringRef ModuleName,
+                                  bool VisibilityOnly) {
+  SmallString<64> Buffer;
+  Buffer.push_back((char)VisibilityOnly);
+  Buffer.append(ModuleName);
+  return IncludeTreeBase::create(DB, {}, Buffer);
 }
 
 IncludeTree::FileList::FileSizeTy
@@ -600,7 +603,11 @@ llvm::Error IncludeTree::FileList::print(llvm::raw_ostream &OS,
 
 llvm::Error IncludeTree::ModuleImport::print(llvm::raw_ostream &OS,
                                              unsigned Indent) {
-  OS << "(Module) " << getModuleName() << '\n';
+  if (visibilityOnly())
+    OS << "(Module for visibility only) ";
+  else
+    OS << "(Module) ";
+  OS << getModuleName() << '\n';
   return llvm::Error::success();
 }
 

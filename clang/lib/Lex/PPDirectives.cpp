@@ -1994,17 +1994,36 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
       return;
     }
     if (auto *Import = std::get_if<PPCachedActions::IncludeModule>(&Include)) {
-      ModuleLoadResult Imported = TheModuleLoader.loadModule(
-          IncludeTok.getLocation(), Import->ImportPath, Module::Hidden,
-          /*IsIncludeDirective=*/true);
-      if (!Imported) {
-        assert(hadModuleLoaderFatalFailure() && "unexpected failure kind");
-        if (hadModuleLoaderFatalFailure()) {
-          IncludeTok.setKind(tok::eof);
-          CurLexer->cutOffLexing();
+      ModuleLoadResult Imported;
+      if (Import->VisibilityOnly) {
+        ModuleMap &MMap = getHeaderSearchInfo().getModuleMap();
+        Module *M = nullptr;
+        for (auto &NameLoc : Import->ImportPath) {
+          M = MMap.lookupModuleQualified(NameLoc.first->getName(), M);
+          if (!M)
+            break;
         }
-        return;
+        if (!M) {
+          Diags->Report(diag::err_pp_missing_module_include_tree)
+              << getLangOpts().CurrentModule;
+
+          return;
+        }
+        Imported = M;
+      } else {
+        Imported = TheModuleLoader.loadModule(
+            IncludeTok.getLocation(), Import->ImportPath, Module::Hidden,
+            /*IsIncludeDirective=*/true);
+        if (!Imported) {
+          assert(hadModuleLoaderFatalFailure() && "unexpected failure kind");
+          if (hadModuleLoaderFatalFailure()) {
+            IncludeTok.setKind(tok::eof);
+            CurLexer->cutOffLexing();
+          }
+          return;
+        }
       }
+
       makeModuleVisible(Imported, EndLoc);
       if (IncludeTok.getIdentifierInfo()->getPPKeywordID() !=
           tok::pp___include_macros)

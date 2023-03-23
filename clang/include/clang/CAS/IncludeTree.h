@@ -331,9 +331,12 @@ class IncludeTree::ModuleImport : public IncludeTreeBase<ModuleImport> {
 public:
   static constexpr StringRef getNodeKind() { return "ModI"; }
 
-  static Expected<ModuleImport> create(ObjectStore &DB, StringRef ModuleName);
+  static Expected<ModuleImport> create(ObjectStore &DB, StringRef ModuleName,
+                                       bool VisibilityOnly);
 
-  StringRef getModuleName() { return getData(); }
+  StringRef getModuleName() const { return getData().drop_front(); }
+  /// Whether this module should only be "marked visible" rather than imported.
+  bool visibilityOnly() const { return (bool)getData()[0]; }
 
   llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
 
@@ -341,7 +344,7 @@ public:
     if (!IncludeTreeBase::isValid(Node))
       return false;
     IncludeTreeBase Base(Node);
-    return Base.getNumReferences() == 0 && !Base.getData().empty();
+    return Base.getNumReferences() == 0 && Base.getData().size() > 1;
   }
   static bool isValid(ObjectStore &DB, ObjectRef Ref) {
     auto Node = DB.getProxy(Ref);

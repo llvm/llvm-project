@@ -23,6 +23,8 @@
 // CHECK:   Submodule: Mod
 // CHECK: 3:1 [[PREFIX]]/Mod.framework/PrivateHeaders/Priv.h  llvmcas://
 // CHECK:   Submodule: Mod_Private
+// CHECK: 4:1 (Module for visibility only) Mod
+// CHECK: 5:1 (Module for visibility only) Mod_Private
 // CHECK: Module Map:
 // CHECK: Mod (framework)
 // CHECK:   link Mod (framework)
@@ -57,6 +59,8 @@ void pub(void);
 void priv(void);
 
 //--- tu.m
+#import <Mod/Mod.h>
+#import <Mod/Priv.h>
 #import <Mod/Mod.h>
 #import <Mod/Priv.h>
 void tu(void) {
