@@ -3,7 +3,9 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include <sys/stat.h>
 #include <system_error>
 #include <unordered_map>
 #include <unordered_set>
@@ -14,7 +16,6 @@ using namespace llvm;
 
 namespace {
 void makeDotPrologue(raw_fd_ostream &File) { File << "digraph G {\n"; }
-void makeDotEpilogue(raw_fd_ostream &File) { File << "}\n"; }
 
 /// Class for implemeting CallGraph building
 struct CallGraph : ModulePass {
@@ -37,13 +38,24 @@ struct CallGraph : ModulePass {
   bool isLLVMTrap(StringRef Name) const { return Name == "llvm.trap"; }
 
   bool runOnModule(Module &M) override {
+    constexpr StringRef FileName = "OutFile.dot";
     std::error_code EC;
-    // We use ostream, because while we collect static information, we
-    // don't need to know previous file condition
-    raw_fd_ostream File{"OutFile.txt", EC};
+    // We use append mode, because we support processing of multiple-modules
+    // projects
+    raw_fd_ostream File{FileName, EC, sys::fs::OF_Append};
     assert(EC.value() == 0);
 
-    makeDotPrologue(File);
+    // For correct dot-format, we need to know if that file was alredy opened by
+    // other modules or not.
+    struct stat StatBuf;
+    if (!stat(FileName.data(), &StatBuf)) {
+      if (StatBuf.st_size == 0) {
+        makeDotPrologue(File);
+      }
+    } else {
+      perror("Stat failed:");
+      return false;
+    }
 
     // Prepare builder for IR modification
     LLVMContext &Ctx = M.getContext();
@@ -57,7 +69,7 @@ struct CallGraph : ModulePass {
 
       // Traverse all basic blocks
       for (BasicBlock &B : F) {
-        auto FuncAddr = &F;
+        const Function *FuncAddr = &F;
         // Traverse all Intructions
         for (Instruction &I : B) {
           if (auto *Call = dyn_cast<CallInst>(&I)) {
@@ -76,13 +88,13 @@ struct CallGraph : ModulePass {
             // If we meet that edge for the first time, we need to add it to map
             // and print it to file
             if (Nodes.find(FuncAddr) == Nodes.end()) {
-              File << "{} " << reinterpret_cast<int64_t>(&F)
-                   << " [label = " << FuncName << " ]\n";
+              File << "{} " << reinterpret_cast<int64_t>(&F) << " [label = \" "
+                   << FuncName << " \" ]\n";
               Nodes.insert(FuncAddr);
             }
             if (Nodes.find(CalledFunc) == Nodes.end()) {
               File << "{} " << reinterpret_cast<int64_t>(CalledFunc)
-                   << " [label = " << CalledFunc->getName() << " ]\n";
+                   << " [label = \" " << CalledFunc->getName() << " \" ]\n";
               Nodes.insert(CalledFunc);
             }
 
@@ -94,7 +106,6 @@ struct CallGraph : ModulePass {
       }
     }
 
-    makeDotEpilogue(File);
     return true;
   }
 };

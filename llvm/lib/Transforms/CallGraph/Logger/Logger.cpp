@@ -98,7 +98,7 @@ void GraphEditor::writeGraph() const {
 
 void GraphEditor::fillNameMap(
     std::unordered_map<int64_t, std::string> &NameMap) const {
-  FILE *SrcFile = std::fopen("OutFile.txt", "r");
+  FILE *SrcFile = std::fopen("OutFile.dot", "r");
   assert(SrcFile != nullptr);
 
   char Name[128] = {};
@@ -106,7 +106,7 @@ void GraphEditor::fillNameMap(
 
   fscanf(SrcFile, "digraph G { \n");
 
-  while (fscanf(SrcFile, " {} %ld [label = %s ] ", &Addr, Name) == 2) {
+  while (fscanf(SrcFile, " {} %ld [label = \" %s \" ] ", &Addr, Name) == 2) {
     auto &OldName = NameMap[Addr];
     if (OldName.empty())
       OldName = Name;
