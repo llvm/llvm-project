@@ -15,9 +15,9 @@ supported variations of the RISC-V specification.  It lives in the
 Base ISAs
 =========
 
-The specification defines four base instruction sets: RV32I, RV32E, RV64I,
-and RV128I. Currently, LLVM fully supports RV32I, and RV64I.  RV32E is
-supported by the assembly-based tools only.  RV128I is not supported.
+The specification defines five base instruction sets: RV32I, RV32E, RV64I,
+RV64E, and RV128I. Currently, LLVM fully supports RV32I, and RV64I.  RV32E and
+RV64E are supported by the assembly-based tools only.  RV128I is not supported.
 
 To specify the target triple:
 
@@ -27,7 +27,7 @@ To specify the target triple:
      Architecture Description
      ============ ==============================================================
      ``riscv32``   RISC-V with XLEN=32 (i.e. RV32I or RV32E)
-     ``riscv64``   RISC-V with XLEN=64 (i.e. RV64I)
+     ``riscv64``   RISC-V with XLEN=64 (i.e. RV64I or RV64E)
      ============ ==============================================================
 
 To select an E variant ISA (e.g. RV32E instead of RV32I), use the base

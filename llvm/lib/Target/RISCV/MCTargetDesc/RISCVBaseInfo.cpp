@@ -40,7 +40,7 @@ ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
                      StringRef ABIName) {
   auto TargetABI = getTargetABI(ABIName);
   bool IsRV64 = TT.isArch64Bit();
-  bool IsRV32E = FeatureBits[RISCV::FeatureRV32E];
+  bool IsRVE = FeatureBits[RISCV::FeatureRVE];
 
   if (!ABIName.empty() && TargetABI == ABI_Unknown) {
     errs()
@@ -54,10 +54,17 @@ ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
     errs() << "64-bit ABIs are not supported for 32-bit targets (ignoring "
               "target-abi)\n";
     TargetABI = ABI_Unknown;
-  } else if (IsRV32E && TargetABI != ABI_ILP32E && TargetABI != ABI_Unknown) {
+  } else if (!IsRV64 && IsRVE && TargetABI != ABI_ILP32E &&
+             TargetABI != ABI_Unknown) {
     // TODO: move this checking to RISCVTargetLowering and RISCVAsmParser
     errs()
         << "Only the ilp32e ABI is supported for RV32E (ignoring target-abi)\n";
+    TargetABI = ABI_Unknown;
+  } else if (IsRV64 && IsRVE && TargetABI != ABI_LP64E &&
+             TargetABI != ABI_Unknown) {
+    // TODO: move this checking to RISCVTargetLowering and RISCVAsmParser
+    errs()
+        << "Only the lp64e ABI is supported for RV64E (ignoring target-abi)\n";
     TargetABI = ABI_Unknown;
   }
 
@@ -80,6 +87,7 @@ ABI getTargetABI(StringRef ABIName) {
                        .Case("lp64", ABI_LP64)
                        .Case("lp64f", ABI_LP64F)
                        .Case("lp64d", ABI_LP64D)
+                       .Case("lp64e", ABI_LP64E)
                        .Default(ABI_Unknown);
   return TargetABI;
 }
@@ -101,8 +109,6 @@ void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
     report_fatal_error("RV64 target requires an RV64 CPU");
   if (!TT.isArch64Bit() && !FeatureBits[RISCV::Feature32Bit])
     report_fatal_error("RV32 target requires an RV32 CPU");
-  if (TT.isArch64Bit() && FeatureBits[RISCV::FeatureRV32E])
-    report_fatal_error("RV32E can't be enabled for an RV64 target");
   if (FeatureBits[RISCV::Feature32Bit] &&
       FeatureBits[RISCV::Feature64Bit])
     report_fatal_error("RV32 and RV64 can't be combined");
