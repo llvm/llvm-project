@@ -11,10 +11,14 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
+#include "mlir/Dialect/MemRef/Transforms/Transforms.h"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
@@ -69,6 +73,31 @@ DiagnosedSilenceableFailure transform::MemRefMultiBufferOp::apply(
 }
 
 //===----------------------------------------------------------------------===//
+// MemRefExtractAddressComputationsOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::MemRefExtractAddressComputationsOp::applyToOne(
+    Operation *target, transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  if (!target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
+    auto diag = this->emitOpError("requires isolated-from-above targets");
+    diag.attachNote(target->getLoc()) << "non-isolated target";
+    return DiagnosedSilenceableFailure::definiteFailure();
+  }
+
+  MLIRContext *ctx = getContext();
+  RewritePatternSet patterns(ctx);
+  memref::populateExtractAddressComputationsPatterns(patterns);
+
+  if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns))))
+    return emitDefaultDefiniteFailure(target);
+
+  results.push_back(target);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//
 
@@ -83,6 +112,9 @@ public:
     declareDependentDialect<pdl::PDLDialect>();
     declareGeneratedDialect<AffineDialect>();
     declareGeneratedDialect<arith::ArithDialect>();
+    declareGeneratedDialect<memref::MemRefDialect>();
+    declareGeneratedDialect<nvgpu::NVGPUDialect>();
+    declareGeneratedDialect<vector::VectorDialect>();
 
     registerTransformOps<
 #define GET_OP_LIST
