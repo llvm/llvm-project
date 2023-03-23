@@ -218,6 +218,13 @@ class AMDGPULowerModuleLDS : public ModulePass {
     // llvm.donothing that takes a pointer to the instance and is lowered to a
     // no-op after LDS is allocated, but that is not presently necessary.
 
+    // This intrinsic is eliminated shortly before instruction selection. It
+    // does not suffice to indicate to ISel that a given global which is not
+    // immediately used by the kernel must still be allocated by it. An
+    // equivalent target specific intrinsic which lasts until immediately after
+    // codegen would suffice for that, but one would still need to ensure that
+    // the variables are allocated in the anticpated order.
+
     LLVMContext &Ctx = Func->getContext();
 
     Builder.SetInsertPoint(Func->getEntryBlock().getFirstNonPHI());
@@ -241,7 +248,7 @@ class AMDGPULowerModuleLDS : public ModulePass {
     // This pass specialises LDS variables with respect to the kernel that
     // allocates them.
 
-    // This is semantically equivalent to:
+    // This is semantically equivalent to (the unimplemented as slow):
     // for (auto &F : M.functions())
     //   for (auto &BB : F)
     //     for (auto &I : BB)
@@ -469,28 +476,6 @@ public:
     IRBuilder<> Builder(Ctx);
     Type *I32 = Type::getInt32Ty(Ctx);
 
-    // Accesses from a function use the amdgcn_lds_kernel_id intrinsic which
-    // lowers to a read from a live in register. Emit it once in the entry
-    // block to spare deduplicating it later.
-
-    DenseMap<Function *, Value *> tableKernelIndexCache;
-    auto getTableKernelIndex = [&](Function *F) -> Value * {
-      if (tableKernelIndexCache.count(F) == 0) {
-        LLVMContext &Ctx = M.getContext();
-        FunctionType *FTy = FunctionType::get(Type::getInt32Ty(Ctx), {});
-        Function *Decl =
-            Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_lds_kernel_id, {});
-
-        BasicBlock::iterator it =
-            F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
-        Instruction &i = *it;
-        Builder.SetInsertPoint(&i);
-
-        tableKernelIndexCache[F] = Builder.CreateCall(FTy, Decl, {});
-      }
-
-      return tableKernelIndexCache[F];
-    };
 
     for (size_t Index = 0; Index < ModuleScopeVariables.size(); Index++) {
       auto *GV = ModuleScopeVariables[Index];
@@ -500,7 +485,8 @@ public:
         if (!I)
           continue;
 
-        Value *tableKernelIndex = getTableKernelIndex(I->getFunction());
+        Value *tableKernelIndex =
+            getTableLookupKernelIndex(M, I->getFunction());
 
         // So if the phi uses this value multiple times, what does this look
         // like?
@@ -516,6 +502,7 @@ public:
             tableKernelIndex,
             ConstantInt::get(I32, Index),
         };
+
 
         Value *Address = Builder.CreateInBoundsGEP(
             LookupTable->getValueType(), LookupTable, GEPIdx, GV->getName());
@@ -621,6 +608,78 @@ public:
                     MDNode::get(Ctx, {MinC, MaxC}));
   }
 
+  DenseMap<Function *, Value *> tableKernelIndexCache;
+  Value *getTableLookupKernelIndex(Module &M, Function *F) {
+    // Accesses from a function use the amdgcn_lds_kernel_id intrinsic which
+    // lowers to a read from a live in register. Emit it once in the entry
+    // block to spare deduplicating it later.
+    if (tableKernelIndexCache.count(F) == 0) {
+      LLVMContext &Ctx = M.getContext();
+      IRBuilder<> Builder(Ctx);
+      FunctionType *FTy = FunctionType::get(Type::getInt32Ty(Ctx), {});
+      Function *Decl =
+          Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_lds_kernel_id, {});
+
+      BasicBlock::iterator it =
+          F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+      Instruction &i = *it;
+      Builder.SetInsertPoint(&i);
+
+      tableKernelIndexCache[F] = Builder.CreateCall(FTy, Decl, {});
+    }
+
+    return tableKernelIndexCache[F];
+  }
+
+  std::vector<Function *> assignLDSKernelIDToEachKernel(
+      Module *M, DenseSet<Function *> const &KernelsThatAllocateTableLDS) {
+    // Associate kernels in the set with an arbirary but reproducible order and
+    // annotate them with that order in metadata. This metadata is recognised by
+    // the backend and lowered to a SGPR which can be read from using
+    // amdgcn_lds_kernel_id.
+
+      std::vector<Function *> OrderedKernels;
+
+        for (Function &Func : M->functions()) {
+          if (Func.isDeclaration())
+            continue;
+          if (!isKernelLDS(&Func))
+            continue;
+
+          if (KernelsThatAllocateTableLDS.contains(&Func)) {
+            assert(Func.hasName()); // else fatal error earlier
+            OrderedKernels.push_back(&Func);
+          }
+        }
+
+        // Put them in an arbitrary but reproducible order
+        llvm::sort(OrderedKernels.begin(), OrderedKernels.end(),
+                   [](const Function *lhs, const Function *rhs) -> bool {
+                     return lhs->getName() < rhs->getName();
+                   });
+
+        // Annotate the kernels with their order in this vector
+        LLVMContext &Ctx = M->getContext();
+        IRBuilder<> Builder(Ctx);
+
+        if (OrderedKernels.size() > UINT32_MAX) {
+          // 32 bit keeps it in one SGPR. > 2**32 kernels won't fit on the GPU
+          report_fatal_error("Unimplemented LDS lowering for > 2**32 kernels");
+        }
+
+        for (size_t i = 0; i < OrderedKernels.size(); i++) {
+          Metadata *AttrMDArgs[1] = {
+              ConstantAsMetadata::get(Builder.getInt32(i)),
+          };
+          OrderedKernels[i]->setMetadata("llvm.amdgcn.lds.kernel.id",
+                                         MDNode::get(Ctx, AttrMDArgs));
+
+        }
+
+
+    return OrderedKernels;
+  }
+
   bool runOnModule(Module &M) override {
     LLVMContext &Ctx = M.getContext();
     CallGraph CG = CallGraph(M);
@@ -644,7 +703,7 @@ public:
       }
     }
 
-    // Partition variables into the different strategies
+    // Partition variables accessed indirectly into the different strategies
     DenseSet<GlobalVariable *> ModuleScopeVariables;
     DenseSet<GlobalVariable *> TableLookupVariables;
     DenseSet<GlobalVariable *> KernelAccessVariables;
@@ -706,10 +765,12 @@ public:
         }
       }
 
+      // All LDS variables accessed indirectly have now been partitioned into
+      // the distinct lowering strategies.
       assert(ModuleScopeVariables.size() + TableLookupVariables.size() +
                  KernelAccessVariables.size() ==
              LDSToKernelsThatNeedToAccessItIndirectly.size());
-    } // Variables have now been partitioned into the three lowering strategies.
+    }
 
     // If the kernel accesses a variable that is going to be stored in the
     // module instance through a call then that kernel needs to allocate the
@@ -787,9 +848,14 @@ public:
         continue;
 
       DenseSet<GlobalVariable *> KernelUsedVariables;
+      // Allocating variables that are used directly in this struct to get
+      // alignment aware allocation and predictable frame size.
       for (auto &v : LDSUsesInfo.direct_access[&Func]) {
         KernelUsedVariables.insert(v);
       }
+
+      // Allocating variables that are accessed indirectly so that a lookup of
+      // this struct instance can find them from nested functions.
       for (auto &v : LDSUsesInfo.indirect_access[&Func]) {
         KernelUsedVariables.insert(v);
       }
@@ -803,7 +869,7 @@ public:
       }
 
       if (KernelUsedVariables.empty()) {
-        // Either used no LDS, or all the LDS it used was also in module
+        // Either used no LDS, or the LDS it used was all in the module struct
         continue;
       }
 
@@ -872,53 +938,25 @@ public:
       DenseSet<GlobalVariable *> Vec;
       Vec.insert(GV);
 
+      // TODO: Looks like a latent bug, Replacement may not be marked
+      // UsedByKernel here
       replaceLDSVariablesWithStruct(M, Vec, Replacement, [](Use &U) {
                                                            return isa<Instruction>(U.getUser());
       });
     }
 
     if (!KernelsThatAllocateTableLDS.empty()) {
-      // Collect the kernels that allocate table lookup LDS
-      std::vector<Function *> OrderedKernels;
-      {
-        for (Function &Func : M.functions()) {
-          if (Func.isDeclaration())
-            continue;
-          if (!isKernelLDS(&Func))
-            continue;
-
-          if (KernelsThatAllocateTableLDS.contains(&Func)) {
-            assert(Func.hasName()); // else fatal error earlier
-            OrderedKernels.push_back(&Func);
-          }
-        }
-
-        // Put them in an arbitrary but reproducible order
-        llvm::sort(OrderedKernels.begin(), OrderedKernels.end(),
-                   [](const Function *lhs, const Function *rhs) -> bool {
-                     return lhs->getName() < rhs->getName();
-                   });
-
-        // Annotate the kernels with their order in this vector
         LLVMContext &Ctx = M.getContext();
         IRBuilder<> Builder(Ctx);
 
-        if (OrderedKernels.size() > UINT32_MAX) {
-          // 32 bit keeps it in one SGPR. > 2**32 kernels won't fit on the GPU
-          report_fatal_error("Unimplemented LDS lowering for > 2**32 kernels");
-        }
+    // The ith element of this vector is kernel id i
+    std::vector<Function *> OrderedKernels =
+        assignLDSKernelIDToEachKernel(&M, KernelsThatAllocateTableLDS);
 
-        for (size_t i = 0; i < OrderedKernels.size(); i++) {
-          Metadata *AttrMDArgs[1] = {
-              ConstantAsMetadata::get(Builder.getInt32(i)),
-          };
-          OrderedKernels[i]->setMetadata("llvm.amdgcn.lds.kernel.id",
-                                         MDNode::get(Ctx, AttrMDArgs));
-
-          markUsedByKernel(Builder, OrderedKernels[i],
-                           KernelToReplacement[OrderedKernels[i]].SGV);
-        }
-      }
+    for (size_t i = 0; i < OrderedKernels.size(); i++) {
+      markUsedByKernel(Builder, OrderedKernels[i],
+                       KernelToReplacement[OrderedKernels[i]].SGV);
+    }
 
       // The order must be consistent between lookup table and accesses to
       // lookup table
@@ -938,7 +976,6 @@ public:
 
     for (auto &GV : make_early_inc_range(M.globals()))
       if (AMDGPU::isLDSVariableToLower(GV)) {
-
         // probably want to remove from used lists
         GV.removeDeadConstantUsers();
         if (GV.use_empty())
