@@ -1849,8 +1849,11 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Emit the call.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
-  if (IsTailCall)
-    return DAG.getNode(SystemZISD::SIBCALL, DL, NodeTys, Ops);
+  if (IsTailCall) {
+    SDValue Ret = DAG.getNode(SystemZISD::SIBCALL, DL, NodeTys, Ops);
+    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
+    return Ret;
+  }
   Chain = DAG.getNode(SystemZISD::CALL, DL, NodeTys, Ops);
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   Glue = Chain.getValue(1);

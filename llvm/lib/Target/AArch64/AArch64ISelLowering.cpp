@@ -7599,6 +7599,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (IsCFICall)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
 
+    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
     return Ret;
   }
