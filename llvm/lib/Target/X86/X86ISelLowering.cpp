@@ -53970,7 +53970,7 @@ static bool isOrXorXorTree(SDValue X, bool Root = true) {
 /// Recursive helper for combineVectorSizedSetCCEquality() to emit the memcmp
 /// expansion.
 template <typename F>
-static SDValue emitOrXorXorTree(SDValue X, SDLoc &DL, SelectionDAG &DAG,
+static SDValue emitOrXorXorTree(SDValue X, const SDLoc &DL, SelectionDAG &DAG,
                                 EVT VecVT, EVT CmpVT, bool HasPT, F SToV) {
   SDValue Op0 = X.getOperand(0);
   SDValue Op1 = X.getOperand(1);
@@ -53997,14 +53997,14 @@ static SDValue emitOrXorXorTree(SDValue X, SDLoc &DL, SelectionDAG &DAG,
 
 /// Try to map a 128-bit or larger integer comparison to vector instructions
 /// before type legalization splits it up into chunks.
-static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
+static SDValue combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y,
+                                               ISD::CondCode CC,
+                                               const SDLoc &DL,
+                                               SelectionDAG &DAG,
                                                const X86Subtarget &Subtarget) {
-  ISD::CondCode CC = cast<CondCodeSDNode>(SetCC->getOperand(2))->get();
   assert((CC == ISD::SETNE || CC == ISD::SETEQ) && "Bad comparison predicate");
 
   // We're looking for an oversized integer equality comparison.
-  SDValue X = SetCC->getOperand(0);
-  SDValue Y = SetCC->getOperand(1);
   EVT OpVT = X.getValueType();
   unsigned OpSize = OpVT.getSizeInBits();
   if (!OpVT.isScalarInteger() || OpSize < 128)
@@ -54028,9 +54028,6 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
   if ((!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y)) &&
       !IsOrXorXorTreeCCZero)
     return SDValue();
-
-  EVT VT = SetCC->getValueType(0);
-  SDLoc DL(SetCC);
 
   // Use XOR (plus OR) and PTEST after SSE4.1 for 128/256-bit operands.
   // Use PCMPNEQ (plus OR) and KORTEST for 512-bit operands.
@@ -54173,7 +54170,8 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
 
   if (CC == ISD::SETNE || CC == ISD::SETEQ) {
-    if (SDValue V = combineVectorSizedSetCCEquality(N, DAG, Subtarget))
+    if (SDValue V = combineVectorSizedSetCCEquality(VT, LHS, RHS, CC, DL, DAG,
+                                                    Subtarget))
       return V;
 
     if (VT == MVT::i1 && isNullConstant(RHS)) {
