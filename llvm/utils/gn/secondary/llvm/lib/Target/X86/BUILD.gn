@@ -77,7 +77,6 @@ static_library("LLVMX86CodeGen") {
     deps += [ ":X86GenFoldTables" ]
   }
   sources = [
-    "X86ArgumentStackSlotRebase.cpp",
     "X86AsmPrinter.cpp",
     "X86AvoidStoreForwardingBlocks.cpp",
     "X86AvoidTrailingCall.cpp",
