@@ -962,7 +962,7 @@ void LifetimeCheckPass::checkCoroTaskStore(StoreOp storeOp) {
   // when %arg0 finishes its lifetime at the end of the enclosing cir.scope.
   if (auto call = dyn_cast<mlir::cir::CallOp>(taskTmp.getDefiningOp())) {
     bool potentialTaintedTask = false;
-    for (auto arg : call.getOperands()) {
+    for (auto arg : call.getArgOperands()) {
       auto alloca = dyn_cast<mlir::cir::AllocaOp>(arg.getDefiningOp());
       if (alloca && currScope->localValues.count(alloca)) {
         getPmap()[taskAddr].insert(State::getLocalValue(alloca));
@@ -1485,8 +1485,14 @@ void LifetimeCheckPass::trackCallToCoroutine(CallOp callOp) {
     }
     return;
   }
-  // TODO: Handle indirect calls to coroutines, for instance when
+  // Handle indirect calls to coroutines, for instance when
   // lambda coroutines are involved with invokers.
+  if (callOp->getNumResults() > 0 && isTaskType(callOp->getResult(0))) {
+    // FIXME: get more guarantees to prevent false positives (perhaps
+    // apply some tracking analysis before this pass and check for lambda
+    // idioms).
+    currScope->localTempTasks.insert(callOp->getResult(0));
+  }
 }
 
 void LifetimeCheckPass::checkCall(CallOp callOp) {
