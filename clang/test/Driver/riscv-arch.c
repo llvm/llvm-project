@@ -206,7 +206,7 @@
 // RUN: %clang --target=riscv32-unknown-elf -march=unknown -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-STR %s
 // RV32-STR: error: invalid arch name 'unknown',
-// RV32-STR: string must begin with rv32{i,e,g} or rv64{i,g}
+// RV32-STR: string must begin with rv32{i,e,g} or rv64{i,e,g}
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32q -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-LETTER %s
