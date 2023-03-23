@@ -237,14 +237,9 @@ func.func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   %19 = "tosa.sigmoid"(%0) : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
-  // CHECK: arith.constant 0.000000e+00
-  // CHECK: arith.constant 5.000000e-01
   // CHECK: arith.constant -2.14748365E+9
   // CHECK: arith.constant 2.14748365E+9
-  // CHECK: arith.addf
-  // CHECK: arith.subf
-  // CHECK: arith.cmpf olt
-  // CHECK: select
+  // CHECK: math.roundeven
   // CHECK: arith.minf
   // CHECK: arith.maxf
   // CHECK: arith.fptosi

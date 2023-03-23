@@ -1438,16 +1438,23 @@ void JITDylib::dump(raw_ostream &OS) {
     OS << "Link order: " << LinkOrder << "\n"
        << "Symbol table:\n";
 
-    for (auto &KV : Symbols) {
+    // Sort symbols so we get a deterministic order and can check them in tests.
+    std::vector<std::pair<SymbolStringPtr, SymbolTableEntry *>> SymbolsSorted;
+    for (auto &KV : Symbols)
+      SymbolsSorted.emplace_back(KV.first, &KV.second);
+    std::sort(SymbolsSorted.begin(), SymbolsSorted.end(),
+              [](const auto &L, const auto &R) { return *L.first < *R.first; });
+
+    for (auto &KV : SymbolsSorted) {
       OS << "    \"" << *KV.first << "\": ";
-      if (auto Addr = KV.second.getAddress())
+      if (auto Addr = KV.second->getAddress())
         OS << Addr;
       else
         OS << "<not resolved> ";
 
-      OS << " " << KV.second.getFlags() << " " << KV.second.getState();
+      OS << " " << KV.second->getFlags() << " " << KV.second->getState();
 
-      if (KV.second.hasMaterializerAttached()) {
+      if (KV.second->hasMaterializerAttached()) {
         OS << " (Materializer ";
         auto I = UnmaterializedInfos.find(KV.first);
         assert(I != UnmaterializedInfos.end() &&

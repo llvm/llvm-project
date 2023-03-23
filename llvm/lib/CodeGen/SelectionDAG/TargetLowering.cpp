@@ -4974,6 +4974,23 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       return DAG.getSetCC(dl, VT, N0, N1, NewCond);
   }
 
+  // ~X > ~Y --> Y > X
+  // ~X < ~Y --> Y < X
+  // ~X < C --> X > ~C
+  // ~X > C --> X < ~C
+  if ((isSignedIntSetCC(Cond) || isUnsignedIntSetCC(Cond)) &&
+      N0.getValueType().isInteger()) {
+    if (isBitwiseNot(N0)) {
+      if (isBitwiseNot(N1))
+        return DAG.getSetCC(dl, VT, N1.getOperand(0), N0.getOperand(0), Cond);
+
+      if (DAG.isConstantIntBuildVectorOrConstantInt(N1)) {
+        SDValue Not = DAG.getNOT(dl, N1, OpVT);
+        return DAG.getSetCC(dl, VT, Not, N0.getOperand(0), Cond);
+      }
+    }
+  }
+
   if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
       N0.getValueType().isInteger()) {
     if (N0.getOpcode() == ISD::ADD || N0.getOpcode() == ISD::SUB ||
