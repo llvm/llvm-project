@@ -8,7 +8,6 @@
 
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
-#include "llvm/ExecutionEngine/JITLink/aarch32.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
@@ -41,10 +40,7 @@ bool hasInitializerSection(jitlink::LinkGraph &G) {
 }
 
 JITTargetAddress getJITSymbolPtrForSymbol(Symbol &Sym) {
-  uint64_t CallableAddr = Sym.getAddress().getValue();
-  if (Sym.isCallable() && Sym.hasTargetFlags(aarch32::ThumbSymbol))
-    CallableAddr |= 0x01; // thumb bit
-  return CallableAddr;
+  return Sym.getAddress().getValue();
 }
 
 JITSymbolFlags getJITSymbolFlagsForSymbol(Symbol &Sym) {

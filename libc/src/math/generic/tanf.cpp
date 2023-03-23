@@ -90,7 +90,7 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
     double result =
         fputil::polyeval(xsq, 1.0, 0x1.555555553d022p-2, 0x1.111111ce442c1p-3,
                          0x1.ba180a6bbdecdp-5, 0x1.69c0a88a0b71fp-6);
-    return xd * result;
+    return static_cast<float>(xd * result);
   }
 
   // Check for exceptional values
@@ -134,8 +134,9 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
   // tan(x) = sin(x) / cos(x)
   //        = (sin_y * cos_k + cos_y * sin_k) / (cos_y * cos_k - sin_y * sin_k)
   using fputil::multiply_add;
-  return multiply_add(sin_y, cos_k, multiply_add(cosm1_y, sin_k, sin_k)) /
-         multiply_add(sin_y, -sin_k, multiply_add(cosm1_y, cos_k, cos_k));
+  return static_cast<float>(
+      multiply_add(sin_y, cos_k, multiply_add(cosm1_y, sin_k, sin_k)) /
+      multiply_add(sin_y, -sin_k, multiply_add(cosm1_y, cos_k, cos_k)));
 }
 
 } // namespace __llvm_libc

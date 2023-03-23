@@ -390,6 +390,9 @@ buildTypeForLambdaCallOperator(Sema &S, clang::CXXRecordDecl *Class,
 void Sema::handleLambdaNumbering(
     CXXRecordDecl *Class, CXXMethodDecl *Method,
     std::optional<std::tuple<bool, unsigned, unsigned, Decl *>> Mangling) {
+
+  ContextRAII ManglingContext(*this, Class->getDeclContext());
+
   if (Mangling) {
     bool HasKnownInternalLinkage;
     unsigned ManglingNumber, DeviceManglingNumber;
@@ -1324,8 +1327,6 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
       ParamInfo.getDeclSpec().getConstexprSpecifier(),
       IsLambdaStatic ? SC_Static : SC_None, Params, ExplicitResultType);
 
-  ContextRAII ManglingContext(*this, Class->getDeclContext());
-
   CheckCXXDefaultArguments(Method);
 
   // This represents the function body for the lambda function, check if we
@@ -1349,8 +1350,6 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(Method);
 
   handleLambdaNumbering(Class, Method);
-
-  ManglingContext.pop();
 
   for (auto &&C : LSI->Captures) {
     if (!C.isVariableCapture())
