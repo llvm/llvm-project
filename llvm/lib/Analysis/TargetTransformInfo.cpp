@@ -274,6 +274,11 @@ bool llvm::TargetTransformInfo::isAlwaysUniform(const Value *V) const {
   return TTIImpl->isAlwaysUniform(V);
 }
 
+bool llvm::TargetTransformInfo::isValidAddrSpaceCast(unsigned FromAS,
+                                                     unsigned ToAS) const {
+  return TTIImpl->isValidAddrSpaceCast(FromAS, ToAS);
+}
+
 unsigned TargetTransformInfo::getFlatAddressSpace() const {
   return TTIImpl->getFlatAddressSpace();
 }
