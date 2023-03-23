@@ -26,7 +26,6 @@ endif()
 add_public_tablegen_target(X86CommonTableGen)
 
 set(sources
-  X86ArgumentStackSlotRebase.cpp
   X86AsmPrinter.cpp
   X86AvoidTrailingCall.cpp
   X86CallFrameOptimization.cpp
