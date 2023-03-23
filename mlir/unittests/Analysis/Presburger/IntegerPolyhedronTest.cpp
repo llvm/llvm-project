@@ -594,12 +594,12 @@ TEST(IntegerPolyhedronTest, removeRedundantConstraintsTest) {
 
 TEST(IntegerPolyhedronTest, addConstantUpperBound) {
   IntegerPolyhedron poly(PresburgerSpace::getSetSpace(2));
-  poly.addBound(IntegerPolyhedron::UB, 0, 1);
+  poly.addBound(BoundType::UB, 0, 1);
   EXPECT_EQ(poly.atIneq(0, 0), -1);
   EXPECT_EQ(poly.atIneq(0, 1), 0);
   EXPECT_EQ(poly.atIneq(0, 2), 1);
 
-  poly.addBound(IntegerPolyhedron::UB, {1, 2, 3}, 1);
+  poly.addBound(BoundType::UB, {1, 2, 3}, 1);
   EXPECT_EQ(poly.atIneq(1, 0), -1);
   EXPECT_EQ(poly.atIneq(1, 1), -2);
   EXPECT_EQ(poly.atIneq(1, 2), -2);
@@ -607,12 +607,12 @@ TEST(IntegerPolyhedronTest, addConstantUpperBound) {
 
 TEST(IntegerPolyhedronTest, addConstantLowerBound) {
   IntegerPolyhedron poly(PresburgerSpace::getSetSpace(2));
-  poly.addBound(IntegerPolyhedron::LB, 0, 1);
+  poly.addBound(BoundType::LB, 0, 1);
   EXPECT_EQ(poly.atIneq(0, 0), 1);
   EXPECT_EQ(poly.atIneq(0, 1), 0);
   EXPECT_EQ(poly.atIneq(0, 2), -1);
 
-  poly.addBound(IntegerPolyhedron::LB, {1, 2, 3}, 1);
+  poly.addBound(BoundType::LB, {1, 2, 3}, 1);
   EXPECT_EQ(poly.atIneq(1, 0), 1);
   EXPECT_EQ(poly.atIneq(1, 1), 2);
   EXPECT_EQ(poly.atIneq(1, 2), 2);

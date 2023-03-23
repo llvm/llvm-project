@@ -97,11 +97,9 @@ SimplifyBoundedAffineOpsOp::apply(TransformResults &results,
     unsigned pos;
     if (!cstr.findVar(std::get<0>(it), &pos))
       pos = cstr.appendSymbolVar(std::get<0>(it));
-    cstr.addBound(FlatAffineValueConstraints::BoundType::LB, pos,
-                  std::get<1>(it));
+    cstr.addBound(presburger::BoundType::LB, pos, std::get<1>(it));
     // Note: addBound bounds are inclusive, but specified UB is exclusive.
-    cstr.addBound(FlatAffineValueConstraints::BoundType::UB, pos,
-                  std::get<2>(it) - 1);
+    cstr.addBound(presburger::BoundType::UB, pos, std::get<2>(it) - 1);
   }
 
   // Transform all targets.
