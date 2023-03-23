@@ -59,6 +59,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
                          bool forRetLambda = false);
   void checkCoroTaskStore(StoreOp storeOp);
   void checkLambdaCaptureStore(StoreOp storeOp);
+  void trackCallToCoroutine(CallOp callOp);
 
   void checkCtor(CallOp callOp, const clang::CXXConstructorDecl *ctor);
   void checkMoveAssignment(CallOp callOp, const clang::CXXMethodDecl *m);
@@ -1473,6 +1474,21 @@ bool LifetimeCheckPass::isTaskType(mlir::Value taskVal) {
   return IsTaskTyCache[ty];
 }
 
+void LifetimeCheckPass::trackCallToCoroutine(CallOp callOp) {
+  if (auto fnName = callOp.getCallee()) {
+    auto calleeFuncOp = getCalleeFromSymbol(theModule, *fnName);
+    if (calleeFuncOp &&
+        (calleeFuncOp.getCoroutine() ||
+         (calleeFuncOp.isDeclaration() && callOp->getNumResults() > 0 &&
+          isTaskType(callOp->getResult(0))))) {
+      currScope->localTempTasks.insert(callOp->getResult(0));
+    }
+    return;
+  }
+  // TODO: Handle indirect calls to coroutines, for instance when
+  // lambda coroutines are involved with invokers.
+}
+
 void LifetimeCheckPass::checkCall(CallOp callOp) {
   if (callOp.getNumOperands() == 0)
     return;
@@ -1481,21 +1497,14 @@ void LifetimeCheckPass::checkCall(CallOp callOp) {
   //
   // Note that we can't reliably know if a function is a coroutine only as
   // part of declaration
+  trackCallToCoroutine(callOp);
 
-  // FIXME: Indirect calls are not yet supported.
+  // FIXME: General indirect calls not yet supported.
   if (!callOp.getCallee())
     return;
 
   auto fnName = *callOp.getCallee();
-  auto calleeFuncOp = getCalleeFromSymbol(theModule, fnName);
-  if (calleeFuncOp &&
-      (calleeFuncOp.getCoroutine() ||
-       (calleeFuncOp.isDeclaration() && callOp->getNumResults() > 0 &&
-        isTaskType(callOp->getResult(0))))) {
-    currScope->localTempTasks.insert(callOp->getResult(0));
-  }
-
-  const auto *methodDecl = getMethod(theModule, fnName);
+  auto methodDecl = getMethod(theModule, fnName);
   if (!isOwnerOrPointerClassMethod(callOp.getOperand(0), methodDecl))
     return checkOtherMethodsAndFunctions(callOp, methodDecl);
 
