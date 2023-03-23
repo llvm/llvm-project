@@ -328,6 +328,8 @@ public:
     return ConstString();
   }
 
+  virtual ConstString GetInstanceVariableName() { return {}; }
+
 protected:
   // Classes that inherit from Language can see and modify these
 
