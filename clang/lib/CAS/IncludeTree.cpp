@@ -80,7 +80,7 @@ llvm::Error IncludeTree::forEachInclude(
 Expected<IncludeTree> IncludeTree::create(
     ObjectStore &DB, SrcMgr::CharacteristicKind FileCharacteristic,
     ObjectRef BaseFile, ArrayRef<IncludeInfo> Includes,
-    std::optional<ObjectRef> SubmoduleName, llvm::SmallBitVector Checks) {
+    Optional<ObjectRef> SubmoduleName, llvm::SmallBitVector Checks) {
   // The data buffer is composed of
   // 1. 1 byte for `CharacteristicKind` and IsSubmodule
   // 2. `uint32_t` offset and `uint8_t` kind for each includes
