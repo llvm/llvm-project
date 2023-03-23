@@ -14,11 +14,12 @@
 #include "TestTU.h"
 #include "index/MemIndex.h"
 #include "clang/AST/Attr.h"
+#include "clang/Format/Format.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/StringRef.h"
 
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -27,6 +28,10 @@ namespace clangd {
 namespace {
 
 using PassMode = HoverInfo::PassType::PassMode;
+
+std::string guard(llvm::StringRef Code) {
+  return "#pragma once\n" + Code.str();
+}
 
 TEST(Hover, Structured) {
   struct {
@@ -2882,6 +2887,99 @@ TEST(Hover, All) {
   }
 }
 
+TEST(Hover, Providers) {
+  struct {
+    const char *Code;
+    const std::function<void(HoverInfo &)> ExpectedBuilder;
+  } Cases[] = {{R"cpp(
+                  struct Foo {};                     
+                  Foo F = Fo^o{};
+                )cpp",
+                [](HoverInfo &HI) { HI.Provider = ""; }},
+               {R"cpp(
+                  #include "foo.h"                   
+                  Foo F = Fo^o{};
+                )cpp",
+                [](HoverInfo &HI) { HI.Provider = "\"foo.h\""; }},
+               {R"cpp(
+                  #include "all.h"  
+                  Foo F = Fo^o{};
+                )cpp",
+                [](HoverInfo &HI) { HI.Provider = "\"foo.h\""; }},
+               {R"cpp(
+                  #define FOO 5
+                  int F = ^FOO;
+                )cpp",
+                [](HoverInfo &HI) { HI.Provider = ""; }},
+               {R"cpp(
+                  #include "foo.h"
+                  int F = ^FOO;
+                )cpp",
+                [](HoverInfo &HI) { HI.Provider = "\"foo.h\""; }},
+               {R"cpp(
+                  #include "all.h"
+                  int F = ^FOO;
+                )cpp",
+                [](HoverInfo &HI) { HI.Provider = "\"foo.h\""; }},
+               {R"cpp(
+                  #include "foo.h"    
+                  Foo A;
+                  Foo B;
+                  Foo C = A ^+ B;
+                )cpp",
+                [](HoverInfo &HI) { HI.Provider = "\"foo.h\""; }},
+               // Hover selects the underlying decl of the using decl
+               {R"cpp(
+                  #include "foo.h"
+                  namespace ns {
+                    using ::Foo;
+                  }
+                  ns::F^oo d;
+                )cpp",
+                [](HoverInfo &HI) { HI.Provider = "\"foo.h\""; }}};
+
+  for (const auto &Case : Cases) {
+    Annotations Code{Case.Code};
+    SCOPED_TRACE(Code.code());
+
+    TestTU TU;
+    TU.Filename = "foo.cpp";
+    TU.Code = Code.code();
+    TU.AdditionalFiles["foo.h"] = guard(R"cpp(
+                                          #define FOO 1
+                                          class Foo {};
+                                          Foo& operator+(const Foo, const Foo);
+                                        )cpp");
+    TU.AdditionalFiles["all.h"] = guard("#include \"foo.h\"");
+
+    auto AST = TU.build();
+    auto H = getHover(AST, Code.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+    HoverInfo Expected;
+    Case.ExpectedBuilder(Expected);
+    SCOPED_TRACE(H->present().asMarkdown());
+    EXPECT_EQ(H->Provider, Expected.Provider);
+  }
+}
+
+TEST(Hover, ParseProviderInfo) {
+  HoverInfo HIFoo;
+  HIFoo.Name = "foo";
+  HIFoo.Provider = "\"foo.h\"";
+
+  HoverInfo HIFooBar;
+  HIFooBar.Name = "foo";
+  HIFooBar.Provider = "<bar.h>";
+  struct Case {
+    HoverInfo HI;
+    llvm::StringRef ExpectedMarkdown;
+  } Cases[] = {{HIFoo, "### `foo`  \nprovided by `\"foo.h\"`"},
+               {HIFooBar, "### `foo`  \nprovided by `<bar.h>`"}};
+
+  for (const auto &Case : Cases)
+    EXPECT_EQ(Case.HI.present().asMarkdown(), Case.ExpectedMarkdown);
+}
+
 TEST(Hover, DocsFromIndex) {
   Annotations T(R"cpp(
   template <typename T> class X {};
@@ -3359,8 +3457,8 @@ TEST(Hover, ParseDocumentation) {
   }
 }
 
-// This is a separate test as headings don't create any differences in plaintext
-// mode.
+// This is a separate test as headings don't create any differences in
+// plaintext mode.
 TEST(Hover, PresentHeadings) {
   HoverInfo HI;
   HI.Kind = index::SymbolKind::Variable;

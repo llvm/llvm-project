@@ -51,6 +51,8 @@ public:
   const Environment *getEnvironment(const Stmt &S) const override {
     auto BlockIt = CFCtx.getStmtToBlock().find(&ignoreCFGOmittedNodes(S));
     assert(BlockIt != CFCtx.getStmtToBlock().end());
+    if (!CFCtx.isBlockReachable(*BlockIt->getSecond()))
+      return nullptr;
     const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
     assert(State);
     return &State->Env;
@@ -189,7 +191,10 @@ struct AnalysisContext {
                   llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>>
                       BlockStates)
       : CFCtx(CFCtx), Analysis(Analysis), InitEnv(InitEnv),
-        BlockStates(BlockStates) {}
+        Log(InitEnv.logger()), BlockStates(BlockStates) {
+    Log.beginAnalysis(CFCtx, Analysis);
+  }
+  ~AnalysisContext() { Log.endAnalysis(); }
 
   /// Contains the CFG being analyzed.
   const ControlFlowContext &CFCtx;
@@ -197,6 +202,7 @@ struct AnalysisContext {
   TypeErasedDataflowAnalysis &Analysis;
   /// Initial state to start the analysis.
   const Environment &InitEnv;
+  Logger &Log;
   /// Stores the state of a CFG block if it has been evaluated by the analysis.
   /// The indices correspond to the block IDs.
   llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>> BlockStates;
@@ -366,8 +372,11 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
                  std::function<void(const CFGElement &,
                                     const TypeErasedDataflowAnalysisState &)>
                      PostVisitCFG = nullptr) {
+  AC.Log.enterBlock(Block);
   auto State = computeBlockInputState(Block, AC);
+  AC.Log.recordState(State);
   for (const auto &Element : Block) {
+    AC.Log.enterElement(Element);
     // Built-in analysis
     if (AC.Analysis.builtinOptions()) {
       builtinTransfer(Element, State, AC);
@@ -380,6 +389,7 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
     if (PostVisitCFG) {
       PostVisitCFG(Element, State);
     }
+    AC.Log.recordState(State);
   }
   return State;
 }
@@ -460,15 +470,18 @@ runTypeErasedDataflowAnalysis(
         LatticeJoinEffect Effect2 =
             NewBlockState.Env.widen(OldBlockState->Env, Analysis);
         if (Effect1 == LatticeJoinEffect::Unchanged &&
-            Effect2 == LatticeJoinEffect::Unchanged)
+            Effect2 == LatticeJoinEffect::Unchanged) {
           // The state of `Block` didn't change from widening so there's no need
           // to revisit its successors.
+          AC.Log.blockConverged();
           continue;
+        }
       } else if (Analysis.isEqualTypeErased(OldBlockState->Lattice,
                                             NewBlockState.Lattice) &&
                  OldBlockState->Env.equivalentTo(NewBlockState.Env, Analysis)) {
         // The state of `Block` didn't change after transfer so there's no need
         // to revisit its successors.
+        AC.Log.blockConverged();
         continue;
       }
     }

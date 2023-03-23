@@ -65,9 +65,8 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
     break;
   case RTLIB::MEMSET:
     AEABILibcall = AEABI_MEMSET;
-    if (ConstantSDNode *ConstantSrc = dyn_cast<ConstantSDNode>(Src))
-      if (ConstantSrc->getZExtValue() == 0)
-        AEABILibcall = AEABI_MEMCLR;
+    if (isNullConstant(Src))
+      AEABILibcall = AEABI_MEMCLR;
     break;
   default:
     return SDValue();

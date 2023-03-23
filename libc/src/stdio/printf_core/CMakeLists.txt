@@ -116,35 +116,31 @@ add_object_library(
     libc.src.__support.arg_list
 )
 
-if(NOT (TARGET libc.src.__support.File.file))
-  # Not all platforms have a file implementation. If file is unvailable,
-  # then we must skip all file based printf sections.
+if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
+  # Not all platforms have a file implementation. If file is unvailable, and a 
+  # full build is requested, then we must skip all file based printf sections.
   return()
 endif()
 
-add_object_library(
+add_header_library(
   file_writer
-  SRCS
-    file_writer.cpp
   HDRS
     file_writer.h
   DEPENDS
+    libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.CPP.string_view
     libc.src.string.memory_utils.memset_implementation
     .core_structs
 )
 
-add_object_library(
+add_header_library(
   vfprintf_internal
-  SRCS
-    vfprintf_internal.cpp
   HDRS
     vfprintf_internal.h
   DEPENDS
     libc.include.stdio
     libc.src.__support.File.file
-    libc.src.__support.File.platform_file
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.file_writer

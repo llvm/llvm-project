@@ -1,7 +1,8 @@
 ## Arch string without version.
 
 # RUN: llvm-mc %s -triple=riscv32 -filetype=asm | FileCheck %s
-# RUN: llvm-mc %s -triple=riscv64 -filetype=asm | FileCheck %s
+# RUN: llvm-mc %s -triple=riscv64 -filetype=asm \
+# RUN:     | FileCheck --check-prefixes=CHECK,CHECK-RV64 %s
 
 .attribute arch, "rv32i"
 # CHECK: attribute      5, "rv32i2p0"
@@ -11,6 +12,12 @@
 
 .attribute arch, "rv32i2p0"
 # CHECK: attribute      5, "rv32i2p0"
+
+.attribute arch, "rv32e"
+# CHECK: attribute      5, "rv32e2p0"
+
+.attribute arch, "rv64e"
+# CHECK-RV64: attribute      5, "rv64e2p0"
 
 .attribute arch, "rv32i2_m2"
 # CHECK: attribute      5, "rv32i2p0_m2p0"

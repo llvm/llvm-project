@@ -134,7 +134,7 @@ int DeviceTy::disassociatePtr(void *HstPtrBegin) {
     if (Event)
       destroyEvent(Event);
     HDTTMap->erase(It);
-    return OFFLOAD_SUCCESS;
+    return notifyDataUnmapped(HstPtrBegin);
   }
 
   REPORT("Trying to disassociate a pointer which was not mapped via "

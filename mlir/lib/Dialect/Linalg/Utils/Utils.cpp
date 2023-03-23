@@ -270,7 +270,7 @@ void getUpperBoundForIndex(Value value, AffineMap &boundMap,
     if (auto applyOp = dyn_cast<AffineApplyOp>(op)) {
       AffineMap map = constraints.computeAlignedMap(applyOp.getAffineMap(),
                                                     applyOp.getOperands());
-      if (failed(constraints.addBound(IntegerPolyhedron::EQ,
+      if (failed(constraints.addBound(BoundType::EQ,
                                       getPosition(applyOp.getResult()), map)))
         return;
       continue;
@@ -279,7 +279,7 @@ void getUpperBoundForIndex(Value value, AffineMap &boundMap,
     auto minOp = cast<AffineMinOp>(op);
     AffineMap map = constraints.computeAlignedMap(minOp.getAffineMap(),
                                                   minOp.getOperands());
-    if (failed(constraints.addBound(IntegerPolyhedron::UB,
+    if (failed(constraints.addBound(BoundType::UB,
                                     getPosition(minOp.getResult()), map,
                                     /*isClosedBound=*/true)))
       return;
@@ -290,8 +290,7 @@ void getUpperBoundForIndex(Value value, AffineMap &boundMap,
   // of the terminals of the index computation.
   unsigned pos = getPosition(value);
   if (constantRequired) {
-    auto ubConst = constraints.getConstantBound64(
-        FlatAffineValueConstraints::BoundType::UB, pos);
+    auto ubConst = constraints.getConstantBound64(BoundType::UB, pos);
     if (!ubConst)
       return;
 

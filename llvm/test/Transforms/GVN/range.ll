@@ -17,7 +17,7 @@ define i32 @test1(ptr %p) {
 define i32 @test2(ptr %p) {
 ; CHECK-LABEL: define i32 @test2
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -30,7 +30,7 @@ define i32 @test2(ptr %p) {
 define i32 @test3(ptr %p) {
 ; CHECK-LABEL: define i32 @test3
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -43,7 +43,7 @@ define i32 @test3(ptr %p) {
 define i32 @test4(ptr %p) {
 ; CHECK-LABEL: define i32 @test4
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG2:![0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -56,7 +56,7 @@ define i32 @test4(ptr %p) {
 define i32 @test5(ptr %p) {
 ; CHECK-LABEL: define i32 @test5
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG3:![0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -69,7 +69,7 @@ define i32 @test5(ptr %p) {
 define i32 @test6(ptr %p) {
 ; CHECK-LABEL: define i32 @test6
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG2:![0-9]+]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG4:![0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -82,7 +82,7 @@ define i32 @test6(ptr %p) {
 define i32 @test7(ptr %p) {
 ; CHECK-LABEL: define i32 @test7
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG3:![0-9]+]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG5:![0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -95,7 +95,7 @@ define i32 @test7(ptr %p) {
 define i32 @test8(ptr %p) {
 ; CHECK-LABEL: define i32 @test8
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG4:![0-9]+]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -105,6 +105,31 @@ define i32 @test8(ptr %p) {
   ret i32 %c
 }
 
+define i32 @load_noundef_load(ptr %p) {
+; CHECK-LABEL: define i32 @load_noundef_load
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0]], !noundef !6
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %a = load i32, ptr %p, !range !0, !noundef !11
+  %b = load i32, ptr %p, !range !1
+  %c = add i32 %a, %b
+  ret i32 %c
+}
+
+define i32 @load_load_noundef(ptr %p) {
+; CHECK-LABEL: define i32 @load_load_noundef
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG1]]
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[A]]
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %a = load i32, ptr %p, !range !0
+  %b = load i32, ptr %p, !range !1, !noundef !11
+  %c = add i32 %a, %b
+  ret i32 %c
+}
 
 !0 = !{i32 0, i32 2}
 !1 = !{i32 3, i32 5}
@@ -117,10 +142,13 @@ define i32 @test8(ptr %p) {
 !8 = !{i32 5, i32 1}
 !9 = !{i32 1, i32 5}
 !10 = !{i32 5, i32 1}
+!11 = !{}
 ;.
 ; CHECK: [[RNG0]] = !{i32 0, i32 2}
-; CHECK: [[RNG1]] = !{i32 -5, i32 -2}
-; CHECK: [[RNG2]] = !{i32 10, i32 1}
-; CHECK: [[RNG3]] = !{i32 1, i32 2, i32 3, i32 4}
-; CHECK: [[RNG4]] = !{i32 1, i32 5}
+; CHECK: [[RNG1]] = !{i32 0, i32 2, i32 3, i32 5}
+; CHECK: [[RNG2]] = !{i32 0, i32 5}
+; CHECK: [[RNG3]] = !{i32 -5, i32 -2, i32 1, i32 5}
+; CHECK: [[RNG4]] = !{i32 10, i32 1}
+; CHECK: [[RNG5]] = !{i32 3, i32 4, i32 5, i32 2}
+; CHECK: [[META6:![0-9]+]] = !{}
 ;.

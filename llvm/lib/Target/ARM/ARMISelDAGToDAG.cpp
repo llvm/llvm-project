@@ -2720,10 +2720,7 @@ void ARMDAGToDAGISel::SelectBaseMVE_VMLLDAV(SDNode *N, bool Predicated,
   }
 
   auto OpIsZero = [N](size_t OpNo) {
-    if (ConstantSDNode *OpConst = dyn_cast<ConstantSDNode>(N->getOperand(OpNo)))
-      if (OpConst->getZExtValue() == 0)
-        return true;
-    return false;
+    return isNullConstant(N->getOperand(OpNo));
   };
 
   // If the input accumulator value is not zero, select an instruction with
@@ -3990,10 +3987,9 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
 
     SDValue SmulLoHi = N->getOperand(1);
     SDValue Subc = N->getOperand(2);
-    auto *Zero = dyn_cast<ConstantSDNode>(Subc.getOperand(0));
+    SDValue Zero = Subc.getOperand(0);
 
-    if (!Zero || Zero->getZExtValue() != 0 ||
-        Subc.getOperand(1) != SmulLoHi.getValue(0) ||
+    if (!isNullConstant(Zero) || Subc.getOperand(1) != SmulLoHi.getValue(0) ||
         N->getOperand(1) != SmulLoHi.getValue(1) ||
         N->getOperand(2) != Subc.getValue(1))
       break;

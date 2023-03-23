@@ -978,7 +978,7 @@ LLVM_LIBC_FUNCTION(double, log10, (double x)) {
   //   |R * x_m - 1| < C
   uint64_t x_u = xbits.uintval();
   int shifted = x_u >> 45;
-  size_t index = shifted & 0x7F;
+  int index = shifted & 0x7F;
   double r = R[index];
 
   x_e += (x_u >> 52) & 0x7FF;

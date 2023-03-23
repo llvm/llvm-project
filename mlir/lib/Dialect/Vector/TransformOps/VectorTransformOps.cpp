@@ -7,13 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Vector/TransformOps/VectorTransformOps.h"
-
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
 #include "mlir/Parser/Parser.h"
@@ -82,10 +83,9 @@ DiagnosedSilenceableFailure transform::LowerVectorsOp::apply(
 
     // In the future we may want to more finely select particular stages.
     // Stage 1: contraction lowerings.
-    patterns.add<mlir::vector::ContractionOpToOuterProductOpLowering,
-                 mlir::vector::ContractionOpToMatmulOpLowering,
-                 mlir::vector::ContractionOpLowering>(vectorTransformOptions,
-                                                      ctx);
+    populateVectorContractLoweringPatterns(
+        patterns, vectorTransformOptions, /*benefit=*/1,
+        /*disableOuterProductLowering*/ true);
     vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
 
     // Stage 2: multi-reduction lowerings.
@@ -93,8 +93,7 @@ DiagnosedSilenceableFailure transform::LowerVectorsOp::apply(
         patterns, vectorTransformOptions.vectorMultiReductionLowering);
 
     // Stage 3: Rewrite vector.transfer into full and partial parts.
-    patterns.add<vector::VectorTransferFullPartialRewriter>(
-        ctx, vectorTransformOptions);
+    populateVectorTransferFullPartialPatterns(patterns, vectorTransformOptions);
 
     // Stage 4: Lower vector transfers.
     vector::populateVectorTransferLoweringPatterns(patterns, maxTransferRank);
@@ -107,8 +106,8 @@ DiagnosedSilenceableFailure transform::LowerVectorsOp::apply(
     vector::populateVectorShapeCastLoweringPatterns(patterns);
 
     // Stage 7: Lower vector.transpose.
-    vector::populateVectorTransposeLoweringPatterns(patterns,
-                                                    vectorTransformOptions);
+    vector::populateVectorTransposeLoweringPatterns(
+        patterns, vectorTransformOptions, /*benefit=*/1);
     if (getTransposeAvx2Lowering())
       x86vector::avx2::populateSpecializedTransposeLoweringPatterns(
           patterns, avx2LoweringOptions, /*benefit=*/10);

@@ -157,7 +157,25 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
   return 0;
 }
 
-int FunctionComparator::cmpMetadata(const MDNode *L, const MDNode *R) const {
+int FunctionComparator::cmpMetadata(const Metadata *L,
+                                    const Metadata *R) const {
+  // TODO: the following routine coerce the metadata contents into constants
+  // before comparison.
+  // It ignores any other cases, so that the metadata nodes are considered
+  // equal even though this is not correct.
+  // We should structurally compare the metadata nodes to be perfect here.
+  auto *CL = dyn_cast<ConstantAsMetadata>(L);
+  auto *CR = dyn_cast<ConstantAsMetadata>(R);
+  if (CL == CR)
+    return 0;
+  if (!CL)
+    return -1;
+  if (!CR)
+    return 1;
+  return cmpConstants(CL->getValue(), CR->getValue());
+}
+
+int FunctionComparator::cmpMDNode(const MDNode *L, const MDNode *R) const {
   if (L == R)
     return 0;
   if (!L)
@@ -172,23 +190,9 @@ int FunctionComparator::cmpMetadata(const MDNode *L, const MDNode *R) const {
   // function semantically.
   if (int Res = cmpNumbers(L->getNumOperands(), R->getNumOperands()))
     return Res;
-  for (size_t I = 0; I < L->getNumOperands(); ++I) {
-    // TODO: the following routine coerce the metadata contents into numbers
-    // before comparison.
-    // It ignores any other cases, so that the metadata nodes are considered
-    // equal even though this is not correct.
-    // We should structurally compare the metadata nodes to be perfect here.
-    ConstantInt *LLow = mdconst::extract<ConstantInt>(L->getOperand(I));
-    ConstantInt *RLow = mdconst::extract<ConstantInt>(R->getOperand(I));
-    if (LLow == RLow)
-      continue;
-    if (!LLow)
-      return -1;
-    if (!RLow)
-      return 1;
-    if (int Res = cmpAPInts(LLow->getValue(), RLow->getValue()))
+  for (size_t I = 0; I < L->getNumOperands(); ++I)
+    if (int Res = cmpMetadata(L->getOperand(I), R->getOperand(I)))
       return Res;
-  }
   return 0;
 }
 
@@ -209,7 +213,7 @@ int FunctionComparator::cmpInstMetadata(Instruction const *L,
     auto const [KeyR, MR] = MDR[I];
     if (int Res = cmpNumbers(KeyL, KeyR))
       return Res;
-    if (int Res = cmpMetadata(ML, MR))
+    if (int Res = cmpMDNode(ML, MR))
       return Res;
   }
   return 0;
@@ -645,8 +649,8 @@ int FunctionComparator::cmpOperations(const Instruction *L,
       if (int Res = cmpNumbers(CI->getTailCallKind(),
                                cast<CallInst>(R)->getTailCallKind()))
         return Res;
-    return cmpMetadata(L->getMetadata(LLVMContext::MD_range),
-                       R->getMetadata(LLVMContext::MD_range));
+    return cmpMDNode(L->getMetadata(LLVMContext::MD_range),
+                     R->getMetadata(LLVMContext::MD_range));
   }
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(L)) {
     ArrayRef<unsigned> LIndices = IVI->getIndices();

@@ -15,12 +15,19 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Analysis/FlowSensitive/DebugSupport.h"
+#include "clang/Analysis/FlowSensitive/Logger.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 #include <memory>
 #include <utility>
+
+static llvm::cl::opt<std::string>
+    DataflowLog("dataflow-log", llvm::cl::Hidden, llvm::cl::ValueOptional,
+                llvm::cl::desc("Emit log of dataflow analysis. With no arg, "
+                               "writes textual log to stderr."));
 
 namespace clang {
 namespace dataflow {
@@ -374,6 +381,27 @@ DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
 
   return nullptr;
 }
+
+DataflowAnalysisContext::DataflowAnalysisContext(std::unique_ptr<Solver> S,
+                                                 Options Opts)
+    : S(std::move(S)), TrueVal(createAtomicBoolValue()),
+      FalseVal(createAtomicBoolValue()), Opts(Opts) {
+  assert(this->S != nullptr);
+  // If the -dataflow-log command-line flag was set, synthesize a logger.
+  // This is ugly but provides a uniform method for ad-hoc debugging dataflow-
+  // based tools.
+  if (Opts.Log == nullptr) {
+    if (DataflowLog.getNumOccurrences() > 0) {
+      LogOwner = Logger::textual(llvm::errs());
+      this->Opts.Log = LogOwner.get();
+      // FIXME: if the flag is given a value, write an HTML log to a file.
+    } else {
+      this->Opts.Log = &Logger::null();
+    }
+  }
+}
+
+DataflowAnalysisContext::~DataflowAnalysisContext() = default;
 
 } // namespace dataflow
 } // namespace clang

@@ -14,6 +14,7 @@
 #include "support/Markup.h"
 #include "clang/Index/IndexSymbol.h"
 #include <optional>
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -67,6 +68,8 @@ struct HoverInfo {
   std::string LocalScope;
   /// Name of the symbol, does not contain any "::".
   std::string Name;
+  /// Header providing the symbol (best match). Contains ""<>.
+  std::string Provider;
   std::optional<Range> SymRange;
   index::SymbolKind Kind = index::SymbolKind::Unknown;
   std::string Documentation;
