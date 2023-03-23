@@ -24192,12 +24192,21 @@ static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
                        DAG.getConstant(0, DL, IntVT));
   }
 
-  // Split down to 128/256-bit vector.
-  unsigned TestSize = Subtarget.hasAVX() ? 256 : 128;
+  // Split down to 128/256/512-bit vector.
+  unsigned TestSize =
+      Subtarget.useAVX512Regs() ? 512 : (Subtarget.hasAVX() ? 256 : 128);
   while (VT.getSizeInBits() > TestSize) {
     auto Split = DAG.SplitVector(V, DL);
     VT = Split.first.getValueType();
     V = DAG.getNode(ISD::OR, DL, VT, Split.first, Split.second);
+  }
+
+  bool UseKORTEST = Subtarget.useAVX512Regs();
+  if (UseKORTEST && VT.is512BitVector()) {
+    V = DAG.getBitcast(MVT::v16i32, MaskBits(V));
+    V = DAG.getSetCC(DL, MVT::v16i1, V,
+                     getZeroVector(MVT::v16i32, Subtarget, DAG, DL), ISD::SETEQ);
+    return DAG.getNode(X86ISD::KORTEST, DL, MVT::i32, V, V);
   }
 
   bool UsePTEST = Subtarget.hasSSE41();
