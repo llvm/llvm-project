@@ -218,6 +218,7 @@ struct RcOptions {
   std::string OutputFile;
   Format OutputFormat = Res;
 
+  bool IsWindres = false;
   bool BeVerbose = false;
   WriterParams Params;
   bool AppendNull = false;
@@ -238,9 +239,12 @@ bool preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
     } else {
       errs() << "llvm-rc: Unable to find clang, skipping preprocessing."
              << "\n";
-      errs() << "Pass -no-cpp to disable preprocessing. This will be an error "
-                "in the future."
-             << "\n";
+      StringRef OptionName =
+          Opts.IsWindres ? "--no-preprocess" : "-no-preprocess";
+      errs()
+          << "Pass " << OptionName
+          << " to disable preprocessing. This will be an error in the future."
+          << "\n";
       return false;
     }
   }
@@ -364,6 +368,8 @@ RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
   RcOptions Opts;
   unsigned MAI, MAC;
   opt::InputArgList InputArgs = T.ParseArgs(ArgsArr, MAI, MAC);
+
+  Opts.IsWindres = true;
 
   // The tool prints nothing when invoked with no command-line arguments.
   if (InputArgs.hasArg(WINDRES_help)) {
