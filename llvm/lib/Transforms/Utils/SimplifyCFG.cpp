@@ -2455,9 +2455,13 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
 
   // Can we theoretically form the data operands for the merged `invoke`?
   auto IsIllegalToMergeArguments = [](auto Ops) {
-    Type *Ty = std::get<0>(Ops)->getType();
-    assert(Ty == std::get<1>(Ops)->getType() && "Incompatible types?");
-    return Ty->isTokenTy() && std::get<0>(Ops) != std::get<1>(Ops);
+    Use &U0 = std::get<0>(Ops);
+    Use &U1 = std::get<1>(Ops);
+    if (U0 == U1)
+      return false;
+    return U0->getType()->isTokenTy() ||
+           !canReplaceOperandWithVariable(cast<Instruction>(U0.getUser()),
+                                          U0.getOperandNo());
   };
   assert(Invokes.size() == 2 && "Always called with exactly two candidates.");
   if (any_of(zip(Invokes[0]->data_ops(), Invokes[1]->data_ops()),
