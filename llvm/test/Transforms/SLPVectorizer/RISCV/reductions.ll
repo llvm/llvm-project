@@ -826,58 +826,24 @@ entry:
 
 declare i32 @llvm.abs.i32(i32, i1)
 
-; FIXME: This horizontal reduction occurs because the cost model thinks it can
-; vectorize the loads here. However, because -riscv-v-slp-max-vf is set to 1 by
-; default, tryToVectorizeList fails and we end up with this very expensive
-; scalarized load.
-;
-; This is the code the cost model thinks it's going to generate, which you can
-; get by passing -riscv-v-slp-max-vf=0
-;
-; define i32 @stride_sum_abs_diff(ptr %p, ptr %q, i64 %stride) #0 {
-;   %p.2 = getelementptr inbounds i32, ptr %p, i64 %stride
-;   %q.2 = getelementptr inbounds i32, ptr %q, i64 %stride
-;   %p.3 = getelementptr inbounds i32, ptr %p.2, i64 1
-;   %q.3 = getelementptr inbounds i32, ptr %q.2, i64 1
-;   %1 = load <2 x i32>, ptr %p, align 4
-;   %2 = load <2 x i32>, ptr %q, align 4
-;   %x.2 = load i32, ptr %p.2, align 4
-;   %y.2 = load i32, ptr %q.2, align 4
-;   %x.3 = load i32, ptr %p.3, align 4
-;   %y.3 = load i32, ptr %q.3, align 4
-;   %3 = shufflevector <2 x i32> %1, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-;   %4 = insertelement <4 x i32> %3, i32 %x.2, i32 2
-;   %5 = insertelement <4 x i32> %4, i32 %x.3, i32 3
-;   %6 = shufflevector <2 x i32> %2, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-;   %7 = insertelement <4 x i32> %6, i32 %y.2, i32 2
-;   %8 = insertelement <4 x i32> %7, i32 %y.3, i32 3
-;   %9 = sub <4 x i32> %5, %8
-;   %10 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %9, i1 true)
-;   %11 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %10)
-;   ret i32 %11
-; }
 define i32 @stride_sum_abs_diff(ptr %p, ptr %q, i64 %stride) {
 ; CHECK-LABEL: @stride_sum_abs_diff(
 ; CHECK-NEXT:    [[P_2:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[STRIDE:%.*]]
 ; CHECK-NEXT:    [[Q_2:%.*]] = getelementptr inbounds i32, ptr [[Q:%.*]], i64 [[STRIDE]]
-; CHECK-NEXT:    [[P_3:%.*]] = getelementptr inbounds i32, ptr [[P_2]], i64 1
-; CHECK-NEXT:    [[Q_3:%.*]] = getelementptr inbounds i32, ptr [[Q_2]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[Q]], align 4
-; CHECK-NEXT:    [[X_2:%.*]] = load i32, ptr [[P_2]], align 4
-; CHECK-NEXT:    [[Y_2:%.*]] = load i32, ptr [[Q_2]], align 4
-; CHECK-NEXT:    [[X_3:%.*]] = load i32, ptr [[P_3]], align 4
-; CHECK-NEXT:    [[Y_3:%.*]] = load i32, ptr [[Q_3]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[X_2]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[X_3]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[Y_2]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[Y_3]], i32 3
-; CHECK-NEXT:    [[TMP9:%.*]] = sub <4 x i32> [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP9]], i1 true)
-; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP10]])
-; CHECK-NEXT:    ret i32 [[TMP11]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[P_2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr [[Q_2]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP11:%.*]] = sub <4 x i32> [[TMP7]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP11]], i1 true)
+; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP12]])
+; CHECK-NEXT:    ret i32 [[TMP13]]
 ;
   %x.0 = load i32, ptr %p
   %y.0 = load i32, ptr %q
@@ -912,41 +878,17 @@ define i32 @stride_sum_abs_diff(ptr %p, ptr %q, i64 %stride) {
   ret i32 %sum.2
 }
 
-; FIXME: This could be horizontally reduced, as it is functionally equivalent to
-; @reduce_sum_2arrays_b
 define i32 @reduce_sum_2arrays_a(ptr noalias %p, ptr noalias %q) {
 ; CHECK-LABEL: @reduce_sum_2arrays_a(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X_0:%.*]] = load i8, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X_0]] to i32
-; CHECK-NEXT:    [[Y_0:%.*]] = load i8, ptr [[Q:%.*]], align 1
-; CHECK-NEXT:    [[CONV3:%.*]] = zext i8 [[Y_0]] to i32
-; CHECK-NEXT:    [[ADD4:%.*]] = add nuw nsw i32 [[CONV]], [[CONV3]]
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[X_1:%.*]] = load i8, ptr [[ARRAYIDX_1]], align 1
-; CHECK-NEXT:    [[CONV_1:%.*]] = zext i8 [[X_1]] to i32
-; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 1
-; CHECK-NEXT:    [[Y_1:%.*]] = load i8, ptr [[ARRAYIDX2_1]], align 1
-; CHECK-NEXT:    [[CONV3_1:%.*]] = zext i8 [[Y_1]] to i32
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i32 [[ADD4]], [[CONV_1]]
-; CHECK-NEXT:    [[ADD4_1:%.*]] = add nuw nsw i32 [[ADD_1]], [[CONV3_1]]
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[X_2:%.*]] = load i8, ptr [[ARRAYIDX_2]], align 1
-; CHECK-NEXT:    [[CONV_2:%.*]] = zext i8 [[X_2]] to i32
-; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 2
-; CHECK-NEXT:    [[Y_2:%.*]] = load i8, ptr [[ARRAYIDX2_2]], align 1
-; CHECK-NEXT:    [[CONV3_2:%.*]] = zext i8 [[Y_2]] to i32
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i32 [[ADD4_1]], [[CONV_2]]
-; CHECK-NEXT:    [[ADD4_2:%.*]] = add nuw nsw i32 [[ADD_2]], [[CONV3_2]]
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 3
-; CHECK-NEXT:    [[X_3:%.*]] = load i8, ptr [[ARRAYIDX_3]], align 1
-; CHECK-NEXT:    [[CONV_3:%.*]] = zext i8 [[X_3]] to i32
-; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 3
-; CHECK-NEXT:    [[Y_3:%.*]] = load i8, ptr [[ARRAYIDX2_3]], align 1
-; CHECK-NEXT:    [[CONV3_3:%.*]] = zext i8 [[Y_3]] to i32
-; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw nsw i32 [[ADD4_2]], [[CONV_3]]
-; CHECK-NEXT:    [[ADD4_3:%.*]] = add nuw nsw i32 [[ADD_3]], [[CONV3_3]]
-; CHECK-NEXT:    ret i32 [[ADD4_3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[Q:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i8> [[TMP2]], <8 x i8> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i8> [[TMP4]] to <8 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP5]])
+; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
 entry:
   %x.0 = load i8, ptr %p, align 1
@@ -989,13 +931,13 @@ define i32 @reduce_sum_2arrays_b(ptr noalias noundef %x, ptr noalias %y) {
 ; CHECK-LABEL: @reduce_sum_2arrays_b(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[X:%.*]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[Y:%.*]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    ret i32 [[OP_RDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[Y:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i8> [[TMP2]], <8 x i8> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i8> [[TMP4]] to <8 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP5]])
+; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
   entry:
   %0 = load i8, ptr %x, align 1
