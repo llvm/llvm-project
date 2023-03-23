@@ -2358,6 +2358,46 @@ evaluated, so any side effects of the expression will be discarded.
 
 Query for this feature with ``__has_builtin(__builtin_assume)``.
 
+.. _langext-__builtin_assume_separate_storage:
+
+``__builtin_assume_separate_storage``
+--------------------
+
+``__builtin_assume_separate_storage`` is used to provide the optimizer with the
+knowledge that its two arguments point to separately allocated objects.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    __builtin_assume_separate_storage(const volatile void *, const volatile void *)
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  int foo(int *x, int *y) {
+      __builtin_assume_separate_storage(x, y);
+      *x = 0;
+      *y = 1;
+      // The optimizer may optimize this to return 0 without reloading from *x.
+      return *x;
+  }
+
+**Description**:
+
+The arguments to this function are assumed to point into separately allocated
+storage (either different variable definitions or different dynamic storage
+allocations). The optimizer may use this fact to aid in alias analysis. If the
+arguments point into the same storage, the behavior is undefined. Note that the
+definition of "storage" here refers to the outermost enclosing allocation of any
+particular object (so for example, it's never correct to call this function
+passing the addresses of fields in the same struct, elements of the same array,
+etc.).
+
+Query for this feature with ``__has_builtin(__builtin_assume_separate_storage)``.
+
+
 ``__builtin_offsetof``
 ----------------------
 
