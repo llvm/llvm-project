@@ -36,10 +36,11 @@
 ; GCN-O0-NEXT:      Early propagate attributes from kernels to functions
 ; GCN-O0-NEXT:    AMDGPU Lower Intrinsics
 ; GCN-O0-NEXT:    AMDGPU Inline All Functions
-; GCN-O0-NEXT:    CallGraph Construction
-; GCN-O0-NEXT:    Call Graph SCC Pass Manager
-; GCN-O0-NEXT:      Inliner for always_inline functions
-; GCN-O0-NEXT:    A No-Op Barrier Pass
+; GCN-O0-NEXT:    Inliner for always_inline functions
+; GCN-O0-NEXT:      FunctionPass Manager
+; GCN-O0-NEXT:        Dominator Tree Construction
+; GCN-O0-NEXT:        Basic Alias Analysis (stateless AA impl)
+; GCN-O0-NEXT:        Function Alias Analysis Results
 ; GCN-O0-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O0-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O0-NEXT:    FunctionPass Manager
@@ -186,10 +187,11 @@
 ; GCN-O1-NEXT:      Early propagate attributes from kernels to functions
 ; GCN-O1-NEXT:    AMDGPU Lower Intrinsics
 ; GCN-O1-NEXT:    AMDGPU Inline All Functions
-; GCN-O1-NEXT:    CallGraph Construction
-; GCN-O1-NEXT:    Call Graph SCC Pass Manager
-; GCN-O1-NEXT:      Inliner for always_inline functions
-; GCN-O1-NEXT:    A No-Op Barrier Pass
+; GCN-O1-NEXT:    Inliner for always_inline functions
+; GCN-O1-NEXT:      FunctionPass Manager
+; GCN-O1-NEXT:        Dominator Tree Construction
+; GCN-O1-NEXT:        Basic Alias Analysis (stateless AA impl)
+; GCN-O1-NEXT:        Function Alias Analysis Results
 ; GCN-O1-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O1-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-NEXT:    FunctionPass Manager
@@ -461,10 +463,11 @@
 ; GCN-O1-OPTS-NEXT:      Early propagate attributes from kernels to functions
 ; GCN-O1-OPTS-NEXT:    AMDGPU Lower Intrinsics
 ; GCN-O1-OPTS-NEXT:    AMDGPU Inline All Functions
-; GCN-O1-OPTS-NEXT:    CallGraph Construction
-; GCN-O1-OPTS-NEXT:    Call Graph SCC Pass Manager
-; GCN-O1-OPTS-NEXT:      Inliner for always_inline functions
-; GCN-O1-OPTS-NEXT:    A No-Op Barrier Pass
+; GCN-O1-OPTS-NEXT:    Inliner for always_inline functions
+; GCN-O1-OPTS-NEXT:      FunctionPass Manager
+; GCN-O1-OPTS-NEXT:        Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:        Basic Alias Analysis (stateless AA impl)
+; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
 ; GCN-O1-OPTS-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O1-OPTS-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-OPTS-NEXT:    FunctionPass Manager
@@ -768,10 +771,11 @@
 ; GCN-O2-NEXT:      Early propagate attributes from kernels to functions
 ; GCN-O2-NEXT:    AMDGPU Lower Intrinsics
 ; GCN-O2-NEXT:    AMDGPU Inline All Functions
-; GCN-O2-NEXT:    CallGraph Construction
-; GCN-O2-NEXT:    Call Graph SCC Pass Manager
-; GCN-O2-NEXT:      Inliner for always_inline functions
-; GCN-O2-NEXT:    A No-Op Barrier Pass
+; GCN-O2-NEXT:    Inliner for always_inline functions
+; GCN-O2-NEXT:      FunctionPass Manager
+; GCN-O2-NEXT:        Dominator Tree Construction
+; GCN-O2-NEXT:        Basic Alias Analysis (stateless AA impl)
+; GCN-O2-NEXT:        Function Alias Analysis Results
 ; GCN-O2-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O2-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O2-NEXT:    FunctionPass Manager
@@ -1078,10 +1082,11 @@
 ; GCN-O3-NEXT:      Early propagate attributes from kernels to functions
 ; GCN-O3-NEXT:    AMDGPU Lower Intrinsics
 ; GCN-O3-NEXT:    AMDGPU Inline All Functions
-; GCN-O3-NEXT:    CallGraph Construction
-; GCN-O3-NEXT:    Call Graph SCC Pass Manager
-; GCN-O3-NEXT:      Inliner for always_inline functions
-; GCN-O3-NEXT:    A No-Op Barrier Pass
+; GCN-O3-NEXT:    Inliner for always_inline functions
+; GCN-O3-NEXT:      FunctionPass Manager
+; GCN-O3-NEXT:        Dominator Tree Construction
+; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
+; GCN-O3-NEXT:        Function Alias Analysis Results
 ; GCN-O3-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O3-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O3-NEXT:    FunctionPass Manager

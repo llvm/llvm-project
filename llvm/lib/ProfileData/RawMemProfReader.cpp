@@ -24,13 +24,16 @@
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/RawMemProfReader.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 
 #define DEBUG_TYPE "memprof"
@@ -270,17 +273,37 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
   auto* Elf64LEObject = llvm::cast<llvm::object::ELF64LEObjectFile>(ElfObject);
   const llvm::object::ELF64LEFile& ElfFile = Elf64LEObject->getELFFile();
   auto PHdrsOr = ElfFile.program_headers();
-  if(!PHdrsOr) 
-    return report(make_error<StringError>(Twine("Could not read program headers: "),
-                                          inconvertibleErrorCode()),
-                  FileName);
-  auto FirstLoadHeader = PHdrsOr->begin();
-  while (FirstLoadHeader->p_type != llvm::ELF::PT_LOAD)
-    ++FirstLoadHeader;
-  if(FirstLoadHeader->p_vaddr == 0)
-    return report(make_error<StringError>(Twine("Unsupported position independent code"),
-                                          inconvertibleErrorCode()),
-                  FileName);
+  if (!PHdrsOr)
+    return report(
+        make_error<StringError>(Twine("Could not read program headers: "),
+                                inconvertibleErrorCode()),
+        FileName);
+
+  int NumExecutableSegments = 0;
+  for (const auto &Phdr : *PHdrsOr) {
+    if (Phdr.p_type == ELF::PT_LOAD) {
+      if (Phdr.p_flags & ELF::PF_X) {
+        // We assume only one text segment in the main binary for simplicity and
+        // reduce the overhead of checking multiple ranges during symbolization.
+        if (++NumExecutableSegments > 1) {
+          return report(
+              make_error<StringError>(
+                  "Expect only one executable load segment in the binary",
+                  inconvertibleErrorCode()),
+              FileName);
+        }
+        // Segment will always be loaded at a page boundary, expect it to be
+        // aligned already. Assume 4K pagesize for the machine from which the
+        // profile has been collected. This should be fine for now, in case we
+        // want to support other pagesizes it can be recorded in the raw profile
+        // during collection.
+        PreferredTextSegmentAddress = Phdr.p_vaddr;
+        assert(Phdr.p_vaddr == (Phdr.p_vaddr & ~(0x1000 - 1U)) &&
+               "Expect p_vaddr to always be page aligned");
+        assert(Phdr.p_offset == 0 && "Expect p_offset = 0 for symbolization.");
+      }
+    }
+  }
 
   auto Triple = ElfObject->makeTriple();
   if (!Triple.isX86())
@@ -299,13 +322,49 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
     return report(SOFOr.takeError(), FileName);
   Symbolizer = std::move(SOFOr.get());
 
+  // Process the raw profile.
   if (Error E = readRawProfile(std::move(DataBuffer)))
+    return E;
+
+  if (Error E = setupForSymbolization())
     return E;
 
   if (Error E = symbolizeAndFilterStackFrames())
     return E;
 
   return mapRawProfileToRecords();
+}
+
+Error RawMemProfReader::setupForSymbolization() {
+  auto *Object = cast<object::ObjectFile>(Binary.getBinary());
+  auto BuildIdOr = object::getBuildID(Object);
+  if (!BuildIdOr.has_value())
+    return make_error<StringError>(Twine("No build id found in binary ") +
+                                       Binary.getBinary()->getFileName(),
+                                   inconvertibleErrorCode());
+  llvm::ArrayRef<uint8_t> BinaryId = BuildIdOr.value();
+
+  int NumMatched = 0;
+  for (const auto &Entry : SegmentInfo) {
+    llvm::ArrayRef<uint8_t> SegmentId(Entry.BuildId, Entry.BuildIdSize);
+    if (BinaryId == SegmentId) {
+      // We assume only one text segment in the main binary for simplicity and
+      // reduce the overhead of checking multiple ranges during symbolization.
+      if (++NumMatched > 1) {
+        return make_error<StringError>(
+            "We expect only one executable segment in the profiled binary",
+            inconvertibleErrorCode());
+      }
+      ProfiledTextSegmentStart = Entry.Start;
+      ProfiledTextSegmentEnd = Entry.End;
+    }
+  }
+  assert(NumMatched != 0 && "No matching executable segments in segment info.");
+  assert(PreferredTextSegmentAddress == 0 ||
+         (PreferredTextSegmentAddress == ProfiledTextSegmentStart) &&
+             "Expect text segment address to be 0 or equal to profiled text "
+             "segment start.");
+  return Error::success();
 }
 
 Error RawMemProfReader::mapRawProfileToRecords() {
@@ -516,20 +575,19 @@ Error RawMemProfReader::readRawProfile(
 
 object::SectionedAddress
 RawMemProfReader::getModuleOffset(const uint64_t VirtualAddress) {
-  LLVM_DEBUG({
-  SegmentEntry *ContainingSegment = nullptr;
-  for (auto &SE : SegmentInfo) {
-    if (VirtualAddress > SE.Start && VirtualAddress <= SE.End) {
-      ContainingSegment = &SE;
-    }
+  if (VirtualAddress > ProfiledTextSegmentStart &&
+      VirtualAddress <= ProfiledTextSegmentEnd) {
+    // For PIE binaries, the preferred address is zero and we adjust the virtual
+    // address by start of the profiled segment assuming that the offset of the
+    // segment in the binary is zero. For non-PIE binaries the preferred and
+    // profiled segment addresses should be equal and this is a no-op.
+    const uint64_t AdjustedAddress =
+        VirtualAddress + PreferredTextSegmentAddress - ProfiledTextSegmentStart;
+    return object::SectionedAddress{AdjustedAddress};
   }
-
-  // Ensure that the virtual address is valid.
-  assert(ContainingSegment && "Could not find a segment entry");
-  });
-
-  // TODO: Compute the file offset based on the maps and program headers. For
-  // now this only works for non PIE binaries.
+  // Addresses which do not originate from the profiled text segment in the
+  // binary are not adjusted. These will fail symbolization and be filtered out
+  // during processing.
   return object::SectionedAddress{VirtualAddress};
 }
 

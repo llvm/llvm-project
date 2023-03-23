@@ -19,10 +19,12 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Variable.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -540,13 +542,17 @@ Block *SymbolContext::GetFunctionBlock() {
 }
 
 ConstString SymbolContext::GetInstanceVariableName() {
+  LanguageType lang_type = eLanguageTypeUnknown;
+
   if (Block *function_block = GetFunctionBlock())
-    if (CompilerDeclContext decl_ctx = function_block->GetDeclContext()) {
-      auto language = decl_ctx.GetLanguage();
-      if (language == eLanguageTypeUnknown)
-        language = GetLanguage();
-      return decl_ctx.GetInstanceVariableName(language);
-    }
+    if (CompilerDeclContext decl_ctx = function_block->GetDeclContext())
+      lang_type = decl_ctx.GetLanguage();
+
+  if (lang_type == eLanguageTypeUnknown)
+    lang_type = GetLanguage();
+
+  if (auto *lang = Language::FindPlugin(lang_type))
+    return lang->GetInstanceVariableName();
 
   return {};
 }

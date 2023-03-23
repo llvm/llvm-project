@@ -1263,7 +1263,7 @@ bool SampleProfileLoader::tryInlineCandidate(
   if (!Cost)
     return false;
 
-  InlineFunctionInfo IFI(nullptr, GetAC);
+  InlineFunctionInfo IFI(GetAC);
   IFI.UpdateProfile = false;
   InlineResult IR = InlineFunction(CB, IFI,
                                    /*MergeAttributes=*/true);

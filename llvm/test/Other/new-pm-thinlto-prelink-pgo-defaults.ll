@@ -71,11 +71,10 @@
 ; CHECK-O-NEXT: Invalidating analysis: InlineAdvisorAnalysis
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: PGOInstrumentationUse
-; These next two can appear in any order since they are accessed as parameters
-; on the same call to BlockFrequencyInfo::calculate.
-; CHECK-O-DAG: Running analysis: BranchProbabilityAnalysis on foo
-; CHECK-O-DAG: Running analysis: PostDominatorTreeAnalysis on foo
-; CHECK-O-DAG: Running analysis: LoopAnalysis on foo
+; CHECK-O-NEXT: Running analysis: ProfileSummaryAnalysis
+; CHECK-O-NEXT: Running analysis: BranchProbabilityAnalysis on foo
+; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
+; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
 ; CHECK-O-NEXT: Invalidating analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Invalidating analysis: LazyCallGraphAnalysis on
@@ -122,11 +121,9 @@
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
-; These next two can appear in any order since they are accessed as parameters
-; on the same call to BlockFrequencyInfo::calculate.
-; CHECK-O-DAG: Running analysis: LoopAnalysis on foo
-; CHECK-O-DAG: Running analysis: BranchProbabilityAnalysis on foo
-; CHECK-O-DAG: Running analysis: PostDominatorTreeAnalysis on foo
+; CHECK-O-NEXT: Running analysis: BranchProbabilityAnalysis on foo
+; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
+; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O3-NEXT: Running pass: AggressiveInstCombinePass
 ; CHECK-O23SZ-NEXT: Running pass: ConstraintEliminationPass
 ; CHECK-O1-NEXT: Running pass: LibCallsShrinkWrapPass
