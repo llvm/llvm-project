@@ -973,6 +973,7 @@ PointerDereferenceGadget::getFixits(const Strategy &S) const {
                             endOfOperand.value().getLocWithOffset(1), "[0]")}};
     }
   }
+    [[fallthrough]];
   case Strategy::Kind::Iterator:
   case Strategy::Kind::Array:
   case Strategy::Kind::Vector:
