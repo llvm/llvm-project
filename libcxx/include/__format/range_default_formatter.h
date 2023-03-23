@@ -84,12 +84,12 @@ inline constexpr range_format format_kind<_Rp> = [] {
 }();
 
 template <range_format _Kp, ranges::input_range _Rp, class _CharT>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __range_default_formatter;
+struct _LIBCPP_TEMPLATE_VIS __range_default_formatter;
 
 // Required specializations
 
 template <ranges::input_range _Rp, class _CharT>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __range_default_formatter<range_format::sequence, _Rp, _CharT> {
+struct _LIBCPP_TEMPLATE_VIS __range_default_formatter<range_format::sequence, _Rp, _CharT> {
 private:
   using __maybe_const_r = __fmt_maybe_const<_Rp, _CharT>;
   range_formatter<remove_cvref_t<ranges::range_reference_t<__maybe_const_r>>, _CharT> __underlying_;
@@ -115,7 +115,7 @@ public:
 };
 
 template <ranges::input_range _Rp, class _CharT>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __range_default_formatter<range_format::map, _Rp, _CharT> {
+struct _LIBCPP_TEMPLATE_VIS __range_default_formatter<range_format::map, _Rp, _CharT> {
 private:
   using __maybe_const_map = __fmt_maybe_const<_Rp, _CharT>;
   using __element_type    = remove_cvref_t<ranges::range_reference_t<__maybe_const_map>>;
@@ -143,7 +143,7 @@ public:
 };
 
 template <ranges::input_range _Rp, class _CharT>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __range_default_formatter<range_format::set, _Rp, _CharT> {
+struct _LIBCPP_TEMPLATE_VIS __range_default_formatter<range_format::set, _Rp, _CharT> {
 private:
   using __maybe_const_set = __fmt_maybe_const<_Rp, _CharT>;
   using __element_type    = remove_cvref_t<ranges::range_reference_t<__maybe_const_set>>;
@@ -168,14 +168,13 @@ public:
 
 template <range_format _Kp, ranges::input_range _Rp, class _CharT>
   requires(_Kp == range_format::string || _Kp == range_format::debug_string)
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __range_default_formatter<_Kp, _Rp, _CharT> {
+struct _LIBCPP_TEMPLATE_VIS __range_default_formatter<_Kp, _Rp, _CharT> {
   __range_default_formatter() = delete; // TODO FMT Implement
 };
 
 template <ranges::input_range _Rp, class _CharT>
   requires(format_kind<_Rp> != range_format::disabled && formattable<ranges::range_reference_t<_Rp>, _CharT>)
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<_Rp, _CharT>
-    : __range_default_formatter<format_kind<_Rp>, _Rp, _CharT> {};
+struct _LIBCPP_TEMPLATE_VIS formatter<_Rp, _CharT> : __range_default_formatter<format_kind<_Rp>, _Rp, _CharT> {};
 
 #endif //_LIBCPP_STD_VER >= 23
 

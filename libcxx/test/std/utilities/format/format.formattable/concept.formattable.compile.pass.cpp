@@ -8,6 +8,9 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 
+// This test uses std::filesystem::path, which was introduced in macOS 10.15
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+
 // <format>
 
 // template<class T, class charT>
@@ -107,9 +110,7 @@ void test_P0645() {
   assert_is_formattable<__uint128_t, CharT>();
 #endif
 
-  assert_is_formattable<float, CharT>();
-  assert_is_formattable<double, CharT>();
-  assert_is_formattable<long double, CharT>();
+  // floating-point types are tested in concept.formattable.float.compile.pass.cpp
 
   assert_is_formattable<std::nullptr_t, CharT>();
   assert_is_formattable<void*, CharT>();
