@@ -10,6 +10,8 @@
 #ifndef _LIBCPP___CHRONO_DURATION_H
 #define _LIBCPP___CHRONO_DURATION_H
 
+#include <__compare/ordering.h>
+#include <__compare/three_way_comparable.h>
 #include <__config>
 #include <__type_traits/common_type.h>
 #include <__type_traits/enable_if.h>
@@ -343,6 +345,8 @@ operator==(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period
     return __duration_eq<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >()(__lhs, __rhs);
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 // Duration !=
 
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
@@ -353,6 +357,8 @@ operator!=(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period
 {
     return !(__lhs == __rhs);
 }
+
+#endif // _LIBCPP_STD_VER <= 17
 
 // Duration <
 
@@ -416,6 +422,20 @@ operator>=(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period
 {
     return !(__lhs < __rhs);
 }
+
+#if _LIBCPP_STD_VER >= 20
+
+template<class _Rep1, class _Period1, class _Rep2, class _Period2>
+  requires three_way_comparable<common_type_t<_Rep1, _Rep2>>
+_LIBCPP_HIDE_FROM_ABI
+constexpr auto operator<=>(const duration<_Rep1, _Period1>& __lhs,
+                           const duration<_Rep2, _Period2>& __rhs)
+{
+    using _Ct = common_type_t<duration<_Rep1, _Period1>, duration<_Rep2, _Period2>>;
+    return _Ct(__lhs).count() <=> _Ct(__rhs).count();
+}
+
+#endif // _LIBCPP_STD_VER >= 20
 
 // Duration +
 

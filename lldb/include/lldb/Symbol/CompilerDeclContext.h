@@ -69,14 +69,6 @@ public:
   /// Determines the original language of the decl context.
   lldb::LanguageType GetLanguage();
 
-  /// Determines the name of the instance variable for the this decl context.
-  ///
-  /// For C++ the name is "this", for Objective-C the name is "self".
-  ///
-  /// \return
-  ///     Returns a string for the name of the instance variable.
-  ConstString GetInstanceVariableName(lldb::LanguageType language);
-
   /// Check if the given other decl context is contained in the lookup
   /// of this decl context (for example because the other context is a nested
   /// inline namespace).

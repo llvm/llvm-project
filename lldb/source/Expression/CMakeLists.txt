@@ -3,6 +3,7 @@ if(NOT LLDB_ENABLE_SWIFT_SUPPORT)
   unset(SWIFT_LIBS)
 endif()
 
+# TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbExpression
 add_lldb_library(lldbExpression
   DiagnosticManager.cpp
   DWARFExpression.cpp
