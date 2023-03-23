@@ -818,6 +818,11 @@ bool CompilerInvocation::createFromArgs(
     success = false;
   }
 
+  // -flang-experimental-hlfir
+  if (args.hasArg(clang::driver::options::OPT_flang_experimental_hlfir)) {
+    res.loweringOpts.setLowerToHighLevelFIR(true);
+  }
+
   success &= parseFrontendArgs(res.getFrontendOpts(), args, diags);
   parseTargetArgs(res.getTargetOpts(), args);
   parsePreprocessorArgs(res.getPreprocessorOpts(), args);
