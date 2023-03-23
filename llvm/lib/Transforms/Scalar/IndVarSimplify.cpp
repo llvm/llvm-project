@@ -1080,8 +1080,7 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
     // a truncate within in.
     bool Extended = false;
     const SCEV *IV = SE->getSCEV(CmpIndVar);
-    const SCEV *TruncatedIV = SE->getTruncateExpr(SE->getSCEV(CmpIndVar),
-                                                  ExitCnt->getType());
+    const SCEV *TruncatedIV = SE->getTruncateExpr(IV, ExitCnt->getType());
     const SCEV *ZExtTrunc =
       SE->getZeroExtendExpr(TruncatedIV, CmpIndVar->getType());
 
