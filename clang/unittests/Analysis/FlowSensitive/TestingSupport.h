@@ -389,6 +389,20 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
 ///   `Name` must be unique in `ASTCtx`.
 const ValueDecl *findValueDecl(ASTContext &ASTCtx, llvm::StringRef Name);
 
+/// Returns the value (of type `ValueT`) for the given identifier.
+/// `ValueT` must be a subclass of `Value` and must be of the appropriate type.
+///
+/// Requirements:
+///
+///   `Name` must be unique in `ASTCtx`.
+template <class ValueT>
+ValueT &getValueForDecl(ASTContext &ASTCtx, const Environment &Env,
+                        llvm::StringRef Name) {
+  const ValueDecl *VD = findValueDecl(ASTCtx, Name);
+  assert(VD != nullptr);
+  return *cast<ValueT>(Env.getValue(*VD, SkipPast::None));
+}
+
 /// Creates and owns constraints which are boolean values.
 class ConstraintContext {
 public:
