@@ -99,6 +99,7 @@ private:
     llvm::SmallBitVector HasIncludeChecks;
   };
 
+  Error addModuleInputs(ASTReader &Reader);
   Expected<cas::ObjectRef> getObjectForFile(Preprocessor &PP, FileID FID);
   Expected<cas::ObjectRef>
   getObjectForFileNonCached(FileManager &FM, const SrcMgr::FileInfo &FI);
@@ -128,7 +129,7 @@ private:
   // are recorded in the PCH, ordered by \p FileEntry::UID index.
   SmallVector<StringRef> PreIncludedFileNames;
   llvm::BitVector SeenIncludeFiles;
-  SmallVector<cas::IncludeTree::FileList::FileEntry> IncludedFiles;
+  llvm::SetVector<cas::IncludeTree::FileList::FileEntry> IncludedFiles;
   Optional<cas::ObjectRef> PredefinesBufferRef;
   Optional<cas::ObjectRef> ModuleIncludesBufferRef;
   Optional<cas::ObjectRef> ModuleMapFileRef;
@@ -494,30 +495,8 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
       return Error::success(); // no need for additional work.
 
     // Go through all the recorded input files.
-    SmallVector<const FileEntry *, 32> NotSeenIncludes;
-    for (serialization::ModuleFile &MF : Reader->getModuleManager()) {
-      if (hasErrorOccurred())
-        break;
-      Reader->visitInputFiles(
-          MF, /*IncludeSystem=*/true, /*Complain=*/false,
-          [&](const serialization::InputFile &IF, bool isSystem) {
-            Optional<FileEntryRef> FE = IF.getFile();
-            assert(FE);
-            if (FE->getUID() >= SeenIncludeFiles.size() ||
-                !SeenIncludeFiles[FE->getUID()])
-              NotSeenIncludes.push_back(*FE);
-          });
-    }
-    // Sort so we can visit the files in deterministic order.
-    llvm::sort(NotSeenIncludes, [](const FileEntry *LHS, const FileEntry *RHS) {
-      return LHS->getUID() < RHS->getUID();
-    });
-
-    for (const FileEntry *FE : NotSeenIncludes) {
-      auto FileNode = addToFileList(FM, FE);
-      if (!FileNode)
-        return FileNode.takeError();
-    }
+    if (Error E = addModuleInputs(*Reader))
+      return E;
 
     PreprocessorOptions &PPOpts = NewInvocation.getPreprocessorOpts();
     if (PPOpts.ImplicitPCHInclude.empty())
@@ -543,13 +522,47 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
       getCASTreeForFileIncludes(IncludeStack.pop_back_val());
   if (!MainIncludeTree)
     return MainIncludeTree.takeError();
-  auto FileList = cas::IncludeTree::FileList::create(DB, IncludedFiles);
+  auto FileList =
+      cas::IncludeTree::FileList::create(DB, IncludedFiles.getArrayRef());
   if (!FileList)
     return FileList.takeError();
 
   return cas::IncludeTreeRoot::create(DB, MainIncludeTree->getRef(),
                                       FileList->getRef(), PCHRef,
                                       ModuleMapFileRef);
+}
+
+Error IncludeTreeBuilder::addModuleInputs(ASTReader &Reader) {
+  for (serialization::ModuleFile &MF : Reader.getModuleManager()) {
+    // Only add direct imports to avoid duplication. Each include tree is a
+    // superset of its imported modules' include trees.
+    if (!MF.isDirectlyImported())
+      continue;
+
+    assert(!MF.IncludeTreeID.empty() && "missing include-tree for import");
+
+    Optional<cas::CASID> ID;
+    if (Error E = DB.parseID(MF.IncludeTreeID).moveInto(ID))
+      return E;
+    Optional<cas::ObjectRef> Ref = DB.getReference(*ID);
+    if (!Ref)
+      return DB.createUnknownObjectError(*ID);
+    Optional<cas::IncludeTreeRoot> Root;
+    if (Error E = cas::IncludeTreeRoot::get(DB, *Ref).moveInto(Root))
+      return E;
+    Optional<cas::IncludeTree::FileList> Files;
+    if (Error E = Root->getFileList().moveInto(Files))
+      return E;
+
+    Error E = Files->forEachFile([&](auto IF, auto Size) -> Error {
+      IncludedFiles.insert({IF.getRef(), Size});
+      return Error::success();
+    });
+    if (E)
+      return E;
+  }
+
+  return Error::success();
 }
 
 Expected<cas::ObjectRef> IncludeTreeBuilder::getObjectForFile(Preprocessor &PP,
@@ -627,7 +640,7 @@ IncludeTreeBuilder::addToFileList(FileManager &FM, const FileEntry *FE) {
     auto FileNode = createIncludeFile(Filename, **CASContents);
     if (!FileNode)
       return FileNode.takeError();
-    IncludedFiles.push_back(
+    IncludedFiles.insert(
         {FileNode->getRef(),
          static_cast<cas::IncludeTree::FileList::FileSizeTy>(FE->getSize())});
     return FileNode->getRef();
