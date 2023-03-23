@@ -54,10 +54,12 @@ class IntegerRelation {
 public:
   /// All derived classes of IntegerRelation.
   enum class Kind {
-    FlatAffineConstraints,
-    FlatAffineValueConstraints,
     IntegerRelation,
     IntegerPolyhedron,
+    FlatLinearConstraints,
+    FlatLinearValueConstraints,
+    FlatAffineValueConstraints,
+    FlatAffineRelation
   };
 
   /// Constructs a relation reserving memory for the specified number
@@ -848,7 +850,8 @@ public:
   Kind getKind() const override { return Kind::IntegerPolyhedron; }
 
   static bool classof(const IntegerRelation *cst) {
-    return cst->getKind() == Kind::IntegerPolyhedron;
+    return cst->getKind() >= Kind::IntegerPolyhedron &&
+           cst->getKind() <= Kind::FlatAffineRelation;
   }
 
   // Clones this object.
