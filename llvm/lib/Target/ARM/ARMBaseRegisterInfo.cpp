@@ -338,7 +338,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
     SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  std::pair<Register, Register> Hint = MRI.getRegAllocationHint(VirtReg);
+  std::pair<unsigned, Register> Hint = MRI.getRegAllocationHint(VirtReg);
 
   unsigned Odd;
   switch (Hint.first) {
@@ -391,7 +391,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
 void ARMBaseRegisterInfo::updateRegAllocHint(Register Reg, Register NewReg,
                                              MachineFunction &MF) const {
   MachineRegisterInfo *MRI = &MF.getRegInfo();
-  std::pair<Register, Register> Hint = MRI->getRegAllocationHint(Reg);
+  std::pair<unsigned, Register> Hint = MRI->getRegAllocationHint(Reg);
   if ((Hint.first == ARMRI::RegPairOdd || Hint.first == ARMRI::RegPairEven) &&
       Hint.second.isVirtual()) {
     // If 'Reg' is one of the even / odd register pair and it's now changed
