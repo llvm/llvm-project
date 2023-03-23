@@ -14,9 +14,9 @@
 // subsequently annotated with an attribute for later transformation.
 //
 // The transformations can be performed either directly on IR (regular LTO), or
-// (eventually) on a ThinLTO index (later applied to the IR during the ThinLTO
-// backend). Both types of LTO operate on a the same base graph representation,
-// which uses CRTP to support either IR or Index formats.
+// on a ThinLTO index (and later applied to the IR during the ThinLTO backend).
+// Both types of LTO operate on a the same base graph representation, which
+// uses CRTP to support either IR or Index formats.
 //
 //===----------------------------------------------------------------------===//
 
@@ -28,9 +28,11 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -458,6 +460,56 @@ private:
   const Module &Mod;
 };
 
+/// Represents a call in the summary index graph, which can either be an
+/// allocation or an interior callsite node in an allocation's context.
+/// Holds a pointer to the corresponding data structure in the index.
+struct IndexCall : public PointerUnion<CallsiteInfo *, AllocInfo *> {
+  IndexCall() : PointerUnion() {}
+  IndexCall(std::nullptr_t) : IndexCall() {}
+  IndexCall(CallsiteInfo *StackNode) : PointerUnion(StackNode) {}
+  IndexCall(AllocInfo *AllocNode) : PointerUnion(AllocNode) {}
+
+  IndexCall *operator->() { return this; }
+
+  void print(raw_ostream &OS) const {
+    if (auto *AI = dyn_cast<AllocInfo *>())
+      OS << *AI;
+    else {
+      auto *CI = dyn_cast<CallsiteInfo *>();
+      assert(CI);
+      OS << *CI;
+    }
+  }
+};
+
+/// CRTP derived class for graphs built from summary index (ThinLTO).
+class IndexCallsiteContextGraph
+    : public CallsiteContextGraph<IndexCallsiteContextGraph, FunctionSummary,
+                                  IndexCall> {
+public:
+  IndexCallsiteContextGraph(
+      ModuleSummaryIndex &Index,
+      function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+          isPrevailing);
+
+private:
+  friend CallsiteContextGraph<IndexCallsiteContextGraph, FunctionSummary,
+                              IndexCall>;
+
+  uint64_t getStackId(uint64_t IdOrIndex) const;
+  bool calleeMatchesFunc(IndexCall &Call, const FunctionSummary *Func);
+  uint64_t getLastStackId(IndexCall &Call);
+  std::vector<uint64_t> getStackIdsWithContextNodesForCall(IndexCall &Call);
+  std::string getLabel(const FunctionSummary *Func, const IndexCall &Call,
+                       unsigned CloneNo) const;
+
+  // Saves mapping from function summaries containing memprof records back to
+  // its VI, for use in checking and debugging.
+  std::map<const FunctionSummary *, ValueInfo> FSToVIMap;
+
+  const ModuleSummaryIndex &Index;
+};
+
 namespace {
 
 struct FieldSeparator {
@@ -473,6 +525,20 @@ raw_ostream &operator<<(raw_ostream &OS, FieldSeparator &FS) {
     return OS;
   }
   return OS << FS.Sep;
+}
+
+// Map the uint8_t alloc types (which may contain NotCold|Cold) to the alloc
+// type we should actually use on the corresponding allocation.
+// If we can't clone a node that has NotCold+Cold alloc type, we will fall
+// back to using NotCold. So don't bother cloning to distinguish NotCold+Cold
+// from NotCold.
+AllocationType allocTypeToUse(uint8_t AllocTypes) {
+  assert(AllocTypes != (uint8_t)AllocationType::None);
+  if (AllocTypes ==
+      ((uint8_t)AllocationType::NotCold | (uint8_t)AllocationType::Cold))
+    return AllocationType::NotCold;
+  else
+    return (AllocationType)AllocTypes;
 }
 
 } // end anonymous namespace
@@ -1118,6 +1184,20 @@ uint64_t ModuleCallsiteContextGraph::getLastStackId(Instruction *Call) {
   return CallsiteContext.back();
 }
 
+uint64_t IndexCallsiteContextGraph::getLastStackId(IndexCall &Call) {
+  assert(Call.is<CallsiteInfo *>());
+  CallStack<CallsiteInfo, SmallVector<unsigned>::const_iterator>
+      CallsiteContext(Call.dyn_cast<CallsiteInfo *>());
+  // Need to convert index into stack id.
+  return Index.getStackIdAtIndex(CallsiteContext.back());
+}
+
+static std::string getMemProfFuncName(Twine Base, unsigned CloneNo) {
+  if (!CloneNo)
+    return Base.str();
+  return (Base + ".memprof." + Twine(CloneNo)).str();
+}
+
 std::string ModuleCallsiteContextGraph::getLabel(const Function *Func,
                                                  const Instruction *Call,
                                                  unsigned CloneNo) const {
@@ -1126,12 +1206,38 @@ std::string ModuleCallsiteContextGraph::getLabel(const Function *Func,
       .str();
 }
 
+std::string IndexCallsiteContextGraph::getLabel(const FunctionSummary *Func,
+                                                const IndexCall &Call,
+                                                unsigned CloneNo) const {
+  auto VI = FSToVIMap.find(Func);
+  assert(VI != FSToVIMap.end());
+  if (Call.is<AllocInfo *>())
+    return (VI->second.name() + " -> alloc").str();
+  else {
+    auto *Callsite = Call.dyn_cast<CallsiteInfo *>();
+    return (VI->second.name() + " -> " +
+            getMemProfFuncName(Callsite->Callee.name(),
+                               Callsite->Clones[CloneNo]))
+        .str();
+  }
+}
+
 std::vector<uint64_t>
 ModuleCallsiteContextGraph::getStackIdsWithContextNodesForCall(
     Instruction *Call) {
   CallStack<MDNode, MDNode::op_iterator> CallsiteContext(
       Call->getMetadata(LLVMContext::MD_callsite));
   return getStackIdsWithContextNodes<MDNode, MDNode::op_iterator>(
+      CallsiteContext);
+}
+
+std::vector<uint64_t>
+IndexCallsiteContextGraph::getStackIdsWithContextNodesForCall(IndexCall &Call) {
+  assert(Call.is<CallsiteInfo *>());
+  CallStack<CallsiteInfo, SmallVector<unsigned>::const_iterator>
+      CallsiteContext(Call.dyn_cast<CallsiteInfo *>());
+  return getStackIdsWithContextNodes<CallsiteInfo,
+                                     SmallVector<unsigned>::const_iterator>(
       CallsiteContext);
 }
 
@@ -1207,6 +1313,84 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(Module &M) : Mod(M) {
       Call.call()->setMetadata(LLVMContext::MD_callsite, nullptr);
 }
 
+IndexCallsiteContextGraph::IndexCallsiteContextGraph(
+    ModuleSummaryIndex &Index,
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        isPrevailing)
+    : Index(Index) {
+  for (auto &I : Index) {
+    auto VI = Index.getValueInfo(I);
+    for (auto &S : VI.getSummaryList()) {
+      // We should only add the prevailing nodes. Otherwise we may try to clone
+      // in a weak copy that won't be linked (and may be different than the
+      // prevailing version).
+      // We only keep the memprof summary on the prevailing copy now when
+      // building the combined index, as a space optimization, however don't
+      // rely on this optimization. The linker doesn't resolve local linkage
+      // values so don't check whether those are prevailing.
+      if (!GlobalValue::isLocalLinkage(S->linkage()) &&
+          !isPrevailing(VI.getGUID(), S.get()))
+        continue;
+      auto *FS = dyn_cast<FunctionSummary>(S.get());
+      if (!FS)
+        continue;
+      std::vector<CallInfo> CallsWithMetadata;
+      if (!FS->allocs().empty()) {
+        for (auto &AN : FS->mutableAllocs()) {
+          // This can happen because of recursion elimination handling that
+          // currently exists in ModuleSummaryAnalysis. Skip these for now.
+          // We still added them to the summary because we need to be able to
+          // correlate properly in applyImport in the backends.
+          if (AN.MIBs.empty())
+            continue;
+          CallsWithMetadata.push_back({&AN});
+          auto *AllocNode = addAllocNode({&AN}, FS);
+          // Pass an empty CallStack to the CallsiteContext (second)
+          // parameter, since for ThinLTO we already collapsed out the inlined
+          // stack ids on the allocation call during ModuleSummaryAnalysis.
+          CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
+              EmptyContext;
+          // Now add all of the MIBs and their stack nodes.
+          for (auto &MIB : AN.MIBs) {
+            CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
+                StackContext(&MIB);
+            addStackNodesForMIB<MIBInfo, SmallVector<unsigned>::const_iterator>(
+                AllocNode, StackContext, EmptyContext, MIB.AllocType);
+          }
+          assert(AllocNode->AllocTypes != (uint8_t)AllocationType::None);
+          // Initialize version 0 on the summary alloc node to the current alloc
+          // type, unless it has both types in which case make it default, so
+          // that in the case where we aren't able to clone the original version
+          // always ends up with the default allocation behavior.
+          AN.Versions[0] = (uint8_t)allocTypeToUse(AllocNode->AllocTypes);
+        }
+      }
+      // For callsite metadata, add to list for this function for later use.
+      if (!FS->callsites().empty())
+        for (auto &SN : FS->mutableCallsites())
+          CallsWithMetadata.push_back({&SN});
+
+      if (!CallsWithMetadata.empty())
+        FuncToCallsWithMetadata.push_back({FS, CallsWithMetadata});
+
+      if (!FS->allocs().empty() || !FS->callsites().empty())
+        FSToVIMap[FS] = VI;
+    }
+  }
+
+  if (DumpCCG) {
+    dbgs() << "CCG before updating call stack chains:\n";
+    dbgs() << *this;
+  }
+
+  if (ExportToDot)
+    exportToDot("prestackupdate");
+
+  updateStackNodes();
+
+  handleCallsitesWithMultipleTargets();
+}
+
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy,
                           CallTy>::handleCallsitesWithMultipleTargets() {
@@ -1251,6 +1435,12 @@ uint64_t ModuleCallsiteContextGraph::getStackId(uint64_t IdOrIndex) const {
   return IdOrIndex;
 }
 
+uint64_t IndexCallsiteContextGraph::getStackId(uint64_t IdOrIndex) const {
+  // In the Index case this is an index into the stack id list in the summary
+  // index, convert it to an Id.
+  return Index.getStackIdAtIndex(IdOrIndex);
+}
+
 bool ModuleCallsiteContextGraph::calleeMatchesFunc(Instruction *Call,
                                                    const Function *Func) {
   auto *CB = dyn_cast<CallBase>(Call);
@@ -1262,6 +1452,23 @@ bool ModuleCallsiteContextGraph::calleeMatchesFunc(Instruction *Call,
     return true;
   auto *Alias = dyn_cast<GlobalAlias>(CalleeVal);
   return Alias && Alias->getAliasee() == Func;
+}
+
+bool IndexCallsiteContextGraph::calleeMatchesFunc(IndexCall &Call,
+                                                  const FunctionSummary *Func) {
+  ValueInfo Callee = Call.dyn_cast<CallsiteInfo *>()->Callee;
+  // If there is no summary list then this is a call to an externally defined
+  // symbol.
+  AliasSummary *Alias =
+      Callee.getSummaryList().empty()
+          ? nullptr
+          : dyn_cast<AliasSummary>(Callee.getSummaryList()[0].get());
+  assert(FSToVIMap.count(Func));
+  return Callee == FSToVIMap[Func] ||
+         // If callee is an alias, check the aliasee, since only function
+         // summary base objects will contain the stack node summaries and thus
+         // get a context node.
+         (Alias && Alias->getAliaseeVI() == FSToVIMap[Func]);
 }
 
 static std::string getAllocTypeString(uint8_t AllocTypes) {
@@ -1580,4 +1787,12 @@ PreservedAnalyses MemProfContextDisambiguation::run(Module &M,
   if (!processModule(M))
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
+}
+
+void MemProfContextDisambiguation::run(
+    ModuleSummaryIndex &Index,
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        isPrevailing) {
+  IndexCallsiteContextGraph CCG(Index, isPrevailing);
+  CCG.process();
 }
