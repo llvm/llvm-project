@@ -358,6 +358,8 @@ void CodeEmitterGen::emitInstructionBaseValues(
 }
 
 void CodeEmitterGen::run(raw_ostream &o) {
+  emitSourceFileHeader("Machine Code Emitter", o);
+
   CodeGenTarget Target(Records);
   std::vector<Record*> Insts = Records.getAllDerivedDefinitions("Instruction");
 
@@ -505,7 +507,6 @@ void CodeEmitterGen::run(raw_ostream &o) {
 namespace llvm {
 
 void EmitCodeEmitter(RecordKeeper &RK, raw_ostream &OS) {
-  emitSourceFileHeader("Machine Code Emitter", OS);
   CodeEmitterGen(RK).run(OS);
 }
 
