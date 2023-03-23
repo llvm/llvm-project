@@ -103,6 +103,7 @@ void RISCVTargetELFStreamer::finish() {
     EFlags |= ELF::EF_RISCV_FLOAT_ABI_DOUBLE;
     break;
   case RISCVABI::ABI_ILP32E:
+  case RISCVABI::ABI_LP64E:
     EFlags |= ELF::EF_RISCV_RVE;
     break;
   case RISCVABI::ABI_Unknown:
