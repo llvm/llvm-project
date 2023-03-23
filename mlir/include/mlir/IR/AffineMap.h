@@ -403,6 +403,9 @@ private:
 /// Simplifies an affine map by simplifying its underlying AffineExpr results.
 AffineMap simplifyAffineMap(AffineMap map);
 
+/// Drop the dims that are listed in `unusedDims`.
+AffineMap compressDims(AffineMap map, const llvm::SmallBitVector &unusedDims);
+
 /// Drop the dims that are not used.
 AffineMap compressUnusedDims(AffineMap map);
 
@@ -411,8 +414,9 @@ AffineMap compressUnusedDims(AffineMap map);
 /// dims and symbols.
 SmallVector<AffineMap> compressUnusedDims(ArrayRef<AffineMap> maps);
 
-/// Drop the dims that are not listed in `unusedDims`.
-AffineMap compressDims(AffineMap map, const llvm::SmallBitVector &unusedDims);
+/// Drop the symbols that are listed in `unusedSymbols`.
+AffineMap compressSymbols(AffineMap map,
+                          const llvm::SmallBitVector &unusedSymbols);
 
 /// Drop the symbols that are not used.
 AffineMap compressUnusedSymbols(AffineMap map);
@@ -421,10 +425,6 @@ AffineMap compressUnusedSymbols(AffineMap map);
 /// Asserts that all maps in `maps` are normalized to the same number of
 /// dims and symbols.
 SmallVector<AffineMap> compressUnusedSymbols(ArrayRef<AffineMap> maps);
-
-/// Drop the symbols that are not listed in `unusedSymbols`.
-AffineMap compressSymbols(AffineMap map,
-                          const llvm::SmallBitVector &unusedSymbols);
 
 /// Returns a map with the same dimension and symbol count as `map`, but whose
 /// results are the unique affine expressions of `map`.
@@ -469,7 +469,7 @@ AffineMap inversePermutation(AffineMap map);
 /// Return the reverse map of a projected permutation where the projected
 /// dimensions are transformed into 0s.
 ///
-/// Prerequisites: `map` must be a projected permuation.
+/// Prerequisites: `map` must be a projected permutation.
 ///
 /// Example 1:
 ///
@@ -559,9 +559,38 @@ AffineMap concatAffineMaps(ArrayRef<AffineMap> maps);
 ///    projected_dimensions : {1}
 ///    result               : affine_map<(d0, d1) -> (d0, 0)>
 ///
-/// This function also compresses unused symbols away.
+/// This function also compresses the dims when the boolean flag is true.
+AffineMap projectDims(AffineMap map,
+                      const llvm::SmallBitVector &projectedDimensions,
+                      bool compressDimsFlag = false);
+/// Symbol counterpart of `projectDims`.
+/// This function also compresses the symbols when the boolean flag is true.
+AffineMap projectSymbols(AffineMap map,
+                         const llvm::SmallBitVector &projectedSymbols,
+                         bool compressSymbolsFlag = false);
+/// Calls `projectDims(map, projectedDimensions, compressDimsFlag)`.
+/// If `compressSymbolsFlag` is true, additionally call `compressUnusedSymbols`.
 AffineMap getProjectedMap(AffineMap map,
-                          const llvm::SmallBitVector &projectedDimensions);
+                          const llvm::SmallBitVector &projectedDimensions,
+                          bool compressDimsFlag = true,
+                          bool compressSymbolsFlag = true);
+
+// Return a bitvector where each bit set indicates a dimension that is not used
+// by any of the maps in the input array `maps`.
+llvm::SmallBitVector getUnusedDimsBitVector(ArrayRef<AffineMap> maps);
+
+// Return a bitvector where each bit set indicates a symbol that is not used
+// by any of the maps in the input array `maps`.
+llvm::SmallBitVector getUnusedSymbolsBitVector(ArrayRef<AffineMap> maps);
+
+inline raw_ostream &operator<<(raw_ostream &os, AffineMap map) {
+  map.print(os);
+  return os;
+}
+
+//===----------------------------------------------------------------------===//
+// Templated helper functions.
+//===----------------------------------------------------------------------===//
 
 /// Apply a permutation from `map` to `source` and return the result.
 template <typename T>
@@ -584,7 +613,7 @@ SmallVector<T> applyPermutationMap(AffineMap map, llvm::ArrayRef<T> source) {
   return result;
 }
 
-/// Calculates maxmimum dimension and symbol positions from the expressions
+/// Calculates maximum dimension and symbol positions from the expressions
 /// in `exprsLists` and stores them in `maxDim` and `maxSym` respectively.
 template <typename AffineExprContainer>
 static void getMaxDimAndSymbol(ArrayRef<AffineExprContainer> exprsList,
@@ -600,15 +629,6 @@ static void getMaxDimAndSymbol(ArrayRef<AffineExprContainer> exprsList,
     }
   }
 }
-
-inline raw_ostream &operator<<(raw_ostream &os, AffineMap map) {
-  map.print(os);
-  return os;
-}
-
-// Return a bitvector where each bit set indicates a dimension that is not used
-// by any of the maps in the input array `maps`.
-llvm::SmallBitVector getUnusedDimsBitVector(ArrayRef<AffineMap> maps);
 
 } // namespace mlir
 
