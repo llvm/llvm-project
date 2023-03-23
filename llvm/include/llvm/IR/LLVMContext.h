@@ -68,7 +68,7 @@ class LLVMContext {
 public:
   LLVMContextImpl *const pImpl;
   LLVMContext();
-  LLVMContext(LLVMContext &) = delete;
+  LLVMContext(const LLVMContext &) = delete;
   LLVMContext &operator=(const LLVMContext &) = delete;
   ~LLVMContext();
 
