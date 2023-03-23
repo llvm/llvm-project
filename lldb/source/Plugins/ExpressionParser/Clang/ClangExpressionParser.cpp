@@ -1403,14 +1403,12 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
           ClangDynamicCheckerFunctions *dynamic_checkers =
               new ClangDynamicCheckerFunctions();
 
-          DiagnosticManager install_diagnostics;
-
-          if (!dynamic_checkers->Install(install_diagnostics, exe_ctx)) {
-            if (install_diagnostics.Diagnostics().size())
-              err.SetErrorString(install_diagnostics.GetString().c_str());
-            else
-              err.SetErrorString("couldn't install checkers, unknown error");
-
+          DiagnosticManager install_diags;
+          if (Error Err = dynamic_checkers->Install(install_diags, exe_ctx)) {
+            std::string ErrMsg = "couldn't install checkers: " + toString(std::move(Err));
+            if (install_diags.Diagnostics().size())
+              ErrMsg = ErrMsg + "\n" + install_diags.GetString().c_str();
+            err.SetErrorString(ErrMsg);
             return err;
           }
 
