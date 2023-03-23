@@ -23,8 +23,19 @@ def Transform_Dialect : Dialect {
     "::mlir::pdl_interp::PDLInterpDialect",
   ];
 
+  let hasOperationAttrVerify = 1;
 
   let extraClassDeclaration = [{
+      /// Name of the attribute attachable to the symbol table operation
+      /// containing named sequences. This is used to trigger verification.
+      constexpr const static llvm::StringLiteral
+          kWithNamedSequenceAttrName = "transform.with_named_sequence";
+
+      /// Names of the attribute attachable to an operation so it can be
+      /// identified as root by the default interpreter pass.
+      constexpr const static llvm::StringLiteral
+          kTargetTagAttrName = "transform.target_tag";
+
       /// Returns the named PDL constraint functions available in the dialect
       /// as a map from their name to the function.
       const ::llvm::StringMap<::mlir::PDLConstraintFunction> &

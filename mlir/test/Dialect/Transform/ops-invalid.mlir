@@ -284,3 +284,184 @@ transform.sequence failures(suppress) {
   // expected-note @below {{no 'allocate' effect specified for result #0}}
   transform.test_required_memory_effects %arg0 {has_operand_effect, modifies_payload} : (!transform.any_op) -> !transform.any_op
 }
+
+// -----
+
+// expected-error @below {{attribute can only be attached to operations with symbol tables}}
+"test.unknown_container"() { transform.with_named_sequence } : () -> ()
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  // expected-error @below {{failed to verify constraint: region with 1 blocks}}
+  "transform.named_sequence"() ({}) { sym_name = "external_named_sequence", function_type = () -> () } : () -> ()
+
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    transform.include @external_named_sequence failures(propagate) () : () -> ()
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  // expected-error @below {{recursion not allowed in named sequences}}
+  transform.named_sequence @self_recursion() -> () {
+    transform.include @self_recursion failures(suppress) () : () -> ()
+  }
+}
+
+// -----
+
+module @mutual_recursion attributes { transform.with_named_sequence } {
+  // expected-note @below {{operation on recursion stack}}  
+  transform.named_sequence @foo(%arg0: !transform.any_op) -> () {
+    transform.include @bar failures(suppress) (%arg0) : (!transform.any_op) -> ()
+    transform.yield
+  }
+
+  // expected-error @below {{recursion not allowed in named sequences}}
+  transform.named_sequence @bar(%arg0: !transform.any_op) -> () {
+    transform.include @foo failures(propagate) (%arg0) : (!transform.any_op) -> ()
+    transform.yield
+  }
+}
+
+// -----
+
+// expected-error @below {{unknown attribute: "transform.unknown_container"}}
+module @unknown_attribute attributes { transform.unknown_container } {}
+
+// -----
+
+module {
+  transform.sequence failures(suppress) {
+  ^bb0(%arg0: !transform.any_op):
+    // expected-error @below {{op does not reference a named transform sequence}}
+    transform.include @non_existent failures(propagate) () : () -> ()
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.sequence failures(suppress) {
+  ^bb0(%arg0: !transform.any_op):
+    // expected-error @below {{requires attribute 'target'}}
+    "transform.include"() {failure_propagation_mode = 0} : () -> ()
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @foo(%arg0: !transform.any_op) -> () {
+    transform.yield
+  }
+
+  transform.sequence failures(suppress) {
+  ^bb0(%arg1: !transform.any_op):
+    // expected-error @below {{incorrect number of operands for callee}}
+    transform.include @foo failures(suppress) () : () -> ()
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @foo(%arg0: !transform.any_op) -> () {
+    transform.yield
+  }
+
+  transform.sequence failures(suppress) {
+  ^bb0(%arg1: !transform.op<"builtin.module">):
+    // expected-error @below {{operand type mismatch: expected operand type '!transform.any_op', but provided '!transform.op<"builtin.module">' for operand number 0}}
+    transform.include @foo failures(suppress) (%arg1) : (!transform.op<"builtin.module">) -> ()
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @foo(%arg0: !transform.any_op) -> (!transform.any_op) {
+    transform.yield %arg0 : !transform.any_op
+  }
+
+  transform.sequence failures(suppress) {
+  ^bb0(%arg1: !transform.any_op):
+    // expected-error @below {{incorrect number of results for callee}}
+    transform.include @foo failures(suppress) (%arg1) : (!transform.any_op) -> ()
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @foo(%arg0: !transform.any_op) -> (!transform.any_op) {
+    transform.yield %arg0 : !transform.any_op
+  }
+
+  transform.sequence failures(suppress) {
+  ^bb0(%arg1: !transform.any_op):
+    // expected-error @below {{type of result #0 must implement the same transform dialect interface as the corresponding callee result}}
+    transform.include @foo failures(suppress) (%arg1) : (!transform.any_op) -> (!transform.any_value)
+  }
+}
+
+// -----
+
+// expected-note @below {{symbol table operation}}
+module {
+  // expected-error @below {{expects the parent symbol table to have the 'transform.with_named_sequence' attribute}}
+  transform.named_sequence @parent_has_no_attributes() {
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence} {
+  // expected-note @below {{ancestor transform op}}
+  transform.sequence failures(suppress) {
+  ^bb0(%arg0: !transform.any_op):
+    // expected-error @below {{cannot be defined inside another transform op}}
+    transform.named_sequence @nested() {
+      transform.yield
+    }
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence} {
+  func.func private @foo()
+
+  // expected-error @below {{expected 'transform.yield' as terminator}}
+  transform.named_sequence @nested() {
+    // expected-note @below {{terminator}}
+    func.call @foo() : () -> ()
+  }
+}
+
+
+// -----
+
+module attributes { transform.with_named_sequence} {
+  func.func private @foo()
+
+  transform.named_sequence @nested(%arg0: !transform.any_op) {
+    // expected-error @below {{expected terminator to have as many operands as the parent op has results}}
+    transform.yield %arg0 : !transform.any_op
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence} {
+  func.func private @foo()
+
+  transform.named_sequence @nested(%arg0: !transform.any_op) -> !transform.op<"builtin.module"> {
+    // expected-error @below {{the type of the terminator operand #0 must match the type of the corresponding parent op result}}
+    transform.yield %arg0 : !transform.any_op
+  }
+}
