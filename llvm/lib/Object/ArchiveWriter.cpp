@@ -356,7 +356,7 @@ static void printNBits(raw_ostream &Out, object::Archive::Kind Kind,
 
 static uint64_t computeSymbolTableSize(object::Archive::Kind Kind,
                                        uint64_t NumSyms, uint64_t OffsetSize,
-                                       StringRef StringTable,
+                                       uint64_t StringTableSize,
                                        uint32_t *Padding = nullptr) {
   assert((OffsetSize == 4 || OffsetSize == 8) && "Unsupported OffsetSize");
   uint64_t Size = OffsetSize; // Number of entries
@@ -366,7 +366,7 @@ static uint64_t computeSymbolTableSize(object::Archive::Kind Kind,
     Size += NumSyms * OffsetSize; // Table
   if (isBSDLike(Kind))
     Size += OffsetSize; // byte count
-  Size += StringTable.size();
+  Size += StringTableSize;
   // ld64 expects the members to be 8-byte aligned for 64-bit content and at
   // least 4-byte aligned for 32-bit content.  Opt for the larger encoding
   // uniformly.
@@ -398,9 +398,24 @@ static void writeSymbolTableHeader(raw_ostream &Out, object::Archive::Kind Kind,
   }
 }
 
+static uint64_t computeHeadersSize(object::Archive::Kind Kind, uint64_t NumSyms,
+                                   uint64_t SymNamesSize) {
+  uint32_t OffsetSize = is64BitKind(Kind) ? 8 : 4;
+  uint64_t SymtabSize =
+      computeSymbolTableSize(Kind, NumSyms, OffsetSize, SymNamesSize);
+  auto computeSymbolTableHeaderSize = [=] {
+    SmallString<0> TmpBuf;
+    raw_svector_ostream Tmp(TmpBuf);
+    writeSymbolTableHeader(Tmp, Kind, true, SymtabSize);
+    return TmpBuf.size();
+  };
+
+  return strlen("!<arch>\n") + computeSymbolTableHeaderSize() + SymtabSize;
+}
+
 static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
                              bool Deterministic, ArrayRef<MemberData> Members,
-                             StringRef StringTable,
+                             StringRef StringTable, uint64_t MembersOffset,
                              uint64_t PrevMemberOffset = 0) {
   // We don't write a symbol table on an archive with no members -- except on
   // Darwin, where the linker will abort unless the archive has a symbol table.
@@ -413,17 +428,16 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
 
   uint64_t OffsetSize = is64BitKind(Kind) ? 8 : 4;
   uint32_t Pad;
-  uint64_t Size = computeSymbolTableSize(Kind, NumSyms, OffsetSize, StringTable, &Pad);
+  uint64_t Size = computeSymbolTableSize(Kind, NumSyms, OffsetSize,
+                                         StringTable.size(), &Pad);
   writeSymbolTableHeader(Out, Kind, Deterministic, Size, PrevMemberOffset);
-
-  uint64_t Pos = isAIXBigArchive(Kind) ? sizeof(object::BigArchive::FixLenHdr)
-                                       : Out.tell() + Size;
 
   if (isBSDLike(Kind))
     printNBits(Out, Kind, NumSyms * 2 * OffsetSize);
   else
     printNBits(Out, Kind, NumSyms);
 
+  uint64_t Pos = MembersOffset;
   for (const MemberData &M : Members) {
     for (unsigned StringOffset : M.Symbols) {
       if (isBSDLike(Kind))
@@ -679,9 +693,8 @@ static Error writeArchiveToStream(raw_ostream &Out,
     Data.insert(Data.begin(), computeStringTable(StringTableBuf));
 
   // We would like to detect if we need to switch to a 64-bit symbol table.
-  uint64_t LastMemberEndOffset =
-      isAIXBigArchive(Kind) ? sizeof(object::BigArchive::FixLenHdr) : 8;
-  uint64_t LastMemberHeaderOffset = LastMemberEndOffset;
+  uint64_t LastMemberEndOffset = 0;
+  uint64_t LastMemberHeaderOffset = 0;
   uint64_t NumSyms = 0;
   for (const auto &M : Data) {
     // Record the start of the member's offset
@@ -691,19 +704,13 @@ static Error writeArchiveToStream(raw_ostream &Out,
     NumSyms += M.Symbols.size();
   }
 
+  std::optional<uint64_t> HeadersSize;
+
   // The symbol table is put at the end of the big archive file. The symbol
   // table is at the start of the archive file for other archive formats.
-  if (WriteSymtab && !isAIXBigArchive(Kind)) {
+  if (WriteSymtab && !is64BitKind(Kind)) {
     // We assume 32-bit offsets to see if 32-bit symbols are possible or not.
-    uint64_t SymtabSize = computeSymbolTableSize(Kind, NumSyms, 4, SymNamesBuf);
-    auto computeSymbolTableHeaderSize =
-        [=] {
-          SmallString<0> TmpBuf;
-          raw_svector_ostream Tmp(TmpBuf);
-          writeSymbolTableHeader(Tmp, Kind, Deterministic, SymtabSize);
-          return TmpBuf.size();
-        };
-    LastMemberHeaderOffset += computeSymbolTableHeaderSize() + SymtabSize;
+    HeadersSize = computeHeadersSize(Kind, NumSyms, SymNamesBuf.size());
 
     // The SYM64 format is used when an archive's member offsets are larger than
     // 32-bits can hold. The need for this shift in format is detected by
@@ -720,11 +727,12 @@ static Error writeArchiveToStream(raw_ostream &Out,
     // If LastMemberHeaderOffset isn't going to fit in a 32-bit varible we need
     // to switch to 64-bit. Note that the file can be larger than 4GB as long as
     // the last member starts before the 4GB offset.
-    if (LastMemberHeaderOffset >= Sym64Threshold) {
+    if (*HeadersSize + LastMemberHeaderOffset >= Sym64Threshold) {
       if (Kind == object::Archive::K_DARWIN)
         Kind = object::Archive::K_DARWIN64;
       else
         Kind = object::Archive::K_GNU64;
+      HeadersSize.reset();
     }
   }
 
@@ -736,11 +744,19 @@ static Error writeArchiveToStream(raw_ostream &Out,
     Out << "!<arch>\n";
 
   if (!isAIXBigArchive(Kind)) {
-    if (WriteSymtab)
-      writeSymbolTable(Out, Kind, Deterministic, Data, SymNamesBuf);
+    if (WriteSymtab) {
+      if (!HeadersSize)
+        HeadersSize = computeHeadersSize(Kind, NumSyms, SymNamesBuf.size());
+      writeSymbolTable(Out, Kind, Deterministic, Data, SymNamesBuf,
+                       *HeadersSize);
+    }
     for (const MemberData &M : Data)
       Out << M.Header << M.Data << M.Padding;
   } else {
+    HeadersSize = sizeof(object::BigArchive::FixLenHdr);
+    LastMemberEndOffset += *HeadersSize;
+    LastMemberHeaderOffset += *HeadersSize;
+
     // For the big archive (AIX) format, compute a table of member names and
     // offsets, used in the member table.
     uint64_t MemberTableNameStrTblSize = 0;
@@ -813,7 +829,7 @@ static Error writeArchiveToStream(raw_ostream &Out,
 
       if (WriteSymtab && NumSyms > 0)
         writeSymbolTable(Out, Kind, Deterministic, Data, SymNamesBuf,
-                         LastMemberEndOffset);
+                         *HeadersSize, LastMemberEndOffset);
     }
   }
   Out.flush();
