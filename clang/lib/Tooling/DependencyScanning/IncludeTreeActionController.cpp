@@ -154,6 +154,19 @@ struct PPCallbacksDependencyCollector : public DependencyCollector {
     PP.addPPCallbacks(std::move(CB));
   }
 };
+/// A utility for adding \c ASTReaderListener to a compiler instance at the
+/// appropriate time.
+struct ASTReaderListenerDependencyCollector : public DependencyCollector {
+  using MakeL =
+      llvm::unique_function<std::unique_ptr<ASTReaderListener>(ASTReader &R)>;
+  MakeL Create;
+  ASTReaderListenerDependencyCollector(MakeL Create) : Create(std::move(Create)) {}
+  void attachToASTReader(ASTReader &R) final {
+    std::unique_ptr<ASTReaderListener> L = Create(R);
+    assert(L);
+    R.addListener(std::move(L));
+  }
+};
 
 struct IncludeTreePPCallbacks : public PPCallbacks {
   IncludeTreeBuilder &Builder;
@@ -218,6 +231,40 @@ public:
     Builder.exitedSubmodule(PP, M, ImportLoc, ForPragma);
   }
 };
+
+/// Utility to trigger module lookup in header search for modules loaded via
+/// PCH. This causes dependency scanning via PCH to parse modulemap files at
+/// roughly the same point they would with modulemap files embedded in the pcms,
+/// which is disabled with include-tree modules. Without this, we can fail to
+/// find modules that are in the same directory as a named import, since
+/// it may be skipped during search (see \c loadFrameworkModule).
+///
+/// The specific lookup we do matches what happens in ASTReader for the
+/// MODULE_DIRECTORY record, and ignores the result.
+class LookupPCHModulesListener : public ASTReaderListener {
+public:
+  LookupPCHModulesListener(Preprocessor &PP) : PP(PP) {}
+
+private:
+  void ReadModuleName(StringRef ModuleName) final {
+    if (PCHFinished)
+      return;
+    // Match MODULE_DIRECTORY: allow full search and ignore failure to find
+    // the module.
+    (void)PP.getHeaderSearchInfo().lookupModule(
+        ModuleName, SourceLocation(), /*AllowSearch=*/true,
+        /*AllowExtraModuleMapSearch=*/true);
+  }
+  void visitModuleFile(StringRef Filename,
+                       serialization::ModuleKind Kind) final {
+    if (Kind == serialization::MK_PCH)
+      PCHFinished = true;
+  }
+
+private:
+  Preprocessor &PP;
+  bool PCHFinished = false;
+};
 } // namespace
 
 /// The PCH recorded file paths with canonical paths, create a VFS that
@@ -274,6 +321,15 @@ Error IncludeTreeActionController::initialize(
         return std::make_unique<IncludeTreePPCallbacks>(Builder, PP);
       });
   ScanInstance.addDependencyCollector(std::move(DC));
+
+  // Attach callback for modules loaded via PCH.
+  if (!ScanInstance.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
+    auto DC = std::make_shared<ASTReaderListenerDependencyCollector>(
+      [&](ASTReader &R) {
+        return std::make_unique<LookupPCHModulesListener>(R.getPreprocessor());
+      });
+    ScanInstance.addDependencyCollector(std::move(DC));
+  }
 
   // Enable caching in the resulting commands.
   ScanInstance.getFrontendOpts().CacheCompileJob = true;
