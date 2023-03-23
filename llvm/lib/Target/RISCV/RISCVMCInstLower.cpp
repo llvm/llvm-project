@@ -193,6 +193,19 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
       } else if (RISCV::FPR64RegClass.contains(Reg)) {
         Reg = TRI->getSubReg(Reg, RISCV::sub_32);
         assert(Reg && "Superregister does not exist");
+      } else if (RISCV::VRN2M1RegClass.contains(Reg) ||
+                 RISCV::VRN2M2RegClass.contains(Reg) ||
+                 RISCV::VRN2M4RegClass.contains(Reg) ||
+                 RISCV::VRN3M1RegClass.contains(Reg) ||
+                 RISCV::VRN3M2RegClass.contains(Reg) ||
+                 RISCV::VRN4M1RegClass.contains(Reg) ||
+                 RISCV::VRN4M2RegClass.contains(Reg) ||
+                 RISCV::VRN5M1RegClass.contains(Reg) ||
+                 RISCV::VRN6M1RegClass.contains(Reg) ||
+                 RISCV::VRN7M1RegClass.contains(Reg) ||
+                 RISCV::VRN8M1RegClass.contains(Reg)) {
+        Reg = TRI->getSubReg(Reg, RISCV::sub_vrm1_0);
+        assert(Reg && "Subregister does not exist");
       }
 
       MCOp = MCOperand::createReg(Reg);
