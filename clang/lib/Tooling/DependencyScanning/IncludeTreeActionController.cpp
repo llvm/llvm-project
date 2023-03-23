@@ -95,7 +95,7 @@ private:
     SrcMgr::CharacteristicKind FileCharacteristic;
     cas::ObjectRef File;
     SmallVector<cas::IncludeTree::IncludeInfo, 6> Includes;
-    std::optional<cas::ObjectRef> SubmoduleName;
+    Optional<cas::ObjectRef> SubmoduleName;
     llvm::SmallBitVector HasIncludeChecks;
   };
 
@@ -327,9 +327,8 @@ Error IncludeTreeActionController::finalizeModuleBuild(
   if (!Tree)
     return Tree.takeError();
 
-  Module *M = ModuleScanInstance.getPreprocessor().getCurrentModule();
-  assert(M && "finalizing without a module");
-  M->setIncludeTreeID(Tree->getID().toString());
+  ModuleScanInstance.getASTContext().setCASIncludeTreeID(
+      Tree->getID().toString());
 
   return Error::success();
 }

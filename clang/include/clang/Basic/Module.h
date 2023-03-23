@@ -192,14 +192,6 @@ private:
   /// The \c ActionCache key for this module, if any.
   Optional<std::string> ModuleCacheKey;
 
-  /// The CAS filesystem root ID for implicit modules built with the dependency
-  /// scanner, if any.
-  Optional<std::string> CASFileSystemRootID;
-
-  /// The include-tree root ID for implicit modules built with the dependency
-  /// scanner, if any.
-  Optional<std::string> IncludeTreeID;
-
   /// The top-level headers associated with this module.
   llvm::SmallSetVector<const FileEntry *, 2> TopHeaders;
 
@@ -640,23 +632,6 @@ public:
     getTopLevelModule()->ModuleCacheKey = std::move(Key);
   }
 
-  Optional<std::string> getCASFileSystemRootID() const {
-    return getTopLevelModule()->CASFileSystemRootID;
-  }
-
-  void setCASFileSystemRootID(std::string ID) {
-    assert(!getCASFileSystemRootID() || *getCASFileSystemRootID() == ID);
-    getTopLevelModule()->CASFileSystemRootID = std::move(ID);
-  }
-
-  Optional<std::string> getIncludeTreeID() const {
-    return getTopLevelModule()->IncludeTreeID;
-  }
-
-  void setIncludeTreeID(std::string ID) {
-    assert(!getIncludeTreeID() || *getIncludeTreeID() == ID);
-    getTopLevelModule()->IncludeTreeID = std::move(ID);
-  }
 
   /// Retrieve the directory for which this module serves as the
   /// umbrella.

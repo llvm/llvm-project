@@ -152,7 +152,7 @@ public:
   static Expected<IncludeTree>
   create(ObjectStore &DB, SrcMgr::CharacteristicKind FileCharacteristic,
          ObjectRef BaseFile, ArrayRef<IncludeInfo> Includes,
-         std::optional<ObjectRef> SubmoduleName, llvm::SmallBitVector Checks);
+         Optional<ObjectRef> SubmoduleName, llvm::SmallBitVector Checks);
 
   static Expected<IncludeTree> get(ObjectStore &DB, ObjectRef Ref);
 
