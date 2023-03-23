@@ -127,10 +127,13 @@ def FLEQ_D : FPCmp_rr<0b1010001, 0b100, "fleq.d", FPR64>;
 } // Predicates = [HasStdExtZfa, HasStdExtD]
 
 let Predicates = [HasStdExtZfa, HasStdExtD, IsRV32] in {
+let mayRaiseFPException = 0 in {
 def FMVH_X_D : FPUnaryOp_r<0b1110001, 0b00001, 0b000, GPR, FPR64, "fmvh.x.d">,
                Sched<[WriteFMovF32ToI32, ReadFMovF32ToI32]>;
 def FMVP_D_X : FPBinaryOp_rr<0b1011001, 0b000, FPR64, GPR, "fmvp.d.x">,
                Sched<[WriteFMovI32ToF32, ReadFMovI32ToF32]>;
+}
+
 let isCodeGenOnly = 1, mayRaiseFPException = 0 in
 def FMV_X_W_FPR64 : FPUnaryOp_r<0b1110000, 0b00000, 0b000, GPR, FPR64,
                                 "fmv.x.w">,
