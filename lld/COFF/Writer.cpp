@@ -1953,7 +1953,8 @@ void Writer::writeSections() {
     // Fill gaps between functions in .text with INT3 instructions
     // instead of leaving as NUL bytes (which can be interpreted as
     // ADD instructions).
-    if (sec->header.Characteristics & IMAGE_SCN_CNT_CODE)
+    if ((sec->header.Characteristics & IMAGE_SCN_CNT_CODE) &&
+        (ctx.config.machine == AMD64 || ctx.config.machine == I386))
       memset(secBuf, 0xCC, sec->getRawSize());
     parallelForEach(sec->chunks, [&](Chunk *c) {
       c->writeTo(secBuf + c->getRVA() - sec->getRVA());
