@@ -423,6 +423,34 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
 }
 
 static LogicalResult printOperation(KokkosCppEmitter &emitter,
+                                    memref::AllocaOp op) {
+  Operation *operation = op.getOperation();
+  OpResult result = operation->getResult(0);
+  MemRefType type = op.getType();
+
+  // Only emit an assignment as the variable was already declared when printing
+  // the FuncOp.
+  if (emitter.shouldDeclareVariablesAtTop()) {
+    if (failed(emitter.emitVariableAssignment(result)))
+      return failure();
+    //Emit a Kokkos::View constructor call. Use the variable name as label.
+    if (failed(emitter.emitType(op.getLoc(), type)))
+      return failure();
+    emitter << "(Kokkos::view_alloc(Kokkos::WithoutInitializing, \"" << emitter.getOrCreateName(result) << "\"))";
+    return success();
+  }
+
+  // Emit a variable declaration.
+  if (failed(emitter.emitAssignPrefix(*operation)))
+    return failure();
+
+  if (failed(emitter.emitType(op.getLoc(), type)))
+    return failure();
+  emitter << "(Kokkos::view_alloc(Kokkos::WithoutInitializing, \"" << emitter.getOrCreateName(result) << "\"))";
+  return success();
+}
+
+static LogicalResult printOperation(KokkosCppEmitter &emitter,
                                     memref::StoreOp op) {
   //TODO: if in host code, use a mirror view?
   emitter << emitter.getOrCreateName(op.getMemref()) << "(";
@@ -2240,7 +2268,7 @@ LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemico
           .Case<math::SqrtOp, math::AbsIOp, math::AbsFOp, math::ExpOp, math::Exp2Op, math::SinOp, math::CosOp, math::AtanOp, math::TanhOp, math::ErfOp, math::LogOp, math::Log2Op>(
               [&](auto op) { return printMathOperation(*this, op); })
           // Memref ops.
-          .Case<memref::GlobalOp, memref::GetGlobalOp, memref::AllocOp, memref::StoreOp, memref::LoadOp, memref::CopyOp, memref::SubViewOp, memref::CollapseShapeOp, memref::CastOp>(
+          .Case<memref::GlobalOp, memref::GetGlobalOp, memref::AllocOp, memref::AllocaOp, memref::StoreOp, memref::LoadOp, memref::CopyOp, memref::SubViewOp, memref::CollapseShapeOp, memref::CastOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Other operations are unknown/unsupported.
           .Default([&](Operation *) {
