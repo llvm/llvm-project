@@ -124,7 +124,7 @@ define void @ptr_of_ptr_addrec(ptr %ptrptr, i32 %length) {
 ; CHECK-NEXT:    [[IT_04:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[START_PTRPTR]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[IT_04]], align 8
 ; CHECK-NEXT:    tail call void @foo(ptr [[TMP4]])
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds ptr, ptr [[IT_04]], i64 1
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr ptr, ptr [[IT_04]], i64 1
 ; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[INCDEC_PTR]], [[SCEVGEP]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
@@ -170,7 +170,7 @@ define void @iv_start_non_preheader(ptr %mark, i32 signext %length) {
 ; CHECK-NEXT:    [[DST_04:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[MARK]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DST_04]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = call ptr @foo(ptr [[TMP4]])
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds ptr, ptr [[DST_04]], i64 1
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr ptr, ptr [[DST_04]], i64 1
 ; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[INCDEC_PTR]], [[SCEVGEP]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ;
@@ -197,9 +197,9 @@ for.body:                                         ; preds = %entry, %for.body
 ; advance the pointer IV by *4* each time, and thus on the iteration we write
 ; byte 16, %uglygep2 (the pointer increment) is past the end of the underlying
 ; storage and thus violates the inbounds requirements.  As a result, %uglygep2
-; is poison on the final iteration.  If we insert a branch on that value, we
-; have inserted undefined behavior where it did not previously exist.
-; FIXME: miscompile
+; is poison on the final iteration.  If we insert a branch on that value
+; (without stripping the poison flag), we have inserted undefined behavior
+; where it did not previously exist.
 define void @inbounds_poison_use(ptr %a) {
 ; CHECK-LABEL: @inbounds_poison_use(
 ; CHECK-NEXT:  entry:
@@ -208,7 +208,7 @@ define void @inbounds_poison_use(ptr %a) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[A]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i8 1, ptr [[LSR_IV1]], align 4
-; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr inbounds i8, ptr [[LSR_IV1]], i64 4
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
 ; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[SCEVGEP]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
