@@ -105,6 +105,7 @@ values for thread-safety and concept parsimony reasons. Instead, regular values
 are produced by dedicated operations that have the corresponding semantics:
 [`llvm.mlir.constant`](#llvmmlirconstant-mlirllvmconstantop),
 [`llvm.mlir.undef`](#llvmmlirundef-mlirllvmundefop),
+[`llvm.mlir.poison`](#llvmmlirpoison-mlirllvmpoisonop),
 [`llvm.mlir.null`](#llvmmlirnull-mlirllvmnullop). Note how these operations are
 prefixed with `mlir.` to indicate that they don't belong to LLVM IR but are only
 necessary to model it in MLIR. The values produced by these operations are

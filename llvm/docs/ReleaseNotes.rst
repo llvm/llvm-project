@@ -122,7 +122,11 @@ Changes to the MIPS Backend
 Changes to the PowerPC Backend
 ------------------------------
 
-* ...
+* A new option ``-mroptr`` is added to ``clang`` and ``llc``. When this option
+  is present, constant objects with relocatable address values are put into the
+  RO data section. This option should be used with the ``-fdata-sections``
+  option, and is not supported with ``-fno-data-sections``. The option is
+  only supported on AIX.
 
 Changes to the RISC-V Backend
 -----------------------------
@@ -144,6 +148,7 @@ Changes to the RISC-V Backend
 * Adds support for the vendor-defined XTHeadCmo (cache management operations) extension.
 * Adds support for the vendor-defined XTHeadSync (multi-core synchronization instructions) extension.
 * Added support for the vendor-defined XTHeadFMemIdx (indexed memory operations for floating point) extension.
+* Assembler support for RV64E was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------

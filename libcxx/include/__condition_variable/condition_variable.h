@@ -29,9 +29,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#ifndef _LIBCPP_HAS_NO_THREADS
-
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+#ifndef _LIBCPP_HAS_NO_THREADS
 
 // enum class cv_status
 _LIBCPP_DECLARE_STRONG_ENUM(cv_status){no_timeout, timeout};
@@ -234,9 +234,9 @@ inline void condition_variable::__do_timed_wait(unique_lock<mutex>& __lk,
   wait_for(__lk, __tp - _Clock::now());
 }
 
-_LIBCPP_END_NAMESPACE_STD
-
 #endif // _LIBCPP_HAS_NO_THREADS
+
+_LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 

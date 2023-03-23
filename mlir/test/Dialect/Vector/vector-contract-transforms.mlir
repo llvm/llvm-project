@@ -1,7 +1,6 @@
 // RUN: mlir-opt %s -test-vector-contraction-lowering | FileCheck %s
 // RUN: mlir-opt %s -test-vector-contraction-lowering=vector-lower-matrix-intrinsics=1 | FileCheck %s --check-prefix=MATRIX
 // RUN: mlir-opt %s -test-vector-contraction-lowering=vector-outerproduct=1 | FileCheck %s --check-prefix=OUTERPRODUCT
-// RUN: mlir-opt %s -test-vector-contraction-lowering=vector-filter-outerproduct=1 | FileCheck %s --check-prefix=FILTEROUTERPRODUCT
 // RUN: mlir-opt %s -test-vector-contraction-lowering=vector-parallel-arith=1 | FileCheck %s --check-prefix=PARALLEL
 
 #dotp_accesses = [
@@ -1180,32 +1179,6 @@ func.func @matmul_7(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: vecto
   %0 = vector.contract #matmat_trait_7 %arg0, %arg1, %arg2
     : vector<2x1xf32>, vector<1x3xf32> into vector<3x2xf32>
   return %0 : vector<3x2xf32>
-}
-
-// FILTEROUTERPRODUCT-LABEL: func @matmul_4_filtered
-// FILTEROUTERPRODUCT-SAME: %[[A:[a-zA-Z0-9]*]]: vector<4x4xf32>,
-// FILTEROUTERPRODUCT-SAME: %[[B:[a-zA-Z0-9]*]]: vector<4x4xf32>,
-// FILTEROUTERPRODUCT-SAME: %[[C:[a-zA-Z0-9]*]]: vector<4x4xf32>
-//      FILTEROUTERPRODUCT: %[[c0:.*]] = vector.contract {{{.*}}} %[[A]], %[[B]], %[[C]]
-func.func @matmul_4_filtered(%arg0: vector<4x4xf32>, %arg1: vector<4x4xf32>, %arg2: vector<4x4xf32>)
--> vector<4x4xf32>
-{
-  %0 = vector.contract #matmat_trait_0 %arg0, %arg1, %arg2
-    : vector<4x4xf32>, vector<4x4xf32> into vector<4x4xf32>
-  return %0 : vector<4x4xf32>
-}
-
-// FILTEROUTERPRODUCT-LABEL: func @matmul_4_not_filtered
-// FILTEROUTERPRODUCT-SAME: %[[A:[a-zA-Z0-9]*]]: vector<3x4xf32>,
-// FILTEROUTERPRODUCT-SAME: %[[B:[a-zA-Z0-9]*]]: vector<4x4xf32>,
-// FILTEROUTERPRODUCT-SAME: %[[C:[a-zA-Z0-9]*]]: vector<3x4xf32>
-//      FILTEROUTERPRODUCT: %[[c0:.*]] = vector.contract {{{.*}}} %[[A]], %[[B]], %[[C]]
-func.func @matmul_4_not_filtered(%arg0: vector<3x4xf32>, %arg1: vector<4x4xf32>, %arg2: vector<3x4xf32>)
--> vector<3x4xf32>
-{
-  %0 = vector.contract #matmat_trait_0 %arg0, %arg1, %arg2
-    : vector<3x4xf32>, vector<4x4xf32> into vector<3x4xf32>
-  return %0 : vector<3x4xf32>
 }
 
 // PARALLEL-LABEL: func @parrallel_contract_lowering

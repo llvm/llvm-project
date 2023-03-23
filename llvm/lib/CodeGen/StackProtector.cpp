@@ -15,6 +15,7 @@
 
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -620,18 +621,19 @@ BasicBlock *StackProtector::CreateFailBB() {
   if (F->getSubprogram())
     B.SetCurrentDebugLocation(
         DILocation::get(Context, 0, 0, F->getSubprogram()));
+  FunctionCallee StackChkFail;
+  SmallVector<Value *, 1> Args;
   if (Trip.isOSOpenBSD()) {
-    FunctionCallee StackChkFail = M->getOrInsertFunction(
-        "__stack_smash_handler", Type::getVoidTy(Context),
-        Type::getInt8PtrTy(Context));
-
-    B.CreateCall(StackChkFail, B.CreateGlobalStringPtr(F->getName(), "SSH"));
+    StackChkFail = M->getOrInsertFunction("__stack_smash_handler",
+                                          Type::getVoidTy(Context),
+                                          Type::getInt8PtrTy(Context));
+    Args.push_back(B.CreateGlobalStringPtr(F->getName(), "SSH"));
   } else {
-    FunctionCallee StackChkFail =
+    StackChkFail =
         M->getOrInsertFunction("__stack_chk_fail", Type::getVoidTy(Context));
-
-    B.CreateCall(StackChkFail, {});
   }
+  cast<Function>(StackChkFail.getCallee())->addFnAttr(Attribute::NoReturn);
+  B.CreateCall(StackChkFail, Args);
   B.CreateUnreachable();
   return FailBB;
 }

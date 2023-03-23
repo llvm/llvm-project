@@ -68,6 +68,16 @@ std::vector<Diag> issueIncludeCleanerDiagnostics(ParsedAST &AST,
 /// FIXME: remove this hack once the implementation is good enough.
 void setIncludeCleanerAnalyzesStdlib(bool B);
 
+/// Converts the clangd include representation to include-cleaner
+/// include representation.
+include_cleaner::Includes
+convertIncludes(const SourceManager &SM,
+                const llvm::ArrayRef<Inclusion> Includes);
+
+/// Determines the header spelling of an include-cleaner header
+/// representation. The spelling contains the ""<> characters.
+std::string spellHeader(ParsedAST &AST, const FileEntry *MainFile,
+                        include_cleaner::Header Provider);
 } // namespace clangd
 } // namespace clang
 

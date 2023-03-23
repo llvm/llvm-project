@@ -24167,6 +24167,10 @@ static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
     return SDValue();
   }
 
+  // Quit if not convertable to legal scalar or 128/256-bit vector.
+  if (!llvm::has_single_bit<uint32_t>(VT.getSizeInBits()))
+    return SDValue();
+
   assert((CC == ISD::SETEQ || CC == ISD::SETNE) && "Unsupported ISD::CondCode");
   X86CC = (CC == ISD::SETEQ ? X86::COND_E : X86::COND_NE);
 
@@ -24188,36 +24192,42 @@ static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
                        DAG.getConstant(0, DL, IntVT));
   }
 
-  // Quit if not splittable to 128/256-bit vector.
-  if (!llvm::has_single_bit<uint32_t>(VT.getSizeInBits()))
+  // Without PTEST, a masked v2i64 or-reduction is not faster than
+  // scalarization.
+  bool UseKORTEST = Subtarget.useAVX512Regs();
+  bool UsePTEST = Subtarget.hasSSE41();
+  if (!UsePTEST && !Mask.isAllOnes() && VT.getScalarSizeInBits() > 32)
     return SDValue();
 
-  // Split down to 128/256-bit vector.
-  unsigned TestSize = Subtarget.hasAVX() ? 256 : 128;
+  // Split down to 128/256/512-bit vector.
+  unsigned TestSize = UseKORTEST ? 512 : (Subtarget.hasAVX() ? 256 : 128);
   while (VT.getSizeInBits() > TestSize) {
     auto Split = DAG.SplitVector(V, DL);
     VT = Split.first.getValueType();
     V = DAG.getNode(ISD::OR, DL, VT, Split.first, Split.second);
   }
 
-  bool UsePTEST = Subtarget.hasSSE41();
+  if (UseKORTEST && VT.is512BitVector()) {
+    V = DAG.getBitcast(MVT::v16i32, MaskBits(V));
+    V = DAG.getSetCC(DL, MVT::v16i1, V,
+                     getZeroVector(MVT::v16i32, Subtarget, DAG, DL),
+                     ISD::SETNE);
+    return DAG.getNode(X86ISD::KORTEST, DL, MVT::i32, V, V);
+  }
+
   if (UsePTEST) {
     MVT TestVT = VT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
     V = DAG.getBitcast(TestVT, MaskBits(V));
     return DAG.getNode(X86ISD::PTEST, DL, MVT::i32, V, V);
   }
 
-  // Without PTEST, a masked v2i64 or-reduction is not faster than
-  // scalarization.
-  if (!Mask.isAllOnes() && VT.getScalarSizeInBits() > 32)
-    return SDValue();
-
   V = DAG.getBitcast(MVT::v16i8, MaskBits(V));
   V = DAG.getNode(X86ISD::PCMPEQ, DL, MVT::v16i8, V,
                   getZeroVector(MVT::v16i8, Subtarget, DAG, DL));
+  V = DAG.getNOT(DL, V, MVT::v16i8);
   V = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, V);
   return DAG.getNode(X86ISD::CMP, DL, MVT::i32, V,
-                     DAG.getConstant(0xFFFF, DL, MVT::i32));
+                     DAG.getConstant(0, DL, MVT::i32));
 }
 
 // Check whether an OR'd reduction tree is PTEST-able, or if we can fallback to
@@ -53960,7 +53970,7 @@ static bool isOrXorXorTree(SDValue X, bool Root = true) {
 /// Recursive helper for combineVectorSizedSetCCEquality() to emit the memcmp
 /// expansion.
 template <typename F>
-static SDValue emitOrXorXorTree(SDValue X, SDLoc &DL, SelectionDAG &DAG,
+static SDValue emitOrXorXorTree(SDValue X, const SDLoc &DL, SelectionDAG &DAG,
                                 EVT VecVT, EVT CmpVT, bool HasPT, F SToV) {
   SDValue Op0 = X.getOperand(0);
   SDValue Op1 = X.getOperand(1);
@@ -53987,14 +53997,14 @@ static SDValue emitOrXorXorTree(SDValue X, SDLoc &DL, SelectionDAG &DAG,
 
 /// Try to map a 128-bit or larger integer comparison to vector instructions
 /// before type legalization splits it up into chunks.
-static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
+static SDValue combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y,
+                                               ISD::CondCode CC,
+                                               const SDLoc &DL,
+                                               SelectionDAG &DAG,
                                                const X86Subtarget &Subtarget) {
-  ISD::CondCode CC = cast<CondCodeSDNode>(SetCC->getOperand(2))->get();
   assert((CC == ISD::SETNE || CC == ISD::SETEQ) && "Bad comparison predicate");
 
   // We're looking for an oversized integer equality comparison.
-  SDValue X = SetCC->getOperand(0);
-  SDValue Y = SetCC->getOperand(1);
   EVT OpVT = X.getValueType();
   unsigned OpSize = OpVT.getSizeInBits();
   if (!OpVT.isScalarInteger() || OpSize < 128)
@@ -54018,9 +54028,6 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
   if ((!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y)) &&
       !IsOrXorXorTreeCCZero)
     return SDValue();
-
-  EVT VT = SetCC->getValueType(0);
-  SDLoc DL(SetCC);
 
   // Use XOR (plus OR) and PTEST after SSE4.1 for 128/256-bit operands.
   // Use PCMPNEQ (plus OR) and KORTEST for 512-bit operands.
@@ -54163,7 +54170,8 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
 
   if (CC == ISD::SETNE || CC == ISD::SETEQ) {
-    if (SDValue V = combineVectorSizedSetCCEquality(N, DAG, Subtarget))
+    if (SDValue V = combineVectorSizedSetCCEquality(VT, LHS, RHS, CC, DL, DAG,
+                                                    Subtarget))
       return V;
 
     if (VT == MVT::i1 && isNullConstant(RHS)) {
@@ -54432,25 +54440,25 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
 
   // Fold movmsk(icmp_eq(and(x,c1),0)) -> movmsk(not(shl(x,c2)))
   // iff pow2splat(c1).
+  // Use KnownBits to determine if only a single bit is non-zero
+  // in each element (pow2 or zero), and shift that bit to the msb.
   if (Src.getOpcode() == X86ISD::PCMPEQ &&
-      Src.getOperand(0).getOpcode() == ISD::AND &&
       ISD::isBuildVectorAllZeros(Src.getOperand(1).getNode())) {
-    SDValue LHS = Src.getOperand(0).getOperand(0);
-    SDValue RHS = Src.getOperand(0).getOperand(1);
-    KnownBits KnownRHS = DAG.computeKnownBits(RHS);
-    if (KnownRHS.isConstant() && KnownRHS.getConstant().isPowerOf2()) {
+    KnownBits KnownSrc = DAG.computeKnownBits(Src.getOperand(0));
+    if (KnownSrc.countMaxPopulation() == 1) {
       SDLoc DL(N);
       MVT ShiftVT = SrcVT;
+      SDValue ShiftSrc = Src.getOperand(0);
       if (ShiftVT.getScalarType() == MVT::i8) {
         // vXi8 shifts - we only care about the signbit so can use PSLLW.
         ShiftVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
-        LHS = DAG.getBitcast(ShiftVT, LHS);
+        ShiftSrc = DAG.getBitcast(ShiftVT, ShiftSrc);
       }
-      unsigned ShiftAmt = KnownRHS.getConstant().countl_zero();
-      LHS = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, ShiftVT, LHS,
-                                       ShiftAmt, DAG);
-      LHS = DAG.getNOT(DL, DAG.getBitcast(SrcVT, LHS), SrcVT);
-      return DAG.getNode(X86ISD::MOVMSK, DL, VT, LHS);
+      unsigned ShiftAmt = KnownSrc.countMinLeadingZeros();
+      ShiftSrc = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, ShiftVT,
+                                            ShiftSrc, ShiftAmt, DAG);
+      ShiftSrc = DAG.getNOT(DL, DAG.getBitcast(SrcVT, ShiftSrc), SrcVT);
+      return DAG.getNode(X86ISD::MOVMSK, DL, VT, ShiftSrc);
     }
   }
 

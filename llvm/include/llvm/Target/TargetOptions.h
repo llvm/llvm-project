@@ -130,13 +130,12 @@ namespace llvm {
           HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
           GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
           EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
-          DisableIntegratedAS(false),
-          RelaxELFRelocations(true), FunctionSections(false),
-          DataSections(false), IgnoreXCOFFVisibility(false),
-          XCOFFTracebackTable(true), UniqueSectionNames(true),
-          UniqueBasicBlockSectionNames(false), TrapUnreachable(false),
-          NoTrapAfterNoreturn(false), TLSSize(0), EmulatedTLS(false),
-          ExplicitEmulatedTLS(false), EnableIPRA(false),
+          DisableIntegratedAS(false), RelaxELFRelocations(true),
+          FunctionSections(false), DataSections(false),
+          IgnoreXCOFFVisibility(false), XCOFFTracebackTable(true),
+          UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
+          TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
+          EmulatedTLS(false), ExplicitEmulatedTLS(false), EnableIPRA(false),
           EmitStackSizeSection(false), EnableMachineOutliner(false),
           EnableMachineFunctionSplitter(false), SupportsDefaultOutlining(false),
           EmitAddrsig(false), EmitCallSiteInfo(false),
@@ -144,7 +143,7 @@ namespace llvm {
           ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
           XRayOmitFunctionIndex(false), DebugStrictDwarf(false),
           Hotpatch(false), PPCGenScalarMASSEntries(false), JMCInstrument(false),
-          EnableCFIFixup(false), MisExpect(false),
+          EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
 
     /// DisableFramePointerElim - This returns true if frame pointer elimination
@@ -359,6 +358,10 @@ namespace llvm {
     /// When set to true, enable MisExpect Diagnostics
     /// By default, it is set to false
     unsigned MisExpect : 1;
+
+    /// When set to true, const objects with relocatable address values are put
+    /// into the RO data section.
+    unsigned XCOFFReadOnlyPointers : 1;
 
     /// Name of the stack usage file (i.e., .su file) if user passes
     /// -fstack-usage. If empty, it can be implied that -fstack-usage is not

@@ -1618,6 +1618,9 @@ llvm.func @callFreezeOp(%x : i32) {
   %1 = llvm.mlir.undef : i32
   // CHECK: freeze i32 undef
   %2 = llvm.freeze %1 : i32
+  %3 = llvm.mlir.poison : i32
+  // CHECK: freeze i32 poison
+  %4 = llvm.freeze %3 : i32
   llvm.return
 }
 

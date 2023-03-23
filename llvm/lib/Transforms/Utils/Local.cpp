@@ -2675,14 +2675,7 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
                        intersectAccessGroups(K, J));
         break;
       case LLVMContext::MD_range:
-
-        // If K does move, use most generic range. Otherwise keep the range of
-        // K.
-        if (DoesKMove)
-          // FIXME: If K does move, we should drop the range info and nonnull.
-          //        Currently this function is used with DoesKMove in passes
-          //        doing hoisting/sinking and the current behavior of using the
-          //        most generic range is correct in those cases.
+        if (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef))
           K->setMetadata(Kind, MDNode::getMostGenericRange(JMD, KMD));
         break;
       case LLVMContext::MD_fpmath:

@@ -146,8 +146,8 @@ int main(int, char**)
     test< std::int64_t> ();
     test<std::uint64_t> ();
 
-    test<intptr_t>  ();
-    test<uintptr_t> ();
+    test<std::intptr_t>  ();
+    test<std::uintptr_t> ();
     test<std::size_t>    ();
     test<std::ptrdiff_t> ();
     test<intmax_t>  ();

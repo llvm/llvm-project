@@ -59,7 +59,7 @@ void test(StringT expected, StringViewT fmt, PointerT arg) {
     buffer[0] = CharT('0');
     buffer[1] = CharT('x');
     expected.append(buffer.begin(),
-                    std::to_chars(buffer.begin() + 2, buffer.end(), reinterpret_cast<uintptr_t>(arg), 16).ptr);
+                    std::to_chars(buffer.begin() + 2, buffer.end(), reinterpret_cast<std::uintptr_t>(arg), 16).ptr);
   }
   assert(result == expected);
 }

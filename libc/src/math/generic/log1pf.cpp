@@ -150,7 +150,7 @@ LLVM_LIBC_FUNCTION(float, log1pf, (float x)) {
   double c2 = fputil::multiply_add(xd, COEFFS[5], COEFFS[4]);
   double r = fputil::polyeval(xsq, xd, c0, c1, c2, COEFFS[6]);
 
-  return r;
+  return static_cast<float>(r);
 }
 
 } // namespace __llvm_libc

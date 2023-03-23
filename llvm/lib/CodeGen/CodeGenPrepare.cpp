@@ -2279,7 +2279,8 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       if (!Arg->getType()->isPointerTy())
         continue;
       unsigned AS = Arg->getType()->getPointerAddressSpace();
-      return optimizeMemoryInst(CI, Arg, Arg->getType(), AS);
+      if (optimizeMemoryInst(CI, Arg, Arg->getType(), AS))
+        return true;
     }
 
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);

@@ -1800,8 +1800,8 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType,
   for (unsigned d = 0; d < rank; ++d) {
     // Use constraint system only in static dimensions.
     if (shape[d] > 0) {
-      fac.addBound(IntegerPolyhedron::LB, d, 0);
-      fac.addBound(IntegerPolyhedron::UB, d, shape[d] - 1);
+      fac.addBound(BoundType::LB, d, 0);
+      fac.addBound(BoundType::UB, d, shape[d] - 1);
     } else {
       memrefTypeDynDims.emplace_back(d);
     }
@@ -1824,8 +1824,7 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType,
       newShape[d] = ShapedType::kDynamic;
     } else {
       // The lower bound for the shape is always zero.
-      std::optional<int64_t> ubConst =
-          fac.getConstantBound64(IntegerPolyhedron::UB, d);
+      std::optional<int64_t> ubConst = fac.getConstantBound64(BoundType::UB, d);
       // For a static memref and an affine map with no symbols, this is
       // always bounded. However, when we have symbols, we may not be able to
       // obtain a constant upper bound. Also, mapping to a negative space is

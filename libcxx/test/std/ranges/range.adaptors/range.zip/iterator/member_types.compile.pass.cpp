@@ -144,16 +144,16 @@ void test() {
 
   {
     // difference_type of single view
-    std::ranges::zip_view v{DiffTypeRange<intptr_t>{}};
+    std::ranges::zip_view v{DiffTypeRange<std::intptr_t>{}};
     using Iter = decltype(v.begin());
-    static_assert(std::is_same_v<Iter::difference_type, intptr_t>);
+    static_assert(std::is_same_v<Iter::difference_type, std::intptr_t>);
   }
 
   {
     // difference_type of multiple views should be the common type
-    std::ranges::zip_view v{DiffTypeRange<intptr_t>{}, DiffTypeRange<std::ptrdiff_t>{}};
+    std::ranges::zip_view v{DiffTypeRange<std::intptr_t>{}, DiffTypeRange<std::ptrdiff_t>{}};
     using Iter = decltype(v.begin());
-    static_assert(std::is_same_v<Iter::difference_type, std::common_type_t<intptr_t, std::ptrdiff_t>>);
+    static_assert(std::is_same_v<Iter::difference_type, std::common_type_t<std::intptr_t, std::ptrdiff_t>>);
   }
 
   const std::array foos{Foo{}};
