@@ -27,8 +27,9 @@
 //   basic_ostream<charT, traits>&
 //     operator<<(basic_ostream<charT, traits>& os, const hh_mm_ss<Duration>& hms);
 
-#include <chrono>
 #include <cassert>
+#include <chrono>
+#include <ratio>
 #include <sstream>
 
 #include "make_string.h"

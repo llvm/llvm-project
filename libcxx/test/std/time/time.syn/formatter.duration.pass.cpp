@@ -31,6 +31,7 @@
 #include <concepts>
 #include <locale>
 #include <iostream>
+#include <ratio>
 #include <type_traits>
 
 #include "formatter_tests.h"
