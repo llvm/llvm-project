@@ -7,8 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define i32 @sub_icmp_i32(i32 %0, i32 %1) {
 ; CHECK-LABEL: sub_icmp_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w0, w0, w1
-; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    subs w0, w0, w1
 ; CHECK-NEXT:    b.le .LBB0_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    b _Z2f2i
@@ -36,8 +35,7 @@ define i32 @sub_icmp_i32(i32 %0, i32 %1) {
 define i64 @sub_icmp_i64(i64 %0, i64 %1) {
 ; CHECK-LABEL: sub_icmp_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub x0, x0, x1
-; CHECK-NEXT:    cmp x0, #0
+; CHECK-NEXT:    subs x0, x0, x1
 ; CHECK-NEXT:    b.le .LBB1_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    b _Z2f4l
@@ -63,8 +61,7 @@ define i64 @sub_icmp_i64(i64 %0, i64 %1) {
 define i64 @add_i64(i64 %0, i64 %1) {
 ; CHECK-LABEL: add_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x0, x1, x0
-; CHECK-NEXT:    cmp x0, #0
+; CHECK-NEXT:    adds x0, x1, x0
 ; CHECK-NEXT:    b.le .LBB2_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    b _Z2f4l
@@ -90,8 +87,7 @@ define i64 @add_i64(i64 %0, i64 %1) {
 define i32 @add_i32(i32 %0, i32 %1) {
 ; CHECK-LABEL: add_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w0, w1, w0
-; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    adds w0, w1, w0
 ; CHECK-NEXT:    b.le .LBB3_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    b _Z2f4l
