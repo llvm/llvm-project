@@ -159,3 +159,11 @@ func.func @multi_symbols() {
   "test_affine_map"() { affine_map = affine_map<(d0, d1)[s0, s1] -> (d0 + 1 + s1, d1 - 1 - s0)> } : () -> ()
   return
 }
+
+// -----
+
+// CHECK-LABEL: @no_affine_maps
+func.func @no_affine_maps() {
+  // CHECK: return
+  return
+}

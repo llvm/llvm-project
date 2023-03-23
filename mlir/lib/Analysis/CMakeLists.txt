@@ -2,6 +2,7 @@ set(LLVM_OPTIONAL_SOURCES
   AliasAnalysis.cpp
   CallGraph.cpp
   DataLayoutAnalysis.cpp
+  FlatLinearValueConstraints.cpp
   Liveness.cpp
   SliceAnalysis.cpp
 
@@ -14,11 +15,14 @@ set(LLVM_OPTIONAL_SOURCES
   DataFlow/SparseAnalysis.cpp
   )
 
+add_subdirectory(Presburger)
+
 add_mlir_library(MLIRAnalysis
   AliasAnalysis.cpp
   CallGraph.cpp
   DataFlowFramework.cpp
   DataLayoutAnalysis.cpp
+  FlatLinearValueConstraints.cpp
   Liveness.cpp
   SliceAnalysis.cpp
 
@@ -43,8 +47,8 @@ add_mlir_library(MLIRAnalysis
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRLoopLikeInterface
+  MLIRPresburger
   MLIRSideEffectInterfaces
   MLIRViewLikeInterface
   )
 
-add_subdirectory(Presburger)

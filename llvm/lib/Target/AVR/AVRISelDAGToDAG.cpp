@@ -275,8 +275,7 @@ bool AVRDAGToDAGISel::SelectInlineAsmMemoryOperand(
       }
 
       if (ImmNode->getValueType(0) != MVT::i8) {
-        Disp = CurDAG->getTargetConstant(
-            ImmNode->getAPIntValue().getZExtValue(), dl, MVT::i8);
+        Disp = CurDAG->getTargetConstant(ImmNode->getZExtValue(), dl, MVT::i8);
       } else {
         Disp = ImmOp;
       }

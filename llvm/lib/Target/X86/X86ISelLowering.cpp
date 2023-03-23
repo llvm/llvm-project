@@ -24167,6 +24167,10 @@ static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
     return SDValue();
   }
 
+  // Quit if not convertable to legal scalar or 128/256-bit vector.
+  if (!llvm::has_single_bit<uint32_t>(VT.getSizeInBits()))
+    return SDValue();
+
   assert((CC == ISD::SETEQ || CC == ISD::SETNE) && "Unsupported ISD::CondCode");
   X86CC = (CC == ISD::SETEQ ? X86::COND_E : X86::COND_NE);
 
@@ -24187,10 +24191,6 @@ static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
                        DAG.getBitcast(IntVT, MaskBits(V)),
                        DAG.getConstant(0, DL, IntVT));
   }
-
-  // Quit if not splittable to 128/256-bit vector.
-  if (!llvm::has_single_bit<uint32_t>(VT.getSizeInBits()))
-    return SDValue();
 
   // Split down to 128/256-bit vector.
   unsigned TestSize = Subtarget.hasAVX() ? 256 : 128;

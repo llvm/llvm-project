@@ -231,14 +231,14 @@ MultiAffineFunction::getLexSet(OrderingKind comp,
       //        outA - outB <= -1
       //        outA <= outB - 1
       //        outA < outB
-      levelSet.addBound(IntegerPolyhedron::BoundType::UB, subExpr, MPInt(-1));
+      levelSet.addBound(BoundType::UB, subExpr, MPInt(-1));
       break;
     case OrderingKind::GT:
       // For greater than, we add a lower bound of 1:
       //        outA - outB >= 1
       //        outA > outB + 1
       //        outA > outB
-      levelSet.addBound(IntegerPolyhedron::BoundType::LB, subExpr, MPInt(1));
+      levelSet.addBound(BoundType::LB, subExpr, MPInt(1));
       break;
     case OrderingKind::GE:
     case OrderingKind::LE:
