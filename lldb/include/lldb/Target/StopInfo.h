@@ -115,7 +115,8 @@ public:
 
   static lldb::StopInfoSP
   CreateStopReasonWithSignal(Thread &thread, int signo,
-                             const char *description = nullptr);
+                             const char *description = nullptr,
+                             std::optional<int> code = std::nullopt);
 
   static lldb::StopInfoSP CreateStopReasonToTrace(Thread &thread);
 
