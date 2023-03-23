@@ -382,7 +382,7 @@ define dso_local void @rmw_addi_addi() nounwind {
 ; RV32-LABEL: rmw_addi_addi:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    lui a0, %hi(bar+3211)
-; RV32-NEXT:    lb a1, %lo(bar+3211)(a0)
+; RV32-NEXT:    lbu a1, %lo(bar+3211)(a0)
 ; RV32-NEXT:    addi a1, a1, 10
 ; RV32-NEXT:    sb a1, %lo(bar+3211)(a0)
 ; RV32-NEXT:    ret
@@ -390,7 +390,7 @@ define dso_local void @rmw_addi_addi() nounwind {
 ; RV64-LABEL: rmw_addi_addi:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    lui a0, %hi(bar+3211)
-; RV64-NEXT:    lb a1, %lo(bar+3211)(a0)
+; RV64-NEXT:    lbu a1, %lo(bar+3211)(a0)
 ; RV64-NEXT:    addiw a1, a1, 10
 ; RV64-NEXT:    sb a1, %lo(bar+3211)(a0)
 ; RV64-NEXT:    ret
