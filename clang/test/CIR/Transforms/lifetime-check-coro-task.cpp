@@ -25,3 +25,11 @@ folly::coro::Task<int> go2_lambda() {
   co_return co_await task; // expected-remark {{pset => { task, invalid }}}
                            // expected-warning@-1 {{use of coroutine 'task' with dangling reference}}
 }
+
+folly::coro::Task<int> go3_lambda() {
+  auto* fn = +[](int const& i) -> folly::coro::Task<int> { co_return i; };
+  auto task = fn(3); // expected-note {{coroutine bound to resource with expired lifetime}}
+                     // expected-note@-1 {{at the end of scope or full-expression}}
+  co_return co_await task; // expected-remark {{pset => { task, invalid }}}
+                           // expected-warning@-1 {{use of coroutine 'task' with dangling reference}}
+}
