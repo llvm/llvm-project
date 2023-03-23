@@ -114,7 +114,7 @@ bool X86ArgumentStackSlotPass::runOnMachineFunction(MachineFunction &MF) {
   if (F.hasFnAttribute(Attribute::Naked))
     return false;
   // Only support Linux
-  if (!STI.isTargetLinux() && !STI.isTargetELF())
+  if (!STI.isTargetLinux())
     return false;
   if (!TRI->hasBasePointer(MF))
     return false;
