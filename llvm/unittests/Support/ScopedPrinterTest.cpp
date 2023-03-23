@@ -8,6 +8,7 @@
 
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/Support/Format.h"
 #include "gtest/gtest.h"
 #include <cmath>
 #include <vector>
@@ -594,6 +595,19 @@ TEST_F(ScopedPrinterTest, PrintNumber) {
   format("%5.1f", std::numeric_limits<double>::max()).snprint(Buf, sizeof(Buf));
   std::string MaxDoubleStr(Buf);
 
+  format("%5.1f", std::numeric_limits<double>::infinity())
+      .snprint(Buf, sizeof(Buf));
+  std::string InfFloatStr(Buf);
+
+  std::to_string(std::numeric_limits<float>::infinity());
+  std::string InfDoubleStr(Buf);
+
+  format("%5.1f", std::nanf("1")).snprint(Buf, sizeof(Buf));
+  std::string NaNFloatStr(Buf);
+
+  format("%5.1f", std::nan("1")).snprint(Buf, sizeof(Buf));
+  std::string NaNDoubleStr(Buf);
+
   std::string ExpectedOut = Twine(
                                 R"(uint64_t-max: 18446744073709551615
 uint64_t-min: 0
@@ -615,15 +629,15 @@ apsint: 9999999999999999999999
 label: value (0)
 float-max: )" + MaxFloatStr + R"(
 float-min:   0.0
-float-inf:   inf
-float-nan:   nan
+float-inf: )" + InfFloatStr + R"(
+float-nan: )" + NaNFloatStr + R"(
 float-42.0:  42.0
 float-42.5625:  42.6
 double-max: )" + MaxDoubleStr +
                                 R"(
 double-min:   0.0
-double-inf:   inf
-double-nan:   nan
+double-inf: )" + InfDoubleStr + R"(
+double-nan: )" + NaNDoubleStr + R"(
 double-42.0:  42.0
 double-42.5625:  42.6
 )")
