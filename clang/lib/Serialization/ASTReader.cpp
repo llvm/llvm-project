@@ -5686,10 +5686,6 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
         CurrentModule->PresumedModuleMapFile = F.ModuleMapPath;
         if (!F.ModuleCacheKey.empty())
           CurrentModule->setModuleCacheKey(F.ModuleCacheKey);
-        if (!F.CASFileSystemRootID.empty())
-          CurrentModule->setCASFileSystemRootID(F.CASFileSystemRootID);
-        if (!F.IncludeTreeID.empty())
-          CurrentModule->setIncludeTreeID(F.IncludeTreeID);
       }
 
       CurrentModule->Kind = Kind;

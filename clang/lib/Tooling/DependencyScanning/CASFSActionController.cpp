@@ -176,7 +176,7 @@ Error CASFSActionController::finalizeModuleBuild(
   Module *M = ModuleScanInstance.getPreprocessor().getCurrentModule();
   assert(M && "finalizing without a module");
 
-  M->setCASFileSystemRootID(RootID->toString());
+  ModuleScanInstance.getASTContext().setCASFileSystemRootID(RootID->toString());
   return Error::success();
 }
 

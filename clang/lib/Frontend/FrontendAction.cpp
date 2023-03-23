@@ -1070,6 +1070,10 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       }
     }
 
+    if (!CI.getFrontendOpts().CASIncludeTreeID.empty())
+      CI.getASTContext().setCASIncludeTreeID(
+          CI.getFrontendOpts().CASIncludeTreeID);
+
     CI.setASTConsumer(std::move(Consumer));
     if (!CI.hasASTConsumer())
       return false;
