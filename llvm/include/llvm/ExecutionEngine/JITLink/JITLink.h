@@ -420,6 +420,7 @@ private:
     setScope(S);
     setLive(IsLive);
     setCallable(IsCallable);
+    setTargetFlags(TargetFlagsType{});
   }
 
   static Symbol &constructExternal(BumpPtrAllocator &Allocator,

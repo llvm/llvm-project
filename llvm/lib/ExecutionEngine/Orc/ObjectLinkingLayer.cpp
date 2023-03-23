@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
+#include "llvm/ExecutionEngine/JITLink/aarch32.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
@@ -39,8 +40,20 @@ bool hasInitializerSection(jitlink::LinkGraph &G) {
   return false;
 }
 
-JITTargetAddress getJITSymbolPtrForSymbol(Symbol &Sym) {
-  return Sym.getAddress().getValue();
+JITTargetAddress getJITSymbolPtrForSymbol(Symbol &Sym, const Triple &TT) {
+  uint64_t CallableAddr = Sym.getAddress().getValue();
+  switch (TT.getArch()) {
+  case Triple::arm:
+  case Triple::armeb:
+  case Triple::thumb:
+  case Triple::thumbeb:
+    if (Sym.hasTargetFlags(aarch32::ThumbSymbol) && Sym.isCallable())
+      CallableAddr |= 0x01; // LSB is thumb bit
+    break;
+  default:
+    break;
+  }
+  return CallableAddr;
 }
 
 JITSymbolFlags getJITSymbolFlagsForSymbol(Symbol &Sym) {
@@ -219,7 +232,7 @@ public:
     for (auto *Sym : G.defined_symbols())
       if (Sym->hasName() && Sym->getScope() != Scope::Local) {
         auto InternedName = ES.intern(Sym->getName());
-        auto Ptr = getJITSymbolPtrForSymbol(*Sym);
+        auto Ptr = getJITSymbolPtrForSymbol(*Sym, G.getTargetTriple());
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
         InternedResult[InternedName] = JITEvaluatedSymbol(Ptr, Flags);
         if (AutoClaim && !MR->getSymbols().count(InternedName)) {
@@ -232,7 +245,7 @@ public:
     for (auto *Sym : G.absolute_symbols())
       if (Sym->hasName() && Sym->getScope() != Scope::Local) {
         auto InternedName = ES.intern(Sym->getName());
-        auto Ptr = getJITSymbolPtrForSymbol(*Sym);
+        auto Ptr = getJITSymbolPtrForSymbol(*Sym, G.getTargetTriple());
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
         InternedResult[InternedName] = JITEvaluatedSymbol(Ptr, Flags);
         if (AutoClaim && !MR->getSymbols().count(InternedName)) {
