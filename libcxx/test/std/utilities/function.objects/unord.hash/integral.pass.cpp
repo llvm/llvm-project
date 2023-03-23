@@ -44,7 +44,7 @@ test()
         if (small)
         {
             const std::size_t result = h(t);
-            LIBCPP_ASSERT(result == static_cast<size_t>(t));
+            LIBCPP_ASSERT(result == static_cast<std::size_t>(t));
             ((void)result); // Prevent unused warning
         }
     }
@@ -72,7 +72,7 @@ int main(int, char**)
 
 //  LWG #2119
     test<std::ptrdiff_t>();
-    test<size_t>();
+    test<std::size_t>();
 
     test<std::int8_t>();
     test<std::int16_t>();

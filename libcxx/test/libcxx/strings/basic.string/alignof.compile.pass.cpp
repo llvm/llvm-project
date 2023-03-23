@@ -132,5 +132,5 @@ static_assert(alignof(small_string<char32_t>) == 4, "");
 #  endif
 
 #else
-#  error "size_t has an unexpected size"
+#  error "std::size_t has an unexpected size"
 #endif

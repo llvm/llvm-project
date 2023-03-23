@@ -65,7 +65,7 @@ void test_container(std::initializer_list<T>& c)
     assert ( std::ssize(c)   == static_cast<decltype(std::ssize(c))>(c.size()));
 }
 
-template<typename T, size_t Sz>
+template<typename T, std::size_t Sz>
 void test_const_array(const T (&array)[Sz])
 {
     ASSERT_NOEXCEPT(std::ssize(array));

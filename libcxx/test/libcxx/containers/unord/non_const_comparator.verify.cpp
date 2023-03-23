@@ -17,7 +17,7 @@
 
 struct BadHash {
   template <class T>
-  size_t operator()(T const& t) {
+  std::size_t operator()(T const& t) {
     return std::hash<T>{}(t);
   }
 };

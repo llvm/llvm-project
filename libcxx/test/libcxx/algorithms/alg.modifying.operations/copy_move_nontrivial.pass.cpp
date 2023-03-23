@@ -26,7 +26,7 @@
 // This template is a better match than the actual `builtin_memmove` (it can match the pointer type exactly, without an
 // implicit conversion to `void*`), so it should hijack the call inside `std::copy` and similar algorithms if it's made.
 template <class Dst, class Src>
-constexpr void* __builtin_memmove(Dst*, Src*, size_t) {
+constexpr void* __builtin_memmove(Dst*, Src*, std::size_t) {
   assert(false);
   return nullptr;
 }
@@ -172,7 +172,7 @@ constexpr void test_one(Func func) {
   using To = typename std::iterator_traits<OutIter>::value_type;
 
   {
-    const size_t N = 5;
+    const std::size_t N = 5;
 
     From input[N] = {make<From>(0), make<From>(1), make<From>(2), make<From>(3), make<From>(4)};
     To output[N];
@@ -192,7 +192,7 @@ constexpr void test_one(Func func) {
   }
 
   {
-    const size_t N = 0;
+    const std::size_t N = 0;
 
     From input[1]  = {make<From>(1)};
     To output[1] = {make<To>(2)};
@@ -211,25 +211,25 @@ template <class InIter, template <class> class SentWrapper, class OutIter>
 constexpr void test_copy() {
   // Classic.
   if constexpr (std::same_as<InIter, SentWrapper<InIter>>) {
-    test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, size_t) {
+    test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, std::size_t) {
       std::copy(first, last, out);
     });
-    test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, size_t n) {
+    test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, std::size_t n) {
       std::copy_backward(first, last, out + n);
     });
-    test_one<InIter, SentWrapper, OutIter>([](auto first, auto, auto out, size_t n) {
+    test_one<InIter, SentWrapper, OutIter>([](auto first, auto, auto out, std::size_t n) {
       std::copy_n(first, n, out);
     });
   }
 
   // Ranges.
-  test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, size_t) {
+  test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, std::size_t) {
     std::ranges::copy(first, last, out);
   });
-  test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, size_t n) {
+  test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, std::size_t n) {
     std::ranges::copy_backward(first, last, out + n);
   });
-  test_one<InIter, SentWrapper, OutIter>([](auto first, auto, auto out, size_t n) {
+  test_one<InIter, SentWrapper, OutIter>([](auto first, auto, auto out, std::size_t n) {
     std::ranges::copy_n(first, n, out);
   });
 }
@@ -237,19 +237,19 @@ constexpr void test_copy() {
 template <class InIter, template <class> class SentWrapper, class OutIter>
 constexpr void test_move() {
   if constexpr (std::same_as<InIter, SentWrapper<InIter>>) {
-    test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, size_t) {
+    test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, std::size_t) {
       std::move(first, last, out);
     });
-    test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, size_t n) {
+    test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, std::size_t n) {
       std::move_backward(first, last, out + n);
     });
   }
 
   // Ranges.
-  test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, size_t) {
+  test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, std::size_t) {
     std::ranges::move(first, last, out);
   });
-  test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, size_t n) {
+  test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, std::size_t n) {
     std::ranges::move_backward(first, last, out + n);
   });
 }

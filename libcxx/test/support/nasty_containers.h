@@ -10,6 +10,7 @@
 #define NASTY_CONTAINERS_H
 
 #include <cassert>
+#include <cstddef>
 #include <vector>
 #include <list>
 

@@ -35,15 +35,15 @@ namespace std {
     static bool eq(char_type c1, char_type c2);
     static bool lt(char_type c1, char_type c2);
 
-    static int compare(const char_type* s1, const char_type* s2, size_t n);
-    static size_t length(const char_type* s);
-    static const char_type* find(const char_type* s, size_t n, const char_type& a);
-    static char_type* move(char_type* s1, const char_type* s2, size_t n);
-    static TEST_CONSTEXPR_CXX20 char_type* copy(char_type* s1, const char_type* s2, size_t n) {
+    static int compare(const char_type* s1, const char_type* s2, std::size_t n);
+    static std::size_t length(const char_type* s);
+    static const char_type* find(const char_type* s, std::size_t n, const char_type& a);
+    static char_type* move(char_type* s1, const char_type* s2, std::size_t n);
+    static TEST_CONSTEXPR_CXX20 char_type* copy(char_type* s1, const char_type* s2, std::size_t n) {
       std::copy_n(s2, n, s1);
       return s1;
     }
-    static TEST_CONSTEXPR_CXX20 char_type* assign(char_type* s, size_t n, char_type a) {
+    static TEST_CONSTEXPR_CXX20 char_type* assign(char_type* s, std::size_t n, char_type a) {
       std::fill_n(s, n, a);
       return s;
     }

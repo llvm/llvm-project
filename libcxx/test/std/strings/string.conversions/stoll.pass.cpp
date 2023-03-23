@@ -24,13 +24,13 @@ int main(int, char**)
     assert(std::stoll("-10") == -10);
     assert(std::stoll(" 10") == 10);
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         assert(std::stoll("10g", &idx, 16) == 16);
         assert(idx == 2);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stoll("", &idx);
             assert(false);
@@ -39,7 +39,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stoll("  - 8", &idx);
             assert(false);
@@ -48,7 +48,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stoll("a1", &idx);
             assert(false);
@@ -57,7 +57,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             // LWG#2009 and PR14919
             (void)std::stoll("99999999999999999999999999", &idx);
@@ -74,13 +74,13 @@ int main(int, char**)
     assert(std::stoll(L"-10") == -10);
     assert(std::stoll(L" 10") == 10);
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         assert(std::stoll(L"10g", &idx, 16) == 16);
         assert(idx == 2);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stoll(L"", &idx);
             assert(false);
@@ -89,7 +89,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stoll(L"  - 8", &idx);
             assert(false);
@@ -98,7 +98,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             (void)std::stoll(L"a1", &idx);
             assert(false);
@@ -107,7 +107,7 @@ int main(int, char**)
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
             // LWG#2009 and PR14919
             (void)std::stoll(L"99999999999999999999999999", &idx);
