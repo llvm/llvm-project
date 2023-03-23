@@ -28,8 +28,8 @@ define void @f2(ptr %0, ptr %1) {
   ret void
 }
 
-define void @f3(ptr %0, ptr %1) {
-; CHECK-LABEL: @f3(
+define void @noundef(ptr %0, ptr %1) {
+; CHECK-LABEL: @noundef(
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP1:%.*]], align 8, !noundef !0
 ; CHECK-NEXT:    store ptr [[TMP3]], ptr [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    ret void
@@ -39,9 +39,20 @@ define void @f3(ptr %0, ptr %1) {
   ret void
 }
 
-define void @f4(ptr %0, ptr %1) {
-; CHECK-LABEL: @f4(
-; CHECK-NEXT:    tail call void @f3(ptr [[TMP0:%.*]], ptr [[TMP1:%.*]])
+define void @noalias_1(ptr %0, ptr %1) {
+; CHECK-LABEL: @noalias_1(
+; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP1:%.*]], align 8, !noalias !1
+; CHECK-NEXT:    store ptr [[TMP3]], ptr [[TMP0:%.*]], align 8, !alias.scope !1
+; CHECK-NEXT:    ret void
+;
+  %3 = load ptr, ptr %1, align 8, !noalias !4
+  store ptr %3, ptr %0, align 8, !alias.scope !4
+  ret void
+}
+
+define void @noundef_dbg(ptr %0, ptr %1) {
+; CHECK-LABEL: @noundef_dbg(
+; CHECK-NEXT:    tail call void @noundef(ptr [[TMP0:%.*]], ptr [[TMP1:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %3 = load ptr, ptr %1, align 8, !noundef !0, !dbg !1
@@ -49,5 +60,22 @@ define void @f4(ptr %0, ptr %1) {
   ret void
 }
 
+; FIXME: This is merged despite different noalias metadata.
+define void @noalias_2(ptr %0, ptr %1) {
+; CHECK-LABEL: @noalias_2(
+; CHECK-NEXT:    tail call void @noalias_1(ptr [[TMP0:%.*]], ptr [[TMP1:%.*]])
+; CHECK-NEXT:    ret void
+;
+  %3 = load ptr, ptr %1, align 8, !noalias !7
+  store ptr %3, ptr %0, align 8, !alias.scope !7
+  ret void
+}
+
 !0 = !{}
 !1 = !{}
+!2 = !{!2}
+!3 = !{!3, !2}
+!4 = !{!3}
+!5 = !{!5}
+!6 = !{!6, !5}
+!7 = !{!6}
