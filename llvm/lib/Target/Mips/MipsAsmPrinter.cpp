@@ -58,6 +58,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -71,6 +72,56 @@ using namespace llvm;
 
 extern cl::opt<bool> EmitJalrReloc;
 
+void MipsAsmPrinter::emitJumpTableInfo() {
+  if (!Subtarget->hasNanoMips() || Subtarget->useAbsoluteJumpTables() ) {
+    AsmPrinter::emitJumpTableInfo();
+    return;
+  }
+
+  const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
+  if (!MJTI)
+    return;
+
+  const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
+  if (JT.empty())
+    return;
+
+  const Function &F = MF->getFunction();
+  const TargetLoweringObjectFile &TLOF = getObjFileLowering();
+
+  MCSection *ReadOnlySection = TLOF.getSectionForJumpTable(F, TM);
+  OutStreamer->SwitchSection(ReadOnlySection);
+
+  auto MFI = MF->getInfo<MipsFunctionInfo>();
+  for (unsigned JTI = 0, e = JT.size(); JTI != e; ++JTI) {
+    const std::vector<MachineBasicBlock *> &JTBBs = JT[JTI].MBBs;
+
+    // If this jump table was deleted, ignore it.
+    if (JTBBs.empty())
+      continue;
+
+    unsigned EntrySize = MFI->getJumpTableEntrySize(JTI);
+    bool Signed = MFI->getJumpTableIsSigned(JTI);
+    emitJumpTableDir(*OutStreamer, EntrySize, JTBBs.size(), Signed);
+    emitAlignment(Align(EntrySize));
+    OutStreamer->emitLabel(GetJTISymbol(JTI));
+
+    MCSymbol *DiffLbl = MFI->getJumpTableSymbol(JTI);
+    for (auto *JTBB : JTBBs) {
+      const MCExpr *Value =
+          MCSymbolRefExpr::create(JTBB->getSymbol(), OutContext);
+      const MCExpr *DiffExpr = MCSymbolRefExpr::create(DiffLbl, OutContext);
+
+      // Each entry is:
+      //     .byte/.hword/...   (LBB - LBR) >> 1
+      Value = MCBinaryExpr::createSub(Value, DiffExpr, OutContext);
+      Value = MCBinaryExpr::createLShr(
+          Value, MCConstantExpr::create(1, OutContext), OutContext);
+      OutStreamer->emitValue(Value, EntrySize);
+    }
+  }
+}
+
 MipsTargetStreamer &MipsAsmPrinter::getTargetStreamer() const {
   return static_cast<MipsTargetStreamer &>(*OutStreamer->getTargetStreamer());
 }
@@ -79,6 +130,7 @@ bool MipsAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<MipsSubtarget>();
 
   MipsFI = MF.getInfo<MipsFunctionInfo>();
+  MFI = MF.getInfo<MipsFunctionInfo>();
   if (Subtarget->inMips16Mode())
     for (std::map<
              const char *,
@@ -151,6 +203,79 @@ void MipsAsmPrinter::emitPseudoIndirectBranch(MCStreamer &OutStreamer,
   TmpInst0.addOperand(MCOp);
 
   EmitToStreamer(OutStreamer, TmpInst0);
+}
+
+void MipsAsmPrinter::emitJumpTableDest(MCStreamer &OutStreamer,
+                                       const MachineInstr *MI) {
+  Register DestReg = MI->getOperand(0).getReg();
+  Register TableReg = MI->getOperand(1).getReg();
+  Register EntryReg = MI->getOperand(2).getReg();
+  int JTIdx = MI->getOperand(3).getIndex();
+  unsigned Size = MFI->getJumpTableEntrySize(JTIdx);
+  unsigned Signed = MFI->getJumpTableIsSigned(JTIdx) ? 1 : 0;
+
+  // Mark each load instruction that loads from the table with a
+  // R_NANOMIPS_JUMPTABLE_LOAD relocation, referring to the start of the table.
+  MCSymbol *JTLabel = MF->getJTISymbol(JTIdx, OutContext);
+  MCSymbol *OffsetLabel = OutContext.createTempSymbol();
+  const MCExpr *OffsetExpr = MCSymbolRefExpr::create(OffsetLabel, OutContext);
+  const MCExpr *JTLabelExpr = MCSymbolRefExpr::create(JTLabel, OutContext);
+  OutStreamer.emitRelocDirective(*OffsetExpr, "R_NANOMIPS_JUMPTABLE_LOAD",
+                                 JTLabelExpr, SMLoc(),
+                                 *TM.getMCSubtargetInfo());
+  OutStreamer.emitLabel(OffsetLabel);
+
+  MCInst LoadI;
+  // Choose appropriate load instruction based on the entry size and signess.
+  switch (Size) {
+  case 1:
+    LoadI.setOpcode(Signed ? Mips::LBX_NM : Mips::LBUX_NM);
+    break;
+  case 2:
+    LoadI.setOpcode(Signed ? Mips::LHXS_NM : Mips::LHUXS_NM);
+    break;
+  case 4:
+    LoadI.setOpcode(Mips::LWXS_NM);
+    break;
+
+  default:
+    llvm_unreachable("unallowed jump table entry size");
+    break;
+  }
+
+  LoadI.addOperand(MCOperand::createReg(DestReg));
+  LoadI.addOperand(MCOperand::createReg(TableReg));
+  LoadI.addOperand(MCOperand::createReg(EntryReg));
+  EmitToStreamer(OutStreamer, LoadI);
+}
+
+// Each table starts with the following directive:
+//
+// .jumptable esize, nsize [, unsigned]
+//
+// esize: size of each element 8/16/32
+// nsize: number of elements in table
+// unsigned: optional token, assume signed if not specified.
+void MipsAsmPrinter::emitJumpTableDir(MCStreamer &OutStreamer,
+                                      unsigned int EntrySize,
+                                      unsigned int EntryNum, bool Signed) {
+  auto JTDir = Twine(".jumptable ");
+  OutStreamer.emitRawText(JTDir.concat(std::to_string(EntrySize))
+                              .concat(",")
+                              .concat(std::to_string(EntryNum))
+                              .concat(Signed ? "" : ",1"));
+}
+
+void MipsAsmPrinter::emitBrsc(MCStreamer &OutStreamer, const MachineInstr *MI) {
+  int JTIdx = MI->getOperand(1).getIndex();
+  int Size = MFI->getJumpTableEntrySize(JTIdx);
+  bool Signed = MFI->getJumpTableIsSigned(JTIdx);
+  MCSymbol *BRSCLabel = OutContext.createTempSymbol("BRSC");
+  MCInst TmpInst0;
+  MCInstLowering.Lower(MI, TmpInst0);
+  EmitToStreamer(OutStreamer, TmpInst0);
+  OutStreamer.emitLabel(BRSCLabel);
+  MFI->setJumpTableEntryInfo(JTIdx, Size, BRSCLabel, Signed);
 }
 
 // If there is an MO_JALR operand, insert:
@@ -275,6 +400,16 @@ void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
       continue;
     }
 
+    if (Subtarget->hasNanoMips() &&
+        (I->getOpcode() == Mips::LoadJumpTableOffset)) {
+      emitJumpTableDest(*OutStreamer, &*I);
+      continue;
+    }
+
+    if (Subtarget->hasNanoMips() && I->getOpcode() == Mips::BRSC_NM) {
+      emitBrsc(*OutStreamer, &*I);
+      continue;
+    }
     // The inMips16Mode() test is not permanent.
     // Some instructions are marked as pseudo right now which
     // would make the test fail for the wrong reason but

@@ -258,7 +258,10 @@ class TargetRegisterClass;
       UALW,
       UALH,
       UASW,
-      UASH
+      UASH,
+
+      // nanoMIPS br_jt.
+      BR_JT
     };
 
   } // ene namespace MipsISD
@@ -548,6 +551,7 @@ class TargetRegisterClass;
     SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSETCC(SDValue Op, SelectionDAG &DAG) const;

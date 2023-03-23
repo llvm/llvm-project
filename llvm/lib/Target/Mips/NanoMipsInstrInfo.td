@@ -21,6 +21,10 @@ def NMUnalignedLH : SDNode<"MipsISD::UALH", SDTMipsLoadLR, [SDNPHasChain, SDNPMa
 def NMUnalignedSW : SDNode<"MipsISD::UASW", SDTStore, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def NMUnalignedSH : SDNode<"MipsISD::UASH", SDTStore, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
+def SDT_NMbr_jt : SDTypeProfile<0, 2, []>;
+
+def NMbr_jt : SDNode<"MipsISD::BR_JT", SDT_NMbr_jt, [SDNPHasChain]>;
+
 //===----------------------------------------------------------------------===//
 // nanoMIPS Operand, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
@@ -393,6 +397,13 @@ def OR16_NM  : ArithLogicR16<"or16", GPR3Opnd>;
 
 def JRC_NM : IndirectBranchNM<"jrc", GPR32NMOpnd>;
 
+let isCodeGenOnly = 1, hasNoSchedulingInfo = 1,
+    hasDelaySlot = 0, isBranch = 1,
+   isTerminator = 1,
+   hasDelaySlot = 0,
+   isCTI = 1 in
+def BRSC_NM : InstNM<(outs), (ins GPR32NMOpnd:$rs, GPR32NMOpnd: $jti), "brsc\t$rs", [(NMbr_jt GPR32NMOpnd:$rs, GPR32NMOpnd: $jti)]>, InstSize32;
+
 def BALC_NM : CallNM<"balc", MipsJmpLink, tglobaladdr>, InstSize32;
 def MOVEBALC_NM : MoveBalcBase;
 
@@ -427,6 +438,9 @@ def PseudoReturnNM : PseudoInstNM<(outs), (ins GPR32NMOpnd:$rs), []> {
   let hasExtraSrcRegAllocReq = 1;
   bit isCTI = 1;
 }
+
+let isCodeGenOnly = 1, hasNoSchedulingInfo = 1, hasDelaySlot = 0 in
+def LoadJumpTableOffset : PseudoInstNM<(outs GPR32NMOpnd:$rd), (ins GPR32NMOpnd:$table, GPR32NMOpnd:$entry, GPR32NMOpnd:$jti), []>;
 
 // Indirect branch is matched as PseudoIndirectBranchNM and expanded to JRC_NM.
 def PseudoIndirectBranchNM :

@@ -292,6 +292,14 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       Features.push_back("-xgot");
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_mjump_table_opt,
+                               options::OPT_mno_jump_table_opt)) {
+    if (A->getOption().matches(options::OPT_mno_jump_table_opt))
+      Features.push_back("+disable-jump-table-opt");
+    else
+      Features.push_back("-disable-jump-table-opt");
+  }
+
   mips::FloatABI FloatABI = mips::getMipsFloatABI(D, Args, Triple);
   if (FloatABI == mips::FloatABI::Soft) {
     // FIXME: Note, this is a hack. We need to pass the selected float
