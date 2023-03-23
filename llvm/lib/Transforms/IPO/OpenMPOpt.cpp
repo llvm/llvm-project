@@ -5201,6 +5201,8 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
   A.getOrCreateAAFor<AAExecutionDomain>(IRPosition::function(F));
   if (!DisableOpenMPOptDeglobalization)
     A.getOrCreateAAFor<AAHeapToStack>(IRPosition::function(F));
+  if (F.hasFnAttribute(Attribute::Convergent))
+    A.getOrCreateAAFor<AANonConvergent>(IRPosition::function(F));
 
   for (auto &I : instructions(F)) {
     if (auto *LI = dyn_cast<LoadInst>(&I)) {
