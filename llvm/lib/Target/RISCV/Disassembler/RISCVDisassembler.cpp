@@ -61,9 +61,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVDisassembler() {
 static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint32_t RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder) {
-  bool IsRV32E = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureRV32E);
+  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureRVE);
 
-  if (RegNo >= 32 || (IsRV32E && RegNo >= 16))
+  if (RegNo >= 32 || (IsRVE && RegNo >= 16))
     return MCDisassembler::Fail;
 
   MCRegister Reg = RISCV::X0 + RegNo;

@@ -675,7 +675,7 @@ cc_test(
         ":automata_tables_gen",
         "//llvm:Support",
         "//llvm:TableGen",
-        "//llvm:tblgen",
+        "//llvm:LLVMTableGenGlobalISel",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",

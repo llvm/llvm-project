@@ -2,6 +2,7 @@ add_clang_library(clangAnalysisFlowSensitive
   ControlFlowContext.cpp
   DataflowAnalysisContext.cpp
   DataflowEnvironment.cpp
+  Logger.cpp
   Transfer.cpp
   TypeErasedDataflowAnalysis.cpp
   Value.cpp

@@ -399,7 +399,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       #define $Macro_decl[[MACRO_CONCAT]](X, V, T) T foo##X = V
       #define $Macro_decl[[DEF_VAR]](X, V) int X = V
       #define $Macro_decl[[DEF_VAR_T]](T, X, V) T X = V
-      #define $Macro_decl[[DEF_VAR_REV]](V, X) DEF_VAR(X, V)
+      #define $Macro_decl[[DEF_VAR_REV]](V, X) $Macro[[DEF_VAR]](X, V)
       #define $Macro_decl[[CPY]](X) X
       #define $Macro_decl[[DEF_VAR_TYPE]](X, Y) X Y
       #define $Macro_decl[[SOME_NAME]] variable
@@ -431,7 +431,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
     )cpp",
       R"cpp(
       #define $Macro_decl[[fail]](expr) expr
-      #define $Macro_decl[[assert]](COND) if (!(COND)) { fail("assertion failed" #COND); }
+      #define $Macro_decl[[assert]](COND) if (!(COND)) { $Macro[[fail]]("assertion failed" #COND); }
       // Preamble ends.
       int $Variable_def[[x]];
       int $Variable_def[[y]];

@@ -109,7 +109,7 @@ TEST(ParseArchString, RejectsUpperCase) {
 TEST(ParseArchString, RejectsInvalidBaseISA) {
   for (StringRef Input : {"rv32", "rv64", "rv65i"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "string must begin with rv32{i,e,g} or rv64{i,g}");
+              "string must begin with rv32{i,e,g} or rv64{i,e,g}");
   }
   for (StringRef Input : {"rv32j", "rv64k", "rv32_i"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
@@ -118,11 +118,9 @@ TEST(ParseArchString, RejectsInvalidBaseISA) {
 }
 
 TEST(ParseArchString, RejectsUnsupportedBaseISA) {
-  EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv64e", true).takeError()),
-            "standard user-level extension 'e' requires 'rv32'");
   for (StringRef Input : {"rv128i", "rv128g"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "string must begin with rv32{i,e,g} or rv64{i,g}");
+              "string must begin with rv32{i,e,g} or rv64{i,e,g}");
   }
 }
 
@@ -141,7 +139,7 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   RISCVISAInfo &InfoRV32E = **MaybeRV32E;
   RISCVISAInfo::OrderedExtensionMap ExtsRV32E = InfoRV32E.getExtensions();
   EXPECT_EQ(ExtsRV32E.size(), 1UL);
-  EXPECT_TRUE(ExtsRV32E.at("e") == (RISCVExtensionInfo{1, 9}));
+  EXPECT_TRUE(ExtsRV32E.at("e") == (RISCVExtensionInfo{2, 0}));
   EXPECT_EQ(InfoRV32E.getXLen(), 32U);
   EXPECT_EQ(InfoRV32E.getFLen(), 0U);
 
@@ -166,6 +164,15 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_TRUE(ExtsRV64I.at("i") == (RISCVExtensionInfo{2, 0}));
   EXPECT_EQ(InfoRV64I.getXLen(), 64U);
   EXPECT_EQ(InfoRV64I.getFLen(), 0U);
+
+  auto MaybeRV64E = RISCVISAInfo::parseArchString("rv64e", true);
+  ASSERT_THAT_EXPECTED(MaybeRV64E, Succeeded());
+  RISCVISAInfo &InfoRV64E = **MaybeRV64E;
+  RISCVISAInfo::OrderedExtensionMap ExtsRV64E = InfoRV64E.getExtensions();
+  EXPECT_EQ(ExtsRV64E.size(), 1UL);
+  EXPECT_TRUE(ExtsRV64E.at("e") == (RISCVExtensionInfo{2, 0}));
+  EXPECT_EQ(InfoRV64E.getXLen(), 64U);
+  EXPECT_EQ(InfoRV64E.getFLen(), 0U);
 
   auto MaybeRV64G = RISCVISAInfo::parseArchString("rv64g", true);
   ASSERT_THAT_EXPECTED(MaybeRV64G, Succeeded());

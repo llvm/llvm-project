@@ -26,9 +26,9 @@ class StmtToEnvMap {
 public:
   virtual ~StmtToEnvMap() = default;
 
-  /// Returns the environment of the basic block that contains `S` or nullptr if
-  /// there isn't one.
-  /// FIXME: Ensure that the result can't be null and return a const reference.
+  /// Retrieves the environment of the basic block that contains `S`.
+  /// If `S` is reachable, returns a non-null pointer to the environment.
+  /// If `S` is not reachable, returns nullptr.
   virtual const Environment *getEnvironment(const Stmt &S) const = 0;
 };
 

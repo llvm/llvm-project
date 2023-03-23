@@ -645,7 +645,7 @@ public:
   /// relocation table for one or more symbols.
   ///
   /// \param Sym - The symbol on the .ref directive.
-  virtual void emitXCOFFRefDirective(StringRef Sym);
+  virtual void emitXCOFFRefDirective(const MCSymbol *Symbol);
 
   /// Emit an ELF .size directive.
   ///

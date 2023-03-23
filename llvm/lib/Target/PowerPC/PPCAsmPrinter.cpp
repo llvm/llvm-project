@@ -2517,16 +2517,22 @@ void PPCAIXAsmPrinter::emitPGORefs() {
     OutStreamer->switchSection(CntsSection);
     if (OutContext.hasXCOFFSection(
             "__llvm_prf_data",
-            XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD)))
-      OutStreamer->emitXCOFFRefDirective("__llvm_prf_data[RW]");
+            XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD))) {
+      MCSymbol *S = OutContext.getOrCreateSymbol("__llvm_prf_data[RW]");
+      OutStreamer->emitXCOFFRefDirective(S);
+    }
     if (OutContext.hasXCOFFSection(
             "__llvm_prf_names",
-            XCOFF::CsectProperties(XCOFF::XMC_RO, XCOFF::XTY_SD)))
-      OutStreamer->emitXCOFFRefDirective("__llvm_prf_names[RO]");
+            XCOFF::CsectProperties(XCOFF::XMC_RO, XCOFF::XTY_SD))) {
+      MCSymbol *S = OutContext.getOrCreateSymbol("__llvm_prf_names[RO]");
+      OutStreamer->emitXCOFFRefDirective(S);
+    }
     if (OutContext.hasXCOFFSection(
             "__llvm_prf_vnds",
-            XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD)))
-      OutStreamer->emitXCOFFRefDirective("__llvm_prf_vnds[RW]");
+            XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD))) {
+      MCSymbol *S = OutContext.getOrCreateSymbol("__llvm_prf_vnds[RW]");
+      OutStreamer->emitXCOFFRefDirective(S);
+    }
   }
 }
 
