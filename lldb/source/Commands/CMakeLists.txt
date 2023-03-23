@@ -7,7 +7,7 @@ if (LLDB_ENABLE_SWIFT_SUPPORT)
 endif()
 set(LLVM_OPTIONAL_SOURCES CommandObjectHealthcheck.cpp)
 
-add_lldb_library(lldbCommands
+add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
   CommandCompletions.cpp
   CommandObjectApropos.cpp
   CommandObjectBreakpoint.cpp

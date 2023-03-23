@@ -21,7 +21,7 @@ if (NOT LLDB_ENABLE_SWIFT_SUPPORT)
   unset(SWIFT_LIBS)
 endif()
 
-add_lldb_library(lldbSymbol
+add_lldb_library(lldbSymbol NO_PLUGIN_DEPENDENCIES
   ArmUnwindInfo.cpp
   Block.cpp
   CompactUnwindInfo.cpp

@@ -37,7 +37,7 @@ function(add_lldb_library name)
   # only supported parameters to this macro are the optional
   # MODULE;SHARED;STATIC library type and source files
   cmake_parse_arguments(PARAM
-    "MODULE;SHARED;STATIC;OBJECT;PLUGIN;FRAMEWORK;NO_INTERNAL_DEPENDENCIES"
+    "MODULE;SHARED;STATIC;OBJECT;PLUGIN;FRAMEWORK;NO_INTERNAL_DEPENDENCIES;NO_PLUGIN_DEPENDENCIES"
     "INSTALL_PREFIX;ENTITLEMENTS"
     "EXTRA_CXXFLAGS;DEPENDS;LINK_LIBS;LINK_COMPONENTS;CLANG_LIBS"
     ${ARGN})
@@ -50,6 +50,16 @@ function(add_lldb_library name)
         message(FATAL_ERROR
           "Library ${name} cannot depend on any other lldb libs "
           "(Found ${link_lib} in LINK_LIBS)")
+      endif()
+    endforeach()
+  endif()
+
+  if(PARAM_NO_PLUGIN_DEPENDENCIES)
+    foreach(link_lib ${PARAM_LINK_LIBS})
+      if (link_lib MATCHES "^lldbPlugin")
+        message(FATAL_ERROR
+          "Library ${name} cannot depend on a plugin (Found ${link_lib} in "
+          "LINK_LIBS)")
       endif()
     endforeach()
   endif()
