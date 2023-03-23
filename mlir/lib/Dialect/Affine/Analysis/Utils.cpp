@@ -98,7 +98,7 @@ ComputationSliceState::getAsConstraints(FlatAffineValueConstraints *cst) {
     if (isValidSymbol(value)) {
       // Check if the symbol is a constant.
       if (auto cOp = value.getDefiningOp<arith::ConstantIndexOp>())
-        cst->addBound(FlatAffineValueConstraints::EQ, value, cOp.value());
+        cst->addBound(BoundType::EQ, value, cOp.value());
     } else if (auto loop = getForInductionVarOwner(value)) {
       if (failed(cst->addAffineForOpDomain(loop)))
         return failure();
@@ -357,11 +357,11 @@ std::optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
   // that will need non-trivials means to eliminate.
   FlatAffineValueConstraints cstWithShapeBounds(cst);
   for (unsigned r = 0; r < rank; r++) {
-    cstWithShapeBounds.addBound(FlatAffineValueConstraints::LB, r, 0);
+    cstWithShapeBounds.addBound(BoundType::LB, r, 0);
     int64_t dimSize = memRefType.getDimSize(r);
     if (ShapedType::isDynamic(dimSize))
       continue;
-    cstWithShapeBounds.addBound(FlatAffineValueConstraints::UB, r, dimSize - 1);
+    cstWithShapeBounds.addBound(BoundType::UB, r, dimSize - 1);
   }
 
   // Find a constant upper bound on the extent of this memref region along each
@@ -516,7 +516,7 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
       // Check if the symbol is a constant.
       Value symbol = operand;
       if (auto constVal = getConstantIntValue(symbol))
-        cst.addBound(FlatAffineValueConstraints::EQ, symbol, constVal.value());
+        cst.addBound(BoundType::EQ, symbol, constVal.value());
     } else {
       LLVM_DEBUG(llvm::dbgs() << "unknown affine dimensional value");
       return failure();
@@ -580,11 +580,10 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   if (addMemRefDimBounds) {
     auto memRefType = memref.getType().cast<MemRefType>();
     for (unsigned r = 0; r < rank; r++) {
-      cst.addBound(FlatAffineValueConstraints::LB, /*pos=*/r, /*value=*/0);
+      cst.addBound(BoundType::LB, /*pos=*/r, /*value=*/0);
       if (memRefType.isDynamicDim(r))
         continue;
-      cst.addBound(FlatAffineValueConstraints::UB, /*pos=*/r,
-                   memRefType.getDimSize(r) - 1);
+      cst.addBound(BoundType::UB, /*pos=*/r, memRefType.getDimSize(r) - 1);
     }
   }
   cst.removeTrivialRedundancy();
@@ -695,7 +694,7 @@ LogicalResult mlir::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
       continue;
 
     // Check for overflow: d_i >= memref dim size.
-    ucst.addBound(FlatAffineValueConstraints::LB, r, dimSize);
+    ucst.addBound(BoundType::LB, r, dimSize);
     outOfBounds = !ucst.isEmpty();
     if (outOfBounds && emitError) {
       loadOrStoreOp.emitOpError()
@@ -706,7 +705,7 @@ LogicalResult mlir::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
     FlatAffineValueConstraints lcst(*region.getConstraints());
     std::fill(ineq.begin(), ineq.end(), 0);
     // d_i <= -1;
-    lcst.addBound(FlatAffineValueConstraints::UB, r, -1);
+    lcst.addBound(BoundType::UB, r, -1);
     outOfBounds = !lcst.isEmpty();
     if (outOfBounds && emitError) {
       loadOrStoreOp.emitOpError()
@@ -1403,9 +1402,8 @@ static void unpackOptionalValues(ArrayRef<std::optional<Value>> source,
 /// Note: This function adds a new symbol column to the `constraints` for each
 /// dimension/symbol that exists in the affine map but not in `constraints`.
 static LogicalResult alignAndAddBound(FlatAffineValueConstraints &constraints,
-                                      IntegerPolyhedron::BoundType type,
-                                      unsigned pos, AffineMap map,
-                                      ValueRange operands) {
+                                      BoundType type, unsigned pos,
+                                      AffineMap map, ValueRange operands) {
   SmallVector<Value> dims, syms, newSyms;
   unpackOptionalValues(constraints.getMaybeValues(VarKind::SetDim), dims);
   unpackOptionalValues(constraints.getMaybeValues(VarKind::Symbol), syms);
@@ -1482,7 +1480,7 @@ mlir::simplifyConstrainedMinMaxOp(Operation *op,
 
   // Add an inequality for each result expr_i of map:
   // isMin: op <= expr_i, !isMin: op >= expr_i
-  auto boundType = isMin ? IntegerPolyhedron::UB : IntegerPolyhedron::LB;
+  auto boundType = isMin ? BoundType::UB : BoundType::LB;
   // Upper bounds are exclusive, so add 1. (`affine.min` ops are inclusive.)
   AffineMap mapLbUb = isMin ? addConstToResults(map, 1) : map;
   if (failed(
@@ -1504,8 +1502,7 @@ mlir::simplifyConstrainedMinMaxOp(Operation *op,
   // Add an equality: Set dimOpBound to computed bound.
   // Add back dimension for op. (Was removed by `getSliceBounds`.)
   AffineMap alignedBoundMap = boundMap.shiftDims(/*shift=*/1, /*offset=*/dimOp);
-  if (failed(constraints.addBound(IntegerPolyhedron::EQ, dimOpBound,
-                                  alignedBoundMap)))
+  if (failed(constraints.addBound(BoundType::EQ, dimOpBound, alignedBoundMap)))
     return failure();
 
   // If the constraint system is empty, there is an inconsistency. (E.g., this
@@ -1530,7 +1527,7 @@ mlir::simplifyConstrainedMinMaxOp(Operation *op,
     // Note: These equalities could have been added earlier and used to express
     // minOp <= expr_i. However, then we run the risk that `getSliceBounds`
     // computes minOpUb in terms of r_i dims, which is not desired.
-    if (failed(alignAndAddBound(newConstr, IntegerPolyhedron::EQ, i,
+    if (failed(alignAndAddBound(newConstr, BoundType::EQ, i,
                                 map.getSubMap({i - resultDimStart}), operands)))
       return failure();
 
@@ -1557,7 +1554,7 @@ mlir::simplifyConstrainedMinMaxOp(Operation *op,
     // Skip unused operands and operands that are already constants.
     if (!newOperands[i] || getConstantIntValue(newOperands[i]))
       continue;
-    if (auto bound = constraints.getConstantBound64(IntegerPolyhedron::EQ, i)) {
+    if (auto bound = constraints.getConstantBound64(BoundType::EQ, i)) {
       AffineExpr expr =
           i < newMap.getNumDims()
               ? builder.getAffineDimExpr(i)
