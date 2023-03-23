@@ -39,5 +39,26 @@ define i64 @bit_floor_64(i64 %x) {
   ret i64 %sel
 }
 
+; a vector version of @bit_floor_32 above
+define <4 x i32> @bit_floor_v4i32(<4 x i32> %x) {
+; CHECK-LABEL: @bit_floor_v4i32(
+; CHECK-NEXT:    [[EQ0:%.*]] = icmp eq <4 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <4 x i32> [[X]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[CTLZ:%.*]] = tail call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[LSHR]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw <4 x i32> <i32 32, i32 32, i32 32, i32 32>, [[CTLZ]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <4 x i32> <i32 1, i32 1, i32 1, i32 1>, [[SUB]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[EQ0]], <4 x i32> zeroinitializer, <4 x i32> [[SHL]]
+; CHECK-NEXT:    ret <4 x i32> [[SEL]]
+;
+  %eq0 = icmp eq <4 x i32> %x, <i32 0, i32 0, i32 0, i32 0>
+  %lshr = lshr <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
+  %ctlz = tail call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %lshr, i1 false)
+  %sub = sub <4 x i32> <i32 32, i32 32, i32 32, i32 32>, %ctlz
+  %shl = shl <4 x i32> <i32 1, i32 1, i32 1, i32 1>, %sub
+  %sel = select <4 x i1> %eq0, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> %shl
+  ret <4 x i32> %sel
+}
+
 declare i32 @llvm.ctlz.i32(i32, i1 immarg)
 declare i64 @llvm.ctlz.i64(i64, i1 immarg)
+declare <4 x i32> @llvm.ctlz.v4i32(<4 x i32>, i1)
