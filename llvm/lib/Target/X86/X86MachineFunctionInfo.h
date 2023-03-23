@@ -117,8 +117,6 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// determine if we should insert tilerelease in frame lowering.
   bool HasVirtualTileReg = false;
 
-  MachineInstr *StackPtrSaveMI = nullptr;
-
   std::optional<int> SwiftAsyncContextFrameIdx;
 
   // Preallocated fields are only used during isel.
@@ -226,9 +224,6 @@ public:
 
   bool hasVirtualTileReg() const { return HasVirtualTileReg; }
   void setHasVirtualTileReg(bool v) { HasVirtualTileReg = v; }
-
-  void setStackPtrSaveMI(MachineInstr *MI) { StackPtrSaveMI = MI; }
-  MachineInstr *getStackPtrSaveMI() const { return StackPtrSaveMI; }
 
   std::optional<int> getSwiftAsyncContextFrameIdx() const {
     return SwiftAsyncContextFrameIdx;

@@ -39,10 +39,11 @@ define void @runtime_tripcount(ptr %a, i32 %N) {
 ; CHECK-LABEL: @runtime_tripcount(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 84
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 84
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[N:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 88
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
@@ -70,6 +71,42 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
+; In this case, the i8 IVs increment *isn't* nsw.  As a result, a N of 0
+; is well defined, and thus the post-inc starts at 255.
+define void @wrap_around(ptr %a, i8 %N) {
+; CHECK-LABEL: @wrap_around(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[N:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 4
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP3]]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[A]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store i8 1, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[SCEVGEP]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %lsr.iv1 = phi ptr [ %uglygep2, %for.body ], [ %a, %entry ]
+  %lsr.iv = phi i8 [ %lsr.iv.next, %for.body ], [ %N, %entry ]
+  store i8 1, ptr %lsr.iv1, align 4
+  %lsr.iv.next = add i8 %lsr.iv, -1
+  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i64 4
+  %exitcond.not = icmp eq i8 %lsr.iv.next, 0
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
 ; The replacing AddRec IV is a complicated AddRec. This tests whether
 ; the fold terminating condition transformation is writing new terminating
 ; condition in the correct type.
@@ -77,15 +114,17 @@ define void @ptr_of_ptr_addrec(ptr %ptrptr, i32 %length) {
 ; CHECK-LABEL: @ptr_of_ptr_addrec(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[START_PTRPTR:%.*]] = getelementptr ptr, ptr [[PTRPTR:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[LENGTH:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[START_PTRPTR]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LENGTH:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 8
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[START_PTRPTR]], i64 [[TMP3]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IT_04:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[START_PTRPTR]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[IT_04]], align 8
-; CHECK-NEXT:    tail call void @foo(ptr [[TMP2]])
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds ptr, ptr [[IT_04]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[IT_04]], align 8
+; CHECK-NEXT:    tail call void @foo(ptr [[TMP4]])
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr ptr, ptr [[IT_04]], i64 1
 ; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[INCDEC_PTR]], [[SCEVGEP]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
@@ -117,9 +156,11 @@ define void @iv_start_non_preheader(ptr %mark, i32 signext %length) {
 ; CHECK-NEXT:    [[TOBOOL_NOT3:%.*]] = icmp eq i32 [[LENGTH:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT3]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[LENGTH]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[MARK:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LENGTH]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 8
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[MARK:%.*]], i64 [[TMP3]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
@@ -127,9 +168,9 @@ define void @iv_start_non_preheader(ptr %mark, i32 signext %length) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[DST_04:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[MARK]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DST_04]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @foo(ptr [[TMP2]])
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds ptr, ptr [[DST_04]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DST_04]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = call ptr @foo(ptr [[TMP4]])
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr ptr, ptr [[DST_04]], i64 1
 ; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[INCDEC_PTR]], [[SCEVGEP]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ;
@@ -156,9 +197,9 @@ for.body:                                         ; preds = %entry, %for.body
 ; advance the pointer IV by *4* each time, and thus on the iteration we write
 ; byte 16, %uglygep2 (the pointer increment) is past the end of the underlying
 ; storage and thus violates the inbounds requirements.  As a result, %uglygep2
-; is poison on the final iteration.  If we insert a branch on that value, we
-; have inserted undefined behavior where it did not previously exist.
-; FIXME: miscompile
+; is poison on the final iteration.  If we insert a branch on that value
+; (without stripping the poison flag), we have inserted undefined behavior
+; where it did not previously exist.
 define void @inbounds_poison_use(ptr %a) {
 ; CHECK-LABEL: @inbounds_poison_use(
 ; CHECK-NEXT:  entry:
@@ -167,7 +208,7 @@ define void @inbounds_poison_use(ptr %a) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[A]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i8 1, ptr [[LSR_IV1]], align 4
-; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr inbounds i8, ptr [[LSR_IV1]], i64 4
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
 ; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[SCEVGEP]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
@@ -394,6 +435,40 @@ for.body:                                         ; preds = %another.branch, %en
 another.branch:
   %exitcond.not = icmp sle i32 %lsr.iv.next, 0
   br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+
+define void @non_branch_terminator(ptr %a) {
+; CHECK-LABEL: @non_branch_terminator(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 84
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi i64 [ [[LSR_IV_NEXT3:%.*]], [[FOR_BODY]] ], [ 378, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[ENTRY]] ]
+; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
+; CHECK-NEXT:    [[LSR_IV_NEXT3]] = add nsw i64 [[LSR_IV2]], -1
+; CHECK-NEXT:    switch i64 [[LSR_IV2]], label [[FOR_BODY]] [
+; CHECK-NEXT:    i64 0, label [[FOR_END:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %uglygep = getelementptr i8, ptr %a, i64 84
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %lsr.iv1 = phi ptr [ %uglygep2, %for.body ], [ %uglygep, %entry ]
+  %lsr.iv = phi i64 [ %lsr.iv.next, %for.body ], [ 379, %entry ]
+  store i32 1, ptr %lsr.iv1, align 4
+  %lsr.iv.next = add nsw i64 %lsr.iv, -1
+  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i64 4
+  switch i64 %lsr.iv.next, label %for.body [i64 0, label %for.end]
 
 for.end:                                          ; preds = %for.body
   ret void

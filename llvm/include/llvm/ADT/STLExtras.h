@@ -77,6 +77,14 @@ constexpr void swap_impl(T &&lhs,
   swap(std::forward<T>(lhs), std::forward<T>(rhs));
 }
 
+using std::size;
+
+template <typename RangeT>
+constexpr auto size_impl(RangeT &&range)
+    -> decltype(size(std::forward<RangeT>(range))) {
+  return size(std::forward<RangeT>(range));
+}
+
 } // end namespace adl_detail
 
 /// Returns the begin iterator to \p range using `std::begin` and
@@ -101,6 +109,14 @@ template <typename T>
 constexpr void adl_swap(T &&lhs, T &&rhs) noexcept(
     noexcept(adl_detail::swap_impl(std::declval<T>(), std::declval<T>()))) {
   adl_detail::swap_impl(std::forward<T>(lhs), std::forward<T>(rhs));
+}
+
+/// Returns the size of \p range using `std::size` and functions found through
+/// Argument-Dependent Lookup (ADL).
+template <typename RangeT>
+constexpr auto adl_size(RangeT &&range)
+    -> decltype(adl_detail::size_impl(std::forward<RangeT>(range))) {
+  return adl_detail::size_impl(std::forward<RangeT>(range));
 }
 
 namespace detail {
@@ -745,6 +761,8 @@ bool any_of(R &&range, UnaryPredicate P);
 
 template <typename T> bool all_equal(std::initializer_list<T> Values);
 
+template <typename R> constexpr size_t range_size(R &&Range);
+
 namespace detail {
 
 using std::declval;
@@ -936,9 +954,7 @@ detail::zippy<detail::zip_shortest, T, U, Args...> zip(T &&t, U &&u,
 template <typename T, typename U, typename... Args>
 detail::zippy<detail::zip_first, T, U, Args...> zip_equal(T &&t, U &&u,
                                                           Args &&...args) {
-  assert(all_equal({std::distance(adl_begin(t), adl_end(t)),
-                    std::distance(adl_begin(u), adl_end(u)),
-                    std::distance(adl_begin(args), adl_end(args))...}) &&
+  assert(all_equal({range_size(t), range_size(u), range_size(args)...}) &&
          "Iteratees do not have equal length");
   return detail::zippy<detail::zip_first, T, U, Args...>(
       std::forward<T>(t), std::forward<U>(u), std::forward<Args>(args)...);
@@ -951,9 +967,7 @@ detail::zippy<detail::zip_first, T, U, Args...> zip_equal(T &&t, U &&u,
 template <typename T, typename U, typename... Args>
 detail::zippy<detail::zip_first, T, U, Args...> zip_first(T &&t, U &&u,
                                                           Args &&...args) {
-  assert(std::distance(adl_begin(t), adl_end(t)) <=
-             std::min({std::distance(adl_begin(u), adl_end(u)),
-                       std::distance(adl_begin(args), adl_end(args))...}) &&
+  assert(range_size(t) <= std::min({range_size(u), range_size(args)...}) &&
          "First iteratee is not the shortest");
 
   return detail::zippy<detail::zip_first, T, U, Args...>(
@@ -1769,6 +1783,29 @@ auto size(R &&Range,
   return std::distance(Range.begin(), Range.end());
 }
 
+namespace detail {
+template <typename Range>
+using check_has_free_function_size =
+    decltype(adl_size(std::declval<Range &>()));
+
+template <typename Range>
+static constexpr bool HasFreeFunctionSize =
+    is_detected<check_has_free_function_size, Range>::value;
+} // namespace detail
+
+/// Returns the size of the \p Range, i.e., the number of elements. This
+/// implementation takes inspiration from `std::ranges::size` from C++20 and
+/// delegates the size check to `adl_size` or `std::distance`, in this order of
+/// preference. Unlike `llvm::size`, this function does *not* guarantee O(1)
+/// running time, and is intended to be used in generic code that does not know
+/// the exact range type.
+template <typename R> constexpr size_t range_size(R &&Range) {
+  if constexpr (detail::HasFreeFunctionSize<R>)
+    return adl_size(Range);
+  else
+    return static_cast<size_t>(std::distance(adl_begin(Range), adl_end(Range)));
+}
+
 /// Provide wrappers to std::for_each which take ranges instead of having to
 /// pass begin/end explicitly.
 template <typename R, typename UnaryFunction>
@@ -2389,9 +2426,7 @@ auto enumerate(FirstRange &&First, RestRanges &&...Rest) {
 #ifndef NDEBUG
     // Note: Create an array instead of an initializer list to work around an
     // Apple clang 14 compiler bug.
-    size_t sizes[] = {
-        static_cast<size_t>(std::distance(adl_begin(First), adl_end(First))),
-        static_cast<size_t>(std::distance(adl_begin(Rest), adl_end(Rest)))...};
+    size_t sizes[] = {range_size(First), range_size(Rest)...};
     assert(all_equal(sizes) && "Ranges have different length");
 #endif
   }

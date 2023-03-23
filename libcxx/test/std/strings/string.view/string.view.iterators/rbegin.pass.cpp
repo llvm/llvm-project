@@ -27,7 +27,7 @@ test(S s)
     typename S::const_reverse_iterator cb2 = s.crbegin();
     if (!s.empty())
     {
-        const size_t last = s.size() - 1;
+        const std::size_t last = s.size() - 1;
         assert(   *b ==  s[last]);
         assert(  &*b == &s[last]);
         assert( *cb1 ==  s[last]);

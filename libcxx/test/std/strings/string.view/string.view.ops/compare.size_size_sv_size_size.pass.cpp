@@ -23,8 +23,8 @@
 int sign ( int x ) { return x > 0 ? 1 : ( x < 0 ? -1 : 0 ); }
 
 template<typename CharT>
-void test1 ( std::basic_string_view<CharT> sv1, size_t pos1, size_t n1,
-             std::basic_string_view<CharT> sv2, size_t pos2, size_t n2,
+void test1 ( std::basic_string_view<CharT> sv1, std::size_t pos1, size_t n1,
+             std::basic_string_view<CharT> sv2, std::size_t pos2, size_t n2,
              int expected ) {
 #ifdef TEST_HAS_NO_EXCEPTIONS
     if (pos1 <= sv1.size() && pos2 <= sv2.size())
@@ -42,8 +42,8 @@ void test1 ( std::basic_string_view<CharT> sv1, size_t pos1, size_t n1,
 
 
 template<typename CharT>
-void test ( const CharT *s1, size_t pos1, size_t n1,
-            const CharT *s2, size_t pos2, size_t n2,
+void test ( const CharT *s1, std::size_t pos1, size_t n1,
+            const CharT *s2, std::size_t pos2, size_t n2,
             int expected ) {
     typedef std::basic_string_view<CharT> string_view_t;
 

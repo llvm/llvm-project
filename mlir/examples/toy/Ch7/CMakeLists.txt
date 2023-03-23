@@ -43,6 +43,7 @@ target_link_libraries(toyc-ch7
     ${dialect_libs}
     ${conversion_libs}
     MLIRAnalysis
+    MLIRBuiltinToLLVMIRTranslation
     MLIRCallInterfaces
     MLIRCastInterfaces
     MLIRExecutionEngine

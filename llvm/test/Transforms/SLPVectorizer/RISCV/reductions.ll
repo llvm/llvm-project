@@ -821,4 +821,96 @@ entry:
   ret i64 %add.15
 }
 
+declare i32 @llvm.abs.i32(i32, i1)
 
+; FIXME: This horizontal reduction occurs because the cost model thinks it can
+; vectorize the loads here. However, because -riscv-v-slp-max-vf is set to 1 by
+; default, tryToVectorizeList fails and we end up with this very expensive
+; scalarized load.
+;
+; This is the code the cost model thinks it's going to generate, which you can
+; get by passing -riscv-v-slp-max-vf=0
+;
+; define i32 @stride_sum_abs_diff(ptr %p, ptr %q, i64 %stride) #0 {
+;   %p.2 = getelementptr inbounds i32, ptr %p, i64 %stride
+;   %q.2 = getelementptr inbounds i32, ptr %q, i64 %stride
+;   %p.3 = getelementptr inbounds i32, ptr %p.2, i64 1
+;   %q.3 = getelementptr inbounds i32, ptr %q.2, i64 1
+;   %1 = load <2 x i32>, ptr %p, align 4
+;   %2 = load <2 x i32>, ptr %q, align 4
+;   %x.2 = load i32, ptr %p.2, align 4
+;   %y.2 = load i32, ptr %q.2, align 4
+;   %x.3 = load i32, ptr %p.3, align 4
+;   %y.3 = load i32, ptr %q.3, align 4
+;   %3 = shufflevector <2 x i32> %1, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+;   %4 = insertelement <4 x i32> %3, i32 %x.2, i32 2
+;   %5 = insertelement <4 x i32> %4, i32 %x.3, i32 3
+;   %6 = shufflevector <2 x i32> %2, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+;   %7 = insertelement <4 x i32> %6, i32 %y.2, i32 2
+;   %8 = insertelement <4 x i32> %7, i32 %y.3, i32 3
+;   %9 = sub <4 x i32> %5, %8
+;   %10 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %9, i1 true)
+;   %11 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %10)
+;   ret i32 %11
+; }
+define i32 @stride_sum_abs_diff(ptr %p, ptr %q, i64 %stride) {
+; CHECK-LABEL: @stride_sum_abs_diff(
+; CHECK-NEXT:    [[P_1:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[Q_1:%.*]] = getelementptr inbounds i32, ptr [[Q:%.*]], i64 1
+; CHECK-NEXT:    [[P_2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[STRIDE:%.*]]
+; CHECK-NEXT:    [[Q_2:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 [[STRIDE]]
+; CHECK-NEXT:    [[P_3:%.*]] = getelementptr inbounds i32, ptr [[P_2]], i64 1
+; CHECK-NEXT:    [[Q_3:%.*]] = getelementptr inbounds i32, ptr [[Q_2]], i64 1
+; CHECK-NEXT:    [[X_0:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[Y_0:%.*]] = load i32, ptr [[Q]], align 4
+; CHECK-NEXT:    [[X_1:%.*]] = load i32, ptr [[P_1]], align 4
+; CHECK-NEXT:    [[Y_1:%.*]] = load i32, ptr [[Q_1]], align 4
+; CHECK-NEXT:    [[X_2:%.*]] = load i32, ptr [[P_2]], align 4
+; CHECK-NEXT:    [[Y_2:%.*]] = load i32, ptr [[Q_2]], align 4
+; CHECK-NEXT:    [[X_3:%.*]] = load i32, ptr [[P_3]], align 4
+; CHECK-NEXT:    [[Y_3:%.*]] = load i32, ptr [[Q_3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[X_0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X_1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X_2]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[X_3]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[Y_0]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[Y_1]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[Y_2]], i32 2
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[Y_3]], i32 3
+; CHECK-NEXT:    [[TMP9:%.*]] = sub <4 x i32> [[TMP4]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP9]], i1 true)
+; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP10]])
+; CHECK-NEXT:    ret i32 [[TMP11]]
+;
+  %x.0 = load i32, ptr %p
+  %y.0 = load i32, ptr %q
+  %sub.0 = sub i32 %x.0, %y.0
+  %abs.0 = tail call i32 @llvm.abs.i32(i32 %sub.0, i1 true)
+
+  %p.1 = getelementptr inbounds i32, ptr %p, i64 1
+  %x.1 = load i32, ptr %p.1
+  %q.1 = getelementptr inbounds i32, ptr %q, i64 1
+  %y.1 = load i32, ptr %q.1
+  %sub.1 = sub i32 %x.1, %y.1
+  %abs.1 = tail call i32 @llvm.abs.i32(i32 %sub.1, i1 true)
+  %sum.0 = add i32 %abs.0, %abs.1
+
+  %p.2 = getelementptr inbounds i32, ptr %p, i64 %stride
+  %q.2 = getelementptr inbounds i32, ptr %q, i64 %stride
+
+  %x.2 = load i32, ptr %p.2
+  %y.2 = load i32, ptr %q.2
+  %sub.2 = sub i32 %x.2, %y.2
+  %abs.2 = tail call i32 @llvm.abs.i32(i32 %sub.2, i1 true)
+  %sum.1 = add i32 %sum.0, %abs.2
+
+  %p.3 = getelementptr inbounds i32, ptr %p.2, i64 1
+  %x.3 = load i32, ptr %p.3
+  %q.3 = getelementptr inbounds i32, ptr %q.2, i64 1
+  %y.3 = load i32, ptr %q.3
+  %sub.3 = sub i32 %x.3, %y.3
+  %abs.3 = tail call i32 @llvm.abs.i32(i32 %sub.3, i1 true)
+  %sum.2 = add i32 %sum.1, %abs.3
+
+  ret i32 %sum.2
+}

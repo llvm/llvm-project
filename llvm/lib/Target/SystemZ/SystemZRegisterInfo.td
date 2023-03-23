@@ -20,12 +20,12 @@ class SystemZRegWithSubregs<string n, list<Register> subregs>
 }
 
 let Namespace = "SystemZ" in {
-def subreg_l32   : SubRegIndex<32, 0>;  // Also acts as subreg_ll32.
-def subreg_h32   : SubRegIndex<32, 32>; // Also acts as subreg_lh32.
+def subreg_l32   : SubRegIndex<32, 0>;  // Also acts as subreg_hl32.
+def subreg_h32   : SubRegIndex<32, 32>; // Also acts as subreg_hh32.
 def subreg_l64   : SubRegIndex<64, 0>;
 def subreg_h64   : SubRegIndex<64, 64>;
-def subreg_hh32  : ComposedSubRegIndex<subreg_h64, subreg_h32>;
-def subreg_hl32  : ComposedSubRegIndex<subreg_h64, subreg_l32>;
+def subreg_lh32  : ComposedSubRegIndex<subreg_l64, subreg_h32>;
+def subreg_ll32  : ComposedSubRegIndex<subreg_l64, subreg_l32>;
 }
 
 // Define a register class that contains values of types TYPES and an
@@ -73,9 +73,9 @@ class GPR64<bits<16> num, string n, GPR32 low, GPR32 high>
 
 // 8 even-odd pairs of GPR64s.
 class GPR128<bits<16> num, string n, GPR64 low, GPR64 high>
- : SystemZRegWithSubregs<n, [low, high]> {
+ : SystemZRegWithSubregs<n, [high, low]> {
   let HWEncoding = num;
-  let SubRegIndices = [subreg_l64, subreg_h64];
+  let SubRegIndices = [subreg_h64, subreg_l64];
   let CoveredBySubRegs = 1;
 }
 
@@ -215,9 +215,9 @@ class FPR64<bits<16> num, string n, FPR32 high>
 
 // 8 pairs of FPR64s, with a one-register gap inbetween.
 class FPR128<bits<16> num, string n, FPR64 low, FPR64 high>
- : SystemZRegWithSubregs<n, [low, high]> {
+ : SystemZRegWithSubregs<n, [high, low]> {
   let HWEncoding = num;
-  let SubRegIndices = [subreg_l64, subreg_h64];
+  let SubRegIndices = [subreg_h64, subreg_l64];
   let CoveredBySubRegs = 1;
 }
 

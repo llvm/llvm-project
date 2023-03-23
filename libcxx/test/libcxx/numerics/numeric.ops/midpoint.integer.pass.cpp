@@ -63,7 +63,7 @@ int main(int, char**)
 
     test<char>();
     test<ptrdiff_t>();
-    test<size_t>();
+    test<std::size_t>();
 
     return 0;
 }

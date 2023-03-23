@@ -76,7 +76,7 @@ TEST_CONSTEXPR_CXX23 void test_for_non_eager_instantiation() {
     // since it may not be well formed and can cause an error in the
     // non-immediate context.
     static_assert(!std::is_constructible<std::bitset<3>, Nonsense*>::value, "");
-    static_assert(!std::is_constructible<std::bitset<3>, Nonsense*, size_t, Nonsense&, Nonsense&>::value, "");
+    static_assert(!std::is_constructible<std::bitset<3>, Nonsense*, std::size_t, Nonsense&, Nonsense&>::value, "");
 }
 
 TEST_CONSTEXPR_CXX23 bool test() {

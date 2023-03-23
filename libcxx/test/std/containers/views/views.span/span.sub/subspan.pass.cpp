@@ -24,7 +24,7 @@
 
 #include "test_macros.h"
 
-template <typename Span, size_t Offset, size_t Count>
+template <typename Span, std::size_t Offset, size_t Count>
 constexpr bool testConstexprSpan(Span sp)
 {
     LIBCPP_ASSERT((noexcept(sp.template subspan<Offset, Count>())));
@@ -43,7 +43,7 @@ constexpr bool testConstexprSpan(Span sp)
      && std::equal(s1.begin(), s1.end(), sp.begin() + Offset);
 }
 
-template <typename Span, size_t Offset>
+template <typename Span, std::size_t Offset>
 constexpr bool testConstexprSpan(Span sp)
 {
     LIBCPP_ASSERT((noexcept(sp.template subspan<Offset>())));
@@ -63,7 +63,7 @@ constexpr bool testConstexprSpan(Span sp)
 }
 
 
-template <typename Span, size_t Offset, size_t Count>
+template <typename Span, std::size_t Offset, size_t Count>
 void testRuntimeSpan(Span sp)
 {
     LIBCPP_ASSERT((noexcept(sp.template subspan<Offset, Count>())));
@@ -82,7 +82,7 @@ void testRuntimeSpan(Span sp)
 }
 
 
-template <typename Span, size_t Offset>
+template <typename Span, std::size_t Offset>
 void testRuntimeSpan(Span sp)
 {
     LIBCPP_ASSERT((noexcept(sp.template subspan<Offset>())));

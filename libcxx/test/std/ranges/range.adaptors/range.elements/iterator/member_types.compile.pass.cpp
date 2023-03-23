@@ -20,7 +20,7 @@
 template <class Iter>
 using Range = std::ranges::subrange<Iter, sentinel_wrapper<Iter>>;
 
-template <class Range, size_t N = 0>
+template <class Range, std::size_t N = 0>
 using ElementsIter = std::ranges::iterator_t<std::ranges::elements_view<Range, N>>;
 
 // using iterator_concept = see below;

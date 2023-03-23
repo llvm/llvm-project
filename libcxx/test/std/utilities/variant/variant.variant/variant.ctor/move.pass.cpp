@@ -161,7 +161,7 @@ void test_move_ctor_sfinae() {
 }
 
 template <typename T>
-struct Result { size_t index; T value; };
+struct Result { std::size_t index; T value; };
 
 void test_move_ctor_basic() {
   {
@@ -292,7 +292,7 @@ void test_move_ctor_valueless_by_exception() {
 #endif // TEST_HAS_NO_EXCEPTIONS
 }
 
-template <size_t Idx>
+template <std::size_t Idx>
 constexpr bool test_constexpr_ctor_imp(std::variant<long, void*, const int> const& v) {
   auto copy = v;
   auto v2 = std::move(copy);

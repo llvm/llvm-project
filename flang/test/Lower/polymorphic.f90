@@ -53,6 +53,10 @@ module polymorphic_test
     class(p1), allocatable :: a(:)
   end type
 
+  type :: p5
+    class(*), allocatable :: up
+  end type
+
   contains
 
   elemental subroutine assign_p1_int(lhs, rhs)
@@ -1137,6 +1141,28 @@ module polymorphic_test
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPg(
 ! CHECK-SAME: %[[B:.*]]: !fir.class<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>> {fir.bindc_name = "b"}) {
 ! CHECK: %[[A:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>
+
+  subroutine pass_up(up)
+    class(*), intent(in) :: up
+  end subroutine
+
+  subroutine parenthesized_up(a)
+    type(p5) :: a
+    call pass_up((a%up))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPparenthesized_up(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.type<_QMpolymorphic_testTp5{up:!fir.class<!fir.heap<none>>}>> {fir.bindc_name = "a"}) {
+! CHECK: %[[ALLOCA:.*]] = fir.alloca
+! CHECK: %[[FIELD_UP:.*]] = fir.field_index up, !fir.type<_QMpolymorphic_testTp5{up:!fir.class<!fir.heap<none>>}>
+! CHECK: %[[COORD:.*]] = fir.coordinate_of %[[ARG0]], %[[FIELD_UP]] : (!fir.ref<!fir.type<_QMpolymorphic_testTp5{up:!fir.class<!fir.heap<none>>}>>, !fir.field) -> !fir.ref<!fir.class<!fir.heap<none>>>
+! CHECK: %[[LOAD:.*]] = fir.load %[[COORD]] : !fir.ref<!fir.class<!fir.heap<none>>>
+! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.class<!fir.heap<none>>) -> !fir.heap<none>
+! CHECK: %[[LOAD_ADDR:.*]] = fir.load %[[BOX_ADDR]] : !fir.heap<none>
+! CHECK: %[[NO_REASSOC:.*]] = fir.no_reassoc %[[LOAD_ADDR]] : none
+! CHECK: fir.store %[[NO_REASSOC]] to %[[ALLOCA]] : !fir.ref<none>
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[ALLOCA]] source_box %[[LOAD]] : (!fir.ref<none>, !fir.class<!fir.heap<none>>) -> !fir.class<none>
+! CHECK: fir.call @_QMpolymorphic_testPpass_up(%[[EMBOX]]) fastmath<contract> : (!fir.class<none>) -> ()
 
 end module
 

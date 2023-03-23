@@ -1775,7 +1775,8 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
     if (S.Context.areCompatibleVectorTypes(FromType, ToType) ||
         (S.isLaxVectorConversion(FromType, ToType) &&
          !ToType->hasAttr(attr::ArmMveStrictPolymorphism))) {
-      if (S.isLaxVectorConversion(FromType, ToType) &&
+      if (S.getASTContext().getTargetInfo().getTriple().isPPC() &&
+          S.isLaxVectorConversion(FromType, ToType) &&
           S.anyAltivecTypes(FromType, ToType) &&
           !S.Context.areCompatibleVectorTypes(FromType, ToType) &&
           !InOverloadResolution && !CStyle) {

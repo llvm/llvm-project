@@ -35,8 +35,8 @@ int main(int, char**) {
       "00000000000000000000000000000000000000000000000000000000000000000000000",
       "1237546895+54+4554985416849484213464984765465464654564565645645646546456546546"
   };
-  const size_t NumCases = sizeof(TestCases)/sizeof(TestCases[0]);
-  for (size_t i=0; i < NumCases; ++i)
+  const std::size_t NumCases = sizeof(TestCases)/sizeof(TestCases[0]);
+  for (std::size_t i=0; i < NumCases; ++i)
     test(TestCases[i].data(), TestCases[i].length());
 
   return 0;
