@@ -1028,7 +1028,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     // Move data back to the host
     const bool HasAlways = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
     const bool HasFrom = ArgTypes[I] & OMP_TGT_MAPTYPE_FROM;
-    if (HasFrom && (HasAlways || IsLast) && !IsHostPtr) {
+    if (HasFrom && (HasAlways || IsLast) && !IsHostPtr && DataSize != 0) {
       DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
          DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
 

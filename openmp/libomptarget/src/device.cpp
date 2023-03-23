@@ -321,7 +321,8 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
 
   // If the target pointer is valid, and we need to transfer data, issue the
   // data transfer.
-  if (TargetPointer && !IsHostPtr && HasFlagTo && (IsNew || HasFlagAlways)) {
+  if (TargetPointer && !IsHostPtr && HasFlagTo && (IsNew || HasFlagAlways) &&
+      Size != 0) {
     // Lock the entry before releasing the mapping table lock such that another
     // thread that could issue data movement will get the right result.
     std::lock_guard<decltype(*Entry)> LG(*Entry);
