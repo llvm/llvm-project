@@ -421,6 +421,10 @@ public:
   // even taking non-uniform arguments
   bool isAlwaysUniform(const Value *V) const;
 
+  /// Query the target whether the specified address space cast from FromAS to
+  /// ToAS is valid.
+  bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
+
   /// Returns the address space ID for a target's 'flat' address space. Note
   /// this is not necessarily the same as addrspace(0), which LLVM sometimes
   /// refers to as the generic address space. The flat address space is a
@@ -1685,6 +1689,7 @@ public:
   virtual bool useGPUDivergenceAnalysis() = 0;
   virtual bool isSourceOfDivergence(const Value *V) = 0;
   virtual bool isAlwaysUniform(const Value *V) = 0;
+  virtual bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const = 0;
   virtual unsigned getFlatAddressSpace() = 0;
   virtual bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                           Intrinsic::ID IID) const = 0;
@@ -2060,6 +2065,10 @@ public:
 
   bool isAlwaysUniform(const Value *V) override {
     return Impl.isAlwaysUniform(V);
+  }
+
+  bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const override {
+    return Impl.isValidAddrSpaceCast(FromAS, ToAS);
   }
 
   unsigned getFlatAddressSpace() override { return Impl.getFlatAddressSpace(); }
