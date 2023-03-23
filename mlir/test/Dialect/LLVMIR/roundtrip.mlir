@@ -438,10 +438,14 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
 func.func @useFreezeOp(%arg0: i32) {
   // CHECK:  = llvm.freeze %[[ARG0:.*]] : i32
   %0 = llvm.freeze %arg0 : i32
-  // CHECK: %[[x:.*]] = llvm.mlir.undef : i8
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : i8
   %1 = llvm.mlir.undef : i8
-  // CHECK:  = llvm.freeze %[[x]] : i8
+  // CHECK:  = llvm.freeze %[[UNDEF]] : i8
   %2 = llvm.freeze %1 : i8
+  // CHECK: %[[POISON:.*]] = llvm.mlir.poison : i8
+  %3 = llvm.mlir.poison : i8
+  // CHECK:  = llvm.freeze %[[POISON]] : i8
+  %4 = llvm.freeze %3 : i8
   return
 }
 

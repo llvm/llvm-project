@@ -1036,6 +1036,12 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     return builder.create<NullOp>(loc, type).getResult();
   }
 
+  // Convert poison.
+  if (auto *poisonVal = dyn_cast<llvm::PoisonValue>(constant)) {
+    Type type = convertType(poisonVal->getType());
+    return builder.create<PoisonOp>(loc, type).getResult();
+  }
+
   // Convert undef.
   if (auto *undefVal = dyn_cast<llvm::UndefValue>(constant)) {
     Type type = convertType(undefVal->getType());
