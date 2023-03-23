@@ -19,9 +19,12 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/PassManager.h"
+#include <functional>
 
 namespace llvm {
+class GlobalValueSummary;
 class Module;
+class ModuleSummaryIndex;
 
 class MemProfContextDisambiguation
     : public PassInfoMixin<MemProfContextDisambiguation> {
@@ -32,6 +35,10 @@ public:
   MemProfContextDisambiguation() {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  void run(ModuleSummaryIndex &Index,
+           function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+               isPrevailing);
 };
 } // end namespace llvm
 

@@ -1,4 +1,4 @@
-//===- VectorMultiDimReductionTransforms.cpp - Multi-Reduction Transforms -===//
+//===- LowerVectorMultiReduction.cpp - Lower `vector.multi_reduction` op --===//
 //
 /// Part of the LLVM Project, under the Apache License v2.0 with LLVM
 /// Exceptions. See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// This file implements target-independent rewrites of MultiDimReductionOp.
+// This file implements target-independent rewrites and utilities to lower the
+// 'vector.multi_reduction' operation.
 //
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/TypeUtilities.h"
 
@@ -19,6 +20,7 @@
 
 using namespace mlir;
 
+namespace {
 /// This file implements the following transformations as composable atomic
 /// patterns.
 
@@ -441,6 +443,7 @@ struct OneDimMultiReductionToTwoDim
     return success();
   }
 };
+} // namespace
 
 void mlir::vector::populateVectorMultiReductionLoweringPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,

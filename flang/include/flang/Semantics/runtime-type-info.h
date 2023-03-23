@@ -42,6 +42,14 @@ RuntimeDerivedTypeTables BuildRuntimeDerivedTypeTables(SemanticsContext &);
 /// to describe other derived types at runtime in flang descriptor.
 constexpr char typeInfoBuiltinModule[]{"__fortran_type_info"};
 
+/// Name of the bindings descriptor component in the DerivedType type of the
+/// __Fortran_type_info module
+constexpr char bindingDescCompName[]{"binding"};
+
+/// Name of the __builtin_c_funptr component in the Binding type  of the
+/// __Fortran_type_info module
+constexpr char procCompName[]{"proc"};
+
 SymbolVector CollectBindings(const Scope &dtScope);
 
 } // namespace Fortran::semantics

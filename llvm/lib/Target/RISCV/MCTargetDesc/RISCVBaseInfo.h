@@ -408,6 +408,7 @@ enum ABI {
   ABI_LP64,
   ABI_LP64F,
   ABI_LP64D,
+  ABI_LP64E,
   ABI_Unknown
 };
 

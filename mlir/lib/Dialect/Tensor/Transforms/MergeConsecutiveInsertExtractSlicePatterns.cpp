@@ -18,6 +18,7 @@ using namespace mlir::tensor;
 
 namespace {
 /// Merges consecutive tensor.extract_slice ops into one.
+// TODO: move to FoldTensorSubsetOps and unify APIs with FoldMemRefAliasOps.
 struct MergeConsecutiveExtractSlice : public OpRewritePattern<ExtractSliceOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -41,6 +42,7 @@ struct MergeConsecutiveExtractSlice : public OpRewritePattern<ExtractSliceOp> {
 };
 
 /// Merges consecutive tensor.insert_slice ops into one.
+// TODO: move to FoldTensorSubsetOps and unify APIs with FoldMemRefAliasOps.
 template <typename OpTy>
 struct MergeConsecutiveInsertSlice : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;

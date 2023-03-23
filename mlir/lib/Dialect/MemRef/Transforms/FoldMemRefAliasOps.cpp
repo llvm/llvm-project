@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/ViewLikeInterfaceUtils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -19,7 +20,9 @@
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/IR/AffineMap.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -150,70 +153,6 @@ resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
   return success();
 }
 
-/// Given the 'indices' of an load/store operation where the memref is a result
-/// of a subview op, returns the indices w.r.t to the source memref of the
-/// subview op. For example
-///
-/// %0 = ... : memref<12x42xf32>
-/// %1 = subview %0[%arg0, %arg1][][%stride1, %stride2] : memref<12x42xf32> to
-///          memref<4x4xf32, offset=?, strides=[?, ?]>
-/// %2 = load %1[%i1, %i2] : memref<4x4xf32, offset=?, strides=[?, ?]>
-///
-/// could be folded into
-///
-/// %2 = load %0[%arg0 + %i1 * %stride1][%arg1 + %i2 * %stride2] :
-///          memref<12x42xf32>
-static LogicalResult
-resolveSourceIndicesSubView(Location loc, PatternRewriter &rewriter,
-                            memref::SubViewOp subViewOp, ValueRange indices,
-                            SmallVectorImpl<Value> &sourceIndices) {
-  SmallVector<OpFoldResult> mixedOffsets = subViewOp.getMixedOffsets();
-  SmallVector<OpFoldResult> mixedSizes = subViewOp.getMixedSizes();
-  SmallVector<OpFoldResult> mixedStrides = subViewOp.getMixedStrides();
-
-  SmallVector<Value> useIndices;
-  // Check if this is rank-reducing case. Then for every unit-dim size add a
-  // zero to the indices.
-  int64_t resultDim = 0;
-  llvm::SmallBitVector unusedDims = subViewOp.getDroppedDims();
-  for (auto dim : llvm::seq<int64_t>(0, subViewOp.getSourceType().getRank())) {
-    if (unusedDims.test(dim))
-      useIndices.push_back(rewriter.create<arith::ConstantIndexOp>(loc, 0));
-    else
-      useIndices.push_back(indices[resultDim++]);
-  }
-  if (useIndices.size() != mixedOffsets.size())
-    return failure();
-  sourceIndices.resize(useIndices.size());
-  for (auto index : llvm::seq<size_t>(0, mixedOffsets.size())) {
-    SmallVector<OpFoldResult> dynamicOperands;
-    AffineExpr expr = rewriter.getAffineDimExpr(0);
-    int64_t numSymbols = 0;
-    dynamicOperands.push_back(useIndices[index]);
-
-    // Multiply the stride;
-    if (auto attr = mixedStrides[index].dyn_cast<Attribute>()) {
-      expr = expr * attr.cast<IntegerAttr>().getInt();
-    } else {
-      dynamicOperands.push_back(mixedStrides[index].get<Value>());
-      expr = expr * rewriter.getAffineSymbolExpr(numSymbols++);
-    }
-
-    // Add the offset.
-    if (auto attr = mixedOffsets[index].dyn_cast<Attribute>()) {
-      expr = expr + attr.cast<IntegerAttr>().getInt();
-    } else {
-      dynamicOperands.push_back(mixedOffsets[index].get<Value>());
-      expr = expr + rewriter.getAffineSymbolExpr(numSymbols++);
-    }
-    Location loc = subViewOp.getLoc();
-    OpFoldResult ofr = makeComposedFoldedAffineApply(
-        rewriter, loc, AffineMap::get(1, numSymbols, expr), dynamicOperands);
-    sourceIndices[index] = getValueOrCreateConstantIndexOp(rewriter, loc, ofr);
-  }
-  return success();
-}
-
 /// Helpers to access the memref operand for each op.
 template <typename LoadOrStoreOpTy>
 static Value getMemRefOperand(LoadOrStoreOpTy op) {
@@ -234,25 +173,6 @@ static Value getMemRefOperand(gpu::SubgroupMmaLoadMatrixOp op) {
 
 static Value getMemRefOperand(gpu::SubgroupMmaStoreMatrixOp op) {
   return op.getDstMemref();
-}
-
-/// Given the permutation map of the original
-/// `vector.transfer_read`/`vector.transfer_write` operations compute the
-/// permutation map to use after the subview is folded with it.
-static AffineMapAttr getPermutationMapAttr(MLIRContext *context,
-                                           memref::SubViewOp subViewOp,
-                                           AffineMap currPermutationMap) {
-  llvm::SmallBitVector unusedDims = subViewOp.getDroppedDims();
-  SmallVector<AffineExpr> exprs;
-  int64_t sourceRank = subViewOp.getSourceType().getRank();
-  for (auto dim : llvm::seq<int64_t>(0, sourceRank)) {
-    if (unusedDims.test(dim))
-      continue;
-    exprs.push_back(getAffineDimExpr(dim, context));
-  }
-  auto resultDimToSourceDimMap = AffineMap::get(sourceRank, 0, exprs, context);
-  return AffineMapAttr::get(
-      currPermutationMap.compose(resultDimToSourceDimMap));
 }
 
 //===----------------------------------------------------------------------===//
@@ -390,6 +310,42 @@ calculateExpandedAccessIndices(AffineMap affineMap,
   return expandedIndices;
 }
 
+template <typename XferOp>
+static LogicalResult
+preconditionsFoldSubViewOpImpl(RewriterBase &rewriter, XferOp xferOp,
+                               memref::SubViewOp subviewOp) {
+  static_assert(
+      !llvm::is_one_of<vector::TransferReadOp, vector::TransferWriteOp>::value,
+      "must be a vector transfer op");
+  if (xferOp.hasOutOfBoundsDim())
+    return rewriter.notifyMatchFailure(xferOp, "out of bounds transfer dim");
+  if (xferOp.getMask())
+    return rewriter.notifyMatchFailure(xferOp, "masked transfer");
+  if (!subviewOp.hasUnitStride()) {
+    return rewriter.notifyMatchFailure(
+        xferOp, "non-1 stride subview, need to track strides in folded memref");
+  }
+  return success();
+}
+
+static LogicalResult preconditionsFoldSubViewOp(RewriterBase &rewriter,
+                                                Operation *op,
+                                                memref::SubViewOp subviewOp) {
+  return success();
+}
+
+static LogicalResult preconditionsFoldSubViewOp(RewriterBase &rewriter,
+                                                vector::TransferReadOp readOp,
+                                                memref::SubViewOp subviewOp) {
+  return preconditionsFoldSubViewOpImpl(rewriter, readOp, subviewOp);
+}
+
+static LogicalResult preconditionsFoldSubViewOp(RewriterBase &rewriter,
+                                                vector::TransferWriteOp writeOp,
+                                                memref::SubViewOp subviewOp) {
+  return preconditionsFoldSubViewOpImpl(rewriter, writeOp, subviewOp);
+}
+
 template <typename OpTy>
 LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
     OpTy loadOp, PatternRewriter &rewriter) const {
@@ -397,7 +353,12 @@ LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
       getMemRefOperand(loadOp).template getDefiningOp<memref::SubViewOp>();
 
   if (!subViewOp)
-    return failure();
+    return rewriter.notifyMatchFailure(loadOp, "not a subview producer");
+
+  LogicalResult preconditionResult =
+      preconditionsFoldSubViewOp(rewriter, loadOp, subViewOp);
+  if (failed(preconditionResult))
+    return preconditionResult;
 
   SmallVector<Value> indices(loadOp.getIndices().begin(),
                              loadOp.getIndices().end());
@@ -410,9 +371,10 @@ LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
     indices.assign(expandedIndices.begin(), expandedIndices.end());
   }
   SmallVector<Value> sourceIndices;
-  if (failed(resolveSourceIndicesSubView(loadOp.getLoc(), rewriter, subViewOp,
-                                         indices, sourceIndices)))
-    return failure();
+  resolveSourceIndicesOffsetsAndStrides(
+      rewriter, loadOp.getLoc(), subViewOp.getMixedOffsets(),
+      subViewOp.getMixedStrides(), subViewOp.getDroppedDims(), indices,
+      sourceIndices);
 
   llvm::TypeSwitch<Operation *, void>(loadOp)
       .Case([&](AffineLoadOp op) {
@@ -423,14 +385,13 @@ LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
         rewriter.replaceOpWithNewOp<memref::LoadOp>(
             loadOp, subViewOp.getSource(), sourceIndices, op.getNontemporal());
       })
-      .Case([&](vector::TransferReadOp transferReadOp) {
+      .Case([&](vector::TransferReadOp op) {
         rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
-            transferReadOp, transferReadOp.getVectorType(),
-            subViewOp.getSource(), sourceIndices,
-            getPermutationMapAttr(rewriter.getContext(), subViewOp,
-                                  transferReadOp.getPermutationMap()),
-            transferReadOp.getPadding(),
-            /*mask=*/Value(), transferReadOp.getInBoundsAttr());
+            op, op.getVectorType(), subViewOp.getSource(), sourceIndices,
+            AffineMapAttr::get(expandDimsToRank(
+                op.getPermutationMap(), subViewOp.getSourceType().getRank(),
+                subViewOp.getDroppedDims())),
+            op.getPadding(), /*mask=*/Value(), op.getInBoundsAttr());
       })
       .Case([&](gpu::SubgroupMmaLoadMatrixOp op) {
         rewriter.replaceOpWithNewOp<gpu::SubgroupMmaLoadMatrixOp>(
@@ -512,7 +473,12 @@ LogicalResult StoreOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
       getMemRefOperand(storeOp).template getDefiningOp<memref::SubViewOp>();
 
   if (!subViewOp)
-    return failure();
+    return rewriter.notifyMatchFailure(storeOp, "not a subview producer");
+
+  LogicalResult preconditionResult =
+      preconditionsFoldSubViewOp(rewriter, storeOp, subViewOp);
+  if (failed(preconditionResult))
+    return preconditionResult;
 
   SmallVector<Value> indices(storeOp.getIndices().begin(),
                              storeOp.getIndices().end());
@@ -525,9 +491,10 @@ LogicalResult StoreOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
     indices.assign(expandedIndices.begin(), expandedIndices.end());
   }
   SmallVector<Value> sourceIndices;
-  if (failed(resolveSourceIndicesSubView(storeOp.getLoc(), rewriter, subViewOp,
-                                         indices, sourceIndices)))
-    return failure();
+  resolveSourceIndicesOffsetsAndStrides(
+      rewriter, storeOp.getLoc(), subViewOp.getMixedOffsets(),
+      subViewOp.getMixedStrides(), subViewOp.getDroppedDims(), indices,
+      sourceIndices);
 
   llvm::TypeSwitch<Operation *, void>(storeOp)
       .Case([&](AffineStoreOp op) {
@@ -542,8 +509,9 @@ LogicalResult StoreOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
       .Case([&](vector::TransferWriteOp op) {
         rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
             op, op.getValue(), subViewOp.getSource(), sourceIndices,
-            getPermutationMapAttr(rewriter.getContext(), subViewOp,
-                                  op.getPermutationMap()),
+            AffineMapAttr::get(expandDimsToRank(
+                op.getPermutationMap(), subViewOp.getSourceType().getRank(),
+                subViewOp.getDroppedDims())),
             op.getInBoundsAttr());
       })
       .Case([&](gpu::SubgroupMmaStoreMatrixOp op) {

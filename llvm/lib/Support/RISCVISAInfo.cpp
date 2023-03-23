@@ -41,7 +41,7 @@ static constexpr StringLiteral AllStdExts = "mafdqlcbkjtpvnh";
 
 static const RISCVSupportedExtension SupportedExtensions[] = {
     {"i", RISCVExtensionVersion{2, 0}},
-    {"e", RISCVExtensionVersion{1, 9}},
+    {"e", RISCVExtensionVersion{2, 0}},
     {"m", RISCVExtensionVersion{2, 0}},
     {"a", RISCVExtensionVersion{2, 0}},
     {"f", RISCVExtensionVersion{2, 0}},
@@ -584,8 +584,9 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   bool HasRV64 = Arch.startswith("rv64");
   // ISA string must begin with rv32 or rv64.
   if (!(Arch.startswith("rv32") || HasRV64) || (Arch.size() < 5)) {
-    return createStringError(errc::invalid_argument,
-                             "string must begin with rv32{i,e,g} or rv64{i,g}");
+    return createStringError(
+        errc::invalid_argument,
+        "string must begin with rv32{i,e,g} or rv64{i,e,g}");
   }
 
   unsigned XLen = HasRV64 ? 64 : 32;
@@ -601,14 +602,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   default:
     return createStringError(errc::invalid_argument,
                              "first letter should be 'e', 'i' or 'g'");
-  case 'e': {
-    // Extension 'e' is not allowed in rv64.
-    if (HasRV64)
-      return createStringError(
-          errc::invalid_argument,
-          "standard user-level extension 'e' requires 'rv32'");
-    break;
-  }
+  case 'e':
   case 'i':
     break;
   case 'g':
@@ -828,8 +822,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 }
 
 Error RISCVISAInfo::checkDependency() {
-  bool IsRv32 = XLen == 32;
-  bool HasE = Exts.count("e") != 0;
   bool HasD = Exts.count("d") != 0;
   bool HasF = Exts.count("f") != 0;
   bool HasZfinx = Exts.count("zfinx") != 0;
@@ -838,11 +830,6 @@ Error RISCVISAInfo::checkDependency() {
   bool HasZve32f = Exts.count("zve32f") != 0;
   bool HasZve64d = Exts.count("zve64d") != 0;
   bool HasZvl = MinVLen != 0;
-
-  if (HasE && !IsRv32)
-    return createStringError(
-        errc::invalid_argument,
-        "standard user-level extension 'e' requires 'rv32'");
 
   if (HasF && HasZfinx)
     return createStringError(errc::invalid_argument,
@@ -1115,6 +1102,8 @@ StringRef RISCVISAInfo::computeDefaultABI() const {
   } else if (XLen == 64) {
     if (hasExtension("d"))
       return "lp64d";
+    if (hasExtension("e"))
+      return "lp64e";
     return "lp64";
   }
   llvm_unreachable("Invalid XLEN");

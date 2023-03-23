@@ -74,7 +74,7 @@ public:
     drop_view() requires default_initializable<_View> = default;
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr drop_view(_View __base, range_difference_t<_View> __count)
+    constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 drop_view(_View __base, range_difference_t<_View> __count)
       : __count_(__count)
       , __base_(std::move(__base))
     {

@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// constexpr take_while_view(V base, Pred pred);
+// constexpr take_while_view(V base, Pred pred); // explicit since C++23
 
 #include <cassert>
 #include <ranges>
@@ -16,6 +16,8 @@
 #include <utility>
 
 #include "MoveOnly.h"
+#include "test_convertible.h"
+#include "test_macros.h"
 
 struct View : std::ranges::view_base {
   MoveOnly mo;
@@ -32,9 +34,23 @@ struct Pred {
   bool operator()(int) const;
 };
 
+// SFINAE tests.
+
+#if TEST_STD_VER >= 23
+
+static_assert(!test_convertible<std::ranges::take_while_view<View, Pred>, View, Pred>(),
+              "This constructor must be explicit");
+
+#else
+
+static_assert(test_convertible<std::ranges::take_while_view<View, Pred>, View, Pred>(),
+              "This constructor must not be explicit");
+
+#endif // TEST_STD_VER >= 23
+
 constexpr bool test() {
   {
-    std::ranges::take_while_view<View, Pred> twv = {View{{}, MoveOnly{5}}, Pred{}};
+    std::ranges::take_while_view<View, Pred> twv{View{{}, MoveOnly{5}}, Pred{}};
     assert(twv.pred().moved);
     assert(!twv.pred().copied);
     assert(std::move(twv).base().mo.get() == 5);
@@ -45,5 +61,6 @@ constexpr bool test() {
 int main(int, char**) {
   test();
   static_assert(test());
+
   return 0;
 }

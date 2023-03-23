@@ -93,8 +93,6 @@ bool isFilteredByConfig(const Config &Cfg, llvm::StringRef HeaderPath) {
 static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
                               const Config &Cfg,
                               const include_cleaner::PragmaIncludes *PI) {
-  if (PI && PI->shouldKeep(Inc.HashLine + 1))
-    return false;
   // FIXME(kirillbobyrev): We currently do not support the umbrella headers.
   // System headers are likely to be standard library headers.
   // Until we have good support for umbrella headers, don't warn about them.
@@ -108,6 +106,20 @@ static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
   auto FE = AST.getSourceManager().getFileManager().getFileRef(
       AST.getIncludeStructure().getRealPath(HID));
   assert(FE);
+  if (PI) {
+    if (PI->shouldKeep(Inc.HashLine + 1))
+      return false;
+    // Check if main file is the public interface for a private header. If so we
+    // shouldn't diagnose it as unused.
+    if(auto PHeader = PI->getPublic(*FE); !PHeader.empty()) {
+      PHeader = PHeader.trim("<>\"");
+      // Since most private -> public mappings happen in a verbatim way, we
+      // check textually here. This might go wrong in presence of symlinks or
+      // header mappings. But that's not different than rest of the places.
+      if(AST.tuPath().endswith(PHeader))
+        return false;
+    }
+  }
   // Headers without include guards have side effects and are not
   // self-contained, skip them.
   if (!AST.getPreprocessor().getHeaderSearchInfo().isFileMultipleIncludeGuarded(
@@ -122,45 +134,6 @@ static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
     return false;
   }
   return true;
-}
-
-include_cleaner::Includes
-convertIncludes(const SourceManager &SM,
-                const llvm::ArrayRef<Inclusion> MainFileIncludes) {
-  include_cleaner::Includes Includes;
-  for (const Inclusion &Inc : MainFileIncludes) {
-    include_cleaner::Include TransformedInc;
-    llvm::StringRef WrittenRef = llvm::StringRef(Inc.Written);
-    TransformedInc.Spelled = WrittenRef.trim("\"<>");
-    TransformedInc.HashLocation =
-        SM.getComposedLoc(SM.getMainFileID(), Inc.HashOffset);
-    TransformedInc.Line = Inc.HashLine + 1;
-    TransformedInc.Angled = WrittenRef.starts_with("<");
-    auto FE = SM.getFileManager().getFile(Inc.Resolved);
-    if (!FE) {
-      elog("IncludeCleaner: Failed to get an entry for resolved path {0}: {1}",
-           Inc.Resolved, FE.getError().message());
-      continue;
-    }
-    TransformedInc.Resolved = *FE;
-    Includes.add(std::move(TransformedInc));
-  }
-  return Includes;
-}
-
-std::string spellHeader(ParsedAST &AST, const FileEntry *MainFile,
-                        include_cleaner::Header Provider) {
-  if (Provider.kind() == include_cleaner::Header::Physical) {
-    if (auto CanonicalPath =
-            getCanonicalPath(Provider.physical(), AST.getSourceManager())) {
-      std::string SpelledHeader =
-          llvm::cantFail(URI::includeSpelling(URI::create(*CanonicalPath)));
-      if (!SpelledHeader.empty())
-        return SpelledHeader;
-    }
-  }
-  return include_cleaner::spellHeader(
-      Provider, AST.getPreprocessor().getHeaderSearchInfo(), MainFile);
 }
 
 std::vector<include_cleaner::SymbolReference>
@@ -315,6 +288,44 @@ std::vector<Diag> generateUnusedIncludeDiagnostics(
 }
 } // namespace
 
+include_cleaner::Includes
+convertIncludes(const SourceManager &SM,
+                const llvm::ArrayRef<Inclusion> Includes) {
+  include_cleaner::Includes ConvertedIncludes;
+  for (const Inclusion &Inc : Includes) {
+    include_cleaner::Include TransformedInc;
+    llvm::StringRef WrittenRef = llvm::StringRef(Inc.Written);
+    TransformedInc.Spelled = WrittenRef.trim("\"<>");
+    TransformedInc.HashLocation =
+        SM.getComposedLoc(SM.getMainFileID(), Inc.HashOffset);
+    TransformedInc.Line = Inc.HashLine + 1;
+    TransformedInc.Angled = WrittenRef.starts_with("<");
+    auto FE = SM.getFileManager().getFile(Inc.Resolved);
+    if (!FE) {
+      elog("IncludeCleaner: Failed to get an entry for resolved path {0}: {1}",
+           Inc.Resolved, FE.getError().message());
+      continue;
+    }
+    TransformedInc.Resolved = *FE;
+    ConvertedIncludes.add(std::move(TransformedInc));
+  }
+  return ConvertedIncludes;
+}
+
+std::string spellHeader(ParsedAST &AST, const FileEntry *MainFile,
+                        include_cleaner::Header Provider) {
+  if (Provider.kind() == include_cleaner::Header::Physical) {
+    if (auto CanonicalPath =
+            getCanonicalPath(Provider.physical(), AST.getSourceManager())) {
+      std::string SpelledHeader =
+          llvm::cantFail(URI::includeSpelling(URI::create(*CanonicalPath)));
+      if (!SpelledHeader.empty())
+        return SpelledHeader;
+    }
+  }
+  return include_cleaner::spellHeader(
+      Provider, AST.getPreprocessor().getHeaderSearchInfo(), MainFile);
+}
 
 std::vector<const Inclusion *>
 getUnused(ParsedAST &AST,

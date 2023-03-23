@@ -151,7 +151,8 @@ RuntimeTableBuilder::RuntimeTableBuilder(
     : context_{c}, tables_{t}, derivedTypeSchema_{GetSchema("derivedtype")},
       componentSchema_{GetSchema("component")}, procPtrSchema_{GetSchema(
                                                     "procptrcomponent")},
-      valueSchema_{GetSchema("value")}, bindingSchema_{GetSchema("binding")},
+      valueSchema_{GetSchema("value")}, bindingSchema_{GetSchema(
+                                            bindingDescCompName)},
       specialSchema_{GetSchema("specialbinding")}, deferredEnum_{GetEnumValue(
                                                        "deferred")},
       explicitEnum_{GetEnumValue("explicit")}, lenParameterEnum_{GetEnumValue(
@@ -562,7 +563,7 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
     if (!isAbstractType) {
       std::vector<evaluate::StructureConstructor> bindings{
           DescribeBindings(dtScope, scope)};
-      AddValue(dtValues, derivedTypeSchema_, "binding"s,
+      AddValue(dtValues, derivedTypeSchema_, bindingDescCompName,
           SaveDerivedPointerTarget(scope, SaveObjectName(".v."s + distinctName),
               std::move(bindings),
               evaluate::ConstantSubscripts{
@@ -982,7 +983,7 @@ RuntimeTableBuilder::DescribeBindings(const Scope &dtScope, Scope &scope) {
   std::vector<evaluate::StructureConstructor> result;
   for (const SymbolRef &ref : CollectBindings(dtScope)) {
     evaluate::StructureConstructorValues values;
-    AddValue(values, bindingSchema_, "proc"s,
+    AddValue(values, bindingSchema_, procCompName,
         SomeExpr{evaluate::ProcedureDesignator{
             ref.get().get<ProcBindingDetails>().symbol()}});
     AddValue(values, bindingSchema_, "name"s,
@@ -1152,7 +1153,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
         values, specialSchema_, "which"s, SomeExpr{std::move(which.value())});
     AddValue(values, specialSchema_, "isargdescriptorset"s,
         IntExpr<1>(isArgDescriptorSet));
-    AddValue(values, specialSchema_, "proc"s,
+    AddValue(values, specialSchema_, procCompName,
         SomeExpr{evaluate::ProcedureDesignator{specific}});
     // index might already be present in the case of an override
     specials.emplace(*index,

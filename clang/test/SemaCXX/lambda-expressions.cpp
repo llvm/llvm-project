@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++14 -Wno-unused-value -fsyntax-only -verify -verify=expected-cxx14 -fblocks %s
-// RUN: %clang_cc1 -std=c++17 -Wno-unused-value -fsyntax-only -verify -fblocks %s
+// RUN: %clang_cc1 -std=c++17 -Wno-unused-value -verify -ast-dump -fblocks %s | FileCheck %s
 
 namespace std { class type_info; };
 
@@ -704,3 +704,13 @@ static_assert([]() constexpr {
 }());
 } // namespace GH60936
 #endif
+
+// Call operator attributes refering to a variable should
+// be properly handled after D124351
+constexpr int i = 2;
+void foo() {
+  (void)[=][[gnu::aligned(i)]] () {}; // expected-warning{{C++2b extension}}
+  // CHECK: AlignedAttr
+  // CHECK-NEXT: ConstantExpr
+  // CHECK-NEXT: value: Int 2
+}

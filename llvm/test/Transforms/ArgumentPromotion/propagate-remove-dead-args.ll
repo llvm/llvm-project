@@ -18,18 +18,12 @@ entry:
 
 define internal void @parent(ptr %this, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: define internal void @parent
-; CHECK-SAME: (ptr [[THIS:%.*]], ptr [[P1:%.*]], ptr [[P2:%.*]]) {
+; CHECK-SAME: (ptr [[P1:%.*]], ptr [[P2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SRC_ELEMENT_OP_0:%.*]] = getelementptr ptr, ptr [[THIS]], i64 0
-; CHECK-NEXT:    [[LOAD0:%.*]] = load ptr, ptr [[SRC_ELEMENT_OP_0]], align 8
 ; CHECK-NEXT:    [[P2_VAL2:%.*]] = load half, ptr [[P2]], align 2
 ; CHECK-NEXT:    call void @child(ptr [[P1]], half [[P2_VAL2]])
-; CHECK-NEXT:    [[SRC_ELEMENT_OP_1:%.*]] = getelementptr ptr, ptr [[THIS]], i64 1
-; CHECK-NEXT:    [[LOAD1:%.*]] = load ptr, ptr [[SRC_ELEMENT_OP_1]], align 8
 ; CHECK-NEXT:    [[P2_VAL1:%.*]] = load half, ptr [[P2]], align 2
 ; CHECK-NEXT:    call void @child(ptr [[P1]], half [[P2_VAL1]])
-; CHECK-NEXT:    [[SRC_ELEMENT_OP_2:%.*]] = getelementptr ptr, ptr [[THIS]], i64 2
-; CHECK-NEXT:    [[LOAD2:%.*]] = load ptr, ptr [[SRC_ELEMENT_OP_2]], align 8
 ; CHECK-NEXT:    [[P2_VAL:%.*]] = load half, ptr [[P2]], align 2
 ; CHECK-NEXT:    call void @child(ptr [[P1]], half [[P2_VAL]])
 ; CHECK-NEXT:    ret void
@@ -50,10 +44,9 @@ entry:
 define  void @grandparent() {
 ; CHECK-LABEL: define void @grandparent() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[F:%.*]] = alloca [[PTR_STRUCT:%.*]], align 8
 ; CHECK-NEXT:    [[XPTR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[YPTR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @parent(ptr [[F]], ptr [[XPTR]], ptr [[YPTR]])
+; CHECK-NEXT:    call void @parent(ptr [[XPTR]], ptr [[YPTR]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

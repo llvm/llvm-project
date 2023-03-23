@@ -22,6 +22,7 @@
 #define CLANG_INCLUDE_CLEANER_ANALYSISINTERNAL_H
 
 #include "TypesInternal.h"
+#include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -57,13 +58,6 @@ llvm::SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
 
 /// A set of locations that provides the declaration.
 std::vector<Hinted<SymbolLocation>> locateSymbol(const Symbol &S);
-
-/// Gets all the providers for a symbol by traversing each location.
-/// Returned headers are sorted by relevance, first element is the most
-/// likely provider for the symbol.
-llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
-                                           const SourceManager &SM,
-                                           const PragmaIncludes *PI);
 
 /// Write an HTML summary of the analysis to the given stream.
 void writeHTMLReport(FileID File, const Includes &,

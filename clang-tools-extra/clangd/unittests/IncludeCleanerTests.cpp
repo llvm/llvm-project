@@ -30,6 +30,7 @@
 #include "gtest/gtest.h"
 #include <cstddef>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -328,6 +329,26 @@ TEST(IncludeCleaner, NoDiagsForObjC) {
   ParsedAST AST = TU.build();
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
 }
+
+TEST(IncludeCleaner, UmbrellaUsesPrivate) {
+  TestTU TU;
+  TU.Code = R"cpp(
+    #include "private.h"
+    )cpp";
+  TU.AdditionalFiles["private.h"] = guard(R"cpp(
+    // IWYU pragma: private, include "public.h"
+    void foo() {}
+  )cpp");
+  TU.Filename = "public.h";
+  Config Cfg;
+  Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
+  WithContextValue Ctx(Config::Key, std::move(Cfg));
+  ParsedAST AST = TU.build();
+  EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

@@ -64,7 +64,7 @@ static cl::opt<bool> UseShortPointersOpt(
 
 namespace llvm {
 
-void initializeGenericToNVVMPass(PassRegistry&);
+void initializeGenericToNVVMLegacyPassPass(PassRegistry &);
 void initializeNVPTXAllocaHoistingPass(PassRegistry &);
 void initializeNVPTXAssignValidGlobalNamesPass(PassRegistry&);
 void initializeNVPTXAtomicLowerPass(PassRegistry &);
@@ -89,7 +89,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   // but it's very NVPTX-specific.
   initializeNVVMReflectPass(PR);
   initializeNVVMIntrRangePass(PR);
-  initializeGenericToNVVMPass(PR);
+  initializeGenericToNVVMLegacyPassPass(PR);
   initializeNVPTXAllocaHoistingPass(PR);
   initializeNVPTXAssignValidGlobalNamesPass(PR);
   initializeNVPTXAtomicLowerPass(PR);
@@ -246,6 +246,16 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
     return false;
   });
 
+  PB.registerPipelineParsingCallback(
+      [](StringRef PassName, ModulePassManager &PM,
+         ArrayRef<PassBuilder::PipelineElement>) {
+        if (PassName == "generic-to-nvvm") {
+          PM.addPass(GenericToNVVMPass());
+          return true;
+        }
+        return false;
+      });
+
   PB.registerPipelineStartEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
         FunctionPassManager FPM;
@@ -348,7 +358,7 @@ void NVPTXPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createNVPTXImageOptimizerPass());
   addPass(createNVPTXAssignValidGlobalNamesPass());
-  addPass(createGenericToNVVMPass());
+  addPass(createGenericToNVVMLegacyPass());
 
   // NVPTXLowerArgs is required for correctness and should be run right
   // before the address space inference passes.

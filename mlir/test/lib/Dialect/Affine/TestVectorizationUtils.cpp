@@ -215,6 +215,9 @@ void VectorizerTestPass::testComposeMaps(llvm::raw_ostream &outs) {
                    .getValue();
     maps.push_back(map);
   }
+  if (maps.empty())
+    // Nothing to compose
+    return;
   AffineMap res;
   for (auto m : maps) {
     res = res ? res.compose(m) : m;
