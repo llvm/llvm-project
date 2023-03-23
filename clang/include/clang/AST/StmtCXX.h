@@ -411,9 +411,8 @@ public:
     return cast<Expr>(getStoredStmts()[SubStmt::ReturnValue]);
   }
   Expr *getReturnValue() const {
-    assert(getReturnStmt());
-    auto *RS = cast<clang::ReturnStmt>(getReturnStmt());
-    return RS->getRetValue();
+    auto *RS = dyn_cast_or_null<clang::ReturnStmt>(getReturnStmt());
+    return RS ? RS->getRetValue() : nullptr;
   }
   Stmt *getReturnStmt() const { return getStoredStmts()[SubStmt::ReturnStmt]; }
   Stmt *getReturnStmtOnAllocFailure() const {

@@ -472,13 +472,41 @@ struct GetReturnObjectManager {
   CodeGenFunction &CGF;
   CGBuilderTy &Builder;
   const CoroutineBodyStmt &S;
+  // When true, performs RVO for the return object.
+  bool DirectEmit = false;
 
   Address GroActiveFlag;
   CodeGenFunction::AutoVarEmission GroEmission;
 
   GetReturnObjectManager(CodeGenFunction &CGF, const CoroutineBodyStmt &S)
       : CGF(CGF), Builder(CGF.Builder), S(S), GroActiveFlag(Address::invalid()),
-        GroEmission(CodeGenFunction::AutoVarEmission::invalid()) {}
+        GroEmission(CodeGenFunction::AutoVarEmission::invalid()) {
+    // The call to get_­return_­object is sequenced before the call to
+    // initial_­suspend and is invoked at most once, but there are caveats
+    // regarding on whether the prvalue result object may be initialized
+    // directly/eager or delayed, depending on the types involved.
+    //
+    // More info at https://github.com/cplusplus/papers/issues/1414
+    //
+    // The general cases:
+    // 1. Same type of get_return_object and coroutine return type (direct
+    // emission):
+    //  - Constructed in the return slot.
+    // 2. Different types (delayed emission):
+    //  - Constructed temporary object prior to initial suspend initialized with
+    //  a call to get_return_object()
+    //  - When coroutine needs to to return to the caller and needs to construct
+    //  return value for the coroutine it is initialized with expiring value of
+    //  the temporary obtained above.
+    //
+    // Direct emission for void returning coroutines or GROs.
+    DirectEmit = [&]() {
+      auto *RVI = S.getReturnValueInit();
+      assert(RVI && "expected RVI");
+      auto GroType = RVI->getType();
+      return CGF.getContext().hasSameType(GroType, CGF.FnRetTy);
+    }();
+  }
 
   // The gro variable has to outlive coroutine frame and coroutine promise, but,
   // it can only be initialized after coroutine promise was created, thus, we
@@ -486,7 +514,10 @@ struct GetReturnObjectManager {
   // cleanups. Later when coroutine promise is available we initialize the gro
   // and sets the flag that the cleanup is now active.
   void EmitGroAlloca() {
-    auto *GroDeclStmt = dyn_cast<DeclStmt>(S.getResultDecl());
+    if (DirectEmit)
+      return;
+
+    auto *GroDeclStmt = dyn_cast_or_null<DeclStmt>(S.getResultDecl());
     if (!GroDeclStmt) {
       // If get_return_object returns void, no need to do an alloca.
       return;
@@ -519,6 +550,27 @@ struct GetReturnObjectManager {
   }
 
   void EmitGroInit() {
+    if (DirectEmit) {
+      // ReturnValue should be valid as long as the coroutine's return type
+      // is not void. The assertion could help us to reduce the check later.
+      assert(CGF.ReturnValue.isValid() == (bool)S.getReturnStmt());
+      // Now we have the promise, initialize the GRO.
+      // We need to emit `get_return_object` first. According to:
+      // [dcl.fct.def.coroutine]p7
+      // The call to get_return_­object is sequenced before the call to
+      // initial_suspend and is invoked at most once.
+      //
+      // So we couldn't emit return value when we emit return statment,
+      // otherwise the call to get_return_object wouldn't be in front
+      // of initial_suspend.
+      if (CGF.ReturnValue.isValid()) {
+        CGF.EmitAnyExprToMem(S.getReturnValue(), CGF.ReturnValue,
+                             S.getReturnValue()->getType().getQualifiers(),
+                             /*IsInit*/ true);
+      }
+      return;
+    }
+
     if (!GroActiveFlag.isValid()) {
       // No Gro variable was allocated. Simply emit the call to
       // get_return_object.
@@ -598,10 +650,6 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
       CGM.getIntrinsic(llvm::Intrinsic::coro_begin), {CoroId, Phi});
   CurCoro.Data->CoroBegin = CoroBegin;
 
-  // We need to emit `get_­return_­object` first. According to:
-  // [dcl.fct.def.coroutine]p7
-  // The call to get_­return_­object is sequenced before the call to
-  // initial_­suspend and is invoked at most once.
   GetReturnObjectManager GroManager(*this, S);
   GroManager.EmitGroAlloca();
 
@@ -706,8 +754,13 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   llvm::Function *CoroEnd = CGM.getIntrinsic(llvm::Intrinsic::coro_end);
   Builder.CreateCall(CoroEnd, {NullPtr, Builder.getFalse()});
 
-  if (Stmt *Ret = S.getReturnStmt())
+  if (Stmt *Ret = S.getReturnStmt()) {
+    // Since we already emitted the return value above, so we shouldn't
+    // emit it again here.
+    if (GroManager.DirectEmit)
+      cast<ReturnStmt>(Ret)->setRetValue(nullptr);
     EmitStmt(Ret);
+  }
 
   // LLVM require the frontend to mark the coroutine.
   CurFn->setPresplitCoroutine();
