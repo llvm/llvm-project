@@ -45,7 +45,7 @@ endif()
 set(LIBC_GPU_TEST_ARCHITECTURE "" CACHE STRING "Architecture for the GPU tests")
 if(LIBC_GPU_TEST_ARCHITECTURE)
   message(STATUS "Using user-specified GPU architecture for testing "
-                 "'${LIBC_GPU_TARGET_ARCHITECTURE}'")
+                 "'${LIBC_GPU_TEST_ARCHITECTURE}'")
   if("${LIBC_GPU_TEST_ARCHITECTURE}" IN_LIST all_amdgpu_architectures)
     set(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU TRUE)
     set(LIBC_GPU_TARGET_TRIPLE "amdgcn-amd-amdhsa")
