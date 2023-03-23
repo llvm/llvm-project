@@ -483,4 +483,26 @@ createIncludeTreeFileSystem(IncludeTreeRoot &Root);
 } // namespace cas
 } // namespace clang
 
+namespace llvm {
+template <> struct DenseMapInfo<clang::cas::IncludeTree::FileList::FileEntry> {
+  using FileEntry = clang::cas::IncludeTree::FileList::FileEntry;
+
+  static FileEntry getEmptyKey() {
+    return {cas::ObjectRef::getDenseMapEmptyKey(), 0};
+  }
+
+  static FileEntry getTombstoneKey() {
+    return {cas::ObjectRef::getDenseMapTombstoneKey(), 0};
+  }
+
+  static unsigned getHashValue(FileEntry F) {
+    return F.FileRef.getDenseMapHash();
+  }
+
+  static bool isEqual(FileEntry LHS, FileEntry RHS) {
+    return LHS.FileRef == RHS.FileRef && LHS.Size == RHS.Size;
+  }
+};
+} // namespace llvm
+
 #endif
