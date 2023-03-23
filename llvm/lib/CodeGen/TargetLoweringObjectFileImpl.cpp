@@ -2343,8 +2343,11 @@ MCSection *TargetLoweringObjectFileXCOFF::getExplicitSectionGlobal(
   XCOFF::StorageMappingClass MappingClass;
   if (Kind.isText())
     MappingClass = XCOFF::XMC_PR;
-  else if (Kind.isData() || Kind.isReadOnlyWithRel() || Kind.isBSS())
+  else if (Kind.isData() || Kind.isBSS())
     MappingClass = XCOFF::XMC_RW;
+  else if (Kind.isReadOnlyWithRel())
+    MappingClass =
+        TM.Options.XCOFFReadOnlyPointers ? XCOFF::XMC_RO : XCOFF::XMC_RW;
   else if (Kind.isReadOnly())
     MappingClass = XCOFF::XMC_RO;
   else
@@ -2429,9 +2432,18 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
     return TextSection;
   }
 
-  // TODO: We may put Kind.isReadOnlyWithRel() under option control, because
-  // user may want to have read-only data with relocations placed into a
-  // read-only section by the compiler.
+  if (TM.Options.XCOFFReadOnlyPointers && Kind.isReadOnlyWithRel()) {
+    if (!TM.getDataSections())
+      report_fatal_error(
+          "ReadOnlyPointers is supported only if data sections is turned on");
+
+    SmallString<128> Name;
+    getNameWithPrefix(Name, GO, TM);
+    return getContext().getXCOFFSection(
+        Name, SectionKind::getReadOnly(),
+        XCOFF::CsectProperties(XCOFF::XMC_RO, XCOFF::XTY_SD));
+  }
+
   // For BSS kind, zero initialized data must be emitted to the .data section
   // because external linkage control sections that get mapped to the .bss
   // section will be linked as tentative defintions, which is only appropriate
