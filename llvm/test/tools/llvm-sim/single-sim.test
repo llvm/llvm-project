@@ -5,21 +5,21 @@
 # CHECK: {
 # CHECK-NEXT: "1": [
 # CHECK-NEXT:  {
-# CHECK-NEXT:   "start": 18,
+# CHECK-NEXT:   "start": 14,
 # CHECK-NEXT:   "end": 19
 # CHECK-NEXT:  },
 # CHECK-NEXT:  {
-# CHECK-NEXT:   "start": 8,
+# CHECK-NEXT:   "start": 4,
 # CHECK-NEXT:   "end": 9
 # CHECK-NEXT:  }
 # CHECK-NEXT: ],
 # CHECK-NEXT: "2": [
 # CHECK-NEXT:  {
-# CHECK-NEXT:   "start": 17,
+# CHECK-NEXT:   "start": 15,
 # CHECK-NEXT:   "end": 19
 # CHECK-NEXT:  },
 # CHECK-NEXT:  {
-# CHECK-NEXT:   "start": 7,
+# CHECK-NEXT:   "start": 5,
 # CHECK-NEXT:   "end": 9
 # CHECK-NEXT:  }
 # CHECK-NEXT: ],
@@ -35,21 +35,21 @@
 # CHECK-NEXT: ],
 # CHECK-NEXT: "4": [
 # CHECK-NEXT:  {
-# CHECK-NEXT:   "start": 15,
+# CHECK-NEXT:   "start": 17,
 # CHECK-NEXT:   "end": 19
 # CHECK-NEXT:  },
 # CHECK-NEXT:  {
-# CHECK-NEXT:   "start": 5,
+# CHECK-NEXT:   "start": 7,
 # CHECK-NEXT:   "end": 9
 # CHECK-NEXT:  }
 # CHECK-NEXT: ],
 # CHECK-NEXT: "5": [
 # CHECK-NEXT:  {
-# CHECK-NEXT:   "start": 14,
+# CHECK-NEXT:   "start": 18,
 # CHECK-NEXT:   "end": 19
 # CHECK-NEXT:  },
 # CHECK-NEXT:  {
-# CHECK-NEXT:   "start": 4,
+# CHECK-NEXT:   "start": 8,
 # CHECK-NEXT:   "end": 9
 # CHECK-NEXT:  }
 # CHECK-NEXT: ]
