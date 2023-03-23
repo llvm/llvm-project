@@ -1383,7 +1383,7 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
     OR << ore::NV("Callee", Cloner.OrigFunc) << " partially inlined into "
        << ore::NV("Caller", CB->getCaller());
 
-    InlineFunctionInfo IFI(nullptr, GetAssumptionCache, &PSI);
+    InlineFunctionInfo IFI(GetAssumptionCache, &PSI);
     // We can only forward varargs when we outlined a single region, else we
     // bail on vararg functions.
     if (!InlineFunction(*CB, IFI, /*MergeAttributes=*/false, nullptr, true,
