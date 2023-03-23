@@ -828,9 +828,11 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
   Check(!isa<ScalableVectorType>(GV.getValueType()),
         "Globals cannot contain scalable vectors", &GV);
 
-  if (auto *STy = dyn_cast<StructType>(GV.getValueType()))
-    Check(!STy->containsScalableVectorType(),
+  if (auto *STy = dyn_cast<StructType>(GV.getValueType())) {
+    SmallPtrSet<Type *, 4> Visited;
+    Check(!STy->containsScalableVectorType(&Visited),
           "Globals cannot contain scalable vectors", &GV);
+  }
 
   // Check if it's a target extension type that disallows being used as a
   // global.
@@ -3835,6 +3837,14 @@ void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   Check(isa<PointerType>(TargetTy),
         "GEP base pointer is not a vector or a vector of pointers", &GEP);
   Check(GEP.getSourceElementType()->isSized(), "GEP into unsized type!", &GEP);
+
+  if (auto *STy = dyn_cast<StructType>(GEP.getSourceElementType())) {
+    SmallPtrSet<Type *, 4> Visited;
+    Check(!STy->containsScalableVectorType(&Visited),
+          "getelementptr cannot target structure that contains scalable vector"
+          "type",
+          &GEP);
+  }
 
   SmallVector<Value *, 16> Idxs(GEP.indices());
   Check(
