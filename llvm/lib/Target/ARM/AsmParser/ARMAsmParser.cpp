@@ -11007,7 +11007,7 @@ unsigned ARMAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
     // Find the optional-def operand (cc_out).
     unsigned OpNo;
     for (OpNo = 0;
-         !MCID.operands()[OpNo].isOptionalDef() && OpNo < MCID.NumOperands;
+         OpNo < MCID.NumOperands && !MCID.operands()[OpNo].isOptionalDef();
          ++OpNo)
       ;
     // If we're parsing Thumb1, reject it completely.
