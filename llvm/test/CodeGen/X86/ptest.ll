@@ -148,9 +148,8 @@ define i32 @veccond512(<16 x i32> %input) {
 ;
 ; AVX512-LABEL: veccond512:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vptest %ymm0, %ymm0
+; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    je .LBB2_2
 ; AVX512-NEXT:  # %bb.1: # %if-true-block
 ; AVX512-NEXT:    xorl %eax, %eax
@@ -268,10 +267,9 @@ define i32 @vectest512(<16 x i32> %input) {
 ;
 ; AVX512-LABEL: vectest512:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512-NEXT:    xorl %eax, %eax
-; AVX512-NEXT:    vptest %ymm0, %ymm0
+; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -380,9 +378,8 @@ define i32 @vecsel512(<16 x i32> %input, i32 %a, i32 %b) {
 ; AVX512-LABEL: vecsel512:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    movl %edi, %eax
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vptest %ymm0, %ymm0
+; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    cmovel %esi, %eax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
