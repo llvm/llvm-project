@@ -280,6 +280,7 @@ public:
 
   /// Constructs a new iteration lattice point, and returns its identifier.
   LatPointId addLat(TensorId t, LoopId i, ExprId e);
+  LatPointId addLat(const BitVector &bits, ExprId e);
 
   /// Constructs a new (initially empty) set, and returns its identifier.
   LatSetId addSet();
