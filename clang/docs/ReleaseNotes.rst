@@ -83,6 +83,8 @@ C++20 Feature Support
 - Lambda templates with a requires clause directly after the template parameters now parse
   correctly if the requires clause consists of a variable with a dependent type.
   (`#61278 <https://github.com/llvm/llvm-project/issues/61278>`_)
+- Announced C++20 Coroutines is fully supported on all targets except Windows, which
+  still has some stability and ABI issues.
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
