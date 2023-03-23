@@ -17,6 +17,7 @@
 #include "ResourceScriptStmt.h"
 #include "ResourceScriptToken.h"
 
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -138,10 +139,12 @@ ErrorOr<std::string> findClang(const char *Argv0, StringRef Triple) {
   StringRef Parent = llvm::sys::path::parent_path(Argv0);
   ErrorOr<std::string> Path = std::error_code();
   std::string TargetClang = (Triple + "-clang").str();
+  std::string VersionedClang = ("clang-" + Twine(LLVM_VERSION_MAJOR)).str();
   if (!Parent.empty()) {
     // First look for the tool with all potential names in the specific
     // directory of Argv0, if known
-    for (const auto *Name : {TargetClang.c_str(), "clang", "clang-cl"}) {
+    for (const auto *Name :
+         {TargetClang.c_str(), VersionedClang.c_str(), "clang", "clang-cl"}) {
       Path = sys::findProgramByName(Name, Parent);
       if (Path)
         return Path;
