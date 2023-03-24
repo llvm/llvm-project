@@ -105,9 +105,8 @@ define i1 @test_v8i64(<8 x i64> %a0) {
 ;
 ; AVX512-LABEL: test_v8i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vptest %ymm0, %ymm0
+; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -169,9 +168,8 @@ define i1 @test_v16i64(<16 x i64> %a0) {
 ; AVX512-LABEL: test_v16i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vporq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vptest %ymm0, %ymm0
+; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -298,9 +296,8 @@ define i1 @test_v16i32(<16 x i32> %a0) {
 ;
 ; AVX512-LABEL: test_v16i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vptest %ymm0, %ymm0
+; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -362,9 +359,8 @@ define i1 @test_v32i32(<32 x i32> %a0) {
 ; AVX512-LABEL: test_v32i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpord %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vptest %ymm0, %ymm0
+; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -510,9 +506,8 @@ define i1 @test_v32i16(<32 x i16> %a0) {
 ;
 ; AVX512-LABEL: test_v32i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vptest %ymm0, %ymm0
+; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -574,9 +569,8 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; AVX512-LABEL: test_v64i16:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vporq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vptest %ymm0, %ymm0
+; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -741,9 +735,8 @@ define i1 @test_v64i8(<64 x i8> %a0) {
 ;
 ; AVX512-LABEL: test_v64i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vptest %ymm0, %ymm0
+; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -805,9 +798,8 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 ; AVX512-LABEL: test_v128i8:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vporq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vptest %ymm0, %ymm0
+; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -1014,10 +1006,8 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; AVX512-LABEL: mask_v128i8:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vporq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [72340172838076673,72340172838076673,72340172838076673,72340172838076673]
-; AVX512-NEXT:    vptest %ymm1, %ymm0
+; AVX512-NEXT:    vptestnmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %k0
+; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
