@@ -645,8 +645,8 @@ entry:
   ret <4 x i16> %5
 }
 
-define <8 x i8> @merge_start_into_end(<8 x i8> %v, <8 x i8> %w) {
-; CHECK-LABEL: merge_start_into_end:
+define <8 x i8> @concat_4xi8_start(<8 x i8> %v, <8 x i8> %w) {
+; CHECK-LABEL: concat_4xi8_start:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 4
@@ -655,8 +655,8 @@ define <8 x i8> @merge_start_into_end(<8 x i8> %v, <8 x i8> %w) {
   ret <8 x i8> %res
 }
 
-define <8 x i8> @merge_start_into_end_undef(<8 x i8> %v, <8 x i8> %w) {
-; CHECK-LABEL: merge_start_into_end_undef:
+define <8 x i8> @concat_4xi8_start_undef(<8 x i8> %v, <8 x i8> %w) {
+; CHECK-LABEL: concat_4xi8_start_undef:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 4
@@ -665,8 +665,8 @@ define <8 x i8> @merge_start_into_end_undef(<8 x i8> %v, <8 x i8> %w) {
   ret <8 x i8> %res
 }
 
-define <8 x i8> @merge_start_into_end_undef_at_start(<8 x i8> %v, <8 x i8> %w) {
-; CHECK-LABEL: merge_start_into_end_undef_at_start:
+define <8 x i8> @concat_4xi8_start_undef_at_start(<8 x i8> %v, <8 x i8> %w) {
+; CHECK-LABEL: concat_4xi8_start_undef_at_start:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vid.v v11
