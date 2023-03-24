@@ -249,7 +249,9 @@ public:
 
   /// Returns a new AffineMap with the same number of dims and symbols and one
   /// less result at `pos`, dropped.
-  AffineMap dropResult(int64_t pos) const { return dropResults({pos}); }
+  AffineMap dropResult(int64_t pos) const {
+    return dropResults(ArrayRef({pos}));
+  }
 
   // Returns a new AffineMap with the same number of dims and symbols, but all
   // results in `positions` dropped.
