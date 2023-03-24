@@ -70,7 +70,7 @@ CodeGenHwModes::CodeGenHwModes(RecordKeeper &RK) : Records(RK) {
     // to accept references to it. We need to ignore the definition here.
     if (R->getName() == DefaultModeName)
       continue;
-    Modes.push_back(R);
+    Modes.emplace_back(R);
     ModeIds.insert(std::make_pair(R, Modes.size()));
   }
 
