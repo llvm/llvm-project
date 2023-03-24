@@ -7373,6 +7373,11 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
       }
     }
   }
+
+  // Attach kernel metadata directly if compiling for NVPTX.
+  if (FD->hasAttr<NVPTXKernelAttr>()) {
+    addNVVMMetadata(F, "kernel", 1);
+  }
 }
 
 void NVPTXTargetCodeGenInfo::addNVVMMetadata(llvm::GlobalValue *GV,

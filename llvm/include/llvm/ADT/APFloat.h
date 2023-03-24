@@ -177,6 +177,13 @@ struct APFloatBase {
     // This format's exponent bias is 8, instead of the 7 (2 ** (4 - 1) - 1)
     // that IEEE precedent would imply.
     S_Float8E4M3FNUZ,
+    // 8-bit floating point number mostly following IEEE-754 conventions
+    // and bit layout S1E4M3 with expanded range and with no infinity or signed
+    // zero.
+    // NaN is represnted as negative zero. (FN -> Finite, UZ -> unsigned zero).
+    // This format's exponent bias is 11, instead of the 7 (2 ** (4 - 1) - 1)
+    // that IEEE precedent would imply.
+    S_Float8E4M3B11FNUZ,
 
     S_x87DoubleExtended,
     S_MaxSemantics = S_x87DoubleExtended,
@@ -195,6 +202,7 @@ struct APFloatBase {
   static const fltSemantics &Float8E5M2FNUZ() LLVM_READNONE;
   static const fltSemantics &Float8E4M3FN() LLVM_READNONE;
   static const fltSemantics &Float8E4M3FNUZ() LLVM_READNONE;
+  static const fltSemantics &Float8E4M3B11FNUZ() LLVM_READNONE;
   static const fltSemantics &x87DoubleExtended() LLVM_READNONE;
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
@@ -590,6 +598,7 @@ private:
   APInt convertFloat8E5M2FNUZAPFloatToAPInt() const;
   APInt convertFloat8E4M3FNAPFloatToAPInt() const;
   APInt convertFloat8E4M3FNUZAPFloatToAPInt() const;
+  APInt convertFloat8E4M3B11FNUZAPFloatToAPInt() const;
   void initFromAPInt(const fltSemantics *Sem, const APInt &api);
   void initFromHalfAPInt(const APInt &api);
   void initFromBFloatAPInt(const APInt &api);
@@ -602,6 +611,7 @@ private:
   void initFromFloat8E5M2FNUZAPInt(const APInt &api);
   void initFromFloat8E4M3FNAPInt(const APInt &api);
   void initFromFloat8E4M3FNUZAPInt(const APInt &api);
+  void initFromFloat8E4M3B11FNUZAPInt(const APInt &api);
 
   void assign(const IEEEFloat &);
   void copySignificand(const IEEEFloat &);

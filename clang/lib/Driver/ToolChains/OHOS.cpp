@@ -407,7 +407,7 @@ std::string OHOS::getArchSpecificLibPath() const {
 }
 
 ToolChain::UnwindLibType OHOS::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
-  if (const Arg *A = Args.getLastArg(options::OPT_unwindlib_EQ))
+  if (Args.getLastArg(options::OPT_unwindlib_EQ))
     return Generic_ELF::GetUnwindLibType(Args);
   return GetDefaultUnwindLibType();
 }

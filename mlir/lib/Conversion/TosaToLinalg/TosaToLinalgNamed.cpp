@@ -63,6 +63,27 @@ static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
       highIndices, padValue);
 }
 
+static mlir::Value
+linalgIntBroadcastExtSIAdd(PatternRewriter &rewriter, Location loc, Value bias,
+                           Value conv, Value result,
+                           ArrayRef<AffineMap> indexingMaps) {
+  ShapedType resultTy = conv.getType().cast<ShapedType>();
+  return rewriter
+      .create<linalg::GenericOp>(
+          loc, resultTy, ValueRange({bias, conv}), result, indexingMaps,
+          getNParallelLoopsAttrs(resultTy.getRank()),
+          [](OpBuilder &builder, Location loc, ValueRange args) {
+            Value biasVal = args[0];
+            Type resType = args[1].getType();
+            if (resType != biasVal.getType()) {
+              biasVal = builder.create<arith::ExtSIOp>(loc, resType, biasVal);
+            }
+            Value added = builder.create<arith::AddIOp>(loc, biasVal, args[1]);
+            builder.create<linalg::YieldOp>(loc, added);
+          })
+      .getResult(0);
+}
+
 static mlir::Value reifyConstantDim(int64_t attr,
                                     ImplicitLocOpBuilder &builder) {
   return builder.createOrFold<arith::IndexCastOp>(
@@ -290,19 +311,8 @@ public:
                   loc, resultTy, ValueRange{input, weight, iZpVal, kZpVal},
                   ValueRange{zeroTensor}, strideAttr, dilationAttr)
               ->getResult(0);
-
-      Value result =
-          rewriter
-              .create<linalg::GenericOp>(
-                  loc, resultTy, ValueRange({bias, conv}), biasEmptyTensor,
-                  indexingMaps, getNParallelLoopsAttrs(resultTy.getRank()),
-                  [&](OpBuilder &nestedBuilder, Location nestedLoc,
-                      ValueRange args) {
-                    Value added = nestedBuilder.create<arith::AddIOp>(
-                        loc, args[0], args[1]);
-                    nestedBuilder.create<linalg::YieldOp>(nestedLoc, added);
-                  })
-              .getResult(0);
+      Value result = linalgIntBroadcastExtSIAdd(rewriter, loc, bias, conv,
+                                                biasEmptyTensor, indexingMaps);
       rewriter.replaceOp(op, result);
       return success();
     }
@@ -479,19 +489,8 @@ public:
       createDepthwiseConvCollapseMap(resultRank, reassociationMap, rewriter);
       Value convReshape = rewriter.create<tensor::CollapseShapeOp>(
           loc, resultTy, conv, reassociationMap);
-      Value result =
-          rewriter
-              .create<linalg::GenericOp>(
-                  loc, resultTy, ValueRange({bias, convReshape}),
-                  biasEmptyTensor, indexingMaps,
-                  getNParallelLoopsAttrs(resultRank),
-                  [&](OpBuilder &nestedBuilder, Location nestedLoc,
-                      ValueRange args) {
-                    Value added = nestedBuilder.create<arith::AddIOp>(
-                        loc, args[0], args[1]);
-                    nestedBuilder.create<linalg::YieldOp>(nestedLoc, added);
-                  })
-              .getResult(0);
+      Value result = linalgIntBroadcastExtSIAdd(
+          rewriter, loc, bias, convReshape, biasEmptyTensor, indexingMaps);
       rewriter.replaceOp(op, result);
     }
     return success();
@@ -624,11 +623,8 @@ public:
     Value transposedWeight = rewriter.create<tosa::TransposeOp>(
         loc, newWeightTy, weight, permutationValue);
 
-    auto biasEmptyTensor =
-        rewriter
-            .create<tensor::EmptyOp>(loc, outputTy.getShape(), outputETy,
-                                     filteredDims)
-            ->getResults();
+    Value biasEmptyTensor = rewriter.create<tensor::EmptyOp>(
+        loc, outputTy.getShape(), outputETy, filteredDims);
 
     if (!op.getQuantizationInfo()) {
       Value matmul = rewriter
@@ -665,18 +661,8 @@ public:
                 ValueRange{input, transposedWeight, inputZp, outputZp},
                 zeroTensor)
             ->getResult(0);
-    Value result =
-        rewriter
-            .create<linalg::GenericOp>(
-                loc, outputTy, ValueRange({bias, matmul}), biasEmptyTensor,
-                indexingMaps, getNParallelLoopsAttrs(outputTy.getRank()),
-                [&](OpBuilder &nestedBuilder, Location nestedLoc,
-                    ValueRange args) {
-                  Value added = nestedBuilder.create<arith::AddIOp>(
-                      loc, args[0], args[1]);
-                  nestedBuilder.create<linalg::YieldOp>(nestedLoc, added);
-                })
-            .getResult(0);
+    Value result = linalgIntBroadcastExtSIAdd(rewriter, loc, bias, matmul,
+                                              biasEmptyTensor, indexingMaps);
     rewriter.replaceOp(op, result);
     return success();
   }

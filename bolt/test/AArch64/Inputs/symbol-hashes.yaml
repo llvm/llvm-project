@@ -1,0 +1,83 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_AARCH64
+  Entry:           0x90
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .rodata
+    LastSec:         .text
+    Align:           0x10000
+    Offset:          0x0
+Sections:
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x78
+    AddressAlign:    0x1
+    Content:         '7800000000000000'
+  - Name:            .dummy
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x80
+    AddressAlign:    0x1
+    Content:         '78000000000000009000000000000000'
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x90
+    AddressAlign:    0x4
+    Content:         FF4300D11F2003D508FFFF10080140F9E80700F9A80B8052010000D4FF430091C0035FD6
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x94
+        Symbol:          Symbol
+        Type:            R_AARCH64_ADR_GOT_PAGE
+      - Offset:          0x98
+        Symbol:          Symbol
+        Type:            R_AARCH64_LD64_GOT_LO12_NC
+  - Name:            .rela.dummy
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .dummy
+    Relocations:
+      - Offset:          0x80
+        Symbol:          Symbol
+        Type:            R_AARCH64_ABS64
+      - Offset:          0x88
+        Symbol:          _start
+        Type:            R_AARCH64_ABS64
+Symbols:
+  - Name:            tmp.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            '$x.0'
+    Section:         .text
+    Value:           0x90
+  - Name:            '$d.1'
+    Index:           SHN_ABS
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+    Value:           0x90
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x90
+    Size:            0x24
+  - Name:            Symbol
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0x78
+...

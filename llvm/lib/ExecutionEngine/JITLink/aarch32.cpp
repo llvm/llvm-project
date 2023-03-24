@@ -157,8 +157,9 @@ struct ThumbRelocation {
 Error makeUnexpectedOpcodeError(const LinkGraph &G, const ThumbRelocation &R,
                                 Edge::Kind Kind) {
   return make_error<JITLinkError>(
-      formatv("Invalid opcode [ 0x{0:x4}, 0x{1:x4} ] for relocation: {2}", R.Hi,
-              R.Lo, G.getEdgeKindName(Kind)));
+      formatv("Invalid opcode [ 0x{0:x4}, 0x{1:x4} ] for relocation: {2}",
+              static_cast<uint16_t>(R.Hi), static_cast<uint16_t>(R.Lo),
+              G.getEdgeKindName(Kind)));
 }
 
 template <EdgeKind_aarch32 Kind> bool checkOpcode(const ThumbRelocation &R) {

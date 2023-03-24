@@ -100,6 +100,14 @@ MlirType mlirFloat8E4M3FNUZTypeGet(MlirContext ctx) {
   return wrap(FloatType::getFloat8E4M3FNUZ(unwrap(ctx)));
 }
 
+bool mlirTypeIsAFloat8E4M3B11FNUZ(MlirType type) {
+  return unwrap(type).isFloat8E4M3B11FNUZ();
+}
+
+MlirType mlirFloat8E4M3B11FNUZTypeGet(MlirContext ctx) {
+  return wrap(FloatType::getFloat8E4M3B11FNUZ(unwrap(ctx)));
+}
+
 bool mlirTypeIsABF16(MlirType type) { return unwrap(type).isBF16(); }
 
 MlirType mlirBF16TypeGet(MlirContext ctx) {

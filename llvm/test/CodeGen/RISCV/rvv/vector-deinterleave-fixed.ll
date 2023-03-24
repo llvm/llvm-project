@@ -292,15 +292,13 @@ define {<2 x i64>, <2 x i64>} @vector_deinterleave_v2i64_v4i64(<4 x i64> %vec) {
 ; CHECK-LABEL: vector_deinterleave_v2i64_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v12, v8, 2
+; CHECK-NEXT:    vslidedown.vi v10, v8, 2
 ; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; CHECK-NEXT:    vrgather.vi v10, v8, 0
-; CHECK-NEXT:    vrgather.vi v10, v12, 0, v0.t
 ; CHECK-NEXT:    vrgather.vi v9, v8, 1
-; CHECK-NEXT:    vrgather.vi v9, v12, 1, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vrgather.vi v9, v10, 1, v0.t
+; CHECK-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-NEXT:    ret
 %retval = call {<2 x i64>, <2 x i64>} @llvm.experimental.vector.deinterleave2.v4i64(<4 x i64> %vec)
 ret {<2 x i64>, <2 x i64>} %retval
@@ -381,15 +379,13 @@ define {<2 x double>, <2 x double>} @vector_deinterleave_v2f64_v4f64(<4 x double
 ; CHECK-LABEL: vector_deinterleave_v2f64_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v12, v8, 2
+; CHECK-NEXT:    vslidedown.vi v10, v8, 2
 ; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; CHECK-NEXT:    vrgather.vi v10, v8, 0
-; CHECK-NEXT:    vrgather.vi v10, v12, 0, v0.t
 ; CHECK-NEXT:    vrgather.vi v9, v8, 1
-; CHECK-NEXT:    vrgather.vi v9, v12, 1, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vrgather.vi v9, v10, 1, v0.t
+; CHECK-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-NEXT:    ret
 %retval = call {<2 x double>, <2 x double>} @llvm.experimental.vector.deinterleave2.v4f64(<4 x double> %vec)
 ret {<2 x double>, <2 x double>} %retval
