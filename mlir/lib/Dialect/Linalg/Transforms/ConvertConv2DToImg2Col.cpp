@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -41,37 +42,17 @@ static Value createMul(Location loc, Value x, Value y, OpBuilder &builder) {
   return builder.create<arith::MulFOp>(loc, x, y);
 }
 
-// Unrolls the given composite `index` into a set of subindices with maximum
-// iteration ranges specified by `factors` according to the following
-// assumptions:
-//   1. The iteration range for `index` is [0, f1 * f2 * ... * fn] i.e. the
-//   product of the given list of factors
-//   2. The iterators corresponding to the entries in `factors` are ordered from
-//   slowest to fastest varying
-// Each subindex is then computed as:
-//    subindex[i] = floor( (index % (fi * ... * fn)) / (fi-1 * ... * fn) )
-static SmallVector<Value, 3> unrollIndex(OpBuilder &b, Location loc,
-                                         Value index,
-                                         ArrayRef<int64_t> factors) {
+// Delinearizes the given composite `index` by the basis specified in `factors`.
+static SmallVector<Value> unrollIndex(OpBuilder &b, Location loc, Value index,
+                                      ArrayRef<int64_t> factors) {
   assert(factors.size() >= 1 && "empty factor list");
-  SmallVector<Value, 3> indices(factors.size());
-  int64_t runningProd = 1;
-  for (int i = factors.size() - 1, end = 0; i >= end; i--) {
-    Value unrolledIndex = index;
-    if (i > 0) {
-      Value modBase = b.create<arith::ConstantOp>(
-          loc, b.getIndexAttr(runningProd * factors[i]));
-      unrolledIndex = b.create<arith::RemUIOp>(loc, unrolledIndex, modBase);
-    }
-    if (runningProd > 1) {
-      Value divDenom =
-          b.create<arith::ConstantOp>(loc, b.getIndexAttr(runningProd));
-      unrolledIndex = b.create<arith::DivUIOp>(loc, unrolledIndex, divDenom);
-    }
-    runningProd *= factors[i];
-    indices[i] = unrolledIndex;
-  }
-  return indices;
+  SmallVector<Value> basis;
+  for (int64_t f : factors)
+    basis.push_back(b.create<arith::ConstantOp>(loc, b.getIndexAttr(f)));
+  FailureOr<SmallVector<Value>> multiIndex =
+      delinearizeIndex(b, loc, index, basis);
+  assert(!failed(multiIndex) && "Failed to linearize img2col index");
+  return *multiIndex;
 }
 
 // Given indices corresponding to iterators in the output (oIndex) and filter
@@ -79,9 +60,10 @@ static SmallVector<Value, 3> unrollIndex(OpBuilder &b, Location loc,
 // input as `oIndex * stride + fIndex`.
 static Value getConvolvedIndex(OpBuilder &b, Location loc, Value oIndex,
                                Value fIndex, int64_t stride) {
-  Value strideVal = b.create<arith::ConstantOp>(loc, b.getIndexAttr(stride));
-  Value convIndex = b.create<arith::MulIOp>(loc, oIndex, strideVal);
-  return b.create<arith::AddIOp>(loc, convIndex, fIndex);
+  AffineExpr oExpr, fExpr;
+  bindSymbols(b.getContext(), oExpr, fExpr);
+  AffineMap convMap = AffineMap::get(0, 2, stride * oExpr + fExpr);
+  return makeComposedAffineApply(b, loc, convMap, ValueRange{oIndex, fIndex});
 }
 
 FailureOr<std::pair<Operation *, Operation *>>
@@ -159,12 +141,12 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNhwcHwcfOp convOp) {
         Value kIndex = nestedBuilder.create<linalg::IndexOp>(loc, 2);
 
         // Recover the original iteration indices from the problem/input sizes.
-        SmallVector<Value, 3> mIndices = unrollIndex(
+        SmallVector<Value> mIndices = unrollIndex(
             nestedBuilder, nestedLoc, mIndex, ArrayRef<int64_t>{oh, ow});
         auto ohIndex = mIndices[0];
         auto owIndex = mIndices[1];
 
-        SmallVector<Value, 3> kIndices = unrollIndex(
+        SmallVector<Value> kIndices = unrollIndex(
             nestedBuilder, nestedLoc, kIndex, ArrayRef<int64_t>{fh, fw, ic});
         auto fhIndex = kIndices[0];
         auto fwIndex = kIndices[1];
@@ -443,13 +425,13 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp) {
         Value nIndex = nestedBuilder.create<linalg::IndexOp>(loc, 2);
 
         // Recover the original iteration indices from the problem/input sizes.
-        SmallVector<Value, 3> kIndices = unrollIndex(
+        SmallVector<Value> kIndices = unrollIndex(
             nestedBuilder, nestedLoc, kIndex, ArrayRef<int64_t>{ic, fh, fw});
         auto icIndex = kIndices[0];
         auto fhIndex = kIndices[1];
         auto fwIndex = kIndices[2];
 
-        SmallVector<Value, 3> nIndices = unrollIndex(
+        SmallVector<Value> nIndices = unrollIndex(
             nestedBuilder, nestedLoc, nIndex, ArrayRef<int64_t>{oh, ow});
         auto ohIndex = nIndices[0];
         auto owIndex = nIndices[1];
