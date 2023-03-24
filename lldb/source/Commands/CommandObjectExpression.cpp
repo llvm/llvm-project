@@ -456,7 +456,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
 
         DumpValueObjectOptions options(m_varobj_options.GetAsDumpOptions(
             m_command_options.m_verbosity, format));
-        options.SetHideName(eval_options.GetSuppressPersistentResult());
+        options.SetHideRootName(eval_options.GetSuppressPersistentResult());
         options.SetVariableFormatDisplayLanguage(
             result_valobj_sp->GetPreferredDisplayLanguage());
 
