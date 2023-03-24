@@ -16,6 +16,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
@@ -908,6 +909,52 @@ struct ConvertShRSI final : OpConversionPattern<arith::ShRSIOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertSIToFP
+//===----------------------------------------------------------------------===//
+
+struct ConvertSIToFP final : OpConversionPattern<arith::SIToFPOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::SIToFPOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    Value in = op.getIn();
+    Type oldTy = in.getType();
+    auto newTy =
+        dyn_cast_or_null<VectorType>(getTypeConverter()->convertType(oldTy));
+    if (!newTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {0}", oldTy));
+
+    unsigned oldBitWidth = getElementTypeOrSelf(oldTy).getIntOrFloatBitWidth();
+    Value zeroCst = createScalarOrSplatConstant(rewriter, loc, oldTy, 0);
+    Value oneCst = createScalarOrSplatConstant(rewriter, loc, oldTy, 1);
+    Value allOnesCst = createScalarOrSplatConstant(
+        rewriter, loc, oldTy, APInt::getAllOnes(oldBitWidth));
+
+    // To avoid operating on very large unsigned numbers, perform the
+    // conversion on the absolute value. Then, decide whether to negate the
+    // result or not based on that sign bit. We assume two's complement and
+    // implement negation by flipping all bits and adding 1.
+    // Note that this relies on the the other conversion patterns to legalize
+    // created ops and narrow the bit widths.
+    Value isNeg = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
+                                                 in, zeroCst);
+    Value bitwiseNeg = rewriter.create<arith::XOrIOp>(loc, in, allOnesCst);
+    Value neg = rewriter.create<arith::AddIOp>(loc, bitwiseNeg, oneCst);
+    Value abs = rewriter.create<arith::SelectOp>(loc, isNeg, neg, in);
+
+    Value absResult = rewriter.create<arith::UIToFPOp>(loc, op.getType(), abs);
+    Value negResult = rewriter.create<arith::NegFOp>(loc, absResult);
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNeg, negResult,
+                                                 absResult);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertUIToFP
 //===----------------------------------------------------------------------===//
 
@@ -1146,5 +1193,5 @@ void arith::populateArithWideIntEmulationPatterns(
       ConvertIndexCastIntToIndex<arith::IndexCastUIOp>,
       ConvertIndexCastIndexToInt<arith::IndexCastOp, arith::ExtSIOp>,
       ConvertIndexCastIndexToInt<arith::IndexCastUIOp, arith::ExtUIOp>,
-      ConvertUIToFP>(typeConverter, patterns.getContext());
+      ConvertSIToFP, ConvertUIToFP>(typeConverter, patterns.getContext());
 }
