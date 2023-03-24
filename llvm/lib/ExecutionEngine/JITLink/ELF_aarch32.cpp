@@ -185,8 +185,9 @@ protected:
   }
 
 public:
-  ELFLinkGraphBuilder_aarch32(StringRef FileName, const ELFFile<ELFT> &Obj,
-                              Triple TT, aarch32::ArmConfig ArmCfg)
+  ELFLinkGraphBuilder_aarch32(StringRef FileName,
+                              const llvm::object::ELFFile<ELFT> &Obj, Triple TT,
+                              aarch32::ArmConfig ArmCfg)
       : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), FileName,
                                   getELFAArch32EdgeKindName),
         ArmCfg(std::move(ArmCfg)) {}
