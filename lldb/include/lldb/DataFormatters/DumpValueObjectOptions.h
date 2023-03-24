@@ -105,6 +105,8 @@ public:
 
   DumpValueObjectOptions &SetHideRootType(bool hide_root_type = false);
 
+  DumpValueObjectOptions &SetHideRootName(bool hide_root_name);
+
   DumpValueObjectOptions &SetHideName(bool hide_name = false);
 
   DumpValueObjectOptions &SetHideValue(bool hide_value = false);
@@ -146,6 +148,7 @@ public:
   bool m_show_location : 1;
   bool m_use_objc : 1;
   bool m_hide_root_type : 1;
+  bool m_hide_root_name : 1;
   bool m_hide_name : 1;
   bool m_hide_value : 1;
   bool m_run_validator : 1;

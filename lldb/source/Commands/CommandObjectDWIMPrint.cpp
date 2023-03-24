@@ -84,7 +84,7 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   DumpValueObjectOptions dump_options = m_varobj_options.GetAsDumpOptions(
       m_expr_options.m_verbosity, m_format_options.GetFormat());
-  dump_options.SetHideName(eval_options.GetSuppressPersistentResult());
+  dump_options.SetHideRootName(eval_options.GetSuppressPersistentResult());
 
   StackFrame *frame = m_exe_ctx.GetFramePtr();
 
