@@ -90,9 +90,25 @@ AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
            });
 
   AnalysisResults Results;
-  for (const Include &I : Inc.all())
-    if (!Used.contains(&I) && PI && !PI->shouldKeep(I.Line))
-      Results.Unused.push_back(&I);
+  for (const Include &I : Inc.all()) {
+    if (Used.contains(&I))
+      continue;
+    if (PI) {
+      if (PI->shouldKeep(I.Line))
+        continue;
+      // Check if main file is the public interface for a private header. If so
+      // we shouldn't diagnose it as unused.
+      if (auto PHeader = PI->getPublic(I.Resolved); !PHeader.empty()) {
+        PHeader = PHeader.trim("<>\"");
+        // Since most private -> public mappings happen in a verbatim way, we
+        // check textually here. This might go wrong in presence of symlinks or
+        // header mappings. But that's not different than rest of the places.
+        if (MainFile->tryGetRealPathName().endswith(PHeader))
+          continue;
+      }
+    }
+    Results.Unused.push_back(&I);
+  }
   for (llvm::StringRef S : Missing.keys())
     Results.Missing.push_back(S.str());
   llvm::sort(Results.Missing);
