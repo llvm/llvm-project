@@ -308,8 +308,7 @@ static bool detectAsMod(const FlatLinearConstraints &cst, unsigned pos,
 
     // Express `var_r` as `var_n % divisor` and store the expression in `memo`.
     if (quotientCount >= 1) {
-      auto ub = cst.getConstantBound64(FlatLinearConstraints::BoundType::UB,
-                                       dimExpr.getPosition());
+      auto ub = cst.getConstantBound64(BoundType::UB, dimExpr.getPosition());
       // If `var_n` has an upperbound that is less than the divisor, mod can be
       // eliminated altogether.
       if (ub && *ub < divisor)

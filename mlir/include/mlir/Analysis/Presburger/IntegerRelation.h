@@ -31,6 +31,9 @@ class PresburgerSet;
 class PresburgerRelation;
 struct SymbolicLexMin;
 
+/// The type of bound: equal, lower bound or upper bound.
+enum class BoundType { EQ, LB, UB };
+
 /// An IntegerRelation represents the set of points from a PresburgerSpace that
 /// satisfy a list of affine constraints. Affine constraints can be inequalities
 /// or equalities in the form:
@@ -396,9 +399,6 @@ public:
   /// pair/equality can be found, the kind attribute in `MaybeLocalRepr` is set
   /// to None.
   DivisionRepr getLocalReprs(std::vector<MaybeLocalRepr> *repr = nullptr) const;
-
-  /// The type of bound: equal, lower bound or upper bound.
-  enum BoundType { EQ, LB, UB };
 
   /// Adds a constant bound for the specified variable.
   void addBound(BoundType type, unsigned pos, const MPInt &value);
