@@ -1242,7 +1242,7 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
       assert(CGM.getLangOpts().OpenMPIsDevice && "Unexpected host path");
       CodeGenModule::NoLoopXteamErr NxStatus = CGM.checkAndSetNoLoopKernel(D);
       DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
-                      CGM.emitNxResult("[No-Loop]", D, NxStatus));
+                      CGM.emitNxResult("[No-Loop/Big-Jump-Loop]", D, NxStatus));
       if (NxStatus) {
         NxStatus = CGM.checkAndSetXteamRedKernel(D);
         DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
@@ -1254,9 +1254,9 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
   } else {
     emitNonSPMDKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
                       CodeGen);
-    DEBUG_WITH_TYPE(
-        NO_LOOP_XTEAM_RED,
-        CGM.emitNxResult("[No-Loop/Xteam]", D, CodeGenModule::NxNonSPMD));
+    DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
+                    CGM.emitNxResult("[No-Loop/Big-Jump-Loop/Xteam]", D,
+                                     CodeGenModule::NxNonSPMD));
   }
 
   setPropertyExecutionMode(CGM, OutlinedFn->getName(),

@@ -7231,10 +7231,16 @@ public:
     return NoLoopCheckStatus;
   }
 
-  // Reject if there is a nested OpenMP directive
+  // Reject if there is a nested OpenMP parallel directive
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D) {
-    NoLoopCheckStatus = CodeGenModule::NxNestedOmpDirective;
-    // No need to continue visiting any more
+    if (D->getDirectiveKind() == llvm::omp::Directive::OMPD_parallel) {
+      NoLoopCheckStatus = CodeGenModule::NxNestedOmpParallelDirective;
+      // No need to continue visiting any more
+      return;
+    }
+    for (const Stmt *Child : D->children())
+      if (Child)
+        Visit(Child);
   }
 
   void VisitCallExpr(const CallExpr *C) {
@@ -7430,8 +7436,8 @@ void CodeGenModule::emitNxResult(std::string StatusMsg,
   case NxSplitConstructImproperlyNested:
     StatusMsg += "Improperly nested split construct";
     break;
-  case NxNestedOmpDirective:
-    StatusMsg += "Nested OpenMP directive";
+  case NxNestedOmpParallelDirective:
+    StatusMsg += "Nested OpenMP parallel directive";
     break;
   case NxNestedOmpCall:
     StatusMsg += "Nested OpenMP API call";

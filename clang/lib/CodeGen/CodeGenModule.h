@@ -311,7 +311,7 @@ public:
     NxNotExecutableStmt,
     NxUnsupportedNestedSplitDirective,
     NxSplitConstructImproperlyNested,
-    NxNestedOmpDirective,
+    NxNestedOmpParallelDirective,
     NxNestedOmpCall,
     NxNoSingleForStmt,
     NxUnsupportedLoopInit,
