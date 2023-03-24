@@ -150,11 +150,11 @@ int main(int, char**)
     test<std::uintptr_t> ();
     test<std::size_t>    ();
     test<std::ptrdiff_t> ();
-    test<intmax_t>  ();
-    test<uintmax_t> ();
+    test<std::intmax_t>  ();
+    test<std::uintmax_t> ();
 
-    test<uintmax_t> ();
-    test<uintmax_t> ();
+    test<std::uintmax_t> ();
+    test<std::uintmax_t> ();
 
     test<TriviallyCopyable>();
     test<PaddedTriviallyCopyable>();
