@@ -56,7 +56,7 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
                                  const DataLayout &DL, TargetLibraryInfo &TLI,
                                  ObjectSizeOffsetEvaluator &ObjSizeEval,
                                  BuilderTy &IRB, ScalarEvolution &SE) {
-  uint64_t NeededSize = DL.getTypeStoreSize(InstVal->getType());
+  TypeSize NeededSize = DL.getTypeStoreSize(InstVal->getType());
   LLVM_DEBUG(dbgs() << "Instrument " << *Ptr << " for " << Twine(NeededSize)
                     << " bytes\n");
 
@@ -72,7 +72,7 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
   ConstantInt *SizeCI = dyn_cast<ConstantInt>(Size);
 
   Type *IntTy = DL.getIntPtrType(Ptr->getType());
-  Value *NeededSizeVal = ConstantInt::get(IntTy, NeededSize);
+  Value *NeededSizeVal = IRB.CreateTypeSize(IntTy, NeededSize);
 
   auto SizeRange = SE.getUnsignedRange(SE.getSCEV(Size));
   auto OffsetRange = SE.getUnsignedRange(SE.getSCEV(Offset));

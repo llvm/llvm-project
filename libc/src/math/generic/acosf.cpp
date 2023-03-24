@@ -56,8 +56,8 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
         return r.value();
 
       double xd = static_cast<double>(x);
-      return fputil::multiply_add(-0x1.5555555555555p-3 * xd, xd * xd,
-                                  M_MATH_PI_2 - xd);
+      return static_cast<float>(fputil::multiply_add(
+          -0x1.5555555555555p-3 * xd, xd * xd, M_MATH_PI_2 - xd));
     }
 
     // For |x| <= 0.5, we approximate acosf(x) by:
@@ -70,7 +70,7 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
     double xsq = xd * xd;
     double x3 = xd * xsq;
     double r = asin_eval(xsq);
-    return fputil::multiply_add(-x3, r, M_MATH_PI_2 - xd);
+    return static_cast<float>(fputil::multiply_add(-x3, r, M_MATH_PI_2 - xd));
   }
 
   // |x| > 1, return NaNs.
@@ -111,7 +111,7 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
 
   double r3 = asin_eval(u);
   double r = fputil::multiply_add(cv * u, r3, cv);
-  return x_sign ? M_MATH_PI - r : r;
+  return static_cast<float>(x_sign ? M_MATH_PI - r : r);
 }
 
 } // namespace __llvm_libc

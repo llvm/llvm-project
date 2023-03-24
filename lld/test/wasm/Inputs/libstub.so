@@ -1,0 +1,5 @@
+#STUB
+# This is a comment
+foo: foodep1,foodep2
+# This symbols as no dependencies
+bar

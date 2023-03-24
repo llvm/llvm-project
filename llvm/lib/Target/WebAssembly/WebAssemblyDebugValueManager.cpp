@@ -18,21 +18,18 @@
 
 using namespace llvm;
 
-WebAssemblyDebugValueManager::WebAssemblyDebugValueManager(
-    MachineInstr *Instr) {
+WebAssemblyDebugValueManager::WebAssemblyDebugValueManager(MachineInstr *Def) {
   // This code differs from MachineInstr::collectDebugValues in that it scans
   // the whole BB, not just contiguous DBG_VALUEs.
-  if (!Instr->getOperand(0).isReg())
+  if (!Def->getOperand(0).isReg())
     return;
-  CurrentReg = Instr->getOperand(0).getReg();
+  CurrentReg = Def->getOperand(0).getReg();
 
-  MachineBasicBlock::iterator DI = *Instr;
-  ++DI;
-  for (MachineBasicBlock::iterator DE = Instr->getParent()->end(); DI != DE;
-       ++DI) {
-    if (DI->isDebugValue() &&
-        DI->hasDebugOperandForReg(Instr->getOperand(0).getReg()))
-      DbgValues.push_back(&*DI);
+  for (MachineBasicBlock::iterator MI = std::next(Def->getIterator()),
+                                   ME = Def->getParent()->end();
+       MI != ME; ++MI) {
+    if (MI->isDebugValue() && MI->hasDebugOperandForReg(CurrentReg))
+      DbgValues.push_back(&*MI);
   }
 }
 
@@ -42,15 +39,8 @@ void WebAssemblyDebugValueManager::move(MachineInstr *Insert) {
     MBB->splice(Insert, DBI->getParent(), DBI);
 }
 
-void WebAssemblyDebugValueManager::updateReg(unsigned Reg) {
-  for (auto *DBI : DbgValues)
-    for (auto &MO : DBI->getDebugOperandsForReg(CurrentReg))
-      MO.setReg(Reg);
-  CurrentReg = Reg;
-}
-
 void WebAssemblyDebugValueManager::clone(MachineInstr *Insert,
-                                         unsigned NewReg) {
+                                         Register NewReg) {
   MachineBasicBlock *MBB = Insert->getParent();
   MachineFunction *MF = MBB->getParent();
   for (MachineInstr *DBI : reverse(DbgValues)) {
@@ -59,6 +49,13 @@ void WebAssemblyDebugValueManager::clone(MachineInstr *Insert,
       MO.setReg(NewReg);
     MBB->insert(Insert, Clone);
   }
+}
+
+void WebAssemblyDebugValueManager::updateReg(Register Reg) {
+  for (auto *DBI : DbgValues)
+    for (auto &MO : DBI->getDebugOperandsForReg(CurrentReg))
+      MO.setReg(Reg);
+  CurrentReg = Reg;
 }
 
 void WebAssemblyDebugValueManager::replaceWithLocal(unsigned LocalId) {

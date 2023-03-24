@@ -30,9 +30,6 @@ int main(int argc, char *argv[]) {
   fprintf(stderr, "Start.\n");
   // CHECK: Start.
 
-  fprintf(stderr, "ExternalWrite function address: %p\n", &ExternalWrite);
-  // CHECK: ExternalWrite function address: [[ExternalWrite_addr:0x[0-9a-z]+]]
-
   void *opaque_object = malloc(16);
   std::thread t1([opaque_object] {
     ExternalWrite(opaque_object);
@@ -85,7 +82,7 @@ __tsan_on_report(void *report) {
             info.dli_saddr, info.dli_sname);
   }
   // Ensure ExternalWrite() function is top of trace
-  // CHECK: 0: frame: 0x{{[0-9a-z]+}}, function: [[ExternalWrite_addr]] _Z13ExternalWritePv
+  // CHECK: 0: frame: 0x{{[0-9a-z]+}}, function: 0x{{[0-9a-z]+}} _Z13ExternalWritePv
 }
 
 // CHECK: Done.

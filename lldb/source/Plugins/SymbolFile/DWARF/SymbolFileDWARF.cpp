@@ -1319,7 +1319,7 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(
                                          range.GetByteSize()));
           else {
             GetObjectFile()->GetModule()->ReportError(
-                "{0x:+8}: adding range [{1:x16}-{2:x16}) which has a base "
+                "{0:x8}: adding range [{1:x16}-{2:x16}) which has a base "
                 "that is less than the function's low PC {3:x16}. Please file "
                 "a bug and attach the file at the "
                 "start of this error message",
