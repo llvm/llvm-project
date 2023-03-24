@@ -130,6 +130,9 @@ std::optional<Operation *> CodegenEnv::genLoopBoundary(
   auto r = callback(params); // may update parameters
   unsigned i = 0;
   if (isReduc()) {
+    // FIXME: This requires `updateExprValue` to perform updates without
+    // checking for a previous value; but it's not clear whether that's
+    // by design or might be a potential source for bugs.
     updateReduc(params[i++]);
     if (redValidLexInsert)
       setValidLexInsert(params[i++]);
@@ -281,12 +284,18 @@ void CodegenEnv::startReduc(ExprId exp, Value val) {
 
 void CodegenEnv::updateReduc(Value val) {
   assert(isReduc());
-  redVal = exp(redExp).val = val;
+  redVal = val;
+  // NOTE: `genLoopBoundary` requires that this performs a unilateral
+  // update without checking for a previous value first.  (It's not
+  // clear whether any other callsites also require that.)
+  latticeMerger.updateExprValue(redExp, val);
 }
 
 Value CodegenEnv::endReduc() {
+  assert(isReduc());
   Value val = redVal;
-  updateReduc(Value());
+  redVal = val;
+  latticeMerger.clearExprValue(redExp);
   redExp = kInvalidId;
   return val;
 }
