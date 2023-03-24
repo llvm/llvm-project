@@ -4970,7 +4970,10 @@ static void handleGlobalAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (FD->isInlineSpecified() && !S.getLangOpts().CUDAIsDevice)
     S.Diag(FD->getBeginLoc(), diag::warn_kern_is_inline) << FD;
 
-  D->addAttr(::new (S.Context) CUDAGlobalAttr(S.Context, AL));
+  if (AL.getKind() == ParsedAttr::AT_NVPTXKernel)
+    D->addAttr(::new (S.Context) NVPTXKernelAttr(S.Context, AL));
+  else
+    D->addAttr(::new (S.Context) CUDAGlobalAttr(S.Context, AL));
   // In host compilation the kernel is emitted as a stub function, which is
   // a helper function for launching the kernel. The instructions in the helper
   // function has nothing to do with the source code of the kernel. Do not emit
@@ -8851,6 +8854,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_CalledOnce:
     handleCalledOnceAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_NVPTXKernel:
   case ParsedAttr::AT_CUDAGlobal:
     handleGlobalAttr(S, D, AL);
     break;
