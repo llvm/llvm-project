@@ -56,7 +56,8 @@ CodegenEnv::CodegenEnv(linalg::GenericOp linop, SparsificationOptions opts,
       latticeMerger(numTensors, numLoops, numFilterLoops, maxRank),
       loopEmitter(), topSort(), sparseOut(nullptr), outerParNest(-1u),
       insChain(), expValues(), expFilled(), expAdded(), expCount(), redVal(),
-      redExp(kInvalidId), redCustom(kInvalidId), redValidLexInsert() {}
+      redExp(detail::kInvalidId), redCustom(detail::kInvalidId),
+      redValidLexInsert() {}
 
 LogicalResult CodegenEnv::initTensorExp() {
   // Builds the tensor expression for the Linalg operation in SSA form.
@@ -277,7 +278,7 @@ void CodegenEnv::endExpand() {
 //===----------------------------------------------------------------------===//
 
 void CodegenEnv::startReduc(ExprId exp, Value val) {
-  assert(!isReduc() && exp != kInvalidId);
+  assert(!isReduc() && exp != detail::kInvalidId);
   redExp = exp;
   updateReduc(val);
 }
@@ -296,7 +297,7 @@ Value CodegenEnv::endReduc() {
   Value val = redVal;
   redVal = val;
   latticeMerger.clearExprValue(redExp);
-  redExp = kInvalidId;
+  redExp = detail::kInvalidId;
   return val;
 }
 
@@ -311,7 +312,7 @@ void CodegenEnv::clearValidLexInsert() {
 }
 
 void CodegenEnv::startCustomReduc(ExprId exp) {
-  assert(!isCustomReduc() && exp != kInvalidId);
+  assert(!isCustomReduc() && exp != detail::kInvalidId);
   redCustom = exp;
 }
 
@@ -322,5 +323,5 @@ Value CodegenEnv::getCustomRedId() {
 
 void CodegenEnv::endCustomReduc() {
   assert(isCustomReduc());
-  redCustom = kInvalidId;
+  redCustom = detail::kInvalidId;
 }

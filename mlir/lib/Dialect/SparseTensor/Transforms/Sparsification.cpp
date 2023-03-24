@@ -1111,7 +1111,7 @@ static Value genExp(CodegenEnv &env, RewriterBase &rewriter, ExprId e,
   linalg::GenericOp op = env.op();
   Location loc = op.getLoc();
 
-  if (e == kInvalidId)
+  if (e == ::mlir::sparse_tensor::detail::kInvalidId)
     return Value();
   const TensorExp &exp = env.exp(e);
   const auto kind = exp.kind;
@@ -1146,11 +1146,11 @@ static Value genExp(CodegenEnv &env, RewriterBase &rewriter, ExprId e,
 /// Hoists loop invariant tensor loads for which indices have been exhausted.
 static void genInvariants(CodegenEnv &env, OpBuilder &builder, ExprId exp,
                           LoopId ldx, bool atStart) {
-  if (exp == kInvalidId)
+  if (exp == ::mlir::sparse_tensor::detail::kInvalidId)
     return;
   if (env.exp(exp).kind == TensorExp::Kind::kTensor) {
     // Inspect tensor indices.
-    bool isAtLoop = ldx == kInvalidId;
+    bool isAtLoop = ldx == ::mlir::sparse_tensor::detail::kInvalidId;
     linalg::GenericOp op = env.op();
     OpOperand &t = op->getOpOperand(env.exp(exp).tensor);
     auto map = op.getMatchingIndexingMap(&t);
@@ -1715,7 +1715,8 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
 
   // Construct iteration lattices for current loop index, with L0 at top.
   const LoopId idx = env.topSortAt(at);
-  const LoopId ldx = at == 0 ? kInvalidId : env.topSortAt(at - 1);
+  const LoopId ldx = at == 0 ? ::mlir::sparse_tensor::detail::kInvalidId
+                             : env.topSortAt(at - 1);
   const LatSetId lts =
       env.merger().optimizeSet(env.merger().buildLattices(exp, idx));
 

@@ -76,9 +76,11 @@ using LatPointId = unsigned;
 /// for the corresponding `SmallVector<LatPointId>` object.
 using LatSetId = unsigned;
 
+namespace detail {
 /// A constant serving as the canonically invalid identifier, regardless
 /// of the identifier type.
 static constexpr unsigned kInvalidId = -1u;
+} // namespace detail
 
 /// Tensor expression. Represents an MLIR expression in tensor index notation.
 struct TensorExp final {
@@ -272,13 +274,13 @@ public:
   /// Constructs a new tensor expression, and returns its identifier.
   /// The type of the `e0` argument varies according to the value of the
   /// `k` argument, as described by the `TensorExp` ctor.
-  ExprId addExp(TensorExp::Kind k, unsigned e0, ExprId e1 = kInvalidId,
+  ExprId addExp(TensorExp::Kind k, unsigned e0, ExprId e1 = detail::kInvalidId,
                 Value v = Value(), Operation *op = nullptr);
   ExprId addExp(TensorExp::Kind k, ExprId e, Value v, Operation *op = nullptr) {
-    return addExp(k, e, kInvalidId, v, op);
+    return addExp(k, e, detail::kInvalidId, v, op);
   }
   ExprId addExp(TensorExp::Kind k, Value v, Operation *op = nullptr) {
-    return addExp(k, kInvalidId, kInvalidId, v, op);
+    return addExp(k, detail::kInvalidId, detail::kInvalidId, v, op);
   }
 
   /// Constructs a new iteration lattice point, and returns its identifier.

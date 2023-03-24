@@ -134,7 +134,7 @@ public:
   //
 
   void startReduc(ExprId exp, Value val);
-  bool isReduc() const { return redExp != kInvalidId; }
+  bool isReduc() const { return redExp != detail::kInvalidId; }
   void updateReduc(Value val);
   Value getReduc() const { return redVal; }
   Value endReduc();
@@ -143,7 +143,7 @@ public:
   Value getValidLexInsert() const { return redValidLexInsert; }
 
   void startCustomReduc(ExprId exp);
-  bool isCustomReduc() const { return redCustom != kInvalidId; }
+  bool isCustomReduc() const { return redCustom != detail::kInvalidId; }
   Value getCustomRedId();
   void endCustomReduc();
 
