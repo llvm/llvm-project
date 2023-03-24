@@ -31,6 +31,7 @@ class WebAssemblyDebugValueManager {
   Register CurrentReg;
   SmallVector<MachineInstr *>
   getSinkableDebugValues(MachineInstr *Insert) const;
+  bool isInsertSamePlace(MachineInstr *Insert) const;
 
 public:
   WebAssemblyDebugValueManager(MachineInstr *Def);

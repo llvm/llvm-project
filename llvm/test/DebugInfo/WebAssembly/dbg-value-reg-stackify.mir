@@ -191,9 +191,7 @@ body: |
     CALL @use, %0:i32, implicit-def $arguments
     RETURN implicit-def $arguments
 
-  ; CHECK:      DBG_VALUE $noreg, $noreg, ![[VAR_A]], !DIExpression()
-  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_B]], !DIExpression()
-  ; CHECK-NEXT: %0:i32 = CONST_I32 1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK:      %0:i32 = CONST_I32 1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
   ; CHECK-NEXT: DBG_VALUE %0, $noreg, ![[VAR_A]], !DIExpression()
   ; CHECK-NEXT: DBG_VALUE %0, $noreg, ![[VAR_B]], !DIExpression()
   ; CHECK-NEXT: CALL @use, %0, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
