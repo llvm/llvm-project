@@ -496,6 +496,24 @@ static int compileModule(char **argv, LLVMContext &Context) {
   TargetOptions Options;
   auto InitializeOptions = [&](const Triple &TheTriple) {
     Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+
+    if (Options.XCOFFReadOnlyPointers) {
+      if (!TheTriple.isOSAIX())
+        reportError("-mroptr option is only supported on AIX", InputFilename);
+
+      // Since the storage mapping class is specified per csect,
+      // without using data sections, it is less effective to use read-only
+      // pointers. Using read-only pointers may cause other RO variables in the
+      // same csect to become RW when the linker acts upon `-bforceimprw`;
+      // therefore, we require that separate data sections are used in the
+      // presence of ReadOnlyPointers. We respect the setting of data-sections
+      // since we have not found reasons to do otherwise that overcome the user
+      // surprise of not respecting the setting.
+      if (!Options.DataSections)
+        reportError("-mroptr option must be used with -data-sections",
+                    InputFilename);
+    }
+
     Options.BinutilsVersion =
         TargetMachine::parseBinutilsVersion(BinutilsVersion);
     Options.DisableIntegratedAS = NoIntegratedAssembler;
