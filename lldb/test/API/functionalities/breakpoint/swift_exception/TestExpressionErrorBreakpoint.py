@@ -28,26 +28,29 @@ class TestSwiftErrorBreakpoint(TestBase):
     @swiftTest
     def test_swift_error_no_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
+        self.build()
         self.do_tests(None, True)
 
     @swiftTest
     def test_swift_error_matching_base_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
+        self.build()
         self.do_tests("EnumError", True)
 
     @swiftTest
     def test_swift_error_matching_full_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
+        self.build()
         self.do_tests("a.EnumError", True)
 
     @swiftTest
     def test_swift_error_bogus_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
+        self.build()
         self.do_tests("NoSuchErrorHere", False)
 
     def setUp(self):
         TestBase.setUp(self)
-        self.build()
 
     def do_tests(self, typename, should_stop):
         self.do_test(typename, should_stop, self.create_breakpoint_with_api)
