@@ -114,3 +114,11 @@ class TestCase(TestBase):
         error_msg = "error: 'dwim-print' takes a variable or expression"
         self.expect(f"dwim-print", error=True, startstr=error_msg)
         self.expect(f"dwim-print -- ", error=True, startstr=error_msg)
+
+    def test_nested_values(self):
+        """Test dwim-print with nested values (structs, etc)."""
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.c"))
+        self.runCmd("settings set auto-one-line-summaries false")
+        self._expect_cmd(f"dwim-print s", "frame variable")
+        self._expect_cmd(f"dwim-print (struct Structure)s", "expression")

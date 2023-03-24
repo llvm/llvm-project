@@ -2,7 +2,7 @@
 # RUN: 
 # RUN: llvm-jitlink -abs __ImageBase=0xdeadbeaf -noexec %t \
 # RUN: -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
-# RUN: -show-graph -noexec 2>&1 | FileCheck %s
+# RUN: -show-graphs='.*' -noexec 2>&1 | FileCheck %s
 #
 # Check that basic seh frame of dead block is dead-stripped out
 #
