@@ -80,15 +80,15 @@ using LatSetId = unsigned;
 /// of the identifier type.
 static constexpr unsigned kInvalidId = -1u;
 
-/// Children subexpressions of tensor operations.
-struct Children {
-  ExprId e0;
-  ExprId e1;
-};
-
-/// Tensor expression. Represents a MLIR expression in tensor index notation.
-struct TensorExp {
+/// Tensor expression. Represents an MLIR expression in tensor index notation.
+struct TensorExp final {
   enum class Kind;
+
+  /// Child subexpressions for non-leaf expressions.
+  struct Children final {
+    ExprId e0;
+    ExprId e1;
+  };
 
   // The `x` parameter has different types depending on the value of the
   // `k` parameter.  The correspondences are:
@@ -209,7 +209,7 @@ enum class TensorExp::Kind {
 /// of `TensorLoopId`s, together with the identifier of the corresponding
 /// tensor expression.  The formal conjunction is represented as a set of
 /// `TensorLoopId`, where that set is implemented as a `BitVector`.
-struct LatPoint {
+struct LatPoint final {
   /// Construct the lattice point from a given set of `TensorLoopId`s.
   LatPoint(const BitVector &bits, ExprId e);
 
