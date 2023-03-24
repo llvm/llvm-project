@@ -655,10 +655,6 @@ def warn_pragma_debug_missing_command : Warning<
   "missing debug command">, InGroup<IgnoredPragmas>;
 def warn_pragma_debug_unexpected_command : Warning<
   "unexpected debug command '%0'">, InGroup<IgnoredPragmas>;
-def warn_pragma_debug_missing_argument : Warning<
-  "missing argument to debug command '%0'">, InGroup<IgnoredPragmas>;
-def warn_pragma_debug_unexpected_argument : Warning<
-  "unexpected argument to debug command">, InGroup<IgnoredPragmas>;
 def warn_pragma_debug_unknown_module : Warning<
   "unknown module '%0'">, InGroup<IgnoredPragmas>;
 // #pragma module

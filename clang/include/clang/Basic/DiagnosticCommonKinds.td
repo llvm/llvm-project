@@ -63,6 +63,10 @@ def err_invalid_character_udl : Error<
   "character literal with user-defined suffix cannot be used here">;
 def err_invalid_numeric_udl : Error<
   "numeric literal with user-defined suffix cannot be used here">;
+def warn_pragma_debug_missing_argument : Warning<
+  "missing argument to debug command '%0'">, InGroup<IgnoredPragmas>;
+def warn_pragma_debug_unexpected_argument : Warning<
+  "unexpected argument to debug command">, InGroup<IgnoredPragmas>;
 
 }
 
