@@ -717,6 +717,7 @@ void mlir::python::populateIRTypes(py::module &m) {
   PyFloat8E4M3FNType::bind(m);
   PyFloat8E5M2Type::bind(m);
   PyFloat8E4M3FNUZType::bind(m);
+  PyFloat8E4M3B11FNUZType::bind(m);
   PyFloat8E5M2FNUZType::bind(m);
   PyBF16Type::bind(m);
   PyF16Type::bind(m);
