@@ -23,6 +23,7 @@
 #endif
 
 #if defined(__apple_build_version__)
+// Given AppleClang XX.Y.Z, _LIBCPP_APPLE_CLANG_VER is XXYZ (e.g. AppleClang 14.0.3 => 1403)
 #  define _LIBCPP_COMPILER_CLANG_BASED
 #  define _LIBCPP_APPLE_CLANG_VER (__apple_build_version__ / 10000)
 #elif defined(__clang__)
