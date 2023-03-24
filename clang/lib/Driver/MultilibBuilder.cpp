@@ -41,9 +41,8 @@ static void normalizePathSegment(std::string &Segment) {
   }
 }
 
-MultilibBuilder::MultilibBuilder(StringRef GCC, StringRef OS, StringRef Include,
-                                 int Priority)
-    : GCCSuffix(GCC), OSSuffix(OS), IncludeSuffix(Include), Priority(Priority) {
+MultilibBuilder::MultilibBuilder(StringRef GCC, StringRef OS, StringRef Include)
+    : GCCSuffix(GCC), OSSuffix(OS), IncludeSuffix(Include) {
   normalizePathSegment(GCCSuffix);
   normalizePathSegment(OSSuffix);
   normalizePathSegment(IncludeSuffix);
@@ -87,7 +86,7 @@ bool MultilibBuilder::isValid() const {
 }
 
 Multilib MultilibBuilder::makeMultilib() const {
-  return Multilib(GCCSuffix, OSSuffix, IncludeSuffix, Priority, Flags);
+  return Multilib(GCCSuffix, OSSuffix, IncludeSuffix, Flags);
 }
 
 MultilibSetBuilder &MultilibSetBuilder::Maybe(const MultilibBuilder &M) {

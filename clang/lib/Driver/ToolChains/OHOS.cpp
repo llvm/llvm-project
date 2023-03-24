@@ -39,14 +39,16 @@ static bool findOHOSMuslMultilibs(const Multilib::flags_list &Flags,
   // -mcpu=cortex-a7
   // -mfloat-abi=soft -mfloat-abi=softfp -mfloat-abi=hard
   // -mfpu=neon-vfpv4
-  Multilibs.push_back(Multilib("/a7_soft", {}, {}, 1,
-                          {"+mcpu=cortex-a7", "+mfloat-abi=soft"}));
+  Multilibs.push_back(
+      Multilib("/a7_soft", {}, {}, {"+mcpu=cortex-a7", "+mfloat-abi=soft"}));
 
-  Multilibs.push_back(Multilib("/a7_softfp_neon-vfpv4", {}, {}, 1,
-                          {"+mcpu=cortex-a7", "+mfloat-abi=softfp", "+mfpu=neon-vfpv4"}));
+  Multilibs.push_back(
+      Multilib("/a7_softfp_neon-vfpv4", {}, {},
+               {"+mcpu=cortex-a7", "+mfloat-abi=softfp", "+mfpu=neon-vfpv4"}));
 
-  Multilibs.push_back(Multilib("/a7_hard_neon-vfpv4", {}, {}, 1,
-                          {"+mcpu=cortex-a7", "+mfloat-abi=hard", "+mfpu=neon-vfpv4"}));
+  Multilibs.push_back(
+      Multilib("/a7_hard_neon-vfpv4", {}, {},
+               {"+mcpu=cortex-a7", "+mfloat-abi=hard", "+mfpu=neon-vfpv4"}));
 
   if (Multilibs.select(Flags, Result.SelectedMultilib)) {
     Result.Multilibs = Multilibs;
