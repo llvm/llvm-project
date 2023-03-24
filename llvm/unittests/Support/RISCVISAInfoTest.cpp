@@ -141,7 +141,7 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   RISCVISAInfo &InfoRV32E = **MaybeRV32E;
   RISCVISAInfo::OrderedExtensionMap ExtsRV32E = InfoRV32E.getExtensions();
   EXPECT_EQ(ExtsRV32E.size(), 1UL);
-  EXPECT_TRUE(ExtsRV32E.at("e") == (RISCVExtensionInfo{1, 9}));
+  EXPECT_TRUE(ExtsRV32E.at("e") == (RISCVExtensionInfo{2, 0}));
   EXPECT_EQ(InfoRV32E.getXLen(), 32U);
   EXPECT_EQ(InfoRV32E.getFLen(), 0U);
 
