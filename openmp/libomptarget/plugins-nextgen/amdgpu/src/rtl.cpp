@@ -447,12 +447,20 @@ struct AMDGPUKernelTy : public GenericKernelTy {
                              &ConstWGSize);
     GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
     if (auto Err =
-            GHandler.readGlobalFromImage(Device, AMDImage, HostConstWGSize))
-      return Err;
-    // Set the number of preferred and max threads to the ConstWGSize to get the
-    // exact value for kernel launch.
-    PreferredNumThreads = ConstWGSize;
-    MaxNumThreads = ConstWGSize;
+            GHandler.readGlobalFromImage(Device, AMDImage, HostConstWGSize)) {
+      // In case it is not found, we simply stick with the defaults.
+      // So we consume the error and print a debug message.
+      DP("Could not load %s global from kernel image. Run with %u %u\n",
+         WGSizeName.c_str(), PreferredNumThreads, MaxNumThreads);
+      consumeError(std::move(Err));
+      assert(PreferredNumThreads > 0 && "Prefer more than 0 threads");
+      assert(MaxNumThreads > 0 && "MaxNumThreads more than 0 threads");
+    } else {
+      // Set the number of preferred and max threads to the ConstWGSize to get
+      // the exact value for kernel launch.
+      PreferredNumThreads = ConstWGSize;
+      MaxNumThreads = ConstWGSize;
+    }
 
     // Get additional kernel info read from image
     KernelInfo = AMDImage.getKernelInfo(getName());
