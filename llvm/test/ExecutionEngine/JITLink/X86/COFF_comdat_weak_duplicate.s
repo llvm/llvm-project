@@ -2,10 +2,10 @@
 # RUN: yaml2obj %S/Inputs/COFF_comdat_weak_def.yaml -o %t/COFF_weak_1.o
 # RUN: yaml2obj %S/Inputs/COFF_comdat_weak_def.yaml -o %t/COFF_weak_2.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-windows-msvc %s -o %t/COFF_main.o
-# RUN: 
+# RUN:
 # RUN: llvm-jitlink -noexec %t/COFF_main.o %t/COFF_weak_1.o %t/COFF_weak_2.o \
 # RUN: -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
-# RUN: -show-graph -noexec 2>&1 | FileCheck %s
+# RUN: -show-graphs='.*' -noexec 2>&1 | FileCheck %s
 #
 # Check that duplicate comdat any definitions don't generate duplicate definition error.
 #

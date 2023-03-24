@@ -50,6 +50,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
 
@@ -175,10 +176,11 @@ static cl::opt<bool> ShowAddrs(
     cl::desc("Print registered symbol, section, got and stub addresses"),
     cl::init(false), cl::cat(JITLinkCategory));
 
-static cl::opt<bool> ShowLinkGraph(
-    "show-graph",
-    cl::desc("Print the link graph after fixups have been applied"),
-    cl::init(false), cl::cat(JITLinkCategory));
+static cl::opt<std::string> ShowLinkGraphs(
+    "show-graphs",
+    cl::desc("Takes a posix regex and prints the link graphs of all files "
+             "matching that regex after fixups have been applied"),
+    cl::Optional, cl::cat(JITLinkCategory));
 
 static cl::opt<bool> ShowSizes(
     "show-sizes",
@@ -1062,6 +1064,9 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   // external.
   for (auto &DefName : HarnessDefinitions)
     HarnessExternals.erase(DefName.getKey());
+
+  if (!ShowLinkGraphs.empty())
+    ShowGraphsRegex = Regex(ShowLinkGraphs);
 }
 
 void Session::dumpSessionInfo(raw_ostream &OS) {
@@ -1086,10 +1091,14 @@ void Session::modifyPassConfig(const Triple &TT,
                                      inconvertibleErrorCode());
     });
 
-  if (ShowLinkGraph)
-    PassConfig.PostFixupPasses.push_back([](LinkGraph &G) -> Error {
-      outs() << "Link graph \"" << G.getName() << "\" post-fixup:\n";
-      G.dump(outs());
+  if (ShowGraphsRegex)
+    PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) -> Error {
+      // Print graph if ShowLinkGraphs is specified-but-empty, or if
+      // it contains the given graph.
+      if (ShowGraphsRegex->match(G.getName())) {
+        outs() << "Link graph \"" << G.getName() << "\" post-fixup:\n";
+        G.dump(outs());
+      }
       return Error::success();
     });
 

@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-jitlink -noexec -show-graph %t | FileCheck %s
+# RUN: llvm-jitlink -noexec -show-graphs='.*' %t | FileCheck %s
 
 # The below describes an object with two local symbols named _foo, each
 # referenced by _main to keep it live. Ensure we can link it.
