@@ -37,7 +37,7 @@ define void @kernel() "kernel" {
 ; CHECK:       if.else:
 ; CHECK-NEXT:    call void @barrier() #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
-; CHECK-NEXT:    call void @llvm.assume(i1 true)
+; CHECK-NEXT:    call void @llvm.assume(i1 undef)
 ; CHECK-NEXT:    call void @barrier() #[[ATTR6]]
 ; CHECK-NEXT:    br label [[IF_MERGE]]
 ; CHECK:       if.merge:
