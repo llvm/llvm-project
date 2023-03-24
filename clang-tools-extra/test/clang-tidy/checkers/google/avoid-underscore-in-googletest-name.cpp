@@ -87,21 +87,31 @@ TYPED_TEST_P(Illegal_Type_ParameterizedTestCaseName, TestName) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: avoid using "_" in test case name "Illegal_Type_ParameterizedTestCaseName" according to Googletest FAQ [google-readability-avoid-underscore-in-googletest-name]
 
 // Underscores are allowed to disable a test with the DISABLED_ prefix.
-// https://github.com/google/googletest/blob/master/googletest/docs/faq.md#why-should-test-suite-names-and-test-names-not-contain-underscore
+// https://google.github.io/googletest/faq.html#why-should-test-suite-names-and-test-names-not-contain-underscore
 TEST(TestCaseName, TestName) {}
 TEST(TestCaseName, DISABLED_TestName) {}
+TEST(DISABLED_TestCaseName, TestName) {}
+TEST(DISABLED_TestCaseName, DISABLED_TestName) {}
 
 TEST_F(TestCaseFixtureName, TestName) {}
 TEST_F(TestCaseFixtureName, DISABLED_TestName) {}
+TEST_F(DISABLED_TestCaseFixtureName, TestName) {}
+TEST_F(DISABLED_TestCaseFixtureName, DISABLED_TestName) {}
 
 TEST_P(ParameterizedTestCaseFixtureName, TestName) {}
 TEST_P(ParameterizedTestCaseFixtureName, DISABLED_TestName) {}
+TEST_P(DISABLED_ParameterizedTestCaseFixtureName, TestName) {}
+TEST_P(DISABLED_ParameterizedTestCaseFixtureName, DISABLED_TestName) {}
 
 TYPED_TEST(TypedTestName, TestName) {}
 TYPED_TEST(TypedTestName, DISABLED_TestName) {}
+TYPED_TEST(DISABLED_TypedTestName, TestName) {}
+TYPED_TEST(DISABLED_TypedTestName, DISABLED_TestName) {}
 
 TYPED_TEST_P(TypeParameterizedTestName, TestName) {}
 TYPED_TEST_P(TypeParameterizedTestName, DISABLED_TestName) {}
+TYPED_TEST_P(DISABLED_TypeParameterizedTestName, TestName) {}
+TYPED_TEST_P(DISABLED_TypeParameterizedTestName, DISABLED_TestName) {}
 
 FRIEND_TEST(FriendTest, Is_NotChecked) {}
 FRIEND_TEST(Friend_Test, IsNotChecked) {}
