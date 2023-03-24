@@ -81,7 +81,7 @@ template <typename F, typename U> void Client::run(F fill, U use) {
   if (!in & !out) {
     fill(buffer);
     atomic_thread_fence(cpp::MemoryOrder::RELEASE);
-    outbox->store(1, cpp::MemoryOrder::RELEASE);
+    outbox->store(1, cpp::MemoryOrder::RELAXED);
     out = 1;
   }
   // Wait for the server to work on the buffer and respond.
@@ -94,7 +94,7 @@ template <typename F, typename U> void Client::run(F fill, U use) {
   if (in & out) {
     use(buffer);
     atomic_thread_fence(cpp::MemoryOrder::RELEASE);
-    outbox->store(0, cpp::MemoryOrder::RELEASE);
+    outbox->store(0, cpp::MemoryOrder::RELAXED);
     out = 0;
   }
   // Wait for the server to signal the end of the protocol.
@@ -123,7 +123,7 @@ template <typename W, typename C> bool Server::handle(W work, C clean) {
   if (in & !out) {
     work(buffer);
     atomic_thread_fence(cpp::MemoryOrder::RELEASE);
-    outbox->store(1, cpp::MemoryOrder::RELEASE);
+    outbox->store(1, cpp::MemoryOrder::RELAXED);
     out = 1;
   }
   // Wait for the client to use the buffer and respond.
@@ -136,7 +136,7 @@ template <typename W, typename C> bool Server::handle(W work, C clean) {
   if (!in & out) {
     clean(buffer);
     atomic_thread_fence(cpp::MemoryOrder::RELEASE);
-    outbox->store(0, cpp::MemoryOrder::RELEASE);
+    outbox->store(0, cpp::MemoryOrder::RELAXED);
     out = 0;
   }
 
