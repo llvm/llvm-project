@@ -33,7 +33,7 @@ public:
       : Arch(Arch), Platform(Platform), MinDeployment(MinDeployment) {}
   explicit Target(const llvm::Triple &Triple)
       : Arch(mapToArchitecture(Triple)), Platform(mapToPlatformType(Triple)),
-        MinDeployment(Triple.getOSVersion()) {}
+        MinDeployment(mapToSupportedOSVersion(Triple)) {}
 
   static llvm::Expected<Target> create(StringRef Target);
 

@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/VersionTuple.h"
 
 namespace llvm {
 namespace MachO {
@@ -27,6 +28,7 @@ StringRef getPlatformName(PlatformType Platform);
 PlatformType getPlatformFromName(StringRef Name);
 std::string getOSAndEnvironmentName(PlatformType Platform,
                                     std::string Version = "");
+VersionTuple mapToSupportedOSVersion(const Triple &Triple);
 
 } // end namespace MachO.
 } // end namespace llvm.

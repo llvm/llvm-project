@@ -854,15 +854,15 @@ public:
     }
 
     // Insert new location defs.
-    for (auto Pair : BBInsertBeforeMap) {
+    for (auto &Pair : BBInsertBeforeMap) {
       InsertMap &Map = Pair.second;
-      for (auto Pair : Map) {
+      for (auto &Pair : Map) {
         Instruction *InsertBefore = Pair.first;
         assert(InsertBefore && "should never be null");
         auto FragMemLocs = Pair.second;
         auto &Ctx = Fn.getContext();
 
-        for (auto FragMemLoc : FragMemLocs) {
+        for (auto &FragMemLoc : FragMemLocs) {
           DIExpression *Expr = DIExpression::get(Ctx, std::nullopt);
           Expr = *DIExpression::createFragmentExpression(
               Expr, FragMemLoc.OffsetInBits, FragMemLoc.SizeInBits);

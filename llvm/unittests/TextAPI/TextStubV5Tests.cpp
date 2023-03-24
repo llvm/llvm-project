@@ -944,6 +944,50 @@ TEST(TBDv5, Target_Simulator) {
   EXPECT_EQ(*File, *WriteResultFile);
 }
 
+TEST(TBDv5, Target_UnsupportedMinOS) {
+  static const char TBDv5File[] = R"({ 
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "arm64-macos",
+      "min_deployment": "10.14"
+    },
+    {
+      "target": "x86_64-macos",
+      "min_deployment": "10.14" 
+    }
+  ],
+  "install_names":[
+    { "name":"/S/L/F/Foo.framework/Foo" }
+  ]
+}})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5File, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V5, File->getFileType());
+  TargetList ExpectedTargets = {
+      Target(AK_x86_64, PLATFORM_MACOS, VersionTuple(10, 14)),
+      Target(AK_arm64, PLATFORM_MACOS, VersionTuple(11, 0)),
+  };
+  TargetList Targets{File->targets().begin(), File->targets().end()};
+  llvm::sort(Targets);
+  EXPECT_EQ(Targets, ExpectedTargets);
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+
+  Expected<TBDFile> Output =
+      TextAPIReader::get(MemoryBufferRef(Buffer, "Output.tbd"));
+  EXPECT_TRUE(!!Output);
+  TBDFile WriteResultFile = std::move(Output.get());
+  EXPECT_EQ(*File, *WriteResultFile);
+}
+
 TEST(TBDv5, MisspelledKey) {
   static const char TBDv5File[] = R"({ 
 "tapi_tbd_version": 5,

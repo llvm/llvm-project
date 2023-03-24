@@ -160,12 +160,29 @@ llvm.func @caller() {
 
 // -----
 
-llvm.func @callee_noinline() attributes { passthrough = ["noinline"] }
-llvm.func @callee_optnone() attributes { passthrough = ["optnone"] }
-llvm.func @callee_noduplicate() attributes { passthrough = ["noduplicate"] }
-llvm.func @callee_presplitcoroutine() attributes { passthrough = ["presplitcoroutine"] }
-llvm.func @callee_returns_twice() attributes { passthrough = ["returns_twice"] }
-llvm.func @callee_strictfp() attributes { passthrough = ["strictfp"] }
+llvm.func @callee_noinline() attributes { passthrough = ["noinline"] } {
+  llvm.return
+}
+
+llvm.func @callee_optnone() attributes { passthrough = ["optnone"] } {
+  llvm.return
+}
+
+llvm.func @callee_noduplicate() attributes { passthrough = ["noduplicate"] } {
+  llvm.return
+}
+
+llvm.func @callee_presplitcoroutine() attributes { passthrough = ["presplitcoroutine"] } {
+  llvm.return
+}
+
+llvm.func @callee_returns_twice() attributes { passthrough = ["returns_twice"] } {
+  llvm.return
+}
+
+llvm.func @callee_strictfp() attributes { passthrough = ["strictfp"] } {
+  llvm.return
+}
 
 // CHECK-LABEL: llvm.func @caller
 // CHECK-NEXT: llvm.call @callee_noinline
