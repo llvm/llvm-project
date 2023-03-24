@@ -943,11 +943,12 @@ public:
       // one for loop?
       // FIXME(wrengr): what is this "ld" supposed to be really?
       const Level ld = op.getOrder() ? op.getOrder()->getDimPosition(l) : l;
-      loopEmitter.enterNewLoopSeq(rewriter, loc, 0, ld);
+      const SmallVector<TensorId, 1> tids{0};
+      loopEmitter.enterNewLoopSeq(rewriter, loc, tids, ld);
       // Note that reduc will be taken care of by loop emitter and get updated
       // in place.
 
-      loopEmitter.enterLoopOverTensorAtLvl(rewriter, loc, 0, l, reduc);
+      loopEmitter.enterLoopOverTensorAtLvl(rewriter, loc, tids, l, reduc);
     }
 
     SmallVector<Value> lcvs;
