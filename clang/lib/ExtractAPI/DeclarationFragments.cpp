@@ -243,25 +243,29 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
     return Fragments.append(getFragmentsForType(ET->desugar(), Context, After));
   }
 
-  // Everything we care about has been handled now, reduce to the canonical
-  // unqualified base type.
-  QualType Base = T->getCanonicalTypeUnqualified();
-
-  // Render Objective-C `id`/`instancetype` as keywords.
-  if (T->isObjCIdType())
-    return Fragments.append(Base.getAsString(),
-                            DeclarationFragments::FragmentKind::Keyword);
-
   // If the type is a typedefed type, get the underlying TypedefNameDecl for a
   // direct reference to the typedef instead of the wrapped type.
+
+  // 'id' type is a typedef for an ObjCObjectPointerType
+  //  we treat it as a typedef
   if (const TypedefType *TypedefTy = dyn_cast<TypedefType>(T)) {
     const TypedefNameDecl *Decl = TypedefTy->getDecl();
     TypedefUnderlyingTypeResolver TypedefResolver(Context);
     std::string USR = TypedefResolver.getUSRForType(QualType(T, 0));
+
+    if (T->isObjCIdType()) {
+      return Fragments.append(Decl->getName(),
+                              DeclarationFragments::FragmentKind::Keyword);
+    }
+
     return Fragments.append(
         Decl->getName(), DeclarationFragments::FragmentKind::TypeIdentifier,
         USR, TypedefResolver.getUnderlyingTypeDecl(QualType(T, 0)));
   }
+
+  // Everything we care about has been handled now, reduce to the canonical
+  // unqualified base type.
+  QualType Base = T->getCanonicalTypeUnqualified();
 
   // If the base type is a TagType (struct/interface/union/class/enum), let's
   // get the underlying Decl for better names and USRs.

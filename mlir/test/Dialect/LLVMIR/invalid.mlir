@@ -64,7 +64,7 @@ func.func @alloca_missing_input_result_type(%size : i64) {
 
 func.func @alloca_missing_input_type() {
   // expected-error@+1 {{expected trailing function type with one argument and one result}}
-  llvm.alloca %size x i32 : () -> (!llvm.ptr<i32>)
+  llvm.alloca %size x i32 : () -> (!llvm.ptr)
 }
 
 // -----
@@ -78,14 +78,14 @@ func.func @alloca_missing_result_type() {
 
 func.func @alloca_non_function_type() {
   // expected-error@+1 {{expected trailing function type with one argument and one result}}
-  llvm.alloca %size x i32 : !llvm.ptr<i32>
+  llvm.alloca %size x i32 : !llvm.ptr
 }
 
 // -----
 
 func.func @alloca_non_integer_alignment() {
   // expected-error@+1 {{expected integer alignment}}
-  llvm.alloca %size x i32 {alignment = 3.0} : !llvm.ptr<i32>
+  llvm.alloca %size x i32 {alignment = 3.0} : !llvm.ptr
 }
 
 // -----
@@ -97,44 +97,37 @@ func.func @alloca_opaque_ptr_no_type(%sz : i64) {
 
 // -----
 
-func.func @alloca_ptr_type_attr_non_opaque_ptr(%sz : i64) {
-  // expected-error@below {{unexpected 'elem_type' attribute when non-opaque pointer type is used}}
-  "llvm.alloca"(%sz) { elem_type = i32 } : (i64) -> !llvm.ptr<i32>
-}
-
-// -----
-
-func.func @gep_missing_input_result_type(%pos : i64, %base : !llvm.ptr<f32>) {
+func.func @gep_missing_input_result_type(%pos : i64, %base : !llvm.ptr) {
   // expected-error@+1 {{2 operands present, but expected 0}}
   llvm.getelementptr %base[%pos] : () -> ()
 }
 
 // -----
 
-func.func @gep_missing_input_type(%pos : i64, %base : !llvm.ptr<f32>) {
+func.func @gep_missing_input_type(%pos : i64, %base : !llvm.ptr) {
   // expected-error@+1 {{2 operands present, but expected 0}}
-  llvm.getelementptr %base[%pos] : () -> (!llvm.ptr<f32>)
+  llvm.getelementptr %base[%pos] : () -> (!llvm.ptr)
 }
 
 // -----
 
-func.func @gep_missing_result_type(%pos : i64, %base : !llvm.ptr<f32>) {
+func.func @gep_missing_result_type(%pos : i64, %base : !llvm.ptr) {
   // expected-error@+1 {{op requires one result}}
-  llvm.getelementptr %base[%pos] : (!llvm.ptr<f32>, i64) -> ()
+  llvm.getelementptr %base[%pos] : (!llvm.ptr, i64) -> ()
 }
 
 // -----
 
-func.func @gep_non_function_type(%pos : i64, %base : !llvm.ptr<f32>) {
+func.func @gep_non_function_type(%pos : i64, %base : !llvm.ptr) {
   // expected-error@+1 {{invalid kind of type specified}}
-  llvm.getelementptr %base[%pos] : !llvm.ptr<f32>
+  llvm.getelementptr %base[%pos] : !llvm.ptr
 }
 
 // -----
 
-func.func @gep_too_few_dynamic(%base : !llvm.ptr<f32>) {
+func.func @gep_too_few_dynamic(%base : !llvm.ptr) {
   // expected-error@+1 {{expected as many dynamic indices as specified in 'rawConstantIndices'}}
-  %1 = "llvm.getelementptr"(%base) {rawConstantIndices = array<i32: -2147483648>} : (!llvm.ptr<f32>) -> !llvm.ptr<f32>
+  %1 = "llvm.getelementptr"(%base) {elem_type = f32, rawConstantIndices = array<i32: -2147483648>} : (!llvm.ptr) -> !llvm.ptr
 }
 
 // -----
@@ -302,14 +295,6 @@ func.func @call_unknown_symbol() {
 
 // -----
 
-func.func @call_variadic(%callee : !llvm.ptr<func<i8 (i8, ...)>>, %arg : i8) {
-  // expected-error@+1 {{indirect calls to variadic functions are not supported}}
-  llvm.call %callee(%arg) : !llvm.ptr<func<i8 (i8, ...)>>, (i8) -> (i8)
-  llvm.return
-}
-
-// -----
-
 func.func private @standard_func_callee()
 
 func.func @call_non_llvm() {
@@ -346,27 +331,11 @@ func.func @callee_arg_mismatch(%arg0 : i32) {
 
 // -----
 
-func.func @indirect_callee_arg_mismatch(%arg0 : i32, %callee : !llvm.ptr<func<void(i8)>>) {
-  // expected-error@+1 {{'llvm.call' op operand type mismatch for operand 0: 'i32' != 'i8'}}
-  "llvm.call"(%callee, %arg0) : (!llvm.ptr<func<void(i8)>>, i32) -> ()
-  llvm.return
-}
-
-// -----
-
 llvm.func @callee_func() -> (i8)
 
 func.func @callee_return_mismatch() {
   // expected-error@+1 {{'llvm.call' op result type mismatch: 'i32' != 'i8'}}
   %res = llvm.call @callee_func() : () -> (i32)
-  llvm.return
-}
-
-// -----
-
-func.func @indirect_callee_return_mismatch(%callee : !llvm.ptr<func<i8()>>) {
-  // expected-error@+1 {{'llvm.call' op result type mismatch: 'i32' != 'i8'}}
-  "llvm.call"(%callee) : (!llvm.ptr<func<i8()>>) -> (i32)
   llvm.return
 }
 
@@ -406,14 +375,14 @@ llvm.func @func_result_mismatch(%arg0: f32) -> i32 {
 
 func.func @constant_wrong_type() {
   // expected-error@+1 {{only supports integer, float, string or elements attributes}}
-  llvm.mlir.constant(@constant_wrong_type) : !llvm.ptr<func<void ()>>
+  llvm.mlir.constant(@constant_wrong_type) : !llvm.ptr
 }
 
 // -----
 
 func.func @constant_wrong_type_string() {
   // expected-error@below {{expected array type of 3 i8 elements for the string constant}}
-  llvm.mlir.constant("foo") : !llvm.ptr<i8>
+  llvm.mlir.constant("foo") : !llvm.ptr
 }
 
 // -----
@@ -671,57 +640,41 @@ func.func @atomicrmw_expected_ptr(%f32 : f32) {
 
 // -----
 
-func.func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr<f32>, %i32 : i32) {
-  // expected-error@+1 {{expected LLVM IR element type for operand #0 to match type for operand #1}}
-  %0 = "llvm.atomicrmw"(%f32_ptr, %i32) {bin_op=11, ordering=1} : (!llvm.ptr<f32>, i32) -> i32
-  llvm.return
-}
-
-// -----
-
-func.func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr<f32>, %f32 : f32) {
+func.func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr, %f32 : f32) {
   // expected-error@+1 {{op failed to verify that result #0 and operand #1 have the same type}}
-  %0 = "llvm.atomicrmw"(%f32_ptr, %f32) {bin_op=11, ordering=1} : (!llvm.ptr<f32>, f32) -> i32
+  %0 = "llvm.atomicrmw"(%f32_ptr, %f32) {bin_op=11, ordering=1} : (!llvm.ptr, f32) -> i32
   llvm.return
 }
 
 // -----
 
-func.func @atomicrmw_expected_float(%i32_ptr : !llvm.ptr<i32>, %i32 : i32) {
+func.func @atomicrmw_expected_float(%i32_ptr : !llvm.ptr, %i32 : i32) {
   // expected-error@+1 {{expected LLVM IR floating point type}}
-  %0 = llvm.atomicrmw fadd %i32_ptr, %i32 unordered : !llvm.ptr<i32>, i32
+  %0 = llvm.atomicrmw fadd %i32_ptr, %i32 unordered : !llvm.ptr, i32
   llvm.return
 }
 
 // -----
 
-func.func @atomicrmw_unexpected_xchg_type(%i1_ptr : !llvm.ptr<i1>, %i1 : i1) {
+func.func @atomicrmw_unexpected_xchg_type(%i1_ptr : !llvm.ptr, %i1 : i1) {
   // expected-error@+1 {{unexpected LLVM IR type for 'xchg' bin_op}}
-  %0 = llvm.atomicrmw xchg %i1_ptr, %i1 unordered : !llvm.ptr<i1>, i1
+  %0 = llvm.atomicrmw xchg %i1_ptr, %i1 unordered : !llvm.ptr, i1
   llvm.return
 }
 
 // -----
 
-func.func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr<f32>, %f32 : f32) {
+func.func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr, %f32 : f32) {
   // expected-error@+1 {{expected LLVM IR integer type}}
-  %0 = llvm.atomicrmw max %f32_ptr, %f32 unordered : !llvm.ptr<f32>, f32
+  %0 = llvm.atomicrmw max %f32_ptr, %f32 unordered : !llvm.ptr, f32
   llvm.return
 }
 
 // -----
 
-func.func @cmpxchg_expected_ptr(%f32_ptr : !llvm.ptr<f32>, %f32 : f32) {
+func.func @cmpxchg_expected_ptr(%f32 : f32) {
   // expected-error@+1 {{op operand #0 must be LLVM pointer to integer or LLVM pointer type}}
   %0 = "llvm.cmpxchg"(%f32, %f32, %f32) {success_ordering=2,failure_ordering=2} : (f32, f32, f32) -> !llvm.struct<(f32, i1)>
-  llvm.return
-}
-
-// -----
-
-func.func @cmpxchg_mismatched_operands(%i64_ptr : !llvm.ptr<i64>, %i32 : i32) {
-  // expected-error@+1 {{expected LLVM IR element type for operand #0 to match type for all other operands}}
-  %0 = "llvm.cmpxchg"(%i64_ptr, %i32, %i32) {success_ordering=2,failure_ordering=2} : (!llvm.ptr<i64>, i32, i32) -> !llvm.struct<(i32, i1)>
   llvm.return
 }
 
@@ -743,41 +696,41 @@ func.func @cmpxchg_mismatched_result(%ptr : !llvm.ptr, %i64 : i64) {
 
 // -----
 
-func.func @cmpxchg_unexpected_type(%i1_ptr : !llvm.ptr<i1>, %i1 : i1) {
+func.func @cmpxchg_unexpected_type(%i1_ptr : !llvm.ptr, %i1 : i1) {
   // expected-error@+1 {{unexpected LLVM IR type}}
-  %0 = llvm.cmpxchg %i1_ptr, %i1, %i1 monotonic monotonic : !llvm.ptr<i1>, i1
+  %0 = llvm.cmpxchg %i1_ptr, %i1, %i1 monotonic monotonic : !llvm.ptr, i1
   llvm.return
 }
 
 // -----
 
-func.func @cmpxchg_at_least_monotonic_success(%i32_ptr : !llvm.ptr<i32>, %i32 : i32) {
+func.func @cmpxchg_at_least_monotonic_success(%i32_ptr : !llvm.ptr, %i32 : i32) {
   // expected-error@+1 {{ordering must be at least 'monotonic'}}
-  %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 unordered monotonic : !llvm.ptr<i32>, i32
+  %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 unordered monotonic : !llvm.ptr, i32
   llvm.return
 }
 
 // -----
 
-func.func @cmpxchg_at_least_monotonic_failure(%i32_ptr : !llvm.ptr<i32>, %i32 : i32) {
+func.func @cmpxchg_at_least_monotonic_failure(%i32_ptr : !llvm.ptr, %i32 : i32) {
   // expected-error@+1 {{ordering must be at least 'monotonic'}}
-  %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 monotonic unordered : !llvm.ptr<i32>, i32
+  %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 monotonic unordered : !llvm.ptr, i32
   llvm.return
 }
 
 // -----
 
-func.func @cmpxchg_failure_release(%i32_ptr : !llvm.ptr<i32>, %i32 : i32) {
+func.func @cmpxchg_failure_release(%i32_ptr : !llvm.ptr, %i32 : i32) {
   // expected-error@+1 {{failure ordering cannot be 'release' or 'acq_rel'}}
-  %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 acq_rel release : !llvm.ptr<i32>, i32
+  %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 acq_rel release : !llvm.ptr, i32
   llvm.return
 }
 
 // -----
 
-func.func @cmpxchg_failure_acq_rel(%i32_ptr : !llvm.ptr<i32>, %i32 : i32) {
+func.func @cmpxchg_failure_acq_rel(%i32_ptr : !llvm.ptr, %i32 : i32) {
   // expected-error@+1 {{failure ordering cannot be 'release' or 'acq_rel'}}
-  %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 acq_rel acq_rel : !llvm.ptr<i32>, i32
+  %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 acq_rel acq_rel : !llvm.ptr, i32
   llvm.return
 }
 
@@ -786,7 +739,7 @@ func.func @cmpxchg_failure_acq_rel(%i32_ptr : !llvm.ptr<i32>, %i32 : i32) {
 llvm.func @foo(i32) -> i32
 llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @bad_landingpad(%arg0: !llvm.ptr<ptr<i8>>) -> i32 attributes { personality = @__gxx_personality_v0} {
+llvm.func @bad_landingpad(%arg0: !llvm.ptr) -> i32 attributes { personality = @__gxx_personality_v0} {
   %0 = llvm.mlir.constant(3 : i32) : i32
   %1 = llvm.mlir.constant(2 : i32) : i32
   %2 = llvm.invoke @foo(%1) to ^bb1 unwind ^bb2 : (i32) -> i32
@@ -794,7 +747,7 @@ llvm.func @bad_landingpad(%arg0: !llvm.ptr<ptr<i8>>) -> i32 attributes { persona
   llvm.return %1 : i32
 ^bb2:  // pred: ^bb0
   // expected-error@+1 {{clause #0 is not a known constant - null, addressof, bitcast}}
-  %3 = llvm.landingpad cleanup (catch %1 : i32) (catch %arg0 : !llvm.ptr<ptr<i8>>) : !llvm.struct<(ptr<i8>, i32)>
+  %3 = llvm.landingpad cleanup (catch %1 : i32) (catch %arg0 : !llvm.ptr) : !llvm.struct<(ptr, i32)>
   llvm.return %0 : i32
 }
 
@@ -805,15 +758,15 @@ llvm.func @__gxx_personality_v0(...) -> i32
 
 llvm.func @caller(%arg0: i32) -> i32 attributes { personality = @__gxx_personality_v0} {
   %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.alloca %0 x !llvm.ptr<i8> : (i32) -> !llvm.ptr<ptr<i8>>
+  %1 = llvm.alloca %0 x !llvm.ptr : (i32) -> !llvm.ptr
   // expected-note@+1 {{global addresses expected as operand to bitcast used in clauses for landingpad}}
-  %2 = llvm.bitcast %1 : !llvm.ptr<ptr<i8>> to !llvm.ptr<i8>
+  %2 = llvm.bitcast %1 : !llvm.ptr to !llvm.ptr
   %3 = llvm.invoke @foo(%0) to ^bb1 unwind ^bb2 : (i32) -> i32
 ^bb1: // pred: ^bb0
   llvm.return %0 : i32
 ^bb2: // pred: ^bb0
   // expected-error@+1 {{constant clauses expected}}
-  %5 = llvm.landingpad (catch %2 : !llvm.ptr<i8>) : !llvm.struct<(ptr<i8>, i32)>
+  %5 = llvm.landingpad (catch %2 : !llvm.ptr) : !llvm.struct<(ptr, i32)>
   llvm.return %0 : i32
 }
 
@@ -829,7 +782,7 @@ llvm.func @caller(%arg0: i32) -> i32 attributes { personality = @__gxx_personali
   llvm.return %0 : i32
 ^bb2: // pred: ^bb0
   // expected-error@+1 {{landingpad instruction expects at least one clause or cleanup attribute}}
-  %2 = llvm.landingpad : !llvm.struct<(ptr<i8>, i32)>
+  %2 = llvm.landingpad : !llvm.struct<(ptr, i32)>
   llvm.return %0 : i32
 }
 
@@ -844,7 +797,7 @@ llvm.func @caller(%arg0: i32) -> i32 attributes { personality = @__gxx_personali
 ^bb1: // pred: ^bb0
   llvm.return %0 : i32
 ^bb2: // pred: ^bb0
-  %2 = llvm.landingpad cleanup : !llvm.struct<(ptr<i8>, i32)>
+  %2 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   // expected-error@+1 {{'llvm.resume' op expects landingpad value as operand}}
   llvm.resume %0 : i32
 }
@@ -860,8 +813,8 @@ llvm.func @caller(%arg0: i32) -> i32 {
   llvm.return %0 : i32
 ^bb2: // pred: ^bb0
   // expected-error@+1 {{llvm.landingpad needs to be in a function with a personality}}
-  %2 = llvm.landingpad cleanup : !llvm.struct<(ptr<i8>, i32)>
-  llvm.resume %2 : !llvm.struct<(ptr<i8>, i32)>
+  %2 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.resume %2 : !llvm.struct<(ptr, i32)>
 }
 
 // -----
@@ -1056,55 +1009,55 @@ module {
 
 // -----
 
-llvm.func @wmmaLoadOp_invalid_mem_space(%arg0: !llvm.ptr<i32, 5>, %arg1: i32) {
+llvm.func @wmmaLoadOp_invalid_mem_space(%arg0: !llvm.ptr<5>, %arg1: i32) {
   // expected-error@+1 {{'nvvm.wmma.load' op expected source pointer in memory space 0, 1, 3}}
   %0 = nvvm.wmma.load %arg0, %arg1
     {eltype = #nvvm.mma_type<f16>, frag = #nvvm.mma_frag<a>, k = 16 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
-    : (!llvm.ptr<i32, 5>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+    : (!llvm.ptr<5>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
   llvm.return
 }
 
 // -----
 
-llvm.func @wmmaLoadOp_invalid_AOp(%arg0: !llvm.ptr<i32, 3>, %arg1: i32) {
+llvm.func @wmmaLoadOp_invalid_AOp(%arg0: !llvm.ptr<3>, %arg1: i32) {
   // expected-error@+1 {{'nvvm.wmma.load' op expected destination type is a structure of 8 elements of type 'vector<2xf16>'}}
   %0 = nvvm.wmma.load %arg0, %arg1
   {eltype = #nvvm.mma_type<f16>, frag = #nvvm.mma_frag<a>, k = 16 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
-  : (!llvm.ptr<i32, 3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+  : (!llvm.ptr<3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
   llvm.return
 }
 
 // -----
 
-llvm.func @wmmaLoadOp_invalid_BOp(%arg0: !llvm.ptr<i32, 3>, %arg1: i32) {
+llvm.func @wmmaLoadOp_invalid_BOp(%arg0: !llvm.ptr<3>, %arg1: i32) {
   // expected-error@+1 {{'nvvm.wmma.load' op expected destination type is a structure of 8 elements of type 'vector<2xf16>'}}
  %0 = nvvm.wmma.load %arg0, %arg1
  {eltype = #nvvm.mma_type<f16>, frag = #nvvm.mma_frag<b>, k = 16 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
- : (!llvm.ptr<i32, 3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+ : (!llvm.ptr<3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 
   llvm.return
 }
 
 // -----
 
-llvm.func @wmmaLoadOp_invalid_COp(%arg0: !llvm.ptr<i32, 3>, %arg1: i32) {
+llvm.func @wmmaLoadOp_invalid_COp(%arg0: !llvm.ptr<3>, %arg1: i32) {
   // expected-error@+1 {{'nvvm.wmma.load' op expected destination type is a structure of 4 elements of type 'vector<2xf16>'}}
  %0 = nvvm.wmma.load %arg0, %arg1
    {eltype = #nvvm.mma_type<f16>, frag = #nvvm.mma_frag<c>, k = 16 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
-   : (!llvm.ptr<i32, 3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+   : (!llvm.ptr<3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
 
   llvm.return
 }
 
 // -----
 
-llvm.func @wmmaStoreOp_invalid_mem_space(%arg0: !llvm.ptr<i32, 5>, %arg1: i32,
+llvm.func @wmmaStoreOp_invalid_mem_space(%arg0: !llvm.ptr<5>, %arg1: i32,
                             %arg2: vector<2 x f16>, %arg3: vector<2 x f16>,
                             %arg4: vector<2 x f16>, %arg5: vector<2 xf16>) {
   // expected-error@+1 {{'nvvm.wmma.store' op expected operands to be a source pointer in memory space 0, 1, 3}}
   nvvm.wmma.store %arg0, %arg1, %arg2, %arg3, %arg4, %arg5
     {eltype = #nvvm.mma_type<f16>, k = 16 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
-    : !llvm.ptr<i32, 5>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>
+    : !llvm.ptr<5>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>
   llvm.return
 }
 
@@ -1208,33 +1161,33 @@ llvm.func @gpu_wmma_mma_op_invalid_result(%arg0: vector<2 x f16>, %arg1: vector<
 
 // -----
 
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<i32>) {
+llvm.func @wmmald_matrix(%arg0: !llvm.ptr) {
   // expected-error@+1 {{'nvvm.ldmatrix' op expected source pointer in memory space 3}}
-  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<i32>) -> i32
+  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr) -> i32
   llvm.return
 }
 
 // -----
 
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<i32, 3>) {
+llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
   // expected-error@+1 {{'nvvm.ldmatrix' op expected num attribute to be 1, 2 or 4}}
-  %l = nvvm.ldmatrix %arg0 {num = 3 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<i32, 3>) -> i32
+  %l = nvvm.ldmatrix %arg0 {num = 3 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> i32
   llvm.return
 }
 
 // -----
 
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<i32, 3>) {
+llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
   // expected-error@+1 {{'nvvm.ldmatrix' op expected destination type is i32}}
-  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<i32, 3>) -> !llvm.struct<(i32)>
+  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> !llvm.struct<(i32)>
   llvm.return
 }
 
 // -----
 
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<i32, 3>) {
+llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
   // expected-error@+1 {{'nvvm.ldmatrix' op expected destination type is a structure of 4 elements of type i32}}
-  %l = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<i32, 3>) -> !llvm.struct<(i32, i32)>
+  %l = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
   llvm.return
 }
 
@@ -1278,33 +1231,33 @@ func.func @bitcast(%arg0: vector<2x3xf32>) {
 
 // -----
 
-func.func @cp_async(%arg0: !llvm.ptr<i8, 3>, %arg1: !llvm.ptr<i8, 1>) {
+func.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
   // expected-error @below {{expected byte size to be either 4, 8 or 16.}}
-  nvvm.cp.async.shared.global %arg0, %arg1, 32 : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
+  nvvm.cp.async.shared.global %arg0, %arg1, 32 : !llvm.ptr<3>, !llvm.ptr<1>
   return
 }
 
 // -----
 
-func.func @cp_async(%arg0: !llvm.ptr<i8, 3>, %arg1: !llvm.ptr<i8, 1>) {
+func.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
   // expected-error @below {{bypass l1 is only support for 16 bytes copy.}}
-  nvvm.cp.async.shared.global %arg0, %arg1, 8 {bypass_l1} : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
+  nvvm.cp.async.shared.global %arg0, %arg1, 8 {bypass_l1} : !llvm.ptr<3>, !llvm.ptr<1>
   return
 }
 
 // -----
 
-func.func @gep_struct_variable(%arg0: !llvm.ptr<struct<(i32)>>, %arg1: i32, %arg2: i32) {
+func.func @gep_struct_variable(%arg0: !llvm.ptr, %arg1: i32, %arg2: i32) {
   // expected-error @below {{op expected index 1 indexing a struct to be constant}}
-  llvm.getelementptr %arg0[%arg1, %arg1] : (!llvm.ptr<struct<(i32)>>, i32, i32) -> !llvm.ptr<i32>
+  llvm.getelementptr %arg0[%arg1, %arg1] : (!llvm.ptr, i32, i32) -> !llvm.ptr, !llvm.struct<(i32)>
   return
 }
 
 // -----
 
-func.func @gep_out_of_bounds(%ptr: !llvm.ptr<struct<(i32, struct<(i32, f32)>)>>, %idx: i64) {
+func.func @gep_out_of_bounds(%ptr: !llvm.ptr, %idx: i64) {
   // expected-error @below {{index 2 indexing a struct is out of bounds}}
-  llvm.getelementptr %ptr[%idx, 1, 3] : (!llvm.ptr<struct<(i32, struct<(i32, f32)>)>>, i64) -> !llvm.ptr<i32>
+  llvm.getelementptr %ptr[%idx, 1, 3] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(i32, struct<(i32, f32)>)>
   return
 }
 
@@ -1321,8 +1274,8 @@ func.func @non_splat_shuffle_on_scalable_vector(%arg0: vector<[4]xf32>) {
 llvm.mlir.global internal @side_effecting_global() : !llvm.struct<(i8)> {
   %0 = llvm.mlir.constant(1 : i64) : i64
   // expected-error@below {{ops with side effects not allowed in global initializers}}
-  %1 = llvm.alloca %0 x !llvm.struct<(i8)> : (i64) -> !llvm.ptr<struct<(i8)>>
-  %2 = llvm.load %1 : !llvm.ptr<struct<(i8)>>
+  %1 = llvm.alloca %0 x !llvm.struct<(i8)> : (i64) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> !llvm.struct<(i8)>
   llvm.return %2 : !llvm.struct<(i8)>
 }
 

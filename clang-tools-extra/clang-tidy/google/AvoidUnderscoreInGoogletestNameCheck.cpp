@@ -47,18 +47,19 @@ public:
     if (!isGoogletestTestMacro(MacroName) || !Args ||
         Args->getNumMacroArguments() < 2)
       return;
-    const Token *TestCaseNameToken = Args->getUnexpArgument(0);
+    const Token *TestSuiteNameToken = Args->getUnexpArgument(0);
     const Token *TestNameToken = Args->getUnexpArgument(1);
-    if (!TestCaseNameToken || !TestNameToken)
+    if (!TestSuiteNameToken || !TestNameToken)
       return;
-    std::string TestCaseNameMaybeDisabled = PP->getSpelling(*TestCaseNameToken);
-    StringRef TestCaseName = TestCaseNameMaybeDisabled;
-    TestCaseName.consume_front(KDisabledTestPrefix);
-    if (TestCaseName.contains('_'))
-      Check->diag(TestCaseNameToken->getLocation(),
-                  "avoid using \"_\" in test case name \"%0\" according to "
+    std::string TestSuiteNameMaybeDisabled =
+        PP->getSpelling(*TestSuiteNameToken);
+    StringRef TestSuiteName = TestSuiteNameMaybeDisabled;
+    TestSuiteName.consume_front(KDisabledTestPrefix);
+    if (TestSuiteName.contains('_'))
+      Check->diag(TestSuiteNameToken->getLocation(),
+                  "avoid using \"_\" in test suite name \"%0\" according to "
                   "Googletest FAQ")
-          << TestCaseName;
+          << TestSuiteName;
 
     std::string TestNameMaybeDisabled = PP->getSpelling(*TestNameToken);
     StringRef TestName = TestNameMaybeDisabled;

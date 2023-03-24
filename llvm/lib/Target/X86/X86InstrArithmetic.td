@@ -125,12 +125,12 @@ class BinOpRR_Rev<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
   let hasSideEffects = 0;
 }
 
-// BinOpRR_RFF_Rev - Binary instructions with inputs "reg, reg"(reversed 
+// BinOpRR_RFF_Rev - Binary instructions with inputs "reg, reg"(reversed
 // encoding), with sched = WriteADC.
 class BinOpRR_RFF_Rev<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo>
   : BinOpRR_Rev<opcode, mnemonic, typeinfo, WriteADC>;
 
-// BinOpRR_F_Rev - Binary instructions with inputs "reg, reg"(reversed 
+// BinOpRR_F_Rev - Binary instructions with inputs "reg, reg"(reversed
 // encoding), without outlist dag.
 class BinOpRR_F_Rev<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo>
   : ITy<opcode, MRMSrcReg, typeinfo, (outs),
@@ -184,10 +184,10 @@ class BinOpRM_RF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
 // has both a regclass and EFLAGS as a result, and has EFLAGS as input.
 class BinOpRM_RFF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
                   SDNode opnode>
-  : BinOpRM_ImplicitUse<opcode, mnemonic, typeinfo, 
+  : BinOpRM_ImplicitUse<opcode, mnemonic, typeinfo,
                         (outs typeinfo.RegClass:$dst), WriteADC,
                         [(set typeinfo.RegClass:$dst, EFLAGS,
-                         (opnode typeinfo.RegClass:$src1, 
+                         (opnode typeinfo.RegClass:$src1,
                          (typeinfo.LoadNode addr:$src2), EFLAGS))]>;
 
 // BinOpRI - Binary instructions with inputs "reg, imm".
@@ -273,21 +273,21 @@ class BinOpMR_RMW<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
                   SDNode opnode>
   : BinOpMR<opcode, mnemonic, typeinfo,
             [(store (opnode (load addr:$dst), typeinfo.RegClass:$src), addr:$dst),
-             (implicit EFLAGS)]>, 
+             (implicit EFLAGS)]>,
     Sched<[WriteALURMW,
            // base, scale, index, offset, segment
            ReadDefault, ReadDefault, ReadDefault,
            ReadDefault, ReadDefault,
            WriteALU.ReadAfterFold]>;  // reg
 
-// BinOpMR_RMW_FF - Binary instructions with inputs "[mem], reg", where the 
+// BinOpMR_RMW_FF - Binary instructions with inputs "[mem], reg", where the
 // pattern use EFLAGS as operand and implicitly use EFLAGS.
 class BinOpMR_RMW_FF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
                     SDNode opnode>
   : BinOpMR<opcode, mnemonic, typeinfo,
             [(store (opnode (load addr:$dst), typeinfo.RegClass:$src, EFLAGS),
                     addr:$dst),
-             (implicit EFLAGS)]>, 
+             (implicit EFLAGS)]>,
     Sched<[WriteADCRMW,
           // base, scale, index, offset, segment
           ReadDefault, ReadDefault, ReadDefault,
@@ -321,7 +321,7 @@ class BinOpMI_RMW<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
   : BinOpMI<opcode, mnemonic, typeinfo, f,
             [(store (opnode (typeinfo.VT (load addr:$dst)),
                             typeinfo.ImmOperator:$src), addr:$dst),
-             (implicit EFLAGS)]>, 
+             (implicit EFLAGS)]>,
     Sched<[WriteALURMW]>;
 
 // BinOpMI_RMW_FF - Binary instructions with inputs "[mem], imm", where the
@@ -331,7 +331,7 @@ class BinOpMI_RMW_FF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
   : BinOpMI<opcode, mnemonic, typeinfo, f,
             [(store (opnode (typeinfo.VT (load addr:$dst)),
                              typeinfo.ImmOperator:$src, EFLAGS), addr:$dst),
-                             (implicit EFLAGS)]>, 
+                             (implicit EFLAGS)]>,
     Sched<[WriteADCRMW]>;
 
 // BinOpMI_F - Binary instructions with inputs "[mem], imm", where the pattern
@@ -359,7 +359,7 @@ class BinOpMI8_RMW<string mnemonic, X86TypeInfo typeinfo,
   : BinOpMI8<mnemonic, typeinfo, f,
              [(store (opnode (load addr:$dst),
                              typeinfo.Imm8Operator:$src), addr:$dst),
-              (implicit EFLAGS)]>, 
+              (implicit EFLAGS)]>,
     Sched<[WriteALURMW]>;
 
 // BinOpMI8_RMW_FF - Binary instructions with inputs "[mem], imm8", where the
@@ -369,7 +369,7 @@ class BinOpMI8_RMW_FF<string mnemonic, X86TypeInfo typeinfo,
   : BinOpMI8<mnemonic, typeinfo, f,
              [(store (opnode (load addr:$dst),
                              typeinfo.Imm8Operator:$src, EFLAGS), addr:$dst),
-              (implicit EFLAGS)]>, 
+              (implicit EFLAGS)]>,
     Sched<[WriteADCRMW]>;
 
 // BinOpMI8_F - Binary instructions with inputs "[mem], imm8", where the pattern
@@ -387,7 +387,7 @@ class BinOpAI<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
               Register areg, string operands, X86FoldableSchedWrite sched = WriteALU>
   : ITy<opcode, RawFrm, typeinfo,
         (outs), (ins typeinfo.ImmOperand:$src),
-        mnemonic, operands, []>, 
+        mnemonic, operands, []>,
     Sched<[sched]> {
   let ImmT = typeinfo.ImmEncoding;
   let Uses = [areg];
@@ -427,7 +427,7 @@ class UnaryOpR<bits<8> opcode, Format f, string mnemonic, X86TypeInfo info,
 class INCDECR<Format f, string mnemonic, X86TypeInfo info,
               SDPatternOperator node>
   : UnaryOpR<0xFE, f, mnemonic, info,
-               [(set info.RegClass:$dst, EFLAGS, 
+               [(set info.RegClass:$dst, EFLAGS,
                (node info.RegClass:$src1, 1))]>;
 
 //  INCDECM - Instructions like "inc [mem]".
@@ -444,16 +444,16 @@ class INCDECR_ALT<bits<8> opcode, string mnemonic, X86TypeInfo info>
 }
 
 //  MulOpR - Instructions like "mul reg".
-class MulOpR<bits<8> opcode, Format f, string mnemonic, X86TypeInfo info, 
+class MulOpR<bits<8> opcode, Format f, string mnemonic, X86TypeInfo info,
              X86FoldableSchedWrite sched, list<dag> pattern>
-  : ITy<opcode, f, info, (outs), (ins info.RegClass:$src), mnemonic, 
-        "$src", pattern>, 
+  : ITy<opcode, f, info, (outs), (ins info.RegClass:$src), mnemonic,
+        "$src", pattern>,
     Sched<[sched]>;
 
 //  MulOpM - Instructions like "mul [mem]".
-class MulOpM<bits<8> opcode, Format f, string mnemonic, X86TypeInfo info, 
+class MulOpM<bits<8> opcode, Format f, string mnemonic, X86TypeInfo info,
              X86FoldableSchedWrite sched, list<dag> pattern>
-  : ITy<opcode, f, info, (outs), (ins info.MemOperand:$src), mnemonic, 
+  : ITy<opcode, f, info, (outs), (ins info.MemOperand:$src), mnemonic,
         "$src", pattern>, SchedLoadReg<sched>;
 
 //  NegOpR - Instructions like "neg reg", with implicit EFLAGS.
@@ -465,7 +465,7 @@ class NegOpR<bits<8> opcode, string mnemonic, X86TypeInfo info>
 //  NotOpR - Instructions like "not reg".
 class NotOpR<bits<8> opcode, string mnemonic, X86TypeInfo info>
   : UnaryOpR<opcode, MRM2r, mnemonic, info,
-               [(set info.RegClass:$dst, 
+               [(set info.RegClass:$dst,
                 (not info.RegClass:$src1))]>;
 
 //  NegOpM - Instructions like "neg [mem]", with implicit EFLAGS.
@@ -496,16 +496,16 @@ class BinOpRM_C<bits<8> opcode, Format f, string mnemonic, X86TypeInfo info,
         mnemonic, "{$src2, $dst|$dst, $src2}", pattern>;
 
 // IMulOpRR - Instructions like "imul reg, reg, i8".
-class IMulOpRR<bits<8> opcode, string mnemonic, X86TypeInfo info, 
+class IMulOpRR<bits<8> opcode, string mnemonic, X86TypeInfo info,
                X86FoldableSchedWrite sched>
   : BinOpRR_C<opcode, MRMSrcReg, mnemonic, info,
               [(set info.RegClass:$dst, EFLAGS,
-                (X86smul_flag info.RegClass:$src1, 
-                info.RegClass:$src2))]>, 
+                (X86smul_flag info.RegClass:$src1,
+                info.RegClass:$src2))]>,
     Sched<[sched]>, TB;
 
 // IMulOpRM - Instructions like "imul reg, reg, [mem]".
-class IMulOpRM<bits<8> opcode, string mnemonic, X86TypeInfo info, 
+class IMulOpRM<bits<8> opcode, string mnemonic, X86TypeInfo info,
                X86FoldableSchedWrite sched>
   : BinOpRM_C<opcode, MRMSrcMem, mnemonic, info,
               [(set info.RegClass:$dst, EFLAGS,
@@ -513,57 +513,57 @@ class IMulOpRM<bits<8> opcode, string mnemonic, X86TypeInfo info,
     Sched<[sched.Folded, sched.ReadAfterFold]>, TB;
 
 // IMulOpRRI8 - Instructions like "imul reg, reg, i8".
-class IMulOpRRI8<bits<8> opcode, string mnemonic, X86TypeInfo info, 
+class IMulOpRRI8<bits<8> opcode, string mnemonic, X86TypeInfo info,
                  X86FoldableSchedWrite sched>
   : ITy<opcode, MRMSrcReg, info, (outs info.RegClass:$dst),
-               (ins info.RegClass:$src1, 
+               (ins info.RegClass:$src1,
                info.Imm8Operand:$src2), mnemonic,
                "{$src2, $src1, $dst|$dst, $src1, $src2}",
                [(set info.RegClass:$dst, EFLAGS,
-                (X86smul_flag info.RegClass:$src1, 
-                info.Imm8NoSuOperator:$src2))]>, 
+                (X86smul_flag info.RegClass:$src1,
+                info.Imm8NoSuOperator:$src2))]>,
     Sched<[sched]>{
   let ImmT = Imm8;
 }
 
 // IMulOpRRI - Instructions like "imul reg, reg, i16/i32/i64".
-class IMulOpRRI<bits<8> opcode, string mnemonic, X86TypeInfo info, 
+class IMulOpRRI<bits<8> opcode, string mnemonic, X86TypeInfo info,
                 X86FoldableSchedWrite sched>
   : ITy<opcode, MRMSrcReg, info, (outs info.RegClass:$dst),
-               (ins info.RegClass:$src1, 
-               info.ImmOperand:$src2), mnemonic, 
+               (ins info.RegClass:$src1,
+               info.ImmOperand:$src2), mnemonic,
                "{$src2, $src1, $dst|$dst, $src1, $src2}",
                [(set info.RegClass:$dst, EFLAGS,
-                (X86smul_flag info.RegClass:$src1, 
-                info.ImmNoSuOperator:$src2))]>, 
+                (X86smul_flag info.RegClass:$src1,
+                info.ImmNoSuOperator:$src2))]>,
     Sched<[sched]>{
   let ImmT = info.ImmEncoding;
 }
 
 // IMulOpRMI8 - Instructions like "imul reg, [mem], i8".
-class IMulOpRMI8<bits<8> opcode, string mnemonic, X86TypeInfo info, 
+class IMulOpRMI8<bits<8> opcode, string mnemonic, X86TypeInfo info,
                  X86FoldableSchedWrite sched>
   : ITy<opcode, MRMSrcMem, info, (outs info.RegClass:$dst),
-               (ins info.MemOperand:$src1, 
-               info.Imm8Operand:$src2), mnemonic, 
+               (ins info.MemOperand:$src1,
+               info.Imm8Operand:$src2), mnemonic,
                 "{$src2, $src1, $dst|$dst, $src1, $src2}",
                [(set info.RegClass:$dst, EFLAGS,
                 (X86smul_flag (info.LoadNode addr:$src1),
-                info.Imm8NoSuOperator:$src2))]>, 
+                info.Imm8NoSuOperator:$src2))]>,
     Sched<[sched.Folded]>{
   let ImmT = Imm8;
 }
 
 // IMulOpRMI - Instructions like "imul reg, [mem], i16/i32/i64".
-class IMulOpRMI<bits<8> opcode, string mnemonic, X86TypeInfo info, 
+class IMulOpRMI<bits<8> opcode, string mnemonic, X86TypeInfo info,
                 X86FoldableSchedWrite sched>
   : ITy<opcode, MRMSrcMem, info, (outs info.RegClass:$dst),
                (ins info.MemOperand:$src1,
-               info.ImmOperand:$src2), mnemonic, 
+               info.ImmOperand:$src2), mnemonic,
                "{$src2, $src1, $dst|$dst, $src1, $src2}",
                [(set info.RegClass:$dst, EFLAGS,
                   (X86smul_flag (info.LoadNode addr:$src1),
-                  info.ImmNoSuOperator:$src2))]>, 
+                  info.ImmNoSuOperator:$src2))]>,
     Sched<[sched.Folded]>{
   let ImmT = info.ImmEncoding;
 }
@@ -639,7 +639,7 @@ let Predicates = [UseIncDec, In64BitMode] in {
 // SDNode results (i8, i32).
 // AL,AH = AL*GR8
 let Defs = [AL,EFLAGS,AX], Uses = [AL] in
-def MUL8r  : MulOpR<0xF6, MRM4r, "mul", Xi8, WriteIMul8, 
+def MUL8r  : MulOpR<0xF6, MRM4r, "mul", Xi8, WriteIMul8,
                // FIXME: Used for 8-bit mul, ignore result upper 8 bits.
                // This probably ought to be moved to a def : Pat<> if the
                // syntax can be accepted.

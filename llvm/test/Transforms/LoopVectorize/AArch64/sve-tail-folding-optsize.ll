@@ -3,8 +3,8 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define void @trip1024_i64(i64* noalias nocapture noundef %dst, i64* noalias nocapture noundef readonly %src) #0 {
-; CHECK-LABEL: @trip1024_i64(
+define void @trip1025_i64(i64* noalias nocapture noundef %dst, i64* noalias nocapture noundef readonly %src) #0 {
+; CHECK-LABEL: @trip1025_i64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -13,10 +13,10 @@ define void @trip1024_i64(i64* noalias nocapture noundef %dst, i64* noalias noca
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP4]]
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 1025, [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 1024)
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 1025)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -37,7 +37,7 @@ define void @trip1024_i64(i64* noalias nocapture noundef %dst, i64* noalias noca
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP16]]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1024)
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; CHECK-NEXT:    [[TMP17:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <vscale x 2 x i1> [[TMP17]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -56,7 +56,7 @@ define void @trip1024_i64(i64* noalias nocapture noundef %dst, i64* noalias noca
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[TMP20]], [[MUL]]
 ; CHECK-NEXT:    store i64 [[ADD]], i64* [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_06]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], 1024
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], 1025
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -74,7 +74,7 @@ for.body:                                         ; preds = %entry, %for.body
   %add = add nsw i64 %1, %mul
   store i64 %add, i64* %arrayidx1, align 8
   %inc = add nuw nsw i64 %i.06, 1
-  %exitcond.not = icmp eq i64 %inc, 1024
+  %exitcond.not = icmp eq i64 %inc, 1025
   br i1 %exitcond.not, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body

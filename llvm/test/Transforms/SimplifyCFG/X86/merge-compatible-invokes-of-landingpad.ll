@@ -1232,7 +1232,7 @@ if.end:
 }
 
 ; We need to PHI together the arguments of the operand bundles.
-define void @t21_semicompatible_operand_bundle() personality ptr @__gxx_personality_v0 {
+define void @t21_semicompatible_operand_bundle(i32 %a, i32 %b) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t21_semicompatible_operand_bundle(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -1246,7 +1246,7 @@ define void @t21_semicompatible_operand_bundle() personality ptr @__gxx_personal
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, [[IF_ELSE]] ], [ 42, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[B:%.*]], [[IF_ELSE]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    invoke void @simple_throw() [ "abc"(i32 [[TMP0]]) ]
 ; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
@@ -1260,7 +1260,7 @@ entry:
   br i1 %c0, label %if.then0, label %if.else
 
 if.then0:
-  invoke void @simple_throw() [ "abc"(i32 42) ] to label %invoke.cont0 unwind label %lpad
+  invoke void @simple_throw() [ "abc"(i32 %a) ] to label %invoke.cont0 unwind label %lpad
 
 invoke.cont0:
   unreachable
@@ -1275,7 +1275,7 @@ if.else:
   br i1 %c1, label %if.then1, label %if.end
 
 if.then1:
-  invoke void @simple_throw() [ "abc"(i32 0) ] to label %invoke.cont2 unwind label %lpad
+  invoke void @simple_throw() [ "abc"(i32 %b) ] to label %invoke.cont2 unwind label %lpad
 
 invoke.cont2:
   unreachable
@@ -2342,7 +2342,7 @@ if.end:
 }
 
 ; For indirect invokes, different operand bundle arguments are fine.
-define void @t39_different_arguments_and_operand_bundes_are_fine(ptr %callee0, ptr %callee1) personality ptr @__gxx_personality_v0 {
+define void @t39_different_arguments_and_operand_bundes_are_fine(ptr %callee0, ptr %callee1, i32 %a, i32 %b) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t39_different_arguments_and_operand_bundes_are_fine(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -2356,7 +2356,7 @@ define void @t39_different_arguments_and_operand_bundes_are_fine(ptr %callee0, p
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, [[IF_ELSE]] ], [ 42, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[B:%.*]], [[IF_ELSE]] ], [ [[A:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    invoke void [[TMP1]]() [ "abc"(i32 [[TMP0]]) ]
 ; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
@@ -2371,7 +2371,7 @@ entry:
   br i1 %c0, label %if.then0, label %if.else
 
 if.then0:
-  invoke void %callee0() [ "abc"(i32 42) ] to label %invoke.cont0 unwind label %lpad
+  invoke void %callee0() [ "abc"(i32 %a) ] to label %invoke.cont0 unwind label %lpad
 
 invoke.cont0:
   unreachable
@@ -2386,7 +2386,7 @@ if.else:
   br i1 %c1, label %if.then1, label %if.end
 
 if.then1:
-  invoke void %callee1() [ "abc"(i32 0) ] to label %invoke.cont2 unwind label %lpad
+  invoke void %callee1() [ "abc"(i32 %b) ] to label %invoke.cont2 unwind label %lpad
 
 invoke.cont2:
   unreachable
@@ -2397,7 +2397,7 @@ if.end:
 }
 
 ; For indirect invokes, both different arguments and operand bundle arguments are fine.
-define void @t40_different_arguments_and_operand_bundes_are_fine(ptr %callee0, ptr %callee1) personality ptr @__gxx_personality_v0 {
+define void @t40_different_arguments_and_operand_bundes_are_fine(ptr %callee0, ptr %callee1, i32 %a, i32 %b) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t40_different_arguments_and_operand_bundes_are_fine(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -2412,7 +2412,7 @@ define void @t40_different_arguments_and_operand_bundes_are_fine(ptr %callee0, p
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 42, [[IF_ELSE]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 0, [[IF_ELSE]] ], [ 42, [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[B:%.*]], [[IF_ELSE]] ], [ [[A:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    invoke void [[TMP2]](i32 [[TMP0]]) [ "abc"(i32 [[TMP1]]) ]
 ; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
@@ -2427,7 +2427,7 @@ entry:
   br i1 %c0, label %if.then0, label %if.else
 
 if.then0:
-  invoke void %callee0(i32 0) [ "abc"(i32 42) ] to label %invoke.cont0 unwind label %lpad
+  invoke void %callee0(i32 0) [ "abc"(i32 %a) ] to label %invoke.cont0 unwind label %lpad
 
 invoke.cont0:
   unreachable
@@ -2442,7 +2442,7 @@ if.else:
   br i1 %c1, label %if.then1, label %if.end
 
 if.then1:
-  invoke void %callee1(i32 42) [ "abc"(i32 0) ] to label %invoke.cont2 unwind label %lpad
+  invoke void %callee1(i32 42) [ "abc"(i32 %b) ] to label %invoke.cont2 unwind label %lpad
 
 invoke.cont2:
   unreachable
@@ -2451,6 +2451,43 @@ if.end:
   call void @sideeffect()
   ret void
 }
+
+define void @dont_merge_different_immargs(i1 %c1) gc "statepoint-example" personality ptr null {
+; CHECK-LABEL: @dont_merge_different_immargs(
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[T1:%.*]] = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 1, i32 0, ptr elementtype(void (ptr addrspace(1))) null, i32 1, i32 0, ptr addrspace(1) null, i64 0, i64 0)
+; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[T2:%.*]] = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void (ptr addrspace(1))) null, i32 1, i32 0, ptr addrspace(1) null, i64 0, i64 0)
+; CHECK-NEXT:    to label [[UNREACHABLE]] unwind label [[LPAD]]
+; CHECK:       unreachable:
+; CHECK-NEXT:    unreachable
+; CHECK:       lpad:
+; CHECK-NEXT:    [[T3:%.*]] = landingpad token
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    ret void
+;
+  br i1 %c1, label %if, label %else
+
+if:
+  %t1 = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 1, i32 0, ptr elementtype(void (ptr addrspace(1))) null, i32 1, i32 0, ptr addrspace(1) null, i64 0, i64 0)
+  to label %unreachable unwind label %lpad
+
+else:
+  %t2 = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void (ptr addrspace(1))) null, i32 1, i32 0, ptr addrspace(1) null, i64 0, i64 0)
+  to label %unreachable unwind label %lpad
+
+unreachable:
+  unreachable
+
+lpad:
+  %t3 = landingpad token
+  cleanup
+  ret void
+}
+
+declare token @llvm.experimental.gc.statepoint.p0(i64 immarg, i32 immarg, ptr, i32 immarg, i32 immarg, ...)
 
 declare i1 @cond()
 

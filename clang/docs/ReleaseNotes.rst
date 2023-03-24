@@ -124,6 +124,8 @@ Non-comprehensive list of changes in this release
 - Clang now supports ``__builtin_FILE_NAME()`` which returns the same
   information as the ``__FILE_NAME__`` macro (the presumed file name
   from the invocation point, with no path components included).
+- Clang now supports ``__builtin_assume_separate_storage`` that indicates that
+  its arguments point to objects in separate storage allocations.
 
 New Compiler Flags
 ------------------

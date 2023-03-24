@@ -7,16 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "AnalysisInternal.h"
+#include "clang-include-cleaner/Types.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Casting.h"
 
 namespace clang::include_cleaner {
@@ -61,6 +64,24 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
     if (const auto *TST = dyn_cast<TemplateSpecializationType>(Base))
       return resolveTemplateName(TST->getTemplateName());
     return Base->getAsRecordDecl();
+  }
+  // Templated as TemplateSpecializationType and
+  // DeducedTemplateSpecializationType doesn't share a common base.
+  template <typename T>
+  // Picks the most specific specialization for a
+  // (Deduced)TemplateSpecializationType, while prioritizing using-decls.
+  NamedDecl *getMostRelevantTemplatePattern(const T *TST) {
+    // This is the underlying decl used by TemplateSpecializationType, can be
+    // null when type is dependent.
+    auto *RD = TST->getAsTagDecl();
+    auto *ND = resolveTemplateName(TST->getTemplateName());
+    // In case of exported template names always prefer the using-decl. This
+    // implies we'll point at the using-decl even when there's an explicit
+    // specializaiton using the exported name, but that's rare.
+    if (llvm::isa_and_present<UsingShadowDecl, TypeAliasTemplateDecl>(ND))
+      return ND;
+    // Fallback to primary template for dependent instantiations.
+    return RD ? RD : ND;
   }
 
 public:
@@ -161,17 +182,15 @@ public:
   }
 
   bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) {
-    // FIXME: Handle explicit specializations.
     report(TL.getTemplateNameLoc(),
-           resolveTemplateName(TL.getTypePtr()->getTemplateName()));
+           getMostRelevantTemplatePattern(TL.getTypePtr()));
     return true;
   }
 
   bool VisitDeducedTemplateSpecializationTypeLoc(
       DeducedTemplateSpecializationTypeLoc TL) {
-    // FIXME: Handle specializations.
     report(TL.getTemplateNameLoc(),
-           resolveTemplateName(TL.getTypePtr()->getTemplateName()));
+           getMostRelevantTemplatePattern(TL.getTypePtr()));
     return true;
   }
 

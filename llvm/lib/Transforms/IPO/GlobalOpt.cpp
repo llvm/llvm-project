@@ -237,19 +237,8 @@ CleanupPointerRootUsers(GlobalVariable *GV,
           Dead.push_back(std::make_pair(I, MTI));
       }
     } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(U)) {
-      if (CE->use_empty()) {
-        CE->destroyConstant();
-        Changed = true;
-      } else if (isa<GEPOperator>(CE))
+      if (isa<GEPOperator>(CE))
         append_range(Worklist, CE->users());
-    } else if (Constant *C = dyn_cast<Constant>(U)) {
-      if (isSafeToDestroyConstant(C)) {
-        C->destroyConstant();
-        // This could have invalidated UI, start over from scratch.
-        Dead.clear();
-        CleanupPointerRootUsers(GV, GetTLI);
-        return true;
-      }
     }
   }
 
@@ -271,6 +260,7 @@ CleanupPointerRootUsers(GlobalVariable *GV,
     }
   }
 
+  GV->removeDeadConstantUsers();
   return Changed;
 }
 

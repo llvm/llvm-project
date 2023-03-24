@@ -10,7 +10,7 @@ void test_global_add_2f16(__global half2 *addrh2, half2 xh2,
   half2 *half_rtn;
   float *fp_rtn;
   double *rtn;
-  *half_rtn = __builtin_amdgcn_global_atomic_fadd_v2f16(addrh2, xh2); // expected-error{{'__builtin_amdgcn_global_atomic_fadd_v2f16' needs target feature gfx90a-insts}}
+  *half_rtn = __builtin_amdgcn_global_atomic_fadd_v2f16(addrh2, xh2); // expected-error{{'__builtin_amdgcn_global_atomic_fadd_v2f16' needs target feature atomic-buffer-global-pk-add-f16-insts}}
   *fp_rtn = __builtin_amdgcn_global_atomic_fadd_f32(addr, x); // expected-error{{'__builtin_amdgcn_global_atomic_fadd_f32' needs target feature gfx90a-insts}}
   *rtn = __builtin_amdgcn_global_atomic_fadd_f64(addr, x); // expected-error{{'__builtin_amdgcn_global_atomic_fadd_f64' needs target feature gfx90a-insts}}
   *rtn = __builtin_amdgcn_global_atomic_fmax_f64(addr, x); // expected-error{{'__builtin_amdgcn_global_atomic_fmax_f64' needs target feature gfx90a-insts}}

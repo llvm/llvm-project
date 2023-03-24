@@ -1327,3 +1327,8 @@ void mlir::vector::populateVectorContractLoweringPatterns(
                ContractionOpToOuterProductOpLowering>(
       options, patterns.getContext(), benefit);
 }
+
+void mlir::vector::populateVectorOuterProductLoweringPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<OuterProductOpLowering>(patterns.getContext(), benefit);
+}
