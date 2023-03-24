@@ -76,6 +76,7 @@ class TestBackticksInAlias(TestBase):
         interp = self.dbg.GetCommandInterpreter()
         interp.HandleCommand(f"script {argc_value} - `argc`", result)
         self.assertTrue(result.Succeeded(), "Command succeeded")
-        self.assertEqual("0\n", result.GetOutput(), "Substitution worked")
+        fixed_output = result.GetOutput().rstrip()
+        self.assertEqual("0", fixed_output, "Substitution worked")
 
         
