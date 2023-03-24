@@ -1369,7 +1369,7 @@ void SSANameState::printValueID(Value value, bool printResultNo,
 void SSANameState::printOperationID(Operation *op, raw_ostream &stream) const {
   auto it = operationIDs.find(op);
   if (it == operationIDs.end()) {
-    stream << "<<UNKOWN OPERATION>>";
+    stream << "<<UNKNOWN OPERATION>>";
   } else {
     stream << '%' << it->second;
   }
