@@ -706,10 +706,36 @@ void Parser::HandlePragmaAlign() {
 
 void Parser::HandlePragmaDump() {
   assert(Tok.is(tok::annot_pragma_dump));
-  IdentifierInfo *II =
-      reinterpret_cast<IdentifierInfo *>(Tok.getAnnotationValue());
-  Actions.ActOnPragmaDump(getCurScope(), Tok.getLocation(), II);
   ConsumeAnnotationToken();
+  if (Tok.is(tok::eod)) {
+    PP.Diag(Tok, diag::warn_pragma_debug_missing_argument) << "dump";
+  } else if (NextToken().is(tok::eod)) {
+    if (Tok.isNot(tok::identifier)) {
+      PP.Diag(Tok, diag::warn_pragma_debug_unexpected_argument);
+      ConsumeAnyToken();
+      ExpectAndConsume(tok::eod);
+      return;
+    }
+    IdentifierInfo *II = Tok.getIdentifierInfo();
+    Actions.ActOnPragmaDump(getCurScope(), Tok.getLocation(), II);
+    ConsumeToken();
+  } else {
+    SourceLocation StartLoc = Tok.getLocation();
+    EnterExpressionEvaluationContext Ctx(
+      Actions, Sema::ExpressionEvaluationContext::Unevaluated);
+    ExprResult E = ParseExpression();
+    if (!E.isUsable() || E.get()->containsErrors()) {
+      // Diagnostics were emitted during parsing. No action needed.
+    } else if (E.get()->getDependence() != ExprDependence::None) {
+      PP.Diag(StartLoc, diag::warn_pragma_debug_dependent_argument)
+        << E.get()->isTypeDependent()
+        << SourceRange(StartLoc, Tok.getLocation());
+    } else {
+      Actions.ActOnPragmaDump(E.get());
+    }
+    SkipUntil(tok::eod, StopBeforeMatch);
+  }
+  ExpectAndConsume(tok::eod);
 }
 
 void Parser::HandlePragmaWeak() {
