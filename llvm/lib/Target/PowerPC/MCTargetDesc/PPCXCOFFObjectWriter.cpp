@@ -90,6 +90,12 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
     return {XCOFF::RelocationType::R_RBR, EncodedSignednessIndicator | 25};
   case PPC::fixup_ppc_br24abs:
     return {XCOFF::RelocationType::R_RBA, EncodedSignednessIndicator | 25};
+  case PPC::fixup_ppc_nofixup: {
+    if (Modifier == MCSymbolRefExpr::VK_None)
+      return {XCOFF::RelocationType::R_REF, 0};
+    else
+      llvm_unreachable("Unsupported Modifier");
+  } break;
   case FK_Data_4:
   case FK_Data_8:
     const uint8_t SignAndSizeForFKData =
