@@ -7642,9 +7642,10 @@ unsigned AArch64AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       return Match_Success;
     return Match_InvalidOperand;
 
-    // If the kind is a token for a literal immediate, check if our asm
-    // operand matches. This is for InstAliases which have a fixed-value
-    // immediate in the syntax.
+    // If the kind is a token for a literal immediate, check if our asm operand
+    // matches. This is for InstAliases which have a fixed-value immediate in
+    // the asm string, such as hints which are parsed into a specific
+    // instruction definition.
 #define MATCH_HASH(N)                                                          \
   case MCK__HASH_##N:                                                          \
     return MatchesOpImmediate(N);
@@ -7654,10 +7655,20 @@ unsigned AArch64AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     MATCH_HASH(3)
     MATCH_HASH(4)
     MATCH_HASH(6)
+    MATCH_HASH(7)
     MATCH_HASH(8)
+    MATCH_HASH(10)
     MATCH_HASH(12)
+    MATCH_HASH(14)
     MATCH_HASH(16)
     MATCH_HASH(24)
+    MATCH_HASH(25)
+    MATCH_HASH(26)
+    MATCH_HASH(27)
+    MATCH_HASH(28)
+    MATCH_HASH(29)
+    MATCH_HASH(30)
+    MATCH_HASH(31)
     MATCH_HASH(32)
     MATCH_HASH(40)
     MATCH_HASH(48)

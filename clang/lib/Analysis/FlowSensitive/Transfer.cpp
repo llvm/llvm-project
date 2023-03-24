@@ -162,15 +162,27 @@ public:
     }
     case BO_LAnd:
     case BO_LOr: {
-      BoolValue &LHSVal = getLogicOperatorSubExprValue(*LHS);
-      BoolValue &RHSVal = getLogicOperatorSubExprValue(*RHS);
-
       auto &Loc = Env.createStorageLocation(*S);
       Env.setStorageLocation(*S, Loc);
+
+      BoolValue *LHSVal = getLogicOperatorSubExprValue(*LHS);
+      // If the LHS was not reachable, this BinaryOperator would also not be
+      // reachable, and we would never get here.
+      assert(LHSVal != nullptr);
+      BoolValue *RHSVal = getLogicOperatorSubExprValue(*RHS);
+      if (RHSVal == nullptr) {
+        // If the RHS isn't reachable and we evaluate this BinaryOperator,
+        // then the value of the LHS must have triggered the short-circuit
+        // logic. This implies that the value of the entire expression must be
+        // equal to the value of the LHS.
+        Env.setValue(Loc, *LHSVal);
+        break;
+      }
+
       if (S->getOpcode() == BO_LAnd)
-        Env.setValue(Loc, Env.makeAnd(LHSVal, RHSVal));
+        Env.setValue(Loc, Env.makeAnd(*LHSVal, *RHSVal));
       else
-        Env.setValue(Loc, Env.makeOr(LHSVal, RHSVal));
+        Env.setValue(Loc, Env.makeOr(*LHSVal, *RHSVal));
       break;
     }
     case BO_NE:
@@ -779,15 +791,19 @@ public:
   }
 
 private:
-  BoolValue &getLogicOperatorSubExprValue(const Expr &SubExpr) {
+  /// If `SubExpr` is reachable, returns a non-null pointer to the value for
+  /// `SubExpr`. If `SubExpr` is not reachable, returns nullptr.
+  BoolValue *getLogicOperatorSubExprValue(const Expr &SubExpr) {
     // `SubExpr` and its parent logic operator might be part of different basic
     // blocks. We try to access the value that is assigned to `SubExpr` in the
     // corresponding environment.
-    if (const Environment *SubExprEnv = StmtToEnv.getEnvironment(SubExpr)) {
-      if (auto *Val = dyn_cast_or_null<BoolValue>(
-              SubExprEnv->getValue(SubExpr, SkipPast::Reference)))
-        return *Val;
-    }
+    const Environment *SubExprEnv = StmtToEnv.getEnvironment(SubExpr);
+    if (!SubExprEnv)
+      return nullptr;
+
+    if (auto *Val = dyn_cast_or_null<BoolValue>(
+            SubExprEnv->getValue(SubExpr, SkipPast::Reference)))
+      return Val;
 
     if (Env.getStorageLocation(SubExpr, SkipPast::None) == nullptr) {
       // Sub-expressions that are logic operators are not added in basic blocks
@@ -800,11 +816,11 @@ private:
 
     if (auto *Val = dyn_cast_or_null<BoolValue>(
             Env.getValue(SubExpr, SkipPast::Reference)))
-      return *Val;
+      return Val;
 
     // If the value of `SubExpr` is still unknown, we create a fresh symbolic
     // boolean value for it.
-    return Env.makeAtomicBoolValue();
+    return &Env.makeAtomicBoolValue();
   }
 
   // If context sensitivity is enabled, try to analyze the body of the callee

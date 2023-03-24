@@ -110,42 +110,10 @@ void populateFlattenVectorTransferPatterns(RewritePatternSet &patterns,
 void populateBubbleVectorBitCastOpPatterns(RewritePatternSet &patterns,
                                            PatternBenefit benefit = 1);
 
-/// Collect a set of transfer read/write lowering patterns.
-///
-/// These patterns lower transfer ops to simpler ops like `vector.load`,
-/// `vector.store` and `vector.broadcast`. Only transfers with a transfer rank
-/// of a most `maxTransferRank` are lowered. This is useful when combined with
-/// VectorToSCF, which reduces the rank of vector transfer ops.
-void populateVectorTransferLoweringPatterns(
-    RewritePatternSet &patterns,
-    std::optional<unsigned> maxTransferRank = std::nullopt,
-    PatternBenefit benefit = 1);
-
 /// These patterns materialize masks for various vector ops such as transfers.
 void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
                                                bool force32BitVectorIndices,
                                                PatternBenefit benefit = 1);
-
-/// Collects patterns to progressively lower vector.broadcast ops on high-D
-/// vectors to low-D vector ops.
-void populateVectorBroadcastLoweringPatterns(RewritePatternSet &patterns,
-                                             PatternBenefit benefit = 1);
-
-/// Collects patterns to progressively lower vector mask ops into elementary
-/// selection and insertion ops.
-void populateVectorMaskOpLoweringPatterns(RewritePatternSet &patterns,
-                                          PatternBenefit benefit = 1);
-
-/// Collects patterns to progressively lower vector.shape_cast ops on high-D
-/// vectors into 1-D/2-D vector ops by generating data movement extract/insert
-/// ops.
-void populateVectorShapeCastLoweringPatterns(RewritePatternSet &patterns,
-                                             PatternBenefit benefit = 1);
-
-/// Collects patterns that lower scalar vector transfer ops to memref loads and
-/// stores when beneficial.
-void populateScalarVectorTransferLoweringPatterns(RewritePatternSet &patterns,
-                                                  PatternBenefit benefit = 1);
 
 /// Returns the integer type required for subscripts in the vector dialect.
 IntegerType getVectorSubscriptType(Builder &builder);
@@ -214,8 +182,8 @@ void createMaskOpRegion(OpBuilder &builder, Operation *maskableOp);
 /// Creates a vector.mask operation around a maskable operation. Returns the
 /// vector.mask operation if the mask provided is valid. Otherwise, returns the
 /// maskable operation itself.
-Operation *maskOperation(OpBuilder &builder, Operation *maskableOp,
-                         Value mask, Value passthru = Value());
+Operation *maskOperation(OpBuilder &builder, Operation *maskableOp, Value mask,
+                         Value passthru = Value());
 
 /// Creates a vector select operation that picks values from `newValue` or
 /// `passthru` for each result vector lane based on `mask`. This utility is used

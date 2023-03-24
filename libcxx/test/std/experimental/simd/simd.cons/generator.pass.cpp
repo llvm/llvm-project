@@ -47,7 +47,7 @@ struct identity {
 void compile_generator() {
   supported_simd128_ctor<int>(identity());
   not_supported_simd128_ctor<int>([](int i) { return float(i); });
-  not_supported_simd128_ctor<int>([](intptr_t i) { return (int*)(i); });
+  not_supported_simd128_ctor<int>([](std::intptr_t i) { return (int*)(i); });
   not_supported_simd128_ctor<int>([](int* i) { return i; });
 }
 

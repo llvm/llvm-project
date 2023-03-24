@@ -249,11 +249,13 @@ public:
 
   /// Returns a new AffineMap with the same number of dims and symbols and one
   /// less result at `pos`, dropped.
-  AffineMap dropResult(int64_t pos) { return dropResults({pos}); }
+  AffineMap dropResult(int64_t pos) const {
+    return dropResults(ArrayRef({pos}));
+  }
 
   // Returns a new AffineMap with the same number of dims and symbols, but all
-  // positions in `positions` dropped from results.
-  AffineMap dropResults(ArrayRef<int64_t> positions) {
+  // results in `positions` dropped.
+  AffineMap dropResults(ArrayRef<int64_t> positions) const {
     SmallVector<int64_t> reverse_sorted_positions = llvm::to_vector(positions);
     llvm::sort(reverse_sorted_positions, std::greater<int64_t>());
 
@@ -263,9 +265,13 @@ public:
     return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
   }
 
+  // Returns a new AffineMap with the same number of dims and symbols, but all
+  // results in `positions` dropped.
+  AffineMap dropResults(const llvm::SmallBitVector &positions) const;
+
   /// Returns a new AffineMap with the same number of dims and symbols and an
   /// extra result inserted at `pos`.
-  AffineMap insertResult(AffineExpr expr, unsigned pos) {
+  AffineMap insertResult(AffineExpr expr, unsigned pos) const {
     auto exprs = llvm::to_vector<4>(getResults());
     exprs.insert(exprs.begin() + pos, expr);
     return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
@@ -582,6 +588,12 @@ llvm::SmallBitVector getUnusedDimsBitVector(ArrayRef<AffineMap> maps);
 // Return a bitvector where each bit set indicates a symbol that is not used
 // by any of the maps in the input array `maps`.
 llvm::SmallBitVector getUnusedSymbolsBitVector(ArrayRef<AffineMap> maps);
+
+/// Expand `map` to operate on `rank` dims while projecting out the dims in
+/// `projectedDimensions`. This amounts to composing `map` with
+/// `id(rank).dropResults(projectedDimensions)`.
+AffineMap expandDimsToRank(AffineMap map, int64_t rank,
+                           const llvm::SmallBitVector &projectedDimensions);
 
 inline raw_ostream &operator<<(raw_ostream &os, AffineMap map) {
   map.print(os);

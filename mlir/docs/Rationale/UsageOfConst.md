@@ -235,9 +235,9 @@ if (auto *dimOp = inst->dyn_cast<DimOp>()) {
 It is much better to eliminate them entirely, and just pass around `DimOp`
 directly. For example, instead of:
 
-```C++
+```c++
 LogicalResult mlir::getIndexSet(MutableArrayRef<OpPointer<AffineForOp>> forOps,
-                                FlatAffineConstraints *domain) {
+                                FlatAffineValueConstraints *domain) {
 
 ```
 
@@ -245,7 +245,7 @@ It is a lot nicer to just have:
 
 ```c++
 LogicalResult mlir::getIndexSet(MutableArrayRef<AffineForOp> forOps,
-                                FlatAffineConstraints *domain) {
+                                FlatAffineValueConstraints *domain) {
 ```
 
 Particularly since all of the `FooOp` classes are already semantically a smart

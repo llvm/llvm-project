@@ -589,11 +589,11 @@ def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
 defvar RV32 = DefaultMode;
 def RV64           : HwMode<"+64bit", [IsRV64]>;
 
-def FeatureRV32E
-    : SubtargetFeature<"e", "IsRV32E", "true",
-                       "Implements RV32E (provides 16 rather than 32 GPRs)">;
-def IsRV32E : Predicate<"Subtarget->isRV32E()">,
-                        AssemblerPredicate<(all_of FeatureRV32E)>;
+def FeatureRVE
+    : SubtargetFeature<"e", "IsRVE", "true",
+                       "Implements RV{32,64}E (provides 16 rather than 32 GPRs)">;
+def IsRVE : Predicate<"Subtarget->isRVE()">,
+                        AssemblerPredicate<(all_of FeatureRVE)>;
 
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",

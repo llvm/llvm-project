@@ -610,11 +610,12 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     Macros = Patch->mainFileMacros();
     Marks = Patch->marks();
   }
-  Clang->getPreprocessor().addPPCallbacks(
-      std::make_unique<CollectMainFileMacros>(Clang->getSourceManager(),
-                                              Macros));
+  auto& PP = Clang->getPreprocessor();
+  PP.addPPCallbacks(
+      std::make_unique<CollectMainFileMacros>(
+          PP, Macros));
 
-  Clang->getPreprocessor().addPPCallbacks(
+  PP.addPPCallbacks(
       collectPragmaMarksCallback(Clang->getSourceManager(), Marks));
 
   // Copy over the includes from the preamble, then combine with the
@@ -626,10 +627,10 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     CanonIncludes.addSystemHeadersMapping(Clang->getLangOpts());
   std::unique_ptr<CommentHandler> IWYUHandler =
       collectIWYUHeaderMaps(&CanonIncludes);
-  Clang->getPreprocessor().addCommentHandler(IWYUHandler.get());
+  PP.addCommentHandler(IWYUHandler.get());
 
   // Collect tokens of the main file.
-  syntax::TokenCollector CollectTokens(Clang->getPreprocessor());
+  syntax::TokenCollector CollectTokens(PP);
 
   // To remain consistent with preamble builds, these callbacks must be called
   // exactly here, after preprocessor is initialized and BeginSourceFile() was
@@ -660,7 +661,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // XXX: This is messy: clang-tidy checks flush some diagnostics at EOF.
   // However Action->EndSourceFile() would destroy the ASTContext!
   // So just inform the preprocessor of EOF, while keeping everything alive.
-  Clang->getPreprocessor().EndSourceFile();
+  PP.EndSourceFile();
   // UnitDiagsConsumer is local, we can not store it in CompilerInstance that
   // has a longer lifetime.
   Clang->getDiagnostics().setClient(new IgnoreDiagnostics);

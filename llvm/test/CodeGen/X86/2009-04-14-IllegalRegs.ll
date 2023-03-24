@@ -53,7 +53,6 @@ define i32 @z() nounwind ssp {
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB0_3: ## %CallStackCheckFailBlk
 ; CHECK-NEXT:    calll ___stack_chk_fail
-; CHECK-NEXT:    ud2
 entry:
 	%retval = alloca i32		; <ptr> [#uses=2]
 	%xxx = alloca %struct.X		; <ptr> [#uses=6]

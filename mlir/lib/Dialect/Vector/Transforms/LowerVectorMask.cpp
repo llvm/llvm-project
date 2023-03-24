@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements target-independent rewrites and utilitites to lower the
+// This file implements target-independent rewrites and utilities to lower the
 // 'vector.mask' operation.
 //
 //===----------------------------------------------------------------------===//
@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/Passes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -29,6 +30,147 @@ namespace vector {
 
 using namespace mlir;
 using namespace mlir::vector;
+
+//===----------------------------------------------------------------------===//
+// populateVectorMaskOpLoweringPatterns
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Progressive lowering of CreateMaskOp.
+/// One:
+///   %x = vector.create_mask %a, ... : vector<dx...>
+/// is replaced by:
+///   %l = vector.create_mask ... : vector<...>  ; one lower rank
+///   %0 = arith.cmpi "slt", %ci, %a       |
+///   %1 = select %0, %l, %zeroes    |
+///   %r = vector.insert %1, %pr [i] | d-times
+///   %x = ....
+/// until a one-dimensional vector is reached.
+class CreateMaskOpLowering : public OpRewritePattern<vector::CreateMaskOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::CreateMaskOp op,
+                                PatternRewriter &rewriter) const override {
+    auto dstType = op.getResult().getType().cast<VectorType>();
+    int64_t rank = dstType.getRank();
+    if (rank <= 1)
+      return rewriter.notifyMatchFailure(
+          op, "0-D and 1-D vectors are handled separately");
+
+    auto loc = op.getLoc();
+    auto eltType = dstType.getElementType();
+    int64_t dim = dstType.getDimSize(0);
+    Value idx = op.getOperand(0);
+
+    VectorType lowType =
+        VectorType::get(dstType.getShape().drop_front(), eltType);
+    Value trueVal = rewriter.create<vector::CreateMaskOp>(
+        loc, lowType, op.getOperands().drop_front());
+    Value falseVal = rewriter.create<arith::ConstantOp>(
+        loc, lowType, rewriter.getZeroAttr(lowType));
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, dstType, rewriter.getZeroAttr(dstType));
+    for (int64_t d = 0; d < dim; d++) {
+      Value bnd =
+          rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(d));
+      Value val = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
+                                                 bnd, idx);
+      Value sel = rewriter.create<arith::SelectOp>(loc, val, trueVal, falseVal);
+      auto pos = rewriter.getI64ArrayAttr(d);
+      result =
+          rewriter.create<vector::InsertOp>(loc, dstType, sel, result, pos);
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+/// Progressive lowering of ConstantMaskOp.
+/// One:
+///   %x = vector.constant_mask [a,b]
+/// is replaced by:
+///   %z = zero-result
+///   %l = vector.constant_mask [b]
+///   %4 = vector.insert %l, %z[0]
+///   ..
+///   %x = vector.insert %l, %..[a-1]
+/// until a one-dimensional vector is reached. All these operations
+/// will be folded at LLVM IR level.
+class ConstantMaskOpLowering : public OpRewritePattern<vector::ConstantMaskOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ConstantMaskOp op,
+                                PatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    auto dstType = op.getType();
+    auto eltType = dstType.getElementType();
+    auto dimSizes = op.getMaskDimSizes();
+    int64_t rank = dstType.getRank();
+
+    if (rank == 0) {
+      assert(dimSizes.size() == 1 &&
+             "Expected exactly one dim size for a 0-D vector");
+      bool value = dimSizes[0].cast<IntegerAttr>().getInt() == 1;
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+          op, dstType,
+          DenseIntElementsAttr::get(
+              VectorType::get(ArrayRef<int64_t>{}, rewriter.getI1Type()),
+              ArrayRef<bool>{value}));
+      return success();
+    }
+
+    // Scalable constant masks can only be lowered for the "none set" case.
+    if (dstType.cast<VectorType>().isScalable()) {
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+          op, DenseElementsAttr::get(dstType, false));
+      return success();
+    }
+
+    int64_t trueDim = std::min(dstType.getDimSize(0),
+                               dimSizes[0].cast<IntegerAttr>().getInt());
+
+    if (rank == 1) {
+      // Express constant 1-D case in explicit vector form:
+      //   [T,..,T,F,..,F].
+      SmallVector<bool> values(dstType.getDimSize(0));
+      for (int64_t d = 0; d < trueDim; d++)
+        values[d] = true;
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+          op, dstType, rewriter.getBoolVectorAttr(values));
+      return success();
+    }
+
+    VectorType lowType =
+        VectorType::get(dstType.getShape().drop_front(), eltType);
+    SmallVector<int64_t> newDimSizes;
+    for (int64_t r = 1; r < rank; r++)
+      newDimSizes.push_back(dimSizes[r].cast<IntegerAttr>().getInt());
+    Value trueVal = rewriter.create<vector::ConstantMaskOp>(
+        loc, lowType, rewriter.getI64ArrayAttr(newDimSizes));
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, dstType, rewriter.getZeroAttr(dstType));
+    for (int64_t d = 0; d < trueDim; d++) {
+      auto pos = rewriter.getI64ArrayAttr(d);
+      result =
+          rewriter.create<vector::InsertOp>(loc, dstType, trueVal, result, pos);
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+} // namespace
+
+void mlir::vector::populateVectorMaskOpLoweringPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<CreateMaskOpLowering, ConstantMaskOpLowering>(
+      patterns.getContext(), benefit);
+}
+
+//===----------------------------------------------------------------------===//
+// populateVectorMaskLoweringPatternsForSideEffectingOps
+//===----------------------------------------------------------------------===//
 
 namespace {
 

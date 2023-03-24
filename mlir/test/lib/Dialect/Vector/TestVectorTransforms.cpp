@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <type_traits>
 #include <optional>
+#include <type_traits>
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -22,6 +22,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
@@ -136,11 +137,6 @@ struct TestVectorContractionLowering
       *this, "vector-outerproduct",
       llvm::cl::desc("Lower vector.contract to vector.outerproduct"),
       llvm::cl::init(false)};
-  Option<bool> lowerToFilterOuterProduct{
-      *this, "vector-filter-outerproduct",
-      llvm::cl::desc("Lower vector.contract to vector.outerproduct but not for "
-                     "vectors of size 4."),
-      llvm::cl::init(false)};
   Option<bool> lowerToParallelArith{
       *this, "vector-parallel-arith",
       llvm::cl::desc("Lower vector.contract to elementwise vector ops."),
@@ -153,24 +149,9 @@ struct TestVectorContractionLowering
     if (lowerToOuterProduct) {
       VectorContractLowering lowering = VectorContractLowering::OuterProduct;
       VectorTransformsOptions options{lowering};
-      patterns.add<ContractionOpToOuterProductOpLowering>(options,
-                                                          &getContext());
-      (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
-      return;
-    }
-
-    // Test on one pattern in isolation.
-    if (lowerToFilterOuterProduct) {
-      VectorContractLowering lowering = VectorContractLowering::OuterProduct;
-      VectorTransformsOptions options{lowering};
-      patterns.add<ContractionOpToOuterProductOpLowering>(
-          options, &getContext(), /*benefit=*/1, [](vector::ContractionOp op) {
-            // Only lowers vector.contract where the lhs as a type vector<MxNx?>
-            // where M is not 4.
-            if (op.getRhsType().getShape()[0] == 4)
-              return failure();
-            return success();
-          });
+      populateVectorContractLoweringPatterns(
+          patterns, options, /*benefit=*/1,
+          /*disableOuterProductlowering=*/true);
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
       return;
     }
@@ -490,7 +471,7 @@ struct TestVectorTransferFullPartialSplitPatterns
       options.setVectorTransferSplit(VectorTransferSplit::LinalgCopy);
     else
       options.setVectorTransferSplit(VectorTransferSplit::VectorTransfer);
-    patterns.add<VectorTransferFullPartialRewriter>(ctx, options);
+    populateVectorTransferFullPartialPatterns(patterns, options);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
