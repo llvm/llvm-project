@@ -28,13 +28,16 @@ private:
 
   Function *ACStoreFunction;
   Function *AFStoreFunction;
-  Function *AFPrintTopAmplificationPaths;
 
   Function *AFStoreInFile;
 
   // Instruction to AC/AF Maps
   ValueMap<Value*, Value*> InstructionACMap;
   ValueMap<Value*, Value*> InstructionAFMap;
+
+  // Result Functions
+  Function *AFPrintTopAmplificationPaths;
+  Function *AFPrintStatistics;
 
   // Additional Utilities
 

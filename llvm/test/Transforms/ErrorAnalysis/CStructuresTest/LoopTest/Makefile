@@ -1,5 +1,5 @@
 OP =  -O1
-CXX = /home/tanmay/Documents/Tools/llvm-project/build/bin/clang $(DEBUG_FLAG) $(DUMP_SYMBOLIC)
+CXX = /home/tanmay/Documents/Tools/llvm-project/build/bin/clang $(DEBUG_FLAG) $(MEMORY_OPT) -g
 OPT = /home/tanmay/Documents/Tools/llvm-project/build/bin/opt
 LLI = /home/tanmay/Documents/Tools/llvm-project/build/bin/lli
 

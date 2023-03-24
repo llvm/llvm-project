@@ -7,6 +7,7 @@
 
 #include "AtomicCondition.h"
 #include "../Utilities/RunTimeUtilities.h"
+#include "Statistics.h"
 #include "stdlib.h"
 
 /*----------------------------------------------------------------------------*/
@@ -34,7 +35,7 @@ float fp32OpError[] = {
     1e-6,
     1e-6, // Does not have a known error
     1e-6, // Truncing is not a GNU library function. Giving it 1 ULP error
-    1e-6, // Extendin is not a GNU library function. Giving it 1 ULP error
+    1e-6, // Extending is not a GNU library function. Giving it 1 ULP error
     1e-6,
 };
 
@@ -56,7 +57,7 @@ double fp64OpError[] = {
     1e-16,
     1e-16, // Does not have a known error
     1e-16, // Truncing is not a GNU library function. Giving it 1 ULP error
-    1e-16, // Extendin is not a GNU library function. Giving it 1 ULP error
+    1e-16, // Extending is not a GNU library function. Giving it 1 ULP error
     1e-16,
 };
 
@@ -67,16 +68,18 @@ double fp64OpError[] = {
 /* ------------------------------- AFProduct -------------------------------*/
 
 struct AFProduct {
-  int ItemId;
+  int ItemId; // Unique identifier for an instance.
 
-  ACItem **Factors;
-  struct AFProduct **ProductTails;
-  char **Inputs;
-  double *AFs;
+  // List of Pointers to Amplification data corresponding to executions with separate inputs.
+  // (We assume the computation paths do not change for separate inputs.)
+  ACItem **Factors; // Pointers to ACItems of the root operations.
+  struct AFProduct **ProductTails; // Pointers to AFProducts of the next operations along a computation path.
+  char **Inputs; // Register names of the inputs.
+  double *AFs; // Amplification Factors.
 
   // Metadata
-  int Height;
-  int NumberOfInputs;
+  int Height; // Height of the Node in the Computation DAG.
+  int NumberOfInputs; // Number of inputs to the Node.
 };
 
 typedef struct AFProduct AFProduct;
@@ -287,13 +290,17 @@ void fAFStoreAFProducts(FILE *FP, AFProduct **ObjectPointerList, uint64_t NumObj
 /* ---------------------------------- AFItem ---------------------------------*/
 
 struct AFItem {
-  int ItemId;
-  int FunctionEvaluationId;
-  int InstructionId;
-  int InstructionExecutionId;
+  int ItemId; // Unique identifier for an instance of AFItem.
+  int FunctionEvaluationId; // Identifier for the function call in which the instruction instance
+                            // about which this AFItem provides information about lies.
+  int InstructionId; // Identifier for the instruction about which this AFItem informs.
+  int InstructionExecutionId; // Identifier for the instance of the instruction about which this AFItem informs.
 
-  AFProduct** Components;
-  int NumAFComponents;
+  AFProduct** Components; // List of AFProducts corresponding the roots of the
+                          // computation paths starting at the instruction which
+                          // this AFItem informs about.
+  int NumAFComponents; // Number of AFProducts in the Components list.
+  int RootNode; // 1 if this AFItem belongs to a root node of a computation DAG, 0 otherwise.
 };
 
 typedef struct AFItem AFItem;
@@ -315,6 +322,8 @@ void fAFCreateAFItem(AFItem **AddressToAllocateAt,
   (*AddressToAllocateAt)->InstructionExecutionId = InstructionExecutionId;
   (*AddressToAllocateAt)->Components = NULL;
   (*AddressToAllocateAt)->NumAFComponents = NumAFComponents;
+  // By default, all newly created AFItems are root nodes.
+  (*AddressToAllocateAt)->RootNode = 1;
 
   return ;
 }
@@ -433,6 +442,41 @@ void fAFCreateAFTable(AFTable **AddressToAllocateAt) {
   }
 
   return ;
+}
+
+// Gets the number of AFItems in the AFTable that are RootNodes (These will correspond
+// to the number of computation DAGs in the program)
+int getNumberOfComputationDAGs(AFTable *AFTable) {
+  int NumberOfComputationDAGs = 0;
+  for (uint64_t I = 0; I < AFTable->ListLength; ++I) {
+    if (AFTable->AFItems[I]->RootNode)
+      NumberOfComputationDAGs++;
+  }
+  return NumberOfComputationDAGs;
+}
+
+// Gets the number of computation paths that start from some RootNode.
+int getNumberOfComputationPaths(AFTable *AFTable) {
+  int NumberOfComputationPaths = 0;
+  for (uint64_t I = 0; I < AFTable->ListLength; ++I) {
+    if (AFTable->AFItems[I]->RootNode)
+      NumberOfComputationPaths += AFTable->AFItems[I]->NumAFComponents;
+  }
+  return NumberOfComputationPaths;
+}
+
+// Compute the Average Amplification Factor.
+double getAverageAmplificationFactor(AFTable *AFTable) {
+  double AverageAmplificationFactor = 0.0;
+  for (uint64_t I = 0; I < AFTable->ListLength; ++I) {
+    if (AFTable->AFItems[I]->RootNode) {
+      for (int J = 0; J < AFTable->AFItems[I]->NumAFComponents; ++J) {
+        AverageAmplificationFactor += AFTable->AFItems[I]->Components[J]->AFs[0];
+      }
+    }
+  }
+  AverageAmplificationFactor /= getNumberOfComputationPaths(AFTable);
+  return AverageAmplificationFactor;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -698,6 +742,8 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
 
     if (AFItemWRTOperands[OperandIndex] != NULL) {
       assert((*AFItemWRTOperands[OperandIndex])->Components[0] != NULL);
+      // Change status of the children of this AFItem to NOT root nodes.
+      (*AFItemWRTOperands[OperandIndex])->RootNode = 0;
       double GreatestAF =
           (*AFItemWRTOperands[OperandIndex])->Components[0]->AFs[0] *
           (*AC)->ACWRTOperands[OperandIndex];
@@ -859,6 +905,9 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
     printf("\t\tOperandIndex: %d\n", OperandIndex);
 #endif
     if (AFItemWRTOperands[OperandIndex] != NULL) {
+      if(!NewAFItem)
+        // Change status of the children of this AFItem to NOT root nodes.
+        (*AFItemWRTOperands[OperandIndex])->RootNode = 0;
 
       // Loop through all Components of this child.
       for (int AFItemsChildComponentIndex = 0;
@@ -1051,10 +1100,24 @@ void fAFPrintTopFromAllAmplificationPaths() {
   printf("Ranked AF Paths written to file: %s\n", File);
 }
 
+// Prints the Statistics of the Analysis
+void fAFPrintStatistics() {
+#if FAF_DEBUG
+  printf("\nPrinting Statistics\n");
+#endif
+
+  printf("Number of Computation DAGs\t\t\t: %d\n", getNumberOfComputationDAGs(AFs));
+  printf("Number of Computation Paths\t\t\t: %d\n", getNumberOfComputationPaths(AFs));
+  printf("Number of Floating-Point Operations\t: %lu\n", AFs->ListLength);
+  printf("Average Amplification Factor\t\t: %0.15lf\n", getAverageAmplificationFactor(AFs));
+
+#if FAF_DEBUG
+  printf("\nPrinted Statistics\n");
+#endif
+}
+
 
 void fAFStoreAFs() {
-#if NO_DATA_DUMP
-#else
   printf("\nWriting Amplification Factors to file.\n");
   // Generate a file path + file name string to store the AF Records
   char File[5000];
@@ -1070,7 +1133,6 @@ void fAFStoreAFs() {
   }
 
   printf("Amplification Factors written to file: %s\n", File);
-#endif
 }
 
 #endif // LLVM_AMPLIFICATIONFACTOR_H

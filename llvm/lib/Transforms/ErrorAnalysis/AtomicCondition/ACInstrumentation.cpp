@@ -50,6 +50,9 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction, string Functi
     // Only configuring functions with certain prefixes
     if (!CurrentFunction->hasName()) {
 
+    } else if (CurrentFunction->getName().compare(FunctionToAnalyze) == 0) {
+      confFunction(CurrentFunction, &FunctionToInstrument,
+                   GlobalValue::LinkageTypes::ExternalLinkage);
     } else if (CurrentFunction->getName().str().find("fAFInitialize") !=
                std::string::npos) {
       confFunction(CurrentFunction, &AFInitFunction,
@@ -81,9 +84,9 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction, string Functi
       confFunction(CurrentFunction, &AFPrintTopAmplificationPaths,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
-    else if (CurrentFunction->getName().compare(FunctionToAnalyze) == 0) {
-      confFunction(CurrentFunction, &FunctionToInstrument,
-                   GlobalValue::LinkageTypes::ExternalLinkage);
+    else if (CurrentFunction->getName().str().find("fAFPrintStatistics") != std::string::npos) {
+      confFunction(CurrentFunction, &AFPrintStatistics,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
   }
 
@@ -581,19 +584,21 @@ void ACInstrumentation::instrumentBasicBlock(
 }
 
 void ACInstrumentation::instrumentMainFunction(Function *F) {
-  assert((AFInitFunction != nullptr) && "Function not initialized!");
-  assert((ACStoreFunction != nullptr) && "Function not initialized!");
-  assert((AFStoreFunction != nullptr) && "Function not initialized!");
+  assert((AFInitFunction != nullptr) && "AFInitFunction not initialized!");
+  assert((ACStoreFunction != nullptr) && "ACStoreFunction not initialized!");
+  assert((AFStoreFunction != nullptr) && "AFStoreFunction not initialized!");
   assert((AFPrintTopAmplificationPaths != nullptr) &&
-         "Function not initialized!");
+         "AFPrintTopAmplificationPaths not initialized!");
+  assert((AFPrintStatistics != nullptr) && "AFPrintStatistics not initialized!");
 
   BasicBlock *BB = &(*(F->begin()));
   Instruction *Inst = BB->getFirstNonPHIOrDbg();
   IRBuilder<> InstructionBuilder(Inst);
   std::vector<Value *> ACInitCallArgs, AFInitCallArgs, PrintAFPathsCallArgs;
-  std::vector<Value *> ACStoreCallArgs, AFStoreCallArgs;
+  std::vector<Value *> ACStoreCallArgs, AFStoreCallArgs, PrintStatisticsCallArgs;
 
-  CallInst *AFInitCallInstruction, *PrintAFPathsCallInstruction;
+  CallInst *AFInitCallInstruction, *PrintAFPathsCallInstruction,
+      *PrintStatisticsCallInstruction;
   CallInst *StoreACTableCallInstruction, *StoreAFTableCallInstruction;
 
   InstructionBuilder.CreateStore(InstructionBuilder.getInt32(0), FunctionInstanceCounter);
@@ -612,6 +617,7 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
         ArrayRef<Value *> ACStoreCallArgsRef(ACStoreCallArgs);
         ArrayRef<Value *> AFStoreCallArgsRef(AFStoreCallArgs);
         ArrayRef<Value *> PrintAFPathsCallArgsRef(PrintAFPathsCallArgs);
+        ArrayRef<Value *> PrintStatisticsCallArgsRef(PrintStatisticsCallArgs);
 
         InstructionBuilder.SetInsertPoint(CurrentInstruction);
         StoreACTableCallInstruction =
@@ -620,13 +626,17 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
             InstructionBuilder.CreateCall(AFStoreFunction, AFStoreCallArgsRef);
         PrintAFPathsCallInstruction = InstructionBuilder.CreateCall(
             AFPrintTopAmplificationPaths, PrintAFPathsCallArgsRef);
+        PrintStatisticsCallInstruction = InstructionBuilder.CreateCall(
+            AFPrintStatistics, PrintStatisticsCallArgsRef);
       }
     }
   }
 
   assert(AFInitCallInstruction && "Invalid call instruction!");
   assert(StoreACTableCallInstruction && StoreAFTableCallInstruction &&
-         PrintAFPathsCallInstruction && "Invalid call instruction!");
+         "Invalid call instruction!");
+  assert(PrintAFPathsCallInstruction && PrintStatisticsCallInstruction &&
+         "Invalid call instruction!");
   return;
 }
 
