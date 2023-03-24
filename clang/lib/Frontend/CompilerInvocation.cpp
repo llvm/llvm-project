@@ -12,7 +12,6 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/CommentOptions.h"
-#include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -59,6 +58,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Frontend/Debug/Options.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -1397,28 +1397,28 @@ void CompilerInvocation::GenerateCodeGenArgs(
 
   std::optional<StringRef> DebugInfoVal;
   switch (Opts.DebugInfo) {
-  case codegenoptions::DebugLineTablesOnly:
+  case llvm::codegenoptions::DebugLineTablesOnly:
     DebugInfoVal = "line-tables-only";
     break;
-  case codegenoptions::DebugDirectivesOnly:
+  case llvm::codegenoptions::DebugDirectivesOnly:
     DebugInfoVal = "line-directives-only";
     break;
-  case codegenoptions::DebugInfoConstructor:
+  case llvm::codegenoptions::DebugInfoConstructor:
     DebugInfoVal = "constructor";
     break;
-  case codegenoptions::LimitedDebugInfo:
+  case llvm::codegenoptions::LimitedDebugInfo:
     DebugInfoVal = "limited";
     break;
-  case codegenoptions::FullDebugInfo:
+  case llvm::codegenoptions::FullDebugInfo:
     DebugInfoVal = "standalone";
     break;
-  case codegenoptions::UnusedTypeInfo:
+  case llvm::codegenoptions::UnusedTypeInfo:
     DebugInfoVal = "unused-types";
     break;
-  case codegenoptions::NoDebugInfo: // default value
+  case llvm::codegenoptions::NoDebugInfo: // default value
     DebugInfoVal = std::nullopt;
     break;
-  case codegenoptions::LocTrackingOnly: // implied value
+  case llvm::codegenoptions::LocTrackingOnly: // implied value
     DebugInfoVal = std::nullopt;
     break;
   }
@@ -1463,10 +1463,10 @@ void CompilerInvocation::GenerateCodeGenArgs(
     GenerateArg(Args, OPT_gpubnames, SA);
 
   auto TNK = Opts.getDebugSimpleTemplateNames();
-  if (TNK != codegenoptions::DebugTemplateNamesKind::Full) {
-    if (TNK == codegenoptions::DebugTemplateNamesKind::Simple)
+  if (TNK != llvm::codegenoptions::DebugTemplateNamesKind::Full) {
+    if (TNK == llvm::codegenoptions::DebugTemplateNamesKind::Simple)
       GenerateArg(Args, OPT_gsimple_template_names_EQ, "simple", SA);
-    else if (TNK == codegenoptions::DebugTemplateNamesKind::Mangled)
+    else if (TNK == llvm::codegenoptions::DebugTemplateNamesKind::Mangled)
       GenerateArg(Args, OPT_gsimple_template_names_EQ, "mangled", SA);
   }
   // ProfileInstrumentUsePath is marshalled automatically, no need to generate
@@ -1667,18 +1667,19 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (Arg *A = Args.getLastArg(OPT_debug_info_kind_EQ)) {
     unsigned Val =
         llvm::StringSwitch<unsigned>(A->getValue())
-            .Case("line-tables-only", codegenoptions::DebugLineTablesOnly)
-            .Case("line-directives-only", codegenoptions::DebugDirectivesOnly)
-            .Case("constructor", codegenoptions::DebugInfoConstructor)
-            .Case("limited", codegenoptions::LimitedDebugInfo)
-            .Case("standalone", codegenoptions::FullDebugInfo)
-            .Case("unused-types", codegenoptions::UnusedTypeInfo)
+            .Case("line-tables-only", llvm::codegenoptions::DebugLineTablesOnly)
+            .Case("line-directives-only",
+                  llvm::codegenoptions::DebugDirectivesOnly)
+            .Case("constructor", llvm::codegenoptions::DebugInfoConstructor)
+            .Case("limited", llvm::codegenoptions::LimitedDebugInfo)
+            .Case("standalone", llvm::codegenoptions::FullDebugInfo)
+            .Case("unused-types", llvm::codegenoptions::UnusedTypeInfo)
             .Default(~0U);
     if (Val == ~0U)
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
                                                 << A->getValue();
     else
-      Opts.setDebugInfo(static_cast<codegenoptions::DebugInfoKind>(Val));
+      Opts.setDebugInfo(static_cast<llvm::codegenoptions::DebugInfoKind>(Val));
   }
 
   // If -fuse-ctor-homing is set and limited debug info is already on, then use
@@ -1686,11 +1687,11 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (const Arg *A =
           Args.getLastArg(OPT_fuse_ctor_homing, OPT_fno_use_ctor_homing)) {
     if (A->getOption().matches(OPT_fuse_ctor_homing) &&
-        Opts.getDebugInfo() == codegenoptions::LimitedDebugInfo)
-      Opts.setDebugInfo(codegenoptions::DebugInfoConstructor);
+        Opts.getDebugInfo() == llvm::codegenoptions::LimitedDebugInfo)
+      Opts.setDebugInfo(llvm::codegenoptions::DebugInfoConstructor);
     if (A->getOption().matches(OPT_fno_use_ctor_homing) &&
-        Opts.getDebugInfo() == codegenoptions::DebugInfoConstructor)
-      Opts.setDebugInfo(codegenoptions::LimitedDebugInfo);
+        Opts.getDebugInfo() == llvm::codegenoptions::DebugInfoConstructor)
+      Opts.setDebugInfo(llvm::codegenoptions::LimitedDebugInfo);
   }
 
   for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {
@@ -1745,8 +1746,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
           << A->getSpelling() << A->getValue();
     Opts.setDebugSimpleTemplateNames(
         StringRef(A->getValue()) == "simple"
-            ? codegenoptions::DebugTemplateNamesKind::Simple
-            : codegenoptions::DebugTemplateNamesKind::Mangled);
+            ? llvm::codegenoptions::DebugTemplateNamesKind::Simple
+            : llvm::codegenoptions::DebugTemplateNamesKind::Mangled);
   }
 
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
@@ -2040,8 +2041,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
 
   // If the user requested a flag that requires source locations available in
   // the backend, make sure that the backend tracks source location information.
-  if (NeedLocTracking && Opts.getDebugInfo() == codegenoptions::NoDebugInfo)
-    Opts.setDebugInfo(codegenoptions::LocTrackingOnly);
+  if (NeedLocTracking &&
+      Opts.getDebugInfo() == llvm::codegenoptions::NoDebugInfo)
+    Opts.setDebugInfo(llvm::codegenoptions::LocTrackingOnly);
 
   // Parse -fsanitize-recover= arguments.
   // FIXME: Report unrecoverable sanitizers incorrectly specified here.
