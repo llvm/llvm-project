@@ -727,10 +727,14 @@ bool CommandObjectParsed::Execute(const char *args_string,
   }
   if (!handled) {
     for (auto entry : llvm::enumerate(cmd_args.entries())) {
-      if (!entry.value().ref().empty() && entry.value().GetQuoteChar() == '`') {
-        cmd_args.ReplaceArgumentAtIndex(
-            entry.index(),
-            m_interpreter.ProcessEmbeddedScriptCommands(entry.value().c_str()));
+      const Args::ArgEntry &value = entry.value();
+      if (!value.ref().empty() && value.GetQuoteChar() == '`') {
+        // We have to put the backtick back in place for PreprocessCommand.
+        std::string opt_string = value.c_str();
+        Status error;
+        error = m_interpreter.PreprocessToken(opt_string);
+        if (error.Success())
+          cmd_args.ReplaceArgumentAtIndex(entry.index(), opt_string);
       }
     }
 
