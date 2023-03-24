@@ -105,6 +105,7 @@ set(SCUDO_UNIT_TEST_SOURCES
   size_class_map_test.cpp
   stats_test.cpp
   strings_test.cpp
+  timing_test.cpp
   tsd_test.cpp
   vector_test.cpp
   scudo_unit_test_main.cpp
