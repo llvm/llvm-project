@@ -498,12 +498,60 @@ public:
   }
 
   /// Convenience getters to immediately access the stored nodes.
-  /// Typically it is inadvisible to keep the reference around, as in
-  /// `TensorExpr &te = merger.exp(e)`, since insertions into the merger
-  /// may cause data movement and invalidate the underlying memory address.
-  TensorExp &exp(ExprId e) { return tensorExps[e]; }
-  LatPoint &lat(LatPointId p) { return latPoints[p]; }
-  SmallVector<LatPointId> &set(LatSetId s) { return latSets[s]; }
+  /// These methods return `const&` because the underlying objects must
+  /// not be mutated by client code.  The only exception is for mutating
+  /// the value associated with an expression, for which there are
+  /// dedicated methods below.
+  ///
+  /// NOTE: It is inadvisable to keep the reference alive for a long
+  /// time (e.g., as in `TensorExpr &te = merger.exp(e)`), since insertions
+  /// into the merger can cause data movement which will invalidate the
+  /// underlying memory address.  This isn't just a problem with the `&`
+  /// references, but also applies to the `ArrayRef`.  In particular,
+  /// using `for (LatPointId p : merger.set(s))` will run into the same
+  /// dangling-reference problems if the loop body inserts new sets.
+  const TensorExp &exp(ExprId e) const { return tensorExps[e]; }
+  const LatPoint &lat(LatPointId p) const { return latPoints[p]; }
+  ArrayRef<LatPointId> set(LatSetId s) const { return latSets[s]; }
+
+  /// Checks whether the given expression has an associated value.
+  bool hasExprValue(ExprId e) const {
+    return static_cast<bool>(tensorExps[e].val);
+  }
+
+  /// Sets the expression to have the associated value.  Asserts that
+  /// the new value is defined, and that the expression does not already
+  /// have a value.  If you want to overwrite a previous associated value,
+  /// use `updateExprValue` instead.
+  void setExprValue(ExprId e, Value v) {
+    assert(v && "Got an undefined value");
+    auto &val = tensorExps[e].val;
+    assert(!val && "Expression already has an associated value");
+    val = v;
+  }
+
+  /// Clears the value associated with the expression.  Asserts that the
+  /// expression does indeed have an associated value before clearing it.
+  /// If you don't want to check for a previous associated value first,
+  /// then use `updateExprValue` instead.
+  void clearExprValue(ExprId e) {
+    auto &val = tensorExps[e].val;
+    assert(val && "Expression does not have an associated value to clear");
+    val = Value();
+  }
+
+  /// Unilaterally updates the expression to have the associated value.
+  /// That is, unlike `setExprValue` and `clearExprValue`, this method
+  /// does not perform any checks on whether the expression had a
+  /// previously associated value nor whether the new value is defined.
+  //
+  // TODO: The unilateral update semantics are required by the
+  // current implementation of `CodegenEnv::genLoopBoundary`; however,
+  // that implementation seems a bit dubious.  We would much rather have
+  // the semantics `{ clearExprValue(e); setExprValue(e, v); }` or
+  // `{ clearExprValue(e); if (v) setExprValue(e, v); }` since those
+  // provide better invariants.
+  void updateExprValue(ExprId e, Value v) { tensorExps[e].val = v; }
 
 #ifndef NDEBUG
   /// Print methods (for debugging).

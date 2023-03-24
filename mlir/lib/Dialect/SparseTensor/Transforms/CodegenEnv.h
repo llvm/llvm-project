@@ -66,9 +66,9 @@ public:
   // Merger delegates.
   //
 
-  TensorExp &exp(ExprId e) { return latticeMerger.exp(e); }
-  LatPoint &lat(LatPointId l) { return latticeMerger.lat(l); }
-  SmallVector<LatPointId> &set(LatSetId s) { return latticeMerger.set(s); }
+  const TensorExp &exp(ExprId e) const { return latticeMerger.exp(e); }
+  const LatPoint &lat(LatPointId l) const { return latticeMerger.lat(l); }
+  ArrayRef<LatPointId> set(LatSetId s) const { return latticeMerger.set(s); }
   DimLevelType dlt(TensorId t, LoopId i) const {
     return latticeMerger.getDimLevelType(t, i);
   }
