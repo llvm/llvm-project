@@ -43,7 +43,7 @@ static std::pair<APInt, APInt> getHalves(const APInt &value,
   return {std::move(low), std::move(high)};
 }
 
-/// Returns the type with the last (innermost) dimention reduced to x1.
+/// Returns the type with the last (innermost) dimension reduced to x1.
 /// Scalarizes 1D vector inputs to match how we extract/insert vector values,
 /// e.g.:
 ///   - vector<3x2xi16> --> vector<3x1xi16>
@@ -128,7 +128,7 @@ static Value dropTrailingX1Dim(ConversionPatternRewriter &rewriter,
   if (!vecTy)
     return input;
 
-  // Shape cast to drop the last x1 dimention.
+  // Shape cast to drop the last x1 dimension.
   ArrayRef<int64_t> shape = vecTy.getShape();
   assert(shape.size() >= 2 && "Expected vector with at list two dims");
   assert(shape.back() == 1 && "Expected the last vector dim to be x1");
@@ -177,13 +177,13 @@ static Value insertLastDimSlice(ConversionPatternRewriter &rewriter,
 /// dimension.
 /// When all `resultComponents` are scalars, the result type is `vector<NxT>`;
 /// when `resultComponents` are `vector<...x1xT>`s, the result type is
-/// `vector<...xNxT>`, where `N` is the number of `resultComponenets`.
+/// `vector<...xNxT>`, where `N` is the number of `resultComponents`.
 static Value constructResultVector(ConversionPatternRewriter &rewriter,
                                    Location loc, VectorType resultType,
                                    ValueRange resultComponents) {
   llvm::ArrayRef<int64_t> resultShape = resultType.getShape();
   (void)resultShape;
-  assert(!resultShape.empty() && "Result expected to have dimentions");
+  assert(!resultShape.empty() && "Result expected to have dimensions");
   assert(resultShape.back() == static_cast<int64_t>(resultComponents.size()) &&
          "Wrong number of result components");
 
