@@ -10,11 +10,11 @@
 # RUN: llvm-readelf -s %t.rv32 | FileCheck %s
 # RUN: llvm-readelf -s %t.rv64 | FileCheck %s
 
-# CHECK: 100000     4 NOTYPE  LOCAL  DEFAULT     1 a
-# CHECK: 100000     6 NOTYPE  LOCAL  DEFAULT     1 b
-# CHECK: 100004     2 NOTYPE  LOCAL  DEFAULT     1 c
-# CHECK: 100004     6 NOTYPE  LOCAL  DEFAULT     1 d
-# CHECK: 100000    10 NOTYPE  GLOBAL DEFAULT     1 _start
+# CHECK: 00100000     4 NOTYPE  LOCAL  DEFAULT     1 a
+# CHECK: 00100000     8 NOTYPE  LOCAL  DEFAULT     1 b
+# CHECK: 00100004     4 NOTYPE  LOCAL  DEFAULT     1 c
+# CHECK: 00100004     8 NOTYPE  LOCAL  DEFAULT     1 d
+# CHECK: 00100000    12 NOTYPE  GLOBAL DEFAULT     1 _start
 
 .global _start
 _start:

@@ -383,10 +383,9 @@ public:
 
   bool isFinalized = false;
 
-protected:
-  uint64_t size = 0;
-
 private:
+  SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
+      finalizeEntry(llvm::DenseMap<llvm::CachedHashStringRef, int> EntryMap, uint32_t maxSize);
   void addEntry(const Symbol &symbol,
                 llvm::DenseMap<llvm::CachedHashStringRef, int> &entriesList,
                 int gain);
@@ -398,9 +397,7 @@ private:
       uint8_t *buf,
       SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
           &entriesList);
-  void padUntil(uint8_t *buf, const uint8_t index);
-
-  const size_t xlen = config->is64 ? 64 : 32;
+  void padWords(uint8_t *buf, const uint8_t maxWordCount);
 
   // used in finalizeContents function.
   static const size_t maxCMJTEntrySize = 32;
