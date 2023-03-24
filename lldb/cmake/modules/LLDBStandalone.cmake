@@ -14,7 +14,9 @@ option(LLVM_INSTALL_TOOLCHAIN_ONLY "Only include toolchain files in the 'install
 
 find_package(LLVM REQUIRED CONFIG HINTS ${LLVM_DIR} NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang REQUIRED CONFIG HINTS ${Clang_DIR} ${LLVM_DIR}/../clang NO_CMAKE_FIND_ROOT_PATH)
-find_package(Swift REQUIRED CONFIG HINTS "${Swift_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+if(LLDB_ENABLE_SWIFT_SUPPORT)
+  find_package(Swift REQUIRED CONFIG HINTS "${Swift_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+endif()
 
 # We set LLVM_CMAKE_DIR so that GetSVN.cmake is found correctly when building SVNVersion.inc
 set(LLVM_CMAKE_DIR ${LLVM_CMAKE_DIR} CACHE PATH "Path to LLVM CMake modules")
@@ -88,7 +90,9 @@ endif()
 # CMake modules to be in that directory as well.
 file(TO_CMAKE_PATH ${LLVM_DIR} LLVM_DIR)
 list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
-list(APPEND CMAKE_MODULE_PATH "${SWIFT_CMAKE_DIR}")
+if(LLDB_ENABLE_SWIFT_SUPPORT)
+  list(APPEND CMAKE_MODULE_PATH "${SWIFT_CMAKE_DIR}")
+endif()
 
 include(AddLLVM)
 include(TableGen)
@@ -124,9 +128,12 @@ include_directories(
   "${CMAKE_BINARY_DIR}/include"
   "${LLVM_INCLUDE_DIRS}"
   "${CLANG_INCLUDE_DIRS}"
-  "${SWIFT_INCLUDE_DIRS}"
-  "${SWIFT_MAIN_SRC_DIR}/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/source")
+if(LLDB_ENABLE_SWIFT_SUPPORT)
+  include_directories(
+    "${SWIFT_INCLUDE_DIRS}"
+    "${SWIFT_MAIN_SRC_DIR}/include")
+endif()
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
