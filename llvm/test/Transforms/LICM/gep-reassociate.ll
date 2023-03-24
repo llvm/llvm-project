@@ -11,13 +11,13 @@ define void @only_one_inbounds(ptr %ptr, i1 %c, i32 %arg) {
 ; CHECK-SAME: (ptr [[PTR:%.*]], i1 [[C:%.*]], i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARG_EXT:%.*]] = zext i32 [[ARG]] to i64
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[ARG_EXT]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @get.i32()
 ; CHECK-NEXT:    [[VAL_EXT:%.*]] = zext i32 [[VAL]] to i64
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[VAL_EXT]]
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i8, ptr [[PTR2]], i64 [[ARG_EXT]]
-; CHECK-NEXT:    call void @use(ptr [[PTR3]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[INVARIANT_GEP]], i64 [[VAL_EXT]]
+; CHECK-NEXT:    call void @use(ptr [[GEP]])
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -42,13 +42,13 @@ define void @both_inbounds_one_neg(ptr %ptr, i1 %c) {
 ; CHECK-LABEL: define void @both_inbounds_one_neg
 ; CHECK-SAME: (ptr [[PTR:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 -1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @get.i32()
 ; CHECK-NEXT:    [[VAL_EXT:%.*]] = zext i32 [[VAL]] to i64
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[VAL_EXT]]
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i8, ptr [[PTR2]], i64 -1
-; CHECK-NEXT:    call void @use(ptr [[PTR3]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[INVARIANT_GEP]], i64 [[VAL_EXT]]
+; CHECK-NEXT:    call void @use(ptr [[GEP]])
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -72,13 +72,13 @@ define void @both_inbounds_pos(ptr %ptr, i1 %c) {
 ; CHECK-LABEL: define void @both_inbounds_pos
 ; CHECK-SAME: (ptr [[PTR:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @get.i32()
 ; CHECK-NEXT:    [[VAL_EXT:%.*]] = zext i32 [[VAL]] to i64
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[VAL_EXT]]
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds i8, ptr [[PTR2]], i64 1
-; CHECK-NEXT:    call void @use(ptr [[PTR3]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[INVARIANT_GEP]], i64 [[VAL_EXT]]
+; CHECK-NEXT:    call void @use(ptr [[GEP]])
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -102,12 +102,12 @@ define void @different_elem_types(ptr %ptr, i1 %c, i64 %arg) {
 ; CHECK-LABEL: define void @different_elem_types
 ; CHECK-SAME: (ptr [[PTR:%.*]], i1 [[C:%.*]], i64 [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i64, ptr [[PTR]], i64 [[ARG]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[VAL:%.*]] = call i64 @get.i64()
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[VAL]]
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i64, ptr [[PTR2]], i64 [[ARG]]
-; CHECK-NEXT:    call void @use(ptr [[PTR3]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[INVARIANT_GEP]], i64 [[VAL]]
+; CHECK-NEXT:    call void @use(ptr [[GEP]])
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -119,6 +119,62 @@ loop:
   %val = call i64 @get.i64()
   %ptr2 = getelementptr i32, ptr %ptr, i64 %val
   %ptr3 = getelementptr i64, ptr %ptr2, i64 %arg
+  call void @use(ptr %ptr3)
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @different_index_types(ptr %ptr, i1 %c, i32 %arg) {
+; CHECK-LABEL: define void @different_index_types
+; CHECK-SAME: (ptr [[PTR:%.*]], i1 [[C:%.*]], i32 [[ARG:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[ARG]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[VAL:%.*]] = call i64 @get.i64()
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[INVARIANT_GEP]], i64 [[VAL]]
+; CHECK-NEXT:    call void @use(ptr [[GEP]])
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %val = call i64 @get.i64()
+  %ptr2 = getelementptr i8, ptr %ptr, i64 %val
+  %ptr3 = getelementptr i8, ptr %ptr2, i32 %arg
+  call void @use(ptr %ptr3)
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @different_index_count(ptr %ptr, i1 %c, i64 %arg1, i64 %arg2) {
+; CHECK-LABEL: define void @different_index_count
+; CHECK-SAME: (ptr [[PTR:%.*]], i1 [[C:%.*]], i64 [[ARG1:%.*]], i64 [[ARG2:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr [0 x i8], ptr [[PTR]], i64 [[ARG1]], i64 [[ARG2]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[VAL:%.*]] = call i64 @get.i64()
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[INVARIANT_GEP]], i64 [[VAL]]
+; CHECK-NEXT:    call void @use(ptr [[GEP]])
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %val = call i64 @get.i64()
+  %ptr2 = getelementptr i8, ptr %ptr, i64 %val
+  %ptr3 = getelementptr [0 x i8], ptr %ptr2, i64 %arg1, i64 %arg2
   call void @use(ptr %ptr3)
   br i1 %c, label %loop, label %exit
 
@@ -246,13 +302,13 @@ define void @multiple_indices(ptr %ptr, i1 %c, i64 %arg1, i64 %arg2) {
 ; CHECK-LABEL: define void @multiple_indices
 ; CHECK-SAME: (ptr [[PTR:%.*]], i1 [[C:%.*]], i64 [[ARG1:%.*]], i64 [[ARG2:%.*]]) {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr [0 x i8], ptr [[PTR]], i64 [[ARG1]], i64 [[ARG2]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[VAL1:%.*]] = call i64 @get.i64()
 ; CHECK-NEXT:    [[VAL2:%.*]] = call i64 @get.i64()
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr [0 x i8], ptr [[PTR]], i64 [[VAL1]], i64 [[VAL2]]
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr [0 x i8], ptr [[PTR2]], i64 [[ARG1]], i64 [[ARG2]]
-; CHECK-NEXT:    call void @use(ptr [[PTR3]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [0 x i8], ptr [[INVARIANT_GEP]], i64 [[VAL1]], i64 [[VAL2]]
+; CHECK-NEXT:    call void @use(ptr [[GEP]])
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -308,12 +364,12 @@ define void @multiple_indices_very_invariant(ptr %ptr, i1 %c, i64 %arg1, i64 %ar
 ; CHECK-LABEL: define void @multiple_indices_very_invariant
 ; CHECK-SAME: (ptr [[PTR:%.*]], i1 [[C:%.*]], i64 [[ARG1:%.*]], i64 [[ARG2:%.*]], i64 [[ARG3:%.*]]) {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr [0 x i8], ptr [[PTR]], i64 [[ARG1]], i64 [[ARG2]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[VAL1:%.*]] = call i64 @get.i64()
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr [0 x i8], ptr [[PTR]], i64 [[ARG3]], i64 [[VAL1]]
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr [0 x i8], ptr [[PTR2]], i64 [[ARG1]], i64 [[ARG2]]
-; CHECK-NEXT:    call void @use(ptr [[PTR3]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [0 x i8], ptr [[INVARIANT_GEP]], i64 [[ARG3]], i64 [[VAL1]]
+; CHECK-NEXT:    call void @use(ptr [[GEP]])
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
