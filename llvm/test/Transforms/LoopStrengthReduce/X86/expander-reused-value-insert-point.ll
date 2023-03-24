@@ -20,8 +20,8 @@ define void @test(ptr %ioptr, i32 %X, ptr %start, ptr %end) {
 ; CHECK:       for.body37:
 ; CHECK-NEXT:    [[P0R_0335:%.*]] = phi ptr [ [[ADD_PTR94:%.*]], [[FOR_BODY37]] ], [ [[START:%.*]], [[FOR_BODY15]] ]
 ; CHECK-NEXT:    [[ADD_PTR94]] = getelementptr inbounds double, ptr [[P0R_0335]], i64 1
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P0R_0335]], i64 [[TMP1]]
-; CHECK-NEXT:    [[F1I_0:%.*]] = load double, ptr [[UGLYGEP]], align 8
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P0R_0335]], i64 [[TMP1]]
+; CHECK-NEXT:    [[F1I_0:%.*]] = load double, ptr [[SCEVGEP]], align 8
 ; CHECK-NEXT:    call void @use(double [[F1I_0]])
 ; CHECK-NEXT:    [[EC0:%.*]] = icmp eq ptr [[ADD_PTR94]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[EC0]], label [[FOR_BODY37]], label [[FOR_END_LOOPEXIT:%.*]]
