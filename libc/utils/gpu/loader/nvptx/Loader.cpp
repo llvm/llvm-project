@@ -15,6 +15,8 @@
 
 #include "Loader.h"
 
+#include "src/__support/RPC/rpc.h"
+
 #include "cuda.h"
 #include <cstddef>
 #include <cstdio>
@@ -31,6 +33,30 @@ struct kernel_args_t {
   void *outbox;
   void *buffer;
 };
+
+static __llvm_libc::rpc::Server server;
+
+/// Queries the RPC client at least once and performs server-side work if there
+/// are any active requests.
+void handle_server() {
+  while (server.handle(
+      [&](__llvm_libc::rpc::Buffer *buffer) {
+        switch (static_cast<__llvm_libc::rpc::Opcode>(buffer->data[0])) {
+        case __llvm_libc::rpc::Opcode::PRINT_TO_STDERR: {
+          fputs(reinterpret_cast<const char *>(&buffer->data[1]), stderr);
+          break;
+        }
+        case __llvm_libc::rpc::Opcode::EXIT: {
+          exit(buffer->data[1]);
+          break;
+        }
+        default:
+          return;
+        };
+      },
+      [](__llvm_libc::rpc::Buffer *buffer) {}))
+    ;
+}
 
 static void handle_error(CUresult err) {
   if (err == CUDA_SUCCESS)
@@ -106,8 +132,13 @@ int load(int argc, char **argv, char **envp, void *image, size_t size) {
   if (CUresult err = cuMemsetD32(dev_ret, 0, 1))
     handle_error(err);
 
+  void *server_inbox = allocator(sizeof(__llvm_libc::cpp::Atomic<int>));
+  void *server_outbox = allocator(sizeof(__llvm_libc::cpp::Atomic<int>));
+  void *buffer = allocator(sizeof(__llvm_libc::rpc::Buffer));
+  if (!server_inbox || !server_outbox || !buffer)
+    handle_error("Failed to allocate memory the RPC client / server.");
+
   // Set up the arguments to the '_start' kernel on the GPU.
-  // TODO: Setup RPC server implementation;
   uint64_t args_size = sizeof(kernel_args_t);
   kernel_args_t args;
   std::memset(&args, 0, args_size);
@@ -115,9 +146,15 @@ int load(int argc, char **argv, char **envp, void *image, size_t size) {
   args.argv = dev_argv;
   args.envp = dev_envp;
   args.ret = reinterpret_cast<void *>(dev_ret);
+  args.inbox = server_outbox;
+  args.outbox = server_inbox;
+  args.buffer = buffer;
   void *args_config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, &args,
                          CU_LAUNCH_PARAM_BUFFER_SIZE, &args_size,
                          CU_LAUNCH_PARAM_END};
+
+  // Initialize the RPC server's buffer for host-device communication.
+  server.reset(server_inbox, server_outbox, buffer);
 
   // Call the kernel with the given arguments.
   if (CUresult err =
@@ -126,9 +163,10 @@ int load(int argc, char **argv, char **envp, void *image, size_t size) {
                          /*bloackDimZ=*/1, 0, stream, nullptr, args_config))
     handle_error(err);
 
-  // TODO: Query the RPC server periodically while the kernel is running.
+  // Wait until the kernel has completed execution on the device. Periodically
+  // check the RPC client for work to be performed on the server.
   while (cuStreamQuery(stream) == CUDA_ERROR_NOT_READY)
-    ;
+    handle_server();
 
   // Copy the return value back from the kernel and wait.
   int host_ret = 0;
