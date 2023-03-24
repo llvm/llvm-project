@@ -1328,7 +1328,7 @@ void OpenCLBuiltinHeaderEmitter::emit() {
   }
 
   OS << "\n// Disable any extensions we may have enabled previously.\n"
-        "#pragma OPENCL EXTENSION all : disable";
+        "#pragma OPENCL EXTENSION all : disable\n";
 }
 
 void clang::EmitClangOpenCLBuiltins(RecordKeeper &Records, raw_ostream &OS) {
