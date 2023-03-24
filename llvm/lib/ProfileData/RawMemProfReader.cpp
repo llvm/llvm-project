@@ -360,10 +360,10 @@ Error RawMemProfReader::setupForSymbolization() {
     }
   }
   assert(NumMatched != 0 && "No matching executable segments in segment info.");
-  assert(PreferredTextSegmentAddress == 0 ||
-         (PreferredTextSegmentAddress == ProfiledTextSegmentStart) &&
-             "Expect text segment address to be 0 or equal to profiled text "
-             "segment start.");
+  assert((PreferredTextSegmentAddress == 0 ||
+          (PreferredTextSegmentAddress == ProfiledTextSegmentStart)) &&
+         "Expect text segment address to be 0 or equal to profiled text "
+         "segment start.");
   return Error::success();
 }
 
