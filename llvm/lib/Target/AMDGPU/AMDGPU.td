@@ -622,6 +622,19 @@ def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
   "Has v_pk_fmac_f16 instruction"
 >;
 
+def FeatureAtomicDsPkAdd16Insts : SubtargetFeature<"atomic-ds-pk-add-16-insts",
+  "HasAtomicDsPkAdd16Insts",
+  "true",
+  "Has ds_pk_add_bf16, ds_pk_add_f16, ds_pk_add_rtn_bf16, "
+  "ds_pk_add_rtn_f16 instructions"
+>;
+
+def FeatureAtomicFlatPkAdd16Insts : SubtargetFeature<"atomic-flat-pk-add-16-insts",
+  "HasAtomicFlatPkAdd16Insts",
+  "true",
+  "Has flat_atomic_pk_add_f16 and flat_atomic_pk_add_bf16 instructions"
+>;
+
 def FeatureAtomicFaddRtnInsts : SubtargetFeature<"atomic-fadd-rtn-insts",
   "HasAtomicFaddRtnInsts",
   "true",
@@ -638,13 +651,28 @@ def FeatureAtomicFaddNoRtnInsts : SubtargetFeature<"atomic-fadd-no-rtn-insts",
   [FeatureFlatGlobalInsts]
 >;
 
-def FeatureAtomicPkFaddNoRtnInsts
-  : SubtargetFeature<"atomic-pk-fadd-no-rtn-insts",
-  "HasAtomicPkFaddNoRtnInsts",
+def FeatureAtomicBufferGlobalPkAddF16NoRtnInsts
+  : SubtargetFeature<"atomic-buffer-global-pk-add-f16-no-rtn-insts",
+  "HasAtomicBufferGlobalPkAddF16NoRtnInsts",
   "true",
   "Has buffer_atomic_pk_add_f16 and global_atomic_pk_add_f16 instructions that "
   "don't return original value",
   [FeatureFlatGlobalInsts]
+>;
+
+def FeatureAtomicBufferGlobalPkAddF16Insts : SubtargetFeature<"atomic-buffer-global-pk-add-f16-insts",
+ "HasAtomicBufferGlobalPkAddF16Insts",
+ "true",
+ "Has buffer_atomic_pk_add_f16 and global_atomic_pk_add_f16 instructions that "
+ "can return original value",
+ [FeatureFlatGlobalInsts]
+>;
+
+def FeatureAtomicGlobalPkAddBF16Inst : SubtargetFeature<"atomic-global-pk-add-bf16-inst",
+ "HasAtomicGlobalPkAddBF16Inst",
+ "true",
+ "Has global_atomic_pk_add_bf16 instruction",
+ [FeatureFlatGlobalInsts]
 >;
 
 def FeatureFlatAtomicFaddF32Inst
@@ -1111,7 +1139,7 @@ def FeatureISAVersion9_0_8 : FeatureSet<
    FeatureMAIInsts,
    FeaturePkFmacF16Inst,
    FeatureAtomicFaddNoRtnInsts,
-   FeatureAtomicPkFaddNoRtnInsts,
+   FeatureAtomicBufferGlobalPkAddF16NoRtnInsts,
    FeatureSupportsSRAMECC,
    FeatureMFMAInlineLiteralBug,
    FeatureImageGather4D16Bug]>;
@@ -1147,7 +1175,7 @@ def FeatureISAVersion9_0_A : FeatureSet<
    FeaturePkFmacF16Inst,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
-   FeatureAtomicPkFaddNoRtnInsts,
+   FeatureAtomicBufferGlobalPkAddF16Insts,
    FeatureImageInsts,
    FeatureMadMacF32Insts,
    FeatureSupportsSRAMECC,
@@ -1181,6 +1209,8 @@ def FeatureISAVersion9_4_0 : FeatureSet<
    FeatureDot6Insts,
    FeatureDot7Insts,
    FeatureDot10Insts,
+   FeatureAtomicDsPkAdd16Insts,
+   FeatureAtomicFlatPkAdd16Insts,
    Feature64BitDPP,
    FeaturePackedFP32Ops,
    FeatureMAIInsts,
@@ -1188,7 +1218,8 @@ def FeatureISAVersion9_4_0 : FeatureSet<
    FeaturePkFmacF16Inst,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
-   FeatureAtomicPkFaddNoRtnInsts,
+   FeatureAtomicBufferGlobalPkAddF16Insts,
+   FeatureAtomicGlobalPkAddBF16Inst,
    FeatureFlatAtomicFaddF32Inst,
    FeatureSupportsSRAMECC,
    FeaturePackedTID,
@@ -1804,13 +1835,25 @@ def HasMadMacF32Insts : Predicate<"Subtarget->hasMadMacF32Insts()">,
 def HasFmaLegacy32 : Predicate<"Subtarget->hasGFX10_3Insts()">,
   AssemblerPredicate<(any_of FeatureGFX10_3Insts)>;
 
+def HasAtomicDsPkAdd16Insts : Predicate<"Subtarget->hasAtomicDsPkAdd16Insts()">,
+  AssemblerPredicate<(any_of FeatureAtomicDsPkAdd16Insts)>;
+
+def HasAtomicFlatPkAdd16Insts : Predicate<"Subtarget->hasAtomicFlatPkAdd16Insts()">,
+  AssemblerPredicate<(any_of FeatureAtomicFlatPkAdd16Insts)>;
+
 def HasAtomicFaddRtnInsts : Predicate<"Subtarget->hasAtomicFaddRtnInsts()">,
   AssemblerPredicate<(all_of FeatureAtomicFaddRtnInsts)>;
 def HasAtomicFaddNoRtnInsts : Predicate<"Subtarget->hasAtomicFaddNoRtnInsts()">,
   AssemblerPredicate<(all_of FeatureAtomicFaddNoRtnInsts)>;
-def HasAtomicPkFaddNoRtnInsts
-  : Predicate<"Subtarget->hasAtomicPkFaddNoRtnInsts()">,
-  AssemblerPredicate<(all_of FeatureAtomicPkFaddNoRtnInsts)>;
+def HasAtomicBufferGlobalPkAddF16NoRtnInsts
+  : Predicate<"Subtarget->hasAtomicBufferGlobalPkAddF16NoRtnInsts() || Subtarget->hasAtomicBufferGlobalPkAddF16Insts()">,
+  AssemblerPredicate<(any_of FeatureAtomicBufferGlobalPkAddF16NoRtnInsts, FeatureAtomicBufferGlobalPkAddF16Insts)>;
+def HasAtomicBufferGlobalPkAddF16Insts
+  : Predicate<"Subtarget->hasAtomicBufferGlobalPkAddF16Insts()">,
+  AssemblerPredicate<(all_of FeatureAtomicBufferGlobalPkAddF16Insts)>;
+def HasAtomicGlobalPkAddBF16Inst
+  : Predicate<"Subtarget->hasAtomicGlobalPkAddBF16Inst()">,
+  AssemblerPredicate<(all_of FeatureAtomicGlobalPkAddBF16Inst)>;
 def HasFlatAtomicFaddF32Inst
   : Predicate<"Subtarget->hasFlatAtomicFaddF32Inst()">,
   AssemblerPredicate<(all_of FeatureFlatAtomicFaddF32Inst)>;

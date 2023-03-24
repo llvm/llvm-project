@@ -114,6 +114,25 @@ TEST(WalkAST, TagType) {
   // One explicit call from the TypeLoc in constructor spelling, another
   // implicit reference through the constructor call.
   testWalk("struct $explicit^$implicit^S { static int x; };", "auto y = ^S();");
+  testWalk("template<typename> struct $explicit^Foo {};", "^Foo<int> x;");
+  testWalk(R"cpp(
+    template<typename> struct Foo {};
+    template<> struct $explicit^Foo<int> {};)cpp",
+           "^Foo<int> x;");
+  testWalk(R"cpp(
+    template<typename> struct Foo {};
+    template<typename T> struct $explicit^Foo<T*> { void x(); };)cpp",
+           "^Foo<int *> x;");
+  testWalk(R"cpp(
+    template<typename> struct Foo {};
+    template struct $explicit^Foo<int>;)cpp",
+           "^Foo<int> x;");
+  // FIXME: This is broken due to
+  // https://github.com/llvm/llvm-project/issues/42259.
+  testWalk(R"cpp(
+    template<typename T> struct $explicit^Foo { Foo(T); };
+    template<> struct Foo<int> { void get(); Foo(int); };)cpp",
+           "^Foo x(3);");
 }
 
 TEST(WalkAST, Alias) {
@@ -124,6 +143,25 @@ TEST(WalkAST, Alias) {
            "int y = ^x;");
   testWalk("using $explicit^foo = int;", "^foo x;");
   testWalk("struct S {}; using $explicit^foo = S;", "^foo x;");
+  testWalk(R"cpp(
+    template<typename> struct Foo {};
+    template<> struct Foo<int> {};
+    namespace ns { using ::$explicit^Foo; })cpp",
+           "ns::^Foo<int> x;");
+  testWalk(R"cpp(
+    template<typename> struct Foo {};
+    namespace ns { using ::Foo; }
+    template<> struct ns::$explicit^Foo<int> {};)cpp",
+           "^Foo<int> x;");
+  // AST doesn't have enough information to figure out whether specialization
+  // happened through an exported type or not. So err towards attributing use to
+  // the using-decl, specializations on the exported type should be rare and
+  // they're not permitted on type-aliases.
+  testWalk(R"cpp(
+    template<typename> struct Foo {};
+    namespace ns { using ::$explicit^Foo; }
+    template<> struct ns::Foo<int> {};)cpp",
+           "ns::^Foo<int> x;");
 }
 
 TEST(WalkAST, Using) {
@@ -183,10 +221,6 @@ TEST(WalkAST, TemplateNames) {
       template <template <typename> typename> struct X {};
       X<^S> x;)cpp");
   testWalk("template<typename T> struct $explicit^S { S(T); };", "^S s(42);");
-  // Should we mark the specialization instead?
-  testWalk(
-      "template<typename> struct $explicit^S {}; template <> struct S<int> {};",
-      "^S<int> s;");
 }
 
 TEST(WalkAST, MemberExprs) {

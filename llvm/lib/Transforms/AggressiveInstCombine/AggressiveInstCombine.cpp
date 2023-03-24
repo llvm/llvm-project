@@ -65,7 +65,6 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
   // shift amount.
   auto matchFunnelShift = [](Value *V, Value *&ShVal0, Value *&ShVal1,
                              Value *&ShAmt) {
-    Value *SubAmt;
     unsigned Width = V->getType()->getScalarSizeInBits();
 
     // fshl(ShVal0, ShVal1, ShAmt)
@@ -73,8 +72,7 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
     if (match(V, m_OneUse(m_c_Or(
                      m_Shl(m_Value(ShVal0), m_Value(ShAmt)),
                      m_LShr(m_Value(ShVal1),
-                            m_Sub(m_SpecificInt(Width), m_Value(SubAmt))))))) {
-      if (ShAmt == SubAmt) // TODO: Use m_Specific
+                            m_Sub(m_SpecificInt(Width), m_Deferred(ShAmt))))))) {
         return Intrinsic::fshl;
     }
 
@@ -82,9 +80,8 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
     //  == (ShVal0 >> ShAmt) | (ShVal1 << (Width - ShAmt))
     if (match(V,
               m_OneUse(m_c_Or(m_Shl(m_Value(ShVal0), m_Sub(m_SpecificInt(Width),
-                                                           m_Value(SubAmt))),
-                              m_LShr(m_Value(ShVal1), m_Value(ShAmt)))))) {
-      if (ShAmt == SubAmt) // TODO: Use m_Specific
+                                                           m_Value(ShAmt))),
+                              m_LShr(m_Value(ShVal1), m_Deferred(ShAmt)))))) {
         return Intrinsic::fshr;
     }
 
