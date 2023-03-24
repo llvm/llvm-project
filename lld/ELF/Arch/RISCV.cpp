@@ -1145,7 +1145,7 @@ void TableJumpSection::addCMJTEntryCandidate(const Symbol &symbol, int gain) {
 
 int TableJumpSection::getCMJTEntryIndex(const Symbol &symbol) {
   uint32_t index = getEntry(symbol, maxCMJTEntrySize, finalizedCMJTEntries);
-  return index < maxCMJTEntrySize ? (int)(startCMJTEntryIdx + index) : -1;
+  return index < finalizedCMJTEntries.size() ? (int)(startCMJTEntryIdx + index) : -1;
 }
 
 void TableJumpSection::addCMJALTEntryCandidate(const Symbol &symbol, int gain) {
@@ -1154,7 +1154,7 @@ void TableJumpSection::addCMJALTEntryCandidate(const Symbol &symbol, int gain) {
 
 int TableJumpSection::getCMJALTEntryIndex(const Symbol &symbol) {
   uint32_t index = getEntry(symbol, maxCMJALTEntrySize, finalizedCMJALTEntries);
-  return index < maxCMJALTEntrySize ? (int)(startCMJALTEntryIdx + index) : -1;
+  return index < finalizedCMJALTEntries.size() ? (int)(startCMJALTEntryIdx + index) : -1;
 }
 
 void TableJumpSection::addEntry(
@@ -1177,13 +1177,12 @@ uint32_t TableJumpSection::getEntry(
   uint32_t i = 0;
   llvm::CachedHashStringRef symName =
       llvm::CachedHashStringRef("<unknown>:" + symbol.getName().str());
-  ;
   if (symbol.file)
     symName =
         llvm::CachedHashStringRef(symbol.file->mb.getBufferIdentifier().str() +
                                   ":" + symbol.getName().str());
 
-  for (; i < entriesList.size() && i <= maxSize; ++i) {
+  for (; i < entriesList.size() && i <= maxSize; i++) {
     // If this is a duplicate addition, do not add it and return the address
     // offset of the original entry.
     if (symName.hash() == entriesList[i].first.hash()) {
@@ -1195,20 +1194,28 @@ uint32_t TableJumpSection::getEntry(
 
 void TableJumpSection::scanTableJumpEntrys(const InputSection &sec) const {
   for (auto [i, r] : llvm::enumerate(sec.relocations)) {
+    Defined *definedSymbol = dyn_cast<Defined>(r.sym);
+    if (!definedSymbol)
+      continue;
+    if (i + 1 == sec.relocs().size() ||
+        sec.relocs()[i + 1].type != R_RISCV_RELAX)
+        continue;
     switch (r.type) {
     case R_RISCV_JAL:
     case R_RISCV_CALL:
     case R_RISCV_CALL_PLT: {
-      int gain = 6;
-      if (r.type == R_RISCV_JAL)
-        gain = 2;
-
       const auto jalr = sec.contentMaybeDecompress().data()[r.offset + 4];
       const uint8_t rd = extractBits(jalr, 11, 7);
 
+      int gain = 6;
+      if (sec.relaxAux->relocTypes[i] == R_RISCV_RVC_JUMP)
+        continue;
+      else if (sec.relaxAux->relocTypes[i] == R_RISCV_JAL)
+        gain = 2;
+
       if (rd == 0)
         in.riscvTableJumpSection->addCMJTEntryCandidate(*r.sym, gain);
-      else if (rd == 1)
+      else if (rd == X_RA)
         in.riscvTableJumpSection->addCMJALTEntryCandidate(*r.sym, gain);
     }
     }
@@ -1220,38 +1227,80 @@ void TableJumpSection::finalizeContents() {
     return;
   isFinalized = true;
 
-  auto cmp =
+  finalizedCMJTEntries = finalizeEntry(CMJTEntryCandidates, maxCMJTEntrySize);
+  finalizedCMJALTEntries = finalizeEntry(CMJALTEntryCandidates, maxCMJALTEntrySize);
+  CMJTEntryCandidates.clear();
+  CMJALTEntryCandidates.clear();
+
+  if (finalizedCMJALTEntries.size() > 0){
+    int gainRequired = maxCMJTEntrySize * config->wordsize;
+    for (auto entry : finalizedCMJTEntries){
+      gainRequired -= entry.second;
+    }
+    if(gainRequired > 0){
+      for (auto entry : finalizedCMJALTEntries){
+        gainRequired -= (entry.second - config->wordsize) ;
+        if(gainRequired <= 0)
+          break;
+      }
+    }
+
+    // Stop relax to cm.jalt if there will be negative effect
+    if (gainRequired > 0)
+      finalizedCMJALTEntries.clear();
+  }
+}
+
+SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
+    TableJumpSection::finalizeEntry(llvm::DenseMap<llvm::CachedHashStringRef, int> EntryMap, uint32_t maxSize){
+      auto cmp =
       [](const llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int> &p1,
          const llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int> &p2) {
         return p1.second > p2.second;
       };
 
-  std::copy(CMJTEntryCandidates.begin(), CMJTEntryCandidates.end(),
-            std::back_inserter(finalizedCMJTEntries));
-  std::sort(finalizedCMJTEntries.begin(), finalizedCMJTEntries.end(), cmp);
+      SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0> tempEntryVector;
+      std::copy(EntryMap.begin(), EntryMap.end(),
+                std::back_inserter(tempEntryVector));
+      std::sort(tempEntryVector.begin(), tempEntryVector.end(), cmp);
 
-  std::copy(CMJALTEntryCandidates.begin(), CMJALTEntryCandidates.end(),
-            std::back_inserter(finalizedCMJALTEntries));
-  std::sort(finalizedCMJALTEntries.begin(), finalizedCMJALTEntries.end(), cmp);
+      auto finalizedVector = tempEntryVector;
+      if (tempEntryVector.size() >= maxSize)
+        finalizedVector = SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>(tempEntryVector.begin(), tempEntryVector.begin() + maxSize);
+
+      // drop the item which has negitive effect
+      while (finalizedVector.size()){
+        if (finalizedVector.rbegin()->second < config->wordsize)
+          finalizedVector.pop_back();
+        else
+          break;
+      }
+      return finalizedVector;
 }
 
 size_t TableJumpSection::getSize() const {
-  if (!CMJALTEntryCandidates.empty()) {
-    return (startCMJALTEntryIdx + CMJALTEntryCandidates.size()) * xlen;
+  if (isFinalized){
+    if (!finalizedCMJALTEntries.empty())
+      return (startCMJALTEntryIdx + finalizedCMJALTEntries.size()) * config->wordsize;
+    return (startCMJTEntryIdx + finalizedCMJTEntries.size()) * config->wordsize;
   }
-  return (startCMJTEntryIdx + CMJTEntryCandidates.size()) * xlen;
+  else{
+    if (!CMJALTEntryCandidates.empty())
+      return (startCMJALTEntryIdx + CMJALTEntryCandidates.size()) * config->wordsize;
+    return (startCMJTEntryIdx + CMJTEntryCandidates.size()) * config->wordsize;
+  }
 }
 
 void TableJumpSection::writeTo(uint8_t *buf) {
   target->writeTableJumpHeader(buf);
-  writeEntries(buf + startCMJTEntryIdx, finalizedCMJTEntries);
-  padUntil(buf + ((startCMJTEntryIdx + finalizedCMJTEntries.size()) * xlen),
-           startCMJALTEntryIdx * xlen);
-  writeEntries(buf + startCMJALTEntryIdx, finalizedCMJALTEntries);
+  writeEntries(buf + startCMJTEntryIdx * config->wordsize, finalizedCMJTEntries);
+  padWords(buf + ((startCMJTEntryIdx + finalizedCMJTEntries.size()) * config->wordsize),
+           startCMJALTEntryIdx);
+  writeEntries(buf + (startCMJALTEntryIdx * config->wordsize), finalizedCMJALTEntries);
 }
 
-void TableJumpSection::padUntil(uint8_t *buf, const uint8_t address) {
-  for (size_t i = 0; i < address; ++i) {
+void TableJumpSection::padWords(uint8_t *buf, const uint8_t maxWordCount) {
+  for (size_t i = 0; i < maxWordCount; ++i) {
     if (config->is64)
       write64le(buf, 0);
     else
@@ -1268,23 +1317,26 @@ void TableJumpSection::writeEntries(
       continue;
     // Use the symbol from in.symTab to ensure we have the final adjusted
     // symbol.
+    Defined *definedSymbol;
     for (const auto &symbol : in.symTab->getSymbols()) {
-      llvm::CachedHashStringRef sym =
-          llvm::CachedHashStringRef("<unknown>:" + symbol.sym->getName().str());
-      ;
+      llvm::CachedHashStringRef sym = llvm::CachedHashStringRef("<unknown>:" + symbol.sym->getName().str());
       if (symbol.sym->file)
         sym = llvm::CachedHashStringRef(
             symbol.sym->file->mb.getBufferIdentifier().str() + ":" +
             symbol.sym->getName().str());
 
-      if (sym.hash() != symbolName.first.hash())
-        continue;
-      // Only process defined symbols.
-      auto *definedSymbol = dyn_cast<Defined>(symbol.sym);
-      if (!definedSymbol)
-        continue;
-      target->writeTableJump(buf, definedSymbol->getVA());
-      buf += config->wordsize;
+      if (sym.hash() == symbolName.first.hash()){
+        definedSymbol = dyn_cast<Defined>(symbol.sym);
+        // Only process defined symbols.
+        if (!definedSymbol)
+          continue;
+
+        break;
+      }
     }
+    if (!definedSymbol)
+      continue;
+    target->writeTableJump(buf, definedSymbol->getVA());
+    buf += config->wordsize;
   }
 }

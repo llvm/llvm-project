@@ -2128,7 +2128,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     finalizeSynthetic(in.mipsGot.get());
     finalizeSynthetic(in.igotPlt.get());
     finalizeSynthetic(in.gotPlt.get());
-    // finalizeSynthetic(in.riscvTableJumpSection.get());
     finalizeSynthetic(in.relaIplt.get());
     finalizeSynthetic(in.relaPlt.get());
     finalizeSynthetic(in.plt.get());
