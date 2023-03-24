@@ -32,6 +32,7 @@
 # TBLJAL32-NEXT: cm.jt   2
 # TBLJAL32-NEXT: cm.jt   1
 # TBLJAL32-NEXT: cm.jt   1
+# TBLJAL32-NEXT: cm.jt   1
 # TBLJAL32-NEXT: cm.jt   0
 # TBLJAL32-NEXT: cm.jt   0
 # TBLJAL32-NEXT: cm.jt   0
@@ -68,6 +69,7 @@ _start:
   call foo
   tail foo_1
   tail foo_1
+  tail foo_2
   tail foo_2
   tail foo_2
   tail foo_3
