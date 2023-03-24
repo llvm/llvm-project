@@ -398,7 +398,8 @@ static void writeSymbolTableHeader(raw_ostream &Out, object::Archive::Kind Kind,
   }
 }
 
-static uint64_t computeHeadersSize(object::Archive::Kind Kind, uint64_t NumSyms,
+static uint64_t computeHeadersSize(object::Archive::Kind Kind,
+                                   uint64_t StringMemberSize, uint64_t NumSyms,
                                    uint64_t SymNamesSize) {
   uint32_t OffsetSize = is64BitKind(Kind) ? 8 : 4;
   uint64_t SymtabSize =
@@ -410,7 +411,7 @@ static uint64_t computeHeadersSize(object::Archive::Kind Kind, uint64_t NumSyms,
     return TmpBuf.size();
   };
 
-  return strlen("!<arch>\n") + computeSymbolTableHeaderSize() + SymtabSize;
+  return strlen("!<arch>\n") + computeSymbolTableHeaderSize() + SymtabSize + StringMemberSize;
 }
 
 static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
@@ -689,8 +690,14 @@ static Error writeArchiveToStream(raw_ostream &Out,
     return E;
   std::vector<MemberData> &Data = *DataOrErr;
 
-  if (!StringTableBuf.empty() && !isAIXBigArchive(Kind))
-    Data.insert(Data.begin(), computeStringTable(StringTableBuf));
+  uint64_t StringTableSize = 0;
+  MemberData StringTableMember;
+  if (!StringTableBuf.empty() && !isAIXBigArchive(Kind)) {
+    StringTableMember = computeStringTable(StringTableBuf);
+    StringTableSize = StringTableMember.Header.size() +
+                      StringTableMember.Data.size() +
+                      StringTableMember.Padding.size();
+  }
 
   // We would like to detect if we need to switch to a 64-bit symbol table.
   uint64_t LastMemberEndOffset = 0;
@@ -710,7 +717,8 @@ static Error writeArchiveToStream(raw_ostream &Out,
   // table is at the start of the archive file for other archive formats.
   if (WriteSymtab && !is64BitKind(Kind)) {
     // We assume 32-bit offsets to see if 32-bit symbols are possible or not.
-    HeadersSize = computeHeadersSize(Kind, NumSyms, SymNamesBuf.size());
+    HeadersSize =
+        computeHeadersSize(Kind, StringTableSize, NumSyms, SymNamesBuf.size());
 
     // The SYM64 format is used when an archive's member offsets are larger than
     // 32-bits can hold. The need for this shift in format is detected by
@@ -746,10 +754,16 @@ static Error writeArchiveToStream(raw_ostream &Out,
   if (!isAIXBigArchive(Kind)) {
     if (WriteSymtab) {
       if (!HeadersSize)
-        HeadersSize = computeHeadersSize(Kind, NumSyms, SymNamesBuf.size());
+        HeadersSize = computeHeadersSize(Kind, StringTableSize, NumSyms,
+                                         SymNamesBuf.size());
       writeSymbolTable(Out, Kind, Deterministic, Data, SymNamesBuf,
                        *HeadersSize);
     }
+
+    if (StringTableSize)
+      Out << StringTableMember.Header << StringTableMember.Data
+          << StringTableMember.Padding;
+
     for (const MemberData &M : Data)
       Out << M.Header << M.Data << M.Padding;
   } else {
