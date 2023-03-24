@@ -385,7 +385,8 @@ public:
 
 private:
   SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
-      finalizeEntry(llvm::DenseMap<llvm::CachedHashStringRef, int> EntryMap, uint32_t maxSize);
+  finalizeEntry(llvm::DenseMap<llvm::CachedHashStringRef, int> EntryMap,
+                uint32_t maxSize);
   void addEntry(const Symbol &symbol,
                 llvm::DenseMap<llvm::CachedHashStringRef, int> &entriesList,
                 int gain);
