@@ -9,9 +9,12 @@ double RHO = 12;
 double SIGMA = 10;
 double BETA = 8/3;
 
-void solve_lorenz(float x_0, float y_0, float z_0) {
-  float x_1 = 0, y_1 = 0, z_1 = 0;
-  int n = 10;
+#define type double
+#define type_precision_format "%0.15lf"
+
+void solve_lorenz(type x_0, type y_0, type z_0) {
+  type x_1 = 0, y_1 = 0, z_1 = 0;
+  int n = 100;
 
   char command_filename[] = "lorenz_ode_commands.txt";
   FILE *command_unit;
@@ -44,22 +47,22 @@ void solve_lorenz(float x_0, float y_0, float z_0) {
     z_0 = z_1 + (x_1*y_1 - BETA*z_1)*0.005;
   }
 
-  printf("x_0 = %0.7f\n", x_0);
-  printf("y_0 = %0.7f\n", y_0);
-  printf("z_0 = %0.7lf\n\n", z_0);
+  printf("x_0 = "type_precision_format"\n", x_0);
+  printf("y_0 = "type_precision_format"\n", y_0);
+  printf("z_0 = "type_precision_format"\n\n", z_0);
 
   fprintf ( data_unit, "  %d  %14.6g  %14.6g  %14.6g\n",
           2*n, x_0, y_0, z_0 );
 }
 
 int main() {
-  float x_0 = 1.2;
-  float y_0 = 1.3;
-  float z_0 = 1.4;
+  type x_0 = 1.2;
+  type y_0 = 1.3;
+  type z_0 = 1.4;
 //  printf("Enter value of z: ");
 //  scanf("%lf", &z_0);
 
   solve_lorenz(x_0, y_0, z_0);
 
-//  printf("z_1 = %0.7f\n\n", z_1);
+//  printf("z_1 = "type_precision_format"\n\n", z_1);
 }
