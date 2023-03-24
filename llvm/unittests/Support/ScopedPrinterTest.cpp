@@ -572,7 +572,7 @@ TEST_F(ScopedPrinterTest, PrintNumber) {
     W.printNumber("float-42.0", 42.0f);
     W.printNumber("float-42.5625", 42.5625f);
 
-        W.printNumber("double-max", MaxDouble);
+    W.printNumber("double-max", MaxDouble);
     W.printNumber("double-min", MinDouble);
     W.printNumber("double-inf", InfDouble);
     W.printNumber("double-nan", NaNDouble);
@@ -609,6 +609,19 @@ TEST_F(ScopedPrinterTest, PrintNumber) {
 
   format("%5.1f", NaNDouble).snprint(Buf, sizeof(Buf));
   std::string NaNDoubleStr(Buf);
+
+  format("%.*g", InfFloat).snprint(Buf, sizeof(Buf));
+  std::string JsonInfFloatStr(Buf);
+
+  format("%.*g", InfDouble).snprint(Buf, sizeof(Buf));
+  std::string JsonInfDoubleStr(Buf);
+
+  format("%.*g", NaNFloat).snprint(Buf, sizeof(Buf));
+  std::string JsonNaNFloatStr(Buf);
+
+  format("%.*g", NaNDouble).snprint(Buf, sizeof(Buf));
+  std::string JsonNaNDoubleStr(Buf);
+
 
   std::string ExpectedOut = Twine(
                                 R"(uint64_t-max: 18446744073709551615
@@ -669,14 +682,14 @@ double-42.5625:  42.6
   },
   "float-max": 3.4028234663852886e+38,
   "float-min": 1.1754943508222875e-38,
-  "float-inf": )" + std::to_string(InfFloat) + R"(,
-  "float-nan": )" + std::to_string(NaNFloat) + R"(,
+  "float-inf": )" + JsonInfFloatStr + R"(,
+  "float-nan": )" + JsonNaNFloatStr + R"(,
   "float-42.0": 42,
   "float-42.5625": 42.5625,
   "double-max": 1.7976931348623157e+308,
   "double-min": 2.2250738585072014e-308,
-  "double-inf": )" + std::to_string(InfDouble) + R"(,
-  "double-nan": )" + std::to_string(NaNDouble) + R"(,
+  "double-inf": )" + JsonInfDoubleStr + R"(,
+  "double-nan": )" + JsonNaNDoubleStr + R"(,
   "double-42.0": 42,
   "double-42.5625": 42.5625
 })").str();
