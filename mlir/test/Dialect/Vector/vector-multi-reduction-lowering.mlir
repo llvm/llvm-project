@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-vector-multi-reduction-lowering-patterns -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --test-transform-dialect-interpreter | FileCheck %s
 
 func.func @vector_multi_reduction(%arg0: vector<2x4xf32>, %acc: vector<2xf32>) -> vector<2xf32> {
     %0 = vector.multi_reduction <mul>, %arg0, %acc [1] : vector<2x4xf32> to vector<2xf32>
@@ -264,3 +264,10 @@ func.func @vector_multi_reduction_parallel_middle(%arg0: vector<3x4x5xf32>, %acc
 // CHECK-LABEL: func @vector_multi_reduction_parallel_middle
 //  CHECK-SAME:   %[[INPUT:.+]]: vector<3x4x5xf32>, %[[ACC:.+]]: vector<4xf32>
 //       CHECK: vector.transpose %[[INPUT]], [1, 0, 2] : vector<3x4x5xf32> to vector<4x3x5xf32>
+
+transform.sequence failures(propagate) {
+^bb1(%module_op: !pdl.operation):
+  transform.vector.lower_multi_reduction %module_op
+    lowering_strategy = "innerreduction"
+      : (!pdl.operation) -> !pdl.operation
+}

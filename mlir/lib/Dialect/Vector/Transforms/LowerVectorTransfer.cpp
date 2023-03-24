@@ -78,18 +78,20 @@ struct TransferReadPermutationLowering
                                 PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
-      return failure();
+      return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
 
     SmallVector<unsigned> permutation;
     AffineMap map = op.getPermutationMap();
     if (map.getNumResults() == 0)
-      return failure();
-    if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation))
-      return failure();
+      return rewriter.notifyMatchFailure(op, "0 result permutation map");
+    if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation)) {
+      return rewriter.notifyMatchFailure(
+          op, "map is not permutable to minor identity, apply another pattern");
+    }
     AffineMap permutationMap =
         map.getPermutationMap(permutation, op.getContext());
     if (permutationMap.isIdentity())
-      return failure();
+      return rewriter.notifyMatchFailure(op, "map is not identity");
 
     permutationMap = map.getPermutationMap(permutation, op.getContext());
     // Caluclate the map of the new read by applying the inverse permutation.
@@ -148,14 +150,17 @@ struct TransferWritePermutationLowering
                                 PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
-      return failure();
+      return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
 
     SmallVector<unsigned> permutation;
     AffineMap map = op.getPermutationMap();
     if (map.isMinorIdentity())
-      return failure();
-    if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation))
-      return failure();
+      return rewriter.notifyMatchFailure(op, "map is already minor identity");
+
+    if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation)) {
+      return rewriter.notifyMatchFailure(
+          op, "map is not permutable to minor identity, apply another pattern");
+    }
 
     // Remove unused dims from the permutation map. E.g.:
     // E.g.:  (d0, d1, d2, d3, d4, d5) -> (d5, d3, d4)
@@ -209,19 +214,23 @@ struct TransferWriteNonPermutationLowering
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp op,
                                 PatternRewriter &rewriter) const override {
+    // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
-      return failure();
+      return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
+
     SmallVector<unsigned> permutation;
     AffineMap map = op.getPermutationMap();
-    if (map.isPermutationOfMinorIdentityWithBroadcasting(permutation))
-      return failure();
+    if (map.isPermutationOfMinorIdentityWithBroadcasting(permutation)) {
+      return rewriter.notifyMatchFailure(
+          op,
+          "map is already permutable to minor identity, apply another pattern");
+    }
 
     // Missing outer dimensions are allowed, find the most outer existing
     // dimension then deduce the missing inner dimensions.
     SmallVector<bool> foundDim(map.getNumDims(), false);
-    for (AffineExpr exp : map.getResults()) {
+    for (AffineExpr exp : map.getResults())
       foundDim[exp.cast<AffineDimExpr>().getPosition()] = true;
-    }
     SmallVector<AffineExpr> exprs;
     bool foundFirstDim = false;
     SmallVector<int64_t> missingInnerDim;
@@ -274,7 +283,7 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
                                 PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
-      return failure();
+      return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
 
     AffineMap map = op.getPermutationMap();
     unsigned numLeadingBroadcast = 0;
@@ -286,7 +295,8 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
     }
     // If there are no leading zeros in the map there is nothing to do.
     if (numLeadingBroadcast == 0)
-      return failure();
+      return rewriter.notifyMatchFailure(op, "no leading broadcasts in map");
+
     VectorType originalVecType = op.getVectorType();
     unsigned reducedShapeRank = originalVecType.getRank() - numLeadingBroadcast;
     // Calculate new map, vector type and masks without the leading zeros.
@@ -295,8 +305,10 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
         op.getContext());
     // Only remove the leading zeros if the rest of the map is a minor identity
     // with broadasting. Otherwise we first want to permute the map.
-    if (!newMap.isMinorIdentityWithBroadcasting())
-      return failure();
+    if (!newMap.isMinorIdentityWithBroadcasting()) {
+      return rewriter.notifyMatchFailure(
+          op, "map is not a minor identity with broadcasting");
+    }
 
     // TODO: support zero-dimension vectors natively.  See:
     // https://llvm.discourse.group/t/should-we-have-0-d-vectors/3097.
@@ -315,11 +327,13 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
                                                        newRead);
       return success();
     }
+
     SmallVector<int64_t> newShape = llvm::to_vector<4>(
         originalVecType.getShape().take_back(reducedShapeRank));
     // Vector rank cannot be zero. Handled by TransferReadToVectorLoadLowering.
     if (newShape.empty())
-      return failure();
+      return rewriter.notifyMatchFailure(op, "rank-reduced vector is 0-d");
+
     VectorType newReadType =
         VectorType::get(newShape, originalVecType.getElementType());
     ArrayAttr newInBoundsAttr =
@@ -370,8 +384,10 @@ struct TransferReadToVectorLoadLowering
 
   LogicalResult matchAndRewrite(vector::TransferReadOp read,
                                 PatternRewriter &rewriter) const override {
-    if (maxTransferRank && read.getVectorType().getRank() > *maxTransferRank)
-      return failure();
+    if (maxTransferRank && read.getVectorType().getRank() > *maxTransferRank) {
+      return rewriter.notifyMatchFailure(
+          read, "vector type is greater than max transfer rank");
+    }
 
     SmallVector<unsigned> broadcastedDims;
     // Permutations are handled by VectorToSCF or
@@ -379,15 +395,15 @@ struct TransferReadToVectorLoadLowering
     // We let the 0-d corner case pass-through as it is supported.
     if (!read.getPermutationMap().isMinorIdentityWithBroadcasting(
             &broadcastedDims))
-      return failure();
+      return rewriter.notifyMatchFailure(read, "not minor identity + bcast");
 
     auto memRefType = read.getShapedType().dyn_cast<MemRefType>();
     if (!memRefType)
-      return failure();
+      return rewriter.notifyMatchFailure(read, "not a memref source");
 
     // Non-unit strides are handled by VectorToSCF.
     if (!vector::isLastMemrefDimUnitStride(memRefType))
-      return failure();
+      return rewriter.notifyMatchFailure(read, "!= 1 stride needs VectorToSCF");
 
     // If there is broadcasting involved then we first load the unbroadcasted
     // vector, and then broadcast it with `vector.broadcast`.
@@ -403,16 +419,16 @@ struct TransferReadToVectorLoadLowering
     // resulting vector type is the same as the element type.
     auto memrefElTy = memRefType.getElementType();
     if (memrefElTy.isa<VectorType>() && memrefElTy != unbroadcastedVectorType)
-      return failure();
+      return rewriter.notifyMatchFailure(read, "incompatible element type");
 
     // Otherwise, element types of the memref and the vector must match.
     if (!memrefElTy.isa<VectorType>() &&
         memrefElTy != read.getVectorType().getElementType())
-      return failure();
+      return rewriter.notifyMatchFailure(read, "non-matching element type");
 
     // Out-of-bounds dims are handled by MaterializeTransferMask.
     if (read.hasOutOfBoundsDim())
-      return failure();
+      return rewriter.notifyMatchFailure(read, "out-of-bounds needs mask");
 
     // Create vector load op.
     Operation *loadOp;
@@ -458,7 +474,8 @@ struct VectorLoadToMemrefLoadLowering
                                 PatternRewriter &rewriter) const override {
     auto vecType = loadOp.getVectorType();
     if (vecType.getNumElements() != 1)
-      return failure();
+      return rewriter.notifyMatchFailure(loadOp, "not a single element vector");
+
     auto memrefLoad = rewriter.create<memref::LoadOp>(
         loadOp.getLoc(), loadOp.getBase(), loadOp.getIndices());
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(loadOp, vecType,
@@ -476,7 +493,8 @@ struct VectorStoreToMemrefStoreLowering
                                 PatternRewriter &rewriter) const override {
     auto vecType = storeOp.getVectorType();
     if (vecType.getNumElements() != 1)
-      return failure();
+      return rewriter.notifyMatchFailure(storeOp, "not single element vector");
+
     Value extracted;
     if (vecType.getRank() == 0) {
       // TODO: Unifiy once ExtractOp supports 0-d vectors.
@@ -512,10 +530,10 @@ struct TransferWriteToVectorStoreLowering
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp write,
                                 PatternRewriter &rewriter) const override {
-    if (maxTransferRank && write.getVectorType().getRank() > *maxTransferRank)
-      return rewriter.notifyMatchFailure(write.getLoc(), [=](Diagnostic &diag) {
-        diag << "rank exceeds maxTransferRank: " << write;
-      });
+    if (maxTransferRank && write.getVectorType().getRank() > *maxTransferRank) {
+      return rewriter.notifyMatchFailure(
+          write, "vector type is greater than max transfer rank");
+    }
 
     // Permutations are handled by VectorToSCF or
     // populateVectorTransferPermutationMapLoweringPatterns.
