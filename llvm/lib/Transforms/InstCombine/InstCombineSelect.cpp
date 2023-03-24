@@ -3163,6 +3163,134 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   return nullptr;
 }
 
+// Return true if we can safely remove the select instruction for std::bit_ceil
+// pattern.
+static bool isSafeToRemoveBitCeilSelect(ICmpInst::Predicate Pred, Value *Cond0,
+                                        const APInt *Cond1, Value *CtlzOp,
+                                        unsigned BitWidth) {
+  // The challenge in recognizing std::bit_ceil(X) is that the operand is used
+  // for the CTLZ proper and select condition, each possibly with some
+  // operation like add and sub.
+  //
+  // Our aim is to make sure that -ctlz & (BitWidth - 1) == 0 even when the
+  // select instruction would select 1, which allows us to get rid of the select
+  // instruction.
+  //
+  // To see if we can do so, we do some symbolic execution with ConstantRange.
+  // Specifically, we compute the range of values that Cond0 could take when
+  // Cond == false.  Then we successively transform the range until we obtain
+  // the range of values that CtlzOp could take.
+  //
+  // Conceptually, we follow the def-use chain backward from Cond0 while
+  // transforming the range for Cond0 until we meet the common ancestor of Cond0
+  // and CtlzOp.  Then we follow the def-use chain forward until we obtain the
+  // range for CtlzOp.  That said, we only follow at most one ancestor from
+  // Cond0.  Likewise, we only follow at most one ancestor from CtrlOp.
+
+  ConstantRange CR = ConstantRange::makeExactICmpRegion(
+      CmpInst::getInversePredicate(Pred), *Cond1);
+
+  // Match the operation that's used to compute CtlzOp from CommonAncestor.  If
+  // CtlzOp == CommonAncestor, return true as no operation is needed.  If a
+  // match is found, execute the operation on CR, update CR, and return true.
+  // Otherwise, return false.
+  auto MatchForward = [&](Value *CommonAncestor) {
+    const APInt *C = nullptr;
+    if (CtlzOp == CommonAncestor)
+      return true;
+    if (match(CtlzOp, m_Add(m_Specific(CommonAncestor), m_APInt(C)))) {
+      CR = CR.add(*C);
+      return true;
+    }
+    if (match(CtlzOp, m_Sub(m_APInt(C), m_Specific(CommonAncestor)))) {
+      CR = ConstantRange(*C).sub(CR);
+      return true;
+    }
+    if (match(CtlzOp, m_Not(m_Specific(CommonAncestor)))) {
+      CR = CR.binaryNot();
+      return true;
+    }
+    return false;
+  };
+
+  const APInt *C = nullptr;
+  Value *CommonAncestor;
+  if (MatchForward(Cond0)) {
+    // Cond0 is either CtlzOp or CtlzOp's parent.  CR has been updated.
+  } else if (match(Cond0, m_Add(m_Value(CommonAncestor), m_APInt(C)))) {
+    CR = CR.sub(*C);
+    if (!MatchForward(CommonAncestor))
+      return false;
+    // Cond0's parent is either CtlzOp or CtlzOp's parent.  CR has been updated.
+  } else {
+    return false;
+  }
+
+  // Return true if all the values in the range are either 0 or negative (if
+  // treated as signed).  We do so by evaluating:
+  //
+  //   CR - 1 u>= (1 << BitWidth) - 1.
+  APInt IntMax = APInt::getSignMask(BitWidth) - 1;
+  CR = CR.sub(APInt(BitWidth, 1));
+  return CR.icmp(ICmpInst::ICMP_UGE, IntMax);
+}
+
+// Transform the std::bit_ceil(X) pattern like:
+//
+//   %dec = add i32 %x, -1
+//   %ctlz = tail call i32 @llvm.ctlz.i32(i32 %dec, i1 false)
+//   %sub = sub i32 32, %ctlz
+//   %shl = shl i32 1, %sub
+//   %ugt = icmp ugt i32 %x, 1
+//   %sel = select i1 %ugt, i32 %shl, i32 1
+//
+// into:
+//
+//   %dec = add i32 %x, -1
+//   %ctlz = tail call i32 @llvm.ctlz.i32(i32 %dec, i1 false)
+//   %neg = sub i32 0, %ctlz
+//   %masked = and i32 %ctlz, 31
+//   %shl = shl i32 1, %sub
+//
+// Note that the select is optimized away while the shift count is masked with
+// 31.  We handle some variations of the input operand like std::bit_ceil(X +
+// 1).
+static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
+  Type *SelType = SI.getType();
+  unsigned BitWidth = SelType->getScalarSizeInBits();
+
+  Value *FalseVal = SI.getFalseValue();
+  Value *TrueVal = SI.getTrueValue();
+  ICmpInst::Predicate Pred;
+  const APInt *Cond1;
+  Value *Cond0, *Ctlz, *CtlzOp;
+  if (!match(SI.getCondition(), m_ICmp(Pred, m_Value(Cond0), m_APInt(Cond1))))
+    return nullptr;
+
+  if (match(TrueVal, m_One())) {
+    std::swap(FalseVal, TrueVal);
+    Pred = CmpInst::getInversePredicate(Pred);
+  }
+
+  if (!match(FalseVal, m_One()) ||
+      !match(TrueVal,
+             m_OneUse(m_Shl(m_One(), m_OneUse(m_Sub(m_SpecificInt(BitWidth),
+                                                    m_Value(Ctlz)))))) ||
+      !match(Ctlz, m_Intrinsic<Intrinsic::ctlz>(m_Value(CtlzOp), m_Zero())) ||
+      !isSafeToRemoveBitCeilSelect(Pred, Cond0, Cond1, CtlzOp, BitWidth))
+    return nullptr;
+
+  // Build 1 << (-CTLZ & (BitWidth-1)).  The negation likely corresponds to a
+  // single hardware instruction as opposed to BitWidth - CTLZ, where BitWidth
+  // is an integer constant.  Masking with BitWidth-1 comes free on some
+  // hardware as part of the shift instruction.
+  Value *Neg = Builder.CreateNeg(Ctlz);
+  Value *Masked =
+      Builder.CreateAnd(Neg, ConstantInt::get(SelType, BitWidth - 1));
+  return BinaryOperator::Create(Instruction::Shl, ConstantInt::get(SelType, 1),
+                                Masked);
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -3589,6 +3717,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   //   (~x) & y  -->  ~(x | (~y))
   if (sinkNotIntoOtherHandOfLogicalOp(SI))
     return &SI;
+
+  if (Instruction *I = foldBitCeil(SI, Builder))
+    return I;
 
   return nullptr;
 }
