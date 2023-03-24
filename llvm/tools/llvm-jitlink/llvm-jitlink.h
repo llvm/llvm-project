@@ -83,6 +83,8 @@ struct Session {
   StringSet<> HarnessDefinitions;
   DenseMap<StringRef, StringRef> CanonicalWeakDefs;
 
+  std::optional<Regex> ShowGraphsRegex;
+
 private:
   Session(std::unique_ptr<orc::ExecutorProcessControl> EPC, Error &Err);
 };
