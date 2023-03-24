@@ -687,11 +687,12 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerPipelineEarlySimplificationEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
+        PM.addPass(AMDGPUPrintfRuntimeBindingPass());
+
         if (Level == OptimizationLevel::O0)
           return;
 
         PM.addPass(AMDGPUUnifyMetadataPass());
-        PM.addPass(AMDGPUPrintfRuntimeBindingPass());
 
         if (InternalizeSymbols) {
           PM.addPass(InternalizePass(mustPreserveGV));
