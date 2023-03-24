@@ -1066,21 +1066,11 @@ struct PragmaDebugHandler : public PragmaHandler {
         PP.EnterToken(Crasher, /*IsReinject*/ false);
       }
     } else if (II->isStr("dump")) {
-      Token Identifier;
-      PP.LexUnexpandedToken(Identifier);
-      if (auto *DumpII = Identifier.getIdentifierInfo()) {
-        Token DumpAnnot;
-        DumpAnnot.startToken();
-        DumpAnnot.setKind(tok::annot_pragma_dump);
-        DumpAnnot.setAnnotationRange(
-            SourceRange(Tok.getLocation(), Identifier.getLocation()));
-        DumpAnnot.setAnnotationValue(DumpII);
-        PP.DiscardUntilEndOfDirective();
-        PP.EnterToken(DumpAnnot, /*IsReinject*/false);
-      } else {
-        PP.Diag(Identifier, diag::warn_pragma_debug_missing_argument)
-            << II->getName();
-      }
+      Token DumpAnnot;
+      DumpAnnot.startToken();
+      DumpAnnot.setKind(tok::annot_pragma_dump);
+      DumpAnnot.setAnnotationRange(SourceRange(Tok.getLocation()));
+      PP.EnterToken(DumpAnnot, /*IsReinject*/false);
     } else if (II->isStr("diag_mapping")) {
       Token DiagName;
       PP.LexUnexpandedToken(DiagName);

@@ -126,6 +126,7 @@ Non-comprehensive list of changes in this release
   from the invocation point, with no path components included).
 - Clang now supports ``__builtin_assume_separate_storage`` that indicates that
   its arguments point to objects in separate storage allocations.
+- Clang now supports expressions in ``#pragma clang __debug dump``.
 
 New Compiler Flags
 ------------------
