@@ -31,7 +31,7 @@ vsetvli a3, a2, e8, m8, tu, mu
 .Lend:
 
 #--- invalid_arch.s
-# INVALID: string must begin with rv32{i,e,g} or rv64{i,g} 
+# INVALID: string must begin with rv32{i,e,g} or rv64{i,e,g}
 nop
 
 .section .riscv.attributes,"",@0x70000003
