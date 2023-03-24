@@ -100,8 +100,8 @@ public:
   /// EQ bound, the  bound map is expected to have exactly one result. In case
   /// of a LB/UB, the bound map may have more than one result, for each of which
   /// an inequality is added.
-  LogicalResult addBound(BoundType type, unsigned pos, AffineMap boundMap,
-                         ValueRange operands);
+  LogicalResult addBound(presburger::BoundType type, unsigned pos,
+                         AffineMap boundMap, ValueRange operands);
   using FlatLinearValueConstraints::addBound;
 
   /// Add the specified values as a dim or symbol var depending on its nature,
