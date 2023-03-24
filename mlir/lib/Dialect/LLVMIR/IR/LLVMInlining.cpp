@@ -15,6 +15,9 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "llvm-inliner"
 
 using namespace mlir;
 
@@ -134,9 +137,17 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     if (!wouldBeCloned)
       return false;
     auto callOp = dyn_cast<LLVM::CallOp>(call);
-    auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(callable);
-    if (!callOp || !funcOp)
+    if (!callOp) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Cannot inline: call is not an LLVM::CallOp\n");
       return false;
+    }
+    auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(callable);
+    if (!funcOp) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Cannot inline: callable is not an LLVM::LLVMFuncOp\n");
+      return false;
+    }
     if (auto attrs = funcOp.getArgAttrs()) {
       for (Attribute attr : *attrs) {
         auto attrDict = cast<DictionaryAttr>(attr);
@@ -144,16 +155,25 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
           if (attr.getName() == LLVM::LLVMDialect::getByValAttrName())
             continue;
           // TODO: Handle all argument attributes;
+          LLVM_DEBUG(llvm::dbgs() << "Cannot inline " << funcOp.getSymName()
+                                  << ": unhandled argument attribute \""
+                                  << attr.getName() << "\"\n");
           return false;
         }
       }
     }
     // TODO: Handle result attributes;
-    if (funcOp.getResAttrs())
+    if (funcOp.getResAttrs()) {
+      LLVM_DEBUG(llvm::dbgs() << "Cannot inline " << funcOp.getSymName()
+                              << ": unhandled result attribute\n");
       return false;
+    }
     // TODO: Handle exceptions.
-    if (funcOp.getPersonality())
+    if (funcOp.getPersonality()) {
+      LLVM_DEBUG(llvm::dbgs() << "Cannot inline " << funcOp.getSymName()
+                              << ": unhandled function personality\n");
       return false;
+    }
     if (funcOp.getPassthrough()) {
       // TODO: Used attributes should not be passthrough.
       DenseSet<StringAttr> disallowed(
@@ -167,7 +187,14 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
             auto stringAttr = dyn_cast<StringAttr>(attr);
             if (!stringAttr)
               return false;
-            return disallowed.contains(stringAttr);
+            if (disallowed.contains(stringAttr)) {
+              LLVM_DEBUG(llvm::dbgs()
+                         << "Cannot inline " << funcOp.getSymName()
+                         << ": found disallowed function attribute "
+                         << stringAttr << "\n");
+              return true;
+            }
+            return false;
           }))
         return false;
     }
@@ -185,14 +212,28 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     // Some attributes on memory operations require handling during
     // inlining. Since this is not yet implemented, refuse to inline memory
     // operations that have any of these attributes.
-    if (auto iface = dyn_cast<LLVM::AliasAnalysisOpInterface>(op))
-      if (iface.getAliasScopesOrNull() || iface.getNoAliasScopesOrNull())
+    if (auto iface = dyn_cast<LLVM::AliasAnalysisOpInterface>(op)) {
+      if (iface.getAliasScopesOrNull() || iface.getNoAliasScopesOrNull()) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Cannot inline: unhandled alias analysis metadata\n");
         return false;
-    if (auto iface = dyn_cast<LLVM::AccessGroupOpInterface>(op))
-      if (iface.getAccessGroupsOrNull())
+      }
+    }
+    if (auto iface = dyn_cast<LLVM::AccessGroupOpInterface>(op)) {
+      if (iface.getAccessGroupsOrNull()) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Cannot inline: unhandled access group metadata\n");
         return false;
-    return isa<LLVM::CallOp, LLVM::AllocaOp, LLVM::LifetimeStartOp,
-               LLVM::LifetimeEndOp, LLVM::LoadOp, LLVM::StoreOp>(op);
+      }
+    }
+    if (!isa<LLVM::CallOp, LLVM::AllocaOp, LLVM::LifetimeStartOp,
+             LLVM::LifetimeEndOp, LLVM::LoadOp, LLVM::StoreOp>(op)) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Cannot inline: unhandled side effecting operation \""
+                 << op->getName() << "\"\n");
+      return false;
+    }
+    return true;
   }
 
   /// Handle the given inlined return by replacing it with a branch. This

@@ -428,6 +428,36 @@ define i8 @umaxi8(i8 %a, i8 %b) {
   ret i8 %c
 }
 
+define i8 @umaxi8_1(i8 %a) {
+; CHECK-ISEL-LABEL: umaxi8_1:
+; CHECK-ISEL:       // %bb.0:
+; CHECK-ISEL-NEXT:    and w8, w0, #0xff
+; CHECK-ISEL-NEXT:    tst w0, #0xfe
+; CHECK-ISEL-NEXT:    csinc w0, w8, wzr, ne
+; CHECK-ISEL-NEXT:    ret
+;
+; CHECK-ISEL-CSSC-LABEL: umaxi8_1:
+; CHECK-ISEL-CSSC:       // %bb.0:
+; CHECK-ISEL-CSSC-NEXT:    and w8, w0, #0xff
+; CHECK-ISEL-CSSC-NEXT:    umax w0, w8, #1
+; CHECK-ISEL-CSSC-NEXT:    ret
+;
+; CHECK-GLOBAL-LABEL: umaxi8_1:
+; CHECK-GLOBAL:       // %bb.0:
+; CHECK-GLOBAL-NEXT:    and w8, w0, #0xff
+; CHECK-GLOBAL-NEXT:    cmp w8, #1
+; CHECK-GLOBAL-NEXT:    csinc w0, w0, wzr, hi
+; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umaxi8_1:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    and w8, w0, #0xff
+; CHECK-GLOBAL-CSSC-NEXT:    umax w0, w8, #1
+; CHECK-GLOBAL-CSSC-NEXT:    ret
+  %c = call i8 @llvm.umax.i8(i8 %a, i8 1)
+  ret i8 %c
+}
+
 declare i16 @llvm.umax.i16(i16 %a, i16 %b) readnone
 
 define i16 @umaxi16(i16 %a, i16 %b) {
@@ -463,6 +493,36 @@ define i16 @umaxi16(i16 %a, i16 %b) {
   ret i16 %c
 }
 
+define i16 @umaxi16_1(i16 %a) {
+; CHECK-ISEL-LABEL: umaxi16_1:
+; CHECK-ISEL:       // %bb.0:
+; CHECK-ISEL-NEXT:    and w8, w0, #0xffff
+; CHECK-ISEL-NEXT:    tst w0, #0xfffe
+; CHECK-ISEL-NEXT:    csinc w0, w8, wzr, ne
+; CHECK-ISEL-NEXT:    ret
+;
+; CHECK-ISEL-CSSC-LABEL: umaxi16_1:
+; CHECK-ISEL-CSSC:       // %bb.0:
+; CHECK-ISEL-CSSC-NEXT:    and w8, w0, #0xffff
+; CHECK-ISEL-CSSC-NEXT:    umax w0, w8, #1
+; CHECK-ISEL-CSSC-NEXT:    ret
+;
+; CHECK-GLOBAL-LABEL: umaxi16_1:
+; CHECK-GLOBAL:       // %bb.0:
+; CHECK-GLOBAL-NEXT:    and w8, w0, #0xffff
+; CHECK-GLOBAL-NEXT:    cmp w8, #1
+; CHECK-GLOBAL-NEXT:    csinc w0, w0, wzr, hi
+; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umaxi16_1:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    and w8, w0, #0xffff
+; CHECK-GLOBAL-CSSC-NEXT:    umax w0, w8, #1
+; CHECK-GLOBAL-CSSC-NEXT:    ret
+  %c = call i16 @llvm.umax.i16(i16 %a, i16 1)
+  ret i16 %c
+}
+
 declare i32 @llvm.umax.i32(i32 %a, i32 %b) readnone
 
 define i32 @umaxi32(i32 %a, i32 %b) {
@@ -491,6 +551,32 @@ define i32 @umaxi32(i32 %a, i32 %b) {
   ret i32 %c
 }
 
+define i32 @umaxi32_1(i32 %a) {
+; CHECK-ISEL-LABEL: umaxi32_1:
+; CHECK-ISEL:       // %bb.0:
+; CHECK-ISEL-NEXT:    cmp w0, #1
+; CHECK-ISEL-NEXT:    csinc w0, w0, wzr, hi
+; CHECK-ISEL-NEXT:    ret
+;
+; CHECK-ISEL-CSSC-LABEL: umaxi32_1:
+; CHECK-ISEL-CSSC:       // %bb.0:
+; CHECK-ISEL-CSSC-NEXT:    umax w0, w0, #1
+; CHECK-ISEL-CSSC-NEXT:    ret
+;
+; CHECK-GLOBAL-LABEL: umaxi32_1:
+; CHECK-GLOBAL:       // %bb.0:
+; CHECK-GLOBAL-NEXT:    cmp w0, #1
+; CHECK-GLOBAL-NEXT:    csinc w0, w0, wzr, hi
+; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umaxi32_1:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    umax w0, w0, #1
+; CHECK-GLOBAL-CSSC-NEXT:    ret
+  %c = call i32 @llvm.umax.i32(i32 %a, i32 1)
+  ret i32 %c
+}
+
 declare i64 @llvm.umax.i64(i64 %a, i64 %b) readnone
 
 define i64 @umaxi64(i64 %a, i64 %b) {
@@ -516,6 +602,32 @@ define i64 @umaxi64(i64 %a, i64 %b) {
 ; CHECK-GLOBAL-CSSC-NEXT:    umax x0, x0, x1
 ; CHECK-GLOBAL-CSSC-NEXT:    ret
   %c = call i64 @llvm.umax.i64(i64 %a, i64 %b)
+  ret i64 %c
+}
+
+define i64 @umaxi64_1(i64 %a) {
+; CHECK-ISEL-LABEL: umaxi64_1:
+; CHECK-ISEL:       // %bb.0:
+; CHECK-ISEL-NEXT:    cmp x0, #1
+; CHECK-ISEL-NEXT:    csinc x0, x0, xzr, hi
+; CHECK-ISEL-NEXT:    ret
+;
+; CHECK-ISEL-CSSC-LABEL: umaxi64_1:
+; CHECK-ISEL-CSSC:       // %bb.0:
+; CHECK-ISEL-CSSC-NEXT:    umax x0, x0, #1
+; CHECK-ISEL-CSSC-NEXT:    ret
+;
+; CHECK-GLOBAL-LABEL: umaxi64_1:
+; CHECK-GLOBAL:       // %bb.0:
+; CHECK-GLOBAL-NEXT:    cmp x0, #1
+; CHECK-GLOBAL-NEXT:    csinc x0, x0, xzr, hi
+; CHECK-GLOBAL-NEXT:    ret
+;
+; CHECK-GLOBAL-CSSC-LABEL: umaxi64_1:
+; CHECK-GLOBAL-CSSC:       // %bb.0:
+; CHECK-GLOBAL-CSSC-NEXT:    umax x0, x0, #1
+; CHECK-GLOBAL-CSSC-NEXT:    ret
+  %c = call i64 @llvm.umax.i64(i64 %a, i64 1)
   ret i64 %c
 }
 

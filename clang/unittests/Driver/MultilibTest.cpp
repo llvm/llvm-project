@@ -33,14 +33,14 @@ TEST(MultilibTest, OpEqReflexivity2) {
 }
 
 TEST(MultilibTest, OpEqReflexivity3) {
-  Multilib M1({}, {}, {}, 0, {"+foo"});
-  Multilib M2({}, {}, {}, 0, {"+foo"});
+  Multilib M1({}, {}, {}, {"+foo"});
+  Multilib M2({}, {}, {}, {"+foo"});
   ASSERT_TRUE(M1 == M2) << "Multilibs with the same flag should be the same";
 }
 
 TEST(MultilibTest, OpEqInequivalence1) {
-  Multilib M1({}, {}, {}, 0, {"+foo"});
-  Multilib M2({}, {}, {}, 0, {"-foo"});
+  Multilib M1({}, {}, {}, {"+foo"});
+  Multilib M2({}, {}, {}, {"-foo"});
   ASSERT_FALSE(M1 == M2) << "Multilibs with conflicting flags are not the same";
   ASSERT_FALSE(M2 == M1)
       << "Multilibs with conflicting flags are not the same (commuted)";
@@ -48,7 +48,7 @@ TEST(MultilibTest, OpEqInequivalence1) {
 
 TEST(MultilibTest, OpEqInequivalence2) {
   Multilib M1;
-  Multilib M2({}, {}, {}, 0, {"+foo"});
+  Multilib M2({}, {}, {}, {"+foo"});
   ASSERT_FALSE(M1 == M2) << "Flags make Multilibs different";
 }
 
@@ -124,7 +124,7 @@ TEST(MultilibTest, Construction2) {
 }
 
 TEST(MultilibTest, Construction3) {
-  Multilib M({}, {}, {}, 0, {"+f1", "+f2", "-f3"});
+  Multilib M({}, {}, {}, {"+f1", "+f2", "-f3"});
   for (Multilib::flags_list::const_iterator I = M.flags().begin(),
                                             E = M.flags().end();
        I != E; ++I) {
@@ -149,8 +149,8 @@ TEST(MultilibTest, SetPushback) {
 
 TEST(MultilibTest, SetPriority) {
   MultilibSet MS({
-      Multilib("/foo", {}, {}, 1, {"+foo"}),
-      Multilib("/bar", {}, {}, 2, {"+bar"}),
+      Multilib("/foo", {}, {}, {"+foo"}),
+      Multilib("/bar", {}, {}, {"+bar"}),
   });
   Multilib::flags_list Flags1 = {"+foo", "-bar"};
   Multilib Selection1;
@@ -165,4 +165,25 @@ TEST(MultilibTest, SetPriority) {
       << "Flag set was {\"+bar\"}, but selection not found";
   ASSERT_TRUE(Selection2.gccSuffix() == "/bar")
       << "Selection picked " << Selection2 << " which was not expected";
+}
+
+TEST(MultilibTest, SelectMultiple) {
+  MultilibSet MS({
+      Multilib("/a", {}, {}, {"x"}),
+      Multilib("/b", {}, {}, {"y"}),
+  });
+  std::vector<Multilib> Selection;
+
+  Selection = MS.select({"x"});
+  ASSERT_EQ(1u, Selection.size());
+  EXPECT_EQ("/a", Selection[0].gccSuffix());
+
+  Selection = MS.select({"y"});
+  ASSERT_EQ(1u, Selection.size());
+  EXPECT_EQ("/b", Selection[0].gccSuffix());
+
+  Selection = MS.select({"y", "x"});
+  ASSERT_EQ(2u, Selection.size());
+  EXPECT_EQ("/a", Selection[0].gccSuffix());
+  EXPECT_EQ("/b", Selection[1].gccSuffix());
 }

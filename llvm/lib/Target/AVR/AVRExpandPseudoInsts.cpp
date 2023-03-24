@@ -98,6 +98,8 @@ private:
 
   // Common implementation of LPMWRdZ and ELPMWRdZ.
   bool expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsExt);
+  // Common implementation of LPMBRdZ and ELPMBRdZ.
+  bool expandLPMBELPMB(Block &MBB, BlockIt MBBI, bool IsExt);
 };
 
 char AVRExpandPseudo::ID = 0;
@@ -858,28 +860,32 @@ bool AVRExpandPseudo::expand<AVR::ELPMWRdZ>(Block &MBB, BlockIt MBBI) {
   return expandLPMWELPMW(MBB, MBBI, true);
 }
 
-template <>
-bool AVRExpandPseudo::expand<AVR::ELPMBRdZ>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudo::expandLPMBELPMB(Block &MBB, BlockIt MBBI, bool IsExt) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
-  Register BankReg = MI.getOperand(2).getReg();
   bool SrcIsKill = MI.getOperand(1).isKill();
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
+  bool HasX = IsExt ? STI.hasELPMX() : STI.hasLPMX();
 
   // Set the I/O register RAMPZ for ELPM (out RAMPZ, rtmp).
-  buildMI(MBB, MBBI, AVR::OUTARr).addImm(STI.getIORegRAMPZ()).addReg(BankReg);
+  if (IsExt) {
+    Register BankReg = MI.getOperand(2).getReg();
+    buildMI(MBB, MBBI, AVR::OUTARr).addImm(STI.getIORegRAMPZ()).addReg(BankReg);
+  }
 
   // Load byte.
-  if (STI.hasELPMX()) {
-    auto MILB = buildMI(MBB, MBBI, AVR::ELPMRdZ)
+  if (HasX) {
+    unsigned Opc = IsExt ? AVR::ELPMRdZ : AVR::LPMRdZ;
+    auto MILB = buildMI(MBB, MBBI, Opc)
                     .addReg(DstReg, RegState::Define)
                     .addReg(SrcReg, getKillRegState(SrcIsKill));
     MILB.setMemRefs(MI.memoperands());
   } else {
-    // For the basic 'ELPM' instruction, its operand[0] is the implicit
+    // For the basic ELPM/LPM instruction, its operand[0] is the implicit
     // 'Z' register, and its operand[1] is the implicit 'R0' register.
-    auto MILB = buildMI(MBB, MBBI, AVR::ELPM);
+    unsigned Opc = IsExt ? AVR::ELPM : AVR::LPM;
+    auto MILB = buildMI(MBB, MBBI, Opc);
     buildMI(MBB, MBBI, AVR::MOVRdRr)
         .addReg(DstReg, RegState::Define)
         .addReg(AVR::R0, RegState::Kill);
@@ -888,6 +894,16 @@ bool AVRExpandPseudo::expand<AVR::ELPMBRdZ>(Block &MBB, BlockIt MBBI) {
 
   MI.eraseFromParent();
   return true;
+}
+
+template <>
+bool AVRExpandPseudo::expand<AVR::ELPMBRdZ>(Block &MBB, BlockIt MBBI) {
+  return expandLPMBELPMB(MBB, MBBI, true);
+}
+
+template <>
+bool AVRExpandPseudo::expand<AVR::LPMBRdZ>(Block &MBB, BlockIt MBBI) {
+  return expandLPMBELPMB(MBB, MBBI, false);
 }
 
 template <>
@@ -2437,6 +2453,7 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
     EXPAND(AVR::LDWRdPtrPd);
   case AVR::LDDWRdYQ: //: FIXME: remove this once PR13375 gets fixed
     EXPAND(AVR::LDDWRdPtrQ);
+    EXPAND(AVR::LPMBRdZ);
     EXPAND(AVR::LPMWRdZ);
     EXPAND(AVR::LPMWRdZPi);
     EXPAND(AVR::ELPMBRdZ);

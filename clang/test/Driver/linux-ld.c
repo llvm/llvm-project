@@ -1223,11 +1223,6 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-64 %s
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=mips64el-linux-android \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-64 %s
-// RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=i686-linux-android \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
