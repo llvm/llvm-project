@@ -12887,71 +12887,41 @@ bool ARMAsmParser::isMnemonicVPTPredicable(StringRef Mnemonic,
   if (!hasMVE())
     return false;
 
-  return Mnemonic.startswith("vabav") || Mnemonic.startswith("vaddv") ||
-         Mnemonic.startswith("vaddlv") || Mnemonic.startswith("vminnmv") ||
-         Mnemonic.startswith("vminnmav") || Mnemonic.startswith("vminv") ||
-         Mnemonic.startswith("vminav") || Mnemonic.startswith("vmaxnmv") ||
-         Mnemonic.startswith("vmaxnmav") || Mnemonic.startswith("vmaxv") ||
-         Mnemonic.startswith("vmaxav") || Mnemonic.startswith("vmladav") ||
-         Mnemonic.startswith("vrmlaldavh") || Mnemonic.startswith("vrmlalvh") ||
-         Mnemonic.startswith("vmlsdav") || Mnemonic.startswith("vmlav") ||
-         Mnemonic.startswith("vmlaldav") || Mnemonic.startswith("vmlalv") ||
-         Mnemonic.startswith("vmaxnm") || Mnemonic.startswith("vminnm") ||
-         Mnemonic.startswith("vmax") || Mnemonic.startswith("vmin") ||
-         Mnemonic.startswith("vshlc") || Mnemonic.startswith("vmovlt") ||
-         Mnemonic.startswith("vmovlb") || Mnemonic.startswith("vshll") ||
-         Mnemonic.startswith("vrshrn") || Mnemonic.startswith("vshrn") ||
-         Mnemonic.startswith("vqrshrun") || Mnemonic.startswith("vqshrun") ||
-         Mnemonic.startswith("vqrshrn") || Mnemonic.startswith("vqshrn") ||
-         Mnemonic.startswith("vbic") || Mnemonic.startswith("vrev64") ||
-         Mnemonic.startswith("vrev32") || Mnemonic.startswith("vrev16") ||
-         Mnemonic.startswith("vmvn") || Mnemonic.startswith("veor") ||
-         Mnemonic.startswith("vorn") || Mnemonic.startswith("vorr") ||
-         Mnemonic.startswith("vand") || Mnemonic.startswith("vmul") ||
-         Mnemonic.startswith("vqrdmulh") || Mnemonic.startswith("vqdmulh") ||
-         Mnemonic.startswith("vsub") || Mnemonic.startswith("vadd") ||
-         Mnemonic.startswith("vqsub") || Mnemonic.startswith("vqadd") ||
-         Mnemonic.startswith("vabd") || Mnemonic.startswith("vrhadd") ||
-         Mnemonic.startswith("vhsub") || Mnemonic.startswith("vhadd") ||
-         Mnemonic.startswith("vdup") || Mnemonic.startswith("vcls") ||
-         Mnemonic.startswith("vclz") || Mnemonic.startswith("vneg") ||
-         Mnemonic.startswith("vabs") || Mnemonic.startswith("vqneg") ||
-         Mnemonic.startswith("vqabs") ||
-         (Mnemonic.startswith("vrint") && Mnemonic != "vrintr") ||
-         Mnemonic.startswith("vcmla") || Mnemonic.startswith("vfma") ||
-         Mnemonic.startswith("vfms") || Mnemonic.startswith("vcadd") ||
-         Mnemonic.startswith("vadd") || Mnemonic.startswith("vsub") ||
-         Mnemonic.startswith("vshl") || Mnemonic.startswith("vqshl") ||
-         Mnemonic.startswith("vqrshl") || Mnemonic.startswith("vrshl") ||
-         Mnemonic.startswith("vsri") || Mnemonic.startswith("vsli") ||
-         Mnemonic.startswith("vrshr") || Mnemonic.startswith("vshr") ||
-         Mnemonic.startswith("vpsel") || Mnemonic.startswith("vcmp") ||
-         Mnemonic.startswith("vqdmladh") || Mnemonic.startswith("vqrdmladh") ||
-         Mnemonic.startswith("vqdmlsdh") || Mnemonic.startswith("vqrdmlsdh") ||
-         Mnemonic.startswith("vcmul") || Mnemonic.startswith("vrmulh") ||
-         Mnemonic.startswith("vqmovn") || Mnemonic.startswith("vqmovun") ||
-         Mnemonic.startswith("vmovnt") || Mnemonic.startswith("vmovnb") ||
-         Mnemonic.startswith("vmaxa") || Mnemonic.startswith("vmaxnma") ||
-         Mnemonic.startswith("vhcadd") || Mnemonic.startswith("vadc") ||
-         Mnemonic.startswith("vsbc") || Mnemonic.startswith("vrshr") ||
-         Mnemonic.startswith("vshr") || Mnemonic.startswith("vstrb") ||
-         Mnemonic.startswith("vldrb") ||
-         (Mnemonic.startswith("vstrh") && Mnemonic != "vstrhi") ||
-         (Mnemonic.startswith("vldrh") && Mnemonic != "vldrhi") ||
-         Mnemonic.startswith("vstrw") || Mnemonic.startswith("vldrw") ||
-         Mnemonic.startswith("vldrd") || Mnemonic.startswith("vstrd") ||
-         Mnemonic.startswith("vqdmull") || Mnemonic.startswith("vbrsr") ||
-         Mnemonic.startswith("vfmas") || Mnemonic.startswith("vmlas") ||
-         Mnemonic.startswith("vmla") || Mnemonic.startswith("vqdmlash") ||
-         Mnemonic.startswith("vqdmlah") || Mnemonic.startswith("vqrdmlash") ||
-         Mnemonic.startswith("vqrdmlah") || Mnemonic.startswith("viwdup") ||
-         Mnemonic.startswith("vdwdup") || Mnemonic.startswith("vidup") ||
-         Mnemonic.startswith("vddup") || Mnemonic.startswith("vctp") ||
-         Mnemonic.startswith("vpnot") || Mnemonic.startswith("vbic") ||
-         Mnemonic.startswith("vrmlsldavh") || Mnemonic.startswith("vmlsldav") ||
-         Mnemonic.startswith("vcvt") ||
-         MS.isVPTPredicableCDEInstr(Mnemonic) ||
-         (Mnemonic.startswith("vmov") &&
-          !(ExtraToken == ".f16" || ExtraToken == ".32" ||
-            ExtraToken == ".16" || ExtraToken == ".8"));
+  if (MS.isVPTPredicableCDEInstr(Mnemonic) ||
+      (Mnemonic.startswith("vldrh") && Mnemonic != "vldrhi") ||
+      (Mnemonic.startswith("vmov") &&
+       !(ExtraToken == ".f16" || ExtraToken == ".32" || ExtraToken == ".16" ||
+         ExtraToken == ".8")) ||
+      (Mnemonic.startswith("vrint") && Mnemonic != "vrintr") ||
+      (Mnemonic.startswith("vstrh") && Mnemonic != "vstrhi"))
+    return true;
+
+  const char *predicable_prefixes[] = {
+      "vabav",      "vabd",     "vabs",      "vadc",       "vadd",
+      "vaddlv",     "vaddv",    "vand",      "vbic",       "vbrsr",
+      "vcadd",      "vcls",     "vclz",      "vcmla",      "vcmp",
+      "vcmul",      "vctp",     "vcvt",      "vddup",      "vdup",
+      "vdwdup",     "veor",     "vfma",      "vfmas",      "vfms",
+      "vhadd",      "vhcadd",   "vhsub",     "vidup",      "viwdup",
+      "vldrb",      "vldrd",    "vldrw",     "vmax",       "vmaxa",
+      "vmaxav",     "vmaxnm",   "vmaxnma",   "vmaxnmav",   "vmaxnmv",
+      "vmaxv",      "vmin",     "vminav",    "vminnm",     "vminnmav",
+      "vminnmv",    "vminv",    "vmla",      "vmladav",    "vmlaldav",
+      "vmlalv",     "vmlas",    "vmlav",     "vmlsdav",    "vmlsldav",
+      "vmovlb",     "vmovlt",   "vmovnb",    "vmovnt",     "vmul",
+      "vmvn",       "vneg",     "vorn",      "vorr",       "vpnot",
+      "vpsel",      "vqabs",    "vqadd",     "vqdmladh",   "vqdmlah",
+      "vqdmlash",   "vqdmlsdh", "vqdmulh",   "vqdmull",    "vqmovn",
+      "vqmovun",    "vqneg",    "vqrdmladh", "vqrdmlah",   "vqrdmlash",
+      "vqrdmlsdh",  "vqrdmulh", "vqrshl",    "vqrshrn",    "vqrshrun",
+      "vqshl",      "vqshrn",   "vqshrun",   "vqsub",      "vrev16",
+      "vrev32",     "vrev64",   "vrhadd",    "vrmlaldavh", "vrmlalvh",
+      "vrmlsldavh", "vrmulh",   "vrshl",     "vrshr",      "vrshrn",
+      "vsbc",       "vshl",     "vshlc",     "vshll",      "vshr",
+      "vshrn",      "vsli",     "vsri",      "vstrb",      "vstrd",
+      "vstrw",      "vsub"};
+
+  return std::any_of(
+      std::begin(predicable_prefixes), std::end(predicable_prefixes),
+      [&Mnemonic](const char *prefix) { return Mnemonic.startswith(prefix); });
 }
