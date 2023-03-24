@@ -1039,6 +1039,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         break;
 
       assert(Subtarget->hasSSE41() && "Expected SSE4.1 support!");
+      assert(N->getValueType(0).getVectorElementType() != MVT::i16 &&
+             "We can't replace VSELECT with BLENDV in vXi16!");
       SDValue Blendv =
           CurDAG->getNode(X86ISD::BLENDV, SDLoc(N), N->getValueType(0),
                           N->getOperand(0), N->getOperand(1), N->getOperand(2));
