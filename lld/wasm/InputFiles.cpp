@@ -12,6 +12,7 @@
 #include "InputElement.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
+#include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Reproduce.h"
 #include "llvm/Object/Binary.h"
@@ -676,6 +677,48 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &sym, bool isCalledDirectly) {
     llvm_unreachable("section symbols cannot be undefined");
   }
   llvm_unreachable("unknown symbol kind");
+}
+
+
+StringRef strip(StringRef s) {
+  while (s.starts_with(" ")) {
+    s = s.drop_front();
+  }
+  while (s.ends_with(" ")) {
+    s = s.drop_back();
+  }
+  return s;
+}
+
+void StubFile::parse() {
+  bool first = false;
+
+  for (StringRef line : args::getLines(mb)) {
+    // File must begin with #STUB
+    if (first) {
+      assert(line == "#STUB\n");
+      first = false;
+    }
+
+    // Lines starting with # are considered comments
+    if (line.startswith("#"))
+      continue;
+
+    StringRef sym;
+    StringRef rest;
+    std::tie(sym, rest) = line.split(':');
+    sym = strip(sym);
+    rest = strip(rest);
+
+    symbolDependencies[sym] = {};
+
+    while (rest.size()) {
+      StringRef first;
+      std::tie(first, rest) = rest.split(',');
+      first = strip(first);
+      symbolDependencies[sym].push_back(first);
+    }
+  }
 }
 
 void ArchiveFile::parse() {
