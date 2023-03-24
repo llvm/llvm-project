@@ -41,7 +41,7 @@ static constexpr StringLiteral AllStdExts = "mafdqlcbkjtpvnh";
 
 static const RISCVSupportedExtension SupportedExtensions[] = {
     {"i", RISCVExtensionVersion{2, 0}},
-    {"e", RISCVExtensionVersion{1, 9}},
+    {"e", RISCVExtensionVersion{2, 0}},
     {"m", RISCVExtensionVersion{2, 0}},
     {"a", RISCVExtensionVersion{2, 0}},
     {"f", RISCVExtensionVersion{2, 0}},
