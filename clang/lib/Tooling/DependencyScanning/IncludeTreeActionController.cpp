@@ -393,11 +393,14 @@ Error IncludeTreeActionController::finalizeModuleBuild(
 
 Error IncludeTreeActionController::finalizeModuleInvocation(
     CompilerInvocation &CI, const ModuleDeps &MD) {
-  if (auto ID = MD.IncludeTreeID) {
-    configureInvocationForCaching(CI, CASOpts, std::move(*ID),
-                                  /*CASFSWorkingDir=*/"",
-                                  /*ProduceIncludeTree=*/true);
-  }
+  if (!MD.IncludeTreeID)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "missing include-tree for module '%s'",
+                                   MD.ID.ModuleName.c_str());
+
+  configureInvocationForCaching(CI, CASOpts, *MD.IncludeTreeID,
+                                /*CASFSWorkingDir=*/"",
+                                /*ProduceIncludeTree=*/true);
 
   DepscanPrefixMapping::remapInvocationPaths(CI, PrefixMapper);
   return Error::success();
