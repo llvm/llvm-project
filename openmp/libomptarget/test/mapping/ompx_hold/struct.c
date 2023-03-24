@@ -1,11 +1,13 @@
 // RUN: %libomptarget-compile-generic -fopenmp-extensions
 // RUN: %libomptarget-run-generic | %fcheck-generic -strict-whitespace
 
-// Wrong results on amdgpu
-// XFAIL: amdgcn-amd-amdhsa
-
 #include <omp.h>
 #include <stdio.h>
+
+#pragma omp begin declare target
+char *N1, *N2;
+int V1, V2;
+#pragma omp declare target
 
 #define CHECK_PRESENCE(Var1, Var2, Var3)                                       \
   printf("    presence of %s, %s, %s: %d, %d, %d\n", #Var1, #Var2, #Var3,      \
@@ -13,8 +15,21 @@
          omp_target_is_present(&(Var2), omp_get_default_device()),             \
          omp_target_is_present(&(Var3), omp_get_default_device()))
 
+#define CHECK_VALUES_HELPER(N1, N2, Var1, Var2)                                \
+  printf("    values of %s, %s: %d, %d\n", N1, N2, (Var1), (Var2))
+
+#define CHECK_VALUES_DELAYED(Var1, Var2)                                       \
+  N1 = #Var1;                                                                  \
+  N2 = #Var2;                                                                  \
+  V1 = (Var1);                                                                 \
+  V2 = (Var2);
+
+#define CHECK_DELAYED_VALUS()                                                  \
+  _Pragma("omp target update from(N1, N2, V1, V2)")                            \
+      CHECK_VALUES_HELPER(N1, N2, V1, V2)
+
 #define CHECK_VALUES(Var1, Var2)                                               \
-  printf("    values of %s, %s: %d, %d\n", #Var1, #Var2, (Var1), (Var2))
+  CHECK_VALUES_HELPER(#Var1, #Var2, (Var1), (Var2))
 
 int main() {
   struct S {
@@ -132,8 +147,9 @@ int main() {
 #pragma omp target map(to : s.i, s.j)
     { // No transfer here even though parent's DynRefCount=1.
       // CHECK-NEXT: values of s.i, s.j: 21, 31
-      CHECK_VALUES(s.i, s.j);
+      CHECK_VALUES_DELAYED(s.i, s.j);
     }
+    CHECK_DELAYED_VALUS();
   }
   // CHECK-NEXT: presence of s, s.i, s.j: 0, 0, 0
   // CHECK-NEXT: values of s.i, s.j: 21, 31
@@ -162,8 +178,9 @@ int main() {
 #pragma omp target map(ompx_hold, to : s.i, s.j)
     { // No transfer here even though parent's HoldRefCount=1.
       // CHECK-NEXT: values of s.i, s.j: 21, 31
-      CHECK_VALUES(s.i, s.j);
+      CHECK_VALUES_DELAYED(s.i, s.j);
     }
+    CHECK_DELAYED_VALUS();
   }
   // CHECK-NEXT: presence of s, s.i, s.j: 0, 0, 0
   // CHECK-NEXT: values of s.i, s.j: 21, 31
