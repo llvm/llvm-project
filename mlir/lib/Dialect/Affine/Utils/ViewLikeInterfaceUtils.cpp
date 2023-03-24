@@ -8,6 +8,8 @@
 
 #include "mlir/Dialect/Affine/ViewLikeInterfaceUtils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/IR/PatternMatch.h"
 
 using namespace mlir;
 
@@ -73,4 +75,34 @@ LogicalResult mlir::mergeOffsetsSizesAndStrides(
       builder, loc, producerOffsets, producerSizes, producerStrides,
       droppedProducerDims, consumerOffsets, consumerSizes, consumerStrides,
       combinedOffsets, combinedSizes, combinedStrides);
+}
+
+void mlir::resolveSourceIndicesOffsetsAndStrides(
+    RewriterBase &rewriter, Location loc, ArrayRef<OpFoldResult> mixedOffsets,
+    ArrayRef<OpFoldResult> mixedStrides,
+    const llvm::SmallBitVector &rankReducedDims, ValueRange indicesVals,
+    SmallVectorImpl<Value> &sourceIndices) {
+  OpFoldResult zero = rewriter.getIndexAttr(0);
+
+  // For each dimension that is rank-reduced, add a zero to the indices.
+  int64_t indicesDim = 0;
+  SmallVector<OpFoldResult> indices;
+  for (auto dim : llvm::seq<int64_t>(0, mixedOffsets.size())) {
+    OpFoldResult ofr =
+        (rankReducedDims.test(dim)) ? zero : indicesVals[indicesDim++];
+    indices.push_back(ofr);
+  }
+
+  sourceIndices.resize(indices.size());
+  sourceIndices.clear();
+  for (auto [offset, index, stride] :
+       llvm::zip_equal(mixedOffsets, indices, mixedStrides)) {
+    AffineExpr off, idx, str;
+    bindSymbols(rewriter.getContext(), off, idx, str);
+    OpFoldResult ofr = makeComposedFoldedAffineApply(
+        rewriter, loc, AffineMap::get(0, 3, off + idx * str),
+        {offset, index, stride});
+    sourceIndices.push_back(
+        getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
+  }
 }
