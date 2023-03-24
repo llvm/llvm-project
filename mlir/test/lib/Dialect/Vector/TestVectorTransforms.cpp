@@ -22,6 +22,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
@@ -148,8 +149,9 @@ struct TestVectorContractionLowering
     if (lowerToOuterProduct) {
       VectorContractLowering lowering = VectorContractLowering::OuterProduct;
       VectorTransformsOptions options{lowering};
-      patterns.add<ContractionOpToOuterProductOpLowering>(options,
-                                                          &getContext());
+      populateVectorContractLoweringPatterns(
+          patterns, options, /*benefit=*/1,
+          /*disableOuterProductlowering=*/true);
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
       return;
     }
@@ -469,7 +471,7 @@ struct TestVectorTransferFullPartialSplitPatterns
       options.setVectorTransferSplit(VectorTransferSplit::LinalgCopy);
     else
       options.setVectorTransferSplit(VectorTransferSplit::VectorTransfer);
-    patterns.add<VectorTransferFullPartialRewriter>(ctx, options);
+    populateVectorTransferFullPartialPatterns(patterns, options);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
