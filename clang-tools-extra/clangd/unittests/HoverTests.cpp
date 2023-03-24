@@ -2892,50 +2892,50 @@ TEST(Hover, Providers) {
     const char *Code;
     const std::function<void(HoverInfo &)> ExpectedBuilder;
   } Cases[] = {{R"cpp(
-                            struct Foo {};                     
-                            Foo F = Fo^o{};
-                          )cpp",
+                  struct Foo {};                     
+                  Foo F = Fo^o{};
+                )cpp",
                 [](HoverInfo &HI) { HI.Provider = ""; }},
                {R"cpp(
-                            #include "foo.h"                   
-                            Foo F = Fo^o{};
-                          )cpp",
+                  #include "foo.h"                   
+                  Foo F = Fo^o{};
+                )cpp",
                 [](HoverInfo &HI) { HI.Provider = "\"foo.h\""; }},
                {R"cpp(
-                            #include "all.h"  
-                            Foo F = Fo^o{};
-                          )cpp",
+                  #include "all.h"  
+                  Foo F = Fo^o{};
+                )cpp",
                 [](HoverInfo &HI) { HI.Provider = "\"foo.h\""; }},
                {R"cpp(
-                            #define FOO 5
-                            int F = ^FOO;
-                          )cpp",
+                  #define FOO 5
+                  int F = ^FOO;
+                )cpp",
                 [](HoverInfo &HI) { HI.Provider = ""; }},
                {R"cpp(
-                            #include "foo.h"
-                            int F = ^FOO;
-                          )cpp",
+                  #include "foo.h"
+                  int F = ^FOO;
+                )cpp",
                 [](HoverInfo &HI) { HI.Provider = "\"foo.h\""; }},
                {R"cpp(
-                            #include "all.h"
-                            int F = ^FOO;
-                          )cpp",
+                  #include "all.h"
+                  int F = ^FOO;
+                )cpp",
                 [](HoverInfo &HI) { HI.Provider = "\"foo.h\""; }},
                {R"cpp(
-                            #include "foo.h"    
-                            Foo A;
-                            Foo B;
-                            Foo C = A ^+ B;
-                          )cpp",
+                  #include "foo.h"    
+                  Foo A;
+                  Foo B;
+                  Foo C = A ^+ B;
+                )cpp",
                 [](HoverInfo &HI) { HI.Provider = "\"foo.h\""; }},
                // Hover selects the underlying decl of the using decl
                {R"cpp(
-                            #include "foo.h"
-                            namespace ns {
-                              using ::Foo;
-                            }
-                            ns::F^oo d;
-                          )cpp",
+                  #include "foo.h"
+                  namespace ns {
+                    using ::Foo;
+                  }
+                  ns::F^oo d;
+                )cpp",
                 [](HoverInfo &HI) { HI.Provider = "\"foo.h\""; }}};
 
   for (const auto &Case : Cases) {
@@ -2946,10 +2946,10 @@ TEST(Hover, Providers) {
     TU.Filename = "foo.cpp";
     TU.Code = Code.code();
     TU.AdditionalFiles["foo.h"] = guard(R"cpp(
-                                                #define FOO 1
-                                                class Foo {};
-                                                Foo& operator+(const Foo, const Foo);
-                                              )cpp");
+                                          #define FOO 1
+                                          class Foo {};
+                                          Foo& operator+(const Foo, const Foo);
+                                        )cpp");
     TU.AdditionalFiles["all.h"] = guard("#include \"foo.h\"");
 
     auto AST = TU.build();
