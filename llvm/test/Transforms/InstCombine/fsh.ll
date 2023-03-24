@@ -672,8 +672,9 @@ define i32 @fshl_mask_args_same1(i32 %a) {
 
 define i32 @fshl_mask_args_same2(i32 %a) {
 ; CHECK-LABEL: @fshl_mask_args_same2(
-; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[A:%.*]], 8
-; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T1]], 65280
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[A:%.*]] to i16
+; CHECK-NEXT:    [[REV:%.*]] = shl i16 [[TRUNC]], 8
+; CHECK-NEXT:    [[T2:%.*]] = zext i16 [[REV]] to i32
 ; CHECK-NEXT:    ret i32 [[T2]]
 ;
   %t1 = and i32 %a, 255
@@ -683,8 +684,8 @@ define i32 @fshl_mask_args_same2(i32 %a) {
 
 define i32 @fshl_mask_args_same3(i32 %a) {
 ; CHECK-LABEL: @fshl_mask_args_same3(
-; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[A:%.*]], 24
-; CHECK-NEXT:    ret i32 [[T2]]
+; CHECK-NEXT:    [[REV:%.*]] = shl i32 [[A:%.*]], 24
+; CHECK-NEXT:    ret i32 [[REV]]
 ;
   %t1 = and i32 %a, 255
   %t2 = call i32 @llvm.fshl.i32(i32 %t1, i32 %t1, i32 24)

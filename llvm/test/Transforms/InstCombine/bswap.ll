@@ -932,17 +932,7 @@ define i32 @PR50910(i64 %t0) {
 
 define i64 @PR60690_call_fshl(i64 %result) {
 ; CHECK-LABEL: @PR60690_call_fshl(
-; CHECK-NEXT:    [[AND_I:%.*]] = lshr i64 [[RESULT:%.*]], 8
-; CHECK-NEXT:    [[SHR_I:%.*]] = and i64 [[AND_I]], 71777214294589695
-; CHECK-NEXT:    [[AND1_I:%.*]] = shl i64 [[RESULT]], 8
-; CHECK-NEXT:    [[SHL_I:%.*]] = and i64 [[AND1_I]], -71777214294589696
-; CHECK-NEXT:    [[OR_I:%.*]] = or i64 [[SHR_I]], [[SHL_I]]
-; CHECK-NEXT:    [[AND_I7:%.*]] = shl i64 [[OR_I]], 16
-; CHECK-NEXT:    [[SHL_I8:%.*]] = and i64 [[AND_I7]], -281470681808896
-; CHECK-NEXT:    [[AND1_I9:%.*]] = lshr i64 [[OR_I]], 16
-; CHECK-NEXT:    [[SHR_I10:%.*]] = and i64 [[AND1_I9]], 281470681808895
-; CHECK-NEXT:    [[OR_I11:%.*]] = or i64 [[SHL_I8]], [[SHR_I10]]
-; CHECK-NEXT:    [[OR_I12:%.*]] = tail call i64 @llvm.fshl.i64(i64 [[OR_I11]], i64 [[OR_I11]], i64 32)
+; CHECK-NEXT:    [[OR_I12:%.*]] = call i64 @llvm.bswap.i64(i64 [[RESULT:%.*]])
 ; CHECK-NEXT:    ret i64 [[OR_I12]]
 ;
   %and.i = lshr i64 %result, 8
@@ -962,17 +952,7 @@ declare i64 @llvm.fshl.i64(i64, i64, i64)
 
 define i64 @PR60690_call_fshr(i64 %result) {
 ; CHECK-LABEL: @PR60690_call_fshr(
-; CHECK-NEXT:    [[AND_I:%.*]] = lshr i64 [[RESULT:%.*]], 8
-; CHECK-NEXT:    [[SHR_I:%.*]] = and i64 [[AND_I]], 71777214294589695
-; CHECK-NEXT:    [[AND1_I:%.*]] = shl i64 [[RESULT]], 8
-; CHECK-NEXT:    [[SHL_I:%.*]] = and i64 [[AND1_I]], -71777214294589696
-; CHECK-NEXT:    [[OR_I:%.*]] = or i64 [[SHR_I]], [[SHL_I]]
-; CHECK-NEXT:    [[AND_I7:%.*]] = shl i64 [[OR_I]], 16
-; CHECK-NEXT:    [[SHL_I8:%.*]] = and i64 [[AND_I7]], -281470681808896
-; CHECK-NEXT:    [[AND1_I9:%.*]] = lshr i64 [[OR_I]], 16
-; CHECK-NEXT:    [[SHR_I10:%.*]] = and i64 [[AND1_I9]], 281470681808895
-; CHECK-NEXT:    [[OR_I11:%.*]] = or i64 [[SHL_I8]], [[SHR_I10]]
-; CHECK-NEXT:    [[OR_I12:%.*]] = call i64 @llvm.fshl.i64(i64 [[OR_I11]], i64 [[OR_I11]], i64 32)
+; CHECK-NEXT:    [[OR_I12:%.*]] = call i64 @llvm.bswap.i64(i64 [[RESULT:%.*]])
 ; CHECK-NEXT:    ret i64 [[OR_I12]]
 ;
   %and.i = lshr i64 %result, 8
