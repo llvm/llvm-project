@@ -18,33 +18,33 @@ define void @_Z15IntegerToStringjjR7Vector2(i32 %i, i32 %radix, %struct.Vector2*
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds [33 x i16], [33 x i16]* [[BUFFER]], i64 0, i64 33
 ; CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint i16* [[ADD_PTR]] to i64
 ; CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint i16* [[ADD_PTR]] to i64
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr [33 x i16], [33 x i16]* [[BUFFER]], i64 0, i64 32
-; CHECK-NEXT:    [[SCEVGEP45:%.*]] = bitcast i16* [[SCEVGEP4]] to [33 x i16]*
-; CHECK-NEXT:    [[SCEVGEP11:%.*]] = getelementptr [33 x i16], [33 x i16]* [[BUFFER]], i64 1, i64 0
-; CHECK-NEXT:    [[SCEVGEP1112:%.*]] = bitcast i16* [[SCEVGEP11]] to [33 x i16]*
+; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr [33 x i16], [33 x i16]* [[BUFFER]], i64 0, i64 32
+; CHECK-NEXT:    [[SCEVGEP56:%.*]] = bitcast i16* [[SCEVGEP5]] to [33 x i16]*
+; CHECK-NEXT:    [[SCEVGEP12:%.*]] = getelementptr [33 x i16], [33 x i16]* [[BUFFER]], i64 1, i64 0
+; CHECK-NEXT:    [[SCEVGEP1213:%.*]] = bitcast i16* [[SCEVGEP12]] to [33 x i16]*
 ; CHECK-NEXT:    br label [[DO_BODY:%.*]]
 ; CHECK:       do.body:
-; CHECK-NEXT:    [[LSR_IV15:%.*]] = phi i64 [ [[LSR_IV_NEXT16:%.*]], [[DO_BODY]] ], [ -1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV13:%.*]] = phi [33 x i16]* [ [[TMP2:%.*]], [[DO_BODY]] ], [ [[SCEVGEP1112]], [[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV6:%.*]] = phi [33 x i16]* [ [[TMP1:%.*]], [[DO_BODY]] ], [ [[SCEVGEP45]], [[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV16:%.*]] = phi i64 [ [[LSR_IV_NEXT17:%.*]], [[DO_BODY]] ], [ -1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV14:%.*]] = phi [33 x i16]* [ [[TMP2:%.*]], [[DO_BODY]] ], [ [[SCEVGEP1213]], [[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV7:%.*]] = phi [33 x i16]* [ [[TMP1:%.*]], [[DO_BODY]] ], [ [[SCEVGEP56]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[I_ADDR_0:%.*]] = phi i32 [ [[DIV:%.*]], [[DO_BODY]] ], [ [[I:%.*]], [[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV617:%.*]] = bitcast [33 x i16]* [[LSR_IV6]] to i16*
+; CHECK-NEXT:    [[LSR_IV718:%.*]] = bitcast [33 x i16]* [[LSR_IV7]] to i16*
 ; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[I_ADDR_0]], 10
 ; CHECK-NEXT:    [[DIV]] = udiv i32 [[I_ADDR_0]], 10
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[REM]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [37 x i8], [37 x i8]* @.str, i64 0, i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[TMP5]] to i16
-; CHECK-NEXT:    store i16 [[CONV]], i16* [[LSR_IV617]], align 2
+; CHECK-NEXT:    [[INST5:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[INST5]] to i16
+; CHECK-NEXT:    store i16 [[CONV]], i16* [[LSR_IV718]], align 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[I_ADDR_0]], 9
-; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr [33 x i16], [33 x i16]* [[LSR_IV6]], i64 0, i64 -1
-; CHECK-NEXT:    [[TMP1]] = bitcast i16* [[SCEVGEP7]] to [33 x i16]*
-; CHECK-NEXT:    [[SCEVGEP14:%.*]] = getelementptr [33 x i16], [33 x i16]* [[LSR_IV13]], i64 0, i64 -1
-; CHECK-NEXT:    [[TMP2]] = bitcast i16* [[SCEVGEP14]] to [33 x i16]*
-; CHECK-NEXT:    [[LSR_IV_NEXT16]] = add i64 [[LSR_IV15]], 1
+; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr [33 x i16], [33 x i16]* [[LSR_IV7]], i64 0, i64 -1
+; CHECK-NEXT:    [[TMP1]] = bitcast i16* [[SCEVGEP8]] to [33 x i16]*
+; CHECK-NEXT:    [[SCEVGEP15:%.*]] = getelementptr [33 x i16], [33 x i16]* [[LSR_IV14]], i64 0, i64 -1
+; CHECK-NEXT:    [[TMP2]] = bitcast i16* [[SCEVGEP15]] to [33 x i16]*
+; CHECK-NEXT:    [[LSR_IV_NEXT17]] = add i64 [[LSR_IV16]], 1
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[DO_BODY]], label [[DO_END:%.*]]
 ; CHECK:       do.end:
-; CHECK-NEXT:    [[XAP_0:%.*]] = inttoptr i64 [[LSR_IV_NEXT16]] to i1*
+; CHECK-NEXT:    [[XAP_0:%.*]] = inttoptr i64 [[LSR_IV_NEXT17]] to i1*
 ; CHECK-NEXT:    [[CAP_0:%.*]] = ptrtoint i1* [[XAP_0]] to i64
 ; CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]]
 ; CHECK-NEXT:    [[SUB_PTR_DIV39:%.*]] = lshr exact i64 [[SUB_PTR_SUB]], 1
@@ -54,32 +54,32 @@ define void @_Z15IntegerToStringjjR7Vector2(i32 %i, i32 %radix, %struct.Vector2*
 ; CHECK-NEXT:    [[CMP2740:%.*]] = icmp eq i64 [[IDX_EXT21]], 0
 ; CHECK-NEXT:    br i1 [[CMP2740]], label [[FOR_END:%.*]], label [[FOR_BODY_LR_PH:%.*]]
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[TMP16:%.*]] = load i32, i32* [[MLENGTH]], align 4
+; CHECK-NEXT:    [[INST16:%.*]] = load i32, i32* [[MLENGTH]], align 4
 ; CHECK-NEXT:    [[MBEGIN:%.*]] = getelementptr inbounds [[STRUCT_VECTOR2]], %struct.Vector2* [[RESULT]], i64 0, i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = load i16*, i16** [[MBEGIN]], align 8
-; CHECK-NEXT:    [[TMP48:%.*]] = zext i32 [[TMP16]] to i64
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i16, i16* [[TMP14]], i64 [[TMP48]]
+; CHECK-NEXT:    [[INST14:%.*]] = load i16*, i16** [[MBEGIN]], align 8
+; CHECK-NEXT:    [[INST48:%.*]] = zext i32 [[INST16]] to i64
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i16, i16* [[INST14]], i64 [[INST48]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = bitcast i16* [[SCEVGEP]] to i8*
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[LSR_IV8:%.*]] = phi [33 x i16]* [ [[TMP3:%.*]], [[FOR_BODY]] ], [ [[TMP2]], [[FOR_BODY_LR_PH]] ]
+; CHECK-NEXT:    [[LSR_IV9:%.*]] = phi [33 x i16]* [ [[TMP3:%.*]], [[FOR_BODY]] ], [ [[TMP2]], [[FOR_BODY_LR_PH]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_LR_PH]] ]
-; CHECK-NEXT:    [[LSR_IV810:%.*]] = bitcast [33 x i16]* [[LSR_IV8]] to i16*
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[SCEVGEP1]], i64 [[LSR_IV]]
-; CHECK-NEXT:    [[UGLYGEP2:%.*]] = bitcast i8* [[UGLYGEP]] to i16*
-; CHECK-NEXT:    [[TMP29:%.*]] = load i16, i16* [[LSR_IV810]], align 2
-; CHECK-NEXT:    store i16 [[TMP29]], i16* [[UGLYGEP2]], align 2
+; CHECK-NEXT:    [[LSR_IV911:%.*]] = bitcast [33 x i16]* [[LSR_IV9]] to i16*
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, i8* [[SCEVGEP1]], i64 [[LSR_IV]]
+; CHECK-NEXT:    [[SCEVGEP23:%.*]] = bitcast i8* [[SCEVGEP2]] to i16*
+; CHECK-NEXT:    [[INST29:%.*]] = load i16, i16* [[LSR_IV911]], align 2
+; CHECK-NEXT:    store i16 [[INST29]], i16* [[SCEVGEP23]], align 2
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], 2
-; CHECK-NEXT:    [[LSR_IV_NEXT3:%.*]] = inttoptr i64 [[LSR_IV_NEXT]] to i16*
-; CHECK-NEXT:    [[SCEVGEP9:%.*]] = getelementptr [33 x i16], [33 x i16]* [[LSR_IV8]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP3]] = bitcast i16* [[SCEVGEP9]] to [33 x i16]*
-; CHECK-NEXT:    [[CMP27:%.*]] = icmp eq i16* [[LSR_IV_NEXT3]], null
+; CHECK-NEXT:    [[LSR_IV_NEXT4:%.*]] = inttoptr i64 [[LSR_IV_NEXT]] to i16*
+; CHECK-NEXT:    [[SCEVGEP10:%.*]] = getelementptr [33 x i16], [33 x i16]* [[LSR_IV9]], i64 0, i64 1
+; CHECK-NEXT:    [[TMP3]] = bitcast i16* [[SCEVGEP10]] to [33 x i16]*
+; CHECK-NEXT:    [[CMP27:%.*]] = icmp eq i16* [[LSR_IV_NEXT4]], null
 ; CHECK-NEXT:    br i1 [[CMP27]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP38:%.*]] = load i32, i32* [[MLENGTH]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP38]], [[CONV11]]
+; CHECK-NEXT:    [[INST38:%.*]] = load i32, i32* [[MLENGTH]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[INST38]], [[CONV11]]
 ; CHECK-NEXT:    store i32 [[ADD]], i32* [[MLENGTH]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -93,14 +93,14 @@ entry:
 do.body:                                          ; preds = %do.body, %entry
   %0 = phi i64 [ %indvar.next44, %do.body ], [ 0, %entry ]
   %i.addr.0 = phi i32 [ %div, %do.body ], [ %i, %entry ]
-  %tmp51 = sub i64 32, %0
-  %incdec.ptr = getelementptr [33 x i16], [33 x i16]* %buffer, i64 0, i64 %tmp51
+  %inst51 = sub i64 32, %0
+  %incdec.ptr = getelementptr [33 x i16], [33 x i16]* %buffer, i64 0, i64 %inst51
   %rem = urem i32 %i.addr.0, 10
   %div = udiv i32 %i.addr.0, 10
   %idxprom = zext i32 %rem to i64
   %arrayidx = getelementptr inbounds [37 x i8], [37 x i8]* @.str, i64 0, i64 %idxprom
-  %tmp5 = load i8, i8* %arrayidx, align 1
-  %conv = sext i8 %tmp5 to i16
+  %inst5 = load i8, i8* %arrayidx, align 1
+  %conv = sext i8 %inst5 to i16
   store i16 %conv, i16* %incdec.ptr, align 2
   %1 = icmp ugt i32 %i.addr.0, 9
   %indvar.next44 = add i64 %0, 1
@@ -121,22 +121,22 @@ do.end:                                           ; preds = %do.body
   br i1 %cmp2740, label %for.end, label %for.body.lr.ph
 
 for.body.lr.ph:                                   ; preds = %do.end
-  %tmp16 = load i32, i32* %mLength, align 4
+  %inst16 = load i32, i32* %mLength, align 4
   %mBegin = getelementptr inbounds %struct.Vector2, %struct.Vector2* %result, i64 0, i32 0
-  %tmp14 = load i16*, i16** %mBegin, align 8
-  %tmp48 = zext i32 %tmp16 to i64
+  %inst14 = load i16*, i16** %mBegin, align 8
+  %inst48 = zext i32 %inst16 to i64
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
   %indvar = phi i64 [ 0, %for.body.lr.ph ], [ %indvar.next, %for.body ]
-  %tmp46 = add i64 %tmp51, %indvar
-  %p.042 = getelementptr [33 x i16], [33 x i16]* %buffer, i64 0, i64 %tmp46
-  %tmp47 = sub i64 %indvar, %0
-  %incdec.ptr32 = getelementptr [33 x i16], [33 x i16]* %buffer, i64 1, i64 %tmp47
-  %tmp49 = add i64 %tmp48, %indvar
-  %dst.041 = getelementptr i16, i16* %tmp14, i64 %tmp49
-  %tmp29 = load i16, i16* %p.042, align 2
-  store i16 %tmp29, i16* %dst.041, align 2
+  %inst46 = add i64 %inst51, %indvar
+  %p.042 = getelementptr [33 x i16], [33 x i16]* %buffer, i64 0, i64 %inst46
+  %inst47 = sub i64 %indvar, %0
+  %incdec.ptr32 = getelementptr [33 x i16], [33 x i16]* %buffer, i64 1, i64 %inst47
+  %inst49 = add i64 %inst48, %indvar
+  %dst.041 = getelementptr i16, i16* %inst14, i64 %inst49
+  %inst29 = load i16, i16* %p.042, align 2
+  store i16 %inst29, i16* %dst.041, align 2
   %cmp27 = icmp eq i16* %incdec.ptr32, %add.ptr22
   %indvar.next = add i64 %indvar, 1
   br i1 %cmp27, label %for.end.loopexit, label %for.body
@@ -145,8 +145,8 @@ for.end.loopexit:                                 ; preds = %for.body
   br label %for.end
 
 for.end:                                          ; preds = %for.end.loopexit, %do.end
-  %tmp38 = load i32, i32* %mLength, align 4
-  %add = add i32 %tmp38, %conv11
+  %inst38 = load i32, i32* %mLength, align 4
+  %add = add i32 %inst38, %conv11
   store i32 %add, i32* %mLength, align 4
   ret void
 }
