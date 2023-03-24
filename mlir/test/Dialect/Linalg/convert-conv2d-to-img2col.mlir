@@ -37,29 +37,12 @@ transform.sequence failures(propagate) {
 // CHECK: %[[MINDEX:.+]] = linalg.index 1 : index
 // CHECK: %[[KINDEX:.+]] = linalg.index 2 : index
 
-// Unrolled output shape indices.
-// CHECK: %[[C14:.+]] = arith.constant 14 : index
-// CHECK: %[[OWINDEX:.+]] = arith.remui %[[MINDEX]], %[[C14]] : index
-// CHECK: %[[C14_1:.+]] = arith.constant 14 : index
-// CHECK: %[[OHINDEX:.+]] = arith.divui %[[MINDEX]], %[[C14_1]] : index
+// Compute input channel/convolved indices.
+// CHECK: %[[ICINDEX:.+]] = affine.apply affine_map<(d0) -> (d0 mod 4)>(%[[KINDEX]])
+// CHECK: %[[CONVH:.+]] = affine.apply affine_map<(d0, d1) -> (d0 floordiv 14 + d1 floordiv 12)>(%[[MINDEX]], %[[KINDEX]])
+// CHECK: %[[CONVW:.+]] = affine.apply affine_map<(d0, d1) -> (d0 mod 14 + (d1 mod 12) floordiv 4)>(%[[MINDEX]], %[[KINDEX]])
 
-// Unrolled filter shape indices.
-// CHECK: %[[C4:.+]] = arith.constant 4 : index
-// CHECK: %[[ICINDEX:.+]] = arith.remui %[[KINDEX]], %[[C4]] : index
-// CHECK: %[[C12:.+]] = arith.constant 12 : index
-// CHECK: %[[FWREM:.+]] = arith.remui %[[KINDEX]], %[[C12]] : index
-// CHECK: %[[C4_2:.+]] = arith.constant 4 : index
-// CHECK: %[[FWINDEX:.+]] = arith.divui %[[FWREM]], %[[C4_2]] : index
-// CHECK: %[[C12_3:.+]] = arith.constant 12 : index
-// CHECK: %[[FHINDEX:.+]] = arith.divui %[[KINDEX]], %[[C12_3]] : index
-
-// Compute input indices.
-// CHECK: %[[SH:.+]] = arith.constant 1 : index
-// CHECK: %[[STRIDEDOH:.+]] = arith.muli %[[OHINDEX]], %[[SH]] : index
-// CHECK: %[[CONVH:.+]] = arith.addi %[[STRIDEDOH]], %[[FHINDEX]] : index
-// CHECK: %[[SW:.+]] = arith.constant 1 : index
-// CHECK: %[[STRIDEDOW:.+]] = arith.muli %[[OWINDEX]], %[[SW]] : index
-// CHECK: %[[CONVW:.+]] = arith.addi %[[STRIDEDOW]], %[[FWINDEX]] : index
+// Extract from the input tensor.
 // CHECK: %[[EXTRACTED_INPUT:.+]] = tensor.extract
 // CHECK-SAME: %{{.+}}{{\[}}%[[BINDEX]], %[[CONVH]], %[[CONVW]], %[[ICINDEX]]] : tensor<1x16x16x4xf32>
 // CHECK: linalg.yield %[[EXTRACTED_INPUT]] : f32
@@ -234,6 +217,13 @@ transform.sequence failures(propagate) {
 // -----
 
 //  CHECK-DAG: #[[MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+
+//  Im2col maps
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0) -> (d0 floordiv 9)>
+//  CHECK-DAG: #[[MAP7:.+]] = affine_map<(d0, d1) -> (d0 floordiv 14 + (d1 mod 9) floordiv 3)>
+//  CHECK-DAG: #[[MAP8:.+]] = affine_map<(d0, d1) -> (d0 + d1 - (d0 floordiv 14) * 14 - (d1 floordiv 3) * 3)>
+
+
 //  CHECK-DAG: #[[LHSMAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d3)>
 //  CHECK-DAG: #[[RHSMAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
 //  CHECK-DAG: #[[RESMAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
@@ -252,29 +242,12 @@ transform.sequence failures(propagate) {
 //      CHECK:       %[[KINDEX:.+]] = linalg.index 1 : index
 //      CHECK:       %[[NINDEX:.+]] = linalg.index 2 : index
 
-//      Unrolled filter shape indices.
-//      CHECK:       %[[C3:.+]] = arith.constant 3 : index
-//      CHECK:       %[[FWINDEX:.+]] = arith.remui %[[KINDEX]], %[[C3]] : index
-//      CHECK:       %[[C9:.+]] = arith.constant 9 : index
-//      CHECK:       %[[FHREM:.+]] = arith.remui %[[KINDEX]], %[[C9]] : index
-//      CHECK:       %[[C3_1:.+]] = arith.constant 3 : index
-//      CHECK:       %[[FHINDEX:.+]] = arith.divui %[[FHREM]], %[[C3_1]] : index
-//      CHECK:       %[[C9_2:.+]] = arith.constant 9 : index
-//      CHECK:       %[[ICINDEX:.+]] = arith.divui %[[KINDEX]], %[[C9_2]] : index
+//      Compute input channel/convolved indices.
+//      CHECK:       %[[ICINDEX:.+]] = affine.apply #[[MAP1]](%[[KINDEX]])
+//      CHECK:       %[[CONVH:.+]] = affine.apply #[[MAP7]](%[[NINDEX]], %[[KINDEX]])
+//      CHECK:       %[[CONVW:.+]] = affine.apply #[[MAP8]](%[[NINDEX]], %[[KINDEX]])
 
-//      Unrolled output shape indices.
-//      CHECK:       %[[C14:.+]] = arith.constant 14 : index
-//      CHECK:       %[[OWINDEX:.+]] = arith.remui %[[NINDEX]], %[[C14]] : index
-//      CHECK:       %[[C14_3:.+]] = arith.constant 14 : index
-//      CHECK:       %[[OHINDEX:.+]] = arith.divui %[[NINDEX]], %[[C14_3]] : index
-
-//      Compute input indices.
-//      CHECK:       %[[SH:.+]] = arith.constant 1 : index
-//      CHECK:       %[[STRIDEDOH:.+]] = arith.muli %[[OHINDEX]], %[[SH]] : index
-//      CHECK:       %[[CONVH:.+]] = arith.addi %[[STRIDEDOH]], %[[FHINDEX]] : index
-//      CHECK:       %[[SW:.+]] = arith.constant 1 : index
-//      CHECK:       %[[STRIDEDOW:.+]] = arith.muli %[[OWINDEX]], %[[SW]] : index
-//      CHECK:       %[[CONVW:.+]] = arith.addi %[[STRIDEDOW]], %[[FWINDEX]] : index
+//      Extract from the input tensor.
 //      CHECK:       %[[EXTRACTED_INPUT:.+]] = tensor.extract
 //      CHECK-SAME:  %[[INPUT]]{{\[}}%[[BINDEX]], %[[ICINDEX]], %[[CONVH]], %[[CONVW]]] : tensor<8x4x16x16xf32>
 //      CHECK: linalg.yield %[[EXTRACTED_INPUT]] : f32
