@@ -228,7 +228,7 @@ struct RcOptions {
   unsigned LangId = (/*PrimaryLangId*/ 0x09) | (/*SubLangId*/ 0x01 << 10);
 };
 
-bool preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
+void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
                 const char *Argv0) {
   std::string Clang;
   if (Opts.PrintCmdAndExit || !Opts.PreprocessCmd.empty()) {
@@ -238,15 +238,12 @@ bool preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
     if (ClangOrErr) {
       Clang = *ClangOrErr;
     } else {
-      errs() << "llvm-rc: Unable to find clang, skipping preprocessing."
+      errs() << "llvm-rc: Unable to find clang for preprocessing."
              << "\n";
       StringRef OptionName =
           Opts.IsWindres ? "--no-preprocess" : "-no-preprocess";
-      errs()
-          << "Pass " << OptionName
-          << " to disable preprocessing. This will be an error in the future."
-          << "\n";
-      return false;
+      errs() << "Pass " << OptionName << " to disable preprocessing.\n";
+      fatalError("llvm-rc: Unable to preprocess.");
     }
   }
 
@@ -278,7 +275,6 @@ bool preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
   if (Res) {
     fatalError("llvm-rc: Preprocessing failed.");
   }
-  return true;
 }
 
 static std::pair<bool, std::string> isWindres(llvm::StringRef Argv0) {
@@ -612,8 +608,8 @@ void doRc(std::string Src, std::string Dest, RcOptions &Opts,
   if (Opts.Preprocess) {
     std::string OutFile = createTempFile("preproc", "rc");
     TempPreprocFile.setFile(OutFile);
-    if (preprocess(Src, OutFile, Opts, Argv0))
-      PreprocessedFile = OutFile;
+    preprocess(Src, OutFile, Opts, Argv0);
+    PreprocessedFile = OutFile;
   }
 
   // Read and tokenize the input file.
