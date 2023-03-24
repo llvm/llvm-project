@@ -170,6 +170,13 @@ MODULE_PASS_WITH_PARAMS("ipsccp",
                         },
                         parseIPSCCPOptions,
                         "no-func-spec;func-spec")
+MODULE_PASS_WITH_PARAMS("embed-bitcode",
+                         "EmbedBitcodePass",
+                        [](EmbedBitcodeOptions Opts) {
+                          return EmbedBitcodePass(Opts);
+                        },
+                        parseEmbedBitcodePassOptions,
+                        "thinlto;emit-summary")
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS
