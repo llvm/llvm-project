@@ -29,36 +29,71 @@ transform.sequence failures(propagate) {
 
 // CHECK: IR printer: tensor_producer
 // CHECK-NEXT: %[[COL_TENSOR:.+]] = linalg.generic
-// CHECK-SAME: affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d3, d2 + d4, d5)>,
-// CHECK-SAME: affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3, d4, d5)>]
-// CHECK: ^bb0(%[[IN_DATA:.+]]: f32, %[[OUT_DATA:.+]]: f32)
-// CHECK: linalg.yield %[[IN_DATA]] : f32
+// CHECK-SAME: affine_map<(d0, d1, d2) -> (d0, d1, d2)>]
+// CHECK: ^bb0(%[[OUT_DATA:.+]]: f32)
+
+// Collapsed indices.
+// CHECK: %[[BINDEX:.+]] = linalg.index 0 : index
+// CHECK: %[[MINDEX:.+]] = linalg.index 1 : index
+// CHECK: %[[KINDEX:.+]] = linalg.index 2 : index
+
+// Unrolled output shape indices.
+// CHECK: %[[C14:.+]] = arith.constant 14 : index
+// CHECK: %[[OWINDEX:.+]] = arith.remui %[[MINDEX]], %[[C14]] : index
+// CHECK: %[[C14_1:.+]] = arith.constant 14 : index
+// CHECK: %[[OHINDEX:.+]] = arith.divui %[[MINDEX]], %[[C14_1]] : index
+
+// Unrolled filter shape indices.
+// CHECK: %[[C4:.+]] = arith.constant 4 : index
+// CHECK: %[[ICINDEX:.+]] = arith.remui %[[KINDEX]], %[[C4]] : index
+// CHECK: %[[C12:.+]] = arith.constant 12 : index
+// CHECK: %[[FWREM:.+]] = arith.remui %[[KINDEX]], %[[C12]] : index
+// CHECK: %[[C4_2:.+]] = arith.constant 4 : index
+// CHECK: %[[FWINDEX:.+]] = arith.divui %[[FWREM]], %[[C4_2]] : index
+// CHECK: %[[C12_3:.+]] = arith.constant 12 : index
+// CHECK: %[[FHINDEX:.+]] = arith.divui %[[KINDEX]], %[[C12_3]] : index
+
+// Compute input indices.
+// CHECK: %[[SH:.+]] = arith.constant 1 : index
+// CHECK: %[[STRIDEDOH:.+]] = arith.muli %[[OHINDEX]], %[[SH]] : index
+// CHECK: %[[CONVH:.+]] = arith.addi %[[STRIDEDOH]], %[[FHINDEX]] : index
+// CHECK: %[[SW:.+]] = arith.constant 1 : index
+// CHECK: %[[STRIDEDOW:.+]] = arith.muli %[[OWINDEX]], %[[SW]] : index
+// CHECK: %[[CONVW:.+]] = arith.addi %[[STRIDEDOW]], %[[FWINDEX]] : index
+// CHECK: %[[EXTRACTED_INPUT:.+]] = tensor.extract
+// CHECK-SAME: %{{.+}}{{\[}}%[[BINDEX]], %[[CONVH]], %[[CONVW]], %[[ICINDEX]]] : tensor<1x16x16x4xf32>
+// CHECK: linalg.yield %[[EXTRACTED_INPUT]] : f32
 
 // CHECK: IR printer: transformed
-// CHECK: tensor.expand_shape %{{[^ ]*}} {{\[}}[0, 1, 2], [3]] : tensor<196x16xf32> into tensor<1x14x14x16xf32>
+// CHECK: tensor.expand_shape %{{[^ ]*}} {{\[}}[0], [1, 2], [3]] : tensor<1x196x16xf32> into tensor<1x14x14x16xf32>
 
-// CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d3, d2 + d4, d5)>
-// CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3, d4, d5)>
+// CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+// CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
 //      CHECK: @conv_16433136
-//      CHECK: %[[INPUT:.+]]: tensor<1x16x16x4xf32>
-//      CHECK: %[[FILTER:.+]]: tensor<3x3x4x16xf32>
-//      CHECK: %[[OUTPUT:.+]]: tensor<1x14x14x16xf32>
-//      CHECK: %[[INIT_COL_TENSOR:.+]] = tensor.empty() : tensor<1x14x14x3x3x4xf32>
+//      CHECK-SAME: %[[INPUT:.+]]: tensor<1x16x16x4xf32>
+//      CHECK-SAME: %[[FILTER:.+]]: tensor<3x3x4x16xf32>
+//      CHECK-SAME: %[[OUTPUT:.+]]: tensor<1x14x14x16xf32>
+//  CHECK-DAG: %[[COLLAPSED_FILTER:.+]] = tensor.collapse_shape %[[FILTER]] {{\[}}[0, 1, 2], [3]] : tensor<3x3x4x16xf32> into tensor<36x16xf32>
+//  CHECK-DAG: %[[COLLAPSED_OUT:.+]] = tensor.collapse_shape %[[OUTPUT]] {{\[}}[0], [1, 2], [3]] : tensor<1x14x14x16xf32> into tensor<1x196x16xf32>
+//      CHECK: %[[INIT_COL_TENSOR:.+]] = tensor.empty() : tensor<1x196x36xf32>
 //      CHECK: %[[COL_TENSOR:.+]] = linalg.generic
 //           CHECK-SAME: #[[MAP0]]
+//                CHECK: ^bb0(%[[OUT_DATA:.+]]: f32)
+//                CHECK: linalg.yield %{{.+}} : f32
+//      CHECK: %[[MATMUL_RESULT:.+]] = linalg.generic
 //           CHECK-SAME: #[[MAP1]]
-//                CHECK: ^bb0(%[[IN_DATA:.+]]: f32, %[[OUT_DATA:.+]]: f32)
-//                CHECK: linalg.yield %[[IN_DATA]] : f32
-//      CHECK-DAG: %[[RESHAPED_INIT_COL_TENSOR:.+]] = tensor.collapse_shape %[[COL_TENSOR]]
-//           CHECK-SAME: [0, 1, 2], [3, 4, 5]
-//           CHECK-SAME: tensor<1x14x14x3x3x4xf32> into tensor<196x36xf32>
-//      CHECK-DAG: %[[RESHAPED_FILTER:.+]] = tensor.collapse_shape %[[FILTER]]
-//           CHECK-SAME: [0, 1, 2], [3]
-//           CHECK-SAME: tensor<3x3x4x16xf32> into tensor<36x16xf32>
-//      CHECK-DAG: %[[RESHAPED_OUTPUT:.+]] = tensor.collapse_shape %[[OUTPUT]]
-//           CHECK-SAME: [0, 1, 2], [3]
-//      CHECK: %[[MATMUL_RESULT:.+]] = linalg.matmul ins(%[[RESHAPED_INIT_COL_TENSOR]], %[[RESHAPED_FILTER]] : tensor<196x36xf32>, tensor<36x16xf32>) outs(%[[RESHAPED_OUTPUT]] : tensor<196x16xf32>)
-//      CHECK: %[[RESULT:.+]] = tensor.expand_shape %[[MATMUL_RESULT]] {{\[}}[0, 1, 2], [3]] : tensor<196x16xf32> into tensor<1x14x14x16xf32>
+//           CHECK-SAME: #[[MAP2]]
+//           CHECK-SAME: #[[MAP3]]
+//           CHECK-SAME: ins(%[[COL_TENSOR]], %[[COLLAPSED_FILTER]] : tensor<1x196x36xf32>, tensor<36x16xf32>)
+//           CHECK-SAME: outs(%[[COLLAPSED_OUT]] : tensor<1x196x16xf32>)
+//                CHECK: ^bb0(%[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32, %[[ARG2:.+]]: f32)
+//                CHECK:     %[[MUL:.+]] = arith.mulf %[[ARG0]], %[[ARG1]] : f32
+//                CHECK:     %[[ADD:.+]] = arith.addf %[[MUL]], %[[ARG2]] : f32
+//                CHECK:     linalg.yield %[[ADD]] : f32
+//                CHECK: } -> tensor<1x196x16xf32>
+//      CHECK: %[[RESULT:.+]] = tensor.expand_shape %[[MATMUL_RESULT]] {{\[}}[0], [1, 2], [3]] : tensor<1x196x16xf32> into tensor<1x14x14x16xf32>
 //      CHECK: return %[[RESULT]]
 
 func.func @conv_16433136(%arg0: tensor<1x16x16x4xf32>, %arg1: tensor<3x3x4x16xf32>, %arg2: tensor<1x14x14x16xf32>) -> tensor<1x14x14x16xf32> {
@@ -156,27 +191,24 @@ transform.sequence failures(propagate) {
 
 // -----
 
-//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d3, d2 + d4, d5)>
-//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3, d4, d5)>
+//  CHECK-DAG: #[[MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 //  CHECK-DAG: #[[LHSMAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
 //  CHECK-DAG: #[[RHSMAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
 //  CHECK-DAG: #[[RESMAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
 
 //      CHECK: func.func @batch_nhwc_conv
 // CHECK-SAME: (%[[INPUT:.+]]: tensor<8x16x16x4xf32>, %[[FILTER:.+]]: tensor<3x3x4x16xf32>, %[[INIT:.+]]: tensor<8x14x14x16xf32>)
-//      CHECK:   %[[IT:.+]] = tensor.empty() : tensor<8x14x14x3x3x4xf32>
+//  CHECK-DAG:   %[[CS_FILTER:.+]] = tensor.collapse_shape %[[FILTER]] {{\[}}[0, 1, 2], [3]] : tensor<3x3x4x16xf32> into tensor<36x16xf32>
+//  CHECK-DAG:   %[[CS_RESULT:.+]] = tensor.collapse_shape %[[INIT]] {{\[}}[0], [1, 2], [3]] : tensor<8x14x14x16xf32> into tensor<8x196x16xf32>
+//      CHECK:   %[[IT:.+]] = tensor.empty() : tensor<8x196x36xf32>
 //      CHECK:   %[[IMG2COL:.+]] = linalg.generic
-// CHECK-SAME:      indexing_maps = [#[[MAP0]], #[[MAP1]]]
-// CHECK-SAME:      iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel"]
-// CHECK-SAME:   ins(%[[INPUT]] : tensor<8x16x16x4xf32>)
-// CHECK-SAME:   outs(%[[IT]] : tensor<8x14x14x3x3x4xf32>)
-//      CHECK:   %[[CS_INPUT:.+]] = tensor.collapse_shape %[[IMG2COL]] {{\[}}[0], [1, 2], [3, 4, 5]] : tensor<8x14x14x3x3x4xf32> into tensor<8x196x36xf32>
-//      CHECK:   %[[CS_FILTER:.+]] = tensor.collapse_shape %[[FILTER]] {{\[}}[0, 1, 2], [3]] : tensor<3x3x4x16xf32> into tensor<36x16xf32>
-//      CHECK:   %[[CS_RESULT:.+]] = tensor.collapse_shape %[[INIT]] {{\[}}[0], [1, 2], [3]] : tensor<8x14x14x16xf32> into tensor<8x196x16xf32>
+// CHECK-SAME:      indexing_maps = [#[[MAP]]]
+// CHECK-SAME:      iterator_types = ["parallel", "parallel", "parallel"]
+// CHECK-SAME:   outs(%[[IT]] : tensor<8x196x36xf32>)
 //      CHECK:   %[[MATMUL:.+]] = linalg.generic
 // CHECK-SAME:      indexing_maps = [#[[LHSMAP]], #[[RHSMAP]], #[[RESMAP]]],
 // CHECK-SAME:      iterator_types = ["parallel", "parallel", "parallel", "reduction"]
-// CHECK-SAME:   ins(%[[CS_INPUT]], %[[CS_FILTER]] : tensor<8x196x36xf32>, tensor<36x16xf32>)
+// CHECK-SAME:   ins(%[[IMG2COL]], %[[CS_FILTER]] : tensor<8x196x36xf32>, tensor<36x16xf32>)
 // CHECK-SAME:   outs(%[[CS_RESULT]] : tensor<8x196x16xf32>)
 //      CHECK:   ^bb0(%[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32, %[[ARG2:.+]]: f32):
 //      CHECK:     %[[MUL:.+]] = arith.mulf %[[ARG0]], %[[ARG1]] : f32
@@ -201,27 +233,55 @@ transform.sequence failures(propagate) {
 
 // -----
 
-//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d4 + d2, d5 + d3)>
-//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3, d4, d5)>
+//  CHECK-DAG: #[[MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 //  CHECK-DAG: #[[LHSMAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d3)>
 //  CHECK-DAG: #[[RHSMAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
 //  CHECK-DAG: #[[RESMAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
 
 //      CHECK: func.func @batch_nchw_conv
 // CHECK-SAME: (%[[INPUT:.+]]: tensor<8x4x16x16xf32>, %[[FILTER:.+]]: tensor<16x4x3x3xf32>, %[[INIT:.+]]: tensor<8x16x14x14xf32>)
-//      CHECK:   %[[IT:.+]] = tensor.empty() : tensor<8x4x3x3x14x14xf32>
+//  CHECK-DAG:   %[[CS_FILTER:.+]] = tensor.collapse_shape %[[FILTER]] {{\[}}[0], [1, 2, 3]] : tensor<16x4x3x3xf32> into tensor<16x36xf32>
+//  CHECK-DAG:   %[[CS_RESULT:.+]] = tensor.collapse_shape %[[INIT]] {{\[}}[0], [1], [2, 3]] : tensor<8x16x14x14xf32> into tensor<8x16x196xf32>
+//      CHECK:   %[[IT:.+]] = tensor.empty() : tensor<8x36x196xf32>
 //      CHECK:   %[[IMG2COL:.+]] = linalg.generic
-// CHECK-SAME:      indexing_maps = [#[[MAP0]], #[[MAP1]]]
-// CHECK-SAME:      iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel"]
-// CHECK-SAME:   ins(%[[INPUT]] : tensor<8x4x16x16xf32>)
-// CHECK-SAME:   outs(%[[IT]] : tensor<8x4x3x3x14x14xf32>)
-//      CHECK:   %[[CS_FILTER:.+]] = tensor.collapse_shape %[[FILTER]] {{\[}}[0], [1, 2, 3]] : tensor<16x4x3x3xf32> into tensor<16x36xf32>
-//      CHECK:   %[[CS_INPUT:.+]] = tensor.collapse_shape %[[IMG2COL]] {{\[}}[0], [1, 2, 3], [4, 5]] : tensor<8x4x3x3x14x14xf32> into tensor<8x36x196xf32>
-//      CHECK:   %[[CS_RESULT:.+]] = tensor.collapse_shape %[[INIT]] {{\[}}[0], [1], [2, 3]] : tensor<8x16x14x14xf32> into tensor<8x16x196xf32>
+// CHECK-SAME:      indexing_maps = [#[[MAP]]]
+// CHECK-SAME:      iterator_types = ["parallel", "parallel", "parallel"]
+// CHECK-SAME:   outs(%[[IT]] : tensor<8x36x196xf32>)
+//      Collapsed indices.
+//      CHECK:       %[[BINDEX:.+]] = linalg.index 0 : index
+//      CHECK:       %[[KINDEX:.+]] = linalg.index 1 : index
+//      CHECK:       %[[NINDEX:.+]] = linalg.index 2 : index
+
+//      Unrolled filter shape indices.
+//      CHECK:       %[[C3:.+]] = arith.constant 3 : index
+//      CHECK:       %[[FWINDEX:.+]] = arith.remui %[[KINDEX]], %[[C3]] : index
+//      CHECK:       %[[C9:.+]] = arith.constant 9 : index
+//      CHECK:       %[[FHREM:.+]] = arith.remui %[[KINDEX]], %[[C9]] : index
+//      CHECK:       %[[C3_1:.+]] = arith.constant 3 : index
+//      CHECK:       %[[FHINDEX:.+]] = arith.divui %[[FHREM]], %[[C3_1]] : index
+//      CHECK:       %[[C9_2:.+]] = arith.constant 9 : index
+//      CHECK:       %[[ICINDEX:.+]] = arith.divui %[[KINDEX]], %[[C9_2]] : index
+
+//      Unrolled output shape indices.
+//      CHECK:       %[[C14:.+]] = arith.constant 14 : index
+//      CHECK:       %[[OWINDEX:.+]] = arith.remui %[[NINDEX]], %[[C14]] : index
+//      CHECK:       %[[C14_3:.+]] = arith.constant 14 : index
+//      CHECK:       %[[OHINDEX:.+]] = arith.divui %[[NINDEX]], %[[C14_3]] : index
+
+//      Compute input indices.
+//      CHECK:       %[[SH:.+]] = arith.constant 1 : index
+//      CHECK:       %[[STRIDEDOH:.+]] = arith.muli %[[OHINDEX]], %[[SH]] : index
+//      CHECK:       %[[CONVH:.+]] = arith.addi %[[STRIDEDOH]], %[[FHINDEX]] : index
+//      CHECK:       %[[SW:.+]] = arith.constant 1 : index
+//      CHECK:       %[[STRIDEDOW:.+]] = arith.muli %[[OWINDEX]], %[[SW]] : index
+//      CHECK:       %[[CONVW:.+]] = arith.addi %[[STRIDEDOW]], %[[FWINDEX]] : index
+//      CHECK:       %[[EXTRACTED_INPUT:.+]] = tensor.extract
+//      CHECK-SAME:  %[[INPUT]]{{\[}}%[[BINDEX]], %[[ICINDEX]], %[[CONVH]], %[[CONVW]]] : tensor<8x4x16x16xf32>
+//      CHECK: linalg.yield %[[EXTRACTED_INPUT]] : f32
 //      CHECK:   %[[MATMUL:.+]] = linalg.generic
 // CHECK-SAME:      indexing_maps = [#[[LHSMAP]], #[[RHSMAP]], #[[RESMAP]]],
 // CHECK-SAME:      iterator_types = ["parallel", "parallel", "parallel", "reduction"]
-// CHECK-SAME:   ins(%[[CS_FILTER]], %[[CS_INPUT]] : tensor<16x36xf32>, tensor<8x36x196xf32>)
+// CHECK-SAME:   ins(%[[CS_FILTER]], %[[IMG2COL]] : tensor<16x36xf32>, tensor<8x36x196xf32>)
 // CHECK-SAME:   outs(%[[CS_RESULT]] : tensor<8x16x196xf32>)
 //      CHECK:   ^bb0(%[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32, %[[ARG2:.+]]: f32):
 //      CHECK:     %[[MUL:.+]] = arith.mulf %[[ARG0]], %[[ARG1]] : f32
