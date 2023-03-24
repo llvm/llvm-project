@@ -221,7 +221,7 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
   this->hasOutput = hasOutput;
   this->isSparseOut = isSparseOut;
 
-  const TensorId numTensors = ts.size();
+  const unsigned numTensors = ts.size();
   this->tensors.assign(ts.begin(), ts.end());
   this->lvlTypes.assign(numTensors, std::vector<DimLevelType>());
   this->lvlSizes.assign(numTensors, std::vector<Value>());
@@ -420,8 +420,9 @@ Value LoopEmitter::genAffine(OpBuilder &builder, Location loc, AffineExpr a) {
     // level-expression, the `getPosition` must in fact be a `Dimension`.
     // However, elsewhere we have been lead to expect that `loopIdToOrd`
     // should be indexed by `LoopId`...
-    const LoopId i = a.cast<AffineDimExpr>().getPosition();
-    return loopStack[loopIdToOrd[i]].iv;
+    const auto loopId = a.cast<AffineDimExpr>().getPosition();
+    assert(loopId < loopIdToOrd.size());
+    return loopStack[loopIdToOrd[loopId]].iv;
   }
   case AffineExprKind::Add: {
     auto binOp = a.cast<AffineBinaryOpExpr>();
@@ -692,7 +693,7 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
   Value cond;
   unsigned o = 0;
   for (auto [t, lvl] : llvm::zip(tids, lvls)) {
-    unsigned tid = t; // Why `t` can not be captured by lambda?
+    const TensorId tid = t; // Why `t` can not be captured by lambda?
     const auto lvlTp = lvlTypes[tid][lvl];
     if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp)) {
       const auto reassoc = getCollapseReassociation(tid, lvl);
@@ -896,10 +897,11 @@ void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
       // guarantee that segHi is defined: because we only generate segHi
       // whenever coiterating, in order to improve code quality for the
       // non-coiterating cases.
-      const auto theSegHi = segHi[tid][srcLvl - 1];
-      highs[tid][srcLvl] = (!isUniqueDLT(lvlTypes[tid][srcLvl - 1]) && theSegHi)
-                               ? theSegHi
-                               : builder.create<arith::AddIOp>(loc, pLo, c1);
+      const auto parentSegHi = segHi[tid][srcLvl - 1];
+      highs[tid][srcLvl] =
+          (!isUniqueDLT(lvlTypes[tid][srcLvl - 1]) && parentSegHi)
+              ? parentSegHi
+              : builder.create<arith::AddIOp>(loc, pLo, c1);
       return;
     }
   }

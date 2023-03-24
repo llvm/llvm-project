@@ -255,10 +255,10 @@ private:
                                                  Location loc, Value crd,
                                                  TensorId tid, Level lvl);
 
-  TensorId getNumTensors() const { return tensors.size(); }
+  unsigned getNumTensors() const { return tensors.size(); }
 
   bool isOutputTensor(TensorId tid) const {
-    return hasOutput && tid == static_cast<TensorId>(getNumTensors() - 1);
+    return hasOutput && tid == getNumTensors() - 1;
   }
 
   bool isSparseOutput(TensorId tid) const {
