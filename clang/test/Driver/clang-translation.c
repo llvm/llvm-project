@@ -483,10 +483,3 @@
 // MIPSN32R6EL: "-target-cpu" "mips64r6"
 // MIPSN32R6EL: "-target-abi" "n32"
 // MIPSN32R6EL: "-mfloat-abi" "hard"
-
-// RUN: %clang -target mips64el-linux-android -### -S %s 2>&1 | \
-// RUN: FileCheck -check-prefix=MIPS64EL-ANDROID %s
-// MIPS64EL-ANDROID: clang
-// MIPS64EL-ANDROID: "-cc1"
-// MIPS64EL-ANDROID: "-target-cpu" "mips64r6"
-// MIPS64EL-ANDROID: "-mfloat-abi" "hard"

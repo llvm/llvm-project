@@ -744,13 +744,18 @@ static AffineMap projectCommonImpl(AffineMap map,
   replacements.reserve(numDimOrSym);
 
   auto createNewDimOrSym = (isDim) ? getAffineDimExpr : getAffineSymbolExpr;
-  auto replaceDims = [](AffineExpr e, ArrayRef<AffineExpr> replacements) {
+
+  using replace_fn_ty =
+      std::function<AffineExpr(AffineExpr, ArrayRef<AffineExpr>)>;
+  replace_fn_ty replaceDims = [](AffineExpr e,
+                                 ArrayRef<AffineExpr> replacements) {
     return e.replaceDims(replacements);
   };
-  auto replaceSymbols = [](AffineExpr e, ArrayRef<AffineExpr> replacements) {
+  replace_fn_ty replaceSymbols = [](AffineExpr e,
+                                    ArrayRef<AffineExpr> replacements) {
     return e.replaceSymbols(replacements);
   };
-  auto replaceNewDimOrSym = (isDim) ? replaceDims : replaceSymbols;
+  replace_fn_ty replaceNewDimOrSym = (isDim) ? replaceDims : replaceSymbols;
 
   MLIRContext *context = map.getContext();
   int64_t newNumDimOrSym = 0;

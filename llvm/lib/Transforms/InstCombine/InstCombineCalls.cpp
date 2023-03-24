@@ -1795,6 +1795,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         Function *Bswap = Intrinsic::getDeclaration(Mod, Intrinsic::bswap, Ty);
         return CallInst::Create(Bswap, { Op0 });
       }
+      if (Instruction *BitOp =
+              matchBSwapOrBitReverse(*II, /*MatchBSwaps*/ true,
+                                     /*MatchBitReversals*/ true))
+        return BitOp;
     }
 
     // Left or right might be masked.

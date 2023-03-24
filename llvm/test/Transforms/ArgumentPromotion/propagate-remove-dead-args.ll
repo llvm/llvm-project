@@ -57,3 +57,20 @@ entry:
   ret void
 }
 
+define internal ptr @callee(ptr %dead) {
+; CHECK-LABEL: define internal ptr @callee() {
+; CHECK-NEXT:    ret ptr null
+;
+  ret ptr null
+}
+
+define void @caller() {
+; CHECK-LABEL: define void @caller() {
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @callee()
+; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @callee()
+; CHECK-NEXT:    ret void
+;
+  %ret = call ptr @callee(ptr null)
+  %ret2 = call ptr @callee(ptr %ret)
+  ret void
+}

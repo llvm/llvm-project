@@ -1591,6 +1591,7 @@ BUILTIN(__builtin_annotation, "v.", "tn")
 
 // Invariants
 BUILTIN(__builtin_assume, "vb", "nE")
+BUILTIN(__builtin_assume_separate_storage, "vvCD*vCD*", "nE")
 
 // Multiprecision Arithmetic Builtins.
 BUILTIN(__builtin_addcb, "UcUcCUcCUcCUc*", "n")

@@ -50,6 +50,14 @@ void populateVectorContractLoweringPatterns(
     RewritePatternSet &patterns, VectorTransformsOptions options,
     PatternBenefit benefit = 1, bool disableOuterProductLowering = false);
 
+/// Populate the pattern set with the following patterns:
+///
+/// [OuterProductOpLowering]
+/// Progressively lower a `vector.outerproduct` to linearized
+/// `vector.extract` + `vector.fma` + `vector.insert`.
+void populateVectorOuterProductLoweringPatterns(RewritePatternSet &patterns,
+                                                PatternBenefit benefit = 1);
+
 /// Collect a set of patterns to convert vector.multi_reduction op into
 /// a sequence of vector.reduction ops. The patterns comprise:
 ///
