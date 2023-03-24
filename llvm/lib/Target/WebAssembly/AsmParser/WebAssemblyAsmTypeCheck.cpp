@@ -53,7 +53,8 @@ void WebAssemblyAsmTypeCheck::funcDecl(const wasm::WasmSignature &Sig) {
   ReturnTypes.assign(Sig.Returns.begin(), Sig.Returns.end());
 }
 
-void WebAssemblyAsmTypeCheck::localDecl(const SmallVector<wasm::ValType, 4> &Locals) {
+void WebAssemblyAsmTypeCheck::localDecl(
+    const SmallVectorImpl<wasm::ValType> &Locals) {
   LocalTypes.insert(LocalTypes.end(), Locals.begin(), Locals.end());
 }
 
