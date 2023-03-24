@@ -14,10 +14,10 @@ define ptr @array_add(ptr noalias nocapture readonly %a, ptr noalias nocapture r
 ; LMUL1-NEXT:    [[TMP0:%.*]] = add i32 [[SIZE]], -1
 ; LMUL1-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; LMUL1-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; LMUL1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
+; LMUL1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 8
 ; LMUL1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; LMUL1:       vector.ph:
-; LMUL1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; LMUL1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 8
 ; LMUL1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; LMUL1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL1:       vector.body:
@@ -25,15 +25,15 @@ define ptr @array_add(ptr noalias nocapture readonly %a, ptr noalias nocapture r
 ; LMUL1-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
 ; LMUL1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP3]]
 ; LMUL1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 0
-; LMUL1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
+; LMUL1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP5]], align 4
 ; LMUL1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP3]]
 ; LMUL1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i32 0
-; LMUL1-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP7]], align 4
-; LMUL1-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1]], [[WIDE_LOAD]]
+; LMUL1-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i32>, ptr [[TMP7]], align 4
+; LMUL1-NEXT:    [[TMP8:%.*]] = add nsw <8 x i32> [[WIDE_LOAD1]], [[WIDE_LOAD]]
 ; LMUL1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[TMP3]]
 ; LMUL1-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i32 0
-; LMUL1-NEXT:    store <4 x i32> [[TMP8]], ptr [[TMP10]], align 4
-; LMUL1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; LMUL1-NEXT:    store <8 x i32> [[TMP8]], ptr [[TMP10]], align 4
+; LMUL1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; LMUL1-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; LMUL1-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL1:       middle.block:
@@ -54,7 +54,7 @@ define ptr @array_add(ptr noalias nocapture readonly %a, ptr noalias nocapture r
 ; LMUL1-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; LMUL1-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; LMUL1-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[SIZE]]
-; LMUL1-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; LMUL1-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; LMUL1:       for.end.loopexit:
 ; LMUL1-NEXT:    br label [[FOR_END]]
 ; LMUL1:       for.end:
@@ -108,7 +108,7 @@ define ptr @array_add(ptr noalias nocapture readonly %a, ptr noalias nocapture r
 ; LMUL2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; LMUL2-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; LMUL2-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[SIZE]]
-; LMUL2-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; LMUL2-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; LMUL2:       for.end.loopexit:
 ; LMUL2-NEXT:    br label [[FOR_END]]
 ; LMUL2:       for.end:
