@@ -12,6 +12,9 @@
 .attribute arch, "rv32i2p0"
 # CHECK: attribute      5, "rv32i2p0"
 
+.attribute arch, "rv32e"
+# CHECK: attribute      5, "rv32e2p0"
+
 .attribute arch, "rv32i2_m2"
 # CHECK: attribute      5, "rv32i2p0_m2p0"
 
