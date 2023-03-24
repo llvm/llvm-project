@@ -18,6 +18,27 @@ import sys
 import time
 from typing import List, Optional
 
+beginner_comment =
+"""
+Hi!
+
+This issue may be a good introductory issue for people new to working on LLVM. If you would like to work on this issue, your first steps are:
+
+  1) Assign the issue to you.
+  2) Fix the issue locally.
+  3) [Run the test suite](https://llvm.org/docs/TestingGuide.html#unit-and-regression-tests) locally.
+    3.1) Remember that the subdirectories under `test/` create fine-grained testing targets, so you can
+         e.g. use `make check-clang-ast` to only run Clang's AST tests.
+  4) Create a `git` commit
+  5) Run [`git clang-format HEAD~1`](https://clang.llvm.org/docs/ClangFormat.html#git-integration) to format your changes.
+  6) Submit the patch to [Phabricator](https://reviews.llvm.org/).
+    6.1) Detailed instructions can be found [here](https://llvm.org/docs/Phabricator.html#requesting-a-review-via-the-web-interface)
+
+For more instructions on how to submit a patch to LLVM, see our [documentation](https://llvm.org/docs/Contributing.html).
+
+If you have any further questions about this issue, don't hesitate to ask via a comment on this Github issue.
+"""
+
 class IssueSubscriber:
 
     @property
@@ -34,7 +55,12 @@ class IssueSubscriber:
         for team in self.org.get_teams():
             if self.team_name != team.name.lower():
                 continue
-            comment = '@llvm/{}'.format(team.slug)
+
+            comment = ''
+            if team.slug == 'issue-subscribers-good-first-issue':
+                comment = '{}\n'.format(beginner_comment)
+
+            comment += '@llvm/{}'.format(team.slug)
             self.issue.create_comment(comment)
             return True
         return False
