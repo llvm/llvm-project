@@ -37,8 +37,8 @@ llvm.func @no_fold_extractvalue(%arr: !llvm.array<4 x f32>) -> f32 {
   %3 = llvm.extractvalue %2[0, 0] : !llvm.array<4 x !llvm.array<4 x f32>>
 
   llvm.return %3 : f32
-
 }
+
 // -----
 
 // CHECK-LABEL: fold_unrelated_extractvalue
@@ -56,18 +56,18 @@ llvm.func @fold_unrelated_extractvalue(%arr: !llvm.array<4 x f32>) -> f32 {
 // CHECK-LABEL: fold_bitcast
 // CHECK-SAME: %[[a0:arg[0-9]+]]
 // CHECK-NEXT: llvm.return %[[a0]]
-llvm.func @fold_bitcast(%x : !llvm.ptr<i8>) -> !llvm.ptr<i8> {
-  %c = llvm.bitcast %x : !llvm.ptr<i8> to !llvm.ptr<i8>
-  llvm.return %c : !llvm.ptr<i8>
+llvm.func @fold_bitcast(%x : !llvm.ptr) -> !llvm.ptr {
+  %c = llvm.bitcast %x : !llvm.ptr to !llvm.ptr
+  llvm.return %c : !llvm.ptr
 }
 
 // CHECK-LABEL: fold_bitcast2
 // CHECK-SAME: %[[a0:arg[0-9]+]]
 // CHECK-NEXT: llvm.return %[[a0]]
-llvm.func @fold_bitcast2(%x : !llvm.ptr<i8>) -> !llvm.ptr<i8> {
-  %c = llvm.bitcast %x : !llvm.ptr<i8> to !llvm.ptr<i32>
-  %d = llvm.bitcast %c : !llvm.ptr<i32> to !llvm.ptr<i8>
-  llvm.return %d : !llvm.ptr<i8>
+llvm.func @fold_bitcast2(%x : i32) -> i32 {
+  %c = llvm.bitcast %x : i32 to f32
+  %d = llvm.bitcast %c : f32 to i32
+  llvm.return %d : i32
 }
 
 // -----
@@ -75,18 +75,18 @@ llvm.func @fold_bitcast2(%x : !llvm.ptr<i8>) -> !llvm.ptr<i8> {
 // CHECK-LABEL: fold_addrcast
 // CHECK-SAME: %[[a0:arg[0-9]+]]
 // CHECK-NEXT: llvm.return %[[a0]]
-llvm.func @fold_addrcast(%x : !llvm.ptr<i8>) -> !llvm.ptr<i8> {
-  %c = llvm.addrspacecast %x : !llvm.ptr<i8> to !llvm.ptr<i8>
-  llvm.return %c : !llvm.ptr<i8>
+llvm.func @fold_addrcast(%x : !llvm.ptr) -> !llvm.ptr {
+  %c = llvm.addrspacecast %x : !llvm.ptr to !llvm.ptr
+  llvm.return %c : !llvm.ptr
 }
 
 // CHECK-LABEL: fold_addrcast2
 // CHECK-SAME: %[[a0:arg[0-9]+]]
 // CHECK-NEXT: llvm.return %[[a0]]
-llvm.func @fold_addrcast2(%x : !llvm.ptr<i8>) -> !llvm.ptr<i8> {
-  %c = llvm.addrspacecast %x : !llvm.ptr<i8> to !llvm.ptr<i32, 5>
-  %d = llvm.addrspacecast %c : !llvm.ptr<i32, 5> to !llvm.ptr<i8>
-  llvm.return %d : !llvm.ptr<i8>
+llvm.func @fold_addrcast2(%x : !llvm.ptr) -> !llvm.ptr {
+  %c = llvm.addrspacecast %x : !llvm.ptr to !llvm.ptr<5>
+  %d = llvm.addrspacecast %c : !llvm.ptr<5> to !llvm.ptr
+  llvm.return %d : !llvm.ptr
 }
 
 // -----
@@ -94,10 +94,10 @@ llvm.func @fold_addrcast2(%x : !llvm.ptr<i8>) -> !llvm.ptr<i8> {
 // CHECK-LABEL: fold_gep
 // CHECK-SAME: %[[a0:arg[0-9]+]]
 // CHECK-NEXT: llvm.return %[[a0]]
-llvm.func @fold_gep(%x : !llvm.ptr<i8>) -> !llvm.ptr<i8> {
+llvm.func @fold_gep(%x : !llvm.ptr) -> !llvm.ptr {
   %c0 = arith.constant 0 : i32
-  %c = llvm.getelementptr %x[%c0] : (!llvm.ptr<i8>, i32) -> !llvm.ptr<i8>
-  llvm.return %c : !llvm.ptr<i8>
+  %c = llvm.getelementptr %x[%c0] : (!llvm.ptr, i32) -> !llvm.ptr, i8
+  llvm.return %c : !llvm.ptr
 }
 
 // CHECK-LABEL: fold_gep_neg
@@ -114,12 +114,11 @@ llvm.func @fold_gep_neg(%x : !llvm.ptr) -> !llvm.ptr {
 // CHECK-SAME: %[[a0:arg[0-9]+]]
 // CHECK-NEXT: %[[RES:.*]] = llvm.getelementptr %[[a0]][2]
 // CHECK-NEXT: llvm.return %[[RES]]
-llvm.func @fold_gep_canon(%x : !llvm.ptr<i8>) -> !llvm.ptr<i8> {
+llvm.func @fold_gep_canon(%x : !llvm.ptr) -> !llvm.ptr {
   %c2 = arith.constant 2 : i32
-  %c = llvm.getelementptr %x[%c2] : (!llvm.ptr<i8>, i32) -> !llvm.ptr<i8>
-  llvm.return %c : !llvm.ptr<i8>
+  %c = llvm.getelementptr %x[%c2] : (!llvm.ptr, i32) -> !llvm.ptr, i8
+  llvm.return %c : !llvm.ptr
 }
-
 
 // -----
 
@@ -142,17 +141,17 @@ llvm.func @llvm_constant() -> i32 {
 
 // CHECK-LABEL: load_dce
 // CHECK-NEXT: llvm.return
-llvm.func @load_dce(%x : !llvm.ptr<i8>) {
-  %0 = llvm.load %x : !llvm.ptr<i8>
+llvm.func @load_dce(%x : !llvm.ptr) {
+  %0 = llvm.load %x : !llvm.ptr -> i8
   llvm.return
 }
 
-llvm.mlir.global external @fp() : !llvm.ptr<i8>
+llvm.mlir.global external @fp() : !llvm.ptr
 
 // CHECK-LABEL: addr_dce
 // CHECK-NEXT: llvm.return
-llvm.func @addr_dce(%x : !llvm.ptr<i8>) {
-  %0 = llvm.mlir.addressof @fp : !llvm.ptr<ptr<i8>>
+llvm.func @addr_dce(%x : !llvm.ptr) {
+  %0 = llvm.mlir.addressof @fp : !llvm.ptr
   llvm.return
 }
 
@@ -160,6 +159,6 @@ llvm.func @addr_dce(%x : !llvm.ptr<i8>) {
 // CHECK-NEXT: llvm.return
 llvm.func @alloca_dce() {
   %c1_i64 = arith.constant 1 : i64
-  %0 = llvm.alloca %c1_i64 x i32 : (i64) -> !llvm.ptr<i32>
+  %0 = llvm.alloca %c1_i64 x i32 : (i64) -> !llvm.ptr
   llvm.return
 }
