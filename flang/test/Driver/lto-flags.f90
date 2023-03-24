@@ -1,4 +1,5 @@
-! UNSUPPORTED: system-windows
+! Solaris ld doesn't support the linker plugin interface
+! UNSUPPORTED: system-windows, system-solaris
 ! RUN: %flang -### -S %s 2>&1 | FileCheck %s --check-prefix=NO-LTO
 ! RUN: %flang -### -S -fno-lto %s 2>&1 | FileCheck %s --check-prefix=NO-LTO
 

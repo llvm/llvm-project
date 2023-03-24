@@ -2361,7 +2361,7 @@ Query for this feature with ``__has_builtin(__builtin_assume)``.
 .. _langext-__builtin_assume_separate_storage:
 
 ``__builtin_assume_separate_storage``
---------------------
+-------------------------------------
 
 ``__builtin_assume_separate_storage`` is used to provide the optimizer with the
 knowledge that its two arguments point to separately allocated objects.

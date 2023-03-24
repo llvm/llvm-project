@@ -15,5 +15,6 @@ add_mlir_dialect_library(MLIRTransformDialect
   MLIRPDLInterpDialect
   MLIRRewrite
   MLIRSideEffectInterfaces
+  MLIRTransforms
   MLIRTransformDialectUtils
   )
