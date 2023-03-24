@@ -650,8 +650,8 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_source_location",
     "values": { "c++20": 201907 },
     "headers": ["source_location"],
-    "test_suite_guard": "__has_builtin(__builtin_source_location)",
-    "libcxx_guard": "__has_builtin(__builtin_source_location)",
+    "test_suite_guard": "__has_builtin(__builtin_source_location) && !(defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER <= 1403)",
+    "libcxx_guard": "__has_builtin(__builtin_source_location) && !(defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER <= 1403)",
   }, {
     "name": "__cpp_lib_span",
     "values": { "c++20": 202002 },
