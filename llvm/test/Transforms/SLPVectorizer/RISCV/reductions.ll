@@ -911,3 +911,121 @@ define i32 @stride_sum_abs_diff(ptr %p, ptr %q, i64 %stride) {
 
   ret i32 %sum.2
 }
+
+; FIXME: This could be horizontally reduced, as it is functionally equivalent to
+; @reduce_sum_2arrays_b
+define i32 @reduce_sum_2arrays_a(ptr noalias %p, ptr noalias %q) {
+; CHECK-LABEL: @reduce_sum_2arrays_a(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_0:%.*]] = load i8, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X_0]] to i32
+; CHECK-NEXT:    [[Y_0:%.*]] = load i8, ptr [[Q:%.*]], align 1
+; CHECK-NEXT:    [[CONV3:%.*]] = zext i8 [[Y_0]] to i32
+; CHECK-NEXT:    [[ADD4:%.*]] = add nuw nsw i32 [[CONV]], [[CONV3]]
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
+; CHECK-NEXT:    [[X_1:%.*]] = load i8, ptr [[ARRAYIDX_1]], align 1
+; CHECK-NEXT:    [[CONV_1:%.*]] = zext i8 [[X_1]] to i32
+; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 1
+; CHECK-NEXT:    [[Y_1:%.*]] = load i8, ptr [[ARRAYIDX2_1]], align 1
+; CHECK-NEXT:    [[CONV3_1:%.*]] = zext i8 [[Y_1]] to i32
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i32 [[ADD4]], [[CONV_1]]
+; CHECK-NEXT:    [[ADD4_1:%.*]] = add nuw nsw i32 [[ADD_1]], [[CONV3_1]]
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
+; CHECK-NEXT:    [[X_2:%.*]] = load i8, ptr [[ARRAYIDX_2]], align 1
+; CHECK-NEXT:    [[CONV_2:%.*]] = zext i8 [[X_2]] to i32
+; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 2
+; CHECK-NEXT:    [[Y_2:%.*]] = load i8, ptr [[ARRAYIDX2_2]], align 1
+; CHECK-NEXT:    [[CONV3_2:%.*]] = zext i8 [[Y_2]] to i32
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i32 [[ADD4_1]], [[CONV_2]]
+; CHECK-NEXT:    [[ADD4_2:%.*]] = add nuw nsw i32 [[ADD_2]], [[CONV3_2]]
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 3
+; CHECK-NEXT:    [[X_3:%.*]] = load i8, ptr [[ARRAYIDX_3]], align 1
+; CHECK-NEXT:    [[CONV_3:%.*]] = zext i8 [[X_3]] to i32
+; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 3
+; CHECK-NEXT:    [[Y_3:%.*]] = load i8, ptr [[ARRAYIDX2_3]], align 1
+; CHECK-NEXT:    [[CONV3_3:%.*]] = zext i8 [[Y_3]] to i32
+; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw nsw i32 [[ADD4_2]], [[CONV_3]]
+; CHECK-NEXT:    [[ADD4_3:%.*]] = add nuw nsw i32 [[ADD_3]], [[CONV3_3]]
+; CHECK-NEXT:    ret i32 [[ADD4_3]]
+;
+entry:
+  %x.0 = load i8, ptr %p, align 1
+  %conv = zext i8 %x.0 to i32
+  %y.0 = load i8, ptr %q, align 1
+  %conv3 = zext i8 %y.0 to i32
+  %add4 = add nuw nsw i32 %conv, %conv3
+
+  %arrayidx.1 = getelementptr inbounds i8, ptr %p, i64 1
+  %x.1 = load i8, ptr %arrayidx.1, align 1
+  %conv.1 = zext i8 %x.1 to i32
+  %arrayidx2.1 = getelementptr inbounds i8, ptr %q, i64 1
+  %y.1 = load i8, ptr %arrayidx2.1, align 1
+  %conv3.1 = zext i8 %y.1 to i32
+  %add.1 = add nuw nsw i32 %add4, %conv.1
+  %add4.1 = add nuw nsw i32 %add.1, %conv3.1
+
+  %arrayidx.2 = getelementptr inbounds i8, ptr %p, i64 2
+  %x.2 = load i8, ptr %arrayidx.2, align 1
+  %conv.2 = zext i8 %x.2 to i32
+  %arrayidx2.2 = getelementptr inbounds i8, ptr %q, i64 2
+  %y.2 = load i8, ptr %arrayidx2.2, align 1
+  %conv3.2 = zext i8 %y.2 to i32
+  %add.2 = add nuw nsw i32 %add4.1, %conv.2
+  %add4.2 = add nuw nsw i32 %add.2, %conv3.2
+
+  %arrayidx.3 = getelementptr inbounds i8, ptr %p, i64 3
+  %x.3 = load i8, ptr %arrayidx.3, align 1
+  %conv.3 = zext i8 %x.3 to i32
+  %arrayidx2.3 = getelementptr inbounds i8, ptr %q, i64 3
+  %y.3 = load i8, ptr %arrayidx2.3, align 1
+  %conv3.3 = zext i8 %y.3 to i32
+  %add.3 = add nuw nsw i32 %add4.2, %conv.3
+  %add4.3 = add nuw nsw i32 %add.3, %conv3.3
+
+  ret i32 %add4.3
+}
+
+define i32 @reduce_sum_2arrays_b(ptr noalias noundef %x, ptr noalias %y) {
+; CHECK-LABEL: @reduce_sum_2arrays_b(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[X:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[Y:%.*]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    ret i32 [[OP_RDX]]
+;
+  entry:
+  %0 = load i8, ptr %x, align 1
+  %conv = zext i8 %0 to i32
+  %arrayidx.1 = getelementptr inbounds i8, ptr %x, i64 1
+  %1 = load i8, ptr %arrayidx.1, align 1
+  %conv.1 = zext i8 %1 to i32
+  %add.1 = add nuw nsw i32 %conv, %conv.1
+  %arrayidx.2 = getelementptr inbounds i8, ptr %x, i64 2
+  %2 = load i8, ptr %arrayidx.2, align 1
+  %conv.2 = zext i8 %2 to i32
+  %add.2 = add nuw nsw i32 %add.1, %conv.2
+  %arrayidx.3 = getelementptr inbounds i8, ptr %x, i64 3
+  %3 = load i8, ptr %arrayidx.3, align 1
+  %conv.3 = zext i8 %3 to i32
+  %add.3 = add nuw nsw i32 %add.2, %conv.3
+  %4 = load i8, ptr %y, align 1
+  %conv9 = zext i8 %4 to i32
+  %add10 = add nuw nsw i32 %add.3, %conv9
+  %arrayidx8.1 = getelementptr inbounds i8, ptr %y, i64 1
+  %5 = load i8, ptr %arrayidx8.1, align 1
+  %conv9.1 = zext i8 %5 to i32
+  %add10.1 = add nuw nsw i32 %add10, %conv9.1
+  %arrayidx8.2 = getelementptr inbounds i8, ptr %y, i64 2
+  %6 = load i8, ptr %arrayidx8.2, align 1
+  %conv9.2 = zext i8 %6 to i32
+  %add10.2 = add nuw nsw i32 %add10.1, %conv9.2
+  %arrayidx8.3 = getelementptr inbounds i8, ptr %y, i64 3
+  %7 = load i8, ptr %arrayidx8.3, align 1
+  %conv9.3 = zext i8 %7 to i32
+  %add10.3 = add nuw nsw i32 %add10.2, %conv9.3
+  ret i32 %add10.3
+}
