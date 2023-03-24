@@ -512,12 +512,12 @@ FirstSecondThirdByteMask [ (0x333)
 TEST_F(ScopedPrinterTest, PrintNumber) {
   constexpr float MaxFloat = std::numeric_limits<float>::max();
   constexpr float MinFloat = std::numeric_limits<float>::min();
-  constexpr float InfFloat = std::numeric_limits<float>::infinity();
-  const float NaNFloat = std::nanf("1");
+  // constexpr float InfFloat = std::numeric_limits<float>::infinity();
+  // const float NaNFloat = std::nanf("1");
   constexpr double MaxDouble = std::numeric_limits<double>::max();
   constexpr double MinDouble = std::numeric_limits<double>::min();
-  constexpr double InfDouble = std::numeric_limits<double>::infinity();
-  const double NaNDouble = std::nan("1");
+  // constexpr double InfDouble = std::numeric_limits<double>::infinity();
+  // const double NaNDouble = std::nan("1");
 
   auto PrintFunc = [&](ScopedPrinter &W) {
     uint64_t Unsigned64Max = std::numeric_limits<uint64_t>::max();
