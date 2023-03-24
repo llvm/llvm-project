@@ -52,7 +52,7 @@ public:
   WebAssemblyAsmTypeCheck(MCAsmParser &Parser, const MCInstrInfo &MII, bool is64);
 
   void funcDecl(const wasm::WasmSignature &Sig);
-  void localDecl(const SmallVector<wasm::ValType, 4> &Locals);
+  void localDecl(const SmallVectorImpl<wasm::ValType> &Locals);
   void setLastSig(const wasm::WasmSignature &Sig) { LastSig = Sig; }
   bool endOfFunction(SMLoc ErrorLoc);
   bool typeCheck(SMLoc ErrorLoc, const MCInst &Inst, OperandVector &Operands);
