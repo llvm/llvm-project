@@ -2,6 +2,8 @@ add_startup_object(
   crt1
   SRC
     start.cpp
+  DEPENDS
+    libc.src.__support.RPC.rpc_client
   COMPILE_OPTIONS
     -ffreestanding # To avoid compiler warnings about calling the main function.
     -fno-builtin

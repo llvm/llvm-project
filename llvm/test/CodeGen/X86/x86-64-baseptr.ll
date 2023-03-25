@@ -80,7 +80,7 @@ define void @clobber_base() #0 {
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %r10
 ; CHECK-NEXT:    .cfi_def_cfa %r10, 0
 ; CHECK-NEXT:    andq $-128, %rsp
-; CHECK-NEXT:    pushq -16(%r10)
+; CHECK-NEXT:    pushq -8(%r10)
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x06, 0x02, 0x76, 0x00 #
@@ -111,7 +111,7 @@ define void @clobber_base() #0 {
 ; CHECK-NEXT:    leaq -8(%rbp), %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    leaq -16(%r10), %rsp
+; CHECK-NEXT:    leaq -8(%r10), %rsp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
 ;
@@ -167,7 +167,7 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %r10
 ; CHECK-NEXT:    .cfi_def_cfa %r10, 0
 ; CHECK-NEXT:    andq $-128, %rsp
-; CHECK-NEXT:    pushq -16(%r10)
+; CHECK-NEXT:    pushq -8(%r10)
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x06, 0x02, 0x76, 0x00 #
@@ -226,7 +226,7 @@ define x86_regcallcc void @clobber_baseptr_argptr(i32 %param1, i32 %param2, i32 
 ; CHECK-NEXT:    leaq -8(%rbp), %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    leaq -16(%r10), %rsp
+; CHECK-NEXT:    leaq -8(%r10), %rsp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
 ;
