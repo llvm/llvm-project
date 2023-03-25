@@ -103,16 +103,16 @@ TensorExp::TensorExp(Kind k, unsigned x, ExprId y, Value v, Operation *o)
   switch (kind) {
   // Leaf.
   case TensorExp::Kind::kTensor:
-    assert(x != kInvalidId && y == kInvalidId && !v && !o);
+    assert(x != detail::kInvalidId && y == detail::kInvalidId && !v && !o);
     tensor = x;
-    break;
+    return;
   case TensorExp::Kind::kInvariant:
-    assert(x == kInvalidId && y == kInvalidId && v && !o);
-    break;
+    assert(x == detail::kInvalidId && y == detail::kInvalidId && v && !o);
+    return;
   case TensorExp::Kind::kLoopVar:
-    assert(x != kInvalidId && y == kInvalidId && !v && !o);
+    assert(x != detail::kInvalidId && y == detail::kInvalidId && !v && !o);
     loop = x;
-    break;
+    return;
   // Unary operations.
   case TensorExp::Kind::kAbsF:
   case TensorExp::Kind::kAbsC:
@@ -134,10 +134,10 @@ TensorExp::TensorExp(Kind k, unsigned x, ExprId y, Value v, Operation *o)
   case TensorExp::Kind::kNegI:
   case TensorExp::Kind::kCIm:
   case TensorExp::Kind::kCRe:
-    assert(x != kInvalidId && y == kInvalidId && !v && !o);
+    assert(x != detail::kInvalidId && y == detail::kInvalidId && !v && !o);
     children.e0 = x;
     children.e1 = y;
-    break;
+    return;
   case TensorExp::Kind::kTruncF:
   case TensorExp::Kind::kExtF:
   case TensorExp::Kind::kCastFS:
@@ -149,23 +149,23 @@ TensorExp::TensorExp(Kind k, unsigned x, ExprId y, Value v, Operation *o)
   case TensorExp::Kind::kCastIdx:
   case TensorExp::Kind::kTruncI:
   case TensorExp::Kind::kBitCast:
-    assert(x != kInvalidId && y == kInvalidId && v && !o);
+    assert(x != detail::kInvalidId && y == detail::kInvalidId && v && !o);
     children.e0 = x;
     children.e1 = y;
-    break;
+    return;
   case TensorExp::Kind::kBinaryBranch:
   case TensorExp::Kind::kSelect:
-    assert(x != kInvalidId && y == kInvalidId && !v && o);
+    assert(x != detail::kInvalidId && y == detail::kInvalidId && !v && o);
     children.e0 = x;
     children.e1 = y;
-    break;
+    return;
   case TensorExp::Kind::kUnary:
     // No assertion on y can be made, as the branching paths involve both
     // a unary (`mapSet`) and binary (`disjSet`) pathway.
-    assert(x != kInvalidId && !v && o);
+    assert(x != detail::kInvalidId && !v && o);
     children.e0 = x;
     children.e1 = y;
-    break;
+    return;
   // Binary operations.
   case TensorExp::Kind::kMulF:
   case TensorExp::Kind::kMulC:
@@ -186,17 +186,18 @@ TensorExp::TensorExp(Kind k, unsigned x, ExprId y, Value v, Operation *o)
   case TensorExp::Kind::kShrS:
   case TensorExp::Kind::kShrU:
   case TensorExp::Kind::kShlI:
-    assert(x != kInvalidId && y != kInvalidId && !v && !o);
+    assert(x != detail::kInvalidId && y != detail::kInvalidId && !v && !o);
     children.e0 = x;
     children.e1 = y;
-    break;
+    return;
   case TensorExp::Kind::kBinary:
   case TensorExp::Kind::kReduce:
-    assert(x != kInvalidId && y != kInvalidId && !v && o);
+    assert(x != detail::kInvalidId && y != detail::kInvalidId && !v && o);
     children.e0 = x;
     children.e1 = y;
-    break;
+    return;
   }
+  llvm_unreachable("unexpected kind");
 }
 
 LatPoint::LatPoint(const BitVector &bits, ExprId e) : bits(bits), exp(e) {}

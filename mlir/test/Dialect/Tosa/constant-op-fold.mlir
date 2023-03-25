@@ -46,6 +46,17 @@ func.func @transpose_fold_2d_float() -> tensor<3x2xf32> {
   return %1 : tensor<3x2xf32>
 }
 
+// CHECK-LABEL: @transpose_fold_2d_bool
+func.func @transpose_fold_2d_bool() -> tensor<3x2xi1> {
+  %input = "tosa.const"() {value = dense<[[true, false, false], [false, false, true]]> : tensor<2x3xi1>} : () -> tensor<2x3xi1>
+  %perms = "tosa.const"() {value = dense<[1, 0]> : tensor<2xi32>} : () -> tensor<2xi32>
+  //               CHECK: %[[CST:.+]] = "tosa.const"()
+  // CHECK-SAME{LITERAL}: value = dense<[[true, false], [false, false], [false, true]]> : tensor<3x2xi1>
+  %1 = "tosa.transpose"(%input, %perms) : (tensor<2x3xi1>, tensor<2xi32>) -> tensor<3x2xi1>
+  // CHECK: return %[[CST]]
+  return %1 : tensor<3x2xi1>
+}
+
 // CHECK-LABEL: @transpose_fold_4d_int
 func.func @transpose_fold_4d_int() -> tensor<3x1x4x2xi32> {
   %input = "tosa.const"() {value = dense<[[

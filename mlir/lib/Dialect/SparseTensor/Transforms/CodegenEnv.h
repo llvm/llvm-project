@@ -66,9 +66,9 @@ public:
   // Merger delegates.
   //
 
-  TensorExp &exp(ExprId e) { return latticeMerger.exp(e); }
-  LatPoint &lat(LatPointId l) { return latticeMerger.lat(l); }
-  SmallVector<LatPointId> &set(LatSetId s) { return latticeMerger.set(s); }
+  const TensorExp &exp(ExprId e) const { return latticeMerger.exp(e); }
+  const LatPoint &lat(LatPointId l) const { return latticeMerger.lat(l); }
+  ArrayRef<LatPointId> set(LatSetId s) const { return latticeMerger.set(s); }
   DimLevelType dlt(TensorId t, LoopId i) const {
     return latticeMerger.getDimLevelType(t, i);
   }
@@ -134,7 +134,7 @@ public:
   //
 
   void startReduc(ExprId exp, Value val);
-  bool isReduc() const { return redExp != kInvalidId; }
+  bool isReduc() const { return redExp != detail::kInvalidId; }
   void updateReduc(Value val);
   Value getReduc() const { return redVal; }
   Value endReduc();
@@ -143,7 +143,7 @@ public:
   Value getValidLexInsert() const { return redValidLexInsert; }
 
   void startCustomReduc(ExprId exp);
-  bool isCustomReduc() const { return redCustom != kInvalidId; }
+  bool isCustomReduc() const { return redCustom != detail::kInvalidId; }
   Value getCustomRedId();
   void endCustomReduc();
 
