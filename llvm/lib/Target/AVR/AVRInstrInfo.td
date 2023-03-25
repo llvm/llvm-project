@@ -1690,6 +1690,11 @@ let canFoldAsLoad = 1, isReMaterializable = 1, mayLoad = 1,
       : F16<0b1001010111001000, (outs), (ins), "lpm", []>,
       Requires<[HasLPM]>;
 
+  // This pseudo is combination of LPM and MOV instructions.
+  let Defs = [R0] in
+  def LPMBRdZ : Pseudo<(outs GPR8:$dst), (ins ZREG:$z), "lpmb\t$dst, $z", []>,
+                Requires<[HasLPM]>;
+
   def LPMRdZ : FLPMX<0, 0,
                      (outs GPR8
                       : $rd),

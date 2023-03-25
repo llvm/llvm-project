@@ -514,6 +514,7 @@ private:
   void WriteTypeAbbrevs();
   void WriteType(QualType T);
 
+  bool isLookupResultExternal(StoredDeclsList &Result, DeclContext *DC);
   bool isLookupResultEntirelyExternal(StoredDeclsList &Result, DeclContext *DC);
 
   void GenerateNameLookupTable(const DeclContext *DC,

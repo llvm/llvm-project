@@ -127,6 +127,12 @@ protected:
   Error graphifySections();
   Error graphifySymbols();
 
+  /// Override in derived classes to suppress certain sections in the link
+  /// graph.
+  virtual bool excludeSection(const typename ELFT::Shdr &Sect) const {
+    return false;
+  }
+
   /// Traverse all matching ELFT::Rela relocation records in the given section.
   /// The handler function Func should be callable with this signature:
   ///   Error(const typename ELFT::Rela &,
@@ -321,6 +327,13 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
     auto Name = Obj.getSectionName(Sec, SectionStringTab);
     if (!Name)
       return Name.takeError();
+    if (excludeSection(Sec)) {
+      LLVM_DEBUG({
+        dbgs() << "    " << SecIndex << ": Skipping section \"" << *Name
+               << "\" explicitly\n";
+      });
+      continue;
+    }
 
     // Skip null sections.
     if (Sec.sh_type == ELF::SHT_NULL) {
@@ -564,6 +577,10 @@ Error ELFLinkGraphBuilder<ELFT>::forEachRelaRelocation(
     LLVM_DEBUG(dbgs() << "    skipped (dwarf section)\n\n");
     return Error::success();
   }
+  if (excludeSection(**FixupSection)) {
+    LLVM_DEBUG(dbgs() << "    skipped (fixup section excluded explicitly)\n\n");
+    return Error::success();
+  }
 
   // Lookup the link-graph node corresponding to the target section name.
   auto *BlockToFix = getGraphBlock(RelSect.sh_info);
@@ -608,6 +625,10 @@ Error ELFLinkGraphBuilder<ELFT>::forEachRelRelocation(
   // Consider skipping these relocations.
   if (!ProcessDebugSections && isDwarfSection(*Name)) {
     LLVM_DEBUG(dbgs() << "    skipped (dwarf section)\n\n");
+    return Error::success();
+  }
+  if (excludeSection(**FixupSection)) {
+    LLVM_DEBUG(dbgs() << "    skipped (fixup section excluded explicitly)\n\n");
     return Error::success();
   }
 

@@ -26,10 +26,9 @@ using namespace driver;
 using namespace llvm::sys;
 
 Multilib::Multilib(StringRef GCCSuffix, StringRef OSSuffix,
-                   StringRef IncludeSuffix, int Priority,
-                   const flags_list &Flags)
+                   StringRef IncludeSuffix, const flags_list &Flags)
     : GCCSuffix(GCCSuffix), OSSuffix(OSSuffix), IncludeSuffix(IncludeSuffix),
-      Flags(Flags), Priority(Priority) {
+      Flags(Flags) {
   assert(GCCSuffix.empty() ||
          (StringRef(GCCSuffix).front() == '/' && GCCSuffix.size() > 1));
   assert(OSSuffix.empty() ||
@@ -84,56 +83,36 @@ raw_ostream &clang::driver::operator<<(raw_ostream &OS, const Multilib &M) {
 }
 
 MultilibSet &MultilibSet::FilterOut(FilterCallback F) {
-  filterInPlace(F, Multilibs);
+  llvm::erase_if(Multilibs, F);
   return *this;
 }
 
 void MultilibSet::push_back(const Multilib &M) { Multilibs.push_back(M); }
 
-static bool isFlagEnabled(StringRef Flag) {
-  char Indicator = Flag.front();
-  assert(Indicator == '+' || Indicator == '-');
-  return Indicator == '+';
+MultilibSet::multilib_list
+MultilibSet::select(const Multilib::flags_list &Flags) const {
+  llvm::StringSet<> FlagSet;
+  for (const auto &Flag : Flags)
+    FlagSet.insert(Flag);
+
+  multilib_list Result;
+  llvm::copy_if(Multilibs, std::back_inserter(Result),
+                [&FlagSet](const Multilib &M) {
+                  for (const std::string &F : M.flags())
+                    if (!FlagSet.contains(F))
+                      return false;
+                  return true;
+                });
+  return Result;
 }
 
-bool MultilibSet::select(const Multilib::flags_list &Flags, Multilib &M) const {
-  llvm::StringMap<bool> FlagSet;
-
-  // Stuff all of the flags into the FlagSet such that a true mappend indicates
-  // the flag was enabled, and a false mappend indicates the flag was disabled.
-  for (StringRef Flag : Flags)
-    FlagSet[Flag.substr(1)] = isFlagEnabled(Flag);
-
-  multilib_list Filtered = filterCopy([&FlagSet](const Multilib &M) {
-    for (StringRef Flag : M.flags()) {
-      llvm::StringMap<bool>::const_iterator SI = FlagSet.find(Flag.substr(1));
-      if (SI != FlagSet.end())
-        if (SI->getValue() != isFlagEnabled(Flag))
-          return true;
-    }
+bool MultilibSet::select(const Multilib::flags_list &Flags,
+                         Multilib &Selected) const {
+  multilib_list Result = select(Flags);
+  if (Result.empty())
     return false;
-  }, Multilibs);
-
-  if (Filtered.empty())
-    return false;
-  if (Filtered.size() == 1) {
-    M = Filtered[0];
-    return true;
-  }
-
-  // Sort multilibs by priority and select the one with the highest priority.
-  llvm::sort(Filtered, [](const Multilib &a, const Multilib &b) -> bool {
-    return a.priority() > b.priority();
-  });
-
-  if (Filtered[0].priority() > Filtered[1].priority()) {
-    M = Filtered[0];
-    return true;
-  }
-
-  // TODO: We should consider returning llvm::Error rather than aborting.
-  assert(false && "More than one multilib with the same priority");
-  return false;
+  Selected = Result.back();
+  return true;
 }
 
 LLVM_DUMP_METHOD void MultilibSet::dump() const {
@@ -143,17 +122,6 @@ LLVM_DUMP_METHOD void MultilibSet::dump() const {
 void MultilibSet::print(raw_ostream &OS) const {
   for (const auto &M : *this)
     OS << M << "\n";
-}
-
-MultilibSet::multilib_list MultilibSet::filterCopy(FilterCallback F,
-                                                   const multilib_list &Ms) {
-  multilib_list Copy(Ms);
-  filterInPlace(F, Copy);
-  return Copy;
-}
-
-void MultilibSet::filterInPlace(FilterCallback F, multilib_list &Ms) {
-  llvm::erase_if(Ms, F);
 }
 
 raw_ostream &clang::driver::operator<<(raw_ostream &OS, const MultilibSet &MS) {

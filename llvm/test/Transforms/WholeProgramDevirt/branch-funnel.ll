@@ -233,6 +233,54 @@ define i32 @fn3_rv(ptr %obj) #0 {
   ret i32 %result
 }
 
+; CHECK-LABEL: define i32 @fn4
+; CHECK-NOT: call void (...) @llvm.icall.branch.funnel
+define i32 @fn4(ptr %obj) #0 {
+  %p = call i1 @llvm.type.test(ptr @vt1_1, metadata !"typeid1")
+  call void @llvm.assume(i1 %p)
+  %fptr = load ptr, ptr @vt1_1
+  ; RETP: call i32 @__typeid_typeid1_0_branch_funnel(ptr nest @vt1_1, ptr %obj, i32 1)
+  %result = call i32 %fptr(ptr %obj, i32 1)
+  ; NORETP: call i32 %
+  ret i32 %result
+}
+
+; CHECK-LABEL: define i32 @fn4_cpy
+; CHECK-NOT: call void (...) @llvm.icall.branch.funnel
+define i32 @fn4_cpy(ptr %obj) #0 {
+  %p = call i1 @llvm.type.test(ptr @vt1_1, metadata !"typeid1")
+  call void @llvm.assume(i1 %p)
+  %fptr = load ptr, ptr @vt1_1
+  ; RETP: call i32 @__typeid_typeid1_0_branch_funnel(ptr nest @vt1_1, ptr %obj, i32 1)
+  %result = call i32 %fptr(ptr %obj, i32 1)
+  ; NORETP: call i32 %
+  ret i32 %result
+}
+
+; CHECK-LABEL: define i32 @fn4_rv
+; CHECK-NOT: call void (...) @llvm.icall.branch.funnel
+define i32 @fn4_rv(ptr %obj) #0 {
+  %p = call i1 @llvm.type.test(ptr @vt1_1_rv, metadata !"typeid1_rv")
+  call void @llvm.assume(i1 %p)
+  %fptr = call ptr @llvm.load.relative.i32(ptr @vt1_1_rv, i32 0)
+  ; RETP: call i32 @__typeid_typeid1_rv_0_branch_funnel(ptr nest @vt1_1_rv, ptr %obj, i32 1)
+  %result = call i32 %fptr(ptr %obj, i32 1)
+  ; NORETP: call i32 %
+  ret i32 %result
+}
+
+; CHECK-LABEL: define i32 @fn4_rv_cpy
+; CHECK-NOT: call void (...) @llvm.icall.branch.funnel
+define i32 @fn4_rv_cpy(ptr %obj) #0 {
+  %p = call i1 @llvm.type.test(ptr @vt1_1_rv, metadata !"typeid1_rv")
+  call void @llvm.assume(i1 %p)
+  %fptr = call ptr @llvm.load.relative.i32(ptr @vt1_1_rv, i32 0)
+  ; RETP: call i32 @__typeid_typeid1_rv_0_branch_funnel(ptr nest @vt1_1_rv, ptr %obj, i32 1)
+  %result = call i32 %fptr(ptr %obj, i32 1)
+  ; NORETP: call i32 %
+  ret i32 %result
+}
+
 ; CHECK-LABEL: define hidden void @__typeid_typeid1_0_branch_funnel(ptr nest %0, ...)
 ; CHECK-NEXT: musttail call void (...) @llvm.icall.branch.funnel(ptr %0, ptr {{(nonnull )?}}@vt1_1, ptr {{(nonnull )?}}@vf1_1, ptr {{(nonnull )?}}@vt1_2, ptr {{(nonnull )?}}@vf1_2, ...)
 

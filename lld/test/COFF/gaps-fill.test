@@ -1,4 +1,4 @@
-# REQUIRES: aarch64
+# REQUIRES: aarch64, x86
 # RUN: split-file %s %t.dir
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-windows %t.dir/arm64-dllmain.s -o %t.dir/arm64-dllmain.obj

@@ -11,8 +11,6 @@ add_mlir_dialect_library(MLIRVectorTransformOps
   MLIRIR
   MLIRVectorDialect
   MLIRVectorTransforms
-  MLIRParser
-  MLIRPDLDialect
   MLIRSideEffectInterfaces
   MLIRTransformDialect
   MLIRVectorDialect

@@ -8,6 +8,7 @@
 // RUN: %clang_cc1 -triple mipsisa64r6el-linux-gnuabi64 -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS64
 // RUN: %clang_cc1 -triple sparc-unknown-eabi -emit-llvm %s -o - | FileCheck %s -check-prefix=SPARCV8 -check-prefix=SPARC
 // RUN: %clang_cc1 -triple sparcv9-unknown-eabi -emit-llvm %s -o - | FileCheck %s -check-prefix=SPARCV9 -check-prefix=SPARC
+// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s -check-prefix=NVPTX
 
 unsigned char c1, c2;
 unsigned short s1, s2;
@@ -109,4 +110,17 @@ void test1(void) {
 // SPARCV9: store atomic i64 {{.*}}, ptr @ll1 seq_cst, align 8
 // SPARCV8: call void @__atomic_load(i32 noundef 100, ptr noundef @a1, ptr noundef @a2
 // SPARCV8: call void @__atomic_store(i32 noundef 100, ptr noundef @a1, ptr noundef @a2
+
+// NVPTX-LABEL: define{{.*}} void @test1
+// NVPTX: = load atomic i8, ptr @c1 seq_cst, align 1
+// NVPTX: store atomic i8 {{.*}}, ptr @c1 seq_cst, align 1
+// NVPTX: = load atomic i16, ptr @s1 seq_cst, align 2
+// NVPTX: store atomic i16 {{.*}}, ptr @s1 seq_cst, align 2
+// NVPTX: = load atomic i32, ptr @i1 seq_cst, align 4
+// NVPTX: store atomic i32 {{.*}}, ptr @i1 seq_cst, align 4
+// NVPTX: = load atomic i64, ptr @ll1 seq_cst, align 8
+// NVPTX: store atomic i64 {{.*}}, ptr @ll1 seq_cst, align 8
+// NVPTX: call void @__atomic_load(i64 noundef 100, ptr noundef @a1, ptr noundef @a2, i32 noundef 5)
+// NVPTX: call void @__atomic_store(i64 noundef 100, ptr noundef @a1, ptr noundef @a2, i32 noundef 5)
+
 }

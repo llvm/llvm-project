@@ -666,14 +666,13 @@ define i1 @uaddo_i64_increment_alt_dom(i64 %x, ptr %p) {
 define i1 @uaddo_i64_decrement_alt(i64 %x, ptr %p) {
 ; RV32-LABEL: uaddo_i64_decrement_alt:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a3, a0, -1
-; RV32-NEXT:    sltu a4, a3, a0
-; RV32-NEXT:    add a4, a1, a4
-; RV32-NEXT:    addi a4, a4, -1
-; RV32-NEXT:    sw a3, 0(a2)
+; RV32-NEXT:    seqz a3, a0
+; RV32-NEXT:    sub a3, a1, a3
+; RV32-NEXT:    addi a4, a0, -1
+; RV32-NEXT:    sw a4, 0(a2)
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    snez a0, a0
-; RV32-NEXT:    sw a4, 4(a2)
+; RV32-NEXT:    sw a3, 4(a2)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: uaddo_i64_decrement_alt:
@@ -695,12 +694,11 @@ define i1 @uaddo_i64_decrement_alt_dom(i64 %x, ptr %p) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    or a3, a0, a1
 ; RV32-NEXT:    snez a3, a3
-; RV32-NEXT:    addi a4, a0, -1
-; RV32-NEXT:    sltu a0, a4, a0
-; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    seqz a4, a0
+; RV32-NEXT:    sub a1, a1, a4
 ; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    sw a4, 0(a2)
-; RV32-NEXT:    sw a0, 4(a2)
+; RV32-NEXT:    sw a0, 0(a2)
+; RV32-NEXT:    sw a1, 4(a2)
 ; RV32-NEXT:    mv a0, a3
 ; RV32-NEXT:    ret
 ;
@@ -1222,22 +1220,21 @@ define i64 @foo2(ptr %p) {
 define void @PR41129(ptr %p64) {
 ; RV32-LABEL: PR41129:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    lw a1, 4(a0)
-; RV32-NEXT:    lw a2, 0(a0)
-; RV32-NEXT:    or a3, a2, a1
+; RV32-NEXT:    lw a2, 4(a0)
+; RV32-NEXT:    lw a1, 0(a0)
+; RV32-NEXT:    or a3, a1, a2
 ; RV32-NEXT:    beqz a3, .LBB36_2
 ; RV32-NEXT:  # %bb.1: # %false
-; RV32-NEXT:    andi a2, a2, 7
+; RV32-NEXT:    andi a1, a1, 7
 ; RV32-NEXT:    sw zero, 4(a0)
-; RV32-NEXT:    sw a2, 0(a0)
+; RV32-NEXT:    sw a1, 0(a0)
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB36_2: # %true
-; RV32-NEXT:    addi a3, a2, -1
-; RV32-NEXT:    sltu a2, a3, a2
-; RV32-NEXT:    add a1, a1, a2
+; RV32-NEXT:    seqz a3, a1
+; RV32-NEXT:    sub a2, a2, a3
 ; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    sw a3, 0(a0)
-; RV32-NEXT:    sw a1, 4(a0)
+; RV32-NEXT:    sw a1, 0(a0)
+; RV32-NEXT:    sw a2, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: PR41129:
