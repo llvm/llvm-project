@@ -113,7 +113,7 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   if (mapping::isSPMDMode()) {
     // Avoid the race between the read of the `icv::Level` above and the write
     // below by synchronizing all threads here.
-    synchronize::threadsAligned(atomic::seq_cst);
+    synchronize::threadsAligned();
     {
       // Note that the order here is important. `icv::Level` has to be updated
       // last or the other updates will cause a thread specific state to be
@@ -128,36 +128,28 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
 
       // Synchronize all threads after the main thread (TId == 0) set up the
       // team state properly.
-      synchronize::threadsAligned(atomic::acq_rel);
+      synchronize::threadsAligned();
 
       state::ParallelTeamSize.assert_eq(NumThreads, ident,
                                         /* ForceTeamState */ true);
       icv::ActiveLevel.assert_eq(1u, ident, /* ForceTeamState */ true);
       icv::Level.assert_eq(1u, ident, /* ForceTeamState */ true);
 
-      // Ensure we synchronize before we run user code to avoid invalidating the
-      // assumptions above.
-      synchronize::threadsAligned(atomic::relaxed);
-
       if (TId < NumThreads)
         invokeMicrotask(TId, 0, fn, args, nargs);
 
       // Synchronize all threads at the end of a parallel region.
-      synchronize::threadsAligned(atomic::seq_cst);
+      synchronize::threadsAligned();
     }
 
     // Synchronize all threads to make sure every thread exits the scope above;
     // otherwise the following assertions and the assumption in
     // __kmpc_target_deinit may not hold.
-    synchronize::threadsAligned(atomic::acq_rel);
+    synchronize::threadsAligned();
 
     state::ParallelTeamSize.assert_eq(1u, ident, /* ForceTeamState */ true);
     icv::ActiveLevel.assert_eq(0u, ident, /* ForceTeamState */ true);
     icv::Level.assert_eq(0u, ident, /* ForceTeamState */ true);
-
-    // Ensure we synchronize to create an aligned region around the assumptions.
-    synchronize::threadsAligned(atomic::relaxed);
-
     return;
   }
 
@@ -251,9 +243,9 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
                                /* ForceTeamState */ true);
 
     // Master signals work to activate workers.
-    synchronize::threads(atomic::seq_cst);
+    synchronize::threads();
     // Master waits for workers to signal.
-    synchronize::threads(atomic::seq_cst);
+    synchronize::threads();
   }
 
   if (nargs)
