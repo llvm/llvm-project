@@ -1587,7 +1587,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
                MachineInstr::FrameSetup);
     }
     BuildStackAlignAND(MBB, MBBI, DL, StackPtr, MaxAlign);
-    int64_t Offset = Is64Bit ? -2 * (int64_t)SlotSize : -1 * (int64_t)SlotSize;
+    int64_t Offset = -(int64_t)SlotSize;
     BuildMI(MBB, MBBI, DL, TII.get(Is64Bit ? X86::PUSH64rmm: X86::PUSH32rmm))
         .addReg(ArgBaseReg)
         .addImm(1)
@@ -2318,13 +2318,13 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
       Opc = X86::LEA64r;
       StackReg = X86::RSP;
     }
-    // leal    -8(%basereg), %esp
+    // leal    -4(%basereg), %esp
     // .cfi_def_cfa %esp, 4
     BuildMI(MBB, MBBI, DL, TII.get(Opc), StackReg)
         .addUse(ArgBaseReg)
         .addImm(1)
         .addUse(X86::NoRegister)
-        .addImm((int64_t)SlotSize * -2)
+        .addImm(-(int64_t)SlotSize)
         .addUse(X86::NoRegister)
         .setMIFlag(MachineInstr::FrameDestroy);
     if (NeedsDwarfCFI) {
