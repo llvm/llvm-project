@@ -33,11 +33,11 @@
 //  LLDB_INVALID_HOST_THREAD  The value of an invalid lldb::thread_t
 //  LLDB_INVALID_PIPE         The value of an invalid lldb::pipe_t
 
-namespace lldb {
-
 #ifdef _WIN32
 
 #include <process.h>
+
+namespace lldb {
 typedef void *rwlock_t;
 typedef void *process_t;                          // Process type is HANDLE
 typedef void *thread_t;                           // Host thread type
@@ -51,6 +51,8 @@ typedef void *pipe_t;                             // Host pipe type is HANDLE
 #else
 
 #include <pthread.h>
+
+namespace lldb {
 typedef pthread_rwlock_t rwlock_t;
 typedef uint64_t process_t;             // Process type is just a pid.
 typedef pthread_t thread_t;             // Host thread type
