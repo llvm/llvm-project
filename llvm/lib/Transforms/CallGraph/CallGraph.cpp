@@ -1,10 +1,15 @@
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include <string>
 #include <sys/stat.h>
 #include <system_error>
 #include <unordered_map>
@@ -25,17 +30,19 @@ struct CallGraph : ModulePass {
   StringRef LoggerFuncName = "_Z6Loggerll";
 
   // Edges map contains key=caller and value=set_of_calees
-  std::unordered_map<const Function *, SmallPtrSet<const Function *, 8>> Edges;
+  std::unordered_map<int64_t, llvm::SmallSet<int64_t, 8>> Edges;
 
   // Set for storing already existed nodes decl for graphviz
-  std::unordered_set<const Function *> Nodes;
+  std::unordered_set<int64_t> Nodes;
 
   FunctionCallee getCallLogFunc(Module &M, IRBuilder<> &Builder) const;
-  void insertCallLogger(IRBuilder<> &Builder, const Function *CallerFunc,
-                        const Function *CalleeFunc,
-                        FunctionCallee &LogFunc) const;
+  void insertCallLogger(IRBuilder<> &Builder, int64_t CallerFunc,
+                        int64_t CalleeFunc, FunctionCallee &LogFunc) const;
   bool isLoggerFunc(StringRef Name) const { return Name == LoggerFuncName; }
   bool isLLVMTrap(StringRef Name) const { return Name == "llvm.trap"; }
+
+  int64_t getFuncHash(const Function *Func, StringRef FuncName,
+                      Module &M) const;
 
   bool runOnModule(Module &M) override {
     constexpr StringRef FileName = "OutFile.dot";
@@ -64,48 +71,60 @@ struct CallGraph : ModulePass {
 
     // Traverse all Functions
     for (Function &F : M.functions()) {
-      auto &Bucket = Edges[&F];
       StringRef FuncName = F.getName();
+      int64_t CallerHash = getFuncHash(&F, FuncName, M);
+      auto &Bucket = Edges[CallerHash];
 
-      // Traverse all basic blocks
-      for (BasicBlock &B : F) {
-        const Function *FuncAddr = &F;
-        // Traverse all Intructions
-        for (Instruction &I : B) {
-          if (auto *Call = dyn_cast<CallInst>(&I)) {
-            const Function *CalledFunc = Call->getCalledFunction();
-            if (!CalledFunc)
-              continue;
+      // Traverse all instructions in F
+      for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
+        if (auto *Call = dyn_cast<CallInst>(&*I)) {
+          const Function *CalleeFunc = Call->getCalledFunction();
+          if (!CalleeFunc)
+            continue;
 
-            Builder.SetInsertPoint(Call);
-            insertCallLogger(Builder, &F, CalledFunc, CallLogFunc);
+          StringRef CalleeName = CalleeFunc->getName();
+          if (isLLVMTrap(CalleeName) || isLoggerFunc(CalleeName))
+            return false;
 
-            // Here we will add static information, if we meet edge for the
-            // first time
-            if (Bucket.contains(CalledFunc))
-              continue;
+          int64_t CalleeHash = getFuncHash(CalleeFunc, CalleeName, M);
 
-            // If we meet that edge for the first time, we need to add it to map
-            // and print it to file
-            if (Nodes.find(FuncAddr) == Nodes.end()) {
-              File << "{} " << reinterpret_cast<int64_t>(&F) << " [label = \" "
-                   << FuncName << " \" ]\n";
-              Nodes.insert(FuncAddr);
-            }
-            if (Nodes.find(CalledFunc) == Nodes.end()) {
-              File << "{} " << reinterpret_cast<int64_t>(CalledFunc)
-                   << " [label = \" " << CalledFunc->getName() << " \" ]\n";
-              Nodes.insert(CalledFunc);
-            }
-
-            File << reinterpret_cast<int64_t>(FuncAddr) << " -> "
-                 << reinterpret_cast<int64_t>(CalledFunc) << '\n';
-            Bucket.insert(CalledFunc);
+          if (GlobalValue::isLocalLinkage(CalleeFunc->getLinkage())) {
+            std::string NewName = M.getSourceFileName();
+            NewName += CalleeName;
+            CalleeHash = llvm::hash_value(NewName);
+          } else {
+            CalleeHash = llvm::hash_value(CalleeName);
           }
+
+          Builder.SetInsertPoint(Call);
+          insertCallLogger(Builder, CallerHash, CalleeHash, CallLogFunc);
+
+          // Here we will add static information, if we meet edge for the
+          // first time
+          if (Bucket.contains(CalleeHash))
+            continue;
+
+          // If we meet that edge for the first time, we need to add it to map
+          // and print it to file
+          if (Nodes.find(CallerHash) == Nodes.end()) {
+            File << "{} " << CallerHash << " [label = \" " << FuncName
+                 << " \" ]\n";
+            Nodes.insert(CallerHash);
+          }
+          if (Nodes.find(CalleeHash) == Nodes.end()) {
+            File << "{} " << CalleeHash << " [label = \" " << CalleeName
+                 << " \" ]\n";
+            Nodes.insert(CalleeHash);
+          }
+
+          File << CallerHash << " -> " << CalleeHash << '\n';
+          Bucket.insert(CalleeHash);
         }
       }
     }
 
+    // It is nessacary for comfortable parsing
+    File << '\n';
     return true;
   }
 };
@@ -127,15 +146,10 @@ FunctionCallee CallGraph::getCallLogFunc(Module &M,
   return CallLogFunc;
 }
 
-void CallGraph::insertCallLogger(IRBuilder<> &Builder,
-                                 const Function *CallerFunc,
-                                 const Function *CalleeFunc,
+void CallGraph::insertCallLogger(IRBuilder<> &Builder, int64_t CallerFunc,
+                                 int64_t CalleeFunc,
                                  FunctionCallee &LogFunc) const {
   if (!CalleeFunc)
-    return;
-
-  StringRef CalleeFuncName = CalleeFunc->getName();
-  if (isLoggerFunc(CalleeFuncName) || isLLVMTrap(CalleeFuncName))
     return;
 
   Value *CallerAddr =
@@ -145,6 +159,20 @@ void CallGraph::insertCallLogger(IRBuilder<> &Builder,
   Value *Args[] = {CallerAddr, CalleeAddr};
 
   Builder.CreateCall(LogFunc, Args);
+}
+
+/// Method for calculating a hash for Function
+/// Check if function is static, because if we have static function, we
+/// need to add fileName to the funcName to avoid collisions with other
+/// static functions from different files.
+int64_t CallGraph::getFuncHash(const Function *Func, StringRef FuncName,
+                               Module &M) const {
+  if (GlobalValue::isLocalLinkage(Func->getLinkage())) {
+    std::string NewName = M.getSourceFileName();
+    NewName += FuncName;
+    return llvm::hash_value(NewName);
+  }
+  return llvm::hash_value(FuncName);
 }
 
 } // namespace
