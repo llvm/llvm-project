@@ -283,7 +283,7 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
     return false;
 
   MemorySSAUpdater MSSAU(&MSSA);
-  SinkAndHoistLICMFlags LICMFlags(/*IsSink=*/true, &L, &MSSA);
+  SinkAndHoistLICMFlags LICMFlags(/*IsSink=*/true, L, MSSA);
 
   bool Changed = false;
 

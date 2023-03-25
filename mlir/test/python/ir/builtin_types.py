@@ -202,6 +202,8 @@ def testFloatType():
     print("float:", Float8E5M2FNUZType.get())
     # CHECK: float: f8E4M3FNUZ
     print("float:", Float8E4M3FNUZType.get())
+    # CHECK: float: f8E4M3B11FNUZ
+    print("float:", Float8E4M3B11FNUZType.get())
     # CHECK: float: bf16
     print("float:", BF16Type.get())
     # CHECK: float: f16

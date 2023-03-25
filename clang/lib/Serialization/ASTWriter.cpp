@@ -4444,11 +4444,6 @@ void ASTWriter::AddString(StringRef Str, RecordDataImpl &Record) {
 bool ASTWriter::PreparePathForOutput(SmallVectorImpl<char> &Path) {
   assert(Context && "should have context when outputting path");
 
-  // Leave special file names as they are.
-  StringRef PathStr(Path.data(), Path.size());
-  if (PathStr == "<built-in>" || PathStr == "<command line>")
-    return false;
-
   bool Changed =
       cleanPathForOutput(Context->getSourceManager().getFileManager(), Path);
 

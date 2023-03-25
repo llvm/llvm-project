@@ -115,7 +115,6 @@ public:
   // Queue related functions
   uint32_t GetNumQueues();
 
-  // TODO: This technically takes a uint32_t in the interface file.
   lldb::SBQueue GetQueueAtIndex(size_t index);
 
   // Stepping related functions

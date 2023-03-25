@@ -170,6 +170,8 @@
 ! HELP-FC1-NEXT: -pic-level <value>      Value for __PIC__
 ! HELP-FC1-NEXT: -plugin <name>         Use the named plugin action instead of the default action (use "help" to list available options)
 ! HELP-FC1-NEXT: -P                     Disable linemarker output in -E mode
+! HELP-FC1-NEXT: -save-temps=<value>    Save intermediate compilation results.
+! HELP-FC1-NEXT: -save-temps            Save intermediate compilation results
 ! HELP-FC1-NEXT: -std=<value>           Language standard to compile for
 ! HELP-FC1-NEXT: -S                     Only run preprocess and compilation steps
 ! HELP-FC1-NEXT: -target-cpu <value>    Target a specific cpu type

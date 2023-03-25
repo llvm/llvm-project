@@ -116,10 +116,9 @@ public:
   // Explicitly set limits.
   SinkAndHoistLICMFlags(unsigned LicmMssaOptCap,
                         unsigned LicmMssaNoAccForPromotionCap, bool IsSink,
-                        Loop *L = nullptr, MemorySSA *MSSA = nullptr);
+                        Loop &L, MemorySSA &MSSA);
   // Use default limits.
-  SinkAndHoistLICMFlags(bool IsSink, Loop *L = nullptr,
-                        MemorySSA *MSSA = nullptr);
+  SinkAndHoistLICMFlags(bool IsSink, Loop &L, MemorySSA &MSSA);
 
   void setIsSink(bool B) { IsSink = B; }
   bool getIsSink() { return IsSink; }

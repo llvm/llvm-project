@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify
 
-namespace dr2518 { // dr2518: 17 review
+namespace dr2518 { // dr2518: 17
 
 template <class T>
 void f(T t) {

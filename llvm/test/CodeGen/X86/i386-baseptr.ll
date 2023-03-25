@@ -73,7 +73,7 @@ define void @clobber_base() #0 {
 ; CHECK-NEXT:    leal -4(%ebp), %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %ebp
-; CHECK-NEXT:    leal -8(%ecx), %esp
+; CHECK-NEXT:    leal -4(%ecx), %esp
 ; CHECK-NEXT:    .cfi_def_cfa %esp, 4
 ; CHECK-NEXT:    retl
 entry:

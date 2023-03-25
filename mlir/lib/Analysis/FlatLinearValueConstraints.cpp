@@ -457,7 +457,7 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
                                            SmallVectorImpl<AffineMap> *lbMaps,
                                            SmallVectorImpl<AffineMap> *ubMaps,
                                            bool closedUB) {
-  assert(num < getNumDimVars() && "invalid range");
+  assert(offset + num <= getNumDimVars() && "invalid range");
 
   // Basic simplification.
   normalizeConstraintsByGCD();

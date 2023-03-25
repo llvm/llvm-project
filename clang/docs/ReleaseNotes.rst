@@ -126,6 +126,7 @@ Non-comprehensive list of changes in this release
   from the invocation point, with no path components included).
 - Clang now supports ``__builtin_assume_separate_storage`` that indicates that
   its arguments point to objects in separate storage allocations.
+- Clang now supports expressions in ``#pragma clang __debug dump``.
 
 New Compiler Flags
 ------------------
@@ -176,8 +177,8 @@ Improvements to Clang's diagnostics
 - Diagnostic notes and fix-its are now generated for ``ifunc``/``alias`` attributes
   which point to functions whose names are mangled.
 - Diagnostics relating to macros on the command line of a preprocessed assembly
-  file or precompiled header are now reported as coming from the file
-  ``<command line>`` instead of ``<built-in>``.
+  file are now reported as coming from the file ``<command line>`` instead of
+  ``<built-in>``.
 - Clang constexpr evaluator now provides a more concise diagnostic when calling
   function pointer that is known to be null.
 - Clang now avoids duplicate warnings on unreachable ``[[fallthrough]];`` statements

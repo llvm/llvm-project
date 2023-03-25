@@ -104,7 +104,7 @@ LogicalResult splitFullAndPartialTransfer(
 
 /// Implements transfer op write to read forwarding and dead transfer write
 /// optimizations.
-void transferOpflowOpt(Operation *rootOp);
+void transferOpflowOpt(RewriterBase &rewriter, Operation *rootOp);
 
 } // namespace vector
 } // namespace mlir
