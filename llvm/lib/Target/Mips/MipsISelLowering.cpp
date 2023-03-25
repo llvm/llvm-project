@@ -299,6 +299,7 @@ const char *MipsTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case MipsISD::PCKEV:             return "MipsISD::PCKEV";
   case MipsISD::PCKOD:             return "MipsISD::PCKOD";
   case MipsISD::INSVE:             return "MipsISD::INSVE";
+  case MipsISD::BR_JT:             return "MipsISD::BR_JT";
   }
   return nullptr;
 }
@@ -349,7 +350,10 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   AddPromotedToType(ISD::SETCC, MVT::i1, MVT::i32);
 
   // Mips Custom Operations
-  setOperationAction(ISD::BR_JT,              MVT::Other, Expand);
+  if (Subtarget.hasNanoMips() && !STI.useAbsoluteJumpTables())
+    setOperationAction(ISD::BR_JT, MVT::Other, Custom);
+  else
+    setOperationAction(ISD::BR_JT, MVT::Other, Expand);
   setOperationAction(ISD::GlobalAddress,      MVT::i32,   Custom);
   setOperationAction(ISD::BlockAddress,       MVT::i32,   Custom);
   setOperationAction(ISD::GlobalTLSAddress,   MVT::i32,   Custom);
@@ -1507,6 +1511,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::GlobalAddress:      return lowerGlobalAddress(Op, DAG);
   case ISD::BlockAddress:       return lowerBlockAddress(Op, DAG);
   case ISD::GlobalTLSAddress:   return lowerGlobalTLSAddress(Op, DAG);
+  case ISD::BR_JT:              return lowerBR_JT(Op, DAG);
   case ISD::JumpTable:          return lowerJumpTable(Op, DAG);
   case ISD::SELECT:             return lowerSELECT(Op, DAG);
   case ISD::SETCC:              return lowerSETCC(Op, DAG);
@@ -2526,6 +2531,25 @@ lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const
   SDValue ThreadPointer = DAG.getNode(MipsISD::ThreadPointer, DL, PtrVT);
   return DAG.getNode(ISD::ADD, DL, PtrVT, ThreadPointer, Offset);
 }
+
+SDValue MipsTargetLowering::
+lowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op.getOperand(0);
+  SDValue JT = Op.getOperand(1);
+  SDValue Entry = Op.getOperand(2);
+
+  int JTI = cast<JumpTableSDNode>(JT.getNode())->getIndex();
+  auto *MFI = DAG.getMachineFunction().getInfo<MipsFunctionInfo>();
+  MFI->setJumpTableEntryInfo(JTI, 4, nullptr);
+
+  SDValue TJT = DAG.getTargetJumpTable(JTI, MVT::i32);
+  SDNode *Dest =
+      DAG.getMachineNode(Mips::LoadJumpTableOffset, DL, MVT::i32, JT, Entry, TJT);
+  return DAG.getNode(MipsISD::BR_JT, DL, MVT::Other, Chain, SDValue(Dest, 0),
+                     TJT);
+}
+
 
 SDValue MipsTargetLowering::
 lowerJumpTable(SDValue Op, SelectionDAG &DAG) const

@@ -138,8 +138,8 @@ bool getXRayOmitFunctionIndex();
 
 bool getDebugStrictDwarf();
 
-/// Create this object with static storage to register codegen-related command
-/// line options.
+/// Create this object with static storage to register codegen-related
+/// command line options.
 struct RegisterCodeGenFlags {
   RegisterCodeGenFlags();
 };

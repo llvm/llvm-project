@@ -333,6 +333,8 @@ MipsTargetMachine::getTargetTransformInfo(const Function &F) {
 // Implemented by targets that want to run passes immediately before
 // machine code is emitted.
 void MipsPassConfig::addPreEmitPass() {
+  if (getMipsSubtarget().hasNanoMips())
+    addPass(createNanoMipsCompressJumpTablesPass());
   // Expand pseudo instructions that are sensitive to register allocation.
   addPass(createMipsExpandPseudoPass());
 

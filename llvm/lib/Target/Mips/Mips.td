@@ -218,6 +218,9 @@ def FeatureLongCalls : SubtargetFeature<"long-calls", "UseLongCalls", "true",
 def FeatureXGOT
     : SubtargetFeature<"xgot", "UseXGOT", "true", "Assume 32-bit GOT">;
 
+def FeatureUseAbsoluteJumpTables
+    : SubtargetFeature<"disable-jump-table-opt", "UseAbsoluteJumpTables", "true", "Disable jump table optimization, use absolute jump tables instead">;
+
 def FeatureUseIndirectJumpsHazard : SubtargetFeature<"use-indirect-jump-hazard",
                                                     "UseIndirectJumpsHazard",
                                                     "true", "Use indirect jump"

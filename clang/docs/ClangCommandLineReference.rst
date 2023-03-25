@@ -3423,6 +3423,10 @@ Enable MT ASE (MIPS only)
 
 .. option:: -mxgot, -mno-xgot
 
+Disable jump table optimization (nanoMIPS only)
+
+.. option:: -mjump-table-opt, -mno-jump-table-opt
+
 PowerPC
 -------
 .. option:: -maltivec, -mno-altivec
