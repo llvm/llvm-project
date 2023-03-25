@@ -21,5 +21,5 @@ add_entrypoint_object(
     libc.include.setjmp
   COMPILE_OPTIONS
     -O3
-    -fno-omit-frame-pointer
+    -fomit-frame-pointer
 )
