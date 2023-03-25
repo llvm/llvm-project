@@ -383,7 +383,7 @@ defm "" : LMULSchedWrites<"WriteVISlideI">;
 defm "" : LMULSchedWrites<"WriteVISlide1X">;
 defm "" : LMULSchedWrites<"WriteVFSlide1F">;
 // 16.4. Vector Register Gather Instructions
-defm "" : LMULSchedWrites<"WriteVRGatherVV">;
+defm "" : LMULSEWSchedWrites<"WriteVRGatherVV">;
 defm "" : LMULSchedWrites<"WriteVRGatherVX">;
 defm "" : LMULSchedWrites<"WriteVRGatherVI">;
 // 16.5. Vector Compress Instruction
@@ -605,8 +605,8 @@ defm "" : LMULSchedReads<"ReadVISlideX">;
 defm "" : LMULSchedReads<"ReadVFSlideV">;
 defm "" : LMULSchedReads<"ReadVFSlideF">;
 // 16.4. Vector Register Gather Instructions
-defm "" : LMULSchedReads<"ReadVRGatherVV_data">;
-defm "" : LMULSchedReads<"ReadVRGatherVV_index">;
+defm "" : LMULSEWSchedReads<"ReadVRGatherVV_data">;
+defm "" : LMULSEWSchedReads<"ReadVRGatherVV_index">;
 defm "" : LMULSchedReads<"ReadVRGatherVX_data">;
 defm "" : LMULSchedReads<"ReadVRGatherVX_index">;
 defm "" : LMULSchedReads<"ReadVRGatherVI_data">;
@@ -800,7 +800,7 @@ defm "" : LMULWriteRes<"WriteVISlideX", []>;
 defm "" : LMULWriteRes<"WriteVISlideI", []>;
 defm "" : LMULWriteRes<"WriteVISlide1X", []>;
 defm "" : LMULWriteRes<"WriteVFSlide1F", []>;
-defm "" : LMULWriteRes<"WriteVRGatherVV", []>;
+defm "" : LMULSEWWriteRes<"WriteVRGatherVV", []>;
 defm "" : LMULWriteRes<"WriteVRGatherVX", []>;
 defm "" : LMULWriteRes<"WriteVRGatherVI", []>;
 defm "" : LMULSEWWriteRes<"WriteVCompressV", []>;
@@ -958,13 +958,12 @@ defm "" : LMULReadAdvance<"ReadVISlideV", 0>;
 defm "" : LMULReadAdvance<"ReadVISlideX", 0>;
 defm "" : LMULReadAdvance<"ReadVFSlideV", 0>;
 defm "" : LMULReadAdvance<"ReadVFSlideF", 0>;
-defm "" : LMULReadAdvance<"ReadVRGatherVV_data", 0>;
-defm "" : LMULReadAdvance<"ReadVRGatherVV_index", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVRGatherVV_data", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVRGatherVV_index", 0>;
 defm "" : LMULReadAdvance<"ReadVRGatherVX_data", 0>;
 defm "" : LMULReadAdvance<"ReadVRGatherVX_index", 0>;
 defm "" : LMULReadAdvance<"ReadVRGatherVI_data", 0>;
 defm "" : LMULReadAdvance<"ReadVGatherV", 0>;
-defm "" : LMULReadAdvance<"ReadVGatherX", 0>;
 defm "" : LMULSEWReadAdvance<"ReadVCompressV", 0>;
 // These are already LMUL aware
 def : ReadAdvance<ReadVMov1V, 0>;

@@ -2047,7 +2047,7 @@ foreach vti = AllIntegerVectors in {
                                               vti.RegClass:$merge,
                                               (vti.Mask V0),
                                               VLOpFrag)),
-            (!cast<Instruction>("PseudoVRGATHER_VV_"# vti.LMul.MX#"_MASK")
+            (!cast<Instruction>("PseudoVRGATHER_VV_"# vti.LMul.MX#"_E"# vti.SEW#"_MASK")
                  vti.RegClass:$merge, vti.RegClass:$rs2, vti.RegClass:$rs1,
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
   def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2, GPR:$rs1,
@@ -2073,7 +2073,7 @@ foreach vti = AllIntegerVectors in {
   if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
     defvar emul_str = octuple_to_str<octuple_emul>.ret;
     defvar ivti = !cast<VTypeInfo>("VI16" # emul_str);
-    defvar inst = "PseudoVRGATHEREI16_VV_" # vti.LMul.MX # "_" # emul_str;
+    defvar inst = "PseudoVRGATHEREI16_VV_" # vti.LMul.MX # "_E" # vti.SEW # "_" # emul_str;
 
     def : Pat<(vti.Vector
                (riscv_vrgatherei16_vv_vl vti.RegClass:$rs2,
@@ -2117,7 +2117,7 @@ foreach vti = AllFloatVectors in {
                                    vti.RegClass:$merge,
                                    (vti.Mask V0),
                                    VLOpFrag)),
-            (!cast<Instruction>("PseudoVRGATHER_VV_"# vti.LMul.MX#"_MASK")
+            (!cast<Instruction>("PseudoVRGATHER_VV_"# vti.LMul.MX#"_E"# vti.SEW#"_MASK")
                  vti.RegClass:$merge, vti.RegClass:$rs2, vti.RegClass:$rs1,
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
   def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2, GPR:$rs1,
@@ -2143,7 +2143,7 @@ foreach vti = AllFloatVectors in {
   if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
     defvar emul_str = octuple_to_str<octuple_emul>.ret;
     defvar ivti = !cast<VTypeInfo>("VI16" # emul_str);
-    defvar inst = "PseudoVRGATHEREI16_VV_" # vti.LMul.MX # "_" # emul_str;
+    defvar inst = "PseudoVRGATHEREI16_VV_" # vti.LMul.MX # "_E" # vti.SEW # "_" # emul_str;
 
     def : Pat<(vti.Vector
                (riscv_vrgatherei16_vv_vl vti.RegClass:$rs2,
