@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines the `MatchSwitch` abstraction for building a "switch"
+//  This file defines the `ASTMatchSwitch` abstraction for building a "switch"
 //  statement, where each case of the switch is defined by an AST matcher. The
 //  cases are considered in order, like pattern matching in functional
 //  languages.
@@ -17,8 +17,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// FIXME: Rename to ASTMatchSwitch.h and update documentation when all usages of
-// `MatchSwitch` are updated to `ASTMatchSwitch<Stmt>`
+// FIXME: Rename to ASTMatchSwitch.h
 
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_MATCHSWITCH_H_
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_MATCHSWITCH_H_
@@ -68,11 +67,6 @@ using MatchSwitchAction = std::function<Result(
 template <typename BaseT, typename State, typename Result = void>
 using ASTMatchSwitch =
     std::function<Result(const BaseT &, ASTContext &, State &)>;
-
-// FIXME: Remove this alias when all usages of `MatchSwitch` are updated to
-// `ASTMatchSwitch<Stmt>`.
-template <typename State, typename Result = void>
-using MatchSwitch = ASTMatchSwitch<Stmt, State, Result>;
 
 /// Collects cases of a "match switch": a collection of matchers paired with
 /// callbacks, which together define a switch that can be applied to a node
@@ -170,11 +164,6 @@ private:
   std::vector<ast_matchers::internal::DynTypedMatcher> Matchers;
   std::vector<MatchSwitchAction<BaseT, State, Result>> Actions;
 };
-
-// FIXME: Remove this alias when all usages of `MatchSwitchBuilder` are updated
-// to `ASTMatchSwitchBuilder<Stmt>`.
-template <typename State, typename Result = void>
-using MatchSwitchBuilder = ASTMatchSwitchBuilder<Stmt, State, Result>;
 
 } // namespace dataflow
 } // namespace clang
