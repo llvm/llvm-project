@@ -6334,8 +6334,9 @@ static SDValue lowerReductionSeq(unsigned RVVOpcode, MVT ResVT,
                                DAG.getUNDEF(M1VT),
                                InitialValue, DAG.getConstant(0, DL, XLenVT));
   SDValue PassThru = NonZeroAVL ? DAG.getUNDEF(M1VT) : InitialValue;
-  SDValue Reduction = DAG.getNode(RVVOpcode, DL, M1VT, PassThru, Vec,
-                                  InitialValue, Mask, VL);
+  SDValue Policy = DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT);
+  SDValue Ops[] = {PassThru, Vec, InitialValue, Mask, VL, Policy};
+  SDValue Reduction = DAG.getNode(RVVOpcode, DL, M1VT, Ops);
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT, Reduction,
                      DAG.getConstant(0, DL, XLenVT));
 }
@@ -8751,10 +8752,11 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
         DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ScalarVT, DAG.getUNDEF(ScalarVT),
                     NewScalarV, DAG.getConstant(0, DL, Subtarget.getXLenVT()));
 
+  SDValue Ops[] = {Reduce.getOperand(0), Reduce.getOperand(1),
+                   NewScalarV,           Reduce.getOperand(3),
+                   Reduce.getOperand(4), Reduce.getOperand(5)};
   SDValue NewReduce =
-      DAG.getNode(Reduce.getOpcode(), DL, Reduce.getValueType(),
-                  Reduce.getOperand(0), Reduce.getOperand(1), NewScalarV,
-                  Reduce.getOperand(3), Reduce.getOperand(4));
+      DAG.getNode(Reduce.getOpcode(), DL, Reduce.getValueType(), Ops);
   return DAG.getNode(Extract.getOpcode(), DL, Extract.getValueType(), NewReduce,
                      Extract.getOperand(1));
 }

@@ -75,6 +75,11 @@ static void handle_error(hsa_status_t code) {
   exit(EXIT_FAILURE);
 }
 
+static void handle_error(const char *msg) {
+  fprintf(stderr, "%s\n", msg);
+  exit(EXIT_FAILURE);
+}
+
 /// Generic interface for iterating using the HSA callbacks.
 template <typename elem_ty, typename func_ty, typename callback_ty>
 hsa_status_t iterate(func_ty func, callback_ty cb) {
@@ -279,50 +284,23 @@ int load(int argc, char **argv, char **envp, void *image, size_t size) {
 
   // Allocate fine-grained memory on the host to hold the pointer array for the
   // copied argv and allow the GPU agent to access it.
-  void *dev_argv;
-  if (hsa_status_t err =
-          hsa_amd_memory_pool_allocate(finegrained_pool, argc * sizeof(char *),
-                                       /*flags=*/0, &dev_argv))
-    handle_error(err);
-  hsa_amd_agents_allow_access(1, &dev_agent, nullptr, dev_argv);
-
-  // Copy each string in the argument vector to global memory on the device.
-  for (int i = 0; i < argc; ++i) {
-    size_t size = strlen(argv[i]) + 1;
-    void *dev_str;
+  auto allocator = [&](uint64_t size) -> void * {
+    void *dev_ptr = nullptr;
     if (hsa_status_t err = hsa_amd_memory_pool_allocate(finegrained_pool, size,
-                                                        /*flags=*/0, &dev_str))
+                                                        /*flags=*/0, &dev_ptr))
       handle_error(err);
-    hsa_amd_agents_allow_access(1, &dev_agent, nullptr, dev_str);
-    // Load the host memory buffer with the pointer values of the newly
-    // allocated strings.
-    std::memcpy(dev_str, argv[i], size);
-    static_cast<void **>(dev_argv)[i] = dev_str;
-  }
+    hsa_amd_agents_allow_access(1, &dev_agent, nullptr, dev_ptr);
+    return dev_ptr;
+  };
+  void *dev_argv = copy_argument_vector(argc, argv, allocator);
+  if (!dev_argv)
+    handle_error("Failed to allocate device argv");
 
   // Allocate fine-grained memory on the host to hold the pointer array for the
   // copied environment array and allow the GPU agent to access it.
-  int envc = 0;
-  for (char **env = envp; *env != 0; ++env)
-    ++envc;
-  void *dev_envp;
-  if (hsa_status_t err =
-          hsa_amd_memory_pool_allocate(finegrained_pool, envc * sizeof(char *),
-                                       /*flags=*/0, &dev_envp))
-    handle_error(err);
-  hsa_amd_agents_allow_access(1, &dev_agent, nullptr, dev_envp);
-  for (int i = 0; i < envc; ++i) {
-    size_t size = strlen(envp[i]) + 1;
-    void *dev_str;
-    if (hsa_status_t err = hsa_amd_memory_pool_allocate(finegrained_pool, size,
-                                                        /*flags=*/0, &dev_str))
-      handle_error(err);
-    hsa_amd_agents_allow_access(1, &dev_agent, nullptr, dev_str);
-    // Load the host memory buffer with the pointer values of the newly
-    // allocated strings.
-    std::memcpy(dev_str, envp[i], size);
-    static_cast<void **>(dev_envp)[i] = dev_str;
-  }
+  void *dev_envp = copy_environment(envp, allocator);
+  if (!dev_envp)
+    handle_error("Failed to allocate device environment");
 
   // Allocate space for the return pointer and initialize it to zero.
   void *dev_ret;

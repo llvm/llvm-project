@@ -456,7 +456,7 @@ Operation *LoopEmitter::enterLoopOverTensorAtLvl(
   for (auto [t, l] : llvm::zip(tids, lvls)) {
     // TODO: this check for validity of the (t,l) pairs should be
     // checked/enforced at the callsites, if possible.
-    assert(t < lvlTypes.size() && l < lvlTypes[t].size());
+    assert(isValidLevel(t, l));
     assert(!coords[t][l]); // We cannot re-enter the same level
     const auto lvlTp = lvlTypes[t][l];
     const bool isSparse = isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp);
@@ -572,7 +572,7 @@ Operation *LoopEmitter::enterLoopOverTensorAtLvl(
 Operation *LoopEmitter::enterFilterLoopOverTensorAtLvl(
     OpBuilder &builder, Location loc, TensorId tid, Level lvl,
     AffineExpr affine, MutableArrayRef<Value> reduc) {
-  assert(tid < lvlTypes.size() && lvl < lvlTypes[tid].size());
+  assert(isValidLevel(tid, lvl));
   assert(!affine.isa<AffineDimExpr>() && !isDenseDLT(lvlTypes[tid][lvl]));
   // We can not re-enter the same level.
   assert(!coords[tid][lvl]);
@@ -862,7 +862,7 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
 
 void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
                                              TensorId tid, Level dstLvl) {
-  assert(tid < lvlTypes.size() && dstLvl < lvlTypes[tid].size());
+  assert(isValidLevel(tid, dstLvl));
   const auto lvlTp = lvlTypes[tid][dstLvl];
 
   if (isDenseDLT(lvlTp))

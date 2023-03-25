@@ -27,7 +27,14 @@ TEST(BoolValueDebugStringTest, AtomicBoolean) {
   auto B = Ctx.atom();
 
   auto Expected = R"(B0)";
-  debugString(*B);
+  EXPECT_THAT(debugString(*B), StrEq(Expected));
+}
+
+TEST(BoolValueDebugStringTest, Top) {
+  ConstraintContext Ctx;
+  auto B = Ctx.top();
+
+  auto Expected = R"(top)";
   EXPECT_THAT(debugString(*B), StrEq(Expected));
 }
 
