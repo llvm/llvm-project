@@ -1,0 +1,12 @@
+#include <optional>
+#include <string>
+
+struct OneOptionalStringStruct {
+    struct Storage {
+        std::optional<std::string> s;
+    };
+    OneOptionalStringStruct::Storage storage{std::string{"hello"}};
+   std::optional<std::string> opt{"world"};
+};
+
+void test() { OneOptionalStringStruct ooss{{.s = "hello"}}; }
