@@ -2392,6 +2392,17 @@ private:
     if (Style.isCSharp() && Tok.is(tok::ampamp))
       return TT_BinaryOperator;
 
+    if (Style.isVerilog()) {
+      // In Verilog, `*` can only be a binary operator.  `&` can be either unary
+      // or binary.  `*` also includes `*>` in module path declarations in
+      // specify blocks because merged tokens take the type of the first one by
+      // default.
+      if (Tok.is(tok::star))
+        return TT_BinaryOperator;
+      return determineUnaryOperatorByUsage(Tok) ? TT_UnaryOperator
+                                                : TT_BinaryOperator;
+    }
+
     const FormatToken *PrevToken = Tok.getPreviousNonComment();
     if (!PrevToken)
       return TT_UnaryOperator;
@@ -3987,7 +3998,12 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return !Left.isOneOf(tok::l_paren, tok::l_square, tok::at) &&
            (Left.isNot(tok::colon) || Left.isNot(TT_ObjCMethodExpr));
   }
-  if ((Left.isOneOf(tok::identifier, tok::greater, tok::r_square,
+  // No space between the variable name and the initializer list.
+  // A a1{1};
+  // Verilog doesn't have such syntax, but it has word operators that are C++
+  // identifiers like `a inside {b, c}`. So the rule is not applicable.
+  if (!Style.isVerilog() &&
+      (Left.isOneOf(tok::identifier, tok::greater, tok::r_square,
                     tok::r_paren) ||
        Left.isSimpleTypeSpecifier()) &&
       Right.is(tok::l_brace) && Right.getNextNonComment() &&
@@ -4373,12 +4389,24 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
          Keywords.isWordLike(Left))) {
       return false;
     }
+    // Don't add spaces in imports like `import foo::*;`.
+    if ((Right.is(tok::star) && Left.is(tok::coloncolon)) ||
+        (Left.is(tok::star) && Right.is(tok::semi))) {
+      return false;
+    }
     // Add space in attribute like `(* ASYNC_REG = "TRUE" *)`.
     if (Left.endsSequence(tok::star, tok::l_paren) && Right.is(tok::identifier))
       return true;
     // Add space before drive strength like in `wire (strong1, pull0)`.
     if (Right.is(tok::l_paren) && Right.is(TT_VerilogStrength))
       return true;
+    // Don't add space in a streaming concatenation like `{>>{j}}`.
+    if ((Left.is(tok::l_brace) &&
+         Right.isOneOf(tok::lessless, tok::greatergreater)) ||
+        (Left.endsSequence(tok::lessless, tok::l_brace) ||
+         Left.endsSequence(tok::greatergreater, tok::l_brace))) {
+      return false;
+    }
   }
   if (Left.is(TT_ImplicitStringLiteral))
     return Right.hasWhitespaceBefore();
