@@ -35,6 +35,7 @@ add_llvm_target(LoongArchCodeGen
   MC
   LoongArchDesc
   LoongArchInfo
+  Scalar
   SelectionDAG
   Support
   Target

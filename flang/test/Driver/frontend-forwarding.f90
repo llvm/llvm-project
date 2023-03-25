@@ -15,7 +15,8 @@
 ! RUN:     -fassociative-math \
 ! RUN:     -freciprocal-math \
 ! RUN:     -fpass-plugin=Bye%pluginext \
-! RUN:     -mllvm -print-before-all\
+! RUN:     -mllvm -print-before-all \
+! RUN:     -save-temps=obj \
 ! RUN:     -P \
 ! RUN:   | FileCheck %s
 
@@ -34,3 +35,4 @@
 ! CHECK: "-fconvert=little-endian"
 ! CHECK: "-fpass-plugin=Bye
 ! CHECK: "-mllvm" "-print-before-all"
+! CHECK: "-save-temps=obj"

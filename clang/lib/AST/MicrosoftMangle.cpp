@@ -845,6 +845,7 @@ void MicrosoftCXXNameMangler::mangleFloat(llvm::APFloat Number) {
   case APFloat::S_Float8E4M3FN:
   case APFloat::S_Float8E5M2FNUZ:
   case APFloat::S_Float8E4M3FNUZ:
+  case APFloat::S_Float8E4M3B11FNUZ:
     llvm_unreachable("Tried to mangle unexpected APFloat semantics");
   }
 

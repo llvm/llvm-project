@@ -120,6 +120,8 @@ protected:
   bool HasReachedMaximumDepth();
 
 private:
+  bool ShouldShowName() const;
+
   ValueObject *m_orig_valobj;
   ValueObject *m_valobj;
   Stream *m_stream;

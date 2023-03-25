@@ -1,5 +1,5 @@
 // RUN: %clangxx_asan -O0 %s -o %t
-// RUN: %env_asan_opts=external_symbolizer_path=asdf not %run %t 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=external_symbolizer_path=non-existent\\\\asdf not %run %t 2>&1 | FileCheck %s
 
 #include <windows.h>
 #include <dbghelp.h>

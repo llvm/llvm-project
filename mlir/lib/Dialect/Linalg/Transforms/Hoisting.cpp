@@ -52,6 +52,30 @@ void mlir::linalg::hoistRedundantVectorTransfersOnTensor(func::FuncOp func) {
   });
 }
 
+static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
+                                LoopLikeOpInterface loop) {
+  Value source = transferRead.getSource();
+  while (auto subView = source.getDefiningOp<memref::SubViewOp>())
+    source = subView.getSource();
+  llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
+                                           source.getUsers().end());
+  llvm::SmallDenseSet<Operation *, 32> processed;
+  while (!users.empty()) {
+    Operation *user = users.pop_back_val();
+    // If the user has already been processed skip.
+    if (!processed.insert(user).second)
+      continue;
+    if (auto subView = dyn_cast<memref::SubViewOp>(user)) {
+      users.append(subView->getUsers().begin(), subView->getUsers().end());
+      continue;
+    }
+    if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
+      continue;
+    return false;
+  }
+  return true;
+}
+
 void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
   bool changed = true;
   while (changed) {
@@ -95,9 +119,15 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
         if (!loop.isDefinedOutsideOfLoop(operand))
           return WalkResult::advance();
 
-      // Only hoist transfer_read / transfer_write pairs for now.
-      if (!transferWrite)
+      // Only hoist transfer_read / transfer_write pairs and singleton
+      // transfer_reads for now.
+      if (!transferWrite) {
+        // Make sure there are no other accesses to the memref before
+        // hoisting transfer_read.
+        if (noAliasingUseInLoop(transferRead, loop))
+          loop.moveOutOfLoop(transferRead);
         return WalkResult::advance();
+      }
 
       LLVM_DEBUG(DBGS() << "Candidate: " << *transferWrite.getOperation()
                         << "\n");
