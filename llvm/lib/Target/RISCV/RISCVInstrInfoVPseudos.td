@@ -1988,7 +1988,8 @@ multiclass VPseudoVGTR_VV_EEW<int eew, string Constraint = ""> {
   foreach m = MxList in {
     defvar mx = m.MX;
     defvar WriteVRGatherVV_MX = !cast<SchedWrite>("WriteVRGatherVV_" # mx);
-    defvar ReadVRGatherVV_MX = !cast<SchedRead>("ReadVRGatherVV_" # mx);
+    defvar ReadVRGatherVV_data_MX = !cast<SchedRead>("ReadVRGatherVV_data_" # mx);
+    defvar ReadVRGatherVV_index_MX = !cast<SchedRead>("ReadVRGatherVV_index_" # mx);
 
     foreach sew = EEWList in {
       defvar octuple_lmul = m.octuple;
@@ -1998,8 +1999,8 @@ multiclass VPseudoVGTR_VV_EEW<int eew, string Constraint = ""> {
         defvar emulMX = octuple_to_str<octuple_emul>.ret;
         defvar emul = !cast<LMULInfo>("V_" # emulMX);
         defm _VV : VPseudoBinaryEmul<m.vrclass, m.vrclass, emul.vrclass, m, emul, Constraint>,
-                   Sched<[WriteVRGatherVV_MX, ReadVRGatherVV_MX,
-                          ReadVRGatherVV_MX]>;
+                   Sched<[WriteVRGatherVV_MX, ReadVRGatherVV_data_MX,
+                          ReadVRGatherVV_index_MX]>;
       }
     }
   }
@@ -2398,17 +2399,20 @@ multiclass VPseudoVGTR_VV_VX_VI<Operand ImmType = simm5, string Constraint = "">
     defvar WriteVRGatherVV_MX = !cast<SchedWrite>("WriteVRGatherVV_" # mx);
     defvar WriteVRGatherVX_MX = !cast<SchedWrite>("WriteVRGatherVX_" # mx);
     defvar WriteVRGatherVI_MX = !cast<SchedWrite>("WriteVRGatherVI_" # mx);
-    defvar ReadVRGatherVV_MX = !cast<SchedRead>("ReadVRGatherVV_" # mx);
-    defvar ReadVRGatherVX_MX = !cast<SchedRead>("ReadVRGatherVX_" # mx);
+    defvar ReadVRGatherVV_data_MX = !cast<SchedRead>("ReadVRGatherVV_data_" # mx);
+    defvar ReadVRGatherVV_index_MX = !cast<SchedRead>("ReadVRGatherVV_index_" # mx);
+    defvar ReadVRGatherVX_data_MX = !cast<SchedRead>("ReadVRGatherVX_data_" # mx);
+    defvar ReadVRGatherVX_index_MX = !cast<SchedRead>("ReadVRGatherVX_index_" # mx);
+    defvar ReadVRGatherVI_data_MX = !cast<SchedRead>("ReadVRGatherVI_data_" # mx);
 
     defm "" : VPseudoBinaryV_VV<m, Constraint>,
-              Sched<[WriteVRGatherVV_MX, ReadVRGatherVV_MX,
-                     ReadVRGatherVV_MX, ReadVMask]>;
+              Sched<[WriteVRGatherVV_MX, ReadVRGatherVV_data_MX,
+                     ReadVRGatherVV_index_MX, ReadVMask]>;
     defm "" : VPseudoBinaryV_VX<m, Constraint>,
-              Sched<[WriteVRGatherVX_MX, ReadVRGatherVV_MX,
-                     ReadVRGatherVX_MX, ReadVMask]>;
+              Sched<[WriteVRGatherVX_MX, ReadVRGatherVX_data_MX,
+                     ReadVRGatherVX_index_MX, ReadVMask]>;
     defm "" : VPseudoBinaryV_VI<ImmType, m, Constraint>,
-              Sched<[WriteVRGatherVI_MX, ReadVRGatherVV_MX, ReadVMask]>;
+              Sched<[WriteVRGatherVI_MX, ReadVRGatherVI_data_MX, ReadVMask]>;
   }
 }
 
