@@ -97,6 +97,23 @@ TEST_F(FormatTestVerilog, Align) {
                Style);
 }
 
+TEST_F(FormatTestVerilog, Assign) {
+  verifyFormat("assign mynet = enable;");
+  verifyFormat("assign (strong1, pull0) #1 mynet = enable;");
+  verifyFormat("assign #1 mynet = enable;");
+  verifyFormat("assign mynet = enable;");
+  // Test that assignments are on separate lines.
+  verifyFormat("assign mynet = enable,\n"
+               "       mynet1 = enable1;");
+  // Test that `<=` and `,` don't confuse it.
+  verifyFormat("assign mynet = enable1 <= enable2;");
+  verifyFormat("assign mynet = enable1 <= enable2,\n"
+               "       mynet1 = enable3;");
+  verifyFormat("assign mynet = enable,\n"
+               "       mynet1 = enable2 <= enable3;");
+  verifyFormat("assign mynet = enable(enable1, enable2);");
+}
+
 TEST_F(FormatTestVerilog, BasedLiteral) {
   verifyFormat("x = '0;");
   verifyFormat("x = '1;");

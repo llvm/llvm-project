@@ -1286,8 +1286,11 @@ private:
         Tok->setType(TT_InheritanceComma);
         break;
       default:
-        if (Contexts.back().FirstStartOfName &&
-            (Contexts.size() == 1 || startsWithInitStatement(Line))) {
+        if (Style.isVerilog() && Contexts.size() == 1 &&
+            Line.startsWith(Keywords.kw_assign)) {
+          Tok->setFinalizedType(TT_VerilogAssignComma);
+        } else if (Contexts.back().FirstStartOfName &&
+                   (Contexts.size() == 1 || startsWithInitStatement(Line))) {
           Contexts.back().FirstStartOfName->PartOfMultiVariableDeclStmt = true;
           Line.IsMultiVariableDeclStmt = true;
         }
@@ -4720,6 +4723,9 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return true;
     }
   } else if (Style.isVerilog()) {
+    // Break between assignments.
+    if (Left.is(TT_VerilogAssignComma))
+      return true;
     // Break between ports of different types.
     if (Left.is(TT_VerilogTypeComma))
       return true;
