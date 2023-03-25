@@ -369,5 +369,3 @@ template <typename Cat> Log *GetLog(Cat mask) {
   } while (0)
 
 #endif // LLDB_UTILITY_LOG_H
-
-// TODO: Remove this and fix includes everywhere.

@@ -1105,19 +1105,18 @@ getSingleConstraintMatchWeight(AsmOperandInfo &info,
   case 'd': // Data register (equivalent to 'r')
   case 'h': // High-part register
   case 'r': // General-purpose register
-    if (CallOperandVal->getType()->isIntegerTy())
-      weight = CW_Register;
+    weight = CallOperandVal->getType()->isIntegerTy() ? CW_Register : CW_Default;
     break;
 
   case 'f': // Floating-point register
-    if (type->isFloatingPointTy())
-      weight = CW_Register;
+    if (!useSoftFloat())
+      weight = type->isFloatingPointTy() ? CW_Register : CW_Default;
     break;
 
   case 'v': // Vector register
-    if ((type->isVectorTy() || type->isFloatingPointTy()) &&
-        Subtarget.hasVector())
-      weight = CW_Register;
+    if (Subtarget.hasVector())
+      weight = (type->isVectorTy() || type->isFloatingPointTy()) ? CW_Register
+                                                                 : CW_Default;
     break;
 
   case 'I': // Unsigned 8-bit constant
@@ -1179,9 +1178,9 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
     default: break;
     case 'd': // Data register (equivalent to 'r')
     case 'r': // General-purpose register
-      if (VT == MVT::i64)
+      if (VT.getSizeInBits() == 64)
         return std::make_pair(0U, &SystemZ::GR64BitRegClass);
-      else if (VT == MVT::i128)
+      else if (VT.getSizeInBits() == 128)
         return std::make_pair(0U, &SystemZ::GR128BitRegClass);
       return std::make_pair(0U, &SystemZ::GR32BitRegClass);
 
@@ -1197,18 +1196,19 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
 
     case 'f': // Floating-point register
       if (!useSoftFloat()) {
-        if (VT == MVT::f64)
+        if (VT.getSizeInBits() == 64)
           return std::make_pair(0U, &SystemZ::FP64BitRegClass);
-        else if (VT == MVT::f128)
+        else if (VT.getSizeInBits() == 128)
           return std::make_pair(0U, &SystemZ::FP128BitRegClass);
         return std::make_pair(0U, &SystemZ::FP32BitRegClass);
       }
       break;
+
     case 'v': // Vector register
       if (Subtarget.hasVector()) {
-        if (VT == MVT::f32)
+        if (VT.getSizeInBits() == 32)
           return std::make_pair(0U, &SystemZ::VR32BitRegClass);
-        if (VT == MVT::f64)
+        if (VT.getSizeInBits() == 64)
           return std::make_pair(0U, &SystemZ::VR64BitRegClass);
         return std::make_pair(0U, &SystemZ::VR128BitRegClass);
       }
@@ -1216,15 +1216,22 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
     }
   }
   if (Constraint.size() > 0 && Constraint[0] == '{') {
+
+    // A clobber constraint (e.g. ~{f0}) will have MVT::Other which is illegal
+    // to check the size on.
+    auto getVTSizeInBits = [&VT]() {
+      return VT == MVT::Other ? 0 : VT.getSizeInBits();
+    };
+
     // We need to override the default register parsing for GPRs and FPRs
     // because the interpretation depends on VT.  The internal names of
     // the registers are also different from the external names
     // (F0D and F0S instead of F0, etc.).
     if (Constraint[1] == 'r') {
-      if (VT == MVT::i32)
+      if (getVTSizeInBits() == 32)
         return parseRegisterNumber(Constraint, &SystemZ::GR32BitRegClass,
                                    SystemZMC::GR32Regs, 16);
-      if (VT == MVT::i128)
+      if (getVTSizeInBits() == 128)
         return parseRegisterNumber(Constraint, &SystemZ::GR128BitRegClass,
                                    SystemZMC::GR128Regs, 16);
       return parseRegisterNumber(Constraint, &SystemZ::GR64BitRegClass,
@@ -1234,10 +1241,10 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
       if (useSoftFloat())
         return std::make_pair(
             0u, static_cast<const TargetRegisterClass *>(nullptr));
-      if (VT == MVT::f32)
+      if (getVTSizeInBits() == 32)
         return parseRegisterNumber(Constraint, &SystemZ::FP32BitRegClass,
                                    SystemZMC::FP32Regs, 16);
-      if (VT == MVT::f128)
+      if (getVTSizeInBits() == 128)
         return parseRegisterNumber(Constraint, &SystemZ::FP128BitRegClass,
                                    SystemZMC::FP128Regs, 16);
       return parseRegisterNumber(Constraint, &SystemZ::FP64BitRegClass,
@@ -1247,10 +1254,10 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
       if (!Subtarget.hasVector())
         return std::make_pair(
             0u, static_cast<const TargetRegisterClass *>(nullptr));
-      if (VT == MVT::f32)
+      if (getVTSizeInBits() == 32)
         return parseRegisterNumber(Constraint, &SystemZ::VR32BitRegClass,
                                    SystemZMC::VR32Regs, 32);
-      if (VT == MVT::f64)
+      if (getVTSizeInBits() == 64)
         return parseRegisterNumber(Constraint, &SystemZ::VR64BitRegClass,
                                    SystemZMC::VR64Regs, 32);
       return parseRegisterNumber(Constraint, &SystemZ::VR128BitRegClass,
@@ -1453,28 +1460,24 @@ bool SystemZTargetLowering::splitValueIntoRegisterParts(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
     unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC) const {
   EVT ValueVT = Val.getValueType();
-  assert((ValueVT != MVT::i128 ||
-          ((NumParts == 1 && PartVT == MVT::Untyped) ||
-           (NumParts == 2 && PartVT == MVT::i64))) &&
-         "Unknown handling of i128 value.");
-  if (ValueVT == MVT::i128 && NumParts == 1) {
+  if (ValueVT.getSizeInBits() == 128 && NumParts == 1 && PartVT == MVT::Untyped) {
     // Inline assembly operand.
-    Parts[0] = lowerI128ToGR128(DAG, Val);
+    Parts[0] = lowerI128ToGR128(DAG, DAG.getBitcast(MVT::i128, Val));
     return true;
   }
+
   return false;
 }
 
 SDValue SystemZTargetLowering::joinRegisterPartsIntoValue(
     SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts, unsigned NumParts,
     MVT PartVT, EVT ValueVT, std::optional<CallingConv::ID> CC) const {
-  assert((ValueVT != MVT::i128 ||
-          ((NumParts == 1 && PartVT == MVT::Untyped) ||
-           (NumParts == 2 && PartVT == MVT::i64))) &&
-         "Unknown handling of i128 value.");
-  if (ValueVT == MVT::i128 && NumParts == 1)
+  if (ValueVT.getSizeInBits() == 128 && NumParts == 1 && PartVT == MVT::Untyped) {
     // Inline assembly operand.
-    return lowerGR128ToI128(DAG, Parts[0]);
+    SDValue Res = lowerGR128ToI128(DAG, Parts[0]);
+    return DAG.getBitcast(ValueVT, Res);
+  }
+
   return SDValue();
 }
 

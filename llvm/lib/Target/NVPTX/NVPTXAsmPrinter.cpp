@@ -1148,7 +1148,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
       }
     }
   } else {
-    unsigned int ElementSize = 0;
+    uint64_t ElementSize = 0;
 
     // Although PTX has direct support for struct type and array type and
     // LLVM IR is very similar to PTX, the LLVM CodeGen does not support for

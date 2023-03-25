@@ -39,16 +39,19 @@ BinarySection::hash(const BinaryData &BD,
   if (Itr != Cache.end())
     return Itr->second;
 
-  Cache[&BD] = 0;
+  hash_code Hash =
+      hash_combine(hash_value(BD.getSize()), hash_value(BD.getSectionName()));
+
+  Cache[&BD] = Hash;
+
+  if (!containsRange(BD.getAddress(), BD.getSize()))
+    return Hash;
 
   uint64_t Offset = BD.getAddress() - getAddress();
   const uint64_t EndOffset = BD.getEndAddress() - getAddress();
   auto Begin = Relocations.lower_bound(Relocation{Offset, 0, 0, 0, 0});
   auto End = Relocations.upper_bound(Relocation{EndOffset, 0, 0, 0, 0});
   const StringRef Contents = getContents();
-
-  hash_code Hash =
-      hash_combine(hash_value(BD.getSize()), hash_value(BD.getSectionName()));
 
   while (Begin != End) {
     const Relocation &Rel = *Begin++;

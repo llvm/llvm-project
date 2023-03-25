@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -filetype=obj -o %t %S/Inputs/x86-64_self_relocation.s
-# RUN: llvm-jitlink -noexec -show-graph %t 2>&1 | \
+# RUN: llvm-jitlink -noexec -show-graphs='.*' %t 2>&1 | \
 # RUN:   FileCheck -check-prefix=WITHOUT %s
-# RUN: llvm-jitlink -noexec -show-graph -add-self-relocations %t 2>&1 | \
+# RUN: llvm-jitlink -noexec -show-graphs='.*' -add-self-relocations %t 2>&1 | \
 # RUN:   FileCheck -check-prefix=CHECK %s
 
 # WITHOUT: block

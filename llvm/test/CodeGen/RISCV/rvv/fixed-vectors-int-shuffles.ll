@@ -645,19 +645,39 @@ entry:
   ret <4 x i16> %5
 }
 
-define <8 x i8> @merge_start_into_end(<8 x i8> %v, <8 x i8> %w) {
-; CHECK-LABEL: merge_start_into_end:
+define <8 x i8> @concat_4xi8_start(<8 x i8> %v, <8 x i8> %w) {
+; CHECK-LABEL: concat_4xi8_start:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 4
+; CHECK-NEXT:    ret
+  %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @concat_4xi8_start_undef(<8 x i8> %v, <8 x i8> %w) {
+; CHECK-LABEL: concat_4xi8_start_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 4
+; CHECK-NEXT:    ret
+  %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 undef, i32 10, i32 11>
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @concat_4xi8_start_undef_at_start(<8 x i8> %v, <8 x i8> %w) {
+; CHECK-LABEL: concat_4xi8_start_undef_at_start:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vid.v v11
 ; CHECK-NEXT:    vrgather.vv v10, v8, v11
-; CHECK-NEXT:    li a0, 240
+; CHECK-NEXT:    li a0, 224
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vadd.vi v8, v11, -4
 ; CHECK-NEXT:    vrgather.vv v10, v9, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
-  %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 9, i32 10, i32 11>
   ret <8 x i8> %res
 }
 
@@ -680,10 +700,9 @@ define <8 x i8> @merge_start_into_end_non_contiguous(<8 x i8> %v, <8 x i8> %w) {
 define <8 x i8> @merge_end_into_end(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: merge_end_into_end:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 15
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
+; CHECK-NEXT:    vslideup.vi v9, v8, 0
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i8> %res
@@ -692,14 +711,8 @@ define <8 x i8> @merge_end_into_end(<8 x i8> %v, <8 x i8> %w) {
 define <8 x i8> @merge_start_into_middle(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: merge_start_into_middle:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vid.v v11
-; CHECK-NEXT:    vrgather.vv v10, v8, v11
-; CHECK-NEXT:    li a0, 30
-; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vadd.vi v8, v11, -1
-; CHECK-NEXT:    vrgather.vv v10, v9, v8, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vsetivli zero, 5, e8, mf2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 0, i32 8, i32 9, i32 10, i32 11, i32 5, i32 6, i32 7>
   ret <8 x i8> %res
@@ -708,10 +721,8 @@ define <8 x i8> @merge_start_into_middle(<8 x i8> %v, <8 x i8> %w) {
 define <8 x i8> @merge_start_into_start(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: merge_start_into_start:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 240
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 0
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i8> %res
@@ -758,8 +769,8 @@ define <8 x i8> @unmergable(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vid.v v10
 ; CHECK-NEXT:    vadd.vi v11, v10, 2
-; CHECK-NEXT:    lui a0, %hi(.LCPI44_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI44_0)
+; CHECK-NEXT:    lui a0, %hi(.LCPI46_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI46_0)
 ; CHECK-NEXT:    vle8.v v12, (a0)
 ; CHECK-NEXT:    li a0, 234
 ; CHECK-NEXT:    vmv.s.x v0, a0
