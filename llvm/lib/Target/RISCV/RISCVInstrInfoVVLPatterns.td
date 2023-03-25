@@ -1802,7 +1802,7 @@ foreach vti = AllFloatVectors in {
   // 13.8. Vector Floating-Point Square-Root Instruction
   def : Pat<(riscv_fsqrt_vl (vti.Vector vti.RegClass:$rs2), (vti.Mask V0),
                             VLOpFrag),
-            (!cast<Instruction>("PseudoVFSQRT_V_"# vti.LMul.MX #"_MASK")
+            (!cast<Instruction>("PseudoVFSQRT_V_"# vti.LMul.MX # "_E" # vti.SEW # "_MASK")
                  (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TA_MA)>;
 
