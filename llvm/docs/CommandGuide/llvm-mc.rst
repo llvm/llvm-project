@@ -75,6 +75,13 @@ End-user Options
 
  Marked up disassembly of string of hex bytes.
 
+.. option:: --filetype=[asm,null,obj]
+
+ Sets the output filetype. Setting this flag to `asm` will make the tool
+ output text assembly. Setting this flag to `obj` will make the tool output
+ an object file. Setting it to `null` causes no output to be created and can be
+ used for timing purposes. The default value is `asm`.
+
 .. option:: -g
 
  Generate DWARF debugging info for assembly source files.
