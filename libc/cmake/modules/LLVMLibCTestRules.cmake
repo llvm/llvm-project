@@ -484,6 +484,8 @@ function(add_integration_test test_name)
   add_executable(
     ${fq_build_target_name}
     EXCLUDE_FROM_ALL
+    # The NVIDIA 'nvlink' linker does not currently support static libraries.
+    $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_GPU}>:${link_object_files}>
     ${INTEGRATION_TEST_SRCS}
     ${INTEGRATION_TEST_HDRS}
   )
@@ -510,9 +512,12 @@ function(add_integration_test test_name)
   endif()
 
   target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
-  target_link_libraries(${fq_build_target_name} ${fq_target_name}.__libc__
-                        libc.startup.${LIBC_TARGET_OS}.crt1
-                        libc.test.IntegrationTest.test)
+  target_link_libraries(
+    ${fq_build_target_name}
+    # The NVIDIA 'nvlink' linker does not currently support static libraries.
+    $<$<NOT:$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_GPU}>>:${fq_target_name}.__libc__>
+    libc.startup.${LIBC_TARGET_OS}.crt1
+    libc.test.IntegrationTest.test)
   add_dependencies(${fq_build_target_name}
                    libc.test.IntegrationTest.test
                    ${INTEGRATION_TEST_DEPENDS})
