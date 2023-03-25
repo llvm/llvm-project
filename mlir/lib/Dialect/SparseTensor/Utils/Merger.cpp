@@ -103,14 +103,14 @@ TensorExp::TensorExp(Kind k, unsigned x, ExprId y, Value v, Operation *o)
   switch (kind) {
   // Leaf.
   case TensorExp::Kind::kTensor:
-    assert(x != kInvalidId && y == kInvalidId && !v && !o);
+    assert(x != detail::kInvalidId && y == detail::kInvalidId && !v && !o);
     tensor = x;
     return;
   case TensorExp::Kind::kInvariant:
-    assert(x == kInvalidId && y == kInvalidId && v && !o);
+    assert(x == detail::kInvalidId && y == detail::kInvalidId && v && !o);
     return;
   case TensorExp::Kind::kLoopVar:
-    assert(x != kInvalidId && y == kInvalidId && !v && !o);
+    assert(x != detail::kInvalidId && y == detail::kInvalidId && !v && !o);
     loop = x;
     return;
   // Unary operations.
@@ -134,7 +134,7 @@ TensorExp::TensorExp(Kind k, unsigned x, ExprId y, Value v, Operation *o)
   case TensorExp::Kind::kNegI:
   case TensorExp::Kind::kCIm:
   case TensorExp::Kind::kCRe:
-    assert(x != kInvalidId && y == kInvalidId && !v && !o);
+    assert(x != detail::kInvalidId && y == detail::kInvalidId && !v && !o);
     children.e0 = x;
     children.e1 = y;
     return;
@@ -149,20 +149,20 @@ TensorExp::TensorExp(Kind k, unsigned x, ExprId y, Value v, Operation *o)
   case TensorExp::Kind::kCastIdx:
   case TensorExp::Kind::kTruncI:
   case TensorExp::Kind::kBitCast:
-    assert(x != kInvalidId && y == kInvalidId && v && !o);
+    assert(x != detail::kInvalidId && y == detail::kInvalidId && v && !o);
     children.e0 = x;
     children.e1 = y;
     return;
   case TensorExp::Kind::kBinaryBranch:
   case TensorExp::Kind::kSelect:
-    assert(x != kInvalidId && y == kInvalidId && !v && o);
+    assert(x != detail::kInvalidId && y == detail::kInvalidId && !v && o);
     children.e0 = x;
     children.e1 = y;
     return;
   case TensorExp::Kind::kUnary:
     // No assertion on y can be made, as the branching paths involve both
     // a unary (`mapSet`) and binary (`disjSet`) pathway.
-    assert(x != kInvalidId && !v && o);
+    assert(x != detail::kInvalidId && !v && o);
     children.e0 = x;
     children.e1 = y;
     return;
@@ -186,13 +186,13 @@ TensorExp::TensorExp(Kind k, unsigned x, ExprId y, Value v, Operation *o)
   case TensorExp::Kind::kShrS:
   case TensorExp::Kind::kShrU:
   case TensorExp::Kind::kShlI:
-    assert(x != kInvalidId && y != kInvalidId && !v && !o);
+    assert(x != detail::kInvalidId && y != detail::kInvalidId && !v && !o);
     children.e0 = x;
     children.e1 = y;
     return;
   case TensorExp::Kind::kBinary:
   case TensorExp::Kind::kReduce:
-    assert(x != kInvalidId && y != kInvalidId && !v && o);
+    assert(x != detail::kInvalidId && y != detail::kInvalidId && !v && o);
     children.e0 = x;
     children.e1 = y;
     return;
