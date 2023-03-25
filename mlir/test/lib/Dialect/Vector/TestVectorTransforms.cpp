@@ -325,7 +325,10 @@ struct TestVectorTransferOpt
   StringRef getDescription() const final {
     return "Test optimization transformations for transfer ops";
   }
-  void runOnOperation() override { transferOpflowOpt(getOperation()); }
+  void runOnOperation() override {
+    IRRewriter rewriter(&getContext());
+    transferOpflowOpt(rewriter, getOperation());
+  }
 };
 
 struct TestVectorTransferCollapseInnerMostContiguousDims
