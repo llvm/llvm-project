@@ -5747,7 +5747,8 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
                        const CFGElement &E);
 
 void CFGElement::dumpToStream(llvm::raw_ostream &OS) const {
-  StmtPrinterHelper Helper(nullptr, {});
+  LangOptions LangOpts;
+  StmtPrinterHelper Helper(nullptr, LangOpts);
   print_elem(OS, Helper, *this);
 }
 
