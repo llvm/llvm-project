@@ -45,16 +45,18 @@ namespace {
 
 class TransferOptimization {
 public:
-  TransferOptimization(Operation *op) : dominators(op), postDominators(op) {}
+  TransferOptimization(RewriterBase &rewriter, Operation *op)
+      : rewriter(rewriter), dominators(op), postDominators(op) {}
   void deadStoreOp(vector::TransferWriteOp);
   void storeToLoadForwarding(vector::TransferReadOp);
   void removeDeadOp() {
     for (Operation *op : opToErase)
-      op->erase();
+      rewriter.eraseOp(op);
     opToErase.clear();
   }
 
 private:
+  RewriterBase &rewriter;
   bool isReachable(Operation *start, Operation *dest);
   DominanceInfo dominators;
   PostDominanceInfo postDominators;
@@ -724,8 +726,9 @@ class RewriteScalarWrite : public OpRewritePattern<vector::TransferWriteOp> {
 };
 } // namespace
 
-void mlir::vector::transferOpflowOpt(Operation *rootOp) {
-  TransferOptimization opt(rootOp);
+void mlir::vector::transferOpflowOpt(RewriterBase &rewriter,
+                                     Operation *rootOp) {
+  TransferOptimization opt(rewriter, rootOp);
   // Run store to load forwarding first since it can expose more dead store
   // opportunity.
   rootOp->walk([&](vector::TransferReadOp read) {
