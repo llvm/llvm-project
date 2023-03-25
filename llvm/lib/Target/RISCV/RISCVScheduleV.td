@@ -17,10 +17,19 @@ defvar SchedMxListFW = !listremove(SchedMxList, ["M8", "MF8"]);
 // Used for widening floating-point Reduction as it doesn't contain MF8.
 defvar SchedMxListFWRed = !listremove(SchedMxList, ["MF8"]);
 
+class SchedSEWSet<string mx> {
+  list<int> val = !cond(!eq(mx, "M1"):  [8, 16, 32, 64],
+                        !eq(mx, "M2"):  [8, 16, 32, 64],
+                        !eq(mx, "M4"):  [8, 16, 32, 64],
+                        !eq(mx, "M8"):  [8, 16, 32, 64],
+                        !eq(mx, "MF2"): [8, 16, 32],
+                        !eq(mx, "MF4"): [8, 16],
+                        !eq(mx, "MF8"): [8]);
+}
+
 // Define multiclasses to define SchedWrite, SchedRead,  WriteRes, and
 // ReadAdvance for each (name, LMUL) pair for each LMUL in each of the
 // SchedMxList variants above.
-
 multiclass LMULSchedWritesImpl<string name, list<string> MxList> {
   foreach mx = MxList in {
     def name # "_" # mx : SchedWrite;
