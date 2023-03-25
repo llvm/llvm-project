@@ -26,9 +26,9 @@ using namespace llvm;
 #define RISCV_MERGE_BASE_OFFSET_NAME "RISCV Merge Base Offset"
 namespace {
 
-struct RISCVMergeBaseOffsetOpt : public MachineFunctionPass {
-private:
+class RISCVMergeBaseOffsetOpt : public MachineFunctionPass {
   const RISCVSubtarget *ST = nullptr;
+  MachineRegisterInfo *MRI;
 
 public:
   static char ID;
@@ -60,9 +60,6 @@ public:
   StringRef getPassName() const override {
     return RISCV_MERGE_BASE_OFFSET_NAME;
   }
-
-private:
-  MachineRegisterInfo *MRI;
 };
 } // end anonymous namespace
 

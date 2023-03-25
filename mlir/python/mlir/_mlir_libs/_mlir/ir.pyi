@@ -53,6 +53,7 @@ __all__ = [
     "Float8E4M3FNType",
     "Float8E5M2Type",
     "Float8E4M3FNUZType",
+    "Float8E4M3B11FNUZType",
     "Float8E5M2FNUZType",
     "F16Type",
     "F32Type",
@@ -599,6 +600,13 @@ class Float8E4M3FNUZType(Type):
     def __init__(self, cast_from_type: Type) -> None: ...
     @staticmethod
     def get(*args, **kwargs) -> Float8E4M3FNUZType: ...
+    @staticmethod
+    def isinstance(arg: Any) -> bool: ...
+
+class Float8E4M3B11FNUZType(Type):
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @staticmethod
+    def get(*args, **kwargs) -> Float8E4M3B11FNUZType: ...
     @staticmethod
     def isinstance(arg: Any) -> bool: ...
 

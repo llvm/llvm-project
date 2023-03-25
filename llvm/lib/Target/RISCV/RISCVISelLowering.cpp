@@ -3315,6 +3315,53 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlidedown(const SDLoc &DL, MVT VT,
       DAG.getConstant(0, DL, XLenVT));
 }
 
+// Because vslideup leaves the destination elements at the start intact, we can
+// use it to perform shuffles that insert subvectors:
+//
+// vector_shuffle v8:v8i8, v9:v8i8, <0, 1, 2, 3, 8, 9, 10, 11>
+// ->
+// vsetvli zero, 8, e8, mf2, ta, ma
+// vslideup.vi v8, v9, 4
+//
+// vector_shuffle v8:v8i8, v9:v8i8 <0, 1, 8, 9, 10, 5, 6, 7>
+// ->
+// vsetvli zero, 5, e8, mf2, tu, ma
+// vslideup.v1 v8, v9, 2
+static SDValue lowerVECTOR_SHUFFLEAsVSlideup(const SDLoc &DL, MVT VT,
+                                             SDValue V1, SDValue V2,
+                                             ArrayRef<int> Mask,
+                                             const RISCVSubtarget &Subtarget,
+                                             SelectionDAG &DAG) {
+  unsigned NumElts = VT.getVectorNumElements();
+  int NumSubElts, Index;
+  if (!ShuffleVectorInst::isInsertSubvectorMask(Mask, NumElts, NumSubElts,
+                                                Index))
+    return SDValue();
+
+  bool OpsSwapped = Mask[Index] < (int)NumElts;
+  SDValue InPlace = OpsSwapped ? V2 : V1;
+  SDValue ToInsert = OpsSwapped ? V1 : V2;
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  auto TrueMask = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).first;
+  // We slide up by the index that the subvector is being inserted at, and set
+  // VL to the index + the number of elements being inserted.
+  unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED | RISCVII::MASK_AGNOSTIC;
+  // If the we're adding a suffix to the in place vector, i.e. inserting right
+  // up to the very end of it, then we don't actually care about the tail.
+  if (NumSubElts + Index >= (int)NumElts)
+    Policy |= RISCVII::TAIL_AGNOSTIC;
+  SDValue Slideup = getVSlideup(
+      DAG, Subtarget, DL, ContainerVT,
+      convertToScalableVector(ContainerVT, InPlace, DAG, Subtarget),
+      convertToScalableVector(ContainerVT, ToInsert, DAG, Subtarget),
+      DAG.getConstant(Index, DL, XLenVT), TrueMask,
+      DAG.getConstant(NumSubElts + Index, DL, XLenVT),
+      Policy);
+  return convertFromScalableVector(VT, Slideup, DAG, Subtarget);
+}
+
 // Given two input vectors of <[vscale x ]n x ty>, use vwaddu.vv and vwmaccu.vx
 // to create an interleaved vector of <[vscale x] n*2 x ty>.
 // This requires that the size of ty is less than the subtarget's maximum ELEN.
@@ -3550,6 +3597,10 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
     return getWideningInterleave(EvenV, OddV, DL, DAG, Subtarget);
   }
+
+  if (SDValue V =
+          lowerVECTOR_SHUFFLEAsVSlideup(DL, VT, V1, V2, Mask, Subtarget, DAG))
+    return V;
 
   // Detect shuffles which can be re-expressed as vector selects; these are
   // shuffles in which each element in the destination is taken from an element
@@ -6283,8 +6334,9 @@ static SDValue lowerReductionSeq(unsigned RVVOpcode, MVT ResVT,
                                DAG.getUNDEF(M1VT),
                                InitialValue, DAG.getConstant(0, DL, XLenVT));
   SDValue PassThru = NonZeroAVL ? DAG.getUNDEF(M1VT) : InitialValue;
-  SDValue Reduction = DAG.getNode(RVVOpcode, DL, M1VT, PassThru, Vec,
-                                  InitialValue, Mask, VL);
+  SDValue Policy = DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT);
+  SDValue Ops[] = {PassThru, Vec, InitialValue, Mask, VL, Policy};
+  SDValue Reduction = DAG.getNode(RVVOpcode, DL, M1VT, Ops);
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT, Reduction,
                      DAG.getConstant(0, DL, XLenVT));
 }
@@ -8700,10 +8752,11 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
         DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ScalarVT, DAG.getUNDEF(ScalarVT),
                     NewScalarV, DAG.getConstant(0, DL, Subtarget.getXLenVT()));
 
+  SDValue Ops[] = {Reduce.getOperand(0), Reduce.getOperand(1),
+                   NewScalarV,           Reduce.getOperand(3),
+                   Reduce.getOperand(4), Reduce.getOperand(5)};
   SDValue NewReduce =
-      DAG.getNode(Reduce.getOpcode(), DL, Reduce.getValueType(),
-                  Reduce.getOperand(0), Reduce.getOperand(1), NewScalarV,
-                  Reduce.getOperand(3), Reduce.getOperand(4));
+      DAG.getNode(Reduce.getOpcode(), DL, Reduce.getValueType(), Ops);
   return DAG.getNode(Extract.getOpcode(), DL, Extract.getValueType(), NewReduce,
                      Extract.getOperand(1));
 }

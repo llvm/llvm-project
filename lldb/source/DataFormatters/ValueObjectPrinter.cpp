@@ -275,7 +275,7 @@ void ValueObjectPrinter::PrintDecl() {
 
   StreamString varName;
 
-  if (!m_options.m_hide_name) {
+  if (ShouldShowName()) {
     if (m_options.m_flat_output)
       m_valobj->GetExpressionPath(varName);
     else
@@ -314,7 +314,7 @@ void ValueObjectPrinter::PrintDecl() {
       m_stream->Printf("(%s) ", typeName.GetData());
     if (!varName.Empty())
       m_stream->Printf("%s =", varName.GetData());
-    else if (!m_options.m_hide_name)
+    else if (ShouldShowName())
       m_stream->Printf(" =");
   }
 }
@@ -437,7 +437,7 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
         if (m_options.m_hide_pointer_value &&
             IsPointerValue(m_valobj->GetCompilerType())) {
         } else {
-          if (!m_options.m_hide_name)
+          if (ShouldShowName())
             m_stream->PutChar(' ');
           m_stream->PutCString(m_value);
           value_printed = true;
@@ -459,7 +459,7 @@ bool ValueObjectPrinter::PrintObjectDescriptionIfNeeded(bool value_printed,
     // let's avoid the overly verbose no description error for a nil thing
     if (m_options.m_use_objc && !IsNil() && !IsUninitialized() &&
         (!m_options.m_pointer_as_array)) {
-      if (!m_options.m_hide_value || !m_options.m_hide_name)
+      if (!m_options.m_hide_value || ShouldShowName())
         m_stream->Printf(" ");
       const char *object_desc = nullptr;
       if (value_printed || summary_printed)
@@ -565,8 +565,14 @@ void ValueObjectPrinter::PrintChildrenPreamble() {
     if (ShouldPrintValueObject())
       m_stream->EOL();
   } else {
-    if (ShouldPrintValueObject())
-      m_stream->PutCString(IsRef() ? ": {\n" : " {\n");
+    if (ShouldPrintValueObject()) {
+      if (IsRef()) {
+        m_stream->PutCString(": ");
+      } else if (ShouldShowName()) {
+        m_stream->PutChar(' ');
+      }
+      m_stream->PutCString("{\n");
+    }
     m_stream->IndentMore();
   }
 }
@@ -818,4 +824,10 @@ void ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
 
 bool ValueObjectPrinter::HasReachedMaximumDepth() {
   return m_curr_depth >= m_options.m_max_depth;
+}
+
+bool ValueObjectPrinter::ShouldShowName() const {
+  if (m_curr_depth == 0)
+    return !m_options.m_hide_root_name && !m_options.m_hide_name;
+  return !m_options.m_hide_name;
 }

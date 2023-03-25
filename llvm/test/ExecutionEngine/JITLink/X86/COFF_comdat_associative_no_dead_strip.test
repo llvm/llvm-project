@@ -1,8 +1,8 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-jitlink -noexec \
 # RUN: -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
-# RUN: -show-graph -noexec %t 2>&1 | FileCheck %s
-# 
+# RUN: -show-graphs='.*' -noexec %t 2>&1 | FileCheck %s
+#
 # Check a comdat child block connected by associative selection type is not dead strip when
 # parent block is alive.
 #

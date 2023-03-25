@@ -410,6 +410,14 @@ class VALUVs2<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, string opcodestr>
     : RVInstV<funct6, vs1, opv, (outs VR:$vd),
                (ins VR:$vs2, VMaskOp:$vm),
                opcodestr, "$vd, $vs2$vm">;
+
+// op vd, vs2 (use vs1 as instruction encoding)
+class VALUVs2NoVm<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, string opcodestr>
+    : RVInstV<funct6, vs1, opv, (outs VR:$vd),
+              (ins VR:$vs2), opcodestr,
+              "$vd, $vs2"> {
+  let vm = 1;
+}
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 //===----------------------------------------------------------------------===//
@@ -942,13 +950,13 @@ multiclass VSLD1_FV_F<string opcodestr, bits<6> funct6, string vw = "v"> {
 
 multiclass VGTR_IV_V_X_I<string opcodestr, bits<6> funct6, Operand optype = simm5, string vw = "v"> {
   def V  : VALUVV<funct6, OPIVV, opcodestr # "." # vw # "v">,
-           Sched<[WriteVGatherV_UpperBound, ReadVGatherV_UpperBound,
-                  ReadVGatherV_UpperBound, ReadVMask]>;
+           Sched<[WriteVRGatherVV_UpperBound, ReadVRGatherVV_data_UpperBound,
+                  ReadVRGatherVV_index_UpperBound, ReadVMask]>;
   def X  : VALUVX<funct6, OPIVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVGatherX_UpperBound, ReadVGatherV_UpperBound,
-                  ReadVGatherX_UpperBound, ReadVMask]>;
+           Sched<[WriteVRGatherVX_UpperBound, ReadVRGatherVX_data_UpperBound,
+                  ReadVRGatherVX_index_UpperBound, ReadVMask]>;
   def I  : VALUVI<funct6, opcodestr # "." # vw # "i", optype>,
-           Sched<[WriteVGatherI_UpperBound, ReadVGatherV_UpperBound,
+           Sched<[WriteVRGatherVI_UpperBound, ReadVRGatherVI_data_UpperBound,
                   ReadVMask]>;
 }
 
@@ -1662,8 +1670,8 @@ let Predicates = [HasVInstructions] in {
 let Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather in {
 defm VRGATHER_V : VGTR_IV_V_X_I<"vrgather", 0b001100, uimm5>;
 def VRGATHEREI16_VV : VALUVV<0b001110, OPIVV, "vrgatherei16.vv">,
-                      Sched<[WriteVGatherV_UpperBound, ReadVGatherV_UpperBound,
-                             ReadVGatherV_UpperBound]>;
+                      Sched<[WriteVRGatherVV_UpperBound, ReadVRGatherVV_data_UpperBound,
+                             ReadVRGatherVV_index_UpperBound]>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather
 
 // Vector Compress Instruction
@@ -1773,4 +1781,5 @@ let Predicates = [HasVInstructionsI64, IsRV64] in {
   }
 } // Predicates = [HasVInstructionsI64, IsRV64]
 
+include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoVPseudos.td"

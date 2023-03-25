@@ -88,6 +88,23 @@ class VPatBinarySDNode_VV<SDPatternOperator vop,
                      op_reg_class:$rs2,
                      avl, sew)>;
 
+class VPatBinarySDNode_VV_E<SDPatternOperator vop,
+                            string instruction_name,
+                            ValueType result_type,
+                            ValueType op_type,
+                            int log2sew,
+                            LMULInfo vlmul,
+                            int sew,
+                            OutPatFrag avl,
+                            VReg op_reg_class> :
+    Pat<(result_type (vop
+                     (op_type op_reg_class:$rs1),
+                     (op_type op_reg_class:$rs2))),
+        (!cast<Instruction>(instruction_name#"_VV_"# vlmul.MX#"_E"#sew)
+                     op_reg_class:$rs1,
+                     op_reg_class:$rs2,
+                     avl, log2sew)>;
+
 class VPatBinarySDNode_XI<SDPatternOperator vop,
                           string instruction_name,
                           string suffix,
@@ -107,6 +124,26 @@ class VPatBinarySDNode_XI<SDPatternOperator vop,
                      xop_kind:$rs2,
                      avl, sew)>;
 
+class VPatBinarySDNode_XI_E<SDPatternOperator vop,
+                            string instruction_name,
+                            string suffix,
+                            ValueType result_type,
+                            ValueType vop_type,
+                            int log2sew,
+                            LMULInfo vlmul,
+                            int sew,
+                            OutPatFrag avl,
+                            VReg vop_reg_class,
+                            ComplexPattern SplatPatKind,
+                            DAGOperand xop_kind> :
+    Pat<(result_type (vop
+                     (vop_type vop_reg_class:$rs1),
+                     (vop_type (SplatPatKind xop_kind:$rs2)))),
+        (!cast<Instruction>(instruction_name#_#suffix#_# vlmul.MX#"_E"#sew)
+                     vop_reg_class:$rs1,
+                     xop_kind:$rs2,
+                     avl, log2sew)>;
+
 multiclass VPatBinarySDNode_VV_VX<SDPatternOperator vop, string instruction_name> {
   foreach vti = AllIntegerVectors in {
     def : VPatBinarySDNode_VV<vop, instruction_name,
@@ -116,6 +153,19 @@ multiclass VPatBinarySDNode_VV_VX<SDPatternOperator vop, string instruction_name
                               vti.Vector, vti.Vector, vti.Log2SEW,
                               vti.LMul, vti.AVL, vti.RegClass,
                               SplatPat, GPR>;
+  }
+}
+
+multiclass VPatBinarySDNode_VV_VX_E<SDPatternOperator vop,
+                                    string instruction_name> {
+  foreach vti = AllIntegerVectors in {
+    def : VPatBinarySDNode_VV_E<vop, instruction_name,
+                                vti.Vector, vti.Vector, vti.Log2SEW,
+                                vti.LMul, vti.SEW, vti.AVL, vti.RegClass>;
+    def : VPatBinarySDNode_XI_E<vop, instruction_name, "VX",
+                                vti.Vector, vti.Vector, vti.Log2SEW,
+                                vti.LMul, vti.SEW, vti.AVL, vti.RegClass,
+                                SplatPat, GPR>;
   }
 }
 
@@ -148,6 +198,24 @@ class VPatBinarySDNode_VF<SDPatternOperator vop,
                      (xop_type xop_kind:$rs2),
                      avl, sew)>;
 
+class VPatBinarySDNode_VF_E<SDPatternOperator vop,
+                            string instruction_name,
+                            ValueType result_type,
+                            ValueType vop_type,
+                            ValueType xop_type,
+                            int log2sew,
+                            LMULInfo vlmul,
+                            int sew,
+                            OutPatFrag avl,
+                            VReg vop_reg_class,
+                            DAGOperand xop_kind> :
+    Pat<(result_type (vop (vop_type vop_reg_class:$rs1),
+                          (vop_type (SplatFPOp xop_kind:$rs2)))),
+        (!cast<Instruction>(instruction_name#"_"#vlmul.MX#"_E"#sew)
+                     vop_reg_class:$rs1,
+                     (xop_type xop_kind:$rs2),
+                     avl, log2sew)>;
+
 multiclass VPatBinaryFPSDNode_VV_VF<SDPatternOperator vop, string instruction_name> {
   foreach vti = AllFloatVectors in {
     def : VPatBinarySDNode_VV<vop, instruction_name,
@@ -160,11 +228,35 @@ multiclass VPatBinaryFPSDNode_VV_VF<SDPatternOperator vop, string instruction_na
   }
 }
 
+multiclass VPatBinaryFPSDNode_VV_VF_E<SDPatternOperator vop,
+                                      string instruction_name> {
+  foreach vti = AllFloatVectors in {
+    def : VPatBinarySDNode_VV_E<vop, instruction_name,
+                              vti.Vector, vti.Vector, vti.Log2SEW,
+                              vti.LMul, vti.SEW, vti.AVL, vti.RegClass>;
+    def : VPatBinarySDNode_VF_E<vop, instruction_name#"_V"#vti.ScalarSuffix,
+                              vti.Vector, vti.Vector, vti.Scalar,
+                              vti.Log2SEW, vti.LMul, vti.SEW, vti.AVL,
+                              vti.RegClass, vti.ScalarRegClass>;
+  }
+}
+
 multiclass VPatBinaryFPSDNode_R_VF<SDPatternOperator vop, string instruction_name> {
   foreach fvti = AllFloatVectors in
     def : Pat<(fvti.Vector (vop (fvti.Vector (SplatFPOp fvti.Scalar:$rs2)),
                                 (fvti.Vector fvti.RegClass:$rs1))),
               (!cast<Instruction>(instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
+                           fvti.RegClass:$rs1,
+                           (fvti.Scalar fvti.ScalarRegClass:$rs2),
+                           fvti.AVL, fvti.Log2SEW)>;
+}
+
+multiclass VPatBinaryFPSDNode_R_VF_E<SDPatternOperator vop,
+                                     string instruction_name> {
+  foreach fvti = AllFloatVectors in
+    def : Pat<(fvti.Vector (vop (fvti.Vector (SplatFPOp fvti.Scalar:$rs2)),
+                                (fvti.Vector fvti.RegClass:$rs1))),
+              (!cast<Instruction>(instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_E"#fvti.SEW)
                            fvti.RegClass:$rs1,
                            (fvti.Scalar fvti.ScalarRegClass:$rs2),
                            fvti.AVL, fvti.Log2SEW)>;
@@ -723,10 +815,10 @@ defm : VPatBinarySDNode_VV_VX<mulhs, "PseudoVMULH">;
 defm : VPatBinarySDNode_VV_VX<mulhu, "PseudoVMULHU">;
 
 // 11.11. Vector Integer Divide Instructions
-defm : VPatBinarySDNode_VV_VX<udiv, "PseudoVDIVU">;
-defm : VPatBinarySDNode_VV_VX<sdiv, "PseudoVDIV">;
-defm : VPatBinarySDNode_VV_VX<urem, "PseudoVREMU">;
-defm : VPatBinarySDNode_VV_VX<srem, "PseudoVREM">;
+defm : VPatBinarySDNode_VV_VX_E<udiv, "PseudoVDIVU">;
+defm : VPatBinarySDNode_VV_VX_E<sdiv, "PseudoVDIV">;
+defm : VPatBinarySDNode_VV_VX_E<urem, "PseudoVREMU">;
+defm : VPatBinarySDNode_VV_VX_E<srem, "PseudoVREM">;
 
 // 11.12. Vector Widening Integer Multiply Instructions
 defm : VPatWidenBinarySDNode_VV_VX<mul, sext_oneuse, sext_oneuse,
@@ -836,8 +928,8 @@ defm : VPatWidenBinaryFPSDNode_VV_VF_WV_WF<fsub, "PseudoVFWSUB">;
 
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 defm : VPatBinaryFPSDNode_VV_VF<any_fmul, "PseudoVFMUL">;
-defm : VPatBinaryFPSDNode_VV_VF<any_fdiv, "PseudoVFDIV">;
-defm : VPatBinaryFPSDNode_R_VF<any_fdiv, "PseudoVFRDIV">;
+defm : VPatBinaryFPSDNode_VV_VF_E<any_fdiv, "PseudoVFDIV">;
+defm : VPatBinaryFPSDNode_R_VF_E<any_fdiv, "PseudoVFRDIV">;
 
 // 13.5. Vector Widening Floating-Point Multiply Instructions
 defm : VPatWidenBinaryFPSDNode_VV_VF<fmul, "PseudoVFWMUL">;
@@ -914,7 +1006,7 @@ defm : VPatWidenFPNegMulSacSDNode_VV_VF<"PseudoVFWNMSAC">;
 foreach vti = AllFloatVectors in {
   // 13.8. Vector Floating-Point Square-Root Instruction
   def : Pat<(fsqrt (vti.Vector vti.RegClass:$rs2)),
-            (!cast<Instruction>("PseudoVFSQRT_V_"# vti.LMul.MX)
+            (!cast<Instruction>("PseudoVFSQRT_V_"# vti.LMul.MX#"_E"#vti.SEW)
                  vti.RegClass:$rs2, vti.AVL, vti.Log2SEW)>;
 
   // 13.12. Vector Floating-Point Sign-Injection Instructions

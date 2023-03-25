@@ -210,6 +210,7 @@ libc_support_library(
     deps = [
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
+        ":__support_macros_properties_architectures",
         ":libc_root",
     ],
 )
