@@ -14,7 +14,8 @@ using enum E; // expected-error {{unknown type name E}}
 }
 }
 
-namespace dr2628 { // dr2628: no, this was reverted for the 16.x release
+namespace dr2628 { // dr2628: no open
+                   // this was reverted for the 16.x release
                    // due to regressions, see the issue for more details:
                    // https://github.com/llvm/llvm-project/issues/60777
 
