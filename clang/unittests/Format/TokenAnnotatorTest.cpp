@@ -253,6 +253,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
                     "};");
   ASSERT_EQ(Tokens.size(), 30u) << Tokens;
   EXPECT_TOKEN(Tokens[14], tok::ampamp, TT_BinaryOperator);
+
+  Tokens = annotate("template <bool B = C && D> struct S {};");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::ampamp, TT_BinaryOperator);
+
+  Tokens = annotate("template <typename T, bool B = C && D> struct S {};");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::ampamp, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
