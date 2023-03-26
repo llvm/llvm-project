@@ -7,7 +7,7 @@ define ptr @test1(ptr %v0, ptr %v1) {
 ; CHECK-LABEL: define ptr @test1
 ; CHECK-SAME: (ptr [[V0:%.*]], ptr [[V1:%.*]]) {
 ; CHECK-NEXT:  top:
-; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[V0]], align 8, !nonnull !0
+; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[V0]], align 8
 ; CHECK-NEXT:    store ptr [[V2]], ptr [[V1]], align 8
 ; CHECK-NEXT:    ret ptr [[V2]]
 ;
@@ -92,7 +92,7 @@ define ptr @test5(ptr %v0) {
 ; CHECK-LABEL: define ptr @test5
 ; CHECK-SAME: (ptr [[V0:%.*]]) {
 ; CHECK-NEXT:  top:
-; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[V0]], align 8, !nonnull !0
+; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[V0]], align 8
 ; CHECK-NEXT:    call void @use1(ptr [[V1]])
 ; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
@@ -120,7 +120,7 @@ define ptr @test6(ptr %v0, ptr %v1) {
 ; CHECK-NEXT:  top:
 ; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[V0]], align 8, !nonnull !0
+; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[V0]], align 8
 ; CHECK-NEXT:    store ptr [[V2]], ptr [[V1]], align 8
 ; CHECK-NEXT:    ret ptr [[V2]]
 ; CHECK:       bb2:
