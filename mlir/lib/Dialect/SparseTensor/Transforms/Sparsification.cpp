@@ -1057,7 +1057,7 @@ static void genTensorStore(CodegenEnv &env, OpBuilder &builder, ExprId exp,
       assert(env.exp(exp).val);
       Value v0 = env.exp(exp).val;
       genInsertionStore(env, builder, t, v0);
-      env.exp(exp).val = Value();
+      env.merger().clearExprValue(exp);
       // Yield modified insertion chain along true branch.
       Value mchain = env.getInsertionChain();
       builder.create<scf::YieldOp>(op.getLoc(), mchain);
@@ -1111,7 +1111,7 @@ static Value genExp(CodegenEnv &env, RewriterBase &rewriter, ExprId e,
   linalg::GenericOp op = env.op();
   Location loc = op.getLoc();
 
-  if (e == kInvalidId)
+  if (e == ::mlir::sparse_tensor::detail::kInvalidId)
     return Value();
   const TensorExp &exp = env.exp(e);
   const auto kind = exp.kind;
@@ -1137,10 +1137,8 @@ static Value genExp(CodegenEnv &env, RewriterBase &rewriter, ExprId e,
   if (kind == TensorExp::Kind::kReduce)
     env.endCustomReduc(); // exit custom
 
-  if (kind == TensorExp::Kind::kSelect) {
-    assert(!exp.val);
-    env.exp(e).val = v0; // Preserve value for later use.
-  }
+  if (kind == TensorExp::Kind::kSelect)
+    env.merger().setExprValue(e, v0); // Preserve value for later use.
 
   return ee;
 }
@@ -1148,11 +1146,11 @@ static Value genExp(CodegenEnv &env, RewriterBase &rewriter, ExprId e,
 /// Hoists loop invariant tensor loads for which indices have been exhausted.
 static void genInvariants(CodegenEnv &env, OpBuilder &builder, ExprId exp,
                           LoopId ldx, bool atStart) {
-  if (exp == kInvalidId)
+  if (exp == ::mlir::sparse_tensor::detail::kInvalidId)
     return;
   if (env.exp(exp).kind == TensorExp::Kind::kTensor) {
     // Inspect tensor indices.
-    bool isAtLoop = ldx == kInvalidId;
+    bool isAtLoop = ldx == ::mlir::sparse_tensor::detail::kInvalidId;
     linalg::GenericOp op = env.op();
     OpOperand &t = op->getOpOperand(env.exp(exp).tensor);
     auto map = op.getMatchingIndexingMap(&t);
@@ -1192,7 +1190,10 @@ static void genInvariants(CodegenEnv &env, OpBuilder &builder, ExprId exp,
       }
     } else {
       // Start or end loop invariant hoisting of a tensor load.
-      env.exp(exp).val = atStart ? genTensorLoad(env, builder, exp) : Value();
+      if (atStart)
+        env.merger().setExprValue(exp, genTensorLoad(env, builder, exp));
+      else
+        env.merger().clearExprValue(exp);
     }
   } else if (env.exp(exp).kind != TensorExp::Kind::kInvariant &&
              env.exp(exp).kind != TensorExp::Kind::kLoopVar) {
@@ -1346,8 +1347,7 @@ static Operation *genLoop(CodegenEnv &env, OpBuilder &builder, LoopOrd at,
 
 /// Generates the induction structure for a while-loop.
 static void finalizeWhileOp(CodegenEnv &env, OpBuilder &builder, LoopId idx,
-                            bool needsUniv, BitVector &induction,
-                            scf::WhileOp whileOp) {
+                            bool needsUniv, scf::WhileOp whileOp) {
   Location loc = env.op().getLoc();
   // Finalize each else branch of all if statements.
   if (env.isReduc() || env.isExpand() || env.getInsertionChain()) {
@@ -1386,7 +1386,7 @@ static void finalizeWhileOp(CodegenEnv &env, OpBuilder &builder, LoopId idx,
 
 /// Generates a single if-statement within a while-loop.
 static scf::IfOp genIf(CodegenEnv &env, OpBuilder &builder, LoopId ldx,
-                       BitVector &conditions) {
+                       const BitVector &conditions) {
   Location loc = env.op().getLoc();
   SmallVector<Type> types;
   Value cond;
@@ -1486,13 +1486,10 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
   // Maintain the universal index only if it is actually
   // consumed by a subsequent lattice point.
   if (needsUniv) {
-    unsigned lsize = env.set(lts).size();
-    for (unsigned i = 1; i < lsize; i++) {
-      const LatPointId li = env.set(lts)[i];
+    for (const LatPointId li : env.set(lts).drop_front())
       if (!env.merger().hasAnySparse(env.lat(li).simple) &&
           !env.merger().hasSparseIdxReduction(env.lat(li).simple))
         return true;
-    }
   }
   return false;
 }
@@ -1675,7 +1672,7 @@ static bool endLoop(CodegenEnv &env, RewriterBase &rewriter, Operation *loop,
                     LoopId idx, LatPointId li, bool needsUniv) {
   // End a while-loop.
   if (auto whileOp = dyn_cast<scf::WhileOp>(loop)) {
-    finalizeWhileOp(env, rewriter, idx, needsUniv, env.lat(li).bits, whileOp);
+    finalizeWhileOp(env, rewriter, idx, needsUniv, whileOp);
   } else if (auto forOp = dyn_cast<scf::ForOp>(loop)) {
     // Any iteration of a reduction for-loop creates a valid lex insert.
     if (env.isReduc() && env.getValidLexInsert())
@@ -1718,7 +1715,8 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
 
   // Construct iteration lattices for current loop index, with L0 at top.
   const LoopId idx = env.topSortAt(at);
-  const LoopId ldx = at == 0 ? kInvalidId : env.topSortAt(at - 1);
+  const LoopId ldx = at == 0 ? ::mlir::sparse_tensor::detail::kInvalidId
+                             : env.topSortAt(at - 1);
   const LatSetId lts =
       env.merger().optimizeSet(env.merger().buildLattices(exp, idx));
 
@@ -1726,10 +1724,14 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
   bool needsUniv = startLoopSeq(env, rewriter, exp, at, idx, ldx, lts);
 
   // Emit a loop for every lattice point L0 >= Li in this loop sequence.
-  unsigned lsize = env.set(lts).size();
+  //
+  // NOTE: We cannot change this to `for (const LatPointId li : env.set(lts))`
+  // because the loop body causes data-movement which invalidates
+  // the iterator.
+  const unsigned lsize = env.set(lts).size();
   for (unsigned i = 0; i < lsize; i++) {
-    // Start a loop.
     const LatPointId li = env.set(lts)[i];
+    // Start a loop.
     auto [loop, isSingleCond] = startLoop(env, rewriter, at, li, needsUniv);
 
     // Visit all lattices points with Li >= Lj to generate the
@@ -1737,6 +1739,9 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
     Value redInput = env.getReduc();
     Value cntInput = env.getExpandCount();
     Value insInput = env.getInsertionChain();
+    // NOTE: We cannot change this to `for (const LatPointId lj : env.set(lts))`
+    // because the loop body causes data-movement which invalidates the
+    // iterator.
     for (unsigned j = 0; j < lsize; j++) {
       const LatPointId lj = env.set(lts)[j];
       const ExprId ej = env.lat(lj).exp;

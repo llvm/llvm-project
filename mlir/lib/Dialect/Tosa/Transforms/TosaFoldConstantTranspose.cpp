@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
 
@@ -19,6 +20,82 @@ using namespace mlir;
 using namespace mlir::tosa;
 
 namespace {
+
+template <typename BaseType>
+DenseElementsAttr transposeType(ElementsAttr attr, ShapedType inputType,
+                                ShapedType outputType,
+                                llvm::ArrayRef<int64_t> permValues) {
+  if (inputType.getNumElements() == 0)
+    return DenseElementsAttr::get(outputType, llvm::ArrayRef<BaseType>{});
+
+  auto attrValues = attr.getValues<BaseType>();
+  auto inputShape = inputType.getShape();
+
+  // The inverted permutation map and strides of the output are used to compute
+  // the contribution of a given dimension to the destination linear index in
+  // an order-independent way.
+  auto outputStrides = computeStrides(outputType.getShape());
+  auto invertedPermValues = invertPermutationVector(permValues);
+
+  auto initialValue = *std::begin(attrValues);
+  SmallVector<BaseType> outputValues(inputType.getNumElements(), initialValue);
+
+  for (const auto &it : llvm::enumerate(attrValues)) {
+    auto srcLinearIndex = it.index();
+
+    uint64_t dstLinearIndex = 0;
+    for (int64_t dim = inputShape.size() - 1; dim >= 0; --dim) {
+      // Compute the index into the current dimension of the source vector.
+      auto sourceIndexForDim = srcLinearIndex % inputShape[dim];
+      srcLinearIndex /= inputShape[dim];
+
+      // Add the contribution of the current dimension to the output using the
+      // permutation map.
+      dstLinearIndex +=
+          outputStrides[invertedPermValues[dim]] * sourceIndexForDim;
+    }
+
+    outputValues[dstLinearIndex] = it.value();
+  }
+
+  return DenseElementsAttr::get(outputType,
+                                llvm::ArrayRef<BaseType>(outputValues));
+}
+
+// A type specialized transposition of an ElementsAttr.
+// This implementation tries to operate on the underlying data in its raw
+// representation when possible to avoid allocating a large number of Attribute
+// objects.
+DenseElementsAttr transpose(ElementsAttr attr, ShapedType inputType,
+                            ShapedType outputType,
+                            llvm::ArrayRef<int64_t> permValues) {
+  auto baseType = inputType.getElementType();
+
+  // Handle possible integer types
+  if (auto intType = baseType.dyn_cast<IntegerType>()) {
+    switch (intType.getWidth()) {
+    case 1:
+      return transposeType<bool>(attr, inputType, outputType, permValues);
+    case 8:
+      return transposeType<int8_t>(attr, inputType, outputType, permValues);
+    case 16:
+      return transposeType<int16_t>(attr, inputType, outputType, permValues);
+    case 32:
+      return transposeType<int32_t>(attr, inputType, outputType, permValues);
+    case 64:
+      return transposeType<int64_t>(attr, inputType, outputType, permValues);
+    default:
+      return transposeType<APInt>(attr, inputType, outputType, permValues);
+    }
+  }
+
+  // Handle possible float types
+  if (baseType.isF32()) {
+    return transposeType<float>(attr, inputType, outputType, permValues);
+  }
+
+  return transposeType<APFloat>(attr, inputType, outputType, permValues);
+}
 
 struct TosaFoldConstantTranspose : public OpRewritePattern<tosa::TransposeOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -43,41 +120,12 @@ struct TosaFoldConstantTranspose : public OpRewritePattern<tosa::TransposeOp> {
     auto permValues = llvm::to_vector<6>(llvm::map_range(
         // TOSA allows both 32- and 64-bit integer tensors here.
         permAttr.getValues<APInt>(),
-        [](const APInt &val) { return val.getZExtValue(); }));
+        [](const APInt &val) { return val.getSExtValue(); }));
 
     auto inputType = op.getInput1().getType().cast<ShapedType>();
-    ArrayRef<int64_t> inputShape = inputType.getShape();
-    int64_t numElements = inputType.getNumElements();
 
-    SmallVector<Attribute, 4> outputValues;
-    outputValues.resize(numElements);
-
-    // Transpose the input constant. Because we don't know its rank in advance,
-    // we need to loop over the range [0, element count) and delinearize the
-    // index.
-    auto attrValues = inputValues.getValues<Attribute>();
-    ArrayRef<int64_t> outputShape = outputType.getShape();
-    for (const auto &it : llvm::enumerate(attrValues)) {
-      SmallVector<uint64_t, 6> srcIndices(inputType.getRank(), 0);
-      int totalCount = it.index();
-      for (int dim = inputType.getRank() - 1; dim >= 0; --dim) {
-        srcIndices[dim] = totalCount % inputShape[dim];
-        totalCount /= inputShape[dim];
-      }
-
-      SmallVector<uint64_t, 6> dstIndices(outputType.getRank(), 0);
-      for (int dim = outputType.getRank() - 1; dim >= 0; --dim)
-        dstIndices[dim] = srcIndices[permValues[dim]];
-
-      uint64_t dstLinearIndex = dstIndices.front();
-      for (int dim = 1; dim < outputType.getRank(); ++dim)
-        dstLinearIndex = dstLinearIndex * outputShape[dim] + dstIndices[dim];
-
-      outputValues[dstLinearIndex] = it.value();
-    }
-
-    rewriter.replaceOpWithNewOp<tosa::ConstOp>(
-        op, outputType, DenseElementsAttr::get(outputType, outputValues));
+    auto resultAttr = transpose(inputValues, inputType, outputType, permValues);
+    rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, outputType, resultAttr);
     return success();
   }
 };

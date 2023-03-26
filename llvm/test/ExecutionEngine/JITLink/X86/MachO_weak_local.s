@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -filetype=obj -o %t %s
-# RUN: llvm-jitlink -noexec %t -show-graph | FileCheck %s
+# RUN: llvm-jitlink -noexec %t -show-graphs='.*' | FileCheck %s
 
 # CHECK: linkage: weak, scope: local, live  -   _foo_weak
 

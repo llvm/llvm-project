@@ -265,6 +265,10 @@ private:
     return isOutputTensor(tid) && isSparseOut;
   }
 
+  bool isValidLevel(TensorId tid, Level lvl) const {
+    return tid < lvlTypes.size() && lvl < lvlTypes[tid].size();
+  }
+
   /// Prepares loop for iterating over `tensor[lvl]`, under the assumption
   /// that `tensor[0...lvl-1]` loops have already been set up.
   void prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,

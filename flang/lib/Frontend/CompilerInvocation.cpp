@@ -150,6 +150,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       opts.PrepareForThinLTO = true;
   }
 
+  if (auto *a = args.getLastArg(clang::driver::options::OPT_save_temps_EQ))
+    opts.SaveTempsDir = a->getValue();
+
   // -mrelocation-model option.
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_mrelocation_model)) {

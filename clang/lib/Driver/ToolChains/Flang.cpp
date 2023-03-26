@@ -405,6 +405,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   assert(Input.isFilename() && "Invalid input.");
 
+  if (Args.getLastArg(options::OPT_save_temps_EQ))
+    Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
+
   addDashXForInput(Args, Input, CmdArgs);
 
   CmdArgs.push_back(Input.getFilename());

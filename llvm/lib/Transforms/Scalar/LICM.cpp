@@ -364,25 +364,20 @@ Pass *llvm::createLICMPass(unsigned LicmMssaOptCap,
                             LicmAllowSpeculation);
 }
 
-llvm::SinkAndHoistLICMFlags::SinkAndHoistLICMFlags(bool IsSink, Loop *L,
-                                                   MemorySSA *MSSA)
+llvm::SinkAndHoistLICMFlags::SinkAndHoistLICMFlags(bool IsSink, Loop &L,
+                                                   MemorySSA &MSSA)
     : SinkAndHoistLICMFlags(SetLicmMssaOptCap, SetLicmMssaNoAccForPromotionCap,
                             IsSink, L, MSSA) {}
 
 llvm::SinkAndHoistLICMFlags::SinkAndHoistLICMFlags(
     unsigned LicmMssaOptCap, unsigned LicmMssaNoAccForPromotionCap, bool IsSink,
-    Loop *L, MemorySSA *MSSA)
+    Loop &L, MemorySSA &MSSA)
     : LicmMssaOptCap(LicmMssaOptCap),
       LicmMssaNoAccForPromotionCap(LicmMssaNoAccForPromotionCap),
       IsSink(IsSink) {
-  assert(((L != nullptr) == (MSSA != nullptr)) &&
-         "Unexpected values for SinkAndHoistLICMFlags");
-  if (!MSSA)
-    return;
-
   unsigned AccessCapCount = 0;
-  for (auto *BB : L->getBlocks())
-    if (const auto *Accesses = MSSA->getBlockAccesses(BB))
+  for (auto *BB : L.getBlocks())
+    if (const auto *Accesses = MSSA.getBlockAccesses(BB))
       for (const auto &MA : *Accesses) {
         (void)MA;
         ++AccessCapCount;
@@ -432,7 +427,7 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
 
   MemorySSAUpdater MSSAU(MSSA);
   SinkAndHoistLICMFlags Flags(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
-                              /*IsSink=*/true, L, MSSA);
+                              /*IsSink=*/true, *L, *MSSA);
 
   // Get the preheader block to move instructions into...
   BasicBlock *Preheader = L->getLoopPreheader();

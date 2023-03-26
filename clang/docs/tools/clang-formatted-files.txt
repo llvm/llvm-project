@@ -2594,6 +2594,7 @@ libc/include/llvm-libc-types/fexcept_t.h
 libc/include/llvm-libc-types/FILE.h
 libc/include/llvm-libc-types/float_t.h
 libc/include/llvm-libc-types/imaxdiv_t.h
+libc/include/llvm-libc-types/jmp_buf.h
 libc/include/llvm-libc-types/ldiv_t.h
 libc/include/llvm-libc-types/lldiv_t.h
 libc/include/llvm-libc-types/mode_t.h

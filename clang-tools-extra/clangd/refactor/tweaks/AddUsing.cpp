@@ -290,7 +290,7 @@ bool AddUsing::prepare(const Selection &Inputs) {
 
   SourceRange SpelledNameRange;
   if (auto *D = Node->ASTNode.get<DeclRefExpr>()) {
-    if (auto *II = D->getDecl()->getIdentifier()) {
+    if (D->getDecl()->getIdentifier()) {
       QualifierToRemove = D->getQualifierLoc();
       SpelledNameRange = D->getSourceRange();
       MustInsertAfterLoc = D->getDecl()->getBeginLoc();

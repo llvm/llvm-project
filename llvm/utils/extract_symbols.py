@@ -58,7 +58,7 @@ def nm_get_symbols(lib):
         # The -P flag displays the size field for symbols only when applicable,
         # so the last field is optional. There's no space after the value field,
         # but \s+ match newline also, so \s+\S* will match the optional size field.
-        match = re.match("^(\S+)\s+[BDGRSTVW]\s+\S+\s+\S*$", line)
+        match = re.match("^(\S+)\s+[BDGRSTuVW]\s+\S+\s+\S*$", line)
         if match:
             yield (match.group(1), True)
         # Look for undefined symbols, which have type U and may or may not

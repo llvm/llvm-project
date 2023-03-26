@@ -97,8 +97,6 @@ module lldb_Wrapper {
 
     umbrella "Expression"
     module * { export * }
-    // TODO: This file includes a non-public header.
-    exclude header "Expression/REPL.h"
   }
 
   module lldb_Interpreter {

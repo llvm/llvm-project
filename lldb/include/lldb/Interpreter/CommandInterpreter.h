@@ -637,6 +637,9 @@ public:
 
   bool IOHandlerInterrupt(IOHandler &io_handler) override;
 
+  Status PreprocessCommand(std::string &command);
+  Status PreprocessToken(std::string &token);
+
 protected:
   friend class Debugger;
 
@@ -670,8 +673,6 @@ private:
   void OverrideExecutionContext(const ExecutionContext &override_context);
 
   void RestoreExecutionContext();
-
-  Status PreprocessCommand(std::string &command);
 
   void SourceInitFile(FileSpec file, CommandReturnObject &result);
 
