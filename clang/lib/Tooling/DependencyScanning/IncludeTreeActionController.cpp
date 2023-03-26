@@ -640,13 +640,11 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
       // that case we need both of those modules.
       ModuleMap &MMap =
           ScanInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
-      M = MMap.findModule(ScanInstance.getLangOpts().CurrentModule);
-      assert(M && "missing current module?");
-      if (Error E = AddModule(M))
-        return std::move(E);
-      Module *PM =
-          MMap.findModule(ScanInstance.getLangOpts().ModuleName + "_Private");
-      if (PM)
+      if (Module *M = MMap.findModule(ScanInstance.getLangOpts().CurrentModule))
+        if (Error E = AddModule(M))
+          return std::move(E);
+      if (Module *PM =
+          MMap.findModule(ScanInstance.getLangOpts().ModuleName + "_Private"))
         if (Error E = AddModule(PM))
           return std::move(E);
     }
