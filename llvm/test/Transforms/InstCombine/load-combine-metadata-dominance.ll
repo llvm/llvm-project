@@ -3,14 +3,14 @@
 
 target datalayout = "e-m:e-p:64:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
-; Check that nonnull metadata is propagated from dominating load.
+; Check that nonnull metadata is not propagated from dominating load.
 define void @combine_metadata_dominance1(ptr %p) {
 ; CHECK-LABEL: define void @combine_metadata_dominance1
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[P]], align 8, !nonnull !0
+; CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[P]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -55,5 +55,46 @@ bb2:
   ret void
 }
 
+define void @combine_metadata_dominance3(ptr %p) {
+; CHECK-LABEL: define void @combine_metadata_dominance3
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[P]], align 8, !nonnull !0, !noundef !0
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = load ptr, ptr %p, !nonnull !0, !noundef !1
+  br label %bb1
 
+bb1:
+  %b = load ptr, ptr %p
+  store i32 0, ptr %a
+  store i32 0, ptr %b
+  ret void
+}
+
+define void @combine_metadata_dominance4(ptr %p) {
+; CHECK-LABEL: define void @combine_metadata_dominance4
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[P]], align 8
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = load ptr, ptr %p, !nonnull !0
+  br label %bb1
+
+bb1:
+  %b = load ptr, ptr %p, !noundef !1
+  store i32 0, ptr %a
+  store i32 0, ptr %b
+  ret void
+}
 !0 = !{}
+!1 = !{}

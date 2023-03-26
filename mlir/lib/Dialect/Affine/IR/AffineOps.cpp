@@ -1708,6 +1708,17 @@ LogicalResult AffineDmaStartOp::fold(ArrayRef<Attribute> cstOperands,
   return memref::foldMemRefCast(*this);
 }
 
+void AffineDmaStartOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), getSrcMemRef(),
+                       SideEffects::DefaultResource::get());
+  effects.emplace_back(MemoryEffects::Write::get(), getDstMemRef(),
+                       SideEffects::DefaultResource::get());
+  effects.emplace_back(MemoryEffects::Read::get(), getTagMemRef(),
+                       SideEffects::DefaultResource::get());
+}
+
 //===----------------------------------------------------------------------===//
 // AffineDmaWaitOp
 //===----------------------------------------------------------------------===//
@@ -1784,6 +1795,13 @@ LogicalResult AffineDmaWaitOp::fold(ArrayRef<Attribute> cstOperands,
                                     SmallVectorImpl<OpFoldResult> &results) {
   /// dma_wait(memrefcast) -> dma_wait
   return memref::foldMemRefCast(*this);
+}
+
+void AffineDmaWaitOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), getTagMemRef(),
+                       SideEffects::DefaultResource::get());
 }
 
 //===----------------------------------------------------------------------===//

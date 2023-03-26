@@ -1785,9 +1785,6 @@ public:
       // Currently findSiblingNodeToFuse searches for siblings with one load.
       assert(sibLoadOpInsts.size() == 1);
       Operation *sibLoadOpInst = sibLoadOpInsts[0];
-      assert(!sibNode->stores.empty());
-      // TODO: Choose the store which postdominates all other stores.
-      auto *sibStoreOpInst = sibNode->stores.back();
 
       // Gather 'dstNode' load ops to 'memref'.
       SmallVector<Operation *, 2> dstLoadOpInsts;
@@ -1818,8 +1815,11 @@ public:
 
       unsigned bestDstLoopDepth = maxLegalFusionDepth;
       if (!maximalFusion) {
-        // Check if fusion would be profitable.
-        if (!isFusionProfitable(sibLoadOpInst, sibStoreOpInst, dstAffineForOp,
+        // Check if fusion would be profitable. For sibling fusion, the sibling
+        // load op is treated as the src "store" op for fusion profitability
+        // purposes. The footprint of the load in the slice relative to the
+        // unfused source's determines reuse.
+        if (!isFusionProfitable(sibLoadOpInst, sibLoadOpInst, dstAffineForOp,
                                 depthSliceUnions, maxLegalFusionDepth,
                                 &bestDstLoopDepth, computeToleranceThreshold))
           continue;
@@ -1875,13 +1875,13 @@ public:
           }))
         return false;
 
-      // Check that all stores are to the same memref.
+      // Check that all stores are to the same memref if any.
       DenseSet<Value> storeMemrefs;
       for (auto *storeOpInst : sibNode->stores) {
         storeMemrefs.insert(
             cast<AffineWriteOpInterface>(storeOpInst).getMemRef());
       }
-      if (storeMemrefs.size() != 1)
+      if (storeMemrefs.size() > 1)
         return false;
 
       // Skip if a memref value in one node is used by a non-affine memref

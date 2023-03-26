@@ -446,3 +446,10 @@ TEST(ToFeatureVector, IIsDroppedAndExperimentalExtensionsArePrefixed) {
   EXPECT_THAT((*MaybeISAInfo2)->toFeatureVector(),
               ElementsAre("+e", "+experimental-zihintntl", "+xventanacondops"));
 }
+
+TEST(ToFeatureVector, UnsupportedExtensionsAreDropped) {
+  auto MaybeISAInfo =
+      RISCVISAInfo::parseNormalizedArchString("rv64i2p0_m2p0_xmadeup1p0");
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+  EXPECT_THAT((*MaybeISAInfo)->toFeatureVector(), ElementsAre("+m"));
+}
