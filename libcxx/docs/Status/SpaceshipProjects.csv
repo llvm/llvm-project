@@ -21,8 +21,8 @@ Section,Description,Dependencies,Assignee,Complete
 | `[tuple.rel] <https://wg21.link/tuple.rel>`_,| `tuple <https://reviews.llvm.org/D108250>`_,[expos.only.func],Kent Ross,|Complete|
 "| `[optional.relops] <https://wg21.link/optional.relops>`_
 | `[optional.nullops] <https://wg21.link/optional.nullops>`_
-| `[optional.comp.with.t] <https://wg21.link/optional.comp.with.t>`_","| optional
-| nullopt",None,Kent Ross,|In Progress|
+| `[optional.comp.with.t] <https://wg21.link/optional.comp.with.t>`_","| `optional <https://reviews.llvm.org/D146392>`_
+| `nullopt <https://reviews.llvm.org/D146392>`_",None,Hristo Hristov,|In Progress|
 "| `[variant.relops] <https://wg21.link/variant.relops>`_
 | `[variant.monostate.relops] <https://wg21.link/variant.monostate.relops>`_","| `monostate <https://reviews.llvm.org/D131372>`_
 | `variant <https://reviews.llvm.org/D131372>`_",None,Kent Ross,|Complete|
@@ -31,8 +31,8 @@ Section,Description,Dependencies,Assignee,Complete
 | `[type.index.members] <https://wg21.link/type.index.members>`_,| `type_index <https://reviews.llvm.org/D131357>`_,None,Adrian Vogelsgesang,|Complete|
 | `[charconv.syn] <https://wg21.link/charconv.syn>`_,| `to_chars_result <https://reviews.llvm.org/D112366>`_,None,Mark de Wever,|Complete|
 | `[charconv.syn] <https://wg21.link/charconv.syn>`_,| `from_chars_result <https://reviews.llvm.org/D112366>`_,None,Mark de Wever,|Complete|
-| `[stacktrace.entry.cmp] <https://wg21.link/stacktrace.entry.cmp>`_,| stacktrace_entry,None,Unassigned,|Not Started|
-| `[stacktrace.basic.cmp] <https://wg21.link/stacktrace.basic.cmp>`_,| basic_stacktrace,[alg.three.way],Unassigned,|Not Started|
+| `[stacktrace.entry.cmp] <https://wg21.link/stacktrace.entry.cmp>`_,| `stacktrace_entry <https://reviews.llvm.org/D123228>`_,None,Nikolas Klauser,|In Progress|
+| `[stacktrace.basic.cmp] <https://wg21.link/stacktrace.basic.cmp>`_,| `basic_stacktrace <https://reviews.llvm.org/D123228>`_,[alg.three.way],Nikolas Klauser,|In Progress|
 | `[string.cmp] <https://wg21.link/string.cmp>`_,| `basic_string <https://reviews.llvm.org/D131421>`_,None,Mark de Wever,|Complete|
 | `[string.view.comparison] <https://wg21.link/string.view.comparison>`_,| `basic_string_view <https://reviews.llvm.org/D130295>`_,None,Mark de Wever,|Complete|
 | `[array.syn] <https://wg21.link/array.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `array <https://reviews.llvm.org/D132265>`_,[expos.only.func],Adrian Vogelsgesang,|In Progress|
@@ -43,9 +43,9 @@ Section,Description,Dependencies,Assignee,Complete
 | `[associative.map.syn] <https://wg21.link/associative.map.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),"| `map <https://reviews.llvm.org/D145976>`_
 | `multimap <https://reviews.llvm.org/D145976>`_",[expos.only.func],Hristo Hristov,|Complete|
 | `[associative.set.syn] <https://wg21.link/associative.set.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),"| multiset
-| set",[expos.only.func],Unassigned,|Not Started|
-| `[queue.ops] <https://wg21.link/queue.ops>`_,| queue,None,Unassigned,|Not Started|
-| `[stack.ops] <https://wg21.link/stack.ops>`_,| stack,None,Unassigned,|Not Started|
+| set",[expos.only.func],Hristo Hristov,|In Progress|
+| `[queue.ops] <https://wg21.link/queue.ops>`_,| `queue <https://reviews.llvm.org/D146066>`_,None,Hristo Hristov,|In Progress|
+| `[stack.ops] <https://wg21.link/stack.ops>`_,| `stack <https://reviews.llvm.org/D146094>`_,None,Hristo Hristov,|In Progress|
 | `[reverse.iter.cmp] <https://wg21.link/reverse.iter.cmp>`_,| `reverse_iterator <https://reviews.llvm.org/D113695>`_,None,Mikhail Maltsev,|Complete|
 | `[move.iter.op.comp] <https://wg21.link/move.iter.op.comp>`_,| `move_iterator <https://reviews.llvm.org/D117656>`_,None,Arthur O'Dwyer,|Complete|
 | `[counted.iter.cmp] <https://wg21.link/counted.iter.cmp>`_,| `counted_iterator <https://reviews.llvm.org/D106205>`_,None,Zoe Carver,|Complete|
@@ -53,7 +53,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[range.transform.iterator] <https://wg21.link/range.transform.iterator>`_,| `ranges::transform_view::iterator <https://reviews.llvm.org/D110774>`_,[concepts.cmp],Arthur O'Dwyer,|Complete|
 | `[range.elements.iterator] <https://wg21.link/range.elements.iterator>`_,| ranges::elements_view::iterator,[concepts.cmp],Hui Xie,|Complete|
 | `[time.duration.comparisons] <https://wg21.link/time.duration.comparisons>`_, `chrono::duration <https://reviews.llvm.org/D145881>`_, None, Hristo Hristov, |Complete|
-| `[time.point.comparisons] <https://wg21.link/time.point.comparisons>`_, "chrono::time_point", None, Mark de Wever, |Not Started|
+| `[time.point.comparisons] <https://wg21.link/time.point.comparisons>`_, `chrono::time_point <https://reviews.llvm.org/D146250>`_, None, Hristo Hristov, |In Progress|
 "| `[time.cal.day.nonmembers] <https://wg21.link/time.cal.day.nonmembers>`_
 | `[time.cal.month.nonmembers] <https://wg21.link/time.cal.month.nonmembers>`_
 | `[time.cal.year.nonmembers] <https://wg21.link/time.cal.year.nonmembers>`_
@@ -77,5 +77,5 @@ Section,Description,Dependencies,Assignee,Complete
 | `[fs.filesystem.syn] <https://wg21.link/fs.filesystem.syn>`_,| `filesystem::space_info <https://reviews.llvm.org/D130861>`_,None,Adrian Vogelsgesang,|Complete|
 | `[fs.path.nonmember] <https://wg21.link/fs.path.nonmember>`_,| `filesystem::path <https://reviews.llvm.org/D130859>`_,None,Adrian Vogelsgesang,|Complete|
 | `[fs.dir.entry.obs] <https://wg21.link/fs.dir.entry.obs>`_,| `filesystem::directory_entry <https://reviews.llvm.org/D130860>`_,None,Adrian Vogelsgesang,|Complete|
-| `[re.submatch.op] <https://wg21.link/re.submatch.op>`_,| sub_match,None,Mark de Wever,|In Progress|
+| `[re.submatch.op] <https://wg21.link/re.submatch.op>`_,| `sub_match <https://reviews.llvm.org/D132310>`_,None,Mark de Wever,|In Progress|
 | `[thread.thread.id] <https://wg21.link/thread.thread.id>`_,| `thread::id <https://reviews.llvm.org/D131362>`_,None,Adrian Vogelsgesang,|Complete|
