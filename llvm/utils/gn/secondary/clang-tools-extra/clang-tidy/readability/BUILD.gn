@@ -13,6 +13,7 @@ static_library("readability") {
   ]
   sources = [
     "AvoidConstParamsInDecls.cpp",
+    "AvoidUnconditionalPreprocessorIfCheck.cpp",
     "BracesAroundStatementsCheck.cpp",
     "ConstReturnTypeCheck.cpp",
     "ContainerContainsCheck.cpp",
