@@ -67,14 +67,6 @@ static void findLoadCallsAtConstantOffset(
         findLoadCallsAtConstantOffset(M, DevirtCalls, User, Offset + GEPOffset,
                                       CI, DT);
       }
-    } else if (auto *Call = dyn_cast<CallInst>(User)) {
-      if (Call->getIntrinsicID() == llvm::Intrinsic::load_relative) {
-        if (auto *LoadOffset = dyn_cast<ConstantInt>(Call->getOperand(1))) {
-          findCallsAtConstantOffset(DevirtCalls, nullptr, User,
-                                    Offset + LoadOffset->getSExtValue(), CI,
-                                    DT);
-        }
-      }
     }
   }
 }
@@ -137,12 +129,6 @@ void llvm::findDevirtualizableCallsForTypeCheckedLoad(
 
 Constant *llvm::getPointerAtOffset(Constant *I, uint64_t Offset, Module &M,
                                    Constant *TopLevelGlobal) {
-  // TODO: Ideally it would be the caller who knows if it's appropriate to strip
-  // the DSOLocalEquicalent. More generally, it would feel more appropriate to
-  // have two functions that handle absolute and relative pointers separately.
-  if (auto *Equiv = dyn_cast<DSOLocalEquivalent>(I))
-    I = Equiv->getGlobalValue();
-
   if (I->getType()->isPointerTy()) {
     if (Offset == 0)
       return I;
@@ -173,7 +159,7 @@ Constant *llvm::getPointerAtOffset(Constant *I, uint64_t Offset, Module &M,
                               Offset % ElemSize, M, TopLevelGlobal);
   }
 
-  // Relative-pointer support starts here.
+  // (Swift-specific) relative-pointer support starts here.
   if (auto *CI = dyn_cast<ConstantInt>(I)) {
     if (Offset == 0 && CI->isZero()) {
       return I;
