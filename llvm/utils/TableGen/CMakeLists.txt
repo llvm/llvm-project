@@ -54,6 +54,7 @@ add_tablegen(llvm-tblgen LLVM
   SubtargetFeatureInfo.cpp
   TableGen.cpp
   Types.cpp
+  VTEmitter.cpp
   VarLenCodeEmitterGen.cpp
   X86DisassemblerTables.cpp
   X86EVEX2VEXTablesEmitter.cpp
