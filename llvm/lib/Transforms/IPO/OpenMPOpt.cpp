@@ -36,6 +36,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -1706,37 +1707,27 @@ private:
     };
 
     if (!ReplVal) {
-      for (Use *U : *UV)
+      auto *DT =
+          OMPInfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(F);
+      if (!DT)
+        return false;
+      Instruction *IP = nullptr;
+      for (Use *U : *UV) {
         if (CallInst *CI = getCallIfRegularCall(*U, &RFI)) {
+          if (IP)
+            IP = DT->findNearestCommonDominator(IP, CI);
+          else
+            IP = CI;
           if (!CanBeMoved(*CI))
             continue;
-
-          // If the function is a kernel, dedup will move
-          // the runtime call right after the kernel init callsite. Otherwise,
-          // it will move it to the beginning of the caller function.
-          if (isKernel(F)) {
-            auto &KernelInitRFI = OMPInfoCache.RFIs[OMPRTL___kmpc_target_init];
-            auto *KernelInitUV = KernelInitRFI.getUseVector(F);
-
-            if (KernelInitUV->empty())
-              continue;
-
-            assert(KernelInitUV->size() == 1 &&
-                   "Expected a single __kmpc_target_init in kernel\n");
-
-            CallInst *KernelInitCI =
-                getCallIfRegularCall(*KernelInitUV->front(), &KernelInitRFI);
-            assert(KernelInitCI &&
-                   "Expected a call to __kmpc_target_init in kernel\n");
-
-            CI->moveAfter(KernelInitCI);
-          } else
-            CI->moveBefore(&*F.getEntryBlock().getFirstInsertionPt());
-          ReplVal = CI;
-          break;
+          if (!ReplVal)
+            ReplVal = CI;
         }
+      }
       if (!ReplVal)
         return false;
+      assert(IP && "Expected insertion point!");
+      cast<Instruction>(ReplVal)->moveBefore(IP);
     }
 
     // If we use a call as a replacement value we need to make sure the ident is
