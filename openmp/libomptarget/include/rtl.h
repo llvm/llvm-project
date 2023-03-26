@@ -194,9 +194,14 @@ struct RTLsTy {
   void loadRTLs();
 
   std::vector<std::string> archsSupportingManagedMemory = {
-      "gfx908", "gfx90a", "sm_35", "sm_50", "sm_60", "sm_70", "sm_61"};
+      "gfx908", "gfx90a", "gfx940", "sm_35",
+      "sm_50",  "sm_60",  "sm_70",  "sm_61"};
   // Return whether the current system supports omp_get_target_memory_space
   bool SystemSupportManagedMemory();
+
+  std::vector<std::string> archsAPU = {"gfx940"};
+  bool IsAPUSystem();
+  void disableAPUMapsForUSM(int64_t RequiresFlags);
 
 private:
   static bool attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL);

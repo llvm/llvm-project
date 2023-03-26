@@ -130,11 +130,34 @@ void RTLsTy::loadRTLs() {
     }
   }
 
-  // Parse environement variable OMPX_APU_MAPS (if set)
-  if (auto *ApuMaps = getenv("OMPX_APU_MAPS")) {
-    auto Value{std::stoi(ApuMaps)};
-    if (Value > 0) {
-      DisableAllocationsForMapsOnApus = true;
+  // On APU systems (e.g., gfx940), running with
+  // OMPX_APU_MAPS=1, in default mode and HSA_XNACK=1 triggers
+  // disabling of most map clauses
+  // (except for declare target variables).
+  // Disabling means no device memory allocation
+  // and h2d or d2h memory copies are performed,
+  // but host thread allocated memory is used on
+  // devices. This behavior is reset if user app
+  // calls register requires later with unified_shared_memory flag
+  if (IsAPUSystem()) {
+    auto *ApuMaps = getenv("OMPX_APU_MAPS");
+    auto *hsaXnack = getenv("HSA_XNACK");
+    if (ApuMaps && hsaXnack) {
+      auto ApuMapsVal = std::stoi(ApuMaps);
+      auto hsaXnackVal = std::stoi(hsaXnack);
+
+      // OMPX_APU_MAPS is a temporary env variable
+      // that should always be used with HSA_XNACK=1:
+      // error if it is not. Once this is made default behavior
+      // for USM=OFF, HSA_XNACK=1, then we can remove the error
+      // as the behavior is only triggered by HSA_XNACK value
+      if (ApuMapsVal > 0 && hsaXnackVal == 0) {
+	FATAL_MESSAGE0(
+		       1,
+		       "OMPX_APU_MAPS behavior requires HSA_XNACK=1");
+      }
+      if (ApuMapsVal > 0 && hsaXnackVal > 0)
+        DisableAllocationsForMapsOnApus = true;
     }
   }
 
@@ -413,6 +436,16 @@ static __tgt_image_info getImageInfo(__tgt_device_image *Image) {
   return __tgt_image_info{(*BinaryOrErr)->getArch().data()};
 }
 
+// Temp workaround due to the presence of OMPX_APU_MAPS
+// to enable unified shared memory mode for default programs
+// run with HSA_XNACK=1. Remove once the OMPX_APU_MAPS mode is
+// made default
+void RTLsTy::disableAPUMapsForUSM(int64_t RequiresFlags) {
+  // TODO: insert any other missing checks
+  if (RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)
+    DisableAllocationsForMapsOnApus = false;
+}
+
 void RTLsTy::registerRequires(int64_t Flags) {
   // TODO: add more elaborate check.
   // Minimal check: only set requires flags if previous value
@@ -423,6 +456,7 @@ void RTLsTy::registerRequires(int64_t Flags) {
          "illegal undefined flag for requires directive!");
   if (RequiresFlags == OMP_REQ_UNDEFINED) {
     RequiresFlags = Flags;
+    disableAPUMapsForUSM(RequiresFlags);
     return;
   }
 
@@ -448,6 +482,8 @@ void RTLsTy::registerRequires(int64_t Flags) {
         "'#pragma omp requires unified_shared_memory' not used consistently!");
   }
 
+  disableAPUMapsForUSM(RequiresFlags);
+  
   // TODO: insert any other missing checks
 
   DP("New requires flags %" PRId64 " compatible with existing %" PRId64 "!\n",
@@ -685,4 +721,11 @@ extern "C" char *global_allocate(uint32_t sz) { return (char *)malloc(sz); }
 extern "C" int global_free(void *ptr) {
   free(ptr);
   return 0;
+}
+
+bool RTLsTy::IsAPUSystem() {
+  for (auto it : archsAPU)
+    if (isHomogeneousSystemOf(it))
+      return true;
+  return false;
 }

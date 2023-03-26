@@ -373,19 +373,18 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
     if (Size) {
       // When allocating under unified_shared_memory, amdgpu plugin
       // can optimize memory access latency by registering allocated
-      // memory as coarse_grain. The usage of coarse grained memory can be
-      // overriden by setting the env-var OMPX_DISABLE_USM_MAPS=1
-      // Setting OMPX_APU_MAPS to 1 prevents memory allocations/transfers for all
-      // mapped variables.
-      if (!PM->RTLs.DisableAllocationsForMapsOnApus &&
-          !PM->RTLs.EnableFineGrainedMemory && HstPtrBegin &&
+      // memory as coarse-grained. The usage of coarse-grained memory can be
+      // overriden by setting the env-var OMPX_DISABLE_USM_MAPS=1.
+      // This is not done for APUs.
+      if (!PM->RTLs.IsAPUSystem() &&
+         !PM->RTLs.EnableFineGrainedMemory && HstPtrBegin &&
           RTL->set_coarse_grain_mem_region) {
         RTL->set_coarse_grain_mem_region(DeviceID, HstPtrBegin, Size);
       }
 
       if (!PM->RTLs.NoUSMMapChecks) {
         // even under unified_shared_memory need to check for correctness of
-        // use of map clauses. device pointer is same as host ptr in this case
+        // use of map clauses. Device pointer is same as host ptr in this case
         LR.TPR.setEntry(HDTTMap
                     ->emplace(new HostDataToTargetTy(
                         (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
@@ -394,13 +393,14 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
                         /*IsUSMAlloc=*/true))
                     .first->HDTT);
       }
-      DP("Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
-         "memory\n",
-         DPxPTR((uintptr_t)HstPtrBegin), Size);
-      LR.TPR.Flags.IsPresent = false;
-      LR.TPR.Flags.IsHostPointer = true;
-      LR.TPR.TargetPointer = HstPtrBegin;
     }
+    DP("Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
+       "memory\n",
+       DPxPTR((uintptr_t)HstPtrBegin), Size);
+
+    LR.TPR.Flags.IsPresent = false;
+    LR.TPR.Flags.IsHostPointer = true;
+    LR.TPR.TargetPointer = HstPtrBegin;
   } else if (HasPresentModifier) {
     DP("Mapping required by 'present' map type modifier does not exist for "
        "HstPtrBegin=" DPxMOD ", Size=%" PRId64 "\n",
