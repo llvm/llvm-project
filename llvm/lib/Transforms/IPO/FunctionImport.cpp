@@ -245,24 +245,25 @@ using EdgeInfo =
 
 } // anonymous namespace
 
-static bool shouldImportGlobal(const ValueInfo &VI,
-                               const GVSummaryMapTy &DefinedGVSummaries) {
+static bool shouldImportGlobal(
+    const ValueInfo &VI, const GVSummaryMapTy &DefinedGVSummaries,
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        isPrevailing) {
   const auto &GVS = DefinedGVSummaries.find(VI.getGUID());
   if (GVS == DefinedGVSummaries.end())
     return true;
-  // We should not skip import if the module contains a definition with
-  // interposable linkage type. This is required for correctness in
-  // the situation with two following conditions:
-  // * the def with interposable linkage is non-prevailing,
-  // * there is a prevailing def available for import and marked read-only.
-  // In this case, the non-prevailing def will be converted to a declaration,
-  // while the prevailing one becomes internal, thus no definitions will be
-  // available for linking. In order to prevent undefined symbol link error,
-  // the prevailing definition must be imported.
+  // We should not skip import if the module contains a non-prevailing
+  // definition with interposable linkage type. This is required for correctness
+  // in the situation where there is a prevailing def available for import and
+  // marked read-only. In this case, the non-prevailing def will be converted to
+  // a declaration, while the prevailing one becomes internal, thus no
+  // definitions will be available for linking. In order to prevent undefined
+  // symbol link error, the prevailing definition must be imported.
   // FIXME: Consider adding a check that the suitable prevailing definition
   // exists and marked read-only.
   if (VI.getSummaryList().size() > 1 &&
-      GlobalValue::isInterposableLinkage(GVS->second->linkage()))
+      GlobalValue::isInterposableLinkage(GVS->second->linkage()) &&
+      !isPrevailing(VI.getGUID(), GVS->second))
     return true;
 
   return false;
@@ -271,11 +272,13 @@ static bool shouldImportGlobal(const ValueInfo &VI,
 static void computeImportForReferencedGlobals(
     const GlobalValueSummary &Summary, const ModuleSummaryIndex &Index,
     const GVSummaryMapTy &DefinedGVSummaries,
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        isPrevailing,
     SmallVectorImpl<EdgeInfo> &Worklist,
     FunctionImporter::ImportMapTy &ImportList,
     StringMap<FunctionImporter::ExportSetTy> *ExportLists) {
   for (const auto &VI : Summary.refs()) {
-    if (!shouldImportGlobal(VI, DefinedGVSummaries)) {
+    if (!shouldImportGlobal(VI, DefinedGVSummaries, isPrevailing)) {
       LLVM_DEBUG(
           dbgs() << "Ref ignored! Target already in destination module.\n");
       continue;
@@ -348,12 +351,15 @@ getFailureName(FunctionImporter::ImportFailureReason Reason) {
 static void computeImportForFunction(
     const FunctionSummary &Summary, const ModuleSummaryIndex &Index,
     const unsigned Threshold, const GVSummaryMapTy &DefinedGVSummaries,
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        isPrevailing,
     SmallVectorImpl<EdgeInfo> &Worklist,
     FunctionImporter::ImportMapTy &ImportList,
     StringMap<FunctionImporter::ExportSetTy> *ExportLists,
     FunctionImporter::ImportThresholdsTy &ImportThresholds) {
   computeImportForReferencedGlobals(Summary, Index, DefinedGVSummaries,
-                                    Worklist, ImportList, ExportLists);
+                                    isPrevailing, Worklist, ImportList,
+                                    ExportLists);
   static int ImportCount = 0;
   for (const auto &Edge : Summary.calls()) {
     ValueInfo VI = Edge.first;
@@ -519,8 +525,11 @@ static void computeImportForFunction(
 /// as well as the list of "exports", i.e. the list of symbols referenced from
 /// another module (that may require promotion).
 static void ComputeImportForModule(
-    const GVSummaryMapTy &DefinedGVSummaries, const ModuleSummaryIndex &Index,
-    StringRef ModName, FunctionImporter::ImportMapTy &ImportList,
+    const GVSummaryMapTy &DefinedGVSummaries,
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        isPrevailing,
+    const ModuleSummaryIndex &Index, StringRef ModName,
+    FunctionImporter::ImportMapTy &ImportList,
     StringMap<FunctionImporter::ExportSetTy> *ExportLists = nullptr) {
   // Worklist contains the list of function imported in this module, for which
   // we will analyse the callees and may import further down the callgraph.
@@ -546,8 +555,8 @@ static void ComputeImportForModule(
       continue;
     LLVM_DEBUG(dbgs() << "Initialize import for " << VI << "\n");
     computeImportForFunction(*FuncSummary, Index, ImportInstrLimit,
-                             DefinedGVSummaries, Worklist, ImportList,
-                             ExportLists, ImportThresholds);
+                             DefinedGVSummaries, isPrevailing, Worklist,
+                             ImportList, ExportLists, ImportThresholds);
   }
 
   // Process the newly imported functions and add callees to the worklist.
@@ -558,11 +567,12 @@ static void ComputeImportForModule(
 
     if (auto *FS = dyn_cast<FunctionSummary>(Summary))
       computeImportForFunction(*FS, Index, Threshold, DefinedGVSummaries,
-                               Worklist, ImportList, ExportLists,
+                               isPrevailing, Worklist, ImportList, ExportLists,
                                ImportThresholds);
     else
       computeImportForReferencedGlobals(*Summary, Index, DefinedGVSummaries,
-                                        Worklist, ImportList, ExportLists);
+                                        isPrevailing, Worklist, ImportList,
+                                        ExportLists);
   }
 
   // Print stats about functions considered but rejected for importing
@@ -653,6 +663,8 @@ checkVariableImport(const ModuleSummaryIndex &Index,
 void llvm::ComputeCrossModuleImport(
     const ModuleSummaryIndex &Index,
     const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        isPrevailing,
     StringMap<FunctionImporter::ImportMapTy> &ImportLists,
     StringMap<FunctionImporter::ExportSetTy> &ExportLists) {
   // For each module that has function defined, compute the import/export lists.
@@ -660,7 +672,7 @@ void llvm::ComputeCrossModuleImport(
     auto &ImportList = ImportLists[DefinedGVSummaries.first()];
     LLVM_DEBUG(dbgs() << "Computing import for Module '"
                       << DefinedGVSummaries.first() << "'\n");
-    ComputeImportForModule(DefinedGVSummaries.second, Index,
+    ComputeImportForModule(DefinedGVSummaries.second, isPrevailing, Index,
                            DefinedGVSummaries.first(), ImportList,
                            &ExportLists);
   }
@@ -759,7 +771,10 @@ static void dumpImportListForModule(const ModuleSummaryIndex &Index,
 
 /// Compute all the imports for the given module in the Index.
 void llvm::ComputeCrossModuleImportForModule(
-    StringRef ModulePath, const ModuleSummaryIndex &Index,
+    StringRef ModulePath,
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        isPrevailing,
+    const ModuleSummaryIndex &Index,
     FunctionImporter::ImportMapTy &ImportList) {
   // Collect the list of functions this module defines.
   // GUID -> Summary
@@ -768,7 +783,8 @@ void llvm::ComputeCrossModuleImportForModule(
 
   // Compute the import list for this module.
   LLVM_DEBUG(dbgs() << "Computing import for Module '" << ModulePath << "'\n");
-  ComputeImportForModule(FunctionSummaryMap, Index, ModulePath, ImportList);
+  ComputeImportForModule(FunctionSummaryMap, isPrevailing, Index, ModulePath,
+                         ImportList);
 
 #ifndef NDEBUG
   dumpImportListForModule(Index, ModulePath, ImportList);
@@ -1395,7 +1411,9 @@ Expected<bool> FunctionImporter::importFunctions(
   return ImportedCount;
 }
 
-static bool doImportingForModule(Module &M) {
+static bool doImportingForModule(
+    Module &M, function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+                   isPrevailing) {
   if (SummaryFile.empty())
     report_fatal_error("error: -function-import requires -summary-file\n");
   Expected<std::unique_ptr<ModuleSummaryIndex>> IndexPtrOrErr =
@@ -1416,8 +1434,8 @@ static bool doImportingForModule(Module &M) {
     ComputeCrossModuleImportForModuleFromIndex(M.getModuleIdentifier(), *Index,
                                                ImportList);
   else
-    ComputeCrossModuleImportForModule(M.getModuleIdentifier(), *Index,
-                                      ImportList);
+    ComputeCrossModuleImportForModule(M.getModuleIdentifier(), isPrevailing,
+                                      *Index, ImportList);
 
   // Conservatively mark all internal values as promoted. This interface is
   // only used when doing importing via the function importing pass. The pass
@@ -1458,7 +1476,14 @@ static bool doImportingForModule(Module &M) {
 
 PreservedAnalyses FunctionImportPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  if (!doImportingForModule(M))
+  // This is only used for testing the function import pass via opt, where we
+  // don't have prevailing information from the LTO context available, so just
+  // conservatively assume everything is prevailing (which is fine for the very
+  // limited use of prevailing checking in this pass).
+  auto isPrevailing = [](GlobalValue::GUID, const GlobalValueSummary *) {
+    return true;
+  };
+  if (!doImportingForModule(M, isPrevailing))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
