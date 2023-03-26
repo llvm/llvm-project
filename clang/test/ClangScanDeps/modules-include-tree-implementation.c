@@ -4,7 +4,7 @@
 // RUN: split-file %s %t
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 
-// RUN: clang-scan-deps -compilation-database %t/cdb.json \
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -j 1 \
 // RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-include-tree-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps.json
@@ -35,12 +35,22 @@
 // CHECK: [[PREFIX]]/Mod.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK-NOT: [[PREFIX]]/module.modulemap
 
+// RUN: %deps-to-rsp %t/deps.json --tu-index 1 > %t/tu_missing_module.rsp
+// RUN: %clang @%t/tu_missing_module.rsp
+
 //--- cdb.json.template
-[{
+[
+{
   "file": "DIR/tu.c",
   "directory": "DIR",
   "command": "clang -fsyntax-only DIR/tu.c -I DIR -fmodule-name=Mod -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=DIR/module-cache"
-}]
+},
+{
+  "file": "DIR/tu_missing_module.c",
+  "directory": "DIR",
+  "command": "clang -fsyntax-only DIR/tu_missing_module.c -I DIR -fmodule-name=NonExistent -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=DIR/module-cache"
+}
+]
 
 //--- module.modulemap
 module Mod { header "Mod.h" }
@@ -55,3 +65,6 @@ void top(void);
 void tu(void) {
   top();
 }
+
+//--- tu_missing_module.c
+
