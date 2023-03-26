@@ -806,7 +806,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::STRICT_FP_EXTEND, VT, Custom);
       setOperationAction({ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
-                          ISD::STRICT_FDIV},
+                          ISD::STRICT_FDIV, ISD::STRICT_FSQRT},
                          VT, Legal);
     };
 
@@ -1023,7 +1023,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::STRICT_FP_EXTEND, VT, Custom);
         setOperationAction({ISD::STRICT_FADD, ISD::STRICT_FSUB,
-                            ISD::STRICT_FMUL, ISD::STRICT_FDIV},
+                            ISD::STRICT_FMUL, ISD::STRICT_FDIV,
+                            ISD::STRICT_FSQRT},
                            VT, Custom);
       }
 
@@ -4503,6 +4504,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::STRICT_FDIV:
     return lowerToScalableOp(Op, DAG, RISCVISD::STRICT_FDIV_VL,
                              /*HasMergeOp*/ true);
+  case ISD::STRICT_FSQRT:
+    return lowerToScalableOp(Op, DAG, RISCVISD::STRICT_FSQRT_VL);
   case ISD::MGATHER:
   case ISD::VP_GATHER:
     return lowerMaskedGather(Op, DAG);
@@ -14098,6 +14101,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(STRICT_FSUB_VL)
   NODE_NAME_CASE(STRICT_FMUL_VL)
   NODE_NAME_CASE(STRICT_FDIV_VL)
+  NODE_NAME_CASE(STRICT_FSQRT_VL)
   NODE_NAME_CASE(STRICT_FP_EXTEND_VL)
   NODE_NAME_CASE(VWMUL_VL)
   NODE_NAME_CASE(VWMULU_VL)
