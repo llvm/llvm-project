@@ -57,7 +57,7 @@ Example with magic values refactored:
 
    const size_t NUMBER_OF_ELEMENTS = 30;
    using containerType = CustomType<int, NUMBER_OF_ELEMENTS>;
-   
+
    struct OtherType {
       containerType container;
    }
@@ -144,3 +144,8 @@ Options
 
    Boolean value indicating whether to accept magic numbers in ``typedef`` or
    ``using`` declarations. Default value is `false`.
+
+.. option:: IgnoreUserDefinedLiterals
+
+   Boolean value indicating whether to accept magic numbers in user-defined
+   literals. Default value is `false`.
