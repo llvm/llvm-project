@@ -1533,24 +1533,29 @@ union float_u f_ret_float_u(void) {
 // separate arguments in IR. They are passed by the same rules for returns,
 // but will be lowered to simple two-element structs if necessary (as LLVM IR
 // functions cannot return multiple values).
-// FIXME: Essentially all test cases below involving _Float16 in structs
-// aren't lowered according to the rules in the FP calling convention (i.e.
-// are incorrect for ilp32f/ilp32d).
 
 struct float16_s { _Float16 f; };
 
 // A struct containing just one floating-point real is passed as though it
 // were a standalone floating-point real.
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_float16_s_arg
-// ILP32-ILP32F-ILP32D-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local void @f_float16_s_arg
+// ILP32-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local void @f_float16_s_arg
+// ILP32F-ILP32D-SAME: (half [[TMP0:%.*]]) #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 void f_float16_s_arg(struct float16_s a) {}
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local i32 @f_ret_float16_s
-// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local i32 @f_ret_float16_s
+// ILP32-SAME: () #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local half @f_ret_float16_s
+// ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 struct float16_s f_ret_float16_s(void) {
   return (struct float16_s){1.0};
@@ -1562,29 +1567,45 @@ struct float16_s f_ret_float16_s(void) {
 struct zbf_float16_s { int : 0; _Float16 f; };
 struct zbf_float16_zbf_s { int : 0; _Float16 f; int : 0; };
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_zbf_float16_s_arg
-// ILP32-ILP32F-ILP32D-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local void @f_zbf_float16_s_arg
+// ILP32-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local void @f_zbf_float16_s_arg
+// ILP32F-ILP32D-SAME: (half [[TMP0:%.*]]) #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 void f_zbf_float16_s_arg(struct zbf_float16_s a) {}
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local i32 @f_ret_zbf_float16_s
-// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local i32 @f_ret_zbf_float16_s
+// ILP32-SAME: () #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local half @f_ret_zbf_float16_s
+// ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 struct zbf_float16_s f_ret_zbf_float16_s(void) {
   return (struct zbf_float16_s){1.0};
 }
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_zbf_float16_zbf_s_arg
-// ILP32-ILP32F-ILP32D-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local void @f_zbf_float16_zbf_s_arg
+// ILP32-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local void @f_zbf_float16_zbf_s_arg
+// ILP32F-ILP32D-SAME: (half [[TMP0:%.*]]) #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 void f_zbf_float16_zbf_s_arg(struct zbf_float16_zbf_s a) {}
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local i32 @f_ret_zbf_float16_zbf_s
-// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local i32 @f_ret_zbf_float16_zbf_s
+// ILP32-SAME: () #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local half @f_ret_zbf_float16_zbf_s
+// ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 struct zbf_float16_zbf_s f_ret_zbf_float16_zbf_s(void) {
   return (struct zbf_float16_zbf_s){1.0};
@@ -1595,15 +1616,23 @@ struct zbf_float16_zbf_s f_ret_zbf_float16_zbf_s(void) {
 
 struct double_float16_s { double f; _Float16 g; };
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_double_float16_s_arg
-// ILP32-ILP32F-ILP32D-SAME: (ptr noundef [[A:%.*]]) #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-ILP32F-LABEL: define dso_local void @f_double_float16_s_arg
+// ILP32-ILP32F-SAME: (ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// ILP32-ILP32F:  entry:
+//
+// ILP32D-LABEL: define dso_local void @f_double_float16_s_arg
+// ILP32D-SAME: (double [[TMP0:%.*]], half [[TMP1:%.*]]) #[[ATTR0]] {
+// ILP32D:  entry:
 //
 void f_double_float16_s_arg(struct double_float16_s a) {}
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_ret_double_float16_s
-// ILP32-ILP32F-ILP32D-SAME: (ptr noalias sret([[STRUCT_DOUBLE_FLOAT16_S:%.*]]) align 8 [[AGG_RESULT:%.*]]) #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-ILP32F-LABEL: define dso_local void @f_ret_double_float16_s
+// ILP32-ILP32F-SAME: (ptr noalias sret([[STRUCT_DOUBLE_FLOAT16_S:%.*]]) align 8 [[AGG_RESULT:%.*]]) #[[ATTR0]] {
+// ILP32-ILP32F:  entry:
+//
+// ILP32D-LABEL: define dso_local { double, half } @f_ret_double_float16_s
+// ILP32D-SAME: () #[[ATTR0]] {
+// ILP32D:  entry:
 //
 struct double_float16_s f_ret_double_float16_s(void) {
   return (struct double_float16_s){1.0, 2.0};
@@ -1627,43 +1656,67 @@ struct float16_int64_s { _Float16 f; int64_t i; };
 struct float16_int64bf_s { _Float16 f; int64_t i : 32; };
 struct float16_int8_zbf_s { _Float16 f; int8_t i; int : 0; };
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_float16_int8_s_arg
-// ILP32-ILP32F-ILP32D-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local void @f_float16_int8_s_arg
+// ILP32-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local void @f_float16_int8_s_arg
+// ILP32F-ILP32D-SAME: (half [[TMP0:%.*]], i8 [[TMP1:%.*]]) #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 void f_float16_int8_s_arg(struct float16_int8_s a) {}
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local i32 @f_ret_float16_int8_s
-// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local i32 @f_ret_float16_int8_s
+// ILP32-SAME: () #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local { half, i8 } @f_ret_float16_int8_s
+// ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 struct float16_int8_s f_ret_float16_int8_s(void) {
   return (struct float16_int8_s){1.0, 2};
 }
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_float16_uint8_s_arg
-// ILP32-ILP32F-ILP32D-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local void @f_float16_uint8_s_arg
+// ILP32-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local void @f_float16_uint8_s_arg
+// ILP32F-ILP32D-SAME: (half [[TMP0:%.*]], i8 [[TMP1:%.*]]) #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 void f_float16_uint8_s_arg(struct float16_uint8_s a) {}
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local i32 @f_ret_float16_uint8_s
-// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local i32 @f_ret_float16_uint8_s
+// ILP32-SAME: () #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local { half, i8 } @f_ret_float16_uint8_s
+// ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 struct float16_uint8_s f_ret_float16_uint8_s(void) {
   return (struct float16_uint8_s){1.0, 2};
 }
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_float16_int32_s_arg
-// ILP32-ILP32F-ILP32D-SAME: ([2 x i32] [[A_COERCE:%.*]]) #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local void @f_float16_int32_s_arg
+// ILP32-SAME: ([2 x i32] [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local void @f_float16_int32_s_arg
+// ILP32F-ILP32D-SAME: (half [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 void f_float16_int32_s_arg(struct float16_int32_s a) {}
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local [2 x i32] @f_ret_float16_int32_s
-// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local [2 x i32] @f_ret_float16_int32_s
+// ILP32-SAME: () #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local { half, i32 } @f_ret_float16_int32_s
+// ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 struct float16_int32_s f_ret_float16_int32_s(void) {
   return (struct float16_int32_s){1.0, 2};
@@ -1683,15 +1736,23 @@ struct float16_int64_s f_ret_float16_int64_s(void) {
   return (struct float16_int64_s){1.0, 2};
 }
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_float16_int64bf_s_arg
-// ILP32-ILP32F-ILP32D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local void @f_float16_int64bf_s_arg
+// ILP32-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local void @f_float16_int64bf_s_arg
+// ILP32F-ILP32D-SAME: (half [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 void f_float16_int64bf_s_arg(struct float16_int64bf_s a) {}
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local i64 @f_ret_float16_int64bf_s
-// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local i64 @f_ret_float16_int64bf_s
+// ILP32-SAME: () #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local <{ half, i32 }> @f_ret_float16_int64bf_s
+// ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 struct float16_int64bf_s f_ret_float16_int64bf_s(void) {
   return (struct float16_int64bf_s){1.0, 2};
@@ -1700,15 +1761,23 @@ struct float16_int64bf_s f_ret_float16_int64bf_s(void) {
 // The zero-width bitfield means the struct can't be passed according to the
 // floating point calling convention.
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_float16_int8_zbf_s
-// ILP32-ILP32F-ILP32D-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local void @f_float16_int8_zbf_s
+// ILP32-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local void @f_float16_int8_zbf_s
+// ILP32F-ILP32D-SAME: (half [[TMP0:%.*]], i8 [[TMP1:%.*]]) #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 void f_float16_int8_zbf_s(struct float16_int8_zbf_s a) {}
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local i32 @f_ret_float16_int8_zbf_s
-// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local i32 @f_ret_float16_int8_zbf_s
+// ILP32-SAME: () #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local { half, i8 } @f_ret_float16_int8_zbf_s
+// ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 struct float16_int8_zbf_s f_ret_float16_int8_zbf_s(void) {
   return (struct float16_int8_zbf_s){1.0, 2};
@@ -1782,15 +1851,23 @@ struct float16complex_s f_ret_float16complex_s(void) {
 
 struct float16arr1_s { _Float16 a[1]; };
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_float16arr1_s_arg
-// ILP32-ILP32F-ILP32D-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local void @f_float16arr1_s_arg
+// ILP32-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local void @f_float16arr1_s_arg
+// ILP32F-ILP32D-SAME: (half [[TMP0:%.*]]) #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 void f_float16arr1_s_arg(struct float16arr1_s a) {}
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local i32 @f_ret_float16arr1_s
-// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local i32 @f_ret_float16arr1_s
+// ILP32-SAME: () #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local half @f_ret_float16arr1_s
+// ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 struct float16arr1_s f_ret_float16arr1_s(void) {
   return (struct float16arr1_s){{1.0}};
@@ -1798,15 +1875,23 @@ struct float16arr1_s f_ret_float16arr1_s(void) {
 
 struct float16arr2_s { _Float16 a[2]; };
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_float16arr2_s_arg
-// ILP32-ILP32F-ILP32D-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local void @f_float16arr2_s_arg
+// ILP32-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local void @f_float16arr2_s_arg
+// ILP32F-ILP32D-SAME: (half [[TMP0:%.*]], half [[TMP1:%.*]]) #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 void f_float16arr2_s_arg(struct float16arr2_s a) {}
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local i32 @f_ret_float16arr2_s
-// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local i32 @f_ret_float16arr2_s
+// ILP32-SAME: () #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local { half, half } @f_ret_float16arr2_s
+// ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 struct float16arr2_s f_ret_float16arr2_s(void) {
   return (struct float16arr2_s){{1.0, 2.0}};
@@ -1814,15 +1899,23 @@ struct float16arr2_s f_ret_float16arr2_s(void) {
 
 struct float16arr2_tricky1_s { struct { _Float16 f[1]; } g[2]; };
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_float16arr2_tricky1_s_arg
-// ILP32-ILP32F-ILP32D-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local void @f_float16arr2_tricky1_s_arg
+// ILP32-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local void @f_float16arr2_tricky1_s_arg
+// ILP32F-ILP32D-SAME: (half [[TMP0:%.*]], half [[TMP1:%.*]]) #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 void f_float16arr2_tricky1_s_arg(struct float16arr2_tricky1_s a) {}
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local i32 @f_ret_float16arr2_tricky1_s
-// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local i32 @f_ret_float16arr2_tricky1_s
+// ILP32-SAME: () #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local { half, half } @f_ret_float16arr2_tricky1_s
+// ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 struct float16arr2_tricky1_s f_ret_float16arr2_tricky1_s(void) {
   return (struct float16arr2_tricky1_s){{{{1.0}}, {{2.0}}}};
@@ -1830,15 +1923,23 @@ struct float16arr2_tricky1_s f_ret_float16arr2_tricky1_s(void) {
 
 struct float16arr2_tricky2_s { struct {}; struct { _Float16 f[1]; } g[2]; };
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_float16arr2_tricky2_s_arg
-// ILP32-ILP32F-ILP32D-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local void @f_float16arr2_tricky2_s_arg
+// ILP32-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local void @f_float16arr2_tricky2_s_arg
+// ILP32F-ILP32D-SAME: (half [[TMP0:%.*]], half [[TMP1:%.*]]) #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 void f_float16arr2_tricky2_s_arg(struct float16arr2_tricky2_s a) {}
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local i32 @f_ret_float16arr2_tricky2_s
-// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local i32 @f_ret_float16arr2_tricky2_s
+// ILP32-SAME: () #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local { half, half } @f_ret_float16arr2_tricky2_s
+// ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 struct float16arr2_tricky2_s f_ret_float16arr2_tricky2_s(void) {
   return (struct float16arr2_tricky2_s){{}, {{{1.0}}, {{2.0}}}};
@@ -1846,15 +1947,23 @@ struct float16arr2_tricky2_s f_ret_float16arr2_tricky2_s(void) {
 
 struct float16arr2_tricky3_s { union {}; struct { _Float16 f[1]; } g[2]; };
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_float16arr2_tricky3_s_arg
-// ILP32-ILP32F-ILP32D-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local void @f_float16arr2_tricky3_s_arg
+// ILP32-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local void @f_float16arr2_tricky3_s_arg
+// ILP32F-ILP32D-SAME: (half [[TMP0:%.*]], half [[TMP1:%.*]]) #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 void f_float16arr2_tricky3_s_arg(struct float16arr2_tricky3_s a) {}
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local i32 @f_ret_float16arr2_tricky3_s
-// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local i32 @f_ret_float16arr2_tricky3_s
+// ILP32-SAME: () #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local { half, half } @f_ret_float16arr2_tricky3_s
+// ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 struct float16arr2_tricky3_s f_ret_float16arr2_tricky3_s(void) {
   return (struct float16arr2_tricky3_s){{}, {{{1.0}}, {{2.0}}}};
@@ -1862,15 +1971,23 @@ struct float16arr2_tricky3_s f_ret_float16arr2_tricky3_s(void) {
 
 struct float16arr2_tricky4_s { union {}; struct { struct {}; _Float16 f[1]; } g[2]; };
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_float16arr2_tricky4_s_arg
-// ILP32-ILP32F-ILP32D-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local void @f_float16arr2_tricky4_s_arg
+// ILP32-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local void @f_float16arr2_tricky4_s_arg
+// ILP32F-ILP32D-SAME: (half [[TMP0:%.*]], half [[TMP1:%.*]]) #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 void f_float16arr2_tricky4_s_arg(struct float16arr2_tricky4_s a) {}
 
-// ILP32-ILP32F-ILP32D-LABEL: define dso_local i32 @f_ret_float16arr2_tricky4_s
-// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
-// ILP32-ILP32F-ILP32D:  entry:
+// ILP32-LABEL: define dso_local i32 @f_ret_float16arr2_tricky4_s
+// ILP32-SAME: () #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local { half, half } @f_ret_float16arr2_tricky4_s
+// ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
 //
 struct float16arr2_tricky4_s f_ret_float16arr2_tricky4_s(void) {
   return (struct float16arr2_tricky4_s){{}, {{{}, {1.0}}, {{}, {2.0}}}};

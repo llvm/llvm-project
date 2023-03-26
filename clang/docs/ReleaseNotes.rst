@@ -306,6 +306,9 @@ RISC-V Support
   length. Valid values are powers of 2 between 64 and 65536. A value of 32
   should eventually be supported. We also accept "zvl" to use the Zvl*b
   extension from ``-march`` or ``-mcpu`` to the be the upper and lower bound.
+- Fixed incorrect ABI lowering of ``_Float16`` in the case of structs
+  containing ``_Float16`` that are eligible for passing via GPR+FPR or
+  FPR+FPR.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
