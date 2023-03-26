@@ -146,6 +146,8 @@ public:
 void ComputeCrossModuleImport(
     const ModuleSummaryIndex &Index,
     const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        isPrevailing,
     StringMap<FunctionImporter::ImportMapTy> &ImportLists,
     StringMap<FunctionImporter::ExportSetTy> &ExportLists);
 
@@ -154,8 +156,10 @@ void ComputeCrossModuleImport(
 /// \p ImportList will be populated with a map that can be passed to
 /// FunctionImporter::importFunctions() above (see description there).
 void ComputeCrossModuleImportForModule(
-    StringRef ModulePath, const ModuleSummaryIndex &Index,
-    FunctionImporter::ImportMapTy &ImportList);
+    StringRef ModulePath,
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        isPrevailing,
+    const ModuleSummaryIndex &Index, FunctionImporter::ImportMapTy &ImportList);
 
 /// Mark all external summaries in \p Index for import into the given module.
 /// Used for distributed builds using a distributed index.

@@ -21,9 +21,9 @@ namespace fputil {
 namespace x86 {
 
 LIBC_INLINE void normalize(int &exponent, UInt128 &mantissa) {
-  const int shift =
+  const unsigned int shift = static_cast<unsigned int>(
       unsafe_clz(static_cast<uint64_t>(mantissa)) -
-      (8 * sizeof(uint64_t) - 1 - MantissaWidth<long double>::VALUE);
+      (8 * sizeof(uint64_t) - 1 - MantissaWidth<long double>::VALUE));
   exponent -= shift;
   mantissa <<= shift;
 }

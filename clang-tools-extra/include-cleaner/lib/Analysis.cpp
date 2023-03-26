@@ -10,7 +10,6 @@
 #include "AnalysisInternal.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/SourceManager.h"
@@ -19,9 +18,13 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Error.h"
+#include <string>
 
 namespace clang::include_cleaner {
 
@@ -91,7 +94,7 @@ AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
 
   AnalysisResults Results;
   for (const Include &I : Inc.all()) {
-    if (Used.contains(&I))
+    if (Used.contains(&I) || !I.Resolved)
       continue;
     if (PI) {
       if (PI->shouldKeep(I.Line))

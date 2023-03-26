@@ -899,16 +899,11 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
   Tracker.clear();
 }
 
-static bool isBackwardPropagatableCopy(MachineInstr &MI,
+static bool isBackwardPropagatableCopy(const DestSourcePair &CopyOperands,
                                        const MachineRegisterInfo &MRI,
-                                       const TargetInstrInfo &TII,
-                                       bool UseCopyInstr) {
-  std::optional<DestSourcePair> CopyOperands =
-      isCopyInstr(MI, TII, UseCopyInstr);
-  assert(CopyOperands && "MI is expected to be a COPY");
-
-  Register Def = CopyOperands->Destination->getReg();
-  Register Src = CopyOperands->Source->getReg();
+                                       const TargetInstrInfo &TII) {
+  Register Def = CopyOperands.Destination->getReg();
+  Register Src = CopyOperands.Source->getReg();
 
   if (!Def || !Src)
     return false;
@@ -916,7 +911,7 @@ static bool isBackwardPropagatableCopy(MachineInstr &MI,
   if (MRI.isReserved(Def) || MRI.isReserved(Src))
     return false;
 
-  return CopyOperands->Source->isRenamable() && CopyOperands->Source->isKill();
+  return CopyOperands.Source->isRenamable() && CopyOperands.Source->isKill();
 }
 
 void MachineCopyPropagation::propagateDefs(MachineInstr &MI) {
@@ -991,14 +986,13 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
       Register SrcReg = CopyOperands->Source->getReg();
 
       if (!TRI->regsOverlap(DefReg, SrcReg)) {
-        MCRegister Def = DefReg.asMCReg();
-        MCRegister Src = SrcReg.asMCReg();
-
         // Unlike forward cp, we don't invoke propagateDefs here,
         // just let forward cp do COPY-to-COPY propagation.
-        if (isBackwardPropagatableCopy(MI, *MRI, *TII, UseCopyInstr)) {
-          Tracker.invalidateRegister(Src, *TRI, *TII, UseCopyInstr);
-          Tracker.invalidateRegister(Def, *TRI, *TII, UseCopyInstr);
+        if (isBackwardPropagatableCopy(*CopyOperands, *MRI, *TII)) {
+          Tracker.invalidateRegister(SrcReg.asMCReg(), *TRI, *TII,
+                                     UseCopyInstr);
+          Tracker.invalidateRegister(DefReg.asMCReg(), *TRI, *TII,
+                                     UseCopyInstr);
           Tracker.trackCopy(&MI, *TRI, *TII, UseCopyInstr);
           continue;
         }
