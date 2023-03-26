@@ -3205,16 +3205,49 @@ TEST_F(FormatTest, MultiLineControlStatements) {
             format("try{foo();}catch(...){baz();}", Style));
 
   Style.BraceWrapping.AfterFunction = true;
+  Style.BraceWrapping.AfterStruct = false;
   Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_MultiLine;
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
   Style.ColumnLimit = 80;
   verifyFormat("void shortfunction() { bar(); }", Style);
+  verifyFormat("struct T shortfunction() { return bar(); }", Style);
+  verifyFormat("struct T {};", Style);
 
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
   verifyFormat("void shortfunction()\n"
                "{\n"
                "  bar();\n"
                "}",
+               Style);
+  verifyFormat("struct T shortfunction()\n"
+               "{\n"
+               "  return bar();\n"
+               "}",
+               Style);
+  verifyFormat("struct T {};", Style);
+
+  Style.BraceWrapping.AfterFunction = false;
+  Style.BraceWrapping.AfterStruct = true;
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
+  verifyFormat("void shortfunction() { bar(); }", Style);
+  verifyFormat("struct T shortfunction() { return bar(); }", Style);
+  verifyFormat("struct T\n"
+               "{\n"
+               "};",
+               Style);
+
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
+  verifyFormat("void shortfunction() {\n"
+               "  bar();\n"
+               "}",
+               Style);
+  verifyFormat("struct T shortfunction() {\n"
+               "  return bar();\n"
+               "}",
+               Style);
+  verifyFormat("struct T\n"
+               "{\n"
+               "};",
                Style);
 }
 
