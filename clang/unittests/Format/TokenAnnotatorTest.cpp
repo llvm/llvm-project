@@ -374,6 +374,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   auto Tokens = annotate("struct S {};");
   EXPECT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_StructLBrace);
+
+  Tokens = annotate("struct EXPORT_MACRO [[nodiscard]] C { int i; };");
+  EXPECT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_StructLBrace);
+
+  Tokens = annotate("struct [[deprecated]] [[nodiscard]] C { int i; };");
+  EXPECT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[12], tok::l_brace, TT_StructLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUnions) {
