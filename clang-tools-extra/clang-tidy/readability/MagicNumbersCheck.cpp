@@ -81,6 +81,8 @@ MagicNumbersCheck::MagicNumbersCheck(StringRef Name, ClangTidyContext *Context)
       IgnorePowersOf2IntegerValues(
           Options.get("IgnorePowersOf2IntegerValues", false)),
       IgnoreTypeAliases(Options.get("IgnoreTypeAliases", false)),
+      IgnoreUserDefinedLiterals(
+          Options.get("IgnoreUserDefinedLiterals", false)),
       RawIgnoredIntegerValues(
           Options.get("IgnoredIntegerValues", DefaultIgnoredIntegerValues)),
       RawIgnoredFloatingPointValues(Options.get(
@@ -130,6 +132,7 @@ void MagicNumbersCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnorePowersOf2IntegerValues",
                 IgnorePowersOf2IntegerValues);
   Options.store(Opts, "IgnoreTypeAliases", IgnoreTypeAliases);
+  Options.store(Opts, "IgnoreUserDefinedLiterals", IgnoreUserDefinedLiterals);
   Options.store(Opts, "IgnoredIntegerValues", RawIgnoredIntegerValues);
   Options.store(Opts, "IgnoredFloatingPointValues",
                 RawIgnoredFloatingPointValues);
@@ -241,6 +244,15 @@ bool MagicNumbersCheck::isBitFieldWidth(
                       [&Result](const DynTypedNode &Parent) {
                         return isUsedToDefineABitField(Result, Parent);
                       });
+}
+
+bool MagicNumbersCheck::isUserDefinedLiteral(
+    const clang::ast_matchers::MatchFinder::MatchResult &Result,
+    const clang::Expr &Literal) const {
+  DynTypedNodeList Parents = Result.Context->getParents(Literal);
+  if (Parents.empty())
+    return false;
+  return Parents[0].get<UserDefinedLiteral>() != nullptr;
 }
 
 } // namespace tidy::readability
