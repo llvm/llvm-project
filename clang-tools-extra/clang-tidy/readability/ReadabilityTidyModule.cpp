@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "AvoidConstParamsInDecls.h"
+#include "AvoidUnconditionalPreprocessorIfCheck.h"
 #include "BracesAroundStatementsCheck.h"
 #include "ConstReturnTypeCheck.h"
 #include "ContainerContainsCheck.h"
@@ -60,6 +61,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidConstParamsInDecls>(
         "readability-avoid-const-params-in-decls");
+    CheckFactories.registerCheck<AvoidUnconditionalPreprocessorIfCheck>(
+        "readability-avoid-unconditional-preprocessor-if");
     CheckFactories.registerCheck<BracesAroundStatementsCheck>(
         "readability-braces-around-statements");
     CheckFactories.registerCheck<ConstReturnTypeCheck>(

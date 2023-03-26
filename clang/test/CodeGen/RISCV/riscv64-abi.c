@@ -1492,24 +1492,29 @@ union double_u f_ret_double_u(void) {
 // separate arguments in IR. They are passed by the same rules for returns,
 // but will be lowered to simple two-element structs if necessary (as LLVM IR
 // functions cannot return multiple values).
-// FIXME: Essentially all test cases below involving _Float16 in structs
-// aren't lowered according to the rules in the FP calling convention (i.e.
-// are incorrect for lp64f/lp64d).
 
 struct float16_s { _Float16 f; };
 
 // A struct containing just one floating-point real is passed as though it
 // were a standalone floating-point real.
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16_s_arg
-// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_float16_s_arg
+// LP64-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_float16_s_arg
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 void f_float16_s_arg(struct float16_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local i64 @f_ret_float16_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local half @f_ret_float16_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 struct float16_s f_ret_float16_s(void) {
   return (struct float16_s){1.0};
@@ -1521,29 +1526,45 @@ struct float16_s f_ret_float16_s(void) {
 struct zbf_float16_s { int : 0; _Float16 f; };
 struct zbf_float16_zbf_s { int : 0; _Float16 f; int : 0; };
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_zbf_float16_s_arg
-// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_zbf_float16_s_arg
+// LP64-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_zbf_float16_s_arg
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 void f_zbf_float16_s_arg(struct zbf_float16_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_zbf_float16_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local i64 @f_ret_zbf_float16_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local half @f_ret_zbf_float16_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 struct zbf_float16_s f_ret_zbf_float16_s(void) {
   return (struct zbf_float16_s){1.0};
 }
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_zbf_float16_zbf_s_arg
-// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_zbf_float16_zbf_s_arg
+// LP64-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_zbf_float16_zbf_s_arg
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 void f_zbf_float16_zbf_s_arg(struct zbf_float16_zbf_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_zbf_float16_zbf_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local i64 @f_ret_zbf_float16_zbf_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local half @f_ret_zbf_float16_zbf_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 struct zbf_float16_zbf_s f_ret_zbf_float16_zbf_s(void) {
   return (struct zbf_float16_zbf_s){1.0};
@@ -1554,15 +1575,23 @@ struct zbf_float16_zbf_s f_ret_zbf_float16_zbf_s(void) {
 
 struct double_float16_s { double f; _Float16 g; };
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_double_float16_s_arg
-// LP64-LP64F-LP64D-SAME: ([2 x i64] [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LP64F-LABEL: define dso_local void @f_double_float16_s_arg
+// LP64-LP64F-SAME: ([2 x i64] [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F:  entry:
+//
+// LP64D-LABEL: define dso_local void @f_double_float16_s_arg
+// LP64D-SAME: (double [[TMP0:%.*]], half [[TMP1:%.*]]) #[[ATTR0]] {
+// LP64D:  entry:
 //
 void f_double_float16_s_arg(struct double_float16_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local [2 x i64] @f_ret_double_float16_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LP64F-LABEL: define dso_local [2 x i64] @f_ret_double_float16_s
+// LP64-LP64F-SAME: () #[[ATTR0]] {
+// LP64-LP64F:  entry:
+//
+// LP64D-LABEL: define dso_local { double, half } @f_ret_double_float16_s
+// LP64D-SAME: () #[[ATTR0]] {
+// LP64D:  entry:
 //
 struct double_float16_s f_ret_double_float16_s(void) {
   return (struct double_float16_s){1.0, 2.0};
@@ -1586,71 +1615,111 @@ struct float16_int64_s { _Float16 f; int64_t i; };
 struct float16_int64bf_s { _Float16 f; int64_t i : 32; };
 struct float16_int8_zbf_s { _Float16 f; int8_t i; int : 0; };
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16_int8_s_arg
-// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_float16_int8_s_arg
+// LP64-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_float16_int8_s_arg
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]], i8 [[TMP1:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 void f_float16_int8_s_arg(struct float16_int8_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16_int8_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local i64 @f_ret_float16_int8_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local { half, i8 } @f_ret_float16_int8_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 struct float16_int8_s f_ret_float16_int8_s(void) {
   return (struct float16_int8_s){1.0, 2};
 }
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16_uint8_s_arg
-// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_float16_uint8_s_arg
+// LP64-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_float16_uint8_s_arg
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]], i8 [[TMP1:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 void f_float16_uint8_s_arg(struct float16_uint8_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16_uint8_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local i64 @f_ret_float16_uint8_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local { half, i8 } @f_ret_float16_uint8_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 struct float16_uint8_s f_ret_float16_uint8_s(void) {
   return (struct float16_uint8_s){1.0, 2};
 }
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16_int32_s_arg
-// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_float16_int32_s_arg
+// LP64-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_float16_int32_s_arg
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 void f_float16_int32_s_arg(struct float16_int32_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16_int32_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local i64 @f_ret_float16_int32_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local { half, i32 } @f_ret_float16_int32_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 struct float16_int32_s f_ret_float16_int32_s(void) {
   return (struct float16_int32_s){1.0, 2};
 }
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16_int64_s_arg
-// LP64-LP64F-LP64D-SAME: ([2 x i64] [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_float16_int64_s_arg
+// LP64-SAME: ([2 x i64] [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_float16_int64_s_arg
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 void f_float16_int64_s_arg(struct float16_int64_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local [2 x i64] @f_ret_float16_int64_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local [2 x i64] @f_ret_float16_int64_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local { half, i64 } @f_ret_float16_int64_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 struct float16_int64_s f_ret_float16_int64_s(void) {
   return (struct float16_int64_s){1.0, 2};
 }
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16_int64bf_s_arg
-// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_float16_int64bf_s_arg
+// LP64-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_float16_int64bf_s_arg
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 void f_float16_int64bf_s_arg(struct float16_int64bf_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16_int64bf_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local i64 @f_ret_float16_int64bf_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local <{ half, i64 }> @f_ret_float16_int64bf_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 struct float16_int64bf_s f_ret_float16_int64bf_s(void) {
   return (struct float16_int64bf_s){1.0, 2};
@@ -1659,15 +1728,23 @@ struct float16_int64bf_s f_ret_float16_int64bf_s(void) {
 // The zero-width bitfield means the struct can't be passed according to the
 // floating point calling convention.
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16_int8_zbf_s
-// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_float16_int8_zbf_s
+// LP64-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_float16_int8_zbf_s
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]], i8 [[TMP1:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 void f_float16_int8_zbf_s(struct float16_int8_zbf_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16_int8_zbf_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local i64 @f_ret_float16_int8_zbf_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local { half, i8 } @f_ret_float16_int8_zbf_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 struct float16_int8_zbf_s f_ret_float16_int8_zbf_s(void) {
   return (struct float16_int8_zbf_s){1.0, 2};
@@ -1680,9 +1757,17 @@ struct float16_int8_zbf_s f_ret_float16_int8_zbf_s(void) {
 void f_float16_int8_s_arg_insufficient_gprs(int a, int b, int c, int d, int e,
                                             int f, int g, int h, struct float16_int8_s i) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_struct_float16_int8_insufficient_fprs
-// LP64-LP64F-LP64D-SAME: (float noundef [[A:%.*]], double noundef [[B:%.*]], double noundef [[C:%.*]], double noundef [[D:%.*]], double noundef [[E:%.*]], double noundef [[F:%.*]], double noundef [[G:%.*]], double noundef [[H:%.*]], i64 [[I_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_struct_float16_int8_insufficient_fprs
+// LP64-SAME: (float noundef [[A:%.*]], double noundef [[B:%.*]], double noundef [[C:%.*]], double noundef [[D:%.*]], double noundef [[E:%.*]], double noundef [[F:%.*]], double noundef [[G:%.*]], double noundef [[H:%.*]], i64 [[I_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LABEL: define dso_local void @f_struct_float16_int8_insufficient_fprs
+// LP64F-SAME: (float noundef [[A:%.*]], double noundef [[B:%.*]], double noundef [[C:%.*]], double noundef [[D:%.*]], double noundef [[E:%.*]], double noundef [[F:%.*]], double noundef [[G:%.*]], double noundef [[H:%.*]], half [[TMP0:%.*]], i8 [[TMP1:%.*]]) #[[ATTR0]] {
+// LP64F:  entry:
+//
+// LP64D-LABEL: define dso_local void @f_struct_float16_int8_insufficient_fprs
+// LP64D-SAME: (float noundef [[A:%.*]], double noundef [[B:%.*]], double noundef [[C:%.*]], double noundef [[D:%.*]], double noundef [[E:%.*]], double noundef [[F:%.*]], double noundef [[G:%.*]], double noundef [[H:%.*]], i64 [[I_COERCE:%.*]]) #[[ATTR0]] {
+// LP64D:  entry:
 //
 void f_struct_float16_int8_insufficient_fprs(float a, double b, double c, double d,
                                              double e, double f, double g, double h, struct float16_int8_s i) {}
@@ -1741,15 +1826,23 @@ struct float16complex_s f_ret_float16complex_s(void) {
 
 struct float16arr1_s { _Float16 a[1]; };
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16arr1_s_arg
-// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_float16arr1_s_arg
+// LP64-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_float16arr1_s_arg
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 void f_float16arr1_s_arg(struct float16arr1_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16arr1_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local i64 @f_ret_float16arr1_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local half @f_ret_float16arr1_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 struct float16arr1_s f_ret_float16arr1_s(void) {
   return (struct float16arr1_s){{1.0}};
@@ -1757,15 +1850,23 @@ struct float16arr1_s f_ret_float16arr1_s(void) {
 
 struct float16arr2_s { _Float16 a[2]; };
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16arr2_s_arg
-// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_float16arr2_s_arg
+// LP64-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_float16arr2_s_arg
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]], half [[TMP1:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 void f_float16arr2_s_arg(struct float16arr2_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16arr2_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local i64 @f_ret_float16arr2_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local { half, half } @f_ret_float16arr2_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 struct float16arr2_s f_ret_float16arr2_s(void) {
   return (struct float16arr2_s){{1.0, 2.0}};
@@ -1773,15 +1874,23 @@ struct float16arr2_s f_ret_float16arr2_s(void) {
 
 struct float16arr2_tricky1_s { struct { _Float16 f[1]; } g[2]; };
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16arr2_tricky1_s_arg
-// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_float16arr2_tricky1_s_arg
+// LP64-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_float16arr2_tricky1_s_arg
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]], half [[TMP1:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 void f_float16arr2_tricky1_s_arg(struct float16arr2_tricky1_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16arr2_tricky1_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local i64 @f_ret_float16arr2_tricky1_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local { half, half } @f_ret_float16arr2_tricky1_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 struct float16arr2_tricky1_s f_ret_float16arr2_tricky1_s(void) {
   return (struct float16arr2_tricky1_s){{{{1.0}}, {{2.0}}}};
@@ -1789,15 +1898,23 @@ struct float16arr2_tricky1_s f_ret_float16arr2_tricky1_s(void) {
 
 struct float16arr2_tricky2_s { struct {}; struct { _Float16 f[1]; } g[2]; };
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16arr2_tricky2_s_arg
-// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_float16arr2_tricky2_s_arg
+// LP64-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_float16arr2_tricky2_s_arg
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]], half [[TMP1:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 void f_float16arr2_tricky2_s_arg(struct float16arr2_tricky2_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16arr2_tricky2_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local i64 @f_ret_float16arr2_tricky2_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local { half, half } @f_ret_float16arr2_tricky2_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 struct float16arr2_tricky2_s f_ret_float16arr2_tricky2_s(void) {
   return (struct float16arr2_tricky2_s){{}, {{{1.0}}, {{2.0}}}};
@@ -1805,15 +1922,23 @@ struct float16arr2_tricky2_s f_ret_float16arr2_tricky2_s(void) {
 
 struct float16arr2_tricky3_s { union {}; struct { _Float16 f[1]; } g[2]; };
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16arr2_tricky3_s_arg
-// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_float16arr2_tricky3_s_arg
+// LP64-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_float16arr2_tricky3_s_arg
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]], half [[TMP1:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 void f_float16arr2_tricky3_s_arg(struct float16arr2_tricky3_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16arr2_tricky3_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local i64 @f_ret_float16arr2_tricky3_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local { half, half } @f_ret_float16arr2_tricky3_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 struct float16arr2_tricky3_s f_ret_float16arr2_tricky3_s(void) {
   return (struct float16arr2_tricky3_s){{}, {{{1.0}}, {{2.0}}}};
@@ -1821,15 +1946,23 @@ struct float16arr2_tricky3_s f_ret_float16arr2_tricky3_s(void) {
 
 struct float16arr2_tricky4_s { union {}; struct { struct {}; _Float16 f[1]; } g[2]; };
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_float16arr2_tricky4_s_arg
-// LP64-LP64F-LP64D-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_float16arr2_tricky4_s_arg
+// LP64-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_float16arr2_tricky4_s_arg
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]], half [[TMP1:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 void f_float16arr2_tricky4_s_arg(struct float16arr2_tricky4_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local i64 @f_ret_float16arr2_tricky4_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local i64 @f_ret_float16arr2_tricky4_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local { half, half } @f_ret_float16arr2_tricky4_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 struct float16arr2_tricky4_s f_ret_float16arr2_tricky4_s(void) {
   return (struct float16arr2_tricky4_s){{}, {{{}, {1.0}}, {{}, {2.0}}}};
@@ -1856,15 +1989,23 @@ struct int_float16_int_s f_ret_int_float16_int_s(void) {
 
 struct int64_float16_s { int64_t a; _Float16 b; };
 
-// LP64-LP64F-LP64D-LABEL: define dso_local void @f_int64_float16_s_arg
-// LP64-LP64F-LP64D-SAME: ([2 x i64] [[A_COERCE:%.*]]) #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local void @f_int64_float16_s_arg
+// LP64-SAME: ([2 x i64] [[A_COERCE:%.*]]) #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local void @f_int64_float16_s_arg
+// LP64F-LP64D-SAME: (i64 [[TMP0:%.*]], half [[TMP1:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 void f_int64_float16_s_arg(struct int64_float16_s a) {}
 
-// LP64-LP64F-LP64D-LABEL: define dso_local [2 x i64] @f_ret_int64_float16_s
-// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
-// LP64-LP64F-LP64D:  entry:
+// LP64-LABEL: define dso_local [2 x i64] @f_ret_int64_float16_s
+// LP64-SAME: () #[[ATTR0]] {
+// LP64:  entry:
+//
+// LP64F-LP64D-LABEL: define dso_local { i64, half } @f_ret_int64_float16_s
+// LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64F-LP64D:  entry:
 //
 struct int64_float16_s f_ret_int64_float16_s(void) {
   return (struct int64_float16_s){1, 2.0};
@@ -1905,5 +2046,3 @@ union float16_u f_ret_float16_u(void) {
   return (union float16_u){1.0};
 }
 
-//// NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-// LP64F: {{.*}}
