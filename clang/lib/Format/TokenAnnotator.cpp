@@ -1722,6 +1722,11 @@ private:
           return false;
         }
 
+        // This is the default value of a non-template type parameter, so treat
+        // it as an expression.
+        if (Contexts.back().ContextKind == tok::less)
+          return true;
+
         Tok = Tok->MatchingParen;
         if (!Tok)
           return false;
@@ -4916,8 +4921,13 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return true;
     }
 
-    return (Line.startsWith(tok::kw_class) && Style.BraceWrapping.AfterClass) ||
-           (Line.startsWith(tok::kw_struct) && Style.BraceWrapping.AfterStruct);
+    // Don't attempt to interpret struct return types as structs.
+    if (Right.isNot(TT_FunctionLBrace)) {
+      return (Line.startsWith(tok::kw_class) &&
+              Style.BraceWrapping.AfterClass) ||
+             (Line.startsWith(tok::kw_struct) &&
+              Style.BraceWrapping.AfterStruct);
+    }
   }
 
   if (Left.is(TT_ObjCBlockLBrace) &&
