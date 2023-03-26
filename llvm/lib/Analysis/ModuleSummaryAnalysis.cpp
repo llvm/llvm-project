@@ -22,7 +22,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
@@ -581,8 +580,7 @@ static void computeFunctionSummary(
 /// within the initializer.
 static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
                              const Module &M, ModuleSummaryIndex &Index,
-                             VTableFuncList &VTableFuncs,
-                             const GlobalVariable &OrigGV) {
+                             VTableFuncList &VTableFuncs) {
   // First check if this is a function pointer.
   if (I->getType()->isPointerTy()) {
     auto C = I->stripPointerCasts();
@@ -610,7 +608,7 @@ static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
       auto Offset = SL->getElementOffset(EI.index());
       unsigned Op = SL->getElementContainingOffset(Offset);
       findFuncPointers(cast<Constant>(I->getOperand(Op)),
-                       StartingOffset + Offset, M, Index, VTableFuncs, OrigGV);
+                       StartingOffset + Offset, M, Index, VTableFuncs);
     }
   } else if (auto *C = dyn_cast<ConstantArray>(I)) {
     ArrayType *ATy = C->getType();
@@ -618,34 +616,7 @@ static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
     uint64_t EltSize = DL.getTypeAllocSize(EltTy);
     for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i) {
       findFuncPointers(cast<Constant>(I->getOperand(i)),
-                       StartingOffset + i * EltSize, M, Index, VTableFuncs,
-                       OrigGV);
-    }
-  } else if (const auto *CE = dyn_cast<ConstantExpr>(I)) {
-    // For relative vtables, the next sub-component should be a trunc.
-    if (CE->getOpcode() != Instruction::Trunc ||
-        !(CE = dyn_cast<ConstantExpr>(CE->getOperand(0))))
-      return;
-
-    // If this constant can be reduced to the offset between a function and a
-    // global, then we know this is a valid virtual function if the RHS is the
-    // original vtable we're scanning through.
-    if (CE->getOpcode() == Instruction::Sub) {
-      GlobalValue *LHS, *RHS;
-      APSInt LHSOffset, RHSOffset;
-      if (IsConstantOffsetFromGlobal(CE->getOperand(0), LHS, LHSOffset, DL) &&
-          IsConstantOffsetFromGlobal(CE->getOperand(1), RHS, RHSOffset, DL) &&
-          RHS == &OrigGV &&
-
-          // For relative vtables, this component should point to the callable
-          // function without any offsets.
-          LHSOffset == 0 &&
-
-          // Also, the RHS should always point to somewhere within the vtable.
-          RHSOffset <=
-              static_cast<uint64_t>(DL.getTypeAllocSize(OrigGV.getInitializer()->getType()))) {
-        findFuncPointers(LHS, StartingOffset, M, Index, VTableFuncs, OrigGV);
-      }
+                       StartingOffset + i * EltSize, M, Index, VTableFuncs);
     }
   }
 }
@@ -658,7 +629,7 @@ static void computeVTableFuncs(ModuleSummaryIndex &Index,
     return;
 
   findFuncPointers(V.getInitializer(), /*StartingOffset=*/0, M, Index,
-                   VTableFuncs, V);
+                   VTableFuncs);
 
 #ifndef NDEBUG
   // Validate that the VTableFuncs list is ordered by offset.
