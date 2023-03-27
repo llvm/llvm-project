@@ -4348,6 +4348,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return true;
     }
   } else if (Style.isVerilog()) {
+    // An escaped identifier ends with whitespace.
+    if (Style.isVerilog() && Left.is(tok::identifier) &&
+        Left.TokenText[0] == '\\') {
+      return true;
+    }
     // Add space between things in a primitive's state table unless in a
     // transition like `(0?)`.
     if ((Left.is(TT_VerilogTableItem) &&

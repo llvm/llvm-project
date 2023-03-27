@@ -1070,8 +1070,7 @@ int runOrcJIT(const char *ProgName) {
       assert(EAIdx != 0 && "ExtraArchive should have index > 0");
       auto JDItr = std::prev(IdxToDylib.lower_bound(EAIdx));
       auto &JD = *JDItr->second;
-      JD.addGenerator(ExitOnErr(orc::StaticLibraryDefinitionGenerator::Load(
-          J->getObjLinkingLayer(), EAItr->c_str())));
+      ExitOnErr(J->linkStaticLibraryInto(JD, EAItr->c_str()));
     }
   }
 

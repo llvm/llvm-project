@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
@@ -756,6 +757,41 @@ LLJIT::~LLJIT() {
     CompileThreads->wait();
   if (auto Err = ES->endSession())
     ES->reportError(std::move(Err));
+}
+
+Expected<JITDylib &> LLJIT::loadPlatformDynamicLibrary(const char *Path) {
+  auto G = EPCDynamicLibrarySearchGenerator::Load(*ES, Path);
+  if (!G)
+    return G.takeError();
+
+  if (auto *ExistingJD = ES->getJITDylibByName(Path))
+    return *ExistingJD;
+
+  auto &JD = ES->createBareJITDylib(Path);
+  JD.addGenerator(std::move(*G));
+  return JD;
+}
+
+Error LLJIT::linkStaticLibraryInto(JITDylib &JD,
+                                   std::unique_ptr<MemoryBuffer> LibBuffer) {
+  auto G = StaticLibraryDefinitionGenerator::Create(*ObjLinkingLayer,
+                                                    std::move(LibBuffer));
+  if (!G)
+    return G.takeError();
+
+  JD.addGenerator(std::move(*G));
+
+  return Error::success();
+}
+
+Error LLJIT::linkStaticLibraryInto(JITDylib &JD, const char *Path) {
+  auto G = StaticLibraryDefinitionGenerator::Load(*ObjLinkingLayer, Path);
+  if (!G)
+    return G.takeError();
+
+  JD.addGenerator(std::move(*G));
+
+  return Error::success();
 }
 
 Error LLJIT::addIRModule(ResourceTrackerSP RT, ThreadSafeModule TSM) {

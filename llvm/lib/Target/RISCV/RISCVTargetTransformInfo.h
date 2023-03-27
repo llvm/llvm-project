@@ -232,6 +232,10 @@ public:
     return ST->is64Bit() && !ST->hasVInstructionsI64();
   }
 
+  bool isVScaleKnownToBeAPowerOfTwo() const {
+    return TLI->isVScaleKnownToBeAPowerOfTwo();
+  }
+
   /// \returns How the target needs this vector-predicated operation to be
   /// transformed.
   TargetTransformInfo::VPLegalization
