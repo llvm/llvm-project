@@ -26,7 +26,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-codegenprepare"
-#define PASS_NAME "RISCV CodeGenPrepare"
+#define PASS_NAME "RISC-V CodeGenPrepare"
 
 STATISTIC(NumZExtToSExt, "Number of SExt instructions converted to ZExt");
 
