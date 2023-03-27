@@ -178,27 +178,39 @@ TEST(IncludeCleaner, GenerateMissingHeaderDiags) {
   WithContextValue Ctx(Config::Key, std::move(Cfg));
   Annotations MainFile(R"cpp(
 #include "a.h"
+#include "all.h"
 $insert_b[[]]#include "baz.h"
 #include "dir/c.h"
-$insert_d[[]]#include "fuzz.h"
+$insert_d[[]]$insert_foo[[]]#include "fuzz.h"
 #include "header.h"
 $insert_foobar[[]]#include <e.h>
 $insert_f[[]]$insert_vector[[]]
 
-    void foo() {
-      $b[[b]]();
+#define DEF(X) const Foo *X;
+#define BAZ(X) const X x
 
-      ns::$bar[[Bar]] bar;
-      bar.d();
-      $f[[f]](); 
+  void foo() {
+    $b[[b]]();
 
-      // this should not be diagnosed, because it's ignored in the config
-      buzz(); 
+    ns::$bar[[Bar]] bar;
+    bar.d();
+    $f[[f]](); 
 
-      $foobar[[foobar]]();
+    // this should not be diagnosed, because it's ignored in the config
+    buzz(); 
 
-      std::$vector[[vector]] v;
-    })cpp");
+    $foobar[[foobar]]();
+
+    std::$vector[[vector]] v;
+
+    int var = $FOO[[FOO]];
+
+    $DEF[[DEF]](a);
+
+    $BAR[[BAR]](b);
+
+    BAZ($Foo[[Foo]]);
+})cpp");
 
   TestTU TU;
   TU.Filename = "foo.cpp";
@@ -223,6 +235,13 @@ $insert_f[[]]$insert_vector[[]]
   )cpp");
   TU.AdditionalFiles["header.h"] = guard(R"cpp(
   namespace std { class vector {}; }
+  )cpp");
+
+  TU.AdditionalFiles["all.h"] = guard("#include \"foo.h\"");
+  TU.AdditionalFiles["foo.h"] = guard(R"cpp(
+    #define BAR(x) Foo *x
+    #define FOO 1
+    struct Foo{}; 
   )cpp");
 
   TU.Code = MainFile.code();
@@ -254,7 +273,23 @@ $insert_f[[]]$insert_vector[[]]
               Diag(MainFile.range("vector"),
                    "No header providing \"std::vector\" is directly included"),
               withFix(Fix(MainFile.range("insert_vector"),
-                          "#include <vector>\n", "#include <vector>")))));
+                          "#include <vector>\n", "#include <vector>"))),
+          AllOf(Diag(MainFile.range("FOO"),
+                     "No header providing \"FOO\" is directly included"),
+                withFix(Fix(MainFile.range("insert_foo"),
+                            "#include \"foo.h\"\n", "#include \"foo.h\""))),
+          AllOf(Diag(MainFile.range("DEF"),
+                     "No header providing \"Foo\" is directly included"),
+                withFix(Fix(MainFile.range("insert_foo"),
+                            "#include \"foo.h\"\n", "#include \"foo.h\""))),
+          AllOf(Diag(MainFile.range("BAR"),
+                     "No header providing \"BAR\" is directly included"),
+                withFix(Fix(MainFile.range("insert_foo"),
+                            "#include \"foo.h\"\n", "#include \"foo.h\""))),
+          AllOf(Diag(MainFile.range("Foo"),
+                     "No header providing \"Foo\" is directly included"),
+                withFix(Fix(MainFile.range("insert_foo"),
+                            "#include \"foo.h\"\n", "#include \"foo.h\"")))));
 }
 
 TEST(IncludeCleaner, IWYUPragmas) {
