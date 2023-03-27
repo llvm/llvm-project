@@ -1061,14 +1061,16 @@ void ThinLTOCodeGenerator::promote(Module &TheModule, ModuleSummaryIndex &Index,
   // Compute "dead" symbols, we don't want to import/export these!
   computeDeadSymbolsInIndex(Index, GUIDPreservedSymbols);
 
+  // Compute prevailing symbols
+  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
+  computePrevailingCopies(Index, PrevailingCopy);
+
   // Generate import/export list
   StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
   StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
-  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries, ImportLists,
+  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
+                           IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
-
-  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
-  computePrevailingCopies(Index, PrevailingCopy);
 
   // Resolve prevailing symbols
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
@@ -1111,10 +1113,15 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
   // Compute "dead" symbols, we don't want to import/export these!
   computeDeadSymbolsInIndex(Index, GUIDPreservedSymbols);
 
+  // Compute prevailing symbols
+  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
+  computePrevailingCopies(Index, PrevailingCopy);
+
   // Generate import/export list
   StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
   StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
-  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries, ImportLists,
+  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
+                           IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
   auto &ImportList = ImportLists[TheModule.getModuleIdentifier()];
 
@@ -1146,10 +1153,15 @@ void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
   // Compute "dead" symbols, we don't want to import/export these!
   computeDeadSymbolsInIndex(Index, GUIDPreservedSymbols);
 
+  // Compute prevailing symbols
+  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
+  computePrevailingCopies(Index, PrevailingCopy);
+
   // Generate import/export list
   StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
   StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
-  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries, ImportLists,
+  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
+                           IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
 
   llvm::gatherImportedSummariesForModule(
@@ -1179,10 +1191,15 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
   // Compute "dead" symbols, we don't want to import/export these!
   computeDeadSymbolsInIndex(Index, GUIDPreservedSymbols);
 
+  // Compute prevailing symbols
+  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
+  computePrevailingCopies(Index, PrevailingCopy);
+
   // Generate import/export list
   StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
   StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
-  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries, ImportLists,
+  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
+                           IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
 
   std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
@@ -1221,10 +1238,15 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
   // Compute "dead" symbols, we don't want to import/export these!
   computeDeadSymbolsInIndex(Index, GUIDPreservedSymbols);
 
+  // Compute prevailing symbols
+  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
+  computePrevailingCopies(Index, PrevailingCopy);
+
   // Generate import/export list
   StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
   StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
-  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries, ImportLists,
+  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
+                           IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
   auto &ExportList = ExportLists[ModuleIdentifier];
 
@@ -1232,9 +1254,6 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
   // supply anything to preserve.
   if (ExportList.empty() && GUIDPreservedSymbols.empty())
     return;
-
-  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
-  computePrevailingCopies(Index, PrevailingCopy);
 
   // Resolve prevailing symbols
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
@@ -1425,11 +1444,16 @@ void ThinLTOCodeGenerator::run() {
   for (auto GUID : ExportedGUIDs)
     GUIDPreservedSymbols.insert(GUID);
 
+  // Compute prevailing symbols
+  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
+  computePrevailingCopies(*Index, PrevailingCopy);
+
   // Collect the import/export lists for all modules from the call-graph in the
   // combined index.
   StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
   StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
-  ComputeCrossModuleImport(*Index, ModuleToDefinedGVSummaries, ImportLists,
+  ComputeCrossModuleImport(*Index, ModuleToDefinedGVSummaries,
+                           IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
 
   // We use a std::map here to be able to have a defined ordering when
@@ -1437,9 +1461,6 @@ void ThinLTOCodeGenerator::run() {
   // FIXME: we should be able to compute the caching hash for the entry based
   // on the index, and nuke this map.
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
-
-  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
-  computePrevailingCopies(*Index, PrevailingCopy);
 
   // Resolve prevailing symbols, this has to be computed early because it
   // impacts the caching.
