@@ -349,16 +349,24 @@ enum {
   /// - InsnID - Instruction ID to modify
   /// - Imm - The immediate to add
   GIR_AddImm,
+
   /// Render complex operands to the specified instruction
   /// - InsnID - Instruction ID to modify
   /// - RendererID - The renderer to call
   GIR_ComplexRenderer,
-
   /// Render sub-operands of complex operands to the specified instruction
   /// - InsnID - Instruction ID to modify
   /// - RendererID - The renderer to call
   /// - RenderOpID - The suboperand to render.
   GIR_ComplexSubOperandRenderer,
+  /// Render subregisters of suboperands of complex operands to the
+  /// specified instruction
+  /// - InsnID - Instruction ID to modify
+  /// - RendererID - The renderer to call
+  /// - RenderOpID - The suboperand to render
+  /// - SubRegIdx - The subregister to extract
+  GIR_ComplexSubOperandSubRegRenderer,
+
   /// Render operands to the specified instruction using a custom function
   /// - InsnID - Instruction ID to modify
   /// - OldInsnID - Instruction ID to get the matched operand from

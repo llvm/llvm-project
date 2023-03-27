@@ -511,7 +511,7 @@ bool SIFoldOperands::tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
       for (unsigned i = 0, e = InstDesc.getNumOperands(); i != e; ++i) {
         auto &Op = MI->getOperand(i);
         if (OpNo != i && !Op.isReg() &&
-            !TII->isInlineConstant(Op, InstDesc.OpInfo[i]))
+            !TII->isInlineConstant(Op, InstDesc.operands()[i]))
           return false;
       }
     }

@@ -7246,10 +7246,8 @@ SDValue SITargetLowering::lowerRawBufferAtomicIntrin(SDValue Op,
 
 // Return a value to use for the idxen operand by examining the vindex operand.
 static unsigned getIdxEn(SDValue VIndex) {
-  if (auto VIndexC = dyn_cast<ConstantSDNode>(VIndex))
-    // No need to set idxen if vindex is known to be zero.
-    return VIndexC->getZExtValue() != 0;
-  return 1;
+  // No need to set idxen if vindex is known to be zero.
+  return isNullConstant(VIndex) ? 0 : 1;
 }
 
 SDValue
@@ -11287,8 +11285,8 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
   }
   case ISD::ADDCARRY: {
     // add x, (addcarry y, 0, cc) => addcarry x, y, cc
-    auto C = dyn_cast<ConstantSDNode>(RHS.getOperand(1));
-    if (!C || C->getZExtValue() != 0) break;
+    if (!isNullConstant(RHS.getOperand(1)))
+      break;
     SDValue Args[] = { LHS, RHS.getOperand(0), RHS.getOperand(2) };
     return DAG.getNode(ISD::ADDCARRY, SDLoc(N), RHS->getVTList(), Args);
   }

@@ -131,14 +131,14 @@ private:
 SnippetRepetitor::~SnippetRepetitor() {}
 
 std::unique_ptr<const SnippetRepetitor>
-SnippetRepetitor::Create(InstructionBenchmark::RepetitionModeE Mode,
+SnippetRepetitor::Create(Benchmark::RepetitionModeE Mode,
                          const LLVMState &State) {
   switch (Mode) {
-  case InstructionBenchmark::Duplicate:
+  case Benchmark::Duplicate:
     return std::make_unique<DuplicateSnippetRepetitor>(State);
-  case InstructionBenchmark::Loop:
+  case Benchmark::Loop:
     return std::make_unique<LoopSnippetRepetitor>(State);
-  case InstructionBenchmark::AggregateMin:
+  case Benchmark::AggregateMin:
     break;
   }
   llvm_unreachable("Unknown RepetitionModeE enum");

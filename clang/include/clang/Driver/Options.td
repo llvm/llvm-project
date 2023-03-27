@@ -3792,10 +3792,6 @@ def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Gr
   NormalizedValues<["COV_None", "COV_2", "COV_3", "COV_4", "COV_5"]>,
   MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_4">;
 
-defm code_object_v3_legacy : SimpleMFlag<"code-object-v3",
-  "Legacy option to specify code object ABI V3",
-  "Legacy option to specify code object ABI V2",
-  " (AMDGPU only)">;
 defm cumode : SimpleMFlag<"cumode",
   "Specify CU wavefront", "Specify WGP wavefront",
   " execution mode (AMDGPU only)", m_amdgpu_Features_Group>;

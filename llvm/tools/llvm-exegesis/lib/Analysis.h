@@ -37,7 +37,7 @@ namespace exegesis {
 class Analysis {
 public:
   Analysis(const LLVMState &State,
-           const InstructionBenchmarkClustering &Clustering,
+           const BenchmarkClustering &Clustering,
            double AnalysisInconsistencyEpsilon,
            bool AnalysisDisplayUnstableOpcodes);
 
@@ -49,19 +49,19 @@ public:
   template <typename Pass> Error run(raw_ostream &OS) const;
 
 private:
-  using ClusterId = InstructionBenchmarkClustering::ClusterId;
+  using ClusterId = BenchmarkClustering::ClusterId;
 
   // Represents the intersection of a sched class and a cluster.
   class SchedClassCluster {
   public:
-    const InstructionBenchmarkClustering::ClusterId &id() const {
+    const BenchmarkClustering::ClusterId &id() const {
       return ClusterId;
     }
 
     const std::vector<size_t> &getPointIds() const { return PointIds; }
 
     void addPoint(size_t PointId,
-                  const InstructionBenchmarkClustering &Clustering);
+                  const BenchmarkClustering &Clustering);
 
     // Return the cluster centroid.
     const SchedClassClusterCentroid &getCentroid() const { return Centroid; }
@@ -69,11 +69,11 @@ private:
     // Returns true if the cluster representative measurements match that of SC.
     bool
     measurementsMatch(const MCSubtargetInfo &STI, const ResolvedSchedClass &SC,
-                      const InstructionBenchmarkClustering &Clustering,
+                      const BenchmarkClustering &Clustering,
                       const double AnalysisInconsistencyEpsilonSquared_) const;
 
   private:
-    InstructionBenchmarkClustering::ClusterId ClusterId;
+    BenchmarkClustering::ClusterId ClusterId;
     std::vector<size_t> PointIds;
     // Measurement stats for the points in the SchedClassCluster.
     SchedClassClusterCentroid Centroid;
@@ -81,10 +81,10 @@ private:
 
   void printInstructionRowCsv(size_t PointId, raw_ostream &OS) const;
 
-  void printClusterRawHtml(const InstructionBenchmarkClustering::ClusterId &Id,
+  void printClusterRawHtml(const BenchmarkClustering::ClusterId &Id,
                            StringRef display_name, llvm::raw_ostream &OS) const;
 
-  void printPointHtml(const InstructionBenchmark &Point,
+  void printPointHtml(const Benchmark &Point,
                       llvm::raw_ostream &OS) const;
 
   void
@@ -110,7 +110,7 @@ private:
   void writeSnippet(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
                     const char *Separator) const;
 
-  const InstructionBenchmarkClustering &Clustering_;
+  const BenchmarkClustering &Clustering_;
   const LLVMState &State_;
   std::unique_ptr<MCContext> Context_;
   std::unique_ptr<MCAsmInfo> AsmInfo_;

@@ -1,4 +1,4 @@
-; RUN: opt %s -mtriple amdgcn-- -amdgpu-use-legacy-divergence-analysis -passes='print<divergence>' 2>&1 -disable-output | FileCheck %s
+; RUN: opt %s -mtriple amdgcn-- -passes='print<divergence>' 2>&1 -disable-output | FileCheck %s
 
 ; CHECK-LABEL: function 'test_amdgpu_ps':
 ; CHECK: DIVERGENT:  ptr addrspace(4) %arg0

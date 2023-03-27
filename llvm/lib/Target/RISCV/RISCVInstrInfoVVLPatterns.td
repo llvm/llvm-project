@@ -111,6 +111,7 @@ def riscv_strict_fadd_vl  : SDNode<"RISCVISD::STRICT_FADD_VL",  SDT_RISCVFPBinOp
 def riscv_strict_fsub_vl  : SDNode<"RISCVISD::STRICT_FSUB_VL",  SDT_RISCVFPBinOp_VL, [SDNPHasChain]>;
 def riscv_strict_fmul_vl  : SDNode<"RISCVISD::STRICT_FMUL_VL",  SDT_RISCVFPBinOp_VL, [SDNPCommutative, SDNPHasChain]>;
 def riscv_strict_fdiv_vl  : SDNode<"RISCVISD::STRICT_FDIV_VL",  SDT_RISCVFPBinOp_VL, [SDNPHasChain]>;
+def riscv_strict_fsqrt_vl : SDNode<"RISCVISD::STRICT_FSQRT_VL", SDT_RISCVFPUnOp_VL, [SDNPHasChain]>;
 
 def any_riscv_fadd_vl : PatFrags<(ops node:$lhs, node:$rhs, node:$merge, node:$mask, node:$vl),
                         [(riscv_fadd_vl node:$lhs, node:$rhs, node:$merge, node:$mask, node:$vl),
@@ -124,6 +125,9 @@ def any_riscv_fmul_vl : PatFrags<(ops node:$lhs, node:$rhs, node:$merge, node:$m
 def any_riscv_fdiv_vl : PatFrags<(ops node:$lhs, node:$rhs, node:$merge, node:$mask, node:$vl),
                         [(riscv_fdiv_vl node:$lhs, node:$rhs, node:$merge, node:$mask, node:$vl),
                          (riscv_strict_fdiv_vl node:$lhs, node:$rhs, node:$merge, node:$mask, node:$vl)]>;
+def any_riscv_fsqrt_vl : PatFrags<(ops node:$src, node:$mask, node:$vl),
+                        [(riscv_fsqrt_vl node:$src, node:$mask, node:$vl),
+                         (riscv_strict_fsqrt_vl node:$src, node:$mask, node:$vl)]>;
 
 def SDT_RISCVVecFMA_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                               SDTCisSameAs<0, 2>,
@@ -1813,7 +1817,7 @@ defm : VPatFPSetCCVL_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
 
 foreach vti = AllFloatVectors in {
   // 13.8. Vector Floating-Point Square-Root Instruction
-  def : Pat<(riscv_fsqrt_vl (vti.Vector vti.RegClass:$rs2), (vti.Mask V0),
+  def : Pat<(any_riscv_fsqrt_vl (vti.Vector vti.RegClass:$rs2), (vti.Mask V0),
                             VLOpFrag),
             (!cast<Instruction>("PseudoVFSQRT_V_"# vti.LMul.MX # "_E" # vti.SEW # "_MASK")
                  (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,

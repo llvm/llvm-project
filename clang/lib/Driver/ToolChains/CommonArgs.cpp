@@ -2177,26 +2177,13 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
 
 static llvm::opt::Arg *
 getAMDGPUCodeObjectArgument(const Driver &D, const llvm::opt::ArgList &Args) {
-  // The last of -mcode-object-v3, -mno-code-object-v3 and
-  // -mcode-object-version=<version> wins.
-  return Args.getLastArg(options::OPT_mcode_object_v3_legacy,
-                         options::OPT_mno_code_object_v3_legacy,
-                         options::OPT_mcode_object_version_EQ);
+  return Args.getLastArg(options::OPT_mcode_object_version_EQ);
 }
 
 void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
                                          const llvm::opt::ArgList &Args) {
   const unsigned MinCodeObjVer = 2;
   const unsigned MaxCodeObjVer = 5;
-
-  // Emit warnings for legacy options even if they are overridden.
-  if (Args.hasArg(options::OPT_mno_code_object_v3_legacy))
-    D.Diag(diag::warn_drv_deprecated_arg) << "-mno-code-object-v3"
-                                          << "-mcode-object-version=2";
-
-  if (Args.hasArg(options::OPT_mcode_object_v3_legacy))
-    D.Diag(diag::warn_drv_deprecated_arg) << "-mcode-object-v3"
-                                          << "-mcode-object-version=3";
 
   if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args)) {
     if (CodeObjArg->getOption().getID() ==
@@ -2214,17 +2201,8 @@ void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
 unsigned tools::getAMDGPUCodeObjectVersion(const Driver &D,
                                            const llvm::opt::ArgList &Args) {
   unsigned CodeObjVer = 4; // default
-  if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args)) {
-    if (CodeObjArg->getOption().getID() ==
-        options::OPT_mno_code_object_v3_legacy) {
-      CodeObjVer = 2;
-    } else if (CodeObjArg->getOption().getID() ==
-               options::OPT_mcode_object_v3_legacy) {
-      CodeObjVer = 3;
-    } else {
-      StringRef(CodeObjArg->getValue()).getAsInteger(0, CodeObjVer);
-    }
-  }
+  if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args))
+    StringRef(CodeObjArg->getValue()).getAsInteger(0, CodeObjVer);
   return CodeObjVer;
 }
 
