@@ -675,6 +675,9 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
     // returning.
     auto packedType =
         getTypeConverter()->packFunctionResults(op.getOperandTypes());
+    if (!packedType) {
+      return rewriter.notifyMatchFailure(op, "could not convert result types");
+    }
 
     Value packed = rewriter.create<LLVM::UndefOp>(loc, packedType);
     for (auto [idx, operand] : llvm::enumerate(updatedOperands)) {
