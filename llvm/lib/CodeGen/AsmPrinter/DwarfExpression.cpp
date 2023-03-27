@@ -869,10 +869,18 @@ bool DwarfExprAST::tryInlineArgObject(DIObject *ArgObject) {
   if (GV == GVFragmentMap->end())
     return false;
   const GlobalVariable *Global = GV->getSecond();
-  const MCSymbol *Sym = AP.getSymbol(Global);
-  CU.getDwarfDebug().addArangeLabel(SymbolCU(&CU, Sym));
-  emitDwarfOp(dwarf::DW_OP_addr);
-  emitDwarfAddr(Sym);
+  // FIXME(KZHURAVL): This depends on the target and address space
+  // semantics. For AMDGPU, address space 3 is lds/local/shared.
+  // Need to replace this with a target hook!
+  if (Global->getAddressSpace() == 3) {
+    // Non-generic address space.
+    emitUnsigned(0);
+  } else {
+    const MCSymbol *Sym = AP.getSymbol(Global);
+    CU.getDwarfDebug().addArangeLabel(SymbolCU(&CU, Sym));
+    emitDwarfOp(dwarf::DW_OP_addr);
+    emitDwarfAddr(Sym);
+  }
   emitDwarfOp(dwarf::DW_OP_stack_value);
   return true;
 }

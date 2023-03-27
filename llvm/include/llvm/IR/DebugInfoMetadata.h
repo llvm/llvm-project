@@ -4158,7 +4158,7 @@ public:
     ArgObjectIterator() = delete;
     ArgObjectIterator(const ArgObjectIterator &) = default;
     bool operator==(const ArgObjectIterator &R) const { return R.I == I; }
-    DIObject *operator*() const { return cast<DIObject>(*I); }
+    DIObject *operator*() const { return cast_or_null<DIObject>(*I); }
     friend iterator_facade_base::difference_type
     operator-(ArgObjectIterator LHS, ArgObjectIterator RHS) {
       return LHS.I - RHS.I;

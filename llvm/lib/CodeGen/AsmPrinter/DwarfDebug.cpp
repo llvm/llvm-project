@@ -1185,7 +1185,6 @@ void DwarfDebug::beginModule(Module *M) {
   SingleCU = NumDebugCUs == 1;
   DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
       GVMap;
-  DenseMap<DIFragment *, const GlobalVariable *> GVFragmentMap;
   for (const GlobalVariable &Global : M->globals()) {
     // To support the "inlining" of GV-fragments as an optimization, we record
     // the referrer for each such fragment.
@@ -1208,9 +1207,15 @@ void DwarfDebug::beginModule(Module *M) {
     if (NamedMDNode *RN = M->getNamedMetadata("llvm.dbg.retainedNodes"))
       for (MDNode *O : RN->operands())
         if (auto *L = dyn_cast<DILifetime>(O))
-          if (auto *GV = dyn_cast<DIGlobalVariable>(L->getObject()))
-            if (auto *CU = dyn_cast<DICompileUnit>(GV->getScope()))
+          if (auto *GV = dyn_cast<DIGlobalVariable>(L->getObject())) {
+            if (auto *CU = dyn_cast<DICompileUnit>(GV->getScope())) {
               CULifetimeMap[CU].push_back(L);
+              ProcessedLifetimes.insert(L);
+            } else if (auto *SP = dyn_cast<DISubprogram>(GV->getScope())) {
+              SPLifetimeMap[SP].push_back(L);
+              ProcessedLifetimes.insert(L);
+            }
+          }
 
   // Create the symbol that designates the start of the unit's contribution
   // to the string offsets table. In a split DWARF scenario, only the skeleton
@@ -1971,6 +1976,43 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
     // Finalize the entry by lowering it into a DWARF bytestream.
     for (auto &Entry : Entries)
       Entry.finalize(*Asm, List, BT, TheCU);
+  }
+
+  const Module &M = *Asm->MF->getFunction().getParent();
+      DenseMap<DICompileUnit *, SmallVector<DILifetime *>> AddCULifetimeMap;
+  if (isHeterogeneousDebug(M)) {
+    for (const GlobalVariable &Global : M.globals()) {
+      if (DIFragment *F = Global.getDbgDef()) {
+        GVFragmentMap[F] = &Global;
+      }
+    }
+
+    if (NamedMDNode *RN = M.getNamedMetadata("llvm.dbg.retainedNodes")) {
+      for (MDNode *O : RN->operands()) {
+        if (auto *L = dyn_cast<DILifetime>(O)) {
+          if (auto *GV = dyn_cast<DIGlobalVariable>(L->getObject())) {
+            if (ProcessedLifetimes.insert(L).second) {
+              if (auto *AddCU = dyn_cast<DICompileUnit>(GV->getScope()))
+                AddCULifetimeMap[AddCU].push_back(L);
+              else if (auto *AddSP = dyn_cast<DISubprogram>(GV->getScope()))
+                SPLifetimeMap[AddSP].push_back(L);
+              else
+                llvm_unreachable("Unexpected DI type!");
+            }
+          }
+        }
+      }
+    }
+
+    const auto &CULS = AddCULifetimeMap.find(SP->getUnit());
+    if (CULS != AddCULifetimeMap.end())
+      for (auto &L : CULS->getSecond())
+        TheCU.getOrCreateGlobalVariableDIE(*L, GVFragmentMap);
+
+    const auto &SPLS = SPLifetimeMap.find(SP);
+    if (SPLS != SPLifetimeMap.end())
+      for (auto &L : SPLS->getSecond())
+        TheCU.getOrCreateGlobalVariableDIE(*L, GVFragmentMap);
   }
 
   for (const auto &I : DbgDefKills) {

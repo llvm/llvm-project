@@ -485,6 +485,10 @@ class DwarfDebug : public DebugHandlerBase {
   /// Avoid using DW_OP_convert due to consumer incompatibilities.
   bool EnableOpConvert;
 
+  DenseMap<DIFragment *, const GlobalVariable *> GVFragmentMap;
+  DenseMap<DISubprogram *, SmallVector<DILifetime *>> SPLifetimeMap;
+  DenseSet<DILifetime *> ProcessedLifetimes;
+
 public:
   enum class MinimizeAddrInV5 {
     Default,

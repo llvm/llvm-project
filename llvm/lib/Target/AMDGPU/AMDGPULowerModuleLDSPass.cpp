@@ -128,6 +128,8 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
@@ -874,7 +876,7 @@ public:
           (Twine("llvm.amdgcn.kernel.") + Func.getName() + ".lds").str();
 
       auto Replacement =
-          createLDSVariableReplacement(M, VarName, KernelUsedVariables);
+          createLDSVariableReplacement(M, VarName, KernelUsedVariables, &Func);
 
       // This struct is allocated at a predictable address that can be
       // calculated now, recorded in metadata then used to lower references to
@@ -1068,7 +1070,8 @@ private:
 
   static LDSVariableReplacement createLDSVariableReplacement(
       Module &M, std::string VarName,
-      DenseSet<GlobalVariable *> const &LDSVarsToTransform) {
+      DenseSet<GlobalVariable *> const &LDSVarsToTransform,
+      Function *F = nullptr) {
     // Create a struct instance containing LDSVarsToTransform and map from those
     // variables to ConstantExprGEP
     // Variables may be introduced to meet alignment requirements. No aliasing
@@ -1100,6 +1103,12 @@ private:
 
     performOptimizedStructLayout(LayoutFields);
 
+    struct VarInfo {
+      GlobalVariable *Var;
+      uint64_t Offset;
+    };
+    DenseMap<DIFragment*, VarInfo> Fragment2VarInfo;
+
     std::vector<GlobalVariable *> LocalVars;
     BitVector IsPaddingField;
     LocalVars.reserve(LDSVarsToTransform.size()); // will be at least this large
@@ -1128,6 +1137,9 @@ private:
           CurrentOffset += Padding;
         }
 
+        if (isHeterogeneousDebug(M))
+          Fragment2VarInfo[FGV->getDbgDef()] = VarInfo{ FGV, CurrentOffset };
+
         LocalVars.push_back(FGV);
         IsPaddingField.push_back(false);
         CurrentOffset += LayoutFields[I].Size;
@@ -1149,6 +1161,45 @@ private:
         VarName, nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS,
         false);
     SGV->setAlignment(StructAlign);
+
+    if (isHeterogeneousDebug(M)) {
+      DIBuilder DBuilder(M);
+
+      DIFragment *DbgVarFragment = DBuilder.createFragment();
+      SGV->setDbgDef(DbgVarFragment);
+
+      if (NamedMDNode *RN = M.getNamedMetadata("llvm.dbg.retainedNodes")) {
+        for (MDNode *O : RN->operands()) {
+          auto *L = dyn_cast<DILifetime>(O);
+          if (!L)
+            continue;
+
+          if (L->argObjects().empty())
+            continue;
+
+          // FIXME(KZHURAVL): Handle more than one arg object?
+          auto *F = dyn_cast<DIFragment>(*L->argObjectsBegin());
+          if (!F)
+            continue;
+
+          auto FragmentIterator = Fragment2VarInfo.find(F);
+          if (FragmentIterator == Fragment2VarInfo.end())
+            continue;
+
+          DIExprBuilder ExprBuilder(Ctx);
+          ExprBuilder.append<DIOp::Arg>(0, SGV->getType());
+          ExprBuilder.append<DIOp::Deref>(
+              FragmentIterator->second.Var->getValueType());
+          ExprBuilder.append<DIOp::Constant>(
+              ConstantInt::get(Type::getInt32Ty(Ctx), FragmentIterator->second.Offset));
+          ExprBuilder.append<DIOp::ByteOffset>(
+              FragmentIterator->second.Var->getValueType());
+
+          L->setLocation(ExprBuilder.intoExpr());
+          L->replaceOperandWith(2, DbgVarFragment);
+        }
+      }
+    }
 
     DenseMap<GlobalVariable *, Constant *> Map;
     Type *I32 = Type::getInt32Ty(Ctx);
