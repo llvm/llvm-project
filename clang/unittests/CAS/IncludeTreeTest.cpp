@@ -197,6 +197,8 @@ TEST(IncludeTree, IncludeTreeFileList) {
   size_t I = 0;
   ASSERT_THAT_ERROR(
       L->forEachFile([&](IncludeTree::File F, auto Size) -> llvm::Error {
+        if (I >= Files.size())
+          return llvm::Error::success(); // diagnosed later.
         EXPECT_EQ(F.getFilenameRef(), Files[I].getFilenameRef())
             << "filename mismatch at " << I;
         EXPECT_EQ(F.getContentsRef(), Files[I].getContentsRef())
@@ -206,4 +208,55 @@ TEST(IncludeTree, IncludeTreeFileList) {
         return llvm::Error::success();
       }),
       llvm::Succeeded());
+  EXPECT_EQ(I, Files.size());
+}
+
+TEST(IncludeTree, IncludeTreeFileListDuplicates) {
+  std::shared_ptr<ObjectStore> DB = llvm::cas::createInMemoryCAS();
+  SmallVector<IncludeTree::File> Files;
+  for (unsigned I = 0; I < 10; ++I) {
+    std::optional<IncludeTree::File> File;
+    std::string Path = "/file" + std::to_string(I);
+    static constexpr StringRef Bytes = "123456789";
+    std::optional<ObjectRef> Content;
+    ASSERT_THAT_ERROR(
+        DB->storeFromString({}, Bytes.substr(0, I)).moveInto(Content),
+        llvm::Succeeded());
+    ASSERT_THAT_ERROR(
+        IncludeTree::File::create(*DB, Path, *Content).moveInto(File),
+        llvm::Succeeded());
+    Files.push_back(std::move(*File));
+  }
+
+  auto MakeFileList = [&](unsigned Begin, unsigned End,
+                          ArrayRef<ObjectRef> Lists) {
+    SmallVector<IncludeTree::FileList::FileEntry> Entries;
+    for (; Begin != End; ++Begin)
+      Entries.push_back({Files[Begin].getRef(), Begin});
+    return IncludeTree::FileList::create(*DB, Entries, Lists);
+  };
+
+  std::optional<IncludeTree::FileList> L89, L;
+  ASSERT_THAT_ERROR(MakeFileList(8, 10, {}).moveInto(L89), llvm::Succeeded());
+  EXPECT_EQ(L89->getNumReferences(), 2u);
+  ASSERT_THAT_ERROR(
+      MakeFileList(0, 9, {L89->getRef(), L89->getRef()}).moveInto(L),
+      llvm::Succeeded());
+  EXPECT_EQ(L->getNumReferences(), 11u); // 0, 1, ..., 8, {8, 9}, {8, 9}
+
+  size_t I = 0;
+  ASSERT_THAT_ERROR(
+      L->forEachFile([&](IncludeTree::File F, auto Size) -> llvm::Error {
+        if (I >= Files.size())
+          return llvm::Error::success(); // diagnosed later.
+        EXPECT_EQ(F.getFilenameRef(), Files[I].getFilenameRef())
+            << "filename mismatch at " << I;
+        EXPECT_EQ(F.getContentsRef(), Files[I].getContentsRef())
+            << "contents mismatch at " << I;
+        EXPECT_EQ(Size, I) << "size mismatch at " << I;
+        I += 1;
+        return llvm::Error::success();
+      }),
+      llvm::Succeeded());
+  EXPECT_EQ(I, Files.size());
 }
