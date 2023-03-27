@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-- -amdgpu-use-legacy-divergence-analysis -passes='print<divergence>' 2>&1 -disable-output %s | FileCheck %s
+; RUN: opt -mtriple=amdgcn-- -passes='print<divergence>' 2>&1 -disable-output %s | FileCheck %s
 
 ; CHECK: DIVERGENT: %orig = atomicrmw xchg ptr %ptr, i32 %val seq_cst
 define amdgpu_kernel void @test1(ptr %ptr, i32 %val) #0 {
