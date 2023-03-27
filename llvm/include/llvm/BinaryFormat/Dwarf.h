@@ -426,7 +426,8 @@ enum MemorySpace {
 };
 
 enum AddressSpace {
-#define HANDLE_DW_ASPACE(ID, CATEGORY, NAME) DW_ASPACE_##CATEGORY##_##NAME = ID,
+#define HANDLE_DW_ASPACE(ID, NAME) DW_ASPACE_LLVM_##NAME = ID,
+#define HANDLE_DW_ASPACE_PRED(ID, NAME, PRED) DW_ASPACE_LLVM_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
 };
 
@@ -673,6 +674,7 @@ StringRef FormatString(DwarfFormat Format);
 StringRef FormatString(bool IsDWARF64);
 StringRef RLEString(unsigned RLE);
 StringRef MemorySpaceString(unsigned MS);
+StringRef AddressSpaceString(unsigned AS, llvm::Triple TT);
 /// @}
 
 /// \defgroup DwarfConstantsParsing Dwarf constants parsing functions

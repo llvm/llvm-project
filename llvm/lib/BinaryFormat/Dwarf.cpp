@@ -839,6 +839,27 @@ StringRef llvm::dwarf::MemorySpaceString(unsigned MS) {
   }
 }
 
+StringRef llvm::dwarf::AddressSpaceString(unsigned AS, llvm::Triple TT) {
+  switch (AS) {
+#define HANDLE_DW_ASPACE(ID, NAME)                                             \
+  case DW_ASPACE_LLVM_##NAME:                                                  \
+    return "DW_ASPACE_LLVM_" #NAME;
+#define HANDLE_DW_ASPACE_PRED(ID, NAME, PRED)
+#include "llvm/BinaryFormat/Dwarf.def"
+  default:
+    break;
+  }
+
+  bool SELECT_AMDGPU = TT.isAMDGPU();
+#define HANDLE_DW_ASPACE(ID, NAME)
+#define HANDLE_DW_ASPACE_PRED(ID, NAME, PRED)                                  \
+  if (DW_ASPACE_LLVM_##NAME == AS && PRED)                                     \
+    return "DW_ASPACE_LLVM_" #NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+
+  return "";
+}
+
 constexpr char llvm::dwarf::EnumTraits<Attribute>::Type[];
 constexpr char llvm::dwarf::EnumTraits<Form>::Type[];
 constexpr char llvm::dwarf::EnumTraits<Index>::Type[];

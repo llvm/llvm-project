@@ -202,6 +202,7 @@ struct DIDumpOptions {
   bool IsEH = false;
   std::function<llvm::StringRef(uint64_t DwarfRegNum, bool IsEH)>
       GetNameForDWARFReg;
+  std::function<llvm::StringRef(uint64_t AS)> GetNameForDWARFAddressSpace;
 
   /// Return default option set for printing a single DIE without children.
   static DIDumpOptions getForSingleDIE() {
