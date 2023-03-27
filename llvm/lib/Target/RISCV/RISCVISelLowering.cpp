@@ -806,7 +806,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::STRICT_FP_EXTEND, VT, Custom);
       setOperationAction({ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
-                          ISD::STRICT_FDIV, ISD::STRICT_FSQRT},
+                          ISD::STRICT_FDIV, ISD::STRICT_FSQRT, ISD::STRICT_FMA},
                          VT, Legal);
     };
 
@@ -1024,7 +1024,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::STRICT_FP_EXTEND, VT, Custom);
         setOperationAction({ISD::STRICT_FADD, ISD::STRICT_FSUB,
                             ISD::STRICT_FMUL, ISD::STRICT_FDIV,
-                            ISD::STRICT_FSQRT},
+                            ISD::STRICT_FSQRT, ISD::STRICT_FMA},
                            VT, Custom);
       }
 
@@ -4506,6 +4506,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                              /*HasMergeOp*/ true);
   case ISD::STRICT_FSQRT:
     return lowerToScalableOp(Op, DAG, RISCVISD::STRICT_FSQRT_VL);
+  case ISD::STRICT_FMA:
+    return lowerToScalableOp(Op, DAG, RISCVISD::STRICT_VFMADD_VL);
   case ISD::MGATHER:
   case ISD::VP_GATHER:
     return lowerMaskedGather(Op, DAG);
@@ -10386,6 +10388,10 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
     case RISCVISD::VFNMSUB_VL: Opcode = RISCVISD::VFMADD_VL;  break;
     case RISCVISD::VFNMADD_VL: Opcode = RISCVISD::VFMSUB_VL;  break;
     case RISCVISD::VFMSUB_VL:  Opcode = RISCVISD::VFNMADD_VL; break;
+    case RISCVISD::STRICT_VFMADD_VL:  Opcode = RISCVISD::STRICT_VFNMSUB_VL; break;
+    case RISCVISD::STRICT_VFNMSUB_VL: Opcode = RISCVISD::STRICT_VFMADD_VL;  break;
+    case RISCVISD::STRICT_VFNMADD_VL: Opcode = RISCVISD::STRICT_VFMSUB_VL;  break;
+    case RISCVISD::STRICT_VFMSUB_VL:  Opcode = RISCVISD::STRICT_VFNMADD_VL; break;
     }
     // clang-format on
   }
@@ -10399,6 +10405,10 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
     case RISCVISD::VFMSUB_VL:  Opcode = RISCVISD::VFMADD_VL;  break;
     case RISCVISD::VFNMADD_VL: Opcode = RISCVISD::VFNMSUB_VL; break;
     case RISCVISD::VFNMSUB_VL: Opcode = RISCVISD::VFNMADD_VL; break;
+    case RISCVISD::STRICT_VFMADD_VL:  Opcode = RISCVISD::STRICT_VFMSUB_VL;  break;
+    case RISCVISD::STRICT_VFMSUB_VL:  Opcode = RISCVISD::STRICT_VFMADD_VL;  break;
+    case RISCVISD::STRICT_VFNMADD_VL: Opcode = RISCVISD::STRICT_VFNMSUB_VL; break;
+    case RISCVISD::STRICT_VFNMSUB_VL: Opcode = RISCVISD::STRICT_VFNMADD_VL; break;
     }
     // clang-format on
   }
@@ -11146,13 +11156,19 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::VFMADD_VL:
   case RISCVISD::VFNMADD_VL:
   case RISCVISD::VFMSUB_VL:
-  case RISCVISD::VFNMSUB_VL: {
+  case RISCVISD::VFNMSUB_VL:
+  case RISCVISD::STRICT_VFMADD_VL:
+  case RISCVISD::STRICT_VFNMADD_VL:
+  case RISCVISD::STRICT_VFMSUB_VL:
+  case RISCVISD::STRICT_VFNMSUB_VL: {
     // Fold FNEG_VL into FMA opcodes.
-    SDValue A = N->getOperand(0);
-    SDValue B = N->getOperand(1);
-    SDValue C = N->getOperand(2);
-    SDValue Mask = N->getOperand(3);
-    SDValue VL = N->getOperand(4);
+    // The first operand of strict-fp is chain.
+    unsigned Offset = N->isTargetStrictFPOpcode();
+    SDValue A = N->getOperand(0 + Offset);
+    SDValue B = N->getOperand(1 + Offset);
+    SDValue C = N->getOperand(2 + Offset);
+    SDValue Mask = N->getOperand(3 + Offset);
+    SDValue VL = N->getOperand(4 + Offset);
 
     auto invertIfNegative = [&Mask, &VL](SDValue &V) {
       if (V.getOpcode() == RISCVISD::FNEG_VL && V.getOperand(1) == Mask &&
@@ -11174,6 +11190,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return SDValue();
 
     unsigned NewOpcode = negateFMAOpcode(N->getOpcode(), NegA != NegB, NegC);
+    if (Offset > 0)
+      return DAG.getNode(NewOpcode, SDLoc(N), N->getVTList(),
+                         {N->getOperand(0), A, B, C, Mask, VL});
     return DAG.getNode(NewOpcode, SDLoc(N), N->getValueType(0), A, B, C, Mask,
                        VL);
   }
@@ -14102,6 +14121,10 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(STRICT_FMUL_VL)
   NODE_NAME_CASE(STRICT_FDIV_VL)
   NODE_NAME_CASE(STRICT_FSQRT_VL)
+  NODE_NAME_CASE(STRICT_VFMADD_VL)
+  NODE_NAME_CASE(STRICT_VFNMADD_VL)
+  NODE_NAME_CASE(STRICT_VFMSUB_VL)
+  NODE_NAME_CASE(STRICT_VFNMSUB_VL)
   NODE_NAME_CASE(STRICT_FP_EXTEND_VL)
   NODE_NAME_CASE(VWMUL_VL)
   NODE_NAME_CASE(VWMULU_VL)
