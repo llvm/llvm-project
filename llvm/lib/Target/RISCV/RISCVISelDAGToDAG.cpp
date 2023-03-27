@@ -26,7 +26,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-isel"
-#define PASS_NAME "RISCV DAG->DAG Pattern Instruction Selection"
+#define PASS_NAME "RISC-V DAG->DAG Pattern Instruction Selection"
 
 namespace llvm::RISCV {
 #define GET_RISCVVSSEGTable_IMPL
@@ -134,7 +134,7 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
     }
 
     if (Result) {
-      LLVM_DEBUG(dbgs() << "RISCV DAG preprocessing replacing:\nOld:    ");
+      LLVM_DEBUG(dbgs() << "RISC-V DAG preprocessing replacing:\nOld:    ");
       LLVM_DEBUG(N->dump(CurDAG));
       LLVM_DEBUG(dbgs() << "\nNew: ");
       LLVM_DEBUG(Result->dump(CurDAG));

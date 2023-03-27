@@ -56,7 +56,7 @@ public:
   }
 
   StringRef getPassName() const override {
-    return "RISCV Redundant Copy Elimination";
+    return "RISC-V Redundant Copy Elimination";
   }
 
 private:
@@ -68,7 +68,7 @@ private:
 char RISCVRedundantCopyElimination::ID = 0;
 
 INITIALIZE_PASS(RISCVRedundantCopyElimination, "riscv-copyelim",
-                "RISCV redundant copy elimination pass", false, false)
+                "RISC-V Redundant Copy Elimination", false, false)
 
 static bool
 guaranteesZeroRegInBlock(MachineBasicBlock &MBB,
