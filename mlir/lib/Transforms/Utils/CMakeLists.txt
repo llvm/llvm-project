@@ -6,7 +6,6 @@ add_mlir_library(MLIRTransformUtils
   GreedyPatternRewriteDriver.cpp
   InliningUtils.cpp
   LoopInvariantCodeMotionUtils.cpp
-  OneToNTypeConversion.cpp
   RegionUtils.cpp
   TopologicalSortUtils.cpp
 
