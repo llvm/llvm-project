@@ -316,7 +316,7 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   bool HasDebugInfo = false;
 
   /// The Debug Info Version of the module being verified.
-  Optional<unsigned> DebugInfoVersion;
+  std::optional<unsigned> DebugInfoVersion;
 
   /// The current source language.
   dwarf::SourceLanguage CurrentSourceLang = dwarf::DW_LANG_lo_user;

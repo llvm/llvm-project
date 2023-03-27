@@ -138,7 +138,7 @@ namespace {
       /// * An inserted DbgKill, if we encounter the DbgDef before any existing
       /// DbgKill, or if there is no such existing DbgKill.
       ///
-      /// Read as `Optional<MachineInstr>`.
+      /// Read as `std::optional<MachineInstr>`.
       MachineInstr *Live = nullptr;
       /// The existing DbgKill, if one exists and we have also inserted a
       /// DbgKill for a non-stack DbgDef. This is retained until we either:
@@ -147,7 +147,7 @@ namespace {
       /// * Finish allocating the function, at which point we can remove this
       /// "backup" existing DbgDef instruction.
       ///
-      /// Read as `Optional<MachineInstr>`
+      /// Read as `std::optional<MachineInstr>`
       MachineInstr *Dead = nullptr;
       /// Flag to represent the case where we want to eliminate all future
       /// DbgKills we encounter, as we have removed the corresponding DbgDef

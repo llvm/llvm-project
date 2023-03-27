@@ -59,7 +59,8 @@ public:
 
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
 
-  Optional<unsigned> mapToDWARFAddrSpace(unsigned LLVMAddrSpace) const override;
+  std::optional<unsigned>
+  mapToDWARFAddrSpace(unsigned LLVMAddrSpace) const override;
 
   unsigned getAssumedAddrSpace(const Value *V) const override;
 

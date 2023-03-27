@@ -759,12 +759,12 @@ constexpr std::pair<unsigned, unsigned> LLVMToDWARFAddrSpaceMapping[] = {
     {AMDGPUAS::FLAT_ADDRESS, 1},   {AMDGPUAS::REGION_ADDRESS, 2},
     {AMDGPUAS::LOCAL_ADDRESS, 3},  {AMDGPUAS::PRIVATE_ADDRESS, 5}};
 
-Optional<unsigned>
+std::optional<unsigned>
 AMDGPUTargetMachine::mapToDWARFAddrSpace(unsigned LLVMAddrSpace) const {
   for (const auto &I : LLVMToDWARFAddrSpaceMapping)
     if (I.first == LLVMAddrSpace)
       return I.second;
-  return None;
+  return std::nullopt;
 }
 
 unsigned AMDGPUTargetMachine::getAssumedAddrSpace(const Value *V) const {

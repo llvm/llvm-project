@@ -115,7 +115,7 @@ protected:
   /// Index of the entry list in DebugLocs.
   unsigned DebugLocListIndex = ~0u;
   /// DW_OP_LLVM_tag_offset value from DebugLocs.
-  Optional<uint8_t> DebugLocListTagOffset;
+  std::optional<uint8_t> DebugLocListTagOffset;
 
   // FIXME(KZHURAVL): Move FrameIndexExpr and getFrameIndexExprs into
   // OldDbgVariable.
@@ -164,7 +164,9 @@ public:
   void setDebugLocListIndex(unsigned O) { DebugLocListIndex = O; }
   unsigned getDebugLocListIndex() const { return DebugLocListIndex; }
   void setDebugLocListTagOffset(uint8_t O) { DebugLocListTagOffset = O; }
-  Optional<uint8_t> getDebugLocListTagOffset() const { return DebugLocListTagOffset; }
+  std::optional<uint8_t> getDebugLocListTagOffset() const {
+    return DebugLocListTagOffset;
+  }
   virtual const DbgValueLoc *getValueLoc() const = 0;
   virtual ArrayRef<FrameIndexExpr> getFrameIndexExprs() const = 0;
   virtual bool hasFrameIndexExprs() const = 0;

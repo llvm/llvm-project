@@ -770,27 +770,29 @@ size_t DwarfExprAST::Node::getChildrenCount() const {
       Element);
 }
 
-Optional<uint8_t> DwarfExprAST::Node::getEquivalentDwarfOp() const {
-  return visit<Optional<uint8_t>>(
-      makeVisitor(
-          [](DIOp::Arg) { return std::nullopt; }, [](DIOp::Constant) { return std::nullopt; },
-          [](DIOp::PushLane) { return std::nullopt; },
-          [](DIOp::Referrer) { return std::nullopt; },
-          [](DIOp::TypeObject) { return std::nullopt; },
-          [](DIOp::AddrOf) { return std::nullopt; }, [](DIOp::Convert) { return std::nullopt; },
-          [](DIOp::Deref) { return std::nullopt; }, [](DIOp::Extend) { return std::nullopt; },
-          [](DIOp::Read) { return std::nullopt; },
-          [](DIOp::Reinterpret) { return std::nullopt; },
-          [](DIOp::Add) { return dwarf::DW_OP_plus; },
-          [](DIOp::BitOffset) { return dwarf::DW_OP_LLVM_bit_offset; },
-          [](DIOp::ByteOffset) { return dwarf::DW_OP_LLVM_offset; },
-          [](DIOp::Div) { return dwarf::DW_OP_div; },
-          [](DIOp::Mul) { return dwarf::DW_OP_mul; },
-          [](DIOp::Shl) { return dwarf::DW_OP_shl; },
-          [](DIOp::Shr) { return dwarf::DW_OP_shr; },
-          [](DIOp::Sub) { return dwarf::DW_OP_minus; },
-          [](DIOp::Select) { return std::nullopt; },
-          [](DIOp::Composite) { return std::nullopt; }),
+std::optional<uint8_t> DwarfExprAST::Node::getEquivalentDwarfOp() const {
+  return visit<std::optional<uint8_t>>(
+      makeVisitor([](DIOp::Arg) { return std::nullopt; },
+                  [](DIOp::Constant) { return std::nullopt; },
+                  [](DIOp::PushLane) { return std::nullopt; },
+                  [](DIOp::Referrer) { return std::nullopt; },
+                  [](DIOp::TypeObject) { return std::nullopt; },
+                  [](DIOp::AddrOf) { return std::nullopt; },
+                  [](DIOp::Convert) { return std::nullopt; },
+                  [](DIOp::Deref) { return std::nullopt; },
+                  [](DIOp::Extend) { return std::nullopt; },
+                  [](DIOp::Read) { return std::nullopt; },
+                  [](DIOp::Reinterpret) { return std::nullopt; },
+                  [](DIOp::Add) { return dwarf::DW_OP_plus; },
+                  [](DIOp::BitOffset) { return dwarf::DW_OP_LLVM_bit_offset; },
+                  [](DIOp::ByteOffset) { return dwarf::DW_OP_LLVM_offset; },
+                  [](DIOp::Div) { return dwarf::DW_OP_div; },
+                  [](DIOp::Mul) { return dwarf::DW_OP_mul; },
+                  [](DIOp::Shl) { return dwarf::DW_OP_shl; },
+                  [](DIOp::Shr) { return dwarf::DW_OP_shr; },
+                  [](DIOp::Sub) { return dwarf::DW_OP_minus; },
+                  [](DIOp::Select) { return std::nullopt; },
+                  [](DIOp::Composite) { return std::nullopt; }),
       Element);
 }
 
@@ -1000,7 +1002,7 @@ void DwarfExprAST::lowerDIOpDeref(DwarfExprAST::Node *OpNode) {
   uint64_t PointerSizeInBytes = PointerSizeInBits / 8;
 
   unsigned PointerLLVMAddrSpace = PointerResultType->getAddressSpace();
-  Optional<unsigned> PointerDWARFAddrSpace =
+  std::optional<unsigned> PointerDWARFAddrSpace =
       AP.TM.mapToDWARFAddrSpace(PointerLLVMAddrSpace);
   if (!PointerDWARFAddrSpace) {
     LLVM_DEBUG(dbgs() << "Failed to lower DIOpDeref of pointer to addrspace("
@@ -1105,7 +1107,7 @@ void DwarfExprAST::lowerBitOrByteOffset(DwarfExprAST::Node *OpNode) {
 
   readToValue(OpNode->getChildren()[1].get(), /*NeedsSwap=*/false);
 
-  Optional<uint8_t> DwarfOp = OpNode->getEquivalentDwarfOp();
+  std::optional<uint8_t> DwarfOp = OpNode->getEquivalentDwarfOp();
   assert(DwarfOp.has_value() && "Expected equivalent dwarf operation");
 
   emitDwarfOp(DwarfOp.value());
@@ -1138,7 +1140,7 @@ void DwarfExprAST::lowerMathOp(DwarfExprAST::Node *OpNode) {
     readToValue(ChildOpNode.get(), /*NeedsSwap=*/true);
   }
 
-  Optional<uint8_t> DwarfOp = OpNode->getEquivalentDwarfOp();
+  std::optional<uint8_t> DwarfOp = OpNode->getEquivalentDwarfOp();
   assert(DwarfOp.has_value() && "Expected equivalent dwarf operation");
 
   emitDwarfOp(DwarfOp.value());
