@@ -1,6 +1,6 @@
 ; RUN: llvm-link %s %s -S -o -| FileCheck %s
 
-; This test checks that DIMacro and DIMacroFile comaprison works correctly.
+; This test checks that DIMacro and DIMacroFile comparison works correctly.
 
 ; CHECK: !llvm.dbg.cu = !{[[CU1:![0-9]*]], [[CU2:![0-9]*]]}
 
