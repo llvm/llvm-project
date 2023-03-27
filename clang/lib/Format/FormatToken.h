@@ -144,6 +144,8 @@ namespace format {
   TYPE(UnaryOperator)                                                          \
   TYPE(UnionLBrace)                                                            \
   TYPE(UntouchableMacroFunc)                                                   \
+  /* Like in 'assign x = 0, y = 1;' . */                                       \
+  TYPE(VerilogAssignComma)                                                     \
   /* like in begin : block */                                                  \
   TYPE(VerilogBlockLabelColon)                                                 \
   /* The square bracket for the dimension part of the type name.               \
