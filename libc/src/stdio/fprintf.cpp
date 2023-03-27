@@ -8,7 +8,6 @@
 
 #include "src/stdio/fprintf.h"
 
-#include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
 #include "src/stdio/printf_core/vfprintf_internal.h"
 
@@ -18,6 +17,7 @@
 namespace __llvm_libc {
 
 #ifndef LIBC_COPT_PRINTF_USE_SYSTEM_FILE
+#include "src/__support/File/file.h"
 using FileT = __llvm_libc::File;
 #else  // defined(LIBC_COPT_PRINTF_USE_SYSTEM_FILE)
 using FileT = ::FILE;
