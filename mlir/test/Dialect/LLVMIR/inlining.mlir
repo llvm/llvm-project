@@ -396,3 +396,43 @@ llvm.func @test_byval_write_only(%ptr : !llvm.ptr) {
   llvm.call @with_byval_arg(%ptr) : (!llvm.ptr) -> ()
   llvm.return
 }
+
+// -----
+
+llvm.func @ignored_attrs(%ptr : !llvm.ptr { llvm.inreg, llvm.nocapture, llvm.nofree, llvm.preallocated = i32, llvm.returned, llvm.alignstack = 32 : i64, llvm.writeonly, llvm.noundef, llvm.nonnull }, %x : i32 { llvm.zeroext }) -> (!llvm.ptr { llvm.noundef, llvm.inreg, llvm.nonnull }) {
+  llvm.return %ptr : !llvm.ptr
+}
+
+// CHECK-LABEL: @test_ignored_attrs
+// CHECK-NOT: llvm.call
+// CHECK-NEXT: llvm.return
+llvm.func @test_ignored_attrs(%ptr : !llvm.ptr, %x : i32) {
+  llvm.call @ignored_attrs(%ptr, %x) : (!llvm.ptr, i32) -> (!llvm.ptr)
+  llvm.return
+}
+
+// -----
+
+llvm.func @disallowed_arg_attr(%ptr : !llvm.ptr { llvm.align = 16 : i32 }) {
+  llvm.return
+}
+
+// CHECK-LABEL: @test_disallow_arg_attr
+// CHECK-NEXT: llvm.call
+llvm.func @test_disallow_arg_attr(%ptr : !llvm.ptr) {
+  llvm.call @disallowed_arg_attr(%ptr) : (!llvm.ptr) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @disallowed_res_attr(%ptr : !llvm.ptr) -> (!llvm.ptr { llvm.noalias }) {
+  llvm.return %ptr : !llvm.ptr
+}
+
+// CHECK-LABEL: @test_disallow_res_attr
+// CHECK-NEXT: llvm.call
+llvm.func @test_disallow_res_attr(%ptr : !llvm.ptr) {
+  llvm.call @disallowed_res_attr(%ptr) : (!llvm.ptr) -> (!llvm.ptr)
+  llvm.return
+}
