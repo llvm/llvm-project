@@ -272,6 +272,16 @@ Miscellaneous Clang Crashes Fixed
 Target Specific Changes
 -----------------------
 
+AMDGPU Support
+^^^^^^^^^^^^^^
+
+- Linking for AMDGPU now uses ``--no-undefined`` by default. This causes
+  undefined symbols in the created module to be a linker error. To prevent this,
+  pass ``-Wl,--undefined`` if compiling directly, or ``-Xoffload-linker
+  --undefined`` if using an offloading language.
+- The deprecated ``-mcode-object-v3`` and ``-mno-code-object-v3`` command-line 
+  options have been removed.
+
 X86 Support
 ^^^^^^^^^^^
 
@@ -353,6 +363,8 @@ clang-format
   Compared to ``NextLine`` style, ``NextLineOnly`` style will not try to
   put the initializers on the current line first, instead, it will try to
   put the initializers on the next line only.
+- Add additional Qualifier Ordering support for special cases such
+  as templates, requires clauses, long qualified names.
 
 libclang
 --------

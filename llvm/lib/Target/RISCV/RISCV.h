@@ -1,4 +1,4 @@
-//===-- RISCV.h - Top-level interface for RISCV -----------------*- C++ -*-===//
+//===-- RISCV.h - Top-level interface for RISC-V ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

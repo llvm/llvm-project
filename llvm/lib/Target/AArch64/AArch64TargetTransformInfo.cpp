@@ -49,8 +49,9 @@ public:
     TFDisabled = 0x0,
     TFReductions = 0x01,
     TFRecurrences = 0x02,
+    TFReverse = 0x04,
     TFSimple = 0x80,
-    TFAll = TFReductions | TFRecurrences | TFSimple
+    TFAll = TFReductions | TFRecurrences | TFReverse | TFSimple
   };
 
   void operator=(const std::string &Val) {
@@ -71,10 +72,14 @@ public:
         add(TFReductions);
       else if (TailFoldType == "recurrences")
         add(TFRecurrences);
+      else if (TailFoldType == "reverse")
+        add(TFReverse);
       else if (TailFoldType == "noreductions")
         remove(TFReductions);
       else if (TailFoldType == "norecurrences")
         remove(TFRecurrences);
+      else if (TailFoldType == "noreverse")
+        remove(TFReverse);
       else {
         errs()
             << "invalid argument " << TailFoldType.str()
@@ -106,7 +111,9 @@ cl::opt<TailFoldingKind, true, cl::parser<std::string>> SVETailFolding(
         "recurrences)"
         "\nreductions  Use tail-folding for loops containing reductions"
         "\nrecurrences Use tail-folding for loops containing fixed order "
-        "recurrences"),
+        "recurrences"
+        "\nreverse     Use tail-folding for loops requiring reversed "
+        "predicates"),
     cl::location(TailFoldingKindLoc));
 
 // Experimental option that will only be fully functional when the
@@ -3383,6 +3390,26 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
 }
 
+static bool containsDecreasingPointers(Loop *TheLoop,
+                                       PredicatedScalarEvolution *PSE) {
+  const ValueToValueMap &Strides = ValueToValueMap();
+  for (BasicBlock *BB : TheLoop->blocks()) {
+    // Scan the instructions in the block and look for addresses that are
+    // consecutive and decreasing.
+    for (Instruction &I : *BB) {
+      if (isa<LoadInst>(&I) || isa<StoreInst>(&I)) {
+        Value *Ptr = getLoadStorePointerOperand(&I);
+        Type *AccessTy = getLoadStoreType(&I);
+        if (getPtrStride(*PSE, AccessTy, Ptr, TheLoop, Strides, /*Assume=*/true,
+                         /*ShouldCheckWrap=*/false)
+                .value_or(0) < 0)
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool AArch64TTIImpl::preferPredicateOverEpilogue(
     Loop *L, LoopInfo *LI, ScalarEvolution &SE, AssumptionCache &AC,
     TargetLibraryInfo *TLI, DominatorTree *DT, LoopVectorizationLegality *LVL,
@@ -3401,6 +3428,12 @@ bool AArch64TTIImpl::preferPredicateOverEpilogue(
     Required.add(TailFoldingKind::TFReductions);
   if (LVL->getFixedOrderRecurrences().size())
     Required.add(TailFoldingKind::TFRecurrences);
+
+  // We call this to discover whether any load/store pointers in the loop have
+  // negative strides. This will require extra work to reverse the loop
+  // predicate, which may be expensive.
+  if (containsDecreasingPointers(L, LVL->getPredicatedScalarEvolution()))
+    Required.add(TailFoldingKind::TFReverse);
   if (!Required)
     Required.add(TailFoldingKind::TFSimple);
 

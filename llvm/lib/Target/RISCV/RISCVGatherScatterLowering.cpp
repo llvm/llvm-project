@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass custom lowers llvm.gather and llvm.scatter instructions to
-// RISCV intrinsics.
+// RISC-V intrinsics.
 //
 //===----------------------------------------------------------------------===//
 
@@ -59,7 +59,7 @@ public:
   }
 
   StringRef getPassName() const override {
-    return "RISCV gather/scatter lowering";
+    return "RISC-V gather/scatter lowering";
   }
 
 private:
@@ -81,7 +81,7 @@ private:
 char RISCVGatherScatterLowering::ID = 0;
 
 INITIALIZE_PASS(RISCVGatherScatterLowering, DEBUG_TYPE,
-                "RISCV gather/scatter lowering pass", false, false)
+                "RISC-V gather/scatter lowering pass", false, false)
 
 FunctionPass *llvm::createRISCVGatherScatterLoweringPass() {
   return new RISCVGatherScatterLowering();

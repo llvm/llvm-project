@@ -2294,6 +2294,11 @@ def FormatNestedCompoundAttr : TEST_Op<"format_cpmd_nested_attr"> {
   let assemblyFormat = "`nested` $nested attr-dict-with-keyword";
 }
 
+def FormatMaybeEmptyType : TEST_Op<"format_maybe_empty_type"> {
+  let arguments = (ins TestTypeOptionalValueType:$in);
+  let assemblyFormat = "$in `:` type($in) attr-dict";
+}
+
 def FormatQualifiedCompoundAttr : TEST_Op<"format_qual_cpmd_nested_attr"> {
   let arguments = (ins CompoundNestedOuter:$nested);
   let assemblyFormat = "`nested` qualified($nested) attr-dict-with-keyword";

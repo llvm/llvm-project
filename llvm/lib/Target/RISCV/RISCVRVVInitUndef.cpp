@@ -39,7 +39,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-init-undef"
-#define RISCV_INIT_UNDEF_NAME "RISCV init undef pass"
+#define RISCV_INIT_UNDEF_NAME "RISC-V init undef pass"
 
 namespace {
 
