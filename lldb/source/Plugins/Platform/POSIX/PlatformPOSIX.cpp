@@ -27,7 +27,6 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -295,13 +294,9 @@ std::string PlatformPOSIX::GetPlatformSpecificConnectionInformation() {
     return "";
 }
 
-lldb::UnixSignalsSP PlatformPOSIX::GetRemoteUnixSignals() {
-  if (IsRemote() && m_remote_platform_sp) {
-    if (auto unix_signals_sp = m_remote_platform_sp->GetRemoteUnixSignals())
-      return unix_signals_sp;
-  }
-  if (auto unix_signals_sp = CreateUnixSignals())
-    return unix_signals_sp;
+const lldb::UnixSignalsSP &PlatformPOSIX::GetRemoteUnixSignals() {
+  if (IsRemote() && m_remote_platform_sp)
+    return m_remote_platform_sp->GetRemoteUnixSignals();
   return Platform::GetRemoteUnixSignals();
 }
 
@@ -993,8 +988,4 @@ ConstString PlatformPOSIX::GetFullNameForDylib(ConstString basename) {
   StreamString stream;
   stream.Printf("lib%s.so", basename.GetCString());
   return ConstString(stream.GetString());
-}
-
-lldb::UnixSignalsSP PlatformPOSIX::CreateUnixSignals() {
-  return std::make_shared<UnixSignals>();
 }

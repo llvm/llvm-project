@@ -35,8 +35,6 @@ public:
   MOCK_METHOD2(ResolveRemoteExecutable,
                std::pair<Status, ModuleSP>(const ModuleSpec &,
                                            const FileSpecList *));
-  MOCK_METHOD0(CreateUnixSignals, lldb::UnixSignalsSP());
-
   Status ResolveRemoteExecutable(
       const ModuleSpec &module_spec, lldb::ModuleSP &exe_module_sp,
       const FileSpecList *module_search_paths_ptr) /*override*/
@@ -63,7 +61,6 @@ public:
                ProcessSP(ProcessAttachInfo &, Debugger &, Target *, Status &));
   MOCK_METHOD0(CalculateTrapHandlerSymbolNames, void());
   MOCK_METHOD0(GetUserIDResolver, UserIDResolver &());
-  MOCK_METHOD0(CreateUnixSignals, lldb::UnixSignalsSP());
 };
 
 namespace {

@@ -69,12 +69,6 @@ public:
         arch, addr, length, prot, flags, fd, offset);
   }
 
-  lldb::UnixSignalsSP CreateUnixSignals() override {
-    // PlatformQemuUser shouldn't create its own UnixSignals. It should defer to
-    // other platforms.
-    return lldb::UnixSignalsSP();
-  }
-
 private:
   static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
   static void DebuggerInitialize(Debugger &debugger);

@@ -19,7 +19,6 @@ add_lldb_library(lldbPluginAppleObjCRuntime PLUGIN
     lldbUtility
     lldbPluginExpressionParserClang
     lldbPluginCPPRuntime
-    lldbPluginProcessUtility
     lldbPluginTypeSystemClang
   CLANG_LIBS
     clangAST
