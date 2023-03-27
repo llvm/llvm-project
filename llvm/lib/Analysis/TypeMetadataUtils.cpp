@@ -199,26 +199,19 @@ Constant *llvm::getPointerAtOffset(Constant *I, uint64_t Offset, Module &M,
   return nullptr;
 }
 
-static void replaceRelativePointerUserWithZero(User *U) {
-  auto *PtrExpr = dyn_cast<ConstantExpr>(U);
-  if (!PtrExpr || PtrExpr->getOpcode() != Instruction::PtrToInt)
-    return;
+void llvm::replaceRelativePointerUsersWithZero(Function *F) {
+  for (auto *U : F->users()) {
+    auto *PtrExpr = dyn_cast<ConstantExpr>(U);
+    if (!PtrExpr || PtrExpr->getOpcode() != Instruction::PtrToInt)
+      continue;
 
-  for (auto *PtrToIntUser : PtrExpr->users()) {
-    auto *SubExpr = dyn_cast<ConstantExpr>(PtrToIntUser);
-    if (!SubExpr || SubExpr->getOpcode() != Instruction::Sub)
-      return;
+    for (auto *PtrToIntUser : PtrExpr->users()) {
+      auto *SubExpr = dyn_cast<ConstantExpr>(PtrToIntUser);
+      if (!SubExpr || SubExpr->getOpcode() != Instruction::Sub)
+        continue;
 
-    SubExpr->replaceNonMetadataUsesWith(
-        ConstantInt::get(SubExpr->getType(), 0));
-  }
-}
-
-void llvm::replaceRelativePointerUsersWithZero(Constant *C) {
-  for (auto *U : C->users()) {
-    if (auto *Equiv = dyn_cast<DSOLocalEquivalent>(U))
-      replaceRelativePointerUsersWithZero(Equiv);
-    else
-      replaceRelativePointerUserWithZero(U);
+      SubExpr->replaceNonMetadataUsesWith(
+          ConstantInt::get(SubExpr->getType(), 0));
+    }
   }
 }
