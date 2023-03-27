@@ -3045,6 +3045,15 @@ TEST(Hover, NoCrash) {
     getHover(AST, P, format::getLLVMStyle(), nullptr);
 }
 
+TEST(Hover, NoCrashAPInt64) {
+  Annotations T(R"cpp(
+    constexpr unsigned long value = -1; // wrap around
+    void foo() { va^lue; }
+  )cpp");
+  auto AST = TestTU::withCode(T.code()).build();
+  getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+}
+
 TEST(Hover, DocsFromMostSpecial) {
   Annotations T(R"cpp(
   // doc1
