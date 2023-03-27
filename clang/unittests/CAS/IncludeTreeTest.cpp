@@ -4,6 +4,7 @@
 #include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -135,29 +136,74 @@ TEST(IncludeTree, IncludeTreeScan) {
 
   std::optional<IncludeTree::FileList> FileList;
   ASSERT_THAT_ERROR(Root->getFileList().moveInto(FileList), llvm::Succeeded());
-  ASSERT_EQ(FileList->getNumFiles(), size_t(4));
-  {
+
+  SmallVector<std::pair<IncludeTree::File, IncludeTree::FileList::FileSizeTy>>
+      Files;
+  ASSERT_THAT_ERROR(FileList->forEachFile([&](auto F, auto S) -> llvm::Error {
+    Files.push_back({F, S});
+    return llvm::Error::success();
+  }),
+                    llvm::Succeeded());
+
+  ASSERT_EQ(Files.size(), size_t(4));
+  EXPECT_EQ(Files[0].first.getRef(), MainFile->getRef());
+  EXPECT_EQ(Files[0].second, MainContents.size());
+  EXPECT_EQ(Files[1].first.getRef(), A1File->getRef());
+  EXPECT_EQ(Files[1].second, A1Contents.size());
+  EXPECT_EQ(Files[2].first.getRef(), B1File->getRef());
+  EXPECT_EQ(Files[2].second, IncludeTree::FileList::FileSizeTy(0));
+  EXPECT_EQ(Files[3].first.getRef(), SysFile->getRef());
+  EXPECT_EQ(Files[3].second, IncludeTree::FileList::FileSizeTy(0));
+}
+
+TEST(IncludeTree, IncludeTreeFileList) {
+  std::shared_ptr<ObjectStore> DB = llvm::cas::createInMemoryCAS();
+  SmallVector<IncludeTree::File> Files;
+  for (unsigned I = 0; I < 10; ++I) {
     std::optional<IncludeTree::File> File;
-    ASSERT_THAT_ERROR(FileList->getFile(0).moveInto(File), llvm::Succeeded());
-    EXPECT_EQ(File->getRef(), MainFile->getRef());
-    EXPECT_EQ(FileList->getFileSize(0), MainContents.size());
+    std::string Path = "/file" + std::to_string(I);
+    static constexpr StringRef Bytes = "123456789";
+    std::optional<ObjectRef> Content;
+    ASSERT_THAT_ERROR(
+        DB->storeFromString({}, Bytes.substr(0, I)).moveInto(Content),
+        llvm::Succeeded());
+    ASSERT_THAT_ERROR(
+        IncludeTree::File::create(*DB, Path, *Content).moveInto(File),
+        llvm::Succeeded());
+    Files.push_back(std::move(*File));
   }
-  {
-    std::optional<IncludeTree::File> File;
-    ASSERT_THAT_ERROR(FileList->getFile(1).moveInto(File), llvm::Succeeded());
-    EXPECT_EQ(File->getRef(), A1File->getRef());
-    EXPECT_EQ(FileList->getFileSize(1), A1Contents.size());
-  }
-  {
-    std::optional<IncludeTree::File> File;
-    ASSERT_THAT_ERROR(FileList->getFile(2).moveInto(File), llvm::Succeeded());
-    EXPECT_EQ(File->getRef(), B1File->getRef());
-    EXPECT_EQ(FileList->getFileSize(2), IncludeTree::FileList::FileSizeTy(0));
-  }
-  {
-    std::optional<IncludeTree::File> File;
-    ASSERT_THAT_ERROR(FileList->getFile(3).moveInto(File), llvm::Succeeded());
-    EXPECT_EQ(File->getRef(), SysFile->getRef());
-    EXPECT_EQ(FileList->getFileSize(3), IncludeTree::FileList::FileSizeTy(0));
-  }
+
+  auto MakeFileList = [&](unsigned Begin, unsigned End,
+                          ArrayRef<ObjectRef> Lists) {
+    SmallVector<IncludeTree::FileList::FileEntry> Entries;
+    for (; Begin != End; ++Begin)
+      Entries.push_back({Files[Begin].getRef(), Begin});
+    return IncludeTree::FileList::create(*DB, Entries, Lists);
+  };
+
+  std::optional<IncludeTree::FileList> L89, L7, L29, L;
+  ASSERT_THAT_ERROR(MakeFileList(8, 10, {}).moveInto(L89), llvm::Succeeded());
+  EXPECT_EQ(L89->getNumReferences(), 2u);
+  ASSERT_THAT_ERROR(MakeFileList(7, 8, {}).moveInto(L7), llvm::Succeeded());
+  EXPECT_EQ(L7->getNumReferences(), 1u);
+  ASSERT_THAT_ERROR(
+      MakeFileList(2, 7, {L7->getRef(), L89->getRef()}).moveInto(L29),
+      llvm::Succeeded());
+  EXPECT_EQ(L29->getNumReferences(), 7u); // 2,3,4,5,6, {7}, {8, 9}
+  ASSERT_THAT_ERROR(MakeFileList(0, 2, {L29->getRef()}).moveInto(L),
+                    llvm::Succeeded());
+  EXPECT_EQ(L->getNumReferences(), 3u); // 0, 1, {2, ...}
+
+  size_t I = 0;
+  ASSERT_THAT_ERROR(
+      L->forEachFile([&](IncludeTree::File F, auto Size) -> llvm::Error {
+        EXPECT_EQ(F.getFilenameRef(), Files[I].getFilenameRef())
+            << "filename mismatch at " << I;
+        EXPECT_EQ(F.getContentsRef(), Files[I].getContentsRef())
+            << "contents mismatch at " << I;
+        EXPECT_EQ(Size, I) << "size mismatch at " << I;
+        I += 1;
+        return llvm::Error::success();
+      }),
+      llvm::Succeeded());
 }

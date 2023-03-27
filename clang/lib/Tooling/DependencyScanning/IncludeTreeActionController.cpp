@@ -129,7 +129,8 @@ private:
   // are recorded in the PCH, ordered by \p FileEntry::UID index.
   SmallVector<StringRef> PreIncludedFileNames;
   llvm::BitVector SeenIncludeFiles;
-  llvm::SetVector<cas::IncludeTree::FileList::FileEntry> IncludedFiles;
+  SmallVector<cas::IncludeTree::FileList::FileEntry> IncludedFiles;
+  SmallVector<cas::ObjectRef> IncludedFileLists;
   std::optional<cas::ObjectRef> PredefinesBufferRef;
   std::optional<cas::ObjectRef> ModuleIncludesBufferRef;
   std::optional<cas::ObjectRef> ModuleMapRef;
@@ -656,7 +657,7 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
   }
 
   auto FileList =
-      cas::IncludeTree::FileList::create(DB, IncludedFiles.getArrayRef());
+      cas::IncludeTree::FileList::create(DB, IncludedFiles, IncludedFileLists);
   if (!FileList)
     return FileList.takeError();
 
@@ -682,16 +683,8 @@ Error IncludeTreeBuilder::addModuleInputs(ASTReader &Reader) {
     std::optional<cas::IncludeTreeRoot> Root;
     if (Error E = cas::IncludeTreeRoot::get(DB, *Ref).moveInto(Root))
       return E;
-    std::optional<cas::IncludeTree::FileList> Files;
-    if (Error E = Root->getFileList().moveInto(Files))
-      return E;
 
-    Error E = Files->forEachFile([&](auto IF, auto Size) -> Error {
-      IncludedFiles.insert({IF.getRef(), Size});
-      return Error::success();
-    });
-    if (E)
-      return E;
+    IncludedFileLists.push_back(Root->getFileListRef());
   }
 
   return Error::success();
@@ -772,7 +765,7 @@ IncludeTreeBuilder::addToFileList(FileManager &FM, const FileEntry *FE) {
     auto FileNode = createIncludeFile(Filename, **CASContents);
     if (!FileNode)
       return FileNode.takeError();
-    IncludedFiles.insert(
+    IncludedFiles.push_back(
         {FileNode->getRef(),
          static_cast<cas::IncludeTree::FileList::FileSizeTy>(FE->getSize())});
     return FileNode->getRef();

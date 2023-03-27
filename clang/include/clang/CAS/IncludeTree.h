@@ -264,24 +264,14 @@ private:
   }
 };
 
-/// A flat list of \c File entries. This is used along with a simple
-/// implementation of a \p vfs::FileSystem produced via
-/// \p createIncludeTreeFileSystem().
+/// A list of \c File entries. Multiple \c FileList can be combined without
+/// copying their contents. This is used along with a simple implementation of a
+/// \p vfs::FileSystem produced via \p createIncludeTreeFileSystem().
 class IncludeTree::FileList : public IncludeTreeBase<FileList> {
 public:
   static constexpr StringRef getNodeKind() { return "List"; }
 
   using FileSizeTy = uint32_t;
-
-  size_t getNumFiles() const { return getNumReferences(); }
-
-  ObjectRef getFileRef(size_t I) const {
-    assert(I < getNumFiles());
-    return getReference(I);
-  }
-
-  Expected<File> getFile(size_t I) { return getFile(getFileRef(I)); }
-  FileSizeTy getFileSize(size_t I) const;
 
   /// \returns each \c File entry along with its file size.
   llvm::Error
@@ -294,7 +284,8 @@ public:
     ObjectRef FileRef;
     FileSizeTy Size;
   };
-  static Expected<FileList> create(ObjectStore &DB, ArrayRef<FileEntry> Files);
+  static Expected<FileList> create(ObjectStore &DB, ArrayRef<FileEntry> Files,
+                                   ArrayRef<ObjectRef> FileLists);
 
   static Expected<FileList> get(ObjectStore &CAS, ObjectRef Ref);
 
@@ -307,6 +298,9 @@ private:
   explicit FileList(ObjectProxy Node) : IncludeTreeBase(std::move(Node)) {
     assert(isValid(*this));
   }
+
+  size_t getNumFilesCurrentList() const;
+  FileSizeTy getFileSize(size_t I) const;
 
   Expected<File> getFile(ObjectRef Ref) {
     auto Node = getCAS().getProxy(Ref);
@@ -743,27 +737,5 @@ createIncludeTreeFileSystem(IncludeTreeRoot &Root);
 
 } // namespace cas
 } // namespace clang
-
-namespace llvm {
-template <> struct DenseMapInfo<clang::cas::IncludeTree::FileList::FileEntry> {
-  using FileEntry = clang::cas::IncludeTree::FileList::FileEntry;
-
-  static FileEntry getEmptyKey() {
-    return {cas::ObjectRef::getDenseMapEmptyKey(), 0};
-  }
-
-  static FileEntry getTombstoneKey() {
-    return {cas::ObjectRef::getDenseMapTombstoneKey(), 0};
-  }
-
-  static unsigned getHashValue(FileEntry F) {
-    return F.FileRef.getDenseMapHash();
-  }
-
-  static bool isEqual(FileEntry LHS, FileEntry RHS) {
-    return LHS.FileRef == RHS.FileRef && LHS.Size == RHS.Size;
-  }
-};
-} // namespace llvm
 
 #endif

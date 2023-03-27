@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CAS/IncludeTree.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/Error.h"
+#include <utility>
 
 using namespace clang;
 using namespace clang::cas;
@@ -220,10 +223,15 @@ IncludeTree::ModuleImport::create(ObjectStore &DB, StringRef ModuleName,
   return IncludeTreeBase::create(DB, {}, Buffer);
 }
 
+size_t IncludeTree::FileList::getNumFilesCurrentList() const {
+  return llvm::support::endian::read<uint32_t, llvm::support::little>(
+      getData().data());
+}
+
 IncludeTree::FileList::FileSizeTy
 IncludeTree::FileList::getFileSize(size_t I) const {
-  assert(I < getNumFiles());
-  StringRef Data = getData();
+  assert(I < getNumFilesCurrentList());
+  StringRef Data = getData().drop_front(sizeof(uint32_t));
   assert(Data.size() >= (I + 1) * sizeof(FileSizeTy));
   return llvm::support::endian::read<FileSizeTy, llvm::support::little>(
       Data.data() + I * sizeof(FileSizeTy));
@@ -232,29 +240,44 @@ IncludeTree::FileList::getFileSize(size_t I) const {
 llvm::Error IncludeTree::FileList::forEachFile(
     llvm::function_ref<llvm::Error(File, FileSizeTy)> Callback) {
   size_t I = 0;
+  size_t FileCount = getNumFilesCurrentList();
   return forEachReference([&](ObjectRef Ref) -> llvm::Error {
-    auto Include = getFile(Ref);
-    if (!Include)
-      return Include.takeError();
-    return Callback(std::move(*Include), getFileSize(I++));
+    if (I < FileCount) {
+      auto Include = getFile(Ref);
+      if (!Include)
+        return Include.takeError();
+      return Callback(std::move(*Include), getFileSize(I++));
+    }
+    // Otherwise, it's a chained FileList.
+    ++I;
+    auto Proxy = getCAS().getProxy(Ref);
+    if (!Proxy)
+      return Proxy.takeError();
+    FileList FL(std::move(*Proxy));
+    return FL.forEachFile(Callback);
   });
 }
 
 Expected<IncludeTree::FileList>
-IncludeTree::FileList::create(ObjectStore &DB, ArrayRef<FileEntry> Files) {
+IncludeTree::FileList::create(ObjectStore &DB, ArrayRef<FileEntry> Files,
+                              ArrayRef<ObjectRef> FileLists) {
   SmallVector<ObjectRef, 16> Refs;
-  Refs.reserve(Files.size());
+  Refs.reserve(Files.size() + FileLists.size());
   SmallString<256> Buffer;
-  Buffer.reserve(Files.size() * sizeof(FileSizeTy));
+  Buffer.reserve(sizeof(uint32_t) + Files.size() * sizeof(FileSizeTy));
 
   llvm::raw_svector_ostream BufOS(Buffer);
   llvm::support::endian::Writer Writer(BufOS, llvm::support::little);
+  Writer.write(static_cast<uint32_t>(Files.size()));
 
   for (const FileEntry &Entry : Files) {
     assert(File::isValid(DB, Entry.FileRef));
     Refs.push_back(Entry.FileRef);
     Writer.write(Entry.Size);
   }
+
+  Refs.append(FileLists.begin(), FileLists.end());
+
   return IncludeTreeBase::create(DB, Refs, Buffer);
 }
 
@@ -273,9 +296,13 @@ bool IncludeTree::FileList::isValid(const ObjectProxy &Node) {
   if (!IncludeTreeBase::isValid(Node))
     return false;
   IncludeTreeBase Base(Node);
-  unsigned NumFiles = Base.getNumReferences();
-  return NumFiles != 0 &&
-         Base.getData().size() == NumFiles * sizeof(FileSizeTy);
+  StringRef Data = Base.getData();
+  if (Data.size() < sizeof(uint32_t))
+    return false;
+  unsigned NumFiles =
+      llvm::support::endian::read<uint32_t, llvm::support::little>(Data.data());
+  return NumFiles != 0 && NumFiles <= Base.getNumReferences() &&
+         Data.size() == sizeof(uint32_t) + NumFiles * sizeof(FileSizeTy);
 }
 
 static constexpr char ModuleFlagFramework = 1 << 0;
@@ -846,20 +873,47 @@ public:
 };
 } // namespace
 
+static llvm::Error diagnoseFileChange(IncludeTree::File F, ObjectRef Content) {
+  auto FilenameBlob = F.getFilename();
+  if (!FilenameBlob)
+    return FilenameBlob.takeError();
+  cas::ObjectStore &DB = F.getCAS();
+  std::string Filename(FilenameBlob->getData());
+  std::string OldID = DB.getID(Content).toString();
+  std::string NewID = DB.getID(F.getContentsRef()).toString();
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "file '%s' changed during build; include-tree "
+                                 "contents changed from %s to %s",
+                                 Filename.c_str(), OldID.c_str(),
+                                 NewID.c_str());
+}
+
 Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>>
 cas::createIncludeTreeFileSystem(IncludeTreeRoot &Root) {
   auto FileList = Root.getFileList();
   if (!FileList)
     return FileList.takeError();
 
+  // Map from FilenameRef to ContentsRef.
+  llvm::DenseMap<ObjectRef, ObjectRef> SeenContents;
+
   IntrusiveRefCntPtr<IncludeTreeFileSystem> IncludeTreeFS =
       new IncludeTreeFileSystem(Root.getCAS());
   llvm::Error E = FileList->forEachFile(
       [&](IncludeTree::File File,
           IncludeTree::FileList::FileSizeTy Size) -> llvm::Error {
+        auto InsertPair = SeenContents.insert(
+            std::make_pair(File.getFilenameRef(), File.getContentsRef()));
+        if (!InsertPair.second) {
+          if (InsertPair.first->second != File.getContentsRef())
+            return diagnoseFileChange(File, InsertPair.first->second);
+          return llvm::Error::success();
+        }
+
         auto FilenameBlob = File.getFilename();
         if (!FilenameBlob)
           return FilenameBlob.takeError();
+
         SmallString<128> Filename(FilenameBlob->getData());
         // Strip './' in the filename to match the behaviour of ASTWriter; we
         // also strip './' in IncludeTreeFileSystem::getPath.
