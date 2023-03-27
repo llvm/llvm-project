@@ -623,7 +623,7 @@ implementation of powerful new features. For example:
 .. code-block:: c++
 
   StringRef FunctionName = "foo";
-  std::vector<JITTargetAddress> CallSitesForFunction;
+  std::vector<ExecutorAddr> CallSitesForFunction;
 
   auto RecordCallSites =
     [&](LinkGraph &G) -> Error {

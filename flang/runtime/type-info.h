@@ -133,6 +133,11 @@ public:
     // higher-ranked final procedures follow
   };
 
+  // Special bindings can be created during execution to handle user-defined
+  // derived type I/O procedures that are not type-bound.
+  SpecialBinding(Which which, ProcedurePointer proc, std::uint8_t isArgDescSet)
+      : which_{which}, isArgDescriptorSet_{isArgDescSet}, proc_{proc} {}
+
   static constexpr Which RankFinal(int rank) {
     return static_cast<Which>(static_cast<int>(Which::ScalarFinal) + rank);
   }

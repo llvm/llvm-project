@@ -91,6 +91,10 @@ def: Flag<["-"], "f">,
   HelpText<"Alias for --flat">,
   Group<grp_general>;
 
+def fat64: F<"fat64">,
+  HelpText<"Use a 64-bit header when emitting universal binaries.">,
+  Group<grp_general>;
+
 def update: F<"update">,
   HelpText<"Updates existing dSYM files to contain the latest accelerator tables and other DWARF optimizations.">,
   Group<grp_general>;

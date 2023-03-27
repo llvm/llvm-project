@@ -89,6 +89,7 @@ module m4
     end
   end interface
   interface operator(.not.)
+    !WARNING: The external interface 'not1' is not compatible with an earlier definition (distinct numbers of dummy arguments)
     real function not1(x)
       real, value :: x
     end

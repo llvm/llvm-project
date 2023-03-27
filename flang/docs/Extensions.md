@@ -346,6 +346,9 @@ end
 * User (non-intrinsic) `ELEMENTAL` procedures may not be passed as actual
   arguments, in accordance with the standard; some Fortran compilers
   permit such usage.
+* Constraint C1406, which prohibits the same module name from being used
+  in a scope for both an intrinsic and a non-intrinsic module, is implemented
+  as a portability warning only, not a hard error.
 
 ## Preprocessing behavior
 
