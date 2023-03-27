@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown                      | FileCheck %s --check-prefix=BASE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=slow-3ops-lea | FileCheck %s --check-prefix=SLOWLEA3
 
-define i32 @select_unsigned_lt_10_8_13j(i32 %0) {
-; BASE-LABEL: select_unsigned_lt_10_8_13j:
+define i32 @select_unsigned_lt_10_8_13(i32 %0) {
+; BASE-LABEL: select_unsigned_lt_10_8_13:
 ; BASE:       # %bb.0:
 ; BASE-NEXT:    xorl %eax, %eax
 ; BASE-NEXT:    cmpl $10, %edi
@@ -11,7 +11,7 @@ define i32 @select_unsigned_lt_10_8_13j(i32 %0) {
 ; BASE-NEXT:    leal 8(%rax,%rax,4), %eax
 ; BASE-NEXT:    retq
 ;
-; SLOWLEA3-LABEL: select_unsigned_lt_10_8_13j:
+; SLOWLEA3-LABEL: select_unsigned_lt_10_8_13:
 ; SLOWLEA3:       # %bb.0:
 ; SLOWLEA3-NEXT:    xorl %eax, %eax
 ; SLOWLEA3-NEXT:    cmpl $10, %edi
