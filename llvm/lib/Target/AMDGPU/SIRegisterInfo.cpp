@@ -2515,6 +2515,17 @@ StringRef SIRegisterInfo::getRegAsmName(MCRegister Reg) const {
   return AMDGPUInstPrinter::getRegisterName(Reg);
 }
 
+unsigned SIRegisterInfo::getHWRegIndex(MCRegister Reg) const {
+  unsigned Idx = getEncodingValue(Reg);
+  if (ST.has512AddressableVGPRs()) {
+    const TargetRegisterClass *RC = getPhysRegBaseClass(Reg);
+    if (RC && isVGPRClass(RC))
+      return Idx & 0x1ff;
+  }
+
+  return Idx & 0xff;
+}
+
 static const TargetRegisterClass *
 getAnyVGPRClassForBitWidth(unsigned BitWidth) {
   if (BitWidth <= 64)
