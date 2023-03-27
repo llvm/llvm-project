@@ -148,9 +148,11 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
     return std::make_pair(ConstantInt::get(Ty, 0), ConstantInt::get(Ty, 1));
   }
 
-  // Not a constant, maybe it's a strided constant with a splat added to it.
+  // Not a constant, maybe it's a strided constant with a splat added or
+  // multipled.
   auto *BO = dyn_cast<BinaryOperator>(Start);
-  if (!BO || BO->getOpcode() != Instruction::Add)
+  if (!BO || (BO->getOpcode() != Instruction::Add &&
+              BO->getOpcode() != Instruction::Mul))
     return std::make_pair(nullptr, nullptr);
 
   // Look for an operand that is splatted.
@@ -169,10 +171,17 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
   if (!Start)
     return std::make_pair(nullptr, nullptr);
 
-  // Add the splat value to the start.
   Builder.SetInsertPoint(BO);
   Builder.SetCurrentDebugLocation(DebugLoc());
-  Start = Builder.CreateAdd(Start, Splat);
+  // Add the splat value to the start
+  if (BO->getOpcode() == Instruction::Add) {
+    Start = Builder.CreateAdd(Start, Splat);
+  }
+  // Or multiply the start and stride by the splat.
+  else if (BO->getOpcode() == Instruction::Mul) {
+    Start = Builder.CreateMul(Start, Splat);
+    Stride = Builder.CreateMul(Stride, Splat);
+  }
   return std::make_pair(Start, Stride);
 }
 
