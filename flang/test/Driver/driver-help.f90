@@ -56,6 +56,8 @@
 ! HELP-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
 ! HELP-NEXT: -funderscoring         Appends one trailing underscore to external names
 ! HELP-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
+! HELP-NEXT: -gline-tables-only     Emit debug line number tables only
+! HELP-NEXT: -g                     Generate source-level debug information
 ! HELP-NEXT: -help                  Display available options
 ! HELP-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! HELP-NEXT: -mllvm=<arg>           Alias for -mllvm
