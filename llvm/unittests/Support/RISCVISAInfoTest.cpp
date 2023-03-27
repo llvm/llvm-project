@@ -279,11 +279,22 @@ TEST(ParseArchString, RejectsUnrecognizedExtensionVersionsByDefault) {
             "unsupported version number 10.10 for extension 'zifencei'");
 }
 
-TEST(ParseArchString, RejectsUnrecognisedBaseISAVersionEvenWithIgnoreUnknown) {
-  EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rv64i1p0", true, false, true)
-                   .takeError()),
-      "unsupported version number 1.0 for extension 'i'");
+TEST(ParseArchString,
+     UsesDefaultVersionForUnrecognisedBaseISAVersionWithIgnoreUnknown) {
+  for (StringRef Input : {"rv32i0p1", "rv32i99p99", "rv64i0p1", "rv64i99p99"}) {
+    auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true, false, true);
+    ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+    RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
+    EXPECT_EQ(Exts.size(), 1UL);
+    EXPECT_TRUE(Exts.at("i") == (RISCVExtensionInfo{2, 0}));
+  }
+  for (StringRef Input : {"rv32e0p1", "rv32e99p99", "rv64e0p1", "rv64e99p99"}) {
+    auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true, false, true);
+    ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+    RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
+    EXPECT_EQ(Exts.size(), 1UL);
+    EXPECT_TRUE(Exts.at("e") == (RISCVExtensionInfo{2, 0}));
+  }
 }
 
 TEST(ParseArchString,

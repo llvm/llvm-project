@@ -658,10 +658,18 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
         llvm_unreachable("Default extension version not found?");
   } else {
     // Baseline is `i` or `e`
-    if (auto E = getExtensionVersion(std::string(1, Baseline), Exts, Major, Minor,
-                                     ConsumeLength, EnableExperimentalExtension,
-                                     ExperimentalExtensionVersionCheck))
-      return std::move(E);
+    if (auto E = getExtensionVersion(
+            std::string(1, Baseline), Exts, Major, Minor, ConsumeLength,
+            EnableExperimentalExtension, ExperimentalExtensionVersionCheck)) {
+      if (!IgnoreUnknown)
+        return std::move(E);
+      // If IgnoreUnknown, then ignore an unrecognised version of the baseline
+      // ISA and just use the default supported version.
+      consumeError(std::move(E));
+      auto Version = findDefaultVersion(std::string(1, Baseline));
+      Major = Version->Major;
+      Minor = Version->Minor;
+    }
 
     ISAInfo->addExtension(std::string(1, Baseline), Major, Minor);
   }
