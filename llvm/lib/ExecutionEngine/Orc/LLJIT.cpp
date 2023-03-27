@@ -764,11 +764,8 @@ Expected<JITDylib &> LLJIT::loadPlatformDynamicLibrary(const char *Path) {
   if (!G)
     return G.takeError();
 
-  if (ES->getJITDylibByName(Path))
-    return make_error<StringError>(
-        Twine("LLJIT ExecutionSession already contains a JITDylib named \"") +
-            Path + "\"",
-        inconvertibleErrorCode());
+  if (auto *ExistingJD = ES->getJITDylibByName(Path))
+    return *ExistingJD;
 
   auto &JD = ES->createBareJITDylib(Path);
   JD.addGenerator(std::move(*G));
