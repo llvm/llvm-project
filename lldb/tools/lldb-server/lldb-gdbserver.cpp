@@ -62,16 +62,16 @@ using namespace lldb_private::process_gdb_remote;
 
 namespace {
 #if defined(__linux__)
-typedef process_linux::NativeProcessLinux::Factory NativeProcessFactory;
+typedef process_linux::NativeProcessLinux::Manager NativeProcessManager;
 #elif defined(__FreeBSD__)
-typedef process_freebsd::NativeProcessFreeBSD::Factory NativeProcessFactory;
+typedef process_freebsd::NativeProcessFreeBSD::Manager NativeProcessManager;
 #elif defined(__NetBSD__)
-typedef process_netbsd::NativeProcessNetBSD::Factory NativeProcessFactory;
+typedef process_netbsd::NativeProcessNetBSD::Manager NativeProcessManager;
 #elif defined(_WIN32)
-typedef NativeProcessWindows::Factory NativeProcessFactory;
+typedef NativeProcessWindows::Manager NativeProcessManager;
 #else
 // Dummy implementation to make sure the code compiles
-class NativeProcessFactory : public NativeProcessProtocol::Factory {
+class NativeProcessManager : public NativeProcessProtocol::Manager {
 public:
   llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
   Launch(ProcessLaunchInfo &launch_info,
@@ -431,8 +431,8 @@ int main_gdbserver(int argc, char *argv[]) {
     return 1;
   }
 
-  NativeProcessFactory factory;
-  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, factory);
+  NativeProcessManager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
 
   llvm::StringRef host_and_port;
   if (!Inputs.empty()) {
