@@ -92,8 +92,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_FloatingCast: {
     if (!this->visit(SubExpr))
       return false;
-    const auto *TargetSemantics =
-        &Ctx.getASTContext().getFloatTypeSemantics(CE->getType());
+    const auto *TargetSemantics = &Ctx.getFloatSemantics(CE->getType());
     return this->emitCastFP(TargetSemantics, getRoundingMode(CE), CE);
   }
 
@@ -105,8 +104,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
-    const auto *TargetSemantics =
-        &Ctx.getASTContext().getFloatTypeSemantics(CE->getType());
+    const auto *TargetSemantics = &Ctx.getFloatSemantics(CE->getType());
     llvm::RoundingMode RM = getRoundingMode(CE);
     return this->emitCastIntegralFloating(*FromT, TargetSemantics, RM, CE);
   }
@@ -601,8 +599,7 @@ bool ByteCodeExprGen<Emitter>::VisitFloatCompoundAssignOperator(
 
   // If necessary, convert LHS to its computation type.
   if (LHS->getType() != LHSComputationType) {
-    const auto *TargetSemantics =
-        &Ctx.getASTContext().getFloatTypeSemantics(LHSComputationType);
+    const auto *TargetSemantics = &Ctx.getFloatSemantics(LHSComputationType);
 
     if (!this->emitCastFP(TargetSemantics, RM, E))
       return false;
@@ -635,8 +632,7 @@ bool ByteCodeExprGen<Emitter>::VisitFloatCompoundAssignOperator(
 
   // If necessary, convert result to LHS's type.
   if (LHS->getType() != ResultType) {
-    const auto *TargetSemantics =
-        &Ctx.getASTContext().getFloatTypeSemantics(LHS->getType());
+    const auto *TargetSemantics = &Ctx.getFloatSemantics(LHS->getType());
 
     if (!this->emitCastFP(TargetSemantics, RM, E))
       return false;
