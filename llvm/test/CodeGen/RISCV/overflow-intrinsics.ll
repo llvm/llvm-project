@@ -612,13 +612,12 @@ define i1 @uaddo_i64_increment_alt(i64 %x, ptr %p) {
 ; RV32-LABEL: uaddo_i64_increment_alt:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi a3, a0, 1
-; RV32-NEXT:    seqz a4, a3
-; RV32-NEXT:    add a4, a1, a4
-; RV32-NEXT:    sw a3, 0(a2)
-; RV32-NEXT:    and a0, a0, a1
-; RV32-NEXT:    addi a0, a0, 1
+; RV32-NEXT:    seqz a0, a3
+; RV32-NEXT:    add a1, a1, a0
+; RV32-NEXT:    or a0, a3, a1
 ; RV32-NEXT:    seqz a0, a0
-; RV32-NEXT:    sw a4, 4(a2)
+; RV32-NEXT:    sw a3, 0(a2)
+; RV32-NEXT:    sw a1, 4(a2)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: uaddo_i64_increment_alt:
@@ -638,15 +637,13 @@ define i1 @uaddo_i64_increment_alt(i64 %x, ptr %p) {
 define i1 @uaddo_i64_increment_alt_dom(i64 %x, ptr %p) {
 ; RV32-LABEL: uaddo_i64_increment_alt_dom:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    and a3, a0, a1
-; RV32-NEXT:    addi a3, a3, 1
-; RV32-NEXT:    seqz a3, a3
-; RV32-NEXT:    addi a0, a0, 1
-; RV32-NEXT:    seqz a4, a0
-; RV32-NEXT:    add a1, a1, a4
-; RV32-NEXT:    sw a0, 0(a2)
+; RV32-NEXT:    addi a3, a0, 1
+; RV32-NEXT:    seqz a0, a3
+; RV32-NEXT:    add a1, a1, a0
+; RV32-NEXT:    or a0, a3, a1
+; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    sw a1, 4(a2)
-; RV32-NEXT:    mv a0, a3
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: uaddo_i64_increment_alt_dom:
@@ -666,19 +663,24 @@ define i1 @uaddo_i64_increment_alt_dom(i64 %x, ptr %p) {
 define i1 @uaddo_i64_decrement_alt(i64 %x, ptr %p) {
 ; RV32-LABEL: uaddo_i64_decrement_alt:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    seqz a3, a0
-; RV32-NEXT:    sub a3, a1, a3
-; RV32-NEXT:    addi a4, a0, -1
-; RV32-NEXT:    sw a4, 0(a2)
-; RV32-NEXT:    or a0, a0, a1
-; RV32-NEXT:    snez a0, a0
-; RV32-NEXT:    sw a3, 4(a2)
+; RV32-NEXT:    addi a3, a0, -1
+; RV32-NEXT:    seqz a4, a0
+; RV32-NEXT:    sub a4, a1, a4
+; RV32-NEXT:    bnez a0, .LBB18_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    sltu a0, a4, a1
+; RV32-NEXT:    j .LBB18_3
+; RV32-NEXT:  .LBB18_2:
+; RV32-NEXT:    sltu a0, a3, a0
+; RV32-NEXT:  .LBB18_3:
+; RV32-NEXT:    sw a3, 0(a2)
+; RV32-NEXT:    sw a4, 4(a2)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: uaddo_i64_decrement_alt:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi a2, a0, -1
-; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    sltu a0, a2, a0
 ; RV64-NEXT:    sd a2, 0(a1)
 ; RV64-NEXT:    ret
   %a = add i64 %x, -1
@@ -692,22 +694,25 @@ define i1 @uaddo_i64_decrement_alt(i64 %x, ptr %p) {
 define i1 @uaddo_i64_decrement_alt_dom(i64 %x, ptr %p) {
 ; RV32-LABEL: uaddo_i64_decrement_alt_dom:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    or a3, a0, a1
-; RV32-NEXT:    snez a3, a3
+; RV32-NEXT:    addi a3, a0, -1
 ; RV32-NEXT:    seqz a4, a0
-; RV32-NEXT:    sub a1, a1, a4
-; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    sw a0, 0(a2)
-; RV32-NEXT:    sw a1, 4(a2)
-; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:    sub a4, a1, a4
+; RV32-NEXT:    bnez a0, .LBB19_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    sltu a0, a4, a1
+; RV32-NEXT:    j .LBB19_3
+; RV32-NEXT:  .LBB19_2:
+; RV32-NEXT:    sltu a0, a3, a0
+; RV32-NEXT:  .LBB19_3:
+; RV32-NEXT:    sw a3, 0(a2)
+; RV32-NEXT:    sw a4, 4(a2)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: uaddo_i64_decrement_alt_dom:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    snez a2, a0
-; RV64-NEXT:    addi a0, a0, -1
-; RV64-NEXT:    sd a0, 0(a1)
-; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    addi a2, a0, -1
+; RV64-NEXT:    sltu a0, a2, a0
+; RV64-NEXT:    sd a2, 0(a1)
 ; RV64-NEXT:    ret
   %ov = icmp ne i64 %x, 0
   %a = add i64 %x, -1
