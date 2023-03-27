@@ -847,9 +847,9 @@ LLVMErrorRef LLVMOrcObjectLayerAddObjectFile(LLVMOrcObjectLayerRef ObjLayer,
       *unwrap(JD), std::unique_ptr<MemoryBuffer>(unwrap(ObjBuffer))));
 }
 
-LLVMErrorRef LLVMOrcLLJITAddObjectFileWithRT(LLVMOrcObjectLayerRef ObjLayer,
-                                             LLVMOrcResourceTrackerRef RT,
-                                             LLVMMemoryBufferRef ObjBuffer) {
+LLVMErrorRef LLVMOrcObjectLayerAddObjectFileWithRT(LLVMOrcObjectLayerRef ObjLayer,
+                                                   LLVMOrcResourceTrackerRef RT,
+                                                   LLVMMemoryBufferRef ObjBuffer) {
   return wrap(
       unwrap(ObjLayer)->add(ResourceTrackerSP(unwrap(RT)),
                             std::unique_ptr<MemoryBuffer>(unwrap(ObjBuffer))));
