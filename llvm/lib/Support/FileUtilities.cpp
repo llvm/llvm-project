@@ -169,7 +169,7 @@ static bool CompareNumbers(const char *&F1P, const char *&F2P,
 
 /// DiffFilesWithTolerance - Compare the two files specified, returning 0 if the
 /// files match, 1 if they are different, and 2 if there is a file error.  This
-/// function differs from DiffFiles in that you can specify an absolete and
+/// function differs from DiffFiles in that you can specify an absolute and
 /// relative FP error that is allowed to exist.  If you specify a string to fill
 /// in for the error option, it will set the string to an error message if an
 /// error occurs, allowing the caller to distinguish between a failed diff and a

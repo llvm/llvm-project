@@ -23,7 +23,7 @@ class UopsBenchmarkRunner : public BenchmarkRunner {
 public:
   UopsBenchmarkRunner(const LLVMState &State,
                       BenchmarkPhaseSelectorE BenchmarkPhaseSelector)
-      : BenchmarkRunner(State, InstructionBenchmark::Uops,
+      : BenchmarkRunner(State, Benchmark::Uops,
                         BenchmarkPhaseSelector) {}
   ~UopsBenchmarkRunner() override;
 

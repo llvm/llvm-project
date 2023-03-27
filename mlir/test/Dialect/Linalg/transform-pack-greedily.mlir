@@ -25,7 +25,7 @@ transform.sequence failures(propagate) {
   %matmul = transform.structured.match ops{["linalg.matmul"]} in %module_op 
     : (!pdl.operation) -> !transform.op<"linalg.matmul">
   transform.structured.pack_greedily %matmul 
-      gemm_packed_sizes = [8, 16, 32] gemm_inner_dims_order = [1, 2, 0]
+      matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.matmul">) -> !transform.op<"linalg.generic">
 }
 
@@ -70,7 +70,7 @@ transform.sequence failures(propagate) {
 ^bb1(%module_op: !pdl.operation):
   %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!pdl.operation) -> !transform.op<"linalg.generic">
   transform.structured.pack_greedily %generic
-      gemm_packed_sizes = [8, 16, 32] gemm_inner_dims_order = [1, 2, 0]
+      matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
 }
 
@@ -115,7 +115,7 @@ transform.sequence failures(propagate) {
 ^bb1(%module_op: !pdl.operation):
   %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!pdl.operation) -> !transform.op<"linalg.generic">
   transform.structured.pack_greedily %generic
-      gemm_packed_sizes = [8, 16, 32] gemm_inner_dims_order = [1, 2, 0]
+      matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
 }
 
@@ -160,7 +160,7 @@ transform.sequence failures(propagate) {
 ^bb1(%module_op: !pdl.operation):
   %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!pdl.operation) -> !transform.op<"linalg.generic">
   transform.structured.pack_greedily %generic
-      gemm_packed_sizes = [8, 16, 32] gemm_inner_dims_order = [1, 2, 0]
+      matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
 }
 
@@ -195,7 +195,7 @@ transform.sequence failures(propagate) {
   %conv = transform.structured.match ops{["linalg.conv_2d_nchw_fchw"]} in %module_op 
     : (!pdl.operation) -> !transform.op<"linalg.conv_2d_nchw_fchw">
   transform.structured.pack_greedily %conv
-      gemm_packed_sizes = [8, 16, 32] gemm_inner_dims_order = [1, 2, 0]
+      matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.conv_2d_nchw_fchw">) -> !transform.op<"linalg.generic">
 }
 
@@ -223,6 +223,6 @@ transform.sequence failures(propagate) {
 ^bb1(%module_op: !pdl.operation):
   %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!pdl.operation) -> !transform.op<"linalg.generic">
   transform.structured.pack_greedily %generic
-      gemm_packed_sizes = [8, 16, 32] gemm_inner_dims_order = [1, 2, 0]
+      matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
 }

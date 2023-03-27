@@ -220,7 +220,7 @@ public:
   static SubCommand &getTopLevel();
 
   // Get the special subcommand that can be used to put an option into all
-  // subcomands.
+  // subcommands.
   static SubCommand &getAll();
 
   void reset();

@@ -45,6 +45,10 @@ public:
       : XLen(XLen), FLen(0), MinVLen(0), MaxELen(0), MaxELenFp(0), Exts(Exts) {}
 
   /// Parse RISCV ISA info from arch string.
+  /// If IgnoreUnknown is set, any unrecognised extension names or
+  /// extensions with unrecognised versions will be silently dropped, except
+  /// for the special case of the base 'i' and 'e' extensions, where the
+  /// default version will be used (as ignoring the base is not possible).
   static llvm::Expected<std::unique_ptr<RISCVISAInfo>>
   parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                   bool ExperimentalExtensionVersionCheck = true,

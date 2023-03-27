@@ -27,10 +27,6 @@
 #include "mlir/Dialect/Transform/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
-#include "mlir/IR/AffineMap.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/TilingInterface.h"
@@ -38,9 +34,6 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 
@@ -1300,94 +1293,21 @@ void transform::PackOp::getEffects(
 //===---------------------------------------------------------------------===//
 
 LogicalResult transform::PackGreedilyOp::verify() {
-  if (!isPermutationVector(getGemmInnerDimsOrder())) {
-    return emitOpError() << getGemmInnerDimsOrderAttrName()
+  if (!isPermutationVector(getMatmulInnerDimsOrder())) {
+    return emitOpError() << getMatmulInnerDimsOrderAttrName()
                          << " is not a valid permutation";
   }
-  // TODO: relax to allow empty once we have another strategy than just gemm.
-  if (getGemmInnerDimsOrder().size() != 3 ||
-      getMixedGemmPackedSizes().size() != 3) {
-    return emitOpError() << " needs 3 entries for gemm_packed_sizes and "
-                         << getGemmInnerDimsOrderAttrName()
-                         << " order for the gemm strategy";
+  // TODO: relax to allow empty once we have another strategy than just matmul.
+  if (getMatmulInnerDimsOrder().size() != 3 ||
+      getMixedMatmulPackedSizes().size() != 3) {
+    return emitOpError() << " needs 3 entries for matmul_packed_sizes and "
+                         << getMatmulInnerDimsOrderAttrName()
+                         << " order for the matmul strategy";
   }
   return success();
 }
 
-namespace {
-auto par = utils::IteratorType::parallel;
-auto red = utils::IteratorType::reduction;
-} // namespace
-
-DenseSet<int64_t> transform::findPermutationsIndexingOperand(
-    LinalgOp linalgOp, OpOperand *opOperand, utils::IteratorType iter) {
-  DenseSet<int64_t> res;
-  assert(linalgOp == opOperand->getOwner() && "expected linalgOp owner");
-  AffineMap indexingMap = linalgOp.getMatchingIndexingMap(opOperand);
-  for (AffineExpr e : indexingMap.getResults()) {
-    if (auto d = e.dyn_cast<AffineDimExpr>()) {
-      if (linalgOp.getIteratorTypesArray()[d.getPosition()] == iter &&
-          llvm::count_if(indexingMap.getResults(), [d](AffineExpr e) {
-            return e.isFunctionOfDim(d.getPosition());
-          }) == 1)
-        res.insert(d.getPosition());
-    }
-  }
-  return res;
-}
-
-FailureOr<GemmDimsForPacking> transform::inferGemmDims(LinalgOp linalgOp) {
-  if (linalgOp.getNumDpsInits() != 1 || linalgOp.getNumDpsInputs() != 2)
-    return failure();
-
-  DenseSet<int64_t> a = findPermutationsIndexingOperand(
-      linalgOp, linalgOp.getDpsInputOperand(0), par);
-  DenseSet<int64_t> b = findPermutationsIndexingOperand(
-      linalgOp, linalgOp.getDpsInputOperand(1), par);
-  DenseSet<int64_t> c = findPermutationsIndexingOperand(
-      linalgOp, linalgOp.getDpsInitOperand(0), par);
-
-  // A & C - B are the iterators involved in an outer-product along A (the LHS).
-  DenseSet<int64_t> ac = a;
-  llvm::set_intersect(ac, c);
-  llvm::set_subtract(ac, b);
-  // B & C - A are the iterators involved in an outer-product along B (the RHS).
-  DenseSet<int64_t> bc = b;
-  llvm::set_intersect(bc, c);
-  llvm::set_subtract(bc, a);
-
-  // Note: if we ever need them, A & B & C would be "batch" dimensions.
-
-  // A & B red are the reduction dimensions.
-  DenseSet<int64_t> ra = findPermutationsIndexingOperand(
-      linalgOp, linalgOp.getDpsInputOperand(0), red);
-  DenseSet<int64_t> rb = findPermutationsIndexingOperand(
-      linalgOp, linalgOp.getDpsInputOperand(1), red);
-  llvm::set_intersect(ra, rb);
-
-  if (ac.empty() || bc.empty() || ra.empty())
-    return failure();
-
-  // Pick the first one in each set.
-  // TODO: Better heuristic (e.g pick dims based on packing-based metric).
-  return GemmDimsForPacking{ac, bc, ra};
-}
-
-bool transform::containsMostMinorGemm(LinalgOp linalgOp) {
-  FailureOr<GemmDimsForPacking> res = inferGemmDims(linalgOp);
-  if (failed(res))
-    return false;
-  int64_t numLoops = linalgOp.getNumLoops();
-  for (const DenseSet<int64_t> &s : {res->mPos, res->nPos, res->kPos}) {
-    if (s.contains(numLoops - 3) || s.contains(numLoops - 2) ||
-        s.contains(numLoops - 1))
-      continue;
-    return false;
-  }
-  return true;
-}
-
-/// Pack a LinalgOp by greedily inferring gemm dimensions (m, n, k) where m
+/// Pack a LinalgOp by greedily inferring matmul dimensions (m, n, k) where m
 /// and n are proper parallel dimensions and k is a proper reduction
 /// dimension. Packing occurs by rewriting the op as a linalg.generic and
 /// calling linalg::pack by `mnkPackedSizes`. The order of the packed
@@ -1396,17 +1316,17 @@ bool transform::containsMostMinorGemm(LinalgOp linalgOp) {
 /// dimensions of the operands are not permuted at this time, this is left for
 /// future work.
 static FailureOr<PackResult>
-packGemmGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
-                 ArrayRef<OpFoldResult> mnkPackedSizes,
-                 ArrayRef<int64_t> mnkOrder) {
+packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
+                   ArrayRef<OpFoldResult> mnkPackedSizes,
+                   ArrayRef<int64_t> mnkOrder) {
   assert(mnkPackedSizes.size() == 3 && "unexpected num of packing sizes");
   assert(mnkOrder.size() == 3 && "unexpected mnkOrder size");
   assert(isPermutationVector(mnkOrder) && "expected a permutation");
 
   int64_t numLoops = linalgOp.getNumLoops();
   if (numLoops <= 2) {
-    return rewriter.notifyMatchFailure(linalgOp,
-                                       "need 3+ loops to find a gemm to pack");
+    return rewriter.notifyMatchFailure(
+        linalgOp, "need 3+ loops to find a matmul to pack");
   }
 
   // Locally adjust the desired iterator position of mnk and packing sizes.
@@ -1418,11 +1338,11 @@ packGemmGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
   for (int64_t i = 0, e = numPackedDims; i < e; ++i)
     packedSizes[mnkOrder[i]] = mnkPackedSizes[i];
 
-  // 1. Infer dims that are important for gemm.
-  FailureOr<GemmDimsForPacking> res = inferGemmDims(linalgOp);
+  // 1. Infer dims that are important for matmul.
+  FailureOr<EmbeddedMatmulDimsCandidates> res = inferMatmulDims(linalgOp);
   if (failed(res)) {
     return rewriter.notifyMatchFailure(linalgOp,
-                                       "couldn't infer gemm iterators");
+                                       "couldn't infer matmul iterators");
   }
 
   // 2. Normalize linalgOp to an kmn-matmul-like with [red, par, par] most
@@ -1479,8 +1399,8 @@ packGemmGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
   // TODO: If we wanted to give the genericOp a name after packing, after
   // calling `pack` would be a good time.
   auto packingRes = linalg::pack(rewriter, genericOp, adjustedPackedSizes);
-  assert(containsMostMinorGemm(packingRes->packedLinalgOp) &&
-         "failed to pack to a most minor gemm");
+  assert(containsMostMinorMatmul(packingRes->packedLinalgOp) &&
+         "failed to pack to a most minor matmul");
   return packingRes;
 }
 
@@ -1500,11 +1420,11 @@ PackGreedilyOp::apply(transform::TransformResults &transformResults,
     rewriter.setInsertionPointAfter(linalgOp);
     // Failing to pack greedily is perfectly fine.
     // In the future we will want to order packings according to some metric.
-    FailureOr<PackResult> packResult = packGemmGreedily(
+    FailureOr<PackResult> packResult = packMatmulGreedily(
         /*rewriter=*/rewriter,
         /*linalgOp=*/linalgOp,
-        /*mnkPackedSizes=*/getMixedGemmPackedSizes(),
-        /*mnkOrder=*/getGemmInnerDimsOrder());
+        /*mnkPackedSizes=*/getMixedMatmulPackedSizes(),
+        /*mnkOrder=*/getMatmulInnerDimsOrder());
     if (succeeded(packResult)) {
       results.push_back(packResult->packedLinalgOp);
       continue;
@@ -1515,15 +1435,16 @@ PackGreedilyOp::apply(transform::TransformResults &transformResults,
   return DiagnosedSilenceableFailure::success();
 }
 
-SmallVector<OpFoldResult> PackGreedilyOp::getMixedGemmPackedSizes() {
+SmallVector<OpFoldResult> PackGreedilyOp::getMixedMatmulPackedSizes() {
   Builder b(getContext());
-  return getMixedValues(getStaticGemmPackedSizes(), getGemmPackedSizes(), b);
+  return getMixedValues(getStaticMatmulPackedSizes(), getMatmulPackedSizes(),
+                        b);
 }
 
 void transform::PackGreedilyOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   transform::consumesHandle(getTarget(), effects);
-  transform::onlyReadsHandle(getGemmPackedSizes(), effects);
+  transform::onlyReadsHandle(getMatmulPackedSizes(), effects);
   transform::producesHandle(getPackedOp(), effects);
   transform::modifiesPayload(effects);
 }

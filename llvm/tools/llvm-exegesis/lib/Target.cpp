@@ -57,15 +57,15 @@ void ExegesisTarget::registerTarget(ExegesisTarget *Target) {
 }
 
 std::unique_ptr<SnippetGenerator> ExegesisTarget::createSnippetGenerator(
-    InstructionBenchmark::ModeE Mode, const LLVMState &State,
+    Benchmark::ModeE Mode, const LLVMState &State,
     const SnippetGenerator::Options &Opts) const {
   switch (Mode) {
-  case InstructionBenchmark::Unknown:
+  case Benchmark::Unknown:
     return nullptr;
-  case InstructionBenchmark::Latency:
+  case Benchmark::Latency:
     return createSerialSnippetGenerator(State, Opts);
-  case InstructionBenchmark::Uops:
-  case InstructionBenchmark::InverseThroughput:
+  case Benchmark::Uops:
+  case Benchmark::InverseThroughput:
     return createParallelSnippetGenerator(State, Opts);
   }
   return nullptr;
@@ -73,18 +73,18 @@ std::unique_ptr<SnippetGenerator> ExegesisTarget::createSnippetGenerator(
 
 Expected<std::unique_ptr<BenchmarkRunner>>
 ExegesisTarget::createBenchmarkRunner(
-    InstructionBenchmark::ModeE Mode, const LLVMState &State,
+    Benchmark::ModeE Mode, const LLVMState &State,
     BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-    InstructionBenchmark::ResultAggregationModeE ResultAggMode) const {
+    Benchmark::ResultAggregationModeE ResultAggMode) const {
   PfmCountersInfo PfmCounters = State.getPfmCounters();
   switch (Mode) {
-  case InstructionBenchmark::Unknown:
+  case Benchmark::Unknown:
     return nullptr;
-  case InstructionBenchmark::Latency:
-  case InstructionBenchmark::InverseThroughput:
+  case Benchmark::Latency:
+  case Benchmark::InverseThroughput:
     if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
         !PfmCounters.CycleCounter) {
-      const char *ModeName = Mode == InstructionBenchmark::Latency
+      const char *ModeName = Mode == Benchmark::Latency
                                  ? "latency"
                                  : "inverse_throughput";
       return make_error<Failure>(
@@ -97,7 +97,7 @@ ExegesisTarget::createBenchmarkRunner(
     }
     return createLatencyBenchmarkRunner(State, Mode, BenchmarkPhaseSelector,
                                         ResultAggMode);
-  case InstructionBenchmark::Uops:
+  case Benchmark::Uops:
     if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
         !PfmCounters.UopsCounter && !PfmCounters.IssueCounters)
       return make_error<Failure>(
@@ -121,16 +121,16 @@ std::unique_ptr<SnippetGenerator> ExegesisTarget::createParallelSnippetGenerator
 }
 
 std::unique_ptr<BenchmarkRunner> ExegesisTarget::createLatencyBenchmarkRunner(
-    const LLVMState &State, InstructionBenchmark::ModeE Mode,
+    const LLVMState &State, Benchmark::ModeE Mode,
     BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-    InstructionBenchmark::ResultAggregationModeE ResultAggMode) const {
+    Benchmark::ResultAggregationModeE ResultAggMode) const {
   return std::make_unique<LatencyBenchmarkRunner>(
       State, Mode, BenchmarkPhaseSelector, ResultAggMode);
 }
 
 std::unique_ptr<BenchmarkRunner> ExegesisTarget::createUopsBenchmarkRunner(
     const LLVMState &State, BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-    InstructionBenchmark::ResultAggregationModeE /*unused*/) const {
+    Benchmark::ResultAggregationModeE /*unused*/) const {
   return std::make_unique<UopsBenchmarkRunner>(State, BenchmarkPhaseSelector);
 }
 
