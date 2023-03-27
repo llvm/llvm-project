@@ -565,12 +565,12 @@
 // RV32-ZHINX-BADVERS: error: invalid arch name 'rv32izhinx0p1'
 // RV32-ZHINX-BADVERS: unsupported version number 0.1 for extension 'zhinx'
 
-// RUN: %clang -target riscv32-unknown-elf -march=rv32i_zmmul2p0 -### %s \
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32i_zmmul2p0 -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZMMUL-BADVERS %s
 // RV32-ZMMUL-BADVERS: error: invalid arch name 'rv32i_zmmul2p0'
 // RV32-ZMMUL-BADVERS: unsupported version number 2.0 for extension
 
-// RUN: %clang -target riscv32-unknown-elf -march=rv32i_zmmul1p0 -### %s \
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32i_zmmul1p0 -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZMMUL-GOODVERS %s
 // RV32-ZMMUL-GOODVERS: "-target-feature" "+zmmul"
 

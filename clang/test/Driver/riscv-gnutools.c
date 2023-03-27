@@ -17,7 +17,7 @@
 // RUN: 2>&1 | FileCheck -check-prefix=CHECK-RV32G-ILP32D %s
 
 // Check -mno-relax is passed when -fno-integrated-as specified
-// RUN: %clang -target riscv32-unknown-elf --gcc-toolchain=%S/Inputs/basic_riscv32_tree -mno-relax -fno-integrated-as %s -### -c \
+// RUN: %clang --target=riscv32-unknown-elf --gcc-toolchain=%S/Inputs/basic_riscv32_tree -mno-relax -fno-integrated-as %s -### -c \
 // RUN: 2>&1 | FileCheck -check-prefix=CHECK-RV32-NO-RELAX %s
 
 // CHECK-RV32IMAC-ILP32: "{{.*}}as{{(.exe)?}}" "-mabi" "ilp32" "-march" "rv32imac"
@@ -41,7 +41,7 @@
 // RUN: 2>&1 | FileCheck -check-prefix=CHECK-RV64G-LP64D %s
 
 // Check -mno-relax is not passed when -fno-integrated-as specified
-// RUN: %clang -target riscv64-unknown-elf --gcc-toolchain=%S/Inputs/basic_riscv64_tree -mno-relax -mrelax -fno-integrated-as %s -### -c \
+// RUN: %clang --target=riscv64-unknown-elf --gcc-toolchain=%S/Inputs/basic_riscv64_tree -mno-relax -mrelax -fno-integrated-as %s -### -c \
 // RUN: 2>&1 | FileCheck -check-prefix=CHECK-RV64-RELAX %s
 
 // CHECK-RV64IMAC-LP64: "{{.*}}as{{(.exe)?}}" "-mabi" "lp64" "-march" "rv64imac"
