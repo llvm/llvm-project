@@ -683,7 +683,8 @@ createTargetDataOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::IntegerAttr> mapTypes;
 
   auto addMapClause = [&firOpBuilder, &converter, &mapOperands,
-                       &mapTypes](const auto &mapClause) {
+                       &mapTypes](const auto &mapClause,
+                                  mlir::Location &currentLocation) {
     auto mapType = std::get<Fortran::parser::OmpMapType::Type>(
         std::get<std::optional<Fortran::parser::OmpMapType>>(mapClause->v.t)
             ->t);
@@ -725,10 +726,26 @@ createTargetDataOp(Fortran::lower::AbstractConverter &converter,
             mapTypeBits));
 
     llvm::SmallVector<mlir::Value> mapOperand;
+    /// Check for unsupported map operand types.
+    for (const Fortran::parser::OmpObject &ompObject :
+         std::get<Fortran::parser::OmpObjectList>(mapClause->v.t).v) {
+      if (Fortran::parser::Unwrap<Fortran::parser::ArrayElement>(ompObject) ||
+          Fortran::parser::Unwrap<Fortran::parser::StructureComponent>(
+              ompObject))
+        TODO(currentLocation,
+             "OMPD_target_data for Array Expressions or Structure Components");
+    }
     genObjectList(std::get<Fortran::parser::OmpObjectList>(mapClause->v.t),
                   converter, mapOperand);
 
     for (mlir::Value mapOp : mapOperand) {
+      /// Check for unsupported map operand types.
+      mlir::Type checkType = mapOp.getType();
+      if (auto refType = checkType.dyn_cast<fir::ReferenceType>())
+        checkType = refType.getElementType();
+      if (checkType.isa<fir::BoxType>())
+        TODO(currentLocation, "OMPD_target_data MapOperand BoxType");
+
       mapOperands.push_back(mapOp);
       mapTypes.push_back(mapTypeAttr);
     }
@@ -764,7 +781,7 @@ createTargetDataOp(Fortran::lower::AbstractConverter &converter,
       nowaitAttr = firOpBuilder.getUnitAttr();
     } else if (const auto &mapClause =
                    std::get_if<Fortran::parser::OmpClause::Map>(&clause.u)) {
-      addMapClause(mapClause);
+      addMapClause(mapClause, currentLocation);
     } else {
       TODO(currentLocation, "OMPD_target unhandled clause");
     }

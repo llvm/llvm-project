@@ -51,23 +51,24 @@ TEST(IsIdenticalToTest, DifferentDefs) {
 
   unsigned short NumOps = 2;
   unsigned char NumDefs = 1;
-  MCOperandInfo OpInfo[] = {
-      {0, 0, MCOI::OPERAND_REGISTER, 0},
-      {0, 1 << MCOI::OptionalDef, MCOI::OPERAND_REGISTER, 0}};
-  MCInstrDesc MCID = {0, NumOps,  NumDefs, 0,
-                      0, 0,       0,       1ULL << MCID::HasOptionalDef,
-                      0, nullptr, OpInfo};
+  struct {
+    MCInstrDesc MCID;
+    MCOperandInfo OpInfo[2];
+  } Table = {
+      {0, NumOps, NumDefs, 0, 0, 0, 0, 0, 0, 1ULL << MCID::HasOptionalDef, 0},
+      {{0, 0, MCOI::OPERAND_REGISTER, 0},
+       {0, 1 << MCOI::OptionalDef, MCOI::OPERAND_REGISTER, 0}}};
 
   // Create two MIs with different virtual reg defs and the same uses.
   unsigned VirtualDef1 = -42; // The value doesn't matter, but the sign does.
   unsigned VirtualDef2 = -43;
   unsigned VirtualUse = -44;
 
-  auto MI1 = MF->CreateMachineInstr(MCID, DebugLoc());
+  auto MI1 = MF->CreateMachineInstr(Table.MCID, DebugLoc());
   MI1->addOperand(*MF, MachineOperand::CreateReg(VirtualDef1, /*isDef*/ true));
   MI1->addOperand(*MF, MachineOperand::CreateReg(VirtualUse, /*isDef*/ false));
 
-  auto MI2 = MF->CreateMachineInstr(MCID, DebugLoc());
+  auto MI2 = MF->CreateMachineInstr(Table.MCID, DebugLoc());
   MI2->addOperand(*MF, MachineOperand::CreateReg(VirtualDef2, /*isDef*/ true));
   MI2->addOperand(*MF, MachineOperand::CreateReg(VirtualUse, /*isDef*/ false));
 
@@ -83,11 +84,11 @@ TEST(IsIdenticalToTest, DifferentDefs) {
   // sentinel register.
   unsigned SentinelReg = 0;
 
-  auto MI3 = MF->CreateMachineInstr(MCID, DebugLoc());
+  auto MI3 = MF->CreateMachineInstr(Table.MCID, DebugLoc());
   MI3->addOperand(*MF, MachineOperand::CreateReg(VirtualDef1, /*isDef*/ true));
   MI3->addOperand(*MF, MachineOperand::CreateReg(SentinelReg, /*isDef*/ true));
 
-  auto MI4 = MF->CreateMachineInstr(MCID, DebugLoc());
+  auto MI4 = MF->CreateMachineInstr(Table.MCID, DebugLoc());
   MI4->addOperand(*MF, MachineOperand::CreateReg(VirtualDef2, /*isDef*/ true));
   MI4->addOperand(*MF, MachineOperand::CreateReg(SentinelReg, /*isDef*/ false));
 
@@ -122,12 +123,13 @@ TEST(MachineInstrExpressionTraitTest, IsEqualAgreesWithGetHashValue) {
 
   unsigned short NumOps = 2;
   unsigned char NumDefs = 1;
-  MCOperandInfo OpInfo[] = {
-      {0, 0, MCOI::OPERAND_REGISTER, 0},
-      {0, 1 << MCOI::OptionalDef, MCOI::OPERAND_REGISTER, 0}};
-  MCInstrDesc MCID = {0, NumOps,  NumDefs, 0,
-                      0, 0,       0,       1ULL << MCID::HasOptionalDef,
-                      0, nullptr, OpInfo};
+  struct {
+    MCInstrDesc MCID;
+    MCOperandInfo OpInfo[2];
+  } Table = {
+      {0, NumOps, NumDefs, 0, 0, 0, 0, 0, 0, 1ULL << MCID::HasOptionalDef, 0},
+      {{0, 0, MCOI::OPERAND_REGISTER, 0},
+       {0, 1 << MCOI::OptionalDef, MCOI::OPERAND_REGISTER, 0}}};
 
   // Define a series of instructions with different kinds of operands and make
   // sure that the hash function is consistent with isEqual for various
@@ -138,37 +140,37 @@ TEST(MachineInstrExpressionTraitTest, IsEqualAgreesWithGetHashValue) {
   unsigned SentinelReg = 0;
   unsigned PhysicalReg = 45;
 
-  auto VD1VU = MF->CreateMachineInstr(MCID, DebugLoc());
+  auto VD1VU = MF->CreateMachineInstr(Table.MCID, DebugLoc());
   VD1VU->addOperand(*MF,
                     MachineOperand::CreateReg(VirtualDef1, /*isDef*/ true));
   VD1VU->addOperand(*MF,
                     MachineOperand::CreateReg(VirtualReg, /*isDef*/ false));
 
-  auto VD2VU = MF->CreateMachineInstr(MCID, DebugLoc());
+  auto VD2VU = MF->CreateMachineInstr(Table.MCID, DebugLoc());
   VD2VU->addOperand(*MF,
                     MachineOperand::CreateReg(VirtualDef2, /*isDef*/ true));
   VD2VU->addOperand(*MF,
                     MachineOperand::CreateReg(VirtualReg, /*isDef*/ false));
 
-  auto VD1SU = MF->CreateMachineInstr(MCID, DebugLoc());
+  auto VD1SU = MF->CreateMachineInstr(Table.MCID, DebugLoc());
   VD1SU->addOperand(*MF,
                     MachineOperand::CreateReg(VirtualDef1, /*isDef*/ true));
   VD1SU->addOperand(*MF,
                     MachineOperand::CreateReg(SentinelReg, /*isDef*/ false));
 
-  auto VD1SD = MF->CreateMachineInstr(MCID, DebugLoc());
+  auto VD1SD = MF->CreateMachineInstr(Table.MCID, DebugLoc());
   VD1SD->addOperand(*MF,
                     MachineOperand::CreateReg(VirtualDef1, /*isDef*/ true));
   VD1SD->addOperand(*MF,
                     MachineOperand::CreateReg(SentinelReg, /*isDef*/ true));
 
-  auto VD2PU = MF->CreateMachineInstr(MCID, DebugLoc());
+  auto VD2PU = MF->CreateMachineInstr(Table.MCID, DebugLoc());
   VD2PU->addOperand(*MF,
                     MachineOperand::CreateReg(VirtualDef2, /*isDef*/ true));
   VD2PU->addOperand(*MF,
                     MachineOperand::CreateReg(PhysicalReg, /*isDef*/ false));
 
-  auto VD2PD = MF->CreateMachineInstr(MCID, DebugLoc());
+  auto VD2PD = MF->CreateMachineInstr(Table.MCID, DebugLoc());
   VD2PD->addOperand(*MF,
                     MachineOperand::CreateReg(VirtualDef2, /*isDef*/ true));
   VD2PD->addOperand(*MF,
@@ -200,8 +202,11 @@ TEST(MachineInstrPrintingTest, DebugLocPrinting) {
   Module Mod("Module", Ctx);
   auto MF = createMachineFunction(Ctx, Mod);
 
-  MCOperandInfo OpInfo{0, 0, MCOI::OPERAND_REGISTER, 0};
-  MCInstrDesc MCID = {0, 1, 1, 0, 0, 0, 0, 0, 0, nullptr, &OpInfo};
+  struct {
+    MCInstrDesc MCID;
+    MCOperandInfo OpInfo;
+  } Table = {{0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+             {0, 0, MCOI::OPERAND_REGISTER, 0}};
 
   DIFile *DIF = DIFile::getDistinct(Ctx, "filename", "");
   DISubprogram *DIS = DISubprogram::getDistinct(
@@ -209,7 +214,7 @@ TEST(MachineInstrPrintingTest, DebugLocPrinting) {
       DISubprogram::SPFlagZero, nullptr);
   DILocation *DIL = DILocation::get(Ctx, 1, 5, DIS);
   DebugLoc DL(DIL);
-  MachineInstr *MI = MF->CreateMachineInstr(MCID, DL);
+  MachineInstr *MI = MF->CreateMachineInstr(Table.MCID, DL);
   MI->addOperand(*MF, MachineOperand::CreateReg(0, /*isDef*/ true));
 
   std::string str;
@@ -228,7 +233,7 @@ TEST(MachineInstrSpan, DistanceBegin) {
   auto MF = createMachineFunction(Ctx, Mod);
   auto MBB = MF->CreateMachineBasicBlock();
 
-  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, nullptr, nullptr};
+  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   auto MII = MBB->begin();
   MachineInstrSpan MIS(MII, MBB);
@@ -245,7 +250,7 @@ TEST(MachineInstrSpan, DistanceEnd) {
   auto MF = createMachineFunction(Ctx, Mod);
   auto MBB = MF->CreateMachineBasicBlock();
 
-  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, nullptr, nullptr};
+  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   auto MII = MBB->end();
   MachineInstrSpan MIS(MII, MBB);
@@ -260,7 +265,7 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   LLVMContext Ctx;
   Module Mod("Module", Ctx);
   auto MF = createMachineFunction(Ctx, Mod);
-  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, nullptr, nullptr};
+  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
   auto MAI = MCAsmInfo();
@@ -320,7 +325,7 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   LLVMContext Ctx;
   Module Mod("Module", Ctx);
   auto MF = createMachineFunction(Ctx, Mod);
-  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, nullptr, nullptr};
+  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
   auto MAI = MCAsmInfo();
@@ -361,7 +366,7 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   LLVMContext Ctx;
   Module Mod("Module", Ctx);
   auto MF = createMachineFunction(Ctx, Mod);
-  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, nullptr, nullptr};
+  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
   auto MAI = MCAsmInfo();
@@ -428,12 +433,9 @@ TEST(MachineInstrDebugValue, AddDebugValueOperand) {
         TargetOpcode::DBG_INSTR_REF, TargetOpcode::DBG_PHI,
         TargetOpcode::DBG_LABEL}) {
     const MCInstrDesc MCID = {
-        Opcode, 0,
-        0,      0,
-        0,      0,
-        0,      (1ULL << MCID::Pseudo) | (1ULL << MCID::Variadic),
-        0,      nullptr,
-        nullptr};
+        Opcode, 0, 0, 0, 0,
+        0,      0, 0, 0, (1ULL << MCID::Pseudo) | (1ULL << MCID::Variadic),
+        0};
 
     auto *MI = MF->CreateMachineInstr(MCID, DebugLoc());
     MI->addOperand(*MF, MachineOperand::CreateReg(0, /*isDef*/ false));
@@ -463,7 +465,7 @@ TEST(MachineInstrBuilder, BuildMI) {
   Module Mod("Module", Ctx);
   auto MF = createMachineFunction(Ctx, Mod);
   auto MBB = MF->CreateMachineBasicBlock();
-  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, nullptr, nullptr};
+  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   EXPECT_THAT(BuildMI(*MF, MIMD, MCID), HasMIMetadata(MIMD));
   EXPECT_THAT(BuildMI(*MF, MIMD, MCID), HasMIMetadata(MIMD));
   EXPECT_THAT(BuildMI(*MBB, MBB->end(), MIMD, MCID), HasMIMetadata(MIMD));

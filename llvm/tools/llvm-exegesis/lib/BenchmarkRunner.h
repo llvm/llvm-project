@@ -35,7 +35,7 @@ namespace exegesis {
 class BenchmarkRunner {
 public:
   explicit BenchmarkRunner(const LLVMState &State,
-                           InstructionBenchmark::ModeE Mode,
+                           Benchmark::ModeE Mode,
                            BenchmarkPhaseSelectorE BenchmarkPhaseSelector);
 
   virtual ~BenchmarkRunner();
@@ -54,7 +54,7 @@ public:
   private:
     RunnableConfiguration() = default;
 
-    InstructionBenchmark InstrBenchmark;
+    Benchmark InstrBenchmark;
     object::OwningBinary<object::ObjectFile> ObjectFile;
   };
 
@@ -63,7 +63,7 @@ public:
                            unsigned NumRepetitions, unsigned LoopUnrollFactor,
                            const SnippetRepetitor &Repetitor) const;
 
-  Expected<InstructionBenchmark> runConfiguration(RunnableConfiguration &&RC,
+  Expected<Benchmark> runConfiguration(RunnableConfiguration &&RC,
                                                   bool DumpObjectToDisk) const;
 
   // Scratch space to run instructions that touch memory.
@@ -97,7 +97,7 @@ public:
 
 protected:
   const LLVMState &State;
-  const InstructionBenchmark::ModeE Mode;
+  const Benchmark::ModeE Mode;
   const BenchmarkPhaseSelectorE BenchmarkPhaseSelector;
 
 private:

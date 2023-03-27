@@ -744,6 +744,83 @@ define <vscale x 16 x i8> @mulsub_i8_negativeAddend(<vscale x 16 x i8> %a, <vsca
   ret <vscale x 16 x i8> %2
 }
 
+define <vscale x 8 x i16> @multiple_fused_ops(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
+; CHECK-LABEL: multiple_fused_ops:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    mul z2.h, p0/m, z2.h, z1.h
+; CHECK-NEXT:    add z2.h, z2.h, #200 // =0xc8
+; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    sub z0.h, z0.h, z1.h
+; CHECK-NEXT:    ret
+{
+  %1 = mul <vscale x 8 x i16> %a, %b
+  %2 = add  <vscale x 8 x i16> %1, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 200, i16 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %3 = mul <vscale x 8 x i16> %2, %a
+  %4 = sub <vscale x 8 x i16> %3, %b
+  ret <vscale x 8 x i16> %4
+}
+
+define void @mad_in_loop(ptr %dst, ptr %src1, ptr %src2, i32 %n) {
+; CHECK-LABEL: mad_in_loop:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmp w3, #1
+; CHECK-NEXT:    b.lt .LBB70_3
+; CHECK-NEXT:  // %bb.1: // %for.body.preheader
+; CHECK-NEXT:    mov w9, w3
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    cntw x10
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    whilelo p1.s, xzr, x9
+; CHECK-NEXT:  .LBB70_2: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x1, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z1.s }, p1/z, [x2, x8, lsl #2]
+; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    add z0.s, z0.s, #1 // =0x1
+; CHECK-NEXT:    st1w { z0.s }, p1, [x0, x8, lsl #2]
+; CHECK-NEXT:    add x8, x8, x10
+; CHECK-NEXT:    whilelo p1.s, x8, x9
+; CHECK-NEXT:    b.mi .LBB70_2
+; CHECK-NEXT:  .LBB70_3: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %cmp9 = icmp sgt i32 %n, 0
+  br i1 %cmp9, label %for.body.preheader, label %for.cond.cleanup
+
+for.body.preheader:                               ; preds = %entry
+  %wide.trip.count = zext i32 %n to i64
+  %active.lane.mask.entry = tail call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 %wide.trip.count)
+  %0 = tail call i64 @llvm.vscale.i64()
+  %1 = shl nuw nsw i64 %0, 2
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %for.body.preheader
+  %index = phi i64 [ 0, %for.body.preheader ], [ %index.next, %vector.body ]
+  %active.lane.mask = phi <vscale x 4 x i1> [ %active.lane.mask.entry, %for.body.preheader ], [ %active.lane.mask.next, %vector.body ]
+  %2 = getelementptr inbounds i32, ptr %src1, i64 %index
+  %wide.masked.load = tail call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr %2, i32 4, <vscale x 4 x i1> %active.lane.mask, <vscale x 4 x i32> poison)
+  %3 = getelementptr inbounds i32, ptr %src2, i64 %index
+  %wide.masked.load12 = tail call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr %3, i32 4, <vscale x 4 x i1> %active.lane.mask, <vscale x 4 x i32> poison)
+  %4 = mul nsw <vscale x 4 x i32> %wide.masked.load12, %wide.masked.load
+  %5 = add nsw <vscale x 4 x i32> %4, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %6 = getelementptr inbounds i32, ptr %dst, i64 %index
+  tail call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> %5, ptr %6, i32 4, <vscale x 4 x i1> %active.lane.mask)
+  %index.next = add i64 %index, %1
+  %active.lane.mask.next = tail call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 %index.next, i64 %wide.trip.count)
+  %7 = extractelement <vscale x 4 x i1> %active.lane.mask.next, i64 0
+  br i1 %7, label %vector.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %vector.body, %entry
+  ret void
+}
+
+declare i64 @llvm.vscale.i64()
+declare <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64, i64)
+declare <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr nocapture, i32 immarg, <vscale x 4 x i1>, <vscale x 4 x i32>)
+declare void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32>, ptr nocapture, i32 immarg, <vscale x 4 x i1>)
+
 declare <vscale x 16 x i8> @llvm.sadd.sat.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 8 x i16> @llvm.sadd.sat.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.sadd.sat.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>)

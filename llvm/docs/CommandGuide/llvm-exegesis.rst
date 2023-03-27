@@ -30,6 +30,33 @@ scheduling models. To that end, we also provide analysis of the results.
 :program:`llvm-exegesis` can also benchmark arbitrary user-provided code
 snippets.
 
+SNIPPET ANNOTATIONS
+-------------------
+
+:program:`llvm-exegesis` supports benchmarking arbitrary snippets of assembly.
+However, benchmarking these snippets often requires some setup so that they
+can execute properly. :program:`llvm-exegesis` has two annotations and some
+additional utilities to help with setup so that snippets can be benchmarked
+properly.
+
+* `LLVM-EXEGESIS-DEFREG <register name>` - Adding this annotation to the text
+  assembly snippet to be benchmarked marks the register as requiring a definition.
+  A value will automatically be provided unless a second parameter, a hex value,
+  is passed in. This is done with the `LLVM-EXEGESIS-DEFREG <register name> <hex value>`
+  format. `<hex value>` is a bit pattern used to fill the register. If it is a
+  value smaller than the register, it is sign extended to match the size of the
+  register.
+* `LLVM-EXEGESIS-LIVEIN <register name>` - This annotation allows specifying
+  registers that should keep their value upon starting the benchmark. Values
+  can be passed through registers from the benchmarking setup in some cases.
+  The registers and the values assigned to them that can be utilized in the
+  benchmarking script with a `LLVM-EXEGESIS-LIVEIN` are as follows:
+
+  * Scratch memory register - The specific register that this value is put in
+    is platform dependent (e.g., it is the RDI register on X86 Linux). Setting
+    this register as a live in ensures that a pointer to a block of memory (1MB)
+    is placed within this register that can be used by the snippet.
+
 EXAMPLE 1: benchmarking instructions
 ------------------------------------
 
@@ -90,16 +117,8 @@ To measure the latency/uops of a custom piece of code, you can specify the
 Real-life code snippets typically depend on registers or memory.
 :program:`llvm-exegesis` checks the liveliness of registers (i.e. any register
 use has a corresponding def or is a "live in"). If your code depends on the
-value of some registers, you have two options:
-
-- Mark the register as requiring a definition. :program:`llvm-exegesis` will
-  automatically assign a value to the register. This can be done using the
-  directive `LLVM-EXEGESIS-DEFREG <reg name> <hex_value>`, where `<hex_value>`
-  is a bit pattern used to fill `<reg_name>`. If `<hex_value>` is smaller than
-  the register width, it will be sign-extended.
-- Mark the register as a "live in". :program:`llvm-exegesis` will benchmark
-  using whatever value was in this registers on entry. This can be done using
-  the directive `LLVM-EXEGESIS-LIVEIN <reg name>`.
+value of some registers, you need to use snippet annotations to ensure setup
+is performed properly.
 
 For example, the following code snippet depends on the values of XMM1 (which
 will be set by the tool) and the memory buffer passed in RDI (live in).

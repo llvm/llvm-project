@@ -400,9 +400,9 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
 // 100   => 0x64
 // Negative numbers are sign-extended to 32/64 bits
 // -2    => 0xfffffffe
-// -2^32 => 0xfffffffeffffffff
+// -2^32 => 0xffffffff00000000
 static llvm::FormattedNumber printHex(const llvm::APSInt &V) {
-  uint64_t Bits = V.getExtValue();
+  uint64_t Bits = V.getZExtValue();
   if (V.isNegative() && V.getSignificantBits() <= 32)
     return llvm::format_hex(uint32_t(Bits), 0);
   return llvm::format_hex(Bits, 0);

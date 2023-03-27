@@ -101,7 +101,6 @@ public:
   explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
 
   bool hasBranchDivergence() { return true; }
-  bool useGPUDivergenceAnalysis() const;
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
