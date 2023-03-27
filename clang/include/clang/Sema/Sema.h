@@ -2274,10 +2274,6 @@ private:
   };
   /// The modules we're currently parsing.
   llvm::SmallVector<ModuleScope, 16> ModuleScopes;
-
-  /// For an interface unit, this is the implicitly imported interface unit.
-  clang::Module *ThePrimaryInterface = nullptr;
-
   /// The explicit global module fragment of the current translation unit.
   /// The explicit Global Module Fragment, as specified in C++
   /// [module.global.frag].
