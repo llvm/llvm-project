@@ -172,10 +172,12 @@ function(add_properties_for_swift_modules target reldir)
         target_link_directories(${target} PRIVATE
             "${CMAKE_OSX_SYSROOT}/usr/lib/swift"
             "${LLDB_SWIFT_LIBS}/macosx")
-	set(SWIFT_RPATH "/usr/lib/swift")
+	set(SWIFT_BUILD_RPATH "/usr/lib/swift")
+	set(SWIFT_INSTALL_RPATH "/usr/lib/swift")
       elseif(APSM_BOOTSTRAPPING_MODE STREQUAL "BOOTSTRAPPING")
         target_link_directories(${target} PRIVATE "${LLDB_SWIFT_LIBS}/macosx")
-	set(SWIFT_RPATH "${LLDB_SWIFT_LIBS}/macosx")
+	set(SWIFT_BUILD_RPATH "${LLDB_SWIFT_LIBS}/macosx")
+	set(SWIFT_INSTALL_RPATH "${LLDB_SWIFT_LIBS}/macosx")
       else()
         message(FATAL_ERROR "Unknown APSM_BOOTSTRAPPING_MODE '${APSM_BOOTSTRAPPING_MODE}'")
       endif()
@@ -183,14 +185,16 @@ function(add_properties_for_swift_modules target reldir)
       # Workaround for a linker crash related to autolinking: rdar://77839981
       set_property(TARGET ${target} APPEND_STRING PROPERTY
                    LINK_FLAGS " -lobjc ")
-    elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
+    elseif (CMAKE_SYSTEM_NAME MATCHES "Linux|Android|OpenBSD|FreeBSD")
       string(REGEX MATCH "^[^-]*" arch ${LLVM_TARGET_TRIPLE})
       target_link_libraries(${target} PRIVATE swiftCore-linux-${arch})
-      set(SWIFT_RPATH "${LLDB_SWIFT_LIBS}/linux;$ORIGIN/../lib/swift/linux")
+      string(TOLOWER ${CMAKE_SYSTEM_NAME} platform)
+      set(SWIFT_BUILD_RPATH "${LLDB_SWIFT_LIBS}/${platform}")
+      set(SWIFT_INSTALL_RPATH "$ORIGIN/swift/${platform}")
     endif()
 
-    set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "${SWIFT_RPATH}")
-    set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "${SWIFT_RPATH}")
+    set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "${SWIFT_BUILD_RPATH}")
+    set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "${SWIFT_INSTALL_RPATH}")
 
     if (SWIFT_SWIFT_PARSER)
       set_property(TARGET ${target}
