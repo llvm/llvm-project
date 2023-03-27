@@ -230,6 +230,11 @@ Bug Fixes in This Version
   antecipation of `CWG2563 <https://cplusplus.github.io/CWG/issues/2563.html>_`.
 - Fix highlighting issue with ``_Complex`` and initialization list with more than
   2 items. (`#61518 <https://github.com/llvm/llvm-project/issues/61518>`_)
+- Fix  ``getSourceRange`` on  ``VarTemplateSpecializationDecl`` and
+  ``VarTemplatePartialSpecializationDecl``, which represents variable with
+  the initializer, so it behaves consistently with other ``VarDecls`` and ends
+  on the last token of initializer, instead of right angle bracket of
+  the template argument list.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
