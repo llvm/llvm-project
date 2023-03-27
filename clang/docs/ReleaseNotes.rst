@@ -363,6 +363,8 @@ clang-format
   Compared to ``NextLine`` style, ``NextLineOnly`` style will not try to
   put the initializers on the current line first, instead, it will try to
   put the initializers on the next line only.
+- Add additional Qualifier Ordering support for special cases such
+  as templates, requires clauses, long qualified names.
 
 libclang
 --------
