@@ -53,33 +53,6 @@ class DialectRegistry;
 
 namespace transform {
 
-/// Return the set of `linalgOp` iterator positions for which the indexing map
-/// for `opOperand` is a permutation (i.e. an AffineDimExpr).
-DenseSet<int64_t> findPermutationsIndexingOperand(linalg::LinalgOp linalgOp,
-                                                  OpOperand *opOperand,
-                                                  utils::IteratorType iter);
-
-/// Possible dimension candidates that define a gemm embedded in the indexing
-/// maps of a LinalgOp.
-struct GemmDimsForPacking {
-  DenseSet<int64_t> mPos, nPos, kPos;
-};
-
-/// Find 2 parallel (m and n) and 1 reduction (k) dimension candidates that form
-/// a gemm subcomputation within `linalgOp`. These dimensions are such that:
-///   1. The m dimension is involved in an outer-product along LHS
-///      (i.e. it is a permutation on RES and LHS and does not appear in RHS).
-///   2. The n dimension is involved in an outer-product along RHS
-///      (i.e. it is a permutation on RES and RHS and does not appear in LHS).
-///   3. The k dimension appears as a permutation on LHS and RHS.
-///   4. m, n and k appear only once in any given indexing.
-/// This allows detecting that some gemm is embedded within `linalgOp` with some
-/// orthogonal heuristic.
-FailureOr<GemmDimsForPacking> inferGemmDims(linalg::LinalgOp linalgOp);
-
-/// Return true if `linalgOp` contains an embedded gemm subcomputation.
-bool containsMostMinorGemm(linalg::LinalgOp linalgOp);
-
 /// Implementation of tiling operations using `scf.forall`.
 DiagnosedSilenceableFailure tileToForallOpImpl(
     RewriterBase &rewriter, transform::TransformState &state,
