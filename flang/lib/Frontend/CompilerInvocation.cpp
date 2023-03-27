@@ -25,6 +25,7 @@
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
@@ -114,6 +115,38 @@ bool Fortran::frontend::parseDiagnosticArgs(clang::DiagnosticOptions &opts,
                                             llvm::opt::ArgList &args) {
   opts.ShowColors = parseShowColorsArgs(args);
 
+  return true;
+}
+
+static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
+                           llvm::opt::ArgList &args,
+                           clang::DiagnosticsEngine &diags) {
+  using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
+  if (llvm::opt::Arg *arg =
+          args.getLastArg(clang::driver::options::OPT_debug_info_kind_EQ)) {
+    std::optional<DebugInfoKind> val =
+        llvm::StringSwitch<std::optional<DebugInfoKind>>(arg->getValue())
+            .Case("line-tables-only", llvm::codegenoptions::DebugLineTablesOnly)
+            .Case("line-directives-only",
+                  llvm::codegenoptions::DebugDirectivesOnly)
+            .Case("constructor", llvm::codegenoptions::DebugInfoConstructor)
+            .Case("limited", llvm::codegenoptions::LimitedDebugInfo)
+            .Case("standalone", llvm::codegenoptions::FullDebugInfo)
+            .Case("unused-types", llvm::codegenoptions::UnusedTypeInfo)
+            .Default(std::nullopt);
+    if (!val.has_value()) {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << arg->getAsString(args) << arg->getValue();
+      return false;
+    }
+    opts.setDebugInfo(val.value());
+    if (val != llvm::codegenoptions::DebugLineTablesOnly &&
+        val != llvm::codegenoptions::NoDebugInfo) {
+      const auto debugWarning = diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Warning, "Unsupported debug option: %0");
+      diags.Report(debugWarning) << arg->getValue();
+    }
+  }
   return true;
 }
 
@@ -830,6 +863,7 @@ bool CompilerInvocation::createFromArgs(
   parseTargetArgs(res.getTargetOpts(), args);
   parsePreprocessorArgs(res.getPreprocessorOpts(), args);
   parseCodeGenArgs(res.getCodeGenOpts(), args, diags);
+  success &= parseDebugArgs(res.getCodeGenOpts(), args, diags);
   success &= parseSemaArgs(res, args, diags);
   success &= parseDialectArgs(res, args, diags);
   success &= parseDiagArgs(res, args, diags);
