@@ -61,7 +61,9 @@ public:
 private:
   void emitEnums(raw_ostream &OS);
 
-  typedef std::map<std::vector<std::string>, unsigned> OperandInfoMapTy;
+  typedef std::vector<std::string> OperandInfoTy;
+  typedef std::vector<OperandInfoTy> OperandInfoListTy;
+  typedef std::map<OperandInfoTy, unsigned> OperandInfoMapTy;
 
   /// The keys of this map are maps which have OpName enum values as their keys
   /// and instruction operand indices as their values.  The values of this map
@@ -86,9 +88,8 @@ private:
   void emitFeatureVerifier(raw_ostream &OS, const CodeGenTarget &Target);
   void emitRecord(const CodeGenInstruction &Inst, unsigned Num,
                   Record *InstrInfo,
-                  std::map<std::vector<Record*>, unsigned> &EL,
-                  const OperandInfoMapTy &OpInfo,
-                  raw_ostream &OS);
+                  std::map<std::vector<Record *>, unsigned> &EL,
+                  const OperandInfoMapTy &OperandInfo, raw_ostream &OS);
   void emitOperandTypeMappings(
       raw_ostream &OS, const CodeGenTarget &Target,
       ArrayRef<const CodeGenInstruction *> NumberedInstructions);
@@ -108,8 +109,10 @@ private:
       ArrayRef<const CodeGenInstruction *> NumberedInstructions);
 
   // Operand information.
-  void EmitOperandInfo(raw_ostream &OS, OperandInfoMapTy &OperandInfoIDs);
-  std::vector<std::string> GetOperandInfo(const CodeGenInstruction &Inst);
+  unsigned CollectOperandInfo(OperandInfoListTy &OperandInfoList,
+                              OperandInfoMapTy &OperandInfoMap);
+  void EmitOperandInfo(raw_ostream &OS, OperandInfoListTy &OperandInfoList);
+  OperandInfoTy GetOperandInfo(const CodeGenInstruction &Inst);
 };
 
 } // end anonymous namespace
@@ -118,9 +121,9 @@ private:
 // Operand Info Emission.
 //===----------------------------------------------------------------------===//
 
-std::vector<std::string>
+InstrInfoEmitter::OperandInfoTy
 InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
-  std::vector<std::string> Result;
+  OperandInfoTy Result;
 
   for (auto &Op : Inst.Operands) {
     // Handle aggregate operands and normal operands the same way by expanding
@@ -207,23 +210,30 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
   return Result;
 }
 
-void InstrInfoEmitter::EmitOperandInfo(raw_ostream &OS,
-                                       OperandInfoMapTy &OperandInfoIDs) {
-  // ID #0 is for no operand info.
-  unsigned OperandListNum = 0;
-  OperandInfoIDs[std::vector<std::string>()] = ++OperandListNum;
-
+unsigned
+InstrInfoEmitter::CollectOperandInfo(OperandInfoListTy &OperandInfoList,
+                                     OperandInfoMapTy &OperandInfoMap) {
   const CodeGenTarget &Target = CDP.getTargetInfo();
+  unsigned Offset = 0;
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
-    std::vector<std::string> OperandInfo = GetOperandInfo(*Inst);
-    unsigned &N = OperandInfoIDs[OperandInfo];
-    if (N != 0) continue;
+    OperandInfoTy OperandInfo = GetOperandInfo(*Inst);
+    if (OperandInfoMap.insert({OperandInfo, Offset}).second) {
+      OperandInfoList.push_back(OperandInfo);
+      Offset += OperandInfo.size();
+    }
+  }
+  return Offset;
+}
 
-    N = ++OperandListNum;
-    OS << "static const MCOperandInfo OperandInfo" << N << "[] = { ";
-    for (const std::string &Info : OperandInfo)
-      OS << "{ " << Info << " }, ";
-    OS << "};\n";
+void InstrInfoEmitter::EmitOperandInfo(raw_ostream &OS,
+                                       OperandInfoListTy &OperandInfoList) {
+  unsigned Offset = 0;
+  for (auto &OperandInfo : OperandInfoList) {
+    OS << "    /* " << Offset << " */";
+    for (auto &Info : OperandInfo)
+      OS << " { " << Info << " },";
+    OS << '\n';
+    Offset += OperandInfo.size();
   }
 }
 
@@ -886,6 +896,13 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   const std::string &TargetName = std::string(Target.getName());
   Record *InstrInfo = Target.getInstructionSet();
 
+  // Collect all of the operand info records.
+  Records.startTimer("Collect operand info");
+  OperandInfoListTy OperandInfoList;
+  OperandInfoMapTy OperandInfoMap;
+  unsigned OperandInfoSize =
+      CollectOperandInfo(OperandInfoList, OperandInfoMap);
+
   // Collect all of the instruction's implicit uses and defs.
   Records.startTimer("Collect uses/defs");
   std::map<std::vector<Record*>, unsigned> EmittedLists;
@@ -908,8 +925,11 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
   OS << "struct " << TargetName << "InstrTable {\n";
   OS << "  MCInstrDesc Insts[" << NumberedInstructions.size() << "];\n";
-  OS << "  static_assert(alignof(MCInstrDesc) >= alignof(MCPhysReg), "
-        "\"Unwanted padding between Insts and ImplicitOps\");\n";
+  OS << "  static_assert(alignof(MCInstrDesc) >= alignof(MCOperandInfo), "
+        "\"Unwanted padding between Insts and OperandInfo\");\n";
+  OS << "  MCOperandInfo OperandInfo[" << OperandInfoSize << "];\n";
+  OS << "  static_assert(alignof(MCOperandInfo) >= alignof(MCPhysReg), "
+        "\"Unwanted padding between OperandInfo and ImplicitOps\");\n";
   OS << "  MCPhysReg ImplicitOps[" << std::max(ImplicitListSize, 1U) << "];\n";
   OS << "};\n\n";
 
@@ -921,14 +941,12 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   OS << "#undef GET_INSTRINFO_MC_DESC\n";
   OS << "namespace llvm {\n\n";
 
-  // Emit all of the operand info records.
-  Records.startTimer("Emit operand info");
-  OperandInfoMapTy OperandInfoIDs;
-  EmitOperandInfo(OS, OperandInfoIDs);
-  OS << "\n";
-
   // Emit all of the MCInstrDesc records in reverse ENUM ordering.
   Records.startTimer("Emit InstrDesc records");
+  OS << "static_assert(sizeof(MCOperandInfo) % sizeof(MCPhysReg) == 0);\n";
+  OS << "static constexpr unsigned " << TargetName << "ImpOpBase = sizeof "
+     << TargetName << "InstrTable::OperandInfo / (sizeof(MCPhysReg));\n\n";
+
   OS << "extern const " << TargetName << "InstrTable " << TargetName
      << "Descs = {\n  {\n";
   SequenceToOffsetTable<std::string> InstrNames;
@@ -937,8 +955,14 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     // Keep a list of the instruction names.
     InstrNames.add(std::string(Inst->TheDef->getName()));
     // Emit the record into the table.
-    emitRecord(*Inst, --Num, InstrInfo, EmittedLists, OperandInfoIDs, OS);
+    emitRecord(*Inst, --Num, InstrInfo, EmittedLists, OperandInfoMap, OS);
   }
+
+  OS << "  }, {\n";
+
+  // Emit all of the operand info records.
+  Records.startTimer("Emit operand info");
+  EmitOperandInfo(OS, OperandInfoList);
 
   OS << "  }, {\n";
 
@@ -1115,11 +1139,10 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   emitFeatureVerifier(OS, Target);
 }
 
-void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
-                                  Record *InstrInfo,
-                         std::map<std::vector<Record*>, unsigned> &EmittedLists,
-                                  const OperandInfoMapTy &OpInfo,
-                                  raw_ostream &OS) {
+void InstrInfoEmitter::emitRecord(
+    const CodeGenInstruction &Inst, unsigned Num, Record *InstrInfo,
+    std::map<std::vector<Record *>, unsigned> &EmittedLists,
+    const OperandInfoMapTy &OperandInfoMap, raw_ostream &OS) {
   int MinOperands = 0;
   if (!Inst.Operands.empty())
     // Each logical operand can be multiple MI operands.
@@ -1131,13 +1154,18 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
      << Inst.TheDef->getValueAsInt("Size") << ",\t"
      << SchedModels.getSchedClassIdx(Inst) << ",\t";
 
+  CodeGenTarget &Target = CDP.getTargetInfo();
+
   // Emit the implicit use/def list...
   OS << Inst.ImplicitUses.size() << ",\t" << Inst.ImplicitDefs.size() << ",\t";
   std::vector<Record *> ImplicitOps = Inst.ImplicitUses;
   llvm::append_range(ImplicitOps, Inst.ImplicitDefs);
-  OS << EmittedLists[ImplicitOps] << ",\t0";
+  OS << Target.getName() << "ImpOpBase + " << EmittedLists[ImplicitOps]
+     << ",\t";
 
-  CodeGenTarget &Target = CDP.getTargetInfo();
+  // Emit the operand info offset.
+  OperandInfoTy OperandInfo = GetOperandInfo(Inst);
+  OS << OperandInfoMap.find(OperandInfo)->second << ",\t0";
 
   // Emit all of the target independent flags...
   if (Inst.isPreISelOpcode)    OS << "|(1ULL<<MCID::PreISelOpcode)";
@@ -1198,14 +1226,7 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
   }
   OS << ", 0x";
   OS.write_hex(Value);
-  OS << "ULL, ";
-
-  // Emit the operand info.
-  std::vector<std::string> OperandInfo = GetOperandInfo(Inst);
-  if (OperandInfo.empty())
-    OS << "nullptr";
-  else
-    OS << "OperandInfo" << OpInfo.find(OperandInfo)->second;
+  OS << "ULL";
 
   OS << " },  // Inst #" << Num << " = " << Inst.TheDef->getName() << "\n";
 }
