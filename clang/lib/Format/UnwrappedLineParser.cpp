@@ -2134,7 +2134,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::l_brace:
       break;
     case tok::l_paren:
-      parseParens();
+      parseParens(/*AmpAmpTokenType=*/TT_PointerOrReference);
       break;
     case tok::l_square:
       parseSquare();
@@ -2211,6 +2211,12 @@ bool UnwrappedLineParser::tryToParseLambda() {
       SeenArrow = true;
       nextToken();
       break;
+    case tok::kw_requires: {
+      auto *RequiresToken = FormatTok;
+      nextToken();
+      parseRequiresClause(RequiresToken);
+      break;
+    }
     default:
       return true;
     }
@@ -3371,6 +3377,17 @@ void UnwrappedLineParser::parseConstraintExpression() {
   // lambda to be possible.
   // template <typename T> requires requires { ... } [[nodiscard]] ...;
   bool LambdaNextTimeAllowed = true;
+
+  // Within lambda declarations, it is permitted to put a requires clause after
+  // its template parameter list, which would place the requires clause right
+  // before the parentheses of the parameters of the lambda declaration. Thus,
+  // we track if we expect to see grouping parentheses at all.
+  // Without this check, `requires foo<T> (T t)` in the below example would be
+  // seen as the whole requires clause, accidentally eating the parameters of
+  // the lambda.
+  // [&]<typename T> requires foo<T> (T t) { ... };
+  bool TopLevelParensAllowed = true;
+
   do {
     bool LambdaThisTimeAllowed = std::exchange(LambdaNextTimeAllowed, false);
 
@@ -3383,7 +3400,10 @@ void UnwrappedLineParser::parseConstraintExpression() {
     }
 
     case tok::l_paren:
+      if (!TopLevelParensAllowed)
+        return;
       parseParens(/*AmpAmpTokenType=*/TT_BinaryOperator);
+      TopLevelParensAllowed = false;
       break;
 
     case tok::l_square:
@@ -3407,6 +3427,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
       FormatTok->setFinalizedType(TT_BinaryOperator);
       nextToken();
       LambdaNextTimeAllowed = true;
+      TopLevelParensAllowed = true;
       break;
 
     case tok::comma:
@@ -3430,6 +3451,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
     case tok::star:
     case tok::slash:
       LambdaNextTimeAllowed = true;
+      TopLevelParensAllowed = true;
       // Just eat them.
       nextToken();
       break;
@@ -3438,6 +3460,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
     case tok::coloncolon:
     case tok::kw_true:
     case tok::kw_false:
+      TopLevelParensAllowed = false;
       // Just eat them.
       nextToken();
       break;
@@ -3486,6 +3509,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
         parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
                         /*ClosingBraceKind=*/tok::greater);
       }
+      TopLevelParensAllowed = false;
       break;
     }
   } while (!eof());

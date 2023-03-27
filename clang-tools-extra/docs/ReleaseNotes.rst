@@ -133,6 +133,13 @@ New checks
   Checks that all implicit and explicit inline functions in header files are
   tagged with the ``LIBC_INLINE`` macro.
 
+- New :doc:`readability-avoid-unconditional-preprocessor-if
+  <clang-tidy/checks/readability/avoid-unconditional-preprocessor-if>` check.
+
+  Finds code blocks that are constantly enabled or disabled in preprocessor
+  directives by analyzing ``#if`` conditions, such as ``#if 0`` and
+  ``#if 1``, etc.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -196,6 +203,11 @@ Changes in existing checks
   constructors toward hand written constructors so that they are skipped if more
   than one exists.
 
+- Fixed false positive in :doc:`modernize-use-equals-default
+  <clang-tidy/checks/modernize/use-equals-default>` check for special member
+  functions containing macros or preprocessor directives, and out-of-line special
+  member functions in unions.
+
 - Fixed reading `HungarianNotation.CString.*` options in
   :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check.
@@ -210,6 +222,9 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>`. To preserve the previous
   behavior of using `i` as the prefix for enum tags, set the `EnumConstantPrefix`
   option to `i` instead of using `EnumConstantHungarianPrefix`.
+
+- Added support to optionally ignore user-defined literals in
+  :doc:`readability-magic-numbers<clang-tidy/checks/readability/magic-numbers>`.
 
 - Fixed a false positive in :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check when comparing
