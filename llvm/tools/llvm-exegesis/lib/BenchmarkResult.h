@@ -41,9 +41,9 @@ enum class BenchmarkPhaseSelectorE {
   Measure,
 };
 
-enum class InstructionBenchmarkFilter { All, RegOnly, WithMem };
+enum class BenchmarkFilter { All, RegOnly, WithMem };
 
-struct InstructionBenchmarkKey {
+struct BenchmarkKey {
   // The LLVM opcode name.
   std::vector<MCInst> Instructions;
   // The initial values of the registers.
@@ -68,8 +68,8 @@ struct BenchmarkMeasure {
 };
 
 // The result of an instruction benchmark.
-struct InstructionBenchmark {
-  InstructionBenchmarkKey Key;
+struct Benchmark {
+  BenchmarkKey Key;
   enum ModeE { Unknown, Latency, Uops, InverseThroughput };
   ModeE Mode;
   std::string CpuName;
@@ -88,18 +88,18 @@ struct InstructionBenchmark {
   // How to aggregate measurements.
   enum ResultAggregationModeE { Min, Max, Mean, MinVariance };
 
-  InstructionBenchmark() = default;
-  InstructionBenchmark(InstructionBenchmark &&) = default;
+  Benchmark() = default;
+  Benchmark(Benchmark &&) = default;
 
-  InstructionBenchmark(const InstructionBenchmark &) = delete;
-  InstructionBenchmark &operator=(const InstructionBenchmark &) = delete;
-  InstructionBenchmark &operator=(InstructionBenchmark &&) = delete;
+  Benchmark(const Benchmark &) = delete;
+  Benchmark &operator=(const Benchmark &) = delete;
+  Benchmark &operator=(Benchmark &&) = delete;
 
   // Read functions.
-  static Expected<InstructionBenchmark> readYaml(const LLVMState &State,
+  static Expected<Benchmark> readYaml(const LLVMState &State,
                                                  MemoryBufferRef Buffer);
 
-  static Expected<std::vector<InstructionBenchmark>>
+  static Expected<std::vector<Benchmark>>
   readYamls(const LLVMState &State, MemoryBufferRef Buffer);
 
   // Given a set of serialized instruction benchmarks, returns the set of

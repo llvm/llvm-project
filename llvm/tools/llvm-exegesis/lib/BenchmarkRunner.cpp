@@ -30,7 +30,7 @@ namespace llvm {
 namespace exegesis {
 
 BenchmarkRunner::BenchmarkRunner(const LLVMState &State,
-                                 InstructionBenchmark::ModeE Mode,
+                                 Benchmark::ModeE Mode,
                                  BenchmarkPhaseSelectorE BenchmarkPhaseSelector)
     : State(State), Mode(Mode), BenchmarkPhaseSelector(BenchmarkPhaseSelector),
       Scratch(std::make_unique<ScratchSpace>()) {}
@@ -155,7 +155,7 @@ BenchmarkRunner::getRunnableConfiguration(
     const SnippetRepetitor &Repetitor) const {
   RunnableConfiguration RC;
 
-  InstructionBenchmark &InstrBenchmark = RC.InstrBenchmark;
+  Benchmark &InstrBenchmark = RC.InstrBenchmark;
   InstrBenchmark.Mode = Mode;
   InstrBenchmark.CpuName = std::string(State.getTargetMachine().getTargetCPU());
   InstrBenchmark.LLVMTriple =
@@ -196,10 +196,10 @@ BenchmarkRunner::getRunnableConfiguration(
   return std::move(RC);
 }
 
-Expected<InstructionBenchmark>
+Expected<Benchmark>
 BenchmarkRunner::runConfiguration(RunnableConfiguration &&RC,
                                   bool DumpObjectToDisk) const {
-  InstructionBenchmark &InstrBenchmark = RC.InstrBenchmark;
+  Benchmark &InstrBenchmark = RC.InstrBenchmark;
   object::OwningBinary<object::ObjectFile> &ObjectFile = RC.ObjectFile;
 
   if (DumpObjectToDisk &&
