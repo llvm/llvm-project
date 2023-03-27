@@ -1005,7 +1005,7 @@ defm : VPatWidenFPNegMulSacSDNode_VV_VF<"PseudoVFWNMSAC">;
 
 foreach vti = AllFloatVectors in {
   // 13.8. Vector Floating-Point Square-Root Instruction
-  def : Pat<(fsqrt (vti.Vector vti.RegClass:$rs2)),
+  def : Pat<(any_fsqrt (vti.Vector vti.RegClass:$rs2)),
             (!cast<Instruction>("PseudoVFSQRT_V_"# vti.LMul.MX#"_E"#vti.SEW)
                  vti.RegClass:$rs2, vti.AVL, vti.Log2SEW)>;
 
