@@ -1,4 +1,4 @@
-//===-- RISCVMCInstLower.cpp - Convert RISCV MachineInstr to an MCInst ------=//
+//===-- RISCVMCInstLower.cpp - Convert RISC-V MachineInstr to an MCInst -----=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains code to lower RISCV MachineInstrs to their corresponding
+// This file contains code to lower RISC-V MachineInstrs to their corresponding
 // MCInst records.
 //
 //===----------------------------------------------------------------------===//

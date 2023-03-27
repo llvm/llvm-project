@@ -64,8 +64,6 @@ public:
 
   std::vector<ArchSpec> m_supported_architectures;
 
-  lldb::UnixSignalsSP CreateUnixSignals() override;
-
 private:
   std::mutex m_mutex;
   std::shared_ptr<TypeSystemClang> m_type_system;

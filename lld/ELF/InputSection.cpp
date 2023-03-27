@@ -724,7 +724,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
       p = p & 0xfffffffc;
     if (sym.isUndefined()) {
       // On ARM and AArch64 a branch to an undefined weak resolves to the next
-      // instruction, otherwise the place. On RISCV, resolve an undefined weak
+      // instruction, otherwise the place. On RISC-V, resolve an undefined weak
       // to the same instruction to cause an infinite loop (making the user
       // aware of the issue) while ensuring no overflow.
       // Note: if the symbol is hidden, its binding has been converted to local,

@@ -11,8 +11,7 @@
 // TODO FMT Fix this test using GCC, it currently times out.
 // UNSUPPORTED: gcc-12
 
-// This test requires std::to_chars(floating-point), which is in the dylib
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0}}
+// XFAIL: availability-fp_to_chars-missing
 
 // <vector>
 

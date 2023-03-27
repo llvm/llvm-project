@@ -32,7 +32,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-insert-vsetvli"
-#define RISCV_INSERT_VSETVLI_NAME "RISCV Insert VSETVLI pass"
+#define RISCV_INSERT_VSETVLI_NAME "RISC-V Insert VSETVLI pass"
 
 static cl::opt<bool> DisableInsertVSETVLPHIOpt(
     "riscv-disable-insert-vsetvl-phi-opt", cl::init(false), cl::Hidden,

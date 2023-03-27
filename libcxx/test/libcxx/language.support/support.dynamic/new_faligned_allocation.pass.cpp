@@ -9,10 +9,9 @@
 // test libc++'s implementation of align_val_t, and the relevant new/delete
 // overloads in all dialects when -faligned-allocation is present.
 
-// The dylibs shipped before macosx10.13 do not contain the aligned allocation
-// functions, so trying to force using those with -faligned-allocation results
-// in a link error.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
+// Some dylibs do not contain the aligned allocation functions, so trying to force
+// using those with -faligned-allocation results in a link error.
+// XFAIL: availability-aligned_allocation-missing
 
 // Libcxx when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.

@@ -312,6 +312,14 @@ def TestTypeAPFloat : Test_Type<"TestTypeAPFloat"> {
   let assemblyFormat = "`<` $a `>`";
 }
 
+def TestTypeOptionalValueType : Test_Type<"TestTypeOptionalValueType"> {
+  let parameters = (ins
+    OptionalParameter<"std::optional<int>">:$value
+  );
+  let mnemonic = "optional_value_type";
+  let assemblyFormat = "(`<` $value^ `>`)?";
+}
+
 def TestTypeDefaultValuedType : Test_Type<"TestTypeDefaultValuedType"> {
   let parameters = (ins
     DefaultValuedParameter<"mlir::IntegerType",

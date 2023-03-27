@@ -8,9 +8,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Aligned allocation was not provided before macosx10.13 and as a result we
-// get availability errors when the deployment target is older than macosx10.13.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
+// We get availability markup errors when aligned allocation is missing
+// XFAIL: availability-aligned_allocation-missing
 
 // asan and msan will not call the new handler.
 // UNSUPPORTED: sanitizer-new-delete

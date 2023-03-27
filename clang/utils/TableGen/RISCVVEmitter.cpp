@@ -57,9 +57,6 @@ struct SemaRecord {
   // Suffix of overloaded intrinsic name.
   SmallVector<PrototypeDescriptor> OverloadedSuffix;
 
-  // BitMask for supported policies.
-  uint16_t PolicyBitMask;
-
   // Number of field, large than 1 if it's segment load/store.
   unsigned NF;
 

@@ -82,10 +82,6 @@ public:
 
   std::vector<ArchSpec> m_supported_architectures;
 
-  lldb::UnixSignalsSP CreateUnixSignals() override {
-    return lldb::UnixSignalsSP();
-  }
-
 private:
   std::unique_ptr<lldb_private::UtilityFunction>
   MakeLoadImageUtilityFunction(lldb_private::ExecutionContext &context,
