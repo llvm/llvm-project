@@ -144,6 +144,22 @@ func.func @reduce_add_non_maximal_f32_f32(%arg0: memref<64x64xf32, 1>, %arg1 : m
 
 // -----
 
+// SIBLING-MAXIMAL-LABEL: func @sibling_load_only
+func.func @sibling_load_only(%arg0: memref<10xf32>) {
+  affine.for %arg1 = 0 to 10 {
+    %0 = affine.load %arg0[%arg1] : memref<10xf32>
+  }
+  affine.for %arg1 = 0 to 10 {
+    %0 = affine.load %arg0[%arg1] : memref<10xf32>
+  }
+  // SIBLING-MAXIMAL-NEXT: affine.for
+  // SIBLING-MAXIMAL-NEXT:   affine.load
+  // SIBLING-MAXIMAL-NEXT:   affine.load
+  return
+}
+
+// -----
+
 // PRODUCER-CONSUMER-LABEL: func @fusion_for_multiple_blocks() {
 func.func @fusion_for_multiple_blocks() {
 ^bb0:
