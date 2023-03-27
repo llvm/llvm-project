@@ -1722,6 +1722,11 @@ private:
           return false;
         }
 
+        // This is the default value of a non-template type parameter, so treat
+        // it as an expression.
+        if (Contexts.back().ContextKind == tok::less)
+          return true;
+
         Tok = Tok->MatchingParen;
         if (!Tok)
           return false;
