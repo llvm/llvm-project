@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // Just make sure we can link an implib into another DLL
 // This used to fail between r212699 and r212814.
 // RUN: %clang_cl_asan -DCONFIG=1 %s -c -Fo%t.1.obj

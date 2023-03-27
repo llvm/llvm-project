@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // RUN: %clang_cl_asan -LD /Od -DDLL %s -Fe%t.dll
 // RUN: %clang_cl /Od -DEXE %s -Fe%te.exe
 // RUN: %env_asan_opts=windows_hook_rtl_allocators=true not %run %te.exe %t.dll 2>&1 | FileCheck %s

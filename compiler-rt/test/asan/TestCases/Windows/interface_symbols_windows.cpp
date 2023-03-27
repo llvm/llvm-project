@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // Check that the interface exported by asan static lib matches the list of
 // functions mentioned in sanitizer_interface.inc.
 //

@@ -1,3 +1,4 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
 
 // RUN: %clang_cl -LD %s -Fe%t.dll -DHEAP_LIBRARY -MD
 // RUN: %clang_cl %s %t.lib -Fe%t -fsanitize=address -MT

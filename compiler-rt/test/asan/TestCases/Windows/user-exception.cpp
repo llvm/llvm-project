@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // RUN: %clang_cl_asan -Od %s -Fe%t
 // RUN: env ASAN_OPTIONS=handle_segv=0 %run %t 2>&1 | FileCheck %s --check-prefix=USER
 // RUN: env ASAN_OPTIONS=handle_segv=1 not %run %t 2>&1 | FileCheck %s --check-prefix=ASAN

@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 #include <stdio.h>
 #include <windows.h>
 
