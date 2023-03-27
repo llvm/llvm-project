@@ -8340,6 +8340,8 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
     return true;
 
   auto cu_imports = compile_unit->GetImportedModules();
+  if (cu_imports.size() == 0)
+    return true;
 
   Progress progress(
       llvm::formatv("Getting Swift compile unit imports for '{0}'",
