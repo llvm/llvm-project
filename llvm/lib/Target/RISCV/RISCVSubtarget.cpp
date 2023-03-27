@@ -1,4 +1,4 @@
-//===-- RISCVSubtarget.cpp - RISCV Subtarget Information ------------------===//
+//===-- RISCVSubtarget.cpp - RISC-V Subtarget Information -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the RISCV specific subclass of TargetSubtargetInfo.
+// This file implements the RISC-V specific subclass of TargetSubtargetInfo.
 //
 //===----------------------------------------------------------------------===//
 

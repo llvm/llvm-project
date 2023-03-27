@@ -1,4 +1,4 @@
-//===-- RISCVSubtarget.h - Define Subtarget for the RISCV -------*- C++ -*-===//
+//===-- RISCVSubtarget.h - Define Subtarget for the RISC-V ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the RISCV specific subclass of TargetSubtargetInfo.
+// This file declares the RISC-V specific subclass of TargetSubtargetInfo.
 //
 //===----------------------------------------------------------------------===//
 
@@ -101,7 +101,7 @@ public:
   Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
   Align getPrefLoopAlignment() const { return PrefLoopAlignment; }
 
-  /// Returns RISCV processor family.
+  /// Returns RISC-V processor family.
   /// Avoid this function! CPU specifics should be kept local to this class
   /// and preferably modeled with SubtargetFeatures or properties in
   /// initializeProperties().

@@ -11,29 +11,12 @@
 #if defined(__APPLE__)
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 using HostObjectFile = ObjectFileMachO;
-#include "Plugins/Platform/MacOSX/PlatformMacOSX.h"
-using HostPlatform = lldb_private::PlatformMacOSX;
 #elif defined(_WIN32)
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 using HostObjectFile = ObjectFilePECOFF;
-#include "Plugins/Platform/Windows/PlatformWindows.h"
-using HostPlatform = lldb_private::PlatformWindows;
 #else
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 using HostObjectFile = ObjectFileELF;
-#if defined(__ANDROID__)
-#include "Plugins/Platform/Android/PlatformAndroid.h"
-using HostPlatform = lldb_private::platform_android::PlatformAndroid;
-#elif defined(__FreeBSD__)
-#include "Plugins/Platform/FreeBSD/PlatformFreeBSD.h"
-using HostPlatform = lldb_private::platform_freebsd::PlatformFreeBSD;
-#elif defined(__linux__)
-#include "Plugins/Platform/Linux/PlatformLinux.h"
-using HostPlatform = lldb_private::platform_linux::PlatformLinux;
-#elif defined(__NetBSD__)
-#include "Plugins/Platform/NetBSD/PlatformNetBSD.h"
-using HostPlatform = lldb_private::platform_netbsd::PlatformNetBSD;
-#endif
 #endif
 
 #if defined(__arm64__) || defined(__aarch64__) || defined(_M_ARM64)
@@ -75,7 +58,6 @@ llvm::Error SystemInitializerLLGS::Initialize() {
     return e;
 
   HostObjectFile::Initialize();
-  HostPlatform::Initialize();
 
 #if defined(LLDB_TARGET_ARM) || defined(LLDB_TARGET_ARM64)
   EmulateInstructionARM::Initialize();
@@ -98,7 +80,6 @@ llvm::Error SystemInitializerLLGS::Initialize() {
 
 void SystemInitializerLLGS::Terminate() {
   HostObjectFile::Terminate();
-  HostPlatform::Terminate();
 
 #if defined(LLDB_TARGET_ARM) || defined(LLDB_TARGET_ARM64)
   EmulateInstructionARM::Terminate();

@@ -509,6 +509,21 @@ cc_library(
 )
 
 cc_library(
+    name = "TestOneToNTypeConversion",
+    srcs = glob(["lib/Conversion/OneToNTypeConversion/*.cpp"]),
+    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        ":TestDialect",
+        "//mlir:FuncDialect",
+        "//mlir:FuncTransforms",
+        "//mlir:IR",
+        "//mlir:Pass",
+        "//mlir:TransformUtils",
+    ],
+)
+
+cc_library(
     name = "TestVectorToSPIRV",
     srcs = glob(["lib/Conversion/VectorToSPIRV/*.cpp"]),
     deps = [

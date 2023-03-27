@@ -23,7 +23,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-merge-base-offset"
-#define RISCV_MERGE_BASE_OFFSET_NAME "RISCV Merge Base Offset"
+#define RISCV_MERGE_BASE_OFFSET_NAME "RISC-V Merge Base Offset"
 namespace {
 
 class RISCVMergeBaseOffsetOpt : public MachineFunctionPass {

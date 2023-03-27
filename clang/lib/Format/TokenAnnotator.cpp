@@ -199,6 +199,7 @@ private:
           CurrentToken->setType(TT_DictLiteral);
         } else {
           CurrentToken->setType(TT_TemplateCloser);
+          CurrentToken->Tok.setLength(1);
         }
         if (CurrentToken->Next && CurrentToken->Next->Tok.isLiteral())
           return false;

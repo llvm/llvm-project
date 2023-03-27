@@ -7,10 +7,11 @@
 #===----------------------------------------------------------------------===##
 
 from libcxx.test.dsl import *
+from lit.BooleanExpression import BooleanExpression
 import re
 import shutil
-import sys
 import subprocess
+import sys
 
 _isClang      = lambda cfg: '__clang__' in compilerMacros(cfg) and '__apple_build_version__' not in compilerMacros(cfg)
 _isAppleClang = lambda cfg: '__apple_build_version__' in compilerMacros(cfg)
@@ -317,4 +318,55 @@ DEFAULT_FEATURES += [
     when=check_gdb,
     actions=[AddSubstitution('%{gdb}', lambda cfg: shutil.which('gdb'))]
   )
+]
+
+# Define features for back-deployment testing.
+# These features can be used to XFAIL tests that require features in the dylib that
+# were not supported by a certain target. Vendors can tweak how those are defined
+# to match their own releases of the dylib.
+DEFAULT_FEATURES += [
+  # Tests that require std::to_chars(floating-point) in the built library
+  Feature(name='availability-fp_to_chars-missing',
+    when=lambda cfg: BooleanExpression.evaluate('use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0}}', cfg.available_features)),
+
+  # Tests that require https://wg21.link/P0482 support in the built library
+  Feature(name='availability-char8_t_support-missing',
+    when=lambda cfg: BooleanExpression.evaluate('use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0}}', cfg.available_features)),
+
+  # Tests that require __libcpp_verbose_abort support in the built library
+  Feature(name='availability-verbose_abort-missing',
+    when=lambda cfg: BooleanExpression.evaluate('use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}', cfg.available_features)),
+
+  # Tests that require std::bad_variant_access in the built library
+  Feature(name='availability-bad_variant_access-missing',
+    when=lambda cfg: BooleanExpression.evaluate('use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}', cfg.available_features)),
+
+  # Tests that require std::bad_optional_access in the built library
+  Feature(name='availability-bad_optional_access-missing',
+    when=lambda cfg: BooleanExpression.evaluate('use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}', cfg.available_features)),
+
+  # Tests that require std::bad_any_cast in the built library
+  Feature(name='availability-bad_any_cast-missing',
+    when=lambda cfg: BooleanExpression.evaluate('use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}', cfg.available_features)),
+
+  # Tests that require std::pmr support in the built library
+  Feature(name='availability-pmr-missing',
+    when=lambda cfg: BooleanExpression.evaluate('use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}', cfg.available_features)),
+
+  # Tests that require std::filesystem support in the built library
+  Feature(name='availability-filesystem-missing',
+    when=lambda cfg: BooleanExpression.evaluate('use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}', cfg.available_features)),
+
+  # Tests that require the C++20 synchronization library (P1135R6 implemented by https://llvm.org/D68480) in the built library
+  Feature(name='availability-synchronization_library-missing',
+    when=lambda cfg: BooleanExpression.evaluate('use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}', cfg.available_features)),
+
+  # Tests that require support for std::shared_mutex and std::shared_timed_mutex in the built library
+  Feature(name='availability-shared_mutex-missing',
+    when=lambda cfg: BooleanExpression.evaluate('use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}', cfg.available_features)),
+
+  # Tests that require support for aligned allocation in the built library. This is about `operator new(..., std::align_val_t, ...)` specifically,
+  # not other forms of aligned allocation.
+  Feature(name='availability-aligned_allocation-missing',
+    when=lambda cfg: BooleanExpression.evaluate('use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}', cfg.available_features)),
 ]
