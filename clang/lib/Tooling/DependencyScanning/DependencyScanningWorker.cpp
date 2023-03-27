@@ -438,15 +438,12 @@ public:
           OriginalInvocation, OptimizeArgs, EagerLoadModules,
           Format == ScanningOutputFormat::P1689);
       ScanInstance.addDependencyCollector(MDC);
-      if (CacheFS) {
-        ScanInstance.setGenModuleActionWrapper(
-            [CacheFS = CacheFS, &Controller = Controller](
-                const FrontendOptions &Opts,
-                std::unique_ptr<FrontendAction> Wrapped) {
-              return std::make_unique<WrapScanModuleBuildAction>(
-                  std::move(Wrapped), Controller);
-            });
-      }
+      ScanInstance.setGenModuleActionWrapper(
+          [&Controller = Controller](const FrontendOptions &Opts,
+                                     std::unique_ptr<FrontendAction> Wrapped) {
+            return std::make_unique<WrapScanModuleBuildAction>(
+                std::move(Wrapped), Controller);
+          });
       break;
     }
 
@@ -463,6 +460,10 @@ public:
       Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
     else
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
+
+    // Normally this would be handled by GeneratePCHAction
+    if (ScanInstance.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
+      ScanInstance.getLangOpts().CompilingPCH = true;
 
     if (Error E = Controller.initialize(ScanInstance, OriginalInvocation))
       return reportError(std::move(E));

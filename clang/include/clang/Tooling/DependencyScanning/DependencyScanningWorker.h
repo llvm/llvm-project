@@ -102,13 +102,6 @@ public:
     return llvm::Error::success();
   }
 
-  virtual void enteredInclude(Preprocessor &PP, FileID FID) {}
-
-  virtual void exitedInclude(Preprocessor &PP, FileID IncludedBy,
-                             FileID Include, SourceLocation ExitLoc) {}
-
-  virtual void handleHasIncludeCheck(Preprocessor &PP, bool Result) {}
-
   /// FIXME: This is temporary until we eliminate the split between consumers in
   /// \p DependencyScanningTool and collectors in \p DependencyScanningWorker
   /// and have them both in the same file. see FIXME in \p

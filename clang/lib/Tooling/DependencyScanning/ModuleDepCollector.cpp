@@ -463,15 +463,6 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MD.ImportedByMainFile = DirectModularDeps.contains(M);
   MD.IsSystem = M->IsSystem;
 
-  if (auto ID = M->getCASFileSystemRootID()) {
-    auto &CAS = MDC.ScanInstance.getOrCreateObjectStore();
-    if (auto Err = CAS.parseID(*ID).moveInto(MD.CASFileSystemRootID)) {
-      MDC.ScanInstance.getDiagnostics().Report(
-          diag::err_cas_cannot_parse_root_id_for_module)
-          << *ID << MD.ID.ModuleName;
-    }
-  }
-
   ModuleMap &ModMapInfo =
       MDC.ScanInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
 
@@ -511,6 +502,19 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
           return;
         MD.ModuleMapFileDeps.emplace_back(FE.getNameAsRequested());
       });
+
+  if (!MF->IncludeTreeID.empty())
+    MD.IncludeTreeID = MF->IncludeTreeID;
+
+  if (!MF->CASFileSystemRootID.empty()) {
+    auto &CAS = MDC.ScanInstance.getOrCreateObjectStore();
+    if (auto Err = CAS.parseID(MF->CASFileSystemRootID)
+                       .moveInto(MD.CASFileSystemRootID)) {
+      MDC.ScanInstance.getDiagnostics().Report(
+          diag::err_cas_cannot_parse_root_id_for_module)
+          << MF->CASFileSystemRootID << MD.ID.ModuleName;
+    }
+  }
 
   CompilerInvocation CI = MDC.makeInvocationForModuleBuildWithoutOutputs(
       MD, [&](CompilerInvocation &BuildInvocation) {
