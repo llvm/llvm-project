@@ -69,47 +69,47 @@ static cl::opt<std::string>
                            "results. “-” uses stdin/stdout."),
                   cl::cat(Options), cl::init(""));
 
-static cl::opt<exegesis::InstructionBenchmark::ModeE> BenchmarkMode(
+static cl::opt<exegesis::Benchmark::ModeE> BenchmarkMode(
     "mode", cl::desc("the mode to run"), cl::cat(Options),
-    cl::values(clEnumValN(exegesis::InstructionBenchmark::Latency, "latency",
+    cl::values(clEnumValN(exegesis::Benchmark::Latency, "latency",
                           "Instruction Latency"),
-               clEnumValN(exegesis::InstructionBenchmark::InverseThroughput,
+               clEnumValN(exegesis::Benchmark::InverseThroughput,
                           "inverse_throughput",
                           "Instruction Inverse Throughput"),
-               clEnumValN(exegesis::InstructionBenchmark::Uops, "uops",
+               clEnumValN(exegesis::Benchmark::Uops, "uops",
                           "Uop Decomposition"),
                // When not asking for a specific benchmark mode,
                // we'll analyse the results.
-               clEnumValN(exegesis::InstructionBenchmark::Unknown, "analysis",
+               clEnumValN(exegesis::Benchmark::Unknown, "analysis",
                           "Analysis")));
 
-static cl::opt<exegesis::InstructionBenchmark::ResultAggregationModeE>
+static cl::opt<exegesis::Benchmark::ResultAggregationModeE>
     ResultAggMode(
         "result-aggregation-mode",
         cl::desc("How to aggregate multi-values result"),
         cl::cat(BenchmarkOptions),
-        cl::values(clEnumValN(exegesis::InstructionBenchmark::Min, "min",
+        cl::values(clEnumValN(exegesis::Benchmark::Min, "min",
                               "Keep min reading"),
-                   clEnumValN(exegesis::InstructionBenchmark::Max, "max",
+                   clEnumValN(exegesis::Benchmark::Max, "max",
                               "Keep max reading"),
-                   clEnumValN(exegesis::InstructionBenchmark::Mean, "mean",
+                   clEnumValN(exegesis::Benchmark::Mean, "mean",
                               "Compute mean of all readings"),
-                   clEnumValN(exegesis::InstructionBenchmark::MinVariance,
+                   clEnumValN(exegesis::Benchmark::MinVariance,
                               "min-variance",
                               "Keep readings set with min-variance")),
-        cl::init(exegesis::InstructionBenchmark::Min));
+        cl::init(exegesis::Benchmark::Min));
 
-static cl::opt<exegesis::InstructionBenchmark::RepetitionModeE> RepetitionMode(
+static cl::opt<exegesis::Benchmark::RepetitionModeE> RepetitionMode(
     "repetition-mode", cl::desc("how to repeat the instruction snippet"),
     cl::cat(BenchmarkOptions),
     cl::values(
-        clEnumValN(exegesis::InstructionBenchmark::Duplicate, "duplicate",
+        clEnumValN(exegesis::Benchmark::Duplicate, "duplicate",
                    "Duplicate the snippet"),
-        clEnumValN(exegesis::InstructionBenchmark::Loop, "loop",
+        clEnumValN(exegesis::Benchmark::Loop, "loop",
                    "Loop over the snippet"),
-        clEnumValN(exegesis::InstructionBenchmark::AggregateMin, "min",
+        clEnumValN(exegesis::Benchmark::AggregateMin, "min",
                    "All of the above and take the minimum of measurements")),
-    cl::init(exegesis::InstructionBenchmark::Duplicate));
+    cl::init(exegesis::Benchmark::Duplicate));
 
 static cl::opt<bool> BenchmarkMeasurementsPrintProgress(
     "measurements-print-progress",
@@ -163,27 +163,27 @@ static cl::opt<bool> IgnoreInvalidSchedClass(
     cl::desc("ignore instructions that do not define a sched class"),
     cl::cat(BenchmarkOptions), cl::init(false));
 
-static cl::opt<exegesis::InstructionBenchmarkFilter> AnalysisSnippetFilter(
+static cl::opt<exegesis::BenchmarkFilter> AnalysisSnippetFilter(
     "analysis-filter", cl::desc("Filter the benchmarks before analysing them"),
     cl::cat(BenchmarkOptions),
     cl::values(
-        clEnumValN(exegesis::InstructionBenchmarkFilter::All, "all",
+        clEnumValN(exegesis::BenchmarkFilter::All, "all",
                    "Keep all benchmarks (default)"),
-        clEnumValN(exegesis::InstructionBenchmarkFilter::RegOnly, "reg-only",
+        clEnumValN(exegesis::BenchmarkFilter::RegOnly, "reg-only",
                    "Keep only those benchmarks that do *NOT* involve memory"),
-        clEnumValN(exegesis::InstructionBenchmarkFilter::WithMem, "mem-only",
+        clEnumValN(exegesis::BenchmarkFilter::WithMem, "mem-only",
                    "Keep only the benchmarks that *DO* involve memory")),
-    cl::init(exegesis::InstructionBenchmarkFilter::All));
+    cl::init(exegesis::BenchmarkFilter::All));
 
-static cl::opt<exegesis::InstructionBenchmarkClustering::ModeE>
+static cl::opt<exegesis::BenchmarkClustering::ModeE>
     AnalysisClusteringAlgorithm(
         "analysis-clustering", cl::desc("the clustering algorithm to use"),
         cl::cat(AnalysisOptions),
-        cl::values(clEnumValN(exegesis::InstructionBenchmarkClustering::Dbscan,
+        cl::values(clEnumValN(exegesis::BenchmarkClustering::Dbscan,
                               "dbscan", "use DBSCAN/OPTICS algorithm"),
-                   clEnumValN(exegesis::InstructionBenchmarkClustering::Naive,
+                   clEnumValN(exegesis::BenchmarkClustering::Naive,
                               "naive", "one cluster per opcode")),
-        cl::init(exegesis::InstructionBenchmarkClustering::Dbscan));
+        cl::init(exegesis::BenchmarkClustering::Dbscan));
 
 static cl::opt<unsigned> AnalysisDbscanNumPoints(
     "analysis-numpoints",
@@ -369,7 +369,7 @@ static void runBenchmarkConfigurations(
     Meter.emplace(Configurations.size());
   for (const BenchmarkCode &Conf : Configurations) {
     ProgressMeter<>::ProgressMeterStep MeterStep(Meter ? &*Meter : nullptr);
-    SmallVector<InstructionBenchmark, 2> AllResults;
+    SmallVector<Benchmark, 2> AllResults;
 
     for (const std::unique_ptr<const SnippetRepetitor> &Repetitor :
          Repetitors) {
@@ -378,18 +378,18 @@ static void runBenchmarkConfigurations(
       AllResults.emplace_back(
           ExitOnErr(Runner.runConfiguration(std::move(RC), DumpObjectToDisk)));
     }
-    InstructionBenchmark &Result = AllResults.front();
+    Benchmark &Result = AllResults.front();
 
     // If any of our measurements failed, pretend they all have failed.
     if (AllResults.size() > 1 &&
-        any_of(AllResults, [](const InstructionBenchmark &R) {
+        any_of(AllResults, [](const Benchmark &R) {
           return R.Measurements.empty();
         }))
       Result.Measurements.clear();
 
-    if (RepetitionMode == InstructionBenchmark::RepetitionModeE::AggregateMin) {
-      for (const InstructionBenchmark &OtherResult :
-           ArrayRef<InstructionBenchmark>(AllResults).drop_front()) {
+    if (RepetitionMode == Benchmark::RepetitionModeE::AggregateMin) {
+      for (const Benchmark &OtherResult :
+           ArrayRef<Benchmark>(AllResults).drop_front()) {
         llvm::append_range(Result.AssembledSnippet,
                            OtherResult.AssembledSnippet);
         // Aggregate measurements, but only iff all measurements succeeded.
@@ -449,12 +449,12 @@ void benchmarkMain() {
   const auto Opcodes = getOpcodesOrDie(State);
 
   SmallVector<std::unique_ptr<const SnippetRepetitor>, 2> Repetitors;
-  if (RepetitionMode != InstructionBenchmark::RepetitionModeE::AggregateMin)
+  if (RepetitionMode != Benchmark::RepetitionModeE::AggregateMin)
     Repetitors.emplace_back(SnippetRepetitor::Create(RepetitionMode, State));
   else {
-    for (InstructionBenchmark::RepetitionModeE RepMode :
-         {InstructionBenchmark::RepetitionModeE::Duplicate,
-          InstructionBenchmark::RepetitionModeE::Loop})
+    for (Benchmark::RepetitionModeE RepMode :
+         {Benchmark::RepetitionModeE::Duplicate,
+          Benchmark::RepetitionModeE::Loop})
       Repetitors.emplace_back(SnippetRepetitor::Create(RepMode, State));
   }
 
@@ -526,14 +526,14 @@ static void maybeRunAnalysis(const Analysis &Analyzer, const std::string &Name,
     ExitOnFileError(OutputFilename, std::move(Err));
 }
 
-static void filterPoints(MutableArrayRef<InstructionBenchmark> Points,
+static void filterPoints(MutableArrayRef<Benchmark> Points,
                          const MCInstrInfo &MCII) {
-  if (AnalysisSnippetFilter == exegesis::InstructionBenchmarkFilter::All)
+  if (AnalysisSnippetFilter == exegesis::BenchmarkFilter::All)
     return;
 
   bool WantPointsWithMemOps =
-      AnalysisSnippetFilter == exegesis::InstructionBenchmarkFilter::WithMem;
-  for (InstructionBenchmark &Point : Points) {
+      AnalysisSnippetFilter == exegesis::BenchmarkFilter::WithMem;
+  for (Benchmark &Point : Points) {
     if (!Point.Error.empty())
       continue;
     if (WantPointsWithMemOps ==
@@ -568,7 +568,7 @@ static void analysisMain() {
 
   const auto TriplesAndCpus = ExitOnFileError(
       BenchmarkFile,
-      InstructionBenchmark::readTriplesAndCpusFromYamls(*MemoryBuffer));
+      Benchmark::readTriplesAndCpusFromYamls(*MemoryBuffer));
   if (TriplesAndCpus.empty()) {
     errs() << "no benchmarks to analyze\n";
     return;
@@ -591,8 +591,8 @@ static void analysisMain() {
   // Read benchmarks.
   const LLVMState State = ExitOnErr(
       LLVMState::Create(TripleAndCpu.LLVMTriple, TripleAndCpu.CpuName));
-  std::vector<InstructionBenchmark> Points = ExitOnFileError(
-      BenchmarkFile, InstructionBenchmark::readYamls(State, *MemoryBuffer));
+  std::vector<Benchmark> Points = ExitOnFileError(
+      BenchmarkFile, Benchmark::readYamls(State, *MemoryBuffer));
 
   outs() << "Parsed " << Points.size() << " benchmark points\n";
   if (Points.empty()) {
@@ -603,7 +603,7 @@ static void analysisMain() {
 
   filterPoints(Points, State.getInstrInfo());
 
-  const auto Clustering = ExitOnErr(InstructionBenchmarkClustering::create(
+  const auto Clustering = ExitOnErr(BenchmarkClustering::create(
       Points, AnalysisClusteringAlgorithm, AnalysisDbscanNumPoints,
       AnalysisClusteringEpsilon, &State.getSubtargetInfo(),
       &State.getInstrInfo()));
@@ -651,7 +651,7 @@ int main(int Argc, char **Argv) {
     return EXIT_FAILURE;
   });
 
-  if (exegesis::BenchmarkMode == exegesis::InstructionBenchmark::Unknown) {
+  if (exegesis::BenchmarkMode == exegesis::Benchmark::Unknown) {
     exegesis::analysisMain();
   } else {
     exegesis::benchmarkMain();
