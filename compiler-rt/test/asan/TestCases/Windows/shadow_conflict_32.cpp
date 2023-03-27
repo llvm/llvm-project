@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // Load this DLL at the default 32-bit ASan shadow base, and test how we dump
 // the process memory layout.
 // REQUIRES: asan-32-bits
