@@ -588,14 +588,27 @@ def PackGreedilyOp : Op<Transform_Dialect, "structured.pack_greedily", [
     Target a Linalg op and rewrite it into packed LinalgOp form by trying to
     infer whether a known suboperation is embedded
 
-    Different packing strategies are applied in order, when one applies
+    Different packing strategies are applied in order, when one applies 
     successfully, the transform returns:
       1. Matmul packing: Try to infer a matmul operation embedded in the target op.
          Specifically, this looks for 2 parallel dimensions that participate in
          an outer-product and 1 reduction dimension.
          These dimensions are referred as (m, n, k) to match canonical matmul
          terminology.
-         The packed sizes for (m, n, k) are specified by `matmul_packed_sizes`.
+         
+         The packed sizes for (m, n, k) are specified by `matmul_packed_sizes`
+         and the optional `matmul_padded_sizes_next_multiple_of`.
+         When an entry `matmul_packed_sizes[i]` is non-0, the corresponding 
+         dimension is packed by `matmul_packed_sizes[i]`.
+         Otherwise, the dimension is merely padded to the next multiple of
+         `matmul_padded_sizes_next_multiple_of[i]`.
+
+         `matmul_padded_sizes_next_multiple_of` is optional and is expected to
+         either be empty or of size `3`, matching the size of `matmul_packed_sizes`.
+         For each individual element of `matmul_packed_sizes` and 
+         `matmul_padded_sizes_next_multiple_of`, only one of them is allowed to
+         be non-zero.
+         
          The ordering of the packed dimensions (mm, nn, kk) is specified by the
          `matmul_inner_dims_order` attribute.
 
@@ -605,10 +618,15 @@ def PackGreedilyOp : Op<Transform_Dialect, "structured.pack_greedily", [
       3. An interchange transform is applied to isolate the dimensions to pack as
          the most minor indexing dimensions of the linalg.generic. The most minor
          dimensions are themselves ordered according to `inner_dims_order`.
-      4. Packing is performed by `packed_sizes` and following `inner_dims_order`.
+      4. An elementwise traversal of `matmul_packed_sizes` and
+         `matmul_padded_sizes_next_multiple_of` is performed and for each 
+         dimension `d`, either pack to `matmul_packed_sizes[d]` or pad to the
+         `matmul_padded_sizes_next_multiple_of[d]`.
+      5. Packing/padding is performed by the amounts determined in step 4. and
+         following `inner_dims_order`.
 
     By normalizing the most minor dimensions to `inner_dims_order`, the transform
-    guarantees that packing immediates generates inner dimensions in a desirable
+    guarantees that packing immediately generates inner dimensions in a desirable
     layout.
 
     Outer dimension layout permutations are not controlled by this transform op
@@ -625,15 +643,23 @@ def PackGreedilyOp : Op<Transform_Dialect, "structured.pack_greedily", [
   // TODO: Transform_ConcreteOpType<linalg::LinalgOp> needs interface.
   let arguments = (ins TransformHandleTypeInterface:$target,
                    Variadic<PDL_Operation>:$matmul_packed_sizes,
-                   DefaultValuedAttr<DenseI64ArrayAttr, "{}">
-                     :$static_matmul_packed_sizes,
-                   DefaultValuedAttr<DenseI64ArrayAttr, "{}">
-                     :$matmul_inner_dims_order);
+                   ConfinedAttr<DefaultValuedAttr<DenseI64ArrayAttr, "{}">,
+                                 [DenseArrayCount<3>]>:$static_matmul_packed_sizes,
+                   ConfinedAttr<DefaultValuedAttr<DenseI64ArrayAttr, "{}">,
+                                 [Attr<
+                                    Or<[DenseArrayCount<0>.predicate, 
+                                        DenseArrayCount<3>.predicate]>,
+                                        "with 0 or 3 elements"
+                                      >]>
+                                 :$matmul_padded_sizes_next_multiple_of,
+                   ConfinedAttr<DefaultValuedAttr<DenseI64ArrayAttr, "{}">,
+                                 [DenseArrayCount<3>]>:$matmul_inner_dims_order);
   let results = (outs Transform_ConcreteOpType<"linalg.generic">:$packed_op);
 
   let builders = [
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedMatmulPackedSizes,
+                   "ArrayRef<int64_t>":$matmulPaddededSizesNextMultipleOf,
                    CArg<"ArrayRef<int64_t>", "{}">:$matmulDimsInnerDimsOrder)>
   ];
 
@@ -641,7 +667,9 @@ def PackGreedilyOp : Op<Transform_Dialect, "structured.pack_greedily", [
     $target
     oilist(
       `matmul_packed_sizes` `=` custom<DynamicIndexList>($matmul_packed_sizes,
-                                                       $static_matmul_packed_sizes)
+                                                         $static_matmul_packed_sizes)
+      (`matmul_padded_sizes_next_multiple_of` `=` 
+        $matmul_padded_sizes_next_multiple_of^)?
       `matmul_inner_dims_order` `=` $matmul_inner_dims_order
     )
     attr-dict
