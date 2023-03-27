@@ -8,8 +8,7 @@ define i32 @select_unsigned_lt_10_8_13j(i32 %0) {
 ; BASE-NEXT:    xorl %eax, %eax
 ; BASE-NEXT:    cmpl $10, %edi
 ; BASE-NEXT:    setae %al
-; BASE-NEXT:    leal (%rax,%rax,4), %eax
-; BASE-NEXT:    orl $8, %eax
+; BASE-NEXT:    leal 8(%rax,%rax,4), %eax
 ; BASE-NEXT:    retq
 ;
 ; SLOWLEA3-LABEL: select_unsigned_lt_10_8_13j:
@@ -18,7 +17,7 @@ define i32 @select_unsigned_lt_10_8_13j(i32 %0) {
 ; SLOWLEA3-NEXT:    cmpl $10, %edi
 ; SLOWLEA3-NEXT:    setae %al
 ; SLOWLEA3-NEXT:    leal (%rax,%rax,4), %eax
-; SLOWLEA3-NEXT:    orl $8, %eax
+; SLOWLEA3-NEXT:    addl $8, %eax
 ; SLOWLEA3-NEXT:    retq
   %2 = icmp ult i32 %0, 10
   %3 = select i1 %2, i32 8, i32 13

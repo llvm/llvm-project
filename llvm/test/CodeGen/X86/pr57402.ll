@@ -6,8 +6,7 @@ define void @PR57402() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    andl $-2, %eax
-; CHECK-NEXT:    leal (%rax,%rax,2), %ecx
-; CHECK-NEXT:    orl $1, %ecx
+; CHECK-NEXT:    leal 1(%rax,%rax,2), %ecx
 ; CHECK-NEXT:    movswq %cx, %rsi
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    movq $-1, %rax
