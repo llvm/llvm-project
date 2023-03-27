@@ -2926,13 +2926,7 @@ public:
     return ExplicitInfo ? ExplicitInfo->TemplateKeywordLoc : SourceLocation();
   }
 
-  SourceRange getSourceRange() const override LLVM_READONLY {
-    if (isExplicitSpecialization()) {
-      if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsInfo())
-        return SourceRange(getOuterLocStart(), Info->getRAngleLoc());
-    }
-    return VarDecl::getSourceRange();
-  }
+  SourceRange getSourceRange() const override LLVM_READONLY;
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
     Profile(ID, TemplateArgs->asArray(), getASTContext());
@@ -3091,13 +3085,7 @@ public:
     return First->InstantiatedFromMember.setInt(true);
   }
 
-  SourceRange getSourceRange() const override LLVM_READONLY {
-    if (isExplicitSpecialization()) {
-      if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsAsWritten())
-        return SourceRange(getOuterLocStart(), Info->getRAngleLoc());
-    }
-    return VarDecl::getSourceRange();
-  }
+  SourceRange getSourceRange() const override LLVM_READONLY;
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
     Profile(ID, getTemplateArgs().asArray(), getTemplateParameters(),

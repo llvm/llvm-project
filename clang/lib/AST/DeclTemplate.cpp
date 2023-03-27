@@ -1402,6 +1402,15 @@ void VarTemplateSpecializationDecl::setTemplateArgsInfo(
       ASTTemplateArgumentListInfo::Create(getASTContext(), ArgsInfo);
 }
 
+SourceRange VarTemplateSpecializationDecl::getSourceRange() const {
+  if (isExplicitSpecialization() && !hasInit()) {
+    if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsInfo())
+      return SourceRange(getOuterLocStart(), Info->getRAngleLoc());
+  }
+  return VarDecl::getSourceRange();
+}
+
+
 //===----------------------------------------------------------------------===//
 // VarTemplatePartialSpecializationDecl Implementation
 //===----------------------------------------------------------------------===//
@@ -1445,6 +1454,14 @@ VarTemplatePartialSpecializationDecl *
 VarTemplatePartialSpecializationDecl::CreateDeserialized(ASTContext &C,
                                                          unsigned ID) {
   return new (C, ID) VarTemplatePartialSpecializationDecl(C);
+}
+
+SourceRange VarTemplatePartialSpecializationDecl::getSourceRange() const {
+  if (isExplicitSpecialization() && !hasInit()) {
+    if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsAsWritten())
+      return SourceRange(getOuterLocStart(), Info->getRAngleLoc());
+  }
+  return VarDecl::getSourceRange();
 }
 
 static TemplateParameterList *

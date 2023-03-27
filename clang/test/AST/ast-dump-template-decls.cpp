@@ -197,9 +197,7 @@ int unTempl<int>;
 
 template<>
 float unTempl<float> = 1;
-// FIXME (#61680) - serializing and loading AST should not affect reported source range
-// DIRECT:     VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:20> col:7 unTempl 'float' cinit
-// SERIALIZED: VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:24> col:7 unTempl 'float' cinit
+// CHECK:      VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:24> col:7 unTempl 'float' cinit
 // CHECK-NEXT: |-TemplateArgument type 'float'
 // CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'float'
 // CHECK-NEXT: `-ImplicitCastExpr 0x{{[^ ]*}} <col:24> 'float' <IntegralToFloating>
@@ -245,9 +243,7 @@ int binTempl<int, int>;
 
 template<>
 float binTempl<float, float> = 1;
-// FIXME (#61680) - serializing and loading AST should not affect reported source range
-// DIRECT:    VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:28> col:7 binTempl 'float' cinit
-// SERIALIZED: VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:32> col:7 binTempl 'float' cinit
+// CHECK:     VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:32> col:7 binTempl 'float' cinit
 // CHECK-NEXT: |-TemplateArgument type 'float'
 // CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'float'
 // CHECK-NEXT: |-TemplateArgument type 'float'
