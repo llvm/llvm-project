@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-- -passes='print<divergence>' 2>&1 -disable-output -amdgpu-use-legacy-divergence-analysis %s | FileCheck %s
+; RUN: opt -mtriple=amdgcn-- -passes='print<divergence>' 2>&1 -disable-output %s | FileCheck %s
 
 ; CHECK: DIVERGENT: %swizzle = call i32 @llvm.amdgcn.ds.swizzle(i32 %src, i32 100) #0
 define amdgpu_kernel void @ds_swizzle(ptr addrspace(1) %out, i32 %src) #0 {

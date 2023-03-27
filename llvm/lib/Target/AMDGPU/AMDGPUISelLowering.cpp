@@ -3638,12 +3638,6 @@ SDValue AMDGPUTargetLowering::performMulhuCombine(SDNode *N,
   return DAG.getZExtOrTrunc(Mulhi, DL, VT);
 }
 
-static bool isNegativeOne(SDValue Val) {
-  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Val))
-    return C->isAllOnes();
-  return false;
-}
-
 SDValue AMDGPUTargetLowering::getFFBX_U32(SelectionDAG &DAG,
                                           SDValue Op,
                                           const SDLoc &DL,
@@ -3686,7 +3680,7 @@ SDValue AMDGPUTargetLowering::performCtlz_CttzCombine(const SDLoc &SL, SDValue C
   // select (setcc x, 0, eq), -1, (cttz_zero_undef x) -> ffbl_u32 x
   if (CCOpcode == ISD::SETEQ &&
       (isCtlzOpc(RHS.getOpcode()) || isCttzOpc(RHS.getOpcode())) &&
-      RHS.getOperand(0) == CmpLHS && isNegativeOne(LHS)) {
+      RHS.getOperand(0) == CmpLHS && isAllOnesConstant(LHS)) {
     unsigned Opc =
         isCttzOpc(RHS.getOpcode()) ? AMDGPUISD::FFBL_B32 : AMDGPUISD::FFBH_U32;
     return getFFBX_U32(DAG, CmpLHS, SL, Opc);
@@ -3696,7 +3690,7 @@ SDValue AMDGPUTargetLowering::performCtlz_CttzCombine(const SDLoc &SL, SDValue C
   // select (setcc x, 0, ne), (cttz_zero_undef x), -1 -> ffbl_u32 x
   if (CCOpcode == ISD::SETNE &&
       (isCtlzOpc(LHS.getOpcode()) || isCttzOpc(LHS.getOpcode())) &&
-      LHS.getOperand(0) == CmpLHS && isNegativeOne(RHS)) {
+      LHS.getOperand(0) == CmpLHS && isAllOnesConstant(RHS)) {
     unsigned Opc =
         isCttzOpc(LHS.getOpcode()) ? AMDGPUISD::FFBL_B32 : AMDGPUISD::FFBH_U32;
 

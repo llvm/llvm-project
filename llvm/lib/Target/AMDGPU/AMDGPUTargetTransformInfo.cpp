@@ -52,11 +52,6 @@ static cl::opt<bool> UnrollRuntimeLocal(
   cl::desc("Allow runtime unroll for AMDGPU if local memory used in a loop"),
   cl::init(true), cl::Hidden);
 
-static cl::opt<bool> UseLegacyDA(
-  "amdgpu-use-legacy-divergence-analysis",
-  cl::desc("Enable legacy divergence analysis for AMDGPU"),
-  cl::init(false), cl::Hidden);
-
 static cl::opt<unsigned> UnrollMaxBlockToAnalyze(
     "amdgpu-unroll-max-block-to-analyze",
     cl::desc("Inner loop block size threshold to analyze in unroll for AMDGPU"),
@@ -858,11 +853,6 @@ bool GCNTTIImpl::isInlineAsmSourceOfDivergence(
   }
 
   return false;
-}
-
-/// \returns true if the new GPU divergence analysis is enabled.
-bool GCNTTIImpl::useGPUDivergenceAnalysis() const {
-  return !UseLegacyDA;
 }
 
 bool GCNTTIImpl::isReadRegisterSourceOfDivergence(

@@ -917,7 +917,7 @@ public:
                               SDValue Chain, SDValue InFlag,
                               SDValue PStateSM, bool Entry) const;
 
-  bool isVScaleKnownToBeAPowerOfTwo() const override;
+  bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
 
   // Normally SVE is only used for byte size vectors that do not fit within a
   // NEON vector. This changes when OverrideNEON is true, allowing SVE to be

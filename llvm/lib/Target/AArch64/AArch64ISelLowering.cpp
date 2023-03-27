@@ -6030,10 +6030,6 @@ bool AArch64TargetLowering::mergeStoresAfterLegalization(EVT VT) const {
   return !Subtarget->useSVEForFixedLengthVectors();
 }
 
-bool AArch64TargetLowering::isVScaleKnownToBeAPowerOfTwo() const {
-  return true;
-}
-
 bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(
     EVT VT, bool OverrideNEON) const {
   if (!VT.isFixedLengthVector() || !VT.isSimple())
@@ -16586,7 +16582,6 @@ performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   SelectionDAG &DAG = DCI.DAG;
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
-  ConstantSDNode *ConstantN1 = dyn_cast<ConstantSDNode>(N1);
 
   EVT VT = N->getValueType(0);
   const bool FullFP16 = DAG.getSubtarget<AArch64Subtarget>().hasFullFP16();
@@ -16605,8 +16600,7 @@ performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   //              (extract_vector_elt (vXf32 Other) 1))
   // For strict_fadd we need to make sure the old strict_fadd can be deleted, so
   // we can only do this when it's used only by the extract_vector_elt.
-  if (ConstantN1 && ConstantN1->getZExtValue() == 0 &&
-      hasPairwiseAdd(N0->getOpcode(), VT, FullFP16) &&
+  if (isNullConstant(N1) && hasPairwiseAdd(N0->getOpcode(), VT, FullFP16) &&
       (!IsStrict || N0.hasOneUse())) {
     SDLoc DL(N0);
     SDValue N00 = N0->getOperand(IsStrict ? 1 : 0);
