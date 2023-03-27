@@ -1,4 +1,4 @@
-//===-- RISCVTargetMachine.h - Define TargetMachine for RISCV ---*- C++ -*-===//
+//===-- RISCVTargetMachine.h - Define TargetMachine for RISC-V --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the RISCV specific subclass of TargetMachine.
+// This file declares the RISC-V specific subclass of TargetMachine.
 //
 //===----------------------------------------------------------------------===//
 

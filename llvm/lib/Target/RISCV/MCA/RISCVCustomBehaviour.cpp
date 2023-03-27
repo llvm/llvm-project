@@ -56,7 +56,7 @@ uint8_t RISCVLMULInstrument::getLMUL() const {
   // below
   assert(isDataValid(getData()) &&
          "Cannot get LMUL because invalid Data value");
-  // These are the LMUL values that are used in RISCV tablegen
+  // These are the LMUL values that are used in RISC-V tablegen
   return StringSwitch<uint8_t>(getData())
       .Case("M1", 0b000)
       .Case("M2", 0b001)
@@ -139,7 +139,7 @@ createRISCVInstrumentManager(const MCSubtargetInfo &STI,
   return new RISCVInstrumentManager(STI, MCII);
 }
 
-/// Extern function to initialize the targets for the RISCV backend
+/// Extern function to initialize the targets for the RISC-V backend
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTargetMCA() {
   TargetRegistry::RegisterInstrumentManager(getTheRISCV32Target(),
                                             createRISCVInstrumentManager);

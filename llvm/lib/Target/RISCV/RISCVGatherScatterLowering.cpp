@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass custom lowers llvm.gather and llvm.scatter instructions to
-// RISCV intrinsics.
+// RISC-V intrinsics.
 //
 //===----------------------------------------------------------------------===//
 
