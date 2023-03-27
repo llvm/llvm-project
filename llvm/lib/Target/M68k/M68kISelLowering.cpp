@@ -178,6 +178,7 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
           ISD::ATOMIC_LOAD_MAX,
           ISD::ATOMIC_LOAD_UMIN,
           ISD::ATOMIC_LOAD_UMAX,
+          ISD::ATOMIC_SWAP,
       },
       {MVT::i8, MVT::i16, MVT::i32}, LibCall);
 
