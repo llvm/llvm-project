@@ -8501,6 +8501,81 @@ TEST_P(ASTImporterOptionSpecificTestBase,
     EXPECT_EQ(true, FD->hasAttr<NoUniqueAddressAttr>());
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportExistingTypedefToRecord) {
+  const char *Code =
+      R"(
+      struct S { int i; };
+      typedef struct S T;
+      extern T x;
+      )";
+  Decl *ToTU = getToTuDecl(Code, Lang_C99);
+  Decl *FromTU = getTuDecl(Code, Lang_C99);
+
+  auto *FromX =
+      FirstDeclMatcher<VarDecl>().match(FromTU, varDecl(hasName("x")));
+  auto *ToX = Import(FromX, Lang_C99);
+  EXPECT_TRUE(ToX);
+
+  auto *Typedef1 =
+      FirstDeclMatcher<TypedefDecl>().match(ToTU, typedefDecl(hasName("T")));
+  auto *Typedef2 =
+      LastDeclMatcher<TypedefDecl>().match(ToTU, typedefDecl(hasName("T")));
+  EXPECT_EQ(Typedef1, Typedef2);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportExistingTypedefToUnnamedRecord) {
+  const char *Code =
+      R"(
+      typedef const struct { int f; } T;
+      extern T x;
+      )";
+  Decl *ToTU = getToTuDecl(Code, Lang_C99);
+  Decl *FromTU = getTuDecl(Code, Lang_C99);
+
+  auto *FromX =
+      FirstDeclMatcher<VarDecl>().match(FromTU, varDecl(hasName("x")));
+  auto *ToX = Import(FromX, Lang_C99);
+  EXPECT_TRUE(ToX);
+
+  auto *Typedef1 =
+      FirstDeclMatcher<TypedefDecl>().match(ToTU, typedefDecl(hasName("T")));
+  auto *Typedef2 =
+      LastDeclMatcher<TypedefDecl>().match(ToTU, typedefDecl(hasName("T")));
+  EXPECT_NE(Typedef1, Typedef2);
+  EXPECT_NE(Typedef1->getUnderlyingType().getTypePtr(),
+            Typedef2->getUnderlyingType().getTypePtr());
+  EXPECT_EQ(ToX->getType()->getAs<TypedefType>()->getDecl(), Typedef2);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportTwoTypedefsToUnnamedRecord) {
+  const char *Code =
+      R"(
+      typedef struct { int f; } T1;
+      typedef struct { int f; } T2;
+      extern T1 x1;
+      extern T2 x2;
+      )";
+  Decl *ToTU = getToTuDecl("", Lang_C99);
+  Decl *FromTU = getTuDecl(Code, Lang_C99);
+
+  auto *FromX1 =
+      FirstDeclMatcher<VarDecl>().match(FromTU, varDecl(hasName("x1")));
+  auto *FromX2 =
+      FirstDeclMatcher<VarDecl>().match(FromTU, varDecl(hasName("x2")));
+  auto *ToX1 = Import(FromX1, Lang_C99);
+  EXPECT_TRUE(ToX1);
+  auto *ToX2 = Import(FromX2, Lang_C99);
+  EXPECT_TRUE(ToX2);
+
+  auto *Typedef1 =
+      FirstDeclMatcher<TypedefDecl>().match(ToTU, typedefDecl(hasName("T1")));
+  auto *Typedef2 =
+      FirstDeclMatcher<TypedefDecl>().match(ToTU, typedefDecl(hasName("T2")));
+  EXPECT_NE(Typedef1->getUnderlyingType().getTypePtr(),
+            Typedef2->getUnderlyingType().getTypePtr());
+}
+
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,
                          DefaultTestValuesForRunOptions);
 
