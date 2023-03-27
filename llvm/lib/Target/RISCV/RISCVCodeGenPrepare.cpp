@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is a RISCV specific version of CodeGenPrepare.
+// This is a RISC-V specific version of CodeGenPrepare.
 // It munges the code in the input function to better prepare it for
 // SelectionDAG-based code generation. This works around limitations in it's
 // basic-block-at-a-time approach.
