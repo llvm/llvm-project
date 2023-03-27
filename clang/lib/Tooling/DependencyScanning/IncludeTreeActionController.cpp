@@ -129,7 +129,8 @@ private:
   // are recorded in the PCH, ordered by \p FileEntry::UID index.
   SmallVector<StringRef> PreIncludedFileNames;
   llvm::BitVector SeenIncludeFiles;
-  llvm::SetVector<cas::IncludeTree::FileList::FileEntry> IncludedFiles;
+  SmallVector<cas::IncludeTree::FileList::FileEntry> IncludedFiles;
+  SmallVector<cas::ObjectRef> IncludedFileLists;
   Optional<cas::ObjectRef> PredefinesBufferRef;
   Optional<cas::ObjectRef> ModuleIncludesBufferRef;
   Optional<cas::ObjectRef> ModuleMapRef;
@@ -454,9 +455,23 @@ void IncludeTreeBuilder::handleHasIncludeCheck(Preprocessor &PP, bool Result) {
   IncludeStack.back().HasIncludeChecks.push_back(Result);
 }
 
+// FIXME: duplicates code in PPDirectives
+static bool isForModuleBuilding(const Module *M, StringRef CurrentModule,
+                                StringRef ModuleName) {
+  StringRef TopLevelName = M->getTopLevelModuleName();
+
+  // When building framework Foo, we wanna make sure that Foo *and* Foo_Private
+  // are textually included and no modules are built for both.
+  if (M->getTopLevelModule()->IsFramework && CurrentModule == ModuleName &&
+      !CurrentModule.endswith("_Private") && TopLevelName.endswith("_Private"))
+    TopLevelName = TopLevelName.drop_back(8);
+
+  return TopLevelName == CurrentModule;
+}
+
 void IncludeTreeBuilder::moduleImport(Preprocessor &PP, const Module *M,
                                       SourceLocation EndLoc) {
-  bool VisibilityOnly = M->isForBuilding(PP.getLangOpts());
+  bool VisibilityOnly = isForModuleBuilding(M, PP.getLangOpts().CurrentModule, PP.getLangOpts().ModuleName);
   auto Import = check(cas::IncludeTree::ModuleImport::create(
       DB, M->getFullModuleName(), VisibilityOnly));
   if (!Import)
@@ -655,7 +670,7 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
   }
 
   auto FileList =
-      cas::IncludeTree::FileList::create(DB, IncludedFiles.getArrayRef());
+      cas::IncludeTree::FileList::create(DB, IncludedFiles, IncludedFileLists);
   if (!FileList)
     return FileList.takeError();
 
@@ -681,16 +696,8 @@ Error IncludeTreeBuilder::addModuleInputs(ASTReader &Reader) {
     Optional<cas::IncludeTreeRoot> Root;
     if (Error E = cas::IncludeTreeRoot::get(DB, *Ref).moveInto(Root))
       return E;
-    Optional<cas::IncludeTree::FileList> Files;
-    if (Error E = Root->getFileList().moveInto(Files))
-      return E;
 
-    Error E = Files->forEachFile([&](auto IF, auto Size) -> Error {
-      IncludedFiles.insert({IF.getRef(), Size});
-      return Error::success();
-    });
-    if (E)
-      return E;
+    IncludedFileLists.push_back(Root->getFileListRef());
   }
 
   return Error::success();
@@ -771,7 +778,7 @@ IncludeTreeBuilder::addToFileList(FileManager &FM, const FileEntry *FE) {
     auto FileNode = createIncludeFile(Filename, **CASContents);
     if (!FileNode)
       return FileNode.takeError();
-    IncludedFiles.insert(
+    IncludedFiles.push_back(
         {FileNode->getRef(),
          static_cast<cas::IncludeTree::FileList::FileSizeTy>(FE->getSize())});
     return FileNode->getRef();
