@@ -2393,7 +2393,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
 
     getTargetStreamer().emitDirectiveOptionNoRVC();
     clearFeatureBits(RISCV::FeatureStdExtC, "c");
-    clearFeatureBits(RISCV::FeatureExtZca, "+experimental-zca");
+    clearFeatureBits(RISCV::FeatureStdExtZca, "+experimental-zca");
     return false;
   }
 
@@ -2568,7 +2568,7 @@ bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
     return Error(ErrorLoc, "expected instruction format");
 
   bool AllowC = getSTI().hasFeature(RISCV::FeatureStdExtC) ||
-                getSTI().hasFeature(RISCV::FeatureExtZca);
+                getSTI().hasFeature(RISCV::FeatureStdExtZca);
   if (!isValidInsnFormat(Format, AllowC))
     return Error(ErrorLoc, "invalid instruction format");
 
