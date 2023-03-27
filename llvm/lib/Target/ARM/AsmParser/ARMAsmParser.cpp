@@ -70,7 +70,12 @@
 using namespace llvm;
 
 namespace llvm {
-extern const MCInstrDesc ARMDescs[];
+struct ARMInstrTable {
+  MCInstrDesc Insts[4445];
+  MCOperandInfo OperandInfo[3026];
+  MCPhysReg ImplicitOps[130];
+};
+extern const ARMInstrTable ARMDescs;
 } // end namespace llvm
 
 namespace {
@@ -2504,7 +2509,7 @@ public:
     } else {
       unsigned NextOpIndex = Inst.getNumOperands();
       const MCInstrDesc &MCID =
-          ARMDescs[ARM::INSTRUCTION_LIST_END - 1 - Inst.getOpcode()];
+          ARMDescs.Insts[ARM::INSTRUCTION_LIST_END - 1 - Inst.getOpcode()];
       int TiedOp = MCID.getOperandConstraint(NextOpIndex, MCOI::TIED_TO);
       assert(TiedOp >= 0 &&
              "Inactive register in vpred_r is not tied to an output!");
