@@ -1505,7 +1505,7 @@ RISCVAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
     auto *CE = dyn_cast<MCConstantExpr>(Res);
     if (CE) {
       int64_t Imm = CE->getValue();
-      if (isUInt<7>(Imm) && (Imm & 3) == 3) {
+      if (isUInt<7>(Imm)) {
         Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
         return MatchOperand_Success;
       }
@@ -1534,8 +1534,8 @@ RISCVAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
     break;
   }
 
-  Error(S, "opcode must be in the range [0, 127] and the lower 2 bits must be "
-           "0x3");
+  Error(S, "opcode must be a valid opcode name or an immediate in the range "
+           "[0, 127]");
   return MatchOperand_ParseFail;
 }
 
