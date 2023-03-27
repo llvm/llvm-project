@@ -128,6 +128,11 @@ static cl::opt<std::string> SampleProfileRemappingFile(
     "sample-profile-remapping-file", cl::init(""), cl::value_desc("filename"),
     cl::desc("Profile remapping file loaded by -sample-profile"), cl::Hidden);
 
+static cl::opt<bool> SalvageStaleProfile(
+    "salvage-stale-profile", cl::Hidden, cl::init(false),
+    cl::desc("Salvage stale profile by fuzzy matching and use the remapped "
+             "location for sample profile query."));
+
 static cl::opt<bool> ReportProfileStaleness(
     "report-profile-staleness", cl::Hidden, cl::init(false),
     cl::desc("Compute and report stale profile statistical metrics."));
@@ -458,7 +463,9 @@ public:
                                        FunctionSamples::ProfileIsCS);
     }
   }
+  void runOnModule();
 
+private:
   FunctionSamples *getFlattenedSamplesFor(const Function &F) {
     StringRef CanonFName = FunctionSamples::getCanonicalFnName(F);
     auto It = FlattenedProfiles.find(CanonFName);
@@ -466,9 +473,11 @@ public:
       return &It->second;
     return nullptr;
   }
-
-  void detectProfileMismatch();
-  void detectProfileMismatch(const Function &F, const FunctionSamples &FS);
+  void runOnFunction(const Function &F, const FunctionSamples &FS);
+  void countProfileMismatches(
+      const FunctionSamples &FS,
+      const std::unordered_set<LineLocation, LineLocationHash>
+          &MatchedCallsiteLocs);
 };
 
 /// Sample profile pass.
@@ -2071,7 +2080,8 @@ bool SampleProfileLoader::doInitialization(Module &M,
     }
   }
 
-  if (ReportProfileStaleness || PersistProfileStaleness) {
+  if (ReportProfileStaleness || PersistProfileStaleness ||
+      SalvageStaleProfile) {
     MatchingManager =
         std::make_unique<SampleProfileMatcher>(M, *Reader, ProbeManager.get());
   }
@@ -2079,8 +2089,53 @@ bool SampleProfileLoader::doInitialization(Module &M,
   return true;
 }
 
-void SampleProfileMatcher::detectProfileMismatch(const Function &F,
-                                                 const FunctionSamples &FS) {
+void SampleProfileMatcher::countProfileMismatches(
+    const FunctionSamples &FS,
+    const std::unordered_set<LineLocation, LineLocationHash>
+        &MatchedCallsiteLocs) {
+
+  auto isInvalidLineOffset = [](uint32_t LineOffset) {
+    return LineOffset & 0x8000;
+  };
+
+  // Check if there are any callsites in the profile that does not match to any
+  // IR callsites, those callsite samples will be discarded.
+  for (auto &I : FS.getBodySamples()) {
+    const LineLocation &Loc = I.first;
+    if (isInvalidLineOffset(Loc.LineOffset))
+      continue;
+
+    uint64_t Count = I.second.getSamples();
+    if (!I.second.getCallTargets().empty()) {
+      TotalCallsiteSamples += Count;
+      TotalProfiledCallsites++;
+      if (!MatchedCallsiteLocs.count(Loc)) {
+        MismatchedCallsiteSamples += Count;
+        NumMismatchedCallsites++;
+      }
+    }
+  }
+
+  for (auto &I : FS.getCallsiteSamples()) {
+    const LineLocation &Loc = I.first;
+    if (isInvalidLineOffset(Loc.LineOffset))
+      continue;
+
+    uint64_t Count = 0;
+    for (auto &FM : I.second) {
+      Count += FM.second.getHeadSamplesEstimate();
+    }
+    TotalCallsiteSamples += Count;
+    TotalProfiledCallsites++;
+    if (!MatchedCallsiteLocs.count(Loc)) {
+      MismatchedCallsiteSamples += Count;
+      NumMismatchedCallsites++;
+    }
+  }
+}
+
+void SampleProfileMatcher::runOnFunction(const Function &F,
+                                         const FunctionSamples &FS) {
   if (FunctionSamples::ProfileIsProbeBased) {
     uint64_t Count = FS.getTotalSamples();
     TotalFuncHashSamples += Count;
@@ -2130,47 +2185,12 @@ void SampleProfileMatcher::detectProfileMismatch(const Function &F,
     }
   }
 
-  auto isInvalidLineOffset = [](uint32_t LineOffset) {
-    return LineOffset & 0x8000;
-  };
-
-  // Check if there are any callsites in the profile that does not match to any
-  // IR callsites, those callsite samples will be discarded.
-  for (auto &I : FS.getBodySamples()) {
-    const LineLocation &Loc = I.first;
-    if (isInvalidLineOffset(Loc.LineOffset))
-      continue;
-
-    uint64_t Count = I.second.getSamples();
-    if (!I.second.getCallTargets().empty()) {
-      TotalCallsiteSamples += Count;
-      TotalProfiledCallsites++;
-      if (!MatchedCallsiteLocs.count(Loc)) {
-        MismatchedCallsiteSamples += Count;
-        NumMismatchedCallsites++;
-      }
-    }
-  }
-
-  for (auto &I : FS.getCallsiteSamples()) {
-    const LineLocation &Loc = I.first;
-    if (isInvalidLineOffset(Loc.LineOffset))
-      continue;
-
-    uint64_t Count = 0;
-    for (auto &FM : I.second) {
-      Count += FM.second.getHeadSamplesEstimate();
-    }
-    TotalCallsiteSamples += Count;
-    TotalProfiledCallsites++;
-    if (!MatchedCallsiteLocs.count(Loc)) {
-      MismatchedCallsiteSamples += Count;
-      NumMismatchedCallsites++;
-    }
-  }
+  // Detect profile mismatch for profile staleness metrics report.
+  if (ReportProfileStaleness || PersistProfileStaleness)
+    countProfileMismatches(FS, MatchedCallsiteLocs);
 }
 
-void SampleProfileMatcher::detectProfileMismatch() {
+void SampleProfileMatcher::runOnModule() {
   for (auto &F : M) {
     if (F.isDeclaration() || !F.hasFnAttribute("use-sample-profile"))
       continue;
@@ -2181,7 +2201,7 @@ void SampleProfileMatcher::detectProfileMismatch() {
       FS = Reader.getSamplesFor(F);
     if (!FS)
       continue;
-    detectProfileMismatch(F, *FS);
+    runOnFunction(F, *FS);
   }
 
   if (ReportProfileStaleness) {
@@ -2270,8 +2290,10 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
   assert(SymbolMap.count(StringRef()) == 0 &&
          "No empty StringRef should be added in SymbolMap");
 
-  if (ReportProfileStaleness || PersistProfileStaleness)
-    MatchingManager->detectProfileMismatch();
+  if (ReportProfileStaleness || PersistProfileStaleness ||
+      SalvageStaleProfile) {
+    MatchingManager->runOnModule();
+  }
 
   bool retval = false;
   for (auto *F : buildFunctionOrder(M, CG)) {
