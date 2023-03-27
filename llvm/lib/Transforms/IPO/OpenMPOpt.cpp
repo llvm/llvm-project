@@ -3501,22 +3501,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
     Attributor::SimplifictionCallbackTy StateMachineSimplifyCB =
         [&](const IRPosition &IRP, const AbstractAttribute *AA,
             bool &UsedAssumedInformation) -> std::optional<Value *> {
-      // IRP represents the "use generic state machine" argument of an
-      // __kmpc_target_init call. We will answer this one with the internal
-      // state. As long as we are not in an invalid state, we will create a
-      // custom state machine so the value should be a `i1 false`. If we are
-      // in an invalid state, we won't change the value that is in the IR.
-      if (!ReachedKnownParallelRegions.isValidState())
         return nullptr;
-      // If we have disabled state machine rewrites, don't make a custom one.
-      if (DisableOpenMPOptStateMachineRewrite)
-        return nullptr;
-      if (AA)
-        A.recordDependence(*this, *AA, DepClassTy::OPTIONAL);
-      UsedAssumedInformation = !isAtFixpoint();
-      auto *FalseVal =
-          ConstantInt::getBool(IRP.getAnchorValue().getContext(), false);
-      return FalseVal;
     };
 
     Attributor::SimplifictionCallbackTy ModeSimplifyCB =
