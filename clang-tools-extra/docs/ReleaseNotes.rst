@@ -223,6 +223,9 @@ Changes in existing checks
   behavior of using `i` as the prefix for enum tags, set the `EnumConstantPrefix`
   option to `i` instead of using `EnumConstantHungarianPrefix`.
 
+- Added support to optionally ignore user-defined literals in
+  :doc:`readability-magic-numbers<clang-tidy/checks/readability/magic-numbers>`.
+
 - Fixed a false positive in :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check when comparing
   ``std::array`` objects to default constructed ones. The behavior for this and
