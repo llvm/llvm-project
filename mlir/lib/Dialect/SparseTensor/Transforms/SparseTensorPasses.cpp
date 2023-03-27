@@ -181,7 +181,8 @@ struct SparseTensorCodegenPass
 
   SparseTensorCodegenPass() = default;
   SparseTensorCodegenPass(const SparseTensorCodegenPass &pass) = default;
-  SparseTensorCodegenPass(bool enableInit) {
+  SparseTensorCodegenPass(bool createDeallocs, bool enableInit) {
+    createSparseDeallocs = createDeallocs;
     enableBufferInitialization = enableInit;
   }
 
@@ -232,8 +233,8 @@ struct SparseTensorCodegenPass
                                                                    converter);
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                          target);
-    populateSparseTensorCodegenPatterns(converter, patterns,
-                                        enableBufferInitialization);
+    populateSparseTensorCodegenPatterns(
+        converter, patterns, createSparseDeallocs, enableBufferInitialization);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
@@ -378,8 +379,10 @@ std::unique_ptr<Pass> mlir::createSparseTensorCodegenPass() {
 }
 
 std::unique_ptr<Pass>
-mlir::createSparseTensorCodegenPass(bool enableBufferInitialization) {
-  return std::make_unique<SparseTensorCodegenPass>(enableBufferInitialization);
+mlir::createSparseTensorCodegenPass(bool createSparseDeallocs,
+                                    bool enableBufferInitialization) {
+  return std::make_unique<SparseTensorCodegenPass>(createSparseDeallocs,
+                                                   enableBufferInitialization);
 }
 
 std::unique_ptr<Pass> mlir::createSparseBufferRewritePass() {
