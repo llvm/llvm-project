@@ -173,12 +173,12 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
 
   Builder.SetInsertPoint(BO);
   Builder.SetCurrentDebugLocation(DebugLoc());
-  // Add the splat value to the start
+  // Add the splat value to the start or multiply the start and stride by the
+  // splat.
   if (BO->getOpcode() == Instruction::Add) {
     Start = Builder.CreateAdd(Start, Splat);
-  }
-  // Or multiply the start and stride by the splat.
-  else if (BO->getOpcode() == Instruction::Mul) {
+  } else {
+    assert(BO->getOpcode() == Instruction::Mul && "Unexpected opcode");
     Start = Builder.CreateMul(Start, Splat);
     Stride = Builder.CreateMul(Stride, Splat);
   }
