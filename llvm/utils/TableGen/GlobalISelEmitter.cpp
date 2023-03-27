@@ -3002,6 +3002,8 @@ private:
   /// When provided, this is the suboperand of the ComplexPattern operand to
   /// render. Otherwise all the suboperands will be rendered.
   std::optional<unsigned> SubOperand;
+  /// The subregister to extract. Render the whole register if not specified.
+  const CodeGenSubRegIndex *SubReg;
 
   unsigned getNumOperands() const {
     return TheDef.getValueAsDag("Operands")->getNumArgs();
@@ -3010,24 +3012,30 @@ private:
 public:
   RenderComplexPatternOperand(unsigned InsnID, const Record &TheDef,
                               StringRef SymbolicName, unsigned RendererID,
-                              std::optional<unsigned> SubOperand = std::nullopt)
+                              std::optional<unsigned> SubOperand = std::nullopt,
+                              const CodeGenSubRegIndex *SubReg = nullptr)
       : OperandRenderer(OR_ComplexPattern), InsnID(InsnID), TheDef(TheDef),
         SymbolicName(SymbolicName), RendererID(RendererID),
-        SubOperand(SubOperand) {}
+        SubOperand(SubOperand), SubReg(SubReg) {}
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_ComplexPattern;
   }
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
-    Table << MatchTable::Opcode(SubOperand ? "GIR_ComplexSubOperandRenderer"
-                                           : "GIR_ComplexRenderer")
+    Table << MatchTable::Opcode(
+                 SubOperand ? (SubReg ? "GIR_ComplexSubOperandSubRegRenderer"
+                                      : "GIR_ComplexSubOperandRenderer")
+                            : "GIR_ComplexRenderer")
           << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
           << MatchTable::Comment("RendererID")
           << MatchTable::IntValue(RendererID);
     if (SubOperand)
       Table << MatchTable::Comment("SubOperand")
             << MatchTable::IntValue(*SubOperand);
+    if (SubReg)
+      Table << MatchTable::Comment("SubRegIdx")
+            << MatchTable::IntValue(SubReg->EnumValue);
     Table << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
   }
 };
@@ -4914,8 +4922,15 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
         return failedImport("EXTRACT_SUBREG requires an additional COPY");
     }
 
-    DstMIBuilder.addRenderer<CopySubRegRenderer>(Dst->getChild(0)->getName(),
-                                                 SubIdx);
+    StringRef RegOperandName = Dst->getChild(0)->getName();
+    if (const auto &SubOperand = M.getComplexSubOperand(RegOperandName)) {
+      DstMIBuilder.addRenderer<RenderComplexPatternOperand>(
+          *std::get<0>(*SubOperand), RegOperandName, std::get<1>(*SubOperand),
+          std::get<2>(*SubOperand), SubIdx);
+      return InsertPt;
+    }
+
+    DstMIBuilder.addRenderer<CopySubRegRenderer>(RegOperandName, SubIdx);
     return InsertPt;
   }
 
