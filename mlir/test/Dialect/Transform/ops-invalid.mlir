@@ -293,8 +293,10 @@ transform.sequence failures(suppress) {
 // -----
 
 module attributes { transform.with_named_sequence } {
-  // expected-error @below {{failed to verify constraint: region with 1 blocks}}
-  "transform.named_sequence"() ({}) { sym_name = "external_named_sequence", function_type = () -> () } : () -> ()
+  // expected-error @below {{expected a non-empty body block}}
+  "transform.named_sequence"() ({
+  ^bb0:
+  }) { sym_name = "external_named_sequence", function_type = () -> () } : () -> ()
 
   transform.sequence failures(propagate) {
   ^bb0(%arg0: !transform.any_op):
