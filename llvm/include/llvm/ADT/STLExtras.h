@@ -2311,14 +2311,21 @@ template <typename... Refs> struct enumerator_result<std::size_t, Refs...> {
       return Storage;
   }
 
-  /// Returns the value at index `I`. This includes the index.
-  template <std::size_t I>
-  friend decltype(auto) get(const enumerator_result &Result) {
-    static_assert(I < NumValues, "Index out of bounds");
-    if constexpr (I == 0)
-      return Result.Idx;
-    else
-      return std::get<I - 1>(Result.Storage);
+  /// Returns the value at index `I`. This case covers the index.
+  template <std::size_t I, typename = std::enable_if_t<I == 0>>
+  friend std::size_t get(const enumerator_result &Result) {
+    return Result.Idx;
+  }
+
+  /// Returns the value at index `I`. This case covers references to the
+  /// iteratees.
+  template <std::size_t I, typename = std::enable_if_t<I != 0>>
+  friend std::tuple_element_t<I, value_reference_tuple>
+  get(const enumerator_result &Result) {
+    // Note: This is a separate function from the other `get`, instead of an
+    // `if constexpr` case, to work around an MSVC 19.31.31XXX compiler
+    // (Visual Studio 2022 17.1) return type deduction bug.
+    return std::get<I - 1>(Result.Storage);
   }
 
   template <typename... Ts>
