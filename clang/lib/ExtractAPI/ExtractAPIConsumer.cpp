@@ -12,10 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/DeclObjC.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -35,7 +33,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -222,34 +219,11 @@ private:
   llvm::DenseSet<const FileEntry *> ExternalFileEntries;
 };
 
-struct BatchExtractAPIVisitor : ExtractAPIVisitor<BatchExtractAPIVisitor> {
-  bool shouldDeclBeIncluded(const Decl *D) const {
-    bool ShouldBeIncluded = true;
-    // Check that we have the definition for redeclarable types.
-    if (auto *TD = llvm::dyn_cast<TagDecl>(D))
-      ShouldBeIncluded = TD->isThisDeclarationADefinition();
-    else if (auto *Interface = llvm::dyn_cast<ObjCInterfaceDecl>(D))
-      ShouldBeIncluded = Interface->isThisDeclarationADefinition();
-    else if (auto *Protocol = llvm::dyn_cast<ObjCProtocolDecl>(D))
-      ShouldBeIncluded = Protocol->isThisDeclarationADefinition();
-
-    ShouldBeIncluded = ShouldBeIncluded && LCF(D->getLocation());
-    return ShouldBeIncluded;
-  }
-
-  BatchExtractAPIVisitor(LocationFileChecker &LCF, ASTContext &Context,
-                         APISet &API)
-      : ExtractAPIVisitor<BatchExtractAPIVisitor>(Context, API), LCF(LCF) {}
-
-private:
-  LocationFileChecker &LCF;
-};
-
 class ExtractAPIConsumer : public ASTConsumer {
 public:
   ExtractAPIConsumer(ASTContext &Context,
                      std::unique_ptr<LocationFileChecker> LCF, APISet &API)
-      : Visitor(*LCF, Context, API), LCF(std::move(LCF)) {}
+      : Visitor(Context, *LCF, API), LCF(std::move(LCF)) {}
 
   void HandleTranslationUnit(ASTContext &Context) override {
     // Use ExtractAPIVisitor to traverse symbol declarations in the context.
@@ -257,7 +231,7 @@ public:
   }
 
 private:
-  BatchExtractAPIVisitor Visitor;
+  ExtractAPIVisitor Visitor;
   std::unique_ptr<LocationFileChecker> LCF;
 };
 

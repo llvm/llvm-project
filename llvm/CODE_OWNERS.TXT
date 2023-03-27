@@ -116,8 +116,7 @@ E: lhames@gmail.com
 D: MCJIT, RuntimeDyld and JIT event listeners, Orcish Warchief
 
 N: Min-Yih Hsu
-E: minyihh@uci.edu
-E: yihshyng223@gmail.com
+E: min@myhsu.dev
 D: M68k Target (lib/Target/M68k/*)
 
 N: Teresa Johnson
