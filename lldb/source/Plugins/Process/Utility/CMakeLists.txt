@@ -1,14 +1,18 @@
 add_lldb_library(lldbPluginProcessUtility
   AuxVector.cpp
+  FreeBSDSignals.cpp
+  GDBRemoteSignals.cpp
   HistoryThread.cpp
   HistoryUnwind.cpp
   InferiorCallPOSIX.cpp
   LinuxProcMaps.cpp
+  LinuxSignals.cpp
   MemoryTagManagerAArch64MTE.cpp
   NativeProcessSoftwareSingleStep.cpp
   NativeRegisterContextDBReg_arm64.cpp
   NativeRegisterContextDBReg_x86.cpp
   NativeRegisterContextRegisterInfo.cpp
+  NetBSDSignals.cpp
   RegisterContext_x86.cpp
   RegisterContextDarwin_arm.cpp
   RegisterContextDarwin_arm64.cpp
