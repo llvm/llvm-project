@@ -309,6 +309,10 @@ private:
     return File(std::move(*Node));
   }
 
+  llvm::Error
+  forEachFileImpl(llvm::DenseSet<ObjectRef> &Seen,
+                  llvm::function_ref<llvm::Error(File, FileSizeTy)> Callback);
+
   static bool isValid(const ObjectProxy &Node);
   static bool isValid(ObjectStore &CAS, ObjectRef Ref) {
     auto Node = CAS.getProxy(Ref);

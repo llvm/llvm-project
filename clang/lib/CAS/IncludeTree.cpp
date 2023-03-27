@@ -237,25 +237,36 @@ IncludeTree::FileList::getFileSize(size_t I) const {
       Data.data() + I * sizeof(FileSizeTy));
 }
 
-llvm::Error IncludeTree::FileList::forEachFile(
+llvm::Error IncludeTree::FileList::forEachFileImpl(
+    llvm::DenseSet<ObjectRef> &Seen,
     llvm::function_ref<llvm::Error(File, FileSizeTy)> Callback) {
-  size_t I = 0;
+  size_t Next = 0;
   size_t FileCount = getNumFilesCurrentList();
   return forEachReference([&](ObjectRef Ref) -> llvm::Error {
-    if (I < FileCount) {
+    size_t Index = Next++;
+    if (!Seen.insert(Ref).second)
+      return llvm::Error::success();
+
+    if (Index < FileCount) {
       auto Include = getFile(Ref);
       if (!Include)
         return Include.takeError();
-      return Callback(std::move(*Include), getFileSize(I++));
+      return Callback(std::move(*Include), getFileSize(Index));
     }
+
     // Otherwise, it's a chained FileList.
-    ++I;
     auto Proxy = getCAS().getProxy(Ref);
     if (!Proxy)
       return Proxy.takeError();
     FileList FL(std::move(*Proxy));
-    return FL.forEachFile(Callback);
+    return FL.forEachFileImpl(Seen, Callback);
   });
+}
+
+llvm::Error IncludeTree::FileList::forEachFile(
+    llvm::function_ref<llvm::Error(File, FileSizeTy)> Callback) {
+  llvm::DenseSet<ObjectRef> Seen;
+  return forEachFileImpl(Seen, Callback);
 }
 
 Expected<IncludeTree::FileList>
