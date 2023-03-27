@@ -3892,12 +3892,16 @@ void InnerLoopVectorizer::fixFixedOrderRecurrence(
   // had multiple exiting edges (as we always run the last iteration in the
   // scalar epilogue); in that case, there is no edge from middle to exit and
   // and thus no phis which needed updated.
-  if (!Cost->requiresScalarEpilogue(VF))
-    for (PHINode &LCSSAPhi : LoopExitBlock->phis())
-      if (llvm::is_contained(LCSSAPhi.incoming_values(), Phi)) {
-        LCSSAPhi.addIncoming(ExtractForPhiUsedOutsideLoop, LoopMiddleBlock);
-        State.Plan->removeLiveOut(&LCSSAPhi);
-      }
+  if (!Cost->requiresScalarEpilogue(VF)) {
+    SmallPtrSet<PHINode *, 2> ToFix;
+    for (User *U : Phi->users())
+      if (isa<PHINode>(U) && cast<Instruction>(U)->getParent() == LoopExitBlock)
+        ToFix.insert(cast<PHINode>(U));
+    for (PHINode *LCSSAPhi : ToFix) {
+      LCSSAPhi->addIncoming(ExtractForPhiUsedOutsideLoop, LoopMiddleBlock);
+      State.Plan->removeLiveOut(LCSSAPhi);
+    }
+  }
 }
 
 void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
