@@ -7,7 +7,7 @@
 # RUN: not llvm-objdump -d invalid_arch.o 2>&1 | FileCheck %s --check-prefix=INVALID
 
 # RUN: llvm-mc -filetype=obj -triple=riscv32 unknown_i_version.s -o unknown_i_version.o
-# RUN: not llvm-objdump -d unknown_i_version.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN-I-VERSION
+# RUN: llvm-objdump -d unknown_i_version.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN-I-VERSION
 
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zicbom unknown_ext_version.s -o unknown_ext_version.o
 # RUN: llvm-objdump -d unknown_ext_version.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN-EXT-VERSION
@@ -46,7 +46,7 @@ nop
 .Lend:
 
 #--- unknown_i_version.s
-# UNKNOWN-I-VERSION: unsupported version number 99.99 for extension 'i'
+# UNKNOWN-I-VERSION: nop
 nop
 
 .section .riscv.attributes,"",@0x70000003
