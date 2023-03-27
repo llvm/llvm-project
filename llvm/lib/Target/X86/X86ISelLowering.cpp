@@ -15609,10 +15609,6 @@ static SDValue lowerV4I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
           lowerShuffleAsShift(DL, MVT::v4i32, V1, V2, Mask, Zeroable, Subtarget,
                               DAG, /*BitwiseOnly*/ false))
     return Shift;
-  if (!Subtarget.preferLowerShuffleAsShift() && NumV2Elements == 0)
-    if (SDValue Rotate =
-            lowerShuffleAsBitRotate(DL, MVT::v4i32, V1, Mask, Subtarget, DAG))
-      return Rotate;
 
   // There are special ways we can lower some single-element blends.
   if (NumV2Elements == 1)
