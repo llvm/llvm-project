@@ -657,6 +657,14 @@ TEST_F(FormatTestVerilog, Operators) {
   verifyFormat("x = ++x;");
   verifyFormat("x = --x;");
 
+  // Test that `*` and `*>` are binary.
+  verifyFormat("x = x * x;");
+  verifyFormat("x = (x * x);");
+  verifyFormat("(opcode *> o1) = 6.1;");
+  verifyFormat("(C, D *> Q) = 18;");
+  // The wildcard import is not a binary operator.
+  verifyFormat("import p::*;");
+
   // Test that operators don't get split.
   verifyFormat("x = x++;");
   verifyFormat("x = x--;");
@@ -697,6 +705,13 @@ TEST_F(FormatTestVerilog, Operators) {
   EXPECT_EQ("x = x < -x;", format("x=x<-x;"));
   EXPECT_EQ("x = x << -x;", format("x=x<<-x;"));
   EXPECT_EQ("x = x <<< -x;", format("x=x<<<-x;"));
+
+  // Test that operators that are C++ identifiers get treated as operators.
+  verifyFormat("solve s before d;");                       // before
+  verifyFormat("binsof(i) intersect {0};");                // intersect
+  verifyFormat("req dist {1};");                           // dist
+  verifyFormat("a inside {b, c};");                        // inside
+  verifyFormat("bus.randomize() with { atype == low; };"); // with
 }
 
 TEST_F(FormatTestVerilog, Preprocessor) {
@@ -847,6 +862,26 @@ TEST_F(FormatTestVerilog, Primitive) {
                "    (?\?) ? : ? : -;\n"
                "  endtable\n"
                "endprimitive");
+}
+
+TEST_F(FormatTestVerilog, Streaming) {
+  verifyFormat("x = {>>{j}};");
+  verifyFormat("x = {>>byte{j}};");
+  verifyFormat("x = {<<{j}};");
+  verifyFormat("x = {<<byte{j}};");
+  verifyFormat("x = {<<16{j}};");
+  verifyFormat("x = {<<{8'b0011_0101}};");
+  verifyFormat("x = {<<4{6'b11_0101}};");
+  verifyFormat("x = {>>4{6'b11_0101}};");
+  verifyFormat("x = {<<2{{<<{4'b1101}}}};");
+  verifyFormat("bit [96 : 1] y = {>>{a, b, c}};");
+  verifyFormat("int j = {>>{a, b, c}};");
+  verifyFormat("{>>{a, b, c}} = 23'b1;");
+  verifyFormat("{>>{a, b, c}} = x;");
+  verifyFormat("{>>{j}} = x;");
+  verifyFormat("{>>byte{j}} = x;");
+  verifyFormat("{<<{j}} = x;");
+  verifyFormat("{<<byte{j}} = x;");
 }
 
 TEST_F(FormatTestVerilog, StructuredProcedure) {
