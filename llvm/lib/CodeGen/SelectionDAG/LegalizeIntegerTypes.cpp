@@ -3166,6 +3166,11 @@ void DAGTypeLegalizer::ExpandIntRes_UADDSUBO(SDNode *N,
       SDValue Or = DAG.getNode(ISD::OR, dl, Lo.getValueType(), Lo, Hi);
       Ovf = DAG.getSetCC(dl, N->getValueType(1), Or,
                          DAG.getConstant(0, dl, Lo.getValueType()), ISD::SETEQ);
+    } else if (N->getOpcode() == ISD::UADDO && isAllOnesConstant(RHS)) {
+      // Special case: uaddo X, -1 overflows if X == 0.
+      Ovf =
+          DAG.getSetCC(dl, N->getValueType(1), LHS,
+                       DAG.getConstant(0, dl, LHS.getValueType()), ISD::SETNE);
     } else {
       // Calculate the overflow: addition overflows iff a + b < a, and
       // subtraction overflows iff a - b > a.
