@@ -14396,6 +14396,9 @@ static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
 static void CheckConditionalOperand(Sema &S, Expr *E, QualType T,
                                     SourceLocation CC, bool &ICContext) {
   E = E->IgnoreParenImpCasts();
+  // Diagnose incomplete type for second or third operand in C.
+  if (!S.getLangOpts().CPlusPlus && E->getType()->isRecordType())
+    S.RequireCompleteExprType(E, diag::err_incomplete_type);
 
   if (auto *CO = dyn_cast<AbstractConditionalOperator>(E))
     return CheckConditionalOperator(S, CO, CC, T);

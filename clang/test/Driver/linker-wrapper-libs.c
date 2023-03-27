@@ -65,6 +65,29 @@ int bar() { return weak; }
 // LIBRARY-GLOBAL: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.s {{.*}}.o
 
 //
+// Check that we do not extract a global symbol if the source file was not
+// created by an offloading language that expects there to be a host version of
+// the symbol.
+//
+// RUN: %clang -cc1 %s -triple nvptx64-nvidia-cuda -emit-llvm-bc -DGLOBAL -o %t.nvptx.global.bc
+// RUN: %clang -cc1 %s -triple amdgcn-amd-amdhsa -emit-llvm-bc -DGLOBAL -o %t.amdgpu.global.bc
+// RUN: clang-offload-packager -o %t-lib.out \
+// RUN:   --image=file=%t.nvptx.global.bc,triple=nvptx64-nvidia-cuda,arch=sm_70 \
+// RUN:   --image=file=%t.amdgpu.global.bc,triple=amdgcn-amd-amdhsa,arch=gfx1030
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t-lib.out
+// RUN: llvm-ar rcs %t.a %t.o
+// RUN: clang-offload-packager -o %t.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70 \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx1030
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld -- %t.o %t.a -o a.out 2>&1 \
+// RUN: | FileCheck %s --check-prefix=LIBRARY-GLOBAL-NONE
+
+// LIBRARY-GLOBAL-NONE-NOT: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 {{.*}}.o {{.*}}.o
+// LIBRARY-GLOBAL-NONE-NOT: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.s {{.*}}.o
+
+//
 // Check that we do not extract an external weak symbol.
 //
 // RUN: %clang -cc1 %s -triple nvptx64-nvidia-cuda -emit-llvm-bc -DWEAK -o %t.nvptx.weak.bc

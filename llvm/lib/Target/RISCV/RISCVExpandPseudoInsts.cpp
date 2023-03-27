@@ -23,8 +23,8 @@
 
 using namespace llvm;
 
-#define RISCV_EXPAND_PSEUDO_NAME "RISCV pseudo instruction expansion pass"
-#define RISCV_PRERA_EXPAND_PSEUDO_NAME "RISCV Pre-RA pseudo instruction expansion pass"
+#define RISCV_EXPAND_PSEUDO_NAME "RISC-V pseudo instruction expansion pass"
+#define RISCV_PRERA_EXPAND_PSEUDO_NAME "RISC-V Pre-RA pseudo instruction expansion pass"
 
 namespace {
 

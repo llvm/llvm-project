@@ -46,7 +46,7 @@ public:
   bool shouldIgnoreInstruments() const override { return false; }
   bool supportsInstrumentType(StringRef Type) const override;
 
-  /// Create a Instrument for RISCV target
+  /// Create a Instrument for RISC-V target
   SharedInstrument createInstrument(StringRef Desc, StringRef Data) override;
 
   /// Using the Instrument, returns a SchedClassID to use instead of

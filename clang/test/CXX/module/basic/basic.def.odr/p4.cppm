@@ -143,6 +143,9 @@ void use() {
   (void)&inline_var_exported;
   (void)&const_var_exported;
 
+  // CHECK: define {{.*}}@_ZL26used_static_module_linkagev
+  used_static_module_linkage();
+
   // CHECK: define linkonce_odr {{.*}}@_ZW6Module26used_inline_module_linkagev
   used_inline_module_linkage();
 
@@ -151,12 +154,8 @@ void use() {
 
   (void)&extern_var_module_linkage;
   (void)&inline_var_module_linkage;
-
-  // FIXME: Issue #61427 Internal-linkage declarations in the interface TU
-  // should not be not visible here.
   (void)&static_var_module_linkage; // FIXME: Should not be visible here.
-
-  (void)&const_var_module_linkage; // FIXME: will be visible after P2788R0
+  (void)&const_var_module_linkage;
 }
 
 //--- user.cpp
@@ -177,6 +176,5 @@ void use() {
   (void)&inline_var_exported;
   (void)&const_var_exported;
 
-  // Internal-linkage declarations are not visible here.
   // Module-linkage declarations are not visible here.
 }

@@ -24,7 +24,7 @@
 using namespace llvm;
 
 #define RISCV_EXPAND_ATOMIC_PSEUDO_NAME                                        \
-  "RISCV atomic pseudo instruction expansion pass"
+  "RISC-V atomic pseudo instruction expansion pass"
 
 namespace {
 

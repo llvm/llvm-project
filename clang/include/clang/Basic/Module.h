@@ -103,22 +103,16 @@ public:
   /// The location of the module definition.
   SourceLocation DefinitionLoc;
 
-  // FIXME: Consider if reducing the size of this enum (having Partition and
-  // Named modules only) then representing interface/implementation separately
-  // is more efficient.
   enum ModuleKind {
     /// This is a module that was defined by a module map and built out
     /// of header files.
     ModuleMapModule,
 
-    /// This is a C++ 20 header unit.
-    ModuleHeaderUnit,
-
     /// This is a C++20 module interface unit.
     ModuleInterfaceUnit,
 
-    /// This is a C++20 module implementation unit.
-    ModuleImplementationUnit,
+    /// This is a C++ 20 header unit.
+    ModuleHeaderUnit,
 
     /// This is a C++ 20 module partition interface.
     ModulePartitionInterface,
@@ -175,16 +169,9 @@ public:
   /// Does this Module scope describe part of the purview of a standard named
   /// C++ module?
   bool isModulePurview() const {
-    switch (Kind) {
-    case ModuleInterfaceUnit:
-    case ModuleImplementationUnit:
-    case ModulePartitionInterface:
-    case ModulePartitionImplementation:
-    case PrivateModuleFragment:
-      return true;
-    default:
-      return false;
-    }
+    return Kind == ModuleInterfaceUnit || Kind == ModulePartitionInterface ||
+           Kind == ModulePartitionImplementation ||
+           Kind == PrivateModuleFragment;
   }
 
   /// Does this Module scope describe a fragment of the global module within
@@ -572,11 +559,6 @@ public:
   bool isModulePartition() const {
     return Kind == ModulePartitionInterface ||
            Kind == ModulePartitionImplementation;
-  }
-
-  /// Is this a module implementation.
-  bool isModuleImplementation() const {
-    return Kind == ModuleImplementationUnit;
   }
 
   /// Is this module a header unit.

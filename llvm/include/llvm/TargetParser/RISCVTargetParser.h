@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements a target parser to recognise hardware features
-// FOR RISC-V CPUS.
+// for RISC-V CPUs.
 //
 //===----------------------------------------------------------------------===//
 
