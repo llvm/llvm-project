@@ -76,7 +76,12 @@ CSPreInliner::CSPreInliner(SampleContextTracker &Tracker,
 
 std::vector<StringRef> CSPreInliner::buildTopDownOrder() {
   std::vector<StringRef> Order;
-  ProfiledCallGraph ProfiledCG(ContextTracker);
+  // Trim cold edges to get a more stable call graph. This allows for a more
+  // stable top-down order which in turns helps the stablity of the generated
+  // profile from run to run.
+  uint64_t ColdCountThreshold = ProfileSummaryBuilder::getColdCountThreshold(
+      (Summary->getDetailedSummary()));
+  ProfiledCallGraph ProfiledCG(ContextTracker, ColdCountThreshold);
 
   // Now that we have a profiled call graph, construct top-down order
   // by building up SCC and reversing SCC order.
