@@ -1279,6 +1279,110 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_LambdaLBrace);
+
+  // Lambdas with a requires-clause
+  Tokens = annotate("[] <typename T> (T t) requires Bar<T> {}");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[10], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TRUE(Tokens[14]->ClosesRequiresClause);
+  EXPECT_TOKEN(Tokens[15], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[] <typename T> (T &&t) requires Bar<T> {}");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[8], tok::ampamp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[11], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TRUE(Tokens[15]->ClosesRequiresClause);
+  EXPECT_TOKEN(Tokens[16], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[] <typename T> (T t) requires Foo<T> || Bar<T> {}");
+  ASSERT_EQ(Tokens.size(), 23u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[10], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TRUE(Tokens[19]->ClosesRequiresClause);
+  EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[] <typename T> (T t) -> T requires Bar<T> {}");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[10], tok::arrow, TT_LambdaArrow);
+  EXPECT_TOKEN(Tokens[12], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TRUE(Tokens[16]->ClosesRequiresClause);
+  EXPECT_TOKEN(Tokens[17], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[] <typename T> requires Bar<T> (T t) {}");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TRUE(Tokens[10]->ClosesRequiresClause);
+  EXPECT_TOKEN(Tokens[15], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[] <typename T> requires Bar<T> (T &&t) {}");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TRUE(Tokens[10]->ClosesRequiresClause);
+  EXPECT_TOKEN(Tokens[13], tok::ampamp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[16], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[] <typename T> requires Foo<T> || Bar<T> (T t) {}");
+  ASSERT_EQ(Tokens.size(), 23u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TRUE(Tokens[15]->ClosesRequiresClause);
+  EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[] <typename T> requires true (T&& t) {}");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TRUE(Tokens[7]->ClosesRequiresClause);
+  EXPECT_TOKEN(Tokens[10], tok::ampamp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[] <typename T> requires Bar<T> {}");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TRUE(Tokens[10]->ClosesRequiresClause);
+  EXPECT_TOKEN(Tokens[11], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[] <typename T> requires Bar<T> noexcept {}");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TRUE(Tokens[10]->ClosesRequiresClause);
+  EXPECT_TOKEN(Tokens[12], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[] <typename T> requires Bar<T> -> T {}");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TRUE(Tokens[10]->ClosesRequiresClause);
+  EXPECT_TOKEN(Tokens[11], tok::arrow, TT_LambdaArrow);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[] <typename T> requires Foo<T> (T t) requires Bar<T> {}");
+  ASSERT_EQ(Tokens.size(), 23u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[6], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TRUE(Tokens[10]->ClosesRequiresClause);
+  EXPECT_TOKEN(Tokens[15], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TRUE(Tokens[19]->ClosesRequiresClause);
+  EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_LambdaLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsFunctionAnnotations) {
