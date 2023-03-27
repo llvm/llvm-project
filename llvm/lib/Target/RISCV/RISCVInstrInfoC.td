@@ -236,20 +236,6 @@ def simm12_lsb0 : Operand<XLenVT>,
   let OperandType = "OPERAND_PCREL";
 }
 
-def InsnCDirectiveOpcode : AsmOperandClass {
-  let Name = "InsnCDirectiveOpcode";
-  let ParserMethod = "parseInsnCDirectiveOpcode";
-  let RenderMethod = "addImmOperands";
-  let PredicateMethod = "isImm";
-}
-
-def uimm2_opcode : Operand<XLenVT> {
-  let ParserMatchClass = InsnCDirectiveOpcode;
-  let DecoderMethod = "decodeUImmOperand<2>";
-  let OperandType = "OPERAND_UIMM2";
-  let OperandNamespace = "RISCVOp";
-}
-
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
@@ -762,100 +748,6 @@ def : InstAlias<"c.fldsp $rd, (${rs1})", (C_FLDSP FPR64C:$rd, SPMem:$rs1, 0)>;
 def : InstAlias<"c.fsdsp $rs2, (${rs1})", (C_FSDSP FPR64C:$rs2, SPMem:$rs1, 0)>;
 }
 } // EmitPriority = 0
-
-//===----------------------------------------------------------------------===//
-// .insn directive instructions
-//===----------------------------------------------------------------------===//
-
-def AnyRegCOperand : AsmOperandClass {
-  let Name = "AnyRegCOperand";
-  let RenderMethod = "addRegOperands";
-  let PredicateMethod = "isAnyRegC";
-}
-
-def AnyRegC : Operand<XLenVT> {
-  let OperandType = "OPERAND_REGISTER";
-  let ParserMatchClass = AnyRegCOperand;
-}
-
-// isCodeGenOnly = 1 to hide them from the tablegened assembly parser.
-let isCodeGenOnly = 1, hasSideEffects = 1, mayLoad = 1, mayStore = 1,
-    hasNoSchedulingInfo = 1, Predicates = [HasStdExtCOrZca] in {
-def InsnCR : DirectiveInsnCR<(outs AnyReg:$rd), (ins uimm2_opcode:$opcode,
-                                                     uimm4:$funct4,
-                                                     AnyReg:$rs2),
-                             "$opcode, $funct4, $rd, $rs2">;
-def InsnCI : DirectiveInsnCI<(outs AnyRegC:$rd), (ins uimm2_opcode:$opcode,
-                                                      uimm3:$funct3,
-                                                      simm6:$imm6),
-                             "$opcode, $funct3, $rd, $imm6">;
-def InsnCIW : DirectiveInsnCIW<(outs AnyRegC:$rd), (ins uimm2_opcode:$opcode,
-                                                        uimm3:$funct3,
-                                                        uimm8:$imm8),
-                               "$opcode, $funct3, $rd, $imm8">;
-def InsnCSS : DirectiveInsnCSS<(outs), (ins uimm2_opcode:$opcode,
-                                            uimm3:$funct3,
-                                            AnyReg:$rs2,
-                                            uimm6:$imm6),
-                               "$opcode, $funct3, $rs2, $imm6">;
-def InsnCL : DirectiveInsnCL<(outs AnyRegC:$rd), (ins uimm2_opcode:$opcode,
-                                                      uimm3:$funct3,
-                                                      AnyRegC:$rs1,
-                                                      uimm5:$imm5),
-                             "$opcode, $funct3, $rd, ${imm5}(${rs1})">;
-def InsnCS : DirectiveInsnCS<(outs), (ins uimm2_opcode:$opcode,
-                                          uimm3:$funct3,
-                                          AnyRegC:$rs2,
-                                          AnyRegC:$rs1,
-                                          uimm5:$imm5),
-                             "$opcode, $funct3, $rs2, ${imm5}(${rs1})">;
-def InsnCA : DirectiveInsnCA<(outs AnyRegC:$rd), (ins uimm2_opcode:$opcode,
-                                                      uimm6:$funct6,
-                                                      uimm2:$funct2,
-                                                      AnyRegC:$rs2),
-                             "$opcode, $funct6, $funct2, $rd, $rs2">;
-def InsnCB : DirectiveInsnCB<(outs), (ins uimm2_opcode:$opcode, uimm3:$funct3,
-                                          AnyRegC:$rs1,
-                                          simm9_lsb0:$imm8),
-                             "$opcode, $funct3, $rs1, $imm8">;
-def InsnCJ : DirectiveInsnCJ<(outs), (ins uimm2_opcode:$opcode,
-                                          uimm3:$funct3,
-                                          simm12_lsb0:$imm11),
-                             "$opcode, $funct3, $imm11">;
-}
-
-// Use InstAliases to match these so that we can combine the insn and format
-// into a mnemonic to use as the key for the tablegened asm matcher table. The
-// parser will take care of creating these fake mnemonics and will only do it
-// for known formats.
-let EmitPriority = 0, Predicates = [HasStdExtCOrZca] in {
-def : InstAlias<".insn_cr $opcode, $funct4, $rd, $rs2",
-                (InsnCR AnyReg:$rd, uimm2_opcode:$opcode, uimm4:$funct4,
-                        AnyReg:$rs2)>;
-def : InstAlias<".insn_ci $opcode, $funct3, $rd, $imm6",
-                (InsnCI AnyRegC:$rd, uimm2_opcode:$opcode, uimm3:$funct3,
-                        simm6:$imm6)>;
-def : InstAlias<".insn_ciw $opcode, $funct3, $rd, $imm8",
-                (InsnCIW AnyRegC:$rd, uimm2_opcode:$opcode, uimm3:$funct3,
-                         uimm8:$imm8)>;
-def : InstAlias<".insn_css $opcode, $funct3, $rs2, $imm6",
-                (InsnCSS uimm2_opcode:$opcode, uimm3:$funct3, AnyReg:$rs2,
-                         uimm6:$imm6)>;
-def : InstAlias<".insn_cl $opcode, $funct3, $rd, ${imm5}(${rs1})",
-                (InsnCL AnyRegC:$rd, uimm2_opcode:$opcode, uimm3:$funct3,
-                        AnyRegC:$rs1, uimm5:$imm5)>;
-def : InstAlias<".insn_cs $opcode, $funct3, $rs2, ${imm5}(${rs1})",
-                (InsnCS uimm2_opcode:$opcode, uimm3:$funct3, AnyRegC:$rs2,
-                        AnyRegC:$rs1, uimm5:$imm5)>;
-def : InstAlias<".insn_ca $opcode, $funct6, $funct2, $rd, $rs2",
-                (InsnCA AnyRegC:$rd, uimm2_opcode:$opcode, uimm6:$funct6,
-                        uimm2:$funct2, AnyRegC:$rs2)>;
-def : InstAlias<".insn_cb $opcode, $funct3, $rs1, $imm8",
-                (InsnCB uimm2_opcode:$opcode, uimm3:$funct3, AnyRegC:$rs1,
-                        simm9_lsb0:$imm8)>;
-def : InstAlias<".insn_cj $opcode, $funct3, $imm11",
-                (InsnCJ uimm2_opcode:$opcode, uimm3:$funct3, simm12_lsb0:$imm11)>;
-}
 
 //===----------------------------------------------------------------------===/i
 // Compress Instruction tablegen backend.
