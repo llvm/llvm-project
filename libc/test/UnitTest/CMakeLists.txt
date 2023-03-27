@@ -1,6 +1,7 @@
 set(libc_test_srcs_common
   Test.h
   LibcTest.cpp
+  CmakeFilePath.cpp
   LibcTest.h
   TestLogger.cpp
   TestLogger.h
@@ -29,6 +30,7 @@ foreach(lib LibcUnitTest LibcHermeticTest)
   target_compile_options(${lib} PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS}
                          -fno-exceptions -fno-rtti)
   add_dependencies(${lib}
+    libc.src.__support.c_string
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
