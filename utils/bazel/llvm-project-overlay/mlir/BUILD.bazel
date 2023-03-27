@@ -7209,6 +7209,7 @@ cc_binary(
         "//mlir/test:TestMath",
         "//mlir/test:TestMemRef",
         "//mlir/test:TestNVGPU",
+        "//mlir/test:TestOneToNTypeConversion",
         "//mlir/test:TestPDLL",
         "//mlir/test:TestPass",
         "//mlir/test:TestReducer",
