@@ -130,7 +130,7 @@ D: LLVM Buildbot
 
 N: Anton Korobeynikov
 E: anton@korobeynikov.info
-D: Exception handling, Windows codegen, ARM EABI
+D: Exception handling, Windows codegen, ARM EABI, MSP430 Target (lib/Target/MSP430/*)
 
 N: Benjamin Kramer
 E: benny.kra@gmail.com
