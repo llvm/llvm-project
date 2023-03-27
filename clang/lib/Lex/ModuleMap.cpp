@@ -936,7 +936,6 @@ Module *ModuleMap::createModuleForImplementationUnit(SourceLocation Loc,
   // Mark the main source file as being within the newly-created module so that
   // declarations and macros are properly visibility-restricted to it.
   auto *MainFile = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
-  (void)MainFile;
   assert(MainFile && "no input file for module implementation");
 
   return Result;
