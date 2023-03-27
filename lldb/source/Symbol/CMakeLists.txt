@@ -19,9 +19,14 @@ list(APPEND LLVM_OPTIONAL_SOURCES ${SWIFT_SOURCES})
 if (NOT LLDB_ENABLE_SWIFT_SUPPORT)
   unset(SWIFT_SOURCES)
   unset(SWIFT_LIBS)
+  set(PLUGIN_DEPENDENCY_ARG NO_PLUGIN_DEPENDENCIES)
+  set(LLDB_PLUGIN_DEPENDENCIES)
+else()
+  set(PLUGIN_DEPENDENCY_ARG)
+  set(LLDB_PLUGIN_DEPENDENCIES lldbPluginSwiftLanguageRuntime)
 endif()
 
-add_lldb_library(lldbSymbol NO_PLUGIN_DEPENDENCIES
+add_lldb_library(lldbSymbol ${PLUGIN_DEPENDENCY_ARG}
   ArmUnwindInfo.cpp
   Block.cpp
   CompactUnwindInfo.cpp
@@ -67,7 +72,7 @@ add_lldb_library(lldbSymbol NO_PLUGIN_DEPENDENCIES
     lldbHost
     lldbTarget
     lldbUtility
-    lldbPluginPlatformMacOSX
+    ${LLDB_PLUGIN_DEPENDENCIES}
     ${SWIFT_LIBS}
 
   LINK_COMPONENTS
