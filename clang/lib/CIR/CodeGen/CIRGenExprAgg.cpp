@@ -42,6 +42,12 @@ class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
     return Dest;
   }
 
+  void EnsureDest(mlir::Location loc, QualType T) {
+    if (!Dest.isIgnored())
+      return;
+    Dest = CGF.CreateAggTemp(T, loc, "agg.tmp.ensured");
+  }
+
 public:
   AggExprEmitter(CIRGenFunction &cgf, AggValueSlot Dest, bool IsResultUnused)
       : CGF{cgf}, Dest(Dest), IsResultUnused(IsResultUnused) {}
