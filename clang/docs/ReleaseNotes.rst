@@ -186,6 +186,9 @@ Improvements to Clang's diagnostics
   by prioritizing ``-Wunreachable-code-fallthrough``.
 - Clang now correctly diagnoses statement attributes ``[[clang::always_inine]]`` and
   ``[[clang::noinline]]`` when used on a statement with dependent call expressions.
+- Clang now checks for completeness of the second and third arguments in the
+  conditional operator.
+  (`#59718 <https://github.com/llvm/llvm-project/issues/59718>`_)
 
 Bug Fixes in This Version
 -------------------------
