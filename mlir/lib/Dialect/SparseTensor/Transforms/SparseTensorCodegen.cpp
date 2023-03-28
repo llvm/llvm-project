@@ -1058,9 +1058,14 @@ public:
     SparseTensorEncodingAttr encDst = getSparseTensorEncoding(op.getType());
     SparseTensorEncodingAttr encSrc =
         getSparseTensorEncoding(op.getSource().getType());
+    // The output tensor can not be a slice and those cases should have been
+    // rejected by ConvertOp::verify() already.
+    assert(!encDst.isSlice() && "Cannot convert to a sparse tensor slices.");
     // Different encoding (except for different bitwidth) should be handled by
     // rewriting.
-    if (encDst.withoutBitWidths() != encSrc.withoutBitWidths()) {
+    // We need further rewrites if the input tensor is a slice too.
+    if (encDst.withoutBitWidths() != encSrc.withoutBitWidths() ||
+        encSrc.isSlice()) {
       return failure();
     }
 
