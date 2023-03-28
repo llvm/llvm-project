@@ -377,11 +377,11 @@ GDBJITDebugInfoRegistrationPlugin::Create(ExecutionSession &ES,
           ? ES.intern("_llvm_orc_registerJITLoaderGDBAllocAction")
           : ES.intern("llvm_orc_registerJITLoaderGDBAllocAction");
 
-  if (auto Addr = ES.lookup({&ProcessJD}, RegisterActionAddr))
+  if (auto RegisterSym = ES.lookup({&ProcessJD}, RegisterActionAddr))
     return std::make_unique<GDBJITDebugInfoRegistrationPlugin>(
-        ExecutorAddr(Addr->getAddress()));
+        RegisterSym->getAddress());
   else
-    return Addr.takeError();
+    return RegisterSym.takeError();
 }
 
 Error GDBJITDebugInfoRegistrationPlugin::notifyFailed(

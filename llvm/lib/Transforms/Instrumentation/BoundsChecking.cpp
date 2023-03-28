@@ -71,8 +71,8 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
   Value *Offset = SizeOffset.second;
   ConstantInt *SizeCI = dyn_cast<ConstantInt>(Size);
 
-  Type *IntTy = DL.getIntPtrType(Ptr->getType());
-  Value *NeededSizeVal = IRB.CreateTypeSize(IntTy, NeededSize);
+  Type *IndexTy = DL.getIndexType(Ptr->getType());
+  Value *NeededSizeVal = IRB.CreateTypeSize(IndexTy, NeededSize);
 
   auto SizeRange = SE.getUnsignedRange(SE.getSCEV(Size));
   auto OffsetRange = SE.getUnsignedRange(SE.getSCEV(Offset));
@@ -97,7 +97,7 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
   Value *Or = IRB.CreateOr(Cmp2, Cmp3);
   if ((!SizeCI || SizeCI->getValue().slt(0)) &&
       !SizeRange.getSignedMin().isNonNegative()) {
-    Value *Cmp1 = IRB.CreateICmpSLT(Offset, ConstantInt::get(IntTy, 0));
+    Value *Cmp1 = IRB.CreateICmpSLT(Offset, ConstantInt::get(IndexTy, 0));
     Or = IRB.CreateOr(Cmp1, Or);
   }
 

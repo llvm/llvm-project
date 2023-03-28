@@ -1794,6 +1794,10 @@ public:
   /// executions corresponding to this function.
   uint64_t getRawBranchCount() const { return RawBranchCount; }
 
+  /// Set the profile data about the number of branch executions corresponding
+  /// to this function.
+  void setRawBranchCount(uint64_t Count) { RawBranchCount = Count; }
+
   /// Return the execution count for functions with known profile.
   /// Return 0 if the function has no profile.
   uint64_t getKnownExecutionCount() const {

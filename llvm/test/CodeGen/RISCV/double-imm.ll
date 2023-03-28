@@ -17,8 +17,8 @@ define double @double_imm_op(double %a) nounwind {
 ; CHECK-LABEL: double_imm_op:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI1_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI1_0)(a0)
-; CHECK-NEXT:    fadd.d fa0, fa0, ft0
+; CHECK-NEXT:    fld fa5, %lo(.LCPI1_0)(a0)
+; CHECK-NEXT:    fadd.d fa0, fa0, fa5
 ; CHECK-NEXT:    ret
   %1 = fadd double %a, 1.0
   ret double %1

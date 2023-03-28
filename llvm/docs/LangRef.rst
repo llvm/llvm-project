@@ -4568,7 +4568,9 @@ The following is the syntax for constant expressions:
     Perform the :ref:`getelementptr operation <i_getelementptr>` on
     constants. As with the :ref:`getelementptr <i_getelementptr>`
     instruction, the index list may have one or more indexes, which are
-    required to make sense for the type of "pointer to TY".
+    required to make sense for the type of "pointer to TY". These indexes
+    may be implicitly sign-extended or truncated to match the index size
+    of CSTPTR's address space.
 ``select (COND, VAL1, VAL2)``
     Perform the :ref:`select operation <i_select>` on constants.
 ``icmp COND (VAL1, VAL2)``
@@ -10325,11 +10327,11 @@ alignment is not set to a value which is at least the size in bytes of the
 pointee. ``!nontemporal`` does not have any defined semantics for atomic loads.
 
 The optional constant ``align`` argument specifies the alignment of the
-operation (that is, the alignment of the memory address). It is the 
+operation (that is, the alignment of the memory address). It is the
 responsibility of the code emitter to ensure that the alignment information is
-correct. Overestimating the alignment results in undefined behavior. 
+correct. Overestimating the alignment results in undefined behavior.
 Underestimating the alignment may produce less efficient code. An alignment of
-1 is always safe. The maximum possible alignment is ``1 << 32``. An alignment 
+1 is always safe. The maximum possible alignment is ``1 << 32``. An alignment
 value higher than the size of the loaded type implies memory up to the
 alignment value bytes can be safely loaded without trapping in the default
 address space. Access of the high bytes can interfere with debugging tools, so
@@ -10465,11 +10467,11 @@ the alignment is not set to a value which is at least the size in bytes of the
 pointee. ``!nontemporal`` does not have any defined semantics for atomic stores.
 
 The optional constant ``align`` argument specifies the alignment of the
-operation (that is, the alignment of the memory address). It is the 
+operation (that is, the alignment of the memory address). It is the
 responsibility of the code emitter to ensure that the alignment information is
-correct. Overestimating the alignment results in undefined behavior. 
+correct. Overestimating the alignment results in undefined behavior.
 Underestimating the alignment may produce less efficient code. An alignment of
-1 is always safe. The maximum possible alignment is ``1 << 32``. An alignment 
+1 is always safe. The maximum possible alignment is ``1 << 32``. An alignment
 value higher than the size of the loaded type implies memory up to the
 alignment value bytes can be safely loaded without trapping in the default
 address space. Access of the high bytes can interfere with debugging tools, so
@@ -10897,9 +10899,9 @@ than half the pointer index type space.
 
 If the ``inbounds`` keyword is not present, the offsets are added to the
 base address with silently-wrapping two's complement arithmetic. If the
-offsets have a different width from the pointer, they are sign-extended
-or truncated to the width of the pointer. The result value of the
-``getelementptr`` may be outside the object pointed to by the base
+offsets have a different width from the pointer's index type, they are
+sign-extended or truncated to the width of the pointer's index type. The result
+value of the ``getelementptr`` may be outside the object pointed to by the base
 pointer. The result value may not necessarily be used to access memory
 though, even if it happens to point into allocated storage. See the
 :ref:`Pointer Aliasing Rules <pointeraliasing>` section for more

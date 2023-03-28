@@ -4156,6 +4156,7 @@ cc_binary(
         ":Support",
         ":TargetParser",
         ":WindresTableGen",
+        ":config",
         ":llvm-rc-defs-lib",
     ],
 )

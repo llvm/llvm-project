@@ -885,6 +885,11 @@ unsigned DataLayout::getLargestLegalIntTypeSizeInBits() const {
   return Max != LegalIntWidths.end() ? *Max : 0;
 }
 
+IntegerType *DataLayout::getIndexType(LLVMContext &C,
+                                      unsigned AddressSpace) const {
+  return IntegerType::get(C, getIndexSizeInBits(AddressSpace));
+}
+
 Type *DataLayout::getIndexType(Type *Ty) const {
   assert(Ty->isPtrOrPtrVectorTy() &&
          "Expected a pointer or pointer vector type.");

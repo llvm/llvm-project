@@ -220,7 +220,8 @@ static Error compileAndExecute(Options &options, Operation *module,
                                              : llvm::orc::SymbolMap();
     for (auto &exportSymbol : exportSymbols)
       symbolMap[interner(exportSymbol.getKey())] =
-          llvm::JITEvaluatedSymbol::fromPointer(exportSymbol.getValue());
+          { llvm::orc::ExecutorAddr::fromPtr(exportSymbol.getValue()),
+            llvm::JITSymbolFlags::Exported };
     return symbolMap;
   };
 

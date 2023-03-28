@@ -888,7 +888,7 @@ public:
                       const SymbolLookupSet &LookupSet) override {
     SymbolMap PhonySymbols;
     for (auto &KV : LookupSet)
-      PhonySymbols[KV.first] = JITEvaluatedSymbol(0, JITSymbolFlags::Exported);
+      PhonySymbols[KV.first] = {ExecutorAddr(), JITSymbolFlags::Exported};
     return JD.define(absoluteSymbols(std::move(PhonySymbols)));
   }
 };
@@ -976,7 +976,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     auto &TestResultJD = ES.createBareJITDylib("<TestResultJD>");
     ExitOnErr(TestResultJD.define(absoluteSymbols(
         {{ES.intern("llvm_jitlink_setTestResultOverride"),
-          {pointerToJITTargetAddress(llvm_jitlink_setTestResultOverride),
+          {ExecutorAddr::fromPtr(llvm_jitlink_setTestResultOverride),
            JITSymbolFlags::Exported}}})));
     MainJD->addToLinkOrder(TestResultJD);
   }
@@ -1401,7 +1401,7 @@ static Error addAbsoluteSymbols(Session &S,
                                          "\" in absolute symbol definition \"" +
                                          AbsDefStmt + "\"",
                                      inconvertibleErrorCode());
-    JITEvaluatedSymbol AbsDef(Addr, JITSymbolFlags::Exported);
+    ExecutorSymbolDef AbsDef(ExecutorAddr(Addr), JITSymbolFlags::Exported);
     if (auto Err = JD.define(absoluteSymbols({{S.ES.intern(Name), AbsDef}})))
       return Err;
 
@@ -1940,19 +1940,19 @@ static void dumpSessionStats(Session &S) {
            << "\n";
 }
 
-static Expected<JITEvaluatedSymbol> getMainEntryPoint(Session &S) {
+static Expected<ExecutorSymbolDef> getMainEntryPoint(Session &S) {
   return S.ES.lookup(S.JDSearchOrder, S.ES.intern(EntryPointName));
 }
 
-static Expected<JITEvaluatedSymbol> getOrcRuntimeEntryPoint(Session &S) {
+static Expected<ExecutorSymbolDef> getOrcRuntimeEntryPoint(Session &S) {
   std::string RuntimeEntryPoint = "__orc_rt_run_program_wrapper";
   if (S.ES.getTargetTriple().getObjectFormat() == Triple::MachO)
     RuntimeEntryPoint = '_' + RuntimeEntryPoint;
   return S.ES.lookup(S.JDSearchOrder, S.ES.intern(RuntimeEntryPoint));
 }
 
-static Expected<JITEvaluatedSymbol> getEntryPoint(Session &S) {
-  JITEvaluatedSymbol EntryPoint;
+static Expected<ExecutorSymbolDef> getEntryPoint(Session &S) {
+  ExecutorSymbolDef EntryPoint;
 
   // Find the entry-point function unconditionally, since we want to force
   // it to be materialized to collect stats.
@@ -2041,9 +2041,9 @@ int main(int argc, char *argv[]) {
   if (ShowInitialExecutionSessionState)
     S->ES.dump(outs());
 
-  Expected<JITEvaluatedSymbol> EntryPoint(nullptr);
+  Expected<ExecutorSymbolDef> EntryPoint((ExecutorSymbolDef()));
   {
-    ExpectedAsOutParameter<JITEvaluatedSymbol> _(&EntryPoint);
+    ExpectedAsOutParameter<ExecutorSymbolDef> _(&EntryPoint);
     TimeRegion TR(Timers ? &Timers->LinkTimer : nullptr);
     EntryPoint = getEntryPoint(*S);
   }

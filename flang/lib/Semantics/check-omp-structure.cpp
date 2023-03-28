@@ -284,7 +284,7 @@ void OmpStructureChecker::CheckPredefinedAllocatorRestriction(
     const auto &scope{context_.FindScope(symbol->name())};
     const Scope &containingScope{GetProgramUnitContaining(scope)};
     if (!isPredefinedAllocator &&
-        (IsSave(*symbol) || commonBlock ||
+        (IsSaved(*symbol) || commonBlock ||
             containingScope.kind() == Scope::Kind::Module)) {
       context_.Say(source,
           "If list items within the ALLOCATE directive have the "
@@ -1026,7 +1026,7 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                           "%s "
                           "directive"_err_en_US,
                           ContextDirectiveAsFortran());
-                    } else if (!IsSave(*name->symbol) &&
+                    } else if (!IsSaved(*name->symbol) &&
                         declScope.kind() != Scope::Kind::MainProgram &&
                         declScope.kind() != Scope::Kind::Module) {
                       context_.Say(name->source,

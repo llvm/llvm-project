@@ -15,5 +15,7 @@ add_mlir_dialect_library(MLIRMemRefTransformOps
   MLIRLoopLikeInterface
   MLIRMemRefDialect
   MLIRMemRefTransforms
+  MLIRNVGPUDialect
   MLIRTransformDialect
+  MLIRVectorDialect
 )

@@ -751,16 +751,13 @@ struct PostProcessingInfo {
   /// The mapping type (bitfield).
   int64_t ArgType;
 
-  /// Index of the argument in the data mapping scheme.
-  int32_t ArgIndex;
-
   /// The target pointer information.
   TargetPointerResultTy TPR;
 
   PostProcessingInfo(void *HstPtr, int64_t Size, int64_t ArgType,
-                     int32_t ArgIndex, TargetPointerResultTy &&TPR)
+                     TargetPointerResultTy &&TPR)
       : HstPtrBegin(HstPtr), DataSize(Size), ArgType(ArgType),
-        ArgIndex(ArgIndex), TPR(std::move(TPR)) {}
+        TPR(std::move(TPR)) {}
 };
 
 } // namespace
@@ -772,12 +769,10 @@ struct PostProcessingInfo {
 /// according to the successfulness of the operations.
 [[nodiscard]] static int
 postProcessingTargetDataEnd(DeviceTy *Device,
-                            SmallVector<PostProcessingInfo> &EntriesInfo,
-                            bool FromMapper) {
+                            SmallVector<PostProcessingInfo> &EntriesInfo) {
   int Ret = OFFLOAD_SUCCESS;
-  void *FromMapperBase = nullptr;
 
-  for (auto &[HstPtrBegin, DataSize, ArgType, ArgIndex, TPR] : EntriesInfo) {
+  for (auto &[HstPtrBegin, DataSize, ArgType, TPR] : EntriesInfo) {
     bool DelEntry = !TPR.isHostPointer();
 
     // If the last element from the mapper (for end transfer args comes in
@@ -786,11 +781,6 @@ postProcessingTargetDataEnd(DeviceTy *Device,
     if ((ArgType & OMP_TGT_MAPTYPE_MEMBER_OF) &&
         !(ArgType & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
       DelEntry = false; // protect parent struct from being deallocated
-    }
-
-    if (DelEntry && FromMapper && ArgIndex == 0) {
-      DelEntry = false;
-      FromMapperBase = HstPtrBegin;
     }
 
     // If we marked the entry to be deleted we need to verify no other
@@ -836,7 +826,7 @@ postProcessingTargetDataEnd(DeviceTy *Device,
     // TPR), or erase TPR.
     TPR.setEntry(nullptr);
 
-    if (!DelEntry || (FromMapperBase && FromMapperBase == HstPtrBegin))
+    if (!DelEntry)
       continue;
 
     Ret = Device->eraseMapEntry(HDTTMap, Entry, DataSize);
@@ -860,7 +850,6 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                   void **ArgMappers, AsyncInfoTy &AsyncInfo, bool FromMapper) {
   int Ret = OFFLOAD_SUCCESS;
   auto *PostProcessingPtrs = new SmallVector<PostProcessingInfo>();
-  void *FromMapperBase = nullptr;
   // process each input.
   for (int32_t I = ArgNum - 1; I >= 0; --I) {
     // Ignore private variables and arrays - there is no mapping for them.
@@ -998,7 +987,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     }
 
     // Add pointer to the buffer for post-synchronize processing.
-    PostProcessingPtrs->emplace_back(HstPtrBegin, DataSize, ArgTypes[I], I,
+    PostProcessingPtrs->emplace_back(HstPtrBegin, DataSize, ArgTypes[I],
                                      std::move(TPR));
     PostProcessingPtrs->back().TPR.getEntry()->unlock();
   }
@@ -1007,8 +996,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
   // TODO: We might want to remove `mutable` in the future by not changing the
   // captured variables somehow.
   AsyncInfo.addPostProcessingFunction([=, Device = &Device]() mutable -> int {
-    return postProcessingTargetDataEnd(Device, *PostProcessingPtrs,
-                                       FromMapperBase);
+    return postProcessingTargetDataEnd(Device, *PostProcessingPtrs);
   });
 
   return Ret;
@@ -1050,7 +1038,7 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     }
     if (TPR.getEntry()) {
       int Ret = TPR.getEntry()->foreachShadowPointerInfo(
-          [&](const ShadowPtrInfoTy &ShadowPtr) {
+          [&](ShadowPtrInfoTy &ShadowPtr) {
             DP("Restoring original target pointer value " DPxMOD " for target "
                "pointer " DPxMOD "\n",
                DPxPTR(ShadowPtr.TgtPtrVal), DPxPTR(ShadowPtr.TgtPtrAddr));

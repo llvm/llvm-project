@@ -7,9 +7,9 @@
 define dso_local float @flw(ptr %a) nounwind {
 ; CHECKIF-LABEL: flw:
 ; CHECKIF:       # %bb.0:
-; CHECKIF-NEXT:    flw ft0, 0(a0)
-; CHECKIF-NEXT:    flw ft1, 12(a0)
-; CHECKIF-NEXT:    fadd.s fa0, ft0, ft1
+; CHECKIF-NEXT:    flw fa5, 0(a0)
+; CHECKIF-NEXT:    flw fa4, 12(a0)
+; CHECKIF-NEXT:    fadd.s fa0, fa5, fa4
 ; CHECKIF-NEXT:    ret
   %1 = load float, ptr %a
   %2 = getelementptr float, ptr %a, i32 3
@@ -25,9 +25,9 @@ define dso_local void @fsw(ptr %a, float %b, float %c) nounwind {
 ; for the soft float ABI
 ; CHECKIF-LABEL: fsw:
 ; CHECKIF:       # %bb.0:
-; CHECKIF-NEXT:    fadd.s ft0, fa0, fa1
-; CHECKIF-NEXT:    fsw ft0, 0(a0)
-; CHECKIF-NEXT:    fsw ft0, 32(a0)
+; CHECKIF-NEXT:    fadd.s fa5, fa0, fa1
+; CHECKIF-NEXT:    fsw fa5, 0(a0)
+; CHECKIF-NEXT:    fsw fa5, 32(a0)
 ; CHECKIF-NEXT:    ret
   %1 = fadd float %b, %c
   store float %1, ptr %a
@@ -46,10 +46,10 @@ define dso_local float @flw_fsw_global(float %a, float %b) nounwind {
 ; CHECKIF:       # %bb.0:
 ; CHECKIF-NEXT:    fadd.s fa0, fa0, fa1
 ; CHECKIF-NEXT:    lui a0, %hi(G)
-; CHECKIF-NEXT:    flw ft0, %lo(G)(a0)
+; CHECKIF-NEXT:    flw fa5, %lo(G)(a0)
 ; CHECKIF-NEXT:    addi a1, a0, %lo(G)
 ; CHECKIF-NEXT:    fsw fa0, %lo(G)(a0)
-; CHECKIF-NEXT:    flw ft0, 36(a1)
+; CHECKIF-NEXT:    flw fa5, 36(a1)
 ; CHECKIF-NEXT:    fsw fa0, 36(a1)
 ; CHECKIF-NEXT:    ret
   %1 = fadd float %a, %b
@@ -66,8 +66,8 @@ define dso_local float @flw_fsw_constant(float %a) nounwind {
 ; RV32IF-LABEL: flw_fsw_constant:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    lui a0, 912092
-; RV32IF-NEXT:    flw ft0, -273(a0)
-; RV32IF-NEXT:    fadd.s fa0, fa0, ft0
+; RV32IF-NEXT:    flw fa5, -273(a0)
+; RV32IF-NEXT:    fadd.s fa0, fa0, fa5
 ; RV32IF-NEXT:    fsw fa0, -273(a0)
 ; RV32IF-NEXT:    ret
 ;
@@ -75,8 +75,8 @@ define dso_local float @flw_fsw_constant(float %a) nounwind {
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    lui a0, 228023
 ; RV64IF-NEXT:    slli a0, a0, 2
-; RV64IF-NEXT:    flw ft0, -273(a0)
-; RV64IF-NEXT:    fadd.s fa0, fa0, ft0
+; RV64IF-NEXT:    flw fa5, -273(a0)
+; RV64IF-NEXT:    fadd.s fa0, fa0, fa5
 ; RV64IF-NEXT:    fsw fa0, -273(a0)
 ; RV64IF-NEXT:    ret
   %1 = inttoptr i32 3735928559 to ptr
@@ -97,8 +97,8 @@ define dso_local float @flw_stack(float %a) nounwind {
 ; RV32IF-NEXT:    fmv.s fs0, fa0
 ; RV32IF-NEXT:    addi a0, sp, 4
 ; RV32IF-NEXT:    call notdead@plt
-; RV32IF-NEXT:    flw ft0, 4(sp)
-; RV32IF-NEXT:    fadd.s fa0, ft0, fs0
+; RV32IF-NEXT:    flw fa5, 4(sp)
+; RV32IF-NEXT:    fadd.s fa0, fa5, fs0
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    flw fs0, 8(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
@@ -112,8 +112,8 @@ define dso_local float @flw_stack(float %a) nounwind {
 ; RV64IF-NEXT:    fmv.s fs0, fa0
 ; RV64IF-NEXT:    mv a0, sp
 ; RV64IF-NEXT:    call notdead@plt
-; RV64IF-NEXT:    flw ft0, 0(sp)
-; RV64IF-NEXT:    fadd.s fa0, ft0, fs0
+; RV64IF-NEXT:    flw fa5, 0(sp)
+; RV64IF-NEXT:    fadd.s fa0, fa5, fs0
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
@@ -130,8 +130,8 @@ define dso_local void @fsw_stack(float %a, float %b) nounwind {
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    fadd.s ft0, fa0, fa1
-; RV32IF-NEXT:    fsw ft0, 8(sp)
+; RV32IF-NEXT:    fadd.s fa5, fa0, fa1
+; RV32IF-NEXT:    fsw fa5, 8(sp)
 ; RV32IF-NEXT:    addi a0, sp, 8
 ; RV32IF-NEXT:    call notdead@plt
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -142,8 +142,8 @@ define dso_local void @fsw_stack(float %a, float %b) nounwind {
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    addi sp, sp, -16
 ; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IF-NEXT:    fadd.s ft0, fa0, fa1
-; RV64IF-NEXT:    fsw ft0, 4(sp)
+; RV64IF-NEXT:    fadd.s fa5, fa0, fa1
+; RV64IF-NEXT:    fsw fa5, 4(sp)
 ; RV64IF-NEXT:    addi a0, sp, 4
 ; RV64IF-NEXT:    call notdead@plt
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload

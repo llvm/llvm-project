@@ -373,9 +373,10 @@ def NamedSequenceOp : TransformDialectOp<"named_sequence",
     SymbolNameAttr:$sym_name,
     TypeAttrBase<"::mlir::FunctionType",
                  "function type attribute">:$function_type,
+    OptionalAttr<StrAttr>:$sym_visibility,
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs);
-  let regions = (region SizedRegion<1>:$body);
+  let regions = (region MaxSizedRegion<1>:$body);
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;

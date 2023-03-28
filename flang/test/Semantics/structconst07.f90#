@@ -1,0 +1,5 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+! C1594(4)
+module m
+  type t1
+    

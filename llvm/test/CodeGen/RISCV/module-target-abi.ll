@@ -12,9 +12,9 @@
 
 define float @foo(i32 %a) nounwind #0 {
 ; DEFAULT: # %bb.0:
-; DEFAULT: fmv.x.w a0, ft0
+; DEFAULT: fmv.x.w a0, fa5
 ; RV32IF-ILP32: # %bb.0:
-; RV32IF-ILP32: fmv.x.w a0, ft0
+; RV32IF-ILP32: fmv.x.w a0, fa5
   %conv = sitofp i32 %a to float
   ret float %conv
 }

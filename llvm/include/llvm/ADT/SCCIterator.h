@@ -244,11 +244,11 @@ template <class T> scc_iterator<T> scc_end(const T &G) {
 /// declared in its graph traits in order to use this iterator.
 ///
 /// This is implemented using Kruskal's minimal spanning tree algorithm followed
-/// by a BFS walk. First a maximum spanning tree (forest) is built based on all
-/// edges within the SCC collection. Then a BFS walk is initiated on tree nodes
-/// that do not have a predecessor. Finally, the BFS order computed is the
-/// traversal order of the nodes of the SCC. Such order ensures that
-/// high-weighted edges are visited first during the tranversal.
+/// by Kahn's algorithm to compute a topological order on the MST. First a
+/// maximum spanning tree (forest) is built based on all edges within the SCC
+/// collection. Then a topological walk is initiated on tree nodes that do not
+/// have a predecessor and then applied to all nodes of the SCC. Such order
+/// ensures that high-weighted edges are visited first during the traversal.
 template <class GraphT, class GT = GraphTraits<GraphT>>
 class scc_member_iterator {
   using NodeType = typename GT::NodeType;

@@ -357,8 +357,14 @@ Bound ArraySpecAnalyzer::GetBound(const parser::SpecificationExpr &x) {
 static void PropagateSaveAttr(
     const EquivalenceObject &src, EquivalenceSet &dst) {
   if (src.symbol.attrs().test(Attr::SAVE)) {
+    bool isImplicit{src.symbol.implicitAttrs().test(Attr::SAVE)};
     for (auto &obj : dst) {
-      obj.symbol.attrs().set(Attr::SAVE);
+      if (!obj.symbol.attrs().test(Attr::SAVE)) {
+        obj.symbol.attrs().set(Attr::SAVE);
+        if (isImplicit) {
+          obj.symbol.implicitAttrs().set(Attr::SAVE);
+        }
+      }
     }
   }
 }
