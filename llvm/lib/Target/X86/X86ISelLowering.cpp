@@ -11249,7 +11249,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
       continue;
     }
     Values.insert(Elt);
-    if (!isa<ConstantSDNode>(Elt) && !isa<ConstantFPSDNode>(Elt)) {
+    if (!isIntOrFPConstant(Elt)) {
       IsAllConstants = false;
       NumConstants--;
     }
