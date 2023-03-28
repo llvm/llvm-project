@@ -7,8 +7,8 @@ define void @masked_load_v1f16(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    fmv.h.x ft0, zero
-; CHECK-NEXT:    vmfeq.vf v0, v8, ft0
+; CHECK-NEXT:    fmv.h.x fa5, zero
+; CHECK-NEXT:    vmfeq.vf v0, v8, fa5
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
@@ -25,8 +25,8 @@ define void @masked_load_v1f32(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    fmv.w.x ft0, zero
-; CHECK-NEXT:    vmfeq.vf v0, v8, ft0
+; CHECK-NEXT:    fmv.w.x fa5, zero
+; CHECK-NEXT:    vmfeq.vf v0, v8, fa5
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
@@ -43,8 +43,8 @@ define void @masked_load_v1f64(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a1)
-; RV32-NEXT:    fcvt.d.w ft0, zero
-; RV32-NEXT:    vmfeq.vf v0, v8, ft0
+; RV32-NEXT:    fcvt.d.w fa5, zero
+; RV32-NEXT:    vmfeq.vf v0, v8, fa5
 ; RV32-NEXT:    vle64.v v8, (a0), v0.t
 ; RV32-NEXT:    vse64.v v8, (a2)
 ; RV32-NEXT:    ret
@@ -53,8 +53,8 @@ define void @masked_load_v1f64(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a1)
-; RV64-NEXT:    fmv.d.x ft0, zero
-; RV64-NEXT:    vmfeq.vf v0, v8, ft0
+; RV64-NEXT:    fmv.d.x fa5, zero
+; RV64-NEXT:    vmfeq.vf v0, v8, fa5
 ; RV64-NEXT:    vle64.v v8, (a0), v0.t
 ; RV64-NEXT:    vse64.v v8, (a2)
 ; RV64-NEXT:    ret
@@ -71,8 +71,8 @@ define void @masked_load_v2f16(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    fmv.h.x ft0, zero
-; CHECK-NEXT:    vmfeq.vf v0, v8, ft0
+; CHECK-NEXT:    fmv.h.x fa5, zero
+; CHECK-NEXT:    vmfeq.vf v0, v8, fa5
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
@@ -89,8 +89,8 @@ define void @masked_load_v2f32(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    fmv.w.x ft0, zero
-; CHECK-NEXT:    vmfeq.vf v0, v8, ft0
+; CHECK-NEXT:    fmv.w.x fa5, zero
+; CHECK-NEXT:    vmfeq.vf v0, v8, fa5
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
@@ -107,8 +107,8 @@ define void @masked_load_v2f64(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a1)
-; RV32-NEXT:    fcvt.d.w ft0, zero
-; RV32-NEXT:    vmfeq.vf v0, v8, ft0
+; RV32-NEXT:    fcvt.d.w fa5, zero
+; RV32-NEXT:    vmfeq.vf v0, v8, fa5
 ; RV32-NEXT:    vle64.v v8, (a0), v0.t
 ; RV32-NEXT:    vse64.v v8, (a2)
 ; RV32-NEXT:    ret
@@ -117,8 +117,8 @@ define void @masked_load_v2f64(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a1)
-; RV64-NEXT:    fmv.d.x ft0, zero
-; RV64-NEXT:    vmfeq.vf v0, v8, ft0
+; RV64-NEXT:    fmv.d.x fa5, zero
+; RV64-NEXT:    vmfeq.vf v0, v8, fa5
 ; RV64-NEXT:    vle64.v v8, (a0), v0.t
 ; RV64-NEXT:    vse64.v v8, (a2)
 ; RV64-NEXT:    ret
@@ -135,8 +135,8 @@ define void @masked_load_v4f16(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    fmv.h.x ft0, zero
-; CHECK-NEXT:    vmfeq.vf v0, v8, ft0
+; CHECK-NEXT:    fmv.h.x fa5, zero
+; CHECK-NEXT:    vmfeq.vf v0, v8, fa5
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
@@ -153,8 +153,8 @@ define void @masked_load_v4f32(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    fmv.w.x ft0, zero
-; CHECK-NEXT:    vmfeq.vf v0, v8, ft0
+; CHECK-NEXT:    fmv.w.x fa5, zero
+; CHECK-NEXT:    vmfeq.vf v0, v8, fa5
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
@@ -171,8 +171,8 @@ define void @masked_load_v4f64(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a1)
-; RV32-NEXT:    fcvt.d.w ft0, zero
-; RV32-NEXT:    vmfeq.vf v0, v8, ft0
+; RV32-NEXT:    fcvt.d.w fa5, zero
+; RV32-NEXT:    vmfeq.vf v0, v8, fa5
 ; RV32-NEXT:    vle64.v v8, (a0), v0.t
 ; RV32-NEXT:    vse64.v v8, (a2)
 ; RV32-NEXT:    ret
@@ -181,8 +181,8 @@ define void @masked_load_v4f64(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a1)
-; RV64-NEXT:    fmv.d.x ft0, zero
-; RV64-NEXT:    vmfeq.vf v0, v8, ft0
+; RV64-NEXT:    fmv.d.x fa5, zero
+; RV64-NEXT:    vmfeq.vf v0, v8, fa5
 ; RV64-NEXT:    vle64.v v8, (a0), v0.t
 ; RV64-NEXT:    vse64.v v8, (a2)
 ; RV64-NEXT:    ret
@@ -199,8 +199,8 @@ define void @masked_load_v8f16(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    fmv.h.x ft0, zero
-; CHECK-NEXT:    vmfeq.vf v0, v8, ft0
+; CHECK-NEXT:    fmv.h.x fa5, zero
+; CHECK-NEXT:    vmfeq.vf v0, v8, fa5
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
@@ -217,8 +217,8 @@ define void @masked_load_v8f32(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    fmv.w.x ft0, zero
-; CHECK-NEXT:    vmfeq.vf v0, v8, ft0
+; CHECK-NEXT:    fmv.w.x fa5, zero
+; CHECK-NEXT:    vmfeq.vf v0, v8, fa5
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
@@ -235,8 +235,8 @@ define void @masked_load_v8f64(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a1)
-; RV32-NEXT:    fcvt.d.w ft0, zero
-; RV32-NEXT:    vmfeq.vf v0, v8, ft0
+; RV32-NEXT:    fcvt.d.w fa5, zero
+; RV32-NEXT:    vmfeq.vf v0, v8, fa5
 ; RV32-NEXT:    vle64.v v8, (a0), v0.t
 ; RV32-NEXT:    vse64.v v8, (a2)
 ; RV32-NEXT:    ret
@@ -245,8 +245,8 @@ define void @masked_load_v8f64(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a1)
-; RV64-NEXT:    fmv.d.x ft0, zero
-; RV64-NEXT:    vmfeq.vf v0, v8, ft0
+; RV64-NEXT:    fmv.d.x fa5, zero
+; RV64-NEXT:    vmfeq.vf v0, v8, fa5
 ; RV64-NEXT:    vle64.v v8, (a0), v0.t
 ; RV64-NEXT:    vse64.v v8, (a2)
 ; RV64-NEXT:    ret
@@ -263,8 +263,8 @@ define void @masked_load_v16f16(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    fmv.h.x ft0, zero
-; CHECK-NEXT:    vmfeq.vf v0, v8, ft0
+; CHECK-NEXT:    fmv.h.x fa5, zero
+; CHECK-NEXT:    vmfeq.vf v0, v8, fa5
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
@@ -281,8 +281,8 @@ define void @masked_load_v16f32(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    fmv.w.x ft0, zero
-; CHECK-NEXT:    vmfeq.vf v0, v8, ft0
+; CHECK-NEXT:    fmv.w.x fa5, zero
+; CHECK-NEXT:    vmfeq.vf v0, v8, fa5
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
@@ -299,8 +299,8 @@ define void @masked_load_v16f64(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a1)
-; RV32-NEXT:    fcvt.d.w ft0, zero
-; RV32-NEXT:    vmfeq.vf v0, v8, ft0
+; RV32-NEXT:    fcvt.d.w fa5, zero
+; RV32-NEXT:    vmfeq.vf v0, v8, fa5
 ; RV32-NEXT:    vle64.v v8, (a0), v0.t
 ; RV32-NEXT:    vse64.v v8, (a2)
 ; RV32-NEXT:    ret
@@ -309,8 +309,8 @@ define void @masked_load_v16f64(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a1)
-; RV64-NEXT:    fmv.d.x ft0, zero
-; RV64-NEXT:    vmfeq.vf v0, v8, ft0
+; RV64-NEXT:    fmv.d.x fa5, zero
+; RV64-NEXT:    vmfeq.vf v0, v8, fa5
 ; RV64-NEXT:    vle64.v v8, (a0), v0.t
 ; RV64-NEXT:    vse64.v v8, (a2)
 ; RV64-NEXT:    ret
@@ -328,8 +328,8 @@ define void @masked_load_v32f16(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    fmv.h.x ft0, zero
-; CHECK-NEXT:    vmfeq.vf v0, v8, ft0
+; CHECK-NEXT:    fmv.h.x fa5, zero
+; CHECK-NEXT:    vmfeq.vf v0, v8, fa5
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
@@ -347,8 +347,8 @@ define void @masked_load_v32f32(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    fmv.w.x ft0, zero
-; CHECK-NEXT:    vmfeq.vf v0, v8, ft0
+; CHECK-NEXT:    fmv.w.x fa5, zero
+; CHECK-NEXT:    vmfeq.vf v0, v8, fa5
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
@@ -367,9 +367,9 @@ define void @masked_load_v32f64(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vle64.v v16, (a1)
 ; RV32-NEXT:    vle64.v v24, (a3)
-; RV32-NEXT:    fcvt.d.w ft0, zero
-; RV32-NEXT:    vmfeq.vf v8, v16, ft0
-; RV32-NEXT:    vmfeq.vf v0, v24, ft0
+; RV32-NEXT:    fcvt.d.w fa5, zero
+; RV32-NEXT:    vmfeq.vf v8, v16, fa5
+; RV32-NEXT:    vmfeq.vf v0, v24, fa5
 ; RV32-NEXT:    addi a1, a0, 128
 ; RV32-NEXT:    vle64.v v16, (a1), v0.t
 ; RV32-NEXT:    vmv1r.v v0, v8
@@ -385,9 +385,9 @@ define void @masked_load_v32f64(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vle64.v v16, (a1)
 ; RV64-NEXT:    vle64.v v24, (a3)
-; RV64-NEXT:    fmv.d.x ft0, zero
-; RV64-NEXT:    vmfeq.vf v8, v16, ft0
-; RV64-NEXT:    vmfeq.vf v0, v24, ft0
+; RV64-NEXT:    fmv.d.x fa5, zero
+; RV64-NEXT:    vmfeq.vf v8, v16, fa5
+; RV64-NEXT:    vmfeq.vf v0, v24, fa5
 ; RV64-NEXT:    addi a1, a0, 128
 ; RV64-NEXT:    vle64.v v16, (a1), v0.t
 ; RV64-NEXT:    vmv1r.v v0, v8
@@ -410,8 +410,8 @@ define void @masked_load_v64f16(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; CHECK-NEXT:    li a3, 64
 ; CHECK-NEXT:    vsetvli zero, a3, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    fmv.h.x ft0, zero
-; CHECK-NEXT:    vmfeq.vf v0, v8, ft0
+; CHECK-NEXT:    fmv.h.x fa5, zero
+; CHECK-NEXT:    vmfeq.vf v0, v8, fa5
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
@@ -431,9 +431,9 @@ define void @masked_load_v64f32(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; CHECK-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v16, (a1)
 ; CHECK-NEXT:    vle32.v v24, (a3)
-; CHECK-NEXT:    fmv.w.x ft0, zero
-; CHECK-NEXT:    vmfeq.vf v8, v16, ft0
-; CHECK-NEXT:    vmfeq.vf v0, v24, ft0
+; CHECK-NEXT:    fmv.w.x fa5, zero
+; CHECK-NEXT:    vmfeq.vf v8, v16, fa5
+; CHECK-NEXT:    vmfeq.vf v0, v24, fa5
 ; CHECK-NEXT:    addi a1, a0, 128
 ; CHECK-NEXT:    vle32.v v16, (a1), v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v8
@@ -458,9 +458,9 @@ define void @masked_load_v128f16(ptr %a, ptr %m_ptr, ptr %res_ptr) nounwind {
 ; CHECK-NEXT:    vsetvli zero, a4, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v16, (a1)
 ; CHECK-NEXT:    vle16.v v24, (a3)
-; CHECK-NEXT:    fmv.h.x ft0, zero
-; CHECK-NEXT:    vmfeq.vf v8, v16, ft0
-; CHECK-NEXT:    vmfeq.vf v0, v24, ft0
+; CHECK-NEXT:    fmv.h.x fa5, zero
+; CHECK-NEXT:    vmfeq.vf v8, v16, fa5
+; CHECK-NEXT:    vmfeq.vf v0, v24, fa5
 ; CHECK-NEXT:    addi a1, a0, 128
 ; CHECK-NEXT:    vle16.v v16, (a1), v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v8

@@ -66,8 +66,8 @@ define zeroext i32 @zext_fptoui(half %a) nounwind {
 define i16 @bcvt_f16_to_aext_i16(half %a, half %b) nounwind {
 ; RV64IZFH-LABEL: bcvt_f16_to_aext_i16:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    fadd.h ft0, fa0, fa1
-; RV64IZFH-NEXT:    fmv.x.h a0, ft0
+; RV64IZFH-NEXT:    fadd.h fa5, fa0, fa1
+; RV64IZFH-NEXT:    fmv.x.h a0, fa5
 ; RV64IZFH-NEXT:    ret
   %1 = fadd half %a, %b
   %2 = bitcast half %1 to i16
@@ -77,8 +77,8 @@ define i16 @bcvt_f16_to_aext_i16(half %a, half %b) nounwind {
 define signext i16 @bcvt_f16_to_sext_i16(half %a, half %b) nounwind {
 ; RV64IZFH-LABEL: bcvt_f16_to_sext_i16:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    fadd.h ft0, fa0, fa1
-; RV64IZFH-NEXT:    fmv.x.h a0, ft0
+; RV64IZFH-NEXT:    fadd.h fa5, fa0, fa1
+; RV64IZFH-NEXT:    fmv.x.h a0, fa5
 ; RV64IZFH-NEXT:    ret
   %1 = fadd half %a, %b
   %2 = bitcast half %1 to i16
@@ -88,8 +88,8 @@ define signext i16 @bcvt_f16_to_sext_i16(half %a, half %b) nounwind {
 define zeroext i16 @bcvt_f16_to_zext_i16(half %a, half %b) nounwind {
 ; RV64IZFH-LABEL: bcvt_f16_to_zext_i16:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    fadd.h ft0, fa0, fa1
-; RV64IZFH-NEXT:    fmv.x.h a0, ft0
+; RV64IZFH-NEXT:    fadd.h fa5, fa0, fa1
+; RV64IZFH-NEXT:    fmv.x.h a0, fa5
 ; RV64IZFH-NEXT:    slli a0, a0, 48
 ; RV64IZFH-NEXT:    srli a0, a0, 48
 ; RV64IZFH-NEXT:    ret
@@ -101,9 +101,9 @@ define zeroext i16 @bcvt_f16_to_zext_i16(half %a, half %b) nounwind {
 define half @bcvt_i64_to_f16_via_i16(i64 %a, i64 %b) nounwind {
 ; RV64IZFH-LABEL: bcvt_i64_to_f16_via_i16:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    fmv.h.x ft0, a0
-; RV64IZFH-NEXT:    fmv.h.x ft1, a1
-; RV64IZFH-NEXT:    fadd.h fa0, ft0, ft1
+; RV64IZFH-NEXT:    fmv.h.x fa5, a0
+; RV64IZFH-NEXT:    fmv.h.x fa4, a1
+; RV64IZFH-NEXT:    fadd.h fa0, fa5, fa4
 ; RV64IZFH-NEXT:    ret
   %1 = trunc i64 %a to i16
   %2 = trunc i64 %b to i16

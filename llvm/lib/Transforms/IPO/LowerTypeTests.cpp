@@ -700,7 +700,7 @@ static bool isKnownTypeIdMember(Metadata *TypeId, const DataLayout &DL,
   }
 
   if (auto GEP = dyn_cast<GEPOperator>(V)) {
-    APInt APOffset(DL.getPointerSizeInBits(0), 0);
+    APInt APOffset(DL.getIndexSizeInBits(0), 0);
     bool Result = GEP->accumulateConstantOffset(DL, APOffset);
     if (!Result)
       return false;

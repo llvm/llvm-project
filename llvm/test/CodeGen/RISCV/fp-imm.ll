@@ -91,8 +91,8 @@ define double @f64_negative_zero(ptr %pd) nounwind {
 ;
 ; RV32D-LABEL: f64_negative_zero:
 ; RV32D:       # %bb.0:
-; RV32D-NEXT:    fcvt.d.w ft0, zero
-; RV32D-NEXT:    fneg.d fa0, ft0
+; RV32D-NEXT:    fcvt.d.w fa5, zero
+; RV32D-NEXT:    fneg.d fa0, fa5
 ; RV32D-NEXT:    ret
 ;
 ; RV64F-LABEL: f64_negative_zero:
@@ -103,8 +103,8 @@ define double @f64_negative_zero(ptr %pd) nounwind {
 ;
 ; RV64D-LABEL: f64_negative_zero:
 ; RV64D:       # %bb.0:
-; RV64D-NEXT:    fmv.d.x ft0, zero
-; RV64D-NEXT:    fneg.d fa0, ft0
+; RV64D-NEXT:    fmv.d.x fa5, zero
+; RV64D-NEXT:    fneg.d fa0, fa5
 ; RV64D-NEXT:    ret
   ret double -0.0
 }

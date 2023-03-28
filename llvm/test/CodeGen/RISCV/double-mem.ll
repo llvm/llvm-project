@@ -7,9 +7,9 @@
 define dso_local double @fld(ptr %a) nounwind {
 ; CHECKIFD-LABEL: fld:
 ; CHECKIFD:       # %bb.0:
-; CHECKIFD-NEXT:    fld ft0, 0(a0)
-; CHECKIFD-NEXT:    fld ft1, 24(a0)
-; CHECKIFD-NEXT:    fadd.d fa0, ft0, ft1
+; CHECKIFD-NEXT:    fld fa5, 0(a0)
+; CHECKIFD-NEXT:    fld fa4, 24(a0)
+; CHECKIFD-NEXT:    fadd.d fa0, fa5, fa4
 ; CHECKIFD-NEXT:    ret
   %1 = load double, ptr %a
   %2 = getelementptr double, ptr %a, i32 3
@@ -23,9 +23,9 @@ define dso_local double @fld(ptr %a) nounwind {
 define dso_local void @fsd(ptr %a, double %b, double %c) nounwind {
 ; CHECKIFD-LABEL: fsd:
 ; CHECKIFD:       # %bb.0:
-; CHECKIFD-NEXT:    fadd.d ft0, fa0, fa1
-; CHECKIFD-NEXT:    fsd ft0, 0(a0)
-; CHECKIFD-NEXT:    fsd ft0, 64(a0)
+; CHECKIFD-NEXT:    fadd.d fa5, fa0, fa1
+; CHECKIFD-NEXT:    fsd fa5, 0(a0)
+; CHECKIFD-NEXT:    fsd fa5, 64(a0)
 ; CHECKIFD-NEXT:    ret
 ; Use %b and %c in an FP op to ensure floating point registers are used, even
 ; for the soft float ABI
@@ -44,10 +44,10 @@ define dso_local double @fld_fsd_global(double %a, double %b) nounwind {
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    fadd.d fa0, fa0, fa1
 ; CHECKIFD-NEXT:    lui a0, %hi(G)
-; CHECKIFD-NEXT:    fld ft0, %lo(G)(a0)
+; CHECKIFD-NEXT:    fld fa5, %lo(G)(a0)
 ; CHECKIFD-NEXT:    addi a1, a0, %lo(G)
 ; CHECKIFD-NEXT:    fsd fa0, %lo(G)(a0)
-; CHECKIFD-NEXT:    fld ft0, 72(a1)
+; CHECKIFD-NEXT:    fld fa5, 72(a1)
 ; CHECKIFD-NEXT:    fsd fa0, 72(a1)
 ; CHECKIFD-NEXT:    ret
 ; Use %a and %b in an FP op to ensure floating point registers are used, even
@@ -66,8 +66,8 @@ define dso_local double @fld_fsd_constant(double %a) nounwind {
 ; RV32IFD-LABEL: fld_fsd_constant:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    lui a0, 912092
-; RV32IFD-NEXT:    fld ft0, -273(a0)
-; RV32IFD-NEXT:    fadd.d fa0, fa0, ft0
+; RV32IFD-NEXT:    fld fa5, -273(a0)
+; RV32IFD-NEXT:    fadd.d fa0, fa0, fa5
 ; RV32IFD-NEXT:    fsd fa0, -273(a0)
 ; RV32IFD-NEXT:    ret
 ;
@@ -75,8 +75,8 @@ define dso_local double @fld_fsd_constant(double %a) nounwind {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    lui a0, 228023
 ; RV64IFD-NEXT:    slli a0, a0, 2
-; RV64IFD-NEXT:    fld ft0, -273(a0)
-; RV64IFD-NEXT:    fadd.d fa0, fa0, ft0
+; RV64IFD-NEXT:    fld fa5, -273(a0)
+; RV64IFD-NEXT:    fadd.d fa0, fa0, fa5
 ; RV64IFD-NEXT:    fsd fa0, -273(a0)
 ; RV64IFD-NEXT:    ret
   %1 = inttoptr i32 3735928559 to ptr
@@ -97,8 +97,8 @@ define dso_local double @fld_stack(double %a) nounwind {
 ; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    addi a0, sp, 8
 ; RV32IFD-NEXT:    call notdead@plt
-; RV32IFD-NEXT:    fld ft0, 8(sp)
-; RV32IFD-NEXT:    fadd.d fa0, ft0, fs0
+; RV32IFD-NEXT:    fld fa5, 8(sp)
+; RV32IFD-NEXT:    fadd.d fa0, fa5, fs0
 ; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 32
@@ -112,8 +112,8 @@ define dso_local double @fld_stack(double %a) nounwind {
 ; RV64IFD-NEXT:    fmv.d fs0, fa0
 ; RV64IFD-NEXT:    addi a0, sp, 8
 ; RV64IFD-NEXT:    call notdead@plt
-; RV64IFD-NEXT:    fld ft0, 8(sp)
-; RV64IFD-NEXT:    fadd.d fa0, ft0, fs0
+; RV64IFD-NEXT:    fld fa5, 8(sp)
+; RV64IFD-NEXT:    fadd.d fa0, fa5, fs0
 ; RV64IFD-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 32
@@ -130,8 +130,8 @@ define dso_local void @fsd_stack(double %a, double %b) nounwind {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    fadd.d ft0, fa0, fa1
-; RV32IFD-NEXT:    fsd ft0, 0(sp)
+; RV32IFD-NEXT:    fadd.d fa5, fa0, fa1
+; RV32IFD-NEXT:    fsd fa5, 0(sp)
 ; RV32IFD-NEXT:    mv a0, sp
 ; RV32IFD-NEXT:    call notdead@plt
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -142,8 +142,8 @@ define dso_local void @fsd_stack(double %a, double %b) nounwind {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
 ; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fadd.d ft0, fa0, fa1
-; RV64IFD-NEXT:    fsd ft0, 0(sp)
+; RV64IFD-NEXT:    fadd.d fa5, fa0, fa1
+; RV64IFD-NEXT:    fsd fa5, 0(sp)
 ; RV64IFD-NEXT:    mv a0, sp
 ; RV64IFD-NEXT:    call notdead@plt
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -160,8 +160,8 @@ define dso_local void @fsd_stack(double %a, double %b) nounwind {
 define dso_local void @fsd_trunc(ptr %a, double %b) nounwind noinline optnone {
 ; CHECKIFD-LABEL: fsd_trunc:
 ; CHECKIFD:       # %bb.0:
-; CHECKIFD-NEXT:    fcvt.s.d ft0, fa0
-; CHECKIFD-NEXT:    fsw ft0, 0(a0)
+; CHECKIFD-NEXT:    fcvt.s.d fa5, fa0
+; CHECKIFD-NEXT:    fsw fa5, 0(a0)
 ; CHECKIFD-NEXT:    ret
   %1 = fptrunc double %b to float
   store float %1, ptr %a, align 4

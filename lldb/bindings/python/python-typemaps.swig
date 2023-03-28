@@ -1,4 +1,10 @@
-/* Typemap definitions, to allow SWIG to properly handle 'char**' data types. */
+/* Typemap definitions, to allow SWIG to properly handle 'char**' data types.
+
+NOTE: If there's logic to free memory in a %typemap(freearg), it will also be
+run if you call SWIG_fail on an error path. Don't manually free() an argument
+AND call SWIG_fail at the same time, because it will result in a double free.
+
+*/
 
 %inline %{
 
@@ -17,7 +23,6 @@
       PythonString py_str = list.GetItemAtIndex(i).AsType<PythonString>();
       if (!py_str.IsAllocated()) {
         PyErr_SetString(PyExc_TypeError, "list must contain strings");
-        free($1);
         SWIG_fail;
       }
 
@@ -294,12 +299,10 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
       PyObject *o = PyList_GetItem($input, i);
       if (!SetNumberFromPyObject($1[i], o)) {
         PyErr_SetString(PyExc_TypeError, "list must contain numbers");
-        free($1);
         SWIG_fail;
       }
 
       if (PyErr_Occurred()) {
-        free($1);
         SWIG_fail;
       }
     }

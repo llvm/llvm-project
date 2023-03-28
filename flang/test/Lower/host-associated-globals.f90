@@ -26,9 +26,9 @@ end subroutine
 ! CHECK:  %[[VAL_4:.*]] = fir.address_of(@_QMtest_mod_used_in_hostEnot_in_equiv) : !fir.ref<i32>
 
 subroutine test_common()
-  integer, save :: i(2)
-  integer, save :: j_in_equiv
-  integer, save :: not_in_equiv
+  integer :: i(2)
+  integer :: j_in_equiv
+  integer :: not_in_equiv
   equivalence (i(2),j_in_equiv)
   common /x/ i, not_in_equiv
   call bar()

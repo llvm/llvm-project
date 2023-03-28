@@ -66,8 +66,8 @@ define zeroext i32 @zext_fptoui(float %a) nounwind {
 define i32 @bcvt_f32_to_aext_i32(float %a, float %b) nounwind {
 ; RV64IF-LABEL: bcvt_f32_to_aext_i32:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fadd.s ft0, fa0, fa1
-; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    fadd.s fa5, fa0, fa1
+; RV64IF-NEXT:    fmv.x.w a0, fa5
 ; RV64IF-NEXT:    ret
   %1 = fadd float %a, %b
   %2 = bitcast float %1 to i32
@@ -77,8 +77,8 @@ define i32 @bcvt_f32_to_aext_i32(float %a, float %b) nounwind {
 define signext i32 @bcvt_f32_to_sext_i32(float %a, float %b) nounwind {
 ; RV64IF-LABEL: bcvt_f32_to_sext_i32:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fadd.s ft0, fa0, fa1
-; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    fadd.s fa5, fa0, fa1
+; RV64IF-NEXT:    fmv.x.w a0, fa5
 ; RV64IF-NEXT:    ret
   %1 = fadd float %a, %b
   %2 = bitcast float %1 to i32
@@ -88,8 +88,8 @@ define signext i32 @bcvt_f32_to_sext_i32(float %a, float %b) nounwind {
 define zeroext i32 @bcvt_f32_to_zext_i32(float %a, float %b) nounwind {
 ; RV64IF-LABEL: bcvt_f32_to_zext_i32:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fadd.s ft0, fa0, fa1
-; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    fadd.s fa5, fa0, fa1
+; RV64IF-NEXT:    fmv.x.w a0, fa5
 ; RV64IF-NEXT:    slli a0, a0, 32
 ; RV64IF-NEXT:    srli a0, a0, 32
 ; RV64IF-NEXT:    ret
@@ -101,9 +101,9 @@ define zeroext i32 @bcvt_f32_to_zext_i32(float %a, float %b) nounwind {
 define float @bcvt_i64_to_f32_via_i32(i64 %a, i64 %b) nounwind {
 ; RV64IF-LABEL: bcvt_i64_to_f32_via_i32:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fmv.w.x ft0, a0
-; RV64IF-NEXT:    fmv.w.x ft1, a1
-; RV64IF-NEXT:    fadd.s fa0, ft0, ft1
+; RV64IF-NEXT:    fmv.w.x fa5, a0
+; RV64IF-NEXT:    fmv.w.x fa4, a1
+; RV64IF-NEXT:    fadd.s fa0, fa5, fa4
 ; RV64IF-NEXT:    ret
   %1 = trunc i64 %a to i32
   %2 = trunc i64 %b to i32

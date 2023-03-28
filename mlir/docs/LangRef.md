@@ -188,7 +188,7 @@ toplevel := (operation | attribute-alias-def | type-alias-def)*
 
 The production `toplevel` is the top level production that is parsed by any parsing
 consuming the MLIR syntax. [Operations](#operations),
-[Attribute alises](#attribute-value-aliases), and [Type aliases](#type-aliases)
+[Attribute aliases](#attribute-value-aliases), and [Type aliases](#type-aliases)
 can be declared on the toplevel.
 
 ### Identifiers and keywords
@@ -846,7 +846,7 @@ that are directly usable by any other dialect in MLIR. These types cover a range
 from primitive integer and floating-point values, attribute dictionaries, dense
 multi-dimensional arrays, and more.
 
-### IR Versionning
+### IR Versioning
 
 A dialect can opt-in to handle versioning through the
 `BytecodeDialectInterface`. Few hooks are exposed to the dialect to allow

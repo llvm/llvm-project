@@ -643,3 +643,54 @@ func.func @cbrt_vector(%arg0: vector<4xf32>) -> vector<4xf32> {
   %0 = "math.cbrt"(%arg0) : (vector<4xf32>) -> vector<4xf32>
   func.return %0 : vector<4xf32>
 }
+
+
+// CHECK-LABEL: @math_f16
+func.func @math_f16(%arg0 : vector<4xf16>) -> vector<4xf16> {
+
+  // CHECK-NOT: math.atan
+  %0 = "math.atan"(%arg0) : (vector<4xf16>) -> vector<4xf16>
+
+  // CHECK-NOT: math.atan2
+  %1 = "math.atan2"(%0, %arg0) : (vector<4xf16>, vector<4xf16>) -> vector<4xf16>
+
+  // CHECK-NOT: math.tanh
+  %2 = "math.tanh"(%1) : (vector<4xf16>) -> vector<4xf16>
+
+  // CHECK-NOT: math.log
+  %3 = "math.log"(%2) : (vector<4xf16>) -> vector<4xf16>
+
+  // CHECK-NOT: math.log2
+  %4 = "math.log2"(%3) : (vector<4xf16>) -> vector<4xf16>
+
+  // CHECK-NOT: math.log1p
+  %5 = "math.log1p"(%4) : (vector<4xf16>) -> vector<4xf16>
+
+  // CHECK-NOT: math.erf
+  %6 = "math.erf"(%5) : (vector<4xf16>) -> vector<4xf16>
+
+  // CHECK-NOT: math.exp
+  %7 = "math.exp"(%6) : (vector<4xf16>) -> vector<4xf16>
+
+  // CHECK-NOT: math.expm1
+  %8 = "math.expm1"(%7) : (vector<4xf16>) -> vector<4xf16>
+
+  // CHECK-NOT: math.cbrt
+  %9 = "math.cbrt"(%8) : (vector<4xf16>) -> vector<4xf16>
+
+  // CHECK-NOT: math.sin
+  %10 = "math.sin"(%9) : (vector<4xf16>) -> vector<4xf16>
+
+  // CHECK-NOT: math.cos
+  %11 = "math.cos"(%10) : (vector<4xf16>) -> vector<4xf16>
+
+  return %11 : vector<4xf16>
+}
+
+
+// AVX2-LABEL: @rsqrt_f16
+func.func @rsqrt_f16(%arg0 : vector<2x8xf16>) -> vector<2x8xf16> {
+  // AVX2-NOT: math.rsqrt
+  %0 = "math.rsqrt"(%arg0) : (vector<2x8xf16>) -> vector<2x8xf16>
+  return %0 : vector<2x8xf16>
+}

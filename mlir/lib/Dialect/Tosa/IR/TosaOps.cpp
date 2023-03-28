@@ -425,6 +425,8 @@ LogicalResult tosa::FFT2dOp::inferReturnTypeComponents(
 bool tosa::ConcatOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
   if (l.size() != r.size() || l.size() != 1)
     return false;
+  if (getElementTypeOrSelf(l[0]) != getElementTypeOrSelf(r[0]))
+    return false;
   return succeeded(verifyCompatibleShape(l[0], r[0]));
 }
 

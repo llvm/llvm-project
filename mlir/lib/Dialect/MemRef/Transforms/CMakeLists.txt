@@ -4,6 +4,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   ExpandOps.cpp
   ExpandStridedMetadata.cpp
   EmulateWideInt.cpp
+  ExtractAddressComputations.cpp
   FoldMemRefAliasOps.cpp
   MultiBuffer.cpp
   NormalizeMemRefs.cpp
@@ -27,6 +28,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   MLIRInferTypeOpInterface
   MLIRLoopLikeInterface
   MLIRMemRefDialect
+  MLIRNVGPUDialect
   MLIRPass
   MLIRTensorDialect
   MLIRTransforms

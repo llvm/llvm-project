@@ -122,3 +122,12 @@ class TestCase(TestBase):
         self.runCmd("settings set auto-one-line-summaries false")
         self._expect_cmd(f"dwim-print s", "frame variable")
         self._expect_cmd(f"dwim-print (struct Structure)s", "expression")
+
+    def test_summary_strings(self):
+        """Test dwim-print with nested values (structs, etc)."""
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.c"))
+        self.runCmd("settings set auto-one-line-summaries false")
+        self.runCmd("type summary add -e -s 'stub summary' Structure")
+        self._expect_cmd(f"dwim-print s", "frame variable")
+        self._expect_cmd(f"dwim-print (struct Structure)s", "expression")

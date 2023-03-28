@@ -2514,10 +2514,10 @@ define <vscale x 8 x i1> @fcmp_uno_vf_nxv8f64_nonans(<vscale x 8 x double> %va, 
 define <vscale x 16 x i1> @fcmp_oeq_vf_nx16f64(<vscale x 16 x double> %va) {
 ; RV32-LABEL: fcmp_oeq_vf_nx16f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    fcvt.d.w ft0, zero
+; RV32-NEXT:    fcvt.d.w fa5, zero
 ; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; RV32-NEXT:    vmfeq.vf v24, v16, ft0
-; RV32-NEXT:    vmfeq.vf v0, v8, ft0
+; RV32-NEXT:    vmfeq.vf v24, v16, fa5
+; RV32-NEXT:    vmfeq.vf v0, v8, fa5
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    srli a0, a0, 3
 ; RV32-NEXT:    add a1, a0, a0
@@ -2527,10 +2527,10 @@ define <vscale x 16 x i1> @fcmp_oeq_vf_nx16f64(<vscale x 16 x double> %va) {
 ;
 ; RV64-LABEL: fcmp_oeq_vf_nx16f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fmv.d.x ft0, zero
+; RV64-NEXT:    fmv.d.x fa5, zero
 ; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; RV64-NEXT:    vmfeq.vf v24, v16, ft0
-; RV64-NEXT:    vmfeq.vf v0, v8, ft0
+; RV64-NEXT:    vmfeq.vf v24, v16, fa5
+; RV64-NEXT:    vmfeq.vf v0, v8, fa5
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    srli a0, a0, 3
 ; RV64-NEXT:    add a1, a0, a0

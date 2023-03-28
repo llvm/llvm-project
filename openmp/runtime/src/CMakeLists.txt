@@ -295,14 +295,13 @@ if(WIN32)
           -o ${LIBOMPIMP_GENERATED_DEF_FILE} ${CMAKE_CURRENT_SOURCE_DIR}/dllexports
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dllexports ${LIBOMP_TOOLS_DIR}/generate-def.pl
     )
-    # while this is merely generating an import library off the one generated with the runtime dll,
-    # kmp_global.cpp will satisfy the librarian's apparent ask to see the actual exported DATA items
-    set_source_files_properties(${LIBOMP_GENERATED_IMP_LIB_FILENAME} PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE)
-    add_library(${LIBOMP_IMP_LIB_TARGET} STATIC ${LIBOMP_GENERATED_IMP_LIB_FILENAME} kmp_global.cpp)
+    # while this merely generates an import library off a def file, CMAKE still requires it to have a "source" so feed it a dummy one, 
+    # making it a .txt which CMAKE will filter out from the librarian (a .cpp will make lib.exe punt trying to resolve the .def symbols)
+    add_library(${LIBOMP_IMP_LIB_TARGET} STATIC kmp_dummy.txt)
     set_target_properties(${LIBOMP_IMP_LIB_TARGET} PROPERTIES
-        PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_IMP_LIB_FILE}" LINKER_LANGUAGE C
+        PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_IMP_LIB_FILE}" LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
         STATIC_LIBRARY_OPTIONS "${CMAKE_LINK_DEF_FILE_FLAG}${CMAKE_CURRENT_BINARY_DIR}/${LIBOMPIMP_GENERATED_DEF_FILE}")
-    add_dependencies(${LIBOMP_IMP_LIB_TARGET} omp libompimp-needed-def-file)
+    add_dependencies(${LIBOMP_IMP_LIB_TARGET} libompimp-needed-def-file)
   endif()
 endif()
 

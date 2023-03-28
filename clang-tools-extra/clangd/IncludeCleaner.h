@@ -78,6 +78,9 @@ convertIncludes(const SourceManager &SM,
 /// representation. The spelling contains the ""<> characters.
 std::string spellHeader(ParsedAST &AST, const FileEntry *MainFile,
                         include_cleaner::Header Provider);
+
+std::vector<include_cleaner::SymbolReference>
+collectMacroReferences(ParsedAST &AST);
 } // namespace clangd
 } // namespace clang
 

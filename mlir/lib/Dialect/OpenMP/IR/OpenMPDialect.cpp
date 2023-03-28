@@ -58,6 +58,10 @@ void OpenMPDialect::initialize() {
   LLVM::LLVMPointerType::attachInterface<
       PointerLikeModel<LLVM::LLVMPointerType>>(*getContext());
   MemRefType::attachInterface<PointerLikeModel<MemRefType>>(*getContext());
+  LLVM::LLVMPointerType::attachInterface<
+      PointerLikeModel<LLVM::LLVMPointerType>>(*getContext());
+  mlir::ModuleOp::attachInterface<mlir::omp::OffloadModuleDefaultModel>(
+      *getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1415,26 +1419,6 @@ LogicalResult CancellationPointOp::verify() {
   }
   // TODO : Add more when we support taskgroup.
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// OpenMPDialect helper functions
-//===----------------------------------------------------------------------===//
-
-// Set the omp.is_device attribute on the module with the specified boolean
-void OpenMPDialect::setIsDevice(Operation* module, bool isDevice) {
-  module->setAttr(
-      mlir::StringAttr::get(module->getContext(), llvm::Twine{"omp.is_device"}),
-      mlir::BoolAttr::get(module->getContext(), isDevice));
-}
-
-// Return the value of the omp.is_device attribute stored in the module if it
-// exists, otherwise return false by default
-bool OpenMPDialect::getIsDevice(Operation* module) {
-  if (Attribute isDevice = module->getAttr("omp.is_device"))
-    if (isDevice.isa<mlir::BoolAttr>())
-      return isDevice.dyn_cast<BoolAttr>().getValue();
-  return false;
 }
 
 #define GET_ATTRDEF_CLASSES

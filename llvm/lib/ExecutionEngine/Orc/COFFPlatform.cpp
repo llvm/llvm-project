@@ -185,13 +185,13 @@ COFFPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
   auto &HostFuncJD = ES.createBareJITDylib("$<PlatformRuntimeHostFuncJD>");
 
   // Add JIT-dispatch function support symbols.
-  if (auto Err = HostFuncJD.define(absoluteSymbols(
-          {{ES.intern("__orc_rt_jit_dispatch"),
-            {EPC.getJITDispatchInfo().JITDispatchFunction.getValue(),
-             JITSymbolFlags::Exported}},
-           {ES.intern("__orc_rt_jit_dispatch_ctx"),
-            {EPC.getJITDispatchInfo().JITDispatchContext.getValue(),
-             JITSymbolFlags::Exported}}})))
+  if (auto Err = HostFuncJD.define(
+          absoluteSymbols({{ES.intern("__orc_rt_jit_dispatch"),
+                            {EPC.getJITDispatchInfo().JITDispatchFunction,
+                             JITSymbolFlags::Exported}},
+                           {ES.intern("__orc_rt_jit_dispatch_ctx"),
+                            {EPC.getJITDispatchInfo().JITDispatchContext,
+                             JITSymbolFlags::Exported}}})))
     return std::move(Err);
 
   PlatformJD.addToLinkOrder(HostFuncJD);

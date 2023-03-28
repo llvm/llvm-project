@@ -5250,9 +5250,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                                           Depth](ArrayRef<Value *> VL) {
     if (!S.getOpcode() || !S.isAltShuffle() || VL.size() > 2)
       return false;
-    if (S.getOpcode() == Instruction::GetElementPtr &&
-        !TTI->prefersVectorizedAddressing())
-      return true;
     if (VectorizableTree.size() < MinTreeSize)
       return false;
     if (Depth >= RecursionMaxDepth - 1)
@@ -12130,23 +12127,21 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
       if (!isValidElementType(SI->getValueOperand()->getType()))
         continue;
       Stores[getUnderlyingObject(SI->getPointerOperand())].push_back(SI);
-      continue;
     }
 
     // Ignore getelementptr instructions that have more than one index, a
     // constant index, or a pointer operand that doesn't point to a scalar
     // type.
-    if (TTI->prefersVectorizedAddressing())
-      if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-        auto Idx = GEP->idx_begin()->get();
-        if (GEP->getNumIndices() > 1 || isa<Constant>(Idx))
-          continue;
-        if (!isValidElementType(Idx->getType()))
-          continue;
-        if (GEP->getType()->isVectorTy())
-          continue;
-        GEPs[GEP->getPointerOperand()].push_back(GEP);
-      }
+    else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+      auto Idx = GEP->idx_begin()->get();
+      if (GEP->getNumIndices() > 1 || isa<Constant>(Idx))
+        continue;
+      if (!isValidElementType(Idx->getType()))
+        continue;
+      if (GEP->getType()->isVectorTy())
+        continue;
+      GEPs[GEP->getPointerOperand()].push_back(GEP);
+    }
   }
 }
 

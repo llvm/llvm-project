@@ -95,9 +95,9 @@ def Tosa_Float : AnyTypeOf<[
 //===----------------------------------------------------------------------===//
 def Tosa_AnyNumber : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, Tosa_Float],
                                "number">;
-// Add F64 type support for just for tosa::CastOp
-def Tosa_AnyNumber_Cast : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, Tosa_Float, F64],
-                               "number_cast">;
+// Add F64 type support just for tosa::CastOp and tosa::ConstOp
+def Tosa_AnyNumber_Plus_F64 : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, Tosa_Float, F64],
+                               "number_plus_f64">;
 
 //===----------------------------------------------------------------------===//
 // Tensor types
@@ -108,7 +108,7 @@ def Tosa_Int32Or64Tensor : TensorOf<[Tosa_Int32Or64]>;
 
 // Either ranked or unranked tensor of TOSA supported element types.
 def Tosa_Tensor : TensorOf<[Tosa_AnyNumber]>;
-def Tosa_Tensor_Cast : TensorOf<[Tosa_AnyNumber_Cast]>;
+def Tosa_Tensor_Plus_F64 : TensorOf<[Tosa_AnyNumber_Plus_F64]>;
 // Must be ranked but no further constraints
 def Tosa_RankedTensor : RankedTensorOf<[Tosa_AnyNumber]>;
 

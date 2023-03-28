@@ -17,42 +17,42 @@
 define float @bitcast_and(float %a1, float %a2) nounwind {
 ; RV32F-LABEL: bitcast_and:
 ; RV32F:       # %bb.0:
-; RV32F-NEXT:    fmv.w.x ft0, a1
-; RV32F-NEXT:    fmv.w.x ft1, a0
-; RV32F-NEXT:    fadd.s ft0, ft1, ft0
-; RV32F-NEXT:    fabs.s ft0, ft0
-; RV32F-NEXT:    fadd.s ft0, ft1, ft0
-; RV32F-NEXT:    fmv.x.w a0, ft0
+; RV32F-NEXT:    fmv.w.x fa5, a1
+; RV32F-NEXT:    fmv.w.x fa4, a0
+; RV32F-NEXT:    fadd.s fa5, fa4, fa5
+; RV32F-NEXT:    fabs.s fa5, fa5
+; RV32F-NEXT:    fadd.s fa5, fa4, fa5
+; RV32F-NEXT:    fmv.x.w a0, fa5
 ; RV32F-NEXT:    ret
 ;
 ; RV32FD-LABEL: bitcast_and:
 ; RV32FD:       # %bb.0:
-; RV32FD-NEXT:    fmv.w.x ft0, a1
-; RV32FD-NEXT:    fmv.w.x ft1, a0
-; RV32FD-NEXT:    fadd.s ft0, ft1, ft0
-; RV32FD-NEXT:    fabs.s ft0, ft0
-; RV32FD-NEXT:    fadd.s ft0, ft1, ft0
-; RV32FD-NEXT:    fmv.x.w a0, ft0
+; RV32FD-NEXT:    fmv.w.x fa5, a1
+; RV32FD-NEXT:    fmv.w.x fa4, a0
+; RV32FD-NEXT:    fadd.s fa5, fa4, fa5
+; RV32FD-NEXT:    fabs.s fa5, fa5
+; RV32FD-NEXT:    fadd.s fa5, fa4, fa5
+; RV32FD-NEXT:    fmv.x.w a0, fa5
 ; RV32FD-NEXT:    ret
 ;
 ; RV64F-LABEL: bitcast_and:
 ; RV64F:       # %bb.0:
-; RV64F-NEXT:    fmv.w.x ft0, a1
-; RV64F-NEXT:    fmv.w.x ft1, a0
-; RV64F-NEXT:    fadd.s ft0, ft1, ft0
-; RV64F-NEXT:    fabs.s ft0, ft0
-; RV64F-NEXT:    fadd.s ft0, ft1, ft0
-; RV64F-NEXT:    fmv.x.w a0, ft0
+; RV64F-NEXT:    fmv.w.x fa5, a1
+; RV64F-NEXT:    fmv.w.x fa4, a0
+; RV64F-NEXT:    fadd.s fa5, fa4, fa5
+; RV64F-NEXT:    fabs.s fa5, fa5
+; RV64F-NEXT:    fadd.s fa5, fa4, fa5
+; RV64F-NEXT:    fmv.x.w a0, fa5
 ; RV64F-NEXT:    ret
 ;
 ; RV64FD-LABEL: bitcast_and:
 ; RV64FD:       # %bb.0:
-; RV64FD-NEXT:    fmv.w.x ft0, a1
-; RV64FD-NEXT:    fmv.w.x ft1, a0
-; RV64FD-NEXT:    fadd.s ft0, ft1, ft0
-; RV64FD-NEXT:    fabs.s ft0, ft0
-; RV64FD-NEXT:    fadd.s ft0, ft1, ft0
-; RV64FD-NEXT:    fmv.x.w a0, ft0
+; RV64FD-NEXT:    fmv.w.x fa5, a1
+; RV64FD-NEXT:    fmv.w.x fa4, a0
+; RV64FD-NEXT:    fadd.s fa5, fa4, fa5
+; RV64FD-NEXT:    fabs.s fa5, fa5
+; RV64FD-NEXT:    fadd.s fa5, fa4, fa5
+; RV64FD-NEXT:    fmv.x.w a0, fa5
 ; RV64FD-NEXT:    ret
   %a3 = fadd float %a1, %a2
   %bc1 = bitcast float %a3 to i32
@@ -89,14 +89,14 @@ define double @bitcast_double_and(double %a1, double %a2) nounwind {
 ; RV32FD-NEXT:    addi sp, sp, -16
 ; RV32FD-NEXT:    sw a2, 8(sp)
 ; RV32FD-NEXT:    sw a3, 12(sp)
-; RV32FD-NEXT:    fld ft0, 8(sp)
+; RV32FD-NEXT:    fld fa5, 8(sp)
 ; RV32FD-NEXT:    sw a0, 8(sp)
 ; RV32FD-NEXT:    sw a1, 12(sp)
-; RV32FD-NEXT:    fld ft1, 8(sp)
-; RV32FD-NEXT:    fadd.d ft0, ft1, ft0
-; RV32FD-NEXT:    fabs.d ft0, ft0
-; RV32FD-NEXT:    fadd.d ft0, ft1, ft0
-; RV32FD-NEXT:    fsd ft0, 8(sp)
+; RV32FD-NEXT:    fld fa4, 8(sp)
+; RV32FD-NEXT:    fadd.d fa5, fa4, fa5
+; RV32FD-NEXT:    fabs.d fa5, fa5
+; RV32FD-NEXT:    fadd.d fa5, fa4, fa5
+; RV32FD-NEXT:    fsd fa5, 8(sp)
 ; RV32FD-NEXT:    lw a0, 8(sp)
 ; RV32FD-NEXT:    lw a1, 12(sp)
 ; RV32FD-NEXT:    addi sp, sp, 16
@@ -120,12 +120,12 @@ define double @bitcast_double_and(double %a1, double %a2) nounwind {
 ;
 ; RV64FD-LABEL: bitcast_double_and:
 ; RV64FD:       # %bb.0:
-; RV64FD-NEXT:    fmv.d.x ft0, a1
-; RV64FD-NEXT:    fmv.d.x ft1, a0
-; RV64FD-NEXT:    fadd.d ft0, ft1, ft0
-; RV64FD-NEXT:    fabs.d ft0, ft0
-; RV64FD-NEXT:    fadd.d ft0, ft1, ft0
-; RV64FD-NEXT:    fmv.x.d a0, ft0
+; RV64FD-NEXT:    fmv.d.x fa5, a1
+; RV64FD-NEXT:    fmv.d.x fa4, a0
+; RV64FD-NEXT:    fadd.d fa5, fa4, fa5
+; RV64FD-NEXT:    fabs.d fa5, fa5
+; RV64FD-NEXT:    fadd.d fa5, fa4, fa5
+; RV64FD-NEXT:    fmv.x.d a0, fa5
 ; RV64FD-NEXT:    ret
   %a3 = fadd double %a1, %a2
   %bc1 = bitcast double %a3 to i64
@@ -139,42 +139,42 @@ define double @bitcast_double_and(double %a1, double %a2) nounwind {
 define float @bitcast_xor(float %a1, float %a2) nounwind {
 ; RV32F-LABEL: bitcast_xor:
 ; RV32F:       # %bb.0:
-; RV32F-NEXT:    fmv.w.x ft0, a1
-; RV32F-NEXT:    fmv.w.x ft1, a0
-; RV32F-NEXT:    fmul.s ft0, ft1, ft0
-; RV32F-NEXT:    fneg.s ft0, ft0
-; RV32F-NEXT:    fmul.s ft0, ft1, ft0
-; RV32F-NEXT:    fmv.x.w a0, ft0
+; RV32F-NEXT:    fmv.w.x fa5, a1
+; RV32F-NEXT:    fmv.w.x fa4, a0
+; RV32F-NEXT:    fmul.s fa5, fa4, fa5
+; RV32F-NEXT:    fneg.s fa5, fa5
+; RV32F-NEXT:    fmul.s fa5, fa4, fa5
+; RV32F-NEXT:    fmv.x.w a0, fa5
 ; RV32F-NEXT:    ret
 ;
 ; RV32FD-LABEL: bitcast_xor:
 ; RV32FD:       # %bb.0:
-; RV32FD-NEXT:    fmv.w.x ft0, a1
-; RV32FD-NEXT:    fmv.w.x ft1, a0
-; RV32FD-NEXT:    fmul.s ft0, ft1, ft0
-; RV32FD-NEXT:    fneg.s ft0, ft0
-; RV32FD-NEXT:    fmul.s ft0, ft1, ft0
-; RV32FD-NEXT:    fmv.x.w a0, ft0
+; RV32FD-NEXT:    fmv.w.x fa5, a1
+; RV32FD-NEXT:    fmv.w.x fa4, a0
+; RV32FD-NEXT:    fmul.s fa5, fa4, fa5
+; RV32FD-NEXT:    fneg.s fa5, fa5
+; RV32FD-NEXT:    fmul.s fa5, fa4, fa5
+; RV32FD-NEXT:    fmv.x.w a0, fa5
 ; RV32FD-NEXT:    ret
 ;
 ; RV64F-LABEL: bitcast_xor:
 ; RV64F:       # %bb.0:
-; RV64F-NEXT:    fmv.w.x ft0, a1
-; RV64F-NEXT:    fmv.w.x ft1, a0
-; RV64F-NEXT:    fmul.s ft0, ft1, ft0
-; RV64F-NEXT:    fneg.s ft0, ft0
-; RV64F-NEXT:    fmul.s ft0, ft1, ft0
-; RV64F-NEXT:    fmv.x.w a0, ft0
+; RV64F-NEXT:    fmv.w.x fa5, a1
+; RV64F-NEXT:    fmv.w.x fa4, a0
+; RV64F-NEXT:    fmul.s fa5, fa4, fa5
+; RV64F-NEXT:    fneg.s fa5, fa5
+; RV64F-NEXT:    fmul.s fa5, fa4, fa5
+; RV64F-NEXT:    fmv.x.w a0, fa5
 ; RV64F-NEXT:    ret
 ;
 ; RV64FD-LABEL: bitcast_xor:
 ; RV64FD:       # %bb.0:
-; RV64FD-NEXT:    fmv.w.x ft0, a1
-; RV64FD-NEXT:    fmv.w.x ft1, a0
-; RV64FD-NEXT:    fmul.s ft0, ft1, ft0
-; RV64FD-NEXT:    fneg.s ft0, ft0
-; RV64FD-NEXT:    fmul.s ft0, ft1, ft0
-; RV64FD-NEXT:    fmv.x.w a0, ft0
+; RV64FD-NEXT:    fmv.w.x fa5, a1
+; RV64FD-NEXT:    fmv.w.x fa4, a0
+; RV64FD-NEXT:    fmul.s fa5, fa4, fa5
+; RV64FD-NEXT:    fneg.s fa5, fa5
+; RV64FD-NEXT:    fmul.s fa5, fa4, fa5
+; RV64FD-NEXT:    fmv.x.w a0, fa5
 ; RV64FD-NEXT:    ret
   %a3 = fmul float %a1, %a2
   %bc1 = bitcast float %a3 to i32
@@ -211,14 +211,14 @@ define double @bitcast_double_xor(double %a1, double %a2) nounwind {
 ; RV32FD-NEXT:    addi sp, sp, -16
 ; RV32FD-NEXT:    sw a2, 8(sp)
 ; RV32FD-NEXT:    sw a3, 12(sp)
-; RV32FD-NEXT:    fld ft0, 8(sp)
+; RV32FD-NEXT:    fld fa5, 8(sp)
 ; RV32FD-NEXT:    sw a0, 8(sp)
 ; RV32FD-NEXT:    sw a1, 12(sp)
-; RV32FD-NEXT:    fld ft1, 8(sp)
-; RV32FD-NEXT:    fmul.d ft0, ft1, ft0
-; RV32FD-NEXT:    fneg.d ft0, ft0
-; RV32FD-NEXT:    fmul.d ft0, ft1, ft0
-; RV32FD-NEXT:    fsd ft0, 8(sp)
+; RV32FD-NEXT:    fld fa4, 8(sp)
+; RV32FD-NEXT:    fmul.d fa5, fa4, fa5
+; RV32FD-NEXT:    fneg.d fa5, fa5
+; RV32FD-NEXT:    fmul.d fa5, fa4, fa5
+; RV32FD-NEXT:    fsd fa5, 8(sp)
 ; RV32FD-NEXT:    lw a0, 8(sp)
 ; RV32FD-NEXT:    lw a1, 12(sp)
 ; RV32FD-NEXT:    addi sp, sp, 16
@@ -243,12 +243,12 @@ define double @bitcast_double_xor(double %a1, double %a2) nounwind {
 ;
 ; RV64FD-LABEL: bitcast_double_xor:
 ; RV64FD:       # %bb.0:
-; RV64FD-NEXT:    fmv.d.x ft0, a1
-; RV64FD-NEXT:    fmv.d.x ft1, a0
-; RV64FD-NEXT:    fmul.d ft0, ft1, ft0
-; RV64FD-NEXT:    fneg.d ft0, ft0
-; RV64FD-NEXT:    fmul.d ft0, ft1, ft0
-; RV64FD-NEXT:    fmv.x.d a0, ft0
+; RV64FD-NEXT:    fmv.d.x fa5, a1
+; RV64FD-NEXT:    fmv.d.x fa4, a0
+; RV64FD-NEXT:    fmul.d fa5, fa4, fa5
+; RV64FD-NEXT:    fneg.d fa5, fa5
+; RV64FD-NEXT:    fmul.d fa5, fa4, fa5
+; RV64FD-NEXT:    fmv.x.d a0, fa5
 ; RV64FD-NEXT:    ret
   %a3 = fmul double %a1, %a2
   %bc1 = bitcast double %a3 to i64
@@ -261,46 +261,46 @@ define double @bitcast_double_xor(double %a1, double %a2) nounwind {
 define float @bitcast_or(float %a1, float %a2) nounwind {
 ; RV32F-LABEL: bitcast_or:
 ; RV32F:       # %bb.0:
-; RV32F-NEXT:    fmv.w.x ft0, a1
-; RV32F-NEXT:    fmv.w.x ft1, a0
-; RV32F-NEXT:    fmul.s ft0, ft1, ft0
-; RV32F-NEXT:    fabs.s ft0, ft0
-; RV32F-NEXT:    fneg.s ft0, ft0
-; RV32F-NEXT:    fmul.s ft0, ft1, ft0
-; RV32F-NEXT:    fmv.x.w a0, ft0
+; RV32F-NEXT:    fmv.w.x fa5, a1
+; RV32F-NEXT:    fmv.w.x fa4, a0
+; RV32F-NEXT:    fmul.s fa5, fa4, fa5
+; RV32F-NEXT:    fabs.s fa5, fa5
+; RV32F-NEXT:    fneg.s fa5, fa5
+; RV32F-NEXT:    fmul.s fa5, fa4, fa5
+; RV32F-NEXT:    fmv.x.w a0, fa5
 ; RV32F-NEXT:    ret
 ;
 ; RV32FD-LABEL: bitcast_or:
 ; RV32FD:       # %bb.0:
-; RV32FD-NEXT:    fmv.w.x ft0, a1
-; RV32FD-NEXT:    fmv.w.x ft1, a0
-; RV32FD-NEXT:    fmul.s ft0, ft1, ft0
-; RV32FD-NEXT:    fabs.s ft0, ft0
-; RV32FD-NEXT:    fneg.s ft0, ft0
-; RV32FD-NEXT:    fmul.s ft0, ft1, ft0
-; RV32FD-NEXT:    fmv.x.w a0, ft0
+; RV32FD-NEXT:    fmv.w.x fa5, a1
+; RV32FD-NEXT:    fmv.w.x fa4, a0
+; RV32FD-NEXT:    fmul.s fa5, fa4, fa5
+; RV32FD-NEXT:    fabs.s fa5, fa5
+; RV32FD-NEXT:    fneg.s fa5, fa5
+; RV32FD-NEXT:    fmul.s fa5, fa4, fa5
+; RV32FD-NEXT:    fmv.x.w a0, fa5
 ; RV32FD-NEXT:    ret
 ;
 ; RV64F-LABEL: bitcast_or:
 ; RV64F:       # %bb.0:
-; RV64F-NEXT:    fmv.w.x ft0, a1
-; RV64F-NEXT:    fmv.w.x ft1, a0
-; RV64F-NEXT:    fmul.s ft0, ft1, ft0
-; RV64F-NEXT:    fabs.s ft0, ft0
-; RV64F-NEXT:    fneg.s ft0, ft0
-; RV64F-NEXT:    fmul.s ft0, ft1, ft0
-; RV64F-NEXT:    fmv.x.w a0, ft0
+; RV64F-NEXT:    fmv.w.x fa5, a1
+; RV64F-NEXT:    fmv.w.x fa4, a0
+; RV64F-NEXT:    fmul.s fa5, fa4, fa5
+; RV64F-NEXT:    fabs.s fa5, fa5
+; RV64F-NEXT:    fneg.s fa5, fa5
+; RV64F-NEXT:    fmul.s fa5, fa4, fa5
+; RV64F-NEXT:    fmv.x.w a0, fa5
 ; RV64F-NEXT:    ret
 ;
 ; RV64FD-LABEL: bitcast_or:
 ; RV64FD:       # %bb.0:
-; RV64FD-NEXT:    fmv.w.x ft0, a1
-; RV64FD-NEXT:    fmv.w.x ft1, a0
-; RV64FD-NEXT:    fmul.s ft0, ft1, ft0
-; RV64FD-NEXT:    fabs.s ft0, ft0
-; RV64FD-NEXT:    fneg.s ft0, ft0
-; RV64FD-NEXT:    fmul.s ft0, ft1, ft0
-; RV64FD-NEXT:    fmv.x.w a0, ft0
+; RV64FD-NEXT:    fmv.w.x fa5, a1
+; RV64FD-NEXT:    fmv.w.x fa4, a0
+; RV64FD-NEXT:    fmul.s fa5, fa4, fa5
+; RV64FD-NEXT:    fabs.s fa5, fa5
+; RV64FD-NEXT:    fneg.s fa5, fa5
+; RV64FD-NEXT:    fmul.s fa5, fa4, fa5
+; RV64FD-NEXT:    fmv.x.w a0, fa5
 ; RV64FD-NEXT:    ret
   %a3 = fmul float %a1, %a2
   %bc1 = bitcast float %a3 to i32
@@ -337,15 +337,15 @@ define double @bitcast_double_or(double %a1, double %a2) nounwind {
 ; RV32FD-NEXT:    addi sp, sp, -16
 ; RV32FD-NEXT:    sw a2, 8(sp)
 ; RV32FD-NEXT:    sw a3, 12(sp)
-; RV32FD-NEXT:    fld ft0, 8(sp)
+; RV32FD-NEXT:    fld fa5, 8(sp)
 ; RV32FD-NEXT:    sw a0, 8(sp)
 ; RV32FD-NEXT:    sw a1, 12(sp)
-; RV32FD-NEXT:    fld ft1, 8(sp)
-; RV32FD-NEXT:    fmul.d ft0, ft1, ft0
-; RV32FD-NEXT:    fabs.d ft0, ft0
-; RV32FD-NEXT:    fneg.d ft0, ft0
-; RV32FD-NEXT:    fmul.d ft0, ft1, ft0
-; RV32FD-NEXT:    fsd ft0, 8(sp)
+; RV32FD-NEXT:    fld fa4, 8(sp)
+; RV32FD-NEXT:    fmul.d fa5, fa4, fa5
+; RV32FD-NEXT:    fabs.d fa5, fa5
+; RV32FD-NEXT:    fneg.d fa5, fa5
+; RV32FD-NEXT:    fmul.d fa5, fa4, fa5
+; RV32FD-NEXT:    fsd fa5, 8(sp)
 ; RV32FD-NEXT:    lw a0, 8(sp)
 ; RV32FD-NEXT:    lw a1, 12(sp)
 ; RV32FD-NEXT:    addi sp, sp, 16
@@ -370,13 +370,13 @@ define double @bitcast_double_or(double %a1, double %a2) nounwind {
 ;
 ; RV64FD-LABEL: bitcast_double_or:
 ; RV64FD:       # %bb.0:
-; RV64FD-NEXT:    fmv.d.x ft0, a1
-; RV64FD-NEXT:    fmv.d.x ft1, a0
-; RV64FD-NEXT:    fmul.d ft0, ft1, ft0
-; RV64FD-NEXT:    fabs.d ft0, ft0
-; RV64FD-NEXT:    fneg.d ft0, ft0
-; RV64FD-NEXT:    fmul.d ft0, ft1, ft0
-; RV64FD-NEXT:    fmv.x.d a0, ft0
+; RV64FD-NEXT:    fmv.d.x fa5, a1
+; RV64FD-NEXT:    fmv.d.x fa4, a0
+; RV64FD-NEXT:    fmul.d fa5, fa4, fa5
+; RV64FD-NEXT:    fabs.d fa5, fa5
+; RV64FD-NEXT:    fneg.d fa5, fa5
+; RV64FD-NEXT:    fmul.d fa5, fa4, fa5
+; RV64FD-NEXT:    fmv.x.d a0, fa5
 ; RV64FD-NEXT:    ret
   %a3 = fmul double %a1, %a2
   %bc1 = bitcast double %a3 to i64

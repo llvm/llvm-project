@@ -50,7 +50,7 @@ static Value createMul(Location loc, Value x, Value y, Type accType,
 // Delinearizes the given composite `index` by the basis specified in `factors`.
 static SmallVector<Value> unrollIndex(OpBuilder &b, Location loc, Value index,
                                       ArrayRef<int64_t> factors) {
-  assert(factors.size() >= 1 && "empty factor list");
+  assert(!factors.empty() && "empty factor list");
   SmallVector<Value> basis;
   for (int64_t f : factors)
     basis.push_back(b.create<arith::ConstantOp>(loc, b.getIndexAttr(f)));

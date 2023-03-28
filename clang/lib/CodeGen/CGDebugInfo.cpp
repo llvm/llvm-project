@@ -18,6 +18,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclFriend.h"
@@ -1483,9 +1484,9 @@ llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
   return F;
 }
 
-llvm::DIType *CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,
-                                              llvm::DIScope *RecordTy,
-                                              const RecordDecl *RD) {
+llvm::DIDerivedType *
+CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,
+                                llvm::DIScope *RecordTy, const RecordDecl *RD) {
   StringRef Name = BitFieldDecl->getName();
   QualType Ty = BitFieldDecl->getType();
   SourceLocation Loc = BitFieldDecl->getLocation();
@@ -1513,6 +1514,78 @@ llvm::DIType *CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,
   llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(BitFieldDecl);
   return DBuilder.createBitFieldMemberType(
       RecordTy, Name, File, Line, SizeInBits, OffsetInBits, StorageOffsetInBits,
+      Flags, DebugType, Annotations);
+}
+
+llvm::DIDerivedType *CGDebugInfo::createBitFieldSeparatorIfNeeded(
+    const FieldDecl *BitFieldDecl, const llvm::DIDerivedType *BitFieldDI,
+    llvm::ArrayRef<llvm::Metadata *> PreviousFieldsDI, const RecordDecl *RD) {
+
+  if (!CGM.getTargetCodeGenInfo().shouldEmitDWARFBitFieldSeparators())
+    return nullptr;
+
+  /*
+  Add a *single* zero-bitfield separator between two non-zero bitfields
+  separated by one or more zero-bitfields. This is used to distinguish between
+  structures such the ones below, where the memory layout is the same, but how
+  the ABI assigns fields to registers differs.
+
+  struct foo {
+    int space[4];
+    char a : 8; // on amdgpu, passed on v4
+    char b : 8;
+    char x : 8;
+    char y : 8;
+  };
+  struct bar {
+    int space[4];
+    char a : 8; // on amdgpu, passed on v4
+    char b : 8;
+    char : 0;
+    char x : 8; // passed on v5
+    char y : 8;
+  };
+  */
+  if (PreviousFieldsDI.empty())
+    return nullptr;
+
+  // If we already emitted metadata for a 0-length bitfield, nothing to do here.
+  auto *PreviousMDEntry =
+      PreviousFieldsDI.empty() ? nullptr : PreviousFieldsDI.back();
+  auto *PreviousMDField =
+      dyn_cast_or_null<llvm::DIDerivedType>(PreviousMDEntry);
+  if (!PreviousMDField || !PreviousMDField->isBitField() ||
+      PreviousMDField->getSizeInBits() == 0)
+    return nullptr;
+
+  auto PreviousBitfield = RD->field_begin();
+  std::advance(PreviousBitfield, BitFieldDecl->getFieldIndex() - 1);
+
+  assert(PreviousBitfield->isBitField());
+
+  ASTContext &Context = CGM.getContext();
+  if (!PreviousBitfield->isZeroLengthBitField(Context))
+    return nullptr;
+
+  QualType Ty = PreviousBitfield->getType();
+  SourceLocation Loc = PreviousBitfield->getLocation();
+  llvm::DIFile *VUnit = getOrCreateFile(Loc);
+  llvm::DIType *DebugType = getOrCreateType(Ty, VUnit);
+  llvm::DIScope *RecordTy = BitFieldDI->getScope();
+
+  llvm::DIFile *File = getOrCreateFile(Loc);
+  unsigned Line = getLineNumber(Loc);
+
+  uint64_t StorageOffsetInBits =
+      cast<llvm::ConstantInt>(BitFieldDI->getStorageOffsetInBits())
+          ->getZExtValue();
+
+  llvm::DINode::DIFlags Flags =
+      getAccessFlag(PreviousBitfield->getAccess(), RD);
+  llvm::DINodeArray Annotations =
+      CollectBTFDeclTagAnnotations(*PreviousBitfield);
+  return DBuilder.createBitFieldMemberType(
+      RecordTy, "", File, Line, 0, StorageOffsetInBits, StorageOffsetInBits,
       Flags, DebugType, Annotations);
 }
 
@@ -1624,7 +1697,11 @@ void CGDebugInfo::CollectRecordNormalField(
 
   llvm::DIType *FieldType;
   if (field->isBitField()) {
-    FieldType = createBitFieldType(field, RecordTy, RD);
+    llvm::DIDerivedType *BitFieldType;
+    FieldType = BitFieldType = createBitFieldType(field, RecordTy, RD);
+    if (llvm::DIType *Separator =
+            createBitFieldSeparatorIfNeeded(field, BitFieldType, elements, RD))
+      elements.push_back(Separator);
   } else {
     auto Align = getDeclAlignIfRequired(field, CGM.getContext());
     llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(field);
