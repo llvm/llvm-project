@@ -341,7 +341,7 @@ TEST_MACROS();
 #   include <experimental/algorithm>
 TEST_MACROS();
 #endif
-#if __cplusplus >= 201103L && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES)
+#if __cplusplus >= 202002L && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES)
 #   include <experimental/coroutine>
 TEST_MACROS();
 #endif

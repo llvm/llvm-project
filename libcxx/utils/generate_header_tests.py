@@ -43,7 +43,7 @@ header_restrictions = {
     "wchar.h": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
 
     "experimental/algorithm": "__cplusplus >= 201103L",
-    "experimental/coroutine": "__cplusplus >= 201103L && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES)",
+    "experimental/coroutine": "__cplusplus >= 202002L && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES)",
     "experimental/deque": "__cplusplus >= 201103L",
     "experimental/forward_list": "__cplusplus >= 201103L",
     "experimental/functional": "__cplusplus >= 201103L",
