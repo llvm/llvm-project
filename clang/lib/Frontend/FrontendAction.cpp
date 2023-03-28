@@ -562,6 +562,9 @@ static Expected<Module *> makeIncludeTreeModule(CompilerInstance &CI,
   M->Kind = Module::IncludeTreeModuleMap;
   M->IsExternC = Flags.IsExternC;
   M->IsSystem = Flags.IsSystem;
+  M->InferSubmodules = Flags.InferSubmodules;
+  M->InferExplicitSubmodules = Flags.InferExplicitSubmodules;
+  M->InferExportWildcard = Flags.InferExportWildcard;
 
   auto ExportList = Mod.getExports();
   if (!ExportList)

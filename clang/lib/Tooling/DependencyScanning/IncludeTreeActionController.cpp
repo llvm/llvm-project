@@ -504,6 +504,9 @@ getIncludeTreeModule(cas::ObjectStore &DB, Module *M) {
   Flags.IsExplicit = M->IsExplicit;
   Flags.IsExternC = M->IsExternC;
   Flags.IsSystem = M->IsSystem;
+  Flags.InferSubmodules = M->InferSubmodules;
+  Flags.InferExplicitSubmodules = M->InferExplicitSubmodules;
+  Flags.InferExportWildcard = M->InferExportWildcard;
 
   bool GlobalWildcardExport = false;
   SmallVector<ITModule::ExportList::Export> Exports;

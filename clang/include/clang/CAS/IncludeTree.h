@@ -398,9 +398,13 @@ public:
     bool IsExplicit : 1;
     bool IsExternC : 1;
     bool IsSystem : 1;
+    bool InferSubmodules : 1;
+    bool InferExplicitSubmodules : 1;
+    bool InferExportWildcard : 1;
     ModuleFlags()
         : IsFramework(false), IsExplicit(false), IsExternC(false),
-          IsSystem(false) {}
+          IsSystem(false), InferSubmodules(false),
+          InferExplicitSubmodules(false), InferExportWildcard(false) {}
   };
 
   ModuleFlags getFlags() const;
@@ -449,7 +453,7 @@ public:
     if (!IncludeTreeBase::isValid(Node))
       return false;
     IncludeTreeBase Base(Node);
-    return Base.getData().size() > 1;
+    return Base.getData().size() > 2;
   }
   static bool isValid(ObjectStore &DB, ObjectRef Ref) {
     auto Node = DB.getProxy(Ref);
@@ -461,8 +465,8 @@ public:
   }
 
 private:
-  char rawFlags() const { return getData()[0]; }
-  StringRef dataAfterFlags() const { return getData().drop_front(); }
+  uint16_t rawFlags() const;
+  StringRef dataAfterFlags() const { return getData().drop_front(2); }
   bool hasExports() const;
   bool hasLinkLibraries() const;
   std::optional<unsigned> getExportsIndex() const;
