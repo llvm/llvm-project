@@ -768,6 +768,17 @@ public:
   /// Determine if one instruction is the same operation as another.
   bool isSameOperationAs(const Instruction *I, unsigned flags = 0) const LLVM_READONLY;
 
+  /// This function determines if the speficied instruction has the same
+  /// "special" characteristics as the current one. This means that opcode
+  /// specific details are the same. As a common example, if we are comparing
+  /// loads, then hasSameSpecialState would compare the alignments (among
+  /// other things).
+  /// @returns true if the specific instruction has the same opcde specific
+  /// characteristics as the current one. Determine if one instruction has the
+  /// same state as another.
+  bool hasSameSpecialState(const Instruction *I2,
+                           bool IgnoreAlignment = false) const LLVM_READONLY;
+
   /// Return true if there are any uses of this instruction in blocks other than
   /// the specified block. Note that PHI nodes are considered to evaluate their
   /// operands in the corresponding predecessor block.
