@@ -38282,6 +38282,13 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   Known.resetAll();
   switch (Opc) {
   default: break;
+  case X86ISD::MUL_IMM: {
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known2 = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known = KnownBits::mul(Known, Known2);
+    break;
+  }
   case X86ISD::SETCC:
     Known.Zero.setBitsFrom(1);
     break;
