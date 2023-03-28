@@ -16,9 +16,9 @@
 // RUN: %deps-to-rsp %t/deps.json --module-name ExportGlobalWildcard > %t/ExportGlobalWildcard.rsp
 // RUN: %deps-to-rsp %t/deps.json --module-name NoExports > %t/NoExports.rsp
 // RUN: %deps-to-rsp %t/deps.json --tu-index 0 > %t/tu_export_explicit.rsp
-// RUN: %deps-to-rsp %t/deps.json --tu-index 1 > %t/tu_export_wildcard.rsp
-// RUN: %deps-to-rsp %t/deps.json --tu-index 2 > %t/tu_export_global_wildcard.rsp
-// RUN: %deps-to-rsp %t/deps.json --tu-index 3 > %t/tu_export_none.rsp
+// RUN: %deps-to-rsp %t/deps.json --tu-index 1 > %t/tu_export_global_wildcard.rsp
+// RUN: %deps-to-rsp %t/deps.json --tu-index 2 > %t/tu_export_none.rsp
+// RUN: %deps-to-rsp %t/deps.json --tu-index 3 > %t/tu_export_wildcard.rsp
 
 // Build
 // RUN: %clang @%t/TwoSubs.rsp

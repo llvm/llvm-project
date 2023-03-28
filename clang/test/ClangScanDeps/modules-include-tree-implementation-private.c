@@ -27,9 +27,7 @@
 // CHECK: 5:1 (Module for visibility only) Mod_Private
 // CHECK: Module Map:
 // CHECK: Mod (framework)
-// CHECK:   link Mod (framework)
 // CHECK: Mod_Private (framework)
-// CHECK:   link Mod_Private (framework)
 
 // CHECK: Files:
 // CHECK: [[PREFIX]]/tu.m llvmcas://
