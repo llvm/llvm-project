@@ -206,6 +206,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["gfx10-insts"] = true;
       Features["gfx10-3-insts"] = true;
       Features["gfx11-insts"] = true;
+      Features["atomic-fadd-rtn-insts"] = true;
       break;
     case GK_GFX1036:
     case GK_GFX1035:
@@ -264,6 +265,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX90A:
       Features["gfx90a-insts"] = true;
       Features["atomic-buffer-global-pk-add-f16-insts"] = true;
+      Features["atomic-fadd-rtn-insts"] = true;
       [[fallthrough]];
     case GK_GFX908:
       Features["dot3-insts"] = true;
