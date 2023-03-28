@@ -91,10 +91,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            const clang::CodeGenOptions &CGO,
                            DiagnosticsEngine &Diags)
     : builder(context), astCtx(astctx), langOpts(astctx.getLangOpts()),
-      codeGenOpts(CGO), theModule{mlir::ModuleOp::create(
-                            builder.getUnknownLoc())},
-      Diags(Diags), target(astCtx.getTargetInfo()),
-      ABI(createCXXABI(*this)), genTypes{*this} {
+      codeGenOpts(CGO),
+      theModule{mlir::ModuleOp::create(builder.getUnknownLoc())}, Diags(Diags),
+      target(astCtx.getTargetInfo()), ABI(createCXXABI(*this)),
+      genTypes{*this} {
   mlir::cir::sob::SignedOverflowBehavior sob;
   switch (langOpts.getSignedOverflowBehavior()) {
   case clang::LangOptions::SignedOverflowBehaviorTy::SOB_Defined:
@@ -1046,6 +1046,15 @@ void CIRGenModule::buildDeclContext(const DeclContext *DC) {
   }
 }
 
+void CIRGenModule::buildLinkageSpec(const LinkageSpecDecl *LSD) {
+  if (LSD->getLanguage() != LinkageSpecLanguageIDs::C &&
+      LSD->getLanguage() != LinkageSpecLanguageIDs::CXX) {
+    llvm_unreachable("unsupported linkage spec");
+    return;
+  }
+  buildDeclContext(LSD);
+}
+
 // Emit code for a single top level declaration.
 void CIRGenModule::buildTopLevelDecl(Decl *decl) {
   // Ignore dependent declarations
@@ -1120,6 +1129,10 @@ void CIRGenModule::buildTopLevelDecl(Decl *decl) {
 
   case Decl::StaticAssert:
     // Nothing to do.
+    break;
+
+  case Decl::LinkageSpec:
+    buildLinkageSpec(cast<LinkageSpecDecl>(decl));
     break;
 
   case Decl::Typedef:
