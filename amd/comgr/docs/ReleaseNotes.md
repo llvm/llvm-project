@@ -89,6 +89,9 @@ use C++ features in testing (C++ threading APIs, etc.)
 - Remove support for code object v2 compilation in tests and test CMAKE due to
 deprecation of code object v2 in LLVM. However, we still test loading and
 metadata querys for code object v2 objects.
+- Remove support for code object v3 compilation in tests and test CMAKE due to
+deprecation of code object v3 in LLVM. However, we still test loading and
+metadata querys for code object v3 objects.
 
 New Targets
 -----------
@@ -106,4 +109,3 @@ clang's virtual file system support
 - Several Comgr actions currently fork new processes for compilation actions. We
 aim to address this by librayizing llvm tools that are currently only useable as
 a separate process.
-

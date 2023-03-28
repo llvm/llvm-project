@@ -70,16 +70,6 @@ add_test_input_binary(reloc1 source/reloc1.cl source/reloc1.o -c -mcode-object-v
 add_test_input_binary(reloc2 source/reloc2.cl source/reloc2.o -c -mcode-object-version=4)
 add_test_input_binary(reloc-asm source/reloc-asm.s source/reloc-asm.o -c -mcode-object-version=4)
 add_test_input_binary(shared source/shared.cl source/shared.so -mcode-object-version=4)
-add_test_input_binary(shared-v3 source/shared.cl source/shared-v3.so -mcode-object-version=3)
-
-add_test_input_binary(source1-v3 source/source1-v3.s source/source1-v3.o -c -mcode-object-version=3)
-add_test_input_binary(source2-v3 source/source2-v3.s source/source2-v3.o -c -mcode-object-version=3)
-add_test_input_binary(source3-v3 source/source3-v3.s source/source3-v3.o -c -mcode-object-version=3)
-add_test_input_binary(source4-v3 source/source4-v3.s source/source4-v3.o -c -mcode-object-version=3)
-
-add_test_shared_binary(shared12-v3 source1-v3 source/source1-v3.o source2-v3 source/source2-v3.o source/shared12-v3.so)
-add_test_shared_binary(shared14-v3 source1-v3 source/source1-v3.o source4-v3 source/source4-v3.o source/shared14-v3.so)
-add_test_shared_binary(shared23-v3 source2-v3 source/source2-v3.o source3-v3 source/source3-v3.o source/shared23-v3.so)
 
 configure_file("source/source1.cl" "source/source1.cl" COPYONLY)
 configure_file("source/source1-device-libs.cl" "source/source1-device-libs.cl" COPYONLY)
@@ -90,16 +80,11 @@ configure_file("source/shared.cl" "source/shared.cl" COPYONLY)
 configure_file("source/source1.hip" "source/source1.hip" COPYONLY)
 configure_file("source/source2.hip" "source/source2.hip" COPYONLY)
 
-configure_file("source/source1-v3.s" "source/source1-v3.s" COPYONLY)
-configure_file("source/source2-v3.s" "source/source2-v3.s" COPYONLY)
-configure_file("source/source3-v3.s" "source/source3-v3.s" COPYONLY)
-configure_file("source/source4-v3.s" "source/source4-v3.s" COPYONLY)
-
 configure_file("source/square.hip" "source/square.hip" COPYONLY)
 configure_file("source/double.hip" "source/double.hip" COPYONLY)
 configure_file("source/cube.hip" "source/cube.hip" COPYONLY)
 
-# We no longer support emission of code object v2. The runtime however
+# We no longer support emission of code object v2/v3. The runtime however
 # can still load them so we need to test them using prebuilt binaries.
 configure_file("source/legacy/shared-v2.so" "source/shared-v2.so" COPYONLY)
 configure_file("source/legacy/shared12-v2.so" "source/shared12-v2.so" COPYONLY)
@@ -109,6 +94,15 @@ configure_file("source/legacy/source1-v2.o" "source/source1-v2.o" COPYONLY)
 configure_file("source/legacy/source2-v2.o" "source/source2-v2.o" COPYONLY)
 configure_file("source/legacy/source3-v2.o" "source/source3-v2.o" COPYONLY)
 configure_file("source/legacy/source4-v2.o" "source/source4-v2.o" COPYONLY)
+
+configure_file("source/legacy/shared-v3.so" "source/shared-v3.so" COPYONLY)
+configure_file("source/legacy/shared12-v3.so" "source/shared12-v3.so" COPYONLY)
+configure_file("source/legacy/shared14-v3.so" "source/shared14-v3.so" COPYONLY)
+configure_file("source/legacy/shared23-v3.so" "source/shared23-v3.so" COPYONLY)
+configure_file("source/legacy/source1-v3.o" "source/source1-v3.o" COPYONLY)
+configure_file("source/legacy/source2-v3.o" "source/source2-v3.o" COPYONLY)
+configure_file("source/legacy/source3-v3.o" "source/source3-v3.o" COPYONLY)
+configure_file("source/legacy/source4-v3.o" "source/source4-v3.o" COPYONLY)
 
 # Creates executable ${name} and accompanying test ${name} built from
 # test/${name}.cl

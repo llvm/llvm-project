@@ -361,16 +361,8 @@ void testIsaName(char *Name, const char *Features) {
   strncpy(IsaName, Name, MAX_ISA_NAME_SIZE);
   strncat(IsaName, Features, MAX_ISA_NAME_SIZE - 1);
 
-  const char *V3Options[] = {"-mcode-object-version=3"};
-  size_t V3OptionsCount = sizeof(V3Options) / sizeof(V3Options[0]);
   const char *V4Options[] = {"-mcode-object-version=4"};
   size_t V4OptionsCount = sizeof(V4Options) / sizeof(V4Options[0]);
-
-  // Test object code v3.
-  if (getExpectedIsaName(3, IsaName, ExpectedIsaName)) {
-    printf("V3 : ");
-    compileAndTestIsaName(IsaName, ExpectedIsaName, V3Options, V3OptionsCount);
-  }
 
   // Test object code v4.
   if (getExpectedIsaName(4, IsaName, ExpectedIsaName)) {
