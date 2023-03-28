@@ -14,6 +14,8 @@
 #ifndef MLIR_DIALECT_MEMREF_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_MEMREF_TRANSFORMS_TRANSFORMS_H
 
+#include "mlir/Support/LogicalResult.h"
+
 namespace mlir {
 class RewritePatternSet;
 class RewriterBase;
