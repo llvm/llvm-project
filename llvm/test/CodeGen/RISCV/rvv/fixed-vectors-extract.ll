@@ -804,10 +804,10 @@ define float @extractelt_fadd_v4f32(<4 x float> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    lui a0, 267520
-; CHECK-NEXT:    fmv.w.x ft1, a0
-; CHECK-NEXT:    fadd.s fa0, ft0, ft1
+; CHECK-NEXT:    fmv.w.x fa4, a0
+; CHECK-NEXT:    fadd.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %bo = fadd <4 x float> %x, <float 11.0, float 12.0, float 13.0, float 14.0>
   %ext = extractelement <4 x float> %bo, i32 2
@@ -819,10 +819,10 @@ define float @extractelt_fsub_v4f32(<4 x float> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    lui a0, 267520
-; CHECK-NEXT:    fmv.w.x ft1, a0
-; CHECK-NEXT:    fsub.s fa0, ft1, ft0
+; CHECK-NEXT:    fmv.w.x fa4, a0
+; CHECK-NEXT:    fsub.s fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %bo = fsub <4 x float> <float 11.0, float 12.0, float 13.0, float 14.0>, %x
   %ext = extractelement <4 x float> %bo, i32 2
@@ -834,10 +834,10 @@ define float @extractelt_fmul_v4f32(<4 x float> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    lui a0, 267520
-; CHECK-NEXT:    fmv.w.x ft1, a0
-; CHECK-NEXT:    fmul.s fa0, ft0, ft1
+; CHECK-NEXT:    fmv.w.x fa4, a0
+; CHECK-NEXT:    fmul.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %bo = fmul <4 x float> %x, <float 11.0, float 12.0, float 13.0, float 14.0>
   %ext = extractelement <4 x float> %bo, i32 2
@@ -849,10 +849,10 @@ define float @extractelt_fdiv_v4f32(<4 x float> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    lui a0, 267520
-; CHECK-NEXT:    fmv.w.x ft1, a0
-; CHECK-NEXT:    fdiv.s fa0, ft0, ft1
+; CHECK-NEXT:    fmv.w.x fa4, a0
+; CHECK-NEXT:    fdiv.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %bo = fdiv <4 x float> %x, <float 11.0, float 12.0, float 13.0, float 14.0>
   %ext = extractelement <4 x float> %bo, i32 2

@@ -93,10 +93,10 @@ define float @fcopysign_fneg(float %a, float %b) nounwind {
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    lui a2, 524288
 ; RV32IF-NEXT:    xor a1, a1, a2
-; RV32IF-NEXT:    fmv.w.x ft0, a1
-; RV32IF-NEXT:    fmv.w.x ft1, a0
-; RV32IF-NEXT:    fsgnj.s ft0, ft1, ft0
-; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    fmv.w.x fa5, a1
+; RV32IF-NEXT:    fmv.w.x fa4, a0
+; RV32IF-NEXT:    fsgnj.s fa5, fa4, fa5
+; RV32IF-NEXT:    fmv.x.w a0, fa5
 ; RV32IF-NEXT:    ret
 ;
 ; RV64I-LABEL: fcopysign_fneg:
@@ -111,10 +111,10 @@ define float @fcopysign_fneg(float %a, float %b) nounwind {
 ;
 ; RV64IF-LABEL: fcopysign_fneg:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fmv.w.x ft0, a1
-; RV64IF-NEXT:    fmv.w.x ft1, a0
-; RV64IF-NEXT:    fsgnjn.s ft0, ft1, ft0
-; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    fmv.w.x fa5, a1
+; RV64IF-NEXT:    fmv.w.x fa4, a0
+; RV64IF-NEXT:    fsgnjn.s fa5, fa4, fa5
+; RV64IF-NEXT:    fmv.x.w a0, fa5
 ; RV64IF-NEXT:    ret
   %1 = fneg float %b
   %2 = call float @llvm.copysign.f32(float %a, float %1)
