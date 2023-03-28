@@ -156,7 +156,7 @@ TEST_F(QualifierFixerTest, LeftRightQualifier) {
   verifyFormat("int const *b;", Style);
   verifyFormat("int const &b;", Style);
   verifyFormat("int const &&b;", Style);
-  verifyFormat("int const *b const;", Style);
+  verifyFormat("int const *const b;", Style);
   verifyFormat("int *const c;", Style);
 
   verifyFormat("const Foo a;", Style);
@@ -167,7 +167,7 @@ TEST_F(QualifierFixerTest, LeftRightQualifier) {
   verifyFormat("Foo const *b;", Style);
   verifyFormat("Foo const &b;", Style);
   verifyFormat("Foo const &&b;", Style);
-  verifyFormat("Foo const *b const;", Style);
+  verifyFormat("Foo const *const b;", Style);
 
   verifyFormat("LLVM_NODISCARD const int &Foo();", Style);
   verifyFormat("LLVM_NODISCARD int const &Foo();", Style);
@@ -190,7 +190,7 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("int const *b;", Style);
   verifyFormat("int const &b;", Style);
   verifyFormat("int const &&b;", Style);
-  verifyFormat("int const *b const;", Style);
+  verifyFormat("int const *const b;", Style);
   verifyFormat("int *const c;", Style);
 
   verifyFormat("Foo const a;", Style);
@@ -201,7 +201,7 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("Foo const *b;", Style);
   verifyFormat("Foo const &b;", Style);
   verifyFormat("Foo const &&b;", Style);
-  verifyFormat("Foo const *b const;", Style);
+  verifyFormat("Foo const *const b;", Style);
   verifyFormat("Foo *const b;", Style);
   verifyFormat("Foo const *const b;", Style);
   verifyFormat("auto const v = get_value();", Style);
@@ -218,6 +218,11 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("void foo() const final;", Style);
   verifyFormat("void foo() const final LLVM_READONLY;", Style);
   verifyFormat("void foo() const LLVM_READONLY;", Style);
+  verifyFormat("void foo() const volatile override;", Style);
+  verifyFormat("void foo() const volatile override LLVM_READONLY;", Style);
+  verifyFormat("void foo() const volatile final;", Style);
+  verifyFormat("void foo() const volatile final LLVM_READONLY;", Style);
+  verifyFormat("void foo() const volatile LLVM_READONLY;", Style);
 
   verifyFormat(
       "template <typename Func> explicit Action(Action<Func> const &action);",
@@ -258,6 +263,7 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("int const volatile;", "volatile const int;", Style);
   verifyFormat("int const volatile;", "const volatile int;", Style);
   verifyFormat("int const volatile;", "const int volatile;", Style);
+
   verifyFormat("int const volatile *restrict;", "volatile const int *restrict;",
                Style);
   verifyFormat("int const volatile *restrict;", "const volatile int *restrict;",
@@ -265,8 +271,43 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("int const volatile *restrict;", "const int volatile *restrict;",
                Style);
 
+  verifyFormat("long long int const volatile;", "const long long int volatile;",
+               Style);
+  verifyFormat("long long int const volatile;", "long const long int volatile;",
+               Style);
+  verifyFormat("long long int const volatile;", "long long volatile int const;",
+               Style);
+  verifyFormat("long long int const volatile;", "long volatile long const int;",
+               Style);
+  verifyFormat("long long int const volatile;", "const long long volatile int;",
+               Style);
+
   verifyFormat("static int const bat;", "static const int bat;", Style);
   verifyFormat("static int const bat;", "static int const bat;", Style);
+
+  // static is not configured, unchanged on the left of the right hand
+  // qualifiers.
+  verifyFormat("int static const volatile;", "volatile const int static;",
+               Style);
+  verifyFormat("int static const volatile;", "const volatile int static;",
+               Style);
+  verifyFormat("int static const volatile;", "const int volatile static;",
+               Style);
+  verifyFormat("Foo static const volatile;", "volatile const Foo static;",
+               Style);
+  verifyFormat("Foo static const volatile;", "const volatile Foo static;",
+               Style);
+  verifyFormat("Foo static const volatile;", "const Foo volatile static;",
+               Style);
+
+  verifyFormat("Foo inline static const;", "const Foo inline static;", Style);
+  verifyFormat("Foo inline static const;", "Foo const inline static;", Style);
+  verifyFormat("Foo inline static const;", "Foo inline const static;", Style);
+  verifyFormat("Foo inline static const;", "Foo inline static const;", Style);
+
+  verifyFormat("Foo<T volatile>::Bar<Type const, 5> const volatile A::*;",
+               "volatile const Foo<volatile T>::Bar<const Type, 5> A::*;",
+               Style);
 
   verifyFormat("int const Foo<int>::bat = 0;", "const int Foo<int>::bat = 0;",
                Style);
@@ -333,7 +374,157 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("unsigned long long const a;", "const unsigned long long a;",
                Style);
 
-  // don't adjust macros
+  // Multiple template parameters.
+  verifyFormat("Bar<std::Foo const, 32>", "Bar<const std::Foo, 32>", Style);
+  // Variable declaration based on template type.
+  verifyFormat("Bar<std::Foo const> bar", "Bar<const std::Foo> bar", Style);
+
+  // Using typename for a nested dependent type name.
+  verifyFormat("typename Foo::iterator const;", "const typename Foo::iterator;",
+               Style);
+
+  // Don't move past C-style struct/class.
+  verifyFormat("void foo(const struct A a);", "void foo(const struct A a);",
+               Style);
+  verifyFormat("void foo(const class A a);", "void foo(const class A a);",
+               Style);
+
+  // Don't move past struct/class combined declaration and variable
+  // definition.
+  verifyFormat("const struct {\n} var;", "const struct {\n} var;", Style);
+  verifyFormat("struct {\n} const var;", "struct {\n} const var;", Style);
+  verifyFormat("const class {\n} var;", "const class {\n} var;", Style);
+  verifyFormat("class {\n} const var;", "class {\n} const var;", Style);
+
+  // Leave left qualifers unchanged for combined declaration and variable
+  // definition.
+  verifyFormat("volatile const class {\n} var;",
+               "volatile const class {\n} var;", Style);
+  verifyFormat("const volatile class {\n} var;",
+               "const volatile class {\n} var;", Style);
+  // Also do no sorting with respect to not-configured tokens.
+  verifyFormat("const static volatile class {\n} var;",
+               "const static volatile class {\n} var;", Style);
+  // Sort right qualifiers for combined declaration and variable definition.
+  verifyFormat("class {\n} const volatile var;",
+               "class {\n} const volatile var;", Style);
+  verifyFormat("class {\n} const volatile var;",
+               "class {\n} volatile const var;", Style);
+  // Static keyword is not configured, should end up on the left of the right
+  // side.
+  verifyFormat("class {\n} static const volatile var;",
+               "class {\n} static const volatile var;", Style);
+  verifyFormat("class {\n} static const volatile var;",
+               "class {\n} volatile static const var;", Style);
+
+  // ::template for dependent names
+  verifyFormat("::template Foo<T> const volatile var;",
+               "const volatile ::template Foo<T> var;", Style);
+  verifyFormat("typename ::template Foo<T> const volatile var;",
+               "const volatile typename ::template Foo<T> var;", Style);
+  verifyFormat("typename Bar::template Foo<T>::T const;",
+               "const typename Bar::template Foo<T>::T;", Style);
+  verifyFormat("typename Bar::template Foo<T>::T const volatile;",
+               "const volatile typename Bar::template Foo<T>::T;", Style);
+
+  // typename ::
+  verifyFormat("typename ::Bar<int> const;", "const typename ::Bar<int>;",
+               Style);
+  // typename ::template
+  verifyFormat("typename ::template Bar<int> const;",
+               "const typename ::template Bar<int>;", Style);
+
+  verifyFormat("foo<Bar<Baz> const>();", "foo<const Bar<Baz>>();", Style);
+  verifyFormat("foo<Bar<Baz> const>();", "foo<const Bar<Baz> >();", Style);
+  verifyFormat("Bar<32, Foo<25> const>;", "Bar<32, const Foo<25>>;", Style);
+  verifyFormat("A<B<C<D> const> const>;", "A<const B<const C<D>>>;", Style);
+  verifyFormat("A<B<C<D const> const> const>;", "A<const B<const C<const D>>>;",
+               Style);
+
+  // Don't move past decltype, typeof, or _Atomic.
+  verifyFormat("const decltype(foo)", "const decltype(foo)", Style);
+  verifyFormat("const typeof(foo)", "const typeof(foo)", Style);
+  verifyFormat("const _Atomic(foo)", "const _Atomic(foo)", Style);
+
+  // Comments
+  const int ColumnLimit = Style.ColumnLimit;
+  Style.ColumnLimit = 200;
+  verifyFormat("/*c*/ Foo const *foo;", "const /*c*/ Foo *foo;", Style);
+  verifyFormat("Foo const /*c*/ *foo;", "const Foo /*c*/ *foo;", Style);
+  verifyFormat("Foo const * /*c*/ foo;", "const Foo * /*c*/ foo;", Style);
+
+  verifyFormat("/*comment*/ std::vector<int> const v;",
+               "const /*comment*/ std::vector<int> v;", Style);
+  verifyFormat("std /*comment*/ ::vector<int> const v;",
+               "const std /*comment*/ ::vector<int> v;", Style);
+  verifyFormat("std::/*comment*/ vector<int> const v;",
+               "const std::/*comment*/ vector<int> v;", Style);
+  verifyFormat("std::vector /*comment*/<int> const v;",
+               "const std::vector /*comment*/ <int> v;", Style);
+  verifyFormat("std::vector</*comment*/ int> const v;",
+               "const std::vector</*comment*/ int> v;", Style);
+  verifyFormat("std::vector<int /*comment*/> const v;",
+               "const std::vector<int /*comment*/> v;", Style);
+  verifyFormat("std::vector<int> const /*comment*/ v;",
+               "const std::vector<int> /*comment*/ v;", Style);
+
+  verifyFormat("std::vector</*comment*/ int const> v;",
+               "std::vector</*comment*/ const int> v;", Style);
+  verifyFormat("std::vector</*comment*/ int const> v;",
+               "std::vector<const /*comment*/ int> v;", Style);
+  verifyFormat("std::vector<int const /*comment*/> v;",
+               "std::vector<const int /*comment*/> v;", Style);
+  verifyFormat("std::vector</*comment*/ Foo const> v;",
+               "std::vector</*comment*/ const Foo> v;", Style);
+  verifyFormat("std::vector</*comment*/ Foo const> v;",
+               "std::vector<const /*comment*/ Foo> v;", Style);
+  verifyFormat("std::vector<Foo const /*comment*/> v;",
+               "std::vector<const Foo /*comment*/> v;", Style);
+
+  verifyFormat("typename C<T>::template B<T> const;",
+               "const typename C<T>::template B<T>;", Style);
+  verifyFormat("/*c*/ typename C<T>::template B<T> const;",
+               "const /*c*/ typename C<T>::template B<T>;", Style);
+  verifyFormat("typename /*c*/ C<T>::template B<T> const;",
+               "const typename /*c*/ C<T>::template B<T>;", Style);
+  verifyFormat("typename C /*c*/<T>::template B<T> const;",
+               "const typename C /*c*/<T>::template B<T>;", Style);
+  verifyFormat("typename C<T> /*c*/ ::template B<T> const;",
+               "const typename C<T> /*c*/ ::template B<T>;", Style);
+  verifyFormat("typename C<T>::/*c*/ template B<T> const;",
+               "const typename C<T>::/*c*/ template B<T>;", Style);
+  verifyFormat("typename C<T>::template /*c*/ B<T> const;",
+               "const typename C<T>::template /*c*/B<T>;", Style);
+  verifyFormat("typename C<T>::template B<T> const /*c*/;",
+               "const typename C<T>::template B<T>/*c*/;", Style);
+
+  verifyFormat("/*c*/ /*c*/ typename /*c*/ C /*c*/<T> /*c*/ ::/*c*/ template "
+               "/*c*/ B /*c*/<T> const /*c*/ v;",
+               "/*c*/ const /*c*/ typename /*c*/ C /*c*/<T> /*c*/ "
+               "::/*c*/template /*c*/ B /*c*/<T> /*c*/ v;",
+               Style);
+
+  verifyFormat("/*c*/ unsigned /*c*/ long const /*c*/ a;",
+               "const /*c*/ unsigned /*c*/ long /*c*/ a;", Style);
+  verifyFormat("unsigned /*c*/ long /*c*/ long const a;",
+               "const unsigned /*c*/ long /*c*/ long a;", Style);
+
+  // Not changed
+  verifyFormat("foo() /*c*/ const", "foo() /*c*/ const", Style);
+  verifyFormat("const /*c*/ struct a;", "const /*c*/ struct a;", Style);
+  verifyFormat("const /*c*/ class a;", "const /*c*/ class a;", Style);
+  verifyFormat("const /*c*/ decltype(v) a;", "const /*c*/ decltype(v) a;",
+               Style);
+  verifyFormat("const /*c*/ typeof(v) a;", "const /*c*/ typeof(v) a;", Style);
+  verifyFormat("const /*c*/ _Atomic(v) a;", "const /*c*/ _Atomic(v) a;", Style);
+  verifyFormat("const decltype /*c*/ (v) a;", "const decltype /*c*/ (v) a;",
+               Style);
+  verifyFormat("const /*c*/ class {\n} volatile /*c*/ foo = {};",
+               "const /*c*/ class {\n} volatile /*c*/ foo = {};", Style);
+
+  Style.ColumnLimit = ColumnLimit;
+
+  // Don't adjust macros
   verifyFormat("const INTPTR a;", "const INTPTR a;", Style);
 
   // Pointers to members
@@ -360,7 +551,7 @@ TEST_F(QualifierFixerTest, LeftQualifier) {
   verifyFormat("const int *b;", Style);
   verifyFormat("const int &b;", Style);
   verifyFormat("const int &&b;", Style);
-  verifyFormat("const int *b const;", Style);
+  verifyFormat("const int *const b;", Style);
   verifyFormat("int *const c;", Style);
 
   verifyFormat("const Foo a;", Style);
@@ -371,7 +562,7 @@ TEST_F(QualifierFixerTest, LeftQualifier) {
   verifyFormat("const Foo *b;", Style);
   verifyFormat("const Foo &b;", Style);
   verifyFormat("const Foo &&b;", Style);
-  verifyFormat("const Foo *b const;", Style);
+  verifyFormat("const Foo *const b;", Style);
   verifyFormat("Foo *const b;", Style);
   verifyFormat("const Foo *const b;", Style);
 
@@ -405,6 +596,17 @@ TEST_F(QualifierFixerTest, LeftQualifier) {
   verifyFormat("const volatile int *restrict;", "const volatile int *restrict;",
                Style);
   verifyFormat("const volatile int *restrict;", "const int volatile *restrict;",
+               Style);
+
+  verifyFormat("const volatile long long int;", "volatile long long int const;",
+               Style);
+  verifyFormat("const volatile long long int;", "volatile long long const int;",
+               Style);
+  verifyFormat("const volatile long long int;", "long long volatile int const;",
+               Style);
+  verifyFormat("const volatile long long int;", "long volatile long int const;",
+               Style);
+  verifyFormat("const volatile long long int;", "const long long volatile int;",
                Style);
 
   verifyFormat("SourceRange getSourceRange() const override LLVM_READONLY;",
@@ -488,7 +690,151 @@ TEST_F(QualifierFixerTest, LeftQualifier) {
   verifyFormat("const std::Foo < int", "const std::Foo<int", Style);
   verifyFormat("const std::Foo<int>", "const std::Foo<int>", Style);
 
-  // don't adjust macros
+  // Multiple template parameters.
+  verifyFormat("Bar<const std::Foo, 32>;", "Bar<std::Foo const, 32>;", Style);
+
+  // Variable declaration based on template type.
+  verifyFormat("Bar<const std::Foo> bar;", "Bar<std::Foo const> bar;", Style);
+
+  // Using typename for a dependent name.
+  verifyFormat("const typename Foo::iterator;", "typename Foo::iterator const;",
+               Style);
+
+  // Don't move past C-style struct/class.
+  verifyFormat("void foo(struct A const a);", "void foo(struct A const a);",
+               Style);
+  verifyFormat("void foo(class A const a);", "void foo(class A const a);",
+               Style);
+
+  // Don't move past struct/class combined declaration and variable
+  // definition.
+  verifyFormat("const struct {\n} var;", "const struct {\n} var;", Style);
+  verifyFormat("struct {\n} const var;", "struct {\n} const var;", Style);
+  verifyFormat("const class {\n} var;", "const class {\n} var;", Style);
+  verifyFormat("class {\n} const var;", "class {\n} const var;", Style);
+
+  // Sort left qualifiers for struct/class combined declaration and variable
+  // definition.
+  verifyFormat("const volatile class {\n} var;",
+               "const volatile class {\n} var;", Style);
+  verifyFormat("const volatile class {\n} var;",
+               "volatile const class {\n} var;", Style);
+  // Leave right qualifers unchanged for struct/class combined declaration and
+  // variable definition.
+  verifyFormat("class {\n} const volatile var;",
+               "class {\n} const volatile var;", Style);
+  verifyFormat("class {\n} volatile const var;",
+               "class {\n} volatile const var;", Style);
+
+  verifyFormat("foo<const Bar<Baz<T>>>();", "foo<Bar<Baz<T>> const>();", Style);
+  verifyFormat("foo<const Bar<Baz<T>>>();", "foo<Bar<Baz<T> > const>();",
+               Style);
+  verifyFormat("Bar<32, const Foo<25>>;", "Bar<32, Foo<25> const>;", Style);
+  verifyFormat("A<const B<const C<D>>>;", "A<B<C<D> const> const>;", Style);
+  verifyFormat("A<const B<const C<const D>>>;", "A<B<C<D const> const> const>;",
+               Style);
+
+  // Don't move past decltype, typeof, or _Atomic.
+  verifyFormat("decltype(foo) const", "decltype(foo) const", Style);
+  verifyFormat("typeof(foo) const", "typeof(foo) const", Style);
+  verifyFormat("_Atomic(foo) const", "_Atomic(foo) const", Style);
+
+  // ::template for dependent names
+  verifyFormat("const volatile ::template Foo<T> var;",
+               "::template Foo<T> const volatile var;", Style);
+  verifyFormat("const volatile typename ::template Foo<T> var;",
+               "typename ::template Foo<T> const volatile var;", Style);
+  verifyFormat("const typename Bar::template Foo<T>::T;",
+               "typename Bar::template Foo<T>::T const;", Style);
+  verifyFormat("const volatile typename Bar::template Foo<T>::T;",
+               "typename Bar::template Foo<T>::T const volatile;", Style);
+
+  // typename ::
+  verifyFormat("const typename ::Bar<int>;", "typename ::Bar<int> const;",
+               Style);
+  // typename ::template
+  verifyFormat("const typename ::template Bar<int>;",
+               "typename ::template Bar<int> const;", Style);
+
+  // Comments
+  const int ColumnLimit = Style.ColumnLimit;
+  Style.ColumnLimit = 200;
+  verifyFormat("/*c*/ const Foo *foo;", "/*c*/ Foo const *foo;", Style);
+  verifyFormat("const Foo /*c*/ *foo;", "Foo const /*c*/ *foo;", Style);
+  verifyFormat("const Foo * /*c*/ foo;", "Foo const * /*c*/ foo;", Style);
+
+  verifyFormat("/*comment*/ const std::vector<int> v;",
+               "/*comment*/ std::vector<int> const v;", Style);
+  verifyFormat("const std /*comment*/ ::vector<int> v;",
+               "std /*comment*/ ::vector<int> const v;", Style);
+  verifyFormat("const std::/*comment*/ vector<int> v;",
+               "std::/*comment*/ vector<int> const v;", Style);
+  verifyFormat("const std::vector /*comment*/<int> v;",
+               "std::vector /*comment*/<int> const v;", Style);
+  verifyFormat("const std::vector</*comment*/ int> v;",
+               "std::vector</*comment*/ int> const v;", Style);
+  verifyFormat("const std::vector<int /*comment*/> v;",
+               "std::vector<int /*comment*/> const v;", Style);
+  verifyFormat("const std::vector<int> /*comment*/ v;",
+               "std::vector<int> /*comment*/ const v;", Style);
+
+  verifyFormat("std::vector</*comment*/ const int> v;",
+               "std::vector</*comment*/ int const> v;", Style);
+  verifyFormat("std::vector<const int /*comment*/> v;",
+               "std::vector<int /*comment*/ const> v;", Style);
+  verifyFormat("std::vector<const int /*comment*/> v;",
+               "std::vector<int const /*comment*/> v;", Style);
+  verifyFormat("std::vector</*comment*/ const Foo> v;",
+               "std::vector</*comment*/ Foo const> v;", Style);
+  verifyFormat("std::vector<const Foo /*comment*/> v;",
+               "std::vector<Foo /*comment*/ const> v;", Style);
+  verifyFormat("std::vector<const Foo /*comment*/> v;",
+               "std::vector<Foo const /*comment*/> v;", Style);
+
+  verifyFormat("const typename C<T>::template B<T>;",
+               "typename C<T>::template B<T> const;", Style);
+  verifyFormat("/*c*/ const typename C<T>::template B<T>;",
+               "/*c*/ typename C<T>::template B<T> const;", Style);
+  verifyFormat("const typename /*c*/ C<T>::template B<T>;",
+               "typename /*c*/ C<T>::template B<T> const;", Style);
+  verifyFormat("const typename C /*c*/<T>::template B<T>;",
+               "typename C /*c*/<T>::template B<T> const;", Style);
+  verifyFormat("const typename C<T> /*c*/ ::template B<T>;",
+               "typename C<T> /*c*/ ::template B<T> const;", Style);
+  verifyFormat("const typename C<T>::/*c*/ template B<T>;",
+               "typename C<T>::/*c*/ template B<T> const;", Style);
+  verifyFormat("const typename C<T>::template /*c*/ B<T>;",
+               "typename C<T>::template /*c*/ B<T> const;", Style);
+  verifyFormat("const typename C<T>::template B<T> /*c*/;",
+               "typename C<T>::template B<T> /*c*/ const;", Style);
+
+  verifyFormat("/*c*/ const typename /*c*/ C /*c*/<T> /*c*/ ::/*c*/ template "
+               "/*c*/ B /*c*/<T> /*c*/ v;",
+               "/*c*/ typename /*c*/ C /*c*/<T> /*c*/ ::/*c*/ template /*c*/ B "
+               "/*c*/<T> /*c*/ const v;",
+               Style);
+
+  verifyFormat("const unsigned /*c*/ long /*c*/ a;",
+               "unsigned /*c*/ long /*c*/ const a;", Style);
+  verifyFormat("const unsigned /*c*/ long /*c*/ long a;",
+               "unsigned /*c*/ long /*c*/ long const a;", Style);
+
+  // Not changed
+  verifyFormat("foo() /*c*/ const", "foo() /*c*/ const", Style);
+  verifyFormat("struct /*c*/ const a;", "struct /*c*/ const a;", Style);
+  verifyFormat("class /*c*/ const a;", "class /*c*/ const a;", Style);
+  verifyFormat("decltype(v) /*c*/ const a;", "decltype(v) /*c*/ const a;",
+               Style);
+  verifyFormat("typeof(v) /*c*/ const a;", "typeof(v) /*c*/ const a;", Style);
+  verifyFormat("_Atomic(v) /*c*/ const a;", "_Atomic(v) /*c*/ const a;", Style);
+  verifyFormat("decltype /*c*/ (v) const a;", "decltype /*c*/ (v) const a;",
+               Style);
+  verifyFormat("const /*c*/ class {\n} /*c*/ volatile /*c*/ foo = {};",
+               "const /*c*/ class {\n} /*c*/ volatile /*c*/ foo = {};", Style);
+
+  Style.ColumnLimit = ColumnLimit;
+
+  // Don't adjust macros
   verifyFormat("INTPTR const a;", "INTPTR const a;", Style);
 
   // Pointers to members
@@ -516,6 +862,12 @@ TEST_F(QualifierFixerTest, ConstVolatileQualifiersOrder) {
   verifyFormat("const volatile int a;", "int volatile const a;", Style);
   verifyFormat("const volatile int a;", "const int volatile a;", Style);
 
+  verifyFormat("const volatile Foo a;", "const volatile Foo a;", Style);
+  verifyFormat("const volatile Foo a;", "volatile const Foo a;", Style);
+  verifyFormat("const volatile Foo a;", "Foo const volatile a;", Style);
+  verifyFormat("const volatile Foo a;", "Foo volatile const a;", Style);
+  verifyFormat("const volatile Foo a;", "const Foo volatile a;", Style);
+
   Style.QualifierAlignment = FormatStyle::QAS_Right;
   Style.QualifierOrder = {"type", "const", "volatile"};
 
@@ -524,6 +876,12 @@ TEST_F(QualifierFixerTest, ConstVolatileQualifiersOrder) {
   verifyFormat("int const volatile a;", "int const volatile a;", Style);
   verifyFormat("int const volatile a;", "int volatile const a;", Style);
   verifyFormat("int const volatile a;", "const int volatile a;", Style);
+
+  verifyFormat("Foo const volatile a;", "const volatile Foo a;", Style);
+  verifyFormat("Foo const volatile a;", "volatile const Foo a;", Style);
+  verifyFormat("Foo const volatile a;", "Foo const volatile a;", Style);
+  verifyFormat("Foo const volatile a;", "Foo volatile const a;", Style);
+  verifyFormat("Foo const volatile a;", "const Foo volatile a;", Style);
 
   Style.QualifierAlignment = FormatStyle::QAS_Left;
   Style.QualifierOrder = {"volatile", "const", "type"};
@@ -534,6 +892,12 @@ TEST_F(QualifierFixerTest, ConstVolatileQualifiersOrder) {
   verifyFormat("volatile const int a;", "int volatile const a;", Style);
   verifyFormat("volatile const int a;", "const int volatile a;", Style);
 
+  verifyFormat("volatile const Foo a;", "const volatile Foo a;", Style);
+  verifyFormat("volatile const Foo a;", "volatile const Foo a;", Style);
+  verifyFormat("volatile const Foo a;", "Foo const volatile a;", Style);
+  verifyFormat("volatile const Foo a;", "Foo volatile const a;", Style);
+  verifyFormat("volatile const Foo a;", "const Foo volatile a;", Style);
+
   Style.QualifierAlignment = FormatStyle::QAS_Right;
   Style.QualifierOrder = {"type", "volatile", "const"};
 
@@ -543,6 +907,12 @@ TEST_F(QualifierFixerTest, ConstVolatileQualifiersOrder) {
   verifyFormat("int volatile const a;", "int volatile const a;", Style);
   verifyFormat("int volatile const a;", "const int volatile a;", Style);
 
+  verifyFormat("Foo volatile const a;", "const volatile Foo a;", Style);
+  verifyFormat("Foo volatile const a;", "volatile const Foo a;", Style);
+  verifyFormat("Foo volatile const a;", "Foo const volatile a;", Style);
+  verifyFormat("Foo volatile const a;", "Foo volatile const a;", Style);
+  verifyFormat("Foo volatile const a;", "const Foo volatile a;", Style);
+
   Style.QualifierAlignment = FormatStyle::QAS_Custom;
   Style.QualifierOrder = {"type", "volatile", "const"};
 
@@ -551,6 +921,12 @@ TEST_F(QualifierFixerTest, ConstVolatileQualifiersOrder) {
   verifyFormat("int volatile const a;", "int const volatile a;", Style);
   verifyFormat("int volatile const a;", "int volatile const a;", Style);
   verifyFormat("int volatile const a;", "const int volatile a;", Style);
+
+  verifyFormat("Foo volatile const a;", "const volatile Foo a;", Style);
+  verifyFormat("Foo volatile const a;", "volatile const Foo a;", Style);
+  verifyFormat("Foo volatile const a;", "Foo const volatile a;", Style);
+  verifyFormat("Foo volatile const a;", "Foo volatile const a;", Style);
+  verifyFormat("Foo volatile const a;", "const Foo volatile a;", Style);
 }
 
 TEST_F(QualifierFixerTest, InlineStatics) {
@@ -606,16 +982,16 @@ TEST_F(QualifierFixerTest, MoveConstBeforeTypeSmall) {
 
   verifyFormat("const int a;", "int const a;", Style);
   verifyFormat("const int *a;", "int const *a;", Style);
-  verifyFormat("const int *a const;", "int const *a const;", Style);
+  verifyFormat("const int *const a;", "int const *const a;", Style);
 
   verifyFormat("const int a = foo();", "int const a = foo();", Style);
   verifyFormat("const int *a = foo();", "int const *a = foo();", Style);
-  verifyFormat("const int *a const = foo();", "int const *a const = foo();",
+  verifyFormat("const int *const a = foo();", "int const *const a = foo();",
                Style);
 
   verifyFormat("const auto a = foo();", "auto const a = foo();", Style);
   verifyFormat("const auto *a = foo();", "auto const *a = foo();", Style);
-  verifyFormat("const auto *a const = foo();", "auto const *a const = foo();",
+  verifyFormat("const auto *const a = foo();", "auto const *const a = foo();",
                Style);
 }
 
@@ -637,8 +1013,22 @@ TEST_F(QualifierFixerTest, MoveConstBeyondType) {
   verifyFormat("static inline int const volatile a;",
                "const int inline static  volatile a;", Style);
 
-  verifyFormat("static inline int const volatile *a const;",
-               "const int inline static  volatile *a const;", Style);
+  verifyFormat("static inline int const volatile *const a;",
+               "const int inline static  volatile *const a;", Style);
+
+  verifyFormat("static inline Foo const volatile a;",
+               "const inline static volatile Foo a;", Style);
+  verifyFormat("static inline Foo const volatile a;",
+               "volatile inline static const Foo a;", Style);
+  verifyFormat("static inline Foo const volatile a;",
+               "Foo const inline static  volatile a;", Style);
+  verifyFormat("static inline Foo const volatile a;",
+               "Foo volatile inline static  const a;", Style);
+  verifyFormat("static inline Foo const volatile a;",
+               "const Foo inline static  volatile a;", Style);
+
+  verifyFormat("static inline Foo const volatile *const a;",
+               "const Foo inline static volatile *const a;", Style);
 }
 
 TEST_F(QualifierFixerTest, PrepareLeftRightOrdering) {
@@ -674,41 +1064,65 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   auto Tokens = annotate(
       "const static inline auto restrict int double long constexpr friend");
 
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       Tokens[0], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       Tokens[1], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       Tokens[2], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       Tokens[3], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       Tokens[4], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       Tokens[5], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       Tokens[6], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       Tokens[7], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       Tokens[8], ConfiguredTokens));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       Tokens[9], ConfiguredTokens));
+
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[0]));
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[1]));
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[2]));
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[3]));
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[4]));
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[5]));
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[6]));
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[7]));
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[8]));
+  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[9]));
 
   auto NotTokens = annotate("for while do Foo Bar ");
 
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       NotTokens[0], ConfiguredTokens));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       NotTokens[1], ConfiguredTokens));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       NotTokens[2], ConfiguredTokens));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       NotTokens[3], ConfiguredTokens));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       NotTokens[4], ConfiguredTokens));
-  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isQualifierOrType(
+  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
       NotTokens[5], ConfiguredTokens));
+
+  EXPECT_FALSE(
+      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[0]));
+  EXPECT_FALSE(
+      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[1]));
+  EXPECT_FALSE(
+      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[2]));
+  EXPECT_FALSE(
+      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[3]));
+  EXPECT_FALSE(
+      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[4]));
+  EXPECT_FALSE(
+      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[5]));
 }
 
 TEST_F(QualifierFixerTest, IsMacro) {
@@ -734,7 +1148,7 @@ TEST_F(QualifierFixerTest, DontPushQualifierThroughNonSpecifiedTypes) {
 
   FormatStyle Style = getLLVMStyle();
   Style.QualifierAlignment = FormatStyle::QAS_Left;
-  Style.QualifierOrder = {"const", "type"};
+  Style.QualifierOrder = {"const", "volatile", "type"};
 
   verifyFormat("inline static const int a;", Style);
 
@@ -745,6 +1159,28 @@ TEST_F(QualifierFixerTest, DontPushQualifierThroughNonSpecifiedTypes) {
                Style);
 
   verifyFormat("static const int a;", "const static int a;", Style);
+
+  Style.QualifierOrder = {"const", "volatile", "type"};
+  // static is not configured, unchanged at right hand qualifiers.
+  verifyFormat("const volatile int static;", "int volatile static const;",
+               Style);
+  verifyFormat("const volatile int static;", "int const static volatile;",
+               Style);
+  verifyFormat("const volatile int static;", "const int static volatile;",
+               Style);
+  verifyFormat("const volatile Foo static;", "Foo volatile static const;",
+               Style);
+  verifyFormat("const volatile Foo static;", "Foo const static volatile;",
+               Style);
+  verifyFormat("const volatile Foo static;", "const Foo static volatile;",
+               Style);
+
+  verifyFormat("inline static const Foo;", "inline static Foo const;", Style);
+  verifyFormat("inline static const Foo;", "inline static const Foo;", Style);
+
+  // Don't move qualifiers to the right for aestethics only.
+  verifyFormat("inline const static Foo;", "inline const static Foo;", Style);
+  verifyFormat("const inline static Foo;", "const inline static Foo;", Style);
 }
 
 TEST_F(QualifierFixerTest, UnsignedQualifier) {
@@ -859,12 +1295,18 @@ TEST_F(QualifierFixerTest, TemplatesRight) {
   Style.QualifierAlignment = FormatStyle::QAS_Custom;
   Style.QualifierOrder = {"type", "const"};
 
+  verifyFormat("template <typename T> Foo const f();",
+               "template <typename T> const Foo f();", Style);
+  verifyFormat("template <typename T> int const f();",
+               "template <typename T> const int f();", Style);
+
+  verifyFormat("template <T const> t;", "template <const T> t;", Style);
   verifyFormat("template <typename T>\n"
                "  requires Concept<T const>\n"
-               "void f();",
+               "Foo const f();",
                "template <typename T>\n"
                "  requires Concept<const T>\n"
-               "void f();",
+               "const Foo f();",
                Style);
   verifyFormat("TemplateType<T const> t;", "TemplateType<const T> t;", Style);
   verifyFormat("TemplateType<Container const> t;",
@@ -874,15 +1316,27 @@ TEST_F(QualifierFixerTest, TemplatesRight) {
 TEST_F(QualifierFixerTest, TemplatesLeft) {
   FormatStyle Style = getLLVMStyle();
   Style.QualifierAlignment = FormatStyle::QAS_Custom;
-  Style.QualifierOrder = {"const", "type"};
+  Style.QualifierOrder = {"const", "volatile", "type"};
+
+  verifyFormat("template <typename T> const Foo f();",
+               "template <typename T> Foo const f();", Style);
+  verifyFormat("template <typename T> const int f();",
+               "template <typename T> int const f();", Style);
 
   verifyFormat("template <const T> t;", "template <T const> t;", Style);
   verifyFormat("template <typename T>\n"
                "  requires Concept<const T>\n"
-               "void f();",
+               "const Foo f();",
                "template <typename T>\n"
                "  requires Concept<T const>\n"
-               "void f();",
+               "Foo const f();",
+               Style);
+  verifyFormat("template <typename T>\n"
+               "  requires Concept<const T>\n"
+               "const volatile Foo f();",
+               "template <typename T>\n"
+               "  requires Concept<T const>\n"
+               "volatile const Foo f();",
                Style);
   verifyFormat("TemplateType<const T> t;", "TemplateType<T const> t;", Style);
   verifyFormat("TemplateType<const Container> t;",
