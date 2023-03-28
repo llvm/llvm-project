@@ -226,3 +226,52 @@ transform.sequence failures(propagate) {
       matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
 }
+
+// -----
+
+!A_mk = tensor<1023x255xf32>
+!B_nk = tensor<127x255xf32>
+!C_nm = tensor<127x1023xf32>
+
+#mkn_accesses = [
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (n, k)>,
+  affine_map<(m, n, k) -> (n, m)>
+]
+#mkn_trait = {
+  indexing_maps = #mkn_accesses,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// Normalized dims are:                     ( k,  m,  n)(kk, mm, nn)
+// CHECK-DAG: #[[$km_kkmm:.*]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d1, d0, d3, d4)>
+// CHECK-DAG: #[[$kn_kknn:.*]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d2, d0, d3, d5)>
+// CHECK-DAG: #[[$mn_mmnn:.*]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d2, d1, d4, d5)>
+
+// CHECK-LABEL: @matmul_mk_nk_nm(
+func.func @matmul_mk_nk_nm(%A : !A_mk, %B : !B_nk, %C : !C_nm) -> !C_nm {
+  //      CHECK: linalg.generic
+  // CHECK-SAME: indexing_maps = [#[[$mk_kkmm]], #[[$kn_kknn]], #[[$mn_mmnn]]]
+  // CHECK-SAME:   ["reduction", "parallel", "parallel", "reduction", "parallel", "parallel"]} 
+  // CHECK-SAME:   ins(%{{.*}} : tensor<128x8x32x8xf32>, tensor<1x8x32x130xf32>)
+  // CHECK-SAME:  outs(%{{.*}} : tensor<1x128x8x130xf32>)
+  %0 = linalg.generic #mkn_trait ins(%A, %B : !A_mk, !B_nk) outs(%C : !C_nm) {
+    ^bb0(%a: f32, %b: f32, %c: f32):
+      %d = arith.mulf %a, %b : f32
+      %e = arith.addf %c, %d : f32
+      linalg.yield %e : f32
+  } -> !C_nm
+  return %0 : !C_nm
+}
+
+transform.sequence failures(propagate) {
+^bb1(%module_op: !pdl.operation):
+  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!pdl.operation) -> !transform.op<"linalg.generic">
+  transform.structured.pack_greedily %generic
+      // In this spec, the "k" dimension is not packed but rather padded to the
+      // next multiple of 10 (i.e. 130).
+      matmul_packed_sizes = [8, 0, 32] 
+      matmul_padded_sizes_next_multiple_of = [0, 10, 0] 
+      matmul_inner_dims_order = [1, 2, 0]
+    : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
+}

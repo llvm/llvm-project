@@ -796,6 +796,13 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     if (!ExitL || ExitL->contains(OuterL))
       OuterL = ExitL;
   }
+  for (unsigned Index : ExitCaseIndices) {
+    auto CaseI = SI.case_begin() + Index;
+    // Compute the outer loop from this exit.
+    Loop *ExitL = LI.getLoopFor(CaseI->getCaseSuccessor());
+    if (!ExitL || ExitL->contains(OuterL))
+      OuterL = ExitL;
+  }
 
   if (SE) {
     if (OuterL)
@@ -821,10 +828,6 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   // and don't disrupt the earlier indices.
   for (unsigned Index : reverse(ExitCaseIndices)) {
     auto CaseI = SI.case_begin() + Index;
-    // Compute the outer loop from this exit.
-    Loop *ExitL = LI.getLoopFor(CaseI->getCaseSuccessor());
-    if (!ExitL || ExitL->contains(OuterL))
-      OuterL = ExitL;
     // Save the value of this case.
     auto W = SIW.getSuccessorWeight(CaseI->getSuccessorIndex());
     ExitCases.emplace_back(CaseI->getCaseValue(), CaseI->getCaseSuccessor(), W);
