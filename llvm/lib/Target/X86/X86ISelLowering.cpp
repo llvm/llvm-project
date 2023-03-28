@@ -24419,7 +24419,7 @@ static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
 static SDValue MatchVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
                                       const SDLoc &DL,
                                       const X86Subtarget &Subtarget,
-                                      SelectionDAG &DAG, SDValue &X86CC) {
+                                      SelectionDAG &DAG, X86::CondCode &X86CC) {
   assert((CC == ISD::SETEQ || CC == ISD::SETNE) && "Unsupported ISD::CondCode");
 
   if (!Subtarget.hasSSE2() || !Op->hasOneUse())
@@ -24467,24 +24467,18 @@ static SDValue MatchVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
       VecIns.push_back(DAG.getNode(ISD::OR, DL, VT, LHS, RHS));
     }
 
-    X86::CondCode CCode;
     if (SDValue V = LowerVectorAllZero(DL, VecIns.back(), CC, Mask, Subtarget,
-                                       DAG, CCode)) {
-      X86CC = DAG.getTargetConstant(CCode, DL, MVT::i8);
+                                       DAG, X86CC))
       return V;
-    }
   }
 
   if (Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
     ISD::NodeType BinOp;
     if (SDValue Match =
             DAG.matchBinOpReduction(Op.getNode(), BinOp, {ISD::OR})) {
-      X86::CondCode CCode;
       if (SDValue V =
-              LowerVectorAllZero(DL, Match, CC, Mask, Subtarget, DAG, CCode)) {
-        X86CC = DAG.getTargetConstant(CCode, DL, MVT::i8);
+              LowerVectorAllZero(DL, Match, CC, Mask, Subtarget, DAG, X86CC))
         return V;
-      }
     }
   }
 
@@ -25684,9 +25678,11 @@ SDValue X86TargetLowering::emitFlagsForSetcc(SDValue Op0, SDValue Op1,
     // Try to use PTEST/PMOVMSKB for a tree ORs equality compared with 0.
     // TODO: We could do AND tree with all 1s as well by using the C flag.
     if (isNullConstant(Op1))
-      if (SDValue CmpZ =
-              MatchVectorAllZeroTest(Op0, CC, dl, Subtarget, DAG, X86CC))
+      if (SDValue CmpZ = MatchVectorAllZeroTest(Op0, CC, dl, Subtarget, DAG,
+                                                X86CondCode)) {
+        X86CC = DAG.getTargetConstant(X86CondCode, dl, MVT::i8);
         return CmpZ;
+      }
 
     // Try to lower using KORTEST or KTEST.
     if (SDValue Test = EmitAVX512Test(Op0, Op1, CC, dl, DAG, Subtarget, X86CC))
@@ -54180,11 +54176,10 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
       return V;
 
     if (VT == MVT::i1 && isNullConstant(RHS)) {
-      SDValue X86CC;
+      X86::CondCode X86CC;
       if (SDValue V =
               MatchVectorAllZeroTest(LHS, CC, DL, Subtarget, DAG, X86CC))
-        return DAG.getNode(ISD::TRUNCATE, DL, VT,
-                           DAG.getNode(X86ISD::SETCC, DL, MVT::i8, X86CC, V));
+        return DAG.getNode(ISD::TRUNCATE, DL, VT, getSETCC(X86CC, V, DL, DAG));
     }
 
     if (OpVT.isScalarInteger()) {
