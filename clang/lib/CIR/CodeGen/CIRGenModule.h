@@ -289,6 +289,7 @@ public:
       ForDefinition_t IsForDefinition = NotForDefinition);
 
   void buildTopLevelDecl(clang::Decl *decl);
+  void buildLinkageSpec(const LinkageSpecDecl *D);
 
   /// Emit code for a single global function or var decl. Forward declarations
   /// are emitted lazily.
