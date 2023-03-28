@@ -251,7 +251,7 @@ public:
   /// OFFLOAD_SUCCESS. The entry is locked for this operation.
   template <typename CBTy> int foreachShadowPointerInfo(CBTy CB) const {
     for (auto &It : States->ShadowPtrInfos)
-      if (CB(It) == OFFLOAD_FAIL)
+      if (CB(const_cast<ShadowPtrInfoTy &>(It)) == OFFLOAD_FAIL)
         return OFFLOAD_FAIL;
     return OFFLOAD_SUCCESS;
   }
