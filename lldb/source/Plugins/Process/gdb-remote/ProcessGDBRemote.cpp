@@ -74,7 +74,7 @@
 
 #include "GDBRemoteRegisterContext.h"
 #include "GDBRemoteRegisterFallback.h"
-#include "Plugins/Platform/gdb-server/GDBRemoteSignals.h"
+#include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "Plugins/Process/Utility/InferiorCallPOSIX.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
 #include "ProcessGDBRemote.h"
@@ -967,13 +967,15 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
     MapSupportedStructuredDataPlugins(*supported_packets);
 
   // If connected to LLDB ("native-signals+"), use signal defs for
-  // the remote platform (assuming it's available).  If connected to GDB, just
-  // use the standard set.
-  auto platform_sp = GetTarget().GetPlatform();
-  if (!platform_sp || !m_gdb_comm.UsesNativeSignals())
+  // the remote platform.  If connected to GDB, just use the standard set.
+  if (!m_gdb_comm.UsesNativeSignals()) {
     SetUnixSignals(std::make_shared<GDBRemoteSignals>());
-  else {
-    SetUnixSignals(platform_sp->GetUnixSignals());
+  } else {
+    PlatformSP platform_sp = GetTarget().GetPlatform();
+    if (platform_sp && platform_sp->IsConnected())
+      SetUnixSignals(platform_sp->GetUnixSignals());
+    else
+      SetUnixSignals(UnixSignals::Create(GetTarget().GetArchitecture()));
   }
 }
 

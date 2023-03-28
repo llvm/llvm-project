@@ -385,7 +385,8 @@ if(runtimes)
       list(APPEND extra_deps llvm-link)
     endif()
   endif()
-  if("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND LLVM_LIBC_FULL_BUILD)
+  if("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND 
+      (LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES))
     if(TARGET libc-hdrgen)
       set(libc_tools libc-hdrgen)
       set(libc_cmake_args "-DLIBC_HDRGEN_EXE=$<TARGET_FILE:libc-hdrgen>"

@@ -1,4 +1,4 @@
-//===---- RISCVISelDAGToDAG.h - A dag to dag inst selector for RISCV ------===//
+//===---- RISCVISelDAGToDAG.h - A dag to dag inst selector for RISC-V -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines an instruction selector for the RISCV target.
+// This file defines an instruction selector for the RISC-V target.
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,7 +18,7 @@
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/KnownBits.h"
 
-// RISCV-specific code to select RISCV machine instructions for
+// RISC-V specific code to select RISC-V machine instructions for
 // SelectionDAG operations.
 namespace llvm {
 class RISCVDAGToDAGISel : public SelectionDAGISel {

@@ -29,8 +29,9 @@ if(NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
                       " is not `Clang ${req_ver}.")
 endif()
 if(NOT LLVM_LIBC_FULL_BUILD)
-  message(FATAL_ERROR "LLVM_LIBC_FULL_BUILD must be enabled to build libc for "
-                      "GPU.")
+  message(STATUS "LLVM_LIBC_FULL_BUILD must be enabled to build libc for GPU. "
+                 "Overriding LLVM_LIBC_FULL_BUILD to ON.")
+  set(LLVM_LIBC_FULL_BUILD ON FORCE)
 endif()
 
 # Identify the program used to package multiple images into a single binary.

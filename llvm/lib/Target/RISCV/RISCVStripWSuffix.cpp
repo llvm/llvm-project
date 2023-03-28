@@ -40,14 +40,14 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  StringRef getPassName() const override { return "RISCV Strip W Suffix"; }
+  StringRef getPassName() const override { return "RISC-V Strip W Suffix"; }
 };
 
 } // end anonymous namespace
 
 char RISCVStripWSuffix::ID = 0;
 INITIALIZE_PASS(RISCVStripWSuffix, "riscv-strip-w-suffix",
-                "RISCV Strip W Suffix", false, false)
+                "RISC-V Strip W Suffix", false, false)
 
 FunctionPass *llvm::createRISCVStripWSuffixPass() {
   return new RISCVStripWSuffix();
