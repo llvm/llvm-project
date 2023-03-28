@@ -429,9 +429,9 @@ protected:
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
     const auto t2 = tid(2);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
-    const PatternRef p2 = tensorPattern(t2);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
+    PatternRef p2 = tensorPattern(t2);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
     expectNumLatPoints(s, 1);                                                  \
     expectLatPoint(s, 0, CONJ2##Pattern(CONJ1##Pattern(p0, p1), p2),           \
@@ -466,9 +466,9 @@ FOREVERY_PAIR_OF_COMMON_CONJ_CONJ_BINOP(IMPL_MERGER_TEST_CONJ_CONJ_UNDEF)
     const auto t1 = tid(1);                                                    \
     const auto t2 = tid(2);                                                    \
     const auto t3 = tid(3);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
-    const PatternRef p2 = tensorPattern(t2);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
+    PatternRef p2 = tensorPattern(t2);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
     expectNumLatPoints(s, 1);                                                  \
     expectLatPoint(s, 0, CONJ2##Pattern(CONJ1##Pattern(p0, p1), p2),           \
@@ -504,8 +504,8 @@ FOREVERY_PAIR_OF_COMMON_CONJ_CONJ_BINOP(IMPL_MERGER_TEST_CONJ_CONJ_SPARSE_OUT)
     const auto l0 = lid(0);                                                    \
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 3);                                                  \
@@ -538,8 +538,8 @@ FOREVERY_COMMON_DISJ_BINOP(IMPL_MERGER_TEST_DISJ)
     const auto l0 = lid(0);                                                    \
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 1);                                                  \
@@ -572,9 +572,9 @@ FOREVERY_COMMON_CONJ_BINOP(IMPL_MERGER_TEST_CONJ)
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
     const auto t2 = tid(2);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
-    const PatternRef p2 = tensorPattern(t2);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
+    PatternRef p2 = tensorPattern(t2);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 3);                                                  \
@@ -617,9 +617,9 @@ FOREVERY_PAIR_OF_COMMON_CONJ_DISJ_BINOP(IMPL_MERGER_TEST_CONJ_DISJ)
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
     const auto t2 = tid(2);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
-    const PatternRef p2 = tensorPattern(t2);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
+    PatternRef p2 = tensorPattern(t2);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 7);                                                  \
@@ -668,9 +668,9 @@ FOREVERY_PAIR_OF_COMMON_DISJ_DISJ_BINOP(IMPL_MERGER_TEST_DISJ_DISJ)
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
     const auto t2 = tid(2);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
-    const PatternRef p2 = tensorPattern(t2);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
+    PatternRef p2 = tensorPattern(t2);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
     expectNumLatPoints(s, 1);                                                  \
     expectLatPoint(s, 0, CONJ2##Pattern(CONJ1##Pattern(p0, p1), p2),           \
@@ -707,8 +707,8 @@ FOREVERY_PAIR_OF_COMMON_CONJ_CONJ_BINOP(IMPL_MERGER_TEST_CONJ_CONJ)
     const auto l0 = lid(0);                                                    \
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 3);                                                  \
@@ -745,8 +745,8 @@ FOREVERY_COMMON_DISJ_BINOP(IMPL_MERGER_TEST_OPTIMIZED_DISJ)
     const auto l0 = lid(0);                                                    \
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 1);                                                  \
