@@ -1083,6 +1083,7 @@ void CIRGenModule::buildTopLevelDecl(Decl *decl) {
     //       EmitGlobal(HD);
     break;
 
+  case Decl::CXXConversion:
   case Decl::CXXMethod:
   case Decl::Function:
     buildGlobal(cast<FunctionDecl>(decl));
