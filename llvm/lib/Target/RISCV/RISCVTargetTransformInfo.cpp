@@ -280,6 +280,19 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
               return LT.first * getLMULCost(LT.second);
           }
         }
+
+        // vrgather + cost of generating the mask constant.
+        // We model this for an unknown mask with a single vrgather.
+        if (LT.first == 1 &&
+            (LT.second.getScalarSizeInBits() != 8 ||
+             LT.second.getVectorNumElements() <= 256)) {
+          VectorType *IdxTy = VectorType::get(IntegerType::getInt8Ty(Tp->getContext()),
+                                              Tp->getElementCount());
+          InstructionCost IndexCost =
+            2 + getMemoryOpCost(Instruction::Load, IdxTy, DL.getABITypeAlign(IdxTy),
+                                /*AddressSpace=*/0, CostKind);
+          return IndexCost + getLMULCost(LT.second);
+        }
       }
     }
     }
