@@ -139,6 +139,8 @@ static Value *maybeUnpackLValueExpr(const Expr &E, Environment &Env) {
   return &UnpackedVal;
 }
 
+namespace {
+
 class TransferVisitor : public ConstStmtVisitor<TransferVisitor> {
 public:
   TransferVisitor(const StmtToEnvMap &StmtToEnv, Environment &Env)
@@ -883,6 +885,8 @@ private:
   const StmtToEnvMap &StmtToEnv;
   Environment &Env;
 };
+
+} // namespace
 
 void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env) {
   TransferVisitor(StmtToEnv, Env).Visit(&S);
