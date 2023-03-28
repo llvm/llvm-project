@@ -711,7 +711,8 @@ public:
   RValue buildCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *E,
                                         const CXXMethodDecl *MD,
                                         ReturnValueSlot ReturnValue);
-  void buildNullInitialization(Address DestPtr, QualType Ty);
+  void buildNullInitialization(mlir::Location loc, Address DestPtr,
+                               QualType Ty);
 
   mlir::Value buildCXXNewExpr(const CXXNewExpr *E);
 

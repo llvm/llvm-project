@@ -1123,7 +1123,8 @@ std::string CIRGenFunction::getCounterRefTmpAsString() {
   return getVersionedTmpName("ref.tmp", CounterRefTmp++);
 }
 
-void CIRGenFunction::buildNullInitialization(Address DestPtr, QualType Ty) {
+void CIRGenFunction::buildNullInitialization(mlir::Location loc,
+                                             Address DestPtr, QualType Ty) {
   // Ignore empty classes in C++.
   if (getLangOpts().CPlusPlus) {
     if (const RecordType *RT = Ty->getAs<RecordType>()) {
@@ -1132,7 +1133,45 @@ void CIRGenFunction::buildNullInitialization(Address DestPtr, QualType Ty) {
     }
   }
 
-  llvm_unreachable("NYI");
+  // Cast the dest ptr to the appropriate i8 pointer type.
+  // FIXME: add a CodeGenTypeCache thing for CIR.
+  auto intTy = DestPtr.getElementType().dyn_cast<mlir::IntegerType>();
+  if (intTy && intTy.getWidth() == 8) {
+    llvm_unreachable("NYI");
+  }
+
+  // Get size and alignment info for this aggregate.
+  CharUnits size = getContext().getTypeSizeInChars(Ty);
+  [[maybe_unused]] mlir::Attribute SizeVal{};
+  [[maybe_unused]] const VariableArrayType *vla = nullptr;
+
+  // Don't bother emitting a zero-byte memset.
+  if (size.isZero()) {
+    // But note that getTypeInfo returns 0 for a VLA.
+    if (const VariableArrayType *vlaType = dyn_cast_or_null<VariableArrayType>(
+            getContext().getAsArrayType(Ty))) {
+      llvm_unreachable("NYI");
+    } else {
+      return;
+    }
+  } else {
+    SizeVal = CGM.getSize(size);
+  }
+
+  // If the type contains a pointer to data member we can't memset it to zero.
+  // Instead, create a null constant and copy it to the destination.
+  // TODO: there are other patterns besides zero that we can usefully memset,
+  // like -1, which happens to be the pattern used by member-pointers.
+  if (!CGM.getTypes().isZeroInitializable(Ty)) {
+    llvm_unreachable("NYI");
+  }
+
+  // In LLVM Codegen: otherwise, just memset the whole thing to zero using
+  // Builder.CreateMemSet. In CIR just emit a store of #cir.zero to the
+  // respective address.
+  // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
+  builder.createStore(loc, builder.getZero(loc, getTypes().ConvertType(Ty)),
+                      DestPtr);
 }
 
 CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &CGF,

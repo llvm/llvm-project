@@ -164,8 +164,9 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *RD) {
   // Force conversion of non-virtual base classes recursively.
   if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(RD)) {
     for (const auto &I : cxxRecordDecl->bases()) {
-      (void)I;
-      llvm_unreachable("NYI");
+      if (I.isVirtual())
+        continue;
+      convertRecordDeclType(I.getType()->castAs<RecordType>()->getDecl());
     }
   }
 
