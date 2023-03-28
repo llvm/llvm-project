@@ -138,15 +138,39 @@ llvm.func @caller(%arg0: i32) -> i32 attributes { personality = @__gxx_personali
 llvm.func @foo(i32) -> i32
 llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @caller(%arg0: i32) -> i32 attributes { personality = @__gxx_personality_v0 } {
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.invoke @foo(%0) to ^bb1 unwind ^bb2 : (i32) -> i32
-^bb1: // pred: ^bb0
-  llvm.return %0 : i32
-^bb2: // pred: ^bb0
+// expected-error@below {{'llvm.resume' should have a consistent input type inside a function}}
+llvm.func @caller(%arg0: i32, %arg1: !llvm.struct<(ptr<i32>, i32)>) -> i32 attributes { personality = @__gxx_personality_v0 } {
+  %0 = llvm.invoke @foo(%arg0) to ^bb1 unwind ^bb2 : (i32) -> i32
+^bb1:
+  %1 = llvm.invoke @foo(%0) to ^bb3 unwind ^bb4 : (i32) -> i32
+^bb2:
   %2 = llvm.landingpad cleanup : !llvm.struct<(ptr<i8>, i32)>
-  // expected-error@+1 {{'llvm.resume' op expects landingpad value as operand}}
-  llvm.resume %0 : i32
+  llvm.resume %arg1 : !llvm.struct<(ptr<i32>, i32)>
+^bb3:
+  llvm.return %1 : i32
+^bb4:
+  %3 = llvm.landingpad cleanup : !llvm.struct<(ptr<i8>, i32)>
+  llvm.resume %3 : !llvm.struct<(ptr<i8>, i32)>
+}
+
+// -----
+
+llvm.func @foo(i32) -> i32
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// expected-error@below {{'llvm.landingpad' should have a consistent result type inside a function}}
+llvm.func @caller(%arg0: i32) -> i32 attributes { personality = @__gxx_personality_v0 } {
+  %0 = llvm.invoke @foo(%arg0) to ^bb1 unwind ^bb2 : (i32) -> i32
+^bb1:
+  %1 = llvm.invoke @foo(%0) to ^bb3 unwind ^bb4 : (i32) -> i32
+^bb2:
+  %2 = llvm.landingpad cleanup : !llvm.struct<(ptr<i8>, i32)>
+  llvm.resume %2 : !llvm.struct<(ptr<i8>, i32)>
+^bb3:
+  llvm.return %1 : i32
+^bb4:
+  %3 = llvm.landingpad cleanup : !llvm.struct<(ptr<i32>, i32)>
+  llvm.resume %3 : !llvm.struct<(ptr<i32>, i32)>
 }
 
 // -----

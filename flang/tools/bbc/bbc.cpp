@@ -37,6 +37,7 @@
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
+#include "flang/Tools/CrossToolHelpers.h"
 #include "flang/Version.inc"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/AsmState.h"
@@ -244,7 +245,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   burnside.lower(parseTree, semanticsContext);
   mlir::ModuleOp mlirModule = burnside.getModule();
   if (enableOpenMP)
-    mlir::omp::OpenMPDialect::setIsDevice(mlirModule, enableOpenMPDevice);
+    setOffloadModuleInterfaceAttributes(mlirModule, enableOpenMPDevice);
   std::error_code ec;
   std::string outputName = outputFilename;
   if (!outputName.size())

@@ -11,6 +11,8 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallSet.h"
 
+#include <unordered_map>
+
 using namespace llvm;
 using namespace mlir;
 

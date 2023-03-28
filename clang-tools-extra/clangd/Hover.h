@@ -15,6 +15,7 @@
 #include "clang/Index/IndexSymbol.h"
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -110,6 +111,10 @@ struct HoverInfo {
   };
   // Set only if CalleeArgInfo is set.
   std::optional<PassType> CallPassType;
+  // Filled when hovering over the #include line. Contains the names of symbols
+  // from a #include'd file that are used in the main file, sorted in
+  // alphabetical order.
+  std::vector<std::string> UsedSymbolNames;
 
   /// Produce a user-readable information.
   markup::Document present() const;

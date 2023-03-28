@@ -104,7 +104,8 @@ void getTileableBands(func::FuncOp f,
                       std::vector<SmallVector<AffineForOp, 6>> *bands);
 
 /// Tiles the specified band of perfectly nested loops creating tile-space loops
-/// and intra-tile loops. A band is a contiguous set of loops.
+/// and intra-tile loops. A band is a contiguous set of loops. This utility
+/// doesn't check for the validity of tiling itself, but just performs it.
 LogicalResult
 tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
                     ArrayRef<unsigned> tileSizes,

@@ -410,8 +410,8 @@ void ConstantHoistingPass::collectConstantCandidates(
 
   // Get offset from the base GV.
   PointerType *GVPtrTy = cast<PointerType>(BaseGV->getType());
-  IntegerType *PtrIntTy = DL->getIntPtrType(*Ctx, GVPtrTy->getAddressSpace());
-  APInt Offset(DL->getTypeSizeInBits(PtrIntTy), /*val*/0, /*isSigned*/true);
+  IntegerType *OffsetTy = DL->getIndexType(*Ctx, GVPtrTy->getAddressSpace());
+  APInt Offset(DL->getTypeSizeInBits(OffsetTy), /*val*/ 0, /*isSigned*/ true);
   auto *GEPO = cast<GEPOperator>(ConstExpr);
 
   // TODO: If we have a mix of inbounds and non-inbounds GEPs, then basing a
@@ -432,7 +432,7 @@ void ConstantHoistingPass::collectConstantCandidates(
   // to be cheaper than compute it by <Base + Offset>, which can be lowered to
   // an ADD instruction or folded into Load/Store instruction.
   InstructionCost Cost =
-      TTI->getIntImmCostInst(Instruction::Add, 1, Offset, PtrIntTy,
+      TTI->getIntImmCostInst(Instruction::Add, 1, Offset, OffsetTy,
                              TargetTransformInfo::TCK_SizeAndLatency, Inst);
   ConstCandVecType &ExprCandVec = ConstGEPCandMap[BaseGV];
   ConstCandMapType::iterator Itr;

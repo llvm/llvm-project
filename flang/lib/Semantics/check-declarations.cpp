@@ -260,10 +260,25 @@ void CheckHelper::Check(const Symbol &symbol) {
       !symbol.implicitAttrs().test(Attr::SAVE)) {
     CheckExplicitSave(symbol);
   }
+  const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+  if (symbol.attrs().test(Attr::CONTIGUOUS)) {
+    if ((!object && !symbol.has<UseDetails>()) ||
+        !((IsPointer(symbol) && symbol.Rank() > 0) || IsAssumedShape(symbol) ||
+            evaluate::IsAssumedRank(symbol))) {
+      if (symbol.owner().IsDerivedType()) { // C752
+        messages_.Say(
+            "A CONTIGUOUS component must be an array with the POINTER attribute"_err_en_US);
+      } else { // C830
+        messages_.Say(
+            "CONTIGUOUS entity must be an array pointer, assumed-shape, or assumed-rank"_err_en_US);
+      }
+    }
+  }
   CheckGlobalName(symbol);
   if (isDone) {
     return; // following checks do not apply
   }
+
   if (symbol.attrs().test(Attr::PROTECTED)) {
     if (symbol.owner().kind() != Scope::Kind::Module) { // C854
       messages_.Say(
@@ -330,7 +345,7 @@ void CheckHelper::Check(const Symbol &symbol) {
                     ProcedureDefinitionClass::Dummy)) ||
         symbol.test(Symbol::Flag::ParentComp)};
     if (!IsStmtFunctionDummy(symbol)) { // C726
-      if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+      if (object) {
         canHaveAssumedParameter |= object->isDummy() ||
             (isChar && object->isFuncResult()) ||
             IsStmtFunctionResult(symbol); // Avoids multiple messages
@@ -393,10 +408,6 @@ void CheckHelper::Check(const Symbol &symbol) {
   if (symbol.attrs().test(Attr::VALUE)) {
     CheckValue(symbol, derived);
   }
-  if (symbol.attrs().test(Attr::CONTIGUOUS) && IsPointer(symbol) &&
-      symbol.Rank() == 0) { // C830
-    messages_.Say("CONTIGUOUS POINTER must be an array"_err_en_US);
-  }
   if (IsDummy(symbol)) {
     if (IsNamedConstant(symbol)) {
       messages_.Say(
@@ -408,12 +419,6 @@ void CheckHelper::Check(const Symbol &symbol) {
           "A function result may not also be a named constant"_err_en_US);
     }
     CheckBindCFunctionResult(symbol);
-  }
-  if (symbol.owner().IsDerivedType() &&
-      (symbol.attrs().test(Attr::CONTIGUOUS) &&
-          !(IsPointer(symbol) && symbol.Rank() > 0))) { // C752
-    messages_.Say(
-        "A CONTIGUOUS component must be an array with the POINTER attribute"_err_en_US);
   }
   if (symbol.owner().IsModule() && IsAutomatic(symbol)) {
     messages_.Say(

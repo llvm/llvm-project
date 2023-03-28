@@ -49,4 +49,48 @@ def MemRefMultiBufferOp : Op<Transform_Dialect, "memref.multibuffer",
     "$target attr-dict `:` functional-type(operands, results)";
 }
 
+def MemRefExtractAddressComputationsOp :
+    Op<Transform_Dialect, "memref.extract_address_computations",
+       [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+        TransformEachOpTrait, TransformOpInterface]> {
+  let summary = "Extract address computations from memory accesses";
+  let description = [{
+    Transformation that extracts address computations from instructions
+    with memory accesses such that these memory accesses use only a base
+    pointer.
+
+    For instance,
+    ```mlir
+    memref.load %base[%off0, ...]
+    ```
+
+    Will be rewritten in:
+    ```mlir
+    %new_base = memref.subview %base[%off0,...][1,...][1,...]
+    memref.load %new_base[%c0,...]
+    ```
+
+    Note: The current implementation requires that the input operation
+    is "isolated from above".
+
+    #### Return modes
+
+    This operation produces `definiteFailure` if the extraction fails for any
+    reason.
+    The operation always returns the handle to the target op that is expected
+    to be isolated from above.
+  }];
+
+  let arguments = (ins PDL_Operation:$target);
+  let results = (outs PDL_Operation:$transformed);
+
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &transformResults,
+        ::mlir::transform::TransformState &state);
+  }];
+}
 #endif // MEMREF_TRANSFORM_OPS
