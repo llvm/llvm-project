@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/UnixSignals.h"
+#include "Plugins/Process/Utility/FreeBSDSignals.h"
+#include "Plugins/Process/Utility/LinuxSignals.h"
+#include "Plugins/Process/Utility/NetBSDSignals.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Target/Platform.h"
 #include "lldb/Utility/ArchSpec.h"
 #include <optional>
 #include <sstream>
@@ -28,25 +30,24 @@ UnixSignals::Signal::Signal(const char *name, bool default_suppress,
     m_description.assign(description);
 }
 
-lldb::UnixSignalsSP UnixSignals::CreateForHost() {
-  static lldb::UnixSignalsSP s_unix_signals_sp;
-  if (s_unix_signals_sp)
-    return s_unix_signals_sp;
-
-  auto host_platform_sp = Platform::GetHostPlatform();
-
-  // If we have no host platform, be resilient and use default UnixSignals.
-  if (!host_platform_sp)
-    s_unix_signals_sp = std::make_shared<UnixSignals>();
-  else {
-    s_unix_signals_sp = host_platform_sp->CreateUnixSignals();
-    // If the Host platform cannot create a UnixSignals object, fall back to the
-    // default UnixSignals. This may happen on platforms without a
-    // UnixSignals implementation (e.g. Windows).
-    if (!s_unix_signals_sp)
-      s_unix_signals_sp = std::make_shared<UnixSignals>();
+lldb::UnixSignalsSP UnixSignals::Create(const ArchSpec &arch) {
+  const auto &triple = arch.GetTriple();
+  switch (triple.getOS()) {
+  case llvm::Triple::Linux:
+    return std::make_shared<LinuxSignals>();
+  case llvm::Triple::FreeBSD:
+  case llvm::Triple::OpenBSD:
+    return std::make_shared<FreeBSDSignals>();
+  case llvm::Triple::NetBSD:
+    return std::make_shared<NetBSDSignals>();
+  default:
+    return std::make_shared<UnixSignals>();
   }
+}
 
+lldb::UnixSignalsSP UnixSignals::CreateForHost() {
+  static lldb::UnixSignalsSP s_unix_signals_sp =
+      Create(HostInfo::GetArchitecture());
   return s_unix_signals_sp;
 }
 

@@ -128,14 +128,12 @@ static void insertQualifierAfter(const SourceManager &SourceMgr,
                                  tooling::Replacements &Fixes,
                                  const FormatToken *First,
                                  const std::string &Qualifier) {
-  FormatToken *Next = First->Next;
-  if (!Next)
-    return;
-  auto Range = CharSourceRange::getCharRange(Next->getStartOfNonWhitespace(),
-                                             Next->Tok.getEndLoc());
+  auto Range = CharSourceRange::getCharRange(First->Tok.getLocation(),
+                                             First->Tok.getEndLoc());
 
-  std::string NewText = " " + Qualifier + " ";
-  NewText += Next->TokenText;
+  std::string NewText{};
+  NewText += First->TokenText;
+  NewText += " " + Qualifier;
   replaceToken(SourceMgr, Fixes, Range, NewText);
 }
 
@@ -204,9 +202,33 @@ static void rotateTokens(const SourceManager &SourceMgr,
   replaceToken(SourceMgr, Fixes, Range, NewText);
 }
 
+static bool
+isConfiguredQualifier(const FormatToken *const Tok,
+                      const std::vector<tok::TokenKind> &Qualifiers) {
+  return Tok && llvm::is_contained(Qualifiers, Tok->Tok.getKind());
+}
+
+static bool isQualifier(const FormatToken *const Tok) {
+  if (!Tok)
+    return false;
+
+  switch (Tok->Tok.getKind()) {
+  case tok::kw_const:
+  case tok::kw_volatile:
+  case tok::kw_static:
+  case tok::kw_inline:
+  case tok::kw_constexpr:
+  case tok::kw_restrict:
+  case tok::kw_friend:
+    return true;
+  default:
+    return false;
+  }
+}
+
 const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
     const SourceManager &SourceMgr, const AdditionalKeywords &Keywords,
-    tooling::Replacements &Fixes, const FormatToken *Tok,
+    tooling::Replacements &Fixes, const FormatToken *const Tok,
     const std::string &Qualifier, tok::TokenKind QualifierType) {
   // We only need to think about streams that begin with a qualifier.
   if (!Tok->is(QualifierType))
@@ -214,65 +236,141 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
   // Don't concern yourself if nothing follows the qualifier.
   if (!Tok->Next)
     return Tok;
-  if (LeftRightQualifierAlignmentFixer::isPossibleMacro(Tok->Next))
+
+  // Skip qualifiers to the left to find what preceeds the qualifiers.
+  // Use isQualifier rather than isConfiguredQualifier to cover all qualifiers.
+  const FormatToken *PreviousCheck = Tok->getPreviousNonComment();
+  while (isQualifier(PreviousCheck))
+    PreviousCheck = PreviousCheck->getPreviousNonComment();
+
+  // Examples given in order of ['type', 'const', 'volatile']
+  const bool IsRightQualifier = PreviousCheck && [PreviousCheck]() {
+    // The cases:
+    // `Foo() const` -> `Foo() const`
+    // `Foo() const final` -> `Foo() const final`
+    // `Foo() const override` -> `Foo() const final`
+    // `Foo() const volatile override` -> `Foo() const volatile override`
+    // `Foo() volatile const final` -> `Foo() const volatile final`
+    if (PreviousCheck->is(tok::r_paren))
+      return true;
+
+    // The cases:
+    // `struct {} volatile const a;` -> `struct {} const volatile a;`
+    // `class {} volatile const a;` -> `class {} const volatile a;`
+    if (PreviousCheck->is(tok::r_brace))
+      return true;
+
+    // The case:
+    // `template <class T> const Bar Foo()` ->
+    // `template <class T> Bar const Foo()`
+    // The cases:
+    // `Foo<int> const foo` -> `Foo<int> const foo`
+    // `Foo<int> volatile const` -> `Foo<int> const volatile`
+    // The case:
+    // ```
+    // template <class T>
+    //   requires Concept1<T> && requires Concept2<T>
+    // const Foo f();
+    // ```
+    // ->
+    // ```
+    // template <class T>
+    //   requires Concept1<T> && requires Concept2<T>
+    // Foo const f();
+    // ```
+    if (PreviousCheck->is(TT_TemplateCloser)) {
+      // If the token closes a template<> or requires clause, then it is a left
+      // qualifier and should be moved to the right.
+      return !(PreviousCheck->ClosesTemplateDeclaration ||
+               PreviousCheck->ClosesRequiresClause);
+    }
+
+    // The case  `Foo* const` -> `Foo* const`
+    // The case  `Foo* volatile const` -> `Foo* const volatile`
+    // The case  `int32_t const` -> `int32_t const`
+    // The case  `auto volatile const` -> `auto const volatile`
+    if (PreviousCheck->isOneOf(TT_PointerOrReference, tok::identifier,
+                               tok::kw_auto)) {
+      return true;
+    }
+
+    return false;
+  }();
+
+  // Find the last qualifier to the right.
+  const FormatToken *LastQual = Tok;
+  while (isQualifier(LastQual->getNextNonComment()))
+    LastQual = LastQual->getNextNonComment();
+
+  // If this qualifier is to the right of a type or pointer do a partial sort
+  // and return.
+  if (IsRightQualifier) {
+    if (LastQual != Tok)
+      rotateTokens(SourceMgr, Fixes, Tok, LastQual, /*Left=*/false);
     return Tok;
-
-  auto AnalyzeTemplate =
-      [&](const FormatToken *Tok,
-          const FormatToken *StartTemplate) -> const FormatToken * {
-    // Read from the TemplateOpener to TemplateCloser.
-    FormatToken *EndTemplate = StartTemplate->MatchingParen;
-    if (EndTemplate) {
-      // Move to the end of any template class members e.g.
-      // `Foo<int>::iterator`.
-      if (EndTemplate->startsSequence(TT_TemplateCloser, tok::coloncolon,
-                                      tok::identifier)) {
-        EndTemplate = EndTemplate->Next->Next;
-      }
-    }
-    if (EndTemplate && EndTemplate->Next &&
-        !EndTemplate->Next->isOneOf(tok::equal, tok::l_paren)) {
-      insertQualifierAfter(SourceMgr, Fixes, EndTemplate, Qualifier);
-      // Remove the qualifier.
-      removeToken(SourceMgr, Fixes, Tok);
-      return Tok;
-    }
-    return nullptr;
-  };
-
-  FormatToken *Qual = Tok->Next;
-  FormatToken *LastQual = Qual;
-  while (Qual && isQualifierOrType(Qual, ConfiguredQualifierTokens)) {
-    LastQual = Qual;
-    Qual = Qual->Next;
   }
-  if (LastQual && Qual != LastQual) {
-    rotateTokens(SourceMgr, Fixes, Tok, LastQual, /*Left=*/false);
-    Tok = LastQual;
-  } else if (Tok->startsSequence(QualifierType, tok::identifier,
-                                 TT_TemplateCloser)) {
-    FormatToken *Closer = Tok->Next->Next;
-    rotateTokens(SourceMgr, Fixes, Tok, Tok->Next, /*Left=*/false);
-    Tok = Closer;
+
+  const FormatToken *TypeToken = LastQual->getNextNonComment();
+  if (!TypeToken)
     return Tok;
-  } else if (Tok->startsSequence(QualifierType, tok::identifier,
-                                 TT_TemplateOpener)) {
-    // `const ArrayRef<int> a;`
-    // `const ArrayRef<int> &a;`
-    const FormatToken *NewTok = AnalyzeTemplate(Tok, Tok->Next->Next);
-    if (NewTok)
-      return NewTok;
-  } else if (Tok->startsSequence(QualifierType, tok::coloncolon,
-                                 tok::identifier, TT_TemplateOpener)) {
-    // `const ::ArrayRef<int> a;`
-    // `const ::ArrayRef<int> &a;`
-    const FormatToken *NewTok = AnalyzeTemplate(Tok, Tok->Next->Next->Next);
-    if (NewTok)
-      return NewTok;
-  } else if (Tok->startsSequence(QualifierType, tok::identifier) ||
-             Tok->startsSequence(QualifierType, tok::coloncolon,
-                                 tok::identifier)) {
-    FormatToken *Next = Tok->Next;
+
+  // Stay safe and don't move past macros, also don't bother with sorting.
+  if (isPossibleMacro(TypeToken))
+    return Tok;
+
+  // The case `const long long int volatile` -> `long long int const volatile`
+  // The case `long const long int volatile` -> `long long int const volatile`
+  // The case `long long volatile int const` -> `long long int const volatile`
+  // The case `const long long volatile int` -> `long long int const volatile`
+  if (TypeToken->isSimpleTypeSpecifier()) {
+    // The case `const decltype(foo)` -> `const decltype(foo)`
+    // The case `const typeof(foo)` -> `const typeof(foo)`
+    // The case `const _Atomic(foo)` -> `const _Atomic(foo)`
+    if (TypeToken->isOneOf(tok::kw_decltype, tok::kw_typeof, tok::kw__Atomic))
+      return Tok;
+
+    const FormatToken *LastSimpleTypeSpecifier = TypeToken;
+    while (isQualifierOrType(LastSimpleTypeSpecifier->getNextNonComment()))
+      LastSimpleTypeSpecifier = LastSimpleTypeSpecifier->getNextNonComment();
+
+    rotateTokens(SourceMgr, Fixes, Tok, LastSimpleTypeSpecifier,
+                 /*Left=*/false);
+    return LastSimpleTypeSpecifier;
+  }
+
+  // The case  `unsigned short const` -> `unsigned short const`
+  // The case:
+  // `unsigned short volatile const` -> `unsigned short const volatile`
+  if (PreviousCheck && PreviousCheck->isSimpleTypeSpecifier()) {
+    if (LastQual != Tok)
+      rotateTokens(SourceMgr, Fixes, Tok, LastQual, /*Left=*/false);
+    return Tok;
+  }
+
+  // Skip the typename keyword.
+  // The case `const typename C::type` -> `typename C::type const`
+  if (TypeToken->is(tok::kw_typename))
+    TypeToken = TypeToken->getNextNonComment();
+
+  // Skip the initial :: of a global-namespace type.
+  // The case `const ::...` -> `::... const`
+  if (TypeToken->is(tok::coloncolon)) {
+    // The case `const ::template Foo...` -> `::template Foo... const`
+    TypeToken = TypeToken->getNextNonComment();
+    if (TypeToken && TypeToken->is(tok::kw_template))
+      TypeToken = TypeToken->getNextNonComment();
+  }
+
+  // Don't change declarations such as
+  // `foo(const struct Foo a);` -> `foo(const struct Foo a);`
+  // as they would currently change code such as
+  // `const struct my_struct_t {} my_struct;` -> `struct my_struct_t const {}
+  // my_struct;`
+  if (TypeToken->isOneOf(tok::kw_struct, tok::kw_class))
+    return Tok;
+
+  if (TypeToken->isOneOf(tok::kw_auto, tok::identifier)) {
+    // The case  `const auto` -> `auto const`
     // The case  `const Foo` -> `Foo const`
     // The case  `const ::Foo` -> `::Foo const`
     // The case  `const Foo *` -> `Foo const *`
@@ -280,30 +378,35 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
     // The case  `const Foo &&` -> `Foo const &&`
     // The case  `const std::Foo &&` -> `std::Foo const &&`
     // The case  `const std::Foo<T> &&` -> `std::Foo<T> const &&`
-    // However,  `const Bar::*` remains the same.
-    while (Next && Next->isOneOf(tok::identifier, tok::coloncolon) &&
-           !Next->startsSequence(tok::coloncolon, tok::star)) {
-      Next = Next->Next;
-    }
-    if (Next && Next->is(TT_TemplateOpener)) {
-      Next = Next->MatchingParen;
-      // Move to the end of any template class members e.g.
-      // `Foo<int>::iterator`.
-      if (Next && Next->startsSequence(TT_TemplateCloser, tok::coloncolon,
-                                       tok::identifier)) {
-        return Tok;
+    // The case  `const ::template Foo` -> `::template Foo const`
+    // The case  `const T::template Foo` -> `T::template Foo const`
+    const FormatToken *Next = nullptr;
+    while ((Next = TypeToken->getNextNonComment()) &&
+           (Next->is(TT_TemplateOpener) ||
+            Next->startsSequence(tok::coloncolon, tok::identifier) ||
+            Next->startsSequence(tok::coloncolon, tok::kw_template,
+                                 tok::identifier))) {
+      if (Next->is(TT_TemplateOpener)) {
+        assert(Next->MatchingParen && "Missing template closer");
+        TypeToken = Next->MatchingParen;
+      } else if (Next->startsSequence(tok::coloncolon, tok::identifier)) {
+        TypeToken = Next->getNextNonComment();
+      } else {
+        TypeToken = Next->getNextNonComment()->getNextNonComment();
       }
-      assert(Next && "Missing template opener");
-      Next = Next->Next;
     }
-    if (Next && Next->isOneOf(tok::star, tok::amp, tok::ampamp) &&
-        !Tok->Next->isOneOf(Keywords.kw_override, Keywords.kw_final)) {
-      if (Next->Previous && !Next->Previous->is(QualifierType)) {
-        insertQualifierAfter(SourceMgr, Fixes, Next->Previous, Qualifier);
-        removeToken(SourceMgr, Fixes, Tok);
-      }
-      return Next;
+
+    // Place the Qualifier at the end of the list of qualifiers.
+    while (isQualifier(TypeToken->getNextNonComment())) {
+      // The case `volatile Foo::iter const` -> `Foo::iter const volatile`
+      TypeToken = TypeToken->getNextNonComment();
     }
+
+    insertQualifierAfter(SourceMgr, Fixes, TypeToken, Qualifier);
+    // Remove token and following whitespace.
+    auto Range = CharSourceRange::getCharRange(
+        Tok->getStartOfNonWhitespace(), Tok->Next->getStartOfNonWhitespace());
+    replaceToken(SourceMgr, Fixes, Range, "");
   }
 
   return Tok;
@@ -311,98 +414,140 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
 
 const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
     const SourceManager &SourceMgr, const AdditionalKeywords &Keywords,
-    tooling::Replacements &Fixes, const FormatToken *Tok,
+    tooling::Replacements &Fixes, const FormatToken *const Tok,
     const std::string &Qualifier, tok::TokenKind QualifierType) {
-  // if Tok is an identifier and possibly a macro then don't convert.
-  if (LeftRightQualifierAlignmentFixer::isPossibleMacro(Tok))
+  // We only need to think about streams that begin with a qualifier.
+  if (!Tok->is(QualifierType))
+    return Tok;
+  // Don't concern yourself if nothing preceeds the qualifier.
+  if (!Tok->getPreviousNonComment())
     return Tok;
 
-  const FormatToken *Qual = Tok;
-  const FormatToken *LastQual = Qual;
-  while (Qual && isQualifierOrType(Qual, ConfiguredQualifierTokens)) {
-    LastQual = Qual;
-    Qual = Qual->Next;
-    if (Qual && Qual->is(QualifierType))
-      break;
+  // Skip qualifiers to the left to find what preceeds the qualifiers.
+  const FormatToken *TypeToken = Tok->getPreviousNonComment();
+  while (isQualifier(TypeToken))
+    TypeToken = TypeToken->getPreviousNonComment();
+
+  // For left qualifiers preceeded by nothing, a template declaration, or *,&,&&
+  // we only perform sorting.
+  if (!TypeToken || TypeToken->isOneOf(tok::star, tok::amp, tok::ampamp) ||
+      TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration) {
+
+    // Don't sort past a non-configured qualifier token.
+    const FormatToken *FirstQual = Tok;
+    while (isConfiguredQualifier(FirstQual->getPreviousNonComment(),
+                                 ConfiguredQualifierTokens)) {
+      FirstQual = FirstQual->getPreviousNonComment();
+    }
+
+    if (FirstQual != Tok)
+      rotateTokens(SourceMgr, Fixes, FirstQual, Tok, /*Left=*/true);
+    return Tok;
   }
 
-  if (!Qual)
+  // Stay safe and don't move past macros, also don't bother with sorting.
+  if (isPossibleMacro(TypeToken))
     return Tok;
 
-  if (LastQual && Qual != LastQual && Qual->is(QualifierType)) {
-    rotateTokens(SourceMgr, Fixes, Tok, Qual, /*Left=*/true);
-    if (!Qual->Next)
-      return Tok;
-    Tok = Qual->Next;
-  } else if (Tok->startsSequence(tok::identifier, QualifierType)) {
-    if (Tok->Next->Next && Tok->Next->Next->isOneOf(tok::identifier, tok::star,
-                                                    tok::amp, tok::ampamp)) {
-      // Don't swap `::iterator const` to `::const iterator`.
-      if (!Tok->Previous ||
-          (Tok->Previous && !Tok->Previous->is(tok::coloncolon))) {
-        rotateTokens(SourceMgr, Fixes, Tok, Tok->Next, /*Left=*/true);
-        Tok = Tok->Next;
-      }
-    } else if (Tok->startsSequence(tok::identifier, QualifierType,
-                                   TT_TemplateCloser)) {
-      FormatToken *Closer = Tok->Next->Next;
-      rotateTokens(SourceMgr, Fixes, Tok, Tok->Next, /*Left=*/true);
-      Tok = Closer;
-    }
-  }
-  if (Tok->is(TT_TemplateOpener) && Tok->Next &&
-      (Tok->Next->is(tok::identifier) || Tok->Next->isSimpleTypeSpecifier()) &&
-      Tok->Next->Next && Tok->Next->Next->is(QualifierType)) {
-    rotateTokens(SourceMgr, Fixes, Tok->Next, Tok->Next->Next, /*Left=*/true);
-  }
-  if ((Tok->startsSequence(tok::coloncolon, tok::identifier) ||
-       Tok->is(tok::identifier)) &&
-      Tok->Next) {
-    if (Tok->Previous &&
-        Tok->Previous->isOneOf(tok::star, tok::ampamp, tok::amp)) {
-      return Tok;
-    }
-    const FormatToken *Next = Tok->Next;
-    // The case  `std::Foo<T> const` -> `const std::Foo<T> &&`
-    while (Next && Next->isOneOf(tok::identifier, tok::coloncolon))
-      Next = Next->Next;
-    if (Next && Next->Previous &&
-        Next->Previous->startsSequence(tok::identifier, TT_TemplateOpener)) {
-      // Read from to the end of the TemplateOpener to
-      // TemplateCloser const ArrayRef<int> a; const ArrayRef<int> &a;
-      if (Next->is(tok::comment) && Next->getNextNonComment())
-        Next = Next->getNextNonComment();
-      assert(Next->MatchingParen && "Missing template closer");
-      Next = Next->MatchingParen;
+  // Examples given in order of ['const', 'volatile', 'type']
 
-      // If the template closer is closing the requires clause,
-      // then stop and go back to the TemplateOpener and do whatever is
-      // inside the <>.
-      if (Next->ClosesRequiresClause)
-        return Next->MatchingParen;
-      Next = Next->Next;
+  // The case `volatile long long int const` -> `const volatile long long int`
+  // The case `volatile long long const int` -> `const volatile long long int`
+  // The case `const long long volatile int` -> `const volatile long long int`
+  // The case `long volatile long int const` -> `const volatile long long int`
+  if (TypeToken->isSimpleTypeSpecifier()) {
+    const FormatToken *LastSimpleTypeSpecifier = TypeToken;
+    while (isConfiguredQualifierOrType(
+        LastSimpleTypeSpecifier->getPreviousNonComment(),
+        ConfiguredQualifierTokens)) {
+      LastSimpleTypeSpecifier =
+          LastSimpleTypeSpecifier->getPreviousNonComment();
+    }
 
-      // Move to the end of any template class members e.g.
-      // `Foo<int>::iterator`.
-      if (Next && Next->startsSequence(tok::coloncolon, tok::identifier))
-        Next = Next->Next->Next;
-      if (Next && Next->is(QualifierType)) {
-        // Move the qualifier.
-        insertQualifierBefore(SourceMgr, Fixes, Tok, Qualifier);
-        removeToken(SourceMgr, Fixes, Next);
-        return Next;
+    rotateTokens(SourceMgr, Fixes, LastSimpleTypeSpecifier, Tok,
+                 /*Left=*/true);
+    return Tok;
+  }
+
+  if (TypeToken->isOneOf(tok::kw_auto, tok::identifier, TT_TemplateCloser)) {
+    const auto IsStartOfType = [](const FormatToken *const Tok) -> bool {
+      if (!Tok)
+        return true;
+
+      // A template closer is not the start of a type.
+      // The case `?<> const` -> `const ?<>`
+      if (Tok->is(TT_TemplateCloser))
+        return false;
+
+      const FormatToken *const Previous = Tok->getPreviousNonComment();
+      if (!Previous)
+        return true;
+
+      // An identifier preceeded by :: is not the start of a type.
+      // The case `?::Foo const` -> `const ?::Foo`
+      if (Tok->is(tok::identifier) && Previous->is(tok::coloncolon))
+        return false;
+
+      const FormatToken *const PrePrevious = Previous->getPreviousNonComment();
+      // An identifier preceeded by ::template is not the start of a type.
+      // The case `?::template Foo const` -> `const ?::template Foo`
+      if (Tok->is(tok::identifier) && Previous->is(tok::kw_template) &&
+          PrePrevious && PrePrevious->is(tok::coloncolon)) {
+        return false;
+      }
+
+      return true;
+    };
+
+    while (!IsStartOfType(TypeToken)) {
+      // The case `?<>`
+      if (TypeToken->is(TT_TemplateCloser)) {
+        assert(TypeToken->MatchingParen && "Missing template opener");
+        TypeToken = TypeToken->MatchingParen->getPreviousNonComment();
+      } else {
+        // The cases
+        // `::Foo`
+        // `?>::Foo`
+        // `?Bar::Foo`
+        // `::template Foo`
+        // `?>::template Foo`
+        // `?Bar::template Foo`
+        if (TypeToken->getPreviousNonComment()->is(tok::kw_template))
+          TypeToken = TypeToken->getPreviousNonComment();
+
+        const FormatToken *const ColonColon =
+            TypeToken->getPreviousNonComment();
+        const FormatToken *const PreColonColon =
+            ColonColon->getPreviousNonComment();
+        if (PreColonColon &&
+            PreColonColon->isOneOf(TT_TemplateCloser, tok::identifier)) {
+          TypeToken = PreColonColon;
+        } else {
+          TypeToken = ColonColon;
+        }
       }
     }
-    if (Next && Next->Next &&
-        Next->Next->isOneOf(tok::amp, tok::ampamp, tok::star)) {
-      if (Next->is(QualifierType)) {
-        // Move the qualifier.
-        insertQualifierBefore(SourceMgr, Fixes, Tok, Qualifier);
-        removeToken(SourceMgr, Fixes, Next);
-        return Next;
-      }
+
+    assert(TypeToken && "Should be auto or identifier");
+
+    // Place the Qualifier at the start of the list of qualifiers.
+    const FormatToken *Previous = nullptr;
+    while ((Previous = TypeToken->getPreviousNonComment()) &&
+           (isConfiguredQualifier(Previous, ConfiguredQualifierTokens) ||
+            Previous->is(tok::kw_typename))) {
+      // The case `volatile Foo::iter const` -> `const volatile Foo::iter`
+      // The case `typename C::type const` -> `const typename C::type`
+      TypeToken = Previous;
+    }
+
+    // Don't change declarations such as
+    // `foo(struct Foo const a);` -> `foo(struct Foo const a);`
+    if (!Previous || !Previous->isOneOf(tok::kw_struct, tok::kw_class)) {
+      insertQualifierBefore(SourceMgr, Fixes, TypeToken, Qualifier);
+      removeToken(SourceMgr, Fixes, Tok);
     }
   }
+
   return Tok;
 }
 
@@ -502,9 +647,16 @@ void QualifierAlignmentFixer::PrepareLeftRightOrdering(
 }
 
 bool LeftRightQualifierAlignmentFixer::isQualifierOrType(
-    const FormatToken *Tok, const std::vector<tok::TokenKind> &specifiedTypes) {
+    const FormatToken *const Tok) {
   return Tok && (Tok->isSimpleTypeSpecifier() || Tok->is(tok::kw_auto) ||
-                 llvm::is_contained(specifiedTypes, Tok->Tok.getKind()));
+                 isQualifier(Tok));
+}
+
+bool LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
+    const FormatToken *const Tok,
+    const std::vector<tok::TokenKind> &Qualifiers) {
+  return Tok && (Tok->isSimpleTypeSpecifier() || Tok->is(tok::kw_auto) ||
+                 isConfiguredQualifier(Tok, Qualifiers));
 }
 
 // If a token is an identifier and it's upper case, it could

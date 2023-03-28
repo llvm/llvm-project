@@ -8,8 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11
 
-// shared_timed_mutex was introduced in macosx10.12
-// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
+// UNSUPPORTED: availability-shared_mutex-missing
 
 // <shared_mutex>
 

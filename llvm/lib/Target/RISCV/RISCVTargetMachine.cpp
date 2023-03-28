@@ -1,4 +1,4 @@
-//===-- RISCVTargetMachine.cpp - Define TargetMachine for RISCV -----------===//
+//===-- RISCVTargetMachine.cpp - Define TargetMachine for RISC-V ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements the info about RISCV target spec.
+// Implements the info about RISC-V target spec.
 //
 //===----------------------------------------------------------------------===//
 
@@ -68,7 +68,7 @@ static cl::opt<int> RVVVectorBitsMinOpt(
 
 static cl::opt<bool> EnableRISCVCopyPropagation(
     "riscv-enable-copy-propagation",
-    cl::desc("Enable the copy propagation with RISCV copy instr"),
+    cl::desc("Enable the copy propagation with RISC-V copy instr"),
     cl::init(true), cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {

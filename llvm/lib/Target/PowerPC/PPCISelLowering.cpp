@@ -18253,9 +18253,9 @@ CCAssignFn *PPCTargetLowering::ccAssignFnForCall(CallingConv::ID CC,
                                                  bool IsVarArg) const {
   switch (CC) {
   case CallingConv::Cold:
-    return (Return ? RetCC_PPC_Cold : CC_PPC64_ELF_FIS);
+    return (Return ? RetCC_PPC_Cold : CC_PPC64_ELF);
   default:
-    return CC_PPC64_ELF_FIS;
+    return CC_PPC64_ELF;
   }
 }
 

@@ -1,4 +1,4 @@
-//===-- RISCVISAInfo.h - RISCV ISA Information ------------------*- C++ -*-===//
+//===-- RISCVISAInfo.h - RISC-V ISA Information -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -44,7 +44,7 @@ public:
   RISCVISAInfo(unsigned XLen, OrderedExtensionMap &Exts)
       : XLen(XLen), FLen(0), MinVLen(0), MaxELen(0), MaxELenFp(0), Exts(Exts) {}
 
-  /// Parse RISCV ISA info from arch string.
+  /// Parse RISC-V ISA info from arch string.
   /// If IgnoreUnknown is set, any unrecognised extension names or
   /// extensions with unrecognised versions will be silently dropped, except
   /// for the special case of the base 'i' and 'e' extensions, where the
@@ -54,17 +54,17 @@ public:
                   bool ExperimentalExtensionVersionCheck = true,
                   bool IgnoreUnknown = false);
 
-  /// Parse RISCV ISA info from an arch string that is already in normalized
+  /// Parse RISC-V ISA info from an arch string that is already in normalized
   /// form (as defined in the psABI). Unlike parseArchString, this function
   /// will not error for unrecognized extension names or extension versions.
   static llvm::Expected<std::unique_ptr<RISCVISAInfo>>
   parseNormalizedArchString(StringRef Arch);
 
-  /// Parse RISCV ISA info from feature vector.
+  /// Parse RISC-V ISA info from feature vector.
   static llvm::Expected<std::unique_ptr<RISCVISAInfo>>
   parseFeatures(unsigned XLen, const std::vector<std::string> &Features);
 
-  /// Convert RISCV ISA info to a feature vector.
+  /// Convert RISC-V ISA info to a feature vector.
   void toFeatures(std::vector<StringRef> &Features,
                   llvm::function_ref<StringRef(const Twine &)> StrAlloc,
                   bool AddAllExtensions) const;

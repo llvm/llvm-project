@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass custom lowers llvm.gather and llvm.scatter instructions to
-// RISCV intrinsics.
+// RISC-V intrinsics.
 //
 //===----------------------------------------------------------------------===//
 
@@ -59,7 +59,7 @@ public:
   }
 
   StringRef getPassName() const override {
-    return "RISCV gather/scatter lowering";
+    return "RISC-V gather/scatter lowering";
   }
 
 private:
@@ -81,7 +81,7 @@ private:
 char RISCVGatherScatterLowering::ID = 0;
 
 INITIALIZE_PASS(RISCVGatherScatterLowering, DEBUG_TYPE,
-                "RISCV gather/scatter lowering pass", false, false)
+                "RISC-V gather/scatter lowering pass", false, false)
 
 FunctionPass *llvm::createRISCVGatherScatterLoweringPass() {
   return new RISCVGatherScatterLowering();
@@ -148,9 +148,11 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
     return std::make_pair(ConstantInt::get(Ty, 0), ConstantInt::get(Ty, 1));
   }
 
-  // Not a constant, maybe it's a strided constant with a splat added to it.
+  // Not a constant, maybe it's a strided constant with a splat added or
+  // multipled.
   auto *BO = dyn_cast<BinaryOperator>(Start);
-  if (!BO || BO->getOpcode() != Instruction::Add)
+  if (!BO || (BO->getOpcode() != Instruction::Add &&
+              BO->getOpcode() != Instruction::Mul))
     return std::make_pair(nullptr, nullptr);
 
   // Look for an operand that is splatted.
@@ -169,10 +171,17 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
   if (!Start)
     return std::make_pair(nullptr, nullptr);
 
-  // Add the splat value to the start.
   Builder.SetInsertPoint(BO);
   Builder.SetCurrentDebugLocation(DebugLoc());
-  Start = Builder.CreateAdd(Start, Splat);
+  // Add the splat value to the start or multiply the start and stride by the
+  // splat.
+  if (BO->getOpcode() == Instruction::Add) {
+    Start = Builder.CreateAdd(Start, Splat);
+  } else {
+    assert(BO->getOpcode() == Instruction::Mul && "Unexpected opcode");
+    Start = Builder.CreateMul(Start, Splat);
+    Stride = Builder.CreateMul(Stride, Splat);
+  }
   return std::make_pair(Start, Stride);
 }
 

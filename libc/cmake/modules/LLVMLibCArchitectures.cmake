@@ -6,7 +6,7 @@
 # platform.
 # ------------------------------------------------------------------------------
 
-if(LIBC_GPU_BUILD)
+if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
   # We set the generic target and OS to "gpu" here. More specific defintions
   # for the exact target GPU are set up in prepare_libc_gpu_build.cmake.
   set(LIBC_TARGET_OS "gpu")

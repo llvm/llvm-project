@@ -1,5 +1,4 @@
 add_lldb_library(lldbPluginPlatformGDB PLUGIN
-  GDBRemoteSignals.cpp
   PlatformRemoteGDBServer.cpp
 
    LINK_LIBS
@@ -7,5 +6,6 @@ add_lldb_library(lldbPluginPlatformGDB PLUGIN
     lldbCore
     lldbHost
     lldbTarget
+    lldbPluginProcessUtility
     lldbPluginProcessGDBRemote
   )

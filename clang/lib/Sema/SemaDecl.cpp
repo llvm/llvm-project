@@ -1661,19 +1661,13 @@ bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
   if (NewM == OldM)
     return false;
 
-  if (NewM && OldM) {
-    // A module implementation unit has visibility of the decls in its
-    // implicitly imported interface.
-    if (NewM->isModuleImplementation() && OldM == ThePrimaryInterface)
-      return false;
-
-    // Partitions are part of the module, but a partition could import another
-    // module, so verify that the PMIs agree.
-    if ((NewM->isModulePartition() || OldM->isModulePartition()) &&
-        NewM->getPrimaryModuleInterfaceName() ==
-            OldM->getPrimaryModuleInterfaceName())
-      return false;
-  }
+  // Partitions are part of the module, but a partition could import another
+  // module, so verify that the PMIs agree.
+  if (NewM && OldM &&
+      (NewM->isModulePartition() || OldM->isModulePartition()) &&
+      NewM->getPrimaryModuleInterfaceName() ==
+          OldM->getPrimaryModuleInterfaceName())
+    return false;
 
   bool NewIsModuleInterface = NewM && NewM->isModulePurview();
   bool OldIsModuleInterface = OldM && OldM->isModulePurview();

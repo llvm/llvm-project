@@ -14,11 +14,11 @@
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 multiclass VCLMUL_MV_V_X<string opcodestr, bits<6> funct6> {
   def V  : VALUVV<funct6, OPMVV, opcodestr # "." # "vv">,
-           Sched<[WriteVIALUV_UpperBound, ReadVIALUV_UpperBound,
-                  ReadVIALUV_UpperBound, ReadVMask]>;
+           Sched<[WriteVIALUV_WorstCase, ReadVIALUV_WorstCase,
+                  ReadVIALUV_WorstCase, ReadVMask]>;
   def X  : VALUVX<funct6, OPMVX, opcodestr # "." # "vx">,
-           Sched<[WriteVIALUX_UpperBound, ReadVIALUV_UpperBound,
-                  ReadVIALUX_UpperBound, ReadVMask]>;
+           Sched<[WriteVIALUX_WorstCase, ReadVIALUV_WorstCase,
+                  ReadVIALUX_WorstCase, ReadVMask]>;
 }
 
 class RVInstIVI_VROR<bits<6> funct6, dag outs, dag ins, string opcodestr,
@@ -48,7 +48,7 @@ multiclass VROR_IV_V_X_I<string opcodestr, bits<6> funct6,
   def I : RVInstIVI_VROR<funct6, (outs VR:$vd),
               (ins VR:$vs2, optype:$imm, VMaskOp:$vm),
               opcodestr # "." # vw # "i", "$vd, $vs2, $imm$vm">,
-         Sched<[WriteVIALUI_UpperBound, ReadVIALUV_UpperBound,
+         Sched<[WriteVIALUI_WorstCase, ReadVIALUV_WorstCase,
                 ReadVMask]>;
 }
 

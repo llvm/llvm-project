@@ -13,8 +13,7 @@
 // UNSUPPORTED: gcc-12
 
 // TODO FMT This test should not require std::to_chars(floating-point)
-// This test requires std::to_chars(floating-point), which is in the dylib
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0}}
+// XFAIL: availability-fp_to_chars-missing
 
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8

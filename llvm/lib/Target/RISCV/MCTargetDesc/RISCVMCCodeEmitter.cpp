@@ -1,4 +1,4 @@
-//===-- RISCVMCCodeEmitter.cpp - Convert RISCV code to machine code -------===//
+//===-- RISCVMCCodeEmitter.cpp - Convert RISC-V code to machine code ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -98,7 +98,7 @@ MCCodeEmitter *llvm::createRISCVMCCodeEmitter(const MCInstrInfo &MCII,
 
 // Expand PseudoCALL(Reg), PseudoTAIL and PseudoJump to AUIPC and JALR with
 // relocation types. We expand those pseudo-instructions while encoding them,
-// meaning AUIPC and JALR won't go through RISCV MC to MC compressed
+// meaning AUIPC and JALR won't go through RISC-V MC to MC compressed
 // instruction transformation. This is acceptable because AUIPC has no 16-bit
 // form and C_JALR has no immediate operand field.  We let linker relaxation
 // deal with it. When linker relaxation is enabled, AUIPC and JALR have a
@@ -216,7 +216,7 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI, raw_ostream &OS,
 
   bool UseCompressedBr = false;
   if (IsEqTest && (STI.hasFeature(RISCV::FeatureStdExtC) ||
-                   STI.hasFeature(RISCV::FeatureExtZca))) {
+                   STI.hasFeature(RISCV::FeatureStdExtZca))) {
     if (RISCV::X8 <= SrcReg1.id() && SrcReg1.id() <= RISCV::X15 &&
         SrcReg2.id() == RISCV::X0) {
       UseCompressedBr = true;

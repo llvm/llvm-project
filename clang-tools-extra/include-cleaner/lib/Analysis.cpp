@@ -36,9 +36,10 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
   tooling::stdlib::Recognizer Recognizer;
   for (auto *Root : ASTRoots) {
     walkAST(*Root, [&](SourceLocation Loc, NamedDecl &ND, RefType RT) {
-      if (!SM.isWrittenInMainFile(SM.getSpellingLoc(Loc)))
+      auto FID = SM.getFileID(SM.getSpellingLoc(Loc));
+      if (FID != SM.getMainFileID() && FID != SM.getPreambleFileID())
         return;
-      // FIXME: Most of the work done here is repetative. It might be useful to
+      // FIXME: Most of the work done here is repetitive. It might be useful to
       // have a cache/batching.
       SymbolReference SymRef{Loc, ND, RT};
       return CB(SymRef, headersForSymbol(ND, SM, PI));

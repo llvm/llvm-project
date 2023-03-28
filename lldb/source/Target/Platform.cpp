@@ -1672,7 +1672,7 @@ FileSpec Platform::GetModuleCacheRoot() {
 
 const char *Platform::GetCacheHostname() { return GetHostname(); }
 
-UnixSignalsSP Platform::GetRemoteUnixSignals() {
+const UnixSignalsSP &Platform::GetRemoteUnixSignals() {
   static const auto s_default_unix_signals_sp = std::make_shared<UnixSignals>();
   return s_default_unix_signals_sp;
 }
