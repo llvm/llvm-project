@@ -221,12 +221,11 @@ def SparseTensorCodegen : Pass<"sparse-tensor-codegen", "ModuleOp"> {
     Option<"enableBufferInitialization", "enable-buffer-initialization", "bool",
            "false", "Enable zero-initialization of the memory buffers">,
     Option<"createSparseDeallocs", "create-sparse-deallocs", "bool",
-           "true", "Specify if the temporary sparse buffer created by the sparse "
+           "true", "Specify if the temporary buffers created by the sparse "
                    "compiler should be deallocated. For compatibility with core "
                    "bufferization passes. "
-                   "It only takes effect when enable-runtime-library=false, otherwise "
-                   "the memory storage for sparse tensors are managed by the runtime "
-                   "library. See also create-deallocs for BufferizationOption.">,
+                   "This option is only used when enable-runtime-library=false. "
+                   "See also create-deallocs for BufferizationOption.">,
   ];
 }
 

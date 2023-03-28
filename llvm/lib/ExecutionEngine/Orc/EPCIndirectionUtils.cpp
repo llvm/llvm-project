@@ -58,16 +58,16 @@ public:
 
   Error deallocateStubs();
 
-  Error createStub(StringRef StubName, JITTargetAddress StubAddr,
+  Error createStub(StringRef StubName, ExecutorAddr StubAddr,
                    JITSymbolFlags StubFlags) override;
 
   Error createStubs(const StubInitsMap &StubInits) override;
 
-  JITEvaluatedSymbol findStub(StringRef Name, bool ExportedStubsOnly) override;
+  ExecutorSymbolDef findStub(StringRef Name, bool ExportedStubsOnly) override;
 
-  JITEvaluatedSymbol findPointer(StringRef Name) override;
+  ExecutorSymbolDef findPointer(StringRef Name) override;
 
-  Error updatePointer(StringRef Name, JITTargetAddress NewAddr) override;
+  Error updatePointer(StringRef Name, ExecutorAddr NewAddr) override;
 
 private:
   using StubInfo = std::pair<IndirectStubInfo, JITSymbolFlags>;
@@ -118,12 +118,10 @@ Error EPCTrampolinePool::grow() {
   unsigned NumTrampolines = TrampolinesPerPage;
 
   auto SegInfo = Alloc->getSegInfo(MemProt::Read | MemProt::Exec);
-  EPCIU.getABISupport().writeTrampolines(SegInfo.WorkingMem.data(),
-                                         SegInfo.Addr.getValue(),
-                                         ResolverAddress, NumTrampolines);
+  EPCIU.getABISupport().writeTrampolines(
+      SegInfo.WorkingMem.data(), SegInfo.Addr, ResolverAddress, NumTrampolines);
   for (unsigned I = 0; I < NumTrampolines; ++I)
-    AvailableTrampolines.push_back(SegInfo.Addr.getValue() +
-                                   (I * TrampolineSize));
+    AvailableTrampolines.push_back(SegInfo.Addr + (I * TrampolineSize));
 
   auto FA = Alloc->finalize();
   if (!FA)
@@ -135,7 +133,7 @@ Error EPCTrampolinePool::grow() {
 }
 
 Error EPCIndirectStubsManager::createStub(StringRef StubName,
-                                          JITTargetAddress StubAddr,
+                                          ExecutorAddr StubAddr,
                                           JITSymbolFlags StubFlags) {
   StubInitsMap SIM;
   SIM[StubName] = std::make_pair(StubAddr, StubFlags);
@@ -164,7 +162,7 @@ Error EPCIndirectStubsManager::createStubs(const StubInitsMap &StubInits) {
     for (auto &SI : StubInits)
       PtrUpdates.push_back(
           {ExecutorAddr((*AvailableStubInfos)[ASIdx++].PointerAddress),
-           static_cast<uint32_t>(SI.second.first)});
+           static_cast<uint32_t>(SI.second.first.getValue())});
     return MemAccess.writeUInt32s(PtrUpdates);
   }
   case 8: {
@@ -173,7 +171,7 @@ Error EPCIndirectStubsManager::createStubs(const StubInitsMap &StubInits) {
     for (auto &SI : StubInits)
       PtrUpdates.push_back(
           {ExecutorAddr((*AvailableStubInfos)[ASIdx++].PointerAddress),
-           static_cast<uint64_t>(SI.second.first)});
+           static_cast<uint64_t>(SI.second.first.getValue())});
     return MemAccess.writeUInt64s(PtrUpdates);
   }
   default:
@@ -182,27 +180,27 @@ Error EPCIndirectStubsManager::createStubs(const StubInitsMap &StubInits) {
   }
 }
 
-JITEvaluatedSymbol EPCIndirectStubsManager::findStub(StringRef Name,
-                                                     bool ExportedStubsOnly) {
+ExecutorSymbolDef EPCIndirectStubsManager::findStub(StringRef Name,
+                                                    bool ExportedStubsOnly) {
   std::lock_guard<std::mutex> Lock(ISMMutex);
   auto I = StubInfos.find(Name);
   if (I == StubInfos.end())
-    return nullptr;
+    return ExecutorSymbolDef();
   return {I->second.first.StubAddress, I->second.second};
 }
 
-JITEvaluatedSymbol EPCIndirectStubsManager::findPointer(StringRef Name) {
+ExecutorSymbolDef EPCIndirectStubsManager::findPointer(StringRef Name) {
   std::lock_guard<std::mutex> Lock(ISMMutex);
   auto I = StubInfos.find(Name);
   if (I == StubInfos.end())
-    return nullptr;
+    return ExecutorSymbolDef();
   return {I->second.first.PointerAddress, I->second.second};
 }
 
 Error EPCIndirectStubsManager::updatePointer(StringRef Name,
-                                             JITTargetAddress NewAddr) {
+                                             ExecutorAddr NewAddr) {
 
-  JITTargetAddress PtrAddr = 0;
+  ExecutorAddr PtrAddr;
   {
     std::lock_guard<std::mutex> Lock(ISMMutex);
     auto I = StubInfos.find(Name);
@@ -215,11 +213,11 @@ Error EPCIndirectStubsManager::updatePointer(StringRef Name,
   auto &MemAccess = EPCIU.getExecutorProcessControl().getMemoryAccess();
   switch (EPCIU.getABISupport().getPointerSize()) {
   case 4: {
-    tpctypes::UInt32Write PUpdate(ExecutorAddr(PtrAddr), NewAddr);
+    tpctypes::UInt32Write PUpdate(PtrAddr, NewAddr.getValue());
     return MemAccess.writeUInt32s(PUpdate);
   }
   case 8: {
-    tpctypes::UInt64Write PUpdate(ExecutorAddr(PtrAddr), NewAddr);
+    tpctypes::UInt64Write PUpdate(PtrAddr, NewAddr.getValue());
     return MemAccess.writeUInt64s(PUpdate);
   }
   default:
@@ -290,9 +288,9 @@ Error EPCIndirectionUtils::cleanup() {
   return Err;
 }
 
-Expected<JITTargetAddress>
-EPCIndirectionUtils::writeResolverBlock(JITTargetAddress ReentryFnAddr,
-                                        JITTargetAddress ReentryCtxAddr) {
+Expected<ExecutorAddr>
+EPCIndirectionUtils::writeResolverBlock(ExecutorAddr ReentryFnAddr,
+                                        ExecutorAddr ReentryCtxAddr) {
   using namespace jitlink;
 
   assert(ABI && "ABI can not be null");
@@ -307,7 +305,7 @@ EPCIndirectionUtils::writeResolverBlock(JITTargetAddress ReentryFnAddr,
     return Alloc.takeError();
 
   auto SegInfo = Alloc->getSegInfo(MemProt::Read | MemProt::Exec);
-  ResolverBlockAddr = SegInfo.Addr.getValue();
+  ResolverBlockAddr = SegInfo.Addr;
   ABI->writeResolverCode(SegInfo.WorkingMem.data(), ResolverBlockAddr,
                          ReentryFnAddr, ReentryCtxAddr);
 
@@ -331,7 +329,7 @@ TrampolinePool &EPCIndirectionUtils::getTrampolinePool() {
 }
 
 LazyCallThroughManager &EPCIndirectionUtils::createLazyCallThroughManager(
-    ExecutionSession &ES, JITTargetAddress ErrorHandlerAddr) {
+    ExecutionSession &ES, ExecutorAddr ErrorHandlerAddr) {
   assert(!LCTM &&
          "createLazyCallThroughManager can not have been called before");
   LCTM = std::make_unique<LazyCallThroughManager>(ES, ErrorHandlerAddr,
@@ -377,9 +375,8 @@ EPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
     auto StubSeg = Alloc->getSegInfo(StubProt);
     auto PtrSeg = Alloc->getSegInfo(PtrProt);
 
-    ABI->writeIndirectStubsBlock(StubSeg.WorkingMem.data(),
-                                 StubSeg.Addr.getValue(),
-                                 PtrSeg.Addr.getValue(), NumStubsToAllocate);
+    ABI->writeIndirectStubsBlock(StubSeg.WorkingMem.data(), StubSeg.Addr,
+                                 PtrSeg.Addr, NumStubsToAllocate);
 
     auto FA = Alloc->finalize();
     if (!FA)
@@ -390,8 +387,8 @@ EPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
     auto StubExecutorAddr = StubSeg.Addr;
     auto PtrExecutorAddr = PtrSeg.Addr;
     for (unsigned I = 0; I != NumStubsToAllocate; ++I) {
-      AvailableIndirectStubs.push_back(IndirectStubInfo(
-          StubExecutorAddr.getValue(), PtrExecutorAddr.getValue()));
+      AvailableIndirectStubs.push_back(
+          IndirectStubInfo(StubExecutorAddr, PtrExecutorAddr));
       StubExecutorAddr += ABI->getStubSize();
       PtrExecutorAddr += ABI->getPointerSize();
     }
@@ -412,19 +409,19 @@ EPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
 static JITTargetAddress reentry(JITTargetAddress LCTMAddr,
                                 JITTargetAddress TrampolineAddr) {
   auto &LCTM = *jitTargetAddressToPointer<LazyCallThroughManager *>(LCTMAddr);
-  std::promise<JITTargetAddress> LandingAddrP;
+  std::promise<ExecutorAddr> LandingAddrP;
   auto LandingAddrF = LandingAddrP.get_future();
   LCTM.resolveTrampolineLandingAddress(
-      TrampolineAddr,
-      [&](JITTargetAddress Addr) { LandingAddrP.set_value(Addr); });
-  return LandingAddrF.get();
+      ExecutorAddr(TrampolineAddr),
+      [&](ExecutorAddr Addr) { LandingAddrP.set_value(Addr); });
+  return LandingAddrF.get().getValue();
 }
 
 Error setUpInProcessLCTMReentryViaEPCIU(EPCIndirectionUtils &EPCIU) {
   auto &LCTM = EPCIU.getLazyCallThroughManager();
   return EPCIU
-      .writeResolverBlock(pointerToJITTargetAddress(&reentry),
-                          pointerToJITTargetAddress(&LCTM))
+      .writeResolverBlock(ExecutorAddr::fromPtr(&reentry),
+                          ExecutorAddr::fromPtr(&LCTM))
       .takeError();
 }
 

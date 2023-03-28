@@ -269,6 +269,9 @@ end
 * A scalar logical dummy argument to a `BIND(C)` procedure does
   not have to have `KIND=C_BOOL` since it can be converted to/from
   `_Bool` without loss of information.
+* The character length of the `SOURCE=` or `MOLD=` in `ALLOCATE`
+  may be distinct from the constant character length, if any,
+  of an allocated object.
 
 ### Extensions supported when enabled by options
 

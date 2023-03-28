@@ -33,22 +33,22 @@ define <4 x double> @shuffle_fv_v4f64(<4 x double> %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a0, 9
 ; RV32-NEXT:    lui a1, %hi(.LCPI2_0)
-; RV32-NEXT:    fld ft0, %lo(.LCPI2_0)(a1)
+; RV32-NEXT:    fld fa5, %lo(.LCPI2_0)(a1)
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; RV32-NEXT:    vmv.s.x v0, a0
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    vfmerge.vfm v8, v8, ft0, v0
+; RV32-NEXT:    vfmerge.vfm v8, v8, fa5, v0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: shuffle_fv_v4f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, %hi(.LCPI2_0)
-; RV64-NEXT:    fld ft0, %lo(.LCPI2_0)(a0)
+; RV64-NEXT:    fld fa5, %lo(.LCPI2_0)(a0)
 ; RV64-NEXT:    li a0, 9
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; RV64-NEXT:    vmv.s.x v0, a0
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vfmerge.vfm v8, v8, ft0, v0
+; RV64-NEXT:    vfmerge.vfm v8, v8, fa5, v0
 ; RV64-NEXT:    ret
   %s = shufflevector <4 x double> <double 2.0, double 2.0, double 2.0, double 2.0>, <4 x double> %x, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
   ret <4 x double> %s
@@ -59,22 +59,22 @@ define <4 x double> @shuffle_vf_v4f64(<4 x double> %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a0, 6
 ; RV32-NEXT:    lui a1, %hi(.LCPI3_0)
-; RV32-NEXT:    fld ft0, %lo(.LCPI3_0)(a1)
+; RV32-NEXT:    fld fa5, %lo(.LCPI3_0)(a1)
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; RV32-NEXT:    vmv.s.x v0, a0
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    vfmerge.vfm v8, v8, ft0, v0
+; RV32-NEXT:    vfmerge.vfm v8, v8, fa5, v0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: shuffle_vf_v4f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, %hi(.LCPI3_0)
-; RV64-NEXT:    fld ft0, %lo(.LCPI3_0)(a0)
+; RV64-NEXT:    fld fa5, %lo(.LCPI3_0)(a0)
 ; RV64-NEXT:    li a0, 6
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; RV64-NEXT:    vmv.s.x v0, a0
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vfmerge.vfm v8, v8, ft0, v0
+; RV64-NEXT:    vfmerge.vfm v8, v8, fa5, v0
 ; RV64-NEXT:    ret
   %s = shufflevector <4 x double> %x, <4 x double> <double 2.0, double 2.0, double 2.0, double 2.0>, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
   ret <4 x double> %s

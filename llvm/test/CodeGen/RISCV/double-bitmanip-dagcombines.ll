@@ -99,12 +99,12 @@ define double @fcopysign_fneg(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    sw a2, 8(sp)
 ; RV32IFD-NEXT:    sw a3, 12(sp)
-; RV32IFD-NEXT:    fld ft0, 8(sp)
+; RV32IFD-NEXT:    fld fa5, 8(sp)
 ; RV32IFD-NEXT:    sw a0, 8(sp)
 ; RV32IFD-NEXT:    sw a1, 12(sp)
-; RV32IFD-NEXT:    fld ft1, 8(sp)
-; RV32IFD-NEXT:    fsgnjn.d ft0, ft1, ft0
-; RV32IFD-NEXT:    fsd ft0, 8(sp)
+; RV32IFD-NEXT:    fld fa4, 8(sp)
+; RV32IFD-NEXT:    fsgnjn.d fa5, fa4, fa5
+; RV32IFD-NEXT:    fsd fa5, 8(sp)
 ; RV32IFD-NEXT:    lw a0, 8(sp)
 ; RV32IFD-NEXT:    lw a1, 12(sp)
 ; RV32IFD-NEXT:    addi sp, sp, 16
@@ -125,10 +125,10 @@ define double @fcopysign_fneg(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    li a2, -1
 ; RV64IFD-NEXT:    slli a2, a2, 63
 ; RV64IFD-NEXT:    xor a1, a1, a2
-; RV64IFD-NEXT:    fmv.d.x ft0, a1
-; RV64IFD-NEXT:    fmv.d.x ft1, a0
-; RV64IFD-NEXT:    fsgnj.d ft0, ft1, ft0
-; RV64IFD-NEXT:    fmv.x.d a0, ft0
+; RV64IFD-NEXT:    fmv.d.x fa5, a1
+; RV64IFD-NEXT:    fmv.d.x fa4, a0
+; RV64IFD-NEXT:    fsgnj.d fa5, fa4, fa5
+; RV64IFD-NEXT:    fmv.x.d a0, fa5
 ; RV64IFD-NEXT:    ret
   %1 = fneg double %b
   %2 = call double @llvm.copysign.f64(double %a, double %1)

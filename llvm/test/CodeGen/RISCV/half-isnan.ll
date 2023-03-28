@@ -17,8 +17,8 @@ define zeroext i1 @half_is_nan(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: half_is_nan:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; CHECKIZFHMIN-NEXT:    feq.s a0, ft0, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECKIZFHMIN-NEXT:    feq.s a0, fa5, fa5
 ; CHECKIZFHMIN-NEXT:    xori a0, a0, 1
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = fcmp uno half %a, 0.000000e+00
@@ -33,8 +33,8 @@ define zeroext i1 @half_not_nan(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: half_not_nan:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; CHECKIZFHMIN-NEXT:    feq.s a0, ft0, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECKIZFHMIN-NEXT:    feq.s a0, fa5, fa5
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = fcmp ord half %a, 0.000000e+00
   ret i1 %1

@@ -27,13 +27,13 @@ define float @fmul_f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-NEXT:    vfmul.vv v8, v8, v10
 ; CHECK-NEXT:    vrgather.vi v10, v8, 1
 ; CHECK-NEXT:    vfmul.vv v8, v8, v10
-; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 2
 ; CHECK-NEXT:    vfmul.vv v8, v9, v8
 ; CHECK-NEXT:    vrgather.vi v9, v8, 1
 ; CHECK-NEXT:    vfmul.vv v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s ft1, v8
-; CHECK-NEXT:    fmul.s fa0, ft0, ft1
+; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    fmul.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float 1.0, <4 x float> %a)
   %r2 = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float 1.0, <4 x float> %b)
@@ -45,14 +45,14 @@ define float @fmin_f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: fmin_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI2_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI2_0)(a0)
+; CHECK-NEXT:    flw fa5, %lo(.LCPI2_0)(a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v10, ft0
+; CHECK-NEXT:    vfmv.s.f v10, fa5
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v10
-; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    vfredmin.vs v8, v9, v10
-; CHECK-NEXT:    vfmv.f.s ft1, v8
-; CHECK-NEXT:    fmin.s fa0, ft0, ft1
+; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    fmin.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmin.v4f32(<4 x float> %a)
   %r2 = call fast float @llvm.vector.reduce.fmin.v4f32(<4 x float> %b)
@@ -64,14 +64,14 @@ define float @fmax_f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: fmax_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI3_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI3_0)(a0)
+; CHECK-NEXT:    flw fa5, %lo(.LCPI3_0)(a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v10, ft0
+; CHECK-NEXT:    vfmv.s.f v10, fa5
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v10
-; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    vfredmax.vs v8, v9, v10
-; CHECK-NEXT:    vfmv.f.s ft1, v8
-; CHECK-NEXT:    fmax.s fa0, ft0, ft1
+; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    fmax.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmax.v4f32(<4 x float> %a)
   %r2 = call fast float @llvm.vector.reduce.fmax.v4f32(<4 x float> %b)
