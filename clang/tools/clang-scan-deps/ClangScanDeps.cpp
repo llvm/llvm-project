@@ -544,6 +544,7 @@ public:
     ID.FileDeps = std::move(TUDeps.FileDeps);
     ID.ModuleDeps = std::move(TUDeps.ClangModuleDeps);
     ID.CASFileSystemRootID = std::move(TUDeps.CASFileSystemRootID);
+    ID.IncludeTreeID = std::move(TUDeps.IncludeTreeID);
     ID.DriverCommandLine = std::move(TUDeps.DriverCommandLine);
     ID.Commands = std::move(TUDeps.Commands);
 
@@ -624,6 +625,8 @@ public:
       };
       if (MD.CASFileSystemRootID)
         O.try_emplace("casfs-root-id", MD.CASFileSystemRootID->toString());
+      if (MD.IncludeTreeID)
+        O.try_emplace("cas-include-tree-id", MD.IncludeTreeID);
       OutModules.push_back(std::move(O));
     }
 
@@ -642,6 +645,8 @@ public:
           };
           if (I.CASFileSystemRootID)
             O.try_emplace("casfs-root-id", I.CASFileSystemRootID);
+          if (I.IncludeTreeID)
+            O.try_emplace("cas-include-tree-id", I.IncludeTreeID);
           Commands.push_back(std::move(O));
         }
       } else {
@@ -655,6 +660,8 @@ public:
         };
         if (I.CASFileSystemRootID)
           O.try_emplace("casfs-root-id", I.CASFileSystemRootID);
+        if (I.IncludeTreeID)
+          O.try_emplace("cas-include-tree-id", I.IncludeTreeID);
         Commands.push_back(std::move(O));
       }
       TUs.push_back(Object{
@@ -694,7 +701,8 @@ private:
     std::string ContextHash;
     std::vector<std::string> FileDeps;
     std::vector<ModuleID> ModuleDeps;
-    llvm::Optional<std::string> CASFileSystemRootID;
+    Optional<std::string> CASFileSystemRootID;
+    Optional<std::string> IncludeTreeID;
     std::vector<std::string> DriverCommandLine;
     std::vector<Command> Commands;
   };
@@ -995,7 +1003,7 @@ int main(int argc, const char **argv) {
                                    std::move(MaybeTree));
         } else if (Format == ScanningOutputFormat::IncludeTree) {
           auto MaybeTree = WorkerTools[I]->getIncludeTree(
-              *CAS, Input->CommandLine, CWD, PrefixMapping);
+              *CAS, Input->CommandLine, CWD, LookupOutput, PrefixMapping);
           std::unique_lock<std::mutex> LockGuard(Lock);
           TreeResults.emplace_back(LocalIndex, std::move(Filename),
                                    std::move(MaybeTree));

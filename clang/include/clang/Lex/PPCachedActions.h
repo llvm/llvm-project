@@ -15,9 +15,12 @@
 #define LLVM_CLANG_LEX_PPCACHEDACTIONS_H
 
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace clang {
 
+class IdentifierInfo;
+class Module;
 class Preprocessor;
 
 /// This interface provides a way to override the actions of the preprocessor as
@@ -28,6 +31,18 @@ class PPCachedActions {
   virtual void anchor();
 
 public:
+  /// The file that is included by an \c #include directive.
+  struct IncludeFile {
+    FileID FID;
+    Module *Submodule;
+  };
+  /// The module that is imported by an \c #include directive or \c @import.
+  struct IncludeModule {
+    SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> ImportPath;
+    // Whether this module should only be "marked visible" rather than imported.
+    bool VisibilityOnly;
+  };
+
   virtual ~PPCachedActions() = default;
 
   /// \returns the \p FileID that should be used for predefines.
@@ -37,9 +52,10 @@ public:
   virtual bool evaluateHasInclude(Preprocessor &PP, SourceLocation Loc,
                                   bool IsIncludeNext) = 0;
 
-  /// \returns the \p FileID that should be entered for an include directive.
-  /// \p None indicates that the directive should be skipped.
-  virtual Optional<FileID>
+  /// \returns the file that should be entered or module that should be imported
+  /// for an \c #include directive. \c {} indicates that the directive
+  /// should be skipped.
+  virtual std::variant<std::monostate, IncludeFile, IncludeModule>
   handleIncludeDirective(Preprocessor &PP, SourceLocation IncludeLoc,
                          SourceLocation AfterDirectiveLoc) = 0;
 

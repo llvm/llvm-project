@@ -257,7 +257,10 @@ bool ChainedASTReaderListener::readCASFileSystemRootID(StringRef RootID,
   return First->readCASFileSystemRootID(RootID, Complain) ||
          Second->readCASFileSystemRootID(RootID, Complain);
 }
-
+bool ChainedASTReaderListener::readIncludeTreeID(StringRef ID, bool Complain) {
+  return First->readIncludeTreeID(ID, Complain) ||
+         Second->readIncludeTreeID(ID, Complain);
+}
 bool ChainedASTReaderListener::readModuleCacheKey(StringRef ModuleName,
                                                   StringRef Filename,
                                                   StringRef CacheKey) {
@@ -2984,6 +2987,15 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           return OutOfDate;
       }
       break;
+    case CAS_INCLUDE_TREE_ID:
+      F.IncludeTreeID = Blob.str();
+      if (Listener) {
+        bool Complain =
+            !canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities);
+        if (Listener->readIncludeTreeID(F.IncludeTreeID, Complain))
+          return OutOfDate;
+      }
+      break;
     }
   }
 }
@@ -5624,8 +5636,6 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
         CurrentModule->PresumedModuleMapFile = F.ModuleMapPath;
         if (!F.ModuleCacheKey.empty())
           CurrentModule->setModuleCacheKey(F.ModuleCacheKey);
-        if (!F.CASFileSystemRootID.empty())
-          CurrentModule->setCASFileSystemRootID(F.CASFileSystemRootID);
       }
 
       CurrentModule->Kind = Kind;
