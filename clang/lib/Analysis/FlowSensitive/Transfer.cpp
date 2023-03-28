@@ -36,6 +36,16 @@
 namespace clang {
 namespace dataflow {
 
+const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
+  auto BlockIt = CFCtx.getStmtToBlock().find(&ignoreCFGOmittedNodes(S));
+  assert(BlockIt != CFCtx.getStmtToBlock().end());
+  if (!CFCtx.isBlockReachable(*BlockIt->getSecond()))
+    return nullptr;
+  const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
+  assert(State);
+  return &State->Env;
+}
+
 static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
                                           Environment &Env) {
   if (auto *LHSValue =
