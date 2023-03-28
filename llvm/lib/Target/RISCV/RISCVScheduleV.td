@@ -9,8 +9,7 @@
 //===----------------------------------------------------------------------===//
 /// Define scheduler resources associated with def operands.
 
-defvar UpperBoundLMUL = "UpperBound";
-defvar SchedMxList = ["UpperBound", "M1", "M2", "M4", "M8", "MF2", "MF4", "MF8"];
+defvar SchedMxList = ["M1", "M2", "M4", "M8", "MF2", "MF4", "MF8"];
 // Used for widening and narrowing instructions as it doesn't contain M8.
 defvar SchedMxListW = !listremove(SchedMxList, ["M8"]);
 defvar SchedMxListFW = !listremove(SchedMxList, ["M8", "MF8"]);
@@ -28,19 +27,24 @@ class SchedSEWSet<string mx> {
 }
 
 // Define multiclasses to define SchedWrite, SchedRead,  WriteRes, and
-// ReadAdvance for each (name, LMUL) pair for each LMUL in each of the
-// SchedMxList variants above.
+// ReadAdvance for each (name, LMUL) pair and for each LMUL in each of the
+// SchedMxList variants above. Each multiclass is responsible for defining
+// a record that represents the WorseCase behavior for name.
 multiclass LMULSchedWritesImpl<string name, list<string> MxList> {
+  def name # "_WorstCase" : SchedWrite;
   foreach mx = MxList in {
     def name # "_" # mx : SchedWrite;
   }
 }
 multiclass LMULSchedReadsImpl<string name, list<string> MxList> {
+  def name # "_WorstCase" : SchedRead;
   foreach mx = MxList in {
     def name # "_" # mx : SchedRead;
   }
 }
 multiclass LMULWriteResImpl<string name, list<ProcResourceKind> resources> {
+  if !exists<SchedWrite>(name # "_WorstCase") then
+    def : WriteRes<!cast<SchedWrite>(name # "_WorstCase"), resources>;
   foreach mx = SchedMxList in {
     if !exists<SchedWrite>(name # "_" # mx) then
       def : WriteRes<!cast<SchedWrite>(name # "_" # mx), resources>;
@@ -48,6 +52,8 @@ multiclass LMULWriteResImpl<string name, list<ProcResourceKind> resources> {
 }
 multiclass LMULReadAdvanceImpl<string name, int val,
                                list<SchedWrite> writes = []> {
+  if !exists<SchedRead>(name # "_WorstCase") then
+    def : ReadAdvance<!cast<SchedRead>(name # "_WorstCase"), val, writes>;
   foreach mx = SchedMxList in {
     if !exists<SchedRead>(name # "_" # mx) then
       def : ReadAdvance<!cast<SchedRead>(name # "_" # mx), val, writes>;
@@ -56,42 +62,35 @@ multiclass LMULReadAdvanceImpl<string name, int val,
 
 // Define multiclasses to define SchedWrite, SchedRead,  WriteRes, and
 // ReadAdvance for each (name, LMUL, SEW) tuple for each LMUL in each of the
-// SchedMxList variants above.
+// SchedMxList variants above. Each multiclass is responsible for defining
+// a record that represents the WorseCase behavior for name.
 multiclass LMULSEWSchedWritesImpl<string name, list<string> MxList> {
+  def name # "_WorstCase" : SchedWrite;
   foreach mx = MxList in {
-    if !eq(mx, "UpperBound") then
-      def name # "_" # mx : SchedWrite;
-    else
-      foreach sew = SchedSEWSet<mx>.val in
-        def name # "_" # mx # "_E" # sew : SchedWrite;
+    foreach sew = SchedSEWSet<mx>.val in
+      def name # "_" # mx # "_E" # sew : SchedWrite;
   }
 }
 multiclass LMULSEWSchedReadsImpl<string name, list<string> MxList> {
+  def name # "_WorstCase" : SchedRead;
   foreach mx = MxList in {
-    if !eq(mx, "UpperBound") then
-      def name # "_" # mx : SchedRead;
-    else
-      foreach sew = SchedSEWSet<mx>.val in
-        def name # "_" # mx # "_E" # sew : SchedRead;
+    foreach sew = SchedSEWSet<mx>.val in
+      def name # "_" # mx # "_E" # sew : SchedRead;
   }
 }
 multiclass LMULSEWWriteResImpl<string name, list<ProcResourceKind> resources> {
+  def : WriteRes<!cast<SchedWrite>(name # "_WorstCase"), resources>;
   foreach mx = SchedMxList in {
-    if !eq(mx, "UpperBound") then
-      def : WriteRes<!cast<SchedWrite>(name # "_" # mx), resources>;
-    else
-      foreach sew = SchedSEWSet<mx>.val in
-        def : WriteRes<!cast<SchedWrite>(name # "_" # mx # "_E" # sew), resources>;
+   foreach sew = SchedSEWSet<mx>.val in
+     def : WriteRes<!cast<SchedWrite>(name # "_" # mx # "_E" # sew), resources>;
   }
 }
 multiclass LMULSEWReadAdvanceImpl<string name, int val,
                                   list<SchedWrite> writes = []> {
+  def : ReadAdvance<!cast<SchedRead>(name # "_WorstCase"), val, writes>;
   foreach mx = SchedMxList in {
-    if !eq(mx, "UpperBound") then
-      def : ReadAdvance<!cast<SchedRead>(name # "_" # mx), val, writes>;
-    else
-      foreach sew = SchedSEWSet<mx>.val in
-        def : ReadAdvance<!cast<SchedRead>(name # "_" # mx # "_E" # sew), val, writes>;
+    foreach sew = SchedSEWSet<mx>.val in
+      def : ReadAdvance<!cast<SchedRead>(name # "_" # mx # "_E" # sew), val, writes>;
   }
 }
 // Define classes to define list containing all SchedWrites for each (name, LMUL)
