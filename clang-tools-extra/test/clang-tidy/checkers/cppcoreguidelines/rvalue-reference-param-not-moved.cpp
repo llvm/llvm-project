@@ -156,6 +156,13 @@ void moves_parameter_extra_parens(Obj&& o) {
   Obj moved = std::move((o));
 }
 
+void does_not_move_in_evaluated(Obj&& o) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: rvalue reference parameter 'o' is never moved from inside the function body [cppcoreguidelines-rvalue-reference-param-not-moved]
+  using result_t = decltype(std::move(o));
+  unsigned size = sizeof(std::move(o));
+  Obj moved = o;
+}
+
 template <typename T1, typename T2>
 struct mypair {
   T1 first;
