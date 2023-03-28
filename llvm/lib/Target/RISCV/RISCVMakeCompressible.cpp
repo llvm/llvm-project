@@ -75,7 +75,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-make-compressible"
-#define RISCV_COMPRESS_INSTRS_NAME "RISCV Make Compressible"
+#define RISCV_COMPRESS_INSTRS_NAME "RISC-V Make Compressible"
 
 namespace {
 

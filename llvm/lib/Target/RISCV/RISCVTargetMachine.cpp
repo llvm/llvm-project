@@ -68,7 +68,7 @@ static cl::opt<int> RVVVectorBitsMinOpt(
 
 static cl::opt<bool> EnableRISCVCopyPropagation(
     "riscv-enable-copy-propagation",
-    cl::desc("Enable the copy propagation with RISCV copy instr"),
+    cl::desc("Enable the copy propagation with RISC-V copy instr"),
     cl::init(true), cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {

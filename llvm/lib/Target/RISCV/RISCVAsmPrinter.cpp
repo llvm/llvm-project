@@ -53,7 +53,7 @@ public:
                            std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer)) {}
 
-  StringRef getPassName() const override { return "RISCV Assembly Printer"; }
+  StringRef getPassName() const override { return "RISC-V Assembly Printer"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
