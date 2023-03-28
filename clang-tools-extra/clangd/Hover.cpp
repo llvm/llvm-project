@@ -12,6 +12,7 @@
 #include "CodeCompletionStrings.h"
 #include "Config.h"
 #include "FindTarget.h"
+#include "Headers.h"
 #include "IncludeCleaner.h"
 #include "ParsedAST.h"
 #include "Selection.h"
@@ -38,11 +39,15 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Tooling/Syntax/Tokens.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -52,6 +57,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <optional>
 #include <string>
 #include <vector>
@@ -1134,11 +1140,66 @@ void maybeAddSymbolProviders(ParsedAST &AST, HoverInfo &HI,
   HI.Provider = spellHeader(AST, SM.getFileEntryForID(SM.getMainFileID()), H);
 }
 
+// FIXME: similar functions are present in FindHeaders.cpp (symbolName)
+// and IncludeCleaner.cpp (getSymbolName). Introduce a name() method into
+// include_cleaner::Symbol instead.
+std::string getSymbolName(include_cleaner::Symbol Sym) {
+  std::string Name;
+  switch (Sym.kind()) {
+  case include_cleaner::Symbol::Declaration:
+    if (const auto *ND = llvm::dyn_cast<NamedDecl>(&Sym.declaration()))
+      Name = ND->getDeclName().getAsString();
+    break;
+  case include_cleaner::Symbol::Macro:
+    Name = Sym.macro().Name->getName();
+    break;
+  }
+  return Name;
+}
+
+void maybeAddUsedSymbols(ParsedAST &AST, HoverInfo &HI, const Inclusion &Inc) {
+  const SourceManager &SM = AST.getSourceManager();
+  const auto &ConvertedMainFileIncludes =
+      convertIncludes(SM, AST.getIncludeStructure().MainFileIncludes);
+  const auto &HoveredInclude = convertIncludes(SM, llvm::ArrayRef{Inc});
+  llvm::DenseSet<include_cleaner::Symbol> UsedSymbols;
+  include_cleaner::walkUsed(
+      AST.getLocalTopLevelDecls(), collectMacroReferences(AST),
+      AST.getPragmaIncludes(), SM,
+      [&](const include_cleaner::SymbolReference &Ref,
+          llvm::ArrayRef<include_cleaner::Header> Providers) {
+        if (Ref.RT != include_cleaner::RefType::Explicit ||
+            UsedSymbols.find(Ref.Target) != UsedSymbols.end())
+          return;
+
+        for (const include_cleaner::Header &H : Providers) {
+          auto MatchingIncludes = ConvertedMainFileIncludes.match(H);
+          // No match for this provider in the main file.
+          if (MatchingIncludes.empty())
+            continue;
+
+          // Check if the hovered include matches this provider.
+          if (!HoveredInclude.match(H).empty())
+            UsedSymbols.insert(Ref.Target);
+
+          // Don't look for rest of the providers once we've found a match
+          // in the main file.
+          break;
+        }
+      });
+
+  for (const auto &UsedSymbolDecl : UsedSymbols)
+    HI.UsedSymbolNames.push_back(getSymbolName(UsedSymbolDecl));
+  llvm::sort(HI.UsedSymbolNames);
+}
+
 } // namespace
 
 std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
                                   const format::FormatStyle &Style,
                                   const SymbolIndex *Index) {
+  static constexpr trace::Metric HoverCountMetric(
+      "hover", trace::Metric::Counter, "case");
   PrintingPolicy PP =
       getPrintingPolicy(AST.getASTContext().getPrintingPolicy());
   const SourceManager &SM = AST.getSourceManager();
@@ -1157,12 +1218,14 @@ std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   for (const auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
     if (Inc.Resolved.empty() || Inc.HashLine != Pos.line)
       continue;
+    HoverCountMetric.record(1, "include");
     HoverInfo HI;
     HI.Name = std::string(llvm::sys::path::filename(Inc.Resolved));
     // FIXME: We don't have a fitting value for Kind.
     HI.Definition =
         URIForFile::canonicalize(Inc.Resolved, AST.tuPath()).file().str();
     HI.DefinitionLanguage = "";
+    maybeAddUsedSymbols(AST, HI, Inc);
     return HI;
   }
 
@@ -1180,6 +1243,7 @@ std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
       // Prefer the identifier token as a fallback highlighting range.
       HighlightRange = Tok.range(SM).toCharRange(SM);
       if (auto M = locateMacroAt(Tok, AST.getPreprocessor())) {
+        HoverCountMetric.record(1, "macro");
         HI = getHoverContents(*M, Tok, AST);
         if (auto DefLoc = M->Info->getDefinitionLoc(); DefLoc.isValid()) {
           include_cleaner::Macro IncludeCleanerMacro{
@@ -1190,6 +1254,7 @@ std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
         break;
       }
     } else if (Tok.kind() == tok::kw_auto || Tok.kind() == tok::kw_decltype) {
+      HoverCountMetric.record(1, "keyword");
       if (auto Deduced = getDeducedType(AST.getASTContext(), Tok.location())) {
         HI = getDeducedTypeHoverContents(*Deduced, Tok, AST.getASTContext(), PP,
                                          Index);
@@ -1216,6 +1281,7 @@ std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
       auto Decls = explicitReferenceTargets(N->ASTNode, DeclRelation::Alias,
                                             AST.getHeuristicResolver());
       if (const auto *DeclToUse = pickDeclToUse(Decls)) {
+        HoverCountMetric.record(1, "decl");
         HI = getHoverContents(DeclToUse, PP, Index, TB);
         // Layout info only shown when hovering on the field/class itself.
         if (DeclToUse == N->ASTNode.get<Decl>())
@@ -1226,8 +1292,10 @@ std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
         maybeAddCalleeArgInfo(N, *HI, PP);
         maybeAddSymbolProviders(AST, *HI, include_cleaner::Symbol{*DeclToUse});
       } else if (const Expr *E = N->ASTNode.get<Expr>()) {
+        HoverCountMetric.record(1, "expr");
         HI = getHoverContents(N, E, AST, PP, Index);
       } else if (const Attr *A = N->ASTNode.get<Attr>()) {
+        HoverCountMetric.record(1, "attribute");
         HI = getHoverContents(A, AST);
       }
       // FIXME: support hovers for other nodes?
@@ -1376,6 +1444,29 @@ markup::Document HoverInfo::present() const {
     }
 
     Output.addCodeBlock(Buffer, DefinitionLanguage);
+  }
+
+  if (!UsedSymbolNames.empty()) {
+    Output.addRuler();
+    markup::Paragraph &P = Output.addParagraph();
+    P.appendText("provides ");
+
+    const unsigned long SymbolNamesLimit = 5;
+    auto Front =
+        llvm::ArrayRef(UsedSymbolNames)
+            .take_front(std::min(UsedSymbolNames.size(), SymbolNamesLimit));
+
+    for (const auto &Sym : Front) {
+      P.appendCode(Sym);
+      if (Sym != Front.back())
+        P.appendText(", ");
+    }
+
+    if (UsedSymbolNames.size() > Front.size()) {
+      P.appendText(" and ");
+      P.appendText(std::to_string(UsedSymbolNames.size() - Front.size()));
+      P.appendText(" more");
+    }
   }
 
   return Output;

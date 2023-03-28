@@ -349,6 +349,11 @@ public:
   /// as 'used', and having internal linkage.
   virtual bool shouldEmitStaticExternCAliases() const { return true; }
 
+  /// \return true if annonymous zero-sized bitfields should be emitted to
+  /// correctly distinguish between struct types whose memory layout is the
+  /// same, but whose layout may differ when used as argument passed by value
+  virtual bool shouldEmitDWARFBitFieldSeparators() const { return false; }
+
   virtual void setCUDAKernelCallingConvention(const FunctionType *&FT) const {}
 
   /// Return the device-side type for the CUDA device builtin surface type.

@@ -10,6 +10,7 @@
 #include "Annotations.h"
 #include "Config.h"
 #include "Hover.h"
+#include "TestFS.h"
 #include "TestIndex.h"
 #include "TestTU.h"
 #include "index/MemIndex.h"
@@ -2980,6 +2981,91 @@ TEST(Hover, ParseProviderInfo) {
     EXPECT_EQ(Case.HI.present().asMarkdown(), Case.ExpectedMarkdown);
 }
 
+TEST(Hover, UsedSymbols) {
+  struct {
+    const char *Code;
+    const std::function<void(HoverInfo &)> ExpectedBuilder;
+  } Cases[] = {{R"cpp(
+                  #include ^"bar.h"
+                  int fstBar = bar1();
+                  int sndBar = bar2();
+                  Bar bar;
+                  int macroBar = BAR;
+                )cpp",
+                [](HoverInfo &HI) {
+                  HI.UsedSymbolNames = {"BAR", "Bar", "bar1", "bar2"};
+                }},
+               {R"cpp(
+                  #in^clude <vector>
+                  std::vector<int> vec;
+                )cpp",
+                [](HoverInfo &HI) { HI.UsedSymbolNames = {"vector"}; }},
+               {R"cpp(
+                  #in^clude "public.h"
+                  #include "private.h"
+                  int fooVar = foo();
+                )cpp",
+                [](HoverInfo &HI) { HI.UsedSymbolNames = {"foo"}; }},
+               {R"cpp(
+                  #include "bar.h"
+                  #include "for^ward.h"
+                  Bar *x;
+                )cpp",
+                [](HoverInfo &HI) {
+                  HI.UsedSymbolNames = {
+                      // No used symbols, since bar.h is a higher-ranked
+                      // provider for Bar.
+                  };
+                }},
+               {R"cpp(
+                  #include "b^ar.h"
+                  #define DEF(X) const Bar *X
+                  DEF(a);
+                )cpp",
+                [](HoverInfo &HI) { HI.UsedSymbolNames = {"Bar"}; }},
+               {R"cpp(
+                  #in^clude "bar.h"
+                  #define BAZ(X) const X x
+                  BAZ(Bar);
+                )cpp",
+                [](HoverInfo &HI) { HI.UsedSymbolNames = {"Bar"}; }}};
+  for (const auto &Case : Cases) {
+    Annotations Code{Case.Code};
+    SCOPED_TRACE(Code.code());
+
+    TestTU TU;
+    TU.Filename = "foo.cpp";
+    TU.Code = Code.code();
+    TU.AdditionalFiles["bar.h"] = guard(R"cpp(
+                                          #define BAR 5
+                                          int bar1();
+                                          int bar2();
+                                          class Bar {};
+                                        )cpp");
+    TU.AdditionalFiles["private.h"] = guard(R"cpp(
+                                              // IWYU pragma: private, include "public.h"
+                                              int foo(); 
+                                            )cpp");
+    TU.AdditionalFiles["public.h"] = guard("");
+    TU.AdditionalFiles["system/vector"] = guard(R"cpp(
+      namespace std {
+        template<typename>
+        class vector{};
+      }
+    )cpp");
+    TU.AdditionalFiles["forward.h"] = guard("class Bar;");
+    TU.ExtraArgs.push_back("-isystem" + testPath("system"));
+
+    auto AST = TU.build();
+    auto H = getHover(AST, Code.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+    HoverInfo Expected;
+    Case.ExpectedBuilder(Expected);
+    SCOPED_TRACE(H->present().asMarkdown());
+    EXPECT_EQ(H->UsedSymbolNames, Expected.UsedSymbolNames);
+  }
+}
+
 TEST(Hover, DocsFromIndex) {
   Annotations T(R"cpp(
   template <typename T> class X {};
@@ -3369,7 +3455,21 @@ int foo = 3)",
           R"(stdio.h
 
 /usr/include/stdio.h)",
-      }};
+      },
+      {[](HoverInfo &HI) {
+         HI.Name = "foo.h";
+         HI.UsedSymbolNames = {"Foo", "Bar", "Baz"};
+       },
+       R"(foo.h
+
+provides Foo, Bar, Baz)"},
+      {[](HoverInfo &HI) {
+         HI.Name = "foo.h";
+         HI.UsedSymbolNames = {"Foo", "Bar", "Baz", "Foobar", "Qux", "Quux"};
+       },
+       R"(foo.h
+
+provides Foo, Bar, Baz, Foobar, Qux and 1 more)"}};
 
   for (const auto &C : Cases) {
     HoverInfo HI;
