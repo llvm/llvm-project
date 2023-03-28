@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PlatformLinux.h"
-#include "LinuxSignals.h"
 #include "lldb/Host/Config.h"
 
 #include <cstdio>
@@ -480,8 +479,4 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
 
   ast->CompleteTagDeclarationDefinition(siginfo_type);
   return siginfo_type;
-}
-
-lldb::UnixSignalsSP PlatformLinux::CreateUnixSignals() {
-  return std::make_shared<LinuxSignals>();
 }

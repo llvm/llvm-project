@@ -86,6 +86,7 @@ add_lldb_library(lldbTarget
     lldbInterpreter
     lldbSymbol
     lldbUtility
+    lldbPluginProcessUtility
 
   LINK_COMPONENTS
     Support
