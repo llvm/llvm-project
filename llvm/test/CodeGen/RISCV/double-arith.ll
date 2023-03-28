@@ -184,9 +184,9 @@ define double @fsgnj_d(double %a, double %b) nounwind {
 define i32 @fneg_d(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fneg_d:
 ; CHECKIFD:       # %bb.0:
-; CHECKIFD-NEXT:    fadd.d ft0, fa0, fa0
-; CHECKIFD-NEXT:    fneg.d ft1, ft0
-; CHECKIFD-NEXT:    feq.d a0, ft0, ft1
+; CHECKIFD-NEXT:    fadd.d fa5, fa0, fa0
+; CHECKIFD-NEXT:    fneg.d fa4, fa5
+; CHECKIFD-NEXT:    feq.d a0, fa5, fa4
 ; CHECKIFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fneg_d:
@@ -266,9 +266,9 @@ declare double @llvm.fabs.f64(double)
 define double @fabs_d(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fabs_d:
 ; CHECKIFD:       # %bb.0:
-; CHECKIFD-NEXT:    fadd.d ft0, fa0, fa1
-; CHECKIFD-NEXT:    fabs.d ft1, ft0
-; CHECKIFD-NEXT:    fadd.d fa0, ft1, ft0
+; CHECKIFD-NEXT:    fadd.d fa5, fa0, fa1
+; CHECKIFD-NEXT:    fabs.d fa4, fa5
+; CHECKIFD-NEXT:    fadd.d fa0, fa4, fa5
 ; CHECKIFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fabs_d:
@@ -393,16 +393,16 @@ define double @fmadd_d(double %a, double %b, double %c) nounwind {
 define double @fmsub_d(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fmsub_d:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.d.w ft0, zero
-; RV32IFD-NEXT:    fadd.d ft0, fa2, ft0
-; RV32IFD-NEXT:    fmsub.d fa0, fa0, fa1, ft0
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
+; RV32IFD-NEXT:    fadd.d fa5, fa2, fa5
+; RV32IFD-NEXT:    fmsub.d fa0, fa0, fa1, fa5
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fmsub_d:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, zero
-; RV64IFD-NEXT:    fadd.d ft0, fa2, ft0
-; RV64IFD-NEXT:    fmsub.d fa0, fa0, fa1, ft0
+; RV64IFD-NEXT:    fmv.d.x fa5, zero
+; RV64IFD-NEXT:    fadd.d fa5, fa2, fa5
+; RV64IFD-NEXT:    fmsub.d fa0, fa0, fa1, fa5
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fmsub_d:
@@ -469,18 +469,18 @@ define double @fmsub_d(double %a, double %b, double %c) nounwind {
 define double @fnmadd_d(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fnmadd_d:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.d.w ft0, zero
-; RV32IFD-NEXT:    fadd.d ft1, fa0, ft0
-; RV32IFD-NEXT:    fadd.d ft0, fa2, ft0
-; RV32IFD-NEXT:    fnmadd.d fa0, ft1, fa1, ft0
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
+; RV32IFD-NEXT:    fadd.d fa4, fa0, fa5
+; RV32IFD-NEXT:    fadd.d fa5, fa2, fa5
+; RV32IFD-NEXT:    fnmadd.d fa0, fa4, fa1, fa5
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fnmadd_d:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, zero
-; RV64IFD-NEXT:    fadd.d ft1, fa0, ft0
-; RV64IFD-NEXT:    fadd.d ft0, fa2, ft0
-; RV64IFD-NEXT:    fnmadd.d fa0, ft1, fa1, ft0
+; RV64IFD-NEXT:    fmv.d.x fa5, zero
+; RV64IFD-NEXT:    fadd.d fa4, fa0, fa5
+; RV64IFD-NEXT:    fadd.d fa5, fa2, fa5
+; RV64IFD-NEXT:    fnmadd.d fa0, fa4, fa1, fa5
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_d:
@@ -565,18 +565,18 @@ define double @fnmadd_d(double %a, double %b, double %c) nounwind {
 define double @fnmadd_d_2(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fnmadd_d_2:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.d.w ft0, zero
-; RV32IFD-NEXT:    fadd.d ft1, fa1, ft0
-; RV32IFD-NEXT:    fadd.d ft0, fa2, ft0
-; RV32IFD-NEXT:    fnmadd.d fa0, ft1, fa0, ft0
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
+; RV32IFD-NEXT:    fadd.d fa4, fa1, fa5
+; RV32IFD-NEXT:    fadd.d fa5, fa2, fa5
+; RV32IFD-NEXT:    fnmadd.d fa0, fa4, fa0, fa5
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fnmadd_d_2:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, zero
-; RV64IFD-NEXT:    fadd.d ft1, fa1, ft0
-; RV64IFD-NEXT:    fadd.d ft0, fa2, ft0
-; RV64IFD-NEXT:    fnmadd.d fa0, ft1, fa0, ft0
+; RV64IFD-NEXT:    fmv.d.x fa5, zero
+; RV64IFD-NEXT:    fadd.d fa4, fa1, fa5
+; RV64IFD-NEXT:    fadd.d fa5, fa2, fa5
+; RV64IFD-NEXT:    fnmadd.d fa0, fa4, fa0, fa5
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_d_2:
@@ -662,8 +662,8 @@ define double @fnmadd_d_2(double %a, double %b, double %c) nounwind {
 define double @fnmadd_d_3(double %a, double %b, double %c) nounwind {
 ; CHECKIFD-LABEL: fnmadd_d_3:
 ; CHECKIFD:       # %bb.0:
-; CHECKIFD-NEXT:    fmadd.d ft0, fa0, fa1, fa2
-; CHECKIFD-NEXT:    fneg.d fa0, ft0
+; CHECKIFD-NEXT:    fmadd.d fa5, fa0, fa1, fa2
+; CHECKIFD-NEXT:    fneg.d fa0, fa5
 ; CHECKIFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_d_3:
@@ -730,16 +730,16 @@ define double @fnmadd_nsz(double %a, double %b, double %c) nounwind {
 define double @fnmsub_d(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fnmsub_d:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.d.w ft0, zero
-; RV32IFD-NEXT:    fadd.d ft0, fa0, ft0
-; RV32IFD-NEXT:    fnmsub.d fa0, ft0, fa1, fa2
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
+; RV32IFD-NEXT:    fadd.d fa5, fa0, fa5
+; RV32IFD-NEXT:    fnmsub.d fa0, fa5, fa1, fa2
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fnmsub_d:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, zero
-; RV64IFD-NEXT:    fadd.d ft0, fa0, ft0
-; RV64IFD-NEXT:    fnmsub.d fa0, ft0, fa1, fa2
+; RV64IFD-NEXT:    fmv.d.x fa5, zero
+; RV64IFD-NEXT:    fadd.d fa5, fa0, fa5
+; RV64IFD-NEXT:    fnmsub.d fa0, fa5, fa1, fa2
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmsub_d:
@@ -802,16 +802,16 @@ define double @fnmsub_d(double %a, double %b, double %c) nounwind {
 define double @fnmsub_d_2(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fnmsub_d_2:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.d.w ft0, zero
-; RV32IFD-NEXT:    fadd.d ft0, fa1, ft0
-; RV32IFD-NEXT:    fnmsub.d fa0, ft0, fa0, fa2
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
+; RV32IFD-NEXT:    fadd.d fa5, fa1, fa5
+; RV32IFD-NEXT:    fnmsub.d fa0, fa5, fa0, fa2
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fnmsub_d_2:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, zero
-; RV64IFD-NEXT:    fadd.d ft0, fa1, ft0
-; RV64IFD-NEXT:    fnmsub.d fa0, ft0, fa0, fa2
+; RV64IFD-NEXT:    fmv.d.x fa5, zero
+; RV64IFD-NEXT:    fadd.d fa5, fa1, fa5
+; RV64IFD-NEXT:    fnmsub.d fa0, fa5, fa0, fa2
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmsub_d_2:
@@ -920,16 +920,16 @@ define double @fmadd_d_contract(double %a, double %b, double %c) nounwind {
 define double @fmsub_d_contract(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fmsub_d_contract:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.d.w ft0, zero
-; RV32IFD-NEXT:    fadd.d ft0, fa2, ft0
-; RV32IFD-NEXT:    fmsub.d fa0, fa0, fa1, ft0
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
+; RV32IFD-NEXT:    fadd.d fa5, fa2, fa5
+; RV32IFD-NEXT:    fmsub.d fa0, fa0, fa1, fa5
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fmsub_d_contract:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, zero
-; RV64IFD-NEXT:    fadd.d ft0, fa2, ft0
-; RV64IFD-NEXT:    fmsub.d fa0, fa0, fa1, ft0
+; RV64IFD-NEXT:    fmv.d.x fa5, zero
+; RV64IFD-NEXT:    fadd.d fa5, fa2, fa5
+; RV64IFD-NEXT:    fmsub.d fa0, fa0, fa1, fa5
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fmsub_d_contract:
@@ -1004,20 +1004,20 @@ define double @fmsub_d_contract(double %a, double %b, double %c) nounwind {
 define double @fnmadd_d_contract(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fnmadd_d_contract:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.d.w ft0, zero
-; RV32IFD-NEXT:    fadd.d ft1, fa0, ft0
-; RV32IFD-NEXT:    fadd.d ft2, fa1, ft0
-; RV32IFD-NEXT:    fadd.d ft0, fa2, ft0
-; RV32IFD-NEXT:    fnmadd.d fa0, ft1, ft2, ft0
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
+; RV32IFD-NEXT:    fadd.d fa4, fa0, fa5
+; RV32IFD-NEXT:    fadd.d fa3, fa1, fa5
+; RV32IFD-NEXT:    fadd.d fa5, fa2, fa5
+; RV32IFD-NEXT:    fnmadd.d fa0, fa4, fa3, fa5
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fnmadd_d_contract:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, zero
-; RV64IFD-NEXT:    fadd.d ft1, fa0, ft0
-; RV64IFD-NEXT:    fadd.d ft2, fa1, ft0
-; RV64IFD-NEXT:    fadd.d ft0, fa2, ft0
-; RV64IFD-NEXT:    fnmadd.d fa0, ft1, ft2, ft0
+; RV64IFD-NEXT:    fmv.d.x fa5, zero
+; RV64IFD-NEXT:    fadd.d fa4, fa0, fa5
+; RV64IFD-NEXT:    fadd.d fa3, fa1, fa5
+; RV64IFD-NEXT:    fadd.d fa5, fa2, fa5
+; RV64IFD-NEXT:    fnmadd.d fa0, fa4, fa3, fa5
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_d_contract:
@@ -1119,18 +1119,18 @@ define double @fnmadd_d_contract(double %a, double %b, double %c) nounwind {
 define double @fnmsub_d_contract(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fnmsub_d_contract:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.d.w ft0, zero
-; RV32IFD-NEXT:    fadd.d ft1, fa0, ft0
-; RV32IFD-NEXT:    fadd.d ft0, fa1, ft0
-; RV32IFD-NEXT:    fnmsub.d fa0, ft1, ft0, fa2
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
+; RV32IFD-NEXT:    fadd.d fa4, fa0, fa5
+; RV32IFD-NEXT:    fadd.d fa5, fa1, fa5
+; RV32IFD-NEXT:    fnmsub.d fa0, fa4, fa5, fa2
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fnmsub_d_contract:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, zero
-; RV64IFD-NEXT:    fadd.d ft1, fa0, ft0
-; RV64IFD-NEXT:    fadd.d ft0, fa1, ft0
-; RV64IFD-NEXT:    fnmsub.d fa0, ft1, ft0, fa2
+; RV64IFD-NEXT:    fmv.d.x fa5, zero
+; RV64IFD-NEXT:    fadd.d fa4, fa0, fa5
+; RV64IFD-NEXT:    fadd.d fa5, fa1, fa5
+; RV64IFD-NEXT:    fnmsub.d fa0, fa4, fa5, fa2
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmsub_d_contract:

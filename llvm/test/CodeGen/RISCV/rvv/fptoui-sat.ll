@@ -155,11 +155,11 @@ define <vscale x 4 x i16> @test_signed_v4f64_v4i16(<vscale x 4 x double> %f) {
 ; CHECK32-LABEL: test_signed_v4f64_v4i16:
 ; CHECK32:       # %bb.0:
 ; CHECK32-NEXT:    lui a0, %hi(.LCPI10_0)
-; CHECK32-NEXT:    fld ft0, %lo(.LCPI10_0)(a0)
-; CHECK32-NEXT:    fcvt.d.w ft1, zero
+; CHECK32-NEXT:    fld fa5, %lo(.LCPI10_0)(a0)
+; CHECK32-NEXT:    fcvt.d.w fa4, zero
 ; CHECK32-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; CHECK32-NEXT:    vfmax.vf v8, v8, ft1
-; CHECK32-NEXT:    vfmin.vf v8, v8, ft0
+; CHECK32-NEXT:    vfmax.vf v8, v8, fa4
+; CHECK32-NEXT:    vfmin.vf v8, v8, fa5
 ; CHECK32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK32-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; CHECK32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -169,11 +169,11 @@ define <vscale x 4 x i16> @test_signed_v4f64_v4i16(<vscale x 4 x double> %f) {
 ; CHECK64-LABEL: test_signed_v4f64_v4i16:
 ; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    lui a0, %hi(.LCPI10_0)
-; CHECK64-NEXT:    fld ft0, %lo(.LCPI10_0)(a0)
-; CHECK64-NEXT:    fmv.d.x ft1, zero
+; CHECK64-NEXT:    fld fa5, %lo(.LCPI10_0)(a0)
+; CHECK64-NEXT:    fmv.d.x fa4, zero
 ; CHECK64-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; CHECK64-NEXT:    vfmax.vf v8, v8, ft1
-; CHECK64-NEXT:    vfmin.vf v8, v8, ft0
+; CHECK64-NEXT:    vfmax.vf v8, v8, fa4
+; CHECK64-NEXT:    vfmin.vf v8, v8, fa5
 ; CHECK64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK64-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; CHECK64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -187,11 +187,11 @@ define <vscale x 8 x i16> @test_signed_v8f64_v8i16(<vscale x 8 x double> %f) {
 ; CHECK32-LABEL: test_signed_v8f64_v8i16:
 ; CHECK32:       # %bb.0:
 ; CHECK32-NEXT:    lui a0, %hi(.LCPI11_0)
-; CHECK32-NEXT:    fld ft0, %lo(.LCPI11_0)(a0)
-; CHECK32-NEXT:    fcvt.d.w ft1, zero
+; CHECK32-NEXT:    fld fa5, %lo(.LCPI11_0)(a0)
+; CHECK32-NEXT:    fcvt.d.w fa4, zero
 ; CHECK32-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; CHECK32-NEXT:    vfmax.vf v8, v8, ft1
-; CHECK32-NEXT:    vfmin.vf v8, v8, ft0
+; CHECK32-NEXT:    vfmax.vf v8, v8, fa4
+; CHECK32-NEXT:    vfmin.vf v8, v8, fa5
 ; CHECK32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK32-NEXT:    vfncvt.rtz.xu.f.w v16, v8
 ; CHECK32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
@@ -201,11 +201,11 @@ define <vscale x 8 x i16> @test_signed_v8f64_v8i16(<vscale x 8 x double> %f) {
 ; CHECK64-LABEL: test_signed_v8f64_v8i16:
 ; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    lui a0, %hi(.LCPI11_0)
-; CHECK64-NEXT:    fld ft0, %lo(.LCPI11_0)(a0)
-; CHECK64-NEXT:    fmv.d.x ft1, zero
+; CHECK64-NEXT:    fld fa5, %lo(.LCPI11_0)(a0)
+; CHECK64-NEXT:    fmv.d.x fa4, zero
 ; CHECK64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; CHECK64-NEXT:    vfmax.vf v8, v8, ft1
-; CHECK64-NEXT:    vfmin.vf v8, v8, ft0
+; CHECK64-NEXT:    vfmax.vf v8, v8, fa4
+; CHECK64-NEXT:    vfmin.vf v8, v8, fa5
 ; CHECK64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK64-NEXT:    vfncvt.rtz.xu.f.w v16, v8
 ; CHECK64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma

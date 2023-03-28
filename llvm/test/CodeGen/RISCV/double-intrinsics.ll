@@ -603,14 +603,14 @@ define double @floor_f64(double %a) nounwind {
 ; RV64IFD-LABEL: floor_f64:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    lui a0, %hi(.LCPI17_0)
-; RV64IFD-NEXT:    fld ft0, %lo(.LCPI17_0)(a0)
-; RV64IFD-NEXT:    fabs.d ft1, fa0
-; RV64IFD-NEXT:    flt.d a0, ft1, ft0
+; RV64IFD-NEXT:    fld fa5, %lo(.LCPI17_0)(a0)
+; RV64IFD-NEXT:    fabs.d fa4, fa0
+; RV64IFD-NEXT:    flt.d a0, fa4, fa5
 ; RV64IFD-NEXT:    beqz a0, .LBB17_2
 ; RV64IFD-NEXT:  # %bb.1:
 ; RV64IFD-NEXT:    fcvt.l.d a0, fa0, rdn
-; RV64IFD-NEXT:    fcvt.d.l ft0, a0, rdn
-; RV64IFD-NEXT:    fsgnj.d fa0, ft0, fa0
+; RV64IFD-NEXT:    fcvt.d.l fa5, a0, rdn
+; RV64IFD-NEXT:    fsgnj.d fa0, fa5, fa0
 ; RV64IFD-NEXT:  .LBB17_2:
 ; RV64IFD-NEXT:    ret
 ;
@@ -645,14 +645,14 @@ define double @ceil_f64(double %a) nounwind {
 ; RV64IFD-LABEL: ceil_f64:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    lui a0, %hi(.LCPI18_0)
-; RV64IFD-NEXT:    fld ft0, %lo(.LCPI18_0)(a0)
-; RV64IFD-NEXT:    fabs.d ft1, fa0
-; RV64IFD-NEXT:    flt.d a0, ft1, ft0
+; RV64IFD-NEXT:    fld fa5, %lo(.LCPI18_0)(a0)
+; RV64IFD-NEXT:    fabs.d fa4, fa0
+; RV64IFD-NEXT:    flt.d a0, fa4, fa5
 ; RV64IFD-NEXT:    beqz a0, .LBB18_2
 ; RV64IFD-NEXT:  # %bb.1:
 ; RV64IFD-NEXT:    fcvt.l.d a0, fa0, rup
-; RV64IFD-NEXT:    fcvt.d.l ft0, a0, rup
-; RV64IFD-NEXT:    fsgnj.d fa0, ft0, fa0
+; RV64IFD-NEXT:    fcvt.d.l fa5, a0, rup
+; RV64IFD-NEXT:    fsgnj.d fa0, fa5, fa0
 ; RV64IFD-NEXT:  .LBB18_2:
 ; RV64IFD-NEXT:    ret
 ;
@@ -687,14 +687,14 @@ define double @trunc_f64(double %a) nounwind {
 ; RV64IFD-LABEL: trunc_f64:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    lui a0, %hi(.LCPI19_0)
-; RV64IFD-NEXT:    fld ft0, %lo(.LCPI19_0)(a0)
-; RV64IFD-NEXT:    fabs.d ft1, fa0
-; RV64IFD-NEXT:    flt.d a0, ft1, ft0
+; RV64IFD-NEXT:    fld fa5, %lo(.LCPI19_0)(a0)
+; RV64IFD-NEXT:    fabs.d fa4, fa0
+; RV64IFD-NEXT:    flt.d a0, fa4, fa5
 ; RV64IFD-NEXT:    beqz a0, .LBB19_2
 ; RV64IFD-NEXT:  # %bb.1:
 ; RV64IFD-NEXT:    fcvt.l.d a0, fa0, rtz
-; RV64IFD-NEXT:    fcvt.d.l ft0, a0, rtz
-; RV64IFD-NEXT:    fsgnj.d fa0, ft0, fa0
+; RV64IFD-NEXT:    fcvt.d.l fa5, a0, rtz
+; RV64IFD-NEXT:    fsgnj.d fa0, fa5, fa0
 ; RV64IFD-NEXT:  .LBB19_2:
 ; RV64IFD-NEXT:    ret
 ;
@@ -729,14 +729,14 @@ define double @rint_f64(double %a) nounwind {
 ; RV64IFD-LABEL: rint_f64:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    lui a0, %hi(.LCPI20_0)
-; RV64IFD-NEXT:    fld ft0, %lo(.LCPI20_0)(a0)
-; RV64IFD-NEXT:    fabs.d ft1, fa0
-; RV64IFD-NEXT:    flt.d a0, ft1, ft0
+; RV64IFD-NEXT:    fld fa5, %lo(.LCPI20_0)(a0)
+; RV64IFD-NEXT:    fabs.d fa4, fa0
+; RV64IFD-NEXT:    flt.d a0, fa4, fa5
 ; RV64IFD-NEXT:    beqz a0, .LBB20_2
 ; RV64IFD-NEXT:  # %bb.1:
 ; RV64IFD-NEXT:    fcvt.l.d a0, fa0
-; RV64IFD-NEXT:    fcvt.d.l ft0, a0
-; RV64IFD-NEXT:    fsgnj.d fa0, ft0, fa0
+; RV64IFD-NEXT:    fcvt.d.l fa5, a0
+; RV64IFD-NEXT:    fsgnj.d fa0, fa5, fa0
 ; RV64IFD-NEXT:  .LBB20_2:
 ; RV64IFD-NEXT:    ret
 ;
@@ -799,14 +799,14 @@ define double @round_f64(double %a) nounwind {
 ; RV64IFD-LABEL: round_f64:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    lui a0, %hi(.LCPI22_0)
-; RV64IFD-NEXT:    fld ft0, %lo(.LCPI22_0)(a0)
-; RV64IFD-NEXT:    fabs.d ft1, fa0
-; RV64IFD-NEXT:    flt.d a0, ft1, ft0
+; RV64IFD-NEXT:    fld fa5, %lo(.LCPI22_0)(a0)
+; RV64IFD-NEXT:    fabs.d fa4, fa0
+; RV64IFD-NEXT:    flt.d a0, fa4, fa5
 ; RV64IFD-NEXT:    beqz a0, .LBB22_2
 ; RV64IFD-NEXT:  # %bb.1:
 ; RV64IFD-NEXT:    fcvt.l.d a0, fa0, rmm
-; RV64IFD-NEXT:    fcvt.d.l ft0, a0, rmm
-; RV64IFD-NEXT:    fsgnj.d fa0, ft0, fa0
+; RV64IFD-NEXT:    fcvt.d.l fa5, a0, rmm
+; RV64IFD-NEXT:    fsgnj.d fa0, fa5, fa0
 ; RV64IFD-NEXT:  .LBB22_2:
 ; RV64IFD-NEXT:    ret
 ;
@@ -841,14 +841,14 @@ define double @roundeven_f64(double %a) nounwind {
 ; RV64IFD-LABEL: roundeven_f64:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    lui a0, %hi(.LCPI23_0)
-; RV64IFD-NEXT:    fld ft0, %lo(.LCPI23_0)(a0)
-; RV64IFD-NEXT:    fabs.d ft1, fa0
-; RV64IFD-NEXT:    flt.d a0, ft1, ft0
+; RV64IFD-NEXT:    fld fa5, %lo(.LCPI23_0)(a0)
+; RV64IFD-NEXT:    fabs.d fa4, fa0
+; RV64IFD-NEXT:    flt.d a0, fa4, fa5
 ; RV64IFD-NEXT:    beqz a0, .LBB23_2
 ; RV64IFD-NEXT:  # %bb.1:
 ; RV64IFD-NEXT:    fcvt.l.d a0, fa0, rne
-; RV64IFD-NEXT:    fcvt.d.l ft0, a0, rne
-; RV64IFD-NEXT:    fsgnj.d fa0, ft0, fa0
+; RV64IFD-NEXT:    fcvt.d.l fa5, a0, rne
+; RV64IFD-NEXT:    fsgnj.d fa0, fa5, fa0
 ; RV64IFD-NEXT:  .LBB23_2:
 ; RV64IFD-NEXT:    ret
 ;
