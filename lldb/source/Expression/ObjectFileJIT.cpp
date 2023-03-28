@@ -8,17 +8,12 @@
 
 #include "llvm/ADT/StringRef.h"
 
-#include "ObjectFileJIT.h"
-#include "lldb/Core/Debugger.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/StreamFile.h"
-#include "lldb/Host/Host.h"
-#include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Target/Platform.h"
+#include "lldb/Expression/ObjectFileJIT.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
@@ -27,8 +22,6 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RangeMap.h"
-#include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/Utility/UUID.h"
 
@@ -38,8 +31,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-
-LLDB_PLUGIN_DEFINE(ObjectFileJIT)
 
 char ObjectFileJIT::ID;
 
@@ -217,9 +208,9 @@ size_t ObjectFileJIT::ReadSectionData(lldb_private::Section *section,
   return 0;
 }
 
-size_t ObjectFileJIT::ReadSectionData(
-    lldb_private::Section *section,
-    lldb_private::DataExtractor &section_data) {
+size_t
+ObjectFileJIT::ReadSectionData(lldb_private::Section *section,
+                               lldb_private::DataExtractor &section_data) {
   if (section->GetFileSize()) {
     const void *src = (void *)(uintptr_t)section->GetFileOffset();
 
