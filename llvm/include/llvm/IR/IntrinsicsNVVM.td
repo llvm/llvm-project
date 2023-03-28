@@ -583,7 +583,6 @@ let TargetPrefix = "nvvm" in {
       "_xorsign_abs_f16", "_ftz_xorsign_abs_f16", "_nan_xorsign_abs_f16",
       "_ftz_nan_xorsign_abs_f16"] in {
       def int_nvvm_f # operation # variant :
-        ClangBuiltin<!strconcat("__nvvm_f", operation, variant)>,
         DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty],
           [IntrNoMem, IntrSpeculatable, Commutative]>;
     }
@@ -592,7 +591,6 @@ let TargetPrefix = "nvvm" in {
       "_ftz_nan_f16x2", "_xorsign_abs_f16x2", "_ftz_xorsign_abs_f16x2",
       "_nan_xorsign_abs_f16x2", "_ftz_nan_xorsign_abs_f16x2"] in {
       def int_nvvm_f # operation # variant :
-        ClangBuiltin<!strconcat("__nvvm_f", operation, variant)>,
         DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty],
           [IntrNoMem, IntrSpeculatable, Commutative]>;
     }
@@ -828,9 +826,9 @@ let TargetPrefix = "nvvm" in {
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
   def int_nvvm_ex2_approx_d : ClangBuiltin<"__nvvm_ex2_approx_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
-  def int_nvvm_ex2_approx_f16 : ClangBuiltin<"__nvvm_ex2_approx_f16">,
+  def int_nvvm_ex2_approx_f16 :
       DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty], [IntrNoMem]>;
-  def int_nvvm_ex2_approx_f16x2 : ClangBuiltin<"__nvvm_ex2_approx_f16x2">,
+  def int_nvvm_ex2_approx_f16x2 :
       DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty], [IntrNoMem]>;
 
   def int_nvvm_lg2_approx_ftz_f : ClangBuiltin<"__nvvm_lg2_approx_ftz_f">,
@@ -860,18 +858,16 @@ let TargetPrefix = "nvvm" in {
 
   foreach variant = ["_rn_f16", "_rn_ftz_f16", "_rn_sat_f16",
     "_rn_ftz_sat_f16", "_rn_relu_f16", "_rn_ftz_relu_f16"] in {
-    def int_nvvm_fma # variant : ClangBuiltin<!strconcat("__nvvm_fma", variant)>,
-        DefaultAttrsIntrinsic<[llvm_half_ty],
-          [llvm_half_ty, llvm_half_ty, llvm_half_ty],
-          [IntrNoMem, IntrSpeculatable]>;
+    def int_nvvm_fma # variant : DefaultAttrsIntrinsic<[llvm_half_ty],
+      [llvm_half_ty, llvm_half_ty, llvm_half_ty],
+      [IntrNoMem, IntrSpeculatable]>;
   }
 
   foreach variant = ["_rn_f16x2", "_rn_ftz_f16x2", "_rn_sat_f16x2",
     "_rn_ftz_sat_f16x2", "_rn_relu_f16x2", "_rn_ftz_relu_f16x2"] in {
-    def int_nvvm_fma # variant : ClangBuiltin<!strconcat("__nvvm_fma", variant)>,
-      DefaultAttrsIntrinsic<[llvm_v2f16_ty],
-        [llvm_v2f16_ty, llvm_v2f16_ty, llvm_v2f16_ty],
-        [IntrNoMem, IntrSpeculatable]>;
+    def int_nvvm_fma # variant : DefaultAttrsIntrinsic<[llvm_v2f16_ty],
+      [llvm_v2f16_ty, llvm_v2f16_ty, llvm_v2f16_ty],
+      [IntrNoMem, IntrSpeculatable]>;
   }
 
   foreach variant = ["_rn_bf16", "_rn_relu_bf16"] in {

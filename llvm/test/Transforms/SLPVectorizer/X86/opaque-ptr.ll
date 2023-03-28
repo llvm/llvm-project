@@ -4,29 +4,18 @@
 define void @test(ptr %r, ptr %p, ptr %q) #0 {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 0
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 2
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 3
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr inbounds i64, ptr [[Q:%.*]], i64 0
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds i64, ptr [[Q]], i64 1
-; CHECK-NEXT:    [[Q2:%.*]] = getelementptr inbounds i64, ptr [[Q]], i64 2
-; CHECK-NEXT:    [[Q3:%.*]] = getelementptr inbounds i64, ptr [[Q]], i64 3
-; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[P0]], align 2
-; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[P1]], align 2
-; CHECK-NEXT:    [[X2:%.*]] = load i64, ptr [[P2]], align 2
-; CHECK-NEXT:    [[X3:%.*]] = load i64, ptr [[P3]], align 2
-; CHECK-NEXT:    [[Y0:%.*]] = load i64, ptr [[Q0]], align 2
-; CHECK-NEXT:    [[Y1:%.*]] = load i64, ptr [[Q1]], align 2
-; CHECK-NEXT:    [[Y2:%.*]] = load i64, ptr [[Q2]], align 2
-; CHECK-NEXT:    [[Y3:%.*]] = load i64, ptr [[Q3]], align 2
-; CHECK-NEXT:    [[SUB0:%.*]] = sub nsw i64 [[X0]], [[Y0]]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i64 [[X1]], [[Y1]]
-; CHECK-NEXT:    [[SUB2:%.*]] = sub nsw i64 [[X2]], [[Y2]]
-; CHECK-NEXT:    [[SUB3:%.*]] = sub nsw i64 [[X3]], [[Y3]]
-; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[R:%.*]], i64 [[SUB0]]
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[SUB1]]
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[SUB2]]
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[SUB3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[P0]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr [[Q0]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw <4 x i64> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP3]], i32 0
+; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[R:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP3]], i32 1
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP3]], i32 2
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP3]], i32 3
+; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP7]]
 ; CHECK-NEXT:    ret void
 ;
   %p0 = getelementptr inbounds i64, ptr %p, i64 0

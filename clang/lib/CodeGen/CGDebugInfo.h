@@ -322,9 +322,15 @@ class CGDebugInfo {
   }
 
   /// Create new bit field member.
-  llvm::DIType *createBitFieldType(const FieldDecl *BitFieldDecl,
-                                   llvm::DIScope *RecordTy,
-                                   const RecordDecl *RD);
+  llvm::DIDerivedType *createBitFieldType(const FieldDecl *BitFieldDecl,
+                                          llvm::DIScope *RecordTy,
+                                          const RecordDecl *RD);
+
+  /// Create an anonnymous zero-size separator for bit-field-decl if needed on
+  /// the target.
+  llvm::DIDerivedType *createBitFieldSeparatorIfNeeded(
+      const FieldDecl *BitFieldDecl, const llvm::DIDerivedType *BitFieldDI,
+      llvm::ArrayRef<llvm::Metadata *> PreviousFieldsDI, const RecordDecl *RD);
 
   /// Helpers for collecting fields of a record.
   /// @{
