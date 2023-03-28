@@ -326,6 +326,9 @@ extern char &AMDGPUReleaseVGPRsID;
 void initializeAMDGPUInsertDelayAluPass(PassRegistry &);
 extern char &AMDGPUInsertDelayAluID;
 
+void initializeAMDGPULowerVGPREncodingPass(PassRegistry &);
+extern char &AMDGPULowerVGPREncodingID;
+
 void initializeSIInsertHardClausesPass(PassRegistry &);
 extern char &SIInsertHardClausesID;
 

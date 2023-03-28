@@ -141,6 +141,7 @@
 ; GCN-O0-NEXT:        Insert required mode register values
 ; GCN-O0-NEXT:        SI Final Branch Preparation
 ; GCN-O0-NEXT:        Post RA hazard recognizer
+; GCN-O0-NEXT:        AMDGPU Lower VGPR Encoding
 ; GCN-O0-NEXT:        Branch relaxation pass
 ; GCN-O0-NEXT:        Register Usage Information Collector Pass
 ; GCN-O0-NEXT:        Live DEBUG_VALUE analysis
@@ -416,6 +417,7 @@
 ; GCN-O1-NEXT:        SI Final Branch Preparation
 ; GCN-O1-NEXT:        SI peephole optimizations
 ; GCN-O1-NEXT:        Post RA hazard recognizer
+; GCN-O1-NEXT:        AMDGPU Lower VGPR Encoding
 ; GCN-O1-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O1-NEXT:        Branch relaxation pass
 ; GCN-O1-NEXT:        Register Usage Information Collector Pass
@@ -727,6 +729,7 @@
 ; GCN-O1-OPTS-NEXT:        SI Final Branch Preparation
 ; GCN-O1-OPTS-NEXT:        SI peephole optimizations
 ; GCN-O1-OPTS-NEXT:        Post RA hazard recognizer
+; GCN-O1-OPTS-NEXT:        AMDGPU Lower VGPR Encoding
 ; GCN-O1-OPTS-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O1-OPTS-NEXT:        Branch relaxation pass
 ; GCN-O1-OPTS-NEXT:        Register Usage Information Collector Pass
@@ -1038,6 +1041,7 @@
 ; GCN-O2-NEXT:        SI peephole optimizations
 ; GCN-O2-NEXT:        Post RA hazard recognizer
 ; GCN-O2-NEXT:        Release VGPRs
+; GCN-O2-NEXT:        AMDGPU Lower VGPR Encoding
 ; GCN-O2-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O2-NEXT:        Branch relaxation pass
 ; GCN-O2-NEXT:        Register Usage Information Collector Pass
@@ -1359,6 +1363,7 @@
 ; GCN-O3-NEXT:        SI peephole optimizations
 ; GCN-O3-NEXT:        Post RA hazard recognizer
 ; GCN-O3-NEXT:        Release VGPRs
+; GCN-O3-NEXT:        AMDGPU Lower VGPR Encoding
 ; GCN-O3-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O3-NEXT:        Branch relaxation pass
 ; GCN-O3-NEXT:        Register Usage Information Collector Pass
