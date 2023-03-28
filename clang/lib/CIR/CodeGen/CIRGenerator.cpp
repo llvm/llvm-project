@@ -173,3 +173,10 @@ void CIRGenerator::HandleTagDeclRequiredDefinition(const TagDecl *D) {
   if (CGM->getModuleDebugInfo())
     llvm_unreachable("NYI");
 }
+
+void CIRGenerator::HandleCXXStaticMemberVarInstantiation(VarDecl *D) {
+  if (Diags.hasErrorOccurred())
+    return;
+
+  CGM->HandleCXXStaticMemberVarInstantiation(D);
+}

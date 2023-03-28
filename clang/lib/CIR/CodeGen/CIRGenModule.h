@@ -161,6 +161,9 @@ public:
   template <typename SomeDecl>
   void maybeHandleStaticInExternC(const SomeDecl *D, mlir::cir::GlobalOp GV);
 
+  /// Tell the consumer that this variable has been instantiated.
+  void HandleCXXStaticMemberVarInstantiation(VarDecl *VD);
+
   llvm::DenseMap<StringRef, mlir::Value> Globals;
   mlir::Operation *getGlobalValue(StringRef Ref);
   mlir::Value getGlobalValue(const clang::Decl *D);

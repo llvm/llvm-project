@@ -83,6 +83,7 @@ public:
   void HandleInlineFunctionDefinition(clang::FunctionDecl *D) override;
   void HandleTagDeclDefinition(clang::TagDecl *D) override;
   void HandleTagDeclRequiredDefinition(const clang::TagDecl *D) override;
+  void HandleCXXStaticMemberVarInstantiation(clang::VarDecl *D) override;
 
   mlir::ModuleOp getModule();
   std::unique_ptr<mlir::MLIRContext> takeContext() {

@@ -137,7 +137,7 @@ public:
   }
 
   void HandleCXXStaticMemberVarInstantiation(clang::VarDecl *VD) override {
-    llvm_unreachable("NYI");
+    gen->HandleCXXStaticMemberVarInstantiation(VD);
   }
 
   void HandleInlineFunctionDefinition(FunctionDecl *D) override {

@@ -1991,3 +1991,18 @@ void CIRGenModule::buildExplicitCastExprType(const ExplicitCastExpr *E,
 
   assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
 }
+
+void CIRGenModule::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
+  auto DK = VD->isThisDeclarationADefinition();
+  if (DK == VarDecl::Definition && VD->hasAttr<DLLImportAttr>())
+    return;
+
+  TemplateSpecializationKind TSK = VD->getTemplateSpecializationKind();
+  // If we have a definition, this might be a deferred decl. If the
+  // instantiation is explicit, make sure we emit it at the end.
+  if (VD->getDefinition() && TSK == TSK_ExplicitInstantiationDefinition) {
+    llvm_unreachable("NYI");
+  }
+
+  buildTopLevelDecl(VD);
+}
