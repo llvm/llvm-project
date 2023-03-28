@@ -6,7 +6,8 @@ lldb_tablegen(TargetPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE TargetProperties.td
   TARGET LLDBTargetPropertiesEnumGen)
 
-add_lldb_library(lldbTarget NO_PLUGIN_DEPENDENCIES
+# TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbTarget
+add_lldb_library(lldbTarget
   ABI.cpp
   AssertFrameRecognizer.cpp
   DynamicRegisterInfo.cpp
