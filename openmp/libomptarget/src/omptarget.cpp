@@ -1038,7 +1038,7 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     }
     if (TPR.getEntry()) {
       int Ret = TPR.getEntry()->foreachShadowPointerInfo(
-          [&](const ShadowPtrInfoTy &ShadowPtr) {
+          [&](ShadowPtrInfoTy &ShadowPtr) {
             DP("Restoring original target pointer value " DPxMOD " for target "
                "pointer " DPxMOD "\n",
                DPxPTR(ShadowPtr.TgtPtrVal), DPxPTR(ShadowPtr.TgtPtrAddr));
