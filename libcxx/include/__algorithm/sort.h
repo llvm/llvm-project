@@ -26,8 +26,6 @@
 #include <__functional/operations.h>
 #include <__functional/ranges_operations.h>
 #include <__iterator/iterator_traits.h>
-#include <__memory/destruct_n.h>
-#include <__memory/unique_ptr.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/disjunction.h>
 #include <__type_traits/is_arithmetic.h>
@@ -350,37 +348,6 @@ _LIBCPP_HIDE_FROM_ABI bool __insertion_sort_incomplete(
     __j = __i;
   }
   return true;
-}
-
-template <class _AlgPolicy, class _Compare, class _BidirectionalIterator>
-_LIBCPP_HIDE_FROM_ABI
-void __insertion_sort_move(_BidirectionalIterator __first1, _BidirectionalIterator __last1,
-                           typename iterator_traits<_BidirectionalIterator>::value_type* __first2, _Compare __comp) {
-  using _Ops = _IterOps<_AlgPolicy>;
-
-  typedef typename iterator_traits<_BidirectionalIterator>::value_type value_type;
-  if (__first1 != __last1) {
-    __destruct_n __d(0);
-    unique_ptr<value_type, __destruct_n&> __h(__first2, __d);
-    value_type* __last2 = __first2;
-    ::new ((void*)__last2) value_type(_Ops::__iter_move(__first1));
-    __d.template __incr<value_type>();
-    for (++__last2; ++__first1 != __last1; ++__last2) {
-      value_type* __j2 = __last2;
-      value_type* __i2 = __j2;
-      if (__comp(*__first1, *--__i2)) {
-        ::new ((void*)__j2) value_type(std::move(*__i2));
-        __d.template __incr<value_type>();
-        for (--__j2; __i2 != __first2 && __comp(*__first1, *--__i2); --__j2)
-          *__j2 = std::move(*__i2);
-        *__j2 = _Ops::__iter_move(__first1);
-      } else {
-        ::new ((void*)__j2) value_type(_Ops::__iter_move(__first1));
-        __d.template __incr<value_type>();
-      }
-    }
-    __h.release();
-  }
 }
 
 template <class _AlgPolicy, class _RandomAccessIterator>
