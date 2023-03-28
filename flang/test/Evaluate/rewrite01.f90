@@ -196,7 +196,9 @@ subroutine associate_tests(p)
 end subroutine
 
 !CHECK-LABEL: array_constructor
-subroutine array_constructor()
+subroutine array_constructor(a, u, v, w, x, y, z)
+  real :: a(4)
+  integer :: u(:), v(1), w(2), x(4), y(4), z(2, 2)
   interface
     function return_allocatable()
      real, allocatable :: return_allocatable(:)
@@ -204,6 +206,28 @@ subroutine array_constructor()
   end interface
   !CHECK: PRINT *, size([REAL(4)::return_allocatable(),return_allocatable()])
   print *, size([return_allocatable(), return_allocatable()])
+  !CHECK: PRINT *, [INTEGER(4)::x+y]
+  print *, (/x/) + (/y/)
+  !CHECK: PRINT *, [INTEGER(4)::x]+[INTEGER(4)::z]
+  print *, (/x/) + (/z/)
+  !CHECK: PRINT *, [INTEGER(4)::x+y,x+y]
+  print *, (/x, x/) + (/y, y/)
+  !CHECK: PRINT *, [INTEGER(4)::x,x]+[INTEGER(4)::x,z]
+  print *, (/x, x/) + (/x, z/)
+  !CHECK: PRINT *, [INTEGER(4)::x,w,w]+[INTEGER(4)::w,w,x]
+  print *, (/x, w, w/) + (/w, w, x/)
+  !CHECK: PRINT *, [INTEGER(4)::x]+[INTEGER(4)::1_4,2_4,3_4,4_4]
+  print *, (/x/) + (/1, 2, 3, 4/)
+  !CHECK: PRINT *, [INTEGER(4)::v]+[INTEGER(4)::1_4]
+  print *, (/v/) + (/1/)
+  !CHECK: PRINT *, [INTEGER(4)::x]+[INTEGER(4)::u]
+  print *, (/x/) + (/u/)
+  !CHECK: PRINT *, [INTEGER(4)::u]+[INTEGER(4)::u]
+  print *, (/u/) + (/u/)
+  !CHECK: PRINT *, [REAL(4)::a**x]
+  print *, (/a/) ** (/x/)
+  !CHECK: PRINT *, [REAL(4)::a]**[INTEGER(4)::z]
+  print *, (/a/) ** (/z/)
 end subroutine
 
 !CHECK-LABEL: array_ctor_implied_do_index
