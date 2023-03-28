@@ -1,4 +1,4 @@
-//===- RISCVTargetDefEmitter.cpp - Generate lists of RISCV CPUs -----------===//
+//===- RISCVTargetDefEmitter.cpp - Generate lists of RISC-V CPUs ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@ using namespace llvm;
 using ISAInfoTy = llvm::Expected<std::unique_ptr<RISCVISAInfo>>;
 
 // We can generate march string from target features as what has been described
-// in RISCV ISA specification (version 20191213) 'Chapter 27. ISA Extension
+// in RISC-V ISA specification (version 20191213) 'Chapter 27. ISA Extension
 // Naming Conventions'.
 //
 // This is almost the same as RISCVFeatures::parseFeatureBits, except that we

@@ -1,4 +1,4 @@
-//===- RISCVInstrInfoC.td - Compressed RISCV instructions -*- tblgen-*-----===//
+//===- RISCVInstrInfoC.td - Compressed RISC-V instructions -*- tblgen-*----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

@@ -1,4 +1,4 @@
-//===-- RISCVBaseInfo.h - Top level definitions for RISCV MC ----*- C++ -*-===//
+//===-- RISCVBaseInfo.h - Top level definitions for RISC-V MC ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains small standalone enum definitions for the RISCV target
+// This file contains small standalone enum definitions for the RISC-V target
 // useful for the compiler back-end and the MC libraries.
 //
 //===----------------------------------------------------------------------===//

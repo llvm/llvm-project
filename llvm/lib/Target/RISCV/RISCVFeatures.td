@@ -1,4 +1,4 @@
-//===-- RISCVFeatures.td - RISCV Features and Extensions ---*- tablegen -*-===//
+//===-- RISCVFeatures.td - RISC-V Features and Extensions --*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
