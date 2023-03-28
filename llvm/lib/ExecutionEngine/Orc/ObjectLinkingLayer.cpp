@@ -41,19 +41,21 @@ bool hasInitializerSection(jitlink::LinkGraph &G) {
 }
 
 ExecutorAddr getJITSymbolPtrForSymbol(Symbol &Sym, const Triple &TT) {
-  uint64_t CallableAddr = Sym.getAddress().getValue();
   switch (TT.getArch()) {
   case Triple::arm:
   case Triple::armeb:
   case Triple::thumb:
   case Triple::thumbeb:
-    if (Sym.hasTargetFlags(aarch32::ThumbSymbol) && Sym.isCallable())
-      CallableAddr |= 0x01; // LSB is thumb bit
-    break;
+    if (Sym.hasTargetFlags(aarch32::ThumbSymbol)) {
+      // Set LSB to indicate thumb target
+      assert(Sym.isCallable() && "Only callable symbols can have thumb flag");
+      assert((Sym.getAddress().getValue() & 0x01) == 0 && "LSB is clear");
+      return Sym.getAddress() + 0x01;
+    }
+    return Sym.getAddress();
   default:
-    break;
+    return Sym.getAddress();
   }
-  return ExecutorAddr(CallableAddr);
 }
 
 JITSymbolFlags getJITSymbolFlagsForSymbol(Symbol &Sym) {
