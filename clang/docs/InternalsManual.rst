@@ -3268,3 +3268,39 @@ are similar.
      proper visitation for your expression, enabling various IDE features such
      as syntax highlighting, cross-referencing, and so on.  The
      ``c-index-test`` helper program can be used to test these features.
+
+Feature Test Macros
+===================
+Clang implements several ways to test whether a feature is supported or not.
+Some of these feature tests are standardized, like ``__has_cpp_attribute`` or
+``__cpp_lambdas``, while others are Clang extensions, like ``__has_builtin``.
+The common theme among all the various feature tests is that they are a utility
+to tell users that we think a particular feature is complete. However,
+completeness is a difficult property to define because features may still have
+lingering bugs, may only work on some targets, etc. We use the following
+criteria when deciding whether to expose a feature test macro (or particular
+result value for the feature test):
+
+  * Are there known issues where we reject valid code that should be accepted?
+  * Are there known issues where we accept invalid code that should be rejected?
+  * Are there known crashes, failed assertions, or miscompilations?
+  * Are there known issues on a particular relevant target?
+
+If the answer to any of these is "yes", the feature test macro should either
+not be defined or there should be very strong rationale for why the issues
+should not prevent defining it. Note, it is acceptable to define the feature
+test macro on a per-target basis if needed.
+
+When in doubt, being conservative is better than being aggressive. If we don't
+claim support for the feature but it does useful things, users can still use it
+and provide us with useful feedback on what is missing. But if we claim support
+for a feature that has significant bugs, we've eliminated most of the utility
+of having a feature testing macro at all because users are then forced to test
+what compiler version is in use to get a more accurate answer.
+
+The status reported by the feature test macro should always be reflected in the
+language support page for the corresponding feature (`C++
+<https://clang.llvm.org/cxx_status.html>`_, `C
+<https://clang.llvm.org/c_status.html>`_) if applicable. This page can give
+more nuanced information to the user as well, such as claiming partial support
+for a feature and specifying details as to what remains to be done.
