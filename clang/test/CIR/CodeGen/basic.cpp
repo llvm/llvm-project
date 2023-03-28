@@ -136,3 +136,8 @@ void if1(int a, bool b, bool c) {
 // CHECK-DAG: #[[locScope]] = loc(fused[#[[locScopeA:loc[0-9]+]], #[[locScopeB:loc[0-9]+]]])
 // CHECK-DAG: #[[locScopeA]] = loc("{{.*}}basic.cpp":27:3)
 // CHECK-DAG: #[[locScopeB]] = loc("{{.*}}basic.cpp":31:3)
+
+enum {
+  um = 0,
+  dois = 1,
+}; // Do not crash!

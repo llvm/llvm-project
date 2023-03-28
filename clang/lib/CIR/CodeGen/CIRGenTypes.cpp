@@ -716,7 +716,18 @@ void CIRGenTypes::UpdateCompletedType(const TagDecl *TD) {
   // from the cache. This allows function types and other things that may be
   // derived from the enum to be recomputed.
   if (const auto *ED = dyn_cast<EnumDecl>(TD)) {
-    llvm_unreachable("NYI");
+    // Only flush the cache if we've actually already converted this type.
+    if (TypeCache.count(ED->getTypeForDecl())) {
+      // Okay, we formed some types based on this.  We speculated that the enum
+      // would be lowered to i32, so we only need to flush the cache if this
+      // didn't happen.
+      if (!ConvertType(ED->getIntegerType()).isInteger(32))
+        TypeCache.clear();
+    }
+    // If necessary, provide the full definition of a type only used with a
+    // declaration so far.
+    assert(!UnimplementedFeature::generateDebugInfo());
+    return;
   }
 
   // If we completed a RecordDecl that we previously used and converted to an
