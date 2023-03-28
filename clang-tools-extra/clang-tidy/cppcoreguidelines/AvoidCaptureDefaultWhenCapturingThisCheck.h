@@ -27,13 +27,16 @@ namespace clang::tidy::cppcoreguidelines {
 class AvoidCaptureDefaultWhenCapturingThisCheck : public ClangTidyCheck {
 public:
   AvoidCaptureDefaultWhenCapturingThisCheck(StringRef Name,
-                                            ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+                                            ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus11;
   }
+
+private:
+  bool IgnoreCaptureDefaultByReference;
 };
 
 } // namespace clang::tidy::cppcoreguidelines
