@@ -22,8 +22,7 @@
 // Reported as https://llvm.org/PR53170.
 
 // reserve(n) used to shrink the string until https://llvm.org/D117332 was shipped.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{11.0|12.0}}
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
 
 #include <string>
 #include <stdexcept>
