@@ -248,7 +248,11 @@ Bug Fixes in This Version
 - Fix false-positive diagnostic issued for consteval initializers of temporary
   objects.
   (`#60286 <https://github.com/llvm/llvm-project/issues/60286>`_)
-
+- Correct restriction of trailing requirements clauses on a templated function.
+  Previously we only rejected non-'templated' things, but the restrictions ALSO need
+  to limit non-defined/non-member functions as well. Additionally, we now diagnose
+  requires on lambdas when not allowed, which we previously missed.
+  (`#61748 <https://github.com/llvm/llvm-project/issues/61748>`_)
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
