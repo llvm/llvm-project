@@ -137,7 +137,7 @@ entry:
 define i32 @foo9(i32 %v) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo9:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #4
+; CHECK-NEXT:    mov w8, #4 // =0x4
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cinv w0, w8, eq
 ; CHECK-NEXT:    ret
@@ -150,7 +150,7 @@ entry:
 define i64 @foo10(i64 %v) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo10:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #4
+; CHECK-NEXT:    mov w8, #4 // =0x4
 ; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    cinv x0, x8, eq
 ; CHECK-NEXT:    ret
@@ -163,7 +163,7 @@ entry:
 define i32 @foo11(i32 %v) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo11:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #4
+; CHECK-NEXT:    mov w8, #4 // =0x4
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cneg w0, w8, eq
 ; CHECK-NEXT:    ret
@@ -176,7 +176,7 @@ entry:
 define i64 @foo12(i64 %v) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo12:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #4
+; CHECK-NEXT:    mov w8, #4 // =0x4
 ; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    cneg x0, x8, eq
 ; CHECK-NEXT:    ret
@@ -216,7 +216,7 @@ define i32 @foo15(i32 %a, i32 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo15:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cinc w0, w8, gt
 ; CHECK-NEXT:    ret
 entry:
@@ -229,7 +229,7 @@ define i32 @foo16(i32 %a, i32 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cinc w0, w8, le
 ; CHECK-NEXT:    ret
 entry:
@@ -242,7 +242,7 @@ define i64 @foo17(i64 %a, i64 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo17:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp x0, x1
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cinc x0, x8, gt
 ; CHECK-NEXT:    ret
 entry:
@@ -255,7 +255,7 @@ define i64 @foo18(i64 %a, i64 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo18:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp x0, x1
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cinc x0, x8, le
 ; CHECK-NEXT:    ret
 entry:
@@ -269,7 +269,7 @@ define i64 @foo18_overflow1(i64 %a, i64 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo18_overflow1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp x0, x1
-; CHECK-NEXT:    mov x8, #9223372036854775807
+; CHECK-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
 ; CHECK-NEXT:    csel x0, x8, xzr, gt
 ; CHECK-NEXT:    ret
 entry:
@@ -283,7 +283,7 @@ define i64 @foo18_overflow2(i64 %a, i64 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo18_overflow2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp x0, x1
-; CHECK-NEXT:    mov x8, #9223372036854775807
+; CHECK-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
 ; CHECK-NEXT:    csel x0, xzr, x8, gt
 ; CHECK-NEXT:    ret
 entry:
@@ -296,9 +296,9 @@ entry:
 define i64 @foo18_overflow3(i1 %cmp) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo18_overflow3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-9223372036854775808 
-; CHECK-NEXT:    tst w0, #0x1 
-; CHECK-NEXT:    csel x0, x8, xzr, ne 
+; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
+; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    csel x0, x8, xzr, ne
 ; CHECK-NEXT:    ret
 entry:
   %. = select i1 %cmp, i64 -9223372036854775808, i64 0
@@ -309,9 +309,9 @@ entry:
 define i64 @foo18_overflow4(i1 %cmp) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo18_overflow4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-9223372036854775808 
-; CHECK-NEXT:    tst w0, #0x1 
-; CHECK-NEXT:    csel x0, xzr, x8, ne 
+; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
+; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    csel x0, xzr, x8, ne
 ; CHECK-NEXT:    ret
 entry:
   %. = select i1 %cmp, i64 0, i64 -9223372036854775808
@@ -334,7 +334,7 @@ entry:
 define i32 @foo20(i32 %x) {
 ; CHECK-LABEL: foo20:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w8, #6 // =0x6
 ; CHECK-NEXT:    cmp w0, #5
 ; CHECK-NEXT:    csinc w0, w8, wzr, eq
 ; CHECK-NEXT:    ret
@@ -346,7 +346,7 @@ define i32 @foo20(i32 %x) {
 define i64 @foo21(i64 %x) {
 ; CHECK-LABEL: foo21:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w8, #6 // =0x6
 ; CHECK-NEXT:    cmp x0, #5
 ; CHECK-NEXT:    csinc x0, x8, xzr, eq
 ; CHECK-NEXT:    ret
@@ -358,7 +358,7 @@ define i64 @foo21(i64 %x) {
 define i32 @foo22(i32 %x) {
 ; CHECK-LABEL: foo22:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w8, #6 // =0x6
 ; CHECK-NEXT:    cmp w0, #5
 ; CHECK-NEXT:    csinc w0, w8, wzr, ne
 ; CHECK-NEXT:    ret
@@ -370,7 +370,7 @@ define i32 @foo22(i32 %x) {
 define i64 @foo23(i64 %x) {
 ; CHECK-LABEL: foo23:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w8, #6 // =0x6
 ; CHECK-NEXT:    cmp x0, #5
 ; CHECK-NEXT:    csinc x0, x8, xzr, ne
 ; CHECK-NEXT:    ret
