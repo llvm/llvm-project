@@ -98,6 +98,7 @@ public:
                                  FunctionArgList &Params) override;
 
   void buildCXXConstructors(const clang::CXXConstructorDecl *D) override;
+  void buildCXXDestructors(const clang::CXXDestructorDecl *D) override;
 
   void buildCXXStructor(clang::GlobalDecl GD) override;
 
@@ -397,4 +398,20 @@ void CIRGenItaniumCXXABI::buildCXXConstructors(const CXXConstructorDecl *D) {
     // We don't need to emit the complete ctro if the class is abstract.
     CGM.buildGlobal(GlobalDecl(D, Ctor_Complete));
   }
+}
+
+void CIRGenItaniumCXXABI::buildCXXDestructors(const CXXDestructorDecl *D) {
+  // The destructor used for destructing this as a base class; ignores
+  // virtual bases.
+  CGM.buildGlobal(GlobalDecl(D, Dtor_Base));
+
+  // The destructor used for destructing this as a most-derived class;
+  // call the base destructor and then destructs any virtual bases.
+  CGM.buildGlobal(GlobalDecl(D, Dtor_Complete));
+
+  // The destructor in a virtual table is always a 'deleting'
+  // destructor, which calls the complete destructor and then uses the
+  // appropriate operator delete.
+  if (D->isVirtual())
+    CGM.buildGlobal(GlobalDecl(D, Dtor_Deleting));
 }

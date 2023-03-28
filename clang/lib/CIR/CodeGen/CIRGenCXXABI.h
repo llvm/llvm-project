@@ -132,6 +132,8 @@ public:
 
   /// Emit constructor variants required by this ABI.
   virtual void buildCXXConstructors(const clang::CXXConstructorDecl *D) = 0;
+  /// Emit dtor variants required by this ABI.
+  virtual void buildCXXDestructors(const clang::CXXDestructorDecl *D) = 0;
 
   /// Specify how one should pass an argument of a record type.
   enum class RecordArgABI {
