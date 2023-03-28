@@ -74,7 +74,7 @@ define amdgpu_kernel void @sub_shr_i32(ptr addrspace(1) %out, ptr addrspace(1) %
 ; NOSDWA-NEXT:    v_mov_b32_e32 v1, s1
 ; NOSDWA-NEXT:    s_waitcnt vmcnt(0)
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; NOSDWA-NEXT:    v_subrev_u32_e32 v2, vcc, v2, v3
+; NOSDWA-NEXT:    v_sub_u32_e32 v2, vcc, v3, v2
 ; NOSDWA-NEXT:    flat_store_dword v[0:1], v2
 ; NOSDWA-NEXT:    s_endpgm
 ;
@@ -88,7 +88,7 @@ define amdgpu_kernel void @sub_shr_i32(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX89-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX89-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
-; GFX89-NEXT:    v_subrev_u32_sdwa v2, vcc, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX89-NEXT:    v_sub_u32_sdwa v2, vcc, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX89-NEXT:    flat_store_dword v[0:1], v2
 ; GFX89-NEXT:    s_endpgm
 ;
