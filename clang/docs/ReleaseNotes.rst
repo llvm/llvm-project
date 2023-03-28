@@ -238,6 +238,9 @@ Bug Fixes in This Version
   the initializer, so it behaves consistently with other ``VarDecls`` and ends
   on the last token of initializer, instead of right angle bracket of
   the template argument list.
+- Fix false-positive diagnostic issued for consteval initializers of temporary
+  objects.
+  (`#60286 <https://github.com/llvm/llvm-project/issues/60286>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
