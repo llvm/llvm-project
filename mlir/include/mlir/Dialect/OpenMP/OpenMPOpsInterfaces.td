@@ -79,6 +79,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
         if (Attribute isDevice = $_op->getAttr("omp.is_device"))
           if (isDevice.isa<mlir::omp::IsDeviceAttr>())
             return isDevice.dyn_cast<IsDeviceAttr>().getIsDevice();
+        return false;
       }]>,
   ];
 }
