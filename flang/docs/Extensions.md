@@ -269,6 +269,9 @@ end
 * A scalar logical dummy argument to a `BIND(C)` procedure does
   not have to have `KIND=C_BOOL` since it can be converted to/from
   `_Bool` without loss of information.
+* The character length of the `SOURCE=` or `MOLD=` in `ALLOCATE`
+  may be distinct from the constant character length, if any,
+  of an allocated object.
 
 ### Extensions supported when enabled by options
 
@@ -346,6 +349,9 @@ end
 * User (non-intrinsic) `ELEMENTAL` procedures may not be passed as actual
   arguments, in accordance with the standard; some Fortran compilers
   permit such usage.
+* Constraint C1406, which prohibits the same module name from being used
+  in a scope for both an intrinsic and a non-intrinsic module, is implemented
+  as a portability warning only, not a hard error.
 
 ## Preprocessing behavior
 

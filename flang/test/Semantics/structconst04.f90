@@ -37,10 +37,10 @@ module module1
     type(has_pointer3) :: hp3
     type(t4), allocatable :: link
   end type t4
-  real, target :: modulevar1
-  type(has_pointer1) :: modulevar2
-  type(has_pointer2) :: modulevar3
-  type(has_pointer3) :: modulevar4
+  real, target :: modulevar1 = 0.
+  type(has_pointer1) :: modulevar2 = has_pointer1(modulevar1)
+  type(has_pointer2) :: modulevar3 = has_pointer2(has_pointer1(modulevar1))
+  type(has_pointer3) :: modulevar4 = has_pointer3(has_pointer1(modulevar1))
 
  contains
 
@@ -71,11 +71,17 @@ module module1
 ! TODO !ERROR: Externally visible object may not be associated with a pointer in a pure procedure
 ! TODO x1 = t1(dummy4[0])
     x1 = t1(dummy4)
-    !ERROR: Externally visible object 'modulevar2' may not be associated with pointer component 'ptop' in a pure procedure
+    !ERROR: Externally visible object 'modulevar1' may not be associated with pointer component 'ptop' in a pure procedure
+    x2 = t2(has_pointer1(modulevar1))
+    !ERROR: Externally visible object 'modulevar1' may not be associated with pointer component 'ptop' in a pure procedure
+    x3 = t3(has_pointer2(has_pointer1(modulevar1)))
+    !ERROR: Externally visible object 'modulevar1' may not be associated with pointer component 'ptop' in a pure procedure
+    x4 = t4(has_pointer3(has_pointer1(modulevar1)))
+    !ERROR: The externally visible object 'modulevar2' may not be used in a pure procedure as the value for component 'hp1' which has the pointer component 'ptop'
     x2 = t2(modulevar2)
-    !ERROR: Externally visible object 'modulevar3' may not be associated with pointer component 'ptop' in a pure procedure
+    !ERROR: The externally visible object 'modulevar3' may not be used in a pure procedure as the value for component 'hp2' which has the pointer component 'ptop'
     x3 = t3(modulevar3)
-    !ERROR: Externally visible object 'modulevar4' may not be associated with pointer component 'ptop' in a pure procedure
+    !ERROR: The externally visible object 'modulevar4' may not be used in a pure procedure as the value for component 'hp3' which has the pointer component 'ptop'
     x4 = t4(modulevar4)
    contains
     pure subroutine subr(dummy1a, dummy2a, dummy3a, dummy4a)
@@ -106,11 +112,17 @@ module module1
 ! TODO !ERROR: Externally visible object may not be associated with a pointer in a pure procedure
 ! TODO x1a = t1(dummy4a[0])
       x1a = t1(dummy4a)
-      !ERROR: Externally visible object 'modulevar2' may not be associated with pointer component 'ptop' in a pure procedure
+      !ERROR: Externally visible object 'modulevar1' may not be associated with pointer component 'ptop' in a pure procedure
+      x2a = t2(has_pointer1(modulevar1))
+      !ERROR: Externally visible object 'modulevar1' may not be associated with pointer component 'ptop' in a pure procedure
+      x3a = t3(has_pointer2(has_pointer1(modulevar1)))
+      !ERROR: Externally visible object 'modulevar1' may not be associated with pointer component 'ptop' in a pure procedure
+      x4a = t4(has_pointer3(has_pointer1(modulevar1)))
+      !ERROR: The externally visible object 'modulevar2' may not be used in a pure procedure as the value for component 'hp1' which has the pointer component 'ptop'
       x2a = t2(modulevar2)
-      !ERROR: Externally visible object 'modulevar3' may not be associated with pointer component 'ptop' in a pure procedure
+      !ERROR: The externally visible object 'modulevar3' may not be used in a pure procedure as the value for component 'hp2' which has the pointer component 'ptop'
       x3a = t3(modulevar3)
-      !ERROR: Externally visible object 'modulevar4' may not be associated with pointer component 'ptop' in a pure procedure
+      !ERROR: The externally visible object 'modulevar4' may not be used in a pure procedure as the value for component 'hp3' which has the pointer component 'ptop'
       x4a = t4(modulevar4)
     end subroutine subr
   end subroutine
@@ -147,12 +159,17 @@ module module1
     x1 = t1(usedfrom1)
     x1 = t1(modulevar1)
     x1 = t1(commonvar1)
+    !WARNING: Pointer target is not a definable variable
+    !BECAUSE: 'dummy1' is an INTENT(IN) dummy argument
     x1 = t1(dummy1)
     x1 = t1(dummy2)
     x1 = t1(dummy3)
 ! TODO when semantics handles coindexing:
 ! TODO x1 = t1(dummy4[0])
     x1 = t1(dummy4)
+    x2 = t2(has_pointer1(modulevar1))
+    x3 = t3(has_pointer2(has_pointer1(modulevar1)))
+    x4 = t4(has_pointer3(has_pointer1(modulevar1)))
     x2 = t2(modulevar2)
     x3 = t3(modulevar3)
     x4 = t4(modulevar4)

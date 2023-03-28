@@ -67,9 +67,9 @@ define half @sqrt_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: sqrt_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; CHECKIZFHMIN-NEXT:    fsqrt.s ft0, ft0
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECKIZFHMIN-NEXT:    fsqrt.s fa5, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = call half @llvm.sqrt.f16(half %a)
   ret half %1
@@ -327,8 +327,8 @@ define half @sincos_f16(half %a) nounwind {
 ; RV32IFZFH-NEXT:    fcvt.h.s fs1, fa0
 ; RV32IFZFH-NEXT:    fmv.s fa0, fs0
 ; RV32IFZFH-NEXT:    call cosf@plt
-; RV32IFZFH-NEXT:    fcvt.h.s ft0, fa0
-; RV32IFZFH-NEXT:    fadd.h fa0, fs1, ft0
+; RV32IFZFH-NEXT:    fcvt.h.s fa5, fa0
+; RV32IFZFH-NEXT:    fadd.h fa0, fs1, fa5
 ; RV32IFZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFZFH-NEXT:    flw fs0, 8(sp) # 4-byte Folded Reload
 ; RV32IFZFH-NEXT:    flw fs1, 4(sp) # 4-byte Folded Reload
@@ -347,8 +347,8 @@ define half @sincos_f16(half %a) nounwind {
 ; RV64IFZFH-NEXT:    fcvt.h.s fs1, fa0
 ; RV64IFZFH-NEXT:    fmv.s fa0, fs0
 ; RV64IFZFH-NEXT:    call cosf@plt
-; RV64IFZFH-NEXT:    fcvt.h.s ft0, fa0
-; RV64IFZFH-NEXT:    fadd.h fa0, fs1, ft0
+; RV64IFZFH-NEXT:    fcvt.h.s fa5, fa0
+; RV64IFZFH-NEXT:    fadd.h fa0, fs1, fa5
 ; RV64IFZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFZFH-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
 ; RV64IFZFH-NEXT:    flw fs1, 0(sp) # 4-byte Folded Reload
@@ -367,8 +367,8 @@ define half @sincos_f16(half %a) nounwind {
 ; RV32IDZFH-NEXT:    fcvt.h.s fs1, fa0
 ; RV32IDZFH-NEXT:    fmv.s fa0, fs0
 ; RV32IDZFH-NEXT:    call cosf@plt
-; RV32IDZFH-NEXT:    fcvt.h.s ft0, fa0
-; RV32IDZFH-NEXT:    fadd.h fa0, fs1, ft0
+; RV32IDZFH-NEXT:    fcvt.h.s fa5, fa0
+; RV32IDZFH-NEXT:    fadd.h fa0, fs1, fa5
 ; RV32IDZFH-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IDZFH-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; RV32IDZFH-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
@@ -387,8 +387,8 @@ define half @sincos_f16(half %a) nounwind {
 ; RV64IDZFH-NEXT:    fcvt.h.s fs1, fa0
 ; RV64IDZFH-NEXT:    fmv.s fa0, fs0
 ; RV64IDZFH-NEXT:    call cosf@plt
-; RV64IDZFH-NEXT:    fcvt.h.s ft0, fa0
-; RV64IDZFH-NEXT:    fadd.h fa0, fs1, ft0
+; RV64IDZFH-NEXT:    fcvt.h.s fa5, fa0
+; RV64IDZFH-NEXT:    fadd.h fa0, fs1, fa5
 ; RV64IDZFH-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IDZFH-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; RV64IDZFH-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
@@ -477,11 +477,11 @@ define half @sincos_f16(half %a) nounwind {
 ; RV32IFZFHMIN-NEXT:    fcvt.h.s fs1, fa0
 ; RV32IFZFHMIN-NEXT:    fmv.s fa0, fs0
 ; RV32IFZFHMIN-NEXT:    call cosf@plt
-; RV32IFZFHMIN-NEXT:    fcvt.h.s ft0, fa0
-; RV32IFZFHMIN-NEXT:    fcvt.s.h ft0, ft0
-; RV32IFZFHMIN-NEXT:    fcvt.s.h ft1, fs1
-; RV32IFZFHMIN-NEXT:    fadd.s ft0, ft1, ft0
-; RV32IFZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV32IFZFHMIN-NEXT:    fcvt.h.s fa5, fa0
+; RV32IFZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; RV32IFZFHMIN-NEXT:    fcvt.s.h fa4, fs1
+; RV32IFZFHMIN-NEXT:    fadd.s fa5, fa4, fa5
+; RV32IFZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV32IFZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFZFHMIN-NEXT:    flw fs0, 8(sp) # 4-byte Folded Reload
 ; RV32IFZFHMIN-NEXT:    flw fs1, 4(sp) # 4-byte Folded Reload
@@ -500,11 +500,11 @@ define half @sincos_f16(half %a) nounwind {
 ; RV64IFZFHMIN-NEXT:    fcvt.h.s fs1, fa0
 ; RV64IFZFHMIN-NEXT:    fmv.s fa0, fs0
 ; RV64IFZFHMIN-NEXT:    call cosf@plt
-; RV64IFZFHMIN-NEXT:    fcvt.h.s ft0, fa0
-; RV64IFZFHMIN-NEXT:    fcvt.s.h ft0, ft0
-; RV64IFZFHMIN-NEXT:    fcvt.s.h ft1, fs1
-; RV64IFZFHMIN-NEXT:    fadd.s ft0, ft1, ft0
-; RV64IFZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV64IFZFHMIN-NEXT:    fcvt.h.s fa5, fa0
+; RV64IFZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; RV64IFZFHMIN-NEXT:    fcvt.s.h fa4, fs1
+; RV64IFZFHMIN-NEXT:    fadd.s fa5, fa4, fa5
+; RV64IFZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IFZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFZFHMIN-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
 ; RV64IFZFHMIN-NEXT:    flw fs1, 0(sp) # 4-byte Folded Reload
@@ -523,11 +523,11 @@ define half @sincos_f16(half %a) nounwind {
 ; RV32IDZFHMIN-NEXT:    fcvt.h.s fs1, fa0
 ; RV32IDZFHMIN-NEXT:    fmv.s fa0, fs0
 ; RV32IDZFHMIN-NEXT:    call cosf@plt
-; RV32IDZFHMIN-NEXT:    fcvt.h.s ft0, fa0
-; RV32IDZFHMIN-NEXT:    fcvt.s.h ft0, ft0
-; RV32IDZFHMIN-NEXT:    fcvt.s.h ft1, fs1
-; RV32IDZFHMIN-NEXT:    fadd.s ft0, ft1, ft0
-; RV32IDZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV32IDZFHMIN-NEXT:    fcvt.h.s fa5, fa0
+; RV32IDZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; RV32IDZFHMIN-NEXT:    fcvt.s.h fa4, fs1
+; RV32IDZFHMIN-NEXT:    fadd.s fa5, fa4, fa5
+; RV32IDZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV32IDZFHMIN-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IDZFHMIN-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; RV32IDZFHMIN-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
@@ -546,11 +546,11 @@ define half @sincos_f16(half %a) nounwind {
 ; RV64IDZFHMIN-NEXT:    fcvt.h.s fs1, fa0
 ; RV64IDZFHMIN-NEXT:    fmv.s fa0, fs0
 ; RV64IDZFHMIN-NEXT:    call cosf@plt
-; RV64IDZFHMIN-NEXT:    fcvt.h.s ft0, fa0
-; RV64IDZFHMIN-NEXT:    fcvt.s.h ft0, ft0
-; RV64IDZFHMIN-NEXT:    fcvt.s.h ft1, fs1
-; RV64IDZFHMIN-NEXT:    fadd.s ft0, ft1, ft0
-; RV64IDZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV64IDZFHMIN-NEXT:    fcvt.h.s fa5, fa0
+; RV64IDZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; RV64IDZFHMIN-NEXT:    fcvt.s.h fa4, fs1
+; RV64IDZFHMIN-NEXT:    fadd.s fa5, fa4, fa5
+; RV64IDZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IDZFHMIN-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IDZFHMIN-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; RV64IDZFHMIN-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
@@ -1124,11 +1124,11 @@ define half @fma_f16(half %a, half %b, half %c) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: fma_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa2
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft1, fa1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft2, fa0
-; CHECKIZFHMIN-NEXT:    fmadd.s ft0, ft2, ft1, ft0
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa2
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa1
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa3, fa0
+; CHECKIZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = call half @llvm.fma.f16(half %a, half %b, half %c)
   ret half %1
@@ -1220,14 +1220,14 @@ define half @fmuladd_f16(half %a, half %b, half %c) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: fmuladd_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft1, fa0
-; CHECKIZFHMIN-NEXT:    fmul.s ft0, ft1, ft0
-; CHECKIZFHMIN-NEXT:    fcvt.h.s ft0, ft0
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, ft0
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft1, fa2
-; CHECKIZFHMIN-NEXT:    fadd.s ft0, ft0, ft1
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECKIZFHMIN-NEXT:    fmul.s fa5, fa4, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa2
+; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = call half @llvm.fmuladd.f16(half %a, half %b, half %c)
   ret half %1
@@ -1255,9 +1255,9 @@ define half @fabs_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: fabs_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; CHECKIZFHMIN-NEXT:    fabs.s ft0, ft0
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECKIZFHMIN-NEXT:    fabs.s fa5, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = call half @llvm.fabs.f16(half %a)
   ret half %1
@@ -1325,10 +1325,10 @@ define half @minnum_f16(half %a, half %b) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: minnum_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft1, fa0
-; CHECKIZFHMIN-NEXT:    fmin.s ft0, ft1, ft0
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECKIZFHMIN-NEXT:    fmin.s fa5, fa4, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = call half @llvm.minnum.f16(half %a, half %b)
   ret half %1
@@ -1396,10 +1396,10 @@ define half @maxnum_f16(half %a, half %b) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: maxnum_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa1
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft1, fa0
-; CHECKIZFHMIN-NEXT:    fmax.s ft0, ft1, ft0
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECKIZFHMIN-NEXT:    fmax.s fa5, fa4, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = call half @llvm.maxnum.f16(half %a, half %b)
   ret half %1
@@ -1487,14 +1487,14 @@ define half @floor_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: floor_f16:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    lui a0, %hi(.LCPI17_0)
-; CHECKIZFH-NEXT:    flh ft0, %lo(.LCPI17_0)(a0)
-; CHECKIZFH-NEXT:    fabs.h ft1, fa0
-; CHECKIZFH-NEXT:    flt.h a0, ft1, ft0
+; CHECKIZFH-NEXT:    flh fa5, %lo(.LCPI17_0)(a0)
+; CHECKIZFH-NEXT:    fabs.h fa4, fa0
+; CHECKIZFH-NEXT:    flt.h a0, fa4, fa5
 ; CHECKIZFH-NEXT:    beqz a0, .LBB17_2
 ; CHECKIZFH-NEXT:  # %bb.1:
 ; CHECKIZFH-NEXT:    fcvt.w.h a0, fa0, rdn
-; CHECKIZFH-NEXT:    fcvt.h.w ft0, a0, rdn
-; CHECKIZFH-NEXT:    fsgnj.h fa0, ft0, fa0
+; CHECKIZFH-NEXT:    fcvt.h.w fa5, a0, rdn
+; CHECKIZFH-NEXT:    fsgnj.h fa0, fa5, fa0
 ; CHECKIZFH-NEXT:  .LBB17_2:
 ; CHECKIZFH-NEXT:    ret
 ;
@@ -1526,18 +1526,18 @@ define half @floor_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: floor_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
-; CHECKIZFHMIN-NEXT:    fmv.w.x ft1, a0
-; CHECKIZFHMIN-NEXT:    fabs.s ft2, ft0
-; CHECKIZFHMIN-NEXT:    flt.s a0, ft2, ft1
+; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
+; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
+; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
 ; CHECKIZFHMIN-NEXT:    beqz a0, .LBB17_2
 ; CHECKIZFHMIN-NEXT:  # %bb.1:
-; CHECKIZFHMIN-NEXT:    fcvt.w.s a0, ft0, rdn
-; CHECKIZFHMIN-NEXT:    fcvt.s.w ft1, a0, rdn
-; CHECKIZFHMIN-NEXT:    fsgnj.s ft0, ft1, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.w.s a0, fa5, rdn
+; CHECKIZFHMIN-NEXT:    fcvt.s.w fa4, a0, rdn
+; CHECKIZFHMIN-NEXT:    fsgnj.s fa5, fa4, fa5
 ; CHECKIZFHMIN-NEXT:  .LBB17_2:
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = call half @llvm.floor.f16(half %a)
   ret half %1
@@ -1549,14 +1549,14 @@ define half @ceil_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: ceil_f16:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    lui a0, %hi(.LCPI18_0)
-; CHECKIZFH-NEXT:    flh ft0, %lo(.LCPI18_0)(a0)
-; CHECKIZFH-NEXT:    fabs.h ft1, fa0
-; CHECKIZFH-NEXT:    flt.h a0, ft1, ft0
+; CHECKIZFH-NEXT:    flh fa5, %lo(.LCPI18_0)(a0)
+; CHECKIZFH-NEXT:    fabs.h fa4, fa0
+; CHECKIZFH-NEXT:    flt.h a0, fa4, fa5
 ; CHECKIZFH-NEXT:    beqz a0, .LBB18_2
 ; CHECKIZFH-NEXT:  # %bb.1:
 ; CHECKIZFH-NEXT:    fcvt.w.h a0, fa0, rup
-; CHECKIZFH-NEXT:    fcvt.h.w ft0, a0, rup
-; CHECKIZFH-NEXT:    fsgnj.h fa0, ft0, fa0
+; CHECKIZFH-NEXT:    fcvt.h.w fa5, a0, rup
+; CHECKIZFH-NEXT:    fsgnj.h fa0, fa5, fa0
 ; CHECKIZFH-NEXT:  .LBB18_2:
 ; CHECKIZFH-NEXT:    ret
 ;
@@ -1588,18 +1588,18 @@ define half @ceil_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: ceil_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
-; CHECKIZFHMIN-NEXT:    fmv.w.x ft1, a0
-; CHECKIZFHMIN-NEXT:    fabs.s ft2, ft0
-; CHECKIZFHMIN-NEXT:    flt.s a0, ft2, ft1
+; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
+; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
+; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
 ; CHECKIZFHMIN-NEXT:    beqz a0, .LBB18_2
 ; CHECKIZFHMIN-NEXT:  # %bb.1:
-; CHECKIZFHMIN-NEXT:    fcvt.w.s a0, ft0, rup
-; CHECKIZFHMIN-NEXT:    fcvt.s.w ft1, a0, rup
-; CHECKIZFHMIN-NEXT:    fsgnj.s ft0, ft1, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.w.s a0, fa5, rup
+; CHECKIZFHMIN-NEXT:    fcvt.s.w fa4, a0, rup
+; CHECKIZFHMIN-NEXT:    fsgnj.s fa5, fa4, fa5
 ; CHECKIZFHMIN-NEXT:  .LBB18_2:
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = call half @llvm.ceil.f16(half %a)
   ret half %1
@@ -1611,14 +1611,14 @@ define half @trunc_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: trunc_f16:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    lui a0, %hi(.LCPI19_0)
-; CHECKIZFH-NEXT:    flh ft0, %lo(.LCPI19_0)(a0)
-; CHECKIZFH-NEXT:    fabs.h ft1, fa0
-; CHECKIZFH-NEXT:    flt.h a0, ft1, ft0
+; CHECKIZFH-NEXT:    flh fa5, %lo(.LCPI19_0)(a0)
+; CHECKIZFH-NEXT:    fabs.h fa4, fa0
+; CHECKIZFH-NEXT:    flt.h a0, fa4, fa5
 ; CHECKIZFH-NEXT:    beqz a0, .LBB19_2
 ; CHECKIZFH-NEXT:  # %bb.1:
 ; CHECKIZFH-NEXT:    fcvt.w.h a0, fa0, rtz
-; CHECKIZFH-NEXT:    fcvt.h.w ft0, a0, rtz
-; CHECKIZFH-NEXT:    fsgnj.h fa0, ft0, fa0
+; CHECKIZFH-NEXT:    fcvt.h.w fa5, a0, rtz
+; CHECKIZFH-NEXT:    fsgnj.h fa0, fa5, fa0
 ; CHECKIZFH-NEXT:  .LBB19_2:
 ; CHECKIZFH-NEXT:    ret
 ;
@@ -1650,18 +1650,18 @@ define half @trunc_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: trunc_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
-; CHECKIZFHMIN-NEXT:    fmv.w.x ft1, a0
-; CHECKIZFHMIN-NEXT:    fabs.s ft2, ft0
-; CHECKIZFHMIN-NEXT:    flt.s a0, ft2, ft1
+; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
+; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
+; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
 ; CHECKIZFHMIN-NEXT:    beqz a0, .LBB19_2
 ; CHECKIZFHMIN-NEXT:  # %bb.1:
-; CHECKIZFHMIN-NEXT:    fcvt.w.s a0, ft0, rtz
-; CHECKIZFHMIN-NEXT:    fcvt.s.w ft1, a0, rtz
-; CHECKIZFHMIN-NEXT:    fsgnj.s ft0, ft1, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.w.s a0, fa5, rtz
+; CHECKIZFHMIN-NEXT:    fcvt.s.w fa4, a0, rtz
+; CHECKIZFHMIN-NEXT:    fsgnj.s fa5, fa4, fa5
 ; CHECKIZFHMIN-NEXT:  .LBB19_2:
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = call half @llvm.trunc.f16(half %a)
   ret half %1
@@ -1673,14 +1673,14 @@ define half @rint_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: rint_f16:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    lui a0, %hi(.LCPI20_0)
-; CHECKIZFH-NEXT:    flh ft0, %lo(.LCPI20_0)(a0)
-; CHECKIZFH-NEXT:    fabs.h ft1, fa0
-; CHECKIZFH-NEXT:    flt.h a0, ft1, ft0
+; CHECKIZFH-NEXT:    flh fa5, %lo(.LCPI20_0)(a0)
+; CHECKIZFH-NEXT:    fabs.h fa4, fa0
+; CHECKIZFH-NEXT:    flt.h a0, fa4, fa5
 ; CHECKIZFH-NEXT:    beqz a0, .LBB20_2
 ; CHECKIZFH-NEXT:  # %bb.1:
 ; CHECKIZFH-NEXT:    fcvt.w.h a0, fa0
-; CHECKIZFH-NEXT:    fcvt.h.w ft0, a0
-; CHECKIZFH-NEXT:    fsgnj.h fa0, ft0, fa0
+; CHECKIZFH-NEXT:    fcvt.h.w fa5, a0
+; CHECKIZFH-NEXT:    fsgnj.h fa0, fa5, fa0
 ; CHECKIZFH-NEXT:  .LBB20_2:
 ; CHECKIZFH-NEXT:    ret
 ;
@@ -1712,18 +1712,18 @@ define half @rint_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: rint_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
-; CHECKIZFHMIN-NEXT:    fmv.w.x ft1, a0
-; CHECKIZFHMIN-NEXT:    fabs.s ft2, ft0
-; CHECKIZFHMIN-NEXT:    flt.s a0, ft2, ft1
+; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
+; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
+; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
 ; CHECKIZFHMIN-NEXT:    beqz a0, .LBB20_2
 ; CHECKIZFHMIN-NEXT:  # %bb.1:
-; CHECKIZFHMIN-NEXT:    fcvt.w.s a0, ft0
-; CHECKIZFHMIN-NEXT:    fcvt.s.w ft1, a0
-; CHECKIZFHMIN-NEXT:    fsgnj.s ft0, ft1, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.w.s a0, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.w fa4, a0
+; CHECKIZFHMIN-NEXT:    fsgnj.s fa5, fa4, fa5
 ; CHECKIZFHMIN-NEXT:  .LBB20_2:
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = call half @llvm.rint.f16(half %a)
   ret half %1
@@ -1811,14 +1811,14 @@ define half @round_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: round_f16:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    lui a0, %hi(.LCPI22_0)
-; CHECKIZFH-NEXT:    flh ft0, %lo(.LCPI22_0)(a0)
-; CHECKIZFH-NEXT:    fabs.h ft1, fa0
-; CHECKIZFH-NEXT:    flt.h a0, ft1, ft0
+; CHECKIZFH-NEXT:    flh fa5, %lo(.LCPI22_0)(a0)
+; CHECKIZFH-NEXT:    fabs.h fa4, fa0
+; CHECKIZFH-NEXT:    flt.h a0, fa4, fa5
 ; CHECKIZFH-NEXT:    beqz a0, .LBB22_2
 ; CHECKIZFH-NEXT:  # %bb.1:
 ; CHECKIZFH-NEXT:    fcvt.w.h a0, fa0, rmm
-; CHECKIZFH-NEXT:    fcvt.h.w ft0, a0, rmm
-; CHECKIZFH-NEXT:    fsgnj.h fa0, ft0, fa0
+; CHECKIZFH-NEXT:    fcvt.h.w fa5, a0, rmm
+; CHECKIZFH-NEXT:    fsgnj.h fa0, fa5, fa0
 ; CHECKIZFH-NEXT:  .LBB22_2:
 ; CHECKIZFH-NEXT:    ret
 ;
@@ -1850,18 +1850,18 @@ define half @round_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: round_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
-; CHECKIZFHMIN-NEXT:    fmv.w.x ft1, a0
-; CHECKIZFHMIN-NEXT:    fabs.s ft2, ft0
-; CHECKIZFHMIN-NEXT:    flt.s a0, ft2, ft1
+; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
+; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
+; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
 ; CHECKIZFHMIN-NEXT:    beqz a0, .LBB22_2
 ; CHECKIZFHMIN-NEXT:  # %bb.1:
-; CHECKIZFHMIN-NEXT:    fcvt.w.s a0, ft0, rmm
-; CHECKIZFHMIN-NEXT:    fcvt.s.w ft1, a0, rmm
-; CHECKIZFHMIN-NEXT:    fsgnj.s ft0, ft1, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.w.s a0, fa5, rmm
+; CHECKIZFHMIN-NEXT:    fcvt.s.w fa4, a0, rmm
+; CHECKIZFHMIN-NEXT:    fsgnj.s fa5, fa4, fa5
 ; CHECKIZFHMIN-NEXT:  .LBB22_2:
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = call half @llvm.round.f16(half %a)
   ret half %1
@@ -1873,14 +1873,14 @@ define half @roundeven_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: roundeven_f16:
 ; CHECKIZFH:       # %bb.0:
 ; CHECKIZFH-NEXT:    lui a0, %hi(.LCPI23_0)
-; CHECKIZFH-NEXT:    flh ft0, %lo(.LCPI23_0)(a0)
-; CHECKIZFH-NEXT:    fabs.h ft1, fa0
-; CHECKIZFH-NEXT:    flt.h a0, ft1, ft0
+; CHECKIZFH-NEXT:    flh fa5, %lo(.LCPI23_0)(a0)
+; CHECKIZFH-NEXT:    fabs.h fa4, fa0
+; CHECKIZFH-NEXT:    flt.h a0, fa4, fa5
 ; CHECKIZFH-NEXT:    beqz a0, .LBB23_2
 ; CHECKIZFH-NEXT:  # %bb.1:
 ; CHECKIZFH-NEXT:    fcvt.w.h a0, fa0, rne
-; CHECKIZFH-NEXT:    fcvt.h.w ft0, a0, rne
-; CHECKIZFH-NEXT:    fsgnj.h fa0, ft0, fa0
+; CHECKIZFH-NEXT:    fcvt.h.w fa5, a0, rne
+; CHECKIZFH-NEXT:    fsgnj.h fa0, fa5, fa0
 ; CHECKIZFH-NEXT:  .LBB23_2:
 ; CHECKIZFH-NEXT:    ret
 ;
@@ -1912,18 +1912,18 @@ define half @roundeven_f16(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: roundeven_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 307200
-; CHECKIZFHMIN-NEXT:    fmv.w.x ft1, a0
-; CHECKIZFHMIN-NEXT:    fabs.s ft2, ft0
-; CHECKIZFHMIN-NEXT:    flt.s a0, ft2, ft1
+; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
+; CHECKIZFHMIN-NEXT:    fabs.s fa3, fa5
+; CHECKIZFHMIN-NEXT:    flt.s a0, fa3, fa4
 ; CHECKIZFHMIN-NEXT:    beqz a0, .LBB23_2
 ; CHECKIZFHMIN-NEXT:  # %bb.1:
-; CHECKIZFHMIN-NEXT:    fcvt.w.s a0, ft0, rne
-; CHECKIZFHMIN-NEXT:    fcvt.s.w ft1, a0, rne
-; CHECKIZFHMIN-NEXT:    fsgnj.s ft0, ft1, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.w.s a0, fa5, rne
+; CHECKIZFHMIN-NEXT:    fcvt.s.w fa4, a0, rne
+; CHECKIZFHMIN-NEXT:    fsgnj.s fa5, fa4, fa5
 ; CHECKIZFHMIN-NEXT:  .LBB23_2:
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = call half @llvm.roundeven.f16(half %a)
   ret half %1

@@ -20,7 +20,7 @@ using namespace llvm;
 unsigned RISCVMCObjectFileInfo::getTextSectionAlignment() const {
   const MCSubtargetInfo *STI = getContext().getSubtargetInfo();
   return (STI->hasFeature(RISCV::FeatureStdExtC) ||
-          STI->hasFeature(RISCV::FeatureExtZca))
+          STI->hasFeature(RISCV::FeatureStdExtZca))
              ? 2
              : 4;
 }

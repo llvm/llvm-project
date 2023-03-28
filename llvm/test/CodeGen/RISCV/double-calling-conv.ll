@@ -13,12 +13,12 @@ define double @callee_double_inreg(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    sw a2, 8(sp)
 ; RV32IFD-NEXT:    sw a3, 12(sp)
-; RV32IFD-NEXT:    fld ft0, 8(sp)
+; RV32IFD-NEXT:    fld fa5, 8(sp)
 ; RV32IFD-NEXT:    sw a0, 8(sp)
 ; RV32IFD-NEXT:    sw a1, 12(sp)
-; RV32IFD-NEXT:    fld ft1, 8(sp)
-; RV32IFD-NEXT:    fadd.d ft0, ft1, ft0
-; RV32IFD-NEXT:    fsd ft0, 8(sp)
+; RV32IFD-NEXT:    fld fa4, 8(sp)
+; RV32IFD-NEXT:    fadd.d fa5, fa4, fa5
+; RV32IFD-NEXT:    fsd fa5, 8(sp)
 ; RV32IFD-NEXT:    lw a0, 8(sp)
 ; RV32IFD-NEXT:    lw a1, 12(sp)
 ; RV32IFD-NEXT:    addi sp, sp, 16
@@ -56,12 +56,12 @@ define double @callee_double_split_reg_stack(i32 %a, i64 %b, i64 %c, double %d, 
 ; RV32IFD-NEXT:    lw a0, 16(sp)
 ; RV32IFD-NEXT:    sw a7, 8(sp)
 ; RV32IFD-NEXT:    sw a0, 12(sp)
-; RV32IFD-NEXT:    fld ft0, 8(sp)
+; RV32IFD-NEXT:    fld fa5, 8(sp)
 ; RV32IFD-NEXT:    sw a5, 8(sp)
 ; RV32IFD-NEXT:    sw a6, 12(sp)
-; RV32IFD-NEXT:    fld ft1, 8(sp)
-; RV32IFD-NEXT:    fadd.d ft0, ft1, ft0
-; RV32IFD-NEXT:    fsd ft0, 8(sp)
+; RV32IFD-NEXT:    fld fa4, 8(sp)
+; RV32IFD-NEXT:    fadd.d fa5, fa4, fa5
+; RV32IFD-NEXT:    fsd fa5, 8(sp)
 ; RV32IFD-NEXT:    lw a0, 8(sp)
 ; RV32IFD-NEXT:    lw a1, 12(sp)
 ; RV32IFD-NEXT:    addi sp, sp, 16
@@ -100,10 +100,10 @@ define double @callee_double_stack(i64 %a, i64 %b, i64 %c, i64 %d, double %e, do
 ; RV32IFD-LABEL: callee_double_stack:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fld ft0, 24(sp)
-; RV32IFD-NEXT:    fld ft1, 16(sp)
-; RV32IFD-NEXT:    fadd.d ft0, ft1, ft0
-; RV32IFD-NEXT:    fsd ft0, 8(sp)
+; RV32IFD-NEXT:    fld fa5, 24(sp)
+; RV32IFD-NEXT:    fld fa4, 16(sp)
+; RV32IFD-NEXT:    fadd.d fa5, fa4, fa5
+; RV32IFD-NEXT:    fsd fa5, 8(sp)
 ; RV32IFD-NEXT:    lw a0, 8(sp)
 ; RV32IFD-NEXT:    lw a1, 12(sp)
 ; RV32IFD-NEXT:    addi sp, sp, 16

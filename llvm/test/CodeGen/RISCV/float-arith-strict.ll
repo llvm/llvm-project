@@ -263,9 +263,9 @@ declare float @llvm.experimental.constrained.fma.f32(float, float, float, metada
 define float @fmsub_s(float %a, float %b, float %c) nounwind strictfp {
 ; CHECKIF-LABEL: fmsub_s:
 ; CHECKIF:       # %bb.0:
-; CHECKIF-NEXT:    fmv.w.x ft0, zero
-; CHECKIF-NEXT:    fadd.s ft0, fa2, ft0
-; CHECKIF-NEXT:    fmsub.s fa0, fa0, fa1, ft0
+; CHECKIF-NEXT:    fmv.w.x fa5, zero
+; CHECKIF-NEXT:    fadd.s fa5, fa2, fa5
+; CHECKIF-NEXT:    fmsub.s fa0, fa0, fa1, fa5
 ; CHECKIF-NEXT:    ret
 ;
 ; RV32I-LABEL: fmsub_s:
@@ -320,10 +320,10 @@ define float @fmsub_s(float %a, float %b, float %c) nounwind strictfp {
 define float @fnmadd_s(float %a, float %b, float %c) nounwind strictfp {
 ; CHECKIF-LABEL: fnmadd_s:
 ; CHECKIF:       # %bb.0:
-; CHECKIF-NEXT:    fmv.w.x ft0, zero
-; CHECKIF-NEXT:    fadd.s ft1, fa0, ft0
-; CHECKIF-NEXT:    fadd.s ft0, fa2, ft0
-; CHECKIF-NEXT:    fnmadd.s fa0, ft1, fa1, ft0
+; CHECKIF-NEXT:    fmv.w.x fa5, zero
+; CHECKIF-NEXT:    fadd.s fa4, fa0, fa5
+; CHECKIF-NEXT:    fadd.s fa5, fa2, fa5
+; CHECKIF-NEXT:    fnmadd.s fa0, fa4, fa1, fa5
 ; CHECKIF-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_s:
@@ -392,10 +392,10 @@ define float @fnmadd_s(float %a, float %b, float %c) nounwind strictfp {
 define float @fnmadd_s_2(float %a, float %b, float %c) nounwind strictfp {
 ; CHECKIF-LABEL: fnmadd_s_2:
 ; CHECKIF:       # %bb.0:
-; CHECKIF-NEXT:    fmv.w.x ft0, zero
-; CHECKIF-NEXT:    fadd.s ft1, fa1, ft0
-; CHECKIF-NEXT:    fadd.s ft0, fa2, ft0
-; CHECKIF-NEXT:    fnmadd.s fa0, ft1, fa0, ft0
+; CHECKIF-NEXT:    fmv.w.x fa5, zero
+; CHECKIF-NEXT:    fadd.s fa4, fa1, fa5
+; CHECKIF-NEXT:    fadd.s fa5, fa2, fa5
+; CHECKIF-NEXT:    fnmadd.s fa0, fa4, fa0, fa5
 ; CHECKIF-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_s_2:
@@ -464,9 +464,9 @@ define float @fnmadd_s_2(float %a, float %b, float %c) nounwind strictfp {
 define float @fnmsub_s(float %a, float %b, float %c) nounwind strictfp {
 ; CHECKIF-LABEL: fnmsub_s:
 ; CHECKIF:       # %bb.0:
-; CHECKIF-NEXT:    fmv.w.x ft0, zero
-; CHECKIF-NEXT:    fadd.s ft0, fa0, ft0
-; CHECKIF-NEXT:    fnmsub.s fa0, ft0, fa1, fa2
+; CHECKIF-NEXT:    fmv.w.x fa5, zero
+; CHECKIF-NEXT:    fadd.s fa5, fa0, fa5
+; CHECKIF-NEXT:    fnmsub.s fa0, fa5, fa1, fa2
 ; CHECKIF-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmsub_s:
@@ -519,9 +519,9 @@ define float @fnmsub_s(float %a, float %b, float %c) nounwind strictfp {
 define float @fnmsub_s_2(float %a, float %b, float %c) nounwind strictfp {
 ; CHECKIF-LABEL: fnmsub_s_2:
 ; CHECKIF:       # %bb.0:
-; CHECKIF-NEXT:    fmv.w.x ft0, zero
-; CHECKIF-NEXT:    fadd.s ft0, fa1, ft0
-; CHECKIF-NEXT:    fnmsub.s fa0, ft0, fa0, fa2
+; CHECKIF-NEXT:    fmv.w.x fa5, zero
+; CHECKIF-NEXT:    fadd.s fa5, fa1, fa5
+; CHECKIF-NEXT:    fnmsub.s fa0, fa5, fa0, fa2
 ; CHECKIF-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmsub_s_2:

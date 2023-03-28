@@ -35,7 +35,7 @@ public:
   GetFile(const lldb_private::FileSpec &source,
           const lldb_private::FileSpec &destination) override;
 
-  lldb::UnixSignalsSP GetRemoteUnixSignals() override;
+  const lldb::UnixSignalsSP &GetRemoteUnixSignals() override;
 
   lldb::ProcessSP Attach(lldb_private::ProcessAttachInfo &attach_info,
                          lldb_private::Debugger &debugger,
@@ -68,8 +68,6 @@ public:
                                    uint32_t image_token) override;
 
   lldb_private::ConstString GetFullNameForDylib(lldb_private::ConstString basename) override;
-
-  lldb::UnixSignalsSP CreateUnixSignals() override;
 
 protected:
   std::unique_ptr<lldb_private::OptionGroupPlatformRSync>

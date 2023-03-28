@@ -498,15 +498,15 @@ define signext i32 @fcvt_s_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV32IF-LABEL: fcvt_s_w_demanded_bits:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi a0, a0, 1
-; RV32IF-NEXT:    fcvt.s.w ft0, a0
-; RV32IF-NEXT:    fsw ft0, 0(a1)
+; RV32IF-NEXT:    fcvt.s.w fa5, a0
+; RV32IF-NEXT:    fsw fa5, 0(a1)
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: fcvt_s_w_demanded_bits:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    addiw a0, a0, 1
-; RV64IF-NEXT:    fcvt.s.w ft0, a0
-; RV64IF-NEXT:    fsw ft0, 0(a1)
+; RV64IF-NEXT:    fcvt.s.w fa5, a0
+; RV64IF-NEXT:    fsw fa5, 0(a1)
 ; RV64IF-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_s_w_demanded_bits:
@@ -555,15 +555,15 @@ define signext i32 @fcvt_s_wu_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV32IF-LABEL: fcvt_s_wu_demanded_bits:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi a0, a0, 1
-; RV32IF-NEXT:    fcvt.s.wu ft0, a0
-; RV32IF-NEXT:    fsw ft0, 0(a1)
+; RV32IF-NEXT:    fcvt.s.wu fa5, a0
+; RV32IF-NEXT:    fsw fa5, 0(a1)
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: fcvt_s_wu_demanded_bits:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    addiw a0, a0, 1
-; RV64IF-NEXT:    fcvt.s.wu ft0, a0
-; RV64IF-NEXT:    fsw ft0, 0(a1)
+; RV64IF-NEXT:    fcvt.s.wu fa5, a0
+; RV64IF-NEXT:    fsw fa5, 0(a1)
 ; RV64IF-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_s_wu_demanded_bits:

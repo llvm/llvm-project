@@ -40,7 +40,7 @@ bool hasInitializerSection(jitlink::LinkGraph &G) {
   return false;
 }
 
-JITTargetAddress getJITSymbolPtrForSymbol(Symbol &Sym, const Triple &TT) {
+ExecutorAddr getJITSymbolPtrForSymbol(Symbol &Sym, const Triple &TT) {
   uint64_t CallableAddr = Sym.getAddress().getValue();
   switch (TT.getArch()) {
   case Triple::arm:
@@ -53,7 +53,7 @@ JITTargetAddress getJITSymbolPtrForSymbol(Symbol &Sym, const Triple &TT) {
   default:
     break;
   }
-  return CallableAddr;
+  return ExecutorAddr(CallableAddr);
 }
 
 JITSymbolFlags getJITSymbolFlagsForSymbol(Symbol &Sym) {
@@ -234,7 +234,7 @@ public:
         auto InternedName = ES.intern(Sym->getName());
         auto Ptr = getJITSymbolPtrForSymbol(*Sym, G.getTargetTriple());
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
-        InternedResult[InternedName] = JITEvaluatedSymbol(Ptr, Flags);
+        InternedResult[InternedName] = {Ptr, Flags};
         if (AutoClaim && !MR->getSymbols().count(InternedName)) {
           assert(!ExtraSymbolsToClaim.count(InternedName) &&
                  "Duplicate symbol to claim?");
@@ -247,7 +247,7 @@ public:
         auto InternedName = ES.intern(Sym->getName());
         auto Ptr = getJITSymbolPtrForSymbol(*Sym, G.getTargetTriple());
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
-        InternedResult[InternedName] = JITEvaluatedSymbol(Ptr, Flags);
+        InternedResult[InternedName] = {Ptr, Flags};
         if (AutoClaim && !MR->getSymbols().count(InternedName)) {
           assert(!ExtraSymbolsToClaim.count(InternedName) &&
                  "Duplicate symbol to claim?");

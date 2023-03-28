@@ -56,12 +56,13 @@ public:
       const bufferization::OneShotBufferizationOptions &bufferizationOptions,
       const SparsificationOptions &sparsificationOptions,
       const SparseTensorConversionOptions &sparseTensorConversionOptions,
-      bool enableRuntimeLibrary, bool enableBufferInitialization,
-      unsigned vectorLength, bool enableVLAVectorization,
-      bool enableSIMDIndex32)
+      bool createSparseDeallocs, bool enableRuntimeLibrary,
+      bool enableBufferInitialization, unsigned vectorLength,
+      bool enableVLAVectorization, bool enableSIMDIndex32)
       : bufferizationOptions(bufferizationOptions),
         sparsificationOptions(sparsificationOptions),
         sparseTensorConversionOptions(sparseTensorConversionOptions),
+        createSparseDeallocs(createSparseDeallocs),
         enableRuntimeLibrary(enableRuntimeLibrary),
         enableBufferInitialization(enableBufferInitialization),
         vectorLength(vectorLength),
@@ -147,7 +148,8 @@ public:
         pm.addPass(
             createSparseTensorConversionPass(sparseTensorConversionOptions));
       } else {
-        pm.addPass(createSparseTensorCodegenPass(enableBufferInitialization));
+        pm.addPass(createSparseTensorCodegenPass(createSparseDeallocs,
+                                                 enableBufferInitialization));
         pm.addPass(createSparseBufferRewritePass(enableBufferInitialization));
         pm.addPass(createStorageSpecifierToLLVMPass());
       }
@@ -164,6 +166,7 @@ private:
   bufferization::OneShotBufferizationOptions bufferizationOptions;
   SparsificationOptions sparsificationOptions;
   SparseTensorConversionOptions sparseTensorConversionOptions;
+  bool createSparseDeallocs;
   bool enableRuntimeLibrary;
   bool enableBufferInitialization;
   unsigned vectorLength;
@@ -178,13 +181,13 @@ std::unique_ptr<Pass> mlir::createSparsificationAndBufferizationPass(
     const bufferization::OneShotBufferizationOptions &bufferizationOptions,
     const SparsificationOptions &sparsificationOptions,
     const SparseTensorConversionOptions &sparseTensorConversionOptions,
-    bool enableRuntimeLibrary, bool enableBufferInitialization,
-    unsigned vectorLength, bool enableVLAVectorization,
-    bool enableSIMDIndex32) {
+    bool createSparseDeallocs, bool enableRuntimeLibrary,
+    bool enableBufferInitialization, unsigned vectorLength,
+    bool enableVLAVectorization, bool enableSIMDIndex32) {
   return std::make_unique<
       mlir::sparse_tensor::SparsificationAndBufferizationPass>(
       bufferizationOptions, sparsificationOptions,
-      sparseTensorConversionOptions, enableRuntimeLibrary,
+      sparseTensorConversionOptions, createSparseDeallocs, enableRuntimeLibrary,
       enableBufferInitialization, vectorLength, enableVLAVectorization,
       enableSIMDIndex32);
 }

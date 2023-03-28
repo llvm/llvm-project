@@ -13,8 +13,8 @@ declare i64 @llvm.llrint.i64.f16(half)
 define i64 @llrint_f16(half %a) nounwind {
 ; CHECKIZFHMIN-LABEL: llrint_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; CHECKIZFHMIN-NEXT:    fcvt.l.s a0, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECKIZFHMIN-NEXT:    fcvt.l.s a0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = call i64 @llvm.llrint.i64.f16(half %a)
   ret i64 %1
@@ -25,8 +25,8 @@ declare i64 @llvm.llround.i64.f16(half)
 define i64 @llround_f16(half %a) nounwind {
 ; CHECKIZFHMIN-LABEL: llround_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; CHECKIZFHMIN-NEXT:    fcvt.l.s a0, ft0, rmm
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECKIZFHMIN-NEXT:    fcvt.l.s a0, fa5, rmm
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = call i64 @llvm.llround.i64.f16(half %a)
   ret i64 %1

@@ -350,30 +350,24 @@ static std::optional<std::int64_t> GetTypeParameterInt64Value(
   if (const ParamValue *
       paramValue{derivedType.FindParameter(parameterSymbol.name())}) {
     return evaluate::ToInt64(paramValue->GetExplicit());
-  } else {
-    return std::nullopt;
   }
+  return std::nullopt;
 }
 
-// HaveCompatibleKindParameters functions assume type1 is type compatible with
-// type2 (except for kind type parameters)
-static bool HaveCompatibleKindParameters(
+static bool HaveCompatibleTypeParameters(
     const DerivedTypeSpec &derivedType1, const DerivedTypeSpec &derivedType2) {
   for (const Symbol &symbol :
       OrderParameterDeclarations(derivedType1.typeSymbol())) {
-    if (symbol.get<TypeParamDetails>().attr() == common::TypeParamAttr::Kind) {
-      // At this point, it should have been ensured that these contain integer
-      // constants, so die if this is not the case.
-      if (GetTypeParameterInt64Value(symbol, derivedType1).value() !=
-          GetTypeParameterInt64Value(symbol, derivedType2).value()) {
-        return false;
-      }
+    auto v1{GetTypeParameterInt64Value(symbol, derivedType1)};
+    auto v2{GetTypeParameterInt64Value(symbol, derivedType2)};
+    if (v1 && v2 && *v1 != *v2) {
+      return false;
     }
   }
   return true;
 }
 
-static bool HaveCompatibleKindParameters(
+static bool HaveCompatibleTypeParameters(
     const DeclTypeSpec &type1, const evaluate::DynamicType &type2) {
   if (type1.category() == DeclTypeSpec::Category::ClassStar) {
     return true;
@@ -383,25 +377,53 @@ static bool HaveCompatibleKindParameters(
   } else if (type2.IsUnlimitedPolymorphic()) {
     return false;
   } else if (const DerivedTypeSpec * derivedType1{type1.AsDerived()}) {
-    return HaveCompatibleKindParameters(
+    return HaveCompatibleTypeParameters(
         *derivedType1, type2.GetDerivedTypeSpec());
   } else {
     common::die("unexpected type1 category");
   }
 }
 
-static bool HaveCompatibleKindParameters(
+static bool HaveCompatibleTypeParameters(
     const DeclTypeSpec &type1, const DeclTypeSpec &type2) {
   if (type1.category() == DeclTypeSpec::Category::ClassStar) {
     return true;
-  }
-  if (const IntrinsicTypeSpec * intrinsicType1{type1.AsIntrinsic()}) {
-    return intrinsicType1->kind() == DEREF(type2.AsIntrinsic()).kind();
+  } else if (const IntrinsicTypeSpec * intrinsicType1{type1.AsIntrinsic()}) {
+    const IntrinsicTypeSpec *intrinsicType2{type2.AsIntrinsic()};
+    return !intrinsicType2 || intrinsicType1->kind() == intrinsicType2->kind();
   } else if (const DerivedTypeSpec * derivedType1{type1.AsDerived()}) {
-    return HaveCompatibleKindParameters(
-        *derivedType1, DEREF(type2.AsDerived()));
+    const DerivedTypeSpec *derivedType2{type2.AsDerived()};
+    return !derivedType2 ||
+        HaveCompatibleTypeParameters(*derivedType1, *derivedType2);
   } else {
     common::die("unexpected type1 category");
+  }
+}
+
+static bool HaveCompatibleLengths(
+    const DeclTypeSpec &type1, const DeclTypeSpec &type2) {
+  if (type1.category() == DeclTypeSpec::Character &&
+      type2.category() == DeclTypeSpec::Character) {
+    auto v1{
+        evaluate::ToInt64(type1.characterTypeSpec().length().GetExplicit())};
+    auto v2{
+        evaluate::ToInt64(type2.characterTypeSpec().length().GetExplicit())};
+    return !v1 || !v2 || *v1 == *v2;
+  } else {
+    return true;
+  }
+}
+
+static bool HaveCompatibleLengths(
+    const DeclTypeSpec &type1, const evaluate::DynamicType &type2) {
+  if (type1.category() == DeclTypeSpec::Character &&
+      type2.category() == TypeCategory::Character) {
+    auto v1{
+        evaluate::ToInt64(type1.characterTypeSpec().length().GetExplicit())};
+    auto v2{type2.knownLength()};
+    return !v1 || !v2 || *v1 == *v2;
+  } else {
+    return true;
   }
 }
 
@@ -455,10 +477,15 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
           "Allocatable object in ALLOCATE must be type compatible with type-spec"_err_en_US);
       return false;
     }
-    if (!HaveCompatibleKindParameters(*type_, *allocateInfo_.typeSpec)) {
+    if (!HaveCompatibleTypeParameters(*type_, *allocateInfo_.typeSpec)) {
       context.Say(name_.source,
           // C936
-          "Kind type parameters of allocatable object in ALLOCATE must be the same as the corresponding ones in type-spec"_err_en_US);
+          "Type parameters of allocatable object in ALLOCATE must be the same as the corresponding ones in type-spec"_err_en_US);
+      return false;
+    }
+    if (!HaveCompatibleLengths(*type_, *allocateInfo_.typeSpec)) { // C934
+      context.Say(name_.source,
+          "Character length of allocatable object in ALLOCATE must be the same as the type-spec"_err_en_US);
       return false;
     }
     if (!HaveSameAssumedTypeParameters(*type_, *allocateInfo_.typeSpec)) {
@@ -474,11 +501,18 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
           "Allocatable object in ALLOCATE must be type compatible with source expression from MOLD or SOURCE"_err_en_US);
       return false;
     }
-    if (!HaveCompatibleKindParameters(
+    if (!HaveCompatibleTypeParameters(
             *type_, allocateInfo_.sourceExprType.value())) {
       // C946
       context.Say(name_.source,
-          "Kind type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression"_err_en_US);
+          "Derived type parameters of allocatable object must be the same as the corresponding ones of SOURCE or MOLD expression"_err_en_US);
+      return false;
+    }
+    // Character length distinction is allowed, with a warning
+    if (!HaveCompatibleLengths(
+            *type_, allocateInfo_.sourceExprType.value())) { // C945
+      context.Say(name_.source,
+          "Character length of allocatable object in ALLOCATE should be the same as the SOURCE or MOLD"_port_en_US);
       return false;
     }
   }

@@ -19,26 +19,26 @@ declare iXLen @llvm.lrint.iXLen.f16(half)
 define iXLen @lrint_f16(half %a) nounwind {
 ; RV32IZFHMIN-LABEL: lrint_f16:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; RV32IZFHMIN-NEXT:    fcvt.w.s a0, ft0
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV32IZFHMIN-NEXT:    fcvt.w.s a0, fa5
 ; RV32IZFHMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: lrint_f16:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; RV64IZFHMIN-NEXT:    fcvt.l.s a0, ft0
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV64IZFHMIN-NEXT:    fcvt.l.s a0, fa5
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV32IDZFHMIN-LABEL: lrint_f16:
 ; RV32IDZFHMIN:       # %bb.0:
-; RV32IDZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; RV32IDZFHMIN-NEXT:    fcvt.w.s a0, ft0
+; RV32IDZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV32IDZFHMIN-NEXT:    fcvt.w.s a0, fa5
 ; RV32IDZFHMIN-NEXT:    ret
 ;
 ; RV64IDZFHMIN-LABEL: lrint_f16:
 ; RV64IDZFHMIN:       # %bb.0:
-; RV64IDZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; RV64IDZFHMIN-NEXT:    fcvt.l.s a0, ft0
+; RV64IDZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV64IDZFHMIN-NEXT:    fcvt.l.s a0, fa5
 ; RV64IDZFHMIN-NEXT:    ret
   %1 = call iXLen @llvm.lrint.iXLen.f16(half %a)
   ret iXLen %1
@@ -49,26 +49,26 @@ declare iXLen @llvm.lround.iXLen.f16(half)
 define iXLen @lround_f16(half %a) nounwind {
 ; RV32IZFHMIN-LABEL: lround_f16:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; RV32IZFHMIN-NEXT:    fcvt.w.s a0, ft0, rmm
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV32IZFHMIN-NEXT:    fcvt.w.s a0, fa5, rmm
 ; RV32IZFHMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: lround_f16:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; RV64IZFHMIN-NEXT:    fcvt.l.s a0, ft0, rmm
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV64IZFHMIN-NEXT:    fcvt.l.s a0, fa5, rmm
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV32IDZFHMIN-LABEL: lround_f16:
 ; RV32IDZFHMIN:       # %bb.0:
-; RV32IDZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; RV32IDZFHMIN-NEXT:    fcvt.w.s a0, ft0, rmm
+; RV32IDZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV32IDZFHMIN-NEXT:    fcvt.w.s a0, fa5, rmm
 ; RV32IDZFHMIN-NEXT:    ret
 ;
 ; RV64IDZFHMIN-LABEL: lround_f16:
 ; RV64IDZFHMIN:       # %bb.0:
-; RV64IDZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; RV64IDZFHMIN-NEXT:    fcvt.l.s a0, ft0, rmm
+; RV64IDZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV64IDZFHMIN-NEXT:    fcvt.l.s a0, fa5, rmm
 ; RV64IDZFHMIN-NEXT:    ret
   %1 = call iXLen @llvm.lround.iXLen.f16(half %a)
   ret iXLen %1

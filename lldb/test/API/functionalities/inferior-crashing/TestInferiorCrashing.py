@@ -63,9 +63,7 @@ class CrashingInferiorTestCase(TestBase):
         # The exact stop reason depends on the platform
         if self.platformIsDarwin():
             stop_reason = 'stop reason = EXC_BAD_ACCESS'
-        elif self.getPlatform() == "linux":
-            stop_reason = 'stop reason = signal SIGSEGV: address not mapped to object'
-        elif self.getPlatform() == "freebsd":
+        elif self.getPlatform() == "linux" or self.getPlatform() == "freebsd":
             stop_reason = 'stop reason = signal SIGSEGV'
         else:
             stop_reason = 'stop reason = invalid address'
