@@ -254,8 +254,8 @@ class DylibSymbol : public Symbol {
 public:
   DylibSymbol(DylibFile *file, StringRefZ name, bool isWeakDef,
               RefState refState, bool isTlv)
-      : Symbol(DylibKind, name, file), refState(refState), weakDef(isWeakDef),
-        tlv(isTlv) {
+      : Symbol(DylibKind, name, file), shouldReexport(false),
+        refState(refState), weakDef(isWeakDef), tlv(isTlv) {
     if (file && refState > RefState::Unreferenced)
       file->numReferencedSymbols++;
   }
@@ -297,6 +297,7 @@ public:
     }
   }
 
+  bool shouldReexport : 1;
 private:
   RefState refState : 2;
   const bool weakDef : 1;

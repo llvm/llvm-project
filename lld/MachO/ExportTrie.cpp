@@ -58,21 +58,24 @@ struct Edge {
 
 struct ExportInfo {
   uint64_t address;
+  uint64_t ordinal = 0;
   uint8_t flags = 0;
   ExportInfo(const Symbol &sym, uint64_t imageBase)
       : address(sym.getVA() - imageBase) {
     using namespace llvm::MachO;
-    // Set the symbol type.
     if (sym.isWeakDef())
       flags |= EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION;
-    // TODO: Add proper support for re-exports & stub-and-resolver flags.
-
-    // Set the symbol kind.
-    if (sym.isTlv()) {
+    if (sym.isTlv())
       flags |= EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL;
-    } else if (auto *defined = dyn_cast<Defined>(&sym)) {
+    // TODO: Add proper support for stub-and-resolver flags.
+
+    if (auto *defined = dyn_cast<Defined>(&sym)) {
       if (defined->isAbsolute())
         flags |= EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE;
+    } else if (auto *dysym = dyn_cast<DylibSymbol>(&sym)) {
+      flags |= EXPORT_SYMBOL_FLAGS_REEXPORT;
+      if (!dysym->isDynamicLookup())
+        ordinal = dysym->getFile()->ordinal;
     }
   }
 };
@@ -87,10 +90,49 @@ struct macho::TrieNode {
   // fixpoint.
   size_t offset = 0;
 
+  uint32_t getTerminalSize() const;
   // Returns whether the new estimated offset differs from the old one.
   bool updateOffset(size_t &nextOffset);
   void writeTo(uint8_t *buf) const;
 };
+
+// For regular symbols, the node layout (excluding the children) is
+//
+//   uleb128 terminalSize;
+//   uleb128 flags;
+//   uleb128 address;
+//
+// For re-exported symbols, the layout is
+//
+//   uleb128 terminalSize;
+//   uleb128 flags;
+//   uleb128 ordinal;
+//   char[] originalName;
+//
+// If libfoo.dylib is linked against libbar.dylib, and libfoo exports an alias
+// _foo to a symbol _bar in libbar, then originalName will be "_bar". If libfoo
+// re-exports _bar directly (i.e. not via an alias), then originalName will be
+// the empty string.
+//
+// TODO: Support aliased re-exports. (Since we don't yet support these,
+// originalName will always be the empty string.)
+//
+// For stub-and-resolver nodes, the layout is
+//
+//   uleb128 terminalSize;
+//   uleb128 flags;
+//   uleb128 stubAddress;
+//   uleb128 resolverAddress;
+//
+// TODO: Support stub-and-resolver nodes.
+uint32_t TrieNode::getTerminalSize() const {
+  uint32_t size = getULEB128Size(info->flags);
+  if (info->flags & MachO::EXPORT_SYMBOL_FLAGS_REEXPORT)
+    size += getULEB128Size(info->ordinal) + 1; // + 1 for the null-terminator
+  else
+    size += getULEB128Size(info->address);
+  return size;
+}
 
 bool TrieNode::updateOffset(size_t &nextOffset) {
   // Size of the whole node (including the terminalSize and the outgoing edges.)
@@ -98,8 +140,7 @@ bool TrieNode::updateOffset(size_t &nextOffset) {
   // node.
   size_t nodeSize;
   if (info) {
-    uint32_t terminalSize =
-        getULEB128Size(info->flags) + getULEB128Size(info->address);
+    uint32_t terminalSize = getTerminalSize();
     // Overall node size so far is the uleb128 size of the length of the symbol
     // info + the symbol info itself.
     nodeSize = terminalSize + getULEB128Size(terminalSize);
@@ -123,12 +164,15 @@ bool TrieNode::updateOffset(size_t &nextOffset) {
 void TrieNode::writeTo(uint8_t *buf) const {
   buf += offset;
   if (info) {
-    // TrieNodes with Symbol info: size, flags address
-    uint32_t terminalSize =
-        getULEB128Size(info->flags) + getULEB128Size(info->address);
+    uint32_t terminalSize = getTerminalSize();
     buf += encodeULEB128(terminalSize, buf);
     buf += encodeULEB128(info->flags, buf);
-    buf += encodeULEB128(info->address, buf);
+    if (info->flags & MachO::EXPORT_SYMBOL_FLAGS_REEXPORT) {
+      buf += encodeULEB128(info->ordinal, buf);
+      *buf++ = 0; // empty originalName string
+    } else {
+      buf += encodeULEB128(info->address, buf);
+    }
   } else {
     // TrieNode with no Symbol info.
     *buf++ = 0; // terminalSize
