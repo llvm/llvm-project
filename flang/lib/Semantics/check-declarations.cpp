@@ -66,7 +66,7 @@ private:
   void CheckArraySpec(const Symbol &, const ArraySpec &);
   void CheckProcEntity(const Symbol &, const ProcEntityDetails &);
   void CheckSubprogram(const Symbol &, const SubprogramDetails &);
-  void CheckLocalVsGlobal(const Symbol &);
+  void CheckExternal(const Symbol &);
   void CheckAssumedTypeEntity(const Symbol &, const ObjectEntityDetails &);
   void CheckDerivedType(const Symbol &, const DerivedTypeDetails &);
   bool CheckFinal(
@@ -161,6 +161,8 @@ private:
   std::map<std::pair<SourceName, const Symbol *>, SymbolRef> moduleProcs_;
   // Collection of symbols with global names, BIND(C) or otherwise
   std::map<std::string, SymbolRef> globalNames_;
+  // Collection of external procedures without global definitions
+  std::map<std::string, SymbolRef> externalNames_;
 };
 
 class DistinguishabilityHelper {
@@ -957,7 +959,7 @@ void CheckHelper::CheckProcEntity(
         "Procedure '%s' with SAVE attribute must also have POINTER attribute"_err_en_US,
         symbol.name());
   }
-  CheckLocalVsGlobal(symbol);
+  CheckExternal(symbol);
 }
 
 // When a module subprogram has the MODULE prefix the following must match
@@ -1098,17 +1100,18 @@ void CheckHelper::CheckSubprogram(
           "A function interface may not declare an assumed-length CHARACTER(*) result"_err_en_US);
     }
   }
-  CheckLocalVsGlobal(symbol);
+  CheckExternal(symbol);
   CheckModuleProcedureDef(symbol);
 }
 
-void CheckHelper::CheckLocalVsGlobal(const Symbol &symbol) {
+void CheckHelper::CheckExternal(const Symbol &symbol) {
   if (IsExternal(symbol)) {
-    if (const Symbol *global{FindGlobal(symbol)}; global && global != &symbol) {
-      std::string interfaceName{symbol.name().ToString()};
-      if (const auto *bind{symbol.GetBindName()}) {
-        interfaceName = *bind;
-      }
+    std::string interfaceName{symbol.name().ToString()};
+    if (const auto *bind{symbol.GetBindName()}) {
+      interfaceName = *bind;
+    }
+    if (const Symbol * global{FindGlobal(symbol)};
+        global && global != &symbol) {
       std::string definitionName{global->name().ToString()};
       if (const auto *bind{global->GetBindName()}) {
         definitionName = *bind;
@@ -1146,6 +1149,24 @@ void CheckHelper::CheckLocalVsGlobal(const Symbol &symbol) {
           evaluate::AttachDeclaration(msg, symbol);
         }
       }
+    } else if (auto iter{externalNames_.find(interfaceName)};
+               iter != externalNames_.end()) {
+      const Symbol &previous{*iter->second};
+      if (auto chars{Characterize(symbol)}) {
+        if (auto previousChars{Characterize(previous)}) {
+          std::string whyNot;
+          if (!chars->IsCompatibleWith(*previousChars, &whyNot)) {
+            if (auto *msg{messages_.Say(
+                    "The external interface '%s' is not compatible with an earlier definition (%s)"_warn_en_US,
+                    symbol.name(), whyNot)}) {
+              evaluate::AttachDeclaration(msg, previous);
+              evaluate::AttachDeclaration(msg, symbol);
+            }
+          }
+        }
+      }
+    } else {
+      externalNames_.emplace(interfaceName, symbol);
     }
   }
 }
