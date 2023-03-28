@@ -297,6 +297,10 @@ Bug Fixes in This Version
   not a type concept.
 - Fix crash when a doc comment contains a line splicing.
   (`#62054 <https://github.com/llvm/llvm-project/issues/62054>`_)
+- Work around with a clang coverage crash which happens when visiting 
+  expressions/statements with invalid source locations in non-assert builds. 
+  Assert builds may still see assertions triggered from this.
+  (`#62105 <https://github.com/llvm/llvm-project/issues/62105>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
