@@ -316,20 +316,26 @@ bool IncludeTree::FileList::isValid(const ObjectProxy &Node) {
          Data.size() == sizeof(uint32_t) + NumFiles * sizeof(FileSizeTy);
 }
 
-static constexpr char ModuleFlagFramework = 1 << 0;
-static constexpr char ModuleFlagExplicit = 1 << 1;
-static constexpr char ModuleFlagExternC = 1 << 2;
-static constexpr char ModuleFlagSystem = 1 << 3;
-static constexpr char ModuleFlagHasExports = 1 << 4;
-static constexpr char ModuleFlagHasLinkLibraries = 1 << 5;
+static constexpr uint16_t ModuleFlagFramework = 1 << 0;
+static constexpr uint16_t ModuleFlagExplicit = 1 << 1;
+static constexpr uint16_t ModuleFlagExternC = 1 << 2;
+static constexpr uint16_t ModuleFlagSystem = 1 << 3;
+static constexpr uint16_t ModuleFlagInferSubmodules = 1 << 4;
+static constexpr uint16_t ModuleFlagInferExplicitSubmodules = 1 << 5;
+static constexpr uint16_t ModuleFlagInferInferExportWildcard = 1 << 6;
+static constexpr uint16_t ModuleFlagHasExports = 1 << 7;
+static constexpr uint16_t ModuleFlagHasLinkLibraries = 1 << 8;
 
 IncludeTree::Module::ModuleFlags IncludeTree::Module::getFlags() const {
-  char Raw = rawFlags();
+  uint16_t Raw = rawFlags();
   ModuleFlags Flags;
   Flags.IsFramework = Raw & ModuleFlagFramework;
   Flags.IsExplicit = Raw & ModuleFlagExplicit;
   Flags.IsExternC = Raw & ModuleFlagExternC;
   Flags.IsSystem = Raw & ModuleFlagSystem;
+  Flags.InferSubmodules = Raw & ModuleFlagInferSubmodules;
+  Flags.InferExplicitSubmodules = Raw & ModuleFlagInferExplicitSubmodules;
+  Flags.InferExportWildcard = Raw & ModuleFlagInferInferExportWildcard;
   return Flags;
 }
 
@@ -362,14 +368,14 @@ IncludeTree::Module::create(ObjectStore &DB, StringRef ModuleName,
                             std::optional<ObjectRef> ExportList,
                             std::optional<ObjectRef> LinkLibraries) {
   // Data:
-  // - 1 byte for Flags
+  // - 2 bytes for Flags
   // - ModuleName (String)
   // Refs:
   // - Submodules (IncludeTreeModule)
   // - (optional) ExportList
   // - (optional) LinkLibaryList
 
-  char RawFlags = 0;
+  uint16_t RawFlags = 0;
   if (Flags.IsFramework)
     RawFlags |= ModuleFlagFramework;
   if (Flags.IsExplicit)
@@ -378,13 +384,22 @@ IncludeTree::Module::create(ObjectStore &DB, StringRef ModuleName,
     RawFlags |= ModuleFlagExternC;
   if (Flags.IsSystem)
     RawFlags |= ModuleFlagSystem;
+  if (Flags.InferSubmodules)
+    RawFlags |= ModuleFlagInferSubmodules;
+  if (Flags.InferExplicitSubmodules)
+    RawFlags |= ModuleFlagInferExplicitSubmodules;
+  if (Flags.InferExportWildcard)
+    RawFlags |= ModuleFlagInferInferExportWildcard;
   if (ExportList)
     RawFlags |= ModuleFlagHasExports;
   if (LinkLibraries)
     RawFlags |= ModuleFlagHasLinkLibraries;
 
   SmallString<64> Buffer;
-  Buffer.push_back(RawFlags);
+  llvm::raw_svector_ostream BufOS(Buffer);
+  llvm::support::endian::Writer Writer(BufOS, llvm::support::little);
+  Writer.write(RawFlags);
+
   Buffer.append(ModuleName);
 
   SmallVector<ObjectRef> Refs(Submodules);
@@ -394,6 +409,11 @@ IncludeTree::Module::create(ObjectStore &DB, StringRef ModuleName,
     Refs.push_back(*LinkLibraries);
 
   return IncludeTreeBase::create(DB, Refs, Buffer);
+}
+
+uint16_t IncludeTree::Module::rawFlags() const {
+  return llvm::support::endian::read<uint16_t, llvm::support::little>(
+      getData().data());
 }
 
 bool IncludeTree::Module::hasExports() const {
@@ -670,6 +690,15 @@ llvm::Error IncludeTree::Module::print(llvm::raw_ostream &OS, unsigned Indent) {
   if (Flags.IsSystem)
     OS << " (system)";
   OS << '\n';
+  if (Flags.InferSubmodules) {
+    if (Flags.InferExplicitSubmodules)
+      OS << "  explicit module *";
+    else
+      OS << "  module *";
+    if (Flags.InferExportWildcard)
+      OS << " { export * }";
+    OS << '\n';
+  }
   auto ExportList = getExports();
   if (!ExportList)
     return ExportList.takeError();
