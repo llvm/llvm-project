@@ -40,29 +40,6 @@
 namespace clang {
 namespace dataflow {
 
-class StmtToEnvMapImpl : public StmtToEnvMap {
-public:
-  StmtToEnvMapImpl(
-      const ControlFlowContext &CFCtx,
-      llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>>
-          BlockToState)
-      : CFCtx(CFCtx), BlockToState(BlockToState) {}
-
-  const Environment *getEnvironment(const Stmt &S) const override {
-    auto BlockIt = CFCtx.getStmtToBlock().find(&ignoreCFGOmittedNodes(S));
-    assert(BlockIt != CFCtx.getStmtToBlock().end());
-    if (!CFCtx.isBlockReachable(*BlockIt->getSecond()))
-      return nullptr;
-    const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
-    assert(State);
-    return &State->Env;
-  }
-
-private:
-  const ControlFlowContext &CFCtx;
-  llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>> BlockToState;
-};
-
 /// Returns the index of `Block` in the successors of `Pred`.
 static int blockIndexInPredecessor(const CFGBlock &Pred,
                                    const CFGBlock &Block) {
@@ -269,7 +246,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     TypeErasedDataflowAnalysisState PredState = *MaybePredState;
     if (Analysis.builtinOptions()) {
       if (const Stmt *PredTerminatorStmt = Pred->getTerminatorStmt()) {
-        const StmtToEnvMapImpl StmtToEnv(AC.CFCtx, AC.BlockStates);
+        const StmtToEnvMap StmtToEnv(AC.CFCtx, AC.BlockStates);
         auto [Cond, CondValue] =
             TerminatorVisitor(StmtToEnv, PredState.Env,
                               blockIndexInPredecessor(*Pred, Block))
@@ -304,7 +281,7 @@ void builtinTransferStatement(const CFGStmt &Elt,
                               AnalysisContext &AC) {
   const Stmt *S = Elt.getStmt();
   assert(S != nullptr);
-  transfer(StmtToEnvMapImpl(AC.CFCtx, AC.BlockStates), *S, InputState.Env);
+  transfer(StmtToEnvMap(AC.CFCtx, AC.BlockStates), *S, InputState.Env);
 }
 
 /// Built-in transfer function for `CFGInitializer`.

@@ -28,19 +28,29 @@ def OpenMP_Dialect : Dialect {
   let cppNamespace = "::mlir::omp";
   let dependentDialects = ["::mlir::LLVM::LLVMDialect"];
   let useDefaultAttributePrinterParser = 1;
-
-  let extraClassDeclaration = [{
-    // Set the omp.is_device attribute on the module with the specified boolean
-    static void setIsDevice(Operation* module, bool isDevice);
-
-    // Return the value of the omp.is_device attribute stored in the module if it
-    // exists, otherwise return false by default
-    static bool getIsDevice(Operation* module);
-  }];
 }
 
 // OmpCommon requires definition of OpenACC_Dialect.
 include "mlir/Dialect/OpenMP/OmpCommon.td"
+
+//===----------------------------------------------------------------------===//
+//  OpenMP Attributes
+//===----------------------------------------------------------------------===//
+
+class OpenMP_Attr<string name, string attrMnemonic,
+                list<Trait> traits = [],
+                string baseCppClass = "::mlir::Attribute">
+    : AttrDef<OpenMP_Dialect, name, traits, baseCppClass> {
+  let mnemonic = attrMnemonic;
+}
+
+def IsDeviceAttr : OpenMP_Attr<"IsDevice", "isdevice"> {
+  let parameters = (ins 
+    "bool":$is_device
+  );
+  
+  let assemblyFormat = "`<` struct(params) `>`";
+}
 
 class OpenMP_Op<string mnemonic, list<Trait> traits = []> :
       Op<OpenMP_Dialect, mnemonic, traits>;

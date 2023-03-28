@@ -36,6 +36,16 @@
 namespace clang {
 namespace dataflow {
 
+const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
+  auto BlockIt = CFCtx.getStmtToBlock().find(&ignoreCFGOmittedNodes(S));
+  assert(BlockIt != CFCtx.getStmtToBlock().end());
+  if (!CFCtx.isBlockReachable(*BlockIt->getSecond()))
+    return nullptr;
+  const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
+  assert(State);
+  return &State->Env;
+}
+
 static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
                                           Environment &Env) {
   if (auto *LHSValue =
@@ -128,6 +138,8 @@ static Value *maybeUnpackLValueExpr(const Expr &E, Environment &Env) {
   Env.setValue(*Loc, UnpackedVal);
   return &UnpackedVal;
 }
+
+namespace {
 
 class TransferVisitor : public ConstStmtVisitor<TransferVisitor> {
 public:
@@ -873,6 +885,8 @@ private:
   const StmtToEnvMap &StmtToEnv;
   Environment &Env;
 };
+
+} // namespace
 
 void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env) {
   TransferVisitor(StmtToEnv, Env).Visit(&S);

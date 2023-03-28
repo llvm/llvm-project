@@ -125,15 +125,15 @@ define float @lower_constantpool(float %a) nounwind {
 ; RV32I-SMALL-LABEL: lower_constantpool:
 ; RV32I-SMALL:       # %bb.0:
 ; RV32I-SMALL-NEXT:    lui a0, 260096
-; RV32I-SMALL-NEXT:    fmv.w.x ft0, a0
-; RV32I-SMALL-NEXT:    fadd.s fa0, fa0, ft0
+; RV32I-SMALL-NEXT:    fmv.w.x fa5, a0
+; RV32I-SMALL-NEXT:    fadd.s fa0, fa0, fa5
 ; RV32I-SMALL-NEXT:    ret
 ;
 ; RV32I-MEDIUM-LABEL: lower_constantpool:
 ; RV32I-MEDIUM:       # %bb.0:
 ; RV32I-MEDIUM-NEXT:    lui a0, 260096
-; RV32I-MEDIUM-NEXT:    fmv.w.x ft0, a0
-; RV32I-MEDIUM-NEXT:    fadd.s fa0, fa0, ft0
+; RV32I-MEDIUM-NEXT:    fmv.w.x fa5, a0
+; RV32I-MEDIUM-NEXT:    fadd.s fa0, fa0, fa5
 ; RV32I-MEDIUM-NEXT:    ret
   %1 = fadd float %a, 1.0
   ret float %1

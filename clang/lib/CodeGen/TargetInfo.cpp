@@ -9474,6 +9474,7 @@ public:
                                          llvm::Function *BlockInvokeFunc,
                                          llvm::Type *BlockTy) const override;
   bool shouldEmitStaticExternCAliases() const override;
+  bool shouldEmitDWARFBitFieldSeparators() const override;
   void setCUDAKernelCallingConvention(const FunctionType *&FT) const override;
 };
 }
@@ -9689,6 +9690,10 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
 
 bool AMDGPUTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {
   return false;
+}
+
+bool AMDGPUTargetCodeGenInfo::shouldEmitDWARFBitFieldSeparators() const {
+  return true;
 }
 
 void AMDGPUTargetCodeGenInfo::setCUDAKernelCallingConvention(

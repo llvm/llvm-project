@@ -428,7 +428,7 @@ private:
   /// Returns true if the module changes.
   ///
   /// Verified in @i32_add in split-gep.ll
-  bool canonicalizeArrayIndicesToPointerSize(GetElementPtrInst *GEP);
+  bool canonicalizeArrayIndicesToIndexSize(GetElementPtrInst *GEP);
 
   /// Optimize sext(a)+sext(b) to sext(a+b) when a+b can't sign overflow.
   /// SeparateConstOffsetFromGEP distributes a sext to leaves before extracting
@@ -791,17 +791,17 @@ int64_t ConstantOffsetExtractor::Find(Value *Idx, GetElementPtrInst *GEP,
       .getSExtValue();
 }
 
-bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToPointerSize(
+bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToIndexSize(
     GetElementPtrInst *GEP) {
   bool Changed = false;
-  Type *IntPtrTy = DL->getIntPtrType(GEP->getType());
+  Type *PtrIdxTy = DL->getIndexType(GEP->getType());
   gep_type_iterator GTI = gep_type_begin(*GEP);
   for (User::op_iterator I = GEP->op_begin() + 1, E = GEP->op_end();
        I != E; ++I, ++GTI) {
     // Skip struct member indices which must be i32.
     if (GTI.isSequential()) {
-      if ((*I)->getType() != IntPtrTy) {
-        *I = CastInst::CreateIntegerCast(*I, IntPtrTy, true, "idxprom", GEP);
+      if ((*I)->getType() != PtrIdxTy) {
+        *I = CastInst::CreateIntegerCast(*I, PtrIdxTy, true, "idxprom", GEP);
         Changed = true;
       }
     }
@@ -849,7 +849,7 @@ SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
 void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
     GetElementPtrInst *Variadic, int64_t AccumulativeByteOffset) {
   IRBuilder<> Builder(Variadic);
-  Type *IntPtrTy = DL->getIntPtrType(Variadic->getType());
+  Type *PtrIndexTy = DL->getIndexType(Variadic->getType());
 
   Type *I8PtrTy =
       Builder.getInt8PtrTy(Variadic->getType()->getPointerAddressSpace());
@@ -875,15 +875,16 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
         if (CI->isZero())
           continue;
 
-      APInt ElementSize = APInt(IntPtrTy->getIntegerBitWidth(),
+      APInt ElementSize = APInt(PtrIndexTy->getIntegerBitWidth(),
                                 DL->getTypeAllocSize(GTI.getIndexedType()));
       // Scale the index by element size.
       if (ElementSize != 1) {
         if (ElementSize.isPowerOf2()) {
           Idx = Builder.CreateShl(
-              Idx, ConstantInt::get(IntPtrTy, ElementSize.logBase2()));
+              Idx, ConstantInt::get(PtrIndexTy, ElementSize.logBase2()));
         } else {
-          Idx = Builder.CreateMul(Idx, ConstantInt::get(IntPtrTy, ElementSize));
+          Idx =
+              Builder.CreateMul(Idx, ConstantInt::get(PtrIndexTy, ElementSize));
         }
       }
       // Create an ugly GEP with a single index for each index.
@@ -896,7 +897,7 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
 
   // Create a GEP with the constant offset index.
   if (AccumulativeByteOffset != 0) {
-    Value *Offset = ConstantInt::get(IntPtrTy, AccumulativeByteOffset);
+    Value *Offset = ConstantInt::get(PtrIndexTy, AccumulativeByteOffset);
     ResultPtr =
         Builder.CreateGEP(Builder.getInt8Ty(), ResultPtr, Offset, "uglygep");
   } else
@@ -922,6 +923,9 @@ SeparateConstOffsetFromGEP::lowerToArithmetics(GetElementPtrInst *Variadic,
                                                int64_t AccumulativeByteOffset) {
   IRBuilder<> Builder(Variadic);
   Type *IntPtrTy = DL->getIntPtrType(Variadic->getType());
+  assert(IntPtrTy == DL->getIndexType(Variadic->getType()) &&
+         "Pointer type must match index type for arithmetic-based lowering of "
+         "split GEPs");
 
   Value *ResultPtr = Builder.CreatePtrToInt(Variadic->getOperand(0), IntPtrTy);
   gep_type_iterator GTI = gep_type_begin(*Variadic);
@@ -973,7 +977,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   if (GEP->hasAllConstantIndices())
     return false;
 
-  bool Changed = canonicalizeArrayIndicesToPointerSize(GEP);
+  bool Changed = canonicalizeArrayIndicesToIndexSize(GEP);
 
   bool NeedsExtraction;
   int64_t AccumulativeByteOffset = accumulateByteOffset(GEP, NeedsExtraction);
@@ -1057,7 +1061,15 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   if (LowerGEP) {
     // As currently BasicAA does not analyze ptrtoint/inttoptr, do not lower to
     // arithmetic operations if the target uses alias analysis in codegen.
-    if (TTI.useAA())
+    // Additionally, pointers that aren't integral (and so can't be safely
+    // converted to integers) or those whose offset size is different from their
+    // pointer size (which means that doing integer arithmetic on them could
+    // affect that data) can't be lowered in this way.
+    unsigned AddrSpace = GEP->getPointerAddressSpace();
+    bool PointerHasExtraData = DL->getPointerSizeInBits(AddrSpace) !=
+                               DL->getIndexSizeInBits(AddrSpace);
+    if (TTI.useAA() || DL->isNonIntegralAddressSpace(AddrSpace) ||
+        PointerHasExtraData)
       lowerToSingleIndexGEPs(GEP, AccumulativeByteOffset);
     else
       lowerToArithmetics(GEP, AccumulativeByteOffset);
@@ -1104,13 +1116,13 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // used with unsigned integers later.
   int64_t ElementTypeSizeOfGEP = static_cast<int64_t>(
       DL->getTypeAllocSize(GEP->getResultElementType()));
-  Type *IntPtrTy = DL->getIntPtrType(GEP->getType());
+  Type *PtrIdxTy = DL->getIndexType(GEP->getType());
   if (AccumulativeByteOffset % ElementTypeSizeOfGEP == 0) {
     // Very likely. As long as %gep is naturally aligned, the byte offset we
     // extracted should be a multiple of sizeof(*%gep).
     int64_t Index = AccumulativeByteOffset / ElementTypeSizeOfGEP;
     NewGEP = GetElementPtrInst::Create(GEP->getResultElementType(), NewGEP,
-                                       ConstantInt::get(IntPtrTy, Index, true),
+                                       ConstantInt::get(PtrIdxTy, Index, true),
                                        GEP->getName(), GEP);
     NewGEP->copyMetadata(*GEP);
     // Inherit the inbounds attribute of the original GEP.
@@ -1136,7 +1148,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 
     NewGEP = cast<Instruction>(Builder.CreateGEP(
         Builder.getInt8Ty(), Builder.CreateBitCast(NewGEP, I8PtrTy),
-        {ConstantInt::get(IntPtrTy, AccumulativeByteOffset, true)}, "uglygep",
+        {ConstantInt::get(PtrIdxTy, AccumulativeByteOffset, true)}, "uglygep",
         GEPWasInBounds));
 
     NewGEP->copyMetadata(*GEP);

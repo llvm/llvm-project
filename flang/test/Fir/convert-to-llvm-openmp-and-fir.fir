@@ -490,9 +490,8 @@ func.func @_QPsb() {
 
 // CHECK:  omp.reduction.declare @[[EQV_REDUCTION:.*]] : i32 init {
 // CHECK:  ^bb0(%{{.*}}: i32):
-// CHECK:    %[[TRUE:.*]] = llvm.mlir.constant(true) : i1
-// CHECK:    %[[TRUE_EXT:.*]] = llvm.zext %[[TRUE]] : i1 to i32
-// CHECK:    omp.yield(%[[TRUE_EXT]] : i32)
+// CHECK:    %[[TRUE:.*]] = llvm.mlir.constant(1 : i64) : i32
+// CHECK:    omp.yield(%[[TRUE]] : i32)
 // CHECK:  } combiner {
 // CHECK:  ^bb0(%[[ARG_1:.*]]: i32, %[[ARG_2:.*]]: i32):
 // CHECK:    %[[ZERO_1:.*]] = llvm.mlir.constant(0 : i64) : i32

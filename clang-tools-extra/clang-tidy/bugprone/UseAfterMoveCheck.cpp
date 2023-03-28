@@ -10,13 +10,13 @@
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/STLExtras.h"
 
 #include "../utils/ExprSequence.h"
+#include "../utils/Matchers.h"
 #include <optional>
 
 using namespace clang::ast_matchers;
@@ -24,24 +24,9 @@ using namespace clang::tidy::utils;
 
 namespace clang::tidy::bugprone {
 
-namespace {
+using matchers::hasUnevaluatedContext;
 
-AST_MATCHER(Expr, hasUnevaluatedContext) {
-  if (isa<CXXNoexceptExpr>(Node) || isa<RequiresExpr>(Node))
-    return true;
-  if (const auto *UnaryExpr = dyn_cast<UnaryExprOrTypeTraitExpr>(&Node)) {
-    switch (UnaryExpr->getKind()) {
-    case UETT_SizeOf:
-    case UETT_AlignOf:
-      return true;
-    default:
-      return false;
-    }
-  }
-  if (const auto *TypeIDExpr = dyn_cast<CXXTypeidExpr>(&Node))
-    return !TypeIDExpr->isPotentiallyEvaluated();
-  return false;
-}
+namespace {
 
 /// Contains information about a use-after-move.
 struct UseAfterMove {
@@ -85,7 +70,6 @@ private:
 };
 
 } // namespace
-
 
 // Matches nodes that are
 // - Part of a decltype argument or class template argument (we check this by

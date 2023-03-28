@@ -350,9 +350,9 @@ private:
   constexpr Raw Infinity() const {
     return (Raw{Real::maxExponent} << Real::significandBits) | SignBit();
   }
-  static constexpr Raw NaN() {
+  constexpr Raw NaN(bool isQuiet = true) {
     return (Raw{Real::maxExponent} << Real::significandBits) |
-        (Raw{1} << (Real::significandBits - 2));
+        (Raw{1} << (Real::significandBits - (isQuiet ? 1 : 2))) | SignBit();
   }
 
   Digit digit_[maxDigits]; // in little-endian order: digit_[0] is LSD

@@ -127,13 +127,13 @@ Expected<std::unique_ptr<ELFNixPlatform>> ELFNixPlatform::Create(
     return std::move(Err);
 
   // Add JIT-dispatch function support symbols.
-  if (auto Err = PlatformJD.define(absoluteSymbols(
-          {{ES.intern("__orc_rt_jit_dispatch"),
-            {EPC.getJITDispatchInfo().JITDispatchFunction.getValue(),
-             JITSymbolFlags::Exported}},
-           {ES.intern("__orc_rt_jit_dispatch_ctx"),
-            {EPC.getJITDispatchInfo().JITDispatchContext.getValue(),
-             JITSymbolFlags::Exported}}})))
+  if (auto Err = PlatformJD.define(
+          absoluteSymbols({{ES.intern("__orc_rt_jit_dispatch"),
+                            {EPC.getJITDispatchInfo().JITDispatchFunction,
+                             JITSymbolFlags::Exported}},
+                           {ES.intern("__orc_rt_jit_dispatch_ctx"),
+                            {EPC.getJITDispatchInfo().JITDispatchContext,
+                             JITSymbolFlags::Exported}}})))
     return std::move(Err);
 
   // Create the instance.
@@ -492,7 +492,7 @@ void ELFNixPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
     void operator()(Expected<SymbolMap> Result) {
       if (Result) {
         assert(Result->size() == 1 && "Unexpected result map count");
-        SendResult(ExecutorAddr(Result->begin()->second.getAddress()));
+        SendResult(Result->begin()->second.getAddress());
       } else {
         SendResult(Result.takeError());
       }
@@ -534,7 +534,7 @@ Error ELFNixPlatform::bootstrapELFNixRuntime(JITDylib &PlatformJD) {
   for (const auto &KV : AddrsToRecord) {
     auto &Name = KV.first;
     assert(RuntimeSymbolAddrs->count(Name) && "Missing runtime symbol?");
-    KV.second->setValue((*RuntimeSymbolAddrs)[Name].getAddress());
+    *KV.second = (*RuntimeSymbolAddrs)[Name].getAddress();
   }
 
   auto PJDDSOHandle = ES.lookup(
@@ -543,7 +543,8 @@ Error ELFNixPlatform::bootstrapELFNixRuntime(JITDylib &PlatformJD) {
     return PJDDSOHandle.takeError();
 
   if (auto Err = ES.callSPSWrapper<void(uint64_t)>(
-          orc_rt_elfnix_platform_bootstrap, PJDDSOHandle->getAddress()))
+          orc_rt_elfnix_platform_bootstrap,
+          PJDDSOHandle->getAddress().getValue()))
     return Err;
 
   // FIXME: Ordering is fuzzy here. We're probably best off saying

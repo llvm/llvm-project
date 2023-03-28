@@ -40,20 +40,22 @@ bool hasInitializerSection(jitlink::LinkGraph &G) {
   return false;
 }
 
-JITTargetAddress getJITSymbolPtrForSymbol(Symbol &Sym, const Triple &TT) {
-  uint64_t CallableAddr = Sym.getAddress().getValue();
+ExecutorAddr getJITSymbolPtrForSymbol(Symbol &Sym, const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::arm:
   case Triple::armeb:
   case Triple::thumb:
   case Triple::thumbeb:
-    if (Sym.hasTargetFlags(aarch32::ThumbSymbol) && Sym.isCallable())
-      CallableAddr |= 0x01; // LSB is thumb bit
-    break;
+    if (Sym.hasTargetFlags(aarch32::ThumbSymbol)) {
+      // Set LSB to indicate thumb target
+      assert(Sym.isCallable() && "Only callable symbols can have thumb flag");
+      assert((Sym.getAddress().getValue() & 0x01) == 0 && "LSB is clear");
+      return Sym.getAddress() + 0x01;
+    }
+    return Sym.getAddress();
   default:
-    break;
+    return Sym.getAddress();
   }
-  return CallableAddr;
 }
 
 JITSymbolFlags getJITSymbolFlagsForSymbol(Symbol &Sym) {
@@ -234,7 +236,7 @@ public:
         auto InternedName = ES.intern(Sym->getName());
         auto Ptr = getJITSymbolPtrForSymbol(*Sym, G.getTargetTriple());
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
-        InternedResult[InternedName] = JITEvaluatedSymbol(Ptr, Flags);
+        InternedResult[InternedName] = {Ptr, Flags};
         if (AutoClaim && !MR->getSymbols().count(InternedName)) {
           assert(!ExtraSymbolsToClaim.count(InternedName) &&
                  "Duplicate symbol to claim?");
@@ -247,7 +249,7 @@ public:
         auto InternedName = ES.intern(Sym->getName());
         auto Ptr = getJITSymbolPtrForSymbol(*Sym, G.getTargetTriple());
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
-        InternedResult[InternedName] = JITEvaluatedSymbol(Ptr, Flags);
+        InternedResult[InternedName] = {Ptr, Flags};
         if (AutoClaim && !MR->getSymbols().count(InternedName)) {
           assert(!ExtraSymbolsToClaim.count(InternedName) &&
                  "Duplicate symbol to claim?");

@@ -7,6 +7,9 @@ add_mlir_library(MLIRTestOneToNTypeConversionPass
   MLIRFuncDialect
   MLIRFuncTransforms
   MLIRIR
+  MLIRPass
+  MLIRSCFDialect
+  MLIRSCFTransforms
   MLIRTestDialect
   MLIRTransformUtils
  )

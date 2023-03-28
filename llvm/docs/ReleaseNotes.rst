@@ -127,6 +127,8 @@ Changes to the PowerPC Backend
   RO data section. This option should be used with the ``-fdata-sections``
   option, and is not supported with ``-fno-data-sections``. The option is
   only supported on AIX.
+* On AIX, teach the profile runtime to check for a build-id string; such string
+  can be created by the -mxcoff-build-id option.
 
 Changes to the RISC-V Backend
 -----------------------------

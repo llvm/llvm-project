@@ -157,7 +157,7 @@ BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
     return {};
   }
 
-  APInt Offset = APInt(DL.getPointerTypeSizeInBits(Addr->getType()), 0);
+  APInt Offset = APInt(DL.getIndexTypeSizeInBits(Addr->getType()), 0);
   Value *Base = Addr;
   auto *GEP = dyn_cast<GetElementPtrInst>(Addr);
   if (GEP) {

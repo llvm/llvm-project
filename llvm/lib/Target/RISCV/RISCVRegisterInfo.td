@@ -223,39 +223,44 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
+// We start by allocating argument registers in reverse order since they are
+// compressible.
 def FPR16 : RegisterClass<"RISCV", [f16], 16, (add
-    (sequence "F%u_H", 0, 7),
-    (sequence "F%u_H", 10, 17),
-    (sequence "F%u_H", 28, 31),
-    (sequence "F%u_H", 8, 9),
-    (sequence "F%u_H", 18, 27)
+    (sequence "F%u_H", 15, 10), // fa5-fa0
+    (sequence "F%u_H", 0, 7),   // ft0-f7
+    (sequence "F%u_H", 16, 17), // fa6-fa7
+    (sequence "F%u_H", 28, 31), // ft8-ft11
+    (sequence "F%u_H", 8, 9),   // fs0-fs1
+    (sequence "F%u_H", 18, 27)  // fs2-fs11
 )>;
 
 def FPR32 : RegisterClass<"RISCV", [f32], 32, (add
+    (sequence "F%u_F", 15, 10),
     (sequence "F%u_F", 0, 7),
-    (sequence "F%u_F", 10, 17),
+    (sequence "F%u_F", 16, 17),
     (sequence "F%u_F", 28, 31),
     (sequence "F%u_F", 8, 9),
     (sequence "F%u_F", 18, 27)
 )>;
 
 def FPR32C : RegisterClass<"RISCV", [f32], 32, (add
-  (sequence "F%u_F", 10, 15),
+  (sequence "F%u_F", 15, 10),
   (sequence "F%u_F", 8, 9)
 )>;
 
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
 def FPR64 : RegisterClass<"RISCV", [f64], 64, (add
+    (sequence "F%u_D", 15, 10),
     (sequence "F%u_D", 0, 7),
-    (sequence "F%u_D", 10, 17),
+    (sequence "F%u_D", 16, 17),
     (sequence "F%u_D", 28, 31),
     (sequence "F%u_D", 8, 9),
     (sequence "F%u_D", 18, 27)
 )>;
 
 def FPR64C : RegisterClass<"RISCV", [f64], 64, (add
-  (sequence "F%u_D", 10, 15),
+  (sequence "F%u_D", 15, 10),
   (sequence "F%u_D", 8, 9)
 )>;
 

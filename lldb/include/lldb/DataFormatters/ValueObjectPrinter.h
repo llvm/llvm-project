@@ -98,7 +98,7 @@ protected:
 
   ValueObject *GetValueObjectForChildrenGeneration();
 
-  void PrintChildrenPreamble();
+  void PrintChildrenPreamble(bool value_printed, bool summary_printed);
 
   void PrintChildrenPostamble(bool print_dotdotdot);
 

@@ -8,6 +8,7 @@
 
 #include "TestDialect.h"
 #include "mlir/Dialect/Func/Transforms/OneToNFuncConversions.h"
+#include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/OneToNTypeConversion.h"
 
@@ -42,6 +43,10 @@ struct TestOneToNTypeConversionPass
   Option<bool> convertFuncOps{*this, "convert-func-ops",
                               llvm::cl::desc("Enable conversion on func ops"),
                               llvm::cl::init(false)};
+
+  Option<bool> convertSCFOps{*this, "convert-scf-ops",
+                             llvm::cl::desc("Enable conversion on scf ops"),
+                             llvm::cl::init(false)};
 
   Option<bool> convertTupleOps{*this, "convert-tuple-ops",
                                llvm::cl::desc("Enable conversion on tuple ops"),
@@ -237,6 +242,8 @@ void TestOneToNTypeConversionPass::runOnOperation() {
     populateDecomposeTuplesTestPatterns(typeConverter, patterns);
   if (convertFuncOps)
     populateFuncTypeConversionPatterns(typeConverter, patterns);
+  if (convertSCFOps)
+    scf::populateSCFStructuralOneToNTypeConversions(typeConverter, patterns);
 
   // Run conversion.
   if (failed(applyPartialOneToNConversion(module, typeConverter,

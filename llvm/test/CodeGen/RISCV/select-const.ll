@@ -102,8 +102,8 @@ define float @select_const_fp(i1 zeroext %a) nounwind {
 ; RV32IF-NEXT:  .LBB4_2:
 ; RV32IF-NEXT:    lui a0, 263168
 ; RV32IF-NEXT:  .LBB4_3:
-; RV32IF-NEXT:    fmv.w.x ft0, a0
-; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    fmv.w.x fa5, a0
+; RV32IF-NEXT:    fmv.x.w a0, fa5
 ; RV32IF-NEXT:    ret
 ;
 ; RV64I-LABEL: select_const_fp:
@@ -125,8 +125,8 @@ define float @select_const_fp(i1 zeroext %a) nounwind {
 ; RV64IFD-NEXT:  .LBB4_2:
 ; RV64IFD-NEXT:    lui a0, 263168
 ; RV64IFD-NEXT:  .LBB4_3:
-; RV64IFD-NEXT:    fmv.w.x ft0, a0
-; RV64IFD-NEXT:    fmv.x.w a0, ft0
+; RV64IFD-NEXT:    fmv.w.x fa5, a0
+; RV64IFD-NEXT:    fmv.x.w a0, fa5
 ; RV64IFD-NEXT:    ret
   %1 = select i1 %a, float 3.0, float 4.0
   ret float %1

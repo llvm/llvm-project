@@ -347,7 +347,7 @@ public:
 
 } // namespace
 
-bool PyAffineExpr::operator==(const PyAffineExpr &other) {
+bool PyAffineExpr::operator==(const PyAffineExpr &other) const {
   return mlirAffineExprEqual(affineExpr, other.affineExpr);
 }
 
@@ -406,7 +406,7 @@ private:
 };
 } // namespace
 
-bool PyAffineMap::operator==(const PyAffineMap &other) {
+bool PyAffineMap::operator==(const PyAffineMap &other) const {
   return mlirAffineMapEqual(affineMap, other.affineMap);
 }
 
@@ -483,7 +483,7 @@ private:
 };
 } // namespace
 
-bool PyIntegerSet::operator==(const PyIntegerSet &other) {
+bool PyIntegerSet::operator==(const PyIntegerSet &other) const {
   return mlirIntegerSetEqual(integerSet, other.integerSet);
 }
 

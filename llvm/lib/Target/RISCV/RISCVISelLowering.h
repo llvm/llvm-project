@@ -335,6 +335,10 @@ enum NodeType : unsigned {
   STRICT_FMUL_VL,
   STRICT_FDIV_VL,
   STRICT_FSQRT_VL,
+  STRICT_VFMADD_VL,
+  STRICT_VFNMADD_VL,
+  STRICT_VFMSUB_VL,
+  STRICT_VFNMSUB_VL,
   STRICT_FP_EXTEND_VL,
 
   // WARNING: Do not add anything in the end unless you want the node to

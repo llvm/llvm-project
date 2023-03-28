@@ -1489,9 +1489,9 @@ define void @sink_splat_fmul_scalable(ptr nocapture %a, float %x) {
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:  .LBB26_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    flw ft0, 0(a0)
-; CHECK-NEXT:    fmul.s ft0, ft0, fa0
-; CHECK-NEXT:    fsw ft0, 0(a0)
+; CHECK-NEXT:    flw fa5, 0(a0)
+; CHECK-NEXT:    fmul.s fa5, fa5, fa0
+; CHECK-NEXT:    fsw fa5, 0(a0)
 ; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    bnez a2, .LBB26_6
@@ -1579,9 +1579,9 @@ define void @sink_splat_fdiv_scalable(ptr nocapture %a, float %x) {
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:  .LBB27_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    flw ft0, 0(a0)
-; CHECK-NEXT:    fdiv.s ft0, ft0, fa0
-; CHECK-NEXT:    fsw ft0, 0(a0)
+; CHECK-NEXT:    flw fa5, 0(a0)
+; CHECK-NEXT:    fdiv.s fa5, fa5, fa0
+; CHECK-NEXT:    fsw fa5, 0(a0)
 ; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    bnez a2, .LBB27_6
@@ -1669,9 +1669,9 @@ define void @sink_splat_frdiv_scalable(ptr nocapture %a, float %x) {
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:  .LBB28_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    flw ft0, 0(a0)
-; CHECK-NEXT:    fdiv.s ft0, fa0, ft0
-; CHECK-NEXT:    fsw ft0, 0(a0)
+; CHECK-NEXT:    flw fa5, 0(a0)
+; CHECK-NEXT:    fdiv.s fa5, fa0, fa5
+; CHECK-NEXT:    fsw fa5, 0(a0)
 ; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    bnez a2, .LBB28_6
@@ -1759,9 +1759,9 @@ define void @sink_splat_fadd_scalable(ptr nocapture %a, float %x) {
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:  .LBB29_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    flw ft0, 0(a0)
-; CHECK-NEXT:    fadd.s ft0, ft0, fa0
-; CHECK-NEXT:    fsw ft0, 0(a0)
+; CHECK-NEXT:    flw fa5, 0(a0)
+; CHECK-NEXT:    fadd.s fa5, fa5, fa0
+; CHECK-NEXT:    fsw fa5, 0(a0)
 ; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    bnez a2, .LBB29_6
@@ -1849,9 +1849,9 @@ define void @sink_splat_fsub_scalable(ptr nocapture %a, float %x) {
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:  .LBB30_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    flw ft0, 0(a0)
-; CHECK-NEXT:    fsub.s ft0, ft0, fa0
-; CHECK-NEXT:    fsw ft0, 0(a0)
+; CHECK-NEXT:    flw fa5, 0(a0)
+; CHECK-NEXT:    fsub.s fa5, fa5, fa0
+; CHECK-NEXT:    fsw fa5, 0(a0)
 ; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    bnez a2, .LBB30_6
@@ -1939,9 +1939,9 @@ define void @sink_splat_frsub_scalable(ptr nocapture %a, float %x) {
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:  .LBB31_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    flw ft0, 0(a0)
-; CHECK-NEXT:    fsub.s ft0, fa0, ft0
-; CHECK-NEXT:    fsw ft0, 0(a0)
+; CHECK-NEXT:    flw fa5, 0(a0)
+; CHECK-NEXT:    fsub.s fa5, fa0, fa5
+; CHECK-NEXT:    fsw fa5, 0(a0)
 ; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    bnez a2, .LBB31_6
@@ -2109,10 +2109,10 @@ define void @sink_splat_fma_scalable(ptr noalias nocapture %a, ptr noalias nocap
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:  .LBB34_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    flw ft0, 0(a0)
-; CHECK-NEXT:    flw ft1, 0(a1)
-; CHECK-NEXT:    fmadd.s ft0, ft0, fa0, ft1
-; CHECK-NEXT:    fsw ft0, 0(a0)
+; CHECK-NEXT:    flw fa5, 0(a0)
+; CHECK-NEXT:    flw fa4, 0(a1)
+; CHECK-NEXT:    fmadd.s fa5, fa5, fa0, fa4
+; CHECK-NEXT:    fsw fa5, 0(a0)
 ; CHECK-NEXT:    addi a3, a3, 1
 ; CHECK-NEXT:    addi a1, a1, 4
 ; CHECK-NEXT:    addi a0, a0, 4
@@ -2209,10 +2209,10 @@ define void @sink_splat_fma_commute_scalable(ptr noalias nocapture %a, ptr noali
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:  .LBB35_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    flw ft0, 0(a0)
-; CHECK-NEXT:    flw ft1, 0(a1)
-; CHECK-NEXT:    fmadd.s ft0, fa0, ft0, ft1
-; CHECK-NEXT:    fsw ft0, 0(a0)
+; CHECK-NEXT:    flw fa5, 0(a0)
+; CHECK-NEXT:    flw fa4, 0(a1)
+; CHECK-NEXT:    fmadd.s fa5, fa0, fa5, fa4
+; CHECK-NEXT:    fsw fa5, 0(a0)
 ; CHECK-NEXT:    addi a3, a3, 1
 ; CHECK-NEXT:    addi a1, a1, 4
 ; CHECK-NEXT:    addi a0, a0, 4
