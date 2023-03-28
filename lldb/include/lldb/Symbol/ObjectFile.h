@@ -25,25 +25,6 @@
 
 namespace lldb_private {
 
-class ObjectFileJITDelegate {
-public:
-  ObjectFileJITDelegate() = default;
-
-  virtual ~ObjectFileJITDelegate() = default;
-
-  virtual lldb::ByteOrder GetByteOrder() const = 0;
-
-  virtual uint32_t GetAddressByteSize() const = 0;
-
-  virtual void PopulateSymtab(lldb_private::ObjectFile *obj_file,
-                              lldb_private::Symtab &symtab) = 0;
-
-  virtual void PopulateSectionList(lldb_private::ObjectFile *obj_file,
-                                   lldb_private::SectionList &section_list) = 0;
-
-  virtual ArchSpec GetArchitecture() = 0;
-};
-
 /// \class ObjectFile ObjectFile.h "lldb/Symbol/ObjectFile.h"
 /// A plug-in interface definition class for object file parsers.
 ///
