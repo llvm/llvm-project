@@ -52,14 +52,14 @@ template <size_t Bits> struct DyadicFloat {
     normalize();
   }
 
-  DyadicFloat(bool s, int e, MantissaType m)
+  constexpr DyadicFloat(bool s, int e, MantissaType m)
       : sign(s), exponent(e), mantissa(m) {
     normalize();
   }
 
   // Normalizing the mantissa, bringing the leading 1 bit to the most
   // significant bit.
-  DyadicFloat &normalize() {
+  constexpr DyadicFloat &normalize() {
     if (!mantissa.is_zero()) {
       int shift_length = static_cast<int>(mantissa.clz());
       exponent -= shift_length;
@@ -117,6 +117,24 @@ template <size_t Bits> struct DyadicFloat {
 
     // Still correct without FMA instructions if `d_lo` is not underflow.
     return multiply_add(d_lo.get_val(), T(round_and_sticky), d_hi.get_val());
+  }
+
+  explicit operator MantissaType() const {
+    if (mantissa.is_zero())
+      return 0;
+
+    MantissaType new_mant = mantissa;
+    if (exponent > 0) {
+      new_mant <<= exponent;
+    } else {
+      new_mant >>= (-exponent);
+    }
+
+    if (sign) {
+      new_mant = (~new_mant) + 1;
+    }
+
+    return new_mant;
   }
 };
 
@@ -205,6 +223,30 @@ constexpr DyadicFloat<Bits> quick_mul(DyadicFloat<Bits> a,
   } else {
     result.mantissa = (typename DyadicFloat<Bits>::MantissaType)(0);
   }
+  return result;
+}
+
+// Simple exponentiation implementation for printf. Only handles positive
+// exponents, since division isn't implemented.
+template <size_t Bits>
+constexpr DyadicFloat<Bits> pow_n(DyadicFloat<Bits> a, uint32_t power) {
+  DyadicFloat<Bits> result = 1.0;
+  DyadicFloat<Bits> cur_power = a;
+
+  while (power > 0) {
+    if ((power % 2) > 0) {
+      result = quick_mul(result, cur_power);
+    }
+    power = power >> 1;
+    cur_power = quick_mul(cur_power, cur_power);
+  }
+  return result;
+}
+
+template <size_t Bits>
+constexpr DyadicFloat<Bits> mul_pow_2(DyadicFloat<Bits> a, int32_t pow_2) {
+  DyadicFloat<Bits> result = a;
+  result.exponent += pow_2;
   return result;
 }
 

@@ -12,6 +12,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+constexpr size_t TABLE_SHIFT_CONST = 120;
+constexpr size_t IDX_SIZE = 16;
+
+constexpr size_t MID_INT_SIZE = 192;
+
 static const uint16_t POW10_OFFSET[64] = {
     0,   2,   5,   8,   12,  16,  21,   26,   32,   39,   46,   54,  62,
     71,  80,  90,  100, 111, 122, 134,  146,  159,  173,  187,  202, 217,
