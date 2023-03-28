@@ -146,6 +146,11 @@ void GNUPrinter::printSimpleLocation(StringRef Filename,
       SourceCode(Filename, Info.Line, Config.SourceContextLines, Info.Source));
 }
 
+void GNUPrinter::printInvalidCommand(const Request &Request,
+                                     StringRef Command) {
+  OS << "??:0\n";
+}
+
 void PlainPrinterBase::printVerbose(StringRef Filename,
                                     const DILineInfo &Info) {
   OS << "  Filename: " << Filename << '\n';

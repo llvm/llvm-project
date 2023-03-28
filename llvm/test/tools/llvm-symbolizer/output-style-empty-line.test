@@ -25,4 +25,4 @@ LLVM-EMPTY:
 LLVM-NEXT: some text2
 
 GNU: x.c:14
-GNU-NEXT: some text2
+GNU-NEXT: ??:0
