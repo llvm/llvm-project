@@ -2320,7 +2320,7 @@ template <typename... Refs> struct enumerator_result<std::size_t, Refs...> {
   /// Returns the value at index `I`. This case covers references to the
   /// iteratees.
   template <std::size_t I, typename = std::enable_if_t<I != 0>>
-  friend std::tuple_element_t<I, value_reference_tuple>
+  friend decltype(auto)
   get(const enumerator_result &Result) {
     // Note: This is a separate function from the other `get`, instead of an
     // `if constexpr` case, to work around an MSVC 19.31.31XXX compiler

@@ -445,7 +445,9 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
       }
 
       if (m_summary.size()) {
-        m_stream->Printf(" %s", m_summary.c_str());
+        if (ShouldShowName() || value_printed)
+          m_stream->PutChar(' ');
+        m_stream->PutCString(m_summary);
         summary_printed = true;
       }
     }
@@ -560,7 +562,8 @@ ValueObject *ValueObjectPrinter::GetValueObjectForChildrenGeneration() {
   return m_valobj;
 }
 
-void ValueObjectPrinter::PrintChildrenPreamble() {
+void ValueObjectPrinter::PrintChildrenPreamble(bool value_printed,
+                                               bool summary_printed) {
   if (m_options.m_flat_output) {
     if (ShouldPrintValueObject())
       m_stream->EOL();
@@ -568,7 +571,7 @@ void ValueObjectPrinter::PrintChildrenPreamble() {
     if (ShouldPrintValueObject()) {
       if (IsRef()) {
         m_stream->PutCString(": ");
-      } else if (ShouldShowName()) {
+      } else if (value_printed || summary_printed || ShouldShowName()) {
         m_stream->PutChar(' ');
       }
       m_stream->PutCString("{\n");
@@ -694,7 +697,7 @@ void ValueObjectPrinter::PrintChildren(
     for (size_t idx = 0; idx < num_children; ++idx) {
       if (ValueObjectSP child_sp = GenerateChild(synth_m_valobj, idx)) {
         if (!any_children_printed) {
-          PrintChildrenPreamble();
+          PrintChildrenPreamble(value_printed, summary_printed);
           any_children_printed = true;
         }
         PrintChild(child_sp, curr_ptr_depth);

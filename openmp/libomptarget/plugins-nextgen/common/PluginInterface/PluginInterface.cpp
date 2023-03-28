@@ -242,9 +242,8 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   llvm::SmallVector<void *, 16> Args;
   llvm::SmallVector<void *, 16> Ptrs;
 
-  void *KernelArgsPtr =
-      prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs, Args,
-                  Ptrs, AsyncInfoWrapper);
+  void *KernelArgsPtr = prepareArgs(GenericDevice, ArgPtrs, ArgOffsets,
+                                    KernelArgs.NumArgs, Args, Ptrs);
 
   uint32_t NumThreads = getNumThreads(GenericDevice, KernelArgs.ThreadLimit);
   uint64_t NumBlocks = getNumBlocks(GenericDevice, KernelArgs.NumTeams,
@@ -262,8 +261,7 @@ void *GenericKernelTy::prepareArgs(GenericDeviceTy &GenericDevice,
                                    void **ArgPtrs, ptrdiff_t *ArgOffsets,
                                    int32_t NumArgs,
                                    llvm::SmallVectorImpl<void *> &Args,
-                                   llvm::SmallVectorImpl<void *> &Ptrs,
-                                   AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+                                   llvm::SmallVectorImpl<void *> &Ptrs) const {
   Args.resize(NumArgs);
   Ptrs.resize(NumArgs);
 

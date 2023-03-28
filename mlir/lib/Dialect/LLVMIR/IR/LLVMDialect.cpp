@@ -1263,6 +1263,9 @@ LogicalResult LandingpadOp::verify() {
           "llvm.landingpad needs to be in a function with a personality");
   }
 
+  // Consistency of llvm.landingpad result types is checked in
+  // LLVMFuncOp::verify().
+
   if (!getCleanup() && getOperands().empty())
     return emitError("landingpad instruction expects at least one clause or "
                      "cleanup attribute");
@@ -1523,8 +1526,8 @@ LogicalResult ReturnOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult ResumeOp::verify() {
-  if (!getValue().getDefiningOp<LandingpadOp>())
-    return emitOpError("expects landingpad value as operand");
+  // Consistency of llvm.resume value types is checked in LLVMFuncOp::verify().
+
   // No check for personality of function - landingpad op verifies it.
   return success();
 }
@@ -2169,6 +2172,42 @@ LogicalResult LLVMFuncOp::verify() {
                            << stringifyLinkage(LLVM::Linkage::ExternWeak)
                            << "' linkage";
     return success();
+  }
+
+  Type landingpadResultTy;
+  StringRef diagnosticMessage;
+  bool isLandingpadTypeConsistent =
+      !walk([&](Operation *op) {
+         const auto checkType = [&](Type type, StringRef errorMessage) {
+           if (!landingpadResultTy) {
+             landingpadResultTy = type;
+             return WalkResult::advance();
+           }
+           if (landingpadResultTy != type) {
+             diagnosticMessage = errorMessage;
+             return WalkResult::interrupt();
+           }
+           return WalkResult::advance();
+         };
+         return TypeSwitch<Operation *, WalkResult>(op)
+             .Case<LandingpadOp>([&](auto landingpad) {
+               constexpr StringLiteral errorMessage =
+                   "'llvm.landingpad' should have a consistent result type "
+                   "inside a function";
+               return checkType(landingpad.getType(), errorMessage);
+             })
+             .Case<ResumeOp>([&](auto resume) {
+               constexpr StringLiteral errorMessage =
+                   "'llvm.resume' should have a consistent input type inside a "
+                   "function";
+               return checkType(resume.getValue().getType(), errorMessage);
+             })
+             .Default([](auto) { return WalkResult::skip(); });
+       }).wasInterrupted();
+  if (!isLandingpadTypeConsistent) {
+    assert(!diagnosticMessage.empty() &&
+           "Expecting a non-empty diagnostic message");
+    return emitError(diagnosticMessage);
   }
 
   return success();

@@ -338,6 +338,11 @@ CUDA Support
 
 AIX Support
 ^^^^^^^^^^^
+- Add an AIX-only link-time option, `-mxcoff-build-id=0xHEXSTRING`, to allow users
+  to embed a hex id in their binary such that it's readable by the program itself.
+  This option is an alternative to the `--build-id=0xHEXSTRING` GNU linker option
+  which is currently not supported by the AIX linker.
+
 
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
