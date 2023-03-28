@@ -534,11 +534,12 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
   assert(CallResults.getOpcode() == WebAssembly::CALL_RESULTS ||
          CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS);
 
-  bool IsIndirect = CallParams.getOperand(0).isReg();
+  bool IsIndirect =
+      CallParams.getOperand(0).isReg() || CallParams.getOperand(0).isFI();
   bool IsRetCall = CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS;
 
   bool IsFuncrefCall = false;
-  if (IsIndirect) {
+  if (IsIndirect && CallParams.getOperand(0).isReg()) {
     Register Reg = CallParams.getOperand(0).getReg();
     const MachineFunction *MF = BB->getParent();
     const MachineRegisterInfo &MRI = MF->getRegInfo();
