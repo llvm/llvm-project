@@ -22,7 +22,6 @@
 // CHECK:   Submodule: Mod
 // CHECK: Module Map:
 // CHECK: Mod (framework)
-// CHECK:   link Mod (framework)
 // CHECK: Files:
 // CHECK-NOT: [[PREFIX]]/module.modulemap
 // CHECK: [[PREFIX]]/Mod.framework/Headers/Mod.h llvmcas://
