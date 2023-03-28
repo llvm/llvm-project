@@ -1451,7 +1451,7 @@ markup::Document HoverInfo::present() const {
     markup::Paragraph &P = Output.addParagraph();
     P.appendText("provides ");
 
-    const unsigned long SymbolNamesLimit = 5;
+    const std::vector<std::string>::size_type SymbolNamesLimit = 5;
     auto Front =
         llvm::ArrayRef(UsedSymbolNames)
             .take_front(std::min(UsedSymbolNames.size(), SymbolNamesLimit));
