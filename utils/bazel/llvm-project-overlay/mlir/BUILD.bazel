@@ -5674,6 +5674,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":IR",
+        ":PDLDialect",
         ":TensorDialect",
         ":TransformDialect",
         "//llvm:Support",
