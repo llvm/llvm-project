@@ -498,8 +498,7 @@ change.</span>
     href="https://www.iso.org/standard/64029.html">ISO
     C++ 2014 standard</a>.</p>
 
-<p>By default, Clang builds C++ code according to the C++14 standard.
-You can use Clang in C++14 mode with the <code>-std=c++14</code> option
+<p>You can use Clang in C++14 mode with the <code>-std=c++14</code> option
 (use <code>-std=c++1y</code> in Clang 3.4 and earlier).</p>
 
 <details>
@@ -593,7 +592,8 @@ version 3.7.
 <p>Clang 5 and later implement all the features of the
 <a href="https://www.iso.org/standard/68564.html">ISO C++ 2017 standard</a>.</p>
 
-<p>You can use Clang in C++17 mode with the <code>-std=c++17</code> option
+<p>By default, Clang 16 or later builds C++ code according to the C++17 standard.
+You can use Clang in C++17 mode with the <code>-std=c++17</code> option
 (use <code>-std=c++1z</code> in Clang 4 and earlier).</p>
 
 <details open>
@@ -912,7 +912,7 @@ code. This issue is expected to be rectified soon.
     </tr>
       <tr> <!-- from Albuquerque -->
         <td><a href="https://wg21.link/p0857r0">P0857R0</a></td>
-        <td rowspan="1" class="unreleased" align="center">Clang 16</td>
+        <td rowspan="1" class="full" align="center">Clang 16</td>
       </tr>
       <tr> <!-- from San Diego -->
         <td><a href="https://wg21.link/p1084r2">P1084R2</a></td>
@@ -923,7 +923,7 @@ code. This issue is expected to be rectified soon.
       </tr>
       <tr> <!-- from Cologne -->
         <td><a href="https://wg21.link/p0848r3">P0848R3</a></td>
-        <td rowspan="1" class="unreleased" align="center">
+        <td rowspan="1" class="partial" align="center">
           <details>
             <summary>Clang 16 (Partial)</summary>
             Because of other concepts implementation deficits, the __cpp_concepts macro is not yet set to 202002L.
@@ -955,11 +955,11 @@ code. This issue is expected to be rectified soon.
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2092r0">P2092R0</a></td>
-        <td rowspan="1" class="unreleased" align="center">Clang 16</td>
+        <td rowspan="1" class="full" align="center">Clang 16</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2113r0">P2113R0</a></td>
-        <td rowspan="1" class="unreleased" align="center">Clang 16</td>
+        <td rowspan="1" class="full" align="center">Clang 16</td>
       </tr>
     <!-- Albuquerque papers -->
     <tr>
@@ -1044,7 +1044,7 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td><tt>typename</tt> optional in more contexts</td>
       <td><a href="https://wg21.link/p0634r3">P0634R3</a></td>
-      <td class="unreleased" align="center">Clang 16</td>
+      <td class="full" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>Pack expansion in lambda <i>init-capture</i></td>
@@ -1147,7 +1147,7 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td rowspan="2">Structured binding extensions</td>
       <td><a href="https://wg21.link/p1091r3">P1091R3</a></td>
-      <td rowspan="2" class="unreleased" align="center">Clang 16</td>
+      <td rowspan="2" class="full" align="center">Clang 16</td>
     </tr>
       <tr>
         <td><a href="https://wg21.link/p1381r1">P1381R1</a></td>
@@ -1445,7 +1445,7 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>The Equality Operator You Are Looking For</td>
       <td><a href="https://wg21.link/P2468R2">P2468R2</a></td>
-      <td class="unreleased" align="center">Clang 16</td>
+      <td class="full" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>De-deprecating volatile compound operations</td>
@@ -1465,7 +1465,7 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>Labels at the end of compound statements</td>
       <td><a href="https://wg21.link/P2324R2">P2324R2</a></td>
-      <td class="unreleased" align="center">Clang 16</td>
+      <td class="full" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>Delimited escape sequences</td>
@@ -1490,7 +1490,7 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>static <code>operator()</code></td>
       <td><a href="https://wg21.link/P1169R4">P1169R4</a></td>
-      <td class="unreleased" align="center">Clang 16</td>
+      <td class="full" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>Extended floating-point types and standard names</td>
@@ -1515,7 +1515,7 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td><code>char8_t</code> Compatibility and Portability Fix</td>
       <td><a href="https://wg21.link/P2513R3">P2513R3</a></td>
-      <td class="unreleased" align="center">Clang 16</td>
+      <td class="full" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>Relax requirements on <code>wchar_t</code> to match existing practices</td>
@@ -1531,12 +1531,12 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>static <code>operator[]</code></td>
       <td><a href="https://wg21.link/P2589R1">P2589R1</a></td>
-      <td class="unreleased" align="center">Clang 16</td>
+      <td class="full" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>Permitting static constexpr variables in constexpr functions</td>
       <td><a href="https://wg21.link/P2647R1">P2647R1</a></td>
-      <td class="unreleased" align="center">Clang 16</td>
+      <td class="full" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>consteval needs to propagate up</td>

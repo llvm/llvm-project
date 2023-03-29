@@ -6,8 +6,7 @@ define i32 @test_intrinsic_very_profitable(i32 %n, i1 %cond.1, i1 %cond.2) {
 ; CHECK-LABEL: define i32 @test_intrinsic_very_profitable
 ; CHECK-SAME: (i32 [[N:%.*]], i1 [[COND_1:%.*]], i1 [[COND_2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND_2_GW_FR:%.*]] = freeze i1 [[COND_2]]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2_GW_FR]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2]]
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND]]
 ; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0:![0-9]+]]
@@ -20,7 +19,7 @@ define i32 @test_intrinsic_very_profitable(i32 %n, i1 %cond.1, i1 %cond.2) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[GUARDED]] ], [ [[IV_NEXT:%.*]], [[GUARDED1:%.*]] ]
 ; CHECK-NEXT:    [[WIDENABLE_COND4:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND5:%.*]] = and i1 [[COND_2_GW_FR]], [[WIDENABLE_COND4]]
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND5:%.*]] = and i1 [[COND_2]], [[WIDENABLE_COND4]]
 ; CHECK-NEXT:    br i1 true, label [[GUARDED1]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    [[DEOPTCALL3:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
@@ -75,8 +74,7 @@ define i32 @test_intrinsic_profitable(i32 %n, i1 %cond.1, i1 %cond.2) {
 ; CHECK-LABEL: define i32 @test_intrinsic_profitable
 ; CHECK-SAME: (i32 [[N:%.*]], i1 [[COND_1:%.*]], i1 [[COND_2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND_2_GW_FR:%.*]] = freeze i1 [[COND_2]]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2_GW_FR]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2]]
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND]]
 ; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
@@ -89,7 +87,7 @@ define i32 @test_intrinsic_profitable(i32 %n, i1 %cond.1, i1 %cond.2) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[GUARDED]] ], [ [[IV_NEXT:%.*]], [[GUARDED1:%.*]] ]
 ; CHECK-NEXT:    [[WIDENABLE_COND4:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND5:%.*]] = and i1 [[COND_2_GW_FR]], [[WIDENABLE_COND4]]
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND5:%.*]] = and i1 [[COND_2]], [[WIDENABLE_COND4]]
 ; CHECK-NEXT:    br i1 true, label [[GUARDED1]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    [[DEOPTCALL3:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
@@ -144,8 +142,7 @@ define i32 @test_intrinsic_neutral(i32 %n, i1 %cond.1, i1 %cond.2) {
 ; CHECK-LABEL: define i32 @test_intrinsic_neutral
 ; CHECK-SAME: (i32 [[N:%.*]], i1 [[COND_1:%.*]], i1 [[COND_2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND_2_GW_FR:%.*]] = freeze i1 [[COND_2]]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2_GW_FR]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2]]
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND]]
 ; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
@@ -158,7 +155,7 @@ define i32 @test_intrinsic_neutral(i32 %n, i1 %cond.1, i1 %cond.2) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[GUARDED]] ], [ [[IV_NEXT:%.*]], [[GUARDED1:%.*]] ]
 ; CHECK-NEXT:    [[WIDENABLE_COND4:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND5:%.*]] = and i1 [[COND_2_GW_FR]], [[WIDENABLE_COND4]]
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND5:%.*]] = and i1 [[COND_2]], [[WIDENABLE_COND4]]
 ; CHECK-NEXT:    br i1 true, label [[GUARDED1]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    [[DEOPTCALL3:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
@@ -212,8 +209,7 @@ define i32 @test_intrinsic_very_unprofitable(i32 %n, i1 %cond.1, i1 %cond.2) {
 ; CHECK-LABEL: define i32 @test_intrinsic_very_unprofitable
 ; CHECK-SAME: (i32 [[N:%.*]], i1 [[COND_1:%.*]], i1 [[COND_2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND_2_GW_FR:%.*]] = freeze i1 [[COND_2]]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2_GW_FR]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2]]
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND]]
 ; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
@@ -226,7 +222,7 @@ define i32 @test_intrinsic_very_unprofitable(i32 %n, i1 %cond.1, i1 %cond.2) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[GUARDED]] ], [ [[IV_NEXT:%.*]], [[GUARDED1:%.*]] ]
 ; CHECK-NEXT:    [[WIDENABLE_COND4:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND5:%.*]] = and i1 [[COND_2_GW_FR]], [[WIDENABLE_COND4]]
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND5:%.*]] = and i1 [[COND_2]], [[WIDENABLE_COND4]]
 ; CHECK-NEXT:    br i1 true, label [[GUARDED1]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    [[DEOPTCALL3:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
@@ -280,8 +276,7 @@ define i32 @test_intrinsic_unprofitable(i32 %n, i1 %cond.1, i1 %cond.2) {
 ; CHECK-LABEL: define i32 @test_intrinsic_unprofitable
 ; CHECK-SAME: (i32 [[N:%.*]], i1 [[COND_1:%.*]], i1 [[COND_2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND_2_GW_FR:%.*]] = freeze i1 [[COND_2]]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2_GW_FR]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2]]
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND]]
 ; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
@@ -294,7 +289,7 @@ define i32 @test_intrinsic_unprofitable(i32 %n, i1 %cond.1, i1 %cond.2) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[GUARDED]] ], [ [[IV_NEXT:%.*]], [[GUARDED1:%.*]] ]
 ; CHECK-NEXT:    [[WIDENABLE_COND4:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND5:%.*]] = and i1 [[COND_2_GW_FR]], [[WIDENABLE_COND4]]
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND5:%.*]] = and i1 [[COND_2]], [[WIDENABLE_COND4]]
 ; CHECK-NEXT:    br i1 true, label [[GUARDED1]], label [[DEOPT2:%.*]], !prof [[PROF0]]
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    [[DEOPTCALL3:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]

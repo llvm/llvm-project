@@ -163,6 +163,12 @@ public:
     Never,    // No loop is assumed to be finite.
   };
 
+  enum AssignmentTrackingOpts {
+    Disabled,
+    Enabled,
+    Forced,
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
