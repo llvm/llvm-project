@@ -17,6 +17,7 @@
 #include "CIRGenCall.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
+#include "EHScopeStack.h"
 
 #include "clang/AST/BaseSubobject.h"
 #include "clang/AST/CurrentSourceLocExprScope.h"
@@ -508,6 +509,9 @@ public:
   /// invalid iff the function has no return value.
   Address ReturnValue = Address::invalid();
 
+  /// Tracks function scope overall cleanup handling.
+  EHScopeStack EHStack;
+
   /// A mapping from NRVO variables to the flags used to indicate
   /// when the NRVO has been applied to this variable.
   llvm::DenseMap<const VarDecl *, mlir::Value> NRVOFlags;
@@ -714,6 +718,8 @@ public:
   void buildNullInitialization(mlir::Location loc, Address DestPtr,
                                QualType Ty);
 
+  void buildCXXTemporary(const CXXTemporary *Temporary, QualType TempType,
+                         Address Ptr);
   mlir::Value buildCXXNewExpr(const CXXNewExpr *E);
 
   mlir::Value createLoad(const clang::VarDecl *VD, const char *Name);
@@ -1281,6 +1287,74 @@ public:
   void buildAggregateCopy(LValue Dest, LValue Src, QualType EltTy,
                           AggValueSlot::Overlap_t MayOverlap,
                           bool isVolatile = false);
+
+  ///
+  /// Cleanups
+  /// --------
+  typedef void Destroyer(CIRGenFunction &CGF, Address addr, QualType ty);
+
+  static Destroyer destroyCXXObject;
+
+  void pushDestroy(CleanupKind kind, Address addr, QualType type,
+                   Destroyer *destroyer, bool useEHCleanupForArray);
+
+  /// An object to manage conditionally-evaluated expressions.
+  class ConditionalEvaluation {
+    // llvm::BasicBlock *StartBB;
+
+  public:
+    ConditionalEvaluation(CIRGenFunction &CGF)
+    /*: StartBB(CGF.Builder.GetInsertBlock())*/ {}
+
+    void begin(CIRGenFunction &CGF) {
+      assert(CGF.OutermostConditional != this);
+      if (!CGF.OutermostConditional)
+        CGF.OutermostConditional = this;
+    }
+
+    void end(CIRGenFunction &CGF) {
+      assert(CGF.OutermostConditional != nullptr);
+      if (CGF.OutermostConditional == this)
+        CGF.OutermostConditional = nullptr;
+    }
+
+    /// Returns a block which will be executed prior to each
+    /// evaluation of the conditional code.
+    // llvm::BasicBlock *getStartingBlock() const { return StartBB; }
+  };
+
+  // Return true if we're currently emitting one branch or the other of a
+  // conditional expression.
+  bool isInConditionalBranch() const { return OutermostConditional != nullptr; }
+
+  void setBeforeOutermostConditional(mlir::Value value, Address addr) {
+    assert(isInConditionalBranch());
+    llvm_unreachable("NYI");
+  }
+
+  // Points to the outermost active conditional control. This is used so that
+  // we know if a temporary should be destroyed conditionally.
+  ConditionalEvaluation *OutermostConditional = nullptr;
+
+  /// Push a cleanup to be run at the end of the current full-expression.  Safe
+  /// against the possibility that we're currently inside a
+  /// conditionally-evaluated expression.
+  template <class T, class... As>
+  void pushFullExprCleanup(CleanupKind kind, As... A) {
+    // If we're not in a conditional branch, or if none of the
+    // arguments requires saving, then use the unconditional cleanup.
+    if (!isInConditionalBranch())
+      return EHStack.pushCleanup<T>(kind, A...);
+
+    llvm_unreachable("NYI");
+    // Stash values in a tuple so we can guarantee the order of saves.
+    // typedef std::tuple<typename DominatingValue<As>::saved_type...>
+    // SavedTuple; SavedTuple Saved{saveValueInCond(A)...};
+
+    // typedef EHScopeStack::ConditionalCleanup<T, As...> CleanupType;
+    // EHStack.pushCleanupTuple<CleanupType>(kind, Saved);
+    // initFullExprCleanup();
+  }
 
   /// CIR build helpers
   /// -----------------

@@ -22,6 +22,10 @@ using namespace cir;
 using namespace clang;
 using namespace mlir::cir;
 
+//===----------------------------------------------------------------------===//
+// CIRGenFunction cleanup related
+//===----------------------------------------------------------------------===//
+
 /// Build a unconditional branch to the lexical scope cleanup block
 /// or with the labeled blocked if already solved.
 ///
@@ -37,4 +41,22 @@ mlir::cir::BrOp CIRGenFunction::buildBranchThroughCleanup(mlir::Location Loc,
   // materialized label. Keep track of unsolved goto's.
   return builder.create<BrOp>(Loc, Dest.isValid() ? Dest.getBlock()
                                                   : ReturnBlock().getBlock());
+}
+
+/// Emits all the code to cause the given temporary to be cleaned up.
+void CIRGenFunction::buildCXXTemporary(const CXXTemporary *Temporary,
+                                       QualType TempType, Address Ptr) {
+  pushDestroy(NormalAndEHCleanup, Ptr, TempType, destroyCXXObject,
+              /*useEHCleanup*/ true);
+}
+
+//===----------------------------------------------------------------------===//
+// EHScopeStack
+//===----------------------------------------------------------------------===//
+
+void EHScopeStack::Cleanup::anchor() {}
+
+void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
+  llvm_unreachable("NYI");
+  return nullptr;
 }

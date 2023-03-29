@@ -742,3 +742,14 @@ void CIRGenFunction::buildLambdaStaticInvokeBody(const CXXMethodDecl *MD) {
 
   buildLambdaDelegatingInvokeBody(MD);
 }
+
+void CIRGenFunction::destroyCXXObject(CIRGenFunction &CGF, Address addr,
+                                      QualType type) {
+  const RecordType *rtype = type->castAs<RecordType>();
+  const CXXRecordDecl *record = cast<CXXRecordDecl>(rtype->getDecl());
+  const CXXDestructorDecl *dtor = record->getDestructor();
+  assert(!dtor->isTrivial());
+  llvm_unreachable("NYI");
+  // CGF.buildCXXDestructorCall(dtor, Dtor_Complete, /*for vbase*/ false,
+  //                            /*Delegating=*/false, addr, type);
+}
