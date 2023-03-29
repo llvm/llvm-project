@@ -1329,6 +1329,20 @@ cc_library(
 )
 
 cc_library(
+    name = "FrontendDebug",
+    srcs = glob([
+        "lib/Frontend/Debug/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/Frontend/Debug/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":Support",
+    ],
+)
+
+cc_library(
     name = "FrontendHLSL",
     srcs = glob([
         "lib/Frontend/HLSL/*.cpp",
