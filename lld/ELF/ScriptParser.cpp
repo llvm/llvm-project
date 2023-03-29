@@ -419,6 +419,7 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
       .Case("elf32-avr", {ELF32LEKind, EM_AVR})
       .Case("elf32-iamcu", {ELF32LEKind, EM_IAMCU})
       .Case("elf32-littlearm", {ELF32LEKind, EM_ARM})
+      .Case("elf32-bigarm", {ELF32BEKind, EM_ARM})
       .Case("elf32-x86-64", {ELF32LEKind, EM_X86_64})
       .Case("elf64-aarch64", {ELF64LEKind, EM_AARCH64})
       .Case("elf64-littleaarch64", {ELF64LEKind, EM_AARCH64})

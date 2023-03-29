@@ -183,7 +183,7 @@ ARCHFLAG ?= -arch
 #----------------------------------------------------------------------
 ifeq "$(OS)" "Darwin"
 	DS := $(DSYMUTIL)
-	DSFLAGS =
+	DSFLAGS := $(DSFLAGS_EXTRAS)
 	DSYM = $(EXE).dSYM
 	AR := $(CROSS_COMPILE)libtool
 	ARFLAGS := -static -o

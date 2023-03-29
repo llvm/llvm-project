@@ -4306,8 +4306,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/AMDGPUToROCDL/*.cpp",
         "lib/Conversion/AMDGPUToROCDL/*.h",
-        "include/mlir/Conversion/GPUToROCDL/Runtimes.h",
-    ]),
+    ]) + ["include/mlir/Conversion/GPUToROCDL/Runtimes.h"],
     hdrs = glob([
         "include/mlir/Conversion/AMDGPUToROCDL/*.h",
     ]),
@@ -5669,6 +5668,20 @@ cc_library(
 )
 
 cc_library(
+    name = "TensorTransformOps",
+    srcs = glob(["lib/Dialect/Tensor/TransformOps/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Tensor/TransformOps/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":PDLDialect",
+        ":TensorDialect",
+        ":TransformDialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "Rewrite",
     srcs = glob([
         "lib/Rewrite/*.cpp",
@@ -6743,8 +6756,8 @@ cc_library(
 
 cc_library(
     name = "GPUToLLVMIRTranslation",
-    srcs = glob(["lib/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.cpp"]),
-    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"]),
+    srcs = ["lib/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.cpp"],
+    hdrs = ["include/mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"],
     includes = ["include"],
     deps = [
         ":GPUDialect",
@@ -6757,8 +6770,8 @@ cc_library(
 
 cc_library(
     name = "BuiltinToLLVMIRTranslation",
-    srcs = glob(["lib/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.cpp"]),
-    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"]),
+    srcs = ["lib/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.cpp"],
+    hdrs = ["include/mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"],
     includes = ["include"],
     deps = [
         ":IR",
@@ -7143,6 +7156,7 @@ cc_library(
         ":TensorDialect",
         ":TensorInferTypeOpInterfaceImpl",
         ":TensorTilingInterfaceImpl",
+        ":TensorTransformOps",
         ":TensorTransforms",
         ":TosaDialect",
         ":TosaToLinalg",
@@ -7865,10 +7879,16 @@ cc_library(
             "lib/Dialect/OpenMP/IR/*.h",
         ],
     ),
-    hdrs = glob([
-        "include/mlir/Dialect/OpenMP/*.h",
-    ]),
+    hdrs = glob(
+        [
+            "include/mlir/Dialect/OpenMP/*.h",
+        ],
+        exclude = ["include/mlir/Dialect/OpenMP/OpenMPInterfaces.h"],
+    ),
     includes = ["include"],
+    textual_hdrs = [
+        "include/mlir/Dialect/OpenMP/OpenMPInterfaces.h",
+    ],
     deps = [
         ":ControlFlowInterfaces",
         ":IR",
@@ -9363,8 +9383,8 @@ cc_library(
         ":TransformDialectInterfacesIncGen",
         ":TransformDialectUtils",
         ":TransformOpsIncGen",
-        ":Transforms",
         ":TransformTypesIncGen",
+        ":Transforms",
         "//llvm:Support",
     ],
 )
@@ -10098,8 +10118,10 @@ cc_library(
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":MemRefPassIncGen",
+        ":NVGPUDialect",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
+        ":Support",
         ":TensorDialect",
         ":Transforms",
         ":VectorDialect",
@@ -10152,8 +10174,11 @@ cc_library(
         ":MemRefDialect",
         ":MemRefTransformOpsIncGen",
         ":MemRefTransforms",
+        ":NVGPUDialect",
         ":PDLDialect",
         ":TransformDialect",
+        ":TransformUtils",
+        ":VectorDialect",
         "//llvm:Support",
     ],
 )

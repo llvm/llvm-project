@@ -315,7 +315,8 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
             "Target type %s is not compatible with pointer type %s"_err_en_US,
             rhsType->type().AsFortran(), lhsType_->type().AsFortran()};
 
-      } else if (!isBoundsRemapping_) {
+      } else if (!isBoundsRemapping_ &&
+          !lhsType_->attrs().test(TypeAndShape::Attr::AssumedRank)) {
         int lhsRank{evaluate::GetRank(lhsType_->shape())};
         int rhsRank{evaluate::GetRank(rhsType->shape())};
         if (lhsRank != rhsRank) {

@@ -223,8 +223,6 @@ void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
   switch (Kind) {
     // For most of the platforms we support, native and natural are the same.
     // With XL, native is the same as power, natural means something else.
-    //
-    // FIXME: This is not true on Darwin/PPC.
   case POAK_Native:
   case POAK_Power:
     Action = Sema::PSK_Push_Set;

@@ -401,6 +401,8 @@ def warn_reserved_extern_symbol: Warning<
   "it starts with '_' followed by a capital letter|"
   "it contains '__'}1">,
   InGroup<ReservedIdentifier>, DefaultIgnore;
+def warn_reserved_module_name : Warning<
+  "%0 is a reserved name for a module">, InGroup<ReservedModuleIdentifier>;
 
 def warn_parameter_size: Warning<
   "%0 is a large (%1 bytes) pass-by-value argument; "
@@ -8717,6 +8719,10 @@ def note_cuda_device_builtin_surftex_should_be_template_class : Note<
 def err_hip_invalid_args_builtin_mangled_name : Error<
     "invalid argument: symbol must be a device-side function or global variable">;
 
+def warn_hip_omp_target_directives : Warning<
+  "HIP does not support OpenMP target directives; directive has been ignored">,
+  InGroup<HIPOpenMPOffloading>, DefaultError;
+
 def warn_non_pod_vararg_with_format_string : Warning<
   "cannot pass %select{non-POD|non-trivial}0 object of type %1 to variadic "
   "%select{function|block|method|constructor}2; expected type from format "
@@ -11344,8 +11350,7 @@ def err_private_module_fragment_not_module_interface : Error<
   "private module fragment in module implementation unit">;
 def note_not_module_interface_add_export : Note<
   "add 'export' here if this is intended to be a module interface unit">;
-def err_invalid_module_name : Error<
-  "%0 is %select{an invalid|a reserved}1 name for a module">;
+def err_invalid_module_name : Error<"%0 is an invalid name for a module">;
 def err_extern_def_in_header_unit : Error<
   "non-inline external definitions are not permitted in C++ header units">;
 

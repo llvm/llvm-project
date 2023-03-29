@@ -4,6 +4,11 @@
 // RUN: llvm-objdump -s --triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
 // RUN: llvm-readelf --relocs %t2 | FileCheck -check-prefix=CHECK-RELOCS %s
 
+// RUN: llvm-mc -filetype=obj --arm-add-build-attributes -triple=armv7aeb-none-linux-gnueabi -mcpu=cortex-a8 %s -o %t
+// RUN: ld.lld --emit-relocs %t -o %t2
+// RUN: llvm-objdump -s --triple=armv7aeb-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-EB %s
+// RUN: llvm-readelf --relocs %t2 | FileCheck -check-prefix=CHECK-RELOCS %s
+
 /// LLD does not support --emit-relocs for .ARM.exidx sections as the relocations
 /// from synthetic table entries won't be represented. Given the known use cases
 /// of --emit-relocs, relocating kernels, and binary analysis, the former doesn't
@@ -69,3 +74,9 @@ __aeabi_unwind_cpp_pr0:
 // CHECK-NEXT:  100f4 20000100 01000000
 
 // CHECK-RELOCS-NOT: Relocation section '.rel.ARM.exidx'
+
+// CHECK-EB: Contents of section .ARM.exidx:
+// CHECK-EB-NEXT: 100d4 00010028 80978408 00010028 00000001
+// CHECK-EB-NEXT: 100e4 00010028 80978408 00010024 00000001
+// CHECK-EB-NEXT: 100f4 00010020 00000001
+

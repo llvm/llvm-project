@@ -77,7 +77,7 @@ public:
   computeMSVCVersion(const Driver *D,
                      const llvm::opt::ArgList &Args) const override;
 
-  void adjustDebugInfoKind(codegenoptions::DebugInfoKind &DebugInfoKind,
+  void adjustDebugInfoKind(llvm::codegenoptions::DebugInfoKind &DebugInfoKind,
                            const llvm::opt::ArgList &Args) const override;
   bool IsIntegratedAssemblerDefault() const override { return true; }
   bool IsMathErrnoDefault() const override { return false; }

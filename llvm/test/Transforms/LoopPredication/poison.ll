@@ -13,12 +13,13 @@ define i32 @test1(i32 %length, i32 %nlimit) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[N]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 0, [[LENGTH]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze i1 [[TMP2]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[OK:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[J_NEXT:%.*]], [[OK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[J]], [[LENGTH]]
-; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[TMP:%.*]] = icmp ult i32 [[NLIMIT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP]], label [[OK]], label [[EXIT:%.*]]
@@ -68,12 +69,13 @@ define i32 @test2(i32 noundef %length, i32 noundef %nlimit, i32 %istart) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[NLIMIT:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 1, [[LENGTH]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i1 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[TMP4]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[OK:%.*]] ], [ [[ISTART2]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[J_NEXT:%.*]], [[OK]] ], [ 1, [[ENTRY]] ]
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[J]], [[LENGTH]]
-; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP4]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP5]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[TMP:%.*]] = icmp ult i32 [[ISTART]], 1000
 ; CHECK-NEXT:    br i1 [[TMP]], label [[OK]], label [[EXIT:%.*]]

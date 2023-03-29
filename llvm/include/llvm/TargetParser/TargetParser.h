@@ -14,6 +14,7 @@
 #ifndef LLVM_TARGETPARSER_TARGETPARSER_H
 #define LLVM_TARGETPARSER_TARGETPARSER_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
@@ -148,6 +149,14 @@ void fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values);
 void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
 
 IsaVersion getIsaVersion(StringRef GPU);
+
+/// Fills Features map with default values for given target GPU
+void fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
+                          StringMap<bool> &Features);
+
+/// Inserts wave size feature for given GPU into features map
+bool insertWaveSizeFeature(StringRef GPU, const Triple &T,
+                           StringMap<bool> &Features, std::string &ErrorMsg);
 
 } // namespace AMDGPU
 } // namespace llvm

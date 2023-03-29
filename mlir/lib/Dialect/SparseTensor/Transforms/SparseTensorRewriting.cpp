@@ -618,7 +618,7 @@ struct ConvertRewriter : public OpRewritePattern<ConvertOp> {
                                 PatternRewriter &rewriter) const override {
     auto encDst = getSparseTensorEncoding(op.getType());
     auto encSrc = getSparseTensorEncoding(op.getSource().getType());
-    if (encDst && encSrc &&
+    if (encDst && encSrc && !encSrc.isSlice() &&
         encSrc.withoutBitWidths() == encDst.withoutBitWidths()) {
       // Trivial tensor conversion and simple element type conversion is handled
       // in codegen.
