@@ -518,10 +518,10 @@ define float @extractelt_fadd_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    lui a0, 263168
-; CHECK-NEXT:    fmv.w.x ft1, a0
-; CHECK-NEXT:    fadd.s fa0, ft0, ft1
+; CHECK-NEXT:    fmv.w.x fa4, a0
+; CHECK-NEXT:    fadd.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x float> poison, float 3.0, i32 0
   %splat = shufflevector <vscale x 4 x float> %head, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
@@ -535,10 +535,10 @@ define float @extractelt_fsub_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
-; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    lui a0, 263168
-; CHECK-NEXT:    fmv.w.x ft1, a0
-; CHECK-NEXT:    fsub.s fa0, ft1, ft0
+; CHECK-NEXT:    fmv.w.x fa4, a0
+; CHECK-NEXT:    fsub.s fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x float> poison, float 3.0, i32 0
   %splat = shufflevector <vscale x 4 x float> %head, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
@@ -552,10 +552,10 @@ define float @extractelt_fmul_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 3
-; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    lui a0, 263168
-; CHECK-NEXT:    fmv.w.x ft1, a0
-; CHECK-NEXT:    fmul.s fa0, ft0, ft1
+; CHECK-NEXT:    fmv.w.x fa4, a0
+; CHECK-NEXT:    fmul.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x float> poison, float 3.0, i32 0
   %splat = shufflevector <vscale x 4 x float> %head, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
@@ -568,10 +568,10 @@ define float @extractelt_fdiv_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK-LABEL: extractelt_fdiv_nxv4f32_splat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m2, ta, ma
-; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    lui a0, 263168
-; CHECK-NEXT:    fmv.w.x ft1, a0
-; CHECK-NEXT:    fdiv.s fa0, ft0, ft1
+; CHECK-NEXT:    fmv.w.x fa4, a0
+; CHECK-NEXT:    fdiv.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x float> poison, float 3.0, i32 0
   %splat = shufflevector <vscale x 4 x float> %head, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer

@@ -263,16 +263,16 @@ declare double @llvm.experimental.constrained.fma.f64(double, double, double, me
 define double @fmsub_d(double %a, double %b, double %c) nounwind strictfp {
 ; RV32IFD-LABEL: fmsub_d:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.d.w ft0, zero
-; RV32IFD-NEXT:    fadd.d ft0, fa2, ft0
-; RV32IFD-NEXT:    fmsub.d fa0, fa0, fa1, ft0
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
+; RV32IFD-NEXT:    fadd.d fa5, fa2, fa5
+; RV32IFD-NEXT:    fmsub.d fa0, fa0, fa1, fa5
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fmsub_d:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, zero
-; RV64IFD-NEXT:    fadd.d ft0, fa2, ft0
-; RV64IFD-NEXT:    fmsub.d fa0, fa0, fa1, ft0
+; RV64IFD-NEXT:    fmv.d.x fa5, zero
+; RV64IFD-NEXT:    fadd.d fa5, fa2, fa5
+; RV64IFD-NEXT:    fmsub.d fa0, fa0, fa1, fa5
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fmsub_d:
@@ -339,18 +339,18 @@ define double @fmsub_d(double %a, double %b, double %c) nounwind strictfp {
 define double @fnmadd_d(double %a, double %b, double %c) nounwind strictfp {
 ; RV32IFD-LABEL: fnmadd_d:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.d.w ft0, zero
-; RV32IFD-NEXT:    fadd.d ft1, fa0, ft0
-; RV32IFD-NEXT:    fadd.d ft0, fa2, ft0
-; RV32IFD-NEXT:    fnmadd.d fa0, ft1, fa1, ft0
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
+; RV32IFD-NEXT:    fadd.d fa4, fa0, fa5
+; RV32IFD-NEXT:    fadd.d fa5, fa2, fa5
+; RV32IFD-NEXT:    fnmadd.d fa0, fa4, fa1, fa5
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fnmadd_d:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, zero
-; RV64IFD-NEXT:    fadd.d ft1, fa0, ft0
-; RV64IFD-NEXT:    fadd.d ft0, fa2, ft0
-; RV64IFD-NEXT:    fnmadd.d fa0, ft1, fa1, ft0
+; RV64IFD-NEXT:    fmv.d.x fa5, zero
+; RV64IFD-NEXT:    fadd.d fa4, fa0, fa5
+; RV64IFD-NEXT:    fadd.d fa5, fa2, fa5
+; RV64IFD-NEXT:    fnmadd.d fa0, fa4, fa1, fa5
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_d:
@@ -435,18 +435,18 @@ define double @fnmadd_d(double %a, double %b, double %c) nounwind strictfp {
 define double @fnmadd_d_2(double %a, double %b, double %c) nounwind strictfp {
 ; RV32IFD-LABEL: fnmadd_d_2:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.d.w ft0, zero
-; RV32IFD-NEXT:    fadd.d ft1, fa1, ft0
-; RV32IFD-NEXT:    fadd.d ft0, fa2, ft0
-; RV32IFD-NEXT:    fnmadd.d fa0, ft1, fa0, ft0
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
+; RV32IFD-NEXT:    fadd.d fa4, fa1, fa5
+; RV32IFD-NEXT:    fadd.d fa5, fa2, fa5
+; RV32IFD-NEXT:    fnmadd.d fa0, fa4, fa0, fa5
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fnmadd_d_2:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, zero
-; RV64IFD-NEXT:    fadd.d ft1, fa1, ft0
-; RV64IFD-NEXT:    fadd.d ft0, fa2, ft0
-; RV64IFD-NEXT:    fnmadd.d fa0, ft1, fa0, ft0
+; RV64IFD-NEXT:    fmv.d.x fa5, zero
+; RV64IFD-NEXT:    fadd.d fa4, fa1, fa5
+; RV64IFD-NEXT:    fadd.d fa5, fa2, fa5
+; RV64IFD-NEXT:    fnmadd.d fa0, fa4, fa0, fa5
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_d_2:
@@ -532,16 +532,16 @@ define double @fnmadd_d_2(double %a, double %b, double %c) nounwind strictfp {
 define double @fnmsub_d(double %a, double %b, double %c) nounwind strictfp {
 ; RV32IFD-LABEL: fnmsub_d:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.d.w ft0, zero
-; RV32IFD-NEXT:    fadd.d ft0, fa0, ft0
-; RV32IFD-NEXT:    fnmsub.d fa0, ft0, fa1, fa2
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
+; RV32IFD-NEXT:    fadd.d fa5, fa0, fa5
+; RV32IFD-NEXT:    fnmsub.d fa0, fa5, fa1, fa2
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fnmsub_d:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, zero
-; RV64IFD-NEXT:    fadd.d ft0, fa0, ft0
-; RV64IFD-NEXT:    fnmsub.d fa0, ft0, fa1, fa2
+; RV64IFD-NEXT:    fmv.d.x fa5, zero
+; RV64IFD-NEXT:    fadd.d fa5, fa0, fa5
+; RV64IFD-NEXT:    fnmsub.d fa0, fa5, fa1, fa2
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmsub_d:
@@ -604,16 +604,16 @@ define double @fnmsub_d(double %a, double %b, double %c) nounwind strictfp {
 define double @fnmsub_d_2(double %a, double %b, double %c) nounwind strictfp {
 ; RV32IFD-LABEL: fnmsub_d_2:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    fcvt.d.w ft0, zero
-; RV32IFD-NEXT:    fadd.d ft0, fa1, ft0
-; RV32IFD-NEXT:    fnmsub.d fa0, ft0, fa0, fa2
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
+; RV32IFD-NEXT:    fadd.d fa5, fa1, fa5
+; RV32IFD-NEXT:    fnmsub.d fa0, fa5, fa0, fa2
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fnmsub_d_2:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, zero
-; RV64IFD-NEXT:    fadd.d ft0, fa1, ft0
-; RV64IFD-NEXT:    fnmsub.d fa0, ft0, fa0, fa2
+; RV64IFD-NEXT:    fmv.d.x fa5, zero
+; RV64IFD-NEXT:    fadd.d fa5, fa1, fa5
+; RV64IFD-NEXT:    fnmsub.d fa0, fa5, fa0, fa2
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmsub_d_2:
