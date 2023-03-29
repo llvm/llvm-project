@@ -4807,6 +4807,9 @@ SDValue RISCVTargetLowering::lowerGlobalTLSAddress(SDValue Op,
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   assert(N->getOffset() == 0 && "unexpected offset in global node");
 
+  if (DAG.getTarget().useEmulatedTLS())
+    return LowerToTLSEmulatedModel(N, DAG);
+
   TLSModel::Model Model = getTargetMachine().getTLSModel(N->getGlobal());
 
   if (DAG.getMachineFunction().getFunction().getCallingConv() ==

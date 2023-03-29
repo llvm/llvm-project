@@ -300,6 +300,12 @@ TEST(WalkAST, Operator) {
            "int k = string() ^+ string();");
 }
 
+TEST(WalkAST, VarDecls) {
+  // Definition uses declaration, not the other way around.
+  testWalk("extern int $explicit^x;", "int ^x = 1;");
+  testWalk("int x = 1;", "extern int ^x;");
+}
+
 TEST(WalkAST, Functions) {
   // Definition uses declaration, not the other way around.
   testWalk("void $explicit^foo();", "void ^foo() {}");

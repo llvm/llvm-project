@@ -197,7 +197,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.write
 
     # wchar.h entrypoints
-    # libc.src.wchar.wctob
+    libc.src.wchar.wctob
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
