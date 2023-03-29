@@ -26,6 +26,7 @@
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -1298,11 +1299,18 @@ LogicalResult transform::PackGreedilyOp::verify() {
                          << " is not a valid permutation";
   }
   // TODO: relax to allow empty once we have another strategy than just matmul.
-  if (getMatmulInnerDimsOrder().size() != 3 ||
-      getMixedMatmulPackedSizes().size() != 3) {
-    return emitOpError() << " needs 3 entries for matmul_packed_sizes and "
-                         << getMatmulInnerDimsOrderAttrName()
-                         << " order for the matmul strategy";
+  if (!getMatmulPaddedSizesNextMultipleOf().empty()) {
+    for (auto [s, nmo] :
+         llvm::zip_equal(getMixedMatmulPackedSizes(),
+                         getMatmulPaddedSizesNextMultipleOf())) {
+      std::optional<int64_t> maybeStaticPackedSize = getConstantIntValue(s);
+      if (nmo != 0 &&
+          (!maybeStaticPackedSize.has_value() || *maybeStaticPackedSize != 0)) {
+        return emitOpError() << "at most one of the packed_size and the "
+                                "padded_sizes_next_multiple_of can be nonzero "
+                                "for the matmul strategy";
+      }
+    }
   }
   return success();
 }
@@ -1318,8 +1326,12 @@ LogicalResult transform::PackGreedilyOp::verify() {
 static FailureOr<PackResult>
 packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
                    ArrayRef<OpFoldResult> mnkPackedSizes,
+                   ArrayRef<int64_t> mnkPaddedSizesNextMultipleOf,
                    ArrayRef<int64_t> mnkOrder) {
   assert(mnkPackedSizes.size() == 3 && "unexpected num of packing sizes");
+  assert(mnkPaddedSizesNextMultipleOf.empty() ||
+         mnkPaddedSizesNextMultipleOf.size() == 3 &&
+             "num of packing sizes next multiple should be empty or of size 3");
   assert(mnkOrder.size() == 3 && "unexpected mnkOrder size");
   assert(isPermutationVector(mnkOrder) && "expected a permutation");
 
@@ -1334,9 +1346,15 @@ packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
   SmallVector<int64_t> mmnnkkPos(numPackedDims);
   for (int64_t i = 0, e = numPackedDims; i < e; ++i)
     mmnnkkPos[i] = numLoops - numPackedDims + mnkOrder[i];
-  SmallVector<OpFoldResult> packedSizes(mnkPackedSizes.size());
+  SmallVector<OpFoldResult> packedSizes(numPackedDims);
   for (int64_t i = 0, e = numPackedDims; i < e; ++i)
     packedSizes[mnkOrder[i]] = mnkPackedSizes[i];
+  SmallVector<int64_t> paddedSizesNextMultipleOf(numPackedDims);
+  for (int64_t i = 0, e = numPackedDims; i < e; ++i) {
+    paddedSizesNextMultipleOf[mnkOrder[i]] =
+        mnkPaddedSizesNextMultipleOf.empty() ? 0
+                                             : mnkPaddedSizesNextMultipleOf[i];
+  }
 
   // 1. Infer dims that are important for matmul.
   FailureOr<EmbeddedMatmulDimsCandidates> res = inferMatmulDims(linalgOp);
@@ -1391,10 +1409,37 @@ packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
   // desired outerPerm for each operand.
   // This is left for future work.
 
-  // Add leading zeros to match numLoops.
+  // TODO: this creates too much IR, go use reifyResultShapes.
+  SmallVector<Range, 4> loopRanges =
+      cast<LinalgOp>(genericOp.getOperation())
+          .createLoopRanges(rewriter, genericOp.getLoc());
+
+  // Add leading zeros to match numLoops, we only pack the last 3 dimensions
+  // post interchange.
+  LLVM_DEBUG(llvm::interleaveComma(paddedSizesNextMultipleOf,
+                                   DBGS() << "paddedSizesNextMultipleOf: ");
+             DBGSNL(););
+  LLVM_DEBUG(llvm::interleaveComma(loopRanges, DBGS() << "loopRanges: ",
+                                   [](Range r) { llvm::dbgs() << r.size; });
+             DBGSNL(););
   SmallVector<OpFoldResult> adjustedPackedSizes(numLoops - packedSizes.size(),
                                                 rewriter.getIndexAttr(0));
-  llvm::append_range(adjustedPackedSizes, packedSizes);
+  for (int64_t i = 0, e = numPackedDims; i < e; ++i) {
+    if (paddedSizesNextMultipleOf[i] == 0) {
+      adjustedPackedSizes.push_back(packedSizes[i]);
+      continue;
+    }
+    AffineExpr d0, s0;
+    bindDims(rewriter.getContext(), d0);
+    bindSymbols(rewriter.getContext(), s0);
+    adjustedPackedSizes.push_back(makeComposedFoldedAffineApply(
+        rewriter, genericOp->getLoc(), d0.ceilDiv(s0) * s0,
+        {loopRanges[adjustedPackedSizes.size()].size,
+         rewriter.getIndexAttr(paddedSizesNextMultipleOf[i])}));
+  }
+  LLVM_DEBUG(llvm::interleaveComma(adjustedPackedSizes,
+                                   DBGS() << "adjustedPackedSizes: ");
+             DBGSNL(););
 
   // TODO: If we wanted to give the genericOp a name after packing, after
   // calling `pack` would be a good time.
@@ -1424,6 +1469,8 @@ PackGreedilyOp::apply(transform::TransformResults &transformResults,
         /*rewriter=*/rewriter,
         /*linalgOp=*/linalgOp,
         /*mnkPackedSizes=*/getMixedMatmulPackedSizes(),
+        /*mnkPaddedSizesNextMultipleOf=*/
+        getMatmulPaddedSizesNextMultipleOf(),
         /*mnkOrder=*/getMatmulInnerDimsOrder());
     if (succeeded(packResult)) {
       results.push_back(packResult->packedLinalgOp);
