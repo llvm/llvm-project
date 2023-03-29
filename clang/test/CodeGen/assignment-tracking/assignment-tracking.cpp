@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-none-linux-gnu -debug-info-kind=standalone -O0 \
-// RUN:     -emit-llvm  -fexperimental-assignment-tracking %s -o -               \
+// RUN:     -emit-llvm  -fexperimental-assignment-tracking=forced %s -o -        \
 // RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 // Based on llvm/test/DebugInfo/Generic/track-assignments.ll - check that using

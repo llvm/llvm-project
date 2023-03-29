@@ -335,8 +335,8 @@ VALUE_CODEGENOPT(WarnStackSize     , 32, UINT_MAX) ///< Set via -fwarn-stack-siz
 CODEGENOPT(NoStackArgProbe, 1, 0) ///< Set when -mno-stack-arg-probe is used
 CODEGENOPT(DebugStrictDwarf, 1, 1) ///< Whether or not to use strict DWARF info.
 
-CODEGENOPT(EnableAssignmentTracking, 1,0) ///< Enable the Assignment Tracking
-                                          ///< debug info feature.
+/// Control the Assignment Tracking debug info feature.
+ENUM_CODEGENOPT(AssignmentTrackingMode, AssignmentTrackingOpts, 2, AssignmentTrackingOpts::Disabled)
 
 CODEGENOPT(DebugColumnInfo, 1, 0) ///< Whether or not to use column information
                                   ///< in debug info.

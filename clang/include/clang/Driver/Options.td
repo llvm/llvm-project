@@ -5796,11 +5796,11 @@ def fctor_dtor_return_this : Flag<["-"], "fctor-dtor-return-this">,
            "and non-deleting destructors. (No effect on Microsoft ABI)">,
   MarshallingInfoFlag<CodeGenOpts<"CtorDtorReturnThis">>;
 
-defm experimental_assignment_tracking :
-  BoolOption<"f", "experimental-assignment-tracking",
-  CodeGenOpts<"EnableAssignmentTracking">, DefaultFalse,
-  PosFlag<SetTrue, [CC1Option]>, NegFlag<SetFalse>, BothFlags<[CoreOption]>>,
-  Group<f_Group>;
+def experimental_assignment_tracking_EQ : Joined<["-"], "fexperimental-assignment-tracking=">,
+  Group<f_Group>, CodeGenOpts<"EnableAssignmentTracking">,
+  NormalizedValuesScope<"CodeGenOptions::AssignmentTrackingOpts">,
+  Values<"disabled,enabled,forced">, NormalizedValues<["Disabled","Enabled","Forced"]>,
+  MarshallingInfoEnum<CodeGenOpts<"AssignmentTrackingMode">, "Disabled">;
 
 } // let Flags = [CC1Option, NoDriverOption]
 
