@@ -302,6 +302,26 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
           return IndexCost + getLMULCost(LT.second);
         }
       }
+      break;
+    }
+    case TTI::SK_PermuteTwoSrc: {
+      if (Mask.size() >= 2 && LT.second.isFixedLengthVector()) {
+        // 2 x (vrgather + cost of generating the mask constant) + cost of mask
+        // register for the second vrgather. We model this for an unknown
+        // (shuffle) mask.
+        if (LT.first == 1 &&
+            (LT.second.getScalarSizeInBits() != 8 ||
+             LT.second.getVectorNumElements() <= 256)) {
+          auto &C = Tp->getContext();
+          auto EC = Tp->getElementCount();
+          VectorType *IdxTy = VectorType::get(IntegerType::getInt8Ty(C), EC);
+          VectorType *MaskTy = VectorType::get(IntegerType::getInt1Ty(C), EC);
+          InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
+          InstructionCost MaskCost = getConstantPoolLoadCost(MaskTy, CostKind);
+          return 2 * IndexCost + 2 * getLMULCost(LT.second) + MaskCost;
+        }
+      }
+      break;
     }
     }
   };
