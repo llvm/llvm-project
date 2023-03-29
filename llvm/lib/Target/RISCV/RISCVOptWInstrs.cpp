@@ -1,4 +1,4 @@
-//===-------------- RISCVSExtWRemoval.cpp - MI sext.w Removal -------------===//
+//===- RISCVOptWInstrs.cpp - MI W instruction optimizations ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,16 @@
 //
 //===---------------------------------------------------------------------===//
 //
-// This pass removes unneeded sext.w instructions at the MI level. Either
-// because the sign extended bits aren't consumed or because the input was
-// already sign extended by an earlier instruction.
+// This pass does some optimizations for *W instructions at the MI level.
+//
+// First it removes unneeded sext.w instructions. Either because the sign
+// extended bits aren't consumed or because the input was already sign extended
+// by an earlier instruction.
+//
+// Then it removes the -w suffix from each addiw and slliw instructions
+// whenever all users are dependent only on the lower word of the result of the
+// instruction. We do this only for addiw, slliw, and mulw because the -w forms
+// are less compressible.
 //
 //===---------------------------------------------------------------------===//
 
@@ -21,7 +28,8 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "riscv-sextw-removal"
+#define DEBUG_TYPE "riscv-opt-w-instrs"
+#define RISCV_OPT_W_INSTRS_NAME "RISC-V Optimize W Instructions"
 
 STATISTIC(NumRemovedSExtW, "Number of removed sign-extensions");
 STATISTIC(NumTransformedToWInstrs,
@@ -30,34 +38,42 @@ STATISTIC(NumTransformedToWInstrs,
 static cl::opt<bool> DisableSExtWRemoval("riscv-disable-sextw-removal",
                                          cl::desc("Disable removal of sext.w"),
                                          cl::init(false), cl::Hidden);
+static cl::opt<bool> DisableStripWSuffix("riscv-disable-strip-w-suffix",
+                                         cl::desc("Disable strip W suffix"),
+                                         cl::init(false), cl::Hidden);
+
 namespace {
 
-class RISCVSExtWRemoval : public MachineFunctionPass {
+class RISCVOptWInstrs : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVSExtWRemoval() : MachineFunctionPass(ID) {
-    initializeRISCVSExtWRemovalPass(*PassRegistry::getPassRegistry());
+  RISCVOptWInstrs() : MachineFunctionPass(ID) {
+    initializeRISCVOptWInstrsPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+  bool removeSExtWInstrs(MachineFunction &MF, const RISCVInstrInfo &TII,
+                         MachineRegisterInfo &MRI);
+  bool stripWSuffixes(MachineFunction &MF, const RISCVInstrInfo &TII,
+                      MachineRegisterInfo &MRI);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  StringRef getPassName() const override { return "RISC-V sext.w Removal"; }
+  StringRef getPassName() const override { return RISCV_OPT_W_INSTRS_NAME; }
 };
 
 } // end anonymous namespace
 
-char RISCVSExtWRemoval::ID = 0;
-INITIALIZE_PASS(RISCVSExtWRemoval, DEBUG_TYPE, "RISC-V sext.w Removal", false,
+char RISCVOptWInstrs::ID = 0;
+INITIALIZE_PASS(RISCVOptWInstrs, DEBUG_TYPE, RISCV_OPT_W_INSTRS_NAME, false,
                 false)
 
-FunctionPass *llvm::createRISCVSExtWRemovalPass() {
-  return new RISCVSExtWRemoval();
+FunctionPass *llvm::createRISCVOptWInstrsPass() {
+  return new RISCVOptWInstrs();
 }
 
 // This function returns true if the machine instruction always outputs a value
@@ -317,19 +333,13 @@ static unsigned getWOp(unsigned Opcode) {
   }
 }
 
-bool RISCVSExtWRemoval::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()) || DisableSExtWRemoval)
-    return false;
-
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
-  const RISCVInstrInfo &TII = *ST.getInstrInfo();
-
-  if (!ST.is64Bit())
+bool RISCVOptWInstrs::removeSExtWInstrs(MachineFunction &MF,
+                                        const RISCVInstrInfo &TII,
+                                        MachineRegisterInfo &MRI) {
+  if (DisableSExtWRemoval)
     return false;
 
   bool MadeChange = false;
-
   for (MachineBasicBlock &MBB : MF) {
     for (auto I = MBB.begin(), IE = MBB.end(); I != IE;) {
       MachineInstr *MI = &*I++;
@@ -372,6 +382,54 @@ bool RISCVSExtWRemoval::runOnMachineFunction(MachineFunction &MF) {
       MadeChange = true;
     }
   }
+
+  return MadeChange;
+}
+
+bool RISCVOptWInstrs::stripWSuffixes(MachineFunction &MF,
+                                     const RISCVInstrInfo &TII,
+                                     MachineRegisterInfo &MRI) {
+  if (DisableStripWSuffix)
+    return false;
+
+  bool MadeChange = false;
+  for (MachineBasicBlock &MBB : MF) {
+    for (auto I = MBB.begin(), IE = MBB.end(); I != IE; ++I) {
+      MachineInstr &MI = *I;
+
+      unsigned Opc;
+      switch (MI.getOpcode()) {
+      default:
+        continue;
+      case RISCV::ADDW:  Opc = RISCV::ADD;  break;
+      case RISCV::MULW:  Opc = RISCV::MUL;  break;
+      case RISCV::SLLIW: Opc = RISCV::SLLI; break;
+      }
+
+      if (TII.hasAllWUsers(MI, MRI)) {
+        MI.setDesc(TII.get(Opc));
+        MadeChange = true;
+      }
+    }
+  }
+
+  return MadeChange;
+}
+
+bool RISCVOptWInstrs::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVInstrInfo &TII = *ST.getInstrInfo();
+
+  if (!ST.is64Bit())
+    return false;
+
+  bool MadeChange = false;
+  MadeChange |= removeSExtWInstrs(MF, TII, MRI);
+  MadeChange |= stripWSuffixes(MF, TII, MRI);
 
   return MadeChange;
 }
