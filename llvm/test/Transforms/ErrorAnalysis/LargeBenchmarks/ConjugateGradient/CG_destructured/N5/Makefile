@@ -1,23 +1,36 @@
-OP =  -O1
-CXX = /home/tanmay/Documents/Tools/llvm-project/build/bin/clang $(DEBUG_FLAG) $(NO_DATA_DUMP) $(MEMORY_OPT) -g
-OPT = /home/tanmay/Documents/Tools/llvm-project/build/bin/opt
-LLI = /home/tanmay/Documents/Tools/llvm-project/build/bin/lli
+LLVM_PROJECT_ROOT = /home/tanmay/Documents/Tools/llvm-project
+RUN_TIME_LIB_ROOT = /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis
 
-# make build_pass [DEBUG_FLAG=-DFAF_DEBUG<=debug level>] [NO_DATA_DUMP=-DNO_DATA_DUMP] [MEMORYOPT=-DMEMORY_OPT]
-build_pass_5:
-	$(CXX) --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AtomicCondition.h \
-		   --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AmplificationFactor.h \
-	$(OP) -S -emit-llvm cg_destructured_5.cpp \
-    	  -o cg_destructured_5.ll
-	$(OPT) -passes=error-analysis -S cg_destructured_5.ll \
-								  -o cg_destructured_5_ac.ll
+# -emit-pristine-llvm: https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang8-emit-pristine-llvm
+OP = -emit-pristine-llvm
+CXX = $(LLVM_PROJECT_ROOT)/build/bin/clang
+# [DEBUG_FLAG=-DFAF_DEBUG<=debug level>] [MEMORYOPT=-DMEMORY_OPT]
+CXX_FLAGS = $(DEBUG_FLAG) $(MEMORY_OPT) -g -S -emit-llvm
 
-run_pass_5:
+OPT = $(LLVM_PROJECT_ROOT)/build/bin/opt
+OPT_FLAGS = -S -passes=error-analysis
+
+LLI = $(LLVM_PROJECT_ROOT)/build/bin/lli
+
+RUN_TIME_LIB_FLAGS = -function-to-analyze conjugateGradientSolver \
+					-evaluations 0
+
+RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.h \
+				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AmplificationFactor.h \
+				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h \
+				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/Statistics.h
+
+run: cg_destructured_5_ac.ll
 	$(LLI) cg_destructured_5_ac.ll
 
+cg_destructured_5_ac.ll: cg_destructured_5.ll
+	$(OPT) $(OPT_FLAGS) $(RUN_TIME_LIB_FLAGS) cg_destructured_5.ll -o cg_destructured_5_ac.ll
+
+cg_destructured_5.ll:
+	$(CXX) $(CXX_FLAGS) $(RUN_TIME_FILES) $(OP) cg_destructured_5.c -o cg_destructured_5.ll
 
 build_original:
-	g++ cg_destructured_5.cpp -lm -o cg_destructured_5.out
+	gcc cg_destructured_5.c -o cg_destructured_5.out
 
 clean:
-	rm -rf *.ll .fAF_logs cg_destructured_5.out *.txt
+	rm -rf cg_destructured_5.ll cg_destructured_5_ac.ll .fAF_logs a.out *.txt

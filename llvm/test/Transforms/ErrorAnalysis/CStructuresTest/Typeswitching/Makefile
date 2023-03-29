@@ -12,7 +12,7 @@ OPT_FLAGS = -S -passes=error-analysis
 
 LLI = $(LLVM_PROJECT_ROOT)/build/bin/lli
 
-RUN_TIME_LIB_FLAGS = -function-to-analyze ex0 \
+RUN_TIME_LIB_FLAGS = -function-to-analyze implicit_type_casting \
 					-evaluations 0
 
 RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.h \
@@ -20,17 +20,17 @@ RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.
 				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h \
 				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/Statistics.h
 
-run: Iterative_GramSchmidt_ac.ll
-	$(LLI) Iterative_GramSchmidt_ac.ll
+run: typeswitching_ac.ll
+	$(LLI) typeswitching_ac.ll
 
-Iterative_GramSchmidt_ac.ll: Iterative_GramSchmidt.ll
-	$(OPT) $(OPT_FLAGS) $(RUN_TIME_LIB_FLAGS) Iterative_GramSchmidt.ll -o Iterative_GramSchmidt_ac.ll
+typeswitching_ac.ll: typeswitching.ll
+	$(OPT) $(OPT_FLAGS) $(RUN_TIME_LIB_FLAGS) typeswitching.ll -o typeswitching_ac.ll
 
-Iterative_GramSchmidt.ll:
-	$(CXX) $(CXX_FLAGS) $(RUN_TIME_FILES) $(OP) Iterative_GramSchmidt.c -o Iterative_GramSchmidt.ll
+typeswitching.ll:
+	$(CXX) $(CXX_FLAGS) $(RUN_TIME_FILES) $(OP) typeswitching.c -o typeswitching.ll
 
 build_original:
-	gcc Iterative_GramSchmidt.c -o Iterative_GramSchmidt.out
+	gcc typeswitching.c -o typeswitching.out
 
 clean:
-	rm -rf Iterative_GramSchmidt.ll Iterative_GramSchmidt_ac.ll .fAF_logs a.out *.txt
+	rm -rf typeswitching.ll typeswitching_ac.ll .fAF_logs a.out *.txt

@@ -1,45 +1,23 @@
 #include "stdio.h"
 
-int main(void)
-{
+#define TYPE double
+#define PRINT_PRECISION_FORMAT "%0.15lf"
 
-  double ax;
-  double ay;
-  double az;
-  double bx;
-  double by;
-  double bz;
-  double cx;
-  double cy;
-  double cz;
-  double px;
-  double py;
-  double pz;
+TYPE compute_barycentric_coordinates(TYPE ax, TYPE ay, TYPE az,
+                                       TYPE bx, TYPE by, TYPE bz,
+                                       TYPE cx, TYPE cy, TYPE cz,
+                                       TYPE px, TYPE py, TYPE pz) {
+  TYPE bax = bx - ax ;
+  TYPE bay = by - ay ;
+  TYPE baz = bz - az ;
+  TYPE cax = cx - ax ;
+  TYPE cay = cy - ay ;
+  TYPE caz = cz - az ;
+  TYPE mx  = bay*caz - baz*cay;
+  TYPE my = baz*cax - bax*caz;
+  TYPE mz = bax*cay - bay*cax;
 
-  ax = -4.157;
-  ay = 4.93;
-  az = -6.73;
-  bx = 7.393;
-  by = -7.17;
-  bz = 8.42;
-  cx = 3.941;
-  cy = 7.84;
-  cz = -3.85;
-  px = 1.5;
-  py = 2.5;
-  pz = 4.5;
-
-  double bax = bx - ax ;
-  double bay = by - ay ;
-  double baz = bz - az ;
-  double cax = cx - ax ;
-  double cay = cy - ay ;
-  double caz = cz - az ;
-  double mx  = bay*caz - baz*cay;
-  double my = baz*cax - bax*caz;
-  double mz = bax*cay - bay*cax;
-
-  double nu , nv, ood, u, v, w ;
+  TYPE nu , nv, ood, u, v, w ;
 
   if(( ((mx >= 0) && (my >= 0) && (mx >= my)) || ((mx < 0) && (my >= 0) && (mx+my <= 0)) ||
        ((mx >= 0) && (my < 0) && (mx + my >= 0)) || ((mx < 0) && (my < 0) && (mx - my <= 0))
@@ -71,7 +49,41 @@ int main(void)
   v = nv * ood ;
   w = 1.0 - u - v ;
 
-  printf("Result = %0.15lf\n", w);
+  return w;
+}
+
+int main(void)
+{
+
+  TYPE ax;
+  TYPE ay;
+  TYPE az;
+  TYPE bx;
+  TYPE by;
+  TYPE bz;
+  TYPE cx;
+  TYPE cy;
+  TYPE cz;
+  TYPE px;
+  TYPE py;
+  TYPE pz;
+
+  ax = -4.157;
+  ay = 4.93;
+  az = -6.73;
+  bx = 7.393;
+  by = -7.17;
+  bz = 8.42;
+  cx = 3.941;
+  cy = 7.84;
+  cz = -3.85;
+  px = 1.5;
+  py = 2.5;
+  pz = 4.5;
+
+  TYPE w = compute_barycentric_coordinates(ax, ay, az, bx, by, bz, cx, cy, cz, px, py, pz);
+
+  printf("Result = "PRINT_PRECISION_FORMAT"\n", w);
 
   return 0;
 

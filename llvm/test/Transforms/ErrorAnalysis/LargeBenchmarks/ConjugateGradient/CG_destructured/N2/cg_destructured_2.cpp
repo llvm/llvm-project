@@ -27,7 +27,12 @@ vec conjugateGradientSolver( const matrix &A, const vec &B );
 
 int main()
 {
-  matrix A = { { 4, 1 }, { 1, 3 } };
+//  cond_inf(A = 2.2727): Low
+//  matrix A = { { 4, 1 }, { 1, 3 } };
+//  vec B = { 1, 2 };
+
+//  cond_inf(A = 2.2727): Low
+  matrix A = { { 20, 1 }, { 1, 3 } };
   vec B = { 1, 2 };
 
   vec X = conjugateGradientSolver( A, B );
@@ -132,22 +137,22 @@ vec conjugateGradientSolver( const matrix &A_, const vec &B_ )
   int iterations = 4;
 
   // Matrix Initialization
-  double A_0_0 = A_[0][0], A_0_1 = A_[0][1];
-  double A_1_0 = A_[1][0], A_1_1 = A_[1][1];
-  
+  float A_0_0 = A_[0][0], A_0_1 = A_[0][1];
+  float A_1_0 = A_[1][0], A_1_1 = A_[1][1];
+
   // Initializing vector X which will be set to the solution by this algorithm.
   double X_0 = 0.0, X_1 = 0.0;
 
   // Vector Initializations
-  double R_0 = B_[0], R_1 = B_[1];
-  double P_0 = B_[0], P_1 = B_[1];
+  float R_0 = B_[0], R_1 = B_[1];
+  float P_0 = B_[0], P_1 = B_[1];
 
   int k = 0;
 
   while ( k < iterations )
   {
-    double Rold_0 = R_0, Rold_1 = R_1;
-    double AP_0, AP_1;
+    float Rold_0 = R_0, Rold_1 = R_1;
+    float AP_0, AP_1;
 
 
 //    for ( int i = 0; i < n; i++ ) {
@@ -161,7 +166,7 @@ vec conjugateGradientSolver( const matrix &A_, const vec &B_ )
     AP_0 += A_0_0*P_0 + A_0_1*P_1;
     AP_1 += A_1_0*P_0 + A_1_1*P_1;
 
-    double NormOfR = 0;
+    float NormOfR = 0;
 //    for (int j = 0; j < n; ++j)
 //      NormOfR += R[j]*R[j];
 

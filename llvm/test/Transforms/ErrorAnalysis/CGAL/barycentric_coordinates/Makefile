@@ -1,23 +1,36 @@
-OP =  -O0
-CXX = /home/tanmay/Documents/Tools/llvm-project/build/bin/clang $(DEBUG_FLAG) $(NO_DATA_DUMP) $(MEMORY_OPT) -g
-OPT = /home/tanmay/Documents/Tools/llvm-project/build/bin/opt
-LLI = /home/tanmay/Documents/Tools/llvm-project/build/bin/lli
+LLVM_PROJECT_ROOT = /home/tanmay/Documents/Tools/llvm-project
+RUN_TIME_LIB_ROOT = /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis
 
-# make build_pass [DEBUG_FLAG=-DFAF_DEBUG<=debug level>] [NO_DATA_DUMP=-DNO_DATA_DUMP] [MEMORYOPT=-DMEMORY_OPT]
-build_pass:
-	$(CXX) --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AtomicCondition.h \
-		   --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AmplificationFactor.h \
-	$(OP) -S -emit-llvm barycentric_coordinates.c \
-    	  -o barycentric_coordinates.ll
-	$(OPT) -passes=error-analysis -S barycentric_coordinates.ll \
-								  -o barycentric_coordinates_ac.ll
+# -emit-pristine-llvm: https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang8-emit-pristine-llvm
+OP = -emit-pristine-llvm
+CXX = $(LLVM_PROJECT_ROOT)/build/bin/clang
+# [DEBUG_FLAG=-DFAF_DEBUG<=debug level>] [MEMORYOPT=-DMEMORY_OPT]
+CXX_FLAGS = $(DEBUG_FLAG) $(MEMORY_OPT) -g -S -emit-llvm
 
-run_pass:
+OPT = $(LLVM_PROJECT_ROOT)/build/bin/opt
+OPT_FLAGS = -S -passes=error-analysis
+
+LLI = $(LLVM_PROJECT_ROOT)/build/bin/lli
+
+RUN_TIME_LIB_FLAGS = -function-to-analyze compute_barycentric_coordinates \
+					-evaluations 0
+
+RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.h \
+				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AmplificationFactor.h \
+				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h \
+				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/Statistics.h
+
+run: barycentric_coordinates_ac.ll
 	$(LLI) barycentric_coordinates_ac.ll
 
+barycentric_coordinates_ac.ll: barycentric_coordinates.ll
+	$(OPT) $(OPT_FLAGS) $(RUN_TIME_LIB_FLAGS) barycentric_coordinates.ll -o barycentric_coordinates_ac.ll
+
+barycentric_coordinates.ll:
+	$(CXX) $(CXX_FLAGS) $(RUN_TIME_FILES) $(OP) barycentric_coordinates.c -o barycentric_coordinates.ll
 
 build_original:
-	clang barycentric_coordinates.c $(OP) -lm -o barycentric_coordinates.out
+	gcc barycentric_coordinates.c -o barycentric_coordinates.out
 
 clean:
-	rm -rf *.ll .fAF_logs barycentric_coordinates.out *.txt
+	rm -rf barycentric_coordinates.ll barycentric_coordinates_ac.ll .fAF_logs a.out *.txt

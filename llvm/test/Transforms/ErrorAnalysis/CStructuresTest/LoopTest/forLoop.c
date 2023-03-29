@@ -1,7 +1,3 @@
-//
-// Created by tanmay on 6/27/22.
-//
-
 #include<stdio.h>
 
 __attribute__((noinline))
@@ -22,13 +18,11 @@ int main() {
   printf("Multiply Accumulator\n");
   printf("Enter value of a: ");
   scanf("%f", &a);
-  printf("Enter value of b: ");
-  scanf("%d", &b);
 
   res = temp(a, res);
 
 
-  printf("Product = %0.15f\n", res);
+  printf("Result = %0.15f\n", res);
 //  fAFfp32markForResult(res);
 
   return 0;
