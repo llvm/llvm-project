@@ -322,6 +322,9 @@ std::string unescape(StringRef S) {
       else
         fatalError("Unterminated escape");
       continue;
+    } else if (S[I] == '"') {
+      // This eats an individual unescaped quote, like a shell would do.
+      continue;
     }
     Out.push_back(S[I]);
   }
