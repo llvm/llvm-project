@@ -69,7 +69,6 @@ using namespace llvm;
 
 STATISTIC(GuardsEliminated, "Number of eliminated guards");
 STATISTIC(CondBranchEliminated, "Number of eliminated conditional branches");
-STATISTIC(FreezeAdded, "Number of freeze instruction introduced");
 
 static cl::opt<bool>
     WidenBranchGuards("guard-widening-widen-branch-guards", cl::Hidden,
@@ -209,10 +208,6 @@ class GuardWideningImpl {
   /// InsertPt and return it in \p Result (else no change to the IR is made).
   bool widenCondCommon(Value *Cond0, Value *Cond1, Instruction *InsertPt,
                        Value *&Result, bool InvertCondition);
-
-  /// Adds freeze to Orig and push it as far as possible very aggressively.
-  /// Also replaces all uses of frozen instruction with frozen version.
-  Value *freezeAndPush(Value *Orig, Instruction *InsertPt);
 
   /// Represents a range check of the form \c Base + \c Offset u< \c Length,
   /// with the constraint that \c Length is not negative.  \c CheckInst is the
@@ -563,80 +558,8 @@ void GuardWideningImpl::makeAvailableAt(Value *V, Instruction *Loc) const {
     makeAvailableAt(Op, Loc);
 
   Inst->moveBefore(Loc);
-}
-
-// Return Instruction before which we can insert freeze for the value V as close
-// to def as possible. If there is no place to add freeze, return nullptr.
-static Instruction *getFreezeInsertPt(Value *V, const DominatorTree &DT) {
-  auto *I = dyn_cast<Instruction>(V);
-  if (!I)
-    return &*DT.getRoot()->getFirstNonPHIOrDbgOrAlloca();
-
-  auto *Res = I->getInsertionPointAfterDef();
-  // If there is no place to add freeze - return nullptr.
-  if (!Res || !DT.dominates(I, Res))
-    return nullptr;
-
-  // If there is a User dominated by original I, then it should be dominated
-  // by Freeze instruction as well.
-  if (any_of(I->users(), [&](User *U) {
-        Instruction *User = cast<Instruction>(U);
-        return Res != User && DT.dominates(I, User) && !DT.dominates(Res, User);
-      }))
-    return nullptr;
-  return Res;
-}
-
-Value *GuardWideningImpl::freezeAndPush(Value *Orig, Instruction *InsertPt) {
-  if (isGuaranteedNotToBePoison(Orig, nullptr, InsertPt, &DT))
-    return Orig;
-  Instruction *InsertPtAtDef = getFreezeInsertPt(Orig, DT);
-  if (!InsertPtAtDef)
-    return new FreezeInst(Orig, "gw.freeze", InsertPt);
-  SmallSet<Value *, 16> Visited;
-  SmallVector<Value *, 16> Worklist;
-  SmallSet<Instruction *, 16> DropPoisonFlags;
-  SmallSet<Value *, 16> NeedFreeze;
-  Worklist.push_back(Orig);
-  while (!Worklist.empty()) {
-    Value *V = Worklist.pop_back_val();
-    if (!Visited.insert(V).second)
-      continue;
-
-    if (isGuaranteedNotToBePoison(V, nullptr, InsertPt, &DT))
-      continue;
-
-    Instruction *I = dyn_cast<Instruction>(V);
-    if (!I || canCreateUndefOrPoison(cast<Operator>(I),
-                                     /*ConsiderFlagsAndMetadata*/ false)) {
-      NeedFreeze.insert(V);
-      continue;
-    }
-    // Check all operands. If for any of them we cannot insert Freeze,
-    // stop here. Otherwise, iterate.
-    if (any_of(I->operands(), [&](Value *Op) {
-          return isa<Instruction>(Op) && !getFreezeInsertPt(Op, DT);
-        })) {
-      NeedFreeze.insert(I);
-      continue;
-    }
-    DropPoisonFlags.insert(I);
-    append_range(Worklist, I->operands());
-  }
-  for (Instruction *I : DropPoisonFlags)
-    I->dropPoisonGeneratingFlagsAndMetadata();
-
-  Value *Result = Orig;
-  for (Value *V : NeedFreeze) {
-    auto *FreezeInsertPt = getFreezeInsertPt(V, DT);
-    FreezeInst *FI = new FreezeInst(V, V->getName() + ".gw.fr", FreezeInsertPt);
-    ++FreezeAdded;
-    if (V == Orig)
-      Result = FI;
-    V->replaceUsesWithIf(FI, [&](Use & U)->bool { return U.getUser() != FI; });
-  }
-
-  return Result;
+  // If we moved instruction before guard we must clean poison generating flags.
+  Inst->dropPoisonGeneratingFlags();
 }
 
 bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
@@ -698,7 +621,6 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
         }
         assert(Result && "Failed to find result value");
         Result->setName("wide.chk");
-        Result = freezeAndPush(Result, InsertPt);
       }
       return true;
     }
@@ -711,7 +633,6 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
     makeAvailableAt(Cond1, InsertPt);
     if (InvertCondition)
       Cond1 = BinaryOperator::CreateNot(Cond1, "inverted", InsertPt);
-    Cond1 = freezeAndPush(Cond1, InsertPt);
     Result = BinaryOperator::CreateAnd(Cond0, Cond1, "wide.chk", InsertPt);
   }
 

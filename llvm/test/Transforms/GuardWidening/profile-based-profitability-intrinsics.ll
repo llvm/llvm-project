@@ -9,8 +9,7 @@ define i32 @test_intrinsic_very_profitable(i32 %n, i1 %cond.1, i1 %cond.2) {
 ; CHECK-LABEL: define i32 @test_intrinsic_very_profitable
 ; CHECK-SAME: (i32 [[N:%.*]], i1 [[COND_1:%.*]], i1 [[COND_2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND_2_GW_FR:%.*]] = freeze i1 [[COND_2]]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2_GW_FR]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[LOOP_PRECONDITION:%.*]] = icmp uge i32 [[N]], 100
 ; CHECK-NEXT:    br i1 [[LOOP_PRECONDITION]], label [[LOOP:%.*]], label [[FAILED:%.*]], !prof [[PROF0:![0-9]+]]
@@ -49,8 +48,7 @@ define i32 @test_intrinsic_profitable(i32 %n, i1 %cond.1, i1 %cond.2) {
 ; CHECK-LABEL: define i32 @test_intrinsic_profitable
 ; CHECK-SAME: (i32 [[N:%.*]], i1 [[COND_1:%.*]], i1 [[COND_2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND_2_GW_FR:%.*]] = freeze i1 [[COND_2]]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2_GW_FR]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[LOOP_PRECONDITION:%.*]] = icmp uge i32 [[N]], 100
 ; CHECK-NEXT:    br i1 [[LOOP_PRECONDITION]], label [[LOOP:%.*]], label [[FAILED:%.*]], !prof [[PROF2:![0-9]+]]
@@ -89,8 +87,7 @@ define i32 @test_intrinsic_neutral(i32 %n, i1 %cond.1, i1 %cond.2) {
 ; CHECK-LABEL: define i32 @test_intrinsic_neutral
 ; CHECK-SAME: (i32 [[N:%.*]], i1 [[COND_1:%.*]], i1 [[COND_2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND_2_GW_FR:%.*]] = freeze i1 [[COND_2]]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2_GW_FR]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[LOOP_PRECONDITION:%.*]] = icmp uge i32 [[N]], 100
 ; CHECK-NEXT:    br i1 [[LOOP_PRECONDITION]], label [[LOOP:%.*]], label [[FAILED:%.*]], !prof [[PROF3:![0-9]+]]
@@ -128,8 +125,7 @@ define i32 @test_intrinsic_very_unprofitable(i32 %n, i1 %cond.1, i1 %cond.2) {
 ; CHECK-LABEL: define i32 @test_intrinsic_very_unprofitable
 ; CHECK-SAME: (i32 [[N:%.*]], i1 [[COND_1:%.*]], i1 [[COND_2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND_2_GW_FR:%.*]] = freeze i1 [[COND_2]]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2_GW_FR]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[LOOP_PRECONDITION:%.*]] = icmp uge i32 [[N]], 100
 ; CHECK-NEXT:    br i1 [[LOOP_PRECONDITION]], label [[LOOP:%.*]], label [[FAILED:%.*]], !prof [[PROF4:![0-9]+]]
@@ -167,8 +163,7 @@ define i32 @test_intrinsic_unprofitable(i32 %n, i1 %cond.1, i1 %cond.2) {
 ; CHECK-LABEL: define i32 @test_intrinsic_unprofitable
 ; CHECK-SAME: (i32 [[N:%.*]], i1 [[COND_1:%.*]], i1 [[COND_2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND_2_GW_FR:%.*]] = freeze i1 [[COND_2]]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2_GW_FR]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_1]], [[COND_2]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[LOOP_PRECONDITION:%.*]] = icmp uge i32 [[N]], 100
 ; CHECK-NEXT:    br i1 [[LOOP_PRECONDITION]], label [[LOOP:%.*]], label [[FAILED:%.*]], !prof [[PROF5:![0-9]+]]
