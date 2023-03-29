@@ -29,7 +29,7 @@ class WebAssemblyDebugValueManager {
   MachineInstr *Def;
   SmallVector<MachineInstr *, 1> DbgValues;
   Register CurrentReg;
-  SmallVector<MachineInstr *>
+  SmallVector<MachineInstr *, 1>
   getSinkableDebugValues(MachineInstr *Insert) const;
   bool isInsertSamePlace(MachineInstr *Insert) const;
 
