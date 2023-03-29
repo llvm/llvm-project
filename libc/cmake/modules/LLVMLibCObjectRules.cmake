@@ -193,7 +193,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     target_compile_options(${internal_target_name} BEFORE PRIVATE
                            ${common_compile_options} --target=${LIBC_GPU_TARGET_TRIPLE})
     if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
-      target_compile_options(${internal_target_name} PRIVATE -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE})
+      target_compile_options(${internal_target_name} PRIVATE -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto)
     elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
       target_compile_options(${internal_target_name} PRIVATE -march=${LIBC_GPU_TARGET_ARCHITECTURE})
     endif()
