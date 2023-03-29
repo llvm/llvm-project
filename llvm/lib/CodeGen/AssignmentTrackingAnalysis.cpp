@@ -2191,15 +2191,14 @@ static bool
 removeRedundantDbgLocsUsingBackwardScan(const BasicBlock *BB,
                                         FunctionVarLocsBuilder &FnVarLocs) {
   bool Changed = false;
-  SmallDenseSet<DebugVariable> VariableSet;
-
+  SmallDenseMap<DebugAggregate, BitVector> VariableDefinedBits;
   // Scan over the entire block, not just over the instructions mapped by
   // FnVarLocs, because wedges in FnVarLocs may only be seperated by debug
   // instructions.
   for (const Instruction &I : reverse(*BB)) {
     if (!isa<DbgVariableIntrinsic>(I)) {
       // Sequence of consecutive defs ended. Clear map for the next one.
-      VariableSet.clear();
+      VariableDefinedBits.clear();
     }
 
     // Get the location defs that start just before this instruction.
@@ -2215,21 +2214,44 @@ removeRedundantDbgLocsUsingBackwardScan(const BasicBlock *BB,
     // Iterate over the existing defs in reverse.
     for (auto RIt = Locs->rbegin(), REnd = Locs->rend(); RIt != REnd; ++RIt) {
       NumDefsScanned++;
-      const DebugVariable &Key = FnVarLocs.getVariable(RIt->VariableID);
-      bool FirstDefOfFragment = VariableSet.insert(Key).second;
+      DebugAggregate Aggr =
+          getAggregate(FnVarLocs.getVariable(RIt->VariableID));
+      uint64_t SizeInBits = Aggr.first->getSizeInBits().value_or(0);
 
-      // If the same variable fragment is described more than once it is enough
-      // to keep the last one (i.e. the first found in this reverse iteration).
-      if (FirstDefOfFragment) {
-        // New def found: keep it.
+      if (SizeInBits == 0) {
+        // If the size is unknown (0) then keep this location def to be safe.
         NewDefsReversed.push_back(*RIt);
-      } else {
-        // Redundant def found: throw it away. Since the wedge of defs is being
-        // rebuilt, doing nothing is the same as deleting an entry.
-        ChangedThisWedge = true;
-        NumDefsRemoved++;
+        continue;
       }
-      continue;
+
+      // Only keep this location definition if it is not fully eclipsed by
+      // other definitions in this wedge that come after it
+
+      // Inert the bits the location definition defines.
+      auto InsertResult =
+          VariableDefinedBits.try_emplace(Aggr, BitVector(SizeInBits));
+      bool FirstDefinition = InsertResult.second;
+      BitVector &DefinedBits = InsertResult.first->second;
+
+      DIExpression::FragmentInfo Fragment =
+          RIt->Expr->getFragmentInfo().value_or(
+              DIExpression::FragmentInfo(SizeInBits, 0));
+      bool InvalidFragment = Fragment.endInBits() > SizeInBits;
+
+      // If this defines any previously undefined bits, keep it.
+      if (FirstDefinition || InvalidFragment ||
+          DefinedBits.find_first_unset_in(Fragment.startInBits(),
+                                          Fragment.endInBits()) != -1) {
+        if (!InvalidFragment)
+          DefinedBits.set(Fragment.startInBits(), Fragment.endInBits());
+        NewDefsReversed.push_back(*RIt);
+        continue;
+      }
+
+      // Redundant def found: throw it away. Since the wedge of defs is being
+      // rebuilt, doing nothing is the same as deleting an entry.
+      ChangedThisWedge = true;
+      NumDefsRemoved++;
     }
 
     // Un-reverse the defs and replace the wedge with the pruned version.
