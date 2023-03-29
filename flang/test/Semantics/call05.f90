@@ -86,6 +86,7 @@ module m
     !ERROR: If a POINTER or ALLOCATABLE dummy or actual argument is unlimited polymorphic, both must be so
     call sua(pa)
     !ERROR: Actual argument type 'CLASS(*)' is not compatible with dummy argument type 'CLASS(t)'
+    !ERROR: Pointer type must be unlimited polymorphic or non-extensible derived type when target is unlimited polymorphic
     call spp(up)
     !ERROR: Actual argument type 'CLASS(*)' is not compatible with dummy argument type 'CLASS(t)'
     call spa(ua)
@@ -94,6 +95,7 @@ module m
     !ERROR: POINTER or ALLOCATABLE dummy and actual arguments must have the same declared type and kind
     call spa(pa2)
     !ERROR: Rank of dummy argument is 1, but actual argument has rank 2
+    !ERROR: Pointer has rank 1 but target has rank 2
     call smp(mpmat)
     !ERROR: Rank of dummy argument is 1, but actual argument has rank 2
     call sma(mamat)
