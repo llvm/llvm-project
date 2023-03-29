@@ -525,10 +525,10 @@ define i32 @ashr_i32_22(i32 %a) {
 ; CHECK-NEXT:    sbc r18, r18
 ; CHECK-NEXT:    lsl r24
 ; CHECK-NEXT:    rol r25
+; CHECK-NEXT:    mov r19, r18
 ; CHECK-NEXT:    mov r23, r18
 ; CHECK-NEXT:    rol r23
 ; CHECK-NEXT:    mov r22, r25
-; CHECK-NEXT:    mov r19, r18
 ; CHECK-NEXT:    movw r24, r18
 ; CHECK-NEXT:    ret
   %res = ashr i32 %a, 22
