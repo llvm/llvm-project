@@ -323,18 +323,15 @@ define <4 x i32> @combine_vec_lshr_ashr_sign(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @combine_vec_lshr_lzcnt_bit0(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_lshr_lzcnt_bit0:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    psrld $4, %xmm0
-; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_lshr_lzcnt_bit0:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [16,16,16,16]
-; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrld $4, %xmm0, %xmm0
 ; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
-; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = and <4 x i32> %x, <i32 16, i32 16, i32 16, i32 16>
   %2 = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %1, i1 0)
