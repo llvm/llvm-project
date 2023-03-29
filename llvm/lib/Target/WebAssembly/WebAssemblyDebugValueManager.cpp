@@ -54,7 +54,7 @@ static bool isSameScalarConst(const MachineInstr *A, const MachineInstr *B) {
   return false;
 }
 
-SmallVector<MachineInstr *>
+SmallVector<MachineInstr *, 1>
 WebAssemblyDebugValueManager::getSinkableDebugValues(
     MachineInstr *Insert) const {
   if (DbgValues.empty())

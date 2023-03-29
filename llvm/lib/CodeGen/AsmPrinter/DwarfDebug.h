@@ -696,9 +696,7 @@ public:
 
   /// Returns whether range encodings should be used for single entry range
   /// lists.
-  bool alwaysUseRanges() const {
-    return MinimizeAddr == MinimizeAddrInV5::Ranges;
-  }
+  bool alwaysUseRanges(const DwarfCompileUnit &) const;
 
   // Returns whether novel exprloc addrx+offset encodings should be used to
   // reduce debug_addr size.
