@@ -2324,6 +2324,7 @@ void Fortran::lower::genOpenMPReduction(
                     // Match the pattern here.
                     mlir::Operation *reductionOp =
                         findReductionChain(loadVal, &reductionVal);
+                    if (reductionOp == nullptr) continue;
                     assert(mlir::isa<mlir::arith::SelectOp>(reductionOp) &&
                            "Selection Op not found in reduction intrinsic");
                     mlir::Operation *compareOp =

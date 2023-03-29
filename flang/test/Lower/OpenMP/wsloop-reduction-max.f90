@@ -63,4 +63,13 @@ subroutine reduction_max_real(y)
   !$omp end do
   !$omp end parallel
   print *, x
+
+  !$omp parallel
+  !$omp do reduction(max:x)
+  do i=1, 100
+    if (y(i) .gt. x) x = y(i)
+  end do
+  !$omp end do
+  !$omp end parallel
+  print *, x
 end subroutine
