@@ -1050,11 +1050,11 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
   if (!SDK.empty())
     NewCU.addString(Die, dwarf::DW_AT_APPLE_sdk, SDK);
 
-  // Add DW_str_offsets_base to the unit DIE, except for split units.
-  if (useSegmentedStringOffsetsTable() && !useSplitDwarf())
-    NewCU.addStringOffsetsStart();
-
   if (!useSplitDwarf()) {
+    // Add DW_str_offsets_base to the unit DIE, except for split units.
+    if (useSegmentedStringOffsetsTable())
+      NewCU.addStringOffsetsStart();
+
     NewCU.initStmtList();
 
     // If we're using split dwarf the compilation dir is going to be in the
@@ -1377,11 +1377,10 @@ void DwarfDebug::finalizeModuleInfo() {
       if (U.hasRangeLists())
         U.addRnglistsBase();
 
-      if (!DebugLocs.getLists().empty()) {
-        if (!useSplitDwarf())
-          U.addSectionLabel(U.getUnitDie(), dwarf::DW_AT_loclists_base,
-                            DebugLocs.getSym(),
-                            TLOF.getDwarfLoclistsSection()->getBeginSymbol());
+      if (!DebugLocs.getLists().empty() && !useSplitDwarf()) {
+        U.addSectionLabel(U.getUnitDie(), dwarf::DW_AT_loclists_base,
+                          DebugLocs.getSym(),
+                          TLOF.getDwarfLoclistsSection()->getBeginSymbol());
       }
     }
 
