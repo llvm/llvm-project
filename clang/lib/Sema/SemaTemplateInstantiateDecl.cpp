@@ -3008,8 +3008,10 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
 
   if (AutoTypeLoc AutoLoc = DI->getTypeLoc().getContainedAutoTypeLoc())
     if (AutoLoc.isConstrained())
+      // Note: We attach the uninstantiated constriant here, so that it can be
+      // instantiated relative to the top level, like all our other constraints.
       if (SemaRef.AttachTypeConstraint(
-              AutoLoc, Param,
+              AutoLoc, Param, D,
               IsExpandedParameterPack
                 ? DI->getTypeLoc().getAs<PackExpansionTypeLoc>()
                     .getEllipsisLoc()
