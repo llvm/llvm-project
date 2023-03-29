@@ -78,6 +78,12 @@ public:
   /// Check whether this struct can be C++ zero-initialized with a
   /// zeroinitializer.
   bool isZeroInitializable() const { return IsZeroInitializable; }
+
+  /// Return the "base subobject" LLVM type associated with
+  /// this record.
+  mlir::cir::StructType getBaseSubobjectCIRType() const {
+    return BaseSubobjectType;
+  }
 };
 
 } // namespace cir

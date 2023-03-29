@@ -1,5 +1,8 @@
 
+#include "CIRGenBuilder.h"
+#include "CIRGenModule.h"
 #include "CIRGenTypes.h"
+
 #include "mlir/IR/BuiltinTypes.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"

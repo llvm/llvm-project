@@ -61,7 +61,6 @@ class GlobalDecl;
 
 namespace mlir {
 class Type;
-class OpBuilder;
 namespace cir {
 class StructType;
 } // namespace cir
@@ -72,12 +71,13 @@ class CallArgList;
 class CIRGenCXXABI;
 class CIRGenModule;
 class CIRGenFunctionInfo;
+class CIRGenBuilderTy;
 
 /// This class organizes the cross-module state that is used while lowering
 /// AST types to CIR types.
 class CIRGenTypes {
   clang::ASTContext &Context;
-  mlir::OpBuilder &Builder;
+  cir::CIRGenBuilderTy &Builder;
   CIRGenModule &CGM;
   const clang::TargetInfo &Target;
   CIRGenCXXABI &TheCXXABI;
@@ -116,6 +116,9 @@ class CIRGenTypes {
 public:
   CIRGenTypes(CIRGenModule &cgm);
   ~CIRGenTypes();
+
+  cir::CIRGenBuilderTy &getBuilder() const { return Builder; }
+  CIRGenModule &getModule() const { return CGM; }
 
   /// isFuncTypeConvertible - Utility to check whether a function type can be
   /// converted to a CIR type (i.e. doesn't depend on an incomplete tag type).
