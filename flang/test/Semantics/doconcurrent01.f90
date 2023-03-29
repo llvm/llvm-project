@@ -22,6 +22,11 @@ subroutine do_concurrent_test1(i,n)
      SYNC IMAGES (*)
 !ERROR: An image control statement is not allowed in DO CONCURRENT
      SYNC MEMORY
+!ERROR: An image control statement is not allowed in DO CONCURRENT
+     stop
+!ERROR: An image control statement is not allowed in DO CONCURRENT
+     if (.false.) stop
+     error stop ! ok
 !ERROR: RETURN is not allowed in DO CONCURRENT
      return
 10 continue
