@@ -8,14 +8,12 @@ declare i32 @llvm.experimental.deoptimize.i32(...)
 define i32 @test_01(i32 %start, i32 %x) {
 ; CHECK-LABEL: @test_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[START_GW_FR:%.*]] = freeze i32 [[START:%.*]]
-; CHECK-NEXT:    [[X_GW_FR:%.*]] = freeze i32 [[X:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[START_GW_FR]], [[X_GW_FR]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[START:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 true, [[COND]]
 ; CHECK-NEXT:    [[WC1:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START_GW_FR]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[WIDE_CHK]], [[WC1]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[GUARD_BLOCK:%.*]], label [[EXIT_BY_WC:%.*]]
 ; CHECK:       exit_by_wc:
@@ -129,14 +127,12 @@ failure:
 define i32 @test_03(i32 %start, i32 %x, i1 %c) {
 ; CHECK-LABEL: @test_03(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[START_GW_FR:%.*]] = freeze i32 [[START:%.*]]
-; CHECK-NEXT:    [[X_GW_FR:%.*]] = freeze i32 [[X:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[START_GW_FR]], [[X_GW_FR]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[START:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[C:%.*]], [[COND]]
 ; CHECK-NEXT:    [[WC1:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START_GW_FR]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[INVARIANT:%.*]] = and i1 [[WIDE_CHK]], [[WC1]]
 ; CHECK-NEXT:    br i1 [[INVARIANT]], label [[GUARD_BLOCK:%.*]], label [[EXIT_BY_WC:%.*]]
 ; CHECK:       exit_by_wc:
@@ -156,7 +152,7 @@ define i32 @test_03(i32 %start, i32 %x, i1 %c) {
 ; CHECK-NEXT:    [[RVAL2:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"(i32 [[IV]]) ]
 ; CHECK-NEXT:    ret i32 [[RVAL2]]
 ; CHECK:       early_failure:
-; CHECK-NEXT:    [[RVAL3:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"(i32 [[X_GW_FR]]) ]
+; CHECK-NEXT:    [[RVAL3:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"(i32 [[X]]) ]
 ; CHECK-NEXT:    ret i32 [[RVAL3]]
 ;
 entry:
