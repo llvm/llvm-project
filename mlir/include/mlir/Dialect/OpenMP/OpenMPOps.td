@@ -52,6 +52,22 @@ def IsDeviceAttr : OpenMP_Attr<"IsDevice", "isdevice"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+//===----------------------------------------------------------------------===//
+// Runtime library flag's attribute that holds information for lowering to LLVM
+//===----------------------------------------------------------------------===//
+
+def FlagsAttr : OpenMP_Attr<"Flags", "flags"> {
+  let parameters = (ins 
+    DefaultValuedParameter<"uint32_t", "0">:$debug_kind,
+    DefaultValuedParameter<"bool", "false">:$assume_teams_oversubscription,
+    DefaultValuedParameter<"bool", "false">:$assume_threads_oversubscription,
+    DefaultValuedParameter<"bool", "false">:$assume_no_thread_state,
+    DefaultValuedParameter<"bool", "false">:$assume_no_nested_parallelism
+  );
+  
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 class OpenMP_Op<string mnemonic, list<Trait> traits = []> :
       Op<OpenMP_Dialect, mnemonic, traits>;
 
