@@ -804,7 +804,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction(FloatingPointVPOps, VT, Custom);
 
-      setOperationAction(ISD::STRICT_FP_EXTEND, VT, Custom);
+      setOperationAction({ISD::STRICT_FP_EXTEND, ISD::STRICT_FP_ROUND}, VT,
+                         Custom);
       setOperationAction({ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
                           ISD::STRICT_FDIV, ISD::STRICT_FSQRT, ISD::STRICT_FMA},
                          VT, Legal);
@@ -1021,7 +1022,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(FloatingPointVPOps, VT, Custom);
 
-        setOperationAction(ISD::STRICT_FP_EXTEND, VT, Custom);
+        setOperationAction({ISD::STRICT_FP_EXTEND, ISD::STRICT_FP_ROUND}, VT,
+                           Custom);
         setOperationAction({ISD::STRICT_FADD, ISD::STRICT_FSUB,
                             ISD::STRICT_FMUL, ISD::STRICT_FDIV,
                             ISD::STRICT_FSQRT, ISD::STRICT_FMA},
@@ -4150,8 +4152,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (!Op.getValueType().isVector())
       return Op;
     return lowerVectorFPExtendOrRoundLike(Op, DAG);
+  case ISD::STRICT_FP_ROUND:
   case ISD::STRICT_FP_EXTEND:
-    return lowerStrictFPExtend(Op, DAG);
+    return lowerStrictFPExtendOrRoundLike(Op, DAG);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
   case ISD::SINT_TO_FP:
@@ -5388,14 +5391,14 @@ SDValue RISCVTargetLowering::lowerVectorTruncLike(SDValue Op,
   return Result;
 }
 
-SDValue RISCVTargetLowering::lowerStrictFPExtend(SDValue Op,
-                                                 SelectionDAG &DAG) const {
+SDValue
+RISCVTargetLowering::lowerStrictFPExtendOrRoundLike(SDValue Op,
+                                                    SelectionDAG &DAG) const {
   SDLoc DL(Op);
   SDValue Chain = Op.getOperand(0);
   SDValue Src = Op.getOperand(1);
   MVT VT = Op.getSimpleValueType();
   MVT SrcVT = Src.getSimpleValueType();
-
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
     MVT SrcContainerVT = getContainerForFixedLengthVector(SrcVT);
@@ -5406,19 +5409,26 @@ SDValue RISCVTargetLowering::lowerStrictFPExtend(SDValue Op,
 
   auto [Mask, VL] = getDefaultVLOps(SrcVT, ContainerVT, DL, DAG, Subtarget);
 
-  // RVV can only widen fp to types double the size as the source, so it needs
-  // two vfwcvt to achieve extending fp16 to fp64.
-  if (VT.getVectorElementType() == MVT::f64 &&
-      SrcVT.getVectorElementType() == MVT::f16) {
+  // RVV can only widen/truncate fp to types double/half the size as the source.
+  if ((VT.getVectorElementType() == MVT::f64 &&
+       SrcVT.getVectorElementType() == MVT::f16) ||
+      (VT.getVectorElementType() == MVT::f16 &&
+       SrcVT.getVectorElementType() == MVT::f64)) {
+    // For double rounding, the intermediate rounding should be round-to-odd.
+    unsigned InterConvOpc = Op.getOpcode() == ISD::STRICT_FP_EXTEND
+                                ? RISCVISD::STRICT_FP_EXTEND_VL
+                                : RISCVISD::STRICT_VFNCVT_ROD_VL;
     MVT InterVT = ContainerVT.changeVectorElementType(MVT::f32);
-    Src = DAG.getNode(RISCVISD::STRICT_FP_EXTEND_VL, DL,
-                      DAG.getVTList(InterVT, MVT::Other), Chain, Src, Mask, VL);
+    Src = DAG.getNode(InterConvOpc, DL, DAG.getVTList(InterVT, MVT::Other),
+                      Chain, Src, Mask, VL);
     Chain = Src.getValue(1);
   }
 
-  SDValue Res =
-      DAG.getNode(RISCVISD::STRICT_FP_EXTEND_VL, DL,
-                  DAG.getVTList(ContainerVT, MVT::Other), Chain, Src, Mask, VL);
+  unsigned ConvOpc = Op.getOpcode() == ISD::STRICT_FP_EXTEND
+                         ? RISCVISD::STRICT_FP_EXTEND_VL
+                         : RISCVISD::STRICT_FP_ROUND_VL;
+  SDValue Res = DAG.getNode(ConvOpc, DL, DAG.getVTList(ContainerVT, MVT::Other),
+                            Chain, Src, Mask, VL);
   if (VT.isFixedLengthVector()) {
     // StrictFP operations have two result values. Their lowered result should
     // have same result count.
@@ -14129,7 +14139,9 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(STRICT_VFNMADD_VL)
   NODE_NAME_CASE(STRICT_VFMSUB_VL)
   NODE_NAME_CASE(STRICT_VFNMSUB_VL)
+  NODE_NAME_CASE(STRICT_FP_ROUND_VL)
   NODE_NAME_CASE(STRICT_FP_EXTEND_VL)
+  NODE_NAME_CASE(STRICT_VFNCVT_ROD_VL)
   NODE_NAME_CASE(VWMUL_VL)
   NODE_NAME_CASE(VWMULU_VL)
   NODE_NAME_CASE(VWMULSU_VL)
