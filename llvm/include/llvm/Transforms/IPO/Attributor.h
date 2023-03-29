@@ -5090,7 +5090,10 @@ struct AAExecutionDomain
                                          const Instruction &I) const = 0;
 
   virtual ExecutionDomainTy getExecutionDomain(const BasicBlock &) const = 0;
-  virtual ExecutionDomainTy getExecutionDomain(const CallBase &) const = 0;
+  /// Return the execution domain with which the call \p CB is entered and the
+  /// one with which it is left.
+  virtual std::pair<ExecutionDomainTy, ExecutionDomainTy>
+  getExecutionDomain(const CallBase &CB) const = 0;
   virtual ExecutionDomainTy getFunctionExecutionDomain() const = 0;
 
   /// This function should return true if the type of the \p AA is
