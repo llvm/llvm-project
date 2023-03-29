@@ -17,6 +17,8 @@
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_platform.h"
 
+namespace __sanitizer {
+
 #if SANITIZER_ANDROID
 
 struct __sanitizer_struct_mallinfo {
@@ -30,5 +32,7 @@ struct __sanitizer_struct_mallinfo {
 };
 
 #endif
+
+}  // namespace __sanitizer
 
 #endif  // SANITIZER_MALLINFO_H
