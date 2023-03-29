@@ -732,11 +732,12 @@ let SubtargetPredicate = isGFX90APlus in {
 
 let SubtargetPredicate = HasAtomicFlatPkAdd16Insts in {
   defm FLAT_ATOMIC_PK_ADD_F16    : FLAT_Atomic_Pseudo<"flat_atomic_pk_add_f16",  VGPR_32, v2f16>;
-  defm FLAT_ATOMIC_PK_ADD_BF16   : FLAT_Atomic_Pseudo<"flat_atomic_pk_add_bf16", VGPR_32, v2f16>;
+  let FPAtomic = 1 in
+    defm FLAT_ATOMIC_PK_ADD_BF16   : FLAT_Atomic_Pseudo<"flat_atomic_pk_add_bf16", VGPR_32, v2i16>;
 } // End SubtargetPredicate = HasAtomicFlatPkAdd16Insts
 
-let SubtargetPredicate = HasAtomicGlobalPkAddBF16Inst in
-  defm GLOBAL_ATOMIC_PK_ADD_BF16 : FLAT_Global_Atomic_Pseudo<"global_atomic_pk_add_bf16", VGPR_32, v2f16>;
+let SubtargetPredicate = HasAtomicGlobalPkAddBF16Inst, FPAtomic = 1 in
+  defm GLOBAL_ATOMIC_PK_ADD_BF16 : FLAT_Global_Atomic_Pseudo<"global_atomic_pk_add_bf16", VGPR_32, v2i16>;
 
 // GFX7-, GFX10-, GFX11-only flat instructions.
 let SubtargetPredicate = isGFX7GFX10GFX11 in {
