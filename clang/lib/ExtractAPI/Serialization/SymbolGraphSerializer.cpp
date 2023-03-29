@@ -547,6 +547,10 @@ Array generateParentContexts(const RecordTy &Record, const APISet &API,
                                serializeParentContext(PC, Lang));
                          });
 
+  // The last component would be the record itself so let's remove it.
+  if (!ParentContexts.empty())
+    ParentContexts.pop_back();
+
   return ParentContexts;
 }
 
