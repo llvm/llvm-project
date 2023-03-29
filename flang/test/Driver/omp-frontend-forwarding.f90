@@ -18,5 +18,5 @@
 ! RUN:   | FileCheck %s --check-prefixes=CHECK-OPENMP-EMBED
 ! CHECK-OPENMP-EMBED: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu" {{.*}} "-fopenmp" {{.*}}.f90"
 ! CHECK-OPENMP-EMBED-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-device" {{.*}}.f90"
-! CHECK-OPENMP-EMBED: "{{[^"]*}}clang-offload-packager" {{.*}} "--image=file={{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a,kind=openmp"
+! CHECK-OPENMP-EMBED: "{{[^"]*}}clang-offload-packager{{.*}} "--image=file={{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a,kind=openmp"
 ! CHECK-OPENMP-EMBED-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu" {{.*}} "-fopenmp" {{.*}} "-fembed-offload-object={{.*}}.out" {{.*}}.bc"
