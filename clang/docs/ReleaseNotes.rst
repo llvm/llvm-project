@@ -253,6 +253,7 @@ Bug Fixes in This Version
   to limit non-defined/non-member functions as well. Additionally, we now diagnose
   requires on lambdas when not allowed, which we previously missed.
   (`#61748 <https://github.com/llvm/llvm-project/issues/61748>`_)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
