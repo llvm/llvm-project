@@ -862,9 +862,8 @@ define i1 @mask_v8i32(<8 x i32> %a0) {
 ; SSE2-LABEL: mask_v8i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-NEXT:    testl %eax, %eax
+; SSE2-NEXT:    testl $34952, %eax # imm = 0x8888
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;

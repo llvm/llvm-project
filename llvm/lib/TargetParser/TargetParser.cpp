@@ -251,3 +251,218 @@ StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
 
   return T.isAMDGCN() ? getArchNameAMDGCN(ProcKind) : getArchNameR600(ProcKind);
 }
+
+void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
+                                  StringMap<bool> &Features) {
+  // XXX - What does the member GPU mean if device name string passed here?
+  if (T.isAMDGCN()) {
+    switch (parseArchAMDGCN(GPU)) {
+    case GK_GFX1103:
+    case GK_GFX1102:
+    case GK_GFX1101:
+    case GK_GFX1100:
+      Features["ci-insts"] = true;
+      Features["dot5-insts"] = true;
+      Features["dot7-insts"] = true;
+      Features["dot8-insts"] = true;
+      Features["dot9-insts"] = true;
+      Features["dot10-insts"] = true;
+      Features["dl-insts"] = true;
+      Features["16-bit-insts"] = true;
+      Features["dpp"] = true;
+      Features["gfx8-insts"] = true;
+      Features["gfx9-insts"] = true;
+      Features["gfx10-insts"] = true;
+      Features["gfx10-3-insts"] = true;
+      Features["gfx11-insts"] = true;
+      Features["atomic-fadd-rtn-insts"] = true;
+      break;
+    case GK_GFX1036:
+    case GK_GFX1035:
+    case GK_GFX1034:
+    case GK_GFX1033:
+    case GK_GFX1032:
+    case GK_GFX1031:
+    case GK_GFX1030:
+      Features["ci-insts"] = true;
+      Features["dot1-insts"] = true;
+      Features["dot2-insts"] = true;
+      Features["dot5-insts"] = true;
+      Features["dot6-insts"] = true;
+      Features["dot7-insts"] = true;
+      Features["dot10-insts"] = true;
+      Features["dl-insts"] = true;
+      Features["16-bit-insts"] = true;
+      Features["dpp"] = true;
+      Features["gfx8-insts"] = true;
+      Features["gfx9-insts"] = true;
+      Features["gfx10-insts"] = true;
+      Features["gfx10-3-insts"] = true;
+      Features["s-memrealtime"] = true;
+      Features["s-memtime-inst"] = true;
+      break;
+    case GK_GFX1012:
+    case GK_GFX1011:
+      Features["dot1-insts"] = true;
+      Features["dot2-insts"] = true;
+      Features["dot5-insts"] = true;
+      Features["dot6-insts"] = true;
+      Features["dot7-insts"] = true;
+      Features["dot10-insts"] = true;
+      [[fallthrough]];
+    case GK_GFX1013:
+    case GK_GFX1010:
+      Features["dl-insts"] = true;
+      Features["ci-insts"] = true;
+      Features["16-bit-insts"] = true;
+      Features["dpp"] = true;
+      Features["gfx8-insts"] = true;
+      Features["gfx9-insts"] = true;
+      Features["gfx10-insts"] = true;
+      Features["s-memrealtime"] = true;
+      Features["s-memtime-inst"] = true;
+      break;
+    case GK_GFX940:
+      Features["gfx940-insts"] = true;
+      Features["fp8-insts"] = true;
+      Features["atomic-ds-pk-add-16-insts"] = true;
+      Features["atomic-flat-pk-add-16-insts"] = true;
+      Features["atomic-global-pk-add-bf16-inst"] = true;
+      [[fallthrough]];
+    case GK_GFX90A:
+      Features["gfx90a-insts"] = true;
+      Features["atomic-buffer-global-pk-add-f16-insts"] = true;
+      Features["atomic-fadd-rtn-insts"] = true;
+      [[fallthrough]];
+    case GK_GFX908:
+      Features["dot3-insts"] = true;
+      Features["dot4-insts"] = true;
+      Features["dot5-insts"] = true;
+      Features["dot6-insts"] = true;
+      Features["mai-insts"] = true;
+      [[fallthrough]];
+    case GK_GFX906:
+      Features["dl-insts"] = true;
+      Features["dot1-insts"] = true;
+      Features["dot2-insts"] = true;
+      Features["dot7-insts"] = true;
+      Features["dot10-insts"] = true;
+      [[fallthrough]];
+    case GK_GFX90C:
+    case GK_GFX909:
+    case GK_GFX904:
+    case GK_GFX902:
+    case GK_GFX900:
+      Features["gfx9-insts"] = true;
+      [[fallthrough]];
+    case GK_GFX810:
+    case GK_GFX805:
+    case GK_GFX803:
+    case GK_GFX802:
+    case GK_GFX801:
+      Features["gfx8-insts"] = true;
+      Features["16-bit-insts"] = true;
+      Features["dpp"] = true;
+      Features["s-memrealtime"] = true;
+      [[fallthrough]];
+    case GK_GFX705:
+    case GK_GFX704:
+    case GK_GFX703:
+    case GK_GFX702:
+    case GK_GFX701:
+    case GK_GFX700:
+      Features["ci-insts"] = true;
+      [[fallthrough]];
+    case GK_GFX602:
+    case GK_GFX601:
+    case GK_GFX600:
+      Features["s-memtime-inst"] = true;
+      break;
+    case GK_NONE:
+      break;
+    default:
+      llvm_unreachable("Unhandled GPU!");
+    }
+  } else {
+    if (GPU.empty())
+      GPU = "r600";
+
+    switch (llvm::AMDGPU::parseArchR600(GPU)) {
+    case GK_CAYMAN:
+    case GK_CYPRESS:
+    case GK_RV770:
+    case GK_RV670:
+      // TODO: Add fp64 when implemented.
+      break;
+    case GK_TURKS:
+    case GK_CAICOS:
+    case GK_BARTS:
+    case GK_SUMO:
+    case GK_REDWOOD:
+    case GK_JUNIPER:
+    case GK_CEDAR:
+    case GK_RV730:
+    case GK_RV710:
+    case GK_RS880:
+    case GK_R630:
+    case GK_R600:
+      break;
+    default:
+      llvm_unreachable("Unhandled GPU!");
+    }
+  }
+}
+
+static bool isWave32Capable(StringRef GPU, const Triple &T) {
+  bool IsWave32Capable = false;
+  // XXX - What does the member GPU mean if device name string passed here?
+  if (T.isAMDGCN()) {
+    switch (parseArchAMDGCN(GPU)) {
+    case GK_GFX1103:
+    case GK_GFX1102:
+    case GK_GFX1101:
+    case GK_GFX1100:
+    case GK_GFX1036:
+    case GK_GFX1035:
+    case GK_GFX1034:
+    case GK_GFX1033:
+    case GK_GFX1032:
+    case GK_GFX1031:
+    case GK_GFX1030:
+    case GK_GFX1012:
+    case GK_GFX1011:
+    case GK_GFX1013:
+    case GK_GFX1010:
+      IsWave32Capable = true;
+      break;
+    default:
+      break;
+    }
+  }
+  return IsWave32Capable;
+}
+
+bool AMDGPU::insertWaveSizeFeature(StringRef GPU, const Triple &T,
+                                   StringMap<bool> &Features,
+                                   std::string &ErrorMsg) {
+  bool IsWave32Capable = isWave32Capable(GPU, T);
+  const bool IsNullGPU = GPU.empty();
+  // FIXME: Not diagnosing wavefrontsize32 on wave64 only targets.
+  const bool HaveWave32 =
+      (IsWave32Capable || IsNullGPU) && Features.count("wavefrontsize32");
+  const bool HaveWave64 = Features.count("wavefrontsize64");
+  if (HaveWave32 && HaveWave64) {
+    ErrorMsg = "'wavefrontsize32' and 'wavefrontsize64' are mutually exclusive";
+    return false;
+  }
+  // Don't assume any wavesize with an unknown subtarget.
+  if (!IsNullGPU) {
+    // Default to wave32 if available, or wave64 if not
+    if (!HaveWave32 && !HaveWave64) {
+      StringRef DefaultWaveSizeFeature =
+          IsWave32Capable ? "wavefrontsize32" : "wavefrontsize64";
+      Features.insert(std::make_pair(DefaultWaveSizeFeature, true));
+    }
+  }
+  return true;
+}

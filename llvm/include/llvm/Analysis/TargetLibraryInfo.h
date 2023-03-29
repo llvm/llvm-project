@@ -31,6 +31,7 @@ struct VecDesc {
   StringRef ScalarFnName;
   StringRef VectorFnName;
   ElementCount VectorizationFactor;
+  bool Masked;
 };
 
   enum LibFunc : unsigned {
@@ -164,7 +165,8 @@ public:
   /// Return true if the function F has a vector equivalent with vectorization
   /// factor VF.
   bool isFunctionVectorizable(StringRef F, const ElementCount &VF) const {
-    return !getVectorizedFunction(F, VF).empty();
+    return !(getVectorizedFunction(F, VF, false).empty() &&
+             getVectorizedFunction(F, VF, true).empty());
   }
 
   /// Return true if the function F has a vector equivalent with any
@@ -173,7 +175,8 @@ public:
 
   /// Return the name of the equivalent of F, vectorized with factor VF. If no
   /// such mapping exists, return the empty string.
-  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF) const;
+  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF,
+                                  bool Masked) const;
 
   /// Set to true iff i32 parameters to library functions should have signext
   /// or zeroext attributes if they correspond to C-level int or unsigned int,
@@ -349,8 +352,9 @@ public:
   bool isFunctionVectorizable(StringRef F) const {
     return Impl->isFunctionVectorizable(F);
   }
-  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF) const {
-    return Impl->getVectorizedFunction(F, VF);
+  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF,
+                                  bool Masked = false) const {
+    return Impl->getVectorizedFunction(F, VF, Masked);
   }
 
   /// Tests if the function is both available and a candidate for optimized code

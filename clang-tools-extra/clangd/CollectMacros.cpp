@@ -36,33 +36,51 @@ void CollectMainFileMacros::FileChanged(SourceLocation Loc, FileChangeReason,
                                         SrcMgr::CharacteristicKind, FileID) {
   InMainFile = isInsideMainFile(Loc, SM);
 }
+
 void CollectMainFileMacros::MacroExpands(const Token &MacroName,
                                          const MacroDefinition &MD,
                                          SourceRange Range,
                                          const MacroArgs *Args) {
   add(MacroName, MD.getMacroInfo());
 }
+
 void CollectMainFileMacros::MacroUndefined(const clang::Token &MacroName,
                                            const clang::MacroDefinition &MD,
                                            const clang::MacroDirective *Undef) {
   add(MacroName, MD.getMacroInfo());
 }
+
 void CollectMainFileMacros::Ifdef(SourceLocation Loc, const Token &MacroName,
                                   const MacroDefinition &MD) {
   add(MacroName, MD.getMacroInfo(), /*IsDefinition=*/false,
       /*InConditionalDirective=*/true);
 }
+
 void CollectMainFileMacros::Ifndef(SourceLocation Loc, const Token &MacroName,
                                    const MacroDefinition &MD) {
   add(MacroName, MD.getMacroInfo(), /*IsDefinition=*/false,
       /*InConditionalDirective=*/true);
 }
+
+void CollectMainFileMacros::Elifdef(SourceLocation Loc, const Token &MacroName,
+                                    const MacroDefinition &MD) {
+  add(MacroName, MD.getMacroInfo(), /*IsDefinition=*/false,
+      /*InConditionalDirective=*/true);
+}
+
+void CollectMainFileMacros::Elifndef(SourceLocation Loc, const Token &MacroName,
+                                     const MacroDefinition &MD) {
+  add(MacroName, MD.getMacroInfo(), /*IsDefinition=*/false,
+      /*InConditionalDirective=*/true);
+}
+
 void CollectMainFileMacros::Defined(const Token &MacroName,
                                     const MacroDefinition &MD,
                                     SourceRange Range) {
   add(MacroName, MD.getMacroInfo(), /*IsDefinition=*/false,
       /*InConditionalDirective=*/true);
 }
+
 void CollectMainFileMacros::SourceRangeSkipped(SourceRange R,
                                                SourceLocation EndifLoc) {
   if (!InMainFile)
