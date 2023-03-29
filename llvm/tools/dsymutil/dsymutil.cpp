@@ -297,6 +297,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.LinkOpts.Update = Args.hasArg(OPT_update);
   Options.LinkOpts.Verbose = Args.hasArg(OPT_verbose);
   Options.LinkOpts.Statistics = Args.hasArg(OPT_statistics);
+  Options.LinkOpts.Fat64 = Args.hasArg(OPT_fat64);
   Options.LinkOpts.KeepFunctionForStatic =
       Args.hasArg(OPT_keep_func_for_static);
 
@@ -775,40 +776,47 @@ int dsymutil_main(int argc, char **argv) {
       return EXIT_FAILURE;
 
     if (NeedsTempFiles) {
-      // Universal Mach-O files can't have an archicture slice that starts
-      // beyond the 4GB boundary. "lipo" can creeate a 64 bit universal header,
-      // but not all tools can parse these files so we want to return an error
-      // if the file can't be encoded as a file with a 32 bit universal header.
-      // To detect this, we check the size of each architecture's skinny Mach-O
-      // file and add up the offsets. If they exceed 4GB, then we return an
-      // error.
+      const bool Fat64 = Options.LinkOpts.Fat64;
+      if (!Fat64) {
+        // Universal Mach-O files can't have an archicture slice that starts
+        // beyond the 4GB boundary. "lipo" can create a 64 bit universal
+        // header, but not all tools can parse these files so we want to return
+        // an error if the file can't be encoded as a file with a 32 bit
+        // universal header. To detect this, we check the size of each
+        // architecture's skinny Mach-O file and add up the offsets. If they
+        // exceed 4GB, then we return an error.
 
-      // First we compute the right offset where the first architecture will fit
-      // followin the 32 bit universal header. The 32 bit universal header
-      // starts with a uint32_t magic and a uint32_t number of architecture
-      // infos. Then it is followed by 5 uint32_t values for each architecture.
-      // So we set the start offset to the right value so we can calculate the
-      // exact offset that the first architecture slice can start at.
-      constexpr uint64_t MagicAndCountSize = 2 * 4;
-      constexpr uint64_t UniversalArchInfoSize = 5 * 4;
-      uint64_t FileOffset = MagicAndCountSize +
-          UniversalArchInfoSize * TempFiles.size();
-      for (const auto &File: TempFiles) {
-        ErrorOr<vfs::Status> stat = Options.LinkOpts.VFS->status(File.path());
-        if (!stat)
-          break;
-        if (FileOffset > UINT32_MAX) {
-          WithColor::error() << formatv(
-              "the universal binary has a slice with a starting offset ({0:x}) "
-              "that exceeds 4GB and will produce an invalid Mach-O file.",
-              FileOffset);
-          return EXIT_FAILURE;
+        // First we compute the right offset where the first architecture will
+        // fit followin the 32 bit universal header. The 32 bit universal header
+        // starts with a uint32_t magic and a uint32_t number of architecture
+        // infos. Then it is followed by 5 uint32_t values for each
+        // architecture. So we set the start offset to the right value so we can
+        // calculate the exact offset that the first architecture slice can
+        // start at.
+        constexpr uint64_t MagicAndCountSize = 2 * 4;
+        constexpr uint64_t UniversalArchInfoSize = 5 * 4;
+        uint64_t FileOffset =
+            MagicAndCountSize + UniversalArchInfoSize * TempFiles.size();
+        for (const auto &File : TempFiles) {
+          ErrorOr<vfs::Status> stat = Options.LinkOpts.VFS->status(File.path());
+          if (!stat)
+            break;
+          if (FileOffset > UINT32_MAX) {
+            WithColor::error()
+                << formatv("the universal binary has a slice with a starting "
+                           "offset ({0:x}) that exceeds 4GB and will produce "
+                           "an invalid Mach-O file. Use the -fat64 flag to "
+                           "generate a universal binary with a 64-bit header "
+                           "but note that not all tools support this format.",
+                           FileOffset);
+            return EXIT_FAILURE;
+          }
+          FileOffset += stat->getSize();
         }
-        FileOffset += stat->getSize();
       }
-      if (!MachOUtils::generateUniversalBinary(TempFiles,
-                                               OutputLocationOrErr->DWARFFile,
-                                               Options.LinkOpts, SDKPath))
+      if (!MachOUtils::generateUniversalBinary(
+              TempFiles, OutputLocationOrErr->DWARFFile, Options.LinkOpts,
+              SDKPath, Fat64))
         return EXIT_FAILURE;
     }
   }
