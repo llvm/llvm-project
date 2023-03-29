@@ -39,9 +39,12 @@ static LogicalResult generalizeNamedOpPrecondition(LinalgOp linalgOp) {
   // Check if the operation is a LinalgOp but not a GenericOp.
   if (isa<GenericOp>(linalgOp))
     return failure();
-  // Check if the operation has a region builder.
-  if (!linalgOp.getRegionBuilder())
+  // Check if the operation has exactly one region.
+  if (linalgOp->getNumRegions() != 1) {
+    assert(linalgOp->getNumRegions() == 0 && "op with multiple regions");
+    // TOD: Otherwise it needs to be built explicitly from the region builder.
     return failure();
+  }
   return success();
 }
 
