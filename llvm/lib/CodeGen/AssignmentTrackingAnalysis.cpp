@@ -1,4 +1,5 @@
 #include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
+#include "LiveDebugValues/LiveDebugValues.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/IntervalMap.h"
@@ -47,6 +48,12 @@ static cl::opt<bool> EnableMemLocFragFill("mem-loc-frag-fill", cl::init(true),
 /// Print the results of the analysis. Respects -filter-print-funcs.
 static cl::opt<bool> PrintResults("print-debug-ata", cl::init(false),
                                   cl::Hidden);
+
+/// Coalesce adjacent dbg locs describing memory locations that have contiguous
+/// fragments. This reduces the cost of LiveDebugValues which does SSA
+/// construction for each explicitly stated variable fragment.
+static cl::opt<cl::boolOrDefault>
+    CoalesceAdjacentFragmentsOpt("debug-ata-coalesce-frags", cl::Hidden);
 
 // Implicit conversions are disabled for enum class types, so unfortunately we
 // need to create a DenseMapInfo wrapper around the specified underlying type.
@@ -287,6 +294,24 @@ static DebugAggregate getAggregate(const DebugVariable &Var) {
   return DebugAggregate(Var.getVariable(), Var.getInlinedAt());
 }
 
+static bool shouldCoalesceFragments(Function &F) {
+  // Enabling fragment coalescing reduces compiler run time when instruction
+  // referencing is enabled. However, it may cause LiveDebugVariables to create
+  // incorrect locations. Since instruction-referencing mode effectively
+  // bypasses LiveDebugVariables we only enable coalescing if the cl::opt flag
+  // has not been explicitly set and instruction-referencing is turned on.
+  switch (CoalesceAdjacentFragmentsOpt) {
+  case cl::boolOrDefault::BOU_UNSET:
+    return debuginfoShouldUseDebugInstrRef(
+        Triple(F.getParent()->getTargetTriple()));
+  case cl::boolOrDefault::BOU_TRUE:
+    return true;
+  case cl::boolOrDefault::BOU_FALSE:
+    return false;
+  }
+  llvm_unreachable("Unknown boolOrDefault value");
+}
+
 namespace {
 /// In dwarf emission, the following sequence
 ///    1. dbg.value ... Fragment(0, 64)
@@ -310,6 +335,7 @@ class MemLocFragmentFill {
   Function &Fn;
   FunctionVarLocsBuilder *FnVarLocs;
   const DenseSet<DebugAggregate> *VarsWithStackSlot;
+  bool CoalesceAdjacentFragments;
 
   // 0 = no memory location.
   using BaseAddress = unsigned;
@@ -574,6 +600,31 @@ class MemLocFragmentFill {
                       << " bits [" << StartBit << ", " << EndBit << ")\n");
   }
 
+  /// Inserts a new dbg def if the interval found when looking up \p StartBit
+  /// in \p FragMap starts before \p StartBit or ends after \p EndBit (which
+  /// indicates - assuming StartBit->EndBit has just been inserted - that the
+  /// slice has been coalesced in the map).
+  void coalesceFragments(BasicBlock &BB, Instruction &Before, unsigned Var,
+                         unsigned StartBit, unsigned EndBit, unsigned Base,
+                         DebugLoc DL, const FragsInMemMap &FragMap) {
+    if (!CoalesceAdjacentFragments)
+      return;
+    // We've inserted the location into the map. The map will have coalesced
+    // adjacent intervals (variable fragments) that describe the same memory
+    // location. Use this knowledge to insert a debug location that describes
+    // that coalesced fragment. This may eclipse other locs we've just
+    // inserted. This is okay as redundant locs will be cleaned up later.
+    auto CoalescedFrag = FragMap.find(StartBit);
+    // Bail if no coalescing has taken place.
+    if (CoalescedFrag.start() == StartBit && CoalescedFrag.stop() == EndBit)
+      return;
+
+    LLVM_DEBUG(dbgs() << "- Insert loc for bits " << CoalescedFrag.start()
+                      << " to " << CoalescedFrag.stop() << "\n");
+    insertMemLoc(BB, Before, Var, CoalescedFrag.start(), CoalescedFrag.stop(),
+                 Base, DL);
+  }
+
   void addDef(const VarLocInfo &VarLoc, Instruction &Before, BasicBlock &BB,
               VarFragMap &LiveSet) {
     DebugVariable DbgVar = FnVarLocs->getVariable(VarLoc.VariableID);
@@ -639,6 +690,8 @@ class MemLocFragmentFill {
     if (!FragMap.overlaps(StartBit, EndBit)) {
       LLVM_DEBUG(dbgs() << "- No overlaps\n");
       FragMap.insert(StartBit, EndBit, Base);
+      coalesceFragments(BB, Before, Var, StartBit, EndBit, Base, VarLoc.DL,
+                        FragMap);
       return;
     }
     // There is at least one overlap.
@@ -729,6 +782,9 @@ class MemLocFragmentFill {
       LLVM_DEBUG(dbgs() << "- Insert DEF into now-empty space\n");
       FragMap.insert(StartBit, EndBit, Base);
     }
+
+    coalesceFragments(BB, Before, Var, StartBit, EndBit, Base, VarLoc.DL,
+                      FragMap);
   }
 
   bool skipVariable(const DILocalVariable *V) { return !V->getSizeInBits(); }
@@ -746,8 +802,10 @@ class MemLocFragmentFill {
 
 public:
   MemLocFragmentFill(Function &Fn,
-                     const DenseSet<DebugAggregate> *VarsWithStackSlot)
-      : Fn(Fn), VarsWithStackSlot(VarsWithStackSlot) {}
+                     const DenseSet<DebugAggregate> *VarsWithStackSlot,
+                     bool CoalesceAdjacentFragments)
+      : Fn(Fn), VarsWithStackSlot(VarsWithStackSlot),
+        CoalesceAdjacentFragments(CoalesceAdjacentFragments) {}
 
   /// Add variable locations to \p FnVarLocs so that any bits of a variable
   /// with a memory location have that location explicitly reinstated at each
@@ -864,8 +922,10 @@ public:
 
         for (auto &FragMemLoc : FragMemLocs) {
           DIExpression *Expr = DIExpression::get(Ctx, std::nullopt);
-          Expr = *DIExpression::createFragmentExpression(
-              Expr, FragMemLoc.OffsetInBits, FragMemLoc.SizeInBits);
+          if (FragMemLoc.SizeInBits !=
+              *Aggregates[FragMemLoc.Var].first->getSizeInBits())
+            Expr = *DIExpression::createFragmentExpression(
+                Expr, FragMemLoc.OffsetInBits, FragMemLoc.SizeInBits);
           Expr = DIExpression::prepend(Expr, DIExpression::DerefAfter,
                                        FragMemLoc.OffsetInBits / 8);
           DebugVariable Var(Aggregates[FragMemLoc.Var].first, Expr,
@@ -2455,7 +2515,8 @@ static void analyzeFunction(Function &Fn, const DataLayout &Layout,
   }
 
   if (Changed) {
-    MemLocFragmentFill Pass(Fn, &VarsWithStackSlot);
+    MemLocFragmentFill Pass(Fn, &VarsWithStackSlot,
+                            shouldCoalesceFragments(Fn));
     Pass.run(FnVarLocs);
 
     // Remove redundant entries. As well as reducing memory consumption and

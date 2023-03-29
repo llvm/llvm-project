@@ -18,9 +18,12 @@
 ;; live in memory.
 ; CHECK-NEXT: DBG_VALUE %stack.0.c, $noreg, ![[var]], !DIExpression(DW_OP_plus_uconst, 4, DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
 
+;; After the call to @d there's a dbg.assign linked to the store to bits 0-32
+;; that comes before it. Meaning the stack location for bits 0-32 are valid
+;; from here (bits 32-64 for the variable are already located in memory).
 ; CHECK: CALL64pcrel32 @d
 ; CHECK-NEXT: ADJCALLSTACKUP64
-; CHECK-NEXT: DBG_VALUE %stack.0.c, $noreg, ![[var]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 32), debug-location
+; CHECK-NEXT: DBG_VALUE %stack.0.c, $noreg, ![[var]], !DIExpression(DW_OP_deref), debug-location
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
