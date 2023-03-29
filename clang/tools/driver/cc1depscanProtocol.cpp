@@ -280,73 +280,23 @@ llvm::Error CC1DepScanDProtocol::getArgs(llvm::StringSaver &Saver,
   return Error::success();
 }
 
-llvm::Error
-CC1DepScanDProtocol::putCommand(StringRef WorkingDirectory,
-                                ArrayRef<const char *> Args,
-                                const DepscanPrefixMapping &Mapping) {
+llvm::Error CC1DepScanDProtocol::putCommand(StringRef WorkingDirectory,
+                                            ArrayRef<const char *> Args) {
   if (llvm::Error E = putString(WorkingDirectory))
     return E;
   if (llvm::Error E = putArgs(Args))
     return E;
-  return putDepscanPrefixMapping(Mapping);
+  return llvm::Error::success();
 }
 
-llvm::Error CC1DepScanDProtocol::getCommand(llvm::StringSaver &Saver,
-                                            StringRef &WorkingDirectory,
-                                            SmallVectorImpl<const char *> &Args,
-                                            DepscanPrefixMapping &Mapping) {
+llvm::Error
+CC1DepScanDProtocol::getCommand(llvm::StringSaver &Saver,
+                                StringRef &WorkingDirectory,
+                                SmallVectorImpl<const char *> &Args) {
   if (llvm::Error E = getString(Saver, WorkingDirectory))
     return E;
   if (llvm::Error E = getArgs(Saver, Args))
     return E;
-  return getDepscanPrefixMapping(Saver, Mapping);
-}
-
-llvm::Error CC1DepScanDProtocol::putDepscanPrefixMapping(
-    const DepscanPrefixMapping &Mapping) {
-  // Construct the message.
-  SmallString<256> FullMapping;
-  if (Mapping.NewSDKPath)
-    FullMapping.append(*Mapping.NewSDKPath);
-  FullMapping.push_back(0);
-  if (Mapping.NewToolchainPath)
-    FullMapping.append(*Mapping.NewToolchainPath);
-  FullMapping.push_back(0);
-  for (StringRef Map : Mapping.PrefixMap) {
-    FullMapping.append(Map);
-    FullMapping.push_back(0);
-  }
-  return putString(FullMapping);
-}
-
-llvm::Error
-CC1DepScanDProtocol::getDepscanPrefixMapping(llvm::StringSaver &Saver,
-                                             DepscanPrefixMapping &Mapping) {
-  StringRef FullMapping;
-  if (llvm::Error E = getString(Saver, FullMapping))
-    return E;
-
-  // Parse the mapping.
-  size_t Count = 0;
-  for (auto I = FullMapping.begin(), B = I, E = FullMapping.end(); I != E;
-       ++I) {
-    if (I != B && I[-1])
-      continue; // Wait for null-terminator.
-    StringRef Map = I;
-    switch (Count++) {
-    case 0:
-      if (!Map.empty())
-        Mapping.NewSDKPath = Map;
-      break;
-    case 1:
-      if (!Map.empty())
-        Mapping.NewToolchainPath = Map;
-      break;
-    default:
-      Mapping.PrefixMap.push_back(std::string(Map));
-      break;
-    }
-  }
   return llvm::Error::success();
 }
 

@@ -21,14 +21,7 @@
 #include <sys/un.h>     // FIXME: Unix-only. Not portable.
 #include <unistd.h>     // FIXME: Unix-only. Not portable.
 
-namespace clang {
-namespace tooling::dependencies {
-struct DepscanPrefixMapping;
-}
-
-namespace cc1depscand {
-using tooling::dependencies::DepscanPrefixMapping;
-
+namespace clang::cc1depscand {
 struct DepscanSharing {
   bool OnlyShareParent = false;
   bool ShareViaIdentifier = false;
@@ -137,20 +130,14 @@ public:
     return putMessage(String.size(), String.begin());
   }
 
-  llvm::Error putDepscanPrefixMapping(const DepscanPrefixMapping &Mapping);
-  llvm::Error getDepscanPrefixMapping(llvm::StringSaver &Saver,
-                                      DepscanPrefixMapping &Mapping);
-
   llvm::Error putArgs(ArrayRef<const char *> Args);
   llvm::Error getArgs(llvm::StringSaver &Saver,
                       SmallVectorImpl<const char *> &Args);
 
   llvm::Error putCommand(StringRef WorkingDirectory,
-                         ArrayRef<const char *> Args,
-                         const DepscanPrefixMapping &Mapping);
+                         ArrayRef<const char *> Args);
   llvm::Error getCommand(llvm::StringSaver &Saver, StringRef &WorkingDirectory,
-                         SmallVectorImpl<const char *> &Args,
-                         DepscanPrefixMapping &Mapping);
+                         SmallVectorImpl<const char *> &Args);
 
   llvm::Error putScanResultFailed(StringRef Reason);
   llvm::Error putScanResultSuccess(StringRef RootID,
@@ -240,8 +227,7 @@ private:
   explicit ScanDaemon(OpenSocket S) : OpenSocket(std::move(S)) {}
 };
 
-} // namespace cc1depscand
-} // namespace clang
+} // namespace clang::cc1depscand
 
 #endif /* LLVM_ON_UNIX */
 #endif // LLVM_CLANG_TOOLS_DRIVER_CC1DEPSCANPROTOCOL_H

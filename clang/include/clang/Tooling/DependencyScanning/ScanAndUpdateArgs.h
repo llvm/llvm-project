@@ -41,14 +41,13 @@ void configureInvocationForCaching(CompilerInvocation &CI, CASOptions CASOpts,
                                    bool ProduceIncludeTree);
 
 struct DepscanPrefixMapping {
-  std::optional<std::string> NewSDKPath;
-  std::optional<std::string> NewToolchainPath;
-  SmallVector<std::string> PrefixMap;
+  /// Add path mappings to the \p Mapper.
+  static void configurePrefixMapper(const CompilerInvocation &Invocation,
+                                    llvm::PrefixMapper &Mapper);
 
-  /// Add path mappings from the current path in \p Invocation to the new path
-  /// from \c DepscanPrefixMapping to the \p Mapper.
-  llvm::Error configurePrefixMapper(const CompilerInvocation &Invocation,
-                                    llvm::PrefixMapper &Mapper) const;
+  /// Add path mappings to the \p Mapper.
+  static void configurePrefixMapper(ArrayRef<std::string> PathPrefixMappings,
+                                    llvm::PrefixMapper &Mapper);
 
   /// Apply the mappings from \p Mapper to \p Invocation.
   static void remapInvocationPaths(CompilerInvocation &Invocation,
@@ -61,7 +60,6 @@ Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     tooling::dependencies::DependencyScanningTool &Tool,
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
     CompilerInvocation &Invocation, StringRef WorkingDirectory,
-    const tooling::dependencies::DepscanPrefixMapping &PrefixMapping,
     llvm::cas::ObjectStore &DB);
 
 } // end namespace clang

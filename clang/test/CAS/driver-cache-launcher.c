@@ -58,14 +58,15 @@
 // RUN: cp -R %S/Inputs/cmake-build %t/cmake-build
 // RUN: pushd %t/cmake-build
 // RUN: cache-build-session -prefix-map-cmake -v echo 2>&1 | FileCheck %s -check-prefix=SESSION-CMAKE-PREFIX
-// RUN: env LLVM_CACHE_CAS_PATH=%t/cas cache-build-session -prefix-map-cmake %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=CLANG-CMAKE-PREFIX -DPREFIX=%t
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas cache-build-session -prefix-map-cmake %clang-cache %clang -c %s -o %t.o -isysroot %S/Inputs/SDK -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -### 2>&1 | FileCheck %s -check-prefix=CLANG-CMAKE-PREFIX -DPREFIX=%t -DINPUTS=%S/Inputs
 // RUN: popd
 
 // SESSION-CMAKE-PREFIX: note: setting LLVM_CACHE_PREFIX_MAPS=/llvm/build=/^build;/llvm/llvm-project/llvm=/^src;/llvm/llvm-project/clang=/^src-clang;/llvm/llvm-project/clang-tools-extra=/^src-clang-tools-extra;/llvm/llvm-project/third-party/benchmark=/^src-benchmark;/llvm/llvm-project/other/benchmark=/^src-benchmark-1;/llvm/llvm-project/another/benchmark=/^src-benchmark-2{{$}}
 // SESSION-CMAKE-PREFIX: note: setting LLVM_CACHE_BUILD_SESSION_ID=
 
 // CLANG-CMAKE-PREFIX: "-cc1depscan" "-fdepscan=daemon" "-fdepscan-share-identifier"
-// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map-sdk=/^sdk" "-fdepscan-prefix-map-toolchain=/^toolchain"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=[[INPUTS]]/SDK=/^sdk"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=[[INPUTS]]/toolchain_dir=/^toolchain"
 // CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/build=/^build"
 // CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/llvm-project/llvm=/^src"
 // CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/llvm-project/clang=/^src-clang"

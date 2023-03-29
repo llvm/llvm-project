@@ -32,7 +32,6 @@ using CachingOnDiskFileSystemPtr =
     llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem>;
 
 class DependencyScanningWorkerFilesystem;
-struct DepscanPrefixMapping;
 
 /// A command-line tool invocation that is part of building a TU.
 ///
@@ -104,12 +103,6 @@ public:
                                                const ModuleDeps &MD) {
     return llvm::Error::success();
   }
-
-  /// FIXME: This is temporary until we eliminate the split between consumers in
-  /// \p DependencyScanningTool and collectors in \p DependencyScanningWorker
-  /// and have them both in the same file. see FIXME in \p
-  /// DependencyScanningAction::runInvocation.
-  virtual const DepscanPrefixMapping *getPrefixMapping() { return nullptr; }
 };
 
 /// An individual dependency scanning worker that is able to run on its own

@@ -37,9 +37,9 @@
 // RUN: mkdir -p %t.dir/a && mkdir -p %t.dir/b
 // RUN: cp %t.profdata %t.dir/a/a.profdata
 // RUN: cp %t.profdata %t.dir/b/a.profdata
-// RUN: %clang -cc1depscan -fdepscan=inline -o %t4.rsp -fdepscan-prefix-map=%t.dir/a=/^testdir -cc1-args -cc1 -triple x86_64-apple-macosx12.0.0 -emit-obj -O3 -Rcompile-job-cache \
+// RUN: %clang -cc1depscan -fdepscan=inline -o %t4.rsp -cc1-args -cc1 -triple x86_64-apple-macosx12.0.0 -emit-obj -O3 -Rcompile-job-cache -fdepscan-prefix-map=%t.dir/a=/^testdir  \
 // RUN:   -x c %s -o %t.o -fcas-path %t.dir/cas -fprofile-instrument-use-path=%t.dir/a/a.profdata
-// RUN: %clang -cc1depscan -fdepscan=inline -o %t5.rsp -fdepscan-prefix-map=%t.dir/b=/^testdir -cc1-args -cc1 -triple x86_64-apple-macosx12.0.0 -emit-obj -O3 -Rcompile-job-cache \
+// RUN: %clang -cc1depscan -fdepscan=inline -o %t5.rsp -cc1-args -cc1 -triple x86_64-apple-macosx12.0.0 -emit-obj -O3 -Rcompile-job-cache -fdepscan-prefix-map=%t.dir/b=/^testdir \
 // RUN:   -x c %s -o %t.o -fcas-path %t.dir/cas -fprofile-instrument-use-path=%t.dir/b/a.profdata
 // RUN: cat %t4.rsp | FileCheck %s --check-prefix=REMAP
 // RUN: %clang @%t4.rsp 2>&1 | FileCheck %s --check-prefix=CACHE-MISS
@@ -54,9 +54,9 @@
 // RUN: grep llvmcas %t.dir/cache-key1
 // RUN: diff -u %t.dir/cache-key1 %t.dir/cache-key2
 
-// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t4.inc.rsp -fdepscan-prefix-map=%t.dir/a=/^testdir -cc1-args -cc1 -triple x86_64-apple-macosx12.0.0 -emit-obj -O3 -Rcompile-job-cache \
+// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t4.inc.rsp -cc1-args -cc1 -triple x86_64-apple-macosx12.0.0 -emit-obj -O3 -Rcompile-job-cache -fdepscan-prefix-map=%t.dir/a=/^testdir \
 // RUN:   -x c %s -o %t.o -fcas-path %t.dir/cas -fprofile-instrument-use-path=%t.dir/a/a.profdata
-// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t5.inc.rsp -fdepscan-prefix-map=%t.dir/b=/^testdir -cc1-args -cc1 -triple x86_64-apple-macosx12.0.0 -emit-obj -O3 -Rcompile-job-cache \
+// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t5.inc.rsp -cc1-args -cc1 -triple x86_64-apple-macosx12.0.0 -emit-obj -O3 -Rcompile-job-cache -fdepscan-prefix-map=%t.dir/b=/^testdir \
 // RUN:   -x c %s -o %t.o -fcas-path %t.dir/cas -fprofile-instrument-use-path=%t.dir/b/a.profdata
 // RUN: cat %t4.inc.rsp | FileCheck %s --check-prefix=REMAP
 // RUN: %clang @%t4.inc.rsp 2>&1 | FileCheck %s --check-prefix=CACHE-MISS

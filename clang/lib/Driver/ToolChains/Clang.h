@@ -43,7 +43,8 @@ private:
                                const Driver &D, const llvm::opt::ArgList &Args,
                                llvm::opt::ArgStringList &CmdArgs,
                                const InputInfo &Output,
-                               const InputInfoList &Inputs) const;
+                               const InputInfoList &Inputs,
+                               std::optional<StringRef> &Sysroot) const;
 
   void RenderTargetOptions(const llvm::Triple &EffectiveTriple,
                            const llvm::opt::ArgList &Args, bool KernelOrKext,
@@ -103,6 +104,11 @@ private:
   void DumpCompilationDatabaseFragmentToDir(
       StringRef Dir, Compilation &C, StringRef Target, const InputInfo &Output,
       const InputInfo &Input, const llvm::opt::ArgList &Args) const;
+
+  void AddPrefixMappingOptions(const llvm::opt::ArgList &Args,
+                               llvm::opt::ArgStringList &CmdArgs,
+                               const Driver &D,
+                               std::optional<StringRef> Sysroot) const;
 
 public:
   Clang(const ToolChain &TC, bool HasIntegratedBackend = true);
