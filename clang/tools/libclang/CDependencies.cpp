@@ -239,7 +239,7 @@ static CXErrorCode getFullDependencies(DependencyScanningWorker *Worker,
 
   TranslationUnitDeps TU = DepConsumer.takeTranslationUnitDeps();
 
-  if (!TU.ModuleGraph.empty()) {
+  if (MDC && !TU.ModuleGraph.empty()) {
     CXModuleDependencySet *MDS = new CXModuleDependencySet;
     MDS->Count = TU.ModuleGraph.size();
     MDS->Modules = new CXModuleDependency[MDS->Count];
@@ -383,6 +383,239 @@ CXErrorCode clang_experimental_DependencyScannerWorker_getFileDependencies_v5(
   *OutDiags = DiagConsumer.getDiagnosticSet();
 
   return Result;
+}
+
+namespace {
+
+struct DependencyScannerWorkerScanSettings {
+  int argc;
+  const char *const *argv;
+  const char *ModuleName;
+  const char *WorkingDirectory;
+  void *MLOContext;
+  CXModuleLookupOutputCallback *MLO;
+};
+
+struct CStringsManager {
+  SmallVector<std::unique_ptr<std::vector<const char *>>> OwnedCStr;
+  SmallVector<std::unique_ptr<std::vector<std::string>>> OwnedStdStr;
+
+  /// Doesn't own the string contents.
+  CXCStringArray createCStringsRef(ArrayRef<std::string> Strings) {
+    OwnedCStr.push_back(std::make_unique<std::vector<const char *>>());
+    std::vector<const char *> &CStrings = *OwnedCStr.back();
+    CStrings.reserve(Strings.size());
+    for (const auto &String : Strings)
+      CStrings.push_back(String.c_str());
+    return {CStrings.data(), CStrings.size()};
+  }
+
+  /// Doesn't own the string contents.
+  CXCStringArray createCStringsRef(const llvm::StringSet<> &StringsUnordered) {
+    std::vector<StringRef> Strings;
+
+    for (auto SI = StringsUnordered.begin(), SE = StringsUnordered.end();
+         SI != SE; ++SI)
+      Strings.push_back(SI->getKey());
+
+    llvm::sort(Strings);
+
+    OwnedCStr.push_back(std::make_unique<std::vector<const char *>>());
+    std::vector<const char *> &CStrings = *OwnedCStr.back();
+    CStrings.reserve(Strings.size());
+    for (const auto &String : Strings)
+      CStrings.push_back(String.data());
+    return {CStrings.data(), CStrings.size()};
+  }
+
+  /// Gets ownership of string contents.
+  CXCStringArray createCStringsOwned(std::vector<std::string> &&Strings) {
+    OwnedStdStr.push_back(
+        std::make_unique<std::vector<std::string>>(std::move(Strings)));
+    return createCStringsRef(*OwnedStdStr.back());
+  }
+};
+
+struct DependencyGraph {
+  TranslationUnitDeps TUDeps;
+  CXDiagnosticSetDiagnosticConsumer DiagConsumer;
+  CStringsManager StrMgr{};
+};
+
+struct DependencyGraphModule {
+  ModuleDeps *ModDeps;
+  CStringsManager StrMgr{};
+};
+
+struct DependencyGraphTUCommand {
+  Command *TUCmd;
+  CStringsManager StrMgr{};
+};
+
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DependencyScannerWorkerScanSettings,
+                                   CXDependencyScannerWorkerScanSettings)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DependencyGraph, CXDepGraph)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DependencyGraphModule, CXDepGraphModule)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DependencyGraphTUCommand,
+                                   CXDepGraphTUCommand)
+
+} // end anonymous namespace
+
+CXDependencyScannerWorkerScanSettings
+clang_experimental_DependencyScannerWorkerScanSettings_create(
+    int argc, const char *const *argv, const char *ModuleName,
+    const char *WorkingDirectory, void *MLOContext,
+    CXModuleLookupOutputCallback *MLO) {
+  return wrap(new DependencyScannerWorkerScanSettings{
+      argc, argv, ModuleName, WorkingDirectory, MLOContext, MLO});
+}
+
+void clang_experimental_DependencyScannerWorkerScanSettings_dispose(
+    CXDependencyScannerWorkerScanSettings Settings) {
+  delete unwrap(Settings);
+}
+
+enum CXErrorCode clang_experimental_DependencyScannerWorker_getDepGraph(
+    CXDependencyScannerWorker W,
+    CXDependencyScannerWorkerScanSettings CXSettings, CXDepGraph *Out) {
+  DependencyScannerWorkerScanSettings &Settings = *unwrap(CXSettings);
+  int argc = Settings.argc;
+  const char *const *argv = Settings.argv;
+  const char *ModuleName = Settings.ModuleName;
+  const char *WorkingDirectory = Settings.WorkingDirectory;
+  void *MLOContext = Settings.MLOContext;
+  CXModuleLookupOutputCallback *MLO = Settings.MLO;
+
+  OutputLookup OL(MLOContext, MLO);
+  auto LookupOutputs = [&](const ModuleID &ID, ModuleOutputKind MOK) {
+    return OL.lookupModuleOutput(ID, MOK);
+  };
+
+  if (!Out)
+    return CXError_InvalidArguments;
+  *Out = nullptr;
+
+  DependencyGraph *DepGraph = new DependencyGraph();
+
+  CXErrorCode Result = getFileDependencies(
+      W, argc, argv, WorkingDirectory, /*MDC=*/nullptr, /*MDCContext=*/nullptr,
+      /*Error=*/nullptr, &DepGraph->DiagConsumer, LookupOutputs,
+      ModuleName ? Optional<StringRef>(ModuleName) : std::nullopt,
+      [&](TranslationUnitDeps TU) { DepGraph->TUDeps = std::move(TU); });
+
+  *Out = wrap(DepGraph);
+  return Result;
+}
+
+void clang_experimental_DepGraph_dispose(CXDepGraph Graph) {
+  delete unwrap(Graph);
+}
+
+size_t clang_experimental_DepGraph_getNumModules(CXDepGraph Graph) {
+  TranslationUnitDeps &TUDeps = unwrap(Graph)->TUDeps;
+  return TUDeps.ModuleGraph.size();
+}
+
+CXDepGraphModule clang_experimental_DepGraph_getModule(CXDepGraph Graph,
+                                                       size_t Index) {
+  TranslationUnitDeps &TUDeps = unwrap(Graph)->TUDeps;
+  return wrap(new DependencyGraphModule{&TUDeps.ModuleGraph[Index]});
+}
+
+void clang_experimental_DepGraphModule_dispose(CXDepGraphModule CXDepMod) {
+  delete unwrap(CXDepMod);
+}
+
+const char *
+clang_experimental_DepGraphModule_getName(CXDepGraphModule CXDepMod) {
+  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  return ModDeps.ID.ModuleName.c_str();
+}
+
+const char *
+clang_experimental_DepGraphModule_getContextHash(CXDepGraphModule CXDepMod) {
+  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  return ModDeps.ID.ContextHash.c_str();
+}
+
+const char *
+clang_experimental_DepGraphModule_getModuleMapPath(CXDepGraphModule CXDepMod) {
+  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  if (ModDeps.ClangModuleMapFile.empty())
+    return nullptr;
+  return ModDeps.ClangModuleMapFile.c_str();
+}
+
+CXCStringArray
+clang_experimental_DepGraphModule_getFileDeps(CXDepGraphModule CXDepMod) {
+  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  return unwrap(CXDepMod)->StrMgr.createCStringsRef(ModDeps.FileDeps);
+}
+
+CXCStringArray
+clang_experimental_DepGraphModule_getModuleDeps(CXDepGraphModule CXDepMod) {
+  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  std::vector<std::string> Modules;
+  Modules.reserve(ModDeps.ClangModuleDeps.size());
+  for (const ModuleID &MID : ModDeps.ClangModuleDeps)
+    Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
+  return unwrap(CXDepMod)->StrMgr.createCStringsOwned(std::move(Modules));
+}
+
+CXCStringArray
+clang_experimental_DepGraphModule_getBuildArguments(CXDepGraphModule CXDepMod) {
+  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  return unwrap(CXDepMod)->StrMgr.createCStringsRef(ModDeps.BuildArguments);
+}
+
+size_t clang_experimental_DepGraph_getNumTUCommands(CXDepGraph Graph) {
+  TranslationUnitDeps &TUDeps = unwrap(Graph)->TUDeps;
+  return TUDeps.Commands.size();
+}
+
+CXDepGraphTUCommand clang_experimental_DepGraph_getTUCommand(CXDepGraph Graph,
+                                                             size_t Index) {
+  TranslationUnitDeps &TUDeps = unwrap(Graph)->TUDeps;
+  return wrap(new DependencyGraphTUCommand{&TUDeps.Commands[Index]});
+}
+
+void clang_experimental_DepGraphTUCommand_dispose(CXDepGraphTUCommand CXCmd) {
+  delete unwrap(CXCmd);
+}
+
+const char *
+clang_experimental_DepGraphTUCommand_getExecutable(CXDepGraphTUCommand CXCmd) {
+  Command &TUCmd = *unwrap(CXCmd)->TUCmd;
+  return TUCmd.Executable.c_str();
+}
+
+CXCStringArray clang_experimental_DepGraphTUCommand_getBuildArguments(
+    CXDepGraphTUCommand CXCmd) {
+  Command &TUCmd = *unwrap(CXCmd)->TUCmd;
+  return unwrap(CXCmd)->StrMgr.createCStringsRef(TUCmd.Arguments);
+}
+
+CXCStringArray clang_experimental_DepGraph_getTUFileDeps(CXDepGraph Graph) {
+  TranslationUnitDeps &TUDeps = unwrap(Graph)->TUDeps;
+  return unwrap(Graph)->StrMgr.createCStringsRef(TUDeps.FileDeps);
+}
+
+CXCStringArray clang_experimental_DepGraph_getTUModuleDeps(CXDepGraph Graph) {
+  TranslationUnitDeps &TUDeps = unwrap(Graph)->TUDeps;
+  std::vector<std::string> Modules;
+  Modules.reserve(TUDeps.ClangModuleDeps.size());
+  for (const ModuleID &MID : TUDeps.ClangModuleDeps)
+    Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
+  return unwrap(Graph)->StrMgr.createCStringsOwned(std::move(Modules));
+}
+
+const char *clang_experimental_DepGraph_getTUContextHash(CXDepGraph Graph) {
+  TranslationUnitDeps &TUDeps = unwrap(Graph)->TUDeps;
+  return TUDeps.ID.ContextHash.c_str();
+}
+
+CXDiagnosticSet clang_experimental_DepGraph_getDiagnostics(CXDepGraph Graph) {
+  return unwrap(Graph)->DiagConsumer.getDiagnosticSet();
 }
 
 static std::string lookupModuleOutput(const ModuleID &ID, ModuleOutputKind MOK,
