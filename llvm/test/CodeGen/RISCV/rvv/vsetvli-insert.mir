@@ -307,19 +307,19 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 2, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: [[PseudoVLE64_V_M1_:%[0-9]+]]:vr = PseudoVLE64_V_M1 [[COPY]], 2, 6 /* e64 */, implicit $vl, implicit $vtype :: (load (s128) from %ir.x)
-    ; CHECK-NEXT: dead %6:gpr = PseudoVSETVLIX0 $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: dead [[PseudoVSETVLIX0_:%[0-9]+]]:gpr = PseudoVSETVLIX0 $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: [[PseudoVMV_V_I_M1_:%[0-9]+]]:vr = PseudoVMV_V_I_M1 0, -1, 6 /* e64 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 2, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
-    ; CHECK-NEXT: [[PseudoVREDSUM_VS_M1_:%[0-9]+]]:vr = PseudoVREDSUM_VS_M1 [[DEF]], killed [[PseudoVLE64_V_M1_]], killed [[PseudoVMV_V_I_M1_]], 2, 6 /* e64 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: [[PseudoVMV_X_S_M1_:%[0-9]+]]:gpr = PseudoVMV_X_S_M1 killed [[PseudoVREDSUM_VS_M1_]], 6 /* e64 */, implicit $vtype
+    ; CHECK-NEXT: [[PseudoVREDSUM_VS_M1_E8_:%[0-9]+]]:vr = PseudoVREDSUM_VS_M1_E8 [[DEF]], killed [[PseudoVLE64_V_M1_]], killed [[PseudoVMV_V_I_M1_]], 2, 6 /* e64 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: [[PseudoVMV_X_S_M1_:%[0-9]+]]:gpr = PseudoVMV_X_S_M1 killed [[PseudoVREDSUM_VS_M1_E8_]], 6 /* e64 */, implicit $vtype
     ; CHECK-NEXT: $x10 = COPY [[PseudoVMV_X_S_M1_]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gpr = COPY $x10
     %1:vr = PseudoVLE64_V_M1 %0, 2, 6 :: (load (s128) from %ir.x)
     %2:vr = PseudoVMV_V_I_M1 0, -1, 6
     %4:vr = IMPLICIT_DEF
-    %3:vr = PseudoVREDSUM_VS_M1 %4, killed %1, killed %2, 2, 6, 1
+    %3:vr = PseudoVREDSUM_VS_M1_E8 %4, killed %1, killed %2, 2, 6, 1
     %5:gpr = PseudoVMV_X_S_M1 killed %3, 6
     $x10 = COPY %5
     PseudoRET implicit $x10
