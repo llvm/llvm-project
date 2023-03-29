@@ -25,6 +25,10 @@
   dimLevelType = ["compressed"]
 }>
 
+#SortedCOO2D = #sparse_tensor.encoding<{
+  dimLevelType = [ "compressed-nu", "singleton" ],
+}>
+
 #SortedCOO3D = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed-nu", "singleton-nu", "singleton" ]
 
@@ -33,6 +37,11 @@
 #TsssPermuted = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed", "compressed", "compressed" ],
   dimOrdering = affine_map<(i,j,k) -> (k,i,j)>
+}>
+
+#COOSlice = #sparse_tensor.encoding<{
+  dimLevelType = [ "compressed-nu", "singleton" ],
+  slice = [ (2, 2, 1), (12, 13, 1) ]
 }>
 
 // CHECK-LABEL: func @sparse_nop_convert(
@@ -184,4 +193,21 @@ func.func @sparse_convert_singleton(%arg0: tensor<?xf32, #SparseSingleton64>) ->
 func.func @sparse_convert_permuted(%arg0: tensor<?x?x?xf32, #SortedCOO3D>) -> tensor<?x?x?xf32, #TsssPermuted> {
   %0 = sparse_tensor.convert %arg0 : tensor<?x?x?xf32, #SortedCOO3D> to tensor<?x?x?xf32, #TsssPermuted>
   return %0 : tensor<?x?x?xf32, #TsssPermuted>
+}
+
+// CHECK-RWT-LABEL: func.func @sparse_convert_slice(
+//  CHECK-RWT-SAME: %[[VAL_0:.*]]: tensor<2x13xi32, #{{.*}}>) -> tensor<2x13xi32, #{{.*}}> {
+//       CHECK-RWT: %[[VAL_1:.*]] = sparse_tensor.number_of_entries %[[VAL_0]] : tensor<2x13xi32, #{{.*}}>
+//       CHECK-RWT: %[[VAL_2:.*]] = bufferization.alloc_tensor() size_hint=%[[VAL_1]] : tensor<2x13xi32, #{{.*}}>
+//       CHECK-RWT: %[[VAL_3:.*]] = sparse_tensor.foreach in %[[VAL_0]] init(%[[VAL_2]]) : tensor<2x13xi32, #{{.*}}>, tensor<2x13xi32, #{{.*}}> -> tensor<2x13xi32, #{{.*}}> do {
+//       CHECK-RWT: ^bb0(%[[VAL_4:.*]]: index, %[[VAL_5:.*]]: index, %[[VAL_6:.*]]: i32, %[[VAL_7:.*]]: tensor<2x13xi32, #{{.*}}>):
+//       CHECK-RWT:   %[[VAL_8:.*]] = sparse_tensor.insert %[[VAL_6]] into %[[VAL_7]]{{\[}}%[[VAL_4]], %[[VAL_5]]] : tensor<2x13xi32, #{{.*}}>
+//       CHECK-RWT:   sparse_tensor.yield %[[VAL_8]] : tensor<2x13xi32, #{{.*}}>
+//       CHECK-RWT: }
+//       CHECK-RWT: %[[VAL_9:.*]] = sparse_tensor.load %[[VAL_10:.*]] hasInserts : tensor<2x13xi32, #{{.*}}>
+//       CHECK-RWT: %[[VAL_11:.*]] = sparse_tensor.convert %[[VAL_9]] : tensor<2x13xi32, #{{.*}}> to tensor<2x13xi32, #{{.*}}>
+//       CHECK-RWT: return %[[VAL_11]] : tensor<2x13xi32, #{{.*}}>
+func.func @sparse_convert_slice(%arg0: tensor<2x13xi32, #COOSlice>) -> (tensor<2x13xi32, #SortedCOO2D>)  {
+  %0 = sparse_tensor.convert %arg0 : tensor<2x13xi32, #COOSlice> to tensor<2x13xi32, #SortedCOO2D>
+  return %0 : tensor<2x13xi32, #SortedCOO2D>
 }
