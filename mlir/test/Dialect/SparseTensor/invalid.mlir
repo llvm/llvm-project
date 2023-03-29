@@ -423,6 +423,19 @@ func.func @invalid_out_dense(%arg0: tensor<10xf64>, %arg1: !llvm.ptr<i8>) {
 
 // -----
 
+#CSR = #sparse_tensor.encoding<{
+  dimLevelType = ["dense", "compressed"],
+  slice = [ (1, 4, 1), (1, 4, 2) ]
+}>
+
+func.func @sparse_convert_to_slice(%arg0: tensor<10x?xf32>) -> tensor<10x10xf32, #CSR> {
+  // expected-error@+1 {{cannot convert to a sparse tensor slice}}
+  %0 = sparse_tensor.convert %arg0 : tensor<10x?xf32> to tensor<10x10xf32, #CSR>
+  return %0 : tensor<10x10xf32, #CSR>
+}
+
+// -----
+
 func.func @invalid_binary_num_args_mismatch_overlap(%arg0: f64, %arg1: f64) -> f64 {
   // expected-error@+1 {{overlap region must have exactly 2 arguments}}
   %r = sparse_tensor.binary %arg0, %arg1 : f64, f64 to f64

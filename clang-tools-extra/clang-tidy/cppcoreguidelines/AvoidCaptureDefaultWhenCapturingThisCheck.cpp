@@ -18,6 +18,19 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
+AvoidCaptureDefaultWhenCapturingThisCheck::
+    AvoidCaptureDefaultWhenCapturingThisCheck(StringRef Name,
+                                              ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoreCaptureDefaultByReference(
+          Options.get("IgnoreCaptureDefaultByReference", false)) {}
+
+void AvoidCaptureDefaultWhenCapturingThisCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreCaptureDefaultByReference",
+                IgnoreCaptureDefaultByReference);
+}
+
 void AvoidCaptureDefaultWhenCapturingThisCheck::registerMatchers(
     MatchFinder *Finder) {
   Finder->addMatcher(lambdaExpr(hasAnyCapture(capturesThis())).bind("lambda"),
@@ -74,24 +87,30 @@ static std::string createReplacementText(const LambdaExpr *Lambda) {
 
 void AvoidCaptureDefaultWhenCapturingThisCheck::check(
     const MatchFinder::MatchResult &Result) {
-  if (const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda")) {
-    if (Lambda->getCaptureDefault() != LCD_None) {
-      bool IsThisImplicitlyCaptured = std::any_of(
-          Lambda->implicit_capture_begin(), Lambda->implicit_capture_end(),
-          [](const LambdaCapture &Capture) { return Capture.capturesThis(); });
-      auto Diag = diag(Lambda->getCaptureDefaultLoc(),
-                       "lambdas that %select{|implicitly }0capture 'this' "
-                       "should not specify a capture default")
-                  << IsThisImplicitlyCaptured;
+  const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
+  if (!Lambda)
+    return;
 
-      std::string ReplacementText = createReplacementText(Lambda);
-      SourceLocation DefaultCaptureEnd =
-          findDefaultCaptureEnd(Lambda, *Result.Context);
-      Diag << FixItHint::CreateReplacement(
-          CharSourceRange::getCharRange(Lambda->getCaptureDefaultLoc(),
-                                        DefaultCaptureEnd),
-          ReplacementText);
-    }
+  if (IgnoreCaptureDefaultByReference &&
+      Lambda->getCaptureDefault() == LCD_ByRef)
+    return;
+
+  if (Lambda->getCaptureDefault() != LCD_None) {
+    bool IsThisImplicitlyCaptured = std::any_of(
+        Lambda->implicit_capture_begin(), Lambda->implicit_capture_end(),
+        [](const LambdaCapture &Capture) { return Capture.capturesThis(); });
+    auto Diag = diag(Lambda->getCaptureDefaultLoc(),
+                     "lambdas that %select{|implicitly }0capture 'this' "
+                     "should not specify a capture default")
+                << IsThisImplicitlyCaptured;
+
+    std::string ReplacementText = createReplacementText(Lambda);
+    SourceLocation DefaultCaptureEnd =
+        findDefaultCaptureEnd(Lambda, *Result.Context);
+    Diag << FixItHint::CreateReplacement(
+        CharSourceRange::getCharRange(Lambda->getCaptureDefaultLoc(),
+                                      DefaultCaptureEnd),
+        ReplacementText);
   }
 }
 

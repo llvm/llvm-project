@@ -49,7 +49,21 @@ TEST_F(IntegerLiteralSeparatorTest, SingleQuoteAsSeparator) {
 
   verifyFormat("o0 = 0;\n"
                "o1 = 07;\n"
-               "o5 = 012345",
+               "o5 = 012345;",
+               Style);
+
+  verifyFormat("bi = 0b1'0000i;\n"
+               "dif = 1'234if;\n"
+               "hil = 0xA'BCil;",
+               "bi = 0b10000i;\n"
+               "dif = 1234if;\n"
+               "hil = 0xABCil;",
+               Style);
+
+  verifyFormat("d = 5'678_km;\n"
+               "h = 0xD'EF_u16;",
+               "d = 5678_km;\n"
+               "h = 0xDEF_u16;",
                Style);
 }
 
