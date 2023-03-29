@@ -6,7 +6,7 @@
 ; RUN: llc -mtriple=riscv64 -mcpu=sifive-u74 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=SFB64 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xventanacondops -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefix=CONDOPS64 %s
+; RUN:   | FileCheck -check-prefix=VTCONDOPS64 %s
 
 ; InstCombine canonicalizes (c ? x | y : x) to (x | (c ? y : 0)) similar for
 ; other binary operations using their identity value as the constant.
@@ -38,14 +38,14 @@ define signext i32 @and_select_all_ones_i32(i1 zeroext %c, i32 signext %x, i32 s
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
-; CONDOPS64-LABEL: and_select_all_ones_i32:
-; CONDOPS64:       # %bb.0:
-; CONDOPS64-NEXT:    li a3, -1
-; CONDOPS64-NEXT:    vt.maskcn a3, a3, a0
-; CONDOPS64-NEXT:    vt.maskc a0, a1, a0
-; CONDOPS64-NEXT:    or a0, a0, a3
-; CONDOPS64-NEXT:    and a0, a0, a2
-; CONDOPS64-NEXT:    ret
+; VTCONDOPS64-LABEL: and_select_all_ones_i32:
+; VTCONDOPS64:       # %bb.0:
+; VTCONDOPS64-NEXT:    li a3, -1
+; VTCONDOPS64-NEXT:    vt.maskcn a3, a3, a0
+; VTCONDOPS64-NEXT:    vt.maskc a0, a1, a0
+; VTCONDOPS64-NEXT:    or a0, a0, a3
+; VTCONDOPS64-NEXT:    and a0, a0, a2
+; VTCONDOPS64-NEXT:    ret
   %a = select i1 %c, i32 %x, i32 -1
   %b = and i32 %a, %y
   ret i32 %b
@@ -77,14 +77,14 @@ define i64 @and_select_all_ones_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
-; CONDOPS64-LABEL: and_select_all_ones_i64:
-; CONDOPS64:       # %bb.0:
-; CONDOPS64-NEXT:    vt.maskcn a1, a1, a0
-; CONDOPS64-NEXT:    li a3, -1
-; CONDOPS64-NEXT:    vt.maskc a0, a3, a0
-; CONDOPS64-NEXT:    or a0, a0, a1
-; CONDOPS64-NEXT:    and a0, a2, a0
-; CONDOPS64-NEXT:    ret
+; VTCONDOPS64-LABEL: and_select_all_ones_i64:
+; VTCONDOPS64:       # %bb.0:
+; VTCONDOPS64-NEXT:    vt.maskcn a1, a1, a0
+; VTCONDOPS64-NEXT:    li a3, -1
+; VTCONDOPS64-NEXT:    vt.maskc a0, a3, a0
+; VTCONDOPS64-NEXT:    or a0, a0, a1
+; VTCONDOPS64-NEXT:    and a0, a2, a0
+; VTCONDOPS64-NEXT:    ret
   %a = select i1 %c, i64 -1, i64 %x
   %b = and i64 %y, %a
   ret i64 %b
@@ -114,11 +114,11 @@ define signext i32 @or_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 s
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
-; CONDOPS64-LABEL: or_select_all_zeros_i32:
-; CONDOPS64:       # %bb.0:
-; CONDOPS64-NEXT:    vt.maskc a0, a1, a0
-; CONDOPS64-NEXT:    or a0, a2, a0
-; CONDOPS64-NEXT:    ret
+; VTCONDOPS64-LABEL: or_select_all_zeros_i32:
+; VTCONDOPS64:       # %bb.0:
+; VTCONDOPS64-NEXT:    vt.maskc a0, a1, a0
+; VTCONDOPS64-NEXT:    or a0, a2, a0
+; VTCONDOPS64-NEXT:    ret
   %a = select i1 %c, i32 %x, i32 0
   %b = or i32 %y, %a
   ret i32 %b
@@ -150,11 +150,11 @@ define i64 @or_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
-; CONDOPS64-LABEL: or_select_all_zeros_i64:
-; CONDOPS64:       # %bb.0:
-; CONDOPS64-NEXT:    vt.maskcn a0, a1, a0
-; CONDOPS64-NEXT:    or a0, a0, a2
-; CONDOPS64-NEXT:    ret
+; VTCONDOPS64-LABEL: or_select_all_zeros_i64:
+; VTCONDOPS64:       # %bb.0:
+; VTCONDOPS64-NEXT:    vt.maskcn a0, a1, a0
+; VTCONDOPS64-NEXT:    or a0, a0, a2
+; VTCONDOPS64-NEXT:    ret
   %a = select i1 %c, i64 0, i64 %x
   %b = or i64 %a, %y
   ret i64 %b
@@ -184,11 +184,11 @@ define signext i32 @xor_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
-; CONDOPS64-LABEL: xor_select_all_zeros_i32:
-; CONDOPS64:       # %bb.0:
-; CONDOPS64-NEXT:    vt.maskcn a0, a1, a0
-; CONDOPS64-NEXT:    xor a0, a2, a0
-; CONDOPS64-NEXT:    ret
+; VTCONDOPS64-LABEL: xor_select_all_zeros_i32:
+; VTCONDOPS64:       # %bb.0:
+; VTCONDOPS64-NEXT:    vt.maskcn a0, a1, a0
+; VTCONDOPS64-NEXT:    xor a0, a2, a0
+; VTCONDOPS64-NEXT:    ret
   %a = select i1 %c, i32 0, i32 %x
   %b = xor i32 %y, %a
   ret i32 %b
@@ -220,11 +220,11 @@ define i64 @xor_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
-; CONDOPS64-LABEL: xor_select_all_zeros_i64:
-; CONDOPS64:       # %bb.0:
-; CONDOPS64-NEXT:    vt.maskc a0, a1, a0
-; CONDOPS64-NEXT:    xor a0, a0, a2
-; CONDOPS64-NEXT:    ret
+; VTCONDOPS64-LABEL: xor_select_all_zeros_i64:
+; VTCONDOPS64:       # %bb.0:
+; VTCONDOPS64-NEXT:    vt.maskc a0, a1, a0
+; VTCONDOPS64-NEXT:    xor a0, a0, a2
+; VTCONDOPS64-NEXT:    ret
   %a = select i1 %c, i64 %x, i64 0
   %b = xor i64 %a, %y
   ret i64 %b
@@ -254,11 +254,11 @@ define signext i32 @add_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
-; CONDOPS64-LABEL: add_select_all_zeros_i32:
-; CONDOPS64:       # %bb.0:
-; CONDOPS64-NEXT:    vt.maskcn a0, a1, a0
-; CONDOPS64-NEXT:    addw a0, a2, a0
-; CONDOPS64-NEXT:    ret
+; VTCONDOPS64-LABEL: add_select_all_zeros_i32:
+; VTCONDOPS64:       # %bb.0:
+; VTCONDOPS64-NEXT:    vt.maskcn a0, a1, a0
+; VTCONDOPS64-NEXT:    addw a0, a2, a0
+; VTCONDOPS64-NEXT:    ret
   %a = select i1 %c, i32 0, i32 %x
   %b = add i32 %y, %a
   ret i32 %b
@@ -292,11 +292,11 @@ define i64 @add_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
-; CONDOPS64-LABEL: add_select_all_zeros_i64:
-; CONDOPS64:       # %bb.0:
-; CONDOPS64-NEXT:    vt.maskc a0, a1, a0
-; CONDOPS64-NEXT:    add a0, a0, a2
-; CONDOPS64-NEXT:    ret
+; VTCONDOPS64-LABEL: add_select_all_zeros_i64:
+; VTCONDOPS64:       # %bb.0:
+; VTCONDOPS64-NEXT:    vt.maskc a0, a1, a0
+; VTCONDOPS64-NEXT:    add a0, a0, a2
+; VTCONDOPS64-NEXT:    ret
   %a = select i1 %c, i64 %x, i64 0
   %b = add i64 %a, %y
   ret i64 %b
@@ -326,11 +326,11 @@ define signext i32 @sub_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
-; CONDOPS64-LABEL: sub_select_all_zeros_i32:
-; CONDOPS64:       # %bb.0:
-; CONDOPS64-NEXT:    vt.maskcn a0, a1, a0
-; CONDOPS64-NEXT:    subw a0, a2, a0
-; CONDOPS64-NEXT:    ret
+; VTCONDOPS64-LABEL: sub_select_all_zeros_i32:
+; VTCONDOPS64:       # %bb.0:
+; VTCONDOPS64-NEXT:    vt.maskcn a0, a1, a0
+; VTCONDOPS64-NEXT:    subw a0, a2, a0
+; VTCONDOPS64-NEXT:    ret
   %a = select i1 %c, i32 0, i32 %x
   %b = sub i32 %y, %a
   ret i32 %b
@@ -364,11 +364,11 @@ define i64 @sub_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
-; CONDOPS64-LABEL: sub_select_all_zeros_i64:
-; CONDOPS64:       # %bb.0:
-; CONDOPS64-NEXT:    vt.maskc a0, a1, a0
-; CONDOPS64-NEXT:    sub a0, a2, a0
-; CONDOPS64-NEXT:    ret
+; VTCONDOPS64-LABEL: sub_select_all_zeros_i64:
+; VTCONDOPS64:       # %bb.0:
+; VTCONDOPS64-NEXT:    vt.maskc a0, a1, a0
+; VTCONDOPS64-NEXT:    sub a0, a2, a0
+; VTCONDOPS64-NEXT:    ret
   %a = select i1 %c, i64 %x, i64 0
   %b = sub i64 %y, %a
   ret i64 %b
