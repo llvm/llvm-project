@@ -190,9 +190,7 @@ void CheckHelper::Check(const ParamValue &value, bool canBeAssumed) {
   if (value.isAssumed()) {
     if (!canBeAssumed) { // C795, C721, C726
       messages_.Say(
-          "An assumed (*) type parameter may be used only for a (non-statement"
-          " function) dummy argument, associate name, named constant, or"
-          " external function result"_err_en_US);
+          "An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, character named constant, or external function result"_err_en_US);
     }
   } else {
     CheckSpecExpr(value.GetExplicit());
@@ -323,8 +321,9 @@ void CheckHelper::Check(const Symbol &symbol) {
           "A dummy procedure of a pure subprogram must be pure"_err_en_US);
     }
   }
-  if (type) { // Section 7.2, paragraph 7
-    bool canHaveAssumedParameter{IsNamedConstant(symbol) ||
+  if (type) { // Section 7.2, paragraph 7; C795
+    bool isChar{type->category() == DeclTypeSpec::Character};
+    bool canHaveAssumedParameter{(isChar && IsNamedConstant(symbol)) ||
         (IsAssumedLengthCharacter(symbol) && // C722
             (IsExternal(symbol) ||
                 ClassifyProcedure(symbol) ==
@@ -333,8 +332,7 @@ void CheckHelper::Check(const Symbol &symbol) {
     if (!IsStmtFunctionDummy(symbol)) { // C726
       if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
         canHaveAssumedParameter |= object->isDummy() ||
-            (object->isFuncResult() &&
-                type->category() == DeclTypeSpec::Character) ||
+            (isChar && object->isFuncResult()) ||
             IsStmtFunctionResult(symbol); // Avoids multiple messages
       } else {
         canHaveAssumedParameter |= symbol.has<AssocEntityDetails>();
