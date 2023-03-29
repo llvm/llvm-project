@@ -59,6 +59,15 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(EmptyShell Empty)
     : Expr(ConceptSpecializationExprClass, Empty) {}
 
 ConceptSpecializationExpr *ConceptSpecializationExpr::Create(
+    const ASTContext &C, ConceptDecl *NamedConcept,
+    ImplicitConceptSpecializationDecl *SpecDecl,
+    const ConstraintSatisfaction *Satisfaction, bool Dependent,
+    bool ContainsUnexpandedParameterPack) {
+  return Create(C, NamedConcept, /*ArgsAsWritten*/ nullptr, SpecDecl, Satisfaction,
+                Dependent, ContainsUnexpandedParameterPack);
+}
+
+ConceptSpecializationExpr *ConceptSpecializationExpr::Create(
     const ASTContext &C, NestedNameSpecifierLoc NNS,
     SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
     NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
@@ -72,13 +81,14 @@ ConceptSpecializationExpr *ConceptSpecializationExpr::Create(
 
 ConceptSpecializationExpr::ConceptSpecializationExpr(
     const ASTContext &C, ConceptDecl *NamedConcept,
+    const ASTTemplateArgumentListInfo *ArgsAsWritten,
     ImplicitConceptSpecializationDecl *SpecDecl,
     const ConstraintSatisfaction *Satisfaction, bool Dependent,
     bool ContainsUnexpandedParameterPack)
     : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_PRValue, OK_Ordinary),
       ConceptReference(NestedNameSpecifierLoc(), SourceLocation(),
                        DeclarationNameInfo(), NamedConcept, NamedConcept,
-                       nullptr),
+                       ArgsAsWritten),
       SpecDecl(SpecDecl),
       Satisfaction(Satisfaction
                        ? ASTConstraintSatisfaction::Create(C, *Satisfaction)
@@ -95,12 +105,13 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(
 
 ConceptSpecializationExpr *ConceptSpecializationExpr::Create(
     const ASTContext &C, ConceptDecl *NamedConcept,
+    const ASTTemplateArgumentListInfo *ArgsAsWritten,
     ImplicitConceptSpecializationDecl *SpecDecl,
     const ConstraintSatisfaction *Satisfaction, bool Dependent,
     bool ContainsUnexpandedParameterPack) {
-  return new (C)
-      ConceptSpecializationExpr(C, NamedConcept, SpecDecl, Satisfaction,
-                                Dependent, ContainsUnexpandedParameterPack);
+  return new (C) ConceptSpecializationExpr(C, NamedConcept, ArgsAsWritten,
+                                           SpecDecl, Satisfaction, Dependent,
+                                           ContainsUnexpandedParameterPack);
 }
 
 const TypeConstraint *
