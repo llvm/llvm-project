@@ -192,7 +192,7 @@ std::optional<VFInfo> tryDemangleForVFABI(StringRef MangledName,
 /// where:
 ///
 /// <isa> = "_LLVM_"
-/// <mask> = "N". Note: TLI does not support masked interfaces.
+/// <mask> = "M" if masked, "N" if no mask.
 /// <vlen> = Number of concurrent lanes, stored in the `VectorizationFactor`
 ///          field of the `VecDesc` struct. If the number of lanes is scalable
 ///          then 'x' is printed instead.
@@ -200,7 +200,8 @@ std::optional<VFInfo> tryDemangleForVFABI(StringRef MangledName,
 /// <scalarname> = the name of the scalar function.
 /// <vectorname> = the name of the vector function.
 std::string mangleTLIVectorName(StringRef VectorName, StringRef ScalarName,
-                                unsigned numArgs, ElementCount VF);
+                                unsigned numArgs, ElementCount VF,
+                                bool Masked = false);
 
 /// Retrieve the `VFParamKind` from a string token.
 VFParamKind getVFParamKindFromString(const StringRef Token);
