@@ -10,6 +10,7 @@
 #define _LIBCPP___MEMORY_RESOURCE_POLYMORPHIC_ALLOCATOR_H
 
 #include <__assert>
+#include <__availability>
 #include <__config>
 #include <__memory_resource/memory_resource.h>
 #include <__utility/exception_guard.h>
@@ -39,7 +40,7 @@ template <class _ValueType
           = byte
 #  endif
           >
-class _LIBCPP_TEMPLATE_VIS polymorphic_allocator {
+class _LIBCPP_AVAILABILITY_PMR _LIBCPP_TEMPLATE_VIS polymorphic_allocator {
 
 public:
   using value_type = _ValueType;

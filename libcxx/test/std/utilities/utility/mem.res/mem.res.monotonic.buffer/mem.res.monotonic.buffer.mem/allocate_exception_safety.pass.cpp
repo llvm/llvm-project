@@ -8,7 +8,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-exceptions
-// XFAIL: availability-pmr-missing
+// TODO: Change to XFAIL once https://github.com/llvm/llvm-project/issues/40340 is fixed
+// UNSUPPORTED: availability-pmr-missing
 
 // <memory_resource>
 
