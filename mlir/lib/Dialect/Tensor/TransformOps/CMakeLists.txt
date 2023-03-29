@@ -6,6 +6,7 @@ add_mlir_dialect_library(MLIRTensorTransformOps
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRPDLDialect
   MLIRTensorDialect
   MLIRTransformDialect
 )
