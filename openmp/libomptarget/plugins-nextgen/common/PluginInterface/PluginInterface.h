@@ -227,8 +227,7 @@ private:
   void *prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                     ptrdiff_t *ArgOffsets, int32_t NumArgs,
                     llvm::SmallVectorImpl<void *> &Args,
-                    llvm::SmallVectorImpl<void *> &Ptrs,
-                    AsyncInfoWrapperTy &AsyncInfoWrapper) const;
+                    llvm::SmallVectorImpl<void *> &Ptrs) const;
 
   /// Get the default number of threads and blocks for the kernel.
   virtual uint32_t getDefaultNumThreads(GenericDeviceTy &Device) const = 0;

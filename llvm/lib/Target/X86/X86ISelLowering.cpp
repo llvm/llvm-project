@@ -24419,7 +24419,7 @@ static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
 static SDValue MatchVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
                                       const SDLoc &DL,
                                       const X86Subtarget &Subtarget,
-                                      SelectionDAG &DAG, SDValue &X86CC) {
+                                      SelectionDAG &DAG, X86::CondCode &X86CC) {
   assert((CC == ISD::SETEQ || CC == ISD::SETNE) && "Unsupported ISD::CondCode");
 
   if (!Subtarget.hasSSE2() || !Op->hasOneUse())
@@ -24467,24 +24467,18 @@ static SDValue MatchVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
       VecIns.push_back(DAG.getNode(ISD::OR, DL, VT, LHS, RHS));
     }
 
-    X86::CondCode CCode;
     if (SDValue V = LowerVectorAllZero(DL, VecIns.back(), CC, Mask, Subtarget,
-                                       DAG, CCode)) {
-      X86CC = DAG.getTargetConstant(CCode, DL, MVT::i8);
+                                       DAG, X86CC))
       return V;
-    }
   }
 
   if (Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
     ISD::NodeType BinOp;
     if (SDValue Match =
             DAG.matchBinOpReduction(Op.getNode(), BinOp, {ISD::OR})) {
-      X86::CondCode CCode;
       if (SDValue V =
-              LowerVectorAllZero(DL, Match, CC, Mask, Subtarget, DAG, CCode)) {
-        X86CC = DAG.getTargetConstant(CCode, DL, MVT::i8);
+              LowerVectorAllZero(DL, Match, CC, Mask, Subtarget, DAG, X86CC))
         return V;
-      }
     }
   }
 
@@ -25611,9 +25605,7 @@ static SDValue EmitAVX512Test(SDValue Op0, SDValue Op1, ISD::CondCode CC,
                               const SDLoc &dl, SelectionDAG &DAG,
                               const X86Subtarget &Subtarget,
                               SDValue &X86CC) {
-  // Only support equality comparisons.
-  if (CC != ISD::SETEQ && CC != ISD::SETNE)
-    return SDValue();
+  assert((CC == ISD::SETEQ || CC == ISD::SETNE) && "Unsupported ISD::CondCode");
 
   // Must be a bitcast from vXi1.
   if (Op0.getOpcode() != ISD::BITCAST)
@@ -25668,63 +25660,67 @@ SDValue X86TargetLowering::emitFlagsForSetcc(SDValue Op0, SDValue Op1,
                                              ISD::CondCode CC, const SDLoc &dl,
                                              SelectionDAG &DAG,
                                              SDValue &X86CC) const {
-  // Optimize to BT if possible.
-  // Lower (X & (1 << N)) == 0 to BT(X, N).
-  // Lower ((X >>u N) & 1) != 0 to BT(X, N).
-  // Lower ((X >>s N) & 1) != 0 to BT(X, N).
-  if (Op0.getOpcode() == ISD::AND && Op0.hasOneUse() && isNullConstant(Op1) &&
-      (CC == ISD::SETEQ || CC == ISD::SETNE)) {
+  // Equality Combines.
+  if (CC == ISD::SETEQ || CC == ISD::SETNE) {
     X86::CondCode X86CondCode;
-    if (SDValue BT = LowerAndToBT(Op0, CC, dl, DAG, X86CondCode)) {
-      X86CC = DAG.getTargetConstant(X86CondCode, dl, MVT::i8);
-      return BT;
+
+    // Optimize to BT if possible.
+    // Lower (X & (1 << N)) == 0 to BT(X, N).
+    // Lower ((X >>u N) & 1) != 0 to BT(X, N).
+    // Lower ((X >>s N) & 1) != 0 to BT(X, N).
+    if (Op0.getOpcode() == ISD::AND && Op0.hasOneUse() && isNullConstant(Op1)) {
+      if (SDValue BT = LowerAndToBT(Op0, CC, dl, DAG, X86CondCode)) {
+        X86CC = DAG.getTargetConstant(X86CondCode, dl, MVT::i8);
+        return BT;
+      }
     }
-  }
 
-  // Try to use PTEST/PMOVMSKB for a tree ORs equality compared with 0.
-  // TODO: We could do AND tree with all 1s as well by using the C flag.
-  if (isNullConstant(Op1) && (CC == ISD::SETEQ || CC == ISD::SETNE))
-    if (SDValue CmpZ =
-            MatchVectorAllZeroTest(Op0, CC, dl, Subtarget, DAG, X86CC))
-      return CmpZ;
-
-  // Try to lower using KORTEST or KTEST.
-  if (SDValue Test = EmitAVX512Test(Op0, Op1, CC, dl, DAG, Subtarget, X86CC))
-    return Test;
-
-  // Look for X == 0, X == 1, X != 0, or X != 1.  We can simplify some forms of
-  // these.
-  if ((isOneConstant(Op1) || isNullConstant(Op1)) &&
-      (CC == ISD::SETEQ || CC == ISD::SETNE)) {
-    // If the input is a setcc, then reuse the input setcc or use a new one with
-    // the inverted condition.
-    if (Op0.getOpcode() == X86ISD::SETCC) {
-      bool Invert = (CC == ISD::SETNE) ^ isNullConstant(Op1);
-
-      X86CC = Op0.getOperand(0);
-      if (Invert) {
-        X86::CondCode CCode = (X86::CondCode)Op0.getConstantOperandVal(0);
-        CCode = X86::GetOppositeBranchCondition(CCode);
-        X86CC = DAG.getTargetConstant(CCode, dl, MVT::i8);
+    // Try to use PTEST/PMOVMSKB for a tree ORs equality compared with 0.
+    // TODO: We could do AND tree with all 1s as well by using the C flag.
+    if (isNullConstant(Op1))
+      if (SDValue CmpZ = MatchVectorAllZeroTest(Op0, CC, dl, Subtarget, DAG,
+                                                X86CondCode)) {
+        X86CC = DAG.getTargetConstant(X86CondCode, dl, MVT::i8);
+        return CmpZ;
       }
 
-      return Op0.getOperand(1);
+    // Try to lower using KORTEST or KTEST.
+    if (SDValue Test = EmitAVX512Test(Op0, Op1, CC, dl, DAG, Subtarget, X86CC))
+      return Test;
+
+    // Look for X == 0, X == 1, X != 0, or X != 1.  We can simplify some forms
+    // of these.
+    if (isOneConstant(Op1) || isNullConstant(Op1)) {
+      // If the input is a setcc, then reuse the input setcc or use a new one
+      // with the inverted condition.
+      if (Op0.getOpcode() == X86ISD::SETCC) {
+        bool Invert = (CC == ISD::SETNE) ^ isNullConstant(Op1);
+
+        X86CC = Op0.getOperand(0);
+        if (Invert) {
+          X86CondCode = (X86::CondCode)Op0.getConstantOperandVal(0);
+          X86CondCode = X86::GetOppositeBranchCondition(X86CondCode);
+          X86CC = DAG.getTargetConstant(X86CondCode, dl, MVT::i8);
+        }
+
+        return Op0.getOperand(1);
+      }
     }
-  }
 
-  // Try to use the carry flag from the add in place of an separate CMP for:
-  // (seteq (add X, -1), -1). Similar for setne.
-  if (isAllOnesConstant(Op1) && Op0.getOpcode() == ISD::ADD &&
-      Op0.getOperand(1) == Op1 && (CC == ISD::SETEQ || CC == ISD::SETNE)) {
-    if (isProfitableToUseFlagOp(Op0)) {
-      SDVTList VTs = DAG.getVTList(Op0.getValueType(), MVT::i32);
+    // Try to use the carry flag from the add in place of an separate CMP for:
+    // (seteq (add X, -1), -1). Similar for setne.
+    if (isAllOnesConstant(Op1) && Op0.getOpcode() == ISD::ADD &&
+        Op0.getOperand(1) == Op1) {
+      if (isProfitableToUseFlagOp(Op0)) {
+        SDVTList VTs = DAG.getVTList(Op0.getValueType(), MVT::i32);
 
-      SDValue New = DAG.getNode(X86ISD::ADD, dl, VTs, Op0.getOperand(0),
-                                Op0.getOperand(1));
-      DAG.ReplaceAllUsesOfValueWith(SDValue(Op0.getNode(), 0), New);
-      X86::CondCode CCode = CC == ISD::SETEQ ? X86::COND_AE : X86::COND_B;
-      X86CC = DAG.getTargetConstant(CCode, dl, MVT::i8);
-      return SDValue(New.getNode(), 1);
+        SDValue New = DAG.getNode(X86ISD::ADD, dl, VTs, Op0.getOperand(0),
+                                  Op0.getOperand(1));
+        DAG.ReplaceAllUsesOfValueWith(SDValue(Op0.getNode(), 0), New);
+        X86CondCode = CC == ISD::SETEQ ? X86::COND_AE : X86::COND_B;
+        X86CC = DAG.getTargetConstant(X86CondCode, dl, MVT::i8);
+        return SDValue(New.getNode(), 1);
+      }
     }
   }
 
@@ -54180,11 +54176,10 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
       return V;
 
     if (VT == MVT::i1 && isNullConstant(RHS)) {
-      SDValue X86CC;
+      X86::CondCode X86CC;
       if (SDValue V =
               MatchVectorAllZeroTest(LHS, CC, DL, Subtarget, DAG, X86CC))
-        return DAG.getNode(ISD::TRUNCATE, DL, VT,
-                           DAG.getNode(X86ISD::SETCC, DL, MVT::i8, X86CC, V));
+        return DAG.getNode(ISD::TRUNCATE, DL, VT, getSETCC(X86CC, V, DL, DAG));
     }
 
     if (OpVT.isScalarInteger()) {

@@ -2916,44 +2916,12 @@ bool Generic_GCC::isPICDefaultForced() const {
 
 bool Generic_GCC::IsIntegratedAssemblerDefault() const {
   switch (getTriple().getArch()) {
-  case llvm::Triple::aarch64:
-  case llvm::Triple::aarch64_be:
-  case llvm::Triple::amdgcn:
-  case llvm::Triple::arm:
-  case llvm::Triple::armeb:
-  case llvm::Triple::avr:
-  case llvm::Triple::bpfel:
-  case llvm::Triple::bpfeb:
-  case llvm::Triple::csky:
-  case llvm::Triple::hexagon:
-  case llvm::Triple::lanai:
-  case llvm::Triple::loongarch32:
-  case llvm::Triple::loongarch64:
-  case llvm::Triple::m68k:
-  case llvm::Triple::mips:
-  case llvm::Triple::mipsel:
-  case llvm::Triple::mips64:
-  case llvm::Triple::mips64el:
-  case llvm::Triple::msp430:
-  case llvm::Triple::ppc:
-  case llvm::Triple::ppcle:
-  case llvm::Triple::ppc64:
-  case llvm::Triple::ppc64le:
-  case llvm::Triple::r600:
-  case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64:
-  case llvm::Triple::sparc:
-  case llvm::Triple::sparcel:
-  case llvm::Triple::sparcv9:
-  case llvm::Triple::systemz:
-  case llvm::Triple::thumb:
-  case llvm::Triple::thumbeb:
-  case llvm::Triple::ve:
-  case llvm::Triple::x86:
-  case llvm::Triple::x86_64:
-    return true;
-  default:
+  case llvm::Triple::nvptx:
+  case llvm::Triple::nvptx64:
+  case llvm::Triple::xcore:
     return false;
+  default:
+    return getTriple().getVendor() != llvm::Triple::Myriad;
   }
 }
 

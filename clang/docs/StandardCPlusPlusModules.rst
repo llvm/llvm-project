@@ -660,26 +660,6 @@ the orders matter here in the case.
 
 This is tracked in: https://github.com/llvm/llvm-project/issues/61465
 
-Ambiguous deduction guide
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Currently, when we call deduction guides in global module fragment,
-we may get incorrect diagnosing message like: `ambiguous deduction`.
-
-So if we're using deduction guide from global module fragment, we probably need to write:
-
-.. code-block:: c++
-
-  std::lock_guard<std::mutex> lk(mutex);
-
-instead of
-
-.. code-block:: c++
-
-  std::lock_guard lk(mutex);
-
-This is tracked in: https://github.com/llvm/llvm-project/issues/56916
-
 Ignored PreferredName Attribute
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

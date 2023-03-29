@@ -573,6 +573,9 @@ transform::IncludeOp::apply(transform::TransformResults &results,
       getOperation(), getTarget());
   assert(callee && "unverified reference to unknown symbol");
 
+  if (callee.isExternal())
+    return emitDefiniteFailure() << "unresolved external named sequence";
+
   // Map operands to block arguments.
   SmallVector<SmallVector<MappedValue>> mappings;
   detail::prepareValueMappings(mappings, getOperands(), state);
@@ -648,7 +651,10 @@ void transform::IncludeOp::getEffects(
   }
 
   // Carry over effects from the callee.
-  remapArgumentEffects(callee.getBody().front(), getOperands(), effects);
+  // TODO: external callees must provides attributes annotating the
+  // readonly/consume effects on operands.
+  if (!callee.isExternal())
+    remapArgumentEffects(callee.getBody().front(), getOperands(), effects);
 
   // Proper effects.
   onlyReadsHandle(getOperands(), effects);
@@ -784,9 +790,6 @@ void transform::NamedSequenceOp::print(OpAsmPrinter &printer) {
 /// verifier runs, e.g., during trait verification.
 static DiagnosedSilenceableFailure
 verifyNamedSequenceOp(transform::NamedSequenceOp op) {
-  if (op.isExternal())
-    return emitSilenceableFailure(op) << "cannot be empty";
-
   if (Operation *parent = op->getParentWithTrait<OpTrait::SymbolTable>()) {
     if (!parent->getAttr(
             transform::TransformDialect::kWithNamedSequenceAttrName)) {
@@ -807,6 +810,9 @@ verifyNamedSequenceOp(transform::NamedSequenceOp op) {
     diag.attachNote(parent.getLoc()) << "ancestor transform op";
     return diag;
   }
+
+  if (op.isExternal() || op.getBody().empty())
+    return DiagnosedSilenceableFailure::success();
 
   if (op.getBody().front().empty())
     return emitSilenceableFailure(op) << "expected a non-empty body block";

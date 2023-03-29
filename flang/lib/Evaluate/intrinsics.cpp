@@ -56,8 +56,8 @@ class FoldingContext;
 // that can also be typeless values are encoded with an "elementalOrBOZ"
 // rank pattern.
 // Assumed-type (TYPE(*)) dummy arguments can be forwarded along to some
-// intrinsic functions that accept AnyType + Rank::anyOrAssumedRank or
-// AnyType + Kind::addressable.
+// intrinsic functions that accept AnyType + Rank::anyOrAssumedRank,
+// AnyType + Rank::arrayOrAssumedRank,  or AnyType + Kind::addressable.
 using CategorySet = common::EnumSet<TypeCategory, 8>;
 static constexpr CategorySet IntType{TypeCategory::Integer};
 static constexpr CategorySet RealType{TypeCategory::Real};
@@ -203,7 +203,8 @@ ENUM_CLASS(Rank,
     coarray, // rank is known and can be scalar; has nonzero corank
     atom, // is scalar and has nonzero corank or is coindexed
     known, // rank is known and can be scalar
-    anyOrAssumedRank, // rank can be unknown; assumed-type TYPE(*) allowed
+    anyOrAssumedRank, // any rank, or assumed; assumed-type TYPE(*) allowed
+    arrayOrAssumedRank, // rank >= 1 or assumed; assumed-type TYPE(*) allowed
     conformable, // scalar, or array of same rank & shape as "array" argument
     reduceOperation, // a pure function with constraints for REDUCE
     dimReduced, // scalar if no DIM= argument, else rank(array)-1
@@ -554,7 +555,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         {{"array", AnyData, Rank::anyOrAssumedRank}, RequiredDIM,
             SizeDefaultKIND},
         KINDInt, Rank::scalar, IntrinsicClass::inquiryFunction},
-    {"lbound", {{"array", AnyData, Rank::anyOrAssumedRank}, SizeDefaultKIND},
+    {"lbound", {{"array", AnyData, Rank::arrayOrAssumedRank}, SizeDefaultKIND},
         KINDInt, Rank::vector, IntrinsicClass::inquiryFunction},
     {"lcobound",
         {{"coarray", AnyData, Rank::coarray}, OptionalDIM, SizeDefaultKIND},
@@ -802,7 +803,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"sind", {{"x", SameFloating}}, SameFloating},
     {"sinh", {{"x", SameFloating}}, SameFloating},
     {"size",
-        {{"array", AnyData, Rank::anyOrAssumedRank},
+        {{"array", AnyData, Rank::arrayOrAssumedRank},
             OptionalDIM, // unless array is assumed-size
             SizeDefaultKIND},
         KINDInt, Rank::scalar, IntrinsicClass::inquiryFunction},
@@ -862,7 +863,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         {{"array", AnyData, Rank::anyOrAssumedRank}, RequiredDIM,
             SizeDefaultKIND},
         KINDInt, Rank::scalar, IntrinsicClass::inquiryFunction},
-    {"ubound", {{"array", AnyData, Rank::anyOrAssumedRank}, SizeDefaultKIND},
+    {"ubound", {{"array", AnyData, Rank::arrayOrAssumedRank}, SizeDefaultKIND},
         KINDInt, Rank::vector, IntrinsicClass::inquiryFunction},
     {"ucobound",
         {{"coarray", AnyData, Rank::coarray}, OptionalDIM, SizeDefaultKIND},
@@ -1689,7 +1690,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     if (arg->GetAssumedTypeDummy()) {
       // TYPE(*) assumed-type dummy argument forwarded to intrinsic
       if (d.typePattern.categorySet == AnyType &&
-          d.rank == Rank::anyOrAssumedRank &&
+          (d.rank == Rank::anyOrAssumedRank ||
+              d.rank == Rank::arrayOrAssumedRank) &&
           (d.typePattern.kindCode == KindCode::any ||
               d.typePattern.kindCode == KindCode::addressable)) {
         continue;
@@ -1871,7 +1873,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     const IntrinsicDummyArgument &d{dummy[std::min(j, dummyArgPatterns - 1)]};
     if (const ActualArgument *arg{actualForDummy[j]}) {
       bool isAssumedRank{IsAssumedRank(*arg)};
-      if (isAssumedRank && d.rank != Rank::anyOrAssumedRank) {
+      if (isAssumedRank && d.rank != Rank::anyOrAssumedRank &&
+          d.rank != Rank::arrayOrAssumedRank) {
         messages.Say(arg->sourceLocation(),
             "Assumed-rank array cannot be forwarded to '%s=' argument"_err_en_US,
             d.keyword);
@@ -1949,6 +1952,11 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         argOk = rank == knownArg->Rank();
         break;
       case Rank::anyOrAssumedRank:
+      case Rank::arrayOrAssumedRank:
+        if (d.rank == Rank::arrayOrAssumedRank && rank == 0) {
+          argOk = false;
+          break;
+        }
         if (!dimArg && rank > 0 && !isAssumedRank &&
             (std::strcmp(name, "shape") == 0 ||
                 std::strcmp(name, "size") == 0 ||
@@ -2245,6 +2253,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   case Rank::atom:
   case Rank::known:
   case Rank::anyOrAssumedRank:
+  case Rank::arrayOrAssumedRank:
   case Rank::reduceOperation:
   case Rank::dimRemovedOrScalar:
     common::die("INTERNAL: bad Rank code on intrinsic '%s' result", name);

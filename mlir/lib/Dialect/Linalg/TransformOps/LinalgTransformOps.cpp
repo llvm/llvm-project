@@ -1442,11 +1442,10 @@ packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
              DBGSNL(););
 
   // TODO: If we wanted to give the genericOp a name after packing, after
-  // calling `pack` would be a good time.
-  auto packingRes = linalg::pack(rewriter, genericOp, adjustedPackedSizes);
-  assert(containsMostMinorMatmul(packingRes->packedLinalgOp) &&
-         "failed to pack to a most minor matmul");
-  return packingRes;
+  // calling `pack` would be a good time. One would still need to check that
+  // `containsMostMinorMatmul(packingRes->packedLinalgOp)` is true, since we
+  // also allow degenerate matmul cases (i.e. matvec, dot).
+  return linalg::pack(rewriter, genericOp, adjustedPackedSizes);
 }
 
 DiagnosedSilenceableFailure

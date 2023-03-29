@@ -83,6 +83,12 @@ bool YAMLProfileReader::parseFunctionProfile(
 
   BF.setExecutionCount(YamlBF.ExecCount);
 
+  uint64_t FuncRawBranchCount = 0;
+  for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks)
+    for (const yaml::bolt::SuccessorInfo &YamlSI : YamlBB.Successors)
+      FuncRawBranchCount += YamlSI.Count;
+  BF.setRawBranchCount(FuncRawBranchCount);
+
   if (!opts::IgnoreHash && YamlBF.Hash != BF.computeHash(/*UseDFS=*/true)) {
     if (opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: function hash mismatch\n";

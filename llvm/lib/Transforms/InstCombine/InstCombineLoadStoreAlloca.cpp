@@ -219,7 +219,7 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
       // Now that I is pointing to the first non-allocation-inst in the block,
       // insert our getelementptr instruction...
       //
-      Type *IdxTy = IC.getDataLayout().getIntPtrType(AI.getType());
+      Type *IdxTy = IC.getDataLayout().getIndexType(AI.getType());
       Value *NullIdx = Constant::getNullValue(IdxTy);
       Value *Idx[2] = {NullIdx, NullIdx};
       Instruction *GEP = GetElementPtrInst::CreateInBounds(
@@ -235,11 +235,12 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
   if (isa<UndefValue>(AI.getArraySize()))
     return IC.replaceInstUsesWith(AI, Constant::getNullValue(AI.getType()));
 
-  // Ensure that the alloca array size argument has type intptr_t, so that
-  // any casting is exposed early.
-  Type *IntPtrTy = IC.getDataLayout().getIntPtrType(AI.getType());
-  if (AI.getArraySize()->getType() != IntPtrTy) {
-    Value *V = IC.Builder.CreateIntCast(AI.getArraySize(), IntPtrTy, false);
+  // Ensure that the alloca array size argument has type equal to the offset
+  // size of the alloca() pointer, which, in the tyical case, is intptr_t,
+  // so that any casting is exposed early.
+  Type *PtrIdxTy = IC.getDataLayout().getIndexType(AI.getType());
+  if (AI.getArraySize()->getType() != PtrIdxTy) {
+    Value *V = IC.Builder.CreateIntCast(AI.getArraySize(), PtrIdxTy, false);
     return IC.replaceOperand(AI, 0, V);
   }
 
