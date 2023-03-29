@@ -103,8 +103,7 @@
 ; CHECK-NEXT:       Machine Trace Metrics
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine InstCombiner
-; RV64-NEXT:        RISC-V sext.w Removal
-; RV64-NEXT:        RISC-V Strip W Suffix
+; RV64-NEXT:        RISC-V Optimize W Instructions
 ; CHECK-NEXT:       RISC-V Pre-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V Merge Base Offset
 ; CHECK-NEXT:       RISC-V Insert VSETVLI pass
