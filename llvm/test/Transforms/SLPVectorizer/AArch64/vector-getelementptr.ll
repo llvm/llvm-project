@@ -6,36 +6,19 @@ define void @should_vectorize_gep(ptr %base1, ptr %base2, ptr %base_gep) {
 ; CHECK-LABEL: define void @should_vectorize_gep
 ; CHECK-SAME: (ptr [[BASE1:%.*]], ptr [[BASE2:%.*]], ptr [[BASE_GEP:%.*]]) {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[BASE1]], align 2
-; CHECK-NEXT:    [[ZEXT1:%.*]] = zext i32 [[LOAD1]] to i64
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[BASE2]], align 2
-; CHECK-NEXT:    [[ZEXT2:%.*]] = zext i32 [[LOAD2]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[ZEXT1]], [[ZEXT2]]
-; CHECK-NEXT:    [[GETELEMENTPTR_RES_1:%.*]] = getelementptr i32, ptr [[BASE_GEP]], i64 [[SUB]]
-; CHECK-NEXT:    [[GETELEMENTPTR1:%.*]] = getelementptr i32, ptr [[BASE1]], i64 1
-; CHECK-NEXT:    [[GETELEMENTPTR2:%.*]] = getelementptr i32, ptr [[BASE2]], i64 1
-; CHECK-NEXT:    [[LOAD3:%.*]] = load i32, ptr [[GETELEMENTPTR1]], align 2
-; CHECK-NEXT:    [[ZEXT3:%.*]] = zext i32 [[LOAD3]] to i64
-; CHECK-NEXT:    [[LOAD4:%.*]] = load i32, ptr [[GETELEMENTPTR2]], align 2
-; CHECK-NEXT:    [[ZEXT4:%.*]] = zext i32 [[LOAD4]] to i64
-; CHECK-NEXT:    [[SUB2:%.*]] = sub i64 [[ZEXT3]], [[ZEXT4]]
-; CHECK-NEXT:    [[GETELEMENTPTR_RES_2:%.*]] = getelementptr i32, ptr [[BASE_GEP]], i64 [[SUB2]]
-; CHECK-NEXT:    [[GETELEMENTPTR3:%.*]] = getelementptr i32, ptr [[BASE1]], i64 2
-; CHECK-NEXT:    [[GETELEMENTPTR4:%.*]] = getelementptr i32, ptr [[BASE2]], i64 2
-; CHECK-NEXT:    [[LOAD5:%.*]] = load i32, ptr [[GETELEMENTPTR3]], align 2
-; CHECK-NEXT:    [[ZEXT5:%.*]] = zext i32 [[LOAD5]] to i64
-; CHECK-NEXT:    [[LOAD6:%.*]] = load i32, ptr [[GETELEMENTPTR4]], align 2
-; CHECK-NEXT:    [[ZEXT6:%.*]] = zext i32 [[LOAD6]] to i64
-; CHECK-NEXT:    [[SUB3:%.*]] = sub i64 [[ZEXT5]], [[ZEXT6]]
-; CHECK-NEXT:    [[GETELEMENTPTR_RES_3:%.*]] = getelementptr i32, ptr [[BASE_GEP]], i64 [[SUB3]]
-; CHECK-NEXT:    [[GETELEMENTPTR5:%.*]] = getelementptr i32, ptr [[BASE1]], i64 3
-; CHECK-NEXT:    [[GETELEMENTPTR6:%.*]] = getelementptr i32, ptr [[BASE2]], i64 3
-; CHECK-NEXT:    [[LOAD7:%.*]] = load i32, ptr [[GETELEMENTPTR5]], align 2
-; CHECK-NEXT:    [[ZEXT7:%.*]] = zext i32 [[LOAD7]] to i64
-; CHECK-NEXT:    [[LOAD8:%.*]] = load i32, ptr [[GETELEMENTPTR6]], align 2
-; CHECK-NEXT:    [[ZEXT8:%.*]] = zext i32 [[LOAD8]] to i64
-; CHECK-NEXT:    [[SUB4:%.*]] = sub i64 [[ZEXT7]], [[ZEXT8]]
-; CHECK-NEXT:    [[GETELEMENTPTR_RES_4:%.*]] = getelementptr i32, ptr [[BASE_GEP]], i64 [[SUB4]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[BASE1]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i32> [[TMP0]] to <4 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[BASE2]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i32> [[TMP2]] to <4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = sub <4 x i64> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP4]], i32 0
+; CHECK-NEXT:    [[GETELEMENTPTR_RES_1:%.*]] = getelementptr i32, ptr [[BASE_GEP]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP4]], i32 1
+; CHECK-NEXT:    [[GETELEMENTPTR_RES_2:%.*]] = getelementptr i32, ptr [[BASE_GEP]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP4]], i32 2
+; CHECK-NEXT:    [[GETELEMENTPTR_RES_3:%.*]] = getelementptr i32, ptr [[BASE_GEP]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[TMP4]], i32 3
+; CHECK-NEXT:    [[GETELEMENTPTR_RES_4:%.*]] = getelementptr i32, ptr [[BASE_GEP]], i64 [[TMP8]]
 ; CHECK-NEXT:    call void @use_4(ptr [[GETELEMENTPTR_RES_1]], ptr [[GETELEMENTPTR_RES_2]], ptr [[GETELEMENTPTR_RES_3]], ptr [[GETELEMENTPTR_RES_4]])
 ; CHECK-NEXT:    ret void
 ;
