@@ -34,6 +34,7 @@ CODEGENOPT(StackArrays, 1, 0) ///< -fstack-arrays (enable the stack-arrays pass)
 
 CODEGENOPT(Underscoring, 1, 1)
 ENUM_CODEGENOPT(RelocationModel, llvm::Reloc::Model, 3, llvm::Reloc::PIC_) ///< Name of the relocation model to use.
+ENUM_CODEGENOPT(DebugInfo,  llvm::codegenoptions::DebugInfoKind, 4,  llvm::codegenoptions::NoDebugInfo) ///< Level of debug info to generate
 
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
