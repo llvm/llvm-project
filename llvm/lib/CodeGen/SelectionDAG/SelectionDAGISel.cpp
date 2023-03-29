@@ -59,6 +59,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -1292,6 +1293,43 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
   return true;
 }
 
+// Mark and Report IPToState for each Block under IsEHa
+void SelectionDAGISel::reportIPToStateForBlocks(MachineFunction *MF) {
+  MachineModuleInfo &MMI = MF->getMMI();
+  llvm::WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo();
+  if (!EHInfo)
+    return;
+  for (auto MBBI = MF->begin(), E = MF->end(); MBBI != E; ++MBBI) {
+    MachineBasicBlock *MBB = &*MBBI;
+    const BasicBlock *BB = MBB->getBasicBlock();
+    int State = EHInfo->BlockToStateMap[BB];
+    if (BB->getFirstMayFaultInst()) {
+      // Report IP range only for blocks with Faulty inst
+      auto MBBb = MBB->getFirstNonPHI();
+      MachineInstr *MIb = &*MBBb;
+      if (MIb->isTerminator())
+        continue;
+
+      // Insert EH Labels
+      MCSymbol *BeginLabel = MMI.getContext().createTempSymbol();
+      MCSymbol *EndLabel = MMI.getContext().createTempSymbol();
+      EHInfo->addIPToStateRange(State, BeginLabel, EndLabel);
+      BuildMI(*MBB, MBBb, SDB->getCurDebugLoc(),
+              TII->get(TargetOpcode::EH_LABEL))
+          .addSym(BeginLabel);
+      auto MBBe = MBB->instr_end();
+      MachineInstr *MIe = &*(--MBBe);
+      // insert before (possible multiple) terminators
+      while (MIe->isTerminator())
+        MIe = &*(--MBBe);
+      ++MBBe;
+      BuildMI(*MBB, MBBe, SDB->getCurDebugLoc(),
+              TII->get(TargetOpcode::EH_LABEL))
+          .addSym(EndLabel);
+    }
+  }
+}
+
 /// isFoldedOrDeadInstruction - Return true if the specified instruction is
 /// side-effect free and is either dead or folded into a generated instruction.
 /// Return false if it needs to be emitted.
@@ -1648,6 +1686,10 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     FuncInfo->PHINodesToUpdate.clear();
     ElidedArgCopyInstrs.clear();
   }
+
+  // AsynchEH: Report Block State under -AsynchEH
+  if (Fn.getParent()->getModuleFlag("eh-asynch"))
+    reportIPToStateForBlocks(MF);
 
   SP.copyToMachineFrameInfo(MF->getFrameInfo());
 
