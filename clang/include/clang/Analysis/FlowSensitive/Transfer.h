@@ -17,6 +17,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 
 namespace clang {
 namespace dataflow {
@@ -24,12 +25,18 @@ namespace dataflow {
 /// Maps statements to the environments of basic blocks that contain them.
 class StmtToEnvMap {
 public:
-  virtual ~StmtToEnvMap() = default;
+  StmtToEnvMap(const ControlFlowContext &CFCtx,
+               llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>>
+                   BlockToState)
+      : CFCtx(CFCtx), BlockToState(BlockToState) {}
 
-  /// Retrieves the environment of the basic block that contains `S`.
-  /// If `S` is reachable, returns a non-null pointer to the environment.
-  /// If `S` is not reachable, returns nullptr.
-  virtual const Environment *getEnvironment(const Stmt &S) const = 0;
+  /// Returns the environment of the basic block that contains `S`.
+  /// The result is guaranteed never to be null.
+  const Environment *getEnvironment(const Stmt &S) const;
+
+private:
+  const ControlFlowContext &CFCtx;
+  llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>> BlockToState;
 };
 
 /// Evaluates `S` and updates `Env` accordingly.
