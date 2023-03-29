@@ -2386,8 +2386,8 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   // functions. If the current target's C++ ABI requires this and this is a
   // member function, set its alignment accordingly.
   if (getTarget().getCXXABI().areMemberFunctionsAligned()) {
-    if (F->getAlignment() < 2 && isa<CXXMethodDecl>(D))
-      F->setAlignment(llvm::Align(2));
+    if (F->getPointerAlignment(getDataLayout()) < 2 && isa<CXXMethodDecl>(D))
+      F->setAlignment(std::max(llvm::Align(2), F->getAlign().valueOrOne()));
   }
 
   // In the cross-dso CFI mode with canonical jump tables, we want !type
