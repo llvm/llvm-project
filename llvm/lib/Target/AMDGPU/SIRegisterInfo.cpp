@@ -2516,7 +2516,11 @@ unsigned SIRegisterInfo::getHWRegIndex(MCRegister Reg) const {
   unsigned Idx = getEncodingValue(Reg);
   if (ST.has512AddressableVGPRs()) {
     const TargetRegisterClass *RC = getPhysRegBaseClass(Reg);
-    if (RC && isVGPRClass(RC))
+    // VGPRs 0..255 and 256..511 have the same encoding value
+    // and bit 8 is always set.
+    if (RC && isVGPRClass(RC) &&
+        *MCRegUnitRootIterator(*MCRegUnitIterator(Reg, this), this) >=
+            AMDGPU::VGPR256_LO16)
       return Idx & 0x1ff;
   }
 
