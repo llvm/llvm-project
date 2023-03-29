@@ -130,9 +130,7 @@ public:
   void VisitXCXDefaultInitExpr(CXXDefaultInitExpr *E) {
     llvm_unreachable("NYI");
   }
-  void VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
-    llvm_unreachable("NYI");
-  }
+  void VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E);
   void VisitCXXConstructExpr(const CXXConstructExpr *E);
   void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E) {
     llvm_unreachable("NYI");
@@ -495,6 +493,22 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
 
   assert(E->getType()->isRecordType() && "Only support structs/unions here!");
   llvm_unreachable("NYI");
+}
+
+void AggExprEmitter::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
+  // Ensure that we have a slot, but if we already do, remember
+  // whether it was externally destructed.
+  bool wasExternallyDestructed = Dest.isExternallyDestructed();
+  EnsureDest(CGF.getLoc(E->getSourceRange()), E->getType());
+
+  // We're going to push a destructor if there isn't already one.
+  Dest.setExternallyDestructed();
+
+  Visit(E->getSubExpr());
+
+  // Push that destructor we promised.
+  if (!wasExternallyDestructed)
+    CGF.buildCXXTemporary(E->getTemporary(), E->getType(), Dest.getAddress());
 }
 
 //===----------------------------------------------------------------------===//

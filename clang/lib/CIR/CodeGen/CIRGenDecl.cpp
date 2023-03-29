@@ -12,6 +12,7 @@
 
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
+#include "EHScopeStack.h"
 
 #include "clang/AST/Decl.h"
 
@@ -473,4 +474,102 @@ void CIRGenFunction::buildDecl(const Decl &D) {
     assert(0 && "Not implemented");
   }
   }
+}
+
+namespace {
+struct DestroyObject final : EHScopeStack::Cleanup {
+  DestroyObject(Address addr, QualType type,
+                CIRGenFunction::Destroyer *destroyer, bool useEHCleanupForArray)
+      : addr(addr), type(type), destroyer(destroyer),
+        useEHCleanupForArray(useEHCleanupForArray) {}
+
+  Address addr;
+  QualType type;
+  CIRGenFunction::Destroyer *destroyer;
+  bool useEHCleanupForArray;
+
+  void Emit(CIRGenFunction &CGF, Flags flags) override {
+    // Don't use an EH cleanup recursively from an EH cleanup.
+    [[maybe_unused]] bool useEHCleanupForArray =
+        flags.isForNormalCleanup() && this->useEHCleanupForArray;
+
+    llvm_unreachable("NYI");
+    // CGF.emitDestroy(addr, type, destroyer, useEHCleanupForArray);
+  }
+};
+
+template <class Derived> struct DestroyNRVOVariable : EHScopeStack::Cleanup {
+  DestroyNRVOVariable(Address addr, QualType type, mlir::Value NRVOFlag)
+      : NRVOFlag(NRVOFlag), Loc(addr), Ty(type) {}
+
+  mlir::Value NRVOFlag;
+  Address Loc;
+  QualType Ty;
+
+  void Emit(CIRGenFunction &CGF, Flags flags) override {
+    llvm_unreachable("NYI");
+  }
+
+  virtual ~DestroyNRVOVariable() = default;
+};
+
+struct DestroyNRVOVariableCXX final
+    : DestroyNRVOVariable<DestroyNRVOVariableCXX> {
+  DestroyNRVOVariableCXX(Address addr, QualType type,
+                         const CXXDestructorDecl *Dtor, mlir::Value NRVOFlag)
+      : DestroyNRVOVariable<DestroyNRVOVariableCXX>(addr, type, NRVOFlag),
+        Dtor(Dtor) {}
+
+  const CXXDestructorDecl *Dtor;
+
+  void emitDestructorCall(CIRGenFunction &CGF) { llvm_unreachable("NYI"); }
+};
+
+struct DestroyNRVOVariableC final : DestroyNRVOVariable<DestroyNRVOVariableC> {
+  DestroyNRVOVariableC(Address addr, mlir::Value NRVOFlag, QualType Ty)
+      : DestroyNRVOVariable<DestroyNRVOVariableC>(addr, Ty, NRVOFlag) {}
+
+  void emitDestructorCall(CIRGenFunction &CGF) { llvm_unreachable("NYI"); }
+};
+
+struct CallStackRestore final : EHScopeStack::Cleanup {
+  Address Stack;
+  CallStackRestore(Address Stack) : Stack(Stack) {}
+  bool isRedundantBeforeReturn() override { return true; }
+  void Emit(CIRGenFunction &CGF, Flags flags) override {
+    llvm_unreachable("NYI");
+  }
+};
+
+struct ExtendGCLifetime final : EHScopeStack::Cleanup {
+  const VarDecl &Var;
+  ExtendGCLifetime(const VarDecl *var) : Var(*var) {}
+
+  void Emit(CIRGenFunction &CGF, Flags flags) override {
+    llvm_unreachable("NYI");
+  }
+};
+
+struct CallCleanupFunction final : EHScopeStack::Cleanup {
+  // FIXME: mlir::Value used as placeholder, check options before implementing
+  // Emit below.
+  mlir::Value CleanupFn;
+  const CIRGenFunctionInfo &FnInfo;
+  const VarDecl &Var;
+
+  CallCleanupFunction(mlir::Value CleanupFn, const CIRGenFunctionInfo *Info,
+                      const VarDecl *Var)
+      : CleanupFn(CleanupFn), FnInfo(*Info), Var(*Var) {}
+
+  void Emit(CIRGenFunction &CGF, Flags flags) override {
+    llvm_unreachable("NYI");
+  }
+};
+} // end anonymous namespace
+
+void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
+                                 QualType type, Destroyer *destroyer,
+                                 bool useEHCleanupForArray) {
+  pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type, destroyer,
+                                     useEHCleanupForArray);
 }
