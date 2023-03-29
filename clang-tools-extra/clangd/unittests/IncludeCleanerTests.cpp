@@ -384,6 +384,35 @@ TEST(IncludeCleaner, UmbrellaUsesPrivate) {
   EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
 }
 
+TEST(IncludeCleaner, MacroExpandedThroughIncludes) {
+  Annotations MainFile(R"cpp(
+  #include "all.h"
+  #define FOO(X) const Foo *X
+  void foo() {
+  #include [["expander.inc"]]
+  }
+)cpp");
+
+  TestTU TU;
+  TU.AdditionalFiles["expander.inc"] = guard("FOO(f1);FOO(f2);");
+  TU.AdditionalFiles["foo.h"] = guard("struct Foo {};");
+  TU.AdditionalFiles["all.h"] = guard("#include \"foo.h\"");
+
+  TU.Code = MainFile.code();
+  ParsedAST AST = TU.build();
+
+  auto Findings = computeIncludeCleanerFindings(AST).MissingIncludes;
+  // FIXME: Deduplicate references resulting from expansion of the same macro in
+  // multiple places.
+  EXPECT_THAT(Findings, testing::SizeIs(2));
+  auto RefRange = Findings.front().SymRefRange;
+  auto &SM = AST.getSourceManager();
+  EXPECT_EQ(RefRange.file(), SM.getMainFileID());
+  // FIXME: Point at the spelling location, rather than the include.
+  EXPECT_EQ(halfOpenToRange(SM, RefRange.toCharRange(SM)), MainFile.range());
+  EXPECT_EQ(RefRange, Findings[1].SymRefRange);
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
