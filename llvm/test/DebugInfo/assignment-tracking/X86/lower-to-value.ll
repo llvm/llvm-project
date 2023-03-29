@@ -1,5 +1,6 @@
 ; RUN: llc %s -stop-before finalize-isel -o - \
 ; RUN:    -experimental-debug-variable-locations=false \
+; RUN:    -debug-ata-coalesce-frags=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE --implicit-check-not=DBG_VALUE
 ; RUN: llc %s -stop-before finalize-isel -o - \
 ; RUN:    -experimental-debug-variable-locations=true \
@@ -37,10 +38,7 @@
 
 ;; Then there is a store to the upper 64 bits.
 ; CHECK: MOV64mi32 %stack.0.X, 1, $noreg, 8, $noreg, 0, debug-location
-;; This DBG_VALUE is added by the mem-loc-frag-fill pass because bits [0, 64)
-;; are still live in memory.
-; CHECK-NEXT: DBG_VALUE %stack.0.X, $noreg, ![[VAR]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 64)
-; CHECK-NEXT: DBG_VALUE %stack.0.X, $noreg, ![[VAR]], !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref, DW_OP_LLVM_fragment, 64, 64), debug-location
+;; No change in variable location: the stack home is still valid.
 
 ;; The final assignment (X.B += 2) doesn't get stored back to the alloca. This
 ;; means that that the stack location isn't valid for the entire lifetime of X.

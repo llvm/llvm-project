@@ -122,8 +122,6 @@ entry:
 ; CHECK-NEXT:    DBG_VALUE %stack.4.e.addr, $noreg, ![[e]], !DIExpression(DW_OP_deref)
 ; CHECK-NEXT:    MOV64mi32 %stack.0.a.addr, 1, $noreg, 0, $noreg, 1
 ; CHECK-NEXT:    MOV64mi32 %stack.1.b.addr, 1, $noreg, 0, $noreg, 2
-; CHECK-NEXT:    DBG_VALUE %stack.4.e.addr, $noreg, ![[e]], !DIExpression(DW_OP_plus_uconst, 4, DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
-; CHECK-NEXT:    DBG_VALUE %stack.4.e.addr, $noreg, ![[e]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 32)
 ; CHECK-NEXT:    MOV32mi %stack.0.a.addr, 1, $noreg, 0, $noreg, 3
 ; CHECK-NEXT:    DBG_VALUE $noreg, $noreg, ![[a]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
 ; CHECK-NEXT:    DBG_VALUE %stack.0.a.addr, $noreg, ![[a]], !DIExpression(DW_OP_plus_uconst, 4, DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
@@ -156,7 +154,6 @@ do.body1:                                         ; preds = %do.cond, %do.body
 ; CHECK-LABEL: bb.2.do.body1:
 ; CHECK-NEXT: successors
 ; CHECK-NEXT: {{^ *$}}
-; CxHECK-NEXT:    DBG_VALUE 11, $noreg, ![[f]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
 ; CHECK:         JMP_1
 ; CHECK-NEXT: {{^ *$}}
 
@@ -174,13 +171,12 @@ if.then:                                          ; preds = %do.body1
 ; CHECK-NEXT: {{^ *$}}
 ; CHECK-NEXT:    %5:gr32 = MOV32rm $rip, 1, $noreg, @g_a, $noreg
 ; CHECK-NEXT:    MOV32mr %stack.1.b.addr, 1, $noreg, 0, $noreg, killed %5
-; CHECK-NEXT:    DBG_VALUE %stack.1.b.addr, $noreg, ![[b]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 32)
+; CHECK-NEXT:    DBG_VALUE %stack.1.b.addr, $noreg, ![[b]], !DIExpression(DW_OP_deref)
 ; CHECK-NEXT:    MOV32mi %stack.3.d.addr, 1, $noreg, 0, $noreg, 6
 ; CHECK-NEXT:    DBG_VALUE 8, $noreg, ![[e]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 ; CHECK-NEXT:    MOV32mi %stack.4.e.addr, 1, $noreg, 0, $noreg, 8
 ; CHECK-NEXT:    DBG_VALUE %stack.4.e.addr, $noreg, ![[e]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
 ; CHECK-NEXT:    JMP_1 %bb.5
-; CHECxK-NEXT: {{^ *$}}
 
 if.else:                                          ; preds = %do.body1
   store i32 6, ptr %d.addr, !DIAssignID !74 ; VAR:d
