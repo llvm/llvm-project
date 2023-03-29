@@ -989,7 +989,7 @@ class Tensor_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
               return indexAttr.cast<IntegerAttr>().getInt();
             })));
       return reassociationIndices;
-    };
+    }
     RankedTensorType getSrcType() {
       return getSrc().getType().cast<RankedTensorType>();
     }
