@@ -207,7 +207,7 @@ const CompilerInstance *Interpreter::getCompilerInstance() const {
 llvm::Expected<llvm::orc::LLJIT &> Interpreter::getExecutionEngine() {
   if (!IncrExecutor) {
     if (auto Err = CreateExecutor())
-      return Err;
+      return std::move(Err);
   }
 
   return IncrExecutor->GetExecutionEngine();
