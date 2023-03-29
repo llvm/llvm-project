@@ -336,3 +336,24 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
 
   return writeValueProfData(Writer, VPDataReader, DataBegin, DataEnd);
 }
+
+/*
+ * Write binary id length and then its data, because binary id does not
+ * have a fixed length.
+ */
+COMPILER_RT_VISIBILITY
+int lprofWriteOneBinaryId(ProfDataWriter *Writer, uint64_t BinaryIdLen,
+                          const uint8_t *BinaryIdData,
+                          uint64_t BinaryIdPadding) {
+  ProfDataIOVec BinaryIdIOVec[] = {
+      {&BinaryIdLen, sizeof(uint64_t), 1, 0},
+      {BinaryIdData, sizeof(uint8_t), BinaryIdLen, 0},
+      {NULL, sizeof(uint8_t), BinaryIdPadding, 1},
+  };
+  if (Writer->Write(Writer, BinaryIdIOVec,
+                    sizeof(BinaryIdIOVec) / sizeof(*BinaryIdIOVec)))
+    return -1;
+
+  /* Successfully wrote binary id, report success. */
+  return 0;
+}

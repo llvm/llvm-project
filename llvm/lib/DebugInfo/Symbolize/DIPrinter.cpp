@@ -146,6 +146,11 @@ void GNUPrinter::printSimpleLocation(StringRef Filename,
       SourceCode(Filename, Info.Line, Config.SourceContextLines, Info.Source));
 }
 
+void GNUPrinter::printInvalidCommand(const Request &Request,
+                                     StringRef Command) {
+  OS << "??:0\n";
+}
+
 void PlainPrinterBase::printVerbose(StringRef Filename,
                                     const DILineInfo &Info) {
   OS << "  Filename: " << Filename << '\n';
@@ -288,6 +293,24 @@ static json::Object toJSON(const Request &Request, StringRef ErrorMsg = "") {
   return Json;
 }
 
+static json::Object toJSON(const DILineInfo &LineInfo) {
+  return json::Object(
+      {{"FunctionName", LineInfo.FunctionName != DILineInfo::BadString
+                            ? LineInfo.FunctionName
+                            : ""},
+       {"StartFileName", LineInfo.StartFileName != DILineInfo::BadString
+                             ? LineInfo.StartFileName
+                             : ""},
+       {"StartLine", LineInfo.StartLine},
+       {"StartAddress",
+        LineInfo.StartAddress ? toHex(*LineInfo.StartAddress) : ""},
+       {"FileName",
+        LineInfo.FileName != DILineInfo::BadString ? LineInfo.FileName : ""},
+       {"Line", LineInfo.Line},
+       {"Column", LineInfo.Column},
+       {"Discriminator", LineInfo.Discriminator}});
+}
+
 void JSONPrinter::print(const Request &Request, const DILineInfo &Info) {
   DIInliningInfo InliningInfo;
   InliningInfo.addFrame(Info);
@@ -298,21 +321,7 @@ void JSONPrinter::print(const Request &Request, const DIInliningInfo &Info) {
   json::Array Array;
   for (uint32_t I = 0, N = Info.getNumberOfFrames(); I < N; ++I) {
     const DILineInfo &LineInfo = Info.getFrame(I);
-    json::Object Object(
-        {{"FunctionName", LineInfo.FunctionName != DILineInfo::BadString
-                              ? LineInfo.FunctionName
-                              : ""},
-         {"StartFileName", LineInfo.StartFileName != DILineInfo::BadString
-                               ? LineInfo.StartFileName
-                               : ""},
-         {"StartLine", LineInfo.StartLine},
-         {"StartAddress",
-          LineInfo.StartAddress ? toHex(*LineInfo.StartAddress) : ""},
-         {"FileName",
-          LineInfo.FileName != DILineInfo::BadString ? LineInfo.FileName : ""},
-         {"Line", LineInfo.Line},
-         {"Column", LineInfo.Column},
-         {"Discriminator", LineInfo.Discriminator}});
+    json::Object Object = toJSON(LineInfo);
     SourceCode SourceCode(LineInfo.FileName, LineInfo.Line,
                           Config.SourceContextLines, LineInfo.Source);
     std::string FormattedSource;

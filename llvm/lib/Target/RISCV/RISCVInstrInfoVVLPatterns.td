@@ -1108,7 +1108,7 @@ multiclass VPatReductionVL<SDNode vop, string instruction_name, bit is_float> {
                                  (vti.Vector vti.RegClass:$rs1), VR:$rs2,
                                  (vti.Mask true_mask), VLOpFrag,
                                  (XLenVT timm:$policy))),
-        (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX)
+        (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_E"#vti.SEW)
             (vti_m1.Vector VR:$merge),
             (vti.Vector vti.RegClass:$rs1),
             (vti_m1.Vector VR:$rs2),
@@ -1118,7 +1118,7 @@ multiclass VPatReductionVL<SDNode vop, string instruction_name, bit is_float> {
                                  (vti.Vector vti.RegClass:$rs1), VR:$rs2,
                                  (vti.Mask V0), VLOpFrag,
                                  (XLenVT timm:$policy))),
-        (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_MASK")
+        (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_E"#vti.SEW#"_MASK")
             (vti_m1.Vector VR:$merge),
             (vti.Vector vti.RegClass:$rs1),
             (vti_m1.Vector VR:$rs2),
@@ -1178,7 +1178,7 @@ multiclass VPatWidenReductionVL<SDNode vop, PatFrags extop, string instruction_n
                                  (wti.Vector (extop (vti.Vector vti.RegClass:$rs1))),
                                  VR:$rs2, (vti.Mask true_mask), VLOpFrag,
                                  (XLenVT timm:$policy))),
-             (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX)
+             (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_E"#vti.SEW)
                 (wti_m1.Vector VR:$merge), (vti.Vector vti.RegClass:$rs1),
                 (wti_m1.Vector VR:$rs2), GPR:$vl, vti.Log2SEW,
                 (XLenVT timm:$policy))>;
@@ -1186,7 +1186,7 @@ multiclass VPatWidenReductionVL<SDNode vop, PatFrags extop, string instruction_n
                                  (wti.Vector (extop (vti.Vector vti.RegClass:$rs1))),
                                  VR:$rs2, (vti.Mask V0), VLOpFrag,
                                  (XLenVT timm:$policy))),
-             (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_MASK")
+             (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_E"#vti.SEW#"_MASK")
                 (wti_m1.Vector VR:$merge), (vti.Vector vti.RegClass:$rs1),
                 (wti_m1.Vector VR:$rs2), (vti.Mask V0), GPR:$vl, vti.Log2SEW,
                 (XLenVT timm:$policy))>;
@@ -1202,7 +1202,7 @@ multiclass VPatWidenReductionVL_Ext_VL<SDNode vop, PatFrags extop, string instru
                                  (wti.Vector (extop (vti.Vector vti.RegClass:$rs1), (vti.Mask true_mask), VLOpFrag)),
                                  VR:$rs2, (vti.Mask true_mask), VLOpFrag,
                                  (XLenVT timm:$policy))),
-             (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX)
+             (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_E"#vti.SEW)
                 (wti_m1.Vector VR:$merge), (vti.Vector vti.RegClass:$rs1),
                 (wti_m1.Vector VR:$rs2), GPR:$vl, vti.Log2SEW,
                 (XLenVT timm:$policy))>;
@@ -1210,7 +1210,7 @@ multiclass VPatWidenReductionVL_Ext_VL<SDNode vop, PatFrags extop, string instru
                                  (wti.Vector (extop (vti.Vector vti.RegClass:$rs1), (vti.Mask true_mask), VLOpFrag)),
                                  VR:$rs2, (vti.Mask V0), VLOpFrag,
                                  (XLenVT timm:$policy))),
-             (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_MASK")
+             (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_E"#vti.SEW#"_MASK")
                 (wti_m1.Vector VR:$merge), (vti.Vector vti.RegClass:$rs1),
                 (wti_m1.Vector VR:$rs2), (vti.Mask V0), GPR:$vl, vti.Log2SEW,
                 (XLenVT timm:$policy))>;
