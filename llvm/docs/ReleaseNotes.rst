@@ -151,6 +151,8 @@ Changes to the RISC-V Backend
 * Adds support for the vendor-defined XTHeadSync (multi-core synchronization instructions) extension.
 * Added support for the vendor-defined XTHeadFMemIdx (indexed memory operations for floating point) extension.
 * Assembler support for RV64E was added.
+* Assembler support was added for the experimental Zicond (integer conditional
+  operations) extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
