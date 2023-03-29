@@ -5269,23 +5269,37 @@ class FoldTransposeCreateMask final : public OpRewritePattern<TransposeOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(TransposeOp transposeOp,
+  LogicalResult matchAndRewrite(TransposeOp transpOp,
                                 PatternRewriter &rewriter) const override {
-    auto createMaskOp =
-        transposeOp.getVector().getDefiningOp<vector::CreateMaskOp>();
-    if (!createMaskOp)
+    Value transposeSrc = transpOp.getVector();
+    auto createMaskOp = transposeSrc.getDefiningOp<vector::CreateMaskOp>();
+    auto constantMaskOp = transposeSrc.getDefiningOp<vector::ConstantMaskOp>();
+    if (!createMaskOp && !constantMaskOp)
       return failure();
 
-    // Get the transpose permutation and apply it to the vector.create_mask
-    // operands.
-    auto maskOperands = createMaskOp.getOperands();
+    // Get the transpose permutation and apply it to the vector.create_mask or
+    // vector.constant_mask operands.
     SmallVector<int64_t> permutation;
-    transposeOp.getTransp(permutation);
-    SmallVector<Value> newOperands(maskOperands.begin(), maskOperands.end());
-    applyPermutationToVector(newOperands, permutation);
+    transpOp.getTransp(permutation);
 
-    rewriter.replaceOpWithNewOp<vector::CreateMaskOp>(
-        transposeOp, transposeOp.getResultVectorType(), newOperands);
+    if (createMaskOp) {
+      auto maskOperands = createMaskOp.getOperands();
+      SmallVector<Value> newOperands(maskOperands.begin(), maskOperands.end());
+      applyPermutationToVector(newOperands, permutation);
+
+      rewriter.replaceOpWithNewOp<vector::CreateMaskOp>(
+          transpOp, transpOp.getResultVectorType(), newOperands);
+      return success();
+    }
+
+    // ConstantMaskOp case.
+    auto maskDimSizes = constantMaskOp.getMaskDimSizes();
+    SmallVector<Attribute> newMaskDimSizes(maskDimSizes.getValue());
+    applyPermutationToVector(newMaskDimSizes, permutation);
+
+    rewriter.replaceOpWithNewOp<vector::ConstantMaskOp>(
+        transpOp, transpOp.getResultVectorType(),
+        ArrayAttr::get(transpOp.getContext(), newMaskDimSizes));
     return success();
   }
 };
