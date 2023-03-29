@@ -462,6 +462,28 @@ public:
   void Post(const parser::EndLabel &endLabel) { CheckSourceLabel(endLabel.v); }
   void Post(const parser::EorLabel &eorLabel) { CheckSourceLabel(eorLabel.v); }
 
+  void Post(const parser::OmpMapClause &x) {
+    const auto &ompObjList{std::get<parser::OmpObjectList>(x.t)};
+    for (const auto &ompObj : ompObjList.v) {
+      common::visit(
+          common::visitors{
+              [&](const parser::Designator &designator) {
+                if (const auto *name{GetDesignatorNameIfDataRef(designator)}) {
+                  if (name->symbol &&
+                      semantics::IsAssumedSizeArray(*name->symbol)) {
+                    context_.Say(designator.source,
+                        "Assumed-size whole arrays may not appear on the %s "
+                        "clause"_err_en_US,
+                        "MAP");
+                  }
+                }
+              },
+              [&](const auto &name) {},
+          },
+          ompObj.u);
+    }
+  }
+
   const parser::OmpClause *associatedClause{nullptr};
   void SetAssociatedClause(const parser::OmpClause &c) {
     associatedClause = &c;
