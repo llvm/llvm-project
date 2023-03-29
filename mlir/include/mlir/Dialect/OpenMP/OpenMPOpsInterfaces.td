@@ -136,7 +136,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
           mlir::StringAttr::get($_op->getContext(), llvm::Twine{"omp.is_device"}),
             mlir::BoolAttr::get($_op->getContext(), isDevice));
       }]>,
-      InterfaceMethod<
+    InterfaceMethod<
       /*description=*/[{
         Get the attribute on the current module if it exists and
         return its value, if it doesn't exist it returns false by default.
@@ -149,7 +149,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
            return isDevice.dyn_cast<BoolAttr>().getValue();
         return false;
       }]>,
-      InterfaceMethod<
+    InterfaceMethod<
       /*description=*/[{
         Get the FlagsAttr attribute on the current module if it exists
         and return the attribute, if it doesn't exit it returns a nullptr
@@ -207,7 +207,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
                                              targetCPU.str(),
                                              targetFeatures.str()));
       }]>,
-      InterfaceMethod<
+    InterfaceMethod<
       /*description=*/[{
         Set a StringAttr on the current module containing the host IR file path. This
         file path is used in two-phase compilation during the device phase to generate
@@ -220,7 +220,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
           mlir::StringAttr::get($_op->getContext(), llvm::Twine{"omp.host_ir_filepath"}),
             mlir::StringAttr::get($_op->getContext(), hostIRFilePath));
        }]>,
-      InterfaceMethod<
+    InterfaceMethod<
       /*description=*/[{
         Find the host-ir file path StringAttr from the current module if it exists and
         return its contained value, if it doesn't exist it returns an empty string. This
@@ -234,6 +234,30 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
           if (::llvm::isa<mlir::StringAttr>(filepath))
             return ::llvm::dyn_cast<mlir::StringAttr>(filepath).getValue();
         return {};
+      }]>,
+    InterfaceMethod<
+      /*description=*/[{
+        Get the omp.requires attribute on the operator if it's present and
+        return its value. If it doesn't exist, return `ClauseRequires::none` by
+        default.
+      }],
+      /*retTy=*/"::mlir::omp::ClauseRequires",
+      /*methodName=*/"getRequires",
+      (ins), [{}], [{
+        if (Attribute requiresAttr = $_op->getAttr("omp.requires"))
+          if (auto requiresVal = requiresAttr.dyn_cast<mlir::omp::ClauseRequiresAttr>())
+            return requiresVal.getValue();
+        return mlir::omp::ClauseRequires::none;
+      }]>,
+    InterfaceMethod<
+      /*description=*/[{
+        Set the omp.requires attribute on the operator to the specified clauses.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setRequires",
+      (ins "::mlir::omp::ClauseRequires":$clauses), [{}], [{
+        $_op->setAttr(mlir::StringAttr::get($_op->getContext(), "omp.requires"),
+          mlir::omp::ClauseRequiresAttr::get($_op->getContext(), clauses));
       }]>
   ];
 }
