@@ -1851,6 +1851,7 @@ getUntaggedStoreAssignmentInfo(const Instruction &I, const DataLayout &Layout) {
 /// to iterate over the function as they can be achieved together in one pass.
 static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
     Function &Fn, FunctionVarLocsBuilder *FnVarLocs,
+    const DenseSet<DebugAggregate> &VarsWithStackSlot,
     AssignmentTrackingLowering::UntaggedStoreAssignmentMap &UntaggedStoreVars,
     unsigned &TrackedVariablesVectorSize) {
   DenseSet<DebugVariable> Seen;
@@ -1871,6 +1872,8 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
       } else if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
         DebugVariable DV = DebugVariable(DII);
         DebugAggregate DA = {DV.getVariable(), DV.getInlinedAt()};
+        if (!VarsWithStackSlot.contains(DA))
+          continue;
         if (Seen.insert(DV).second)
           FragmentMap[DA].push_back(DV);
       } else if (auto Info = getUntaggedStoreAssignmentInfo(
@@ -1895,6 +1898,8 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
           DebugVariable DV = DebugVariable(DAI->getVariable(), FragInfo,
                                            DAI->getDebugLoc().getInlinedAt());
           DebugAggregate DA = {DV.getVariable(), DV.getInlinedAt()};
+          if (!VarsWithStackSlot.contains(DA))
+            continue;
 
           // Cache this info for later.
           UntaggedStoreVars[&I].push_back(
@@ -1972,7 +1977,8 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
   // neither does LiveDebugVariables) because that is difficult to do and
   // appears to be rare occurance.
   VarContains = buildOverlapMapAndRecordDeclares(
-      Fn, FnVarLocs, UntaggedStoreVars, TrackedVariablesVectorSize);
+      Fn, FnVarLocs, *VarsWithStackSlot, UntaggedStoreVars,
+      TrackedVariablesVectorSize);
 
   // Prepare for traversal.
   ReversePostOrderTraversal<Function *> RPOT(&Fn);
