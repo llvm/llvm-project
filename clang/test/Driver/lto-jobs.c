@@ -3,6 +3,9 @@
 // RUN: %clang -target x86_64-unknown-linux -### %s -flto=thin -flto-jobs=5 2> %t
 // RUN: FileCheck -check-prefix=CHECK-LINK-THIN-JOBS-ACTION < %t %s
 //
+// RUN: %clang -target x86_64-sie-ps5 -### %s -flto=thin -flto-jobs=5 2> %t
+// RUN: FileCheck -check-prefix=CHECK-LINK-THIN-JOBS-ACTION < %t %s
+//
 // CHECK-LINK-THIN-JOBS-ACTION: "-plugin-opt=jobs=5"
 
 // RUN: %clang -target x86_64-apple-darwin13.3.0 -### %s -flto=thin -flto-jobs=5 2> %t
