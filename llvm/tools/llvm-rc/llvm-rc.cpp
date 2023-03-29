@@ -227,7 +227,7 @@ struct RcOptions {
 bool preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
                 const char *Argv0) {
   std::string Clang;
-  if (Opts.PrintCmdAndExit) {
+  if (Opts.PrintCmdAndExit || !Opts.PreprocessCmd.empty()) {
     Clang = "clang";
   } else {
     ErrorOr<std::string> ClangOrErr = findClang(Argv0, Opts.Triple);
@@ -267,7 +267,7 @@ bool preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
   }
   // The llvm Support classes don't handle reading from stdout of a child
   // process; otherwise we could avoid using a temp file.
-  int Res = sys::ExecuteAndWait(Clang, Args);
+  int Res = sys::ExecuteAndWait(Args[0], Args);
   if (Res) {
     fatalError("llvm-rc: Preprocessing failed.");
   }
