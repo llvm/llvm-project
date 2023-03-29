@@ -3385,7 +3385,8 @@ static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP) {
       ExtraBitsSize = alignTo(ExtraBitsSize, 8);
       ExtraBits = Realigned.getRawData()[0] &
         (((uint64_t)-1) >> (64 - ExtraBitsSize));
-      Realigned.lshrInPlace(ExtraBitsSize);
+      if (BitWidth >= 64)
+        Realigned.lshrInPlace(ExtraBitsSize);
     } else
       ExtraBits = Realigned.getRawData()[BitWidth / 64];
   }
