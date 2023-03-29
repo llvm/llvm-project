@@ -34,7 +34,7 @@ struct Foo {
 @end
 
 // RUN: c-index-test -single-symbol-sgf-at=%s:4:9 local %s | FileCheck -check-prefix=CHECK-FOO %s
-// CHECK-FOO: "parentContexts":[{"kind":"objective-c.struct","name":"Foo","usr":"c:@S@Foo"}]
+// CHECK-FOO: "parentContexts":[]
 // CHECK-FOO: "relatedSymbols":[]
 // CHECK-FOO: "relationships":[]
 // CHECK-FOO: "text":"Foo docs"
@@ -42,7 +42,7 @@ struct Foo {
 // CHECK-FOO: "title":"Foo"
 
 // RUN: c-index-test -single-symbol-sgf-at=%s:6:9 local %s | FileCheck -check-prefix=CHECK-BAR %s
-// CHECK-BAR: "parentContexts":[{"kind":"objective-c.struct","name":"Foo","usr":"c:@S@Foo"},{"kind":"objective-c.property","name":"bar","usr":"c:@S@Foo@FI@bar"}]
+// CHECK-BAR: "parentContexts":[{"kind":"objective-c.struct","name":"Foo","usr":"c:@S@Foo"}]
 // CHECK-BAR: "relatedSymbols":[]
 // CHECK-BAR: "relationships":[{"kind":"memberOf","source":"c:@S@Foo@FI@bar","target":"c:@S@Foo"
 // CHECK-BAR: "text":"Bar docs"
@@ -50,7 +50,7 @@ struct Foo {
 // CHECK-BAR: "title":"bar"
 
 // RUN: c-index-test -single-symbol-sgf-at=%s:10:11 local %s | FileCheck -check-prefix=CHECK-BASE %s
-// CHECK-BASE: "parentContexts":[{"kind":"objective-c.class","name":"Base","usr":"c:objc(cs)Base"}]
+// CHECK-BASE: "parentContexts":[]
 // CHECK-BASE: "relatedSymbols":[]
 // CHECK-BASE: "relationships":[]
 // CHECK-BASE: "text":"Base docs"
@@ -58,7 +58,7 @@ struct Foo {
 // CHECK-BASE: "title":"Base"
 
 // RUN: c-index-test -single-symbol-sgf-at=%s:12:25 local %s | FileCheck -check-prefix=CHECK-BASE-PROP %s
-// CHECK-BASE-PROP: "parentContexts":[{"kind":"objective-c.class","name":"Base","usr":"c:objc(cs)Base"},{"kind":"objective-c.property","name":"baseProperty","usr":"c:objc(cs)Base(py)baseProperty"}]
+// CHECK-BASE-PROP: "parentContexts":[{"kind":"objective-c.class","name":"Base","usr":"c:objc(cs)Base"}]
 // CHECK-BASE-PROP: "relatedSymbols":[{"accessLevel":"public","declarationLanguage":"objective-c"
 // CHECK-BASE-PROP: "isSystem":false
 // CHECK-BASE-PROP: "usr":"c:@S@Foo"}]
@@ -68,7 +68,7 @@ struct Foo {
 // CHECK-BASE-PROP: "title":"baseProperty"
 
 // RUN: c-index-test -single-symbol-sgf-at=%s:15:9 local %s | FileCheck -check-prefix=CHECK-BASE-METHOD %s
-// CHECK-BASE-METHOD: "parentContexts":[{"kind":"objective-c.class","name":"Base","usr":"c:objc(cs)Base"},{"kind":"objective-c.method","name":"baseMethodWithArg:","usr":"c:objc(cs)Base(im)baseMethodWithArg:"}]
+// CHECK-BASE-METHOD: "parentContexts":[{"kind":"objective-c.class","name":"Base","usr":"c:objc(cs)Base"}]
 // CHECK-BASE-METHOD: "relatedSymbols":[]
 // CHECK-BASE-METHOD: "relationships":[{"kind":"memberOf","source":"c:objc(cs)Base(im)baseMethodWithArg:","target":"c:objc(cs)Base"
 // CHECK-BASE-METHOD: "text":"Base method docs"
@@ -76,7 +76,7 @@ struct Foo {
 // CHECK-BASE-METHOD: "title":"baseMethodWithArg:"
 
 // RUN: c-index-test -single-symbol-sgf-at=%s:19:11 local %s | FileCheck -check-prefix=CHECK-PROTOCOL %s
-// CHECK-PROTOCOL: "parentContexts":[{"kind":"objective-c.protocol","name":"Protocol","usr":"c:objc(pl)Protocol"}]
+// CHECK-PROTOCOL: "parentContexts":[]
 // CHECK-PROTOCOL: "relatedSymbols":[]
 // CHECK-PROTOCOL: "relationships":[]
 // CHECK-PROTOCOL: "text":"Protocol docs"
@@ -84,7 +84,7 @@ struct Foo {
 // CHECK-PROTOCOL: "title":"Protocol"
 
 // RUN: c-index-test -single-symbol-sgf-at=%s:21:27 local %s | FileCheck -check-prefix=CHECK-PROTOCOL-PROP %s
-// CHECK-PROTOCOL-PROP: "parentContexts":[{"kind":"objective-c.protocol","name":"Protocol","usr":"c:objc(pl)Protocol"},{"kind":"objective-c.property","name":"protocolProperty","usr":"c:objc(pl)Protocol(py)protocolProperty"}]
+// CHECK-PROTOCOL-PROP: "parentContexts":[{"kind":"objective-c.protocol","name":"Protocol","usr":"c:objc(pl)Protocol"}]
 // CHECK-PROTOCOL-PROP: "relatedSymbols":[{"accessLevel":"public","declarationLanguage":"objective-c"
 // CHECK-PROTOCOL-PROP: "isSystem":false
 // CHECK-PROTOCOL-PROP: "usr":"c:@S@Foo"}]
@@ -94,7 +94,7 @@ struct Foo {
 // CHECK-PROTOCOL-PROP: "title":"protocolProperty"
 
 // RUN: c-index-test -single-symbol-sgf-at=%s:25:15 local %s | FileCheck -check-prefix=CHECK-DERIVED %s
-// CHECK-DERIVED: "parentContexts":[{"kind":"objective-c.class","name":"Derived","usr":"c:objc(cs)Derived"}]
+// CHECK-DERIVED: "parentContexts":[]
 // CHECK-DERIVED: "relatedSymbols":[{"accessLevel":"public","declarationLanguage":"objective-c"
 // CHECK-DERIVED: "isSystem":false
 // CHECK-DERIVED: "usr":"c:objc(cs)Base"}]
@@ -104,7 +104,7 @@ struct Foo {
 // CHECK-DERIVED: "title":"Derived"
 
 // RUN: c-index-test -single-symbol-sgf-at=%s:27:11 local %s | FileCheck -check-prefix=CHECK-DERIVED-METHOD %s
-// CHECK-DERIVED-METHOD: "parentContexts":[{"kind":"objective-c.class","name":"Derived","usr":"c:objc(cs)Derived"},{"kind":"objective-c.method","name":"derivedMethodWithValue:","usr":"c:objc(cs)Derived(im)derivedMethodWithValue:"}]
+// CHECK-DERIVED-METHOD: "parentContexts":[{"kind":"objective-c.class","name":"Derived","usr":"c:objc(cs)Derived"}]
 // CHECK-DERIVED-METHOD: "relatedSymbols":[]
 // CHECK-DERIVED-METHOD: "relationships":[{"kind":"memberOf","source":"c:objc(cs)Derived(im)derivedMethodWithValue:","target":"c:objc(cs)Derived"
 // CHECK-DERIVED-METHOD: "text":"Derived method docs"
@@ -112,7 +112,7 @@ struct Foo {
 // CHECK-DERIVED-METHOD: "title":"derivedMethodWithValue:"
 
 // RUN: c-index-test -single-symbol-sgf-at=%s:31:11 local %s | FileCheck -check-prefix=CHECK-DERIVED-METHOD-IMPL %s
-// CHECK-DERIVED-METHOD-IMPL: "parentContexts":[{"kind":"objective-c.class","name":"Derived","usr":"c:objc(cs)Derived"},{"kind":"objective-c.method","name":"derivedMethodWithValue:","usr":"c:objc(cs)Derived(im)derivedMethodWithValue:"}]
+// CHECK-DERIVED-METHOD-IMPL: "parentContexts":[{"kind":"objective-c.class","name":"Derived","usr":"c:objc(cs)Derived"}]
 // CHECK-DERIVED-METHOD-IMPL: "relatedSymbols":[]
 // CHECK-DERIVED-METHOD-IMPL: "relationships":[{"kind":"memberOf","source":"c:objc(cs)Derived(im)derivedMethodWithValue:","target":"c:objc(cs)Derived"
 // CHECK-DERIVED-METHOD-IMPL: "text":"Derived method docs"
