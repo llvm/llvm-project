@@ -75,4 +75,25 @@ namespace dr2565 { // dr2565: 16 open
   // expected-error@-1{{constraints not satisfied for class template 'VariadicStruct'}}
   // expected-note@#VSREQ{{because 'Variadic<void, int, char, double>' evaluated to false}}
   // expected-note@#VC{{because 'b' would be invalid: argument may not have 'void' type}}
+
+  template<typename T>
+  // expected-error@+1 {{unknown type name 'ErrorRequires'}}
+  concept ErrorRequires = requires (ErrorRequires auto x) {
+    x;
+  };
+  static_assert(ErrorRequires<int>);
+  // expected-error@-1{{static assertion failed}}
+  // expected-note@-2{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+
+  template<typename T>
+  // expected-error@+2 {{unknown type name 'NestedErrorInRequires'}}
+  concept NestedErrorInRequires = requires (T x) {
+    requires requires (NestedErrorInRequires auto y) {
+      y;
+    };
+  };
+  static_assert(NestedErrorInRequires<int>);
+  // expected-error@-1{{static assertion failed}}
+  // expected-note@-2{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+
 }

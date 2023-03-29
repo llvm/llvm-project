@@ -112,6 +112,19 @@ concepts::ExprRequirement::ReturnTypeRequirement::getTypeConstraint() const {
       ->getTypeConstraint();
 }
 
+// Search through the requirements, and see if any have a RecoveryExpr in it,
+// which means this RequiresExpr ALSO needs to be invalid.
+static bool RequirementContainsError(concepts::Requirement *R) {
+  if (auto *ExprReq = dyn_cast<concepts::ExprRequirement>(R))
+    return ExprReq->getExpr() && ExprReq->getExpr()->containsErrors();
+
+  if (auto *NestedReq = dyn_cast<concepts::NestedRequirement>(R))
+    return !NestedReq->hasInvalidConstraint() &&
+           NestedReq->getConstraintExpr() &&
+           NestedReq->getConstraintExpr()->containsErrors();
+  return false;
+}
+
 RequiresExpr::RequiresExpr(ASTContext &C, SourceLocation RequiresKWLoc,
                            RequiresExprBodyDecl *Body,
                            ArrayRef<ParmVarDecl *> LocalParameters,
@@ -138,6 +151,9 @@ RequiresExpr::RequiresExpr(ASTContext &C, SourceLocation RequiresKWLoc,
       if (!RequiresExprBits.IsSatisfied)
         break;
     }
+
+    if (RequirementContainsError(R))
+      setDependence(getDependence() | ExprDependence::Error);
   }
   std::copy(LocalParameters.begin(), LocalParameters.end(),
             getTrailingObjects<ParmVarDecl *>());
