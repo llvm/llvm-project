@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenBuilder.h"
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
 #include "CIRGenFunctionInfo.h"
