@@ -8045,6 +8045,12 @@ const SCEV *ScalarEvolution::getTripCountFromExitCount(const SCEV *ExitCount,
   if (!Extend)
     return getAddExpr(ExitCount, getOne(ExitCountType));
 
+  ConstantRange ExitCountRange =
+      getRangeRef(ExitCount, RangeSignHint::HINT_RANGE_UNSIGNED);
+  if (!ExitCountRange.contains(
+          APInt::getMaxValue(ExitCountRange.getBitWidth())))
+    return getAddExpr(ExitCount, getOne(ExitCountType));
+
   auto *WiderType = Type::getIntNTy(ExitCountType->getContext(),
                                     1 + ExitCountType->getScalarSizeInBits());
   return getAddExpr(getNoopOrZeroExtend(ExitCount, WiderType),
@@ -8227,15 +8233,14 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
     return 1;
 
   // Get the trip count
-  const SCEV *TCExpr = getTripCountFromExitCount(ExitCount);
+  const SCEV *TCExpr = getTripCountFromExitCount(applyLoopGuards(ExitCount, L));
 
   const SCEVConstant *TC = dyn_cast<SCEVConstant>(TCExpr);
   if (!TC)
     // Attempt to factor more general cases. Returns the greatest power of
     // two divisor. If overflow happens, the trip count expression is still
     // divisible by the greatest power of 2 divisor returned.
-    return 1U << std::min((uint32_t)31,
-                          GetMinTrailingZeros(applyLoopGuards(TCExpr, L)));
+    return 1U << std::min((uint32_t)31, GetMinTrailingZeros(TCExpr));
 
   ConstantInt *Result = TC->getValue();
 
