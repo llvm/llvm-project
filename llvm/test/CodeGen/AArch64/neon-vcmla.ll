@@ -311,9 +311,7 @@ entry:
 define <4 x float> @reassoc_f32x4(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: reassoc_f32x4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v3.4s, v1.4s, v2.4s, #0
-; CHECK-NEXT:    fadd v0.4s, v3.4s, v0.4s
+; CHECK-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #0
 ; CHECK-NEXT:    ret
 entry:
   %d = tail call <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> zeroinitializer, <4 x float> %b, <4 x float> %c)
@@ -324,9 +322,7 @@ entry:
 define <4 x float> @reassoc_c_f32x4(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: reassoc_c_f32x4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v3.4s, v1.4s, v2.4s, #90
-; CHECK-NEXT:    fadd v0.4s, v0.4s, v3.4s
+; CHECK-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #90
 ; CHECK-NEXT:    ret
 entry:
   %d = tail call <4 x float> @llvm.aarch64.neon.vcmla.rot90.v4f32(<4 x float> zeroinitializer, <4 x float> %b, <4 x float> %c)
@@ -337,9 +333,7 @@ entry:
 define <4 x half> @reassoc_f16x4(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
 ; CHECK-LABEL: reassoc_f16x4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi d3, #0000000000000000
-; CHECK-NEXT:    fcmla v3.4h, v1.4h, v2.4h, #180
-; CHECK-NEXT:    fadd v0.4h, v3.4h, v0.4h
+; CHECK-NEXT:    fcmla v0.4h, v1.4h, v2.4h, #180
 ; CHECK-NEXT:    ret
 entry:
   %d = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot180.v4f16(<4 x half> zeroinitializer, <4 x half> %b, <4 x half> %c)
@@ -350,9 +344,7 @@ entry:
 define <4 x half> @reassoc_c_f16x4(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
 ; CHECK-LABEL: reassoc_c_f16x4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi d3, #0000000000000000
-; CHECK-NEXT:    fcmla v3.4h, v1.4h, v2.4h, #270
-; CHECK-NEXT:    fadd v0.4h, v0.4h, v3.4h
+; CHECK-NEXT:    fcmla v0.4h, v1.4h, v2.4h, #270
 ; CHECK-NEXT:    ret
 entry:
   %d = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot270.v4f16(<4 x half> zeroinitializer, <4 x half> %b, <4 x half> %c)
@@ -363,10 +355,8 @@ entry:
 define <2 x double> @reassoc_f64x2(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double> %g) {
 ; CHECK-LABEL: reassoc_f64x2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    fcmla v0.2d, v1.2d, v2.2d, #270
-; CHECK-NEXT:    fcmla v4.2d, v2.2d, v3.2d, #270
-; CHECK-NEXT:    fadd v0.2d, v4.2d, v0.2d
+; CHECK-NEXT:    fcmla v0.2d, v2.2d, v3.2d, #270
 ; CHECK-NEXT:    ret
 entry:
   %d = tail call <2 x double> @llvm.aarch64.neon.vcmla.rot270.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c)
@@ -378,10 +368,9 @@ entry:
 define <2 x double> @reassoc_c_f64x2(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double> %g) {
 ; CHECK-LABEL: reassoc_c_f64x2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov v4.16b, v0.16b
+; CHECK-NEXT:    fadd v0.2d, v0.2d, v0.2d
+; CHECK-NEXT:    fcmla v0.2d, v1.2d, v2.2d, #270
 ; CHECK-NEXT:    fcmla v0.2d, v2.2d, v3.2d, #270
-; CHECK-NEXT:    fcmla v4.2d, v1.2d, v2.2d, #270
-; CHECK-NEXT:    fadd v0.2d, v0.2d, v4.2d
 ; CHECK-NEXT:    ret
 entry:
   %d = tail call <2 x double> @llvm.aarch64.neon.vcmla.rot270.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c)

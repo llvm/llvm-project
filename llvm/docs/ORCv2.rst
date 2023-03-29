@@ -147,7 +147,7 @@ specified before the JIT instance is constructed. For example:
   auto JIT = LLLazyJITBuilder()
                .setNumCompileThreads(4)
                .setLazyCompileFailureAddr(
-                   toJITTargetAddress(&handleLazyCompileFailure))
+                   ExecutorAddr::fromPtr(&handleLazyCompileFailure))
                .create();
 
   // ...
@@ -315,7 +315,7 @@ absolute symbols is allowing resolution of process symbols. E.g.
 
   JD.define(absoluteSymbols(SymbolMap({
       { Mangle("printf"),
-        { pointerToJITTargetAddress(&printf),
+        { ExecutorAddr::fromPtr(&printf),
           JITSymbolFlags::Callable } }
     });
 
@@ -364,7 +364,7 @@ absolute symbol definition when the JIT is started:
 
   JITStdLibJD.define(absoluteSymbols(SymbolMap({
       { Mangle("__MyJITInstance"),
-        { pointerToJITTargetAddress(&J), JITSymbolFlags() } }
+        { ExecutorAddr::fromPtr(&J), JITSymbolFlags() } }
     });
 
 Aliases and Reexports
@@ -819,8 +819,8 @@ absoluteSymbols function:
 
     JD.define(
       absoluteSymbols({
-        { Mangle("puts"), pointerToJITTargetAddress(&puts)},
-        { Mangle("gets"), pointerToJITTargetAddress(&getS)}
+        { Mangle("puts"), ExecutorAddr::fromPtr(&puts)},
+        { Mangle("gets"), ExecutorAddr::fromPtr(&getS)}
       }));
 
 Using absoluteSymbols is reasonable if the set of symbols to be reflected is

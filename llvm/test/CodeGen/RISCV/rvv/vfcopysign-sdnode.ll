@@ -604,9 +604,9 @@ define <vscale x 1 x float> @vfcopysign_exttrunc_vv_nxv1f32_nxv1f16(<vscale x 1 
 define <vscale x 1 x float> @vfcopysign_exttrunc_vf_nxv1f32_nxv1f16(<vscale x 1 x float> %vm, half %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv1f32_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.h ft0, fa0
+; CHECK-NEXT:    fcvt.s.h fa5, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfsgnj.vf v8, v8, ft0
+; CHECK-NEXT:    vfsgnj.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
@@ -632,9 +632,9 @@ define <vscale x 1 x float> @vfcopynsign_exttrunc_vv_nxv1f32_nxv1f16(<vscale x 1
 define <vscale x 1 x float> @vfcopynsign_exttrunc_vf_nxv1f32_nxv1f16(<vscale x 1 x float> %vm, half %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv1f32_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.h ft0, fa0
+; CHECK-NEXT:    fcvt.s.h fa5, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfsgnjn.vf v8, v8, ft0
+; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
@@ -862,9 +862,9 @@ define <vscale x 8 x float> @vfcopysign_exttrunc_vv_nxv8f32_nxv8f16(<vscale x 8 
 define <vscale x 8 x float> @vfcopysign_exttrunc_vf_nxv8f32_nxv8f16(<vscale x 8 x float> %vm, half %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv8f32_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.h ft0, fa0
+; CHECK-NEXT:    fcvt.s.h fa5, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vfsgnj.vf v8, v8, ft0
+; CHECK-NEXT:    vfsgnj.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
@@ -890,9 +890,9 @@ define <vscale x 8 x float> @vfcopynsign_exttrunc_vv_nxv8f32_nxv8f16(<vscale x 8
 define <vscale x 8 x float> @vfcopynsign_exttrunc_vf_nxv8f32_nxv8f16(<vscale x 8 x float> %vm, half %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv8f32_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.h ft0, fa0
+; CHECK-NEXT:    fcvt.s.h fa5, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vfsgnjn.vf v8, v8, ft0
+; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
@@ -1074,9 +1074,9 @@ define <vscale x 1 x double> @vfcopysign_exttrunc_vv_nxv1f64_nxv1f16(<vscale x 1
 define <vscale x 1 x double> @vfcopysign_exttrunc_vf_nxv1f64_nxv1f16(<vscale x 1 x double> %vm, half %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv1f64_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.d.h ft0, fa0
+; CHECK-NEXT:    fcvt.d.h fa5, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfsgnj.vf v8, v8, ft0
+; CHECK-NEXT:    vfsgnj.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
@@ -1104,9 +1104,9 @@ define <vscale x 1 x double> @vfcopynsign_exttrunc_vv_nxv1f64_nxv1f16(<vscale x 
 define <vscale x 1 x double> @vfcopynsign_exttrunc_vf_nxv1f64_nxv1f16(<vscale x 1 x double> %vm, half %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv1f64_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.d.h ft0, fa0
+; CHECK-NEXT:    fcvt.d.h fa5, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfsgnjn.vf v8, v8, ft0
+; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
@@ -1132,9 +1132,9 @@ define <vscale x 1 x double> @vfcopysign_exttrunc_vv_nxv1f64_nxv1f32(<vscale x 1
 define <vscale x 1 x double> @vfcopysign_exttrunc_vf_nxv1f64_nxv1f32(<vscale x 1 x double> %vm, float %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv1f64_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.d.s ft0, fa0
+; CHECK-NEXT:    fcvt.d.s fa5, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfsgnj.vf v8, v8, ft0
+; CHECK-NEXT:    vfsgnj.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x float> poison, float %s, i32 0
   %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> poison, <vscale x 1 x i32> zeroinitializer
@@ -1160,9 +1160,9 @@ define <vscale x 1 x double> @vfcopynsign_exttrunc_vv_nxv1f64_nxv1f32(<vscale x 
 define <vscale x 1 x double> @vfcopynsign_exttrunc_vf_nxv1f64_nxv1f32(<vscale x 1 x double> %vm, float %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv1f64_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.d.s ft0, fa0
+; CHECK-NEXT:    fcvt.d.s fa5, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfsgnjn.vf v8, v8, ft0
+; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x float> poison, float %s, i32 0
   %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> poison, <vscale x 1 x i32> zeroinitializer
@@ -1334,9 +1334,9 @@ define <vscale x 8 x double> @vfcopysign_exttrunc_vv_nxv8f64_nxv8f16(<vscale x 8
 define <vscale x 8 x double> @vfcopysign_exttrunc_vf_nxv8f64_nxv8f16(<vscale x 8 x double> %vm, half %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv8f64_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.d.h ft0, fa0
+; CHECK-NEXT:    fcvt.d.h fa5, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vfsgnj.vf v8, v8, ft0
+; CHECK-NEXT:    vfsgnj.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
@@ -1364,9 +1364,9 @@ define <vscale x 8 x double> @vfcopynsign_exttrunc_vv_nxv8f64_nxv8f16(<vscale x 
 define <vscale x 8 x double> @vfcopynsign_exttrunc_vf_nxv8f64_nxv8f16(<vscale x 8 x double> %vm, half %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv8f64_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.d.h ft0, fa0
+; CHECK-NEXT:    fcvt.d.h fa5, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vfsgnjn.vf v8, v8, ft0
+; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %s, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
@@ -1392,9 +1392,9 @@ define <vscale x 8 x double> @vfcopysign_exttrunc_vv_nxv8f64_nxv8f32(<vscale x 8
 define <vscale x 8 x double> @vfcopysign_exttrunc_vf_nxv8f64_nxv8f32(<vscale x 8 x double> %vm, float %s) {
 ; CHECK-LABEL: vfcopysign_exttrunc_vf_nxv8f64_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.d.s ft0, fa0
+; CHECK-NEXT:    fcvt.d.s fa5, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vfsgnj.vf v8, v8, ft0
+; CHECK-NEXT:    vfsgnj.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> poison, float %s, i32 0
   %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
@@ -1420,9 +1420,9 @@ define <vscale x 8 x double> @vfcopynsign_exttrunc_vv_nxv8f64_nxv8f32(<vscale x 
 define <vscale x 8 x double> @vfcopynsign_exttrunc_vf_nxv8f64_nxv8f32(<vscale x 8 x double> %vm, float %s) {
 ; CHECK-LABEL: vfcopynsign_exttrunc_vf_nxv8f64_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.d.s ft0, fa0
+; CHECK-NEXT:    fcvt.d.s fa5, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vfsgnjn.vf v8, v8, ft0
+; CHECK-NEXT:    vfsgnjn.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> poison, float %s, i32 0
   %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer

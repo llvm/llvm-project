@@ -4,9 +4,7 @@
 
 ; GCN-LABEL: {{^}}test_mfma_loop_zeroinit:
 
-; GFX908-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
-; GFX90A:          v_accvgpr_write_b32 [[LEAD:a[0-9]+]], 0
-; GFX90A-COUNT-31: v_accvgpr_mov_b32 a{{[0-9]+}}, [[LEAD]]
+; GCN-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
 
 ; Check that we do not copy agprs to vgprs and back inside the loop.
 
@@ -47,11 +45,8 @@ exit:
 ; 3 vgprs are needed to avoid wait states between writes.
 ; Check that we do not use 32 temp sgprs as well.
 
-; GFX908:          v_mov_b32_e32 [[TMP:v[0-9]+]], 0x42f60000
-; GFX940_A:        s_mov_b32 [[TMP:s[0-9]+]], 0x42f60000
-; GFX908-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A:          v_accvgpr_write_b32 [[LEAD:a[0-9]+]], [[TMP]]
-; GFX90A-COUNT-31: v_accvgpr_mov_b32 a{{[0-9]+}}, [[LEAD]]
+; GCN:          v_mov_b32_e32 [[TMP:v[0-9]+]], 0x42f60000
+; GCN-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
 
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
@@ -84,10 +79,8 @@ exit:
 
 ; GCN-LABEL: {{^}}test_mfma_loop_non_splat:
 
-; GCN:             v_accvgpr_write_b32 [[LEAD:a[0-9]+]], 0{{$}}
+; GCN-COUNT-31:    v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
 ; GCN:             v_accvgpr_write_b32 a{{[0-9]+}}, 1.0{{$}}
-; GFX908-COUNT-30: v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
-; GFX90A-COUNT-30: v_accvgpr_mov_b32 a{{[0-9]+}}, [[LEAD]]{{$}}
 
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
@@ -123,73 +116,105 @@ exit:
 ; Check that we do not use 32 temp vgprs, but rotate 3 vgprs only.
 ; 3 vgprs are needed to avoid wait states between writes.
 
-; GFX908: v_mov_b32_e32 [[TMP1:v[0-9]+]], 0x42f60000
-; GFX908: v_mov_b32_e32 [[TMP2:v[0-9]+]], 0x42f80000
-; GFX908: v_mov_b32_e32 [[TMP3:v[0-9]+]], 0x42fe0000
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP1]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP2]]
-; GFX908: v_mov_b32_e32 [[TMP1]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP2]], 0x4{{[0-9a-f]+}}
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP3]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP1]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP2]]
-; GFX908: v_mov_b32_e32 [[TMP1]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP2]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP3]], 0x4{{[0-9a-f]+}}
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP1]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP2]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP3]]
-; GFX908: v_mov_b32_e32 [[TMP1]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP2]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP3]], 0x4{{[0-9a-f]+}}
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP1]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP2]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP3]]
-; GFX908: v_mov_b32_e32 [[TMP1]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP2]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP3]], 0x4{{[0-9a-f]+}}
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP1]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP2]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP3]]
-; GFX908: v_mov_b32_e32 [[TMP1]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP2]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP3]], 0x4{{[0-9a-f]+}}
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP1]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP2]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP3]]
-; GFX908: v_mov_b32_e32 [[TMP1]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP2]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP3]], 0x4{{[0-9a-f]+}}
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP1]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP2]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP3]]
-; GFX908: v_mov_b32_e32 [[TMP1]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP2]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP3]], 0x4{{[0-9a-f]+}}
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP1]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP2]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP3]]
-; GFX908: v_mov_b32_e32 [[TMP1]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP2]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP3]], 0x4{{[0-9a-f]+}}
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP1]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP2]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP3]]
-; GFX908: v_mov_b32_e32 [[TMP1]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP2]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP3]], 0x4{{[0-9a-f]+}}
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP1]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP2]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP3]]
-; GFX908: v_mov_b32_e32 [[TMP1]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP2]], 0x4{{[0-9a-f]+}}
-; GFX908: v_mov_b32_e32 [[TMP3]], 0x4{{[0-9a-f]+}}
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP1]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP2]]
-; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP3]]
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x42f80000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x42fa0000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x42fc0000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x42fe0000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43000000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43010000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43020000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43030000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43040000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43050000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43060000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43070000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43080000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43090000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x430a0000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x430b0000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x430c0000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x430d0000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x430e0000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x430f0000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43100000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43110000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43120000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43130000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43140000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43150000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43160000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43170000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43180000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x43190000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
+; GFX-908: v_mov_b32_e32 v0, 0x431a0000
+; GFX-908: s_nop 1
+; GFX-908: v_accvgpr_write_b32 {{[0-9]+}}, v0
 
-; GFX940_A-COUNT-32: s_mov_b32 s{{[0-9]+}}, 0x4{{[0-9a-f]+}}
-; GFX940_A-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, s{{[0-9]+}}
+; FIXME: Constant is now in VGPR instead of SGPR.
+
+; GFX940_A: v_mov_b32_e32 v{{[0-9]+}}, 0x4{{[0-9a-f]+}}
+; GFX940_A-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
@@ -292,8 +317,7 @@ exit:
 
 ; GFX908:          v_mov_b32_e32 [[TMP:v[0-9]+]], s{{[0-9]+}}
 ; GFX908-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX940_A:        v_accvgpr_write_b32 [[LEAD:a[0-9]+]], s{{[0-9]+}}
-; GFX90A-COUNT-31: v_accvgpr_mov_b32 a{{[0-9]+}}, [[LEAD]]
+; GFX940_A-COUNT-32:        v_accvgpr_write_b32 [[LEAD:a[0-9]+]], s{{[0-9]+}}
 
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
@@ -395,7 +419,7 @@ exit:
 ; GFX908-DAG:   v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
 
 ; GFX90A-DAG:      v_accvgpr_write_b32 [[LEAD:a[0-9]+]], 0
-; GFX90A-COUNT-28: v_accvgpr_mov_b32 a{{[0-9]+}}, [[LEAD]]
+; GFX90A-COUNT-28: v_accvgpr_write_b32 a{{[0-9]+}}, 0
 
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
@@ -483,10 +507,8 @@ exit:
 
 ; Check that we are using only one tmp VGPR.
 
-; GCN:             v_accvgpr_read_b32 [[TMP:v[0-9]+]], a{{[0-9]+}}
-; GFX908-COUNT-31: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]{{$}}
-; GFX90A:          v_accvgpr_write_b32 [[LEAD:a[0-9]+]], [[TMP]]{{$}}
-; GFX90A-COUNT-29: v_accvgpr_mov_b32 a{{[0-9]+}}, [[LEAD]]
+; GFX908:             v_accvgpr_read_b32 [[TMP:v[0-9]+]], a{{[0-9]+}}
+; GFX940_A-COUNT-31:  v_accvgpr_mov_b32 a{{[0-9]+}}, a{{[0-9]+}}
 
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
@@ -554,9 +576,7 @@ exit:
 
 ; GCN-LABEL: {{^}}test_mfma_nested_loop_zeroinit:
 
-; GFX908-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
-; GFX90A:          v_accvgpr_write_b32 [[LEAD:a[0-9]+]], 0
-; GFX90A-COUNT-31: v_accvgpr_mov_b32 a{{[0-9]+}}, [[LEAD]]
+; GCN-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
 
 ; Check that we do not copy agprs to vgprs and back in an outer loop.
 

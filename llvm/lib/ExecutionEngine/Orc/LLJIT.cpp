@@ -189,12 +189,10 @@ public:
 
     SymbolMap StdInterposes;
 
-    StdInterposes[J.mangleAndIntern("__lljit.platform_support_instance")] =
-        JITEvaluatedSymbol(pointerToJITTargetAddress(this),
-                           JITSymbolFlags::Exported);
-    StdInterposes[J.mangleAndIntern("__lljit.cxa_atexit_helper")] =
-        JITEvaluatedSymbol(pointerToJITTargetAddress(registerCxaAtExitHelper),
-                           JITSymbolFlags());
+    StdInterposes[J.mangleAndIntern("__lljit.platform_support_instance")] = {
+        ExecutorAddr::fromPtr(this), JITSymbolFlags::Exported};
+    StdInterposes[J.mangleAndIntern("__lljit.cxa_atexit_helper")] = {
+        ExecutorAddr::fromPtr(registerCxaAtExitHelper), JITSymbolFlags()};
 
     cantFail(
         J.getMainJITDylib().define(absoluteSymbols(std::move(StdInterposes))));
@@ -209,12 +207,10 @@ public:
 
     // Add per-jitdylib standard interposes.
     SymbolMap PerJDInterposes;
-    PerJDInterposes[J.mangleAndIntern("__lljit.run_atexits_helper")] =
-        JITEvaluatedSymbol(pointerToJITTargetAddress(runAtExitsHelper),
-                           JITSymbolFlags());
-    PerJDInterposes[J.mangleAndIntern("__lljit.atexit_helper")] =
-        JITEvaluatedSymbol(pointerToJITTargetAddress(registerAtExitHelper),
-                           JITSymbolFlags());
+    PerJDInterposes[J.mangleAndIntern("__lljit.run_atexits_helper")] = {
+        ExecutorAddr::fromPtr(runAtExitsHelper), JITSymbolFlags()};
+    PerJDInterposes[J.mangleAndIntern("__lljit.atexit_helper")] = {
+        ExecutorAddr::fromPtr(registerAtExitHelper), JITSymbolFlags()};
     cantFail(JD.define(absoluteSymbols(std::move(PerJDInterposes))));
 
     auto Ctx = std::make_unique<LLVMContext>();
@@ -228,7 +224,7 @@ public:
         "__dso_handle");
     DSOHandle->setVisibility(GlobalValue::DefaultVisibility);
     DSOHandle->setInitializer(
-        ConstantInt::get(Int64Ty, pointerToJITTargetAddress(&JD)));
+        ConstantInt::get(Int64Ty, ExecutorAddr::fromPtr(&JD).getValue()));
 
     auto *GenericIRPlatformSupportTy =
         StructType::create(*Ctx, "lljit.GenericLLJITIRPlatformSupport");
@@ -288,7 +284,7 @@ public:
           dbgs() << "  Running init " << formatv("{0:x16}", InitFnAddr)
                  << "...\n";
         });
-        auto *InitFn = jitTargetAddressToFunction<void (*)()>(InitFnAddr);
+        auto *InitFn = InitFnAddr.toPtr<void (*)()>();
         InitFn();
       }
     } else
@@ -309,7 +305,7 @@ public:
           dbgs() << "  Running deinit " << formatv("{0:x16}", DeinitFnAddr)
                  << "...\n";
         });
-        auto *DeinitFn = jitTargetAddressToFunction<void (*)()>(DeinitFnAddr);
+        auto *DeinitFn = DeinitFnAddr.toPtr<void (*)()>();
         DeinitFn();
       }
     } else
@@ -330,8 +326,7 @@ public:
   }
 
 private:
-
-  Expected<std::vector<JITTargetAddress>> getInitializers(JITDylib &JD) {
+  Expected<std::vector<ExecutorAddr>> getInitializers(JITDylib &JD) {
     if (auto Err = issueInitLookups(JD))
       return std::move(Err);
 
@@ -371,7 +366,7 @@ private:
     if (!LookupResult)
       return LookupResult.takeError();
 
-    std::vector<JITTargetAddress> Initializers;
+    std::vector<ExecutorAddr> Initializers;
     while (!DFSLinkOrder.empty()) {
       auto &NextJD = *DFSLinkOrder.back();
       DFSLinkOrder.pop_back();
@@ -385,7 +380,7 @@ private:
     return Initializers;
   }
 
-  Expected<std::vector<JITTargetAddress>> getDeinitializers(JITDylib &JD) {
+  Expected<std::vector<ExecutorAddr>> getDeinitializers(JITDylib &JD) {
     auto &ES = getExecutionSession();
 
     auto LLJITRunAtExits = J.mangleAndIntern("__lljit_run_atexits");
@@ -428,7 +423,7 @@ private:
     if (!LookupResult)
       return LookupResult.takeError();
 
-    std::vector<JITTargetAddress> DeInitializers;
+    std::vector<ExecutorAddr> DeInitializers;
     for (auto &NextJD : DFSLinkOrder) {
       auto DeInitsItr = LookupResult->find(NextJD.get());
       assert(DeInitsItr != LookupResult->end() &&
@@ -1031,7 +1026,7 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
     LCTMgr = std::move(S.LCTMgr);
   else {
     if (auto LCTMgrOrErr = createLocalLazyCallThroughManager(
-        S.TT, *ES, S.LazyCompileFailureAddr.getValue()))
+            S.TT, *ES, S.LazyCompileFailureAddr))
       LCTMgr = std::move(*LCTMgrOrErr);
     else {
       Err = LCTMgrOrErr.takeError();

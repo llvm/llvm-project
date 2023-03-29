@@ -2601,12 +2601,20 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
   // FIXME: Skip constructors for which deduction must necessarily fail (those
   // for which some class template parameter without a default argument never
   // appears in a deduced context).
+  llvm::SmallPtrSet<NamedDecl *, 8> ProcessedCtors;
   bool AddedAny = false;
   for (NamedDecl *D : LookupConstructors(Transform.Primary)) {
     D = D->getUnderlyingDecl();
     if (D->isInvalidDecl() || D->isImplicit())
       continue;
+
     D = cast<NamedDecl>(D->getCanonicalDecl());
+
+    // Within C++20 modules, we may have multiple same constructors in
+    // multiple same RecordDecls. And it doesn't make sense to create
+    // duplicated deduction guides for the duplicated constructors.
+    if (ProcessedCtors.count(D))
+      continue;
 
     auto *FTD = dyn_cast<FunctionTemplateDecl>(D);
     auto *CD =
@@ -2622,6 +2630,7 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
         }))
       continue;
 
+    ProcessedCtors.insert(D);
     Transform.transformConstructor(FTD, CD);
     AddedAny = true;
   }

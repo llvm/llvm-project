@@ -11,22 +11,22 @@ define double @func(double %d, i32 %n) nounwind {
 ; RV32IFD-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    sw a0, 16(sp)
 ; RV32IFD-NEXT:    sw a1, 20(sp)
-; RV32IFD-NEXT:    fld ft0, 16(sp)
+; RV32IFD-NEXT:    fld fa5, 16(sp)
 ; RV32IFD-NEXT:    beqz a2, .LBB0_2
 ; RV32IFD-NEXT:  # %bb.1: # %if.else
 ; RV32IFD-NEXT:    addi a2, a2, -1
-; RV32IFD-NEXT:    fsd ft0, 16(sp)
+; RV32IFD-NEXT:    fsd fa5, 16(sp)
 ; RV32IFD-NEXT:    lw a0, 16(sp)
 ; RV32IFD-NEXT:    lw a1, 20(sp)
-; RV32IFD-NEXT:    fsd ft0, 8(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    fsd fa5, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    call func@plt
 ; RV32IFD-NEXT:    sw a0, 16(sp)
 ; RV32IFD-NEXT:    sw a1, 20(sp)
-; RV32IFD-NEXT:    fld ft0, 16(sp)
-; RV32IFD-NEXT:    fld ft1, 8(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fadd.d ft0, ft0, ft1
+; RV32IFD-NEXT:    fld fa5, 16(sp)
+; RV32IFD-NEXT:    fld fa4, 8(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    fadd.d fa5, fa5, fa4
 ; RV32IFD-NEXT:  .LBB0_2: # %return
-; RV32IFD-NEXT:    fsd ft0, 16(sp)
+; RV32IFD-NEXT:    fsd fa5, 16(sp)
 ; RV32IFD-NEXT:    lw a0, 16(sp)
 ; RV32IFD-NEXT:    lw a1, 20(sp)
 ; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -36,24 +36,24 @@ define double @func(double %d, i32 %n) nounwind {
 ; RV64IFD-LABEL: func:
 ; RV64IFD:       # %bb.0: # %entry
 ; RV64IFD-NEXT:    sext.w a2, a1
-; RV64IFD-NEXT:    fmv.d.x ft0, a0
+; RV64IFD-NEXT:    fmv.d.x fa5, a0
 ; RV64IFD-NEXT:    beqz a2, .LBB0_2
 ; RV64IFD-NEXT:  # %bb.1: # %if.else
 ; RV64IFD-NEXT:    addi sp, sp, -16
 ; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    addiw a1, a1, -1
-; RV64IFD-NEXT:    fmv.x.d a0, ft0
-; RV64IFD-NEXT:    fsd ft0, 0(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    fmv.x.d a0, fa5
+; RV64IFD-NEXT:    fsd fa5, 0(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    call func@plt
-; RV64IFD-NEXT:    fmv.d.x ft0, a0
-; RV64IFD-NEXT:    fld ft1, 0(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fadd.d ft0, ft0, ft1
-; RV64IFD-NEXT:    fmv.x.d a0, ft0
+; RV64IFD-NEXT:    fmv.d.x fa5, a0
+; RV64IFD-NEXT:    fld fa4, 0(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    fadd.d fa5, fa5, fa4
+; RV64IFD-NEXT:    fmv.x.d a0, fa5
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB0_2: # %return
-; RV64IFD-NEXT:    fmv.x.d a0, ft0
+; RV64IFD-NEXT:    fmv.x.d a0, fa5
 ; RV64IFD-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %n, 0

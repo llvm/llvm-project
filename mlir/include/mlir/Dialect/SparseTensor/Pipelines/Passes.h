@@ -73,6 +73,15 @@ struct SparseCompilerOptions
       *this, "enable-buffer-initialization",
       desc("Enable zero-initialization of memory buffers"), init(false)};
 
+  PassOptions::Option<bool> createSparseDeallocs{
+      *this, "create-sparse-deallocs",
+      desc("Specify if the temporary buffers created by the sparse "
+           "compiler should be deallocated. For compatibility with core "
+           "bufferization passes. "
+           "This option is only used when enable-runtime-library=false. "
+           "See also create-deallocs for BufferizationOption."),
+      init(true)};
+
   PassOptions::Option<int32_t> vectorLength{
       *this, "vl", desc("Set the vector length (0 disables vectorization)"),
       init(0)};

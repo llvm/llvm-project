@@ -19,7 +19,7 @@
 #include "test_container_comparisons.h"
 
 int main(int, char**) {
-  assert(test_ordered_container_spaceship<std::list>());
+  assert(test_sequence_container_spaceship<std::list>());
   // `std::list` is not constexpr, so no `static_assert` test here.
   return 0;
 }

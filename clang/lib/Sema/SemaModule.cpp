@@ -156,11 +156,15 @@ static bool DiagReservedModuleName(Sema &S, const IdentifierInfo *II,
   if (Reason == Reserved && S.getSourceManager().isInSystemHeader(Loc))
     Reason = Valid;
 
-  if (Reason != Valid) {
-    S.Diag(Loc, diag::err_invalid_module_name) << II << (int)Reason;
-    return true;
+  switch (Reason) {
+  case Valid:
+    return false;
+  case Invalid:
+    return S.Diag(Loc, diag::err_invalid_module_name) << II;
+  case Reserved:
+    return S.Diag(Loc, diag::warn_reserved_module_name) << II;
   }
-  return false;
+  llvm_unreachable("fell off a fully covered switch");
 }
 
 Sema::DeclGroupPtrTy
@@ -264,8 +268,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
       (FirstComponentName == "std" ||
        (FirstComponentName.startswith("std") &&
         llvm::all_of(FirstComponentName.drop_front(3), &llvm::isDigit)))) {
-    Diag(Path[0].second, diag::err_invalid_module_name)
-        << Path[0].first << /*reserved*/ 1;
+    Diag(Path[0].second, diag::warn_reserved_module_name) << Path[0].first;
     return nullptr;
   }
 

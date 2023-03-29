@@ -28,17 +28,17 @@ define half @half_imm_op(half %a) nounwind {
 ; CHECK-LABEL: half_imm_op:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI1_0)
-; CHECK-NEXT:    flh ft0, %lo(.LCPI1_0)(a0)
-; CHECK-NEXT:    fadd.h fa0, fa0, ft0
+; CHECK-NEXT:    flh fa5, %lo(.LCPI1_0)(a0)
+; CHECK-NEXT:    fadd.h fa0, fa0, fa5
 ; CHECK-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: half_imm_op:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 260096
-; CHECKIZFHMIN-NEXT:    fmv.w.x ft1, a0
-; CHECKIZFHMIN-NEXT:    fadd.s ft0, ft0, ft1
-; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
+; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
   %1 = fadd half %a, 1.0
   ret half %1

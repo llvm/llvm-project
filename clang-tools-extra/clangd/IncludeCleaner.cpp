@@ -135,27 +135,6 @@ static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
   return true;
 }
 
-std::vector<include_cleaner::SymbolReference>
-collectMacroReferences(ParsedAST &AST) {
-  const auto &SM = AST.getSourceManager();
-  //  FIXME: !!this is a hacky way to collect macro references.
-  std::vector<include_cleaner::SymbolReference> Macros;
-  auto &PP = AST.getPreprocessor();
-  for (const syntax::Token &Tok :
-       AST.getTokens().spelledTokens(SM.getMainFileID())) {
-    auto Macro = locateMacroAt(Tok, PP);
-    if (!Macro)
-      continue;
-    if (auto DefLoc = Macro->Info->getDefinitionLoc(); DefLoc.isValid())
-      Macros.push_back(
-          {Tok.location(),
-           include_cleaner::Macro{/*Name=*/PP.getIdentifierInfo(Tok.text(SM)),
-                                  DefLoc},
-           include_cleaner::RefType::Explicit});
-  }
-  return Macros;
-}
-
 llvm::StringRef getResolvedPath(const include_cleaner::Header &SymProvider) {
   switch (SymProvider.kind()) {
   case include_cleaner::Header::Physical:
@@ -286,6 +265,28 @@ std::vector<Diag> generateUnusedIncludeDiagnostics(
   return Result;
 }
 } // namespace
+
+
+std::vector<include_cleaner::SymbolReference>
+collectMacroReferences(ParsedAST &AST) {
+  const auto &SM = AST.getSourceManager();
+  //  FIXME: !!this is a hacky way to collect macro references.
+  std::vector<include_cleaner::SymbolReference> Macros;
+  auto &PP = AST.getPreprocessor();
+  for (const syntax::Token &Tok :
+       AST.getTokens().spelledTokens(SM.getMainFileID())) {
+    auto Macro = locateMacroAt(Tok, PP);
+    if (!Macro)
+      continue;
+    if (auto DefLoc = Macro->Info->getDefinitionLoc(); DefLoc.isValid())
+      Macros.push_back(
+          {Tok.location(),
+           include_cleaner::Macro{/*Name=*/PP.getIdentifierInfo(Tok.text(SM)),
+                                  DefLoc},
+           include_cleaner::RefType::Explicit});
+  }
+  return Macros;
+}
 
 include_cleaner::Includes
 convertIncludes(const SourceManager &SM,

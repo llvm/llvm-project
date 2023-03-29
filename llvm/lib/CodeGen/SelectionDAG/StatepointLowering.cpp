@@ -258,8 +258,7 @@ static bool willLowerDirectly(SDValue Incoming) {
   if (Incoming.getValueType().getSizeInBits() > 64)
     return false;
 
-  return (isa<ConstantSDNode>(Incoming) || isa<ConstantFPSDNode>(Incoming) ||
-          Incoming.isUndef());
+  return isIntOrFPConstant(Incoming) || Incoming.isUndef();
 }
 
 /// Try to find existing copies of the incoming values in stack slots used for

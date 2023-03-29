@@ -1590,7 +1590,7 @@ SDValue SelectionDAGBuilder::getNonRegisterValue(const Value *V) {
   // If we already have an SDValue for this value, use it.
   SDValue &N = NodeMap[V];
   if (N.getNode()) {
-    if (isa<ConstantSDNode>(N) || isa<ConstantFPSDNode>(N)) {
+    if (isIntOrFPConstant(N)) {
       // Remove the debug location from the node as the node is about to be used
       // in a location which may differ from the original debug location.  This
       // is relevant to Constant and ConstantFP nodes because they can appear

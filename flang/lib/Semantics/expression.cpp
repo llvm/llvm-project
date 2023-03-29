@@ -1814,6 +1814,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(
   if (!spec.scope() || !typeSymbol.has<semantics::DerivedTypeDetails>()) {
     return std::nullopt; // error recovery
   }
+  const semantics::Scope &scope{context_.FindScope(typeName)};
+  const semantics::Scope *pureContext{FindPureProcedureContaining(scope)};
   const auto &typeDetails{typeSymbol.get<semantics::DerivedTypeDetails>()};
   const Symbol *parentComponent{typeDetails.GetParentComponent(*spec.scope())};
 
@@ -1939,41 +1941,18 @@ MaybeExpr ExpressionAnalyzer::Analyze(
       }
       unavailable.insert(symbol->name());
       if (value) {
-        if (symbol->has<semantics::ProcEntityDetails>()) {
-          CHECK(IsPointer(*symbol));
-        } else if (symbol->has<semantics::ObjectEntityDetails>()) {
-          // C1594(4)
-          if (const auto *pureProc{FindPureProcedureContaining(innermost)}) {
-            if (const Symbol *pointer{FindPointerComponent(*symbol)}) {
-              if (const Symbol *object{
-                      FindExternallyVisibleObject(*value, *pureProc)}) {
-                if (auto *msg{Say(expr.source,
-                        "Externally visible object '%s' may not be "
-                        "associated with pointer component '%s' in a "
-                        "pure procedure"_err_en_US,
-                        object->name(), pointer->name())}) {
-                  msg->Attach(object->name(), "Object declaration"_en_US)
-                      .Attach(pointer->name(), "Pointer declaration"_en_US);
-                }
-              }
-            }
-          }
-        } else if (symbol->has<semantics::TypeParamDetails>()) {
+        if (symbol->has<semantics::TypeParamDetails>()) {
           Say(expr.source,
-              "Type parameter '%s' may not appear as a component "
-              "of a structure constructor"_err_en_US,
+              "Type parameter '%s' may not appear as a component of a structure constructor"_err_en_US,
               symbol->name());
-          continue;
-        } else {
-          Say(expr.source,
-              "Component '%s' is neither a procedure pointer "
-              "nor a data object"_err_en_US,
-              symbol->name());
-          continue;
         }
-        if (IsPointer(*symbol)) {
+        if (!(symbol->has<semantics::ProcEntityDetails>() ||
+                symbol->has<semantics::ObjectEntityDetails>())) {
+          continue; // recovery
+        }
+        if (IsPointer(*symbol)) { // C7104, C7105, C1594(4)
           semantics::CheckStructConstructorPointerComponent(
-              GetFoldingContext(), *symbol, *value, innermost); // C7104, C7105
+              GetFoldingContext(), *symbol, *value, innermost);
           result.Add(*symbol, Fold(std::move(*value)));
           continue;
         }
@@ -2007,6 +1986,15 @@ MaybeExpr ExpressionAnalyzer::Analyze(
                     symbol->name()),
                 *symbol);
             continue;
+          }
+        } else if (const Symbol * pointer{FindPointerComponent(*symbol)};
+                   pointer && pureContext) { // C1594(4)
+          if (const Symbol *
+              visible{semantics::FindExternallyVisibleObject(
+                  *value, *pureContext)}) {
+            Say(expr.source,
+                "The externally visible object '%s' may not be used in a pure procedure as the value for component '%s' which has the pointer component '%s'"_err_en_US,
+                visible->name(), symbol->name(), pointer->name());
           }
         }
         if (MaybeExpr converted{ConvertToType(*symbol, std::move(*value))}) {
