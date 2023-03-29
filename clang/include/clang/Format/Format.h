@@ -4279,7 +4279,7 @@ struct FormatStyle {
            Language == R.Language &&
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
            LineEnding == R.LineEnding && MacroBlockBegin == R.MacroBlockBegin &&
-           MacroBlockEnd == R.MacroBlockEnd &&
+           MacroBlockEnd == R.MacroBlockEnd && Macros == R.Macros &&
            MaxEmptyLinesToKeep == R.MaxEmptyLinesToKeep &&
            NamespaceIndentation == R.NamespaceIndentation &&
            NamespaceMacros == R.NamespaceMacros &&
@@ -4346,8 +4346,7 @@ struct FormatStyle {
            StatementAttributeLikeMacros == R.StatementAttributeLikeMacros &&
            StatementMacros == R.StatementMacros && TabWidth == R.TabWidth &&
            TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
-           WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros &&
-           Macros == R.Macros;
+           WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;
   }
 
   std::optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;
