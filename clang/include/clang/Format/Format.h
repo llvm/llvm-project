@@ -3714,6 +3714,16 @@ struct FormatStyle {
   /// \version 7
   bool SpaceBeforeInheritanceColon;
 
+  /// If ``true``, a space will be add before a JSON colon.
+  /// \code
+  ///    true:                                  false:
+  ///    {                                      {
+  ///      "key" : "value"              vs.       "key": "value"
+  ///    }                                      }
+  /// \endcode
+  /// \version 17
+  bool SpaceBeforeJsonColon;
+
   /// Different ways to put a space before opening parentheses.
   enum SpaceBeforeParensStyle : int8_t {
     /// Never put a space before opening parentheses.
@@ -4323,6 +4333,7 @@ struct FormatStyle {
            SpaceBeforeCtorInitializerColon ==
                R.SpaceBeforeCtorInitializerColon &&
            SpaceBeforeInheritanceColon == R.SpaceBeforeInheritanceColon &&
+           SpaceBeforeJsonColon == R.SpaceBeforeJsonColon &&
            SpaceBeforeParens == R.SpaceBeforeParens &&
            SpaceBeforeParensOptions == R.SpaceBeforeParensOptions &&
            SpaceAroundPointerQualifiers == R.SpaceAroundPointerQualifiers &&
