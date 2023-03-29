@@ -292,9 +292,6 @@ struct CastAwayContractionLeadingOneDim
       return failure();
     if (oldAccType.getRank() < 2)
       return failure();
-    // TODO: implement masks.
-    if (!contractOp.getMasks().empty())
-      return failure();
     if (oldAccType.getShape()[0] != 1)
       return failure();
     // currently we support only dropping one dim but the pattern can be applied

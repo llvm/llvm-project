@@ -729,8 +729,6 @@ void ContractionOp::print(OpAsmPrinter &p) {
   auto dictAttr = DictionaryAttr::get(getContext(), attrs);
   p << " " << dictAttr << " " << getLhs() << ", ";
   p << getRhs() << ", " << getAcc();
-  if (getMasks().size() == 2)
-    p << ", " << getMasks();
 
   p.printOptionalAttrDict((*this)->getAttrs(), attrNames);
   p << " : " << getLhs().getType() << ", " << getRhs().getType() << " into "
@@ -897,18 +895,6 @@ LogicalResult ContractionOp::verify() {
   if (failed(verifyOutputShape(*this, lhsType, rhsType, accType, resType,
                                contractingDimMap, batchDimMap)))
     return failure();
-
-  // Verify that either two vector masks are set or none are set.
-  auto lhsMaskType = getLHSVectorMaskType();
-  auto rhsMaskType = getRHSVectorMaskType();
-  if ((lhsMaskType && !rhsMaskType) || (!lhsMaskType && rhsMaskType))
-    return emitOpError("invalid number of vector masks specified");
-  if (lhsMaskType && rhsMaskType) {
-    // Verify mask rank == argument rank.
-    if (lhsMaskType.getShape().size() != lhsType.getShape().size() ||
-        rhsMaskType.getShape().size() != rhsType.getShape().size())
-      return emitOpError("invalid vector mask rank");
-  }
 
   // Verify supported combining kind.
   auto vectorType = resType.dyn_cast<VectorType>();
