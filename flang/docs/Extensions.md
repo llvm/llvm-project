@@ -188,7 +188,9 @@ end
   relax enforcement of some requirements on actual arguments that must otherwise
   hold true for definable arguments.
 * Assignment of `LOGICAL` to `INTEGER` and vice versa (but not other types) is
-  allowed.  The values are normalized.
+  allowed.  The values are normalized to canonical `.TRUE.`/`.FALSE.`.
+  The values are also normalized for assignments of `LOGICAL(KIND=K1)` to
+  `LOGICAL(KIND=K2)`, when `K1 != K2`.
 * Static initialization of `LOGICAL` with `INTEGER` is allowed in `DATA` statements
   and object initializers.
   The results are *not* normalized to canonical `.TRUE.`/`.FALSE.`.
