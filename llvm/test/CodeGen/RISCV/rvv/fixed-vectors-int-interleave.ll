@@ -665,17 +665,16 @@ define <8 x i32> @unary_interleave_v8i32(<8 x i32> %x) {
 }
 
 ; This interleaves the first 2 elements of a vector in opposite order. With
-; undefs for the remaining elements.
-; FIXME: We incorrectly swap the elements.
+; undefs for the remaining elements. We use to miscompile this.
 define <4 x i8> @unary_interleave_10uu_v4i8(<4 x i8> %x) {
 ; V128-LABEL: unary_interleave_10uu_v4i8:
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; V128-NEXT:    vslidedown.vi v10, v8, 1
 ; V128-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; V128-NEXT:    vwaddu.vv v9, v8, v10
+; V128-NEXT:    vwaddu.vv v9, v10, v8
 ; V128-NEXT:    li a0, -1
-; V128-NEXT:    vwmaccu.vx v9, a0, v10
+; V128-NEXT:    vwmaccu.vx v9, a0, v8
 ; V128-NEXT:    vmv1r.v v8, v9
 ; V128-NEXT:    ret
 ;
@@ -683,9 +682,9 @@ define <4 x i8> @unary_interleave_10uu_v4i8(<4 x i8> %x) {
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; V512-NEXT:    vslidedown.vi v10, v8, 1
-; V512-NEXT:    vwaddu.vv v9, v8, v10
+; V512-NEXT:    vwaddu.vv v9, v10, v8
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v9, a0, v10
+; V512-NEXT:    vwmaccu.vx v9, a0, v8
 ; V512-NEXT:    vmv1r.v v8, v9
 ; V512-NEXT:    ret
   %a = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
