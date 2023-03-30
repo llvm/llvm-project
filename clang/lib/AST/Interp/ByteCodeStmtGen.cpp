@@ -194,6 +194,23 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
   }
 }
 
+/// Visits the given statment without creating a variable
+/// scope for it in case it is a compound statement.
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitLoopBody(const Stmt *S) {
+  if (isa<NullStmt>(S))
+    return true;
+
+  if (const auto *CS = dyn_cast<CompoundStmt>(S)) {
+    for (auto *InnerStmt : CS->body())
+      if (!visitStmt(InnerStmt))
+        return false;
+    return true;
+  }
+
+  return this->visitStmt(S);
+}
+
 template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitCompoundStmt(
     const CompoundStmt *CompoundStmt) {
@@ -306,11 +323,15 @@ bool ByteCodeStmtGen<Emitter>::visitWhileStmt(const WhileStmt *S) {
   if (!this->jumpFalse(EndLabel))
     return false;
 
-  if (!this->visitStmt(Body))
-    return false;
+  LocalScope<Emitter> Scope(this);
+  {
+    DestructorScope<Emitter> DS(Scope);
+    if (!this->visitLoopBody(Body))
+      return false;
+  }
+
   if (!this->jump(CondLabel))
     return false;
-
   this->emitLabel(EndLabel);
 
   return true;
@@ -325,15 +346,21 @@ bool ByteCodeStmtGen<Emitter>::visitDoStmt(const DoStmt *S) {
   LabelTy EndLabel = this->getLabel();
   LabelTy CondLabel = this->getLabel();
   LoopScope<Emitter> LS(this, EndLabel, CondLabel);
+  LocalScope<Emitter> Scope(this);
 
   this->emitLabel(StartLabel);
-  if (!this->visitStmt(Body))
-    return false;
-  this->emitLabel(CondLabel);
-  if (!this->visitBool(Cond))
-    return false;
+  {
+    DestructorScope<Emitter> DS(Scope);
+
+    if (!this->visitLoopBody(Body))
+      return false;
+    this->emitLabel(CondLabel);
+    if (!this->visitBool(Cond))
+      return false;
+  }
   if (!this->jumpTrue(StartLabel))
     return false;
+
   this->emitLabel(EndLabel);
   return true;
 }
@@ -350,6 +377,7 @@ bool ByteCodeStmtGen<Emitter>::visitForStmt(const ForStmt *S) {
   LabelTy CondLabel = this->getLabel();
   LabelTy IncLabel = this->getLabel();
   LoopScope<Emitter> LS(this, EndLabel, IncLabel);
+  LocalScope<Emitter> Scope(this);
 
   if (Init && !this->visitStmt(Init))
     return false;
@@ -360,11 +388,17 @@ bool ByteCodeStmtGen<Emitter>::visitForStmt(const ForStmt *S) {
     if (!this->jumpFalse(EndLabel))
       return false;
   }
-  if (Body && !this->visitStmt(Body))
-    return false;
-  this->emitLabel(IncLabel);
-  if (Inc && !this->discard(Inc))
-    return false;
+
+  {
+    DestructorScope<Emitter> DS(Scope);
+
+    if (Body && !this->visitLoopBody(Body))
+      return false;
+    this->emitLabel(IncLabel);
+    if (Inc && !this->discard(Inc))
+      return false;
+  }
+
   if (!this->jump(CondLabel))
     return false;
   this->emitLabel(EndLabel);
@@ -386,38 +420,40 @@ bool ByteCodeStmtGen<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
   LabelTy CondLabel = this->getLabel();
   LabelTy IncLabel = this->getLabel();
   LoopScope<Emitter> LS(this, EndLabel, IncLabel);
+
+  // Emit declarations needed in the loop.
+  if (Init && !this->visitStmt(Init))
+    return false;
+  if (!this->visitStmt(RangeStmt))
+    return false;
+  if (!this->visitStmt(BeginStmt))
+    return false;
+  if (!this->visitStmt(EndStmt))
+    return false;
+
+  // Now the condition as well as the loop variable assignment.
+  this->emitLabel(CondLabel);
+  if (!this->visitBool(Cond))
+    return false;
+  if (!this->jumpFalse(EndLabel))
+    return false;
+
+  if (!this->visitVarDecl(LoopVar))
+    return false;
+
+  // Body.
+  LocalScope<Emitter> Scope(this);
   {
-    ExprScope<Emitter> ES(this);
+    DestructorScope<Emitter> DS(Scope);
 
-    // Emit declarations needed in the loop.
-    if (Init && !this->visitStmt(Init))
-      return false;
-    if (!this->visitStmt(RangeStmt))
-      return false;
-    if (!this->visitStmt(BeginStmt))
-      return false;
-    if (!this->visitStmt(EndStmt))
-      return false;
-
-    // Now the condition as well as the loop variable assignment.
-    this->emitLabel(CondLabel);
-    if (!this->visitBool(Cond))
-      return false;
-    if (!this->jumpFalse(EndLabel))
-      return false;
-
-    if (!this->visitVarDecl(LoopVar))
-      return false;
-
-    // Body.
-    if (!this->visitStmt(Body))
+    if (!this->visitLoopBody(Body))
       return false;
     this->emitLabel(IncLabel);
     if (!this->discard(Inc))
       return false;
-    if (!this->jump(CondLabel))
-      return false;
   }
+  if (!this->jump(CondLabel))
+    return false;
 
   this->emitLabel(EndLabel);
   return true;
@@ -428,6 +464,7 @@ bool ByteCodeStmtGen<Emitter>::visitBreakStmt(const BreakStmt *S) {
   if (!BreakLabel)
     return false;
 
+  this->VarScope->emitDestructors();
   return this->jump(*BreakLabel);
 }
 
@@ -436,6 +473,7 @@ bool ByteCodeStmtGen<Emitter>::visitContinueStmt(const ContinueStmt *S) {
   if (!ContinueLabel)
     return false;
 
+  this->VarScope->emitDestructors();
   return this->jump(*ContinueLabel);
 }
 

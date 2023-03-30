@@ -8,9 +8,9 @@ define i32 @veccond128(<4 x i32> %input) {
 ; SSE2-LABEL: veccond128:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %eax
-; SSE2-NEXT:    xorl $65535, %eax # imm = 0xFFFF
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    movmskps %xmm1, %eax
+; SSE2-NEXT:    xorl $15, %eax
 ; SSE2-NEXT:    je .LBB0_2
 ; SSE2-NEXT:  # %bb.1: # %if-true-block
 ; SSE2-NEXT:    xorl %eax, %eax
@@ -55,9 +55,9 @@ define i32 @veccond256(<8 x i32> %input) {
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %eax
-; SSE2-NEXT:    xorl $65535, %eax # imm = 0xFFFF
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    movmskps %xmm1, %eax
+; SSE2-NEXT:    xorl $15, %eax
 ; SSE2-NEXT:    je .LBB1_2
 ; SSE2-NEXT:  # %bb.1: # %if-true-block
 ; SSE2-NEXT:    xorl %eax, %eax
@@ -107,9 +107,9 @@ define i32 @veccond512(<16 x i32> %input) {
 ; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %eax
-; SSE2-NEXT:    xorl $65535, %eax # imm = 0xFFFF
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    movmskps %xmm1, %eax
+; SSE2-NEXT:    xorl $15, %eax
 ; SSE2-NEXT:    je .LBB2_2
 ; SSE2-NEXT:  # %bb.1: # %if-true-block
 ; SSE2-NEXT:    xorl %eax, %eax
@@ -173,10 +173,10 @@ define i32 @vectest128(<4 x i32> %input) {
 ; SSE2-LABEL: vectest128:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %ecx
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    movmskps %xmm1, %ecx
 ; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    xorl $65535, %ecx # imm = 0xFFFF
+; SSE2-NEXT:    xorl $15, %ecx
 ; SSE2-NEXT:    setne %al
 ; SSE2-NEXT:    retq
 ;
@@ -204,10 +204,10 @@ define i32 @vectest256(<8 x i32> %input) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %ecx
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    movmskps %xmm1, %ecx
 ; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    xorl $65535, %ecx # imm = 0xFFFF
+; SSE2-NEXT:    xorl $15, %ecx
 ; SSE2-NEXT:    setne %al
 ; SSE2-NEXT:    retq
 ;
@@ -239,10 +239,10 @@ define i32 @vectest512(<16 x i32> %input) {
 ; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %ecx
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    movmskps %xmm1, %ecx
 ; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    xorl $65535, %ecx # imm = 0xFFFF
+; SSE2-NEXT:    xorl $15, %ecx
 ; SSE2-NEXT:    setne %al
 ; SSE2-NEXT:    retq
 ;
@@ -284,9 +284,9 @@ define i32 @vecsel128(<4 x i32> %input, i32 %a, i32 %b) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movl %edi, %eax
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %ecx
-; SSE2-NEXT:    xorl $65535, %ecx # imm = 0xFFFF
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    movmskps %xmm1, %ecx
+; SSE2-NEXT:    xorl $15, %ecx
 ; SSE2-NEXT:    cmovel %esi, %eax
 ; SSE2-NEXT:    retq
 ;
@@ -315,9 +315,9 @@ define i32 @vecsel256(<8 x i32> %input, i32 %a, i32 %b) {
 ; SSE2-NEXT:    movl %edi, %eax
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %ecx
-; SSE2-NEXT:    xorl $65535, %ecx # imm = 0xFFFF
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    movmskps %xmm1, %ecx
+; SSE2-NEXT:    xorl $15, %ecx
 ; SSE2-NEXT:    cmovel %esi, %eax
 ; SSE2-NEXT:    retq
 ;
@@ -350,9 +350,9 @@ define i32 @vecsel512(<16 x i32> %input, i32 %a, i32 %b) {
 ; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %ecx
-; SSE2-NEXT:    xorl $65535, %ecx # imm = 0xFFFF
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    movmskps %xmm1, %ecx
+; SSE2-NEXT:    xorl $15, %ecx
 ; SSE2-NEXT:    cmovel %esi, %eax
 ; SSE2-NEXT:    retq
 ;

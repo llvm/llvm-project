@@ -132,30 +132,10 @@ define i1 @combine_setcc_ne_vecreduce_or_v64i1(<64 x i8> %a) {
 define i1 @combine_setcc_eq_vecreduce_and_v8i1(<8 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_eq_vecreduce_and_v8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    cmeq v0.8b, v0.8b, #0
-; CHECK-NEXT:    mov w8, #255 // =0xff
-; CHECK-NEXT:    umov w9, v0.b[0]
-; CHECK-NEXT:    umov w10, v0.b[1]
-; CHECK-NEXT:    umov w11, v0.b[2]
-; CHECK-NEXT:    umov w12, v0.b[3]
-; CHECK-NEXT:    umov w13, v0.b[4]
-; CHECK-NEXT:    umov w14, v0.b[6]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    bfi w9, w10, #1, #1
-; CHECK-NEXT:    umov w10, v0.b[5]
-; CHECK-NEXT:    bfi w9, w11, #2, #1
-; CHECK-NEXT:    umov w11, v0.b[7]
-; CHECK-NEXT:    bfi w9, w12, #3, #1
-; CHECK-NEXT:    and w12, w14, #0x1
-; CHECK-NEXT:    bfi w9, w13, #4, #1
-; CHECK-NEXT:    bfi w9, w10, #5, #1
-; CHECK-NEXT:    orr w9, w9, w12, lsl #6
-; CHECK-NEXT:    orr w9, w9, w11, lsl #7
-; CHECK-NEXT:    bics wzr, w8, w9
-; CHECK-NEXT:    cset w0, eq
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    uminv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %cmp1 = icmp eq <8 x i8> %a, zeroinitializer
   %cast = bitcast <8 x i1> %cmp1 to i8
@@ -166,54 +146,10 @@ define i1 @combine_setcc_eq_vecreduce_and_v8i1(<8 x i8> %a) {
 define i1 @combine_setcc_eq_vecreduce_and_v16i1(<16 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_eq_vecreduce_and_v16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    cmeq v0.16b, v0.16b, #0
-; CHECK-NEXT:    mov w8, #65535 // =0xffff
-; CHECK-NEXT:    umov w9, v0.b[0]
-; CHECK-NEXT:    umov w10, v0.b[1]
-; CHECK-NEXT:    umov w11, v0.b[2]
-; CHECK-NEXT:    umov w12, v0.b[3]
-; CHECK-NEXT:    umov w13, v0.b[4]
-; CHECK-NEXT:    umov w14, v0.b[5]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    bfi w9, w10, #1, #1
-; CHECK-NEXT:    umov w10, v0.b[6]
-; CHECK-NEXT:    bfi w9, w11, #2, #1
-; CHECK-NEXT:    umov w11, v0.b[7]
-; CHECK-NEXT:    bfi w9, w12, #3, #1
-; CHECK-NEXT:    umov w12, v0.b[8]
-; CHECK-NEXT:    bfi w9, w13, #4, #1
-; CHECK-NEXT:    umov w13, v0.b[9]
-; CHECK-NEXT:    and w10, w10, #0x1
-; CHECK-NEXT:    bfi w9, w14, #5, #1
-; CHECK-NEXT:    umov w14, v0.b[10]
-; CHECK-NEXT:    and w11, w11, #0x1
-; CHECK-NEXT:    orr w9, w9, w10, lsl #6
-; CHECK-NEXT:    umov w10, v0.b[11]
-; CHECK-NEXT:    and w12, w12, #0x1
-; CHECK-NEXT:    orr w9, w9, w11, lsl #7
-; CHECK-NEXT:    umov w11, v0.b[12]
-; CHECK-NEXT:    and w13, w13, #0x1
-; CHECK-NEXT:    orr w9, w9, w12, lsl #8
-; CHECK-NEXT:    umov w12, v0.b[13]
-; CHECK-NEXT:    and w14, w14, #0x1
-; CHECK-NEXT:    orr w9, w9, w13, lsl #9
-; CHECK-NEXT:    umov w13, v0.b[14]
-; CHECK-NEXT:    and w10, w10, #0x1
-; CHECK-NEXT:    orr w9, w9, w14, lsl #10
-; CHECK-NEXT:    and w11, w11, #0x1
-; CHECK-NEXT:    orr w9, w9, w10, lsl #11
-; CHECK-NEXT:    and w10, w12, #0x1
-; CHECK-NEXT:    umov w12, v0.b[15]
-; CHECK-NEXT:    orr w9, w9, w11, lsl #12
-; CHECK-NEXT:    and w11, w13, #0x1
-; CHECK-NEXT:    orr w9, w9, w10, lsl #13
-; CHECK-NEXT:    orr w9, w9, w11, lsl #14
-; CHECK-NEXT:    orr w9, w9, w12, lsl #15
-; CHECK-NEXT:    bics wzr, w8, w9
-; CHECK-NEXT:    cset w0, eq
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    uminv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %cmp1 = icmp eq <16 x i8> %a, zeroinitializer
   %cast = bitcast <16 x i1> %cmp1 to i16
@@ -224,97 +160,11 @@ define i1 @combine_setcc_eq_vecreduce_and_v16i1(<16 x i8> %a) {
 define i1 @combine_setcc_eq_vecreduce_and_v32i1(<32 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_eq_vecreduce_and_v32i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    cmeq v1.16b, v1.16b, #0
-; CHECK-NEXT:    mov w8, #65535 // =0xffff
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    cmeq v0.16b, v0.16b, #0
-; CHECK-NEXT:    umov w9, v1.b[0]
-; CHECK-NEXT:    umov w10, v1.b[1]
-; CHECK-NEXT:    umov w11, v1.b[2]
-; CHECK-NEXT:    umov w12, v1.b[3]
-; CHECK-NEXT:    umov w13, v1.b[4]
-; CHECK-NEXT:    umov w14, v1.b[5]
-; CHECK-NEXT:    umov w15, v1.b[6]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    umov w16, v1.b[7]
-; CHECK-NEXT:    bfi w9, w10, #1, #1
-; CHECK-NEXT:    umov w10, v1.b[8]
-; CHECK-NEXT:    bfi w9, w11, #2, #1
-; CHECK-NEXT:    umov w11, v1.b[9]
-; CHECK-NEXT:    bfi w9, w12, #3, #1
-; CHECK-NEXT:    umov w12, v1.b[10]
-; CHECK-NEXT:    bfi w9, w13, #4, #1
-; CHECK-NEXT:    umov w13, v0.b[0]
-; CHECK-NEXT:    bfi w9, w14, #5, #1
-; CHECK-NEXT:    umov w14, v0.b[1]
-; CHECK-NEXT:    and w15, w15, #0x1
-; CHECK-NEXT:    and w16, w16, #0x1
-; CHECK-NEXT:    and w10, w10, #0x1
-; CHECK-NEXT:    and w11, w11, #0x1
-; CHECK-NEXT:    orr w9, w9, w15, lsl #6
-; CHECK-NEXT:    and w13, w13, #0x1
-; CHECK-NEXT:    bfi w13, w14, #1, #1
-; CHECK-NEXT:    orr w9, w9, w16, lsl #7
-; CHECK-NEXT:    umov w14, v0.b[2]
-; CHECK-NEXT:    and w12, w12, #0x1
-; CHECK-NEXT:    orr w9, w9, w10, lsl #8
-; CHECK-NEXT:    umov w10, v0.b[3]
-; CHECK-NEXT:    orr w9, w9, w11, lsl #9
-; CHECK-NEXT:    umov w11, v0.b[4]
-; CHECK-NEXT:    orr w9, w9, w12, lsl #10
-; CHECK-NEXT:    umov w12, v0.b[6]
-; CHECK-NEXT:    bfi w13, w14, #2, #1
-; CHECK-NEXT:    umov w14, v0.b[5]
-; CHECK-NEXT:    umov w16, v1.b[12]
-; CHECK-NEXT:    bfi w13, w10, #3, #1
-; CHECK-NEXT:    umov w10, v0.b[7]
-; CHECK-NEXT:    umov w15, v1.b[11]
-; CHECK-NEXT:    bfi w13, w11, #4, #1
-; CHECK-NEXT:    and w11, w12, #0x1
-; CHECK-NEXT:    umov w12, v0.b[8]
-; CHECK-NEXT:    bfi w13, w14, #5, #1
-; CHECK-NEXT:    orr w11, w13, w11, lsl #6
-; CHECK-NEXT:    umov w13, v0.b[9]
-; CHECK-NEXT:    and w14, w16, #0x1
-; CHECK-NEXT:    and w10, w10, #0x1
-; CHECK-NEXT:    umov w16, v0.b[10]
-; CHECK-NEXT:    and w15, w15, #0x1
-; CHECK-NEXT:    and w12, w12, #0x1
-; CHECK-NEXT:    orr w10, w11, w10, lsl #7
-; CHECK-NEXT:    orr w9, w9, w15, lsl #11
-; CHECK-NEXT:    and w11, w13, #0x1
-; CHECK-NEXT:    orr w10, w10, w12, lsl #8
-; CHECK-NEXT:    umov w12, v0.b[11]
-; CHECK-NEXT:    orr w9, w9, w14, lsl #12
-; CHECK-NEXT:    and w13, w16, #0x1
-; CHECK-NEXT:    umov w14, v0.b[12]
-; CHECK-NEXT:    orr w10, w10, w11, lsl #9
-; CHECK-NEXT:    umov w15, v1.b[13]
-; CHECK-NEXT:    orr w10, w10, w13, lsl #10
-; CHECK-NEXT:    umov w13, v0.b[13]
-; CHECK-NEXT:    umov w11, v1.b[14]
-; CHECK-NEXT:    and w12, w12, #0x1
-; CHECK-NEXT:    umov w16, v0.b[14]
-; CHECK-NEXT:    and w14, w14, #0x1
-; CHECK-NEXT:    orr w10, w10, w12, lsl #11
-; CHECK-NEXT:    and w15, w15, #0x1
-; CHECK-NEXT:    umov w12, v1.b[15]
-; CHECK-NEXT:    orr w10, w10, w14, lsl #12
-; CHECK-NEXT:    and w13, w13, #0x1
-; CHECK-NEXT:    umov w14, v0.b[15]
-; CHECK-NEXT:    and w11, w11, #0x1
-; CHECK-NEXT:    and w16, w16, #0x1
-; CHECK-NEXT:    orr w9, w9, w15, lsl #13
-; CHECK-NEXT:    orr w10, w10, w13, lsl #13
-; CHECK-NEXT:    orr w9, w9, w11, lsl #14
-; CHECK-NEXT:    orr w10, w10, w16, lsl #14
-; CHECK-NEXT:    orr w9, w9, w12, lsl #15
-; CHECK-NEXT:    orr w10, w10, w14, lsl #15
-; CHECK-NEXT:    and w9, w10, w9
-; CHECK-NEXT:    bics wzr, w8, w9
-; CHECK-NEXT:    cset w0, eq
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    uminv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %cmp1 = icmp eq <32 x i8> %a, zeroinitializer
   %cast = bitcast <32 x i1> %cmp1 to i32
@@ -325,187 +175,13 @@ define i1 @combine_setcc_eq_vecreduce_and_v32i1(<32 x i8> %a) {
 define i1 @combine_setcc_eq_vecreduce_and_v64i1(<64 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_eq_vecreduce_and_v64i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    cmeq v3.16b, v3.16b, #0
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    cmeq v2.16b, v2.16b, #0
-; CHECK-NEXT:    umov w10, v3.b[0]
-; CHECK-NEXT:    umov w9, v3.b[1]
-; CHECK-NEXT:    umov w11, v3.b[2]
-; CHECK-NEXT:    umov w12, v3.b[3]
-; CHECK-NEXT:    umov w13, v3.b[4]
-; CHECK-NEXT:    umov w15, v3.b[6]
-; CHECK-NEXT:    umov w14, v3.b[5]
-; CHECK-NEXT:    and w10, w10, #0x1
-; CHECK-NEXT:    umov w16, v3.b[7]
-; CHECK-NEXT:    lsl w10, w10, #16
-; CHECK-NEXT:    umov w17, v3.b[8]
-; CHECK-NEXT:    bfi w10, w9, #17, #1
-; CHECK-NEXT:    umov w18, v3.b[9]
-; CHECK-NEXT:    bfi w10, w11, #18, #1
-; CHECK-NEXT:    umov w9, v3.b[10]
-; CHECK-NEXT:    bfi w10, w12, #19, #1
-; CHECK-NEXT:    and w15, w15, #0x1
-; CHECK-NEXT:    bfi w10, w13, #20, #1
-; CHECK-NEXT:    umov w11, v3.b[11]
-; CHECK-NEXT:    bfi w10, w14, #21, #1
-; CHECK-NEXT:    and w16, w16, #0x1
-; CHECK-NEXT:    umov w12, v3.b[12]
-; CHECK-NEXT:    and w17, w17, #0x1
-; CHECK-NEXT:    orr w10, w10, w15, lsl #22
-; CHECK-NEXT:    umov w13, v3.b[13]
-; CHECK-NEXT:    and w18, w18, #0x1
-; CHECK-NEXT:    orr w10, w10, w16, lsl #23
-; CHECK-NEXT:    umov w14, v3.b[14]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    orr w10, w10, w17, lsl #24
-; CHECK-NEXT:    and w11, w11, #0x1
-; CHECK-NEXT:    orr w10, w10, w18, lsl #25
-; CHECK-NEXT:    and w12, w12, #0x1
-; CHECK-NEXT:    orr w9, w10, w9, lsl #26
-; CHECK-NEXT:    and w13, w13, #0x1
-; CHECK-NEXT:    orr w9, w9, w11, lsl #27
-; CHECK-NEXT:    umov w11, v2.b[0]
-; CHECK-NEXT:    and w10, w14, #0x1
-; CHECK-NEXT:    orr w9, w9, w12, lsl #28
-; CHECK-NEXT:    umov w12, v2.b[1]
-; CHECK-NEXT:    orr w9, w9, w13, lsl #29
-; CHECK-NEXT:    umov w13, v2.b[2]
-; CHECK-NEXT:    orr w9, w9, w10, lsl #30
-; CHECK-NEXT:    umov w10, v2.b[3]
-; CHECK-NEXT:    and w11, w11, #0x1
-; CHECK-NEXT:    umov w14, v2.b[4]
-; CHECK-NEXT:    umov w16, v2.b[10]
-; CHECK-NEXT:    bfi w11, w12, #1, #1
-; CHECK-NEXT:    umov w12, v2.b[5]
-; CHECK-NEXT:    bfi w11, w13, #2, #1
-; CHECK-NEXT:    umov w13, v2.b[6]
-; CHECK-NEXT:    bfi w11, w10, #3, #1
-; CHECK-NEXT:    umov w10, v2.b[7]
-; CHECK-NEXT:    bfi w11, w14, #4, #1
-; CHECK-NEXT:    umov w14, v2.b[9]
-; CHECK-NEXT:    bfi w11, w12, #5, #1
-; CHECK-NEXT:    umov w12, v2.b[8]
-; CHECK-NEXT:    and w13, w13, #0x1
-; CHECK-NEXT:    umov w15, v3.b[15]
-; CHECK-NEXT:    and w10, w10, #0x1
-; CHECK-NEXT:    orr w11, w11, w13, lsl #6
-; CHECK-NEXT:    umov w13, v2.b[11]
-; CHECK-NEXT:    orr w10, w11, w10, lsl #7
-; CHECK-NEXT:    and w11, w12, #0x1
-; CHECK-NEXT:    and w12, w14, #0x1
-; CHECK-NEXT:    umov w14, v2.b[14]
-; CHECK-NEXT:    orr w10, w10, w11, lsl #8
-; CHECK-NEXT:    and w11, w16, #0x1
-; CHECK-NEXT:    orr w10, w10, w12, lsl #9
-; CHECK-NEXT:    umov w12, v2.b[12]
-; CHECK-NEXT:    orr w10, w10, w11, lsl #10
-; CHECK-NEXT:    umov w11, v2.b[13]
-; CHECK-NEXT:    and w13, w13, #0x1
-; CHECK-NEXT:    orr w9, w9, w15, lsl #31
-; CHECK-NEXT:    cmeq v1.16b, v1.16b, #0
-; CHECK-NEXT:    and w12, w12, #0x1
-; CHECK-NEXT:    orr w10, w10, w13, lsl #11
-; CHECK-NEXT:    and w11, w11, #0x1
-; CHECK-NEXT:    umov w13, v1.b[0]
-; CHECK-NEXT:    orr w10, w10, w12, lsl #12
-; CHECK-NEXT:    and w12, w14, #0x1
-; CHECK-NEXT:    orr w10, w10, w11, lsl #13
-; CHECK-NEXT:    umov w11, v1.b[1]
-; CHECK-NEXT:    umov w14, v1.b[2]
-; CHECK-NEXT:    umov w15, v1.b[3]
-; CHECK-NEXT:    and w13, w13, #0x1
-; CHECK-NEXT:    orr w10, w10, w12, lsl #14
-; CHECK-NEXT:    lsl w13, w13, #16
-; CHECK-NEXT:    umov w12, v2.b[15]
-; CHECK-NEXT:    bfi w13, w11, #17, #1
-; CHECK-NEXT:    umov w11, v1.b[4]
-; CHECK-NEXT:    umov w17, v1.b[6]
-; CHECK-NEXT:    umov w16, v1.b[5]
-; CHECK-NEXT:    bfi w13, w14, #18, #1
-; CHECK-NEXT:    umov w14, v1.b[7]
-; CHECK-NEXT:    bfi w13, w15, #19, #1
-; CHECK-NEXT:    orr w10, w10, w12, lsl #15
-; CHECK-NEXT:    bfi w13, w11, #20, #1
-; CHECK-NEXT:    umov w11, v1.b[8]
-; CHECK-NEXT:    and w12, w17, #0x1
-; CHECK-NEXT:    bfi w13, w16, #21, #1
-; CHECK-NEXT:    umov w15, v1.b[9]
-; CHECK-NEXT:    and w14, w14, #0x1
-; CHECK-NEXT:    orr w12, w13, w12, lsl #22
-; CHECK-NEXT:    umov w13, v1.b[10]
-; CHECK-NEXT:    and w11, w11, #0x1
-; CHECK-NEXT:    orr w12, w12, w14, lsl #23
+; CHECK-NEXT:    orr v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    cmeq v0.16b, v0.16b, #0
-; CHECK-NEXT:    umov w18, v1.b[12]
-; CHECK-NEXT:    orr w11, w12, w11, lsl #24
-; CHECK-NEXT:    and w12, w15, #0x1
-; CHECK-NEXT:    and w13, w13, #0x1
-; CHECK-NEXT:    umov w14, v0.b[0]
-; CHECK-NEXT:    orr w11, w11, w12, lsl #25
-; CHECK-NEXT:    umov w12, v0.b[1]
-; CHECK-NEXT:    orr w11, w11, w13, lsl #26
-; CHECK-NEXT:    umov w13, v0.b[2]
-; CHECK-NEXT:    umov w16, v0.b[3]
-; CHECK-NEXT:    umov w17, v0.b[4]
-; CHECK-NEXT:    and w14, w14, #0x1
-; CHECK-NEXT:    umov w15, v1.b[11]
-; CHECK-NEXT:    bfi w14, w12, #1, #1
-; CHECK-NEXT:    umov w12, v0.b[6]
-; CHECK-NEXT:    bfi w14, w13, #2, #1
-; CHECK-NEXT:    umov w13, v0.b[5]
-; CHECK-NEXT:    bfi w14, w16, #3, #1
-; CHECK-NEXT:    umov w16, v0.b[7]
-; CHECK-NEXT:    bfi w14, w17, #4, #1
-; CHECK-NEXT:    umov w17, v0.b[8]
-; CHECK-NEXT:    and w12, w12, #0x1
-; CHECK-NEXT:    and w15, w15, #0x1
-; CHECK-NEXT:    bfi w14, w13, #5, #1
-; CHECK-NEXT:    and w13, w18, #0x1
-; CHECK-NEXT:    orr w12, w14, w12, lsl #6
-; CHECK-NEXT:    and w14, w16, #0x1
-; CHECK-NEXT:    umov w16, v0.b[9]
-; CHECK-NEXT:    umov w18, v0.b[10]
-; CHECK-NEXT:    and w17, w17, #0x1
-; CHECK-NEXT:    orr w11, w11, w15, lsl #27
-; CHECK-NEXT:    orr w12, w12, w14, lsl #7
-; CHECK-NEXT:    orr w11, w11, w13, lsl #28
-; CHECK-NEXT:    umov w14, v0.b[11]
-; CHECK-NEXT:    orr w12, w12, w17, lsl #8
-; CHECK-NEXT:    and w13, w16, #0x1
-; CHECK-NEXT:    and w15, w18, #0x1
-; CHECK-NEXT:    umov w16, v0.b[12]
-; CHECK-NEXT:    umov w17, v1.b[13]
-; CHECK-NEXT:    orr w12, w12, w13, lsl #9
-; CHECK-NEXT:    umov w18, v0.b[14]
-; CHECK-NEXT:    orr w12, w12, w15, lsl #10
-; CHECK-NEXT:    umov w15, v0.b[13]
-; CHECK-NEXT:    and w14, w14, #0x1
-; CHECK-NEXT:    umov w13, v1.b[14]
-; CHECK-NEXT:    and w16, w16, #0x1
-; CHECK-NEXT:    and w17, w17, #0x1
-; CHECK-NEXT:    orr w12, w12, w14, lsl #11
-; CHECK-NEXT:    umov w14, v1.b[15]
-; CHECK-NEXT:    orr w12, w12, w16, lsl #12
-; CHECK-NEXT:    and w15, w15, #0x1
-; CHECK-NEXT:    umov w16, v0.b[15]
-; CHECK-NEXT:    and w18, w18, #0x1
-; CHECK-NEXT:    and w13, w13, #0x1
-; CHECK-NEXT:    orr w12, w12, w15, lsl #13
-; CHECK-NEXT:    orr w11, w11, w17, lsl #29
-; CHECK-NEXT:    orr w12, w12, w18, lsl #14
-; CHECK-NEXT:    orr w11, w11, w13, lsl #30
-; CHECK-NEXT:    and w10, w10, #0xffff
-; CHECK-NEXT:    orr w12, w12, w16, lsl #15
-; CHECK-NEXT:    orr w11, w11, w14, lsl #31
-; CHECK-NEXT:    and w12, w12, #0xffff
-; CHECK-NEXT:    orr w9, w10, w9
-; CHECK-NEXT:    orr w10, w12, w11
-; CHECK-NEXT:    and x9, x9, x10
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    cset w0, eq
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    uminv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %cmp1 = icmp eq <64 x i8> %a, zeroinitializer
   %cast = bitcast <64 x i1> %cmp1 to i64
@@ -516,30 +192,11 @@ define i1 @combine_setcc_eq_vecreduce_and_v64i1(<64 x i8> %a) {
 define i1 @combine_setcc_ne_vecreduce_and_v8i1(<8 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_ne_vecreduce_and_v8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    cmtst v0.8b, v0.8b, v0.8b
-; CHECK-NEXT:    mov w8, #255 // =0xff
-; CHECK-NEXT:    umov w9, v0.b[0]
-; CHECK-NEXT:    umov w10, v0.b[1]
-; CHECK-NEXT:    umov w11, v0.b[2]
-; CHECK-NEXT:    umov w12, v0.b[3]
-; CHECK-NEXT:    umov w13, v0.b[4]
-; CHECK-NEXT:    umov w14, v0.b[6]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    bfi w9, w10, #1, #1
-; CHECK-NEXT:    umov w10, v0.b[5]
-; CHECK-NEXT:    bfi w9, w11, #2, #1
-; CHECK-NEXT:    umov w11, v0.b[7]
-; CHECK-NEXT:    bfi w9, w12, #3, #1
-; CHECK-NEXT:    and w12, w14, #0x1
-; CHECK-NEXT:    bfi w9, w13, #4, #1
-; CHECK-NEXT:    bfi w9, w10, #5, #1
-; CHECK-NEXT:    orr w9, w9, w12, lsl #6
-; CHECK-NEXT:    orr w9, w9, w11, lsl #7
-; CHECK-NEXT:    bics wzr, w8, w9
-; CHECK-NEXT:    cset w0, ne
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    uminv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ne <8 x i8> %a, zeroinitializer
   %cast = bitcast <8 x i1> %cmp1 to i8
@@ -550,54 +207,11 @@ define i1 @combine_setcc_ne_vecreduce_and_v8i1(<8 x i8> %a) {
 define i1 @combine_setcc_ne_vecreduce_and_v16i1(<16 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_ne_vecreduce_and_v16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    cmtst v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #65535 // =0xffff
-; CHECK-NEXT:    umov w9, v0.b[0]
-; CHECK-NEXT:    umov w10, v0.b[1]
-; CHECK-NEXT:    umov w11, v0.b[2]
-; CHECK-NEXT:    umov w12, v0.b[3]
-; CHECK-NEXT:    umov w13, v0.b[4]
-; CHECK-NEXT:    umov w14, v0.b[5]
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    bfi w9, w10, #1, #1
-; CHECK-NEXT:    umov w10, v0.b[6]
-; CHECK-NEXT:    bfi w9, w11, #2, #1
-; CHECK-NEXT:    umov w11, v0.b[7]
-; CHECK-NEXT:    bfi w9, w12, #3, #1
-; CHECK-NEXT:    umov w12, v0.b[8]
-; CHECK-NEXT:    bfi w9, w13, #4, #1
-; CHECK-NEXT:    umov w13, v0.b[9]
-; CHECK-NEXT:    and w10, w10, #0x1
-; CHECK-NEXT:    bfi w9, w14, #5, #1
-; CHECK-NEXT:    umov w14, v0.b[10]
-; CHECK-NEXT:    and w11, w11, #0x1
-; CHECK-NEXT:    orr w9, w9, w10, lsl #6
-; CHECK-NEXT:    umov w10, v0.b[11]
-; CHECK-NEXT:    and w12, w12, #0x1
-; CHECK-NEXT:    orr w9, w9, w11, lsl #7
-; CHECK-NEXT:    umov w11, v0.b[12]
-; CHECK-NEXT:    and w13, w13, #0x1
-; CHECK-NEXT:    orr w9, w9, w12, lsl #8
-; CHECK-NEXT:    umov w12, v0.b[13]
-; CHECK-NEXT:    and w14, w14, #0x1
-; CHECK-NEXT:    orr w9, w9, w13, lsl #9
-; CHECK-NEXT:    umov w13, v0.b[14]
-; CHECK-NEXT:    and w10, w10, #0x1
-; CHECK-NEXT:    orr w9, w9, w14, lsl #10
-; CHECK-NEXT:    and w11, w11, #0x1
-; CHECK-NEXT:    orr w9, w9, w10, lsl #11
-; CHECK-NEXT:    and w10, w12, #0x1
-; CHECK-NEXT:    umov w12, v0.b[15]
-; CHECK-NEXT:    orr w9, w9, w11, lsl #12
-; CHECK-NEXT:    and w11, w13, #0x1
-; CHECK-NEXT:    orr w9, w9, w10, lsl #13
-; CHECK-NEXT:    orr w9, w9, w11, lsl #14
-; CHECK-NEXT:    orr w9, w9, w12, lsl #15
-; CHECK-NEXT:    bics wzr, w8, w9
-; CHECK-NEXT:    cset w0, ne
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    uminv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ne <16 x i8> %a, zeroinitializer
   %cast = bitcast <16 x i1> %cmp1 to i16
@@ -608,97 +222,13 @@ define i1 @combine_setcc_ne_vecreduce_and_v16i1(<16 x i8> %a) {
 define i1 @combine_setcc_ne_vecreduce_and_v32i1(<32 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_ne_vecreduce_and_v32i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    cmtst v1.16b, v1.16b, v1.16b
-; CHECK-NEXT:    mov w8, #65535 // =0xffff
 ; CHECK-NEXT:    cmtst v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    umov w10, v1.b[0]
-; CHECK-NEXT:    umov w9, v1.b[1]
-; CHECK-NEXT:    umov w11, v1.b[2]
-; CHECK-NEXT:    umov w12, v1.b[3]
-; CHECK-NEXT:    umov w13, v1.b[4]
-; CHECK-NEXT:    umov w14, v1.b[5]
-; CHECK-NEXT:    umov w15, v1.b[6]
-; CHECK-NEXT:    umov w16, v1.b[7]
-; CHECK-NEXT:    and w10, w10, #0x1
-; CHECK-NEXT:    umov w17, v1.b[8]
-; CHECK-NEXT:    bfi w10, w9, #1, #1
-; CHECK-NEXT:    umov w9, v1.b[9]
-; CHECK-NEXT:    bfi w10, w11, #2, #1
-; CHECK-NEXT:    umov w11, v0.b[0]
-; CHECK-NEXT:    bfi w10, w12, #3, #1
-; CHECK-NEXT:    umov w12, v0.b[1]
-; CHECK-NEXT:    bfi w10, w13, #4, #1
-; CHECK-NEXT:    and w15, w15, #0x1
-; CHECK-NEXT:    bfi w10, w14, #5, #1
-; CHECK-NEXT:    umov w14, v0.b[2]
-; CHECK-NEXT:    umov w13, v1.b[10]
-; CHECK-NEXT:    and w11, w11, #0x1
-; CHECK-NEXT:    orr w10, w10, w15, lsl #6
-; CHECK-NEXT:    and w15, w16, #0x1
-; CHECK-NEXT:    bfi w11, w12, #1, #1
-; CHECK-NEXT:    and w16, w17, #0x1
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    bfi w11, w14, #2, #1
-; CHECK-NEXT:    orr w10, w10, w15, lsl #7
-; CHECK-NEXT:    umov w14, v0.b[3]
-; CHECK-NEXT:    and w13, w13, #0x1
-; CHECK-NEXT:    orr w10, w10, w16, lsl #8
-; CHECK-NEXT:    umov w15, v0.b[4]
-; CHECK-NEXT:    orr w9, w10, w9, lsl #9
-; CHECK-NEXT:    umov w10, v0.b[6]
-; CHECK-NEXT:    orr w9, w9, w13, lsl #10
-; CHECK-NEXT:    umov w13, v0.b[5]
-; CHECK-NEXT:    bfi w11, w14, #3, #1
-; CHECK-NEXT:    umov w14, v0.b[7]
-; CHECK-NEXT:    umov w16, v1.b[12]
-; CHECK-NEXT:    umov w12, v1.b[11]
-; CHECK-NEXT:    bfi w11, w15, #4, #1
-; CHECK-NEXT:    and w10, w10, #0x1
-; CHECK-NEXT:    umov w15, v0.b[8]
-; CHECK-NEXT:    bfi w11, w13, #5, #1
-; CHECK-NEXT:    orr w10, w11, w10, lsl #6
-; CHECK-NEXT:    and w11, w14, #0x1
-; CHECK-NEXT:    umov w14, v0.b[9]
-; CHECK-NEXT:    and w13, w16, #0x1
-; CHECK-NEXT:    umov w16, v0.b[10]
-; CHECK-NEXT:    and w12, w12, #0x1
-; CHECK-NEXT:    and w15, w15, #0x1
-; CHECK-NEXT:    orr w10, w10, w11, lsl #7
-; CHECK-NEXT:    orr w9, w9, w12, lsl #11
-; CHECK-NEXT:    umov w12, v0.b[11]
-; CHECK-NEXT:    and w11, w14, #0x1
-; CHECK-NEXT:    orr w9, w9, w13, lsl #12
-; CHECK-NEXT:    orr w10, w10, w15, lsl #8
-; CHECK-NEXT:    and w13, w16, #0x1
-; CHECK-NEXT:    umov w14, v0.b[12]
-; CHECK-NEXT:    orr w10, w10, w11, lsl #9
-; CHECK-NEXT:    umov w15, v1.b[13]
-; CHECK-NEXT:    orr w10, w10, w13, lsl #10
-; CHECK-NEXT:    umov w13, v0.b[13]
-; CHECK-NEXT:    umov w11, v1.b[14]
-; CHECK-NEXT:    and w12, w12, #0x1
-; CHECK-NEXT:    umov w16, v0.b[14]
-; CHECK-NEXT:    and w14, w14, #0x1
-; CHECK-NEXT:    orr w10, w10, w12, lsl #11
-; CHECK-NEXT:    and w15, w15, #0x1
-; CHECK-NEXT:    umov w12, v1.b[15]
-; CHECK-NEXT:    orr w10, w10, w14, lsl #12
-; CHECK-NEXT:    and w13, w13, #0x1
-; CHECK-NEXT:    umov w14, v0.b[15]
-; CHECK-NEXT:    and w11, w11, #0x1
-; CHECK-NEXT:    and w16, w16, #0x1
-; CHECK-NEXT:    orr w9, w9, w15, lsl #13
-; CHECK-NEXT:    orr w10, w10, w13, lsl #13
-; CHECK-NEXT:    orr w9, w9, w11, lsl #14
-; CHECK-NEXT:    orr w10, w10, w16, lsl #14
-; CHECK-NEXT:    orr w9, w9, w12, lsl #15
-; CHECK-NEXT:    orr w10, w10, w14, lsl #15
-; CHECK-NEXT:    and w9, w10, w9
-; CHECK-NEXT:    bics wzr, w8, w9
-; CHECK-NEXT:    cset w0, ne
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    cmeq v1.16b, v1.16b, #0
+; CHECK-NEXT:    bic v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    uminv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ne <32 x i8> %a, zeroinitializer
   %cast = bitcast <32 x i1> %cmp1 to i32
@@ -709,187 +239,17 @@ define i1 @combine_setcc_ne_vecreduce_and_v32i1(<32 x i8> %a) {
 define i1 @combine_setcc_ne_vecreduce_and_v64i1(<64 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_ne_vecreduce_and_v64i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    cmtst v3.16b, v3.16b, v3.16b
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    cmtst v2.16b, v2.16b, v2.16b
 ; CHECK-NEXT:    cmtst v1.16b, v1.16b, v1.16b
-; CHECK-NEXT:    umov w10, v3.b[0]
-; CHECK-NEXT:    umov w9, v3.b[1]
-; CHECK-NEXT:    umov w11, v3.b[2]
-; CHECK-NEXT:    umov w12, v3.b[3]
-; CHECK-NEXT:    umov w13, v3.b[4]
-; CHECK-NEXT:    umov w15, v3.b[6]
-; CHECK-NEXT:    umov w14, v3.b[5]
-; CHECK-NEXT:    and w10, w10, #0x1
-; CHECK-NEXT:    umov w16, v3.b[7]
-; CHECK-NEXT:    lsl w10, w10, #16
-; CHECK-NEXT:    umov w17, v3.b[8]
-; CHECK-NEXT:    bfi w10, w9, #17, #1
-; CHECK-NEXT:    umov w18, v3.b[9]
-; CHECK-NEXT:    bfi w10, w11, #18, #1
-; CHECK-NEXT:    umov w9, v3.b[10]
-; CHECK-NEXT:    bfi w10, w12, #19, #1
-; CHECK-NEXT:    and w15, w15, #0x1
-; CHECK-NEXT:    bfi w10, w13, #20, #1
-; CHECK-NEXT:    and w16, w16, #0x1
-; CHECK-NEXT:    bfi w10, w14, #21, #1
-; CHECK-NEXT:    umov w11, v3.b[11]
-; CHECK-NEXT:    and w17, w17, #0x1
-; CHECK-NEXT:    orr w10, w10, w15, lsl #22
-; CHECK-NEXT:    and w18, w18, #0x1
-; CHECK-NEXT:    umov w13, v2.b[0]
-; CHECK-NEXT:    orr w10, w10, w16, lsl #23
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    umov w15, v2.b[1]
-; CHECK-NEXT:    orr w10, w10, w17, lsl #24
-; CHECK-NEXT:    orr w10, w10, w18, lsl #25
-; CHECK-NEXT:    umov w16, v2.b[2]
-; CHECK-NEXT:    and w11, w11, #0x1
-; CHECK-NEXT:    orr w9, w10, w9, lsl #26
-; CHECK-NEXT:    umov w10, v2.b[3]
-; CHECK-NEXT:    umov w12, v3.b[12]
-; CHECK-NEXT:    and w13, w13, #0x1
-; CHECK-NEXT:    umov w14, v3.b[13]
-; CHECK-NEXT:    orr w9, w9, w11, lsl #27
-; CHECK-NEXT:    umov w11, v2.b[4]
-; CHECK-NEXT:    bfi w13, w15, #1, #1
-; CHECK-NEXT:    umov w15, v2.b[5]
-; CHECK-NEXT:    bfi w13, w16, #2, #1
-; CHECK-NEXT:    umov w16, v2.b[6]
-; CHECK-NEXT:    bfi w13, w10, #3, #1
-; CHECK-NEXT:    umov w10, v2.b[7]
-; CHECK-NEXT:    and w12, w12, #0x1
-; CHECK-NEXT:    bfi w13, w11, #4, #1
-; CHECK-NEXT:    and w11, w14, #0x1
-; CHECK-NEXT:    umov w14, v2.b[8]
-; CHECK-NEXT:    orr w9, w9, w12, lsl #28
-; CHECK-NEXT:    bfi w13, w15, #5, #1
-; CHECK-NEXT:    and w12, w16, #0x1
-; CHECK-NEXT:    umov w15, v2.b[9]
-; CHECK-NEXT:    and w10, w10, #0x1
-; CHECK-NEXT:    umov w16, v3.b[14]
-; CHECK-NEXT:    orr w12, w13, w12, lsl #6
-; CHECK-NEXT:    orr w9, w9, w11, lsl #29
-; CHECK-NEXT:    orr w10, w12, w10, lsl #7
-; CHECK-NEXT:    and w11, w14, #0x1
-; CHECK-NEXT:    umov w12, v2.b[10]
-; CHECK-NEXT:    and w13, w15, #0x1
-; CHECK-NEXT:    umov w14, v2.b[11]
-; CHECK-NEXT:    orr w10, w10, w11, lsl #8
-; CHECK-NEXT:    orr w10, w10, w13, lsl #9
-; CHECK-NEXT:    umov w13, v2.b[12]
-; CHECK-NEXT:    and w15, w16, #0x1
-; CHECK-NEXT:    umov w16, v2.b[13]
-; CHECK-NEXT:    and w12, w12, #0x1
-; CHECK-NEXT:    umov w11, v3.b[15]
-; CHECK-NEXT:    and w14, w14, #0x1
-; CHECK-NEXT:    orr w9, w9, w15, lsl #30
-; CHECK-NEXT:    orr w10, w10, w12, lsl #10
-; CHECK-NEXT:    and w12, w13, #0x1
-; CHECK-NEXT:    orr w10, w10, w14, lsl #11
-; CHECK-NEXT:    umov w14, v1.b[0]
-; CHECK-NEXT:    and w13, w16, #0x1
-; CHECK-NEXT:    orr w9, w9, w11, lsl #31
-; CHECK-NEXT:    orr w10, w10, w12, lsl #12
-; CHECK-NEXT:    umov w11, v1.b[1]
-; CHECK-NEXT:    orr w10, w10, w13, lsl #13
-; CHECK-NEXT:    umov w13, v1.b[2]
-; CHECK-NEXT:    and w14, w14, #0x1
-; CHECK-NEXT:    umov w15, v1.b[3]
-; CHECK-NEXT:    lsl w14, w14, #16
-; CHECK-NEXT:    umov w16, v1.b[4]
-; CHECK-NEXT:    umov w12, v2.b[14]
-; CHECK-NEXT:    bfi w14, w11, #17, #1
-; CHECK-NEXT:    umov w11, v1.b[6]
-; CHECK-NEXT:    bfi w14, w13, #18, #1
-; CHECK-NEXT:    umov w13, v1.b[5]
-; CHECK-NEXT:    bfi w14, w15, #19, #1
-; CHECK-NEXT:    bfi w14, w16, #20, #1
-; CHECK-NEXT:    umov w15, v1.b[7]
-; CHECK-NEXT:    umov w16, v1.b[8]
-; CHECK-NEXT:    and w12, w12, #0x1
-; CHECK-NEXT:    and w11, w11, #0x1
-; CHECK-NEXT:    umov w18, v1.b[12]
-; CHECK-NEXT:    bfi w14, w13, #21, #1
-; CHECK-NEXT:    orr w10, w10, w12, lsl #14
-; CHECK-NEXT:    umov w12, v2.b[15]
-; CHECK-NEXT:    orr w11, w14, w11, lsl #22
-; CHECK-NEXT:    umov w14, v1.b[9]
-; CHECK-NEXT:    and w13, w15, #0x1
-; CHECK-NEXT:    and w15, w16, #0x1
-; CHECK-NEXT:    umov w16, v1.b[10]
 ; CHECK-NEXT:    cmtst v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    orr w11, w11, w13, lsl #23
-; CHECK-NEXT:    orr w10, w10, w12, lsl #15
-; CHECK-NEXT:    orr w11, w11, w15, lsl #24
-; CHECK-NEXT:    and w12, w14, #0x1
-; CHECK-NEXT:    umov w15, v1.b[11]
-; CHECK-NEXT:    and w13, w16, #0x1
-; CHECK-NEXT:    umov w14, v0.b[0]
-; CHECK-NEXT:    orr w11, w11, w12, lsl #25
-; CHECK-NEXT:    umov w12, v0.b[1]
-; CHECK-NEXT:    orr w11, w11, w13, lsl #26
-; CHECK-NEXT:    umov w13, v0.b[2]
-; CHECK-NEXT:    umov w16, v0.b[3]
-; CHECK-NEXT:    umov w17, v0.b[4]
-; CHECK-NEXT:    and w14, w14, #0x1
-; CHECK-NEXT:    and w15, w15, #0x1
-; CHECK-NEXT:    bfi w14, w12, #1, #1
-; CHECK-NEXT:    umov w12, v0.b[6]
-; CHECK-NEXT:    bfi w14, w13, #2, #1
-; CHECK-NEXT:    umov w13, v0.b[5]
-; CHECK-NEXT:    bfi w14, w16, #3, #1
-; CHECK-NEXT:    umov w16, v0.b[7]
-; CHECK-NEXT:    bfi w14, w17, #4, #1
-; CHECK-NEXT:    umov w17, v0.b[8]
-; CHECK-NEXT:    and w12, w12, #0x1
-; CHECK-NEXT:    orr w11, w11, w15, lsl #27
-; CHECK-NEXT:    bfi w14, w13, #5, #1
-; CHECK-NEXT:    and w13, w18, #0x1
-; CHECK-NEXT:    orr w12, w14, w12, lsl #6
-; CHECK-NEXT:    and w14, w16, #0x1
-; CHECK-NEXT:    umov w16, v0.b[9]
-; CHECK-NEXT:    umov w18, v0.b[10]
-; CHECK-NEXT:    and w17, w17, #0x1
-; CHECK-NEXT:    orr w12, w12, w14, lsl #7
-; CHECK-NEXT:    orr w11, w11, w13, lsl #28
-; CHECK-NEXT:    umov w14, v0.b[11]
-; CHECK-NEXT:    orr w12, w12, w17, lsl #8
-; CHECK-NEXT:    umov w17, v1.b[13]
-; CHECK-NEXT:    and w13, w16, #0x1
-; CHECK-NEXT:    and w15, w18, #0x1
-; CHECK-NEXT:    umov w16, v0.b[12]
-; CHECK-NEXT:    umov w18, v0.b[14]
-; CHECK-NEXT:    orr w12, w12, w13, lsl #9
-; CHECK-NEXT:    and w14, w14, #0x1
-; CHECK-NEXT:    orr w12, w12, w15, lsl #10
-; CHECK-NEXT:    umov w15, v0.b[13]
-; CHECK-NEXT:    umov w13, v1.b[14]
-; CHECK-NEXT:    orr w12, w12, w14, lsl #11
-; CHECK-NEXT:    and w16, w16, #0x1
-; CHECK-NEXT:    and w17, w17, #0x1
-; CHECK-NEXT:    umov w14, v1.b[15]
-; CHECK-NEXT:    and w18, w18, #0x1
-; CHECK-NEXT:    orr w12, w12, w16, lsl #12
-; CHECK-NEXT:    and w15, w15, #0x1
-; CHECK-NEXT:    umov w16, v0.b[15]
-; CHECK-NEXT:    and w13, w13, #0x1
-; CHECK-NEXT:    orr w12, w12, w15, lsl #13
-; CHECK-NEXT:    orr w11, w11, w17, lsl #29
-; CHECK-NEXT:    orr w12, w12, w18, lsl #14
-; CHECK-NEXT:    orr w11, w11, w13, lsl #30
-; CHECK-NEXT:    orr w11, w11, w14, lsl #31
-; CHECK-NEXT:    and w10, w10, #0xffff
-; CHECK-NEXT:    orr w12, w12, w16, lsl #15
-; CHECK-NEXT:    orr w9, w10, w9
-; CHECK-NEXT:    and w12, w12, #0xffff
-; CHECK-NEXT:    orr w10, w12, w11
-; CHECK-NEXT:    and x9, x9, x10
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    cset w0, ne
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    cmeq v3.16b, v3.16b, #0
+; CHECK-NEXT:    cmeq v2.16b, v2.16b, #0
+; CHECK-NEXT:    bic v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    bic v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    uminv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ne <64 x i8> %a, zeroinitializer
   %cast = bitcast <64 x i1> %cmp1 to i64

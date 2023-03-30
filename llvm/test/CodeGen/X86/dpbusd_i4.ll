@@ -52,10 +52,9 @@ define i32 @mul_i4i4(<16 x i4> %a, <16 x i4> %b, i32 %c) {
 ; CHECK-LABEL: mul_i4i4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpsllw $4, %xmm1, %xmm1
-; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; CHECK-NEXT:    vpsrlw $4, %xmm1, %xmm1
 ; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
-; CHECK-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; CHECK-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm1
 ; CHECK-NEXT:    vpsubb %xmm2, %xmm1, %xmm1
 ; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2

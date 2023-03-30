@@ -619,7 +619,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     break;
   case 'g':
     // g = imafd
-    if (Arch.size() > 5 && isdigit(Arch[5]))
+    if (Arch.size() > 5 && isDigit(Arch[5]))
       return createStringError(errc::invalid_argument,
                                "version not supported for 'g'");
     StdExts = StdExts.drop_front(4);
@@ -660,19 +660,19 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   } else {
     // Baseline is `i` or `e`
     if (auto E = getExtensionVersion(
-            std::string(1, Baseline), Exts, Major, Minor, ConsumeLength,
+            StringRef(&Baseline, 1), Exts, Major, Minor, ConsumeLength,
             EnableExperimentalExtension, ExperimentalExtensionVersionCheck)) {
       if (!IgnoreUnknown)
         return std::move(E);
       // If IgnoreUnknown, then ignore an unrecognised version of the baseline
       // ISA and just use the default supported version.
       consumeError(std::move(E));
-      auto Version = findDefaultVersion(std::string(1, Baseline));
+      auto Version = findDefaultVersion(StringRef(&Baseline, 1));
       Major = Version->Major;
       Minor = Version->Minor;
     }
 
-    ISAInfo->addExtension(std::string(1, Baseline), Major, Minor);
+    ISAInfo->addExtension(StringRef(&Baseline, 1), Major, Minor);
   }
 
   // Consume the base ISA version number and any '_' between rvxxx and the
@@ -713,11 +713,11 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     // Move to next char to prevent repeated letter.
     ++StdExtsItr;
 
-    std::string Next;
+    StringRef Next;
     unsigned Major, Minor, ConsumeLength;
     if (std::next(I) != E)
-      Next = std::string(std::next(I), E);
-    if (auto E = getExtensionVersion(std::string(1, C), Next, Major, Minor,
+      Next = StringRef(std::next(I), E - std::next(I));
+    if (auto E = getExtensionVersion(StringRef(&C, 1), Next, Major, Minor,
                                      ConsumeLength, EnableExperimentalExtension,
                                      ExperimentalExtensionVersionCheck)) {
       if (IgnoreUnknown) {
@@ -740,7 +740,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                                "unsupported standard user-level extension '%c'",
                                C);
     }
-    ISAInfo->addExtension(std::string(1, C), Major, Minor);
+    ISAInfo->addExtension(StringRef(&C, 1), Major, Minor);
 
     // Consume full extension name and version, including any optional '_'
     // between this extension and the next

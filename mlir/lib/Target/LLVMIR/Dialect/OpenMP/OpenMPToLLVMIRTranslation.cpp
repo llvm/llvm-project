@@ -1432,8 +1432,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   LogicalResult result =
       llvm::TypeSwitch<Operation *, LogicalResult>(op)
           .Case([&](omp::DataOp dataOp) {
-            if (dataOp.getUseDeviceAddr().size() ||
-                dataOp.getUseDevicePtr().size())
+            if (!dataOp.getUseDeviceAddr().empty() ||
+                !dataOp.getUseDevicePtr().empty())
               return failure();
 
             if (auto ifExprVar = dataOp.getIfExpr())

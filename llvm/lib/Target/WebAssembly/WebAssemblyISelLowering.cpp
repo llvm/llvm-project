@@ -196,7 +196,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // Support splatting
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
-		   MVT::v2f64})
+                   MVT::v2f64})
       setOperationAction(ISD::SPLAT_VECTOR, T, Legal);
 
     // Custom lowering since wasm shifts must have a scalar shift amount

@@ -2,7 +2,7 @@
 ; RUN: opt -S -codegenprepare < %s | FileCheck %s
 ; REQUIRES: aarch64-registered-target
 
-; Test that `%addr` is sunk, even though the number of memory uses to scan exceeds the limit.
+; Test that `%addr` is sunk, after we've increased limit on the number of the memory uses to scan.
 
 target triple = "aarch64-linux"
 
