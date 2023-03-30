@@ -15,6 +15,8 @@
 
 using namespace lldb_private;
 
+ExpressionVariable::ExpressionVariable(LLVMCastKind kind)
+    : m_flags(0), m_kind(kind) {}
 ExpressionVariable::~ExpressionVariable() = default;
 
 uint8_t *ExpressionVariable::GetValueBytes() {
@@ -30,6 +32,8 @@ uint8_t *ExpressionVariable::GetValueBytes() {
   return nullptr;
 }
 
+PersistentExpressionState::PersistentExpressionState(LLVMCastKind kind)
+    : m_kind(kind) {}
 PersistentExpressionState::~PersistentExpressionState() = default;
 
 lldb::addr_t PersistentExpressionState::LookupSymbol(ConstString name) {

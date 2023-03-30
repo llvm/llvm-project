@@ -228,7 +228,7 @@ void ASTStmtReader::VisitIfStmt(IfStmt *S) {
   if (HasElse)
     S->setElse(Record.readSubStmt());
   if (HasVar)
-    S->setConditionVariable(Record.getContext(), readDeclAs<VarDecl>());
+    S->setConditionVariableDeclStmt(cast<DeclStmt>(Record.readSubStmt()));
   if (HasInit)
     S->setInit(Record.readSubStmt());
 
@@ -253,7 +253,7 @@ void ASTStmtReader::VisitSwitchStmt(SwitchStmt *S) {
   if (HasInit)
     S->setInit(Record.readSubStmt());
   if (HasVar)
-    S->setConditionVariable(Record.getContext(), readDeclAs<VarDecl>());
+    S->setConditionVariableDeclStmt(cast<DeclStmt>(Record.readSubStmt()));
 
   S->setSwitchLoc(readSourceLocation());
   S->setLParenLoc(readSourceLocation());
@@ -279,7 +279,7 @@ void ASTStmtReader::VisitWhileStmt(WhileStmt *S) {
   S->setCond(Record.readSubExpr());
   S->setBody(Record.readSubStmt());
   if (HasVar)
-    S->setConditionVariable(Record.getContext(), readDeclAs<VarDecl>());
+    S->setConditionVariableDeclStmt(cast<DeclStmt>(Record.readSubStmt()));
 
   S->setWhileLoc(readSourceLocation());
   S->setLParenLoc(readSourceLocation());
@@ -299,7 +299,7 @@ void ASTStmtReader::VisitForStmt(ForStmt *S) {
   VisitStmt(S);
   S->setInit(Record.readSubStmt());
   S->setCond(Record.readSubExpr());
-  S->setConditionVariable(Record.getContext(), readDeclAs<VarDecl>());
+  S->setConditionVariableDeclStmt(cast_or_null<DeclStmt>(Record.readSubStmt()));
   S->setInc(Record.readSubExpr());
   S->setBody(Record.readSubStmt());
   S->setForLoc(readSourceLocation());
