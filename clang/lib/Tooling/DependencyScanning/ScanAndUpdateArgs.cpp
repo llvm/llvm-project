@@ -29,6 +29,12 @@ void tooling::dependencies::configureInvocationForCaching(
   // Clear this otherwise it defeats the purpose of making the compilation key
   // independent of certain arguments.
   CI.getCodeGenOpts().DwarfDebugFlags.clear();
+  if (FrontendOpts.ProgramAction == frontend::GeneratePCH) {
+    // Clear paths that are emitted into binaries; they do not affect PCH.
+    // For modules this is handled in ModuleDepCollector.
+    CI.getCodeGenOpts().CoverageDataFile.clear();
+    CI.getCodeGenOpts().CoverageNotesFile.clear();
+  }
 
   // "Fix" the CAS options.
   auto &FileSystemOpts = CI.getFileSystemOpts();
