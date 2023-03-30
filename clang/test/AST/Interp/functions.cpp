@@ -150,7 +150,7 @@ namespace FunctionReturnType {
 
     return m;
   }
-  static_assert(foo() == 10);
+  static_assert(foo() == 10, "");
 
   struct S {
     int i;
@@ -158,7 +158,7 @@ namespace FunctionReturnType {
   };
 
   constexpr S s{ 12 };
-  static_assert(s.fp == nullptr); // zero-initialized function pointer.
+  static_assert(s.fp == nullptr, ""); // zero-initialized function pointer.
 }
 
 }
