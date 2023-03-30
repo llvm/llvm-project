@@ -457,6 +457,12 @@ let SubtargetPredicate = isGFX11Plus in {
   }
 } // End SubtargetPredicate = isGFX11Plus
 
+let SubtargetPredicate = isGFX12Plus in {
+  let hasSideEffects = 1, Defs = [SCC] in {
+    def S_ALLOC_VGPR : SOP1_0_32 <"s_alloc_vgpr">;
+  }
+} // End SubtargetPredicate = isGFX12Plus
+
 class SOP1_F32_Inst<string opName, SDPatternOperator Op, ValueType vt0=f32,
                     ValueType vt1=vt0> :
   SOP1_32<opName, [(set vt0:$sdst, (UniformUnaryFrag<Op> vt1:$src0))]>;
@@ -1906,6 +1912,7 @@ defm S_SWAPPC_B64            : SOP1_Real_gfx11_gfx12<0x049>;
 defm S_RFE_B64               : SOP1_Real_gfx11_gfx12<0x04a>;
 defm S_SENDMSG_RTN_B32       : SOP1_Real_gfx11_gfx12<0x04c>;
 defm S_SENDMSG_RTN_B64       : SOP1_Real_gfx11_gfx12<0x04d>;
+defm S_ALLOC_VGPR            : SOP1_Real_gfx12<0x053>;
 defm S_SLEEP_VAR             : SOP1_Real_gfx12<0x058>;
 
 //===----------------------------------------------------------------------===//
