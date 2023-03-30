@@ -1,5 +1,5 @@
-// No object emitter on nanomips
-// UNSUPPORTED: nanomips
+; No object emitter on nanomips
+; UNSUPPORTED: nanomips
 ; xfail this test on hexagon because at O2, instructions are bundled in packets
 ; and DW_OP_lit13 is correctly omitted.
 ; XFAIL: hexagon

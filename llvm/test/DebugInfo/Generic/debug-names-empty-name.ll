@@ -1,5 +1,5 @@
-// No object emitter on nanomips
-// UNSUPPORTED: nanomips
+; No object emitter on nanomips
+; UNSUPPORTED: nanomips
 ; RUN: %llc_dwarf -debugger-tune=lldb -accel-tables=Dwarf -filetype=obj -o %t < %s
 ; RUN: llvm-dwarfdump -find=_GLOBAL__sub_I__ %t | FileCheck --check-prefix=INFO %s
 ; RUN: llvm-dwarfdump -debug-names %t | FileCheck --check-prefix=NAMES %s
