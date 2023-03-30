@@ -48,15 +48,14 @@
 #define AMD_COMGR_CALL
 #endif
 
-// Add deprecated support for Comgr on both Windows and Linux
-// This can be removed in favor of genereic [[deprecated]] in C23
+// Add deprecation support for Comgr on Linux
+// This can be removed in favor of generic [[deprecated]] in C23, which should
+// also allow us to more easily include support on Windows
 #ifndef AMD_COMGR_DEPRECATED
 #if defined __GNUC__ && (__GNUC__ > 5 || defined __clang__)
 #define AMD_COMGR_DEPRECATED(msg) __attribute__((deprecated(msg)))
-#elif defined(_MSC_VER)
-//#define AMD_COMGR_DEPRECATED(msg) __declspec(deprecated(msg))
-//#else
-#define AMD_COMGR_DEPRECATED(msg)
+#else // Windows systems, and GCC older than 6.0
+#define AMD_COMGR_DEPRECATED(msg) // empty
 #endif
 #endif
 
