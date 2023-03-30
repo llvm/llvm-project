@@ -16,11 +16,14 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 
 #include <functional>
+#include <optional>
 
 #define DEBUG_TYPE "mlir-spirv-conversion"
 
@@ -147,6 +150,13 @@ getTypeNumBytes(const SPIRVConversionOptions &options, Type type) {
     if (bitWidth == 1)
       return std::nullopt;
     return bitWidth / 8;
+  }
+
+  if (auto complexType = type.dyn_cast<ComplexType>()) {
+    auto elementSize = getTypeNumBytes(options, complexType.getElementType());
+    if (!elementSize)
+      return std::nullopt;
+    return 2 * *elementSize;
   }
 
   if (auto vecType = type.dyn_cast<VectorType>()) {
@@ -299,6 +309,30 @@ convertVectorType(const spirv::TargetEnv &targetEnv,
   return nullptr;
 }
 
+static Type
+convertComplexType(const spirv::TargetEnv &targetEnv,
+                   const SPIRVConversionOptions &options, ComplexType type,
+                   std::optional<spirv::StorageClass> storageClass = {}) {
+  auto scalarType = dyn_cast_or_null<spirv::ScalarType>(type.getElementType());
+  if (!scalarType) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot convert non-scalar element type\n");
+    return nullptr;
+  }
+
+  auto elementType =
+      convertScalarType(targetEnv, options, scalarType, storageClass);
+  if (!elementType)
+    return nullptr;
+  if (elementType != type.getElementType()) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: complex type emulation unsupported\n");
+    return nullptr;
+  }
+
+  return VectorType::get(2, elementType);
+}
+
 /// Converts a tensor `type` to a suitable type under the given `targetEnv`.
 ///
 /// Note that this is mainly for lowering constant tensors. In SPIR-V one can
@@ -372,7 +406,6 @@ static Type convertBoolMemrefType(const spirv::TargetEnv &targetEnv,
     return nullptr;
   }
 
-
   if (!type.hasStaticShape()) {
     // For OpenCL Kernel, dynamic shaped memrefs convert into a pointer pointing
     // to the element.
@@ -419,6 +452,9 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
   if (auto vecType = elementType.dyn_cast<VectorType>()) {
     arrayElemType =
         convertVectorType(targetEnv, options, vecType, storageClass);
+  } else if (auto complexType = elementType.dyn_cast<ComplexType>()) {
+    arrayElemType =
+        convertComplexType(targetEnv, options, complexType, storageClass);
   } else if (auto scalarType = elementType.dyn_cast<spirv::ScalarType>()) {
     arrayElemType =
         convertScalarType(targetEnv, options, scalarType, storageClass);
@@ -442,7 +478,6 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
                << type << " illegal: cannot deduce converted element size\n");
     return nullptr;
   }
-
 
   if (!type.hasStaticShape()) {
     // For OpenCL Kernel, dynamic shaped memrefs convert into a pointer pointing
@@ -498,6 +533,10 @@ SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
     if (auto scalarType = floatType.dyn_cast<spirv::ScalarType>())
       return convertScalarType(this->targetEnv, this->options, scalarType);
     return Type();
+  });
+
+  addConversion([this](ComplexType complexType) {
+    return convertComplexType(this->targetEnv, this->options, complexType);
   });
 
   addConversion([this](VectorType vectorType) {
