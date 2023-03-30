@@ -117,6 +117,8 @@ public:
                                        SourceLocation RAngleLoc,
                                        Expr *RequiresClause);
 
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &C) const;
+
   /// Iterates through the template parameters in this list.
   using iterator = NamedDecl **;
 
@@ -616,7 +618,7 @@ public:
 
   static void
   Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
-          ASTContext &Context) {
+          const ASTContext &Context) {
     ID.AddInteger(TemplateArgs.size());
     for (const TemplateArgument &TemplateArg : TemplateArgs)
       TemplateArg.Profile(ID, Context);
@@ -2081,7 +2083,7 @@ public:
 
   static void
   Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
-          ASTContext &Context) {
+          const ASTContext &Context) {
     ID.AddInteger(TemplateArgs.size());
     for (const TemplateArgument &TemplateArg : TemplateArgs)
       TemplateArg.Profile(ID, Context);
@@ -2257,7 +2259,7 @@ public:
 
   static void
   Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
-          TemplateParameterList *TPL, ASTContext &Context);
+          TemplateParameterList *TPL, const ASTContext &Context);
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
 
@@ -2934,7 +2936,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID &ID,
                       ArrayRef<TemplateArgument> TemplateArgs,
-                      ASTContext &Context) {
+                      const ASTContext &Context) {
     ID.AddInteger(TemplateArgs.size());
     for (const TemplateArgument &TemplateArg : TemplateArgs)
       TemplateArg.Profile(ID, Context);
@@ -3094,7 +3096,7 @@ public:
 
   static void
   Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
-          TemplateParameterList *TPL, ASTContext &Context);
+          TemplateParameterList *TPL, const ASTContext &Context);
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
 
