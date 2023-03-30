@@ -16,6 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenCleanup.h"
 #include "CIRGenFunction.h"
 
 using namespace cir;
