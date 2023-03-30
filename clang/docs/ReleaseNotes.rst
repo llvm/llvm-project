@@ -299,6 +299,10 @@ Attribute Changes in Clang
 
 - Fix a bug where clang doesn't automatically apply the ``[[gsl::Owner]]`` or
   ``[[gsl::Pointer]]`` to STL explicit template specialization decls. (#GH109442)
+- Introduced a new function attribute ``__attribute__((debug_transparent))``
+  which is intended as a hint to debuggers that they should not stop at the annotated
+  function, but instead step through it when stepping in, and continuing directly to 
+  its caller when stepping out.
 
 Improvements to Clang's diagnostics
 -----------------------------------
