@@ -2837,8 +2837,9 @@ Error DWARFLinker::cloneModuleUnit(LinkContext &Context, RefModuleUnit &Unit,
 bool DWARFLinker::verify(const DWARFFile &File) {
   assert(File.Dwarf);
 
+  raw_ostream &os = Options.Verbose ? errs() : nulls();
   DIDumpOptions DumpOpts;
-  if (!File.Dwarf->verify(llvm::outs(), DumpOpts.noImplicitRecursion())) {
+  if (!File.Dwarf->verify(os, DumpOpts.noImplicitRecursion())) {
     reportWarning("input verification failed", File);
     return false;
   }
