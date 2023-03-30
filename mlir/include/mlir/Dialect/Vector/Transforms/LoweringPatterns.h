@@ -236,7 +236,7 @@ void populateVectorScanLoweringPatterns(RewritePatternSet &patterns,
 ///
 /// [FlattenGather]
 /// Flattens 2 or more dimensional `vector.gather` ops by unrolling the
-/// outermost dimension. For example:
+/// outermost dimension.
 ///
 /// [Gather1DToConditionalLoads]
 /// Turns 1-d `vector.gather` into a scalarized sequence of `vector.loads` or
