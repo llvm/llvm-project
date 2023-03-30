@@ -66,6 +66,15 @@ public:
   // Merger delegates.
   //
 
+  constexpr TensorId makeTensorId(unsigned t) const {
+    return latticeMerger.makeTensorId(t);
+  }
+  constexpr LoopId makeLoopId(unsigned i) const {
+    return latticeMerger.makeLoopId(i);
+  }
+  constexpr TensorLoopId makeTensorLoopId(unsigned t, unsigned i) const {
+    return latticeMerger.makeTensorLoopId(t, i);
+  }
   const TensorExp &exp(ExprId e) const { return latticeMerger.exp(e); }
   const LatPoint &lat(LatPointId l) const { return latticeMerger.lat(l); }
   ArrayRef<LatPointId> set(LatSetId s) const { return latticeMerger.set(s); }

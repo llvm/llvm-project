@@ -536,6 +536,13 @@ def HasStdExtZvksh : Predicate<"Subtarget->hasStdExtZvksh()">,
                                AssemblerPredicate<(all_of FeatureStdExtZvksh),
                                "'Zvksh' (SM3 Hash Function Instructions.)">;
 
+def FeatureStdExtZicond
+    : SubtargetFeature<"experimental-zicond", "HasStdExtZicond", "true",
+                       "'Zicond' (Integer Conditional Operations)">;
+def HasStdExtZicond : Predicate<"Subtarget->hasStdExtZicond()">,
+                                AssemblerPredicate<(all_of FeatureStdExtZicond),
+                                "'Zicond' (Integer Conditional Operations)">;
+
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//

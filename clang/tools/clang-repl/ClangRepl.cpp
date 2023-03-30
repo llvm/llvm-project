@@ -123,6 +123,13 @@ int main(int argc, const char **argv) {
         }
         continue;
       }
+      if (Line->rfind("%lib ", 0) == 0) {
+        if (auto Err = Interp->LoadDynamicLibrary(Line->data() + 5)) {
+          llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+          HasError = true;
+        }
+        continue;
+      }
 
       if (auto Err = Interp->ParseAndExecute(*Line)) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");

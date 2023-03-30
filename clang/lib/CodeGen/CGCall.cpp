@@ -1971,10 +1971,9 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
   }
 
   // TODO: NoUnwind attribute should be added for other GPU modes HIP,
-  // SYCL, OpenMP offload. AFAIK, none of them support exceptions in device
-  // code.
+  // OpenMP offload. AFAIK, neither of them support exceptions in device code.
   if ((getLangOpts().CUDA && getLangOpts().CUDAIsDevice) ||
-      getLangOpts().OpenCL) {
+      getLangOpts().OpenCL || getLangOpts().SYCLIsDevice) {
     FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
   }
 

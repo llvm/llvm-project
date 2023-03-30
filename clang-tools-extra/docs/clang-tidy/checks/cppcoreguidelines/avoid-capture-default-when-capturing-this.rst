@@ -41,3 +41,13 @@ Examples:
 
 This check implements
 `CppCoreGuideline F.54 <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#f54-if-you-capture-this-capture-all-variables-explicitly-no-default-capture>`_.
+
+
+Options
+-------
+
+.. option:: IgnoreCaptureDefaultByReference
+
+  Do not warn when using capture default by reference. In this case, there is no
+  confusion as to whether variables are captured by value or reference.
+  Defaults to `false`.

@@ -400,7 +400,7 @@ public:
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
-    // This is the ELF definition, and is overridden by the Darwin sub-target
+    // This is the ELF definition
     return TargetInfo::PowerABIBuiltinVaList;
   }
 };
@@ -478,33 +478,6 @@ public:
     default:
       return CCCR_Warning;
     }
-  }
-};
-
-class LLVM_LIBRARY_VISIBILITY DarwinPPC32TargetInfo
-    : public DarwinTargetInfo<PPC32TargetInfo> {
-public:
-  DarwinPPC32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : DarwinTargetInfo<PPC32TargetInfo>(Triple, Opts) {
-    HasAlignMac68kSupport = true;
-    BoolWidth = BoolAlign = 32; // XXX support -mone-byte-bool?
-    PtrDiffType = SignedInt; // for http://llvm.org/bugs/show_bug.cgi?id=15726
-    LongLongAlign = 32;
-    resetDataLayout("E-m:o-p:32:32-f64:32:64-n32", "_");
-  }
-
-  BuiltinVaListKind getBuiltinVaListKind() const override {
-    return TargetInfo::CharPtrBuiltinVaList;
-  }
-};
-
-class LLVM_LIBRARY_VISIBILITY DarwinPPC64TargetInfo
-    : public DarwinTargetInfo<PPC64TargetInfo> {
-public:
-  DarwinPPC64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : DarwinTargetInfo<PPC64TargetInfo>(Triple, Opts) {
-    HasAlignMac68kSupport = true;
-    resetDataLayout("E-m:o-i64:64-n32:64", "_");
   }
 };
 

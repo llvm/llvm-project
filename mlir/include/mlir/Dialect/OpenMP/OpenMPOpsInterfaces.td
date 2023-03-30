@@ -81,6 +81,35 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
             return isDevice.dyn_cast<IsDeviceAttr>().getIsDevice();
         return false;
       }]>,
+      InterfaceMethod<
+      /*description=*/[{
+        Get the FlagsAttr attribute on the current module if it exists 
+        and return the attribute, if it doesn't exit it returns a nullptr
+      }],
+      /*retTy=*/"mlir::omp::FlagsAttr",
+      /*methodName=*/"getFlags", 
+      (ins), [{}], [{
+        if (Attribute flags = $_op->getAttr("omp.flags"))
+          return flags.dyn_cast_or_null<mlir::omp::FlagsAttr>();
+        return nullptr;
+      }]>,  
+      InterfaceMethod<
+      /*description=*/[{
+        Apply an omp.FlagsAttr to a module with the specified values 
+        for the flags
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setFlags", 
+      (ins "uint32_t":$debugKind,
+            "bool":$assumeTeamsOversubscription,
+            "bool":$assumeThreadsOversubscription,
+            "bool":$assumeNoThreadState,
+            "bool":$assumeNoNestedParallelism), [{}], [{
+        $_op->setAttr(("omp." + mlir::omp::FlagsAttr::getMnemonic()).str(),
+                  mlir::omp::FlagsAttr::get($_op->getContext(), debugKind,
+                      assumeTeamsOversubscription, assumeThreadsOversubscription, 
+                      assumeNoThreadState, assumeNoNestedParallelism));
+      }]>,
   ];
 }
 

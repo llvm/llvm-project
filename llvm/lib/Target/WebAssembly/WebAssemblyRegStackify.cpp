@@ -278,12 +278,13 @@ static MachineInstr *getVRegDef(unsigned Reg, const MachineInstr *Insert,
 }
 
 // Test whether Reg, as defined at Def, has exactly one use. This is a
-// generalization of MachineRegisterInfo::hasOneUse that uses LiveIntervals
-// to handle complex cases.
-static bool hasOneUse(unsigned Reg, MachineInstr *Def, MachineRegisterInfo &MRI,
-                      MachineDominatorTree &MDT, LiveIntervals &LIS) {
+// generalization of MachineRegisterInfo::hasOneNonDBGUse that uses
+// LiveIntervals to handle complex cases.
+static bool hasOneNonDBGUse(unsigned Reg, MachineInstr *Def,
+                            MachineRegisterInfo &MRI, MachineDominatorTree &MDT,
+                            LiveIntervals &LIS) {
   // Most registers are in SSA form here so we try a quick MRI query first.
-  if (MRI.hasOneUse(Reg))
+  if (MRI.hasOneNonDBGUse(Reg))
     return true;
 
   bool HasOne = false;
@@ -525,11 +526,10 @@ static MachineInstr *moveForSingleUse(unsigned Reg, MachineOperand &Op,
   LLVM_DEBUG(dbgs() << "Move for single use: "; Def->dump());
 
   WebAssemblyDebugValueManager DefDIs(Def);
-  MBB.splice(Insert, &MBB, Def);
-  DefDIs.move(Insert);
+  DefDIs.sink(Insert);
   LIS.handleMove(*Def);
 
-  if (MRI.hasOneDef(Reg) && MRI.hasOneUse(Reg)) {
+  if (MRI.hasOneDef(Reg) && MRI.hasOneNonDBGUse(Reg)) {
     // No one else is using this register for anything so we can just stackify
     // it in place.
     MFI.stackifyVReg(MRI, Reg);
@@ -537,8 +537,8 @@ static MachineInstr *moveForSingleUse(unsigned Reg, MachineOperand &Op,
     // The register may have unrelated uses or defs; create a new register for
     // just our one def and use so that we can stackify it.
     Register NewReg = MRI.createVirtualRegister(MRI.getRegClass(Reg));
-    Def->getOperand(0).setReg(NewReg);
     Op.setReg(NewReg);
+    DefDIs.updateReg(NewReg);
 
     // Tell LiveIntervals about the new register.
     LIS.createAndComputeVirtRegInterval(NewReg);
@@ -551,13 +551,18 @@ static MachineInstr *moveForSingleUse(unsigned Reg, MachineOperand &Op,
 
     MFI.stackifyVReg(MRI, NewReg);
 
-    DefDIs.updateReg(NewReg);
-
     LLVM_DEBUG(dbgs() << " - Replaced register: "; Def->dump());
   }
 
   imposeStackOrdering(Def);
   return Def;
+}
+
+static MachineInstr *getPrevNonDebugInst(MachineInstr *MI) {
+  for (auto *I = MI->getPrevNode(); I; I = I->getPrevNode())
+    if (!I->isDebugInstr())
+      return I;
+  return nullptr;
 }
 
 /// A trivially cloneable instruction; clone it and nest the new copy with the
@@ -573,9 +578,10 @@ static MachineInstr *rematerializeCheapDef(
   WebAssemblyDebugValueManager DefDIs(&Def);
 
   Register NewReg = MRI.createVirtualRegister(MRI.getRegClass(Reg));
-  TII->reMaterialize(MBB, Insert, NewReg, 0, Def, *TRI);
+  DefDIs.cloneSink(&*Insert, NewReg);
   Op.setReg(NewReg);
-  MachineInstr *Clone = &*std::prev(Insert);
+  MachineInstr *Clone = getPrevNonDebugInst(&*Insert);
+  assert(Clone);
   LIS.InsertMachineInstrInMaps(*Clone);
   LIS.createAndComputeVirtRegInterval(NewReg);
   MFI.stackifyVReg(MRI, NewReg);
@@ -592,19 +598,13 @@ static MachineInstr *rematerializeCheapDef(
   }
 
   // If that was the last use of the original, delete the original.
-  // Move or clone corresponding DBG_VALUEs to the 'Insert' location.
   if (IsDead) {
     LLVM_DEBUG(dbgs() << " - Deleting original\n");
     SlotIndex Idx = LIS.getInstructionIndex(Def).getRegSlot();
     LIS.removePhysRegDefAt(MCRegister::from(WebAssembly::ARGUMENTS), Idx);
     LIS.removeInterval(Reg);
     LIS.RemoveMachineInstrFromMaps(Def);
-    Def.eraseFromParent();
-
-    DefDIs.move(&*Insert);
-    DefDIs.updateReg(NewReg);
-  } else {
-    DefDIs.clone(&*Insert, NewReg);
+    DefDIs.removeDef();
   }
 
   return Clone;
@@ -636,27 +636,25 @@ static MachineInstr *moveAndTeeForMultiUse(
     MachineRegisterInfo &MRI, const WebAssemblyInstrInfo *TII) {
   LLVM_DEBUG(dbgs() << "Move and tee for multi-use:"; Def->dump());
 
-  WebAssemblyDebugValueManager DefDIs(Def);
-
-  // Move Def into place.
-  MBB.splice(Insert, &MBB, Def);
-  LIS.handleMove(*Def);
-
-  // Create the Tee and attach the registers.
   const auto *RegClass = MRI.getRegClass(Reg);
   Register TeeReg = MRI.createVirtualRegister(RegClass);
   Register DefReg = MRI.createVirtualRegister(RegClass);
+
+  // Move Def into place.
+  WebAssemblyDebugValueManager DefDIs(Def);
+  DefDIs.sink(Insert);
+  LIS.handleMove(*Def);
+
+  // Create the Tee and attach the registers.
   MachineOperand &DefMO = Def->getOperand(0);
   MachineInstr *Tee = BuildMI(MBB, Insert, Insert->getDebugLoc(),
                               TII->get(getTeeOpcode(RegClass)), TeeReg)
                           .addReg(Reg, RegState::Define)
                           .addReg(DefReg, getUndefRegState(DefMO.isDead()));
   Op.setReg(TeeReg);
-  DefMO.setReg(DefReg);
+  DefDIs.updateReg(DefReg);
   SlotIndex TeeIdx = LIS.InsertMachineInstrInMaps(*Tee).getRegSlot();
   SlotIndex DefIdx = LIS.getInstructionIndex(*Def).getRegSlot();
-
-  DefDIs.move(Insert);
 
   // Tell LiveIntervals we moved the original vreg def from Def to Tee.
   LiveInterval &LI = LIS.getInterval(Reg);
@@ -674,8 +672,11 @@ static MachineInstr *moveAndTeeForMultiUse(
   imposeStackOrdering(Def);
   imposeStackOrdering(Tee);
 
-  DefDIs.clone(Tee, DefReg);
-  DefDIs.clone(Insert, TeeReg);
+  // Even though 'TeeReg, Reg = TEE ...', has two defs, we don't need to clone
+  // DBG_VALUEs for both of them, given that the latter will cancel the former
+  // anyway. Here we only clone DBG_VALUEs for TeeReg, which will be converted
+  // to a local index in ExplicitLocals pass.
+  DefDIs.cloneSink(Insert, TeeReg, /* CloneDef */ false);
 
   LLVM_DEBUG(dbgs() << " - Replaced register: "; Def->dump());
   LLVM_DEBUG(dbgs() << " - Tee instruction: "; Tee->dump());
@@ -876,7 +877,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         bool SameBlock = DefI->getParent() == &MBB;
         bool CanMove = SameBlock && isSafeToMove(Def, &Use, Insert, MFI, MRI) &&
                        !TreeWalker.isOnStack(Reg);
-        if (CanMove && hasOneUse(Reg, DefI, MRI, MDT, LIS)) {
+        if (CanMove && hasOneNonDBGUse(Reg, DefI, MRI, MDT, LIS)) {
           Insert = moveForSingleUse(Reg, Use, DefI, MBB, Insert, LIS, MFI, MRI);
 
           // If we are removing the frame base reg completely, remove the debug
@@ -913,7 +914,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
           Register DefReg = SubsequentDef->getReg();
           Register UseReg = SubsequentUse->getReg();
           // TODO: This single-use restriction could be relaxed by using tees
-          if (DefReg != UseReg || !MRI.hasOneUse(DefReg))
+          if (DefReg != UseReg || !MRI.hasOneNonDBGUse(DefReg))
             break;
           MFI.stackifyVReg(MRI, DefReg);
           ++SubsequentDef;

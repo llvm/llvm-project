@@ -3409,17 +3409,12 @@ static bool isExtabRef(uint32_t unwind) {
 // EXIDX_CANTUNWIND entries are represented by nullptr as they do not have an
 // InputSection.
 static bool isDuplicateArmExidxSec(InputSection *prev, InputSection *cur) {
-
-  struct ExidxEntry {
-    ulittle32_t fn;
-    ulittle32_t unwind;
-  };
   // Get the last table Entry from the previous .ARM.exidx section. If Prev is
   // nullptr then it will be a synthesized EXIDX_CANTUNWIND entry.
-  ExidxEntry prevEntry = {ulittle32_t(0), ulittle32_t(1)};
+  uint32_t prevUnwind = 1;
   if (prev)
-    prevEntry = prev->getDataAs<ExidxEntry>().back();
-  if (isExtabRef(prevEntry.unwind))
+    prevUnwind = read32(prev->content().data() + prev->content().size() - 4);
+  if (isExtabRef(prevUnwind))
     return false;
 
   // We consider the unwind instructions of an .ARM.exidx table entry
@@ -3432,12 +3427,13 @@ static bool isDuplicateArmExidxSec(InputSection *prev, InputSection *cur) {
 
   // If Cur is nullptr then this is synthesized EXIDX_CANTUNWIND entry.
   if (cur == nullptr)
-    return prevEntry.unwind == 1;
+    return prevUnwind == 1;
 
-  for (const ExidxEntry entry : cur->getDataAs<ExidxEntry>())
-    if (isExtabRef(entry.unwind) || entry.unwind != prevEntry.unwind)
+  for (uint32_t offset = 4; offset < (uint32_t)cur->content().size(); offset +=8) {
+    uint32_t curUnwind = read32(cur->content().data() + offset);
+    if (isExtabRef(curUnwind) || curUnwind != prevUnwind)
       return false;
-
+  }
   // All table entries in this .ARM.exidx Section can be merged into the
   // previous Section.
   return true;
@@ -3531,27 +3527,32 @@ InputSection *ARMExidxSyntheticSection::getLinkOrderDep() const {
 //     the table to terminate the address range of the final entry.
 void ARMExidxSyntheticSection::writeTo(uint8_t *buf) {
 
-  const uint8_t cantUnwindData[8] = {0, 0, 0, 0,  // PREL31 to target
-                                     1, 0, 0, 0}; // EXIDX_CANTUNWIND
-
+  // A linker generated CANTUNWIND entry is made up of two words:
+  // 0x0 with R_ARM_PREL31 relocation to target.
+  // 0x1 with EXIDX_CANTUNWIND.
   uint64_t offset = 0;
   for (InputSection *isec : executableSections) {
     assert(isec->getParent() != nullptr);
     if (InputSection *d = findExidxSection(isec)) {
-      memcpy(buf + offset, d->content().data(), d->content().size());
+      for (int dataOffset = 0; dataOffset != (int)d->content().size();
+           dataOffset += 4)
+        write32(buf + offset + dataOffset,
+                read32(d->content().data() + dataOffset));
       target->relocateAlloc(*d, buf + d->outSecOff);
       offset += d->getSize();
     } else {
       // A Linker generated CANTUNWIND section.
-      memcpy(buf + offset, cantUnwindData, sizeof(cantUnwindData));
+      write32(buf + offset + 0, 0x0);
+      write32(buf + offset + 4, 0x1);
       uint64_t s = isec->getVA();
       uint64_t p = getVA() + offset;
       target->relocateNoSym(buf + offset, R_ARM_PREL31, s - p);
       offset += 8;
     }
   }
-  // Write Sentinel.
-  memcpy(buf + offset, cantUnwindData, sizeof(cantUnwindData));
+  // Write Sentinel CANTUNWIND entry.
+  write32(buf + offset + 0, 0x0);
+  write32(buf + offset + 4, 0x1);
   uint64_t s = sentinel->getVA(sentinel->getSize());
   uint64_t p = getVA() + offset;
   target->relocateNoSym(buf + offset, R_ARM_PREL31, s - p);

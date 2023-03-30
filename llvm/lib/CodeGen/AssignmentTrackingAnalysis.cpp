@@ -1,4 +1,5 @@
 #include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
+#include "LiveDebugValues/LiveDebugValues.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/IntervalMap.h"
@@ -47,6 +48,12 @@ static cl::opt<bool> EnableMemLocFragFill("mem-loc-frag-fill", cl::init(true),
 /// Print the results of the analysis. Respects -filter-print-funcs.
 static cl::opt<bool> PrintResults("print-debug-ata", cl::init(false),
                                   cl::Hidden);
+
+/// Coalesce adjacent dbg locs describing memory locations that have contiguous
+/// fragments. This reduces the cost of LiveDebugValues which does SSA
+/// construction for each explicitly stated variable fragment.
+static cl::opt<cl::boolOrDefault>
+    CoalesceAdjacentFragmentsOpt("debug-ata-coalesce-frags", cl::Hidden);
 
 // Implicit conversions are disabled for enum class types, so unfortunately we
 // need to create a DenseMapInfo wrapper around the specified underlying type.
@@ -287,6 +294,24 @@ static DebugAggregate getAggregate(const DebugVariable &Var) {
   return DebugAggregate(Var.getVariable(), Var.getInlinedAt());
 }
 
+static bool shouldCoalesceFragments(Function &F) {
+  // Enabling fragment coalescing reduces compiler run time when instruction
+  // referencing is enabled. However, it may cause LiveDebugVariables to create
+  // incorrect locations. Since instruction-referencing mode effectively
+  // bypasses LiveDebugVariables we only enable coalescing if the cl::opt flag
+  // has not been explicitly set and instruction-referencing is turned on.
+  switch (CoalesceAdjacentFragmentsOpt) {
+  case cl::boolOrDefault::BOU_UNSET:
+    return debuginfoShouldUseDebugInstrRef(
+        Triple(F.getParent()->getTargetTriple()));
+  case cl::boolOrDefault::BOU_TRUE:
+    return true;
+  case cl::boolOrDefault::BOU_FALSE:
+    return false;
+  }
+  llvm_unreachable("Unknown boolOrDefault value");
+}
+
 namespace {
 /// In dwarf emission, the following sequence
 ///    1. dbg.value ... Fragment(0, 64)
@@ -310,6 +335,7 @@ class MemLocFragmentFill {
   Function &Fn;
   FunctionVarLocsBuilder *FnVarLocs;
   const DenseSet<DebugAggregate> *VarsWithStackSlot;
+  bool CoalesceAdjacentFragments;
 
   // 0 = no memory location.
   using BaseAddress = unsigned;
@@ -574,6 +600,31 @@ class MemLocFragmentFill {
                       << " bits [" << StartBit << ", " << EndBit << ")\n");
   }
 
+  /// Inserts a new dbg def if the interval found when looking up \p StartBit
+  /// in \p FragMap starts before \p StartBit or ends after \p EndBit (which
+  /// indicates - assuming StartBit->EndBit has just been inserted - that the
+  /// slice has been coalesced in the map).
+  void coalesceFragments(BasicBlock &BB, Instruction &Before, unsigned Var,
+                         unsigned StartBit, unsigned EndBit, unsigned Base,
+                         DebugLoc DL, const FragsInMemMap &FragMap) {
+    if (!CoalesceAdjacentFragments)
+      return;
+    // We've inserted the location into the map. The map will have coalesced
+    // adjacent intervals (variable fragments) that describe the same memory
+    // location. Use this knowledge to insert a debug location that describes
+    // that coalesced fragment. This may eclipse other locs we've just
+    // inserted. This is okay as redundant locs will be cleaned up later.
+    auto CoalescedFrag = FragMap.find(StartBit);
+    // Bail if no coalescing has taken place.
+    if (CoalescedFrag.start() == StartBit && CoalescedFrag.stop() == EndBit)
+      return;
+
+    LLVM_DEBUG(dbgs() << "- Insert loc for bits " << CoalescedFrag.start()
+                      << " to " << CoalescedFrag.stop() << "\n");
+    insertMemLoc(BB, Before, Var, CoalescedFrag.start(), CoalescedFrag.stop(),
+                 Base, DL);
+  }
+
   void addDef(const VarLocInfo &VarLoc, Instruction &Before, BasicBlock &BB,
               VarFragMap &LiveSet) {
     DebugVariable DbgVar = FnVarLocs->getVariable(VarLoc.VariableID);
@@ -639,6 +690,8 @@ class MemLocFragmentFill {
     if (!FragMap.overlaps(StartBit, EndBit)) {
       LLVM_DEBUG(dbgs() << "- No overlaps\n");
       FragMap.insert(StartBit, EndBit, Base);
+      coalesceFragments(BB, Before, Var, StartBit, EndBit, Base, VarLoc.DL,
+                        FragMap);
       return;
     }
     // There is at least one overlap.
@@ -729,6 +782,9 @@ class MemLocFragmentFill {
       LLVM_DEBUG(dbgs() << "- Insert DEF into now-empty space\n");
       FragMap.insert(StartBit, EndBit, Base);
     }
+
+    coalesceFragments(BB, Before, Var, StartBit, EndBit, Base, VarLoc.DL,
+                      FragMap);
   }
 
   bool skipVariable(const DILocalVariable *V) { return !V->getSizeInBits(); }
@@ -746,8 +802,10 @@ class MemLocFragmentFill {
 
 public:
   MemLocFragmentFill(Function &Fn,
-                     const DenseSet<DebugAggregate> *VarsWithStackSlot)
-      : Fn(Fn), VarsWithStackSlot(VarsWithStackSlot) {}
+                     const DenseSet<DebugAggregate> *VarsWithStackSlot,
+                     bool CoalesceAdjacentFragments)
+      : Fn(Fn), VarsWithStackSlot(VarsWithStackSlot),
+        CoalesceAdjacentFragments(CoalesceAdjacentFragments) {}
 
   /// Add variable locations to \p FnVarLocs so that any bits of a variable
   /// with a memory location have that location explicitly reinstated at each
@@ -864,8 +922,10 @@ public:
 
         for (auto &FragMemLoc : FragMemLocs) {
           DIExpression *Expr = DIExpression::get(Ctx, std::nullopt);
-          Expr = *DIExpression::createFragmentExpression(
-              Expr, FragMemLoc.OffsetInBits, FragMemLoc.SizeInBits);
+          if (FragMemLoc.SizeInBits !=
+              *Aggregates[FragMemLoc.Var].first->getSizeInBits())
+            Expr = *DIExpression::createFragmentExpression(
+                Expr, FragMemLoc.OffsetInBits, FragMemLoc.SizeInBits);
           Expr = DIExpression::prepend(Expr, DIExpression::DerefAfter,
                                        FragMemLoc.OffsetInBits / 8);
           DebugVariable Var(Aggregates[FragMemLoc.Var].first, Expr,
@@ -1759,48 +1819,72 @@ AssignmentTrackingLowering::joinBlockInfo(const BlockInfo &A,
 
 bool AssignmentTrackingLowering::join(
     const BasicBlock &BB, const SmallPtrSet<BasicBlock *, 16> &Visited) {
-  BlockInfo BBLiveIn;
-  bool FirstJoin = true;
-  // LiveIn locs for BB is the join of the already-processed preds' LiveOut
-  // locs.
+
+  SmallVector<const BasicBlock *> VisitedPreds;
+  // Ignore backedges if we have not visited the predecessor yet. As the
+  // predecessor hasn't yet had locations propagated into it, most locations
+  // will not yet be valid, so treat them as all being uninitialized and
+  // potentially valid. If a location guessed to be correct here is
+  // invalidated later, we will remove it when we revisit this block. This
+  // is essentially the same as initialising all LocKinds and Assignments to
+  // an implicit ⊥ value which is the identity value for the join operation.
   for (auto I = pred_begin(&BB), E = pred_end(&BB); I != E; I++) {
-    // Ignore backedges if we have not visited the predecessor yet. As the
-    // predecessor hasn't yet had locations propagated into it, most locations
-    // will not yet be valid, so treat them as all being uninitialized and
-    // potentially valid. If a location guessed to be correct here is
-    // invalidated later, we will remove it when we revisit this block. This
-    // is essentially the same as initialising all LocKinds and Assignments to
-    // an implicit ⊥ value which is the identity value for the join operation.
     const BasicBlock *Pred = *I;
-    if (!Visited.count(Pred))
-      continue;
-
-    auto PredLiveOut = LiveOut.find(Pred);
-    // Pred must have been processed already. See comment at start of this loop.
-    assert(PredLiveOut != LiveOut.end());
-
-    // Perform the join of BBLiveIn (current live-in info) and PrevLiveOut.
-    if (FirstJoin)
-      BBLiveIn = PredLiveOut->second;
-    else
-      BBLiveIn = joinBlockInfo(std::move(BBLiveIn), PredLiveOut->second);
-    FirstJoin = false;
+    if (Visited.count(Pred))
+      VisitedPreds.push_back(Pred);
   }
 
-  if (FirstJoin)
-    BBLiveIn.init(TrackedVariablesVectorSize);
+  // No preds visited yet.
+  if (VisitedPreds.empty()) {
+    auto It = LiveIn.try_emplace(&BB, BlockInfo());
+    bool DidInsert = It.second;
+    if (DidInsert)
+      It.first->second.init(TrackedVariablesVectorSize);
+    return /*Changed*/ DidInsert;
+  }
 
+  // Exactly one visited pred. Copy the LiveOut from that pred into BB LiveIn.
+  if (VisitedPreds.size() == 1) {
+    const BlockInfo &PredLiveOut = LiveOut.find(VisitedPreds[0])->second;
+    auto CurrentLiveInEntry = LiveIn.find(&BB);
+
+    // Check if there isn't an entry, or there is but the LiveIn set has
+    // changed (expensive check).
+    if (CurrentLiveInEntry == LiveIn.end())
+      LiveIn.insert(std::make_pair(&BB, PredLiveOut));
+    else if (PredLiveOut != CurrentLiveInEntry->second)
+      CurrentLiveInEntry->second = PredLiveOut;
+    else
+      return /*Changed*/ false;
+    return /*Changed*/ true;
+  }
+
+  // More than one pred. Join LiveOuts of blocks 1 and 2.
+  assert(VisitedPreds.size() > 1);
+  const BlockInfo &PredLiveOut0 = LiveOut.find(VisitedPreds[0])->second;
+  const BlockInfo &PredLiveOut1 = LiveOut.find(VisitedPreds[1])->second;
+  BlockInfo BBLiveIn = joinBlockInfo(PredLiveOut0, PredLiveOut1);
+
+  // Join the LiveOuts of subsequent blocks.
+  ArrayRef Tail = ArrayRef(VisitedPreds).drop_front(2);
+  for (const BasicBlock *Pred : Tail) {
+    const auto &PredLiveOut = LiveOut.find(Pred);
+    assert(PredLiveOut != LiveOut.end() &&
+           "block should have been processed already");
+    BBLiveIn = joinBlockInfo(std::move(BBLiveIn), PredLiveOut->second);
+  }
+
+  // Save the joined result for BB.
   auto CurrentLiveInEntry = LiveIn.find(&BB);
   // Check if there isn't an entry, or there is but the LiveIn set has changed
   // (expensive check).
-  if (CurrentLiveInEntry == LiveIn.end() ||
-      BBLiveIn != CurrentLiveInEntry->second) {
-    LiveIn[&BB] = std::move(BBLiveIn);
-    // A change has occured.
-    return true;
-  }
-  // No change.
-  return false;
+  if (CurrentLiveInEntry == LiveIn.end())
+    LiveIn.try_emplace(&BB, std::move(BBLiveIn));
+  else if (BBLiveIn != CurrentLiveInEntry->second)
+    CurrentLiveInEntry->second = std::move(BBLiveIn);
+  else
+    return /*Changed*/ false;
+  return /*Changed*/ true;
 }
 
 /// Return true if A fully contains B.
@@ -1851,6 +1935,7 @@ getUntaggedStoreAssignmentInfo(const Instruction &I, const DataLayout &Layout) {
 /// to iterate over the function as they can be achieved together in one pass.
 static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
     Function &Fn, FunctionVarLocsBuilder *FnVarLocs,
+    const DenseSet<DebugAggregate> &VarsWithStackSlot,
     AssignmentTrackingLowering::UntaggedStoreAssignmentMap &UntaggedStoreVars,
     unsigned &TrackedVariablesVectorSize) {
   DenseSet<DebugVariable> Seen;
@@ -1871,6 +1956,8 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
       } else if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
         DebugVariable DV = DebugVariable(DII);
         DebugAggregate DA = {DV.getVariable(), DV.getInlinedAt()};
+        if (!VarsWithStackSlot.contains(DA))
+          continue;
         if (Seen.insert(DV).second)
           FragmentMap[DA].push_back(DV);
       } else if (auto Info = getUntaggedStoreAssignmentInfo(
@@ -1895,6 +1982,8 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
           DebugVariable DV = DebugVariable(DAI->getVariable(), FragInfo,
                                            DAI->getDebugLoc().getInlinedAt());
           DebugAggregate DA = {DV.getVariable(), DV.getInlinedAt()};
+          if (!VarsWithStackSlot.contains(DA))
+            continue;
 
           // Cache this info for later.
           UntaggedStoreVars[&I].push_back(
@@ -1972,7 +2061,8 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
   // neither does LiveDebugVariables) because that is difficult to do and
   // appears to be rare occurance.
   VarContains = buildOverlapMapAndRecordDeclares(
-      Fn, FnVarLocs, UntaggedStoreVars, TrackedVariablesVectorSize);
+      Fn, FnVarLocs, *VarsWithStackSlot, UntaggedStoreVars,
+      TrackedVariablesVectorSize);
 
   // Prepare for traversal.
   ReversePostOrderTraversal<Function *> RPOT(&Fn);
@@ -2161,15 +2251,14 @@ static bool
 removeRedundantDbgLocsUsingBackwardScan(const BasicBlock *BB,
                                         FunctionVarLocsBuilder &FnVarLocs) {
   bool Changed = false;
-  SmallDenseSet<DebugVariable> VariableSet;
-
+  SmallDenseMap<DebugAggregate, BitVector> VariableDefinedBits;
   // Scan over the entire block, not just over the instructions mapped by
   // FnVarLocs, because wedges in FnVarLocs may only be seperated by debug
   // instructions.
   for (const Instruction &I : reverse(*BB)) {
     if (!isa<DbgVariableIntrinsic>(I)) {
       // Sequence of consecutive defs ended. Clear map for the next one.
-      VariableSet.clear();
+      VariableDefinedBits.clear();
     }
 
     // Get the location defs that start just before this instruction.
@@ -2185,21 +2274,44 @@ removeRedundantDbgLocsUsingBackwardScan(const BasicBlock *BB,
     // Iterate over the existing defs in reverse.
     for (auto RIt = Locs->rbegin(), REnd = Locs->rend(); RIt != REnd; ++RIt) {
       NumDefsScanned++;
-      const DebugVariable &Key = FnVarLocs.getVariable(RIt->VariableID);
-      bool FirstDefOfFragment = VariableSet.insert(Key).second;
+      DebugAggregate Aggr =
+          getAggregate(FnVarLocs.getVariable(RIt->VariableID));
+      uint64_t SizeInBits = Aggr.first->getSizeInBits().value_or(0);
 
-      // If the same variable fragment is described more than once it is enough
-      // to keep the last one (i.e. the first found in this reverse iteration).
-      if (FirstDefOfFragment) {
-        // New def found: keep it.
+      if (SizeInBits == 0) {
+        // If the size is unknown (0) then keep this location def to be safe.
         NewDefsReversed.push_back(*RIt);
-      } else {
-        // Redundant def found: throw it away. Since the wedge of defs is being
-        // rebuilt, doing nothing is the same as deleting an entry.
-        ChangedThisWedge = true;
-        NumDefsRemoved++;
+        continue;
       }
-      continue;
+
+      // Only keep this location definition if it is not fully eclipsed by
+      // other definitions in this wedge that come after it
+
+      // Inert the bits the location definition defines.
+      auto InsertResult =
+          VariableDefinedBits.try_emplace(Aggr, BitVector(SizeInBits));
+      bool FirstDefinition = InsertResult.second;
+      BitVector &DefinedBits = InsertResult.first->second;
+
+      DIExpression::FragmentInfo Fragment =
+          RIt->Expr->getFragmentInfo().value_or(
+              DIExpression::FragmentInfo(SizeInBits, 0));
+      bool InvalidFragment = Fragment.endInBits() > SizeInBits;
+
+      // If this defines any previously undefined bits, keep it.
+      if (FirstDefinition || InvalidFragment ||
+          DefinedBits.find_first_unset_in(Fragment.startInBits(),
+                                          Fragment.endInBits()) != -1) {
+        if (!InvalidFragment)
+          DefinedBits.set(Fragment.startInBits(), Fragment.endInBits());
+        NewDefsReversed.push_back(*RIt);
+        continue;
+      }
+
+      // Redundant def found: throw it away. Since the wedge of defs is being
+      // rebuilt, doing nothing is the same as deleting an entry.
+      ChangedThisWedge = true;
+      NumDefsRemoved++;
     }
 
     // Un-reverse the defs and replace the wedge with the pruned version.
@@ -2403,7 +2515,8 @@ static void analyzeFunction(Function &Fn, const DataLayout &Layout,
   }
 
   if (Changed) {
-    MemLocFragmentFill Pass(Fn, &VarsWithStackSlot);
+    MemLocFragmentFill Pass(Fn, &VarsWithStackSlot,
+                            shouldCoalesceFragments(Fn));
     Pass.run(FnVarLocs);
 
     // Remove redundant entries. As well as reducing memory consumption and

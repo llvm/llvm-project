@@ -1045,19 +1045,20 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
     switch (keyFunction->getTemplateSpecializationKind()) {
       case TSK_Undeclared:
       case TSK_ExplicitSpecialization:
-        assert((def || CodeGenOpts.OptimizationLevel > 0 ||
-                CodeGenOpts.getDebugInfo() != codegenoptions::NoDebugInfo) &&
-               "Shouldn't query vtable linkage without key function, "
-               "optimizations, or debug info");
-        if (!def && CodeGenOpts.OptimizationLevel > 0)
-          return llvm::GlobalVariable::AvailableExternallyLinkage;
+      assert(
+          (def || CodeGenOpts.OptimizationLevel > 0 ||
+           CodeGenOpts.getDebugInfo() != llvm::codegenoptions::NoDebugInfo) &&
+          "Shouldn't query vtable linkage without key function, "
+          "optimizations, or debug info");
+      if (!def && CodeGenOpts.OptimizationLevel > 0)
+        return llvm::GlobalVariable::AvailableExternallyLinkage;
 
-        if (keyFunction->isInlined())
-          return !Context.getLangOpts().AppleKext ?
-                   llvm::GlobalVariable::LinkOnceODRLinkage :
-                   llvm::Function::InternalLinkage;
+      if (keyFunction->isInlined())
+        return !Context.getLangOpts().AppleKext
+                   ? llvm::GlobalVariable::LinkOnceODRLinkage
+                   : llvm::Function::InternalLinkage;
 
-        return llvm::GlobalVariable::ExternalLinkage;
+      return llvm::GlobalVariable::ExternalLinkage;
 
       case TSK_ImplicitInstantiation:
         return !Context.getLangOpts().AppleKext ?

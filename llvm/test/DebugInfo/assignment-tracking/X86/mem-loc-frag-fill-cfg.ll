@@ -1,5 +1,6 @@
 ; RUN: llc %s -stop-before finalize-isel -o - \
 ; RUN:    -experimental-debug-variable-locations=false \
+; RUN:    -debug-ata-coalesce-frags=true \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 ; RUN: llc %s -stop-before finalize-isel -o - \
 ; RUN:    -experimental-debug-variable-locations=true \
@@ -8,8 +9,8 @@
 ;; Check that the mem-loc-frag-fill pseudo-pass works on a simple CFG. When
 ;; LLVM sees a dbg.value with an overlapping fragment it essentially considers
 ;; the previous location as valid for all bits in that fragment. The pass
-;; inserts dbg.value fragments to preserve memory locations for bits in memory
-;; when overlapping fragments are encountered.
+;; tracks which bits are in memory and inserts dbg.values preserve memory
+;; locations for bits in memory when overlapping fragments are encountered.
 
 ;; nums lives in mem, except prior to the second call to step() where there has
 ;; been some DSE. At this point, the memory loc for nums.c is invalid.  But the
@@ -82,8 +83,9 @@ if.end:                                           ; preds = %if.else, %if.then
   call void @llvm.dbg.assign(metadata i32 2, metadata !44, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata !56, metadata ptr %c, metadata !DIExpression()), !dbg !46
   %call1 = tail call noundef zeroext i1 @_Z4stepv(), !dbg !57
   store i32 1, ptr %c, align 4, !dbg !58, !DIAssignID !61
+;; Store to bits 64 to 96 - the whole variable is in memory again.
 ; CHECK:      MOV32mi %stack.0.nums, 1, $noreg, 8, $noreg, 1
-; CHECK-NEXT: DBG_VALUE %stack.0.nums, $noreg, ![[nums]], !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref, DW_OP_LLVM_fragment, 64, 32)
+; CHECK-NEXT: DBG_VALUE %stack.0.nums, $noreg, ![[nums]], !DIExpression(DW_OP_deref)
   call void @llvm.dbg.assign(metadata i32 1, metadata !44, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata !61, metadata ptr %c, metadata !DIExpression()), !dbg !46
   call void @_Z4esc1P4Nums(ptr noundef nonnull %nums), !dbg !62
   ret i32 0, !dbg !64

@@ -214,7 +214,7 @@ TARGET_BUILTIN(__builtin_amdgcn_perm, "UiUiUiUi", "nc", "gfx8-insts")
 TARGET_BUILTIN(__builtin_amdgcn_fmed3h, "hhhh", "nc", "gfx9-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fadd_f64, "dd*1d", "t", "gfx90a-insts")
-TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fadd_f32, "ff*1f", "t", "gfx90a-insts")
+TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fadd_f32, "ff*1f", "t", "atomic-fadd-rtn-insts")
 TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fadd_v2f16, "V2hV2h*1V2h", "t", "atomic-buffer-global-pk-add-f16-insts")
 TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fmin_f64, "dd*1d", "t", "gfx90a-insts")
 TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fmax_f64, "dd*1d", "t", "gfx90a-insts")

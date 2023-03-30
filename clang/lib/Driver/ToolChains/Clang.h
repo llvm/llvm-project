@@ -10,10 +10,10 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_CLANG_H
 
 #include "MSVC.h"
-#include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/Types.h"
+#include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -91,7 +91,7 @@ private:
 
   void AddClangCLArgs(const llvm::opt::ArgList &Args, types::ID InputType,
                       llvm::opt::ArgStringList &CmdArgs,
-                      codegenoptions::DebugInfoKind *DebugInfoKind,
+                      llvm::codegenoptions::DebugInfoKind *DebugInfoKind,
                       bool *EmitCodeView) const;
 
   mutable std::unique_ptr<llvm::raw_fd_ostream> CompilationDatabase = nullptr;

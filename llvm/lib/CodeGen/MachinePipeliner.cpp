@@ -496,7 +496,7 @@ void SwingSchedulerDAG::schedule() {
   updatePhiDependences();
   Topo.InitDAGTopologicalSorting();
   changeDependences();
-  postprocessDAG();
+  postProcessDAG();
   LLVM_DEBUG(dump());
 
   NodeSetType NodeSets;
@@ -2314,7 +2314,7 @@ bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
   return (OffsetS + (int64_t)AccessSizeS < OffsetD + (int64_t)AccessSizeD);
 }
 
-void SwingSchedulerDAG::postprocessDAG() {
+void SwingSchedulerDAG::postProcessDAG() {
   for (auto &M : Mutations)
     M->apply(this);
 }

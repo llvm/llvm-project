@@ -8092,6 +8092,9 @@ void SIInstrInfo::fixImplicitOperands(MachineInstr &MI) const {
   if (!ST.isWave32())
     return;
 
+  if (MI.isInlineAsm())
+    return;
+
   for (auto &Op : MI.implicit_operands()) {
     if (Op.isReg() && Op.getReg() == AMDGPU::VCC)
       Op.setReg(AMDGPU::VCC_LO);

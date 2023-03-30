@@ -135,7 +135,7 @@ LIBC_INLINE StrToNumResult<T> strtointeger(const char *__restrict src,
 
   ptrdiff_t str_len = is_number ? (src - original_src) : 0;
 
-  if (result == abs_max) {
+  if (error_val == ERANGE) {
     if (is_positive || IS_UNSIGNED)
       return {cpp::numeric_limits<T>::max(), str_len, error_val};
     else // T is signed and there is a negative overflow

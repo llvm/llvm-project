@@ -32127,6 +32127,7 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const {
 
 void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   IRBuilder<> Builder(AI);
+  Builder.CollectMetadataToCopy(AI, {LLVMContext::MD_pcsections});
   Intrinsic::ID IID_C = Intrinsic::not_intrinsic;
   Intrinsic::ID IID_I = Intrinsic::not_intrinsic;
   switch (AI->getOperation()) {
@@ -32267,6 +32268,7 @@ static bool shouldExpandCmpArithRMWInIR(AtomicRMWInst *AI) {
 void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
     AtomicRMWInst *AI) const {
   IRBuilder<> Builder(AI);
+  Builder.CollectMetadataToCopy(AI, {LLVMContext::MD_pcsections});
   Instruction *TempI = nullptr;
   LLVMContext &Ctx = AI->getContext();
   ICmpInst *ICI = dyn_cast<ICmpInst>(AI->user_back());
@@ -32392,6 +32394,7 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
       return nullptr;
 
   IRBuilder<> Builder(AI);
+  Builder.CollectMetadataToCopy(AI, {LLVMContext::MD_pcsections});
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   auto SSID = AI->getSyncScopeID();
   // We must restrict the ordering to avoid generating loads with Release or
@@ -54459,6 +54462,28 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
                                             ShiftSrc, ShiftAmt, DAG);
       ShiftSrc = DAG.getNOT(DL, DAG.getBitcast(SrcVT, ShiftSrc), SrcVT);
       return DAG.getNode(X86ISD::MOVMSK, DL, VT, ShiftSrc);
+    }
+  }
+
+  // Fold movmsk(logic(X,C)) -> logic(movmsk(X),C)
+  if (N->isOnlyUserOf(Src.getNode())) {
+    SDValue SrcBC = peekThroughOneUseBitcasts(Src);
+    if (ISD::isBitwiseLogicOp(SrcBC.getOpcode())) {
+      APInt UndefElts;
+      SmallVector<APInt, 32> EltBits;
+      if (getTargetConstantBitsFromNode(SrcBC.getOperand(1), NumBitsPerElt,
+                                        UndefElts, EltBits)) {
+        APInt Mask = APInt::getZero(NumBits);
+        for (unsigned Idx = 0; Idx != NumElts; ++Idx) {
+          if (!UndefElts[Idx] && EltBits[Idx].isNegative())
+            Mask.setBit(Idx);
+        }
+        SDLoc DL(N);
+        SDValue NewSrc = DAG.getBitcast(SrcVT, SrcBC.getOperand(0));
+        SDValue NewMovMsk = DAG.getNode(X86ISD::MOVMSK, DL, VT, NewSrc);
+        return DAG.getNode(SrcBC.getOpcode(), DL, VT, NewMovMsk,
+                           DAG.getConstant(Mask, DL, VT));
+      }
     }
   }
 

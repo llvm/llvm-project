@@ -1051,6 +1051,8 @@ void SelectionDAGBuilder::init(GCFunctionInfo *gfi, AliasAnalysis *aa,
   Context = DAG.getContext();
   LPadToCallSiteMap.clear();
   SL->init(DAG.getTargetLoweringInfo(), TM, DAG.getDataLayout());
+  AssignmentTrackingEnabled = isAssignmentTrackingEnabled(
+      *DAG.getMachineFunction().getFunction().getParent());
 }
 
 void SelectionDAGBuilder::clear() {
@@ -2971,6 +2973,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
   // catchswitch for successors.
   MachineBasicBlock *Return = FuncInfo.MBBMap[I.getSuccessor(0)];
   const BasicBlock *EHPadBB = I.getSuccessor(1);
+  MachineBasicBlock *EHPadMBB = FuncInfo.MBBMap[EHPadBB];
 
   // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
   // have to do anything here to lower funclet bundles.
@@ -2995,6 +2998,10 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     case Intrinsic::seh_scope_begin:
     case Intrinsic::seh_try_end:
     case Intrinsic::seh_scope_end:
+      if (EHPadMBB)
+          // a block referenced by EH table
+          // so dtor-funclet not removed by opts
+          EHPadMBB->setMachineBlockAddressTaken();
       break;
     case Intrinsic::experimental_patchpoint_void:
     case Intrinsic::experimental_patchpoint_i64:
@@ -6108,7 +6115,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::dbg_declare: {
     // Debug intrinsics are handled separately in assignment tracking mode.
-    if (isAssignmentTrackingEnabled(*I.getFunction()->getParent()))
+    if (AssignmentTrackingEnabled)
       return;
     // Assume dbg.declare can not currently use DIArgList, i.e.
     // it is non-variadic.
@@ -6203,13 +6210,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::dbg_assign: {
     // Debug intrinsics are handled seperately in assignment tracking mode.
-    assert(isAssignmentTrackingEnabled(*I.getFunction()->getParent()) &&
+    assert(AssignmentTrackingEnabled &&
            "expected assignment tracking to be enabled");
     return;
   }
   case Intrinsic::dbg_value: {
     // Debug intrinsics are handled seperately in assignment tracking mode.
-    if (isAssignmentTrackingEnabled(*I.getFunction()->getParent()))
+    if (AssignmentTrackingEnabled)
       return;
     const DbgValueInst &DI = cast<DbgValueInst>(I);
     assert(DI.getVariable() && "Missing variable");

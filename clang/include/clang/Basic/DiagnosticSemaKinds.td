@@ -8634,6 +8634,10 @@ def note_cuda_device_builtin_surftex_should_be_template_class : Note<
 def err_hip_invalid_args_builtin_mangled_name : Error<
     "invalid argument: symbol must be a device-side function or global variable">;
 
+def warn_hip_omp_target_directives : Warning<
+  "HIP does not support OpenMP target directives; directive has been ignored">,
+  InGroup<HIPOpenMPOffloading>, DefaultError;
+
 def warn_non_pod_vararg_with_format_string : Warning<
   "cannot pass %select{non-POD|non-trivial}0 object of type %1 to variadic "
   "%select{function|block|method|constructor}2; expected type from format "

@@ -156,6 +156,12 @@ public:
       report(FD->getLocation(), FD);
     return true;
   }
+  bool VisitVarDecl(VarDecl *VD) {
+    // Mark declaration from definition as it needs type-checking.
+    if (VD->isThisDeclarationADefinition())
+      report(VD->getLocation(), VD);
+    return true;
+  }
 
   bool VisitEnumDecl(EnumDecl *D) {
     // Definition of an enum with an underlying type references declaration for

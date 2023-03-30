@@ -503,7 +503,7 @@ function(add_integration_test test_name)
   # The GPU build requires overriding the default CMake triple and architecture.
   if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_compile_options(${fq_build_target_name} PRIVATE
-                           -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -emit-llvm
+                           -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
                            --target=${LIBC_GPU_TARGET_TRIPLE})
   elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
     target_compile_options(${fq_build_target_name} PRIVATE

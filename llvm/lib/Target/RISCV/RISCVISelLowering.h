@@ -241,11 +241,11 @@ enum NodeType : unsigned {
   VFCVT_X_F_VL,
   VFCVT_XU_F_VL,
   VFROUND_NOEXCEPT_VL,
-  VFCVT_RM_X_F_VL, // Has a rounding mode operand.
+  VFCVT_RM_X_F_VL,  // Has a rounding mode operand.
   VFCVT_RM_XU_F_VL, // Has a rounding mode operand.
   SINT_TO_FP_VL,
   UINT_TO_FP_VL,
-  VFCVT_RM_F_X_VL, // Has a rounding mode operand.
+  VFCVT_RM_F_X_VL,  // Has a rounding mode operand.
   VFCVT_RM_F_XU_VL, // Has a rounding mode operand.
   FP_ROUND_VL,
   FP_EXTEND_VL,
@@ -339,7 +339,9 @@ enum NodeType : unsigned {
   STRICT_VFNMADD_VL,
   STRICT_VFMSUB_VL,
   STRICT_VFNMSUB_VL,
+  STRICT_FP_ROUND_VL,
   STRICT_FP_EXTEND_VL,
+  STRICT_VFNCVT_ROD_VL,
 
   // WARNING: Do not add anything in the end unless you want the node to
   // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
@@ -777,7 +779,7 @@ private:
   SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue lowerStrictFPExtend(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerStrictFPExtendOrRoundLike(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue expandUnalignedRVVLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue expandUnalignedRVVStore(SDValue Op, SelectionDAG &DAG) const;

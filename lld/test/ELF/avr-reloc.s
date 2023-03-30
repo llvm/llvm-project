@@ -96,8 +96,11 @@ sts b, r21
 
 .section .DATA,"ax",@progbits
 ; HEX-LABEL: section .DATA:
-; HEX-NEXT:  {{.*}} 1e1e000f 00785634 12
+; HEX-NEXT:  {{.*}} 1e1e000f 00785634 12785634
 .byte b        ; R_AVR_8
 .short b       ; R_AVR_16
 .short gs(b)   ; R_AVR_16_PM
 .long a        ; R_AVR_32
+.byte lo8(a)   ; R_AVR_8_LO8
+.byte hi8(a)   ; R_AVR_8_HI8
+.byte hlo8(a)  ; R_AVR_8_HLO8

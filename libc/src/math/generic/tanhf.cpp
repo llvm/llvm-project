@@ -61,8 +61,8 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
   double r = ExpBase::powb_lo(ep.lo);
   // tanh(x) = (exp(2x) - 1) / (exp(2x) + 1)
 #if defined(LIBC_TARGET_CPU_HAS_FMA)
-  return fputil::multiply_add(ep.mh, r, -1.0) /
-         fputil::multiply_add(ep.mh, r, 1.0);
+  return static_cast<float>(fputil::multiply_add(ep.mh, r, -1.0) /
+                            fputil::multiply_add(ep.mh, r, 1.0));
 #else
   double exp_x = ep.mh * r;
   return static_cast<float>((exp_x - 1.0) / (exp_x + 1.0));
