@@ -5538,13 +5538,6 @@ void LSRInstance::RewriteForPHI(
     PHINode *PN, const LSRUse &LU, const LSRFixup &LF, const Formula &F,
     SmallVectorImpl<WeakTrackingVH> &DeadInsts) const {
   DenseMap<BasicBlock *, Value *> Inserted;
-
-  // Inserting instructions in the loop and using them as PHI's input could
-  // break LCSSA in case if PHI's parent block is not a loop exit (i.e. the
-  // corresponding incoming block is not loop exiting). So collect all such
-  // instructions to form LCSSA for them later.
-  SmallVector<Instruction *, 4> InsertedNonLCSSAInsts;
-
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
     if (PN->getIncomingValue(i) == LF.OperandValToReplace) {
       bool needUpdateFixups = false;
@@ -5610,13 +5603,6 @@ void LSRInstance::RewriteForPHI(
                              FullV, LF.OperandValToReplace->getType(),
                              "tmp", BB->getTerminator());
 
-        // If the incoming block for this value is not in the loop, it means the
-        // current PHI is not in a loop exit, so we must create a LCSSA PHI for
-        // the inserted value.
-        if (auto *I = dyn_cast<Instruction>(FullV))
-          if (L->contains(I) && !L->contains(BB))
-            InsertedNonLCSSAInsts.push_back(I);
-
         PN->setIncomingValue(i, FullV);
         Pair.first->second = FullV;
       }
@@ -5659,9 +5645,6 @@ void LSRInstance::RewriteForPHI(
             }
       }
     }
-
-  IRBuilder<> Builder(L->getHeader()->getContext());
-  formLCSSAForInstructions(InsertedNonLCSSAInsts, DT, LI, &SE, Builder);
 }
 
 /// Emit instructions for the leading candidate expression for this LSRUse (this

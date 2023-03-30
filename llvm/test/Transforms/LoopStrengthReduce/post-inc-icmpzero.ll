@@ -44,7 +44,6 @@ define void @_Z15IntegerToStringjjR7Vector2(i32 %i, i32 %radix, %struct.Vector2*
 ; CHECK-NEXT:    [[LSR_IV_NEXT17]] = add i64 [[LSR_IV16]], 1
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[DO_BODY]], label [[DO_END:%.*]]
 ; CHECK:       do.end:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi [33 x i16]* [ [[TMP2]], [[DO_BODY]] ]
 ; CHECK-NEXT:    [[XAP_0:%.*]] = inttoptr i64 [[LSR_IV_NEXT17]] to i1*
 ; CHECK-NEXT:    [[CAP_0:%.*]] = ptrtoint i1* [[XAP_0]] to i64
 ; CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]]
@@ -63,7 +62,7 @@ define void @_Z15IntegerToStringjjR7Vector2(i32 %i, i32 %radix, %struct.Vector2*
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = bitcast i16* [[SCEVGEP]] to i8*
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[LSR_IV9:%.*]] = phi [33 x i16]* [ [[TMP3:%.*]], [[FOR_BODY]] ], [ [[DOTLCSSA]], [[FOR_BODY_LR_PH]] ]
+; CHECK-NEXT:    [[LSR_IV9:%.*]] = phi [33 x i16]* [ [[TMP3:%.*]], [[FOR_BODY]] ], [ [[TMP2]], [[FOR_BODY_LR_PH]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_LR_PH]] ]
 ; CHECK-NEXT:    [[LSR_IV911:%.*]] = bitcast [33 x i16]* [[LSR_IV9]] to i16*
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, i8* [[SCEVGEP1]], i64 [[LSR_IV]]
