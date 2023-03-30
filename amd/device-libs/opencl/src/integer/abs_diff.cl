@@ -36,40 +36,37 @@ abs_diff(u##T##N x, u##T##N y) \
 
 GEN(char)
 GEN(short)
-GEN(int)
 
-#define LGEN(N) \
-ATTR ulong##N \
-abs_diff(long##N x, long##N y) \
+// On the signed implementation, we intentionally use unsigned integers to
+// avoid signed integer overflows, which result in undefined-behaviour
+#define LGENN(N,T) \
+ATTR u##T##N \
+abs_diff(T##N x, T##N y) \
 { \
-    return as_ulong##N(select(y - x, x - y, x > y)); \
+    T##N c = x > y; \
+    u##T##N xx = convert_u##T##N(x); \
+    u##T##N yy = convert_u##T##N(y); \
+    u##T##N xmy = xx - yy; \
+    u##T##N ymx = yy - xx; \
+    return select(ymx, xmy, c); \
 } \
  \
-ATTR ulong##N \
-abs_diff(ulong##N x, ulong##N y) \
+ATTR u##T##N \
+abs_diff(u##T##N x, u##T##N y) \
 { \
-    return select(y - x, x - y, x > y); \
+    T##N c = x > y; \
+    u##T##N xmy = x - y; \
+    u##T##N ymx = y - x; \
+    return select(ymx, xmy, c); \
 }
 
-LGEN(16)
-LGEN(8)
-LGEN(4)
-LGEN(3)
-LGEN(2)
+#define LGEN(T) \
+    LGENN(16,T) \
+    LGENN(8,T) \
+    LGENN(4,T) \
+    LGENN(3,T) \
+    LGENN(2,T) \
+    LGENN(,T)
 
-ATTR ulong
-abs_diff(long x, long y)
-{
-    long xmy = x - y;
-    long ymx = y - x;
-    return x > y ? xmy : ymx;
-}
-
-ATTR ulong
-abs_diff(ulong x, ulong y)
-{
-    ulong xmy = x - y;
-    ulong ymx = y - x;
-    return x > y ? xmy : ymx;
-}
-
+LGEN(int)
+LGEN(long)
