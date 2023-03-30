@@ -2179,8 +2179,11 @@ protected:
     const char *clang_args[] = {"clang", pcm_path};
     compiler.setInvocation(clang::createInvocation(clang_args));
 
-    clang::DumpModuleInfoAction dump_module_info;
-    dump_module_info.OutputStream = &result.GetOutputStream().AsRawOstream();
+    // Pass empty deleter to not attempt to free memory that was allocated
+    // outside of the current scope, possibly statically.
+    std::shared_ptr<llvm::raw_ostream> Out(
+        &result.GetOutputStream().AsRawOstream(), [](llvm::raw_ostream *) {});
+    clang::DumpModuleInfoAction dump_module_info(Out);
     // DumpModuleInfoAction requires ObjectFilePCHContainerReader.
     compiler.getPCHContainerOperations()->registerReader(
         std::make_unique<clang::ObjectFilePCHContainerReader>());
