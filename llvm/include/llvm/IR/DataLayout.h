@@ -571,6 +571,11 @@ public:
   /// are set.
   unsigned getLargestLegalIntTypeSizeInBits() const;
 
+  /// Returns the type of a GEP index in AddressSpace.
+  /// If it was not specified explicitly, it will be the integer type of the
+  /// pointer width - IntPtrType.
+  IntegerType *getIndexType(LLVMContext &C, unsigned AddressSpace) const;
+
   /// Returns the type of a GEP index.
   /// If it was not specified explicitly, it will be the integer type of the
   /// pointer width - IntPtrType.

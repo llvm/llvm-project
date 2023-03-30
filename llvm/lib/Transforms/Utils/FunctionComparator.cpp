@@ -748,8 +748,8 @@ int FunctionComparator::cmpGEPs(const GEPOperator *GEPL,
   // When we have target data, we can reduce the GEP down to the value in bytes
   // added to the address.
   const DataLayout &DL = FnL->getParent()->getDataLayout();
-  unsigned BitWidth = DL.getPointerSizeInBits(ASL);
-  APInt OffsetL(BitWidth, 0), OffsetR(BitWidth, 0);
+  unsigned OffsetBitWidth = DL.getIndexSizeInBits(ASL);
+  APInt OffsetL(OffsetBitWidth, 0), OffsetR(OffsetBitWidth, 0);
   if (GEPL->accumulateConstantOffset(DL, OffsetL) &&
       GEPR->accumulateConstantOffset(DL, OffsetR))
     return cmpAPInts(OffsetL, OffsetR);
