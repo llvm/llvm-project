@@ -322,5 +322,11 @@ TEST(WalkAST, Enums) {
   testWalk("enum class E : int {};", "enum class ^E : int ;");
 }
 
+TEST(WalkAST, BuiltinSymbols) {
+  testWalk(R"cpp(
+    extern "C" int __builtin_popcount(unsigned int) noexcept;
+  )cpp", "int x = ^__builtin_popcount(1);");
+}
+
 } // namespace
 } // namespace clang::include_cleaner
