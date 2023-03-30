@@ -289,14 +289,25 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
         return false;
       }
     }
-    if (!isa<LLVM::CallOp, LLVM::AllocaOp, LLVM::LifetimeStartOp,
-             LLVM::LifetimeEndOp, LLVM::LoadOp, LLVM::StoreOp>(op)) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Cannot inline: unhandled side effecting operation \""
-                 << op->getName() << "\"\n");
-      return false;
-    }
-    return true;
+    // clang-format off
+    if (isa<LLVM::AllocaOp,
+            LLVM::CallOp,
+            LLVM::DbgDeclareOp,
+            LLVM::DbgValueOp,
+            LLVM::LifetimeEndOp,
+            LLVM::LifetimeStartOp,
+            LLVM::LoadOp,
+            LLVM::MemcpyOp,
+            LLVM::MemmoveOp,
+            LLVM::MemsetOp,
+            LLVM::StoreOp,
+            LLVM::UnreachableOp>(op))
+      return true;
+    // clang-format on
+    LLVM_DEBUG(llvm::dbgs()
+               << "Cannot inline: unhandled side effecting operation \""
+               << op->getName() << "\"\n");
+    return false;
   }
 
   /// Handle the given inlined return by replacing it with a branch. This

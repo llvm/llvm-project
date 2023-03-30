@@ -218,17 +218,18 @@ void executeCommand(StringRef ModuleName, const T &ModuleSpec, Command Cmd,
   uint64_t AdjustedOffset = Offset - AdjustVMA;
   object::SectionedAddress Address = {AdjustedOffset,
                                       object::SectionedAddress::UndefSection};
+  Request SymRequest = {ModuleName, Offset};
   if (Cmd == Command::Data) {
     Expected<DIGlobal> ResOrErr = Symbolizer.symbolizeData(ModuleSpec, Address);
-    print({ModuleName, Offset}, ResOrErr, Printer);
+    print(SymRequest, ResOrErr, Printer);
   } else if (Cmd == Command::Frame) {
     Expected<std::vector<DILocal>> ResOrErr =
         Symbolizer.symbolizeFrame(ModuleSpec, Address);
-    print({ModuleName, Offset}, ResOrErr, Printer);
+    print(SymRequest, ResOrErr, Printer);
   } else if (ShouldInline) {
     Expected<DIInliningInfo> ResOrErr =
         Symbolizer.symbolizeInlinedCode(ModuleSpec, Address);
-    print({ModuleName, Offset}, ResOrErr, Printer);
+    print(SymRequest, ResOrErr, Printer);
   } else if (Style == OutputStyle::GNU) {
     // With PrintFunctions == FunctionNameKind::LinkageName (default)
     // and UseSymbolTable == true (also default), Symbolizer.symbolizeCode()
@@ -243,11 +244,11 @@ void executeCommand(StringRef ModuleName, const T &ModuleSpec, Command Cmd,
             ? Expected<DILineInfo>(ResOrErr.takeError())
             : ((ResOrErr->getNumberOfFrames() == 0) ? DILineInfo()
                                                     : ResOrErr->getFrame(0));
-    print({ModuleName, Offset}, Res0OrErr, Printer);
+    print(SymRequest, Res0OrErr, Printer);
   } else {
     Expected<DILineInfo> ResOrErr =
         Symbolizer.symbolizeCode(ModuleSpec, Address);
-    print({ModuleName, Offset}, ResOrErr, Printer);
+    print(SymRequest, ResOrErr, Printer);
   }
   Symbolizer.pruneCache();
 }

@@ -792,3 +792,27 @@ int foo() {
     return b;
 }
 } // namespace GH48182
+
+namespace GH61777 {
+template<class T> concept C = sizeof(T) == 4; // #61777_C
+template<class T, class U> concept C2 = sizeof(T) == sizeof(U); //#61777_C2
+
+template<class T>
+struct Parent {
+  template<class, C auto> struct TakesUnary { static const int i = 0 ; }; // #UNARY
+  template<class, C2<T> auto> struct TakesBinary { static const int i = 0 ; }; //#BINARY
+};
+
+static_assert(Parent<void>::TakesUnary<int, 0>::i == 0);
+// expected-error@+3{{constraints not satisfied for class template 'TakesUnary'}}
+// expected-note@#UNARY{{because 'decltype(0ULL)' (aka 'unsigned long long') does not satisfy 'C'}}
+// expected-note@#61777_C{{because 'sizeof(unsigned long long) == 4' (8 == 4) evaluated to false}}
+static_assert(Parent<void>::TakesUnary<int, 0uLL>::i == 0);
+
+static_assert(Parent<int>::TakesBinary<int, 0>::i == 0);
+// expected-error@+3{{constraints not satisfied for class template 'TakesBinary'}}
+// expected-note@#BINARY{{because 'C2<decltype(0ULL), int>' evaluated to false}}
+// expected-note@#61777_C2{{because 'sizeof(unsigned long long) == sizeof(int)' (8 == 4) evaluated to false}}
+static_assert(Parent<int>::TakesBinary<int, 0ULL>::i == 0);
+}
+

@@ -2168,7 +2168,7 @@ public:
   /// declaration to the declaration that is a definition (if there is one).
   ///
   /// \param CheckForPendingFriendDefinition If \c true, also check for friend
-  ///        declarations that were instantiataed from function definitions.
+  ///        declarations that were instantiated from function definitions.
   ///        Such a declaration behaves as if it is a definition for the
   ///        purpose of redefinition checking, but isn't actually a "real"
   ///        definition until its body is instantiated.

@@ -18238,19 +18238,13 @@ ARMTargetLowering::PerformBRCONDCombine(SDNode *N, SelectionDAG &DAG) const {
   // -> (brcond Chain BB CC CPSR Cmp)
   if (CC == ARMCC::NE && LHS.getOpcode() == ISD::AND && LHS->hasOneUse() &&
       LHS->getOperand(0)->getOpcode() == ARMISD::CMOV &&
-      LHS->getOperand(0)->hasOneUse()) {
-    auto *LHS00C = dyn_cast<ConstantSDNode>(LHS->getOperand(0)->getOperand(0));
-    auto *LHS01C = dyn_cast<ConstantSDNode>(LHS->getOperand(0)->getOperand(1));
-    auto *LHS1C = dyn_cast<ConstantSDNode>(LHS->getOperand(1));
-    auto *RHSC = dyn_cast<ConstantSDNode>(RHS);
-    if ((LHS00C && LHS00C->getZExtValue() == 0) &&
-        (LHS01C && LHS01C->getZExtValue() == 1) &&
-        (LHS1C && LHS1C->getZExtValue() == 1) &&
-        (RHSC && RHSC->getZExtValue() == 0)) {
-      return DAG.getNode(
-          ARMISD::BRCOND, dl, VT, Chain, BB, LHS->getOperand(0)->getOperand(2),
-          LHS->getOperand(0)->getOperand(3), LHS->getOperand(0)->getOperand(4));
-    }
+      LHS->getOperand(0)->hasOneUse() &&
+      isNullConstant(LHS->getOperand(0)->getOperand(0)) &&
+      isOneConstant(LHS->getOperand(0)->getOperand(1)) &&
+      isOneConstant(LHS->getOperand(1)) && isNullConstant(RHS)) {
+    return DAG.getNode(
+        ARMISD::BRCOND, dl, VT, Chain, BB, LHS->getOperand(0)->getOperand(2),
+        LHS->getOperand(0)->getOperand(3), LHS->getOperand(0)->getOperand(4));
   }
 
   return SDValue();
@@ -18311,17 +18305,12 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
 
   // (cmov F T ne CPSR (cmpz (cmov 0 1 CC CPSR Cmp) 0))
   // -> (cmov F T CC CPSR Cmp)
-  if (CC == ARMCC::NE && LHS.getOpcode() == ARMISD::CMOV && LHS->hasOneUse()) {
-    auto *LHS0C = dyn_cast<ConstantSDNode>(LHS->getOperand(0));
-    auto *LHS1C = dyn_cast<ConstantSDNode>(LHS->getOperand(1));
-    auto *RHSC = dyn_cast<ConstantSDNode>(RHS);
-    if ((LHS0C && LHS0C->getZExtValue() == 0) &&
-        (LHS1C && LHS1C->getZExtValue() == 1) &&
-        (RHSC && RHSC->getZExtValue() == 0)) {
-      return DAG.getNode(ARMISD::CMOV, dl, VT, FalseVal, TrueVal,
-                         LHS->getOperand(2), LHS->getOperand(3),
-                         LHS->getOperand(4));
-    }
+  if (CC == ARMCC::NE && LHS.getOpcode() == ARMISD::CMOV && LHS->hasOneUse() &&
+      isNullConstant(LHS->getOperand(0)) && isOneConstant(LHS->getOperand(1)) &&
+      isNullConstant(RHS)) {
+    return DAG.getNode(ARMISD::CMOV, dl, VT, FalseVal, TrueVal,
+                       LHS->getOperand(2), LHS->getOperand(3),
+                       LHS->getOperand(4));
   }
 
   if (!VT.isInteger())

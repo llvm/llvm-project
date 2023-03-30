@@ -125,6 +125,20 @@ define void @test5_memcpy(ptr noalias %P, ptr noalias %Q) nounwind  {
 
 }
 
+; Similar to test5_memcpy, but without noalias; check that memcpy.inline is not folded into memmove.
+define void @test6_memcpy(ptr %src, ptr %dest) nounwind {
+; CHECK-LABEL: @test6_memcpy(
+; CHECK-NEXT:    [[TMP:%.*]] = alloca [16 x i8], align 1
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[TMP]], ptr align 1 [[DEST:%.*]], i32 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[DEST]], ptr align 1 [[TMP]], i32 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca [16 x i8], align 1
+  call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %tmp, ptr align 1 %dest, i32 16, i1 false)
+  call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %dest, ptr align 1 %tmp, i32 16, i1 false)
+  ret void
+}
+
 
 @x = external global %0
 

@@ -850,7 +850,7 @@ protected:
     /// template.
     ///
     /// This pointer refers to the template arguments (there are as
-    /// many template arguments as template parameaters) for the
+    /// many template arguments as template parameters) for the
     /// template, and is allocated lazily, since most templates do not
     /// require the use of this information.
     TemplateArgument *InjectedArgs = nullptr;
