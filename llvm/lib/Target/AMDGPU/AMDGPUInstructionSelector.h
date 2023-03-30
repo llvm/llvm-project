@@ -288,12 +288,6 @@ private:
   InstructionSelector::ComplexRendererFns
   selectMUBUFOffset(MachineOperand &Root) const;
 
-  InstructionSelector::ComplexRendererFns
-  selectMUBUFOffsetAtomic(MachineOperand &Root) const;
-
-  InstructionSelector::ComplexRendererFns
-  selectMUBUFAddr64Atomic(MachineOperand &Root) const;
-
   ComplexRendererFns selectSMRDBufferImm(MachineOperand &Root) const;
   ComplexRendererFns selectSMRDBufferImm32(MachineOperand &Root) const;
   ComplexRendererFns selectSMRDBufferSgprImm(MachineOperand &Root) const;
