@@ -3,6 +3,9 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/cat1.s -o %t/cat1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/cat2.s -o %t/cat2.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/klass.s -o %t/klass.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/cat1.s --defsym MAKE_LOAD_METHOD=1 -o %t/cat1-with-load.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/cat2.s --defsym MAKE_LOAD_METHOD=1 -o %t/cat2-with-load.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/klass.s --defsym MAKE_LOAD_METHOD=1 -o %t/klass-with-load.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/klass-with-no-rodata.s -o %t/klass-with-no-rodata.o
 # RUN: %lld -dylib -lobjc %t/klass.o -o %t/libklass.dylib
 
@@ -11,24 +14,32 @@
 # RUN: %no-fatal-warnings-lld -dylib -lobjc %t/libklass.dylib %t/cat1.o \
 # RUN:   %t/cat2.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=CATCAT
 
+## Check that we don't emit spurious warnings around the +load method while
+## still emitting the other warnings. Note that we have made separate
+## `*-with-load.s` files for ease of comparison with ld64; ld64 will not warn
+## at all if multiple +load methods are present.
+# RUN: %no-fatal-warnings-lld -dylib -lobjc %t/klass-with-load.o \
+# RUN:   %t/cat1-with-load.o %t/cat2-with-load.o -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=CATCLS,CATCAT --implicit-check-not '+load'
+
 ## Regression test: Check that we don't crash.
 # RUN: %no-fatal-warnings-lld -dylib -lobjc %t/klass-with-no-rodata.o -o /dev/null
 
 # CATCLS:      warning: method '+s1' has conflicting definitions:
-# CATCLS-NEXT: >>> defined in category Cat1 from {{.*}}cat1.o
-# CATCLS-NEXT: >>> defined in class Foo from {{.*}}klass.o
+# CATCLS-NEXT: >>> defined in category Cat1 from {{.*}}cat1{{.*}}.o
+# CATCLS-NEXT: >>> defined in class Foo from {{.*}}klass{{.*}}.o
 
 # CATCLS:      warning: method '-m1' has conflicting definitions:
-# CATCLS-NEXT: >>> defined in category Cat1 from {{.*}}cat1.o
-# CATCLS-NEXT: >>> defined in class Foo from {{.*}}klass.o
+# CATCLS-NEXT: >>> defined in category Cat1 from {{.*}}cat1{{.*}}.o
+# CATCLS-NEXT: >>> defined in class Foo from {{.*}}klass{{.*}}.o
 
 # CATCAT:      warning: method '+s2' has conflicting definitions:
-# CATCAT-NEXT: >>> defined in category Cat2 from {{.*}}cat2.o
-# CATCAT-NEXT: >>> defined in category Cat1 from {{.*}}cat1.o
+# CATCAT-NEXT: >>> defined in category Cat2 from {{.*}}cat2{{.*}}.o
+# CATCAT-NEXT: >>> defined in category Cat1 from {{.*}}cat1{{.*}}.o
 
 # CATCAT:      warning: method '-m2' has conflicting definitions:
-# CATCAT-NEXT: >>> defined in category Cat2 from {{.*}}cat2.o
-# CATCAT-NEXT: >>> defined in category Cat1 from {{.*}}cat1.o
+# CATCAT-NEXT: >>> defined in category Cat2 from {{.*}}cat2{{.*}}.o
+# CATCAT-NEXT: >>> defined in category Cat1 from {{.*}}cat1{{.*}}.o
 
 #--- cat1.s
 
@@ -51,6 +62,11 @@
 .section __DATA,__objc_catlist,regular,no_dead_strip
   .quad __OBJC_$_CATEGORY_Foo_$_Cat1
 
+.ifdef MAKE_LOAD_METHOD
+.section __DATA,__objc_nlcatlist,regular,no_dead_strip
+  .quad __OBJC_$_CATEGORY_Foo_$_Cat1
+.endif
+
 .section __DATA,__objc_const
 __OBJC_$_CATEGORY_Foo_$_Cat1:
   .objc_classname "Cat1"
@@ -71,7 +87,12 @@ __OBJC_$_CATEGORY_INSTANCE_METHODS_Foo_$_Cat1:
 
 __OBJC_$_CATEGORY_CLASS_METHODS_Foo_$_Cat1:
   .long 24
+.ifdef MAKE_LOAD_METHOD
+  .long 3
+  .empty_objc_method "load", "v16@0:8", "+[Foo(Cat1) load]"
+.else
   .long 2
+.endif
   .empty_objc_method "s1", "v16@0:8", "+[Foo(Cat1) s1]"
   .empty_objc_method "s2", "v16@0:8", "+[Foo(Cat1) s2]"
 
@@ -98,6 +119,11 @@ __OBJC_$_CATEGORY_CLASS_METHODS_Foo_$_Cat1:
 .section __DATA,__objc_catlist,regular,no_dead_strip
   .quad __OBJC_$_CATEGORY_Foo_$_Cat2
 
+.ifdef MAKE_LOAD_METHOD
+.section __DATA,__objc_nlcatlist,regular,no_dead_strip
+  .quad __OBJC_$_CATEGORY_Foo_$_Cat2
+.endif
+
 .section __DATA,__objc_const
 __OBJC_$_CATEGORY_Foo_$_Cat2:
   .objc_classname "Cat2"
@@ -117,7 +143,12 @@ __OBJC_$_CATEGORY_INSTANCE_METHODS_Foo_$_Cat2:
 
 __OBJC_$_CATEGORY_CLASS_METHODS_Foo_$_Cat2:
   .long 24
+.ifdef MAKE_LOAD_METHOD
+  .long 2
+  .empty_objc_method "load", "v16@0:8", "+[Foo(Cat2) load]"
+.else
   .long 1
+.endif
   .empty_objc_method "s2", "v16@0:8", "+[Foo(Cat2) m2]"
 
 .section __DATA,__objc_imageinfo,regular,no_dead_strip
@@ -186,7 +217,12 @@ __OBJC_CLASS_RO_$_Foo:
 
 __OBJC_$_CLASS_METHODS_Foo:
   .long 24
+.ifdef MAKE_LOAD_METHOD
+  .long 2
+  .empty_objc_method "load", "v16@0:8", "+[Foo load]"
+.else
   .long 1
+.endif
   .empty_objc_method "s1", "v16@0:8", "+[Foo s1]"
 
 __OBJC_$_INSTANCE_METHODS_Foo:
@@ -196,6 +232,11 @@ __OBJC_$_INSTANCE_METHODS_Foo:
 
 .section __DATA,__objc_classlist,regular,no_dead_strip
   .quad _OBJC_CLASS_$_Foo
+
+.ifdef MAKE_LOAD_METHOD
+.section __DATA,__objc_nlclslist,regular,no_dead_strip
+  .quad _OBJC_CLASS_$_Foo
+.endif
 
 .section __DATA,__objc_imageinfo,regular,no_dead_strip
   .long 0
