@@ -183,11 +183,11 @@ class OneToNConversionPattern : public RewritePatternWithConverter {
 public:
   using RewritePatternWithConverter::RewritePatternWithConverter;
 
-  /// This function has to be implemented by base classes and is called from the
-  /// usual overloads. Like in "normal" `DialectConversion`, the function is
+  /// This function has to be implemented by derived classes and is called from
+  /// the usual overloads. Like in "normal" `DialectConversion`, the function is
   /// provided with the converted operands (which thus have target types). Since
-  /// 1:N conversion are supported, there is usually no 1:1 relationship between
-  /// the original and the converted operands. Instead, the provided
+  /// 1:N conversions are supported, there is usually no 1:1 relationship
+  /// between the original and the converted operands. Instead, the provided
   /// `operandMapping` can be used to access the converted operands that
   /// correspond to a particular original operand. Similarly, `resultMapping`
   /// is provided to help with assembling the result values, which may have 1:N

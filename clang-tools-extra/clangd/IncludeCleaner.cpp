@@ -51,9 +51,11 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
+#include <cassert>
 #include <iterator>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -266,7 +268,6 @@ std::vector<Diag> generateUnusedIncludeDiagnostics(
 }
 } // namespace
 
-
 std::vector<include_cleaner::SymbolReference>
 collectMacroReferences(ParsedAST &AST) {
   const auto &SM = AST.getSourceManager();
@@ -398,6 +399,10 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
         // FIXME: Use presumed locations to map such usages back to patched
         // locations safely.
         auto Loc = SM.getFileLoc(Ref.RefLocation);
+        // File locations can be outside of the main file if macro is expanded
+        // through an #include.
+        while (SM.getFileID(Loc) != SM.getMainFileID())
+          Loc = SM.getIncludeLoc(SM.getFileID(Loc));
         const auto *Token = AST.getTokens().spelledTokenAt(Loc);
         MissingIncludeDiagInfo DiagInfo{Ref.Target, Token->range(SM),
                                         Providers};

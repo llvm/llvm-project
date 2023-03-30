@@ -635,7 +635,7 @@ retain-agnostic, the conversion is treated as a ``__bridge`` cast.
 
   For loads from ``const`` global variables of :ref:`C retainable pointer type
   <arc.misc.c-retainable>`, it is reasonable to assume that global system
-  constants were initialitzed with true constants (e.g. string literals), but
+  constants were initialized with true constants (e.g. string literals), but
   user constants might have been initialized with something dynamically
   allocated, using a global initializer.
 
