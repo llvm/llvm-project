@@ -968,7 +968,8 @@ static void
 mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
                    StringRef OutputFilename, ProfileFormat OutputFormat,
                    StringRef ProfileSymbolListFile, bool CompressAllSections,
-                   bool UseMD5, bool GenPartialProfile, bool GenCSNestedProfile,
+                   bool UseMD5, bool GenPartialProfile,
+                   SampleProfileLayout ProfileLayout,
                    bool SampleMergeColdContext, bool SampleTrimColdContext,
                    bool SampleColdContextFrameDepth, FailureMode FailMode,
                    bool DropProfileSymbolList, size_t OutputSizeLimit) {
@@ -1048,9 +1049,12 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
             SampleMergeColdContext, SampleColdContextFrameDepth, false);
   }
 
-  if (ProfileIsCS && GenCSNestedProfile) {
-    CSProfileConverter CSConverter(ProfileMap);
-    CSConverter.convertProfiles();
+  if (ProfileLayout == llvm::sampleprof::SPL_Flat) {
+    ProfileConverter::flattenProfile(ProfileMap, FunctionSamples::ProfileIsCS);
+    ProfileIsCS = FunctionSamples::ProfileIsCS = false;
+  } else if (ProfileIsCS && ProfileLayout == llvm::sampleprof::SPL_Nest) {
+    ProfileConverter CSConverter(ProfileMap);
+    CSConverter.convertCSProfiles();
     ProfileIsCS = FunctionSamples::ProfileIsCS = false;
   }
 
@@ -1241,9 +1245,15 @@ static int merge_main(int argc, const char *argv[]) {
       "instr-prof-cold-threshold", cl::init(0), cl::Hidden,
       cl::desc("User specified cold threshold for instr profile which will "
                "override the cold threshold got from profile summary. "));
-  cl::opt<bool> GenCSNestedProfile(
-      "gen-cs-nested-profile", cl::Hidden, cl::init(false),
-      cl::desc("Generate nested function profiles for CSSPGO"));
+  cl::opt<SampleProfileLayout> ProfileLayout(
+      "convert-sample-profile-layout",
+      cl::desc("Convert the generated profile to a profile with a new layout"),
+      cl::init(SPL_None),
+      cl::values(
+          clEnumValN(SPL_Nest, "nest",
+                     "Nested profile, the input should be CS flat profile"),
+          clEnumValN(SPL_Flat, "flat",
+                     "Profile with nested inlinee flatten out")));
   cl::opt<std::string> DebugInfoFilename(
       "debug-info", cl::init(""),
       cl::desc("Use the provided debug info to correlate the raw profile."));
@@ -1298,12 +1308,12 @@ static int merge_main(int argc, const char *argv[]) {
                       OutputFilename, OutputFormat, OutputSparse, NumThreads,
                       FailureMode, ProfiledBinary);
   else
-    mergeSampleProfile(
-        WeightedInputs, Remapper.get(), OutputFilename, OutputFormat,
-        ProfileSymbolListFile, CompressAllSections, UseMD5, GenPartialProfile,
-        GenCSNestedProfile, SampleMergeColdContext, SampleTrimColdContext,
-        SampleColdContextFrameDepth, FailureMode, DropProfileSymbolList,
-        OutputSizeLimit);
+    mergeSampleProfile(WeightedInputs, Remapper.get(), OutputFilename,
+                       OutputFormat, ProfileSymbolListFile, CompressAllSections,
+                       UseMD5, GenPartialProfile, ProfileLayout,
+                       SampleMergeColdContext, SampleTrimColdContext,
+                       SampleColdContextFrameDepth, FailureMode,
+                       DropProfileSymbolList, OutputSizeLimit);
   return 0;
 }
 
