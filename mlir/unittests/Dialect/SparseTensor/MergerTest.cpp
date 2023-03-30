@@ -140,21 +140,15 @@ protected:
                /*maxRank=*/numLoops) {
     tensors.reserve(numTensors);
     for (unsigned t = 0; t < numTensors; t++)
-      tensors.push_back(merger.addExp(TensorExp::Kind::kTensor, tid(t)));
+      tensors.push_back(merger.addTensorExp(tid(t)));
   }
 
   ///
   /// Expression construction helpers.
   ///
 
-  TensorId tid(unsigned t) const {
-    assert(t < merger.getNumTensors());
-    return t;
-  }
-  LoopId lid(unsigned i) const {
-    assert(i < merger.getNumLoops());
-    return i;
-  }
+  TensorId tid(unsigned t) const { return merger.makeTensorId(t); }
+  LoopId lid(unsigned i) const { return merger.makeLoopId(i); }
   ExprId tensor(unsigned t) const {
     assert(t < tensors.size());
     return tensors[t];
@@ -208,11 +202,9 @@ protected:
   /// Converts a vector of (loop, tensor) pairs to a bitvector with the
   /// corresponding bits set.
   BitVector loopsToBits(const std::vector<std::pair<LoopId, TensorId>> &loops) {
-    // NOTE: this `numTensors` includes both the output- and synthetic-tensors.
-    const auto numTensors = merger.getNumTensors();
-    BitVector testBits = BitVector(numTensors, false);
+    BitVector testBits = BitVector(merger.getNumTensors(), false);
     for (auto [loop, tensor] : loops)
-      testBits.set(numTensors * loop + tensor);
+      testBits.set(merger.makeTensorLoopId(tensor, loop));
     return testBits;
   }
 
