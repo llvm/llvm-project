@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTERPSTACK_H
 #define LLVM_CLANG_AST_INTERP_INTERPSTACK_H
 
+#include "FunctionPointer.h"
 #include "PrimType.h"
 #include <memory>
 #include <vector>
@@ -162,6 +163,8 @@ private:
       return PT_Uint64;
     else if constexpr (std::is_same_v<T, Floating>)
       return PT_Float;
+    else if constexpr (std::is_same_v<T, FunctionPointer>)
+      return PT_FnPtr;
 
     llvm_unreachable("unknown type push()'ed into InterpStack");
   }

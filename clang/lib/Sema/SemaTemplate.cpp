@@ -1251,35 +1251,41 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
   return false;
 }
 
-bool Sema::AttachTypeConstraint(AutoTypeLoc TL, NonTypeTemplateParmDecl *NTTP,
+bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
+                                NonTypeTemplateParmDecl *NewConstrainedParm,
+                                NonTypeTemplateParmDecl *OrigConstrainedParm,
                                 SourceLocation EllipsisLoc) {
-  if (NTTP->getType() != TL.getType() ||
+  if (NewConstrainedParm->getType() != TL.getType() ||
       TL.getAutoKeyword() != AutoTypeKeyword::Auto) {
-    Diag(NTTP->getTypeSourceInfo()->getTypeLoc().getBeginLoc(),
+    Diag(NewConstrainedParm->getTypeSourceInfo()->getTypeLoc().getBeginLoc(),
          diag::err_unsupported_placeholder_constraint)
-       << NTTP->getTypeSourceInfo()->getTypeLoc().getSourceRange();
+        << NewConstrainedParm->getTypeSourceInfo()
+               ->getTypeLoc()
+               .getSourceRange();
     return true;
   }
   // FIXME: Concepts: This should be the type of the placeholder, but this is
   // unclear in the wording right now.
   DeclRefExpr *Ref =
-      BuildDeclRefExpr(NTTP, NTTP->getType(), VK_PRValue, NTTP->getLocation());
+      BuildDeclRefExpr(OrigConstrainedParm, OrigConstrainedParm->getType(),
+                       VK_PRValue, OrigConstrainedParm->getLocation());
   if (!Ref)
     return true;
   ExprResult ImmediatelyDeclaredConstraint = formImmediatelyDeclaredConstraint(
       *this, TL.getNestedNameSpecifierLoc(), TL.getConceptNameInfo(),
       TL.getNamedConcept(), TL.getLAngleLoc(), TL.getRAngleLoc(),
-      BuildDecltypeType(Ref), NTTP->getLocation(),
+      BuildDecltypeType(Ref), OrigConstrainedParm->getLocation(),
       [&](TemplateArgumentListInfo &ConstraintArgs) {
         for (unsigned I = 0, C = TL.getNumArgs(); I != C; ++I)
           ConstraintArgs.addArgument(TL.getArgLoc(I));
       },
       EllipsisLoc);
   if (ImmediatelyDeclaredConstraint.isInvalid() ||
-     !ImmediatelyDeclaredConstraint.isUsable())
+      !ImmediatelyDeclaredConstraint.isUsable())
     return true;
 
-  NTTP->setPlaceholderTypeConstraint(ImmediatelyDeclaredConstraint.get());
+  NewConstrainedParm->setPlaceholderTypeConstraint(
+      ImmediatelyDeclaredConstraint.get());
   return false;
 }
 
@@ -1559,7 +1565,7 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
 
   if (AutoTypeLoc TL = TInfo->getTypeLoc().getContainedAutoTypeLoc())
     if (TL.isConstrained())
-      if (AttachTypeConstraint(TL, Param, D.getEllipsisLoc()))
+      if (AttachTypeConstraint(TL, Param, Param, D.getEllipsisLoc()))
         Invalid = true;
 
   if (Invalid)
