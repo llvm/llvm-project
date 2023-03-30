@@ -2661,3 +2661,12 @@ llvm.func @omp_task_if(%boolexpr: i1) {
 // CHECK:         call void @foo_after()
 // CHECK:         ret void
 
+// -----
+
+// Check that OpenMP requires flags are registered by a global constructor.
+// CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }]
+// CHECK-SAME: [{ i32, ptr, ptr } { i32 0, ptr @[[REG_FN:.*]], ptr null }]
+// CHECK: define {{.*}} @[[REG_FN]]({{.*}})
+// CHECK-NOT: }
+// CHECK:   call void @__tgt_register_requires(i64 10)
+module attributes {omp.requires = #omp<clause_requires reverse_offload|unified_shared_memory>} {}
