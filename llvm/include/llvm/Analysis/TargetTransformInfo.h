@@ -95,7 +95,7 @@ struct MemIntrinsicInfo {
 /// Attributes of a target dependent hardware loop.
 struct HardwareLoopInfo {
   HardwareLoopInfo() = delete;
-  HardwareLoopInfo(Loop *L) : L(L) {}
+  HardwareLoopInfo(Loop *L);
   Loop *L = nullptr;
   BasicBlock *ExitBlock = nullptr;
   BranchInst *ExitBranch = nullptr;
