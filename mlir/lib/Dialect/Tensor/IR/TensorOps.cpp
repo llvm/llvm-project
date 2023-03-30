@@ -2879,10 +2879,12 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
     auto inputDims = input.getType().cast<RankedTensorType>().getShape();
     auto inputRank = inputDims.size();
 
-    if (!padTensorOp.getResult().getType().isa<RankedTensorType>())
+    auto oldResultType =
+        dyn_cast<RankedTensorType>(padTensorOp.getResult().getType());
+    if (!oldResultType)
       return failure();
-    auto outputDims =
-        padTensorOp.getResult().getType().cast<RankedTensorType>().getShape();
+
+    auto outputDims = oldResultType.getShape();
 
     // Extract the static info from the high and low operands.
     SmallVector<int64_t> constOperandsLow;
@@ -2955,7 +2957,7 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
 
     IRMapping mapper;
     padTensorOp.getRegion().cloneInto(&newOp.getRegion(), mapper);
-    rewriter.replaceOpWithNewOp<tensor::CastOp>(padTensorOp, newResultType,
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(padTensorOp, oldResultType,
                                                 newOp);
 
     return success();

@@ -18,7 +18,7 @@ If a pointer ``p`` has a nullable annotation and no explicit null check or asser
 
 Taking a branch on nullable pointers are the same like taking branch on null unspecified pointers.
 
-Explicit cast from nullable to nonnul:
+Explicit cast from nullable to nonnull:
 
 .. code-block:: cpp
 

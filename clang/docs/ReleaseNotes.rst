@@ -253,6 +253,8 @@ Bug Fixes in This Version
   to limit non-defined/non-member functions as well. Additionally, we now diagnose
   requires on lambdas when not allowed, which we previously missed.
   (`#61748 <https://github.com/llvm/llvm-project/issues/61748>`_)
+- Fix confusing diagnostic for incorrect use of qualified concepts names.
+
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -300,7 +302,7 @@ AMDGPU Support
   undefined symbols in the created module to be a linker error. To prevent this,
   pass ``-Wl,--undefined`` if compiling directly, or ``-Xoffload-linker
   --undefined`` if using an offloading language.
-- The deprecated ``-mcode-object-v3`` and ``-mno-code-object-v3`` command-line 
+- The deprecated ``-mcode-object-v3`` and ``-mno-code-object-v3`` command-line
   options have been removed.
 
 X86 Support

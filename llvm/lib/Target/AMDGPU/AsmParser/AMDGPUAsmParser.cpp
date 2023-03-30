@@ -1821,7 +1821,6 @@ public:
   AMDGPUOperand::Ptr defaultSMRDOffset8() const;
   AMDGPUOperand::Ptr defaultSMEMOffset() const;
   AMDGPUOperand::Ptr defaultSMEMOffsetMod() const;
-  AMDGPUOperand::Ptr defaultSMRDLiteralOffset() const;
   AMDGPUOperand::Ptr defaultFlatOffset() const;
 
   OperandMatchResultTy parseOModOperand(OperandVector &Operands);
@@ -8449,7 +8448,7 @@ bool AMDGPUOperand::isSMRDLiteralOffset() const {
 }
 
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMRDOffset8() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyNone);
 }
 
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMEMOffset() const {
@@ -8459,10 +8458,6 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMEMOffset() const {
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMEMOffsetMod() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(),
                                   AMDGPUOperand::ImmTySMEMOffsetMod);
-}
-
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMRDLiteralOffset() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
 }
 
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultFlatOffset() const {
