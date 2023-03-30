@@ -67,7 +67,7 @@ public:
   }
 
 protected:
-  void postprocessDAG();
+  void postProcessDAG();
 };
 
 class DFAPacketizer {

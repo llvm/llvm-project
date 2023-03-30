@@ -336,18 +336,13 @@ transform::TransformState::replacePayloadOp(Operation *op,
     dropMappingEntry(mappings.reverse, op, handle);
   }
 
-  // Drop the mapping between the op results and all value handles that point to
-  // them. Don't care if there are no such handles.
-  RaggedArray<Value> resultValueHandles;
+#ifndef NDEBUG
   for (Value opResult : op->getResults()) {
     SmallVector<Value> valueHandles;
     (void)getHandlesForPayloadValue(opResult, valueHandles);
-    for (Value handle : valueHandles) {
-      Mappings &localMappings = getMapping(handle);
-      dropMappingEntry(localMappings.reverseValues, opResult, handle);
-    }
-    resultValueHandles.push_back(std::move(valueHandles));
+    assert(valueHandles.empty() && "expected no mapping to old results");
   }
+#endif // NDEBUG
 
   // TODO: consider invalidating the handles to nested objects here.
 
@@ -357,14 +352,6 @@ transform::TransformState::replacePayloadOp(Operation *op,
     for (Value handle : opHandles) {
       Mappings &mappings = getMapping(handle);
       dropMappingEntry(mappings.direct, handle, op);
-    }
-    for (Value opResult : op->getResults()) {
-      SmallVector<Value> valueHandles;
-      (void)getHandlesForPayloadValue(opResult, valueHandles);
-      for (Value handle : valueHandles) {
-        Mappings &localMappings = getMapping(handle);
-        dropMappingEntry(localMappings.values, handle, opResult);
-      }
     }
     return success();
   }
@@ -386,33 +373,33 @@ transform::TransformState::replacePayloadOp(Operation *op,
     mappings.reverse[replacement].push_back(handle);
   }
 
-  // Second, replace the mapped results of the operation.
-  for (auto [origResult, handleList] :
-       llvm::zip(op->getResults(), resultValueHandles)) {
-    // No handles to the value, skip even if there is no replacement.
-    if (handleList.empty())
-      continue;
+  return success();
+}
 
-    unsigned resultNumber = origResult.getResultNumber();
-    if (resultNumber >= replacement->getNumResults()) {
-      return emitError(op->getLoc())
-             << "cannot replace an op with another op producing less results "
-                "while tracking handles";
-    }
+LogicalResult
+transform::TransformState::replacePayloadValue(Value value, Value replacement) {
+  SmallVector<Value> valueHandles;
+  (void)getHandlesForPayloadValue(value, valueHandles);
 
-    Value replacementResult = replacement->getResult(resultNumber);
-    for (Value resultHandle : handleList) {
-      Mappings &mappings = getMapping(resultHandle);
-      auto it = mappings.values.find(resultHandle);
+  for (Value handle : valueHandles) {
+    Mappings &mappings = getMapping(handle);
+    dropMappingEntry(mappings.reverseValues, value, handle);
+
+    // If replacing with null, that is erasing the mapping, drop the mapping
+    // between the handles and the IR objects
+    if (!replacement) {
+      dropMappingEntry(mappings.values, handle, value);
+    } else {
+      auto it = mappings.values.find(handle);
       if (it == mappings.values.end())
         continue;
 
       SmallVector<Value> &association = it->getSecond();
       for (Value &mapped : association) {
-        if (mapped == origResult)
-          mapped = replacementResult;
+        if (mapped == value)
+          mapped = replacement;
       }
-      mappings.reverseValues[replacementResult].push_back(resultHandle);
+      mappings.reverseValues[replacement].push_back(handle);
     }
   }
 
@@ -865,6 +852,16 @@ transform::TransformState::Extension::replacePayloadOp(Operation *op,
   // TODO: we may need to invalidate handles to operations and values nested in
   // the operation being replaced.
   return state.replacePayloadOp(op, replacement);
+}
+
+LogicalResult
+transform::TransformState::Extension::replacePayloadValue(Value value,
+                                                          Value replacement) {
+  SmallVector<Value> handles;
+  if (failed(state.getHandlesForPayloadValue(value, handles)))
+    return failure();
+
+  return state.replacePayloadValue(value, replacement);
 }
 
 //===----------------------------------------------------------------------===//

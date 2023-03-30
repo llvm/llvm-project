@@ -840,7 +840,8 @@ canonicalizeImmediatelyDeclaredConstraint(const ASTContext &C, Expr *IDC,
       CSE->getNamedConcept()->getLocation(), NewConverted);
 
   Expr *NewIDC = ConceptSpecializationExpr::Create(
-      C, CSE->getNamedConcept(), CSD, nullptr, CSE->isInstantiationDependent(),
+      C, CSE->getNamedConcept(), CSE->getTemplateArgsAsWritten(), CSD,
+      /*Satisfaction=*/nullptr, CSE->isInstantiationDependent(),
       CSE->containsUnexpandedParameterPack());
 
   if (auto *OrigFold = dyn_cast<CXXFoldExpr>(IDC))

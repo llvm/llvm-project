@@ -759,6 +759,8 @@ static StringRef ModuleKindName(Module::ModuleKind MK) {
     return "Module Map Module";
   case Module::ModuleInterfaceUnit:
     return "Interface Unit";
+  case Module::ModuleImplementationUnit:
+    return "Implementation Unit";
   case Module::ModulePartitionInterface:
     return "Partition Interface";
   case Module::ModulePartitionImplementation:

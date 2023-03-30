@@ -53,7 +53,8 @@ public:
   llvm::Error cleanUp();
   llvm::Expected<llvm::JITTargetAddress>
   getSymbolAddress(llvm::StringRef Name, SymbolNameKind NameKind) const;
-  llvm::orc::LLJIT *getExecutionEngine() const { return Jit.get(); }
+
+  llvm::orc::LLJIT &GetExecutionEngine() { return *Jit; }
 };
 
 } // end namespace clang

@@ -158,7 +158,7 @@ public:
     // When building a module MainFileName is the name of the modulemap file.
     CodeGenOpts.MainFileName =
         LangOpts.CurrentModule.empty() ? MainFileName : LangOpts.CurrentModule;
-    CodeGenOpts.setDebugInfo(codegenoptions::FullDebugInfo);
+    CodeGenOpts.setDebugInfo(llvm::codegenoptions::FullDebugInfo);
     CodeGenOpts.setDebuggerTuning(CI.getCodeGenOpts().getDebuggerTuning());
     CodeGenOpts.DebugPrefixMap =
         CI.getInvocation().getCodeGenOpts().DebugPrefixMap;

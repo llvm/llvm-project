@@ -2535,3 +2535,24 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   transform.structured.masked_vectorize %0 vector_sizes [8, 32]
 }
+
+// -----
+
+func.func @vectorize_dynamic_fill(%A : tensor<?x?xf32>, %arg0 : f32) -> tensor<?x?xf32> {
+  %0 = linalg.fill ins(%arg0 : f32) outs(%A : tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// CHECK-LABEL: func.func @vectorize_dynamic_fill
+//   CHECK: %[[DIM0:.*]] = tensor.dim
+//   CHECK: %[[DIM1:.*]] = tensor.dim
+//   CHECK: %[[MASK:.*]] = vector.create_mask %[[DIM0]], %[[DIM1]] : vector<8x16xi1>
+//   CHECK: %[[BCAST:.*]] = vector.broadcast %{{.*}} : f32 to vector<8x16xf32>
+//   CHECK: vector.mask %[[MASK]] { vector.transfer_write %[[BCAST]], {{.*}} {in_bounds = [true, true]} : vector<8x16xf32>, tensor<?x?xf32> } : vector<8x16xi1>
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+  transform.structured.masked_vectorize %0 vector_sizes [8, 16]
+}
+

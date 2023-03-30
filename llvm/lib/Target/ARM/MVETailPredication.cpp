@@ -39,6 +39,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -111,10 +112,10 @@ private:
   /// intrinsic. E.g., check that the loop induction variable and the element
   /// count are of the form we expect, and also perform overflow checks for
   /// the new expressions that are created.
-  bool IsSafeActiveMask(IntrinsicInst *ActiveLaneMask, Value *TripCount);
+  const SCEV *IsSafeActiveMask(IntrinsicInst *ActiveLaneMask, Value *TripCount);
 
   /// Insert the intrinsic to represent the effect of tail predication.
-  void InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask, Value *TripCount);
+  void InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask, Value *Start);
 
   /// Rematerialize the iteration count in exit blocks, which enables
   /// ARMLowOverheadLoops to better optimise away loop update statements inside
@@ -198,8 +199,8 @@ bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
 //        (((ElementCount + (VectorWidth - 1)) / VectorWidth) - TripCount
 // 3) The IV must be an induction phi with an increment equal to the
 //    vector width.
-bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
-                                          Value *TripCount) {
+const SCEV *MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
+                                                 Value *TripCount) {
   bool ForceTailPredication =
     EnableTailPredication == TailPredication::ForceEnabledNoReductions ||
     EnableTailPredication == TailPredication::ForceEnabled;
@@ -207,7 +208,7 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   Value *ElemCount = ActiveLaneMask->getOperand(1);
   bool Changed = false;
   if (!L->makeLoopInvariant(ElemCount, Changed))
-    return false;
+    return nullptr;
 
   auto *EC= SE->getSCEV(ElemCount);
   auto *TC = SE->getSCEV(TripCount);
@@ -215,7 +216,7 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
       cast<FixedVectorType>(ActiveLaneMask->getType())->getNumElements();
   if (VectorWidth != 2 && VectorWidth != 4 && VectorWidth != 8 &&
       VectorWidth != 16)
-    return false;
+    return nullptr;
   ConstantInt *ConstElemCount = nullptr;
 
   // 1) Smoke tests that the original scalar loop TripCount (TC) belongs to
@@ -223,7 +224,38 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   // processed by the loop, so we will refer to that from this point on.
   if (!SE->isLoopInvariant(EC, L)) {
     LLVM_DEBUG(dbgs() << "ARM TP: element count must be loop invariant.\n");
-    return false;
+    return nullptr;
+  }
+
+  // 2) Find out if IV is an induction phi. Note that we can't use Loop
+  // helpers here to get the induction variable, because the hardware loop is
+  // no longer in loopsimplify form, and also the hwloop intrinsic uses a
+  // different counter. Using SCEV, we check that the induction is of the
+  // form i = i + 4, where the increment must be equal to the VectorWidth.
+  auto *IV = ActiveLaneMask->getOperand(0);
+  auto *IVExpr = SE->getSCEV(IV);
+  auto *AddExpr = dyn_cast<SCEVAddRecExpr>(IVExpr);
+
+  if (!AddExpr) {
+    LLVM_DEBUG(dbgs() << "ARM TP: induction not an add expr: "; IVExpr->dump());
+    return nullptr;
+  }
+  // Check that this AddRec is associated with this loop.
+  if (AddExpr->getLoop() != L) {
+    LLVM_DEBUG(dbgs() << "ARM TP: phi not part of this loop\n");
+    return nullptr;
+  }
+  auto *Step = dyn_cast<SCEVConstant>(AddExpr->getOperand(1));
+  if (!Step) {
+    LLVM_DEBUG(dbgs() << "ARM TP: induction step is not a constant: ";
+               AddExpr->getOperand(1)->dump());
+    return nullptr;
+  }
+  auto StepValue = Step->getValue()->getSExtValue();
+  if (VectorWidth != StepValue) {
+    LLVM_DEBUG(dbgs() << "ARM TP: Step value " << StepValue
+                      << " doesn't match vector width " << VectorWidth << "\n");
+    return nullptr;
   }
 
   if ((ConstElemCount = dyn_cast<ConstantInt>(ElemCount))) {
@@ -231,7 +263,7 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
     if (!TC) {
       LLVM_DEBUG(dbgs() << "ARM TP: Constant tripcount expected in "
                            "set.loop.iterations\n");
-      return false;
+      return nullptr;
     }
 
     // Calculate 2 tripcount values and check that they are consistent with
@@ -249,10 +281,10 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
       LLVM_DEBUG(dbgs() << "ARM TP: inconsistent constant tripcount values: "
                  << TC1 << " from set.loop.iterations, and "
                  << TC2 << " from get.active.lane.mask\n");
-      return false;
+      return nullptr;
     }
   } else if (!ForceTailPredication) {
-    // 2) We need to prove that the sub expression that we create in the
+    // 3) We need to prove that the sub expression that we create in the
     // tail-predicated loop body, which calculates the remaining elements to be
     // processed, is non-negative, i.e. it doesn't overflow:
     //
@@ -266,6 +298,7 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
     //
     auto *VW = SE->getSCEV(ConstantInt::get(TripCount->getType(), VectorWidth));
     // ElementCount + (VW-1):
+    auto *Start = AddExpr->getStart();
     auto *ECPlusVWMinus1 = SE->getAddExpr(EC,
         SE->getSCEV(ConstantInt::get(TripCount->getType(), VectorWidth - 1)));
 
@@ -274,18 +307,20 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
 
     // Prevent unused variable warnings with TC
     (void)TC;
-    LLVM_DEBUG(
+    LLVM_DEBUG({
       dbgs() << "ARM TP: Analysing overflow behaviour for:\n";
-      dbgs() << "ARM TP: - TripCount = "; TC->dump();
-      dbgs() << "ARM TP: - ElemCount = "; EC->dump();
+      dbgs() << "ARM TP: - TripCount = " << *TC << "\n";
+      dbgs() << "ARM TP: - ElemCount = " << *EC << "\n";
+      dbgs() << "ARM TP: - Start = " << *Start << "\n";
+      dbgs() << "ARM TP: - BETC = " << *SE->getBackedgeTakenCount(L) << "\n";
       dbgs() << "ARM TP: - VecWidth =  " << VectorWidth << "\n";
-      dbgs() << "ARM TP: - (ElemCount+VW-1) / VW = "; Ceil->dump();
-    );
+      dbgs() << "ARM TP: - (ElemCount+VW-1) / VW = " << *Ceil << "\n";
+    });
 
     // As an example, almost all the tripcount expressions (produced by the
     // vectoriser) look like this:
     //
-    //   TC = ((-4 + (4 * ((3 + %N) /u 4))<nuw>) /u 4)
+    //   TC = ((-4 + (4 * ((3 + %N) /u 4))<nuw> - start) /u 4)
     //
     // and "ElementCount + (VW-1) / VW":
     //
@@ -294,64 +329,56 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
     // Check for equality of TC and Ceil by calculating SCEV expression
     // TC - Ceil and test it for zero.
     //
-    const SCEV *Sub =
-      SE->getMinusSCEV(SE->getBackedgeTakenCount(L),
-                       SE->getUDivExpr(SE->getAddExpr(SE->getMulExpr(Ceil, VW),
-                                                      SE->getNegativeSCEV(VW)),
-                                       VW));
+    const SCEV *Div = SE->getUDivExpr(
+        SE->getAddExpr(SE->getMulExpr(Ceil, VW), SE->getNegativeSCEV(VW),
+                       SE->getNegativeSCEV(Start)),
+        VW);
+    const SCEV *Sub = SE->getMinusSCEV(SE->getBackedgeTakenCount(L), Div);
+    LLVM_DEBUG(dbgs() << "ARM TP: - Sub       = "; Sub->dump());
 
     // Use context sensitive facts about the path to the loop to refine.  This
     // comes up as the backedge taken count can incorporate context sensitive
     // reasoning, and our RHS just above doesn't.
     Sub = SE->applyLoopGuards(Sub, L);
+    LLVM_DEBUG(dbgs() << "ARM TP: - (Guarded) = "; Sub->dump());
 
     if (!Sub->isZero()) {
       LLVM_DEBUG(dbgs() << "ARM TP: possible overflow in sub expression.\n");
-      return false;
+      return nullptr;
     }
   }
 
-  // 3) Find out if IV is an induction phi. Note that we can't use Loop
-  // helpers here to get the induction variable, because the hardware loop is
-  // no longer in loopsimplify form, and also the hwloop intrinsic uses a
-  // different counter. Using SCEV, we check that the induction is of the
-  // form i = i + 4, where the increment must be equal to the VectorWidth.
-  auto *IV = ActiveLaneMask->getOperand(0);
-  auto *IVExpr = SE->getSCEV(IV);
-  auto *AddExpr = dyn_cast<SCEVAddRecExpr>(IVExpr);
+  // Check that the start value is a multiple of the VectorWidth.
+  // TODO: This could do with a method to check if the scev is a multiple of
+  // VectorWidth. For the moment we just check for constants, muls and unknowns
+  // (which use MaskedValueIsZero and seems to be the most common).
+  if (auto *BaseC = dyn_cast<SCEVConstant>(AddExpr->getStart())) {
+    if (BaseC->getAPInt().urem(VectorWidth) == 0)
+      return SE->getMinusSCEV(EC, BaseC);
+  } else if (auto *BaseV = dyn_cast<SCEVUnknown>(AddExpr->getStart())) {
+    Type *Ty = BaseV->getType();
+    APInt Mask = APInt::getLowBitsSet(Ty->getPrimitiveSizeInBits(),
+                                      Log2_64(VectorWidth));
+    if (MaskedValueIsZero(BaseV->getValue(), Mask,
+                          L->getHeader()->getModule()->getDataLayout()))
+      return SE->getMinusSCEV(EC, BaseV);
+  } else if (auto *BaseMul = dyn_cast<SCEVMulExpr>(AddExpr->getStart())) {
+    if (auto *BaseC = dyn_cast<SCEVConstant>(BaseMul->getOperand(0)))
+      if (BaseC->getAPInt().urem(VectorWidth) == 0)
+        return SE->getMinusSCEV(EC, BaseC);
+    if (auto *BaseC = dyn_cast<SCEVConstant>(BaseMul->getOperand(1)))
+      if (BaseC->getAPInt().urem(VectorWidth) == 0)
+        return SE->getMinusSCEV(EC, BaseC);
+  }
 
-  if (!AddExpr) {
-    LLVM_DEBUG(dbgs() << "ARM TP: induction not an add expr: "; IVExpr->dump());
-    return false;
-  }
-  // Check that this AddRec is associated with this loop.
-  if (AddExpr->getLoop() != L) {
-    LLVM_DEBUG(dbgs() << "ARM TP: phi not part of this loop\n");
-    return false;
-  }
-  auto *Base = dyn_cast<SCEVConstant>(AddExpr->getOperand(0));
-  if (!Base || !Base->isZero()) {
-    LLVM_DEBUG(dbgs() << "ARM TP: induction base is not 0\n");
-    return false;
-  }
-  auto *Step = dyn_cast<SCEVConstant>(AddExpr->getOperand(1));
-  if (!Step) {
-    LLVM_DEBUG(dbgs() << "ARM TP: induction step is not a constant: ";
-               AddExpr->getOperand(1)->dump());
-    return false;
-  }
-  auto StepValue = Step->getValue()->getSExtValue();
-  if (VectorWidth == StepValue)
-    return true;
-
-  LLVM_DEBUG(dbgs() << "ARM TP: Step value " << StepValue
-                    << " doesn't match vector width " << VectorWidth << "\n");
-
-  return false;
+  LLVM_DEBUG(
+      dbgs() << "ARM TP: induction base is not know to be a multiple of VF: "
+             << *AddExpr->getOperand(0) << "\n");
+  return nullptr;
 }
 
 void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
-                                             Value *TripCount) {
+                                             Value *Start) {
   IRBuilder<> Builder(L->getLoopPreheader()->getTerminator());
   Module *M = L->getHeader()->getModule();
   Type *Ty = IntegerType::get(M->getContext(), 32);
@@ -361,7 +388,7 @@ void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
   // Insert a phi to count the number of elements processed by the loop.
   Builder.SetInsertPoint(L->getHeader()->getFirstNonPHI());
   PHINode *Processed = Builder.CreatePHI(Ty, 2);
-  Processed->addIncoming(ActiveLaneMask->getOperand(1), L->getLoopPreheader());
+  Processed->addIncoming(Start, L->getLoopPreheader());
 
   // Replace @llvm.get.active.mask() with the ARM specific VCTP intrinic, and
   // thus represent the effect of tail predication.
@@ -407,12 +434,19 @@ bool MVETailPredication::TryConvertActiveLaneMask(Value *TripCount) {
     LLVM_DEBUG(dbgs() << "ARM TP: Found active lane mask: "
                       << *ActiveLaneMask << "\n");
 
-    if (!IsSafeActiveMask(ActiveLaneMask, TripCount)) {
+    const SCEV *StartSCEV = IsSafeActiveMask(ActiveLaneMask, TripCount);
+    if (!StartSCEV) {
       LLVM_DEBUG(dbgs() << "ARM TP: Not safe to insert VCTP.\n");
       return false;
     }
-    LLVM_DEBUG(dbgs() << "ARM TP: Safe to insert VCTP.\n");
-    InsertVCTPIntrinsic(ActiveLaneMask, TripCount);
+    LLVM_DEBUG(dbgs() << "ARM TP: Safe to insert VCTP. Start is " << *StartSCEV
+                      << "\n");
+    SCEVExpander Expander(*SE, L->getHeader()->getModule()->getDataLayout(),
+                          "start");
+    Instruction *Ins = L->getLoopPreheader()->getTerminator();
+    Value *Start = Expander.expandCodeFor(StartSCEV, StartSCEV->getType(), Ins);
+    LLVM_DEBUG(dbgs() << "ARM TP: Created start value " << *Start << "\n");
+    InsertVCTPIntrinsic(ActiveLaneMask, Start);
   }
 
   // Remove dead instructions and now dead phis.
