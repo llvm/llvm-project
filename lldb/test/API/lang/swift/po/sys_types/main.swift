@@ -29,10 +29,8 @@ func main() {
 #endif
   //% self.expect("po nsarr", substrs = ['1','2','3','4'])
   var nsobject = NSObject() //% self.expect("po clr", substrs = ['1 0 0 1']) # may change depending on OS/platform
-  // Disabled: rdar://106152599
-  // self.expect("po nsobject", substrs = ['<NSObject: 0x']) # may change depending on OS/platform
-  // self.expect("script lldb.frame.FindVariable('nsobject').GetObjectDescription()", substrs = ['<NSObject: 0x']) # may change depending on OS/platform
-  var any: Any = 1234
+  var any: Any = 1234 //% self.expect("po nsobject", substrs = ['<NSObject: 0x']) # may change depending on OS/platform
+  //% self.expect("script lldb.frame.FindVariable('nsobject').GetObjectDescription()", substrs = ['<NSObject: 0x']) # may change depending on OS/platform
   var anyobject: AnyObject = 1234 as NSNumber //% self.expect("po any", substrs = ['1234'])
   var notification = Notification(name: Notification.Name(rawValue: "JustANotification"), object: nil)
   print("yay I am done!") //% self.expect("po notification", substrs=['JustANotification'])
