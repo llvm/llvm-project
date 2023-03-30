@@ -210,6 +210,22 @@ WebAssemblyDebugValueManager::getSinkableDebugValues(
   return SinkableDbgValues;
 }
 
+// Returns true if the insertion point is the same as the current place.
+// Following DBG_VALUEs for 'Def' are ignored.
+bool WebAssemblyDebugValueManager::isInsertSamePlace(
+    MachineInstr *Insert) const {
+  if (Def->getParent() != Insert->getParent())
+    return false;
+  for (MachineBasicBlock::iterator MI = std::next(Def->getIterator()),
+                                   ME = Insert;
+       MI != ME; ++MI) {
+    if (std::find(DbgValues.begin(), DbgValues.end(), MI) == DbgValues.end()) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // Sink 'Def', and also sink its eligible DBG_VALUEs to the place before
 // 'Insert'. Convert the original DBG_VALUEs into undefs.
 //
@@ -221,6 +237,23 @@ WebAssemblyDebugValueManager::getSinkableDebugValues(
 // This DebugValueManager's new Def and DbgValues will be updated to the newly
 // sinked Def + DBG_VALUEs.
 void WebAssemblyDebugValueManager::sink(MachineInstr *Insert) {
+  // In case Def is requested to be sunk to
+  // the same place, we don't need to do anything. If we actually do the sink,
+  // it will create unnecessary undef DBG_VALUEs. For example, if the original
+  // code is:
+  //   %0 = someinst           // Def
+  //   DBG_VALUE %0, ...
+  //   %1 = anotherinst        // Insert
+  //
+  // If we actually sink %0 and the following DBG_VALUE and setting the original
+  // DBG_VALUE undef, the result will be:
+  //   DBG_VALUE %noreg, ...   // Unnecessary!
+  //   %0 = someinst           // Def
+  //   DBG_VALUE %0, ...
+  //   %1 = anotherinst        // Insert
+  if (isInsertSamePlace(Insert))
+    return;
+
   MachineBasicBlock *MBB = Insert->getParent();
   MachineFunction *MF = MBB->getParent();
 
