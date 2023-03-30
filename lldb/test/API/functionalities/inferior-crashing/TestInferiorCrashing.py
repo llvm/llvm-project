@@ -64,7 +64,7 @@ class CrashingInferiorTestCase(TestBase):
         if self.platformIsDarwin():
             stop_reason = 'stop reason = EXC_BAD_ACCESS'
         elif self.getPlatform() == "linux" or self.getPlatform() == "freebsd":
-            stop_reason = 'stop reason = signal SIGSEGV'
+            stop_reason = 'stop reason = signal SIGSEGV: address not mapped to object'
         else:
             stop_reason = 'stop reason = invalid address'
         self.expect("thread list", STOPPED_DUE_TO_EXC_BAD_ACCESS,
