@@ -713,10 +713,10 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     // Move to next char to prevent repeated letter.
     ++StdExtsItr;
 
-    std::string Next;
+    StringRef Next;
     unsigned Major, Minor, ConsumeLength;
     if (std::next(I) != E)
-      Next = std::string(std::next(I), E);
+      Next = StringRef(std::next(I), E - std::next(I));
     if (auto E = getExtensionVersion(StringRef(&C, 1), Next, Major, Minor,
                                      ConsumeLength, EnableExperimentalExtension,
                                      ExperimentalExtensionVersionCheck)) {
