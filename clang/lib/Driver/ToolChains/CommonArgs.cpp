@@ -331,6 +331,9 @@ static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
         .Case("aruba", "cayman")
         .Default(GPUName.str());
   }
+  if (Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
+    return getProcessorFromTargetID(T, A->getValue()).str();
+  }
   return "";
 }
 
