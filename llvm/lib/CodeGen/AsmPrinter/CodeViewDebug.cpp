@@ -791,7 +791,6 @@ void CodeViewDebug::emitObjName() {
     // Don't emit the filename if we're writing to stdout or to /dev/null.
     PathRef = {};
   } else {
-    llvm::sys::path::remove_dots(PathStore, /*remove_dot_dot=*/true);
     PathRef = PathStore;
   }
 
