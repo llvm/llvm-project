@@ -92,6 +92,7 @@ metadata querys for code object v2 objects.
 - Remove support for code object v3 compilation in tests and test CMAKE due to
 deprecation of code object v3 in LLVM. However, we still test loading and
 metadata querys for code object v3 objects.
+- Revamp symbolizer test to fail on errors, among other improvments
 
 New Targets
 -----------

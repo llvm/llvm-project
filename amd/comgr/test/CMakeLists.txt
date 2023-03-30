@@ -70,6 +70,7 @@ add_test_input_binary(reloc1 source/reloc1.cl source/reloc1.o -c -mcode-object-v
 add_test_input_binary(reloc2 source/reloc2.cl source/reloc2.o -c -mcode-object-version=4)
 add_test_input_binary(reloc-asm source/reloc-asm.s source/reloc-asm.o -c -mcode-object-version=4)
 add_test_input_binary(shared source/shared.cl source/shared.so -mcode-object-version=4)
+add_test_input_binary(shared-debug source/shared.cl source/shared-debug.so -g -mcode-object-version=4)
 
 configure_file("source/source1.cl" "source/source1.cl" COPYONLY)
 configure_file("source/source1-device-libs.cl" "source/source1-device-libs.cl" COPYONLY)

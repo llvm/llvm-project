@@ -31,9 +31,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
  * THE SOFTWARE.
  *
- *******************************************************************************/
+ ******************************************************************************/
 
-// clang shared.cl --target=amdgcn-amdhsa-opencl -mcpu=gfx803 -o shared.so
+// Standard
+// clang shared.cl --target=amdgcn-amd-amdhsa -mcpu=gfx900 -g -O3 -o shared.so
+
+// Debug
+// clang shared.cl --target=amdgcn-amd-amdhsa -mcpu=gfx900 -g -O3 -o shared-debug.so
 
 __attribute__((visibility("default"))) constant int foo = 0;
 
