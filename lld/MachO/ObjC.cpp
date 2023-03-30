@@ -259,12 +259,14 @@ void ObjcCategoryChecker::parseClass(const Defined *classSym) {
   auto getMethodsIsec =
       [&](const InputSection *classIsec) -> ConcatInputSection * {
     if (const auto *r = classIsec->getRelocAt(classLayout.roDataOffset)) {
-      const auto *roIsec =
-          cast<ConcatInputSection>(r->getReferentInputSection());
-      if (const auto *r = roIsec->getRelocAt(roClassLayout.baseMethodsOffset)) {
-        if (auto *methodsIsec =
-                cast_or_null<ConcatInputSection>(r->getReferentInputSection()))
-          return methodsIsec;
+      if (const auto *roIsec =
+              cast_or_null<ConcatInputSection>(r->getReferentInputSection())) {
+        if (const auto *r =
+                roIsec->getRelocAt(roClassLayout.baseMethodsOffset)) {
+          if (auto *methodsIsec = cast_or_null<ConcatInputSection>(
+                  r->getReferentInputSection()))
+            return methodsIsec;
+        }
       }
     }
     return nullptr;

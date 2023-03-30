@@ -3,12 +3,16 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/cat1.s -o %t/cat1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/cat2.s -o %t/cat2.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/klass.s -o %t/klass.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/klass-with-no-rodata.s -o %t/klass-with-no-rodata.o
 # RUN: %lld -dylib -lobjc %t/klass.o -o %t/libklass.dylib
 
 # RUN: %no-fatal-warnings-lld -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
 # RUN:   /dev/null 2>&1 | FileCheck %s --check-prefixes=CATCLS,CATCAT
 # RUN: %no-fatal-warnings-lld -dylib -lobjc %t/libklass.dylib %t/cat1.o \
 # RUN:   %t/cat2.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=CATCAT
+
+## Regression test: Check that we don't crash.
+# RUN: %no-fatal-warnings-lld -dylib -lobjc %t/klass-with-no-rodata.o -o /dev/null
 
 # CATCLS:      warning: method '+s1' has conflicting definitions:
 # CATCLS-NEXT: >>> defined in category Cat1 from {{.*}}cat1.o
@@ -198,6 +202,42 @@ __OBJC_$_INSTANCE_METHODS_Foo:
   .long 64
 
 .subsections_via_symbols
+
+#--- klass-with-no-rodata.s
+
+.include "objc-macros.s"
+
+## swiftc generates some classes without a statically-linked rodata. Not
+## entirely sure what the corresponding Swift inputs are required for this to
+## happen; this test merely checks that we can gracefully handle this case
+## without crashing.
+## FIXME: It would be better if this test used the output of some real Swift
+## code.
+
+.globl _$s11FooAACfD
+
+.section __DATA,__objc_data
+_$s11FooAACfD:
+  .quad _$s11FooAACfD
+  .quad 0
+  .quad __objc_empty_cache
+  .quad 0
+  .quad __objc_empty_cache
+
+.section __DATA,__objc_catlist,regular,no_dead_strip
+  .quad __CATEGORY_METAFoo_$_Foo20
+
+.section __DATA,__objc_const
+__CATEGORY_METAFoo_$_Foo20:
+  .objc_classname "Foo20"
+  .quad _$s11FooAACfD
+  .quad 0
+  .quad 0
+  .quad 0
+  .quad 0
+  .quad 0
+  .long 64
+  .space 4
 
 #--- objc-macros.s
 
