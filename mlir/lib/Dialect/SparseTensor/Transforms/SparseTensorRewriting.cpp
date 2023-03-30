@@ -358,9 +358,12 @@ public:
     Value srcTensor = op.getSrc();
     auto srcTp = getRankedTensorType(srcTensor);
     auto dstTp = getRankedTensorType(op.getResult());
-    SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(srcTp);
-    SparseTensorEncodingAttr encDst = getSparseTensorEncoding(dstTp);
-    if (!encDst || !encSrc) {
+
+    SparseTensorType srcStt(srcTp);
+    SparseTensorType dstStt(dstTp);
+
+    const auto encSrc = srcStt.getEncoding();
+    if (!srcStt.hasEncoding() || !dstStt.hasEncoding()) {
       return failure();
     }
 
@@ -382,22 +385,29 @@ public:
           dstDynSizes.push_back(dstSizes[idx]);
       }
     }
-
-    // Implement the sparse2sparse reshape as follows:
-    //   %tmp = bufferization.alloc_tensor : unordered COO
-    //   foreach srcCoords %srcTensor
-    //     insert reshapeCvs(srcCoords), %tmp
-    //   %t = sparse_tensor.cast %tmp
     Value nnz = rewriter.create<NumberOfEntriesOp>(loc, srcTensor);
-    RankedTensorType cooTp = getUnorderedCOOFromType(dstTp);
-    Value cooBuffer =
+    // Only need a unordered COO buffer if input and output are not sorted
+    // in the same way.
+    Type bufferTp =
+        srcStt.isAllOrdered() && srcStt.isIdentity() && dstStt.isIdentity()
+            ? dstTp
+            : getUnorderedCOOFromType(dstTp);
+
+    Value buffer =
         rewriter
-            .create<AllocTensorOp>(loc, cooTp, dstDynSizes, Value(),
+            .create<AllocTensorOp>(loc, bufferTp, dstDynSizes, Value(),
                                    /*sizeHint=*/nnz, Attribute())
             .getResult();
 
+    // Implement the sparse2sparse reshape as follows:
+    //   foreach srcCoords %srcTensor
+    //     insert reshapeCvs(srcCoords), %buffer
+    //
+    // followed by an optional
+    //   %t = sparse_tensor.cast %tmp
+    // depending on whether the input/output are sorted in the same way.
     ForeachOp foreachOp = rewriter.create<ForeachOp>(
-        loc, srcTensor, cooBuffer,
+        loc, srcTensor, buffer,
         [&](OpBuilder &builder, Location loc, ValueRange srcLcvs, Value v,
             ValueRange reduc) {
           const Dimension dimRank = srcTp.getRank();
@@ -414,10 +424,14 @@ public:
           auto t = builder.create<InsertOp>(loc, v, reduc.front(), dstDcvs);
           builder.create<sparse_tensor::YieldOp>(loc, t);
         });
-    auto t = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
-    auto converted = rewriter.create<ConvertOp>(loc, dstTp, t).getResult();
-    rewriter.create<DeallocTensorOp>(loc, t);
-    rewriter.replaceOp(op, converted);
+
+    Value t = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
+    if (bufferTp != dstTp) {
+      Value converted = rewriter.create<ConvertOp>(loc, dstTp, t).getResult();
+      rewriter.create<DeallocTensorOp>(loc, t);
+      t = converted;
+    }
+    rewriter.replaceOp(op, t);
     return success();
   }
 };
