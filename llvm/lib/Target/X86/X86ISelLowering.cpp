@@ -54465,6 +54465,28 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Fold movmsk(logic(X,C)) -> logic(movmsk(X),C)
+  if (N->isOnlyUserOf(Src.getNode())) {
+    SDValue SrcBC = peekThroughOneUseBitcasts(Src);
+    if (ISD::isBitwiseLogicOp(SrcBC.getOpcode())) {
+      APInt UndefElts;
+      SmallVector<APInt, 32> EltBits;
+      if (getTargetConstantBitsFromNode(SrcBC.getOperand(1), NumBitsPerElt,
+                                        UndefElts, EltBits)) {
+        APInt Mask = APInt::getZero(NumBits);
+        for (unsigned Idx = 0; Idx != NumElts; ++Idx) {
+          if (!UndefElts[Idx] && EltBits[Idx].isNegative())
+            Mask.setBit(Idx);
+        }
+        SDLoc DL(N);
+        SDValue NewSrc = DAG.getBitcast(SrcVT, SrcBC.getOperand(0));
+        SDValue NewMovMsk = DAG.getNode(X86ISD::MOVMSK, DL, VT, NewSrc);
+        return DAG.getNode(SrcBC.getOpcode(), DL, VT, NewMovMsk,
+                           DAG.getConstant(Mask, DL, VT));
+      }
+    }
+  }
+
   // Simplify the inputs.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   APInt DemandedMask(APInt::getAllOnes(NumBits));
