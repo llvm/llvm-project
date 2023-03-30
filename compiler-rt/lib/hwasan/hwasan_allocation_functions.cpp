@@ -16,9 +16,8 @@
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
+#include "sanitizer_common/sanitizer_mallinfo.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
-
-#if !SANITIZER_FUCHSIA
 
 using namespace __hwasan;
 
@@ -155,12 +154,9 @@ void *__sanitizer_malloc(uptr size) {
 
 }  // extern "C"
 
-#if HWASAN_WITH_INTERCEPTORS
-#  define INTERCEPTOR_ALIAS(RET, FN, ARGS...)                                 \
-    extern "C" SANITIZER_INTERFACE_ATTRIBUTE RET WRAP(FN)(ARGS)               \
-        ALIAS("__sanitizer_" #FN);                                            \
-    extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE RET FN( \
-        ARGS) ALIAS("__sanitizer_" #FN)
+#define INTERCEPTOR_ALIAS(RET, FN, ARGS...)                                 \
+  extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE RET FN( \
+      ARGS) ALIAS("__sanitizer_" #FN)
 
 INTERCEPTOR_ALIAS(int, posix_memalign, void **memptr, SIZE_T alignment,
                   SIZE_T size);
@@ -182,6 +178,3 @@ INTERCEPTOR_ALIAS(__sanitizer_struct_mallinfo, mallinfo);
 INTERCEPTOR_ALIAS(int, mallopt, int cmd, int value);
 INTERCEPTOR_ALIAS(void, malloc_stats, void);
 #  endif
-#endif  // #if HWASAN_WITH_INTERCEPTORS
-
-#endif  // SANITIZER_FUCHSIA
