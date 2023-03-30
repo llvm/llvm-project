@@ -85,6 +85,13 @@ C++20 Feature Support
   (`#61278 <https://github.com/llvm/llvm-project/issues/61278>`_)
 - Announced C++20 Coroutines is fully supported on all targets except Windows, which
   still has some stability and ABI issues.
+- Downgraded use of a reserved identifier in a module export declaration from
+  an error to a warning under the ``-Wreserved-module-identifier`` warning
+  group. This warning is enabled by default. This addresses `#61446
+  <https://github.com/llvm/llvm-project/issues/61446>`_ and allows easier
+  building of precompiled modules. This diagnostic may be strengthened into an
+  error again in the future once there is a less fragile way to mark a module
+  as being part of the implementation rather than a user module.
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
