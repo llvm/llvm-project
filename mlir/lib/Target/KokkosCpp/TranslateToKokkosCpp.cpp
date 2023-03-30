@@ -12,13 +12,13 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/Target/KokkosCpp/KokkosCppEmitter.h"
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -471,17 +471,17 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
                                     memref::LoadOp op) {
   //TODO: if in host code, use a mirror view?
   if(failed(emitter.emitType(op.getLoc(), op.getResult().getType())))
-    return failure();
+    return op.emitError("Failed to emit LoadOp result type");
   emitter << ' ' << emitter.getOrCreateName(op.getResult()) << " = ";
   if(failed(emitter.emitValue(op.getMemRef())))
-    return failure();
+    return op.emitError("Failed to emit the LoadOp's memref value");
   emitter << "(";
   for(auto iter = op.getIndices().begin(); iter != op.getIndices().end(); iter++)
   {
     if(iter != op.getIndices().begin())
       emitter << ", ";
     if(failed(emitter.emitValue(*iter)))
-      return failure();
+      return op.emitError("Failed to emit a LoadOp index");
   }
   emitter << ")";
   return success();
@@ -840,6 +840,39 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ForOp forOp)
     emitter << ";";
   }
 
+  return success();
+}
+
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::WhileOp whileOp) {
+  //Declare the results (if any). YieldOp children of whileOp can assign values to them.
+  if (!emitter.shouldDeclareVariablesAtTop()) {
+    for (OpResult result : whileOp.getResults()) {
+      if (failed(emitter.emitVariableDeclaration(result, /*trailingSemicolon=*/true)))
+        return failure();
+    }
+  }
+
+  emitter << "while(true)\n{";
+
+  //Emit the "before" block(s)
+  for (auto& beforeOp : whileOp.getBefore().getOps()) {
+    if (failed(emitter.emitOperation(beforeOp, /*trailingSemicolon=*/true)))
+      return failure();
+  }
+
+  //Emit the "after" block(s)
+  for (auto& afterOp : whileOp.getAfter().getOps()) {
+    if (failed(emitter.emitOperation(afterOp, /*trailingSemicolon=*/true)))
+      return failure();
+  }
+  emitter << "}\n";
+
+  return success();
+}
+
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ConditionOp condOp) {
+  //The condition value should already be in scope. Just break out of loop if it's falsey.
+  emitter << "if(" << emitter.getOrCreateName(condOp.getCondition()) << ") break;\n";
   return success();
 }
 
@@ -1543,7 +1576,7 @@ bool KokkosCppEmitter::shouldMapToUnsigned(IntegerType::SignednessSemantics val)
   llvm_unreachable("Unexpected IntegerType::SignednessSemantics");
 }
 
-bool KokkosCppEmitter::hasValueInScope(Value val) { return valueMapper.count(val); }
+bool KokkosCppEmitter::hasValueInScope(Value val) { return valueMapper.count(val) || isScalarConstant(val); }
 
 bool KokkosCppEmitter::hasBlockLabel(Block &block) {
   return blockMapper.count(&block);
@@ -2222,6 +2255,19 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, math::RsqrtOp op)
   return success();
 }
 
+static LogicalResult printOperation(KokkosCppEmitter &emitter,
+                                    LLVM::NullOp op) {
+  // Make sure the result type is a pointer (raw, not a memref).
+  // Emit this is a raw null pointer, not an unallocated Kokkos::View
+  if (!op.getResult().getType().isa<LLVM::LLVMPointerType>()) {
+    return op.emitOpError("LLVM::NullOp has a non-pointer result type");
+  }
+  if(failed(emitter.emitType(op.getLoc(), op.getResult().getType())))
+    return failure();
+  emitter << ' ' << emitter.getOrCreateName(op.getResult()) << " = nullptr";
+  return success();
+}
+
 LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
   os << "// " << op.getName() << '\n';
   LogicalResult status =
@@ -2236,7 +2282,7 @@ LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemico
           .Case<func::CallOp, func::ConstantOp, func::ReturnOp>(
               [&](auto op) { return printOperation(*this, op); })
           // SCF ops.
-          .Case<scf::ForOp, scf::IfOp, scf::YieldOp, scf::ParallelOp>(
+          .Case<scf::ForOp, scf::WhileOp, scf::IfOp, scf::YieldOp, scf::ConditionOp, scf::ParallelOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Arithmetic ops: general
           .Case<arith::ConstantOp, arith::FPToUIOp, arith::NegFOp, arith::CmpFOp, arith::CmpIOp, arith::SelectOp>(
@@ -2269,6 +2315,9 @@ LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemico
               [&](auto op) { return printMathOperation(*this, op); })
           // Memref ops.
           .Case<memref::GlobalOp, memref::GetGlobalOp, memref::AllocOp, memref::AllocaOp, memref::StoreOp, memref::LoadOp, memref::CopyOp, memref::SubViewOp, memref::CollapseShapeOp, memref::CastOp>(
+              [&](auto op) { return printOperation(*this, op); })
+          // LLVM ops.
+          .Case<LLVM::NullOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Other operations are unknown/unsupported.
           .Default([&](Operation *) {
