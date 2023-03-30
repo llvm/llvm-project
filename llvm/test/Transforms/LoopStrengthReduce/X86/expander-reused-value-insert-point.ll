@@ -26,9 +26,10 @@ define void @test(ptr %ioptr, i32 %X, ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[EC0:%.*]] = icmp eq ptr [[ADD_PTR94]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[EC0]], label [[FOR_BODY37]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    [[ADD_PTR94_LCSSA:%.*]] = phi ptr [ [[ADD_PTR94]], [[FOR_BODY37]] ]
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[P0R_0_LCSSA:%.*]] = phi ptr [ [[ADD_PTR94]], [[FOR_END_LOOPEXIT]] ]
+; CHECK-NEXT:    [[P0R_0_LCSSA:%.*]] = phi ptr [ [[ADD_PTR94_LCSSA]], [[FOR_END_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[EC1:%.*]] = icmp eq ptr [[P0R_0_LCSSA]], [[END]]
 ; CHECK-NEXT:    br i1 [[EC1]], label [[FOR_BODY15]], label [[FOR_INC133:%.*]]
 ; CHECK:       for.inc133:
