@@ -32,7 +32,7 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &CGM, CIRGenBuilderTy &builder,
       CurFPFeatures(CGM.getLangOpts()), ShouldEmitLifetimeMarkers(false) {
   if (!suppressNewContext)
     CGM.getCXXABI().getMangleContext().startNewFunction();
-  // TODO(CIR): EHStack.setCGF(this);
+  EHStack.setCGF(this);
 
   // TODO(CIR): SetFastMathFlags(CurFPFeatures);
 }

@@ -14,9 +14,8 @@
 #ifndef LLVM_CLANG_LIB_CIR_CODEGEN_CGCLEANUP_H
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CGCLEANUP_H
 
-#include "EHScopeStack.h"
-
 #include "Address.h"
+#include "EHScopeStack.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
