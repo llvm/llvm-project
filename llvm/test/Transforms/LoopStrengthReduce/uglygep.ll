@@ -96,11 +96,10 @@ define fastcc void @TransformLine() nounwind {
 ; CHECK-NEXT:    [[P9_PH:%.*]] = phi i32 [ undef, [[BB5_BB6SPLIT_CRIT_EDGE]] ], [ [[I1]], [[BB6SPLITSPLIT]] ]
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       loop1.bb6_crit_edge:
-; CHECK-NEXT:    [[I1_LCSSA:%.*]] = phi i32 [ [[I1]], [[LOOP1]] ]
 ; CHECK-NEXT:    br label [[BB6]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    [[P8:%.*]] = phi i32 [ undef, [[LOOP1_BB6_CRIT_EDGE]] ], [ [[P8_PH]], [[BB6SPLIT]] ]
-; CHECK-NEXT:    [[P9:%.*]] = phi i32 [ [[I1_LCSSA]], [[LOOP1_BB6_CRIT_EDGE]] ], [ [[P9_PH]], [[BB6SPLIT]] ]
+; CHECK-NEXT:    [[P9:%.*]] = phi i32 [ [[I1]], [[LOOP1_BB6_CRIT_EDGE]] ], [ [[P9_PH]], [[BB6SPLIT]] ]
 ; CHECK-NEXT:    unreachable
 ;
 bb:

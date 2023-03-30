@@ -44,11 +44,10 @@ define void @foo(i64 %N) local_unnamed_addr {
 ; CHECK-NEXT:    [[TOBOOL12:%.*]] = icmp eq i64 [[T2]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL12]], label [[DO_BODY14_PREHEADER:%.*]], label [[DO_BODY8]]
 ; CHECK:       do.body14.preheader:
-; CHECK-NEXT:    [[INC10_LCSSA:%.*]] = phi i64 [ [[INC10]], [[DO_BODY8]] ]
 ; CHECK-NEXT:    br label [[DO_BODY14:%.*]]
 ; CHECK:       do.body14:
 ; CHECK-NEXT:    [[I_3:%.*]] = phi i64 [ [[INC15:%.*]], [[DO_BODY14]] ], [ 0, [[DO_BODY14_PREHEADER]] ]
-; CHECK-NEXT:    [[J_3:%.*]] = phi i64 [ [[INC16:%.*]], [[DO_BODY14]] ], [ [[INC10_LCSSA]], [[DO_BODY14_PREHEADER]] ]
+; CHECK-NEXT:    [[J_3:%.*]] = phi i64 [ [[INC16:%.*]], [[DO_BODY14]] ], [ [[INC10]], [[DO_BODY14_PREHEADER]] ]
 ; CHECK-NEXT:    tail call void @goo(i64 [[I_3]], i64 [[J_3]])
 ; CHECK-NEXT:    [[INC15]] = add nuw nsw i64 [[I_3]], 1
 ; CHECK-NEXT:    [[INC16]] = add i64 [[J_3]], 1
@@ -56,11 +55,10 @@ define void @foo(i64 %N) local_unnamed_addr {
 ; CHECK-NEXT:    [[TOBOOL18:%.*]] = icmp eq i64 [[T3]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL18]], label [[DO_BODY20_PREHEADER:%.*]], label [[DO_BODY14]]
 ; CHECK:       do.body20.preheader:
-; CHECK-NEXT:    [[INC16_LCSSA:%.*]] = phi i64 [ [[INC16]], [[DO_BODY14]] ]
 ; CHECK-NEXT:    br label [[DO_BODY20:%.*]]
 ; CHECK:       do.body20:
 ; CHECK-NEXT:    [[I_4:%.*]] = phi i64 [ [[INC21:%.*]], [[DO_BODY20]] ], [ 0, [[DO_BODY20_PREHEADER]] ]
-; CHECK-NEXT:    [[J_4:%.*]] = phi i64 [ [[INC22:%.*]], [[DO_BODY20]] ], [ [[INC16_LCSSA]], [[DO_BODY20_PREHEADER]] ]
+; CHECK-NEXT:    [[J_4:%.*]] = phi i64 [ [[INC22:%.*]], [[DO_BODY20]] ], [ [[INC16]], [[DO_BODY20_PREHEADER]] ]
 ; CHECK-NEXT:    tail call void @goo(i64 [[I_4]], i64 [[J_4]])
 ; CHECK-NEXT:    [[INC21]] = add nuw nsw i64 [[I_4]], 1
 ; CHECK-NEXT:    [[INC22]] = add i64 [[J_4]], 1
@@ -68,11 +66,10 @@ define void @foo(i64 %N) local_unnamed_addr {
 ; CHECK-NEXT:    [[TOBOOL24:%.*]] = icmp eq i64 [[T4]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL24]], label [[DO_BODY26_PREHEADER:%.*]], label [[DO_BODY20]]
 ; CHECK:       do.body26.preheader:
-; CHECK-NEXT:    [[INC22_LCSSA:%.*]] = phi i64 [ [[INC22]], [[DO_BODY20]] ]
 ; CHECK-NEXT:    br label [[DO_BODY26:%.*]]
 ; CHECK:       do.body26:
 ; CHECK-NEXT:    [[I_5:%.*]] = phi i64 [ [[INC27:%.*]], [[DO_BODY26]] ], [ 0, [[DO_BODY26_PREHEADER]] ]
-; CHECK-NEXT:    [[J_5:%.*]] = phi i64 [ [[INC28:%.*]], [[DO_BODY26]] ], [ [[INC22_LCSSA]], [[DO_BODY26_PREHEADER]] ]
+; CHECK-NEXT:    [[J_5:%.*]] = phi i64 [ [[INC28:%.*]], [[DO_BODY26]] ], [ [[INC22]], [[DO_BODY26_PREHEADER]] ]
 ; CHECK-NEXT:    tail call void @goo(i64 [[I_5]], i64 [[J_5]])
 ; CHECK-NEXT:    [[INC27]] = add nuw nsw i64 [[I_5]], 1
 ; CHECK-NEXT:    [[INC28]] = add nsw i64 [[J_5]], 1
