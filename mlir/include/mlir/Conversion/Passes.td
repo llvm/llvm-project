@@ -223,6 +223,15 @@ def ConvertComplexToLibm : Pass<"convert-complex-to-libm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexToSPIRV
+//===----------------------------------------------------------------------===//
+
+def ConvertComplexToSPIRVPass : Pass<"convert-complex-to-spirv"> {
+  let summary = "Convert Complex dialect to SPIRV dialect";
+  let dependentDialects = ["spirv::SPIRVDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ComplexToStandard
 //===----------------------------------------------------------------------===//
 

@@ -2356,12 +2356,15 @@ Expr *VarDecl::getInit() {
   if (auto *S = Init.dyn_cast<Stmt *>())
     return cast<Expr>(S);
 
-  return cast_or_null<Expr>(Init.get<EvaluatedStmt *>()->Value);
+  auto *Eval = getEvaluatedStmt();
+  return cast<Expr>(Eval->Value.isOffset()
+                        ? Eval->Value.get(getASTContext().getExternalSource())
+                        : Eval->Value.get(nullptr));
 }
 
 Stmt **VarDecl::getInitAddress() {
   if (auto *ES = Init.dyn_cast<EvaluatedStmt *>())
-    return &ES->Value;
+    return ES->Value.getAddressOfPointer(getASTContext().getExternalSource());
 
   return Init.getAddrOfPtr1();
 }
@@ -2498,7 +2501,7 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
                                     bool IsConstantInitialization) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
 
-  const auto *Init = cast<Expr>(Eval->Value);
+  const auto *Init = getInit();
   assert(!Init->isValueDependent());
 
   // We only produce notes indicating why an initializer is non-constant the
@@ -2582,7 +2585,7 @@ bool VarDecl::checkForConstantInitialization(
          "already evaluated var value before checking for constant init");
   assert(getASTContext().getLangOpts().CPlusPlus && "only meaningful in C++");
 
-  assert(!cast<Expr>(Eval->Value)->isValueDependent());
+  assert(!getInit()->isValueDependent());
 
   // Evaluate the initializer to check whether it's a constant expression.
   Eval->HasConstantInitialization =

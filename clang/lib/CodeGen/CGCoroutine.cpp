@@ -593,6 +593,18 @@ static void emitBodyAndFallthrough(CodeGenFunction &CGF,
       CGF.EmitStmt(OnFallthrough);
 }
 
+static CompoundStmt *CoroutineStmtBuilder(ASTContext &Context,
+                                          const CoroutineBodyStmt &S) {
+  Stmt *Stmt = S.getBody();
+  if (CompoundStmt *Body = dyn_cast<CompoundStmt>(Stmt))
+    return Body;
+  // We are about to create a `CXXTryStmt` which requires a `CompoundStmt`.
+  // If the function body is not a `CompoundStmt` yet then we have to create
+  // a new one. This happens for cases like the "function-try-block" syntax.
+  return CompoundStmt::Create(Context, {Stmt}, FPOptionsOverride(),
+                              SourceLocation(), SourceLocation());
+}
+
 void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getInt8PtrTy());
   auto &TI = CGM.getContext().getTargetInfo();
@@ -721,8 +733,8 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
       auto Loc = S.getBeginLoc();
       CXXCatchStmt Catch(Loc, /*exDecl=*/nullptr,
                          CurCoro.Data->ExceptionHandler);
-      auto *TryStmt =
-          CXXTryStmt::Create(getContext(), Loc, S.getBody(), &Catch);
+      CompoundStmt *Body = CoroutineStmtBuilder(getContext(), S);
+      auto *TryStmt = CXXTryStmt::Create(getContext(), Loc, Body, &Catch);
 
       EnterCXXTryStmt(*TryStmt);
       emitBodyAndFallthrough(*this, S, TryStmt->getTryBlock());

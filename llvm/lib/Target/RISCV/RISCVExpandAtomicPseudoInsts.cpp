@@ -178,7 +178,7 @@ static unsigned getSCForRMW32(AtomicOrdering Ordering) {
   case AtomicOrdering::AcquireRelease:
     return RISCV::SC_W_RL;
   case AtomicOrdering::SequentiallyConsistent:
-    return RISCV::SC_W_AQ_RL;
+    return RISCV::SC_W_RL;
   }
 }
 
@@ -212,7 +212,7 @@ static unsigned getSCForRMW64(AtomicOrdering Ordering) {
   case AtomicOrdering::AcquireRelease:
     return RISCV::SC_D_RL;
   case AtomicOrdering::SequentiallyConsistent:
-    return RISCV::SC_D_AQ_RL;
+    return RISCV::SC_D_RL;
   }
 }
 

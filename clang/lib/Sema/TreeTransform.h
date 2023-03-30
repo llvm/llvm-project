@@ -13316,13 +13316,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       E->getCaptureDefault());
   getDerived().transformedLocalDecl(OldClass, {Class});
 
-  std::optional<std::tuple<bool, unsigned, unsigned, Decl *>> Mangling;
-  if (getDerived().ReplacingOriginal())
-    Mangling = std::make_tuple(OldClass->hasKnownLambdaInternalLinkage(),
-                               OldClass->getLambdaManglingNumber(),
-                               OldClass->getDeviceLambdaManglingNumber(),
-                               OldClass->getLambdaContextDecl());
-
   CXXMethodDecl *NewCallOperator =
       getSema().CreateLambdaCallOperator(E->getIntroducerRange(), Class);
   NewCallOperator->setLexicalDeclContext(getSema().CurContext);
@@ -13502,7 +13495,13 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   {
     // Number the lambda for linkage purposes if necessary.
     Sema::ContextRAII ManglingContext(getSema(), Class->getDeclContext());
-    getSema().handleLambdaNumbering(Class, NewCallOperator, Mangling);
+
+    std::optional<CXXRecordDecl::LambdaNumbering> Numbering;
+    if (getDerived().ReplacingOriginal()) {
+      Numbering = OldClass->getLambdaNumbering();
+    }
+
+    getSema().handleLambdaNumbering(Class, NewCallOperator, Numbering);
   }
 
   // FIXME: Sema's lambda-building mechanism expects us to push an expression

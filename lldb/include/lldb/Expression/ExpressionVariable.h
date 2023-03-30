@@ -29,8 +29,7 @@ public:
 
   LLVMCastKind getKind() const { return m_kind; }
 
-  ExpressionVariable(LLVMCastKind kind) : m_flags(0), m_kind(kind) {}
-
+  ExpressionVariable(LLVMCastKind kind);
   virtual ~ExpressionVariable();
 
   std::optional<uint64_t> GetByteSize() { return m_frozen_sp->GetByteSize(); }
@@ -208,8 +207,7 @@ public:
 
   LLVMCastKind getKind() const { return m_kind; }
 
-  PersistentExpressionState(LLVMCastKind kind) : m_kind(kind) {}
-
+  PersistentExpressionState(LLVMCastKind kind);
   virtual ~PersistentExpressionState();
 
   virtual lldb::ExpressionVariableSP

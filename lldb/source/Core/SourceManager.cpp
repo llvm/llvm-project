@@ -205,7 +205,8 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
       }
 
       char buffer[3];
-      sprintf(buffer, "%2.2s", (line == curr_line) ? current_line_cstr : "");
+      snprintf(buffer, sizeof(buffer), "%2.2s",
+               (line == curr_line) ? current_line_cstr : "");
       std::string current_line_highlight(buffer);
 
       auto debugger_sp = m_debugger_wp.lock();
