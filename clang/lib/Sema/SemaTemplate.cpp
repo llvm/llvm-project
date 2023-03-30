@@ -8023,8 +8023,14 @@ static bool MatchTemplateParameterKind(
     // to actually compare the arguments.
     if (Kind != Sema::TPL_TemplateTemplateArgumentMatch ||
         (!OldNTTP->getType()->isDependentType() &&
-         !NewNTTP->getType()->isDependentType()))
-      if (!S.Context.hasSameType(OldNTTP->getType(), NewNTTP->getType())) {
+         !NewNTTP->getType()->isDependentType())) {
+      // C++20 [temp.over.link]p6:
+      //   Two [non-type] template-parameters are equivalent [if] they have
+      //   equivalent types ignoring the use of type-constraints for
+      //   placeholder types
+      QualType OldType = S.Context.getUnconstrainedType(OldNTTP->getType());
+      QualType NewType = S.Context.getUnconstrainedType(NewNTTP->getType());
+      if (!S.Context.hasSameType(OldType, NewType)) {
         if (Complain) {
           unsigned NextDiag = diag::err_template_nontype_parm_different_type;
           if (TemplateArgLoc.isValid()) {
@@ -8042,6 +8048,7 @@ static bool MatchTemplateParameterKind(
 
         return false;
       }
+    }
   }
   // For template template parameters, check the template parameter types.
   // The template parameter lists of template template
