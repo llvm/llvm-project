@@ -1430,6 +1430,13 @@ int32_t __tgt_rtl_data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
   return OFFLOAD_SUCCESS;
 }
 
+int32_t __tgt_rtl_launch_kernel_sync(int32_t DeviceId, void *TgtEntryPtr,
+                                     void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                     KernelArgsTy *KernelArgs) {
+  __tgt_async_info *AsyncInfoPtr = nullptr;
+  return __tgt_rtl_launch_kernel(DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets,
+                                 KernelArgs, AsyncInfoPtr);
+}
 int32_t __tgt_rtl_launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
                                 void **TgtArgs, ptrdiff_t *TgtOffsets,
                                 KernelArgsTy *KernelArgs,

@@ -298,25 +298,25 @@ int __tgt_rtl_number_of_devices() {
 #define __tgt_rtl_number_of_devices(...)                                       \
   __tgt_rtl_number_of_devices_impl(__VA_ARGS__)
 
-// static int32_t __tgt_rtl_launch_kernel_sync_impl(int32_t device_id,
-//                                                  void *tgt_entry_ptr,
-//                                                  void **tgt_args,
-//                                                  ptrdiff_t *tgt_offsets,
-//                                                  KernelArgsTy *KernelArgs);
-// int32_t __tgt_rtl_launch_kernel_sync(int32_t device_id, void *tgt_entry_ptr,
-//                                      void **tgt_args, ptrdiff_t *tgt_offsets,
-//                                      KernelArgsTy *KernelArgs) {
-//   auto t = detail::log<int32_t>(
-//       __func__, device_id, tgt_entry_ptr, tgt_args, tgt_offsets,
-//       (int32_t)KernelArgs->NumArgs, (int32_t)KernelArgs->NumTeams[0],
-//       (int32_t)KernelArgs->ThreadLimit[0], (uint64_t)KernelArgs->Tripcount);
-//   int32_t r = __tgt_rtl_launch_kernel_sync_impl(
-//       device_id, tgt_entry_ptr, tgt_args, tgt_offsets, KernelArgs);
-//   t.res(r);
-//   return r;
-// }
-// #define __tgt_rtl_launch_kernel_sync(...) \
-//   __tgt_rtl_launch_kernel_sync_impl(__VA_ARGS__)
+static int32_t __tgt_rtl_launch_kernel_sync_impl(int32_t device_id,
+                                                 void *tgt_entry_ptr,
+                                                 void **tgt_args,
+                                                 ptrdiff_t *tgt_offsets,
+                                                 KernelArgsTy *KernelArgs);
+int32_t __tgt_rtl_launch_kernel_sync(int32_t device_id, void *tgt_entry_ptr,
+                                     void **tgt_args, ptrdiff_t *tgt_offsets,
+                                     KernelArgsTy *KernelArgs) {
+  auto t = detail::log<int32_t>(
+      __func__, device_id, tgt_entry_ptr, tgt_args, tgt_offsets,
+      (int32_t)KernelArgs->NumArgs, (int32_t)KernelArgs->NumTeams[0],
+      (int32_t)KernelArgs->ThreadLimit[0], (uint64_t)KernelArgs->Tripcount);
+  int32_t r = __tgt_rtl_launch_kernel_sync_impl(
+      device_id, tgt_entry_ptr, tgt_args, tgt_offsets, KernelArgs);
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_launch_kernel_sync(...)                                      \
+  __tgt_rtl_launch_kernel_sync_impl(__VA_ARGS__)
 
 static int32_t __tgt_rtl_launch_kernel_impl(int32_t device_id,
                                             void *tgt_entry_ptr,

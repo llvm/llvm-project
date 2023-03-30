@@ -223,6 +223,9 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
   if (!(*((void **)&RTL.launch_kernel) =
             DynLibrary->getAddressOfSymbol("__tgt_rtl_launch_kernel")))
     ValidPlugin = false;
+  if (!(*((void **)&RTL.launch_kernel_sync) =
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_launch_kernel_sync")))
+    ValidPlugin = false;
 
   // Invalid plugin
   if (!ValidPlugin) {
