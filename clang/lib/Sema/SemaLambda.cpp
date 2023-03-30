@@ -389,21 +389,13 @@ buildTypeForLambdaCallOperator(Sema &S, clang::CXXRecordDecl *Class,
 
 void Sema::handleLambdaNumbering(
     CXXRecordDecl *Class, CXXMethodDecl *Method,
-    std::optional<std::tuple<bool, unsigned, unsigned, Decl *>> Mangling) {
-
-  ContextRAII ManglingContext(*this, Class->getDeclContext());
-
-  if (Mangling) {
-    bool HasKnownInternalLinkage;
-    unsigned ManglingNumber, DeviceManglingNumber;
-    Decl *ManglingContextDecl;
-    std::tie(HasKnownInternalLinkage, ManglingNumber, DeviceManglingNumber,
-             ManglingContextDecl) = *Mangling;
-    Class->setLambdaMangling(ManglingNumber, ManglingContextDecl,
-                             HasKnownInternalLinkage);
-    Class->setDeviceLambdaManglingNumber(DeviceManglingNumber);
+    std::optional<CXXRecordDecl::LambdaNumbering> NumberingOverride) {
+  if (NumberingOverride) {
+    Class->setLambdaNumbering(*NumberingOverride);
     return;
   }
+
+  ContextRAII ManglingContext(*this, Class->getDeclContext());
 
   auto getMangleNumberingContext =
       [this](CXXRecordDecl *Class,
@@ -419,11 +411,10 @@ void Sema::handleLambdaNumbering(
     return &Context.getManglingNumberContext(DC);
   };
 
+  CXXRecordDecl::LambdaNumbering Numbering;
   MangleNumberingContext *MCtx;
-  Decl *ManglingContextDecl;
-  std::tie(MCtx, ManglingContextDecl) =
+  std::tie(MCtx, Numbering.ContextDecl) =
       getCurrentMangleNumberContext(Class->getDeclContext());
-  bool HasKnownInternalLinkage = false;
   if (!MCtx && (getLangOpts().CUDA || getLangOpts().SYCLIsDevice ||
                 getLangOpts().SYCLIsHost)) {
     // Force lambda numbering in CUDA/HIP as we need to name lambdas following
@@ -433,15 +424,19 @@ void Sema::handleLambdaNumbering(
     // Also force for SYCL, since we need this for the
     // __builtin_sycl_unique_stable_name implementation, which depends on lambda
     // mangling.
-    MCtx = getMangleNumberingContext(Class, ManglingContextDecl);
+    MCtx = getMangleNumberingContext(Class, Numbering.ContextDecl);
     assert(MCtx && "Retrieving mangle numbering context failed!");
-    HasKnownInternalLinkage = true;
+    Numbering.HasKnownInternalLinkage = true;
   }
   if (MCtx) {
-    unsigned ManglingNumber = MCtx->getManglingNumber(Method);
-    Class->setLambdaMangling(ManglingNumber, ManglingContextDecl,
-                             HasKnownInternalLinkage);
-    Class->setDeviceLambdaManglingNumber(MCtx->getDeviceManglingNumber(Method));
+    Numbering.IndexInContext = MCtx->getNextLambdaIndex();
+    Numbering.ManglingNumber = MCtx->getManglingNumber(Method);
+    Numbering.DeviceManglingNumber = MCtx->getDeviceManglingNumber(Method);
+    Class->setLambdaNumbering(Numbering);
+
+    if (auto *Source =
+            dyn_cast_or_null<ExternalSemaSource>(Context.getExternalSource()))
+      Source->AssignedLambdaNumbering(Class);
   }
 }
 
