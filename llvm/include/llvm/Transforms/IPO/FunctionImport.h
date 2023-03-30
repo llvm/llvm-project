@@ -136,6 +136,10 @@ public:
 /// \p ModuleToDefinedGVSummaries contains for each Module a map
 /// (GUID -> Summary) for every global defined in the module.
 ///
+/// \p isPrevailing is a callback that will be called with a global value's GUID
+/// and summary and should return whether the module corresponding to the
+/// summary contains the linker-prevailing copy of that value.
+///
 /// \p ImportLists will be populated with an entry for every Module we are
 /// importing into. This entry is itself a map that can be passed to
 /// FunctionImporter::importFunctions() above (see description there).
@@ -152,6 +156,10 @@ void ComputeCrossModuleImport(
     StringMap<FunctionImporter::ExportSetTy> &ExportLists);
 
 /// Compute all the imports for the given module using the Index.
+///
+/// \p isPrevailing is a callback that will be called with a global value's GUID
+/// and summary and should return whether the module corresponding to the
+/// summary contains the linker-prevailing copy of that value.
 ///
 /// \p ImportList will be populated with a map that can be passed to
 /// FunctionImporter::importFunctions() above (see description there).
