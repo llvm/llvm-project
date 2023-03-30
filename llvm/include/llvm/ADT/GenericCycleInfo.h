@@ -28,16 +28,12 @@
 #ifndef LLVM_ADT_GENERICCYCLEINFO_H
 #define LLVM_ADT_GENERICCYCLEINFO_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GenericSSAContext.h"
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/iterator.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
-#include <vector>
 
 namespace llvm {
 
@@ -67,7 +63,9 @@ private:
 
   /// Basic blocks that are contained in the cycle, including entry blocks,
   /// and including blocks that are part of a child cycle.
-  std::vector<BlockT *> Blocks;
+  using BlockSetVectorT = SetVector<BlockT *, SmallVector<BlockT *, 8>,
+                                    SmallPtrSet<const BlockT *, 8>>;
+  BlockSetVectorT Blocks;
 
   /// Depth of the cycle in the tree. The root "cycle" is at depth 0.
   ///
@@ -85,7 +83,7 @@ private:
   }
 
   void appendEntry(BlockT *Block) { Entries.push_back(Block); }
-  void appendBlock(BlockT *Block) { Blocks.push_back(Block); }
+  void appendBlock(BlockT *Block) { Blocks.insert(Block); }
 
   GenericCycle(const GenericCycle &) = delete;
   GenericCycle &operator=(const GenericCycle &) = delete;
@@ -110,9 +108,7 @@ public:
   }
 
   /// \brief Return whether \p Block is contained in the cycle.
-  bool contains(const BlockT *Block) const {
-    return is_contained(Blocks, Block);
-  }
+  bool contains(const BlockT *Block) const { return Blocks.contains(Block); }
 
   /// \brief Returns true iff this cycle contains \p C.
   ///
@@ -171,7 +167,7 @@ public:
 
   /// Iteration over blocks in the cycle (including entry blocks).
   //@{
-  using const_block_iterator = typename std::vector<BlockT *>::const_iterator;
+  using const_block_iterator = typename BlockSetVectorT::const_iterator;
 
   const_block_iterator block_begin() const {
     return const_block_iterator{Blocks.begin()};

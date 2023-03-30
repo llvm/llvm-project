@@ -142,7 +142,7 @@ public:
   bool SupportsProfiling() const override { return false; }
   bool IsMathErrnoDefault() const override { return false; }
   bool supportsDebugInfoOption(const llvm::opt::Arg *A) const override;
-  void adjustDebugInfoKind(codegenoptions::DebugInfoKind &DebugInfoKind,
+  void adjustDebugInfoKind(llvm::codegenoptions::DebugInfoKind &DebugInfoKind,
                            const llvm::opt::ArgList &Args) const override;
   // NVPTX supports only DWARF2.
   unsigned GetDefaultDwarfVersion() const override { return 2; }

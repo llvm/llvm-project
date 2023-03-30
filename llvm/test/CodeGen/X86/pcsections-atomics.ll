@@ -9916,4 +9916,67 @@ entry:
   ret void
 }
 
+define i64 @atomic_use_cond(ptr %a) {
+; O0-LABEL: atomic_use_cond:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:  .Lpcsection412:
+; O0-NEXT:    lock decq (%rdi)
+; O0-NEXT:  .Lpcsection413:
+; O0-NEXT:    sete %al
+; O0-NEXT:    testb $1, %al
+; O0-NEXT:    je .LBB197_2
+; O0-NEXT:  # %bb.1: # %then
+; O0-NEXT:    movl $1, %eax
+; O0-NEXT:    retq
+; O0-NEXT:  .LBB197_2: # %else
+; O0-NEXT:    movl $2, %eax
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic_use_cond:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:  .Lpcsection327:
+; O1-NEXT:    lock decq (%rdi)
+; O1-NEXT:    jne .LBB197_2
+; O1-NEXT:  # %bb.1: # %then
+; O1-NEXT:    movl $1, %eax
+; O1-NEXT:    retq
+; O1-NEXT:  .LBB197_2: # %else
+; O1-NEXT:    movl $2, %eax
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic_use_cond:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:  .Lpcsection327:
+; O2-NEXT:    lock decq (%rdi)
+; O2-NEXT:    jne .LBB197_2
+; O2-NEXT:  # %bb.1: # %then
+; O2-NEXT:    movl $1, %eax
+; O2-NEXT:    retq
+; O2-NEXT:  .LBB197_2: # %else
+; O2-NEXT:    movl $2, %eax
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic_use_cond:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:  .Lpcsection327:
+; O3-NEXT:    lock decq (%rdi)
+; O3-NEXT:    jne .LBB197_2
+; O3-NEXT:  # %bb.1: # %then
+; O3-NEXT:    movl $1, %eax
+; O3-NEXT:    retq
+; O3-NEXT:  .LBB197_2: # %else
+; O3-NEXT:    movl $2, %eax
+; O3-NEXT:    retq
+entry:
+  %x = atomicrmw sub ptr %a, i64 1 seq_cst, align 8, !pcsections !0
+  %y = icmp eq i64 %x, 1
+  br i1 %y, label %then, label %else
+
+then:
+  ret i64 1
+
+else:
+  ret i64 2
+}
+
 !0 = !{!"somesection"}

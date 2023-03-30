@@ -586,7 +586,8 @@ void ThumbThunk::writeTo(uint8_t *buf) {
   uint64_t s = getARMThunkDestVA(destination);
   uint64_t p = getThunkTargetSym()->getVA();
   int64_t offset = s - p - 4;
-  write32(buf, 0xb000f000); // b.w S
+  write16(buf + 0, 0xf000); // b.w S
+  write16(buf + 2, 0xb000);
   target->relocateNoSym(buf, R_ARM_THM_JUMP24, offset);
 }
 

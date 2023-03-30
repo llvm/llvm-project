@@ -1382,8 +1382,8 @@ llvm::Value *CGOpenMPRuntime::emitUpdateLocation(CodeGenFunction &CGF,
                                                  unsigned Flags, bool EmitLoc) {
   uint32_t SrcLocStrSize;
   llvm::Constant *SrcLocStr;
-  if ((!EmitLoc &&
-       CGM.getCodeGenOpts().getDebugInfo() == codegenoptions::NoDebugInfo) ||
+  if ((!EmitLoc && CGM.getCodeGenOpts().getDebugInfo() ==
+                       llvm::codegenoptions::NoDebugInfo) ||
       Loc.isInvalid()) {
     SrcLocStr = OMPBuilder.getOrCreateDefaultSrcLocStr(SrcLocStrSize);
   } else {
@@ -9236,7 +9236,8 @@ static void emitOffloadingArrays(
 
     // The information types are only built if there is debug information
     // requested.
-    if (CGM.getCodeGenOpts().getDebugInfo() == codegenoptions::NoDebugInfo) {
+    if (CGM.getCodeGenOpts().getDebugInfo() ==
+        llvm::codegenoptions::NoDebugInfo) {
       Info.RTArgs.MapNamesArray = llvm::Constant::getNullValue(
           llvm::Type::getInt8Ty(CGF.Builder.getContext())->getPointerTo());
     } else {
@@ -9607,7 +9608,8 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
         Info.Pointers[I], CGM.getTypes().ConvertTypeForMem(C.VoidPtrTy));
     llvm::Value *CurSizeArg = Info.Sizes[I];
     llvm::Value *CurNameArg =
-        (CGM.getCodeGenOpts().getDebugInfo() == codegenoptions::NoDebugInfo)
+        (CGM.getCodeGenOpts().getDebugInfo() ==
+         llvm::codegenoptions::NoDebugInfo)
             ? llvm::ConstantPointerNull::get(CGM.VoidPtrTy)
             : emitMappingInformation(MapperCGF, OMPBuilder, Info.Exprs[I]);
 
@@ -10133,8 +10135,8 @@ void CGOpenMPRuntime::emitTargetCall(
     CGOpenMPRuntime::TargetDataInfo Info;
     // Fill up the arrays and create the arguments.
     emitOffloadingArrays(CGF, CombinedInfo, Info, OMPBuilder);
-    bool EmitDebug =
-        CGF.CGM.getCodeGenOpts().getDebugInfo() != codegenoptions::NoDebugInfo;
+    bool EmitDebug = CGF.CGM.getCodeGenOpts().getDebugInfo() !=
+                     llvm::codegenoptions::NoDebugInfo;
     OMPBuilder.emitOffloadingArraysArgument(CGF.Builder, Info.RTArgs, Info,
                                             EmitDebug,
                                             /*ForEndCall=*/false);
@@ -10779,8 +10781,8 @@ void CGOpenMPRuntime::emitTargetDataCalls(
                          /*IsNonContiguous=*/true);
 
     llvm::OpenMPIRBuilder::TargetDataRTArgs RTArgs;
-    bool EmitDebug =
-        CGF.CGM.getCodeGenOpts().getDebugInfo() != codegenoptions::NoDebugInfo;
+    bool EmitDebug = CGF.CGM.getCodeGenOpts().getDebugInfo() !=
+                     llvm::codegenoptions::NoDebugInfo;
     OMPBuilder.emitOffloadingArraysArgument(CGF.Builder, RTArgs, Info,
                                             EmitDebug);
 
@@ -10825,8 +10827,8 @@ void CGOpenMPRuntime::emitTargetDataCalls(
     assert(Info.isValid() && "Invalid data environment closing arguments.");
 
     llvm::OpenMPIRBuilder::TargetDataRTArgs RTArgs;
-    bool EmitDebug =
-        CGF.CGM.getCodeGenOpts().getDebugInfo() != codegenoptions::NoDebugInfo;
+    bool EmitDebug = CGF.CGM.getCodeGenOpts().getDebugInfo() !=
+                     llvm::codegenoptions::NoDebugInfo;
     OMPBuilder.emitOffloadingArraysArgument(CGF.Builder, RTArgs, Info,
                                             EmitDebug,
                                             /*ForEndCall=*/true);
@@ -11049,8 +11051,8 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
                          /*IsNonContiguous=*/true);
     bool RequiresOuterTask = D.hasClausesOfKind<OMPDependClause>() ||
                              D.hasClausesOfKind<OMPNowaitClause>();
-    bool EmitDebug =
-        CGF.CGM.getCodeGenOpts().getDebugInfo() != codegenoptions::NoDebugInfo;
+    bool EmitDebug = CGF.CGM.getCodeGenOpts().getDebugInfo() !=
+                     llvm::codegenoptions::NoDebugInfo;
     OMPBuilder.emitOffloadingArraysArgument(CGF.Builder, Info.RTArgs, Info,
                                             EmitDebug,
                                             /*ForEndCall=*/false);

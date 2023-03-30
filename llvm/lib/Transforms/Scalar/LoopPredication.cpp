@@ -623,7 +623,8 @@ std::optional<Value *> LoopPredication::widenICmpRangeCheckIncrementingLoop(
   auto *FirstIterationCheck = expandCheck(Expander, Guard, RangeCheck.Pred,
                                           GuardStart, GuardLimit);
   IRBuilder<> Builder(findInsertPt(Guard, {FirstIterationCheck, LimitCheck}));
-  return Builder.CreateAnd(FirstIterationCheck, LimitCheck);
+  return Builder.CreateFreeze(
+      Builder.CreateAnd(FirstIterationCheck, LimitCheck));
 }
 
 std::optional<Value *> LoopPredication::widenICmpRangeCheckDecrementingLoop(
@@ -671,7 +672,8 @@ std::optional<Value *> LoopPredication::widenICmpRangeCheckDecrementingLoop(
   auto *LimitCheck = expandCheck(Expander, Guard, LimitCheckPred, LatchLimit,
                                  SE->getOne(Ty));
   IRBuilder<> Builder(findInsertPt(Guard, {FirstIterationCheck, LimitCheck}));
-  return Builder.CreateAnd(FirstIterationCheck, LimitCheck);
+  return Builder.CreateFreeze(
+      Builder.CreateAnd(FirstIterationCheck, LimitCheck));
 }
 
 static void normalizePredicate(ScalarEvolution *SE, Loop *L,
