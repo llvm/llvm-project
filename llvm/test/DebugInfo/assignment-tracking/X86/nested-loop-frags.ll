@@ -121,13 +121,7 @@ entry:
 ; CHECK-NEXT:    DBG_VALUE %stack.1.b.addr, $noreg, ![[b]], !DIExpression(DW_OP_deref)
 ; CHECK-NEXT:    DBG_VALUE %stack.4.e.addr, $noreg, ![[e]], !DIExpression(DW_OP_deref)
 ; CHECK-NEXT:    MOV64mi32 %stack.0.a.addr, 1, $noreg, 0, $noreg, 1
-; CHECK-NEXT:    DBG_VALUE $noreg, $noreg, ![[a]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-; CHECK-NEXT:    DBG_VALUE %stack.0.a.addr, $noreg, ![[a]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT:    DBG_VALUE %stack.0.a.addr, $noreg, ![[a]], !DIExpression(DW_OP_deref)
 ; CHECK-NEXT:    MOV64mi32 %stack.1.b.addr, 1, $noreg, 0, $noreg, 2
-; CHECK-NEXT:    DBG_VALUE $noreg, $noreg, ![[b]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-; CHECK-NEXT:    DBG_VALUE %stack.1.b.addr, $noreg, ![[b]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT:    DBG_VALUE %stack.1.b.addr, $noreg, ![[b]], !DIExpression(DW_OP_deref)
 ; CHECK-NEXT:    DBG_VALUE %stack.4.e.addr, $noreg, ![[e]], !DIExpression(DW_OP_plus_uconst, 4, DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
 ; CHECK-NEXT:    DBG_VALUE %stack.4.e.addr, $noreg, ![[e]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 32)
 ; CHECK-NEXT:    MOV32mi %stack.0.a.addr, 1, $noreg, 0, $noreg, 3
@@ -213,8 +207,6 @@ do.cond:                                          ; preds = %if.then, %if.else
 ; CHECK-LABEL: bb.5.do.cond:
 ; CHECK-NEXT: successors
 ; CHECK-NEXT: {{^ *$}}
-; xCHECK-NEXT:    XXX ?DBG_VALUE %stack.2.c.addr, $noreg, ![[c]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
-; xCHECK-NEXT:    DBG_VALUE 11, $noreg, ![[f]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 ; CHECK-NOT: DBG_VALUE
 ; CHECK:      {{^ *$}}
 
@@ -244,8 +236,6 @@ do.end6:                                          ; preds = %do.cond4
 ; CHECK-NEXT:    DBG_VALUE %stack.0.a.addr, $noreg, ![[a]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 32)
 ; CHECK-NEXT:    DBG_VALUE 4, $noreg, ![[b]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
 ; CHECK-NEXT:    DBG_VALUE %stack.1.b.addr, $noreg, ![[b]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
-; xCHECK-NEXT:    XXX ? DBG_VALUE %stack.3.d.addr, $noreg, ![[d]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
-; xCHECK-NEXT:    DBG_VALUE 11, $noreg, ![[f]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 }
 
 declare !dbg !54 void @_Z4calli(i32 noundef) local_unnamed_addr #1
