@@ -719,12 +719,12 @@ static void PackageXPCArguments(xpc_object_t message, const char *prefix,
                                 const Args &args) {
   size_t count = args.GetArgumentCount();
   char buf[50]; // long enough for 'argXXX'
-  memset(buf, 0, 50);
-  sprintf(buf, "%sCount", prefix);
+  memset(buf, 0, sizeof(buf));
+  snprintf(buf, sizeof(buf), "%sCount", prefix);
   xpc_dictionary_set_int64(message, buf, count);
   for (size_t i = 0; i < count; i++) {
-    memset(buf, 0, 50);
-    sprintf(buf, "%s%zi", prefix, i);
+    memset(buf, 0, sizeof(buf));
+    snprintf(buf, sizeof(buf), "%s%zi", prefix, i);
     xpc_dictionary_set_string(message, buf, args.GetArgumentAtIndex(i));
   }
 }

@@ -4546,7 +4546,8 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
 
   FSI->setHasCXXTry(TryLoc);
 
-  return CXXTryStmt::Create(Context, TryLoc, TryBlock, Handlers);
+  return CXXTryStmt::Create(Context, TryLoc, cast<CompoundStmt>(TryBlock),
+                            Handlers);
 }
 
 StmtResult Sema::ActOnSEHTryBlock(bool IsCXXTry, SourceLocation TryLoc,

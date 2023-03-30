@@ -246,92 +246,6 @@ void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ConsolidateTransposeOptimization, TransposeIsReshape>(context);
 }
 
-struct AddZeroOptimization : public OpRewritePattern<tosa::AddOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::AddOp op,
-                                PatternRewriter &rewriter) const override {
-    auto input1 = op.getInput1();
-    auto input2 = op.getInput2();
-
-    DenseElementsAttr input1Attr;
-    if (matchPattern(input1, m_Constant(&input1Attr)) && input1Attr.isSplat() &&
-        input2.getType() == op.getType()) {
-      if (input1Attr.getType().getElementType().isa<IntegerType>() &&
-          input1Attr.getSplatValue<APInt>().isZero()) {
-        rewriter.replaceOp(op, op.getInput2());
-        return success();
-      }
-    }
-
-    DenseElementsAttr input2Attr;
-    if (matchPattern(input2, m_Constant(&input2Attr)) && input2Attr.isSplat() &&
-        input1.getType() == op.getType()) {
-      if (input2Attr.getType().getElementType().isa<IntegerType>() &&
-          input2Attr.getSplatValue<APInt>().isZero()) {
-        rewriter.replaceOp(op, op.getInput1());
-        return success();
-      }
-    }
-
-    return failure();
-  }
-};
-
-void AddOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                        MLIRContext *context) {
-  results.add<AddZeroOptimization>(context);
-}
-
-struct MulOneOptimization : public OpRewritePattern<tosa::MulOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::MulOp op,
-                                PatternRewriter &rewriter) const override {
-    auto input1 = op.getInput1();
-    auto input2 = op.getInput2();
-
-    DenseElementsAttr input1Attr;
-    if (matchPattern(input1, m_Constant(&input1Attr)) && input1Attr.isSplat() &&
-        input2.getType() == op.getType()) {
-      if (input1Attr.getType().getElementType().isa<FloatType>() &&
-          input1Attr.getSplatValue<APFloat>().isExactlyValue(1)) {
-        rewriter.replaceOp(op, op.getInput2());
-        return success();
-      }
-
-      if (input1Attr.getType().getElementType().isa<IntegerType>() &&
-          matchPattern(input1, m_One())) {
-        rewriter.replaceOp(op, op.getInput2());
-        return success();
-      }
-    }
-
-    DenseElementsAttr input2Attr;
-    if (matchPattern(input2, m_Constant(&input2Attr)) && input2Attr.isSplat() &&
-        input1.getType() == op.getType()) {
-      if (input2Attr.getType().getElementType().isa<FloatType>() &&
-          input2Attr.getSplatValue<APFloat>().isExactlyValue(1)) {
-        rewriter.replaceOp(op, op.getInput1());
-        return success();
-      }
-
-      if (input2Attr.getType().getElementType().isa<IntegerType>() &&
-          matchPattern(input2, m_One())) {
-        rewriter.replaceOp(op, op.getInput1());
-        return success();
-      }
-    }
-
-    return failure();
-  }
-};
-
-void MulOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                        MLIRContext *context) {
-  results.add<MulOneOptimization>(context);
-}
-
 struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -609,44 +523,47 @@ DenseElementsAttr binaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
   return {};
 }
 
+static bool isSplatZero(Type elemType, DenseElementsAttr val) {
+  if (elemType.isa<FloatType>())
+    return val && val.isSplat() && val.getSplatValue<APFloat>().isZero();
+  if (elemType.isa<IntegerType>())
+    return val && val.isSplat() && val.getSplatValue<APInt>().isZero();
+  return false;
+}
+
+static bool isSplatOne(Type elemType, DenseElementsAttr val, int64_t shift) {
+  if (elemType.isa<FloatType>())
+    return val && val.isSplat() &&
+           val.getSplatValue<APFloat>().isExactlyValue(1.0);
+  if (elemType.isa<IntegerType>()) {
+    const int64_t shifted = 1LL << shift;
+    return val && val.isSplat() &&
+           val.getSplatValue<APInt>().getSExtValue() == shifted;
+  }
+  return false;
+}
+
 OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
   auto lhsTy = getInput1().getType().dyn_cast<RankedTensorType>();
   auto rhsTy = getInput2().getType().dyn_cast<RankedTensorType>();
   auto resultTy = getType().dyn_cast<RankedTensorType>();
   if (!lhsTy || !rhsTy || !resultTy)
     return {};
-  if (lhsTy != rhsTy)
-    return {};
 
   auto resultETy = resultTy.getElementType();
   auto lhsAttr = adaptor.getInput1().dyn_cast_or_null<DenseElementsAttr>();
   auto rhsAttr = adaptor.getInput2().dyn_cast_or_null<DenseElementsAttr>();
 
-  if (lhsAttr && lhsAttr.isSplat() && resultETy.isa<FloatType>()) {
-    if (lhsAttr.getSplatValue<APFloat>().isZero())
-      return getInput2();
-  }
-
-  if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<FloatType>()) {
-    if (rhsAttr.getSplatValue<APFloat>().isZero())
-      return getInput1();
-  }
-
-  if (lhsAttr && lhsAttr.isSplat() && resultETy.isa<IntegerType>()) {
-    if (lhsAttr.getSplatValue<APInt>().isZero())
-      return getInput2();
-  }
-
-  if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<IntegerType>()) {
-    if (rhsAttr.getSplatValue<APInt>().isZero())
-      return getInput1();
-  }
+  if (lhsTy == resultTy && isSplatZero(resultETy, rhsAttr))
+    return getInput1();
+  if (rhsTy == resultTy && isSplatZero(resultETy, lhsAttr))
+    return getInput2();
 
   if (!lhsAttr || !rhsAttr)
     return {};
 
   return binaryFolder<std::plus<APInt>, std::plus<APFloat>>(lhsAttr, rhsAttr,
-                                                            lhsTy);
+                                                            resultTy);
 }
 
 OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
@@ -724,50 +641,26 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
   auto resultTy = getType().dyn_cast<RankedTensorType>();
   if (!lhsTy || !rhsTy || !resultTy)
     return {};
-  if (lhsTy != rhsTy)
-    return {};
 
   auto resultETy = resultTy.getElementType();
   auto lhsAttr = adaptor.getInput1().dyn_cast_or_null<DenseElementsAttr>();
   auto rhsAttr = adaptor.getInput2().dyn_cast_or_null<DenseElementsAttr>();
 
-  if (lhsAttr && lhsAttr.isSplat() && resultETy.isa<FloatType>()) {
-    auto val = lhsAttr.getSplatValue<APFloat>();
-    if (val.isZero())
+  const int64_t shift = resultETy.isa<IntegerType>() ? getShift() : 0;
+  if (rhsTy == resultTy) {
+    if (isSplatZero(resultETy, lhsAttr))
       return lhsAttr;
-    if (val.isExactlyValue(1.0))
+    if (isSplatOne(resultETy, lhsAttr, shift))
       return rhs;
   }
-
-  if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<FloatType>()) {
-    auto val = rhsAttr.getSplatValue<APFloat>();
-    if (val.isZero())
+  if (lhsTy == resultTy) {
+    if (isSplatZero(resultETy, rhsAttr))
       return rhsAttr;
-    if (val.isExactlyValue(1.0))
+    if (isSplatOne(resultETy, rhsAttr, shift))
       return lhs;
   }
 
-  if (lhsAttr && lhsAttr.isSplat() && resultETy.isa<IntegerType>()) {
-    auto val = lhsAttr.getSplatValue<APInt>();
-    if (val.isZero())
-      return lhsAttr;
-    const int64_t shift = getShift();
-    const int64_t shifted = 1LL << shift;
-    if (val.getSExtValue() == shifted)
-      return rhs;
-  }
-
-  if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<IntegerType>()) {
-    auto val = rhsAttr.getSplatValue<APInt>();
-    const int64_t shift = getShift();
-    const int64_t shifted = 1LL << shift;
-    if (val.isZero())
-      return rhsAttr;
-    if (val.getSExtValue() == shifted)
-      return lhs;
-  }
-
-  return mulBinaryFolder(lhsAttr, rhsAttr, lhsTy, getShift());
+  return mulBinaryFolder(lhsAttr, rhsAttr, resultTy, getShift());
 }
 
 OpFoldResult SubOp::fold(FoldAdaptor adaptor) {
@@ -776,32 +669,24 @@ OpFoldResult SubOp::fold(FoldAdaptor adaptor) {
   auto resultTy = getType().dyn_cast<RankedTensorType>();
   if (!lhsTy || !rhsTy || !resultTy)
     return {};
-  if (lhsTy != rhsTy)
-    return {};
 
   auto resultETy = resultTy.getElementType();
   auto lhsAttr = adaptor.getInput1().dyn_cast_or_null<DenseElementsAttr>();
   auto rhsAttr = adaptor.getInput2().dyn_cast_or_null<DenseElementsAttr>();
 
-  if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<FloatType>()) {
-    if (rhsAttr.getSplatValue<APFloat>().isZero())
-      return getInput1();
-  }
-
-  if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<IntegerType>()) {
-    if (rhsAttr.getSplatValue<APInt>().isZero())
-      return getInput1();
-  }
+  if (lhsTy == resultTy && isSplatZero(resultETy, rhsAttr))
+    return getInput1();
 
   if (!lhsAttr || !rhsAttr)
     return {};
 
   return binaryFolder<std::minus<APInt>, std::minus<APFloat>>(lhsAttr, rhsAttr,
-                                                              lhsTy);
+                                                              resultTy);
 }
 
 namespace {
-template <typename Cmp> struct ComparisonFold {
+template <typename Cmp>
+struct ComparisonFold {
   ComparisonFold() = default;
   APInt operator()(const APInt &l, const APInt &r) {
     return APInt(1, Cmp()(l, r));
@@ -1045,6 +930,11 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
     return getInput();
 
   if (!adaptor.getInput())
+    return {};
+
+  // Cannot create an ElementsAttr from non-int/float/index types
+  if (!inputTy.getElementType().isIntOrIndexOrFloat() ||
+      !outputTy.getElementType().isIntOrIndexOrFloat())
     return {};
 
   auto operand = adaptor.getInput().cast<ElementsAttr>();
