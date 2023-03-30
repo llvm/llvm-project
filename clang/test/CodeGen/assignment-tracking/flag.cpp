@@ -16,11 +16,11 @@
 //// Disabled at O0 unless forced.
 // RUN: %clang_cc1 -triple x86_64-none-linux-gnu -debug-info-kind=standalone   \
 // RUN:     -emit-llvm %s -o - -fexperimental-assignment-tracking=enabled      \
-// RUN:     -O0                                                                \
+// RUN:     -O0 -disable-O0-optnone                                           \
 // RUN: | FileCheck %s --check-prefixes=DISABLE
 // RUN: %clang_cc1 -triple x86_64-none-linux-gnu -debug-info-kind=standalone   \
 // RUN:     -emit-llvm %s -o - -fexperimental-assignment-tracking=forced       \
-// RUN:     -O0                                                                \
+// RUN:     -O0 -disable-O0-optnone                                            \
 // RUN: | FileCheck %s --check-prefixes=ENABLE
 
 //// Disabled for LTO and thinLTO unless forced.
