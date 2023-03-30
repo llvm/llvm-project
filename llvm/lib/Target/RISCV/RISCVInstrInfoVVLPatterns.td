@@ -169,13 +169,21 @@ def SDT_RISCVFPExtendOp_VL  : SDTypeProfile<1, 3, [
 ]>;
 
 def riscv_fpround_vl : SDNode<"RISCVISD::FP_ROUND_VL", SDT_RISCVFPRoundOp_VL>;
+def riscv_strict_fpround_vl : SDNode<"RISCVISD::STRICT_FP_ROUND_VL", SDT_RISCVFPRoundOp_VL, [SDNPHasChain]>;
 def riscv_fpextend_vl : SDNode<"RISCVISD::FP_EXTEND_VL", SDT_RISCVFPExtendOp_VL>;
 def riscv_strict_fpextend_vl : SDNode<"RISCVISD::STRICT_FP_EXTEND_VL", SDT_RISCVFPExtendOp_VL, [SDNPHasChain]>;
 def riscv_fncvt_rod_vl : SDNode<"RISCVISD::VFNCVT_ROD_VL", SDT_RISCVFPRoundOp_VL>;
+def riscv_strict_fncvt_rod_vl : SDNode<"RISCVISD::STRICT_VFNCVT_ROD_VL", SDT_RISCVFPRoundOp_VL, [SDNPHasChain]>;
 
+def any_riscv_fpround_vl : PatFrags<(ops node:$src, node:$mask, node:$vl),
+                            [(riscv_fpround_vl node:$src, node:$mask, node:$vl),
+                             (riscv_strict_fpround_vl node:$src, node:$mask, node:$vl)]>;
 def any_riscv_fpextend_vl : PatFrags<(ops node:$src, node:$mask, node:$vl),
                             [(riscv_fpextend_vl node:$src, node:$mask, node:$vl),
                              (riscv_strict_fpextend_vl node:$src, node:$mask, node:$vl)]>;
+def any_riscv_fncvt_rod_vl : PatFrags<(ops node:$src, node:$mask, node:$vl),
+                            [(riscv_fncvt_rod_vl node:$src, node:$mask, node:$vl),
+                             (riscv_strict_fncvt_rod_vl node:$src, node:$mask, node:$vl)]>;
 
 def SDT_RISCVFP2IOp_VL  : SDTypeProfile<1, 3, [
   SDTCisInt<0>, SDTCisFP<1>, SDTCisSameNumEltsAs<0, 1>,
@@ -2048,16 +2056,16 @@ foreach fvti = AllFloatVectors in {
   foreach fvtiToFWti = AllWidenableFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
-    def : Pat<(fvti.Vector (riscv_fpround_vl (fwti.Vector fwti.RegClass:$rs1),
-                                             (fwti.Mask V0),
-                                             VLOpFrag)),
+    def : Pat<(fvti.Vector (any_riscv_fpround_vl
+                               (fwti.Vector fwti.RegClass:$rs1),
+                               (fwti.Mask V0), VLOpFrag)),
               (!cast<Instruction>("PseudoVFNCVT_F_F_W_"#fvti.LMul.MX#"_MASK")
                   (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
                   (fwti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;
 
-    def : Pat<(fvti.Vector (riscv_fncvt_rod_vl (fwti.Vector fwti.RegClass:$rs1),
-                                               (fwti.Mask V0),
-                                               VLOpFrag)),
+    def : Pat<(fvti.Vector (any_riscv_fncvt_rod_vl
+                               (fwti.Vector fwti.RegClass:$rs1),
+                               (fwti.Mask V0), VLOpFrag)),
               (!cast<Instruction>("PseudoVFNCVT_ROD_F_F_W_"#fvti.LMul.MX#"_MASK")
                   (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
                   (fwti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;
