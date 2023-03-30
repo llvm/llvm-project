@@ -47,4 +47,40 @@ def ReductionClauseInterface : OpInterface<"ReductionClauseInterface"> {
   ];
 }
 
+def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
+  let description = [{
+    Operations that represent a module for offloading (host or device) 
+    should have this interface.
+  }];
+
+  let cppNamespace = "::mlir::omp";
+
+  let methods = [
+    InterfaceMethod<
+      /*description=*/[{
+        Set the attribute IsDeviceAttr on the current module with the 
+        specified boolean argument. 
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setIsDevice", 
+      (ins "bool":$isDevice), [{}], [{
+        $_op->setAttr(
+          mlir::StringAttr::get($_op->getContext(), llvm::Twine{"omp.is_device"}),
+            mlir::omp::IsDeviceAttr::get($_op->getContext(), isDevice));
+      }]>,
+      InterfaceMethod<
+      /*description=*/[{
+        Get the IsDeviceAttr attribute on the current module if it exists and return
+        its value, if it doesn't exit it returns false by default.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"getIsDevice", 
+      (ins), [{}], [{
+        if (Attribute isDevice = $_op->getAttr("omp.is_device"))
+          if (isDevice.isa<mlir::omp::IsDeviceAttr>())
+            return isDevice.dyn_cast<IsDeviceAttr>().getIsDevice();
+      }]>,
+  ];
+}
+
 #endif // OpenMP_OPS_INTERFACES
