@@ -2,7 +2,7 @@
 ; RUN: opt -S -codegenprepare < %s | FileCheck %s
 ; REQUIRES: aarch64-registered-target
 
-; Test that `%addr` is not sunk, since the number of memory uses to scan exceeds the limit.
+; Test that `%addr` is sunk, after we've increased limit on the number of the memory uses to scan.
 
 target triple = "aarch64-linux"
 
@@ -11,30 +11,28 @@ declare void @g(...)
 define void @f(ptr %p) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 4
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       exit:
-; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T1:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T2:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T3:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T4:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T5:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T6:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T7:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T8:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T9:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T10:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T11:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T12:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T13:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T14:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T15:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T16:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T17:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[T18:%.*]] = load i32, ptr [[ADDR]], align 4
-; CHECK-NEXT:    [[ADDR_1:%.*]] = getelementptr i8, ptr [[ADDR]], i32 4
-; CHECK-NEXT:    [[T19:%.*]] = load i32, ptr [[ADDR_1]], align 4
+; CHECK-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 4
+; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T2:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T4:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T5:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T6:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T7:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T8:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T9:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T10:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T11:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T12:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T13:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T14:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T15:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T16:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T17:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[T18:%.*]] = load i32, ptr [[SUNKADDR]], align 4
+; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[T19:%.*]] = load i32, ptr [[SUNKADDR1]], align 4
 ; CHECK-NEXT:    call void @g(i32 [[T0]], i32 [[T1]], i32 [[T2]], i32 [[T3]], i32 [[T4]], i32 [[T5]], i32 [[T6]], i32 [[T7]], i32 [[T8]], i32 [[T9]], i32 [[T10]], i32 [[T11]], i32 [[T12]], i32 [[T13]], i32 [[T14]], i32 [[T15]], i32 [[T16]], i32 [[T17]], i32 [[T18]], i32 [[T19]])
 ; CHECK-NEXT:    ret void
 ;
