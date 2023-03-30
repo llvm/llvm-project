@@ -626,6 +626,9 @@ public:
   std::string getCounterAggTmpAsString();
 
   mlir::Type ConvertType(clang::QualType T);
+  mlir::Type ConvertType(const TypeDecl *T) {
+    return ConvertType(getContext().getTypeDeclType(T));
+  }
 
   ///  Return the TypeEvaluationKind of QualType \c T.
   static TypeEvaluationKind getEvaluationKind(clang::QualType T);
@@ -893,6 +896,12 @@ public:
     // resolution of the relevant core issue.
     return AggValueSlot::DoesNotOverlap;
   }
+
+  /// Determine whether a base class initialization may overlap some other
+  /// object.
+  AggValueSlot::Overlap_t getOverlapForBaseInit(const CXXRecordDecl *RD,
+                                                const CXXRecordDecl *BaseRD,
+                                                bool IsVirtual);
 
   /// Get an appropriate 'undef' rvalue for the given type.
   /// TODO: What's the equivalent for MLIR? Currently we're only using this for
@@ -1169,6 +1178,13 @@ public:
     return CXXThisValue;
   }
   Address LoadCXXThisAddress();
+
+  /// Convert the given pointer to a complete class to the given direct base.
+  Address getAddressOfDirectBaseInCompleteClass(mlir::Location loc,
+                                                Address Value,
+                                                const CXXRecordDecl *Derived,
+                                                const CXXRecordDecl *Base,
+                                                bool BaseIsVirtual);
 
   /// Emit code for the start of a function.
   /// \param Loc       The location to be associated with the function.
