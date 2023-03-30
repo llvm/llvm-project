@@ -83,7 +83,7 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; RV32IA-NEXT:    bne a4, a5, .LBB0_1
 ; RV32IA-NEXT:  # %bb.4: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB0_3 Depth=2
-; RV32IA-NEXT:    sc.w.aqrl a7, a6, (a2)
+; RV32IA-NEXT:    sc.w.rl a7, a6, (a2)
 ; RV32IA-NEXT:    bnez a7, .LBB0_3
 ; RV32IA-NEXT:  # %bb.5: # %atomicrmw.start
 ; RV32IA-NEXT:  # %bb.2: # %atomicrmw.end
@@ -159,7 +159,7 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; RV64IA-NEXT:    bne a4, a6, .LBB0_1
 ; RV64IA-NEXT:  # %bb.4: # %atomicrmw.start
 ; RV64IA-NEXT:    # in Loop: Header=BB0_3 Depth=2
-; RV64IA-NEXT:    sc.w.aqrl a7, a5, (a2)
+; RV64IA-NEXT:    sc.w.rl a7, a5, (a2)
 ; RV64IA-NEXT:    bnez a7, .LBB0_3
 ; RV64IA-NEXT:  # %bb.5: # %atomicrmw.start
 ; RV64IA-NEXT:  # %bb.2: # %atomicrmw.end
@@ -245,7 +245,7 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; RV32IA-NEXT:    bne a5, a6, .LBB1_1
 ; RV32IA-NEXT:  # %bb.4: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB1_3 Depth=2
-; RV32IA-NEXT:    sc.w.aqrl t0, a7, (a2)
+; RV32IA-NEXT:    sc.w.rl t0, a7, (a2)
 ; RV32IA-NEXT:    bnez t0, .LBB1_3
 ; RV32IA-NEXT:  # %bb.5: # %atomicrmw.start
 ; RV32IA-NEXT:  # %bb.2: # %atomicrmw.end
@@ -327,7 +327,7 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; RV64IA-NEXT:    bne a5, a7, .LBB1_1
 ; RV64IA-NEXT:  # %bb.4: # %atomicrmw.start
 ; RV64IA-NEXT:    # in Loop: Header=BB1_3 Depth=2
-; RV64IA-NEXT:    sc.w.aqrl t0, a6, (a2)
+; RV64IA-NEXT:    sc.w.rl t0, a6, (a2)
 ; RV64IA-NEXT:    bnez t0, .LBB1_3
 ; RV64IA-NEXT:  # %bb.5: # %atomicrmw.start
 ; RV64IA-NEXT:  # %bb.2: # %atomicrmw.end
@@ -393,7 +393,7 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; RV32IA-NEXT:    bne a2, a3, .LBB2_1
 ; RV32IA-NEXT:  # %bb.4: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB2_3 Depth=2
-; RV32IA-NEXT:    sc.w.aqrl a5, a4, (a0)
+; RV32IA-NEXT:    sc.w.rl a5, a4, (a0)
 ; RV32IA-NEXT:    bnez a5, .LBB2_3
 ; RV32IA-NEXT:  # %bb.5: # %atomicrmw.start
 ; RV32IA-NEXT:  # %bb.2: # %atomicrmw.end
@@ -456,7 +456,7 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; RV64IA-NEXT:    bne a2, a4, .LBB2_1
 ; RV64IA-NEXT:  # %bb.4: # %atomicrmw.start
 ; RV64IA-NEXT:    # in Loop: Header=BB2_3 Depth=2
-; RV64IA-NEXT:    sc.w.aqrl a5, a3, (a0)
+; RV64IA-NEXT:    sc.w.rl a5, a3, (a0)
 ; RV64IA-NEXT:    bnez a5, .LBB2_3
 ; RV64IA-NEXT:  # %bb.5: # %atomicrmw.start
 ; RV64IA-NEXT:  # %bb.2: # %atomicrmw.end
@@ -634,7 +634,7 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; RV64IA-NEXT:    bne a2, a3, .LBB3_1
 ; RV64IA-NEXT:  # %bb.4: # %atomicrmw.start
 ; RV64IA-NEXT:    # in Loop: Header=BB3_3 Depth=2
-; RV64IA-NEXT:    sc.d.aqrl a5, a4, (a0)
+; RV64IA-NEXT:    sc.d.rl a5, a4, (a0)
 ; RV64IA-NEXT:    bnez a5, .LBB3_3
 ; RV64IA-NEXT:  # %bb.5: # %atomicrmw.start
 ; RV64IA-NEXT:  # %bb.2: # %atomicrmw.end
@@ -717,7 +717,7 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; RV32IA-NEXT:    bne a6, a5, .LBB4_7
 ; RV32IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB4_5 Depth=2
-; RV32IA-NEXT:    sc.w.aqrl t0, a7, (a2)
+; RV32IA-NEXT:    sc.w.rl t0, a7, (a2)
 ; RV32IA-NEXT:    bnez t0, .LBB4_5
 ; RV32IA-NEXT:  .LBB4_7: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB4_2 Depth=1
@@ -814,7 +814,7 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; RV64IA-NEXT:    bne a4, a6, .LBB4_7
 ; RV64IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV64IA-NEXT:    # in Loop: Header=BB4_5 Depth=2
-; RV64IA-NEXT:    sc.w.aqrl t0, a7, (a2)
+; RV64IA-NEXT:    sc.w.rl t0, a7, (a2)
 ; RV64IA-NEXT:    bnez t0, .LBB4_5
 ; RV64IA-NEXT:  .LBB4_7: # %atomicrmw.start
 ; RV64IA-NEXT:    # in Loop: Header=BB4_2 Depth=1
@@ -919,7 +919,7 @@ define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; RV32IA-NEXT:    bne a7, a6, .LBB5_7
 ; RV32IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB5_5 Depth=2
-; RV32IA-NEXT:    sc.w.aqrl t1, t0, (a2)
+; RV32IA-NEXT:    sc.w.rl t1, t0, (a2)
 ; RV32IA-NEXT:    bnez t1, .LBB5_5
 ; RV32IA-NEXT:  .LBB5_7: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB5_2 Depth=1
@@ -1022,7 +1022,7 @@ define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; RV64IA-NEXT:    bne a5, a7, .LBB5_7
 ; RV64IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV64IA-NEXT:    # in Loop: Header=BB5_5 Depth=2
-; RV64IA-NEXT:    sc.w.aqrl t1, t0, (a2)
+; RV64IA-NEXT:    sc.w.rl t1, t0, (a2)
 ; RV64IA-NEXT:    bnez t1, .LBB5_5
 ; RV64IA-NEXT:  .LBB5_7: # %atomicrmw.start
 ; RV64IA-NEXT:    # in Loop: Header=BB5_2 Depth=1
@@ -1105,7 +1105,7 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; RV32IA-NEXT:    bne a2, a3, .LBB6_7
 ; RV32IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB6_5 Depth=2
-; RV32IA-NEXT:    sc.w.aqrl a5, a4, (a0)
+; RV32IA-NEXT:    sc.w.rl a5, a4, (a0)
 ; RV32IA-NEXT:    bnez a5, .LBB6_5
 ; RV32IA-NEXT:  .LBB6_7: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB6_2 Depth=1
@@ -1188,7 +1188,7 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; RV64IA-NEXT:    bne a2, a4, .LBB6_7
 ; RV64IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV64IA-NEXT:    # in Loop: Header=BB6_5 Depth=2
-; RV64IA-NEXT:    sc.w.aqrl a6, a5, (a0)
+; RV64IA-NEXT:    sc.w.rl a6, a5, (a0)
 ; RV64IA-NEXT:    bnez a6, .LBB6_5
 ; RV64IA-NEXT:  .LBB6_7: # %atomicrmw.start
 ; RV64IA-NEXT:    # in Loop: Header=BB6_2 Depth=1
@@ -1396,7 +1396,7 @@ define i64 @atomicrmw_udec_wrap_i64(ptr %ptr, i64 %val) {
 ; RV64IA-NEXT:    bne a2, a3, .LBB7_7
 ; RV64IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV64IA-NEXT:    # in Loop: Header=BB7_5 Depth=2
-; RV64IA-NEXT:    sc.d.aqrl a5, a4, (a0)
+; RV64IA-NEXT:    sc.d.rl a5, a4, (a0)
 ; RV64IA-NEXT:    bnez a5, .LBB7_5
 ; RV64IA-NEXT:  .LBB7_7: # %atomicrmw.start
 ; RV64IA-NEXT:    # in Loop: Header=BB7_2 Depth=1
