@@ -1050,3 +1050,18 @@ void test() {
 
 }
 }
+
+namespace GH60286 {
+
+struct A {
+  int i = 0;
+
+  consteval A() {}
+  A(const A&) { i = 1; }
+  consteval int f() { return i; }
+};
+
+constexpr auto B = A{A{}}.f();
+static_assert(B == 0);
+
+}
