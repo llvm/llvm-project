@@ -153,6 +153,9 @@ Changes to the RISC-V Backend
 * Assembler support for RV64E was added.
 * Assembler support was added for the experimental Zicond (integer conditional
   operations) extension.
+* I, F, D, and A extension versions have been update to the 20191214 spec versions.
+  New version I2.1, F2.2, D2.2, A2.1. This should not impact code generation.
+  Immpacts versions accepted in ``-march`` and reported in ELF attributes.
 
 Changes to the WebAssembly Backend
 ----------------------------------
