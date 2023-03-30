@@ -39,13 +39,17 @@ struct RISCVSupportedExtension {
 
 static constexpr StringLiteral AllStdExts = "mafdqlcbkjtpvnh";
 
+static const char *RISCVGImplications[] = {
+  "i", "m", "a", "f", "d", "zicsr", "zifencei"
+};
+
 static const RISCVSupportedExtension SupportedExtensions[] = {
-    {"i", RISCVExtensionVersion{2, 0}},
+    {"i", RISCVExtensionVersion{2, 1}},
     {"e", RISCVExtensionVersion{2, 0}},
     {"m", RISCVExtensionVersion{2, 0}},
-    {"a", RISCVExtensionVersion{2, 0}},
-    {"f", RISCVExtensionVersion{2, 0}},
-    {"d", RISCVExtensionVersion{2, 0}},
+    {"a", RISCVExtensionVersion{2, 1}},
+    {"f", RISCVExtensionVersion{2, 2}},
+    {"d", RISCVExtensionVersion{2, 2}},
     {"c", RISCVExtensionVersion{2, 0}},
 
     {"h", RISCVExtensionVersion{1, 0}},
@@ -618,7 +622,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   case 'i':
     break;
   case 'g':
-    // g = imafd
+    // g expands to extensions in RISCVGImplications.
     if (Arch.size() > 5 && isDigit(Arch[5]))
       return createStringError(errc::invalid_argument,
                                "version not supported for 'g'");
@@ -652,11 +656,12 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     // No matter which version is given to `g`, we always set imafd to default
     // version since the we don't have clear version scheme for that on
     // ISA spec.
-    for (const auto *Ext : {"i", "m", "a", "f", "d"})
+    for (const auto *Ext : RISCVGImplications) {
       if (auto Version = findDefaultVersion(Ext))
         ISAInfo->addExtension(Ext, Version->Major, Version->Minor);
       else
         llvm_unreachable("Default extension version not found?");
+    }
   } else {
     // Baseline is `i` or `e`
     if (auto E = getExtensionVersion(
@@ -897,10 +902,12 @@ Error RISCVISAInfo::checkDependency() {
   return Error::success();
 }
 
+static const char *ImpliedExtsF[] = {"zicsr"};
 static const char *ImpliedExtsD[] = {"f"};
 static const char *ImpliedExtsV[] = {"zvl128b", "zve64d", "f", "d"};
 static const char *ImpliedExtsZfhmin[] = {"f"};
 static const char *ImpliedExtsZfh[] = {"f"};
+static const char *ImpliedExtsZfinx[] = {"zicsr"};
 static const char *ImpliedExtsZdinx[] = {"zfinx"};
 static const char *ImpliedExtsZhinxmin[] = {"zfinx"};
 static const char *ImpliedExtsZhinx[] = {"zfinx"};
@@ -908,7 +915,7 @@ static const char *ImpliedExtsZve64d[] = {"zve64f"};
 static const char *ImpliedExtsZve64f[] = {"zve64x", "zve32f"};
 static const char *ImpliedExtsZve64x[] = {"zve32x", "zvl64b"};
 static const char *ImpliedExtsZve32f[] = {"zve32x"};
-static const char *ImpliedExtsZve32x[] = {"zvl32b"};
+static const char *ImpliedExtsZve32x[] = {"zvl32b", "zicsr"};
 static const char *ImpliedExtsZvl65536b[] = {"zvl32768b"};
 static const char *ImpliedExtsZvl32768b[] = {"zvl16384b"};
 static const char *ImpliedExtsZvl16384b[] = {"zvl8192b"};
@@ -946,6 +953,7 @@ struct ImpliedExtsEntry {
 // Note: The table needs to be sorted by name.
 static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"d"}, {ImpliedExtsD}},
+    {{"f"}, {ImpliedExtsF}},
     {{"v"}, {ImpliedExtsV}},
     {{"xtheadvdot"}, {ImpliedExtsXTHeadVdot}},
     {{"zcb"}, {ImpliedExtsZcb}},
@@ -953,6 +961,7 @@ static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"zfa"}, {ImpliedExtsZfa}},
     {{"zfh"}, {ImpliedExtsZfh}},
     {{"zfhmin"}, {ImpliedExtsZfhmin}},
+    {{"zfinx"}, {ImpliedExtsZfinx}},
     {{"zhinx"}, {ImpliedExtsZhinx}},
     {{"zhinxmin"}, {ImpliedExtsZhinxmin}},
     {{"zk"}, {ImpliedExtsZk}},
