@@ -5794,12 +5794,19 @@ QualType ASTContext::getAutoTypeInternal(
     if (!DeducedType.isNull()) {
       Canon = DeducedType.getCanonicalType();
     } else if (TypeConstraintConcept) {
-      Canon = getAutoTypeInternal(QualType(), Keyword, IsDependent, IsPack,
-                                  nullptr, {}, true);
-      // Find the insert position again.
-      [[maybe_unused]] auto *Nothing =
-          AutoTypes.FindNodeOrInsertPos(ID, InsertPos);
-      assert(!Nothing && "canonical type broken");
+      bool AnyNonCanonArgs = false;
+      ConceptDecl *CanonicalConcept = TypeConstraintConcept->getCanonicalDecl();
+      auto CanonicalConceptArgs = ::getCanonicalTemplateArguments(
+          *this, TypeConstraintArgs, AnyNonCanonArgs);
+      if (CanonicalConcept != TypeConstraintConcept || AnyNonCanonArgs) {
+        Canon =
+            getAutoTypeInternal(QualType(), Keyword, IsDependent, IsPack,
+                                CanonicalConcept, CanonicalConceptArgs, true);
+        // Find the insert position again.
+        [[maybe_unused]] auto *Nothing =
+            AutoTypes.FindNodeOrInsertPos(ID, InsertPos);
+        assert(!Nothing && "canonical type broken");
+      }
     }
   }
 
