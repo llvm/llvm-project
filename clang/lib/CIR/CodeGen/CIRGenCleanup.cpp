@@ -57,7 +57,67 @@ void CIRGenFunction::buildCXXTemporary(const CXXTemporary *Temporary,
 
 void EHScopeStack::Cleanup::anchor() {}
 
+/// Push an entry of the given size onto this protected-scope stack.
+char *EHScopeStack::allocate(size_t Size) {
+  Size = llvm::alignTo(Size, ScopeStackAlignment);
+  if (!StartOfBuffer) {
+    unsigned Capacity = 1024;
+    while (Capacity < Size)
+      Capacity *= 2;
+    StartOfBuffer = new char[Capacity];
+    StartOfData = EndOfBuffer = StartOfBuffer + Capacity;
+  } else if (static_cast<size_t>(StartOfData - StartOfBuffer) < Size) {
+    unsigned CurrentCapacity = EndOfBuffer - StartOfBuffer;
+    unsigned UsedCapacity = CurrentCapacity - (StartOfData - StartOfBuffer);
+
+    unsigned NewCapacity = CurrentCapacity;
+    do {
+      NewCapacity *= 2;
+    } while (NewCapacity < UsedCapacity + Size);
+
+    char *NewStartOfBuffer = new char[NewCapacity];
+    char *NewEndOfBuffer = NewStartOfBuffer + NewCapacity;
+    char *NewStartOfData = NewEndOfBuffer - UsedCapacity;
+    memcpy(NewStartOfData, StartOfData, UsedCapacity);
+    delete[] StartOfBuffer;
+    StartOfBuffer = NewStartOfBuffer;
+    EndOfBuffer = NewEndOfBuffer;
+    StartOfData = NewStartOfData;
+  }
+
+  assert(StartOfBuffer + Size <= StartOfData);
+  StartOfData -= Size;
+  return StartOfData;
+}
+
 void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
-  llvm_unreachable("NYI");
-  return nullptr;
+  char *Buffer = allocate(EHCleanupScope::getSizeForCleanupSize(Size));
+  bool IsNormalCleanup = Kind & NormalCleanup;
+  bool IsEHCleanup = Kind & EHCleanup;
+  bool IsLifetimeMarker = Kind & LifetimeMarker;
+
+  // Per C++ [except.terminate], it is implementation-defined whether none,
+  // some, or all cleanups are called before std::terminate. Thus, when
+  // terminate is the current EH scope, we may skip adding any EH cleanup
+  // scopes.
+  if (InnermostEHScope != stable_end() &&
+      find(InnermostEHScope)->getKind() == EHScope::Terminate)
+    IsEHCleanup = false;
+
+  EHCleanupScope *Scope = new (Buffer)
+      EHCleanupScope(IsNormalCleanup, IsEHCleanup, Size, BranchFixups.size(),
+                     InnermostNormalCleanup, InnermostEHScope);
+  if (IsNormalCleanup)
+    InnermostNormalCleanup = stable_begin();
+  if (IsEHCleanup)
+    InnermostEHScope = stable_begin();
+  if (IsLifetimeMarker)
+    llvm_unreachable("NYI");
+
+  // With Windows -EHa, Invoke llvm.seh.scope.begin() for EHCleanup
+  if (CGF->getLangOpts().EHAsynch && IsEHCleanup && !IsLifetimeMarker &&
+      CGF->getTarget().getCXXABI().isMicrosoft())
+    llvm_unreachable("NYI");
+
+  return Scope->getCleanupBuffer();
 }
