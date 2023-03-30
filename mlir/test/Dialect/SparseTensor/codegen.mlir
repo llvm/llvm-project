@@ -663,6 +663,22 @@ func.func @sparse_nop_convert(%arg0: tensor<32xf32, #SparseVector>) -> tensor<?x
   return %0 : tensor<?xf32, #SparseVector>
 }
 
+// CHECK-LABEL: func.func @sparse_convert_element_type(
+//  CHECK-SAME: %[[A1:.*]]: memref<?xi32>,
+//  CHECK-SAME: %[[A2:.*]]: memref<?xi64>,
+//  CHECK-SAME: %[[A3:.*]]: memref<?xf32>,
+//  CHECK-SAME: %[[A4:.*]]: !sparse_tensor.storage_specifier
+//       CHECK: scf.for
+//       CHECK:   %[[FValue:.*]] = memref.load
+//       CHECK:   %[[IValue:.*]] = arith.fptosi %[[FValue]]
+//       CHECK:   memref.store %[[IValue]]
+//       CHECK: return  %{{.*}}, %{{.*}}, %{{.*}}, %[[A4]] :
+//  CHECK-SAME:   memref<?xi32>, memref<?xi64>, memref<?xi32>, !sparse_tensor.storage_specifier
+func.func @sparse_convert_element_type(%arg0: tensor<32xf32, #SparseVector>) -> tensor<?xi32, #SparseVector> {
+  %0 = sparse_tensor.convert %arg0 : tensor<32xf32, #SparseVector> to tensor<?xi32, #SparseVector>
+  return %0 : tensor<?xi32, #SparseVector>
+}
+
 // CHECK-LABEL: func.func @sparse_new_coo(
 // CHECK-SAME:  %[[A0:.*]]: !llvm.ptr<i8>) -> (memref<?xindex>, memref<?xindex>, memref<?xf32>, !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{ dimLevelType = [ "compressed", "singleton" ] }>>) {
 //   CHECK-DAG: %[[A1:.*]] = arith.constant false

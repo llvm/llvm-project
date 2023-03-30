@@ -20,7 +20,7 @@ define void @cmpxchg_and_branch1(ptr %ptr, i32 signext %cmp, i32 signext %val) n
 ; CHECK-NEXT:    bne a3, a1, .LBB0_1
 ; CHECK-NEXT:  # %bb.4: # %do_cmpxchg
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=2
-; CHECK-NEXT:    sc.w.aqrl a4, a2, (a0)
+; CHECK-NEXT:    sc.w.rl a4, a2, (a0)
 ; CHECK-NEXT:    bnez a4, .LBB0_3
 ; CHECK-NEXT:  # %bb.5: # %do_cmpxchg
 ; CHECK-NEXT:  # %bb.2: # %exit
@@ -48,7 +48,7 @@ define void @cmpxchg_and_branch2(ptr %ptr, i32 signext %cmp, i32 signext %val) n
 ; CHECK-NEXT:    bne a3, a1, .LBB1_5
 ; CHECK-NEXT:  # %bb.4: # %do_cmpxchg
 ; CHECK-NEXT:    # in Loop: Header=BB1_3 Depth=2
-; CHECK-NEXT:    sc.w.aqrl a4, a2, (a0)
+; CHECK-NEXT:    sc.w.rl a4, a2, (a0)
 ; CHECK-NEXT:    bnez a4, .LBB1_3
 ; CHECK-NEXT:  .LBB1_5: # %do_cmpxchg
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
@@ -90,7 +90,7 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV32IA-NEXT:    xor a5, a4, a2
 ; RV32IA-NEXT:    and a5, a5, a0
 ; RV32IA-NEXT:    xor a5, a4, a5
-; RV32IA-NEXT:    sc.w.aqrl a5, a5, (a3)
+; RV32IA-NEXT:    sc.w.rl a5, a5, (a3)
 ; RV32IA-NEXT:    bnez a5, .LBB2_3
 ; RV32IA-NEXT:  # %bb.5: # %do_cmpxchg
 ; RV32IA-NEXT:  # %bb.2: # %exit
@@ -120,7 +120,7 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-NEXT:    xor a5, a4, a2
 ; RV64IA-NEXT:    and a5, a5, a0
 ; RV64IA-NEXT:    xor a5, a4, a5
-; RV64IA-NEXT:    sc.w.aqrl a5, a5, (a3)
+; RV64IA-NEXT:    sc.w.rl a5, a5, (a3)
 ; RV64IA-NEXT:    bnez a5, .LBB2_3
 ; RV64IA-NEXT:  # %bb.5: # %do_cmpxchg
 ; RV64IA-NEXT:  # %bb.2: # %exit
@@ -160,7 +160,7 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV32IA-NEXT:    xor a5, a4, a2
 ; RV32IA-NEXT:    and a5, a5, a0
 ; RV32IA-NEXT:    xor a5, a4, a5
-; RV32IA-NEXT:    sc.w.aqrl a5, a5, (a3)
+; RV32IA-NEXT:    sc.w.rl a5, a5, (a3)
 ; RV32IA-NEXT:    bnez a5, .LBB3_3
 ; RV32IA-NEXT:  .LBB3_5: # %do_cmpxchg
 ; RV32IA-NEXT:    # in Loop: Header=BB3_1 Depth=1
@@ -193,7 +193,7 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-NEXT:    xor a5, a4, a2
 ; RV64IA-NEXT:    and a5, a5, a0
 ; RV64IA-NEXT:    xor a5, a4, a5
-; RV64IA-NEXT:    sc.w.aqrl a5, a5, (a3)
+; RV64IA-NEXT:    sc.w.rl a5, a5, (a3)
 ; RV64IA-NEXT:    bnez a5, .LBB3_3
 ; RV64IA-NEXT:  .LBB3_5: # %do_cmpxchg
 ; RV64IA-NEXT:    # in Loop: Header=BB3_1 Depth=1
@@ -224,7 +224,7 @@ define void @cmpxchg_and_irrelevant_branch(ptr %ptr, i32 signext %cmp, i32 signe
 ; CHECK-NEXT:    bne a4, a1, .LBB4_5
 ; CHECK-NEXT:  # %bb.4: # %do_cmpxchg
 ; CHECK-NEXT:    # in Loop: Header=BB4_3 Depth=2
-; CHECK-NEXT:    sc.w.aqrl a5, a2, (a0)
+; CHECK-NEXT:    sc.w.rl a5, a2, (a0)
 ; CHECK-NEXT:    bnez a5, .LBB4_3
 ; CHECK-NEXT:  .LBB4_5: # %do_cmpxchg
 ; CHECK-NEXT:    # in Loop: Header=BB4_1 Depth=1

@@ -560,6 +560,10 @@ private:
   llvm::DenseMap<Decl*, llvm::SmallVector<NamedDecl*, 2>>
     AnonymousDeclarationsForMerging;
 
+  /// Map from numbering information for lambdas to the corresponding lambdas.
+  llvm::DenseMap<std::pair<const Decl *, unsigned>, NamedDecl *>
+      LambdaDeclarationsForMerging;
+
   /// Key used to identify LifetimeExtendedTemporaryDecl for merging,
   /// containing the lifetime-extending declaration and the mangling number.
   using LETemporaryKey = std::pair<Decl *, unsigned>;
@@ -1101,7 +1105,13 @@ private:
   /// they might contain a deduced return type that refers to a local type
   /// declared within the function.
   SmallVector<std::pair<FunctionDecl *, serialization::TypeID>, 16>
-      PendingFunctionTypes;
+      PendingDeducedFunctionTypes;
+
+  /// The list of deduced variable types that we have not yet read, because
+  /// they might contain a deduced type that refers to a local type declared
+  /// within the variable.
+  SmallVector<std::pair<VarDecl *, serialization::TypeID>, 16>
+      PendingDeducedVarTypes;
 
   /// The list of redeclaration chains that still need to be
   /// reconstructed, and the local offset to the corresponding list
@@ -1138,6 +1148,11 @@ private:
                        llvm::SmallVector<DuplicateObjCDecls<ObjCIvarDecl>, 4>,
                        2>
       PendingObjCExtensionIvarRedeclarations;
+
+  /// Members that have been added to classes, for which the class has not yet
+  /// been notified. CXXRecordDecl::addedMember will be called for each of
+  /// these once recursive deserialization is complete.
+  SmallVector<std::pair<CXXRecordDecl*, Decl*>, 4> PendingAddedClassMembers;
 
   /// The set of NamedDecls that have been loaded, but are members of a
   /// context that has been merged into another context where the corresponding
@@ -2081,6 +2096,8 @@ public:
   void ReadLateParsedTemplates(
       llvm::MapVector<const FunctionDecl *, std::unique_ptr<LateParsedTemplate>>
           &LPTMap) override;
+
+  void AssignedLambdaNumbering(const CXXRecordDecl *Lambda) override;
 
   /// Load a selector from disk, registering its ID if it exists.
   void LoadSelector(Selector Sel);

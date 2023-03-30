@@ -900,7 +900,7 @@ struct EvaluatedStmt {
   bool HasICEInit : 1;
   bool CheckedForICEInit : 1;
 
-  Stmt *Value;
+  LazyDeclStmtPtr Value;
   APValue Evaluated;
 
   EvaluatedStmt()
