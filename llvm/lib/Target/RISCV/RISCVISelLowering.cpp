@@ -3082,8 +3082,8 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
   if (!ShuffleVectorInst::isInterleaveMask(Mask, 2, Size * 2, StartIndexes))
     return false;
 
-  EvenSrc = StartIndexes[0] % 2 ? StartIndexes[1] : StartIndexes[0];
-  OddSrc = StartIndexes[0] % 2 ? StartIndexes[0] : StartIndexes[1];
+  EvenSrc = StartIndexes[0];
+  OddSrc = StartIndexes[1];
 
   // One source should be low half of first vector.
   if (EvenSrc != 0 && OddSrc != 0)
