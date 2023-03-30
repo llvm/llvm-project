@@ -25,6 +25,7 @@ class Universal64TestCase(TestBase):
 
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
+    @skipIf(macos_version=["<", "11.0"])
     def test_universal64_executable(self):
         """Test fat64 universal executable"""
         self.build(debug_info="dsym")
@@ -32,7 +33,7 @@ class Universal64TestCase(TestBase):
 
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
-    @skipIf(compiler="clang", compiler_version=['<', '7.0'])
+    @skipIf(macos_version=["<", "11.0"])
     def test_universal64_dsym(self):
         """Test fat64 universal dSYM"""
         self.build(debug_info="dsym", dictionary={'FAT64_DSYM': '1'})
