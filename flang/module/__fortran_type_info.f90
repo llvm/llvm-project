@@ -44,7 +44,7 @@ module __Fortran_type_info
     integer(1) :: hasParent
     integer(1) :: noInitializationNeeded ! 1 if no component w/ init
     integer(1) :: noDestructionNeeded ! 1 if no component w/ dealloc/final
-    integer(1) :: noFinalizationNeeded ! 1 if nothing finalizaable
+    integer(1) :: noFinalizationNeeded ! 1 if nothing finalizeable
     integer(1) :: __padding0(4)
   end type
 

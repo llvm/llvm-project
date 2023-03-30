@@ -729,52 +729,101 @@ SymbolVector FinalsForDerivedTypeInstantiation(const DerivedTypeSpec &spec) {
   return result;
 }
 
-bool IsFinalizable(
-    const Symbol &symbol, std::set<const DerivedTypeSpec *> *inProgress) {
-  if (IsPointer(symbol)) {
-    return false;
+const Symbol *IsFinalizable(const Symbol &symbol,
+    std::set<const DerivedTypeSpec *> *inProgress, bool withImpureFinalizer) {
+  if (IsPointer(symbol) || evaluate::IsAssumedRank(symbol)) {
+    return nullptr;
   }
   if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
     if (object->isDummy() && !IsIntentOut(symbol)) {
-      return false;
+      return nullptr;
     }
     const DeclTypeSpec *type{object->type()};
-    const DerivedTypeSpec *typeSpec{type ? type->AsDerived() : nullptr};
-    return typeSpec && IsFinalizable(*typeSpec, inProgress);
+    if (const DerivedTypeSpec * typeSpec{type ? type->AsDerived() : nullptr}) {
+      return IsFinalizable(
+          *typeSpec, inProgress, withImpureFinalizer, symbol.Rank());
+    }
   }
-  return false;
+  return nullptr;
 }
 
-bool IsFinalizable(const DerivedTypeSpec &derived,
-    std::set<const DerivedTypeSpec *> *inProgress) {
-  if (!FinalsForDerivedTypeInstantiation(derived).empty()) {
-    return true;
+const Symbol *IsFinalizable(const DerivedTypeSpec &derived,
+    std::set<const DerivedTypeSpec *> *inProgress, bool withImpureFinalizer,
+    std::optional<int> rank) {
+  const Symbol *elemental{nullptr};
+  for (auto ref : FinalsForDerivedTypeInstantiation(derived)) {
+    const Symbol *symbol{&ref->GetUltimate()};
+    if (const auto *binding{symbol->detailsIf<ProcBindingDetails>()}) {
+      symbol = &binding->symbol();
+    }
+    if (const auto *proc{symbol->detailsIf<ProcEntityDetails>()}) {
+      symbol = proc->procInterface();
+    }
+    if (!symbol) {
+    } else if (IsElementalProcedure(*symbol)) {
+      elemental = symbol;
+    } else {
+      if (rank) {
+        if (const SubprogramDetails *
+            subp{symbol->detailsIf<SubprogramDetails>()}) {
+          if (const auto &args{subp->dummyArgs()}; !args.empty() &&
+              args.at(0) && !evaluate::IsAssumedRank(*args.at(0)) &&
+              args.at(0)->Rank() != *rank) {
+            continue; // not a finalizer for this rank
+          }
+        }
+      }
+      if (!withImpureFinalizer || !IsPureProcedure(*symbol)) {
+        return symbol;
+      }
+      // Found non-elemental pure finalizer of matching rank, but still
+      // need to check components for an impure finalizer.
+      elemental = nullptr;
+      break;
+    }
   }
+  if (elemental && (!withImpureFinalizer || !IsPureProcedure(*elemental))) {
+    return elemental;
+  }
+  // Check components (including ancestors)
   std::set<const DerivedTypeSpec *> basis;
   if (inProgress) {
     if (inProgress->find(&derived) != inProgress->end()) {
-      return false; // don't loop on recursive type
+      return nullptr; // don't loop on recursive type
     }
   } else {
     inProgress = &basis;
   }
   auto iterator{inProgress->insert(&derived).first};
-  PotentialComponentIterator components{derived};
-  bool result{bool{std::find_if(
-      components.begin(), components.end(), [=](const Symbol &component) {
-        return IsFinalizable(component, inProgress);
-      })}};
+  const Symbol *result{nullptr};
+  for (const Symbol &component : PotentialComponentIterator{derived}) {
+    result = IsFinalizable(component, inProgress, withImpureFinalizer);
+    if (result) {
+      break;
+    }
+  }
   inProgress->erase(iterator);
   return result;
 }
 
-bool HasImpureFinal(const DerivedTypeSpec &derived) {
-  for (auto ref : FinalsForDerivedTypeInstantiation(derived)) {
-    if (!IsPureProcedure(*ref)) {
-      return true;
+static const Symbol *HasImpureFinal(
+    const DerivedTypeSpec &derived, std::optional<int> rank) {
+  return IsFinalizable(derived, nullptr, /*withImpureFinalizer=*/true, rank);
+}
+
+const Symbol *HasImpureFinal(const Symbol &original) {
+  const Symbol &symbol{ResolveAssociations(original)};
+  if (symbol.has<ObjectEntityDetails>()) {
+    if (const DeclTypeSpec * symType{symbol.GetType()}) {
+      if (const DerivedTypeSpec * derived{symType->AsDerived()}) {
+        // finalizable assumed-rank not allowed (C839)
+        return evaluate::IsAssumedRank(symbol)
+            ? nullptr
+            : HasImpureFinal(*derived, symbol.Rank());
+      }
     }
   }
-  return false;
+  return nullptr;
 }
 
 bool IsAssumedLengthCharacter(const Symbol &symbol) {
@@ -1298,15 +1347,6 @@ FindPolymorphicAllocatableUltimateComponent(const DerivedTypeSpec &derived) {
       ultimates.begin(), ultimates.end(), IsPolymorphicAllocatable);
 }
 
-UltimateComponentIterator::const_iterator
-FindPolymorphicAllocatableNonCoarrayUltimateComponent(
-    const DerivedTypeSpec &derived) {
-  UltimateComponentIterator ultimates{derived};
-  return std::find_if(ultimates.begin(), ultimates.end(), [](const Symbol &x) {
-    return IsPolymorphicAllocatable(x) && !evaluate::IsCoarray(x);
-  });
-}
-
 const Symbol *FindUltimateComponent(const DerivedTypeSpec &derived,
     const std::function<bool(const Symbol &)> &predicate) {
   UltimateComponentIterator ultimates{derived};
@@ -1448,6 +1488,14 @@ bool HasAlternateReturns(const Symbol &subprogram) {
     }
   }
   return false;
+}
+
+bool IsAutomaticallyDestroyed(const Symbol &symbol) {
+  return symbol.has<ObjectEntityDetails>() &&
+      (symbol.owner().kind() == Scope::Kind::Subprogram ||
+          symbol.owner().kind() == Scope::Kind::BlockConstruct) &&
+      (!IsDummy(symbol) || IsIntentOut(symbol)) && !IsPointer(symbol) &&
+      !IsSaved(symbol) && !FindCommonBlockContaining(symbol);
 }
 
 const std::optional<parser::Name> &MaybeGetNodeName(
