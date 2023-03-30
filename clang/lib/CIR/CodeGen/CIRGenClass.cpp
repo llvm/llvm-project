@@ -14,6 +14,7 @@
 #include "CIRGenFunction.h"
 #include "UnimplementedFeatureGuarding.h"
 
+#include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/TargetBuiltins.h"
 
@@ -444,8 +445,122 @@ public:
 };
 } // namespace
 
-/// buildCtorPrologue - This routine generates necessary code to initialize base
-/// classes and non-static data members belonging to this constructor.
+static bool isInitializerOfDynamicClass(const CXXCtorInitializer *BaseInit) {
+  const Type *BaseType = BaseInit->getBaseClass();
+  const auto *BaseClassDecl =
+      cast<CXXRecordDecl>(BaseType->castAs<RecordType>()->getDecl());
+  return BaseClassDecl->isDynamicClass();
+}
+
+namespace {
+/// Call the destructor for a direct base class.
+struct CallBaseDtor final : EHScopeStack::Cleanup {
+  const CXXRecordDecl *BaseClass;
+  bool BaseIsVirtual;
+  CallBaseDtor(const CXXRecordDecl *Base, bool BaseIsVirtual)
+      : BaseClass(Base), BaseIsVirtual(BaseIsVirtual) {}
+
+  void Emit(CIRGenFunction &CGF, Flags flags) override {
+    llvm_unreachable("NYI");
+  }
+};
+
+/// A visitor which checks whether an initializer uses 'this' in a
+/// way which requires the vtable to be properly set.
+struct DynamicThisUseChecker
+    : ConstEvaluatedExprVisitor<DynamicThisUseChecker> {
+  typedef ConstEvaluatedExprVisitor<DynamicThisUseChecker> super;
+
+  bool UsesThis;
+
+  DynamicThisUseChecker(const ASTContext &C) : super(C), UsesThis(false) {}
+
+  // Black-list all explicit and implicit references to 'this'.
+  //
+  // Do we need to worry about external references to 'this' derived
+  // from arbitrary code?  If so, then anything which runs arbitrary
+  // external code might potentially access the vtable.
+  void VisitCXXThisExpr(const CXXThisExpr *E) { UsesThis = true; }
+};
+} // end anonymous namespace
+
+static bool BaseInitializerUsesThis(ASTContext &C, const Expr *Init) {
+  DynamicThisUseChecker Checker(C);
+  Checker.Visit(Init);
+  return Checker.UsesThis;
+}
+
+/// Gets the address of a direct base class within a complete object.
+/// This should only be used for (1) non-virtual bases or (2) virtual bases
+/// when the type is known to be complete (e.g. in complete destructors).
+///
+/// The object pointed to by 'This' is assumed to be non-null.
+Address CIRGenFunction::getAddressOfDirectBaseInCompleteClass(
+    mlir::Location loc, Address This, const CXXRecordDecl *Derived,
+    const CXXRecordDecl *Base, bool BaseIsVirtual) {
+  // 'this' must be a pointer (in some address space) to Derived.
+  assert(This.getElementType() == ConvertType(Derived));
+
+  // Compute the offset of the virtual base.
+  CharUnits Offset;
+  const ASTRecordLayout &Layout = getContext().getASTRecordLayout(Derived);
+  if (BaseIsVirtual)
+    Offset = Layout.getVBaseClassOffset(Base);
+  else
+    Offset = Layout.getBaseClassOffset(Base);
+
+  // Shift and cast down to the base type.
+  // TODO: for complete types, this should be possible with a GEP.
+  Address V = This;
+  if (!Offset.isZero()) {
+    // TODO(cir): probably create a new operation to account for
+    // down casting when the offset isn't zero.
+    llvm_unreachable("NYI");
+  }
+  V = builder.createElementBitCast(loc, V, ConvertType(Base));
+  return V;
+}
+
+static void buildBaseInitializer(mlir::Location loc, CIRGenFunction &CGF,
+                                 const CXXRecordDecl *ClassDecl,
+                                 CXXCtorInitializer *BaseInit) {
+  assert(BaseInit->isBaseInitializer() && "Must have base initializer!");
+
+  Address ThisPtr = CGF.LoadCXXThisAddress();
+
+  const Type *BaseType = BaseInit->getBaseClass();
+  const auto *BaseClassDecl =
+      cast<CXXRecordDecl>(BaseType->castAs<RecordType>()->getDecl());
+
+  bool isBaseVirtual = BaseInit->isBaseVirtual();
+
+  // If the initializer for the base (other than the constructor
+  // itself) accesses 'this' in any way, we need to initialize the
+  // vtables.
+  if (BaseInitializerUsesThis(CGF.getContext(), BaseInit->getInit()))
+    CGF.initializeVTablePointers(ClassDecl);
+
+  // We can pretend to be a complete class because it only matters for
+  // virtual bases, and we only do virtual bases for complete ctors.
+  Address V = CGF.getAddressOfDirectBaseInCompleteClass(
+      loc, ThisPtr, ClassDecl, BaseClassDecl, isBaseVirtual);
+  AggValueSlot AggSlot = AggValueSlot::forAddr(
+      V, Qualifiers(), AggValueSlot::IsDestructed,
+      AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+      CGF.getOverlapForBaseInit(ClassDecl, BaseClassDecl, isBaseVirtual));
+
+  CGF.buildAggExpr(BaseInit->getInit(), AggSlot);
+
+  if (CGF.CGM.getLangOpts().Exceptions &&
+      !BaseClassDecl->hasTrivialDestructor()) {
+    llvm_unreachable("NYI");
+    CGF.EHStack.pushCleanup<CallBaseDtor>(EHCleanup, BaseClassDecl,
+                                          isBaseVirtual);
+  }
+}
+
+/// This routine generates necessary code to initialize base classes and
+/// non-static data members belonging to this constructor.
 void CIRGenFunction::buildCtorPrologue(const CXXConstructorDecl *CD,
                                        CXXCtorType CtorType,
                                        FunctionArgList &Args) {
@@ -492,10 +607,11 @@ void CIRGenFunction::buildCtorPrologue(const CXXConstructorDecl *CD,
   for (; B != E && (*B)->isBaseInitializer(); B++) {
     assert(!(*B)->isBaseVirtual());
 
-    if (CGM.getCodeGenOpts().StrictVTablePointers)
+    if (CGM.getCodeGenOpts().StrictVTablePointers &&
+        CGM.getCodeGenOpts().OptimizationLevel > 0 &&
+        isInitializerOfDynamicClass(*B))
       llvm_unreachable("NYI");
-
-    llvm_unreachable("NYI");
+    buildBaseInitializer(getLoc(CD->getBeginLoc()), *this, ClassDecl, *B);
   }
 
   CXXThisValue = OldThis;

@@ -17,6 +17,7 @@
 #include "CIRGenValue.h"
 #include "UnimplementedFeatureGuarding.h"
 
+#include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 
 using namespace cir;
@@ -540,6 +541,27 @@ static void CheckAggExprForMemSetUse(AggValueSlot &Slot, const Expr *E,
     return;
 
   llvm_unreachable("NYI");
+}
+
+AggValueSlot::Overlap_t CIRGenFunction::getOverlapForBaseInit(
+    const CXXRecordDecl *RD, const CXXRecordDecl *BaseRD, bool IsVirtual) {
+  // If the most-derived object is a field declared with [[no_unique_address]],
+  // the tail padding of any virtual base could be reused for other subobjects
+  // of that field's class.
+  if (IsVirtual)
+    return AggValueSlot::MayOverlap;
+
+  // If the base class is laid out entirely within the nvsize of the derived
+  // class, its tail padding cannot yet be initialized, so we can issue
+  // stores at the full width of the base class.
+  const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
+  if (Layout.getBaseClassOffset(BaseRD) +
+          getContext().getASTRecordLayout(BaseRD).getSize() <=
+      Layout.getNonVirtualSize())
+    return AggValueSlot::DoesNotOverlap;
+
+  // The tail padding may contain values we need to preserve.
+  return AggValueSlot::MayOverlap;
 }
 
 void CIRGenFunction::buildAggExpr(const Expr *E, AggValueSlot Slot) {
