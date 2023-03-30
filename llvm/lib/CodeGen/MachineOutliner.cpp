@@ -74,6 +74,7 @@
 #include "llvm/Support/SHA256.h"
 #include "llvm/Support/SuffixTree.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <functional>
 #include <tuple>
 #include <vector>
@@ -609,10 +610,6 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   LLVMContext &C = M.getContext();
   Function *F = Function::Create(FunctionType::get(Type::getVoidTy(C), false),
                                  Function::ExternalLinkage, FunctionName, M);
-
-  // NOTE: If this is linkonceodr, then we can take advantage of linker deduping
-  // which gives us better results when we outline from linkonceodr functions.
-  F->setLinkage(GlobalValue::LinkOnceODRLinkage);
   F->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
   // Set optsize/minsize, so we don't insert padding between outlined
@@ -697,6 +694,39 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
 
   TII.buildOutlinedFrame(MBB, MF, OF);
 
+  if (!MF.getTarget().getTargetTriple().isNanoMips()) {
+    FunctionName += std::to_string(Name);
+    F->setName(FunctionName);
+    // NOTE: If this is linkonceodr, then we can take advantage of linker
+    // deduping which gives us better results when we outline from linkonceodr
+    // functions.
+    F->setLinkage(GlobalValue::InternalLinkage);
+  } else {
+    F->setLinkage(GlobalValue::LinkOnceODRLinkage);
+    // Dump all instructions into a string.
+    std::string InstrDump;
+    raw_string_ostream InstrDumpStream(InstrDump);
+    for (MachineBasicBlock &MBB : MF)
+      for (MachineInstr &MI : MBB)
+        if (!MI.isCFIInstruction() && !MI.isDebugInstr())
+          MI.print(InstrDumpStream, true, false, true, false, nullptr);
+
+    // Generate has from instruction dump.
+    SHA256 Hasher;
+    Hasher.init();
+    Hasher.update(InstrDump);
+    auto Hash = Hasher.result();
+
+    // Convert hash from decimal array to hexadecimal string.
+    std::ostringstream HashHex;
+    for (unsigned char C : Hash)
+      HashHex << std::hex << std::setw(2) << std::setfill('0') << unsigned(C);
+
+    auto *NewComdat = M.getOrInsertComdat(HashHex.str());
+    F->setName("OUTLINED_FUNCTION_" + HashHex.str());
+    F->setComdat(NewComdat);
+  }
+
   // If there's a DISubprogram associated with this outlined function, then
   // emit debug info for the outlined function.
   if (DISubprogram *SP = getSubprogramOrNull(OF)) {
@@ -728,29 +758,6 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
     // We're done with the DIBuilder.
     DB.finalize();
   }
-
-  // Dump all instructions into a string.
-  std::string InstrDump;
-  raw_string_ostream InstrDumpStream(InstrDump);
-  for (MachineBasicBlock &MBB : MF)
-    for (MachineInstr &MI : MBB)
-      if (!MI.isCFIInstruction() && !MI.isDebugInstr())
-        MI.print(InstrDumpStream, true, false, true, false, nullptr);
-
-  // Generate has from instruction dump.
-  SHA256 Hasher;
-  Hasher.init();
-  Hasher.update(InstrDump);
-  auto Hash = Hasher.result();
-
-  // Convert hash from decimal array to hexadecimal string.
-  std::ostringstream HashHex;
-  for (unsigned char C : Hash)
-    HashHex << std::hex << std::setw(2) << std::setfill('0') << unsigned(C);
-
-  auto *NewComdat = M.getOrInsertComdat(HashHex.str());
-  F->setName("OUTLINED_FUNCTION_" + HashHex.str());
-  F->setComdat(NewComdat);
 
   return &MF;
 }

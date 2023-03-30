@@ -29,7 +29,7 @@ if.else13:                                        ; preds = %if.else
   br i1 %cmp14.not, label %if.then24, label %if.then15
 
 if.then15:                                        ; preds = %if.else13
-; CHECK: balc OUTLINED_FUNCTION_0
+; CHECK: balc OUTLINED_FUNCTION_{{.*}}
   %mul16 = mul nsw i32 %a, 10
   %add17 = add nsw i32 %mul16, %y
   %reass.add9294 = add i32 %add17, %a

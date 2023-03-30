@@ -16,7 +16,7 @@ if.else:                                          ; preds = %entry
   br i1 %cmp4, label %if.then5, label %if.else11
 
 if.then5:                                         ; preds = %if.else
-; CHECK: bc OUTLINED_FUNCTION_1
+; CHECK: bc OUTLINED_FUNCTION_[[FN1:.*]]
   %mul6 = mul nsw i32 %a, 10
   %add7 = add nsw i32 %mul6, %y
   %reass.add8587 = add i32 %add7, %a
@@ -67,7 +67,7 @@ if.end37:                                         ; preds = %if.then5, %if.then2
 define dso_local i32 @testing_default1(i32 signext %x, i32 signext %y, i32 signext %a) local_unnamed_addr #0 {
 entry:
 ; CHECK: save 16, $ra
-; CHECK: balc OUTLINED_FUNCTION_0
+; CHECK: balc OUTLINED_FUNCTION_[[FN0:.*]]
 ; CHECK: restore 16, $ra
   %mul = mul nsw i32 %a, 50
   %add = add nsw i32 %mul, %y
@@ -88,7 +88,7 @@ entry:
 define dso_local i32 @testing_default2(i32 signext %x, i32 signext %y, i32 signext %a) local_unnamed_addr #0 {
 entry:
 ; CHECK: save 16, $ra
-; CHECK: balc OUTLINED_FUNCTION_0
+; CHECK: balc OUTLINED_FUNCTION_[[FN0:.*]]
 ; CHECK: restore 16, $ra
   %mul = mul nsw i32 %a, 50
   %add = add nsw i32 %mul, %y
