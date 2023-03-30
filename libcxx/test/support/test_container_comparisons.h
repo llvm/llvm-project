@@ -12,9 +12,9 @@
 
 #include "test_comparisons.h"
 
-// Implementation detail of `test_ordered_container_spaceship`
+// Implementation detail of `test_sequence_container_spaceship`
 template <template <typename...> typename Container, typename Elem, typename Order>
-constexpr void test_ordered_container_spaceship_with_type() {
+constexpr void test_sequence_container_spaceship_with_type() {
   // Empty containers
   {
     Container<Elem> l1;
@@ -59,20 +59,20 @@ constexpr void test_ordered_container_spaceship_with_type() {
   }
 }
 
-// Tests the `operator<=>` on ordered containers
+// Tests the `operator<=>` on sequence containers
 template <template <typename...> typename Container>
-constexpr bool test_ordered_container_spaceship() {
+constexpr bool test_sequence_container_spaceship() {
   // The container should fulfil `std::three_way_comparable`
   static_assert(std::three_way_comparable<Container<int>>);
 
   // Test different comparison categories
-  test_ordered_container_spaceship_with_type<Container, int, std::strong_ordering>();
-  test_ordered_container_spaceship_with_type<Container, StrongOrder, std::strong_ordering>();
-  test_ordered_container_spaceship_with_type<Container, WeakOrder, std::weak_ordering>();
-  test_ordered_container_spaceship_with_type<Container, PartialOrder, std::partial_ordering>();
+  test_sequence_container_spaceship_with_type<Container, int, std::strong_ordering>();
+  test_sequence_container_spaceship_with_type<Container, StrongOrder, std::strong_ordering>();
+  test_sequence_container_spaceship_with_type<Container, WeakOrder, std::weak_ordering>();
+  test_sequence_container_spaceship_with_type<Container, PartialOrder, std::partial_ordering>();
 
   // `LessAndEqComp` does not have `operator<=>`. ordering is sythesized based on `operator<`
-  test_ordered_container_spaceship_with_type<Container, LessAndEqComp, std::weak_ordering>();
+  test_sequence_container_spaceship_with_type<Container, LessAndEqComp, std::weak_ordering>();
 
   // Thanks to SFINAE, the following is not a compiler error but returns `false`
   struct NonComparable {};
