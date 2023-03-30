@@ -154,6 +154,7 @@ public:
 
   void setIsTargetDevice(bool Value) { IsTargetDevice = Value; }
   void setIsGPU(bool Value) { IsGPU = Value; }
+  void setOpenMPOffloadMandatory(bool Value) { OpenMPOffloadMandatory = Value; }
   void setFirstSeparator(StringRef FS) { FirstSeparator = FS; }
   void setSeparator(StringRef S) { Separator = S; }
 
@@ -449,14 +450,9 @@ public:
 
   /// Initialize the internal state, this will put structures types and
   /// potentially other helpers into the underlying module. Must be called
-  /// before any other method and only once! This internal state includes
-  /// Types used in the OpenMPIRBuilder generated from OMPKinds.def as well
-  /// as loading offload metadata for device from the OpenMP host IR file
-  /// passed in as the HostFilePath argument.
-  /// \param HostFilePath The path to the host IR file, used to load in
-  /// offload metadata for the device, allowing host and device to
-  /// maintain the same metadata mapping.
-  void initialize(StringRef HostFilePath = {});
+  /// before any other method and only once! This internal state includes types
+  /// used in the OpenMPIRBuilder generated from OMPKinds.def.
+  void initialize();
 
   void setConfig(OpenMPIRBuilderConfig C) { Config = C; }
 
@@ -2518,6 +2514,15 @@ public:
   /// \param M         Module to load Metadata info from. Module passed maybe
   /// loaded from bitcode file, i.e, different from OpenMPIRBuilder::M module.
   void loadOffloadInfoMetadata(Module &M);
+
+  /// Loads all the offload entries information from the host IR
+  /// metadata read from the file passed in as the HostFilePath argument. This
+  /// function is only meant to be used with device code generation.
+  ///
+  /// \param HostFilePath The path to the host IR file,
+  /// used to load in offload metadata for the device, allowing host and device
+  /// to maintain the same metadata mapping.
+  void loadOffloadInfoMetadata(StringRef HostFilePath);
 
   /// Gets (if variable with the given name already exist) or creates
   /// internal global variable with the specified Name. The created variable has
