@@ -58,6 +58,7 @@
 // CHECK-NOT: __riscv_zvks {{.*$}}
 // CHECK-NOT: __riscv_zvksed {{.*$}}
 // CHECK-NOT: __riscv_zvksh {{.*$}}
+// CHECK-NOT: __riscv_zicond {{.*$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32i -x c -E -dM %s \
 // RUN: -o - | FileCheck %s
@@ -595,3 +596,11 @@
 // RUN: -march=rv64i_zve32x_zvksh0p3 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZVKSH-EXT %s
 // CHECK-ZVKSH-EXT: __riscv_zvksh  3000{{$}}
+
+// RUN: %clang -target riscv32 -menable-experimental-extensions \
+// RUN: -march=rv32i_zicond1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZICOND-EXT %s
+// RUN: %clang -target riscv64 -menable-experimental-extensions \
+// RUN: -march=rv64i_zicond1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZICOND-EXT %s
+// CHECK-ZICOND-EXT: __riscv_zicond  1000000{{$}}
