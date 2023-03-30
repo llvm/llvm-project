@@ -160,14 +160,26 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
   DeclarationFragments Fragments;
 
   // Declaration fragments of a pointer type is the declaration fragments of
-  // the pointee type followed by a `*`, except for Objective-C `id` and `Class`
-  // pointers, where we do not spell out the `*`.
-  if (T->isPointerType() ||
-      (T->isObjCObjectPointerType() &&
-       !T->getAs<ObjCObjectPointerType>()->isObjCIdOrClassType())) {
+  // the pointee type followed by a `*`,
+  if (T->isPointerType())
     return Fragments
         .append(getFragmentsForType(T->getPointeeType(), Context, After))
         .append(" *", DeclarationFragments::FragmentKind::Text);
+
+  // For Objective-C `id` and `Class` pointers
+  // we do not spell out the `*`.
+  if (T->isObjCObjectPointerType() &&
+      !T->getAs<ObjCObjectPointerType>()->isObjCIdOrClassType()) {
+
+    Fragments.append(getFragmentsForType(T->getPointeeType(), Context, After));
+
+    // id<protocol> is an qualified id type
+    // id<protocol>* is not an qualified id type
+    if (!T->getAs<ObjCObjectPointerType>()->isObjCQualifiedIdType()) {
+      Fragments.append(" *", DeclarationFragments::FragmentKind::Text);
+    }
+
+    return Fragments;
   }
 
   // Declaration fragments of a lvalue reference type is the declaration
