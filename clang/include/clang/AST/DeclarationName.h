@@ -763,7 +763,7 @@ public:
 };
 
 /// DeclarationNameInfo - A collector data type for bundling together
-/// a DeclarationName and the correspnding source/type location info.
+/// a DeclarationName and the corresponding source/type location info.
 struct DeclarationNameInfo {
 private:
   /// Name - The declaration name, also encoding name kind.

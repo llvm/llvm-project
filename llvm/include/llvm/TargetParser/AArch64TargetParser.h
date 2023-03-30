@@ -184,7 +184,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"brbe", AArch64::AEK_BRBE, "+brbe", "-brbe", FEAT_MAX, "", 0},
     {"bti", AArch64::AEK_NONE, {}, {}, FEAT_BTI, "+bti", 510},
     {"crc", AArch64::AEK_CRC, "+crc", "-crc", FEAT_CRC, "+crc", 110},
-    {"crypto", AArch64::AEK_CRYPTO, "+crypto", "-crypto", FEAT_MAX, "", 0},
+    {"crypto", AArch64::AEK_CRYPTO, "+crypto", "-crypto", FEAT_MAX, "+aes,+sha2", 0},
     {"cssc", AArch64::AEK_CSSC, "+cssc", "-cssc", FEAT_MAX, "", 0},
     {"d128", AArch64::AEK_D128, "+d128", "-d128", FEAT_MAX, "", 0},
     {"dgh", AArch64::AEK_NONE, {}, {}, FEAT_DGH, "", 260},

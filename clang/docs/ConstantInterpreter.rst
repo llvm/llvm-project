@@ -81,7 +81,7 @@ Primitive Types
 
 * ``PT_VoidPtr``
 
-  Void pointer type, can be used for rount-trip casts. Represented as
+  Void pointer type, can be used for round-trip casts. Represented as
   the union of all pointers which can be cast to void.
   Defined in ``"VoidPointer.h"``.
 
