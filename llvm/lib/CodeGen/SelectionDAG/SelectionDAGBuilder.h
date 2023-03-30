@@ -175,6 +175,10 @@ class SelectionDAGBuilder {
   /// We defer handling these until we do see it.
   MapVector<const Value*, DanglingDebugInfoVector> DanglingDebugInfoMap;
 
+  /// Cache the module flag for whether we should use debug-info assignment
+  /// tracking.
+  bool AssignmentTrackingEnabled = false;
+
 public:
   /// Loads are not emitted to the program immediately.  We bunch them up and
   /// then emit token factor nodes when possible.  This allows us to get simple
