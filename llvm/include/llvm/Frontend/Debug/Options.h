@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_DEBUGINFOOPTIONS_H
-#define LLVM_CLANG_BASIC_DEBUGINFOOPTIONS_H
+#ifndef LLVM_FRONTEND_DEBUG_OPTIONS_H
+#define LLVM_FRONTEND_DEBUG_OPTIONS_H
 
-namespace clang {
+namespace llvm {
 namespace codegenoptions {
 
 enum DebugInfoFormat {
@@ -54,13 +54,9 @@ enum DebugInfoKind {
   UnusedTypeInfo,
 };
 
-enum class DebugTemplateNamesKind {
-  Full,
-  Simple,
-  Mangled
-};
+enum class DebugTemplateNamesKind { Full, Simple, Mangled };
 
 } // end namespace codegenoptions
-} // end namespace clang
+} // end namespace llvm
 
 #endif
