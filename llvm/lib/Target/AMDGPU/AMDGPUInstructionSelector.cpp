@@ -4704,64 +4704,6 @@ AMDGPUInstructionSelector::selectMUBUFOffset(MachineOperand &Root) const {
     }};
 }
 
-InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectMUBUFAddr64Atomic(MachineOperand &Root) const {
-  Register VAddr;
-  Register RSrcReg;
-  Register SOffset;
-  int64_t Offset = 0;
-
-  if (!selectMUBUFAddr64Impl(Root, VAddr, RSrcReg, SOffset, Offset))
-    return {};
-
-  // FIXME: Use defaulted operands for trailing 0s and remove from the complex
-  // pattern.
-  return {{
-      [=](MachineInstrBuilder &MIB) {  // rsrc
-        MIB.addReg(RSrcReg);
-      },
-      [=](MachineInstrBuilder &MIB) { // vaddr
-        MIB.addReg(VAddr);
-      },
-      [=](MachineInstrBuilder &MIB) { // soffset
-        if (SOffset)
-          MIB.addReg(SOffset);
-        else
-          MIB.addImm(0);
-      },
-      [=](MachineInstrBuilder &MIB) { // offset
-        MIB.addImm(Offset);
-      },
-      [=](MachineInstrBuilder &MIB) {
-        MIB.addImm(AMDGPU::CPol::GLC); // cpol
-      }
-    }};
-}
-
-InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectMUBUFOffsetAtomic(MachineOperand &Root) const {
-  Register RSrcReg;
-  Register SOffset;
-  int64_t Offset = 0;
-
-  if (!selectMUBUFOffsetImpl(Root, RSrcReg, SOffset, Offset))
-    return {};
-
-  return {{
-      [=](MachineInstrBuilder &MIB) {  // rsrc
-        MIB.addReg(RSrcReg);
-      },
-      [=](MachineInstrBuilder &MIB) { // soffset
-        if (SOffset)
-          MIB.addReg(SOffset);
-        else
-          MIB.addImm(0);
-      },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); }, // offset
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(AMDGPU::CPol::GLC); } // cpol
-    }};
-}
-
 /// Get an immediate that must be 32-bits, and treated as zero extended.
 static std::optional<uint64_t>
 getConstantZext32Val(Register Reg, const MachineRegisterInfo &MRI) {
