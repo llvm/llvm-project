@@ -257,6 +257,8 @@ Bug Fixes in This Version
 - Fix handling of comments in function like macros so they are ignored in -CC
   mode.
   (`#60887 <https://github.com/llvm/llvm-project/issues/60887>`_)
+- Fix incorrect merging of lambdas across modules.
+  (`#60985 <https://github.com/llvm/llvm-project/issues/60985>`_)
 
 
 Bug Fixes to Compiler Builtins
