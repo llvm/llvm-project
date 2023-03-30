@@ -29,6 +29,7 @@
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/PreprocessorOptions.h"
 
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/TargetParser/Host.h"
@@ -203,10 +204,13 @@ const CompilerInstance *Interpreter::getCompilerInstance() const {
   return IncrParser->getCI();
 }
 
-const llvm::orc::LLJIT *Interpreter::getExecutionEngine() const {
-  if (IncrExecutor)
-    return IncrExecutor->getExecutionEngine();
-  return nullptr;
+llvm::Expected<llvm::orc::LLJIT &> Interpreter::getExecutionEngine() {
+  if (!IncrExecutor) {
+    if (auto Err = CreateExecutor())
+      return Err;
+  }
+
+  return IncrExecutor->GetExecutionEngine();
 }
 
 llvm::Expected<PartialTranslationUnit &>
@@ -214,14 +218,21 @@ Interpreter::Parse(llvm::StringRef Code) {
   return IncrParser->Parse(Code);
 }
 
+llvm::Error Interpreter::CreateExecutor() {
+  const clang::TargetInfo &TI =
+      getCompilerInstance()->getASTContext().getTargetInfo();
+  llvm::Error Err = llvm::Error::success();
+  auto Executor = std::make_unique<IncrementalExecutor>(*TSCtx, Err, TI);
+  if (!Err)
+    IncrExecutor = std::move(Executor);
+
+  return Err;
+}
+
 llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   assert(T.TheModule);
   if (!IncrExecutor) {
-    const clang::TargetInfo &TI =
-        getCompilerInstance()->getASTContext().getTargetInfo();
-    llvm::Error Err = llvm::Error::success();
-    IncrExecutor = std::make_unique<IncrementalExecutor>(*TSCtx, Err, TI);
-
+    auto Err = CreateExecutor();
     if (Err)
       return Err;
   }
@@ -281,5 +292,21 @@ llvm::Error Interpreter::Undo(unsigned N) {
     IncrParser->CleanUpPTU(PTUs.back());
     PTUs.pop_back();
   }
+  return llvm::Error::success();
+}
+
+llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
+  auto EE = getExecutionEngine();
+  if (!EE)
+    return EE.takeError();
+
+  auto &DL = EE->getDataLayout();
+
+  if (auto DLSG = llvm::orc::DynamicLibrarySearchGenerator::Load(
+          name, DL.getGlobalPrefix()))
+    EE->getMainJITDylib().addGenerator(std::move(*DLSG));
+  else
+    return DLSG.takeError();
+
   return llvm::Error::success();
 }
