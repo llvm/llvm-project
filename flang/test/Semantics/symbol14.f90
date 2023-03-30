@@ -15,10 +15,6 @@
   !DEF: /MainProgram1/t2/b ObjectEntity REAL(4)
   !REF: /MainProgram1/t1/k
   real :: b(k)
-  !DEF: /MainProgram1/t2/c ObjectEntity REAL(4)
-  !DEF: /MainProgram1/size INTRINSIC, PURE (Function) ProcEntity
-  !DEF: /MainProgram1/a (Implicit) ObjectEntity REAL(4)
-  real :: c(size(a))
   !REF: /MainProgram1/t1
   !DEF: /MainProgram1/t2/x ObjectEntity TYPE(t1(k=666_4))
   type(t1) :: x
