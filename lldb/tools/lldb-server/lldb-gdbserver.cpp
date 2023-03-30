@@ -34,6 +34,7 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/WithColor.h"
 
 #if defined(__linux__)
@@ -75,13 +76,11 @@ class NativeProcessManager : public NativeProcessProtocol::Manager {
 public:
   llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
   Launch(ProcessLaunchInfo &launch_info,
-         NativeProcessProtocol::NativeDelegate &delegate,
-         MainLoop &mainloop) const override {
+         NativeDelegate &native_delegate) override {
     llvm_unreachable("Not implemented");
   }
   llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-  Attach(lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &delegate,
-         MainLoop &mainloop) const override {
+  Attach(lldb::pid_t pid, NativeDelegate &native_delegate) override {
     llvm_unreachable("Not implemented");
   }
 };
