@@ -801,7 +801,8 @@ OpFoldResult SubOp::fold(FoldAdaptor adaptor) {
 }
 
 namespace {
-template <typename Cmp> struct ComparisonFold {
+template <typename Cmp>
+struct ComparisonFold {
   ComparisonFold() = default;
   APInt operator()(const APInt &l, const APInt &r) {
     return APInt(1, Cmp()(l, r));
@@ -1045,6 +1046,11 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
     return getInput();
 
   if (!adaptor.getInput())
+    return {};
+
+  // Cannot create an ElementsAttr from non-int/float/index types
+  if (!inputTy.getElementType().isIntOrIndexOrFloat() ||
+      !outputTy.getElementType().isIntOrIndexOrFloat())
     return {};
 
   auto operand = adaptor.getInput().cast<ElementsAttr>();
