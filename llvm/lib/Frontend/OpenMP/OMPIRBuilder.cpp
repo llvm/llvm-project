@@ -582,31 +582,7 @@ Function *OpenMPIRBuilder::getOrCreateRuntimeFunctionPtr(RuntimeFunction FnID) {
   return Fn;
 }
 
-void OpenMPIRBuilder::initialize(StringRef HostFilePath) {
-  initializeTypes(M);
-
-  if (HostFilePath.empty())
-    return;
-
-  auto Buf = MemoryBuffer::getFile(HostFilePath);
-  if (std::error_code Err = Buf.getError()) {
-    report_fatal_error(("error opening host file from host file path inside of "
-                        "OpenMPIRBuilder: " +
-                        Err.message())
-                           .c_str());
-  }
-
-  LLVMContext Ctx;
-  auto M = expectedToErrorOrAndEmitErrors(
-      Ctx, parseBitcodeFile(Buf.get()->getMemBufferRef(), Ctx));
-  if (std::error_code Err = M.getError()) {
-    report_fatal_error(
-        ("error parsing host file inside of OpenMPIRBuilder: " + Err.message())
-            .c_str());
-  }
-
-  loadOffloadInfoMetadata(*M.get());
-}
+void OpenMPIRBuilder::initialize() { initializeTypes(M); }
 
 void OpenMPIRBuilder::finalize(Function *Fn) {
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
@@ -6204,6 +6180,30 @@ void OpenMPIRBuilder::loadOffloadInfoMetadata(Module &M) {
       break;
     }
   }
+}
+
+void OpenMPIRBuilder::loadOffloadInfoMetadata(StringRef HostFilePath) {
+  if (HostFilePath.empty())
+    return;
+
+  auto Buf = MemoryBuffer::getFile(HostFilePath);
+  if (std::error_code Err = Buf.getError()) {
+    report_fatal_error(("error opening host file from host file path inside of "
+                        "OpenMPIRBuilder: " +
+                        Err.message())
+                           .c_str());
+  }
+
+  LLVMContext Ctx;
+  auto M = expectedToErrorOrAndEmitErrors(
+      Ctx, parseBitcodeFile(Buf.get()->getMemBufferRef(), Ctx));
+  if (std::error_code Err = M.getError()) {
+    report_fatal_error(
+        ("error parsing host file inside of OpenMPIRBuilder: " + Err.message())
+            .c_str());
+  }
+
+  loadOffloadInfoMetadata(*M.get());
 }
 
 Function *OpenMPIRBuilder::createRegisterRequires(StringRef Name) {
