@@ -5,10 +5,11 @@
 
 #include "sanitizer/asan_interface.h"
 #include <assert.h>
+#include <stdint.h>
 
 __attribute__((noinline)) void foo(int index, int len) {
   volatile char str[len] __attribute__((aligned(32)));
-  assert(!(reinterpret_cast<long>(str) & 31L));
+  assert(!(reinterpret_cast<uintptr_t>(str) & 31L));
   char *q = (char *)__asan_region_is_poisoned((char *)str, 64);
   assert(q && ((q - str) == index));
 }
