@@ -37,6 +37,14 @@
 // RUN: %clang @tu2.rsp -emit-llvm -o tree-rel.ll
 // RUN: diff -u source-rel.ll tree-rel.ll
 
+// Check that -coverage-notes-file and -coverage-data-file are stripped
+// RUN: %clang -cc1depscan -o pch3.rsp -fdepscan=inline -fdepscan-include-tree -cc1-args \
+// RUN:     -cc1 -emit-pch -x c-header prefix.h -I %t/inc -DCMD_MACRO=1 -fcas-path %t/cas \
+// RUN:     -ftest-coverage -coverage-notes-file %t/pch.gcno -coverage-data-file %t/pch.gcda
+// RUN: FileCheck %s -check-prefix=COVERAGE -input-file %t/pch3.rsp
+// COVERAGE-NOT: -coverage-data-file
+// COVERAGE-NOT: -coverage-notes-file
+
 //--- t1.c
 #if S2_MACRO
 #include "s2-link.h"
