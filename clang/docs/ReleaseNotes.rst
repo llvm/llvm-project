@@ -254,6 +254,9 @@ Bug Fixes in This Version
   requires on lambdas when not allowed, which we previously missed.
   (`#61748 <https://github.com/llvm/llvm-project/issues/61748>`_)
 - Fix confusing diagnostic for incorrect use of qualified concepts names.
+- Fix handling of comments in function like macros so they are ignored in -CC
+  mode.
+  (`#60887 <https://github.com/llvm/llvm-project/issues/60887>`_)
 
 
 Bug Fixes to Compiler Builtins
