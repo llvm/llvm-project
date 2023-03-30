@@ -72,6 +72,7 @@ public:
 
   class PersistentVariableDelegate {
   public:
+    PersistentVariableDelegate();
     virtual ~PersistentVariableDelegate();
     virtual ConstString GetName() = 0;
     virtual void DidDematerialize(lldb::ExpressionVariableSP &variable) = 0;

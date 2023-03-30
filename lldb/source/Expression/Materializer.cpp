@@ -1669,5 +1669,7 @@ void Materializer::Dematerializer::Wipe() {
   m_process_address = LLDB_INVALID_ADDRESS;
 }
 
+Materializer::PersistentVariableDelegate::PersistentVariableDelegate() =
+    default;
 Materializer::PersistentVariableDelegate::~PersistentVariableDelegate() =
     default;
