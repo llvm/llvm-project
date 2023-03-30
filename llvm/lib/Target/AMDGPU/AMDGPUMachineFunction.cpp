@@ -135,7 +135,7 @@ void AMDGPUMachineFunction::allocateKnownAddressLDSGlobal(const Function &F) {
     if (GV && !canElideModuleLDS(F)) {
       unsigned Offset = allocateLDSGlobal(M->getDataLayout(), *GV, Align());
       std::optional<uint32_t> Expect = getLDSAbsoluteAddress(*GV);
-      if (!Expect || (Offset != Expect)) {
+      if (!Expect || (Offset != *Expect)) {
         report_fatal_error("Inconsistent metadata on module LDS variable");
       }
     }
@@ -145,7 +145,7 @@ void AMDGPUMachineFunction::allocateKnownAddressLDSGlobal(const Function &F) {
       // before any other non-module LDS variables.
       unsigned Offset = allocateLDSGlobal(M->getDataLayout(), *KV, Align());
       std::optional<uint32_t> Expect = getLDSAbsoluteAddress(*KV);
-      if (!Expect || (Offset != Expect)) {
+      if (!Expect || (Offset != *Expect)) {
         report_fatal_error("Inconsistent metadata on kernel LDS variable");
       }
     }
