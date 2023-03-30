@@ -17,6 +17,10 @@ endif()
 # Must go below project(..)
 include(GNUInstallDirs)
 
+# BEGIN SWIFT MOD
+option(LLDB_ENABLE_SWIFT_SUPPORT "Enable swift support" ON)
+# END SWIFT MOD
+
 if(LLDB_BUILT_STANDALONE)
   include(LLDBStandalone)
 
@@ -33,25 +37,29 @@ include(LLDBConfig)
 include(AddLLDB)
 
 # BEGIN - Swift Mods
-if(EXISTS "${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}")
-   list(APPEND CMAKE_MODULE_PATH
-        "${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}/cmake"
-        "${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}/cmake/modules")
-elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../swift)
-   list(APPEND CMAKE_MODULE_PATH
-        "${CMAKE_CURRENT_SOURCE_DIR}/../swift/cmake"
-        "${CMAKE_CURRENT_SOURCE_DIR}/../swift/cmake/modules")
+if (LLDB_ENABLE_SWIFT_SUPPORT)
+  if(EXISTS "${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}")
+     list(APPEND CMAKE_MODULE_PATH
+          "${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}/cmake"
+          "${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}/cmake/modules")
+  elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../swift)
+     list(APPEND CMAKE_MODULE_PATH
+          "${CMAKE_CURRENT_SOURCE_DIR}/../swift/cmake"
+          "${CMAKE_CURRENT_SOURCE_DIR}/../swift/cmake/modules")
+  endif()
 endif()
 
 # When we have the early SwiftSyntax build, we can include its parser.
-if(SWIFT_PATH_TO_EARLYSWIFTSYNTAX_BUILD_DIR)
-  set(SWIFT_PATH_TO_EARLYSWIFTSYNTAX_TARGETS
-    ${SWIFT_PATH_TO_EARLYSWIFTSYNTAX_BUILD_DIR}/cmake/SwiftSyntaxTargets.cmake)
-  if(NOT EXISTS "${SWIFT_PATH_TO_EARLYSWIFTSYNTAX_TARGETS}")
-    message(STATUS "Skipping Swift Swift parser integration due to missing early SwiftSyntax")
-  else()
-    set(SWIFT_SWIFT_PARSER TRUE)
-    include(${SWIFT_PATH_TO_EARLYSWIFTSYNTAX_TARGETS})
+if (LLDB_ENABLE_SWIFT_SUPPORT)
+  if(SWIFT_PATH_TO_EARLYSWIFTSYNTAX_BUILD_DIR)
+    set(SWIFT_PATH_TO_EARLYSWIFTSYNTAX_TARGETS
+      ${SWIFT_PATH_TO_EARLYSWIFTSYNTAX_BUILD_DIR}/cmake/SwiftSyntaxTargets.cmake)
+    if(NOT EXISTS "${SWIFT_PATH_TO_EARLYSWIFTSYNTAX_TARGETS}")
+      message(STATUS "Skipping Swift Swift parser integration due to missing early SwiftSyntax")
+    else()
+      set(SWIFT_SWIFT_PARSER TRUE)
+      include(${SWIFT_PATH_TO_EARLYSWIFTSYNTAX_TARGETS})
+    endif()
   endif()
 endif()
 # END - Swift Mods
