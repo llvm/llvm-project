@@ -13,6 +13,8 @@
 // The system-provided <uchar.h> seems to be broken on AIX, which trips up this test.
 // XFAIL: LIBCXX-AIX-FIXME
 
+// XFAIL: availability-verbose_abort-missing
+
 /*
 BEGIN-SCRIPT
 
