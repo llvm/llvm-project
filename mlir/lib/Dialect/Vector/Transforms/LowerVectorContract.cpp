@@ -563,10 +563,6 @@ private:
 /// otherwise supports any layout permutation of the matrix-multiply.
 LogicalResult ContractionOpToOuterProductOpLowering::matchAndRewrite(
     vector::ContractionOp op, PatternRewriter &rewriter) const {
-  // TODO: Remove native masks from contraction op?
-  if (!op.getMasks().empty())
-    return failure();
-
   if (vectorTransformOptions.vectorContractLowering !=
       vector::VectorContractLowering::OuterProduct)
     return failure();
@@ -611,10 +607,6 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
   // TODO: Support vector.mask.
   auto maskableOp = cast<MaskableOpInterface>(op.getOperation());
   if (maskableOp.isMasked())
-    return failure();
-
-  // TODO: Remove native masks from contraction op?
-  if (!op.getMasks().empty())
     return failure();
 
   if (failed(filter(op)))
@@ -749,10 +741,6 @@ struct ContractOpToElementwise
     if (maskableOp.isMasked())
       return failure();
 
-    // TODO: Remove native masks from contraction op?
-    if (!contractOp.getMasks().empty())
-      return failure();
-
     if (failed(filter(contractOp)))
       return failure();
 
@@ -872,10 +860,6 @@ private:
 LogicalResult
 ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
                                        PatternRewriter &rewriter) const {
-  // TODO: Remove native masks from contraction op?
-  if (!op.getMasks().empty())
-    return failure();
-
   if (failed(filter(op)))
     return failure();
 
@@ -1230,9 +1214,6 @@ ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
   if (maskableOp.isMasked())
     return failure();
 
-  // TODO: Remove native masks from contraction op?
-  if (!op.getMasks().empty())
-    return failure();
   if (vectorTransformOptions.vectorContractLowering !=
       vector::VectorContractLowering::Matmul)
     return failure();
