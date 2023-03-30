@@ -187,6 +187,12 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       AddCodeGenFlag(Twine("-crash-diagnostics-dir=") + A->getValue());
   }
 
+  if (IsPS5 && UseLTO) {
+    StringRef Parallelism = getLTOParallelism(Args, D);
+    if (!Parallelism.empty())
+      CmdArgs.push_back(Args.MakeArgString("-plugin-opt=jobs=" + Parallelism));
+  }
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
 

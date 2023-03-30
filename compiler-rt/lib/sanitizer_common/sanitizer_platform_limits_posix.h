@@ -18,6 +18,7 @@
 
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_platform.h"
+#include "sanitizer_mallinfo.h"
 
 #if SANITIZER_APPLE
 #include <sys/cdefs.h>
@@ -204,17 +205,7 @@ struct __sanitizer_sem_t {
 };
 #endif // SANITIZER_LINUX
 
-#if SANITIZER_ANDROID
-struct __sanitizer_struct_mallinfo {
-  uptr v[10];
-};
-#endif
-
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
-struct __sanitizer_struct_mallinfo {
-  int v[10];
-};
-
 extern unsigned struct_ustat_sz;
 extern unsigned struct_rlimit64_sz;
 extern unsigned struct_statvfs64_sz;

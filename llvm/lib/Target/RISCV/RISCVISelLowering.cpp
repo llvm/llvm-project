@@ -804,7 +804,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction(FloatingPointVPOps, VT, Custom);
 
-      setOperationAction(ISD::STRICT_FP_EXTEND, VT, Custom);
+      setOperationAction({ISD::STRICT_FP_EXTEND, ISD::STRICT_FP_ROUND}, VT,
+                         Custom);
       setOperationAction({ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
                           ISD::STRICT_FDIV, ISD::STRICT_FSQRT, ISD::STRICT_FMA},
                          VT, Legal);
@@ -1021,7 +1022,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(FloatingPointVPOps, VT, Custom);
 
-        setOperationAction(ISD::STRICT_FP_EXTEND, VT, Custom);
+        setOperationAction({ISD::STRICT_FP_EXTEND, ISD::STRICT_FP_ROUND}, VT,
+                           Custom);
         setOperationAction({ISD::STRICT_FADD, ISD::STRICT_FSUB,
                             ISD::STRICT_FMUL, ISD::STRICT_FDIV,
                             ISD::STRICT_FSQRT, ISD::STRICT_FMA},
@@ -1133,6 +1135,36 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                              MachineFunction &MF,
                                              unsigned Intrinsic) const {
   auto &DL = I.getModule()->getDataLayout();
+
+  auto SetRVVLoadStoreInfo = [&](unsigned PtrOp, bool IsStore,
+                                 bool IsUnitStrided) {
+    Info.opc = IsStore ? ISD::INTRINSIC_VOID : ISD::INTRINSIC_W_CHAIN;
+    Info.ptrVal = I.getArgOperand(PtrOp);
+    Type *MemTy;
+    if (IsStore) {
+      // Store value is the first operand.
+      MemTy = I.getArgOperand(0)->getType();
+    } else {
+      // Use return type. If it's segment load, return type is a struct.
+      MemTy = I.getType();
+      if (MemTy->isStructTy())
+        MemTy = MemTy->getStructElementType(0);
+    }
+    if (!IsUnitStrided)
+      MemTy = MemTy->getScalarType();
+
+    Info.memVT = getValueType(DL, MemTy);
+    Info.align = Align(DL.getTypeSizeInBits(MemTy->getScalarType()) / 8);
+    Info.size = MemoryLocation::UnknownSize;
+    Info.flags |=
+        IsStore ? MachineMemOperand::MOStore : MachineMemOperand::MOLoad;
+    return true;
+  };
+
+  if (I.getMetadata(LLVMContext::MD_nontemporal) != nullptr)
+    Info.flags |= MachineMemOperand::MONonTemporal;
+
+  Info.flags |= RISCVTargetLowering::getTargetMMOFlags(I);
   switch (Intrinsic) {
   default:
     return false;
@@ -1154,24 +1186,11 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                  MachineMemOperand::MOVolatile;
     return true;
   case Intrinsic::riscv_masked_strided_load:
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.ptrVal = I.getArgOperand(1);
-    Info.memVT = getValueType(DL, I.getType()->getScalarType());
-    Info.align = Align(DL.getTypeSizeInBits(I.getType()->getScalarType()) / 8);
-    Info.size = MemoryLocation::UnknownSize;
-    Info.flags |= MachineMemOperand::MOLoad;
-    return true;
+    return SetRVVLoadStoreInfo(/*PtrOp*/ 1, /*IsStore*/ false,
+                               /*IsUnitStrided*/ false);
   case Intrinsic::riscv_masked_strided_store:
-    Info.opc = ISD::INTRINSIC_VOID;
-    Info.ptrVal = I.getArgOperand(1);
-    Info.memVT =
-        getValueType(DL, I.getArgOperand(0)->getType()->getScalarType());
-    Info.align = Align(
-        DL.getTypeSizeInBits(I.getArgOperand(0)->getType()->getScalarType()) /
-        8);
-    Info.size = MemoryLocation::UnknownSize;
-    Info.flags |= MachineMemOperand::MOStore;
-    return true;
+    return SetRVVLoadStoreInfo(/*PtrOp*/ 1, /*IsStore*/ true,
+                               /*IsUnitStrided*/ false);
   case Intrinsic::riscv_seg2_load:
   case Intrinsic::riscv_seg3_load:
   case Intrinsic::riscv_seg4_load:
@@ -1179,17 +1198,8 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_seg6_load:
   case Intrinsic::riscv_seg7_load:
   case Intrinsic::riscv_seg8_load:
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.ptrVal = I.getArgOperand(0);
-    Info.memVT =
-        getValueType(DL, I.getType()->getStructElementType(0)->getScalarType());
-    Info.align =
-        Align(DL.getTypeSizeInBits(
-                  I.getType()->getStructElementType(0)->getScalarType()) /
-              8);
-    Info.size = MemoryLocation::UnknownSize;
-    Info.flags |= MachineMemOperand::MOLoad;
-    return true;
+    return SetRVVLoadStoreInfo(/*PtrOp*/ 0, /*IsStore*/ false,
+                               /*IsUnitStrided*/ false);
   case Intrinsic::riscv_seg2_store:
   case Intrinsic::riscv_seg3_store:
   case Intrinsic::riscv_seg4_store:
@@ -1197,17 +1207,10 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_seg6_store:
   case Intrinsic::riscv_seg7_store:
   case Intrinsic::riscv_seg8_store:
-    Info.opc = ISD::INTRINSIC_VOID;
     // Operands are (vec, ..., vec, ptr, vl, int_id)
-    Info.ptrVal = I.getArgOperand(I.getNumOperands() - 3);
-    Info.memVT =
-        getValueType(DL, I.getArgOperand(0)->getType()->getScalarType());
-    Info.align = Align(
-        DL.getTypeSizeInBits(I.getArgOperand(0)->getType()->getScalarType()) /
-        8);
-    Info.size = MemoryLocation::UnknownSize;
-    Info.flags |= MachineMemOperand::MOStore;
-    return true;
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.getNumOperands() - 3,
+                               /*IsStore*/ true,
+                               /*IsUnitStrided*/ false);
   }
 }
 
@@ -4149,8 +4152,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (!Op.getValueType().isVector())
       return Op;
     return lowerVectorFPExtendOrRoundLike(Op, DAG);
+  case ISD::STRICT_FP_ROUND:
   case ISD::STRICT_FP_EXTEND:
-    return lowerStrictFPExtend(Op, DAG);
+    return lowerStrictFPExtendOrRoundLike(Op, DAG);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
   case ISD::SINT_TO_FP:
@@ -4807,6 +4811,9 @@ SDValue RISCVTargetLowering::lowerGlobalTLSAddress(SDValue Op,
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   assert(N->getOffset() == 0 && "unexpected offset in global node");
 
+  if (DAG.getTarget().useEmulatedTLS())
+    return LowerToTLSEmulatedModel(N, DAG);
+
   TLSModel::Model Model = getTargetMachine().getTLSModel(N->getGlobal());
 
   if (DAG.getMachineFunction().getFunction().getCallingConv() ==
@@ -5384,14 +5391,14 @@ SDValue RISCVTargetLowering::lowerVectorTruncLike(SDValue Op,
   return Result;
 }
 
-SDValue RISCVTargetLowering::lowerStrictFPExtend(SDValue Op,
-                                                 SelectionDAG &DAG) const {
+SDValue
+RISCVTargetLowering::lowerStrictFPExtendOrRoundLike(SDValue Op,
+                                                    SelectionDAG &DAG) const {
   SDLoc DL(Op);
   SDValue Chain = Op.getOperand(0);
   SDValue Src = Op.getOperand(1);
   MVT VT = Op.getSimpleValueType();
   MVT SrcVT = Src.getSimpleValueType();
-
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
     MVT SrcContainerVT = getContainerForFixedLengthVector(SrcVT);
@@ -5402,19 +5409,26 @@ SDValue RISCVTargetLowering::lowerStrictFPExtend(SDValue Op,
 
   auto [Mask, VL] = getDefaultVLOps(SrcVT, ContainerVT, DL, DAG, Subtarget);
 
-  // RVV can only widen fp to types double the size as the source, so it needs
-  // two vfwcvt to achieve extending fp16 to fp64.
-  if (VT.getVectorElementType() == MVT::f64 &&
-      SrcVT.getVectorElementType() == MVT::f16) {
+  // RVV can only widen/truncate fp to types double/half the size as the source.
+  if ((VT.getVectorElementType() == MVT::f64 &&
+       SrcVT.getVectorElementType() == MVT::f16) ||
+      (VT.getVectorElementType() == MVT::f16 &&
+       SrcVT.getVectorElementType() == MVT::f64)) {
+    // For double rounding, the intermediate rounding should be round-to-odd.
+    unsigned InterConvOpc = Op.getOpcode() == ISD::STRICT_FP_EXTEND
+                                ? RISCVISD::STRICT_FP_EXTEND_VL
+                                : RISCVISD::STRICT_VFNCVT_ROD_VL;
     MVT InterVT = ContainerVT.changeVectorElementType(MVT::f32);
-    Src = DAG.getNode(RISCVISD::STRICT_FP_EXTEND_VL, DL,
-                      DAG.getVTList(InterVT, MVT::Other), Chain, Src, Mask, VL);
+    Src = DAG.getNode(InterConvOpc, DL, DAG.getVTList(InterVT, MVT::Other),
+                      Chain, Src, Mask, VL);
     Chain = Src.getValue(1);
   }
 
-  SDValue Res =
-      DAG.getNode(RISCVISD::STRICT_FP_EXTEND_VL, DL,
-                  DAG.getVTList(ContainerVT, MVT::Other), Chain, Src, Mask, VL);
+  unsigned ConvOpc = Op.getOpcode() == ISD::STRICT_FP_EXTEND
+                         ? RISCVISD::STRICT_FP_EXTEND_VL
+                         : RISCVISD::STRICT_FP_ROUND_VL;
+  SDValue Res = DAG.getNode(ConvOpc, DL, DAG.getVTList(ContainerVT, MVT::Other),
+                            Chain, Src, Mask, VL);
   if (VT.isFixedLengthVector()) {
     // StrictFP operations have two result values. Their lowered result should
     // have same result count.
@@ -14125,7 +14139,9 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(STRICT_VFNMADD_VL)
   NODE_NAME_CASE(STRICT_VFMSUB_VL)
   NODE_NAME_CASE(STRICT_VFNMSUB_VL)
+  NODE_NAME_CASE(STRICT_FP_ROUND_VL)
   NODE_NAME_CASE(STRICT_FP_EXTEND_VL)
+  NODE_NAME_CASE(STRICT_VFNCVT_ROD_VL)
   NODE_NAME_CASE(VWMUL_VL)
   NODE_NAME_CASE(VWMULU_VL)
   NODE_NAME_CASE(VWMULSU_VL)

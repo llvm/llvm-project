@@ -158,7 +158,7 @@ tools = [
 tools.extend([
     'dsymutil', 'lli', 'lli-child-target', 'llvm-ar', 'llvm-as',
     'llvm-addr2line', 'llvm-bcanalyzer', 'llvm-bitcode-strip', 'llvm-config',
-    'llvm-cov', 'llvm-cxxdump', 'llvm-cvtres', 'llvm-debuginfod-find', 'llvm-debuginfod',
+    'llvm-cov', 'llvm-cxxdump', 'llvm-cvtres', 'llvm-debuginfod-find',
     'llvm-debuginfo-analyzer',
     'llvm-diff', 'llvm-dis', 'llvm-dwarfdump', 'llvm-dwarfutil', 'llvm-dlltool',
     'llvm-exegesis', 'llvm-extract', 'llvm-isel-fuzzer', 'llvm-ifs',
@@ -176,6 +176,7 @@ tools.extend([
 # The following tools are optional
 tools.extend([
     ToolSubst('llvm-mt', unresolved='ignore'),
+    ToolSubst('llvm-debuginfod', unresolved='ignore'),
     ToolSubst('Kaleidoscope-Ch3', unresolved='ignore'),
     ToolSubst('Kaleidoscope-Ch4', unresolved='ignore'),
     ToolSubst('Kaleidoscope-Ch5', unresolved='ignore'),

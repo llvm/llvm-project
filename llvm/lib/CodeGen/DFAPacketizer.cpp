@@ -104,7 +104,7 @@ DefaultVLIWScheduler::DefaultVLIWScheduler(MachineFunction &MF,
 }
 
 /// Apply each ScheduleDAGMutation step in order.
-void DefaultVLIWScheduler::postprocessDAG() {
+void DefaultVLIWScheduler::postProcessDAG() {
   for (auto &M : Mutations)
     M->apply(this);
 }
@@ -112,7 +112,7 @@ void DefaultVLIWScheduler::postprocessDAG() {
 void DefaultVLIWScheduler::schedule() {
   // Build the scheduling graph.
   buildSchedGraph(AA);
-  postprocessDAG();
+  postProcessDAG();
 }
 
 VLIWPacketizerList::VLIWPacketizerList(MachineFunction &mf,

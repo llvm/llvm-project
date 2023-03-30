@@ -56,6 +56,9 @@ RelExpr AVR::getRelExpr(RelType type, const Symbol &s,
   case R_AVR_6:
   case R_AVR_6_ADIW:
   case R_AVR_8:
+  case R_AVR_8_LO8:
+  case R_AVR_8_HI8:
+  case R_AVR_8_HLO8:
   case R_AVR_16:
   case R_AVR_16_PM:
   case R_AVR_32:
@@ -98,6 +101,18 @@ void AVR::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_AVR_8:
     checkUInt(loc, val, 8, rel);
     *loc = val;
+    break;
+  case R_AVR_8_LO8:
+    checkUInt(loc, val, 32, rel);
+    *loc = val & 0xff;
+    break;
+  case R_AVR_8_HI8:
+    checkUInt(loc, val, 32, rel);
+    *loc = (val >> 8) & 0xff;
+    break;
+  case R_AVR_8_HLO8:
+    checkUInt(loc, val, 32, rel);
+    *loc = (val >> 16) & 0xff;
     break;
   case R_AVR_16:
     // Note: this relocation is often used between code and data space, which

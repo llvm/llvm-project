@@ -140,21 +140,15 @@ protected:
                /*maxRank=*/numLoops) {
     tensors.reserve(numTensors);
     for (unsigned t = 0; t < numTensors; t++)
-      tensors.push_back(merger.addExp(TensorExp::Kind::kTensor, tid(t)));
+      tensors.push_back(merger.addTensorExp(tid(t)));
   }
 
   ///
   /// Expression construction helpers.
   ///
 
-  TensorId tid(unsigned t) const {
-    assert(t < merger.getNumTensors());
-    return t;
-  }
-  LoopId lid(unsigned i) const {
-    assert(i < merger.getNumLoops());
-    return i;
-  }
+  TensorId tid(unsigned t) const { return merger.makeTensorId(t); }
+  LoopId lid(unsigned i) const { return merger.makeLoopId(i); }
   ExprId tensor(unsigned t) const {
     assert(t < tensors.size());
     return tensors[t];
@@ -208,11 +202,9 @@ protected:
   /// Converts a vector of (loop, tensor) pairs to a bitvector with the
   /// corresponding bits set.
   BitVector loopsToBits(const std::vector<std::pair<LoopId, TensorId>> &loops) {
-    // NOTE: this `numTensors` includes both the output- and synthetic-tensors.
-    const auto numTensors = merger.getNumTensors();
-    BitVector testBits = BitVector(numTensors, false);
+    BitVector testBits = BitVector(merger.getNumTensors(), false);
     for (auto [loop, tensor] : loops)
-      testBits.set(numTensors * loop + tensor);
+      testBits.set(merger.makeTensorLoopId(tensor, loop));
     return testBits;
   }
 
@@ -429,9 +421,9 @@ protected:
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
     const auto t2 = tid(2);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
-    const PatternRef p2 = tensorPattern(t2);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
+    PatternRef p2 = tensorPattern(t2);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
     expectNumLatPoints(s, 1);                                                  \
     expectLatPoint(s, 0, CONJ2##Pattern(CONJ1##Pattern(p0, p1), p2),           \
@@ -466,9 +458,9 @@ FOREVERY_PAIR_OF_COMMON_CONJ_CONJ_BINOP(IMPL_MERGER_TEST_CONJ_CONJ_UNDEF)
     const auto t1 = tid(1);                                                    \
     const auto t2 = tid(2);                                                    \
     const auto t3 = tid(3);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
-    const PatternRef p2 = tensorPattern(t2);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
+    PatternRef p2 = tensorPattern(t2);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
     expectNumLatPoints(s, 1);                                                  \
     expectLatPoint(s, 0, CONJ2##Pattern(CONJ1##Pattern(p0, p1), p2),           \
@@ -504,8 +496,8 @@ FOREVERY_PAIR_OF_COMMON_CONJ_CONJ_BINOP(IMPL_MERGER_TEST_CONJ_CONJ_SPARSE_OUT)
     const auto l0 = lid(0);                                                    \
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 3);                                                  \
@@ -538,8 +530,8 @@ FOREVERY_COMMON_DISJ_BINOP(IMPL_MERGER_TEST_DISJ)
     const auto l0 = lid(0);                                                    \
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 1);                                                  \
@@ -572,9 +564,9 @@ FOREVERY_COMMON_CONJ_BINOP(IMPL_MERGER_TEST_CONJ)
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
     const auto t2 = tid(2);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
-    const PatternRef p2 = tensorPattern(t2);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
+    PatternRef p2 = tensorPattern(t2);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 3);                                                  \
@@ -617,9 +609,9 @@ FOREVERY_PAIR_OF_COMMON_CONJ_DISJ_BINOP(IMPL_MERGER_TEST_CONJ_DISJ)
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
     const auto t2 = tid(2);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
-    const PatternRef p2 = tensorPattern(t2);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
+    PatternRef p2 = tensorPattern(t2);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 7);                                                  \
@@ -668,9 +660,9 @@ FOREVERY_PAIR_OF_COMMON_DISJ_DISJ_BINOP(IMPL_MERGER_TEST_DISJ_DISJ)
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
     const auto t2 = tid(2);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
-    const PatternRef p2 = tensorPattern(t2);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
+    PatternRef p2 = tensorPattern(t2);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
     expectNumLatPoints(s, 1);                                                  \
     expectLatPoint(s, 0, CONJ2##Pattern(CONJ1##Pattern(p0, p1), p2),           \
@@ -707,8 +699,8 @@ FOREVERY_PAIR_OF_COMMON_CONJ_CONJ_BINOP(IMPL_MERGER_TEST_CONJ_CONJ)
     const auto l0 = lid(0);                                                    \
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 3);                                                  \
@@ -745,8 +737,8 @@ FOREVERY_COMMON_DISJ_BINOP(IMPL_MERGER_TEST_OPTIMIZED_DISJ)
     const auto l0 = lid(0);                                                    \
     const auto t0 = tid(0);                                                    \
     const auto t1 = tid(1);                                                    \
-    const PatternRef p0 = tensorPattern(t0);                                   \
-    const PatternRef p1 = tensorPattern(t1);                                   \
+    PatternRef p0 = tensorPattern(t0);                                         \
+    PatternRef p1 = tensorPattern(t1);                                         \
     auto s = merger.buildLattices(e, l0);                                      \
                                                                                \
     expectNumLatPoints(s, 1);                                                  \

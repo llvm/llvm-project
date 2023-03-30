@@ -87,11 +87,13 @@ void CodegenEnv::startEmit() {
   SmallVector<Value> tensors; // input tensors passed to loop emitter
   for (OpOperand &t : linalgOp->getOpOperands()) {
     tensors.push_back(t.get());
-    Level rank = linalgOp.getMatchingIndexingMap(&t).getNumResults();
-    for (Level lvl = 0; lvl < rank; lvl++) {
-      sortArrayBasedOnOrder(
-          latticeMerger.getDependentLoops(t.getOperandNumber(), lvl), topSort);
-    }
+    const TensorId tid = makeTensorId(t.getOperandNumber());
+    const Level lvlRank = linalgOp.getMatchingIndexingMap(&t).getNumResults();
+    const auto enc = getSparseTensorEncoding(t.get().getType());
+    (void)enc;
+    assert(!enc || lvlRank == enc.getLvlRank());
+    for (Level lvl = 0; lvl < lvlRank; lvl++)
+      sortArrayBasedOnOrder(latticeMerger.getDependentLoops(tid, lvl), topSort);
   }
 
   loopEmitter.initialize(
@@ -163,10 +165,7 @@ bool CodegenEnv::isAdmissibleTensorExp(ExprId exp) {
   }
 
   OpOperand *lhs = linalgOp.getDpsInitOperand(0);
-  // That the operand number is a valid `TensorId` will be verified
-  // by the call to `isSingleCondition` below; though we may want to add
-  // assertions to check it here, in order to give better error messages.
-  const TensorId tensor = lhs->getOperandNumber();
+  const TensorId tensor = makeTensorId(lhs->getOperandNumber());
   // An non-annotated output tensor is assumed dense, and becomes a random
   // access n-dim memref. Admissible since insertions cannot occur.
   if (getSparseTensorType(lhs->get()).isAllDense())

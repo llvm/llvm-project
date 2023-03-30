@@ -701,6 +701,11 @@ LogicalResult ConvertOp::verify() {
     if (auto tp2 = getDest().getType().dyn_cast<RankedTensorType>()) {
       if (tp1.getRank() != tp2.getRank())
         return emitError("unexpected conversion mismatch in rank");
+      auto dstEnc =
+          tp2.getEncoding().dyn_cast_or_null<SparseTensorEncodingAttr>();
+      if (dstEnc && dstEnc.isSlice())
+        return emitError("cannot convert to a sparse tensor slice");
+
       auto shape1 = tp1.getShape();
       auto shape2 = tp2.getShape();
       // Accept size matches between the source and the destination type

@@ -3162,23 +3162,25 @@ multiclass VPseudoTernaryNoMaskNoPolicy<VReg RetClass,
     def "_" # MInfo.MX : VPseudoTernaryNoMask<RetClass, Op1Class, Op2Class, Constraint>;
     def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class,
                                                            Constraint>;
-                                   
   }
 }
 
-multiclass VPseudoTernaryWithTailPolicy<VReg RetClass,
-                                        RegisterClass Op1Class,
-                                        DAGOperand Op2Class,
-                                        LMULInfo MInfo,
-                                        string Constraint = "",
-                                        bit Commutable = 0> {
+multiclass VPseudoTernaryWithTailPolicy_E<VReg RetClass,
+                                          RegisterClass Op1Class,
+                                          DAGOperand Op2Class,
+                                          LMULInfo MInfo,
+                                          string Constraint = "",
+                                          bit Commutable = 0> {
   let VLMul = MInfo.value in {
-    let isCommutable = Commutable in
-    def "_" # MInfo.MX : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class, Constraint>;
-    def "_" # MInfo.MX # "_MASK" : VPseudoBinaryTailPolicy<RetClass, Op1Class, Op2Class, Constraint>;
+    defvar mx = MInfo.MX;
+    defvar sews = SchedSEWSet<mx>.val;
+    foreach e = sews in {
+      let isCommutable = Commutable in
+      def "_" # mx # "_E" # e : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class, Constraint>;
+      def "_" # mx # "_E" # e # "_MASK" : VPseudoBinaryTailPolicy<RetClass, Op1Class, Op2Class, Constraint>;
+    }
   }
 }
-
 
 multiclass VPseudoTernaryWithPolicy<VReg RetClass,
                                     RegisterClass Op1Class,
@@ -3435,7 +3437,7 @@ multiclass VPseudoVRED_VS {
   foreach m = MxList in {
     defvar mx = m.MX;
     defvar WriteVIRedV_From_MX = !cast<SchedWrite>("WriteVIRedV_From_" # mx);
-    defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
+    defm _VS : VPseudoTernaryWithTailPolicy_E<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
                Sched<[WriteVIRedV_From_MX, ReadVIRedV, ReadVIRedV, ReadVIRedV,
                       ReadVMask]>;
   }
@@ -3445,7 +3447,7 @@ multiclass VPseudoVWRED_VS {
   foreach m = MxList in {
     defvar mx = m.MX;
     defvar WriteVIWRedV_From_MX = !cast<SchedWrite>("WriteVIWRedV_From_" # mx);
-    defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
+    defm _VS : VPseudoTernaryWithTailPolicy_E<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
                Sched<[WriteVIWRedV_From_MX, ReadVIWRedV, ReadVIWRedV,
                       ReadVIWRedV, ReadVMask]>;
   }
@@ -3455,7 +3457,7 @@ multiclass VPseudoVFRED_VS {
   foreach m = MxListF in {
     defvar mx = m.MX;
     defvar WriteVFRedV_From_MX = !cast<SchedWrite>("WriteVFRedV_From_" # mx);
-    defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
+    defm _VS : VPseudoTernaryWithTailPolicy_E<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
                Sched<[WriteVFRedV_From_MX, ReadVFRedV, ReadVFRedV, ReadVFRedV,
                       ReadVMask]>;
   }
@@ -3465,7 +3467,7 @@ multiclass VPseudoVFREDO_VS {
   foreach m = MxListF in {
     defvar mx = m.MX;
     defvar WriteVFRedOV_From_MX = !cast<SchedWrite>("WriteVFRedOV_From_" # mx);
-    defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
+    defm _VS : VPseudoTernaryWithTailPolicy_E<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
                Sched<[WriteVFRedOV_From_MX, ReadVFRedOV, ReadVFRedOV,
                       ReadVFRedOV, ReadVMask]>;
   }
@@ -3475,7 +3477,7 @@ multiclass VPseudoVFWRED_VS {
   foreach m = MxListF in {
     defvar mx = m.MX;
     defvar WriteVFWRedV_From_MX = !cast<SchedWrite>("WriteVFWRedV_From_" # mx);
-    defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
+    defm _VS : VPseudoTernaryWithTailPolicy_E<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
                Sched<[WriteVFWRedV_From_MX, ReadVFWRedV, ReadVFWRedV,
                       ReadVFWRedV, ReadVMask]>;
   }
@@ -4271,27 +4273,28 @@ class VPatTernaryNoMask<string intrinsic,
                     op2_kind:$rs2,
                     GPR:$vl, sew)>;
 
-class VPatTernaryNoMaskTA<string intrinsic,
-                          string inst,
-                          string kind,
-                          ValueType result_type,
-                          ValueType op1_type,
-                          ValueType op2_type,
-                          int sew,
-                          LMULInfo vlmul,
-                          VReg result_reg_class,
-                          RegisterClass op1_reg_class,
-                          DAGOperand op2_kind> :
+class VPatTernaryNoMaskTA_E<string intrinsic,
+                            string inst,
+                            string kind,
+                            ValueType result_type,
+                            ValueType op1_type,
+                            ValueType op2_type,
+                            int log2sew,
+                            LMULInfo vlmul,
+                            int sew,
+                            VReg result_reg_class,
+                            RegisterClass op1_reg_class,
+                            DAGOperand op2_kind> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic)
                     (result_type result_reg_class:$rs3),
                     (op1_type op1_reg_class:$rs1),
                     (op2_type op2_kind:$rs2),
                     VLOpFrag)),
-                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX)
+                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#"_E"#sew)
                     result_reg_class:$rs3,
                     (op1_type op1_reg_class:$rs1),
                     op2_kind:$rs2,
-                    GPR:$vl, sew, TAIL_AGNOSTIC)>;
+                    GPR:$vl, log2sew, TAIL_AGNOSTIC)>;
 
 class VPatTernaryNoMaskWithPolicy<string intrinsic,
                                   string inst,
@@ -4365,30 +4368,31 @@ class VPatTernaryMaskPolicy<string intrinsic,
                     (mask_type V0),
                     GPR:$vl, sew, (XLenVT timm:$policy))>;
 
-class VPatTernaryMaskTA<string intrinsic,
-                        string inst,
-                        string kind,
-                        ValueType result_type,
-                        ValueType op1_type,
-                        ValueType op2_type,
-                        ValueType mask_type,
-                        int sew,
-                        LMULInfo vlmul,
-                        VReg result_reg_class,
-                        RegisterClass op1_reg_class,
-                        DAGOperand op2_kind> :
+class VPatTernaryMaskTA_E<string intrinsic,
+                          string inst,
+                          string kind,
+                          ValueType result_type,
+                          ValueType op1_type,
+                          ValueType op2_type,
+                          ValueType mask_type,
+                          int log2sew,
+                          LMULInfo vlmul,
+                          int sew,
+                          VReg result_reg_class,
+                          RegisterClass op1_reg_class,
+                          DAGOperand op2_kind> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic#"_mask")
                     (result_type result_reg_class:$rs3),
                     (op1_type op1_reg_class:$rs1),
                     (op2_type op2_kind:$rs2),
                     (mask_type V0),
                     VLOpFrag)),
-                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX # "_MASK")
+                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#"_E"#sew# "_MASK")
                     result_reg_class:$rs3,
                     (op1_type op1_reg_class:$rs1),
                     op2_kind:$rs2,
                     (mask_type V0),
-                    GPR:$vl, sew, TAIL_AGNOSTIC)>;
+                    GPR:$vl, log2sew, TAIL_AGNOSTIC)>;
 
 multiclass VPatUnaryS_M<string intrinsic_name,
                              string inst>
@@ -5133,24 +5137,25 @@ multiclass VPatTernaryWithPolicy<string intrinsic,
                               op2_kind>;
 }
 
-multiclass VPatTernaryTA<string intrinsic,
-                         string inst,
-                         string kind,
-                         ValueType result_type,
-                         ValueType op1_type,
-                         ValueType op2_type,
-                         ValueType mask_type,
-                         int sew,
-                         LMULInfo vlmul,
-                         VReg result_reg_class,
-                         RegisterClass op1_reg_class,
-                         DAGOperand op2_kind> {
-  def : VPatTernaryNoMaskTA<intrinsic, inst, kind, result_type, op1_type,
-                            op2_type, sew, vlmul, result_reg_class,
-                            op1_reg_class, op2_kind>;
-  def : VPatTernaryMaskTA<intrinsic, inst, kind, result_type, op1_type,
-                          op2_type, mask_type, sew, vlmul, result_reg_class,
-                          op1_reg_class, op2_kind>;
+multiclass VPatTernaryTA_E<string intrinsic,
+                           string inst,
+                           string kind,
+                           ValueType result_type,
+                           ValueType op1_type,
+                           ValueType op2_type,
+                           ValueType mask_type,
+                           int log2sew,
+                           LMULInfo vlmul,
+                           int sew,
+                           VReg result_reg_class,
+                           RegisterClass op1_reg_class,
+                           DAGOperand op2_kind> {
+  def : VPatTernaryNoMaskTA_E<intrinsic, inst, kind, result_type, op1_type,
+                              op2_type, log2sew, vlmul, sew, result_reg_class,
+                              op1_reg_class, op2_kind>;
+  def : VPatTernaryMaskTA_E<intrinsic, inst, kind, result_type, op1_type,
+                            op2_type, mask_type, log2sew, vlmul, sew,
+                            result_reg_class, op1_reg_class, op2_kind>;
 }
 
 multiclass VPatTernaryV_VV_AAXA<string intrinsic, string instruction,
@@ -5257,19 +5262,19 @@ multiclass VPatReductionV_VS<string intrinsic, string instruction, bit IsFloat =
   foreach vti = !if(IsFloat, NoGroupFloatVectors, NoGroupIntegerVectors) in
   {
     defvar vectorM1 = !cast<VTypeInfo>(!if(IsFloat, "VF", "VI") # vti.SEW # "M1");
-    defm : VPatTernaryTA<intrinsic, instruction, "VS",
-                         vectorM1.Vector, vti.Vector,
-                         vectorM1.Vector, vti.Mask,
-                         vti.Log2SEW, vti.LMul,
-                         VR, vti.RegClass, VR>;
+    defm : VPatTernaryTA_E<intrinsic, instruction, "VS",
+                           vectorM1.Vector, vti.Vector,
+                           vectorM1.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, vti.SEW,
+                           VR, vti.RegClass, VR>;
   }
   foreach gvti = !if(IsFloat, GroupFloatVectors, GroupIntegerVectors) in
   {
-    defm : VPatTernaryTA<intrinsic, instruction, "VS",
-                         gvti.VectorM1, gvti.Vector,
-                         gvti.VectorM1, gvti.Mask,
-                         gvti.Log2SEW, gvti.LMul,
-                         VR, gvti.RegClass, VR>;
+    defm : VPatTernaryTA_E<intrinsic, instruction, "VS",
+                           gvti.VectorM1, gvti.Vector,
+                           gvti.VectorM1, gvti.Mask,
+                           gvti.Log2SEW, gvti.LMul, gvti.SEW,
+                           VR, gvti.RegClass, VR>;
   }
 }
 
@@ -5279,12 +5284,12 @@ multiclass VPatReductionW_VS<string intrinsic, string instruction, bit IsFloat =
     defvar wtiSEW = !mul(vti.SEW, 2);
     if !le(wtiSEW, 64) then {
       defvar wtiM1 = !cast<VTypeInfo>(!if(IsFloat, "VF", "VI") # wtiSEW # "M1");
-      defm : VPatTernaryTA<intrinsic, instruction, "VS",
-                           wtiM1.Vector, vti.Vector,
-                           wtiM1.Vector, vti.Mask,
-                           vti.Log2SEW, vti.LMul,
-                           wtiM1.RegClass, vti.RegClass,
-                           wtiM1.RegClass>;
+      defm : VPatTernaryTA_E<intrinsic, instruction, "VS",
+                             wtiM1.Vector, vti.Vector,
+                             wtiM1.Vector, vti.Mask,
+                             vti.Log2SEW, vti.LMul, vti.SEW,
+                             wtiM1.RegClass, vti.RegClass,
+                             wtiM1.RegClass>;
     }
   }
 }

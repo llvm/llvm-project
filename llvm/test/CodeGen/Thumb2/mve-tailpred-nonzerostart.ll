@@ -4,44 +4,27 @@
 define arm_aapcs_vfpcc void @start12(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, float %a, i32 %n) {
 ; CHECK-LABEL: start12:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    cmp r3, #1
-; CHECK-NEXT:    blt .LBB0_3
-; CHECK-NEXT:  @ %bb.1: @ %vector.ph
+; CHECK-NEXT:    it lt
+; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:  .LBB0_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r12, s0
-; CHECK-NEXT:    adds r4, r3, #3
-; CHECK-NEXT:    bic r4, r4, #3
-; CHECK-NEXT:    adr r5, .LCPI0_0
-; CHECK-NEXT:    sub.w lr, r4, #16
-; CHECK-NEXT:    movs r4, #1
+; CHECK-NEXT:    subs r3, #12
 ; CHECK-NEXT:    adds r0, #48
 ; CHECK-NEXT:    adds r1, #48
-; CHECK-NEXT:    add.w lr, r4, lr, lsr #2
 ; CHECK-NEXT:    adds r2, #48
-; CHECK-NEXT:    vldrw.u32 q0, [r5]
-; CHECK-NEXT:    movs r4, #12
-; CHECK-NEXT:    vdup.32 q1, r3
+; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vqadd.u32 q2, q0, r4
-; CHECK-NEXT:    adds r4, #4
-; CHECK-NEXT:    vptt.u32 hi, q1, q2
-; CHECK-NEXT:    vldrwt.u32 q2, [r1], #16
-; CHECK-NEXT:    vldrwt.u32 q3, [r0], #16
-; CHECK-NEXT:    vfmas.f32 q3, q2, r12
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrwt.32 q3, [r2], #16
-; CHECK-NEXT:    le lr, .LBB0_2
-; CHECK-NEXT:  .LBB0_3: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.4:
-; CHECK-NEXT:  .LCPI0_0:
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 1 @ 0x1
-; CHECK-NEXT:    .long 2 @ 0x2
-; CHECK-NEXT:    .long 3 @ 0x3
+; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
+; CHECK-NEXT:    vfmas.f32 q1, q0, r12
+; CHECK-NEXT:    vstrw.32 q1, [r2], #16
+; CHECK-NEXT:    letp lr, .LBB0_2
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
   br i1 %cmp8, label %vector.ph, label %for.cond.cleanup
@@ -211,48 +194,30 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 define arm_aapcs_vfpcc void @startSmod4(i32 %S, ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, float %a, i32 %n) {
 ; CHECK-LABEL: startSmod4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    ldr r6, [sp, #16]
-; CHECK-NEXT:    cmp r6, #1
-; CHECK-NEXT:    blt .LBB3_3
-; CHECK-NEXT:  @ %bb.1: @ %vector.ph
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    ldr.w lr, [sp, #8]
+; CHECK-NEXT:    cmp.w lr, #1
+; CHECK-NEXT:    it lt
+; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:  .LBB3_1: @ %vector.ph
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    mvn r4, #12
 ; CHECK-NEXT:    and.w r4, r4, r0, lsl #2
-; CHECK-NEXT:    bic r0, r0, #3
 ; CHECK-NEXT:    add r1, r4
 ; CHECK-NEXT:    add r2, r4
 ; CHECK-NEXT:    add r3, r4
-; CHECK-NEXT:    adds r4, r6, #3
-; CHECK-NEXT:    bic r4, r4, #3
-; CHECK-NEXT:    movs r5, #1
-; CHECK-NEXT:    subs r4, r4, r0
-; CHECK-NEXT:    vdup.32 q1, r6
-; CHECK-NEXT:    subs r4, #4
-; CHECK-NEXT:    add.w lr, r5, r4, lsr #2
-; CHECK-NEXT:    adr r4, .LCPI3_0
-; CHECK-NEXT:    vldrw.u32 q0, [r4]
+; CHECK-NEXT:    sub.w r0, lr, #4
+; CHECK-NEXT:    dlstp.32 lr, r0
 ; CHECK-NEXT:  .LBB3_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vqadd.u32 q2, q0, r0
-; CHECK-NEXT:    adds r0, #4
-; CHECK-NEXT:    vptt.u32 hi, q1, q2
-; CHECK-NEXT:    vldrwt.u32 q2, [r2], #16
-; CHECK-NEXT:    vldrwt.u32 q3, [r1], #16
-; CHECK-NEXT:    vfmas.f32 q3, q2, r12
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrwt.32 q3, [r3], #16
-; CHECK-NEXT:    le lr, .LBB3_2
-; CHECK-NEXT:  .LBB3_3: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, r5, r6, pc}
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.4:
-; CHECK-NEXT:  .LCPI3_0:
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 1 @ 0x1
-; CHECK-NEXT:    .long 2 @ 0x2
-; CHECK-NEXT:    .long 3 @ 0x3
+; CHECK-NEXT:    vldrw.u32 q0, [r2], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
+; CHECK-NEXT:    vfmas.f32 q1, q0, r12
+; CHECK-NEXT:    vstrw.32 q1, [r3], #16
+; CHECK-NEXT:    letp lr, .LBB3_2
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
   br i1 %cmp8, label %vector.ph, label %for.cond.cleanup

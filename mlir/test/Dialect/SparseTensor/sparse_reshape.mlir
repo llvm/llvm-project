@@ -61,8 +61,8 @@
 // CHECK-RWT:           scf.yield %[[NT:.*]]
 // CHECK-RWT:         }
 // CHECK-RWT:         %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
-// CHECK-RWT:         %[[T:.*]] = sparse_tensor.convert %[[NT1]]
-// CHECK-RWT:         return %[[T]] : tensor<10x10xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
+// CHECK-RWT-NOT:     sparse_tensor.convert
+// CHECK-RWT:         return %[[NT1]] : tensor<10x10xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
 //
 func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10xf64, #SparseMatrix> {
   %0 = tensor.expand_shape %arg0 [[0, 1]] :
@@ -134,8 +134,8 @@ func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10x
 // CHECK-RWT            scf.yield %[[RET_1]]
 // CHECK-RWT:         }
 // CHECK-RWT:        %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
-// CHECK-RWT:        %[[T:.*]] = sparse_tensor.convert %[[NT1]]
-// CHECK-RWT:        return %[[T]] : tensor<100xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>>
+// CHECK-RWT-NOT:    sparse_tensor.convert
+// CHECK-RWT:        return %[[NT1]] : tensor<100xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>>
 //
 func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<100xf64, #SparseVector> {
   %0 = tensor.collapse_shape %arg0 [[0, 1]] :
@@ -209,8 +209,8 @@ func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<10
 // CHECK-RWT:           scf.yield %[[NT]]
 // CHECK-RWT:         }
 // CHECK-RWT:         %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
-// CHECK-RWT:         %[[T:.*]] = sparse_tensor.convert %[[NT1]]
-// CHECK-RWT:         return %[[T]] : tensor<?x10xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
+// CHECK-RWT-NOT:     sparse_tensor.convert
+// CHECK-RWT:         return %[[NT1]] : tensor<?x10xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
 //
 func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<?x10xf64, #SparseMatrix> {
   %0 = tensor.expand_shape %arg0 [[0, 1]] :
@@ -291,8 +291,8 @@ func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<
 // CHECK-RWT            scf.yield %[[RET_1]]
 // CHECK-RWT:        }
 // CHECK-RWT:        %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
-// CHECK-RWT:        %[[T:.*]] = sparse_tensor.convert %[[NT1]]
-// CHECK-RWT:        return %[[T]] : tensor<?xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>>
+// CHECK-RWT-NOT:    sparse_tensor.convert
+// CHECK-RWT:        return %[[NT1]] : tensor<?xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>>
 //
 func.func @dynamic_sparse_collapse(%arg0: tensor<10x?xf64, #SparseMatrix>) -> tensor<?xf64, #SparseVector> {
   %0 = tensor.collapse_shape %arg0 [[0, 1]] :

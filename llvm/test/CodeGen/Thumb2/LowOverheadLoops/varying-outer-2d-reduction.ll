@@ -45,8 +45,8 @@ define dso_local void @varying_outer_2d_reduction(ptr nocapture readonly %Input,
 ; ENABLED-NEXT:  .LBB0_4: @ %for.body
 ; ENABLED-NEXT:    @ =>This Loop Header: Depth=1
 ; ENABLED-NEXT:    @ Child Loop BB0_6 Depth 2
-; ENABLED-NEXT:    cmp r2, r8
-; ENABLED-NEXT:    ble .LBB0_2
+; ENABLED-NEXT:    cmp r8, r2
+; ENABLED-NEXT:    bge .LBB0_2
 ; ENABLED-NEXT:  @ %bb.5: @ %vector.ph
 ; ENABLED-NEXT:    @ in Loop: Header=BB0_4 Depth=1
 ; ENABLED-NEXT:    bic r0, r9, #3
@@ -116,8 +116,8 @@ define dso_local void @varying_outer_2d_reduction(ptr nocapture readonly %Input,
 ; NOREDUCTIONS-NEXT:  .LBB0_4: @ %for.body
 ; NOREDUCTIONS-NEXT:    @ =>This Loop Header: Depth=1
 ; NOREDUCTIONS-NEXT:    @ Child Loop BB0_6 Depth 2
-; NOREDUCTIONS-NEXT:    cmp r2, r8
-; NOREDUCTIONS-NEXT:    ble .LBB0_2
+; NOREDUCTIONS-NEXT:    cmp r8, r2
+; NOREDUCTIONS-NEXT:    bge .LBB0_2
 ; NOREDUCTIONS-NEXT:  @ %bb.5: @ %vector.ph
 ; NOREDUCTIONS-NEXT:    @ in Loop: Header=BB0_4 Depth=1
 ; NOREDUCTIONS-NEXT:    bic r0, r9, #3
