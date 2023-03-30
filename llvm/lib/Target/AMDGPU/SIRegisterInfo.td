@@ -817,6 +817,14 @@ def SGPR_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, v4i16, v4f16], 
   let HasSGPR = 1;
 }
 
+// CCR (call clobbered registers) SGPR 64-bit registers, currently used for tail call
+// return address only.
+def CCR_SGPR_64 : SIRegisterClass<"AMDGPU", SGPR_64.RegTypes, 32, (add (trunc SGPR_64, 16))> {
+  let CopyCost = SGPR_64.CopyCost;
+  let AllocationPriority = SGPR_64.AllocationPriority;
+  let HasSGPR = SGPR_64.HasSGPR;
+}
+
 def TTMP_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, f64, v4i16, v4f16], 32,
                             (add TTMP_64Regs)> {
   let isAllocatable = 0;

@@ -10,31 +10,31 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define void @test(ptr nocapture %asd, ptr nocapture %aud,
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[ASD:%.*]], i64 512
-; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[AUD:%.*]], i64 512
-; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[ASR:%.*]], i64 512
-; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[AUR:%.*]], i64 512
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[ASD]], [[UGLYGEP1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[AUD]], [[UGLYGEP]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[ASD:%.*]], i64 512
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[AUD:%.*]], i64 512
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[ASR:%.*]], i64 512
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[AUR:%.*]], i64 512
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[ASD]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[AUD]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[ASD]], [[UGLYGEP2]]
-; CHECK-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[ASR]], [[UGLYGEP]]
+; CHECK-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[ASD]], [[SCEVGEP2]]
+; CHECK-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[ASR]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT6:%.*]] = and i1 [[BOUND04]], [[BOUND15]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT6]]
-; CHECK-NEXT:    [[BOUND07:%.*]] = icmp ult ptr [[ASD]], [[UGLYGEP3]]
-; CHECK-NEXT:    [[BOUND18:%.*]] = icmp ult ptr [[AUR]], [[UGLYGEP]]
+; CHECK-NEXT:    [[BOUND07:%.*]] = icmp ult ptr [[ASD]], [[SCEVGEP3]]
+; CHECK-NEXT:    [[BOUND18:%.*]] = icmp ult ptr [[AUR]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT9:%.*]] = and i1 [[BOUND07]], [[BOUND18]]
 ; CHECK-NEXT:    [[CONFLICT_RDX10:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT9]]
-; CHECK-NEXT:    [[BOUND011:%.*]] = icmp ult ptr [[AUD]], [[UGLYGEP2]]
-; CHECK-NEXT:    [[BOUND112:%.*]] = icmp ult ptr [[ASR]], [[UGLYGEP1]]
+; CHECK-NEXT:    [[BOUND011:%.*]] = icmp ult ptr [[AUD]], [[SCEVGEP2]]
+; CHECK-NEXT:    [[BOUND112:%.*]] = icmp ult ptr [[ASR]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT13:%.*]] = and i1 [[BOUND011]], [[BOUND112]]
 ; CHECK-NEXT:    [[CONFLICT_RDX14:%.*]] = or i1 [[CONFLICT_RDX10]], [[FOUND_CONFLICT13]]
-; CHECK-NEXT:    [[BOUND015:%.*]] = icmp ult ptr [[AUD]], [[UGLYGEP3]]
-; CHECK-NEXT:    [[BOUND116:%.*]] = icmp ult ptr [[AUR]], [[UGLYGEP1]]
+; CHECK-NEXT:    [[BOUND015:%.*]] = icmp ult ptr [[AUD]], [[SCEVGEP3]]
+; CHECK-NEXT:    [[BOUND116:%.*]] = icmp ult ptr [[AUR]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT17:%.*]] = and i1 [[BOUND015]], [[BOUND116]]
 ; CHECK-NEXT:    [[CONFLICT_RDX18:%.*]] = or i1 [[CONFLICT_RDX14]], [[FOUND_CONFLICT17]]
-; CHECK-NEXT:    [[BOUND019:%.*]] = icmp ult ptr [[ASR]], [[UGLYGEP3]]
-; CHECK-NEXT:    [[BOUND120:%.*]] = icmp ult ptr [[AUR]], [[UGLYGEP2]]
+; CHECK-NEXT:    [[BOUND019:%.*]] = icmp ult ptr [[ASR]], [[SCEVGEP3]]
+; CHECK-NEXT:    [[BOUND120:%.*]] = icmp ult ptr [[AUR]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT21:%.*]] = and i1 [[BOUND019]], [[BOUND120]]
 ; CHECK-NEXT:    [[CONFLICT_RDX22:%.*]] = or i1 [[CONFLICT_RDX18]], [[FOUND_CONFLICT21]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX22]], label [[SCALAR_PH:%.*]], label [[VECTOR_BODY:%.*]]
@@ -171,31 +171,31 @@ define void @test(ptr nocapture %asd, ptr nocapture %aud,
 ; UNROLL-NO-VF-NEXT:  entry:
 ; UNROLL-NO-VF-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; UNROLL-NO-VF:       vector.memcheck:
-; UNROLL-NO-VF-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[ASD:%.*]], i64 512
-; UNROLL-NO-VF-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[AUD:%.*]], i64 512
-; UNROLL-NO-VF-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[ASR:%.*]], i64 512
-; UNROLL-NO-VF-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[AUR:%.*]], i64 512
-; UNROLL-NO-VF-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[ASD]], [[UGLYGEP1]]
-; UNROLL-NO-VF-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[AUD]], [[UGLYGEP]]
+; UNROLL-NO-VF-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[ASD:%.*]], i64 512
+; UNROLL-NO-VF-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[AUD:%.*]], i64 512
+; UNROLL-NO-VF-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[ASR:%.*]], i64 512
+; UNROLL-NO-VF-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[AUR:%.*]], i64 512
+; UNROLL-NO-VF-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[ASD]], [[SCEVGEP1]]
+; UNROLL-NO-VF-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[AUD]], [[SCEVGEP]]
 ; UNROLL-NO-VF-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; UNROLL-NO-VF-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[ASD]], [[UGLYGEP2]]
-; UNROLL-NO-VF-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[ASR]], [[UGLYGEP]]
+; UNROLL-NO-VF-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[ASD]], [[SCEVGEP2]]
+; UNROLL-NO-VF-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[ASR]], [[SCEVGEP]]
 ; UNROLL-NO-VF-NEXT:    [[FOUND_CONFLICT6:%.*]] = and i1 [[BOUND04]], [[BOUND15]]
 ; UNROLL-NO-VF-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT6]]
-; UNROLL-NO-VF-NEXT:    [[BOUND07:%.*]] = icmp ult ptr [[ASD]], [[UGLYGEP3]]
-; UNROLL-NO-VF-NEXT:    [[BOUND18:%.*]] = icmp ult ptr [[AUR]], [[UGLYGEP]]
+; UNROLL-NO-VF-NEXT:    [[BOUND07:%.*]] = icmp ult ptr [[ASD]], [[SCEVGEP3]]
+; UNROLL-NO-VF-NEXT:    [[BOUND18:%.*]] = icmp ult ptr [[AUR]], [[SCEVGEP]]
 ; UNROLL-NO-VF-NEXT:    [[FOUND_CONFLICT9:%.*]] = and i1 [[BOUND07]], [[BOUND18]]
 ; UNROLL-NO-VF-NEXT:    [[CONFLICT_RDX10:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT9]]
-; UNROLL-NO-VF-NEXT:    [[BOUND011:%.*]] = icmp ult ptr [[AUD]], [[UGLYGEP2]]
-; UNROLL-NO-VF-NEXT:    [[BOUND112:%.*]] = icmp ult ptr [[ASR]], [[UGLYGEP1]]
+; UNROLL-NO-VF-NEXT:    [[BOUND011:%.*]] = icmp ult ptr [[AUD]], [[SCEVGEP2]]
+; UNROLL-NO-VF-NEXT:    [[BOUND112:%.*]] = icmp ult ptr [[ASR]], [[SCEVGEP1]]
 ; UNROLL-NO-VF-NEXT:    [[FOUND_CONFLICT13:%.*]] = and i1 [[BOUND011]], [[BOUND112]]
 ; UNROLL-NO-VF-NEXT:    [[CONFLICT_RDX14:%.*]] = or i1 [[CONFLICT_RDX10]], [[FOUND_CONFLICT13]]
-; UNROLL-NO-VF-NEXT:    [[BOUND015:%.*]] = icmp ult ptr [[AUD]], [[UGLYGEP3]]
-; UNROLL-NO-VF-NEXT:    [[BOUND116:%.*]] = icmp ult ptr [[AUR]], [[UGLYGEP1]]
+; UNROLL-NO-VF-NEXT:    [[BOUND015:%.*]] = icmp ult ptr [[AUD]], [[SCEVGEP3]]
+; UNROLL-NO-VF-NEXT:    [[BOUND116:%.*]] = icmp ult ptr [[AUR]], [[SCEVGEP1]]
 ; UNROLL-NO-VF-NEXT:    [[FOUND_CONFLICT17:%.*]] = and i1 [[BOUND015]], [[BOUND116]]
 ; UNROLL-NO-VF-NEXT:    [[CONFLICT_RDX18:%.*]] = or i1 [[CONFLICT_RDX14]], [[FOUND_CONFLICT17]]
-; UNROLL-NO-VF-NEXT:    [[BOUND019:%.*]] = icmp ult ptr [[ASR]], [[UGLYGEP3]]
-; UNROLL-NO-VF-NEXT:    [[BOUND120:%.*]] = icmp ult ptr [[AUR]], [[UGLYGEP2]]
+; UNROLL-NO-VF-NEXT:    [[BOUND019:%.*]] = icmp ult ptr [[ASR]], [[SCEVGEP3]]
+; UNROLL-NO-VF-NEXT:    [[BOUND120:%.*]] = icmp ult ptr [[AUR]], [[SCEVGEP2]]
 ; UNROLL-NO-VF-NEXT:    [[FOUND_CONFLICT21:%.*]] = and i1 [[BOUND019]], [[BOUND120]]
 ; UNROLL-NO-VF-NEXT:    [[CONFLICT_RDX22:%.*]] = or i1 [[CONFLICT_RDX18]], [[FOUND_CONFLICT21]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[CONFLICT_RDX22]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -367,10 +367,10 @@ if.end:                                           ; preds = %if.then, %for.body
 define void @test_scalar2scalar(ptr nocapture %asd, ptr nocapture %bsd) {
 ; CHECK-LABEL: @test_scalar2scalar(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[ASD:%.*]], i64 512
-; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[BSD:%.*]], i64 512
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[ASD]], [[UGLYGEP1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[BSD]], [[UGLYGEP]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[ASD:%.*]], i64 512
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[BSD:%.*]], i64 512
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[ASD]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[BSD]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -449,10 +449,10 @@ define void @test_scalar2scalar(ptr nocapture %asd, ptr nocapture %bsd) {
 ; UNROLL-NO-VF-NEXT:  entry:
 ; UNROLL-NO-VF-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; UNROLL-NO-VF:       vector.memcheck:
-; UNROLL-NO-VF-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[ASD:%.*]], i64 512
-; UNROLL-NO-VF-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[BSD:%.*]], i64 512
-; UNROLL-NO-VF-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[ASD]], [[UGLYGEP1]]
-; UNROLL-NO-VF-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[BSD]], [[UGLYGEP]]
+; UNROLL-NO-VF-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[ASD:%.*]], i64 512
+; UNROLL-NO-VF-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[BSD:%.*]], i64 512
+; UNROLL-NO-VF-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[ASD]], [[SCEVGEP1]]
+; UNROLL-NO-VF-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[BSD]], [[SCEVGEP]]
 ; UNROLL-NO-VF-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; UNROLL-NO-VF:       vector.ph:
@@ -559,10 +559,10 @@ if.end:                                           ; preds = %if.then, %for.body
 define void @pr30172(ptr nocapture %asd, ptr nocapture %bsd) !dbg !5 {;
 ; CHECK-LABEL: @pr30172(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[ASD:%.*]], i64 512
-; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[BSD:%.*]], i64 512
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[ASD]], [[UGLYGEP1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[BSD]], [[UGLYGEP]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[ASD:%.*]], i64 512
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[BSD:%.*]], i64 512
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[ASD]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[BSD]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -648,10 +648,10 @@ define void @pr30172(ptr nocapture %asd, ptr nocapture %bsd) !dbg !5 {;
 ; UNROLL-NO-VF-NEXT:  entry:
 ; UNROLL-NO-VF-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; UNROLL-NO-VF:       vector.memcheck:
-; UNROLL-NO-VF-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[ASD:%.*]], i64 512
-; UNROLL-NO-VF-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[BSD:%.*]], i64 512
-; UNROLL-NO-VF-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[ASD]], [[UGLYGEP1]]
-; UNROLL-NO-VF-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[BSD]], [[UGLYGEP]]
+; UNROLL-NO-VF-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[ASD:%.*]], i64 512
+; UNROLL-NO-VF-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[BSD:%.*]], i64 512
+; UNROLL-NO-VF-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[ASD]], [[SCEVGEP1]]
+; UNROLL-NO-VF-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[BSD]], [[SCEVGEP]]
 ; UNROLL-NO-VF-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; UNROLL-NO-VF:       vector.ph:
