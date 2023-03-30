@@ -467,7 +467,7 @@ unsigned TargetCodeGenInfo::getSizeOfUnwindException() const {
   // Verified for:
   //   x86-64     FreeBSD, Linux, Darwin
   //   x86-32     FreeBSD, Linux, Darwin
-  //   PowerPC    Linux, Darwin
+  //   PowerPC    Linux
   //   ARM        Darwin (*not* EABI)
   //   AArch64    Linux
   return 32;
