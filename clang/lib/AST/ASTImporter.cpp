@@ -6793,8 +6793,8 @@ ExpectedStmt ASTNodeImporter::VisitCXXTryStmt(CXXTryStmt *S) {
       return ToHandlerOrErr.takeError();
   }
 
-  return CXXTryStmt::Create(
-      Importer.getToContext(), *ToTryLocOrErr,*ToTryBlockOrErr, ToHandlers);
+  return CXXTryStmt::Create(Importer.getToContext(), *ToTryLocOrErr,
+                            cast<CompoundStmt>(*ToTryBlockOrErr), ToHandlers);
 }
 
 ExpectedStmt ASTNodeImporter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
