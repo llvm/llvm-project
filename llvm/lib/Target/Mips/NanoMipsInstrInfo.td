@@ -402,7 +402,7 @@ let isCodeGenOnly = 1, hasNoSchedulingInfo = 1,
    isTerminator = 1,
    hasDelaySlot = 0,
    isCTI = 1 in
-def BRSC_NM : InstNM<(outs), (ins GPR32NMOpnd:$rs, GPR32NMOpnd: $jti), "brsc\t$rs", [(NMbr_jt GPR32NMOpnd:$rs, GPR32NMOpnd: $jti)]>, InstSize32;
+def BRSC_NM : InstNM<(outs), (ins GPR32NMOpnd:$rs, i32imm:$jti), "brsc\t$rs", [(NMbr_jt GPR32NMOpnd:$rs, tjumptable: $jti)]>, InstSize32;
 
 def BALC_NM : CallNM<"balc", MipsJmpLink, tglobaladdr>, InstSize32;
 def MOVEBALC_NM : MoveBalcBase;
@@ -440,7 +440,7 @@ def PseudoReturnNM : PseudoInstNM<(outs), (ins GPR32NMOpnd:$rs), []> {
 }
 
 let isCodeGenOnly = 1, hasNoSchedulingInfo = 1, hasDelaySlot = 0 in
-def LoadJumpTableOffset : PseudoInstNM<(outs GPR32NMOpnd:$rd), (ins GPR32NMOpnd:$table, GPR32NMOpnd:$entry, GPR32NMOpnd:$jti), []>;
+def LoadJumpTableOffset : PseudoInstNM<(outs GPR32NMOpnd:$rd), (ins GPR32NMOpnd:$table, GPR32NMOpnd:$entry, i32imm:$jti), []>;
 
 // Indirect branch is matched as PseudoIndirectBranchNM and expanded to JRC_NM.
 def PseudoIndirectBranchNM :
