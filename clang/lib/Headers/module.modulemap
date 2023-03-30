@@ -162,3 +162,8 @@ module opencl_c {
   header "opencl-c.h"
   header "opencl-c-base.h"
 }
+
+module ptrauth {
+  header "ptrauth.h"
+  export *
+}
