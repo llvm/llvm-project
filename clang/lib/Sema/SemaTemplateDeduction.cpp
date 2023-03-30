@@ -1613,7 +1613,9 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       llvm_unreachable("Type nodes handled above");
 
     case Type::Auto:
-      // FIXME: Implement deduction in dependent case.
+      // FIXME: It's not clear whether we should deduce the template arguments
+      // of a constrained deduced type. For now we treat them as a non-deduced
+      // context.
       if (P->isDependentType())
         return Sema::TDK_Success;
       [[fallthrough]];
