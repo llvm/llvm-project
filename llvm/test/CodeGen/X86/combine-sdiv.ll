@@ -169,15 +169,41 @@ define <4 x i32> @combine_vec_sdiv_dupe(<4 x i32> %x) {
 define <4 x i32> @combine_vec_sdiv_by_pos0(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_sdiv_by_pos0:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    psrld $2, %xmm0
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: combine_vec_sdiv_by_pos0:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpsrld $2, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: combine_vec_sdiv_by_pos0:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsrld $2, %xmm0, %xmm0
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_vec_sdiv_by_pos0:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsrld $2, %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [63,63,63,63]
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: combine_vec_sdiv_by_pos0:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpsrld $2, %xmm0, %xmm0
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [63,63,63,63]
+; AVX512F-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: combine_vec_sdiv_by_pos0:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpsrld $2, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512BW-NEXT:    retq
+;
+; XOP-LABEL: combine_vec_sdiv_by_pos0:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpsrld $2, %xmm0, %xmm0
+; XOP-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    retq
   %1 = and <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
   %2 = sdiv <4 x i32> %1, <i32 4, i32 4, i32 4, i32 4>
   ret <4 x i32> %2

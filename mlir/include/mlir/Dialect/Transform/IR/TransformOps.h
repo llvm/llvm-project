@@ -54,7 +54,7 @@ protected:
   /// replacement op was found. Derived classes can implement this function for
   /// custom error handling.
   virtual void notifyPayloadReplacementNotFound(Operation *op,
-                                                ValueRange values) const {}
+                                                ValueRange values) {}
 
   /// Return "true" if the given op is a new op.
   bool isNewOp(Operation *op) const;
