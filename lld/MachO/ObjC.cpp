@@ -197,6 +197,19 @@ void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,
       continue;
 
     CachedHashStringRef methodName(getReferentString(r));
+    // +load methods are special: all implementations are called by the runtime
+    // even if they are part of the same class. Thus there is no need to check
+    // for duplicates.
+    // NOTE: Instead of specifically checking for this method name, ld64 simply
+    // checks whether a class / category is present in __objc_nlclslist /
+    // __objc_nlcatlist respectively. This will be the case if the class /
+    // category has a +load method. It skips optimizing the categories if there
+    // are multiple +load methods. Since it does dupe checking as part of the
+    // optimization process, this avoids spurious dupe messages around +load,
+    // but it also means that legit dupe issues for other methods are ignored.
+    if (mKind == MK_Static && methodName.val() == "load")
+      continue;
+
     auto &methodMap =
         mKind == MK_Instance ? klass.instanceMethods : klass.classMethods;
     if (methodMap
