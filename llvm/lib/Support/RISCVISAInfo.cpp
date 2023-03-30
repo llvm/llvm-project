@@ -1060,6 +1060,8 @@ std::vector<std::string> RISCVISAInfo::toFeatureVector() const {
     std::string ExtName = Ext.first;
     if (ExtName == "i") // i is not recognized in clang -cc1
       continue;
+    if (!isSupportedExtension(ExtName))
+      continue;
     std::string Feature = isExperimentalExtension(ExtName)
                               ? "+experimental-" + ExtName
                               : "+" + ExtName;

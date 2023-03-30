@@ -303,12 +303,7 @@ Expected<SubtargetFeatures> ELFObjectFileBase::getRISCVFeatures() const {
   std::optional<StringRef> Attr =
       Attributes.getAttributeString(RISCVAttrs::ARCH);
   if (Attr) {
-    // Suppress version checking for experimental extensions to prevent erroring
-    // when getting any unknown version of experimental extension.
-    auto ParseResult = RISCVISAInfo::parseArchString(
-        *Attr, /*EnableExperimentalExtension=*/true,
-        /*ExperimentalExtensionVersionCheck=*/false,
-        /*IgnoreUnknown=*/true);
+    auto ParseResult = RISCVISAInfo::parseNormalizedArchString(*Attr);
     if (!ParseResult)
       return ParseResult.takeError();
     auto &ISAInfo = *ParseResult;

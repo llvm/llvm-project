@@ -10,6 +10,8 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
+using ::testing::ElementsAre;
+
 using namespace llvm;
 
 bool operator==(const llvm::RISCVExtensionInfo &A,
@@ -102,4 +104,25 @@ TEST(ParseNormalizedArchString, UpdatesFLenMinVLenMaxELen) {
   EXPECT_EQ(Info.getFLen(), 64U);
   EXPECT_EQ(Info.getMinVLen(), 64U);
   EXPECT_EQ(Info.getMaxELen(), 64U);
+}
+
+TEST(ToFeatureVector, IIsDroppedAndExperimentalExtensionsArePrefixed) {
+  auto MaybeISAInfo1 =
+      RISCVISAInfo::parseArchString("rv64im_zihintntl", true, false);
+  ASSERT_THAT_EXPECTED(MaybeISAInfo1, Succeeded());
+  EXPECT_THAT((*MaybeISAInfo1)->toFeatureVector(),
+              ElementsAre("+m", "+experimental-zihintntl"));
+
+  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString(
+      "rv32e_zihintntl_xventanacondops", true, false);
+  ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
+  EXPECT_THAT((*MaybeISAInfo2)->toFeatureVector(),
+              ElementsAre("+e", "+experimental-zihintntl", "+xventanacondops"));
+}
+
+TEST(ToFeatureVector, UnsupportedExtensionsAreDropped) {
+  auto MaybeISAInfo =
+      RISCVISAInfo::parseNormalizedArchString("rv64i2p0_m2p0_xmadeup1p0");
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+  EXPECT_THAT((*MaybeISAInfo)->toFeatureVector(), ElementsAre("+m"));
 }
