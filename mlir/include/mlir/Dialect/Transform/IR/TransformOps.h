@@ -15,6 +15,7 @@
 #include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/CastInterfaces.h"
@@ -31,6 +32,41 @@ using SequenceBodyBuilderFn = ::llvm::function_ref<void(
 using SequenceBodyBuilderArgsFn =
     ::llvm::function_ref<void(::mlir::OpBuilder &, ::mlir::Location,
                               ::mlir::BlockArgument, ::mlir::ValueRange)>;
+
+/// A listener that updates a TransformState based on IR modifications. This
+/// listener can be used during a greedy pattern rewrite to keep the transform
+/// state up-to-date.
+class TrackingListener : public RewriterBase::Listener,
+                         public TransformState::Extension {
+public:
+  explicit TrackingListener(TransformState &state)
+      : TransformState::Extension(state) {}
+
+protected:
+  /// Return a replacement payload op for the given op, which is going to be
+  /// replaced with the given values. By default, if all values are defined by
+  /// the same newly-created op, which also has the same type as the given op,
+  /// that defining op is used as a replacement.
+  virtual Operation *findReplacementOp(Operation *op,
+                                       ValueRange newValues) const;
+
+  /// Return "true" if the given op is a new op.
+  bool isNewOp(Operation *op) const;
+
+  /// Return the single op that defines all given values (if any).
+  static Operation *getCommonDefiningOp(ValueRange values);
+
+private:
+  void notifyOperationInserted(Operation *op) override;
+
+  void notifyOperationRemoved(Operation *op) override;
+
+  void notifyOperationReplaced(Operation *op, ValueRange newValues) override;
+
+  /// Ops that were newly created during the transform.
+  DenseMap<OperationName, DenseSet<Operation *>> newOps;
+};
+
 } // namespace transform
 } // namespace mlir
 
