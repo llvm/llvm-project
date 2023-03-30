@@ -50,6 +50,12 @@ protected:
   virtual Operation *findReplacementOp(Operation *op,
                                        ValueRange newValues) const;
 
+  /// This function is called when a tracked payload op is dropped because no
+  /// replacement op was found. Derived classes can implement this function for
+  /// custom error handling.
+  virtual void notifyPayloadReplacementNotFound(Operation *op,
+                                                ValueRange values) const {}
+
   /// Return "true" if the given op is a new op.
   bool isNewOp(Operation *op) const;
 
