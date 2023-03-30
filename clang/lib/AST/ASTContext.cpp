@@ -6593,34 +6593,6 @@ static bool hasSameOverloadableAttrs(const FunctionDecl *A,
   return true;
 }
 
-bool ASTContext::FriendsDifferByConstraints(const FunctionDecl *X,
-                                            const FunctionDecl *Y) const {
-  // If these aren't friends, then they aren't friends that differ by
-  // constraints.
-  if (!X->getFriendObjectKind() || !Y->getFriendObjectKind())
-    return false;
-
-  // If the two functions share lexical declaration context, they are not in
-  // separate instantations, and thus in the same scope.
-  if (declaresSameEntity(cast<Decl>(X->getLexicalDeclContext()
-                             ->getRedeclContext()),
-                         cast<Decl>(Y->getLexicalDeclContext()
-                             ->getRedeclContext())))
-    return false;
-
-  if (!X->getDescribedFunctionTemplate()) {
-    assert(!Y->getDescribedFunctionTemplate() &&
-           "How would these be the same if they aren't both templates?");
-
-    // If these friends don't have constraints, they aren't constrained, and
-    // thus don't fall under temp.friend p9. Else the simple presence of a
-    // constraint makes them unique.
-    return X->getTrailingRequiresClause();
-  }
-
-  return X->FriendConstraintRefersToEnclosingTemplate();
-}
-
 bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
   // Caution: this function is called by the AST reader during deserialization,
   // so it cannot rely on AST invariants being met. Non-trivial accessors
@@ -6701,6 +6673,15 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
         return false;
     }
 
+    // Per C++20 [temp.over.link]/4, friends in different classes are sometimes
+    // not the same entity if they are constrained.
+    if ((FuncX->isMemberLikeConstrainedFriend() ||
+         FuncY->isMemberLikeConstrainedFriend()) &&
+        !FuncX->getLexicalDeclContext()->Equals(
+            FuncY->getLexicalDeclContext())) {
+      return false;
+    }
+
     // The trailing require clause of instantiated function may change during
     // the semantic analysis. Trying to get the primary template function (if
     // exists) to compare the primary trailing require clause.
@@ -6723,10 +6704,6 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
     const FunctionDecl *PrimaryY = TryToGetPrimaryTemplatedFunction(FuncY);
     if (!isSameConstraintExpr(PrimaryX->getTrailingRequiresClause(),
                               PrimaryY->getTrailingRequiresClause()))
-      return false;
-
-    // Constrained friends are different in certain cases, see: [temp.friend]p9.
-    if (FriendsDifferByConstraints(FuncX, FuncY))
       return false;
 
     auto GetTypeAsWritten = [](const FunctionDecl *FD) {
