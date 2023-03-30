@@ -164,8 +164,8 @@ OPTIONS
 .. option:: --convert-sample-profile-layout=[nest|flat]
 
  Convert the merged profile into a profile with a new layout. Supported
- layout are ``nest``(Nested profile, the input should be CS flat profile) and
- ``flat``(Profile with nested inlinees flattened out).
+ layout are ``nest`` (Nested profile, the input should be CS flat profile) and
+ ``flat`` (Profile with nested inlinees flattened out).
 
 .. option:: --supplement-instr-with-sample=<file>
 
