@@ -236,5 +236,20 @@ TEST_F(FormatTestJson, DisableJsonFormat) {
                      Style);
 }
 
+TEST_F(FormatTestJson, SpaceBeforeJsonColon) {
+  FormatStyle Style = getLLVMStyle(FormatStyle::LK_Json);
+  verifyFormatStable("{\n"
+                     "  \"name\": 1\n"
+                     "}",
+                     Style);
+
+  Style.SpaceBeforeJsonColon = true;
+  verifyFormatStable("{}", Style);
+  verifyFormatStable("{\n"
+                     "  \"name\" : 1\n"
+                     "}",
+                     Style);
+}
+
 } // namespace format
 } // end namespace clang
