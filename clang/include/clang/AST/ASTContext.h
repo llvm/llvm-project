@@ -1716,6 +1716,10 @@ public:
   /// C++11 deduction pattern for 'auto &&' type.
   QualType getAutoRRefDeductType() const;
 
+  /// Remove any type constraints from a template parameter type, for
+  /// equivalence comparison of template parameters.
+  QualType getUnconstrainedType(QualType T) const;
+
   /// C++17 deduced class template specialization type.
   QualType getDeducedTemplateSpecializationType(TemplateName Template,
                                                 QualType DeducedType,
