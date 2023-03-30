@@ -18,6 +18,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_RPC_RPC_H
 #define LLVM_LIBC_SRC_SUPPORT_RPC_RPC_H
 
+#include "rpc_util.h"
 #include "src/__support/CPP/atomic.h"
 
 #include <stdint.h>
@@ -101,8 +102,10 @@ template <typename F, typename U> LIBC_INLINE void Client::run(F fill, U use) {
   }
   // Wait for the server to work on the buffer and respond.
   if (!in & out) {
-    while (!in)
+    while (!in) {
+      sleep_briefly();
       in = inbox->load(cpp::MemoryOrder::RELAXED);
+    }
     atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
   }
   // Apply \p use to the buffer and signal the server.
@@ -114,8 +117,10 @@ template <typename F, typename U> LIBC_INLINE void Client::run(F fill, U use) {
   }
   // Wait for the server to signal the end of the protocol.
   if (in & !out) {
-    while (in)
+    while (in) {
+      sleep_briefly();
       in = inbox->load(cpp::MemoryOrder::RELAXED);
+    }
     atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
   }
 }
