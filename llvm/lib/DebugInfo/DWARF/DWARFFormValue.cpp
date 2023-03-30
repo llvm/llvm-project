@@ -615,16 +615,18 @@ Expected<const char *> DWARFFormValue::getAsCString() const {
   }
   // Prefer the Unit's string extractor, because for .dwo it will point to
   // .debug_str.dwo, while the Context's extractor always uses .debug_str.
-  DataExtractor StrData = Form == DW_FORM_line_strp
-                              ? C->getLineStringExtractor()
-                          : U ? U->getStringExtractor()
-                              : C->getStringExtractor();
+  bool IsDebugLineString = Form == DW_FORM_line_strp;
+  DataExtractor StrData =
+      IsDebugLineString ? C->getLineStringExtractor()
+                        : U ? U->getStringExtractor() : C->getStringExtractor();
   if (const char *Str = StrData.getCStr(&Offset))
     return Str;
   std::string Msg = FormEncodingString(Form).str();
   if (Index)
     Msg += (" uses index " + Twine(*Index) + ", but the referenced string").str();
-  Msg += (" offset " + Twine(Offset) + " is beyond .debug_str bounds").str();
+  Msg += (" offset " + Twine(Offset) + " is beyond " +
+          (IsDebugLineString ? ".debug_line_str" : ".debug_str") + " bounds")
+             .str();
   return make_error<StringError>(Msg,
       inconvertibleErrorCode());
 }
