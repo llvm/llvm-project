@@ -100,10 +100,9 @@ def testRepeatedValuesSplat():
     print(attr)
     # CHECK: is_splat: True
     print("is_splat:", attr.is_splat)
-    # TODO: Re-enable this once a solution is found to raising an exception
-    # from buffer protocol.
-    # Reported as https://github.com/pybind/pybind11/issues/3336
-    # print(np.array(attr))
+    # CHECK{LITERAL}: [[1. 1. 1.]
+    # CHECK{LITERAL}:  [1. 1. 1.]]
+    print(np.array(attr))
 
 
 # CHECK-LABEL: TEST: testNonSplat
