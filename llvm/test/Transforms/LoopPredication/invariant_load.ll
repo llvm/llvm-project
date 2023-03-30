@@ -82,7 +82,8 @@ define i32 @invariant_load_guard_limit(ptr %array, ptr %length, i32 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[N]], [[LEN]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 0, [[LEN]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze i1 [[TMP2]]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
@@ -336,7 +337,8 @@ define i32 @constant_memory(ptr %array, i32 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[N]], [[LEN]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 0, [[LEN]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze i1 [[TMP2]]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
@@ -390,6 +392,7 @@ define i32 @constant_length(ptr %array, i32 %n) {
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[N]], 20
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i1 true, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[TMP1]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
@@ -397,7 +400,7 @@ define i32 @constant_length(ptr %array, i32 %n) {
 ; CHECK-NEXT:    [[UNKNOWN:%.*]] = load volatile i1, ptr @UNKNOWN, align 1
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[UNKNOWN]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], 20
-; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP1]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
