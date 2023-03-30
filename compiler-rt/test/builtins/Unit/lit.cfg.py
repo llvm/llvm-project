@@ -43,6 +43,13 @@ if is_msvc:
 elif config.host_os  == 'Darwin':
   base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.osx.a ")
   config.substitutions.append( ("%librt ", base_lib + ' -lSystem ') )
+elif config.host_os  == 'Windows':
+  base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.builtins%s.a"
+                          % config.target_suffix)
+  if sys.platform in ['win32'] and execute_external:
+    # Don't pass dosish path separator to msys bash.exe.
+    base_lib = base_lib.replace('\\', '/')
+  config.substitutions.append( ("%librt ", base_lib + ' -lmingw32 -lmoldname -lmingwex -lmsvcrt -ladvapi32 -lshell32 -luser32 -lkernel32 ') )
 else:
   base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.builtins%s.a"
                           % config.target_suffix)
