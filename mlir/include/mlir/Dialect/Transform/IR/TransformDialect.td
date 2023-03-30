@@ -36,6 +36,13 @@ def Transform_Dialect : Dialect {
       constexpr const static llvm::StringLiteral
           kTargetTagAttrName = "transform.target_tag";
 
+      /// Names of the attributes indicating whether an argument of an external
+      /// transform dialect symbol is consumed or only read.
+      constexpr const static llvm::StringLiteral
+          kArgConsumedAttrName = "transform.consumed";
+      constexpr const static llvm::StringLiteral
+          kArgReadOnlyAttrName = "transform.readonly";
+
       /// Returns the named PDL constraint functions available in the dialect
       /// as a map from their name to the function.
       const ::llvm::StringMap<::mlir::PDLConstraintFunction> &
@@ -114,7 +121,7 @@ def Transform_Dialect : Dialect {
   }];
 }
 
-// Base class for ops that belong to the tranfsorm dialect. Ops defined in
+// Base class for ops that belong to the transform dialect. Ops defined in
 // extensions of this dialect may also use this.
 class TransformDialectOp<string mnemonic, list<Trait> traits = []>
     : Op<Transform_Dialect, mnemonic, traits>;
