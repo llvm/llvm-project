@@ -2653,11 +2653,6 @@ public:
   /// template.
   bool hasSameTemplateName(const TemplateName &X, const TemplateName &Y) const;
 
-  /// Determine whether two Friend functions are different because constraints
-  /// that refer to an enclosing template, according to [temp.friend] p9.
-  bool FriendsDifferByConstraints(const FunctionDecl *X,
-                                  const FunctionDecl *Y) const;
-
   /// Determine whether the two declarations refer to the same entity.
   bool isSameEntity(const NamedDecl *X, const NamedDecl *Y) const;
 
