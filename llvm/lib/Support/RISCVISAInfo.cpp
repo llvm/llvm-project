@@ -619,7 +619,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     break;
   case 'g':
     // g = imafd
-    if (Arch.size() > 5 && isdigit(Arch[5]))
+    if (Arch.size() > 5 && isDigit(Arch[5]))
       return createStringError(errc::invalid_argument,
                                "version not supported for 'g'");
     StdExts = StdExts.drop_front(4);
