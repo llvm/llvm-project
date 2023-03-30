@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ExtractAPI/DeclarationFragments.h"
-#include "clang/ExtractAPI/TypedefUnderlyingTypeResolver.h"
+#include "TypedefUnderlyingTypeResolver.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/StringSwitch.h"
 
