@@ -277,6 +277,9 @@ Bug Fixes to C++ Support
 - No longer issue a pre-C++2b compatibility warning in ``-pedantic`` mode
   regading overloaded `operator[]` with more than one parmeter or for static
   lambdas. (`#61582 <https://github.com/llvm/llvm-project/issues/61582>`_)
+- Stop stripping CV qualifiers from the type of ``this`` when capturing it by value in
+  a lambda.
+  (`#50866 <https://github.com/llvm/llvm-project/issues/50866>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
