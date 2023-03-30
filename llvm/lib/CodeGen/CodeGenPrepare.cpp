@@ -264,6 +264,10 @@ static cl::opt<unsigned>
     HugeFuncThresholdInCGPP("cgpp-huge-func", cl::init(10000), cl::Hidden,
                             cl::desc("Least BB number of huge function."));
 
+static cl::opt<unsigned>
+    MaxAddressUsersToScan("cgp-max-address-users-to-scan", cl::init(100),
+                          cl::Hidden,
+                          cl::desc("Max number of address users to look at"));
 namespace {
 
 enum ExtType {
@@ -4961,10 +4965,6 @@ static bool IsOperandAMemoryOperand(CallInst *CI, InlineAsm *IA, Value *OpVal,
   return true;
 }
 
-// Max number of memory uses to look at before aborting the search to conserve
-// compile time.
-static constexpr int MaxMemoryUsesToScan = 20;
-
 /// Recursively walk all the uses of I until we find a memory use.
 /// If we find an obviously non-foldable instruction, return true.
 /// Add accessed addresses and types to MemoryUses.
@@ -4972,7 +4972,7 @@ static bool FindAllMemoryUses(
     Instruction *I, SmallVectorImpl<std::pair<Value *, Type *>> &MemoryUses,
     SmallPtrSetImpl<Instruction *> &ConsideredInsts, const TargetLowering &TLI,
     const TargetRegisterInfo &TRI, bool OptSize, ProfileSummaryInfo *PSI,
-    BlockFrequencyInfo *BFI, int &SeenInsts) {
+    BlockFrequencyInfo *BFI, unsigned &SeenInsts) {
   // If we already considered this instruction, we're done.
   if (!ConsideredInsts.insert(I).second)
     return false;
@@ -4985,7 +4985,7 @@ static bool FindAllMemoryUses(
   for (Use &U : I->uses()) {
     // Conservatively return true if we're seeing a large number or a deep chain
     // of users. This avoids excessive compilation times in pathological cases.
-    if (SeenInsts++ >= MaxMemoryUsesToScan)
+    if (SeenInsts++ >= MaxAddressUsersToScan)
       return true;
 
     Instruction *UserI = cast<Instruction>(U.getUser());
@@ -5047,7 +5047,7 @@ static bool FindAllMemoryUses(
     Instruction *I, SmallVectorImpl<std::pair<Value *, Type *>> &MemoryUses,
     const TargetLowering &TLI, const TargetRegisterInfo &TRI, bool OptSize,
     ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
-  int SeenInsts = 0;
+  unsigned SeenInsts = 0;
   SmallPtrSet<Instruction *, 16> ConsideredInsts;
   return FindAllMemoryUses(I, MemoryUses, ConsideredInsts, TLI, TRI, OptSize,
                            PSI, BFI, SeenInsts);
