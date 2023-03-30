@@ -89,10 +89,6 @@ public:
   /// Flag for specifying if the compilation is done for an accelerator.
   std::optional<bool> IsGPU;
 
-  /// Flag for specifying weather a requires unified_shared_memory
-  /// directive is present or not.
-  std::optional<bool> HasRequiresUnifiedSharedMemory;
-
   // Flag for specifying if offloading is mandatory.
   std::optional<bool> OpenMPOffloadMandatory;
 
@@ -101,13 +97,13 @@ public:
   /// Separator used between all of the rest consecutive parts of s name
   std::optional<StringRef> Separator;
 
-  OpenMPIRBuilderConfig() {}
+  OpenMPIRBuilderConfig();
   OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
+                        bool OpenMPOffloadMandatory,
+                        bool HasRequiresReverseOffload,
+                        bool HasRequiresUnifiedAddress,
                         bool HasRequiresUnifiedSharedMemory,
-                        bool OpenMPOffloadMandatory)
-      : IsTargetDevice(IsTargetDevice), IsGPU(IsGPU),
-        HasRequiresUnifiedSharedMemory(HasRequiresUnifiedSharedMemory),
-        OpenMPOffloadMandatory(OpenMPOffloadMandatory) {}
+                        bool HasRequiresDynamicAllocators);
 
   // Getters functions that assert if the required values are not present.
   bool isTargetDevice() const {
@@ -120,17 +116,22 @@ public:
     return *IsGPU;
   }
 
-  bool hasRequiresUnifiedSharedMemory() const {
-    assert(HasRequiresUnifiedSharedMemory.has_value() &&
-           "HasUnifiedSharedMemory is not set");
-    return *HasRequiresUnifiedSharedMemory;
-  }
-
   bool openMPOffloadMandatory() const {
     assert(OpenMPOffloadMandatory.has_value() &&
            "OpenMPOffloadMandatory is not set");
     return *OpenMPOffloadMandatory;
   }
+
+  bool hasRequiresFlags() const { return RequiresFlags; }
+  bool hasRequiresReverseOffload() const;
+  bool hasRequiresUnifiedAddress() const;
+  bool hasRequiresUnifiedSharedMemory() const;
+  bool hasRequiresDynamicAllocators() const;
+
+  /// Returns requires directive clauses as flags compatible with those expected
+  /// by libomptarget.
+  int64_t getRequiresFlags() const;
+
   // Returns the FirstSeparator if set, otherwise use the default separator
   // depending on isGPU
   StringRef firstSeparator() const {
@@ -153,11 +154,17 @@ public:
 
   void setIsTargetDevice(bool Value) { IsTargetDevice = Value; }
   void setIsGPU(bool Value) { IsGPU = Value; }
-  void setHasRequiresUnifiedSharedMemory(bool Value) {
-    HasRequiresUnifiedSharedMemory = Value;
-  }
   void setFirstSeparator(StringRef FS) { FirstSeparator = FS; }
   void setSeparator(StringRef S) { Separator = S; }
+
+  void setHasRequiresReverseOffload(bool Value);
+  void setHasRequiresUnifiedAddress(bool Value);
+  void setHasRequiresUnifiedSharedMemory(bool Value);
+  void setHasRequiresDynamicAllocators(bool Value);
+
+private:
+  /// Flags for specifying which requires directive clauses are present.
+  int64_t RequiresFlags;
 };
 
 /// Data structure to contain the information needed to uniquely identify
@@ -2520,6 +2527,16 @@ public:
   /// \param Name Name of the variable.
   GlobalVariable *getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
                                               unsigned AddressSpace = 0);
+
+  /// Create a global function to register OpenMP requires flags into the
+  /// runtime, according to the `Config`.
+  ///
+  /// This function should be added to the list of constructors of the
+  /// compilation unit in order to be called before other OpenMP runtime
+  /// functions.
+  ///
+  /// \param Name  Name of the created function.
+  Function *createRegisterRequires(StringRef Name);
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.
