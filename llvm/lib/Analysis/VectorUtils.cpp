@@ -1529,10 +1529,10 @@ void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
 
 std::string VFABI::mangleTLIVectorName(StringRef VectorName,
                                        StringRef ScalarName, unsigned numArgs,
-                                       ElementCount VF, bool Masked) {
+                                       ElementCount VF) {
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
-  Out << "_ZGV" << VFABI::_LLVM_ << (Masked ? "M" : "N");
+  Out << "_ZGV" << VFABI::_LLVM_ << "N";
   if (VF.isScalable())
     Out << 'x';
   else
