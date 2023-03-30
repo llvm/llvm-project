@@ -778,6 +778,12 @@ def Artificial : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def TransparentStepping: InheritableAttr {
+  let Spellings = [Clang<"transparent_stepping">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [TransparentSteppingDocs];
+}
+
 def XRayInstrument : InheritableAttr {
   let Spellings = [Clang<"xray_always_instrument">,
                    Clang<"xray_never_instrument">];
