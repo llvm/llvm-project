@@ -1380,6 +1380,37 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     PushOnScopeChains(P, CurScope);
   }
 
+  // C++20: dcl.decl.general p4:
+  // The optional requires-clause ([temp.pre]) in an init-declarator or
+  // member-declarator shall be present only if the declarator declares a
+  // templated function ([dcl.fct]).
+  if (Expr *TRC = Method->getTrailingRequiresClause()) {
+    // [temp.pre]/8:
+    // An entity is templated if it is
+    // - a template,
+    // - an entity defined ([basic.def]) or created ([class.temporary]) in a
+    // templated entity,
+    // - a member of a templated entity,
+    // - an enumerator for an enumeration that is a templated entity, or
+    // - the closure type of a lambda-expression ([expr.prim.lambda.closure])
+    // appearing in the declaration of a templated entity. [Note 6: A local
+    // class, a local or block variable, or a friend function defined in a
+    // templated entity is a templated entity.  — end note]
+    //
+    // A templated function is a function template or a function that is
+    // templated. A templated class is a class template or a class that is
+    // templated. A templated variable is a variable template or a variable
+    // that is templated.
+
+    // Note: we only have to check if this is defined in a template entity, OR
+    // if we are a template, since the rest don't apply. The requires clause
+    // applies to the call operator, which we already know is a member function,
+    // AND defined.
+    if (!Method->getDescribedFunctionTemplate() && !Method->isTemplated()) {
+      Diag(TRC->getBeginLoc(), diag::err_constrained_non_templated_function);
+    }
+  }
+
   // Enter a new evaluation context to insulate the lambda from any
   // cleanups from the enclosing full-expression.
   PushExpressionEvaluationContext(
