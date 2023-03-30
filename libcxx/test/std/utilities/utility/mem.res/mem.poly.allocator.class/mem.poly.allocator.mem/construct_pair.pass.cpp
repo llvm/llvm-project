@@ -25,32 +25,16 @@
 
 int constructed = 0;
 
-template <int>
 struct default_constructible {
   default_constructible() : x(42) { ++constructed; }
   int x = 0;
 };
 
 int main(int, char**) {
-  // pair<default_constructible, default_constructible>
+  // pair<default_constructible, default_constructible> as T()
   {
-    typedef default_constructible<0> T;
+    typedef default_constructible T;
     typedef std::pair<T, T> P;
-    typedef std::pmr::polymorphic_allocator<void> A;
-    alignas(P) char buffer[sizeof(P)];
-    P* ptr = reinterpret_cast<P*>(buffer);
-    A a;
-    a.construct(ptr);
-    assert(constructed == 2);
-    assert(ptr->first.x == 42);
-    assert(ptr->second.x == 42);
-  }
-
-  // pair<default_constructible<0>, default_constructible<1>>
-  {
-    typedef default_constructible<0> T;
-    typedef default_constructible<1> U;
-    typedef std::pair<T, U> P;
     typedef std::pmr::polymorphic_allocator<void> A;
     alignas(P) char buffer[sizeof(P)];
     P* ptr = reinterpret_cast<P*>(buffer);
