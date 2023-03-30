@@ -2319,6 +2319,7 @@ TEST_F(DISubprogramTest, get) {
   assert(!IsLocalToUnit && IsDefinition && !IsOptimized &&
          "bools and SPFlags have to match");
   SPFlags |= DISubprogram::SPFlagDefinition;
+  SPFlags |= DISubprogram::SPFlagIsTransparentStepping;
 
   auto *N = DISubprogram::get(
       Context, Scope, Name, LinkageName, File, Line, Type, ScopeLine,
@@ -2402,12 +2403,17 @@ TEST_F(DISubprogramTest, get) {
                    Flags, SPFlags ^ DISubprogram::SPFlagDefinition, Unit,
                    TemplateParams, Declaration, RetainedNodes, ThrownTypes,
                    Annotations, TargetFuncName));
-  EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
-                                 Type, ScopeLine + 1, ContainingType,
-                                 VirtualIndex, ThisAdjustment, Flags, SPFlags,
-                                 Unit, TemplateParams, Declaration,
-                                 RetainedNodes, ThrownTypes, Annotations,
-                                 TargetFuncName));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, Scope, Name, LinkageName, File, Line, Type,
+                   ScopeLine, ContainingType, VirtualIndex, ThisAdjustment,
+                   Flags, SPFlags ^ DISubprogram::SPFlagIsTransparentStepping,
+                   Unit, TemplateParams, Declaration, RetainedNodes,
+                   ThrownTypes, Annotations, TargetFuncName));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, Scope, Name, LinkageName, File, Line, Type,
+                   ScopeLine + 1, ContainingType, VirtualIndex, ThisAdjustment,
+                   Flags, SPFlags, Unit, TemplateParams, Declaration,
+                   RetainedNodes, ThrownTypes, Annotations, TargetFuncName));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, ScopeLine, getCompositeType(),
                                  VirtualIndex, ThisAdjustment, Flags, SPFlags,
