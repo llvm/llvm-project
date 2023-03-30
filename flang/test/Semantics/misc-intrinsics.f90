@@ -13,6 +13,8 @@ program test_size
     print *, ubound(arg)
     !ERROR: The 'source=' argument to the intrinsic function 'shape' may not be assumed-size
     print *, shape(arg)
+    !ERROR: The 'harvest=' argument to the intrinsic procedure 'random_number' may not be assumed-size
+    call random_number(arg)
     !ERROR: missing mandatory 'dim=' argument
     print *, lbound(scalar)
     !ERROR: 'array=' argument has unacceptable rank 0
