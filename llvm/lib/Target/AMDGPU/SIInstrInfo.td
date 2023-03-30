@@ -963,17 +963,7 @@ def Attr : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-def AttrChanMatchClass : AsmOperandClass {
-  let Name = "AttrChan";
-  let PredicateMethod = "isAttrChan";
-  let RenderMethod = "addImmOperands";
-}
-
-def AttrChan : Operand<i32> {
-  let PrintMethod = "printInterpAttrChan";
-  let ParserMatchClass = AttrChanMatchClass;
-  let OperandType = "OPERAND_IMMEDIATE";
-}
+def AttrChan : ImmOperand<i32, "AttrChan", 0, "printInterpAttrChan">;
 
 def SendMsgMatchClass : AsmOperandClass {
   let Name = "SendMsg";

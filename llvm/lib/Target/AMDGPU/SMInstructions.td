@@ -6,15 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-def smrd_offset_8 : NamedOperandU32<"SMRDOffset8",
-                                  NamedMatchClass<"SMRDOffset8">> {
-  let OperandType = "OPERAND_IMMEDIATE";
-}
+def smrd_offset_8 : ImmOperand<i32, "SMRDOffset8", 1>;
 
 let OperandType = "OPERAND_IMMEDIATE",
     EncoderMethod = "getSMEMOffsetEncoding",
     DecoderMethod = "decodeSMEMOffset" in {
-def smem_offset : NamedOperandU32<"SMEMOffset", NamedMatchClass<"SMEMOffset">>;
+def smem_offset : ImmOperand<i32, "SMEMOffset", 1>;
 def smem_offset_mod : NamedIntOperand<i32, "offset", "SMEMOffsetMod">;
 }
 
@@ -723,10 +720,7 @@ defm S_DCACHE_DISCARD_X2 : SM_Real_Discard_vi <0x29>;
 // CI
 //===----------------------------------------------------------------------===//
 
-def smrd_literal_offset : NamedOperandU32<"SMRDLiteralOffset",
-                                          NamedMatchClass<"SMRDLiteralOffset">> {
-  let OperandType = "OPERAND_IMMEDIATE";
-}
+def smrd_literal_offset : ImmOperand<i32, "SMRDLiteralOffset">;
 
 class SMRD_Real_Load_IMM_ci <bits<5> op, SM_Load_Pseudo ps> :
   SM_Real<ps>,
