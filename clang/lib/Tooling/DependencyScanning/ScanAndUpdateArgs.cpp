@@ -177,6 +177,14 @@ void DepscanPrefixMapping::remapInvocationPaths(CompilerInvocation &Invocation,
   Mapper.mapInPlace(CodeGenOpts.ProfileInstrumentUsePath);
   Mapper.mapInPlace(CodeGenOpts.SampleProfileFile);
   Mapper.mapInPlace(CodeGenOpts.ProfileRemappingFile);
+
+  // Dependency output options.
+  // Note: these are not in the cache key, but they are in the module context
+  // hash, which indirectly impacts the cache key when importing a module.
+  // In the future we may change how -fmodule-file-cache-key works when
+  // remapping to avoid needing this.
+  for (auto &ExtraDep : Invocation.getDependencyOutputOpts().ExtraDeps)
+    Mapper.mapInPlace(ExtraDep.first);
 }
 
 void DepscanPrefixMapping::configurePrefixMapper(const CompilerInvocation &CI,
