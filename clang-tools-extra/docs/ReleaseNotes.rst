@@ -140,6 +140,12 @@ New checks
   directives by analyzing ``#if`` conditions, such as ``#if 0`` and
   ``#if 1``, etc.
 
+- New :doc:`readability-operators-representation
+  <clang-tidy/checks/readability/operators-representation>` check.
+
+  Enforces consistent token representation for invoked binary, unary and
+  overloaded operators in C++ code.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
