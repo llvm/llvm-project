@@ -60,3 +60,43 @@ define i32 @ins6(i32 %a, i32 %b) {
   %or = or i32 %and1, %shift
   ret i32 %or
 }
+
+define i32 @ins7(i32 %a, i8 %b) {
+  ; CHECK: ins $a0, $a1, 16, 8
+  %and1 = and i32 %a, 4278255615 ; 0xff00ffff
+  %conv = zext i8 %b to i32
+  %shift = shl i32 %conv, 16
+  %or = or i32 %and1, %shift
+  ret i32 %or
+}
+
+define i32 @ins8(i32 %a, i16 %b) {
+  ; CHECK: ins $a0, $a1, 8, 16
+  %and1 = and i32 %a, 4278190335 ; 0xff0000ff
+  %conv = zext i16 %b to i32
+  %shift = shl i32 %conv, 8
+  %or = or i32 %and1, %shift
+  ret i32 %or
+}
+
+define i32 @ins9(i32 %a, i8* %b) {
+  ; CHECK: ins $a0, $a1, 16, 8
+  %val = load i8, i8* %b
+  %and1 = and i32 %a, 4278255615 ; 0xff00ffff
+  %conv = zext i8 %val to i32
+  %shift = shl i32 %conv, 16
+  %or = or i32 %and1, %shift
+  ret i32 %or
+}
+
+define i32 @ins10(i32 %a, i16* %b) {
+  ; CHECK: ins $a0, $a1, 8, 16
+  %val = load i16, i16* %b
+  %and1 = and i32 %a, 4278190335 ; 0xff0000ff
+  %conv = zext i16 %val to i32
+  %shift = shl i32 %conv, 8
+  %or = or i32 %and1, %shift
+  ret i32 %or
+}
+
+

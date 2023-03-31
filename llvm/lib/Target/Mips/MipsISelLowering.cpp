@@ -1129,9 +1129,20 @@ static SDValue attemptOrToIns(SDValue &And, SDValue &Right, SDNode *N,
     if (!(CN = dyn_cast<ConstantSDNode>(Right.getOperand(1))))
       return SDValue();
     unsigned ShiftAmount = CN->getZExtValue();
-    // Second check makes sure that all upper bits are picked up.
-    if ((ShiftAmount != SMPos0) || (SMPos0 + SMSize0 != TSize))
+
+    if ((ShiftAmount != SMPos0))
       return SDValue();
+
+    if ((SMPos0 + SMSize0 != TSize)) {
+      // If a register holds a value that is zero extended
+      // and if the actual size of that value can fit in SMSize0
+      // then we will allow replacement with the INS instruction
+      // because we are sure that we have only leading zeros
+      KnownBits Known = DAG.computeKnownBits(Right.getOperand(0));
+      if (Known.countMaxPopulation() > SMSize0)
+        return SDValue();
+    }
+
     return DAG.getNode(MipsISD::Ins, DL, ValTy, Right.getOperand(0),
                        DAG.getConstant(SMPos0, DL, MVT::i32),
                        DAG.getConstant(SMSize0, DL, MVT::i32),
