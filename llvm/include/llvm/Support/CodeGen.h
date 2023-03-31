@@ -68,6 +68,10 @@ namespace llvm {
       return std::nullopt;
     return static_cast<Level>(ID);
   }
+  /// Get the integer \c ID of \p Level.
+  inline IDType getID(CodeGenOpt::Level Level) {
+    return static_cast<IDType>(Level);
+  }
   /// Parse \p C as a single digit integer ID and get matching \c Level.
   ///
   /// Returns std::nullopt if the input is not a valid digit or not a valid ID.
