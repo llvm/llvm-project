@@ -184,4 +184,4 @@ struct BodylessMemberFunction {
 constexpr int nyd(int m);
 constexpr int doit() { return nyd(10); }
 constexpr int nyd(int m) { return m; }
-static_assert(doit() == 10);
+static_assert(doit() == 10, "");
