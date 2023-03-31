@@ -151,8 +151,7 @@ define i32 @ctpop_sel_const_true_false_extra_use(i1 %b) {
 
 define i32 @usub_sat_rhs_const_select_all_const(i1 %b) {
 ; CHECK-LABEL: @usub_sat_rhs_const_select_all_const(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 5, i32 10
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[S]], i32 7)
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i32 0, i32 3
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = select i1 %b, i32 5, i32 10
@@ -173,8 +172,8 @@ define i32 @usub_sat_rhs_var_select_all_const(i1 %b, i32 %x) {
 
 define i32 @usub_sat_rhs_const_select_one_const(i1 %b, i32 %x) {
 ; CHECK-LABEL: @usub_sat_rhs_const_select_one_const(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 5, i32 [[X:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[S]], i32 7)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[X:%.*]], i32 7)
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i32 0, i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = select i1 %b, i32 5, i32 %x
@@ -195,8 +194,7 @@ define i32 @usub_sat_rhs_const_select_no_const(i1 %b, i32 %x, i32 %y) {
 
 define i32 @usub_sat_lhs_const_select_all_const(i1 %b) {
 ; CHECK-LABEL: @usub_sat_lhs_const_select_all_const(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 5, i32 10
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.usub.sat.i32(i32 7, i32 [[S]])
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i32 2, i32 0
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = select i1 %b, i32 5, i32 10
