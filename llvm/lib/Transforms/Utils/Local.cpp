@@ -2693,8 +2693,9 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         // Preserve !invariant.group in K.
         break;
       case LLVMContext::MD_align:
-        K->setMetadata(Kind,
-          MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
+        if (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef))
+          K->setMetadata(
+              Kind, MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
         break;
       case LLVMContext::MD_dereferenceable:
       case LLVMContext::MD_dereferenceable_or_null:
