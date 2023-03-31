@@ -31,6 +31,8 @@ main:110:1
    7: 1
    !CFGChecksum: 4
    !Attributes: 4
+  !CFGChecksum: 1
+  !Attributes: 1
  !CFGChecksum: 2
  !Attributes: 2
 foo:102:1
