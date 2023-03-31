@@ -20,7 +20,7 @@
 #include "llvm/ADT/StringMap.h"
 
 #include "lldb/Expression/IRMemoryMap.h"
-#include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Expression/ObjectFileJIT.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/lldb-forward.h"
