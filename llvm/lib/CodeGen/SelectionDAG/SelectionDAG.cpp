@@ -11643,6 +11643,21 @@ MaybeAlign SelectionDAG::InferPtrAlign(SDValue Ptr) const {
   return std::nullopt;
 }
 
+/// Split the scalar node with EXTRACT_ELEMENT using the provided
+/// VTs and return the low/high part.
+std::pair<SDValue, SDValue> SelectionDAG::SplitScalar(const SDValue &N,
+                                                      const SDLoc &DL,
+                                                      const EVT &LoVT,
+                                                      const EVT &HiVT) {
+  assert(!LoVT.isVector() && !HiVT.isVector() && !N.getValueType().isVector() &&
+         "Split node must be a scalar type");
+  SDValue Lo =
+      getNode(ISD::EXTRACT_ELEMENT, DL, LoVT, N, getIntPtrConstant(0, DL));
+  SDValue Hi =
+      getNode(ISD::EXTRACT_ELEMENT, DL, HiVT, N, getIntPtrConstant(1, DL));
+  return std::make_pair(Lo, Hi);
+}
+
 /// GetSplitDestVTs - Compute the VTs needed for the low/hi parts of a type
 /// which is split (or expanded) into two not necessarily identical pieces.
 std::pair<EVT, EVT> SelectionDAG::GetSplitDestVTs(const EVT &VT) const {

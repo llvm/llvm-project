@@ -72,6 +72,7 @@ add_header_library(
     .str_to_num_result
     libc.src.errno.errno
     libc.src.__support.CPP.limits
+    libc.src.__support.CPP.type_traits
     libc.src.__support.common
 )
 

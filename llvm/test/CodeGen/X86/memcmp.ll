@@ -1868,23 +1868,14 @@ define i1 @length64_eq(ptr %x, ptr %y) nounwind {
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
-; X64-AVX512BW-LABEL: length64_eq:
-; X64-AVX512BW:       # %bb.0:
-; X64-AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512BW-NEXT:    vpcmpneqb (%rsi), %zmm0, %k0
-; X64-AVX512BW-NEXT:    kortestq %k0, %k0
-; X64-AVX512BW-NEXT:    setne %al
-; X64-AVX512BW-NEXT:    vzeroupper
-; X64-AVX512BW-NEXT:    retq
-;
-; X64-AVX512F-LABEL: length64_eq:
-; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512F-NEXT:    vpcmpneqd (%rsi), %zmm0, %k0
-; X64-AVX512F-NEXT:    kortestw %k0, %k0
-; X64-AVX512F-NEXT:    setne %al
-; X64-AVX512F-NEXT:    vzeroupper
-; X64-AVX512F-NEXT:    retq
+; X64-AVX512-LABEL: length64_eq:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-AVX512-NEXT:    vpcmpneqd (%rsi), %zmm0, %k0
+; X64-AVX512-NEXT:    kortestw %k0, %k0
+; X64-AVX512-NEXT:    setne %al
+; X64-AVX512-NEXT:    vzeroupper
+; X64-AVX512-NEXT:    retq
 ;
 ; X64-MIC-AVX2-LABEL: length64_eq:
 ; X64-MIC-AVX2:       # %bb.0:
@@ -1978,23 +1969,14 @@ define i1 @length64_eq_const(ptr %X) nounwind {
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
-; X64-AVX512BW-LABEL: length64_eq_const:
-; X64-AVX512BW:       # %bb.0:
-; X64-AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512BW-NEXT:    vpcmpneqb .L.str(%rip), %zmm0, %k0
-; X64-AVX512BW-NEXT:    kortestq %k0, %k0
-; X64-AVX512BW-NEXT:    sete %al
-; X64-AVX512BW-NEXT:    vzeroupper
-; X64-AVX512BW-NEXT:    retq
-;
-; X64-AVX512F-LABEL: length64_eq_const:
-; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512F-NEXT:    vpcmpneqd .L.str(%rip), %zmm0, %k0
-; X64-AVX512F-NEXT:    kortestw %k0, %k0
-; X64-AVX512F-NEXT:    sete %al
-; X64-AVX512F-NEXT:    vzeroupper
-; X64-AVX512F-NEXT:    retq
+; X64-AVX512-LABEL: length64_eq_const:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-AVX512-NEXT:    vpcmpneqd .L.str(%rip), %zmm0, %k0
+; X64-AVX512-NEXT:    kortestw %k0, %k0
+; X64-AVX512-NEXT:    sete %al
+; X64-AVX512-NEXT:    vzeroupper
+; X64-AVX512-NEXT:    retq
 ;
 ; X64-MIC-AVX2-LABEL: length64_eq_const:
 ; X64-MIC-AVX2:       # %bb.0:

@@ -15,6 +15,7 @@
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "AttrKindDetail.h"
+#include "DataLayoutImporter.h"
 #include "DebugImporter.h"
 #include "LoopAnnotationImporter.h"
 
@@ -80,25 +81,6 @@ static constexpr StringRef getGlobalMetadataOpName() {
   return "__llvm_global_metadata";
 }
 
-/// Returns a supported MLIR floating point type of the given bit width or null
-/// if the bit width is not supported.
-static FloatType getDLFloatType(MLIRContext &ctx, int32_t bitwidth) {
-  switch (bitwidth) {
-  case 16:
-    return FloatType::getF16(&ctx);
-  case 32:
-    return FloatType::getF32(&ctx);
-  case 64:
-    return FloatType::getF64(&ctx);
-  case 80:
-    return FloatType::getF80(&ctx);
-  case 128:
-    return FloatType::getF128(&ctx);
-  default:
-    return nullptr;
-  }
-}
-
 /// Converts the sync scope identifier of `inst` to the string representation
 /// necessary to build an atomic LLVM dialect operation. Returns the empty
 /// string if the operation has either no sync scope or the default system-level
@@ -146,105 +128,6 @@ static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
   // Convert all instructions that provide an MLIR builder.
 #include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
   return failure();
-}
-
-/// Creates an attribute containing ABI and preferred alignment numbers parsed
-/// a string. The string may be either "abi:preferred" or just "abi". In the
-/// latter case, the preferred alignment is considered equal to ABI alignment.
-static DenseIntElementsAttr parseDataLayoutAlignment(MLIRContext &ctx,
-                                                     StringRef spec) {
-  auto i32 = IntegerType::get(&ctx, 32);
-
-  StringRef abiString, preferredString;
-  std::tie(abiString, preferredString) = spec.split(':');
-  int abi, preferred;
-  if (abiString.getAsInteger(/*Radix=*/10, abi))
-    return nullptr;
-
-  if (preferredString.empty())
-    preferred = abi;
-  else if (preferredString.getAsInteger(/*Radix=*/10, preferred))
-    return nullptr;
-
-  return DenseIntElementsAttr::get(VectorType::get({2}, i32), {abi, preferred});
-}
-
-/// Translate the given LLVM data layout into an MLIR equivalent using the DLTI
-/// dialect.
-DataLayoutSpecInterface
-mlir::translateDataLayout(const llvm::DataLayout &dataLayout,
-                          MLIRContext *context) {
-  assert(context && "expected MLIR context");
-  std::string layoutstr = dataLayout.getStringRepresentation();
-
-  // Remaining unhandled default layout defaults
-  // e (little endian if not set)
-  // p[n]:64:64:64 (non zero address spaces have 64-bit properties)
-  // Alloca address space defaults to 0.
-  std::string append =
-      "p:64:64:64-S0-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f16:16:16-f64:"
-      "64:64-f128:128:128-v64:64:64-v128:128:128-a:0:64-A0";
-  if (layoutstr.empty())
-    layoutstr = append;
-  else
-    layoutstr = layoutstr + "-" + append;
-
-  StringRef layout(layoutstr);
-
-  SmallVector<DataLayoutEntryInterface> entries;
-  StringSet<> seen;
-  while (!layout.empty()) {
-    // Split at '-'.
-    std::pair<StringRef, StringRef> split = layout.split('-');
-    StringRef current;
-    std::tie(current, layout) = split;
-
-    // Split at ':'.
-    StringRef kind, spec;
-    std::tie(kind, spec) = current.split(':');
-    if (seen.contains(kind))
-      continue;
-    seen.insert(kind);
-
-    char symbol = kind.front();
-    StringRef parameter = kind.substr(1);
-
-    if (symbol == 'i' || symbol == 'f') {
-      unsigned bitwidth;
-      if (parameter.getAsInteger(/*Radix=*/10, bitwidth))
-        return nullptr;
-      DenseIntElementsAttr params = parseDataLayoutAlignment(*context, spec);
-      if (!params)
-        return nullptr;
-      auto entry = DataLayoutEntryAttr::get(
-          symbol == 'i' ? static_cast<Type>(IntegerType::get(context, bitwidth))
-                        : getDLFloatType(*context, bitwidth),
-          params);
-      entries.emplace_back(entry);
-    } else if (symbol == 'e' || symbol == 'E') {
-      auto value = StringAttr::get(
-          context, symbol == 'e' ? DLTIDialect::kDataLayoutEndiannessLittle
-                                 : DLTIDialect::kDataLayoutEndiannessBig);
-      auto entry = DataLayoutEntryAttr::get(
-          StringAttr::get(context, DLTIDialect::kDataLayoutEndiannessKey),
-          value);
-      entries.emplace_back(entry);
-    } else if (symbol == 'A') {
-      unsigned addressSpace;
-      if (parameter.getAsInteger(/*Radix=*/10, addressSpace))
-        return nullptr;
-      // Skip storing if generic address space is defined.
-      if (addressSpace != 0) {
-        auto entry = DataLayoutEntryAttr::get(
-            StringAttr::get(context,
-                            DLTIDialect::kDataLayoutAllocaMemorySpaceKey),
-            mlir::Builder(context).getUI32IntegerAttr(addressSpace));
-        entries.emplace_back(entry);
-      }
-    }
-  }
-
-  return DataLayoutSpecAttr::get(context, entries);
 }
 
 /// Get a topologically sorted list of blocks for the given function.
@@ -675,6 +558,21 @@ LogicalResult ModuleImport::convertGlobals() {
   return success();
 }
 
+LogicalResult ModuleImport::convertDataLayout() {
+  Location loc = mlirModule.getLoc();
+  DataLayoutImporter dataLayoutImporter(context, llvmModule->getDataLayout());
+  if (!dataLayoutImporter.getDataLayout())
+    return emitError(loc, "cannot translate data layout: ")
+           << dataLayoutImporter.getLastToken();
+
+  for (StringRef token : dataLayoutImporter.getUnhandledTokens())
+    emitWarning(loc, "unhandled data layout token: ") << token;
+
+  mlirModule->setAttr(DLTIDialect::kDataLayoutAttrName,
+                      dataLayoutImporter.getDataLayout());
+  return success();
+}
+
 LogicalResult ModuleImport::convertFunctions() {
   for (llvm::Function &func : llvmModule->functions())
     if (failed(processFunction(&func)))
@@ -802,7 +700,7 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *value) {
     if (type->isBFloatTy())
       floatTy = FloatType::getBF16(context);
     else
-      floatTy = getDLFloatType(*context, type->getScalarSizeInBits());
+      floatTy = detail::getFloatType(context, type->getScalarSizeInBits());
     assert(floatTy && "unsupported floating point type");
     return builder.getFloatAttr(floatTy, c->getValueAPF());
   }
@@ -1118,12 +1016,11 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     return root;
   }
 
-  if (isa<llvm::BlockAddress>(constant)) {
-    return emitError(loc)
-           << "blockaddress is not implemented in the LLVM dialect";
-  }
+  StringRef error = "";
+  if (isa<llvm::BlockAddress>(constant))
+    error = " since blockaddress(...) is unsupported";
 
-  return emitError(loc) << "unhandled constant: " << diag(*constant);
+  return emitError(loc) << "unhandled constant: " << diag(*constant) << error;
 }
 
 FailureOr<Value> ModuleImport::convertConstantExpr(llvm::Constant *constant) {
@@ -1737,16 +1634,10 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
       StringAttr::get(context, llvmModule->getSourceFileName()), /*line=*/0,
       /*column=*/0)));
 
-  DataLayoutSpecInterface dlSpec =
-      translateDataLayout(llvmModule->getDataLayout(), context);
-  if (!dlSpec) {
-    emitError(UnknownLoc::get(context), "can't translate data layout");
-    return {};
-  }
-  module.get()->setAttr(DLTIDialect::kDataLayoutAttrName, dlSpec);
-
   ModuleImport moduleImport(module.get(), std::move(llvmModule));
   if (failed(moduleImport.initializeImportInterface()))
+    return {};
+  if (failed(moduleImport.convertDataLayout()))
     return {};
   if (failed(moduleImport.convertMetadata()))
     return {};

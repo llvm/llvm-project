@@ -263,11 +263,11 @@ __apply_functor(_Fp& __f, _BoundArgs& __bound_args, __tuple_indices<_Indx...>,
 }
 
 template<class _Fp, class ..._BoundArgs>
-class __bind : public __weak_result_type<typename decay<_Fp>::type>
+class __bind : public __weak_result_type<__decay_t<_Fp> >
 {
 protected:
-    typedef typename decay<_Fp>::type _Fd;
-    typedef tuple<typename decay<_BoundArgs>::type...> _Td;
+    using _Fd = __decay_t<_Fp>;
+    typedef tuple<__decay_t<_BoundArgs>...> _Td;
 private:
     _Fd __f_;
     _Td __bound_args_;

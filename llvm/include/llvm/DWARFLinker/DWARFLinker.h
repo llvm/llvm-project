@@ -244,6 +244,7 @@ public:
 typedef std::function<void(const Twine &Warning, StringRef Context,
                            const DWARFDie *DIE)>
     messageHandler;
+typedef std::function<void(const DWARFFile &File)> inputVerificationHandler;
 typedef std::function<ErrorOr<DWARFFile &>(StringRef ContainerName,
                                            StringRef Path)>
     objFileLoader;
@@ -345,6 +346,12 @@ public:
     Options.ErrorHandler = Handler;
   }
 
+  /// Set verification handler which would be used to report verification
+  /// errors.
+  void setInputVerificationHandler(inputVerificationHandler Handler) {
+    Options.InputVerificationHandler = Handler;
+  }
+
   /// Set map for Swift interfaces.
   void setSwiftInterfacesMap(swiftInterfacesMap *Map) {
     Options.ParseableSwiftInterfaces = Map;
@@ -424,7 +431,7 @@ private:
   };
 
   /// Verify the given DWARF file.
-  bool verify(const DWARFFile &File);
+  void verifyInput(const DWARFFile &File);
 
   /// returns true if we need to translate strings.
   bool needToTranslateStrings() { return StringsTranslator != nullptr; }
@@ -855,6 +862,9 @@ private:
 
     // error handler
     messageHandler ErrorHandler = nullptr;
+
+    // input verification handler
+    inputVerificationHandler InputVerificationHandler = nullptr;
 
     /// A list of all .swiftinterface files referenced by the debug
     /// info, mapping Module name to path on disk. The entries need to

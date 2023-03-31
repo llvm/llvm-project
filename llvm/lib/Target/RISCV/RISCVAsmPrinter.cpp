@@ -181,13 +181,18 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   if (ExtraCode)
     return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, ExtraCode, OS);
 
-  const MachineOperand &MO = MI->getOperand(OpNo);
-  // For now, we only support register memory operands in registers and
-  // assume there is no addend
-  if (!MO.isReg())
+  const MachineOperand &AddrReg = MI->getOperand(OpNo);
+  assert(MI->getNumOperands() > OpNo + 1 && "Expected additional operand");
+  const MachineOperand &DispImm = MI->getOperand(OpNo + 1);
+  // All memory operands should have a register and an immediate operand (see
+  // RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand).
+  if (!AddrReg.isReg())
+    return true;
+  if (!DispImm.isImm())
     return true;
 
-  OS << "0(" << RISCVInstPrinter::getRegisterName(MO.getReg()) << ")";
+  OS << DispImm.getImm() << "("
+     << RISCVInstPrinter::getRegisterName(AddrReg.getReg()) << ")";
   return false;
 }
 

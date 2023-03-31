@@ -111,9 +111,9 @@ private:
 
 
 template <class _CharT, class _Traits, class _Delim>
-_LIBCPP_HIDE_FROM_ABI ostream_joiner<typename decay<_Delim>::type, _CharT, _Traits>
+_LIBCPP_HIDE_FROM_ABI ostream_joiner<__decay_t<_Delim>, _CharT, _Traits>
 make_ostream_joiner(basic_ostream<_CharT, _Traits>& __os, _Delim && __d)
-{ return ostream_joiner<typename decay<_Delim>::type, _CharT, _Traits>(__os, _VSTD::forward<_Delim>(__d)); }
+{ return ostream_joiner<__decay_t<_Delim>, _CharT, _Traits>(__os, _VSTD::forward<_Delim>(__d)); }
 
 _LIBCPP_END_NAMESPACE_LFTS
 

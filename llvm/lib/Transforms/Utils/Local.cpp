@@ -2693,8 +2693,9 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         // Preserve !invariant.group in K.
         break;
       case LLVMContext::MD_align:
-        K->setMetadata(Kind,
-          MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
+        if (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef))
+          K->setMetadata(
+              Kind, MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
         break;
       case LLVMContext::MD_dereferenceable:
       case LLVMContext::MD_dereferenceable_or_null:
@@ -2947,7 +2948,8 @@ void llvm::copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
     return;
 
   unsigned BitWidth = DL.getPointerTypeSizeInBits(NewTy);
-  if (!getConstantRangeFromMetadata(*N).contains(APInt(BitWidth, 0))) {
+  if (BitWidth == OldLI.getType()->getScalarSizeInBits() &&
+      !getConstantRangeFromMetadata(*N).contains(APInt(BitWidth, 0))) {
     MDNode *NN = MDNode::get(OldLI.getContext(), std::nullopt);
     NewLI.setMetadata(LLVMContext::MD_nonnull, NN);
   }

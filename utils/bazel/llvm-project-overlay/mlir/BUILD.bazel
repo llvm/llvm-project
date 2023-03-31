@@ -6903,6 +6903,8 @@ cc_library(
 cc_library(
     name = "FromLLVMIRTranslation",
     srcs = [
+        "lib/Target/LLVMIR/DataLayoutImporter.cpp",
+        "lib/Target/LLVMIR/DataLayoutImporter.h",
         "lib/Target/LLVMIR/DebugImporter.cpp",
         "lib/Target/LLVMIR/LoopAnnotationImporter.cpp",
         "lib/Target/LLVMIR/LoopAnnotationImporter.h",

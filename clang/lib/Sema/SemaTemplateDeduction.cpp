@@ -1613,7 +1613,9 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       llvm_unreachable("Type nodes handled above");
 
     case Type::Auto:
-      // FIXME: Implement deduction in dependent case.
+      // FIXME: It's not clear whether we should deduce the template arguments
+      // of a constrained deduced type. For now we treat them as a non-deduced
+      // context.
       if (P->isDependentType())
         return Sema::TDK_Success;
       [[fallthrough]];
@@ -5279,8 +5281,8 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
   //   function parameters that positionally correspond between the two
   //   templates are not of the same type, neither template is more specialized
   //   than the other.
-  if (!TemplateParameterListsAreEqual(
-          TPL1, TPL2, false, Sema::TPL_TemplateMatch, SourceLocation(), true))
+  if (!TemplateParameterListsAreEqual(TPL1, TPL2, false,
+                                      Sema::TPL_TemplateParamsEquivalent))
     return nullptr;
 
   for (unsigned i = 0; i < NumParams1; ++i)
@@ -5637,8 +5639,8 @@ getMoreSpecialized(Sema &S, QualType T1, QualType T2, TemplateLikeDecl *P1,
   // function parameters that positionally correspond between the two
   // templates are not of the same type, neither template is more specialized
   // than the other.
-  if (!S.TemplateParameterListsAreEqual(
-          TPL1, TPL2, false, Sema::TPL_TemplateMatch, SourceLocation(), true))
+  if (!S.TemplateParameterListsAreEqual(TPL1, TPL2, false,
+                                        Sema::TPL_TemplateParamsEquivalent))
     return nullptr;
 
   if (!TemplateArgumentListAreEqual(S.getASTContext())(P1, P2))

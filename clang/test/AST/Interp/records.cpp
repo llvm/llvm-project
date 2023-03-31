@@ -98,9 +98,17 @@ class C {
     int b;
 
   constexpr C() : a(100), b(200) {}
+
+  constexpr C get() const {
+    return *this;
+  }
 };
 
 constexpr C c;
+static_assert(c.a == 100, "");
+static_assert(c.b == 200, "");
+
+constexpr C c2 = C().get();
 static_assert(c.a == 100, "");
 static_assert(c.b == 200, "");
 

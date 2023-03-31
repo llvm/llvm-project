@@ -57,8 +57,8 @@ struct _ProjectedPred {
 
 template <class _Pred,
           class _Proj,
-          __enable_if_t<!(!is_member_pointer<typename decay<_Pred>::type>::value &&
-                            __is_identity<typename decay<_Proj>::type>::value),
+          __enable_if_t<!(!is_member_pointer<__decay_t<_Pred> >::value &&
+                            __is_identity<__decay_t<_Proj> >::value),
                         int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ProjectedPred<_Pred, _Proj>
 __make_projected(_Pred& __pred, _Proj& __proj) {
@@ -70,8 +70,8 @@ __make_projected(_Pred& __pred, _Proj& __proj) {
 // the call stack when the comparator is invoked, even in an unoptimized build.
 template <class _Pred,
           class _Proj,
-          __enable_if_t<!is_member_pointer<typename decay<_Pred>::type>::value &&
-                          __is_identity<typename decay<_Proj>::type>::value,
+          __enable_if_t<!is_member_pointer<__decay_t<_Pred> >::value &&
+                          __is_identity<__decay_t<_Proj> >::value,
                         int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Pred& __make_projected(_Pred& __pred, _Proj&) {
   return __pred;

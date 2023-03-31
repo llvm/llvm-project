@@ -743,3 +743,26 @@ namespace CompoundLiterals {
   static_assert(get3() == 3, "");
 #endif
 };
+
+namespace TypeTraits {
+  static_assert(__is_trivial(int), "");
+  static_assert(__is_trivial(float), "");
+  static_assert(__is_trivial(E), "");
+  struct S{};
+  static_assert(__is_trivial(S), "");
+  struct S2 {
+    S2() {}
+  };
+  static_assert(!__is_trivial(S2), "");
+
+  template <typename T>
+  struct S3 {
+    constexpr bool foo() const { return __is_trivial(T); }
+  };
+  struct T {
+    ~T() {}
+  };
+  struct U {};
+  static_assert(S3<U>{}.foo(), "");
+  static_assert(!S3<T>{}.foo(), "");
+}
