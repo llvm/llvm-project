@@ -112,7 +112,7 @@ define <32 x i1> @fv32(ptr %p, i64 %index, i64 %tc) {
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vsaddu.vx v8, v8, a1
 ; CHECK-NEXT:    vmsltu.vx v0, v8, a2
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, tu, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v0, v16, 2
 ; CHECK-NEXT:    ret
   %mask = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 %index, i64 %tc)
@@ -147,7 +147,7 @@ define <64 x i1> @fv64(ptr %p, i64 %index, i64 %tc) {
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vsaddu.vx v8, v8, a1
 ; CHECK-NEXT:    vmsltu.vx v16, v8, a2
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v0, v16, 6
 ; CHECK-NEXT:    ret
   %mask = call <64 x i1> @llvm.get.active.lane.mask.v64i1.i64(i64 %index, i64 %tc)
@@ -214,7 +214,7 @@ define <128 x i1> @fv128(ptr %p, i64 %index, i64 %tc) {
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vsaddu.vx v8, v8, a1
 ; CHECK-NEXT:    vmsltu.vx v16, v8, a2
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v0, v16, 14
 ; CHECK-NEXT:    ret
   %mask = call <128 x i1> @llvm.get.active.lane.mask.v128i1.i64(i64 %index, i64 %tc)

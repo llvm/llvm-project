@@ -135,7 +135,6 @@ define void @insert_v4i32_v2i32_2(ptr %vp, ptr %svp) {
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 2
 ; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    ret
@@ -210,7 +209,6 @@ define void @insert_v8i32_v2i32_2(ptr %vp, ptr %svp) {
 ; LMULMAX1-NEXT:    vle32.v v8, (a1)
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1-NEXT:    vle32.v v9, (a0)
-; LMULMAX1-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; LMULMAX1-NEXT:    vslideup.vi v9, v8, 2
 ; LMULMAX1-NEXT:    vse32.v v9, (a0)
 ; LMULMAX1-NEXT:    ret
@@ -228,7 +226,6 @@ define void @insert_v8i32_v2i32_6(ptr %vp, ptr %svp) {
 ; LMULMAX2-NEXT:    vle32.v v8, (a1)
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-NEXT:    vle32.v v10, (a0)
-; LMULMAX2-NEXT:    vsetvli zero, zero, e32, m2, tu, ma
 ; LMULMAX2-NEXT:    vslideup.vi v10, v8, 6
 ; LMULMAX2-NEXT:    vse32.v v10, (a0)
 ; LMULMAX2-NEXT:    ret
@@ -240,7 +237,6 @@ define void @insert_v8i32_v2i32_6(ptr %vp, ptr %svp) {
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1-NEXT:    vle32.v v9, (a0)
-; LMULMAX1-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; LMULMAX1-NEXT:    vslideup.vi v9, v8, 2
 ; LMULMAX1-NEXT:    vse32.v v9, (a0)
 ; LMULMAX1-NEXT:    ret
@@ -302,7 +298,7 @@ define void @insert_v4i16_v2i16_2(ptr %vp, ptr %svp) {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 2
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -419,9 +415,8 @@ define void @insert_v8i1_v4i1_4(ptr %vp, ptr %svp) {
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 4
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
