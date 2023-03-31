@@ -12,6 +12,8 @@ declare <3 x i5> @llvm.cttz.v3i5(<3 x i5>, i1)
 declare i32 @llvm.ctpop.i32(i32)
 declare <3 x i7> @llvm.ctpop.v3i7(<3 x i7>)
 
+declare i32 @llvm.usub.sat.i32(i32, i32)
+
 define i32 @ctlz_sel_const_true_false(i1 %b) {
 ; CHECK-LABEL: @ctlz_sel_const_true_false(
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i32 29, i32 0
@@ -35,7 +37,7 @@ define i32 @ctlz_sel_const_true(i1 %b, i32 %x) {
 
 define <3 x i17> @ctlz_sel_const_false(<3 x i1> %b, <3 x i17> %x) {
 ; CHECK-LABEL: @ctlz_sel_const_false(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i17> @llvm.ctlz.v3i17(<3 x i17> [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i17> @llvm.ctlz.v3i17(<3 x i17> [[X:%.*]], i1 true), !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = select <3 x i1> [[B:%.*]], <3 x i17> [[TMP1]], <3 x i17> <i17 14, i17 0, i17 poison>
 ; CHECK-NEXT:    ret <3 x i17> [[C]]
 ;
@@ -48,7 +50,7 @@ define i32 @ctlz_sel_const_true_false_extra_use(i1 %b) {
 ; CHECK-LABEL: @ctlz_sel_const_true_false_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 -1, i32 7
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.ctlz.i32(i32 [[S]], i1 true), !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.ctlz.i32(i32 [[S]], i1 true), !range [[RNG2:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = select i1 %b, i32 -1, i32 7
@@ -80,7 +82,7 @@ define i32 @cttz_sel_const_true(i1 %b, i32 %x) {
 
 define <3 x i5> @cttz_sel_const_false(<3 x i1> %b, <3 x i5> %x) {
 ; CHECK-LABEL: @cttz_sel_const_false(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i5> @llvm.cttz.v3i5(<3 x i5> [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i5> @llvm.cttz.v3i5(<3 x i5> [[X:%.*]], i1 false), !range [[RNG3:![0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = select <3 x i1> [[B:%.*]], <3 x i5> [[TMP1]], <3 x i5> <i5 0, i5 0, i5 5>
 ; CHECK-NEXT:    ret <3 x i5> [[C]]
 ;
@@ -125,7 +127,7 @@ define i32 @ctpop_sel_const_true(i1 %b, i32 %x) {
 
 define <3 x i7> @ctpop_sel_const_false(<3 x i1> %b, <3 x i7> %x) {
 ; CHECK-LABEL: @ctpop_sel_const_false(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i7> @llvm.ctpop.v3i7(<3 x i7> [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i7> @llvm.ctpop.v3i7(<3 x i7> [[X:%.*]]), !range [[RNG4:![0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = select <3 x i1> [[B:%.*]], <3 x i7> [[TMP1]], <3 x i7> <i7 3, i7 7, i7 0>
 ; CHECK-NEXT:    ret <3 x i7> [[C]]
 ;
@@ -138,11 +140,81 @@ define i32 @ctpop_sel_const_true_false_extra_use(i1 %b) {
 ; CHECK-LABEL: @ctpop_sel_const_true_false_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 5, i32 7
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.ctpop.i32(i32 [[S]]), !range [[RNG2:![0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.ctpop.i32(i32 [[S]]), !range [[RNG5:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = select i1 %b, i32 5, i32 7
   call void @use(i32 %s)
   %c = call i32 @llvm.ctpop.i32(i32 %s)
   ret i32 %c
+}
+
+define i32 @usub_sat_rhs_const_select_all_const(i1 %b) {
+; CHECK-LABEL: @usub_sat_rhs_const_select_all_const(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 5, i32 10
+; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[S]], i32 7)
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %s = select i1 %b, i32 5, i32 10
+  %c = call i32 @llvm.usub.sat.i32(i32 %s, i32 7)
+  ret i32 %c
+}
+
+define i32 @usub_sat_rhs_var_select_all_const(i1 %b, i32 %x) {
+; CHECK-LABEL: @usub_sat_rhs_var_select_all_const(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 5, i32 10
+; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[S]], i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %s = select i1 %b, i32 5, i32 10
+  %c = call i32 @llvm.usub.sat.i32(i32 %s, i32 %x)
+  ret i32 %c
+}
+
+define i32 @usub_sat_rhs_const_select_one_const(i1 %b, i32 %x) {
+; CHECK-LABEL: @usub_sat_rhs_const_select_one_const(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 5, i32 [[X:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[S]], i32 7)
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %s = select i1 %b, i32 5, i32 %x
+  %c = call i32 @llvm.usub.sat.i32(i32 %s, i32 7)
+  ret i32 %c
+}
+
+define i32 @usub_sat_rhs_const_select_no_const(i1 %b, i32 %x, i32 %y) {
+; CHECK-LABEL: @usub_sat_rhs_const_select_no_const(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 [[Y:%.*]], i32 [[X:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[S]], i32 7)
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %s = select i1 %b, i32 %y, i32 %x
+  %c = call i32 @llvm.usub.sat.i32(i32 %s, i32 7)
+  ret i32 %c
+}
+
+define i32 @usub_sat_lhs_const_select_all_const(i1 %b) {
+; CHECK-LABEL: @usub_sat_lhs_const_select_all_const(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 5, i32 10
+; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.usub.sat.i32(i32 7, i32 [[S]])
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %s = select i1 %b, i32 5, i32 10
+  %c = call i32 @llvm.usub.sat.i32(i32 7, i32 %s)
+  ret i32 %c
+}
+
+@g1 = constant <2 x i32> zeroinitializer
+@g2 = external global i8
+declare <2 x i32> @llvm.masked.load.v2i32.p0(ptr, i32, <2 x i1>, <2 x i32>)
+
+define <2 x i32> @non_speculatable(i1 %b) {
+; CHECK-LABEL: @non_speculatable(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], ptr @g1, ptr @g2
+; CHECK-NEXT:    [[C:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr nonnull [[S]], i32 64, <2 x i1> <i1 true, i1 false>, <2 x i32> poison)
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %s = select i1 %b, ptr @g1, ptr @g2
+  %c = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr %s, i32 64, <2 x i1> <i1 true, i1 false>, <2 x i32> poison)
+  ret <2 x i32> %c
 }
