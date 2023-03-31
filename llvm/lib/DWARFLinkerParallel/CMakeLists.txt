@@ -1,5 +1,8 @@
 add_llvm_component_library(LLVMDWARFLinkerParallel
+  DWARFEmitterImpl.cpp
   DWARFLinker.cpp
+  DWARFLinkerImpl.cpp
+  OutputSections.cpp
   StringPool.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -16,4 +19,5 @@ add_llvm_component_library(LLVMDWARFLinkerParallel
   MC
   Object
   Support
+  TargetParser
   )
