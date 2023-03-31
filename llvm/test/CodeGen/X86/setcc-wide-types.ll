@@ -399,23 +399,14 @@ define i32 @ne_i512(<8 x i64> %x, <8 x i64> %y) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: ne_i512:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
-; AVX512F-NEXT:    xorl %eax, %eax
-; AVX512F-NEXT:    kortestw %k0, %k0
-; AVX512F-NEXT:    setne %al
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: ne_i512:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpcmpneqb %zmm1, %zmm0, %k0
-; AVX512BW-NEXT:    xorl %eax, %eax
-; AVX512BW-NEXT:    kortestq %k0, %k0
-; AVX512BW-NEXT:    setne %al
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: ne_i512:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
+; AVX512-NEXT:    xorl %eax, %eax
+; AVX512-NEXT:    kortestw %k0, %k0
+; AVX512-NEXT:    setne %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %bcx = bitcast <8 x i64> %x to i512
   %bcy = bitcast <8 x i64> %y to i512
   %cmp = icmp ne i512 %bcx, %bcy
@@ -590,23 +581,14 @@ define i32 @eq_i512(<8 x i64> %x, <8 x i64> %y) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: eq_i512:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
-; AVX512F-NEXT:    xorl %eax, %eax
-; AVX512F-NEXT:    kortestw %k0, %k0
-; AVX512F-NEXT:    sete %al
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: eq_i512:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpcmpneqb %zmm1, %zmm0, %k0
-; AVX512BW-NEXT:    xorl %eax, %eax
-; AVX512BW-NEXT:    kortestq %k0, %k0
-; AVX512BW-NEXT:    sete %al
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: eq_i512:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
+; AVX512-NEXT:    xorl %eax, %eax
+; AVX512-NEXT:    kortestw %k0, %k0
+; AVX512-NEXT:    sete %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %bcx = bitcast <8 x i64> %x to i512
   %bcy = bitcast <8 x i64> %y to i512
   %cmp = icmp eq i512 %bcx, %bcy

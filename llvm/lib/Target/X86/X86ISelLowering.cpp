@@ -24339,12 +24339,12 @@ static bool matchScalarReduction(SDValue Op, ISD::NodeType BinOp,
   return true;
 }
 
-// Helper function for comparing all bits of a vector against zero.
-static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
-                                  const APInt &Mask,
-                                  const X86Subtarget &Subtarget,
-                                  SelectionDAG &DAG, X86::CondCode &X86CC) {
-  EVT VT = V.getValueType();
+// Helper function for comparing all bits of two vectors.
+static SDValue LowerVectorAllEqual(const SDLoc &DL, SDValue LHS, SDValue RHS,
+                                   ISD::CondCode CC, const APInt &Mask,
+                                   const X86Subtarget &Subtarget,
+                                   SelectionDAG &DAG, X86::CondCode &X86CC) {
+  EVT VT = LHS.getValueType();
   unsigned ScalarSize = VT.getScalarSizeInBits();
   if (Mask.getBitWidth() != ScalarSize) {
     assert(ScalarSize == 1 && "Element Mask vs Vector bitwidth mismatch");
@@ -24372,8 +24372,8 @@ static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
     if (!DAG.getTargetLoweringInfo().isTypeLegal(IntVT))
       return SDValue();
     return DAG.getNode(X86ISD::CMP, DL, MVT::i32,
-                       DAG.getBitcast(IntVT, MaskBits(V)),
-                       DAG.getConstant(0, DL, IntVT));
+                       DAG.getBitcast(IntVT, MaskBits(LHS)),
+                       DAG.getBitcast(IntVT, MaskBits(RHS)));
   }
 
   // Without PTEST, a masked v2i64 or-reduction is not faster than
@@ -24385,34 +24385,49 @@ static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
 
   // Split down to 128/256/512-bit vector.
   unsigned TestSize = UseKORTEST ? 512 : (Subtarget.hasAVX() ? 256 : 128);
-  while (VT.getSizeInBits() > TestSize) {
-    auto Split = DAG.SplitVector(V, DL);
-    VT = Split.first.getValueType();
-    V = DAG.getNode(ISD::OR, DL, VT, Split.first, Split.second);
+  if (VT.getSizeInBits() > TestSize) {
+    // Convert to a ICMP_EQ(XOR(LHS,RHS),0) pattern.
+    SDValue V = DAG.getNode(ISD::XOR, DL, VT, LHS, RHS);
+    while (VT.getSizeInBits() > TestSize) {
+      auto Split = DAG.SplitVector(V, DL);
+      VT = Split.first.getValueType();
+      V = DAG.getNode(ISD::OR, DL, VT, Split.first, Split.second);
+    }
+    LHS = V;
+    RHS = DAG.getConstant(0, DL, VT);
   }
 
   if (UseKORTEST && VT.is512BitVector()) {
-    V = DAG.getBitcast(MVT::v16i32, MaskBits(V));
-    V = DAG.getSetCC(DL, MVT::v16i1, V,
-                     getZeroVector(MVT::v16i32, Subtarget, DAG, DL),
-                     ISD::SETNE);
+    LHS = DAG.getBitcast(MVT::v16i32, MaskBits(LHS));
+    RHS = DAG.getBitcast(MVT::v16i32, MaskBits(RHS));
+    SDValue V = DAG.getSetCC(DL, MVT::v16i1, LHS, RHS, ISD::SETNE);
     return DAG.getNode(X86ISD::KORTEST, DL, MVT::i32, V, V);
   }
 
   if (UsePTEST) {
     MVT TestVT = VT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
-    V = DAG.getBitcast(TestVT, MaskBits(V));
+    LHS = DAG.getBitcast(TestVT, MaskBits(LHS));
+    RHS = DAG.getBitcast(TestVT, MaskBits(RHS));
+    SDValue V = DAG.getNode(ISD::XOR, DL, TestVT, LHS, RHS);
     return DAG.getNode(X86ISD::PTEST, DL, MVT::i32, V, V);
   }
 
   MVT MaskVT = ScalarSize >= 32 ? MVT::v4i32 : MVT::v16i8;
-  V = DAG.getBitcast(MaskVT, MaskBits(V));
-  V = DAG.getNode(X86ISD::PCMPEQ, DL, MaskVT, V,
-                  getZeroVector(MaskVT, Subtarget, DAG, DL));
+  LHS = DAG.getBitcast(MaskVT, MaskBits(LHS));
+  RHS = DAG.getBitcast(MaskVT, MaskBits(RHS));
+  SDValue V = DAG.getNode(X86ISD::PCMPEQ, DL, MaskVT, LHS, RHS);
   V = DAG.getNOT(DL, V, MaskVT);
   V = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, V);
   return DAG.getNode(X86ISD::CMP, DL, MVT::i32, V,
                      DAG.getConstant(0, DL, MVT::i32));
+}
+
+static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
+                                  const APInt &Mask,
+                                  const X86Subtarget &Subtarget,
+                                  SelectionDAG &DAG, X86::CondCode &X86CC) {
+  SDValue Z = DAG.getConstant(0, DL, V.getValueType());
+  return LowerVectorAllEqual(DL, V, Z, CC, Mask, Subtarget, DAG, X86CC);
 }
 
 // Check whether an OR'd reduction tree is PTEST-able, or if we can fallback to
@@ -24480,6 +24495,28 @@ static SDValue MatchVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
       if (SDValue V =
               LowerVectorAllZero(DL, Match, CC, Mask, Subtarget, DAG, X86CC))
         return V;
+    }
+  }
+
+  // Match icmp(bitcast(icmp_ne(X,Y)),0) reduction patterns.
+  // TODO: Expand to icmp(bitcast(icmp_eq(X,Y)),-1) patterns.
+  if (Mask.isAllOnes()) {
+    assert(!Op.getValueType().isVector() &&
+           "Illegal vector type for reduction pattern");
+    SDValue Src = peekThroughBitcasts(Op);
+    if (Src.getOpcode() == ISD::SETCC &&
+        Src.getValueType().isFixedLengthVector() &&
+        Src.getValueType().getScalarType() == MVT::i1) {
+      ISD::CondCode SrcCC = cast<CondCodeSDNode>(Src.getOperand(2))->get();
+      if (SrcCC == ISD::SETNE) {
+        SDValue LHS = Src.getOperand(0);
+        SDValue RHS = Src.getOperand(1);
+        EVT LHSVT = LHS.getValueType();
+        APInt SrcMask = APInt::getAllOnes(LHSVT.getScalarSizeInBits());
+        if (SDValue V = LowerVectorAllEqual(DL, LHS, RHS, CC, SrcMask,
+                                            Subtarget, DAG, X86CC))
+          return V;
+      }
     }
   }
 
