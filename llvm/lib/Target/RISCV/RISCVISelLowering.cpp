@@ -2895,10 +2895,8 @@ static SDValue splatSplitI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,
                                    SDValue Scalar, SDValue VL,
                                    SelectionDAG &DAG) {
   assert(Scalar.getValueType() == MVT::i64 && "Unexpected VT!");
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
-                           DAG.getConstant(0, DL, MVT::i32));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
-                           DAG.getConstant(1, DL, MVT::i32));
+  SDValue Lo, Hi;
+  std::tie(Lo, Hi) = DAG.SplitScalar(Scalar, DL, MVT::i32, MVT::i32);
   return splatPartsI64WithVL(DL, VT, Passthru, Lo, Hi, VL, DAG);
 }
 
@@ -4012,10 +4010,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     }
     if (VT == MVT::f64 && Op0VT == MVT::i64 && XLenVT == MVT::i32 &&
         Subtarget.hasStdExtZfa()) {
-      SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Op0,
-                               DAG.getConstant(0, DL, MVT::i32));
-      SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Op0,
-                               DAG.getConstant(1, DL, MVT::i32));
+      SDValue Lo, Hi;
+      std::tie(Lo, Hi) = DAG.SplitScalar(Op0, DL, MVT::i32, MVT::i32);
       SDValue RetReg =
           DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
       return RetReg;
@@ -5539,7 +5535,6 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
 
   MVT XLenVT = Subtarget.getXLenVT();
 
-  SDValue Zero = DAG.getConstant(0, DL, XLenVT);
   bool IsLegalInsert = Subtarget.is64Bit() || Val.getValueType() != MVT::i64;
   // Even i64-element vectors on RV32 can be lowered without scalar
   // legalization if the most-significant 32 bits of the value are not affected
@@ -5572,9 +5567,8 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     // value at element 0, by using two vslide1down instructions in sequence on
     // the i32 split lo/hi value. Use an equivalently-sized i32 vector for
     // this.
-    SDValue One = DAG.getConstant(1, DL, XLenVT);
-    SDValue ValLo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Val, Zero);
-    SDValue ValHi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Val, One);
+    SDValue ValLo, ValHi;
+    std::tie(ValLo, ValHi) = DAG.SplitScalar(Val, DL, MVT::i32, MVT::i32);
     MVT I32ContainerVT =
         MVT::getVectorVT(MVT::i32, ContainerVT.getVectorElementCount() * 2);
     SDValue I32Mask =
@@ -5804,11 +5798,9 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
     // Convert the vector source to the equivalent nxvXi32 vector.
     MVT I32VT = MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
     SDValue Vec = DAG.getBitcast(I32VT, Operands[2]);
-
-    SDValue ScalarLo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, ScalarOp,
-                                   DAG.getConstant(0, DL, XLenVT));
-    SDValue ScalarHi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, ScalarOp,
-                                   DAG.getConstant(1, DL, XLenVT));
+    SDValue ScalarLo, ScalarHi;
+    std::tie(ScalarLo, ScalarHi) =
+        DAG.SplitScalar(ScalarOp, DL, MVT::i32, MVT::i32);
 
     // Double the VL since we halved SEW.
     SDValue AVL = getVLOperand(Op);
