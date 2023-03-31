@@ -679,7 +679,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
       StringRef File = Obj->getObjectFilename();
       auto ErrorOrMem = MemoryBuffer::getFile(File);
       if (!ErrorOrMem) {
-        warn("Could not open '" + File + "'\n");
+        warn("Could not open '" + File + "'");
         continue;
       }
       sys::fs::file_status Stat;
