@@ -33,6 +33,10 @@ ThreadPlanStepThrough::ThreadPlanStepThrough(Thread &thread,
       m_start_address(0), m_backstop_bkpt_id(LLDB_INVALID_BREAK_ID),
       m_backstop_addr(LLDB_INVALID_ADDRESS), m_return_stack_id(m_stack_id),
       m_stop_others(stop_others) {
+  // If trampoline support is disabled, there's nothing for us to do.
+  if (!Target::GetGlobalProperties().GetEnableTrampolineSupport())
+    return;
+
   LookForPlanToStepThroughFromCurrentPC();
 
   // If we don't get a valid step through plan, don't bother to set up a

@@ -66,6 +66,7 @@ add_lldb_library(lldbTarget
   ThreadPlanStepOverRange.cpp
   ThreadPlanStepRange.cpp
   ThreadPlanStepThrough.cpp
+  ThreadPlanStepThroughGenericTrampoline.cpp
   ThreadPlanStepUntil.cpp
   ThreadPlanTracer.cpp
   ThreadPlanStack.cpp
