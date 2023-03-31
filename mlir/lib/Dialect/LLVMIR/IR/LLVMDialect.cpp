@@ -1522,17 +1522,6 @@ LogicalResult ReturnOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// ResumeOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult ResumeOp::verify() {
-  // Consistency of llvm.resume value types is checked in LLVMFuncOp::verify().
-
-  // No check for personality of function - landingpad op verifies it.
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // Verifier for LLVM::AddressOfOp.
 //===----------------------------------------------------------------------===//
 

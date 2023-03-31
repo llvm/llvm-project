@@ -894,7 +894,8 @@ def LLVM_ReturnOp : LLVM_TerminatorOp<"return", [Pure, ReturnLike]> {
 def LLVM_ResumeOp : LLVM_TerminatorOp<"resume"> {
   let arguments = (ins LLVM_Type:$value);
   let assemblyFormat = "$value attr-dict `:` type($value)";
-  let hasVerifier = 1;
+  // Consistency of llvm.resume value types is checked in LLVMFuncOp::verify().
+  let hasVerifier = false;
   string llvmInstName = "Resume";
   string llvmBuilder = [{ builder.CreateResume($value); }];
   string mlirBuilder = [{
