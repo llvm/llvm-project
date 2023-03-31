@@ -197,8 +197,8 @@ def: Pat<(any_frint FPR32:$rs1), (FROUNDNX_S FPR32:$rs1, 0b111)>;
 def: Pat<(any_fnearbyint FPR32:$rs1), (FROUND_S FPR32:$rs1, 0b111)>;
 
 def: Pat<(any_fround FPR32:$rs1), (FROUND_S FPR32:$rs1, 0b100)>;
-def: Pat<(any_ffloor FPR32:$rs1), (FROUND_S FPR32:$rs1, 0b011)>;
-def: Pat<(any_fceil FPR32:$rs1), (FROUND_S FPR32:$rs1, 0b010)>;
+def: Pat<(any_ffloor FPR32:$rs1), (FROUND_S FPR32:$rs1, 0b010)>;
+def: Pat<(any_fceil FPR32:$rs1), (FROUND_S FPR32:$rs1, 0b011)>;
 def: Pat<(any_ftrunc FPR32:$rs1), (FROUND_S FPR32:$rs1, 0b001)>;
 
 def: PatSetCC<FPR32, strict_fsetcc, SETLT, FLTQ_S>;
@@ -220,8 +220,8 @@ def: Pat<(any_fnearbyint FPR64:$rs1), (FROUND_D FPR64:$rs1, 0b111)>;
 
 def: Pat<(any_fround FPR64:$rs1), (FROUND_D FPR64:$rs1, 0b100)>;
 def: Pat<(any_froundeven FPR64:$rs1), (FROUND_D FPR64:$rs1, 0b000)>;
-def: Pat<(any_ffloor FPR64:$rs1), (FROUND_D FPR64:$rs1, 0b011)>;
-def: Pat<(any_fceil FPR64:$rs1), (FROUND_D FPR64:$rs1, 0b010)>;
+def: Pat<(any_ffloor FPR64:$rs1), (FROUND_D FPR64:$rs1, 0b010)>;
+def: Pat<(any_fceil FPR64:$rs1), (FROUND_D FPR64:$rs1, 0b011)>;
 def: Pat<(any_ftrunc FPR64:$rs1), (FROUND_D FPR64:$rs1, 0b001)>;
 
 def: PatSetCC<FPR64, strict_fsetcc, SETLT, FLTQ_D>;
@@ -248,8 +248,8 @@ def: Pat<(any_fnearbyint FPR16:$rs1), (FROUND_H FPR16:$rs1, 0b111)>;
 
 def: Pat<(any_fround FPR16:$rs1), (FROUND_H FPR16:$rs1, 0b100)>;
 def: Pat<(any_froundeven FPR16:$rs1), (FROUND_H FPR16:$rs1, 0b000)>;
-def: Pat<(any_ffloor FPR16:$rs1), (FROUND_H FPR16:$rs1, 0b011)>;
-def: Pat<(any_fceil FPR16:$rs1), (FROUND_H FPR16:$rs1, 0b010)>;
+def: Pat<(any_ffloor FPR16:$rs1), (FROUND_H FPR16:$rs1, 0b010)>;
+def: Pat<(any_fceil FPR16:$rs1), (FROUND_H FPR16:$rs1, 0b011)>;
 def: Pat<(any_ftrunc FPR16:$rs1), (FROUND_H FPR16:$rs1, 0b001)>;
 
 def: PatSetCC<FPR16, strict_fsetcc, SETLT, FLTQ_H>;
