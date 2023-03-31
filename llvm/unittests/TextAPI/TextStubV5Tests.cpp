@@ -192,8 +192,8 @@ TEST(TBDv5, ReadFile) {
 
   TargetList AllTargets = {
       Target(AK_x86_64, PLATFORM_MACOS, VersionTuple(10, 14)),
-      Target(AK_arm64, PLATFORM_MACOS, VersionTuple(10, 14)),
-      Target(AK_arm64, PLATFORM_MACCATALYST, VersionTuple(12, 1)),
+      Target(AK_arm64, PLATFORM_MACOS, VersionTuple(11, 0, 0)),
+      Target(AK_arm64, PLATFORM_MACCATALYST, VersionTuple(14, 0)),
   };
   EXPECT_EQ(mapToPlatformSet(AllTargets), File->getPlatforms());
   EXPECT_EQ(mapToArchitectureSet(AllTargets), File->getArchitectures());
@@ -926,7 +926,7 @@ TEST(TBDv5, Target_Simulator) {
   EXPECT_EQ(FileType::TBD_V5, File->getFileType());
   TargetList ExpectedTargets = {
       Target(AK_x86_64, PLATFORM_IOSSIMULATOR, VersionTuple(11, 3)),
-      Target(AK_arm64, PLATFORM_IOSSIMULATOR, VersionTuple(11, 0)),
+      Target(AK_arm64, PLATFORM_IOSSIMULATOR, VersionTuple(14, 0)),
   };
   TargetList Targets{File->targets().begin(), File->targets().end()};
   llvm::sort(Targets);

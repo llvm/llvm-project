@@ -45,15 +45,21 @@ public:
 };
 
 inline bool operator==(const Target &LHS, const Target &RHS) {
-  return std::tie(LHS.Arch, LHS.Platform) == std::tie(RHS.Arch, RHS.Platform);
+  bool CrossLinkMatch =
+      std::tie(LHS.Arch, LHS.Platform) == std::tie(RHS.Arch, RHS.Platform);
+  // Ignore potential mismatches due to missing deployment versions.
+  if (LHS.MinDeployment.empty() || RHS.MinDeployment.empty())
+    return CrossLinkMatch;
+  return CrossLinkMatch && LHS.MinDeployment == RHS.MinDeployment;
 }
 
 inline bool operator!=(const Target &LHS, const Target &RHS) {
-  return std::tie(LHS.Arch, LHS.Platform) != std::tie(RHS.Arch, RHS.Platform);
+  return !(LHS == RHS);
 }
 
 inline bool operator<(const Target &LHS, const Target &RHS) {
-  return std::tie(LHS.Arch, LHS.Platform) < std::tie(RHS.Arch, RHS.Platform);
+  return std::tie(LHS.Arch, LHS.Platform, LHS.MinDeployment) <
+         std::tie(RHS.Arch, RHS.Platform, RHS.MinDeployment);
 }
 
 inline bool operator==(const Target &LHS, const Architecture &RHS) {
