@@ -102,9 +102,9 @@ void ELFDebugObjectSection<ELFT>::dump(raw_ostream &OS, StringRef Name) {
   }
 }
 
-enum class Requirement {
+enum DebugObjectFlags : int {
   // Request final target memory load-addresses for all sections.
-  ReportFinalSectionLoadAddresses,
+  ReportFinalSectionLoadAddresses = 1 << 0,
 };
 
 /// The plugin creates a debug object from when JITLink starts processing the
@@ -118,8 +118,13 @@ public:
               ExecutionSession &ES)
       : MemMgr(MemMgr), JD(JD), ES(ES) {}
 
-  void set(Requirement Req) { Reqs.insert(Req); }
-  bool has(Requirement Req) const { return Reqs.count(Req) > 0; }
+  bool hasFlags(DebugObjectFlags F) const { return Flags & F; }
+  void setFlags(DebugObjectFlags F) {
+    Flags = static_cast<DebugObjectFlags>(Flags | F);
+  }
+  void clearFlags(DebugObjectFlags F) {
+    Flags = static_cast<DebugObjectFlags>(Flags & ~F);
+  }
 
   using FinalizeContinuation = std::function<void(Expected<ExecutorAddrRange>)>;
 
@@ -148,7 +153,7 @@ protected:
 
 private:
   ExecutionSession &ES;
-  std::set<Requirement> Reqs;
+  DebugObjectFlags Flags;
   FinalizedAlloc Alloc;
 };
 
@@ -211,7 +216,7 @@ private:
                  JITLinkMemoryManager &MemMgr, const JITLinkDylib *JD,
                  ExecutionSession &ES)
       : DebugObject(MemMgr, JD, ES), Buffer(std::move(Buffer)) {
-    set(Requirement::ReportFinalSectionLoadAddresses);
+    setFlags(ReportFinalSectionLoadAddresses);
   }
 
   std::unique_ptr<WritableMemoryBuffer> Buffer;
@@ -429,7 +434,7 @@ void DebugObjectManagerPlugin::modifyPassConfig(
     return;
 
   DebugObject &DebugObj = *It->second;
-  if (DebugObj.has(Requirement::ReportFinalSectionLoadAddresses)) {
+  if (DebugObj.hasFlags(ReportFinalSectionLoadAddresses)) {
     PassConfig.PostAllocationPasses.push_back(
         [&DebugObj](LinkGraph &Graph) -> Error {
           for (const Section &GraphSection : Graph.sections())
