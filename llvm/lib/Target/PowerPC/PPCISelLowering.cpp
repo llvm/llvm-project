@@ -8225,10 +8225,8 @@ SDValue PPCTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG,
       Flags.setNoFPExcept(Op->getFlags().hasNoFPExcept());
 
       if (IsSigned) {
-        SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::f64, Src,
-                                 DAG.getIntPtrConstant(0, dl));
-        SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::f64, Src,
-                                 DAG.getIntPtrConstant(1, dl));
+        SDValue Lo, Hi;
+        std::tie(Lo, Hi) = DAG.SplitScalar(Src, dl, MVT::f64, MVT::f64);
 
         // Add the two halves of the long double in round-to-zero mode, and use
         // a smaller FP_TO_SINT.

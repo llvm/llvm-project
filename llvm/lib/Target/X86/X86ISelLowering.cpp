@@ -3190,10 +3190,7 @@ static void Passv64i1ArgInRegs(
 
   // Splitting the value into two i32 types
   SDValue Lo, Hi;
-  Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, Dl, MVT::i32, Arg,
-                   DAG.getConstant(0, Dl, MVT::i32));
-  Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, Dl, MVT::i32, Arg,
-                   DAG.getConstant(1, Dl, MVT::i32));
+  std::tie(Lo, Hi) = DAG.SplitScalar(Arg, Dl, MVT::i32, MVT::i32);
 
   // Attach the two i32 types into corresponding registers
   RegsToPass.push_back(std::make_pair(VA.getLocReg(), Lo));
@@ -27268,14 +27265,9 @@ static SDValue getMaskNode(SDValue Mask, MVT MaskVT,
     assert(Subtarget.hasBWI() && "Expected AVX512BW target!");
     // In case 32bit mode, bitcast i64 is illegal, extend/split it.
     SDValue Lo, Hi;
-    Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Mask,
-                        DAG.getConstant(0, dl, MVT::i32));
-    Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Mask,
-                        DAG.getConstant(1, dl, MVT::i32));
-
+    std::tie(Lo, Hi) = DAG.SplitScalar(Mask, dl, MVT::i32, MVT::i32);
     Lo = DAG.getBitcast(MVT::v32i1, Lo);
     Hi = DAG.getBitcast(MVT::v32i1, Hi);
-
     return DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v64i1, Lo, Hi);
   } else {
     MVT BitcastVT = MVT::getVectorVT(MVT::i1,
@@ -32659,11 +32651,9 @@ static SDValue LowerBITCAST(SDValue Op, const X86Subtarget &Subtarget,
     assert(!Subtarget.is64Bit() && "Expected 32-bit mode");
     assert(Subtarget.hasBWI() && "Expected BWI target");
     SDLoc dl(Op);
-    SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Src,
-                             DAG.getIntPtrConstant(0, dl));
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = DAG.SplitScalar(Src, dl, MVT::i32, MVT::i32);
     Lo = DAG.getBitcast(MVT::v32i1, Lo);
-    SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Src,
-                             DAG.getIntPtrConstant(1, dl));
     Hi = DAG.getBitcast(MVT::v32i1, Hi);
     return DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v64i1, Lo, Hi);
   }
@@ -34660,21 +34650,16 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
            "64-bit ATOMIC_CMP_SWAP_WITH_SUCCESS requires CMPXCHG16B");
     MVT HalfT = Regs64bit ? MVT::i64 : MVT::i32;
     SDValue cpInL, cpInH;
-    cpInL = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HalfT, N->getOperand(2),
-                        DAG.getConstant(0, dl, HalfT));
-    cpInH = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HalfT, N->getOperand(2),
-                        DAG.getConstant(1, dl, HalfT));
+    std::tie(cpInL, cpInH) =
+        DAG.SplitScalar(N->getOperand(2), dl, HalfT, HalfT);
     cpInL = DAG.getCopyToReg(N->getOperand(0), dl,
-                             Regs64bit ? X86::RAX : X86::EAX,
-                             cpInL, SDValue());
-    cpInH = DAG.getCopyToReg(cpInL.getValue(0), dl,
-                             Regs64bit ? X86::RDX : X86::EDX,
-                             cpInH, cpInL.getValue(1));
+                             Regs64bit ? X86::RAX : X86::EAX, cpInL, SDValue());
+    cpInH =
+        DAG.getCopyToReg(cpInL.getValue(0), dl, Regs64bit ? X86::RDX : X86::EDX,
+                         cpInH, cpInL.getValue(1));
     SDValue swapInL, swapInH;
-    swapInL = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HalfT, N->getOperand(3),
-                          DAG.getConstant(0, dl, HalfT));
-    swapInH = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HalfT, N->getOperand(3),
-                          DAG.getConstant(1, dl, HalfT));
+    std::tie(swapInL, swapInH) =
+        DAG.SplitScalar(N->getOperand(3), dl, HalfT, HalfT);
     swapInH =
         DAG.getCopyToReg(cpInH.getValue(0), dl, Regs64bit ? X86::RCX : X86::ECX,
                          swapInH, cpInH.getValue(1));

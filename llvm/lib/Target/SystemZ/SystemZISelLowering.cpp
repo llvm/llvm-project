@@ -1438,10 +1438,8 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, const SDLoc &DL,
 
 static SDValue lowerI128ToGR128(SelectionDAG &DAG, SDValue In) {
   SDLoc DL(In);
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, In,
-                           DAG.getIntPtrConstant(0, DL));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, In,
-                           DAG.getIntPtrConstant(1, DL));
+  SDValue Lo, Hi;
+  std::tie(Lo, Hi) = DAG.SplitScalar(In, DL, MVT::i64, MVT::i64);
   SDNode *Pair = DAG.getMachineNode(SystemZ::PAIR128, DL,
                                     MVT::Untyped, Hi, Lo);
   return SDValue(Pair, 0);
