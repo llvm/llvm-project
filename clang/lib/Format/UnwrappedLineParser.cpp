@@ -2231,11 +2231,11 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
   const FormatToken *Previous = FormatTok->Previous;
   const FormatToken *LeftSquare = FormatTok;
   nextToken();
-  if (Previous &&
-      (Previous->isOneOf(tok::identifier, tok::kw_operator, tok::kw_new,
-                         tok::kw_delete, tok::l_square) ||
-       LeftSquare->isCppStructuredBinding(Style) || Previous->closesScope() ||
-       Previous->isSimpleTypeSpecifier())) {
+  if ((Previous && ((Previous->Tok.getIdentifierInfo() &&
+                     !Previous->isOneOf(tok::kw_return, tok::kw_co_await,
+                                        tok::kw_co_yield, tok::kw_co_return)) ||
+                    Previous->closesScope())) ||
+      LeftSquare->isCppStructuredBinding(Style)) {
     return false;
   }
   if (FormatTok->is(tok::l_square))
@@ -3784,7 +3784,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
           // Don't try parsing a lambda if we had a closing parenthesis before,
           // it was probably a pointer to an array: int (*)[].
           if (!tryToParseLambda())
-            break;
+            continue;
         } else {
           parseSquare();
           continue;
