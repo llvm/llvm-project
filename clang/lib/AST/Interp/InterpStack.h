@@ -64,11 +64,16 @@ public:
 
   /// Returns a reference to the value on the top of the stack.
   template <typename T> T &peek() const {
-    return *reinterpret_cast<T *>(peek(aligned_size<T>()));
+    return *reinterpret_cast<T *>(peekData(aligned_size<T>()));
+  }
+
+  template <typename T> T &peek(size_t Offset) const {
+    assert(aligned(Offset));
+    return *reinterpret_cast<T *>(peekData(Offset));
   }
 
   /// Returns a pointer to the top object.
-  void *top() const { return Chunk ? peek(0) : nullptr; }
+  void *top() const { return Chunk ? peekData(0) : nullptr; }
 
   /// Returns the size of the stack in bytes.
   size_t size() const { return StackSize; }
@@ -90,7 +95,7 @@ private:
   /// Grows the stack to accommodate a value and returns a pointer to it.
   void *grow(size_t Size);
   /// Returns a pointer from the top of the stack.
-  void *peek(size_t Size) const;
+  void *peekData(size_t Size) const;
   /// Shrinks the stack.
   void shrink(size_t Size);
 
