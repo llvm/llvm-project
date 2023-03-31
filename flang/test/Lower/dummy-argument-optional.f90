@@ -195,9 +195,10 @@ end subroutine
 
 ! CHECK-LABEL: func @_QMoptPnull_as_optional() {
 subroutine null_as_optional
-  ! CHECK: %[[temp:.*]] = fir.alloca !fir.llvm_ptr<none>
-  ! CHECK: %[[null:.*]] = fir.zero_bits !fir.ref<none>
-  ! CHECK: fir.store %{{.*}} to %[[temp]] : !fir.ref<!fir.llvm_ptr<none>>
+  ! CHECK: %[[null_ptr:.*]] = fir.alloca !fir.box<!fir.ptr<none>>
+  ! CHECK: %[[null:.*]] = fir.zero_bits !fir.ptr<none>
+  ! CHECK: %[[null_box:.*]] = fir.embox %[[null]] : (!fir.ptr<none>) -> !fir.box<!fir.ptr<none>>
+  ! CHECK: fir.store %[[null_box]] to %[[null_ptr]] : !fir.ref<!fir.box<!fir.ptr<none>>>
   ! CHECK: fir.call @_QMoptPassumed_shape(%{{.*}}) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
  call assumed_shape(null())
 end subroutine null_as_optional
