@@ -122,9 +122,9 @@ Changes to the MIPS Backend
 Changes to the PowerPC Backend
 ------------------------------
 
-* A new option ``-mroptr`` is added to ``clang`` and ``llc``. When this option
-  is present, constant objects with relocatable address values are put into the
-  RO data section. This option should be used with the ``-fdata-sections``
+* A new option ``-mxcoff-roptr`` is added to ``clang`` and ``llc``. When this
+  option is present, constant objects with relocatable address values are put
+  into the RO data section. This option should be used with the ``-fdata-sections``
   option, and is not supported with ``-fno-data-sections``. The option is
   only supported on AIX.
 * On AIX, teach the profile runtime to check for a build-id string; such string
