@@ -1,6 +1,8 @@
 baz:160:10
  1: 10
  3: 20
+ 4: 21 qux:5 quux:6 corge:10
+ 4.1: 12 quux:3 grault:4 thud:5
  5: foo:30
   1: 20
   3: bar:10
@@ -25,6 +27,7 @@ main:110:1
   !CFGChecksum: 3
   !Attributes: 3
  10: baz:20
+  4: 15 qux:3 quux:7 corge:5
   10: 1
   6: bar:3
    1: 2
