@@ -711,20 +711,22 @@ public:
   }
 
   /// A `NULL()` in a position where a mutable box is expected has the same
-  /// semantics as an absent optional box value.
+  /// semantics as an absent optional box value. Note: this code should
+  /// be depreciated because the rank information is not known here. A
+  /// scalar fir.box is created: it should not be cast to an array box type
+  /// later, but there is no way to enforce that here.
   ExtValue genMutableBoxValueImpl(const Fortran::evaluate::NullPointer &) {
     mlir::Location loc = getLoc();
-    auto nullConst = builder.createNullConstant(loc);
-    auto noneTy = mlir::NoneType::get(builder.getContext());
-    auto polyRefTy = fir::LLVMPointerType::get(noneTy);
-    // MutableBoxValue will dereference the box, so create a bogus temporary for
-    // the `nullptr`. The LLVM optimizer will garbage collect the temp.
-    auto temp =
-        builder.createTemporary(loc, polyRefTy, /*shape=*/mlir::ValueRange{});
-    auto nullPtr = builder.createConvert(loc, polyRefTy, nullConst);
-    builder.create<fir::StoreOp>(loc, nullPtr, temp);
+    mlir::Type noneTy = mlir::NoneType::get(builder.getContext());
+    mlir::Type polyRefTy = fir::PointerType::get(noneTy);
+    mlir::Type boxType = fir::BoxType::get(polyRefTy);
+    mlir::Value nullConst = builder.createNullConstant(loc, polyRefTy);
+    mlir::Value tempBox =
+        builder.createTemporary(loc, boxType, /*shape=*/mlir::ValueRange{});
+    mlir::Value nullBox = builder.create<fir::EmboxOp>(loc, boxType, nullConst);
+    builder.create<fir::StoreOp>(loc, nullBox, tempBox);
     auto nullBoxTy = builder.getRefType(fir::BoxType::get(noneTy));
-    return fir::MutableBoxValue(builder.createConvert(loc, nullBoxTy, temp),
+    return fir::MutableBoxValue(tempBox,
                                 /*lenParameters=*/mlir::ValueRange{},
                                 /*mutableProperties=*/{});
   }
