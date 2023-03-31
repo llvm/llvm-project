@@ -3144,10 +3144,8 @@ static SDValue LowerUMULO_SMULO(SDValue Op, SelectionDAG &DAG,
   SDValue MulResult = TLI.makeLibCall(DAG,
                                       RTLIB::MUL_I128, WideVT,
                                       Args, CallOptions, dl).first;
-  SDValue BottomHalf = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, VT,
-                                   MulResult, DAG.getIntPtrConstant(0, dl));
-  SDValue TopHalf = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, VT,
-                                MulResult, DAG.getIntPtrConstant(1, dl));
+  SDValue BottomHalf, TopHalf;
+  std::tie(BottomHalf, TopHalf) = DAG.SplitScalar(MulResult, dl, VT, VT);
   if (isSigned) {
     SDValue Tmp1 = DAG.getNode(ISD::SRA, dl, VT, BottomHalf, ShiftAmt);
     TopHalf = DAG.getSetCC(dl, MVT::i32, TopHalf, Tmp1, ISD::SETNE);

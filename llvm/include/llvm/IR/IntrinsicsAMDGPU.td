@@ -1164,6 +1164,16 @@ def int_amdgcn_raw_buffer_atomic_cmpswap : Intrinsic<
 
 // gfx908 intrinsic
 def int_amdgcn_raw_buffer_atomic_fadd : AMDGPURawBufferAtomic<llvm_anyfloat_ty>;
+// gfx12+ intrinsic
+def int_amdgcn_raw_buffer_atomic_fadd_v2bf16 : Intrinsic <
+  [llvm_v2i16_ty],
+  [llvm_v2i16_ty,
+   llvm_v4i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty],
+ [ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
+ AMDGPURsrcIntrinsic<1, 0>;
 
 class AMDGPUStructBufferAtomic<LLVMType data_ty = llvm_any_ty, bit NoRtn = false> : Intrinsic <
   !if(NoRtn, [], [data_ty]),
@@ -1202,6 +1212,17 @@ def int_amdgcn_struct_buffer_atomic_cmpswap : Intrinsic<
 
 // gfx908 intrinsic
 def int_amdgcn_struct_buffer_atomic_fadd : AMDGPUStructBufferAtomic<llvm_anyfloat_ty>;
+// gfx12 intrinsic
+def int_amdgcn_struct_buffer_atomic_fadd_v2bf16 : Intrinsic <
+  [llvm_v2i16_ty],
+  [llvm_v2i16_ty,
+   llvm_v4i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty],
+  [ImmArg<ArgIndex<5>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
+  AMDGPURsrcIntrinsic<1, 0>;
 
 // gfx90a intrinsics
 def int_amdgcn_struct_buffer_atomic_fmin : AMDGPUStructBufferAtomic<llvm_anyfloat_ty>;

@@ -9,21 +9,25 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/klass-with-no-rodata.s -o %t/klass-with-no-rodata.o
 # RUN: %lld -dylib -lobjc %t/klass.o -o %t/libklass.dylib
 
-# RUN: %no-fatal-warnings-lld -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
+# RUN: %no-fatal-warnings-lld --check-category-conflicts -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
 # RUN:   /dev/null 2>&1 | FileCheck %s --check-prefixes=CATCLS,CATCAT
-# RUN: %no-fatal-warnings-lld -dylib -lobjc %t/libklass.dylib %t/cat1.o \
+# RUN: %no-fatal-warnings-lld --check-category-conflicts -dylib -lobjc %t/libklass.dylib %t/cat1.o \
 # RUN:   %t/cat2.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=CATCAT
 
 ## Check that we don't emit spurious warnings around the +load method while
 ## still emitting the other warnings. Note that we have made separate
 ## `*-with-load.s` files for ease of comparison with ld64; ld64 will not warn
 ## at all if multiple +load methods are present.
-# RUN: %no-fatal-warnings-lld -dylib -lobjc %t/klass-with-load.o \
+# RUN: %no-fatal-warnings-lld --check-category-conflicts -dylib -lobjc %t/klass-with-load.o \
 # RUN:   %t/cat1-with-load.o %t/cat2-with-load.o -o /dev/null 2>&1 | \
 # RUN:   FileCheck %s --check-prefixes=CATCLS,CATCAT --implicit-check-not '+load'
 
 ## Regression test: Check that we don't crash.
-# RUN: %no-fatal-warnings-lld -dylib -lobjc %t/klass-with-no-rodata.o -o /dev/null
+# RUN: %no-fatal-warnings-lld --check-category-conflicts -dylib -lobjc %t/klass-with-no-rodata.o -o /dev/null
+
+## Check that we don't emit any warnings without --check-category-conflicts.
+# RUN: %no-fatal-warnings-lld -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
+# RUN:   /dev/null 2>&1 | FileCheck %s --implicit-check-not 'warning' --allow-empty
 
 # CATCLS:      warning: method '+s1' has conflicting definitions:
 # CATCLS-NEXT: >>> defined in category Cat1 from {{.*}}cat1{{.*}}.o

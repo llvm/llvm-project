@@ -4724,6 +4724,9 @@ static unsigned getBufferAtomicPseudo(Intrinsic::ID IntrID) {
   case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD;
+  case Intrinsic::amdgcn_raw_buffer_atomic_fadd_v2bf16:
+  case Intrinsic::amdgcn_struct_buffer_atomic_fadd_v2bf16:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD_BF16;
   case Intrinsic::amdgcn_raw_buffer_atomic_fmin:
   case Intrinsic::amdgcn_struct_buffer_atomic_fmin:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMIN;
@@ -5939,7 +5942,9 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_raw_buffer_atomic_fmax:
   case Intrinsic::amdgcn_struct_buffer_atomic_fmax:
   case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
+  case Intrinsic::amdgcn_raw_buffer_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
+  case Intrinsic::amdgcn_struct_buffer_atomic_fadd_v2bf16:
     return legalizeBufferAtomic(MI, B, IntrID);
   case Intrinsic::amdgcn_atomic_inc:
     return legalizeAtomicIncDec(MI, B, true);

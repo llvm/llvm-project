@@ -287,6 +287,10 @@ Bug Fixes to C++ Support
 - Stop stripping CV qualifiers from the type of ``this`` when capturing it by value in
   a lambda.
   (`#50866 <https://github.com/llvm/llvm-project/issues/50866>`_)
+- Fix ordering of function templates by constraints when they have template
+  template parameters with different nested constraints.
+- Fix type equivalence comparison between auto types to take constraints into
+  account.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

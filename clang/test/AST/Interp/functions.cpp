@@ -162,3 +162,26 @@ namespace FunctionReturnType {
 }
 
 }
+
+struct F {
+  constexpr bool ok() const {
+    return okRecurse();
+  }
+  constexpr bool okRecurse() const {
+    return true;
+  }
+};
+
+struct BodylessMemberFunction {
+  constexpr int first() const {
+    return second();
+  }
+  constexpr int second() const {
+    return 1;
+  }
+};
+
+constexpr int nyd(int m);
+constexpr int doit() { return nyd(10); }
+constexpr int nyd(int m) { return m; }
+static_assert(doit() == 10, "");

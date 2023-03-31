@@ -92,6 +92,7 @@ public:
   bool VisitExprWithCleanups(const ExprWithCleanups *E);
   bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
   bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
+  bool VisitTypeTraitExpr(const TypeTraitExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;

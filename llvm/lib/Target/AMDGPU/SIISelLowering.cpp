@@ -6867,7 +6867,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       Op.getOperand(ArgOffset + Intr->CachePolicyIndex))->getZExtValue();
   if (BaseOpcode->Atomic)
     CPol |= AMDGPU::CPol::GLC; // TODO no-return optimization
-  if (CPol & ~AMDGPU::CPol::ALL)
+  if (CPol & ~(IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12))
     return Op;
 
   SmallVector<SDValue, 26> Ops;
@@ -7242,7 +7242,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                            SDLoc(Op), MVT::i32);
   case Intrinsic::amdgcn_s_buffer_load: {
     unsigned CPol = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
-    if (CPol & ~AMDGPU::CPol::ALL)
+    if (CPol & ~((Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12)
+                     ? AMDGPU::CPol::ALL
+                     : AMDGPU::CPol::ALL_pregfx12))
       return Op;
     return lowerSBuffer(VT, DL, Op.getOperand(1), Op.getOperand(2), Op.getOperand(3),
                         DAG);
@@ -7895,8 +7897,14 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
     return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FADD);
+  case Intrinsic::amdgcn_raw_buffer_atomic_fadd_v2bf16:
+    return lowerRawBufferAtomicIntrin(Op, DAG,
+                                      AMDGPUISD::BUFFER_ATOMIC_FADD_BF16);
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
     return lowerStructBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FADD);
+  case Intrinsic::amdgcn_struct_buffer_atomic_fadd_v2bf16:
+    return lowerStructBufferAtomicIntrin(Op, DAG,
+                                         AMDGPUISD::BUFFER_ATOMIC_FADD_BF16);
   case Intrinsic::amdgcn_raw_buffer_atomic_fmin:
     return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FMIN);
   case Intrinsic::amdgcn_struct_buffer_atomic_fmin:
@@ -11607,7 +11615,6 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
   // The actual DAG is noisier than the pseudo code, but only due to
   // instructions that disassemble values into low and high parts, and
   // assemble the final result.
-  SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
   SDValue One = DAG.getConstant(1, SL, MVT::i32);
 
   auto MulLHSLo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, MulLHS);
@@ -11616,8 +11623,8 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
       getMad64_32(DAG, SL, MVT::i64, MulLHSLo, MulRHSLo, AddRHS, MulSignedLo);
 
   if (!MulSignedLo && (!MulLHSUnsigned32 || !MulRHSUnsigned32)) {
-    auto AccumLo = DAG.getNode(ISD::EXTRACT_ELEMENT, SL, MVT::i32, Accum, Zero);
-    auto AccumHi = DAG.getNode(ISD::EXTRACT_ELEMENT, SL, MVT::i32, Accum, One);
+    SDValue AccumLo, AccumHi;
+    std::tie(AccumLo, AccumHi) = DAG.SplitScalar(Accum, SL, MVT::i32, MVT::i32);
 
     if (!MulLHSUnsigned32) {
       auto MulLHSHi =
@@ -13329,6 +13336,7 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
   case AMDGPUISD::BUFFER_ATOMIC_CMPSWAP:
   case AMDGPUISD::BUFFER_ATOMIC_CSUB:
   case AMDGPUISD::BUFFER_ATOMIC_FADD:
+  case AMDGPUISD::BUFFER_ATOMIC_FADD_BF16:
   case AMDGPUISD::BUFFER_ATOMIC_FMIN:
   case AMDGPUISD::BUFFER_ATOMIC_FMAX:
     // Target-specific read-modify-write atomics are sources of divergence.

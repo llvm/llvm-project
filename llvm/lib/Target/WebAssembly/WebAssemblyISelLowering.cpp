@@ -2151,7 +2151,8 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
         assert((LaneBits == 64 || Val >= -(1ll << (LaneBits - 1))) &&
                "Unexpected out of bounds negative value");
         if (Const && LaneBits != 64 && Val > (1ll << (LaneBits - 1)) - 1) {
-          auto NewVal = ((uint64_t)Val % (1ll << LaneBits)) - (1ll << LaneBits);
+          uint64_t Mask = (1ll << LaneBits) - 1;
+          auto NewVal = (((uint64_t)Val & Mask) - (1ll << LaneBits)) & Mask;
           ConstLanes.push_back(DAG.getConstant(NewVal, SDLoc(Lane), LaneT));
         } else {
           ConstLanes.push_back(Lane);
@@ -2241,7 +2242,7 @@ WebAssemblyTargetLowering::LowerAccessVectorElement(SDValue Op,
                                                     SelectionDAG &DAG) const {
   // Allow constant lane indices, expand variable lane indices
   SDNode *IdxNode = Op.getOperand(Op.getNumOperands() - 1).getNode();
-  if (isa<ConstantSDNode>(IdxNode) || IdxNode->isUndef()) {
+  if (isa<ConstantSDNode>(IdxNode)) {
     // Ensure the index type is i32 to match the tablegen patterns
     uint64_t Idx = cast<ConstantSDNode>(IdxNode)->getZExtValue();
     SmallVector<SDValue, 3> Ops(Op.getNode()->ops());

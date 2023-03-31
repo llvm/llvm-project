@@ -354,6 +354,7 @@ Clang-Tidy Checks
    `readability-misplaced-array-index <readability/misplaced-array-index.html>`_, "Yes"
    `readability-named-parameter <readability/named-parameter.html>`_, "Yes"
    `readability-non-const-parameter <readability/non-const-parameter.html>`_, "Yes"
+   `readability-operators-representation <readability/operators-representation.html>`_, "Yes"
    `readability-qualified-auto <readability/qualified-auto.html>`_, "Yes"
    `readability-redundant-access-specifiers <readability/redundant-access-specifiers.html>`_, "Yes"
    `readability-redundant-control-flow <readability/redundant-control-flow.html>`_, "Yes"

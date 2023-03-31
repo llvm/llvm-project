@@ -100,6 +100,8 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   if (!CI.getLangOpts()->ModulesCodegen) {
     CI.getCodeGenOpts().DebugCompilationDir.clear();
     CI.getCodeGenOpts().CoverageCompilationDir.clear();
+    CI.getCodeGenOpts().CoverageDataFile.clear();
+    CI.getCodeGenOpts().CoverageNotesFile.clear();
   }
 
   // Map output paths that affect behaviour to "-" so their existence is in the

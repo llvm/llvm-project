@@ -1102,7 +1102,7 @@ public:
                                    orc::ExecutorAddr Address,
                                    uint64_t Alignment, uint64_t AlignmentOffset,
                                    bool ZeroInitialize = true) {
-    auto Content = allocateContent(ContentSize);
+    auto Content = allocateBuffer(ContentSize);
     if (ZeroInitialize)
       memset(Content.data(), 0, Content.size());
     return createBlock(Parent, Content, Address, Alignment, AlignmentOffset);

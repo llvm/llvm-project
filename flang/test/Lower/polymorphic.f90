@@ -843,15 +843,19 @@ module polymorphic_test
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_call_with_null() {
-! CHECK: %[[NULL_LLVM_PTR:.*]] = fir.alloca !fir.llvm_ptr<none>
-! CHECK: %[[NULL_BOX_NONE:.*]] = fir.convert %[[NULL_LLVM_PTR]] : (!fir.ref<!fir.llvm_ptr<none>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[BOX_NONE:.*]] = fir.load %[[NULL_BOX_NONE]] : !fir.ref<!fir.box<none>>
-! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_NONE]] : (!fir.box<none>) -> !fir.ref<none>
-! CHECK: %[[BOX_ADDR_I64:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.ref<none>) -> i64
+! CHECK: %[[NULL_PTR:.*]] = fir.alloca !fir.box<!fir.ptr<none>>
+! CHECK: %[[NULL:.*]] = fir.zero_bits !fir.ptr<none>
+! CHECK: %[[NULL_BOX:.*]] = fir.embox %[[NULL]] : (!fir.ptr<none>) -> !fir.box<!fir.ptr<none>>
+! CHECK: fir.store %[[NULL_BOX]] to %[[NULL_PTR]] : !fir.ref<!fir.box<!fir.ptr<none>>>
+! CHECK: %[[BOX_NONE:.*]] = fir.load %[[NULL_PTR]] : !fir.ref<!fir.box<!fir.ptr<none>>>
+! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_NONE]] : (!fir.box<!fir.ptr<none>>) -> !fir.ptr<none>
+! CHECK: %[[BOX_ADDR_I64:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.ptr<none>) -> i64
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i64
 ! CHECK: %[[IS_ALLOCATED_OR_ASSOCIATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_I64]], %[[C0]] : i64
 ! CHECK: %[[ABSENT:.*]] = fir.absent !fir.class<none>
-! CHECK: %[[BOX_NONE:.*]] = fir.load %[[NULL_BOX_NONE]] : !fir.ref<!fir.box<none>>
+! CHECK: %[[PTR_LOAD2:.*]] = fir.load %[[NULL_PTR]] : !fir.ref<!fir.box<!fir.ptr<none>>>
+! CHECK: %[[BOX_ADDR2:.*]] = fir.box_addr %[[PTR_LOAD2]] : (!fir.box<!fir.ptr<none>>) -> !fir.ptr<none>
+! CHECK: %[[BOX_NONE:.*]] = fir.embox %[[BOX_ADDR2]] : (!fir.ptr<none>) -> !fir.box<none>
 ! CHECK: %[[CLASS_NONE:.*]] = fir.convert %[[BOX_NONE]] : (!fir.box<none>) -> !fir.class<none>
 ! CHECK: %[[ARG:.*]] = arith.select %[[IS_ALLOCATED_OR_ASSOCIATED]], %[[CLASS_NONE]], %[[ABSENT]] : !fir.class<none>
 ! CHECK: fir.call @_QMpolymorphic_testPsub_with_poly_optional(%[[ARG]]) {{.*}} : (!fir.class<none>) -> ()

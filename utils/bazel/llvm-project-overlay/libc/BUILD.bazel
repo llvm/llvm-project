@@ -338,6 +338,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_limits",
+        ":__support_cpp_type_traits",
         ":__support_ctype_utils",
         ":__support_str_to_num_result",
         ":errno",

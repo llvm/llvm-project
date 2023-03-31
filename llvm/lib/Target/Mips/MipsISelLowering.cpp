@@ -1015,16 +1015,11 @@ static SDValue performMADD_MSUBCombine(SDNode *ROOTNode, SelectionDAG &CurDAG,
 
   // Initialize accumulator.
   SDLoc DL(ROOTNode);
-  SDValue TopHalf;
-  SDValue BottomHalf;
-  BottomHalf = CurDAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, AddOperand,
-                              CurDAG.getIntPtrConstant(0, DL));
-
-  TopHalf = CurDAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, AddOperand,
-                           CurDAG.getIntPtrConstant(1, DL));
-  SDValue ACCIn = CurDAG.getNode(MipsISD::MTLOHI, DL, MVT::Untyped,
-                                  BottomHalf,
-                                  TopHalf);
+  SDValue BottomHalf, TopHalf;
+  std::tie(BottomHalf, TopHalf) =
+      CurDAG.SplitScalar(AddOperand, DL, MVT::i32, MVT::i32);
+  SDValue ACCIn =
+      CurDAG.getNode(MipsISD::MTLOHI, DL, MVT::Untyped, BottomHalf, TopHalf);
 
   // Create MipsMAdd(u) / MipsMSub(u) node.
   bool IsAdd = ROOTNode->getOpcode() == ISD::ADD;

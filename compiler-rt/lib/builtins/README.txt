@@ -35,13 +35,13 @@ typedef uint64_t du_int;
 
 // Integral bit manipulation
 
-di_int __ashldi3(di_int a, si_int b);      // a << b
-ti_int __ashlti3(ti_int a, si_int b);      // a << b
+di_int __ashldi3(di_int a, int b);         // a << b
+ti_int __ashlti3(ti_int a, int b);         // a << b
 
-di_int __ashrdi3(di_int a, si_int b);      // a >> b  arithmetic (sign fill)
-ti_int __ashrti3(ti_int a, si_int b);      // a >> b  arithmetic (sign fill)
-di_int __lshrdi3(di_int a, si_int b);      // a >> b  logical    (zero fill)
-ti_int __lshrti3(ti_int a, si_int b);      // a >> b  logical    (zero fill)
+di_int __ashrdi3(di_int a, int b);         // a >> b  arithmetic (sign fill)
+ti_int __ashrti3(ti_int a, int b);         // a >> b  arithmetic (sign fill)
+di_int __lshrdi3(di_int a, int b);         // a >> b  logical    (zero fill)
+ti_int __lshrti3(ti_int a, int b);         // a >> b  logical    (zero fill)
 
 int __clzsi2(si_int a);  // count leading zeros
 int __clzdi2(di_int a);  // count leading zeros

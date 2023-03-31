@@ -480,7 +480,7 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
   CGBINDOPT(JMCInstrument);
 
   static cl::opt<bool> XCOFFReadOnlyPointers(
-      "mroptr",
+      "mxcoff-roptr",
       cl::desc("When set to true, const objects with relocatable address "
                "values are put into the RO data section."),
       cl::init(false));

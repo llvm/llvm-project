@@ -1856,7 +1856,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   unsigned CPol = MI.getOperand(ArgOffset + Intr->CachePolicyIndex).getImm();
   if (BaseOpcode->Atomic)
     CPol |= AMDGPU::CPol::GLC; // TODO no-return optimization
-  if (CPol & ~AMDGPU::CPol::ALL)
+  if (CPol & ~(IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12))
     return false;
 
   int NumVAddrRegs = 0;
@@ -5334,7 +5334,9 @@ void AMDGPUInstructionSelector::renderExtractCPol(MachineInstrBuilder &MIB,
                                                   const MachineInstr &MI,
                                                   int OpIdx) const {
   assert(OpIdx >= 0 && "expected to match an immediate operand");
-  MIB.addImm(MI.getOperand(OpIdx).getImm() & AMDGPU::CPol::ALL);
+  MIB.addImm(MI.getOperand(OpIdx).getImm() &
+             (AMDGPU::isGFX12Plus(STI) ? AMDGPU::CPol::ALL
+                                       : AMDGPU::CPol::ALL_pregfx12));
 }
 
 void AMDGPUInstructionSelector::renderExtractSWZ(MachineInstrBuilder &MIB,

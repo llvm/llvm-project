@@ -276,14 +276,17 @@ bool CodeGenAction::beginSourceFileAction() {
   // Fetch module from lb, so we can set
   mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());
 
+  if (!setUpTargetMachine())
+    return false;
+
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
     setOffloadModuleInterfaceAttributes(
         *mlirModule, ci.getInvocation().getLangOpts().OpenMPIsDevice);
+    setOffloadModuleInterfaceTargetAttribute(*mlirModule, tm->getTargetCPU(),
+                                             tm->getTargetFeatureString());
   }
 
-  if (!setUpTargetMachine())
-    return false;
   const llvm::DataLayout &dl = tm->createDataLayout();
   setMLIRDataLayout(*mlirModule, dl);
 

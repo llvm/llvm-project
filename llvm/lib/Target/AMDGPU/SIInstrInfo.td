@@ -204,6 +204,7 @@ def SIbuffer_atomic_inc : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_INC">;
 def SIbuffer_atomic_dec : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_DEC">;
 def SIbuffer_atomic_csub : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_CSUB">;
 def SIbuffer_atomic_fadd : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FADD">;
+def SIbuffer_atomic_fadd_bf16 : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FADD_BF16">;
 def SIbuffer_atomic_fmin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMIN">;
 def SIbuffer_atomic_fmax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMAX">;
 def SIbuffer_atomic_cond_sub_u32 : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32">;
@@ -232,6 +233,7 @@ defm SIbuffer_atomic_xor : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_inc : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_dec : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_fadd : SDBufferAtomicNoRet;
+defm SIbuffer_atomic_fadd_bf16 : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_fmin : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_fmax : SDBufferAtomicNoRet;
 defm SIbuffer_atomic_cond_sub_u32 : SDBufferAtomicNoRet;
@@ -928,7 +930,11 @@ def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
 //===----------------------------------------------------------------------===//
 
 def extract_cpol : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() & AMDGPU::CPol::ALL, SDLoc(N), MVT::i8);
+  return CurDAG->getTargetConstant(
+      N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
+                               ? AMDGPU::CPol::ALL
+                               : AMDGPU::CPol::ALL_pregfx12),
+      SDLoc(N), MVT::i8);
 }]>;
 
 def extract_swz : SDNodeXForm<timm, [{

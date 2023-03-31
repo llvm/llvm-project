@@ -44,6 +44,10 @@ public:
   void reportWarning(const Twine &Warning, StringRef Context,
                      const DWARFDie *DIE = nullptr) const;
 
+  /// Returns true if input verification is enabled and verification errors were
+  /// found.
+  bool InputVerificationFailed() const { return HasVerificationErrors; }
+
   /// Flags passed to DwarfLinker::lookForDIEsToKeep
   enum TraversalFlags {
     TF_Keep = 1 << 0,            ///< Mark the traversed DIEs as kept.
@@ -230,6 +234,7 @@ private:
 
   bool ModuleCacheHintDisplayed = false;
   bool ArchiveHintDisplayed = false;
+  bool HasVerificationErrors = false;
 };
 
 } // end namespace dsymutil
