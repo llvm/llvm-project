@@ -23,6 +23,7 @@
 #define DEBUG_PRINT_AFTER_ALL "transform-dialect-print-top-level-after-all"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "] ")
 #define LDBG(X) LLVM_DEBUG(DBGS() << (X))
+#define FULL_LDBG(X) DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, (DBGS() << (X)))
 
 using namespace mlir;
 
@@ -414,17 +415,22 @@ void transform::TransformState::recordOpHandleInvalidationOne(
   if (invalidatedHandles.count(otherHandle))
     return;
 
-  LDBG("--recordOpHandleInvalidationOne\n");
-  LLVM_DEBUG(llvm::interleaveComma(potentialAncestors,
-                                   DBGS() << "--ancestors: ",
-                                   [](Operation *op) { llvm::dbgs() << *op; });
-             llvm::dbgs() << "\n");
+  FULL_LDBG("--recordOpHandleInvalidationOne\n");
+  DEBUG_WITH_TYPE(
+      DEBUG_TYPE_FULL,
+      llvm::interleaveComma(potentialAncestors, DBGS() << "--ancestors: ",
+                            [](Operation *op) { llvm::dbgs() << *op; });
+      llvm::dbgs() << "\n");
   for (Operation *ancestor : potentialAncestors) {
-    LLVM_DEBUG(DBGS() << "----handle one ancestor: " << *ancestor << "\n");
-    LLVM_DEBUG(DBGS() << "----of payload with name: "
-                      << payloadOp->getName().getIdentifier() << "\n");
+    // clang-format off
+    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, 
+      { (DBGS() << "----handle one ancestor: " << *ancestor << "\n"); });
+    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, 
+      { (DBGS() << "----of payload with name: " 
+                << payloadOp->getName().getIdentifier() << "\n"); });
     DEBUG_WITH_TYPE(DEBUG_TYPE_FULL,
-                    { (DBGS() << "----of payload: " << *payloadOp << "\n"); });
+      { (DBGS() << "----of payload: " << *payloadOp << "\n"); });
+    // clang-format on
     if (!ancestor->isAncestor(payloadOp))
       continue;
 
@@ -590,7 +596,7 @@ void transform::TransformState::recordValueHandleInvalidation(
 
 LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
     TransformOpInterface transform) {
-  LDBG("--Start checkAndRecordHandleInvalidation\n");
+  FULL_LDBG("--Start checkAndRecordHandleInvalidation\n");
   auto memoryEffectsIface =
       cast<MemoryEffectOpInterface>(transform.getOperation());
   SmallVector<MemoryEffects::EffectInstance> effects;
@@ -598,13 +604,14 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
       transform::TransformMappingResource::get(), effects);
 
   for (OpOperand &target : transform->getOpOperands()) {
-    LLVM_DEBUG(DBGS() << "----iterate on handle: " << target.get() << "\n");
+    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, {
+      (DBGS() << "----iterate on handle: " << target.get() << "\n");
+    });
     // If the operand uses an invalidated handle, report it.
     auto it = invalidatedHandles.find(target.get());
     if (!transform.allowsRepeatedHandleOperands() &&
         it != invalidatedHandles.end()) {
-      LLVM_DEBUG(
-          DBGS() << "--End checkAndRecordHandleInvalidation -> FAILURE\n");
+      FULL_LDBG("--End checkAndRecordHandleInvalidation -> FAILURE\n");
       return it->getSecond()(transform->getLoc()), failure();
     }
 
@@ -615,25 +622,25 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
              effect.getValue() == target.get();
     };
     if (llvm::any_of(effects, consumesTarget)) {
-      LLVM_DEBUG(DBGS() << "----found consume effect -> SKIP\n");
+      FULL_LDBG("----found consume effect -> SKIP\n");
       if (target.get().getType().isa<TransformHandleTypeInterface>()) {
-        LDBG("----recordOpHandleInvalidation\n");
+        FULL_LDBG("----recordOpHandleInvalidation\n");
         ArrayRef<Operation *> payloadOps = getPayloadOps(target.get());
         recordOpHandleInvalidation(target, payloadOps);
       } else if (target.get()
                      .getType()
                      .isa<TransformValueHandleTypeInterface>()) {
-        LDBG("----recordValueHandleInvalidation\n");
+        FULL_LDBG("----recordValueHandleInvalidation\n");
         recordValueHandleInvalidation(target);
       } else {
-        LDBG("----not a TransformHandle -> SKIP AND DROP ON THE FLOOR\n");
+        FULL_LDBG("----not a TransformHandle -> SKIP AND DROP ON THE FLOOR\n");
       }
     } else {
-      LLVM_DEBUG(DBGS() << "----no consume effect -> SKIP\n");
+      FULL_LDBG("----no consume effect -> SKIP\n");
     }
   }
 
-  LDBG("--End checkAndRecordHandleInvalidation -> SUCCESS\n");
+  FULL_LDBG("--End checkAndRecordHandleInvalidation -> SUCCESS\n");
   return success();
 }
 
@@ -663,51 +670,50 @@ checkRepeatedConsumptionInOperand(ArrayRef<T> payload,
 DiagnosedSilenceableFailure
 transform::TransformState::applyTransform(TransformOpInterface transform) {
   LLVM_DEBUG(DBGS() << "\n"; DBGS() << "applying: " << transform << "\n");
+  LLVM_DEBUG(DBGS() << "On top-level payload:\n" << *getTopLevel(););
   auto printOnFailureRAII = llvm::make_scope_exit([this] {
     (void)this;
-    DEBUG_WITH_TYPE(DEBUG_PRINT_AFTER_ALL, {
-      DBGS() << "Top-level payload:\n";
-      getTopLevel()->print(llvm::dbgs(),
-                           mlir::OpPrintingFlags().printGenericOpForm());
-    });
+    LLVM_DEBUG(DBGS() << "Failing Top-level payload:\n"; getTopLevel()->print(
+        llvm::dbgs(), mlir::OpPrintingFlags().printGenericOpForm()););
   });
   if (options.getExpensiveChecksEnabled()) {
-    LDBG("ExpensiveChecksEnabled\n");
+    FULL_LDBG("ExpensiveChecksEnabled\n");
     if (failed(checkAndRecordHandleInvalidation(transform)))
       return DiagnosedSilenceableFailure::definiteFailure();
 
     for (OpOperand &operand : transform->getOpOperands()) {
-      LLVM_DEBUG(DBGS() << "iterate on handle: " << operand.get() << "\n");
+      DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, {
+        (DBGS() << "iterate on handle: " << operand.get() << "\n");
+      });
       if (!isHandleConsumed(operand.get(), transform)) {
-        LDBG("--handle not consumed -> SKIP\n");
+        FULL_LDBG("--handle not consumed -> SKIP\n");
         continue;
       }
-      LDBG("--handle is consumed\n");
+      FULL_LDBG("--handle is consumed\n");
 
       Type operandType = operand.get().getType();
       if (operandType.isa<TransformHandleTypeInterface>()) {
-        LLVM_DEBUG(
-            DBGS() << "--checkRepeatedConsumptionInOperand for Operation*\n");
+        FULL_LDBG("--checkRepeatedConsumptionInOperand for Operation*\n");
         DiagnosedSilenceableFailure check =
             checkRepeatedConsumptionInOperand<Operation *>(
                 getPayloadOps(operand.get()), transform,
                 operand.getOperandNumber());
         if (!check.succeeded()) {
-          LDBG("----FAILED\n");
+          FULL_LDBG("----FAILED\n");
           return check;
         }
       } else if (operandType.isa<TransformValueHandleTypeInterface>()) {
-        LDBG("--checkRepeatedConsumptionInOperand For Value\n");
+        FULL_LDBG("--checkRepeatedConsumptionInOperand For Value\n");
         DiagnosedSilenceableFailure check =
             checkRepeatedConsumptionInOperand<Value>(
                 getPayloadValues(operand.get()), transform,
                 operand.getOperandNumber());
         if (!check.succeeded()) {
-          LDBG("----FAILED\n");
+          FULL_LDBG("----FAILED\n");
           return check;
         }
       } else {
-        LDBG("--not a TransformHandle -> SKIP AND DROP ON THE FLOOR\n");
+        FULL_LDBG("--not a TransformHandle -> SKIP AND DROP ON THE FLOOR\n");
       }
     }
   }
@@ -732,8 +738,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   // Remember the results of the payload ops associated with the consumed
   // op handles or the ops defining the value handles so we can drop the
   // association with them later. This must happen here because the
-  // transformation may destroy or mutate them so we cannot traverse the payload
-  // IR after that.
+  // transformation may destroy or mutate them so we cannot traverse the
+  // payload IR after that.
   SmallVector<Value> origOpFlatResults;
   SmallVector<Operation *> origAssociatedOps;
   for (unsigned index : consumedOperands) {
@@ -765,16 +771,16 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     return diag;
   }
 
-  // Compute the result but do not short-circuit the silenceable failure case as
-  // we still want the handles to propagate properly so the "suppress" mode can
-  // proceed on a best effort basis.
+  // Compute the result but do not short-circuit the silenceable failure
+  // case as we still want the handles to propagate properly so the
+  // "suppress" mode can proceed on a best effort basis.
   transform::TransformResults results(transform->getNumResults());
   DiagnosedSilenceableFailure result(transform.apply(results, *this));
   if (result.isDefiniteFailure())
     return result;
 
-  // If a silenceable failure was produced, some results may be unset, set them
-  // to empty lists.
+  // If a silenceable failure was produced, some results may be unset, set
+  // them to empty lists.
   if (result.isSilenceableFailure()) {
     for (OpResult opResult : transform->getResults()) {
       if (results.isSet(opResult.getResultNumber()))
@@ -789,8 +795,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     }
   }
 
-  // Remove the mapping for the operand if it is consumed by the operation. This
-  // allows us to catch use-after-free with assertions later on.
+  // Remove the mapping for the operand if it is consumed by the operation.
+  // This allows us to catch use-after-free with assertions later on.
   for (unsigned index : consumedOperands) {
     Value operand = transform->getOperand(index);
     if (operand.getType().isa<TransformHandleTypeInterface>()) {
@@ -849,8 +855,8 @@ transform::TransformState::Extension::replacePayloadOp(Operation *op,
   if (failed(state.getHandlesForPayloadOp(op, handles)))
     return failure();
 
-  // TODO: we may need to invalidate handles to operations and values nested in
-  // the operation being replaced.
+  // TODO: we may need to invalidate handles to operations and values nested
+  // in the operation being replaced.
   return state.replacePayloadOp(op, replacement);
 }
 
@@ -1128,9 +1134,9 @@ LogicalResult transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
 
 LogicalResult
 transform::detail::verifyPossibleTopLevelTransformOpTrait(Operation *op) {
-  // Attaching this trait without the interface is a misuse of the API, but it
-  // cannot be caught via a static_assert because interface registration is
-  // dynamic.
+  // Attaching this trait without the interface is a misuse of the API, but
+  // it cannot be caught via a static_assert because interface registration
+  // is dynamic.
   assert(isa<TransformOpInterface>(op) &&
          "should implement TransformOpInterface to have "
          "PossibleTopLevelTransformOpTrait");
@@ -1166,11 +1172,12 @@ transform::detail::verifyPossibleTopLevelTransformOpTrait(Operation *op) {
                  TransformValueHandleTypeInterface>())
       continue;
 
-    InFlightDiagnostic diag =
-        op->emitOpError()
-        << "expects trailing entry block arguments to be of type implementing "
-           "TransformHandleTypeInterface, TransformValueHandleTypeInterface or "
-           "TransformParamTypeInterface";
+    InFlightDiagnostic diag = op->emitOpError()
+                              << "expects trailing entry block arguments "
+                                 "to be of type implementing "
+                                 "TransformHandleTypeInterface, "
+                                 "TransformValueHandleTypeInterface or "
+                                 "TransformParamTypeInterface";
     diag.attachNote() << "argument #" << arg.getArgNumber() << " does not";
     return diag;
   }
@@ -1235,7 +1242,8 @@ DiagnosedSilenceableFailure transform::detail::transformWithPatternsApply(
     function_ref<void(RewritePatternSet &)> populatePatterns) {
   if (!target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
     return emitDefiniteFailure(transformOp)
-           << "applies only to isolated-from-above targets because it needs to "
+           << "applies only to isolated-from-above targets because it "
+              "needs to "
               "apply patterns greedily";
   }
   RewritePatternSet patterns(transformOp->getContext());
