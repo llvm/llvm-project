@@ -10,10 +10,9 @@
 // that are not yet supported remain commented out.
 //===----------------------------------------------------------------------===//
 
-class GCNPat<dag pattern, dag result> : Pat<pattern, result>, GCNPredicateControl, GISelFlags;
+class GCNPat<dag pattern, dag result> : Pat<pattern, result>, GCNPredicateControl {
 
-let GIIgnoreCopies = 1 in
-class GCNPatIgnoreCopies<dag pattern, dag result> : GCNPat<pattern, result>;
+}
 
 class UniformSextInreg<ValueType VT> : PatFrag<
   (ops node:$src),
@@ -2929,31 +2928,6 @@ def : GCNPat <
   (v2i16 (DivergentBinFrag<build_vector> (i16 VGPR_32:$src0), (i16 VGPR_32:$src1))),
   (v2i16 (V_LSHL_OR_B32_e64 $src1, (i32 16), (i32 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), $src0))))
 >;
-
-multiclass V_SAT_PK_Pat<Instruction inst> {
-  def: GCNPat<
-    (v2i16 (DivergentBinFrag<build_vector> (clamp_s16_u8 i16:$lo), (clamp_s16_u8 i16:$hi))),
-    (inst
-      (V_LSHL_OR_B32_e64 VGPR_32:$hi, (S_MOV_B32 (i32 16)),
-        (V_AND_B32_e64 VGPR_32:$lo, (S_MOV_B32 (i32 0xFFFF)))))
-  >;
-
-  def: GCNPatIgnoreCopies<
-    (v2i16 (DivergentBinFrag<smin> (smax v2i16:$src, (build_vector (i16 0), (i16 0))), (build_vector (i16 255), (i16 255)))),
-    (inst VGPR_32:$src)
-  >;
-
-  def: GCNPatIgnoreCopies<
-    (v2i16 (DivergentBinFrag<smax> (smin v2i16:$src, (build_vector (i16 255), (i16 255))), (build_vector (i16 0), (i16 0)))),
-    (inst VGPR_32:$src)
-  >;
-}
-
-let OtherPredicates = [HasTrue16BitInsts] in
-defm : V_SAT_PK_Pat<V_SAT_PK_U8_I16_t16_e64>;
-
-let OtherPredicates = [NotHasTrue16BitInsts] in
-defm : V_SAT_PK_Pat<V_SAT_PK_U8_I16_e64>;
 
 // With multiple uses of the shift, this will duplicate the shift and
 // increase register pressure.
