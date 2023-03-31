@@ -442,7 +442,7 @@ public:
   Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
            lldb::user_id_t func_type_uid, const Mangled &mangled,
            Type *func_type, const AddressRange &range,
-           bool can_throw = false);
+           bool can_throw = false, bool generic_trampoline = false);
 
   /// Destructor.
   ~Function() override;
@@ -554,6 +554,10 @@ public:
   ///     A type object pointer.
   Type *GetType();
 
+  bool IsGenericTrampoline() const {
+    return m_is_generic_trampoline;
+  }
+
   /// Get const accessor for the type that describes the function return value
   /// type, and parameter types.
   ///
@@ -658,6 +662,8 @@ protected:
   /// The mangled function name if any. If empty, there is no mangled
   /// information.
   Mangled m_mangled;
+
+  bool m_is_generic_trampoline;
 
   /// All lexical blocks contained in this function.
   Block m_block;
