@@ -50,7 +50,7 @@ define void @test(ptr %A, i32 %x) {
 ; CHECK-NEXT:    [[ARRAYIDX1209:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IDX_2]]
 ; CHECK-NEXT:    store float [[LV]], ptr [[ARRAYIDX1209]], align 4
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], undef
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
