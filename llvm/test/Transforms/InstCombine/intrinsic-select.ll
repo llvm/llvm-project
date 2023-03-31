@@ -218,3 +218,27 @@ define <2 x i32> @non_speculatable(i1 %b) {
   %c = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr %s, i32 64, <2 x i1> <i1 true, i1 false>, <2 x i32> poison)
   ret <2 x i32> %c
 }
+
+declare i32 @llvm.vector.reduce.add.v2i32(<2 x i32>)
+
+define i32 @vec_to_scalar_select_scalar(i1 %b) {
+; CHECK-LABEL: @vec_to_scalar_select_scalar(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>
+; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[S]])
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %s = select i1 %b, <2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>
+  %c = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %s)
+  ret i32 %c
+}
+
+define i32 @vec_to_scalar_select_vector(<2 x i1> %b) {
+; CHECK-LABEL: @vec_to_scalar_select_vector(
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[B:%.*]], <2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>
+; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[S]])
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %s = select <2 x i1> %b, <2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>
+  %c = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %s)
+  ret i32 %c
+}
