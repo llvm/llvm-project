@@ -25,17 +25,7 @@ def LoadFPImmOperand : AsmOperandClass {
   let DiagnosticType = "InvalidLoadFPImm";
 }
 
-def loadfp32imm : Operand<f32> {
-  let ParserMatchClass = LoadFPImmOperand;
-  let PrintMethod = "printFPImmOperand";
-}
-
-def loadfp64imm : Operand<f64> {
-  let ParserMatchClass = LoadFPImmOperand;
-  let PrintMethod = "printFPImmOperand";
-}
-
-def loadfp16imm : Operand<f16> {
+def loadfpimm : Operand<XLenVT> {
   let ParserMatchClass = LoadFPImmOperand;
   let PrintMethod = "printFPImmOperand";
 }
@@ -95,7 +85,7 @@ class FPUnaryOp_r_rtz<bits<7> funct7, bits<5> rs2val, DAGOperand rdty,
 let Predicates = [HasStdExtZfa] in {
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def FLI_S : FPUnaryOp_imm<0b1111000, 0b00001, 0b000, OPC_OP_FP, (outs FPR32:$rd),
-            (ins loadfp32imm:$imm), "fli.s", "$rd, $imm">;
+            (ins loadfpimm:$imm), "fli.s", "$rd, $imm">;
 
 def FMINM_S: FPALU_rr<0b0010100, 0b010, "fminm.s", FPR32, /*Commutable*/ 1>;
 def FMAXM_S: FPALU_rr<0b0010100, 0b011, "fmaxm.s", FPR32, /*Commutable*/ 1>;
@@ -110,7 +100,7 @@ def FLEQ_S : FPCmp_rr<0b1010000, 0b100, "fleq.s", FPR32>;
 let Predicates = [HasStdExtZfa, HasStdExtD] in {
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def FLI_D : FPUnaryOp_imm<0b1111001, 0b00001, 0b000, OPC_OP_FP, (outs FPR64:$rd),
-            (ins loadfp64imm:$imm), "fli.d", "$rd, $imm">;
+            (ins loadfpimm:$imm), "fli.d", "$rd, $imm">;
 
 def FMINM_D: FPALU_rr<0b0010101, 0b010, "fminm.d", FPR64, /*Commutable*/ 1>;
 def FMAXM_D: FPALU_rr<0b0010101, 0b011, "fmaxm.d", FPR64, /*Commutable*/ 1>;
@@ -143,7 +133,7 @@ def FMV_X_W_FPR64 : FPUnaryOp_r<0b1110000, 0b00000, 0b000, GPR, FPR64,
 let Predicates = [HasStdExtZfa, HasStdExtZfhOrZvfh] in
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def FLI_H : FPUnaryOp_imm<0b1111010, 0b00001, 0b000, OPC_OP_FP, (outs FPR16:$rd),
-            (ins loadfp16imm:$imm), "fli.h", "$rd, $imm">;
+            (ins loadfpimm:$imm), "fli.h", "$rd, $imm">;
 
 let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
 def FMINM_H: FPALU_rr<0b0010110, 0b010, "fminm.h", FPR16, /*Commutable*/ 1>;
