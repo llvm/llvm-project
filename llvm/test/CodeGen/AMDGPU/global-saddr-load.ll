@@ -4328,7 +4328,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[4:5], s[2:3], s[0:1]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 4
-; GFX12-NEXT:    global_load_b32 v1, v0, s[4:5] th:TH_LOAD_RT_NT
+; GFX12-NEXT:    global_load_b32 v1, v0, s[4:5] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s0, 0x400
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB132_1
@@ -4423,9 +4423,9 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[4:5], s[2:3], s[0:1]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 4
-; GFX12-NEXT:    global_load_b32 v1, v0, s[4:5] th:TH_LOAD_RT_NT
+; GFX12-NEXT:    global_load_b32 v1, v0, s[4:5] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_load_b32 v1, v0, s[4:5] th:TH_LOAD_RT_NT
+; GFX12-NEXT:    global_load_b32 v1, v0, s[4:5] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s0, 0x400
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB133_1

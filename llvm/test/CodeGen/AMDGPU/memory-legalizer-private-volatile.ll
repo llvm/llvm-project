@@ -131,7 +131,7 @@ define amdgpu_kernel void @private_volatile_load_0(
 ; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
-; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s2 th:TH_LOAD_RT_NT
+; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s2 scope:SCOPE_SYS
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -144,7 +144,7 @@ define amdgpu_kernel void @private_volatile_load_0(
 ; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
-; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s2 th:TH_LOAD_RT_NT
+; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s2 scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -282,7 +282,7 @@ define amdgpu_kernel void @private_volatile_load_1(
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
-; GFX12-WGP-NEXT:    scratch_load_b32 v0, v0, s2 th:TH_LOAD_RT_NT
+; GFX12-WGP-NEXT:    scratch_load_b32 v0, v0, s2 scope:SCOPE_SYS
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -294,7 +294,7 @@ define amdgpu_kernel void @private_volatile_load_1(
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
-; GFX12-CU-NEXT:    scratch_load_b32 v0, v0, s2 th:TH_LOAD_RT_NT
+; GFX12-CU-NEXT:    scratch_load_b32 v0, v0, s2 scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -437,7 +437,7 @@ define amdgpu_kernel void @private_volatile_store_0(
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[2:3], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v0, s1
-; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 th:TH_STORE_NT_RT
+; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
 ; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
 ; GFX12-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -451,7 +451,7 @@ define amdgpu_kernel void @private_volatile_store_0(
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[2:3], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v0, s1
-; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 th:TH_STORE_NT_RT
+; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-CU-NEXT:    s_endpgm
@@ -596,7 +596,7 @@ define amdgpu_kernel void @private_volatile_store_1(
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[2:3], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_lshlrev_b32 v0, 2, v0
-; GFX12-WGP-NEXT:    scratch_store_b32 v0, v1, s0 th:TH_STORE_NT_RT
+; GFX12-WGP-NEXT:    scratch_store_b32 v0, v1, s0 scope:SCOPE_SYS
 ; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
 ; GFX12-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -610,7 +610,7 @@ define amdgpu_kernel void @private_volatile_store_1(
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[2:3], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_lshlrev_b32 v0, 2, v0
-; GFX12-CU-NEXT:    scratch_store_b32 v0, v1, s0 th:TH_STORE_NT_RT
+; GFX12-CU-NEXT:    scratch_store_b32 v0, v1, s0 scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-CU-NEXT:    s_endpgm
