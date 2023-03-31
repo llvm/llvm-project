@@ -643,15 +643,19 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     const MachineOperand &CopySrc = *CopyOperands->Source;
     Register CopySrcReg = CopySrc.getReg();
 
-    // When the use is a subregister of the COPY destination,
-    // record the subreg index.
-    unsigned SubregIdx = 0;
-
-    // This can only occur when we are dealing with physical registers.
+    Register ForwardedReg = CopySrcReg;
+    // MI might use a sub-register of the Copy destination, in which case the
+    // forwarded register is the matching sub-register of the Copy source.
     if (MOUse.getReg() != CopyDstReg) {
-      SubregIdx = TRI->getSubRegIndex(CopyDstReg, MOUse.getReg());
-      if (!SubregIdx)
+      unsigned SubRegIdx = TRI->getSubRegIndex(CopyDstReg, MOUse.getReg());
+      assert(SubRegIdx &&
+             "MI source is not a sub-register of Copy destination");
+      ForwardedReg = TRI->getSubReg(CopySrcReg, SubRegIdx);
+      if (!ForwardedReg) {
+        LLVM_DEBUG(dbgs() << "MCP: Copy source does not have sub-register "
+                          << TRI->getSubRegIndexName(SubRegIdx) << '\n');
         continue;
+      }
     }
 
     // Don't forward COPYs of reserved regs unless they are constant.
@@ -681,13 +685,10 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     }
 
     LLVM_DEBUG(dbgs() << "MCP: Replacing " << printReg(MOUse.getReg(), TRI)
-                      << "\n     with " << printReg(CopySrcReg, TRI)
+                      << "\n     with " << printReg(ForwardedReg, TRI)
                       << "\n     in " << MI << "     from " << *Copy);
 
-    if (SubregIdx)
-      MOUse.setReg(TRI->getSubReg(CopySrcReg, SubregIdx));
-    else
-      MOUse.setReg(CopySrcReg);
+    MOUse.setReg(ForwardedReg);
 
     if (!CopySrc.isRenamable())
       MOUse.setIsRenamable(false);

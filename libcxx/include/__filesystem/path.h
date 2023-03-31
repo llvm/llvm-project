@@ -144,7 +144,7 @@ struct __is_pathable_string<
   }
 };
 
-template <class _Source, class _DS = typename decay<_Source>::type,
+template <class _Source, class _DS = __decay_t<_Source>,
           class _UnqualPtrType =
               __remove_const_t<__remove_pointer_t<_DS> >,
           bool _IsCharPtr = is_pointer<_DS>::value&&

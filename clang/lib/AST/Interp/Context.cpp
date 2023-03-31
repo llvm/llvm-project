@@ -78,9 +78,11 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
 
 std::optional<PrimType> Context::classify(QualType T) const {
-  if (T->isReferenceType() || T->isPointerType()) {
+  if (T->isFunctionPointerType() || T->isFunctionReferenceType())
+    return PT_FnPtr;
+
+  if (T->isReferenceType() || T->isPointerType())
     return PT_Ptr;
-  }
 
   if (T->isBooleanType())
     return PT_Bool;

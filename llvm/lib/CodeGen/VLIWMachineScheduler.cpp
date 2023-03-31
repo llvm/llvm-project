@@ -211,7 +211,7 @@ void VLIWMachineScheduler::schedule() {
   Topo.InitDAGTopologicalSorting();
 
   // Postprocess the DAG to add platform-specific artificial dependencies.
-  postprocessDAG();
+  postProcessDAG();
 
   SmallVector<SUnit *, 8> TopRoots, BotRoots;
   findRootsAndBiasEdges(TopRoots, BotRoots);

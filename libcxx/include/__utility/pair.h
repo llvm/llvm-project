@@ -22,6 +22,7 @@
 #include <__type_traits/common_reference.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/decay.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
@@ -152,7 +153,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
     template <class _Tuple>
     using _CheckTLC _LIBCPP_NODEBUG = __conditional_t<
         __tuple_like_with_size<_Tuple, 2>::value
-            && !is_same<typename decay<_Tuple>::type, pair>::value,
+            && !is_same<__decay_t<_Tuple>, pair>::value,
         _CheckTupleLikeConstructor,
         __check_tuple_constructor_fail
     >;

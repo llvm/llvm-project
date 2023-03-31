@@ -78,8 +78,8 @@ class MemCmpExpansion {
   uint64_t NumLoadsNonOneByte = 0;
   const uint64_t NumLoadsPerBlockForZeroCmp;
   std::vector<BasicBlock *> LoadCmpBlocks;
-  BasicBlock *EndBlock;
-  PHINode *PhiRes;
+  BasicBlock *EndBlock = nullptr;
+  PHINode *PhiRes = nullptr;
   const bool IsUsedForZeroCmp;
   const DataLayout &DL;
   DomTreeUpdater *DTU;

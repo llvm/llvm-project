@@ -42,6 +42,8 @@ VERS1.0 {
     omp_target_is_present;
     omp_target_memcpy;
     omp_target_memcpy_rect;
+    omp_target_memcpy_async;
+    omp_target_memcpy_rect_async;
     omp_target_associate_ptr;
     omp_target_disassociate_ptr;
     __kmpc_push_target_tripcount;

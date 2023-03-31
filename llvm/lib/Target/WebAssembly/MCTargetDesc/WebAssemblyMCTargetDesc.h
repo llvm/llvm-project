@@ -279,6 +279,50 @@ inline unsigned GetDefaultP2Align(unsigned Opc) {
   return Align;
 }
 
+inline bool isConst(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::CONST_I32:
+  case WebAssembly::CONST_I32_S:
+  case WebAssembly::CONST_I64:
+  case WebAssembly::CONST_I64_S:
+  case WebAssembly::CONST_F32:
+  case WebAssembly::CONST_F32_S:
+  case WebAssembly::CONST_F64:
+  case WebAssembly::CONST_F64_S:
+  case WebAssembly::CONST_V128_I8x16:
+  case WebAssembly::CONST_V128_I8x16_S:
+  case WebAssembly::CONST_V128_I16x8:
+  case WebAssembly::CONST_V128_I16x8_S:
+  case WebAssembly::CONST_V128_I32x4:
+  case WebAssembly::CONST_V128_I32x4_S:
+  case WebAssembly::CONST_V128_I64x2:
+  case WebAssembly::CONST_V128_I64x2_S:
+  case WebAssembly::CONST_V128_F32x4:
+  case WebAssembly::CONST_V128_F32x4_S:
+  case WebAssembly::CONST_V128_F64x2:
+  case WebAssembly::CONST_V128_F64x2_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool isScalarConst(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::CONST_I32:
+  case WebAssembly::CONST_I32_S:
+  case WebAssembly::CONST_I64:
+  case WebAssembly::CONST_I64_S:
+  case WebAssembly::CONST_F32:
+  case WebAssembly::CONST_F32_S:
+  case WebAssembly::CONST_F64:
+  case WebAssembly::CONST_F64_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
 inline bool isArgument(unsigned Opc) {
   switch (Opc) {
   case WebAssembly::ARGUMENT_i32:

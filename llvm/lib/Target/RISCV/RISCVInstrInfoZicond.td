@@ -23,3 +23,39 @@ def CZERO_EQZ : ALU_rr<0b0000111, 0b101, "czero.eqz">,
 def CZERO_NEZ : ALU_rr<0b0000111, 0b111, "czero.nez">,
                 Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 } // Predicates = [HasStdExtZicond]
+
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions and codegen patterns
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtZicond] in {
+// Directly use CZERO_EQZ/CZERO_NEZ in case of any of the operands being 0.
+def : Pat<(select GPR:$rc, GPR:$rs1, 0),
+          (CZERO_EQZ GPR:$rs1, GPR:$rc)>;
+def : Pat<(select GPR:$rc, 0, GPR:$rs1),
+          (CZERO_NEZ GPR:$rs1, GPR:$rc)>;
+
+def : Pat<(select (riscv_setne GPR:$rc), GPR:$rs1, 0),
+          (CZERO_EQZ GPR:$rs1, GPR:$rc)>;
+def : Pat<(select (riscv_seteq GPR:$rc), GPR:$rs1, 0),
+          (CZERO_NEZ GPR:$rs1, GPR:$rc)>;
+def : Pat<(select (riscv_setne GPR:$rc), 0, GPR:$rs1),
+          (CZERO_NEZ GPR:$rs1, GPR:$rc)>;
+def : Pat<(select (riscv_seteq GPR:$rc), 0, GPR:$rs1),
+          (CZERO_EQZ GPR:$rs1, GPR:$rc)>;
+
+// Conditional AND operation patterns.
+def : Pat<(select GPR:$rc, (and GPR:$rs1, GPR:$rs2), GPR:$rs1),
+          (OR (AND $rs1, $rs2), (CZERO_NEZ $rs1, $rc))>;
+def : Pat<(select GPR:$rc, GPR:$rs1, (and GPR:$rs1, GPR:$rs2)),
+          (OR (AND $rs1, $rs2), (CZERO_EQZ $rs1, $rc))>;
+
+// Basic select pattern that selects between 2 registers.
+def : Pat<(select GPR:$rc, GPR:$rs1, GPR:$rs2),
+          (OR (CZERO_EQZ $rs1, $rc), (CZERO_NEZ $rs2, $rc))>;
+
+def : Pat<(select (riscv_setne GPR:$rc), GPR:$rs1, GPR:$rs2),
+          (OR (CZERO_EQZ GPR:$rs1, GPR:$rc), (CZERO_NEZ GPR:$rs2, GPR:$rc))>;
+def : Pat<(select (riscv_seteq GPR:$rc), GPR:$rs2, GPR:$rs1),
+          (OR (CZERO_EQZ GPR:$rs1, GPR:$rc), (CZERO_NEZ GPR:$rs2, GPR:$rc))>;
+} // Predicates = [HasStdExtZicond]

@@ -17,6 +17,7 @@
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -33,6 +34,9 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
   void report(SourceLocation Loc, NamedDecl *ND,
               RefType RT = RefType::Explicit) {
     if (!ND || Loc.isInvalid())
+      return;
+    // Don't report builtin symbols.
+    if (const auto *II = ND->getIdentifier(); II && II->getBuiltinID() > 0)
       return;
     Callback(Loc, *cast<NamedDecl>(ND->getCanonicalDecl()), RT);
   }
@@ -154,6 +158,12 @@ public:
     // Mark declaration from definition as it needs type-checking.
     if (FD->isThisDeclarationADefinition())
       report(FD->getLocation(), FD);
+    return true;
+  }
+  bool VisitVarDecl(VarDecl *VD) {
+    // Mark declaration from definition as it needs type-checking.
+    if (VD->isThisDeclarationADefinition())
+      report(VD->getLocation(), VD);
     return true;
   }
 

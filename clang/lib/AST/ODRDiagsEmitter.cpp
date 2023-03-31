@@ -1742,6 +1742,7 @@ bool ODRDiagsEmitter::diagnoseMismatch(
       return true;
     }
 
+    // Note, these calls can trigger deserialization.
     const Expr *FirstInit = FirstParam->getInit();
     const Expr *SecondInit = SecondParam->getInit();
     if ((FirstInit == nullptr) != (SecondInit == nullptr)) {

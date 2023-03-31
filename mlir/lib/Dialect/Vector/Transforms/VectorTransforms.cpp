@@ -1044,10 +1044,6 @@ struct CanonicalizeContractMatmulToMMT final
 
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Remove native masks from contraction op?
-    if (!op.getMasks().empty())
-      return failure();
-
     if (failed(filter(op)))
       return failure();
 

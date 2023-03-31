@@ -300,6 +300,12 @@ TEST(WalkAST, Operator) {
            "int k = string() ^+ string();");
 }
 
+TEST(WalkAST, VarDecls) {
+  // Definition uses declaration, not the other way around.
+  testWalk("extern int $explicit^x;", "int ^x = 1;");
+  testWalk("int x = 1;", "extern int ^x;");
+}
+
 TEST(WalkAST, Functions) {
   // Definition uses declaration, not the other way around.
   testWalk("void $explicit^foo();", "void ^foo() {}");
@@ -314,6 +320,12 @@ TEST(WalkAST, Enums) {
   testWalk("enum E { $explicit^A = 42, B = 43 };", "int e = ^A;");
   testWalk("enum class $explicit^E : int;", "enum class ^E : int {};");
   testWalk("enum class E : int {};", "enum class ^E : int ;");
+}
+
+TEST(WalkAST, BuiltinSymbols) {
+  testWalk(R"cpp(
+    extern "C" int __builtin_popcount(unsigned int) noexcept;
+  )cpp", "int x = ^__builtin_popcount(1);");
 }
 
 } // namespace

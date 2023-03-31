@@ -777,7 +777,8 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
   case DW_FORM_strx1:
   case DW_FORM_strx2:
   case DW_FORM_strx3:
-  case DW_FORM_strx4: {
+  case DW_FORM_strx4:
+  case DW_FORM_line_strp: {
     if (Error E = AttrValue.Value.getAsCString().takeError()) {
       ++NumErrors;
       error() << toString(std::move(E)) << ":\n";

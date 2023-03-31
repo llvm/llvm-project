@@ -1026,8 +1026,8 @@ void CSProfileGenerator::postProcessProfiles() {
 
   calculateAndShowDensity(ContextLessProfiles);
   if (GenCSNestedProfile) {
-    CSProfileConverter CSConverter(ProfileMap);
-    CSConverter.convertProfiles();
+    ProfileConverter CSConverter(ProfileMap);
+    CSConverter.convertCSProfiles();
     FunctionSamples::ProfileIsCS = false;
   }
 }

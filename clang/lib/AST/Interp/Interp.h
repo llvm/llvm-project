@@ -16,6 +16,7 @@
 #include "Boolean.h"
 #include "Floating.h"
 #include "Function.h"
+#include "FunctionPointer.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
 #include "InterpState.h"
@@ -1536,6 +1537,22 @@ inline bool CallBI(InterpState &S, CodePtr &PC, const Function *Func) {
   }
   S.Current = FrameBefore;
   return false;
+}
+
+inline bool CallPtr(InterpState &S, CodePtr &PC) {
+  const FunctionPointer &FuncPtr = S.Stk.pop<FunctionPointer>();
+
+  const Function *F = FuncPtr.getFunction();
+  if (!F || !F->isConstexpr())
+    return false;
+
+  return Call(S, PC, F);
+}
+
+inline bool GetFnPtr(InterpState &S, CodePtr &PC, const Function *Func) {
+  assert(Func);
+  S.Stk.push<FunctionPointer>(Func);
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

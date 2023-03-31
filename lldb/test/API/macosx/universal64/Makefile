@@ -18,7 +18,7 @@ fat.arm64.out: fat.arm64.o
 	$(CC) -isysroot $(SDKROOT) -target arm64-apple-macosx10.9 -o $@ $<
 
 fat.x86_64.o: main.c
-	$(CC) -isysroot $(SDKROOT) -g -O0 -target x86_64-apple-macosx11 -c -o $@ $<
+	$(CC) -isysroot $(SDKROOT) -g -O0 -target x86_64-apple-macosx10.9 -c -o $@ $<
 
 fat.arm64.o: main.c
-	$(CC) -isysroot $(SDKROOT) -g -O0 -target arm64-apple-macosx11 -c -o $@ $<
+	$(CC) -isysroot $(SDKROOT) -g -O0 -target arm64-apple-macosx10.9 -c -o $@ $<

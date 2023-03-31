@@ -4746,6 +4746,18 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      class Foo : Bar {}             vs.     class Foo: Bar {}
 
+.. _SpaceBeforeJsonColon:
+
+**SpaceBeforeJsonColon** (``Boolean``) :versionbadge:`clang-format 17` :ref:`¶ <SpaceBeforeJsonColon>`
+  If ``true``, a space will be add before a JSON colon.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     {                                      {
+       "key" : "value"              vs.       "key": "value"
+     }                                      }
+
 .. _SpaceBeforeParens:
 
 **SpaceBeforeParens** (``SpaceBeforeParensStyle``) :versionbadge:`clang-format 3.5` :ref:`¶ <SpaceBeforeParens>`

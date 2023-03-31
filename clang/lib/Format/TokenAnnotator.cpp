@@ -3629,8 +3629,6 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       Right.MatchingParen->is(TT_CastRParen)) {
     return true;
   }
-  if (Style.isJson() && Left.is(tok::string_literal) && Right.is(tok::colon))
-    return false;
   if (Left.is(Keywords.kw_assert) && Style.Language == FormatStyle::LK_Java)
     return true;
   if (Style.ObjCSpaceAfterProperty && Line.Type == LT_ObjCProperty &&
@@ -4153,8 +4151,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.is(tok::numeric_constant) && Right.is(tok::percent))
       return Right.hasWhitespaceBefore();
   } else if (Style.isJson()) {
-    if (Right.is(tok::colon))
-      return false;
+    if (Right.is(tok::colon) && Left.is(tok::string_literal))
+      return Style.SpaceBeforeJsonColon;
   } else if (Style.isCSharp()) {
     // Require spaces around '{' and  before '}' unless they appear in
     // interpolated strings. Interpolated strings are merged into a single token

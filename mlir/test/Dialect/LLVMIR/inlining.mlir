@@ -1,18 +1,38 @@
 // RUN: mlir-opt %s -inline -split-input-file | FileCheck %s
 
+#file = #llvm.di_file<"foo.mlir" in "/foo/">
+#variable = #llvm.di_local_variable<scope = #file>
+#variableAddr = #llvm.di_local_variable<scope = #file>
+
 func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   %0 = llvm.mlir.constant(42 : i32) : i32
   llvm.store %0, %ptr { alignment = 8 } : i32, !llvm.ptr
   %1 = llvm.load %ptr { alignment = 8 } : !llvm.ptr -> i32
+  llvm.intr.dbg.value #variable = %0 : i32
+  llvm.intr.dbg.declare #variableAddr = %ptr : !llvm.ptr
+  %byte = llvm.mlir.constant(43 : i8) : i8
+  %volatile = llvm.mlir.constant(1 : i1) : i1
+  "llvm.intr.memset"(%ptr, %byte, %0, %volatile) : (!llvm.ptr, i8, i32, i1) -> ()
+  "llvm.intr.memmove"(%ptr, %ptr, %0, %volatile) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+  "llvm.intr.memcpy"(%ptr, %ptr, %0, %volatile) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+  llvm.cond_br %volatile, ^bb1, ^bb2
+^bb1:
+  llvm.unreachable
+^bb2:
   return %1 : i32
 }
 
 // CHECK-LABEL: func.func @test_inline(
 // CHECK-SAME: %[[PTR:[a-zA-Z0-9_]+]]
-// CHECK-NEXT: %[[CST:.*]] = llvm.mlir.constant(42 : i32) : i32
-// CHECK-NEXT: llvm.store %[[CST]], %[[PTR]]
-// CHECK-NEXT: %[[RES:.+]] = llvm.load %[[PTR]]
-// CHECK-NEXT: return %[[RES]] : i32
+// CHECK: %[[CST:.*]] = llvm.mlir.constant(42
+// CHECK: llvm.store %[[CST]], %[[PTR]]
+// CHECK: %[[RES:.+]] = llvm.load %[[PTR]]
+// CHECK: llvm.intr.dbg.value #{{.+}} = %[[CST]]
+// CHECK: llvm.intr.dbg.declare #{{.+}} = %[[PTR]]
+// CHECK: "llvm.intr.memset"(%[[PTR]]
+// CHECK: "llvm.intr.memmove"(%[[PTR]], %[[PTR]]
+// CHECK: "llvm.intr.memcpy"(%[[PTR]], %[[PTR]]
+// CHECK: llvm.unreachable
 func.func @test_inline(%ptr : !llvm.ptr) -> i32 {
   %0 = call @inner_func_inlinable(%ptr) : (!llvm.ptr) -> i32
   return %0 : i32

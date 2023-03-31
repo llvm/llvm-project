@@ -132,3 +132,24 @@ func.func @test_rebox_4(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>) {
   return
 }
 func.func private @bar_test_rebox_4(!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>)
+
+
+// Test reboxing of unlimited polymorphic.
+
+func.func @rebox_unlimited_polymorphic_box(%arg0 : !fir.class<!fir.array<?xnone>>, %arg1 : !fir.box<!fir.array<?xnone>>, %arg0r : !fir.ref<!fir.class<!fir.array<?xnone>>>, %arg1r : !fir.ref<!fir.box<!fir.array<?xnone>>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %1 = fir.slice %c1, %c10, %c1 : (index, index, index) -> !fir.slice<1>
+  %2 = fir.rebox %arg0 [%1] : (!fir.class<!fir.array<?xnone>>, !fir.slice<1>) -> !fir.class<!fir.array<?xnone>>
+  %3 = fir.rebox %arg1 [%1] : (!fir.box<!fir.array<?xnone>>, !fir.slice<1>) -> !fir.box<!fir.array<?xnone>>
+  fir.store %2 to %arg0r : !fir.ref<!fir.class<!fir.array<?xnone>>>
+  fir.store %3 to %arg1r : !fir.ref<!fir.box<!fir.array<?xnone>>>
+  return
+}
+// CHECK-LABEL: define void @rebox_unlimited_polymorphic_box
+// CHECK:  %[[VAL_16:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }
+// CHECK:  %[[VAL_17:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }
+// ...
+// CHECK:  store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] } %{{.*}}, ptr %[[VAL_17]]
+// ...
+// CHECK:  store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] } %{{.*}}, ptr %[[VAL_16]]

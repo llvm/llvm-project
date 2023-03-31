@@ -35,7 +35,7 @@ public:
   // Constructors and Destructors
   GDBRemoteCommunicationServerLLGS(
       MainLoop &mainloop,
-      const NativeProcessProtocol::Factory &process_factory);
+      NativeProcessProtocol::Manager &process_manager);
 
   void SetLaunchInfo(const ProcessLaunchInfo &info);
 
@@ -99,7 +99,7 @@ public:
 protected:
   MainLoop &m_mainloop;
   MainLoop::ReadHandleUP m_network_handle_up;
-  const NativeProcessProtocol::Factory &m_process_factory;
+  NativeProcessProtocol::Manager &m_process_manager;
   lldb::tid_t m_current_tid = LLDB_INVALID_THREAD_ID;
   lldb::tid_t m_continue_tid = LLDB_INVALID_THREAD_ID;
   NativeProcessProtocol *m_current_process;

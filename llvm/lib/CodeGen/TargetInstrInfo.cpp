@@ -1579,10 +1579,6 @@ outliner::InstrType TargetInstrInfo::getOutliningType(
     // Just go right to the target implementation.
     return getOutliningTypeImpl(MIT, Flags);
 
-  // Don't allow instructions that don't materialize to impact analysis.
-  if (MI.isMetaInstruction())
-    return outliner::InstrType::Invisible;
-
   // Be conservative about inline assembly.
   if (MI.isInlineAsm())
     return outliner::InstrType::Illegal;
@@ -1590,6 +1586,21 @@ outliner::InstrType TargetInstrInfo::getOutliningType(
   // Labels generally can't safely be outlined.
   if (MI.isLabel())
     return outliner::InstrType::Illegal;
+
+  // Don't let debug instructions impact analysis.
+  if (MI.isDebugInstr())
+    return outliner::InstrType::Invisible;
+
+  // Some other special cases.
+  switch (MI.getOpcode()) {
+    case TargetOpcode::IMPLICIT_DEF:
+    case TargetOpcode::KILL:
+    case TargetOpcode::LIFETIME_START:
+    case TargetOpcode::LIFETIME_END:
+      return outliner::InstrType::Invisible;
+    default:
+      break;
+  }
 
   // Is this a terminator for a basic block?
   if (MI.isTerminator()) {

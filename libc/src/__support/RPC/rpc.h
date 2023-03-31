@@ -18,6 +18,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_RPC_RPC_H
 #define LLVM_LIBC_SRC_SUPPORT_RPC_RPC_H
 
+#include "rpc_util.h"
 #include "src/__support/CPP/atomic.h"
 
 #include <stdint.h>
@@ -43,12 +44,17 @@ struct Buffer {
 /// server. The process contains an inbox and an outbox used for signaling
 /// ownership of the shared buffer.
 struct Process {
+  LIBC_INLINE Process() = default;
+  LIBC_INLINE Process(const Process &) = default;
+  LIBC_INLINE Process &operator=(const Process &) = default;
+  LIBC_INLINE ~Process() = default;
+
   cpp::Atomic<uint32_t> *inbox;
   cpp::Atomic<uint32_t> *outbox;
   Buffer *buffer;
 
   /// Initialize the communication channels.
-  void reset(void *inbox, void *outbox, void *buffer) {
+  LIBC_INLINE void reset(void *inbox, void *outbox, void *buffer) {
     *this = {
         reinterpret_cast<cpp::Atomic<uint32_t> *>(inbox),
         reinterpret_cast<cpp::Atomic<uint32_t> *>(outbox),
@@ -59,12 +65,22 @@ struct Process {
 
 /// The RPC client used to make requests to the server.
 struct Client : public Process {
-  template <typename F, typename U> void run(F fill, U use);
+  LIBC_INLINE Client() = default;
+  LIBC_INLINE Client(const Client &) = default;
+  LIBC_INLINE Client &operator=(const Client &) = default;
+  LIBC_INLINE ~Client() = default;
+
+  template <typename F, typename U> LIBC_INLINE void run(F fill, U use);
 };
 
 /// The RPC server used to respond to the client.
 struct Server : public Process {
-  template <typename W, typename C> bool handle(W work, C clean);
+  LIBC_INLINE Server() = default;
+  LIBC_INLINE Server(const Server &) = default;
+  LIBC_INLINE Server &operator=(const Server &) = default;
+  LIBC_INLINE ~Server() = default;
+
+  template <typename W, typename C> LIBC_INLINE bool handle(W work, C clean);
 };
 
 /// Run the RPC client protocol to communicate with the server. We perform the
@@ -73,7 +89,7 @@ struct Server : public Process {
 ///   - Wait until the inbox is 1.
 ///   - Apply \p use to the shared buffer and write 0 to the outbox.
 ///   - Wait until the inbox is 0.
-template <typename F, typename U> void Client::run(F fill, U use) {
+template <typename F, typename U> LIBC_INLINE void Client::run(F fill, U use) {
   bool in = inbox->load(cpp::MemoryOrder::RELAXED);
   bool out = outbox->load(cpp::MemoryOrder::RELAXED);
   atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
@@ -86,8 +102,10 @@ template <typename F, typename U> void Client::run(F fill, U use) {
   }
   // Wait for the server to work on the buffer and respond.
   if (!in & out) {
-    while (!in)
+    while (!in) {
+      sleep_briefly();
       in = inbox->load(cpp::MemoryOrder::RELAXED);
+    }
     atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
   }
   // Apply \p use to the buffer and signal the server.
@@ -99,8 +117,10 @@ template <typename F, typename U> void Client::run(F fill, U use) {
   }
   // Wait for the server to signal the end of the protocol.
   if (in & !out) {
-    while (in)
+    while (in) {
+      sleep_briefly();
       in = inbox->load(cpp::MemoryOrder::RELAXED);
+    }
     atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
   }
 }
@@ -112,7 +132,8 @@ template <typename F, typename U> void Client::run(F fill, U use) {
 ///   - Apply \p work to the shared buffer and write 1 to the outbox.
 ///   - Wait until the inbox is 0.
 ///   - Apply \p clean to the shared buffer and write 0 to the outbox.
-template <typename W, typename C> bool Server::handle(W work, C clean) {
+template <typename W, typename C>
+LIBC_INLINE bool Server::handle(W work, C clean) {
   bool in = inbox->load(cpp::MemoryOrder::RELAXED);
   bool out = outbox->load(cpp::MemoryOrder::RELAXED);
   atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);

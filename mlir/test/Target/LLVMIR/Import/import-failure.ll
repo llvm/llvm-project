@@ -22,7 +22,7 @@ define i32 @unhandled_value(i32 %arg1) {
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: blockaddress is not implemented in the LLVM dialect
+; CHECK-SAME: unhandled constant: ptr blockaddress(@unhandled_constant, %bb1) since blockaddress(...) is unsupported
 ; CHECK:      import-failure.ll
 ; CHECK-SAME: error: unhandled instruction: ret ptr blockaddress(@unhandled_constant, %bb1)
 define ptr @unhandled_constant() {
@@ -34,7 +34,7 @@ bb1:
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: blockaddress is not implemented in the LLVM dialect
+; CHECK-SAME: unhandled constant: ptr blockaddress(@unhandled_global, %bb1) since blockaddress(...) is unsupported
 ; CHECK:      import-failure.ll
 ; CHECK-SAME: error: unhandled global variable: @private = private global ptr blockaddress(@unhandled_global, %bb1)
 @private = private global ptr blockaddress(@unhandled_global, %bb1)

@@ -620,7 +620,7 @@ Then let's run:
 
   $ clang++ -std=c++20 -g debugging-example.cpp -o debugging-example
   $ gdb ./debugging-example
-  (gdb) # We've alreay set the breakpoint.
+  (gdb) # We've already set the breakpoint.
   (gdb) r
   Program received signal SIGTRAP, Trace/breakpoint trap.
   detail::chain_fn<0> () at debugging-example2.cpp:73

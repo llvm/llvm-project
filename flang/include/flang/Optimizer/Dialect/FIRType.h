@@ -173,7 +173,9 @@ inline bool isa_char_string(mlir::Type t) {
 
 /// Is `t` a box type for which it is not possible to deduce the box size?
 /// It is not possible to deduce the size of a box that describes an entity
-/// of unknown rank or type.
+/// of unknown rank.
+/// Unknown type are always considered to have the size of derived type box
+/// (since they may hold one), and are not considered to be unknown size.
 bool isa_unknown_size_box(mlir::Type t);
 
 /// Returns true iff `t` is a fir.char type and has an unknown length.

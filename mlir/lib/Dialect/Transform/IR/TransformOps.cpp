@@ -204,15 +204,19 @@ void transform::TrackingListener::notifyOperationReplaced(
     Operation *op, ValueRange newValues) {
   assert(op->getNumResults() == newValues.size() &&
          "invalid number of replacement values");
-  if (op->getNumResults() == 0)
-    return;
 
   // Replace value handles.
   for (auto [oldValue, newValue] : llvm::zip(op->getResults(), newValues))
     (void)replacePayloadValue(oldValue, newValue);
 
   // Replace op handle.
-  (void)replacePayloadOp(op, findReplacementOp(op, newValues));
+  Operation *replacement = findReplacementOp(op, newValues);
+  if (succeeded(replacePayloadOp(op, replacement))) {
+    // If the op is tracked but no replacement op was found, send a
+    // notification.
+    if (!replacement)
+      notifyPayloadReplacementNotFound(op, newValues);
+  }
 }
 
 //===----------------------------------------------------------------------===//

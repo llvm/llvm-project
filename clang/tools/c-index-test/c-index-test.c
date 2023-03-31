@@ -4889,12 +4889,13 @@ static void inspect_single_symbol_sgf_cursor(CXCursor Cursor) {
   unsigned line, column;
   CursorLoc = clang_getCursorLocation(Cursor);
   clang_getSpellingLocation(CursorLoc, 0, &line, &column, 0);
-  printf("%d:%d: ", line, column);
 
   SGFData = clang_getSymbolGraphForCursor(Cursor);
   SGF = clang_getCString(SGFData);
   if (SGF)
-    printf("%s\n", SGF);
+    printf("%d:%d: %s\n", line, column, SGF);
+
+  clang_disposeString(SGFData);
 }
 
 /******************************************************************************/

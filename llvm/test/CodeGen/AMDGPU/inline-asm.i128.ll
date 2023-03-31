@@ -8,15 +8,15 @@
 define amdgpu_kernel void @s_input_output_i128() {
   ; GFX908-LABEL: name: s_input_output_i128
   ; GFX908: bb.0 (%ir-block.0):
-  ; GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 6750218 /* regdef:SGPR_128 */, def %4
+  ; GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 6946826 /* regdef:SGPR_128 */, def %4
   ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:sgpr_128 = PRED_COPY %4
-  ; GFX908-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 6750217 /* reguse:SGPR_128 */, [[PRED_COPY]]
+  ; GFX908-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 6946825 /* reguse:SGPR_128 */, [[PRED_COPY]]
   ; GFX908-NEXT:   S_ENDPGM 0
   ; GFX90A-LABEL: name: s_input_output_i128
   ; GFX90A: bb.0 (%ir-block.0):
-  ; GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 6750218 /* regdef:SGPR_128 */, def %4
+  ; GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 6946826 /* regdef:SGPR_128 */, def %4
   ; GFX90A-NEXT:   [[PRED_COPY:%[0-9]+]]:sgpr_128 = PRED_COPY %4
-  ; GFX90A-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 6750217 /* reguse:SGPR_128 */, [[PRED_COPY]]
+  ; GFX90A-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 6946825 /* reguse:SGPR_128 */, [[PRED_COPY]]
   ; GFX90A-NEXT:   S_ENDPGM 0
   %val = tail call i128 asm sideeffect "; def $0", "=s"()
   call void asm sideeffect "; use $0", "s"(i128 %val)
@@ -26,15 +26,15 @@ define amdgpu_kernel void @s_input_output_i128() {
 define amdgpu_kernel void @v_input_output_i128() {
   ; GFX908-LABEL: name: v_input_output_i128
   ; GFX908: bb.0 (%ir-block.0):
-  ; GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 5701642 /* regdef:VReg_128 */, def %4
+  ; GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 5898250 /* regdef:VReg_128 */, def %4
   ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vreg_128 = PRED_COPY %4
-  ; GFX908-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 5701641 /* reguse:VReg_128 */, [[PRED_COPY]]
+  ; GFX908-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 5898249 /* reguse:VReg_128 */, [[PRED_COPY]]
   ; GFX908-NEXT:   S_ENDPGM 0
   ; GFX90A-LABEL: name: v_input_output_i128
   ; GFX90A: bb.0 (%ir-block.0):
-  ; GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 6029322 /* regdef:VReg_128_Align2 */, def %4
+  ; GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 6225930 /* regdef:VReg_128_Align2 */, def %4
   ; GFX90A-NEXT:   [[PRED_COPY:%[0-9]+]]:vreg_128_align2 = PRED_COPY %4
-  ; GFX90A-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 6029321 /* reguse:VReg_128_Align2 */, [[PRED_COPY]]
+  ; GFX90A-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 6225929 /* reguse:VReg_128_Align2 */, [[PRED_COPY]]
   ; GFX90A-NEXT:   S_ENDPGM 0
   %val = tail call i128 asm sideeffect "; def $0", "=v"()
   call void asm sideeffect "; use $0", "v"(i128 %val)
@@ -44,15 +44,15 @@ define amdgpu_kernel void @v_input_output_i128() {
 define amdgpu_kernel void @a_input_output_i128() {
   ; GFX908-LABEL: name: a_input_output_i128
   ; GFX908: bb.0 (%ir-block.0):
-  ; GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 5636106 /* regdef:AReg_128 */, def %4
+  ; GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 5832714 /* regdef:AReg_128 */, def %4
   ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:areg_128 = PRED_COPY %4
-  ; GFX908-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 5636105 /* reguse:AReg_128 */, [[PRED_COPY]]
+  ; GFX908-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 5832713 /* reguse:AReg_128 */, [[PRED_COPY]]
   ; GFX908-NEXT:   S_ENDPGM 0
   ; GFX90A-LABEL: name: a_input_output_i128
   ; GFX90A: bb.0 (%ir-block.0):
-  ; GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 5898250 /* regdef:AReg_128_Align2 */, def %4
+  ; GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 6094858 /* regdef:AReg_128_Align2 */, def %4
   ; GFX90A-NEXT:   [[PRED_COPY:%[0-9]+]]:areg_128_align2 = PRED_COPY %4
-  ; GFX90A-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 5898249 /* reguse:AReg_128_Align2 */, [[PRED_COPY]]
+  ; GFX90A-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 6094857 /* reguse:AReg_128_Align2 */, [[PRED_COPY]]
   ; GFX90A-NEXT:   S_ENDPGM 0
   %val = call i128 asm sideeffect "; def $0", "=a"()
   call void asm sideeffect "; use $0", "a"(i128 %val)

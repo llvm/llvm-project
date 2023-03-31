@@ -759,4 +759,4 @@ void NativeProcessProtocol::DoStopIDBumped(uint32_t /* newBumpId */) {
   // Default implementation does nothing.
 }
 
-NativeProcessProtocol::Factory::~Factory() = default;
+NativeProcessProtocol::Manager::~Manager() = default;

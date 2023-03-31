@@ -168,6 +168,21 @@ def IntrSpeculatable : IntrinsicProperty;
 def IntrHasSideEffects : IntrinsicProperty;
 
 //===----------------------------------------------------------------------===//
+// IIT constants and utils
+//===----------------------------------------------------------------------===//
+
+// llvm::Intrinsic::IITDescriptor::ArgKind::AK_%
+def ArgKind {
+  int Any        = 0;
+  int AnyInteger = 1;
+  int AnyFloat   = 2;
+  int AnyVector  = 3;
+  int AnyPointer = 4;
+
+  int MatchType  = 7;
+}
+
+//===----------------------------------------------------------------------===//
 // Types used by intrinsics.
 //===----------------------------------------------------------------------===//
 

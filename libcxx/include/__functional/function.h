@@ -430,7 +430,7 @@ template <class _Rp, class... _ArgTypes> class __value_func<_Rp(_ArgTypes...)>
     }
 
     template <class _Fp,
-        class = typename enable_if<!is_same<typename decay<_Fp>::type, __value_func>::value>::type>
+        class = typename enable_if<!is_same<__decay_t<_Fp>, __value_func>::value>::type>
     _LIBCPP_INLINE_VISIBILITY explicit __value_func(_Fp&& __f)
         : __value_func(_VSTD::forward<_Fp>(__f), allocator<_Fp>()) {}
 
@@ -773,7 +773,7 @@ template <class _Rp, class... _ArgTypes> class __policy_func<_Rp(_ArgTypes...)>
         }
     }
 
-    template <class _Fp, class = typename enable_if<!is_same<typename decay<_Fp>::type, __policy_func>::value>::type>
+    template <class _Fp, class = typename enable_if<!is_same<__decay_t<_Fp>, __policy_func>::value>::type>
     _LIBCPP_INLINE_VISIBILITY explicit __policy_func(_Fp&& __f)
         : __policy_(__policy::__create_empty()) {
       typedef __default_alloc_func<_Fp, _Rp(_ArgTypes...)> _Fun;
@@ -1029,7 +1029,7 @@ public:
     function& operator=(const function&);
     function& operator=(function&&) _NOEXCEPT;
     function& operator=(nullptr_t) _NOEXCEPT;
-    template<class _Fp, class = _EnableIfLValueCallable<typename decay<_Fp>::type>>
+    template<class _Fp, class = _EnableIfLValueCallable<__decay_t<_Fp>>>
     function& operator=(_Fp&&);
 
     ~function();

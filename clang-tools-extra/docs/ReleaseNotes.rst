@@ -240,6 +240,10 @@ Changes in existing checks
   magic numbers in type aliases such as ``using`` and ``typedef`` declarations if
   the new ``IgnoreTypeAliases`` option is set to true.
 
+- Fixed a false positive in :doc:`readability-misleading-indentation
+  <clang-tidy/checks/readability/misleading-indentation>` check when warning would
+  be unnecessarily emitted for template dependent ``if constexpr``.
+
 - Fixed a false positive in :doc:`cppcoreguidelines-slicing
   <clang-tidy/checks/cppcoreguidelines/slicing>` check when warning would be
   emitted in constructor for virtual base class initialization.

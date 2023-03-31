@@ -198,8 +198,6 @@ INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(TwoAddressInstructionPass, DEBUG_TYPE,
                 "Two-Address instruction pass", false, false)
 
-static bool isPlainlyKilled(MachineInstr *MI, Register Reg, LiveIntervals *LIS);
-
 /// Return the MachineInstr* if it is the single def of the Reg in current BB.
 static MachineInstr *getSingleDef(Register Reg, MachineBasicBlock *BB,
                                   const MachineRegisterInfo *MRI) {
@@ -287,7 +285,7 @@ static bool isCopyToReg(MachineInstr &MI, const TargetInstrInfo *TII,
 
 /// Test if the given register value, which is used by the
 /// given instruction, is killed by the given instruction.
-static bool isPlainlyKilled(MachineInstr *MI, Register Reg,
+static bool isPlainlyKilled(const MachineInstr *MI, Register Reg,
                             LiveIntervals *LIS) {
   if (LIS && Reg.isVirtual() && !LIS->isNotInMIMap(*MI)) {
     // FIXME: Sometimes tryInstructionTransform() will add instructions and
@@ -309,6 +307,12 @@ static bool isPlainlyKilled(MachineInstr *MI, Register Reg,
   }
 
   return MI->killsRegister(Reg);
+}
+
+/// Test if the register used by the given operand is killed by the operand's
+/// instruction.
+static bool isPlainlyKilled(const MachineOperand &MO, LiveIntervals *LIS) {
+  return MO.isKill() || isPlainlyKilled(MO.getParent(), MO.getReg(), LIS);
 }
 
 /// Test if the given register value, which is used by the given
@@ -861,8 +865,7 @@ bool TwoAddressInstructionPass::rescheduleMIBelowKill(
       Defs.push_back(MOReg);
     else {
       Uses.push_back(MOReg);
-      if (MOReg != Reg && (MO.isKill() ||
-                           (LIS && isPlainlyKilled(MI, MOReg, LIS))))
+      if (MOReg != Reg && isPlainlyKilled(MO, LIS))
         Kills.push_back(MOReg);
     }
   }
@@ -913,8 +916,7 @@ bool TwoAddressInstructionPass::rescheduleMIBelowKill(
       } else {
         if (regOverlapsSet(Defs, MOReg, TRI))
           return false;
-        bool isKill =
-            MO.isKill() || (LIS && isPlainlyKilled(&OtherMI, MOReg, LIS));
+        bool isKill = isPlainlyKilled(MO, LIS);
         if (MOReg != Reg && ((isKill && regOverlapsSet(Uses, MOReg, TRI)) ||
                              regOverlapsSet(Kills, MOReg, TRI)))
           // Don't want to extend other live ranges and update kills.
@@ -1042,7 +1044,7 @@ bool TwoAddressInstructionPass::rescheduleKillAboveMI(
         continue;
       if (isDefTooClose(MOReg, DI->second, MI))
         return false;
-      bool isKill = MO.isKill() || (LIS && isPlainlyKilled(KillMI, MOReg, LIS));
+      bool isKill = isPlainlyKilled(MO, LIS);
       if (MOReg == Reg && !isKill)
         return false;
       Uses.push_back(MOReg);
@@ -1084,8 +1086,7 @@ bool TwoAddressInstructionPass::rescheduleKillAboveMI(
         if (regOverlapsSet(Kills, MOReg, TRI))
           // Don't want to extend other live ranges and update kills.
           return false;
-        if (&OtherMI != MI && MOReg == Reg &&
-            !(MO.isKill() || (LIS && isPlainlyKilled(&OtherMI, MOReg, LIS))))
+        if (&OtherMI != MI && MOReg == Reg && !isPlainlyKilled(MO, LIS))
           // We can't schedule across a use of the register in question.
           return false;
       } else {
