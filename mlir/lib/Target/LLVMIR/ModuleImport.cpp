@@ -1118,12 +1118,11 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     return root;
   }
 
-  if (isa<llvm::BlockAddress>(constant)) {
-    return emitError(loc)
-           << "blockaddress is not implemented in the LLVM dialect";
-  }
+  StringRef error = "";
+  if (isa<llvm::BlockAddress>(constant))
+    error = " since blockaddress(...) is unsupported";
 
-  return emitError(loc) << "unhandled constant: " << diag(*constant);
+  return emitError(loc) << "unhandled constant: " << diag(*constant) << error;
 }
 
 FailureOr<Value> ModuleImport::convertConstantExpr(llvm::Constant *constant) {
