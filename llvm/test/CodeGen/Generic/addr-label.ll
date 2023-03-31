@@ -9,7 +9,7 @@
 ; The behavior of this test is not well defined. On PowerPC the test may pass
 ; or fail depending on the order in which the test functions are processed by
 ; llc.
-UNSUPPORTED: target=powerpc{{.*}}
+; UNSUPPORTED: target=powerpc{{.*}}
 
 ;; Reference to a label that gets deleted.
 define ptr @test1() nounwind {
