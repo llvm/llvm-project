@@ -2364,6 +2364,14 @@ m_c_MaxOrMin(const LHS &L, const RHS &R) {
                      m_CombineOr(m_c_UMax(L, R), m_c_UMin(L, R)));
 }
 
+template <Intrinsic::ID IntrID, typename T0, typename T1>
+inline match_combine_or<typename m_Intrinsic_Ty<T0, T1>::Ty,
+                        typename m_Intrinsic_Ty<T1, T0>::Ty>
+m_c_Intrinsic(const T0 &Op0, const T1 &Op1) {
+  return m_CombineOr(m_Intrinsic<IntrID>(Op0, Op1),
+                     m_Intrinsic<IntrID>(Op1, Op0));
+}
+
 /// Matches FAdd with LHS and RHS in either order.
 template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, Instruction::FAdd, true>
