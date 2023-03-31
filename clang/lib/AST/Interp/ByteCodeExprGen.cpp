@@ -1465,7 +1465,7 @@ const Function *ByteCodeExprGen<Emitter>::getFunction(const FunctionDecl *FD) {
   assert(FD);
   const Function *Func = P.getFunction(FD);
   bool IsBeingCompiled = Func && !Func->isFullyCompiled();
-  bool WasNotDefined = Func && !Func->hasBody();
+  bool WasNotDefined = Func && !Func->isConstexpr() && !Func->hasBody();
 
   if (IsBeingCompiled)
     return Func;
