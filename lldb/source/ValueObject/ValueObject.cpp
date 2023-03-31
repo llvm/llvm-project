@@ -742,6 +742,24 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
           return bytes_read;
         }
       }
+      // Try and resolve this address to a section in a file so we can read
+      // from the target. If a variable points into a read only section of a
+      // file in a core file, the core file might not contain an address range
+      // in the core file memory, but we can read it from object file section
+      // data.
+      Address so_addr;
+      Target *target = exe_ctx.GetTargetPtr();
+      if (target && target->ResolveLoadAddress(addr + offset, so_addr)) {
+        // We resolve this to a section + offset within a section of an object
+        // file. Now we can try to read from the target.
+        size_t bytes_read =
+            target->ReadMemory(so_addr, heap_buf_ptr->GetBytes(), bytes, error,
+                               /*force_live_memory*/ false);
+        if (error.Success() || bytes_read > 0) {
+          data.SetData(data_sp);
+          return bytes_read;
+        }
+      }
     } break;
     case eAddressTypeHost: {
       auto max_bytes =
