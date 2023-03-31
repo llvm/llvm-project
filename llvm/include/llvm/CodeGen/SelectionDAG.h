@@ -2184,6 +2184,11 @@ public:
   /// cannot be inferred.
   MaybeAlign InferPtrAlign(SDValue Ptr) const;
 
+  /// Split the scalar node with EXTRACT_ELEMENT using the provided VTs and
+  /// return the low/high part.
+  std::pair<SDValue, SDValue> SplitScalar(const SDValue &N, const SDLoc &DL,
+                                          const EVT &LoVT, const EVT &HiVT);
+
   /// Compute the VTs needed for the low/hi parts of a type
   /// which is split (or expanded) into two not necessarily identical pieces.
   std::pair<EVT, EVT> GetSplitDestVTs(const EVT &VT) const;
