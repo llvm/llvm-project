@@ -151,3 +151,15 @@ s_barrier_signal 0x12345678
 
 s_load_b96 s[3:5], s[6:7], s8
 // GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
+
+s_barrier_signal_isfirst 0x12345678
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_barrier_init 0x12345678
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_barrier_join 0x12345678
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_barrier_signal 0x12345678
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

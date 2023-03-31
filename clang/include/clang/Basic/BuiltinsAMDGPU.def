@@ -412,6 +412,12 @@ TARGET_BUILTIN(__builtin_amdgcn_permlanex16_var, "UiUiUiUiIbIb", "nc", "gfx12-in
 TARGET_BUILTIN(__builtin_amdgcn_s_barrier_signal, "vIi", "n", "gfx12-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_barrier_signal_var, "vi", "n", "gfx12-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_barrier_wait, "vIs", "n", "gfx12-insts")
+TARGET_BUILTIN(__builtin_amdgcn_s_barrier_signal_isfirst, "bIi", "n", "gfx12-insts")
+TARGET_BUILTIN(__builtin_amdgcn_s_barrier_signal_isfirst_var, "bi", "n", "gfx12-insts")
+TARGET_BUILTIN(__builtin_amdgcn_s_barrier_init, "vii", "n", "gfx12-insts")
+TARGET_BUILTIN(__builtin_amdgcn_s_barrier_join, "vi", "n", "gfx12-insts")
+TARGET_BUILTIN(__builtin_amdgcn_s_wakeup_barrier, "vi", "n", "gfx12-insts")
+TARGET_BUILTIN(__builtin_amdgcn_s_barrier_leave, "b", "n", "gfx12-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_global_load_tr_b64_v2i32, "V2iV2i*1", "nc", "gfx12-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_global_load_tr_b128_v8i16, "V8sV8s*1", "nc", "gfx12-insts,wavefrontsize32")
