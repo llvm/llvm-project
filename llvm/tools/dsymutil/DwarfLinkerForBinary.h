@@ -65,7 +65,8 @@ public:
 private:
 
   /// Keeps track of relocations.
-  class AddressManager : public AddressesMap {
+  template <typename AddressesMapBase>
+  class AddressManager : public AddressesMapBase {
     struct ValidReloc {
       uint64_t Offset;
       uint32_t Size;
@@ -180,6 +181,7 @@ private:
     std::optional<int64_t> getExprOpAddressRelocAdjustment(
         DWARFUnit &U, const DWARFExpression::Operation &Op,
         uint64_t StartOffset, uint64_t EndOffset) override;
+
     std::optional<int64_t>
     getSubprogramRelocAdjustment(const DWARFDie &DIE) override;
 
@@ -199,14 +201,20 @@ private:
   /// \defgroup Helpers Various helper methods.
   ///
   /// @{
-  bool createStreamer(const Triple &TheTriple, raw_fd_ostream &OutFile);
+  template <typename OutStreamer>
+  bool createStreamer(const Triple &TheTriple,
+                      typename OutStreamer::OutputFileType FileType,
+                      std::unique_ptr<OutStreamer> &Streamer,
+                      raw_fd_ostream &OutFile);
 
   /// Attempt to load a debug object from disk.
   ErrorOr<const object::ObjectFile &> loadObject(const DebugMapObject &Obj,
                                                  const Triple &triple);
-  ErrorOr<DWARFFile &> loadObject(const DebugMapObject &Obj,
-                                  const DebugMap &DebugMap,
-                                  remarks::RemarkLinker &RL);
+
+  template <typename OutDWARFFile, typename AddressesMap>
+  ErrorOr<std::unique_ptr<OutDWARFFile>> loadObject(const DebugMapObject &Obj,
+                                                    const DebugMap &DebugMap,
+                                                    remarks::RemarkLinker &RL);
 
   void collectRelocationsToApplyToSwiftReflectionSections(
       const object::SectionRef &Section, StringRef &Contents,
@@ -218,21 +226,22 @@ private:
 
   Error copySwiftInterfaces(StringRef Architecture) const;
 
+  template <typename OutStreamer>
   void copySwiftReflectionMetadata(
-      const llvm::dsymutil::DebugMapObject *Obj, DwarfStreamer *Streamer,
+      const llvm::dsymutil::DebugMapObject *Obj, OutStreamer *Streamer,
       std::vector<uint64_t> &SectionToOffsetInDwarf,
       std::vector<MachOUtils::DwarfRelocationApplicationInfo>
           &RelocationsToApply);
+
+  template <typename Linker, typename OutDwarfFile, typename AddressMapBase>
+  bool linkImpl(const DebugMap &Map,
+                typename Linker::OutputFileType ObjectType);
 
   raw_fd_ostream &OutFile;
   BinaryHolder &BinHolder;
   LinkOptions Options;
   std::mutex &ErrorHandlerMutex;
 
-  std::unique_ptr<DwarfStreamer> Streamer;
-  std::vector<std::unique_ptr<DWARFFile>> ObjectsForLinking;
-  std::vector<std::unique_ptr<DWARFContext>> ContextForLinking;
-  std::vector<std::unique_ptr<AddressManager>> AddressMapForLinking;
   std::vector<std::string> EmptyWarnings;
 
   /// A list of all .swiftinterface files referenced by the debug
