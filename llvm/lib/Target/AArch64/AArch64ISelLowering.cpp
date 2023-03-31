@@ -5591,15 +5591,6 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   return SDValue();
 }
 
-static std::pair<SDValue, SDValue> splitInt128(SDValue N, SelectionDAG &DAG) {
-  SDLoc DL(N);
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, N,
-                           DAG.getConstant(0, DL, MVT::i64));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, N,
-                           DAG.getConstant(1, DL, MVT::i64));
-  return std::make_pair(Lo, Hi);
-}
-
 /// Lower atomic or volatile 128-bit stores to a single STP instruction.
 SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
                                              SelectionDAG &DAG) const {
@@ -5619,7 +5610,7 @@ SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
                       ? StoreNode->getOperand(1)
                       : StoreNode->getOperand(2);
   SDLoc DL(Op);
-  auto StoreValue = splitInt128(Value, DAG);
+  auto StoreValue = DAG.SplitScalar(Value, DL, MVT::i64, MVT::i64);
   unsigned Opcode = IsStoreRelease ? AArch64ISD::STILP : AArch64ISD::STP;
   SDValue Result = DAG.getMemIntrinsicNode(
       Opcode, DL, DAG.getVTList(MVT::Other),
@@ -6015,7 +6006,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
 
     SDValue Chain = Op.getOperand(0);
     SDValue SysRegName = Op.getOperand(1);
-    std::pair<SDValue, SDValue> Pair = splitInt128(Op.getOperand(2), DAG);
+    std::pair<SDValue, SDValue> Pair =
+        DAG.SplitScalar(Op.getOperand(2), DL, MVT::i64, MVT::i64);
 
     // chain = MSRR(chain, sysregname, lo, hi)
     SDValue Result = DAG.getNode(AArch64ISD::MSRR, DL, MVT::Other, Chain,
@@ -22328,8 +22320,9 @@ static void ReplaceCMP_SWAP_128Results(SDNode *N,
     llvm_unreachable("Unexpected ordering!");
   }
 
-  auto Desired = splitInt128(N->getOperand(2), DAG);
-  auto New = splitInt128(N->getOperand(3), DAG);
+  SDLoc DL(N);
+  auto Desired = DAG.SplitScalar(N->getOperand(2), DL, MVT::i64, MVT::i64);
+  auto New = DAG.SplitScalar(N->getOperand(3), DL, MVT::i64, MVT::i64);
   SDValue Ops[] = {N->getOperand(1), Desired.first, Desired.second,
                    New.first,        New.second,    N->getOperand(0)};
   SDNode *CmpSwap = DAG.getMachineNode(
@@ -22337,7 +22330,7 @@ static void ReplaceCMP_SWAP_128Results(SDNode *N,
       Ops);
   DAG.setNodeMemRefs(cast<MachineSDNode>(CmpSwap), {MemOp});
 
-  Results.push_back(DAG.getNode(ISD::BUILD_PAIR, SDLoc(N), MVT::i128,
+  Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i128,
                                 SDValue(CmpSwap, 0), SDValue(CmpSwap, 1)));
   Results.push_back(SDValue(CmpSwap, 3));
 }
@@ -22439,7 +22432,8 @@ static void ReplaceATOMIC_LOAD_128Results(SDNode *N,
   const SDValue &Chain = N->getOperand(0);
   const SDValue &Ptr = N->getOperand(1);
   const SDValue &Val128 = N->getOperand(2);
-  std::pair<SDValue, SDValue> Val2x64 = splitInt128(Val128, DAG);
+  std::pair<SDValue, SDValue> Val2x64 =
+      DAG.SplitScalar(Val128, SDLoc(Val128), MVT::i64, MVT::i64);
 
   const unsigned ISDOpcode = N->getOpcode();
   const unsigned MachineOpcode =

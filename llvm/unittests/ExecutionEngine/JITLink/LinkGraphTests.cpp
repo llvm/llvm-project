@@ -241,6 +241,15 @@ TEST(LinkGraphTest, ContentAccessAndUpdate) {
                                          orc::ExecutorAddr(0x10000), 8, 0);
 
   EXPECT_TRUE(B2.isContentMutable()) << "Expected B2 content to be mutable";
+  EXPECT_EQ(B2.getSize(), MutableContent.size());
+
+  // Create a mutable content block with initial zero-fill.
+  auto &B3 =
+      G.createMutableContentBlock(Sec, 16, orc::ExecutorAddr(0x2000), 8, 0);
+  EXPECT_TRUE(B3.isContentMutable()) << "Expected B2 content to be mutable";
+  EXPECT_EQ(B3.getSize(), 16U);
+  EXPECT_TRUE(llvm::all_of(B3.getAlreadyMutableContent(),
+                           [](char C) { return C == 0; }));
 }
 
 TEST(LinkGraphTest, MakeExternal) {

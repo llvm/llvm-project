@@ -988,10 +988,7 @@ void DAGTypeLegalizer::GetPairElements(SDValue Pair,
                                        SDValue &Lo, SDValue &Hi) {
   SDLoc dl(Pair);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Pair.getValueType());
-  Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, NVT, Pair,
-                   DAG.getIntPtrConstant(0, dl));
-  Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, NVT, Pair,
-                   DAG.getIntPtrConstant(1, dl));
+  std::tie(Lo, Hi) = DAG.SplitScalar(Pair, dl, NVT, NVT);
 }
 
 /// Build an integer with low bits Lo and high bits Hi.

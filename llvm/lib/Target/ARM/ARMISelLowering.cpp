@@ -3432,10 +3432,8 @@ static SDValue LowerWRITE_REGISTER(SDValue Op, SelectionDAG &DAG) {
   assert(WriteValue.getValueType() == MVT::i64
           && "LowerWRITE_REGISTER called for non-i64 type argument.");
 
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, WriteValue,
-                           DAG.getConstant(0, DL, MVT::i32));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, WriteValue,
-                           DAG.getConstant(1, DL, MVT::i32));
+  SDValue Lo, Hi;
+  std::tie(Lo, Hi) = DAG.SplitScalar(WriteValue, DL, MVT::i32, MVT::i32);
   SDValue Ops[] = { Op->getOperand(0), Op->getOperand(1), Lo, Hi };
   return DAG.getNode(ISD::WRITE_REGISTER, DL, MVT::Other, Ops);
 }
@@ -4120,11 +4118,8 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
     //          else 31 + clz(if hi(x) == 0 then lo(x) else not(lo(x)))
     const SDValue &Operand = Op.getOperand(1);
     const EVT VTy = Op.getValueType();
-
-    SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, VTy, Operand,
-                             DAG.getConstant(1, dl, VTy));
-    SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, VTy, Operand,
-                             DAG.getConstant(0, dl, VTy));
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = DAG.SplitScalar(Operand, dl, VTy, VTy);
     SDValue Constant0 = DAG.getConstant(0, dl, VTy);
     SDValue Constant1 = DAG.getConstant(1, dl, VTy);
     SDValue Constant31 = DAG.getConstant(31, dl, VTy);
@@ -6251,11 +6246,8 @@ SDValue ARMTargetLowering::ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
     // if we can combine the bitcast with its source.
     if (SDValue Val = CombineVMOVDRRCandidateWithVecOp(N, DAG))
       return Val;
-
-    SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Op,
-                             DAG.getConstant(0, dl, MVT::i32));
-    SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Op,
-                             DAG.getConstant(1, dl, MVT::i32));
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = DAG.SplitScalar(Op, dl, MVT::i32, MVT::i32);
     return DAG.getNode(ISD::BITCAST, dl, DstVT,
                        DAG.getNode(ARMISD::VMOVDRR, dl, MVT::f64, Lo, Hi));
   }
@@ -6667,13 +6659,10 @@ static SDValue Expand64BitShift(SDNode *N, SelectionDAG &DAG,
     } else if (ShOpc == ISD::SRA)
       ShPartsOpc = ARMISD::ASRL;
 
-    // Lower 32 bits of the destination/source
-    SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, N->getOperand(0),
-                             DAG.getConstant(0, dl, MVT::i32));
-    // Upper 32 bits of the destination/source
-    SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, N->getOperand(0),
-                             DAG.getConstant(1, dl, MVT::i32));
-
+    // Split Lower/Upper 32 bits of the destination/source
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) =
+        DAG.SplitScalar(N->getOperand(0), dl, MVT::i32, MVT::i32);
     // Generate the shift operation as computed above
     Lo = DAG.getNode(ShPartsOpc, dl, DAG.getVTList(MVT::i32, MVT::i32), Lo, Hi,
                      ShAmt);
@@ -6691,10 +6680,8 @@ static SDValue Expand64BitShift(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // Okay, we have a 64-bit SRA or SRL of 1.  Lower this to an RRX expr.
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, N->getOperand(0),
-                           DAG.getConstant(0, dl, MVT::i32));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, N->getOperand(0),
-                           DAG.getConstant(1, dl, MVT::i32));
+  SDValue Lo, Hi;
+  std::tie(Lo, Hi) = DAG.SplitScalar(N->getOperand(0), dl, MVT::i32, MVT::i32);
 
   // First, build a SRA_FLAG/SRL_FLAG op, which shifts the top part by one and
   // captures the result into a carry flag.
@@ -10016,10 +10003,8 @@ static SDValue WinDBZCheckDenominator(SelectionDAG &DAG, SDNode *N, SDValue InCh
   SDValue Op = N->getOperand(1);
   if (N->getValueType(0) == MVT::i32)
     return DAG.getNode(ARMISD::WIN__DBZCHK, DL, MVT::Other, InChain, Op);
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Op,
-                           DAG.getConstant(0, DL, MVT::i32));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Op,
-                           DAG.getConstant(1, DL, MVT::i32));
+  SDValue Lo, Hi;
+  std::tie(Lo, Hi) = DAG.SplitScalar(Op, DL, MVT::i32, MVT::i32);
   return DAG.getNode(ARMISD::WIN__DBZCHK, DL, MVT::Other, InChain,
                      DAG.getNode(ISD::OR, DL, MVT::i32, Lo, Hi));
 }
@@ -10626,12 +10611,8 @@ static void ReplaceLongIntrinsic(SDNode *N, SmallVectorImpl<SDValue> &Results,
     return;
 
   SDLoc dl(N);
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32,
-                           N->getOperand(3),
-                           DAG.getConstant(0, dl, MVT::i32));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32,
-                           N->getOperand(3),
-                           DAG.getConstant(1, dl, MVT::i32));
+  SDValue Lo, Hi;
+  std::tie(Lo, Hi) = DAG.SplitScalar(N->getOperand(3), dl, MVT::i32, MVT::i32);
 
   SDValue LongMul = DAG.getNode(Opc, dl,
                                 DAG.getVTList(MVT::i32, MVT::i32),
@@ -13678,11 +13659,9 @@ static SDValue PerformADDVecReduce(SDNode *N, SelectionDAG &DAG,
       NA = DAG.getNode(ISD::ADD, dl, MVT::i64, Inp, NA);
     }
 
-    SmallVector<SDValue, 4> Ops;
-    Ops.push_back(DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, NA,
-                              DAG.getConstant(0, dl, MVT::i32)));
-    Ops.push_back(DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, NA,
-                              DAG.getConstant(1, dl, MVT::i32)));
+    SmallVector<SDValue, 4> Ops(2);
+    std::tie(Ops[0], Ops[1]) = DAG.SplitScalar(NA, dl, MVT::i32, MVT::i32);
+
     unsigned S = VecRed->getOpcode() == OpcodeA ? 2 : 0;
     for (unsigned I = S, E = VecRed.getNumOperands(); I < E; I++)
       Ops.push_back(VecRed->getOperand(I));
