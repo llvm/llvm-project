@@ -59,10 +59,10 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
     InterfaceMethod<
       /*description=*/[{
         Set the attribute IsDeviceAttr on the current module with the 
-        specified boolean argument. 
+        specified boolean argument.
       }],
       /*retTy=*/"void",
-      /*methodName=*/"setIsDevice", 
+      /*methodName=*/"setIsDevice",
       (ins "bool":$isDevice), [{}], [{
         $_op->setAttr(
           mlir::StringAttr::get($_op->getContext(), llvm::Twine{"omp.is_device"}),
@@ -74,7 +74,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
         its value, if it doesn't exit it returns false by default.
       }],
       /*retTy=*/"bool",
-      /*methodName=*/"getIsDevice", 
+      /*methodName=*/"getIsDevice",
       (ins), [{}], [{
         if (Attribute isDevice = $_op->getAttr("omp.is_device"))
           if (isDevice.isa<mlir::omp::IsDeviceAttr>())
@@ -109,6 +109,34 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
                   mlir::omp::FlagsAttr::get($_op->getContext(), debugKind,
                       assumeTeamsOversubscription, assumeThreadsOversubscription, 
                       assumeNoThreadState, assumeNoNestedParallelism));
+      }]>,
+    InterfaceMethod<
+      /*description=*/[{
+        Get the Target attribute on the current module if it exists
+        and return the attribute, if it doesn't exist it returns a nullptr.
+      }],
+      /*retTy=*/"mlir::omp::TargetAttr",
+      /*methodName=*/"getTarget",
+      (ins), [{}], [{
+        if (Attribute flags = $_op->getAttr("omp.target"))
+          return flags.dyn_cast_or_null<mlir::omp::TargetAttr>();
+        return nullptr;
+      }]>,
+    InterfaceMethod<
+      /*description=*/[{
+        Set the attribute target on the current module with the
+        specified string arguments - name of cpu and corresponding features.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setTarget",
+      (ins "llvm::StringRef":$targetCPU,
+           "llvm::StringRef":$targetFeatures), [{}], [{
+        if (targetCPU.empty())
+          return;
+        $_op->setAttr(("omp." + mlir::omp::TargetAttr::getMnemonic()).str(),
+                  mlir::omp::TargetAttr::get($_op->getContext(),
+                                             targetCPU.str(),
+                                             targetFeatures.str()));
       }]>,
   ];
 }
