@@ -738,8 +738,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   // Remember the results of the payload ops associated with the consumed
   // op handles or the ops defining the value handles so we can drop the
   // association with them later. This must happen here because the
-  // transformation may destroy or mutate them so we cannot traverse the
-  // payload IR after that.
+  // transformation may destroy or mutate them so we cannot traverse the payload
+  // IR after that.
   SmallVector<Value> origOpFlatResults;
   SmallVector<Operation *> origAssociatedOps;
   for (unsigned index : consumedOperands) {
@@ -771,16 +771,16 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     return diag;
   }
 
-  // Compute the result but do not short-circuit the silenceable failure
-  // case as we still want the handles to propagate properly so the
-  // "suppress" mode can proceed on a best effort basis.
+  // Compute the result but do not short-circuit the silenceable failure case as
+  // we still want the handles to propagate properly so the "suppress" mode can
+  // proceed on a best effort basis.
   transform::TransformResults results(transform->getNumResults());
   DiagnosedSilenceableFailure result(transform.apply(results, *this));
   if (result.isDefiniteFailure())
     return result;
 
-  // If a silenceable failure was produced, some results may be unset, set
-  // them to empty lists.
+  // If a silenceable failure was produced, some results may be unset, set them
+  // to empty lists.
   if (result.isSilenceableFailure()) {
     for (OpResult opResult : transform->getResults()) {
       if (results.isSet(opResult.getResultNumber()))
@@ -795,8 +795,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     }
   }
 
-  // Remove the mapping for the operand if it is consumed by the operation.
-  // This allows us to catch use-after-free with assertions later on.
+  // Remove the mapping for the operand if it is consumed by the operation. This
+  // allows us to catch use-after-free with assertions later on.
   for (unsigned index : consumedOperands) {
     Value operand = transform->getOperand(index);
     if (operand.getType().isa<TransformHandleTypeInterface>()) {
@@ -855,8 +855,8 @@ transform::TransformState::Extension::replacePayloadOp(Operation *op,
   if (failed(state.getHandlesForPayloadOp(op, handles)))
     return failure();
 
-  // TODO: we may need to invalidate handles to operations and values nested
-  // in the operation being replaced.
+  // TODO: we may need to invalidate handles to operations and values nested in
+  // the operation being replaced.
   return state.replacePayloadOp(op, replacement);
 }
 
@@ -1134,9 +1134,9 @@ LogicalResult transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
 
 LogicalResult
 transform::detail::verifyPossibleTopLevelTransformOpTrait(Operation *op) {
-  // Attaching this trait without the interface is a misuse of the API, but
-  // it cannot be caught via a static_assert because interface registration
-  // is dynamic.
+  // Attaching this trait without the interface is a misuse of the API, but it
+  // cannot be caught via a static_assert because interface registration is
+  // dynamic.
   assert(isa<TransformOpInterface>(op) &&
          "should implement TransformOpInterface to have "
          "PossibleTopLevelTransformOpTrait");
@@ -1172,12 +1172,11 @@ transform::detail::verifyPossibleTopLevelTransformOpTrait(Operation *op) {
                  TransformValueHandleTypeInterface>())
       continue;
 
-    InFlightDiagnostic diag = op->emitOpError()
-                              << "expects trailing entry block arguments "
-                                 "to be of type implementing "
-                                 "TransformHandleTypeInterface, "
-                                 "TransformValueHandleTypeInterface or "
-                                 "TransformParamTypeInterface";
+    InFlightDiagnostic diag =
+        op->emitOpError()
+        << "expects trailing entry block arguments to be of type implementing "
+           "TransformHandleTypeInterface, TransformValueHandleTypeInterface or "
+           "TransformParamTypeInterface";
     diag.attachNote() << "argument #" << arg.getArgNumber() << " does not";
     return diag;
   }
@@ -1242,8 +1241,7 @@ DiagnosedSilenceableFailure transform::detail::transformWithPatternsApply(
     function_ref<void(RewritePatternSet &)> populatePatterns) {
   if (!target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
     return emitDefiniteFailure(transformOp)
-           << "applies only to isolated-from-above targets because it "
-              "needs to "
+           << "applies only to isolated-from-above targets because it needs to "
               "apply patterns greedily";
   }
   RewritePatternSet patterns(transformOp->getContext());
