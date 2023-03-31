@@ -25,11 +25,10 @@ public:
   using OneToNOpConversionPattern<IfOp>::OneToNOpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(IfOp op, OneToNPatternRewriter &rewriter,
-                  const OneToNTypeMapping & /*operandMapping*/,
-                  const OneToNTypeMapping &resultMapping,
-                  const ValueRange /*convertedOperands*/) const override {
+  matchAndRewrite(IfOp op, OpAdaptor adaptor,
+                  OneToNPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
+    const OneToNTypeMapping &resultMapping = adaptor.getResultMapping();
 
     // Nothing to do if there is no non-identity conversion.
     if (!resultMapping.hasNonIdentityConversion())
@@ -62,11 +61,12 @@ public:
   using OneToNOpConversionPattern<WhileOp>::OneToNOpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(WhileOp op, OneToNPatternRewriter &rewriter,
-                  const OneToNTypeMapping &operandMapping,
-                  const OneToNTypeMapping &resultMapping,
-                  const ValueRange convertedOperands) const override {
+  matchAndRewrite(WhileOp op, OpAdaptor adaptor,
+                  OneToNPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
+
+    const OneToNTypeMapping &operandMapping = adaptor.getOperandMapping();
+    const OneToNTypeMapping &resultMapping = adaptor.getResultMapping();
 
     // Nothing to do if the op doesn't have any non-identity conversions for its
     // operands or results.
@@ -77,8 +77,8 @@ public:
     // Create new WhileOp.
     TypeRange convertedResultTypes = resultMapping.getConvertedTypes();
 
-    auto newOp =
-        rewriter.create<WhileOp>(loc, convertedResultTypes, convertedOperands);
+    auto newOp = rewriter.create<WhileOp>(loc, convertedResultTypes,
+                                          adaptor.getFlatOperands());
     newOp->setAttrs(op->getAttrs());
 
     // Update block signatures.
@@ -106,16 +106,15 @@ public:
   using OneToNOpConversionPattern<YieldOp>::OneToNOpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(YieldOp op, OneToNPatternRewriter &rewriter,
-                  const OneToNTypeMapping &operandMapping,
-                  const OneToNTypeMapping & /*resultMapping*/,
-                  const ValueRange convertedOperands) const override {
+  matchAndRewrite(YieldOp op, OpAdaptor adaptor,
+                  OneToNPatternRewriter &rewriter) const override {
     // Nothing to do if there is no non-identity conversion.
-    if (!operandMapping.hasNonIdentityConversion())
+    if (!adaptor.getOperandMapping().hasNonIdentityConversion())
       return failure();
 
     // Convert operands.
-    rewriter.updateRootInPlace(op, [&] { op->setOperands(convertedOperands); });
+    rewriter.updateRootInPlace(
+        op, [&] { op->setOperands(adaptor.getFlatOperands()); });
 
     return success();
   }
@@ -127,16 +126,15 @@ public:
   using OneToNOpConversionPattern<ConditionOp>::OneToNOpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(ConditionOp op, OneToNPatternRewriter &rewriter,
-                  const OneToNTypeMapping &operandMapping,
-                  const OneToNTypeMapping & /*resultMapping*/,
-                  const ValueRange convertedOperands) const override {
+  matchAndRewrite(ConditionOp op, OpAdaptor adaptor,
+                  OneToNPatternRewriter &rewriter) const override {
     // Nothing to do if there is no non-identity conversion.
-    if (!operandMapping.hasNonIdentityConversion())
+    if (!adaptor.getOperandMapping().hasNonIdentityConversion())
       return failure();
 
     // Convert operands.
-    rewriter.updateRootInPlace(op, [&] { op->setOperands(convertedOperands); });
+    rewriter.updateRootInPlace(
+        op, [&] { op->setOperands(adaptor.getFlatOperands()); });
 
     return success();
   }
