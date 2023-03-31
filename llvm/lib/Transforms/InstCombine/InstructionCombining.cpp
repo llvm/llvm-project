@@ -1039,7 +1039,7 @@ static Constant *constantFoldOperationIntoSelectOperand(
     else if (auto *C = dyn_cast<Constant>(Op))
       ConstOps.push_back(C);
     else
-      llvm_unreachable("Operands should be select or constant");
+      return nullptr;
   }
   return ConstantFoldInstOperands(&I, ConstOps, I.getModule()->getDataLayout());
 }

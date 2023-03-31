@@ -151,8 +151,7 @@ define i32 @ctpop_sel_const_true_false_extra_use(i1 %b) {
 
 define i32 @usub_sat_rhs_const_select_all_const(i1 %b) {
 ; CHECK-LABEL: @usub_sat_rhs_const_select_all_const(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 5, i32 10
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[S]], i32 7)
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i32 0, i32 3
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = select i1 %b, i32 5, i32 10
@@ -173,8 +172,8 @@ define i32 @usub_sat_rhs_var_select_all_const(i1 %b, i32 %x) {
 
 define i32 @usub_sat_rhs_const_select_one_const(i1 %b, i32 %x) {
 ; CHECK-LABEL: @usub_sat_rhs_const_select_one_const(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 5, i32 [[X:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[S]], i32 7)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[X:%.*]], i32 7)
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i32 0, i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = select i1 %b, i32 5, i32 %x
@@ -195,8 +194,7 @@ define i32 @usub_sat_rhs_const_select_no_const(i1 %b, i32 %x, i32 %y) {
 
 define i32 @usub_sat_lhs_const_select_all_const(i1 %b) {
 ; CHECK-LABEL: @usub_sat_lhs_const_select_all_const(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 5, i32 10
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.usub.sat.i32(i32 7, i32 [[S]])
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i32 2, i32 0
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = select i1 %b, i32 5, i32 10
@@ -217,4 +215,28 @@ define <2 x i32> @non_speculatable(i1 %b) {
   %s = select i1 %b, ptr @g1, ptr @g2
   %c = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr %s, i32 64, <2 x i1> <i1 true, i1 false>, <2 x i32> poison)
   ret <2 x i32> %c
+}
+
+declare i32 @llvm.vector.reduce.add.v2i32(<2 x i32>)
+
+define i32 @vec_to_scalar_select_scalar(i1 %b) {
+; CHECK-LABEL: @vec_to_scalar_select_scalar(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>
+; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[S]])
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %s = select i1 %b, <2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>
+  %c = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %s)
+  ret i32 %c
+}
+
+define i32 @vec_to_scalar_select_vector(<2 x i1> %b) {
+; CHECK-LABEL: @vec_to_scalar_select_vector(
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[B:%.*]], <2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>
+; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[S]])
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %s = select <2 x i1> %b, <2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>
+  %c = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %s)
+  ret i32 %c
 }
