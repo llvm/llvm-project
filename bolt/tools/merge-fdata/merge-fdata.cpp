@@ -257,8 +257,7 @@ bool isYAML(const StringRef Filename) {
 
 void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   errs() << "Using legacy profile format.\n";
-  bool BoltedCollection = false;
-  bool First = true;
+  std::optional<bool> BoltedCollection;
   StringMap<uint64_t> Entries;
   for (const std::string &Filename : Filenames) {
     if (isYAML(Filename))
@@ -272,17 +271,18 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     StringRef Buf = MB.get()->getBuffer();
     // Check if the string "boltedcollection" is in the first line
     if (Buf.startswith("boltedcollection\n")) {
-      if (!First && !BoltedCollection)
+      if (!BoltedCollection.value_or(true))
         report_error(
             Filename,
             "cannot mix profile collected in BOLT and non-BOLT deployments");
       BoltedCollection = true;
       Buf = Buf.drop_front(17);
     } else {
-      if (BoltedCollection)
+      if (BoltedCollection.value_or(false))
         report_error(
             Filename,
             "cannot mix profile collected in BOLT and non-BOLT deployments");
+      BoltedCollection = false;
     }
 
     SmallVector<StringRef> Lines;
@@ -298,7 +298,6 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
       Count += Entries.lookup(Signature);
       Entries.insert_or_assign(Signature, Count);
     }
-    First = false;
   }
 
   if (BoltedCollection)
