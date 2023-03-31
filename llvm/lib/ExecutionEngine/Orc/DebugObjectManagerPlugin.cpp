@@ -60,8 +60,6 @@ public:
 
 private:
   typename ELFT::Shdr *Header;
-
-  bool isTextOrDataSection() const;
 };
 
 template <typename ELFT>
@@ -105,6 +103,9 @@ void ELFDebugObjectSection<ELFT>::dump(raw_ostream &OS, StringRef Name) {
 enum DebugObjectFlags : int {
   // Request final target memory load-addresses for all sections.
   ReportFinalSectionLoadAddresses = 1 << 0,
+
+  // We found sections with debug information when processing the input object.
+  HasDebugSections = 1 << 1,
 };
 
 /// The plugin creates a debug object from when JITLink starts processing the
@@ -116,7 +117,7 @@ class DebugObject {
 public:
   DebugObject(JITLinkMemoryManager &MemMgr, const JITLinkDylib *JD,
               ExecutionSession &ES)
-      : MemMgr(MemMgr), JD(JD), ES(ES) {}
+      : MemMgr(MemMgr), JD(JD), ES(ES), Flags(DebugObjectFlags{}) {}
 
   bool hasFlags(DebugObjectFlags F) const { return Flags & F; }
   void setFlags(DebugObjectFlags F) {
@@ -265,23 +266,18 @@ ELFDebugObject::CreateArchType(MemoryBufferRef Buffer,
   if (!ObjRef)
     return ObjRef.takeError();
 
-  // TODO: Add support for other architectures.
-  uint16_t TargetMachineArch = ObjRef->getHeader().e_machine;
-  if (TargetMachineArch != ELF::EM_X86_64)
-    return nullptr;
-
   Expected<ArrayRef<SectionHeader>> Sections = ObjRef->sections();
   if (!Sections)
     return Sections.takeError();
 
-  bool HasDwarfSection = false;
   for (const SectionHeader &Header : *Sections) {
     Expected<StringRef> Name = ObjRef->getSectionName(Header);
     if (!Name)
       return Name.takeError();
     if (Name->empty())
       continue;
-    HasDwarfSection |= isDwarfSection(*Name);
+    if (isDwarfSection(*Name))
+      DebugObj->setFlags(HasDebugSections);
 
     // Only record text and data sections (i.e. no bss, comments, rel, etc.)
     if (Header.sh_type != ELF::SHT_PROGBITS &&
@@ -293,13 +289,6 @@ ELFDebugObject::CreateArchType(MemoryBufferRef Buffer,
     auto Wrapped = std::make_unique<ELFDebugObjectSection<ELFT>>(&Header);
     if (Error Err = DebugObj->recordSection(*Name, std::move(Wrapped)))
       return std::move(Err);
-  }
-
-  if (!HasDwarfSection) {
-    LLVM_DEBUG(dbgs() << "Aborting debug registration for LinkGraph \""
-                      << DebugObj->Buffer->getBufferIdentifier()
-                      << "\": input object contains no debug info\n");
-    return nullptr;
   }
 
   return std::move(DebugObj);
@@ -369,11 +358,10 @@ Error ELFDebugObject::recordSection(
     StringRef Name, std::unique_ptr<ELFDebugObjectSection<ELFT>> Section) {
   if (Error Err = Section->validateInBounds(this->getBuffer(), Name.data()))
     return Err;
-  auto ItInserted = Sections.try_emplace(Name, std::move(Section));
-  if (!ItInserted.second)
+  bool Inserted = Sections.try_emplace(Name, std::move(Section)).second;
+  if (!Inserted)
     LLVM_DEBUG(dbgs() << "Skipping debug registration for section '" << Name
-                      << "' "
-                      << "in object " << Buffer->getBufferIdentifier()
+                      << "' in object " << Buffer->getBufferIdentifier()
                       << " (duplicate name)\n");
   return Error::success();
 }
@@ -401,8 +389,14 @@ createDebugObjectFromBuffer(ExecutionSession &ES, LinkGraph &G,
 }
 
 DebugObjectManagerPlugin::DebugObjectManagerPlugin(
+    ExecutionSession &ES, std::unique_ptr<DebugObjectRegistrar> Target,
+    bool RequireDebugSections)
+    : ES(ES), Target(std::move(Target)),
+      RequireDebugSections(RequireDebugSections) {}
+
+DebugObjectManagerPlugin::DebugObjectManagerPlugin(
     ExecutionSession &ES, std::unique_ptr<DebugObjectRegistrar> Target)
-    : ES(ES), Target(std::move(Target)) {}
+    : DebugObjectManagerPlugin(ES, std::move(Target), true) {}
 
 DebugObjectManagerPlugin::~DebugObjectManagerPlugin() = default;
 
@@ -416,8 +410,14 @@ void DebugObjectManagerPlugin::notifyMaterializing(
 
   if (auto DebugObj = createDebugObjectFromBuffer(ES, G, Ctx, ObjBuffer)) {
     // Not all link artifacts allow debugging.
-    if (*DebugObj != nullptr)
-      PendingObjs[&MR] = std::move(*DebugObj);
+    if (*DebugObj == nullptr)
+      return;
+    if (RequireDebugSections && !(**DebugObj).hasFlags(HasDebugSections)) {
+      LLVM_DEBUG(dbgs() << "Skipping debug registration for LinkGraph '"
+                        << G.getName() << "': no debug info\n");
+      return;
+    }
+    PendingObjs[&MR] = std::move(*DebugObj);
   } else {
     ES.reportError(DebugObj.takeError());
   }

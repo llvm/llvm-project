@@ -27,21 +27,21 @@ class ConvertTypesInFuncCallOp : public OneToNOpConversionPattern<CallOp> {
 public:
   using OneToNOpConversionPattern<CallOp>::OneToNOpConversionPattern;
 
-  LogicalResult matchAndRewrite(CallOp op, OneToNPatternRewriter &rewriter,
-                                const OneToNTypeMapping &operandMapping,
-                                const OneToNTypeMapping &resultMapping,
-                                ValueRange convertedOperands) const override {
+  LogicalResult
+  matchAndRewrite(CallOp op, OpAdaptor adaptor,
+                  OneToNPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
+    const OneToNTypeMapping &resultMapping = adaptor.getResultMapping();
 
     // Nothing to do if the op doesn't have any non-identity conversions for its
     // operands or results.
-    if (!operandMapping.hasNonIdentityConversion() &&
+    if (!adaptor.getOperandMapping().hasNonIdentityConversion() &&
         !resultMapping.hasNonIdentityConversion())
       return failure();
 
     // Create new CallOp.
     auto newOp = rewriter.create<CallOp>(loc, resultMapping.getConvertedTypes(),
-                                         convertedOperands);
+                                         adaptor.getFlatOperands());
     newOp->setAttrs(op->getAttrs());
 
     rewriter.replaceOp(op, newOp->getResults(), resultMapping);
@@ -54,10 +54,8 @@ public:
   using OneToNOpConversionPattern<FuncOp>::OneToNOpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(FuncOp op, OneToNPatternRewriter &rewriter,
-                  const OneToNTypeMapping & /*operandMapping*/,
-                  const OneToNTypeMapping & /*resultMapping*/,
-                  ValueRange /*convertedOperands*/) const override {
+  matchAndRewrite(FuncOp op, OpAdaptor adaptor,
+                  OneToNPatternRewriter &rewriter) const override {
     auto *typeConverter = getTypeConverter<OneToNTypeConverter>();
 
     // Construct mapping for function arguments.
@@ -99,16 +97,16 @@ class ConvertTypesInFuncReturnOp : public OneToNOpConversionPattern<ReturnOp> {
 public:
   using OneToNOpConversionPattern<ReturnOp>::OneToNOpConversionPattern;
 
-  LogicalResult matchAndRewrite(ReturnOp op, OneToNPatternRewriter &rewriter,
-                                const OneToNTypeMapping &operandMapping,
-                                const OneToNTypeMapping & /*resultMapping*/,
-                                ValueRange convertedOperands) const override {
+  LogicalResult
+  matchAndRewrite(ReturnOp op, OpAdaptor adaptor,
+                  OneToNPatternRewriter &rewriter) const override {
     // Nothing to do if there is no non-identity conversion.
-    if (!operandMapping.hasNonIdentityConversion())
+    if (!adaptor.getOperandMapping().hasNonIdentityConversion())
       return failure();
 
     // Convert operands.
-    rewriter.updateRootInPlace(op, [&] { op->setOperands(convertedOperands); });
+    rewriter.updateRootInPlace(
+        op, [&] { op->setOperands(adaptor.getFlatOperands()); });
 
     return success();
   }

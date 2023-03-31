@@ -6,5 +6,8 @@ unittest("DWARFLinkerParallelTests") {
     "//llvm/lib/Support",
     "//llvm/lib/Testing/Support",
   ]
-  sources = [ "DWARFLinkerTest.cpp" ]
+  sources = [
+    "DWARFLinkerTest.cpp",
+    "StringPoolTest.cpp",
+  ]
 }

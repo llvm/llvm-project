@@ -21,7 +21,7 @@ if(NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
         ${CMAKE_CXX_COMPILER_VERSION} VERSION_EQUAL "${req_ver}"))
   message(FATAL_ERROR "Cannot build libc for GPU. CMake compiler "
                       "'${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}' "
-                      " is not `Clang ${req_ver}.")
+                      " is not 'Clang ${req_ver}'.")
 endif()
 if(NOT LLVM_LIBC_FULL_BUILD)
   message(FATAL_ERROR "LLVM_LIBC_FULL_BUILD must be enabled to build libc for "

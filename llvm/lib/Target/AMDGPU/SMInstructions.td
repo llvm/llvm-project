@@ -341,11 +341,11 @@ def S_GET_WAVEID_IN_WORKGROUP : SM_WaveId_Pseudo <"s_get_waveid_in_workgroup", i
 
 
 let SubtargetPredicate = HasScalarFlatScratchInsts, Uses = [FLAT_SCR] in {
-defm S_SCRATCH_LOAD_DWORD    : SM_Pseudo_Loads <  SReg_64, SReg_32_XM0_XEXEC>;
+defm S_SCRATCH_LOAD_DWORD    : SM_Pseudo_Loads <SReg_64, SReg_32_XM0_XEXEC>;
 defm S_SCRATCH_LOAD_DWORDX2  : SM_Pseudo_Loads <SReg_64, SReg_64_XEXEC>;
 defm S_SCRATCH_LOAD_DWORDX4  : SM_Pseudo_Loads <SReg_64, SReg_128>;
 
-defm S_SCRATCH_STORE_DWORD   : SM_Pseudo_Stores <  SReg_64, SReg_32_XM0_XEXEC>;
+defm S_SCRATCH_STORE_DWORD   : SM_Pseudo_Stores <SReg_64, SReg_32_XM0_XEXEC>;
 defm S_SCRATCH_STORE_DWORDX2 : SM_Pseudo_Stores <SReg_64, SReg_64_XEXEC>;
 defm S_SCRATCH_STORE_DWORDX4 : SM_Pseudo_Stores <SReg_64, SReg_128>;
 } // SubtargetPredicate = HasScalarFlatScratchInsts
