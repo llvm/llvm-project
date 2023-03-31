@@ -881,8 +881,7 @@ static void processStubLibraries() {
                << "processing stub file: " << stub_file->getName() << "\n");
     for (auto [name, deps]: stub_file->symbolDependencies) {
       auto* sym = symtab->find(name);
-      if (!sym || !sym->isUndefined() || !sym->isUsedInRegularObj ||
-          sym->forceImport) {
+      if (!sym || !sym->isUndefined() || sym->forceImport) {
         LLVM_DEBUG(llvm::dbgs() << "stub not in needed: " << name << "\n");
         continue;
       }
@@ -907,7 +906,6 @@ static void processStubLibraries() {
           LLVM_DEBUG(llvm::dbgs()
                      << "force export: " << toString(*needed) << "\n");
           needed->forceExport = true;
-          needed->isUsedInRegularObj = true;
           if (auto *lazy = dyn_cast<LazySymbol>(needed)) {
             lazy->fetch();
             if (!config->whyExtract.empty())
@@ -1211,7 +1209,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (errorCount())
     return;
 
-  writeWhyExtract();
+  // processStubLibraries must happen before LTO because it can trigger the
+  // export of arbirary symbols that might themselves be defined in LTO objects.
+  processStubLibraries();
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
@@ -1219,7 +1219,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (errorCount())
     return;
 
+  // The LTO process can generate new undefined symbols, specifically libcall
+  // functions.  Because those symbols might be declared in a stub library we
+  // need the process the stub libraries once again after LTO to handle any
+  // newly undefined symbols.
   processStubLibraries();
+
+  writeWhyExtract();
 
   createOptionalSymbols();
 
