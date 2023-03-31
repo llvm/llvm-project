@@ -777,6 +777,11 @@ public:
         FName, Num, Weight);
   }
 
+  sampleprof_error addSampleRecord(LineLocation Location,
+                                   const SampleRecord &SampleRecord, uint64_t Weight = 1) {
+    return BodySamples[Location].merge(SampleRecord, Weight);
+  }
+
   // Remove a call target and decrease the body sample correspondingly. Return
   // the number of body samples actually decreased.
   uint64_t removeCalledTargetAndBodySample(uint32_t LineOffset,
@@ -1342,7 +1347,7 @@ private:
     // To retain the context, checksum, attributes of the original profile, make
     // a copy of it if no profile is found.
     SampleContext &Context = FS.getContext();
-    auto Ret = OutputProfiles.emplace(Context, FS);
+    auto Ret = OutputProfiles.try_emplace(Context, FS);
     FunctionSamples &Profile = Ret.first->second;
     if (Ret.second) {
       // When it's the copy of the old profile, just clear all the inlinees'
@@ -1351,9 +1356,8 @@ private:
       // We recompute TotalSamples later, so here set to zero.
       Profile.setTotalSamples(0);
     } else {
-      for (const auto &Line : FS.getBodySamples()) {
-        Profile.addBodySamples(Line.first.LineOffset, Line.first.Discriminator,
-                               Line.second.getSamples());
+      for (const auto &[LineLocation, SampleRecord] : FS.getBodySamples()) {
+        Profile.addSampleRecord(LineLocation, SampleRecord);
       }
     }
 
