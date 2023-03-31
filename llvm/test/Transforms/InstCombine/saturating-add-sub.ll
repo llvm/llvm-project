@@ -967,8 +967,7 @@ define i8 @test_scalar_usub_add_nuw_no_ov(i8 %a) {
 
 define i8 @test_scalar_usub_add_nuw_nsw_no_ov(i8 %a) {
 ; CHECK-LABEL: @test_scalar_usub_add_nuw_nsw_no_ov(
-; CHECK-NEXT:    [[B:%.*]] = add nuw nsw i8 [[A:%.*]], 10
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[B]], i8 9)
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[A:%.*]], 1
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %b = add nuw nsw i8 %a, 10
