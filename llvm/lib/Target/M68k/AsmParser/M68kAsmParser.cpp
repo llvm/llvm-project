@@ -223,6 +223,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kAsmParser() {
   RegisterMCAsmParser<M68kAsmParser> X(getTheM68kTarget());
 }
 
+#define GET_REGISTER_MATCHER
 #define GET_MATCHER_IMPLEMENTATION
 #include "M68kGenAsmMatcher.inc"
 

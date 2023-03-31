@@ -430,11 +430,11 @@ def NearData     : Predicate<"TM.getCodeModel() == CodeModel::Small ||"
 def IsPIC        : Predicate<"TM.isPositionIndependent()">;
 def IsNotPIC     : Predicate<"!TM.isPositionIndependent()">;
 
-def AtLeastM68000     : Predicate<"Subtarget->atLeastM68000()">;
-def AtLeastM68010     : Predicate<"Subtarget->atLeastM68010()">;
-def AtLeastM68020     : Predicate<"Subtarget->atLeastM68020()">;
-def AtLeastM68030     : Predicate<"Subtarget->atLeastM68030()">;
-def AtLeastM68040     : Predicate<"Subtarget->atLeastM68040()">;
+// ISA versions
+foreach i = [0,1,2,4,6] in
+def AtLeastM680 # i # "0" : Predicate<"Subtarget->atLeastM680"#i#"0()">,
+                            AssemblerPredicate<(all_of
+                                                !cast<SubtargetFeature>("FeatureISA"#i#"0"))>;
 
 //===----------------------------------------------------------------------===//
 // Condition Codes
