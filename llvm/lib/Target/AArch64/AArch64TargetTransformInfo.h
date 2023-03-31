@@ -397,6 +397,15 @@ public:
   /// @}
 
   bool enableSelectOptimize() { return ST->enableSelectOptimize(); }
+
+  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
+                             Type *ScalarValTy) const {
+    // We can vectorize store v4i8.
+    if (ScalarMemTy->isIntegerTy(8) && isPowerOf2_32(VF) && VF >= 4)
+      return 4;
+
+    return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
+  }
 };
 
 } // end namespace llvm
