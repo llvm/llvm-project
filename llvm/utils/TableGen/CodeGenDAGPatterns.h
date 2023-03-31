@@ -338,11 +338,7 @@ struct TypeInfer {
 
   struct ValidateOnExit {
     ValidateOnExit(TypeSetByHwMode &T, TypeInfer &TI) : Infer(TI), VTS(T) {}
-  #ifndef NDEBUG
     ~ValidateOnExit();
-  #else
-    ~ValidateOnExit() {}  // Empty destructor with NDEBUG.
-  #endif
     TypeInfer &Infer;
     TypeSetByHwMode &VTS;
   };

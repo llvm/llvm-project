@@ -363,7 +363,7 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
         MBBI->getOperand(3).getImm() == -4) {
       unsigned Reg = RegInfo->getSEHRegNum(MBBI->getOperand(1).getReg());
       MIB = BuildMI(MF, DL, TII.get(ARM::SEH_SaveRegs))
-                .addImm(1 << Reg)
+                .addImm(1ULL << Reg)
                 .addImm(/*Wide=*/1)
                 .setMIFlags(Flags);
     } else {
@@ -377,7 +377,7 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
         MBBI->getOperand(3).getImm() == 4) {
       unsigned Reg = RegInfo->getSEHRegNum(MBBI->getOperand(0).getReg());
       MIB = BuildMI(MF, DL, TII.get(ARM::SEH_SaveRegs))
-                .addImm(1 << Reg)
+                .addImm(1ULL << Reg)
                 .addImm(/*Wide=*/1)
                 .setMIFlags(Flags);
     } else {
