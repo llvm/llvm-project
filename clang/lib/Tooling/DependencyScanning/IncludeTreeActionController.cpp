@@ -142,30 +142,33 @@ private:
   std::optional<llvm::Error> ErrorToReport;
 };
 
-/// A utility for adding \c PPCallbacks to a compiler instance at the
-/// appropriate time.
-struct PPCallbacksDependencyCollector : public DependencyCollector {
-  using MakeCB =
+/// A utility for adding \c PPCallbacks and/or \cASTReaderListener to a compiler
+/// instance at the appropriate time.
+struct AttachOnlyDependencyCollector : public DependencyCollector {
+  using MakePPCB =
       llvm::unique_function<std::unique_ptr<PPCallbacks>(Preprocessor &)>;
-  MakeCB Create;
-  PPCallbacksDependencyCollector(MakeCB Create) : Create(std::move(Create)) {}
-  void attachToPreprocessor(Preprocessor &PP) final {
-    std::unique_ptr<PPCallbacks> CB = Create(PP);
-    assert(CB);
-    PP.addPPCallbacks(std::move(CB));
-  }
-};
-/// A utility for adding \c ASTReaderListener to a compiler instance at the
-/// appropriate time.
-struct ASTReaderListenerDependencyCollector : public DependencyCollector {
-  using MakeL =
+  using MakeASTReaderL =
       llvm::unique_function<std::unique_ptr<ASTReaderListener>(ASTReader &R)>;
-  MakeL Create;
-  ASTReaderListenerDependencyCollector(MakeL Create) : Create(std::move(Create)) {}
+  MakePPCB CreatePPCB;
+  MakeASTReaderL CreateASTReaderL;
+  AttachOnlyDependencyCollector(MakePPCB CreatePPCB, MakeASTReaderL CreateL)
+      : CreatePPCB(std::move(CreatePPCB)),
+        CreateASTReaderL(std::move(CreateL)) {}
+
+  void attachToPreprocessor(Preprocessor &PP) final {
+    if (CreatePPCB) {
+      std::unique_ptr<PPCallbacks> CB = CreatePPCB(PP);
+      assert(CB);
+      PP.addPPCallbacks(std::move(CB));
+    }
+  }
+
   void attachToASTReader(ASTReader &R) final {
-    std::unique_ptr<ASTReaderListener> L = Create(R);
-    assert(L);
-    R.addListener(std::move(L));
+    if (CreateASTReaderL) {
+      std::unique_ptr<ASTReaderListener> L = CreateASTReaderL(R);
+      assert(L);
+      R.addListener(std::move(L));
+    }
   }
 };
 
@@ -244,27 +247,29 @@ public:
 /// MODULE_DIRECTORY record, and ignores the result.
 class LookupPCHModulesListener : public ASTReaderListener {
 public:
-  LookupPCHModulesListener(Preprocessor &PP) : PP(PP) {}
+  LookupPCHModulesListener(ASTReader &R) : Reader(R) {}
 
 private:
-  void ReadModuleName(StringRef ModuleName) final {
-    if (PCHFinished)
-      return;
-    // Match MODULE_DIRECTORY: allow full search and ignore failure to find
-    // the module.
-    (void)PP.getHeaderSearchInfo().lookupModule(
-        ModuleName, SourceLocation(), /*AllowSearch=*/true,
-        /*AllowExtraModuleMapSearch=*/true);
-  }
   void visitModuleFile(StringRef Filename,
                        serialization::ModuleKind Kind) final {
-    if (Kind == serialization::MK_PCH)
-      PCHFinished = true;
+    // Any prebuilt or explicit modules seen during scanning are "full" modules
+    // rather than implicitly built scanner modules.
+    if (Kind == serialization::MK_PrebuiltModule ||
+        Kind == serialization::MK_ExplicitModule) {
+      serialization::ModuleManager &Manager = Reader.getModuleManager();
+      serialization::ModuleFile *MF = Manager.lookupByFileName(Filename);
+      assert(MF && "module file missing in visitModuleFile");
+      // Match MODULE_DIRECTORY: allow full search and ignore failure to find
+      // the module.
+      HeaderSearch &HS = Reader.getPreprocessor().getHeaderSearchInfo();
+      (void)HS.lookupModule(MF->ModuleName, SourceLocation(),
+                            /*AllowSearch=*/true,
+                            /*AllowExtraModuleMapSearch=*/true);
+    }
   }
 
 private:
-  Preprocessor &PP;
-  bool PCHFinished = false;
+  ASTReader &Reader;
 };
 } // namespace
 
@@ -317,20 +322,14 @@ Error IncludeTreeActionController::initialize(
 
   // Attach callbacks for the IncludeTree of the TU. The preprocessor
   // does not exist yet, so we need to indirect this via DependencyCollector.
-  auto DC = std::make_shared<PPCallbacksDependencyCollector>(
+  auto DC = std::make_shared<AttachOnlyDependencyCollector>(
       [&Builder = current()](Preprocessor &PP) {
         return std::make_unique<IncludeTreePPCallbacks>(Builder, PP);
+      },
+      [](ASTReader &R) {
+        return std::make_unique<LookupPCHModulesListener>(R);
       });
   ScanInstance.addDependencyCollector(std::move(DC));
-
-  // Attach callback for modules loaded via PCH.
-  if (!ScanInstance.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
-    auto DC = std::make_shared<ASTReaderListenerDependencyCollector>(
-      [&](ASTReader &R) {
-        return std::make_unique<LookupPCHModulesListener>(R.getPreprocessor());
-      });
-    ScanInstance.addDependencyCollector(std::move(DC));
-  }
 
   // Enable caching in the resulting commands.
   ScanInstance.getFrontendOpts().CacheCompileJob = true;
@@ -367,9 +366,12 @@ Error IncludeTreeActionController::initializeModuleBuild(
 
   // Attach callbacks for the IncludeTree of the module. The preprocessor
   // does not exist yet, so we need to indirect this via DependencyCollector.
-  auto DC = std::make_shared<PPCallbacksDependencyCollector>(
+  auto DC = std::make_shared<AttachOnlyDependencyCollector>(
       [&Builder = current()](Preprocessor &PP) {
         return std::make_unique<IncludeTreePPCallbacks>(Builder, PP);
+      },
+      [](ASTReader &R) {
+        return std::make_unique<LookupPCHModulesListener>(R);
       });
   ModuleScanInstance.addDependencyCollector(std::move(DC));
 
