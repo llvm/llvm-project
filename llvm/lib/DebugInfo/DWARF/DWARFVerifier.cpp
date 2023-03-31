@@ -868,8 +868,10 @@ void DWARFVerifier::verifyDebugLineRows() {
       continue;
 
     // Verify prologue.
+    bool isDWARF5 = LineTable->Prologue.getVersion() >= 5;
     uint32_t MaxDirIndex = LineTable->Prologue.IncludeDirectories.size();
-    uint32_t FileIndex = 1;
+    uint32_t MinFileIndex = isDWARF5 ? 0 : 1;
+    uint32_t FileIndex = MinFileIndex;
     StringMap<uint16_t> FullPathMap;
     for (const auto &FileName : LineTable->Prologue.FileNames) {
       // Verify directory index.
@@ -927,12 +929,11 @@ void DWARFVerifier::verifyDebugLineRows() {
       // Verify file index.
       if (!LineTable->hasFileAtIndex(Row.File)) {
         ++NumDebugLineErrors;
-        bool isDWARF5 = LineTable->Prologue.getVersion() >= 5;
         error() << ".debug_line["
                 << format("0x%08" PRIx64,
                           *toSectionOffset(Die.find(DW_AT_stmt_list)))
                 << "][" << RowIndex << "] has invalid file index " << Row.File
-                << " (valid values are [" << (isDWARF5 ? "0," : "1,")
+                << " (valid values are [" << MinFileIndex << ','
                 << LineTable->Prologue.FileNames.size()
                 << (isDWARF5 ? ")" : "]") << "):\n";
         DWARFDebugLine::Row::dumpTableHeader(OS, 0);
