@@ -488,7 +488,9 @@ amd_comgr_get_isa_name(
  * @brief Get a handle to the metadata of an isa name.
  *
  * The structure of the returned metadata is isa name specific and versioned
- * with details specified in README.md. It can include information about the
+ * with details specified in
+ * https://llvm.org/docs/AMDGPUUsage.html#code-object-metadata.
+ * It can include information about the
  * limits for resources such as registers and memory addressing.
  *
  * @param[in] isa_name The isa name to query.
