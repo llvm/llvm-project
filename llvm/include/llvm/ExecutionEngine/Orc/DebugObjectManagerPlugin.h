@@ -47,8 +47,22 @@ class DebugObject;
 ///
 class DebugObjectManagerPlugin : public ObjectLinkingLayer::Plugin {
 public:
+  // DEPRECATED - Please specify options explicitly
   DebugObjectManagerPlugin(ExecutionSession &ES,
                            std::unique_ptr<DebugObjectRegistrar> Target);
+
+  /// Create the plugin to submit DebugObjects for JITLink artifacts. For all
+  /// options the recommended setting is true.
+  ///
+  /// RequireDebugSections:
+  ///   Submit debug objects to the executor only if they contain actual debug
+  ///   info. Turning this off may allow minimal debugging based on raw symbol
+  ///   names. Note that this may cause significant memory and transport
+  ///   overhead for objects built with a release configuration.
+  ///
+  DebugObjectManagerPlugin(ExecutionSession &ES,
+                           std::unique_ptr<DebugObjectRegistrar> Target,
+                           bool RequireDebugSections);
   ~DebugObjectManagerPlugin();
 
   void notifyMaterializing(MaterializationResponsibility &MR,
@@ -77,6 +91,7 @@ private:
   std::mutex RegisteredObjsLock;
 
   std::unique_ptr<DebugObjectRegistrar> Target;
+  bool RequireDebugSections;
 };
 
 } // namespace orc
