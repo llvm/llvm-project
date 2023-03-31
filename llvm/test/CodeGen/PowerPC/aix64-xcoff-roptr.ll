@@ -1,14 +1,14 @@
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mroptr < %s | FileCheck %s
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mroptr -filetype=obj -o %t.o < %s
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mxcoff-roptr < %s | FileCheck %s
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mxcoff-roptr -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -t --symbol-description %t.o | FileCheck %s --check-prefix=OBJ
 
-; RUN: not llc -mtriple powerpc64-ibm-aix-xcoff -mroptr -data-sections=false \
+; RUN: not llc -mtriple powerpc64-ibm-aix-xcoff -mxcoff-roptr -data-sections=false \
 ; RUN: < %s 2>&1 | FileCheck %s --check-prefix=DS_ERR
-; RUN: not llc -mtriple powerpc64le-unknown-linux-gnu -mroptr \
+; RUN: not llc -mtriple powerpc64le-unknown-linux-gnu -mxcoff-roptr \
 ; RUN: < %s 2>&1 | FileCheck %s --check-prefix=OS_ERR
 
-; DS_ERR: -mroptr option must be used with -data-sections
-; OS_ERR: -mroptr option is only supported on AIX
+; DS_ERR: -mxcoff-roptr option must be used with -data-sections
+; OS_ERR: -mxcoff-roptr option is only supported on AIX
 
 %union.U = type { %"struct.U::A" }
 %"struct.U::A" = type { ptr }
