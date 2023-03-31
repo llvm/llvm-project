@@ -369,11 +369,10 @@ Error ELFDebugObject::recordSection(
     StringRef Name, std::unique_ptr<ELFDebugObjectSection<ELFT>> Section) {
   if (Error Err = Section->validateInBounds(this->getBuffer(), Name.data()))
     return Err;
-  auto ItInserted = Sections.try_emplace(Name, std::move(Section));
-  if (!ItInserted.second)
+  bool Inserted = Sections.try_emplace(Name, std::move(Section)).second;
+  if (!Inserted)
     LLVM_DEBUG(dbgs() << "Skipping debug registration for section '" << Name
-                      << "' "
-                      << "in object " << Buffer->getBufferIdentifier()
+                      << "' in object " << Buffer->getBufferIdentifier()
                       << " (duplicate name)\n");
   return Error::success();
 }
