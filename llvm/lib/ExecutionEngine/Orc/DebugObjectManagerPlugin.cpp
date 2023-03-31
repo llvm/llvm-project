@@ -66,20 +66,9 @@ private:
 
 template <typename ELFT>
 void ELFDebugObjectSection<ELFT>::setTargetMemoryRange(SectionRange Range) {
-  // Only patch load-addresses for executable and data sections.
-  if (isTextOrDataSection())
-    Header->sh_addr =
-        static_cast<typename ELFT::uint>(Range.getStart().getValue());
-}
-
-template <typename ELFT>
-bool ELFDebugObjectSection<ELFT>::isTextOrDataSection() const {
-  switch (Header->sh_type) {
-  case ELF::SHT_PROGBITS:
-  case ELF::SHT_X86_64_UNWIND:
-    return Header->sh_flags & (ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
-  }
-  return false;
+  // All recorded sections are candidates for load-address patching.
+  Header->sh_addr =
+      static_cast<typename ELFT::uint>(Range.getStart().getValue());
 }
 
 template <typename ELFT>
@@ -289,6 +278,10 @@ ELFDebugObject::CreateArchType(MemoryBufferRef Buffer,
       continue;
     HasDwarfSection |= isDwarfSection(*Name);
 
+    // Only record text and data sections (i.e. no bss, comments, rel, etc.)
+    if (Header.sh_type != ELF::SHT_PROGBITS &&
+        Header.sh_type != ELF::SHT_X86_64_UNWIND)
+      continue;
     if (!(Header.sh_flags & ELF::SHF_ALLOC))
       continue;
 
