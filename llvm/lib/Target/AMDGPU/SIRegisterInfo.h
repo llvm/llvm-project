@@ -170,6 +170,9 @@ public:
   LLVM_READONLY
   const TargetRegisterClass *getVGPRClassForBitWidth(unsigned BitWidth) const;
 
+  LLVM_READONLY const TargetRegisterClass *
+  getAlignedLo256VGPRClassForBitWidth(unsigned BitWidth) const;
+
   LLVM_READONLY
   const TargetRegisterClass *getAGPRClassForBitWidth(unsigned BitWidth) const;
 

@@ -2,7 +2,7 @@
 ; -regalloc=fast just makes the test run faster
 ; RUN: llc -march=amdgcn -mcpu=gfx1210 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX1210
 
-define internal void @use256vgprs() {
+define internal void @use256vgprs_asm() {
   %v0 = call i32 asm sideeffect "; def $0", "=v"()
   %v1 = call i32 asm sideeffect "; def $0", "=v"()
   %v2 = call i32 asm sideeffect "; def $0", "=v"()
@@ -518,7 +518,7 @@ define internal void @use256vgprs() {
   ret void
 }
 
-define internal void @use512vgprs() {
+define internal void @use512vgprs_asm() {
   %v0 = call <32 x i32> asm sideeffect "; def $0", "=v"()
   %v1 = call <32 x i32> asm sideeffect "; def $0", "=v"()
   %v2 = call <32 x i32> asm sideeffect "; def $0", "=v"()
@@ -527,7 +527,7 @@ define internal void @use512vgprs() {
   %v5 = call <32 x i32> asm sideeffect "; def $0", "=v"()
   %v6 = call <32 x i32> asm sideeffect "; def $0", "=v"()
   %v7 = call <32 x i32> asm sideeffect "; def $0", "=v"()
-  call void @use256vgprs()
+  call void @use256vgprs_asm()
   call void asm sideeffect "; use $0", "v"(<32 x i32> %v0)
   call void asm sideeffect "; use $0", "v"(<32 x i32> %v1)
   call void asm sideeffect "; use $0", "v"(<32 x i32> %v2)
@@ -539,18 +539,20 @@ define internal void @use512vgprs() {
   ret void
 }
 
-define void @foo() #0 {
-  ret void
-}
-
-attributes #0 = { noinline }
-
-; GCN-LABEL: {{^}}k256_w1_no_agprs:
-; GFX1210: NumVgprs: 512
+; GCN-LABEL: {{^}}k256_w1_asm:
+; GCN-DAG: def v[224:255]
+; GCN-DAG: def v[192:223]
+; GCN-DAG: def v[160:191]
+; GCN-DAG: def v[128:159]
+; GCN-DAG: def v[96:127]
+; GCN-DAG: def v[64:95]
+; GCN-DAG: def v[32:63]
+; GCN-DAG: def v[0:31]
+; GFX1210: NumVgprs: 256
 ; GFX1210-NOT: NumAgprs:
 ; GFX1210-NOT: TotalNumVgprs:
-define amdgpu_kernel void @k256_w1_no_agprs() #2561 {
-  call void @use512vgprs()
+define amdgpu_kernel void @k256_w1_asm() #2561 {
+  call void @use512vgprs_asm()
   ret void
 }
 
