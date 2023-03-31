@@ -3,6 +3,11 @@
 module {
   // CHECK: @no_spec
   func.func @no_spec() {
+    // CHECK: alignment = 8
+    // CHECK: alloca_memory_space = 0
+    // CHECK: bitsize = 64
+    // CHECK: preferred = 8
+    // CHECK: size = 8
     "test.data_layout_query"() : () -> !llvm.ptr
     // CHECK: alignment = 8
     // CHECK: alloca_memory_space = 0

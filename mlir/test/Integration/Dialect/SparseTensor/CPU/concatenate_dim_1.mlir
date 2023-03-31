@@ -1,8 +1,9 @@
 // DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{run_option} =
 // DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
 // DEFINE: %{run} = mlir-cpu-runner \
 // DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext %{run_option} | \
 // DEFINE: FileCheck %s
 //
 // RUN: %{compile} | %{run}
@@ -11,20 +12,11 @@
 // REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
 // RUN: %{compile} | %{run}
 //
-// Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// Do the same run, but now with direct IR generation and vectorization. Enable
+// Arm SVE if supported.
+// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=4 enable-arm-sve=%ENABLE_VLA reassociate-fp-reductions=true enable-index-optimizations=true"
+// REDEFINE: %{run_option} = %VLA_ARCH_ATTR_OPTIONS
 // RUN: %{compile} | %{run}
-
-// Do the same run, but now with direct IR generation and, if available, VLA
-// vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
-// REDEFINE: %{run} = %lli \
-// REDEFINE:   --entry-function=entry_lli \
-// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
-// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
-// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext --dlopen=%mlir_lib_dir/libmlir_runner_utils%shlibext | \
-// REDEFINE: FileCheck %s
-// RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
 #MAT_C_C = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
 #MAT_D_C = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>

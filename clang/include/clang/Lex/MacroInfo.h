@@ -206,7 +206,7 @@ public:
   void setIsGNUVarargs() { IsGNUVarargs = true; }
   bool isC99Varargs() const { return IsC99Varargs; }
   bool isGNUVarargs() const { return IsGNUVarargs; }
-  bool isVariadic() const { return IsC99Varargs | IsGNUVarargs; }
+  bool isVariadic() const { return IsC99Varargs || IsGNUVarargs; }
 
   /// Return true if this macro requires processing before expansion.
   ///

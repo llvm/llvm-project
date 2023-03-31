@@ -1492,10 +1492,11 @@ inline bool CheckGlobalCtor(InterpState &S, CodePtr &PC) {
 }
 
 inline bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
-  auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
-  Pointer ThisPtr;
   if (Func->hasThisPointer()) {
-    ThisPtr = NewFrame->getThis();
+    size_t ThisOffset =
+        Func->getArgSize() + (Func->hasRVO() ? primSize(PT_Ptr) : 0);
+    const Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
+
     if (!CheckInvoke(S, PC, ThisPtr))
       return false;
 
@@ -1506,6 +1507,7 @@ inline bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
   if (!CheckCallable(S, PC, Func))
     return false;
 
+  auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 

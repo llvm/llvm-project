@@ -434,7 +434,7 @@ template <class _Op, class _A0>
 struct _UnaryOp
 {
     typedef typename _Op::__result_type __result_type;
-    typedef typename decay<__result_type>::type value_type;
+    using value_type = __decay_t<__result_type>;
 
     _Op __op_;
     _A0 __a0_;
@@ -453,7 +453,7 @@ template <class _Op, class _A0, class _A1>
 struct _BinaryOp
 {
     typedef typename _Op::__result_type __result_type;
-    typedef typename decay<__result_type>::type value_type;
+    using value_type = __decay_t<__result_type>;
 
     _Op __op_;
     _A0 __a0_;
@@ -1117,7 +1117,7 @@ template <class _Op, class _Tp>
 struct _UnaryOp<_Op, valarray<_Tp> >
 {
     typedef typename _Op::__result_type __result_type;
-    typedef typename decay<__result_type>::type value_type;
+    using value_type = __decay_t<__result_type>;
 
     _Op __op_;
     const valarray<_Tp>& __a0_;
@@ -1136,7 +1136,7 @@ template <class _Op, class _Tp, class _A1>
 struct _BinaryOp<_Op, valarray<_Tp>, _A1>
 {
     typedef typename _Op::__result_type __result_type;
-    typedef typename decay<__result_type>::type value_type;
+    using value_type = __decay_t<__result_type>;
 
     _Op __op_;
     const valarray<_Tp>& __a0_;
@@ -1157,7 +1157,7 @@ template <class _Op, class _A0, class _Tp>
 struct _BinaryOp<_Op, _A0, valarray<_Tp> >
 {
     typedef typename _Op::__result_type __result_type;
-    typedef typename decay<__result_type>::type value_type;
+    using value_type = __decay_t<__result_type>;
 
     _Op __op_;
     _A0 __a0_;
@@ -1178,7 +1178,7 @@ template <class _Op, class _Tp>
 struct _BinaryOp<_Op, valarray<_Tp>, valarray<_Tp> >
 {
     typedef typename _Op::__result_type __result_type;
-    typedef typename decay<__result_type>::type value_type;
+    using value_type = __decay_t<__result_type>;
 
     _Op __op_;
     const valarray<_Tp>& __a0_;

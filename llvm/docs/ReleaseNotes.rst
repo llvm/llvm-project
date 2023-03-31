@@ -122,9 +122,9 @@ Changes to the MIPS Backend
 Changes to the PowerPC Backend
 ------------------------------
 
-* A new option ``-mroptr`` is added to ``clang`` and ``llc``. When this option
-  is present, constant objects with relocatable address values are put into the
-  RO data section. This option should be used with the ``-fdata-sections``
+* A new option ``-mxcoff-roptr`` is added to ``clang`` and ``llc``. When this
+  option is present, constant objects with relocatable address values are put
+  into the RO data section. This option should be used with the ``-fdata-sections``
   option, and is not supported with ``-fno-data-sections``. The option is
   only supported on AIX.
 * On AIX, teach the profile runtime to check for a build-id string; such string
@@ -153,6 +153,9 @@ Changes to the RISC-V Backend
 * Assembler support for RV64E was added.
 * Assembler support was added for the experimental Zicond (integer conditional
   operations) extension.
+* I, F, D, and A extension versions have been update to the 20191214 spec versions.
+  New version I2.1, F2.2, D2.2, A2.1. This should not impact code generation.
+  Immpacts versions accepted in ``-march`` and reported in ELF attributes.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -235,6 +238,20 @@ Changes to LLDB
 
 Changes to Sanitizers
 ---------------------
+* For Darwin users that override weak symbols, note that the dynamic linker will
+  only consider symbols in other mach-o modules which themselves contain at
+  least one weak symbol. A consequence is that if your program or dylib contains
+  an intended override of a weak symbol, then it must contain at least one weak
+  symbol as well for the override to be effective. That weak symbol may be the
+  intended override itself, an otherwise usused weak symbol added solely to meet
+  the requirement, or an existing but unrelated weak symbol.
+
+    Examples:
+      __attribute__((weak)) const char * __asan_default_options(void) {...}
+
+      __attribute__((weak,unused)) unsigned __enableOverrides;
+      
+      __attribute__((weak)) bool unrelatedWeakFlag;
 
 Other Changes
 -------------

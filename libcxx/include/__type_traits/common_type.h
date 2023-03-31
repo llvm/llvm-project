@@ -49,9 +49,9 @@ struct __common_type2_imp {};
 template <class _Tp, class _Up>
 struct __common_type2_imp<_Tp, _Up, __void_t<decltype(true ? std::declval<_Tp>() : std::declval<_Up>())> >
 {
-  typedef _LIBCPP_NODEBUG typename decay<decltype(
+  typedef _LIBCPP_NODEBUG __decay_t<decltype(
                          true ? std::declval<_Tp>() : std::declval<_Up>()
-                         )>::type type;
+                         )> type;
 };
 
 template <class, class = void>
@@ -109,9 +109,9 @@ struct _LIBCPP_TEMPLATE_VIS common_type<_Tp>
 template <class _Tp, class _Up>
 struct _LIBCPP_TEMPLATE_VIS common_type<_Tp, _Up>
     : conditional<
-        _IsSame<_Tp, typename decay<_Tp>::type>::value && _IsSame<_Up, typename decay<_Up>::type>::value,
+        _IsSame<_Tp, __decay_t<_Tp> >::value && _IsSame<_Up, __decay_t<_Up> >::value,
         __common_type2_imp<_Tp, _Up>,
-        common_type<typename decay<_Tp>::type, typename decay<_Up>::type>
+        common_type<__decay_t<_Tp>, __decay_t<_Up> >
     >::type
 {};
 

@@ -7353,12 +7353,8 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
   // more pieces using a smaller bit width.
   if (HalfMaxPlus1.urem(Divisor).isOne()) {
     assert(!LL == !LH && "Expected both input halves or no input halves!");
-    if (!LL) {
-      LL = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HiLoVT, N->getOperand(0),
-                       DAG.getIntPtrConstant(0, dl));
-      LH = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HiLoVT, N->getOperand(0),
-                       DAG.getIntPtrConstant(1, dl));
-    }
+    if (!LL)
+      std::tie(LL, LH) = DAG.SplitScalar(N->getOperand(0), dl, HiLoVT, HiLoVT);
 
     // Shift the input by the number of TrailingZeros in the divisor. The
     // shifted out bits will be added to the remainder later.
@@ -7432,10 +7428,8 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
                                    DAG.getConstant(MulFactor, dl, VT));
 
     // Split the quotient into low and high parts.
-    SDValue QuotL = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HiLoVT, Quotient,
-                                DAG.getIntPtrConstant(0, dl));
-    SDValue QuotH = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HiLoVT, Quotient,
-                                DAG.getIntPtrConstant(1, dl));
+    SDValue QuotL, QuotH;
+    std::tie(QuotL, QuotH) = DAG.SplitScalar(Quotient, dl, HiLoVT, HiLoVT);
     Result.push_back(QuotL);
     Result.push_back(QuotH);
   }

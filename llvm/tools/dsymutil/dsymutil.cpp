@@ -14,6 +14,7 @@
 #include "BinaryHolder.h"
 #include "CFBundle.h"
 #include "DebugMap.h"
+#include "DwarfLinkerForBinary.h"
 #include "LinkUtils.h"
 #include "MachOUtils.h"
 #include "Reproducer.h"
@@ -94,7 +95,14 @@ enum class DWARFVerify : uint8_t {
   None = 0,
   Input = 1 << 0,
   Output = 1 << 1,
+  OutputOnValidInput = 1 << 2,
   All = Input | Output,
+  Auto = Input | OutputOnValidInput,
+#if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
+  Default = Auto
+#else
+  Default = None
+#endif
 };
 
 inline bool flagIsSet(DWARFVerify Flags, DWARFVerify SingleFlag) {
@@ -115,7 +123,7 @@ struct DsymutilOptions {
   std::vector<std::string> Archs;
   std::vector<std::string> InputFiles;
   unsigned NumThreads;
-  DWARFVerify Verify = DWARFVerify::None;
+  DWARFVerify Verify = DWARFVerify::Default;
   ReproducerMode ReproMode = ReproducerMode::GenerateOnCrash;
   dsymutil::LinkOptions LinkOpts;
 };
@@ -266,14 +274,16 @@ static Expected<DWARFVerify> getVerifyKind(opt::InputArgList &Args) {
       return DWARFVerify::Output;
     if (S == "all")
       return DWARFVerify::All;
+    if (S == "auto")
+      return DWARFVerify::Auto;
     if (S == "none")
       return DWARFVerify::None;
-    return make_error<StringError>(
-        "invalid verify type specified: '" + S +
-            "'. Supported values are 'input', 'output', 'all' and 'none'.",
-        inconvertibleErrorCode());
+    return make_error<StringError>("invalid verify type specified: '" + S +
+                                       "'. Supported values are 'none', "
+                                       "'input', 'output', 'all' and 'auto'.",
+                                   inconvertibleErrorCode());
   }
-  return DWARFVerify::None;
+  return DWARFVerify::Default;
 }
 
 /// Parses the command line options into the LinkOptions struct and performs
@@ -461,10 +471,18 @@ static Error createBundleDir(StringRef BundleBase) {
   return Error::success();
 }
 
-static bool verifyOutput(StringRef OutputFile, StringRef Arch, bool Verbose) {
+static bool verifyOutput(StringRef OutputFile, StringRef Arch,
+                         DsymutilOptions Options) {
+
   if (OutputFile == "-") {
     WithColor::warning() << "verification skipped for " << Arch
-                         << "because writing to stdout.\n";
+                         << " because writing to stdout.\n";
+    return true;
+  }
+
+  if (Options.LinkOpts.NoOutput) {
+    WithColor::warning() << "verification skipped for " << Arch
+                         << " because --no-output was passed.\n";
     return true;
   }
 
@@ -476,9 +494,14 @@ static bool verifyOutput(StringRef OutputFile, StringRef Arch, bool Verbose) {
 
   Binary &Binary = *BinOrErr.get().getBinary();
   if (auto *Obj = dyn_cast<MachOObjectFile>(&Binary)) {
-    raw_ostream &os = Verbose ? errs() : nulls();
-    os << "Verifying DWARF for architecture: " << Arch << "\n";
     std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(*Obj);
+    if (DICtx->getMaxVersion() >= 5) {
+      WithColor::warning() << "verification skipped for " << Arch
+                           << " because DWARFv5 is not fully supported yet.\n";
+      return true;
+    }
+    raw_ostream &os = Options.LinkOpts.Verbose ? errs() : nulls();
+    os << "Verifying DWARF for architecture: " << Arch << "\n";
     DIDumpOptions DumpOpts;
     bool success = DICtx->verify(os, DumpOpts.noImplicitRecursion());
     if (!success)
@@ -687,12 +710,6 @@ int main(int argc, char **argv) {
     const bool NeedsTempFiles =
         !Options.DumpDebugMap && (Options.OutputFile != "-") &&
         (DebugMapPtrsOrErr->size() != 1 || Options.LinkOpts.Update);
-    bool VerifyOutput = flagIsSet(Options.Verify, DWARFVerify::Output);
-    if (VerifyOutput && Options.LinkOpts.NoOutput) {
-      WithColor::warning()
-          << "skipping output verification because --no-output was passed\n";
-      VerifyOutput = false;
-    }
 
     // Set up a crash recovery context.
     CrashRecoveryContext::Enable();
@@ -751,14 +768,15 @@ int main(int argc, char **argv) {
         }
 
         auto LinkLambda = [&,
-                           OutputFile](std::shared_ptr<raw_fd_ostream> Stream,
-                                       LinkOptions Options) {
-          AllOK.fetch_and(
-              linkDwarf(*Stream, BinHolder, *Map, std::move(Options)));
+                           OutputFile](std::shared_ptr<raw_fd_ostream> Stream) {
+          DwarfLinkerForBinary Linker(*Stream, BinHolder, Options.LinkOpts);
+          AllOK.fetch_and(Linker.link(*Map));
           Stream->flush();
-          if (VerifyOutput) {
+          if (flagIsSet(Options.Verify, DWARFVerify::Output) ||
+              (flagIsSet(Options.Verify, DWARFVerify::OutputOnValidInput) &&
+               !Linker.InputVerificationFailed())) {
             AllOK.fetch_and(verifyOutput(
-                OutputFile, Map->getTriple().getArchName(), Options.Verbose));
+                OutputFile, Map->getTriple().getArchName(), Options));
           }
         };
 
@@ -766,9 +784,9 @@ int main(int argc, char **argv) {
         // out the (significantly smaller) stack when using threads. We don't
         // want this limitation when we only have a single thread.
         if (S.ThreadsRequested == 1)
-          LinkLambda(OS, Options.LinkOpts);
+          LinkLambda(OS);
         else
-          Threads.async(LinkLambda, OS, Options.LinkOpts);
+          Threads.async(LinkLambda, OS);
       }
 
       Threads.wait();

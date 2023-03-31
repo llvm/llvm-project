@@ -1878,13 +1878,13 @@ void AMDGPUTargetLowering::LowerUDIVREM64(SDValue Op,
   SDValue Zero = DAG.getConstant(0, DL, HalfVT);
 
   //HiLo split
+  SDValue LHS_Lo, LHS_Hi;
   SDValue LHS = Op.getOperand(0);
-  SDValue LHS_Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, LHS, Zero);
-  SDValue LHS_Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, LHS, One);
+  std::tie(LHS_Lo, LHS_Hi) = DAG.SplitScalar(LHS, DL, HalfVT, HalfVT);
 
+  SDValue RHS_Lo, RHS_Hi;
   SDValue RHS = Op.getOperand(1);
-  SDValue RHS_Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, RHS, Zero);
-  SDValue RHS_Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, RHS, One);
+  std::tie(RHS_Lo, RHS_Hi) = DAG.SplitScalar(RHS, DL, HalfVT, HalfVT);
 
   if (DAG.MaskedValueIsZero(RHS, APInt::getHighBitsSet(64, 32)) &&
       DAG.MaskedValueIsZero(LHS, APInt::getHighBitsSet(64, 32))) {
@@ -1942,10 +1942,9 @@ void AMDGPUTargetLowering::LowerUDIVREM64(SDValue Op,
     SDValue Neg_RHS = DAG.getNode(ISD::SUB, DL, VT, Zero64, RHS);
     SDValue Mullo1 = DAG.getNode(ISD::MUL, DL, VT, Neg_RHS, Rcp64);
     SDValue Mulhi1 = DAG.getNode(ISD::MULHU, DL, VT, Rcp64, Mullo1);
-    SDValue Mulhi1_Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, Mulhi1,
-                                    Zero);
-    SDValue Mulhi1_Hi =
-        DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, Mulhi1, One);
+    SDValue Mulhi1_Lo, Mulhi1_Hi;
+    std::tie(Mulhi1_Lo, Mulhi1_Hi) =
+        DAG.SplitScalar(Mulhi1, DL, HalfVT, HalfVT);
     SDValue Add1_Lo = DAG.getNode(ISD::ADDCARRY, DL, HalfCarryVT, Rcp_Lo,
                                   Mulhi1_Lo, Zero1);
     SDValue Add1_Hi = DAG.getNode(ISD::ADDCARRY, DL, HalfCarryVT, Rcp_Hi,
@@ -1956,10 +1955,9 @@ void AMDGPUTargetLowering::LowerUDIVREM64(SDValue Op,
     // Second round of UNR.
     SDValue Mullo2 = DAG.getNode(ISD::MUL, DL, VT, Neg_RHS, Add1);
     SDValue Mulhi2 = DAG.getNode(ISD::MULHU, DL, VT, Add1, Mullo2);
-    SDValue Mulhi2_Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, Mulhi2,
-                                    Zero);
-    SDValue Mulhi2_Hi =
-        DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, Mulhi2, One);
+    SDValue Mulhi2_Lo, Mulhi2_Hi;
+    std::tie(Mulhi2_Lo, Mulhi2_Hi) =
+        DAG.SplitScalar(Mulhi2, DL, HalfVT, HalfVT);
     SDValue Add2_Lo = DAG.getNode(ISD::ADDCARRY, DL, HalfCarryVT, Add1_Lo,
                                   Mulhi2_Lo, Zero1);
     SDValue Add2_Hi = DAG.getNode(ISD::ADDCARRY, DL, HalfCarryVT, Add1_Hi,
@@ -1971,8 +1969,8 @@ void AMDGPUTargetLowering::LowerUDIVREM64(SDValue Op,
 
     SDValue Mul3 = DAG.getNode(ISD::MUL, DL, VT, RHS, Mulhi3);
 
-    SDValue Mul3_Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, Mul3, Zero);
-    SDValue Mul3_Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, Mul3, One);
+    SDValue Mul3_Lo, Mul3_Hi;
+    std::tie(Mul3_Lo, Mul3_Hi) = DAG.SplitScalar(Mul3, DL, HalfVT, HalfVT);
     SDValue Sub1_Lo = DAG.getNode(ISD::SUBCARRY, DL, HalfCarryVT, LHS_Lo,
                                   Mul3_Lo, Zero1);
     SDValue Sub1_Hi = DAG.getNode(ISD::SUBCARRY, DL, HalfCarryVT, LHS_Hi,

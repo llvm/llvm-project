@@ -46,7 +46,7 @@ struct __compressed_pair_elem {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem(__default_init_tag) {}
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem(__value_init_tag) : __value_() {}
 
-  template <class _Up, class = __enable_if_t<!is_same<__compressed_pair_elem, typename decay<_Up>::type>::value> >
+  template <class _Up, class = __enable_if_t<!is_same<__compressed_pair_elem, __decay_t<_Up> >::value> >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
   explicit __compressed_pair_elem(_Up&& __u) : __value_(std::forward<_Up>(__u)) {}
 
@@ -75,7 +75,7 @@ struct __compressed_pair_elem<_Tp, _Idx, true> : private _Tp {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem(__default_init_tag) {}
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem(__value_init_tag) : __value_type() {}
 
-  template <class _Up, class = __enable_if_t<!is_same<__compressed_pair_elem, typename decay<_Up>::type>::value> >
+  template <class _Up, class = __enable_if_t<!is_same<__compressed_pair_elem, __decay_t<_Up> >::value> >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
   explicit __compressed_pair_elem(_Up&& __u) : __value_type(std::forward<_Up>(__u)) {}
 

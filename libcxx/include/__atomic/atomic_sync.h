@@ -65,7 +65,7 @@ template <class _Atp, class _Fn>
 _LIBCPP_AVAILABILITY_SYNC
 _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_wait(_Atp* __a, _Fn && __test_fn)
 {
-    __libcpp_atomic_wait_backoff_impl<_Atp, typename decay<_Fn>::type> __backoff_fn = {__a, __test_fn};
+    __libcpp_atomic_wait_backoff_impl<_Atp, __decay_t<_Fn> > __backoff_fn = {__a, __test_fn};
     return std::__libcpp_thread_poll_with_backoff(__test_fn, __backoff_fn);
 }
 

@@ -3173,6 +3173,13 @@ public:
                                           Expr *Sub,
                                           SourceLocation RParenLoc,
                                           bool ListInitialization) {
+    // If Sub is a ParenListExpr, then Sub is the syntatic form of a
+    // CXXParenListInitExpr. Pass its expanded arguments so that the
+    // CXXParenListInitExpr can be rebuilt.
+    if (auto *PLE = dyn_cast<ParenListExpr>(Sub))
+      return getSema().BuildCXXTypeConstructExpr(
+          TInfo, LParenLoc, MultiExprArg(PLE->getExprs(), PLE->getNumExprs()),
+          RParenLoc, ListInitialization);
     return getSema().BuildCXXTypeConstructExpr(TInfo, LParenLoc,
                                                MultiExprArg(&Sub, 1), RParenLoc,
                                                ListInitialization);
@@ -3900,16 +3907,6 @@ public:
   ExprResult RebuildEmptyCXXFoldExpr(SourceLocation EllipsisLoc,
                                      BinaryOperatorKind Operator) {
     return getSema().BuildEmptyCXXFoldExpr(EllipsisLoc, Operator);
-  }
-
-  ExprResult RebuildCXXParenListInitExpr(ArrayRef<Expr *> Args, QualType T,
-                                         unsigned NumUserSpecifiedExprs,
-                                         SourceLocation InitLoc,
-                                         SourceLocation LParenLoc,
-                                         SourceLocation RParenLoc) {
-    return CXXParenListInitExpr::Create(getSema().Context, Args, T,
-                                        NumUserSpecifiedExprs, InitLoc,
-                                        LParenLoc, RParenLoc);
   }
 
   /// Build a new atomic operation expression.
@@ -14134,9 +14131,8 @@ TreeTransform<Derived>::TransformCXXParenListInitExpr(CXXParenListInitExpr *E) {
                      TransformedInits))
     return ExprError();
 
-  return getDerived().RebuildCXXParenListInitExpr(
-      TransformedInits, E->getType(), E->getUserSpecifiedInitExprs().size(),
-      E->getInitLoc(), E->getBeginLoc(), E->getEndLoc());
+  return getDerived().RebuildParenListExpr(E->getBeginLoc(), TransformedInits,
+                                           E->getEndLoc());
 }
 
 template<typename Derived>

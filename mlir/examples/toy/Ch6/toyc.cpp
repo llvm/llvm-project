@@ -215,7 +215,21 @@ int dumpLLVMIR(mlir::ModuleOp module) {
   // Initialize LLVM targets.
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
-  mlir::ExecutionEngine::setupTargetTriple(llvmModule.get());
+
+  // Configure the LLVM Module
+  auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
+  if (!tmBuilderOrError) {
+    llvm::errs() << "Could not create JITTargetMachineBuilder\n";
+    return -1;
+  }
+
+  auto tmOrError = tmBuilderOrError->createTargetMachine();
+  if (!tmOrError) {
+    llvm::errs() << "Could not create TargetMachine\n";
+    return -1;
+  }
+  mlir::ExecutionEngine::setupTargetTripleAndDataLayout(llvmModule.get(),
+                                                        tmOrError.get().get());
 
   /// Optionally run an optimization pipeline over the llvm module.
   auto optPipeline = mlir::makeOptimizingTransformer(

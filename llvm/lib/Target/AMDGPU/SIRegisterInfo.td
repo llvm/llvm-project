@@ -774,7 +774,7 @@ def SReg_LO16 : SIRegisterClass<"AMDGPU", [i16, f16], 16,
    SRC_PRIVATE_LIMIT_HI_LO16, SRC_POPS_EXITING_WAVE_ID_LO16, SRC_VCCZ_LO16,
    SRC_EXECZ_LO16, SRC_SCC_LO16, EXEC_LO_LO16, EXEC_HI_LO16, M0_CLASS_LO16)> {
   let Size = 16;
-  let AllocationPriority = 0;
+  let isAllocatable = 0;
   let BaseClassOrder = 16;
 }
 

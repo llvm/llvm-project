@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(DWARFLinkerParallelTests
   DWARFLinkerTest.cpp
+  StringPoolTest.cpp
   )
 
 target_link_libraries(DWARFLinkerParallelTests PRIVATE LLVMTestingSupport)
