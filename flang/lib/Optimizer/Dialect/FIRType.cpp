@@ -403,13 +403,9 @@ void fir::printFirType(FIROpsDialect *, mlir::Type ty,
 }
 
 bool fir::isa_unknown_size_box(mlir::Type t) {
-  if (auto boxTy = t.dyn_cast<fir::BoxType>()) {
-    auto eleTy = boxTy.getEleTy();
-    if (auto actualEleTy = fir::dyn_cast_ptrEleTy(eleTy))
-      eleTy = actualEleTy;
-    if (eleTy.isa<mlir::NoneType>())
-      return true;
-    if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>())
+  if (auto boxTy = t.dyn_cast<fir::BaseBoxType>()) {
+    auto valueType = fir::unwrapPassByRefType(boxTy);
+    if (auto seqTy = valueType.dyn_cast<fir::SequenceType>())
       if (seqTy.hasUnknownShape())
         return true;
   }
