@@ -1,1 +1,3 @@
-RUN: llvm-mc -disassemble %s
+# Test that llvm-mc doesn't crash when disassembling a line that ends with a
+# space.
+RUN: echo -n ' ' | llvm-mc -disassemble
