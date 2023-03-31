@@ -725,7 +725,6 @@ public:
         builder.createTemporary(loc, boxType, /*shape=*/mlir::ValueRange{});
     mlir::Value nullBox = builder.create<fir::EmboxOp>(loc, boxType, nullConst);
     builder.create<fir::StoreOp>(loc, nullBox, tempBox);
-    auto nullBoxTy = builder.getRefType(fir::BoxType::get(noneTy));
     return fir::MutableBoxValue(tempBox,
                                 /*lenParameters=*/mlir::ValueRange{},
                                 /*mutableProperties=*/{});
