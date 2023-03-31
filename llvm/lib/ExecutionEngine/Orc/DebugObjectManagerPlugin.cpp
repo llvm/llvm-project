@@ -372,11 +372,12 @@ Error ELFDebugObject::recordSection(
   if (Error Err = Section->validateInBounds(this->getBuffer(), Name.data()))
     return Err;
   auto ItInserted = Sections.try_emplace(Name, std::move(Section));
-  if (!ItInserted.second)
-    return make_error<StringError>("In " + Buffer->getBufferIdentifier() +
-				   ", encountered duplicate section \"" +
-				   Name + "\" while building debug object",
-                                   inconvertibleErrorCode());
+  LLVM_DEBUG({
+    if (!ItInserted.second)
+      dbgs() << "Skipping debug registration for section '" << Name << "' "
+             << "in object " << Buffer->getBufferIdentifier()
+             << " (duplicate name)\n";
+  });
   return Error::success();
 }
 
