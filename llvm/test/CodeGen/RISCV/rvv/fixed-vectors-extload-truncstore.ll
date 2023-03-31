@@ -814,7 +814,7 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %z) {
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v9, 0
 ; LMULMAX1-NEXT:    vnsrl.wi v8, v8, 0
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 8
 ; LMULMAX1-NEXT:    vse8.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
@@ -1123,7 +1123,7 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, ptr %z) {
 ; LMULMAX1-NEXT:    vnsrl.wi v8, v8, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v8, v8, 0
-; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 4
 ; LMULMAX1-NEXT:    vse8.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
@@ -1147,7 +1147,7 @@ define void @truncstore_v8i32_v8i16(<8 x i32> %x, ptr %z) {
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v9, 0
 ; LMULMAX1-NEXT:    vnsrl.wi v8, v8, 0
-; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 4
 ; LMULMAX1-NEXT:    vse16.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
@@ -1246,7 +1246,7 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %z) {
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v11, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v9, 0
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 12
 ; LMULMAX1-NEXT:    vse8.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
@@ -1270,12 +1270,12 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %z) {
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v9, 0
 ; LMULMAX1-NEXT:    vnsrl.wi v8, v8, 0
-; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 4
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v11, 0
 ; LMULMAX1-NEXT:    vnsrl.wi v10, v10, 0
-; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v10, v9, 4
 ; LMULMAX1-NEXT:    addi a1, a0, 16
 ; LMULMAX1-NEXT:    vse16.v v10, (a1)
@@ -1446,7 +1446,7 @@ define void @truncstore_v4i64_v4i8(<4 x i64> %x, ptr %z) {
 ; LMULMAX1-NEXT:    vnsrl.wi v8, v8, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v8, v8, 0
-; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 2
 ; LMULMAX1-NEXT:    vse8.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
@@ -1477,7 +1477,7 @@ define void @truncstore_v4i64_v4i16(<4 x i64> %x, ptr %z) {
 ; LMULMAX1-NEXT:    vnsrl.wi v8, v8, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v8, v8, 0
-; LMULMAX1-NEXT:    vsetivli zero, 4, e16, mf2, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 2
 ; LMULMAX1-NEXT:    vse16.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
@@ -1501,7 +1501,7 @@ define void @truncstore_v4i64_v4i32(<4 x i64> %x, ptr %z) {
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v9, 0
 ; LMULMAX1-NEXT:    vnsrl.wi v8, v8, 0
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 2
 ; LMULMAX1-NEXT:    vse32.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
@@ -1548,7 +1548,7 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, ptr %z) {
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v9, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v9, 0
-; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 6
 ; LMULMAX1-NEXT:    vse8.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
@@ -1591,7 +1591,7 @@ define void @truncstore_v8i64_v8i16(<8 x i64> %x, ptr %z) {
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v11, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v9, 0
-; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 6
 ; LMULMAX1-NEXT:    vse16.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
@@ -1615,12 +1615,12 @@ define void @truncstore_v8i64_v8i32(<8 x i64> %x, ptr %z) {
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v9, 0
 ; LMULMAX1-NEXT:    vnsrl.wi v8, v8, 0
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 2
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v11, 0
 ; LMULMAX1-NEXT:    vnsrl.wi v10, v10, 0
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v10, v9, 2
 ; LMULMAX1-NEXT:    addi a1, a0, 16
 ; LMULMAX1-NEXT:    vse32.v v10, (a1)
@@ -1701,7 +1701,7 @@ define void @truncstore_v16i64_v16i8(<16 x i64> %x, ptr %z) {
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v9, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v9, 0
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 14
 ; LMULMAX1-NEXT:    vse8.v v8, (a0)
 ; LMULMAX1-NEXT:    ret
@@ -1720,7 +1720,7 @@ define void @truncstore_v16i64_v16i8(<16 x i64> %x, ptr %z) {
 ; LMULMAX4-NEXT:    vnsrl.wi v8, v14, 0
 ; LMULMAX4-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; LMULMAX4-NEXT:    vnsrl.wi v8, v8, 0
-; LMULMAX4-NEXT:    vsetivli zero, 16, e8, m1, tu, ma
+; LMULMAX4-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX4-NEXT:    vslideup.vi v8, v12, 8
 ; LMULMAX4-NEXT:    vse8.v v8, (a0)
 ; LMULMAX4-NEXT:    ret
@@ -1752,7 +1752,7 @@ define void @truncstore_v16i64_v16i16(<16 x i64> %x, ptr %z) {
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v11, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v9, 0
-; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 6
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v13, 0
@@ -1774,7 +1774,7 @@ define void @truncstore_v16i64_v16i16(<16 x i64> %x, ptr %z) {
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v15, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v9, 0
-; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v10, v9, 6
 ; LMULMAX1-NEXT:    addi a1, a0, 16
 ; LMULMAX1-NEXT:    vse16.v v10, (a1)
@@ -1791,7 +1791,7 @@ define void @truncstore_v16i64_v16i16(<16 x i64> %x, ptr %z) {
 ; LMULMAX4-NEXT:    vnsrl.wi v14, v8, 0
 ; LMULMAX4-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; LMULMAX4-NEXT:    vnsrl.wi v8, v14, 0
-; LMULMAX4-NEXT:    vsetivli zero, 16, e16, m2, tu, ma
+; LMULMAX4-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; LMULMAX4-NEXT:    vslideup.vi v8, v12, 8
 ; LMULMAX4-NEXT:    vse16.v v8, (a0)
 ; LMULMAX4-NEXT:    ret
@@ -1806,22 +1806,22 @@ define void @truncstore_v16i64_v16i32(<16 x i64> %x, ptr %z) {
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v9, 0
 ; LMULMAX1-NEXT:    vnsrl.wi v8, v8, 0
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 2
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v11, 0
 ; LMULMAX1-NEXT:    vnsrl.wi v10, v10, 0
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v10, v9, 2
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v13, 0
 ; LMULMAX1-NEXT:    vnsrl.wi v11, v12, 0
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v11, v9, 2
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; LMULMAX1-NEXT:    vnsrl.wi v9, v15, 0
 ; LMULMAX1-NEXT:    vnsrl.wi v12, v14, 0
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v12, v9, 2
 ; LMULMAX1-NEXT:    addi a1, a0, 48
 ; LMULMAX1-NEXT:    vse32.v v12, (a1)
@@ -1837,7 +1837,7 @@ define void @truncstore_v16i64_v16i32(<16 x i64> %x, ptr %z) {
 ; LMULMAX4-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX4-NEXT:    vnsrl.wi v16, v12, 0
 ; LMULMAX4-NEXT:    vnsrl.wi v12, v8, 0
-; LMULMAX4-NEXT:    vsetivli zero, 16, e32, m4, tu, ma
+; LMULMAX4-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; LMULMAX4-NEXT:    vslideup.vi v12, v16, 8
 ; LMULMAX4-NEXT:    vse32.v v12, (a0)
 ; LMULMAX4-NEXT:    ret
