@@ -490,7 +490,6 @@ LLVM_16 {
     clang_experimental_DependencyScannerServiceOptions_setDependencyMode;
     clang_experimental_DependencyScannerServiceOptions_setObjectStore;
     clang_experimental_DependencyScannerWorker_getDepGraph;
-    clang_experimental_DependencyScannerWorker_getFileDependencies_v5;
     clang_experimental_DependencyScannerWorkerScanSettings_create;
     clang_experimental_DependencyScannerWorkerScanSettings_dispose;
     clang_experimental_DepGraph_dispose;
