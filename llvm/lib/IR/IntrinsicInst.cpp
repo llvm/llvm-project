@@ -213,8 +213,6 @@ void DbgAssignIntrinsic::setAssignId(DIAssignID *New) {
 }
 
 void DbgAssignIntrinsic::setAddress(Value *V) {
-  assert(V->getType()->isPointerTy() &&
-         "Destination Component must be a pointer type");
   setOperand(OpAddress,
              MetadataAsValue::get(getContext(), ValueAsMetadata::get(V)));
 }

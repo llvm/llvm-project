@@ -198,18 +198,6 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   const Expr *LHS = BO->getLHS();
   const Expr *RHS = BO->getRHS();
 
-  // Deal with operations which have composite or void types.
-  switch (BO->getOpcode()) {
-  case BO_Comma:
-    if (!discard(LHS))
-      return false;
-    if (!this->visit(RHS))
-      return false;
-    return true;
-  default:
-    break;
-  }
-
   // Typecheck the args.
   std::optional<PrimType> LT = classify(LHS->getType());
   std::optional<PrimType> RT = classify(RHS->getType());
@@ -223,6 +211,13 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
       return false;
     return DiscardResult ? this->emitPop(*T, BO) : true;
   };
+
+  // Deal with operations which have composite or void types.
+  if (BO->isCommaOp()) {
+    if (!discard(LHS))
+      return false;
+    return Discard(this->visit(RHS));
+  }
 
   // Pointer arithmetic special case.
   if (BO->getOpcode() == BO_Add || BO->getOpcode() == BO_Sub) {
@@ -902,6 +897,11 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
   return false;
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
+  return this->emitConstBool(E->getValue(), E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
@@ -1413,7 +1413,7 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
     if (!this->emitDupPtr(Initializer))
       return false;
 
-    return this->VisitCallExpr(CE);
+    return this->visit(CE);
   } else if (const auto *DIE = dyn_cast<CXXDefaultInitExpr>(Initializer)) {
     return this->visitInitializer(DIE->getExpr());
   } else if (const auto *CE = dyn_cast<CastExpr>(Initializer)) {

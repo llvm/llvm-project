@@ -515,8 +515,8 @@ class SMEM_Real_vi <bits<8> op, SM_Pseudo ps>
                         soffset{6-0}, ?);
 }
 
-class SMEM_Real_Load_vi<bits<8> op, string ps, OffsetMode offsets>
-    : SMEM_Real_vi<op, !cast<SM_Pseudo>(ps # offsets.Variant)>;
+class SMEM_Real_Load_vi<bits<8> op, string ps>
+    : SMEM_Real_vi<op, !cast<SM_Pseudo>(ps)>;
 
 // The alternative GFX9 SGPR encoding using soffset to encode the
 // offset register. Not available in assembler and goes to the GFX9
@@ -531,12 +531,12 @@ class SMEM_Real_SGPR_alt_gfx9 {
 
 multiclass SM_Real_Loads_vi<bits<8> op> {
   defvar ps = NAME;
-  def _IMM_vi : SMEM_Real_Load_vi <op, ps, IMM_Offset>;
-  def _SGPR_vi : SMEM_Real_Load_vi <op, ps, SGPR_Offset>;
-  def _SGPR_alt_gfx9 : SMEM_Real_Load_vi <op, ps, SGPR_Offset>,
+  def _IMM_vi : SMEM_Real_Load_vi <op, ps#"_IMM">;
+  def _SGPR_vi : SMEM_Real_Load_vi <op, ps#"_SGPR">;
+  def _SGPR_alt_gfx9 : SMEM_Real_Load_vi <op, ps#"_SGPR">,
                        SMEM_Real_SGPR_alt_gfx9;
   let IsGFX9SpecificEncoding = true in
-  def _SGPR_IMM_gfx9 : SMEM_Real_Load_vi <op, ps, SGPR_IMM_Offset>;
+  def _SGPR_IMM_gfx9 : SMEM_Real_Load_vi <op, ps#"_SGPR_IMM">;
 }
 
 class SMEM_Real_Store_Base_vi <bits<8> op, SM_Pseudo ps> : SMEM_Real_vi <op, ps> {
@@ -547,17 +547,17 @@ class SMEM_Real_Store_Base_vi <bits<8> op, SM_Pseudo ps> : SMEM_Real_vi <op, ps>
   let Inst{12-6}  = !if(ps.has_sdst, sdata{6-0}, ?);
 }
 
-class SMEM_Real_Store_vi <bits<8> op, string ps, OffsetMode offsets>
-    : SMEM_Real_Store_Base_vi <op, !cast<SM_Pseudo>(ps # offsets.Variant)>;
+class SMEM_Real_Store_vi <bits<8> op, string ps>
+    : SMEM_Real_Store_Base_vi <op, !cast<SM_Pseudo>(ps)>;
 
 multiclass SM_Real_Stores_vi<bits<8> op> {
   defvar ps = NAME;
-  def _IMM_vi : SMEM_Real_Store_vi <op, ps, IMM_Offset>;
-  def _SGPR_vi : SMEM_Real_Store_vi <op, ps, SGPR_Offset>;
-  def _SGPR_alt_gfx9 : SMEM_Real_Store_vi <op, ps, SGPR_Offset>,
+  def _IMM_vi : SMEM_Real_Store_vi <op, ps#"_IMM">;
+  def _SGPR_vi : SMEM_Real_Store_vi <op, ps#"_SGPR">;
+  def _SGPR_alt_gfx9 : SMEM_Real_Store_vi <op, ps#"_SGPR">,
                        SMEM_Real_SGPR_alt_gfx9;
   let IsGFX9SpecificEncoding = true in
-  def _SGPR_IMM_gfx9 : SMEM_Real_Store_vi <op, ps, SGPR_IMM_Offset>;
+  def _SGPR_IMM_gfx9 : SMEM_Real_Store_vi <op, ps#"_SGPR_IMM">;
 }
 
 multiclass SM_Real_Probe_vi<bits<8> op> {
@@ -948,14 +948,14 @@ class SMEM_Real_gfx10<bits<8> op, SM_Pseudo ps>
   let Inst{16}    = !if(ps.has_glc, cpol{CPolBit.GLC}, ?);
 }
 
-class SMEM_Real_Load_gfx10<bits<8> op, string ps, OffsetMode offsets>
-    : SMEM_Real_gfx10<op, !cast<SM_Pseudo>(ps # offsets.Variant)>;
+class SMEM_Real_Load_gfx10<bits<8> op, string ps>
+    : SMEM_Real_gfx10<op, !cast<SM_Pseudo>(ps)>;
 
 multiclass SM_Real_Loads_gfx10<bits<8> op> {
   defvar ps = NAME;
-  def _IMM_gfx10 : SMEM_Real_Load_gfx10<op, ps, IMM_Offset>;
-  def _SGPR_gfx10 : SMEM_Real_Load_gfx10<op, ps, SGPR_Offset>;
-  def _SGPR_IMM_gfx10 : SMEM_Real_Load_gfx10<op, ps, SGPR_IMM_Offset>;
+  def _IMM_gfx10 : SMEM_Real_Load_gfx10<op, ps#"_IMM">;
+  def _SGPR_gfx10 : SMEM_Real_Load_gfx10<op, ps#"_SGPR">;
+  def _SGPR_IMM_gfx10 : SMEM_Real_Load_gfx10<op, ps#"_SGPR_IMM">;
 }
 
 class SMEM_Real_Store_gfx10<bits<8> op, SM_Pseudo ps> : SMEM_Real_gfx10<op, ps> {
@@ -1147,14 +1147,14 @@ class SMEM_Real_gfx11<bits<8> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
   let Inst{14}    = !if(ps.has_glc, cpol{CPolBit.GLC}, 0);
 }
 
-class SMEM_Real_Load_gfx11<bits<8> op, string ps, string opName, OffsetMode offsets> :
-    SMEM_Real_gfx11<op, !cast<SM_Pseudo>(ps # offsets.Variant), opName>;
+class SMEM_Real_Load_gfx11<bits<8> op, string ps, string opName> :
+    SMEM_Real_gfx11<op, !cast<SM_Pseudo>(ps), opName>;
 
 multiclass SM_Real_Loads_gfx11<bits<8> op, string ps> {
   defvar opName = !tolower(NAME);
-  def _IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps, opName, IMM_Offset>;
-  def _SGPR_gfx11 : SMEM_Real_Load_gfx11<op, ps, opName, SGPR_Offset>;
-  def _SGPR_IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps, opName, SGPR_IMM_Offset>;
+  def _IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps#"_IMM", opName>;
+  def _SGPR_gfx11 : SMEM_Real_Load_gfx11<op, ps#"_SGPR", opName>;
+  def _SGPR_IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps#"_SGPR_IMM", opName>;
   def : MnemonicAlias<!cast<SM_Pseudo>(ps#"_IMM").Mnemonic, opName>,
                       Requires<[isGFX11Plus]>;
 }

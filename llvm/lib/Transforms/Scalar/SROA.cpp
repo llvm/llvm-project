@@ -266,10 +266,23 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
       Inst->setMetadata(LLVMContext::MD_DIAssignID, NewID);
     }
 
-    Value = Value ? Value : DbgAssign->getValue();
+    ::Value *NewValue = Value ? Value : DbgAssign->getValue();
     auto *NewAssign = DIB.insertDbgAssign(
-        Inst, Value, DbgAssign->getVariable(), Expr, Dest,
+        Inst, NewValue, DbgAssign->getVariable(), Expr, Dest,
         DIExpression::get(Ctx, std::nullopt), DbgAssign->getDebugLoc());
+
+    // If we've updated the value but the original dbg.assign has an arglist
+    // then kill it now - we can't use the requested new value.
+    // We can't replace the DIArgList with the new value as it'd leave
+    // the DIExpression in an invalid state (DW_OP_LLVM_arg operands without
+    // an arglist). And we can't keep the DIArgList in case the linked store
+    // is being split - in which case the DIArgList + expression may no longer
+    // be computing the correct value.
+    // This should be a very rare situation as it requires the value being
+    // stored to differ from the dbg.assign (i.e., the value has been
+    // represented differently in the debug intrinsic for some reason).
+    if (DbgAssign->hasArgList() && Value)
+      NewAssign->setKillLocation();
 
     // We could use more precision here at the cost of some additional (code)
     // complexity - if the original dbg.assign was adjacent to its store, we

@@ -77,13 +77,12 @@ public:
   using OneToNOpConversionPattern<
       ::test::MakeTupleOp>::OneToNOpConversionPattern;
 
-  LogicalResult matchAndRewrite(::test::MakeTupleOp op,
-                                OneToNPatternRewriter &rewriter,
-                                const OneToNTypeMapping &operandMapping,
-                                const OneToNTypeMapping &resultMapping,
-                                ValueRange convertedOperands) const override {
+  LogicalResult
+  matchAndRewrite(::test::MakeTupleOp op, OpAdaptor adaptor,
+                  OneToNPatternRewriter &rewriter) const override {
     // Simply replace the current op with the converted operands.
-    rewriter.replaceOp(op, convertedOperands, resultMapping);
+    rewriter.replaceOp(op, adaptor.getFlatOperands(),
+                       adaptor.getResultMapping());
     return success();
   }
 };
@@ -99,11 +98,9 @@ public:
   using OneToNOpConversionPattern<
       ::test::GetTupleElementOp>::OneToNOpConversionPattern;
 
-  LogicalResult matchAndRewrite(::test::GetTupleElementOp op,
-                                OneToNPatternRewriter &rewriter,
-                                const OneToNTypeMapping &operandMapping,
-                                const OneToNTypeMapping &resultMapping,
-                                ValueRange convertedOperands) const override {
+  LogicalResult
+  matchAndRewrite(::test::GetTupleElementOp op, OpAdaptor adaptor,
+                  OneToNPatternRewriter &rewriter) const override {
     // Construct mapping for tuple element types.
     auto stateType = op->getOperand(0).getType().cast<TupleType>();
     TypeRange originalElementTypes = stateType.getTypes();
@@ -113,16 +110,17 @@ public:
       return failure();
 
     // Compute converted operands corresponding to original input tuple.
-    ValueRange convertedTuple =
-        operandMapping.getConvertedValues(convertedOperands, 0);
+    assert(adaptor.getOperands().size() == 1 &&
+           "expected 'get_tuple_element' to have one operand");
+    ValueRange convertedTuple = adaptor.getOperands()[0];
 
-    // Got those converted operands that correspond to the index-th element of
+    // Got those converted operands that correspond to the index-th element ofq
     // the original input tuple.
     size_t index = op.getIndex();
     ValueRange extractedElement =
         elementMapping.getConvertedValues(convertedTuple, index);
 
-    rewriter.replaceOp(op, extractedElement, resultMapping);
+    rewriter.replaceOp(op, extractedElement, adaptor.getResultMapping());
 
     return success();
   }

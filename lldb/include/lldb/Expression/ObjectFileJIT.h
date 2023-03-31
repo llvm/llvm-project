@@ -6,15 +6,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_JIT_OBJECTFILEJIT_H
-#define LLDB_SOURCE_PLUGINS_OBJECTFILE_JIT_OBJECTFILEJIT_H
+#ifndef LLDB_EXPRESSION_OBJECTFILEJIT_H
+#define LLDB_EXPRESSION_OBJECTFILEJIT_H
 
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/Symtab.h"
+#include "lldb/Utility/ArchSpec.h"
 
-// This class needs to be hidden as eventually belongs in a plugin that
-// will export the ObjectFile protocol
-class ObjectFileJIT : public lldb_private::ObjectFile {
+namespace lldb_private {
+
+class ObjectFileJITDelegate {
+public:
+  ObjectFileJITDelegate() = default;
+  virtual ~ObjectFileJITDelegate() = default;
+  virtual lldb::ByteOrder GetByteOrder() const = 0;
+  virtual uint32_t GetAddressByteSize() const = 0;
+  virtual void PopulateSymtab(lldb_private::ObjectFile *obj_file,
+                              lldb_private::Symtab &symtab) = 0;
+  virtual void PopulateSectionList(lldb_private::ObjectFile *obj_file,
+                                   lldb_private::SectionList &section_list) = 0;
+  virtual ArchSpec GetArchitecture() = 0;
+};
+
+class ObjectFileJIT : public ObjectFile {
 public:
   ObjectFileJIT(const lldb::ModuleSP &module_sp,
                 const lldb::ObjectFileJITDelegateSP &delegate_sp);
@@ -85,9 +101,8 @@ public:
                          lldb::offset_t section_offset, void *dst,
                          size_t dst_len) override;
 
-  size_t
-  ReadSectionData(lldb_private::Section *section,
-                  lldb_private::DataExtractor &section_data) override;
+  size_t ReadSectionData(lldb_private::Section *section,
+                         lldb_private::DataExtractor &section_data) override;
 
   lldb_private::Address GetEntryPointAddress() override;
 
@@ -103,5 +118,6 @@ public:
 protected:
   lldb::ObjectFileJITDelegateWP m_delegate_wp;
 };
+} // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_JIT_OBJECTFILEJIT_H
+#endif // LLDB_EXPRESSION_OBJECTFILEJIT_H

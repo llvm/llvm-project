@@ -337,3 +337,15 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 !0 = !{!1}
 !1 = !{!1, !2}
 !2 = distinct !{!2, !"The domain"}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: error: cannot translate data layout: i8:8:8:8
+target datalayout = "e-i8:8:8:8"
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: unhandled data layout token: ni:42
+target datalayout = "e-ni:42-i64:64"
