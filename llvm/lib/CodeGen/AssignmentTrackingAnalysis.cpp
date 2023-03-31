@@ -2010,7 +2010,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
 
   // Build the map.
   AssignmentTrackingLowering::OverlapMap Map;
-  for (auto Pair : FragmentMap) {
+  for (auto &Pair : FragmentMap) {
     auto &Frags = Pair.second;
     for (auto It = Frags.begin(), IEnd = Frags.end(); It != IEnd; ++It) {
       DIExpression::FragmentInfo Frag = It->getFragmentOrDefault();

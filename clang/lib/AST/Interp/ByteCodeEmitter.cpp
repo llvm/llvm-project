@@ -92,7 +92,7 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
 
     // Set the function's code.
     Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
-                  std::move(Scopes));
+                  std::move(Scopes), FuncDecl->hasBody());
     Func->setIsFullyCompiled(true);
     return Func;
   }
