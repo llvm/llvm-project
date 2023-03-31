@@ -60,8 +60,6 @@ public:
 
 private:
   typename ELFT::Shdr *Header;
-
-  bool isTextOrDataSection() const;
 };
 
 template <typename ELFT>
@@ -267,11 +265,6 @@ ELFDebugObject::CreateArchType(MemoryBufferRef Buffer,
   Expected<ELFFile<ELFT>> ObjRef = ELFFile<ELFT>::create(DebugObj->getBuffer());
   if (!ObjRef)
     return ObjRef.takeError();
-
-  // TODO: Add support for other architectures.
-  uint16_t TargetMachineArch = ObjRef->getHeader().e_machine;
-  if (TargetMachineArch != ELF::EM_X86_64)
-    return nullptr;
 
   Expected<ArrayRef<SectionHeader>> Sections = ObjRef->sections();
   if (!Sections)
