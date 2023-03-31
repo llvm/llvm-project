@@ -587,6 +587,9 @@ void SDiagsWriter::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     return;
   }
 
+  // Call base class to update diagnostic counts.
+  DiagnosticConsumer::HandleDiagnostic(DiagLevel, Info);
+
   // Enter the block for a non-note diagnostic immediately, rather than waiting
   // for beginDiagnostic, in case associated notes are emitted before we get
   // there.

@@ -315,7 +315,9 @@ typedef size_t CXModuleLookupOutputCallback(void *Context,
                                             char *Output, size_t MaxLen);
 
 /**
- * See \c clang_experimental_DependencyScannerWorker_getFileDependencies_v5.
+ * Deprecated, use \c clang_experimental_DependencyScannerWorker_getDepGraph.
+ *
+ * See \c clang_experimental_DependencyScannerWorker_getFileDependencies_v4.
  */
 CINDEX_LINKAGE CXFileDependencies *
 clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
@@ -325,18 +327,8 @@ clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
     CXModuleLookupOutputCallback *MLO, unsigned Options, CXString *error);
 
 /**
- * See \c clang_experimental_DependencyScannerWorker_getFileDependencies_v5.
- * Returns diagnostics in an unstructured CXString instead of CXDiagnosticSet.
- */
-CINDEX_LINKAGE enum CXErrorCode
-clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
-    CXDependencyScannerWorker Worker, int argc, const char *const *argv,
-    const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
-    CXModuleDiscoveredCallback *MDC, void *MLOContext,
-    CXModuleLookupOutputCallback *MLO, unsigned Options,
-    CXFileDependenciesList **Out, CXString *error);
-
-/**
+ * Deprecated, use \c clang_experimental_DependencyScannerWorker_getDepGraph.
+ *
  * Calculates the list of file dependencies for a particular compiler
  * invocation.
  *
@@ -366,19 +358,18 @@ clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
  * \param [out] Out A non-NULL pointer to store the resulting dependencies. The
  *                  output must be freed by calling
  *                  \c clang_experimental_FileDependenciesList_dispose.
- * \param [out] OutDiags The diagnostics emitted during scanning. These must be
- *                       always freed by calling \c clang_disposeDiagnosticSet.
+ * \param [out] error the error string to pass back to client (if any).
  *
  * \returns \c CXError_Success on success; otherwise a non-zero \c CXErrorCode
  * indicating the kind of error.
  */
 CINDEX_LINKAGE enum CXErrorCode
-clang_experimental_DependencyScannerWorker_getFileDependencies_v5(
+clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
     CXDependencyScannerWorker Worker, int argc, const char *const *argv,
     const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
     CXModuleDiscoveredCallback *MDC, void *MLOContext,
     CXModuleLookupOutputCallback *MLO, unsigned Options,
-    CXFileDependenciesList **Out, CXDiagnosticSet *OutDiags);
+    CXFileDependenciesList **Out, CXString *error);
 
 /**
  * Output of \c clang_experimental_DependencyScannerWorker_getDepGraph.

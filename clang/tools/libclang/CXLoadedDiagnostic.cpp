@@ -243,6 +243,9 @@ public:
   }
 
   CXDiagnosticSet load(const char *file);
+  CXDiagnosticSet load(llvm::MemoryBufferRef Buffer);
+
+  CXDiagnosticSet reportError(std::error_code EC);
 };
 } // end anonymous namespace
 
@@ -250,22 +253,36 @@ CXDiagnosticSet DiagLoader::load(const char *file) {
   TopDiags = std::make_unique<CXLoadedDiagnosticSetImpl>();
 
   std::error_code EC = readDiagnostics(file);
-  if (EC) {
-    switch (EC.value()) {
-    case static_cast<int>(serialized_diags::SDError::HandlerFailed):
-      // We've already reported the problem.
-      break;
-    case static_cast<int>(serialized_diags::SDError::CouldNotLoad):
-      reportBad(CXLoadDiag_CannotLoad, EC.message());
-      break;
-    default:
-      reportInvalidFile(EC.message());
-      break;
-    }
-    return nullptr;
-  }
+  if (EC)
+    return reportError(EC);
 
   return (CXDiagnosticSet)TopDiags.release();
+}
+
+CXDiagnosticSet DiagLoader::load(llvm::MemoryBufferRef Buffer) {
+  TopDiags = std::make_unique<CXLoadedDiagnosticSetImpl>();
+
+  std::error_code EC = readDiagnostics(Buffer);
+  if (EC)
+    return reportError(EC);
+
+  return (CXDiagnosticSet)TopDiags.release();
+}
+
+CXDiagnosticSet DiagLoader::reportError(std::error_code EC) {
+  assert(EC);
+  switch (EC.value()) {
+  case static_cast<int>(serialized_diags::SDError::HandlerFailed):
+    // We've already reported the problem.
+    break;
+  case static_cast<int>(serialized_diags::SDError::CouldNotLoad):
+    reportBad(CXLoadDiag_CannotLoad, EC.message());
+    break;
+  default:
+    reportInvalidFile(EC.message());
+    break;
+  }
+  return nullptr;
 }
 
 std::error_code
@@ -391,4 +408,11 @@ CXDiagnosticSet clang_loadDiagnostics(const char *file,
                                       CXString *errorString) {
   DiagLoader L(error, errorString);
   return L.load(file);
+}
+
+CXDiagnosticSet clang::loadCXDiagnosticsFromBuffer(llvm::MemoryBufferRef buffer,
+                                                   enum CXLoadDiag_Error *error,
+                                                   CXString *errorString) {
+  DiagLoader L(error, errorString);
+  return L.load(buffer);
 }
