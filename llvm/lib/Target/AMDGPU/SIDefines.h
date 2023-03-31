@@ -322,7 +322,7 @@ enum CPol {
   SC0 = GLC,
   SC1 = SCC,
   NT = SLC,
-  ALL = GLC | SLC | DLC | SCC,
+  ALL_pregfx12 = GLC | SLC | DLC | SCC,
   SWZ_pregfx12 = 8,
 
   // Below are GFX12+ cache policy bits
@@ -343,9 +343,9 @@ enum CPol {
   TH_RESERVED = 7, // unused value for load insts
 
   // Bits of TH for atomics
-  TH_ATOMIC_RETURN = 1,  // Returning vs non-returning
-  TH_ATOMIC_NT = 2,      // Non-temporal vs regular
-  TH_ATOMIC_CASCADE = 4, // Cascading vs regular
+  TH_ATOMIC_RETURN = GLC, // Returning vs non-returning
+  TH_ATOMIC_NT = SLC,     // Non-temporal vs regular
+  TH_ATOMIC_CASCADE = 4,  // Cascading vs regular
 
   // Scope
   SCOPE = 0x3 << 3, // All Scope bits
@@ -357,6 +357,8 @@ enum CPol {
   NV = 1 << 5, // Non-volatile bit
 
   SWZ = 1 << 6, // Swizzle bit
+
+  ALL = TH | SCOPE | NV,
 
   // Helper bits
   TH_TYPE_LOAD = 1 << 7,    // TH_LOAD policy
