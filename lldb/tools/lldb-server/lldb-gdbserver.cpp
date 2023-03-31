@@ -74,13 +74,17 @@ typedef NativeProcessWindows::Manager NativeProcessManager;
 // Dummy implementation to make sure the code compiles
 class NativeProcessManager : public NativeProcessProtocol::Manager {
 public:
+  NativeProcessManager(MainLoop &mainloop)
+      : NativeProcessProtocol::Manager(mainloop) {}
+
   llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
   Launch(ProcessLaunchInfo &launch_info,
-         NativeDelegate &native_delegate) override {
+         NativeProcessProtocol::NativeDelegate &native_delegate) override {
     llvm_unreachable("Not implemented");
   }
   llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-  Attach(lldb::pid_t pid, NativeDelegate &native_delegate) override {
+  Attach(lldb::pid_t pid,
+         NativeProcessProtocol::NativeDelegate &native_delegate) override {
     llvm_unreachable("Not implemented");
   }
 };
