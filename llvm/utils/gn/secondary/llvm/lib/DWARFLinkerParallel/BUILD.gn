@@ -9,5 +9,8 @@ static_library("DWARFLinkerParallel") {
     "//llvm/lib/Object",
     "//llvm/lib/Support",
   ]
-  sources = [ "DWARFLinker.cpp" ]
+  sources = [
+    "DWARFLinker.cpp",
+    "StringPool.cpp",
+  ]
 }
