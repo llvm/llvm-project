@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefixes=SSE,SSE41
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=AVX,AVX512,AVX512F
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX512,AVX512BW
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl | FileCheck %s --check-prefixes=AVX,AVX512,AVX512BWVL
 
@@ -840,6 +841,12 @@ define i1 @trunc_v2i64(<2 x i64> %a0) {
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    retq
 ;
+; AVX512F-LABEL: trunc_v2i64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX512F-NEXT:    sete %al
+; AVX512F-NEXT:    retq
+;
 ; AVX512BW-LABEL: trunc_v2i64:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -1124,6 +1131,27 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; AVX2-NEXT:  .LBB27_2:
 ; AVX2-NEXT:    movl $1, %eax
 ; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: mask_v3i1:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    kshiftrw $2, %k0, %k1
+; AVX512F-NEXT:    korw %k1, %k0, %k1
+; AVX512F-NEXT:    kshiftrw $1, %k0, %k0
+; AVX512F-NEXT:    korw %k0, %k1, %k0
+; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    je .LBB27_2
+; AVX512F-NEXT:  # %bb.1:
+; AVX512F-NEXT:    xorl %eax, %eax
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+; AVX512F-NEXT:  .LBB27_2:
+; AVX512F-NEXT:    movl $1, %eax
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: mask_v3i1:
 ; AVX512BW:       # %bb.0:
