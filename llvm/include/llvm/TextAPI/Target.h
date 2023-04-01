@@ -45,12 +45,8 @@ public:
 };
 
 inline bool operator==(const Target &LHS, const Target &RHS) {
-  bool CrossLinkMatch =
-      std::tie(LHS.Arch, LHS.Platform) == std::tie(RHS.Arch, RHS.Platform);
-  // Ignore potential mismatches due to missing deployment versions.
-  if (LHS.MinDeployment.empty() || RHS.MinDeployment.empty())
-    return CrossLinkMatch;
-  return CrossLinkMatch && LHS.MinDeployment == RHS.MinDeployment;
+  // In most cases the deployment version is not useful to compare.
+  return std::tie(LHS.Arch, LHS.Platform) == std::tie(RHS.Arch, RHS.Platform);
 }
 
 inline bool operator!=(const Target &LHS, const Target &RHS) {
@@ -70,6 +66,7 @@ inline bool operator!=(const Target &LHS, const Architecture &RHS) {
   return LHS.Arch != RHS;
 }
 
+PlatformVersionSet mapToPlatformVersionSet(ArrayRef<Target> Targets);
 PlatformSet mapToPlatformSet(ArrayRef<Target> Targets);
 ArchitectureSet mapToArchitectureSet(ArrayRef<Target> Targets);
 
