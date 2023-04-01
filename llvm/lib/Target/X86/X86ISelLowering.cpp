@@ -24264,7 +24264,7 @@ static SDValue combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y,
   return SDValue();
 }
 
-/// Helper for matching OR(EXTRACTELT(X,0),OR(EXTRACTELT(X,1),...))
+/// Helper for matching BINOP(EXTRACTELT(X,0),BINOP(EXTRACTELT(X,1),...))
 /// style scalarized (associative) reduction patterns. Partial reductions
 /// are supported when the pointer SrcMask is non-null.
 /// TODO - move this to SelectionDAG?
@@ -24429,14 +24429,6 @@ static SDValue LowerVectorAllEqual(const SDLoc &DL, SDValue LHS, SDValue RHS,
                      DAG.getConstant(0, DL, MVT::i32));
 }
 
-static SDValue LowerVectorAllZero(const SDLoc &DL, SDValue V, ISD::CondCode CC,
-                                  const APInt &Mask,
-                                  const X86Subtarget &Subtarget,
-                                  SelectionDAG &DAG, X86::CondCode &X86CC) {
-  SDValue Z = DAG.getConstant(0, DL, V.getValueType());
-  return LowerVectorAllEqual(DL, V, Z, CC, Mask, Subtarget, DAG, X86CC);
-}
-
 // Check whether an AND/OR'd reduction tree is PTEST-able, or if we can fallback
 // to CMP(MOVMSK(PCMPEQB(X,Y))).
 static SDValue MatchVectorAllEqualTest(SDValue LHS, SDValue RHS,
@@ -24478,9 +24470,12 @@ static SDValue MatchVectorAllEqualTest(SDValue LHS, SDValue RHS,
     }
   }
 
-  // TODO: Add CmpAllOnes support.
+  ISD::NodeType LogicOp = CmpNull ? ISD::OR : ISD::AND;
+
+  // Match icmp(or(extract(X,0),extract(X,1)),0) anyof reduction patterns.
+  // Match icmp(and(extract(X,0),extract(X,1)),-1) allof reduction patterns.
   SmallVector<SDValue, 8> VecIns;
-  if (CmpNull && Op.getOpcode() == ISD::OR && matchScalarReduction(Op, ISD::OR, VecIns)) {
+  if (Op.getOpcode() == LogicOp && matchScalarReduction(Op, LogicOp, VecIns)) {
     EVT VT = VecIns[0].getValueType();
     assert(llvm::all_of(VecIns,
                         [VT](SDValue V) { return VT == V.getValueType(); }) &&
@@ -24491,25 +24486,26 @@ static SDValue MatchVectorAllEqualTest(SDValue LHS, SDValue RHS,
         !llvm::has_single_bit<uint32_t>(VT.getSizeInBits()))
       return SDValue();
 
-    // If more than one full vector is evaluated, OR them first before PTEST.
+    // If more than one full vector is evaluated, AND/OR them first before
+    // PTEST.
     for (unsigned Slot = 0, e = VecIns.size(); e - Slot > 1;
          Slot += 2, e += 1) {
-      // Each iteration will OR 2 nodes and append the result until there is
-      // only 1 node left, i.e. the final OR'd value of all vectors.
+      // Each iteration will AND/OR 2 nodes and append the result until there is
+      // only 1 node left, i.e. the final value of all vectors.
       SDValue LHS = VecIns[Slot];
       SDValue RHS = VecIns[Slot + 1];
-      VecIns.push_back(DAG.getNode(ISD::OR, DL, VT, LHS, RHS));
+      VecIns.push_back(DAG.getNode(LogicOp, DL, VT, LHS, RHS));
     }
 
-    if (SDValue V = LowerVectorAllZero(DL, VecIns.back(), CC, Mask, Subtarget,
-                                       DAG, X86CC))
-      return V;
+    return LowerVectorAllEqual(DL, VecIns.back(),
+                               CmpNull ? DAG.getConstant(0, DL, VT)
+                                       : DAG.getAllOnesConstant(DL, VT),
+                               CC, Mask, Subtarget, DAG, X86CC);
   }
 
   // Match icmp(reduce_or(X),0) anyof reduction patterns.
   // Match icmp(reduce_and(X),-1) allof reduction patterns.
   if (Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-    ISD::NodeType LogicOp = CmpNull ? ISD::OR : ISD::AND;
     ISD::NodeType BinOp;
     if (SDValue Match =
             DAG.matchBinOpReduction(Op.getNode(), BinOp, {LogicOp})) {
