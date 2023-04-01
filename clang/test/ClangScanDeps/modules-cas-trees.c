@@ -64,6 +64,7 @@
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {
+// CHECK:            "cache-key": "[[LEFT_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
 // CHECK:            "casfs-root-id": "[[LEFT_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
 // CHECK:            "clang-module-deps": [
 // CHECK:              {
@@ -92,6 +93,7 @@
 // CHECK:            "name": "Left"
 // CHECK:          }
 // CHECK-NEXT:     {
+// CHECK:            "cache-key": "[[RIGHT_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
 // CHECK:            "casfs-root-id": "[[RIGHT_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
 // CHECK:            "clang-module-deps": [
 // CHECK:              {
@@ -110,7 +112,7 @@
 // CHECK:              "-emit-module"
 // CHECK:              "-fmodule-file-cache-key"
 // CHECK:              "[[TOP_PCM]]"
-// CHECK:              "[[TOP_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
+// CHECK:              "[[TOP_CACHE_KEY]]"
 // CHECK:              "-fmodule-file={{(Top=)?}}[[TOP_PCM]]"
 // CHECK:            ]
 // CHECK:            "file-deps": [
@@ -120,6 +122,7 @@
 // CHECK:            "name": "Right"
 // CHECK:          }
 // CHECK-NEXT:     {
+// CHECK:            "cache-key": "[[TOP_CACHE_KEY]]"
 // CHECK:            "casfs-root-id": "[[TOP_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
 // CHECK:            "clang-module-deps": []
 // CHECK:            "command-line": [
@@ -144,6 +147,7 @@
 // CHECK:          {
 // CHECK:            "commands": [
 // CHECK:              {
+// CHECK:                "cache-key": "[[TU_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
 // CHECK:                "casfs-root-id": "[[TU_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
 // CHECK:                "clang-module-deps": [
 // CHECK:                  {
@@ -162,10 +166,10 @@
 // CHECK:                  "-fcache-compile-job"
 // CHECK:                  "-fmodule-file-cache-key"
 // CHECK:                  "[[LEFT_PCM]]"
-// CHECK:                  "{{llvmcas://[[:xdigit:]]+}}"
+// CHECK:                  "[[LEFT_CACHE_KEY]]"
 // CHECK:                  "-fmodule-file-cache-key"
 // CHECK:                  "[[RIGHT_PCM]]"
-// CHECK:                  "{{llvmcas://[[:xdigit:]]+}}"
+// CHECK:                  "[[RIGHT_CACHE_KEY]]"
 // CHECK:                  "-fmodule-file={{(Left=)?}}[[LEFT_PCM]]"
 // CHECK:                  "-fmodule-file={{(Right=)?}}[[RIGHT_PCM]]"
 // CHECK:                ]

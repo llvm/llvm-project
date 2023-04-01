@@ -18,7 +18,8 @@
 // FULL-TREE-NEXT:   "modules": [],
 // FULL-TREE-NEXT:   "translation-units": [
 // FULL-TREE-NEXT:     {
-// FULL-TREE:            "casfs-root-id": "[[T1_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
+// FULL-TREE:            "cache-key": "[[T1_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
+// FULL-TREE-NEXT:       "casfs-root-id": "[[T1_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
 // FULL-TREE-NEXT:       "clang-context-hash": "{{[A-Z0-9]+}}",
 // FULL-TREE-NEXT:       "clang-module-deps": [],
 // FULL-TREE-NEXT:       "command-line": [
@@ -36,7 +37,8 @@
 // FULL-TREE-NEXT:       "input-file": "[[PREFIX]]/t1.c"
 // FULL-TREE-NEXT:     }
 // FULL-TREE:          {
-// FULL-TREE:            "casfs-root-id": "[[T2_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
+// FULL-TREE:            "cache-key": "[[T2_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
+// FULL-TREE-NEXT:       "casfs-root-id": "[[T2_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
 // FULL-TREE-NEXT:       "clang-context-hash": "{{[A-Z0-9]+}}",
 // FULL-TREE-NEXT:       "clang-module-deps": [],
 // FULL-TREE-NEXT:       "command-line": [
@@ -56,12 +58,30 @@
 // Build with caching
 // RUN: %deps-to-rsp %t/full_result.json --tu-index 0 > %t/t1.cc1.rsp
 // RUN: %deps-to-rsp %t/full_result.json --tu-index 1 > %t/t2.cc1.rsp
-// RUN: %clang @%t/t1.cc1.rsp -Rcompile-job-cache 2>&1 | FileCheck %s -check-prefix=CACHE-MISS
+// RUN: %clang @%t/t1.cc1.rsp -Rcompile-job-cache 2> %t/t1-miss.err
+// RUN: FileCheck %s -input-file=%t/t1-miss.err -check-prefix=CACHE-MISS
 // RUN: %clang @%t/t1.cc1.rsp -Rcompile-job-cache 2>&1 | FileCheck %s -check-prefix=CACHE-HIT
-// RUN: %clang @%t/t2.cc1.rsp -Rcompile-job-cache 2>&1 | FileCheck %s -check-prefix=CACHE-MISS
+// RUN: %clang @%t/t2.cc1.rsp -Rcompile-job-cache 2> %t/t2-miss.err
+// RUN: FileCheck %s -input-file=%t/t2-miss.err -check-prefix=CACHE-MISS
 // RUN: %clang @%t/t2.cc1.rsp -Rcompile-job-cache 2>&1 | FileCheck %s -check-prefix=CACHE-HIT
 // CACHE-HIT: remark: compile job cache hit
 // CACHE-MISS: remark: compile job cache miss
+
+// Check cache keys.
+// RUN: cp %t/full_result.json %t/combined.txt
+// RUN: cat %t/t1-miss.err >> %t/combined.txt
+// RUN: cat %t/t2-miss.err >> %t/combined.txt
+// RUN: FileCheck %s -input-file=%t/combined.txt -check-prefix=COMBINED
+
+// COMBINED:        "commands": [
+// COMBINED-NEXT:     {
+// COMBINED-NEXT:       "cache-key": "[[T1_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
+// COMBINED:          }
+// COMBINED:        "commands": [
+// COMBINED:          {
+// COMBINED-NEXT:       "cache-key": "[[T2_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
+// COMBINED:      remark: compile job cache miss for '[[T1_CACHE_KEY]]'
+// COMBINED-NEXT: remark: compile job cache miss for '[[T2_CACHE_KEY]]'
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -cas-path %t/cas -format experimental-tree -emit-cas-compdb | FileCheck %s -DPREFIX=%/t -check-prefix=COMPDB
 // COMPDB: [
