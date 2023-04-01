@@ -324,8 +324,8 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
       delete EqualMatchers[i];
       EqualMatchers[i] = Tmp;
     }
-    
-    Shared->setNext(new ScopeMatcher(EqualMatchers));
+
+    Shared->setNext(new ScopeMatcher(std::move(EqualMatchers)));
 
     // Recursively factor the newly created node.
     FactorNodes(Shared->getNextPtr());
@@ -400,8 +400,8 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
       Cases.push_back(std::make_pair(&COM->getOpcode(), COM->takeNext()));
       delete COM;
     }
-    
-    MatcherPtr.reset(new SwitchOpcodeMatcher(Cases));
+
+    MatcherPtr.reset(new SwitchOpcodeMatcher(std::move(Cases)));
     return;
   }
   
@@ -427,9 +427,9 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
           SM->resetChild(SM->getNumChildren()-1, MatcherWithoutCTM);
           continue;
         }
-        
-        Matcher *Entries[2] = { PrevMatcher, MatcherWithoutCTM };
-        Cases[Entry-1].second = new ScopeMatcher(Entries);
+
+        SmallVector<Matcher *, 2> Entries = {PrevMatcher, MatcherWithoutCTM};
+        Cases[Entry - 1].second = new ScopeMatcher(std::move(Entries));
         continue;
       }
       
@@ -448,7 +448,7 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
     }
 
     if (Cases.size() != 1) {
-      MatcherPtr.reset(new SwitchTypeMatcher(Cases));
+      MatcherPtr.reset(new SwitchTypeMatcher(std::move(Cases)));
     } else {
       // If we factored and ended up with one case, create it now.
       MatcherPtr.reset(new CheckTypeMatcher(Cases[0].first, 0));
