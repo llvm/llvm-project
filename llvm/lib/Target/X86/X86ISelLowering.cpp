@@ -47417,15 +47417,15 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
 
   // MOVMSK(PCMPEQ(X,0)) == -1 -> PTESTZ(X,X).
   // MOVMSK(PCMPEQ(X,0)) != -1 -> !PTESTZ(X,X).
-  // MOVMSK(PCMPEQ(X,Y)) == -1 -> PTESTZ(SUB(X,Y),SUB(X,Y)).
-  // MOVMSK(PCMPEQ(X,Y)) != -1 -> !PTESTZ(SUB(X,Y),SUB(X,Y)).
+  // MOVMSK(PCMPEQ(X,Y)) == -1 -> PTESTZ(XOR(X,Y),XOR(X,Y)).
+  // MOVMSK(PCMPEQ(X,Y)) != -1 -> !PTESTZ(XOR(X,Y),XOR(X,Y)).
   if (IsAllOf && Subtarget.hasSSE41() && IsOneUse) {
     MVT TestVT = VecVT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
     SDValue BC = peekThroughBitcasts(Vec);
     // Ensure MOVMSK was testing every signbit of BC.
     if (BC.getValueType().getVectorNumElements() <= NumElts) {
       if (BC.getOpcode() == X86ISD::PCMPEQ) {
-        SDValue V = DAG.getNode(ISD::SUB, SDLoc(BC), BC.getValueType(),
+        SDValue V = DAG.getNode(ISD::XOR, SDLoc(BC), BC.getValueType(),
                                 BC.getOperand(0), BC.getOperand(1));
         V = DAG.getBitcast(TestVT, V);
         return DAG.getNode(X86ISD::PTEST, SDLoc(EFLAGS), MVT::i32, V, V);
@@ -47436,9 +47436,9 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
           BC.getOperand(1).getOpcode() == X86ISD::PCMPEQ) {
         SDValue LHS = BC.getOperand(0);
         SDValue RHS = BC.getOperand(1);
-        LHS = DAG.getNode(ISD::SUB, SDLoc(LHS), LHS.getValueType(),
+        LHS = DAG.getNode(ISD::XOR, SDLoc(LHS), LHS.getValueType(),
                           LHS.getOperand(0), LHS.getOperand(1));
-        RHS = DAG.getNode(ISD::SUB, SDLoc(RHS), RHS.getValueType(),
+        RHS = DAG.getNode(ISD::XOR, SDLoc(RHS), RHS.getValueType(),
                           RHS.getOperand(0), RHS.getOperand(1));
         LHS = DAG.getBitcast(TestVT, LHS);
         RHS = DAG.getBitcast(TestVT, RHS);
@@ -47480,7 +47480,7 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
         SDValue Result = peekThroughBitcasts(Src);
         if (IsAllOf && Result.getOpcode() == X86ISD::PCMPEQ &&
             Result.getValueType().getVectorNumElements() <= NumElts) {
-          SDValue V = DAG.getNode(ISD::SUB, DL, Result.getValueType(),
+          SDValue V = DAG.getNode(ISD::XOR, DL, Result.getValueType(),
                                   Result.getOperand(0), Result.getOperand(1));
           V = DAG.getBitcast(MVT::v4i64, V);
           return DAG.getNode(X86ISD::PTEST, SDLoc(EFLAGS), MVT::i32, V, V);

@@ -1058,14 +1058,14 @@ define i1 @bool_reduction_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ;
 ; SSE42-LABEL: bool_reduction_v2i64:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    psubb %xmm1, %xmm0
+; SSE42-NEXT:    pxor %xmm1, %xmm0
 ; SSE42-NEXT:    ptest %xmm0, %xmm0
 ; SSE42-NEXT:    setne %al
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: bool_reduction_v2i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    setne %al
 ; AVX-NEXT:    retq
@@ -1099,15 +1099,15 @@ define i1 @bool_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; SSE42-LABEL: bool_reduction_v4i32:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pminud %xmm0, %xmm1
-; SSE42-NEXT:    psubd %xmm1, %xmm0
-; SSE42-NEXT:    ptest %xmm0, %xmm0
+; SSE42-NEXT:    pxor %xmm0, %xmm1
+; SSE42-NEXT:    ptest %xmm1, %xmm1
 ; SSE42-NEXT:    setne %al
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: bool_reduction_v4i32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpminud %xmm1, %xmm0, %xmm1
-; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    setne %al
 ; AVX-NEXT:    retq
