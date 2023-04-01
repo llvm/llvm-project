@@ -2500,6 +2500,10 @@ struct FormatStyle {
   ///     Decimal: 3
   ///     Hex: -1
   /// \endcode
+  ///
+  /// You can also specify a minimum number of digits (``BinaryMinDigits``,
+  /// ``DecimalMinDigits``, and ``HexMinDigits``) the integer literal must
+  /// have in order for the separators to be inserted.
   struct IntegerLiteralSeparatorStyle {
     /// Format separators in binary literals.
     /// \code{.text}
@@ -2509,6 +2513,14 @@ struct FormatStyle {
     ///   /*  4: */ b = 0b1001'1110'1101;
     /// \endcode
     int8_t Binary;
+    /// Format separators in binary literals with a minimum number of digits.
+    /// \code{.text}
+    ///   // Binary: 3
+    ///   // BinaryMinDigits: 7
+    ///   b1 = 0b101101;
+    ///   b2 = 0b1'101'101;
+    /// \endcode
+    int8_t BinaryMinDigits;
     /// Format separators in decimal literals.
     /// \code{.text}
     ///   /* -1: */ d = 18446744073709550592ull;
@@ -2516,6 +2528,14 @@ struct FormatStyle {
     ///   /*  3: */ d = 18'446'744'073'709'550'592ull;
     /// \endcode
     int8_t Decimal;
+    /// Format separators in decimal literals with a minimum number of digits.
+    /// \code{.text}
+    ///   // Decimal: 3
+    ///   // DecimalMinDigits: 5
+    ///   d1 = 2023;
+    ///   d2 = 10'000;
+    /// \endcode
+    int8_t DecimalMinDigits;
     /// Format separators in hexadecimal literals.
     /// \code{.text}
     ///   /* -1: */ h = 0xDEADBEEFDEADBEEFuz;
@@ -2523,6 +2543,20 @@ struct FormatStyle {
     ///   /*  2: */ h = 0xDE'AD'BE'EF'DE'AD'BE'EFuz;
     /// \endcode
     int8_t Hex;
+    /// Format separators in hexadecimal literals with a minimum number of
+    /// digits.
+    /// \code{.text}
+    ///   // Hex: 2
+    ///   // HexMinDigits: 6
+    ///   h1 = 0xABCDE;
+    ///   h2 = 0xAB'CD'EF;
+    /// \endcode
+    int8_t HexMinDigits;
+    bool operator==(const IntegerLiteralSeparatorStyle &R) const {
+      return Binary == R.Binary && BinaryMinDigits == R.BinaryMinDigits &&
+             Decimal == R.Decimal && DecimalMinDigits == R.DecimalMinDigits &&
+             Hex == R.Hex && HexMinDigits == R.HexMinDigits;
+    }
   };
 
   /// Format integer literal separators (``'`` for C++ and ``_`` for C#, Java,
@@ -4277,10 +4311,7 @@ struct FormatStyle {
            IndentWrappedFunctionNames == R.IndentWrappedFunctionNames &&
            InsertBraces == R.InsertBraces &&
            InsertNewlineAtEOF == R.InsertNewlineAtEOF &&
-           IntegerLiteralSeparator.Binary == R.IntegerLiteralSeparator.Binary &&
-           IntegerLiteralSeparator.Decimal ==
-               R.IntegerLiteralSeparator.Decimal &&
-           IntegerLiteralSeparator.Hex == R.IntegerLiteralSeparator.Hex &&
+           IntegerLiteralSeparator == R.IntegerLiteralSeparator &&
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
