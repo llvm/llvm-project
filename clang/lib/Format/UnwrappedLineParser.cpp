@@ -1709,8 +1709,8 @@ void UnwrappedLineParser::parseStructuralElement(
       // enum definition can start a structural element.
       if (!parseEnum())
         break;
-      // This only applies for C++.
-      if (!Style.isCpp()) {
+      // This only applies to C++ and Verilog.
+      if (!Style.isCpp() && !Style.isVerilog()) {
         addUnwrappedLine();
         return;
       }
@@ -3541,7 +3541,15 @@ bool UnwrappedLineParser::parseEnum() {
          FormatTok->isOneOf(tok::colon, tok::coloncolon, tok::less,
                             tok::greater, tok::comma, tok::question,
                             tok::l_square, tok::r_square)) {
-    nextToken();
+    if (Style.isVerilog()) {
+      FormatTok->setFinalizedType(TT_VerilogDimensionedTypeName);
+      nextToken();
+      // In Verilog the base type can have dimensions.
+      while (FormatTok->is(tok::l_square))
+        parseSquare();
+    } else {
+      nextToken();
+    }
     // We can have macros or attributes in between 'enum' and the enum name.
     if (FormatTok->is(tok::l_paren))
       parseParens();
