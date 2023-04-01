@@ -1723,10 +1723,13 @@ private:
           return false;
         }
 
-        // This is the default value of a non-template type parameter, so treat
-        // it as an expression.
-        if (Contexts.back().ContextKind == tok::less)
-          return true;
+        // This is the default value of a template parameter, determine if it's
+        // type or non-type.
+        if (Contexts.back().ContextKind == tok::less) {
+          assert(Current.Previous->Previous);
+          return !Current.Previous->Previous->isOneOf(tok::kw_typename,
+                                                      tok::kw_class);
+        }
 
         Tok = Tok->MatchingParen;
         if (!Tok)

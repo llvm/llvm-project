@@ -486,8 +486,9 @@ void DNBArchMachARM64::ThreadWillResume() {
       }
 
       DisableHardwareWatchpoint(m_watchpoint_hw_index, false);
-      DNBLogThreadedIf(LOG_WATCHPOINTS, "DNBArchMachARM::ThreadWillResume() "
-                                        "DisableHardwareWatchpoint(%d) called",
+      DNBLogThreadedIf(LOG_WATCHPOINTS,
+                       "DNBArchMachARM64::ThreadWillResume() "
+                       "DisableHardwareWatchpoint(%d) called",
                        m_watchpoint_hw_index);
 
       // Enable hardware single step to move past the watchpoint-triggering
@@ -505,12 +506,12 @@ void DNBArchMachARM64::ThreadWillResume() {
         // Reset the two watchpoint member variables.
         m_watchpoint_did_occur = false;
         m_watchpoint_hw_index = -1;
-        DNBLogThreadedIf(
-            LOG_WATCHPOINTS,
-            "DNBArchMachARM::ThreadWillResume() failed to enable single step");
+        DNBLogThreadedIf(LOG_WATCHPOINTS, "DNBArchMachARM64::ThreadWillResume()"
+                                          " failed to enable single step");
       } else
-        DNBLogThreadedIf(LOG_WATCHPOINTS, "DNBArchMachARM::ThreadWillResume() "
-                                          "succeeded to enable single step");
+        DNBLogThreadedIf(LOG_WATCHPOINTS,
+                         "DNBArchMachARM64::ThreadWillResume() "
+                         "succeeded to enable single step");
     }
   }
 }
@@ -532,18 +533,20 @@ bool DNBArchMachARM64::NotifyException(MachException::Data &exc) {
       // it was too big.  If the watchpoint exception is indicating the 2nd half
       // of the two-parter, find the address of the 1st half and report that --
       // that's what lldb is going to expect to see.
-      DNBLogThreadedIf(LOG_WATCHPOINTS, "DNBArchMachARM::NotifyException "
-                                        "watchpoint %d was hit on address "
-                                        "0x%llx",
+      DNBLogThreadedIf(LOG_WATCHPOINTS,
+                       "DNBArchMachARM64::NotifyException "
+                       "watchpoint %d was hit on address "
+                       "0x%llx",
                        hw_index, (uint64_t)addr);
       const uint32_t num_watchpoints = NumSupportedHardwareWatchpoints();
       for (uint32_t i = 0; i < num_watchpoints; i++) {
         if (LoHi[i] != 0 && LoHi[i] == hw_index && LoHi[i] != i &&
             GetWatchpointAddressByIndex(i) != INVALID_NUB_ADDRESS) {
           addr = GetWatchpointAddressByIndex(i);
-          DNBLogThreadedIf(LOG_WATCHPOINTS, "DNBArchMachARM::NotifyException "
-                                            "It is a linked watchpoint; "
-                                            "rewritten to index %d addr 0x%llx",
+          DNBLogThreadedIf(LOG_WATCHPOINTS,
+                           "DNBArchMachARM64::NotifyException "
+                           "It is a linked watchpoint; "
+                           "rewritten to index %d addr 0x%llx",
                            LoHi[i], (uint64_t)addr);
         }
       }
@@ -1129,11 +1132,11 @@ uint32_t DNBArchMachARM64::GetHardwareWatchpointHit(nub_addr_t &addr) {
       nub_addr_t wp_addr = GetWatchAddress(debug_state, i);
       uint32_t byte_mask = bits(debug_state.__wcr[i], 12, 5);
 
-      DNBLogThreadedIf(LOG_WATCHPOINTS, "DNBArchImplX86_64::"
+      DNBLogThreadedIf(LOG_WATCHPOINTS,
+                       "DNBArchImplARM64::"
                        "GetHardwareWatchpointHit() slot: %u "
                        "(addr = 0x%llx; byte_mask = 0x%x)",
-                       i, static_cast<uint64_t>(wp_addr),
-                       byte_mask);
+                       i, static_cast<uint64_t>(wp_addr), byte_mask);
 
       if (!IsWatchpointEnabled(debug_state, i))
         continue;

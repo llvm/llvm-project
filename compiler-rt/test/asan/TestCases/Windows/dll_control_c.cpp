@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // RUN: %clang_cl_asan -Od %p/dll_host.cpp -Fe%t
 // RUN: %clang_cl_asan -LD -O2 %s -Fe%t.dll
 // RUNX: %run %t %t.dll 2>&1 | FileCheck %s

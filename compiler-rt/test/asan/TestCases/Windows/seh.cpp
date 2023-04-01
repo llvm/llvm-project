@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // Make sure that ASan works with SEH in both Clang and MSVC. MSVC uses a
 // different EH personality depending on the -GS setting, so test both -GS+ and
 // -GS-.

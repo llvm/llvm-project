@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // RUN: %clang_cl_asan -LD -Od -DDLL %s -Fe%t.dll
 // RUN: %clang_cl_asan -Od -DEXE %s %t.lib -Fe%te.exe
 // RUN: %env_asan_opts=report_globals=2 %run %te.exe 2>&1 | FileCheck %s

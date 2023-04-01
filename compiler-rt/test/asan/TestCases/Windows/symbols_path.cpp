@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // Make sure symbolization works even if the path to the .exe file changes.
 // RUN: mkdir %t || true
 // RUN: %clang_cl_asan -Od %s -Fe%t/symbols_path.exe

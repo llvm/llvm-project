@@ -121,6 +121,7 @@ add_header_library(
     .uint128
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.builtin_wrappers
     libc.src.__support.common

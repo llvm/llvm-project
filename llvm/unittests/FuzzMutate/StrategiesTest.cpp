@@ -34,6 +34,17 @@ std::unique_ptr<IRMutator> createInjectorMutator() {
       Type::getInt1Ty,  Type::getInt8Ty,  Type::getInt16Ty, Type::getInt32Ty,
       Type::getInt64Ty, Type::getFloatTy, Type::getDoubleTy};
 
+  // Add vector 1, 2, 3, 4, and 8.
+  int VectorLength[] = {1, 2, 3, 4, 8};
+  std::vector<TypeGetter> BasicTypeGetters(Types);
+  for (auto typeGetter : BasicTypeGetters) {
+    for (int length : VectorLength) {
+      Types.push_back([typeGetter, length](LLVMContext &C) {
+        return VectorType::get(typeGetter(C), length, false);
+      });
+    }
+  }
+
   std::vector<std::unique_ptr<IRMutationStrategy>> Strategies;
   Strategies.push_back(std::make_unique<InjectorIRStrategy>(
       InjectorIRStrategy::getDefaultOps()));
@@ -78,6 +89,25 @@ void IterateOnSource(StringRef Source, IRMutator &Mutator) {
   }
 }
 
+static void mutateAndVerifyModule(StringRef Source,
+                                  std::unique_ptr<IRMutator> &Mutator,
+                                  int repeat = 100) {
+  LLVMContext Ctx;
+  auto M = parseAssembly(Source.data(), Ctx);
+  std::mt19937 mt(Seed);
+  std::uniform_int_distribution<int> RandInt(INT_MIN, INT_MAX);
+  for (int i = 0; i < repeat; i++) {
+    Mutator->mutateModule(*M, RandInt(mt), Source.size(), Source.size() + 1024);
+    ASSERT_FALSE(verifyModule(*M, &errs()));
+  }
+}
+template <class Strategy>
+static void mutateAndVerifyModule(StringRef Source, int repeat = 100) {
+  auto Mutator = createMutator<Strategy>();
+  ASSERT_TRUE(Mutator);
+  mutateAndVerifyModule(Source, Mutator, repeat);
+}
+
 TEST(InjectorIRStrategyTest, EmptyModule) {
   // Test that we can inject into empty module
 
@@ -90,6 +120,13 @@ TEST(InjectorIRStrategyTest, EmptyModule) {
 
   Mutator->mutateModule(*M, Seed, 1, 1);
   EXPECT_TRUE(!verifyModule(*M, &errs()));
+}
+
+TEST(InjectorIRStrategyTest, LargeInsertion) {
+  StringRef Source = "";
+  auto Mutator = createInjectorMutator();
+  ASSERT_TRUE(Mutator);
+  mutateAndVerifyModule(Source, Mutator, 100);
 }
 
 TEST(InstDeleterIRStrategyTest, EmptyFunction) {
@@ -383,21 +420,6 @@ TEST(InstModificationIRStrategy, FastMath) {
   }
   for (auto p : FPOpsHasFastMath)
     ASSERT_TRUE(p.second);
-}
-
-template <class Strategy>
-static void mutateAndVerifyModule(StringRef Source, int repeat = 100) {
-  LLVMContext Ctx;
-  auto Mutator = createMutator<Strategy>();
-  ASSERT_TRUE(Mutator);
-
-  auto M = parseAssembly(Source.data(), Ctx);
-  std::mt19937 mt(Seed);
-  std::uniform_int_distribution<int> RandInt(INT_MIN, INT_MAX);
-  for (int i = 0; i < repeat; i++) {
-    Mutator->mutateModule(*M, RandInt(mt), Source.size(), Source.size() + 1024);
-    ASSERT_FALSE(verifyModule(*M, &errs()));
-  }
 }
 
 TEST(InsertCFGStrategy, CFG) {

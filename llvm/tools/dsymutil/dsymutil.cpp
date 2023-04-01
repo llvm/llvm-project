@@ -99,7 +99,7 @@ enum class DWARFVerify : uint8_t {
   All = Input | Output,
   Auto = Input | OutputOnValidInput,
 #if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
-  Default = Auto
+  Default = None // FIXME: Auto
 #else
   Default = None
 #endif

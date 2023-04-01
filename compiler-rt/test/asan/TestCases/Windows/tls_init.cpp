@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // RUN: %clang_cl_asan %s -Fe%t.exe /MD
 // RUN: %run %t.exe | FileCheck %s
 

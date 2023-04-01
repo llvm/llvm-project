@@ -199,6 +199,10 @@ Changes in existing checks
   <clang-tidy/checks/misc/definitions-in-headers>` check.
   Global options of the same name should be used instead.
 
+- Fixed false positive in :doc:`misc-definitions-in-headers
+  <clang-tidy/checks/misc/definitions-in-headers>` to avoid warning on
+  declarations inside anonymous namespaces.
+
 - Deprecated check-local options `HeaderFileExtensions`
   in :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` check.

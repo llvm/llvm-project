@@ -4,6 +4,10 @@
 // RUN: %clangxx_asan -O2 %s -o %t -fsanitize-address-use-after-return=always && not %run %t 2>&1 | FileCheck %s
 // XFAIL: target={{.*windows-msvc.*}}
 
+// FIXME: Investigate failure on MinGW. MinGW ASAN produces a different report:
+//        stack-overflow on address
+// XFAIL: target={{.*-windows-gnu}}
+
 // FIXME: Fix this test under GCC.
 // REQUIRES: Clang
 

@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // Make sure everything works even if the main module doesn't have any stack
 // variables, thus doesn't explicitly reference any symbol exported by the
 // runtime thunk.
