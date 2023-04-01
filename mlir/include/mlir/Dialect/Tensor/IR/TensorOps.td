@@ -1874,6 +1874,10 @@ def Tensor_UnPackOp : Tensor_RelayoutOp<"unpack"> {
   ];
 
   let extraClassDeclaration = commonExtraClassDeclaration # [{
+    static Value createDestinationTensor(OpBuilder &b, Location loc,
+        Value source, ArrayRef<OpFoldResult> innerTileSizes,
+        ArrayRef<int64_t> innerDimsPos, ArrayRef<int64_t> outerDimsPerm);
+
     /// Build and return a new UnPackOp that is a clone of the current UnPackOp
     /// with (innerDimsPos, innerTiles) (resp. outerDimsPerm) are permuted by 
     /// innerPermutation (resp. outerPermutation).
