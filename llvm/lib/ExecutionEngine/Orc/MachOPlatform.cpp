@@ -1166,10 +1166,9 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
   // If any platform sections were found then add an allocation action to call
   // the registration function.
   StringRef PlatformSections[] = {
-      MachOModInitFuncSectionName,   MachOObjCClassListSectionName,
-      MachOObjCImageInfoSectionName, MachOObjCSelRefsSectionName,
-      MachOSwift5ProtoSectionName,   MachOSwift5ProtosSectionName,
-      MachOSwift5TypesSectionName,
+      MachOModInitFuncSectionName, MachOObjCClassListSectionName,
+      MachOObjCSelRefsSectionName, MachOSwift5ProtoSectionName,
+      MachOSwift5ProtosSectionName, MachOSwift5TypesSectionName,
   };
 
   for (auto &SecName : PlatformSections) {
