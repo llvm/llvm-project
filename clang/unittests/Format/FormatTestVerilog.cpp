@@ -338,6 +338,20 @@ TEST_F(FormatTestVerilog, Delay) {
                             "x = x;");
 }
 
+TEST_F(FormatTestVerilog, Enum) {
+  verifyFormat("enum { x } x;");
+  verifyFormat("typedef enum { x } x;");
+  verifyFormat("enum { red, yellow, green } x;");
+  verifyFormat("typedef enum { red, yellow, green } x;");
+  verifyFormat("enum integer { x } x;");
+  verifyFormat("typedef enum { x = 0 } x;");
+  verifyFormat("typedef enum { red = 0, yellow = 1, green = 2 } x;");
+  verifyFormat("typedef enum integer { x } x;");
+  verifyFormat("typedef enum bit [0 : 1] { x } x;");
+  verifyFormat("typedef enum { add = 10, sub[5], jmp[6 : 8] } E1;");
+  verifyFormat("typedef enum { add = 10, sub[5] = 0, jmp[6 : 8] = 1 } E1;");
+}
+
 TEST_F(FormatTestVerilog, Headers) {
   // Test headers with multiple ports.
   verifyFormat("module mh1\n"
