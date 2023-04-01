@@ -3375,6 +3375,10 @@ the configuration (without a prefix: ``Auto``).
       Decimal: 3
       Hex: -1
 
+  You can also specify a minimum number of digits (``BinaryMinDigits``,
+  ``DecimalMinDigits``, and ``HexMinDigits``) the integer literal must
+  have in order for the separators to be inserted.
+
   * ``int8_t Binary`` Format separators in binary literals.
 
     .. code-block:: text
@@ -3384,6 +3388,15 @@ the configuration (without a prefix: ``Auto``).
       /*  3: */ b = 0b100'111'101'101;
       /*  4: */ b = 0b1001'1110'1101;
 
+  * ``int8_t BinaryMinDigits`` Format separators in binary literals with a minimum number of digits.
+
+    .. code-block:: text
+
+      // Binary: 3
+      // BinaryMinDigits: 7
+      b1 = 0b101101;
+      b2 = 0b1'101'101;
+
   * ``int8_t Decimal`` Format separators in decimal literals.
 
     .. code-block:: text
@@ -3392,6 +3405,15 @@ the configuration (without a prefix: ``Auto``).
       /*  0: */ d = 184467'440737'0'95505'92ull;
       /*  3: */ d = 18'446'744'073'709'550'592ull;
 
+  * ``int8_t DecimalMinDigits`` Format separators in decimal literals with a minimum number of digits.
+
+    .. code-block:: text
+
+      // Decimal: 3
+      // DecimalMinDigits: 5
+      d1 = 2023;
+      d2 = 10'000;
+
   * ``int8_t Hex`` Format separators in hexadecimal literals.
 
     .. code-block:: text
@@ -3399,6 +3421,16 @@ the configuration (without a prefix: ``Auto``).
       /* -1: */ h = 0xDEADBEEFDEADBEEFuz;
       /*  0: */ h = 0xDEAD'BEEF'DE'AD'BEE'Fuz;
       /*  2: */ h = 0xDE'AD'BE'EF'DE'AD'BE'EFuz;
+
+  * ``int8_t HexMinDigits`` Format separators in hexadecimal literals with a minimum number of
+    digits.
+
+    .. code-block:: text
+
+      // Hex: 2
+      // HexMinDigits: 6
+      h1 = 0xABCDE;
+      h2 = 0xAB'CD'EF;
 
 
 .. _JavaImportGroups:

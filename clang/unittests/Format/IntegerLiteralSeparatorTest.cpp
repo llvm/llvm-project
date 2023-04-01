@@ -116,6 +116,41 @@ TEST_F(IntegerLiteralSeparatorTest, UnderscoreAsSeparator) {
   verifyFormat("o = 0o400000000000000003n;", Style);
 }
 
+TEST_F(IntegerLiteralSeparatorTest, MinDigits) {
+  FormatStyle Style = getLLVMStyle();
+  Style.IntegerLiteralSeparator.Binary = 3;
+  Style.IntegerLiteralSeparator.Decimal = 3;
+  Style.IntegerLiteralSeparator.Hex = 2;
+
+  Style.IntegerLiteralSeparator.BinaryMinDigits = 7;
+  verifyFormat("b1 = 0b101101;\n"
+               "b2 = 0b1'101'101;",
+               "b1 = 0b101'101;\n"
+               "b2 = 0b1101101;",
+               Style);
+
+  Style.IntegerLiteralSeparator.DecimalMinDigits = 5;
+  verifyFormat("d1 = 2023;\n"
+               "d2 = 10'000;",
+               "d1 = 2'023;\n"
+               "d2 = 100'00;",
+               Style);
+
+  Style.IntegerLiteralSeparator.DecimalMinDigits = 3;
+  verifyFormat("d1 = 123;\n"
+               "d2 = 1'234;",
+               "d1 = 12'3;\n"
+               "d2 = 12'34;",
+               Style);
+
+  Style.IntegerLiteralSeparator.HexMinDigits = 6;
+  verifyFormat("h1 = 0xABCDE;\n"
+               "h2 = 0xAB'CD'EF;",
+               "h1 = 0xA'BC'DE;\n"
+               "h2 = 0xABC'DEF;",
+               Style);
+}
+
 TEST_F(IntegerLiteralSeparatorTest, FixRanges) {
   FormatStyle Style = getLLVMStyle();
   Style.IntegerLiteralSeparator.Decimal = 3;

@@ -281,7 +281,8 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode *N) {
     return;
   }
 
-  if (LeafRec->getName() == "immAllOnesV") {
+  if (LeafRec->getName() == "immAllOnesV" ||
+      LeafRec->getName() == "immAllZerosV") {
     // If this is the root of the dag we're matching, we emit a redundant opcode
     // check to ensure that this gets folded into the normal top-level
     // OpcodeSwitch.
@@ -291,19 +292,11 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode *N) {
       const SDNodeInfo &NI = CGP.getSDNodeInfo(CGP.getSDNodeNamed(Name));
       AddMatcher(new CheckOpcodeMatcher(NI));
     }
-    return AddMatcher(new CheckImmAllOnesVMatcher());
-  }
-  if (LeafRec->getName() == "immAllZerosV") {
-    // If this is the root of the dag we're matching, we emit a redundant opcode
-    // check to ensure that this gets folded into the normal top-level
-    // OpcodeSwitch.
-    if (N == Pattern.getSrcPattern()) {
-      MVT VT = N->getSimpleType(0);
-      StringRef Name = VT.isScalableVector() ? "splat_vector" : "build_vector";
-      const SDNodeInfo &NI = CGP.getSDNodeInfo(CGP.getSDNodeNamed(Name));
-      AddMatcher(new CheckOpcodeMatcher(NI));
-    }
-    return AddMatcher(new CheckImmAllZerosVMatcher());
+    if (LeafRec->getName() == "immAllOnesV")
+      AddMatcher(new CheckImmAllOnesVMatcher());
+    else
+      AddMatcher(new CheckImmAllZerosVMatcher());
+    return;
   }
 
   errs() << "Unknown leaf kind: " << *N << "\n";

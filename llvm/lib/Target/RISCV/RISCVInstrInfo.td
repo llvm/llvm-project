@@ -1247,8 +1247,7 @@ def mul_oneuse : binop_oneuse<mul>;
 def mul_const_oneuse : PatFrag<(ops node:$A, node:$B),
                                (mul node:$A, node:$B), [{
   if (auto *N1C = dyn_cast<ConstantSDNode>(N->getOperand(1)))
-    if (N1C->hasOneUse())
-      return true;
+    return N1C->hasOneUse();
   return false;
 }]>;
 
