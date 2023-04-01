@@ -128,12 +128,14 @@ static void LockDefStuffAndStopTheWorld(DoStopTheWorldParam *param) {
   __lsan::UnlockThreadRegistry();
 }
 
+#if SANITIZER_LINUX || SANITIZER_NETBSD
 static int LockStuffAndStopTheWorldCallback(struct dl_phdr_info *info,
                                             size_t size, void *data) {
   DoStopTheWorldParam *param = reinterpret_cast<DoStopTheWorldParam *>(data);
   LockDefStuffAndStopTheWorld(param);
   return 1;
 }
+#endif
 
 static void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
                                      void *argument) {
