@@ -261,6 +261,15 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   Tokens = annotate("template <typename T, bool B = C && D> struct S {};");
   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
   EXPECT_TOKEN(Tokens[9], tok::ampamp, TT_BinaryOperator);
+
+  Tokens = annotate("template <typename T, typename U = T&&> struct S {};");
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::ampamp, TT_PointerOrReference);
+
+  Tokens = annotate("template <typename T = int (*)(int)> struct S {};");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_FunctionTypeLParen);
+  EXPECT_TOKEN(Tokens[7], tok::star, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
