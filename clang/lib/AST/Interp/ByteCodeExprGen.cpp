@@ -672,18 +672,28 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
   }
 
   if (T->isAnyComplexType()) {
-    unsigned InitIndex = 0;
-    for (const Expr *Init : E->inits()) {
-      PrimType InitT = classifyPrim(Init->getType());
+    unsigned NumInits = E->getNumInits();
+    QualType ElemQT = E->getType()->getAs<ComplexType>()->getElementType();
+    PrimType ElemT = classifyPrim(ElemQT);
+    if (NumInits == 0) {
+      // Zero-initialize both elements.
+      for (unsigned I = 0; I < 2; ++I) {
+        if (!this->visitZeroInitializer(ElemT, ElemQT, E))
+          return false;
+        if (!this->emitInitElem(ElemT, I, E))
+          return false;
+      }
+    } else if (NumInits == 2) {
+      unsigned InitIndex = 0;
+      for (const Expr *Init : E->inits()) {
+        if (!this->visit(Init))
+          return false;
 
-      if (!this->visit(Init))
-        return false;
-
-      if (!this->emitInitElem(InitT, InitIndex, E))
-        return false;
-      ++InitIndex;
+        if (!this->emitInitElem(ElemT, InitIndex, E))
+          return false;
+        ++InitIndex;
+      }
     }
-    assert(InitIndex == 2);
     return true;
   }
 
