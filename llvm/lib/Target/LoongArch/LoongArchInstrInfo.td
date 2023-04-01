@@ -859,6 +859,13 @@ class shiftopw<SDPatternOperator operator>
     : PatFrag<(ops node:$val, node:$count),
               (operator node:$val, (i64 (shiftMask32 node:$count)))>;
 
+def mul_const_oneuse : PatFrag<(ops node:$A, node:$B),
+                               (mul node:$A, node:$B), [{
+  if (auto *N1C = dyn_cast<ConstantSDNode>(N->getOperand(1)))
+    return N1C->hasOneUse();
+  return false;
+}]>;
+
 let Predicates = [IsLA32] in {
 def : PatGprGpr<add, ADD_W>;
 def : PatGprImm<add, ADDI_W, simm12>;
@@ -937,6 +944,31 @@ def : Pat<(add GPR:$rj, (AddiPair:$im)),
 def : Pat<(sext_inreg (add GPR:$rj, (AddiPair:$im)), i32),
           (ADDI_W (ADDI_W GPR:$rj, (AddiPairImmLarge AddiPair:$im)),
                   (AddiPairImmSmall AddiPair:$im))>;
+} // Predicates = [IsLA64]
+
+let Predicates = [IsLA32] in {
+foreach Idx0 = 1...4 in {
+  foreach Idx1 = 1...4 in {
+    defvar CImm = !add(1, !shl(!add(1, !shl(1, Idx0)), Idx1));
+    def : Pat<(mul_const_oneuse GPR:$r, (i32 CImm)),
+          (ALSL_W (ALSL_W GPR:$r, GPR:$r, (i32 Idx0)),
+                  GPR:$r, (i32 Idx1))>;
+  }
+}
+} // Predicates = [IsLA32]
+
+let Predicates = [IsLA64] in {
+foreach Idx0 = 1...4 in {
+  foreach Idx1 = 1...4 in {
+    defvar CImm = !add(1, !shl(!add(1, !shl(1, Idx0)), Idx1));
+    def : Pat<(sext_inreg (mul_const_oneuse GPR:$r, (i64 CImm)), i32),
+              (ALSL_W (ALSL_W GPR:$r, GPR:$r, (i64 Idx0)),
+                      GPR:$r, (i64 Idx1))>;
+    def : Pat<(mul_const_oneuse GPR:$r, (i64 CImm)),
+              (ALSL_D (ALSL_D GPR:$r, GPR:$r, (i64 Idx0)),
+                      GPR:$r, (i64 Idx1))>;
+  }
+}
 } // Predicates = [IsLA64]
 
 foreach Idx = 1...7 in {
