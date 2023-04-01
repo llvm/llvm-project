@@ -1489,6 +1489,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
     break;
   case FormatStyle::LK_Verilog:
     LLVMStyle.IndentCaseLabels = true;
+    LLVMStyle.SpacesInContainerLiterals = false;
     break;
   default:
     break;
