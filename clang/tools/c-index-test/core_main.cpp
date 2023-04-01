@@ -846,7 +846,8 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
       llvm::make_scope_exit([&]() { clang_disposeDiagnosticSet(Diags); });
   for (unsigned I = 0, N = clang_getNumDiagnosticsInSet(Diags); I < N; ++I) {
     CXDiagnostic Diag = clang_getDiagnosticInSet(Diags, I);
-    CXString Spelling = clang_getDiagnosticSpelling(Diag);
+    CXString Spelling =
+        clang_formatDiagnostic(Diag, clang_defaultDiagnosticDisplayOptions());
     llvm::errs() << clang_getCString(Spelling) << "\n";
     clang_disposeString(Spelling);
     clang_disposeDiagnostic(Diag);

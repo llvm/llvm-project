@@ -13,11 +13,13 @@
 
 #include "CASUtils.h"
 #include "CXDiagnosticSetDiagnosticConsumer.h"
+#include "CXLoadedDiagnostic.h"
 #include "CXString.h"
 
 #include "clang-c/Dependencies.h"
 
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/SerializedDiagnosticPrinter.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
@@ -342,49 +344,6 @@ CXErrorCode clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
   return Result;
 }
 
-CXErrorCode clang_experimental_DependencyScannerWorker_getFileDependencies_v5(
-    CXDependencyScannerWorker W, int argc, const char *const *argv,
-    const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
-    CXModuleDiscoveredCallback *MDC, void *MLOContext,
-    CXModuleLookupOutputCallback *MLO, unsigned, CXFileDependenciesList **Out,
-    CXDiagnosticSet *OutDiags) {
-  OutputLookup OL(MLOContext, MLO);
-  auto LookupOutputs = [&](const ModuleID &ID, ModuleOutputKind MOK) {
-    return OL.lookupModuleOutput(ID, MOK);
-  };
-
-  if (!Out)
-    return CXError_InvalidArguments;
-  *Out = nullptr;
-
-  CXDiagnosticSetDiagnosticConsumer DiagConsumer;
-
-  CXErrorCode Result = getFileDependencies(
-      W, argc, argv, WorkingDirectory, MDC, MDCContext, nullptr, &DiagConsumer,
-      LookupOutputs, ModuleName ? Optional<StringRef>(ModuleName) : None,
-      [&](TranslationUnitDeps TU) {
-        assert(TU.DriverCommandLine.empty());
-        std::vector<std::string> Modules;
-        for (const ModuleID &MID : TU.ClangModuleDeps)
-          Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
-        auto *Commands = new CXTranslationUnitCommand[TU.Commands.size()];
-        for (size_t I = 0, E = TU.Commands.size(); I < E; ++I) {
-          Commands[I].ContextHash = cxstring::createDup(TU.ID.ContextHash);
-          Commands[I].FileDeps = cxstring::createSet(TU.FileDeps);
-          Commands[I].ModuleDeps = cxstring::createSet(Modules);
-          Commands[I].Executable =
-              cxstring::createDup(TU.Commands[I].Executable);
-          Commands[I].BuildArguments =
-              cxstring::createSet(TU.Commands[I].Arguments);
-        }
-        *Out = new CXFileDependenciesList{TU.Commands.size(), Commands};
-      });
-
-  *OutDiags = DiagConsumer.getDiagnosticSet();
-
-  return Result;
-}
-
 namespace {
 
 struct DependencyScannerWorkerScanSettings {
@@ -438,8 +397,18 @@ struct CStringsManager {
 
 struct DependencyGraph {
   TranslationUnitDeps TUDeps;
-  CXDiagnosticSetDiagnosticConsumer DiagConsumer;
+  SmallString<256> SerialDiagBuf;
   CStringsManager StrMgr{};
+
+  CXDiagnosticSet getDiagnosticSet() const {
+    CXLoadDiag_Error Error;
+    CXString ErrorString;
+    CXDiagnosticSet DiagSet = loadCXDiagnosticsFromBuffer(
+        llvm::MemoryBufferRef(SerialDiagBuf, "<diags>"), &Error, &ErrorString);
+    assert(Error == CXLoadDiag_None);
+    clang_disposeString(ErrorString);
+    return DiagSet;
+  }
 };
 
 struct DependencyGraphModule {
@@ -497,9 +466,18 @@ enum CXErrorCode clang_experimental_DependencyScannerWorker_getDepGraph(
 
   DependencyGraph *DepGraph = new DependencyGraph();
 
+  // We capture diagnostics as a serialized diagnostics buffer, so that we don't
+  // need to keep a valid SourceManager in order to access diagnostic locations.
+  auto DiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
+  auto DiagOS =
+      std::make_unique<llvm::raw_svector_ostream>(DepGraph->SerialDiagBuf);
+  std::unique_ptr<DiagnosticConsumer> SerialDiagConsumer =
+      serialized_diags::create("<diagnostics>", DiagOpts.get(),
+                               /*MergeChildRecords=*/false, std::move(DiagOS));
+
   CXErrorCode Result = getFileDependencies(
       W, argc, argv, WorkingDirectory, /*MDC=*/nullptr, /*MDCContext=*/nullptr,
-      /*Error=*/nullptr, &DepGraph->DiagConsumer, LookupOutputs,
+      /*Error=*/nullptr, SerialDiagConsumer.get(), LookupOutputs,
       ModuleName ? Optional<StringRef>(ModuleName) : std::nullopt,
       [&](TranslationUnitDeps TU) { DepGraph->TUDeps = std::move(TU); });
 
@@ -615,7 +593,7 @@ const char *clang_experimental_DepGraph_getTUContextHash(CXDepGraph Graph) {
 }
 
 CXDiagnosticSet clang_experimental_DepGraph_getDiagnostics(CXDepGraph Graph) {
-  return unwrap(Graph)->DiagConsumer.getDiagnosticSet();
+  return unwrap(Graph)->getDiagnosticSet();
 }
 
 static std::string lookupModuleOutput(const ModuleID &ID, ModuleOutputKind MOK,
