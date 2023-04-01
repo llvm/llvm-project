@@ -613,7 +613,7 @@ void COFFPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
     void operator()(Expected<SymbolMap> Result) {
       if (Result) {
         assert(Result->size() == 1 && "Unexpected result map count");
-        SendResult(ExecutorAddr(Result->begin()->second.getAddress()));
+        SendResult(Result->begin()->second.getAddress());
       } else {
         SendResult(Result.takeError());
       }
@@ -892,8 +892,7 @@ Error COFFPlatform::COFFPlatformPlugin::
           continue;
         for (auto &E : B->edges())
           BState.Initializers.push_back(std::make_pair(
-              S.getName().str(),
-              ExecutorAddr(E.getTarget().getAddress() + E.getAddend())));
+              S.getName().str(), E.getTarget().getAddress() + E.getAddend()));
       }
 
   return Error::success();

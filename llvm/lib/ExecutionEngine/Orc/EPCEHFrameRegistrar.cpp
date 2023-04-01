@@ -57,9 +57,8 @@ Expected<std::unique_ptr<EPCEHFrameRegistrar>> EPCEHFrameRegistrar::Create(
   auto RegisterEHFrameWrapperFnAddr = (*Result)[0][0];
   auto DeregisterEHFrameWrapperFnAddr = (*Result)[0][1];
 
-  return std::make_unique<EPCEHFrameRegistrar>(
-      ES, ExecutorAddr(RegisterEHFrameWrapperFnAddr),
-      ExecutorAddr(DeregisterEHFrameWrapperFnAddr));
+  return std::make_unique<EPCEHFrameRegistrar>(ES, RegisterEHFrameWrapperFnAddr,
+                                               DeregisterEHFrameWrapperFnAddr);
 }
 
 Error EPCEHFrameRegistrar::registerEHFrames(ExecutorAddrRange EHFrameSection) {
