@@ -11,14 +11,18 @@
 // This file implements __sanitizer_print_memory_profile.
 //===----------------------------------------------------------------------===//
 
+#include "asan/asan_allocator.h"
+#include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_platform.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_stoptheworld.h"
-#include "lsan/lsan_common.h"
-#include "asan/asan_allocator.h"
 
 #if CAN_SANITIZE_LEAKS
+#  if SANITIZER_LINUX || SANITIZER_NETBSD
+#    include <link.h>
+#  endif
 
 namespace __asan {
 
@@ -111,6 +115,40 @@ static void MemoryProfileCB(const SuspendedThreadsList &suspended_threads_list,
     __asan_print_accumulated_stats();
 }
 
+struct DoStopTheWorldParam {
+  StopTheWorldCallback callback;
+  void *argument;
+};
+
+static void LockDefStuffAndStopTheWorld(DoStopTheWorldParam *param) {
+  __lsan::LockThreadRegistry();
+  __lsan::LockAllocator();
+  __sanitizer::StopTheWorld(param->callback, param->argument);
+  __lsan::UnlockAllocator();
+  __lsan::UnlockThreadRegistry();
+}
+
+static int LockStuffAndStopTheWorldCallback(struct dl_phdr_info *info,
+                                            size_t size, void *data) {
+  DoStopTheWorldParam *param = reinterpret_cast<DoStopTheWorldParam *>(data);
+  LockDefStuffAndStopTheWorld(param);
+  return 1;
+}
+
+static void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
+                                     void *argument) {
+  DoStopTheWorldParam param = {callback, argument};
+
+#  if SANITIZER_LINUX || SANITIZER_NETBSD
+  // For libc dep systems, symbolization uses dl_iterate_phdr, which acquire a
+  // dl write lock. It could deadlock if the lock is already acquired by one of
+  // suspended. So calling stopTheWorld inside dl_iterate_phdr, first wait for
+  // that lock to be released (if acquired) and than suspend all threads
+  dl_iterate_phdr(LockStuffAndStopTheWorldCallback, &param);
+#  else
+  LockDefStuffAndStopTheWorld(&param);
+#  endif
+}
 }  // namespace __asan
 
 #endif  // CAN_SANITIZE_LEAKS
@@ -123,7 +161,7 @@ void __sanitizer_print_memory_profile(uptr top_percent,
   uptr Arg[2];
   Arg[0] = top_percent;
   Arg[1] = max_number_of_contexts;
-  __sanitizer::StopTheWorld(__asan::MemoryProfileCB, Arg);
+  __asan::LockStuffAndStopTheWorld(__asan::MemoryProfileCB, Arg);
 #endif  // CAN_SANITIZE_LEAKS
 }
 }  // extern "C"
