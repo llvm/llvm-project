@@ -3708,24 +3708,17 @@ define i1 @movmsk_or_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ;
 ; SSE41-LABEL: movmsk_or_v2i64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    psubq %xmm1, %xmm0
+; SSE41-NEXT:    pxor %xmm1, %xmm0
 ; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    setne %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1OR2-LABEL: movmsk_or_v2i64:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vptest %xmm0, %xmm0
-; AVX1OR2-NEXT:    setne %al
-; AVX1OR2-NEXT:    retq
-;
-; AVX512-LABEL: movmsk_or_v2i64:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vptest %xmm0, %xmm0
-; AVX512-NEXT:    setne %al
-; AVX512-NEXT:    retq
+; AVX-LABEL: movmsk_or_v2i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vptest %xmm0, %xmm0
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    retq
   %cmp = icmp ne <2 x i64> %x, %y
   %e1 = extractelement <2 x i1> %cmp, i32 0
   %e2 = extractelement <2 x i1> %cmp, i32 1
