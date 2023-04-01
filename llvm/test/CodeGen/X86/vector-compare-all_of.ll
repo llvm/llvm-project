@@ -1427,9 +1427,9 @@ define i1 @bool_reduction_v16i16(<16 x i16> %x, <16 x i16> %y) {
 ;
 ; AVX512-LABEL: bool_reduction_v16i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqw %ymm1, %ymm0, %k0
-; AVX512-NEXT:    kortestw %k0, %k0
-; AVX512-NEXT:    setb %al
+; AVX512-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vptest %ymm0, %ymm0
+; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = icmp eq <16 x i16> %x, %y
@@ -1487,9 +1487,9 @@ define i1 @bool_reduction_v32i8(<32 x i8> %x, <32 x i8> %y) {
 ;
 ; AVX512-LABEL: bool_reduction_v32i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqb %ymm1, %ymm0, %k0
-; AVX512-NEXT:    kortestd %k0, %k0
-; AVX512-NEXT:    setb %al
+; AVX512-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vptest %ymm0, %ymm0
+; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = icmp eq <32 x i8> %x, %y
