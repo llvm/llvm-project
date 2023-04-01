@@ -623,6 +623,8 @@ public:
           {"clang-modulemap-file", MD.ClangModuleMapFile},
           {"command-line", MD.BuildArguments},
       };
+      if (MD.ModuleCacheKey)
+        O.try_emplace("cache-key", MD.ModuleCacheKey);
       if (MD.CASFileSystemRootID)
         O.try_emplace("casfs-root-id", MD.CASFileSystemRootID->toString());
       if (MD.IncludeTreeID)
@@ -643,6 +645,8 @@ public:
               {"executable", Cmd.Executable},
               {"command-line", Cmd.Arguments},
           };
+          if (Cmd.TUCacheKey)
+            O.try_emplace("cache-key", *Cmd.TUCacheKey);
           if (I.CASFileSystemRootID)
             O.try_emplace("casfs-root-id", I.CASFileSystemRootID);
           if (I.IncludeTreeID)
