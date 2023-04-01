@@ -166,8 +166,7 @@ void DebugObject::finalizeAsync(FinalizeContinuation OnFinalize) {
 
   if (auto SimpleSegAlloc = finalizeWorkingMemory()) {
     auto ROSeg = SimpleSegAlloc->getSegInfo(MemProt::Read);
-    ExecutorAddrRange DebugObjRange(ExecutorAddr(ROSeg.Addr),
-                                    ExecutorAddrDiff(ROSeg.WorkingMem.size()));
+    ExecutorAddrRange DebugObjRange(ROSeg.Addr, ROSeg.WorkingMem.size());
     SimpleSegAlloc->finalize(
         [this, DebugObjRange,
          OnFinalize = std::move(OnFinalize)](Expected<FinalizedAlloc> FA) {

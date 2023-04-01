@@ -49,7 +49,7 @@ Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
                                              ArrayRef<std::string> Args) {
   int64_t Result = 0;
   if (auto Err = callSPSWrapper<rt::SPSRunAsMainSignature>(
-          RunAsMainAddr, Result, ExecutorAddr(MainFnAddr), Args))
+          RunAsMainAddr, Result, MainFnAddr, Args))
     return std::move(Err);
   return Result;
 }
@@ -57,7 +57,7 @@ Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
 Expected<int32_t> SimpleRemoteEPC::runAsVoidFunction(ExecutorAddr VoidFnAddr) {
   int32_t Result = 0;
   if (auto Err = callSPSWrapper<rt::SPSRunAsVoidFunctionSignature>(
-          RunAsVoidFunctionAddr, Result, ExecutorAddr(VoidFnAddr)))
+          RunAsVoidFunctionAddr, Result, VoidFnAddr))
     return std::move(Err);
   return Result;
 }
@@ -66,7 +66,7 @@ Expected<int32_t> SimpleRemoteEPC::runAsIntFunction(ExecutorAddr IntFnAddr,
                                                     int Arg) {
   int32_t Result = 0;
   if (auto Err = callSPSWrapper<rt::SPSRunAsIntFunctionSignature>(
-          RunAsIntFunctionAddr, Result, ExecutorAddr(IntFnAddr), Arg))
+          RunAsIntFunctionAddr, Result, IntFnAddr, Arg))
     return std::move(Err);
   return Result;
 }
