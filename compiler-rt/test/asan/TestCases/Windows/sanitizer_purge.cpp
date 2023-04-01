@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 #include <Windows.h>
 #include <stdio.h>
 #include <sanitizer/allocator_interface.h>

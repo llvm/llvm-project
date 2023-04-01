@@ -99,11 +99,13 @@ if config.target_arch == 's390x':
   clang_asan_static_cflags.append("-mbackchain")
 clang_asan_static_cxxflags = config.cxx_mode_flags + clang_asan_static_cflags
 
+target_is_msvc = bool(re.match(r'.*-windows-msvc$', config.target_triple))
+
 asan_dynamic_flags = []
 if config.asan_dynamic:
   asan_dynamic_flags = ["-shared-libasan"]
-  if platform.system() == 'Windows':
-    # On Windows, we need to simulate "clang-cl /MD" on the clang driver side.
+  if platform.system() == 'Windows' and target_is_msvc:
+    # On MSVC target, we need to simulate "clang-cl /MD" on the clang driver side.
     asan_dynamic_flags += ["-D_MT", "-D_DLL", "-Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames"]
   elif platform.system() == 'FreeBSD':
     # On FreeBSD, we need to add -pthread to ensure pthread functions are available.
@@ -144,8 +146,8 @@ if config.asan_dynamic:
   config.substitutions.append( ("%clang_asan_static ", build_invocation(clang_asan_static_cflags)) )
   config.substitutions.append( ("%clangxx_asan_static ", build_invocation(clang_asan_static_cxxflags)) )
 
-# Windows-specific tests might also use the clang-cl.exe driver.
-if platform.system() == 'Windows':
+# MSVC-specific tests might also use the clang-cl.exe driver.
+if platform.system() == 'Windows' and target_is_msvc:
   clang_cl_cxxflags = ["-Wno-deprecated-declarations",
                        "-WX",
                        "-D_HAS_EXCEPTIONS=0",

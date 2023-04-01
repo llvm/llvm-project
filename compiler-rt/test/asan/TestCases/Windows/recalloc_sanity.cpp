@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // Workaround for "LINK : fatal error LNK1318: Unexpected PDB error"
 // RUN: rm -f %t.pdb
 

@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // Test that coverage and MSVC CRT stdio work from a DLL. This ensures that the
 // __local_stdio_printf_options function isn't instrumented for coverage.
 

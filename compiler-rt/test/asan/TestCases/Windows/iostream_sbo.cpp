@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // First, check this works with the default ignorelist:
 // RUN: %clang_cl_asan -Od %s -Fe%t
 // RUN: echo "42" | %run %t 2>&1 | FileCheck %s
