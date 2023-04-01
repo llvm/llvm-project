@@ -1709,8 +1709,8 @@ void UnwrappedLineParser::parseStructuralElement(
       // enum definition can start a structural element.
       if (!parseEnum())
         break;
-      // This only applies for C++.
-      if (!Style.isCpp()) {
+      // This only applies to C++ and Verilog.
+      if (!Style.isCpp() && !Style.isVerilog()) {
         addUnwrappedLine();
         return;
       }
@@ -2231,11 +2231,11 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
   const FormatToken *Previous = FormatTok->Previous;
   const FormatToken *LeftSquare = FormatTok;
   nextToken();
-  if (Previous &&
-      (Previous->isOneOf(tok::identifier, tok::kw_operator, tok::kw_new,
-                         tok::kw_delete, tok::l_square) ||
-       LeftSquare->isCppStructuredBinding(Style) || Previous->closesScope() ||
-       Previous->isSimpleTypeSpecifier())) {
+  if ((Previous && ((Previous->Tok.getIdentifierInfo() &&
+                     !Previous->isOneOf(tok::kw_return, tok::kw_co_await,
+                                        tok::kw_co_yield, tok::kw_co_return)) ||
+                    Previous->closesScope())) ||
+      LeftSquare->isCppStructuredBinding(Style)) {
     return false;
   }
   if (FormatTok->is(tok::l_square))
@@ -3541,7 +3541,15 @@ bool UnwrappedLineParser::parseEnum() {
          FormatTok->isOneOf(tok::colon, tok::coloncolon, tok::less,
                             tok::greater, tok::comma, tok::question,
                             tok::l_square, tok::r_square)) {
-    nextToken();
+    if (Style.isVerilog()) {
+      FormatTok->setFinalizedType(TT_VerilogDimensionedTypeName);
+      nextToken();
+      // In Verilog the base type can have dimensions.
+      while (FormatTok->is(tok::l_square))
+        parseSquare();
+    } else {
+      nextToken();
+    }
     // We can have macros or attributes in between 'enum' and the enum name.
     if (FormatTok->is(tok::l_paren))
       parseParens();
@@ -3784,7 +3792,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
           // Don't try parsing a lambda if we had a closing parenthesis before,
           // it was probably a pointer to an array: int (*)[].
           if (!tryToParseLambda())
-            break;
+            continue;
         } else {
           parseSquare();
           continue;

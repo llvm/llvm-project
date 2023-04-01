@@ -338,6 +338,20 @@ TEST_F(FormatTestVerilog, Delay) {
                             "x = x;");
 }
 
+TEST_F(FormatTestVerilog, Enum) {
+  verifyFormat("enum { x } x;");
+  verifyFormat("typedef enum { x } x;");
+  verifyFormat("enum { red, yellow, green } x;");
+  verifyFormat("typedef enum { red, yellow, green } x;");
+  verifyFormat("enum integer { x } x;");
+  verifyFormat("typedef enum { x = 0 } x;");
+  verifyFormat("typedef enum { red = 0, yellow = 1, green = 2 } x;");
+  verifyFormat("typedef enum integer { x } x;");
+  verifyFormat("typedef enum bit [0 : 1] { x } x;");
+  verifyFormat("typedef enum { add = 10, sub[5], jmp[6 : 8] } E1;");
+  verifyFormat("typedef enum { add = 10, sub[5] = 0, jmp[6 : 8] = 1 } E1;");
+}
+
 TEST_F(FormatTestVerilog, Headers) {
   // Test headers with multiple ports.
   verifyFormat("module mh1\n"
@@ -900,6 +914,25 @@ TEST_F(FormatTestVerilog, Streaming) {
   verifyFormat("{>>byte{j}} = x;");
   verifyFormat("{<<{j}} = x;");
   verifyFormat("{<<byte{j}} = x;");
+}
+
+TEST_F(FormatTestVerilog, StructLiteral) {
+  verifyFormat("c = '{0, 0.0};");
+  verifyFormat("c = '{'{1, 1.0}, '{2, 2.0}};");
+  verifyFormat("c = '{a: 0, b: 0.0};");
+  verifyFormat("c = '{a: 0, b: 0.0, default: 0};");
+  verifyFormat("c = ab'{a: 0, b: 0.0};");
+  verifyFormat("c = ab'{cd: cd'{1, 1.0}, ef: ef'{2, 2.0}};");
+  verifyFormat("c = ab'{cd'{1, 1.0}, ef'{2, 2.0}};");
+  verifyFormat("d = {int: 1, shortreal: 1.0};");
+  verifyFormat("d = ab'{int: 1, shortreal: 1.0};");
+  verifyFormat("c = '{default: 0};");
+  auto Style = getDefaultStyle();
+  Style.SpacesInContainerLiterals = true;
+  verifyFormat("c = '{a : 0, b : 0.0};", Style);
+  verifyFormat("c = '{a : 0, b : 0.0, default : 0};", Style);
+  verifyFormat("c = ab'{a : 0, b : 0.0};", Style);
+  verifyFormat("c = ab'{cd : cd'{1, 1.0}, ef : ef'{2, 2.0}};", Style);
 }
 
 TEST_F(FormatTestVerilog, StructuredProcedure) {

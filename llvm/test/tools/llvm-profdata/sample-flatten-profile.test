@@ -7,6 +7,8 @@
 ; CHECK:baz:169:10
 ; CHECK-NEXT: 1: 10
 ; CHECK-NEXT: 3: 20
+; CHECK-NEXT: 4: 36 corge:15 quux:13 qux:8
+; CHECK-NEXT: 4.1: 12 thud:5 grault:4 quux:3
 ; CHECK-NEXT: 5: 20 foo:20
 ; CHECK-NEXT: 6: 2 bar:2
 ; CHECK-NEXT: 10: 1
@@ -18,12 +20,12 @@
 ; CHECK-NEXT: 4: 1
 ; CHECK-NEXT: !CFGChecksum: 3
 ; CHECK-NEXT: !Attributes: 3
-; CHECK-NEXT:main:91:1
+; CHECK-NEXT:main:104:1
 ; CHECK-NEXT: 4: 1
 ; CHECK-NEXT: 4.2: 1
 ; CHECK-NEXT: 7: 1
 ; CHECK-NEXT: 9: 3 bar:2 foo:1
-; CHECK-NEXT: 10: 3 baz:2 foo:1
+; CHECK-NEXT: 10: 16 baz:15 foo:1
 ; CHECK-NEXT: !CFGChecksum: 2
 ; CHECK-NEXT: !Attributes: 2
 ; CHECK-NEXT:bar:15:14

@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // Make sure we can link a DLL with large functions which would mean
 // functions such as __asan_loadN and __asan_storeN will be called
 // from the DLL.  We simulate the large function with

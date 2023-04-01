@@ -299,7 +299,7 @@ add_entrypoint_object(
   HDRS
     pthread_exit.h
   DEPENDS
-    libc.include.threads
+    libc.include.pthread
     libc.src.__support.threads.thread
 )
 

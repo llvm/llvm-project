@@ -331,12 +331,12 @@ contains
   subroutine formattedReadProc(dtv, unit, iotype, vlist, iostat, iomsg)
     class(t), intent(inout) :: dtv
     integer, intent(in) :: unit
-    !ERROR: Dummy argument 'iotype' of a defined input/output procedure must be assumed-length CHARACTER
+    !ERROR: Dummy argument 'iotype' of a defined input/output procedure must be assumed-length CHARACTER of default kind
     character(len=5), intent(in) :: iotype ! Error, must be assumed length
     integer, intent(in) :: vlist(:)
     integer, intent(out) :: iostat
-    character(len=*), intent(inout) :: iomsg
-
+    !ERROR: Dummy argument 'iomsg' of a defined input/output procedure must be assumed-length CHARACTER of default kind
+    character(len=5), intent(inout) :: iomsg
     iostat = 343
     stop 'fail'
   end subroutine
@@ -667,3 +667,25 @@ subroutine m25b
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
   end subroutine
 end subroutine
+
+module m26a
+  type t
+    integer n
+  end type
+ contains
+  subroutine unformattedRead(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    !ERROR: Dummy argument 'iomsg' of a defined input/output procedure must be assumed-length CHARACTER of default kind
+    character(kind=4,len=*),intent(inout) :: iomsg
+    !ERROR: Must have default kind(1) of CHARACTER type, but is CHARACTER(KIND=4,LEN=*)
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%n
+  end subroutine
+end
+module m26b
+  use m26a
+  interface read(unformatted)
+    procedure unformattedRead
+  end interface
+end
