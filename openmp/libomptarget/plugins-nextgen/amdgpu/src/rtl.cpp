@@ -457,8 +457,13 @@ struct AMDGPUKernelTy : public GenericKernelTy {
       assert(MaxNumThreads > 0 && "MaxNumThreads more than 0 threads");
     } else {
       // Set the number of preferred and max threads to the ConstWGSize to get
-      // the exact value for kernel launch.
-      PreferredNumThreads = ConstWGSize;
+      // the exact value for kernel launch. Exception: In generic-spmd mode, we
+      // set it to the default blocksize since ConstWGSize may include the
+      // master thread which is not required.
+      PreferredNumThreads =
+          getExecutionModeFlags() == OMP_TGT_EXEC_MODE_GENERIC_SPMD
+              ? Device.getDefaultNumThreads()
+              : ConstWGSize;
       MaxNumThreads = ConstWGSize;
     }
 
