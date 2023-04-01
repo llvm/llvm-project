@@ -358,34 +358,15 @@ define i1 @test_v16i64(ptr %ptr) nounwind {
 ;
 
 define i1 @test_v2i32(ptr %ptr) nounwind {
-; SSE2-LABEL: test_v2i32:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq (%rdi), %rax
-; SSE2-NEXT:    movq %rax, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    movd %xmm0, %ecx
-; SSE2-NEXT:    andl %eax, %ecx
-; SSE2-NEXT:    cmpl $-1, %ecx
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: test_v2i32:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    movq (%rdi), %rax
-; SSE41-NEXT:    movq %rax, %rcx
-; SSE41-NEXT:    shrq $32, %rcx
-; SSE41-NEXT:    andl %eax, %ecx
-; SSE41-NEXT:    cmpl $-1, %ecx
-; SSE41-NEXT:    sete %al
-; SSE41-NEXT:    retq
+; SSE-LABEL: test_v2i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    cmpq $-1, (%rdi)
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movq (%rdi), %rax
-; AVX-NEXT:    movq %rax, %rcx
-; AVX-NEXT:    shrq $32, %rcx
-; AVX-NEXT:    andl %eax, %ecx
-; AVX-NEXT:    cmpl $-1, %ecx
+; AVX-NEXT:    cmpq $-1, (%rdi)
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %vload = load <2 x i32>, ptr %ptr
@@ -658,21 +639,13 @@ define i1 @test_v16i32(ptr %ptr) nounwind {
 define i1 @test_v2i16(ptr %ptr) nounwind {
 ; SSE-LABEL: test_v2i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl (%rdi), %eax
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    shrl $16, %ecx
-; SSE-NEXT:    andl %eax, %ecx
-; SSE-NEXT:    cmpw $-1, %cx
+; SSE-NEXT:    cmpl $-1, (%rdi)
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl (%rdi), %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    shrl $16, %ecx
-; AVX-NEXT:    andl %eax, %ecx
-; AVX-NEXT:    cmpw $-1, %cx
+; AVX-NEXT:    cmpl $-1, (%rdi)
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %vload = load <2 x i16>, ptr %ptr
@@ -686,31 +659,13 @@ define i1 @test_v2i16(ptr %ptr) nounwind {
 define i1 @test_v4i16(ptr %ptr) nounwind {
 ; SSE-LABEL: test_v4i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movq (%rdi), %rax
-; SSE-NEXT:    movq %rax, %rcx
-; SSE-NEXT:    movl %eax, %edx
-; SSE-NEXT:    shrl $16, %edx
-; SSE-NEXT:    andl %eax, %edx
-; SSE-NEXT:    shrq $32, %rax
-; SSE-NEXT:    shrq $48, %rcx
-; SSE-NEXT:    andl %ecx, %eax
-; SSE-NEXT:    andl %edx, %eax
-; SSE-NEXT:    cmpw $-1, %ax
+; SSE-NEXT:    cmpq $-1, (%rdi)
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v4i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movq (%rdi), %rax
-; AVX-NEXT:    movq %rax, %rcx
-; AVX-NEXT:    movl %eax, %edx
-; AVX-NEXT:    shrl $16, %edx
-; AVX-NEXT:    andl %eax, %edx
-; AVX-NEXT:    shrq $32, %rax
-; AVX-NEXT:    shrq $48, %rcx
-; AVX-NEXT:    andl %ecx, %eax
-; AVX-NEXT:    andl %edx, %eax
-; AVX-NEXT:    cmpw $-1, %ax
+; AVX-NEXT:    cmpq $-1, (%rdi)
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %vload = load <4 x i16>, ptr %ptr
@@ -914,34 +869,15 @@ define i1 @test_v16i16(ptr %ptr) nounwind {
 ;
 
 define i1 @test_v2i8(ptr %ptr) nounwind {
-; SSE2-LABEL: test_v2i8:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movzwl (%rdi), %eax
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    andb -{{[0-9]+}}(%rsp), %al
-; SSE2-NEXT:    cmpb $-1, %al
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: test_v2i8:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    movzwl (%rdi), %eax
-; SSE41-NEXT:    movl %eax, %ecx
-; SSE41-NEXT:    shrl $8, %ecx
-; SSE41-NEXT:    andl %eax, %ecx
-; SSE41-NEXT:    cmpb $-1, %cl
-; SSE41-NEXT:    sete %al
-; SSE41-NEXT:    retq
+; SSE-LABEL: test_v2i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    cmpw $-1, (%rdi)
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movzwl (%rdi), %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    shrl $8, %ecx
-; AVX-NEXT:    andl %eax, %ecx
-; AVX-NEXT:    cmpb $-1, %cl
+; AVX-NEXT:    cmpw $-1, (%rdi)
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %vload = load <2 x i8>, ptr %ptr
@@ -953,46 +889,15 @@ define i1 @test_v2i8(ptr %ptr) nounwind {
 }
 
 define i1 @test_v4i8(ptr %ptr) nounwind {
-; SSE2-LABEL: test_v4i8:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andb -{{[0-9]+}}(%rsp), %al
-; SSE2-NEXT:    andb -{{[0-9]+}}(%rsp), %cl
-; SSE2-NEXT:    andb %al, %cl
-; SSE2-NEXT:    cmpb $-1, %cl
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: test_v4i8:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    movl (%rdi), %eax
-; SSE41-NEXT:    movl %eax, %ecx
-; SSE41-NEXT:    shrl $8, %ecx
-; SSE41-NEXT:    movl %eax, %edx
-; SSE41-NEXT:    andl %eax, %ecx
-; SSE41-NEXT:    shrl $16, %eax
-; SSE41-NEXT:    shrl $24, %edx
-; SSE41-NEXT:    andl %eax, %edx
-; SSE41-NEXT:    andl %edx, %ecx
-; SSE41-NEXT:    cmpb $-1, %cl
-; SSE41-NEXT:    sete %al
-; SSE41-NEXT:    retq
+; SSE-LABEL: test_v4i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    cmpl $-1, (%rdi)
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v4i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl (%rdi), %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    shrl $8, %ecx
-; AVX-NEXT:    movl %eax, %edx
-; AVX-NEXT:    andl %eax, %ecx
-; AVX-NEXT:    shrl $16, %eax
-; AVX-NEXT:    shrl $24, %edx
-; AVX-NEXT:    andl %eax, %edx
-; AVX-NEXT:    andl %edx, %ecx
-; AVX-NEXT:    cmpb $-1, %cl
+; AVX-NEXT:    cmpl $-1, (%rdi)
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %vload = load <4 x i8>, ptr %ptr
@@ -1008,76 +913,15 @@ define i1 @test_v4i8(ptr %ptr) nounwind {
 }
 
 define i1 @test_v8i8(ptr %ptr) nounwind {
-; SSE2-LABEL: test_v8i8:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andb -{{[0-9]+}}(%rsp), %al
-; SSE2-NEXT:    andb -{{[0-9]+}}(%rsp), %cl
-; SSE2-NEXT:    andb %al, %cl
-; SSE2-NEXT:    andb -{{[0-9]+}}(%rsp), %dl
-; SSE2-NEXT:    andb -{{[0-9]+}}(%rsp), %sil
-; SSE2-NEXT:    andb %dl, %sil
-; SSE2-NEXT:    andb %cl, %sil
-; SSE2-NEXT:    cmpb $-1, %sil
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: test_v8i8:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    movq (%rdi), %rax
-; SSE41-NEXT:    movq %rax, %rcx
-; SSE41-NEXT:    shrq $32, %rcx
-; SSE41-NEXT:    movq %rax, %rdx
-; SSE41-NEXT:    shrq $40, %rdx
-; SSE41-NEXT:    movq %rax, %rsi
-; SSE41-NEXT:    shrq $48, %rsi
-; SSE41-NEXT:    movq %rax, %rdi
-; SSE41-NEXT:    shrq $56, %rdi
-; SSE41-NEXT:    movl %eax, %r8d
-; SSE41-NEXT:    shrl $8, %r8d
-; SSE41-NEXT:    andl %eax, %r8d
-; SSE41-NEXT:    movl %eax, %r9d
-; SSE41-NEXT:    shrl $24, %r9d
-; SSE41-NEXT:    shrl $16, %eax
-; SSE41-NEXT:    andl %r9d, %eax
-; SSE41-NEXT:    andl %r8d, %eax
-; SSE41-NEXT:    andl %edx, %ecx
-; SSE41-NEXT:    andl %edi, %esi
-; SSE41-NEXT:    andl %ecx, %esi
-; SSE41-NEXT:    andl %eax, %esi
-; SSE41-NEXT:    cmpb $-1, %sil
-; SSE41-NEXT:    sete %al
-; SSE41-NEXT:    retq
+; SSE-LABEL: test_v8i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    cmpq $-1, (%rdi)
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v8i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movq (%rdi), %rax
-; AVX-NEXT:    movq %rax, %rcx
-; AVX-NEXT:    shrq $32, %rcx
-; AVX-NEXT:    movq %rax, %rdx
-; AVX-NEXT:    shrq $40, %rdx
-; AVX-NEXT:    movq %rax, %rsi
-; AVX-NEXT:    shrq $48, %rsi
-; AVX-NEXT:    movq %rax, %rdi
-; AVX-NEXT:    shrq $56, %rdi
-; AVX-NEXT:    movl %eax, %r8d
-; AVX-NEXT:    shrl $8, %r8d
-; AVX-NEXT:    andl %eax, %r8d
-; AVX-NEXT:    movl %eax, %r9d
-; AVX-NEXT:    shrl $24, %r9d
-; AVX-NEXT:    shrl $16, %eax
-; AVX-NEXT:    andl %r9d, %eax
-; AVX-NEXT:    andl %r8d, %eax
-; AVX-NEXT:    andl %edx, %ecx
-; AVX-NEXT:    andl %edi, %esi
-; AVX-NEXT:    andl %ecx, %esi
-; AVX-NEXT:    andl %eax, %esi
-; AVX-NEXT:    cmpb $-1, %sil
+; AVX-NEXT:    cmpq $-1, (%rdi)
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %vload = load <8 x i8>, ptr %ptr
