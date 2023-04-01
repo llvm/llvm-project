@@ -799,7 +799,12 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
       if (!sc_list.GetContextAtIndex(i, sc))
         break;
 
+      bool is_trampoline =
+          Target::GetGlobalProperties().GetEnableTrampolineSupport() &&
+          sc.function && sc.function->IsGenericTrampoline();
+
       bool keep_it =
+          !is_trampoline &&
           NameMatchesLookupInfo(sc.GetFunctionName(), sc.GetLanguage());
       if (keep_it)
         ++i;

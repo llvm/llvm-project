@@ -1362,6 +1362,9 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
   if (!SP->getTargetFuncName().empty())
     addString(SPDie, dwarf::DW_AT_trampoline, SP->getTargetFuncName());
 
+  if (SP->getIsTransparentStepping())
+    addFlag(SPDie, dwarf::DW_AT_trampoline);
+
   if (DD->getDwarfVersion() >= 5 && SP->isDeleted())
     addFlag(SPDie, dwarf::DW_AT_deleted);
 }

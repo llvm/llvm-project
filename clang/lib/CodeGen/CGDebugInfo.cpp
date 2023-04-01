@@ -67,6 +67,12 @@ static uint32_t getDeclAlignIfRequired(const Decl *D, const ASTContext &Ctx) {
   return D->hasAttr<AlignedAttr>() ? D->getMaxAlignment() : 0;
 }
 
+static bool getIsTransparentStepping(const Decl *D) {
+  if (!D)
+    return false;
+  return D->hasAttr<TransparentSteppingAttr>();
+}
+
 CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
     : CGM(CGM), DebugKind(CGM.getCodeGenOpts().getDebugInfo()),
       DebugTypeExtRefs(CGM.getCodeGenOpts().DebugTypeExtRefs),
@@ -1882,6 +1888,8 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
   if (CGM.getLangOpts().Optimize)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
+  if (getIsTransparentStepping(Method))
+    SPFlags |= llvm::DISubprogram::SPFlagIsTransparentStepping;
 
   // In this debug mode, emit type info for a class when its constructor type
   // info is emitted.
@@ -3809,6 +3817,8 @@ llvm::DISubprogram *CGDebugInfo::getFunctionFwdDeclOrStub(GlobalDecl GD,
   if (Stub) {
     Flags |= getCallSiteRelatedAttrs();
     SPFlags |= llvm::DISubprogram::SPFlagDefinition;
+    if (getIsTransparentStepping(FD))
+      SPFlags |= llvm::DISubprogram::SPFlagIsTransparentStepping;
     return DBuilder.createFunction(
         DContext, Name, LinkageName, Unit, Line,
         getOrCreateFunctionType(GD.getDecl(), FnType, Unit), 0, Flags, SPFlags,
@@ -3958,6 +3968,8 @@ llvm::DISubprogram *CGDebugInfo::getObjCMethodDeclaration(
   if (It == TypeCache.end())
     return nullptr;
   auto *InterfaceType = cast<llvm::DICompositeType>(It->second);
+  if (getIsTransparentStepping(D))
+    SPFlags |= llvm::DISubprogram::SPFlagIsTransparentStepping;
   llvm::DISubprogram *FD = DBuilder.createFunction(
       InterfaceType, getObjCMethodName(OMD), StringRef(),
       InterfaceType->getFile(), LineNo, FnType, LineNo, Flags, SPFlags);
@@ -4124,6 +4136,8 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
     SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
   if (CGM.getLangOpts().Optimize)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
+  if (getIsTransparentStepping(D))
+    SPFlags |= llvm::DISubprogram::SPFlagIsTransparentStepping;
 
   llvm::DINode::DIFlags FlagsForDef = Flags | getCallSiteRelatedAttrs();
   llvm::DISubprogram::DISPFlags SPFlagsForDef =
@@ -4210,6 +4224,9 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
 
   llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(D);
   llvm::DISubroutineType *STy = getOrCreateFunctionType(D, FnType, Unit);
+  if (getIsTransparentStepping(D))
+    SPFlags |= llvm::DISubprogram::SPFlagIsTransparentStepping;
+
   llvm::DISubprogram *SP = DBuilder.createFunction(
       FDContext, Name, LinkageName, Unit, LineNo, STy, ScopeLine, Flags,
       SPFlags, TParamsArray.get(), nullptr, nullptr, Annotations);

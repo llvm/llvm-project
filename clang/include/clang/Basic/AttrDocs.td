@@ -6924,6 +6924,66 @@ As such, this function attribute is currently only supported on X86 targets.
   }];
 }
 
+def TransparentSteppingDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``transparent_stepping`` attribute is intended as a hint for debuggers that this 
+function itself is not interesting, but it calls a function that might be.  So, when 
+stepping in arrives at a function with this attribute, debuggers should transparently 
+step-in through it into the functions called by the annotated function (but not by 
+subsequent calls made by those functions), stopping at the first one its normal rules 
+for whether to stop says to stop at - or stepping out again if none qualify. Also, when 
+stepping out arrives at a function with this attribute, the debugger should continue 
+stepping out to its caller.
+
+For example:
+
+.. code-block:: c
+
+  int bar(void) {
+    return 42;
+  }
+
+  __attribute__((transparent_stepping))
+  int foo(void) {
+    return bar();
+  }
+
+  int caller(void) {
+    return foo();
+  }
+
+Stepping into ``foo`` should step directly into ``bar`` instead, and stepping out of ``bar`` 
+should stop in ``caller``.
+
+Functions with the ``transparent_stepping`` attribute can be chained together:
+
+.. code-block:: c
+
+  int baz(void) {
+    return 42;
+  }
+
+  __attribute__((transparent_stepping))
+  int bar(void) {
+    return baz();
+  }
+
+  __attribute__((transparent_stepping))
+  int foo(void) {
+    return bar();
+  }
+  
+  int caller(void) {
+    return foo();
+  }
+
+In this example, stepping into ``foo`` should step directly into ``baz``, and stepping out of 
+``baz`` should stop in ``caller``.
+  }];
+}
+
+
 def ReadOnlyPlacementDocs : Documentation {
   let Category = DocCatType;
   let Content = [{This attribute is attached to a structure, class or union declaration.
