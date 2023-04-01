@@ -150,7 +150,7 @@ define i32 @ptestnzc_256_invert0_commute(<4 x i64> %c, <4 x i64> %d, i32 %a, i32
 }
 
 ;
-; TODO: testc(X,~X) -> testc(X,-1)
+; testc(X,~X) -> testc(X,-1)
 ;
 
 define i32 @ptestc_128_not(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
@@ -158,7 +158,6 @@ define i32 @ptestc_128_not(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm1
 ; CHECK-NEXT:    vptest %xmm1, %xmm0
 ; CHECK-NEXT:    cmovael %esi, %eax
 ; CHECK-NEXT:    retq
