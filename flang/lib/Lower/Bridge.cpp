@@ -1030,10 +1030,16 @@ private:
   /// values in \p valueList and targets corresponding labels in \p labelList.
   /// If no value matches the selector, branch to \p defaultEval.
   ///
-  /// There are two special cases. If \p inIoErrContext, the ERR label branch
-  /// is an inverted comparison (ne vs. eq 0). An empty \p valueList indicates
-  /// an ArithmeticIfStmt context that requires two comparisons against 0,
-  /// and the selector may have either INTEGER or REAL type.
+  /// There are two special cases.
+  ///
+  /// An empty \p valueList indicates an ArithmeticIfStmt context that requires
+  /// two comparisons against 0 or 0.0. The selector may have either INTEGER
+  /// or REAL type.
+  ///
+  /// A nonpositive \p valuelist value indicates an IO statement context
+  /// (0 for ERR, -1 for END, -2 for EOR). An ERR branch must be taken for
+  /// any positive (IOSTAT) value. A missing (zero) label requires a branch
+  /// to \p defaultEval for that value.
   ///
   /// If this is not an ArithmeticIfStmt and no targets have exit code,
   /// generate a SelectOp. Otherwise, for each target, if it has exit code,
@@ -1042,8 +1048,7 @@ private:
   void genMultiwayBranch(mlir::Value selector,
                          llvm::SmallVector<int64_t> valueList,
                          llvm::SmallVector<Fortran::parser::Label> labelList,
-                         const Fortran::lower::pft::Evaluation &defaultEval,
-                         bool inIoErrContext = false) {
+                         const Fortran::lower::pft::Evaluation &defaultEval) {
     bool inArithmeticIfContext = valueList.empty();
     assert(((inArithmeticIfContext && labelList.size() == 2) ||
             (valueList.size() && labelList.size() == valueList.size())) &&
@@ -1052,7 +1057,7 @@ private:
     bool hasAnyExitCode = defaultHasExitCode;
     if (!hasAnyExitCode)
       for (auto label : labelList)
-        if (hasExitCode(evalOfLabel(label))) {
+        if (label && hasExitCode(evalOfLabel(label))) {
           hasAnyExitCode = true;
           break;
         }
@@ -1062,13 +1067,15 @@ private:
         !getEval().forceAsUnstructured()) { // from -no-structured-fir option
       // Generate a SelectOp.
       llvm::SmallVector<mlir::Block *> blockList;
-      for (auto label : labelList)
-        blockList.push_back(evalOfLabel(label).block);
-      blockList.push_back(defaultEval.block);
-      if (inIoErrContext) { // Swap ERR and default fallthrough blocks.
-        assert(!valueList[branchCount - 1] && "invalid IO ERR value");
-        std::swap(blockList[branchCount - 1], blockList[branchCount]);
+      for (auto label : labelList) {
+        mlir::Block *block =
+            label ? evalOfLabel(label).block : defaultEval.block;
+        assert(block && "missing multiway branch block");
+        blockList.push_back(block);
       }
+      blockList.push_back(defaultEval.block);
+      if (valueList[branchCount - 1] == 0) // Swap IO ERR and default blocks.
+        std::swap(blockList[branchCount - 1], blockList[branchCount]);
       builder->create<fir::SelectOp>(loc, selector, valueList, blockList);
       return;
     }
@@ -1090,36 +1097,37 @@ private:
             label.index() == 0 ? mlir::arith::CmpFPredicate::OLT
                                : mlir::arith::CmpFPredicate::OGT,
             selector, zero);
-      else if (inArithmeticIfContext)
+      else if (inArithmeticIfContext) // INTEGER selector
         cond = builder->create<mlir::arith::CmpIOp>(
             loc,
             label.index() == 0 ? mlir::arith::CmpIPredicate::slt
                                : mlir::arith::CmpIPredicate::sgt,
             selector, zero);
-      else
+      else // A value of 0 is an IO ERR branch: invert comparison.
         cond = builder->create<mlir::arith::CmpIOp>(
             loc,
-            inIoErrContext && valueList[label.index()] == 0
-                ? mlir::arith::CmpIPredicate::ne
-                : mlir::arith::CmpIPredicate::eq,
+            valueList[label.index()] == 0 ? mlir::arith::CmpIPredicate::ne
+                                          : mlir::arith::CmpIPredicate::eq,
             selector,
             builder->createIntegerConstant(loc, selectorType,
                                            valueList[label.index()]));
       // Branch to a new block with exit code and then to the target, or branch
-      // directly to the target. defaultEval acts as an "else" target.
+      // directly to the target. defaultEval is the "else" target.
       bool lastBranch = label.index() == branchCount - 1;
       mlir::Block *nextBlock =
           lastBranch && !defaultHasExitCode
               ? defaultEval.block
               : builder->getBlock()->splitBlock(builder->getInsertionPoint());
-      if (hasExitCode(evalOfLabel(label.value()))) {
+      const Fortran::lower::pft::Evaluation &targetEval =
+          label.value() ? evalOfLabel(label.value()) : defaultEval;
+      if (hasExitCode(targetEval)) {
         mlir::Block *jumpBlock =
             builder->getBlock()->splitBlock(builder->getInsertionPoint());
         genConditionalBranch(cond, jumpBlock, nextBlock);
         startBlock(jumpBlock);
-        genConstructExitBranch(evalOfLabel(label.value()));
+        genConstructExitBranch(targetEval);
       } else {
-        genConditionalBranch(cond, evalOfLabel(label.value()).block, nextBlock);
+        genConditionalBranch(cond, targetEval.block, nextBlock);
       }
       if (!lastBranch) {
         startBlock(nextBlock);
@@ -1322,6 +1330,8 @@ private:
     // Raise an exception if REAL expr is a NaN.
     if (expr.getType().isa<mlir::FloatType>())
       expr = builder->create<mlir::arith::AddFOp>(toLocation(), expr, expr);
+    // An empty valueList indicates to genMultiwayBranch that the branch is
+    // an ArithmeticIfStmt that has two branches on value 0 or 0.0.
     llvm::SmallVector<int64_t> valueList;
     llvm::SmallVector<Fortran::parser::Label> labelList;
     labelList.push_back(std::get<1>(stmt.t));
@@ -2605,44 +2615,55 @@ private:
     Fortran::parser::Label endLabel{};
     Fortran::parser::Label eorLabel{};
     Fortran::parser::Label errLabel{};
+    bool hasIostat{};
     for (const auto &spec : specList) {
-      std::visit(Fortran::common::visitors{
-                     [&](const Fortran::parser::EndLabel &label) {
-                       endLabel = label.v;
-                     },
-                     [&](const Fortran::parser::EorLabel &label) {
-                       eorLabel = label.v;
-                     },
-                     [&](const Fortran::parser::ErrLabel &label) {
-                       errLabel = label.v;
-                     },
-                     [](const auto &) {}},
-                 spec.u);
+      std::visit(
+          Fortran::common::visitors{
+              [&](const Fortran::parser::EndLabel &label) {
+                endLabel = label.v;
+              },
+              [&](const Fortran::parser::EorLabel &label) {
+                eorLabel = label.v;
+              },
+              [&](const Fortran::parser::ErrLabel &label) {
+                errLabel = label.v;
+              },
+              [&](const Fortran::parser::StatVariable &) { hasIostat = true; },
+              [](const auto &) {}},
+          spec.u);
     }
     if (!endLabel && !eorLabel && !errLabel)
       return;
 
+    // An ERR specifier branch is taken on any positive error value rather than
+    // some single specific value. If ERR and IOSTAT specifiers are given and
+    // END and EOR specifiers are allowed, the latter two specifiers must have
+    // explicit branch targets to allow the ERR branch to be implemented as a
+    // default/else target. A label=0 target for an absent END or EOR specifier
+    // indicates that these specifiers have a fallthrough target. END and EOR
+    // specifiers may appear on READ and WAIT statements.
+    bool allSpecifiersRequired = errLabel && hasIostat &&
+                                 (eval.isA<Fortran::parser::ReadStmt>() ||
+                                  eval.isA<Fortran::parser::WaitStmt>());
     mlir::Value selector =
         builder->createConvert(toLocation(), builder->getIndexType(), iostat);
-    llvm::SmallVector<int64_t> indexList;
+    llvm::SmallVector<int64_t> valueList;
     llvm::SmallVector<Fortran::parser::Label> labelList;
-    if (eorLabel) {
-      indexList.push_back(Fortran::runtime::io::IostatEor);
-      labelList.push_back(eorLabel);
+    if (eorLabel || allSpecifiersRequired) {
+      valueList.push_back(Fortran::runtime::io::IostatEor);
+      labelList.push_back(eorLabel ? eorLabel : 0);
     }
-    if (endLabel) {
-      indexList.push_back(Fortran::runtime::io::IostatEnd);
-      labelList.push_back(endLabel);
+    if (endLabel || allSpecifiersRequired) {
+      valueList.push_back(Fortran::runtime::io::IostatEnd);
+      labelList.push_back(endLabel ? endLabel : 0);
     }
     if (errLabel) {
-      // IostatEor and IostatEnd are fixed negative values. IOSTAT ERR values
-      // are positive. Placing the ERR value last allows recognition of an
-      // unexpected negative value as an error.
-      indexList.push_back(0);
+      // Must be last. Value 0 is interpreted as any positive value, or
+      // equivalently as any value other than 0, IostatEor, or IostatEnd.
+      valueList.push_back(0);
       labelList.push_back(errLabel);
     }
-    genMultiwayBranch(selector, indexList, labelList, eval.nonNopSuccessor(),
-                      /*inIoErrContext=*/errLabel != Fortran::parser::Label{});
+    genMultiwayBranch(selector, valueList, labelList, eval.nonNopSuccessor());
   }
 
   //===--------------------------------------------------------------------===//
