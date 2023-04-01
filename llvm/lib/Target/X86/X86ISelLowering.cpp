@@ -24383,15 +24383,25 @@ static SDValue LowerVectorAllEqual(const SDLoc &DL, SDValue LHS, SDValue RHS,
   // Split down to 128/256/512-bit vector.
   unsigned TestSize = UseKORTEST ? 512 : (Subtarget.hasAVX() ? 256 : 128);
   if (VT.getSizeInBits() > TestSize) {
-    // Convert to a ICMP_EQ(XOR(LHS,RHS),0) pattern.
-    SDValue V = DAG.getNode(ISD::XOR, DL, VT, LHS, RHS);
-    while (VT.getSizeInBits() > TestSize) {
-      auto Split = DAG.SplitVector(V, DL);
-      VT = Split.first.getValueType();
-      V = DAG.getNode(ISD::OR, DL, VT, Split.first, Split.second);
+    if (isAllOnesOrAllOnesSplat(RHS)) {
+      // If ICMP(LHS,-1) - reduce using AND splits.
+      while (VT.getSizeInBits() > TestSize) {
+        auto Split = DAG.SplitVector(LHS, DL);
+        VT = Split.first.getValueType();
+        LHS = DAG.getNode(ISD::AND, DL, VT, Split.first, Split.second);
+      }
+      RHS = DAG.getAllOnesConstant(DL, VT);
+    } else {
+      // Convert to a ICMP_EQ(XOR(LHS,RHS),0) pattern.
+      SDValue V = DAG.getNode(ISD::XOR, DL, VT, LHS, RHS);
+      while (VT.getSizeInBits() > TestSize) {
+        auto Split = DAG.SplitVector(V, DL);
+        VT = Split.first.getValueType();
+        V = DAG.getNode(ISD::OR, DL, VT, Split.first, Split.second);
+      }
+      LHS = V;
+      RHS = DAG.getConstant(0, DL, VT);
     }
-    LHS = V;
-    RHS = DAG.getConstant(0, DL, VT);
   }
 
   if (UseKORTEST && VT.is512BitVector()) {
@@ -24496,14 +24506,18 @@ static SDValue MatchVectorAllEqualTest(SDValue LHS, SDValue RHS,
       return V;
   }
 
-  // TODO: Add CmpAllOnes support.
-  if (CmpNull && Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+  // Match icmp(reduce_or(X),0) anyof reduction patterns.
+  // Match icmp(reduce_and(X),-1) allof reduction patterns.
+  if (Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+    ISD::NodeType LogicOp = CmpNull ? ISD::OR : ISD::AND;
     ISD::NodeType BinOp;
     if (SDValue Match =
-            DAG.matchBinOpReduction(Op.getNode(), BinOp, {ISD::OR})) {
-      if (SDValue V =
-              LowerVectorAllZero(DL, Match, CC, Mask, Subtarget, DAG, X86CC))
-        return V;
+            DAG.matchBinOpReduction(Op.getNode(), BinOp, {LogicOp})) {
+      EVT MatchVT = Match.getValueType();
+      return LowerVectorAllEqual(DL, Match,
+                                 CmpNull ? DAG.getConstant(0, DL, MatchVT)
+                                         : DAG.getAllOnesConstant(DL, MatchVT),
+                                 CC, Mask, Subtarget, DAG, X86CC);
     }
   }
 
