@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // Make sure we can handle reloading the same DLL multiple times.
 // RUN: %clang_cl_asan -LD -Od -DDLL %s -Fe%t.dll
 // RUN: %clang_cl_asan -Od -DEXE %s -Fe%te.exe

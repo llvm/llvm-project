@@ -985,7 +985,7 @@ public:
 
     // Third, try to lower any dot products
     for (CallInst *CI : MaybeFusableInsts) {
-      if (FusedInsts.find(CI) != FusedInsts.end()) // skip if already fused
+      if (FusedInsts.contains(CI)) // skip if already fused
         continue;
       lowerDotProduct(CI, FusedInsts, getFastMathFlags(CI));
     }

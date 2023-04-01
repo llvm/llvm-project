@@ -819,7 +819,7 @@ Expected<ExecutorAddr> LLJIT::lookupLinkerMangled(JITDylib &JD,
   if (auto Sym = ES->lookup(
         makeJITDylibSearchOrder(&JD, JITDylibLookupFlags::MatchAllSymbols),
         Name))
-    return ExecutorAddr(Sym->getAddress());
+    return Sym->getAddress();
   else
     return Sym.takeError();
 }

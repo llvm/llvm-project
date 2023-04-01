@@ -1000,7 +1000,7 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
 
           // Resolved symbols can not be weak: discard the weak flag.
           JITSymbolFlags ResolvedFlags = ResolvedSym.getFlags();
-          SymI->second.setAddress(ExecutorAddr(ResolvedSym.getAddress()));
+          SymI->second.setAddress(ResolvedSym.getAddress());
           SymI->second.setFlags(ResolvedFlags);
           SymI->second.setState(SymbolState::Resolved);
 

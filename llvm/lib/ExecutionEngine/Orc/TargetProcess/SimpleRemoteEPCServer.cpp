@@ -68,23 +68,22 @@ SimpleRemoteEPCServer::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
     case SimpleRemoteEPCOpcode::Setup:
       dbgs() << "Setup";
       assert(SeqNo == 0 && "Non-zero SeqNo for Setup?");
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Setup?");
+      assert(!TagAddr && "Non-zero TagAddr for Setup?");
       break;
     case SimpleRemoteEPCOpcode::Hangup:
       dbgs() << "Hangup";
       assert(SeqNo == 0 && "Non-zero SeqNo for Hangup?");
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Hangup?");
+      assert(!TagAddr && "Non-zero TagAddr for Hangup?");
       break;
     case SimpleRemoteEPCOpcode::Result:
       dbgs() << "Result";
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Result?");
+      assert(!TagAddr && "Non-zero TagAddr for Result?");
       break;
     case SimpleRemoteEPCOpcode::CallWrapper:
       dbgs() << "CallWrapper";
       break;
     }
-    dbgs() << ", seqno = " << SeqNo
-           << ", tag-addr = " << formatv("{0:x}", TagAddr.getValue())
+    dbgs() << ", seqno = " << SeqNo << ", tag-addr = " << TagAddr
            << ", arg-buffer = " << formatv("{0:x}", ArgBytes.size())
            << " bytes\n";
   });
@@ -158,23 +157,22 @@ Error SimpleRemoteEPCServer::sendMessage(SimpleRemoteEPCOpcode OpC,
     case SimpleRemoteEPCOpcode::Setup:
       dbgs() << "Setup";
       assert(SeqNo == 0 && "Non-zero SeqNo for Setup?");
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Setup?");
+      assert(!TagAddr && "Non-zero TagAddr for Setup?");
       break;
     case SimpleRemoteEPCOpcode::Hangup:
       dbgs() << "Hangup";
       assert(SeqNo == 0 && "Non-zero SeqNo for Hangup?");
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Hangup?");
+      assert(!TagAddr && "Non-zero TagAddr for Hangup?");
       break;
     case SimpleRemoteEPCOpcode::Result:
       dbgs() << "Result";
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Result?");
+      assert(!TagAddr && "Non-zero TagAddr for Result?");
       break;
     case SimpleRemoteEPCOpcode::CallWrapper:
       dbgs() << "CallWrapper";
       break;
     }
-    dbgs() << ", seqno = " << SeqNo
-           << ", tag-addr = " << formatv("{0:x}", TagAddr.getValue())
+    dbgs() << ", seqno = " << SeqNo << ", tag-addr = " << TagAddr
            << ", arg-buffer = " << formatv("{0:x}", ArgBytes.size())
            << " bytes\n";
   });

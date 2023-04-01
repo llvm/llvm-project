@@ -88,6 +88,9 @@ end
   from sharing the same name as a symbol in its scope's host, if it
   has one.
   We accept this usage with a portability warning.
+* A module name from a `USE` statement can also be used as a
+  non-global name in the same scope.  This is not conforming,
+  but it is useful and unambiguous.
 
 ## Extensions, deletions, and legacy features supported by default
 

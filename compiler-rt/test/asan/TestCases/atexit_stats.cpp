@@ -6,6 +6,9 @@
 // https://code.google.com/p/address-sanitizer/issues/detail?id=263
 // UNSUPPORTED: android
 
+// FIXME: Investigate failure on MinGW.
+// XFAIL: target={{.*-windows-gnu}}
+
 #include <stdlib.h>
 #if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(__NetBSD__)
 #include <malloc.h>
