@@ -25,48 +25,17 @@ define i1 @test_v2i64(ptr %ptr) nounwind {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa (%rdi), %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1OR2-LABEL: test_v2i64:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpxor %xmm1, %xmm0, %xmm1
-; AVX1OR2-NEXT:    vptest %xmm1, %xmm0
-; AVX1OR2-NEXT:    setb %al
-; AVX1OR2-NEXT:    retq
-;
-; AVX512F-LABEL: test_v2i64:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512F-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512F-NEXT:    vptest %xmm1, %xmm0
-; AVX512F-NEXT:    setb %al
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: test_v2i64:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512BW-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512BW-NEXT:    vptest %xmm1, %xmm0
-; AVX512BW-NEXT:    setb %al
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
-;
-; AVX512VL-LABEL: test_v2i64:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512VL-NEXT:    vmovdqa %xmm0, %xmm1
-; AVX512VL-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm1
-; AVX512VL-NEXT:    vptest %xmm1, %xmm0
-; AVX512VL-NEXT:    setb %al
-; AVX512VL-NEXT:    retq
+; AVX-LABEL: test_v2i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vptest %xmm1, %xmm0
+; AVX-NEXT:    setb %al
+; AVX-NEXT:    retq
   %vload = load <2 x i64>, ptr %ptr
   %v0 = extractelement <2 x i64> %vload, i32 0
   %v1 = extractelement <2 x i64> %vload, i32 1
@@ -92,17 +61,15 @@ define i1 @test_v4i64(ptr %ptr) nounwind {
 ; SSE41-NEXT:    movdqa (%rdi), %xmm0
 ; SSE41-NEXT:    pand 16(%rdi), %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v4i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps (%rdi), %ymm0
+; AVX1-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
-; AVX1-NEXT:    vxorps %ymm1, %ymm0, %ymm1
 ; AVX1-NEXT:    vptest %ymm1, %ymm0
 ; AVX1-NEXT:    setb %al
 ; AVX1-NEXT:    vzeroupper
@@ -112,41 +79,19 @@ define i1 @test_v4i64(ptr %ptr) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    setb %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: test_v4i64:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512F-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512F-NEXT:    vptest %ymm1, %ymm0
-; AVX512F-NEXT:    setb %al
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: test_v4i64:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512BW-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512BW-NEXT:    vptest %ymm1, %ymm0
-; AVX512BW-NEXT:    setb %al
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
-;
-; AVX512VL-LABEL: test_v4i64:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512VL-NEXT:    vmovdqa %ymm0, %ymm1
-; AVX512VL-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm1
-; AVX512VL-NEXT:    vptest %ymm1, %ymm0
-; AVX512VL-NEXT:    setb %al
-; AVX512VL-NEXT:    vzeroupper
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: test_v4i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512-NEXT:    vptest %ymm1, %ymm0
+; AVX512-NEXT:    setb %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %vload = load <4 x i64>, ptr %ptr
   %v0 = extractelement <4 x i64> %vload, i32 0
   %v1 = extractelement <4 x i64> %vload, i32 1
@@ -182,7 +127,6 @@ define i1 @test_v8i64(ptr %ptr) nounwind {
 ; SSE41-NEXT:    pand 32(%rdi), %xmm0
 ; SSE41-NEXT:    pand %xmm1, %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
@@ -193,7 +137,6 @@ define i1 @test_v8i64(ptr %ptr) nounwind {
 ; AVX1-NEXT:    vandps 32(%rdi), %ymm0, %ymm0
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
-; AVX1-NEXT:    vxorps %ymm1, %ymm0, %ymm1
 ; AVX1-NEXT:    vptest %ymm1, %ymm0
 ; AVX1-NEXT:    setb %al
 ; AVX1-NEXT:    vzeroupper
@@ -204,7 +147,6 @@ define i1 @test_v8i64(ptr %ptr) nounwind {
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vpand 32(%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    setb %al
 ; AVX2-NEXT:    vzeroupper
@@ -273,7 +215,6 @@ define i1 @test_v16i64(ptr %ptr) nounwind {
 ; SSE41-NEXT:    pand %xmm2, %xmm0
 ; SSE41-NEXT:    pand %xmm1, %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
@@ -287,7 +228,6 @@ define i1 @test_v16i64(ptr %ptr) nounwind {
 ; AVX1-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
-; AVX1-NEXT:    vxorps %ymm1, %ymm0, %ymm1
 ; AVX1-NEXT:    vptest %ymm1, %ymm0
 ; AVX1-NEXT:    setb %al
 ; AVX1-NEXT:    vzeroupper
@@ -301,7 +241,6 @@ define i1 @test_v16i64(ptr %ptr) nounwind {
 ; AVX2-NEXT:    vpand 64(%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    setb %al
 ; AVX2-NEXT:    vzeroupper
@@ -391,48 +330,17 @@ define i1 @test_v4i32(ptr %ptr) nounwind {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa (%rdi), %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1OR2-LABEL: test_v4i32:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpxor %xmm1, %xmm0, %xmm1
-; AVX1OR2-NEXT:    vptest %xmm1, %xmm0
-; AVX1OR2-NEXT:    setb %al
-; AVX1OR2-NEXT:    retq
-;
-; AVX512F-LABEL: test_v4i32:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512F-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512F-NEXT:    vptest %xmm1, %xmm0
-; AVX512F-NEXT:    setb %al
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: test_v4i32:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512BW-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512BW-NEXT:    vptest %xmm1, %xmm0
-; AVX512BW-NEXT:    setb %al
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
-;
-; AVX512VL-LABEL: test_v4i32:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512VL-NEXT:    vmovdqa %xmm0, %xmm1
-; AVX512VL-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm1
-; AVX512VL-NEXT:    vptest %xmm1, %xmm0
-; AVX512VL-NEXT:    setb %al
-; AVX512VL-NEXT:    retq
+; AVX-LABEL: test_v4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vptest %xmm1, %xmm0
+; AVX-NEXT:    setb %al
+; AVX-NEXT:    retq
   %vload = load <4 x i32>, ptr %ptr
   %v0 = extractelement <4 x i32> %vload, i32 0
   %v1 = extractelement <4 x i32> %vload, i32 1
@@ -462,17 +370,15 @@ define i1 @test_v8i32(ptr %ptr) nounwind {
 ; SSE41-NEXT:    movdqa (%rdi), %xmm0
 ; SSE41-NEXT:    pand 16(%rdi), %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v8i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps (%rdi), %ymm0
+; AVX1-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
-; AVX1-NEXT:    vxorps %ymm1, %ymm0, %ymm1
 ; AVX1-NEXT:    vptest %ymm1, %ymm0
 ; AVX1-NEXT:    setb %al
 ; AVX1-NEXT:    vzeroupper
@@ -482,41 +388,19 @@ define i1 @test_v8i32(ptr %ptr) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    setb %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: test_v8i32:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512F-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512F-NEXT:    vptest %ymm1, %ymm0
-; AVX512F-NEXT:    setb %al
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: test_v8i32:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512BW-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512BW-NEXT:    vptest %ymm1, %ymm0
-; AVX512BW-NEXT:    setb %al
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
-;
-; AVX512VL-LABEL: test_v8i32:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512VL-NEXT:    vmovdqa %ymm0, %ymm1
-; AVX512VL-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm1
-; AVX512VL-NEXT:    vptest %ymm1, %ymm0
-; AVX512VL-NEXT:    setb %al
-; AVX512VL-NEXT:    vzeroupper
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: test_v8i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512-NEXT:    vptest %ymm1, %ymm0
+; AVX512-NEXT:    setb %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %vload = load <8 x i32>, ptr %ptr
   %v0 = extractelement <8 x i32> %vload, i32 0
   %v1 = extractelement <8 x i32> %vload, i32 1
@@ -560,7 +444,6 @@ define i1 @test_v16i32(ptr %ptr) nounwind {
 ; SSE41-NEXT:    pand 32(%rdi), %xmm0
 ; SSE41-NEXT:    pand %xmm1, %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
@@ -571,7 +454,6 @@ define i1 @test_v16i32(ptr %ptr) nounwind {
 ; AVX1-NEXT:    vandps 32(%rdi), %ymm0, %ymm0
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
-; AVX1-NEXT:    vxorps %ymm1, %ymm0, %ymm1
 ; AVX1-NEXT:    vptest %ymm1, %ymm0
 ; AVX1-NEXT:    setb %al
 ; AVX1-NEXT:    vzeroupper
@@ -582,7 +464,6 @@ define i1 @test_v16i32(ptr %ptr) nounwind {
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vpand 32(%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    setb %al
 ; AVX2-NEXT:    vzeroupper
@@ -694,48 +575,17 @@ define i1 @test_v8i16(ptr %ptr) nounwind {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa (%rdi), %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1OR2-LABEL: test_v8i16:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpxor %xmm1, %xmm0, %xmm1
-; AVX1OR2-NEXT:    vptest %xmm1, %xmm0
-; AVX1OR2-NEXT:    setb %al
-; AVX1OR2-NEXT:    retq
-;
-; AVX512F-LABEL: test_v8i16:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512F-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512F-NEXT:    vptest %xmm1, %xmm0
-; AVX512F-NEXT:    setb %al
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: test_v8i16:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512BW-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512BW-NEXT:    vptest %xmm1, %xmm0
-; AVX512BW-NEXT:    setb %al
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
-;
-; AVX512VL-LABEL: test_v8i16:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512VL-NEXT:    vmovdqa %xmm0, %xmm1
-; AVX512VL-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm1
-; AVX512VL-NEXT:    vptest %xmm1, %xmm0
-; AVX512VL-NEXT:    setb %al
-; AVX512VL-NEXT:    retq
+; AVX-LABEL: test_v8i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vptest %xmm1, %xmm0
+; AVX-NEXT:    setb %al
+; AVX-NEXT:    retq
   %vload = load <8 x i16>, ptr %ptr
   %v0 = extractelement <8 x i16> %vload, i32 0
   %v1 = extractelement <8 x i16> %vload, i32 1
@@ -773,17 +623,15 @@ define i1 @test_v16i16(ptr %ptr) nounwind {
 ; SSE41-NEXT:    movdqa (%rdi), %xmm0
 ; SSE41-NEXT:    pand 16(%rdi), %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v16i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps (%rdi), %ymm0
+; AVX1-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
-; AVX1-NEXT:    vxorps %ymm1, %ymm0, %ymm1
 ; AVX1-NEXT:    vptest %ymm1, %ymm0
 ; AVX1-NEXT:    setb %al
 ; AVX1-NEXT:    vzeroupper
@@ -793,41 +641,19 @@ define i1 @test_v16i16(ptr %ptr) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    setb %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: test_v16i16:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512F-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512F-NEXT:    vptest %ymm1, %ymm0
-; AVX512F-NEXT:    setb %al
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: test_v16i16:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512BW-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512BW-NEXT:    vptest %ymm1, %ymm0
-; AVX512BW-NEXT:    setb %al
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
-;
-; AVX512VL-LABEL: test_v16i16:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512VL-NEXT:    vmovdqa %ymm0, %ymm1
-; AVX512VL-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm1
-; AVX512VL-NEXT:    vptest %ymm1, %ymm0
-; AVX512VL-NEXT:    setb %al
-; AVX512VL-NEXT:    vzeroupper
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: test_v16i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512-NEXT:    vptest %ymm1, %ymm0
+; AVX512-NEXT:    setb %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %vload = load <16 x i16>, ptr %ptr
   %v0  = extractelement <16 x i16> %vload, i32 0
   %v1  = extractelement <16 x i16> %vload, i32 1
@@ -958,48 +784,17 @@ define i1 @test_v16i8(ptr %ptr) nounwind {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa (%rdi), %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1OR2-LABEL: test_v16i8:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpxor %xmm1, %xmm0, %xmm1
-; AVX1OR2-NEXT:    vptest %xmm1, %xmm0
-; AVX1OR2-NEXT:    setb %al
-; AVX1OR2-NEXT:    retq
-;
-; AVX512F-LABEL: test_v16i8:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512F-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512F-NEXT:    vptest %xmm1, %xmm0
-; AVX512F-NEXT:    setb %al
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: test_v16i8:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512BW-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512BW-NEXT:    vptest %xmm1, %xmm0
-; AVX512BW-NEXT:    setb %al
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
-;
-; AVX512VL-LABEL: test_v16i8:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512VL-NEXT:    vmovdqa %xmm0, %xmm1
-; AVX512VL-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm1
-; AVX512VL-NEXT:    vptest %xmm1, %xmm0
-; AVX512VL-NEXT:    setb %al
-; AVX512VL-NEXT:    retq
+; AVX-LABEL: test_v16i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vptest %xmm1, %xmm0
+; AVX-NEXT:    setb %al
+; AVX-NEXT:    retq
   %vload = load <16 x i8>, ptr %ptr
   %v0  = extractelement <16 x i8> %vload, i32 0
   %v1  = extractelement <16 x i8> %vload, i32 1
@@ -1036,3 +831,8 @@ define i1 @test_v16i8(ptr %ptr) nounwind {
   ret i1 %vcheck
 }
 
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; AVX1OR2: {{.*}}
+; AVX512BW: {{.*}}
+; AVX512F: {{.*}}
+; AVX512VL: {{.*}}

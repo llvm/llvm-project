@@ -1554,7 +1554,6 @@ define i1 @icmp1_v2i64_v2i1(<2 x i64>) {
 ; SSE41-LABEL: icmp1_v2i64_v2i1:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
@@ -1562,7 +1561,6 @@ define i1 @icmp1_v2i64_v2i1(<2 x i64>) {
 ; AVX1OR2-LABEL: icmp1_v2i64_v2i1:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpxor %xmm1, %xmm0, %xmm1
 ; AVX1OR2-NEXT:    vptest %xmm1, %xmm0
 ; AVX1OR2-NEXT:    setb %al
 ; AVX1OR2-NEXT:    retq
@@ -1615,7 +1613,6 @@ define i1 @icmp1_v4i32_v4i1(<4 x i32>) {
 ; SSE41-LABEL: icmp1_v4i32_v4i1:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
@@ -1623,7 +1620,6 @@ define i1 @icmp1_v4i32_v4i1(<4 x i32>) {
 ; AVX1OR2-LABEL: icmp1_v4i32_v4i1:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpxor %xmm1, %xmm0, %xmm1
 ; AVX1OR2-NEXT:    vptest %xmm1, %xmm0
 ; AVX1OR2-NEXT:    setb %al
 ; AVX1OR2-NEXT:    retq
@@ -1676,7 +1672,6 @@ define i1 @icmp1_v8i16_v8i1(<8 x i16>) {
 ; SSE41-LABEL: icmp1_v8i16_v8i1:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
@@ -1684,7 +1679,6 @@ define i1 @icmp1_v8i16_v8i1(<8 x i16>) {
 ; AVX1OR2-LABEL: icmp1_v8i16_v8i1:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpxor %xmm1, %xmm0, %xmm1
 ; AVX1OR2-NEXT:    vptest %xmm1, %xmm0
 ; AVX1OR2-NEXT:    setb %al
 ; AVX1OR2-NEXT:    retq
@@ -1703,18 +1697,14 @@ define i1 @icmp1_v8i16_v8i1(<8 x i16>) {
 ;
 ; AVX512BW-LABEL: icmp1_v8i16_v8i1:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512BW-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
+; AVX512BW-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vptest %xmm1, %xmm0
 ; AVX512BW-NEXT:    setb %al
-; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VL-LABEL: icmp1_v8i16_v8i1:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa %xmm0, %xmm1
-; AVX512VL-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm1
+; AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vptest %xmm1, %xmm0
 ; AVX512VL-NEXT:    setb %al
 ; AVX512VL-NEXT:    retq
@@ -1736,46 +1726,16 @@ define i1 @icmp1_v16i8_v16i1(<16 x i8>) {
 ; SSE41-LABEL: icmp1_v16i8_v16i1:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1OR2-LABEL: icmp1_v16i8_v16i1:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpxor %xmm1, %xmm0, %xmm1
-; AVX1OR2-NEXT:    vptest %xmm1, %xmm0
-; AVX1OR2-NEXT:    setb %al
-; AVX1OR2-NEXT:    retq
-;
-; AVX512F-LABEL: icmp1_v16i8_v16i1:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512F-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512F-NEXT:    vptest %xmm1, %xmm0
-; AVX512F-NEXT:    setb %al
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: icmp1_v16i8_v16i1:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512BW-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512BW-NEXT:    vptest %xmm1, %xmm0
-; AVX512BW-NEXT:    setb %al
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
-;
-; AVX512VL-LABEL: icmp1_v16i8_v16i1:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa %xmm0, %xmm1
-; AVX512VL-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm1
-; AVX512VL-NEXT:    vptest %xmm1, %xmm0
-; AVX512VL-NEXT:    setb %al
-; AVX512VL-NEXT:    retq
+; AVX-LABEL: icmp1_v16i8_v16i1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vptest %xmm1, %xmm0
+; AVX-NEXT:    setb %al
+; AVX-NEXT:    retq
   %a = icmp eq <16 x i8> %0, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %b = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> %a)
   ret i1 %b
@@ -1794,10 +1754,9 @@ define i1 @icmp1_v4i64_v4i1(<4 x i64>) {
 ;
 ; SSE41-LABEL: icmp1_v4i64_v4i1:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE41-NEXT:    pand %xmm1, %xmm0
-; SSE41-NEXT:    pxor %xmm0, %xmm2
-; SSE41-NEXT:    ptest %xmm2, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
 ;
@@ -1816,7 +1775,6 @@ define i1 @icmp1_v4i64_v4i1(<4 x i64>) {
 ; AVX2-LABEL: icmp1_v4i64_v4i1:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    setb %al
 ; AVX2-NEXT:    vzeroupper
@@ -1871,10 +1829,9 @@ define i1 @icmp1_v8i32_v8i1(<8 x i32>) {
 ;
 ; SSE41-LABEL: icmp1_v8i32_v8i1:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE41-NEXT:    pand %xmm1, %xmm0
-; SSE41-NEXT:    pxor %xmm0, %xmm2
-; SSE41-NEXT:    ptest %xmm2, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
 ;
@@ -1893,40 +1850,18 @@ define i1 @icmp1_v8i32_v8i1(<8 x i32>) {
 ; AVX2-LABEL: icmp1_v8i32_v8i1:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    setb %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: icmp1_v8i32_v8i1:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512F-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512F-NEXT:    vptest %ymm1, %ymm0
-; AVX512F-NEXT:    setb %al
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: icmp1_v8i32_v8i1:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512BW-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
-; AVX512BW-NEXT:    vptest %ymm1, %ymm0
-; AVX512BW-NEXT:    setb %al
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
-;
-; AVX512VL-LABEL: icmp1_v8i32_v8i1:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa %ymm0, %ymm1
-; AVX512VL-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm1
-; AVX512VL-NEXT:    vptest %ymm1, %ymm0
-; AVX512VL-NEXT:    setb %al
-; AVX512VL-NEXT:    vzeroupper
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: icmp1_v8i32_v8i1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512-NEXT:    vptest %ymm1, %ymm0
+; AVX512-NEXT:    setb %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %a = icmp eq <8 x i32> %0, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %b = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %a)
   ret i1 %b
@@ -1945,10 +1880,9 @@ define i1 @icmp1_v16i16_v16i1(<16 x i16>) {
 ;
 ; SSE41-LABEL: icmp1_v16i16_v16i1:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE41-NEXT:    pand %xmm1, %xmm0
-; SSE41-NEXT:    pxor %xmm0, %xmm2
-; SSE41-NEXT:    ptest %xmm2, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
 ;
@@ -1967,7 +1901,6 @@ define i1 @icmp1_v16i16_v16i1(<16 x i16>) {
 ; AVX2-LABEL: icmp1_v16i16_v16i1:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    setb %al
 ; AVX2-NEXT:    vzeroupper
@@ -1986,9 +1919,7 @@ define i1 @icmp1_v16i16_v16i1(<16 x i16>) {
 ;
 ; AVX512BW-LABEL: icmp1_v16i16_v16i1:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512BW-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
+; AVX512BW-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; AVX512BW-NEXT:    vptest %ymm1, %ymm0
 ; AVX512BW-NEXT:    setb %al
 ; AVX512BW-NEXT:    vzeroupper
@@ -1996,8 +1927,7 @@ define i1 @icmp1_v16i16_v16i1(<16 x i16>) {
 ;
 ; AVX512VL-LABEL: icmp1_v16i16_v16i1:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa %ymm0, %ymm1
-; AVX512VL-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm1
+; AVX512VL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vptest %ymm1, %ymm0
 ; AVX512VL-NEXT:    setb %al
 ; AVX512VL-NEXT:    vzeroupper
@@ -2022,7 +1952,6 @@ define i1 @icmp1_v32i8_v32i1(<32 x i8>) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pand %xmm1, %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
@@ -2042,7 +1971,6 @@ define i1 @icmp1_v32i8_v32i1(<32 x i8>) {
 ; AVX2-LABEL: icmp1_v32i8_v32i1:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    setb %al
 ; AVX2-NEXT:    vzeroupper
@@ -2071,9 +1999,7 @@ define i1 @icmp1_v32i8_v32i1(<32 x i8>) {
 ;
 ; AVX512BW-LABEL: icmp1_v32i8_v32i1:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm1
-; AVX512BW-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm1
+; AVX512BW-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; AVX512BW-NEXT:    vptest %ymm1, %ymm0
 ; AVX512BW-NEXT:    setb %al
 ; AVX512BW-NEXT:    vzeroupper
@@ -2081,8 +2007,7 @@ define i1 @icmp1_v32i8_v32i1(<32 x i8>) {
 ;
 ; AVX512VL-LABEL: icmp1_v32i8_v32i1:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa %ymm0, %ymm1
-; AVX512VL-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm1
+; AVX512VL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vptest %ymm1, %ymm0
 ; AVX512VL-NEXT:    setb %al
 ; AVX512VL-NEXT:    vzeroupper
@@ -2107,12 +2032,11 @@ define i1 @icmp1_v8i64_v8i1(<8 x i64>) {
 ;
 ; SSE41-LABEL: icmp1_v8i64_v8i1:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSE41-NEXT:    pand %xmm3, %xmm1
 ; SSE41-NEXT:    pand %xmm2, %xmm0
 ; SSE41-NEXT:    pand %xmm1, %xmm0
-; SSE41-NEXT:    pxor %xmm0, %xmm4
-; SSE41-NEXT:    ptest %xmm4, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
 ;
@@ -2131,9 +2055,8 @@ define i1 @icmp1_v8i64_v8i1(<8 x i64>) {
 ;
 ; AVX2-LABEL: icmp1_v8i64_v8i1:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm1
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    setb %al
 ; AVX2-NEXT:    vzeroupper
@@ -2167,12 +2090,11 @@ define i1 @icmp1_v16i32_v16i1(<16 x i32>) {
 ;
 ; SSE41-LABEL: icmp1_v16i32_v16i1:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSE41-NEXT:    pand %xmm3, %xmm1
 ; SSE41-NEXT:    pand %xmm2, %xmm0
 ; SSE41-NEXT:    pand %xmm1, %xmm0
-; SSE41-NEXT:    pxor %xmm0, %xmm4
-; SSE41-NEXT:    ptest %xmm4, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
 ;
@@ -2191,9 +2113,8 @@ define i1 @icmp1_v16i32_v16i1(<16 x i32>) {
 ;
 ; AVX2-LABEL: icmp1_v16i32_v16i1:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm1
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    setb %al
 ; AVX2-NEXT:    vzeroupper
@@ -2227,12 +2148,11 @@ define i1 @icmp1_v32i16_v32i1(<32 x i16>) {
 ;
 ; SSE41-LABEL: icmp1_v32i16_v32i1:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSE41-NEXT:    pand %xmm3, %xmm1
 ; SSE41-NEXT:    pand %xmm2, %xmm0
 ; SSE41-NEXT:    pand %xmm1, %xmm0
-; SSE41-NEXT:    pxor %xmm0, %xmm4
-; SSE41-NEXT:    ptest %xmm4, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
 ;
@@ -2251,9 +2171,8 @@ define i1 @icmp1_v32i16_v32i1(<32 x i16>) {
 ;
 ; AVX2-LABEL: icmp1_v32i16_v32i1:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm1
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    setb %al
 ; AVX2-NEXT:    vzeroupper
@@ -2322,7 +2241,6 @@ define i1 @icmp1_v64i8_v64i1(<64 x i8>) {
 ; SSE41-NEXT:    pand %xmm2, %xmm0
 ; SSE41-NEXT:    pand %xmm1, %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
@@ -2344,7 +2262,6 @@ define i1 @icmp1_v64i8_v64i1(<64 x i8>) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    setb %al
 ; AVX2-NEXT:    vzeroupper
