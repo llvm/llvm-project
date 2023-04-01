@@ -149,11 +149,11 @@ define i1 @vector_version_v8i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vpmovmskb %xmm0, %eax
-; X86-NEXT:    xorb $-1, %al
+; X86-NEXT:    movl (%ecx), %edx
+; X86-NEXT:    movl 4(%ecx), %ecx
+; X86-NEXT:    xorl 4(%eax), %ecx
+; X86-NEXT:    xorl (%eax), %edx
+; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:

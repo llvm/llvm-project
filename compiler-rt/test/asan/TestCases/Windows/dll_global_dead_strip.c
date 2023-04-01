@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // RUN: %clang_cl_asan -Od %p/dll_host.cpp -Fe%t
 //
 // RUN: %clang_cl_asan /Gw -LD -Od %s -Fe%t.dll

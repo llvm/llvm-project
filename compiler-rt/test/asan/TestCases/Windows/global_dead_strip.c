@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // RUN: %clang_cl_asan /Gw /Od %s /Fe%t.exe
 // RUN: %env_asan_opts=report_globals=2 %t.exe 2>&1 | FileCheck %s --check-prefix=NOSTRIP
 // RUN: %clang_cl_asan /Gw /O2 %s /Fe%t.exe -link -opt:ref
