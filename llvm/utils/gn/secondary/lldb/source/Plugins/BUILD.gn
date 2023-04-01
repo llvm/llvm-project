@@ -89,10 +89,6 @@ lldb_plugins += [
     "ObjectFileELF",
   ],
   [
-    "//lldb/source/Plugins/ObjectFile/JIT",
-    "ObjectFileJIT",
-  ],
-  [
     "//lldb/source/Plugins/ObjectFile/Mach-O",
     "ObjectFileMachO",
   ],
