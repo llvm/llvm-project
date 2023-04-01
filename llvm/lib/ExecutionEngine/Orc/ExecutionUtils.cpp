@@ -568,7 +568,7 @@ DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
 
   for (auto &KV : Resolved) {
     jitlink::Symbol &Target = G->addAbsoluteSymbol(
-        *KV.first, ExecutorAddr(KV.second.getAddress()), *PointerSize,
+        *KV.first, KV.second.getAddress(), *PointerSize,
         jitlink::Linkage::Strong, jitlink::Scope::Local, false);
 
     // Create __imp_ symbol
