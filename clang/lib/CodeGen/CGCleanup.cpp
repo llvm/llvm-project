@@ -836,7 +836,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
       EmitBlock(NormalEntry);
 
       // intercept normal cleanup to mark SEH scope end
-      if (IsEHa) {
+      if (IsEHa && getInvokeDest()) {
         if (Personality.isMSVCXXPersonality())
           EmitSehCppScopeEnd();
         else
