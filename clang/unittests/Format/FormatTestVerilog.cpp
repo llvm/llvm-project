@@ -916,6 +916,25 @@ TEST_F(FormatTestVerilog, Streaming) {
   verifyFormat("{<<byte{j}} = x;");
 }
 
+TEST_F(FormatTestVerilog, StructLiteral) {
+  verifyFormat("c = '{0, 0.0};");
+  verifyFormat("c = '{'{1, 1.0}, '{2, 2.0}};");
+  verifyFormat("c = '{a: 0, b: 0.0};");
+  verifyFormat("c = '{a: 0, b: 0.0, default: 0};");
+  verifyFormat("c = ab'{a: 0, b: 0.0};");
+  verifyFormat("c = ab'{cd: cd'{1, 1.0}, ef: ef'{2, 2.0}};");
+  verifyFormat("c = ab'{cd'{1, 1.0}, ef'{2, 2.0}};");
+  verifyFormat("d = {int: 1, shortreal: 1.0};");
+  verifyFormat("d = ab'{int: 1, shortreal: 1.0};");
+  verifyFormat("c = '{default: 0};");
+  auto Style = getDefaultStyle();
+  Style.SpacesInContainerLiterals = true;
+  verifyFormat("c = '{a : 0, b : 0.0};", Style);
+  verifyFormat("c = '{a : 0, b : 0.0, default : 0};", Style);
+  verifyFormat("c = ab'{a : 0, b : 0.0};", Style);
+  verifyFormat("c = ab'{cd : cd'{1, 1.0}, ef : ef'{2, 2.0}};", Style);
+}
+
 TEST_F(FormatTestVerilog, StructuredProcedure) {
   // Blocks should be indented correctly.
   verifyFormat("initial begin\n"
