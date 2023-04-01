@@ -584,7 +584,7 @@ Error ELFNixPlatform::registerInitInfo(
   for (auto *Sec : InitSections) {
     // FIXME: Avoid copy here.
     jitlink::SectionRange R(*Sec);
-    InitSeq->InitSections[Sec->getName()].push_back({R.getStart(), R.getEnd()});
+    InitSeq->InitSections[Sec->getName()].push_back(R.getRange());
   }
 
   return Error::success();
@@ -714,7 +714,7 @@ void ELFNixPlatform::ELFNixPlatformPlugin::addEHAndTLVSupportPasses(
     if (auto *EHFrameSection = G.findSectionByName(ELFEHFrameSectionName)) {
       jitlink::SectionRange R(*EHFrameSection);
       if (!R.empty())
-        POSR.EHFrameSection = {R.getStart(), R.getEnd()};
+        POSR.EHFrameSection = R.getRange();
     }
 
     // Get a pointer to the thread data section if there is one. It will be used
@@ -738,7 +738,7 @@ void ELFNixPlatform::ELFNixPlatformPlugin::addEHAndTLVSupportPasses(
     if (ThreadDataSection) {
       jitlink::SectionRange R(*ThreadDataSection);
       if (!R.empty())
-        POSR.ThreadDataSection = {R.getStart(), R.getEnd()};
+        POSR.ThreadDataSection = R.getRange();
     }
 
     if (POSR.EHFrameSection.Start || POSR.ThreadDataSection.Start) {
