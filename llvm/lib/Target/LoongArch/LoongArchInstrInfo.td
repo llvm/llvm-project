@@ -951,8 +951,17 @@ foreach Idx0 = 1...4 in {
   foreach Idx1 = 1...4 in {
     defvar CImm = !add(1, !shl(!add(1, !shl(1, Idx0)), Idx1));
     def : Pat<(mul_const_oneuse GPR:$r, (i32 CImm)),
-          (ALSL_W (ALSL_W GPR:$r, GPR:$r, (i32 Idx0)),
-                  GPR:$r, (i32 Idx1))>;
+              (ALSL_W (ALSL_W GPR:$r, GPR:$r, (i32 Idx0)),
+                      GPR:$r, (i32 Idx1))>;
+  }
+}
+foreach Idx0 = 1...4 in {
+  foreach Idx1 = 1...4 in {
+    defvar Cb = !add(1, !shl(1, Idx0));
+    defvar CImm = !add(Cb, !shl(Cb, Idx1));
+    def : Pat<(mul_const_oneuse GPR:$r, (i32 CImm)),
+              (ALSL_W (ALSL_W GPR:$r, GPR:$r, (i32 Idx0)),
+                      (ALSL_W GPR:$r, GPR:$r, (i32 Idx0)), (i32 Idx1))>;
   }
 }
 } // Predicates = [IsLA32]
@@ -967,6 +976,18 @@ foreach Idx0 = 1...4 in {
     def : Pat<(mul_const_oneuse GPR:$r, (i64 CImm)),
               (ALSL_D (ALSL_D GPR:$r, GPR:$r, (i64 Idx0)),
                       GPR:$r, (i64 Idx1))>;
+  }
+}
+foreach Idx0 = 1...4 in {
+  foreach Idx1 = 1...4 in {
+    defvar Cb = !add(1, !shl(1, Idx0));
+    defvar CImm = !add(Cb, !shl(Cb, Idx1));
+    def : Pat<(sext_inreg (mul_const_oneuse GPR:$r, (i64 CImm)), i32),
+              (ALSL_W (ALSL_W GPR:$r, GPR:$r, (i64 Idx0)),
+                      (ALSL_W GPR:$r, GPR:$r, (i64 Idx0)), (i64 Idx1))>;
+    def : Pat<(mul_const_oneuse GPR:$r, (i64 CImm)),
+              (ALSL_D (ALSL_D GPR:$r, GPR:$r, (i64 Idx0)),
+                      (ALSL_D GPR:$r, GPR:$r, (i64 Idx0)), (i64 Idx1))>;
   }
 }
 } // Predicates = [IsLA64]

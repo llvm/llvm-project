@@ -315,12 +315,19 @@ Error SimpleRemoteEPC::setup(Setup S) {
     dbgs() << "SimpleRemoteEPC received setup message:\n"
            << "  Triple: " << EI->TargetTriple << "\n"
            << "  Page size: " << EI->PageSize << "\n"
-           << "  Bootstrap symbols:\n";
+           << "  Bootstrap map" << (EI->BootstrapMap.empty() ? " empty" : ":")
+           << "\n";
+    for (const auto &KV : EI->BootstrapMap)
+      dbgs() << "    " << KV.first() << ": " << KV.second.size()
+             << "-byte SPS encoded buffer\n";
+    dbgs() << "  Bootstrap symbols"
+           << (EI->BootstrapSymbols.empty() ? " empty" : ":") << "\n";
     for (const auto &KV : EI->BootstrapSymbols)
       dbgs() << "    " << KV.first() << ": " << KV.second << "\n";
   });
   TargetTriple = Triple(EI->TargetTriple);
   PageSize = EI->PageSize;
+  BootstrapMap = std::move(EI->BootstrapMap);
   BootstrapSymbols = std::move(EI->BootstrapSymbols);
 
   if (auto Err = getBootstrapSymbols(
