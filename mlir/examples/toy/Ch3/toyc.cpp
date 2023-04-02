@@ -115,7 +115,7 @@ int dumpMLIR() {
   if (enableOpt) {
     mlir::PassManager pm(module.get()->getName());
     // Apply any generic pass manager command line options and run the pipeline.
-    applyPassManagerCLOptions(pm);
+    (void)applyPassManagerCLOptions(pm);
 
     // Add a run of the canonicalizer to optimize the mlir module.
     pm.addNestedPass<mlir::toy::FuncOp>(mlir::createCanonicalizerPass());

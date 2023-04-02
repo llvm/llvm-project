@@ -210,7 +210,8 @@ performActions(raw_ostream &os,
   // Prepare the pass manager, applying command-line and reproducer options.
   PassManager pm(op.get()->getName(), PassManager::Nesting::Implicit);
   pm.enableVerifier(config.shouldVerifyPasses());
-  applyPassManagerCLOptions(pm);
+  if (failed(applyPassManagerCLOptions(pm)))
+    return failure();
   pm.enableTiming(timing);
   if (failed(reproOptions.apply(pm)) || failed(config.setupPassPipeline(pm)))
     return failure();
