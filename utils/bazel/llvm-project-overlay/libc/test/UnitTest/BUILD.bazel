@@ -9,18 +9,6 @@ package(default_visibility = ["//visibility:public"])
 licenses(["notice"])
 
 cc_library(
-    name = "test_logger",
-    srcs = ["TestLogger.cpp"],
-    hdrs = ["TestLogger.h"],
-    deps = [
-        "//libc:__support_cpp_string",
-        "//libc:__support_cpp_string_view",
-        "//libc:__support_osutil_io",
-        "//libc:libc_root",
-    ],
-)
-
-cc_library(
     name = "LibcUnitTest",
     srcs = [
         "LibcTest.cpp",
@@ -32,11 +20,9 @@ cc_library(
         "Test.h",
     ],
     deps = [
-        ":test_logger",
         "//libc:__support_cpp_bit",
         "//libc:__support_cpp_bitset",
         "//libc:__support_cpp_span",
-        "//libc:__support_cpp_string",
         "//libc:__support_cpp_string_view",
         "//libc:__support_cpp_type_traits",
         "//libc:__support_uint128",
