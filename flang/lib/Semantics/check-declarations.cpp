@@ -2624,10 +2624,18 @@ void CheckHelper::CheckDioAssumedLenCharacterArg(const Symbol &subp,
   // Argument looks like: CHARACTER (LEN=*), INTENT(intent) :: (iotype OR iomsg)
   if (CheckDioDummyIsData(subp, arg, argPosition)) {
     CheckDioDummyAttrs(subp, *arg, intent);
-    if (!IsAssumedLengthCharacter(*arg)) {
+    const DeclTypeSpec *type{arg ? arg->GetType() : nullptr};
+    const IntrinsicTypeSpec *intrinsic{type ? type->AsIntrinsic() : nullptr};
+    const auto kind{
+        intrinsic ? evaluate::ToInt64(intrinsic->kind()) : std::nullopt};
+    if (!IsAssumedLengthCharacter(*arg) ||
+        (!kind ||
+            *kind !=
+                context_.defaultKinds().GetDefaultKind(
+                    TypeCategory::Character))) {
       messages_.Say(arg->name(),
           "Dummy argument '%s' of a defined input/output procedure"
-          " must be assumed-length CHARACTER"_err_en_US,
+          " must be assumed-length CHARACTER of default kind"_err_en_US,
           arg->name());
     }
   }
@@ -2688,13 +2696,14 @@ void CheckHelper::CheckDioDummyAttrs(
 void CheckHelper::CheckDefinedIoProc(const Symbol &symbol,
     const GenericDetails &details, GenericKind::DefinedIo ioKind) {
   for (auto ref : details.specificProcs()) {
-    const auto *binding{ref->detailsIf<ProcBindingDetails>()};
-    const Symbol &specific{*(binding ? &binding->symbol() : &*ref)};
-    if (ref->attrs().test(Attr::NOPASS)) { // C774
+    const Symbol &ultimate{ref->GetUltimate()};
+    const auto *binding{ultimate.detailsIf<ProcBindingDetails>()};
+    const Symbol &specific{*(binding ? &binding->symbol() : &ultimate)};
+    if (ultimate.attrs().test(Attr::NOPASS)) { // C774
       messages_.Say("Defined input/output procedure '%s' may not have NOPASS "
                     "attribute"_err_en_US,
-          ref->name());
-      context_.SetError(*ref);
+          ultimate.name());
+      context_.SetError(ultimate);
     }
     if (const auto *subpDetails{specific.detailsIf<SubprogramDetails>()}) {
       const std::vector<Symbol *> &dummyArgs{subpDetails->dummyArgs()};

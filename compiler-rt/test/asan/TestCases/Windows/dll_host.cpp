@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // This is a host program for DLL tests.
 //
 // Just make sure we can compile this.
