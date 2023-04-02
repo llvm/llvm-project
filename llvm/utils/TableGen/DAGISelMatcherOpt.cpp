@@ -108,7 +108,7 @@ static void ContractNodes(std::unique_ptr<Matcher> &MatcherPtr,
       // NOTE: Strictly speaking, we don't have to check for glue here
       // because the code in the pattern generator doesn't handle it right.  We
       // do it anyway for thoroughness.
-      if (!EN->hasOutFlag() &&
+      if (!EN->hasOutGlue() &&
           Pattern.getSrcPattern()->NodeHasProperty(SDNPOutGlue, CGP))
         ResultsMatch = false;
 
@@ -125,8 +125,8 @@ static void ContractNodes(std::unique_ptr<Matcher> &MatcherPtr,
         const SmallVectorImpl<MVT::SimpleValueType> &VTs = EN->getVTList();
         const SmallVectorImpl<unsigned> &Operands = EN->getOperandList();
         MatcherPtr.reset(new MorphNodeToMatcher(
-            EN->getOpcodeName(), VTs, Operands, EN->hasChain(), EN->hasInFlag(),
-            EN->hasOutFlag(), EN->hasMemRefs(), EN->getNumFixedArityOperands(),
+            EN->getOpcodeName(), VTs, Operands, EN->hasChain(), EN->hasInGlue(),
+            EN->hasOutGlue(), EN->hasMemRefs(), EN->getNumFixedArityOperands(),
             Pattern));
         return;
       }
