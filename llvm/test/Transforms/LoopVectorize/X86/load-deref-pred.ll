@@ -1025,21 +1025,21 @@ define i32 @test_non_zero_start(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr i32, ptr [[TMP64]], i32 0
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP68]], i32 4, <4 x i1> [[TMP39]], <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP68]], align 4
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP64]], i32 4
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD4:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP69]], i32 4, <4 x i1> [[TMP47]], <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP69]], align 4
 ; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP64]], i32 8
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP70]], i32 4, <4 x i1> [[TMP55]], <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP70]], align 4
 ; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i32, ptr [[TMP64]], i32 12
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD6:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP71]], i32 4, <4 x i1> [[TMP63]], <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, ptr [[TMP71]], align 4
 ; CHECK-NEXT:    [[TMP72:%.*]] = xor <4 x i1> [[TMP39]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP73:%.*]] = xor <4 x i1> [[TMP47]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP74:%.*]] = xor <4 x i1> [[TMP55]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP75:%.*]] = xor <4 x i1> [[TMP63]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP39]], <4 x i32> [[WIDE_MASKED_LOAD]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI7:%.*]] = select <4 x i1> [[TMP47]], <4 x i32> [[WIDE_MASKED_LOAD4]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI8:%.*]] = select <4 x i1> [[TMP55]], <4 x i32> [[WIDE_MASKED_LOAD5]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI9:%.*]] = select <4 x i1> [[TMP63]], <4 x i32> [[WIDE_MASKED_LOAD6]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP39]], <4 x i32> [[WIDE_LOAD]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI7:%.*]] = select <4 x i1> [[TMP47]], <4 x i32> [[WIDE_LOAD4]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI8:%.*]] = select <4 x i1> [[TMP55]], <4 x i32> [[WIDE_LOAD5]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI9:%.*]] = select <4 x i1> [[TMP63]], <4 x i32> [[WIDE_LOAD6]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP76]] = add <4 x i32> [[VEC_PHI]], [[PREDPHI]]
 ; CHECK-NEXT:    [[TMP77]] = add <4 x i32> [[VEC_PHI1]], [[PREDPHI7]]
 ; CHECK-NEXT:    [[TMP78]] = add <4 x i32> [[VEC_PHI2]], [[PREDPHI8]]
@@ -2945,11 +2945,11 @@ define i32 @test_non_unit_stride_with_first_iteration_step_access(i64 %len, ptr 
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE33:%.*]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP164:%.*]], [[PRED_LOAD_CONTINUE33]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP165:%.*]], [[PRED_LOAD_CONTINUE33]] ]
-; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP166:%.*]], [[PRED_LOAD_CONTINUE33]] ]
-; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP167:%.*]], [[PRED_LOAD_CONTINUE33]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP132:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP133:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP134:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP135:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
@@ -2967,239 +2967,143 @@ define i32 @test_non_unit_stride_with_first_iteration_step_access(i64 %len, ptr 
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[OFFSET_IDX]], 26
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[OFFSET_IDX]], 28
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 30
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP10]]
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP13]]
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP14]]
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP15]]
-; CHECK-NEXT:    [[TMP32:%.*]] = load i1, ptr [[TMP16]], align 1
-; CHECK-NEXT:    [[TMP33:%.*]] = load i1, ptr [[TMP17]], align 1
-; CHECK-NEXT:    [[TMP34:%.*]] = load i1, ptr [[TMP18]], align 1
-; CHECK-NEXT:    [[TMP35:%.*]] = load i1, ptr [[TMP19]], align 1
-; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x i1> poison, i1 [[TMP32]], i32 0
-; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <4 x i1> [[TMP36]], i1 [[TMP33]], i32 1
-; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x i1> [[TMP37]], i1 [[TMP34]], i32 2
-; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <4 x i1> [[TMP38]], i1 [[TMP35]], i32 3
-; CHECK-NEXT:    [[TMP40:%.*]] = load i1, ptr [[TMP20]], align 1
-; CHECK-NEXT:    [[TMP41:%.*]] = load i1, ptr [[TMP21]], align 1
-; CHECK-NEXT:    [[TMP42:%.*]] = load i1, ptr [[TMP22]], align 1
-; CHECK-NEXT:    [[TMP43:%.*]] = load i1, ptr [[TMP23]], align 1
-; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <4 x i1> poison, i1 [[TMP40]], i32 0
-; CHECK-NEXT:    [[TMP45:%.*]] = insertelement <4 x i1> [[TMP44]], i1 [[TMP41]], i32 1
-; CHECK-NEXT:    [[TMP46:%.*]] = insertelement <4 x i1> [[TMP45]], i1 [[TMP42]], i32 2
-; CHECK-NEXT:    [[TMP47:%.*]] = insertelement <4 x i1> [[TMP46]], i1 [[TMP43]], i32 3
-; CHECK-NEXT:    [[TMP48:%.*]] = load i1, ptr [[TMP24]], align 1
-; CHECK-NEXT:    [[TMP49:%.*]] = load i1, ptr [[TMP25]], align 1
-; CHECK-NEXT:    [[TMP50:%.*]] = load i1, ptr [[TMP26]], align 1
-; CHECK-NEXT:    [[TMP51:%.*]] = load i1, ptr [[TMP27]], align 1
+; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[TMP5]], 2
+; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[TMP6]], 2
+; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[TMP7]], 2
+; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[TMP8]], 2
+; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[TMP9]], 2
+; CHECK-NEXT:    [[TMP26:%.*]] = add i64 [[TMP10]], 2
+; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[TMP11]], 2
+; CHECK-NEXT:    [[TMP28:%.*]] = add i64 [[TMP12]], 2
+; CHECK-NEXT:    [[TMP29:%.*]] = add i64 [[TMP13]], 2
+; CHECK-NEXT:    [[TMP30:%.*]] = add i64 [[TMP14]], 2
+; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[TMP15]], 2
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP13]]
+; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP14]]
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i64 [[TMP15]]
+; CHECK-NEXT:    [[TMP48:%.*]] = load i1, ptr [[TMP32]], align 1
+; CHECK-NEXT:    [[TMP49:%.*]] = load i1, ptr [[TMP33]], align 1
+; CHECK-NEXT:    [[TMP50:%.*]] = load i1, ptr [[TMP34]], align 1
+; CHECK-NEXT:    [[TMP51:%.*]] = load i1, ptr [[TMP35]], align 1
 ; CHECK-NEXT:    [[TMP52:%.*]] = insertelement <4 x i1> poison, i1 [[TMP48]], i32 0
 ; CHECK-NEXT:    [[TMP53:%.*]] = insertelement <4 x i1> [[TMP52]], i1 [[TMP49]], i32 1
 ; CHECK-NEXT:    [[TMP54:%.*]] = insertelement <4 x i1> [[TMP53]], i1 [[TMP50]], i32 2
 ; CHECK-NEXT:    [[TMP55:%.*]] = insertelement <4 x i1> [[TMP54]], i1 [[TMP51]], i32 3
-; CHECK-NEXT:    [[TMP56:%.*]] = load i1, ptr [[TMP28]], align 1
-; CHECK-NEXT:    [[TMP57:%.*]] = load i1, ptr [[TMP29]], align 1
-; CHECK-NEXT:    [[TMP58:%.*]] = load i1, ptr [[TMP30]], align 1
-; CHECK-NEXT:    [[TMP59:%.*]] = load i1, ptr [[TMP31]], align 1
+; CHECK-NEXT:    [[TMP56:%.*]] = load i1, ptr [[TMP36]], align 1
+; CHECK-NEXT:    [[TMP57:%.*]] = load i1, ptr [[TMP37]], align 1
+; CHECK-NEXT:    [[TMP58:%.*]] = load i1, ptr [[TMP38]], align 1
+; CHECK-NEXT:    [[TMP59:%.*]] = load i1, ptr [[TMP39]], align 1
 ; CHECK-NEXT:    [[TMP60:%.*]] = insertelement <4 x i1> poison, i1 [[TMP56]], i32 0
 ; CHECK-NEXT:    [[TMP61:%.*]] = insertelement <4 x i1> [[TMP60]], i1 [[TMP57]], i32 1
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i32 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i32 3
-; CHECK-NEXT:    [[TMP64:%.*]] = extractelement <4 x i1> [[TMP39]], i32 0
-; CHECK-NEXT:    br i1 [[TMP64]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
-; CHECK:       pred.load.if:
-; CHECK-NEXT:    [[TMP65:%.*]] = add i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP65]]
-; CHECK-NEXT:    [[TMP67:%.*]] = load i32, ptr [[TMP66]], align 4
-; CHECK-NEXT:    [[TMP68:%.*]] = insertelement <4 x i32> poison, i32 [[TMP67]], i32 0
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
-; CHECK:       pred.load.continue:
-; CHECK-NEXT:    [[TMP69:%.*]] = phi <4 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP68]], [[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    [[TMP70:%.*]] = extractelement <4 x i1> [[TMP39]], i32 1
-; CHECK-NEXT:    br i1 [[TMP70]], label [[PRED_LOAD_IF4:%.*]], label [[PRED_LOAD_CONTINUE5:%.*]]
-; CHECK:       pred.load.if4:
-; CHECK-NEXT:    [[TMP71:%.*]] = add i64 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP72:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP71]]
-; CHECK-NEXT:    [[TMP73:%.*]] = load i32, ptr [[TMP72]], align 4
-; CHECK-NEXT:    [[TMP74:%.*]] = insertelement <4 x i32> [[TMP69]], i32 [[TMP73]], i32 1
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE5]]
-; CHECK:       pred.load.continue5:
-; CHECK-NEXT:    [[TMP75:%.*]] = phi <4 x i32> [ [[TMP69]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP74]], [[PRED_LOAD_IF4]] ]
-; CHECK-NEXT:    [[TMP76:%.*]] = extractelement <4 x i1> [[TMP39]], i32 2
-; CHECK-NEXT:    br i1 [[TMP76]], label [[PRED_LOAD_IF6:%.*]], label [[PRED_LOAD_CONTINUE7:%.*]]
-; CHECK:       pred.load.if6:
-; CHECK-NEXT:    [[TMP77:%.*]] = add i64 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP78:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP77]]
-; CHECK-NEXT:    [[TMP79:%.*]] = load i32, ptr [[TMP78]], align 4
-; CHECK-NEXT:    [[TMP80:%.*]] = insertelement <4 x i32> [[TMP75]], i32 [[TMP79]], i32 2
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE7]]
-; CHECK:       pred.load.continue7:
-; CHECK-NEXT:    [[TMP81:%.*]] = phi <4 x i32> [ [[TMP75]], [[PRED_LOAD_CONTINUE5]] ], [ [[TMP80]], [[PRED_LOAD_IF6]] ]
-; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <4 x i1> [[TMP39]], i32 3
-; CHECK-NEXT:    br i1 [[TMP82]], label [[PRED_LOAD_IF8:%.*]], label [[PRED_LOAD_CONTINUE9:%.*]]
-; CHECK:       pred.load.if8:
-; CHECK-NEXT:    [[TMP83:%.*]] = add i64 [[TMP3]], 2
-; CHECK-NEXT:    [[TMP84:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP83]]
-; CHECK-NEXT:    [[TMP85:%.*]] = load i32, ptr [[TMP84]], align 4
-; CHECK-NEXT:    [[TMP86:%.*]] = insertelement <4 x i32> [[TMP81]], i32 [[TMP85]], i32 3
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE9]]
-; CHECK:       pred.load.continue9:
-; CHECK-NEXT:    [[TMP87:%.*]] = phi <4 x i32> [ [[TMP81]], [[PRED_LOAD_CONTINUE7]] ], [ [[TMP86]], [[PRED_LOAD_IF8]] ]
-; CHECK-NEXT:    [[TMP88:%.*]] = extractelement <4 x i1> [[TMP47]], i32 0
-; CHECK-NEXT:    br i1 [[TMP88]], label [[PRED_LOAD_IF10:%.*]], label [[PRED_LOAD_CONTINUE11:%.*]]
-; CHECK:       pred.load.if10:
-; CHECK-NEXT:    [[TMP89:%.*]] = add i64 [[TMP4]], 2
-; CHECK-NEXT:    [[TMP90:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP89]]
-; CHECK-NEXT:    [[TMP91:%.*]] = load i32, ptr [[TMP90]], align 4
-; CHECK-NEXT:    [[TMP92:%.*]] = insertelement <4 x i32> poison, i32 [[TMP91]], i32 0
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE11]]
-; CHECK:       pred.load.continue11:
-; CHECK-NEXT:    [[TMP93:%.*]] = phi <4 x i32> [ poison, [[PRED_LOAD_CONTINUE9]] ], [ [[TMP92]], [[PRED_LOAD_IF10]] ]
-; CHECK-NEXT:    [[TMP94:%.*]] = extractelement <4 x i1> [[TMP47]], i32 1
-; CHECK-NEXT:    br i1 [[TMP94]], label [[PRED_LOAD_IF12:%.*]], label [[PRED_LOAD_CONTINUE13:%.*]]
-; CHECK:       pred.load.if12:
-; CHECK-NEXT:    [[TMP95:%.*]] = add i64 [[TMP5]], 2
-; CHECK-NEXT:    [[TMP96:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP95]]
-; CHECK-NEXT:    [[TMP97:%.*]] = load i32, ptr [[TMP96]], align 4
-; CHECK-NEXT:    [[TMP98:%.*]] = insertelement <4 x i32> [[TMP93]], i32 [[TMP97]], i32 1
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE13]]
-; CHECK:       pred.load.continue13:
-; CHECK-NEXT:    [[TMP99:%.*]] = phi <4 x i32> [ [[TMP93]], [[PRED_LOAD_CONTINUE11]] ], [ [[TMP98]], [[PRED_LOAD_IF12]] ]
-; CHECK-NEXT:    [[TMP100:%.*]] = extractelement <4 x i1> [[TMP47]], i32 2
-; CHECK-NEXT:    br i1 [[TMP100]], label [[PRED_LOAD_IF14:%.*]], label [[PRED_LOAD_CONTINUE15:%.*]]
-; CHECK:       pred.load.if14:
-; CHECK-NEXT:    [[TMP101:%.*]] = add i64 [[TMP6]], 2
-; CHECK-NEXT:    [[TMP102:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP101]]
-; CHECK-NEXT:    [[TMP103:%.*]] = load i32, ptr [[TMP102]], align 4
-; CHECK-NEXT:    [[TMP104:%.*]] = insertelement <4 x i32> [[TMP99]], i32 [[TMP103]], i32 2
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE15]]
-; CHECK:       pred.load.continue15:
-; CHECK-NEXT:    [[TMP105:%.*]] = phi <4 x i32> [ [[TMP99]], [[PRED_LOAD_CONTINUE13]] ], [ [[TMP104]], [[PRED_LOAD_IF14]] ]
-; CHECK-NEXT:    [[TMP106:%.*]] = extractelement <4 x i1> [[TMP47]], i32 3
-; CHECK-NEXT:    br i1 [[TMP106]], label [[PRED_LOAD_IF16:%.*]], label [[PRED_LOAD_CONTINUE17:%.*]]
-; CHECK:       pred.load.if16:
-; CHECK-NEXT:    [[TMP107:%.*]] = add i64 [[TMP7]], 2
-; CHECK-NEXT:    [[TMP108:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP107]]
-; CHECK-NEXT:    [[TMP109:%.*]] = load i32, ptr [[TMP108]], align 4
-; CHECK-NEXT:    [[TMP110:%.*]] = insertelement <4 x i32> [[TMP105]], i32 [[TMP109]], i32 3
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE17]]
-; CHECK:       pred.load.continue17:
-; CHECK-NEXT:    [[TMP111:%.*]] = phi <4 x i32> [ [[TMP105]], [[PRED_LOAD_CONTINUE15]] ], [ [[TMP110]], [[PRED_LOAD_IF16]] ]
-; CHECK-NEXT:    [[TMP112:%.*]] = extractelement <4 x i1> [[TMP55]], i32 0
-; CHECK-NEXT:    br i1 [[TMP112]], label [[PRED_LOAD_IF18:%.*]], label [[PRED_LOAD_CONTINUE19:%.*]]
-; CHECK:       pred.load.if18:
-; CHECK-NEXT:    [[TMP113:%.*]] = add i64 [[TMP8]], 2
-; CHECK-NEXT:    [[TMP114:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP113]]
-; CHECK-NEXT:    [[TMP115:%.*]] = load i32, ptr [[TMP114]], align 4
-; CHECK-NEXT:    [[TMP116:%.*]] = insertelement <4 x i32> poison, i32 [[TMP115]], i32 0
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE19]]
-; CHECK:       pred.load.continue19:
-; CHECK-NEXT:    [[TMP117:%.*]] = phi <4 x i32> [ poison, [[PRED_LOAD_CONTINUE17]] ], [ [[TMP116]], [[PRED_LOAD_IF18]] ]
-; CHECK-NEXT:    [[TMP118:%.*]] = extractelement <4 x i1> [[TMP55]], i32 1
-; CHECK-NEXT:    br i1 [[TMP118]], label [[PRED_LOAD_IF20:%.*]], label [[PRED_LOAD_CONTINUE21:%.*]]
-; CHECK:       pred.load.if20:
-; CHECK-NEXT:    [[TMP119:%.*]] = add i64 [[TMP9]], 2
-; CHECK-NEXT:    [[TMP120:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP119]]
-; CHECK-NEXT:    [[TMP121:%.*]] = load i32, ptr [[TMP120]], align 4
-; CHECK-NEXT:    [[TMP122:%.*]] = insertelement <4 x i32> [[TMP117]], i32 [[TMP121]], i32 1
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE21]]
-; CHECK:       pred.load.continue21:
-; CHECK-NEXT:    [[TMP123:%.*]] = phi <4 x i32> [ [[TMP117]], [[PRED_LOAD_CONTINUE19]] ], [ [[TMP122]], [[PRED_LOAD_IF20]] ]
-; CHECK-NEXT:    [[TMP124:%.*]] = extractelement <4 x i1> [[TMP55]], i32 2
-; CHECK-NEXT:    br i1 [[TMP124]], label [[PRED_LOAD_IF22:%.*]], label [[PRED_LOAD_CONTINUE23:%.*]]
-; CHECK:       pred.load.if22:
-; CHECK-NEXT:    [[TMP125:%.*]] = add i64 [[TMP10]], 2
-; CHECK-NEXT:    [[TMP126:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP125]]
-; CHECK-NEXT:    [[TMP127:%.*]] = load i32, ptr [[TMP126]], align 4
-; CHECK-NEXT:    [[TMP128:%.*]] = insertelement <4 x i32> [[TMP123]], i32 [[TMP127]], i32 2
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE23]]
-; CHECK:       pred.load.continue23:
-; CHECK-NEXT:    [[TMP129:%.*]] = phi <4 x i32> [ [[TMP123]], [[PRED_LOAD_CONTINUE21]] ], [ [[TMP128]], [[PRED_LOAD_IF22]] ]
-; CHECK-NEXT:    [[TMP130:%.*]] = extractelement <4 x i1> [[TMP55]], i32 3
-; CHECK-NEXT:    br i1 [[TMP130]], label [[PRED_LOAD_IF24:%.*]], label [[PRED_LOAD_CONTINUE25:%.*]]
-; CHECK:       pred.load.if24:
-; CHECK-NEXT:    [[TMP131:%.*]] = add i64 [[TMP11]], 2
-; CHECK-NEXT:    [[TMP132:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP131]]
-; CHECK-NEXT:    [[TMP133:%.*]] = load i32, ptr [[TMP132]], align 4
-; CHECK-NEXT:    [[TMP134:%.*]] = insertelement <4 x i32> [[TMP129]], i32 [[TMP133]], i32 3
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE25]]
-; CHECK:       pred.load.continue25:
-; CHECK-NEXT:    [[TMP135:%.*]] = phi <4 x i32> [ [[TMP129]], [[PRED_LOAD_CONTINUE23]] ], [ [[TMP134]], [[PRED_LOAD_IF24]] ]
-; CHECK-NEXT:    [[TMP136:%.*]] = extractelement <4 x i1> [[TMP63]], i32 0
-; CHECK-NEXT:    br i1 [[TMP136]], label [[PRED_LOAD_IF26:%.*]], label [[PRED_LOAD_CONTINUE27:%.*]]
-; CHECK:       pred.load.if26:
-; CHECK-NEXT:    [[TMP137:%.*]] = add i64 [[TMP12]], 2
-; CHECK-NEXT:    [[TMP138:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP137]]
-; CHECK-NEXT:    [[TMP139:%.*]] = load i32, ptr [[TMP138]], align 4
-; CHECK-NEXT:    [[TMP140:%.*]] = insertelement <4 x i32> poison, i32 [[TMP139]], i32 0
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE27]]
-; CHECK:       pred.load.continue27:
-; CHECK-NEXT:    [[TMP141:%.*]] = phi <4 x i32> [ poison, [[PRED_LOAD_CONTINUE25]] ], [ [[TMP140]], [[PRED_LOAD_IF26]] ]
-; CHECK-NEXT:    [[TMP142:%.*]] = extractelement <4 x i1> [[TMP63]], i32 1
-; CHECK-NEXT:    br i1 [[TMP142]], label [[PRED_LOAD_IF28:%.*]], label [[PRED_LOAD_CONTINUE29:%.*]]
-; CHECK:       pred.load.if28:
-; CHECK-NEXT:    [[TMP143:%.*]] = add i64 [[TMP13]], 2
-; CHECK-NEXT:    [[TMP144:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP143]]
-; CHECK-NEXT:    [[TMP145:%.*]] = load i32, ptr [[TMP144]], align 4
-; CHECK-NEXT:    [[TMP146:%.*]] = insertelement <4 x i32> [[TMP141]], i32 [[TMP145]], i32 1
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE29]]
-; CHECK:       pred.load.continue29:
-; CHECK-NEXT:    [[TMP147:%.*]] = phi <4 x i32> [ [[TMP141]], [[PRED_LOAD_CONTINUE27]] ], [ [[TMP146]], [[PRED_LOAD_IF28]] ]
-; CHECK-NEXT:    [[TMP148:%.*]] = extractelement <4 x i1> [[TMP63]], i32 2
-; CHECK-NEXT:    br i1 [[TMP148]], label [[PRED_LOAD_IF30:%.*]], label [[PRED_LOAD_CONTINUE31:%.*]]
-; CHECK:       pred.load.if30:
-; CHECK-NEXT:    [[TMP149:%.*]] = add i64 [[TMP14]], 2
-; CHECK-NEXT:    [[TMP150:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP149]]
-; CHECK-NEXT:    [[TMP151:%.*]] = load i32, ptr [[TMP150]], align 4
-; CHECK-NEXT:    [[TMP152:%.*]] = insertelement <4 x i32> [[TMP147]], i32 [[TMP151]], i32 2
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE31]]
-; CHECK:       pred.load.continue31:
-; CHECK-NEXT:    [[TMP153:%.*]] = phi <4 x i32> [ [[TMP147]], [[PRED_LOAD_CONTINUE29]] ], [ [[TMP152]], [[PRED_LOAD_IF30]] ]
-; CHECK-NEXT:    [[TMP154:%.*]] = extractelement <4 x i1> [[TMP63]], i32 3
-; CHECK-NEXT:    br i1 [[TMP154]], label [[PRED_LOAD_IF32:%.*]], label [[PRED_LOAD_CONTINUE33]]
-; CHECK:       pred.load.if32:
-; CHECK-NEXT:    [[TMP155:%.*]] = add i64 [[TMP15]], 2
-; CHECK-NEXT:    [[TMP156:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP155]]
-; CHECK-NEXT:    [[TMP157:%.*]] = load i32, ptr [[TMP156]], align 4
-; CHECK-NEXT:    [[TMP158:%.*]] = insertelement <4 x i32> [[TMP153]], i32 [[TMP157]], i32 3
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE33]]
-; CHECK:       pred.load.continue33:
-; CHECK-NEXT:    [[TMP159:%.*]] = phi <4 x i32> [ [[TMP153]], [[PRED_LOAD_CONTINUE31]] ], [ [[TMP158]], [[PRED_LOAD_IF32]] ]
-; CHECK-NEXT:    [[TMP160:%.*]] = xor <4 x i1> [[TMP39]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP161:%.*]] = xor <4 x i1> [[TMP47]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP162:%.*]] = xor <4 x i1> [[TMP55]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP163:%.*]] = xor <4 x i1> [[TMP63]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP39]], <4 x i32> [[TMP87]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI34:%.*]] = select <4 x i1> [[TMP47]], <4 x i32> [[TMP111]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI35:%.*]] = select <4 x i1> [[TMP55]], <4 x i32> [[TMP135]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI36:%.*]] = select <4 x i1> [[TMP63]], <4 x i32> [[TMP159]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP164]] = add <4 x i32> [[VEC_PHI]], [[PREDPHI]]
-; CHECK-NEXT:    [[TMP165]] = add <4 x i32> [[VEC_PHI1]], [[PREDPHI34]]
-; CHECK-NEXT:    [[TMP166]] = add <4 x i32> [[VEC_PHI2]], [[PREDPHI35]]
-; CHECK-NEXT:    [[TMP167]] = add <4 x i32> [[VEC_PHI3]], [[PREDPHI36]]
+; CHECK-NEXT:    [[TMP64:%.*]] = load i1, ptr [[TMP40]], align 1
+; CHECK-NEXT:    [[TMP65:%.*]] = load i1, ptr [[TMP41]], align 1
+; CHECK-NEXT:    [[TMP66:%.*]] = load i1, ptr [[TMP42]], align 1
+; CHECK-NEXT:    [[TMP67:%.*]] = load i1, ptr [[TMP43]], align 1
+; CHECK-NEXT:    [[TMP68:%.*]] = insertelement <4 x i1> poison, i1 [[TMP64]], i32 0
+; CHECK-NEXT:    [[TMP69:%.*]] = insertelement <4 x i1> [[TMP68]], i1 [[TMP65]], i32 1
+; CHECK-NEXT:    [[TMP70:%.*]] = insertelement <4 x i1> [[TMP69]], i1 [[TMP66]], i32 2
+; CHECK-NEXT:    [[TMP71:%.*]] = insertelement <4 x i1> [[TMP70]], i1 [[TMP67]], i32 3
+; CHECK-NEXT:    [[TMP72:%.*]] = load i1, ptr [[TMP44]], align 1
+; CHECK-NEXT:    [[TMP73:%.*]] = load i1, ptr [[TMP45]], align 1
+; CHECK-NEXT:    [[TMP74:%.*]] = load i1, ptr [[TMP46]], align 1
+; CHECK-NEXT:    [[TMP75:%.*]] = load i1, ptr [[TMP47]], align 1
+; CHECK-NEXT:    [[TMP76:%.*]] = insertelement <4 x i1> poison, i1 [[TMP72]], i32 0
+; CHECK-NEXT:    [[TMP77:%.*]] = insertelement <4 x i1> [[TMP76]], i1 [[TMP73]], i32 1
+; CHECK-NEXT:    [[TMP78:%.*]] = insertelement <4 x i1> [[TMP77]], i1 [[TMP74]], i32 2
+; CHECK-NEXT:    [[TMP79:%.*]] = insertelement <4 x i1> [[TMP78]], i1 [[TMP75]], i32 3
+; CHECK-NEXT:    [[TMP80:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP81:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP82:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP18]]
+; CHECK-NEXT:    [[TMP83:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP84:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP20]]
+; CHECK-NEXT:    [[TMP85:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP86:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP22]]
+; CHECK-NEXT:    [[TMP87:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP23]]
+; CHECK-NEXT:    [[TMP88:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP24]]
+; CHECK-NEXT:    [[TMP89:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP25]]
+; CHECK-NEXT:    [[TMP90:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP26]]
+; CHECK-NEXT:    [[TMP91:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP27]]
+; CHECK-NEXT:    [[TMP92:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP28]]
+; CHECK-NEXT:    [[TMP93:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP29]]
+; CHECK-NEXT:    [[TMP94:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP30]]
+; CHECK-NEXT:    [[TMP95:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[TMP31]]
+; CHECK-NEXT:    [[TMP96:%.*]] = load i32, ptr [[TMP80]], align 4
+; CHECK-NEXT:    [[TMP97:%.*]] = load i32, ptr [[TMP81]], align 4
+; CHECK-NEXT:    [[TMP98:%.*]] = load i32, ptr [[TMP82]], align 4
+; CHECK-NEXT:    [[TMP99:%.*]] = load i32, ptr [[TMP83]], align 4
+; CHECK-NEXT:    [[TMP100:%.*]] = insertelement <4 x i32> poison, i32 [[TMP96]], i32 0
+; CHECK-NEXT:    [[TMP101:%.*]] = insertelement <4 x i32> [[TMP100]], i32 [[TMP97]], i32 1
+; CHECK-NEXT:    [[TMP102:%.*]] = insertelement <4 x i32> [[TMP101]], i32 [[TMP98]], i32 2
+; CHECK-NEXT:    [[TMP103:%.*]] = insertelement <4 x i32> [[TMP102]], i32 [[TMP99]], i32 3
+; CHECK-NEXT:    [[TMP104:%.*]] = load i32, ptr [[TMP84]], align 4
+; CHECK-NEXT:    [[TMP105:%.*]] = load i32, ptr [[TMP85]], align 4
+; CHECK-NEXT:    [[TMP106:%.*]] = load i32, ptr [[TMP86]], align 4
+; CHECK-NEXT:    [[TMP107:%.*]] = load i32, ptr [[TMP87]], align 4
+; CHECK-NEXT:    [[TMP108:%.*]] = insertelement <4 x i32> poison, i32 [[TMP104]], i32 0
+; CHECK-NEXT:    [[TMP109:%.*]] = insertelement <4 x i32> [[TMP108]], i32 [[TMP105]], i32 1
+; CHECK-NEXT:    [[TMP110:%.*]] = insertelement <4 x i32> [[TMP109]], i32 [[TMP106]], i32 2
+; CHECK-NEXT:    [[TMP111:%.*]] = insertelement <4 x i32> [[TMP110]], i32 [[TMP107]], i32 3
+; CHECK-NEXT:    [[TMP112:%.*]] = load i32, ptr [[TMP88]], align 4
+; CHECK-NEXT:    [[TMP113:%.*]] = load i32, ptr [[TMP89]], align 4
+; CHECK-NEXT:    [[TMP114:%.*]] = load i32, ptr [[TMP90]], align 4
+; CHECK-NEXT:    [[TMP115:%.*]] = load i32, ptr [[TMP91]], align 4
+; CHECK-NEXT:    [[TMP116:%.*]] = insertelement <4 x i32> poison, i32 [[TMP112]], i32 0
+; CHECK-NEXT:    [[TMP117:%.*]] = insertelement <4 x i32> [[TMP116]], i32 [[TMP113]], i32 1
+; CHECK-NEXT:    [[TMP118:%.*]] = insertelement <4 x i32> [[TMP117]], i32 [[TMP114]], i32 2
+; CHECK-NEXT:    [[TMP119:%.*]] = insertelement <4 x i32> [[TMP118]], i32 [[TMP115]], i32 3
+; CHECK-NEXT:    [[TMP120:%.*]] = load i32, ptr [[TMP92]], align 4
+; CHECK-NEXT:    [[TMP121:%.*]] = load i32, ptr [[TMP93]], align 4
+; CHECK-NEXT:    [[TMP122:%.*]] = load i32, ptr [[TMP94]], align 4
+; CHECK-NEXT:    [[TMP123:%.*]] = load i32, ptr [[TMP95]], align 4
+; CHECK-NEXT:    [[TMP124:%.*]] = insertelement <4 x i32> poison, i32 [[TMP120]], i32 0
+; CHECK-NEXT:    [[TMP125:%.*]] = insertelement <4 x i32> [[TMP124]], i32 [[TMP121]], i32 1
+; CHECK-NEXT:    [[TMP126:%.*]] = insertelement <4 x i32> [[TMP125]], i32 [[TMP122]], i32 2
+; CHECK-NEXT:    [[TMP127:%.*]] = insertelement <4 x i32> [[TMP126]], i32 [[TMP123]], i32 3
+; CHECK-NEXT:    [[TMP128:%.*]] = xor <4 x i1> [[TMP55]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP129:%.*]] = xor <4 x i1> [[TMP63]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP130:%.*]] = xor <4 x i1> [[TMP71]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP131:%.*]] = xor <4 x i1> [[TMP79]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP55]], <4 x i32> [[TMP103]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI4:%.*]] = select <4 x i1> [[TMP63]], <4 x i32> [[TMP111]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI5:%.*]] = select <4 x i1> [[TMP71]], <4 x i32> [[TMP119]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI6:%.*]] = select <4 x i1> [[TMP79]], <4 x i32> [[TMP127]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP132]] = add <4 x i32> [[VEC_PHI]], [[PREDPHI]]
+; CHECK-NEXT:    [[TMP133]] = add <4 x i32> [[VEC_PHI1]], [[PREDPHI4]]
+; CHECK-NEXT:    [[TMP134]] = add <4 x i32> [[VEC_PHI2]], [[PREDPHI5]]
+; CHECK-NEXT:    [[TMP135]] = add <4 x i32> [[VEC_PHI3]], [[PREDPHI6]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NEXT:    [[TMP168:%.*]] = icmp eq i64 [[INDEX_NEXT]], 144
-; CHECK-NEXT:    br i1 [[TMP168]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP38:![0-9]+]]
+; CHECK-NEXT:    [[TMP136:%.*]] = icmp eq i64 [[INDEX_NEXT]], 144
+; CHECK-NEXT:    br i1 [[TMP136]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP38:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP165]], [[TMP164]]
-; CHECK-NEXT:    [[BIN_RDX37:%.*]] = add <4 x i32> [[TMP166]], [[BIN_RDX]]
-; CHECK-NEXT:    [[BIN_RDX38:%.*]] = add <4 x i32> [[TMP167]], [[BIN_RDX37]]
-; CHECK-NEXT:    [[TMP169:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX38]])
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP133]], [[TMP132]]
+; CHECK-NEXT:    [[BIN_RDX7:%.*]] = add <4 x i32> [[TMP134]], [[BIN_RDX]]
+; CHECK-NEXT:    [[BIN_RDX8:%.*]] = add <4 x i32> [[TMP135]], [[BIN_RDX7]]
+; CHECK-NEXT:    [[TMP137:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX8]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 152, 144
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 288, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP169]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP137]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
@@ -3218,7 +3122,7 @@ define i32 @test_non_unit_stride_with_first_iteration_step_access(i64 %len, ptr 
 ; CHECK-NEXT:    [[EXIT:%.*]] = icmp ugt i64 [[IV]], 300
 ; CHECK-NEXT:    br i1 [[EXIT]], label [[LOOP_EXIT]], label [[LOOP]], !llvm.loop [[LOOP39:![0-9]+]]
 ; CHECK:       loop_exit:
-; CHECK-NEXT:    [[ACCUM_NEXT_LCSSA:%.*]] = phi i32 [ [[ACCUM_NEXT]], [[LATCH]] ], [ [[TMP169]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[ACCUM_NEXT_LCSSA:%.*]] = phi i32 [ [[ACCUM_NEXT]], [[LATCH]] ], [ [[TMP137]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[ACCUM_NEXT_LCSSA]]
 ;
 entry:
