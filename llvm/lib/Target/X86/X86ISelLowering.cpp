@@ -14815,10 +14815,10 @@ static SDValue lowerShuffleOfExtractsAsVperm(const SDLoc &DL, SDValue N0,
          "VPERM* family of shuffles requires 32-bit or 64-bit elements");
 
   // Check that both sources are extracts of the same source vector.
-  if (!N0.hasOneUse() || !N1.hasOneUse() ||
-      N0.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+  if (N0.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
       N1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-      N0.getOperand(0) != N1.getOperand(0))
+      N0.getOperand(0) != N1.getOperand(0) ||
+      !N0.hasOneUse() || !N1.hasOneUse())
     return SDValue();
 
   SDValue WideVec = N0.getOperand(0);
