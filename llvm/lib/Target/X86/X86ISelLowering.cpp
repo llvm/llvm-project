@@ -46722,14 +46722,14 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(N->getOpcode(), DL, VT,
                          DAG.getBitcast(CondVT, CondNot), RHS, LHS);
 
-    if (Cond.getOpcode() == X86ISD::PCMPGT && Cond.hasOneUse()) {
-      // pcmpgt(X, -1) -> pcmpgt(0, X) to help select/blendv just use the
-      // signbit.
-      if (ISD::isBuildVectorAllOnes(Cond.getOperand(1).getNode())) {
-        Cond = DAG.getNode(X86ISD::PCMPGT, DL, CondVT,
-                           DAG.getConstant(0, DL, CondVT), Cond.getOperand(0));
-        return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
-      }
+    // pcmpgt(X, -1) -> pcmpgt(0, X) to help select/blendv just use the
+    // signbit.
+    if (Cond.getOpcode() == X86ISD::PCMPGT &&
+        ISD::isBuildVectorAllOnes(Cond.getOperand(1).getNode()) &&
+        Cond.hasOneUse()) {
+      Cond = DAG.getNode(X86ISD::PCMPGT, DL, CondVT,
+                         DAG.getConstant(0, DL, CondVT), Cond.getOperand(0));
+      return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
     }
   }
 
@@ -49544,12 +49544,12 @@ static SDValue combineAndMaskToShift(SDNode *N, SelectionDAG &DAG,
   if (N->getValueType(0) == VT &&
       supportedVectorShiftWithImm(VT.getSimpleVT(), Subtarget, ISD::SRA)) {
     SDValue X, Y;
-    if (Op1.hasOneUse() && Op1.getOpcode() == X86ISD::PCMPGT &&
-        isAllOnesOrAllOnesSplat(Op1.getOperand(1))) {
+    if (Op1.getOpcode() == X86ISD::PCMPGT &&
+        isAllOnesOrAllOnesSplat(Op1.getOperand(1)) && Op1.hasOneUse()) {
       X = Op1.getOperand(0);
       Y = Op0;
-    } else if (Op0.hasOneUse() && Op0.getOpcode() == X86ISD::PCMPGT &&
-               isAllOnesOrAllOnesSplat(Op0.getOperand(1))) {
+    } else if (Op0.getOpcode() == X86ISD::PCMPGT &&
+               isAllOnesOrAllOnesSplat(Op0.getOperand(1)) && Op0.hasOneUse()) {
       X = Op0.getOperand(0);
       Y = Op1;
     }
