@@ -55,3 +55,42 @@ func.func @simple_CNnc_to_NC(%arg0: tensor<1x1x32x8xf32>, %arg1: tensor<32x8xf32
 //                They have the same type, so the insert_slice op is folded
 //                away.
 // CHECK:         return %[[TRANSP]]
+
+// -----
+
+func.func @simple_NCHWc_to_NCHW(%arg0: tensor<2x1x16x8x32xf32>, %arg1: tensor<2x32x16x8xf32>) -> tensor<2x32x16x8xf32> {
+  %0 = tensor.unpack %arg0 inner_dims_pos = [1] inner_tiles = [32] into %arg1 : tensor<2x1x16x8x32xf32> -> tensor<2x32x16x8xf32>
+  return %0 : tensor<2x32x16x8xf32>
+}
+// CHECK-LABEL: func.func @simple_NCHWc_to_NCHW
+// CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
+// CHECK:         %[[TILE:.+]] = tensor.extract_slice %[[SRC]][0, 0, 0, 0, 0] [2, 1, 16, 8, 32] [1, 1, 1, 1, 1]
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<2x32x16x8xf32>
+// CHECK:         %[[TRANSP:.+]] =  linalg.transpose
+// CHECK-SAME:      ins(%[[TILE]] : tensor<2x16x8x32xf32>)
+// CHECK-SAME:      outs(%[[EMPTY]] : tensor<2x32x16x8xf32>)
+// CHECK-SAME:      permutation = [0, 3, 1, 2]
+//                They have the same type, so the insert_slice op is folded
+//                away.
+// CHECK:         return %[[TRANSP]]
+
+
+// -----
+
+func.func @simple_NHWC_to_NCHW(%arg0: tensor<1x16x8x32xf32>, %arg1: tensor<1x32x16x8xf32>) -> tensor<1x32x16x8xf32> {
+  %0 = tensor.unpack %arg0 outer_dims_perm = [0, 2, 3, 1] inner_dims_pos = [] inner_tiles = [] into %arg1 : tensor<1x16x8x32xf32> -> tensor<1x32x16x8xf32>
+  return %0 : tensor<1x32x16x8xf32>
+}
+// CHECK-LABEL: func.func @simple_NHWC_to_NCHW
+// CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
+// CHECK:         %[[TILE:.+]] = tensor.extract_slice %[[SRC]][0, 0, 0, 0] [1, 16, 8, 32] [1, 1, 1, 1]
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<32x16x8xf32>
+// CHECK:         %[[TRANSP:.+]] =  linalg.transpose
+// CHECK-SAME:      ins(%[[TILE]] : tensor<16x8x32xf32>)
+// CHECK-SAME:      outs(%[[EMPTY]] : tensor<32x16x8xf32>)
+// CHECK-SAME:      permutation = [2, 0, 1]
+// CHECK:         %[[INSERT:.+]] = tensor.insert_slice %[[TRANSP]] into %[[DEST]]
+// CHECK-SAME:      [0, 0, 0, 0] [1, 32, 16, 8] [1, 1, 1, 1]
+// CHECK:         return %[[INSERT]]
