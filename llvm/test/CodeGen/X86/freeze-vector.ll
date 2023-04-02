@@ -2,6 +2,27 @@
 ; RUN: llc < %s -mtriple=i686-- -mattr=+avx | FileCheck %s --check-prefixes=CHECK,X86
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK,X64
 
+define <2 x i64> @freeze_insert_vector_elt(<2 x i64> %a0) {
+; X86-LABEL: freeze_insert_vector_elt:
+; X86:       # %bb.0:
+; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
+; X86-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_insert_vector_elt:
+; X64:       # %bb.0:
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; X64-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X64-NEXT:    retq
+  %idx0 = insertelement <2 x i64> %a0, i64 0, i64 0
+  %freeze0 = freeze <2 x i64> %idx0
+  %idx1 = insertelement <2 x i64> %freeze0, i64 0, i64 1
+  %freeze1 = freeze <2 x i64> %idx1
+  ret <2 x i64> %freeze1
+}
+
 define <4 x i32> @freeze_insert_subvector(<8 x i32> %a0) nounwind {
 ; CHECK-LABEL: freeze_insert_subvector:
 ; CHECK:       # %bb.0:
