@@ -3131,11 +3131,16 @@ bool LoongArchTargetLowering::decomposeMulByConstant(LLVMContext &Context,
   if (VT.getSizeInBits() > Subtarget.getGRLen())
     return false;
 
-  // Break MUL into (SLLI + ADD/SUB) or ALSL.
   if (auto *ConstNode = dyn_cast<ConstantSDNode>(C.getNode())) {
     const APInt &Imm = ConstNode->getAPIntValue();
+    // Break MUL into (SLLI + ADD/SUB) or ALSL.
     if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2() ||
         (1 - Imm).isPowerOf2() || (-1 - Imm).isPowerOf2())
+      return true;
+    // Break MUL into (ALSL x, (SLLI x, imm0), imm1).
+    if (ConstNode->hasOneUse() &&
+        ((Imm - 2).isPowerOf2() || (Imm - 4).isPowerOf2() ||
+         (Imm - 8).isPowerOf2() || (Imm - 16).isPowerOf2()))
       return true;
   }
 
