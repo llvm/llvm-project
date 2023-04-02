@@ -7146,6 +7146,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
     Args.addOptInFlag(CmdArgs, options::OPT_munsafe_fp_atomics,
                       options::OPT_mno_unsafe_fp_atomics);
+    Args.addOptOutFlag(CmdArgs, options::OPT_mamdgpu_ieee,
+                       options::OPT_mno_amdgpu_ieee);
   }
 
   // For all the host OpenMP offloading compile jobs we need to pass the targets
