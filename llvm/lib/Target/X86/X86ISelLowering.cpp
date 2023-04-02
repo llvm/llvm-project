@@ -14815,10 +14815,10 @@ static SDValue lowerShuffleOfExtractsAsVperm(const SDLoc &DL, SDValue N0,
          "VPERM* family of shuffles requires 32-bit or 64-bit elements");
 
   // Check that both sources are extracts of the same source vector.
-  if (!N0.hasOneUse() || !N1.hasOneUse() ||
-      N0.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+  if (N0.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
       N1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-      N0.getOperand(0) != N1.getOperand(0))
+      N0.getOperand(0) != N1.getOperand(0) ||
+      !N0.hasOneUse() || !N1.hasOneUse())
     return SDValue();
 
   SDValue WideVec = N0.getOperand(0);
@@ -40532,22 +40532,19 @@ static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
   unsigned NumOps = Ops.size();
 
   // Extract constant bits from each source op.
-  bool OneUseConstantOp = false;
   SmallVector<APInt, 16> UndefEltsOps(NumOps);
   SmallVector<SmallVector<APInt, 16>, 16> RawBitsOps(NumOps);
-  for (unsigned i = 0; i != NumOps; ++i) {
-    SDValue SrcOp = Ops[i];
-    OneUseConstantOp |= SrcOp.hasOneUse();
-    if (!getTargetConstantBitsFromNode(SrcOp, MaskSizeInBits, UndefEltsOps[i],
-                                       RawBitsOps[i]))
+  for (unsigned I = 0; I != NumOps; ++I)
+    if (!getTargetConstantBitsFromNode(Ops[I], MaskSizeInBits, UndefEltsOps[I],
+                                       RawBitsOps[I]))
       return SDValue();
-  }
 
   // If we're optimizing for size, only fold if at least one of the constants is
   // only used once or the combined shuffle has included a variable mask
   // shuffle, this is to avoid constant pool bloat.
   bool IsOptimizingSize = DAG.shouldOptForSize();
-  if (IsOptimizingSize && !OneUseConstantOp && !HasVariableMask)
+  if (IsOptimizingSize && !HasVariableMask &&
+      llvm::none_of(Ops, [](SDValue SrcOp) { return SrcOp->hasOneUse(); }))
     return SDValue();
 
   // Shuffle the constant bits according to the mask.
