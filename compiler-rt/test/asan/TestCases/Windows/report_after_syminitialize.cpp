@@ -3,12 +3,7 @@
 // not support it, so we need to specify extra flags to get the compiler to
 // generate PDB debug info.
 
-// The first build command is intended for MSVC target, which fails on MinGW.
-// The second build command contains the flags required to get PDB debug info
-// on a MinGW build, which fails on MSVC.
-
-// RUN: %clangxx_asan -O0 %s -o %t \
-// RUN: || %clangxx_asan -gcodeview -gcolumn-info -Wl,--pdb= -O0 %s -o %t -ldbghelp
+// RUN: %clangxx_asan %if target={{.*-windows-gnu}} %{ -gcodeview -gcolumn-info -Wl,--pdb= -ldbghelp %} -O0 %s -o %t
 // RUN: %env_asan_opts=external_symbolizer_path=non-existent\\\\asdf not %run %t 2>&1 | FileCheck %s
 
 #include <windows.h>
