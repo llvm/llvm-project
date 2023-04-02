@@ -437,7 +437,11 @@ void RocmInstallationDetector::detectHIPRuntime() {
   SmallVector<Candidate, 4> HIPSearchDirs;
   if (!HIPPathArg.empty())
     HIPSearchDirs.emplace_back(HIPPathArg.str(), /*StrictChecking=*/true);
-  else
+  else if (std::optional<std::string> HIPPathEnv =
+               llvm::sys::Process::GetEnv("HIP_PATH")) {
+    if (!HIPPathEnv->empty())
+      HIPSearchDirs.emplace_back(std::move(*HIPPathEnv));
+  } else
     HIPSearchDirs.append(getInstallationPathCandidates());
   auto &FS = D.getVFS();
 
