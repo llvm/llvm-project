@@ -158,6 +158,9 @@ if platform.system() == 'Windows':
     config.substitutions.append( ("%clang_cl_asan ", clang_cl_asan_invocation) )
     config.substitutions.append( ("%Od", "-Od") )
     config.substitutions.append( ("%Fe", "-Fe") )
+    config.substitutions.append( ("%LD", "-LD") )
+    config.substitutions.append( ("%MD", "-MD") )
+    config.substitutions.append( ("%MT", "-MT") )
 
     base_lib = os.path.join(config.compiler_rt_libdir, "clang_rt.asan%%s%s.lib" % config.target_suffix)
     config.substitutions.append( ("%asan_lib", base_lib % "") )
@@ -170,6 +173,9 @@ if platform.system() == 'Windows':
     config.substitutions.append( ("%clang_cl_asan ", build_invocation(clang_asan_cxxflags)) )
     config.substitutions.append( ("%Od", "-O0") )
     config.substitutions.append( ("%Fe", "-o") )
+    config.substitutions.append( ("%LD", "-shared") )
+    config.substitutions.append( ("%MD", "") )
+    config.substitutions.append( ("%MT", "") )
 
 # FIXME: De-hardcode this path.
 asan_source_dir = os.path.join(
