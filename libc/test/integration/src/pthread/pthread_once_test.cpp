@@ -18,6 +18,7 @@
 #include "test/IntegrationTest/test.h"
 
 #include <pthread.h>
+#include <stdint.h> // uintptr_t
 
 static constexpr unsigned int NUM_THREADS = 5;
 static __llvm_libc::cpp::Atomic<unsigned int> thread_count;

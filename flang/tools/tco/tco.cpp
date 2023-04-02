@@ -106,7 +106,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   mlir::PassManager pm((*owningRef)->getName(),
                        mlir::OpPassManager::Nesting::Implicit);
   pm.enableVerifier(/*verifyPasses=*/true);
-  mlir::applyPassManagerCLOptions(pm);
+  (void)mlir::applyPassManagerCLOptions(pm);
   if (emitFir) {
     // parse the input and pretty-print it back out
     // -emit-fir intentionally disables all the passes

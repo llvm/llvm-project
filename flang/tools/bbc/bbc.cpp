@@ -260,7 +260,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   mlir::PassManager pm(mlirModule->getName(),
                        mlir::OpPassManager::Nesting::Implicit);
   pm.enableVerifier(/*verifyPasses=*/true);
-  mlir::applyPassManagerCLOptions(pm);
+  (void)mlir::applyPassManagerCLOptions(pm);
   if (passPipeline.hasAnyOccurrences()) {
     // run the command-line specified pipeline
     (void)passPipeline.addToPipeline(pm, [&](const llvm::Twine &msg) {

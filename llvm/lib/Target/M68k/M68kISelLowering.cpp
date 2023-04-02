@@ -163,6 +163,8 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
   setOperationAction(ISD::ATOMIC_CMP_SWAP, {MVT::i8, MVT::i16, MVT::i32},
                      Subtarget.atLeastM68020() ? Legal : LibCall);
 
+  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
+
   // M68k does not have native read-modify-write support, so expand all of them
   // to `__sync_fetch_*` for target < M68020, otherwise expand to CmpxChg.
   // See `shouldExpandAtomicRMWInIR` below.
@@ -1408,6 +1410,8 @@ SDValue M68kTargetLowering::LowerOperation(SDValue Op,
     return LowerShiftRightParts(Op, DAG, true);
   case ISD::SRL_PARTS:
     return LowerShiftRightParts(Op, DAG, false);
+  case ISD::ATOMIC_FENCE:
+    return LowerATOMICFENCE(Op, DAG);
   }
 }
 
@@ -3238,6 +3242,28 @@ SDValue M68kTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   SDValue FR = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(), PtrVT);
   return DAG.getStore(Op.getOperand(0), DL, FR, Op.getOperand(1),
                       MachinePointerInfo(SV));
+}
+
+SDValue M68kTargetLowering::LowerATOMICFENCE(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  // Lower to a memory barrier created from inline asm.
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  LLVMContext &Ctx = *DAG.getContext();
+
+  const unsigned Flags = InlineAsm::Extra_MayLoad | InlineAsm::Extra_MayStore |
+                         InlineAsm::Extra_HasSideEffects;
+  const SDValue AsmOperands[4] = {
+      Op.getOperand(0), // Input chain
+      DAG.getTargetExternalSymbol(
+          "", TLI.getProgramPointerTy(
+                  DAG.getDataLayout())),   // Empty inline asm string
+      DAG.getMDNode(MDNode::get(Ctx, {})), // (empty) srcloc
+      DAG.getTargetConstant(Flags, SDLoc(Op),
+                            TLI.getPointerTy(DAG.getDataLayout())), // Flags
+  };
+
+  return DAG.getNode(ISD::INLINEASM, SDLoc(Op),
+                     DAG.getVTList(MVT::Other, MVT::Glue), AsmOperands);
 }
 
 // Lower dynamic stack allocation to _alloca call for Cygwin/Mingw targets.
