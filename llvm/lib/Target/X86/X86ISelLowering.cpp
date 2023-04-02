@@ -54229,8 +54229,8 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
 /// pre-promote its result type since vXi1 vectors don't get promoted
 /// during type legalization.
 static SDValue truncateAVX512SetCCNoBWI(EVT VT, EVT OpVT, SDValue LHS,
-                                        SDValue RHS, ISD::CondCode CC, SDLoc DL,
-                                        SelectionDAG &DAG,
+                                        SDValue RHS, ISD::CondCode CC,
+                                        const SDLoc &DL, SelectionDAG &DAG,
                                         const X86Subtarget &Subtarget) {
   if (Subtarget.hasAVX512() && !Subtarget.hasBWI() && VT.isVector() &&
       VT.getVectorElementType() == MVT::i1 &&
