@@ -1037,8 +1037,8 @@ public:
 
 
   bool hasChain() const { return HasChain; }
-  bool hasInFlag() const { return HasInGlue; }
-  bool hasOutFlag() const { return HasOutGlue; }
+  bool hasInGlue() const { return HasInGlue; }
+  bool hasOutGlue() const { return HasOutGlue; }
   bool hasMemRefs() const { return HasMemRefs; }
   int getNumFixedArityOperands() const { return NumFixedArityOperands; }
 
@@ -1059,11 +1059,11 @@ public:
   EmitNodeMatcher(const std::string &opcodeName,
                   ArrayRef<MVT::SimpleValueType> vts,
                   ArrayRef<unsigned> operands,
-                  bool hasChain, bool hasInFlag, bool hasOutFlag,
+                  bool hasChain, bool hasInGlue, bool hasOutGlue,
                   bool hasmemrefs,
                   int numfixedarityoperands, unsigned firstresultslot)
   : EmitNodeMatcherCommon(opcodeName, vts, operands, hasChain,
-                          hasInFlag, hasOutFlag, hasmemrefs,
+                          hasInGlue, hasOutGlue, hasmemrefs,
                           numfixedarityoperands, false),
     FirstResultSlot(firstresultslot) {}
 
@@ -1082,11 +1082,11 @@ public:
   MorphNodeToMatcher(const std::string &opcodeName,
                      ArrayRef<MVT::SimpleValueType> vts,
                      ArrayRef<unsigned> operands,
-                     bool hasChain, bool hasInFlag, bool hasOutFlag,
+                     bool hasChain, bool hasInGlue, bool hasOutGlue,
                      bool hasmemrefs,
                      int numfixedarityoperands, const PatternToMatch &pattern)
     : EmitNodeMatcherCommon(opcodeName, vts, operands, hasChain,
-                            hasInFlag, hasOutFlag, hasmemrefs,
+                            hasInGlue, hasOutGlue, hasmemrefs,
                             numfixedarityoperands, true),
       Pattern(pattern) {
   }

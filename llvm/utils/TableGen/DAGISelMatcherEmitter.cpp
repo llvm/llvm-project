@@ -778,8 +778,8 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     OS << ", TARGET_VAL(" << EN->getOpcodeName() << "), 0";
 
     if (EN->hasChain())   OS << "|OPFL_Chain";
-    if (EN->hasInFlag())  OS << "|OPFL_GlueInput";
-    if (EN->hasOutFlag()) OS << "|OPFL_GlueOutput";
+    if (EN->hasInGlue())  OS << "|OPFL_GlueInput";
+    if (EN->hasOutGlue()) OS << "|OPFL_GlueOutput";
     if (EN->hasMemRefs()) OS << "|OPFL_MemRefs";
     if (EN->getNumFixedArityOperands() != -1)
       OS << "|OPFL_Variadic" << EN->getNumFixedArityOperands();
