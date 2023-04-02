@@ -8405,6 +8405,10 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       // no compare with constant and branch instructions.
       Overflow = DAG.getSetCC(DL, N->getValueType(1), Res,
                               DAG.getConstant(0, DL, MVT::i64), ISD::SETEQ);
+    } else if (IsAdd && isAllOnesConstant(RHS)) {
+      // Special case uaddo X, -1 overflowed if X != 0.
+      Overflow = DAG.getSetCC(DL, N->getValueType(1), N->getOperand(0),
+                              DAG.getConstant(0, DL, MVT::i32), ISD::SETNE);
     } else {
       // Sign extend the LHS and perform an unsigned compare with the ADDW
       // result. Since the inputs are sign extended from i32, this is equivalent
