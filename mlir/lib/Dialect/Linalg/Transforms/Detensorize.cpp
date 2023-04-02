@@ -474,7 +474,7 @@ struct LinalgDetensorize
     DenseSet<Operation *> opsToDetensor;
     DenseMap<Operation *, DenseSet<int>> detensorableBranchOps;
     DenseSet<BlockArgument> blockArgsToDetensor;
-    FunctionOpInterface funcOp = cast<FunctionOpInterface>(getOperation());
+    FunctionOpInterface funcOp = getOperation();
 
     if (aggressiveMode.getValue()) {
       AggressiveDetensoringModel costModel;
