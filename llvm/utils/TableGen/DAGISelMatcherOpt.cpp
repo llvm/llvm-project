@@ -209,15 +209,13 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
     // Factor the subexpression.
     std::unique_ptr<Matcher> Child(Scope->takeChild(i));
     FactorNodes(Child);
-    
-    if (Child) {
-      // If the child is a ScopeMatcher we can just merge its contents.
-      if (auto *SM = dyn_cast<ScopeMatcher>(Child.get())) {
-        for (unsigned j = 0, e = SM->getNumChildren(); j != e; ++j)
-          OptionsToMatch.push_back(SM->takeChild(j));
-      } else {
-        OptionsToMatch.push_back(Child.release());
-      }
+
+    // If the child is a ScopeMatcher we can just merge its contents.
+    if (auto *SM = dyn_cast<ScopeMatcher>(Child.get())) {
+      for (unsigned j = 0, e = SM->getNumChildren(); j != e; ++j)
+        OptionsToMatch.push_back(SM->takeChild(j));
+    } else {
+      OptionsToMatch.push_back(Child.release());
     }
   }
   
@@ -323,13 +321,16 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
       Matcher *Tmp = EqualMatchers[i]->takeNext();
       delete EqualMatchers[i];
       EqualMatchers[i] = Tmp;
+      assert(!Optn == !Tmp && "Expected all to be null if any are null");
     }
 
-    Shared->setNext(new ScopeMatcher(std::move(EqualMatchers)));
+    if (EqualMatchers[0]) {
+      Shared->setNext(new ScopeMatcher(std::move(EqualMatchers)));
 
-    // Recursively factor the newly created node.
-    FactorNodes(Shared->getNextPtr());
-    
+      // Recursively factor the newly created node.
+      FactorNodes(Shared->getNextPtr());
+    }
+
     NewOptionsToMatch.push_back(Shared);
   }
   
