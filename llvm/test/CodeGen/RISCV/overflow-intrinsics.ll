@@ -671,9 +671,10 @@ define i1 @uaddo_i32_decrement_alt(i32 signext %x, ptr %p) {
 ;
 ; RV64-LABEL: uaddo_i32_decrement_alt:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addiw a2, a0, -1
-; RV64-NEXT:    sltu a0, a2, a0
-; RV64-NEXT:    sw a2, 0(a1)
+; RV64-NEXT:    snez a2, a0
+; RV64-NEXT:    addiw a0, a0, -1
+; RV64-NEXT:    sw a0, 0(a1)
+; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
   %a = add i32 %x, -1
   store i32 %a, ptr %p
