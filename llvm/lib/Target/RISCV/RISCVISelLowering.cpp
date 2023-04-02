@@ -21,7 +21,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -1845,7 +1844,7 @@ bool RISCVTargetLowering::mergeStoresAfterLegalization(EVT VT) const {
 
 bool RISCVTargetLowering::isLegalElementTypeForRVV(Type *ScalarTy) const {
   if (ScalarTy->isPointerTy())
-    return Subtarget.is64Bit() ? Subtarget.hasVInstructionsI64() : true;
+    return true;
 
   if (ScalarTy->isIntegerTy(8) || ScalarTy->isIntegerTy(16) ||
       ScalarTy->isIntegerTy(32))
@@ -15042,135 +15041,6 @@ Value *RISCVTargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
     return useTpOffset(IRB, -0x10);
 
   return TargetLowering::getIRStackGuard(IRB);
-}
-
-bool RISCVTargetLowering::isLegalInterleavedAccessType(
-    FixedVectorType *VTy, unsigned Factor, const DataLayout &DL) const {
-  if (!Subtarget.useRVVForFixedLengthVectors())
-    return false;
-  if (!isLegalElementTypeForRVV(VTy->getElementType()))
-    return false;
-  EVT VT = getValueType(DL, VTy);
-  // Don't lower vlseg/vsseg for fixed length vector types that can't be split.
-  if (!isTypeLegal(VT))
-    return false;
-  // Sometimes the interleaved access pass picks up splats as interleaves of one
-  // element. Don't lower these.
-  if (VTy->getNumElements() < 2)
-    return false;
-
-  // Need to make sure that EMUL * NFIELDS ≤ 8
-  MVT ContainerVT = getContainerForFixedLengthVector(VT.getSimpleVT());
-  auto [LMUL, Fractional] = RISCVVType::decodeVLMUL(getLMUL(ContainerVT));
-  if (Fractional)
-    return true;
-  return Factor * LMUL <= 8;
-}
-
-/// Lower an interleaved load into a vlsegN intrinsic.
-///
-/// E.g. Lower an interleaved load (Factor = 2):
-/// %wide.vec = load <8 x i32>, <8 x i32>* %ptr
-/// %v0 = shuffle %wide.vec, undef, <0, 2, 4, 6>  ; Extract even elements
-/// %v1 = shuffle %wide.vec, undef, <1, 3, 5, 7>  ; Extract odd elements
-///
-/// Into:
-/// %ld2 = { <4 x i32>, <4 x i32> } call llvm.riscv.vlseg.v4i32.p0.i64(
-///                                        %ptr, i64 4)
-/// %vec0 = extractelement { <4 x i32>, <4 x i32> } %ld2, i32 0
-/// %vec1 = extractelement { <4 x i32>, <4 x i32> } %ld2, i32 1
-bool RISCVTargetLowering::lowerInterleavedLoad(
-    LoadInst *LI, ArrayRef<ShuffleVectorInst *> Shuffles,
-    ArrayRef<unsigned> Indices, unsigned Factor) const {
-  IRBuilder<> Builder(LI);
-
-  auto *VTy = cast<FixedVectorType>(Shuffles[0]->getType());
-  if (!isLegalInterleavedAccessType(VTy, Factor,
-                                    LI->getModule()->getDataLayout()))
-    return false;
-
-  auto *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
-
-  static const Intrinsic::ID FixedLenIntrIds[] = {
-      Intrinsic::riscv_seg2_load, Intrinsic::riscv_seg3_load,
-      Intrinsic::riscv_seg4_load, Intrinsic::riscv_seg5_load,
-      Intrinsic::riscv_seg6_load, Intrinsic::riscv_seg7_load,
-      Intrinsic::riscv_seg8_load};
-  Function *VlsegNFunc =
-      Intrinsic::getDeclaration(LI->getModule(), FixedLenIntrIds[Factor - 2],
-                                {VTy, LI->getPointerOperandType(), XLenTy});
-
-  Value *VL = ConstantInt::get(XLenTy, VTy->getNumElements());
-
-  CallInst *VlsegN =
-      Builder.CreateCall(VlsegNFunc, {LI->getPointerOperand(), VL});
-
-  for (unsigned i = 0; i < Shuffles.size(); i++) {
-    Value *SubVec = Builder.CreateExtractValue(VlsegN, Indices[i]);
-    Shuffles[i]->replaceAllUsesWith(SubVec);
-  }
-
-  return true;
-}
-
-/// Lower an interleaved store into a vssegN intrinsic.
-///
-/// E.g. Lower an interleaved store (Factor = 3):
-/// %i.vec = shuffle <8 x i32> %v0, <8 x i32> %v1,
-///                  <0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11>
-/// store <12 x i32> %i.vec, <12 x i32>* %ptr
-///
-/// Into:
-/// %sub.v0 = shuffle <8 x i32> %v0, <8 x i32> v1, <0, 1, 2, 3>
-/// %sub.v1 = shuffle <8 x i32> %v0, <8 x i32> v1, <4, 5, 6, 7>
-/// %sub.v2 = shuffle <8 x i32> %v0, <8 x i32> v1, <8, 9, 10, 11>
-/// call void llvm.riscv.vsseg3.v4i32.p0.i64(%sub.v0, %sub.v1, %sub.v2,
-///                                          %ptr, i32 4)
-///
-/// Note that the new shufflevectors will be removed and we'll only generate one
-/// vsseg3 instruction in CodeGen.
-bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
-                                                ShuffleVectorInst *SVI,
-                                                unsigned Factor) const {
-  IRBuilder<> Builder(SI);
-  auto *ShuffleVTy = cast<FixedVectorType>(SVI->getType());
-  // Given SVI : <n*factor x ty>, then VTy : <n x ty>
-  auto *VTy = FixedVectorType::get(ShuffleVTy->getElementType(),
-                                   ShuffleVTy->getNumElements() / Factor);
-  if (!isLegalInterleavedAccessType(VTy, Factor,
-                                    SI->getModule()->getDataLayout()))
-    return false;
-
-  auto *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
-
-  static const Intrinsic::ID FixedLenIntrIds[] = {
-      Intrinsic::riscv_seg2_store, Intrinsic::riscv_seg3_store,
-      Intrinsic::riscv_seg4_store, Intrinsic::riscv_seg5_store,
-      Intrinsic::riscv_seg6_store, Intrinsic::riscv_seg7_store,
-      Intrinsic::riscv_seg8_store};
-
-  Function *VssegNFunc =
-      Intrinsic::getDeclaration(SI->getModule(), FixedLenIntrIds[Factor - 2],
-                                {VTy, SI->getPointerOperandType(), XLenTy});
-
-  auto Mask = SVI->getShuffleMask();
-  SmallVector<Value *, 10> Ops;
-
-  for (unsigned i = 0; i < Factor; i++) {
-    Value *Shuffle = Builder.CreateShuffleVector(
-        SVI->getOperand(0), SVI->getOperand(1),
-        createSequentialMask(Mask[i], VTy->getNumElements(), 0));
-    Ops.push_back(Shuffle);
-  }
-  // This VL should be OK (should be executable in one vsseg instruction,
-  // potentially under larger LMULs) because we checked that the fixed vector
-  // type fits in isLegalInterleavedAccessType
-  Value *VL = ConstantInt::get(XLenTy, VTy->getNumElements());
-  Ops.append({SI->getPointerOperand(), VL});
-
-  Builder.CreateCall(VssegNFunc, Ops);
-
-  return true;
 }
 
 #define GET_REGISTER_MATCHER

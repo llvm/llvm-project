@@ -681,21 +681,6 @@ public:
   /// returns the address of that location. Otherwise, returns nullptr.
   Value *getIRStackGuard(IRBuilderBase &IRB) const override;
 
-  /// Returns whether or not generating a fixed length interleaved load/store
-  /// intrinsic for this type will be legal.
-  bool isLegalInterleavedAccessType(FixedVectorType *, unsigned Factor,
-                                    const DataLayout &) const;
-
-  unsigned getMaxSupportedInterleaveFactor() const override { return 8; }
-
-  bool lowerInterleavedLoad(LoadInst *LI,
-                            ArrayRef<ShuffleVectorInst *> Shuffles,
-                            ArrayRef<unsigned> Indices,
-                            unsigned Factor) const override;
-
-  bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
-                             unsigned Factor) const override;
-
 private:
   /// RISCVCCAssignFn - This target-specific function extends the default
   /// CCValAssign with additional information used to lower RISC-V calling
