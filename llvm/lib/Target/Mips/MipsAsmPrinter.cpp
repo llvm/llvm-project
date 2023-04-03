@@ -117,7 +117,7 @@ void MipsAsmPrinter::emitJumpTableInfo() {
       Value = MCBinaryExpr::createSub(Value, DiffExpr, OutContext);
       Value = MCBinaryExpr::createLShr(
           Value, MCConstantExpr::create(1, OutContext), OutContext);
-      OutStreamer->emitValue(Value, EntrySize);
+      emitJumpTableEntry(*OutStreamer, EntrySize, Value, Signed);
     }
   }
 }
@@ -265,6 +265,23 @@ void MipsAsmPrinter::emitJumpTableDir(MCStreamer &OutStreamer,
                               .concat(std::to_string(EntryNum))
                               .concat(Signed ? "" : ",1"));
 }
+
+void MipsAsmPrinter::emitJumpTableEntry(MCStreamer &OutStreamer,
+                                      unsigned int EntrySize,
+                                      const MCExpr *Entry, bool Signed) {
+  static const char* const Directives[6] = {".byte ", ".sbyte ",
+                                            ".hword ", ".shword ",
+                                            ".word ", ".word "};
+
+  assert(EntrySize == 1 || EntrySize == 2 || EntrySize == 4);
+
+  SmallString<128> Str;
+  raw_svector_ostream OS(Str);
+  OS << Directives[(EntrySize / 2) * 2 + Signed];
+  Entry->print(OS, MAI);
+  OutStreamer.emitRawText(Str);
+}
+
 
 void MipsAsmPrinter::emitBrsc(MCStreamer &OutStreamer, const MachineInstr *MI) {
   int JTIdx = MI->getOperand(1).getIndex();
