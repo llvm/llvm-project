@@ -168,7 +168,7 @@ LValue CIRGenFunction::buildLValueForFieldInitialization(
 
   // Make sure that the address is pointing to the right type.
   auto memTy = getTypes().convertTypeForMem(FieldType);
-  V = builder.getElementBitCast(getLoc(Field->getSourceRange()), V, memTy);
+  V = builder.createElementBitCast(getLoc(Field->getSourceRange()), V, memTy);
 
   // TODO: Generate TBAA information that describes this access as a structure
   // member access and not just an access to an object of the field's type. This

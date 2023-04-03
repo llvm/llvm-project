@@ -63,6 +63,7 @@ struct UnimplementedFeature {
   static bool openCL() { return false; }
   static bool openMP() { return false; }
   static bool ehStack() { return false; }
+  static bool isVarArg() { return false; }
 };
 } // namespace cir
 
