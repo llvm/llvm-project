@@ -293,8 +293,6 @@ def TAILJMPj  : MxPseudo<(outs), (ins MxARI32_TC:$dst)>;
 // Return
 //===----------------------------------------------------------------------===//
 
-// TODO Implement LINK/UNLK
-
 let isTerminator = 1, isReturn = 1, isBarrier = 1, hasCtrlDep = 1 in {
 
 def RTS : MxInst<(outs), (ins), "rts", []> {
