@@ -114,8 +114,8 @@ public:
   bool operator()(const CodeGenInstruction *VEXInst) {
     RecognizableInstrBase VEXRI(*VEXInst);
     RecognizableInstrBase EVEXRI(*EVEXInst);
-    bool VEX_W = VEXRI.HasVEX_W;
-    bool EVEX_W = EVEXRI.HasVEX_W;
+    bool VEX_W = VEXRI.HasREX_W;
+    bool EVEX_W = EVEXRI.HasREX_W;
     bool VEX_WIG  = VEXRI.IgnoresVEX_W;
     bool EVEX_WIG  = EVEXRI.IgnoresVEX_W;
     bool EVEX_W1_VEX_W0 = EVEXInst->TheDef->getValueAsBit("EVEX_W1_VEX_W0");

@@ -913,13 +913,13 @@ let hasSideEffects = 0 in {
 
 let Predicates = [HasBMI2] in {
   defm RORX32 : bmi_rotate<"rorx{l}", GR32, i32mem>;
-  defm RORX64 : bmi_rotate<"rorx{q}", GR64, i64mem>, VEX_W;
+  defm RORX64 : bmi_rotate<"rorx{q}", GR64, i64mem>, REX_W;
   defm SARX32 : bmi_shift<"sarx{l}", GR32, i32mem>, T8XS;
-  defm SARX64 : bmi_shift<"sarx{q}", GR64, i64mem>, T8XS, VEX_W;
+  defm SARX64 : bmi_shift<"sarx{q}", GR64, i64mem>, T8XS, REX_W;
   defm SHRX32 : bmi_shift<"shrx{l}", GR32, i32mem>, T8XD;
-  defm SHRX64 : bmi_shift<"shrx{q}", GR64, i64mem>, T8XD, VEX_W;
+  defm SHRX64 : bmi_shift<"shrx{q}", GR64, i64mem>, T8XD, REX_W;
   defm SHLX32 : bmi_shift<"shlx{l}", GR32, i32mem>, T8PD;
-  defm SHLX64 : bmi_shift<"shlx{q}", GR64, i64mem>, T8PD, VEX_W;
+  defm SHLX64 : bmi_shift<"shlx{q}", GR64, i64mem>, T8PD, REX_W;
 
   // Prefer RORX which is non-destructive and doesn't update EFLAGS.
   let AddedComplexity = 10 in {
