@@ -1343,8 +1343,6 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
       sc.target_sp->GetSwiftEnableBareSlashRegex();
   invocation.getLangOptions().EnableBareSlashRegexLiterals =
       enable_bare_slash_regex_literals;
-  invocation.getLangOptions().EnableExperimentalStringProcessing =
-      enable_bare_slash_regex_literals;
   invocation.getLangOptions().Features.insert(swift::Feature::VariadicGenerics);
 
   auto should_use_prestable_abi = [&]() {
