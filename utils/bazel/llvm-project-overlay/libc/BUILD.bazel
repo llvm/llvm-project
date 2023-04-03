@@ -219,8 +219,8 @@ libc_support_library(
     name = "__support_arg_list",
     hdrs = ["src/__support/arg_list.h"],
     deps = [
-        ":libc_root",
         ":__support_common",
+        ":libc_root",
     ],
 )
 
@@ -231,11 +231,11 @@ libc_support_library(
         "src/__support/ryu_constants.h",
     ],
     deps = [
+        ":__support_common",
         ":__support_cpp_type_traits",
         ":__support_fputil_fp_bits",
-        ":__support_uint",
         ":__support_libc_assert",
-        ":__support_common",
+        ":__support_uint",
         ":libc_root",
     ],
 )
@@ -306,11 +306,11 @@ libc_support_library(
     name = "__support_integer_to_string",
     hdrs = ["src/__support/integer_to_string.h"],
     deps = [
-        ":__support_cpp_type_traits",
+        ":__support_common",
         ":__support_cpp_optional",
         ":__support_cpp_span",
         ":__support_cpp_string_view",
-        ":__support_common",
+        ":__support_cpp_type_traits",
         ":libc_root",
     ],
 )
@@ -319,10 +319,10 @@ libc_support_library(
     name = "__support_libc_assert",
     hdrs = ["src/__support/libc_assert.h"],
     deps = [
-        ":__support_osutil_io",
-        ":__support_osutil_quick_exit",
         ":__support_integer_to_string",
         ":__support_macros_attributes",
+        ":__support_osutil_io",
+        ":__support_osutil_quick_exit",
         ":libc_root",
     ],
 )
@@ -662,8 +662,8 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
-        ":string_utils",
         ":libc_root",
+        ":string_utils",
     ],
 )
 
@@ -679,7 +679,6 @@ libc_support_library(
         ":libc_root",
     ],
 )
-
 
 ############################### errno targets ################################
 
@@ -2073,65 +2072,64 @@ libc_support_library(
     ],
 )
 
-
 libc_support_library(
     name = "printf_parser",
-    hdrs = ["src/stdio/printf_core/parser.h"],
     srcs = ["src/stdio/printf_core/parser.cpp"],
+    hdrs = ["src/stdio/printf_core/parser.h"],
     deps = [
-        ":printf_core_structs",
-        ":printf_config",
+        ":__support_arg_list",
+        ":__support_common",
+        ":__support_cpp_bit",
+        ":__support_cpp_optional",
         ":__support_cpp_string_view",
         ":__support_cpp_type_traits",
-        ":__support_cpp_optional",
-        ":__support_cpp_bit",
-        ":__support_fputil_fp_bits",
-        ":__support_arg_list",
         ":__support_ctype_utils",
+        ":__support_fputil_fp_bits",
         ":__support_str_to_integer",
-        ":__support_common",
         ":libc_root",
+        ":printf_config",
+        ":printf_core_structs",
     ],
 )
 
 # Only used for testing.
 libc_support_library(
     name = "printf_mock_parser",
-    hdrs = ["src/stdio/printf_core/parser.h"],
     srcs = ["src/stdio/printf_core/parser.cpp"],
+    hdrs = ["src/stdio/printf_core/parser.h"],
+    copts = ["-DLIBC_COPT_MOCK_ARG_LIST"],
     deps = [
-        ":printf_core_structs",
-        ":printf_config",
+        ":__support_arg_list",
+        ":__support_common",
+        ":__support_cpp_bit",
+        ":__support_cpp_optional",
         ":__support_cpp_string_view",
         ":__support_cpp_type_traits",
-        ":__support_cpp_optional",
-        ":__support_cpp_bit",
-        ":__support_fputil_fp_bits",
-        ":__support_arg_list",
         ":__support_ctype_utils",
+        ":__support_fputil_fp_bits",
         ":__support_str_to_integer",
-        ":__support_common",
         ":libc_root",
+        ":printf_config",
+        ":printf_core_structs",
     ],
-    copts = ["-DLIBC_COPT_MOCK_ARG_LIST"],
 )
 
 libc_support_library(
     name = "printf_string_writer",
-    hdrs = ["src/stdio/printf_core/string_writer.h"],
     srcs = ["src/stdio/printf_core/string_writer.cpp"],
+    hdrs = ["src/stdio/printf_core/string_writer.h"],
     deps = [
         ":__support_cpp_string_view",
-        ":string_memory_utils",
-        ":printf_core_structs",
         ":libc_root",
+        ":printf_core_structs",
+        ":string_memory_utils",
     ],
 )
 
 libc_support_library(
     name = "printf_writer",
-    hdrs = ["src/stdio/printf_core/writer.h"],
     srcs = ["src/stdio/printf_core/writer.cpp"],
+    hdrs = ["src/stdio/printf_core/writer.h"],
     deps = [
         ":__support_cpp_string_view",
         ":libc_root",
@@ -2140,49 +2138,49 @@ libc_support_library(
 
 libc_support_library(
     name = "printf_converter",
+    srcs = ["src/stdio/printf_core/converter.cpp"],
     hdrs = [
-        "src/stdio/printf_core/converter.h",
-        "src/stdio/printf_core/converter_utils.h",
-        "src/stdio/printf_core/converter_atlas.h",
-        "src/stdio/printf_core/string_converter.h",
         "src/stdio/printf_core/char_converter.h",
+        "src/stdio/printf_core/converter.h",
+        "src/stdio/printf_core/converter_atlas.h",
+        "src/stdio/printf_core/converter_utils.h",
+        "src/stdio/printf_core/float_dec_converter.h",
+        "src/stdio/printf_core/float_hex_converter.h",
+        "src/stdio/printf_core/float_inf_nan_converter.h",
         "src/stdio/printf_core/int_converter.h",
         "src/stdio/printf_core/ptr_converter.h",
+        "src/stdio/printf_core/string_converter.h",
         "src/stdio/printf_core/write_int_converter.h",
-        "src/stdio/printf_core/float_inf_nan_converter.h",
-        "src/stdio/printf_core/float_hex_converter.h",
-        "src/stdio/printf_core/float_dec_converter.h",
     ],
-    srcs = ["src/stdio/printf_core/converter.cpp"],
     deps = [
-        ":printf_writer",
-        ":printf_core_structs",
-        ":__support_cpp_string_view",
+        ":__support_common",
         ":__support_cpp_limits",
         ":__support_cpp_span",
-        ":__support_fputil_fp_bits",
+        ":__support_cpp_string_view",
+        ":__support_float_to_string",
         ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_integer_to_string",
         ":__support_libc_assert",
         ":__support_uint",
         ":__support_uint128",
-        ":__support_integer_to_string",
-        ":__support_float_to_string",
-        ":__support_common",
         ":libc_root",
+        ":printf_core_structs",
+        ":printf_writer",
     ],
 )
 
 libc_support_library(
     name = "printf_main",
-    hdrs = ["src/stdio/printf_core/printf_main.h"],
     srcs = ["src/stdio/printf_core/printf_main.cpp"],
+    hdrs = ["src/stdio/printf_core/printf_main.h"],
     deps = [
-        ":printf_parser",
-        ":printf_converter",
-        ":printf_writer",
-        ":printf_core_structs",
         ":__support_arg_list",
         ":libc_root",
+        ":printf_converter",
+        ":printf_core_structs",
+        ":printf_parser",
+        ":printf_writer",
     ],
 )
 
@@ -2192,10 +2190,10 @@ libc_function(
     hdrs = ["src/stdio/sprintf.h"],
     deps = [
         ":__support_arg_list",
+        ":errno",
         ":printf_main",
         ":printf_string_writer",
         ":printf_writer",
-        ":errno",
     ],
 )
 
@@ -2205,9 +2203,9 @@ libc_function(
     hdrs = ["src/stdio/snprintf.h"],
     deps = [
         ":__support_arg_list",
+        ":errno",
         ":printf_main",
         ":printf_string_writer",
         ":printf_writer",
-        ":errno",
     ],
 )
