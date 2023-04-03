@@ -28,6 +28,7 @@
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -79,6 +80,17 @@ using namespace llvm;
 using namespace llvm::XCOFF;
 
 #define DEBUG_TYPE "asmprinter"
+
+STATISTIC(NumTOCEntries, "Number of Total TOC Entries Emitted.");
+STATISTIC(NumTOCConstPool, "Number of Constant Pool TOC Entries.");
+STATISTIC(NumTOCGlobalInternal,
+          "Number of Internal Linkage Global TOC Entries.");
+STATISTIC(NumTOCGlobalExternal,
+          "Number of External Linkage Global TOC Entries.");
+STATISTIC(NumTOCJumpTable, "Number of Jump Table TOC Entries.");
+STATISTIC(NumTOCThreadLocal, "Number of Thread Local TOC Entries.");
+STATISTIC(NumTOCBlockAddress, "Number of Block Address TOC Entries.");
+STATISTIC(NumTOCEHBlock, "Number of EH Block TOC Entries.");
 
 static cl::opt<bool> EnableSSPCanaryBitInTB(
     "aix-ssp-tb-bit", cl::init(false),
@@ -148,7 +160,17 @@ public:
 
   StringRef getPassName() const override { return "PowerPC Assembly Printer"; }
 
-  MCSymbol *lookUpOrCreateTOCEntry(const MCSymbol *Sym,
+  enum TOCEntryType {
+    TOCType_ConstantPool,
+    TOCType_GlobalExternal,
+    TOCType_GlobalInternal,
+    TOCType_JumpTable,
+    TOCType_ThreadLocal,
+    TOCType_BlockAddress,
+    TOCType_EHBlock
+  };
+
+  MCSymbol *lookUpOrCreateTOCEntry(const MCSymbol *Sym, TOCEntryType Type,
                                    MCSymbolRefExpr::VariantKind Kind =
                                        MCSymbolRefExpr::VariantKind::VK_None);
 
@@ -412,12 +434,43 @@ bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
   return false;
 }
 
+static void collectTOCStats(PPCAsmPrinter::TOCEntryType Type) {
+  ++NumTOCEntries;
+  switch (Type) {
+  case PPCAsmPrinter::TOCType_ConstantPool:
+    ++NumTOCConstPool;
+    break;
+  case PPCAsmPrinter::TOCType_GlobalInternal:
+    ++NumTOCGlobalInternal;
+    break;
+  case PPCAsmPrinter::TOCType_GlobalExternal:
+    ++NumTOCGlobalExternal;
+    break;
+  case PPCAsmPrinter::TOCType_JumpTable:
+    ++NumTOCJumpTable;
+    break;
+  case PPCAsmPrinter::TOCType_ThreadLocal:
+    ++NumTOCThreadLocal;
+    break;
+  case PPCAsmPrinter::TOCType_BlockAddress:
+    ++NumTOCBlockAddress;
+    break;
+  case PPCAsmPrinter::TOCType_EHBlock:
+    ++NumTOCEHBlock;
+    break;
+  }
+}
+
 /// lookUpOrCreateTOCEntry -- Given a symbol, look up whether a TOC entry
 /// exists for it.  If not, create one.  Then return a symbol that references
 /// the TOC entry.
 MCSymbol *
-PPCAsmPrinter::lookUpOrCreateTOCEntry(const MCSymbol *Sym,
+PPCAsmPrinter::lookUpOrCreateTOCEntry(const MCSymbol *Sym, TOCEntryType Type,
                                       MCSymbolRefExpr::VariantKind Kind) {
+  // If this is a new TOC entry add statistics about it.
+  if (!TOC.contains({Sym, Kind}))
+    collectTOCStats(Type);
+
   MCSymbol *&TOCEntry = TOC[{Sym, Kind}];
   if (!TOCEntry)
     TOCEntry = createTempSymbol("C");
@@ -648,6 +701,48 @@ static MCSymbol *getMCSymbolForTOCPseudoMO(const MachineOperand &MO,
   }
 }
 
+static bool hasTLSFlag(const MachineOperand &MO) {
+  unsigned Flags = MO.getTargetFlags();
+  if (Flags & PPCII::MO_TLSGD_FLAG || Flags & PPCII::MO_TPREL_FLAG ||
+      Flags & PPCII::MO_TLSLD_FLAG || Flags & PPCII::MO_TLSGDM_FLAG)
+    return true;
+
+  if (Flags == PPCII::MO_TPREL_LO || Flags == PPCII::MO_TPREL_HA ||
+      Flags == PPCII::MO_DTPREL_LO || Flags == PPCII::MO_TLSLD_LO ||
+      Flags == PPCII::MO_TLS)
+    return true;
+
+  return false;
+}
+
+static PPCAsmPrinter::TOCEntryType
+getTOCEntryTypeForMO(const MachineOperand &MO) {
+  // Use the target flags to determine if this MO is Thread Local.
+  // If we don't do this it comes out as Global.
+  if (hasTLSFlag(MO))
+    return PPCAsmPrinter::TOCType_ThreadLocal;
+
+  switch (MO.getType()) {
+  case MachineOperand::MO_GlobalAddress: {
+    const GlobalValue *GlobalV = MO.getGlobal();
+    GlobalValue::LinkageTypes Linkage = GlobalV->getLinkage();
+    if (Linkage == GlobalValue::ExternalLinkage ||
+        Linkage == GlobalValue::AvailableExternallyLinkage ||
+        Linkage == GlobalValue::ExternalWeakLinkage)
+      return PPCAsmPrinter::TOCType_GlobalExternal;
+
+    return PPCAsmPrinter::TOCType_GlobalInternal;
+  }
+  case MachineOperand::MO_ConstantPoolIndex:
+    return PPCAsmPrinter::TOCType_ConstantPool;
+  case MachineOperand::MO_JumpTableIndex:
+    return PPCAsmPrinter::TOCType_JumpTable;
+  case MachineOperand::MO_BlockAddress:
+    return PPCAsmPrinter::TOCType_BlockAddress;
+  default:
+    llvm_unreachable("Unexpected operand type to get TOC type.");
+  }
+}
 /// EmitInstruction -- Print out a single PowerPC MI in Darwin syntax to
 /// the current output stream.
 ///
@@ -865,7 +960,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Otherwise, use the TOC. 'TOCEntry' is a label used to reference the
     // storage allocated in the TOC which contains the address of
     // 'MOSymbol'. Said TOC entry will be synthesized later.
-    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(MOSymbol, VK);
+    MCSymbol *TOCEntry =
+        lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
     const MCExpr *Exp =
         MCSymbolRefExpr::create(TOCEntry, MCSymbolRefExpr::VK_None, OutContext);
 
@@ -942,7 +1038,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Map the machine operand to its corresponding MCSymbol, then map the
     // global address operand to be a reference to the TOC entry we will
     // synthesize later.
-    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(MOSymbol, VK);
+    MCSymbol *TOCEntry =
+        lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
 
     MCSymbolRefExpr::VariantKind VKExpr =
         IsAIX ? MCSymbolRefExpr::VK_None : MCSymbolRefExpr::VK_PPC_TOC;
@@ -980,7 +1077,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // to the TOC entry we will synthesize later. 'TOCEntry' is a label used to
     // reference the storage allocated in the TOC which contains the address of
     // 'MOSymbol'.
-    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(MOSymbol, VK);
+    MCSymbol *TOCEntry =
+        lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
     const MCExpr *Exp = MCSymbolRefExpr::create(TOCEntry,
                                                 MCSymbolRefExpr::VK_PPC_U,
                                                 OutContext);
@@ -1012,7 +1110,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // to the TOC entry we will synthesize later. 'TOCEntry' is a label used to
     // reference the storage allocated in the TOC which contains the address of
     // 'MOSymbol'.
-    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(MOSymbol, VK);
+    MCSymbol *TOCEntry =
+        lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
     const MCExpr *Exp = MCSymbolRefExpr::create(TOCEntry,
                                                 MCSymbolRefExpr::VK_PPC_L,
                                                 OutContext);
@@ -1042,7 +1141,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal());
     if (GlobalToc || MO.isJTI() || MO.isBlockAddress() ||
         (MO.isCPI() && TM.getCodeModel() == CodeModel::Large))
-      MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, VK);
+      MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
 
     VK = IsAIX ? MCSymbolRefExpr::VK_PPC_U : MCSymbolRefExpr::VK_PPC_TOC_HA;
 
@@ -1084,7 +1183,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     MCSymbolRefExpr::VariantKind VK = GetVKForMO(MO);
 
     if (!MO.isCPI() || TM.getCodeModel() == CodeModel::Large)
-      MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, VK);
+      MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
 
     VK = IsAIX ? MCSymbolRefExpr::VK_PPC_L : MCSymbolRefExpr::VK_PPC_TOC_LO;
     const MCExpr *Exp =
@@ -2312,7 +2411,7 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
     auto &Ctx = OutStreamer->getContext();
     MCSymbol *EHInfoSym =
         TargetLoweringObjectFileXCOFF::getEHInfoTableSymbol(MF);
-    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(EHInfoSym);
+    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(EHInfoSym, TOCType_EHBlock);
     const MCSymbol *TOCBaseSym =
         cast<MCSectionXCOFF>(getObjFileLowering().getTOCBaseSection())
             ->getQualNameSymbol();
@@ -2792,8 +2891,14 @@ void PPCAIXAsmPrinter::emitXXStructorList(const DataLayout &DL,
 void PPCAIXAsmPrinter::emitTTypeReference(const GlobalValue *GV,
                                           unsigned Encoding) {
   if (GV) {
+    TOCEntryType GlobalType = TOCType_GlobalInternal;
+    GlobalValue::LinkageTypes Linkage = GV->getLinkage();
+    if (Linkage == GlobalValue::ExternalLinkage ||
+        Linkage == GlobalValue::AvailableExternallyLinkage ||
+        Linkage == GlobalValue::ExternalWeakLinkage)
+      GlobalType = TOCType_GlobalExternal;
     MCSymbol *TypeInfoSym = TM.getSymbol(GV);
-    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(TypeInfoSym);
+    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(TypeInfoSym, GlobalType);
     const MCSymbol *TOCBaseSym =
         cast<MCSectionXCOFF>(getObjFileLowering().getTOCBaseSection())
             ->getQualNameSymbol();
