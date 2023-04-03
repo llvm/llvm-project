@@ -3818,22 +3818,27 @@ static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       }
       // Turn icmp (zext X), Cst into a compare of X and Cst if Cst is extended
       // too.  If not, then try to deduce the result of the comparison.
-      else if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS)) {
+      else if (match(RHS, m_ImmConstant())) {
+        Constant *C = dyn_cast<Constant>(RHS);
+        assert(C != nullptr);
+
         // Compute the constant that would happen if we truncated to SrcTy then
         // reextended to DstTy.
-        Constant *Trunc = ConstantExpr::getTrunc(CI, SrcTy);
+        Constant *Trunc = ConstantExpr::getTrunc(C, SrcTy);
         Constant *RExt = ConstantExpr::getCast(CastInst::ZExt, Trunc, DstTy);
+        Constant *AnyEq = ConstantExpr::getICmp(ICmpInst::ICMP_EQ, RExt, C);
 
-        // If the re-extended constant didn't change then this is effectively
-        // also a case of comparing two zero-extended values.
-        if (RExt == CI && MaxRecurse)
+        // If the re-extended constant didn't change any of the elements then
+        // this is effectively also a case of comparing two zero-extended
+        // values.
+        if (AnyEq->isAllOnesValue() && MaxRecurse)
           if (Value *V = simplifyICmpInst(ICmpInst::getUnsignedPredicate(Pred),
                                           SrcOp, Trunc, Q, MaxRecurse - 1))
             return V;
 
         // Otherwise the upper bits of LHS are zero while RHS has a non-zero bit
         // there.  Use this to work out the result of the comparison.
-        if (RExt != CI) {
+        if (AnyEq->isNullValue()) {
           switch (Pred) {
           default:
             llvm_unreachable("Unknown ICmp predicate!");
@@ -3841,26 +3846,23 @@ static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
           case ICmpInst::ICMP_EQ:
           case ICmpInst::ICMP_UGT:
           case ICmpInst::ICMP_UGE:
-            return ConstantInt::getFalse(CI->getContext());
+            return Constant::getNullValue(ITy);
 
           case ICmpInst::ICMP_NE:
           case ICmpInst::ICMP_ULT:
           case ICmpInst::ICMP_ULE:
-            return ConstantInt::getTrue(CI->getContext());
+            return Constant::getAllOnesValue(ITy);
 
           // LHS is non-negative.  If RHS is negative then LHS >s LHS.  If RHS
           // is non-negative then LHS <s RHS.
           case ICmpInst::ICMP_SGT:
           case ICmpInst::ICMP_SGE:
-            return CI->getValue().isNegative()
-                       ? ConstantInt::getTrue(CI->getContext())
-                       : ConstantInt::getFalse(CI->getContext());
-
+            return ConstantExpr::getICmp(ICmpInst::ICMP_SLT, C,
+                                         Constant::getNullValue(C->getType()));
           case ICmpInst::ICMP_SLT:
           case ICmpInst::ICMP_SLE:
-            return CI->getValue().isNegative()
-                       ? ConstantInt::getFalse(CI->getContext())
-                       : ConstantInt::getTrue(CI->getContext());
+            return ConstantExpr::getICmp(ICmpInst::ICMP_SGE, C,
+                                         Constant::getNullValue(C->getType()));
           }
         }
       }
@@ -3887,42 +3889,44 @@ static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       }
       // Turn icmp (sext X), Cst into a compare of X and Cst if Cst is extended
       // too.  If not, then try to deduce the result of the comparison.
-      else if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS)) {
+      else if (match(RHS, m_ImmConstant())) {
+        Constant *C = dyn_cast<Constant>(RHS);
+        assert(C != nullptr);
+
         // Compute the constant that would happen if we truncated to SrcTy then
         // reextended to DstTy.
-        Constant *Trunc = ConstantExpr::getTrunc(CI, SrcTy);
+        Constant *Trunc = ConstantExpr::getTrunc(C, SrcTy);
         Constant *RExt = ConstantExpr::getCast(CastInst::SExt, Trunc, DstTy);
+        Constant *AnyEq = ConstantExpr::getICmp(ICmpInst::ICMP_EQ, RExt, C);
 
         // If the re-extended constant didn't change then this is effectively
         // also a case of comparing two sign-extended values.
-        if (RExt == CI && MaxRecurse)
+        if (AnyEq->isAllOnesValue() && MaxRecurse)
           if (Value *V =
                   simplifyICmpInst(Pred, SrcOp, Trunc, Q, MaxRecurse - 1))
             return V;
 
         // Otherwise the upper bits of LHS are all equal, while RHS has varying
         // bits there.  Use this to work out the result of the comparison.
-        if (RExt != CI) {
+        if (AnyEq->isNullValue()) {
           switch (Pred) {
           default:
             llvm_unreachable("Unknown ICmp predicate!");
           case ICmpInst::ICMP_EQ:
-            return ConstantInt::getFalse(CI->getContext());
+            return Constant::getNullValue(ITy);
           case ICmpInst::ICMP_NE:
-            return ConstantInt::getTrue(CI->getContext());
+            return Constant::getAllOnesValue(ITy);
 
           // If RHS is non-negative then LHS <s RHS.  If RHS is negative then
           // LHS >s RHS.
           case ICmpInst::ICMP_SGT:
           case ICmpInst::ICMP_SGE:
-            return CI->getValue().isNegative()
-                       ? ConstantInt::getTrue(CI->getContext())
-                       : ConstantInt::getFalse(CI->getContext());
+            return ConstantExpr::getICmp(ICmpInst::ICMP_SLT, C,
+                                         Constant::getNullValue(C->getType()));
           case ICmpInst::ICMP_SLT:
           case ICmpInst::ICMP_SLE:
-            return CI->getValue().isNegative()
-                       ? ConstantInt::getFalse(CI->getContext())
-                       : ConstantInt::getTrue(CI->getContext());
+            return ConstantExpr::getICmp(ICmpInst::ICMP_SGE, C,
+                                         Constant::getNullValue(C->getType()));
 
           // If LHS is non-negative then LHS <u RHS.  If LHS is negative then
           // LHS >u RHS.
