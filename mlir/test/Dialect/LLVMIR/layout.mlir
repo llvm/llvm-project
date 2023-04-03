@@ -8,18 +8,21 @@ module {
     // CHECK: bitsize = 64
     // CHECK: preferred = 8
     // CHECK: size = 8
+    // CHECK: stack_alignment = 0
     "test.data_layout_query"() : () -> !llvm.ptr
     // CHECK: alignment = 8
     // CHECK: alloca_memory_space = 0
     // CHECK: bitsize = 64
     // CHECK: preferred = 8
     // CHECK: size = 8
+    // CHECK: stack_alignment = 0
     "test.data_layout_query"() : () -> !llvm.ptr<3>
     // CHECK: alignment = 8
     // CHECK: alloca_memory_space = 0
     // CHECK: bitsize = 64
     // CHECK: preferred = 8
     // CHECK: size = 8
+    // CHECK: stack_alignment = 0
     "test.data_layout_query"() : () -> !llvm.ptr<5>
     return
   }
@@ -31,7 +34,8 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.ptr, dense<[32, 32, 64]> : vector<3xi32>>,
   #dlti.dl_entry<!llvm.ptr<5>, dense<[64, 64, 64]> : vector<3xi32>>,
   #dlti.dl_entry<!llvm.ptr<4>, dense<[32, 64, 64]> : vector<3xi32>>,
-  #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>
+  #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>,
+  #dlti.dl_entry<"dlti.stack_alignment", 128 : i32>
 >} {
   // CHECK: @spec
   func.func @spec() {
@@ -40,31 +44,36 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     // CHECK: bitsize = 32
     // CHECK: preferred = 8
     // CHECK: size = 4
+    // CHECK: stack_alignment = 128
     "test.data_layout_query"() : () -> !llvm.ptr
     // CHECK: alignment = 4
     // CHECK: alloca_memory_space = 5
     // CHECK: bitsize = 32
     // CHECK: preferred = 8
     // CHECK: size = 4
+    // CHECK: stack_alignment = 128
     "test.data_layout_query"() : () -> !llvm.ptr<3>
     // CHECK: alignment = 8
     // CHECK: alloca_memory_space = 5
     // CHECK: bitsize = 64
     // CHECK: preferred = 8
     // CHECK: size = 8
+    // CHECK: stack_alignment = 128
     "test.data_layout_query"() : () -> !llvm.ptr<5>
     // CHECK: alignment = 4
     // CHECK: alloca_memory_space = 5
     // CHECK: bitsize = 32
     // CHECK: preferred = 8
     // CHECK: size = 4
+    // CHECK: stack_alignment = 128
     "test.data_layout_query"() : () -> !llvm.ptr<3>
     // CHECK: alignment = 8
     // CHECK: alloca_memory_space = 5
     // CHECK: bitsize = 32
     // CHECK: preferred = 8
     // CHECK: size = 4
-	"test.data_layout_query"() : () -> !llvm.ptr<4>
+    // CHECK: stack_alignment = 128
+	  "test.data_layout_query"() : () -> !llvm.ptr<4>
     return
   }
 }

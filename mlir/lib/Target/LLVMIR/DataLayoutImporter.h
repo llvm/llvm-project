@@ -38,11 +38,11 @@ namespace detail {
 FloatType getFloatType(MLIRContext *context, unsigned width);
 
 /// Helper class that translates an LLVM data layout to an MLIR data layout
-/// specification. Only integer, float, pointer, alloca memory space, and
-/// endianness entries are translated. The class also returns all entries from
-/// the default data layout specification found in the language reference
-/// (https://llvm.org/docs/LangRef.html#data-layout) if they are not overwritten
-/// by the provided data layout.
+/// specification. Only integer, float, pointer, alloca memory space, stack
+/// alignment, and endianness entries are translated. The class also returns all
+/// entries from the default data layout specification found in the language
+/// reference (https://llvm.org/docs/LangRef.html#data-layout) if they are not
+/// overwritten by the provided data layout.
 class DataLayoutImporter {
 public:
   DataLayoutImporter(MLIRContext *context,
@@ -98,6 +98,9 @@ private:
 
   /// Adds an alloca address space entry if there is none yet.
   LogicalResult tryToEmplaceAllocaAddrSpaceEntry(StringRef token);
+
+  /// Adds a stack alignment entry if there is none yet.
+  LogicalResult tryToEmplaceStackAlignmentEntry(StringRef token);
 
   std::string layoutStr = {};
   StringRef lastToken = {};
