@@ -2849,7 +2849,13 @@ private:
       for (const Fortran::evaluate::ExtentExpr &lbExpr : lbExprs)
         lbounds.push_back(
             fir::getBase(genExprValue(toEvExpr(lbExpr), stmtCtx)));
-      mlir::Value lhs = genExprMutableBox(loc, assign.lhs).getAddr();
+      fir::MutableBoxValue lhsMutableBox = genExprMutableBox(loc, assign.lhs);
+      if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
+              assign.rhs)) {
+        fir::factory::disassociateMutableBox(*builder, loc, lhsMutableBox);
+        return;
+      }
+      mlir::Value lhs = lhsMutableBox.getAddr();
       mlir::Value rhs = fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));
       if (!lbounds.empty()) {
         mlir::Value boundsDesc = createLboundArray(lbounds, loc);
@@ -2936,7 +2942,13 @@ private:
       if (!lowerToHighLevelFIR() && explicitIterationSpace())
         TODO(loc, "polymorphic pointer assignment in FORALL");
 
-      mlir::Value lhs = genExprMutableBox(loc, assign.lhs).getAddr();
+      fir::MutableBoxValue lhsMutableBox = genExprMutableBox(loc, assign.lhs);
+      if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
+              assign.rhs)) {
+        fir::factory::disassociateMutableBox(*builder, loc, lhsMutableBox);
+        return;
+      }
+      mlir::Value lhs = lhsMutableBox.getAddr();
       mlir::Value rhs = fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));
       mlir::Value boundsDesc = createBoundArray(lbounds, ubounds, loc);
       Fortran::lower::genPointerAssociateRemapping(*builder, loc, lhs, rhs,

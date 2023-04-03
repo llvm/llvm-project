@@ -39,7 +39,8 @@ void StaticAccessedThroughInstanceCheck::storeOptions(
 void StaticAccessedThroughInstanceCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       memberExpr(hasDeclaration(anyOf(cxxMethodDecl(isStaticStorageClass()),
-                                      varDecl(hasStaticStorageDuration()))))
+                                      varDecl(hasStaticStorageDuration()),
+                                      enumConstantDecl())))
           .bind("memberExpression"),
       this);
 }
@@ -64,15 +65,15 @@ void StaticAccessedThroughInstanceCheck::check(
           : BaseExpr->getType().getUnqualifiedType();
 
   const ASTContext *AstContext = Result.Context;
-  PrintingPolicy PrintingPolicyWithSupressedTag(AstContext->getLangOpts());
-  PrintingPolicyWithSupressedTag.SuppressTagKeyword = true;
-  PrintingPolicyWithSupressedTag.SuppressUnwrittenScope = true;
+  PrintingPolicy PrintingPolicyWithSuppressedTag(AstContext->getLangOpts());
+  PrintingPolicyWithSuppressedTag.SuppressTagKeyword = true;
+  PrintingPolicyWithSuppressedTag.SuppressUnwrittenScope = true;
 
-  PrintingPolicyWithSupressedTag.PrintCanonicalTypes =
+  PrintingPolicyWithSuppressedTag.PrintCanonicalTypes =
       !BaseExpr->getType()->isTypedefNameType();
 
   std::string BaseTypeName =
-      BaseType.getAsString(PrintingPolicyWithSupressedTag);
+      BaseType.getAsString(PrintingPolicyWithSuppressedTag);
 
   // Do not warn for CUDA built-in variables.
   if (StringRef(BaseTypeName).startswith("__cuda_builtin_"))

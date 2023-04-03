@@ -93,8 +93,8 @@ Error ELFDebugObjectSection<ELFT>::validateInBounds(StringRef Buffer,
 
 template <typename ELFT>
 void ELFDebugObjectSection<ELFT>::dump(raw_ostream &OS, StringRef Name) {
-  if (Header->sh_addr) {
-    OS << formatv("  {0:x16} {1}\n", Header->sh_addr, Name);
+  if (uint64_t Addr = Header->sh_addr) {
+    OS << formatv("  {0:x16} {1}\n", Addr, Name);
   } else {
     OS << formatv("                     {0}\n", Name);
   }

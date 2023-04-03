@@ -216,7 +216,7 @@ HexagonTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   else
     CCInfo.AnalyzeReturn(Outs, RetCC_Hexagon);
 
-  SDValue Flag;
+  SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
 
   // Copy the result values into the output registers.
@@ -244,20 +244,20 @@ HexagonTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
         break;
     }
 
-    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), Val, Flag);
+    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), Val, Glue);
 
     // Guarantee that all emitted copies are stuck together with flags.
-    Flag = Chain.getValue(1);
+    Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
   RetOps[0] = Chain;  // Update chain.
 
-  // Add the flag if we have it.
-  if (Flag.getNode())
-    RetOps.push_back(Flag);
+  // Add the glue if we have it.
+  if (Glue.getNode())
+    RetOps.push_back(Glue);
 
-  return DAG.getNode(HexagonISD::RET_FLAG, dl, MVT::Other, RetOps);
+  return DAG.getNode(HexagonISD::RET_GLUE, dl, MVT::Other, RetOps);
 }
 
 bool HexagonTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
@@ -1391,15 +1391,15 @@ HexagonTargetLowering::LowerToTLSGeneralDynamicModel(GlobalAddressSDNode *GA,
   SDValue Chain = DAG.getNode(ISD::ADD, dl, PtrVT, GOT, Sym);
 
   // Copy over the argument to R0
-  SDValue InFlag;
-  Chain = DAG.getCopyToReg(DAG.getEntryNode(), dl, Hexagon::R0, Chain, InFlag);
-  InFlag = Chain.getValue(1);
+  SDValue InGlue;
+  Chain = DAG.getCopyToReg(DAG.getEntryNode(), dl, Hexagon::R0, Chain, InGlue);
+  InGlue = Chain.getValue(1);
 
   unsigned Flags = DAG.getSubtarget<HexagonSubtarget>().useLongCalls()
                        ? HexagonII::MO_GDPLT | HexagonII::HMOTF_ConstExtended
                        : HexagonII::MO_GDPLT;
 
-  return GetDynamicTLSAddr(DAG, Chain, GA, InFlag, PtrVT,
+  return GetDynamicTLSAddr(DAG, Chain, GA, InGlue, PtrVT,
                            Hexagon::R0, Flags);
 }
 
@@ -1896,7 +1896,7 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::EXTRACTU:      return "HexagonISD::EXTRACTU";
   case HexagonISD::INSERT:        return "HexagonISD::INSERT";
   case HexagonISD::JT:            return "HexagonISD::JT";
-  case HexagonISD::RET_FLAG:      return "HexagonISD::RET_FLAG";
+  case HexagonISD::RET_GLUE:      return "HexagonISD::RET_GLUE";
   case HexagonISD::TC_RETURN:     return "HexagonISD::TC_RETURN";
   case HexagonISD::VASL:          return "HexagonISD::VASL";
   case HexagonISD::VASR:          return "HexagonISD::VASR";
