@@ -9520,6 +9520,31 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "TransformDialectMatchInterfacesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            [
+                "-gen-op-interface-decls",
+            ],
+            "include/mlir/Dialect/Transform/IR/MatchInterfaces.h.inc",
+        ),
+        (
+            [
+                "-gen-op-interface-defs",
+            ],
+            "include/mlir/Dialect/Transform/IR/MatchInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/IR/MatchInterfaces.td",
+    deps = [
+        ":TransformDialectTdFiles",
+        ":TransformDialectInterfacesIncGen",
+    ],
+)
+
+gentbl_cc_library(
     name = "TransformDialectIncGen",
     strip_include_prefix = "include",
     tbl_outs = [
@@ -9598,6 +9623,7 @@ cc_library(
         ":TransformDialectEnumsIncGen",
         ":TransformDialectIncGen",
         ":TransformDialectInterfacesIncGen",
+        ":TransformDialectMatchInterfacesIncGen",
         ":TransformDialectUtils",
         ":TransformOpsIncGen",
         ":TransformTypesIncGen",
