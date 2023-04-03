@@ -295,8 +295,6 @@ else:
   ret i1 1
 }
 
-; TODO: Even though %cnt is not known signed positive %cmp can be simplified
-; because %add.ptr uses it zero-extended.
 define i1 @cnt_not_known_positive_sgt_against_base_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-LABEL: @cnt_not_known_positive_sgt_against_base_with_zext(
 ; CHECK-NEXT:  entry:
@@ -305,7 +303,7 @@ define i1 @cnt_not_known_positive_sgt_against_base_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[CNT]] to i64
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[EXT]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
-; CHECK-NEXT:    br i1 [[CMP_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
@@ -326,8 +324,6 @@ else:
   ret i1 1
 }
 
-; TODO: Even though %cnt is not known signed positive %cmp can be simplified
-; because %add.ptr uses it zero-extended.
 define i1 @cnt_not_known_positive_sge_against_base_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-LABEL: @cnt_not_known_positive_sge_against_base_with_zext(
 ; CHECK-NEXT:  entry:
@@ -336,7 +332,7 @@ define i1 @cnt_not_known_positive_sge_against_base_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[CNT]] to i64
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[EXT]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
-; CHECK-NEXT:    br i1 [[CMP_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
@@ -453,7 +449,6 @@ else:
   ret i1 1
 }
 
-; TODO: Even though %cnt is not known signed positive %cmp can be simplified
 ; because %add.ptr uses it zero-extended.
 define i1 @cnt_not_known_positive_from_branch_check_against_base_struct_ugt_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-LABEL: @cnt_not_known_positive_from_branch_check_against_base_struct_ugt_with_zext(
@@ -464,7 +459,7 @@ define i1 @cnt_not_known_positive_from_branch_check_against_base_struct_ugt_with
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[CNT]] to i64
 ; CHECK-NEXT:    [[GEP_EXT:%.*]] = getelementptr inbounds [[T:%.*]], ptr [[P:%.*]], i64 0, i32 1, i64 [[EXT]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ugt ptr [[GEP_EXT]], [[P]]
-; CHECK-NEXT:    br i1 [[CMP_1]], label [[THEN:%.*]], label [[ELSE]]
+; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
