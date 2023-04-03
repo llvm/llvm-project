@@ -74,9 +74,9 @@ class VectorType;
     BRCOND,      // Conditional branch.
     BR_JT,       // Jumptable branch.
     BR2_JT,      // Jumptable branch (2 level - jumptable entry is a jump).
-    RET_FLAG,    // Return with a flag operand.
-    SERET_FLAG,  // CMSE Entry function return with a flag operand.
-    INTRET_FLAG, // Interrupt return with an LR-offset and a flag operand.
+    RET_GLUE,    // Return with a flag operand.
+    SERET_GLUE,  // CMSE Entry function return with a flag operand.
+    INTRET_GLUE, // Interrupt return with an LR-offset and a flag operand.
 
     PIC_ADD, // Add with a PC operand and a PIC label.
 
@@ -102,8 +102,8 @@ class VectorType;
 
     BCC_i64,
 
-    SRL_FLAG, // V,Flag = srl_flag X -> srl X, 1 + save carry out.
-    SRA_FLAG, // V,Flag = sra_flag X -> sra X, 1 + save carry out.
+    SRL_GLUE, // V,Flag = srl_flag X -> srl X, 1 + save carry out.
+    SRA_GLUE, // V,Flag = sra_flag X -> sra X, 1 + save carry out.
     RRX,      // V = RRX X, Flag     -> srl X, 1 + shift in carry flag.
 
     ADDC, // Add with carry
@@ -877,7 +877,7 @@ class VectorType;
 
     SDValue ReconstructShuffle(SDValue Op, SelectionDAG &DAG) const;
 
-    SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
+    SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                             CallingConv::ID CallConv, bool isVarArg,
                             const SmallVectorImpl<ISD::InputArg> &Ins,
                             const SDLoc &dl, SelectionDAG &DAG,

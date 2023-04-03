@@ -204,15 +204,15 @@ void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
 }
 
 void MipsSEDAGToDAGISel::selectAddE(SDNode *Node, const SDLoc &DL) const {
-  SDValue InFlag = Node->getOperand(2);
-  unsigned Opc = InFlag.getOpcode();
+  SDValue InGlue = Node->getOperand(2);
+  unsigned Opc = InGlue.getOpcode();
   SDValue LHS = Node->getOperand(0), RHS = Node->getOperand(1);
   EVT VT = LHS.getValueType();
 
   // In the base case, we can rely on the carry bit from the addsc
   // instruction.
   if (Opc == ISD::ADDC) {
-    SDValue Ops[3] = {LHS, RHS, InFlag};
+    SDValue Ops[3] = {LHS, RHS, InGlue};
     CurDAG->SelectNodeTo(Node, Mips::ADDWC, VT, MVT::Glue, Ops);
     return;
   }
@@ -236,7 +236,7 @@ void MipsSEDAGToDAGISel::selectAddE(SDNode *Node, const SDLoc &DL) const {
   SDValue OuFlag = CurDAG->getTargetConstant(20, DL, MVT::i32);
 
   SDNode *DSPCtrlField = CurDAG->getMachineNode(Mips::RDDSP, DL, MVT::i32,
-                                                MVT::Glue, CstOne, InFlag);
+                                                MVT::Glue, CstOne, InGlue);
 
   SDNode *Carry = CurDAG->getMachineNode(
       Mips::EXT, DL, MVT::i32, SDValue(DSPCtrlField, 0), OuFlag, CstOne);

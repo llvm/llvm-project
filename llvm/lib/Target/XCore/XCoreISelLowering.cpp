@@ -1054,7 +1054,7 @@ XCoreTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
 /// LowerCallResult - Lower the result values of a call into the
 /// appropriate copies out of appropriate physical registers / memory locations.
-static SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
+static SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                                const SmallVectorImpl<CCValAssign> &RVLocs,
                                const SDLoc &dl, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) {
@@ -1064,8 +1064,8 @@ static SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
     const CCValAssign &VA = RVLocs[i];
     if (VA.isRegLoc()) {
       Chain = DAG.getCopyFromReg(Chain, dl, VA.getLocReg(), VA.getValVT(),
-                                 InFlag).getValue(1);
-      InFlag = Chain.getValue(2);
+                                 InGlue).getValue(1);
+      InGlue = Chain.getValue(2);
       InVals.push_back(Chain.getValue(0));
     } else {
       assert(VA.isMemLoc());
@@ -1176,13 +1176,13 @@ SDValue XCoreTargetLowering::LowerCCCCallTo(
 
   // Build a sequence of copy-to-reg nodes chained together with token
   // chain and flag operands which copy the outgoing args into registers.
-  // The InFlag in necessary since all emitted instructions must be
+  // The InGlue in necessary since all emitted instructions must be
   // stuck together.
-  SDValue InFlag;
+  SDValue InGlue;
   for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
     Chain = DAG.getCopyToReg(Chain, dl, RegsToPass[i].first,
-                             RegsToPass[i].second, InFlag);
-    InFlag = Chain.getValue(1);
+                             RegsToPass[i].second, InGlue);
+    InGlue = Chain.getValue(1);
   }
 
   // If the callee is a GlobalAddress node (quite common, every direct call is)
@@ -1208,19 +1208,19 @@ SDValue XCoreTargetLowering::LowerCCCCallTo(
     Ops.push_back(DAG.getRegister(RegsToPass[i].first,
                                   RegsToPass[i].second.getValueType()));
 
-  if (InFlag.getNode())
-    Ops.push_back(InFlag);
+  if (InGlue.getNode())
+    Ops.push_back(InGlue);
 
   Chain  = DAG.getNode(XCoreISD::BL, dl, NodeTys, Ops);
-  InFlag = Chain.getValue(1);
+  InGlue = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
-  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InFlag, dl);
-  InFlag = Chain.getValue(1);
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InGlue, dl);
+  InGlue = Chain.getValue(1);
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.
-  return LowerCallResult(Chain, InFlag, RVLocs, dl, DAG, InVals);
+  return LowerCallResult(Chain, InGlue, RVLocs, dl, DAG, InVals);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1449,7 +1449,7 @@ XCoreTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   CCInfo.AnalyzeReturn(Outs, RetCC_XCore);
 
-  SDValue Flag;
+  SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
 
   // Return on XCore is always a "retsp 0"
@@ -1490,19 +1490,19 @@ XCoreTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     if (!VA.isRegLoc())
       continue;
     // Copy the result values into the output registers.
-    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), OutVals[i], Flag);
+    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), OutVals[i], Glue);
 
     // guarantee that all emitted copies are
     // stuck together, avoiding something bad
-    Flag = Chain.getValue(1);
+    Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
   RetOps[0] = Chain;  // Update chain.
 
-  // Add the flag if we have it.
-  if (Flag.getNode())
-    RetOps.push_back(Flag);
+  // Add the glue if we have it.
+  if (Glue.getNode())
+    RetOps.push_back(Glue);
 
   return DAG.getNode(XCoreISD::RETSP, dl, MVT::Other, RetOps);
 }

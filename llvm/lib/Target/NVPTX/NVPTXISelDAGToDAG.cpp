@@ -2095,7 +2095,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
 bool NVPTXDAGToDAGISel::tryLoadParam(SDNode *Node) {
   SDValue Chain = Node->getOperand(0);
   SDValue Offset = Node->getOperand(2);
-  SDValue Flag = Node->getOperand(3);
+  SDValue Glue = Node->getOperand(3);
   SDLoc DL(Node);
   MemSDNode *Mem = cast<MemSDNode>(Node);
 
@@ -2163,7 +2163,7 @@ bool NVPTXDAGToDAGISel::tryLoadParam(SDNode *Node) {
   SmallVector<SDValue, 2> Ops;
   Ops.push_back(CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32));
   Ops.push_back(Chain);
-  Ops.push_back(Flag);
+  Ops.push_back(Glue);
 
   ReplaceNode(Node, CurDAG->getMachineNode(*Opcode, DL, VTs, Ops));
   return true;
@@ -2247,7 +2247,7 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
   SDValue Offset = N->getOperand(2);
   unsigned OffsetVal = cast<ConstantSDNode>(Offset)->getZExtValue();
   MemSDNode *Mem = cast<MemSDNode>(N);
-  SDValue Flag = N->getOperand(N->getNumOperands() - 1);
+  SDValue Glue = N->getOperand(N->getNumOperands() - 1);
 
   // How many elements do we have?
   unsigned NumElts = 1;
@@ -2274,7 +2274,7 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
   Ops.push_back(CurDAG->getTargetConstant(ParamVal, DL, MVT::i32));
   Ops.push_back(CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32));
   Ops.push_back(Chain);
-  Ops.push_back(Flag);
+  Ops.push_back(Glue);
 
   // Determine target opcode
   // If we have an i1, use an 8-bit store. The lowering code in

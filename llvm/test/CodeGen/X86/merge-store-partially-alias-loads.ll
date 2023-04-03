@@ -25,7 +25,7 @@
 ; DBGDAG-DAG: [[LOADTOKEN:t[0-9]+]]: ch = TokenFactor [[LD2]]:1, [[LD1]]:1
 ; DBGDAG-DAG: [[ST2:t[0-9]+]]: ch = store<(store (s16) into %ir.tmp10, align 1)> [[LOADTOKEN]], [[LD2]], t{{[0-9]+}}, undef:i64
 
-; DBGDAG: X86ISD::RET_FLAG t{{[0-9]+}},
+; DBGDAG: X86ISD::RET_GLUE t{{[0-9]+}},
 
 ; DBGDAG-LABEL: Instruction selection begins
 define void @merge_store_partial_overlap_load([4 x i8]* %tmp) {
