@@ -319,27 +319,59 @@ public:
   /// is assigned a storage location in the environment, otherwise returns null.
   Value *getValue(const Expr &E, SkipPast SP) const;
 
+  /// Creates a `T` (some subclass of `StorageLocation`), forwarding `args` to
+  /// the constructor, and returns a reference to it.
+  ///
+  /// The analysis context takes ownership of the created object. The object
+  /// will be destroyed when the analysis context is destroyed.
+  template <typename T, typename... Args>
+  std::enable_if_t<std::is_base_of<StorageLocation, T>::value, T &>
+  create(Args &&...args) {
+    return DACtx->create<T>(std::forward<Args>(args)...);
+  }
+
+  /// Creates a `T` (some subclass of `Value`), forwarding `args` to the
+  /// constructor, and returns a reference to it.
+  ///
+  /// The analysis context takes ownership of the created object. The object
+  /// will be destroyed when the analysis context is destroyed.
+  template <typename T, typename... Args>
+  std::enable_if_t<std::is_base_of<Value, T>::value, T &>
+  create(Args &&...args) {
+    return DACtx->create<T>(std::forward<Args>(args)...);
+  }
+
   /// Transfers ownership of `Loc` to the analysis context and returns a
   /// reference to it.
+  ///
+  /// This function is deprecated. Instead of
+  /// `takeOwnership(std::make_unique<SomeStorageLocation>(args))`, prefer
+  /// `create<SomeStorageLocation>(args)`.
   ///
   /// Requirements:
   ///
   ///  `Loc` must not be null.
   template <typename T>
-  std::enable_if_t<std::is_base_of<StorageLocation, T>::value, T &>
-  takeOwnership(std::unique_ptr<T> Loc) {
+  LLVM_DEPRECATED("use create<T> instead", "")
+  std::enable_if_t<std::is_base_of<StorageLocation, T>::value,
+                   T &> takeOwnership(std::unique_ptr<T> Loc) {
     return DACtx->takeOwnership(std::move(Loc));
   }
 
   /// Transfers ownership of `Val` to the analysis context and returns a
   /// reference to it.
   ///
+  /// This function is deprecated. Instead of
+  /// `takeOwnership(std::make_unique<SomeValue>(args))`, prefer
+  /// `create<SomeValue>(args)`.
+  ///
   /// Requirements:
   ///
   ///  `Val` must not be null.
   template <typename T>
-  std::enable_if_t<std::is_base_of<Value, T>::value, T &>
-  takeOwnership(std::unique_ptr<T> Val) {
+  LLVM_DEPRECATED("use create<T> instead", "")
+  std::enable_if_t<std::is_base_of<Value, T>::value, T &> takeOwnership(
+      std::unique_ptr<T> Val) {
     return DACtx->takeOwnership(std::move(Val));
   }
 
