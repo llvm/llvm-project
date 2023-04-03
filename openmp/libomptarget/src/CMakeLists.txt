@@ -18,7 +18,6 @@ add_llvm_library(omptarget
   api.cpp
   device.cpp
   interface.cpp
-  hostrpc.cpp
   ompt_buffer_mgr.cpp
   ompt_callback.cpp
   interop.cpp

@@ -491,12 +491,5 @@ void __kmpc_get_shared_variables(void ***GlobalArgs) {
 extern "C" {
 __attribute__((leaf)) void *__kmpc_impl_malloc(uint64_t t) { return malloc(t); }
 __attribute__((leaf)) void __kmpc_impl_free(void *ptr) { free(ptr); }
-__attribute__((leaf)) char *global_allocate(uint32_t bufsz) {
-  return (char *)malloc(bufsz);
-}
-__attribute__((leaf)) int global_free(void *ptr) {
-  free(ptr);
-  return 0;
-}
 }
 #pragma omp end declare target

@@ -60,6 +60,27 @@ namespace omp {
 namespace target {
 namespace plugin {
 
+extern "C" {
+uint64_t hostrpc_assign_buffer(hsa_agent_t Agent, hsa_queue_t *ThisQ,
+                               uint32_t DeviceId,
+                               hsa_amd_memory_pool_t HostMemoryPool,
+                               hsa_amd_memory_pool_t DevMemoryPool);
+hsa_status_t hostrpc_terminate();
+__attribute__((weak)) hsa_status_t hostrpc_terminate() {
+  return HSA_STATUS_SUCCESS;
+}
+__attribute__((weak)) uint64_t
+hostrpc_assign_buffer(hsa_agent_t, hsa_queue_t *, uint32_t DeviceId,
+                      hsa_amd_memory_pool_t HostMemoryPool,
+                      hsa_amd_memory_pool_t DevMemoryPool) {
+  // FIXME:THIS SHOULD BE HARD FAIL
+  DP("Warning: Attempting to assign hostrpc to device %u, but hostrpc library "
+     "missing\n",
+     DeviceId);
+  return 0;
+}
+}
+
 /// Forward declarations for all specialized data structures.
 struct AMDGPUKernelTy;
 struct AMDGPUDeviceTy;
@@ -131,6 +152,11 @@ Error iterateAgentMemoryPools(hsa_agent_t Agent, CallbackTy Cb) {
                        "Error in hsa_amd_agent_iterate_memory_pools: %s");
 }
 
+extern "C" uint64_t hostrpc_assign_buffer(hsa_agent_t Agent, hsa_queue_t *ThisQ,
+                                          uint32_t DeviceId,
+                                          hsa_amd_memory_pool_t HostMemoryPool,
+                                          hsa_amd_memory_pool_t DevMemoryPool);
+extern "C" hsa_status_t hostrpc_terminate();
 } // namespace utils
 
 /// Utility class representing generic resource references to AMDGPU resources.
@@ -386,6 +412,9 @@ struct AMDGPUDeviceImageTy : public DeviceImageTy {
     return It->second;
   }
 
+  /// Does device image contain Symbol
+  bool hasDeviceSymbol(GenericDeviceTy &Device, StringRef SymbolName) const;
+
 private:
   /// The exectuable loaded on the agent.
   hsa_executable_t Executable;
@@ -399,6 +428,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Create an AMDGPU kernel with a name and an execution mode.
   AMDGPUKernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode)
       : GenericKernelTy(Name, ExecutionMode),
+        GlobalTy_device_st_buf("service_thread_buf", sizeof(uint64_t)),
         ImplicitArgsSize(sizeof(utils::AMDGPUImplicitArgsTy)) {}
 
   /// Initialize the AMDGPU kernel.
@@ -473,8 +503,20 @@ struct AMDGPUKernelTy : public GenericKernelTy {
       INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device.getDeviceId(),
            "Could not read extra information for kernel %s.", getName());
 
+    needs_host_services =
+        AMDImage.hasDeviceSymbol(Device, "__needs_host_services");
+    if (needs_host_services) {
+      // GenericGlobalHandlerTy * GHandler = Plugin::createGlobalHandler();
+      if (auto Err = rpc_buf_handler->getGlobalMetadataFromDevice(
+              Device, AMDImage, GlobalTy_device_st_buf))
+        return Err;
+    }
+
     return Plugin::success();
   }
+  bool needs_host_services;
+  GlobalTy GlobalTy_device_st_buf;
+  GenericGlobalHandlerTy *rpc_buf_handler = Plugin::createGlobalHandler();
 
   /// Launch the AMDGPU kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
@@ -673,6 +715,7 @@ struct AMDGPUQueueTy {
     // Push the barrier with the lock acquired.
     return pushBarrierImpl(OutputSignal, InputSignal1, InputSignal2);
   }
+  hsa_queue_t *getHsaQueue() { return Queue; }
 
 private:
   /// Push a barrier packet that will wait up to two input signals. Assumes the
@@ -793,6 +836,8 @@ private:
 /// devices. This class relies on signals to implement streams and define the
 /// dependencies between asynchronous operations.
 struct AMDGPUStreamTy {
+  AMDGPUQueueTy *getQueue() { return &Queue; };
+
 private:
   /// Utility struct holding arguments for async H2H memory copies.
   struct MemcpyArgsTy {
@@ -1459,6 +1504,9 @@ struct AMDGenericDeviceTy {
     ArgsMemoryPools.clear();
 
     return Plugin::success();
+  }
+  AMDGPUMemoryPoolTy *getCoarseGrainedMemoryPool() {
+    return CoarseGrainedMemoryPools[0];
   }
 
   /// Retrieve and construct all memory pools from the device agent(s).
@@ -2278,7 +2326,6 @@ Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
 Expected<hsa_executable_symbol_t>
 AMDGPUDeviceImageTy::findDeviceSymbol(GenericDeviceTy &Device,
                                       StringRef SymbolName) const {
-
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(Device);
   hsa_agent_t Agent = AMDGPUDevice.getAgent();
 
@@ -2291,6 +2338,16 @@ AMDGPUDeviceImageTy::findDeviceSymbol(GenericDeviceTy &Device,
     return std::move(Err);
 
   return Symbol;
+}
+
+bool AMDGPUDeviceImageTy::hasDeviceSymbol(GenericDeviceTy &Device,
+                                          StringRef SymbolName) const {
+  AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(Device);
+  hsa_agent_t Agent = AMDGPUDevice.getAgent();
+  hsa_executable_symbol_t Symbol;
+  hsa_status_t Status = hsa_executable_get_symbol_by_name(
+      Executable, SymbolName.data(), &Agent, &Symbol);
+  return (Status == HSA_STATUS_SUCCESS);
 }
 
 template <typename ResourceTy>
@@ -2464,6 +2521,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
 
   /// Deinitialize the plugin.
   Error deinitImpl() override {
+    utils::hostrpc_terminate();
     // The HSA runtime was not initialized, so nothing from the plugin was
     // actually initialized.
     if (!Initialized)
@@ -2641,6 +2699,29 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
   AMDGPUStreamTy &Stream = AMDGPUDevice.getStream(AsyncInfoWrapper);
+  if (needs_host_services) {
+    int32_t devid = AMDGPUDevice.getDeviceId();
+    hsa_amd_memory_pool_t host_mem_pool =
+        HostDevice.getFineGrainedMemoryPool().get();
+    hsa_amd_memory_pool_t device_mem_pool =
+        AMDGPUDevice.getCoarseGrainedMemoryPool()->get();
+    hsa_queue_t *hsa_queue = Stream.getQueue()->getHsaQueue();
+    uint64_t Buffer =
+        utils::hostrpc_assign_buffer(AMDGPUDevice.getAgent(), hsa_queue, devid,
+                                     host_mem_pool, device_mem_pool);
+    GlobalTy GlobalTy_host_st_buf("service_thread_buf", sizeof(uint64_t),
+                                  &Buffer);
+    if (auto Err = rpc_buf_handler->writeGlobalToDevice(
+            AMDGPUDevice, GlobalTy_host_st_buf, GlobalTy_device_st_buf)) {
+      DP("Missing symbol %s, continue execution anyway.\n",
+         GlobalTy_host_st_buf.getName().data());
+      consumeError(std::move(Err));
+    }
+    DP("Hostrpc buffer allocated at %p and service thread started\n",
+       (void *)Buffer);
+  } else {
+    DP("No hostrpc buffer or service thread required\n");
+  }
 
   // Push the kernel launch into the stream.
   return Stream.pushKernelLaunch(*this, AllArgs, NumThreads, NumBlocks,

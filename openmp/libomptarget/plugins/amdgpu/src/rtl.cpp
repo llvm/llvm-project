@@ -89,18 +89,19 @@ std::mutex ompt_set_timestamp_mtx;
 // implement a fallback for toolchains that do not yet have a hostrpc library.
 extern "C" {
 uint64_t hostrpc_assign_buffer(hsa_agent_t Agent, hsa_queue_t *ThisQ,
-                               uint32_t DeviceId);
-void hostrpcStatInit(const char *);
-void printHostRPCCallCount();
-hsa_status_t hostrpc_init();
+                               uint32_t DeviceId,
+                               hsa_amd_memory_pool_t HostMemoryPool,
+                               hsa_amd_memory_pool_t DevMemoryPool);
+
 hsa_status_t hostrpc_terminate();
 
-__attribute__((weak)) hsa_status_t hostrpc_init() { return HSA_STATUS_SUCCESS; }
 __attribute__((weak)) hsa_status_t hostrpc_terminate() {
   return HSA_STATUS_SUCCESS;
 }
-__attribute__((weak)) uint64_t hostrpc_assign_buffer(hsa_agent_t, hsa_queue_t *,
-                                                     uint32_t DeviceId) {
+__attribute__((weak)) uint64_t
+hostrpc_assign_buffer(hsa_agent_t, hsa_queue_t *, uint32_t DeviceId,
+                      hsa_amd_memory_pool_t HostMemoryPool,
+                      hsa_amd_memory_pool_t DevMemoryPool) {
   DP("Warning: Attempting to assign hostrpc to device %u, but hostrpc library "
      "missing\n",
      DeviceId);
@@ -1221,9 +1222,6 @@ public:
       return;
     }
 
-    // Init hostcall soon after initializing hsa
-    hostrpc_init();
-
     Err = findAgents([&](hsa_device_type_t DeviceType, hsa_agent_t Agent) {
       if (DeviceType == HSA_DEVICE_TYPE_CPU) {
         CPUAgents.push_back(Agent);
@@ -1370,6 +1368,7 @@ public:
     DeviceStateStore.clear();
     KernelArgPoolMap.clear();
     // Terminate hostrpc before finalizing hsa
+    DP("Terminating hostrpc service thread and buffer if allocated \n");
     hostrpc_terminate();
 
     hsa_status_t Err;
@@ -2307,11 +2306,9 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
 
   if (print_kernel_trace >= LAUNCH) {
     // if host tracing requested, init rpc counters for each kernel launch
-    // TODO: implement same functionality for concurrent kernel launches. (not handled at this point)
-    if (print_kernel_trace >= HOST_SERVICE_TRACING)
-      hostrpcStatInit(KernelInfo->Name);
-    // enum modes are SPMD, GENERIC, NONE 0,1,2
-    // if doing rtl timing, print to stderr, unless stdout requested.
+    // TODO: implement same functionality for concurrent kernel launches. (not
+    // handled at this point) enum modes are SPMD, GENERIC, NONE 0,1,2 if doing
+    // rtl timing, print to stderr, unless stdout requested.
     bool TraceToStdout = print_kernel_trace & (RTL_TO_STDOUT | RTL_TIMING);
     fprintf(TraceToStdout ? stdout : stderr,
             "DEVID:%2d SGN:%1d ConstWGSize:%-4d args:%2d teamsXthrds:(%4dX%4d) "
@@ -2395,8 +2392,11 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
         // under a multiple reader lock, not a writer lock.
         static pthread_mutex_t HostcallInitLock = PTHREAD_MUTEX_INITIALIZER;
         pthread_mutex_lock(&HostcallInitLock);
-        Buffer = hostrpc_assign_buffer(DeviceInfo().HSAAgents[DeviceId], Queue,
-                                       DeviceId);
+        Buffer = hostrpc_assign_buffer(
+            DeviceInfo().HSAAgents[DeviceId], Queue, DeviceId,
+            DeviceInfo().HostFineGrainedMemoryPool,
+            DeviceInfo().getDeviceMemoryPool(DeviceId));
+
         pthread_mutex_unlock(&HostcallInitLock);
         if (!Buffer) {
           DP("hostrpc_assign_buffer failed, gpu would dereference null and "
@@ -3237,7 +3237,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
     hsa_status_t Err = moduleRegisterFromMemoryToPlace(
         KernelInfo, SymbolInfo, (void *)Image->ImageStart, ImgSize, DeviceId,
         [&](void *Data, size_t Size) {
-          if (imageContainsSymbol(Data, Size, "needs_hostcall_buffer")) {
+          if (imageContainsSymbol(Data, Size, "__needs_host_services")) {
             __atomic_store_n(&DeviceInfo().HostcallRequired, true,
                              __ATOMIC_RELEASE);
           }

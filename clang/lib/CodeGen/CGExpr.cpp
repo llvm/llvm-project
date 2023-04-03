@@ -5466,15 +5466,17 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
     }
   }
 
-  // FIXME: Only call EmitHostrpcVargsFn for variadic functions that actually
-  //        that have a hostrpc stub and service function.
-  if ((CGM.getTriple().isAMDGCN()) && CGM.getLangOpts().OpenMP &&
+  // GPUs can execute hostexec variadic functions, printf, and fprintf on host.
+  if ((CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX()) &&
+      CGM.getLangOpts().OpenMP && FnType &&
       dyn_cast<FunctionProtoType>(FnType) &&
-      dyn_cast<FunctionProtoType>(FnType)->isVariadic())
-    return EmitHostrpcVargsFn(
+      dyn_cast<FunctionProtoType>(FnType)->isVariadic() &&
+      (std::find(std::begin(HostexecFns), std::end(HostexecFns),
+                 E->getDirectCallee()->getNameAsString()) !=
+       std::end(HostexecFns)))
+    return EmitHostexecAllocAndExecFns(
         E, E->getDirectCallee()->getNameAsString().append("_allocate").c_str(),
-        E->getDirectCallee()->getNameAsString().append("_execute").c_str(),
-        ReturnValue);
+        E->getDirectCallee()->getNameAsString().append("_execute").c_str());
 
   EmitCallArgs(Args, dyn_cast<FunctionProtoType>(FnType), E->arguments(),
                E->getDirectCallee(), /*ParamsToSkip*/ 0, Order);

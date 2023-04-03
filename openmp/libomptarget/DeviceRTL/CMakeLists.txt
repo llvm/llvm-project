@@ -222,15 +222,16 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
 
     # Add custom target so targets from other directories
     # can be added as dependencies to ensure libm
-    # and libhostrpc bc files have been built.
+    # and libhostexec bc files have been built.
     add_custom_target(touch-target-${target_cpu} ALL)
     add_dependencies(touch-target-${target_cpu}
       libm-target-${target_cpu}
-      libhostrpc-target-${target_cpu}
+      libhostexec-amdgcn-${target_cpu}.bc
+      #${CMAKE_BINARY_DIR}/libomptarget/hostexec/libhostexec-amdgcn-${target_cpu}.bc
     )
     list(APPEND bc_files
       ${CMAKE_BINARY_DIR}/libm-amdgcn-${target_cpu}.bc
-      ${CMAKE_BINARY_DIR}/libhostrpc-amdgcn-${target_cpu}.bc
+      ${CMAKE_BINARY_DIR}/libomptarget/hostexec/libhostexec-amdgcn-${target_cpu}.bc
     )
     if (EXISTS ${CMAKE_BINARY_DIR}/../../tools/ROCMDEVLIBS)
       add_dependencies(touch-target-${target_cpu}

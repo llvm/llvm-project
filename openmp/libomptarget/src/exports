@@ -51,17 +51,7 @@ VERS1.0 {
     printf_execute;
     global_allocate;
     global_free;
-    hostrpc_varfn_uint;
-    hostrpc_varfn_double;
-    hostrpc_varfn_uint_allocate;
-    hostrpc_varfn_uint_execute;
-    hostrpc_varfn_double_allocate;
-    hostrpc_varfn_double_execute;
-    hostrpc_fptr0;
-    hostrpc_varfn_uint64_allocate;
-    hostrpc_varfn_double_allocate;
-    hostrpc_varfn_uint64_execute;
-    hostrpc_varfn_uint64;
+    hostexec*;
     llvm_omp_target_alloc_host;
     llvm_omp_target_alloc_shared;
     llvm_omp_target_alloc_device;

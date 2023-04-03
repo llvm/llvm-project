@@ -92,12 +92,15 @@ add_llvm_library(omptarget.rtl.amdgpu SHARED
   MemoryManager
   ${LIBOMPTARGET_DEP_LIBRARIES}
   ${OPENMP_PTHREAD_LIB}
-  -Wl,--whole-archive hostrpc_services -Wl,--no-whole-archive
+  -Wl,--whole-archive amdgcn_hostexec_services -Wl,--no-whole-archive
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
   ${LDFLAGS_UNDEFINED}
 
   NO_INSTALL_RPATH
 )
+
+add_dependencies(omptarget.rtl.amdgpu omptarget.devicertl.amdgpu )
+add_dependencies(omptarget.rtl.amdgpu amdgcn_hostexec_services)
 
 target_include_directories(
   omptarget.rtl.amdgpu

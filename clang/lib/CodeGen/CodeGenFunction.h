@@ -4216,10 +4216,13 @@ public:
                                        ReturnValueSlot ReturnValue);
   RValue EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E,
                                         ReturnValueSlot ReturnValue);
-
-  RValue EmitHostrpcVargsFn(const CallExpr *E, const char *allocate_name,
-                            const char *execute_name,
-                            ReturnValueSlot ReturnValue);
+  std::vector<std::string> HostexecFns{
+      "printf",        "fprintf",         "hostexec",
+      "hostexec_uint", "hostexec_uint64", "hostexec_int",
+      "hostexec_long", "hostexec_float",  "hostexec_double"};
+  RValue EmitHostexecAllocAndExecFns(const CallExpr *E,
+                                     const char *allocate_name,
+                                     const char *execute_name);
 
   RValue EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                          const CallExpr *E, ReturnValueSlot ReturnValue);

@@ -163,7 +163,7 @@ add_subdirectory(plugins-nextgen)
 # lot of header definitions that get compiled with every offload compilation.
 add_subdirectory(libm)
 
-add_subdirectory(hostrpc)
+add_subdirectory(hostexec)
 add_subdirectory(tools)
 set(PREP_TOOL $<TARGET_FILE:prep-libomptarget-bc>)
 add_subdirectory(DeviceRTL)
