@@ -187,7 +187,7 @@ define i32 @metadata_preservation(ptr nocapture %p, ptr nocapture %q) {
 ; CHECK-LABEL: define i32 @metadata_preservation
 ; CHECK-SAME: (ptr nocapture [[P:%.*]], ptr nocapture [[Q:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4, !invariant.load !0
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], [[X]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
