@@ -661,6 +661,7 @@ libc_support_library(
     ],
     deps = [
         ":__support_common",
+        ":__support_cpp_string_view",
         ":__support_osutil_syscall",
         ":libc_root",
         ":string_utils",
