@@ -11,7 +11,7 @@
 // RUN:     FileCheck %s --check-prefix=CHECK-HEADERS
 // RUN:   %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx1030 -nogpulib --sysroot=./ %s 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=CHECK-HEADERS
-// CHECK-HEADERS: "-cc1"{{.*}}"-c-isystem" "{{.*}}include/gpu-none-llvm"{{.*}}"-isysroot" "./"
+// CHECK-HEADERS: "-cc1"{{.*}}"-c-isystem" "{{.*}}include{{.*}}gpu-none-llvm"{{.*}}"-isysroot" "./"
 
 // RUN:   %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx1030 -nogpulib \
 // RUN:     -nogpuinc %s 2>&1 | FileCheck %s --check-prefix=CHECK-HEADERS-DISABLED
@@ -19,4 +19,4 @@
 // RUN:     -nostdinc %s 2>&1 | FileCheck %s --check-prefix=CHECK-HEADERS-DISABLED
 // RUN:   %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx1030 -nogpulib \
 // RUN:     -nobuiltininc %s 2>&1 | FileCheck %s --check-prefix=CHECK-HEADERS-DISABLED
-// CHECK-HEADERS-DISABLED-NOT: "-cc1"{{.*}}"-c-isystem" "{{.*}}include/gpu-none-llvm"
+// CHECK-HEADERS-DISABLED-NOT: "-cc1"{{.*}}"-c-isystem" "{{.*}}include{{.*}}gpu-none-llvm"
