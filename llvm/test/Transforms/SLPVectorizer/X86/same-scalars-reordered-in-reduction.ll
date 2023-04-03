@@ -7,7 +7,7 @@ define i32 @test() {
 ; CHECK-NEXT:    [[SQ:%.*]] = alloca [64 x i32], i32 0, align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [64 x i32], ptr [[SQ]], i64 0, i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP1]], <i32 3, i32 2, i32 2, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP1]], <i32 2, i32 3, i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
