@@ -1164,6 +1164,17 @@ IgnoreObjectResult IgnoreObjectLocked(const void *p) {
 // ---------------------- Interface ---------------- {{{1
 using namespace __asan;
 
+void *AllocationBegin(const void *p) {
+  AsanChunk *m = __asan::instance.GetAsanChunkByAddr((uptr)p);
+  if (!m)
+    return nullptr;
+  if (atomic_load(&m->chunk_state, memory_order_acquire) != CHUNK_ALLOCATED)
+    return nullptr;
+  if (m->UsedSize() == 0)
+    return nullptr;
+  return (void *)(m->Beg());
+}
+
 // ASan allocator doesn't reserve extra bytes, so normally we would
 // just return "size". We don't want to expose our redzone sizes, etc here.
 uptr __sanitizer_get_estimated_allocated_size(uptr size) {
@@ -1185,6 +1196,10 @@ uptr __sanitizer_get_allocated_size(const void *p) {
     ReportSanitizerGetAllocatedSizeNotOwned(ptr, &stack);
   }
   return allocated_size;
+}
+
+void *__sanitizer_get_allocated_begin(const void *p) {
+  return AllocationBegin(p);
 }
 
 void __sanitizer_purge_allocator() {
