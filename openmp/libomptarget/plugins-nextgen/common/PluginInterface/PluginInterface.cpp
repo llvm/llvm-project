@@ -288,8 +288,12 @@ uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
   assert(ThreadLimitClause[1] == 0 && ThreadLimitClause[2] == 0 &&
          "Multi dimensional launch not supported yet.");
 
-  if (ThreadLimitClause[0] > 0 && isGenericMode())
-    ThreadLimitClause[0] += GenericDevice.getWarpSize();
+  if (ThreadLimitClause[0] > 0 && isGenericMode()) {
+    if (ThreadLimitClause[0] == (uint32_t)-1)
+      ThreadLimitClause[0] = PreferredNumThreads;
+    else
+      ThreadLimitClause[0] += GenericDevice.getWarpSize();
+  }
 
   return std::min(MaxNumThreads, (ThreadLimitClause[0] > 0)
                                      ? ThreadLimitClause[0]
