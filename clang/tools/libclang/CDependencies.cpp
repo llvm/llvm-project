@@ -23,6 +23,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/Support/Process.h"
 
@@ -145,7 +146,7 @@ ScanningOutputFormat DependencyScannerServiceOptions::getFormat() const {
     return ScanningOutputFormat::FullTree;
 
   // Note: default caching behaviour is currently cas-fs.
-  return ConfiguredFormat;
+  return ScanningOutputFormat::FullTree;
 }
 
 CXDependencyScannerService
@@ -155,15 +156,18 @@ clang_experimental_DependencyScannerService_create_v1(
   std::shared_ptr<llvm::cas::ObjectStore> CAS = unwrap(Opts)->CAS;
   std::shared_ptr<llvm::cas::ActionCache> Cache = unwrap(Opts)->Cache;
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
-  if (CAS && Cache) {
+  ScanningOutputFormat Format = unwrap(Opts)->getFormat();
+  bool IsCASFSOutput = Format == ScanningOutputFormat::Tree ||
+                       Format == ScanningOutputFormat::FullTree;
+  if (CAS && Cache && IsCASFSOutput) {
     assert(unwrap(Opts)->CASOpts.getKind() != CASOptions::UnknownCAS &&
            "CAS and ActionCache must match CASOptions");
     FS = llvm::cantFail(
         llvm::cas::createCachingOnDiskFileSystem(CAS));
   }
   return wrap(new DependencyScanningService(
-      ScanningMode::DependencyDirectivesScan, unwrap(Opts)->getFormat(),
-      unwrap(Opts)->CASOpts, std::move(CAS), std::move(Cache), std::move(FS),
+      ScanningMode::DependencyDirectivesScan, Format, unwrap(Opts)->CASOpts,
+      std::move(CAS), std::move(Cache), std::move(FS),
       /*ReuseFilemanager=*/false));
 }
 
@@ -195,8 +199,16 @@ void clang_experimental_FileDependenciesList_dispose(
 
 CXDependencyScannerWorker clang_experimental_DependencyScannerWorker_create_v0(
     CXDependencyScannerService Service) {
-  return wrap(new DependencyScanningWorker(
-      *unwrap(Service), llvm::vfs::createPhysicalFileSystem()));
+  ScanningOutputFormat Format = unwrap(Service)->getFormat();
+  bool IsIncludeTreeOutput = Format == ScanningOutputFormat::IncludeTree ||
+                             Format == ScanningOutputFormat::FullIncludeTree;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
+      llvm::vfs::createPhysicalFileSystem();
+  if (IsIncludeTreeOutput)
+    FS = llvm::cas::createCASProvidingFileSystem(unwrap(Service)->getCAS(),
+                                                 std::move(FS));
+
+  return wrap(new DependencyScanningWorker(*unwrap(Service), FS));
 }
 
 void clang_experimental_DependencyScannerWorker_dispose_v0(
