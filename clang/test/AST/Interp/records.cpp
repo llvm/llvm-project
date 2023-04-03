@@ -252,16 +252,23 @@ static_assert(s.m() == 1, "");
 
 #if __cplusplus >= 201703L
 namespace BaseInit {
+  class _A {public: int a;};
+  class _B : public _A {};
+  class _C : public _B {};
+
+  constexpr _C c{12};
+  constexpr const _B &b = c;
+  static_assert(b.a == 12);
+
   class A {public: int a;};
   class B : public A {};
   class C : public A {};
   class D : public B, public C {};
 
-  // FIXME: Enable this once we support the initialization.
   // This initializes D::B::A::a and not D::C::A::a.
-  //constexpr D d{12};
-  //static_assert(d.B::a == 12);
-  //static_assert(d.C::a == 0);
+  constexpr D d{12};
+  static_assert(d.B::a == 12);
+  static_assert(d.C::a == 0);
 };
 #endif
 

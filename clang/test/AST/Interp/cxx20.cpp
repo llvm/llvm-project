@@ -272,6 +272,69 @@ namespace ConstThis {
                                        // ref-note {{in call to}}
 };
 
+namespace BaseInit {
+  struct Base {
+    int a;
+  };
+
+  struct Intermediate : Base {
+    int b;
+  };
+
+  struct Final : Intermediate {
+    int c;
+
+    constexpr Final(int a, int b, int c) : c(c) {}
+  };
+
+  static_assert(Final{1, 2, 3}.c == 3, ""); // OK
+  static_assert(Final{1, 2, 3}.a == 0, ""); // expected-error {{not an integral constant expression}} \
+                                            // expected-note {{read of object outside its lifetime}} \
+                                            // ref-error {{not an integral constant expression}} \
+                                            // ref-note {{read of uninitialized object}}
+
+
+  struct Mixin  {
+    int b;
+
+    constexpr Mixin() = default;
+    constexpr Mixin(int b) : b(b) {}
+  };
+
+  struct Final2 : Base, Mixin {
+    int c;
+
+    constexpr Final2(int a, int b, int c) : Mixin(b), c(c) {}
+    constexpr Final2(int a, int b, int c, bool) : c(c) {}
+  };
+
+  static_assert(Final2{1, 2, 3}.c == 3, ""); // OK
+  static_assert(Final2{1, 2, 3}.b == 2, ""); // OK
+  static_assert(Final2{1, 2, 3}.a == 0, ""); // expected-error {{not an integral constant expression}} \
+                                             // expected-note {{read of object outside its lifetime}} \
+                                             // ref-error {{not an integral constant expression}} \
+                                             // ref-note {{read of uninitialized object}}
+
+
+  struct Mixin3  {
+    int b;
+  };
+
+  struct Final3 : Base, Mixin3 {
+    int c;
+
+    constexpr Final3(int a, int b, int c) : c(c) { this->b = b; }
+    constexpr Final3(int a, int b, int c, bool) : c(c) {}
+  };
+
+  static_assert(Final3{1, 2, 3}.c == 3, ""); // OK
+  static_assert(Final3{1, 2, 3}.b == 2, ""); // OK
+  static_assert(Final3{1, 2, 3}.a == 0, ""); // expected-error {{not an integral constant expression}} \
+                                             // expected-note {{read of object outside its lifetime}} \
+                                             // ref-error {{not an integral constant expression}} \
+                                             // ref-note {{read of uninitialized object}}
+};
+
 namespace Destructors {
 
   class Inc final {

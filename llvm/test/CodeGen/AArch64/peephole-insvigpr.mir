@@ -79,10 +79,9 @@ body:             |
     ; CHECK-NEXT: [[FCVTNv2i32_:%[0-9]+]]:fpr64 = nofpexcept FCVTNv2i32 killed [[UCVTFv2f64_]], implicit $fpcr
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], killed [[FCVTNv2i32_]], %subreg.dsub
-    ; CHECK-NEXT: [[INSvi64lane1:%[0-9]+]]:fpr128 = INSvi64lane [[INSERT_SUBREG2]], 1, killed [[INSERT_SUBREG1]], 0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[MOVIv2d_ns]].dsub
     ; CHECK-NEXT: STRDui killed [[COPY2]], [[COPY]], 2 :: (store (s64) into %ir.0 + 16)
-    ; CHECK-NEXT: STRQui killed [[INSvi64lane1]], [[COPY]], 0 :: (store (s128) into %ir.0, align 8)
+    ; CHECK-NEXT: STRQui killed [[INSERT_SUBREG2]], [[COPY]], 0 :: (store (s128) into %ir.0, align 8)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
     %1:fpr128 = MOVIv2d_ns 0
