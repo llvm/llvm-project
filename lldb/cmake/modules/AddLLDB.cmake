@@ -165,6 +165,13 @@ function(add_lldb_library name)
   else()
     set_target_properties(${name} PROPERTIES FOLDER "lldb libraries")
   endif()
+
+  # If we want to export all lldb symbols (i.e LLDB_EXPORT_ALL_SYMBOLS=ON), we
+  # need to use default visibility for all LLDB libraries even if a global
+  # `CMAKE_CXX_VISIBILITY_PRESET=hidden`is present.
+  if (LLDB_EXPORT_ALL_SYMBOLS)
+    set_target_properties(${name} PROPERTIES CXX_VISIBILITY_PRESET default)
+  endif()
 endfunction(add_lldb_library)
 
 function(add_lldb_executable name)
