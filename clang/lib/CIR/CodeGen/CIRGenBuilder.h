@@ -100,68 +100,64 @@ public:
   // Type helpers
   // ------------
   //
-
-  // Fetch the type representing a pointer to an 8-bit integer value.
-  mlir::cir::PointerType getInt8PtrTy(unsigned AddrSpace = 0) {
-    return mlir::cir::PointerType::get(getContext(),
-                                       mlir::IntegerType::get(getContext(), 8));
-  }
-
-  // Get a constant 32-bit value.
-  mlir::cir::ConstantOp getInt32(uint32_t C, mlir::Location loc) {
-    auto int32Ty = mlir::IntegerType::get(getContext(), 32);
-    return create<mlir::cir::ConstantOp>(loc, int32Ty,
-                                         mlir::IntegerAttr::get(int32Ty, C));
-  }
-
-  // Get a bool
-  mlir::Value getBool(bool state, mlir::Location loc) {
-    return create<mlir::cir::ConstantOp>(
-        loc, getBoolTy(), mlir::BoolAttr::get(getContext(), state));
-  }
-
-  // Get the bool type
+  mlir::Type getInt8Ty() { return mlir::IntegerType::get(getContext(), 8); }
+  mlir::Type getInt32Ty() { return mlir::IntegerType::get(getContext(), 32); }
   mlir::cir::BoolType getBoolTy() {
     return ::mlir::cir::BoolType::get(getContext());
   }
-
-  // Creates constant pointer for type ty.
-  mlir::cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
-    assert(ty.isa<mlir::cir::PointerType>() && "expected cir.ptr");
-    return create<mlir::cir::ConstantOp>(
-        loc, ty, mlir::cir::NullAttr::get(getContext(), ty));
+  mlir::Type getVirtualFnPtrType([[maybe_unused]] bool isVarArg = false) {
+    // FIXME: replay LLVM codegen for now, perhaps add a vtable ptr special
+    // type so it's a bit more clear and C++ idiomatic.
+    auto fnTy = mlir::FunctionType::get(getContext(), {}, {getInt32Ty()});
+    assert(!UnimplementedFeature::isVarArg());
+    return getPointerTo(getPointerTo(fnTy));
   }
 
-  // Creates null value for type ty.
-  mlir::cir::ConstantOp getNullValue(mlir::Type ty, mlir::Location loc) {
-    assert(ty.isa<mlir::IntegerType>() && "NYI");
-    return create<mlir::cir::ConstantOp>(loc, ty,
-                                         mlir::IntegerAttr::get(ty, 0));
+  // Fetch the type representing a pointer to integer values.
+  mlir::cir::PointerType getInt8PtrTy(unsigned AddrSpace = 0) {
+    return mlir::cir::PointerType::get(getContext(), getInt8Ty());
   }
-
-  mlir::Value getBitcast(mlir::Location loc, mlir::Value src,
-                         mlir::Type newTy) {
-    if (newTy == src.getType())
-      return src;
-    return create<mlir::cir::CastOp>(loc, newTy, mlir::cir::CastKind::bitcast,
-                                     src);
+  mlir::cir::PointerType getInt32PtrTy(unsigned AddrSpace = 0) {
+    return mlir::cir::PointerType::get(getContext(), getInt32Ty());
   }
-
   mlir::cir::PointerType getPointerTo(mlir::Type ty,
                                       unsigned addressSpace = 0) {
     assert(!UnimplementedFeature::addressSpace() && "NYI");
     return mlir::cir::PointerType::get(getContext(), ty);
   }
 
-  /// Cast the element type of the given address to a different type,
-  /// preserving information like the alignment.
-  Address getElementBitCast(mlir::Location loc, Address Addr, mlir::Type Ty) {
-    assert(!UnimplementedFeature::addressSpace() && "NYI");
-    auto ptrTy = getPointerTo(Ty);
-    return Address(getBitcast(loc, Addr.getPointer(), ptrTy), Ty,
-                   Addr.getAlignment());
+  //
+  // Constant creation helpers
+  // -------------------------
+  //
+  mlir::cir::ConstantOp getInt32(uint32_t C, mlir::Location loc) {
+    auto int32Ty = getInt32Ty();
+    return create<mlir::cir::ConstantOp>(loc, int32Ty,
+                                         mlir::IntegerAttr::get(int32Ty, C));
+  }
+  mlir::Value getBool(bool state, mlir::Location loc) {
+    return create<mlir::cir::ConstantOp>(
+        loc, getBoolTy(), mlir::BoolAttr::get(getContext(), state));
   }
 
+  // Creates constant nullptr for pointer type ty.
+  mlir::cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
+    assert(ty.isa<mlir::cir::PointerType>() && "expected cir.ptr");
+    return create<mlir::cir::ConstantOp>(
+        loc, ty, mlir::cir::NullAttr::get(getContext(), ty));
+  }
+
+  // Creates constant null value for integral type ty.
+  mlir::cir::ConstantOp getNullValue(mlir::Type ty, mlir::Location loc) {
+    assert(ty.isa<mlir::IntegerType>() && "NYI");
+    return create<mlir::cir::ConstantOp>(loc, ty,
+                                         mlir::IntegerAttr::get(ty, 0));
+  }
+
+  //
+  // Block handling helpers
+  // ----------------------
+  //
   OpBuilder::InsertPoint getBestAllocaInsertPoint(mlir::Block *block) {
     auto lastAlloca =
         std::find_if(block->rbegin(), block->rend(), [](mlir::Operation &op) {
@@ -187,14 +183,24 @@ public:
                                      mlir::cir::CastKind::floating, v);
   }
 
+  /// Cast the element type of the given address to a different type,
+  /// preserving information like the alignment.
   cir::Address createElementBitCast(mlir::Location loc, cir::Address addr,
                                     mlir::Type destType) {
     if (destType == addr.getElementType())
       return addr;
 
-    auto newPtrType = mlir::cir::PointerType::get(getContext(), destType);
-    auto cast = getBitcast(loc, addr.getPointer(), newPtrType);
-    return Address(cast, addr.getElementType(), addr.getAlignment());
+    auto ptrTy = getPointerTo(destType);
+    return Address(createBitcast(loc, addr.getPointer(), ptrTy), destType,
+                   addr.getAlignment());
+  }
+
+  mlir::Value createBitcast(mlir::Location loc, mlir::Value src,
+                            mlir::Type newTy) {
+    if (newTy == src.getType())
+      return src;
+    return create<mlir::cir::CastOp>(loc, newTy, mlir::cir::CastKind::bitcast,
+                                     src);
   }
 
   mlir::Value createLoad(mlir::Location loc, Address addr) {
