@@ -48,10 +48,10 @@ Expected<std::unique_ptr<EPCDebugObjectRegistrar>> createJITLoaderGDBRegistrar(
   return std::make_unique<EPCDebugObjectRegistrar>(ES, (*Result)[0][0]);
 }
 
-Error EPCDebugObjectRegistrar::registerDebugObject(
-    ExecutorAddrRange TargetMem) {
-  return ES.callSPSWrapper<void(shared::SPSExecutorAddrRange)>(RegisterFn,
-                                                               TargetMem);
+Error EPCDebugObjectRegistrar::registerDebugObject(ExecutorAddrRange TargetMem,
+                                                   bool AutoRegisterCode) {
+  return ES.callSPSWrapper<void(shared::SPSExecutorAddrRange, bool)>(
+      RegisterFn, TargetMem, AutoRegisterCode);
 }
 
 } // namespace orc

@@ -38,8 +38,7 @@ _Complex float valid5 = {1.0f, 1.0fi}; // expected-warning {{imaginary constants
 struct teststruct invalid1 = { 1, 2 }; // expected-warning {{excess elements}}
 _Complex float invalid2 = { 1, 2, 3 }; // expected-warning {{specifying real and imaginary components is an extension}} \
                                        // expected-warning {{excess elements in scalar initializer}}
-_Complex float invalid3 = {}; // expected-error {{scalar initializer cannot be empty}} \
-                             //  expected-warning {{GNU empty initializer}}
+_Complex float invalid3 = {}; // expected-warning {{use of an empty initializer is a C2x extension}}
 
 
 // Check incomplete array sizing

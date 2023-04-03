@@ -360,11 +360,11 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
     });
 
     // Get the section's memory protection flags.
-    orc::MemProt Prot;
+    orc::MemProt Prot = orc::MemProt::Read;
     if (Sec.sh_flags & ELF::SHF_EXECINSTR)
-      Prot = orc::MemProt::Read | orc::MemProt::Exec;
-    else
-      Prot = orc::MemProt::Read | orc::MemProt::Write;
+      Prot |= orc::MemProt::Exec;
+    if (Sec.sh_flags & ELF::SHF_WRITE)
+      Prot |= orc::MemProt::Write;
 
     // Look for existing sections first.
     auto *GraphSec = G->findSectionByName(*Name);

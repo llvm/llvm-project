@@ -176,6 +176,18 @@ int load(int argc, char **argv, char **envp, void *image, size_t size) {
   if (CUresult err = cuStreamSynchronize(stream))
     handle_error(err);
 
+  // Free the memory allocated for the device.
+  if (CUresult err = cuMemFree(dev_ret))
+    handle_error(err);
+  if (CUresult err = cuMemFreeHost(dev_argv))
+    handle_error(err);
+  if (CUresult err = cuMemFreeHost(server_inbox))
+    handle_error(err);
+  if (CUresult err = cuMemFreeHost(server_outbox))
+    handle_error(err);
+  if (CUresult err = cuMemFreeHost(buffer))
+    handle_error(err);
+
   // Destroy the context and the loaded binary.
   if (CUresult err = cuModuleUnload(binary))
     handle_error(err);

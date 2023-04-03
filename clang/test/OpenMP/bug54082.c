@@ -99,7 +99,7 @@ void foo() {
 // CHECK-NEXT:    [[CONV:%.*]] = inttoptr i64 [[TMP1]] to ptr
 // CHECK-NEXT:    [[DOTX__VOID_ADDR:%.*]] = tail call ptr @__kmpc_alloc(i32 [[TMP0]], i64 8, ptr [[CONV]])
 // CHECK-NEXT:    call void @__kmpc_for_static_init_4(ptr nonnull @[[GLOB1:[0-9]+]], i32 [[TMP0]], i32 34, ptr nonnull [[DOTOMP_IS_LAST]], ptr nonnull [[DOTOMP_LB]], ptr nonnull [[DOTOMP_UB]], ptr nonnull [[DOTOMP_STRIDE]], i32 1, i32 1)
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP2]], i32 1023)
 // CHECK-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4, !tbaa [[TBAA6]]
 // CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr nonnull @[[GLOB1]], i32 [[TMP0]])

@@ -520,6 +520,13 @@ int32_t __kmpc_master(IdentTy *Loc, int32_t TId) {
 
 void __kmpc_end_master(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }
 
+int32_t __kmpc_masked(IdentTy *Loc, int32_t TId, int32_t Filter) {
+  FunctionTracingRAII();
+  return omp_get_thread_num() == Filter;
+}
+
+void __kmpc_end_masked(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }
+
 int32_t __kmpc_single(IdentTy *Loc, int32_t TId) {
   FunctionTracingRAII();
   return __kmpc_master(Loc, TId);
