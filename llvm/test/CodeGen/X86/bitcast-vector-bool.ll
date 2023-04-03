@@ -109,9 +109,7 @@ define i2 @bitcast_v4i32_to_v2i2(<4 x i32> %a0) nounwind {
 define i1 @trunc_v4i32_cmp(<4 x i32> %a0) nounwind {
 ; SSE2-SSSE3-LABEL: trunc_v4i32_cmp:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [1,1,1,1]
-; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    pslld $31, %xmm0
 ; SSE2-SSSE3-NEXT:    movmskps %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    xorl $15, %eax
 ; SSE2-SSSE3-NEXT:    sete %al
@@ -263,9 +261,7 @@ define i8 @bitcast_v16i8_to_v2i8(<16 x i8> %a0) nounwind {
 define i1 @trunc_v16i8_cmp(<16 x i8> %a0) nounwind {
 ; SSE2-SSSE3-LABEL: trunc_v16i8_cmp:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    psllw $7, %xmm0
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; SSE2-SSSE3-NEXT:    setne %al
@@ -402,9 +398,7 @@ define i1 @trunc_v8i132_cmp(<8 x i32> %a0) nounwind {
 ; SSE2-SSSE3-LABEL: trunc_v8i132_cmp:
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [1,1,1,1]
-; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    pslld $31, %xmm0
 ; SSE2-SSSE3-NEXT:    movmskps %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    xorl $15, %eax
 ; SSE2-SSSE3-NEXT:    setne %al
@@ -588,9 +582,7 @@ define i1 @trunc_v32i8_cmp(<32 x i8> %a0) nounwind {
 ; SSE2-SSSE3-LABEL: trunc_v32i8_cmp:
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    psllw $7, %xmm0
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; SSE2-SSSE3-NEXT:    sete %al
