@@ -200,9 +200,10 @@ class TestSwiftStepping(lldbtest.TestBase):
         thread.StepOver()
         self.hit_correct_line(thread, "At point initializer.")
         thread.StepOver()
-        self.hit_correct_line (thread, "At the beginning of the switch.")
+        stopped_at_switch = self.hit_correct_line (thread, "At the beginning of the switch.", False)
+        if stopped_at_switch:
+            thread.StepOver()
 
-        thread.StepOver()
         stopped_at_case = self.hit_correct_line(
             thread, "case (let x, let y) where", False)
         if stopped_at_case:
@@ -310,6 +311,10 @@ class TestSwiftStepping(lldbtest.TestBase):
         # Step over the assignment.
         stop_on_partial_apply = self.hit_correct_line(thread, "var cd_maker =", False)
         if stop_on_partial_apply:
+            thread.StepOver()
+
+        stop_at_brace = self.hit_correct_line(thread, "Opening brace", False)
+        if stop_at_brace:
             thread.StepOver()
 
         self.hit_correct_line(thread, "doSomethingWithFunction(cd_maker, 10)")
