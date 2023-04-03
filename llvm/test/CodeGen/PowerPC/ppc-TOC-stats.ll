@@ -1,6 +1,8 @@
 ;;  Note: The checks for this test are manually generated. Please do not
 ;;        run a script to update these checks.
 
+; REQUIRES: asserts
+
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr8 \
 ; RUN:   --stats < %s 2>&1 | FileCheck %s --check-prefix=AIX
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 \
