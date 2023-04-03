@@ -254,6 +254,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/misleading-indentation>` check when warning would
   be unnecessarily emitted for template dependent ``if constexpr``.
 
+- Improved :doc:`readability-static-accessed-through-instance
+  <clang-tidy/checks/readability/static-accessed-through-instance>` check to 
+  support unscoped enumerations through instances.
+
 - Fixed a false positive in :doc:`cppcoreguidelines-slicing
   <clang-tidy/checks/cppcoreguidelines/slicing>` check when warning would be
   emitted in constructor for virtual base class initialization.
