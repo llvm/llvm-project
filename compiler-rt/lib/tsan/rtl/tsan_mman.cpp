@@ -355,7 +355,7 @@ void *user_pvalloc(ThreadState *thr, uptr pc, uptr sz) {
 void *user_alloc_begin(const void *p) {
   if (p == nullptr || !IsAppMem((uptr)p))
     return nullptr;
-  const void *beg = allocator()->GetBlockBegin(p);
+  void *beg = allocator()->GetBlockBegin(p);
   if (!beg)
     return nullptr;
 

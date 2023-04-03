@@ -148,7 +148,7 @@ void GetAllocatorCacheRange(uptr *begin, uptr *end) {
 void *GetMallocBegin(const void *p) {
   if (!p)
     return nullptr;
-  const void *beg = allocator.GetBlockBegin(p);
+  void *beg = allocator.GetBlockBegin(p);
   if (!beg)
     return nullptr;
   ChunkMetadata *m = Metadata(beg);
