@@ -1370,12 +1370,12 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
 
     unsigned InitIndex = 0;
     for (const Expr *Init : InitList->inits()) {
-      const Record::Field *FieldToInit = R->getField(InitIndex);
 
       if (!this->emitDupPtr(Initializer))
         return false;
 
       if (std::optional<PrimType> T = classify(Init)) {
+        const Record::Field *FieldToInit = R->getField(InitIndex);
         if (!this->visit(Init))
           return false;
 
@@ -1385,16 +1385,29 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
         if (!this->emitPopPtr(Initializer))
           return false;
       } else {
-        // Non-primitive case. Get a pointer to the field-to-initialize
-        // on the stack and recurse into visitInitializer().
-        if (!this->emitGetPtrField(FieldToInit->Offset, Init))
-          return false;
+        // Initializer for a direct base class.
+        if (const Record::Base *B = R->getBase(Init->getType())) {
+          if (!this->emitGetPtrBasePop(B->Offset, Init))
+            return false;
 
-        if (!this->visitInitializer(Init))
-          return false;
+          if (!this->visitInitializer(Init))
+            return false;
 
-        if (!this->emitPopPtr(Initializer))
-          return false;
+          if (!this->emitPopPtr(Initializer))
+            return false;
+        } else {
+          const Record::Field *FieldToInit = R->getField(InitIndex);
+          // Non-primitive case. Get a pointer to the field-to-initialize
+          // on the stack and recurse into visitInitializer().
+          if (!this->emitGetPtrField(FieldToInit->Offset, Init))
+            return false;
+
+          if (!this->visitInitializer(Init))
+            return false;
+
+          if (!this->emitPopPtr(Initializer))
+            return false;
+        }
       }
       ++InitIndex;
     }
