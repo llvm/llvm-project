@@ -235,7 +235,7 @@ def callseq_end         : SDNode<"ISD::CALLSEQ_END",   SDT_CallSeqEnd,
 def global_offset_table : SDNode<"ISD::GLOBAL_OFFSET_TABLE", SDTPtrLeaf>;
 
 // Nodes for SystemZISD::*.  See SystemZISelLowering.h for more details.
-def z_retflag           : SDNode<"SystemZISD::RET_FLAG", SDTNone,
+def z_retglue           : SDNode<"SystemZISD::RET_GLUE", SDTNone,
                                  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def z_call              : SDNode<"SystemZISD::CALL", SDT_ZCall,
                                  [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,

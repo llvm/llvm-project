@@ -46,7 +46,7 @@ namespace llvm {
     XTOF, // Int64 to FP within a FP register.
 
     CALL,            // A call instruction.
-    RET_FLAG,        // Return with a flag operand.
+    RET_GLUE,        // Return with a glue operand.
     GLOBAL_BASE_REG, // Global base reg for PIC.
     FLUSHW,          // FLUSH register windows to stack.
 
