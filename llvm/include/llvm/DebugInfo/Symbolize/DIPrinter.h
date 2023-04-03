@@ -34,6 +34,7 @@ class SourceCode;
 struct Request {
   StringRef ModuleName;
   std::optional<uint64_t> Address;
+  StringRef Symbol;
 };
 
 class DIPrinter {
@@ -46,6 +47,8 @@ public:
   virtual void print(const Request &Request, const DIGlobal &Global) = 0;
   virtual void print(const Request &Request,
                      const std::vector<DILocal> &Locals) = 0;
+  virtual void print(const Request &Request,
+                     const std::vector<DILineInfo> &Locations) = 0;
 
   virtual bool printError(const Request &Request,
                           const ErrorInfoBase &ErrorInfo) = 0;
@@ -91,6 +94,8 @@ public:
   void print(const Request &Request, const DIGlobal &Global) override;
   void print(const Request &Request,
              const std::vector<DILocal> &Locals) override;
+  void print(const Request &Request,
+             const std::vector<DILineInfo> &Locations) override;
 
   bool printError(const Request &Request,
                   const ErrorInfoBase &ErrorInfo) override;
@@ -141,6 +146,8 @@ public:
   void print(const Request &Request, const DIGlobal &Global) override;
   void print(const Request &Request,
              const std::vector<DILocal> &Locals) override;
+  void print(const Request &Request,
+             const std::vector<DILineInfo> &Locations) override;
 
   bool printError(const Request &Request,
                   const ErrorInfoBase &ErrorInfo) override;
