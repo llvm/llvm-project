@@ -4128,16 +4128,16 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     SDValue N1 = N->getOperand(1);
     SDValue N2 = N->getOperand(2);
     SDValue N3 = N->getOperand(3);
-    SDValue InFlag = N->getOperand(4);
+    SDValue InGlue = N->getOperand(4);
     assert(N1.getOpcode() == ISD::BasicBlock);
     assert(N2.getOpcode() == ISD::Constant);
     assert(N3.getOpcode() == ISD::Register);
 
     unsigned CC = (unsigned) cast<ConstantSDNode>(N2)->getZExtValue();
 
-    if (InFlag.getOpcode() == ARMISD::CMPZ) {
-      if (InFlag.getOperand(0).getOpcode() == ISD::INTRINSIC_W_CHAIN) {
-        SDValue Int = InFlag.getOperand(0);
+    if (InGlue.getOpcode() == ARMISD::CMPZ) {
+      if (InGlue.getOperand(0).getOpcode() == ISD::INTRINSIC_W_CHAIN) {
+        SDValue Int = InGlue.getOperand(0);
         uint64_t ID = cast<ConstantSDNode>(Int->getOperand(1))->getZExtValue();
 
         // Handle low-overhead loops.
@@ -4160,15 +4160,15 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
 
           ReplaceUses(N, LoopEnd);
           CurDAG->RemoveDeadNode(N);
-          CurDAG->RemoveDeadNode(InFlag.getNode());
+          CurDAG->RemoveDeadNode(InGlue.getNode());
           CurDAG->RemoveDeadNode(Int.getNode());
           return;
         }
       }
 
       bool SwitchEQNEToPLMI;
-      SelectCMPZ(InFlag.getNode(), SwitchEQNEToPLMI);
-      InFlag = N->getOperand(4);
+      SelectCMPZ(InGlue.getNode(), SwitchEQNEToPLMI);
+      InGlue = N->getOperand(4);
 
       if (SwitchEQNEToPLMI) {
         switch ((ARMCC::CondCodes)CC) {
@@ -4184,13 +4184,13 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     }
 
     SDValue Tmp2 = CurDAG->getTargetConstant(CC, dl, MVT::i32);
-    SDValue Ops[] = { N1, Tmp2, N3, Chain, InFlag };
+    SDValue Ops[] = { N1, Tmp2, N3, Chain, InGlue };
     SDNode *ResNode = CurDAG->getMachineNode(Opc, dl, MVT::Other,
                                              MVT::Glue, Ops);
     Chain = SDValue(ResNode, 0);
     if (N->getNumValues() == 2) {
-      InFlag = SDValue(ResNode, 1);
-      ReplaceUses(SDValue(N, 1), InFlag);
+      InGlue = SDValue(ResNode, 1);
+      ReplaceUses(SDValue(N, 1), InGlue);
     }
     ReplaceUses(SDValue(N, 0),
                 SDValue(Chain.getNode(), Chain.getResNo()));
@@ -4237,11 +4237,11 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
   }
 
   case ARMISD::CMOV: {
-    SDValue InFlag = N->getOperand(4);
+    SDValue InGlue = N->getOperand(4);
 
-    if (InFlag.getOpcode() == ARMISD::CMPZ) {
+    if (InGlue.getOpcode() == ARMISD::CMPZ) {
       bool SwitchEQNEToPLMI;
-      SelectCMPZ(InFlag.getNode(), SwitchEQNEToPLMI);
+      SelectCMPZ(InGlue.getNode(), SwitchEQNEToPLMI);
 
       if (SwitchEQNEToPLMI) {
         SDValue ARMcc = N->getOperand(2);

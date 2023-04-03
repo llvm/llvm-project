@@ -445,14 +445,14 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       llvm_unreachable("call arg pass bug");
   }
 
-  SDValue InFlag;
+  SDValue InGlue;
 
   // Build a sequence of copy-to-reg nodes chained together with token chain and
-  // flag operands which copy the outgoing args into registers.  The InFlag in
+  // flag operands which copy the outgoing args into registers.  The InGlue in
   // necessary since all emitted instructions must be stuck together.
   for (auto &Reg : RegsToPass) {
-    Chain = DAG.getCopyToReg(Chain, CLI.DL, Reg.first, Reg.second, InFlag);
-    InFlag = Chain.getValue(1);
+    Chain = DAG.getCopyToReg(Chain, CLI.DL, Reg.first, Reg.second, InGlue);
+    InGlue = Chain.getValue(1);
   }
 
   // If the callee is a GlobalAddress node (quite common, every direct call is)
@@ -479,19 +479,19 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   for (auto &Reg : RegsToPass)
     Ops.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
 
-  if (InFlag.getNode())
-    Ops.push_back(InFlag);
+  if (InGlue.getNode())
+    Ops.push_back(InGlue);
 
   Chain = DAG.getNode(BPFISD::CALL, CLI.DL, NodeTys, Ops);
-  InFlag = Chain.getValue(1);
+  InGlue = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
-  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InFlag, CLI.DL);
-  InFlag = Chain.getValue(1);
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InGlue, CLI.DL);
+  InGlue = Chain.getValue(1);
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.
-  return LowerCallResult(Chain, InFlag, CallConv, IsVarArg, Ins, CLI.DL, DAG,
+  return LowerCallResult(Chain, InGlue, CallConv, IsVarArg, Ins, CLI.DL, DAG,
                          InVals);
 }
 
@@ -501,7 +501,7 @@ BPFTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                const SmallVectorImpl<ISD::OutputArg> &Outs,
                                const SmallVectorImpl<SDValue> &OutVals,
                                const SDLoc &DL, SelectionDAG &DAG) const {
-  unsigned Opc = BPFISD::RET_FLAG;
+  unsigned Opc = BPFISD::RET_GLUE;
 
   // CCValAssign - represent the assignment of the return value to a location
   SmallVector<CCValAssign, 16> RVLocs;
@@ -518,7 +518,7 @@ BPFTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // Analize return values.
   CCInfo.AnalyzeReturn(Outs, getHasAlu32() ? RetCC_BPF32 : RetCC_BPF64);
 
-  SDValue Flag;
+  SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
 
   // Copy the result values into the output registers.
@@ -526,25 +526,25 @@ BPFTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     CCValAssign &VA = RVLocs[i];
     assert(VA.isRegLoc() && "Can only return in registers!");
 
-    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), OutVals[i], Flag);
+    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), OutVals[i], Glue);
 
     // Guarantee that all emitted copies are stuck together,
     // avoiding something bad.
-    Flag = Chain.getValue(1);
+    Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
   RetOps[0] = Chain; // Update chain.
 
-  // Add the flag if we have it.
-  if (Flag.getNode())
-    RetOps.push_back(Flag);
+  // Add the glue if we have it.
+  if (Glue.getNode())
+    RetOps.push_back(Glue);
 
   return DAG.getNode(Opc, DL, MVT::Other, RetOps);
 }
 
 SDValue BPFTargetLowering::LowerCallResult(
-    SDValue Chain, SDValue InFlag, CallingConv::ID CallConv, bool IsVarArg,
+    SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
 
@@ -557,7 +557,7 @@ SDValue BPFTargetLowering::LowerCallResult(
     fail(DL, DAG, "only small returns supported");
     for (unsigned i = 0, e = Ins.size(); i != e; ++i)
       InVals.push_back(DAG.getConstant(0, DL, Ins[i].VT));
-    return DAG.getCopyFromReg(Chain, DL, 1, Ins[0].VT, InFlag).getValue(1);
+    return DAG.getCopyFromReg(Chain, DL, 1, Ins[0].VT, InGlue).getValue(1);
   }
 
   CCInfo.AnalyzeCallResult(Ins, getHasAlu32() ? RetCC_BPF32 : RetCC_BPF64);
@@ -565,8 +565,8 @@ SDValue BPFTargetLowering::LowerCallResult(
   // Copy all of the result registers out of their specified physreg.
   for (auto &Val : RVLocs) {
     Chain = DAG.getCopyFromReg(Chain, DL, Val.getLocReg(),
-                               Val.getValVT(), InFlag).getValue(1);
-    InFlag = Chain.getValue(2);
+                               Val.getValVT(), InGlue).getValue(1);
+    InGlue = Chain.getValue(2);
     InVals.push_back(Chain.getValue(0));
   }
 
@@ -624,8 +624,8 @@ const char *BPFTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((BPFISD::NodeType)Opcode) {
   case BPFISD::FIRST_NUMBER:
     break;
-  case BPFISD::RET_FLAG:
-    return "BPFISD::RET_FLAG";
+  case BPFISD::RET_GLUE:
+    return "BPFISD::RET_GLUE";
   case BPFISD::CALL:
     return "BPFISD::CALL";
   case BPFISD::SELECT_CC:

@@ -55,13 +55,13 @@ def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
 def riscv_call      : SDNode<"RISCVISD::CALL", SDT_RISCVCall,
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                               SDNPVariadic]>;
-def riscv_ret_flag  : SDNode<"RISCVISD::RET_FLAG", SDTNone,
+def riscv_ret_glue  : SDNode<"RISCVISD::RET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-def riscv_uret_flag : SDNode<"RISCVISD::URET_FLAG", SDTNone,
+def riscv_uret_glue : SDNode<"RISCVISD::URET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue]>;
-def riscv_sret_flag : SDNode<"RISCVISD::SRET_FLAG", SDTNone,
+def riscv_sret_glue : SDNode<"RISCVISD::SRET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue]>;
-def riscv_mret_flag : SDNode<"RISCVISD::MRET_FLAG", SDTNone,
+def riscv_mret_glue : SDNode<"RISCVISD::MRET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_selectcc  : SDNode<"RISCVISD::SELECT_CC", SDT_RISCVSelectCC>;
 def riscv_brcc      : SDNode<"RISCVISD::BR_CC", SDT_RISCVBrCC,
@@ -1555,9 +1555,9 @@ def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func), []>,
 def : Pat<(riscv_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(riscv_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
-def : Pat<(riscv_uret_flag), (URET X0, X0)>;
-def : Pat<(riscv_sret_flag), (SRET X0, X0)>;
-def : Pat<(riscv_mret_flag), (MRET X0, X0)>;
+def : Pat<(riscv_uret_glue), (URET X0, X0)>;
+def : Pat<(riscv_sret_glue), (SRET X0, X0)>;
+def : Pat<(riscv_mret_glue), (MRET X0, X0)>;
 
 let isCall = 1, Defs = [X1] in
 def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALR:$rs1),
@@ -1565,7 +1565,7 @@ def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALR:$rs1),
                          PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
 
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
-def PseudoRET : Pseudo<(outs), (ins), [(riscv_ret_flag)]>,
+def PseudoRET : Pseudo<(outs), (ins), [(riscv_ret_glue)]>,
                 PseudoInstExpansion<(JALR X0, X1, 0)>;
 
 // PseudoTAIL is a pseudo instruction similar to PseudoCALL and will eventually

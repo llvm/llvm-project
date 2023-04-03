@@ -23,11 +23,11 @@ namespace llvm {
     enum NodeType : unsigned {
       FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
-      /// Return with a flag operand. Operand 0 is the chain operand.
-      RET_FLAG,
+      /// Return with a glue operand. Operand 0 is the chain operand.
+      RET_GLUE,
 
-      /// Same as RET_FLAG, but used for returning from ISRs.
-      RETI_FLAG,
+      /// Same as RET_GLUE, but used for returning from ISRs.
+      RETI_GLUE,
 
       /// Y = R{R,L}A X, rotate right (left) arithmetically
       RRA, RLA,
@@ -152,7 +152,7 @@ namespace llvm {
                               const SDLoc &dl, SelectionDAG &DAG,
                               SmallVectorImpl<SDValue> &InVals) const;
 
-    SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
+    SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                             CallingConv::ID CallConv, bool isVarArg,
                             const SmallVectorImpl<ISD::InputArg> &Ins,
                             const SDLoc &dl, SelectionDAG &DAG,

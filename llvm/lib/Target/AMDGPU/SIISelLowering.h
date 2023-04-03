@@ -364,7 +364,7 @@ public:
     SmallVectorImpl<SDValue> &MemOpChains,
     SDValue Chain) const;
 
-  SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
+  SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                           CallingConv::ID CallConv, bool isVarArg,
                           const SmallVectorImpl<ISD::InputArg> &Ins,
                           const SDLoc &DL, SelectionDAG &DAG,

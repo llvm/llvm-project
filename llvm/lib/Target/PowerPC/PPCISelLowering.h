@@ -210,8 +210,8 @@ namespace llvm {
     BCTRL_RM,
     BCTRL_LOAD_TOC_RM,
 
-    /// Return with a flag operand, matched by 'blr'
-    RET_FLAG,
+    /// Return with a glue operand, matched by 'blr'
+    RET_GLUE,
 
     /// R32 = MFOCRF(CRREG, INFLAG) - Represents the MFOCRF instruction.
     /// This copies the bits corresponding to the specified CRREG into the
@@ -1322,7 +1322,7 @@ namespace llvm {
     SDValue LowerVectorLoad(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVectorStore(SDValue Op, SelectionDAG &DAG) const;
 
-    SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
+    SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                             CallingConv::ID CallConv, bool isVarArg,
                             const SmallVectorImpl<ISD::InputArg> &Ins,
                             const SDLoc &dl, SelectionDAG &DAG,
@@ -1330,7 +1330,7 @@ namespace llvm {
 
     SDValue FinishCall(CallFlags CFlags, const SDLoc &dl, SelectionDAG &DAG,
                        SmallVector<std::pair<unsigned, SDValue>, 8> &RegsToPass,
-                       SDValue InFlag, SDValue Chain, SDValue CallSeqStart,
+                       SDValue InGlue, SDValue Chain, SDValue CallSeqStart,
                        SDValue &Callee, int SPDiff, unsigned NumBytes,
                        const SmallVectorImpl<ISD::InputArg> &Ins,
                        SmallVectorImpl<SDValue> &InVals,
