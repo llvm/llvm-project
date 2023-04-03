@@ -927,11 +927,10 @@ define i1 @trunc_v32i16_cmp(<32 x i16> %a0) nounwind {
 ; SSE2-SSSE3-NEXT:    pand %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [1,1,1,1,1,1,1,1]
-; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    psllw $7, %xmm0
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-SSSE3-NEXT:    xorl $65535, %eax # imm = 0xFFFF
+; SSE2-SSSE3-NEXT:    notl %eax
+; SSE2-SSSE3-NEXT:    testl $21845, %eax # imm = 0x5555
 ; SSE2-SSSE3-NEXT:    setne %al
 ; SSE2-SSSE3-NEXT:    retq
 ;

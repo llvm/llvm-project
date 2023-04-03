@@ -58,7 +58,7 @@ TEST(LlvmLibcStrChrTest, TheSourceShouldNotChange) {
   // Same case for when the character is not found.
   __llvm_libc::strchr(src, 'z');
   ASSERT_STREQ(src, "abcde");
-  // Same case for when looking for nullptr.
+  // Same case for when looking for null terminator.
   __llvm_libc::strchr(src, '\0');
   ASSERT_STREQ(src, "abcde");
 }

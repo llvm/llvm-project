@@ -33,10 +33,15 @@ NonTemplate PositiveNonTemplateConstValue() {
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: constness of 'obj' prevents automatic move [performance-no-automatic-move]
 }
 
-Obj PositiveSelfConstValue() {
-  const Obj obj = Make<Obj>();
-  return obj;
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: constness of 'obj' prevents automatic move [performance-no-automatic-move]
+Obj PositiveCantNrvo(bool b) {
+  const Obj obj1;
+  const Obj obj2;
+  if (b) {
+    return obj1;
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: constness of 'obj1' prevents automatic move [performance-no-automatic-move]
+  }
+  return obj2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: constness of 'obj2' prevents automatic move [performance-no-automatic-move]
 }
 
 // FIXME: Ideally we would warn here too.
@@ -54,16 +59,30 @@ StatusOr<Obj> PositiveStatusOrLifetimeExtension() {
 // Negatives.
 
 StatusOr<Obj> Temporary() {
-  return Make<const Obj>();
+  return Make<Obj>();
 }
 
 StatusOr<Obj> ConstTemporary() {
   return Make<const Obj>();
 }
 
-StatusOr<Obj> Nrvo() {
+StatusOr<Obj> ConvertingMoveConstructor() {
   Obj obj = Make<Obj>();
   return obj;
+}
+
+Obj ConstNrvo() {
+  const Obj obj = Make<Obj>();
+  return obj;
+}
+
+Obj NotNrvo(bool b) {
+  Obj obj1;
+  Obj obj2;
+  if (b) {
+    return obj1;
+  }
+  return obj2;
 }
 
 StatusOr<Obj> Ref() {

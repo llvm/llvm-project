@@ -275,6 +275,10 @@ Changes in existing checks
   <clang-tidy/checks/google/readability-avoid-underscore-in-googletest-name>` when using
   ``DISABLED_`` in the test suite name.
 
+- Fixed a false positive in :doc:`performance-no-automatic-move
+  <clang-tidy/checks/performance/no-automatic-move>` when warning would be
+  emitted for a const local variable to which NRVO is applied.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
