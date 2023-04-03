@@ -56,6 +56,19 @@ add_header_library(
 )
 
 add_header_library(
+  string
+  HDRS
+    string.h
+  DEPENDS
+    .string_view
+    libc.src.__support.common
+    libc.src.__support.integer_to_string
+    libc.src.string.memory_utils.memcpy_implementation
+    libc.src.string.memory_utils.memset_implementation
+    libc.src.string.string_utils
+)
+
+add_header_library(
   stringstream
   HDRS
     stringstream.h
