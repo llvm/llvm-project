@@ -54537,6 +54537,32 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
                        DAG.getConstant(NotMask, DL, VT));
   }
 
+  // Fold movmsk(icmp_eq(and(x,c1),c1)) -> movmsk(shl(x,c2))
+  // iff pow2splat(c1).
+  // Use KnownBits to determine if only a single bit is non-zero
+  // in each element (pow2 or zero), and shift that bit to the msb.
+  // TODO: Merge with the movmsk(icmp_eq(and(x,c1),0)) fold below?
+  if (Src.getOpcode() == X86ISD::PCMPEQ &&
+      Src.getOperand(0).getOpcode() == ISD::AND &&
+      Src.getOperand(1) == Src.getOperand(0).getOperand(1)) {
+    KnownBits KnownSrc = DAG.computeKnownBits(Src.getOperand(1));
+    if (KnownSrc.countMaxPopulation() == 1) {
+      SDLoc DL(N);
+      MVT ShiftVT = SrcVT;
+      SDValue ShiftSrc = Src.getOperand(0);
+      if (ShiftVT.getScalarType() == MVT::i8) {
+        // vXi8 shifts - we only care about the signbit so can use PSLLW.
+        ShiftVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
+        ShiftSrc = DAG.getBitcast(ShiftVT, ShiftSrc);
+      }
+      unsigned ShiftAmt = KnownSrc.countMinLeadingZeros();
+      ShiftSrc = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, ShiftVT,
+                                            ShiftSrc, ShiftAmt, DAG);
+      ShiftSrc = DAG.getBitcast(SrcVT, ShiftSrc);
+      return DAG.getNode(X86ISD::MOVMSK, DL, VT, ShiftSrc);
+    }
+  }
+
   // Fold movmsk(icmp_eq(and(x,c1),0)) -> movmsk(not(shl(x,c2)))
   // iff pow2splat(c1).
   // Use KnownBits to determine if only a single bit is non-zero
