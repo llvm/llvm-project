@@ -219,3 +219,34 @@ exception:
   %landing_pad = landingpad { ptr, i32 } cleanup
   ret void
 }
+
+declare void @dummy_vec(<4 x i1> %arg)
+
+define void @freeze_poison(i1 %c, i1 %g) {
+; CHECK-LABEL: @freeze_poison(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTGW_FR:%.*]] = freeze i1 poison
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    call void @dummy_vec(<4 x i1> <i1 false, i1 poison, i1 poison, i1 poison>)
+; CHECK-NEXT:    ret void
+; CHECK:       right:
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[G:%.*]], [[DOTGW_FR]]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  call void @dummy_vec(<4 x i1> <i1 0, i1 poison, i1 poison, i1 poison>)
+  ret void
+
+
+right:
+  call void (i1, ...) @llvm.experimental.guard(i1 %g) [ "deopt"() ]
+  call void (i1, ...) @llvm.experimental.guard(i1 poison) [ "deopt"() ]
+  ret void
+
+}
+
