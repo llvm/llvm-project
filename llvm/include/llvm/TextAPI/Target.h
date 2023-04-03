@@ -54,8 +54,8 @@ inline bool operator!=(const Target &LHS, const Target &RHS) {
 }
 
 inline bool operator<(const Target &LHS, const Target &RHS) {
-  return std::tie(LHS.Arch, LHS.Platform, LHS.MinDeployment) <
-         std::tie(RHS.Arch, RHS.Platform, RHS.MinDeployment);
+  // In most cases the deployment version is not useful to compare.
+  return std::tie(LHS.Arch, LHS.Platform) < std::tie(RHS.Arch, RHS.Platform);
 }
 
 inline bool operator==(const Target &LHS, const Architecture &RHS) {
