@@ -3219,7 +3219,7 @@ def : Pat<(f64 (fpextend Float32Regs:$a)),
 def : Pat<(f64 (fpextend Float32Regs:$a)),
           (CVT_f64_f32 Float32Regs:$a, CvtNONE)>;
 
-def retflag : SDNode<"NVPTXISD::RET_FLAG", SDTNone,
+def retglue : SDNode<"NVPTXISD::RET_GLUE", SDTNone,
                      [SDNPHasChain, SDNPOptInGlue]>;
 
 // fceil, ffloor, froundeven, ftrunc.
@@ -3253,7 +3253,7 @@ defm : CVT_ROUND<frint, CvtRNI, CvtRNI_FTZ>;
 
 let isTerminator=1 in {
    let isReturn=1, isBarrier=1 in
-      def Return : NVPTXInst<(outs), (ins), "ret;", [(retflag)]>;
+      def Return : NVPTXInst<(outs), (ins), "ret;", [(retglue)]>;
 
    let isBranch=1 in
       def CBranch : NVPTXInst<(outs), (ins Int1Regs:$a, brtarget:$target),

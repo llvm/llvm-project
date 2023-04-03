@@ -265,3 +265,162 @@ entry:
   %r = and i64 4096, %b
   ret i64 %r
 }
+
+define signext i32 @and_i32_0xfff0(i32 %a) {
+; LA32-LABEL: and_i32_0xfff0:
+; LA32:       # %bb.0:
+; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 4
+; LA32-NEXT:    slli.w $a0, $a0, 4
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: and_i32_0xfff0:
+; LA64:       # %bb.0:
+; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 4
+; LA64-NEXT:    slli.d $a0, $a0, 4
+; LA64-NEXT:    ret
+  %b = and i32 %a, 65520
+  ret i32 %b
+}
+
+define signext i32 @and_i32_0xfff0_twice(i32 %a, i32 %b) {
+; LA32-LABEL: and_i32_0xfff0_twice:
+; LA32:       # %bb.0:
+; LA32-NEXT:    bstrpick.w $a1, $a1, 15, 4
+; LA32-NEXT:    slli.w $a1, $a1, 4
+; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 4
+; LA32-NEXT:    slli.w $a0, $a0, 4
+; LA32-NEXT:    sub.w $a0, $a0, $a1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: and_i32_0xfff0_twice:
+; LA64:       # %bb.0:
+; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 4
+; LA64-NEXT:    slli.d $a1, $a1, 4
+; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 4
+; LA64-NEXT:    slli.d $a0, $a0, 4
+; LA64-NEXT:    sub.d $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %c = and i32 %a, 65520
+  %d = and i32 %b, 65520
+  %e = sub i32 %c, %d
+  ret i32 %e
+}
+
+define i64 @and_i64_0xfff0(i64 %a) {
+; LA32-LABEL: and_i64_0xfff0:
+; LA32:       # %bb.0:
+; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 4
+; LA32-NEXT:    slli.w $a0, $a0, 4
+; LA32-NEXT:    move $a1, $zero
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: and_i64_0xfff0:
+; LA64:       # %bb.0:
+; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 4
+; LA64-NEXT:    slli.d $a0, $a0, 4
+; LA64-NEXT:    ret
+  %b = and i64 %a, 65520
+  ret i64 %b
+}
+
+define i64 @and_i64_0xfff0_twice(i64 %a, i64 %b) {
+; LA32-LABEL: and_i64_0xfff0_twice:
+; LA32:       # %bb.0:
+; LA32-NEXT:    bstrpick.w $a1, $a2, 15, 4
+; LA32-NEXT:    slli.w $a1, $a1, 4
+; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 4
+; LA32-NEXT:    slli.w $a2, $a0, 4
+; LA32-NEXT:    sub.w $a0, $a2, $a1
+; LA32-NEXT:    sltu $a1, $a2, $a1
+; LA32-NEXT:    sub.w $a1, $zero, $a1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: and_i64_0xfff0_twice:
+; LA64:       # %bb.0:
+; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 4
+; LA64-NEXT:    slli.d $a1, $a1, 4
+; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 4
+; LA64-NEXT:    slli.d $a0, $a0, 4
+; LA64-NEXT:    sub.d $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %c = and i64 %a, 65520
+  %d = and i64 %b, 65520
+  %e = sub i64 %c, %d
+  ret i64 %e
+}
+
+;; This case is not optimized to `bstrpick + slli`,
+;; since the immediate 1044480 can be composed via
+;; a single `lu12i.w $rx, 255`.
+define i64 @and_i64_0xff000(i64 %a) {
+; LA32-LABEL: and_i64_0xff000:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a1, 255
+; LA32-NEXT:    and $a0, $a0, $a1
+; LA32-NEXT:    move $a1, $zero
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: and_i64_0xff000:
+; LA64:       # %bb.0:
+; LA64-NEXT:    lu12i.w $a1, 255
+; LA64-NEXT:    and $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %b = and i64 %a, 1044480
+  ret i64 %b
+}
+
+;; This case is not optimized to `bstrpick + slli`,
+;; since the immediate -2048 can be composed via
+;; a single `addi.w $rx, $zero, -2048`.
+define i64 @and_i64_minus_2048(i64 %a) {
+; LA32-LABEL: and_i64_minus_2048:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a2, $zero, -2048
+; LA32-NEXT:    and $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: and_i64_minus_2048:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.w $a1, $zero, -2048
+; LA64-NEXT:    and $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %b = and i64 %a, -2048
+  ret i64 %b
+}
+
+;; This case is not optimized to `bstrpick + slli`,
+;; since the immediate 0xfff0 has more than 2 uses.
+define i64 @and_i64_0xfff0_multiple_times(i64 %a, i64 %b, i64 %c) {
+; LA32-LABEL: and_i64_0xfff0_multiple_times:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a1, 15
+; LA32-NEXT:    ori $a1, $a1, 4080
+; LA32-NEXT:    and $a3, $a0, $a1
+; LA32-NEXT:    and $a0, $a4, $a1
+; LA32-NEXT:    and $a1, $a2, $a1
+; LA32-NEXT:    mul.w $a0, $a1, $a0
+; LA32-NEXT:    sub.w $a2, $a3, $a1
+; LA32-NEXT:    xor $a0, $a2, $a0
+; LA32-NEXT:    sltu $a1, $a3, $a1
+; LA32-NEXT:    sub.w $a1, $zero, $a1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: and_i64_0xfff0_multiple_times:
+; LA64:       # %bb.0:
+; LA64-NEXT:    lu12i.w $a3, 15
+; LA64-NEXT:    ori $a3, $a3, 4080
+; LA64-NEXT:    and $a0, $a0, $a3
+; LA64-NEXT:    and $a2, $a2, $a3
+; LA64-NEXT:    and $a1, $a1, $a3
+; LA64-NEXT:    mul.d $a2, $a1, $a2
+; LA64-NEXT:    sub.d $a0, $a0, $a1
+; LA64-NEXT:    xor $a0, $a0, $a2
+; LA64-NEXT:    ret
+  %d = and i64 %a, 65520
+  %e = and i64 %b, 65520
+  %f = and i64 %c, 65520
+  %g = sub i64 %d, %e
+  %h = mul i64 %e, %f
+  %i = xor i64 %g, %h
+  ret i64 %i
+}

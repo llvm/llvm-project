@@ -32,9 +32,9 @@ def SDT_AVRSelectCC
 // AVR Specific Node Definitions
 //===----------------------------------------------------------------------===//
 
-def AVRretflag : SDNode<"AVRISD::RET_FLAG", SDTNone,
+def AVRretglue : SDNode<"AVRISD::RET_GLUE", SDTNone,
                         [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-def AVRretiflag : SDNode<"AVRISD::RETI_FLAG", SDTNone,
+def AVRretiglue : SDNode<"AVRISD::RETI_GLUE", SDTNone,
                          [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 def AVRcallseq_start : SDNode<"ISD::CALLSEQ_START", SDT_AVRCallSeqStart,
@@ -1010,9 +1010,9 @@ let isCall = 1 in {
 // Return instructions.
 //===----------------------------------------------------------------------===//
 let isTerminator = 1, isReturn = 1, isBarrier = 1 in {
-  def RET : F16<0b1001010100001000, (outs), (ins), "ret", [(AVRretflag)]>;
+  def RET : F16<0b1001010100001000, (outs), (ins), "ret", [(AVRretglue)]>;
 
-  def RETI : F16<0b1001010100011000, (outs), (ins), "reti", [(AVRretiflag)]>;
+  def RETI : F16<0b1001010100011000, (outs), (ins), "reti", [(AVRretiglue)]>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -766,7 +766,7 @@ struct RegsForValue {
   /// updates them for the output Chain/Flag. If the Flag pointer is NULL, no
   /// flag is used.
   SDValue getCopyFromRegs(SelectionDAG &DAG, FunctionLoweringInfo &FuncInfo,
-                          const SDLoc &dl, SDValue &Chain, SDValue *Flag,
+                          const SDLoc &dl, SDValue &Chain, SDValue *Glue,
                           const Value *V = nullptr) const;
 
   /// Emit a series of CopyToReg nodes that copies the specified value into the
@@ -775,7 +775,7 @@ struct RegsForValue {
   /// flag is used. If V is not nullptr, then it is used in printing better
   /// diagnostic messages on error.
   void getCopyToRegs(SDValue Val, SelectionDAG &DAG, const SDLoc &dl,
-                     SDValue &Chain, SDValue *Flag, const Value *V = nullptr,
+                     SDValue &Chain, SDValue *Glue, const Value *V = nullptr,
                      ISD::NodeType PreferredExtendType = ISD::ANY_EXTEND) const;
 
   /// Add this value to the specified inlineasm node operand list. This adds the

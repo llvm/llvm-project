@@ -75,17 +75,28 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       auto value = entry.getValue().cast<StringAttr>();
       bool isLittleEndian =
           value.getValue() == DLTIDialect::kDataLayoutEndiannessLittle;
-      layoutStream << (isLittleEndian ? "e" : "E");
+      layoutStream << "-" << (isLittleEndian ? "e" : "E");
       layoutStream.flush();
       continue;
     }
     if (key.getValue() == DLTIDialect::kDataLayoutAllocaMemorySpaceKey) {
       auto value = entry.getValue().cast<IntegerAttr>();
-      if (value != 0) {
-        // Only emit non-default address space.
-        layoutStream << "A" << value;
-        layoutStream.flush();
-      }
+      uint64_t space = value.getValue().getZExtValue();
+      // Skip the default address space.
+      if (space == 0)
+        continue;
+      layoutStream << "-A" << space;
+      layoutStream.flush();
+      continue;
+    }
+    if (key.getValue() == DLTIDialect::kDataLayoutStackAlignmentKey) {
+      auto value = entry.getValue().cast<IntegerAttr>();
+      uint64_t alignment = value.getValue().getZExtValue();
+      // Skip the default stack alignment.
+      if (alignment == 0)
+        continue;
+      layoutStream << "-S" << alignment;
+      layoutStream.flush();
       continue;
     }
     emitError(*loc) << "unsupported data layout key " << key;

@@ -4504,9 +4504,9 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
   // Force the ccreg into CR7.
   SDValue CR7Reg = CurDAG->getRegister(PPC::CR7, MVT::i32);
 
-  SDValue InFlag;  // Null incoming flag value.
+  SDValue InGlue;  // Null incoming flag value.
   CCReg = CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, CR7Reg, CCReg,
-                               InFlag).getValue(1);
+                               InGlue).getValue(1);
 
   IntCR = SDValue(CurDAG->getMachineNode(PPC::MFOCRF, dl, MVT::i32, CR7Reg,
                                          CCReg), 0);
@@ -5368,9 +5368,9 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     return;
 
   case PPCISD::MFOCRF: {
-    SDValue InFlag = N->getOperand(1);
+    SDValue InGlue = N->getOperand(1);
     ReplaceNode(N, CurDAG->getMachineNode(PPC::MFOCRF, dl, MVT::i32,
-                                          N->getOperand(0), InFlag));
+                                          N->getOperand(0), InGlue));
     return;
   }
 
