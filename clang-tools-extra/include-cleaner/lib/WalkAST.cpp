@@ -95,14 +95,15 @@ public:
   // to them doesn't count as uses (generally the type should provide them, so
   // ignore them).
   // Unless we're using an operator defined as a member, in such cases treat
-  // this as a regular reference.
+  // these as regular member references.
   bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
     if (!WalkUpFromCXXOperatorCallExpr(S))
       return false;
     if (auto *CD = S->getCalleeDecl()) {
       if (llvm::isa<CXXMethodDecl>(CD)) {
         // Treat this as a regular member reference.
-        report(S->getOperatorLoc(), getMemberProvider(S->getArg(0)->getType()));
+        report(S->getOperatorLoc(), getMemberProvider(S->getArg(0)->getType()),
+               RefType::Implicit);
       } else {
         report(S->getOperatorLoc(), llvm::dyn_cast<NamedDecl>(CD),
                RefType::Implicit);
