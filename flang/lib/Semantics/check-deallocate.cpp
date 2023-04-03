@@ -37,11 +37,21 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
                              {DefinabilityFlag::PointerDefinition,
                                  DefinabilityFlag::AcceptAllocatable},
                              *symbol)}) {
+                // Catch problems with non-definability of the
+                // pointer/allocatable
                 context_
                     .Say(name.source,
                         "Name in DEALLOCATE statement is not definable"_err_en_US)
                     .Attach(std::move(*whyNot));
-              } else if (CheckPolymorphism(name.source, *symbol)) {
+              } else if (auto whyNot{WhyNotDefinable(name.source,
+                             context_.FindScope(name.source),
+                             DefinabilityFlags{}, *symbol)}) {
+                // Catch problems with non-definability of the dynamic object
+                context_
+                    .Say(name.source,
+                        "Object in DEALLOCATE statement is not deallocatable"_err_en_US)
+                    .Attach(std::move(*whyNot));
+              } else {
                 context_.CheckIndexVarRedefine(name);
               }
             },
@@ -63,8 +73,13 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
                         .Say(source,
                             "Name in DEALLOCATE statement is not definable"_err_en_US)
                         .Attach(std::move(*whyNot));
-                  } else {
-                    CheckPolymorphism(source, *symbol);
+                  } else if (auto whyNot{WhyNotDefinable(source,
+                                 context_.FindScope(source),
+                                 DefinabilityFlags{}, *expr)}) {
+                    context_
+                        .Say(source,
+                            "Object in DEALLOCATE statement is not deallocatable"_err_en_US)
+                        .Attach(std::move(*whyNot));
                   }
                 }
               }
@@ -96,28 +111,4 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
   }
 }
 
-bool DeallocateChecker::CheckPolymorphism(
-    parser::CharBlock source, const Symbol &symbol) {
-  if (FindPureProcedureContaining(context_.FindScope(source))) {
-    if (auto type{evaluate::DynamicType::From(symbol)}) {
-      if (type->IsPolymorphic()) {
-        context_.Say(source,
-            "'%s' may not be deallocated in a pure procedure because it is polymorphic"_err_en_US,
-            source);
-        return false;
-      }
-      if (!type->IsUnlimitedPolymorphic() &&
-          type->category() == TypeCategory::Derived) {
-        if (auto iter{FindPolymorphicAllocatableUltimateComponent(
-                type->GetDerivedTypeSpec())}) {
-          context_.Say(source,
-              "'%s' may not be deallocated in a pure procedure because its type has a polymorphic allocatable ultimate component '%s'"_err_en_US,
-              source, iter->name());
-          return false;
-        }
-      }
-    }
-  }
-  return true;
-}
 } // namespace Fortran::semantics

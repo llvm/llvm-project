@@ -123,6 +123,7 @@ bool IsDestructible(const Symbol &, const Symbol *derivedType = nullptr);
 bool HasIntrinsicTypeName(const Symbol &);
 bool IsSeparateModuleProcedureInterface(const Symbol *);
 bool HasAlternateReturns(const Symbol &);
+bool IsAutomaticallyDestroyed(const Symbol &);
 
 // Return an ultimate component of type that matches predicate, or nullptr.
 const Symbol *FindUltimateComponent(const DerivedTypeSpec &type,
@@ -167,11 +168,14 @@ inline bool IsImpliedDoIndex(const Symbol &symbol) {
   return symbol.owner().kind() == Scope::Kind::ImpliedDos;
 }
 SymbolVector FinalsForDerivedTypeInstantiation(const DerivedTypeSpec &);
-bool IsFinalizable(
-    const Symbol &, std::set<const DerivedTypeSpec *> * = nullptr);
-bool IsFinalizable(
-    const DerivedTypeSpec &, std::set<const DerivedTypeSpec *> * = nullptr);
-bool HasImpureFinal(const DerivedTypeSpec &);
+// Returns a non-null pointer to a FINAL procedure, if any.
+const Symbol *IsFinalizable(const Symbol &,
+    std::set<const DerivedTypeSpec *> * = nullptr,
+    bool withImpureFinalizer = false);
+const Symbol *IsFinalizable(const DerivedTypeSpec &,
+    std::set<const DerivedTypeSpec *> * = nullptr,
+    bool withImpureFinalizer = false, std::optional<int> rank = std::nullopt);
+const Symbol *HasImpureFinal(const Symbol &);
 bool IsInBlankCommon(const Symbol &);
 inline bool IsAssumedSizeArray(const Symbol &symbol) {
   const auto *details{symbol.detailsIf<ObjectEntityDetails>()};
@@ -565,8 +569,6 @@ DirectComponentIterator::const_iterator FindAllocatableOrPointerDirectComponent(
     const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator
 FindPolymorphicAllocatableUltimateComponent(const DerivedTypeSpec &);
-UltimateComponentIterator::const_iterator
-FindPolymorphicAllocatableNonCoarrayUltimateComponent(const DerivedTypeSpec &);
 
 // The LabelEnforce class (given a set of labels) provides an error message if
 // there is a branch to a label which is not in the given set.

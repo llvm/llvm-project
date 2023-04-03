@@ -1454,8 +1454,6 @@ bool IsSaved(const Symbol &original) {
     // 8.5.16p4
     // In main programs, implied SAVE matters only for pointer
     // initialization targets and coarrays.
-    // BLOCK DATA entities must all be in COMMON,
-    // which was checked above.
     return true;
   } else if (scopeKind == Scope::Kind::MainProgram &&
       (features.IsEnabled(common::LanguageFeature::SaveMainProgram) ||
