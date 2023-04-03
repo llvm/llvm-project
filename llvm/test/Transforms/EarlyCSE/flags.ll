@@ -65,7 +65,7 @@ define void @load_both_nonnull(ptr %p) {
 
 define void @load_first_nonnull(ptr %p) {
 ; CHECK-LABEL: @load_first_nonnull(
-; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull !0
+; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
 ; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
 ; CHECK-NEXT:    ret void
