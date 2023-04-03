@@ -93,12 +93,14 @@ TEST_F(WalkUsedTest, Basic) {
   void $bar^bar($private^Private $p^p) {
     $foo^foo();
     std::$vector^vector $vconstructor^$v^v;
+    $builtin^__builtin_popcount(1);
+    std::$move^move(3);
   }
   )cpp");
   Inputs.Code = Code.code();
   Inputs.ExtraFiles["header.h"] = guard(R"cpp(
   void foo();
-  namespace std { class vector {}; }
+  namespace std { class vector {}; int&& move(int&&); }
   )cpp");
   Inputs.ExtraFiles["private.h"] = guard(R"cpp(
     // IWYU pragma: private, include "path/public.h"
@@ -112,6 +114,7 @@ TEST_F(WalkUsedTest, Basic) {
   auto PublicFile = Header("\"path/public.h\"");
   auto MainFile = Header(SM.getFileEntryForID(SM.getMainFileID()));
   auto VectorSTL = Header(*tooling::stdlib::Header::named("<vector>"));
+  auto UtilitySTL = Header(*tooling::stdlib::Header::named("<utility>"));
   EXPECT_THAT(
       offsetToProviders(AST, SM),
       UnorderedElementsAre(
@@ -122,8 +125,9 @@ TEST_F(WalkUsedTest, Basic) {
           Pair(Code.point("foo"), UnorderedElementsAre(HeaderFile)),
           Pair(Code.point("vector"), UnorderedElementsAre(VectorSTL)),
           Pair(Code.point("vconstructor"), UnorderedElementsAre(VectorSTL)),
-          Pair(Code.point("v"), UnorderedElementsAre(MainFile))
-          ));
+          Pair(Code.point("v"), UnorderedElementsAre(MainFile)),
+          Pair(Code.point("builtin"), testing::IsEmpty()),
+          Pair(Code.point("move"), UnorderedElementsAre(UtilitySTL))));
 }
 
 TEST_F(WalkUsedTest, MultipleProviders) {
