@@ -375,28 +375,28 @@ public:
   void writeTo(uint8_t *buf) override;
   void finalizeContents() override;
 
-  void addCMJTEntryCandidate(const Symbol &symbol, int gain);
-  int getCMJTEntryIndex(const Symbol &symbol);
-  void addCMJALTEntryCandidate(const Symbol &symbol, int gain);
-  int getCMJALTEntryIndex(const Symbol &symbol);
+  void addCMJTEntryCandidate(const Symbol *symbol, int gain);
+  int getCMJTEntryIndex(const Symbol *symbol);
+  void addCMJALTEntryCandidate(const Symbol *symbol, int gain);
+  int getCMJALTEntryIndex(const Symbol *symbol);
   void scanTableJumpEntrys(const InputSection &sec) const;
 
   bool isFinalized = false;
 
 private:
-  SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
-  finalizeEntry(llvm::DenseMap<llvm::CachedHashStringRef, int> EntryMap,
+  SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
+  finalizeEntry(llvm::DenseMap<const Symbol *, int> EntryMap,
                 uint32_t maxSize);
-  void addEntry(const Symbol &symbol,
-                llvm::DenseMap<llvm::CachedHashStringRef, int> &entriesList,
+  void addEntry(const Symbol *symbol,
+                llvm::DenseMap<const Symbol *, int> &entriesList,
                 int gain);
   uint32_t getEntry(
-      const Symbol &symbol, uint32_t maxSize,
-      SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
+      const Symbol *symbol, uint32_t maxSize,
+      SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
           &entriesList);
   void writeEntries(
       uint8_t *buf,
-      SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
+      SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
           &entriesList);
   void padWords(uint8_t *buf, const uint8_t maxWordCount);
 
@@ -407,11 +407,11 @@ private:
   static const size_t startCMJTEntryIdx = 0;
   static const size_t startCMJALTEntryIdx = 32;
 
-  llvm::DenseMap<llvm::CachedHashStringRef, int> CMJTEntryCandidates;
-  SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
+  llvm::DenseMap<const Symbol *, int> CMJTEntryCandidates;
+  SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
       finalizedCMJTEntries;
-  llvm::DenseMap<llvm::CachedHashStringRef, int> CMJALTEntryCandidates;
-  SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0>
+  llvm::DenseMap<const Symbol *, int> CMJALTEntryCandidates;
+  SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
       finalizedCMJALTEntries;
 };
 
