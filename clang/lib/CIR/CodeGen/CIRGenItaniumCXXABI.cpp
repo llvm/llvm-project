@@ -21,6 +21,8 @@
 #include "CIRGenFunctionInfo.h"
 
 #include "clang/AST/GlobalDecl.h"
+#include "clang/AST/Mangle.h"
+#include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/TargetInfo.h"
 
@@ -29,10 +31,17 @@ using namespace clang;
 
 namespace {
 class CIRGenItaniumCXXABI : public cir::CIRGenCXXABI {
+  /// All the vtables which have been defined.
+  llvm::DenseMap<const CXXRecordDecl *, mlir::cir::GlobalOp> VTables;
+
 protected:
   bool UseARMMethodPtrABI;
   bool UseARMGuardVarABI;
   bool Use32BitVTableOffsetABI;
+
+  ItaniumMangleContext &getMangleContext() {
+    return cast<ItaniumMangleContext>(cir::CIRGenCXXABI::getMangleContext());
+  }
 
 public:
   CIRGenItaniumCXXABI(CIRGenModule &CGM, bool UseARMMethodPtrABI = false,
@@ -99,8 +108,17 @@ public:
 
   void buildCXXConstructors(const clang::CXXConstructorDecl *D) override;
   void buildCXXDestructors(const clang::CXXDestructorDecl *D) override;
-
   void buildCXXStructor(clang::GlobalDecl GD) override;
+
+  mlir::cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *RD,
+                                      CharUnits VPtrOffset) override;
+  mlir::Value getVTableAddressPoint(BaseSubobject Base,
+                                    const CXXRecordDecl *VTableClass) override;
+  bool isVirtualOffsetNeededForVTableField(CIRGenFunction &CGF,
+                                           CIRGenFunction::VPtr Vptr) override;
+  mlir::Value getVTableAddressPointInStructor(
+      CIRGenFunction &CGF, const CXXRecordDecl *VTableClass, BaseSubobject Base,
+      const CXXRecordDecl *NearestVBase) override;
 
   /// TODO(cir): seems like could be shared between LLVM IR and CIR codegen.
   bool mayNeedDestruction(const VarDecl *VD) const {
@@ -414,4 +432,88 @@ void CIRGenItaniumCXXABI::buildCXXDestructors(const CXXDestructorDecl *D) {
   // appropriate operator delete.
   if (D->isVirtual())
     CGM.buildGlobal(GlobalDecl(D, Dtor_Deleting));
+}
+
+mlir::cir::GlobalOp
+CIRGenItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
+                                     CharUnits VPtrOffset) {
+  assert(VPtrOffset.isZero() && "Itanium ABI only supports zero vptr offsets");
+  auto vtable = VTables[RD];
+  if (vtable)
+    return vtable;
+
+  // Queue up this vtable for possible deferred emission.
+  CGM.addDeferredVTable(RD);
+
+  SmallString<256> Name;
+  llvm::raw_svector_ostream Out(Name);
+  getMangleContext().mangleCXXVTable(RD, Out);
+
+  const VTableLayout &VTLayout =
+      CGM.getItaniumVTableContext().getVTableLayout(RD);
+  auto VTableType = CGM.getVTables().getVTableType(VTLayout);
+
+  // Use pointer alignment for the vtable. Otherwise we would align them based
+  // on the size of the initializer which doesn't make sense as only single
+  // values are read.
+  unsigned PAlign = CGM.getItaniumVTableContext().isRelativeLayout()
+                        ? 32
+                        : CGM.getTarget().getPointerAlign(LangAS::Default);
+
+  vtable = CGM.createOrReplaceCXXRuntimeVariable(
+      CGM.getLoc(RD->getSourceRange()), Name, VTableType,
+      mlir::cir::GlobalLinkageKind::ExternalLinkage,
+      getContext().toCharUnitsFromBits(PAlign));
+  // For LLVM codegen we also do
+  // VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+
+  // In MS C++ if you have a class with virtual functions in which you are using
+  // selective member import/export, then all virtual functions must be exported
+  // unless they are inline, otherwise a link error will result. To match this
+  // behavior, for such classes, we dllimport the vtable if it is defined
+  // externally and all the non-inline virtual methods are marked dllimport, and
+  // we dllexport the vtable if it is defined in this TU and all the non-inline
+  // virtual methods are marked dllexport.
+  if (CGM.getTarget().hasPS4DLLImportExport())
+    llvm_unreachable("NYI");
+
+  CGM.setGVProperties(vtable, RD);
+  return vtable;
+}
+
+mlir::Value
+CIRGenItaniumCXXABI::getVTableAddressPoint(BaseSubobject Base,
+                                           const CXXRecordDecl *VTableClass) {
+  auto vtable = getAddrOfVTable(VTableClass, CharUnits());
+
+  // Find the appropriate vtable within the vtable group, and the address point
+  // within that vtable.
+  VTableLayout::AddressPointLocation AddressPoint =
+      CGM.getItaniumVTableContext()
+          .getVTableLayout(VTableClass)
+          .getAddressPoint(Base);
+
+  auto &builder = CGM.getBuilder();
+  auto ptrTy = builder.getPointerTo(vtable.getSymType());
+  return builder.create<mlir::cir::VTableAddrPointOp>(
+      CGM.getLoc(VTableClass->getSourceRange()), ptrTy, vtable.getSymName(),
+      AddressPoint.VTableIndex, AddressPoint.AddressPointIndex);
+}
+
+mlir::Value CIRGenItaniumCXXABI::getVTableAddressPointInStructor(
+    CIRGenFunction &CGF, const CXXRecordDecl *VTableClass, BaseSubobject Base,
+    const CXXRecordDecl *NearestVBase) {
+
+  if ((Base.getBase()->getNumVBases() || NearestVBase != nullptr) &&
+      NeedsVTTParameter(CGF.CurGD)) {
+    llvm_unreachable("NYI");
+  }
+  return getVTableAddressPoint(Base, VTableClass);
+}
+
+bool CIRGenItaniumCXXABI::isVirtualOffsetNeededForVTableField(
+    CIRGenFunction &CGF, CIRGenFunction::VPtr Vptr) {
+  if (Vptr.NearestVBase == nullptr)
+    return false;
+  return NeedsVTTParameter(CGF.CurGD);
 }

@@ -135,6 +135,28 @@ public:
   /// Emit dtor variants required by this ABI.
   virtual void buildCXXDestructors(const clang::CXXDestructorDecl *D) = 0;
 
+  /// Get the address of the vtable for the given record decl which should be
+  /// used for the vptr at the given offset in RD.
+  virtual mlir::cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *RD,
+                                              CharUnits VPtrOffset) = 0;
+
+  /// Checks if ABI requires extra virtual offset for vtable field.
+  virtual bool
+  isVirtualOffsetNeededForVTableField(CIRGenFunction &CGF,
+                                      CIRGenFunction::VPtr Vptr) = 0;
+
+  /// Get the address point of the vtable for the given base subobject.
+  virtual mlir::Value
+  getVTableAddressPoint(BaseSubobject Base,
+                        const CXXRecordDecl *VTableClass) = 0;
+
+  /// Get the address point of the vtable for the given base subobject while
+  /// building a constructor or a destructor.
+  virtual mlir::Value
+  getVTableAddressPointInStructor(CIRGenFunction &CGF, const CXXRecordDecl *RD,
+                                  BaseSubobject Base,
+                                  const CXXRecordDecl *NearestVBase) = 0;
+
   /// Specify how one should pass an argument of a record type.
   enum class RecordArgABI {
     /// Pass it using the normal C aggregate rules for the ABI, potentially

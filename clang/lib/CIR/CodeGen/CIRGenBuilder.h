@@ -102,6 +102,7 @@ public:
   //
   mlir::Type getInt8Ty() { return mlir::IntegerType::get(getContext(), 8); }
   mlir::Type getInt32Ty() { return mlir::IntegerType::get(getContext(), 32); }
+  mlir::Type getInt64Ty() { return mlir::IntegerType::get(getContext(), 64); }
   mlir::cir::BoolType getBoolTy() {
     return ::mlir::cir::BoolType::get(getContext());
   }
