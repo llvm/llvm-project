@@ -671,7 +671,6 @@ define <8 x i16> @rhadds_i_undef(<8 x i16> %t, <8 x i16> %src1) {
 define <8 x i8> @shadd_v8i8(<8 x i8> %x) {
 ; CHECK-LABEL: shadd_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shadd v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    ret
   %r = tail call <8 x i8> @llvm.aarch64.neon.shadd.v8i8(<8 x i8> %x, <8 x i8> %x)
   ret <8 x i8> %r
@@ -680,7 +679,6 @@ define <8 x i8> @shadd_v8i8(<8 x i8> %x) {
 define <4 x i16> @shadd_v4i16(<4 x i16> %x) {
 ; CHECK-LABEL: shadd_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shadd v0.4h, v0.4h, v0.4h
 ; CHECK-NEXT:    ret
   %r = tail call <4 x i16> @llvm.aarch64.neon.shadd.v4i16(<4 x i16> %x, <4 x i16> %x)
   ret <4 x i16> %r
@@ -689,7 +687,6 @@ define <4 x i16> @shadd_v4i16(<4 x i16> %x) {
 define <2 x i32> @shadd_v2i32(<2 x i32> %x) {
 ; CHECK-LABEL: shadd_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shadd v0.2s, v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %r = tail call <2 x i32> @llvm.aarch64.neon.shadd.v2i32(<2 x i32> %x, <2 x i32> %x)
   ret <2 x i32> %r
@@ -698,7 +695,6 @@ define <2 x i32> @shadd_v2i32(<2 x i32> %x) {
 define <16 x i8> @shadd_v16i8(<16 x i8> %x) {
 ; CHECK-LABEL: shadd_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shadd v0.16b, v0.16b, v0.16b
 ; CHECK-NEXT:    ret
   %r = tail call <16 x i8> @llvm.aarch64.neon.shadd.v16i8(<16 x i8> %x, <16 x i8> %x)
   ret <16 x i8> %r
@@ -707,7 +703,6 @@ define <16 x i8> @shadd_v16i8(<16 x i8> %x) {
 define <8 x i16> @shadd_v8i16(<8 x i16> %x) {
 ; CHECK-LABEL: shadd_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shadd v0.8h, v0.8h, v0.8h
 ; CHECK-NEXT:    ret
   %r = tail call <8 x i16> @llvm.aarch64.neon.shadd.v8i16(<8 x i16> %x, <8 x i16> %x)
   ret <8 x i16> %r
@@ -716,7 +711,6 @@ define <8 x i16> @shadd_v8i16(<8 x i16> %x) {
 define <4 x i32> @shadd_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: shadd_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shadd v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %r = tail call <4 x i32> @llvm.aarch64.neon.shadd.v4i32(<4 x i32> %x, <4 x i32> %x)
   ret <4 x i32> %r
@@ -725,7 +719,6 @@ define <4 x i32> @shadd_v4i32(<4 x i32> %x) {
 define <8 x i8> @uhadd_v8i8(<8 x i8> %x) {
 ; CHECK-LABEL: uhadd_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uhadd v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    ret
   %r = tail call <8 x i8> @llvm.aarch64.neon.uhadd.v8i8(<8 x i8> %x, <8 x i8> %x)
   ret <8 x i8> %r
@@ -734,7 +727,6 @@ define <8 x i8> @uhadd_v8i8(<8 x i8> %x) {
 define <4 x i16> @uhadd_v4i16(<4 x i16> %x) {
 ; CHECK-LABEL: uhadd_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uhadd v0.4h, v0.4h, v0.4h
 ; CHECK-NEXT:    ret
   %r = tail call <4 x i16> @llvm.aarch64.neon.uhadd.v4i16(<4 x i16> %x, <4 x i16> %x)
   ret <4 x i16> %r
@@ -743,7 +735,6 @@ define <4 x i16> @uhadd_v4i16(<4 x i16> %x) {
 define <2 x i32> @uhadd_v2i32(<2 x i32> %x) {
 ; CHECK-LABEL: uhadd_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uhadd v0.2s, v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %r = tail call <2 x i32> @llvm.aarch64.neon.uhadd.v2i32(<2 x i32> %x, <2 x i32> %x)
   ret <2 x i32> %r
@@ -752,7 +743,6 @@ define <2 x i32> @uhadd_v2i32(<2 x i32> %x) {
 define <16 x i8> @uhadd_v16i8(<16 x i8> %x) {
 ; CHECK-LABEL: uhadd_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uhadd v0.16b, v0.16b, v0.16b
 ; CHECK-NEXT:    ret
   %r = tail call <16 x i8> @llvm.aarch64.neon.uhadd.v16i8(<16 x i8> %x, <16 x i8> %x)
   ret <16 x i8> %r
@@ -761,7 +751,6 @@ define <16 x i8> @uhadd_v16i8(<16 x i8> %x) {
 define <8 x i16> @uhadd_v8i16(<8 x i16> %x) {
 ; CHECK-LABEL: uhadd_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uhadd v0.8h, v0.8h, v0.8h
 ; CHECK-NEXT:    ret
   %r = tail call <8 x i16> @llvm.aarch64.neon.uhadd.v8i16(<8 x i16> %x, <8 x i16> %x)
   ret <8 x i16> %r
@@ -770,7 +759,6 @@ define <8 x i16> @uhadd_v8i16(<8 x i16> %x) {
 define <4 x i32> @uhadd_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: uhadd_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uhadd v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %r = tail call <4 x i32> @llvm.aarch64.neon.uhadd.v4i32(<4 x i32> %x, <4 x i32> %x)
   ret <4 x i32> %r
@@ -778,7 +766,6 @@ define <4 x i32> @uhadd_v4i32(<4 x i32> %x) {
 define <8 x i8> @srhadd_v8i8(<8 x i8> %x) {
 ; CHECK-LABEL: srhadd_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    srhadd v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    ret
   %r = tail call <8 x i8> @llvm.aarch64.neon.srhadd.v8i8(<8 x i8> %x, <8 x i8> %x)
   ret <8 x i8> %r
@@ -787,7 +774,6 @@ define <8 x i8> @srhadd_v8i8(<8 x i8> %x) {
 define <4 x i16> @srhadd_v4i16(<4 x i16> %x) {
 ; CHECK-LABEL: srhadd_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    srhadd v0.4h, v0.4h, v0.4h
 ; CHECK-NEXT:    ret
   %r = tail call <4 x i16> @llvm.aarch64.neon.srhadd.v4i16(<4 x i16> %x, <4 x i16> %x)
   ret <4 x i16> %r
@@ -796,7 +782,6 @@ define <4 x i16> @srhadd_v4i16(<4 x i16> %x) {
 define <2 x i32> @srhadd_v2i32(<2 x i32> %x) {
 ; CHECK-LABEL: srhadd_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    srhadd v0.2s, v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %r = tail call <2 x i32> @llvm.aarch64.neon.srhadd.v2i32(<2 x i32> %x, <2 x i32> %x)
   ret <2 x i32> %r
@@ -805,7 +790,6 @@ define <2 x i32> @srhadd_v2i32(<2 x i32> %x) {
 define <16 x i8> @srhadd_v16i8(<16 x i8> %x) {
 ; CHECK-LABEL: srhadd_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    srhadd v0.16b, v0.16b, v0.16b
 ; CHECK-NEXT:    ret
   %r = tail call <16 x i8> @llvm.aarch64.neon.srhadd.v16i8(<16 x i8> %x, <16 x i8> %x)
   ret <16 x i8> %r
@@ -814,7 +798,6 @@ define <16 x i8> @srhadd_v16i8(<16 x i8> %x) {
 define <8 x i16> @srhadd_v8i16(<8 x i16> %x) {
 ; CHECK-LABEL: srhadd_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    srhadd v0.8h, v0.8h, v0.8h
 ; CHECK-NEXT:    ret
   %r = tail call <8 x i16> @llvm.aarch64.neon.srhadd.v8i16(<8 x i16> %x, <8 x i16> %x)
   ret <8 x i16> %r
@@ -823,7 +806,6 @@ define <8 x i16> @srhadd_v8i16(<8 x i16> %x) {
 define <4 x i32> @srhadd_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: srhadd_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    srhadd v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %r = tail call <4 x i32> @llvm.aarch64.neon.srhadd.v4i32(<4 x i32> %x, <4 x i32> %x)
   ret <4 x i32> %r
@@ -832,7 +814,6 @@ define <4 x i32> @srhadd_v4i32(<4 x i32> %x) {
 define <8 x i8> @urhadd_v8i8(<8 x i8> %x) {
 ; CHECK-LABEL: urhadd_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    urhadd v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    ret
   %r = tail call <8 x i8> @llvm.aarch64.neon.urhadd.v8i8(<8 x i8> %x, <8 x i8> %x)
   ret <8 x i8> %r
@@ -841,7 +822,6 @@ define <8 x i8> @urhadd_v8i8(<8 x i8> %x) {
 define <4 x i16> @urhadd_v4i16(<4 x i16> %x) {
 ; CHECK-LABEL: urhadd_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    urhadd v0.4h, v0.4h, v0.4h
 ; CHECK-NEXT:    ret
   %r = tail call <4 x i16> @llvm.aarch64.neon.urhadd.v4i16(<4 x i16> %x, <4 x i16> %x)
   ret <4 x i16> %r
@@ -850,7 +830,6 @@ define <4 x i16> @urhadd_v4i16(<4 x i16> %x) {
 define <2 x i32> @urhadd_v2i32(<2 x i32> %x) {
 ; CHECK-LABEL: urhadd_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    urhadd v0.2s, v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %r = tail call <2 x i32> @llvm.aarch64.neon.urhadd.v2i32(<2 x i32> %x, <2 x i32> %x)
   ret <2 x i32> %r
@@ -859,7 +838,6 @@ define <2 x i32> @urhadd_v2i32(<2 x i32> %x) {
 define <16 x i8> @urhadd_v16i8(<16 x i8> %x) {
 ; CHECK-LABEL: urhadd_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    urhadd v0.16b, v0.16b, v0.16b
 ; CHECK-NEXT:    ret
   %r = tail call <16 x i8> @llvm.aarch64.neon.urhadd.v16i8(<16 x i8> %x, <16 x i8> %x)
   ret <16 x i8> %r
@@ -868,7 +846,6 @@ define <16 x i8> @urhadd_v16i8(<16 x i8> %x) {
 define <8 x i16> @urhadd_v8i16(<8 x i16> %x) {
 ; CHECK-LABEL: urhadd_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    urhadd v0.8h, v0.8h, v0.8h
 ; CHECK-NEXT:    ret
   %r = tail call <8 x i16> @llvm.aarch64.neon.urhadd.v8i16(<8 x i16> %x, <8 x i16> %x)
   ret <8 x i16> %r
@@ -877,7 +854,6 @@ define <8 x i16> @urhadd_v8i16(<8 x i16> %x) {
 define <4 x i32> @urhadd_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: urhadd_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    urhadd v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %r = tail call <4 x i32> @llvm.aarch64.neon.urhadd.v4i32(<4 x i32> %x, <4 x i32> %x)
   ret <4 x i32> %r
