@@ -277,6 +277,9 @@ end
 * The character length of the `SOURCE=` or `MOLD=` in `ALLOCATE`
   may be distinct from the constant character length, if any,
   of an allocated object.
+* When a name is brought into a scope by multiple ways,
+  such as USE-association as well as an `IMPORT` from its host,
+  it's an error only if the resolution is ambiguous.
 
 ### Extensions supported when enabled by options
 
