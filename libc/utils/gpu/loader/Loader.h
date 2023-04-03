@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_GPU_LOADER_LOADER_H
 #define LLVM_LIBC_UTILS_GPU_LOADER_LOADER_H
 
+#include <cstdint>
 #include <cstring>
 #include <stddef.h>
 
@@ -20,21 +21,27 @@ int load(int argc, char **argv, char **evnp, void *image, size_t size);
 /// Copy the system's argument vector to GPU memory allocated using \p alloc.
 template <typename Allocator>
 void *copy_argument_vector(int argc, char **argv, Allocator alloc) {
-  void *dev_argv = alloc(argc * sizeof(char *));
-  if (dev_argv == nullptr)
+  size_t argv_size = sizeof(char *) * (argc + 1);
+  size_t str_size = 0;
+  for (int i = 0; i < argc; ++i)
+    str_size += strlen(argv[i]) + 1;
+
+  // We allocate enough space for a null terminated array and all the strings.
+  void *dev_argv = alloc(argv_size + str_size);
+  if (!dev_argv)
     return nullptr;
 
+  // Store the strings linerally in the same memory buffer.
+  void *dev_str = reinterpret_cast<uint8_t *>(dev_argv) + argv_size;
   for (int i = 0; i < argc; ++i) {
     size_t size = strlen(argv[i]) + 1;
-    void *dev_str = alloc(size);
-    if (dev_str == nullptr)
-      return nullptr;
-
-    // Load the host memory buffer with the pointer values of the newly
-    // allocated strings.
     std::memcpy(dev_str, argv[i], size);
     static_cast<void **>(dev_argv)[i] = dev_str;
+    dev_str = reinterpret_cast<uint8_t *>(dev_str) + size;
   }
+
+  // Ensure the vector is null terminated.
+  reinterpret_cast<void **>(dev_argv)[argv_size] = nullptr;
   return dev_argv;
 };
 
