@@ -16,7 +16,7 @@
 
 // Return instructions.
 //
-// The X86retflag return instructions are variadic because we may add ST0 and
+// The X86retglue return instructions are variadic because we may add ST0 and
 // ST1 arguments when returning values on the x87 stack.
 let isTerminator = 1, isReturn = 1, isBarrier = 1,
     hasCtrlDep = 1, FPForm = SpecialFP, SchedRW = [WriteJumpLd] in {
@@ -54,7 +54,7 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1,
   def IRET64 : RI  <0xcf, RawFrm, (outs), (ins), "iretq", []>, Requires<[In64BitMode]>;
   let isCodeGenOnly = 1 in
   def IRET : PseudoI<(outs), (ins i32imm:$adj), [(X86iret timm:$adj)]>;
-  def RET  : PseudoI<(outs), (ins i32imm:$adj, variable_ops), [(X86retflag timm:$adj)]>;
+  def RET  : PseudoI<(outs), (ins i32imm:$adj, variable_ops), [(X86retglue timm:$adj)]>;
 }
 
 // Unconditional branches.

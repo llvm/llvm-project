@@ -440,7 +440,7 @@ template <> bool AVRDAGToDAGISel::select<ISD::LOAD>(SDNode *N) {
 }
 
 template <> bool AVRDAGToDAGISel::select<AVRISD::CALL>(SDNode *N) {
-  SDValue InFlag;
+  SDValue InGlue;
   SDValue Chain = N->getOperand(0);
   SDValue Callee = N->getOperand(1);
   unsigned LastOpNum = N->getNumOperands() - 1;
@@ -457,7 +457,7 @@ template <> bool AVRDAGToDAGISel::select<AVRISD::CALL>(SDNode *N) {
   }
 
   SDLoc DL(N);
-  Chain = CurDAG->getCopyToReg(Chain, DL, AVR::R31R30, Callee, InFlag);
+  Chain = CurDAG->getCopyToReg(Chain, DL, AVR::R31R30, Callee, InGlue);
   SmallVector<SDValue, 8> Ops;
   Ops.push_back(CurDAG->getRegister(AVR::R31R30, MVT::i16));
 

@@ -6,16 +6,13 @@
 declare <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8>, <16 x i8>) nounwind readnone
 declare <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16>, <8 x i16>) nounwind readnone
 
-; TODO: AVG(X,X) -> X
 define <16 x i8> @combine_pavgb_self(<16 x i8> %a0) {
 ; SSE-LABEL: combine_pavgb_self:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pavgb %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_pavgb_self:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpavgb %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> %a0, <16 x i8> %a0)
   ret <16 x i8> %1

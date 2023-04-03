@@ -260,6 +260,8 @@ private:
   }
 
   bool emitRecordDestruction(const Descriptor *Desc);
+  bool emitDerivedToBaseCasts(const RecordType *DerivedType,
+                              const RecordType *BaseType, const Expr *E);
 
 protected:
   /// Variable to storage mapping.

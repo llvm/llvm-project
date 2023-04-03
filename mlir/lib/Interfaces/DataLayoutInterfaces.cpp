@@ -225,6 +225,17 @@ mlir::detail::getDefaultAllocaMemorySpace(DataLayoutEntryInterface entry) {
   return entry.getValue();
 }
 
+// Returns the stack alignment if specified in the given entry. If the entry is
+// empty the default alignment zero is returned.
+unsigned
+mlir::detail::getDefaultStackAlignment(DataLayoutEntryInterface entry) {
+  if (entry == DataLayoutEntryInterface())
+    return 0;
+
+  auto value = entry.getValue().cast<IntegerAttr>();
+  return value.getValue().getZExtValue();
+}
+
 DataLayoutEntryList
 mlir::detail::filterEntriesForType(DataLayoutEntryListRef entries,
                                    TypeID typeID) {
@@ -359,7 +370,7 @@ mlir::DataLayout::DataLayout() : DataLayout(ModuleOp()) {}
 
 mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
     : originalLayout(getCombinedDataLayout(op)), scope(op),
-      allocaMemorySpace(std::nullopt) {
+      allocaMemorySpace(std::nullopt), stackAlignment(std::nullopt) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   checkMissingLayout(originalLayout, op);
   collectParentLayouts(op, layoutStack);
@@ -368,7 +379,7 @@ mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
 
 mlir::DataLayout::DataLayout(ModuleOp op)
     : originalLayout(getCombinedDataLayout(op)), scope(op),
-      allocaMemorySpace(std::nullopt) {
+      allocaMemorySpace(std::nullopt), stackAlignment(std::nullopt) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   checkMissingLayout(originalLayout, op);
   collectParentLayouts(op, layoutStack);
@@ -484,6 +495,22 @@ mlir::Attribute mlir::DataLayout::getAllocaMemorySpace() const {
   else
     allocaMemorySpace = detail::getDefaultAllocaMemorySpace(entry);
   return *allocaMemorySpace;
+}
+
+unsigned mlir::DataLayout::getStackAlignment() const {
+  checkValid();
+  MLIRContext *context = scope->getContext();
+  if (stackAlignment)
+    return *stackAlignment;
+  DataLayoutEntryInterface entry;
+  if (originalLayout)
+    entry = originalLayout.getSpecForIdentifier(
+        originalLayout.getStackAlignmentIdentifier(context));
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    stackAlignment = iface.getStackAlignment(entry);
+  else
+    stackAlignment = detail::getDefaultStackAlignment(entry);
+  return *stackAlignment;
 }
 
 //===----------------------------------------------------------------------===//

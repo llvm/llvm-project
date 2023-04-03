@@ -674,10 +674,11 @@ void fir::factory::disassociateMutableBox(fir::FirOpBuilder &builder,
     auto boxTy = box.getBoxTy().dyn_cast<fir::BaseBoxType>();
     auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(boxTy.getEleTy());
     mlir::Type derivedType = fir::getDerivedType(eleTy);
-    if (auto recTy = derivedType.dyn_cast<fir::RecordType>())
+    if (auto recTy = derivedType.dyn_cast<fir::RecordType>()) {
       fir::runtime::genNullifyDerivedType(builder, loc, box.getAddr(), recTy,
                                           box.rank());
-    return;
+      return;
+    }
   }
   MutablePropertyWriter{builder, loc, box}.setUnallocatedStatus();
 }

@@ -24,6 +24,8 @@ namespace {
 constexpr static llvm::StringLiteral kAttrName = "dltest.layout";
 constexpr static llvm::StringLiteral kAllocaKeyName =
     "dltest.alloca_memory_space";
+constexpr static llvm::StringLiteral kStackAlignmentKeyName =
+    "dltest.stack_alignment";
 
 /// Trivial array storage for the custom data layout spec attribute, just a list
 /// of entries.
@@ -66,6 +68,9 @@ struct CustomDataLayoutSpec
   LogicalResult verifySpec(Location loc) { return success(); }
   StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
     return Builder(context).getStringAttr(kAllocaKeyName);
+  }
+  StringAttr getStackAlignmentIdentifier(MLIRContext *context) const {
+    return Builder(context).getStringAttr(kStackAlignmentKeyName);
   }
 };
 
@@ -276,6 +281,7 @@ module {}
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 2u);
 
   EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
+  EXPECT_EQ(layout.getStackAlignment(), 0u);
 }
 
 TEST(DataLayout, NullSpec) {
@@ -302,6 +308,7 @@ TEST(DataLayout, NullSpec) {
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 32u);
 
   EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
+  EXPECT_EQ(layout.getStackAlignment(), 0u);
 }
 
 TEST(DataLayout, EmptySpec) {
@@ -327,6 +334,7 @@ TEST(DataLayout, EmptySpec) {
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 32u);
 
   EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
+  EXPECT_EQ(layout.getStackAlignment(), 0u);
 }
 
 TEST(DataLayout, SpecWithEntries) {
@@ -334,7 +342,8 @@ TEST(DataLayout, SpecWithEntries) {
 "dltest.op_with_layout"() { dltest.layout = #dltest.spec<
   #dlti.dl_entry<i42, 5>,
   #dlti.dl_entry<i16, 6>,
-  #dlti.dl_entry<"dltest.alloca_memory_space", 5 : i32>
+  #dlti.dl_entry<"dltest.alloca_memory_space", 5 : i32>,
+  #dlti.dl_entry<"dltest.stack_alignment", 128 : i32>
 > } : () -> ()
   )MLIR";
 
@@ -365,6 +374,7 @@ TEST(DataLayout, SpecWithEntries) {
   EXPECT_EQ(layout.getTypePreferredAlignment(Float32Type::get(&ctx)), 64u);
 
   EXPECT_EQ(layout.getAllocaMemorySpace(), Builder(&ctx).getI32IntegerAttr(5));
+  EXPECT_EQ(layout.getStackAlignment(), 128u);
 }
 
 TEST(DataLayout, Caching) {
