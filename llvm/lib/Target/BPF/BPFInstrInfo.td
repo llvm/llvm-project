@@ -35,7 +35,7 @@ def SDT_BPFMEMCPY       : SDTypeProfile<0, 4, [SDTCisVT<0, i64>,
 def BPFcall         : SDNode<"BPFISD::CALL", SDT_BPFCall,
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                               SDNPVariadic]>;
-def BPFretflag      : SDNode<"BPFISD::RET_FLAG", SDTNone,
+def BPFretglue      : SDNode<"BPFISD::RET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def BPFcallseq_start: SDNode<"ISD::CALLSEQ_START", SDT_BPFCallSeqStart,
                              [SDNPHasChain, SDNPOutGlue]>;
@@ -536,7 +536,7 @@ class RET<string OpcodeStr>
                    (outs),
                    (ins),
                    !strconcat(OpcodeStr, ""),
-                   [(BPFretflag)]> {
+                   [(BPFretglue)]> {
   let Inst{31-0} = 0;
   let BPFClass = BPF_JMP;
 }

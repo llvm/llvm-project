@@ -381,7 +381,7 @@ enum NodeType : unsigned {
   RETURN_TO_EPILOG,
 
   // Return with values from a non-entry function.
-  RET_FLAG,
+  RET_GLUE,
 
   DWORDADDR,
   FRACT,

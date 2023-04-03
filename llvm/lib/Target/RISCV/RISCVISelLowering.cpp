@@ -13913,7 +13913,7 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
              [](CCValAssign &VA) { return VA.getLocVT().isScalableVector(); }))
     MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
 
-  unsigned RetOpc = RISCVISD::RET_FLAG;
+  unsigned RetOpc = RISCVISD::RET_GLUE;
   // Interrupt service routines use different return instructions.
   const Function &Func = DAG.getMachineFunction().getFunction();
   if (Func.hasFnAttribute("interrupt")) {
@@ -13926,11 +13926,11 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       MF.getFunction().getFnAttribute("interrupt").getValueAsString();
 
     if (Kind == "user")
-      RetOpc = RISCVISD::URET_FLAG;
+      RetOpc = RISCVISD::URET_GLUE;
     else if (Kind == "supervisor")
-      RetOpc = RISCVISD::SRET_FLAG;
+      RetOpc = RISCVISD::SRET_GLUE;
     else
-      RetOpc = RISCVISD::MRET_FLAG;
+      RetOpc = RISCVISD::MRET_GLUE;
   }
 
   return DAG.getNode(RetOpc, DL, MVT::Other, RetOps);
@@ -13974,10 +13974,10 @@ bool RISCVTargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
   if (Copy->getOperand(Copy->getNumOperands() - 1).getValueType() == MVT::Glue)
     return false;
 
-  // The copy must be used by a RISCVISD::RET_FLAG, and nothing else.
+  // The copy must be used by a RISCVISD::RET_GLUE, and nothing else.
   bool HasRet = false;
   for (SDNode *Node : Copy->uses()) {
-    if (Node->getOpcode() != RISCVISD::RET_FLAG)
+    if (Node->getOpcode() != RISCVISD::RET_GLUE)
       return false;
     HasRet = true;
   }
@@ -14000,10 +14000,10 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((RISCVISD::NodeType)Opcode) {
   case RISCVISD::FIRST_NUMBER:
     break;
-  NODE_NAME_CASE(RET_FLAG)
-  NODE_NAME_CASE(URET_FLAG)
-  NODE_NAME_CASE(SRET_FLAG)
-  NODE_NAME_CASE(MRET_FLAG)
+  NODE_NAME_CASE(RET_GLUE)
+  NODE_NAME_CASE(URET_GLUE)
+  NODE_NAME_CASE(SRET_GLUE)
+  NODE_NAME_CASE(MRET_GLUE)
   NODE_NAME_CASE(CALL)
   NODE_NAME_CASE(SELECT_CC)
   NODE_NAME_CASE(BR_CC)
