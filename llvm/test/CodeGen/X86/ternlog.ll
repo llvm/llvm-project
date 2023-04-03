@@ -16,7 +16,7 @@ declare <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32>, <8 x i32>, <8 x i32
 define <16 x i32> @vpternlog_d_v512_imm0(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_d_v512_imm0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpternlogd $0, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2, i32 0)
   ret <16 x i32> %r
@@ -151,7 +151,7 @@ define <8 x i32> @vpternlog_d_v256_imm14(<8 x i32> %v0, <8 x i32> %v1, <8 x i32>
 define <8 x i64> @vpternlog_q_v512_imm15(<8 x i64> %v0, <8 x i64> %v1, <8 x i64> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_q_v512_imm15:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpternlogq $51, %zmm0, %zmm0, %zmm0
+; CHECK-NEXT:    vpternlogq $15, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %v0, <8 x i64> %v1, <8 x i64> %v2, i32 15)
   ret <8 x i64> %r
@@ -476,8 +476,7 @@ define <8 x i32> @vpternlog_d_v256_imm50(<8 x i32> %v0, <8 x i32> %v1, <8 x i32>
 define <8 x i64> @vpternlog_q_v512_imm51(<8 x i64> %v0, <8 x i64> %v1, <8 x i64> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_q_v512_imm51:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
-; CHECK-NEXT:    vpternlogq $15, %zmm1, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogq $51, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %v0, <8 x i64> %v1, <8 x i64> %v2, i32 51)
   ret <8 x i64> %r
@@ -558,7 +557,7 @@ define <4 x i64> @vpternlog_q_v256_imm59(<4 x i64> %v0, <4 x i64> %v1, <4 x i64>
 define <16 x i32> @vpternlog_d_v512_imm60(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_d_v512_imm60:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxord %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpternlogd $60, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2, i32 60)
   ret <16 x i32> %r
@@ -783,8 +782,7 @@ define <16 x i32> @vpternlog_d_v512_imm84(<16 x i32> %v0, <16 x i32> %v1, <16 x 
 define <2 x i64> @vpternlog_q_v128_imm85(<2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_q_v128_imm85:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa %xmm2, %xmm0
-; CHECK-NEXT:    vpternlogq $15, %xmm2, %xmm2, %xmm0
+; CHECK-NEXT:    vpternlogq $85, %xmm2, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, i32 85)
   ret <2 x i64> %r
@@ -829,7 +827,7 @@ define <4 x i64> @vpternlog_q_v256_imm89(<4 x i64> %v0, <4 x i64> %v1, <4 x i64>
 define <16 x i32> @vpternlog_d_v512_imm90(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_d_v512_imm90:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxord %zmm2, %zmm0, %zmm0
+; CHECK-NEXT:    vpternlogd $90, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2, i32 90)
   ret <16 x i32> %r
@@ -937,7 +935,7 @@ define <4 x i64> @vpternlog_q_v256_imm101(<4 x i64> %v0, <4 x i64> %v1, <4 x i64
 define <16 x i32> @vpternlog_d_v512_imm102(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_d_v512_imm102:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxord %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd $102, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2, i32 102)
   ret <16 x i32> %r
@@ -1244,7 +1242,7 @@ define <8 x i64> @vpternlog_q_v512_imm135(<8 x i64> %v0, <8 x i64> %v1, <8 x i64
 define <4 x i32> @vpternlog_d_v128_imm136(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_d_v128_imm136:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vandps %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogd $136, %xmm2, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, i32 136)
   ret <4 x i32> %r
@@ -1460,7 +1458,7 @@ define <8 x i64> @vpternlog_q_v512_imm159(<8 x i64> %v0, <8 x i64> %v1, <8 x i64
 define <4 x i32> @vpternlog_d_v128_imm160(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_d_v128_imm160:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vandps %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vpternlogd $160, %xmm2, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, i32 160)
   ret <4 x i32> %r
@@ -1550,7 +1548,7 @@ define <2 x i64> @vpternlog_q_v128_imm169(<2 x i64> %v0, <2 x i64> %v1, <2 x i64
 define <8 x i32> @vpternlog_d_v256_imm170(<8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_d_v256_imm170:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps %ymm2, %ymm0
+; CHECK-NEXT:    vpternlogd $170, %ymm2, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2, i32 170)
   ret <8 x i32> %r
@@ -1748,7 +1746,7 @@ define <4 x i64> @vpternlog_q_v256_imm191(<4 x i64> %v0, <4 x i64> %v1, <4 x i64
 define <16 x i32> @vpternlog_d_v512_imm192(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_d_v512_imm192:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpandd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpternlogd $192, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2, i32 192)
   ret <16 x i32> %r
@@ -1856,7 +1854,7 @@ define <4 x i64> @vpternlog_q_v256_imm203(<4 x i64> %v0, <4 x i64> %v1, <4 x i64
 define <16 x i32> @vpternlog_d_v512_imm204(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_d_v512_imm204:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd $204, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2, i32 204)
   ret <16 x i32> %r
@@ -2162,7 +2160,7 @@ define <8 x i64> @vpternlog_q_v512_imm237(<8 x i64> %v0, <8 x i64> %v1, <8 x i64
 define <4 x i32> @vpternlog_d_v128_imm238(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_d_v128_imm238:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vorps %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogd $238, %xmm2, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, i32 238)
   ret <4 x i32> %r
@@ -2180,6 +2178,7 @@ define <4 x i64> @vpternlog_q_v256_imm239(<4 x i64> %v0, <4 x i64> %v1, <4 x i64
 define <16 x i32> @vpternlog_d_v512_imm240(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_d_v512_imm240:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpternlogd $240, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2, i32 240)
   ret <16 x i32> %r
@@ -2269,7 +2268,7 @@ define <8 x i64> @vpternlog_q_v512_imm249(<8 x i64> %v0, <8 x i64> %v1, <8 x i64
 define <4 x i32> @vpternlog_d_v128_imm250(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_d_v128_imm250:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vorps %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vpternlogd $250, %xmm2, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, i32 250)
   ret <4 x i32> %r
@@ -2287,7 +2286,7 @@ define <4 x i64> @vpternlog_q_v256_imm251(<4 x i64> %v0, <4 x i64> %v1, <4 x i64
 define <16 x i32> @vpternlog_d_v512_imm252(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_d_v512_imm252:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpord %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpternlogd $252, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2, i32 252)
   ret <16 x i32> %r
@@ -2315,7 +2314,7 @@ define <8 x i32> @vpternlog_d_v256_imm254(<8 x i32> %v0, <8 x i32> %v1, <8 x i32
 define <8 x i64> @vpternlog_q_v512_imm255(<8 x i64> %v0, <8 x i64> %v1, <8 x i64> %v2) nounwind {
 ; CHECK-LABEL: vpternlog_q_v512_imm255:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; CHECK-NEXT:    vpternlogq $255, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %v0, <8 x i64> %v1, <8 x i64> %v2, i32 255)
   ret <8 x i64> %r
