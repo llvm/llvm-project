@@ -3,9 +3,7 @@
 
 define <2 x i1> @icmp_eq_zext_is_false(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_eq_zext_is_false(
-; CHECK-NEXT:    [[XEXT:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[XEXT]], <i32 511, i32 1234>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %xext = zext <2 x i8> %x to <2 x i32>
   %cmp = icmp eq <2 x i32> %xext, <i32 511, i32 1234>
@@ -14,9 +12,7 @@ define <2 x i1> @icmp_eq_zext_is_false(<2 x i8> %x) {
 
 define <2 x i1> @icmp_ugt_zext_is_false(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_ugt_zext_is_false(
-; CHECK-NEXT:    [[XEXT:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> [[XEXT]], <i32 256, i32 1234>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %xext = zext <2 x i8> %x to <2 x i32>
   %cmp = icmp ugt <2 x i32> %xext, <i32 256, i32 1234>
@@ -36,9 +32,7 @@ define <2 x i1> @icmp_ugt_zext_todo_off_by1(<2 x i8> %x) {
 
 define <2 x i1> @icmp_uge_zext_is_false(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_uge_zext_is_false(
-; CHECK-NEXT:    [[XEXT:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge <2 x i32> [[XEXT]], <i32 256, i32 1234>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %xext = zext <2 x i8> %x to <2 x i32>
   %cmp = icmp uge <2 x i32> %xext, <i32 256, i32 1234>
@@ -69,9 +63,7 @@ define <2 x i1> @icmp_eq_zext_unused(<2 x i8> %x) {
 
 define <2 x i1> @icmp_ne_zext_is_true(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_ne_zext_is_true(
-; CHECK-NEXT:    [[XEXT:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[XEXT]], <i32 256, i32 1234>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %xext = zext <2 x i8> %x to <2 x i32>
   %cmp = icmp ne <2 x i32> %xext, <i32 256, i32 1234>
@@ -80,9 +72,7 @@ define <2 x i1> @icmp_ne_zext_is_true(<2 x i8> %x) {
 
 define <2 x i1> @icmp_ult_zext_is_true(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_ult_zext_is_true(
-; CHECK-NEXT:    [[XEXT:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[XEXT]], <i32 256, i32 1234>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %xext = zext <2 x i8> %x to <2 x i32>
   %cmp = icmp ult <2 x i32> %xext, <i32 256, i32 1234>
@@ -91,9 +81,7 @@ define <2 x i1> @icmp_ult_zext_is_true(<2 x i8> %x) {
 
 define <2 x i1> @icmp_ule_zext_is_true(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_ule_zext_is_true(
-; CHECK-NEXT:    [[XEXT:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule <2 x i32> [[XEXT]], <i32 256, i32 -1>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %xext = zext <2 x i8> %x to <2 x i32>
   %cmp = icmp ule <2 x i32> %xext, <i32 256, i32 -1>
@@ -124,9 +112,7 @@ define <2 x i1> @icmp_ne_zext_unused(<2 x i8> %x) {
 
 define <2 x i1> @icmp_sge_zext_is_false_true(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_sge_zext_is_false_true(
-; CHECK-NEXT:    [[XEXT:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge <2 x i32> [[XEXT]], <i32 257, i32 -450>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> <i1 false, i1 true>
 ;
   %xext = zext <2 x i8> %x to <2 x i32>
   %cmp = icmp sge <2 x i32> %xext, <i32 257, i32 -450>
@@ -135,9 +121,7 @@ define <2 x i1> @icmp_sge_zext_is_false_true(<2 x i8> %x) {
 
 define <2 x i1> @icmp_sle_zext_is_false_false(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_sle_zext_is_false_false(
-; CHECK-NEXT:    [[XEXT:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle <2 x i32> [[XEXT]], <i32 -256, i32 -450>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %xext = zext <2 x i8> %x to <2 x i32>
   %cmp = icmp sle <2 x i32> %xext, <i32 -256, i32 -450>
@@ -146,9 +130,7 @@ define <2 x i1> @icmp_sle_zext_is_false_false(<2 x i8> %x) {
 
 define <2 x i1> @icmp_eq_sext_is_false(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_eq_sext_is_false(
-; CHECK-NEXT:    [[XEXT:%.*]] = sext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[XEXT]], <i32 255, i32 129>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %xext = sext <2 x i8> %x to <2 x i32>
   %cmp = icmp eq <2 x i32> %xext, <i32 255, i32 129>
@@ -168,9 +150,7 @@ define <2 x i1> @icmp_eq_sext_fail(<2 x i8> %x) {
 
 define <2 x i1> @icmp_ne_sext_is_true(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_ne_sext_is_true(
-; CHECK-NEXT:    [[XEXT:%.*]] = sext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[XEXT]], <i32 199, i32 1234>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %xext = sext <2 x i8> %x to <2 x i32>
   %cmp = icmp ne <2 x i32> %xext, <i32 199, i32 1234>
@@ -179,9 +159,7 @@ define <2 x i1> @icmp_ne_sext_is_true(<2 x i8> %x) {
 
 define <2 x i1> @icmp_sgt_sext_is_true_false(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_sgt_sext_is_true_false(
-; CHECK-NEXT:    [[XEXT:%.*]] = sext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[XEXT]], <i32 -250, i32 450>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 false>
 ;
   %xext = sext <2 x i8> %x to <2 x i32>
   %cmp = icmp sgt <2 x i32> %xext, <i32 -250, i32 450>
@@ -190,9 +168,7 @@ define <2 x i1> @icmp_sgt_sext_is_true_false(<2 x i8> %x) {
 
 define <2 x i1> @icmp_slt_sext_is_true_false(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_slt_sext_is_true_false(
-; CHECK-NEXT:    [[XEXT:%.*]] = sext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[XEXT]], <i32 257, i32 -450>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 false>
 ;
   %xext = sext <2 x i8> %x to <2 x i32>
   %cmp = icmp slt <2 x i32> %xext, <i32 257, i32 -450>
