@@ -1185,6 +1185,13 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i32, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4f32, Custom);
 
+      // Test data class instructions store results in CR bits.
+      if (Subtarget.useCRBits()) {
+        setOperationAction(ISD::IS_FPCLASS, MVT::f32, Custom);
+        setOperationAction(ISD::IS_FPCLASS, MVT::f64, Custom);
+        setOperationAction(ISD::IS_FPCLASS, MVT::f128, Custom);
+      }
+
       // 128 bit shifts can be accomplished via 3 instructions for SHL and
       // SRL, but not for SRA because of the instructions available:
       // VS{RL} and VS{RL}O.
@@ -10999,6 +11006,153 @@ SDValue PPCTargetLowering::LowerATOMIC_LOAD_STORE(SDValue Op,
   }
 }
 
+static SDValue getDataClassTest(SDValue Op, FPClassTest Mask, const SDLoc &Dl,
+                                SelectionDAG &DAG,
+                                const PPCSubtarget &Subtarget) {
+  assert(Mask <= fcAllFlags && "Invalid fp_class flags!");
+
+  enum DataClassMask {
+    DC_NAN = 1 << 6,
+    DC_NEG_INF = 1 << 4,
+    DC_POS_INF = 1 << 5,
+    DC_NEG_ZERO = 1 << 2,
+    DC_POS_ZERO = 1 << 3,
+    DC_NEG_SUBNORM = 1,
+    DC_POS_SUBNORM = 1 << 1,
+  };
+
+  EVT VT = Op.getValueType();
+
+  unsigned TestOp = VT == MVT::f128  ? PPC::XSTSTDCQP
+                    : VT == MVT::f64 ? PPC::XSTSTDCDP
+                                     : PPC::XSTSTDCSP;
+
+  if (Mask == fcAllFlags)
+    return DAG.getBoolConstant(true, Dl, MVT::i1, VT);
+  if (Mask == 0)
+    return DAG.getBoolConstant(false, Dl, MVT::i1, VT);
+
+  // When it's cheaper or necessary to test reverse flags.
+  if ((Mask & fcNormal) == fcNormal || Mask == ~fcQNan || Mask == ~fcSNan) {
+    SDValue Rev = getDataClassTest(Op, ~Mask, Dl, DAG, Subtarget);
+    return DAG.getNOT(Dl, Rev, MVT::i1);
+  }
+
+  // Power doesn't support testing whether a value is 'normal'. Test the rest
+  // first, and test if it's 'not not-normal' with expected sign.
+  if (Mask & fcNormal) {
+    SDValue Rev(DAG.getMachineNode(
+                    TestOp, Dl, MVT::i32,
+                    DAG.getTargetConstant(DC_NAN | DC_NEG_INF | DC_POS_INF |
+                                              DC_NEG_ZERO | DC_POS_ZERO |
+                                              DC_NEG_SUBNORM | DC_POS_SUBNORM,
+                                          Dl, MVT::i32),
+                    Op),
+                0);
+    // Sign are stored in CR bit 0, result are in CR bit 2.
+    SDValue Sign(
+        DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, Dl, MVT::i1, Rev,
+                           DAG.getTargetConstant(PPC::sub_lt, Dl, MVT::i32)),
+        0);
+    SDValue Normal(DAG.getNOT(
+        Dl,
+        SDValue(DAG.getMachineNode(
+                    TargetOpcode::EXTRACT_SUBREG, Dl, MVT::i1, Rev,
+                    DAG.getTargetConstant(PPC::sub_eq, Dl, MVT::i32)),
+                0),
+        MVT::i1));
+    if (Mask & fcPosNormal)
+      Sign = DAG.getNOT(Dl, Sign, MVT::i1);
+    SDValue Result = DAG.getNode(ISD::AND, Dl, MVT::i1, Sign, Normal);
+    if (Mask == fcPosNormal || Mask == fcNegNormal)
+      return Result;
+
+    return DAG.getNode(
+        ISD::OR, Dl, MVT::i1,
+        getDataClassTest(Op, Mask & ~fcNormal, Dl, DAG, Subtarget), Result);
+  }
+
+  // The instruction doesn't differentiate between signaling or quiet NaN. Test
+  // the rest first, and test if it 'is NaN and is signaling/quiet'.
+  if ((Mask & fcNan) == fcQNan || (Mask & fcNan) == fcSNan) {
+    bool IsQuiet = Mask & fcQNan;
+    SDValue NanCheck = getDataClassTest(Op, fcNan, Dl, DAG, Subtarget);
+
+    // Quietness is determined by the first bit in fraction field.
+    uint64_t QuietMask = 0;
+    SDValue HighWord;
+    if (VT == MVT::f128) {
+      HighWord = DAG.getNode(
+          ISD::EXTRACT_VECTOR_ELT, Dl, MVT::i32, DAG.getBitcast(MVT::v4i32, Op),
+          DAG.getVectorIdxConstant(Subtarget.isLittleEndian() ? 3 : 0, Dl));
+      QuietMask = 0x8000;
+    } else if (VT == MVT::f64) {
+      if (Subtarget.isPPC64()) {
+        HighWord = DAG.getNode(ISD::EXTRACT_ELEMENT, Dl, MVT::i32,
+                               DAG.getBitcast(MVT::i64, Op),
+                               DAG.getConstant(1, Dl, MVT::i32));
+      } else {
+        SDValue Vec = DAG.getBitcast(
+            MVT::v4i32, DAG.getNode(ISD::SCALAR_TO_VECTOR, Dl, MVT::v2f64, Op));
+        HighWord = DAG.getNode(
+            ISD::EXTRACT_VECTOR_ELT, Dl, MVT::i32, Vec,
+            DAG.getVectorIdxConstant(Subtarget.isLittleEndian() ? 1 : 0, Dl));
+      }
+      QuietMask = 0x80000;
+    } else if (VT == MVT::f32) {
+      HighWord = DAG.getBitcast(MVT::i32, Op);
+      QuietMask = 0x400000;
+    }
+    SDValue NanRes = DAG.getSetCC(
+        Dl, MVT::i1,
+        DAG.getNode(ISD::AND, Dl, MVT::i32, HighWord,
+                    DAG.getConstant(QuietMask, Dl, MVT::i32)),
+        DAG.getConstant(0, Dl, MVT::i32), IsQuiet ? ISD::SETNE : ISD::SETEQ);
+    NanRes = DAG.getNode(ISD::AND, Dl, MVT::i1, NanCheck, NanRes);
+    if (Mask == fcQNan || Mask == fcSNan)
+      return NanRes;
+
+    return DAG.getNode(ISD::OR, Dl, MVT::i1,
+                       getDataClassTest(Op, Mask & ~fcNan, Dl, DAG, Subtarget),
+                       NanRes);
+  }
+
+  unsigned NativeMask = 0;
+  if ((Mask & fcNan) == fcNan)
+    NativeMask |= DC_NAN;
+  if (Mask & fcNegInf)
+    NativeMask |= DC_NEG_INF;
+  if (Mask & fcPosInf)
+    NativeMask |= DC_POS_INF;
+  if (Mask & fcNegZero)
+    NativeMask |= DC_NEG_ZERO;
+  if (Mask & fcPosZero)
+    NativeMask |= DC_POS_ZERO;
+  if (Mask & fcNegSubnormal)
+    NativeMask |= DC_NEG_SUBNORM;
+  if (Mask & fcPosSubnormal)
+    NativeMask |= DC_POS_SUBNORM;
+  return SDValue(
+      DAG.getMachineNode(
+          TargetOpcode::EXTRACT_SUBREG, Dl, MVT::i1,
+          SDValue(DAG.getMachineNode(
+                      TestOp, Dl, MVT::i32,
+                      DAG.getTargetConstant(NativeMask, Dl, MVT::i32), Op),
+                  0),
+          DAG.getTargetConstant(PPC::sub_eq, Dl, MVT::i32)),
+      0);
+}
+
+SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  assert(Subtarget.hasP9Vector() && "Test data class requires Power9");
+  SDValue LHS = Op.getOperand(0);
+  const auto *RHS = cast<ConstantSDNode>(Op.getOperand(1));
+  SDLoc Dl(Op);
+  FPClassTest Category = static_cast<FPClassTest>(RHS->getZExtValue());
+  return getDataClassTest(LHS, Category, Dl, DAG, Subtarget);
+}
+
 SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -11426,6 +11580,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerATOMIC_CMP_SWAP(Op, DAG);
   case ISD::ATOMIC_STORE:
     return LowerATOMIC_LOAD_STORE(Op, DAG);
+  case ISD::IS_FPCLASS:
+    return LowerIS_FPCLASS(Op, DAG);
   }
 }
 
