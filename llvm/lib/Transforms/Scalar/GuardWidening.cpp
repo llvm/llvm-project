@@ -627,13 +627,23 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig, Instruction *InsertPt) {
     I->dropPoisonGeneratingFlagsAndMetadata();
 
   Value *Result = Orig;
+  SmallPtrSet<Value *, 16> NeedFreezeSet(NeedFreeze.begin(), NeedFreeze.end());
   for (Value *V : NeedFreeze) {
     auto *FreezeInsertPt = getFreezeInsertPt(V, DT);
     FreezeInst *FI = new FreezeInst(V, V->getName() + ".gw.fr", FreezeInsertPt);
     ++FreezeAdded;
     if (V == Orig)
       Result = FI;
-    V->replaceUsesWithIf(FI, [&](Use & U)->bool { return U.getUser() != FI; });
+    if (isa<Instruction>(V) || isa<Argument>(V))
+      V->replaceUsesWithIf(
+          FI, [&](const Use & U)->bool { return U.getUser() != FI; });
+    else
+      // if it is a constant or global, just make a change only in instructions
+      // we visited and which are not marked as NeedFreeze itself.
+      V->replaceUsesWithIf(FI, [&](const Use & U)->bool {
+        return U.getUser() != FI && Visited.contains(U) &&
+               !NeedFreezeSet.count(U);
+      });
   }
 
   return Result;
