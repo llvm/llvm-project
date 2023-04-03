@@ -955,7 +955,7 @@ static Expected<std::vector<SectionRef>> lookupSections(ObjectFile &OF,
 static Expected<std::unique_ptr<BinaryCoverageReader>>
 loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
                  StringRef CompilationDir = "",
-                 std::optional<object::BuildIDRef> *BinaryID = nullptr) {
+                 object::BuildIDRef *BinaryID = nullptr) {
   std::unique_ptr<ObjectFile> OF;
   if (auto *Universal = dyn_cast<MachOUniversalBinary>(Bin.get())) {
     // If we have a universal binary, try to look up the object for the
@@ -1151,14 +1151,14 @@ BinaryCoverageReader::create(
     return std::move(Readers);
   }
 
-  std::optional<object::BuildIDRef> BinaryID;
+  object::BuildIDRef BinaryID;
   auto ReaderOrErr = loadBinaryFormat(std::move(Bin), Arch, CompilationDir,
                                       BinaryIDs ? &BinaryID : nullptr);
   if (!ReaderOrErr)
     return ReaderOrErr.takeError();
   Readers.push_back(std::move(ReaderOrErr.get()));
-  if (BinaryID)
-    BinaryIDs->push_back(*BinaryID);
+  if (!BinaryID.empty())
+    BinaryIDs->push_back(BinaryID);
   return std::move(Readers);
 }
 
