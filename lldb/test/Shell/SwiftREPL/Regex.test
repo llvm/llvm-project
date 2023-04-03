@@ -3,8 +3,13 @@
 
 // RUN: %lldb --repl < %s | FileCheck %s
 
+// Make sure we can use an extended literal without enabling anything.
+let regex1 = #/Order from <(.*)>, type: (.*), count in dozen: ([0-9]+)/#
+// CHECK: _StringProcessing.Regex<(Substring, Substring, Substring, Substring)> =
+
 :settings set target.experimental.swift-enable-bare-slash-regex true
-let regex = /Order from <(.*)>, type: (.*), count in dozen: ([0-9]+)/
+
+let regex2 = /Order from <(.*)>, type: (.*), count in dozen: ([0-9]+)/
 // CHECK: _StringProcessing.Regex<(Substring, Substring, Substring, Substring)> =
 
 import RegexBuilder
@@ -16,6 +21,7 @@ let dslRegex = Regex { .digit }
 if #unavailable(macOS 13, iOS 16, watchOS 9, tvOS 16) {
   // Work around the fact that the REPL doesn't print results for
   // variables declared inside of a conditional.
+  print("_StringProcessing.Regex<(Substring, Substring, Substring, Substring)> =")
   print("_StringProcessing.Regex<(Substring, Substring, Substring, Substring)> =")
   print("_StringProcessing.Regex<Substring> = ")
 }
