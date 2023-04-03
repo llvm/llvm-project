@@ -183,6 +183,26 @@ DataLayoutImporter::tryToEmplaceAllocaAddrSpaceEntry(StringRef token) {
   return success();
 }
 
+LogicalResult
+DataLayoutImporter::tryToEmplaceStackAlignmentEntry(StringRef token) {
+  auto key =
+      StringAttr::get(context, DLTIDialect::kDataLayoutStackAlignmentKey);
+  if (keyEntries.count(key))
+    return success();
+
+  FailureOr<unsigned> alignment = tryToParseInt(token);
+  if (failed(alignment))
+    return failure();
+
+  // Only store the stack alignment if it has a non-default value.
+  if (*alignment == 0)
+    return success();
+  OpBuilder builder(context);
+  keyEntries.try_emplace(key, DataLayoutEntryAttr::get(
+                                  key, builder.getI32IntegerAttr(*alignment)));
+  return success();
+}
+
 void DataLayoutImporter::translateDataLayout(
     const llvm::DataLayout &llvmDataLayout) {
   dataLayout = {};
@@ -227,6 +247,12 @@ void DataLayoutImporter::translateDataLayout(
     // Parse the alloca address space.
     if (*prefix == "A") {
       if (failed(tryToEmplaceAllocaAddrSpaceEntry(token)))
+        return;
+      continue;
+    }
+    // Parse the stack alignment.
+    if (*prefix == "S") {
+      if (failed(tryToEmplaceStackAlignmentEntry(token)))
         return;
       continue;
     }

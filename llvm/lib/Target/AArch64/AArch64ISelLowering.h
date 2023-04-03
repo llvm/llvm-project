@@ -77,7 +77,7 @@ enum NodeType : unsigned {
   ADDlow,   // Add the low 12 bits of a TargetGlobalAddress operand.
   LOADgot,  // Load from automatically generated descriptor (e.g. Global
             // Offset Table, TLS record).
-  RET_FLAG, // Return with a flag operand. Operand 0 is the chain operand.
+  RET_GLUE, // Return with a glue operand. Operand 0 is the chain operand.
   BRCOND,   // Conditional branch instruction; "b.cond".
   CSEL,
   CSINV, // Conditional select invert.
@@ -914,7 +914,7 @@ public:
   /// \p Entry tells whether this is before/after the Call, which is necessary
   /// because PSTATE.SM is only queried once.
   SDValue changeStreamingMode(SelectionDAG &DAG, SDLoc DL, bool Enable,
-                              SDValue Chain, SDValue InFlag,
+                              SDValue Chain, SDValue InGlue,
                               SDValue PStateSM, bool Entry) const;
 
   bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
@@ -948,7 +948,7 @@ private:
   SDValue LowerCall(CallLoweringInfo & /*CLI*/,
                     SmallVectorImpl<SDValue> &InVals) const override;
 
-  SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
+  SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                           CallingConv::ID CallConv, bool isVarArg,
                           const SmallVectorImpl<CCValAssign> &RVLocs,
                           const SDLoc &DL, SelectionDAG &DAG,

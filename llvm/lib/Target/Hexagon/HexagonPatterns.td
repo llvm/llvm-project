@@ -3243,11 +3243,11 @@ def: Pat<(callv3nr I32:$dst),               (PS_callr_nr I32:$dst)>;
 def: Pat<(callv3nr tglobaladdr:$dst),       (PS_call_nr tglobaladdr:$dst)>;
 def: Pat<(callv3nr texternalsym:$dst),      (PS_call_nr texternalsym:$dst)>;
 
-def retflag : SDNode<"HexagonISD::RET_FLAG", SDTNone,
+def retglue : SDNode<"HexagonISD::RET_GLUE", SDTNone,
                      [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def eh_return: SDNode<"HexagonISD::EH_RETURN", SDTNone, [SDNPHasChain]>;
 
-def: Pat<(retflag),   (PS_jmpret (i32 R31))>;
+def: Pat<(retglue),   (PS_jmpret (i32 R31))>;
 def: Pat<(eh_return), (EH_RETURN_JMPR (i32 R31))>;
 
 

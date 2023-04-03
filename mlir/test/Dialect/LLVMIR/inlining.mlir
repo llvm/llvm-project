@@ -381,10 +381,17 @@ llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) {
 
 // CHECK-LABEL: llvm.func @test_byval
 // CHECK-SAME: %[[PTR:[a-zA-Z0-9_]+]]: !llvm.ptr
-// CHECK: %[[ALLOCA:.+]] = llvm.alloca %{{.+}} x f64
-// CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[PTR]]
 llvm.func @test_byval(%ptr : !llvm.ptr) {
+  // Make sure the new static alloca goes to the entry block.
+  // CHECK: %[[ALLOCA:.+]] = llvm.alloca %{{.+}} x f64
+  // CHECK: llvm.br ^[[BB1:[a-zA-Z0-9_]+]]
+  llvm.br ^bb1
+  // CHECK: ^[[BB1]]
+^bb1:
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[PTR]]
   llvm.call @with_byval_arg(%ptr) : (!llvm.ptr) -> ()
+  llvm.br ^bb2
+^bb2:
   llvm.return
 }
 
@@ -442,15 +449,27 @@ llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 1
   llvm.return
 }
 
-// CHECK-LABEL: llvm.func @test_byval_alloca
-llvm.func @test_byval_alloca() {
-  // Make sure only the unaligned alloca triggers a memcpy.
-  %size = llvm.mlir.constant(1 : i64) : i64
-  // CHECK: %[[ALLOCA:.+]] = llvm.alloca {{.+}}alignment = 1
-  // CHECK: "llvm.intr.memcpy"(%{{.+}}, %[[ALLOCA]]
+// CHECK-LABEL: llvm.func @test_byval_unaligned_alloca
+llvm.func @test_byval_unaligned_alloca() {
+  %size = llvm.mlir.constant(4 : i64) : i64
+  // CHECK-DAG: %[[SRC:.+]] = llvm.alloca {{.+}}alignment = 1 : i64
+  // CHECK-DAG: %[[DST:.+]] = llvm.alloca {{.+}}alignment = 16 : i64
+  // CHECK: "llvm.intr.memcpy"(%[[DST]], %[[SRC]]
   %unaligned = llvm.alloca %size x i16 { alignment = 1 } : (i64) -> !llvm.ptr
   llvm.call @aligned_byval_arg(%unaligned) : (!llvm.ptr) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_byval_aligned_alloca
+llvm.func @test_byval_aligned_alloca() {
   // CHECK-NOT: memcpy
+  %size = llvm.mlir.constant(1 : i64) : i64
   %aligned = llvm.alloca %size x i16 { alignment = 16 } : (i64) -> !llvm.ptr
   llvm.call @aligned_byval_arg(%aligned) : (!llvm.ptr) -> ()
   llvm.return
@@ -468,8 +487,8 @@ llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 1
 // CHECK-LABEL: llvm.func @test_byval_global
 llvm.func @test_byval_global() {
   // Make sure only the unaligned global triggers a memcpy.
-  // CHECK: %[[UNALIGNED:.+]] = llvm.mlir.addressof @unaligned_global
-  // CHECK: %[[ALLOCA:.+]] = llvm.alloca
+  // CHECK-DAG: %[[UNALIGNED:.+]] = llvm.mlir.addressof @unaligned_global
+  // CHECK-DAG: %[[ALLOCA:.+]] = llvm.alloca
   // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[UNALIGNED]]
   // CHECK-NOT: llvm.alloca
   %unaligned = llvm.mlir.addressof @unaligned_global : !llvm.ptr
