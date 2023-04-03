@@ -1703,7 +1703,8 @@ LogicalResult KokkosCppEmitter::emitOperands(Operation &op) {
   auto emitOperandName = [&](Value result) -> LogicalResult {
     if (!hasValueInScope(result))
       return op.emitOpError() << "operand value not in scope";
-    os << getOrCreateName(result);
+    if(failed(emitValue(result)))
+      return failure();
     return success();
   };
   return interleaveCommaWithError(op.getOperands(), os, emitOperandName);
