@@ -269,16 +269,14 @@ entry:
 define signext i32 @and_i32_0xfff0(i32 %a) {
 ; LA32-LABEL: and_i32_0xfff0:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    lu12i.w $a1, 15
-; LA32-NEXT:    ori $a1, $a1, 4080
-; LA32-NEXT:    and $a0, $a0, $a1
+; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 4
+; LA32-NEXT:    slli.w $a0, $a0, 4
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: and_i32_0xfff0:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    lu12i.w $a1, 15
-; LA64-NEXT:    ori $a1, $a1, 4080
-; LA64-NEXT:    and $a0, $a0, $a1
+; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 4
+; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    ret
   %b = and i32 %a, 65520
   ret i32 %b
@@ -287,19 +285,19 @@ define signext i32 @and_i32_0xfff0(i32 %a) {
 define signext i32 @and_i32_0xfff0_twice(i32 %a, i32 %b) {
 ; LA32-LABEL: and_i32_0xfff0_twice:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    lu12i.w $a2, 15
-; LA32-NEXT:    ori $a2, $a2, 4080
-; LA32-NEXT:    and $a1, $a1, $a2
-; LA32-NEXT:    and $a0, $a0, $a2
+; LA32-NEXT:    bstrpick.w $a1, $a1, 15, 4
+; LA32-NEXT:    slli.w $a1, $a1, 4
+; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 4
+; LA32-NEXT:    slli.w $a0, $a0, 4
 ; LA32-NEXT:    sub.w $a0, $a0, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: and_i32_0xfff0_twice:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    lu12i.w $a2, 15
-; LA64-NEXT:    ori $a2, $a2, 4080
-; LA64-NEXT:    and $a1, $a1, $a2
-; LA64-NEXT:    and $a0, $a0, $a2
+; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 4
+; LA64-NEXT:    slli.d $a1, $a1, 4
+; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 4
+; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    sub.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %c = and i32 %a, 65520
@@ -311,17 +309,15 @@ define signext i32 @and_i32_0xfff0_twice(i32 %a, i32 %b) {
 define i64 @and_i64_0xfff0(i64 %a) {
 ; LA32-LABEL: and_i64_0xfff0:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    lu12i.w $a1, 15
-; LA32-NEXT:    ori $a1, $a1, 4080
-; LA32-NEXT:    and $a0, $a0, $a1
+; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 4
+; LA32-NEXT:    slli.w $a0, $a0, 4
 ; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: and_i64_0xfff0:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    lu12i.w $a1, 15
-; LA64-NEXT:    ori $a1, $a1, 4080
-; LA64-NEXT:    and $a0, $a0, $a1
+; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 4
+; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    ret
   %b = and i64 %a, 65520
   ret i64 %b
@@ -330,21 +326,21 @@ define i64 @and_i64_0xfff0(i64 %a) {
 define i64 @and_i64_0xfff0_twice(i64 %a, i64 %b) {
 ; LA32-LABEL: and_i64_0xfff0_twice:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    lu12i.w $a1, 15
-; LA32-NEXT:    ori $a1, $a1, 4080
-; LA32-NEXT:    and $a2, $a2, $a1
-; LA32-NEXT:    and $a1, $a0, $a1
-; LA32-NEXT:    sub.w $a0, $a1, $a2
-; LA32-NEXT:    sltu $a1, $a1, $a2
+; LA32-NEXT:    bstrpick.w $a1, $a2, 15, 4
+; LA32-NEXT:    slli.w $a1, $a1, 4
+; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 4
+; LA32-NEXT:    slli.w $a2, $a0, 4
+; LA32-NEXT:    sub.w $a0, $a2, $a1
+; LA32-NEXT:    sltu $a1, $a2, $a1
 ; LA32-NEXT:    sub.w $a1, $zero, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: and_i64_0xfff0_twice:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    lu12i.w $a2, 15
-; LA64-NEXT:    ori $a2, $a2, 4080
-; LA64-NEXT:    and $a1, $a1, $a2
-; LA64-NEXT:    and $a0, $a0, $a2
+; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 4
+; LA64-NEXT:    slli.d $a1, $a1, 4
+; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 4
+; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    sub.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %c = and i64 %a, 65520
