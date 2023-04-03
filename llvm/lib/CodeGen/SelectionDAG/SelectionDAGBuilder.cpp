@@ -7503,13 +7503,12 @@ void SelectionDAGBuilder::visitVPLoad(
   AAMDNodes AAInfo = VPIntrin.getAAMetadata();
   const MDNode *Ranges = VPIntrin.getMetadata(LLVMContext::MD_range);
   SDValue LD;
-  bool AddToChain = true;
   // Do not serialize variable-length loads of constant memory with
   // anything.
   if (!Alignment)
     Alignment = DAG.getEVTAlign(VT);
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
-  AddToChain = !AA || !AA->pointsToConstantMemory(ML);
+  bool AddToChain = !AA || !AA->pointsToConstantMemory(ML);
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
