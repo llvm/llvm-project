@@ -1210,7 +1210,9 @@ public:
     return LValue::makeAddr(Addr, T, getContext(), LValueBaseInfo(Source));
   }
 
-  void initializeVTablePointers(const clang::CXXRecordDecl *RD);
+  void initializeVTablePointers(mlir::Location loc,
+                                const clang::CXXRecordDecl *RD);
+  void initializeVTablePointer(mlir::Location loc, const VPtr &Vptr);
 
   LValue buildLValueForField(LValue Base, const clang::FieldDecl *Field);
 

@@ -30,6 +30,7 @@ add_clang_library(clangCIR
   CIRGenStmt.cpp
   CIRGenTBAA.cpp
   CIRGenTypes.cpp
+  CIRGenVTables.cpp
   CIRGenerator.cpp
   CIRPasses.cpp
   CIRRecordLayoutBuilder.cpp

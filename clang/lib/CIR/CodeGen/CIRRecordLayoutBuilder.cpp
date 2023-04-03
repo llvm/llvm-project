@@ -288,9 +288,7 @@ void CIRRecordLowering::accumulateVPtrs() {
 mlir::Type CIRRecordLowering::getVFPtrType() {
   // FIXME: replay LLVM codegen for now, perhaps add a vtable ptr special
   // type so it's a bit more clear and C++ idiomatic.
-  auto intTy = mlir::IntegerType::get(builder.getContext(), 32);
-  auto fnTy = mlir::FunctionType::get(builder.getContext(), {}, {intTy});
-  return builder.getPointerTo(builder.getPointerTo(fnTy));
+  return builder.getVirtualFnPtrType();
 }
 
 void CIRRecordLowering::fillOutputFields() {

@@ -37,6 +37,9 @@ struct UnimplementedFeature {
   static bool setDSOLocal() { return false; }
   static bool threadLocal() { return false; }
   static bool setDLLStorageClass() { return false; }
+  static bool setDLLImportDLLExport() { return false; }
+  static bool setPartition() { return false; }
+  static bool setGlobalVisibility() { return false; }
 
   // Sanitizers
   static bool reportGlobalToASan() { return false; }

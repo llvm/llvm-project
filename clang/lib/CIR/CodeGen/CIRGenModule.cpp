@@ -93,8 +93,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
     : builder(context), astCtx(astctx), langOpts(astctx.getLangOpts()),
       codeGenOpts(CGO),
       theModule{mlir::ModuleOp::create(builder.getUnknownLoc())}, Diags(Diags),
-      target(astCtx.getTargetInfo()), ABI(createCXXABI(*this)),
-      genTypes{*this} {
+      target(astCtx.getTargetInfo()), ABI(createCXXABI(*this)), genTypes{*this},
+      VTables{*this} {
   mlir::cir::sob::SignedOverflowBehavior sob;
   switch (langOpts.getSignedOverflowBehavior()) {
   case clang::LangOptions::SignedOverflowBehaviorTy::SOB_Defined:
@@ -350,7 +350,7 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
     return;
 
   setFunctionLinkage(GD, Fn);
-  // TODO(cir): setGVProperties
+  setGVProperties(Op, D);
   // TODO(cir): MaubeHandleStaticInExternC
   // TODO(cir): maybeSetTrivialComdat
   // TODO(cir): setLLVMFunctionFEnvAttributes
@@ -533,8 +533,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
       assert(0 && "not implemented");
     }
 
-    // TODO(cir):
-    //   setGVProperties(GV, D);
+    setGVProperties(GV, D);
 
     // If required by the ABI, treat declarations of static data members with
     // inline initializers as definitions.
@@ -1506,8 +1505,26 @@ StringRef CIRGenModule::getMangledName(GlobalDecl GD) {
   return MangledDeclNames[CanonicalGD] = Result.first->first();
 }
 
+void CIRGenModule::setGlobalVisibility(mlir::Operation *GV,
+                                       const NamedDecl *D) const {
+  assert(!UnimplementedFeature::setGlobalVisibility());
+}
+
 void CIRGenModule::setDSOLocal(mlir::Operation *Op) const {
-  // TODO: Op->setDSOLocal
+  assert(!UnimplementedFeature::setDSOLocal());
+}
+
+void CIRGenModule::setGVProperties(mlir::Operation *Op,
+                                   const NamedDecl *D) const {
+  assert(!UnimplementedFeature::setDLLImportDLLExport());
+  setGVPropertiesAux(Op, D);
+}
+
+void CIRGenModule::setGVPropertiesAux(mlir::Operation *Op,
+                                      const NamedDecl *D) const {
+  setGlobalVisibility(Op, D);
+  setDSOLocal(Op);
+  assert(!UnimplementedFeature::setPartition());
 }
 
 bool CIRGenModule::lookupRepresentativeDecl(StringRef MangledName,
@@ -2022,4 +2039,51 @@ void CIRGenModule::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
   }
 
   buildTopLevelDecl(VD);
+}
+
+mlir::cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
+    mlir::Location loc, StringRef Name, mlir::Type Ty,
+    mlir::cir::GlobalLinkageKind Linkage, clang::CharUnits Alignment) {
+  mlir::cir::GlobalOp OldGV{};
+  auto GV = dyn_cast_or_null<mlir::cir::GlobalOp>(
+      mlir::SymbolTable::lookupSymbolIn(getModule(), Name));
+
+  if (GV) {
+    // Check if the variable has the right type.
+    if (GV.getSymType() == Ty)
+      return GV;
+
+    // Because C++ name mangling, the only way we can end up with an already
+    // existing global with the same name is if it has been declared extern
+    // "C".
+    assert(GV.isDeclaration() && "Declaration has wrong type!");
+    OldGV = GV;
+  }
+
+  // // Create a new variable.
+  GV = createGlobalOp(*this, loc, Name, Ty);
+
+  // Set up extra information and add to the module
+
+  GV.setLinkageAttr(
+      mlir::cir::GlobalLinkageKindAttr::get(builder.getContext(), Linkage));
+  mlir::SymbolTable::setSymbolVisibility(
+      GV, CIRGenModule::getMLIRVisibilityFromCIRLinkage(Linkage));
+
+  if (OldGV) {
+    // Replace occurrences of the old variable if needed.
+    GV.setName(OldGV.getName());
+    if (!OldGV->use_empty()) {
+      llvm_unreachable("NYI");
+    }
+    OldGV->erase();
+  }
+
+  assert(!UnimplementedFeature::setComdat());
+  if (supportsCOMDAT() && mlir::cir::isWeakForLinker(Linkage) &&
+      !GV.hasAvailableExternallyLinkage())
+    assert(!UnimplementedFeature::setComdat());
+
+  GV.setAlignmentAttr(getSize(Alignment));
+  return GV;
 }

@@ -15,6 +15,7 @@
 
 #include "CIRGenBuilder.h"
 #include "CIRGenTypes.h"
+#include "CIRGenVTables.h"
 #include "CIRGenValue.h"
 #include "UnimplementedFeatureGuarding.h"
 
@@ -94,6 +95,9 @@ private:
 
   /// Per-module type mapping from clang AST to CIR.
   CIRGenTypes genTypes;
+
+  /// Holds information about C++ vtables.
+  CIRGenVTables VTables;
 
   /// Per-function codegen information. Updated everytime buildCIR is called
   /// for FunctionDecls's.
@@ -189,6 +193,14 @@ public:
   getAddrOfGlobalVar(const VarDecl *D, std::optional<mlir::Type> Ty = {},
                      ForDefinition_t IsForDefinition = NotForDefinition);
 
+  /// Will return a global variable of the given type. If a variable with a
+  /// different type already exists then a new variable with the right type
+  /// will be created and all uses of the old variable will be replaced with a
+  /// bitcast to the new variable.
+  mlir::cir::GlobalOp createOrReplaceCXXRuntimeVariable(
+      mlir::Location loc, StringRef Name, mlir::Type Ty,
+      mlir::cir::GlobalLinkageKind Linkage, clang::CharUnits Alignment);
+
   llvm::DenseMap<mlir::Attribute, mlir::cir::GlobalOp> ConstantStringMap;
 
   /// Return a constant array for the given string.
@@ -262,6 +274,16 @@ public:
   /// A queue of (optional) vtables to consider emitting.
   std::vector<const clang::CXXRecordDecl *> DeferredVTables;
 
+  mlir::Type getVTableComponentType();
+  CIRGenVTables &getVTables() { return VTables; }
+
+  ItaniumVTableContext &getItaniumVTableContext() {
+    return VTables.getItaniumVTableContext();
+  }
+  const ItaniumVTableContext &getItaniumVTableContext() const {
+    return VTables.getItaniumVTableContext();
+  }
+
   /// This contains all the decls which have definitions but which are deferred
   /// for emission and therefore should only be output if they are actually
   /// used. If a decl is in this, then it is known to have not been referenced
@@ -297,7 +319,13 @@ public:
 
   mlir::Type getCIRType(const clang::QualType &type);
 
+  /// Set the visibility for the given global.
+  void setGlobalVisibility(mlir::Operation *Op, const NamedDecl *D) const;
   void setDSOLocal(mlir::Operation *Op) const;
+  /// Set visibility, dllimport/dllexport and dso_local.
+  /// This must be called after dllimport/dllexport is set.
+  void setGVProperties(mlir::Operation *Op, const NamedDecl *D) const;
+  void setGVPropertiesAux(mlir::Operation *Op, const NamedDecl *D) const;
 
   /// Determine whether the definition must be emitted; if this returns \c
   /// false, the definition can be emitted lazily if it's used.
@@ -349,6 +377,10 @@ public:
   void buildGlobalFunctionDefinition(clang::GlobalDecl D, mlir::Operation *Op);
   void buildGlobalVarDefinition(const clang::VarDecl *D,
                                 bool IsTentative = false);
+
+  void addDeferredVTable(const CXXRecordDecl *RD) {
+    DeferredVTables.push_back(RD);
+  }
 
   /// Stored a deferred empty coverage mapping for an unused and thus
   /// uninstrumented top level declaration.
