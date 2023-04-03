@@ -708,6 +708,8 @@ define amdgpu_kernel void @local_volatile_workgroup_release_store(
 ; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
 ; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
