@@ -2136,9 +2136,8 @@ void SymbolFileNativePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
                                    TypeClass type_mask,
                                    lldb_private::TypeList &type_list) {}
 
-CompilerDeclContext
-SymbolFileNativePDB::FindNamespace(ConstString name,
-                                   const CompilerDeclContext &parent_decl_ctx) {
+CompilerDeclContext SymbolFileNativePDB::FindNamespace(
+    ConstString name, const CompilerDeclContext &parent_decl_ctx, bool) {
   return {};
 }
 
