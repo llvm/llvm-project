@@ -187,7 +187,7 @@ string HipBinUtil::mktempFile(string name) {
 #if defined(_WIN32) || defined(_WIN64)
   fileName = _mktemp(&name[0]);
 #else
-  fileName = mktemp(&name[0]);
+  fileName = mkdtemp(&name[0]);
 #endif
   tmpFiles_.push_back(fileName);
   return fileName;

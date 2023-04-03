@@ -1,22 +1,114 @@
-cmake_minimum_required(VERSION 3.16.3)
-project (hipcc.bin)
+cmake_minimum_required(VERSION 3.13.4)
 
-# Specify the C++ standard
+project(hipcc VERSION "1.0.0" LANGUAGES C CXX)
+set(hipcc_NAME "${PROJECT_NAME}")
+
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+
+find_package(ROCM QUIET)
+if(ROCM_FOUND)
+  include(ROCMSetupVersion)
+  rocm_setup_version(VERSION "${hipcc_VERSION}")
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-set (LINK_LIBS libstdc++fs.so)
-add_executable(hipcc.bin src/hipBin.cpp)
-if (NOT WIN32) # C++17 does not require the std lib linking
-  target_link_libraries(hipcc.bin ${LINK_LIBS} ) # for hipcc.bin
+set(ADDITIONAL_SHARED_LIBRARIES_TO_LINK
+  libstdc++fs.so)
+
+set(HIPCC_BIN
+  hipcc.bin)
+set(HIPCC_SOURCES
+  src/hipBin.cpp)
+
+set(HIPCONFIG_BIN
+  hipconfig.bin)
+set(HIPCONFIG_SOURCES
+  src/hipBin.cpp)
+
+add_executable(${HIPCC_BIN} ${HIPCC_SOURCES})
+if(NOT WIN32)
+  # C++17 does not require std lib linking.
+  target_link_libraries(${HIPCC_BIN} ${ADDITIONAL_SHARED_LIBRARIES_TO_LINK})
 endif()
 
-project (hipconfig.bin)
-add_executable(hipconfig.bin src/hipBin.cpp)
-if (NOT WIN32) # C++17 does not require the std lib linking
-  target_link_libraries(hipconfig.bin ${LINK_LIBS} ) # for hipconfig.bin
+add_executable(${HIPCONFIG_BIN} ${HIPCONFIG_SOURCES})
+if(NOT WIN32)
+  # C++17 does not require std lib linking.
+  target_link_libraries(${HIPCONFIG_BIN} ${ADDITIONAL_SHARED_LIBRARIES_TO_LINK})
 endif()
 
-set(HIP_VERSION_MAJOR 4 PARENT_SCOPE)
-set(HIP_VERSION_MINOR 4 PARENT_SCOPE)
-set(HIP_VERSION_PATCH 4 PARENT_SCOPE)
+# Copy scripts and batch files to build directory.
+file(COPY ${CMAKE_SOURCE_DIR}/bin/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+set(CPACK_GENERATOR "DEB;RPM;ZIP" CACHE STRING "Default packaging generators")
+set(CPACK_PACKAGE_CONTACT "ROCm Compiler Support <rocm.compiler.support@amd.com>")
+set(CPACK_PACKAGE_DESCRIPTION "HIP Compiler Driver")
+set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
+set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc.")
+set(CPACK_PACKAGE_VERSION_MAJOR "${hipcc_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${hipcc_VERSION_MINOR}")
+set(CPACK_PACKAGE_VERSION_PATCH "${hipcc_VERSION_PATCH}")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
+
+# Debian-specific packaging variables.
+set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "hip-dev, libfile-basedir-perl, libfile-copy-recursive-perl, libfile-listing-perl, libfile-which-perl, liburi-encode-perl, perl (>= 5.0), rocm-core, rocm-llvm")
+set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/ROCm-Developer-Tools/HIPCC")
+if(DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
+  set(CPACK_DEBIAN_PACKAGE_RELEASE $ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
+else()
+  set(CPACK_DEBIAN_PACKAGE_RELEASE "local")
+endif()
+
+# RPM-specific packaging variables.
+set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
+set(CPACK_RPM_PACKAGE_LICENSE "NCSA")
+set(CPACK_RPM_PACKAGE_REQUIRES "hip-devel, perl >= 5.0, perl-File-BaseDir, perl-File-Listing, perl-File-Which, perl-URI-Encode, rocm-core, rocm-llvm")
+if(DEFINED ENV{CPACK_RPM_PACKAGE_RELEASE})
+  set(CPACK_RPM_PACKAGE_RELEASE $ENV{CPACK_RPM_PACKAGE_RELEASE})
+else()
+  set(CPACK_RPM_PACKAGE_RELEASE "local")
+endif()
+if(CPACK_RPM_PACKAGE_RELEASE)
+  set(CPACK_RPM_PACKAGE_RELEASE_DIST ON)
+endif()
+
+# ROCM versioning.
+set(ROCM_VERSION_FOR_PACKAGE "")
+if(DEFINED ENV{ROCM_LIBPATCH_VERSION})
+  set(ROCM_VERSION_FOR_PACKAGE $ENV{ROCM_LIBPATCH_VERSION})
+elseif(DEFINED ENV{ROCM_VERSION})
+  string(REGEX REPLACE "." "" ROCM_VERSION_FOR_PACKAGE $ENV{ROCM_VERSION})
+else()
+  set(ROCM_VERSION_FOR_PACKAGE "99999")
+endif()
+set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}.${ROCM_VERSION_FOR_PACKAGE}")
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
+  DESTINATION .
+  USE_SOURCE_PERMISSIONS)
+install(FILES
+  "LICENSE.txt"
+  "README.md"
+  COMPONENT ${hipcc_NAME}
+  DESTINATION ${CMAKE_INSTALL_DOCDIR})
+install(TARGETS ${HIPCC_BIN}
+  COMPONENT ${hipcc_NAME}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS ${HIPCONFIG_BIN}
+  COMPONENT ${hipcc_NAME}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+# TODO: WIN32 check need to be removed if backward
+# compatibility is required for WIN32.
+option(HIPCC_BACKWARD_COMPATIBILITY "Enable HIPCC backward compatibility" ON)
+if(NOT WIN32)
+  if(HIPCC_BACKWARD_COMPATIBILITY)
+    include(hipcc-backward-compat.cmake)
+  endif()
+endif()
+
+include(CPack)

@@ -1,0 +1,7 @@
+# Merge files created by git.
+*.orig
+# Reject files created by patch.
+*.rej
+
+# Nested build directory.
+/build*
