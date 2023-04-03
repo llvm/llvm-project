@@ -17,7 +17,6 @@
 // CHECK-SAME: func
 // CHECK-SAME: gpu
 // CHECK-SAME: index
-// CHECK-SAME: irdl
 // CHECK-SAME: linalg
 // CHECK-SAME: llvm
 // CHECK-SAME: math
