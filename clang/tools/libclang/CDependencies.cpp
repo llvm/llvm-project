@@ -145,8 +145,8 @@ ScanningOutputFormat DependencyScannerServiceOptions::getFormat() const {
   if (llvm::sys::Process::GetEnv("CLANG_CACHE_USE_CASFS_DEPSCAN"))
     return ScanningOutputFormat::FullTree;
 
-  // Note: default caching behaviour is currently cas-fs.
-  return ScanningOutputFormat::FullTree;
+  // Use include-tree by default.
+  return ScanningOutputFormat::FullIncludeTree;
 }
 
 CXDependencyScannerService
