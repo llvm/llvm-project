@@ -552,11 +552,9 @@ static void buildBaseInitializer(mlir::Location loc, CIRGenFunction &CGF,
   CGF.buildAggExpr(BaseInit->getInit(), AggSlot);
 
   if (CGF.CGM.getLangOpts().Exceptions &&
-      !BaseClassDecl->hasTrivialDestructor()) {
-    llvm_unreachable("NYI");
+      !BaseClassDecl->hasTrivialDestructor())
     CGF.EHStack.pushCleanup<CallBaseDtor>(EHCleanup, BaseClassDecl,
                                           isBaseVirtual);
-  }
 }
 
 /// This routine generates necessary code to initialize base classes and
