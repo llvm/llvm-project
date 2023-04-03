@@ -1075,6 +1075,8 @@ def : Pat<(add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
 let Predicates = [IsLA64] in {
 def : Pat<(add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
           (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;
+def : Pat<(sext_inreg (add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)), i32),
+          (ALSL_W GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;
 def : Pat<(loongarch_bstrpick (add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
                               (i64 31), (i64 0)),
           (ALSL_WU GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;

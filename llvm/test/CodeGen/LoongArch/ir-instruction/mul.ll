@@ -1029,9 +1029,8 @@ define signext i32 @mul_i32_4098(i32 %a) {
 ;
 ; LA64-LABEL: mul_i32_4098:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a0, 1
-; LA64-NEXT:    slli.d $a0, $a0, 12
-; LA64-NEXT:    add.w $a0, $a0, $a1
+; LA64-NEXT:    slli.d $a1, $a0, 12
+; LA64-NEXT:    alsl.w $a0, $a0, $a1, 1
 ; LA64-NEXT:    ret
   %b = mul i32 %a, 4098
   ret i32 %b
@@ -1046,9 +1045,8 @@ define signext i32 @mul_i32_4100(i32 %a) {
 ;
 ; LA64-LABEL: mul_i32_4100:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a0, 2
-; LA64-NEXT:    slli.d $a0, $a0, 12
-; LA64-NEXT:    add.w $a0, $a0, $a1
+; LA64-NEXT:    slli.d $a1, $a0, 12
+; LA64-NEXT:    alsl.w $a0, $a0, $a1, 2
 ; LA64-NEXT:    ret
   %b = mul i32 %a, 4100
   ret i32 %b
@@ -1063,9 +1061,8 @@ define signext i32 @mul_i32_4104(i32 %a) {
 ;
 ; LA64-LABEL: mul_i32_4104:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a0, 3
-; LA64-NEXT:    slli.d $a0, $a0, 12
-; LA64-NEXT:    add.w $a0, $a0, $a1
+; LA64-NEXT:    slli.d $a1, $a0, 12
+; LA64-NEXT:    alsl.w $a0, $a0, $a1, 3
 ; LA64-NEXT:    ret
   %b = mul i32 %a, 4104
   ret i32 %b
@@ -1080,9 +1077,8 @@ define signext i32 @mul_i32_4112(i32 %a) {
 ;
 ; LA64-LABEL: mul_i32_4112:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a0, 4
-; LA64-NEXT:    slli.d $a0, $a0, 12
-; LA64-NEXT:    add.w $a0, $a0, $a1
+; LA64-NEXT:    slli.d $a1, $a0, 12
+; LA64-NEXT:    alsl.w $a0, $a0, $a1, 4
 ; LA64-NEXT:    ret
   %b = mul i32 %a, 4112
   ret i32 %b
