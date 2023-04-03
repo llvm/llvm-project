@@ -23246,7 +23246,7 @@ bool AArch64TargetLowering::shouldLocalize(
     const GlobalValue &GV = *MI.getOperand(1).getGlobal();
     if (GV.isThreadLocal() && Subtarget->isTargetMachO())
       return false;
-    break;
+    return true; // Always localize G_GLOBAL_VALUE to avoid high reg pressure.
   }
   case TargetOpcode::G_CONSTANT: {
     auto *CI = MI.getOperand(1).getCImm();
@@ -23267,6 +23267,8 @@ bool AArch64TargetLowering::shouldLocalize(
   // localizable.
   case AArch64::ADRP:
   case AArch64::G_ADD_LOW:
+  // Need to localize G_PTR_ADD so that G_GLOBAL_VALUE can be localized too.
+  case TargetOpcode::G_PTR_ADD:
     return true;
   default:
     break;
