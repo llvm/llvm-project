@@ -66,7 +66,7 @@ endif()
 # RPM-specific packaging variables.
 set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
 set(CPACK_RPM_PACKAGE_LICENSE "NCSA")
-set(CPACK_RPM_PACKAGE_REQUIRES "hip-dev, perl >= 5.0, perl-File-BaseDir, perl-File-Listing, perl-File-Which, perl-URI-Encode, rocm-llvm")
+set(CPACK_RPM_PACKAGE_REQUIRES "hip-devel, perl >= 5.0, perl-File-BaseDir, perl-File-Listing, perl-File-Which, perl-URI-Encode, rocm-llvm")
 if(DEFINED ENV{CPACK_RPM_PACKAGE_RELEASE})
   set(CPACK_RPM_PACKAGE_RELEASE $ENV{CPACK_RPM_PACKAGE_RELEASE})
 else()
