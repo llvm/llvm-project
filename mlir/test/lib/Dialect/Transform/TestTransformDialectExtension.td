@@ -17,6 +17,7 @@
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
+include "mlir/Dialect/Transform/IR/MatchInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
@@ -112,6 +113,20 @@ def TestConsumeOperandOfOpKindOrFail
     PDL_Operation:$operand,
     StrAttr:$op_kind);
   let assemblyFormat = "$operand `,` $op_kind attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
+def TestSucceedIfOperandOfOpKind
+  : Op<Transform_Dialect, "test_succeed_if_operand_of_op_kind",
+       [MatchOpInterface,
+        SingleOpMatcher,
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let arguments = (ins
+    TransformHandleTypeInterface:$operand_handle,
+    StrAttr:$op_kind);
+  let assemblyFormat =
+      "$operand_handle `,` $op_kind attr-dict `:` type($operand_handle)";
+  let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
   let cppNamespace = "::mlir::test";
 }
 
