@@ -79,7 +79,8 @@ static LogicalResult runMLIRPasses(Operation *module,
                                    JitRunnerOptions &options) {
   PassManager passManager(module->getContext(),
                           module->getName().getStringRef());
-  applyPassManagerCLOptions(passManager);
+  if (failed(applyPassManagerCLOptions(passManager)))
+    return failure();
   passManager.addPass(createGpuKernelOutliningPass());
   passManager.addPass(createConvertGPUToSPIRVPass(/*mapMemorySpace=*/true));
 
