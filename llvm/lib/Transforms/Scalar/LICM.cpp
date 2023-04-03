@@ -1943,6 +1943,8 @@ bool isNotVisibleOnUnwindInLoop(const Value *Object, const Loop *L,
          isNotCapturedBeforeOrInLoop(Object, L, DT);
 }
 
+// We don't consider globals as writable: While the physical memory is writable,
+// we may not have provenance to perform the write.
 bool isWritableObject(const Value *Object) {
   // TODO: Alloca might not be writable after its lifetime ends.
   // See https://github.com/llvm/llvm-project/issues/51838.
@@ -1952,9 +1954,6 @@ bool isWritableObject(const Value *Object) {
   // TODO: Also handle sret.
   if (auto *A = dyn_cast<Argument>(Object))
     return A->hasByValAttr();
-
-  if (auto *G = dyn_cast<GlobalVariable>(Object))
-    return !G->isConstant();
 
   // TODO: Noalias has nothing to do with writability, this should check for
   // an allocator function.
