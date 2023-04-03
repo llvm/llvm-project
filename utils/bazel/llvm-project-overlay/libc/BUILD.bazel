@@ -190,6 +190,19 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_cpp_string",
+    hdrs = ["src/__support/CPP/string.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_string_view",
+        ":__support_integer_to_string",
+        ":libc_root",
+        ":string_memory_utils",
+        ":string_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_cpp_type_traits",
     hdrs = ["src/__support/CPP/type_traits.h"],
     deps = [":libc_root"],
