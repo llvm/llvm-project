@@ -1069,6 +1069,7 @@ void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
 
     if (m_kernel.IsLoaded() && m_kernel.GetModule()) {
       static ConstString kext_summary_symbol("gLoadedKextSummaries");
+      static ConstString arm64_T1Sz_value("gT1Sz");
       const Symbol *symbol =
           m_kernel.GetModule()->FindFirstSymbolWithNameAndType(
               kext_summary_symbol, eSymbolTypeData);
@@ -1076,6 +1077,36 @@ void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
         m_kext_summary_header_ptr_addr = symbol->GetAddress();
         // Update all image infos
         ReadAllKextSummaries();
+      }
+      // If the kernel global with the T1Sz setting is available,
+      // update the target.process.virtual-addressable-bits to be correct.
+      symbol = m_kernel.GetModule()->FindFirstSymbolWithNameAndType(
+          arm64_T1Sz_value, eSymbolTypeData);
+      if (symbol) {
+        const uint32_t orig_bits_value = m_process->GetVirtualAddressableBits();
+        // Mark all bits as addressable so we don't strip any from our
+        // memory read below, with an incorrect default value.
+        // b55 is the sign extension bit with PAC, b56:63 are TBI,
+        // don't mark those as addressable.
+        m_process->SetVirtualAddressableBits(55);
+        Status error;
+        // gT1Sz is 8 bytes.  We may run on a stripped kernel binary
+        // where we can't get the size accurately.  Hardcode it.
+        const size_t sym_bytesize = 8; // size of gT1Sz value
+        uint64_t sym_value =
+            m_process->GetTarget().ReadUnsignedIntegerFromMemory(
+                symbol->GetAddress(), sym_bytesize, 0, error);
+        if (error.Success()) {
+          // 64 - T1Sz is the highest bit used for auth.
+          // The value we pass in to SetVirtualAddressableBits is
+          // the number of bits used for addressing, so if
+          // T1Sz is 25, then 64-25 == 39, bits 0..38 are used for
+          // addressing, bits 39..63 are used for PAC/TBI or whatever.
+          uint32_t virt_addr_bits = 64 - sym_value;
+          m_process->SetVirtualAddressableBits(virt_addr_bits);
+        } else {
+          m_process->SetVirtualAddressableBits(orig_bits_value);
+        }
       }
     } else {
       m_kernel.Clear();
