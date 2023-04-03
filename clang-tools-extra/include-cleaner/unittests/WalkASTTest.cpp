@@ -291,13 +291,18 @@ TEST(WalkAST, ConstructExprs) {
 }
 
 TEST(WalkAST, Operator) {
-  // References to operators are not counted as uses.
-  testWalk("struct string {}; int operator+(string, string);",
+  // Operator calls are marked as implicit references as they're ADL-used and
+  // type should be providing them.
+  testWalk(
+      "struct string { friend int $implicit^operator+(string, string); }; ",
+      "int k = string() ^+ string();");
+  // Treat member operators as regular member expr calls.
+  testWalk("struct $implicit^string {int operator+(string); }; ",
            "int k = string() ^+ string();");
-  testWalk("struct string {int operator+(string); }; ",
-           "int k = string() ^+ string();");
-  testWalk("struct string { friend int operator+(string, string); }; ",
-           "int k = string() ^+ string();");
+  // Make sure usage is attributed to the alias.
+  testWalk(
+      "struct string {int operator+(string); }; using $implicit^foo = string;",
+      "int k = foo() ^+ string();");
 }
 
 TEST(WalkAST, VarDecls) {

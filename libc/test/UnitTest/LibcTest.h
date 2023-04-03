@@ -14,6 +14,7 @@
 
 #include "PlatformDefs.h"
 
+#include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "utils/testutils/ExecuteFunction.h"
@@ -114,6 +115,14 @@ protected:
       typename ValType,
       cpp::enable_if_t<cpp::is_same_v<ValType, __llvm_libc::cpp::string_view>,
                        int> = 0>
+  bool test(TestCondition Cond, ValType LHS, ValType RHS, const char *LHSStr,
+            const char *RHSStr, const char *File, unsigned long Line) {
+    return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, File, Line);
+  }
+
+  template <typename ValType,
+            cpp::enable_if_t<cpp::is_same_v<ValType, __llvm_libc::cpp::string>,
+                             int> = 0>
   bool test(TestCondition Cond, ValType LHS, ValType RHS, const char *LHSStr,
             const char *RHSStr, const char *File, unsigned long Line) {
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, File, Line);

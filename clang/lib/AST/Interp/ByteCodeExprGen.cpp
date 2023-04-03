@@ -1350,7 +1350,7 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
   if (const auto CtorExpr = dyn_cast<CXXConstructExpr>(Initializer)) {
     const Function *Func = getFunction(CtorExpr->getConstructor());
 
-    if (!Func || !Func->isConstexpr())
+    if (!Func)
       return false;
 
     // The This pointer is already on the stack because this is an initializer,
@@ -1370,12 +1370,12 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
 
     unsigned InitIndex = 0;
     for (const Expr *Init : InitList->inits()) {
-      const Record::Field *FieldToInit = R->getField(InitIndex);
 
       if (!this->emitDupPtr(Initializer))
         return false;
 
       if (std::optional<PrimType> T = classify(Init)) {
+        const Record::Field *FieldToInit = R->getField(InitIndex);
         if (!this->visit(Init))
           return false;
 
@@ -1384,19 +1384,35 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
 
         if (!this->emitPopPtr(Initializer))
           return false;
+        ++InitIndex;
       } else {
-        // Non-primitive case. Get a pointer to the field-to-initialize
-        // on the stack and recurse into visitInitializer().
-        if (!this->emitGetPtrField(FieldToInit->Offset, Init))
-          return false;
+        // Initializer for a direct base class.
+        if (const Record::Base *B = R->getBase(Init->getType())) {
+          if (!this->emitGetPtrBasePop(B->Offset, Init))
+            return false;
 
-        if (!this->visitInitializer(Init))
-          return false;
+          if (!this->visitInitializer(Init))
+            return false;
 
-        if (!this->emitPopPtr(Initializer))
-          return false;
+          if (!this->emitPopPtr(Initializer))
+            return false;
+          // Base initializers don't increase InitIndex, since they don't count
+          // into the Record's fields.
+        } else {
+          const Record::Field *FieldToInit = R->getField(InitIndex);
+          // Non-primitive case. Get a pointer to the field-to-initialize
+          // on the stack and recurse into visitInitializer().
+          if (!this->emitGetPtrField(FieldToInit->Offset, Init))
+            return false;
+
+          if (!this->visitInitializer(Init))
+            return false;
+
+          if (!this->emitPopPtr(Initializer))
+            return false;
+          ++InitIndex;
+        }
       }
-      ++InitIndex;
     }
 
     return true;

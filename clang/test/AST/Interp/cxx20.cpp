@@ -207,13 +207,15 @@ namespace ConstThis {
                       // ref-note {{declared const here}}
     int a;
   public:
-    constexpr Foo() {
+    constexpr Foo() { // expected-note {{declared here}}
       this->a = 10;
       T = 13; // expected-error {{cannot assign to non-static data member 'T' with const-qualified type}} \
               // ref-error {{cannot assign to non-static data member 'T' with const-qualified type}}
     }
   };
   constexpr Foo F; // expected-error {{must be initialized by a constant expression}} \
+                   // FIXME: The following note is wrong. \
+                   // expected-note {{undefined constructor 'Foo' cannot be used in a constant expression}} \
                    // ref-error {{must be initialized by a constant expression}}
 
 
@@ -270,6 +272,69 @@ namespace ConstThis {
                                        // expected-note {{in call to}} \
                                        // ref-error {{must have constant destruction}} \
                                        // ref-note {{in call to}}
+};
+
+namespace BaseInit {
+  struct Base {
+    int a;
+  };
+
+  struct Intermediate : Base {
+    int b;
+  };
+
+  struct Final : Intermediate {
+    int c;
+
+    constexpr Final(int a, int b, int c) : c(c) {}
+  };
+
+  static_assert(Final{1, 2, 3}.c == 3, ""); // OK
+  static_assert(Final{1, 2, 3}.a == 0, ""); // expected-error {{not an integral constant expression}} \
+                                            // expected-note {{read of object outside its lifetime}} \
+                                            // ref-error {{not an integral constant expression}} \
+                                            // ref-note {{read of uninitialized object}}
+
+
+  struct Mixin  {
+    int b;
+
+    constexpr Mixin() = default;
+    constexpr Mixin(int b) : b(b) {}
+  };
+
+  struct Final2 : Base, Mixin {
+    int c;
+
+    constexpr Final2(int a, int b, int c) : Mixin(b), c(c) {}
+    constexpr Final2(int a, int b, int c, bool) : c(c) {}
+  };
+
+  static_assert(Final2{1, 2, 3}.c == 3, ""); // OK
+  static_assert(Final2{1, 2, 3}.b == 2, ""); // OK
+  static_assert(Final2{1, 2, 3}.a == 0, ""); // expected-error {{not an integral constant expression}} \
+                                             // expected-note {{read of object outside its lifetime}} \
+                                             // ref-error {{not an integral constant expression}} \
+                                             // ref-note {{read of uninitialized object}}
+
+
+  struct Mixin3  {
+    int b;
+  };
+
+  struct Final3 : Base, Mixin3 {
+    int c;
+
+    constexpr Final3(int a, int b, int c) : c(c) { this->b = b; }
+    constexpr Final3(int a, int b, int c, bool) : c(c) {}
+  };
+
+  static_assert(Final3{1, 2, 3}.c == 3, ""); // OK
+  static_assert(Final3{1, 2, 3}.b == 2, ""); // OK
+  static_assert(Final3{1, 2, 3}.a == 0, ""); // expected-error {{not an integral constant expression}} \
+                                             // expected-note {{read of object outside its lifetime}} \
+                                             // ref-error {{not an integral constant expression}} \
+                                             // ref-note {{read of uninitialized object}}
 };
 
 namespace Destructors {
@@ -517,4 +582,21 @@ namespace Destructors {
 
   constexpr Outer O;
   static_assert(O.bar() == 12);
+}
+
+namespace BaseAndFieldInit {
+  struct A {
+    int a;
+  };
+
+  struct B : A {
+    int b;
+  };
+
+  struct C : B {
+    int c;
+  };
+
+  constexpr C c = {1,2,3};
+  static_assert(c.a == 1 && c.b == 2 && c.c == 3);
 }

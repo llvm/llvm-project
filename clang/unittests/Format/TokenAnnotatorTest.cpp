@@ -1477,6 +1477,72 @@ TEST_F(TokenAnnotatorTest, UnderstandsC11GenericSelection) {
   EXPECT_TOKEN(Tokens[9], tok::colon, TT_GenericSelectionColon);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsTrailingReturnArrow) {
+  auto Tokens = annotate("auto f() -> int;");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::arrow, TT_TrailingReturnArrow);
+
+  Tokens = annotate("auto operator->() -> int;");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::arrow, TT_OverloadedOperator);
+  EXPECT_TOKEN(Tokens[5], tok::arrow, TT_TrailingReturnArrow);
+
+  Tokens = annotate("auto operator++(int) -> int;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::arrow, TT_TrailingReturnArrow);
+
+  Tokens = annotate("auto operator=() -> int;");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::arrow, TT_TrailingReturnArrow);
+
+  Tokens = annotate("auto operator=(int) -> int;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::arrow, TT_TrailingReturnArrow);
+
+  Tokens = annotate("auto foo() -> auto { return Val; }");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::arrow, TT_TrailingReturnArrow);
+
+  Tokens = annotate("struct S { auto bar() const -> int; };");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::arrow, TT_TrailingReturnArrow);
+
+  // Not trailing return arrows
+  Tokens = annotate("auto a = b->c;");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::arrow, TT_Unknown);
+
+  Tokens = annotate("auto a = (b)->c;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::arrow, TT_Unknown);
+
+  Tokens = annotate("auto a = b()->c;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::arrow, TT_Unknown);
+
+  Tokens = annotate("auto a = b->c();");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::arrow, TT_Unknown);
+
+  Tokens = annotate("decltype(auto) a = b()->c;");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::arrow, TT_Unknown);
+
+  Tokens = annotate("void f() { auto a = b->c(); }");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::arrow, TT_Unknown);
+
+  Tokens = annotate("void f() { auto a = b()->c; }");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::arrow, TT_Unknown);
+
+  // Mixed
+  Tokens = annotate("auto f() -> int { auto a = b()->c; }");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[13], tok::arrow, TT_Unknown);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   auto Annotate = [this](llvm::StringRef Code) {
     return annotate(Code, getLLVMStyle(FormatStyle::LK_Verilog));

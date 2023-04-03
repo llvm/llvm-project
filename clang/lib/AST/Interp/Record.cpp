@@ -39,6 +39,16 @@ const Record::Base *Record::getBase(const RecordDecl *FD) const {
   return It->second;
 }
 
+const Record::Base *Record::getBase(QualType T) const {
+  if (!T->isRecordType())
+    return nullptr;
+
+  const RecordDecl *RD = T->getAs<RecordType>()->getDecl();
+  if (auto It = BaseMap.find(RD); It != BaseMap.end())
+    return It->second;
+  return nullptr;
+}
+
 const Record::Base *Record::getVirtualBase(const RecordDecl *FD) const {
   auto It = VirtualBaseMap.find(FD);
   assert(It != VirtualBaseMap.end() && "Missing virtual base");

@@ -156,19 +156,27 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
         "'%s' is an entity with either an EVENT_TYPE or LOCK_TYPE"_en_US,
         original);
   }
-  if (!flags.test(DefinabilityFlag::PolymorphicOkInPure) &&
-      FindPureProcedureContaining(scope)) {
+  if (FindPureProcedureContaining(scope)) {
     if (auto dyType{evaluate::DynamicType::From(ultimate)}) {
-      if (dyType->IsPolymorphic()) { // C1596
+      if (!flags.test(DefinabilityFlag::PolymorphicOkInPure)) {
+        if (dyType->IsPolymorphic()) { // C1596
+          return BlameSymbol(at,
+              "'%s' is polymorphic in a pure subprogram"_because_en_US,
+              original);
+        }
+      }
+      if (const Symbol * impure{HasImpureFinal(ultimate)}) {
         return BlameSymbol(at,
-            "'%s' is polymorphic in a pure subprogram"_because_en_US, original);
+            "'%s' has an impure FINAL procedure '%s'"_because_en_US, original,
+            impure->name());
       }
       if (const DerivedTypeSpec * derived{GetDerivedTypeSpec(dyType)}) {
-        if (auto bad{FindPolymorphicAllocatableNonCoarrayUltimateComponent(
-                *derived)}) {
-          return BlameSymbol(at,
-              "'%s' has polymorphic non-coarray component '%s' in a pure subprogram"_because_en_US,
-              original, bad.BuildResultDesignatorName());
+        if (!flags.test(DefinabilityFlag::PolymorphicOkInPure)) {
+          if (auto bad{FindPolymorphicAllocatableUltimateComponent(*derived)}) {
+            return BlameSymbol(at,
+                "'%s' has polymorphic component '%s' in a pure subprogram"_because_en_US,
+                original, bad.BuildResultDesignatorName());
+          }
         }
       }
     }
