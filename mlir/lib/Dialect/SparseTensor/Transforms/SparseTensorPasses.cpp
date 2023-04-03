@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
@@ -28,6 +29,7 @@ namespace mlir {
 #define GEN_PASS_DEF_SPARSETENSORCODEGEN
 #define GEN_PASS_DEF_SPARSEBUFFERREWRITE
 #define GEN_PASS_DEF_SPARSEVECTORIZATION
+#define GEN_PASS_DEF_SPARSEGPUCODEGEN
 #define GEN_PASS_DEF_STORAGESPECIFIERTOLLVM
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
 } // namespace mlir
@@ -281,6 +283,21 @@ struct SparseVectorizationPass
   }
 };
 
+struct SparseGPUCodegenPass
+    : public impl::SparseGPUCodegenBase<SparseGPUCodegenPass> {
+
+  SparseGPUCodegenPass() = default;
+  SparseGPUCodegenPass(const SparseGPUCodegenPass &pass) = default;
+  SparseGPUCodegenPass(unsigned nT) { numThreads = nT; }
+
+  void runOnOperation() override {
+    auto *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    populateSparseGPUCodegenPatterns(patterns, numThreads);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
 struct StorageSpecifierToLLVMPass
     : public impl::StorageSpecifierToLLVMBase<StorageSpecifierToLLVMPass> {
 
@@ -404,6 +421,14 @@ mlir::createSparseVectorizationPass(unsigned vectorLength,
                                     bool enableSIMDIndex32) {
   return std::make_unique<SparseVectorizationPass>(
       vectorLength, enableVLAVectorization, enableSIMDIndex32);
+}
+
+std::unique_ptr<Pass> mlir::createSparseGPUCodegenPass() {
+  return std::make_unique<SparseGPUCodegenPass>();
+}
+
+std::unique_ptr<Pass> mlir::createSparseGPUCodegenPass(unsigned numThreads) {
+  return std::make_unique<SparseGPUCodegenPass>(numThreads);
 }
 
 std::unique_ptr<Pass> mlir::createStorageSpecifierToLLVMPass() {
