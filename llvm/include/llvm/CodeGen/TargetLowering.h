@@ -4755,7 +4755,7 @@ public:
                                             SelectionDAG &DAG) const;
 
   // Lower custom output constraints. If invalid, return SDValue().
-  virtual SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Flag,
+  virtual SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Glue,
                                               const SDLoc &DL,
                                               const AsmOperandInfo &OpInfo,
                                               SelectionDAG &DAG) const;
