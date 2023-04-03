@@ -1285,10 +1285,6 @@ static LogicalResult vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op) {
   if (!isa<linalg::GenericOp, linalg::FillOp>(op))
     return failure();
 
-  // TODO: Index vectorization assumes static shape.
-  if (op.hasIndexSemantics())
-    return failure();
-
   LDBG("Dynamically-shaped op meets vectorization pre-conditions\n");
   return success();
 }
