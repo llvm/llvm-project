@@ -1384,6 +1384,7 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
 
         if (!this->emitPopPtr(Initializer))
           return false;
+        ++InitIndex;
       } else {
         // Initializer for a direct base class.
         if (const Record::Base *B = R->getBase(Init->getType())) {
@@ -1395,6 +1396,8 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
 
           if (!this->emitPopPtr(Initializer))
             return false;
+          // Base initializers don't increase InitIndex, since they don't count
+          // into the Record's fields.
         } else {
           const Record::Field *FieldToInit = R->getField(InitIndex);
           // Non-primitive case. Get a pointer to the field-to-initialize
@@ -1407,9 +1410,9 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
 
           if (!this->emitPopPtr(Initializer))
             return false;
+          ++InitIndex;
         }
       }
-      ++InitIndex;
     }
 
     return true;

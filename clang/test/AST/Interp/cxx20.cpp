@@ -583,3 +583,20 @@ namespace Destructors {
   constexpr Outer O;
   static_assert(O.bar() == 12);
 }
+
+namespace BaseAndFieldInit {
+  struct A {
+    int a;
+  };
+
+  struct B : A {
+    int b;
+  };
+
+  struct C : B {
+    int c;
+  };
+
+  constexpr C c = {1,2,3};
+  static_assert(c.a == 1 && c.b == 2 && c.c == 3);
+}
