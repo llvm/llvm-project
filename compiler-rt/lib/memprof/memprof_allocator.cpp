@@ -681,6 +681,18 @@ int memprof_posix_memalign(void **memptr, uptr alignment, uptr size,
   return 0;
 }
 
+void *memprof_malloc_begin(const void *p) {
+  u64 user_requested_size;
+  MemprofChunk *m =
+      instance.GetMemprofChunkByAddr((uptr)p, user_requested_size);
+  if (!m)
+    return nullptr;
+  if (user_requested_size == 0)
+    return nullptr;
+
+  return (void *)m->Beg();
+}
+
 uptr memprof_malloc_usable_size(const void *ptr, uptr pc, uptr bp) {
   if (!ptr)
     return 0;
@@ -697,6 +709,10 @@ uptr __sanitizer_get_estimated_allocated_size(uptr size) { return size; }
 
 int __sanitizer_get_ownership(const void *p) {
   return memprof_malloc_usable_size(p, 0, 0) != 0;
+}
+
+void *__sanitizer_get_allocated_begin(const void *p) {
+  return memprof_malloc_begin(p);
 }
 
 uptr __sanitizer_get_allocated_size(const void *p) {

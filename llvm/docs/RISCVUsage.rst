@@ -12,6 +12,41 @@ The RISC-V target provides code generation for processors implementing
 supported variations of the RISC-V specification.  It lives in the
 ``llvm/lib/Target/RISCV`` directory.
 
+Specification Documents
+=======================
+
+There have been a number of revisions to the RISC-V specifications. LLVM aims
+to implement the most recent ratified version of the standard RISC-V base ISAs
+and ISA extensions with pragmatic variances. The most recent specification can
+be found at: https://github.com/riscv/riscv-isa-manual/releases/.
+
+`The official RISC-V International specification page
+<https://riscv.org/technical/specifications/>`_. is also worth checking, but
+tends to significantly lag the specifications linked above. Make sure to check
+the `wiki for not yet integrated extensions
+<https://wiki.riscv.org/display/HOME/Recently+Ratified+Extensions>`_ and note
+that in addition, we sometimes carry support for extensions that have not yet
+been ratified (these will be marked as experimental - see below) and support
+various vendor-specific extensions (see below).
+
+The current known variances from the specification are:
+
+* Unconditionally allowing instructions from zifencei, zicsr, zicntr, and
+  zihpm without gating them on the extensions being enabled.  Previous
+  revisions of the specification included these instructions in the base
+  ISA, and we preserve this behavior to avoid breaking existing code.  If
+  a future revision of the specification reuses these opcodes for other
+  extensions, we may need to reevaluate this choice, and thus recommend
+  users migrate build systems so as not to rely on this.
+* Allowing CSRs to be named without gating on specific extensions.  This
+  applies to all CSR names, not just those in zicsr, zicntr, and zihpm.
+
+We are actively deciding not to support multiple specification revisions
+at this time. We acknowledge a likely future need, but actively defer the
+decisions making around handling this until we have a concrete example of
+real hardware having shipped and an incompatible change to the
+specification made afterwards.
+
 Base ISAs
 =========
 
@@ -218,11 +253,3 @@ The current vendor extensions supported are:
 
 ``XVentanaCondOps``
   LLVM implements `version 1.0.0 of the VTx-family custom instructions specification <https://github.com/ventanamicro/ventana-custom-extensions/releases/download/v1.0.0/ventana-custom-extensions-v1.0.0.pdf>`_ by Ventana Micro Systems.  All instructions are prefixed with `vt.` as described in the specification, and the riscv-toolchain-convention document linked above.  These instructions are only available for riscv64 at this time.
-
-Specification Documents
-=======================
-For ratified specifications, please refer to the `official RISC-V International
-page <https://riscv.org/technical/specifications/>`_.  Make sure to check the
-`wiki for not yet integrated extensions
-<https://wiki.riscv.org/display/HOME/Recently+Ratified+Extensions>`_.
-

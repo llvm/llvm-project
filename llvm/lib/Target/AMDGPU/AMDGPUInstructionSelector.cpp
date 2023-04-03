@@ -1743,6 +1743,19 @@ bool AMDGPUInstructionSelector::selectSBarrier(MachineInstr &MI) const {
       return true;
     }
   }
+
+  // On GFX12 lower s_barrier into s_barrier_signal_imm and s_barrier_wait
+  if (STI.hasSplitBarriers()) {
+    MachineBasicBlock *MBB = MI.getParent();
+    const DebugLoc &DL = MI.getDebugLoc();
+    BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_IMM))
+        .addImm(AMDGPU::Barrier::WORKGROUP);
+    BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_BARRIER_WAIT))
+        .addImm(AMDGPU::Barrier::WORKGROUP);
+    MI.eraseFromParent();
+    return true;
+  }
+
   return selectImpl(MI, *CoverageInfo);
 }
 

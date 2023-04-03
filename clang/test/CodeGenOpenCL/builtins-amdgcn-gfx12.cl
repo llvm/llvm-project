@@ -61,3 +61,28 @@ void test_permlane16_var(global uint* out, uint a, uint b, uint c) {
 void test_permlanex16_var(global uint* out, uint a, uint b, uint c) {
   *out = __builtin_amdgcn_permlanex16_var(a, b, c, 0, 0);
 }
+
+// CHECK-LABEL: @test_s_barrier_signal(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.signal(i32 -1)
+// CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.wait(i16 -1)
+// CHECK-NEXT:    ret void
+//
+void test_s_barrier_signal()
+{
+  __builtin_amdgcn_s_barrier_signal(-1);
+  __builtin_amdgcn_s_barrier_wait(-1);
+}
+
+// CHECK-LABEL: @test_s_barrier_signal_var(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    store i32 [[A:%.*]], ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.signal.var(i32 [[TMP0]])
+// CHECK-NEXT:    ret void
+//
+void test_s_barrier_signal_var(int a)
+{
+  __builtin_amdgcn_s_barrier_signal_var(a);
+}

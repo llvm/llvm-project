@@ -91,14 +91,24 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
 public:
   ASTWalker(DeclCallback Callback) : Callback(Callback) {}
 
+  // Operators are almost always ADL extension points and by design references
+  // to them doesn't count as uses (generally the type should provide them, so
+  // ignore them).
+  // Unless we're using an operator defined as a member, in such cases treat
+  // these as regular member references.
   bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
     if (!WalkUpFromCXXOperatorCallExpr(S))
       return false;
-
-    // Operators are always ADL extension points, by design references to them
-    // doesn't count as uses (generally the type should provide them).
-    // Don't traverse the callee.
-
+    if (auto *CD = S->getCalleeDecl()) {
+      if (llvm::isa<CXXMethodDecl>(CD)) {
+        // Treat this as a regular member reference.
+        report(S->getOperatorLoc(), getMemberProvider(S->getArg(0)->getType()),
+               RefType::Implicit);
+      } else {
+        report(S->getOperatorLoc(), llvm::dyn_cast<NamedDecl>(CD),
+               RefType::Implicit);
+      }
+    }
     for (auto *Arg : S->arguments())
       if (!TraverseStmt(Arg))
         return false;

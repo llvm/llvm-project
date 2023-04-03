@@ -468,6 +468,40 @@ public:
         AMDGPUAS::CONSTANT_ADDRESS);
   }
 
+  void replaceUseWithTableLookup(Module &M, IRBuilder<> &Builder,
+                                 GlobalVariable *LookupTable,
+                                 GlobalVariable *GV, Use &U, Value *Index) {
+    // Table is a constant array of the same length as OrderedKernels
+    LLVMContext &Ctx = M.getContext();
+    Type *I32 = Type::getInt32Ty(Ctx);
+    auto *I = cast<Instruction>(U.getUser());
+
+    Value *tableKernelIndex = getTableLookupKernelIndex(M, I->getFunction());
+
+    if (auto *Phi = dyn_cast<PHINode>(I)) {
+      BasicBlock *BB = Phi->getIncomingBlock(U);
+      Builder.SetInsertPoint(&(*(BB->getFirstInsertionPt())));
+    } else {
+      Builder.SetInsertPoint(I);
+    }
+
+    Value *GEPIdx[3] = {
+        ConstantInt::get(I32, 0),
+        tableKernelIndex,
+        Index,
+    };
+
+    Value *Address = Builder.CreateInBoundsGEP(
+        LookupTable->getValueType(), LookupTable, GEPIdx, GV->getName());
+
+    Value *loaded = Builder.CreateLoad(I32, Address);
+
+    Value *replacement =
+        Builder.CreateIntToPtr(loaded, GV->getType(), GV->getName());
+
+    U.set(replacement);
+  }
+
   void replaceUsesInInstructionsWithTableLookup(
       Module &M, ArrayRef<GlobalVariable *> ModuleScopeVariables,
       GlobalVariable *LookupTable) {
@@ -484,33 +518,8 @@ public:
         if (!I)
           continue;
 
-        Value *tableKernelIndex =
-            getTableLookupKernelIndex(M, I->getFunction());
-
-        // So if the phi uses this value multiple times, what does this look
-        // like?
-        if (auto *Phi = dyn_cast<PHINode>(I)) {
-          BasicBlock *BB = Phi->getIncomingBlock(U);
-          Builder.SetInsertPoint(&(*(BB->getFirstInsertionPt())));
-        } else {
-          Builder.SetInsertPoint(I);
-        }
-
-        Value *GEPIdx[3] = {
-            ConstantInt::get(I32, 0),
-            tableKernelIndex,
-            ConstantInt::get(I32, Index),
-        };
-
-        Value *Address = Builder.CreateInBoundsGEP(
-            LookupTable->getValueType(), LookupTable, GEPIdx, GV->getName());
-
-        Value *loaded = Builder.CreateLoad(I32, Address);
-
-        Value *replacement =
-            Builder.CreateIntToPtr(loaded, GV->getType(), GV->getName());
-
-        U.set(replacement);
+        replaceUseWithTableLookup(M, Builder, LookupTable, GV, U,
+                                  ConstantInt::get(I32, Index));
       }
     }
   }
@@ -639,42 +648,42 @@ public:
     // amdgcn_lds_kernel_id.
 
     std::vector<Function *> OrderedKernels;
+    {
+      for (Function &Func : M->functions()) {
+        if (Func.isDeclaration())
+          continue;
+        if (!isKernelLDS(&Func))
+          continue;
 
-    for (Function &Func : M->functions()) {
-      if (Func.isDeclaration())
-        continue;
-      if (!isKernelLDS(&Func))
-        continue;
+        if (KernelsThatAllocateTableLDS.contains(&Func)) {
+          assert(Func.hasName()); // else fatal error earlier
+          OrderedKernels.push_back(&Func);
+        }
+      }
 
-      if (KernelsThatAllocateTableLDS.contains(&Func)) {
-        assert(Func.hasName()); // else fatal error earlier
-        OrderedKernels.push_back(&Func);
+      // Put them in an arbitrary but reproducible order
+      llvm::sort(OrderedKernels.begin(), OrderedKernels.end(),
+                 [](const Function *lhs, const Function *rhs) -> bool {
+                   return lhs->getName() < rhs->getName();
+                 });
+
+      // Annotate the kernels with their order in this vector
+      LLVMContext &Ctx = M->getContext();
+      IRBuilder<> Builder(Ctx);
+
+      if (OrderedKernels.size() > UINT32_MAX) {
+        // 32 bit keeps it in one SGPR. > 2**32 kernels won't fit on the GPU
+        report_fatal_error("Unimplemented LDS lowering for > 2**32 kernels");
+      }
+
+      for (size_t i = 0; i < OrderedKernels.size(); i++) {
+        Metadata *AttrMDArgs[1] = {
+            ConstantAsMetadata::get(Builder.getInt32(i)),
+        };
+        OrderedKernels[i]->setMetadata("llvm.amdgcn.lds.kernel.id",
+                                       MDNode::get(Ctx, AttrMDArgs));
       }
     }
-
-    // Put them in an arbitrary but reproducible order
-    llvm::sort(OrderedKernels.begin(), OrderedKernels.end(),
-               [](const Function *lhs, const Function *rhs) -> bool {
-                 return lhs->getName() < rhs->getName();
-               });
-
-    // Annotate the kernels with their order in this vector
-    LLVMContext &Ctx = M->getContext();
-    IRBuilder<> Builder(Ctx);
-
-    if (OrderedKernels.size() > UINT32_MAX) {
-      // 32 bit keeps it in one SGPR. > 2**32 kernels won't fit on the GPU
-      report_fatal_error("Unimplemented LDS lowering for > 2**32 kernels");
-    }
-
-    for (size_t i = 0; i < OrderedKernels.size(); i++) {
-      Metadata *AttrMDArgs[1] = {
-          ConstantAsMetadata::get(Builder.getInt32(i)),
-      };
-      OrderedKernels[i]->setMetadata("llvm.amdgcn.lds.kernel.id",
-                                     MDNode::get(Ctx, AttrMDArgs));
-    }
-
     return OrderedKernels;
   }
 

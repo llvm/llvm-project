@@ -1027,7 +1027,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
           ES, ExitOnErr(EPCEHFrameRegistrar::Create(this->ES))));
     if (DebuggerSupport)
       ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-          ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES))));
+          ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES)), true, true));
   }
 
   ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));

@@ -24396,8 +24396,9 @@ static SDValue LowerVectorAllEqual(const SDLoc &DL, SDValue LHS, SDValue RHS,
   // Split down to 128/256/512-bit vector.
   unsigned TestSize = UseKORTEST ? 512 : (Subtarget.hasAVX() ? 256 : 128);
   if (VT.getSizeInBits() > TestSize) {
-    if (isAllOnesOrAllOnesSplat(RHS)) {
-      // If ICMP(LHS,-1) - reduce using AND splits.
+    KnownBits KnownRHS = DAG.computeKnownBits(RHS);
+    if (KnownRHS.isConstant() && KnownRHS.getConstant() == Mask) {
+      // If ICMP(AND(LHS,MASK),MASK) - reduce using AND splits.
       while (VT.getSizeInBits() > TestSize) {
         auto Split = DAG.SplitVector(LHS, DL);
         VT = Split.first.getValueType();
@@ -24529,24 +24530,40 @@ static SDValue MatchVectorAllEqualTest(SDValue LHS, SDValue RHS,
     }
   }
 
-  // Match icmp(bitcast(icmp_ne(X,Y)),0) reduction patterns.
-  // Match icmp(bitcast(icmp_eq(X,Y)),-1) reduction patterns.
   if (Mask.isAllOnes()) {
     assert(!Op.getValueType().isVector() &&
            "Illegal vector type for reduction pattern");
     SDValue Src = peekThroughBitcasts(Op);
-    if (Src.getOpcode() == ISD::SETCC &&
-        Src.getValueType().isFixedLengthVector() &&
+    if (Src.getValueType().isFixedLengthVector() &&
         Src.getValueType().getScalarType() == MVT::i1) {
-      ISD::CondCode SrcCC = cast<CondCodeSDNode>(Src.getOperand(2))->get();
-      if (SrcCC == (CmpNull ? ISD::SETNE : ISD::SETEQ)) {
+      // Match icmp(bitcast(icmp_ne(X,Y)),0) reduction patterns.
+      // Match icmp(bitcast(icmp_eq(X,Y)),-1) reduction patterns.
+      if (Src.getOpcode() == ISD::SETCC) {
         SDValue LHS = Src.getOperand(0);
         SDValue RHS = Src.getOperand(1);
         EVT LHSVT = LHS.getValueType();
-        APInt SrcMask = APInt::getAllOnes(LHSVT.getScalarSizeInBits());
-        if (SDValue V = LowerVectorAllEqual(DL, LHS, RHS, CC, SrcMask,
-                                            Subtarget, DAG, X86CC))
-          return V;
+        ISD::CondCode SrcCC = cast<CondCodeSDNode>(Src.getOperand(2))->get();
+        if (SrcCC == (CmpNull ? ISD::SETNE : ISD::SETEQ) &&
+            llvm::has_single_bit<uint32_t>(LHSVT.getSizeInBits())) {
+          APInt SrcMask = APInt::getAllOnes(LHSVT.getScalarSizeInBits());
+          return LowerVectorAllEqual(DL, LHS, RHS, CC, SrcMask, Subtarget, DAG,
+                                     X86CC);
+        }
+      }
+      // Match icmp(bitcast(vXi1 trunc(Y)),0) reduction patterns.
+      // Match icmp(bitcast(vXi1 trunc(Y)),-1) reduction patterns.
+      // Peek through truncation, mask the LSB and compare against zero/LSB.
+      if (Src.getOpcode() == ISD::TRUNCATE) {
+        SDValue Inner = Src.getOperand(0);
+        EVT InnerVT = Inner.getValueType();
+        if (llvm::has_single_bit<uint32_t>(InnerVT.getSizeInBits())) {
+          unsigned BW = InnerVT.getScalarSizeInBits();
+          APInt SrcMask = APInt(BW, 1);
+          APInt Cmp = CmpNull ? APInt::getZero(BW) : SrcMask;
+          return LowerVectorAllEqual(DL, Inner,
+                                     DAG.getConstant(Cmp, DL, InnerVT), CC,
+                                     SrcMask, Subtarget, DAG, X86CC);
+        }
       }
     }
   }
@@ -54520,27 +54537,36 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
                        DAG.getConstant(NotMask, DL, VT));
   }
 
+  // Fold movmsk(icmp_eq(and(x,c1),c1)) -> movmsk(shl(x,c2))
   // Fold movmsk(icmp_eq(and(x,c1),0)) -> movmsk(not(shl(x,c2)))
   // iff pow2splat(c1).
   // Use KnownBits to determine if only a single bit is non-zero
   // in each element (pow2 or zero), and shift that bit to the msb.
-  if (Src.getOpcode() == X86ISD::PCMPEQ &&
-      ISD::isBuildVectorAllZeros(Src.getOperand(1).getNode())) {
-    KnownBits KnownSrc = DAG.computeKnownBits(Src.getOperand(0));
-    if (KnownSrc.countMaxPopulation() == 1) {
+  if (Src.getOpcode() == X86ISD::PCMPEQ) {
+    KnownBits KnownLHS = DAG.computeKnownBits(Src.getOperand(0));
+    KnownBits KnownRHS = DAG.computeKnownBits(Src.getOperand(1));
+    unsigned ShiftAmt = KnownLHS.countMinLeadingZeros();
+    if (KnownLHS.countMaxPopulation() == 1 &&
+        (KnownRHS.isZero() || (KnownRHS.countMaxPopulation() == 1 &&
+                               ShiftAmt == KnownRHS.countMinLeadingZeros()))) {
       SDLoc DL(N);
       MVT ShiftVT = SrcVT;
-      SDValue ShiftSrc = Src.getOperand(0);
+      SDValue ShiftLHS = Src.getOperand(0);
+      SDValue ShiftRHS = Src.getOperand(1);
       if (ShiftVT.getScalarType() == MVT::i8) {
         // vXi8 shifts - we only care about the signbit so can use PSLLW.
         ShiftVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
-        ShiftSrc = DAG.getBitcast(ShiftVT, ShiftSrc);
+        ShiftLHS = DAG.getBitcast(ShiftVT, ShiftLHS);
+        ShiftRHS = DAG.getBitcast(ShiftVT, ShiftRHS);
       }
-      unsigned ShiftAmt = KnownSrc.countMinLeadingZeros();
-      ShiftSrc = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, ShiftVT,
-                                            ShiftSrc, ShiftAmt, DAG);
-      ShiftSrc = DAG.getNOT(DL, DAG.getBitcast(SrcVT, ShiftSrc), SrcVT);
-      return DAG.getNode(X86ISD::MOVMSK, DL, VT, ShiftSrc);
+      ShiftLHS = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, ShiftVT,
+                                            ShiftLHS, ShiftAmt, DAG);
+      ShiftRHS = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, ShiftVT,
+                                            ShiftRHS, ShiftAmt, DAG);
+      ShiftLHS = DAG.getBitcast(SrcVT, ShiftLHS);
+      ShiftRHS = DAG.getBitcast(SrcVT, ShiftRHS);
+      SDValue Res = DAG.getNode(ISD::XOR, DL, SrcVT, ShiftLHS, ShiftRHS);
+      return DAG.getNode(X86ISD::MOVMSK, DL, VT, DAG.getNOT(DL, Res, SrcVT));
     }
   }
 

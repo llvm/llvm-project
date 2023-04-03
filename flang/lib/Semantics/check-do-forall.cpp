@@ -115,19 +115,6 @@ public:
   // invocation of an IMPURE final subroutine. (C1139)
   //
 
-  // Only to be called for symbols with ObjectEntityDetails
-  static bool HasImpureFinal(const Symbol &original) {
-    const Symbol &symbol{ResolveAssociations(original)};
-    if (symbol.has<ObjectEntityDetails>()) {
-      if (const DeclTypeSpec * symType{symbol.GetType()}) {
-        if (const DerivedTypeSpec * derived{symType->AsDerived()}) {
-          return semantics::HasImpureFinal(*derived);
-        }
-      }
-    }
-    return false;
-  }
-
   // Predicate for deallocations caused by block exit and direct deallocation
   static bool DeallocateAll(const Symbol &) { return true; }
 
@@ -166,11 +153,11 @@ public:
     return false;
   }
 
-  void SayDeallocateWithImpureFinal(const Symbol &entity, const char *reason) {
+  void SayDeallocateWithImpureFinal(
+      const Symbol &entity, const char *reason, const Symbol &impure) {
     context_.SayWithDecl(entity, currentStatementSourcePosition_,
-        "Deallocation of an entity with an IMPURE FINAL procedure"
-        " caused by %s not allowed in DO CONCURRENT"_err_en_US,
-        reason);
+        "Deallocation of an entity with an IMPURE FINAL procedure '%s' caused by %s not allowed in DO CONCURRENT"_err_en_US,
+        impure.name(), reason);
   }
 
   void SayDeallocateOfPolymorph(
@@ -199,8 +186,8 @@ public:
             MightDeallocatePolymorphic(entity, DeallocateAll)) {
           SayDeallocateOfPolymorph(endBlockStmt.source, entity, reason);
         }
-        if (HasImpureFinal(entity)) {
-          SayDeallocateWithImpureFinal(entity, reason);
+        if (const Symbol * impure{HasImpureFinal(entity)}) {
+          SayDeallocateWithImpureFinal(entity, reason, *impure);
         }
       }
     }
@@ -215,8 +202,8 @@ public:
       if (MightDeallocatePolymorphic(*entity, DeallocateNonCoarray)) {
         SayDeallocateOfPolymorph(variable.GetSource(), *entity, reason);
       }
-      if (HasImpureFinal(*entity)) {
-        SayDeallocateWithImpureFinal(*entity, reason);
+      if (const Symbol * impure{HasImpureFinal(*entity)}) {
+        SayDeallocateWithImpureFinal(*entity, reason, *impure);
       }
     }
     if (const auto *assignment{GetAssignment(stmt)}) {
@@ -248,8 +235,8 @@ public:
           SayDeallocateOfPolymorph(
               currentStatementSourcePosition_, entity, reason);
         }
-        if (HasImpureFinal(entity)) {
-          SayDeallocateWithImpureFinal(entity, reason);
+        if (const Symbol * impure{HasImpureFinal(entity)}) {
+          SayDeallocateWithImpureFinal(entity, reason, *impure);
         }
       }
     }

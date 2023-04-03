@@ -625,17 +625,17 @@ private:
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
   void visitVPLoad(const VPIntrinsic &VPIntrin, EVT VT,
-                   SmallVector<SDValue, 7> &OpValues);
+                   const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStore(const VPIntrinsic &VPIntrin,
-                    SmallVector<SDValue, 7> &OpValues);
+                    const SmallVectorImpl<SDValue> &OpValues);
   void visitVPGather(const VPIntrinsic &VPIntrin, EVT VT,
-                     SmallVector<SDValue, 7> &OpValues);
+                     const SmallVectorImpl<SDValue> &OpValues);
   void visitVPScatter(const VPIntrinsic &VPIntrin,
-                      SmallVector<SDValue, 7> &OpValues);
+                      const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStridedLoad(const VPIntrinsic &VPIntrin, EVT VT,
-                          SmallVectorImpl<SDValue> &OpValues);
+                          const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStridedStore(const VPIntrinsic &VPIntrin,
-                           SmallVectorImpl<SDValue> &OpValues);
+                           const SmallVectorImpl<SDValue> &OpValues);
   void visitVPCmp(const VPCmpIntrinsic &VPIntrin);
   void visitVectorPredicationIntrinsic(const VPIntrinsic &VPIntrin);
 
