@@ -2682,8 +2682,10 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         K->setMetadata(Kind, MDNode::getMostGenericFPMath(JMD, KMD));
         break;
       case LLVMContext::MD_invariant_load:
-        // Only set the !invariant.load if it is present in both instructions.
-        K->setMetadata(Kind, JMD);
+        // If K moves, only set the !invariant.load if it is present in both
+        // instructions.
+        if (DoesKMove)
+          K->setMetadata(Kind, JMD);
         break;
       case LLVMContext::MD_nonnull:
         if (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef))
@@ -2729,15 +2731,21 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
 
 void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
                                  bool KDominatesJ) {
-  unsigned KnownIDs[] = {
-      LLVMContext::MD_tbaa,            LLVMContext::MD_alias_scope,
-      LLVMContext::MD_noalias,         LLVMContext::MD_range,
-      LLVMContext::MD_invariant_load,  LLVMContext::MD_nonnull,
-      LLVMContext::MD_invariant_group, LLVMContext::MD_align,
-      LLVMContext::MD_dereferenceable,
-      LLVMContext::MD_dereferenceable_or_null,
-      LLVMContext::MD_access_group,    LLVMContext::MD_preserve_access_index,
-      LLVMContext::MD_nontemporal,     LLVMContext::MD_noundef};
+  unsigned KnownIDs[] = {LLVMContext::MD_tbaa,
+                         LLVMContext::MD_alias_scope,
+                         LLVMContext::MD_noalias,
+                         LLVMContext::MD_range,
+                         LLVMContext::MD_fpmath,
+                         LLVMContext::MD_invariant_load,
+                         LLVMContext::MD_nonnull,
+                         LLVMContext::MD_invariant_group,
+                         LLVMContext::MD_align,
+                         LLVMContext::MD_dereferenceable,
+                         LLVMContext::MD_dereferenceable_or_null,
+                         LLVMContext::MD_access_group,
+                         LLVMContext::MD_preserve_access_index,
+                         LLVMContext::MD_nontemporal,
+                         LLVMContext::MD_noundef};
   combineMetadata(K, J, KnownIDs, KDominatesJ);
 }
 
@@ -2816,14 +2824,7 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   // In general, GVN unifies expressions over different control-flow
   // regions, and so we need a conservative combination of the noalias
   // scopes.
-  static const unsigned KnownIDs[] = {
-      LLVMContext::MD_tbaa,            LLVMContext::MD_alias_scope,
-      LLVMContext::MD_noalias,         LLVMContext::MD_range,
-      LLVMContext::MD_fpmath,          LLVMContext::MD_invariant_load,
-      LLVMContext::MD_invariant_group, LLVMContext::MD_nonnull,
-      LLVMContext::MD_access_group,    LLVMContext::MD_preserve_access_index,
-      LLVMContext::MD_noundef,         LLVMContext::MD_nontemporal};
-  combineMetadata(ReplInst, I, KnownIDs, false);
+  combineMetadataForCSE(ReplInst, I, false);
 }
 
 template <typename RootType, typename DominatesFn>

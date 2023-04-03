@@ -119,10 +119,29 @@ join:
   ret ptr %phi
 }
 
+define void @hoist_fpmath(i1 %c, double %x) {
+; CHECK-LABEL: @hoist_fpmath(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    [[T:%.*]] = fadd double [[X:%.*]], 1.000000e+00, !fpmath !2
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+then:
+  %t = fadd double %x, 1.0, !fpmath !{ float 2.5 }
+  br label %out
+else:
+  %e = fadd double %x, 1.0, !fpmath !{ float 5.0 }
+  br label %out
+out:
+  ret void
+}
+
 !0 = !{ i8 0, i8 1 }
 !1 = !{ i8 3, i8 5 }
 !2 = !{}
 ;.
 ; CHECK: [[RNG0]] = !{i8 0, i8 1, i8 3, i8 5}
 ; CHECK: [[META1:![0-9]+]] = !{}
+; CHECK: [[META2:![0-9]+]] = !{float 2.500000e+00}
 ;.

@@ -3,6 +3,7 @@
 ; RUN: opt -passes='early-cse<memssa>' -S < %s | FileCheck %s
 
 declare void @use(i1)
+declare void @use.ptr(ptr) memory(read)
 
 define void @test1(float %x, float %y) {
 ; CHECK-LABEL: @test1(
@@ -45,5 +46,47 @@ define void @test_inbounds_program_not_ub_if_first_gep_poison(ptr %ptr, i64 %n) 
   call void @use.i8(ptr %add.ptr.1)
   %add.ptr.2 = getelementptr i8, ptr %ptr, i64 %n
   call void @use.i8(ptr %add.ptr.2)
+  ret void
+}
+
+define void @load_both_nonnull(ptr %p) {
+; CHECK-LABEL: @load_both_nonnull(
+; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull !0
+; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
+; CHECK-NEXT:    ret void
+;
+  %v1 = load ptr, ptr %p, !nonnull !{}
+  call void @use.ptr(ptr %v1)
+  %v2 = load ptr, ptr %p, !nonnull !{}
+  call void @use.ptr(ptr %v2)
+  ret void
+}
+
+define void @load_first_nonnull(ptr %p) {
+; CHECK-LABEL: @load_first_nonnull(
+; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
+; CHECK-NEXT:    ret void
+;
+  %v1 = load ptr, ptr %p, !nonnull !{}
+  call void @use.ptr(ptr %v1)
+  %v2 = load ptr, ptr %p
+  call void @use.ptr(ptr %v2)
+  ret void
+}
+
+define void @load_first_nonnull_noundef(ptr %p) {
+; CHECK-LABEL: @load_first_nonnull_noundef(
+; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull !0, !noundef !0
+; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
+; CHECK-NEXT:    call void @use.ptr(ptr [[V1]])
+; CHECK-NEXT:    ret void
+;
+  %v1 = load ptr, ptr %p, !nonnull !{}, !noundef !{}
+  call void @use.ptr(ptr %v1)
+  %v2 = load ptr, ptr %p
+  call void @use.ptr(ptr %v2)
   ret void
 }

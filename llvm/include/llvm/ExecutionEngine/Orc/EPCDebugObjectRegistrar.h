@@ -31,7 +31,8 @@ class ExecutionSession;
 /// Abstract interface for registering debug objects in the executor process.
 class DebugObjectRegistrar {
 public:
-  virtual Error registerDebugObject(ExecutorAddrRange TargetMem) = 0;
+  virtual Error registerDebugObject(ExecutorAddrRange TargetMem,
+                                    bool AutoRegisterCode) = 0;
   virtual ~DebugObjectRegistrar() = default;
 };
 
@@ -42,7 +43,8 @@ public:
   EPCDebugObjectRegistrar(ExecutionSession &ES, ExecutorAddr RegisterFn)
       : ES(ES), RegisterFn(RegisterFn) {}
 
-  Error registerDebugObject(ExecutorAddrRange TargetMem) override;
+  Error registerDebugObject(ExecutorAddrRange TargetMem,
+                            bool AutoRegisterCode) override;
 
 private:
   ExecutionSession &ES;

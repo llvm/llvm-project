@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=gnu99 -fsyntax-only -pedantic -verify %s
+// RUN: %clang_cc1 -std=gnu99 -fsyntax-only -pedantic -verify=expected,pedantic %s
 // RUN: %clang_cc1 -std=gnu99 -fsyntax-only -Wgnu -Wc11-extensions -verify %s
 // REQUIRES: LP64
 
@@ -64,7 +64,7 @@ void test(void) {
     { 2, 4, 6 },
     { 3, 5, 7 },
     { 4, 6, 8 },
-    {  }, // expected-warning{{use of GNU empty initializer extension}} expected-warning{{excess elements in array initializer}}
+    {  }, // pedantic-warning{{use of an empty initializer is a C2x extension}} expected-warning{{excess elements in array initializer}}
   };
   int y4[4][3] = {
     { 1, 3, 5, 2 }, // expected-warning{{excess elements in array initializer}}
@@ -175,7 +175,7 @@ void charArrays(void) {
   char c3[5] = { "Hello" };
   char c4[4] = { "Hello" }; //expected-warning{{initializer-string for char array is too long}}
 
-  int i3[] = {}; //expected-warning{{zero size arrays are an extension}} expected-warning{{use of GNU empty initializer extension}}
+  int i3[] = {}; //expected-warning{{zero size arrays are an extension}} pedantic-warning{{use of an empty initializer is a C2x extension}}
 }
 
 void variableArrayInit(void) {
@@ -197,7 +197,7 @@ const char r7[] = "zxcv";
 char r8[5] = "5char";
 char r9[5] = "6chars"; //expected-warning{{initializer-string for char array is too long}}
 unsigned char r10[] = __extension__ (_Generic(0, int: (__extension__ "foo" )));
-int r11[0] = {}; //expected-warning{{zero size arrays are an extension}} expected-warning{{use of GNU empty initializer extension}}
+int r11[0] = {}; //expected-warning{{zero size arrays are an extension}} pedantic-warning{{use of an empty initializer is a C2x extension}}
 
 // Some struct tests
 void autoStructTest(void) {
@@ -221,8 +221,7 @@ int t8[sizeof t7 == (3*sizeof(int)) ? 1 : -1];
 struct bittest{int : 31, a, :21, :12, b;};
 struct bittest bittestvar = {1, 2, 3, 4}; //expected-warning{{excess elements in struct initializer}}
 
-// Not completely sure what should happen here...
-int u1 = {}; //expected-warning{{use of GNU empty initializer extension}} expected-error{{scalar initializer cannot be empty}}
+int u1 = {}; //pedantic-warning{{use of an empty initializer is a C2x extension}}
 int u2 = {{3}}; //expected-warning{{too many braces around scalar initializer}}
 
 // PR2362

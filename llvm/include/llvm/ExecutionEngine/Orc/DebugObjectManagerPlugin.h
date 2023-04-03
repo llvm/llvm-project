@@ -60,9 +60,15 @@ public:
   ///   names. Note that this may cause significant memory and transport
   ///   overhead for objects built with a release configuration.
   ///
+  /// AutoRegisterCode:
+  ///   Notify the debugger for each new debug object. This is a good default
+  ///   mode, but it may cause significant overhead when adding many modules in
+  ///   sequence. When turning this off, the user has to issue the call to
+  ///   __jit_debug_register_code() on the executor side manually.
+  ///
   DebugObjectManagerPlugin(ExecutionSession &ES,
                            std::unique_ptr<DebugObjectRegistrar> Target,
-                           bool RequireDebugSections);
+                           bool RequireDebugSections, bool AutoRegisterCode);
   ~DebugObjectManagerPlugin();
 
   void notifyMaterializing(MaterializationResponsibility &MR,
@@ -92,6 +98,7 @@ private:
 
   std::unique_ptr<DebugObjectRegistrar> Target;
   bool RequireDebugSections;
+  bool AutoRegisterCode;
 };
 
 } // namespace orc
