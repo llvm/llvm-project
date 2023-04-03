@@ -5235,7 +5235,7 @@ const char *TargetLowering::LowerXConstraint(EVT ConstraintVT) const {
 }
 
 SDValue TargetLowering::LowerAsmOutputForConstraint(
-    SDValue &Chain, SDValue &Flag, const SDLoc &DL,
+    SDValue &Chain, SDValue &Glue, const SDLoc &DL,
     const AsmOperandInfo &OpInfo, SelectionDAG &DAG) const {
   return SDValue();
 }
