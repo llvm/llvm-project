@@ -689,12 +689,33 @@ INTERCEPTOR(hsa_status_t, hsa_amd_memory_async_copy, void* dst,
     num_dep_signals, dep_signals, completion_signal);
 }
 
+INTERCEPTOR(hsa_status_t, hsa_amd_memory_async_copy_on_engine, void* dst,
+  hsa_agent_t dst_agent, const void* src, hsa_agent_t src_agent, size_t size,
+  uint32_t num_dep_signals, const hsa_signal_t* dep_signals,
+  hsa_signal_t completion_signal, hsa_amd_sdma_engine_id_t engine_id,
+ bool force_copy_on_sdma) {
+  ENSURE_ASAN_INITED();
+  ENSURE_HSA_INITED();
+  if (flags()->replace_intrin) {
+    if (dst != src) {
+      CHECK_RANGES_OVERLAP("hsa_amd_memory_async_copy_on_engine", dst, size,
+                           src, size);
+    }
+    ASAN_READ_RANGE(nullptr, src, size);
+    ASAN_WRITE_RANGE(nullptr, dst, size);
+  }
+  return REAL(hsa_amd_memory_async_copy_on_engine)(
+    dst, dst_agent, src, src_agent, size, num_dep_signals, dep_signals,
+    completion_signal, engine_id, force_copy_on_sdma);
+}
+
 void InitializeAmdgpuInterceptors() {
   ASAN_INTERCEPT_FUNC(hsa_memory_copy);
   ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_allocate);
   ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_free);
   ASAN_INTERCEPT_FUNC(hsa_amd_agents_allow_access);
   ASAN_INTERCEPT_FUNC(hsa_amd_memory_async_copy);
+  ASAN_INTERCEPT_FUNC(hsa_amd_memory_async_copy_on_engine);
 }
 
 void ENSURE_HSA_INITED() {
