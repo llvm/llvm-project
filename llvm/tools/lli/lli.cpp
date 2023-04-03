@@ -938,7 +938,7 @@ int runOrcJIT(const char *ProgName) {
         L->addPlugin(std::make_unique<orc::EHFrameRegistrationPlugin>(
             ES, ExitOnErr(orc::EPCEHFrameRegistrar::Create(ES))));
         L->addPlugin(std::make_unique<orc::DebugObjectManagerPlugin>(
-            ES, ExitOnErr(orc::createJITLoaderGDBRegistrar(ES))));
+            ES, ExitOnErr(orc::createJITLoaderGDBRegistrar(ES)), true, true));
       }
       return L;
     });

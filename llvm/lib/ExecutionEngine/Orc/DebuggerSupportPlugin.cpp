@@ -348,11 +348,12 @@ public:
       Writer.write(SecCmd);
     }
 
+    static constexpr bool AutoRegisterCode = true;
     SectionRange R(MachOContainerBlock->getSection());
     G.allocActions().push_back(
         {cantFail(shared::WrapperFunctionCall::Create<
-                  shared::SPSArgList<shared::SPSExecutorAddrRange>>(
-             RegisterActionAddr, R.getRange())),
+                  shared::SPSArgList<shared::SPSExecutorAddrRange, bool>>(
+             RegisterActionAddr, R.getRange(), AutoRegisterCode)),
          {}});
     return Error::success();
   }

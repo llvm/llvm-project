@@ -1350,7 +1350,7 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
   if (const auto CtorExpr = dyn_cast<CXXConstructExpr>(Initializer)) {
     const Function *Func = getFunction(CtorExpr->getConstructor());
 
-    if (!Func || !Func->isConstexpr())
+    if (!Func)
       return false;
 
     // The This pointer is already on the stack because this is an initializer,

@@ -19,7 +19,6 @@
 namespace llvm {
 
 class Value;
-
 class ConstraintSystem {
   struct Entry {
     int64_t Coefficient;
@@ -68,8 +67,14 @@ class ConstraintSystem {
 
 public:
   ConstraintSystem() {}
+  ConstraintSystem(ArrayRef<Value *> FunctionArgs) {
+    NumVariables += FunctionArgs.size();
+    for (auto *Arg : FunctionArgs) {
+      Value2Index.insert({Arg, Value2Index.size() + 1});
+    }
+  }
   ConstraintSystem(const DenseMap<Value *, unsigned> &Value2Index)
-      : Value2Index(Value2Index) {}
+      : NumVariables(Value2Index.size()), Value2Index(Value2Index) {}
 
   bool addVariableRow(ArrayRef<int64_t> R) {
     assert(Constraints.empty() || R.size() == NumVariables);
