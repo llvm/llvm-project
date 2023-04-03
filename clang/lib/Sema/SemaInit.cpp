@@ -1565,20 +1565,23 @@ void InitListChecker::CheckScalarType(const InitializedEntity &Entity,
                                       unsigned &StructuredIndex) {
   if (Index >= IList->getNumInits()) {
     if (!VerifyOnly) {
-      if (DeclType->isSizelessBuiltinType())
-        SemaRef.Diag(IList->getBeginLoc(),
-                     SemaRef.getLangOpts().CPlusPlus11
-                         ? diag::warn_cxx98_compat_empty_sizeless_initializer
-                         : diag::err_empty_sizeless_initializer)
-            << DeclType << IList->getSourceRange();
-      else
-        SemaRef.Diag(IList->getBeginLoc(),
-                     SemaRef.getLangOpts().CPlusPlus11
-                         ? diag::warn_cxx98_compat_empty_scalar_initializer
-                         : diag::err_empty_scalar_initializer)
-            << IList->getSourceRange();
+      if (SemaRef.getLangOpts().CPlusPlus) {
+        if (DeclType->isSizelessBuiltinType())
+          SemaRef.Diag(IList->getBeginLoc(),
+                       SemaRef.getLangOpts().CPlusPlus11
+                           ? diag::warn_cxx98_compat_empty_sizeless_initializer
+                           : diag::err_empty_sizeless_initializer)
+              << DeclType << IList->getSourceRange();
+        else
+          SemaRef.Diag(IList->getBeginLoc(),
+                       SemaRef.getLangOpts().CPlusPlus11
+                           ? diag::warn_cxx98_compat_empty_scalar_initializer
+                           : diag::err_empty_scalar_initializer)
+              << IList->getSourceRange();
+      }
     }
-    hadError = !SemaRef.getLangOpts().CPlusPlus11;
+    hadError =
+        SemaRef.getLangOpts().CPlusPlus && !SemaRef.getLangOpts().CPlusPlus11;
     ++Index;
     ++StructuredIndex;
     return;
@@ -1908,11 +1911,24 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     // Check for VLAs; in standard C it would be possible to check this
     // earlier, but I don't know where clang accepts VLAs (gcc accepts
     // them in all sorts of strange places).
-    if (!VerifyOnly)
-      SemaRef.Diag(VAT->getSizeExpr()->getBeginLoc(),
-                   diag::err_variable_object_no_init)
-          << VAT->getSizeExpr()->getSourceRange();
-    hadError = true;
+    bool HasErr = IList->getNumInits() != 0 || SemaRef.getLangOpts().CPlusPlus;
+    if (!VerifyOnly) {
+      // C2x 6.7.9p4: An entity of variable length array type shall not be
+      // initialized except by an empty initializer.
+      //
+      // The C extension warnings are issued from ParseBraceInitializer() and
+      // do not need to be issued here. However, we continue to issue an error
+      // in the case there are initializers or we are compiling C++. We allow
+      // use of VLAs in C++, but it's not clear we want to allow {} to zero
+      // init a VLA in C++ in all cases (such as with non-trivial constructors).
+      // FIXME: should we allow this construct in C++ when it makes sense to do
+      // so?
+      if (HasErr)
+        SemaRef.Diag(VAT->getSizeExpr()->getBeginLoc(),
+                     diag::err_variable_object_no_init)
+            << VAT->getSizeExpr()->getSourceRange();
+    }
+    hadError = HasErr;
     ++Index;
     ++StructuredIndex;
     return;

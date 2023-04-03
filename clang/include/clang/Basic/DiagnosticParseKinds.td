@@ -182,8 +182,6 @@ def ext_gnu_statement_expr_macro : Extension<
   InGroup<GNUStatementExpressionFromMacroExpansion>;
 def ext_gnu_conditional_expr : Extension<
   "use of GNU ?: conditional expression extension, omitting middle operand">, InGroup<GNUConditionalOmittedOperand>;
-def ext_gnu_empty_initializer : Extension<
-  "use of GNU empty initializer extension">, InGroup<GNUEmptyInitializer>;
 def ext_gnu_array_range : Extension<"use of GNU array range extension">,
   InGroup<GNUDesignator>;
 def ext_gnu_missing_equal_designator : ExtWarn<

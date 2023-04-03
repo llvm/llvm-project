@@ -173,6 +173,11 @@ def TestParamFour : ArrayRefParameter<"int", ""> {
   let printer = "::printIntArray($_printer, $_self)";
 }
 
+
+def TestParamVector : ArrayRefParameter<"int", ""> {
+  let cppStorageType = "std::vector<int>";
+}
+
 def TestParamUnsigned : AttrParameter<"uint64_t", ""> {}
 
 def TestAttrWithFormat : Test_Attr<"TestAttrWithFormat"> {
@@ -183,6 +188,7 @@ def TestAttrWithFormat : Test_Attr<"TestAttrWithFormat"> {
     "::mlir::IntegerAttr":$three,
     TestParamFour:$four,
     TestParamUnsigned:$five,
+    TestParamVector:$six,
     // Array of another attribute.
     ArrayRefParameter<
       "AttrWithTypeBuilderAttr", // The parameter C++ type.
@@ -192,7 +198,7 @@ def TestAttrWithFormat : Test_Attr<"TestAttrWithFormat"> {
 
   let mnemonic = "attr_with_format";
   let assemblyFormat = [{
-    `<` $one `:` struct($two, $four) `:` $three `:` $five `,`
+    `<` $one `:` struct($two, $four) `:` $three `:` $five `:` `[` $six `]` `,`
     `[` `` $arrayOfAttrWithTypeBuilderAttr `]` `>`
   }];
   let genVerifyDecl = 1;

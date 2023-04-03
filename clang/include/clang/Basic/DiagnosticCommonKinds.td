@@ -130,6 +130,12 @@ def warn_cxx20_compat_consteval : Warning<
 def warn_missing_type_specifier : Warning<
   "type specifier missing, defaults to 'int'">,
   InGroup<ImplicitInt>, DefaultIgnore;
+
+def ext_c_empty_initializer : Extension<
+  "use of an empty initializer is a C2x extension">, InGroup<C2x>;
+def warn_c2x_compat_empty_initializer : Warning<
+  "use of an empty initializer is incompatible with C standards before C2x">,
+  InGroup<CPre2xCompat>, DefaultIgnore;
 }
 
 let CategoryName = "Nullability Issue" in {
