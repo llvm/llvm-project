@@ -95,6 +95,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  strchrnul_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strchrnul_test.cpp
+  DEPENDS
+    libc.src.string.strchrnul
+)
+
+add_libc_unittest(
   strcmp_test
   SUITE
     libc_string_unittests

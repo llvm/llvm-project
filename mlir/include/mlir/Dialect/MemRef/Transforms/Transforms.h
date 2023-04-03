@@ -53,6 +53,10 @@ void populateResolveShapedTypeResultDimsPatterns(RewritePatternSet &patterns);
 /// (sizes, offset, strides) of a memref into easier to analyze constructs.
 void populateExpandStridedMetadataPatterns(RewritePatternSet &patterns);
 
+/// Appends patterns for resolving `memref.extract_strided_metadata` into
+/// `memref.extract_strided_metadata` of its source.
+void populateResolveExtractStridedMetadataPatterns(RewritePatternSet &patterns);
+
 /// Appends patterns for emulating wide integer memref operations with ops over
 /// narrower integer types.
 void populateMemRefWideIntEmulationPatterns(
