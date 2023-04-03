@@ -417,6 +417,22 @@ int load(int argc, char **argv, char **envp, void *image, size_t size) {
   // Save the return value and perform basic clean-up.
   int ret = *static_cast<int *>(host_ret);
 
+  // Free the memory allocated for the device.
+  if (hsa_status_t err = hsa_amd_memory_pool_free(args))
+    handle_error(err);
+  if (hsa_status_t err = hsa_amd_memory_pool_free(dev_argv))
+    handle_error(err);
+  if (hsa_status_t err = hsa_amd_memory_pool_free(dev_ret))
+    handle_error(err);
+  if (hsa_status_t err = hsa_amd_memory_pool_free(server_inbox))
+    handle_error(err);
+  if (hsa_status_t err = hsa_amd_memory_pool_free(server_outbox))
+    handle_error(err);
+  if (hsa_status_t err = hsa_amd_memory_pool_free(buffer))
+    handle_error(err);
+  if (hsa_status_t err = hsa_amd_memory_pool_free(host_ret))
+    handle_error(err);
+
   if (hsa_status_t err = hsa_signal_destroy(memory_signal))
     handle_error(err);
 
