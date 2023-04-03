@@ -1167,15 +1167,14 @@ define i64 @mul_i64_4112(i64 %a) {
 define signext i32 @mul_i32_768(i32 %a) {
 ; LA32-LABEL: mul_i32_768:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a1, $zero, 768
-; LA32-NEXT:    mul.w $a0, $a0, $a1
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 1
+; LA32-NEXT:    slli.w $a0, $a0, 8
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i32_768:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a1, $zero, 768
-; LA64-NEXT:    mul.d $a0, $a0, $a1
-; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 1
+; LA64-NEXT:    slli.w $a0, $a0, 8
 ; LA64-NEXT:    ret
   %b = mul i32 %a, 768
   ret i32 %b
@@ -1184,15 +1183,14 @@ define signext i32 @mul_i32_768(i32 %a) {
 define signext i32 @mul_i32_1280(i32 %a) {
 ; LA32-LABEL: mul_i32_1280:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a1, $zero, 1280
-; LA32-NEXT:    mul.w $a0, $a0, $a1
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 2
+; LA32-NEXT:    slli.w $a0, $a0, 8
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i32_1280:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a1, $zero, 1280
-; LA64-NEXT:    mul.d $a0, $a0, $a1
-; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 2
+; LA64-NEXT:    slli.w $a0, $a0, 8
 ; LA64-NEXT:    ret
   %b = mul i32 %a, 1280
   ret i32 %b
@@ -1201,15 +1199,14 @@ define signext i32 @mul_i32_1280(i32 %a) {
 define signext i32 @mul_i32_2304(i32 %a) {
 ; LA32-LABEL: mul_i32_2304:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a1, $zero, 2304
-; LA32-NEXT:    mul.w $a0, $a0, $a1
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 3
+; LA32-NEXT:    slli.w $a0, $a0, 8
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i32_2304:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a1, $zero, 2304
-; LA64-NEXT:    mul.d $a0, $a0, $a1
-; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 3
+; LA64-NEXT:    slli.w $a0, $a0, 8
 ; LA64-NEXT:    ret
   %b = mul i32 %a, 2304
   ret i32 %b
@@ -1218,17 +1215,14 @@ define signext i32 @mul_i32_2304(i32 %a) {
 define signext i32 @mul_i32_4352(i32 %a) {
 ; LA32-LABEL: mul_i32_4352:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    lu12i.w $a1, 1
-; LA32-NEXT:    ori $a1, $a1, 256
-; LA32-NEXT:    mul.w $a0, $a0, $a1
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 4
+; LA32-NEXT:    slli.w $a0, $a0, 8
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i32_4352:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    lu12i.w $a1, 1
-; LA64-NEXT:    ori $a1, $a1, 256
-; LA64-NEXT:    mul.d $a0, $a0, $a1
-; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 4
+; LA64-NEXT:    slli.w $a0, $a0, 8
 ; LA64-NEXT:    ret
   %b = mul i32 %a, 4352
   ret i32 %b
@@ -1246,8 +1240,8 @@ define i64 @mul_i64_768(i64 %a) {
 ;
 ; LA64-LABEL: mul_i64_768:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a1, $zero, 768
-; LA64-NEXT:    mul.d $a0, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 1
+; LA64-NEXT:    slli.d $a0, $a0, 8
 ; LA64-NEXT:    ret
   %b = mul i64 %a, 768
   ret i64 %b
@@ -1265,8 +1259,8 @@ define i64 @mul_i64_1280(i64 %a) {
 ;
 ; LA64-LABEL: mul_i64_1280:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a1, $zero, 1280
-; LA64-NEXT:    mul.d $a0, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 2
+; LA64-NEXT:    slli.d $a0, $a0, 8
 ; LA64-NEXT:    ret
   %b = mul i64 %a, 1280
   ret i64 %b
@@ -1284,8 +1278,8 @@ define i64 @mul_i64_2304(i64 %a) {
 ;
 ; LA64-LABEL: mul_i64_2304:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a1, $zero, 2304
-; LA64-NEXT:    mul.d $a0, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 3
+; LA64-NEXT:    slli.d $a0, $a0, 8
 ; LA64-NEXT:    ret
   %b = mul i64 %a, 2304
   ret i64 %b
@@ -1304,9 +1298,8 @@ define i64 @mul_i64_4352(i64 %a) {
 ;
 ; LA64-LABEL: mul_i64_4352:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    lu12i.w $a1, 1
-; LA64-NEXT:    ori $a1, $a1, 256
-; LA64-NEXT:    mul.d $a0, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 4
+; LA64-NEXT:    slli.d $a0, $a0, 8
 ; LA64-NEXT:    ret
   %b = mul i64 %a, 4352
   ret i64 %b
