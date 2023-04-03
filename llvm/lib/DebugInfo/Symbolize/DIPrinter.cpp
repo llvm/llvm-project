@@ -260,6 +260,17 @@ void PlainPrinterBase::print(const Request &Request,
   printFooter();
 }
 
+void PlainPrinterBase::print(const Request &Request,
+                             const std::vector<DILineInfo> &Locations) {
+  if (Locations.empty()) {
+    print(Request, DILineInfo());
+  } else {
+    for (const DILineInfo &L : Locations)
+      print(L, false);
+    printFooter();
+  }
+}
+
 bool PlainPrinterBase::printError(const Request &Request,
                                   const ErrorInfoBase &ErrorInfo) {
   ErrHandler(ErrorInfo, Request.ModuleName);
@@ -273,6 +284,8 @@ static std::string toHex(uint64_t V) {
 
 static json::Object toJSON(const Request &Request, StringRef ErrorMsg = "") {
   json::Object Json({{"ModuleName", Request.ModuleName.str()}});
+  if (!Request.Symbol.empty())
+    Json["SymName"] = Request.Symbol.str();
   if (Request.Address)
     Json["Address"] = toHex(*Request.Address);
   if (!ErrorMsg.empty())
@@ -356,6 +369,19 @@ void JSONPrinter::print(const Request &Request,
   }
   json::Object Json = toJSON(Request);
   Json["Frame"] = std::move(Frame);
+  if (ObjectList)
+    ObjectList->push_back(std::move(Json));
+  else
+    printJSON(std::move(Json));
+}
+
+void JSONPrinter::print(const Request &Request,
+                        const std::vector<DILineInfo> &Locations) {
+  json::Array Definitions;
+  for (const DILineInfo &L : Locations)
+    Definitions.push_back(toJSON(L));
+  json::Object Json = toJSON(Request);
+  Json["Loc"] = std::move(Definitions);
   if (ObjectList)
     ObjectList->push_back(std::move(Json));
   else
