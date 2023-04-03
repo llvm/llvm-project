@@ -1,0 +1,4 @@
+# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1210 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX1210 %s
+
+# GFX1210: s_set_vgpr_msb 10 ; encoding: [0x0a,0x00,0x86,0xbf]
+0x0a,0x00,0x86,0xbf

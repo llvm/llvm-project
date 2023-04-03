@@ -1750,6 +1750,7 @@ private:
                               const unsigned CPol);
   bool validateExeczVcczOperands(const OperandVector &Operands);
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
+  bool validateSetVgprMSB(const MCInst &Inst, const OperandVector &Operands);
   std::optional<StringRef> validateLdsDirect(const MCInst &Inst);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
@@ -4892,6 +4893,22 @@ bool AMDGPUAsmParser::validateTFE(const MCInst &Inst,
   return true;
 }
 
+bool AMDGPUAsmParser::validateSetVgprMSB(const MCInst &Inst,
+                                         const OperandVector &Operands) {
+  if (Inst.getOpcode() != AMDGPU::S_SET_VGPR_MSB_gfx12)
+    return true;
+
+  int Simm16Pos = AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
+                                             AMDGPU::OpName::simm16);
+  if ((unsigned)Inst.getOperand(Simm16Pos).getImm() > 15) {
+    SMLoc Loc = Operands[1]->getStartLoc();
+    Error(Loc, "s_set_vgpr_msb accepts values in range [0..15]");
+    return false;
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const SMLoc &IDLoc,
                                           const OperandVector &Operands) {
@@ -5015,6 +5032,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateTFE(Inst, Operands)) {
+    return false;
+  }
+  if (!validateSetVgprMSB(Inst, Operands)) {
     return false;
   }
 

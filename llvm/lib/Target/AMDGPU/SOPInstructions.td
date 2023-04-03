@@ -1681,6 +1681,10 @@ let SubtargetPredicate = isGFX12Plus, hasSideEffects = 1 in {
                 [(int_amdgcn_s_wait_kmcnt timm:$simm16)]>;
 } // End SubtargetPredicate = isGFX12Plus, hasSideEffects = 1
 
+let SubtargetPredicate = Has512AddressableVGPRs, hasSideEffects = 1 in {
+  def S_SET_VGPR_MSB : SOPP_Pseudo<"s_set_vgpr_msb" , (ins i16imm:$simm16), "$simm16">;
+}
+
 //===----------------------------------------------------------------------===//
 // SOP1 Patterns
 //===----------------------------------------------------------------------===//
@@ -2407,6 +2411,11 @@ defm S_WAIT_DSCNT           : SOPP_Real_32_gfx12<0x046>;
 defm S_WAIT_KMCNT           : SOPP_Real_32_gfx12<0x047>;
 defm S_WAIT_LOADCNT_DSCNT   : SOPP_Real_32_gfx12<0x048>;
 defm S_WAIT_STORECNT_DSCNT  : SOPP_Real_32_gfx12<0x049>;
+
+//===----------------------------------------------------------------------===//
+// SOPP - GFX1210 only.
+//===----------------------------------------------------------------------===//
+defm S_SET_VGPR_MSB : SOPP_Real_32_gfx12<0x006>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX11, GFX12.

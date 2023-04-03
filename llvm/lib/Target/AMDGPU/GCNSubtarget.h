@@ -196,6 +196,7 @@ protected:
   bool HasVGPRSingleUseHintInsts = false;
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
+  bool Has512AddressableVGPRs = false;
   bool HasBitOp3Insts = false;
 
   bool HasVcmpxPermlaneHazard = false;
@@ -1183,7 +1184,7 @@ public:
 
   bool hasBitOp3Insts() const { return HasBitOp3Insts; }
 
-  bool has512AddressableVGPRs() const { return GFX12_10Insts; }
+  bool has512AddressableVGPRs() const { return Has512AddressableVGPRs; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs

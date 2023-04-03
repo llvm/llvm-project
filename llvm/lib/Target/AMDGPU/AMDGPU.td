@@ -821,6 +821,12 @@ def FeatureBitOp3Insts : SubtargetFeature<"bitop3-insts",
   "Has v_bitop3_b32/v_bitop3_b16 instructions"
 >;
 
+def Feature512AddressableVGPRs : SubtargetFeature<"512-addressable-vgprs",
+  "Has512AddressableVGPRs",
+  "true",
+  "Has 512 addressable VGPRs"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1499,6 +1505,7 @@ def FeatureISAVersion12 : FeatureSet<
 def FeatureISAVersion12_10 : FeatureSet<
   [FeatureGFX12,
    FeatureGFX12_10Insts,
+   Feature512AddressableVGPRs,
    FeatureLDSBankCount32, // TODO-GFX1210: redefine
    FeatureDLInsts,
    FeatureDot7Insts,
@@ -2048,6 +2055,9 @@ def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
 
 def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
   AssemblerPredicate<(all_of FeatureBitOp3Insts)>;
+
+def Has512AddressableVGPRs : Predicate<"Subtarget->has512AddressableVGPRs()">,
+  AssemblerPredicate<(all_of Feature512AddressableVGPRs)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"
