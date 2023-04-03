@@ -125,7 +125,7 @@ struct TernTester {
       if (C->isOneValue())
         return 1;
 
-      assert(0 && "Unknown constant type");
+      llvm_unreachable("Unknown constant type");
     };
 
     auto ComputeBit = [&](uint64_t A, uint64_t B, uint64_t C) -> uint64_t {
