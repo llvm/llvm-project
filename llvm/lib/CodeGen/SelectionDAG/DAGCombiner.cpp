@@ -5085,6 +5085,10 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
   if (N1.isUndef())
     return N0;
 
+  // Fold (avg x, x) --> x
+  if (N0 == N1 && Level >= AfterLegalizeTypes)
+    return N0;
+
   // TODO If we use avg for scalars anywhere, we can add (avgfl x, 0) -> x >> 1
 
   return SDValue();
