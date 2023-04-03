@@ -113,6 +113,7 @@ int main(int argc, char **argv) {
   registry.insert<mlir::arith::ArithDialect, mlir::LLVM::LLVMDialect,
                   mlir::gpu::GPUDialect, mlir::spirv::SPIRVDialect,
                   mlir::func::FuncDialect, mlir::memref::MemRefDialect>();
+  mlir::registerPassManagerCLOptions();
   mlir::registerBuiltinDialectTranslation(registry);
   mlir::registerLLVMDialectTranslation(registry);
 
