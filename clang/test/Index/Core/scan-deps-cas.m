@@ -33,6 +33,7 @@
 // CHECK-NEXT:     name: ModA
 // CHECK-NEXT:     context-hash: [[HASH_MOD_A:[A-Z0-9]+]]
 // CHECK-NEXT:     module-map-path: [[PREFIX]]/Inputs/module/module.modulemap
+// CHECK-NEXT:     cache-key: [[CASFS_MODA_CACHE_KEY:llvmcas://[[:xdigit:]]+]]
 // CHECK-NEXT:     module-deps:
 // CHECK-NEXT:     file-deps:
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/ModA.h
@@ -51,6 +52,7 @@
 // CHECK-NEXT: dependencies:
 // CHECK-NEXT:   command 0:
 // CHECK-NEXT:     context-hash: [[HASH_TU:[A-Z0-9]+]]
+// CHECK-NEXT:     cache-key: [[CASFS_TU_CACHE_KEY:llvmcas://[[:xdigit:]]+]]
 // CHECK-NEXT:     module-deps:
 // CHECK-NEXT:       ModA:[[HASH_MOD_A]]
 // CHECK-NEXT:     file-deps:
@@ -66,6 +68,7 @@
 // INCLUDE_TREE:      dependencies:
 // INCLUDE_TREE-NEXT:   command 0:
 // INCLUDE_TREE-NEXT:     context-hash: [[HASH_TU:[A-Z0-9]+]]
+// INCLUDE_TREE-NEXT:     cache-key: [[INC_TU_CACHE_KEY:llvmcas://[[:xdigit:]]+]]
 // INCLUDE_TREE-NEXT:     module-deps:
 // INCLUDE_TREE-NEXT:     file-deps:
 // INCLUDE_TREE-NEXT:       [[PREFIX]]/scan-deps-cas.m
