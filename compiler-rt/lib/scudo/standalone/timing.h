@@ -178,11 +178,11 @@ private:
         Occurrence == 0 ? 0
                         : ((AccumulatedTime % Occurrence) * 10) / Occurrence;
 
-    Str.append("%14llu.%llu(ns) %-11s", Integral, Fraction, " ");
+    Str.append("%14lu.%lu(ns) %-11s", Integral, Fraction, " ");
 
     for (u32 I = 0; I < ExtraIndent; ++I)
       Str.append("%s", "  ");
-    Str.append("%s (%llu)\n", Timers[HandleId].Name, Occurrence);
+    Str.append("%s (%lu)\n", Timers[HandleId].Name, Occurrence);
 
     for (u32 I = 0; I < NumAllocatedTimers; ++I)
       if (Timers[I].Nesting == HandleId)
