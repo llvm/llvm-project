@@ -526,6 +526,12 @@ CINDEX_LINKAGE CXCStringArray
     clang_experimental_DepGraphModule_getBuildArguments(CXDepGraphModule);
 
 /**
+ * \returns the \c ActionCache key for this module, if any.
+ */
+CINDEX_LINKAGE
+const char *clang_experimental_DepGraphModule_getCacheKey(CXDepGraphModule);
+
+/**
  * \returns the number \c CXDepGraphTUCommand objects in the graph.
  */
 CINDEX_LINKAGE size_t clang_experimental_DepGraph_getNumTUCommands(CXDepGraph);
@@ -562,6 +568,12 @@ CINDEX_LINKAGE const char *
  */
 CINDEX_LINKAGE CXCStringArray
     clang_experimental_DepGraphTUCommand_getBuildArguments(CXDepGraphTUCommand);
+
+/**
+ * \returns the \c ActionCache key for this translation unit, if any.
+ */
+CINDEX_LINKAGE const char *
+    clang_experimental_DepGraphTUCommand_getCacheKey(CXDepGraphTUCommand);
 
 /**
  * \returns the list of files which this translation unit directly depends on.

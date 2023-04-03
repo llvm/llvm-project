@@ -753,10 +753,13 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
 
   unsigned CommandIndex = 0;
   auto HandleCommand = [&](const char *ContextHash, CXCStringArray ModuleDeps,
-                           CXCStringArray FileDeps, CXCStringArray Args) {
+                           CXCStringArray FileDeps, CXCStringArray Args,
+                           const char *CacheKey) {
     llvm::outs() << "  command " << CommandIndex++ << ":\n";
-    llvm::outs() << "    context-hash: " << ContextHash << "\n"
-                 << "    module-deps:\n";
+    llvm::outs() << "    context-hash: " << ContextHash << "\n";
+    if (CacheKey)
+      llvm::outs() << "    cache-key: " << CacheKey << "\n";
+    llvm::outs() << "    module-deps:\n";
     for (const auto &ModuleName :
          llvm::makeArrayRef(ModuleDeps.Strings, ModuleDeps.Count))
       llvm::outs() << "      " << ModuleName << "\n";
@@ -794,6 +797,8 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
           clang_experimental_DepGraphModule_getContextHash(Mod);
       const char *ModuleMapPath =
           clang_experimental_DepGraphModule_getModuleMapPath(Mod);
+      const char *ModuleCacheKey =
+          clang_experimental_DepGraphModule_getCacheKey(Mod);
       CXCStringArray ModuleDeps =
           clang_experimental_DepGraphModule_getModuleDeps(Mod);
       CXCStringArray FileDeps =
@@ -806,8 +811,10 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
                    << "    name: " << Name << "\n"
                    << "    context-hash: " << ContextHash << "\n"
                    << "    module-map-path: "
-                   << (ModuleMapPath ? ModuleMapPath : "<none>") << "\n"
-                   << "    module-deps:\n";
+                   << (ModuleMapPath ? ModuleMapPath : "<none>") << "\n";
+      if (ModuleCacheKey)
+        llvm::outs() << "    cache-key: " << ModuleCacheKey << "\n";
+      llvm::outs() << "    module-deps:\n";
       for (const auto &ModuleName :
            ArrayRef(ModuleDeps.Strings, ModuleDeps.Count))
         llvm::outs() << "      " << ModuleName << "\n";
@@ -834,9 +841,11 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
           clang_experimental_DepGraph_getTUCommand(Graph, I);
       CXCStringArray Args =
           clang_experimental_DepGraphTUCommand_getBuildArguments(Cmd);
+      const char *CacheKey =
+          clang_experimental_DepGraphTUCommand_getCacheKey(Cmd);
       auto Dispose = llvm::make_scope_exit(
           [&]() { clang_experimental_DepGraphTUCommand_dispose(Cmd); });
-      HandleCommand(TUContextHash, TUModuleDeps, TUFileDeps, Args);
+      HandleCommand(TUContextHash, TUModuleDeps, TUFileDeps, Args, CacheKey);
     }
     return 0;
   }
