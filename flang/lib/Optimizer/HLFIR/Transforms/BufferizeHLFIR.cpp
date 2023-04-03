@@ -98,6 +98,8 @@ static mlir::Value getBufferizedExprMustFreeFlag(mlir::Value bufferizedExpr) {
 static std::pair<hlfir::Entity, mlir::Value>
 createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
                    hlfir::Entity mold) {
+  if (mold.isPolymorphic())
+    TODO(loc, "creating polymorphic temporary");
   llvm::SmallVector<mlir::Value> lenParams;
   hlfir::genLengthParameters(loc, builder, mold, lenParams);
   llvm::StringRef tmpName{".tmp"};
