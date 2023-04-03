@@ -10,7 +10,7 @@ static_assert(gimme5() == 5, "");
 
 
 template<typename T> constexpr T identity(T t) {
-  static_assert(true);
+  static_assert(true, "");
   return t;
 }
 static_assert(identity(true), "");
