@@ -24625,20 +24625,30 @@ bool AArch64TargetLowering::isConstantUnsignedBitfieldExtractLegal(
 }
 
 bool AArch64TargetLowering::isComplexDeinterleavingSupported() const {
-  return Subtarget->hasComplxNum();
+  return Subtarget->hasSVE() || Subtarget->hasComplxNum();
 }
 
 bool AArch64TargetLowering::isComplexDeinterleavingOperationSupported(
     ComplexDeinterleavingOperation Operation, Type *Ty) const {
-  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  auto *VTy = dyn_cast<VectorType>(Ty);
   if (!VTy)
     return false;
 
-  auto *ScalarTy = VTy->getScalarType();
-  unsigned NumElements = VTy->getNumElements();
+  // If the vector is scalable, SVE is enabled, implying support for complex
+  // numbers. Otherwirse, we need to ensure complex number support is avaialble
+  if (!VTy->isScalableTy() && !Subtarget->hasComplxNum())
+    return false;
 
+  auto *ScalarTy = VTy->getScalarType();
+  unsigned NumElements = VTy->getElementCount().getKnownMinValue();
+
+  // We can only process vectors that have a bit size of 128 or higher (with an
+  // additional 64 bits for Neon). Additionally, these vectors must have a
+  // power-of-2 size, as we later split them into the smallest supported size
+  // and merging them back together after applying complex operation.
   unsigned VTyWidth = VTy->getScalarSizeInBits() * NumElements;
-  if ((VTyWidth < 128 && VTyWidth != 64) || !llvm::isPowerOf2_32(VTyWidth))
+  if ((VTyWidth < 128 && (VTy->isScalableTy() || VTyWidth != 64)) ||
+      !llvm::isPowerOf2_32(VTyWidth))
     return false;
 
   return (ScalarTy->isHalfTy() && Subtarget->hasFullFP16()) ||
@@ -24649,57 +24659,75 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
     Instruction *I, ComplexDeinterleavingOperation OperationType,
     ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,
     Value *Accumulator) const {
-  FixedVectorType *Ty = cast<FixedVectorType>(InputA->getType());
+  VectorType *Ty = cast<VectorType>(InputA->getType());
+  bool IsScalable = Ty->isScalableTy();
 
   IRBuilder<> B(I);
 
-  unsigned TyWidth = Ty->getScalarSizeInBits() * Ty->getNumElements();
+  unsigned TyWidth =
+      Ty->getScalarSizeInBits() * Ty->getElementCount().getKnownMinValue();
 
   assert(((TyWidth >= 128 && llvm::isPowerOf2_32(TyWidth)) || TyWidth == 64) &&
          "Vector type must be either 64 or a power of 2 that is at least 128");
 
   if (TyWidth > 128) {
-    int Stride = Ty->getNumElements() / 2;
-    auto SplitSeq = llvm::seq<int>(0, Ty->getNumElements());
-    auto SplitSeqVec = llvm::to_vector(SplitSeq);
-    ArrayRef<int> LowerSplitMask(&SplitSeqVec[0], Stride);
-    ArrayRef<int> UpperSplitMask(&SplitSeqVec[Stride], Stride);
-
-    auto *LowerSplitA = B.CreateShuffleVector(InputA, LowerSplitMask);
-    auto *LowerSplitB = B.CreateShuffleVector(InputB, LowerSplitMask);
-    auto *UpperSplitA = B.CreateShuffleVector(InputA, UpperSplitMask);
-    auto *UpperSplitB = B.CreateShuffleVector(InputB, UpperSplitMask);
+    int Stride = Ty->getElementCount().getKnownMinValue() / 2;
+    auto *HalfTy = VectorType::getHalfElementsVectorType(Ty);
+    auto *LowerSplitA = B.CreateExtractVector(HalfTy, InputA, B.getInt64(0));
+    auto *LowerSplitB = B.CreateExtractVector(HalfTy, InputB, B.getInt64(0));
+    auto *UpperSplitA =
+        B.CreateExtractVector(HalfTy, InputA, B.getInt64(Stride));
+    auto *UpperSplitB =
+        B.CreateExtractVector(HalfTy, InputB, B.getInt64(Stride));
     Value *LowerSplitAcc = nullptr;
     Value *UpperSplitAcc = nullptr;
-
     if (Accumulator) {
-      LowerSplitAcc = B.CreateShuffleVector(Accumulator, LowerSplitMask);
-      UpperSplitAcc = B.CreateShuffleVector(Accumulator, UpperSplitMask);
+      LowerSplitAcc = B.CreateExtractVector(HalfTy, Accumulator, B.getInt64(0));
+      UpperSplitAcc =
+          B.CreateExtractVector(HalfTy, Accumulator, B.getInt64(Stride));
     }
-
     auto *LowerSplitInt = createComplexDeinterleavingIR(
         I, OperationType, Rotation, LowerSplitA, LowerSplitB, LowerSplitAcc);
     auto *UpperSplitInt = createComplexDeinterleavingIR(
         I, OperationType, Rotation, UpperSplitA, UpperSplitB, UpperSplitAcc);
 
-    ArrayRef<int> JoinMask(&SplitSeqVec[0], Ty->getNumElements());
-    return B.CreateShuffleVector(LowerSplitInt, UpperSplitInt, JoinMask);
+    auto *Result = B.CreateInsertVector(Ty, PoisonValue::get(Ty), LowerSplitInt,
+                                        B.getInt64(0));
+    return B.CreateInsertVector(Ty, Result, UpperSplitInt, B.getInt64(Stride));
   }
 
   if (OperationType == ComplexDeinterleavingOperation::CMulPartial) {
+    if (Accumulator == nullptr)
+      Accumulator = ConstantFP::get(Ty, 0);
+
+    if (IsScalable) {
+      auto *Mask = B.CreateVectorSplat(Ty->getElementCount(), B.getInt1(true));
+      return B.CreateIntrinsic(
+          Intrinsic::aarch64_sve_fcmla, Ty,
+          {Mask, Accumulator, InputA, InputB, B.getInt32((int)Rotation * 90)});
+    }
+
     Intrinsic::ID IdMap[4] = {Intrinsic::aarch64_neon_vcmla_rot0,
                               Intrinsic::aarch64_neon_vcmla_rot90,
                               Intrinsic::aarch64_neon_vcmla_rot180,
                               Intrinsic::aarch64_neon_vcmla_rot270};
 
-    if (Accumulator == nullptr)
-      Accumulator = ConstantFP::get(Ty, 0);
 
     return B.CreateIntrinsic(IdMap[(int)Rotation], Ty,
                              {Accumulator, InputB, InputA});
   }
 
   if (OperationType == ComplexDeinterleavingOperation::CAdd) {
+    if (IsScalable) {
+      auto *Mask = B.CreateVectorSplat(Ty->getElementCount(), B.getInt1(true));
+      if (Rotation == ComplexDeinterleavingRotation::Rotation_90 ||
+          Rotation == ComplexDeinterleavingRotation::Rotation_270)
+        return B.CreateIntrinsic(
+            Intrinsic::aarch64_sve_fcadd, Ty,
+            {Mask, InputA, InputB, B.getInt32((int)Rotation * 90)});
+      return nullptr;
+    }
+
     Intrinsic::ID IntId = Intrinsic::not_intrinsic;
     if (Rotation == ComplexDeinterleavingRotation::Rotation_90)
       IntId = Intrinsic::aarch64_neon_vcadd_rot90;
