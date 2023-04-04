@@ -230,7 +230,7 @@ static CXErrorCode getFullDependencies(DependencyScanningWorker *Worker,
   llvm::StringSet<> AlreadySeen;
   FullDependencyConsumer DepConsumer(AlreadySeen);
   auto Controller = DependencyScanningTool::createActionController(
-      *Worker, std::move(LookupOutput), /*PrefixMapping=*/{});
+      *Worker, std::move(LookupOutput));
 
   bool HasDiagConsumer = DiagConsumer;
   bool HasError = Error;
