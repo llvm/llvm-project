@@ -660,7 +660,7 @@ define amdgpu_ps void @v_omod_mul4_multi_use_f32(float %a) #0 {
 ; GFX12-NEXT:    v_mul_f32_e32 v1, 4.0, v0
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b32 v[0:1], v1, off
-; GFX12-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
+; GFX12-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
