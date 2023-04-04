@@ -312,8 +312,7 @@ void builtinTransferInitializer(const CFGInitializer &Elt,
 
   if (Member->getType()->isReferenceType()) {
     auto &MemberLoc = ThisLoc.getChild(*Member);
-    Env.setValue(MemberLoc, Env.takeOwnership(std::make_unique<ReferenceValue>(
-                                *InitStmtLoc)));
+    Env.setValue(MemberLoc, Env.create<ReferenceValue>(*InitStmtLoc));
   } else {
     auto &MemberLoc = ThisLoc.getChild(*Member);
     Env.setValue(MemberLoc, *InitStmtVal);

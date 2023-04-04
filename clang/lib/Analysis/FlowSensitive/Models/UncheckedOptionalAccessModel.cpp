@@ -221,9 +221,9 @@ void setHasValue(Value &OptionalVal, BoolValue &HasValueVal) {
 /// Creates a symbolic value for an `optional` value using `HasValueVal` as the
 /// symbolic value of its "has_value" property.
 StructValue &createOptionalValue(Environment &Env, BoolValue &HasValueVal) {
-  auto OptionalVal = std::make_unique<StructValue>();
-  setHasValue(*OptionalVal, HasValueVal);
-  return Env.takeOwnership(std::move(OptionalVal));
+  auto &OptionalVal = Env.create<StructValue>();
+  setHasValue(OptionalVal, HasValueVal);
+  return OptionalVal;
 }
 
 /// Returns the symbolic value that represents the "has_value" property of the
@@ -312,8 +312,8 @@ StorageLocation *maybeInitializeOptionalValueMember(QualType Q,
     return nullptr;
   auto &ValueLoc = Env.createStorageLocation(Ty);
   Env.setValue(ValueLoc, *ValueVal);
-  auto ValueRef = std::make_unique<ReferenceValue>(ValueLoc);
-  OptionalVal.setProperty("value", Env.takeOwnership(std::move(ValueRef)));
+  auto &ValueRef = Env.create<ReferenceValue>(ValueLoc);
+  OptionalVal.setProperty("value", ValueRef);
   return &ValueLoc;
 }
 
