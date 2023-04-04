@@ -452,11 +452,11 @@ private:
 
   /// Generates a nested loop that iterates over tid on all the coordinates on
   /// lvl.
-  ValueRange
-  genUnResolvedSliceTreeTraverse(OpBuilder &builder, Location loc, TensorId tid,
-                                 ArrayRef<const SliceInfo *> unResLvls,
-                                 ValueRange userReduc,
-                                 LoopBodyBuilder bodyBuilder);
+  ValueRange genUnResolvedSliceTreeTraverse(
+      OpBuilder &builder, Location loc, TensorId tid,
+      ArrayRef<const SliceInfo *> unResLvls,
+      std::optional<std::pair<TensorId, Level>> firstResLvl,
+      ValueRange userReduc, LoopBodyBuilder bodyBuilder);
 
   /// Generates code to get the first non-empty slice of tid on lvl, when all
   /// the previous level before `lvl` are resolved (or lvl is the first level).
