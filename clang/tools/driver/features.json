@@ -16,6 +16,9 @@
       "name": "extract-api-ignores"
     },
     {
+      "name": "depscan-prefix-map"
+    },
+    {
       "name": "deployment-target-environment-variables",
       "value": [
         "MACOSX_DEPLOYMENT_TARGET",
