@@ -102,12 +102,11 @@ template <typename EscapeTag, EscapeTag Tag>
 void Analysis::writeSnippet(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
                             const char *Separator) const {
   SmallVector<std::string, 3> Lines;
-  const auto &SI = State_.getSubtargetInfo();
   // Parse the asm snippet and print it.
   while (!Bytes.empty()) {
     MCInst MI;
     uint64_t MISize = 0;
-    if (!Disasm_->getInstruction(MI, MISize, Bytes, 0, nulls())) {
+    if (!DisasmHelper_->decodeInst(MI, MISize, Bytes)) {
       writeEscaped<Tag>(OS, join(Lines, Separator));
       writeEscaped<Tag>(OS, Separator);
       writeEscaped<Tag>(OS, "[error decoding asm snippet]");
@@ -115,7 +114,7 @@ void Analysis::writeSnippet(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
     }
     SmallString<128> InstPrinterStr; // FIXME: magic number.
     raw_svector_ostream OSS(InstPrinterStr);
-    InstPrinter_->printInst(&MI, 0, "", SI, OSS);
+    DisasmHelper_->printInst(&MI, OSS);
     Bytes = Bytes.drop_front(MISize);
     Lines.emplace_back(InstPrinterStr.str().trim());
   }
@@ -163,21 +162,7 @@ Analysis::Analysis(const LLVMState &State,
   if (Clustering.getPoints().empty())
     return;
 
-  MCTargetOptions MCOptions;
-  const auto &TM = State.getTargetMachine();
-  const auto &Triple = TM.getTargetTriple();
-  AsmInfo_.reset(TM.getTarget().createMCAsmInfo(State_.getRegInfo(),
-                                                Triple.str(), MCOptions));
-  InstPrinter_.reset(TM.getTarget().createMCInstPrinter(
-      Triple, 0 /*default variant*/, *AsmInfo_, State_.getInstrInfo(),
-      State_.getRegInfo()));
-
-  Context_ = std::make_unique<MCContext>(
-      Triple, AsmInfo_.get(), &State_.getRegInfo(), &State_.getSubtargetInfo());
-  Disasm_.reset(TM.getTarget().createMCDisassembler(State_.getSubtargetInfo(),
-                                                    *Context_));
-  assert(Disasm_ && "cannot create MCDisassembler. missing call to "
-                    "InitializeXXXTargetDisassembler ?");
+  DisasmHelper_ = std::make_unique<DisassemblerHelper>(State);
 }
 
 template <>
