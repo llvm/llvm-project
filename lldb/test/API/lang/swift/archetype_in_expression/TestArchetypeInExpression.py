@@ -22,10 +22,10 @@ class TestArchetypeInExpression(TestBase):
         self.expect("e U.self", substrs=["[Int].Type"])
         # Assert that frame variable doesn't work
         self.expect("v First.self", 
-                substrs=["no variable named 'First' found in this frame"], 
+                substrs=["no variable or instance variable named 'First' found in this frame"],
                 error=True)
         self.expect("v T.self", 
-                substrs=["no variable named 'T' found in this frame"], 
+                substrs=["no variable or instance variable named 'T' found in this frame"],
                 error=True)
 
         # Check that referring to a shadowed archetype works correctly.
@@ -33,7 +33,7 @@ class TestArchetypeInExpression(TestBase):
         self.expect("e T.self", substrs=["String.Type"])
         # Assert that frame variable doesn't work
         self.expect("v T.self", 
-                substrs=["no variable named 'T' found in this frame"], 
+                substrs=["no variable or instance variable named 'T' found in this frame"],
                 error=True)
 
         # Check that you refer to archetypes in nested generic functions.

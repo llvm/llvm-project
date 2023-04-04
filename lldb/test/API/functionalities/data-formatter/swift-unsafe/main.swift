@@ -103,6 +103,7 @@ func main() {
 
   colors.withUnsafeBufferPointer {
     let buf = $0
+    print("break")
     //% self.expect("frame variable -d run-target buf",
     //%            patterns=[
     //%            '\(UnsafeBufferPointer<(.*)\.ColorCode>\) buf = 2 values \(0[xX][0-9a-fA-F]+\) {',
@@ -139,6 +140,7 @@ func main() {
 
   numbers.withUnsafeBufferPointer {
     let buf = $0
+    print("break")
     //% self.expect("frame variable -d run-target buf",
     //%            patterns=[
     //%            '\(UnsafeBufferPointer<(.*)\.Number<Double>>\) buf = 2 values \(0[xX][0-9a-fA-F]+\) {',
@@ -153,6 +155,7 @@ func main() {
   bytes.withUnsafeBufferPointer {
     let buf = $0
     let rawbuf = UnsafeRawBufferPointer(buf)
+    print("break")
     //% self.expect("frame variable -d run-target rawbuf",
     //%            patterns=[
     //%            '\(UnsafeRawBufferPointer\) rawbuf = 256 values \(0[xX][0-9a-fA-F]+\) {',
@@ -160,6 +163,7 @@ func main() {
     //%            ])
     typealias ByteBuffer = UnsafeRawBufferPointer;
     let alias = rawbuf as ByteBuffer
+    print("break")
     //% self.expect("frame variable -d run-target alias",
     //%            patterns=[
     //%            '\(ByteBuffer\) alias = 256 values \(0[xX][0-9a-fA-F]+\) {',
@@ -167,6 +171,7 @@ func main() {
     //%            ])
     typealias ByteBufferAlias = ByteBuffer
     let secondAlias = alias as ByteBufferAlias
+    print("break")
     //% self.expect("frame variable -d run-target secondAlias",
     //%            patterns=[
     //%            '\(ByteBufferAlias\) secondAlias = 256 values \(0[xX][0-9a-fA-F]+\) {',

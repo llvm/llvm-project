@@ -19,6 +19,7 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"
 
 namespace clang {
@@ -199,12 +200,11 @@ public:
   ConstString DeclContextGetScopeQualifiedName(void *opaque_decl_ctx) override {
     return {};
   }
-  bool
-  DeclContextIsClassMethod(void *opaque_decl_ctx,
-                           lldb::LanguageType *language_ptr,
-                           bool *is_instance_method_ptr,
-                           ConstString *language_object_name_ptr) override {
+  bool DeclContextIsClassMethod(void *opaque_decl_ctx) override {
     return false;
+  }
+  lldb::LanguageType DeclContextGetLanguage(void *) override {
+    return lldb::eLanguageTypeSwift;
   }
   bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) override {
     return false;
