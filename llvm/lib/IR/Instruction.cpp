@@ -490,11 +490,11 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   }
 }
 
-/// Return true if both instructions have the same special state. This must be
-/// kept in sync with FunctionComparator::cmpOperations in
+/// This must be kept in sync with FunctionComparator::cmpOperations in
 /// lib/Transforms/IPO/MergeFunctions.cpp.
-static bool haveSameSpecialState(const Instruction *I1, const Instruction *I2,
-                                 bool IgnoreAlignment = false) {
+bool Instruction::hasSameSpecialState(const Instruction *I2,
+                                      bool IgnoreAlignment) const {
+  auto I1 = this;
   assert(I1->getOpcode() == I2->getOpcode() &&
          "Can not compare special state of different instructions");
 
@@ -573,7 +573,7 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I) const {
 
   // If both instructions have no operands, they are identical.
   if (getNumOperands() == 0 && I->getNumOperands() == 0)
-    return haveSameSpecialState(this, I);
+    return this->hasSameSpecialState(I);
 
   // We have two instructions of identical opcode and #operands.  Check to see
   // if all operands are the same.
@@ -587,7 +587,7 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I) const {
                       otherPHI->block_begin());
   }
 
-  return haveSameSpecialState(this, I);
+  return this->hasSameSpecialState(I);
 }
 
 // Keep this in sync with FunctionComparator::cmpOperations in
@@ -613,7 +613,7 @@ bool Instruction::isSameOperationAs(const Instruction *I,
         getOperand(i)->getType() != I->getOperand(i)->getType())
       return false;
 
-  return haveSameSpecialState(this, I, IgnoreAlignment);
+  return this->hasSameSpecialState(I, IgnoreAlignment);
 }
 
 bool Instruction::isUsedOutsideOfBlock(const BasicBlock *BB) const {
