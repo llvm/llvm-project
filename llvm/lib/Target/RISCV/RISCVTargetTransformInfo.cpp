@@ -304,6 +304,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       }
       break;
     }
+    case TTI::SK_Transpose:
     case TTI::SK_PermuteTwoSrc: {
       if (Mask.size() >= 2 && LT.second.isFixedLengthVector()) {
         // 2 x (vrgather + cost of generating the mask constant) + cost of mask
