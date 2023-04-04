@@ -1119,6 +1119,9 @@ def GlobalOp : CIR_Op<"global", [Symbol]> {
     bool isDeclaration() {
       return !getInitialValue();
     }
+    bool hasAvailableExternallyLinkage() {
+      return mlir::cir::isAvailableExternallyLinkage(getLinkage());
+    }
   }];
 
   let skipDefaultBuilders = 1;
@@ -1165,6 +1168,43 @@ def GetGlobalOp : CIR_Op<"get_global",
   let assemblyFormat = "$name `:` `cir.ptr` type($addr) attr-dict";
 
   // `GetGlobalOp` is fully verified by its traits.
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// VTableAddrPointOp
+//===----------------------------------------------------------------------===//
+
+def VTableAddrPointOp : CIR_Op<"vtable.address_point",
+    [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Get the vtable (global variable) address point";
+  let description = [{
+     The `vtable.address_point` operation retrieves the address point of a
+     C++ virtual table (vtable).
+
+     Example:
+
+     ```mlir
+     %x = cir.vtable.address_point(@vtable, 2, 3) : !cir.ptr<!cir.ptr<i32>>
+     ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$name,
+                       I32Attr:$vtableIndex,
+                       I32Attr:$addrPointIndex);
+  let results = (outs Res<CIR_PointerType, "", []>:$addr);
+
+  // FIXME: we should not be printing `cir.ptr` below, that should come
+  // from the pointer type directly.
+  let assemblyFormat = [{
+    `(` $name `,`
+    $vtableIndex `,`
+    $addrPointIndex `,`
+    `)`
+    `:` `cir.ptr` type($addr) attr-dict
+  }];
+
+  // `VTableAddrPointOp` is fully verified by its traits.
   let hasVerifier = 0;
 }
 

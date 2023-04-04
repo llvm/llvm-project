@@ -1160,6 +1160,29 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 //===----------------------------------------------------------------------===//
+// VTableAddrPointOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // Verify that the result type underlying pointer type matches the type of the
+  // referenced cir.global or cir.func op.
+  auto op = dyn_cast_or_null<GlobalOp>(
+      symbolTable.lookupNearestSymbolFrom(*this, getNameAttr()));
+  if (!isa<GlobalOp>(op))
+    return emitOpError("'")
+           << getName() << "' does not reference a valid cir.global";
+
+  mlir::Type symTy = op.getSymType();
+  auto resultType = getAddr().getType().dyn_cast<PointerType>();
+  if (!resultType || symTy != resultType.getPointee())
+    return emitOpError("result type pointee type '")
+           << resultType.getPointee() << "' does not match type " << symTy
+           << " of the global @" << getName();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 
