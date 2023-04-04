@@ -93,6 +93,7 @@ copy("Headers") {
     "adxintrin.h",
     "altivec.h",
     "ammintrin.h",
+    "amxcomplexintrin.h",
     "amxfp16intrin.h",
     "amxintrin.h",
     "arm64intr.h",
