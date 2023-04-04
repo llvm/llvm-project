@@ -955,10 +955,10 @@ namespace X86II {
 
     // The scaling factor for the AVX512's 8-bit compressed displacement.
     CD8_Scale_Shift = EVEX_BShift + 1,
-    CD8_Scale_Mask = 127ULL << CD8_Scale_Shift,
+    CD8_Scale_Mask = 7ULL << CD8_Scale_Shift,
 
     /// Explicitly specified rounding control
-    EVEX_RCShift = CD8_Scale_Shift + 7,
+    EVEX_RCShift = CD8_Scale_Shift + 3,
     EVEX_RC = 1ULL << EVEX_RCShift,
 
     // NOTRACK prefix
