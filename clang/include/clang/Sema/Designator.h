@@ -26,38 +26,75 @@ class Sema;
 /// Designator - A designator in a C99 designated initializer.
 ///
 /// This class is a discriminated union which holds the various
-/// different sorts of designators possible.  A Designation is an array of
+/// different sorts of designators possible. A Designation is an array of
 /// these.  An example of a designator are things like this:
-///     [8] .field [47]        // C99 designation: 3 designators
-///     [8 ... 47]  field:     // GNU extensions: 2 designators
+///
+///      [8] .field [47]        // C99 designation: 3 designators
+///      [8 ... 47]  field:     // GNU extensions: 2 designators
+///
 /// These occur in initializers, e.g.:
-///  int a[10] = {2, 4, [8]=9, 10};
+///
+///      int a[10] = {2, 4, [8]=9, 10};
 ///
 class Designator {
-public:
-  enum DesignatorKind {
-    FieldDesignator, ArrayDesignator, ArrayRangeDesignator
-  };
-private:
-  Designator() {};
-
-  DesignatorKind Kind;
-
+  /// A field designator, e.g., ".x = 42".
   struct FieldDesignatorInfo {
+    /// Refers to the field being initialized.
     const IdentifierInfo *II;
+
+    /// The location of the '.' in the designated initializer.
     SourceLocation DotLoc;
+
+    /// The location of the field name in the designated initializer.
     SourceLocation NameLoc;
+
+    FieldDesignatorInfo(const IdentifierInfo *II, SourceLocation DotLoc,
+                        SourceLocation NameLoc)
+        : II(II), DotLoc(DotLoc), NameLoc(NameLoc) {}
   };
+
+  /// An array designator, e.g., "[42] = 0".
   struct ArrayDesignatorInfo {
     Expr *Index;
+
+    // The location of the '[' in the designated initializer.
     SourceLocation LBracketLoc;
+
+    // The location of the ']' in the designated initializer.
     mutable SourceLocation RBracketLoc;
+
+    ArrayDesignatorInfo(Expr *Index, SourceLocation LBracketLoc)
+        : Index(Index), LBracketLoc(LBracketLoc) {}
   };
+
+  /// An array range designator, e.g. "[42 ... 50] = 1".
   struct ArrayRangeDesignatorInfo {
-    Expr *Start, *End;
-    SourceLocation LBracketLoc, EllipsisLoc;
+    Expr *Start;
+    Expr *End;
+
+    // The location of the '[' in the designated initializer.
+    SourceLocation LBracketLoc;
+
+    // The location of the '...' in the designated initializer.
+    SourceLocation EllipsisLoc;
+
+    // The location of the ']' in the designated initializer.
     mutable SourceLocation RBracketLoc;
+
+    ArrayRangeDesignatorInfo(Expr *Start, Expr *End, SourceLocation LBracketLoc,
+                             SourceLocation EllipsisLoc)
+        : Start(Start), End(End), LBracketLoc(LBracketLoc),
+          EllipsisLoc(EllipsisLoc) {}
   };
+
+  /// The kind of designator this describes.
+  enum DesignatorKind {
+    FieldDesignator,
+    ArrayDesignator,
+    ArrayRangeDesignator
+  };
+
+  DesignatorKind Kind;
 
   union {
     FieldDesignatorInfo FieldInfo;
@@ -65,12 +102,23 @@ private:
     ArrayRangeDesignatorInfo ArrayRangeInfo;
   };
 
-public:
+  Designator(DesignatorKind Kind) : Kind(Kind) {}
 
-  DesignatorKind getKind() const { return Kind; }
+public:
   bool isFieldDesignator() const { return Kind == FieldDesignator; }
   bool isArrayDesignator() const { return Kind == ArrayDesignator; }
   bool isArrayRangeDesignator() const { return Kind == ArrayRangeDesignator; }
+
+  //===--------------------------------------------------------------------===//
+  // FieldDesignatorInfo
+
+  static Designator CreateFieldDesignator(const IdentifierInfo *II,
+                                          SourceLocation DotLoc,
+                                          SourceLocation NameLoc) {
+    Designator D(FieldDesignator);
+    new (&D.FieldInfo) FieldDesignatorInfo(II, DotLoc, NameLoc);
+    return D;
+  }
 
   const IdentifierInfo *getField() const {
     assert(isFieldDesignator() && "Invalid accessor");
@@ -87,78 +135,60 @@ public:
     return FieldInfo.NameLoc;
   }
 
+  //===--------------------------------------------------------------------===//
+  // ArrayDesignatorInfo:
+
+  static Designator CreateArrayDesignator(Expr *Index,
+                                          SourceLocation LBracketLoc) {
+    Designator D(ArrayDesignator);
+    new (&D.ArrayInfo) ArrayDesignatorInfo(Index, LBracketLoc);
+    return D;
+  }
+
   Expr *getArrayIndex() const {
     assert(isArrayDesignator() && "Invalid accessor");
     return ArrayInfo.Index;
+  }
+
+  SourceLocation getLBracketLoc() const {
+    assert((isArrayDesignator() || isArrayRangeDesignator()) &&
+           "Invalid accessor");
+    return isArrayDesignator() ? ArrayInfo.LBracketLoc
+                               : ArrayRangeInfo.LBracketLoc;
+  }
+
+  SourceLocation getRBracketLoc() const {
+    assert((isArrayDesignator() || isArrayRangeDesignator()) &&
+           "Invalid accessor");
+    return isArrayDesignator() ? ArrayInfo.RBracketLoc
+                               : ArrayRangeInfo.RBracketLoc;
+  }
+
+  //===--------------------------------------------------------------------===//
+  // ArrayRangeDesignatorInfo:
+
+  static Designator CreateArrayRangeDesignator(Expr *Start, Expr *End,
+                                               SourceLocation LBracketLoc,
+                                               SourceLocation EllipsisLoc) {
+    Designator D(ArrayRangeDesignator);
+    new (&D.ArrayRangeInfo)
+        ArrayRangeDesignatorInfo(Start, End, LBracketLoc, EllipsisLoc);
+    return D;
   }
 
   Expr *getArrayRangeStart() const {
     assert(isArrayRangeDesignator() && "Invalid accessor");
     return ArrayRangeInfo.Start;
   }
+
   Expr *getArrayRangeEnd() const {
     assert(isArrayRangeDesignator() && "Invalid accessor");
     return ArrayRangeInfo.End;
   }
 
-  SourceLocation getLBracketLoc() const {
-    assert((isArrayDesignator() || isArrayRangeDesignator()) &&
-           "Invalid accessor");
-    if (isArrayDesignator())
-      return ArrayInfo.LBracketLoc;
-    else
-      return ArrayRangeInfo.LBracketLoc;
-  }
-
-  SourceLocation getRBracketLoc() const {
-    assert((isArrayDesignator() || isArrayRangeDesignator()) &&
-           "Invalid accessor");
-    if (isArrayDesignator())
-      return ArrayInfo.RBracketLoc;
-    else
-      return ArrayRangeInfo.RBracketLoc;
-  }
-
   SourceLocation getEllipsisLoc() const {
     assert(isArrayRangeDesignator() && "Invalid accessor");
     return ArrayRangeInfo.EllipsisLoc;
-  }
-
-  static Designator getField(const IdentifierInfo *II, SourceLocation DotLoc,
-                             SourceLocation NameLoc) {
-    Designator D;
-    D.Kind = FieldDesignator;
-    new (&D.FieldInfo) FieldDesignatorInfo;
-    D.FieldInfo.II = II;
-    D.FieldInfo.DotLoc = DotLoc;
-    D.FieldInfo.NameLoc = NameLoc;
-    return D;
-  }
-
-  static Designator getArray(Expr *Index,
-                             SourceLocation LBracketLoc) {
-    Designator D;
-    D.Kind = ArrayDesignator;
-    new (&D.ArrayInfo) ArrayDesignatorInfo;
-    D.ArrayInfo.Index = Index;
-    D.ArrayInfo.LBracketLoc = LBracketLoc;
-    D.ArrayInfo.RBracketLoc = SourceLocation();
-    return D;
-  }
-
-  static Designator getArrayRange(Expr *Start,
-                                  Expr *End,
-                                  SourceLocation LBracketLoc,
-                                  SourceLocation EllipsisLoc) {
-    Designator D;
-    D.Kind = ArrayRangeDesignator;
-    new (&D.ArrayRangeInfo) ArrayRangeDesignatorInfo;
-    D.ArrayRangeInfo.Start = Start;
-    D.ArrayRangeInfo.End = End;
-    D.ArrayRangeInfo.LBracketLoc = LBracketLoc;
-    D.ArrayRangeInfo.EllipsisLoc = EllipsisLoc;
-    D.ArrayRangeInfo.RBracketLoc = SourceLocation();
-    return D;
   }
 
   void setRBracketLoc(SourceLocation RBracketLoc) const {
@@ -169,16 +199,7 @@ public:
     else
       ArrayRangeInfo.RBracketLoc = RBracketLoc;
   }
-
-  /// ClearExprs - Null out any expression references, which prevents
-  /// them from being 'delete'd later.
-  void ClearExprs(Sema &Actions) {}
-
-  /// FreeExprs - Release any unclaimed memory for the expressions in
-  /// this designator.
-  void FreeExprs(Sema &Actions) {}
 };
-
 
 /// Designation - Represent a full designation, which is a sequence of
 /// designators.  This class is mostly a helper for InitListDesignations.
@@ -188,9 +209,7 @@ class Designation {
 
 public:
   /// AddDesignator - Add a designator to the end of this list.
-  void AddDesignator(Designator D) {
-    Designators.push_back(D);
-  }
+  void AddDesignator(Designator D) { Designators.push_back(D); }
 
   bool empty() const { return Designators.empty(); }
 
@@ -199,14 +218,6 @@ public:
     assert(Idx < Designators.size());
     return Designators[Idx];
   }
-
-  /// ClearExprs - Null out any expression references, which prevents them from
-  /// being 'delete'd later.
-  void ClearExprs(Sema &Actions) {}
-
-  /// FreeExprs - Release any unclaimed memory for the expressions in this
-  /// designation.
-  void FreeExprs(Sema &Actions) {}
 };
 
 } // end namespace clang

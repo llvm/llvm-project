@@ -976,7 +976,8 @@ ASTNodeImporter::import(const Designator &D) {
     if (!ToFieldLocOrErr)
       return ToFieldLocOrErr.takeError();
 
-    return Designator(ToFieldName, *ToDotLocOrErr, *ToFieldLocOrErr);
+    return DesignatedInitExpr::Designator::CreateFieldDesignator(
+        ToFieldName, *ToDotLocOrErr, *ToFieldLocOrErr);
   }
 
   ExpectedSLoc ToLBracketLocOrErr = import(D.getLBracketLoc());
@@ -988,16 +989,17 @@ ASTNodeImporter::import(const Designator &D) {
     return ToRBracketLocOrErr.takeError();
 
   if (D.isArrayDesignator())
-    return Designator(D.getFirstExprIndex(),
-                      *ToLBracketLocOrErr, *ToRBracketLocOrErr);
+    return Designator::CreateArrayDesignator(D.getArrayIndex(),
+                                             *ToLBracketLocOrErr,
+                                             *ToRBracketLocOrErr);
 
   ExpectedSLoc ToEllipsisLocOrErr = import(D.getEllipsisLoc());
   if (!ToEllipsisLocOrErr)
     return ToEllipsisLocOrErr.takeError();
 
   assert(D.isArrayRangeDesignator());
-  return Designator(
-      D.getFirstExprIndex(), *ToLBracketLocOrErr, *ToEllipsisLocOrErr,
+  return Designator::CreateArrayRangeDesignator(
+      D.getArrayIndex(), *ToLBracketLocOrErr, *ToEllipsisLocOrErr,
       *ToRBracketLocOrErr);
 }
 

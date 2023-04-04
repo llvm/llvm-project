@@ -181,7 +181,8 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
                                       NewSyntax);
 
     Designation D;
-    D.AddDesignator(Designator::getField(FieldName, SourceLocation(), NameLoc));
+    D.AddDesignator(Designator::CreateFieldDesignator(
+        FieldName, SourceLocation(), NameLoc));
     PreferredType.enterDesignatedInitializer(
         Tok.getLocation(), DesignatorCompletion.PreferredBaseType, D);
     return Actions.ActOnDesignatedInitializer(D, ColonLoc, true,
@@ -210,8 +211,8 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
         return ExprError();
       }
 
-      Desig.AddDesignator(Designator::getField(Tok.getIdentifierInfo(), DotLoc,
-                                               Tok.getLocation()));
+      Desig.AddDesignator(Designator::CreateFieldDesignator(
+          Tok.getIdentifierInfo(), DotLoc, Tok.getLocation()));
       ConsumeToken(); // Eat the identifier.
       continue;
     }
@@ -360,7 +361,8 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
 
     // If this is a normal array designator, remember it.
     if (Tok.isNot(tok::ellipsis)) {
-      Desig.AddDesignator(Designator::getArray(Idx.get(), StartLoc));
+      Desig.AddDesignator(Designator::CreateArrayDesignator(Idx.get(),
+                                                            StartLoc));
     } else {
       // Handle the gnu array range extension.
       Diag(Tok, diag::ext_gnu_array_range);
@@ -371,9 +373,8 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
         SkipUntil(tok::r_square, StopAtSemi);
         return RHS;
       }
-      Desig.AddDesignator(Designator::getArrayRange(Idx.get(),
-                                                    RHS.get(),
-                                                    StartLoc, EllipsisLoc));
+      Desig.AddDesignator(Designator::CreateArrayRangeDesignator(
+          Idx.get(), RHS.get(), StartLoc, EllipsisLoc));
     }
 
     T.consumeClose();
