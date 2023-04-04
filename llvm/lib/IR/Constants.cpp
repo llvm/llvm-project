@@ -1009,13 +1009,6 @@ Constant *ConstantFP::getZero(Type *Ty, bool Negative) {
   return C;
 }
 
-Constant *ConstantFP::getZeroValueForNegation(Type *Ty) {
-  if (Ty->isFPOrFPVectorTy())
-    return getNegativeZero(Ty);
-
-  return Constant::getNullValue(Ty);
-}
-
 
 // ConstantFP accessors.
 ConstantFP* ConstantFP::get(LLVMContext &Context, const APFloat& V) {
