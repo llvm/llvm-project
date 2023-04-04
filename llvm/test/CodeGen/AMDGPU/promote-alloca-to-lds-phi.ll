@@ -13,10 +13,10 @@
 ; CHECK: endif:
 ; CHECK: %phi.ptr = phi ptr addrspace(3) [ %arrayidx0, %if ], [ %arrayidx1, %else ]
 ; CHECK: store i32 0, ptr addrspace(3) %phi.ptr, align 4
-define amdgpu_kernel void @branch_ptr_var_same_alloca(i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @branch_ptr_var_same_alloca(i32 %a, i32 %b, i1 %c0) #0 {
 entry:
   %alloca = alloca [64 x i32], align 4, addrspace(5)
-  br i1 undef, label %if, label %else
+  br i1 %c0, label %if, label %else
 
 if:
   %arrayidx0 = getelementptr inbounds [64 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
@@ -34,10 +34,10 @@ endif:
 
 ; CHECK-LABEL: @branch_ptr_phi_alloca_null_0(
 ; CHECK: %phi.ptr = phi ptr addrspace(3) [ %arrayidx0, %if ], [ null, %entry ]
-define amdgpu_kernel void @branch_ptr_phi_alloca_null_0(i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @branch_ptr_phi_alloca_null_0(i32 %a, i32 %b, i1 %c0) #0 {
 entry:
   %alloca = alloca [64 x i32], align 4, addrspace(5)
-  br i1 undef, label %if, label %endif
+  br i1 %c0, label %if, label %endif
 
 if:
   %arrayidx0 = getelementptr inbounds [64 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
@@ -51,10 +51,10 @@ endif:
 
 ; CHECK-LABEL: @branch_ptr_phi_alloca_null_1(
 ; CHECK: %phi.ptr = phi ptr addrspace(3)  [ null, %entry ], [ %arrayidx0, %if ]
-define amdgpu_kernel void @branch_ptr_phi_alloca_null_1(i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @branch_ptr_phi_alloca_null_1(i32 %a, i32 %b, i1 %c0) #0 {
 entry:
   %alloca = alloca [64 x i32], align 4, addrspace(5)
-  br i1 undef, label %if, label %endif
+  br i1 %c0, label %if, label %endif
 
 if:
   %arrayidx0 = getelementptr inbounds [64 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
@@ -97,10 +97,10 @@ exit:
 ; CHECK: endif:
 ; CHECK: %phi.ptr = phi ptr addrspace(5) [ %arrayidx0, %if ], [ %arrayidx1, %else ]
 ; CHECK: store i32 0, ptr addrspace(5) %phi.ptr, align 4
-define amdgpu_kernel void @branch_ptr_alloca_unknown_obj(i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @branch_ptr_alloca_unknown_obj(i32 %a, i32 %b, i1 %c0) #0 {
 entry:
   %alloca = alloca [64 x i32], align 4, addrspace(5)
-  br i1 undef, label %if, label %else
+  br i1 %c0, label %if, label %else
 
 if:
   %arrayidx0 = getelementptr inbounds [64 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a

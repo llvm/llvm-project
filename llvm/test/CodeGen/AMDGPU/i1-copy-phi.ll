@@ -42,9 +42,9 @@ attributes #0 = { nounwind readnone }
 ; SI-LABEL: {{^}}vcopy_i1_undef
 ; SI: v_cndmask_b32_e64
 ; SI: v_cndmask_b32_e64
-define <2 x float> @vcopy_i1_undef(ptr addrspace(1) %p) {
+define <2 x float> @vcopy_i1_undef(ptr addrspace(1) %p, i1 %c0) {
 entry:
-  br i1 undef, label %exit, label %false
+  br i1 %c0, label %exit, label %false
 
 false:
   %x = load <2 x float>, ptr addrspace(1) %p
