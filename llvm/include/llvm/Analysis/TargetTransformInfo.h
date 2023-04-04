@@ -192,6 +192,15 @@ enum class TailFoldingStyle {
   DataAndControlFlowWithoutRuntimeCheck
 };
 
+struct TailFoldingInfo {
+  TargetLibraryInfo *TLI;
+  LoopVectorizationLegality *LVL;
+  InterleavedAccessInfo *IAI;
+  TailFoldingInfo(TargetLibraryInfo *TLI, LoopVectorizationLegality *LVL,
+                  InterleavedAccessInfo *IAI)
+      : TLI(TLI), LVL(LVL), IAI(IAI) {}
+};
+
 class TargetTransformInfo;
 typedef TargetTransformInfo TTI;
 
@@ -583,11 +592,7 @@ public:
 
   /// Query the target whether it would be prefered to create a predicated
   /// vector loop, which can avoid the need to emit a scalar epilogue loop.
-  bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
-                                   AssumptionCache &AC, TargetLibraryInfo *TLI,
-                                   DominatorTree *DT,
-                                   LoopVectorizationLegality *LVL,
-                                   InterleavedAccessInfo *IAI) const;
+  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const;
 
   /// Query the target what the preferred style of tail folding is.
   /// \param IVUpdateMayOverflow Tells whether it is known if the IV update
@@ -1703,11 +1708,7 @@ public:
                                         AssumptionCache &AC,
                                         TargetLibraryInfo *LibInfo,
                                         HardwareLoopInfo &HWLoopInfo) = 0;
-  virtual bool
-  preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
-                              AssumptionCache &AC, TargetLibraryInfo *TLI,
-                              DominatorTree *DT, LoopVectorizationLegality *LVL,
-                              InterleavedAccessInfo *IAI) = 0;
+  virtual bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) = 0;
   virtual TailFoldingStyle
   getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) = 0;
   virtual std::optional<Instruction *> instCombineIntrinsic(
@@ -2110,12 +2111,8 @@ public:
                                 HardwareLoopInfo &HWLoopInfo) override {
     return Impl.isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
   }
-  bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
-                                   AssumptionCache &AC, TargetLibraryInfo *TLI,
-                                   DominatorTree *DT,
-                                   LoopVectorizationLegality *LVL,
-                                   InterleavedAccessInfo *IAI) override {
-    return Impl.preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LVL, IAI);
+  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) override {
+    return Impl.preferPredicateOverEpilogue(TFI);
   }
   TailFoldingStyle
   getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) override {
