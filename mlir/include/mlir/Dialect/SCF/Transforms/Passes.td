@@ -50,9 +50,38 @@ def SCFParallelLoopFusion : Pass<"scf-parallel-loop-fusion"> {
   let constructor = "mlir::createParallelLoopFusionPass()";
 }
 
-def SCFParallelLoopCollapsing : Pass<"scf-parallel-loop-collapsing"> {
-  let summary = "Collapse parallel loops to use less induction variables";
-  let constructor = "mlir::createParallelLoopCollapsingPass()";
+def TestSCFParallelLoopCollapsing : Pass<"test-scf-parallel-loop-collapsing"> {
+  let summary = "Test parallel loops collapsing transformation";
+  let constructor = "mlir::createTestSCFParallelLoopCollapsingPass()";
+  let description = [{
+      This pass is purely for testing the scf::collapseParallelLoops
+      transformation. The transformation does not have opinions on how a
+      parallel loop should be collapsed, so this pass is structured for the
+      common case on GPUs of collapsing to a 3d parallel loop. 3 lists can be
+      provided to collapsed-indices-{0,1,2} to represent how the loop should be
+      collapsed and must reference evrey iterator in the original parallel loop.
+
+    ```mlir
+    # Before:
+    scf.parallel (%arg0, %arg1)
+                 = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+      "test.sink"(%5, %3) : (index, index) -> ()
+      scf.yield
+    }
+
+    # After:
+    scf.parallel (%arg0) = (%c0) to (%c4) step (%c1) {
+      %0 = arith.remsi %arg0, %c2 : index
+      %1 = arith.divsi %arg0, %c2 : index
+      %2 = arith.muli %0, %c7 : index
+      %3 = arith.addi %2, %c3 : index
+      %4 = arith.muli %1, %c7 : index
+      %5 = arith.addi %4, %c3 : index
+      "test.sink"(%5, %3) : (index, index) -> ()
+    }
+    ```
+  }];
+
   let options = [
     ListOption<"clCollapsedIndices0", "collapsed-indices-0", "unsigned",
                "Which loop indices to combine 0th loop index">,
