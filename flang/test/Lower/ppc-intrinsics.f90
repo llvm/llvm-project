@@ -185,3 +185,18 @@ subroutine frsqrtes_test(x)
 ! CHECK-FIR: fir.call @fir.__ppc_frsqrtes.f32.f32
 ! CHECK-LLVMIR: call contract float @llvm.ppc.frsqrtes(float %{{[0-9]}})
 end
+
+! CHECK-LABEL: mtfsf_test
+subroutine mtfsf_test(r)
+  real(8) :: r
+  call mtfsf(1, r)
+! CHECK-FIR: fir.call @fir.__ppc_mtfsf.void.i32.f64
+! CHECK-LLVMIR: call void @llvm.ppc.mtfsf(i32 {{[0-9]}}, double %{{[0-9]}})
+end
+
+! CHECK-LABEL: mtfsfi_test
+subroutine mtfsfi_test()
+  call mtfsfi(1, 2)
+! CHECK-FIR: fir.call @fir.__ppc_mtfsfi.void.i32.i32
+! CHECK-LLVMIR: call void @llvm.ppc.mtfsfi(i32 {{[0-9]}}, i32 {{[0-9]}})
+end

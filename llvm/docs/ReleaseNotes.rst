@@ -82,6 +82,9 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
+* Added Assembly Support for the 2022 A-profile extensions FEAT_GCS (Guarded
+  Control Stacks), FEAT_CHK (Check Feature Status), and FEAT_ATS1A.
+
 Changes to the AMDGPU Backend
 -----------------------------
 * More fine-grained synchronization around barriers for newer architectures

@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as -opaque-pointers < %s -o /dev/null 2>&1 | FileCheck %s
 
 define <4 x float> @transpose(<4 x float> %m, i32 %arg) {
 ; CHECK: assembly parsed, but does not verify as correct!
@@ -89,6 +89,15 @@ define <4 x float> @multiply_mixed_types(<4 x i32> %ivec, <4 x float> %fvec, i32
   ret <4 x float> %result.3
 }
 
+define void @column.major_store_non_int_float_type(ptr %m, ptr %n, i64 %arg) {
+;
+; CHECK-NEXT: Result type must be an integer or floating-point type!
+; CHECK-NEXT: ptr @llvm.matrix.column.major.store.v4p0.i64
+;
+  call void @llvm.matrix.column.major.store.v4p0.i64(<4 x ptr> zeroinitializer, ptr %n, i64 2, i1 false, i32 2, i32 2)
+  ret void
+}
+
 define <4 x float> @column.major_load_stride_too_small(ptr %m, i32 %arg) {
 ;
 ; CHECK-NEXT: Stride must be greater or equal than the number of rows!
@@ -108,15 +117,15 @@ define void @column.major_store_stride_too_small(ptr %m, i64 %arg) {
 }
 
 declare <4 x i32>   @llvm.matrix.column.major.load.v4i32.i64(ptr, i64, i1, i32, i32)
-declare <4 x float> @llvm.matrix.column.major.load.v4f32.pi32(ptr, i64, i1, i32, i32)
+declare <4 x float> @llvm.matrix.column.major.load.v4f32.p0(ptr, i64, i1, i32, i32)
 declare <4 x float> @llvm.matrix.column.major.load.v4f32.i64(ptr, i64, i1, i32, i32)
 declare <6 x float> @llvm.matrix.column.major.load.v6f32.i64(ptr, i64, i1, i32, i32)
 
 declare void @llvm.matrix.column.major.store.v4f32.i64(<4 x float>, ptr, i64, i1, i32, i32)
 declare void @llvm.matrix.column.major.store.v6f32.i64(<6 x float>, ptr, i64, i1, i32, i32)
 declare void @llvm.matrix.column.major.store.v4i32.vi32(<4 x i32>, ptr, i64, i1, i32, i32)
-declare void @llvm.matrix.column.major.store.v4f32.pi32(<4 x float>, ptr, i64, i1, i32, i32)
-declare void @llvm.matrix.column.major.store.v4f32p0.p0(<4 x ptr>, ptr, i64, i1, i32, i32)
+declare void @llvm.matrix.column.major.store.v4f32.p0(<4 x float>, ptr, i64, i1, i32, i32)
+declare void @llvm.matrix.column.major.store.v4p0.i64(<4 x ptr>, ptr, i64, i1, i32, i32)
 
 declare <4 x i32>   @llvm.matrix.transpose.v4i32.v4f32(<4 x float>, i32, i32)
 declare <4 x float> @llvm.matrix.transpose.v4f32(<4 x float>, i32, i32)

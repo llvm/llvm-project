@@ -175,6 +175,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/suspicious-include>` check.
   Global options of the same name should be used instead.
 
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` check to properly handle calls
+  to ``std::forward``.
+
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check to also cover constructor
   initializers.
@@ -255,8 +259,9 @@ Changes in existing checks
   be unnecessarily emitted for template dependent ``if constexpr``.
 
 - Improved :doc:`readability-static-accessed-through-instance
-  <clang-tidy/checks/readability/static-accessed-through-instance>` check to 
-  support unscoped enumerations through instances.
+  <clang-tidy/checks/readability/static-accessed-through-instance>` check to
+  support unscoped enumerations through instances and fixed usage of anonymous
+  structs or classes.
 
 - Fixed a false positive in :doc:`cppcoreguidelines-slicing
   <clang-tidy/checks/cppcoreguidelines/slicing>` check when warning would be

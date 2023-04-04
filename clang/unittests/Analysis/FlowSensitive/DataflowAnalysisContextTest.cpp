@@ -27,35 +27,35 @@ protected:
 
 TEST_F(DataflowAnalysisContextTest,
        CreateAtomicBoolValueReturnsDistinctValues) {
-  auto &X = Context.createAtomicBoolValue();
-  auto &Y = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
+  auto &Y = Context.create<AtomicBoolValue>();
   EXPECT_NE(&X, &Y);
 }
 
 TEST_F(DataflowAnalysisContextTest,
        CreateTopBoolValueReturnsDistinctValues) {
-  auto &X = Context.createTopBoolValue();
-  auto &Y = Context.createTopBoolValue();
+  auto &X = Context.create<TopBoolValue>();
+  auto &Y = Context.create<TopBoolValue>();
   EXPECT_NE(&X, &Y);
 }
 
 TEST_F(DataflowAnalysisContextTest, DistinctTopsNotEquivalent) {
-  auto &X = Context.createTopBoolValue();
-  auto &Y = Context.createTopBoolValue();
+  auto &X = Context.create<TopBoolValue>();
+  auto &Y = Context.create<TopBoolValue>();
   EXPECT_FALSE(Context.equivalentBoolValues(X, Y));
 }
 
 TEST_F(DataflowAnalysisContextTest,
        GetOrCreateConjunctionReturnsSameExprGivenSameArgs) {
-  auto &X = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
   auto &XAndX = Context.getOrCreateConjunction(X, X);
   EXPECT_EQ(&XAndX, &X);
 }
 
 TEST_F(DataflowAnalysisContextTest,
        GetOrCreateConjunctionReturnsSameExprOnSubsequentCalls) {
-  auto &X = Context.createAtomicBoolValue();
-  auto &Y = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
+  auto &Y = Context.create<AtomicBoolValue>();
   auto &XAndY1 = Context.getOrCreateConjunction(X, Y);
   auto &XAndY2 = Context.getOrCreateConjunction(X, Y);
   EXPECT_EQ(&XAndY1, &XAndY2);
@@ -63,22 +63,22 @@ TEST_F(DataflowAnalysisContextTest,
   auto &YAndX = Context.getOrCreateConjunction(Y, X);
   EXPECT_EQ(&XAndY1, &YAndX);
 
-  auto &Z = Context.createAtomicBoolValue();
+  auto &Z = Context.create<AtomicBoolValue>();
   auto &XAndZ = Context.getOrCreateConjunction(X, Z);
   EXPECT_NE(&XAndY1, &XAndZ);
 }
 
 TEST_F(DataflowAnalysisContextTest,
        GetOrCreateDisjunctionReturnsSameExprGivenSameArgs) {
-  auto &X = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
   auto &XOrX = Context.getOrCreateDisjunction(X, X);
   EXPECT_EQ(&XOrX, &X);
 }
 
 TEST_F(DataflowAnalysisContextTest,
        GetOrCreateDisjunctionReturnsSameExprOnSubsequentCalls) {
-  auto &X = Context.createAtomicBoolValue();
-  auto &Y = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
+  auto &Y = Context.create<AtomicBoolValue>();
   auto &XOrY1 = Context.getOrCreateDisjunction(X, Y);
   auto &XOrY2 = Context.getOrCreateDisjunction(X, Y);
   EXPECT_EQ(&XOrY1, &XOrY2);
@@ -86,34 +86,34 @@ TEST_F(DataflowAnalysisContextTest,
   auto &YOrX = Context.getOrCreateDisjunction(Y, X);
   EXPECT_EQ(&XOrY1, &YOrX);
 
-  auto &Z = Context.createAtomicBoolValue();
+  auto &Z = Context.create<AtomicBoolValue>();
   auto &XOrZ = Context.getOrCreateDisjunction(X, Z);
   EXPECT_NE(&XOrY1, &XOrZ);
 }
 
 TEST_F(DataflowAnalysisContextTest,
        GetOrCreateNegationReturnsSameExprOnSubsequentCalls) {
-  auto &X = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
   auto &NotX1 = Context.getOrCreateNegation(X);
   auto &NotX2 = Context.getOrCreateNegation(X);
   EXPECT_EQ(&NotX1, &NotX2);
 
-  auto &Y = Context.createAtomicBoolValue();
+  auto &Y = Context.create<AtomicBoolValue>();
   auto &NotY = Context.getOrCreateNegation(Y);
   EXPECT_NE(&NotX1, &NotY);
 }
 
 TEST_F(DataflowAnalysisContextTest,
        GetOrCreateImplicationReturnsTrueGivenSameArgs) {
-  auto &X = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
   auto &XImpliesX = Context.getOrCreateImplication(X, X);
   EXPECT_EQ(&XImpliesX, &Context.getBoolLiteralValue(true));
 }
 
 TEST_F(DataflowAnalysisContextTest,
        GetOrCreateImplicationReturnsSameExprOnSubsequentCalls) {
-  auto &X = Context.createAtomicBoolValue();
-  auto &Y = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
+  auto &Y = Context.create<AtomicBoolValue>();
   auto &XImpliesY1 = Context.getOrCreateImplication(X, Y);
   auto &XImpliesY2 = Context.getOrCreateImplication(X, Y);
   EXPECT_EQ(&XImpliesY1, &XImpliesY2);
@@ -121,21 +121,21 @@ TEST_F(DataflowAnalysisContextTest,
   auto &YImpliesX = Context.getOrCreateImplication(Y, X);
   EXPECT_NE(&XImpliesY1, &YImpliesX);
 
-  auto &Z = Context.createAtomicBoolValue();
+  auto &Z = Context.create<AtomicBoolValue>();
   auto &XImpliesZ = Context.getOrCreateImplication(X, Z);
   EXPECT_NE(&XImpliesY1, &XImpliesZ);
 }
 
 TEST_F(DataflowAnalysisContextTest, GetOrCreateIffReturnsTrueGivenSameArgs) {
-  auto &X = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
   auto &XIffX = Context.getOrCreateIff(X, X);
   EXPECT_EQ(&XIffX, &Context.getBoolLiteralValue(true));
 }
 
 TEST_F(DataflowAnalysisContextTest,
        GetOrCreateIffReturnsSameExprOnSubsequentCalls) {
-  auto &X = Context.createAtomicBoolValue();
-  auto &Y = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
+  auto &Y = Context.create<AtomicBoolValue>();
   auto &XIffY1 = Context.getOrCreateIff(X, Y);
   auto &XIffY2 = Context.getOrCreateIff(X, Y);
   EXPECT_EQ(&XIffY1, &XIffY2);
@@ -143,27 +143,27 @@ TEST_F(DataflowAnalysisContextTest,
   auto &YIffX = Context.getOrCreateIff(Y, X);
   EXPECT_EQ(&XIffY1, &YIffX);
 
-  auto &Z = Context.createAtomicBoolValue();
+  auto &Z = Context.create<AtomicBoolValue>();
   auto &XIffZ = Context.getOrCreateIff(X, Z);
   EXPECT_NE(&XIffY1, &XIffZ);
 }
 
 TEST_F(DataflowAnalysisContextTest, EmptyFlowCondition) {
   auto &FC = Context.makeFlowConditionToken();
-  auto &C = Context.createAtomicBoolValue();
+  auto &C = Context.create<AtomicBoolValue>();
   EXPECT_FALSE(Context.flowConditionImplies(FC, C));
 }
 
 TEST_F(DataflowAnalysisContextTest, AddFlowConditionConstraint) {
   auto &FC = Context.makeFlowConditionToken();
-  auto &C = Context.createAtomicBoolValue();
+  auto &C = Context.create<AtomicBoolValue>();
   Context.addFlowConditionConstraint(FC, C);
   EXPECT_TRUE(Context.flowConditionImplies(FC, C));
 }
 
 TEST_F(DataflowAnalysisContextTest, ForkFlowCondition) {
   auto &FC1 = Context.makeFlowConditionToken();
-  auto &C1 = Context.createAtomicBoolValue();
+  auto &C1 = Context.create<AtomicBoolValue>();
   Context.addFlowConditionConstraint(FC1, C1);
 
   // Forked flow condition inherits the constraints of its parent flow
@@ -173,16 +173,16 @@ TEST_F(DataflowAnalysisContextTest, ForkFlowCondition) {
 
   // Adding a new constraint to the forked flow condition does not affect its
   // parent flow condition.
-  auto &C2 = Context.createAtomicBoolValue();
+  auto &C2 = Context.create<AtomicBoolValue>();
   Context.addFlowConditionConstraint(FC2, C2);
   EXPECT_TRUE(Context.flowConditionImplies(FC2, C2));
   EXPECT_FALSE(Context.flowConditionImplies(FC1, C2));
 }
 
 TEST_F(DataflowAnalysisContextTest, JoinFlowConditions) {
-  auto &C1 = Context.createAtomicBoolValue();
-  auto &C2 = Context.createAtomicBoolValue();
-  auto &C3 = Context.createAtomicBoolValue();
+  auto &C1 = Context.create<AtomicBoolValue>();
+  auto &C2 = Context.create<AtomicBoolValue>();
+  auto &C3 = Context.create<AtomicBoolValue>();
 
   auto &FC1 = Context.makeFlowConditionToken();
   Context.addFlowConditionConstraint(FC1, C1);
@@ -214,7 +214,7 @@ TEST_F(DataflowAnalysisContextTest, FlowConditionTautologies) {
   EXPECT_FALSE(Context.flowConditionIsTautology(FC3));
 
   // We can't prove that an arbitrary bool A is always true...
-  auto &C1 = Context.createAtomicBoolValue();
+  auto &C1 = Context.create<AtomicBoolValue>();
   auto &FC4 = Context.makeFlowConditionToken();
   Context.addFlowConditionConstraint(FC4, C1);
   EXPECT_FALSE(Context.flowConditionIsTautology(FC4));
@@ -227,9 +227,9 @@ TEST_F(DataflowAnalysisContextTest, FlowConditionTautologies) {
 }
 
 TEST_F(DataflowAnalysisContextTest, EquivBoolVals) {
-  auto &X = Context.createAtomicBoolValue();
-  auto &Y = Context.createAtomicBoolValue();
-  auto &Z = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
+  auto &Y = Context.create<AtomicBoolValue>();
+  auto &Z = Context.create<AtomicBoolValue>();
   auto &True = Context.getBoolLiteralValue(true);
   auto &False = Context.getBoolLiteralValue(false);
 
@@ -292,7 +292,7 @@ TEST_F(DataflowAnalysisContextTest, EquivBoolVals) {
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
 TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionsTrueUnchanged) {
   auto &True = Context.getBoolLiteralValue(true);
-  auto &Other = Context.createAtomicBoolValue();
+  auto &Other = Context.create<AtomicBoolValue>();
 
   // FC = True
   auto &FC = Context.makeFlowConditionToken();
@@ -305,7 +305,7 @@ TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionsTrueUnchanged) {
 
 TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionsFalseUnchanged) {
   auto &False = Context.getBoolLiteralValue(false);
-  auto &Other = Context.createAtomicBoolValue();
+  auto &Other = Context.create<AtomicBoolValue>();
 
   // FC = False
   auto &FC = Context.makeFlowConditionToken();
@@ -318,7 +318,7 @@ TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionsFalseUnchanged) {
 #endif
 
 TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionContainingAtomic) {
-  auto &X = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
   auto &True = Context.getBoolLiteralValue(true);
   auto &False = Context.getBoolLiteralValue(false);
 
@@ -338,7 +338,7 @@ TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionContainingAtomic) {
 }
 
 TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionContainingNegation) {
-  auto &X = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
   auto &True = Context.getBoolLiteralValue(true);
   auto &False = Context.getBoolLiteralValue(false);
 
@@ -358,8 +358,8 @@ TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionContainingNegation) {
 }
 
 TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionContainingDisjunction) {
-  auto &X = Context.createAtomicBoolValue();
-  auto &Y = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
+  auto &Y = Context.create<AtomicBoolValue>();
   auto &True = Context.getBoolLiteralValue(true);
   auto &False = Context.getBoolLiteralValue(false);
 
@@ -379,8 +379,8 @@ TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionContainingDisjunction
 }
 
 TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionContainingConjunction) {
-  auto &X = Context.createAtomicBoolValue();
-  auto &Y = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
+  auto &Y = Context.create<AtomicBoolValue>();
   auto &True = Context.getBoolLiteralValue(true);
   auto &False = Context.getBoolLiteralValue(false);
 
@@ -400,8 +400,8 @@ TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionContainingConjunction
 }
 
 TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionContainingImplication) {
-  auto &X = Context.createAtomicBoolValue();
-  auto &Y = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
+  auto &Y = Context.create<AtomicBoolValue>();
   auto &True = Context.getBoolLiteralValue(true);
   auto &False = Context.getBoolLiteralValue(false);
 
@@ -432,8 +432,8 @@ TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionContainingImplication
 }
 
 TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionContainingBiconditional) {
-  auto &X = Context.createAtomicBoolValue();
-  auto &Y = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
+  auto &Y = Context.create<AtomicBoolValue>();
   auto &True = Context.getBoolLiteralValue(true);
   auto &False = Context.getBoolLiteralValue(false);
 
@@ -465,9 +465,9 @@ TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionContainingBicondition
 }
 
 TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionsForkedFC) {
-  auto &X = Context.createAtomicBoolValue();
-  auto &Y = Context.createAtomicBoolValue();
-  auto &Z = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
+  auto &Y = Context.create<AtomicBoolValue>();
+  auto &Z = Context.create<AtomicBoolValue>();
   auto &True = Context.getBoolLiteralValue(true);
   auto &False = Context.getBoolLiteralValue(false);
 
@@ -501,9 +501,9 @@ TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionsForkedFC) {
 }
 
 TEST_F(DataflowAnalysisContextTest, SubstituteFlowConditionsJoinedFC) {
-  auto &X = Context.createAtomicBoolValue();
-  auto &Y = Context.createAtomicBoolValue();
-  auto &Z = Context.createAtomicBoolValue();
+  auto &X = Context.create<AtomicBoolValue>();
+  auto &Y = Context.create<AtomicBoolValue>();
+  auto &Z = Context.create<AtomicBoolValue>();
   auto &True = Context.getBoolLiteralValue(true);
   auto &False = Context.getBoolLiteralValue(false);
 

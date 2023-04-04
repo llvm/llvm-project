@@ -1248,23 +1248,25 @@ define { i8, i1 } @cmpxchg_i8(ptr %ptr, i8 %desired, i8 %new) {
   ; CHECK-NEXT:   liveins: $w1, $w2, $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $x8 = ORRXrs $xzr, $x0, 0
+  ; CHECK-NEXT:   $w9 = ORRWrs $wzr, $w1, 0
   ; CHECK-NEXT:   renamable $w2 = KILL $w2, implicit-def $x2
+  ; CHECK-NEXT:   $w1 = ORRWrs $wzr, $wzr, 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cmpxchg.start:
   ; CHECK-NEXT:   successors: %bb.2(0x7c000000), %bb.4(0x04000000)
-  ; CHECK-NEXT:   liveins: $w1, $x2, $x8
+  ; CHECK-NEXT:   liveins: $w1, $w9, $x2, $x8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $w0 = LDXRB renamable $x8, implicit-def $x0, pcsections !0 :: (volatile load (s8) from %ir.ptr)
-  ; CHECK-NEXT:   renamable $w9 = ANDWri renamable $w0, 7, pcsections !0
-  ; CHECK-NEXT:   dead $wzr = SUBSWrx killed renamable $w9, renamable $w1, 0, implicit-def $nzcv, pcsections !0
+  ; CHECK-NEXT:   renamable $w10 = ANDWri renamable $w0, 7, pcsections !0
+  ; CHECK-NEXT:   dead $wzr = SUBSWrx killed renamable $w10, renamable $w9, 0, implicit-def $nzcv, pcsections !0
   ; CHECK-NEXT:   Bcc 1, %bb.4, implicit killed $nzcv, pcsections !0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cmpxchg.trystore:
   ; CHECK-NEXT:   successors: %bb.3(0x04000000), %bb.1(0x7c000000)
-  ; CHECK-NEXT:   liveins: $w1, $x0, $x2, $x8
+  ; CHECK-NEXT:   liveins: $w1, $w9, $x0, $x2, $x8
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   early-clobber renamable $w9 = STXRB renamable $w2, renamable $x8, pcsections !0 :: (volatile store (s8) into %ir.ptr)
-  ; CHECK-NEXT:   CBNZW killed renamable $w9, %bb.1
+  ; CHECK-NEXT:   early-clobber renamable $w10 = STXRB renamable $w2, renamable $x8, pcsections !0 :: (volatile store (s8) into %ir.ptr)
+  ; CHECK-NEXT:   CBNZW killed renamable $w10, %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   liveins: $x0
@@ -1274,9 +1276,8 @@ define { i8, i1 } @cmpxchg_i8(ptr %ptr, i8 %desired, i8 %new) {
   ; CHECK-NEXT:   RET undef $lr, implicit $w0, implicit $w1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.cmpxchg.nostore:
-  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT:   liveins: $w1, $x0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $w1 = ORRWrs $wzr, $wzr, 0
   ; CHECK-NEXT:   CLREX 15, pcsections !0
   ; CHECK-NEXT:   $w0 = KILL renamable $w0, implicit killed $x0
   ; CHECK-NEXT:   RET undef $lr, implicit $w0, implicit $w1
@@ -1291,23 +1292,25 @@ define { i16, i1 } @cmpxchg_i16(ptr %ptr, i16 %desired, i16 %new) {
   ; CHECK-NEXT:   liveins: $w1, $w2, $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $x8 = ORRXrs $xzr, $x0, 0
+  ; CHECK-NEXT:   $w9 = ORRWrs $wzr, $w1, 0
   ; CHECK-NEXT:   renamable $w2 = KILL $w2, implicit-def $x2
+  ; CHECK-NEXT:   $w1 = ORRWrs $wzr, $wzr, 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cmpxchg.start:
   ; CHECK-NEXT:   successors: %bb.2(0x7c000000), %bb.4(0x04000000)
-  ; CHECK-NEXT:   liveins: $w1, $x2, $x8
+  ; CHECK-NEXT:   liveins: $w1, $w9, $x2, $x8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $w0 = LDXRH renamable $x8, implicit-def $x0, pcsections !0 :: (volatile load (s16) from %ir.ptr)
-  ; CHECK-NEXT:   renamable $w9 = ANDWri renamable $w0, 15, pcsections !0
-  ; CHECK-NEXT:   dead $wzr = SUBSWrx killed renamable $w9, renamable $w1, 8, implicit-def $nzcv, pcsections !0
+  ; CHECK-NEXT:   renamable $w10 = ANDWri renamable $w0, 15, pcsections !0
+  ; CHECK-NEXT:   dead $wzr = SUBSWrx killed renamable $w10, renamable $w9, 8, implicit-def $nzcv, pcsections !0
   ; CHECK-NEXT:   Bcc 1, %bb.4, implicit killed $nzcv, pcsections !0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cmpxchg.trystore:
   ; CHECK-NEXT:   successors: %bb.3(0x04000000), %bb.1(0x7c000000)
-  ; CHECK-NEXT:   liveins: $w1, $x0, $x2, $x8
+  ; CHECK-NEXT:   liveins: $w1, $w9, $x0, $x2, $x8
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   early-clobber renamable $w9 = STXRH renamable $w2, renamable $x8, pcsections !0 :: (volatile store (s16) into %ir.ptr)
-  ; CHECK-NEXT:   CBNZW killed renamable $w9, %bb.1
+  ; CHECK-NEXT:   early-clobber renamable $w10 = STXRH renamable $w2, renamable $x8, pcsections !0 :: (volatile store (s16) into %ir.ptr)
+  ; CHECK-NEXT:   CBNZW killed renamable $w10, %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   liveins: $x0
@@ -1317,9 +1320,8 @@ define { i16, i1 } @cmpxchg_i16(ptr %ptr, i16 %desired, i16 %new) {
   ; CHECK-NEXT:   RET undef $lr, implicit $w0, implicit $w1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.cmpxchg.nostore:
-  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT:   liveins: $w1, $x0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $w1 = ORRWrs $wzr, $wzr, 0
   ; CHECK-NEXT:   CLREX 15, pcsections !0
   ; CHECK-NEXT:   $w0 = KILL renamable $w0, implicit killed $x0
   ; CHECK-NEXT:   RET undef $lr, implicit $w0, implicit $w1

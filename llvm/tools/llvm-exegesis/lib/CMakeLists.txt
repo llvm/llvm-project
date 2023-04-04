@@ -51,6 +51,7 @@ add_llvm_library(LLVMExegesis
   BenchmarkRunner.cpp
   Clustering.cpp
   CodeTemplate.cpp
+  DisassemblerHelper.cpp
   Error.cpp
   LatencyBenchmarkRunner.cpp
   LlvmState.cpp

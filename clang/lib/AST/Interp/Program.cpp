@@ -10,6 +10,7 @@
 #include "ByteCodeStmtGen.h"
 #include "Context.h"
 #include "Function.h"
+#include "Integral.h"
 #include "Opcode.h"
 #include "PrimType.h"
 #include "clang/AST/Decl.h"

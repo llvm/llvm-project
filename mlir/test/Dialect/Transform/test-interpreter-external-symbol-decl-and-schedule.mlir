@@ -10,4 +10,5 @@
 // produced twice at the same location only needs to be matched once.
 
 // expected-remark @below {{message}}
+// expected-remark @below {{unannotated}}
 module {}

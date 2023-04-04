@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_AST_INTERP_TYPE_H
 #define LLVM_CLANG_AST_INTERP_TYPE_H
 
-#include "Integral.h"
 #include <climits>
 #include <cstddef>
 #include <cstdint>
@@ -25,6 +24,7 @@ class Pointer;
 class Boolean;
 class Floating;
 class FunctionPointer;
+template <unsigned Bits, bool Signed> class Integral;
 
 /// Enumeration of the primitive types of the VM.
 enum PrimType : unsigned {

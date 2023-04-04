@@ -29,10 +29,6 @@ struct ManualMapEntry {
   const char *RegInstStr;
   const char *MemInstStr;
   uint16_t Strategy;
-
-  ManualMapEntry(const char *RegInstStr, const char *MemInstStr,
-                 uint16_t Strategy = 0)
-      : RegInstStr(RegInstStr), MemInstStr(MemInstStr), Strategy(Strategy) {}
 };
 
 // List of instructions requiring explicitly aligned memory.
@@ -44,7 +40,12 @@ const char *ExplicitUnalign[] = {"MOVDQU", "MOVUPS", "MOVUPD",
                                  "PCMPESTRM", "PCMPESTRI",
                                  "PCMPISTRM", "PCMPISTRI" };
 
-#include "X86FoldTablesEmitterManualMapSet.inc"
+const ManualMapEntry ManualMapSet[] = {
+#define ENTRY(REG, MEM, FLAGS) {#REG, #MEM, FLAGS},
+#include "X86ManualFoldTables.def"
+#undef ENTRY
+};
+
 static bool isExplicitAlign(const CodeGenInstruction *Inst) {
   return any_of(ExplicitAlign, [Inst](const char *InstStr) {
     return Inst->TheDef->getName().contains(InstStr);
@@ -273,7 +274,6 @@ public:
         RegRI.HasREX_W != MemRI.HasREX_W ||
         RegRI.HasVEX_4V != MemRI.HasVEX_4V ||
         RegRI.HasVEX_L != MemRI.HasVEX_L ||
-        RegRI.HasVEX_W != MemRI.HasVEX_W ||
         RegRI.IgnoresVEX_L != MemRI.IgnoresVEX_L ||
         RegRI.IgnoresVEX_W != MemRI.IgnoresVEX_W ||
         RegRI.HasEVEX_K != MemRI.HasEVEX_K ||

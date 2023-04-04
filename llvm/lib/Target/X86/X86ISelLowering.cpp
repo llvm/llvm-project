@@ -24200,7 +24200,7 @@ static SDValue LowerVectorAllEqual(const SDLoc &DL, SDValue LHS, SDValue RHS,
   // scalarization.
   bool UseKORTEST = Subtarget.useAVX512Regs();
   bool UsePTEST = Subtarget.hasSSE41();
-  if (!UsePTEST && !Mask.isAllOnes() && VT.getScalarSizeInBits() > 32)
+  if (!UsePTEST && !Mask.isAllOnes() && ScalarSize > 32)
     return SDValue();
 
   // Split down to 128/256/512-bit vector.
@@ -24229,20 +24229,23 @@ static SDValue LowerVectorAllEqual(const SDLoc &DL, SDValue LHS, SDValue RHS,
   }
 
   if (UseKORTEST && VT.is512BitVector()) {
-    LHS = DAG.getBitcast(MVT::v16i32, MaskBits(LHS));
-    RHS = DAG.getBitcast(MVT::v16i32, MaskBits(RHS));
-    SDValue V = DAG.getSetCC(DL, MVT::v16i1, LHS, RHS, ISD::SETNE);
+    MVT TestVT = MVT::getVectorVT(MVT::i32, VT.getSizeInBits() / 32);
+    MVT BoolVT = TestVT.changeVectorElementType(MVT::i1);
+    LHS = DAG.getBitcast(TestVT, MaskBits(LHS));
+    RHS = DAG.getBitcast(TestVT, MaskBits(RHS));
+    SDValue V = DAG.getSetCC(DL, BoolVT, LHS, RHS, ISD::SETNE);
     return DAG.getNode(X86ISD::KORTEST, DL, MVT::i32, V, V);
   }
 
   if (UsePTEST) {
-    MVT TestVT = VT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
+    MVT TestVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
     LHS = DAG.getBitcast(TestVT, MaskBits(LHS));
     RHS = DAG.getBitcast(TestVT, MaskBits(RHS));
     SDValue V = DAG.getNode(ISD::XOR, DL, TestVT, LHS, RHS);
     return DAG.getNode(X86ISD::PTEST, DL, MVT::i32, V, V);
   }
 
+  assert(VT.getSizeInBits() == 128 && "Failure to split to 128-bits");
   MVT MaskVT = ScalarSize >= 32 ? MVT::v4i32 : MVT::v16i8;
   LHS = DAG.getBitcast(MaskVT, MaskBits(LHS));
   RHS = DAG.getBitcast(MaskVT, MaskBits(RHS));
@@ -38011,6 +38014,23 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent(); // The pseudo is gone now.
     return BB;
   }
+  case X86::PTCMMIMFP16PS:
+  case X86::PTCMMRLFP16PS: {
+    const DebugLoc &DL = MI.getDebugLoc();
+    unsigned Opc;
+    switch (MI.getOpcode()) {
+    default: llvm_unreachable("Unexpected instruction!");
+    case X86::PTCMMIMFP16PS:     Opc = X86::TCMMIMFP16PS;     break;
+    case X86::PTCMMRLFP16PS:     Opc = X86::TCMMRLFP16PS;     break;
+    }
+    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
+    MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Define);
+    MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Undef);
+    MIB.addReg(TMMImmToTMMReg(MI.getOperand(1).getImm()), RegState::Undef);
+    MIB.addReg(TMMImmToTMMReg(MI.getOperand(2).getImm()), RegState::Undef);
+    MI.eraseFromParent(); // The pseudo is gone now.
+    return BB;
+  }
   }
 }
 
@@ -43857,6 +43877,20 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
   // MOVMSK is supported in SSE2 or later.
   if (!Subtarget.hasSSE2() || (Subtarget.hasAVX512() && !PreferMovMsk))
     return SDValue();
+
+  // If the upper half of the ops are undef, then try to bitcast the lower half
+  // and extend.
+  SmallVector<SDValue, 4> SubSrcOps;
+  if (collectConcatOps(Src.getNode(), SubSrcOps, DAG) &&
+      SubSrcOps.size() == 2) {
+    SDValue LowerOp = SubSrcOps[0];
+    SDValue UpperOp = SubSrcOps[1];
+    if (LowerOp.getOpcode() == ISD::SETCC && UpperOp.isUndef()) {
+      EVT HalfVT = VT.getHalfSizedIntegerVT(*DAG.getContext());
+      if (SDValue V = combineBitcastvxi1(DAG, HalfVT, LowerOp, DL, Subtarget))
+        return DAG.getNode(ISD::ANY_EXTEND, DL, VT, V);
+    }
+  }
 
   // There are MOVMSK flavors for types v16i8, v32i8, v4f32, v8f32, v4f64 and
   // v8f64. So all legal 128-bit and 256-bit vectors are covered except for
