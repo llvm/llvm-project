@@ -6,11 +6,11 @@
 ; GCN-NOT: v_accvgpr
 ; GCN-COUNT-8: global_store_dwordx4
 ; GCN-NOT: v_accvgpr
-define amdgpu_kernel void @test_v1024(i1 %c0) {
+define amdgpu_kernel void @test_v1024() {
 entry:
   %alloca = alloca <32 x i32>, align 16, addrspace(5)
   call void @llvm.memset.p5.i32(ptr addrspace(5) %alloca, i8 0, i32 128, i1 false)
-  br i1 %c0, label %if.then.i.i, label %if.else.i
+  br i1 undef, label %if.then.i.i, label %if.else.i
 
 if.then.i.i:                                      ; preds = %entry
   call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 16 %alloca, ptr addrspace(5) align 4 undef, i64 128, i1 false)
