@@ -3410,29 +3410,27 @@ static bool containsDecreasingPointers(Loop *TheLoop,
   return false;
 }
 
-bool AArch64TTIImpl::preferPredicateOverEpilogue(
-    Loop *L, LoopInfo *LI, ScalarEvolution &SE, AssumptionCache &AC,
-    TargetLibraryInfo *TLI, DominatorTree *DT, LoopVectorizationLegality *LVL,
-    InterleavedAccessInfo *IAI) {
+bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
   if (!ST->hasSVE() || TailFoldingKindLoc == TailFoldingKind::TFDisabled)
     return false;
 
   // We don't currently support vectorisation with interleaving for SVE - with
   // such loops we're better off not using tail-folding. This gives us a chance
   // to fall back on fixed-width vectorisation using NEON's ld2/st2/etc.
-  if (IAI->hasGroups())
+  if (TFI->IAI->hasGroups())
     return false;
 
   TailFoldingKind Required; // Defaults to 0.
-  if (LVL->getReductionVars().size())
+  if (TFI->LVL->getReductionVars().size())
     Required.add(TailFoldingKind::TFReductions);
-  if (LVL->getFixedOrderRecurrences().size())
+  if (TFI->LVL->getFixedOrderRecurrences().size())
     Required.add(TailFoldingKind::TFRecurrences);
 
   // We call this to discover whether any load/store pointers in the loop have
   // negative strides. This will require extra work to reverse the loop
   // predicate, which may be expensive.
-  if (containsDecreasingPointers(L, LVL->getPredicatedScalarEvolution()))
+  if (containsDecreasingPointers(TFI->LVL->getLoop(),
+                                 TFI->LVL->getPredicatedScalarEvolution()))
     Required.add(TailFoldingKind::TFReverse);
   if (!Required)
     Required.add(TailFoldingKind::TFSimple);
