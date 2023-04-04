@@ -599,8 +599,15 @@ cc_library(
 
 cc_binary(
     name = "llvm-tblgen",
+    deps = [":UtilsTableGen"]
+    stamp = 0,
+)
+
+cc_library(
+    name = "UtilsTablgen",
     srcs = glob([
         "utils/TableGen/*.cpp",
+        "utils/TableGen/*.def",
         "utils/TableGen/*.inc",
         "utils/TableGen/*.h",
 
@@ -609,11 +616,7 @@ cc_binary(
         # regular dependency.
         "include/llvm/MC/*.h",
     ]),
-    textual_hdrs = glob([
-        "utils/TableGen/*.def",
-    ]),
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":LLVMTableGenGlobalISel",
         ":Support",
