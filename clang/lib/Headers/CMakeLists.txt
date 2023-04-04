@@ -117,6 +117,7 @@ set(x86_files
 # Intrinsics
   adxintrin.h
   ammintrin.h
+  amxcomplexintrin.h
   amxfp16intrin.h
   amxintrin.h
   avx2intrin.h

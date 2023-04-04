@@ -129,6 +129,8 @@ static std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
   }
   // a * b + c
   // The shape depends on which operand.
+  case Intrinsic::x86_tcmmimfp16ps_internal:
+  case Intrinsic::x86_tcmmrlfp16ps_internal:
   case Intrinsic::x86_tdpbssd_internal:
   case Intrinsic::x86_tdpbsud_internal:
   case Intrinsic::x86_tdpbusd_internal:
