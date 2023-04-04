@@ -681,7 +681,7 @@ int memprof_posix_memalign(void **memptr, uptr alignment, uptr size,
   return 0;
 }
 
-void *memprof_malloc_begin(const void *p) {
+const void *memprof_malloc_begin(const void *p) {
   u64 user_requested_size;
   MemprofChunk *m =
       instance.GetMemprofChunkByAddr((uptr)p, user_requested_size);
@@ -690,7 +690,7 @@ void *memprof_malloc_begin(const void *p) {
   if (user_requested_size == 0)
     return nullptr;
 
-  return (void *)m->Beg();
+  return (const void *)m->Beg();
 }
 
 uptr memprof_malloc_usable_size(const void *ptr, uptr pc, uptr bp) {
@@ -711,7 +711,7 @@ int __sanitizer_get_ownership(const void *p) {
   return memprof_malloc_usable_size(p, 0, 0) != 0;
 }
 
-void *__sanitizer_get_allocated_begin(const void *p) {
+const void *__sanitizer_get_allocated_begin(const void *p) {
   return memprof_malloc_begin(p);
 }
 
