@@ -125,15 +125,15 @@ bool WebAssemblyAsmTypeCheck::getLocal(SMLoc ErrorLoc, const MCInst &Inst,
 bool WebAssemblyAsmTypeCheck::checkEnd(SMLoc ErrorLoc, bool PopVals) {
   if (LastSig.Returns.size() > Stack.size())
     return typeError(ErrorLoc, "end: insufficient values on the type stack");
-  
+
   if (PopVals) {
     for (auto VT : llvm::reverse(LastSig.Returns)) {
-      if (popType(ErrorLoc, VT)) 
+      if (popType(ErrorLoc, VT))
         return true;
     }
     return false;
   }
-  
+
   for (size_t i = 0; i < LastSig.Returns.size(); i++) {
     auto EVT = LastSig.Returns[i];
     auto PVT = Stack[Stack.size() - LastSig.Returns.size() + i];
@@ -271,6 +271,30 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
     if (popType(ErrorLoc, Type))
       return true;
     if (popType(ErrorLoc, wasm::ValType::I32))
+      return true;
+  } else if (Name == "memory.fill") {
+    Type = is64 ? wasm::ValType::I64 : wasm::ValType::I32;
+    if (popType(ErrorLoc, Type))
+      return true;
+    if (popType(ErrorLoc, wasm::ValType::I32))
+      return true;
+    if (popType(ErrorLoc, Type))
+      return true;
+  } else if (Name == "memory.copy") {
+    Type = is64 ? wasm::ValType::I64 : wasm::ValType::I32;
+    if (popType(ErrorLoc, Type))
+      return true;
+    if (popType(ErrorLoc, Type))
+      return true;
+    if (popType(ErrorLoc, Type))
+      return true;
+  } else if (Name == "memory.init") {
+    Type = is64 ? wasm::ValType::I64 : wasm::ValType::I32;
+    if (popType(ErrorLoc, wasm::ValType::I32))
+      return true;
+    if (popType(ErrorLoc, wasm::ValType::I32))
+      return true;
+    if (popType(ErrorLoc, Type))
       return true;
   } else if (Name == "drop") {
     if (popType(ErrorLoc, {}))
