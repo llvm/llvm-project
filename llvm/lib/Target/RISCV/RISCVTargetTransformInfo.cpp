@@ -436,7 +436,7 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
       getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
   unsigned VF = FVTy->getNumElements() / Factor;
 
-  // Then interleaved memory access pass with lower interleaved memory ops (i.e
+  // The interleaved memory access pass will lower interleaved memory ops (i.e
   // a load and store followed by a specific shuffle) to vlseg/vsseg
   // intrinsics. In those cases then we can treat it as if it's just one (legal)
   // memory op
@@ -447,6 +447,10 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     if (LT.second.isFixedLengthVector()) {
       auto *LegalFVTy = FixedVectorType::get(FVTy->getElementType(),
                                              LT.second.getVectorNumElements());
+      // FIXME: We use the memory op cost of the *legalized* type here, becuase
+      // it's getMemoryOpCost returns a really expensive cost for types like
+      // <6 x i8>, which show up when doing interleaves of Factor=3 etc.
+      // Should the memory op cost of these be cheaper?
       if (TLI->isLegalInterleavedAccessType(LegalFVTy, Factor, DL)) {
         InstructionCost LegalMemCost = getMemoryOpCost(
             Opcode, LegalFVTy, Alignment, AddressSpace, CostKind);
