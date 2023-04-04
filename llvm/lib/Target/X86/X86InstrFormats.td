@@ -382,7 +382,6 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   let TSFlags{28-27} = ExeDomain.Value;
   let TSFlags{30-29} = OpEncBits;
   let TSFlags{38-31} = Opcode;
-  // Currently no need for second bit in TSFlags - W Ignore is equivalent to 0.
   let TSFlags{39}    = hasVEX_4V;
   let TSFlags{40}    = hasVEX_L;
   let TSFlags{41}    = hasEVEX_K;
