@@ -156,8 +156,6 @@ bool X86FixupInstTuningPass::processInstruction(
 
   // `vunpcklpd/vmovlhps r, r` -> `vshufps r, r, 0x44`
   // `vunpckhpd/vmovlhps r, r` -> `vshufps r, r, 0xee`
-  // `vunpcklpd r, r, k` -> `vshufps r, r, 0x44, k`
-  // `vunpckhpd r, r, k` -> `vshufps r, r, 0xee, k`
   // iff `vshufps` is faster than `vunpck{l|h}pd`. Otherwise stick with
   // `vunpck{l|h}pd` as it uses less code size.
   // TODO: Look into using `{VP}UNPCK{L|H}QDQ{...}` instead of `{V}SHUF{...}PS`
@@ -247,18 +245,6 @@ bool X86FixupInstTuningPass::processInstruction(
     return ProcessUNPCKLPDrr(X86::VSHUFPSZ256rri);
   case X86::VUNPCKLPDZrr:
     return ProcessUNPCKLPDrr(X86::VSHUFPSZrri);
-  case X86::VUNPCKLPDZ128rrk:
-    return ProcessUNPCKLPDrr(X86::VSHUFPSZ128rrik);
-  case X86::VUNPCKLPDZ256rrk:
-    return ProcessUNPCKLPDrr(X86::VSHUFPSZ256rrik);
-  case X86::VUNPCKLPDZrrk:
-    return ProcessUNPCKLPDrr(X86::VSHUFPSZrrik);
-  case X86::VUNPCKLPDZ128rrkz:
-    return ProcessUNPCKLPDrr(X86::VSHUFPSZ128rrikz);
-  case X86::VUNPCKLPDZ256rrkz:
-    return ProcessUNPCKLPDrr(X86::VSHUFPSZ256rrikz);
-  case X86::VUNPCKLPDZrrkz:
-    return ProcessUNPCKLPDrr(X86::VSHUFPSZrrikz);
   case X86::UNPCKHPDrr:
     return ProcessUNPCKHPDrr(X86::SHUFPSrri);
   case X86::VUNPCKHPDrr:
@@ -271,18 +257,6 @@ bool X86FixupInstTuningPass::processInstruction(
     return ProcessUNPCKHPDrr(X86::VSHUFPSZ256rri);
   case X86::VUNPCKHPDZrr:
     return ProcessUNPCKHPDrr(X86::VSHUFPSZrri);
-  case X86::VUNPCKHPDZ128rrk:
-    return ProcessUNPCKHPDrr(X86::VSHUFPSZ128rrik);
-  case X86::VUNPCKHPDZ256rrk:
-    return ProcessUNPCKHPDrr(X86::VSHUFPSZ256rrik);
-  case X86::VUNPCKHPDZrrk:
-    return ProcessUNPCKHPDrr(X86::VSHUFPSZrrik);
-  case X86::VUNPCKHPDZ128rrkz:
-    return ProcessUNPCKHPDrr(X86::VSHUFPSZ128rrikz);
-  case X86::VUNPCKHPDZ256rrkz:
-    return ProcessUNPCKHPDrr(X86::VSHUFPSZ256rrikz);
-  case X86::VUNPCKHPDZrrkz:
-    return ProcessUNPCKHPDrr(X86::VSHUFPSZrrikz);
   default:
     return false;
   }
