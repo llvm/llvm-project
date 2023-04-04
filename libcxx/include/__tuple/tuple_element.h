@@ -10,8 +10,8 @@
 #define _LIBCPP___TUPLE_TUPLE_ELEMENT_H
 
 #include <__config>
-#include <__tuple_dir/tuple_indices.h>
-#include <__tuple_dir/tuple_types.h>
+#include <__tuple/tuple_indices.h>
+#include <__tuple/tuple_types.h>
 #include <__type_traits/add_const.h>
 #include <__type_traits/add_cv.h>
 #include <__type_traits/add_volatile.h>
