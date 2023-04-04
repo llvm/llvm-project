@@ -397,7 +397,7 @@ HwasanChunkView FindHeapChunkByAddress(uptr address) {
   return HwasanChunkView(reinterpret_cast<uptr>(block), metadata);
 }
 
-void *AllocationBegin(const void *p) {
+const void *AllocationBegin(const void *p) {
   const void *untagged_ptr = UntagPtr(p);
   if (!untagged_ptr)
     return nullptr;
@@ -411,7 +411,7 @@ void *AllocationBegin(const void *p) {
     return nullptr;
 
   tag_t tag = GetTagFromPointer((uptr)p);
-  return (void *)AddTagToPointer((uptr)beg, tag);
+  return (const void *)AddTagToPointer((uptr)beg, tag);
 }
 
 static uptr AllocationSize(const void *tagged_ptr) {
@@ -658,7 +658,7 @@ uptr __sanitizer_get_estimated_allocated_size(uptr size) { return size; }
 
 int __sanitizer_get_ownership(const void *p) { return AllocationSize(p) != 0; }
 
-void *__sanitizer_get_allocated_begin(const void *p) {
+const void *__sanitizer_get_allocated_begin(const void *p) {
   return AllocationBegin(p);
 }
 

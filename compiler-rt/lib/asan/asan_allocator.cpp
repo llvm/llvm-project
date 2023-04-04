@@ -1164,7 +1164,7 @@ IgnoreObjectResult IgnoreObjectLocked(const void *p) {
 // ---------------------- Interface ---------------- {{{1
 using namespace __asan;
 
-void *AllocationBegin(const void *p) {
+const void *AllocationBegin(const void *p) {
   AsanChunk *m = __asan::instance.GetAsanChunkByAddr((uptr)p);
   if (!m)
     return nullptr;
@@ -1172,7 +1172,7 @@ void *AllocationBegin(const void *p) {
     return nullptr;
   if (m->UsedSize() == 0)
     return nullptr;
-  return (void *)(m->Beg());
+  return (const void *)(m->Beg());
 }
 
 // ASan allocator doesn't reserve extra bytes, so normally we would
@@ -1198,7 +1198,7 @@ uptr __sanitizer_get_allocated_size(const void *p) {
   return allocated_size;
 }
 
-void *__sanitizer_get_allocated_begin(const void *p) {
+const void *__sanitizer_get_allocated_begin(const void *p) {
   return AllocationBegin(p);
 }
 
