@@ -766,3 +766,16 @@ namespace TypeTraits {
   static_assert(S3<U>{}.foo(), "");
   static_assert(!S3<T>{}.foo(), "");
 }
+
+#if __cplusplus >= 201402L
+constexpr int ignoredDecls() {
+  static_assert(true, "");
+  struct F { int a; };
+  enum E { b };
+  using A = int;
+  typedef int Z;
+
+  return F{12}.a;
+}
+static_assert(ignoredDecls() == 12, "");
+#endif
