@@ -1178,6 +1178,10 @@ static Instruction::BinaryOps intrinsicIDToBinOpCode(unsigned Intrinsic) {
 
 static std::optional<Instruction *>
 instCombineSVEVectorBinOp(InstCombiner &IC, IntrinsicInst &II) {
+  // Bail due to missing support for ISD::STRICT_ scalable vector operations.
+  if (II.isStrictFP())
+    return std::nullopt;
+
   auto *OpPredicate = II.getOperand(0);
   auto BinOpCode = intrinsicIDToBinOpCode(II.getIntrinsicID());
   if (BinOpCode == Instruction::BinaryOpsEnd ||
