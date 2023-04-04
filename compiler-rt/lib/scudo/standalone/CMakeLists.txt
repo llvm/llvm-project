@@ -85,7 +85,9 @@ set(SCUDO_HEADERS
   stack_depot.h
   stats.h
   string_utils.h
-  timing.h
+  # TODO(chiahungduan): Temporarily disable the timer because of the print
+  # of u64 has incorrect placeholder.
+  # timing.h
   tsd_exclusive.h
   tsd_shared.h
   tsd.h
@@ -108,7 +110,9 @@ set(SCUDO_SOURCES
   report.cpp
   rss_limit_checker.cpp
   string_utils.cpp
-  timing.cpp
+  # TODO(chiahungduan): Temporarily disable the timer because of the print
+  # of u64 has incorrect placeholder.
+  # timing.cpp
   )
 
 # Enable the necessary instruction set for scudo_crc32.cpp, if available.
