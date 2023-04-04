@@ -75,26 +75,35 @@ static bool shouldLowerLDSToStruct(const GlobalVariable &GV,
   return Ret;
 }
 
+bool isDynamicLDS(const GlobalVariable &GV) {
+  // external zero size addrspace(3) without initializer implies cuda/hip extern
+  // __shared__ the semantics for such a variable appears to be that all extern
+  // __shared__ variables alias one another. This hits different handling.
+  const Module *M = GV.getParent();
+  const DataLayout &DL = M->getDataLayout();
+  if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS) {
+    return false;
+  }
+  uint64_t AllocSize = DL.getTypeAllocSize(GV.getValueType());
+  return GV.hasExternalLinkage() && AllocSize == 0;
+}
+
 bool isLDSVariableToLower(const GlobalVariable &GV) {
   if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS) {
     return false;
   }
-  if (!GV.hasInitializer()) {
-    // addrspace(3) without initializer implies cuda/hip extern __shared__
-    // the semantics for such a variable appears to be that all extern
-    // __shared__ variables alias one another, in which case this transform
-    // is not required
-    return false;
-  }
-  if (!isa<UndefValue>(GV.getInitializer())) {
-    // Initializers are unimplemented for LDS address space.
-    // Leave such variables in place for consistent error reporting.
-    return false;
+  if (isDynamicLDS(GV)) {
+    return true;
   }
   if (GV.isConstant()) {
     // A constant undef variable can't be written to, and any load is
     // undef, so it should be eliminated by the optimizer. It could be
     // dropped by the back end if not. This pass skips over it.
+    return false;
+  }
+  if (GV.hasInitializer() && !isa<UndefValue>(GV.getInitializer())) {
+    // Initializers are unimplemented for LDS address space.
+    // Leave such variables in place for consistent error reporting.
     return false;
   }
   return true;

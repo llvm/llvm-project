@@ -2542,7 +2542,7 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
       // allocated ones. They all share the same offset.
       if (B.getDataLayout().getTypeAllocSize(Ty).isZero()) {
         // Adjust alignment for that dynamic shared memory array.
-        MFI->setDynLDSAlign(B.getDataLayout(), *cast<GlobalVariable>(GV));
+        MFI->setDynLDSAlign(MF.getFunction(), *cast<GlobalVariable>(GV));
         LLT S32 = LLT::scalar(32);
         auto Sz =
             B.buildIntrinsic(Intrinsic::amdgcn_groupstaticsize, {S32}, false);
