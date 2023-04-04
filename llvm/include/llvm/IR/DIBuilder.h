@@ -52,7 +52,7 @@ namespace llvm {
     SmallVector<TrackingMDNodeRef, 4> AllEnumTypes;
     /// Track the RetainTypes, since they can be updated later on.
     SmallVector<TrackingMDNodeRef, 4> AllRetainTypes;
-    SmallVector<Metadata *, 4> AllSubprograms;
+    SmallVector<DISubprogram *, 4> AllSubprograms;
     SmallVector<Metadata *, 4> AllGVs;
     SmallVector<TrackingMDNodeRef, 4> AllImportedModules;
     /// Map Macro parent (which can be DIMacroFile or nullptr) to a list of
