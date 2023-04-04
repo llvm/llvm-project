@@ -599,7 +599,7 @@ cc_library(
 
 cc_binary(
     name = "llvm-tblgen",
-    deps = [":UtilsTableGen"]
+    deps = [":UtilsTableGen"],
     stamp = 0,
 )
 
