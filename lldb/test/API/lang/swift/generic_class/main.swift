@@ -11,7 +11,7 @@ protocol P {
 }
 extension F : P {
   @inline(never) func method() {
-    print("break here \(b)")
+    print("break here \(b) \(self)")
   }
 }
 

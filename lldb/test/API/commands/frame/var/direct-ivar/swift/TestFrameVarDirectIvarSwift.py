@@ -5,12 +5,14 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
+    @swiftTest
     @skipUnlessDarwin
     def test_objc_self(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "check self", lldb.SBFileSpec("main.swift"))
         self.expect("frame variable _prop", startstr="(Int) _prop = 30")
 
+    @swiftTest
     @skipUnlessDarwin
     def test_objc_self_capture_idiom(self):
         self.build()
