@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/Transforms/TransformInterpreterPassBase.h"
+#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/FunctionInterfaces.h"
@@ -298,6 +299,12 @@ static void performOptionalDebugActions(
 /// Replaces external symbols in `block` with their (non-external) definitions
 /// from the given module.
 static LogicalResult defineDeclaredSymbols(Block &block, ModuleOp definitions) {
+  MLIRContext &ctx = *definitions->getContext();
+  auto consumedName =
+      StringAttr::get(&ctx, transform::TransformDialect::kArgConsumedAttrName);
+  auto readOnlyName =
+      StringAttr::get(&ctx, transform::TransformDialect::kArgReadOnlyAttrName);
+
   for (Operation &op : llvm::make_early_inc_range(block)) {
     LLVM_DEBUG(DBGS() << op << "\n");
     auto symbol = dyn_cast<SymbolOpInterface>(op);
@@ -328,6 +335,30 @@ static LogicalResult defineDeclaredSymbols(Block &block, ModuleOp definitions) {
       return symbolFunc.emitError()
              << "external definition has a mismatching signature ("
              << externalSymbolFunc.getFunctionType() << ")";
+    }
+
+    for (unsigned i = 0, e = symbolFunc.getNumArguments(); i < e; ++i) {
+      bool isExternalConsumed =
+          externalSymbolFunc.getArgAttr(i, consumedName) != nullptr;
+      bool isExternalReadonly =
+          externalSymbolFunc.getArgAttr(i, readOnlyName) != nullptr;
+      bool isConsumed = symbolFunc.getArgAttr(i, consumedName) != nullptr;
+      bool isReadonly = symbolFunc.getArgAttr(i, readOnlyName) != nullptr;
+      if (!isExternalConsumed && !isExternalReadonly) {
+        if (isConsumed)
+          externalSymbolFunc.setArgAttr(i, consumedName, UnitAttr::get(&ctx));
+        else if (isReadonly)
+          externalSymbolFunc.setArgAttr(i, readOnlyName, UnitAttr::get(&ctx));
+        continue;
+      }
+
+      if ((isExternalConsumed && !isConsumed) ||
+          (isExternalReadonly && !isReadonly)) {
+        return symbolFunc.emitError()
+               << "external definition has mismatching consumption annotations "
+                  "for argument #"
+               << i;
+      }
     }
 
     OpBuilder builder(&op);
