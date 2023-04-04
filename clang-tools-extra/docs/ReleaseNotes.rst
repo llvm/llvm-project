@@ -183,6 +183,9 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/use-after-move>` check to also cover constructor
   initializers.
 
+- Deprecated :doc:`cert-dcl21-cpp
+  <clang-tidy/checks/cert/dcl21-cpp>` check.
+
 - Deprecated check-local options `HeaderFileExtensions`
   in :doc:`google-build-namespaces
   <clang-tidy/checks/google/build-namespaces>` check.
