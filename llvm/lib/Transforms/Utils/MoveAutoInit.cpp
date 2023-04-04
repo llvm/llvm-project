@@ -109,7 +109,8 @@ static bool runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA) {
     if (!hasAutoInitMetadata(I))
       continue;
 
-    assert(!I.isVolatile() && "auto init instructions cannot be volatile.");
+    if (I.isVolatile())
+      continue;
 
     BasicBlock *UsersDominator = usersDominator(&I, DT, MSSA);
     if (!UsersDominator)
