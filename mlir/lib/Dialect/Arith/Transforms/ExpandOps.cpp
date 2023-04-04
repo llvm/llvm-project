@@ -10,7 +10,6 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -26,13 +25,15 @@ using namespace mlir;
 /// Create an integer or index constant.
 static Value createConst(Location loc, Type type, int value,
                          PatternRewriter &rewriter) {
-  auto attr = rewriter.getIntegerAttr(getElementTypeOrSelf(type), value);
-  if (auto shapedTy = dyn_cast<ShapedType>(type)) {
-    return rewriter.create<arith::ConstantOp>(
-        loc, DenseElementsAttr::get(shapedTy, attr));
-  }
 
-  return rewriter.create<arith::ConstantOp>(loc, attr);
+  auto elTy = getElementTypeOrSelf(type);
+  auto constantAttr = rewriter.getIntegerAttr(elTy, value);
+
+  if (auto vecTy = llvm::dyn_cast<ShapedType>(type))
+    return rewriter.create<arith::ConstantOp>(
+        loc, vecTy, DenseElementsAttr::get(vecTy, constantAttr));
+
+  return rewriter.create<arith::ConstantOp>(loc, constantAttr);
 }
 
 namespace {
@@ -186,73 +187,6 @@ public:
   }
 };
 
-struct BFloat16ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
-  using OpRewritePattern::OpRewritePattern;
-  LogicalResult matchAndRewrite(arith::ExtFOp op,
-                                PatternRewriter &rewriter) const final {
-    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
-    auto operand = op.getOperand();
-    Type operandTy = operand.getType();
-    Type resultTy = op.getType();
-    Type operandETy = getElementTypeOrSelf(operandTy);
-    Type resultETy = getElementTypeOrSelf(resultTy);
-
-    if (!operandETy.isBF16() || !resultETy.isF32()) {
-      return rewriter.notifyMatchFailure(op, "not a ext of bf16 to f32.");
-    }
-
-    Type i16Ty = b.getI16Type();
-    Type i32Ty = b.getI32Type();
-    if (auto shapedTy = dyn_cast<ShapedType>(operandTy)) {
-      i16Ty = shapedTy.clone(i16Ty);
-      i32Ty = shapedTy.clone(i32Ty);
-    }
-
-    Value bitcast = b.create<arith::BitcastOp>(i16Ty, operand);
-    Value exti = b.create<arith::ExtUIOp>(i32Ty, bitcast);
-
-    Value c16 = createConst(op.getLoc(), i32Ty, 16, rewriter);
-    Value shl = b.create<arith::ShLIOp>(exti, c16);
-    Value result = b.create<arith::BitcastOp>(resultTy, shl);
-
-    rewriter.replaceOp(op, result);
-    return success();
-  }
-};
-
-struct BFloat16TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
-  using OpRewritePattern::OpRewritePattern;
-  LogicalResult matchAndRewrite(arith::TruncFOp op,
-                                PatternRewriter &rewriter) const final {
-    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
-    auto operand = op.getOperand();
-    Type operandTy = operand.getType();
-    Type resultTy = op.getType();
-    Type operandETy = getElementTypeOrSelf(operandTy);
-    Type resultETy = getElementTypeOrSelf(resultTy);
-
-    if (!operandETy.isF32() || !resultETy.isBF16()) {
-      return rewriter.notifyMatchFailure(op, "not a trunc of f32 to bf16.");
-    }
-
-    Type i16Ty = b.getI16Type();
-    Type i32Ty = b.getI32Type();
-    if (auto shapedTy = dyn_cast<ShapedType>(operandTy)) {
-      i16Ty = shapedTy.clone(i16Ty);
-      i32Ty = shapedTy.clone(i32Ty);
-    }
-
-    Value bitcast = b.create<arith::BitcastOp>(i32Ty, operand);
-    Value c16 = createConst(op.getLoc(), i32Ty, 16, rewriter);
-    Value shl = b.create<arith::ShRUIOp>(bitcast, c16);
-    Value trunc = b.create<arith::TruncIOp>(i16Ty, shl);
-    Value result = b.create<arith::BitcastOp>(resultTy, trunc);
-
-    rewriter.replaceOp(op, result);
-    return success();
-  }
-};
-
 struct ArithExpandOpsPass
     : public arith::impl::ArithExpandOpsBase<ArithExpandOpsPass> {
   void runOnOperation() override {
@@ -270,21 +204,6 @@ struct ArithExpandOpsPass
       arith::MaxFOp,
       arith::MinFOp
     >();
-
-    target.addDynamicallyLegalOp<arith::ExtFOp>(
-      [](arith::ExtFOp op) {
-        Type inETy = getElementTypeOrSelf(op.getOperand().getType());
-        Type outETy = getElementTypeOrSelf(op.getType());
-        return !(inETy.isBF16() && outETy.isF32());
-      });
-
-    target.addDynamicallyLegalOp<arith::TruncFOp>(
-      [](arith::TruncFOp op)  {
-        Type inETy = getElementTypeOrSelf(op.getOperand().getType());
-        Type outETy = getElementTypeOrSelf(op.getType());
-        return !(inETy.isF32() && outETy.isBF16());
-      });
-
     // clang-format on
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -301,19 +220,12 @@ void mlir::arith::populateCeilFloorDivExpandOpsPatterns(
           patterns.getContext());
 }
 
-void mlir::arith::populateExpandBFloat16Patterns(RewritePatternSet &patterns) {
-  patterns.add<BFloat16ExtFOpConverter, BFloat16TruncFOpConverter>(
-      patterns.getContext());
-}
-
 void mlir::arith::populateArithExpandOpsPatterns(RewritePatternSet &patterns) {
   populateCeilFloorDivExpandOpsPatterns(patterns);
   // clang-format off
   patterns.add<
     MaxMinFOpConverter<MaxFOp, arith::CmpFPredicate::UGT>,
-    MaxMinFOpConverter<MinFOp, arith::CmpFPredicate::ULT>,
-    BFloat16ExtFOpConverter,
-    BFloat16TruncFOpConverter
+    MaxMinFOpConverter<MinFOp, arith::CmpFPredicate::ULT>
    >(patterns.getContext());
   // clang-format on
 }
