@@ -14,6 +14,7 @@
 #include "string_utils.h"
 #include "thread_annotations.h"
 
+#include <inttypes.h>
 #include <string.h>
 
 namespace scudo {
@@ -178,11 +179,11 @@ private:
         Occurrence == 0 ? 0
                         : ((AccumulatedTime % Occurrence) * 10) / Occurrence;
 
-    Str.append("%14lu.%lu(ns) %-11s", Integral, Fraction, " ");
+    Str.append("%14" PRId64 ".%" PRId64 "(ns) %-11s", Integral, Fraction, " ");
 
     for (u32 I = 0; I < ExtraIndent; ++I)
       Str.append("%s", "  ");
-    Str.append("%s (%lu)\n", Timers[HandleId].Name, Occurrence);
+    Str.append("%s (%" PRId64 ")\n", Timers[HandleId].Name, Occurrence);
 
     for (u32 I = 0; I < NumAllocatedTimers; ++I)
       if (Timers[I].Nesting == HandleId)
