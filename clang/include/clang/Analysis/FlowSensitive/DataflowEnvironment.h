@@ -383,12 +383,12 @@ public:
 
   /// Returns an atomic boolean value.
   BoolValue &makeAtomicBoolValue() const {
-    return DACtx->createAtomicBoolValue();
+    return DACtx->create<AtomicBoolValue>();
   }
 
   /// Returns a unique instance of boolean Top.
   BoolValue &makeTopBoolValue() const {
-    return DACtx->createTopBoolValue();
+    return DACtx->create<TopBoolValue>();
   }
 
   /// Returns a boolean value that represents the conjunction of `LHS` and
