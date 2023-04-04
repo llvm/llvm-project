@@ -398,243 +398,243 @@ _loop_1_do_.preheader:                            ; preds = %_loop_1_do_.lr.ph
   %.vy2a.promoted = load <2 x double>, <2 x double>* %.vy2a, align 16
   %.vy2b.promoted = load <2 x double>, <2 x double>* %.vy2b, align 16
   %.vy2c.promoted = load <2 x double>, <2 x double>* %.vy2c, align 16
-  %0 = zext i32 %_val_m_ to i64
-  %1 = zext i32 %_val_n_ to i64
+  %i = zext i32 %_val_m_ to i64
+  %i1 = zext i32 %_val_n_ to i64
   br label %_loop_2_do_.lr.ph
 
 _loop_2_do_.lr.ph:                                ; preds = %_loop_2_endl_, %_loop_1_do_.preheader
   %indvars.iv212 = phi i64 [ %indvars.iv.next213, %_loop_2_endl_ ], [ 1, %_loop_1_do_.preheader ]
-  %2 = phi <2 x double> [ %142, %_loop_2_endl_ ], [ %.vy2c.promoted, %_loop_1_do_.preheader ]
-  %3 = phi <2 x double> [ %140, %_loop_2_endl_ ], [ %.vy2b.promoted, %_loop_1_do_.preheader ]
-  %4 = phi <2 x double> [ %138, %_loop_2_endl_ ], [ %.vy2a.promoted, %_loop_1_do_.preheader ]
-  %5 = phi <2 x double> [ %136, %_loop_2_endl_ ], [ %.vy29.promoted, %_loop_1_do_.preheader ]
-  %6 = phi <2 x double> [ %134, %_loop_2_endl_ ], [ %.vy28.promoted, %_loop_1_do_.preheader ]
-  %7 = phi <2 x double> [ %132, %_loop_2_endl_ ], [ %.vy27.promoted, %_loop_1_do_.preheader ]
-  %8 = phi <2 x double> [ %129, %_loop_2_endl_ ], [ %.vy26.promoted, %_loop_1_do_.preheader ]
-  %9 = phi <2 x double> [ %127, %_loop_2_endl_ ], [ %.vy25.promoted, %_loop_1_do_.preheader ]
-  %10 = phi <2 x double> [ %125, %_loop_2_endl_ ], [ %.vy24.promoted, %_loop_1_do_.preheader ]
-  %11 = phi <2 x double> [ %123, %_loop_2_endl_ ], [ %.vy23.promoted, %_loop_1_do_.preheader ]
-  %12 = phi <2 x double> [ %121, %_loop_2_endl_ ], [ %.vy22.promoted, %_loop_1_do_.preheader ]
-  %13 = phi <2 x double> [ %119, %_loop_2_endl_ ], [ %.vy21.promoted, %_loop_1_do_.preheader ]
-  %14 = phi <2 x double> [ %116, %_loop_2_endl_ ], [ %.vy0c.promoted, %_loop_1_do_.preheader ]
-  %15 = phi <2 x double> [ %114, %_loop_2_endl_ ], [ %.vy0b.promoted, %_loop_1_do_.preheader ]
-  %16 = phi <2 x double> [ %112, %_loop_2_endl_ ], [ %.vy0a.promoted, %_loop_1_do_.preheader ]
-  %17 = phi <2 x double> [ %110, %_loop_2_endl_ ], [ %.vy09.promoted, %_loop_1_do_.preheader ]
-  %18 = phi <2 x double> [ %108, %_loop_2_endl_ ], [ %.vy08.promoted, %_loop_1_do_.preheader ]
-  %19 = phi <2 x double> [ %106, %_loop_2_endl_ ], [ %.vy07.promoted, %_loop_1_do_.preheader ]
-  %20 = phi <2 x double> [ %81, %_loop_2_endl_ ], [ %.vy06.promoted, %_loop_1_do_.preheader ]
-  %21 = phi <2 x double> [ %79, %_loop_2_endl_ ], [ %.vy05.promoted, %_loop_1_do_.preheader ]
-  %22 = phi <2 x double> [ %77, %_loop_2_endl_ ], [ %.vy04.promoted, %_loop_1_do_.preheader ]
-  %23 = phi <2 x double> [ %75, %_loop_2_endl_ ], [ %.vy03.promoted, %_loop_1_do_.preheader ]
-  %24 = phi <2 x double> [ %73, %_loop_2_endl_ ], [ %.vy02.promoted, %_loop_1_do_.preheader ]
-  %25 = phi <2 x double> [ %71, %_loop_2_endl_ ], [ %.vy01.promoted, %_loop_1_do_.preheader ]
+  %i2 = phi <2 x double> [ %i142, %_loop_2_endl_ ], [ %.vy2c.promoted, %_loop_1_do_.preheader ]
+  %i3 = phi <2 x double> [ %i140, %_loop_2_endl_ ], [ %.vy2b.promoted, %_loop_1_do_.preheader ]
+  %i4 = phi <2 x double> [ %i138, %_loop_2_endl_ ], [ %.vy2a.promoted, %_loop_1_do_.preheader ]
+  %i5 = phi <2 x double> [ %i136, %_loop_2_endl_ ], [ %.vy29.promoted, %_loop_1_do_.preheader ]
+  %i6 = phi <2 x double> [ %i134, %_loop_2_endl_ ], [ %.vy28.promoted, %_loop_1_do_.preheader ]
+  %i7 = phi <2 x double> [ %i132, %_loop_2_endl_ ], [ %.vy27.promoted, %_loop_1_do_.preheader ]
+  %i8 = phi <2 x double> [ %i129, %_loop_2_endl_ ], [ %.vy26.promoted, %_loop_1_do_.preheader ]
+  %i9 = phi <2 x double> [ %i127, %_loop_2_endl_ ], [ %.vy25.promoted, %_loop_1_do_.preheader ]
+  %i10 = phi <2 x double> [ %i125, %_loop_2_endl_ ], [ %.vy24.promoted, %_loop_1_do_.preheader ]
+  %i11 = phi <2 x double> [ %i123, %_loop_2_endl_ ], [ %.vy23.promoted, %_loop_1_do_.preheader ]
+  %i12 = phi <2 x double> [ %i121, %_loop_2_endl_ ], [ %.vy22.promoted, %_loop_1_do_.preheader ]
+  %i13 = phi <2 x double> [ %i119, %_loop_2_endl_ ], [ %.vy21.promoted, %_loop_1_do_.preheader ]
+  %i14 = phi <2 x double> [ %i116, %_loop_2_endl_ ], [ %.vy0c.promoted, %_loop_1_do_.preheader ]
+  %i15 = phi <2 x double> [ %i114, %_loop_2_endl_ ], [ %.vy0b.promoted, %_loop_1_do_.preheader ]
+  %i16 = phi <2 x double> [ %i112, %_loop_2_endl_ ], [ %.vy0a.promoted, %_loop_1_do_.preheader ]
+  %i17 = phi <2 x double> [ %i110, %_loop_2_endl_ ], [ %.vy09.promoted, %_loop_1_do_.preheader ]
+  %i18 = phi <2 x double> [ %i108, %_loop_2_endl_ ], [ %.vy08.promoted, %_loop_1_do_.preheader ]
+  %i19 = phi <2 x double> [ %i106, %_loop_2_endl_ ], [ %.vy07.promoted, %_loop_1_do_.preheader ]
+  %i20 = phi <2 x double> [ %i81, %_loop_2_endl_ ], [ %.vy06.promoted, %_loop_1_do_.preheader ]
+  %i21 = phi <2 x double> [ %i79, %_loop_2_endl_ ], [ %.vy05.promoted, %_loop_1_do_.preheader ]
+  %i22 = phi <2 x double> [ %i77, %_loop_2_endl_ ], [ %.vy04.promoted, %_loop_1_do_.preheader ]
+  %i23 = phi <2 x double> [ %i75, %_loop_2_endl_ ], [ %.vy03.promoted, %_loop_1_do_.preheader ]
+  %i24 = phi <2 x double> [ %i73, %_loop_2_endl_ ], [ %.vy02.promoted, %_loop_1_do_.preheader ]
+  %i25 = phi <2 x double> [ %i71, %_loop_2_endl_ ], [ %.vy01.promoted, %_loop_1_do_.preheader ]
   %_ix_x_len10 = mul i64 %_mult_tmp, %indvars.iv212
   %a_ix_dim_0_ = getelementptr inbounds i8, i8* %a_rvo_based_addr_, i64 %_ix_x_len10
-  %26 = add nuw nsw i64 %indvars.iv212, 1
-  %_ix_x_len24 = mul i64 %_mult_tmp, %26
+  %i26 = add nuw nsw i64 %indvars.iv212, 1
+  %_ix_x_len24 = mul i64 %_mult_tmp, %i26
   %a_ix_dim_0_25 = getelementptr inbounds i8, i8* %a_rvo_based_addr_, i64 %_ix_x_len24
-  %27 = add nuw nsw i64 %indvars.iv212, 2
-  %_ix_x_len40 = mul i64 %_mult_tmp, %27
+  %i27 = add nuw nsw i64 %indvars.iv212, 2
+  %_ix_x_len40 = mul i64 %_mult_tmp, %i27
   %a_ix_dim_0_41 = getelementptr inbounds i8, i8* %a_rvo_based_addr_, i64 %_ix_x_len40
-  %28 = add nuw nsw i64 %indvars.iv212, 3
-  %_ix_x_len56 = mul i64 %_mult_tmp, %28
+  %i28 = add nuw nsw i64 %indvars.iv212, 3
+  %_ix_x_len56 = mul i64 %_mult_tmp, %i28
   %a_ix_dim_0_57 = getelementptr inbounds i8, i8* %a_rvo_based_addr_, i64 %_ix_x_len56
-  %29 = add nuw nsw i64 %indvars.iv212, 4
-  %_ix_x_len72 = mul i64 %_mult_tmp, %29
+  %i29 = add nuw nsw i64 %indvars.iv212, 4
+  %_ix_x_len72 = mul i64 %_mult_tmp, %i29
   %a_ix_dim_0_73 = getelementptr inbounds i8, i8* %a_rvo_based_addr_, i64 %_ix_x_len72
-  %30 = add nuw nsw i64 %indvars.iv212, 5
-  %_ix_x_len88 = mul i64 %_mult_tmp, %30
+  %i30 = add nuw nsw i64 %indvars.iv212, 5
+  %_ix_x_len88 = mul i64 %_mult_tmp, %i30
   %a_ix_dim_0_89 = getelementptr inbounds i8, i8* %a_rvo_based_addr_, i64 %_ix_x_len88
   br label %_loop_2_do_
 
-_loop_2_do_:                                      ; preds = %_loop_2_do_.lr.ph, %_loop_2_do_
+_loop_2_do_:                                      ; preds = %_loop_2_do_, %_loop_2_do_.lr.ph
   %indvars.iv = phi i64 [ 1, %_loop_2_do_.lr.ph ], [ %indvars.iv.next, %_loop_2_do_ ]
-  %31 = phi <2 x double> [ %2, %_loop_2_do_.lr.ph ], [ %142, %_loop_2_do_ ]
-  %32 = phi <2 x double> [ %3, %_loop_2_do_.lr.ph ], [ %140, %_loop_2_do_ ]
-  %33 = phi <2 x double> [ %4, %_loop_2_do_.lr.ph ], [ %138, %_loop_2_do_ ]
-  %34 = phi <2 x double> [ %5, %_loop_2_do_.lr.ph ], [ %136, %_loop_2_do_ ]
-  %35 = phi <2 x double> [ %6, %_loop_2_do_.lr.ph ], [ %134, %_loop_2_do_ ]
-  %36 = phi <2 x double> [ %7, %_loop_2_do_.lr.ph ], [ %132, %_loop_2_do_ ]
-  %37 = phi <2 x double> [ %8, %_loop_2_do_.lr.ph ], [ %129, %_loop_2_do_ ]
-  %38 = phi <2 x double> [ %9, %_loop_2_do_.lr.ph ], [ %127, %_loop_2_do_ ]
-  %39 = phi <2 x double> [ %10, %_loop_2_do_.lr.ph ], [ %125, %_loop_2_do_ ]
-  %40 = phi <2 x double> [ %11, %_loop_2_do_.lr.ph ], [ %123, %_loop_2_do_ ]
-  %41 = phi <2 x double> [ %12, %_loop_2_do_.lr.ph ], [ %121, %_loop_2_do_ ]
-  %42 = phi <2 x double> [ %13, %_loop_2_do_.lr.ph ], [ %119, %_loop_2_do_ ]
-  %43 = phi <2 x double> [ %14, %_loop_2_do_.lr.ph ], [ %116, %_loop_2_do_ ]
-  %44 = phi <2 x double> [ %15, %_loop_2_do_.lr.ph ], [ %114, %_loop_2_do_ ]
-  %45 = phi <2 x double> [ %16, %_loop_2_do_.lr.ph ], [ %112, %_loop_2_do_ ]
-  %46 = phi <2 x double> [ %17, %_loop_2_do_.lr.ph ], [ %110, %_loop_2_do_ ]
-  %47 = phi <2 x double> [ %18, %_loop_2_do_.lr.ph ], [ %108, %_loop_2_do_ ]
-  %48 = phi <2 x double> [ %19, %_loop_2_do_.lr.ph ], [ %106, %_loop_2_do_ ]
-  %49 = phi <2 x double> [ %20, %_loop_2_do_.lr.ph ], [ %81, %_loop_2_do_ ]
-  %50 = phi <2 x double> [ %21, %_loop_2_do_.lr.ph ], [ %79, %_loop_2_do_ ]
-  %51 = phi <2 x double> [ %22, %_loop_2_do_.lr.ph ], [ %77, %_loop_2_do_ ]
-  %52 = phi <2 x double> [ %23, %_loop_2_do_.lr.ph ], [ %75, %_loop_2_do_ ]
-  %53 = phi <2 x double> [ %24, %_loop_2_do_.lr.ph ], [ %73, %_loop_2_do_ ]
-  %54 = phi <2 x double> [ %25, %_loop_2_do_.lr.ph ], [ %71, %_loop_2_do_ ]
+  %i31 = phi <2 x double> [ %i2, %_loop_2_do_.lr.ph ], [ %i142, %_loop_2_do_ ]
+  %i32 = phi <2 x double> [ %i3, %_loop_2_do_.lr.ph ], [ %i140, %_loop_2_do_ ]
+  %i33 = phi <2 x double> [ %i4, %_loop_2_do_.lr.ph ], [ %i138, %_loop_2_do_ ]
+  %i34 = phi <2 x double> [ %i5, %_loop_2_do_.lr.ph ], [ %i136, %_loop_2_do_ ]
+  %i35 = phi <2 x double> [ %i6, %_loop_2_do_.lr.ph ], [ %i134, %_loop_2_do_ ]
+  %i36 = phi <2 x double> [ %i7, %_loop_2_do_.lr.ph ], [ %i132, %_loop_2_do_ ]
+  %i37 = phi <2 x double> [ %i8, %_loop_2_do_.lr.ph ], [ %i129, %_loop_2_do_ ]
+  %i38 = phi <2 x double> [ %i9, %_loop_2_do_.lr.ph ], [ %i127, %_loop_2_do_ ]
+  %i39 = phi <2 x double> [ %i10, %_loop_2_do_.lr.ph ], [ %i125, %_loop_2_do_ ]
+  %i40 = phi <2 x double> [ %i11, %_loop_2_do_.lr.ph ], [ %i123, %_loop_2_do_ ]
+  %i41 = phi <2 x double> [ %i12, %_loop_2_do_.lr.ph ], [ %i121, %_loop_2_do_ ]
+  %i42 = phi <2 x double> [ %i13, %_loop_2_do_.lr.ph ], [ %i119, %_loop_2_do_ ]
+  %i43 = phi <2 x double> [ %i14, %_loop_2_do_.lr.ph ], [ %i116, %_loop_2_do_ ]
+  %i44 = phi <2 x double> [ %i15, %_loop_2_do_.lr.ph ], [ %i114, %_loop_2_do_ ]
+  %i45 = phi <2 x double> [ %i16, %_loop_2_do_.lr.ph ], [ %i112, %_loop_2_do_ ]
+  %i46 = phi <2 x double> [ %i17, %_loop_2_do_.lr.ph ], [ %i110, %_loop_2_do_ ]
+  %i47 = phi <2 x double> [ %i18, %_loop_2_do_.lr.ph ], [ %i108, %_loop_2_do_ ]
+  %i48 = phi <2 x double> [ %i19, %_loop_2_do_.lr.ph ], [ %i106, %_loop_2_do_ ]
+  %i49 = phi <2 x double> [ %i20, %_loop_2_do_.lr.ph ], [ %i81, %_loop_2_do_ ]
+  %i50 = phi <2 x double> [ %i21, %_loop_2_do_.lr.ph ], [ %i79, %_loop_2_do_ ]
+  %i51 = phi <2 x double> [ %i22, %_loop_2_do_.lr.ph ], [ %i77, %_loop_2_do_ ]
+  %i52 = phi <2 x double> [ %i23, %_loop_2_do_.lr.ph ], [ %i75, %_loop_2_do_ ]
+  %i53 = phi <2 x double> [ %i24, %_loop_2_do_.lr.ph ], [ %i73, %_loop_2_do_ ]
+  %i54 = phi <2 x double> [ %i25, %_loop_2_do_.lr.ph ], [ %i71, %_loop_2_do_ ]
   %_ix_x_len = shl nuw nsw i64 %indvars.iv, 3
   %x_ix_dim_0_113 = getelementptr inbounds %_elem_type_of_x, %_elem_type_of_x* %x_rvo_based_addr_112, i64 %indvars.iv
   %x_ix_dim_0_ = bitcast %_elem_type_of_x* %x_ix_dim_0_113 to i8*
-  %55 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* nonnull %x_ix_dim_0_)
+  %i55 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* nonnull %x_ix_dim_0_)
   %a_ix_dim_1_ = getelementptr inbounds i8, i8* %a_ix_dim_0_, i64 %_ix_x_len
-  %56 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* nonnull %a_ix_dim_1_)
+  %i56 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* nonnull %a_ix_dim_1_)
   %a_ix_dim_1_29 = getelementptr inbounds i8, i8* %a_ix_dim_0_25, i64 %_ix_x_len
-  %57 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* nonnull %a_ix_dim_1_29)
+  %i57 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* nonnull %a_ix_dim_1_29)
   %a_ix_dim_1_45 = getelementptr inbounds i8, i8* %a_ix_dim_0_41, i64 %_ix_x_len
-  %58 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* nonnull %a_ix_dim_1_45)
+  %i58 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* nonnull %a_ix_dim_1_45)
   %a_ix_dim_1_61 = getelementptr inbounds i8, i8* %a_ix_dim_0_57, i64 %_ix_x_len
-  %59 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* nonnull %a_ix_dim_1_61)
+  %i59 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* nonnull %a_ix_dim_1_61)
   %a_ix_dim_1_77 = getelementptr inbounds i8, i8* %a_ix_dim_0_73, i64 %_ix_x_len
-  %60 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* nonnull %a_ix_dim_1_77)
+  %i60 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* nonnull %a_ix_dim_1_77)
   %a_ix_dim_1_93 = getelementptr inbounds i8, i8* %a_ix_dim_0_89, i64 %_ix_x_len
-  %61 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* nonnull %a_ix_dim_1_93)
-  %62 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %55)
-  %.fca.0.extract35 = extractvalue { <16 x i8>, <16 x i8> } %62, 0
-  %.fca.1.extract36 = extractvalue { <16 x i8>, <16 x i8> } %62, 1
-  %63 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %56)
-  %.fca.0.extract29 = extractvalue { <16 x i8>, <16 x i8> } %63, 0
-  %.fca.1.extract30 = extractvalue { <16 x i8>, <16 x i8> } %63, 1
-  %64 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %57)
-  %.fca.0.extract23 = extractvalue { <16 x i8>, <16 x i8> } %64, 0
-  %.fca.1.extract24 = extractvalue { <16 x i8>, <16 x i8> } %64, 1
-  %65 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %58)
-  %.fca.0.extract17 = extractvalue { <16 x i8>, <16 x i8> } %65, 0
-  %.fca.1.extract18 = extractvalue { <16 x i8>, <16 x i8> } %65, 1
-  %66 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %59)
-  %.fca.0.extract11 = extractvalue { <16 x i8>, <16 x i8> } %66, 0
-  %.fca.1.extract12 = extractvalue { <16 x i8>, <16 x i8> } %66, 1
-  %67 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %60)
-  %.fca.0.extract5 = extractvalue { <16 x i8>, <16 x i8> } %67, 0
-  %.fca.1.extract6 = extractvalue { <16 x i8>, <16 x i8> } %67, 1
-  %68 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %61)
-  %.fca.0.extract = extractvalue { <16 x i8>, <16 x i8> } %68, 0
-  %.fca.1.extract = extractvalue { <16 x i8>, <16 x i8> } %68, 1
-  %69 = bitcast <16 x i8> %.fca.0.extract29 to <2 x double>
-  %70 = bitcast <16 x i8> %.fca.0.extract35 to <2 x double>
-  %71 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %69, <2 x double> %70, <2 x double> %54)
-  %72 = bitcast <16 x i8> %.fca.0.extract23 to <2 x double>
-  %73 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %72, <2 x double> %70, <2 x double> %53)
-  %74 = bitcast <16 x i8> %.fca.0.extract17 to <2 x double>
-  %75 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %74, <2 x double> %70, <2 x double> %52)
-  %76 = bitcast <16 x i8> %.fca.0.extract11 to <2 x double>
-  %77 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %76, <2 x double> %70, <2 x double> %51)
-  %78 = bitcast <16 x i8> %.fca.0.extract5 to <2 x double>
-  %79 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %78, <2 x double> %70, <2 x double> %50)
-  %80 = bitcast <16 x i8> %.fca.0.extract to <2 x double>
-  %81 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %80, <2 x double> %70, <2 x double> %49)
-  %82 = getelementptr %_elem_type_of_x, %_elem_type_of_x* %x_ix_dim_0_113, i64 4
-  %83 = bitcast %_elem_type_of_x* %82 to i8*
-  %84 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %83)
-  %85 = getelementptr i8, i8* %a_ix_dim_1_, i64 32
-  %86 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %85)
-  %87 = getelementptr i8, i8* %a_ix_dim_1_29, i64 32
-  %88 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %87)
-  %89 = getelementptr i8, i8* %a_ix_dim_1_45, i64 32
-  %90 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %89)
-  %91 = getelementptr i8, i8* %a_ix_dim_1_61, i64 32
-  %92 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %91)
-  %93 = getelementptr i8, i8* %a_ix_dim_1_77, i64 32
-  %94 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %93)
-  %95 = getelementptr i8, i8* %a_ix_dim_1_93, i64 32
-  %96 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %95)
-  %97 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %84)
-  %.fca.0.extract37 = extractvalue { <16 x i8>, <16 x i8> } %97, 0
-  %.fca.1.extract39 = extractvalue { <16 x i8>, <16 x i8> } %97, 1
-  %98 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %86)
-  %.fca.0.extract31 = extractvalue { <16 x i8>, <16 x i8> } %98, 0
-  %.fca.1.extract33 = extractvalue { <16 x i8>, <16 x i8> } %98, 1
-  %99 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %88)
-  %.fca.0.extract25 = extractvalue { <16 x i8>, <16 x i8> } %99, 0
-  %.fca.1.extract27 = extractvalue { <16 x i8>, <16 x i8> } %99, 1
-  %100 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %90)
-  %.fca.0.extract19 = extractvalue { <16 x i8>, <16 x i8> } %100, 0
-  %.fca.1.extract21 = extractvalue { <16 x i8>, <16 x i8> } %100, 1
-  %101 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %92)
-  %.fca.0.extract13 = extractvalue { <16 x i8>, <16 x i8> } %101, 0
-  %.fca.1.extract15 = extractvalue { <16 x i8>, <16 x i8> } %101, 1
-  %102 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %94)
-  %.fca.0.extract7 = extractvalue { <16 x i8>, <16 x i8> } %102, 0
-  %.fca.1.extract9 = extractvalue { <16 x i8>, <16 x i8> } %102, 1
-  %103 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %96)
-  %.fca.0.extract1 = extractvalue { <16 x i8>, <16 x i8> } %103, 0
-  %.fca.1.extract3 = extractvalue { <16 x i8>, <16 x i8> } %103, 1
-  %104 = bitcast <16 x i8> %.fca.1.extract30 to <2 x double>
-  %105 = bitcast <16 x i8> %.fca.1.extract36 to <2 x double>
-  %106 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %104, <2 x double> %105, <2 x double> %48)
-  %107 = bitcast <16 x i8> %.fca.1.extract24 to <2 x double>
-  %108 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %107, <2 x double> %105, <2 x double> %47)
-  %109 = bitcast <16 x i8> %.fca.1.extract18 to <2 x double>
-  %110 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %109, <2 x double> %105, <2 x double> %46)
-  %111 = bitcast <16 x i8> %.fca.1.extract12 to <2 x double>
-  %112 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %111, <2 x double> %105, <2 x double> %45)
-  %113 = bitcast <16 x i8> %.fca.1.extract6 to <2 x double>
-  %114 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %113, <2 x double> %105, <2 x double> %44)
-  %115 = bitcast <16 x i8> %.fca.1.extract to <2 x double>
-  %116 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %115, <2 x double> %105, <2 x double> %43)
-  %117 = bitcast <16 x i8> %.fca.0.extract31 to <2 x double>
-  %118 = bitcast <16 x i8> %.fca.0.extract37 to <2 x double>
-  %119 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %117, <2 x double> %118, <2 x double> %42)
-  %120 = bitcast <16 x i8> %.fca.0.extract25 to <2 x double>
-  %121 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %120, <2 x double> %118, <2 x double> %41)
-  %122 = bitcast <16 x i8> %.fca.0.extract19 to <2 x double>
-  %123 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %122, <2 x double> %118, <2 x double> %40)
-  %124 = bitcast <16 x i8> %.fca.0.extract13 to <2 x double>
-  %125 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %124, <2 x double> %118, <2 x double> %39)
-  %126 = bitcast <16 x i8> %.fca.0.extract7 to <2 x double>
-  %127 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %126, <2 x double> %118, <2 x double> %38)
-  %128 = bitcast <16 x i8> %.fca.0.extract1 to <2 x double>
-  %129 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %128, <2 x double> %118, <2 x double> %37)
-  %130 = bitcast <16 x i8> %.fca.1.extract33 to <2 x double>
-  %131 = bitcast <16 x i8> %.fca.1.extract39 to <2 x double>
-  %132 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %130, <2 x double> %131, <2 x double> %36)
-  %133 = bitcast <16 x i8> %.fca.1.extract27 to <2 x double>
-  %134 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %133, <2 x double> %131, <2 x double> %35)
-  %135 = bitcast <16 x i8> %.fca.1.extract21 to <2 x double>
-  %136 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %135, <2 x double> %131, <2 x double> %34)
-  %137 = bitcast <16 x i8> %.fca.1.extract15 to <2 x double>
-  %138 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %137, <2 x double> %131, <2 x double> %33)
-  %139 = bitcast <16 x i8> %.fca.1.extract9 to <2 x double>
-  %140 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %139, <2 x double> %131, <2 x double> %32)
-  %141 = bitcast <16 x i8> %.fca.1.extract3 to <2 x double>
-  %142 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %141, <2 x double> %131, <2 x double> %31)
+  %i61 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* nonnull %a_ix_dim_1_93)
+  %i62 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %i55)
+  %.fca.0.extract35 = extractvalue { <16 x i8>, <16 x i8> } %i62, 0
+  %.fca.1.extract36 = extractvalue { <16 x i8>, <16 x i8> } %i62, 1
+  %i63 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %i56)
+  %.fca.0.extract29 = extractvalue { <16 x i8>, <16 x i8> } %i63, 0
+  %.fca.1.extract30 = extractvalue { <16 x i8>, <16 x i8> } %i63, 1
+  %i64 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %i57)
+  %.fca.0.extract23 = extractvalue { <16 x i8>, <16 x i8> } %i64, 0
+  %.fca.1.extract24 = extractvalue { <16 x i8>, <16 x i8> } %i64, 1
+  %i65 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %i58)
+  %.fca.0.extract17 = extractvalue { <16 x i8>, <16 x i8> } %i65, 0
+  %.fca.1.extract18 = extractvalue { <16 x i8>, <16 x i8> } %i65, 1
+  %i66 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %i59)
+  %.fca.0.extract11 = extractvalue { <16 x i8>, <16 x i8> } %i66, 0
+  %.fca.1.extract12 = extractvalue { <16 x i8>, <16 x i8> } %i66, 1
+  %i67 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %i60)
+  %.fca.0.extract5 = extractvalue { <16 x i8>, <16 x i8> } %i67, 0
+  %.fca.1.extract6 = extractvalue { <16 x i8>, <16 x i8> } %i67, 1
+  %i68 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %i61)
+  %.fca.0.extract = extractvalue { <16 x i8>, <16 x i8> } %i68, 0
+  %.fca.1.extract = extractvalue { <16 x i8>, <16 x i8> } %i68, 1
+  %i69 = bitcast <16 x i8> %.fca.0.extract29 to <2 x double>
+  %i70 = bitcast <16 x i8> %.fca.0.extract35 to <2 x double>
+  %i71 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i69, <2 x double> %i70, <2 x double> %i54)
+  %i72 = bitcast <16 x i8> %.fca.0.extract23 to <2 x double>
+  %i73 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i72, <2 x double> %i70, <2 x double> %i53)
+  %i74 = bitcast <16 x i8> %.fca.0.extract17 to <2 x double>
+  %i75 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i74, <2 x double> %i70, <2 x double> %i52)
+  %i76 = bitcast <16 x i8> %.fca.0.extract11 to <2 x double>
+  %i77 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i76, <2 x double> %i70, <2 x double> %i51)
+  %i78 = bitcast <16 x i8> %.fca.0.extract5 to <2 x double>
+  %i79 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i78, <2 x double> %i70, <2 x double> %i50)
+  %i80 = bitcast <16 x i8> %.fca.0.extract to <2 x double>
+  %i81 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i80, <2 x double> %i70, <2 x double> %i49)
+  %i82 = getelementptr %_elem_type_of_x, %_elem_type_of_x* %x_ix_dim_0_113, i64 4
+  %i83 = bitcast %_elem_type_of_x* %i82 to i8*
+  %i84 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %i83)
+  %i85 = getelementptr i8, i8* %a_ix_dim_1_, i64 32
+  %i86 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %i85)
+  %i87 = getelementptr i8, i8* %a_ix_dim_1_29, i64 32
+  %i88 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %i87)
+  %i89 = getelementptr i8, i8* %a_ix_dim_1_45, i64 32
+  %i90 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %i89)
+  %i91 = getelementptr i8, i8* %a_ix_dim_1_61, i64 32
+  %i92 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %i91)
+  %i93 = getelementptr i8, i8* %a_ix_dim_1_77, i64 32
+  %i94 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %i93)
+  %i95 = getelementptr i8, i8* %a_ix_dim_1_93, i64 32
+  %i96 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %i95)
+  %i97 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %i84)
+  %.fca.0.extract37 = extractvalue { <16 x i8>, <16 x i8> } %i97, 0
+  %.fca.1.extract39 = extractvalue { <16 x i8>, <16 x i8> } %i97, 1
+  %i98 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %i86)
+  %.fca.0.extract31 = extractvalue { <16 x i8>, <16 x i8> } %i98, 0
+  %.fca.1.extract33 = extractvalue { <16 x i8>, <16 x i8> } %i98, 1
+  %i99 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %i88)
+  %.fca.0.extract25 = extractvalue { <16 x i8>, <16 x i8> } %i99, 0
+  %.fca.1.extract27 = extractvalue { <16 x i8>, <16 x i8> } %i99, 1
+  %i100 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %i90)
+  %.fca.0.extract19 = extractvalue { <16 x i8>, <16 x i8> } %i100, 0
+  %.fca.1.extract21 = extractvalue { <16 x i8>, <16 x i8> } %i100, 1
+  %i101 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %i92)
+  %.fca.0.extract13 = extractvalue { <16 x i8>, <16 x i8> } %i101, 0
+  %.fca.1.extract15 = extractvalue { <16 x i8>, <16 x i8> } %i101, 1
+  %i102 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %i94)
+  %.fca.0.extract7 = extractvalue { <16 x i8>, <16 x i8> } %i102, 0
+  %.fca.1.extract9 = extractvalue { <16 x i8>, <16 x i8> } %i102, 1
+  %i103 = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> %i96)
+  %.fca.0.extract1 = extractvalue { <16 x i8>, <16 x i8> } %i103, 0
+  %.fca.1.extract3 = extractvalue { <16 x i8>, <16 x i8> } %i103, 1
+  %i104 = bitcast <16 x i8> %.fca.1.extract30 to <2 x double>
+  %i105 = bitcast <16 x i8> %.fca.1.extract36 to <2 x double>
+  %i106 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i104, <2 x double> %i105, <2 x double> %i48)
+  %i107 = bitcast <16 x i8> %.fca.1.extract24 to <2 x double>
+  %i108 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i107, <2 x double> %i105, <2 x double> %i47)
+  %i109 = bitcast <16 x i8> %.fca.1.extract18 to <2 x double>
+  %i110 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i109, <2 x double> %i105, <2 x double> %i46)
+  %i111 = bitcast <16 x i8> %.fca.1.extract12 to <2 x double>
+  %i112 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i111, <2 x double> %i105, <2 x double> %i45)
+  %i113 = bitcast <16 x i8> %.fca.1.extract6 to <2 x double>
+  %i114 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i113, <2 x double> %i105, <2 x double> %i44)
+  %i115 = bitcast <16 x i8> %.fca.1.extract to <2 x double>
+  %i116 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i115, <2 x double> %i105, <2 x double> %i43)
+  %i117 = bitcast <16 x i8> %.fca.0.extract31 to <2 x double>
+  %i118 = bitcast <16 x i8> %.fca.0.extract37 to <2 x double>
+  %i119 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i117, <2 x double> %i118, <2 x double> %i42)
+  %i120 = bitcast <16 x i8> %.fca.0.extract25 to <2 x double>
+  %i121 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i120, <2 x double> %i118, <2 x double> %i41)
+  %i122 = bitcast <16 x i8> %.fca.0.extract19 to <2 x double>
+  %i123 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i122, <2 x double> %i118, <2 x double> %i40)
+  %i124 = bitcast <16 x i8> %.fca.0.extract13 to <2 x double>
+  %i125 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i124, <2 x double> %i118, <2 x double> %i39)
+  %i126 = bitcast <16 x i8> %.fca.0.extract7 to <2 x double>
+  %i127 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i126, <2 x double> %i118, <2 x double> %i38)
+  %i128 = bitcast <16 x i8> %.fca.0.extract1 to <2 x double>
+  %i129 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i128, <2 x double> %i118, <2 x double> %i37)
+  %i130 = bitcast <16 x i8> %.fca.1.extract33 to <2 x double>
+  %i131 = bitcast <16 x i8> %.fca.1.extract39 to <2 x double>
+  %i132 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i130, <2 x double> %i131, <2 x double> %i36)
+  %i133 = bitcast <16 x i8> %.fca.1.extract27 to <2 x double>
+  %i134 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i133, <2 x double> %i131, <2 x double> %i35)
+  %i135 = bitcast <16 x i8> %.fca.1.extract21 to <2 x double>
+  %i136 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i135, <2 x double> %i131, <2 x double> %i34)
+  %i137 = bitcast <16 x i8> %.fca.1.extract15 to <2 x double>
+  %i138 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i137, <2 x double> %i131, <2 x double> %i33)
+  %i139 = bitcast <16 x i8> %.fca.1.extract9 to <2 x double>
+  %i140 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i139, <2 x double> %i131, <2 x double> %i32)
+  %i141 = bitcast <16 x i8> %.fca.1.extract3 to <2 x double>
+  %i142 = tail call contract <2 x double> @llvm.fma.v2f64(<2 x double> %i141, <2 x double> %i131, <2 x double> %i31)
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 8
-  %_leq_tmp6.not = icmp ugt i64 %indvars.iv.next, %0
+  %_leq_tmp6.not = icmp ugt i64 %indvars.iv.next, %i
   br i1 %_leq_tmp6.not, label %_loop_2_endl_, label %_loop_2_do_
 
 _loop_2_endl_:                                    ; preds = %_loop_2_do_
   %indvars.iv.next213 = add nuw nsw i64 %indvars.iv212, 6
-  %_leq_tmp.not = icmp ugt i64 %indvars.iv.next213, %1
+  %_leq_tmp.not = icmp ugt i64 %indvars.iv.next213, %i1
   br i1 %_leq_tmp.not, label %_loop_1_loopHeader_._return_bb_crit_edge.loopexit, label %_loop_2_do_.lr.ph
 
 _loop_1_loopHeader_._return_bb_crit_edge.loopexit: ; preds = %_loop_2_endl_
-  store <2 x double> %71, <2 x double>* %.vy01, align 16
-  store <2 x double> %73, <2 x double>* %.vy02, align 16
-  store <2 x double> %75, <2 x double>* %.vy03, align 16
-  store <2 x double> %77, <2 x double>* %.vy04, align 16
-  store <2 x double> %79, <2 x double>* %.vy05, align 16
-  store <2 x double> %81, <2 x double>* %.vy06, align 16
-  store <2 x double> %106, <2 x double>* %.vy07, align 16
-  store <2 x double> %108, <2 x double>* %.vy08, align 16
-  store <2 x double> %110, <2 x double>* %.vy09, align 16
-  store <2 x double> %112, <2 x double>* %.vy0a, align 16
-  store <2 x double> %114, <2 x double>* %.vy0b, align 16
-  store <2 x double> %116, <2 x double>* %.vy0c, align 16
-  store <2 x double> %119, <2 x double>* %.vy21, align 16
-  store <2 x double> %121, <2 x double>* %.vy22, align 16
-  store <2 x double> %123, <2 x double>* %.vy23, align 16
-  store <2 x double> %125, <2 x double>* %.vy24, align 16
-  store <2 x double> %127, <2 x double>* %.vy25, align 16
-  store <2 x double> %129, <2 x double>* %.vy26, align 16
-  store <2 x double> %132, <2 x double>* %.vy27, align 16
-  store <2 x double> %134, <2 x double>* %.vy28, align 16
-  store <2 x double> %136, <2 x double>* %.vy29, align 16
-  store <2 x double> %138, <2 x double>* %.vy2a, align 16
-  store <2 x double> %140, <2 x double>* %.vy2b, align 16
-  store <2 x double> %142, <2 x double>* %.vy2c, align 16
+  store <2 x double> %i71, <2 x double>* %.vy01, align 16
+  store <2 x double> %i73, <2 x double>* %.vy02, align 16
+  store <2 x double> %i75, <2 x double>* %.vy03, align 16
+  store <2 x double> %i77, <2 x double>* %.vy04, align 16
+  store <2 x double> %i79, <2 x double>* %.vy05, align 16
+  store <2 x double> %i81, <2 x double>* %.vy06, align 16
+  store <2 x double> %i106, <2 x double>* %.vy07, align 16
+  store <2 x double> %i108, <2 x double>* %.vy08, align 16
+  store <2 x double> %i110, <2 x double>* %.vy09, align 16
+  store <2 x double> %i112, <2 x double>* %.vy0a, align 16
+  store <2 x double> %i114, <2 x double>* %.vy0b, align 16
+  store <2 x double> %i116, <2 x double>* %.vy0c, align 16
+  store <2 x double> %i119, <2 x double>* %.vy21, align 16
+  store <2 x double> %i121, <2 x double>* %.vy22, align 16
+  store <2 x double> %i123, <2 x double>* %.vy23, align 16
+  store <2 x double> %i125, <2 x double>* %.vy24, align 16
+  store <2 x double> %i127, <2 x double>* %.vy25, align 16
+  store <2 x double> %i129, <2 x double>* %.vy26, align 16
+  store <2 x double> %i132, <2 x double>* %.vy27, align 16
+  store <2 x double> %i134, <2 x double>* %.vy28, align 16
+  store <2 x double> %i136, <2 x double>* %.vy29, align 16
+  store <2 x double> %i138, <2 x double>* %.vy2a, align 16
+  store <2 x double> %i140, <2 x double>* %.vy2b, align 16
+  store <2 x double> %i142, <2 x double>* %.vy2c, align 16
   br label %_return_bb
 
-_return_bb:                                       ; preds = %_loop_1_do_.lr.ph, %_loop_1_loopHeader_._return_bb_crit_edge.loopexit, %entry
+_return_bb:                                       ; preds = %_loop_1_loopHeader_._return_bb_crit_edge.loopexit, %_loop_1_do_.lr.ph, %entry
   ret void
 }
 
