@@ -273,7 +273,6 @@ public:
         RegRI.HasREX_W != MemRI.HasREX_W ||
         RegRI.HasVEX_4V != MemRI.HasVEX_4V ||
         RegRI.HasVEX_L != MemRI.HasVEX_L ||
-        RegRI.HasVEX_W != MemRI.HasVEX_W ||
         RegRI.IgnoresVEX_L != MemRI.IgnoresVEX_L ||
         RegRI.IgnoresVEX_W != MemRI.IgnoresVEX_W ||
         RegRI.HasEVEX_K != MemRI.HasEVEX_K ||

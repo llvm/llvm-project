@@ -1235,11 +1235,11 @@ let hasSideEffects = 0 in {
 
 let Predicates = [HasBMI], Defs = [EFLAGS] in {
   defm BLSR32 : bmi_bls<"blsr{l}", MRM1r, MRM1m, GR32, i32mem, WriteBLS>;
-  defm BLSR64 : bmi_bls<"blsr{q}", MRM1r, MRM1m, GR64, i64mem, WriteBLS>, VEX_W;
+  defm BLSR64 : bmi_bls<"blsr{q}", MRM1r, MRM1m, GR64, i64mem, WriteBLS>, REX_W;
   defm BLSMSK32 : bmi_bls<"blsmsk{l}", MRM2r, MRM2m, GR32, i32mem, WriteBLS>;
-  defm BLSMSK64 : bmi_bls<"blsmsk{q}", MRM2r, MRM2m, GR64, i64mem, WriteBLS>, VEX_W;
+  defm BLSMSK64 : bmi_bls<"blsmsk{q}", MRM2r, MRM2m, GR64, i64mem, WriteBLS>, REX_W;
   defm BLSI32 : bmi_bls<"blsi{l}", MRM3r, MRM3m, GR32, i32mem, WriteBLS>;
-  defm BLSI64 : bmi_bls<"blsi{q}", MRM3r, MRM3m, GR64, i64mem, WriteBLS>, VEX_W;
+  defm BLSI64 : bmi_bls<"blsi{q}", MRM3r, MRM3m, GR64, i64mem, WriteBLS>, REX_W;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1322,7 +1322,7 @@ let Predicates = [HasBMI], Defs = [EFLAGS] in {
   defm BEXTR32 : bmi_bextr<0xF7, "bextr{l}", GR32, i32mem,
                            X86bextr, loadi32, WriteBEXTR>;
   defm BEXTR64 : bmi_bextr<0xF7, "bextr{q}", GR64, i64mem,
-                           X86bextr, loadi64, WriteBEXTR>, VEX_W;
+                           X86bextr, loadi64, WriteBEXTR>, REX_W;
 }
 
 multiclass bmi_bzhi<bits<8> opc, string mnemonic, RegisterClass RC,
@@ -1348,7 +1348,7 @@ let Predicates = [HasBMI2], Defs = [EFLAGS] in {
   defm BZHI32 : bmi_bzhi<0xF5, "bzhi{l}", GR32, i32mem,
                          X86bzhi, loadi32, WriteBZHI>;
   defm BZHI64 : bmi_bzhi<0xF5, "bzhi{q}", GR64, i64mem,
-                         X86bzhi, loadi64, WriteBZHI>, VEX_W;
+                         X86bzhi, loadi64, WriteBZHI>, REX_W;
 }
 
 def CountTrailingOnes : SDNodeXForm<imm, [{
@@ -1406,11 +1406,11 @@ let Predicates = [HasBMI2] in {
   defm PDEP32 : bmi_pdep_pext<"pdep{l}", GR32, i32mem,
                                X86pdep, loadi32>, T8XD;
   defm PDEP64 : bmi_pdep_pext<"pdep{q}", GR64, i64mem,
-                               X86pdep, loadi64>, T8XD, VEX_W;
+                               X86pdep, loadi64>, T8XD, REX_W;
   defm PEXT32 : bmi_pdep_pext<"pext{l}", GR32, i32mem,
                                X86pext, loadi32>, T8XS;
   defm PEXT64 : bmi_pdep_pext<"pext{q}", GR64, i64mem,
-                               X86pext, loadi64>, T8XS, VEX_W;
+                               X86pext, loadi64>, T8XS, REX_W;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1424,9 +1424,9 @@ def SLWPCB : I<0x12, MRM1r, (outs GR32:$dst), (ins), "slwpcb\t$dst",
                [(set GR32:$dst, (int_x86_slwpcb))]>, XOP, XOP9;
 
 def LLWPCB64 : I<0x12, MRM0r, (outs), (ins GR64:$src), "llwpcb\t$src",
-                 [(int_x86_llwpcb GR64:$src)]>, XOP, XOP9, VEX_W;
+                 [(int_x86_llwpcb GR64:$src)]>, XOP, XOP9, REX_W;
 def SLWPCB64 : I<0x12, MRM1r, (outs GR64:$dst), (ins), "slwpcb\t$dst",
-                 [(set GR64:$dst, (int_x86_slwpcb))]>, XOP, XOP9, VEX_W;
+                 [(set GR64:$dst, (int_x86_slwpcb))]>, XOP, XOP9, REX_W;
 
 multiclass lwpins_intr<RegisterClass RC> {
   def rri : Ii32<0x12, MRM0r, (outs), (ins RC:$src0, GR32:$src1, i32imm:$cntl),
@@ -1442,7 +1442,7 @@ multiclass lwpins_intr<RegisterClass RC> {
 
 let Defs = [EFLAGS] in {
   defm LWPINS32 : lwpins_intr<GR32>;
-  defm LWPINS64 : lwpins_intr<GR64>, VEX_W;
+  defm LWPINS64 : lwpins_intr<GR64>, REX_W;
 } // EFLAGS
 
 multiclass lwpval_intr<RegisterClass RC, Intrinsic Int> {
@@ -1457,7 +1457,7 @@ multiclass lwpval_intr<RegisterClass RC, Intrinsic Int> {
 }
 
 defm LWPVAL32 : lwpval_intr<GR32, int_x86_lwpval32>;
-defm LWPVAL64 : lwpval_intr<GR64, int_x86_lwpval64>, VEX_W;
+defm LWPVAL64 : lwpval_intr<GR64, int_x86_lwpval64>, REX_W;
 
 } // HasLWP, SchedRW
 
@@ -1674,7 +1674,7 @@ def CMPCCXADDmr64 : I<0xe0, MRMDestMem4VOp3CC, (outs GR64:$dst),
           "cmp${cond}xadd\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
           [(set GR64:$dst, (X86cmpccxadd addr:$dstsrc2,
             GR64:$dstsrc1, GR64:$src3, timm:$cond))]>,
-          VEX_4V, VEX_W, T8PD, Sched<[WriteXCHG]>;
+          VEX_4V, REX_W, T8PD, Sched<[WriteXCHG]>;
 }
 
 //===----------------------------------------------------------------------===//

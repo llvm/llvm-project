@@ -924,15 +924,10 @@ namespace X86II {
     // Opcode
     OpcodeShift   = EncodingShift + 2,
 
-    /// VEX_W - Has a opcode specific functionality, but is used in the same
-    /// way as REX_W is for regular SSE instructions.
-    VEX_WShift  = OpcodeShift + 8,
-    VEX_W       = 1ULL << VEX_WShift,
-
     /// VEX_4V - Used to specify an additional AVX/SSE register. Several 2
     /// address instructions in SSE are represented as 3 address ones in AVX
     /// and the additional register is encoded in VEX_VVVV prefix.
-    VEX_4VShift = VEX_WShift + 1,
+    VEX_4VShift = OpcodeShift + 8,
     VEX_4V      = 1ULL << VEX_4VShift,
 
     /// VEX_L - Stands for a bit in the VEX opcode prefix meaning the current
