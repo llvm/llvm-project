@@ -51,6 +51,13 @@ using namespace lld::macho;
 #define COMPRESSED_ENTRY_FUNC_OFFSET_MASK                                      \
   UNWIND_INFO_COMPRESSED_ENTRY_FUNC_OFFSET(~0)
 
+static_assert(static_cast<uint32_t>(UNWIND_X86_64_DWARF_SECTION_OFFSET) ==
+                  static_cast<uint32_t>(UNWIND_ARM64_DWARF_SECTION_OFFSET) &&
+              static_cast<uint32_t>(UNWIND_X86_64_DWARF_SECTION_OFFSET) ==
+                  static_cast<uint32_t>(UNWIND_X86_DWARF_SECTION_OFFSET));
+
+constexpr uint64_t DWARF_SECTION_OFFSET = UNWIND_X86_64_DWARF_SECTION_OFFSET;
+
 // Compact Unwind format is a Mach-O evolution of DWARF Unwind that
 // optimizes space and exception-time lookup.  Most DWARF unwind
 // entries can be replaced with Compact Unwind entries, but the ones
@@ -338,7 +345,19 @@ void UnwindInfoSectionImpl::relocateCompactUnwind(
 
     // If we have DWARF unwind info, create a CU entry that points to it.
     if (d->unwindEntry->getName() == section_names::ehFrame) {
-      cu.encoding = target->modeDwarfEncoding | d->unwindEntry->outSecOff;
+      // The unwinder will look for the DWARF entry starting at the hint,
+      // assuming the hint points to a valid CFI record start. If it
+      // fails to find the record, it proceeds in a linear search through the
+      // contiguous CFI records from the hint until the end of the section.
+      // Ideally, in the case where the offset is too large to be encoded, we
+      // would instead encode the largest possible offset to a valid CFI record,
+      // but since we don't keep track of that, just encode zero -- the start of
+      // the section is always the start of a CFI record.
+      uint64_t dwarfOffsetHint =
+          d->unwindEntry->outSecOff <= DWARF_SECTION_OFFSET
+              ? d->unwindEntry->outSecOff
+              : 0;
+      cu.encoding = target->modeDwarfEncoding | dwarfOffsetHint;
       const FDE &fde = cast<ObjFile>(d->getFile())->fdes[d->unwindEntry];
       cu.functionLength = fde.funcLength;
       cu.personality = fde.personality;
