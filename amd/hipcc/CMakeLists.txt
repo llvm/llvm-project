@@ -111,4 +111,9 @@ if(NOT WIN32)
   endif()
 endif()
 
+if(NOT ROCM_DEP_ROCMCORE)
+  string(REGEX REPLACE ",? ?rocm-core" "" CPACK_DEBIAN_PACKAGE_DEPENDS ${CPACK_DEBIAN_PACKAGE_DEPENDS})
+  string(REGEX REPLACE ",? ?rocm-core" "" CPACK_RPM_PACKAGE_REQUIRES ${CPACK_RPM_PACKAGE_REQUIRES})
+endif()
+
 include(CPack)
