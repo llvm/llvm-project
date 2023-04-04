@@ -222,7 +222,7 @@ private:
       KernelData.VGPRSpillCount = V.second.getUInt();
     } else if (isKey(V.first, ".private_segment_fixed_size")) {
       KernelData.PrivateSegmentSize = V.second.getUInt();
-    } else if (isKey(V.first, ".group_segement_fixed_size")) {
+    } else if (isKey(V.first, ".group_segment_fixed_size")) {
       KernelData.GroupSegmentList = V.second.getUInt();
     } else if (isKey(V.first, ".reqd_workgroup_size")) {
       getSequenceOfThreeInts(V.second, KernelData.RequestedWorkgroupSize);
