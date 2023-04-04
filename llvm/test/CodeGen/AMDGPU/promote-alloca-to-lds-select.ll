@@ -77,13 +77,13 @@ define amdgpu_kernel void @lds_promoted_alloca_select_input_select(i32 %a, i32 %
   ret void
 }
 
-define amdgpu_kernel void @lds_promoted_alloca_select_input_phi(i32 %a, i32 %b, i32 %c, i1 %c0) #0 {
+define amdgpu_kernel void @lds_promoted_alloca_select_input_phi(i32 %a, i32 %b, i32 %c) #0 {
 entry:
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %ptr0 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
   %ptr1 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %b
   store i32 0, ptr addrspace(5) %ptr0
-  br i1 %c0, label %bb1, label %bb2
+  br i1 undef, label %bb1, label %bb2
 
 bb1:
   %ptr2 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %c

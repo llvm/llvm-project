@@ -2290,7 +2290,7 @@ define amdgpu_ps void @test_wqm_vote(float %a) {
   ret void
 }
 
-define amdgpu_kernel void @test_branch_true(i1 %c0) #2 {
+define amdgpu_kernel void @test_branch_true() #2 {
 ; GFX1032-LABEL: test_branch_true:
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_mov_b32 vcc_lo, exec_lo
@@ -2327,7 +2327,7 @@ for.body.lr.ph:                                   ; preds = %entry
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
-  br i1 %c0, label %for.end, label %for.body
+  br i1 undef, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body, %entry
   ret void

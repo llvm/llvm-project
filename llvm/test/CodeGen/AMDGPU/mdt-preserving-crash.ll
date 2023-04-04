@@ -4,7 +4,7 @@ target triple = "amdgcn-amd-amdhsa"
 
 @_RSENC_gDcd_______________________________ = external protected addrspace(1) externally_initialized global [4096 x i8], align 16
 
-define protected amdgpu_kernel void @_RSENC_PRInit__________________________________(i1 %c0) local_unnamed_addr #0 {
+define protected amdgpu_kernel void @_RSENC_PRInit__________________________________() local_unnamed_addr #0 {
 entry:
   %runtimeVersionCopy = alloca [128 x i8], align 16, addrspace(5)
   %licenseVersionCopy = alloca [128 x i8], align 16, addrspace(5)
@@ -18,7 +18,7 @@ if.end:                                           ; preds = %entry
   br i1 %cmp13, label %cleanup.cont, label %if.end15
 
 if.end15:                                         ; preds = %if.end
-  br i1 %c0, label %cleanup.cont, label %lor.lhs.false17
+  br i1 undef, label %cleanup.cont, label %lor.lhs.false17
 
 lor.lhs.false17:                                  ; preds = %if.end15
   br label %while.cond.i
