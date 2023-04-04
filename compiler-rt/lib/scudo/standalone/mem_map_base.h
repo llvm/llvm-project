@@ -45,6 +45,15 @@ public:
     return invokeImpl(&Derived::remapImpl, Addr, Size, Name, Flags);
   }
 
+  // This is used to update the pages' access permission. For example, mark
+  // pages as no read/write permission.
+  void setMemoryPermission(uptr Addr, uptr Size, uptr Flags) {
+    DCHECK(isAllocated());
+    DCHECK((Addr >= getBase()) || (Addr + Size <= getBase() + getCapacity()));
+    return static_cast<Derived *>(this)->setMemoryPermissionImpl(Addr, Size,
+                                                                 Flags);
+  }
+
   // Suggest releasing a set of contiguous physical pages back to the OS. Note
   // that only physical pages are supposed to be released. Any release of
   // virtual pages may lead to undefined behavior.
