@@ -1231,7 +1231,7 @@ bool CheckInterfaceForGeneric(const characteristics::Procedure &proc,
 bool CheckArgumentIsConstantExprInRange(
     const evaluate::ActualArguments &actuals, int index, int lowerBound,
     int upperBound, parser::ContextualMessages &messages) {
-  CHECK(index >= 0 && index < actuals.size());
+  CHECK(index >= 0 && static_cast<unsigned>(index) < actuals.size());
 
   const std::optional<evaluate::ActualArgument> &argOptional{actuals[index]};
   if (!argOptional) {
