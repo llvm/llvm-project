@@ -263,7 +263,7 @@ static void *MsanCalloc(StackTrace *stack, uptr nmemb, uptr size) {
 void *AllocationBegin(const void *p) {
   if (!p)
     return nullptr;
-  const void *beg = allocator.GetBlockBegin(p);
+  void *beg = allocator.GetBlockBegin(p);
   if (!beg)
     return nullptr;
   Metadata *b = (Metadata *)allocator.GetMetaData(beg);
