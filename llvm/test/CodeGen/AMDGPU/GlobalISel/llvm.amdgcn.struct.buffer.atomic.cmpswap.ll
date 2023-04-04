@@ -41,8 +41,8 @@ define amdgpu_ps float @struct_buffer_atomic_cmpswap_i32__vgpr_val__vgpr_cmp__sg
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY7]], %subreg.sub1
   ; GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GFX12-NEXT:   [[BUFFER_ATOMIC_CMPSWAP_BOTHEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_CMPSWAP_BOTHEN_RTN [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY8]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
-  ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_CMPSWAP_BOTHEN_RTN]].sub0
+  ; GFX12-NEXT:   [[BUFFER_ATOMIC_CMPSWAP_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_CMPSWAP_VBUFFER_BOTHEN_RTN [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY8]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
+  ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_CMPSWAP_VBUFFER_BOTHEN_RTN]].sub0
   ; GFX12-NEXT:   $vgpr0 = COPY [[COPY9]]
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %ret = call i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32 %val, i32 %cmp, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
@@ -86,7 +86,7 @@ define amdgpu_ps void @struct_buffer_atomic_cmpswap_noret_i32__vgpr_val__vgpr_cm
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY7]], %subreg.sub1
   ; GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GFX12-NEXT:   BUFFER_ATOMIC_CMPSWAP_BOTHEN [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY8]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
+  ; GFX12-NEXT:   BUFFER_ATOMIC_CMPSWAP_VBUFFER_BOTHEN [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY8]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
   ; GFX12-NEXT:   S_ENDPGM 0
   %ret = call i32 @llvm.amdgcn.struct.buffer.atomic.cmpswap.i32(i32 %val, i32 %cmp, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -199,8 +199,8 @@ define amdgpu_ps float @struct_buffer_atomic_cmpswap_i32__sgpr_val__sgpr_cmp__vg
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY11]], %subreg.sub0, [[COPY12]], %subreg.sub1
   ; GFX12-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
-  ; GFX12-NEXT:   [[BUFFER_ATOMIC_CMPSWAP_BOTHEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_CMPSWAP_BOTHEN_RTN [[REG_SEQUENCE3]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
-  ; GFX12-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_CMPSWAP_BOTHEN_RTN]].sub0
+  ; GFX12-NEXT:   [[BUFFER_ATOMIC_CMPSWAP_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_CMPSWAP_VBUFFER_BOTHEN_RTN [[REG_SEQUENCE3]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
+  ; GFX12-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_CMPSWAP_VBUFFER_BOTHEN_RTN]].sub0
   ; GFX12-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX12-NEXT: {{  $}}
@@ -322,7 +322,7 @@ define amdgpu_ps void @struct_buffer_atomic_cmpswap_i32_noret__sgpr_val__sgpr_cm
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY11]], %subreg.sub0, [[COPY12]], %subreg.sub1
   ; GFX12-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
-  ; GFX12-NEXT:   BUFFER_ATOMIC_CMPSWAP_BOTHEN [[REG_SEQUENCE3]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
+  ; GFX12-NEXT:   BUFFER_ATOMIC_CMPSWAP_VBUFFER_BOTHEN [[REG_SEQUENCE3]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
   ; GFX12-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX12-NEXT: {{  $}}
@@ -374,8 +374,8 @@ define amdgpu_ps float @struct_buffer_atomic_cmpswap_i32__vgpr_val__vgpr_cmp__sg
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY7]], %subreg.sub1
   ; GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GFX12-NEXT:   [[BUFFER_ATOMIC_CMPSWAP_BOTHEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_CMPSWAP_BOTHEN_RTN [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY8]], 4095, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
-  ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_CMPSWAP_BOTHEN_RTN]].sub0
+  ; GFX12-NEXT:   [[BUFFER_ATOMIC_CMPSWAP_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_CMPSWAP_VBUFFER_BOTHEN_RTN [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY8]], 4095, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
+  ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_CMPSWAP_VBUFFER_BOTHEN_RTN]].sub0
   ; GFX12-NEXT:   $vgpr0 = COPY [[COPY9]]
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %voffset = add i32 %voffset.base, 4095

@@ -1790,69 +1790,80 @@ let OtherPredicates = [isGFX90APlus] in {
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fmax", f64, "BUFFER_ATOMIC_MAX_F64">;
 } // End SubtargetPredicate = isGFX90APlus
 
-foreach RtnMode = ["ret", "noret"] in {
+multiclass SIBufferAtomicCmpSwapPat_Common<string Inst> {
 
-defvar Op = !cast<SDPatternOperator>(SIbuffer_atomic_cmpswap
-                                     # !if(!eq(RtnMode, "ret"), "", "_noret"));
-defvar InstSuffix = !if(!eq(RtnMode, "ret"), "_RTN", "");
-defvar CachePolicy = !if(!eq(RtnMode, "ret"), (set_glc $cachepolicy),
-  (timm:$cachepolicy));
+  foreach RtnMode = ["ret", "noret"] in {
 
-defvar OffsetResDag = (!cast<MUBUF_Pseudo>("BUFFER_ATOMIC_CMPSWAP_OFFSET" # InstSuffix)
-  (REG_SEQUENCE VReg_64, VGPR_32:$data, sub0, VGPR_32:$cmp, sub1),
-  SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset, CachePolicy);
-def : GCNPat<
-  (Op
-      i32:$data, i32:$cmp, v4i32:$rsrc, 0, 0, (BUFSOffset i32:$soffset),
-      timm:$offset, timm:$cachepolicy, 0),
-  !if(!eq(RtnMode, "ret"),
-    (EXTRACT_SUBREG (i64 (COPY_TO_REGCLASS OffsetResDag, VReg_64)), sub0),
-    OffsetResDag)
->;
+    defvar Op = !cast<SDPatternOperator>(SIbuffer_atomic_cmpswap
+                                         # !if(!eq(RtnMode, "ret"), "", "_noret"));
+    defvar InstSuffix = !if(!eq(RtnMode, "ret"), "_RTN", "");
+    defvar CachePolicy = !if(!eq(RtnMode, "ret"), (set_glc $cachepolicy),
+      (timm:$cachepolicy));
 
-defvar IdxenResDag = (!cast<MUBUF_Pseudo>("BUFFER_ATOMIC_CMPSWAP_IDXEN" # InstSuffix)
-  (REG_SEQUENCE VReg_64, VGPR_32:$data, sub0, VGPR_32:$cmp, sub1),
-  VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
-  CachePolicy);
-def : GCNPat<
-  (Op
-      i32:$data, i32:$cmp, v4i32:$rsrc, i32:$vindex,
-      0, (BUFSOffset i32:$soffset), timm:$offset,
-      timm:$cachepolicy, timm),
-  !if(!eq(RtnMode, "ret"),
-    (EXTRACT_SUBREG (i64 (COPY_TO_REGCLASS IdxenResDag, VReg_64)), sub0),
-    IdxenResDag)
->;
+    defvar OffsetResDag = (!cast<MUBUF_Pseudo>(Inst # "_OFFSET" # InstSuffix)
+      (REG_SEQUENCE VReg_64, VGPR_32:$data, sub0, VGPR_32:$cmp, sub1),
+      SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset, CachePolicy);
+    def : GCNPat<
+      (Op
+          i32:$data, i32:$cmp, v4i32:$rsrc, 0, 0, (BUFSOffset i32:$soffset),
+          timm:$offset, timm:$cachepolicy, 0),
+      !if(!eq(RtnMode, "ret"),
+        (EXTRACT_SUBREG (i64 (COPY_TO_REGCLASS OffsetResDag, VReg_64)), sub0),
+        OffsetResDag)
+    >;
 
-defvar OffenResDag = (!cast<MUBUF_Pseudo>("BUFFER_ATOMIC_CMPSWAP_OFFEN" # InstSuffix)
-  (REG_SEQUENCE VReg_64, VGPR_32:$data, sub0, VGPR_32:$cmp, sub1),
-  VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
-  CachePolicy);
-def : GCNPat<
-  (Op
-      i32:$data, i32:$cmp, v4i32:$rsrc, 0,
-      i32:$voffset, (BUFSOffset i32:$soffset), timm:$offset,
-      timm:$cachepolicy, 0),
-  !if(!eq(RtnMode, "ret"),
-    (EXTRACT_SUBREG (i64 (COPY_TO_REGCLASS OffenResDag, VReg_64)), sub0),
-    OffenResDag)
->;
+    defvar IdxenResDag = (!cast<MUBUF_Pseudo>(Inst # "_IDXEN" # InstSuffix)
+      (REG_SEQUENCE VReg_64, VGPR_32:$data, sub0, VGPR_32:$cmp, sub1),
+      VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
+      CachePolicy);
+    def : GCNPat<
+      (Op
+          i32:$data, i32:$cmp, v4i32:$rsrc, i32:$vindex,
+          0, (BUFSOffset i32:$soffset), timm:$offset,
+          timm:$cachepolicy, timm),
+      !if(!eq(RtnMode, "ret"),
+        (EXTRACT_SUBREG (i64 (COPY_TO_REGCLASS IdxenResDag, VReg_64)), sub0),
+        IdxenResDag)
+    >;
 
-defvar BothenResDag = (!cast<MUBUF_Pseudo>("BUFFER_ATOMIC_CMPSWAP_BOTHEN" # InstSuffix)
-  (REG_SEQUENCE VReg_64, VGPR_32:$data, sub0, VGPR_32:$cmp, sub1),
-  (REG_SEQUENCE VReg_64, VGPR_32:$vindex, sub0, VGPR_32:$voffset, sub1),
-  SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset, CachePolicy);
-def : GCNPat<
-  (Op
-      i32:$data, i32:$cmp, v4i32:$rsrc, i32:$vindex,
-      i32:$voffset, (BUFSOffset i32:$soffset), timm:$offset,
-      timm:$cachepolicy, timm),
-  !if(!eq(RtnMode, "ret"),
-    (EXTRACT_SUBREG (i64 (COPY_TO_REGCLASS BothenResDag, VReg_64)), sub0),
-    BothenResDag)
->;
+    defvar OffenResDag = (!cast<MUBUF_Pseudo>(Inst # "_OFFEN" # InstSuffix)
+      (REG_SEQUENCE VReg_64, VGPR_32:$data, sub0, VGPR_32:$cmp, sub1),
+      VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
+      CachePolicy);
+    def : GCNPat<
+      (Op
+          i32:$data, i32:$cmp, v4i32:$rsrc, 0,
+          i32:$voffset, (BUFSOffset i32:$soffset), timm:$offset,
+          timm:$cachepolicy, 0),
+      !if(!eq(RtnMode, "ret"),
+        (EXTRACT_SUBREG (i64 (COPY_TO_REGCLASS OffenResDag, VReg_64)), sub0),
+        OffenResDag)
+    >;
 
-} // end foreach RtnMode
+    defvar BothenResDag = (!cast<MUBUF_Pseudo>(Inst # "_BOTHEN" # InstSuffix)
+      (REG_SEQUENCE VReg_64, VGPR_32:$data, sub0, VGPR_32:$cmp, sub1),
+      (REG_SEQUENCE VReg_64, VGPR_32:$vindex, sub0, VGPR_32:$voffset, sub1),
+      SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset, CachePolicy);
+    def : GCNPat<
+      (Op
+          i32:$data, i32:$cmp, v4i32:$rsrc, i32:$vindex,
+          i32:$voffset, (BUFSOffset i32:$soffset), timm:$offset,
+          timm:$cachepolicy, timm),
+      !if(!eq(RtnMode, "ret"),
+        (EXTRACT_SUBREG (i64 (COPY_TO_REGCLASS BothenResDag, VReg_64)), sub0),
+        BothenResDag)
+    >;
+  } // end foreach RtnMode
+}
+
+multiclass SIBufferAtomicCmpSwapPat<string Inst> {
+  let SubtargetPredicate = HasUnrestrictedSOffset in {
+    defm : SIBufferAtomicCmpSwapPat_Common<Inst>;
+  }
+  defm : SIBufferAtomicCmpSwapPat_Common<Inst # "_VBUFFER">;
+}
+
+defm : SIBufferAtomicCmpSwapPat<"BUFFER_ATOMIC_CMPSWAP">;
 
 class MUBUFLoad_PatternADDR64 <MUBUF_Pseudo Instr_ADDR64, ValueType vt,
                               PatFrag constant_ld> : GCNPat <
