@@ -1,6 +1,6 @@
 ; Test multiplication of two f32s, producing an f64 result.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z15 | FileCheck %s
 
 declare float @foo()
 
@@ -200,4 +200,14 @@ define float @f7(ptr %ptr0) {
   %trunc9 = fptrunc double %extra9 to float
 
   ret float %trunc9
+}
+
+; Check that reassociation flags do not get in the way of mdebr.
+define double @f8(float %Src) {
+; CHECK-LABEL: f8:
+; CHECK: mdebr %f0, %f0
+; CHECK: br %r14
+  %D = fpext float %Src to double
+  %res = fmul reassoc nsz arcp contract afn double %D, %D
+  ret double %res
 }

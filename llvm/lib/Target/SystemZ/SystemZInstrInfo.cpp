@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -1002,6 +1003,447 @@ SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
     }
   }
   return nullptr;
+}
+
+static bool hasReassocFlags(const MachineInstr *MI) {
+  return (MI->getFlag(MachineInstr::MIFlag::FmReassoc) &&
+          MI->getFlag(MachineInstr::MIFlag::FmNsz));
+}
+
+bool SystemZInstrInfo::IsReassociableFMA(const MachineInstr *MI) const {
+  switch (MI->getOpcode()) {
+  case SystemZ::VFMADB:
+  case SystemZ::VFMASB:
+  case SystemZ::WFMAXB:
+  case SystemZ::WFMADB:
+  case SystemZ::WFMASB:
+    return hasReassocFlags(MI);
+  default:
+    break;
+  }
+  return false;
+}
+
+bool SystemZInstrInfo::IsReassociableAdd(const MachineInstr *MI) const {
+  switch (MI->getOpcode()) {
+  case SystemZ::VFADB:
+  case SystemZ::VFASB:
+  case SystemZ::WFAXB:
+    return hasReassocFlags(MI);
+  case SystemZ::WFADB_CCPseudo:
+  case SystemZ::WFASB_CCPseudo:
+    return hasReassocFlags(MI) &&
+           MI->findRegisterDefOperandIdx(SystemZ::CC, true/*isDead*/) != -1;
+  default:
+    break;
+  }
+  return false;
+}
+
+// EXPERIMENTAL
+static cl::opt<bool> Z_FMA("z-fma", cl::init(false));
+static cl::opt<bool> PPC_FMA("ppc-fma", cl::init(false));
+
+bool SystemZInstrInfo::getFMAPatterns(
+    MachineInstr &Root, SmallVectorImpl<MachineCombinerPattern> &Patterns,
+    bool DoRegPressureReduce) const {
+  assert(Patterns.empty());
+  MachineBasicBlock *MBB = Root.getParent();
+  const MachineRegisterInfo *MRI = &MBB->getParent()->getRegInfo();
+
+  if (!IsReassociableFMA(&Root))
+    return false;
+
+  const TargetRegisterClass *RC = MRI->getRegClass(Root.getOperand(0).getReg());
+
+  // This is more or less always true.
+  auto AllOpsOK = [&MRI, &RC](const MachineInstr &Instr) {
+    for (const auto &MO : Instr.explicit_operands())
+      if (!(MO.isReg() && MO.getReg().isVirtual() && !MO.getSubReg()))
+        return false;
+    const TargetRegisterClass *DefRC = MRI->getRegClass(Instr.getOperand(0).getReg());
+    if (!DefRC->hasSubClassEq(RC) && !DefRC->hasSuperClassEq(RC))
+      return false;
+    return true;
+  };
+  if (!AllOpsOK(Root))
+    return false;
+
+  MachineInstr *TopAdd = nullptr;
+  std::vector<MachineInstr *> FMAChain;
+  FMAChain.push_back(&Root);
+  Register Acc = Root.getOperand(3).getReg();
+  while (MachineInstr *Prev = MRI->getUniqueVRegDef(Acc)) {
+    if (Prev->getParent() != MBB || !MRI->hasOneNonDBGUse(Acc) ||
+        !AllOpsOK(*Prev))
+      break;
+    if (IsReassociableFMA(Prev)) {
+      FMAChain.push_back(Prev);
+      Acc = Prev->getOperand(3).getReg();
+      continue;
+    }
+    if (IsReassociableAdd(Prev))
+      TopAdd = Prev;
+    break;
+  }
+
+  if (Z_FMA) {
+    if (FMAChain.size() >= 2) {
+      Patterns.push_back(MachineCombinerPattern::FMA2_P1P0);
+      LLVM_DEBUG(dbgs() << "add pattern FMA2_P1P0\n");
+      Patterns.push_back(MachineCombinerPattern::FMA2_P0P1);
+      LLVM_DEBUG(dbgs() << "add pattern FMA2_P0P1\n");
+      Patterns.push_back(MachineCombinerPattern::FMA2);
+      LLVM_DEBUG(dbgs() << "add pattern FMA2\n");
+    }
+    if (FMAChain.size() == 1 && TopAdd) {
+      // The latency of the FMA could potentially be hidden above the add:
+      // Try both sides of the add and let MachineCombiner decide on
+      // profitability.
+      Patterns.push_back(MachineCombinerPattern::FMA1_Add_L);
+      LLVM_DEBUG(dbgs() << "add pattern FMA1_Add_L\n");
+      Patterns.push_back(MachineCombinerPattern::FMA1_Add_R);
+      LLVM_DEBUG(dbgs() << "add pattern FMA1_Add_R\n");
+    }
+  } else if (PPC_FMA) {
+    if (FMAChain.size() >= 3) {
+      Patterns.push_back(MachineCombinerPattern::FMA3);
+      LLVM_DEBUG(dbgs() << "add pattern FMA3\n");
+    }
+    if (FMAChain.size() == 2 && TopAdd) {
+      Patterns.push_back(MachineCombinerPattern::FMA2_Add);
+      LLVM_DEBUG(dbgs() << "add pattern FMA2_Add\n");
+    }
+  }
+
+  return Patterns.size() > 0;
+}
+
+bool SystemZInstrInfo::getMachineCombinerPatterns(
+    MachineInstr &Root, SmallVectorImpl<MachineCombinerPattern> &Patterns,
+    bool DoRegPressureReduce) const {
+
+  if (getFMAPatterns(Root, Patterns, DoRegPressureReduce))
+    return true;
+
+  return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
+                                                     DoRegPressureReduce);
+}
+
+void SystemZInstrInfo::finalizeInsInstrs(
+    MachineInstr &Root, MachineCombinerPattern &P,
+    SmallVectorImpl<MachineInstr *> &InsInstrs) const {
+  const TargetRegisterInfo *TRI =
+    Root.getParent()->getParent()->getSubtarget().getRegisterInfo();
+  for (auto *Inst : InsInstrs) {
+    switch (Inst->getOpcode()) {
+    case SystemZ::WFADB_CCPseudo:
+    case SystemZ::WFASB_CCPseudo:
+    case SystemZ::WFSDB_CCPseudo:
+    case SystemZ::WFSSB_CCPseudo:
+      Inst->addRegisterDead(SystemZ::CC, TRI);
+      break;
+    default: break;
+    }
+  }
+}
+
+bool SystemZInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
+                                                   bool Invert) const {
+  unsigned Opc = Inst.getOpcode();
+  if (Invert) {
+    auto InverseOpcode = getInverseOpcode(Opc);
+    if (!InverseOpcode)
+      return false;
+    Opc = *InverseOpcode;
+  }
+
+  switch (Opc) {
+  default:
+    break;
+  // Adds and multiplications.
+  case SystemZ::VFADB:
+  case SystemZ::VFASB:
+  case SystemZ::WFAXB:
+  case SystemZ::WFADB_CCPseudo:
+  case SystemZ::WFASB_CCPseudo:
+  case SystemZ::VFMDB:
+  case SystemZ::VFMSB:
+  case SystemZ::WFMXB:
+  case SystemZ::WFMDB:
+  case SystemZ::WFMSB:
+    return hasReassocFlags(&Inst);
+  }
+
+  return false;
+}
+
+std::optional<unsigned>
+SystemZInstrInfo::getInverseOpcode(unsigned Opcode) const {
+  // fadd <=> fsub in various forms.
+  switch (Opcode) {
+  case SystemZ::VFADB:           return SystemZ::VFSDB;
+  case SystemZ::VFASB:           return SystemZ::VFSSB;
+  case SystemZ::WFAXB:           return SystemZ::WFSXB;
+  case SystemZ::WFADB_CCPseudo:  return SystemZ::WFSDB_CCPseudo;
+  case SystemZ::WFASB_CCPseudo:  return SystemZ::WFSSB_CCPseudo;
+  case SystemZ::VFSDB:           return SystemZ::VFADB;
+  case SystemZ::VFSSB:           return SystemZ::VFASB;
+  case SystemZ::WFSXB:           return SystemZ::WFAXB;
+  case SystemZ::WFSDB_CCPseudo:  return SystemZ::WFADB_CCPseudo;
+  case SystemZ::WFSSB_CCPseudo:  return SystemZ::WFASB_CCPseudo;
+  default:                       return std::nullopt;
+  }
+}
+
+void SystemZInstrInfo::genAlternativeCodeSequence(
+    MachineInstr &Root, MachineCombinerPattern Pattern,
+    SmallVectorImpl<MachineInstr *> &InsInstrs,
+    SmallVectorImpl<MachineInstr *> &DelInstrs,
+    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
+  switch (Pattern) {
+  case MachineCombinerPattern::FMA2_P1P0:
+  case MachineCombinerPattern::FMA2_P0P1:
+  case MachineCombinerPattern::FMA2:
+  case MachineCombinerPattern::FMA1_Add_L:
+  case MachineCombinerPattern::FMA1_Add_R:
+  case MachineCombinerPattern::FMA3:
+  case MachineCombinerPattern::FMA2_Add:
+    reassociateFMA(Root, Pattern, InsInstrs, DelInstrs, InstrIdxForVirtReg);
+    break;
+  default:
+    // Reassociate default patterns.
+    TargetInstrInfo::genAlternativeCodeSequence(Root, Pattern, InsInstrs,
+                                                DelInstrs, InstrIdxForVirtReg);
+    break;
+  }
+}
+
+static void getSplitFMAOpcodes(unsigned FMAOpc, unsigned &AddOpc,
+                               unsigned &MulOpc) {
+  switch (FMAOpc) {
+  case SystemZ::VFMADB: AddOpc = SystemZ::VFADB; MulOpc = SystemZ::VFMDB; break;
+  case SystemZ::VFMASB: AddOpc = SystemZ::VFASB; MulOpc = SystemZ::VFMSB; break;
+  case SystemZ::WFMAXB: AddOpc = SystemZ::WFAXB; MulOpc = SystemZ::WFMXB; break;
+  case SystemZ::WFMADB:
+      AddOpc = SystemZ::WFADB_CCPseudo; MulOpc = SystemZ::WFMDB; break;
+  case SystemZ::WFMASB:
+      AddOpc = SystemZ::WFASB_CCPseudo; MulOpc = SystemZ::WFMSB; break;
+  default:
+    llvm_unreachable("Expected FMA opcode.");
+  }
+}
+
+void SystemZInstrInfo::reassociateFMA(
+    MachineInstr &Root, MachineCombinerPattern Pattern,
+    SmallVectorImpl<MachineInstr *> &InsInstrs,
+    SmallVectorImpl<MachineInstr *> &DelInstrs,
+    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
+  MachineFunction *MF = Root.getMF();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+
+  const TargetRegisterClass *RC = Root.getRegClassConstraint(0, this, TRI);
+  Register DstReg = Root.getOperand(0).getReg();
+  std::vector<MachineInstr *> Chain; // XXXXX
+  Chain.push_back(&Root);
+
+  uint16_t IntersectedFlags = Root.getFlags();
+  auto getIntersectedFlags = [&]() {
+    for (auto *MI : Chain)
+      IntersectedFlags &= MI->getFlags();
+  };
+
+  auto createNewVReg = [&](unsigned NewInsIdx) -> Register {
+    Register NewReg = MRI.createVirtualRegister(RC);
+    InstrIdxForVirtReg.insert(std::make_pair(NewReg, NewInsIdx));
+    return NewReg;
+  };
+
+  auto finalizeNewMIs = [&](ArrayRef<MachineInstr *> NewMIs) {
+    for (auto *MI : NewMIs) {
+      setSpecialOperandAttr(*MI, IntersectedFlags);
+      MI->addRegisterDead(SystemZ::CC, TRI);
+      InsInstrs.push_back(MI);
+    }
+  };
+
+  auto deleteOld = [&InsInstrs, &DelInstrs, &Chain]() {
+    assert(!InsInstrs.empty() &&
+           "Insertion instructions set should not be empty!");
+    // Record old instructions for deletion.
+    for (auto *MI : make_range(Chain.rbegin(), Chain.rend()))
+      DelInstrs.push_back(MI);
+  };
+
+  assert(IsReassociableFMA(&Root));
+  unsigned FMAOpc = Root.getOpcode();
+  unsigned AddOpc, MulOpc;
+  getSplitFMAOpcodes(FMAOpc, AddOpc, MulOpc);
+
+#ifndef NDEBUG
+  auto IsAllFMA = [&Chain, &FMAOpc]() {
+    for (auto *MI : Chain)
+      if (MI->getOpcode() != FMAOpc)
+        return false;
+    return true;
+  };
+#endif
+
+  switch (Pattern) {
+  case MachineCombinerPattern::FMA2_P1P0:
+  case MachineCombinerPattern::FMA2_P0P1: {
+    if (Pattern == MachineCombinerPattern::FMA2_P1P0)
+      LLVM_DEBUG(dbgs() << "reassociating using pattern FMA_P1P0\n");
+    else
+      LLVM_DEBUG(dbgs() << "reassociating using pattern FMA_P0P1\n");
+    Chain.push_back(MRI.getUniqueVRegDef(Chain.back()->getOperand(3).getReg()));
+    assert(IsAllFMA());
+    getIntersectedFlags(); // XXXXXXXXXx
+    Register NewVRA = createNewVReg(0);
+    Register NewVRB = createNewVReg(1);
+    unsigned FirstMulIdx =
+      Pattern == MachineCombinerPattern::FMA2_P1P0 ? 1 : 0;
+    unsigned SecondMulIdx = FirstMulIdx == 0 ? 1 : 0;
+    MachineInstr *MINewA =
+        BuildMI(*MF, Chain[FirstMulIdx]->getDebugLoc(), get(MulOpc), NewVRA)
+            .add(Chain[FirstMulIdx]->getOperand(1))
+            .add(Chain[FirstMulIdx]->getOperand(2));
+    MachineInstr *MINewB =
+        BuildMI(*MF, Chain[SecondMulIdx]->getDebugLoc(), get(FMAOpc), NewVRB)
+           .add(Chain[SecondMulIdx]->getOperand(1))
+            .add(Chain[SecondMulIdx]->getOperand(2))
+            .addReg(NewVRA);
+    MachineInstr *MINewC =
+        BuildMI(*MF, Chain[1]->getDebugLoc(), get(AddOpc), DstReg)
+            .add(Chain[1]->getOperand(3))
+            .addReg(NewVRB);
+    finalizeNewMIs({MINewA, MINewB, MINewC});
+    break;
+  }
+  case MachineCombinerPattern::FMA2: {
+    LLVM_DEBUG(dbgs() << "reassociating using pattern FMA2\n");
+    Chain.push_back(MRI.getUniqueVRegDef(Chain.back()->getOperand(3).getReg()));
+    assert(IsAllFMA());
+    getIntersectedFlags();
+    Register NewVRA = createNewVReg(0);
+    MachineInstr *MINewA =
+        BuildMI(*MF, Chain[0]->getDebugLoc(), get(FMAOpc), NewVRA)
+            .add(Chain[0]->getOperand(1))
+            .add(Chain[0]->getOperand(2))
+            .add(Chain[1]->getOperand(3));
+    MachineInstr *MINewB =
+        BuildMI(*MF, Chain[1]->getDebugLoc(), get(FMAOpc), DstReg)
+            .add(Chain[1]->getOperand(1))
+            .add(Chain[1]->getOperand(2))
+            .addReg(NewVRA);
+    finalizeNewMIs({MINewA, MINewB});
+    break;
+  }
+  case MachineCombinerPattern::FMA1_Add_L:
+  case MachineCombinerPattern::FMA1_Add_R: {
+    if (Pattern == MachineCombinerPattern::FMA1_Add_L)
+      LLVM_DEBUG(dbgs() << "reassociating using pattern FMA1_Add_L\n");
+    else
+      LLVM_DEBUG(dbgs() << "reassociating using pattern FMA1_Add_R\n");
+    assert(IsAllFMA());
+    Chain.push_back(MRI.getUniqueVRegDef(Chain.back()->getOperand(3).getReg()));
+    assert(Chain.back()->getOpcode() == AddOpc && "Expected matching Add");
+    getIntersectedFlags();
+    unsigned Op = Pattern == MachineCombinerPattern::FMA1_Add_L ? 1 : 2;
+    unsigned OtherOp = Op == 1 ? 2 : 1;
+    Register NewVRA = createNewVReg(0);
+    MachineInstr *MINewA =
+        BuildMI(*MF, Chain[0]->getDebugLoc(), get(FMAOpc), NewVRA)
+            .add(Chain[0]->getOperand(1))
+            .add(Chain[0]->getOperand(2))
+            .add(Chain[1]->getOperand(Op));
+    MachineInstr *MINewB =
+        BuildMI(*MF, Chain[1]->getDebugLoc(), get(AddOpc), DstReg)
+            .addReg(NewVRA)
+            .add(Chain[1]->getOperand(OtherOp));
+    finalizeNewMIs({MINewA, MINewB});
+    break;
+  }
+  case MachineCombinerPattern::FMA3: {
+    LLVM_DEBUG(dbgs() << "reassociating using pattern FMA3\n");
+    Chain.push_back(MRI.getUniqueVRegDef(Chain.back()->getOperand(3).getReg()));
+    Chain.push_back(MRI.getUniqueVRegDef(Chain.back()->getOperand(3).getReg()));
+    assert(IsAllFMA());
+    getIntersectedFlags();
+    Register NewVRA = createNewVReg(0);
+    Register NewVRB = createNewVReg(1);
+    Register NewVRC = createNewVReg(2);
+    MachineInstr *MINewA =
+        BuildMI(*MF, Chain[2]->getDebugLoc(), get(MulOpc), NewVRA)
+            .add(Chain[2]->getOperand(1))
+            .add(Chain[2]->getOperand(2));
+    MachineInstr *MINewB =
+        BuildMI(*MF, Chain[1]->getDebugLoc(), get(FMAOpc), NewVRB)
+            .add(Chain[1]->getOperand(1))
+            .add(Chain[1]->getOperand(2))
+            .add(Chain[2]->getOperand(3));
+    MachineInstr *MINewC =
+        BuildMI(*MF, Chain[0]->getDebugLoc(), get(FMAOpc), NewVRC)
+            .add(Chain[0]->getOperand(1))
+            .add(Chain[0]->getOperand(2))
+            .addReg(NewVRA);
+    MachineInstr *MINewD =
+        BuildMI(*MF, Chain[0]->getDebugLoc(), get(AddOpc), DstReg)
+            .addReg(NewVRB)
+            .addReg(NewVRC);
+    finalizeNewMIs({MINewA, MINewB, MINewC, MINewD});
+    break;
+  }
+  case MachineCombinerPattern::FMA2_Add: {
+    LLVM_DEBUG(dbgs() << "reassociating using pattern FMA2_Add\n");
+    Chain.push_back(MRI.getUniqueVRegDef(Chain.back()->getOperand(3).getReg()));
+    assert(IsAllFMA());
+    Chain.push_back(MRI.getUniqueVRegDef(Chain.back()->getOperand(3).getReg()));
+    assert(Chain.back()->getOpcode() == AddOpc && "Expected matching Add");
+    getIntersectedFlags();
+    Register NewVRA = createNewVReg(0);
+    Register NewVRB = createNewVReg(1);
+    MachineInstr *MINewA =
+        BuildMI(*MF, Chain[1]->getDebugLoc(), get(FMAOpc), NewVRA)
+            .add(Chain[1]->getOperand(1))
+            .add(Chain[1]->getOperand(2))
+            .add(Chain[2]->getOperand(1));
+    MachineInstr *MINewB =
+        BuildMI(*MF, Chain[0]->getDebugLoc(), get(FMAOpc), NewVRB)
+            .add(Chain[0]->getOperand(1))
+            .add(Chain[0]->getOperand(2))
+            .add(Chain[2]->getOperand(2));
+    MachineInstr *MINewC =
+        BuildMI(*MF, Chain[0]->getDebugLoc(), get(AddOpc), DstReg)
+            .addReg(NewVRA)
+            .addReg(NewVRB);
+    finalizeNewMIs({MINewA, MINewB, MINewC});
+    break;
+  }
+  default:
+    llvm_unreachable("not recognized pattern!");
+  }
+
+  deleteOld();
+}
+
+bool
+SystemZInstrInfo::accumulateInstrSeqToRootLatency(MachineInstr &Root) const {
+  // This doesn't make much sense for FMA patterns as they typically use an
+  // extra Add to do things in parallell.
+  if (IsReassociableFMA(&Root))    // XXXXXXXXXXXX
+    return false;
+
+  return true;
+}
+
+void SystemZInstrInfo::setSpecialOperandAttr(MachineInstr &MI,
+                                             uint32_t Flags) const {
+  MI.setFlags(Flags);
+  MI.clearFlag(MachineInstr::MIFlag::NoSWrap);
+  MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
+  MI.clearFlag(MachineInstr::MIFlag::IsExact);
 }
 
 MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(

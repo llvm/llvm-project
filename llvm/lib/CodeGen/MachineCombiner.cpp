@@ -306,6 +306,13 @@ CombinerObjective MachineCombiner::getCombinerObjective(unsigned Pattern) {
   case MachineCombinerPattern::REASSOC_AX_YB:
   case MachineCombinerPattern::REASSOC_XA_BY:
   case MachineCombinerPattern::REASSOC_XA_YB:
+  case MachineCombinerPattern::FMA2_P1P0:
+  case MachineCombinerPattern::FMA2_P0P1:
+  case MachineCombinerPattern::FMA2:
+  case MachineCombinerPattern::FMA1_Add_L:
+  case MachineCombinerPattern::FMA1_Add_R:
+  case MachineCombinerPattern::FMA3:
+  case MachineCombinerPattern::FMA2_Add:
     return CombinerObjective::MustReduceDepth;
   default:
     return TII->getCombinerObjective(Pattern);
