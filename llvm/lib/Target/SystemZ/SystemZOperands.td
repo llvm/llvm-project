@@ -300,7 +300,6 @@ def U1Imm  : ImmediateAsmOperand<"U1Imm">;
 def U2Imm  : ImmediateAsmOperand<"U2Imm">;
 def U3Imm  : ImmediateAsmOperand<"U3Imm">;
 def U4Imm  : ImmediateAsmOperand<"U4Imm">;
-def U6Imm  : ImmediateAsmOperand<"U6Imm">;
 def S8Imm  : ImmediateAsmOperand<"S8Imm">;
 def U8Imm  : ImmediateAsmOperand<"U8Imm">;
 def U12Imm : ImmediateAsmOperand<"U12Imm">;
