@@ -910,13 +910,9 @@ define i8 @v2i64_concat_undef(<2 x i64> %vec) {
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,3,3,2]
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm1
-; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm1[0,2,2,3,4,5,6,7]
-; SSE2-SSSE3-NEXT:    psllw $15, %xmm0
-; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm0
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,0,3,2]
+; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    movmskpd %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
 ;
@@ -924,11 +920,7 @@ define i8 @v2i64_concat_undef(<2 x i64> %vec) {
 ; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX12-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; AVX12-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
-; AVX12-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
-; AVX12-NEXT:    vpsllw $15, %xmm0, %xmm0
-; AVX12-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
-; AVX12-NEXT:    vpmovmskb %xmm0, %eax
+; AVX12-NEXT:    vmovmskpd %xmm0, %eax
 ; AVX12-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX12-NEXT:    retq
 ;
