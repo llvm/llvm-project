@@ -6,7 +6,7 @@
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
-define amdgpu_kernel void @reg_coalescer_breaks_dead(ptr addrspace(1) nocapture readonly %arg, i32 %arg1, i32 %arg2, i32 %arg3) #1 {
+define amdgpu_kernel void @reg_coalescer_breaks_dead(ptr addrspace(1) nocapture readonly %arg, i32 %arg1, i32 %arg2, i32 %arg3, i1 %c0) #1 {
 bb:
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   %cmp0 = icmp eq i32 %id.x, 0
@@ -18,7 +18,7 @@ bb3:                                              ; preds = %bb
 
 bb4:                                              ; preds = %bb6, %bb
   %tmp5 = phi <2 x i32> [ zeroinitializer, %bb ], [ %tmp13, %bb6 ]
-  br i1 undef, label %bb15, label %bb16
+  br i1 %c0, label %bb15, label %bb16
 
 bb6:                                              ; preds = %bb6, %bb3
   %tmp7 = phi <2 x i32> [ zeroinitializer, %bb3 ], [ %tmp13, %bb6 ]
