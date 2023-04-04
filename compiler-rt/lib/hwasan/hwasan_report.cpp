@@ -331,7 +331,7 @@ static void ShowHeapOrGlobalCandidate(uptr untagged_addr, tag_t *candidate,
            untagged_addr, offset, whence, chunk.UsedSize(), chunk.Beg(),
            chunk.End());
     Printf("%s", d.Allocation());
-    Printf("allocated here:\n");
+    Printf("allocated by thread T%u here:\n", chunk.GetAllocThreadId());
     Printf("%s", d.Default());
     GetStackTraceFromId(chunk.GetAllocStackId()).Print();
     return;
@@ -473,12 +473,12 @@ void PrintAddressDescription(
              har.requested_size, UntagAddr(har.tagged_addr),
              UntagAddr(har.tagged_addr) + har.requested_size);
       Printf("%s", d.Allocation());
-      Printf("freed by thread T%zd here:\n", t->unique_id());
+      Printf("freed by thread T%u here:\n", t->unique_id());
       Printf("%s", d.Default());
       GetStackTraceFromId(har.free_context_id).Print();
 
       Printf("%s", d.Allocation());
-      Printf("previously allocated here:\n", t);
+      Printf("previously allocated by thread T%u here:\n", har.alloc_thread_id);
       Printf("%s", d.Default());
       GetStackTraceFromId(har.alloc_context_id).Print();
 
