@@ -1819,7 +1819,8 @@ void Parser::HandlePragmaAttribute() {
     ConsumeToken();
   };
 
-  if (Tok.is(tok::l_square) && NextToken().is(tok::l_square)) {
+  if ((Tok.is(tok::l_square) && NextToken().is(tok::l_square)) ||
+      Tok.isRegularKeywordAttribute()) {
     // Parse the CXX11 style attribute.
     ParseCXX11AttributeSpecifier(Attrs);
   } else if (Tok.is(tok::kw___attribute)) {

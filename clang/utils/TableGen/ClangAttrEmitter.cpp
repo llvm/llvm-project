@@ -3882,7 +3882,8 @@ static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
       OS << "bool diagAppertainsToDecl(Sema &S, const ParsedAttr &AL, ";
       OS << "const Decl *D) const override {\n";
       OS << "  S.Diag(AL.getLoc(), diag::err_attribute_invalid_on_decl)\n";
-      OS << "    << AL << D->getLocation();\n";
+      OS << "    << AL << AL.isRegularKeywordAttribute() << "
+            "D->getLocation();\n";
       OS << "  return false;\n";
       OS << "}\n\n";
     }
@@ -3911,7 +3912,7 @@ static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
     OS << (Warn ? "warn_attribute_wrong_decl_type_str"
                 : "err_attribute_wrong_decl_type_str");
     OS << ")\n";
-    OS << "      << Attr << ";
+    OS << "      << Attr << Attr.isRegularKeywordAttribute() << ";
     OS << CalculateDiagnostic(*SubjectObj) << ";\n";
     OS << "    return false;\n";
     OS << "  }\n";
@@ -3926,7 +3927,8 @@ static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
       OS << "bool diagAppertainsToStmt(Sema &S, const ParsedAttr &AL, ";
       OS << "const Stmt *St) const override {\n";
       OS << "  S.Diag(AL.getLoc(), diag::err_decl_attribute_invalid_on_stmt)\n";
-      OS << "    << AL << St->getBeginLoc();\n";
+      OS << "    << AL << AL.isRegularKeywordAttribute() << "
+            "St->getBeginLoc();\n";
       OS << "  return false;\n";
       OS << "}\n\n";
     }
@@ -3945,7 +3947,7 @@ static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
     OS << (Warn ? "warn_attribute_wrong_decl_type_str"
                 : "err_attribute_wrong_decl_type_str");
     OS << ")\n";
-    OS << "      << Attr << ";
+    OS << "      << Attr << Attr.isRegularKeywordAttribute() << ";
     OS << CalculateDiagnostic(*SubjectObj) << ";\n";
     OS << "    return false;\n";
     OS << "  }\n";
@@ -4016,7 +4018,8 @@ static void GenerateMutualExclusionsChecks(const Record &Attr,
     for (const std::string &A : DeclAttrs) {
       OS << "    if (const auto *A = D->getAttr<" << A << ">()) {\n";
       OS << "      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)"
-         << " << AL << A;\n";
+         << " << AL << A << (AL.isRegularKeywordAttribute() ||"
+         << " A->isRegularKeywordAttribute());\n";
       OS << "      S.Diag(A->getLocation(), diag::note_conflicting_attribute);";
       OS << "      \nreturn false;\n";
       OS << "    }\n";
@@ -4037,7 +4040,8 @@ static void GenerateMutualExclusionsChecks(const Record &Attr,
                     << ">()) {\n";
         MergeDeclOS << "      S.Diag(First->getLocation(), "
                     << "diag::err_attributes_are_not_compatible) << First << "
-                    << "Second;\n";
+                    << "Second << (First->isRegularKeywordAttribute() || "
+                    << "Second->isRegularKeywordAttribute());\n";
         MergeDeclOS << "      S.Diag(Second->getLocation(), "
                     << "diag::note_conflicting_attribute);\n";
         MergeDeclOS << "      return false;\n";
@@ -4077,7 +4081,8 @@ static void GenerateMutualExclusionsChecks(const Record &Attr,
     MergeStmtOS << "      if (Iter != C.end()) {\n";
     MergeStmtOS << "        S.Diag((*Iter)->getLocation(), "
                 << "diag::err_attributes_are_not_compatible) << *Iter << "
-                << "Second;\n";
+                << "Second << ((*Iter)->isRegularKeywordAttribute() || "
+                << "Second->isRegularKeywordAttribute());\n";
     MergeStmtOS << "        S.Diag(Second->getLocation(), "
                 << "diag::note_conflicting_attribute);\n";
     MergeStmtOS << "        return false;\n";
