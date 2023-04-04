@@ -59,36 +59,36 @@ define hidden fastcc %struct.LIST_HELP* @test(%struct.PROOFSEARCH_HELP* %Search,
 ; CHECK-NEXT:    b .LBB0_1
 entry:
   %cmp4.i.i = icmp ugt i32 %Level, 31
-  %0 = add i32 %Level, -32
-  %1 = lshr i32 %0, 5
-  %2 = shl nuw i32 %1, 5
-  %3 = sub i32 %0, %2
-  %4 = add nuw nsw i32 %1, 1
+  %i = add i32 %Level, -32
+  %i1 = lshr i32 %i, 5
+  %i2 = shl nuw i32 %i1, 5
+  %i3 = sub i32 %i, %i2
+  %i4 = add nuw nsw i32 %i1, 1
   br label %for.body
 
 for.body:                                         ; preds = %for.inc, %entry
-  %Scan.038 = phi %struct.LIST_HELP* [ %ClauseList, %entry ], [ %9, %for.inc ]
+  %Scan.038 = phi %struct.LIST_HELP* [ %ClauseList, %entry ], [ %i9, %for.inc ]
   %car.i33 = getelementptr inbounds %struct.LIST_HELP, %struct.LIST_HELP* %Scan.038, i32 0, i32 1
-  %5 = bitcast i8** %car.i33 to %struct.CLAUSE_HELP**
-  %6 = load %struct.CLAUSE_HELP*, %struct.CLAUSE_HELP** %5, align 4
-  %. = add i32 %4, 10
-  %.Level = select i1 %cmp4.i.i, i32 %3, i32 %Level
-  %splitfield.i = getelementptr inbounds %struct.CLAUSE_HELP, %struct.CLAUSE_HELP* %6, i32 0, i32 4
-  %7 = load i32*, i32** %splitfield.i, align 4
-  %arrayidx.i = getelementptr inbounds i32, i32* %7, i32 %.
-  %8 = load i32, i32* %arrayidx.i, align 4
+  %i5 = bitcast i8** %car.i33 to %struct.CLAUSE_HELP**
+  %i6 = load %struct.CLAUSE_HELP*, %struct.CLAUSE_HELP** %i5, align 4
+  %. = add i32 %i4, 10
+  %.Level = select i1 %cmp4.i.i, i32 %i3, i32 %Level
+  %splitfield.i = getelementptr inbounds %struct.CLAUSE_HELP, %struct.CLAUSE_HELP* %i6, i32 0, i32 4
+  %i7 = load i32*, i32** %splitfield.i, align 4
+  %arrayidx.i = getelementptr inbounds i32, i32* %i7, i32 %.
+  %i8 = load i32, i32* %arrayidx.i, align 4
   %shl.i = shl i32 1, %.Level
-  %and.i = and i32 %8, %shl.i
+  %and.i = and i32 %i8, %shl.i
   %cmp4.i = icmp eq i32 %and.i, 0
   br i1 %cmp4.i, label %for.inc, label %if.then
 
 if.then:                                          ; preds = %for.body
-  tail call void @foo(%struct.PROOFSEARCH_HELP* %Search, %struct.CLAUSE_HELP* %6)
+  tail call void @foo(%struct.PROOFSEARCH_HELP* %Search, %struct.CLAUSE_HELP* %i6)
   store i8* null, i8** %car.i33, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %if.then, %for.body
   %cdr.i = getelementptr inbounds %struct.LIST_HELP, %struct.LIST_HELP* %Scan.038, i32 0, i32 0
-  %9 = load %struct.LIST_HELP*, %struct.LIST_HELP** %cdr.i, align 4
+  %i9 = load %struct.LIST_HELP*, %struct.LIST_HELP** %cdr.i, align 4
   br label %for.body
 }
