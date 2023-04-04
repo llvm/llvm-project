@@ -5071,37 +5071,6 @@ private:
       NumDesignators(0), NumSubExprs(NumSubExprs), Designators(nullptr) { }
 
 public:
-  /// A field designator, e.g., ".x".
-  struct FieldDesignator {
-    /// Refers to the field that is being initialized. The low bit
-    /// of this field determines whether this is actually a pointer
-    /// to an IdentifierInfo (if 1) or a FieldDecl (if 0). When
-    /// initially constructed, a field designator will store an
-    /// IdentifierInfo*. After semantic analysis has resolved that
-    /// name, the field designator will instead store a FieldDecl*.
-    uintptr_t NameOrField;
-
-    /// The location of the '.' in the designated initializer.
-    SourceLocation DotLoc;
-
-    /// The location of the field name in the designated initializer.
-    SourceLocation FieldLoc;
-  };
-
-  /// An array or GNU array-range designator, e.g., "[9]" or "[10..15]".
-  struct ArrayOrRangeDesignator {
-    /// Location of the first index expression within the designated
-    /// initializer expression's list of subexpressions.
-    unsigned Index;
-    /// The location of the '[' starting the array range designator.
-    SourceLocation LBracketLoc;
-    /// The location of the ellipsis separating the start and end
-    /// indices. Only valid for GNU array-range designators.
-    SourceLocation EllipsisLoc;
-    /// The location of the ']' terminating the array range designator.
-    SourceLocation RBracketLoc;
-  };
-
   /// Represents a single C99 designator.
   ///
   /// @todo This class is infuriatingly similar to clang::Designator,
@@ -5109,118 +5078,184 @@ public:
   /// keep us from reusing it. Try harder, later, to rectify these
   /// differences.
   class Designator {
+    /// A field designator, e.g., ".x".
+    struct FieldDesignatorInfo {
+      /// Refers to the field that is being initialized. The low bit
+      /// of this field determines whether this is actually a pointer
+      /// to an IdentifierInfo (if 1) or a FieldDecl (if 0). When
+      /// initially constructed, a field designator will store an
+      /// IdentifierInfo*. After semantic analysis has resolved that
+      /// name, the field designator will instead store a FieldDecl*.
+      uintptr_t NameOrField;
+
+      /// The location of the '.' in the designated initializer.
+      SourceLocation DotLoc;
+
+      /// The location of the field name in the designated initializer.
+      SourceLocation FieldLoc;
+
+      FieldDesignatorInfo(const IdentifierInfo *II, SourceLocation DotLoc,
+                          SourceLocation FieldLoc)
+          : NameOrField(reinterpret_cast<uintptr_t>(II) | 0x1), DotLoc(DotLoc),
+            FieldLoc(FieldLoc) {}
+    };
+
+    /// An array or GNU array-range designator, e.g., "[9]" or "[10...15]".
+    struct ArrayOrRangeDesignatorInfo {
+      /// Location of the first index expression within the designated
+      /// initializer expression's list of subexpressions.
+      unsigned Index;
+
+      /// The location of the '[' starting the array range designator.
+      SourceLocation LBracketLoc;
+
+      /// The location of the ellipsis separating the start and end
+      /// indices. Only valid for GNU array-range designators.
+      SourceLocation EllipsisLoc;
+
+      /// The location of the ']' terminating the array range designator.
+      SourceLocation RBracketLoc;
+
+      ArrayOrRangeDesignatorInfo(unsigned Index, SourceLocation LBracketLoc,
+                                 SourceLocation RBracketLoc)
+          : Index(Index), LBracketLoc(LBracketLoc), RBracketLoc(RBracketLoc) {}
+
+      ArrayOrRangeDesignatorInfo(unsigned Index,
+                                 SourceLocation LBracketLoc,
+                                 SourceLocation EllipsisLoc,
+                                 SourceLocation RBracketLoc)
+          : Index(Index), LBracketLoc(LBracketLoc), EllipsisLoc(EllipsisLoc),
+            RBracketLoc(RBracketLoc) {}
+    };
+
     /// The kind of designator this describes.
-    enum {
+    enum DesignatorKind {
       FieldDesignator,
       ArrayDesignator,
       ArrayRangeDesignator
-    } Kind;
+    };
+
+    DesignatorKind Kind;
 
     union {
       /// A field designator, e.g., ".x".
-      struct FieldDesignator Field;
+      struct FieldDesignatorInfo FieldInfo;
+
       /// An array or GNU array-range designator, e.g., "[9]" or "[10..15]".
-      struct ArrayOrRangeDesignator ArrayOrRange;
+      struct ArrayOrRangeDesignatorInfo ArrayOrRangeInfo;
     };
-    friend class DesignatedInitExpr;
+
+    Designator(DesignatorKind Kind) : Kind(Kind) {}
 
   public:
     Designator() {}
-
-    /// Initializes a field designator.
-    Designator(const IdentifierInfo *FieldName, SourceLocation DotLoc,
-               SourceLocation FieldLoc)
-      : Kind(FieldDesignator) {
-      new (&Field) DesignatedInitExpr::FieldDesignator;
-      Field.NameOrField = reinterpret_cast<uintptr_t>(FieldName) | 0x01;
-      Field.DotLoc = DotLoc;
-      Field.FieldLoc = FieldLoc;
-    }
-
-    /// Initializes an array designator.
-    Designator(unsigned Index, SourceLocation LBracketLoc,
-               SourceLocation RBracketLoc)
-      : Kind(ArrayDesignator) {
-      new (&ArrayOrRange) DesignatedInitExpr::ArrayOrRangeDesignator;
-      ArrayOrRange.Index = Index;
-      ArrayOrRange.LBracketLoc = LBracketLoc;
-      ArrayOrRange.EllipsisLoc = SourceLocation();
-      ArrayOrRange.RBracketLoc = RBracketLoc;
-    }
-
-    /// Initializes a GNU array-range designator.
-    Designator(unsigned Index, SourceLocation LBracketLoc,
-               SourceLocation EllipsisLoc, SourceLocation RBracketLoc)
-      : Kind(ArrayRangeDesignator) {
-      new (&ArrayOrRange) DesignatedInitExpr::ArrayOrRangeDesignator;
-      ArrayOrRange.Index = Index;
-      ArrayOrRange.LBracketLoc = LBracketLoc;
-      ArrayOrRange.EllipsisLoc = EllipsisLoc;
-      ArrayOrRange.RBracketLoc = RBracketLoc;
-    }
 
     bool isFieldDesignator() const { return Kind == FieldDesignator; }
     bool isArrayDesignator() const { return Kind == ArrayDesignator; }
     bool isArrayRangeDesignator() const { return Kind == ArrayRangeDesignator; }
 
-    IdentifierInfo *getFieldName() const;
+    //===------------------------------------------------------------------===//
+    // FieldDesignatorInfo
+
+    /// Initializes a field designator.
+    static Designator CreateFieldDesignator(const IdentifierInfo *FieldName,
+                                            SourceLocation DotLoc,
+                                            SourceLocation FieldLoc) {
+      Designator D(FieldDesignator);
+      new (&D.FieldInfo) FieldDesignatorInfo(FieldName, DotLoc, FieldLoc);
+      return D;
+    }
+
+    const IdentifierInfo *getFieldName() const;
 
     FieldDecl *getField() const {
-      assert(Kind == FieldDesignator && "Only valid on a field designator");
-      if (Field.NameOrField & 0x01)
+      assert(isFieldDesignator() && "Only valid on a field designator");
+      if (FieldInfo.NameOrField & 0x01)
         return nullptr;
       else
-        return reinterpret_cast<FieldDecl *>(Field.NameOrField);
+        return reinterpret_cast<FieldDecl *>(FieldInfo.NameOrField);
     }
 
     void setField(FieldDecl *FD) {
-      assert(Kind == FieldDesignator && "Only valid on a field designator");
-      Field.NameOrField = reinterpret_cast<uintptr_t>(FD);
+      assert(isFieldDesignator() && "Only valid on a field designator");
+      FieldInfo.NameOrField = reinterpret_cast<uintptr_t>(FD);
     }
 
     SourceLocation getDotLoc() const {
-      assert(Kind == FieldDesignator && "Only valid on a field designator");
-      return Field.DotLoc;
+      assert(isFieldDesignator() && "Only valid on a field designator");
+      return FieldInfo.DotLoc;
     }
 
     SourceLocation getFieldLoc() const {
-      assert(Kind == FieldDesignator && "Only valid on a field designator");
-      return Field.FieldLoc;
+      assert(isFieldDesignator() && "Only valid on a field designator");
+      return FieldInfo.FieldLoc;
+    }
+
+    //===------------------------------------------------------------------===//
+    // ArrayOrRangeDesignator
+
+    /// Initializes an array designator.
+    static Designator CreateArrayDesignator(unsigned Index,
+                                            SourceLocation LBracketLoc,
+                                            SourceLocation RBracketLoc) {
+      Designator D(ArrayDesignator);
+      new (&D.ArrayOrRangeInfo) ArrayOrRangeDesignatorInfo(Index, LBracketLoc,
+                                                           RBracketLoc);
+      return D;
+    }
+
+    /// Initializes a GNU array-range designator.
+    static Designator CreateArrayRangeDesignator(unsigned Index,
+                                                 SourceLocation LBracketLoc,
+                                                 SourceLocation EllipsisLoc,
+                                                 SourceLocation RBracketLoc) {
+      Designator D(ArrayRangeDesignator);
+      new (&D.ArrayOrRangeInfo) ArrayOrRangeDesignatorInfo(Index, LBracketLoc,
+                                                           EllipsisLoc,
+                                                           RBracketLoc);
+      return D;
+    }
+
+    unsigned getArrayIndex() const {
+      assert((isArrayDesignator() || isArrayRangeDesignator()) &&
+             "Only valid on an array or array-range designator");
+      return ArrayOrRangeInfo.Index;
     }
 
     SourceLocation getLBracketLoc() const {
-      assert((Kind == ArrayDesignator || Kind == ArrayRangeDesignator) &&
+      assert((isArrayDesignator() || isArrayRangeDesignator()) &&
              "Only valid on an array or array-range designator");
-      return ArrayOrRange.LBracketLoc;
-    }
-
-    SourceLocation getRBracketLoc() const {
-      assert((Kind == ArrayDesignator || Kind == ArrayRangeDesignator) &&
-             "Only valid on an array or array-range designator");
-      return ArrayOrRange.RBracketLoc;
+      return ArrayOrRangeInfo.LBracketLoc;
     }
 
     SourceLocation getEllipsisLoc() const {
-      assert(Kind == ArrayRangeDesignator &&
+      assert(isArrayRangeDesignator() &&
              "Only valid on an array-range designator");
-      return ArrayOrRange.EllipsisLoc;
+      return ArrayOrRangeInfo.EllipsisLoc;
     }
 
-    unsigned getFirstExprIndex() const {
-      assert((Kind == ArrayDesignator || Kind == ArrayRangeDesignator) &&
+    SourceLocation getRBracketLoc() const {
+      assert((isArrayDesignator() || isArrayRangeDesignator()) &&
              "Only valid on an array or array-range designator");
-      return ArrayOrRange.Index;
+      return ArrayOrRangeInfo.RBracketLoc;
+    }
+
+    unsigned xgetFirstExprIndex() const {
+      assert((isArrayDesignator() || isArrayRangeDesignator()) &&
+             "Only valid on an array or array-range designator");
+      return ArrayOrRangeInfo.Index;
     }
 
     SourceLocation getBeginLoc() const LLVM_READONLY {
-      if (Kind == FieldDesignator)
-        return getDotLoc().isInvalid()? getFieldLoc() : getDotLoc();
-      else
-        return getLBracketLoc();
+      if (isFieldDesignator())
+        return getDotLoc().isInvalid() ? getFieldLoc() : getDotLoc();
+      return getLBracketLoc();
     }
+
     SourceLocation getEndLoc() const LLVM_READONLY {
-      return Kind == FieldDesignator ? getFieldLoc() : getRBracketLoc();
+      return isFieldDesignator() ? getFieldLoc() : getRBracketLoc();
     }
+
     SourceRange getSourceRange() const LLVM_READONLY {
       return SourceRange(getBeginLoc(), getEndLoc());
     }
