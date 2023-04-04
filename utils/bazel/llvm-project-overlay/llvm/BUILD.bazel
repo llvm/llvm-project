@@ -615,6 +615,7 @@ cc_library(
         # regular dependency.
         "include/llvm/MC/*.h",
     ]),
+    alwayslink = True,
     copts = llvm_copts,
     textual_hdrs = glob(["utils/TableGen/*.def"]),
     deps = [
