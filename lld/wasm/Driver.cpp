@@ -280,7 +280,7 @@ void LinkerDriver::addFile(StringRef path) {
     files.push_back(createObjectFile(mbref));
     break;
   case file_magic::unknown:
-    if (mbref.getBuffer().starts_with("#STUB\n")) {
+    if (mbref.getBuffer().starts_with("#STUB")) {
       files.push_back(make<StubFile>(mbref));
       break;
     }
