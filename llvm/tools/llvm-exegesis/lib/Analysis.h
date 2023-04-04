@@ -15,14 +15,11 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_ANALYSIS_H
 
 #include "Clustering.h"
+#include "DisassemblerHelper.h"
 #include "SchedClassResolution.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDisassembler/MCDisassembler.h"
-#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -112,10 +109,7 @@ private:
 
   const BenchmarkClustering &Clustering_;
   const LLVMState &State_;
-  std::unique_ptr<MCContext> Context_;
-  std::unique_ptr<MCAsmInfo> AsmInfo_;
-  std::unique_ptr<MCInstPrinter> InstPrinter_;
-  std::unique_ptr<MCDisassembler> Disasm_;
+  std::unique_ptr<DisassemblerHelper> DisasmHelper_;
   const double AnalysisInconsistencyEpsilonSquared_;
   const bool AnalysisDisplayUnstableOpcodes_;
 };
