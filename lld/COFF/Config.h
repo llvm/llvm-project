@@ -218,8 +218,16 @@ struct Configuration {
   // Used for /thinlto-index-only:
   llvm::StringRef thinLTOIndexOnlyArg;
 
-  // Used for /thinlto-object-prefix-replace:
-  std::pair<llvm::StringRef, llvm::StringRef> thinLTOPrefixReplace;
+  // Used for /thinlto-prefix-replace:
+  // Replace the prefix in paths generated for ThinLTO, replacing
+  // thinLTOPrefixReplaceOld with thinLTOPrefixReplaceNew. If
+  // thinLTOPrefixReplaceNativeObject is defined, replace the prefix of object
+  // file paths written to the response file given in the
+  // --thinlto-index-only=${response} option with
+  // thinLTOPrefixReplaceNativeObject, instead of thinLTOPrefixReplaceNew.
+  llvm::StringRef thinLTOPrefixReplaceOld;
+  llvm::StringRef thinLTOPrefixReplaceNew;
+  llvm::StringRef thinLTOPrefixReplaceNativeObject;
 
   // Used for /thinlto-object-suffix-replace:
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
