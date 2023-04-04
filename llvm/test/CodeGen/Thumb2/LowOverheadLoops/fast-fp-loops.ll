@@ -105,10 +105,10 @@ vector.memcheck:                                  ; preds = %entry
   br i1 %conflict.rdx, label %for.body.preheader, label %vector.ph
 
 for.body.preheader:                               ; preds = %vector.memcheck
-  %0 = add i32 %N, -1
+  %i = add i32 %N, -1
   %xtraiter = and i32 %N, 3
-  %1 = icmp ult i32 %0, 3
-  br i1 %1, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body.preheader.new
+  %i1 = icmp ult i32 %i, 3
+  br i1 %i1, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body.preheader.new
 
 for.body.preheader.new:                           ; preds = %for.body.preheader
   %unroll_iter = sub i32 %N, %xtraiter
@@ -121,34 +121,34 @@ vector.ph:                                        ; preds = %vector.memcheck
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %2 = getelementptr inbounds float, float* %b, i32 %index
-  %3 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
-  %4 = bitcast float* %2 to <4 x float>*
-  %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %4, i32 4, <4 x i1> %3, <4 x float> undef)
-  %5 = getelementptr inbounds float, float* %c, i32 %index
-  %6 = bitcast float* %5 to <4 x float>*
-  %wide.masked.load23 = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %6, i32 4, <4 x i1> %3, <4 x float> undef)
-  %7 = fmul fast <4 x float> %wide.masked.load23, %wide.masked.load
-  %8 = getelementptr inbounds float, float* %a, i32 %index
-  %9 = bitcast float* %8 to <4 x float>*
-  call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %7, <4 x float>* %9, i32 4, <4 x i1> %3)
+  %i2 = getelementptr inbounds float, float* %b, i32 %index
+  %i3 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
+  %i4 = bitcast float* %i2 to <4 x float>*
+  %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %i4, i32 4, <4 x i1> %i3, <4 x float> undef)
+  %i5 = getelementptr inbounds float, float* %c, i32 %index
+  %i6 = bitcast float* %i5 to <4 x float>*
+  %wide.masked.load23 = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %i6, i32 4, <4 x i1> %i3, <4 x float> undef)
+  %i7 = fmul fast <4 x float> %wide.masked.load23, %wide.masked.load
+  %i8 = getelementptr inbounds float, float* %a, i32 %index
+  %i9 = bitcast float* %i8 to <4 x float>*
+  call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %i7, <4 x float>* %i9, i32 4, <4 x i1> %i3)
   %index.next = add i32 %index, 4
-  %10 = icmp eq i32 %index.next, %n.vec
-  br i1 %10, label %for.cond.cleanup, label %vector.body
+  %i10 = icmp eq i32 %index.next, %n.vec
+  br i1 %i10, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup.loopexit.unr-lcssa:              ; preds = %for.body, %for.body.preheader
   %i.09.unr = phi i32 [ 0, %for.body.preheader ], [ %inc.3, %for.body ]
   %lcmp.mod = icmp eq i32 %xtraiter, 0
   br i1 %lcmp.mod, label %for.cond.cleanup, label %for.body.epil
 
-for.body.epil:                                    ; preds = %for.cond.cleanup.loopexit.unr-lcssa, %for.body.epil
+for.body.epil:                                    ; preds = %for.body.epil, %for.cond.cleanup.loopexit.unr-lcssa
   %i.09.epil = phi i32 [ %inc.epil, %for.body.epil ], [ %i.09.unr, %for.cond.cleanup.loopexit.unr-lcssa ]
   %epil.iter = phi i32 [ %epil.iter.sub, %for.body.epil ], [ %xtraiter, %for.cond.cleanup.loopexit.unr-lcssa ]
   %arrayidx.epil = getelementptr inbounds float, float* %b, i32 %i.09.epil
-  %11 = load float, float* %arrayidx.epil, align 4
+  %i11 = load float, float* %arrayidx.epil, align 4
   %arrayidx1.epil = getelementptr inbounds float, float* %c, i32 %i.09.epil
-  %12 = load float, float* %arrayidx1.epil, align 4
-  %mul.epil = fmul fast float %12, %11
+  %i12 = load float, float* %arrayidx1.epil, align 4
+  %mul.epil = fmul fast float %i12, %i11
   %arrayidx2.epil = getelementptr inbounds float, float* %a, i32 %i.09.epil
   store float %mul.epil, float* %arrayidx2.epil, align 4
   %inc.epil = add nuw i32 %i.09.epil, 1
@@ -156,41 +156,41 @@ for.body.epil:                                    ; preds = %for.cond.cleanup.lo
   %epil.iter.cmp = icmp eq i32 %epil.iter.sub, 0
   br i1 %epil.iter.cmp, label %for.cond.cleanup, label %for.body.epil
 
-for.cond.cleanup:                                 ; preds = %vector.body, %for.cond.cleanup.loopexit.unr-lcssa, %for.body.epil, %entry
+for.cond.cleanup:                                 ; preds = %for.body.epil, %for.cond.cleanup.loopexit.unr-lcssa, %vector.body, %entry
   ret void
 
 for.body:                                         ; preds = %for.body, %for.body.preheader.new
   %i.09 = phi i32 [ 0, %for.body.preheader.new ], [ %inc.3, %for.body ]
   %niter = phi i32 [ %unroll_iter, %for.body.preheader.new ], [ %niter.nsub.3, %for.body ]
   %arrayidx = getelementptr inbounds float, float* %b, i32 %i.09
-  %13 = load float, float* %arrayidx, align 4
+  %i13 = load float, float* %arrayidx, align 4
   %arrayidx1 = getelementptr inbounds float, float* %c, i32 %i.09
-  %14 = load float, float* %arrayidx1, align 4
-  %mul = fmul fast float %14, %13
+  %i14 = load float, float* %arrayidx1, align 4
+  %mul = fmul fast float %i14, %i13
   %arrayidx2 = getelementptr inbounds float, float* %a, i32 %i.09
   store float %mul, float* %arrayidx2, align 4
   %inc = or i32 %i.09, 1
   %arrayidx.1 = getelementptr inbounds float, float* %b, i32 %inc
-  %15 = load float, float* %arrayidx.1, align 4
+  %i15 = load float, float* %arrayidx.1, align 4
   %arrayidx1.1 = getelementptr inbounds float, float* %c, i32 %inc
-  %16 = load float, float* %arrayidx1.1, align 4
-  %mul.1 = fmul fast float %16, %15
+  %i16 = load float, float* %arrayidx1.1, align 4
+  %mul.1 = fmul fast float %i16, %i15
   %arrayidx2.1 = getelementptr inbounds float, float* %a, i32 %inc
   store float %mul.1, float* %arrayidx2.1, align 4
   %inc.1 = or i32 %i.09, 2
   %arrayidx.2 = getelementptr inbounds float, float* %b, i32 %inc.1
-  %17 = load float, float* %arrayidx.2, align 4
+  %i17 = load float, float* %arrayidx.2, align 4
   %arrayidx1.2 = getelementptr inbounds float, float* %c, i32 %inc.1
-  %18 = load float, float* %arrayidx1.2, align 4
-  %mul.2 = fmul fast float %18, %17
+  %i18 = load float, float* %arrayidx1.2, align 4
+  %mul.2 = fmul fast float %i18, %i17
   %arrayidx2.2 = getelementptr inbounds float, float* %a, i32 %inc.1
   store float %mul.2, float* %arrayidx2.2, align 4
   %inc.2 = or i32 %i.09, 3
   %arrayidx.3 = getelementptr inbounds float, float* %b, i32 %inc.2
-  %19 = load float, float* %arrayidx.3, align 4
+  %i19 = load float, float* %arrayidx.3, align 4
   %arrayidx1.3 = getelementptr inbounds float, float* %c, i32 %inc.2
-  %20 = load float, float* %arrayidx1.3, align 4
-  %mul.3 = fmul fast float %20, %19
+  %i20 = load float, float* %arrayidx1.3, align 4
+  %mul.3 = fmul fast float %i20, %i19
   %arrayidx2.3 = getelementptr inbounds float, float* %a, i32 %inc.2
   store float %mul.3, float* %arrayidx2.3, align 4
   %inc.3 = add nuw i32 %i.09, 4
@@ -248,31 +248,31 @@ vector.ph:                                        ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %vec.phi = phi <4 x float> [ zeroinitializer, %vector.ph ], [ %6, %vector.body ]
-  %0 = getelementptr inbounds float, float* %b, i32 %index
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
-  %2 = bitcast float* %0 to <4 x float>*
-  %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
-  %3 = getelementptr inbounds float, float* %c, i32 %index
-  %4 = bitcast float* %3 to <4 x float>*
-  %wide.masked.load13 = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %4, i32 4, <4 x i1> %1, <4 x float> undef)
-  %5 = fmul fast <4 x float> %wide.masked.load13, %wide.masked.load
-  %6 = fadd fast <4 x float> %5, %vec.phi
+  %vec.phi = phi <4 x float> [ zeroinitializer, %vector.ph ], [ %i6, %vector.body ]
+  %i = getelementptr inbounds float, float* %b, i32 %index
+  %i1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
+  %i2 = bitcast float* %i to <4 x float>*
+  %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %i2, i32 4, <4 x i1> %i1, <4 x float> undef)
+  %i3 = getelementptr inbounds float, float* %c, i32 %index
+  %i4 = bitcast float* %i3 to <4 x float>*
+  %wide.masked.load13 = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %i4, i32 4, <4 x i1> %i1, <4 x float> undef)
+  %i5 = fmul fast <4 x float> %wide.masked.load13, %wide.masked.load
+  %i6 = fadd fast <4 x float> %i5, %vec.phi
   %index.next = add i32 %index, 4
-  %7 = icmp eq i32 %index.next, %n.vec
-  br i1 %7, label %middle.block, label %vector.body
+  %i7 = icmp eq i32 %index.next, %n.vec
+  br i1 %i7, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
-  %8 = select <4 x i1> %1, <4 x float> %6, <4 x float> %vec.phi
-  %rdx.shuf = shufflevector <4 x float> %8, <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %bin.rdx = fadd fast <4 x float> %8, %rdx.shuf
+  %i8 = select <4 x i1> %i1, <4 x float> %i6, <4 x float> %vec.phi
+  %rdx.shuf = shufflevector <4 x float> %i8, <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %bin.rdx = fadd fast <4 x float> %i8, %rdx.shuf
   %rdx.shuf14 = shufflevector <4 x float> %bin.rdx, <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
   %bin.rdx15 = fadd fast <4 x float> %bin.rdx, %rdx.shuf14
-  %9 = extractelement <4 x float> %bin.rdx15, i32 0
+  %i9 = extractelement <4 x float> %bin.rdx15, i32 0
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %middle.block, %entry
-  %a.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %9, %middle.block ]
+  %a.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %i9, %middle.block ]
   ret float %a.0.lcssa
 }
 
@@ -465,35 +465,35 @@ vector.ph:                                        ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %vec.phi = phi <4 x float> [ zeroinitializer, %vector.ph ], [ %7, %vector.body ]
+  %vec.phi = phi <4 x float> [ zeroinitializer, %vector.ph ], [ %i7, %vector.body ]
   %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
-  %0 = getelementptr inbounds half, half* %b, i32 %index
-  %1 = icmp ule <4 x i32> %induction, %broadcast.splat12
-  %2 = bitcast half* %0 to <4 x half>*
-  %wide.masked.load = call <4 x half> @llvm.masked.load.v4f16.p0v4f16(<4 x half>* %2, i32 2, <4 x i1> %1, <4 x half> undef)
-  %3 = getelementptr inbounds half, half* %c, i32 %index
-  %4 = bitcast half* %3 to <4 x half>*
-  %wide.masked.load13 = call <4 x half> @llvm.masked.load.v4f16.p0v4f16(<4 x half>* %4, i32 2, <4 x i1> %1, <4 x half> undef)
-  %5 = fmul fast <4 x half> %wide.masked.load13, %wide.masked.load
-  %6 = fpext <4 x half> %5 to <4 x float>
-  %7 = fadd fast <4 x float> %vec.phi, %6
+  %i = getelementptr inbounds half, half* %b, i32 %index
+  %i1 = icmp ule <4 x i32> %induction, %broadcast.splat12
+  %i2 = bitcast half* %i to <4 x half>*
+  %wide.masked.load = call <4 x half> @llvm.masked.load.v4f16.p0v4f16(<4 x half>* %i2, i32 2, <4 x i1> %i1, <4 x half> undef)
+  %i3 = getelementptr inbounds half, half* %c, i32 %index
+  %i4 = bitcast half* %i3 to <4 x half>*
+  %wide.masked.load13 = call <4 x half> @llvm.masked.load.v4f16.p0v4f16(<4 x half>* %i4, i32 2, <4 x i1> %i1, <4 x half> undef)
+  %i5 = fmul fast <4 x half> %wide.masked.load13, %wide.masked.load
+  %i6 = fpext <4 x half> %i5 to <4 x float>
+  %i7 = fadd fast <4 x float> %vec.phi, %i6
   %index.next = add i32 %index, 4
-  %8 = icmp eq i32 %index.next, %n.vec
-  br i1 %8, label %middle.block, label %vector.body
+  %i8 = icmp eq i32 %index.next, %n.vec
+  br i1 %i8, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
-  %9 = select <4 x i1> %1, <4 x float> %7, <4 x float> %vec.phi
-  %rdx.shuf = shufflevector <4 x float> %9, <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %bin.rdx = fadd fast <4 x float> %9, %rdx.shuf
+  %i9 = select <4 x i1> %i1, <4 x float> %i7, <4 x float> %vec.phi
+  %rdx.shuf = shufflevector <4 x float> %i9, <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %bin.rdx = fadd fast <4 x float> %i9, %rdx.shuf
   %rdx.shuf14 = shufflevector <4 x float> %bin.rdx, <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
   %bin.rdx15 = fadd fast <4 x float> %bin.rdx, %rdx.shuf14
-  %10 = extractelement <4 x float> %bin.rdx15, i32 0
+  %i10 = extractelement <4 x float> %bin.rdx15, i32 0
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %middle.block, %entry
-  %a.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %10, %middle.block ]
+  %a.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %i10, %middle.block ]
   ret float %a.0.lcssa
 }
 
