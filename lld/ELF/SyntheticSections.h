@@ -385,19 +385,15 @@ public:
 
 private:
   SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
-  finalizeEntry(llvm::DenseMap<const Symbol *, int> EntryMap,
-                uint32_t maxSize);
+  finalizeEntry(llvm::DenseMap<const Symbol *, int> EntryMap, uint32_t maxSize);
   void addEntry(const Symbol *symbol,
-                llvm::DenseMap<const Symbol *, int> &entriesList,
-                int gain);
-  uint32_t getEntry(
-      const Symbol *symbol, uint32_t maxSize,
-      SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
-          &entriesList);
-  void writeEntries(
-      uint8_t *buf,
-      SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
-          &entriesList);
+                llvm::DenseMap<const Symbol *, int> &entriesList, int gain);
+  uint32_t getEntry(const Symbol *symbol, uint32_t maxSize,
+                    SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>,
+                                0> &entriesList);
+  void writeEntries(uint8_t *buf,
+                    SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>,
+                                0> &entriesList);
   void padWords(uint8_t *buf, const uint8_t maxWordCount);
 
   // used in finalizeContents function.

@@ -1161,8 +1161,8 @@ int TableJumpSection::getCMJALTEntryIndex(const Symbol *symbol) {
 }
 
 void TableJumpSection::addEntry(
-    const Symbol * symbol,
-    llvm::DenseMap<const Symbol *, int> &entriesList, int gain) {
+    const Symbol *symbol, llvm::DenseMap<const Symbol *, int> &entriesList,
+    int gain) {
   entriesList[symbol] += gain;
 }
 
@@ -1244,13 +1244,12 @@ void TableJumpSection::finalizeContents() {
 }
 
 SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
-TableJumpSection::finalizeEntry(
-    llvm::DenseMap<const Symbol *, int> EntryMap, uint32_t maxSize) {
-  auto cmp =
-      [](const llvm::detail::DenseMapPair<const Symbol *, int> &p1,
-         const llvm::detail::DenseMapPair<const Symbol *, int> &p2) {
-        return p1.second > p2.second;
-      };
+TableJumpSection::finalizeEntry(llvm::DenseMap<const Symbol *, int> EntryMap,
+                                uint32_t maxSize) {
+  auto cmp = [](const llvm::detail::DenseMapPair<const Symbol *, int> &p1,
+                const llvm::detail::DenseMapPair<const Symbol *, int> &p2) {
+    return p1.second > p2.second;
+  };
 
   SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
       tempEntryVector;
@@ -1261,9 +1260,8 @@ TableJumpSection::finalizeEntry(
   auto finalizedVector = tempEntryVector;
   if (tempEntryVector.size() >= maxSize)
     finalizedVector =
-        SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>,
-                    0>(tempEntryVector.begin(),
-                       tempEntryVector.begin() + maxSize);
+        SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>(
+            tempEntryVector.begin(), tempEntryVector.begin() + maxSize);
 
   // drop the item which has negitive effect
   while (finalizedVector.size()) {
