@@ -59,7 +59,7 @@ void StaticAccessedThroughInstanceCheck::check(
   if (isa<CXXOperatorCallExpr>(BaseExpr))
     return;
 
-  QualType BaseType =
+  const QualType BaseType =
       BaseExpr->getType()->isPointerType()
           ? BaseExpr->getType()->getPointeeType().getUnqualifiedType()
           : BaseExpr->getType().getUnqualifiedType();
@@ -74,6 +74,11 @@ void StaticAccessedThroughInstanceCheck::check(
 
   std::string BaseTypeName =
       BaseType.getAsString(PrintingPolicyWithSuppressedTag);
+
+  // Ignore anonymous structs/classes which will not have an identifier
+  const RecordDecl *RecDecl = BaseType->getAsCXXRecordDecl();
+  if (!RecDecl || RecDecl->getIdentifier() == nullptr)
+    return;
 
   // Do not warn for CUDA built-in variables.
   if (StringRef(BaseTypeName).startswith("__cuda_builtin_"))
