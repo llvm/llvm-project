@@ -4,7 +4,7 @@
 
 # Recreate the folder structure in a temp directory we can remove later.
 RUN: rm -rf %t
-RUN: mkdir -p %t/Inputs
+RUN: mkdir -p %t/Inputs %t/tempdir
 RUN: cp %p/../Inputs/basic.macho.x86_64 %t/Inputs
 RUN: cp %p/../Inputs/basic1.macho.x86_64.o %t/Inputs
 RUN: cp %p/../Inputs/basic2.macho.x86_64.o %t/Inputs
@@ -15,6 +15,10 @@ RUN: dsymutil -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-d
 
 # Make sure we don't crash with an empty TMPDIR.
 RUN: env TMPDIR="" dsymutil -o -f -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1
+
+# Make sure we don't leave around a temporary directory.
+RUN: env TMPDIR="%t/tempdir" dsymutil -o - -f %t/Inputs/basic.macho.x86_64
+RUN: not ls %t/tempdir/dsymutil-*
 
 # Create a reproducer.
 RUN: env DSYMUTIL_REPRODUCER_PATH=%t.repro dsymutil -gen-reproducer -f -o %t.generate -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefixes=REPRODUCER
