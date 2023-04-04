@@ -252,6 +252,13 @@ private:
   void setBufferOffsets(SDValue CombinedOffset, SelectionDAG &DAG,
                         SDValue *Offsets, Align Alignment = Align(4)) const;
 
+  // Convert the i128 that an addrspace(8) pointer is natively represented as
+  // into the v4i32 that all the buffer intrinsics expect to receive. We can't
+  // add register classes for i128 on pain of the promotion logic going haywire,
+  // so this slightly ugly hack is what we've got. If passed a non-pointer
+  // argument (as would be seen in older buffer intrinsics), does nothing.
+  SDValue bufferRsrcPtrToVector(SDValue MaybePointer, SelectionDAG &DAG) const;
+
   // Handle 8 bit and 16 bit buffer loads
   SDValue handleByteShortBufferLoads(SelectionDAG &DAG, EVT LoadVT, SDLoc DL,
                                      ArrayRef<SDValue> Ops, MemSDNode *M) const;

@@ -2012,7 +2012,9 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_s_barrier:
     return selectSBarrier(I);
   case Intrinsic::amdgcn_raw_buffer_load_lds:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
   case Intrinsic::amdgcn_struct_buffer_load_lds:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
     return selectBufferLoadLds(I);
   case Intrinsic::amdgcn_global_load_lds:
     return selectGlobalLoadLds(I);
