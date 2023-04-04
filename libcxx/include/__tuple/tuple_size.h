@@ -11,7 +11,7 @@
 
 #include <__config>
 #include <__fwd/tuple.h>
-#include <__tuple_dir/tuple_types.h>
+#include <__tuple/tuple_types.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_volatile.h>
 #include <cstddef>
