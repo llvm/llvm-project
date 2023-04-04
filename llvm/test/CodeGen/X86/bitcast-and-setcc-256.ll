@@ -865,3 +865,50 @@ define i32 @v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %c, <32 x i8> %d) {
   %res = bitcast <32 x i1> %y to i32
   ret i32 %res
 }
+
+; PR61683 - ignore upper undef elements
+define i8 @v4i32_concat_undef(<4 x i32> %vec) {
+; SSE2-SSSE3-LABEL: v4i32_concat_undef:
+; SSE2-SSSE3:       # %bb.0:
+; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm1
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    packssdw %xmm0, %xmm0
+; SSE2-SSSE3-NEXT:    psllw $15, %xmm0
+; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm0
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-SSSE3-NEXT:    retq
+;
+; AVX12-LABEL: v4i32_concat_undef:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX12-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; AVX12-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX12-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX12-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; AVX12-NEXT:    vpsllw $15, %xmm0, %xmm0
+; AVX12-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
+; AVX12-NEXT:    vpmovmskb %xmm0, %eax
+; AVX12-NEXT:    # kill: def $al killed $al killed $eax
+; AVX12-NEXT:    retq
+;
+; AVX512F-LABEL: v4i32_concat_undef:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vptestmd %xmm0, %xmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: v4i32_concat_undef:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vptestmd %xmm0, %xmm0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    retq
+  %tobool = icmp ne <4 x i32> %vec, zeroinitializer
+  %insertvec = shufflevector <4 x i1> %tobool, <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  %res = bitcast <8 x i1> %insertvec to i8
+  ret i8 %res
+}
