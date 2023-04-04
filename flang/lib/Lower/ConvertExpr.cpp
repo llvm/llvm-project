@@ -1838,6 +1838,15 @@ public:
     for (const auto &arg : llvm::enumerate(procRef.arguments())) {
       auto *expr =
           Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg.value());
+
+      if (!expr && arg.value() && arg.value()->GetAssumedTypeDummy()) {
+        // Assumed type optional.
+        const Fortran::evaluate::Symbol *assumedTypeSym =
+            arg.value()->GetAssumedTypeDummy();
+        auto symBox = symMap.lookupSymbol(*assumedTypeSym);
+        operands.emplace_back(symBox.getAddr());
+        continue;
+      }
       if (!expr) {
         // Absent optional.
         operands.emplace_back(fir::getAbsentIntrinsicArgument());
