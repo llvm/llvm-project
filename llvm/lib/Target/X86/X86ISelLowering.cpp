@@ -44108,7 +44108,6 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
     SDValue UpperOp = SubSrcOps[1];
     if (LowerOp.getOpcode() == ISD::SETCC && UpperOp.isUndef()) {
       EVT HalfVT = VT.getHalfSizedIntegerVT(*DAG.getContext());
-      EVT HalfSrcVT = SrcVT.getHalfNumVectorElementsVT(*DAG.getContext());
       if (SDValue V = combineBitcastvxi1(DAG, HalfVT, LowerOp, DL, Subtarget))
         return DAG.getNode(ISD::ANY_EXTEND, DL, VT, V);
     }
