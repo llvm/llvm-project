@@ -935,7 +935,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
         cast<OMPTargetParallelGenericLoopDirective>(*S));
     break;
   case Stmt::OMPParallelMaskedDirectiveClass:
-    llvm_unreachable("parallel masked directive not supported yet.");
+    EmitOMPParallelMaskedDirective(cast<OMPParallelMaskedDirective>(*S));
     break;
   }
 }

@@ -260,6 +260,21 @@ static void *MsanCalloc(StackTrace *stack, uptr nmemb, uptr size) {
   return MsanAllocate(stack, nmemb * size, sizeof(u64), true);
 }
 
+void *AllocationBegin(const void *p) {
+  if (!p)
+    return nullptr;
+  const void *beg = allocator.GetBlockBegin(p);
+  if (!beg)
+    return nullptr;
+  Metadata *b = (Metadata *)allocator.GetMetaData(beg);
+  if (!b)
+    return nullptr;
+  if (b->requested_size == 0)
+    return nullptr;
+
+  return (void *)beg;
+}
+
 static uptr AllocationSize(const void *p) {
   if (!p) return 0;
   const void *beg = allocator.GetBlockBegin(p);
@@ -372,5 +387,9 @@ uptr __sanitizer_get_unmapped_bytes() { return 1; }
 uptr __sanitizer_get_estimated_allocated_size(uptr size) { return size; }
 
 int __sanitizer_get_ownership(const void *p) { return AllocationSize(p) != 0; }
+
+void *__sanitizer_get_allocated_begin(const void *p) {
+  return AllocationBegin(p);
+}
 
 uptr __sanitizer_get_allocated_size(const void *p) { return AllocationSize(p); }
