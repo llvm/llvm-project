@@ -44102,17 +44102,21 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
   if (!Subtarget.hasSSE2() || (Subtarget.hasAVX512() && !PreferMovMsk))
     return SDValue();
 
-  // If the upper half of the ops are undef, then try to bitcast the lower half
-  // and extend.
+  // If the upper ops of a concatenation are undef, then try to bitcast the
+  // lower op and extend.
   SmallVector<SDValue, 4> SubSrcOps;
   if (collectConcatOps(Src.getNode(), SubSrcOps, DAG) &&
-      SubSrcOps.size() == 2) {
+      SubSrcOps.size() >= 2) {
     SDValue LowerOp = SubSrcOps[0];
-    SDValue UpperOp = SubSrcOps[1];
-    if (LowerOp.getOpcode() == ISD::SETCC && UpperOp.isUndef()) {
-      EVT HalfVT = VT.getHalfSizedIntegerVT(*DAG.getContext());
-      if (SDValue V = combineBitcastvxi1(DAG, HalfVT, LowerOp, DL, Subtarget))
-        return DAG.getNode(ISD::ANY_EXTEND, DL, VT, V);
+    ArrayRef<SDValue> UpperOps(std::next(SubSrcOps.begin()), SubSrcOps.end());
+    if (LowerOp.getOpcode() == ISD::SETCC &&
+        all_of(UpperOps, [](SDValue Op) { return Op.isUndef(); })) {
+      EVT SubVT = VT.getIntegerVT(
+          *DAG.getContext(), LowerOp.getValueType().getVectorMinNumElements());
+      if (SDValue V = combineBitcastvxi1(DAG, SubVT, LowerOp, DL, Subtarget)) {
+        EVT IntVT = VT.getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+        return DAG.getBitcast(VT, DAG.getNode(ISD::ANY_EXTEND, DL, IntVT, V));
+      }
     }
   }
 
