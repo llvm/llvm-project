@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; FIXME: Regressed test from https://github.com/llvm/llvm-project/issues/61923
+; Regressed test from https://github.com/llvm/llvm-project/issues/61923
 define void @test_loop(ptr align 1 %src, ptr align 1 %dest, i32 %len) {
 ; CHECK-LABEL: test_loop:
 ; CHECK:       # %bb.0: # %entry
@@ -17,15 +17,9 @@ define void @test_loop(ptr align 1 %src, ptr align 1 %dest, i32 %len) {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # %memcmp.loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovdqu (%rsi,%rcx), %xmm0
-; CHECK-NEXT:    vmovdqu 16(%rsi,%rcx), %xmm1
-; CHECK-NEXT:    vpcmpeqb (%rdi,%rcx), %xmm0, %xmm0
-; CHECK-NEXT:    vpmovmskb %xmm0, %edx
-; CHECK-NEXT:    vpcmpeqb 16(%rdi,%rcx), %xmm1, %xmm0
-; CHECK-NEXT:    vpmovmskb %xmm0, %r8d
-; CHECK-NEXT:    shll $16, %r8d
-; CHECK-NEXT:    orl %edx, %r8d
-; CHECK-NEXT:    cmpl $-1, %r8d
+; CHECK-NEXT:    vmovups (%rsi,%rcx), %ymm0
+; CHECK-NEXT:    vxorps (%rdi,%rcx), %ymm0, %ymm0
+; CHECK-NEXT:    vptest %ymm0, %ymm0
 ; CHECK-NEXT:    jne .LBB0_4
 ; CHECK-NEXT:  # %bb.3: # %memcmp.loop.latch
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
@@ -33,6 +27,7 @@ define void @test_loop(ptr align 1 %src, ptr align 1 %dest, i32 %len) {
 ; CHECK-NEXT:    cmpq %rax, %rcx
 ; CHECK-NEXT:    jb .LBB0_2
 ; CHECK-NEXT:  .LBB0_4: # %done
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
   %len.wide = zext i32 %len to i64
