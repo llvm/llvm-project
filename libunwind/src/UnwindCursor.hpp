@@ -579,6 +579,7 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
   _dispContext.HistoryTable = &_histTable;
   // Initialize MS context from ours.
   R r(context);
+  RtlCaptureContext(&_msContext);
   _msContext.ContextFlags = CONTEXT_CONTROL|CONTEXT_INTEGER|CONTEXT_FLOATING_POINT;
 #if defined(_LIBUNWIND_TARGET_X86_64)
   _msContext.Rax = r.getRegister(UNW_X86_64_RAX);
