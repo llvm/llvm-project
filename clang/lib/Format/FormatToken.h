@@ -152,6 +152,9 @@ namespace format {
    * In 'logic [1:0] x[1:0]', only the first '['. This way we can have space   \
    * before the first bracket but not the second. */                           \
   TYPE(VerilogDimensionedTypeName)                                             \
+  /* list of port connections or parameters in a module instantiation */       \
+  TYPE(VerilogInstancePortComma)                                               \
+  TYPE(VerilogInstancePortLParen)                                              \
   /* for the base in a number literal, not including the quote */              \
   TYPE(VerilogNumberBase)                                                      \
   /* like `(strong1, pull0)` */                                                \
