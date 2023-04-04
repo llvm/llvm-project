@@ -46,6 +46,10 @@ void MemMapDefault::releaseAndZeroPagesToOSImpl(uptr From, uptr Size) {
   return ::scudo::releasePagesToOS(Base, From - Base, Size, &Data);
 }
 
+void MemMapDefault::setMemoryPermissionImpl(uptr Addr, uptr Size, uptr Flags) {
+  return ::scudo::setMemoryPermission(Addr, Size, Flags);
+}
+
 void ReservedMemoryDefault::releaseImpl() {
   ::scudo::unmap(reinterpret_cast<void *>(Base), Capacity, UNMAP_ALL, &Data);
 }
