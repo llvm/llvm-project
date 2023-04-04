@@ -255,8 +255,9 @@ Changes in existing checks
   be unnecessarily emitted for template dependent ``if constexpr``.
 
 - Improved :doc:`readability-static-accessed-through-instance
-  <clang-tidy/checks/readability/static-accessed-through-instance>` check to 
-  support unscoped enumerations through instances.
+  <clang-tidy/checks/readability/static-accessed-through-instance>` check to
+  support unscoped enumerations through instances and fixed usage of anonymous
+  structs or classes.
 
 - Fixed a false positive in :doc:`cppcoreguidelines-slicing
   <clang-tidy/checks/cppcoreguidelines/slicing>` check when warning would be
