@@ -96,7 +96,6 @@ auto hasAnyOptionalType() {
       recordType(hasDeclaration(anyOf(nulloptTypeDecl(), optionalClass())))));
 }
 
-
 auto inPlaceClass() {
   return recordDecl(
       hasAnyName("std::in_place_t", "absl::in_place_t", "base::in_place_t"));
@@ -147,6 +146,11 @@ auto isStdSwapCall() {
   return callExpr(callee(functionDecl(hasName("std::swap"))),
                   argumentCountIs(2), hasArgument(0, hasOptionalType()),
                   hasArgument(1, hasOptionalType()));
+}
+
+auto isStdForwardCall() {
+  return callExpr(callee(functionDecl(hasName("std::forward"))),
+                  argumentCountIs(1), hasArgument(0, hasOptionalType()));
 }
 
 constexpr llvm::StringLiteral ValueOrCallID = "ValueOrCall";
@@ -571,6 +575,31 @@ void transferStdSwapCall(const CallExpr *E, const MatchFinder::MatchResult &,
   transferSwap(*E->getArg(0), SkipPast::Reference, *E->getArg(1), State.Env);
 }
 
+void transferStdForwardCall(const CallExpr *E, const MatchFinder::MatchResult &,
+                            LatticeTransferState &State) {
+  assert(E->getNumArgs() == 1);
+
+  StorageLocation *LocRet = State.Env.getStorageLocation(*E, SkipPast::None);
+  if (LocRet != nullptr)
+    return;
+
+  StorageLocation *LocArg =
+      State.Env.getStorageLocation(*E->getArg(0), SkipPast::Reference);
+
+  if (LocArg == nullptr)
+    return;
+
+  Value *ValArg = State.Env.getValue(*LocArg);
+  if (ValArg == nullptr)
+    ValArg = &createOptionalValue(State.Env, State.Env.makeAtomicBoolValue());
+
+  // Create a new storage location
+  LocRet = &State.Env.createStorageLocation(*E);
+  State.Env.setStorageLocation(*E, *LocRet);
+
+  State.Env.setValue(*LocRet, *ValArg);
+}
+
 BoolValue &evaluateEquality(Environment &Env, BoolValue &EqVal, BoolValue &LHS,
                             BoolValue &RHS) {
   // Logically, an optional<T> object is composed of two values - a `has_value`
@@ -686,7 +715,6 @@ auto buildTransferMatchSwitch() {
       .CaseOfCFGStmt<CXXConstructExpr>(isOptionalValueOrConversionConstructor(),
                                        transferValueOrConversionConstructor)
 
-
       // optional::operator=
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
           isOptionalValueOrConversionAssignment(),
@@ -744,6 +772,9 @@ auto buildTransferMatchSwitch() {
 
       // std::swap
       .CaseOfCFGStmt<CallExpr>(isStdSwapCall(), transferStdSwapCall)
+
+      // std::forward
+      .CaseOfCFGStmt<CallExpr>(isStdForwardCall(), transferStdForwardCall)
 
       // opt.value_or("").empty()
       .CaseOfCFGStmt<Expr>(isValueOrStringEmptyCall(),
@@ -845,10 +876,12 @@ ComparisonResult UncheckedOptionalAccessModel::compare(
     return ComparisonResult::Unknown;
   bool MustNonEmpty1 = isNonEmptyOptional(Val1, Env1);
   bool MustNonEmpty2 = isNonEmptyOptional(Val2, Env2);
-  if (MustNonEmpty1 && MustNonEmpty2) return ComparisonResult::Same;
+  if (MustNonEmpty1 && MustNonEmpty2)
+    return ComparisonResult::Same;
   // If exactly one is true, then they're different, no reason to check whether
   // they're definitely empty.
-  if (MustNonEmpty1 || MustNonEmpty2) return ComparisonResult::Different;
+  if (MustNonEmpty1 || MustNonEmpty2)
+    return ComparisonResult::Different;
   // Check if they're both definitely empty.
   return (isEmptyOptional(Val1, Env1) && isEmptyOptional(Val2, Env2))
              ? ComparisonResult::Same

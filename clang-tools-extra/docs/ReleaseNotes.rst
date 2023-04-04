@@ -175,6 +175,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/suspicious-include>` check.
   Global options of the same name should be used instead.
 
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` check to properly handle calls
+  to ``std::forward``.
+
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check to also cover constructor
   initializers.
