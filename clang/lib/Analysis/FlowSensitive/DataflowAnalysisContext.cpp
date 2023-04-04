@@ -157,7 +157,7 @@ BoolValue &DataflowAnalysisContext::getOrCreateIff(BoolValue &LHS,
 }
 
 AtomicBoolValue &DataflowAnalysisContext::makeFlowConditionToken() {
-  return createAtomicBoolValue();
+  return create<AtomicBoolValue>();
 }
 
 void DataflowAnalysisContext::addFlowConditionConstraint(
@@ -378,8 +378,8 @@ DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
 
 DataflowAnalysisContext::DataflowAnalysisContext(std::unique_ptr<Solver> S,
                                                  Options Opts)
-    : S(std::move(S)), TrueVal(createAtomicBoolValue()),
-      FalseVal(createAtomicBoolValue()), Opts(Opts) {
+    : S(std::move(S)), TrueVal(create<AtomicBoolValue>()),
+      FalseVal(create<AtomicBoolValue>()), Opts(Opts) {
   assert(this->S != nullptr);
   // If the -dataflow-log command-line flag was set, synthesize a logger.
   // This is ugly but provides a uniform method for ad-hoc debugging dataflow-
