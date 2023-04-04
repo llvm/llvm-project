@@ -2699,6 +2699,8 @@ private:
         "NSDecimalNumber",
         "NSDictionary",
         "NSEdgeInsets",
+        "NSError",
+        "NSErrorDomain",
         "NSHashTable",
         "NSIndexPath",
         "NSIndexSet",
@@ -2760,6 +2762,7 @@ private:
                                 FormatTok->TokenText)) ||
             FormatTok->is(TT_ObjCStringLiteral) ||
             FormatTok->isOneOf(Keywords.kw_NS_CLOSED_ENUM, Keywords.kw_NS_ENUM,
+                               Keywords.kw_NS_ERROR_ENUM,
                                Keywords.kw_NS_OPTIONS, TT_ObjCBlockLBrace,
                                TT_ObjCBlockLParen, TT_ObjCDecl, TT_ObjCForIn,
                                TT_ObjCMethodExpr, TT_ObjCMethodSpecifier,
