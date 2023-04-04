@@ -286,6 +286,11 @@ class SourceLocation(Structure):
         """Get the file offset represented by this source location."""
         return self._get_instantiation()[3]
 
+    @property
+    def is_in_system_header(self):
+        """Returns true if the given source location is in a system header."""
+        return conf.lib.clang_Location_isInSystemHeader(self)
+
     def __eq__(self, other):
         return conf.lib.clang_equalLocations(self, other)
 
@@ -4130,6 +4135,10 @@ functionList = [
   ("clang_Cursor_getOffsetOfField",
    [Cursor],
    c_longlong),
+
+  ("clang_Location_isInSystemHeader",
+   [SourceLocation],
+   bool),
 
   ("clang_Type_getAlignOf",
    [Type],
