@@ -21,7 +21,7 @@ class DeclContext;
 
 /// Mapped value in the address map is the offset to apply to the
 /// linked address.
-using RangesTy = AddressRangesMap;
+using RangesTy = AddressRangesMap<int64_t>;
 
 // FIXME: Delete this structure.
 struct PatchLocation {

@@ -402,9 +402,10 @@ void DwarfStreamer::emitUnitRangesEntries(CompileUnit &Unit,
   // Linked addresses might end up in a different order.
   // Build linked address ranges.
   AddressRanges LinkedRanges;
-  for (const AddressRangeValuePair &Range : FunctionRanges)
+  for (size_t Idx = 0; Idx < FunctionRanges.size(); Idx++)
     LinkedRanges.insert(
-        {Range.Range.start() + Range.Value, Range.Range.end() + Range.Value});
+        {FunctionRanges[Idx].first.start() + FunctionRanges[Idx].second,
+         FunctionRanges[Idx].first.end() + FunctionRanges[Idx].second});
 
   if (!FunctionRanges.empty())
     emitDwarfDebugArangesTable(Unit, LinkedRanges);
