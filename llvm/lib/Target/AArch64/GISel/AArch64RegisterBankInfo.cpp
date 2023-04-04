@@ -753,7 +753,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
           *AArch64GenRegisterBankInfo::PartMappings[OpRegBankIdx[1]].RegBank,
           OpSize[0]);
     break;
-  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_LOAD: {
     // Loading in vector unit is slightly more expensive.
     // This is actually only true for the LD1R and co instructions,
     // but anyway for the fast mode this number does not matter and
@@ -769,6 +769,33 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       // Atomics always use GPR destinations. Don't refine any further.
       OpRegBankIdx[0] = PMI_FirstGPR;
       break;
+    }
+
+    // Try to guess the type of the load from the MMO.
+    const auto &MMO = **MI.memoperands_begin();
+    const Value *LdVal = MMO.getValue();
+    if (LdVal) {
+      Type *EltTy = nullptr;
+      if (const GlobalValue *GV = dyn_cast<GlobalValue>(LdVal)) {
+        EltTy = GV->getValueType();
+      } else {
+        // FIXME: grubbing around uses is pretty ugly, but with no more
+        // `getPointerElementType` there's not much else we can do.
+        for (const auto *LdUser : LdVal->users()) {
+          if (isa<LoadInst>(LdUser)) {
+            EltTy = LdUser->getType();
+            break;
+          }
+          if (isa<StoreInst>(LdUser) && LdUser->getOperand(1) == LdVal) {
+            EltTy = LdUser->getOperand(0)->getType();
+            break;
+          }
+        }
+      }
+      if (EltTy && EltTy->isFPOrFPVectorTy()) {
+        OpRegBankIdx[0] = PMI_FirstFPR;
+        break;
+      }
     }
 
     // Check if that load feeds fp instructions.
@@ -788,6 +815,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                }))
       OpRegBankIdx[0] = PMI_FirstFPR;
     break;
+  }
   case TargetOpcode::G_STORE:
     // Check if that store is fed by fp instructions.
     if (OpRegBankIdx[0] == PMI_FirstGPR) {
