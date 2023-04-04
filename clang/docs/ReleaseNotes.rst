@@ -451,6 +451,12 @@ Static Analyzer
 Sanitizers
 ----------
 
+Python Binding Changes
+----------------------
+The following methods have been added:
+
+- ``clang_Location_isInSystemHeader`` exposed via the ``is_in_system_header``
+  property of the `Location` class.
 
 Additional Information
 ======================
