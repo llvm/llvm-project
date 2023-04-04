@@ -1294,7 +1294,7 @@ bool Sema::IsOverload(FunctionDecl *New, FunctionDecl *Old,
     // We check the return type and template parameter lists for function
     // templates first; the remaining checks follow.
     bool SameTemplateParameterList = TemplateParameterListsAreEqual(
-        NewTemplate->getTemplateParameters(),
+        NewTemplate, NewTemplate->getTemplateParameters(), OldTemplate,
         OldTemplate->getTemplateParameters(), false, TPL_TemplateMatch);
     bool SameReturnType = Context.hasSameType(Old->getDeclaredReturnType(),
                                               New->getDeclaredReturnType());
