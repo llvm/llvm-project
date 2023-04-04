@@ -23,7 +23,7 @@ int main(void) {
 
     // Bogus value to unpoison start. Calling __sanitizer_get_allocated_begin
     // does not unpoison it.
-    void *start = NULL;
+    const void *start = NULL;
     for (int j = 0; j < sizes[i]; j++) {
       printf("j: %d\n", j);
 
