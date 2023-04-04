@@ -19,8 +19,8 @@ define arm_aapcs_vfpcc void @test_fadd(half* noalias nocapture readonly %A, half
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = and i32 %n, 7
-  %cmp = icmp eq i32 %0, 0
+  %i = and i32 %n, 7
+  %cmp = icmp eq i32 %i, 0
   tail call void @llvm.assume(i1 %cmp)
   %cmp18 = icmp sgt i32 %n, 0
   br i1 %cmp18, label %vector.ph, label %for.cond.cleanup
@@ -32,16 +32,16 @@ vector.ph:                                        ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %1 = getelementptr inbounds half, half* %A, i32 %index
-  %2 = bitcast half* %1 to <8 x half>*
-  %wide.load = load <8 x half>, <8 x half>* %2, align 4
-  %3 = fadd fast <8 x half> %wide.load, %broadcast.splat11
-  %4 = getelementptr inbounds half, half* %C, i32 %index
-  %5 = bitcast half* %4 to <8 x half>*
-  store <8 x half> %3, <8 x half>* %5, align 4
+  %i1 = getelementptr inbounds half, half* %A, i32 %index
+  %i2 = bitcast half* %i1 to <8 x half>*
+  %wide.load = load <8 x half>, <8 x half>* %i2, align 4
+  %i3 = fadd fast <8 x half> %wide.load, %broadcast.splat11
+  %i4 = getelementptr inbounds half, half* %C, i32 %index
+  %i5 = bitcast half* %i4 to <8 x half>*
+  store <8 x half> %i3, <8 x half>* %i5, align 4
   %index.next = add i32 %index, 8
-  %6 = icmp eq i32 %index.next, %n
-  br i1 %6, label %for.cond.cleanup, label %vector.body
+  %i6 = icmp eq i32 %index.next, %n
+  br i1 %i6, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
@@ -65,8 +65,8 @@ define arm_aapcs_vfpcc void @test_fadd_r(half* noalias nocapture readonly %A, ha
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = and i32 %n, 7
-  %cmp = icmp eq i32 %0, 0
+  %i = and i32 %n, 7
+  %cmp = icmp eq i32 %i, 0
   tail call void @llvm.assume(i1 %cmp)
   %cmp18 = icmp sgt i32 %n, 0
   br i1 %cmp18, label %vector.ph, label %for.cond.cleanup
@@ -78,16 +78,16 @@ vector.ph:                                        ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %1 = getelementptr inbounds half, half* %A, i32 %index
-  %2 = bitcast half* %1 to <8 x half>*
-  %wide.load = load <8 x half>, <8 x half>* %2, align 4
-  %3 = fadd fast <8 x half> %broadcast.splat11, %wide.load
-  %4 = getelementptr inbounds half, half* %C, i32 %index
-  %5 = bitcast half* %4 to <8 x half>*
-  store <8 x half> %3, <8 x half>* %5, align 4
+  %i1 = getelementptr inbounds half, half* %A, i32 %index
+  %i2 = bitcast half* %i1 to <8 x half>*
+  %wide.load = load <8 x half>, <8 x half>* %i2, align 4
+  %i3 = fadd fast <8 x half> %broadcast.splat11, %wide.load
+  %i4 = getelementptr inbounds half, half* %C, i32 %index
+  %i5 = bitcast half* %i4 to <8 x half>*
+  store <8 x half> %i3, <8 x half>* %i5, align 4
   %index.next = add i32 %index, 8
-  %6 = icmp eq i32 %index.next, %n
-  br i1 %6, label %for.cond.cleanup, label %vector.body
+  %i6 = icmp eq i32 %index.next, %n
+  br i1 %i6, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
@@ -111,8 +111,8 @@ define arm_aapcs_vfpcc void @test_fmul(half* noalias nocapture readonly %A, half
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = and i32 %n, 7
-  %cmp = icmp eq i32 %0, 0
+  %i = and i32 %n, 7
+  %cmp = icmp eq i32 %i, 0
   tail call void @llvm.assume(i1 %cmp)
   %cmp18 = icmp sgt i32 %n, 0
   br i1 %cmp18, label %vector.ph, label %for.cond.cleanup
@@ -124,16 +124,16 @@ vector.ph:                                        ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %1 = getelementptr inbounds half, half* %A, i32 %index
-  %2 = bitcast half* %1 to <8 x half>*
-  %wide.load = load <8 x half>, <8 x half>* %2, align 4
-  %3 = fmul fast <8 x half> %wide.load, %broadcast.splat11
-  %4 = getelementptr inbounds half, half* %C, i32 %index
-  %5 = bitcast half* %4 to <8 x half>*
-  store <8 x half> %3, <8 x half>* %5, align 4
+  %i1 = getelementptr inbounds half, half* %A, i32 %index
+  %i2 = bitcast half* %i1 to <8 x half>*
+  %wide.load = load <8 x half>, <8 x half>* %i2, align 4
+  %i3 = fmul fast <8 x half> %wide.load, %broadcast.splat11
+  %i4 = getelementptr inbounds half, half* %C, i32 %index
+  %i5 = bitcast half* %i4 to <8 x half>*
+  store <8 x half> %i3, <8 x half>* %i5, align 4
   %index.next = add i32 %index, 8
-  %6 = icmp eq i32 %index.next, %n
-  br i1 %6, label %for.cond.cleanup, label %vector.body
+  %i6 = icmp eq i32 %index.next, %n
+  br i1 %i6, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
@@ -157,8 +157,8 @@ define arm_aapcs_vfpcc void @test_fmul_r(half* noalias nocapture readonly %A, ha
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = and i32 %n, 7
-  %cmp = icmp eq i32 %0, 0
+  %i = and i32 %n, 7
+  %cmp = icmp eq i32 %i, 0
   tail call void @llvm.assume(i1 %cmp)
   %cmp18 = icmp sgt i32 %n, 0
   br i1 %cmp18, label %vector.ph, label %for.cond.cleanup
@@ -170,16 +170,16 @@ vector.ph:                                        ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %1 = getelementptr inbounds half, half* %A, i32 %index
-  %2 = bitcast half* %1 to <8 x half>*
-  %wide.load = load <8 x half>, <8 x half>* %2, align 4
-  %3 = fmul fast <8 x half> %broadcast.splat11, %wide.load
-  %4 = getelementptr inbounds half, half* %C, i32 %index
-  %5 = bitcast half* %4 to <8 x half>*
-  store <8 x half> %3, <8 x half>* %5, align 4
+  %i1 = getelementptr inbounds half, half* %A, i32 %index
+  %i2 = bitcast half* %i1 to <8 x half>*
+  %wide.load = load <8 x half>, <8 x half>* %i2, align 4
+  %i3 = fmul fast <8 x half> %broadcast.splat11, %wide.load
+  %i4 = getelementptr inbounds half, half* %C, i32 %index
+  %i5 = bitcast half* %i4 to <8 x half>*
+  store <8 x half> %i3, <8 x half>* %i5, align 4
   %index.next = add i32 %index, 8
-  %6 = icmp eq i32 %index.next, %n
-  br i1 %6, label %for.cond.cleanup, label %vector.body
+  %i6 = icmp eq i32 %index.next, %n
+  br i1 %i6, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
@@ -203,8 +203,8 @@ define arm_aapcs_vfpcc void @test_fsub(half* noalias nocapture readonly %A, half
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = and i32 %n, 7
-  %cmp = icmp eq i32 %0, 0
+  %i = and i32 %n, 7
+  %cmp = icmp eq i32 %i, 0
   tail call void @llvm.assume(i1 %cmp)
   %cmp18 = icmp sgt i32 %n, 0
   br i1 %cmp18, label %vector.ph, label %for.cond.cleanup
@@ -216,16 +216,16 @@ vector.ph:                                        ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %1 = getelementptr inbounds half, half* %A, i32 %index
-  %2 = bitcast half* %1 to <8 x half>*
-  %wide.load = load <8 x half>, <8 x half>* %2, align 4
-  %3 = fsub fast <8 x half> %wide.load, %broadcast.splat11
-  %4 = getelementptr inbounds half, half* %C, i32 %index
-  %5 = bitcast half* %4 to <8 x half>*
-  store <8 x half> %3, <8 x half>* %5, align 4
+  %i1 = getelementptr inbounds half, half* %A, i32 %index
+  %i2 = bitcast half* %i1 to <8 x half>*
+  %wide.load = load <8 x half>, <8 x half>* %i2, align 4
+  %i3 = fsub fast <8 x half> %wide.load, %broadcast.splat11
+  %i4 = getelementptr inbounds half, half* %C, i32 %index
+  %i5 = bitcast half* %i4 to <8 x half>*
+  store <8 x half> %i3, <8 x half>* %i5, align 4
   %index.next = add i32 %index, 8
-  %6 = icmp eq i32 %index.next, %n
-  br i1 %6, label %for.cond.cleanup, label %vector.body
+  %i6 = icmp eq i32 %index.next, %n
+  br i1 %i6, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
@@ -250,8 +250,8 @@ define arm_aapcs_vfpcc void @test_fsub_r(half* noalias nocapture readonly %A, ha
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = and i32 %n, 7
-  %cmp = icmp eq i32 %0, 0
+  %i = and i32 %n, 7
+  %cmp = icmp eq i32 %i, 0
   tail call void @llvm.assume(i1 %cmp)
   %cmp18 = icmp sgt i32 %n, 0
   br i1 %cmp18, label %vector.ph, label %for.cond.cleanup
@@ -263,16 +263,16 @@ vector.ph:                                        ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %1 = getelementptr inbounds half, half* %A, i32 %index
-  %2 = bitcast half* %1 to <8 x half>*
-  %wide.load = load <8 x half>, <8 x half>* %2, align 4
-  %3 = fsub fast <8 x half> %broadcast.splat11, %wide.load
-  %4 = getelementptr inbounds half, half* %C, i32 %index
-  %5 = bitcast half* %4 to <8 x half>*
-  store <8 x half> %3, <8 x half>* %5, align 4
+  %i1 = getelementptr inbounds half, half* %A, i32 %index
+  %i2 = bitcast half* %i1 to <8 x half>*
+  %wide.load = load <8 x half>, <8 x half>* %i2, align 4
+  %i3 = fsub fast <8 x half> %broadcast.splat11, %wide.load
+  %i4 = getelementptr inbounds half, half* %C, i32 %index
+  %i5 = bitcast half* %i4 to <8 x half>*
+  store <8 x half> %i3, <8 x half>* %i5, align 4
   %index.next = add i32 %index, 8
-  %6 = icmp eq i32 %index.next, %n
-  br i1 %6, label %for.cond.cleanup, label %vector.body
+  %i6 = icmp eq i32 %index.next, %n
+  br i1 %i6, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
@@ -298,8 +298,8 @@ define arm_aapcs_vfpcc void @test_fmas(half* noalias nocapture readonly %A, half
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = and i32 %n, 7
-  %cmp = icmp eq i32 %0, 0
+  %i = and i32 %n, 7
+  %cmp = icmp eq i32 %i, 0
   tail call void @llvm.assume(i1 %cmp)
   %cmp110 = icmp sgt i32 %n, 0
   br i1 %cmp110, label %vector.ph, label %for.cond.cleanup
@@ -311,20 +311,20 @@ vector.ph:                                        ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %1 = getelementptr inbounds half, half* %A, i32 %index
-  %2 = bitcast half* %1 to <8 x half>*
-  %wide.load = load <8 x half>, <8 x half>* %2, align 4
-  %3 = getelementptr inbounds half, half* %B, i32 %index
-  %4 = bitcast half* %3 to <8 x half>*
-  %wide.load12 = load <8 x half>, <8 x half>* %4, align 4
-  %5 = fmul fast <8 x half> %wide.load12, %wide.load
-  %6 = fadd fast <8 x half> %5, %broadcast.splat14
-  %7 = getelementptr inbounds half, half* %D, i32 %index
-  %8 = bitcast half* %7 to <8 x half>*
-  store <8 x half> %6, <8 x half>* %8, align 4
+  %i1 = getelementptr inbounds half, half* %A, i32 %index
+  %i2 = bitcast half* %i1 to <8 x half>*
+  %wide.load = load <8 x half>, <8 x half>* %i2, align 4
+  %i3 = getelementptr inbounds half, half* %B, i32 %index
+  %i4 = bitcast half* %i3 to <8 x half>*
+  %wide.load12 = load <8 x half>, <8 x half>* %i4, align 4
+  %i5 = fmul fast <8 x half> %wide.load12, %wide.load
+  %i6 = fadd fast <8 x half> %i5, %broadcast.splat14
+  %i7 = getelementptr inbounds half, half* %D, i32 %index
+  %i8 = bitcast half* %i7 to <8 x half>*
+  store <8 x half> %i6, <8 x half>* %i8, align 4
   %index.next = add i32 %index, 8
-  %9 = icmp eq i32 %index.next, %n
-  br i1 %9, label %for.cond.cleanup, label %vector.body
+  %i9 = icmp eq i32 %index.next, %n
+  br i1 %i9, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
@@ -349,8 +349,8 @@ define arm_aapcs_vfpcc void @test_fmas_r(half* noalias nocapture readonly %A, ha
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = and i32 %n, 7
-  %cmp = icmp eq i32 %0, 0
+  %i = and i32 %n, 7
+  %cmp = icmp eq i32 %i, 0
   tail call void @llvm.assume(i1 %cmp)
   %cmp110 = icmp sgt i32 %n, 0
   br i1 %cmp110, label %vector.ph, label %for.cond.cleanup
@@ -362,20 +362,20 @@ vector.ph:                                        ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %1 = getelementptr inbounds half, half* %A, i32 %index
-  %2 = bitcast half* %1 to <8 x half>*
-  %wide.load = load <8 x half>, <8 x half>* %2, align 4
-  %3 = getelementptr inbounds half, half* %B, i32 %index
-  %4 = bitcast half* %3 to <8 x half>*
-  %wide.load12 = load <8 x half>, <8 x half>* %4, align 4
-  %5 = fmul fast <8 x half> %wide.load12, %wide.load
-  %6 = fadd fast <8 x half> %broadcast.splat14, %5
-  %7 = getelementptr inbounds half, half* %D, i32 %index
-  %8 = bitcast half* %7 to <8 x half>*
-  store <8 x half> %6, <8 x half>* %8, align 4
+  %i1 = getelementptr inbounds half, half* %A, i32 %index
+  %i2 = bitcast half* %i1 to <8 x half>*
+  %wide.load = load <8 x half>, <8 x half>* %i2, align 4
+  %i3 = getelementptr inbounds half, half* %B, i32 %index
+  %i4 = bitcast half* %i3 to <8 x half>*
+  %wide.load12 = load <8 x half>, <8 x half>* %i4, align 4
+  %i5 = fmul fast <8 x half> %wide.load12, %wide.load
+  %i6 = fadd fast <8 x half> %broadcast.splat14, %i5
+  %i7 = getelementptr inbounds half, half* %D, i32 %index
+  %i8 = bitcast half* %i7 to <8 x half>*
+  store <8 x half> %i6, <8 x half>* %i8, align 4
   %index.next = add i32 %index, 8
-  %9 = icmp eq i32 %index.next, %n
-  br i1 %9, label %for.cond.cleanup, label %vector.body
+  %i9 = icmp eq i32 %index.next, %n
+  br i1 %i9, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
@@ -400,8 +400,8 @@ define arm_aapcs_vfpcc void @test_fma(half* noalias nocapture readonly %A, half*
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = and i32 %n, 7
-  %cmp = icmp eq i32 %0, 0
+  %i = and i32 %n, 7
+  %cmp = icmp eq i32 %i, 0
   tail call void @llvm.assume(i1 %cmp)
   %cmp110 = icmp sgt i32 %n, 0
   br i1 %cmp110, label %vector.ph, label %for.cond.cleanup
@@ -413,20 +413,20 @@ vector.ph:                                        ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %1 = getelementptr inbounds half, half* %A, i32 %index
-  %2 = bitcast half* %1 to <8 x half>*
-  %wide.load = load <8 x half>, <8 x half>* %2, align 4
-  %3 = fmul fast <8 x half> %wide.load, %broadcast.splat13
-  %4 = getelementptr inbounds half, half* %B, i32 %index
-  %5 = bitcast half* %4 to <8 x half>*
-  %wide.load14 = load <8 x half>, <8 x half>* %5, align 4
-  %6 = fadd fast <8 x half> %3, %wide.load14
-  %7 = getelementptr inbounds half, half* %D, i32 %index
-  %8 = bitcast half* %7 to <8 x half>*
-  store <8 x half> %6, <8 x half>* %8, align 4
+  %i1 = getelementptr inbounds half, half* %A, i32 %index
+  %i2 = bitcast half* %i1 to <8 x half>*
+  %wide.load = load <8 x half>, <8 x half>* %i2, align 4
+  %i3 = fmul fast <8 x half> %wide.load, %broadcast.splat13
+  %i4 = getelementptr inbounds half, half* %B, i32 %index
+  %i5 = bitcast half* %i4 to <8 x half>*
+  %wide.load14 = load <8 x half>, <8 x half>* %i5, align 4
+  %i6 = fadd fast <8 x half> %i3, %wide.load14
+  %i7 = getelementptr inbounds half, half* %D, i32 %index
+  %i8 = bitcast half* %i7 to <8 x half>*
+  store <8 x half> %i6, <8 x half>* %i8, align 4
   %index.next = add i32 %index, 8
-  %9 = icmp eq i32 %index.next, %n
-  br i1 %9, label %for.cond.cleanup, label %vector.body
+  %i9 = icmp eq i32 %index.next, %n
+  br i1 %i9, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
@@ -451,8 +451,8 @@ define arm_aapcs_vfpcc void @test_fma_r(half* noalias nocapture readonly %A, hal
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = and i32 %n, 7
-  %cmp = icmp eq i32 %0, 0
+  %i = and i32 %n, 7
+  %cmp = icmp eq i32 %i, 0
   tail call void @llvm.assume(i1 %cmp)
   %cmp110 = icmp sgt i32 %n, 0
   br i1 %cmp110, label %vector.ph, label %for.cond.cleanup
@@ -464,20 +464,20 @@ vector.ph:                                        ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %1 = getelementptr inbounds half, half* %A, i32 %index
-  %2 = bitcast half* %1 to <8 x half>*
-  %wide.load = load <8 x half>, <8 x half>* %2, align 4
-  %3 = fmul fast <8 x half> %broadcast.splat13, %wide.load
-  %4 = getelementptr inbounds half, half* %B, i32 %index
-  %5 = bitcast half* %4 to <8 x half>*
-  %wide.load14 = load <8 x half>, <8 x half>* %5, align 4
-  %6 = fadd fast <8 x half> %3, %wide.load14
-  %7 = getelementptr inbounds half, half* %D, i32 %index
-  %8 = bitcast half* %7 to <8 x half>*
-  store <8 x half> %6, <8 x half>* %8, align 4
+  %i1 = getelementptr inbounds half, half* %A, i32 %index
+  %i2 = bitcast half* %i1 to <8 x half>*
+  %wide.load = load <8 x half>, <8 x half>* %i2, align 4
+  %i3 = fmul fast <8 x half> %broadcast.splat13, %wide.load
+  %i4 = getelementptr inbounds half, half* %B, i32 %index
+  %i5 = bitcast half* %i4 to <8 x half>*
+  %wide.load14 = load <8 x half>, <8 x half>* %i5, align 4
+  %i6 = fadd fast <8 x half> %i3, %wide.load14
+  %i7 = getelementptr inbounds half, half* %D, i32 %index
+  %i8 = bitcast half* %i7 to <8 x half>*
+  store <8 x half> %i6, <8 x half>* %i8, align 4
   %index.next = add i32 %index, 8
-  %9 = icmp eq i32 %index.next, %n
-  br i1 %9, label %for.cond.cleanup, label %vector.body
+  %i9 = icmp eq i32 %index.next, %n
+  br i1 %i9, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
@@ -506,8 +506,8 @@ define arm_aapcs_vfpcc void @test_fmss(half* noalias nocapture readonly %A, half
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = and i32 %n, 7
-  %cmp = icmp eq i32 %0, 0
+  %i = and i32 %n, 7
+  %cmp = icmp eq i32 %i, 0
   tail call void @llvm.assume(i1 %cmp)
   %cmp110 = icmp sgt i32 %n, 0
   br i1 %cmp110, label %vector.ph, label %for.cond.cleanup
@@ -519,20 +519,20 @@ vector.ph:                                        ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %1 = getelementptr inbounds half, half* %A, i32 %index
-  %2 = bitcast half* %1 to <8 x half>*
-  %wide.load = load <8 x half>, <8 x half>* %2, align 4
-  %3 = getelementptr inbounds half, half* %B, i32 %index
-  %4 = bitcast half* %3 to <8 x half>*
-  %wide.load12 = load <8 x half>, <8 x half>* %4, align 4
-  %5 = fmul fast <8 x half> %wide.load12, %wide.load
-  %6 = fsub fast <8 x half> %5, %broadcast.splat14
-  %7 = getelementptr inbounds half, half* %D, i32 %index
-  %8 = bitcast half* %7 to <8 x half>*
-  store <8 x half> %6, <8 x half>* %8, align 4
+  %i1 = getelementptr inbounds half, half* %A, i32 %index
+  %i2 = bitcast half* %i1 to <8 x half>*
+  %wide.load = load <8 x half>, <8 x half>* %i2, align 4
+  %i3 = getelementptr inbounds half, half* %B, i32 %index
+  %i4 = bitcast half* %i3 to <8 x half>*
+  %wide.load12 = load <8 x half>, <8 x half>* %i4, align 4
+  %i5 = fmul fast <8 x half> %wide.load12, %wide.load
+  %i6 = fsub fast <8 x half> %i5, %broadcast.splat14
+  %i7 = getelementptr inbounds half, half* %D, i32 %index
+  %i8 = bitcast half* %i7 to <8 x half>*
+  store <8 x half> %i6, <8 x half>* %i8, align 4
   %index.next = add i32 %index, 8
-  %9 = icmp eq i32 %index.next, %n
-  br i1 %9, label %for.cond.cleanup, label %vector.body
+  %i9 = icmp eq i32 %index.next, %n
+  br i1 %i9, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
@@ -559,8 +559,8 @@ define arm_aapcs_vfpcc void @test_fmss_r(half* noalias nocapture readonly %A, ha
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = and i32 %n, 7
-  %cmp = icmp eq i32 %0, 0
+  %i = and i32 %n, 7
+  %cmp = icmp eq i32 %i, 0
   tail call void @llvm.assume(i1 %cmp)
   %cmp110 = icmp sgt i32 %n, 0
   br i1 %cmp110, label %vector.ph, label %for.cond.cleanup
@@ -572,20 +572,20 @@ vector.ph:                                        ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %1 = getelementptr inbounds half, half* %A, i32 %index
-  %2 = bitcast half* %1 to <8 x half>*
-  %wide.load = load <8 x half>, <8 x half>* %2, align 4
-  %3 = getelementptr inbounds half, half* %B, i32 %index
-  %4 = bitcast half* %3 to <8 x half>*
-  %wide.load12 = load <8 x half>, <8 x half>* %4, align 4
-  %5 = fmul fast <8 x half> %wide.load12, %wide.load
-  %6 = fsub fast <8 x half> %broadcast.splat14, %5
-  %7 = getelementptr inbounds half, half* %D, i32 %index
-  %8 = bitcast half* %7 to <8 x half>*
-  store <8 x half> %6, <8 x half>* %8, align 4
+  %i1 = getelementptr inbounds half, half* %A, i32 %index
+  %i2 = bitcast half* %i1 to <8 x half>*
+  %wide.load = load <8 x half>, <8 x half>* %i2, align 4
+  %i3 = getelementptr inbounds half, half* %B, i32 %index
+  %i4 = bitcast half* %i3 to <8 x half>*
+  %wide.load12 = load <8 x half>, <8 x half>* %i4, align 4
+  %i5 = fmul fast <8 x half> %wide.load12, %wide.load
+  %i6 = fsub fast <8 x half> %broadcast.splat14, %i5
+  %i7 = getelementptr inbounds half, half* %D, i32 %index
+  %i8 = bitcast half* %i7 to <8 x half>*
+  store <8 x half> %i6, <8 x half>* %i8, align 4
   %index.next = add i32 %index, 8
-  %9 = icmp eq i32 %index.next, %n
-  br i1 %9, label %for.cond.cleanup, label %vector.body
+  %i9 = icmp eq i32 %index.next, %n
+  br i1 %i9, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
@@ -611,8 +611,8 @@ define arm_aapcs_vfpcc void @test_fms(half* noalias nocapture readonly %A, half*
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = and i32 %n, 7
-  %cmp = icmp eq i32 %0, 0
+  %i = and i32 %n, 7
+  %cmp = icmp eq i32 %i, 0
   tail call void @llvm.assume(i1 %cmp)
   %cmp110 = icmp sgt i32 %n, 0
   br i1 %cmp110, label %vector.ph, label %for.cond.cleanup
@@ -624,20 +624,20 @@ vector.ph:                                        ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %1 = getelementptr inbounds half, half* %A, i32 %index
-  %2 = bitcast half* %1 to <8 x half>*
-  %wide.load = load <8 x half>, <8 x half>* %2, align 4
-  %3 = fmul fast <8 x half> %wide.load, %broadcast.splat13
-  %4 = getelementptr inbounds half, half* %B, i32 %index
-  %5 = bitcast half* %4 to <8 x half>*
-  %wide.load14 = load <8 x half>, <8 x half>* %5, align 4
-  %6 = fsub fast <8 x half> %3, %wide.load14
-  %7 = getelementptr inbounds half, half* %D, i32 %index
-  %8 = bitcast half* %7 to <8 x half>*
-  store <8 x half> %6, <8 x half>* %8, align 4
+  %i1 = getelementptr inbounds half, half* %A, i32 %index
+  %i2 = bitcast half* %i1 to <8 x half>*
+  %wide.load = load <8 x half>, <8 x half>* %i2, align 4
+  %i3 = fmul fast <8 x half> %wide.load, %broadcast.splat13
+  %i4 = getelementptr inbounds half, half* %B, i32 %index
+  %i5 = bitcast half* %i4 to <8 x half>*
+  %wide.load14 = load <8 x half>, <8 x half>* %i5, align 4
+  %i6 = fsub fast <8 x half> %i3, %wide.load14
+  %i7 = getelementptr inbounds half, half* %D, i32 %index
+  %i8 = bitcast half* %i7 to <8 x half>*
+  store <8 x half> %i6, <8 x half>* %i8, align 4
   %index.next = add i32 %index, 8
-  %9 = icmp eq i32 %index.next, %n
-  br i1 %9, label %for.cond.cleanup, label %vector.body
+  %i9 = icmp eq i32 %index.next, %n
+  br i1 %i9, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
@@ -663,8 +663,8 @@ define arm_aapcs_vfpcc void @test_fms_r(half* noalias nocapture readonly %A, hal
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = and i32 %n, 7
-  %cmp = icmp eq i32 %0, 0
+  %i = and i32 %n, 7
+  %cmp = icmp eq i32 %i, 0
   tail call void @llvm.assume(i1 %cmp)
   %cmp110 = icmp sgt i32 %n, 0
   br i1 %cmp110, label %vector.ph, label %for.cond.cleanup
@@ -676,27 +676,27 @@ vector.ph:                                        ; preds = %entry
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %1 = getelementptr inbounds half, half* %A, i32 %index
-  %2 = bitcast half* %1 to <8 x half>*
-  %wide.load = load <8 x half>, <8 x half>* %2, align 4
-  %3 = fmul fast <8 x half> %broadcast.splat13, %wide.load
-  %4 = getelementptr inbounds half, half* %B, i32 %index
-  %5 = bitcast half* %4 to <8 x half>*
-  %wide.load14 = load <8 x half>, <8 x half>* %5, align 4
-  %6 = fsub fast <8 x half> %3, %wide.load14
-  %7 = getelementptr inbounds half, half* %D, i32 %index
-  %8 = bitcast half* %7 to <8 x half>*
-  store <8 x half> %6, <8 x half>* %8, align 4
+  %i1 = getelementptr inbounds half, half* %A, i32 %index
+  %i2 = bitcast half* %i1 to <8 x half>*
+  %wide.load = load <8 x half>, <8 x half>* %i2, align 4
+  %i3 = fmul fast <8 x half> %broadcast.splat13, %wide.load
+  %i4 = getelementptr inbounds half, half* %B, i32 %index
+  %i5 = bitcast half* %i4 to <8 x half>*
+  %wide.load14 = load <8 x half>, <8 x half>* %i5, align 4
+  %i6 = fsub fast <8 x half> %i3, %wide.load14
+  %i7 = getelementptr inbounds half, half* %D, i32 %index
+  %i8 = bitcast half* %i7 to <8 x half>*
+  store <8 x half> %i6, <8 x half>* %i8, align 4
   %index.next = add i32 %index, 8
-  %9 = icmp eq i32 %index.next, %n
-  br i1 %9, label %for.cond.cleanup, label %vector.body
+  %i9 = icmp eq i32 %index.next, %n
+  br i1 %i9, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
 }
 
 
-define dso_local void @test_nested(half* noalias nocapture %pInT1, half* noalias nocapture readonly %pOutT1, half* noalias nocapture readonly %pPRT_in, half* noalias nocapture readnone %pPRT_pDst, i32 %numRows, i32 %numCols, i32 %l) local_unnamed_addr #0 {
+define dso_local void @test_nested(half* noalias nocapture %pInT1, half* noalias nocapture readonly %pOutT1, half* noalias nocapture readonly %pPRT_in, half* noalias nocapture readnone %pPRT_pDst, i32 %numRows, i32 %numCols, i32 %l) local_unnamed_addr {
 ; CHECK-LABEL: test_nested:
 ; CHECK:       @ %bb.0: @ %for.body.us.preheader
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
@@ -746,8 +746,8 @@ for.body.us:                                      ; preds = %for.cond6.for.end_c
   %pOutT1.addr.036.us = phi half* [ %incdec.ptr.us, %for.cond6.for.end_crit_edge.us ], [ %pOutT1, %for.body.us.preheader ]
   %pPRT_in.addr.035.us = phi half* [ %scevgep, %for.cond6.for.end_crit_edge.us ], [ %pPRT_in, %for.body.us.preheader ]
   %scevgep = getelementptr half, half* %pPRT_in.addr.035.us, i32 %numCols
-  %0 = load half, half* %pOutT1.addr.036.us, align 4
-  %broadcast.splatinsert47 = insertelement <8 x half> undef, half %0, i32 0
+  %i = load half, half* %pOutT1.addr.036.us, align 4
+  %broadcast.splatinsert47 = insertelement <8 x half> undef, half %i, i32 0
   %broadcast.splat48 = shufflevector <8 x half> %broadcast.splatinsert47, <8 x half> undef, <8 x i32> zeroinitializer
   br label %vector.body
 
@@ -755,16 +755,16 @@ vector.body:                                      ; preds = %vector.body, %for.b
   %index = phi i32 [ 0, %for.body.us ], [ %index.next, %vector.body ]
   %next.gep = getelementptr half, half* %pInT1.addr.038.us, i32 %index
   %next.gep45 = getelementptr half, half* %pPRT_in.addr.035.us, i32 %index
-  %1 = bitcast half* %next.gep to <8 x half>*
-  %wide.load = load <8 x half>, <8 x half>* %1, align 4
-  %2 = bitcast half* %next.gep45 to <8 x half>*
-  %wide.load46 = load <8 x half>, <8 x half>* %2, align 4
-  %3 = fmul fast <8 x half> %wide.load46, %broadcast.splat48
-  %4 = fsub fast <8 x half> %wide.load, %3
-  store <8 x half> %4, <8 x half>* %1, align 4
+  %i1 = bitcast half* %next.gep to <8 x half>*
+  %wide.load = load <8 x half>, <8 x half>* %i1, align 4
+  %i2 = bitcast half* %next.gep45 to <8 x half>*
+  %wide.load46 = load <8 x half>, <8 x half>* %i2, align 4
+  %i3 = fmul fast <8 x half> %wide.load46, %broadcast.splat48
+  %i4 = fsub fast <8 x half> %wide.load, %i3
+  store <8 x half> %i4, <8 x half>* %i1, align 4
   %index.next = add i32 %index, 8
-  %5 = icmp eq i32 %index.next, %numCols
-  br i1 %5, label %for.cond6.for.end_crit_edge.us, label %vector.body
+  %i5 = icmp eq i32 %index.next, %numCols
+  br i1 %i5, label %for.cond6.for.end_crit_edge.us, label %vector.body
 
 for.cond6.for.end_crit_edge.us:                   ; preds = %vector.body
   %incdec.ptr.us = getelementptr inbounds half, half* %pOutT1.addr.036.us, i32 1
@@ -880,74 +880,74 @@ define void @arm_fir_f32_1_4_mve(%struct.arm_fir_instance_f32* nocapture readonl
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 entry:
   %pState1 = getelementptr inbounds %struct.arm_fir_instance_f32, %struct.arm_fir_instance_f32* %S, i32 0, i32 1
-  %0 = load half*, half** %pState1, align 4
+  %i = load half*, half** %pState1, align 4
   %pCoeffs2 = getelementptr inbounds %struct.arm_fir_instance_f32, %struct.arm_fir_instance_f32* %S, i32 0, i32 2
-  %1 = load half*, half** %pCoeffs2, align 4
+  %i1 = load half*, half** %pCoeffs2, align 4
   %numTaps3 = getelementptr inbounds %struct.arm_fir_instance_f32, %struct.arm_fir_instance_f32* %S, i32 0, i32 0
-  %2 = load i16, i16* %numTaps3, align 4
-  %conv = zext i16 %2 to i32
+  %i2 = load i16, i16* %numTaps3, align 4
+  %conv = zext i16 %i2 to i32
   %sub = add nsw i32 %conv, -1
   %cmp = icmp ult i32 %sub, 4
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %arrayidx = getelementptr inbounds half, half* %0, i32 %sub
-  %incdec.ptr = getelementptr inbounds half, half* %1, i32 1
-  %3 = load half, half* %1, align 4
-  %incdec.ptr6 = getelementptr inbounds half, half* %1, i32 2
-  %4 = load half, half* %incdec.ptr, align 4
-  %incdec.ptr7 = getelementptr inbounds half, half* %1, i32 3
-  %5 = load half, half* %incdec.ptr6, align 4
-  %6 = load half, half* %incdec.ptr7, align 4
+  %arrayidx = getelementptr inbounds half, half* %i, i32 %sub
+  %incdec.ptr = getelementptr inbounds half, half* %i1, i32 1
+  %i3 = load half, half* %i1, align 4
+  %incdec.ptr6 = getelementptr inbounds half, half* %i1, i32 2
+  %i4 = load half, half* %incdec.ptr, align 4
+  %incdec.ptr7 = getelementptr inbounds half, half* %i1, i32 3
+  %i5 = load half, half* %incdec.ptr6, align 4
+  %i6 = load half, half* %incdec.ptr7, align 4
   %shr = lshr i32 %blockSize, 2
   %cmp9146 = icmp eq i32 %shr, 0
-  %.pre161 = insertelement <8 x half> undef, half %3, i32 0
+  %.pre161 = insertelement <8 x half> undef, half %i3, i32 0
   %.pre162 = shufflevector <8 x half> %.pre161, <8 x half> undef, <8 x i32> zeroinitializer
-  %.pre163 = insertelement <8 x half> undef, half %4, i32 0
+  %.pre163 = insertelement <8 x half> undef, half %i4, i32 0
   %.pre164 = shufflevector <8 x half> %.pre163, <8 x half> undef, <8 x i32> zeroinitializer
-  %.pre165 = insertelement <8 x half> undef, half %5, i32 0
+  %.pre165 = insertelement <8 x half> undef, half %i5, i32 0
   %.pre166 = shufflevector <8 x half> %.pre165, <8 x half> undef, <8 x i32> zeroinitializer
-  %.pre167 = insertelement <8 x half> undef, half %6, i32 0
+  %.pre167 = insertelement <8 x half> undef, half %i6, i32 0
   %.pre168 = shufflevector <8 x half> %.pre167, <8 x half> undef, <8 x i32> zeroinitializer
   br i1 %cmp9146, label %while.end, label %while.body.lr.ph
 
 while.body.lr.ph:                                 ; preds = %if.then
-  %7 = and i32 %blockSize, -4
-  %scevgep158 = getelementptr half, half* %pDst, i32 %7
+  %i7 = and i32 %blockSize, -4
+  %scevgep158 = getelementptr half, half* %pDst, i32 %i7
   br label %while.body
 
-while.body:                                       ; preds = %while.body.lr.ph, %while.body
+while.body:                                       ; preds = %while.body, %while.body.lr.ph
   %pStateCur.0151 = phi half* [ %arrayidx, %while.body.lr.ph ], [ %add.ptr, %while.body ]
-  %pSamples.0150 = phi half* [ %0, %while.body.lr.ph ], [ %add.ptr24, %while.body ]
+  %pSamples.0150 = phi half* [ %i, %while.body.lr.ph ], [ %add.ptr24, %while.body ]
   %pOutput.0149 = phi half* [ %pDst, %while.body.lr.ph ], [ %add.ptr23, %while.body ]
   %pTempSrc.0148 = phi half* [ %pSrc, %while.body.lr.ph ], [ %add.ptr11, %while.body ]
   %blkCnt.0147 = phi i32 [ %shr, %while.body.lr.ph ], [ %dec, %while.body ]
-  %8 = bitcast half* %pTempSrc.0148 to <8 x half>*
-  %9 = load <8 x half>, <8 x half>* %8, align 4
-  %10 = bitcast half* %pStateCur.0151 to <8 x half>*
-  store <8 x half> %9, <8 x half>* %10, align 4
+  %i8 = bitcast half* %pTempSrc.0148 to <8 x half>*
+  %i9 = load <8 x half>, <8 x half>* %i8, align 4
+  %i10 = bitcast half* %pStateCur.0151 to <8 x half>*
+  store <8 x half> %i9, <8 x half>* %i10, align 4
   %add.ptr = getelementptr inbounds half, half* %pStateCur.0151, i32 4
   %add.ptr11 = getelementptr inbounds half, half* %pTempSrc.0148, i32 4
-  %11 = bitcast half* %pSamples.0150 to <8 x half>*
-  %12 = load <8 x half>, <8 x half>* %11, align 4
-  %13 = fmul fast <8 x half> %12, %.pre162
+  %i11 = bitcast half* %pSamples.0150 to <8 x half>*
+  %i12 = load <8 x half>, <8 x half>* %i11, align 4
+  %i13 = fmul fast <8 x half> %i12, %.pre162
   %arrayidx12 = getelementptr inbounds half, half* %pSamples.0150, i32 1
-  %14 = bitcast half* %arrayidx12 to <8 x half>*
-  %15 = load <8 x half>, <8 x half>* %14, align 4
-  %mul = fmul fast <8 x half> %15, %.pre164
-  %add = fadd fast <8 x half> %mul, %13
+  %i14 = bitcast half* %arrayidx12 to <8 x half>*
+  %i15 = load <8 x half>, <8 x half>* %i14, align 4
+  %mul = fmul fast <8 x half> %i15, %.pre164
+  %add = fadd fast <8 x half> %mul, %i13
   %arrayidx13 = getelementptr inbounds half, half* %pSamples.0150, i32 2
-  %16 = bitcast half* %arrayidx13 to <8 x half>*
-  %17 = load <8 x half>, <8 x half>* %16, align 4
-  %mul16 = fmul fast <8 x half> %17, %.pre166
+  %i16 = bitcast half* %arrayidx13 to <8 x half>*
+  %i17 = load <8 x half>, <8 x half>* %i16, align 4
+  %mul16 = fmul fast <8 x half> %i17, %.pre166
   %add17 = fadd fast <8 x half> %add, %mul16
   %arrayidx18 = getelementptr inbounds half, half* %pSamples.0150, i32 3
-  %18 = bitcast half* %arrayidx18 to <8 x half>*
-  %19 = load <8 x half>, <8 x half>* %18, align 4
-  %mul21 = fmul fast <8 x half> %19, %.pre168
+  %i18 = bitcast half* %arrayidx18 to <8 x half>*
+  %i19 = load <8 x half>, <8 x half>* %i18, align 4
+  %mul21 = fmul fast <8 x half> %i19, %.pre168
   %add22 = fadd fast <8 x half> %add17, %mul21
-  %20 = bitcast half* %pOutput.0149 to <8 x half>*
-  store <8 x half> %add22, <8 x half>* %20, align 4
+  %i20 = bitcast half* %pOutput.0149 to <8 x half>*
+  store <8 x half> %add22, <8 x half>* %i20, align 4
   %add.ptr23 = getelementptr inbounds half, half* %pOutput.0149, i32 4
   %add.ptr24 = getelementptr inbounds half, half* %pSamples.0150, i32 4
   %dec = add nsw i32 %blkCnt.0147, -1
@@ -955,65 +955,65 @@ while.body:                                       ; preds = %while.body.lr.ph, %
   br i1 %cmp9, label %while.end.loopexit, label %while.body
 
 while.end.loopexit:                               ; preds = %while.body
-  %scevgep157 = getelementptr half, half* %pSrc, i32 %7
-  %scevgep159 = getelementptr half, half* %0, i32 %7
+  %scevgep157 = getelementptr half, half* %pSrc, i32 %i7
+  %scevgep159 = getelementptr half, half* %i, i32 %i7
   br label %while.end
 
-while.end:                                        ; preds = %if.then, %while.end.loopexit
+while.end:                                        ; preds = %while.end.loopexit, %if.then
   %pTempSrc.0.lcssa = phi half* [ %scevgep157, %while.end.loopexit ], [ %pSrc, %if.then ]
   %pOutput.0.lcssa = phi half* [ %scevgep158, %while.end.loopexit ], [ %pDst, %if.then ]
-  %pSamples.0.lcssa = phi half* [ %scevgep159, %while.end.loopexit ], [ %0, %if.then ]
+  %pSamples.0.lcssa = phi half* [ %scevgep159, %while.end.loopexit ], [ %i, %if.then ]
   %pStateCur.0.lcssa = phi half* [ %add.ptr, %while.end.loopexit ], [ %arrayidx, %if.then ]
   %and = and i32 %blockSize, 3
-  %21 = tail call <8 x i1> @llvm.arm.mve.vctp16(i32 %and)
-  %22 = bitcast half* %pTempSrc.0.lcssa to <8 x half>*
-  %23 = load <8 x half>, <8 x half>* %22, align 4
-  %24 = bitcast half* %pStateCur.0.lcssa to <8 x half>*
-  tail call void @llvm.masked.store.v8f16.p0v8f16(<8 x half> %23, <8 x half>* %24, i32 4, <8 x i1> %21)
-  %25 = bitcast half* %pSamples.0.lcssa to <8 x half>*
-  %26 = load <8 x half>, <8 x half>* %25, align 4
-  %27 = fmul fast <8 x half> %26, %.pre162
+  %i21 = tail call <8 x i1> @llvm.arm.mve.vctp16(i32 %and)
+  %i22 = bitcast half* %pTempSrc.0.lcssa to <8 x half>*
+  %i23 = load <8 x half>, <8 x half>* %i22, align 4
+  %i24 = bitcast half* %pStateCur.0.lcssa to <8 x half>*
+  tail call void @llvm.masked.store.v8f16.p0v8f16(<8 x half> %i23, <8 x half>* %i24, i32 4, <8 x i1> %i21)
+  %i25 = bitcast half* %pSamples.0.lcssa to <8 x half>*
+  %i26 = load <8 x half>, <8 x half>* %i25, align 4
+  %i27 = fmul fast <8 x half> %i26, %.pre162
   %arrayidx29 = getelementptr inbounds half, half* %pSamples.0.lcssa, i32 1
-  %28 = bitcast half* %arrayidx29 to <8 x half>*
-  %29 = load <8 x half>, <8 x half>* %28, align 4
-  %mul32 = fmul fast <8 x half> %29, %.pre164
-  %add33 = fadd fast <8 x half> %mul32, %27
+  %i28 = bitcast half* %arrayidx29 to <8 x half>*
+  %i29 = load <8 x half>, <8 x half>* %i28, align 4
+  %mul32 = fmul fast <8 x half> %i29, %.pre164
+  %add33 = fadd fast <8 x half> %mul32, %i27
   %arrayidx34 = getelementptr inbounds half, half* %pSamples.0.lcssa, i32 2
-  %30 = bitcast half* %arrayidx34 to <8 x half>*
-  %31 = load <8 x half>, <8 x half>* %30, align 4
-  %mul37 = fmul fast <8 x half> %31, %.pre166
+  %i30 = bitcast half* %arrayidx34 to <8 x half>*
+  %i31 = load <8 x half>, <8 x half>* %i30, align 4
+  %mul37 = fmul fast <8 x half> %i31, %.pre166
   %add38 = fadd fast <8 x half> %add33, %mul37
   %arrayidx39 = getelementptr inbounds half, half* %pSamples.0.lcssa, i32 3
-  %32 = bitcast half* %arrayidx39 to <8 x half>*
-  %33 = load <8 x half>, <8 x half>* %32, align 4
-  %mul42 = fmul fast <8 x half> %33, %.pre168
+  %i32 = bitcast half* %arrayidx39 to <8 x half>*
+  %i33 = load <8 x half>, <8 x half>* %i32, align 4
+  %mul42 = fmul fast <8 x half> %i33, %.pre168
   %add43 = fadd fast <8 x half> %add38, %mul42
-  %34 = bitcast half* %pOutput.0.lcssa to <8 x half>*
-  tail call void @llvm.masked.store.v8f16.p0v8f16(<8 x half> %add43, <8 x half>* %34, i32 4, <8 x i1> %21)
+  %i34 = bitcast half* %pOutput.0.lcssa to <8 x half>*
+  tail call void @llvm.masked.store.v8f16.p0v8f16(<8 x half> %add43, <8 x half>* %i34, i32 4, <8 x i1> %i21)
   %.pre = load half*, half** %pState1, align 4
   br label %if.end
 
 if.end:                                           ; preds = %while.end, %entry
-  %35 = phi half* [ %.pre, %while.end ], [ %0, %entry ]
-  %arrayidx45 = getelementptr inbounds half, half* %35, i32 %blockSize
+  %i35 = phi half* [ %.pre, %while.end ], [ %i, %entry ]
+  %arrayidx45 = getelementptr inbounds half, half* %i35, i32 %blockSize
   %shr47 = lshr i32 %conv, 2
   %cmp49141 = icmp eq i32 %shr47, 0
   br i1 %cmp49141, label %while.end55, label %while.body51.preheader
 
 while.body51.preheader:                           ; preds = %if.end
-  %36 = and i32 %conv, 65532
-  %37 = add i32 %36, %blockSize
-  %scevgep = getelementptr half, half* %35, i32 %37
+  %i36 = and i32 %conv, 65532
+  %i37 = add i32 %i36, %blockSize
+  %scevgep = getelementptr half, half* %i35, i32 %i37
   br label %while.body51
 
-while.body51:                                     ; preds = %while.body51.preheader, %while.body51
+while.body51:                                     ; preds = %while.body51, %while.body51.preheader
   %pTempSrc.1144 = phi half* [ %add.ptr52, %while.body51 ], [ %arrayidx45, %while.body51.preheader ]
-  %pTempDest.0143 = phi half* [ %add.ptr53, %while.body51 ], [ %35, %while.body51.preheader ]
+  %pTempDest.0143 = phi half* [ %add.ptr53, %while.body51 ], [ %i35, %while.body51.preheader ]
   %blkCnt.1142 = phi i32 [ %dec54, %while.body51 ], [ %shr47, %while.body51.preheader ]
-  %38 = bitcast half* %pTempSrc.1144 to <8 x half>*
-  %39 = load <8 x half>, <8 x half>* %38, align 4
-  %40 = bitcast half* %pTempDest.0143 to <8 x half>*
-  store <8 x half> %39, <8 x half>* %40, align 4
+  %i38 = bitcast half* %pTempSrc.1144 to <8 x half>*
+  %i39 = load <8 x half>, <8 x half>* %i38, align 4
+  %i40 = bitcast half* %pTempDest.0143 to <8 x half>*
+  store <8 x half> %i39, <8 x half>* %i40, align 4
   %add.ptr52 = getelementptr inbounds half, half* %pTempSrc.1144, i32 4
   %add.ptr53 = getelementptr inbounds half, half* %pTempDest.0143, i32 4
   %dec54 = add nsw i32 %blkCnt.1142, -1
@@ -1021,25 +1021,25 @@ while.body51:                                     ; preds = %while.body51.prehea
   br i1 %cmp49, label %while.end55.loopexit, label %while.body51
 
 while.end55.loopexit:                             ; preds = %while.body51
-  %scevgep156 = getelementptr half, half* %35, i32 %36
+  %scevgep156 = getelementptr half, half* %i35, i32 %i36
   br label %while.end55
 
 while.end55:                                      ; preds = %while.end55.loopexit, %if.end
-  %pTempDest.0.lcssa = phi half* [ %35, %if.end ], [ %scevgep156, %while.end55.loopexit ]
+  %pTempDest.0.lcssa = phi half* [ %i35, %if.end ], [ %scevgep156, %while.end55.loopexit ]
   %pTempSrc.1.lcssa = phi half* [ %arrayidx45, %if.end ], [ %scevgep, %while.end55.loopexit ]
   %and56 = and i32 %conv, 3
   %cmp57 = icmp eq i32 %and56, 0
   br i1 %cmp57, label %if.end61, label %if.then59
 
 if.then59:                                        ; preds = %while.end55
-  %41 = tail call <8 x i1> @llvm.arm.mve.vctp16(i32 %and56)
-  %42 = bitcast half* %pTempSrc.1.lcssa to <8 x half>*
-  %43 = load <8 x half>, <8 x half>* %42, align 4
-  %44 = bitcast half* %pTempDest.0.lcssa to <8 x half>*
-  tail call void @llvm.masked.store.v8f16.p0v8f16(<8 x half> %43, <8 x half>* %44, i32 4, <8 x i1> %41)
+  %i41 = tail call <8 x i1> @llvm.arm.mve.vctp16(i32 %and56)
+  %i42 = bitcast half* %pTempSrc.1.lcssa to <8 x half>*
+  %i43 = load <8 x half>, <8 x half>* %i42, align 4
+  %i44 = bitcast half* %pTempDest.0.lcssa to <8 x half>*
+  tail call void @llvm.masked.store.v8f16.p0v8f16(<8 x half> %i43, <8 x half>* %i44, i32 4, <8 x i1> %i41)
   br label %if.end61
 
-if.end61:                                         ; preds = %while.end55, %if.then59
+if.end61:                                         ; preds = %if.then59, %while.end55
   ret void
 }
 
@@ -1193,12 +1193,12 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, half* noca
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 entry:
   %pState1 = getelementptr inbounds %struct.arm_fir_instance_f32, %struct.arm_fir_instance_f32* %S, i32 0, i32 1
-  %0 = load half*, half** %pState1, align 4
+  %i = load half*, half** %pState1, align 4
   %pCoeffs2 = getelementptr inbounds %struct.arm_fir_instance_f32, %struct.arm_fir_instance_f32* %S, i32 0, i32 2
-  %1 = load half*, half** %pCoeffs2, align 4
+  %i1 = load half*, half** %pCoeffs2, align 4
   %numTaps3 = getelementptr inbounds %struct.arm_fir_instance_f32, %struct.arm_fir_instance_f32* %S, i32 0, i32 0
-  %2 = load i16, i16* %numTaps3, align 4
-  %conv = zext i16 %2 to i32
+  %i2 = load i16, i16* %numTaps3, align 4
+  %conv = zext i16 %i2 to i32
   %cmp = icmp ugt i32 %blockSize, 7
   br i1 %cmp, label %if.then, label %if.end
 
@@ -1209,164 +1209,164 @@ if.then:                                          ; preds = %entry
 
 while.body.lr.ph:                                 ; preds = %if.then
   %sub = add nsw i32 %conv, -1
-  %arrayidx = getelementptr inbounds half, half* %0, i32 %sub
-  %incdec.ptr = getelementptr inbounds half, half* %1, i32 1
-  %incdec.ptr7 = getelementptr inbounds half, half* %1, i32 2
-  %incdec.ptr8 = getelementptr inbounds half, half* %1, i32 3
-  %incdec.ptr9 = getelementptr inbounds half, half* %1, i32 4
-  %incdec.ptr10 = getelementptr inbounds half, half* %1, i32 5
-  %incdec.ptr11 = getelementptr inbounds half, half* %1, i32 6
-  %incdec.ptr12 = getelementptr inbounds half, half* %1, i32 7
+  %arrayidx = getelementptr inbounds half, half* %i, i32 %sub
+  %incdec.ptr = getelementptr inbounds half, half* %i1, i32 1
+  %incdec.ptr7 = getelementptr inbounds half, half* %i1, i32 2
+  %incdec.ptr8 = getelementptr inbounds half, half* %i1, i32 3
+  %incdec.ptr9 = getelementptr inbounds half, half* %i1, i32 4
+  %incdec.ptr10 = getelementptr inbounds half, half* %i1, i32 5
+  %incdec.ptr11 = getelementptr inbounds half, half* %i1, i32 6
+  %incdec.ptr12 = getelementptr inbounds half, half* %i1, i32 7
   %sub37 = add nsw i32 %conv, -8
   %div = sdiv i32 %sub37, 8
-  %pCoeffsCur.0199 = getelementptr inbounds half, half* %1, i32 8
-  %cmp38201 = icmp ugt i16 %2, 15
+  %pCoeffsCur.0199 = getelementptr inbounds half, half* %i1, i32 8
+  %cmp38201 = icmp ugt i16 %i2, 15
   %and = and i32 %sub37, 7
   %cmp74210 = icmp eq i32 %and, 0
   %idx.neg = sub nsw i32 0, %conv
-  %3 = icmp sgt i32 %div, 1
-  %smax = select i1 %3, i32 %div, i32 1
+  %i3 = icmp sgt i32 %div, 1
+  %smax = select i1 %i3, i32 %div, i32 1
   br label %while.body
 
-while.body:                                       ; preds = %while.body.lr.ph, %while.end
+while.body:                                       ; preds = %while.end, %while.body.lr.ph
   %blkCnt.0222 = phi i32 [ %shr, %while.body.lr.ph ], [ %dec84, %while.end ]
   %pStateCur.0221 = phi half* [ %arrayidx, %while.body.lr.ph ], [ %add.ptr, %while.end ]
-  %pSamples.0220 = phi half* [ %0, %while.body.lr.ph ], [ %add.ptr83, %while.end ]
+  %pSamples.0220 = phi half* [ %i, %while.body.lr.ph ], [ %add.ptr83, %while.end ]
   %pTempSrc.0219 = phi half* [ %pSrc, %while.body.lr.ph ], [ %add.ptr14, %while.end ]
   %pOutput.0218 = phi half* [ %pDst, %while.body.lr.ph ], [ %add.ptr81, %while.end ]
-  %4 = load half, half* %1, align 4
-  %5 = load half, half* %incdec.ptr, align 4
-  %6 = load half, half* %incdec.ptr7, align 4
-  %7 = load half, half* %incdec.ptr8, align 4
-  %8 = load half, half* %incdec.ptr9, align 4
-  %9 = load half, half* %incdec.ptr10, align 4
-  %10 = load half, half* %incdec.ptr11, align 4
-  %11 = load half, half* %incdec.ptr12, align 4
-  %12 = bitcast half* %pTempSrc.0219 to <8 x half>*
-  %13 = load <8 x half>, <8 x half>* %12, align 4
-  %14 = bitcast half* %pStateCur.0221 to <8 x half>*
-  store <8 x half> %13, <8 x half>* %14, align 4
+  %i4 = load half, half* %i1, align 4
+  %i5 = load half, half* %incdec.ptr, align 4
+  %i6 = load half, half* %incdec.ptr7, align 4
+  %i7 = load half, half* %incdec.ptr8, align 4
+  %i8 = load half, half* %incdec.ptr9, align 4
+  %i9 = load half, half* %incdec.ptr10, align 4
+  %i10 = load half, half* %incdec.ptr11, align 4
+  %i11 = load half, half* %incdec.ptr12, align 4
+  %i12 = bitcast half* %pTempSrc.0219 to <8 x half>*
+  %i13 = load <8 x half>, <8 x half>* %i12, align 4
+  %i14 = bitcast half* %pStateCur.0221 to <8 x half>*
+  store <8 x half> %i13, <8 x half>* %i14, align 4
   %add.ptr = getelementptr inbounds half, half* %pStateCur.0221, i32 4
   %add.ptr14 = getelementptr inbounds half, half* %pTempSrc.0219, i32 4
-  %15 = bitcast half* %pSamples.0220 to <8 x half>*
-  %16 = load <8 x half>, <8 x half>* %15, align 4
-  %.splatinsert = insertelement <8 x half> undef, half %4, i32 0
+  %i15 = bitcast half* %pSamples.0220 to <8 x half>*
+  %i16 = load <8 x half>, <8 x half>* %i15, align 4
+  %.splatinsert = insertelement <8 x half> undef, half %i4, i32 0
   %.splat = shufflevector <8 x half> %.splatinsert, <8 x half> undef, <8 x i32> zeroinitializer
-  %17 = fmul fast <8 x half> %16, %.splat
+  %i17 = fmul fast <8 x half> %i16, %.splat
   %arrayidx15 = getelementptr inbounds half, half* %pSamples.0220, i32 1
-  %18 = bitcast half* %arrayidx15 to <8 x half>*
-  %19 = load <8 x half>, <8 x half>* %18, align 4
-  %.splatinsert16 = insertelement <8 x half> undef, half %5, i32 0
+  %i18 = bitcast half* %arrayidx15 to <8 x half>*
+  %i19 = load <8 x half>, <8 x half>* %i18, align 4
+  %.splatinsert16 = insertelement <8 x half> undef, half %i5, i32 0
   %.splat17 = shufflevector <8 x half> %.splatinsert16, <8 x half> undef, <8 x i32> zeroinitializer
-  %20 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %19, <8 x half> %.splat17, <8 x half> %17)
+  %i20 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i19, <8 x half> %.splat17, <8 x half> %i17)
   %arrayidx18 = getelementptr inbounds half, half* %pSamples.0220, i32 2
-  %21 = bitcast half* %arrayidx18 to <8 x half>*
-  %22 = load <8 x half>, <8 x half>* %21, align 4
-  %.splatinsert19 = insertelement <8 x half> undef, half %6, i32 0
+  %i21 = bitcast half* %arrayidx18 to <8 x half>*
+  %i22 = load <8 x half>, <8 x half>* %i21, align 4
+  %.splatinsert19 = insertelement <8 x half> undef, half %i6, i32 0
   %.splat20 = shufflevector <8 x half> %.splatinsert19, <8 x half> undef, <8 x i32> zeroinitializer
-  %23 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %22, <8 x half> %.splat20, <8 x half> %20)
+  %i23 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i22, <8 x half> %.splat20, <8 x half> %i20)
   %arrayidx21 = getelementptr inbounds half, half* %pSamples.0220, i32 3
-  %24 = bitcast half* %arrayidx21 to <8 x half>*
-  %25 = load <8 x half>, <8 x half>* %24, align 4
-  %.splatinsert22 = insertelement <8 x half> undef, half %7, i32 0
+  %i24 = bitcast half* %arrayidx21 to <8 x half>*
+  %i25 = load <8 x half>, <8 x half>* %i24, align 4
+  %.splatinsert22 = insertelement <8 x half> undef, half %i7, i32 0
   %.splat23 = shufflevector <8 x half> %.splatinsert22, <8 x half> undef, <8 x i32> zeroinitializer
-  %26 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %25, <8 x half> %.splat23, <8 x half> %23)
+  %i26 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i25, <8 x half> %.splat23, <8 x half> %i23)
   %arrayidx24 = getelementptr inbounds half, half* %pSamples.0220, i32 4
-  %27 = bitcast half* %arrayidx24 to <8 x half>*
-  %28 = load <8 x half>, <8 x half>* %27, align 4
-  %.splatinsert25 = insertelement <8 x half> undef, half %8, i32 0
+  %i27 = bitcast half* %arrayidx24 to <8 x half>*
+  %i28 = load <8 x half>, <8 x half>* %i27, align 4
+  %.splatinsert25 = insertelement <8 x half> undef, half %i8, i32 0
   %.splat26 = shufflevector <8 x half> %.splatinsert25, <8 x half> undef, <8 x i32> zeroinitializer
-  %29 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %28, <8 x half> %.splat26, <8 x half> %26)
+  %i29 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i28, <8 x half> %.splat26, <8 x half> %i26)
   %arrayidx27 = getelementptr inbounds half, half* %pSamples.0220, i32 5
-  %30 = bitcast half* %arrayidx27 to <8 x half>*
-  %31 = load <8 x half>, <8 x half>* %30, align 4
-  %.splatinsert28 = insertelement <8 x half> undef, half %9, i32 0
+  %i30 = bitcast half* %arrayidx27 to <8 x half>*
+  %i31 = load <8 x half>, <8 x half>* %i30, align 4
+  %.splatinsert28 = insertelement <8 x half> undef, half %i9, i32 0
   %.splat29 = shufflevector <8 x half> %.splatinsert28, <8 x half> undef, <8 x i32> zeroinitializer
-  %32 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %31, <8 x half> %.splat29, <8 x half> %29)
+  %i32 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i31, <8 x half> %.splat29, <8 x half> %i29)
   %arrayidx30 = getelementptr inbounds half, half* %pSamples.0220, i32 6
-  %33 = bitcast half* %arrayidx30 to <8 x half>*
-  %34 = load <8 x half>, <8 x half>* %33, align 4
-  %.splatinsert31 = insertelement <8 x half> undef, half %10, i32 0
+  %i33 = bitcast half* %arrayidx30 to <8 x half>*
+  %i34 = load <8 x half>, <8 x half>* %i33, align 4
+  %.splatinsert31 = insertelement <8 x half> undef, half %i10, i32 0
   %.splat32 = shufflevector <8 x half> %.splatinsert31, <8 x half> undef, <8 x i32> zeroinitializer
-  %35 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %34, <8 x half> %.splat32, <8 x half> %32)
+  %i35 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i34, <8 x half> %.splat32, <8 x half> %i32)
   %arrayidx33 = getelementptr inbounds half, half* %pSamples.0220, i32 7
-  %36 = bitcast half* %arrayidx33 to <8 x half>*
-  %37 = load <8 x half>, <8 x half>* %36, align 4
-  %.splatinsert34 = insertelement <8 x half> undef, half %11, i32 0
+  %i36 = bitcast half* %arrayidx33 to <8 x half>*
+  %i37 = load <8 x half>, <8 x half>* %i36, align 4
+  %.splatinsert34 = insertelement <8 x half> undef, half %i11, i32 0
   %.splat35 = shufflevector <8 x half> %.splatinsert34, <8 x half> undef, <8 x i32> zeroinitializer
-  %38 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %37, <8 x half> %.splat35, <8 x half> %35)
+  %i38 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i37, <8 x half> %.splat35, <8 x half> %i35)
   %pSamples.1200 = getelementptr inbounds half, half* %pSamples.0220, i32 8
   br i1 %cmp38201, label %for.body, label %for.end
 
-for.body:                                         ; preds = %while.body, %for.body
+for.body:                                         ; preds = %for.body, %while.body
   %pSamples.1207 = phi half* [ %pSamples.1, %for.body ], [ %pSamples.1200, %while.body ]
   %pCoeffsCur.0206 = phi half* [ %pCoeffsCur.0, %for.body ], [ %pCoeffsCur.0199, %while.body ]
-  %.pn205 = phi half* [ %pCoeffsCur.0206, %for.body ], [ %1, %while.body ]
+  %.pn205 = phi half* [ %pCoeffsCur.0206, %for.body ], [ %i1, %while.body ]
   %i.0204 = phi i32 [ %inc, %for.body ], [ 0, %while.body ]
-  %vecAcc0.0203 = phi <8 x half> [ %70, %for.body ], [ %38, %while.body ]
+  %vecAcc0.0203 = phi <8 x half> [ %i70, %for.body ], [ %i38, %while.body ]
   %pSamples.0.pn202 = phi half* [ %pSamples.1207, %for.body ], [ %pSamples.0220, %while.body ]
   %incdec.ptr40 = getelementptr inbounds half, half* %.pn205, i32 9
-  %39 = load half, half* %pCoeffsCur.0206, align 4
+  %i39 = load half, half* %pCoeffsCur.0206, align 4
   %incdec.ptr41 = getelementptr inbounds half, half* %.pn205, i32 10
-  %40 = load half, half* %incdec.ptr40, align 4
+  %i40 = load half, half* %incdec.ptr40, align 4
   %incdec.ptr42 = getelementptr inbounds half, half* %.pn205, i32 11
-  %41 = load half, half* %incdec.ptr41, align 4
+  %i41 = load half, half* %incdec.ptr41, align 4
   %incdec.ptr43 = getelementptr inbounds half, half* %.pn205, i32 12
-  %42 = load half, half* %incdec.ptr42, align 4
+  %i42 = load half, half* %incdec.ptr42, align 4
   %incdec.ptr44 = getelementptr inbounds half, half* %.pn205, i32 13
-  %43 = load half, half* %incdec.ptr43, align 4
+  %i43 = load half, half* %incdec.ptr43, align 4
   %incdec.ptr45 = getelementptr inbounds half, half* %.pn205, i32 14
-  %44 = load half, half* %incdec.ptr44, align 4
+  %i44 = load half, half* %incdec.ptr44, align 4
   %incdec.ptr46 = getelementptr inbounds half, half* %.pn205, i32 15
-  %45 = load half, half* %incdec.ptr45, align 4
-  %46 = load half, half* %incdec.ptr46, align 4
-  %47 = bitcast half* %pSamples.1207 to <8 x half>*
-  %48 = load <8 x half>, <8 x half>* %47, align 4
-  %.splatinsert48 = insertelement <8 x half> undef, half %39, i32 0
+  %i45 = load half, half* %incdec.ptr45, align 4
+  %i46 = load half, half* %incdec.ptr46, align 4
+  %i47 = bitcast half* %pSamples.1207 to <8 x half>*
+  %i48 = load <8 x half>, <8 x half>* %i47, align 4
+  %.splatinsert48 = insertelement <8 x half> undef, half %i39, i32 0
   %.splat49 = shufflevector <8 x half> %.splatinsert48, <8 x half> undef, <8 x i32> zeroinitializer
-  %49 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %48, <8 x half> %.splat49, <8 x half> %vecAcc0.0203)
+  %i49 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i48, <8 x half> %.splat49, <8 x half> %vecAcc0.0203)
   %arrayidx50 = getelementptr inbounds half, half* %pSamples.0.pn202, i32 9
-  %50 = bitcast half* %arrayidx50 to <8 x half>*
-  %51 = load <8 x half>, <8 x half>* %50, align 4
-  %.splatinsert51 = insertelement <8 x half> undef, half %40, i32 0
+  %i50 = bitcast half* %arrayidx50 to <8 x half>*
+  %i51 = load <8 x half>, <8 x half>* %i50, align 4
+  %.splatinsert51 = insertelement <8 x half> undef, half %i40, i32 0
   %.splat52 = shufflevector <8 x half> %.splatinsert51, <8 x half> undef, <8 x i32> zeroinitializer
-  %52 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %51, <8 x half> %.splat52, <8 x half> %49)
+  %i52 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i51, <8 x half> %.splat52, <8 x half> %i49)
   %arrayidx53 = getelementptr inbounds half, half* %pSamples.0.pn202, i32 10
-  %53 = bitcast half* %arrayidx53 to <8 x half>*
-  %54 = load <8 x half>, <8 x half>* %53, align 4
-  %.splatinsert54 = insertelement <8 x half> undef, half %41, i32 0
+  %i53 = bitcast half* %arrayidx53 to <8 x half>*
+  %i54 = load <8 x half>, <8 x half>* %i53, align 4
+  %.splatinsert54 = insertelement <8 x half> undef, half %i41, i32 0
   %.splat55 = shufflevector <8 x half> %.splatinsert54, <8 x half> undef, <8 x i32> zeroinitializer
-  %55 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %54, <8 x half> %.splat55, <8 x half> %52)
+  %i55 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i54, <8 x half> %.splat55, <8 x half> %i52)
   %arrayidx56 = getelementptr inbounds half, half* %pSamples.0.pn202, i32 11
-  %56 = bitcast half* %arrayidx56 to <8 x half>*
-  %57 = load <8 x half>, <8 x half>* %56, align 4
-  %.splatinsert57 = insertelement <8 x half> undef, half %42, i32 0
+  %i56 = bitcast half* %arrayidx56 to <8 x half>*
+  %i57 = load <8 x half>, <8 x half>* %i56, align 4
+  %.splatinsert57 = insertelement <8 x half> undef, half %i42, i32 0
   %.splat58 = shufflevector <8 x half> %.splatinsert57, <8 x half> undef, <8 x i32> zeroinitializer
-  %58 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %57, <8 x half> %.splat58, <8 x half> %55)
+  %i58 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i57, <8 x half> %.splat58, <8 x half> %i55)
   %arrayidx59 = getelementptr inbounds half, half* %pSamples.0.pn202, i32 12
-  %59 = bitcast half* %arrayidx59 to <8 x half>*
-  %60 = load <8 x half>, <8 x half>* %59, align 4
-  %.splatinsert60 = insertelement <8 x half> undef, half %43, i32 0
+  %i59 = bitcast half* %arrayidx59 to <8 x half>*
+  %i60 = load <8 x half>, <8 x half>* %i59, align 4
+  %.splatinsert60 = insertelement <8 x half> undef, half %i43, i32 0
   %.splat61 = shufflevector <8 x half> %.splatinsert60, <8 x half> undef, <8 x i32> zeroinitializer
-  %61 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %60, <8 x half> %.splat61, <8 x half> %58)
+  %i61 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i60, <8 x half> %.splat61, <8 x half> %i58)
   %arrayidx62 = getelementptr inbounds half, half* %pSamples.0.pn202, i32 13
-  %62 = bitcast half* %arrayidx62 to <8 x half>*
-  %63 = load <8 x half>, <8 x half>* %62, align 4
-  %.splatinsert63 = insertelement <8 x half> undef, half %44, i32 0
+  %i62 = bitcast half* %arrayidx62 to <8 x half>*
+  %i63 = load <8 x half>, <8 x half>* %i62, align 4
+  %.splatinsert63 = insertelement <8 x half> undef, half %i44, i32 0
   %.splat64 = shufflevector <8 x half> %.splatinsert63, <8 x half> undef, <8 x i32> zeroinitializer
-  %64 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %63, <8 x half> %.splat64, <8 x half> %61)
+  %i64 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i63, <8 x half> %.splat64, <8 x half> %i61)
   %arrayidx65 = getelementptr inbounds half, half* %pSamples.0.pn202, i32 14
-  %65 = bitcast half* %arrayidx65 to <8 x half>*
-  %66 = load <8 x half>, <8 x half>* %65, align 4
-  %.splatinsert66 = insertelement <8 x half> undef, half %45, i32 0
+  %i65 = bitcast half* %arrayidx65 to <8 x half>*
+  %i66 = load <8 x half>, <8 x half>* %i65, align 4
+  %.splatinsert66 = insertelement <8 x half> undef, half %i45, i32 0
   %.splat67 = shufflevector <8 x half> %.splatinsert66, <8 x half> undef, <8 x i32> zeroinitializer
-  %67 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %66, <8 x half> %.splat67, <8 x half> %64)
+  %i67 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i66, <8 x half> %.splat67, <8 x half> %i64)
   %arrayidx68 = getelementptr inbounds half, half* %pSamples.0.pn202, i32 15
-  %68 = bitcast half* %arrayidx68 to <8 x half>*
-  %69 = load <8 x half>, <8 x half>* %68, align 4
-  %.splatinsert69 = insertelement <8 x half> undef, half %46, i32 0
+  %i68 = bitcast half* %arrayidx68 to <8 x half>*
+  %i69 = load <8 x half>, <8 x half>* %i68, align 4
+  %.splatinsert69 = insertelement <8 x half> undef, half %i46, i32 0
   %.splat70 = shufflevector <8 x half> %.splatinsert69, <8 x half> undef, <8 x i32> zeroinitializer
-  %70 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %69, <8 x half> %.splat70, <8 x half> %67)
+  %i70 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i69, <8 x half> %.splat70, <8 x half> %i67)
   %inc = add nuw nsw i32 %i.0204, 1
   %pCoeffsCur.0 = getelementptr inbounds half, half* %pCoeffsCur.0206, i32 8
   %pSamples.1 = getelementptr inbounds half, half* %pSamples.1207, i32 8
@@ -1374,23 +1374,23 @@ for.body:                                         ; preds = %while.body, %for.bo
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body, %while.body
-  %vecAcc0.0.lcssa = phi <8 x half> [ %38, %while.body ], [ %70, %for.body ]
+  %vecAcc0.0.lcssa = phi <8 x half> [ %i38, %while.body ], [ %i70, %for.body ]
   %pCoeffsCur.0.lcssa = phi half* [ %pCoeffsCur.0199, %while.body ], [ %pCoeffsCur.0, %for.body ]
   %pSamples.1.lcssa = phi half* [ %pSamples.1200, %while.body ], [ %pSamples.1, %for.body ]
   br i1 %cmp74210, label %while.end, label %while.body76
 
-while.body76:                                     ; preds = %for.end, %while.body76
+while.body76:                                     ; preds = %while.body76, %for.end
   %pCoeffsCur.1214 = phi half* [ %incdec.ptr77, %while.body76 ], [ %pCoeffsCur.0.lcssa, %for.end ]
-  %vecAcc0.1213 = phi <8 x half> [ %74, %while.body76 ], [ %vecAcc0.0.lcssa, %for.end ]
+  %vecAcc0.1213 = phi <8 x half> [ %i74, %while.body76 ], [ %vecAcc0.0.lcssa, %for.end ]
   %numCnt.0212 = phi i32 [ %dec, %while.body76 ], [ %and, %for.end ]
   %pSamples.2211 = phi half* [ %incdec.ptr80, %while.body76 ], [ %pSamples.1.lcssa, %for.end ]
   %incdec.ptr77 = getelementptr inbounds half, half* %pCoeffsCur.1214, i32 1
-  %71 = load half, half* %pCoeffsCur.1214, align 4
-  %72 = bitcast half* %pSamples.2211 to <8 x half>*
-  %73 = load <8 x half>, <8 x half>* %72, align 4
-  %.splatinsert78 = insertelement <8 x half> undef, half %71, i32 0
+  %i71 = load half, half* %pCoeffsCur.1214, align 4
+  %i72 = bitcast half* %pSamples.2211 to <8 x half>*
+  %i73 = load <8 x half>, <8 x half>* %i72, align 4
+  %.splatinsert78 = insertelement <8 x half> undef, half %i71, i32 0
   %.splat79 = shufflevector <8 x half> %.splatinsert78, <8 x half> undef, <8 x i32> zeroinitializer
-  %74 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %73, <8 x half> %.splat79, <8 x half> %vecAcc0.1213)
+  %i74 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i73, <8 x half> %.splat79, <8 x half> %vecAcc0.1213)
   %incdec.ptr80 = getelementptr inbounds half, half* %pSamples.2211, i32 1
   %dec = add nsw i32 %numCnt.0212, -1
   %cmp74 = icmp sgt i32 %numCnt.0212, 1
@@ -1402,9 +1402,9 @@ while.end.loopexit:                               ; preds = %while.body76
 
 while.end:                                        ; preds = %while.end.loopexit, %for.end
   %pSamples.2.lcssa = phi half* [ %pSamples.1.lcssa, %for.end ], [ %scevgep, %while.end.loopexit ]
-  %vecAcc0.1.lcssa = phi <8 x half> [ %vecAcc0.0.lcssa, %for.end ], [ %74, %while.end.loopexit ]
-  %75 = bitcast half* %pOutput.0218 to <8 x half>*
-  store <8 x half> %vecAcc0.1.lcssa, <8 x half>* %75, align 4
+  %vecAcc0.1.lcssa = phi <8 x half> [ %vecAcc0.0.lcssa, %for.end ], [ %i74, %while.end.loopexit ]
+  %i75 = bitcast half* %pOutput.0218 to <8 x half>*
+  store <8 x half> %vecAcc0.1.lcssa, <8 x half>* %i75, align 4
   %add.ptr81 = getelementptr inbounds half, half* %pOutput.0218, i32 4
   %add.ptr82 = getelementptr inbounds half, half* %pSamples.2.lcssa, i32 4
   %add.ptr83 = getelementptr inbounds half, half* %add.ptr82, i32 %idx.neg
@@ -1503,12 +1503,12 @@ define void @arm_biquad_cascade_df2T_f16(%struct.arm_biquad_cascade_df2T_instanc
 ; CHECK-NEXT:    .short 0x0000 @ half 0
 entry:
   %pState1 = getelementptr inbounds %struct.arm_biquad_cascade_df2T_instance_f16, %struct.arm_biquad_cascade_df2T_instance_f16* %S, i32 0, i32 1
-  %0 = load half*, half** %pState1, align 4
+  %i = load half*, half** %pState1, align 4
   %numStages = getelementptr inbounds %struct.arm_biquad_cascade_df2T_instance_f16, %struct.arm_biquad_cascade_df2T_instance_f16* %S, i32 0, i32 0
-  %1 = load i8, i8* %numStages, align 4
-  %conv = zext i8 %1 to i32
+  %i1 = load i8, i8* %numStages, align 4
+  %conv = zext i8 %i1 to i32
   %pCoeffs = getelementptr inbounds %struct.arm_biquad_cascade_df2T_instance_f16, %struct.arm_biquad_cascade_df2T_instance_f16* %S, i32 0, i32 2
-  %2 = load half*, half** %pCoeffs, align 4
+  %i2 = load half*, half** %pCoeffs, align 4
   %div = lshr i32 %blockSize, 1
   %cmp.not90 = icmp eq i32 %div, 0
   %and = and i32 %blockSize, 1
@@ -1517,92 +1517,92 @@ entry:
 
 do.body:                                          ; preds = %if.end, %entry
   %stage.0 = phi i32 [ %conv, %entry ], [ %dec23, %if.end ]
-  %pCurCoeffs.0 = phi half* [ %2, %entry ], [ %add.ptr2, %if.end ]
-  %pState.0 = phi half* [ %0, %entry ], [ %pState.1, %if.end ]
+  %pCurCoeffs.0 = phi half* [ %i2, %entry ], [ %add.ptr2, %if.end ]
+  %pState.0 = phi half* [ %i, %entry ], [ %pState.1, %if.end ]
   %pIn.0 = phi half* [ %pSrc, %entry ], [ %pDst, %if.end ]
-  %3 = bitcast half* %pCurCoeffs.0 to <8 x half>*
-  %4 = load <8 x half>, <8 x half>* %3, align 2
+  %i3 = bitcast half* %pCurCoeffs.0 to <8 x half>*
+  %i4 = load <8 x half>, <8 x half>* %i3, align 2
   %add.ptr = getelementptr inbounds half, half* %pCurCoeffs.0, i32 2
-  %5 = bitcast half* %add.ptr to <8 x half>*
-  %6 = load <8 x half>, <8 x half>* %5, align 2
+  %i5 = bitcast half* %add.ptr to <8 x half>*
+  %i6 = load <8 x half>, <8 x half>* %i5, align 2
   %add.ptr2 = getelementptr inbounds half, half* %pCurCoeffs.0, i32 5
-  %7 = bitcast half* %pState.0 to <8 x half>*
-  %8 = load <8 x half>, <8 x half>* %7, align 2
-  %9 = shufflevector <8 x half> %8, <8 x half> <half poison, half poison, half 0xH0000, half 0xH0000, half poison, half poison, half poison, half poison>, <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
-  %10 = bitcast <8 x half> %4 to <8 x i16>
-  %11 = tail call { i32, <8 x i16> } @llvm.arm.mve.vshlc.v8i16(<8 x i16> %10, i32 0, i32 16)
-  %12 = extractvalue { i32, <8 x i16> } %11, 0
-  %13 = extractvalue { i32, <8 x i16> } %11, 1
-  %14 = bitcast <8 x i16> %13 to <8 x half>
-  %15 = bitcast <8 x half> %6 to <8 x i16>
-  %16 = tail call { i32, <8 x i16> } @llvm.arm.mve.vshlc.v8i16(<8 x i16> %15, i32 %12, i32 16)
-  %17 = extractvalue { i32, <8 x i16> } %16, 1
-  %18 = bitcast <8 x i16> %17 to <8 x half>
+  %i7 = bitcast half* %pState.0 to <8 x half>*
+  %i8 = load <8 x half>, <8 x half>* %i7, align 2
+  %i9 = shufflevector <8 x half> %i8, <8 x half> <half poison, half poison, half 0xH0000, half 0xH0000, half poison, half poison, half poison, half poison>, <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
+  %i10 = bitcast <8 x half> %i4 to <8 x i16>
+  %i11 = tail call { i32, <8 x i16> } @llvm.arm.mve.vshlc.v8i16(<8 x i16> %i10, i32 0, i32 16)
+  %i12 = extractvalue { i32, <8 x i16> } %i11, 0
+  %i13 = extractvalue { i32, <8 x i16> } %i11, 1
+  %i14 = bitcast <8 x i16> %i13 to <8 x half>
+  %i15 = bitcast <8 x half> %i6 to <8 x i16>
+  %i16 = tail call { i32, <8 x i16> } @llvm.arm.mve.vshlc.v8i16(<8 x i16> %i15, i32 %i12, i32 16)
+  %i17 = extractvalue { i32, <8 x i16> } %i16, 1
+  %i18 = bitcast <8 x i16> %i17 to <8 x half>
   br i1 %cmp.not90, label %while.end, label %while.body
 
-while.body:                                       ; preds = %do.body, %while.body
+while.body:                                       ; preds = %while.body, %do.body
   %pIn.194 = phi half* [ %incdec.ptr4, %while.body ], [ %pIn.0, %do.body ]
-  %state.093 = phi <8 x half> [ %30, %while.body ], [ %9, %do.body ]
+  %state.093 = phi <8 x half> [ %i30, %while.body ], [ %i9, %do.body ]
   %pOut.192 = phi half* [ %incdec.ptr12, %while.body ], [ %pDst, %do.body ]
   %sample.091 = phi i32 [ %dec, %while.body ], [ %div, %do.body ]
   %incdec.ptr = getelementptr inbounds half, half* %pIn.194, i32 1
-  %19 = load half, half* %pIn.194, align 2
+  %i19 = load half, half* %pIn.194, align 2
   %incdec.ptr4 = getelementptr inbounds half, half* %pIn.194, i32 2
-  %20 = load half, half* %incdec.ptr, align 2
-  %.splatinsert = insertelement <8 x half> poison, half %19, i32 0
+  %i20 = load half, half* %incdec.ptr, align 2
+  %.splatinsert = insertelement <8 x half> poison, half %i19, i32 0
   %.splat = shufflevector <8 x half> %.splatinsert, <8 x half> poison, <8 x i32> zeroinitializer
-  %21 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %4, <8 x half> %.splat, <8 x half> %state.093)
-  %22 = extractelement <8 x half> %21, i32 0
-  %.splat6 = shufflevector <8 x half> %21, <8 x half> poison, <8 x i32> zeroinitializer
-  %23 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %6, <8 x half> %.splat6, <8 x half> %21)
-  %24 = insertelement <8 x half> %23, half 0xH0000, i32 3
-  %.splatinsert7 = insertelement <8 x half> poison, half %20, i32 0
+  %i21 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i4, <8 x half> %.splat, <8 x half> %state.093)
+  %i22 = extractelement <8 x half> %i21, i32 0
+  %.splat6 = shufflevector <8 x half> %i21, <8 x half> poison, <8 x i32> zeroinitializer
+  %i23 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i6, <8 x half> %.splat6, <8 x half> %i21)
+  %i24 = insertelement <8 x half> %i23, half 0xH0000, i32 3
+  %.splatinsert7 = insertelement <8 x half> poison, half %i20, i32 0
   %.splat8 = shufflevector <8 x half> %.splatinsert7, <8 x half> poison, <8 x i32> zeroinitializer
-  %25 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %14, <8 x half> %.splat8, <8 x half> %24)
-  %26 = extractelement <8 x half> %25, i32 1
-  %.splat10 = shufflevector <8 x half> %25, <8 x half> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  %27 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %18, <8 x half> %.splat10, <8 x half> %25)
-  %28 = shufflevector <8 x half> %27, <8 x half> undef, <8 x i32> <i32 2, i32 undef, i32 undef, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %29 = insertelement <8 x half> %28, half 0xH0000, i32 2
-  %30 = shufflevector <8 x half> %29, <8 x half> %27, <8 x i32> <i32 0, i32 11, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %i25 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i14, <8 x half> %.splat8, <8 x half> %i24)
+  %i26 = extractelement <8 x half> %i25, i32 1
+  %.splat10 = shufflevector <8 x half> %i25, <8 x half> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %i27 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i18, <8 x half> %.splat10, <8 x half> %i25)
+  %i28 = shufflevector <8 x half> %i27, <8 x half> undef, <8 x i32> <i32 2, i32 undef, i32 undef, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %i29 = insertelement <8 x half> %i28, half 0xH0000, i32 2
+  %i30 = shufflevector <8 x half> %i29, <8 x half> %i27, <8 x i32> <i32 0, i32 11, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %incdec.ptr11 = getelementptr inbounds half, half* %pOut.192, i32 1
-  store half %22, half* %pOut.192, align 2
+  store half %i22, half* %pOut.192, align 2
   %incdec.ptr12 = getelementptr inbounds half, half* %pOut.192, i32 2
-  store half %26, half* %incdec.ptr11, align 2
+  store half %i26, half* %incdec.ptr11, align 2
   %dec = add nsw i32 %sample.091, -1
   %cmp.not = icmp eq i32 %dec, 0
   br i1 %cmp.not, label %while.end, label %while.body
 
 while.end:                                        ; preds = %while.body, %do.body
   %pOut.1.lcssa = phi half* [ %pDst, %do.body ], [ %incdec.ptr12, %while.body ]
-  %state.0.lcssa = phi <8 x half> [ %9, %do.body ], [ %30, %while.body ]
+  %state.0.lcssa = phi <8 x half> [ %i9, %do.body ], [ %i30, %while.body ]
   %pIn.1.lcssa = phi half* [ %pIn.0, %do.body ], [ %incdec.ptr4, %while.body ]
   br i1 %tobool.not, label %if.else, label %if.then
 
 if.then:                                          ; preds = %while.end
-  %31 = load half, half* %pIn.1.lcssa, align 2
-  %.splatinsert14 = insertelement <8 x half> poison, half %31, i32 0
+  %i31 = load half, half* %pIn.1.lcssa, align 2
+  %.splatinsert14 = insertelement <8 x half> poison, half %i31, i32 0
   %.splat15 = shufflevector <8 x half> %.splatinsert14, <8 x half> poison, <8 x i32> zeroinitializer
-  %32 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %4, <8 x half> %.splat15, <8 x half> %state.0.lcssa)
-  %33 = extractelement <8 x half> %32, i32 0
-  %.splat17 = shufflevector <8 x half> %32, <8 x half> poison, <8 x i32> zeroinitializer
-  %34 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %6, <8 x half> %.splat17, <8 x half> %32)
-  store half %33, half* %pOut.1.lcssa, align 2
-  %35 = extractelement <8 x half> %34, i32 1
-  store half %35, half* %pState.0, align 2
-  %36 = extractelement <8 x half> %34, i32 2
+  %i32 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i4, <8 x half> %.splat15, <8 x half> %state.0.lcssa)
+  %i33 = extractelement <8 x half> %i32, i32 0
+  %.splat17 = shufflevector <8 x half> %i32, <8 x half> poison, <8 x i32> zeroinitializer
+  %i34 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %i6, <8 x half> %.splat17, <8 x half> %i32)
+  store half %i33, half* %pOut.1.lcssa, align 2
+  %i35 = extractelement <8 x half> %i34, i32 1
+  store half %i35, half* %pState.0, align 2
+  %i36 = extractelement <8 x half> %i34, i32 2
   br label %if.end
 
 if.else:                                          ; preds = %while.end
-  %37 = extractelement <8 x half> %state.0.lcssa, i32 0
-  store half %37, half* %pState.0, align 2
-  %38 = extractelement <8 x half> %state.0.lcssa, i32 1
+  %i37 = extractelement <8 x half> %state.0.lcssa, i32 0
+  store half %i37, half* %pState.0, align 2
+  %i38 = extractelement <8 x half> %state.0.lcssa, i32 1
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  %.sink = phi half [ %38, %if.else ], [ %36, %if.then ]
-  %39 = getelementptr inbounds half, half* %pState.0, i32 1
-  store half %.sink, half* %39, align 2
+  %.sink = phi half [ %i38, %if.else ], [ %i36, %if.then ]
+  %i39 = getelementptr inbounds half, half* %pState.0, i32 1
+  store half %.sink, half* %i39, align 2
   %pState.1 = getelementptr inbounds half, half* %pState.0, i32 2
   %dec23 = add i32 %stage.0, -1
   %cmp24.not = icmp eq i32 %dec23, 0
@@ -1622,15 +1622,15 @@ define arm_aapcs_vfpcc half @vecAddAcrossF16Mve(<8 x half> %in) {
 ; CHECK-NEXT:    vadd.f16 s0, s0, s2
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = shufflevector <8 x half> %in, <8 x half> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-  %1 = fadd fast <8 x half> %0, %in
-  %2 = bitcast <8 x half> %1 to <4 x i32>
-  %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 3, i32 undef>
-  %4 = bitcast <4 x i32> %3 to <8 x half>
-  %5 = fadd fast <8 x half> %1, %4
-  %6 = extractelement <8 x half> %5, i32 0
-  %7 = extractelement <8 x half> %5, i32 4
-  %add = fadd fast half %6, %7
+  %i = shufflevector <8 x half> %in, <8 x half> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  %i1 = fadd fast <8 x half> %i, %in
+  %i2 = bitcast <8 x half> %i1 to <4 x i32>
+  %i3 = shufflevector <4 x i32> %i2, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 3, i32 undef>
+  %i4 = bitcast <4 x i32> %i3 to <8 x half>
+  %i5 = fadd fast <8 x half> %i1, %i4
+  %i6 = extractelement <8 x half> %i5, i32 0
+  %i7 = extractelement <8 x half> %i5, i32 4
+  %add = fadd fast half %i6, %i7
   ret half %add
 }
 

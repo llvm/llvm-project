@@ -709,19 +709,19 @@ entry:
   %cmp11 = icmp sgt i32 %and, 0
   br i1 %cmp11, label %vector.body, label %for.end
 
-vector.body:                                      ; preds = %entry, %vector.body
+vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ %index.next, %vector.body ], [ 0, %entry ]
-  %0 = getelementptr inbounds i32*, i32** %src, i32 %index
-  %1 = bitcast i32** %0 to <4 x i32*>*
-  %wide.load = load <4 x i32*>, <4 x i32*>* %1, align 4
-  %2 = icmp ne <4 x i32*> %wide.load, zeroinitializer
-  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %wide.load, i32 4, <4 x i1> %2, <4 x i32> undef)
-  %3 = getelementptr inbounds i32, i32* %dest, i32 %index
-  %4 = bitcast i32* %3 to <4 x i32>*
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %wide.masked.gather, <4 x i32>* %4, i32 4, <4 x i1> %2)
+  %i = getelementptr inbounds i32*, i32** %src, i32 %index
+  %i1 = bitcast i32** %i to <4 x i32*>*
+  %wide.load = load <4 x i32*>, <4 x i32*>* %i1, align 4
+  %i2 = icmp ne <4 x i32*> %wide.load, zeroinitializer
+  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %wide.load, i32 4, <4 x i1> %i2, <4 x i32> undef)
+  %i3 = getelementptr inbounds i32, i32* %dest, i32 %index
+  %i4 = bitcast i32* %i3 to <4 x i32>*
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %wide.masked.gather, <4 x i32>* %i4, i32 4, <4 x i1> %i2)
   %index.next = add i32 %index, 4
-  %5 = icmp eq i32 %index.next, %and
-  br i1 %5, label %for.end, label %vector.body
+  %i5 = icmp eq i32 %index.next, %and
+  br i1 %i5, label %for.end, label %vector.body
 
 for.end:                                          ; preds = %vector.body, %entry
   ret void
@@ -754,20 +754,20 @@ entry:
   %cmp11 = icmp sgt i32 %and, 0
   br i1 %cmp11, label %vector.body, label %for.end
 
-vector.body:                                      ; preds = %entry, %vector.body
+vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ %index.next, %vector.body ], [ 0, %entry ]
-  %0 = getelementptr inbounds float*, float** %src, i32 %index
-  %1 = bitcast float** %0 to <4 x float*>*
-  %wide.load = load <4 x float*>, <4 x float*>* %1, align 4
-  %2 = icmp ne <4 x float*> %wide.load, zeroinitializer
-  %3 = bitcast <4 x float*> %wide.load to <4 x i32*>
-  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %3, i32 4, <4 x i1> %2, <4 x i32> undef)
-  %4 = getelementptr inbounds float, float* %dest, i32 %index
-  %5 = bitcast float* %4 to <4 x i32>*
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %wide.masked.gather, <4 x i32>* %5, i32 4, <4 x i1> %2)
+  %i = getelementptr inbounds float*, float** %src, i32 %index
+  %i1 = bitcast float** %i to <4 x float*>*
+  %wide.load = load <4 x float*>, <4 x float*>* %i1, align 4
+  %i2 = icmp ne <4 x float*> %wide.load, zeroinitializer
+  %i3 = bitcast <4 x float*> %wide.load to <4 x i32*>
+  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %i3, i32 4, <4 x i1> %i2, <4 x i32> undef)
+  %i4 = getelementptr inbounds float, float* %dest, i32 %index
+  %i5 = bitcast float* %i4 to <4 x i32>*
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %wide.masked.gather, <4 x i32>* %i5, i32 4, <4 x i1> %i2)
   %index.next = add i32 %index, 4
-  %6 = icmp eq i32 %index.next, %and
-  br i1 %6, label %for.end, label %vector.body
+  %i6 = icmp eq i32 %index.next, %and
+  br i1 %i6, label %for.end, label %vector.body
 
 for.end:                                          ; preds = %vector.body, %entry
   ret void
@@ -819,7 +819,7 @@ entry:
 
 define arm_aapcs_vfpcc <4 x i32> @gepconstoff_i32(i32* %base) {
 ; CHECK-LABEL: gepconstoff_i32:
-; CHECK:       @ %bb.0:
+; CHECK:       @ %bb.0: @ %bb
 ; CHECK-NEXT:    adr r1, .LCPI30_0
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, q1, uxtw #2]
@@ -831,6 +831,7 @@ define arm_aapcs_vfpcc <4 x i32> @gepconstoff_i32(i32* %base) {
 ; CHECK-NEXT:    .long 4 @ 0x4
 ; CHECK-NEXT:    .long 8 @ 0x8
 ; CHECK-NEXT:    .long 12 @ 0xc
+bb:
   %a = getelementptr i32, i32* %base, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
   %g = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %a, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
   ret <4 x i32> %g
@@ -838,7 +839,7 @@ define arm_aapcs_vfpcc <4 x i32> @gepconstoff_i32(i32* %base) {
 
 define arm_aapcs_vfpcc <4 x i32> @gepconstoff_i8(i8* %base) {
 ; CHECK-STD-LABEL: gepconstoff_i8:
-; CHECK-STD:       @ %bb.0:
+; CHECK-STD:       @ %bb.0: @ %bb
 ; CHECK-STD-NEXT:    adr r1, .LCPI31_0
 ; CHECK-STD-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-STD-NEXT:    vadd.i32 q1, q0, r0
@@ -853,7 +854,7 @@ define arm_aapcs_vfpcc <4 x i32> @gepconstoff_i8(i8* %base) {
 ; CHECK-STD-NEXT:    .long 44 @ 0x2c
 ;
 ; CHECK-OPAQ-LABEL: gepconstoff_i8:
-; CHECK-OPAQ:       @ %bb.0:
+; CHECK-OPAQ:       @ %bb.0: @ %bb
 ; CHECK-OPAQ-NEXT:    adr r1, .LCPI31_0
 ; CHECK-OPAQ-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-OPAQ-NEXT:    vldrw.u32 q0, [r0, q1]
@@ -865,6 +866,7 @@ define arm_aapcs_vfpcc <4 x i32> @gepconstoff_i8(i8* %base) {
 ; CHECK-OPAQ-NEXT:    .long 12 @ 0xc
 ; CHECK-OPAQ-NEXT:    .long 28 @ 0x1c
 ; CHECK-OPAQ-NEXT:    .long 44 @ 0x2c
+bb:
   %a = getelementptr i8, i8* %base, <4 x i32> <i32 0, i32 16, i32 32, i32 48>
   %b = bitcast <4 x i8*> %a to <4 x i32*>
   %c = getelementptr inbounds i32, <4 x i32*> %b, i32 -1
@@ -874,7 +876,7 @@ define arm_aapcs_vfpcc <4 x i32> @gepconstoff_i8(i8* %base) {
 
 define arm_aapcs_vfpcc <4 x i32> @gepconstoff3_i16(i16* %base) {
 ; CHECK-STD-LABEL: gepconstoff3_i16:
-; CHECK-STD:       @ %bb.0:
+; CHECK-STD:       @ %bb.0: @ %bb
 ; CHECK-STD-NEXT:    adr r1, .LCPI32_0
 ; CHECK-STD-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-STD-NEXT:    vadd.i32 q1, q0, r0
@@ -889,7 +891,7 @@ define arm_aapcs_vfpcc <4 x i32> @gepconstoff3_i16(i16* %base) {
 ; CHECK-STD-NEXT:    .long 280 @ 0x118
 ;
 ; CHECK-OPAQ-LABEL: gepconstoff3_i16:
-; CHECK-OPAQ:       @ %bb.0:
+; CHECK-OPAQ:       @ %bb.0: @ %bb
 ; CHECK-OPAQ-NEXT:    adr r1, .LCPI32_0
 ; CHECK-OPAQ-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-OPAQ-NEXT:    vldrw.u32 q0, [r0, q1]
@@ -901,6 +903,7 @@ define arm_aapcs_vfpcc <4 x i32> @gepconstoff3_i16(i16* %base) {
 ; CHECK-OPAQ-NEXT:    .long 18 @ 0x12
 ; CHECK-OPAQ-NEXT:    .long 58 @ 0x3a
 ; CHECK-OPAQ-NEXT:    .long 280 @ 0x118
+bb:
   %a = getelementptr i16, i16* %base, <4 x i32> <i32 0, i32 16, i32 32, i32 48>
   %b = bitcast <4 x i16*> %a to <4 x i8*>
   %c = getelementptr i8, <4 x i8*> %b, <4 x i32> <i32 16, i32 -10, i32 -2, i32 188>
