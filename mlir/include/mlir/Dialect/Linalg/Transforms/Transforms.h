@@ -362,6 +362,26 @@ rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
                   ArrayRef<Attribute> paddingValues,
                   ArrayRef<bool> packPaddings, LinalgOp &paddedOp);
 
+namespace detail {
+
+/// Helper struct to hold the results of building a packing loop nest.
+struct PackingResult {
+  SmallVector<OpFoldResult> offsets, sizes, strides;
+  SmallVector<Value> clonedLoopIvs, leadingPackedTensorIndexings;
+  GenericOp maybeTransposeOp;
+  tensor::PadOp hoistedPadOp;
+};
+
+/// Build the packing loop nest required to hoist `opToHoist` above
+/// `outermostEnclosingForOp`.
+/// The loop nest is built just before `outermostEnclosingForOp`.
+FailureOr<PackingResult>
+buildPackingLoopNest(RewriterBase &rewriter, tensor::PadOp opToHoist,
+                     scf::ForOp outermostEnclosingForOp,
+                     ArrayRef<int64_t> transposeVector);
+
+} // namespace detail
+
 /// Mechanically hoist padding operations on tensors by `numLoops` into a new,
 /// generally larger tensor. This achieves packing of multiple padding ops into
 /// a larger tensor. On success, `opToHoist` is replaced by the cloned version
