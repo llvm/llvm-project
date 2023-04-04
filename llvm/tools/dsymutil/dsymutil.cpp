@@ -250,14 +250,12 @@ static Expected<ReproducerMode> getReproducerMode(opt::InputArgList &Args) {
       return ReproducerMode::GenerateOnExit;
     if (S == "GenerateOnCrash")
       return ReproducerMode::GenerateOnCrash;
-    if (S == "Use")
-      return ReproducerMode::Use;
     if (S == "Off")
       return ReproducerMode::Off;
     return make_error<StringError>(
         "invalid reproducer mode: '" + S +
             "'. Supported values are 'GenerateOnExit', 'GenerateOnCrash', "
-            "'Use', 'Off'.",
+            "'Off'.",
         inconvertibleErrorCode());
   }
   return ReproducerMode::GenerateOnCrash;
@@ -613,7 +611,7 @@ int main(int argc, char **argv) {
 
   auto OptionsOrErr = getOptions(Args);
   if (!OptionsOrErr) {
-    WithColor::error() << toString(OptionsOrErr.takeError());
+    WithColor::error() << toString(OptionsOrErr.takeError()) << '\n';
     return EXIT_FAILURE;
   }
 
@@ -627,7 +625,7 @@ int main(int argc, char **argv) {
   auto Repro = Reproducer::createReproducer(Options.ReproMode,
                                             Options.ReproducerPath, argc, argv);
   if (!Repro) {
-    WithColor::error() << toString(Repro.takeError());
+    WithColor::error() << toString(Repro.takeError()) << '\n';
     return EXIT_FAILURE;
   }
 
