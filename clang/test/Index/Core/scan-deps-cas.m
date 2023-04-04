@@ -70,7 +70,7 @@
 // INCLUDE_TREE-NEXT:   module:
 // INCLUDE_TREE-NEXT:     name: ModA
 // INCLUDE_TREE-NEXT:     context-hash: [[HASH_MOD_A:[A-Z0-9]+]]
-// INCLUDE_TREE-NEXT:     module-map-path: /Users/blangmuir/src/cas/llvm-project/clang/test/Index/Core/Inputs/module/module.modulemap
+// INCLUDE_TREE-NEXT:     module-map-path: [[PREFIX]]/Inputs/module/module.modulemap
 // INCLUDE_TREE-NEXT:     cache-key: [[ModA_CACHE_KEY:llvmcas://[[:xdigit:]]+]]
 // INCLUDE_TREE-NEXT:     module-deps:
 // INCLUDE_TREE-NEXT:     file-deps:
