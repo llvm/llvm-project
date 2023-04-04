@@ -1985,12 +1985,15 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
         if (auto *L = dyn_cast<DILifetime>(O)) {
           if (auto *GV = dyn_cast<DIGlobalVariable>(L->getObject())) {
             if (ProcessedLifetimes.insert(L).second) {
-              if (auto *AddCU = dyn_cast<DICompileUnit>(GV->getScope()))
+              if (auto *AddCU = dyn_cast<DICompileUnit>(GV->getScope())) {
                 AddCULifetimeMap[AddCU].push_back(L);
-              else if (auto *AddSP = dyn_cast<DISubprogram>(GV->getScope()))
+              } else if (auto *AddNS = dyn_cast<DINamespace>(GV->getScope())) {
+                // FIXME(KZHURAVL): Properly support DINamespace.
+              } else if (auto *AddSP = dyn_cast<DISubprogram>(GV->getScope())) {
                 SPLifetimeMap[AddSP].push_back(L);
-              else
+              } else {
                 llvm_unreachable("Unexpected DI type!");
+              }
             }
           }
         }
