@@ -1,10 +1,11 @@
 set(SWIFT_LIBS lldbPluginExpressionParserSwift)
+set(PLUGIN_DEPENDENCY_ARG)
 if(NOT LLDB_ENABLE_SWIFT_SUPPORT)
   unset(SWIFT_LIBS)
+  set(PLUGIN_DEPENDENCY_ARG NO_PLUGIN_DEPENDENCIES)
 endif()
 
-# TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbExpression
-add_lldb_library(lldbExpression NO_PLUGIN_DEPENDENCIES
+add_lldb_library(lldbExpression ${PLUGIN_DEPENDENCY_ARG}
   DiagnosticManager.cpp
   DWARFExpression.cpp
   DWARFExpressionList.cpp
