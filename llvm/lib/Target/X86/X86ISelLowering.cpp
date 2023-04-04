@@ -44099,6 +44099,21 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
   if (!Subtarget.hasSSE2() || (Subtarget.hasAVX512() && !PreferMovMsk))
     return SDValue();
 
+  // If the upper half of the ops are undef, then try to bitcast the lower half
+  // and extend.
+  SmallVector<SDValue, 4> SubSrcOps;
+  if (collectConcatOps(Src.getNode(), SubSrcOps, DAG) &&
+      SubSrcOps.size() == 2) {
+    SDValue LowerOp = SubSrcOps[0];
+    SDValue UpperOp = SubSrcOps[1];
+    if (LowerOp.getOpcode() == ISD::SETCC && UpperOp.isUndef()) {
+      EVT HalfVT = VT.getHalfSizedIntegerVT(*DAG.getContext());
+      EVT HalfSrcVT = SrcVT.getHalfNumVectorElementsVT(*DAG.getContext());
+      if (SDValue V = combineBitcastvxi1(DAG, HalfVT, LowerOp, DL, Subtarget))
+        return DAG.getNode(ISD::ANY_EXTEND, DL, VT, V);
+    }
+  }
+
   // There are MOVMSK flavors for types v16i8, v32i8, v4f32, v8f32, v4f64 and
   // v8f64. So all legal 128-bit and 256-bit vectors are covered except for
   // v8i16 and v16i16.
