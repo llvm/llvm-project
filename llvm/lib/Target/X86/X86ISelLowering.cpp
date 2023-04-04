@@ -24390,7 +24390,7 @@ static SDValue LowerVectorAllEqual(const SDLoc &DL, SDValue LHS, SDValue RHS,
   // scalarization.
   bool UseKORTEST = Subtarget.useAVX512Regs();
   bool UsePTEST = Subtarget.hasSSE41();
-  if (!UsePTEST && !Mask.isAllOnes() && VT.getScalarSizeInBits() > 32)
+  if (!UsePTEST && !Mask.isAllOnes() && ScalarSize > 32)
     return SDValue();
 
   // Split down to 128/256/512-bit vector.
