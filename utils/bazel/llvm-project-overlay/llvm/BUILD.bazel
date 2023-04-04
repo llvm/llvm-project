@@ -601,7 +601,6 @@ cc_binary(
     name = "llvm-tblgen",
     srcs = glob([
         "utils/TableGen/*.cpp",
-        "utils/TableGen/*.def",
         "utils/TableGen/*.inc",
         "utils/TableGen/*.h",
 
@@ -609,6 +608,9 @@ cc_binary(
         # listed here. MC uses headers produced by tablegen, so it cannot be a
         # regular dependency.
         "include/llvm/MC/*.h",
+    ]),
+    textual_hdrs = glob([
+        "utils/TableGen/*.def",
     ]),
     copts = llvm_copts,
     stamp = 0,
