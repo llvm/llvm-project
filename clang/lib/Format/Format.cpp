@@ -1038,6 +1038,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("TabWidth", Style.TabWidth);
     IO.mapOptional("TypenameMacros", Style.TypenameMacros);
     IO.mapOptional("UseTab", Style.UseTab);
+    IO.mapOptional("VerilogBreakBetweenInstancePorts",
+                   Style.VerilogBreakBetweenInstancePorts);
     IO.mapOptional("WhitespaceSensitiveMacros",
                    Style.WhitespaceSensitiveMacros);
     IO.mapOptional("Macros", Style.Macros);
@@ -1462,6 +1464,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.StatementMacros.push_back("QT_REQUIRE_VERSION");
   LLVMStyle.TabWidth = 8;
   LLVMStyle.UseTab = FormatStyle::UT_Never;
+  LLVMStyle.VerilogBreakBetweenInstancePorts = true;
   LLVMStyle.WhitespaceSensitiveMacros.push_back("BOOST_PP_STRINGIZE");
   LLVMStyle.WhitespaceSensitiveMacros.push_back("CF_SWIFT_NAME");
   LLVMStyle.WhitespaceSensitiveMacros.push_back("NS_SWIFT_NAME");
