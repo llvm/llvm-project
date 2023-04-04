@@ -13,14 +13,8 @@ class TestFullLtoStepping(TestBase):
     @skipUnlessDarwin
     def test(self):
         self.build()
-        target = self.createTestTarget()
-    
-        breakpoint = target.BreakpointCreateByName("main")
-        self.assertTrue(
-            breakpoint and breakpoint.IsValid(),
-            "Breakpoint is valid")
+        _, _, thread, _ = lldbutil.run_to_name_breakpoint(self, 'main')
 
-        _, _, thread, _ = lldbutil.run_to_breakpoint_do_run(self, target, breakpoint)
         name = thread.frames[0].GetFunctionName()
         # Check that we start out in main.
         self.assertEqual(name, 'main')
