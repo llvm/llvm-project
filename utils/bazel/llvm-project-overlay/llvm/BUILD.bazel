@@ -601,6 +601,7 @@ cc_binary(
     name = "llvm-tblgen",
     srcs = glob([
         "utils/TableGen/*.cpp",
+        "utils/TableGen/*.def",
         "utils/TableGen/*.inc",
         "utils/TableGen/*.h",
 
