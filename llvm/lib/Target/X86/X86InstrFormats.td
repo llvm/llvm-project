@@ -388,11 +388,10 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   let TSFlags{42}    = hasEVEX_Z;
   let TSFlags{43}    = hasEVEX_L2;
   let TSFlags{44}    = hasEVEX_B;
-  // If we run out of TSFlags bits, it's possible to encode this in 3 bits.
-  let TSFlags{51-45} = CD8_Scale;
-  let TSFlags{52}    = hasEVEX_RC;
-  let TSFlags{53}    = hasNoTrackPrefix;
-  let TSFlags{54}    = ExplicitVEXPrefix;
+  let TSFlags{47-45} = !if(!eq(CD8_Scale, 0), 0, !add(!logtwo(CD8_Scale), 1));
+  let TSFlags{48}    = hasEVEX_RC;
+  let TSFlags{49}    = hasNoTrackPrefix;
+  let TSFlags{50}    = ExplicitVEXPrefix;
 }
 
 class PseudoI<dag oops, dag iops, list<dag> pattern>
