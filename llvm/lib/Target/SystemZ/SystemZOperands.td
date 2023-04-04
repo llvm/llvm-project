@@ -357,10 +357,6 @@ defm imm32zx4even : Immediate<i32, [{
   return isUInt<4>(N->getZExtValue());
 }], UIMM8EVEN, "U4Imm">;
 
-defm imm32zx6 : Immediate<i32, [{
-  return isUInt<6>(N->getZExtValue());
-}], NOOP_SDNodeXForm, "U6Imm">;
-
 defm imm32sx8 : Immediate<i32, [{
   return isInt<8>(N->getSExtValue());
 }], SIMM8, "S8Imm">;
