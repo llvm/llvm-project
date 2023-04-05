@@ -581,8 +581,8 @@
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: G_CTLZ (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
-# DEBUG-NEXT: .. the first uncovered type index: 2, OK
-# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
+# DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: G_CTLZ_ZERO_UNDEF (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
