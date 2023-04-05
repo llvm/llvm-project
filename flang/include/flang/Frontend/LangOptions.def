@@ -36,6 +36,18 @@ LANGOPT(AssociativeMath, 1, false)
 LANGOPT(ReciprocalMath, 1, false)
 /// Generate code only for OpenMP target device
 LANGOPT(OpenMPIsDevice, 1, false)
+/// Enable debugging in the OpenMP offloading device RTL
+LANGOPT(OpenMPTargetDebug, 32, 0)
+/// Assume work-shared loops do not have more iterations than participating
+/// threads.
+LANGOPT(OpenMPThreadSubscription, 1, 0)
+/// Assume distributed loops do not have more iterations than participating
+/// teams.
+LANGOPT(OpenMPTeamSubscription, 1, 0)
+/// Assume that no thread in a parallel region will modify an ICV.
+LANGOPT(OpenMPNoThreadState, 1, 0)
+/// Assume that no thread in a parallel region will encounter a parallel region
+LANGOPT(OpenMPNoNestedParallelism, 1, 0)
 
 #undef LANGOPT
 #undef ENUM_LANGOPT
