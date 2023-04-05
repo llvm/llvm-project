@@ -247,12 +247,15 @@ Changes to Sanitizers
   an intended override of a weak symbol, then it must contain at least one weak
   symbol as well for the override to take effect.
 
-    Example:
-      // Add this to make sure your override takes effect
-      __attribute__((weak,unused)) unsigned __enableOverrides;
+  Example:
 
-      // Example override
-      extern "C" const char *__asan_default_options() { ... }
+  .. code-block:: c
+
+    // Add this to make sure your override takes effect
+    __attribute__((weak,unused)) unsigned __enableOverrides;
+
+    // Example override
+    extern "C" const char *__asan_default_options() { ... }
 
 Other Changes
 -------------
