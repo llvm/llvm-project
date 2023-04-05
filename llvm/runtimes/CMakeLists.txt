@@ -399,6 +399,9 @@ if(runtimes)
       # "libc" is detected in LLVM_ENABLE_RUNTIMES.
       message(FATAL_ERROR "libc-hdrgen target missing unexpectedly")
     endif()
+    if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+      list(APPEND extra_deps clang-offload-packager nvptx-arch amdgpu-arch)
+    endif()
   endif()
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
