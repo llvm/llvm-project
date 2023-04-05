@@ -236,6 +236,21 @@ bb2:
   ret void
 }
 
+; Allocas should be lowered to call_indirects.
+; CHECK-LABEL: call_indirect_alloca:
+; CHECK:      local.tee  $push{{.*}}=, [[L0:[0-9]+]]
+; CHECK-NEXT: global.set  __stack_pointer
+; CHECK-NEXT: local.get  $push{{.*}}=, [[L0]]
+; CHECK-NEXT: i32.const  $push{{.*}}=, 12
+; CHECK-NEXT: i32.add
+; CHECK-NEXT: call_indirect  $pop{{.*}}
+define void @call_indirect_alloca() {
+entry:
+  %ptr = alloca i32, align 4
+  call void %ptr()
+  ret void
+}
+
 ; TODO: test the following:
 ;  - More argument combinations.
 ;  - Tail call.
