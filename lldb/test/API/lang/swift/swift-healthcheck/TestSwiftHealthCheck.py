@@ -19,7 +19,7 @@ class TestSwiftHealthCheck(TestBase):
 
         target, process, thread, bkpt = lldbutil.run_to_name_breakpoint(
             self, 'main')
-        self.expect("p 1")
+        self.expect("expression 1")
         result = lldb.SBCommandReturnObject()
         ret_val = self.dbg.GetCommandInterpreter().HandleCommand("swift-healthcheck", result)
         log = result.GetOutput()[:-1].split(" ")[-1]

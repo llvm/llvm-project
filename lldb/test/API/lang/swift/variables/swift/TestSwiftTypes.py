@@ -177,9 +177,9 @@ class TestSwiftTypes(TestBase):
 
         self.expect("frame variable --raw hello", substrs=['String'])
 
-        self.expect("p/x int64_minus_two", substrs=['0xfffffffffffffffe'])
-        self.expect("p/u ~1", substrs=['18446744073709551614'])
-        self.expect("p/d ~1", substrs=['-2'])
+        self.expect("expression/x int64_minus_two", substrs=['0xfffffffffffffffe'])
+        self.expect("expression/u ~1", substrs=['18446744073709551614'])
+        self.expect("expression/d ~1", substrs=['-2'])
 
         self.expect('frame variable uint8_max', substrs=['-1'], matching=False)
         self.expect(

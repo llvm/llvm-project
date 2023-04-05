@@ -26,6 +26,6 @@ class TestSwiftMissingSDK(TestBase):
         os.unlink(self.getBuildArtifact("fakesdk"))
         lldbutil.run_to_source_breakpoint(self, 'break here',
                                           lldb.SBFileSpec('main.swift'))
-        self.expect("p message", VARIABLES_DISPLAYED_CORRECTLY,
+        self.expect("expression message", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs = ["Hello"])
 

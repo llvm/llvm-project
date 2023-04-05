@@ -53,11 +53,11 @@ class TestSwiftObjCMainConflictingDylibs(TestBase):
         process = target.LaunchSimple(None, None, os.getcwd())
         # This is failing because the Target-SwiftASTContext uses the
         # amalgamated target header search options from all dylibs.
-        self.expect("p baz", "wrong baz", substrs=["i_am_from_Foo"])
+        self.expect("expression baz", "wrong baz", substrs=["i_am_from_Foo"])
         self.expect("fr var baz", "wrong baz", substrs=["i_am_from_Foo"])
 
 
         process.Continue()
-        self.expect("p baz", "correct baz", substrs=["i_am_from_Foo"])
+        self.expect("expression baz", "correct baz", substrs=["i_am_from_Foo"])
         self.expect("fr var baz", "correct baz", substrs=["i_am_from_Foo"])
         
