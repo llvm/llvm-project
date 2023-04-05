@@ -24405,6 +24405,25 @@ static SDValue LowerVectorAllEqual(const SDLoc &DL, SDValue LHS, SDValue RHS,
         LHS = DAG.getNode(ISD::AND, DL, VT, Split.first, Split.second);
       }
       RHS = DAG.getAllOnesConstant(DL, VT);
+    } else if (!UsePTEST && !KnownRHS.isZero()) {
+      // MOVMSK Special Case:
+      // ALLOF(CMPEQ(X,Y)) -> AND(CMPEQ(X[0],Y[0]),CMPEQ(X[1],Y[1]),....)
+      MVT SVT = ScalarSize >= 32 ? MVT::i32 : MVT::i8;
+      VT = MVT::getVectorVT(SVT, VT.getSizeInBits() / SVT.getSizeInBits());
+      LHS = DAG.getBitcast(VT, MaskBits(LHS));
+      RHS = DAG.getBitcast(VT, MaskBits(RHS));
+      EVT BoolVT = VT.changeVectorElementType(MVT::i1);
+      SDValue V = DAG.getSetCC(DL, BoolVT, LHS, RHS, ISD::SETEQ);
+      V = DAG.getSExtOrTrunc(V, DL, VT);
+      while (VT.getSizeInBits() > TestSize) {
+        auto Split = DAG.SplitVector(V, DL);
+        VT = Split.first.getValueType();
+        V = DAG.getNode(ISD::AND, DL, VT, Split.first, Split.second);
+      }
+      V = DAG.getNOT(DL, V, VT);
+      V = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, V);
+      return DAG.getNode(X86ISD::CMP, DL, MVT::i32, V,
+                         DAG.getConstant(0, DL, MVT::i32));
     } else {
       // Convert to a ICMP_EQ(XOR(LHS,RHS),0) pattern.
       SDValue V = DAG.getNode(ISD::XOR, DL, VT, LHS, RHS);
