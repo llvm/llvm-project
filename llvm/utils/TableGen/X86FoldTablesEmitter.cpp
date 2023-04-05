@@ -407,15 +407,14 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
     Result.CannotUnfold = true;
 
   // Check no-kz version's isMoveReg
+  StringRef RegInstName = RegRec->getName();
   Record *BaseDef = nullptr;
-  if (RegRec->getName().ends_with("rkz") &&
-      (BaseDef = Records.getDef(
-           RegRec->getName().substr(0, RegRec->getName().size() - 2)))) {
+  if (RegInstName.endswith("rkz") &&
+      (BaseDef = Records.getDef(RegInstName.drop_back(2)))) {
     Result.CannotUnfold =
         Target.getInstruction(BaseDef).isMoveReg ? true : Result.CannotUnfold;
-  } else if (RegRec->getName().ends_with("rk") &&
-             (BaseDef = Records.getDef(
-                  RegRec->getName().substr(0, RegRec->getName().size() - 1)))) {
+  } else if (RegInstName.endswith("rk") &&
+             (BaseDef = Records.getDef(RegInstName.drop_back(1)))) {
     Result.CannotUnfold =
         Target.getInstruction(BaseDef).isMoveReg ? true : Result.CannotUnfold;
   } else if (RegInstr->isMoveReg && Result.IsStore)
