@@ -1098,13 +1098,13 @@ void ASTStmtWriter::VisitDesignatedInitExpr(DesignatedInitExpr *E) {
       Record.AddSourceLocation(D.getFieldLoc());
     } else if (D.isArrayDesignator()) {
       Record.push_back(serialization::DESIG_ARRAY);
-      Record.push_back(D.getFirstExprIndex());
+      Record.push_back(D.getArrayIndex());
       Record.AddSourceLocation(D.getLBracketLoc());
       Record.AddSourceLocation(D.getRBracketLoc());
     } else {
       assert(D.isArrayRangeDesignator() && "Unknown designator");
       Record.push_back(serialization::DESIG_ARRAY_RANGE);
-      Record.push_back(D.getFirstExprIndex());
+      Record.push_back(D.getArrayIndex());
       Record.AddSourceLocation(D.getLBracketLoc());
       Record.AddSourceLocation(D.getEllipsisLoc());
       Record.AddSourceLocation(D.getRBracketLoc());
