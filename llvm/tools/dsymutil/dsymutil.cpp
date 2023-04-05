@@ -717,6 +717,8 @@ int main(int argc, char **argv) {
     std::atomic_char AllOK(1);
     SmallVector<MachOUtils::ArchAndFile, 4> TempFiles;
 
+    std::mutex ErrorHandlerMutex;
+
     const bool Crashed = !CRC.RunSafely([&]() {
       for (auto &Map : *DebugMapPtrsOrErr) {
         if (Options.LinkOpts.Verbose || Options.DumpDebugMap)
@@ -767,7 +769,8 @@ int main(int argc, char **argv) {
 
         auto LinkLambda = [&,
                            OutputFile](std::shared_ptr<raw_fd_ostream> Stream) {
-          DwarfLinkerForBinary Linker(*Stream, BinHolder, Options.LinkOpts);
+          DwarfLinkerForBinary Linker(*Stream, BinHolder, Options.LinkOpts,
+                                      ErrorHandlerMutex);
           AllOK.fetch_and(Linker.link(*Map));
           Stream->flush();
           if (flagIsSet(Options.Verify, DWARFVerify::Output) ||

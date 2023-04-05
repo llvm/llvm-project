@@ -121,13 +121,14 @@ static void dumpDIE(const DWARFDie *DIE, bool Verbose) {
 /// specific \p DIE related to the warning.
 void DwarfLinkerForBinary::reportWarning(Twine Warning, Twine Context,
                                          const DWARFDie *DIE) const {
-
+  std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
   warn(Warning, Context);
   dumpDIE(DIE, Options.Verbose);
 }
 
 void DwarfLinkerForBinary::reportError(Twine Error, Twine Context,
                                        const DWARFDie *DIE) const {
+  std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
   error(Error, Context);
   dumpDIE(DIE, Options.Verbose);
 }

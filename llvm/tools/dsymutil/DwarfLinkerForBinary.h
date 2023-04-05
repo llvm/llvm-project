@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkLinker.h"
+#include <mutex>
 
 namespace llvm {
 namespace dsymutil {
@@ -35,8 +36,9 @@ namespace dsymutil {
 class DwarfLinkerForBinary {
 public:
   DwarfLinkerForBinary(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,
-                       LinkOptions Options)
-      : OutFile(OutFile), BinHolder(BinHolder), Options(std::move(Options)) {}
+                       LinkOptions Options, std::mutex &ErrorHandlerMutex)
+      : OutFile(OutFile), BinHolder(BinHolder), Options(std::move(Options)),
+        ErrorHandlerMutex(ErrorHandlerMutex) {}
 
   /// Link the contents of the DebugMap.
   bool link(const DebugMap &);
@@ -224,6 +226,8 @@ private:
   raw_fd_ostream &OutFile;
   BinaryHolder &BinHolder;
   LinkOptions Options;
+  std::mutex &ErrorHandlerMutex;
+
   std::unique_ptr<DwarfStreamer> Streamer;
   std::vector<std::unique_ptr<DWARFFile>> ObjectsForLinking;
   std::vector<std::unique_ptr<DWARFContext>> ContextForLinking;
