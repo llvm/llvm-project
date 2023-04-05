@@ -10,9 +10,7 @@ declare <4 x float> @llvm.arm.mve.vcmulq.v4f32(i32, <4 x float>, <4 x float>)
 define arm_aapcs_vfpcc <4 x float> @reassoc_f32x4(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: reassoc_f32x4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.i32 q3, #0x0
-; CHECK-NEXT:    vcmla.f32 q3, q1, q2, #0
-; CHECK-NEXT:    vadd.f32 q0, q3, q0
+; CHECK-NEXT:    vcmla.f32 q0, q1, q2, #0
 ; CHECK-NEXT:    bx lr
 entry:
   %d = tail call <4 x float> @llvm.arm.mve.vcmlaq.v4f32(i32 0, <4 x float> zeroinitializer, <4 x float> %b, <4 x float> %c)
@@ -23,9 +21,7 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @reassoc_c_f32x4(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: reassoc_c_f32x4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.i32 q3, #0x0
-; CHECK-NEXT:    vcmla.f32 q3, q1, q2, #90
-; CHECK-NEXT:    vadd.f32 q0, q0, q3
+; CHECK-NEXT:    vcmla.f32 q0, q1, q2, #90
 ; CHECK-NEXT:    bx lr
 entry:
   %d = tail call <4 x float> @llvm.arm.mve.vcmlaq.v4f32(i32 1, <4 x float> zeroinitializer, <4 x float> %b, <4 x float> %c)
@@ -36,9 +32,7 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @reassoc_f16x4(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; CHECK-LABEL: reassoc_f16x4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.i32 q3, #0x0
-; CHECK-NEXT:    vcmla.f16 q3, q1, q2, #180
-; CHECK-NEXT:    vadd.f16 q0, q3, q0
+; CHECK-NEXT:    vcmla.f16 q0, q1, q2, #180
 ; CHECK-NEXT:    bx lr
 entry:
   %d = tail call <8 x half> @llvm.arm.mve.vcmlaq.v8f16(i32 2, <8 x half> zeroinitializer, <8 x half> %b, <8 x half> %c)
@@ -49,9 +43,7 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @reassoc_c_f16x4(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; CHECK-LABEL: reassoc_c_f16x4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.i32 q3, #0x0
-; CHECK-NEXT:    vcmla.f16 q3, q1, q2, #270
-; CHECK-NEXT:    vadd.f16 q0, q0, q3
+; CHECK-NEXT:    vcmla.f16 q0, q1, q2, #270
 ; CHECK-NEXT:    bx lr
 entry:
   %d = tail call <8 x half> @llvm.arm.mve.vcmlaq.v8f16(i32 3, <8 x half> zeroinitializer, <8 x half> %b, <8 x half> %c)
