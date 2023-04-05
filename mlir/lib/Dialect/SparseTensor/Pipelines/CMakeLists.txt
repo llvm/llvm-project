@@ -12,6 +12,8 @@ add_mlir_dialect_library(MLIRSparseTensorPipelines
   MLIRComplexToLibm
   MLIRComplexToStandard
   MLIRFuncTransforms
+  MLIRGPUToNVVMTransforms
+  MLIRGPUTransforms
   MLIRLinalgTransforms
   MLIRMathToLibm
   MLIRMathToLLVM

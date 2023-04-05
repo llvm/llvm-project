@@ -8,12 +8,16 @@
 
 #include "mlir/Dialect/SparseTensor/Pipelines/Passes.h"
 
+#include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -65,6 +69,16 @@ void mlir::sparse_tensor::buildSparseCompiler(
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
   pm.addNestedPass<func::FuncOp>(
       mlir::bufferization::createFinalizingBufferizePass());
+
+  // GPU code generation.
+  const bool gpuCodegen = options.gpuTriple.hasValue();
+  if (gpuCodegen) {
+    pm.addPass(createSparseGPUCodegenPass());
+    pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
+    pm.addNestedPass<gpu::GPUModuleOp>(createConvertSCFToCFPass());
+    pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());
+  }
+
   // TODO(springerm): Add sparse support to the BufferDeallocation pass and add
   // it to this pipeline.
   pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());
@@ -75,7 +89,7 @@ void mlir::sparse_tensor::buildSparseCompiler(
   pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
   pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   pm.addNestedPass<func::FuncOp>(createConvertComplexToStandardPass());
-  pm.addNestedPass<mlir::func::FuncOp>(mlir::arith::createArithExpandOpsPass());
+  pm.addNestedPass<func::FuncOp>(arith::createArithExpandOpsPass());
   pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
   pm.addPass(createConvertMathToLibmPass());
   pm.addPass(createConvertComplexToLibmPass());
@@ -84,6 +98,16 @@ void mlir::sparse_tensor::buildSparseCompiler(
   pm.addPass(createConvertComplexToLLVMPass());
   pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
   pm.addPass(createConvertFuncToLLVMPass());
+
+  // Finalize GPU code generation.
+  if (gpuCodegen) {
+#if MLIR_GPU_TO_CUBIN_PASS_ENABLE
+    pm.addNestedPass<gpu::GPUModuleOp>(createGpuSerializeToCubinPass(
+        options.gpuTriple, options.gpuChip, options.gpuFeatures));
+#endif
+    pm.addPass(createGpuToLLVMConversionPass());
+  }
+
   pm.addPass(createReconcileUnrealizedCastsPass());
 }
 
