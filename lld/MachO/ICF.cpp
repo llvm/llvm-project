@@ -213,10 +213,8 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
   // symbols at offset zero within the section (which is typically the case with
   // .subsections_via_symbols.)
   auto hasUnwind = [](Defined *d) { return d->unwindEntry != nullptr; };
-  const auto *itA =
-      std::find_if(ia->symbols.begin(), ia->symbols.end(), hasUnwind);
-  const auto *itB =
-      std::find_if(ib->symbols.begin(), ib->symbols.end(), hasUnwind);
+  const auto *itA = llvm::find_if(ia->symbols, hasUnwind);
+  const auto *itB = llvm::find_if(ib->symbols, hasUnwind);
   if (itA == ia->symbols.end())
     return itB == ib->symbols.end();
   if (itB == ib->symbols.end())
