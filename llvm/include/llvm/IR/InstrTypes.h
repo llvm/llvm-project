@@ -628,13 +628,6 @@ public:
   /// Determine if this is an integer-only cast.
   bool isIntegerCast() const;
 
-  /// A lossless cast is one that does not alter the basic value. It implies
-  /// a no-op cast but is more stringent, preventing things like int->float,
-  /// long->double, or int->ptr.
-  /// @returns true iff the cast is lossless.
-  /// Determine if this is a lossless cast.
-  bool isLosslessCast() const;
-
   /// A no-op cast is one that can be effected without changing any bits.
   /// It implies that the source and destination types are the same size. The
   /// DataLayout argument is to determine the pointer size when examining casts
