@@ -270,9 +270,6 @@ class EVEX2VEXOverride<string VEXInstrName> {
   string EVEX2VEXOverride = VEXInstrName;
 }
 
-// Mark the instruction as "illegal to memory fold/unfold"
-class NotMemoryFoldable { bit isMemoryFoldable = 0; }
-
 // Prevent EVEX->VEX conversion from considering this instruction.
 class NotEVEX2VEXConvertible { bit notEVEX2VEXConvertible = 1; }
 
@@ -362,7 +359,6 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   // Used to prevent an explicit EVEX2VEX override for this instruction.
   string EVEX2VEXOverride = ?;
 
-  bit isMemoryFoldable = 1;     // Is it allowed to memory fold/unfold this instruction?
   bit notEVEX2VEXConvertible = 0; // Prevent EVEX->VEX conversion.
   bit ExplicitVEXPrefix = 0; // Force the instruction to use VEX encoding.
   // Force to check predicate before compress EVEX to VEX encoding.

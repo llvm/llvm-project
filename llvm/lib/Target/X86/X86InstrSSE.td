@@ -835,8 +835,7 @@ let Predicates = [UseAVX] in {
                       "movhlps\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                       [(set VR128:$dst,
                         (v4f32 (X86Movhlps VR128:$src1, VR128:$src2)))]>,
-                      VEX_4V, Sched<[SchedWriteFShuffle.XMM]>, VEX_WIG,
-                      NotMemoryFoldable;
+                      VEX_4V, Sched<[SchedWriteFShuffle.XMM]>, VEX_WIG;
 }
 let Constraints = "$src1 = $dst" in {
   def MOVLHPSrr : PSI<0x16, MRMSrcReg, (outs VR128:$dst),
@@ -851,7 +850,7 @@ let Constraints = "$src1 = $dst" in {
                       "movhlps\t{$src2, $dst|$dst, $src2}",
                       [(set VR128:$dst,
                         (v4f32 (X86Movhlps VR128:$src1, VR128:$src2)))]>,
-                      Sched<[SchedWriteFShuffle.XMM]>, NotMemoryFoldable;
+                      Sched<[SchedWriteFShuffle.XMM]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3026,7 +3025,7 @@ multiclass sse1_fp_unop_s_intr<string OpcodeStr, Predicate AVXTarget> {
   defm V#NAME#SS  : avx_fp_unop_s_intr<v4f32, sse_load_f32,
                       !cast<Intrinsic>("int_x86_sse_"#OpcodeStr#_ss),
                       AVXTarget>,
-                      XS, VEX_4V, VEX_LIG, VEX_WIG, NotMemoryFoldable;
+                      XS, VEX_4V, VEX_LIG, VEX_WIG;
 }
 
 multiclass sse1_fp_unop_s<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
