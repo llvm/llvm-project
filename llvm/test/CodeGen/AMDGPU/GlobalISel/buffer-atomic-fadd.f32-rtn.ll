@@ -44,8 +44,8 @@ define amdgpu_ps float @buffer_atomic_fadd_f32_offset_rtn(float %val, <4 x i32> 
   ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr4
-  ; GFX12-NEXT:   [[BUFFER_ATOMIC_ADD_F32_OFFSET_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_OFFSET_RTN [[COPY]], [[REG_SEQUENCE]], [[COPY5]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
-  ; GFX12-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_F32_OFFSET_RTN]]
+  ; GFX12-NEXT:   [[BUFFER_ATOMIC_ADD_F32_VBUFFER_OFFSET_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_VBUFFER_OFFSET_RTN [[COPY]], [[REG_SEQUENCE]], [[COPY5]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
+  ; GFX12-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_F32_VBUFFER_OFFSET_RTN]]
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %ret = call float @llvm.amdgcn.raw.buffer.atomic.fadd.f32(float %val, <4 x i32> %rsrc, i32 0, i32 %soffset, i32 0)
   ret float %ret
@@ -94,8 +94,8 @@ define amdgpu_ps float @buffer_atomic_fadd_f32_offen_rtn(float %val, <4 x i32> i
   ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr4
-  ; GFX12-NEXT:   [[BUFFER_ATOMIC_ADD_F32_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_OFFEN_RTN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
-  ; GFX12-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_F32_OFFEN_RTN]]
+  ; GFX12-NEXT:   [[BUFFER_ATOMIC_ADD_F32_VBUFFER_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_VBUFFER_OFFEN_RTN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
+  ; GFX12-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_F32_VBUFFER_OFFEN_RTN]]
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %ret = call float @llvm.amdgcn.raw.buffer.atomic.fadd.f32(float %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret float %ret
@@ -144,8 +144,8 @@ define amdgpu_ps float @buffer_atomic_fadd_f32_idxen_rtn(float %val, <4 x i32> i
   ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr4
-  ; GFX12-NEXT:   [[BUFFER_ATOMIC_ADD_F32_IDXEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_IDXEN_RTN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
-  ; GFX12-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_F32_IDXEN_RTN]]
+  ; GFX12-NEXT:   [[BUFFER_ATOMIC_ADD_F32_VBUFFER_IDXEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_VBUFFER_IDXEN_RTN [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
+  ; GFX12-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_F32_VBUFFER_IDXEN_RTN]]
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %ret = call float @llvm.amdgcn.struct.buffer.atomic.fadd.f32(float %val, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 %soffset, i32 0)
   ret float %ret
@@ -200,8 +200,8 @@ define amdgpu_ps float @buffer_atomic_fadd_f32_bothen_rtn(float %val, <4 x i32> 
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX12-NEXT:   [[BUFFER_ATOMIC_ADD_F32_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
-  ; GFX12-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_F32_BOTHEN_RTN]]
+  ; GFX12-NEXT:   [[BUFFER_ATOMIC_ADD_F32_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_F32_VBUFFER_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 7)
+  ; GFX12-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_F32_VBUFFER_BOTHEN_RTN]]
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %ret = call float @llvm.amdgcn.struct.buffer.atomic.fadd.f32(float %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret float %ret
