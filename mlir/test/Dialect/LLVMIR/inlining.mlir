@@ -1,18 +1,38 @@
 // RUN: mlir-opt %s -inline -split-input-file | FileCheck %s
 
+#file = #llvm.di_file<"foo.mlir" in "/foo/">
+#variable = #llvm.di_local_variable<scope = #file>
+#variableAddr = #llvm.di_local_variable<scope = #file>
+
 func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   %0 = llvm.mlir.constant(42 : i32) : i32
   llvm.store %0, %ptr { alignment = 8 } : i32, !llvm.ptr
   %1 = llvm.load %ptr { alignment = 8 } : !llvm.ptr -> i32
+  llvm.intr.dbg.value #variable = %0 : i32
+  llvm.intr.dbg.declare #variableAddr = %ptr : !llvm.ptr
+  %byte = llvm.mlir.constant(43 : i8) : i8
+  %volatile = llvm.mlir.constant(1 : i1) : i1
+  "llvm.intr.memset"(%ptr, %byte, %0, %volatile) : (!llvm.ptr, i8, i32, i1) -> ()
+  "llvm.intr.memmove"(%ptr, %ptr, %0, %volatile) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+  "llvm.intr.memcpy"(%ptr, %ptr, %0, %volatile) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+  llvm.cond_br %volatile, ^bb1, ^bb2
+^bb1:
+  llvm.unreachable
+^bb2:
   return %1 : i32
 }
 
 // CHECK-LABEL: func.func @test_inline(
 // CHECK-SAME: %[[PTR:[a-zA-Z0-9_]+]]
-// CHECK-NEXT: %[[CST:.*]] = llvm.mlir.constant(42 : i32) : i32
-// CHECK-NEXT: llvm.store %[[CST]], %[[PTR]]
-// CHECK-NEXT: %[[RES:.+]] = llvm.load %[[PTR]]
-// CHECK-NEXT: return %[[RES]] : i32
+// CHECK: %[[CST:.*]] = llvm.mlir.constant(42
+// CHECK: llvm.store %[[CST]], %[[PTR]]
+// CHECK: %[[RES:.+]] = llvm.load %[[PTR]]
+// CHECK: llvm.intr.dbg.value #{{.+}} = %[[CST]]
+// CHECK: llvm.intr.dbg.declare #{{.+}} = %[[PTR]]
+// CHECK: "llvm.intr.memset"(%[[PTR]]
+// CHECK: "llvm.intr.memmove"(%[[PTR]], %[[PTR]]
+// CHECK: "llvm.intr.memcpy"(%[[PTR]], %[[PTR]]
+// CHECK: llvm.unreachable
 func.func @test_inline(%ptr : !llvm.ptr) -> i32 {
   %0 = call @inner_func_inlinable(%ptr) : (!llvm.ptr) -> i32
   return %0 : i32
@@ -361,10 +381,17 @@ llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) {
 
 // CHECK-LABEL: llvm.func @test_byval
 // CHECK-SAME: %[[PTR:[a-zA-Z0-9_]+]]: !llvm.ptr
-// CHECK: %[[ALLOCA:.+]] = llvm.alloca %{{.+}} x f64
-// CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[PTR]]
 llvm.func @test_byval(%ptr : !llvm.ptr) {
+  // Make sure the new static alloca goes to the entry block.
+  // CHECK: %[[ALLOCA:.+]] = llvm.alloca %{{.+}} x f64
+  // CHECK: llvm.br ^[[BB1:[a-zA-Z0-9_]+]]
+  llvm.br ^bb1
+  // CHECK: ^[[BB1]]
+^bb1:
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[PTR]]
   llvm.call @with_byval_arg(%ptr) : (!llvm.ptr) -> ()
+  llvm.br ^bb2
+^bb2:
   llvm.return
 }
 
@@ -399,6 +426,80 @@ llvm.func @test_byval_write_only(%ptr : !llvm.ptr) {
 
 // -----
 
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_byval_input_aligned
+// CHECK-SAME: %[[UNALIGNED:[a-zA-Z0-9_]+]]: !llvm.ptr
+// CHECK-SAME: %[[ALIGNED:[a-zA-Z0-9_]+]]: !llvm.ptr
+llvm.func @test_byval_input_aligned(%unaligned : !llvm.ptr, %aligned : !llvm.ptr { llvm.align = 16 }) {
+  // Make sure only the unaligned input triggers a memcpy.
+  // CHECK: %[[ALLOCA:.+]] = llvm.alloca %{{.+}} x i16 {alignment = 16
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[UNALIGNED]]
+  llvm.call @aligned_byval_arg(%unaligned) : (!llvm.ptr) -> ()
+  // CHECK-NOT: memcpy
+  llvm.call @aligned_byval_arg(%aligned) : (!llvm.ptr) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_byval_unaligned_alloca
+llvm.func @test_byval_unaligned_alloca() {
+  %size = llvm.mlir.constant(4 : i64) : i64
+  // CHECK-DAG: %[[SRC:.+]] = llvm.alloca {{.+}}alignment = 1 : i64
+  // CHECK-DAG: %[[DST:.+]] = llvm.alloca {{.+}}alignment = 16 : i64
+  // CHECK: "llvm.intr.memcpy"(%[[DST]], %[[SRC]]
+  %unaligned = llvm.alloca %size x i16 { alignment = 1 } : (i64) -> !llvm.ptr
+  llvm.call @aligned_byval_arg(%unaligned) : (!llvm.ptr) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_byval_aligned_alloca
+llvm.func @test_byval_aligned_alloca() {
+  // CHECK-NOT: memcpy
+  %size = llvm.mlir.constant(1 : i64) : i64
+  %aligned = llvm.alloca %size x i16 { alignment = 16 } : (i64) -> !llvm.ptr
+  llvm.call @aligned_byval_arg(%aligned) : (!llvm.ptr) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.mlir.global private @unaligned_global(42 : i64) : i64
+llvm.mlir.global private @aligned_global(42 : i64) { alignment = 64 } : i64
+
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_byval_global
+llvm.func @test_byval_global() {
+  // Make sure only the unaligned global triggers a memcpy.
+  // CHECK-DAG: %[[UNALIGNED:.+]] = llvm.mlir.addressof @unaligned_global
+  // CHECK-DAG: %[[ALLOCA:.+]] = llvm.alloca
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[UNALIGNED]]
+  // CHECK-NOT: llvm.alloca
+  %unaligned = llvm.mlir.addressof @unaligned_global : !llvm.ptr
+  llvm.call @aligned_byval_arg(%unaligned) : (!llvm.ptr) -> ()
+  %aligned = llvm.mlir.addressof @aligned_global : !llvm.ptr
+  llvm.call @aligned_byval_arg(%aligned) : (!llvm.ptr) -> ()
+  llvm.return
+}
+
+// -----
+
 llvm.func @ignored_attrs(%ptr : !llvm.ptr { llvm.inreg, llvm.nocapture, llvm.nofree, llvm.preallocated = i32, llvm.returned, llvm.alignstack = 32 : i64, llvm.writeonly, llvm.noundef, llvm.nonnull }, %x : i32 { llvm.zeroext }) -> (!llvm.ptr { llvm.noundef, llvm.inreg, llvm.nonnull }) {
   llvm.return %ptr : !llvm.ptr
 }
@@ -413,7 +514,7 @@ llvm.func @test_ignored_attrs(%ptr : !llvm.ptr, %x : i32) {
 
 // -----
 
-llvm.func @disallowed_arg_attr(%ptr : !llvm.ptr { llvm.align = 16 : i32 }) {
+llvm.func @disallowed_arg_attr(%ptr : !llvm.ptr { llvm.noalias }) {
   llvm.return
 }
 

@@ -1951,6 +1951,10 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
 }
 
 bool AssignmentTrackingPass::runOnFunction(Function &F) {
+  // No value in assignment tracking without optimisations.
+  if (F.hasFnAttribute(Attribute::OptimizeNone))
+    return /*Changed*/ false;
+
   bool Changed = false;
   // Collect a map of {backing storage : dbg.declares} (currently "backing
   // storage" is limited to Allocas). We'll use this to find dbg.declares to

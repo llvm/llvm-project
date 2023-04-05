@@ -1438,10 +1438,8 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, const SDLoc &DL,
 
 static SDValue lowerI128ToGR128(SelectionDAG &DAG, SDValue In) {
   SDLoc DL(In);
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, In,
-                           DAG.getIntPtrConstant(0, DL));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, In,
-                           DAG.getIntPtrConstant(1, DL));
+  SDValue Lo, Hi;
+  std::tie(Lo, Hi) = DAG.SplitScalar(In, DL, MVT::i64, MVT::i64);
   SDNode *Pair = DAG.getMachineNode(SystemZ::PAIR128, DL,
                                     MVT::Untyped, Hi, Lo);
   return SDValue(Pair, 0);
@@ -1957,7 +1955,7 @@ SystemZTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   // Quick exit for void returns
   if (RetLocs.empty())
-    return DAG.getNode(SystemZISD::RET_FLAG, DL, MVT::Other, Chain);
+    return DAG.getNode(SystemZISD::RET_GLUE, DL, MVT::Other, Chain);
 
   if (CallConv == CallingConv::GHC)
     report_fatal_error("GHC functions return void only");
@@ -1988,7 +1986,7 @@ SystemZTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   if (Glue.getNode())
     RetOps.push_back(Glue);
 
-  return DAG.getNode(SystemZISD::RET_FLAG, DL, MVT::Other, RetOps);
+  return DAG.getNode(SystemZISD::RET_GLUE, DL, MVT::Other, RetOps);
 }
 
 // Return true if Op is an intrinsic node with chain that returns the CC value
@@ -5914,7 +5912,7 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
 #define OPCODE(NAME) case SystemZISD::NAME: return "SystemZISD::" #NAME
   switch ((SystemZISD::NodeType)Opcode) {
     case SystemZISD::FIRST_NUMBER: break;
-    OPCODE(RET_FLAG);
+    OPCODE(RET_GLUE);
     OPCODE(CALL);
     OPCODE(SIBCALL);
     OPCODE(TLS_GDCALL);

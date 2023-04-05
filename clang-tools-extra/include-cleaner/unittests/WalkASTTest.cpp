@@ -291,13 +291,24 @@ TEST(WalkAST, ConstructExprs) {
 }
 
 TEST(WalkAST, Operator) {
-  // References to operators are not counted as uses.
-  testWalk("struct string {}; int operator+(string, string);",
+  // Operator calls are marked as implicit references as they're ADL-used and
+  // type should be providing them.
+  testWalk(
+      "struct string { friend int $implicit^operator+(string, string); }; ",
+      "int k = string() ^+ string();");
+  // Treat member operators as regular member expr calls.
+  testWalk("struct $implicit^string {int operator+(string); }; ",
            "int k = string() ^+ string();");
-  testWalk("struct string {int operator+(string); }; ",
-           "int k = string() ^+ string();");
-  testWalk("struct string { friend int operator+(string, string); }; ",
-           "int k = string() ^+ string();");
+  // Make sure usage is attributed to the alias.
+  testWalk(
+      "struct string {int operator+(string); }; using $implicit^foo = string;",
+      "int k = foo() ^+ string();");
+}
+
+TEST(WalkAST, VarDecls) {
+  // Definition uses declaration, not the other way around.
+  testWalk("extern int $explicit^x;", "int ^x = 1;");
+  testWalk("int x = 1;", "extern int ^x;");
 }
 
 TEST(WalkAST, Functions) {
@@ -314,6 +325,12 @@ TEST(WalkAST, Enums) {
   testWalk("enum E { $explicit^A = 42, B = 43 };", "int e = ^A;");
   testWalk("enum class $explicit^E : int;", "enum class ^E : int {};");
   testWalk("enum class E : int {};", "enum class ^E : int ;");
+}
+
+TEST(WalkAST, BuiltinSymbols) {
+  testWalk(R"cpp(
+    extern "C" int __builtin_popcount(unsigned int) noexcept;
+  )cpp", "int x = ^__builtin_popcount(1);");
 }
 
 } // namespace

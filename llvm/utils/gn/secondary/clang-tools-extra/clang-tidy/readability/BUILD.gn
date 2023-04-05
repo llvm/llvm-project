@@ -37,6 +37,7 @@ static_library("readability") {
     "NamedParameterCheck.cpp",
     "NamespaceCommentCheck.cpp",
     "NonConstParameterCheck.cpp",
+    "OperatorsRepresentationCheck.cpp",
     "QualifiedAutoCheck.cpp",
     "ReadabilityTidyModule.cpp",
     "RedundantAccessSpecifiersCheck.cpp",

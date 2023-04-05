@@ -389,21 +389,13 @@ buildTypeForLambdaCallOperator(Sema &S, clang::CXXRecordDecl *Class,
 
 void Sema::handleLambdaNumbering(
     CXXRecordDecl *Class, CXXMethodDecl *Method,
-    std::optional<std::tuple<bool, unsigned, unsigned, Decl *>> Mangling) {
-
-  ContextRAII ManglingContext(*this, Class->getDeclContext());
-
-  if (Mangling) {
-    bool HasKnownInternalLinkage;
-    unsigned ManglingNumber, DeviceManglingNumber;
-    Decl *ManglingContextDecl;
-    std::tie(HasKnownInternalLinkage, ManglingNumber, DeviceManglingNumber,
-             ManglingContextDecl) = *Mangling;
-    Class->setLambdaMangling(ManglingNumber, ManglingContextDecl,
-                             HasKnownInternalLinkage);
-    Class->setDeviceLambdaManglingNumber(DeviceManglingNumber);
+    std::optional<CXXRecordDecl::LambdaNumbering> NumberingOverride) {
+  if (NumberingOverride) {
+    Class->setLambdaNumbering(*NumberingOverride);
     return;
   }
+
+  ContextRAII ManglingContext(*this, Class->getDeclContext());
 
   auto getMangleNumberingContext =
       [this](CXXRecordDecl *Class,
@@ -419,11 +411,10 @@ void Sema::handleLambdaNumbering(
     return &Context.getManglingNumberContext(DC);
   };
 
+  CXXRecordDecl::LambdaNumbering Numbering;
   MangleNumberingContext *MCtx;
-  Decl *ManglingContextDecl;
-  std::tie(MCtx, ManglingContextDecl) =
+  std::tie(MCtx, Numbering.ContextDecl) =
       getCurrentMangleNumberContext(Class->getDeclContext());
-  bool HasKnownInternalLinkage = false;
   if (!MCtx && (getLangOpts().CUDA || getLangOpts().SYCLIsDevice ||
                 getLangOpts().SYCLIsHost)) {
     // Force lambda numbering in CUDA/HIP as we need to name lambdas following
@@ -433,15 +424,19 @@ void Sema::handleLambdaNumbering(
     // Also force for SYCL, since we need this for the
     // __builtin_sycl_unique_stable_name implementation, which depends on lambda
     // mangling.
-    MCtx = getMangleNumberingContext(Class, ManglingContextDecl);
+    MCtx = getMangleNumberingContext(Class, Numbering.ContextDecl);
     assert(MCtx && "Retrieving mangle numbering context failed!");
-    HasKnownInternalLinkage = true;
+    Numbering.HasKnownInternalLinkage = true;
   }
   if (MCtx) {
-    unsigned ManglingNumber = MCtx->getManglingNumber(Method);
-    Class->setLambdaMangling(ManglingNumber, ManglingContextDecl,
-                             HasKnownInternalLinkage);
-    Class->setDeviceLambdaManglingNumber(MCtx->getDeviceManglingNumber(Method));
+    Numbering.IndexInContext = MCtx->getNextLambdaIndex();
+    Numbering.ManglingNumber = MCtx->getManglingNumber(Method);
+    Numbering.DeviceManglingNumber = MCtx->getDeviceManglingNumber(Method);
+    Class->setLambdaNumbering(Numbering);
+
+    if (auto *Source =
+            dyn_cast_or_null<ExternalSemaSource>(Context.getExternalSource()))
+      Source->AssignedLambdaNumbering(Class);
   }
 }
 
@@ -1378,6 +1373,37 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     if (CheckRedefinition(P))
       CheckShadow(CurScope, P);
     PushOnScopeChains(P, CurScope);
+  }
+
+  // C++20: dcl.decl.general p4:
+  // The optional requires-clause ([temp.pre]) in an init-declarator or
+  // member-declarator shall be present only if the declarator declares a
+  // templated function ([dcl.fct]).
+  if (Expr *TRC = Method->getTrailingRequiresClause()) {
+    // [temp.pre]/8:
+    // An entity is templated if it is
+    // - a template,
+    // - an entity defined ([basic.def]) or created ([class.temporary]) in a
+    // templated entity,
+    // - a member of a templated entity,
+    // - an enumerator for an enumeration that is a templated entity, or
+    // - the closure type of a lambda-expression ([expr.prim.lambda.closure])
+    // appearing in the declaration of a templated entity. [Note 6: A local
+    // class, a local or block variable, or a friend function defined in a
+    // templated entity is a templated entity.  — end note]
+    //
+    // A templated function is a function template or a function that is
+    // templated. A templated class is a class template or a class that is
+    // templated. A templated variable is a variable template or a variable
+    // that is templated.
+
+    // Note: we only have to check if this is defined in a template entity, OR
+    // if we are a template, since the rest don't apply. The requires clause
+    // applies to the call operator, which we already know is a member function,
+    // AND defined.
+    if (!Method->getDescribedFunctionTemplate() && !Method->isTemplated()) {
+      Diag(TRC->getBeginLoc(), diag::err_constrained_non_templated_function);
+    }
   }
 
   // Enter a new evaluation context to insulate the lambda from any

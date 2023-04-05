@@ -637,7 +637,7 @@ void DwarfCompileUnit::attachRangesOrLowHighPC(
   assert(!Ranges.empty());
   if (!DD->useRangesSection() ||
       (Ranges.size() == 1 &&
-       (!DD->alwaysUseRanges() ||
+       (!DD->alwaysUseRanges(*this) ||
         DD->getSectionLabel(&Ranges.front().Begin->getSection()) ==
             Ranges.front().Begin))) {
     const RangeSpan &Front = Ranges.front();

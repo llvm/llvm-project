@@ -268,7 +268,7 @@ SparcTargetLowering::LowerReturn_32(SDValue Chain, CallingConv::ID CallConv,
   // Analyze return values.
   CCInfo.AnalyzeReturn(Outs, RetCC_Sparc32);
 
-  SDValue Flag;
+  SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
   // Make room for the return address offset.
   RetOps.push_back(SDValue());
@@ -294,17 +294,17 @@ SparcTargetLowering::LowerReturn_32(SDValue Chain, CallingConv::ID CallConv,
                                   Arg,
                                   DAG.getConstant(1, DL, getVectorIdxTy(DAG.getDataLayout())));
 
-      Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), Part0, Flag);
-      Flag = Chain.getValue(1);
+      Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), Part0, Glue);
+      Glue = Chain.getValue(1);
       RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
       VA = RVLocs[++i]; // skip ahead to next loc
       Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), Part1,
-                               Flag);
+                               Glue);
     } else
-      Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), Arg, Flag);
+      Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), Arg, Glue);
 
     // Guarantee that all emitted copies are stuck together with flags.
-    Flag = Chain.getValue(1);
+    Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
@@ -317,8 +317,8 @@ SparcTargetLowering::LowerReturn_32(SDValue Chain, CallingConv::ID CallConv,
       llvm_unreachable("sret virtual register not created in the entry block");
     auto PtrVT = getPointerTy(DAG.getDataLayout());
     SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, PtrVT);
-    Chain = DAG.getCopyToReg(Chain, DL, SP::I0, Val, Flag);
-    Flag = Chain.getValue(1);
+    Chain = DAG.getCopyToReg(Chain, DL, SP::I0, Val, Glue);
+    Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(SP::I0, PtrVT));
     RetAddrOffset = 12; // CallInst + Delay Slot + Unimp
   }
@@ -326,11 +326,11 @@ SparcTargetLowering::LowerReturn_32(SDValue Chain, CallingConv::ID CallConv,
   RetOps[0] = Chain;  // Update chain.
   RetOps[1] = DAG.getConstant(RetAddrOffset, DL, MVT::i32);
 
-  // Add the flag if we have it.
-  if (Flag.getNode())
-    RetOps.push_back(Flag);
+  // Add the glue if we have it.
+  if (Glue.getNode())
+    RetOps.push_back(Glue);
 
-  return DAG.getNode(SPISD::RET_FLAG, DL, MVT::Other, RetOps);
+  return DAG.getNode(SPISD::RET_GLUE, DL, MVT::Other, RetOps);
 }
 
 // Lower return values for the 64-bit ABI.
@@ -351,7 +351,7 @@ SparcTargetLowering::LowerReturn_64(SDValue Chain, CallingConv::ID CallConv,
   // Analyze return values.
   CCInfo.AnalyzeReturn(Outs, RetCC_Sparc64);
 
-  SDValue Flag;
+  SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
 
   // The second operand on the return instruction is the return address offset.
@@ -396,20 +396,20 @@ SparcTargetLowering::LowerReturn_64(SDValue Chain, CallingConv::ID CallConv,
       }
     }
 
-    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), OutVal, Flag);
+    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), OutVal, Glue);
 
     // Guarantee that all emitted copies are stuck together with flags.
-    Flag = Chain.getValue(1);
+    Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
   RetOps[0] = Chain;  // Update chain.
 
   // Add the flag if we have it.
-  if (Flag.getNode())
-    RetOps.push_back(Flag);
+  if (Glue.getNode())
+    RetOps.push_back(Glue);
 
-  return DAG.getNode(SPISD::RET_FLAG, DL, MVT::Other, RetOps);
+  return DAG.getNode(SPISD::RET_GLUE, DL, MVT::Other, RetOps);
 }
 
 SDValue SparcTargetLowering::LowerFormalArguments(
@@ -1012,15 +1012,15 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
 
   // Build a sequence of copy-to-reg nodes chained together with token
   // chain and flag operands which copy the outgoing args into registers.
-  // The InFlag in necessary since all emitted instructions must be
+  // The InGlue in necessary since all emitted instructions must be
   // stuck together.
-  SDValue InFlag;
+  SDValue InGlue;
   for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
     Register Reg = RegsToPass[i].first;
     if (!isTailCall)
       Reg = toCallerWindow(Reg);
-    Chain = DAG.getCopyToReg(Chain, dl, Reg, RegsToPass[i].second, InFlag);
-    InFlag = Chain.getValue(1);
+    Chain = DAG.getCopyToReg(Chain, dl, Reg, RegsToPass[i].second, InGlue);
+    InGlue = Chain.getValue(1);
   }
 
   bool hasReturnsTwice = hasReturnsTwiceAttr(DAG, Callee, CLI.CB);
@@ -1058,8 +1058,8 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
 
-  if (InFlag.getNode())
-    Ops.push_back(InFlag);
+  if (InGlue.getNode())
+    Ops.push_back(InGlue);
 
   if (isTailCall) {
     DAG.getMachineFunction().getFrameInfo().setHasTailCall();
@@ -1067,10 +1067,10 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   }
 
   Chain = DAG.getNode(SPISD::CALL, dl, NodeTys, Ops);
-  InFlag = Chain.getValue(1);
+  InGlue = Chain.getValue(1);
 
-  Chain = DAG.getCALLSEQ_END(Chain, ArgsSize, 0, InFlag, dl);
-  InFlag = Chain.getValue(1);
+  Chain = DAG.getCALLSEQ_END(Chain, ArgsSize, 0, InGlue, dl);
+  InGlue = Chain.getValue(1);
 
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
@@ -1085,24 +1085,24 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
     if (RVLocs[i].getLocVT() == MVT::v2i32) {
       SDValue Vec = DAG.getNode(ISD::UNDEF, dl, MVT::v2i32);
       SDValue Lo = DAG.getCopyFromReg(
-          Chain, dl, toCallerWindow(RVLocs[i++].getLocReg()), MVT::i32, InFlag);
+          Chain, dl, toCallerWindow(RVLocs[i++].getLocReg()), MVT::i32, InGlue);
       Chain = Lo.getValue(1);
-      InFlag = Lo.getValue(2);
+      InGlue = Lo.getValue(2);
       Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v2i32, Vec, Lo,
                         DAG.getConstant(0, dl, MVT::i32));
       SDValue Hi = DAG.getCopyFromReg(
-          Chain, dl, toCallerWindow(RVLocs[i].getLocReg()), MVT::i32, InFlag);
+          Chain, dl, toCallerWindow(RVLocs[i].getLocReg()), MVT::i32, InGlue);
       Chain = Hi.getValue(1);
-      InFlag = Hi.getValue(2);
+      InGlue = Hi.getValue(2);
       Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v2i32, Vec, Hi,
                         DAG.getConstant(1, dl, MVT::i32));
       InVals.push_back(Vec);
     } else {
       Chain =
           DAG.getCopyFromReg(Chain, dl, toCallerWindow(RVLocs[i].getLocReg()),
-                             RVLocs[i].getValVT(), InFlag)
+                             RVLocs[i].getValVT(), InGlue)
               .getValue(1);
-      InFlag = Chain.getValue(2);
+      InGlue = Chain.getValue(2);
       InVals.push_back(Chain.getValue(0));
     }
   }
@@ -1989,7 +1989,7 @@ const char *SparcTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case SPISD::FTOX:            return "SPISD::FTOX";
   case SPISD::XTOF:            return "SPISD::XTOF";
   case SPISD::CALL:            return "SPISD::CALL";
-  case SPISD::RET_FLAG:        return "SPISD::RET_FLAG";
+  case SPISD::RET_GLUE:        return "SPISD::RET_GLUE";
   case SPISD::GLOBAL_BASE_REG: return "SPISD::GLOBAL_BASE_REG";
   case SPISD::FLUSHW:          return "SPISD::FLUSHW";
   case SPISD::TLS_ADD:         return "SPISD::TLS_ADD";
@@ -2200,11 +2200,11 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
                                withTargetFlags(Op, addTF, DAG));
 
     SDValue Chain = DAG.getEntryNode();
-    SDValue InFlag;
+    SDValue InGlue;
 
     Chain = DAG.getCALLSEQ_START(Chain, 1, 0, DL);
-    Chain = DAG.getCopyToReg(Chain, DL, SP::O0, Argument, InFlag);
-    InFlag = Chain.getValue(1);
+    Chain = DAG.getCopyToReg(Chain, DL, SP::O0, Argument, InGlue);
+    InGlue = Chain.getValue(1);
     SDValue Callee = DAG.getTargetExternalSymbol("__tls_get_addr", PtrVT);
     SDValue Symbol = withTargetFlags(Op, callTF, DAG);
 
@@ -2217,12 +2217,12 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
                      Symbol,
                      DAG.getRegister(SP::O0, PtrVT),
                      DAG.getRegisterMask(Mask),
-                     InFlag};
+                     InGlue};
     Chain = DAG.getNode(SPISD::TLS_CALL, DL, NodeTys, Ops);
-    InFlag = Chain.getValue(1);
-    Chain = DAG.getCALLSEQ_END(Chain, 1, 0, InFlag, DL);
-    InFlag = Chain.getValue(1);
-    SDValue Ret = DAG.getCopyFromReg(Chain, DL, SP::O0, PtrVT, InFlag);
+    InGlue = Chain.getValue(1);
+    Chain = DAG.getCALLSEQ_END(Chain, 1, 0, InGlue, DL);
+    InGlue = Chain.getValue(1);
+    SDValue Ret = DAG.getCopyFromReg(Chain, DL, SP::O0, PtrVT, InGlue);
 
     if (model != TLSModel::LocalDynamic)
       return Ret;
@@ -3144,10 +3144,8 @@ static SDValue LowerUMULO_SMULO(SDValue Op, SelectionDAG &DAG,
   SDValue MulResult = TLI.makeLibCall(DAG,
                                       RTLIB::MUL_I128, WideVT,
                                       Args, CallOptions, dl).first;
-  SDValue BottomHalf = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, VT,
-                                   MulResult, DAG.getIntPtrConstant(0, dl));
-  SDValue TopHalf = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, VT,
-                                MulResult, DAG.getIntPtrConstant(1, dl));
+  SDValue BottomHalf, TopHalf;
+  std::tie(BottomHalf, TopHalf) = DAG.SplitScalar(MulResult, dl, VT, VT);
   if (isSigned) {
     SDValue Tmp1 = DAG.getNode(ISD::SRA, dl, VT, BottomHalf, ShiftAmt);
     TopHalf = DAG.getSetCC(dl, MVT::i32, TopHalf, Tmp1, ISD::SETNE);

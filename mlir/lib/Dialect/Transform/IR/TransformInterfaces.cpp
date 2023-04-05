@@ -23,6 +23,7 @@
 #define DEBUG_PRINT_AFTER_ALL "transform-dialect-print-top-level-after-all"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "] ")
 #define LDBG(X) LLVM_DEBUG(DBGS() << (X))
+#define FULL_LDBG(X) DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, (DBGS() << (X)))
 
 using namespace mlir;
 
@@ -336,18 +337,13 @@ transform::TransformState::replacePayloadOp(Operation *op,
     dropMappingEntry(mappings.reverse, op, handle);
   }
 
-  // Drop the mapping between the op results and all value handles that point to
-  // them. Don't care if there are no such handles.
-  RaggedArray<Value> resultValueHandles;
+#ifndef NDEBUG
   for (Value opResult : op->getResults()) {
     SmallVector<Value> valueHandles;
     (void)getHandlesForPayloadValue(opResult, valueHandles);
-    for (Value handle : valueHandles) {
-      Mappings &localMappings = getMapping(handle);
-      dropMappingEntry(localMappings.reverseValues, opResult, handle);
-    }
-    resultValueHandles.push_back(std::move(valueHandles));
+    assert(valueHandles.empty() && "expected no mapping to old results");
   }
+#endif // NDEBUG
 
   // TODO: consider invalidating the handles to nested objects here.
 
@@ -357,14 +353,6 @@ transform::TransformState::replacePayloadOp(Operation *op,
     for (Value handle : opHandles) {
       Mappings &mappings = getMapping(handle);
       dropMappingEntry(mappings.direct, handle, op);
-    }
-    for (Value opResult : op->getResults()) {
-      SmallVector<Value> valueHandles;
-      (void)getHandlesForPayloadValue(opResult, valueHandles);
-      for (Value handle : valueHandles) {
-        Mappings &localMappings = getMapping(handle);
-        dropMappingEntry(localMappings.values, handle, opResult);
-      }
     }
     return success();
   }
@@ -386,33 +374,33 @@ transform::TransformState::replacePayloadOp(Operation *op,
     mappings.reverse[replacement].push_back(handle);
   }
 
-  // Second, replace the mapped results of the operation.
-  for (auto [origResult, handleList] :
-       llvm::zip(op->getResults(), resultValueHandles)) {
-    // No handles to the value, skip even if there is no replacement.
-    if (handleList.empty())
-      continue;
+  return success();
+}
 
-    unsigned resultNumber = origResult.getResultNumber();
-    if (resultNumber >= replacement->getNumResults()) {
-      return emitError(op->getLoc())
-             << "cannot replace an op with another op producing less results "
-                "while tracking handles";
-    }
+LogicalResult
+transform::TransformState::replacePayloadValue(Value value, Value replacement) {
+  SmallVector<Value> valueHandles;
+  (void)getHandlesForPayloadValue(value, valueHandles);
 
-    Value replacementResult = replacement->getResult(resultNumber);
-    for (Value resultHandle : handleList) {
-      Mappings &mappings = getMapping(resultHandle);
-      auto it = mappings.values.find(resultHandle);
+  for (Value handle : valueHandles) {
+    Mappings &mappings = getMapping(handle);
+    dropMappingEntry(mappings.reverseValues, value, handle);
+
+    // If replacing with null, that is erasing the mapping, drop the mapping
+    // between the handles and the IR objects
+    if (!replacement) {
+      dropMappingEntry(mappings.values, handle, value);
+    } else {
+      auto it = mappings.values.find(handle);
       if (it == mappings.values.end())
         continue;
 
       SmallVector<Value> &association = it->getSecond();
       for (Value &mapped : association) {
-        if (mapped == origResult)
-          mapped = replacementResult;
+        if (mapped == value)
+          mapped = replacement;
       }
-      mappings.reverseValues[replacementResult].push_back(resultHandle);
+      mappings.reverseValues[replacement].push_back(handle);
     }
   }
 
@@ -427,17 +415,22 @@ void transform::TransformState::recordOpHandleInvalidationOne(
   if (invalidatedHandles.count(otherHandle))
     return;
 
-  LDBG("--recordOpHandleInvalidationOne\n");
-  LLVM_DEBUG(llvm::interleaveComma(potentialAncestors,
-                                   DBGS() << "--ancestors: ",
-                                   [](Operation *op) { llvm::dbgs() << *op; });
-             llvm::dbgs() << "\n");
+  FULL_LDBG("--recordOpHandleInvalidationOne\n");
+  DEBUG_WITH_TYPE(
+      DEBUG_TYPE_FULL,
+      llvm::interleaveComma(potentialAncestors, DBGS() << "--ancestors: ",
+                            [](Operation *op) { llvm::dbgs() << *op; });
+      llvm::dbgs() << "\n");
   for (Operation *ancestor : potentialAncestors) {
-    LLVM_DEBUG(DBGS() << "----handle one ancestor: " << *ancestor << "\n");
-    LLVM_DEBUG(DBGS() << "----of payload with name: "
-                      << payloadOp->getName().getIdentifier() << "\n");
+    // clang-format off
+    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, 
+      { (DBGS() << "----handle one ancestor: " << *ancestor << "\n"); });
+    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, 
+      { (DBGS() << "----of payload with name: " 
+                << payloadOp->getName().getIdentifier() << "\n"); });
     DEBUG_WITH_TYPE(DEBUG_TYPE_FULL,
-                    { (DBGS() << "----of payload: " << *payloadOp << "\n"); });
+      { (DBGS() << "----of payload: " << *payloadOp << "\n"); });
+    // clang-format on
     if (!ancestor->isAncestor(payloadOp))
       continue;
 
@@ -603,7 +596,7 @@ void transform::TransformState::recordValueHandleInvalidation(
 
 LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
     TransformOpInterface transform) {
-  LDBG("--Start checkAndRecordHandleInvalidation\n");
+  FULL_LDBG("--Start checkAndRecordHandleInvalidation\n");
   auto memoryEffectsIface =
       cast<MemoryEffectOpInterface>(transform.getOperation());
   SmallVector<MemoryEffects::EffectInstance> effects;
@@ -611,13 +604,14 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
       transform::TransformMappingResource::get(), effects);
 
   for (OpOperand &target : transform->getOpOperands()) {
-    LLVM_DEBUG(DBGS() << "----iterate on handle: " << target.get() << "\n");
+    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, {
+      (DBGS() << "----iterate on handle: " << target.get() << "\n");
+    });
     // If the operand uses an invalidated handle, report it.
     auto it = invalidatedHandles.find(target.get());
     if (!transform.allowsRepeatedHandleOperands() &&
         it != invalidatedHandles.end()) {
-      LLVM_DEBUG(
-          DBGS() << "--End checkAndRecordHandleInvalidation -> FAILURE\n");
+      FULL_LDBG("--End checkAndRecordHandleInvalidation -> FAILURE\n");
       return it->getSecond()(transform->getLoc()), failure();
     }
 
@@ -628,25 +622,25 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
              effect.getValue() == target.get();
     };
     if (llvm::any_of(effects, consumesTarget)) {
-      LLVM_DEBUG(DBGS() << "----found consume effect -> SKIP\n");
+      FULL_LDBG("----found consume effect -> SKIP\n");
       if (target.get().getType().isa<TransformHandleTypeInterface>()) {
-        LDBG("----recordOpHandleInvalidation\n");
+        FULL_LDBG("----recordOpHandleInvalidation\n");
         ArrayRef<Operation *> payloadOps = getPayloadOps(target.get());
         recordOpHandleInvalidation(target, payloadOps);
       } else if (target.get()
                      .getType()
                      .isa<TransformValueHandleTypeInterface>()) {
-        LDBG("----recordValueHandleInvalidation\n");
+        FULL_LDBG("----recordValueHandleInvalidation\n");
         recordValueHandleInvalidation(target);
       } else {
-        LDBG("----not a TransformHandle -> SKIP AND DROP ON THE FLOOR\n");
+        FULL_LDBG("----not a TransformHandle -> SKIP AND DROP ON THE FLOOR\n");
       }
     } else {
-      LLVM_DEBUG(DBGS() << "----no consume effect -> SKIP\n");
+      FULL_LDBG("----no consume effect -> SKIP\n");
     }
   }
 
-  LDBG("--End checkAndRecordHandleInvalidation -> SUCCESS\n");
+  FULL_LDBG("--End checkAndRecordHandleInvalidation -> SUCCESS\n");
   return success();
 }
 
@@ -676,51 +670,50 @@ checkRepeatedConsumptionInOperand(ArrayRef<T> payload,
 DiagnosedSilenceableFailure
 transform::TransformState::applyTransform(TransformOpInterface transform) {
   LLVM_DEBUG(DBGS() << "\n"; DBGS() << "applying: " << transform << "\n");
+  LLVM_DEBUG(DBGS() << "On top-level payload:\n" << *getTopLevel(););
   auto printOnFailureRAII = llvm::make_scope_exit([this] {
     (void)this;
-    DEBUG_WITH_TYPE(DEBUG_PRINT_AFTER_ALL, {
-      DBGS() << "Top-level payload:\n";
-      getTopLevel()->print(llvm::dbgs(),
-                           mlir::OpPrintingFlags().printGenericOpForm());
-    });
+    LLVM_DEBUG(DBGS() << "Failing Top-level payload:\n"; getTopLevel()->print(
+        llvm::dbgs(), mlir::OpPrintingFlags().printGenericOpForm()););
   });
   if (options.getExpensiveChecksEnabled()) {
-    LDBG("ExpensiveChecksEnabled\n");
+    FULL_LDBG("ExpensiveChecksEnabled\n");
     if (failed(checkAndRecordHandleInvalidation(transform)))
       return DiagnosedSilenceableFailure::definiteFailure();
 
     for (OpOperand &operand : transform->getOpOperands()) {
-      LLVM_DEBUG(DBGS() << "iterate on handle: " << operand.get() << "\n");
+      DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, {
+        (DBGS() << "iterate on handle: " << operand.get() << "\n");
+      });
       if (!isHandleConsumed(operand.get(), transform)) {
-        LDBG("--handle not consumed -> SKIP\n");
+        FULL_LDBG("--handle not consumed -> SKIP\n");
         continue;
       }
-      LDBG("--handle is consumed\n");
+      FULL_LDBG("--handle is consumed\n");
 
       Type operandType = operand.get().getType();
       if (operandType.isa<TransformHandleTypeInterface>()) {
-        LLVM_DEBUG(
-            DBGS() << "--checkRepeatedConsumptionInOperand for Operation*\n");
+        FULL_LDBG("--checkRepeatedConsumptionInOperand for Operation*\n");
         DiagnosedSilenceableFailure check =
             checkRepeatedConsumptionInOperand<Operation *>(
                 getPayloadOps(operand.get()), transform,
                 operand.getOperandNumber());
         if (!check.succeeded()) {
-          LDBG("----FAILED\n");
+          FULL_LDBG("----FAILED\n");
           return check;
         }
       } else if (operandType.isa<TransformValueHandleTypeInterface>()) {
-        LDBG("--checkRepeatedConsumptionInOperand For Value\n");
+        FULL_LDBG("--checkRepeatedConsumptionInOperand For Value\n");
         DiagnosedSilenceableFailure check =
             checkRepeatedConsumptionInOperand<Value>(
                 getPayloadValues(operand.get()), transform,
                 operand.getOperandNumber());
         if (!check.succeeded()) {
-          LDBG("----FAILED\n");
+          FULL_LDBG("----FAILED\n");
           return check;
         }
       } else {
-        LDBG("--not a TransformHandle -> SKIP AND DROP ON THE FLOOR\n");
+        FULL_LDBG("--not a TransformHandle -> SKIP AND DROP ON THE FLOOR\n");
       }
     }
   }
@@ -865,6 +858,16 @@ transform::TransformState::Extension::replacePayloadOp(Operation *op,
   // TODO: we may need to invalidate handles to operations and values nested in
   // the operation being replaced.
   return state.replacePayloadOp(op, replacement);
+}
+
+LogicalResult
+transform::TransformState::Extension::replacePayloadValue(Value value,
+                                                          Value replacement) {
+  SmallVector<Value> handles;
+  if (failed(state.getHandlesForPayloadValue(value, handles)))
+    return failure();
+
+  return state.replacePayloadValue(value, replacement);
 }
 
 //===----------------------------------------------------------------------===//

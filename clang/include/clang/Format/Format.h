@@ -2500,6 +2500,10 @@ struct FormatStyle {
   ///     Decimal: 3
   ///     Hex: -1
   /// \endcode
+  ///
+  /// You can also specify a minimum number of digits (``BinaryMinDigits``,
+  /// ``DecimalMinDigits``, and ``HexMinDigits``) the integer literal must
+  /// have in order for the separators to be inserted.
   struct IntegerLiteralSeparatorStyle {
     /// Format separators in binary literals.
     /// \code{.text}
@@ -2509,6 +2513,14 @@ struct FormatStyle {
     ///   /*  4: */ b = 0b1001'1110'1101;
     /// \endcode
     int8_t Binary;
+    /// Format separators in binary literals with a minimum number of digits.
+    /// \code{.text}
+    ///   // Binary: 3
+    ///   // BinaryMinDigits: 7
+    ///   b1 = 0b101101;
+    ///   b2 = 0b1'101'101;
+    /// \endcode
+    int8_t BinaryMinDigits;
     /// Format separators in decimal literals.
     /// \code{.text}
     ///   /* -1: */ d = 18446744073709550592ull;
@@ -2516,6 +2528,14 @@ struct FormatStyle {
     ///   /*  3: */ d = 18'446'744'073'709'550'592ull;
     /// \endcode
     int8_t Decimal;
+    /// Format separators in decimal literals with a minimum number of digits.
+    /// \code{.text}
+    ///   // Decimal: 3
+    ///   // DecimalMinDigits: 5
+    ///   d1 = 2023;
+    ///   d2 = 10'000;
+    /// \endcode
+    int8_t DecimalMinDigits;
     /// Format separators in hexadecimal literals.
     /// \code{.text}
     ///   /* -1: */ h = 0xDEADBEEFDEADBEEFuz;
@@ -2523,6 +2543,20 @@ struct FormatStyle {
     ///   /*  2: */ h = 0xDE'AD'BE'EF'DE'AD'BE'EFuz;
     /// \endcode
     int8_t Hex;
+    /// Format separators in hexadecimal literals with a minimum number of
+    /// digits.
+    /// \code{.text}
+    ///   // Hex: 2
+    ///   // HexMinDigits: 6
+    ///   h1 = 0xABCDE;
+    ///   h2 = 0xAB'CD'EF;
+    /// \endcode
+    int8_t HexMinDigits;
+    bool operator==(const IntegerLiteralSeparatorStyle &R) const {
+      return Binary == R.Binary && BinaryMinDigits == R.BinaryMinDigits &&
+             Decimal == R.Decimal && DecimalMinDigits == R.DecimalMinDigits &&
+             Hex == R.Hex && HexMinDigits == R.HexMinDigits;
+    }
   };
 
   /// Format integer literal separators (``'`` for C++ and ``_`` for C#, Java,
@@ -3714,6 +3748,16 @@ struct FormatStyle {
   /// \version 7
   bool SpaceBeforeInheritanceColon;
 
+  /// If ``true``, a space will be add before a JSON colon.
+  /// \code
+  ///    true:                                  false:
+  ///    {                                      {
+  ///      "key" : "value"              vs.       "key": "value"
+  ///    }                                      }
+  /// \endcode
+  /// \version 17
+  bool SpaceBeforeJsonColon;
+
   /// Different ways to put a space before opening parentheses.
   enum SpaceBeforeParensStyle : int8_t {
     /// Never put a space before opening parentheses.
@@ -4267,10 +4311,7 @@ struct FormatStyle {
            IndentWrappedFunctionNames == R.IndentWrappedFunctionNames &&
            InsertBraces == R.InsertBraces &&
            InsertNewlineAtEOF == R.InsertNewlineAtEOF &&
-           IntegerLiteralSeparator.Binary == R.IntegerLiteralSeparator.Binary &&
-           IntegerLiteralSeparator.Decimal ==
-               R.IntegerLiteralSeparator.Decimal &&
-           IntegerLiteralSeparator.Hex == R.IntegerLiteralSeparator.Hex &&
+           IntegerLiteralSeparator == R.IntegerLiteralSeparator &&
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
@@ -4279,7 +4320,7 @@ struct FormatStyle {
            Language == R.Language &&
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
            LineEnding == R.LineEnding && MacroBlockBegin == R.MacroBlockBegin &&
-           MacroBlockEnd == R.MacroBlockEnd &&
+           MacroBlockEnd == R.MacroBlockEnd && Macros == R.Macros &&
            MaxEmptyLinesToKeep == R.MaxEmptyLinesToKeep &&
            NamespaceIndentation == R.NamespaceIndentation &&
            NamespaceMacros == R.NamespaceMacros &&
@@ -4323,6 +4364,7 @@ struct FormatStyle {
            SpaceBeforeCtorInitializerColon ==
                R.SpaceBeforeCtorInitializerColon &&
            SpaceBeforeInheritanceColon == R.SpaceBeforeInheritanceColon &&
+           SpaceBeforeJsonColon == R.SpaceBeforeJsonColon &&
            SpaceBeforeParens == R.SpaceBeforeParens &&
            SpaceBeforeParensOptions == R.SpaceBeforeParensOptions &&
            SpaceAroundPointerQualifiers == R.SpaceAroundPointerQualifiers &&
@@ -4346,8 +4388,7 @@ struct FormatStyle {
            StatementAttributeLikeMacros == R.StatementAttributeLikeMacros &&
            StatementMacros == R.StatementMacros && TabWidth == R.TabWidth &&
            TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
-           WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros &&
-           Macros == R.Macros;
+           WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;
   }
 
   std::optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;

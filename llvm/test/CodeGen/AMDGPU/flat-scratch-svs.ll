@@ -98,11 +98,11 @@ define amdgpu_kernel void @soff1_voff1(i32 %soff) {
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v3, 4
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_add_co_i32 s0, s0, 4
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -114,11 +114,11 @@ define amdgpu_kernel void @soff1_voff1(i32 %soff) {
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, 4
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    v_add3_u32 v0, 4, s0, v0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -228,11 +228,11 @@ define amdgpu_kernel void @soff1_voff2(i32 %soff) {
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v2, 2 :: v_dual_mov_b32 v3, 4
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_add_co_i32 s0, s0, 4
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -245,11 +245,11 @@ define amdgpu_kernel void @soff1_voff2(i32 %soff) {
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_add3_u32 v0, 4, s0, v0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -359,11 +359,11 @@ define amdgpu_kernel void @soff1_voff4(i32 %soff) {
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v2, 2 :: v_dual_mov_b32 v3, 4
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_add_co_i32 s0, s0, 4
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -376,11 +376,11 @@ define amdgpu_kernel void @soff1_voff4(i32 %soff) {
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_add3_u32 v0, 4, s0, v0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -493,11 +493,11 @@ define amdgpu_kernel void @soff2_voff1(i32 %soff) {
 ; GFX12-SDAG-NEXT:    s_lshl_b32 s0, s0, 1
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_add_co_i32 s0, s0, 4
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -511,11 +511,11 @@ define amdgpu_kernel void @soff2_voff1(i32 %soff) {
 ; GFX12-GISEL-NEXT:    s_lshl_b32 s0, s0, 1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_add3_u32 v0, 4, s0, v0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -633,11 +633,11 @@ define amdgpu_kernel void @soff2_voff2(i32 %soff) {
 ; GFX12-SDAG-NEXT:    s_lshl_b32 s0, s0, 1
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_add_co_i32 s0, s0, 4
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -651,11 +651,11 @@ define amdgpu_kernel void @soff2_voff2(i32 %soff) {
 ; GFX12-GISEL-NEXT:    s_lshl_b32 s0, s0, 1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_add3_u32 v0, 4, s0, v0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -773,11 +773,11 @@ define amdgpu_kernel void @soff2_voff4(i32 %soff) {
 ; GFX12-SDAG-NEXT:    s_lshl_b32 s0, s0, 1
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_add_co_i32 s0, s0, 4
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -791,11 +791,11 @@ define amdgpu_kernel void @soff2_voff4(i32 %soff) {
 ; GFX12-GISEL-NEXT:    s_lshl_b32 s0, s0, 1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_add3_u32 v0, 4, s0, v0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -908,11 +908,11 @@ define amdgpu_kernel void @soff4_voff1(i32 %soff) {
 ; GFX12-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_add_co_i32 s0, s0, 4
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -926,11 +926,11 @@ define amdgpu_kernel void @soff4_voff1(i32 %soff) {
 ; GFX12-GISEL-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_add3_u32 v0, 4, s0, v0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -1048,11 +1048,11 @@ define amdgpu_kernel void @soff4_voff2(i32 %soff) {
 ; GFX12-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_add_co_i32 s0, s0, 4
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -1066,11 +1066,11 @@ define amdgpu_kernel void @soff4_voff2(i32 %soff) {
 ; GFX12-GISEL-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_add3_u32 v0, 4, s0, v0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -1188,11 +1188,11 @@ define amdgpu_kernel void @soff4_voff4(i32 %soff) {
 ; GFX12-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_add_co_i32 s0, s0, 4
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v1, s0 offset:1 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v2, s0 offset:2 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 th:TH_STORE_NT_RT
+; GFX12-SDAG-NEXT:    scratch_store_b8 v0, v3, s0 offset:4 scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -1206,11 +1206,11 @@ define amdgpu_kernel void @soff4_voff4(i32 %soff) {
 ; GFX12-GISEL-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_add3_u32 v0, 4, s0, v0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v1, off offset:1 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v2, off offset:2 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 th:TH_STORE_NT_RT
+; GFX12-GISEL-NEXT:    scratch_store_b8 v0, v3, off offset:4 scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm

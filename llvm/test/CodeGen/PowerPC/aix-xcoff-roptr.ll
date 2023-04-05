@@ -1,11 +1,11 @@
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mroptr < %s | FileCheck %s
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mroptr -filetype=obj -o %t.o < %s
+; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mxcoff-roptr < %s | FileCheck %s
+; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mxcoff-roptr -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -t --symbol-description %t.o | FileCheck %s --check-prefix=OBJ
 
-; RUN: not llc -mtriple powerpc-ibm-aix-xcoff -mroptr -data-sections=false \
+; RUN: not llc -mtriple powerpc-ibm-aix-xcoff -mxcoff-roptr -data-sections=false \
 ; RUN: < %s 2>&1 | FileCheck %s --check-prefix=DS_ERR
 
-; DS_ERR: -mroptr option must be used with -data-sections
+; DS_ERR: -mxcoff-roptr option must be used with -data-sections
 
 %union.U = type { %"struct.U::A" }
 %"struct.U::A" = type { ptr }

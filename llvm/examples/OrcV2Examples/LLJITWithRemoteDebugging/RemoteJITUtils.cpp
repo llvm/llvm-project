@@ -37,8 +37,8 @@ Error addDebugSupport(ObjectLayer &ObjLayer) {
     return createStringError(inconvertibleErrorCode(),
                              "No debug support for given object layer type");
 
-  ObjLinkingLayer->addPlugin(
-      std::make_unique<DebugObjectManagerPlugin>(ES, std::move(*Registrar)));
+  ObjLinkingLayer->addPlugin(std::make_unique<DebugObjectManagerPlugin>(
+      ES, std::move(*Registrar), true, true));
   return Error::success();
 }
 

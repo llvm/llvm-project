@@ -7,7 +7,8 @@ define void @test_01(i1 %cond) {
 ; CHECK-LABEL: @test_01(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[INST:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[TMP0:%.*]] = and i1 true, [[INST]]
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i1 true
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[TMP0]], [[INST]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       unreached:
 ; CHECK-NEXT:    unreachable
@@ -24,7 +25,7 @@ define void @test_01(i1 %cond) {
 ; CHECK-NEXT:    br i1 [[INST7]], label [[UNREACHED:%.*]], label [[LOOP]]
 ; CHECK:       guard_block:
 ; CHECK-NEXT:    [[INST9]] = icmp ult i32 [[INST4]], 10000
-; CHECK-NEXT:    br i1 [[TMP0]], label [[BACKEDGE]], label [[DEOPT:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BACKEDGE]], label [[DEOPT:%.*]]
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid(i32 13) [ "deopt"() ]
 ; CHECK-NEXT:    ret void

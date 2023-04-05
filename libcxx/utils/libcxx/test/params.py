@@ -215,36 +215,3 @@ DEFAULT_PARAMETERS = [
               AddCompileFlag('-D_LIBCPP_REMOVE_TRANSITIVE_INCLUDES')
             ]),
 ]
-
-DEFAULT_PARAMETERS += [
-  Parameter(name='use_system_cxx_lib', choices=[True, False], type=bool, default=False,
-            help="""
-    Whether the test suite is being *run* against the library shipped on the
-    target triple in use, as opposed to the trunk library.
-
-    When vendor-specific availability annotations are enabled, we add the
-    'use_system_cxx_lib' Lit feature to allow writing XFAIL or UNSUPPORTED
-    markup for tests that are known to fail on a particular triple.
-
-    That feature can be used to XFAIL a test that fails when deployed on (or is
-    compiled for) an older system. For example, if the test exhibits a bug in the
-    libc on a particular system version, or if the test uses a symbol that is not
-    available on an older version of the dylib, it can be marked as XFAIL with
-    the above feature.
-
-    It is sometimes useful to check that a test fails specifically when compiled
-    for a given deployment target. For example, this is the case when testing
-    availability markup, where we want to make sure that using the annotated
-    facility on a deployment target that doesn't support it will fail at compile
-    time, not at runtime. This can be achieved by creating a `.verify.cpp` test
-    that checks for the right errors, and mark that test as requiring
-    `use_system_cxx_lib && target=<target>`.
-    """,
-    actions=lambda useSystem: [
-      AddFeature('use_system_cxx_lib')
-    ] if useSystem else [
-      # If we're testing upstream libc++, disable availability markup,
-      # which is not relevant for non-shipped flavors of libc++.
-      AddCompileFlag('-D_LIBCPP_DISABLE_AVAILABILITY')
-    ])
-]

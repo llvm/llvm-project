@@ -48,6 +48,7 @@ void test_noexcept() {
   static_assert(noexcept([&] mutable noexcept(is_same<int &, decltype((y))>) {}()));
 }
 
+template<typename T>
 void test_requires() {
 
   int x;
@@ -75,6 +76,10 @@ void test_requires() {
 
   [x = 1]() requires is_same<const int &, decltype((x))> {} ();
   [x = 1]() mutable requires is_same<int &, decltype((x))> {} ();
+}
+
+void use() {
+  test_requires<int>();
 }
 
 void err() {

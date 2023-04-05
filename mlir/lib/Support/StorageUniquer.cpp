@@ -223,7 +223,7 @@ private:
   BaseStorage *
   getOrCreate(bool threadingIsEnabled, unsigned hashValue,
               function_ref<bool(const BaseStorage *)> isEqual,
-              function_ref<BaseStorage *(StorageAllocator &)> ctorFn) {
+              function_ref<BaseStorage *()> ctorFn) {
     ParametricStorageUniquer::LookupKey lookupKey{hashValue, isEqual};
     return getOrCreateUnsafe(shard, lookupKey, ctorFn);
   }
@@ -231,8 +231,8 @@ private:
   /// way.
   LogicalResult
   mutate(bool threadingIsEnabled, BaseStorage *storage,
-         function_ref<LogicalResult(StorageAllocator &)> mutationFn) {
-    return mutationFn(shard.allocator);
+         function_ref<LogicalResult()> mutationFn) {
+    return mutationFn();
   }
 
 private:

@@ -72,6 +72,7 @@ add_header_library(
     .str_to_num_result
     libc.src.errno.errno
     libc.src.__support.CPP.limits
+    libc.src.__support.CPP.type_traits
     libc.src.__support.common
 )
 
@@ -120,6 +121,7 @@ add_header_library(
     .uint128
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.builtin_wrappers
     libc.src.__support.common

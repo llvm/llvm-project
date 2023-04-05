@@ -187,6 +187,9 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_C_V2INT32,
   OPERAND_REG_INLINE_C_V2FP32,
 
+  // Operand for split barrier inline constant
+  OPERAND_INLINE_SPLIT_BARRIER_INT32,
+
   /// Operand with 32-bit immediate that uses the constant bus.
   OPERAND_KIMM32,
   OPERAND_KIMM16,
@@ -322,7 +325,7 @@ enum CPol {
   SC0 = GLC,
   SC1 = SCC,
   NT = SLC,
-  ALL = GLC | SLC | DLC | SCC,
+  ALL_pregfx12 = GLC | SLC | DLC | SCC,
   SWZ_pregfx12 = 8,
 
   // Below are GFX12+ cache policy bits
@@ -343,9 +346,9 @@ enum CPol {
   TH_RESERVED = 7, // unused value for load insts
 
   // Bits of TH for atomics
-  TH_ATOMIC_RETURN = 1,  // Returning vs non-returning
-  TH_ATOMIC_NT = 2,      // Non-temporal vs regular
-  TH_ATOMIC_CASCADE = 4, // Cascading vs regular
+  TH_ATOMIC_RETURN = GLC, // Returning vs non-returning
+  TH_ATOMIC_NT = SLC,     // Non-temporal vs regular
+  TH_ATOMIC_CASCADE = 4,  // Cascading vs regular
 
   // Scope
   SCOPE = 0x3 << 3, // All Scope bits
@@ -357,6 +360,8 @@ enum CPol {
   NV = 1 << 5, // Non-volatile bit
 
   SWZ = 1 << 6, // Swizzle bit
+
+  ALL = TH | SCOPE | NV,
 
   // Helper bits
   TH_TYPE_LOAD = 1 << 7,    // TH_LOAD policy
@@ -989,6 +994,15 @@ enum Offset_COV5 : unsigned {
 };
 
 } // namespace ImplicitArg
+} // namespace AMDGPU
+
+namespace AMDGPU {
+namespace Barrier {
+enum Type {
+  TRAP = -2,
+  WORKGROUP = -1
+};
+} // namespace Barrier
 } // namespace AMDGPU
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028

@@ -208,28 +208,9 @@ Value sparse_tensor::genCast(OpBuilder &builder, Location loc, Value value,
   if (srcTp.isa<IndexType>() || dstTp.isa<IndexType>())
     return builder.create<arith::IndexCastOp>(loc, dstTp, value);
 
-  const bool ext =
-      srcTp.getIntOrFloatBitWidth() < dstTp.getIntOrFloatBitWidth();
-
-  // float => float.
-  if (srcTp.isa<FloatType>() && dstTp.isa<FloatType>()) {
-    if (ext)
-      return builder.create<arith::ExtFOp>(loc, dstTp, value);
-    return builder.create<arith::TruncFOp>(loc, dstTp, value);
-  }
-
-  // int => int
-  const auto srcIntTp = srcTp.dyn_cast<IntegerType>();
-  if (srcIntTp && dstTp.isa<IntegerType>()) {
-    if (!ext)
-      return builder.create<arith::TruncIOp>(loc, dstTp, value);
-    if (srcIntTp.isUnsigned())
-      return builder.create<arith::ExtUIOp>(loc, dstTp, value);
-    if (srcIntTp.isSigned())
-      return builder.create<arith::ExtSIOp>(loc, dstTp, value);
-  }
-
-  llvm_unreachable("unhandled type casting");
+  const auto srcIntTp = srcTp.dyn_cast_or_null<IntegerType>();
+  const bool isUnsignedCast = srcIntTp ? srcIntTp.isUnsigned() : false;
+  return mlir::convertScalarToDtype(builder, loc, value, dstTp, isUnsignedCast);
 }
 
 mlir::Attribute mlir::sparse_tensor::getOneAttr(Builder &builder, Type tp) {

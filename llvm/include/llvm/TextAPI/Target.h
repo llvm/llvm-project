@@ -45,14 +45,16 @@ public:
 };
 
 inline bool operator==(const Target &LHS, const Target &RHS) {
+  // In most cases the deployment version is not useful to compare.
   return std::tie(LHS.Arch, LHS.Platform) == std::tie(RHS.Arch, RHS.Platform);
 }
 
 inline bool operator!=(const Target &LHS, const Target &RHS) {
-  return std::tie(LHS.Arch, LHS.Platform) != std::tie(RHS.Arch, RHS.Platform);
+  return !(LHS == RHS);
 }
 
 inline bool operator<(const Target &LHS, const Target &RHS) {
+  // In most cases the deployment version is not useful to compare.
   return std::tie(LHS.Arch, LHS.Platform) < std::tie(RHS.Arch, RHS.Platform);
 }
 
@@ -64,6 +66,7 @@ inline bool operator!=(const Target &LHS, const Architecture &RHS) {
   return LHS.Arch != RHS;
 }
 
+PlatformVersionSet mapToPlatformVersionSet(ArrayRef<Target> Targets);
 PlatformSet mapToPlatformSet(ArrayRef<Target> Targets);
 ArchitectureSet mapToArchitectureSet(ArrayRef<Target> Targets);
 

@@ -56,6 +56,11 @@ TEST(CollectMainFileMacros, SelectedMacros) {
       // )cpp",
       R"cpp(
         #ifdef $Unknown(condit)[[UNDEFINED]]
+        #elifdef $Unknown(condit)[[UNDEFINED]]
+        #endif
+
+        #ifdef $Unknown(condit)[[UNDEFINED]]
+        #elifndef $Unknown(condit)[[UNDEFINED]]
         #endif
 
         #ifndef $Unknown(condit)[[UNDEFINED]]
@@ -101,11 +106,12 @@ TEST(CollectMainFileMacros, SelectedMacros) {
 
   for (const char *Test : Tests) {
     Annotations T(Test);
-    auto AST = TestTU::withCode(T.code()).build();
+    auto Inputs = TestTU::withCode(T.code());
+    Inputs.ExtraArgs.push_back("-std=c++2b");
+    auto AST = Inputs.build();
     auto ActualMacroRefs = AST.getMacros();
     auto &SM = AST.getSourceManager();
     auto &PP = AST.getPreprocessor();
-
     for (const auto &[Name, Ranges] : T.all_ranges()) {
       if (Name == "Unknown") {
         EXPECT_THAT(ActualMacroRefs.UnknownMacros,

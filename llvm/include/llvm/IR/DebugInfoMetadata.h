@@ -2786,6 +2786,9 @@ public:
 
   /// Holds the characteristics of one fragment of a larger variable.
   struct FragmentInfo {
+    FragmentInfo() = default;
+    FragmentInfo(uint64_t SizeInBits, uint64_t OffsetInBits)
+        : SizeInBits(SizeInBits), OffsetInBits(OffsetInBits) {}
     uint64_t SizeInBits;
     uint64_t OffsetInBits;
     /// Return the index of the first bit of the fragment.

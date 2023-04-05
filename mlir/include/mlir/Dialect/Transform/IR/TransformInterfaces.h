@@ -313,7 +313,15 @@ public:
     /// Replaces the given payload op with another op. If the replacement op is
     /// null, removes the association of the payload op with its handle. Returns
     /// failure if the op is not associated with any handle.
+    ///
+    /// Note: This function does not update value handles. None of the original
+    /// op's results are allowed to be mapped to any value handle.
     LogicalResult replacePayloadOp(Operation *op, Operation *replacement);
+
+    /// Replaces the given payload value with another value. If the replacement
+    /// value is null, removes the association of the payload value with its
+    /// handle. Returns failure if the value is not associated with any handle.
+    LogicalResult replacePayloadValue(Value value, Value replacement);
 
   private:
     /// Back-reference to the state that is being extended.
@@ -484,17 +492,17 @@ private:
   void forgetValueMapping(Value valueHandle,
                           ArrayRef<Operation *> payloadOperations);
 
-  /// Updates the payload IR ops associated with the given transform IR value.
-  /// The callback function is called once per associated operation and is
-  /// expected to return the modified operation or nullptr. In the latter case,
-  /// the corresponding operation is no longer associated with the transform IR
-  /// value. Value handles associated with the results of the operation are
-  /// also updated to be associated with the results of the new operation. For
-  /// this reason, the new operation must have the same number of results.
+  /// Replaces the given payload op with another op. If the replacement op is
+  /// null, removes the association of the payload op with its handle.
   ///
-  /// Returns failure if the payload does not satisfy the conditions associated
-  /// with the type of the handle value.
+  /// Note: This function does not update value handles. None of the original
+  /// op's results are allowed to be mapped to any value handle.
   LogicalResult replacePayloadOp(Operation *op, Operation *replacement);
+
+  /// Replaces the given payload value with another value. If the replacement
+  /// value is null, removes the association of the payload value with its
+  /// handle.
+  LogicalResult replacePayloadValue(Value value, Value replacement);
 
   /// If the operand is a handle consumed by the operation, i.e. has the "free"
   /// memory effect associated with it, identifies other handles that are

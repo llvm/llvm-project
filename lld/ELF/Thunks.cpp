@@ -586,7 +586,8 @@ void ThumbThunk::writeTo(uint8_t *buf) {
   uint64_t s = getARMThunkDestVA(destination);
   uint64_t p = getThunkTargetSym()->getVA();
   int64_t offset = s - p - 4;
-  write32(buf, 0xb000f000); // b.w S
+  write16(buf + 0, 0xf000); // b.w S
+  write16(buf + 2, 0xb000);
   target->relocateNoSym(buf, R_ARM_THM_JUMP24, offset);
 }
 
@@ -1312,20 +1313,18 @@ Thunk *elf::addThunk(const InputSection &isec, Relocation &rel) {
   Symbol &s = *rel.sym;
   int64_t a = rel.addend;
 
-  if (config->emachine == EM_AARCH64)
+  switch (config->emachine) {
+  case EM_AARCH64:
     return addThunkAArch64(rel.type, s, a);
-
-  if (config->emachine == EM_ARM)
+  case EM_ARM:
     return addThunkArm(rel.type, s, a);
-
-  if (config->emachine == EM_MIPS)
+  case EM_MIPS:
     return addThunkMips(rel.type, s);
-
-  if (config->emachine == EM_PPC)
+  case EM_PPC:
     return addThunkPPC32(isec, rel, s);
-
-  if (config->emachine == EM_PPC64)
+  case EM_PPC64:
     return addThunkPPC64(rel.type, s, a);
-
-  llvm_unreachable("add Thunk only supported for ARM, Mips and PowerPC");
+  default:
+    llvm_unreachable("add Thunk only supported for ARM, Mips and PowerPC");
+  }
 }

@@ -9,6 +9,7 @@
 // Static declaration checking
 
 #include "check-declarations.h"
+#include "definable.h"
 #include "pointer-assignment.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/fold.h"
@@ -312,19 +313,6 @@ void CheckHelper::Check(const Symbol &symbol) {
               "A pure subprogram may not have a variable with the SAVE attribute"_err_en_US);
         }
       }
-      if (!IsDummy(symbol) && !IsFunctionResult(symbol)) {
-        if (IsPolymorphicAllocatable(symbol)) {
-          SayWithDeclaration(symbol,
-              "Deallocation of polymorphic object '%s' is not permitted in a pure subprogram"_err_en_US,
-              symbol.name());
-        } else if (derived) {
-          if (auto bad{FindPolymorphicAllocatableUltimateComponent(*derived)}) {
-            SayWithDeclaration(*bad,
-                "Deallocation of polymorphic object '%s%s' is not permitted in a pure subprogram"_err_en_US,
-                symbol.name(), bad.BuildResultDesignatorName());
-          }
-        }
-      }
     }
     if (symbol.attrs().test(Attr::VOLATILE) &&
         (IsDummy(symbol) || !InInterface())) {
@@ -359,15 +347,17 @@ void CheckHelper::Check(const Symbol &symbol) {
       Check(*type, canHaveAssumedParameter);
     }
     if (InPure() && InFunction() && IsFunctionResult(symbol)) {
-      if (derived && HasImpureFinal(*derived)) { // C1584
-        messages_.Say(
-            "Result of pure function may not have an impure FINAL subroutine"_err_en_US);
-      }
       if (type->IsPolymorphic() && IsAllocatable(symbol)) { // C1585
         messages_.Say(
             "Result of pure function may not be both polymorphic and ALLOCATABLE"_err_en_US);
       }
       if (derived) {
+        // These cases would be caught be the general validation of local
+        // variables in a pure context, but these messages are more specific.
+        if (HasImpureFinal(symbol)) { // C1584
+          messages_.Say(
+              "Result of pure function may not have an impure FINAL subroutine"_err_en_US);
+        }
         if (auto bad{FindPolymorphicAllocatableUltimateComponent(*derived)}) {
           SayWithDeclaration(*bad,
               "Result of pure function may not have polymorphic ALLOCATABLE ultimate component '%s'"_err_en_US,
@@ -656,6 +646,9 @@ void CheckHelper::CheckObjectEntity(
   }
   if (details.isDummy()) {
     if (IsIntentOut(symbol)) {
+      // Some of these errors would also be caught by the general check
+      // for definability of automatically deallocated local variables,
+      // but these messages are more specific.
       if (FindUltimateComponent(symbol, [](const Symbol &x) {
             return evaluate::IsCoarray(x) && IsAllocatable(x);
           })) { // C846
@@ -701,7 +694,7 @@ void CheckHelper::CheckObjectEntity(
             messages_.Say(
                 "An INTENT(OUT) dummy argument of a pure subroutine may not have a polymorphic ultimate component"_err_en_US);
           }
-          if (HasImpureFinal(*derived)) { // C1587
+          if (HasImpureFinal(symbol)) { // C1587
             messages_.Say(
                 "An INTENT(OUT) dummy argument of a pure subroutine may not have an impure FINAL subroutine"_err_en_US);
           }
@@ -788,6 +781,21 @@ void CheckHelper::CheckObjectEntity(
     messages_.Say("CLASS entity '%s' must be a dummy argument or have "
                   "ALLOCATABLE or POINTER attribute"_err_en_US,
         symbol.name());
+  }
+  if (derived && InPure() && !InInterface() &&
+      IsAutomaticallyDestroyed(symbol) &&
+      !IsIntentOut(symbol) /*has better messages*/ &&
+      !IsFunctionResult(symbol) /*ditto*/) {
+    // Check automatically deallocated local variables for possible
+    // problems with finalization in PURE.
+    if (auto whyNot{
+            WhyNotDefinable(symbol.name(), symbol.owner(), {}, symbol)}) {
+      if (auto *msg{messages_.Say(
+              "'%s' may not be a local variable in a pure subprogram"_err_en_US,
+              symbol.name())}) {
+        msg->Attach(std::move(*whyNot));
+      }
+    }
   }
 }
 
@@ -1735,7 +1743,9 @@ bool CheckHelper::CheckConflicting(const Symbol &symbol, Attr a1, Attr a2) {
 
 void CheckHelper::WarnMissingFinal(const Symbol &symbol) {
   const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-  if (!object || IsPointer(symbol)) {
+  if (!object ||
+      (!IsAutomaticallyDestroyed(symbol) &&
+          symbol.owner().kind() != Scope::Kind::DerivedType)) {
     return;
   }
   const DeclTypeSpec *type{object->type()};
@@ -2624,10 +2634,18 @@ void CheckHelper::CheckDioAssumedLenCharacterArg(const Symbol &subp,
   // Argument looks like: CHARACTER (LEN=*), INTENT(intent) :: (iotype OR iomsg)
   if (CheckDioDummyIsData(subp, arg, argPosition)) {
     CheckDioDummyAttrs(subp, *arg, intent);
-    if (!IsAssumedLengthCharacter(*arg)) {
+    const DeclTypeSpec *type{arg ? arg->GetType() : nullptr};
+    const IntrinsicTypeSpec *intrinsic{type ? type->AsIntrinsic() : nullptr};
+    const auto kind{
+        intrinsic ? evaluate::ToInt64(intrinsic->kind()) : std::nullopt};
+    if (!IsAssumedLengthCharacter(*arg) ||
+        (!kind ||
+            *kind !=
+                context_.defaultKinds().GetDefaultKind(
+                    TypeCategory::Character))) {
       messages_.Say(arg->name(),
           "Dummy argument '%s' of a defined input/output procedure"
-          " must be assumed-length CHARACTER"_err_en_US,
+          " must be assumed-length CHARACTER of default kind"_err_en_US,
           arg->name());
     }
   }
@@ -2688,13 +2706,14 @@ void CheckHelper::CheckDioDummyAttrs(
 void CheckHelper::CheckDefinedIoProc(const Symbol &symbol,
     const GenericDetails &details, GenericKind::DefinedIo ioKind) {
   for (auto ref : details.specificProcs()) {
-    const auto *binding{ref->detailsIf<ProcBindingDetails>()};
-    const Symbol &specific{*(binding ? &binding->symbol() : &*ref)};
-    if (ref->attrs().test(Attr::NOPASS)) { // C774
+    const Symbol &ultimate{ref->GetUltimate()};
+    const auto *binding{ultimate.detailsIf<ProcBindingDetails>()};
+    const Symbol &specific{*(binding ? &binding->symbol() : &ultimate)};
+    if (ultimate.attrs().test(Attr::NOPASS)) { // C774
       messages_.Say("Defined input/output procedure '%s' may not have NOPASS "
                     "attribute"_err_en_US,
-          ref->name());
-      context_.SetError(*ref);
+          ultimate.name());
+      context_.SetError(ultimate);
     }
     if (const auto *subpDetails{specific.detailsIf<SubprogramDetails>()}) {
       const std::vector<Symbol *> &dummyArgs{subpDetails->dummyArgs()};

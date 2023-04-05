@@ -69,7 +69,7 @@ wasm::ValType WebAssembly::regClassToValType(const TargetRegisterClass *RC) {
 }
 
 void WebAssembly::wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
-                                    const SmallVector<MVT, 1> &VTs) {
+                                    const ArrayRef<MVT> &VTs) {
   assert(!Sym->getType());
 
   // Tables are represented as Arrays in LLVM IR therefore

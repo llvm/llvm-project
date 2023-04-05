@@ -589,6 +589,10 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
       [&](const Twine &Error, StringRef Context, const DWARFDie *) {
         error(Error, Context);
       });
+  GeneralLinker.setInputVerificationHandler([&](const DWARFFile &File) {
+    reportWarning("input verification failed", File.FileName);
+    HasVerificationErrors = true;
+  });
   objFileLoader Loader = [&DebugMap, &RL,
                           this](StringRef ContainerName,
                                 StringRef Path) -> ErrorOr<DWARFFile &> {
@@ -654,7 +658,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
   if (!Options.NoOutput && !ReflectionSectionsPresentInBinary) {
     auto SectionToOffsetInDwarf =
         calculateStartOfStrippableReflectionSections(Map);
-    for (const auto &Obj : Map.objects()) 
+    for (const auto &Obj : Map.objects())
       copySwiftReflectionMetadata(Obj.get(), Streamer.get(),
                                   SectionToOffsetInDwarf, RelocationsToApply);
   }
@@ -675,7 +679,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
       StringRef File = Obj->getObjectFilename();
       auto ErrorOrMem = MemoryBuffer::getFile(File);
       if (!ErrorOrMem) {
-        warn("Could not open '" + File + "'\n");
+        warn("Could not open '" + File + "'");
         continue;
       }
       sys::fs::file_status Stat;
@@ -1068,12 +1072,6 @@ bool DwarfLinkerForBinary::AddressManager::applyValidRelocs(
   }
 
   return Relocs.size() > 0;
-}
-
-bool linkDwarf(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,
-               const DebugMap &DM, LinkOptions Options) {
-  DwarfLinkerForBinary Linker(OutFile, BinHolder, std::move(Options));
-  return Linker.link(DM);
 }
 
 } // namespace dsymutil

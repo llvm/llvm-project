@@ -10,10 +10,9 @@
 // that are not yet supported remain commented out.
 //===----------------------------------------------------------------------===//
 
-class GCNPat<dag pattern, dag result> : Pat<pattern, result>, GCNPredicateControl, GISelFlags;
+class GCNPat<dag pattern, dag result> : Pat<pattern, result>, GCNPredicateControl {
 
-let GIIgnoreCopies = 1 in
-class GCNPatIgnoreCopies<dag pattern, dag result> : GCNPat<pattern, result>;
+}
 
 class UniformSextInreg<ValueType VT> : PatFrag<
   (ops node:$src),
@@ -558,7 +557,7 @@ def SI_RETURN_TO_EPILOG : SPseudoInstSI <
 
 // Return for returning function calls.
 def SI_RETURN : SPseudoInstSI <
-  (outs), (ins), [(AMDGPUret_flag)],
+  (outs), (ins), [(AMDGPUret_glue)],
   "; return"> {
   let isTerminator = 1;
   let isBarrier = 1;
@@ -735,6 +734,10 @@ def S_INDIRECT_REG_WRITE_MOVREL_B32_V3 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V4 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_128>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V5 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_160>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V8 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_256>;
+def S_INDIRECT_REG_WRITE_MOVREL_B32_V9 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_288>;
+def S_INDIRECT_REG_WRITE_MOVREL_B32_V10 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_320>;
+def S_INDIRECT_REG_WRITE_MOVREL_B32_V11 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_352>;
+def S_INDIRECT_REG_WRITE_MOVREL_B32_V12 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_384>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V16 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_512>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V32 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_1024>;
 
@@ -2943,31 +2946,6 @@ def : GCNPat <
   (v2i16 (V_LSHL_OR_B32_e64 $src1, (i32 16), (i32 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), $src0))))
 >;
 
-multiclass V_SAT_PK_Pat<Instruction inst> {
-  def: GCNPat<
-    (v2i16 (DivergentBinFrag<build_vector> (clamp_s16_u8 i16:$lo), (clamp_s16_u8 i16:$hi))),
-    (inst
-      (V_LSHL_OR_B32_e64 VGPR_32:$hi, (S_MOV_B32 (i32 16)),
-        (V_AND_B32_e64 VGPR_32:$lo, (S_MOV_B32 (i32 0xFFFF)))))
-  >;
-
-  def: GCNPatIgnoreCopies<
-    (v2i16 (DivergentBinFrag<smin> (smax v2i16:$src, (build_vector (i16 0), (i16 0))), (build_vector (i16 255), (i16 255)))),
-    (inst VGPR_32:$src)
-  >;
-
-  def: GCNPatIgnoreCopies<
-    (v2i16 (DivergentBinFrag<smax> (smin v2i16:$src, (build_vector (i16 255), (i16 255))), (build_vector (i16 0), (i16 0)))),
-    (inst VGPR_32:$src)
-  >;
-}
-
-let OtherPredicates = [HasTrue16BitInsts] in
-defm : V_SAT_PK_Pat<V_SAT_PK_U8_I16_t16_e64>;
-
-let OtherPredicates = [NotHasTrue16BitInsts] in
-defm : V_SAT_PK_Pat<V_SAT_PK_U8_I16_e64>;
-
 // With multiple uses of the shift, this will duplicate the shift and
 // increase register pressure.
 def : GCNPat <
@@ -3592,6 +3570,7 @@ def G_AMDGPU_BUFFER_ATOMIC_XOR : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_INC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_DEC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FADD : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_FADD_BF16 : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FMIN : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FMAX : BufferAtomicGenericInstruction;
 

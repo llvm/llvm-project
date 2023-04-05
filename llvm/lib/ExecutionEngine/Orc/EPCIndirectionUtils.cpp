@@ -160,18 +160,16 @@ Error EPCIndirectStubsManager::createStubs(const StubInitsMap &StubInits) {
     unsigned ASIdx = 0;
     std::vector<tpctypes::UInt32Write> PtrUpdates;
     for (auto &SI : StubInits)
-      PtrUpdates.push_back(
-          {ExecutorAddr((*AvailableStubInfos)[ASIdx++].PointerAddress),
-           static_cast<uint32_t>(SI.second.first.getValue())});
+      PtrUpdates.push_back({(*AvailableStubInfos)[ASIdx++].PointerAddress,
+                            static_cast<uint32_t>(SI.second.first.getValue())});
     return MemAccess.writeUInt32s(PtrUpdates);
   }
   case 8: {
     unsigned ASIdx = 0;
     std::vector<tpctypes::UInt64Write> PtrUpdates;
     for (auto &SI : StubInits)
-      PtrUpdates.push_back(
-          {ExecutorAddr((*AvailableStubInfos)[ASIdx++].PointerAddress),
-           static_cast<uint64_t>(SI.second.first.getValue())});
+      PtrUpdates.push_back({(*AvailableStubInfos)[ASIdx++].PointerAddress,
+                            static_cast<uint64_t>(SI.second.first.getValue())});
     return MemAccess.writeUInt64s(PtrUpdates);
   }
   default:

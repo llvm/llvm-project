@@ -138,9 +138,9 @@ void %(check_name)s::check(const MatchFinder::MatchResult &Result) {
   if (!MatchedDecl->getIdentifier() || MatchedDecl->getName().startswith("awesome_"))
     return;
   diag(MatchedDecl->getLocation(), "function %%0 is insufficiently awesome")
-      << MatchedDecl;
-  diag(MatchedDecl->getLocation(), "insert 'awesome'", DiagnosticIDs::Note)
+      << MatchedDecl
       << FixItHint::CreateInsertion(MatchedDecl->getLocation(), "awesome_");
+  diag(MatchedDecl->getLocation(), "insert 'awesome'", DiagnosticIDs::Note);
 }
 
 } // namespace clang::tidy::%(namespace)s
@@ -293,7 +293,7 @@ void awesome_f2();
 
 
 def get_actual_filename(dirname, filename):
-  if not os.path.isdir(dirname): 
+  if not os.path.isdir(dirname):
     return ''
   name = os.path.join(dirname, filename)
   if (os.path.isfile(name)):

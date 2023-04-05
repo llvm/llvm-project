@@ -93,7 +93,7 @@ define void @a(ptr readnone %b) {
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq ptr [[INCDEC_PTR]], [[B]]
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ;
 
 entry:
@@ -203,5 +203,42 @@ loop.body:                                    ; preds = %loop.body, %entry
   br i1 %c, label %loop.body, label %exit
 
 exit:                            ; preds = %loop.body
+  ret void
+}
+
+; Test the vector expansion of a non-constant stride pointer IV
+define void @non_constant_vector_expansion(i32 %0, ptr %call) {
+; CHECK-LABEL: @non_constant_vector_expansion(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[TMP0:%.*]], 1
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 30, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_COND]] ]
+; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ null, [[ENTRY]] ], [ [[ADD_PTR:%.*]], [[FOR_COND]] ]
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr i8, ptr [[P_0]], i32 [[MUL]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr ptr, ptr [[CALL:%.*]], i32 [[TMP1]]
+; CHECK-NEXT:    store ptr [[P_0]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[INC]] = add i32 [[TMP1]], 1
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_END:%.*]], label [[FOR_COND]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %mul = shl i32 %0, 1
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.body, %entry
+  %1 = phi i32 [ 30, %entry ], [ %inc, %for.cond ]
+  %p.0 = phi ptr [ null, %entry ], [ %add.ptr, %for.cond ]
+  %add.ptr = getelementptr i8, ptr %p.0, i32 %mul
+  %arrayidx = getelementptr ptr, ptr %call, i32 %1
+  store ptr %p.0, ptr %arrayidx, align 4
+  %inc = add i32 %1, 1
+  %tobool.not = icmp eq i32 %1, 0
+  br i1 %tobool.not, label %for.end, label %for.cond
+
+
+for.end:                                          ; preds = %for.cond
   ret void
 }

@@ -102,17 +102,19 @@ config.test_format = lit.formats.ShTest(execute_external)
 if execute_external:
   config.available_features.add('shell')
 
+target_is_msvc = bool(re.match(r'.*-windows-msvc$', config.target_triple))
+
 compiler_id = getattr(config, 'compiler_id', None)
 if compiler_id == "Clang":
-  if platform.system() != 'Windows':
+  if not (platform.system() == 'Windows' and target_is_msvc):
     config.cxx_mode_flags = ["--driver-mode=g++"]
   else:
     config.cxx_mode_flags = []
   # We assume that sanitizers should provide good enough error
   # reports and stack traces even with minimal debug info.
   config.debug_info_flags = ["-gline-tables-only"]
-  if platform.system() == 'Windows':
-    # On Windows, use CodeView with column info instead of DWARF. Both VS and
+  if platform.system() == 'Windows' and target_is_msvc:
+    # On MSVC, use CodeView with column info instead of DWARF. Both VS and
     # windbg do not behave well when column info is enabled, but users have
     # requested it because it makes ASan reports more precise.
     config.debug_info_flags.append("-gcodeview")
@@ -185,8 +187,8 @@ possibly_dangerous_env_vars = ['ASAN_OPTIONS', 'DFSAN_OPTIONS', 'HWASAN_OPTIONS'
                                'LIBCLANG_RESOURCE_USAGE',
                                'LIBCLANG_CODE_COMPLETION_LOGGING',
                                'XRAY_OPTIONS']
-# Clang/Win32 may refer to %INCLUDE%. vsvarsall.bat sets it.
-if platform.system() != 'Windows':
+# Clang/MSVC may refer to %INCLUDE%. vsvarsall.bat sets it.
+if not (platform.system() == 'Windows' and target_is_msvc):
     possibly_dangerous_env_vars.append('INCLUDE')
 for name in possibly_dangerous_env_vars:
   if name in config.environment:
@@ -200,7 +202,7 @@ config.environment['PATH'] = path
 
 # Help MSVS link.exe find the standard libraries.
 # Make sure we only try to use it when targetting Windows.
-if platform.system() == 'Windows' and '-win' in config.target_triple:
+if platform.system() == 'Windows' and target_is_msvc:
   config.environment['LIB'] = os.environ['LIB']
 
 config.available_features.add(config.host_os.lower())
@@ -550,6 +552,8 @@ def is_binutils_lto_supported():
   return True
 
 def is_windows_lto_supported():
+  if not target_is_msvc:
+    return True
   return os.path.exists(os.path.join(config.llvm_tools_dir, 'lld-link.exe'))
 
 if config.host_os == 'Darwin' and is_darwin_lto_supported():

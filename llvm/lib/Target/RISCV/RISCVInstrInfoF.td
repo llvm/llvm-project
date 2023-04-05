@@ -434,6 +434,13 @@ def : InstAlias<"fge.s $rd, $rs, $rt",
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
 
+defvar FRM_RNE = 0b000;
+defvar FRM_RTZ = 0b001;
+defvar FRM_RDN = 0b010;
+defvar FRM_RUP = 0b011;
+defvar FRM_RMM = 0b100;
+defvar FRM_DYN = 0b111;
+
 /// Floating point constants
 def fpimm0    : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
 
@@ -447,7 +454,7 @@ class PatFprFpr<SDPatternOperator OpNode, RVInstR Inst,
 
 class PatFprFprDynFrm<SDPatternOperator OpNode, RVInstRFrm Inst,
                       RegisterClass RegTy>
-    : Pat<(OpNode RegTy:$rs1, RegTy:$rs2), (Inst $rs1, $rs2, 0b111)>;
+    : Pat<(OpNode RegTy:$rs1, RegTy:$rs2), (Inst $rs1, $rs2, FRM_DYN)>;
 
 let Predicates = [HasStdExtF] in {
 
@@ -463,7 +470,7 @@ def : PatFprFprDynFrm<any_fsub, FSUB_S, FPR32>;
 def : PatFprFprDynFrm<any_fmul, FMUL_S, FPR32>;
 def : PatFprFprDynFrm<any_fdiv, FDIV_S, FPR32>;
 
-def : Pat<(any_fsqrt FPR32:$rs1), (FSQRT_S FPR32:$rs1, 0b111)>;
+def : Pat<(any_fsqrt FPR32:$rs1), (FSQRT_S FPR32:$rs1, FRM_DYN)>;
 
 def : Pat<(fneg FPR32:$rs1), (FSGNJN_S $rs1, $rs1)>;
 def : Pat<(fabs FPR32:$rs1), (FSGNJX_S $rs1, $rs1)>;
@@ -473,23 +480,23 @@ def : Pat<(fcopysign FPR32:$rs1, (fneg FPR32:$rs2)), (FSGNJN_S $rs1, $rs2)>;
 
 // fmadd: rs1 * rs2 + rs3
 def : Pat<(any_fma FPR32:$rs1, FPR32:$rs2, FPR32:$rs3),
-          (FMADD_S $rs1, $rs2, $rs3, 0b111)>;
+          (FMADD_S $rs1, $rs2, $rs3, FRM_DYN)>;
 
 // fmsub: rs1 * rs2 - rs3
 def : Pat<(any_fma FPR32:$rs1, FPR32:$rs2, (fneg FPR32:$rs3)),
-          (FMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
+          (FMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, FRM_DYN)>;
 
 // fnmsub: -rs1 * rs2 + rs3
 def : Pat<(any_fma (fneg FPR32:$rs1), FPR32:$rs2, FPR32:$rs3),
-          (FNMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
+          (FNMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, FRM_DYN)>;
 
 // fnmadd: -rs1 * rs2 - rs3
 def : Pat<(any_fma (fneg FPR32:$rs1), FPR32:$rs2, (fneg FPR32:$rs3)),
-          (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
+          (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, FRM_DYN)>;
 
 // fnmadd: -(rs1 * rs2 + rs3) (the nsz flag on the FMA)
 def : Pat<(fneg (any_fma_nsz FPR32:$rs1, FPR32:$rs2, FPR32:$rs3)),
-          (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
+          (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, FRM_DYN)>;
 
 // The ratified 20191213 ISA spec defines fmin and fmax in a way that matches
 // LLVM's fminnum and fmaxnum
@@ -547,22 +554,22 @@ def : Pat<(bitconvert (i32 GPR:$rs1)), (FMV_W_X GPR:$rs1)>;
 def : Pat<(i32 (bitconvert FPR32:$rs1)), (FMV_X_W FPR32:$rs1)>;
 
 // float->[u]int. Round-to-zero must be used.
-def : Pat<(i32 (any_fp_to_sint FPR32:$rs1)), (FCVT_W_S $rs1, 0b001)>;
-def : Pat<(i32 (any_fp_to_uint FPR32:$rs1)), (FCVT_WU_S $rs1, 0b001)>;
+def : Pat<(i32 (any_fp_to_sint FPR32:$rs1)), (FCVT_W_S $rs1, FRM_RTZ)>;
+def : Pat<(i32 (any_fp_to_uint FPR32:$rs1)), (FCVT_WU_S $rs1, FRM_RTZ)>;
 
 // Saturating float->[u]int32.
 def : Pat<(i32 (riscv_fcvt_x FPR32:$rs1, timm:$frm)), (FCVT_W_S $rs1, timm:$frm)>;
 def : Pat<(i32 (riscv_fcvt_xu FPR32:$rs1, timm:$frm)), (FCVT_WU_S $rs1, timm:$frm)>;
 
 // float->int32 with current rounding mode.
-def : Pat<(i32 (any_lrint FPR32:$rs1)), (FCVT_W_S $rs1, 0b111)>;
+def : Pat<(i32 (any_lrint FPR32:$rs1)), (FCVT_W_S $rs1, FRM_DYN)>;
 
 // float->int32 rounded to nearest with ties rounded away from zero.
-def : Pat<(i32 (any_lround FPR32:$rs1)), (FCVT_W_S $rs1, 0b100)>;
+def : Pat<(i32 (any_lround FPR32:$rs1)), (FCVT_W_S $rs1, FRM_RMM)>;
 
 // [u]int->float. Match GCC and default to using dynamic rounding mode.
-def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_S_W $rs1, 0b111)>;
-def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_S_WU $rs1, 0b111)>;
+def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_S_W $rs1, FRM_DYN)>;
+def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_S_WU $rs1, FRM_DYN)>;
 } // Predicates = [HasStdExtF, IsRV32]
 
 let Predicates = [HasStdExtF, IsRV64] in {
@@ -579,24 +586,24 @@ def : Pat<(riscv_any_fcvt_w_rv64 FPR32:$rs1, timm:$frm),  (FCVT_W_S $rs1, timm:$
 def : Pat<(riscv_any_fcvt_wu_rv64 FPR32:$rs1, timm:$frm), (FCVT_WU_S $rs1, timm:$frm)>;
 
 // float->[u]int64. Round-to-zero must be used.
-def : Pat<(i64 (any_fp_to_sint FPR32:$rs1)), (FCVT_L_S $rs1, 0b001)>;
-def : Pat<(i64 (any_fp_to_uint FPR32:$rs1)), (FCVT_LU_S $rs1, 0b001)>;
+def : Pat<(i64 (any_fp_to_sint FPR32:$rs1)), (FCVT_L_S $rs1, FRM_RTZ)>;
+def : Pat<(i64 (any_fp_to_uint FPR32:$rs1)), (FCVT_LU_S $rs1, FRM_RTZ)>;
 
 // Saturating float->[u]int64.
 def : Pat<(i64 (riscv_fcvt_x FPR32:$rs1, timm:$frm)), (FCVT_L_S $rs1, timm:$frm)>;
 def : Pat<(i64 (riscv_fcvt_xu FPR32:$rs1, timm:$frm)), (FCVT_LU_S $rs1, timm:$frm)>;
 
 // float->int64 with current rounding mode.
-def : Pat<(i64 (any_lrint FPR32:$rs1)), (FCVT_L_S $rs1, 0b111)>;
-def : Pat<(i64 (any_llrint FPR32:$rs1)), (FCVT_L_S $rs1, 0b111)>;
+def : Pat<(i64 (any_lrint FPR32:$rs1)), (FCVT_L_S $rs1, FRM_DYN)>;
+def : Pat<(i64 (any_llrint FPR32:$rs1)), (FCVT_L_S $rs1, FRM_DYN)>;
 
 // float->int64 rounded to neartest with ties rounded away from zero.
-def : Pat<(i64 (any_lround FPR32:$rs1)), (FCVT_L_S $rs1, 0b100)>;
-def : Pat<(i64 (any_llround FPR32:$rs1)), (FCVT_L_S $rs1, 0b100)>;
+def : Pat<(i64 (any_lround FPR32:$rs1)), (FCVT_L_S $rs1, FRM_RMM)>;
+def : Pat<(i64 (any_llround FPR32:$rs1)), (FCVT_L_S $rs1, FRM_RMM)>;
 
 // [u]int->fp. Match GCC and default to using dynamic rounding mode.
-def : Pat<(any_sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_S_W $rs1, 0b111)>;
-def : Pat<(any_uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_S_WU $rs1, 0b111)>;
-def : Pat<(any_sint_to_fp (i64 GPR:$rs1)), (FCVT_S_L $rs1, 0b111)>;
-def : Pat<(any_uint_to_fp (i64 GPR:$rs1)), (FCVT_S_LU $rs1, 0b111)>;
+def : Pat<(any_sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_S_W $rs1, FRM_DYN)>;
+def : Pat<(any_uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_S_WU $rs1, FRM_DYN)>;
+def : Pat<(any_sint_to_fp (i64 GPR:$rs1)), (FCVT_S_L $rs1, FRM_DYN)>;
+def : Pat<(any_uint_to_fp (i64 GPR:$rs1)), (FCVT_S_LU $rs1, FRM_DYN)>;
 } // Predicates = [HasStdExtF, IsRV64]

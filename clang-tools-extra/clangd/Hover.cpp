@@ -1169,7 +1169,7 @@ void maybeAddUsedSymbols(ParsedAST &AST, HoverInfo &HI, const Inclusion &Inc) {
       [&](const include_cleaner::SymbolReference &Ref,
           llvm::ArrayRef<include_cleaner::Header> Providers) {
         if (Ref.RT != include_cleaner::RefType::Explicit ||
-            UsedSymbols.find(Ref.Target) != UsedSymbols.end())
+            UsedSymbols.contains(Ref.Target))
           return;
 
         for (const include_cleaner::Header &H : Providers) {

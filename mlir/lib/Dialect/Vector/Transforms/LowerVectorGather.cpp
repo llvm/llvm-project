@@ -1,4 +1,4 @@
-//===- LowerVectorScam.cpp - Lower 'vector.scan' operation ----------------===//
+//===- LowerVectorGather.cpp - Lower 'vector.gather' operation ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements target-independent rewrites and utilities to lower the
-// 'vector.scan' operation.
+// 'vector.gather' operation.
 //
 //===----------------------------------------------------------------------===//
 

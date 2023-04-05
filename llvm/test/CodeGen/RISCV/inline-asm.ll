@@ -85,17 +85,15 @@ define i32 @constraint_m2(ptr %a) nounwind {
 define i32 @constraint_m_with_offset(ptr %a) nounwind {
 ; RV32I-LABEL: constraint_m_with_offset:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a0, a0, 4
 ; RV32I-NEXT:    #APP
-; RV32I-NEXT:    lw a0, 0(a0)
+; RV32I-NEXT:    lw a0, 4(a0)
 ; RV32I-NEXT:    #NO_APP
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: constraint_m_with_offset:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a0, a0, 4
 ; RV64I-NEXT:    #APP
-; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    lw a0, 4(a0)
 ; RV64I-NEXT:    #NO_APP
 ; RV64I-NEXT:    ret
   %1 = getelementptr i32, ptr %a, i32 1

@@ -207,13 +207,15 @@ namespace ConstThis {
                       // ref-note {{declared const here}}
     int a;
   public:
-    constexpr Foo() {
+    constexpr Foo() { // expected-note {{declared here}}
       this->a = 10;
       T = 13; // expected-error {{cannot assign to non-static data member 'T' with const-qualified type}} \
               // ref-error {{cannot assign to non-static data member 'T' with const-qualified type}}
     }
   };
   constexpr Foo F; // expected-error {{must be initialized by a constant expression}} \
+                   // FIXME: The following note is wrong. \
+                   // expected-note {{undefined constructor 'Foo' cannot be used in a constant expression}} \
                    // ref-error {{must be initialized by a constant expression}}
 
 
@@ -271,3 +273,330 @@ namespace ConstThis {
                                        // ref-error {{must have constant destruction}} \
                                        // ref-note {{in call to}}
 };
+
+namespace BaseInit {
+  struct Base {
+    int a;
+  };
+
+  struct Intermediate : Base {
+    int b;
+  };
+
+  struct Final : Intermediate {
+    int c;
+
+    constexpr Final(int a, int b, int c) : c(c) {}
+  };
+
+  static_assert(Final{1, 2, 3}.c == 3, ""); // OK
+  static_assert(Final{1, 2, 3}.a == 0, ""); // expected-error {{not an integral constant expression}} \
+                                            // expected-note {{read of object outside its lifetime}} \
+                                            // ref-error {{not an integral constant expression}} \
+                                            // ref-note {{read of uninitialized object}}
+
+
+  struct Mixin  {
+    int b;
+
+    constexpr Mixin() = default;
+    constexpr Mixin(int b) : b(b) {}
+  };
+
+  struct Final2 : Base, Mixin {
+    int c;
+
+    constexpr Final2(int a, int b, int c) : Mixin(b), c(c) {}
+    constexpr Final2(int a, int b, int c, bool) : c(c) {}
+  };
+
+  static_assert(Final2{1, 2, 3}.c == 3, ""); // OK
+  static_assert(Final2{1, 2, 3}.b == 2, ""); // OK
+  static_assert(Final2{1, 2, 3}.a == 0, ""); // expected-error {{not an integral constant expression}} \
+                                             // expected-note {{read of object outside its lifetime}} \
+                                             // ref-error {{not an integral constant expression}} \
+                                             // ref-note {{read of uninitialized object}}
+
+
+  struct Mixin3  {
+    int b;
+  };
+
+  struct Final3 : Base, Mixin3 {
+    int c;
+
+    constexpr Final3(int a, int b, int c) : c(c) { this->b = b; }
+    constexpr Final3(int a, int b, int c, bool) : c(c) {}
+  };
+
+  static_assert(Final3{1, 2, 3}.c == 3, ""); // OK
+  static_assert(Final3{1, 2, 3}.b == 2, ""); // OK
+  static_assert(Final3{1, 2, 3}.a == 0, ""); // expected-error {{not an integral constant expression}} \
+                                             // expected-note {{read of object outside its lifetime}} \
+                                             // ref-error {{not an integral constant expression}} \
+                                             // ref-note {{read of uninitialized object}}
+};
+
+namespace Destructors {
+
+  class Inc final {
+  public:
+    int &I;
+    constexpr Inc(int &I) : I(I) {}
+    constexpr ~Inc() {
+      I++;
+    }
+  };
+
+  class Dec final {
+  public:
+    int &I;
+    constexpr Dec(int &I) : I(I) {}
+    constexpr ~Dec() {
+      I--;
+    }
+  };
+
+
+
+  constexpr int m() {
+    int i = 0;
+    {
+      Inc f1(i);
+      Inc f2(i);
+      Inc f3(i);
+    }
+    return i;
+  }
+  static_assert(m() == 3, "");
+
+
+  constexpr int C() {
+    int i = 0;
+
+    while (i < 10) {
+      Inc inc(i);
+      continue;
+      Dec dec(i);
+    }
+    return i;
+  }
+  static_assert(C() == 10, "");
+
+
+  constexpr int D() {
+    int i = 0;
+
+    {
+      Inc i1(i);
+      {
+        Inc i2(i);
+        return i;
+      }
+    }
+
+    return i;
+  }
+  static_assert(D() == 0, "");
+
+  constexpr int E() {
+    int i = 0;
+
+    for(;;) {
+      Inc i1(i);
+      break;
+    }
+    return i;
+  }
+  static_assert(E() == 1, "");
+
+
+  /// FIXME: This should be rejected, since we call the destructor
+  ///   twice. However, GCC doesn't care either.
+  constexpr int ManualDtor() {
+    int i = 0;
+    {
+      Inc I(i); // ref-note {{destroying object 'I' whose lifetime has already ended}}
+      I.~Inc();
+    }
+    return i;
+  }
+  static_assert(ManualDtor() == 1, ""); // expected-error {{static assertion failed}} \
+                                        // expected-note {{evaluates to '2 == 1'}} \
+                                        // ref-error {{not an integral constant expression}} \
+                                        // ref-note {{in call to 'ManualDtor()'}}
+
+  constexpr void doInc(int &i) {
+    Inc I(i);
+    return;
+  }
+  constexpr int testInc() {
+    int i = 0;
+    doInc(i);
+    return i;
+  }
+  static_assert(testInc() == 1, "");
+  constexpr void doInc2(int &i) {
+    Inc I(i);
+    // No return statement.
+  }
+   constexpr int testInc2() {
+    int i = 0;
+    doInc2(i);
+    return i;
+  }
+  static_assert(testInc2() == 1, "");
+
+
+  namespace DtorOrder {
+    class A {
+      public:
+      int &I;
+      constexpr A(int &I) : I(I) {}
+      constexpr ~A() {
+        I = 1337;
+      }
+    };
+
+    class B : public A {
+      public:
+      constexpr B(int &I) : A(I) {}
+      constexpr ~B() {
+        I = 42;
+      }
+    };
+
+    constexpr int foo() {
+      int i = 0;
+      {
+        B b(i);
+      }
+      return i;
+    }
+
+    static_assert(foo() == 1337);
+  }
+
+  class FieldDtor1 {
+  public:
+    Inc I1;
+    Inc I2;
+    constexpr FieldDtor1(int &I) : I1(I), I2(I){}
+  };
+
+  constexpr int foo2() {
+    int i = 0;
+    {
+      FieldDtor1 FD1(i);
+    }
+    return i;
+  }
+
+  static_assert(foo2() == 2);
+
+  class FieldDtor2 {
+  public:
+    Inc Incs[3];
+    constexpr FieldDtor2(int &I)  : Incs{Inc(I), Inc(I), Inc(I)} {}
+  };
+
+  constexpr int foo3() {
+    int i = 0;
+    {
+      FieldDtor2 FD2(i);
+    }
+    return i;
+  }
+
+  static_assert(foo3() == 3);
+
+  struct ArrD {
+    int index;
+    int *arr;
+    int &p;
+    constexpr ~ArrD() {
+      arr[p] = index;
+      ++p;
+    }
+  };
+  constexpr bool ArrayOrder() {
+    int order[3] = {0, 0, 0};
+    int p = 0;
+    {
+      ArrD ds[3] = {
+        {1, order, p},
+        {2, order, p},
+        {3, order, p},
+      };
+      // ds will be destroyed.
+    }
+    return order[0] == 3 && order[1] == 2 && order[2] == 1;
+  }
+  static_assert(ArrayOrder());
+
+
+  // Static members aren't destroyed.
+  class Dec2 {
+  public:
+    int A = 0;
+    constexpr ~Dec2() {
+      A++;
+    }
+  };
+  class Foo {
+  public:
+    static constexpr Dec2 a;
+    static Dec2 b;
+  };
+  static_assert(Foo::a.A == 0);
+  constexpr bool f() {
+    Foo f;
+    return true;
+  }
+  static_assert(Foo::a.A == 0);
+  static_assert(f());
+  static_assert(Foo::a.A == 0);
+
+
+  struct NotConstexpr {
+    NotConstexpr() {}
+    ~NotConstexpr() {}
+  };
+
+  struct Outer {
+    constexpr Outer() = default;
+    constexpr ~Outer();
+
+    constexpr int foo() {
+      return 12;
+    }
+
+    constexpr int bar()const  {
+      return Outer{}.foo();
+    }
+
+    static NotConstexpr Val;
+  };
+
+  constexpr Outer::~Outer() {}
+
+  constexpr Outer O;
+  static_assert(O.bar() == 12);
+}
+
+namespace BaseAndFieldInit {
+  struct A {
+    int a;
+  };
+
+  struct B : A {
+    int b;
+  };
+
+  struct C : B {
+    int c;
+  };
+
+  constexpr C c = {1,2,3};
+  static_assert(c.a == 1 && c.b == 2 && c.c == 3);
+}

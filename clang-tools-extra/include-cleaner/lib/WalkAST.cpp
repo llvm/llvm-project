@@ -17,6 +17,7 @@
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -33,6 +34,9 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
   void report(SourceLocation Loc, NamedDecl *ND,
               RefType RT = RefType::Explicit) {
     if (!ND || Loc.isInvalid())
+      return;
+    // Don't report builtin symbols.
+    if (const auto *II = ND->getIdentifier(); II && II->getBuiltinID() > 0)
       return;
     Callback(Loc, *cast<NamedDecl>(ND->getCanonicalDecl()), RT);
   }
@@ -87,14 +91,24 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
 public:
   ASTWalker(DeclCallback Callback) : Callback(Callback) {}
 
+  // Operators are almost always ADL extension points and by design references
+  // to them doesn't count as uses (generally the type should provide them, so
+  // ignore them).
+  // Unless we're using an operator defined as a member, in such cases treat
+  // these as regular member references.
   bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
     if (!WalkUpFromCXXOperatorCallExpr(S))
       return false;
-
-    // Operators are always ADL extension points, by design references to them
-    // doesn't count as uses (generally the type should provide them).
-    // Don't traverse the callee.
-
+    if (auto *CD = S->getCalleeDecl()) {
+      if (llvm::isa<CXXMethodDecl>(CD)) {
+        // Treat this as a regular member reference.
+        report(S->getOperatorLoc(), getMemberProvider(S->getArg(0)->getType()),
+               RefType::Implicit);
+      } else {
+        report(S->getOperatorLoc(), llvm::dyn_cast<NamedDecl>(CD),
+               RefType::Implicit);
+      }
+    }
     for (auto *Arg : S->arguments())
       if (!TraverseStmt(Arg))
         return false;
@@ -154,6 +168,12 @@ public:
     // Mark declaration from definition as it needs type-checking.
     if (FD->isThisDeclarationADefinition())
       report(FD->getLocation(), FD);
+    return true;
+  }
+  bool VisitVarDecl(VarDecl *VD) {
+    // Mark declaration from definition as it needs type-checking.
+    if (VD->isThisDeclarationADefinition())
+      report(VD->getLocation(), VD);
     return true;
   }
 

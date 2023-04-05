@@ -1760,7 +1760,7 @@ template <class _Fp>
 __packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(_Fp&& __f)
     : __f_(nullptr)
 {
-    typedef __libcpp_remove_reference_t<typename decay<_Fp>::type> _FR;
+    typedef __libcpp_remove_reference_t<__decay_t<_Fp> > _FR;
     typedef __packaged_task_func<_FR, allocator<_FR>, _Rp(_ArgTypes...)> _FF;
     if (sizeof(_FF) <= sizeof(__buf_))
     {
@@ -1784,7 +1784,7 @@ __packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(
                                   allocator_arg_t, const _Alloc& __a0, _Fp&& __f)
     : __f_(nullptr)
 {
-    typedef __libcpp_remove_reference_t<typename decay<_Fp>::type> _FR;
+    typedef __libcpp_remove_reference_t<__decay_t<_Fp> > _FR;
     typedef __packaged_task_func<_FR, _Alloc, _Rp(_ArgTypes...)> _FF;
     if (sizeof(_FF) <= sizeof(__buf_))
     {
@@ -2193,10 +2193,10 @@ inline _LIBCPP_INLINE_VISIBILITY bool __does_policy_contain(launch __policy, lau
 
 template <class _Fp, class... _Args>
 _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
-future<typename __invoke_of<typename decay<_Fp>::type, typename decay<_Args>::type...>::type>
+future<typename __invoke_of<__decay_t<_Fp>, __decay_t<_Args>...>::type>
 async(launch __policy, _Fp&& __f, _Args&&... __args)
 {
-    typedef __async_func<typename decay<_Fp>::type, typename decay<_Args>::type...> _BF;
+    typedef __async_func<__decay_t<_Fp>, __decay_t<_Args>...> _BF;
     typedef typename _BF::_Rp _Rp;
 
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -2219,7 +2219,7 @@ async(launch __policy, _Fp&& __f, _Args&&... __args)
 
 template <class _Fp, class... _Args>
 _LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_INLINE_VISIBILITY
-future<typename __invoke_of<typename decay<_Fp>::type, typename decay<_Args>::type...>::type>
+future<typename __invoke_of<__decay_t<_Fp>, __decay_t<_Args>...>::type>
 async(_Fp&& __f, _Args&&... __args)
 {
     return _VSTD::async(launch::any, _VSTD::forward<_Fp>(__f),

@@ -28,7 +28,7 @@ namespace llvm {
 namespace orc {
 class LLJIT;
 class ThreadSafeContext;
-}
+} // namespace orc
 } // namespace llvm
 
 namespace clang {
@@ -52,12 +52,15 @@ class Interpreter {
 
   Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err);
 
+  llvm::Error CreateExecutor();
+
 public:
   ~Interpreter();
   static llvm::Expected<std::unique_ptr<Interpreter>>
   create(std::unique_ptr<CompilerInstance> CI);
   const CompilerInstance *getCompilerInstance() const;
-  const llvm::orc::LLJIT *getExecutionEngine() const;
+  llvm::Expected<llvm::orc::LLJIT &> getExecutionEngine();
+
   llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Code);
   llvm::Error Execute(PartialTranslationUnit &T);
   llvm::Error ParseAndExecute(llvm::StringRef Code) {
@@ -71,6 +74,9 @@ public:
 
   /// Undo N previous incremental inputs.
   llvm::Error Undo(unsigned N = 1);
+
+  /// Link a dynamic library
+  llvm::Error LoadDynamicLibrary(const char *name);
 
   /// \returns the \c JITTargetAddress of a \c GlobalDecl. This interface uses
   /// the CodeGenModule's internal mangling cache to avoid recomputing the

@@ -16,6 +16,7 @@ package(default_visibility = ["//visibility:public"])
         ] + glob([
             "Transform/*-source.mlir",
             "Transform/*-symbol-def.mlir",
+            "Transform/*-symbol-decl-and-schedule.mlir",
         ])
     )
     for src in glob(

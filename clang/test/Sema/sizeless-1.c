@@ -83,8 +83,8 @@ void func(int sel) {
   svint8_t init_int8 = local_int8;
   svint8_t bad_init_int8 = for; // expected-error {{expected expression}}
 
-  int empty_brace_init_int = {}; // expected-error {{scalar initializer cannot be empty}}
-  svint8_t empty_brace_init_int8 = {}; // expected-error {{initializer for sizeless type 'svint8_t' (aka '__SVInt8_t') cannot be empty}}
+  int empty_brace_init_int = {};
+  svint8_t empty_brace_init_int8 = {};
   svint8_t brace_init_int8 = {local_int8};
   svint8_t bad_brace_init_int8_1 = {local_int8, 0};    // expected-warning {{excess elements in initializer for indivisible sizeless type 'svint8_t'}}
   svint8_t bad_brace_init_int8_2 = {0};                // expected-error {{incompatible type 'int'}}

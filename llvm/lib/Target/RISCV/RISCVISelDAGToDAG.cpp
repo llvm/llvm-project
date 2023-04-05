@@ -2115,14 +2115,22 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
 bool RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand(
     const SDValue &Op, unsigned ConstraintID, std::vector<SDValue> &OutOps) {
+  // Always produce a register and immediate operand, as expected by
+  // RISCVAsmPrinter::PrintAsmMemoryOperand.
   switch (ConstraintID) {
-  case InlineAsm::Constraint_m:
-    // We just support simple memory operands that have a single address
-    // operand and need no special handling.
-    OutOps.push_back(Op);
+  case InlineAsm::Constraint_m: {
+    SDValue Op0, Op1;
+    bool Found = SelectAddrRegImm(Op, Op0, Op1);
+    assert(Found && "SelectAddrRegImm should always succeed");
+    (void)Found;
+    OutOps.push_back(Op0);
+    OutOps.push_back(Op1);
     return false;
+  }
   case InlineAsm::Constraint_A:
     OutOps.push_back(Op);
+    OutOps.push_back(
+        CurDAG->getTargetConstant(0, SDLoc(Op), Subtarget->getXLenVT()));
     return false;
   default:
     break;

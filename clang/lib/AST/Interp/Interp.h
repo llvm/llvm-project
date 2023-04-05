@@ -16,6 +16,7 @@
 #include "Boolean.h"
 #include "Floating.h"
 #include "Function.h"
+#include "FunctionPointer.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
 #include "InterpState.h"
@@ -1491,10 +1492,11 @@ inline bool CheckGlobalCtor(InterpState &S, CodePtr &PC) {
 }
 
 inline bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
-  auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
-  Pointer ThisPtr;
   if (Func->hasThisPointer()) {
-    ThisPtr = NewFrame->getThis();
+    size_t ThisOffset =
+        Func->getArgSize() + (Func->hasRVO() ? primSize(PT_Ptr) : 0);
+    const Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
+
     if (!CheckInvoke(S, PC, ThisPtr))
       return false;
 
@@ -1505,6 +1507,7 @@ inline bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
   if (!CheckCallable(S, PC, Func))
     return false;
 
+  auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
@@ -1536,6 +1539,22 @@ inline bool CallBI(InterpState &S, CodePtr &PC, const Function *Func) {
   }
   S.Current = FrameBefore;
   return false;
+}
+
+inline bool CallPtr(InterpState &S, CodePtr &PC) {
+  const FunctionPointer &FuncPtr = S.Stk.pop<FunctionPointer>();
+
+  const Function *F = FuncPtr.getFunction();
+  if (!F || !F->isConstexpr())
+    return false;
+
+  return Call(S, PC, F);
+}
+
+inline bool GetFnPtr(InterpState &S, CodePtr &PC, const Function *Func) {
+  assert(Func);
+  S.Stk.push<FunctionPointer>(Func);
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

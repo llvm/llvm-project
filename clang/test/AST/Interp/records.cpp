@@ -98,9 +98,17 @@ class C {
     int b;
 
   constexpr C() : a(100), b(200) {}
+
+  constexpr C get() const {
+    return *this;
+  }
 };
 
 constexpr C c;
+static_assert(c.a == 100, "");
+static_assert(c.b == 200, "");
+
+constexpr C c2 = C().get();
 static_assert(c.a == 100, "");
 static_assert(c.b == 200, "");
 
@@ -242,6 +250,28 @@ struct S {
 constexpr S s;
 static_assert(s.m() == 1, "");
 
+#if __cplusplus >= 201703L
+namespace BaseInit {
+  class _A {public: int a;};
+  class _B : public _A {};
+  class _C : public _B {};
+
+  constexpr _C c{12};
+  constexpr const _B &b = c;
+  static_assert(b.a == 12);
+
+  class A {public: int a;};
+  class B : public A {};
+  class C : public A {};
+  class D : public B, public C {};
+
+  // This initializes D::B::A::a and not D::C::A::a.
+  constexpr D d{12};
+  static_assert(d.B::a == 12);
+  static_assert(d.C::a == 0);
+};
+#endif
+
 namespace MI {
   class A {
   public:
@@ -278,7 +308,7 @@ namespace MI {
 };
 
 namespace DeriveFailures {
-  struct Base { // ref-note 2{{declared here}}
+  struct Base { // ref-note 2{{declared here}} expected-note {{declared here}}
     int Val;
   };
 
@@ -286,13 +316,15 @@ namespace DeriveFailures {
     int OtherVal;
 
     constexpr Derived(int i) : OtherVal(i) {} // ref-error {{never produces a constant expression}} \
-                                              // ref-note 2{{non-constexpr constructor 'Base' cannot be used in a constant expression}}
+                                              // ref-note 2{{non-constexpr constructor 'Base' cannot be used in a constant expression}} \
+                                              // expected-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}}
   };
 
   constexpr Derived D(12); // ref-error {{must be initialized by a constant expression}} \
                            // ref-note {{in call to 'Derived(12)'}} \
                            // ref-note {{declared here}} \
-                           // expected-error {{must be initialized by a constant expression}}
+                           // expected-error {{must be initialized by a constant expression}} \
+                           // expected-note {{in call to 'Derived(12)'}}
   static_assert(D.Val == 0, ""); // ref-error {{not an integral constant expression}} \
                                  // ref-note {{initializer of 'D' is not a constant expression}} \
                                  // expected-error {{not an integral constant expression}} \
@@ -318,7 +350,8 @@ namespace DeriveFailures {
   };
 
   struct YetAnotherDerived : YetAnotherBase {
-    using YetAnotherBase::YetAnotherBase; //ref-note {{declared here}}
+    using YetAnotherBase::YetAnotherBase; // ref-note {{declared here}} \
+                                          // expected-note {{declared here}}
     int OtherVal;
 
     constexpr bool doit() const { return Val == OtherVal; }
@@ -326,8 +359,8 @@ namespace DeriveFailures {
 
   constexpr YetAnotherDerived Oops(0); // ref-error {{must be initialized by a constant expression}} \
                                        // ref-note {{constructor inherited from base class 'YetAnotherBase' cannot be used in a constant expression}} \
-                                       // expected-error {{must be initialized by a constant expression}}
-                                       // FIXME: Missing reason for rejection.
+                                       // expected-error {{must be initialized by a constant expression}} \
+                                       // expected-note {{constructor inherited from base class 'YetAnotherBase' cannot be used in a constant expression}}
 };
 
 namespace EmptyCtor {

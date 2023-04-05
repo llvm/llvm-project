@@ -32,6 +32,7 @@ namespace mlir {
 namespace LLVM {
 
 namespace detail {
+class DataLayoutImporter;
 class DebugImporter;
 class LoopAnnotationImporter;
 } // namespace detail
@@ -57,6 +58,10 @@ public:
 
   /// Converts all global variables of the LLVM module to MLIR global variables.
   LogicalResult convertGlobals();
+
+  /// Converts the data layout of the LLVM module to an MLIR data layout
+  /// specification.
+  LogicalResult convertDataLayout();
 
   /// Stores the mapping between an LLVM value and its MLIR counterpart.
   void mapValue(llvm::Value *llvm, Value mlir) { mapValue(llvm) = mlir; }

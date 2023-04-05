@@ -183,11 +183,11 @@ class OneToNConversionPattern : public RewritePatternWithConverter {
 public:
   using RewritePatternWithConverter::RewritePatternWithConverter;
 
-  /// This function has to be implemented by base classes and is called from the
-  /// usual overloads. Like in "normal" `DialectConversion`, the function is
+  /// This function has to be implemented by derived classes and is called from
+  /// the usual overloads. Like in "normal" `DialectConversion`, the function is
   /// provided with the converted operands (which thus have target types). Since
-  /// 1:N conversion are supported, there is usually no 1:1 relationship between
-  /// the original and the converted operands. Instead, the provided
+  /// 1:N conversions are supported, there is usually no 1:1 relationship
+  /// between the original and the converted operands. Instead, the provided
   /// `operandMapping` can be used to access the converted operands that
   /// correspond to a particular original operand. Similarly, `resultMapping`
   /// is provided to help with assembling the result values, which may have 1:N
@@ -215,22 +215,66 @@ public:
                             ArrayRef<StringRef> generatedNames = {})
       : OneToNConversionPattern(typeConverter, SourceOp::getOperationName(),
                                 benefit, context, generatedNames) {}
+  /// Generic adaptor around the root op of this pattern using the converted
+  /// operands. Importantly, each operand is represented as a *range* of values,
+  /// namely the N values each original operand gets converted to. Concretely,
+  /// this makes the result type of the accessor functions of the adaptor class
+  /// be a `ValueRange`.
+  class OpAdaptor
+      : public SourceOp::template GenericAdaptor<ArrayRef<ValueRange>> {
+  public:
+    using RangeT = ArrayRef<ValueRange>;
+    using BaseT = typename SourceOp::template GenericAdaptor<RangeT>;
+
+    OpAdaptor(const OneToNTypeMapping *operandMapping,
+              const OneToNTypeMapping *resultMapping,
+              const ValueRange *convertedOperands, RangeT values,
+              DictionaryAttr attrs = nullptr, RegionRange regions = {})
+        : BaseT(values, attrs, regions), operandMapping(operandMapping),
+          resultMapping(resultMapping), convertedOperands(convertedOperands) {}
+
+    /// Get the type mapping of the original operands to the converted operands.
+    const OneToNTypeMapping &getOperandMapping() const {
+      return *operandMapping;
+    }
+
+    /// Get the type mapping of the original results to the converted results.
+    const OneToNTypeMapping &getResultMapping() const { return *resultMapping; }
+
+    /// Get a flat range of all converted operands. Unlike `getOperands`, which
+    /// returns an `ArrayRef` with one `ValueRange` for each original operand,
+    /// this function returns a `ValueRange` that contains all converted
+    /// operands irrespectively of which operand they originated from.
+    ValueRange getFlatOperands() const { return *convertedOperands; }
+
+  private:
+    const OneToNTypeMapping *operandMapping;
+    const OneToNTypeMapping *resultMapping;
+    const ValueRange *convertedOperands;
+  };
 
   using OneToNConversionPattern::matchAndRewrite;
 
   /// Overload that derived classes have to override for their op type.
-  virtual LogicalResult matchAndRewrite(SourceOp op,
-                                        OneToNPatternRewriter &rewriter,
-                                        const OneToNTypeMapping &operandMapping,
-                                        const OneToNTypeMapping &resultMapping,
-                                        ValueRange convertedOperands) const = 0;
+  virtual LogicalResult
+  matchAndRewrite(SourceOp op, OpAdaptor adaptor,
+                  OneToNPatternRewriter &rewriter) const = 0;
 
   LogicalResult matchAndRewrite(Operation *op, OneToNPatternRewriter &rewriter,
                                 const OneToNTypeMapping &operandMapping,
                                 const OneToNTypeMapping &resultMapping,
                                 ValueRange convertedOperands) const final {
-    return matchAndRewrite(cast<SourceOp>(op), rewriter, operandMapping,
-                           resultMapping, convertedOperands);
+    // Wrap converted operands and type mappings into an adaptor.
+    SmallVector<ValueRange> valueRanges;
+    for (int64_t i = 0; i < op->getNumOperands(); i++) {
+      auto values = operandMapping.getConvertedValues(convertedOperands, i);
+      valueRanges.push_back(values);
+    }
+    OpAdaptor adaptor(&operandMapping, &resultMapping, &convertedOperands,
+                      valueRanges, op->getAttrDictionary(), op->getRegions());
+
+    // Call overload implemented by the derived class.
+    return matchAndRewrite(cast<SourceOp>(op), adaptor, rewriter);
   }
 };
 

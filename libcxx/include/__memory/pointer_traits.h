@@ -200,7 +200,7 @@ template <class _Pointer, class = __enable_if_t<
     _And<is_class<_Pointer>, _IsFancyPointer<_Pointer> >::value
 > >
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename decay<decltype(__to_address_helper<_Pointer>::__call(std::declval<const _Pointer&>()))>::type
+__decay_t<decltype(__to_address_helper<_Pointer>::__call(std::declval<const _Pointer&>()))>
 __to_address(const _Pointer& __p) _NOEXCEPT {
     return __to_address_helper<_Pointer>::__call(__p);
 }

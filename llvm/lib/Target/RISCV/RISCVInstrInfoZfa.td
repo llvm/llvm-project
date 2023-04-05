@@ -25,17 +25,7 @@ def LoadFPImmOperand : AsmOperandClass {
   let DiagnosticType = "InvalidLoadFPImm";
 }
 
-def loadfp32imm : Operand<f32> {
-  let ParserMatchClass = LoadFPImmOperand;
-  let PrintMethod = "printFPImmOperand";
-}
-
-def loadfp64imm : Operand<f64> {
-  let ParserMatchClass = LoadFPImmOperand;
-  let PrintMethod = "printFPImmOperand";
-}
-
-def loadfp16imm : Operand<f16> {
+def loadfpimm : Operand<XLenVT> {
   let ParserMatchClass = LoadFPImmOperand;
   let PrintMethod = "printFPImmOperand";
 }
@@ -95,7 +85,7 @@ class FPUnaryOp_r_rtz<bits<7> funct7, bits<5> rs2val, DAGOperand rdty,
 let Predicates = [HasStdExtZfa] in {
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def FLI_S : FPUnaryOp_imm<0b1111000, 0b00001, 0b000, OPC_OP_FP, (outs FPR32:$rd),
-            (ins loadfp32imm:$imm), "fli.s", "$rd, $imm">;
+            (ins loadfpimm:$imm), "fli.s", "$rd, $imm">;
 
 def FMINM_S: FPALU_rr<0b0010100, 0b010, "fminm.s", FPR32, /*Commutable*/ 1>;
 def FMAXM_S: FPALU_rr<0b0010100, 0b011, "fmaxm.s", FPR32, /*Commutable*/ 1>;
@@ -110,7 +100,7 @@ def FLEQ_S : FPCmp_rr<0b1010000, 0b100, "fleq.s", FPR32>;
 let Predicates = [HasStdExtZfa, HasStdExtD] in {
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def FLI_D : FPUnaryOp_imm<0b1111001, 0b00001, 0b000, OPC_OP_FP, (outs FPR64:$rd),
-            (ins loadfp64imm:$imm), "fli.d", "$rd, $imm">;
+            (ins loadfpimm:$imm), "fli.d", "$rd, $imm">;
 
 def FMINM_D: FPALU_rr<0b0010101, 0b010, "fminm.d", FPR64, /*Commutable*/ 1>;
 def FMAXM_D: FPALU_rr<0b0010101, 0b011, "fmaxm.d", FPR64, /*Commutable*/ 1>;
@@ -143,7 +133,7 @@ def FMV_X_W_FPR64 : FPUnaryOp_r<0b1110000, 0b00000, 0b000, GPR, FPR64,
 let Predicates = [HasStdExtZfa, HasStdExtZfhOrZvfh] in
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def FLI_H : FPUnaryOp_imm<0b1111010, 0b00001, 0b000, OPC_OP_FP, (outs FPR16:$rd),
-            (ins loadfp16imm:$imm), "fli.h", "$rd, $imm">;
+            (ins loadfpimm:$imm), "fli.h", "$rd, $imm">;
 
 let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
 def FMINM_H: FPALU_rr<0b0010110, 0b010, "fminm.h", FPR16, /*Commutable*/ 1>;
@@ -191,15 +181,15 @@ def: PatFprFpr<fmaximum, FMAXM_S, FPR32>;
 
 // frint rounds according to the current rounding mode and detects
 // inexact conditions.
-def: Pat<(any_frint FPR32 : $rs1), (FROUNDNX_S FPR32 : $rs1, 0b111)>;
+def: Pat<(any_frint FPR32:$rs1), (FROUNDNX_S FPR32:$rs1, FRM_DYN)>;
 
 // fnearbyint is like frint but does not detect inexact conditions.
-def: Pat<(any_fnearbyint FPR32 : $rs1), (FROUND_S FPR32 : $rs1, 0b111)>;
+def: Pat<(any_fnearbyint FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_DYN)>;
 
-def: Pat<(any_fround FPR32 : $rs1), (FROUND_S FPR32 : $rs1, 0b100)>;
-def: Pat<(any_ffloor FPR32 : $rs1), (FROUND_S FPR32 : $rs1, 0b011)>;
-def: Pat<(any_fceil FPR32 : $rs1), (FROUND_S FPR32 : $rs1, 0b010)>;
-def: Pat<(any_ftrunc FPR32 : $rs1), (FROUND_S FPR32 : $rs1, 0b001)>;
+def: Pat<(any_fround FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_RMM)>;
+def: Pat<(any_ffloor FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_RDN)>;
+def: Pat<(any_fceil FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_RUP)>;
+def: Pat<(any_ftrunc FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_RTZ)>;
 
 def: PatSetCC<FPR32, strict_fsetcc, SETLT, FLTQ_S>;
 def: PatSetCC<FPR32, strict_fsetcc, SETOLT, FLTQ_S>;
@@ -213,16 +203,16 @@ def: PatFprFpr<fmaximum, FMAXM_D, FPR64>;
 
 // frint rounds according to the current rounding mode and detects
 // inexact conditions.
-def: Pat<(any_frint FPR64 : $rs1), (FROUNDNX_D FPR64 : $rs1, 0b111)>;
+def: Pat<(any_frint FPR64:$rs1), (FROUNDNX_D FPR64:$rs1, FRM_DYN)>;
 
 // fnearbyint is like frint but does not detect inexact conditions.
-def: Pat<(any_fnearbyint FPR64 : $rs1), (FROUND_D FPR64 : $rs1, 0b111)>;
+def: Pat<(any_fnearbyint FPR64:$rs1), (FROUND_D FPR64:$rs1, FRM_DYN)>;
 
-def: Pat<(any_fround FPR64 : $rs1), (FROUND_D FPR64 : $rs1, 0b100)>;
-def: Pat<(any_froundeven FPR64 : $rs1), (FROUND_D FPR64 : $rs1, 0b000)>;
-def: Pat<(any_ffloor FPR64 : $rs1), (FROUND_D FPR64 : $rs1, 0b011)>;
-def: Pat<(any_fceil FPR64 : $rs1), (FROUND_D FPR64 : $rs1, 0b010)>;
-def: Pat<(any_ftrunc FPR64 : $rs1), (FROUND_D FPR64 : $rs1, 0b001)>;
+def: Pat<(any_fround FPR64:$rs1), (FROUND_D FPR64:$rs1, FRM_RMM)>;
+def: Pat<(any_froundeven FPR64:$rs1), (FROUND_D FPR64:$rs1, FRM_RNE)>;
+def: Pat<(any_ffloor FPR64:$rs1), (FROUND_D FPR64:$rs1, FRM_RDN)>;
+def: Pat<(any_fceil FPR64:$rs1), (FROUND_D FPR64:$rs1, FRM_RUP)>;
+def: Pat<(any_ftrunc FPR64:$rs1), (FROUND_D FPR64:$rs1, FRM_RTZ)>;
 
 def: PatSetCC<FPR64, strict_fsetcc, SETLT, FLTQ_D>;
 def: PatSetCC<FPR64, strict_fsetcc, SETOLT, FLTQ_D>;
@@ -241,16 +231,16 @@ def: PatFprFpr<fmaximum, FMAXM_H, FPR16>;
 
 // frint rounds according to the current rounding mode and detects
 // inexact conditions.
-def: Pat<(any_frint FPR16 : $rs1), (FROUNDNX_H FPR16 : $rs1, 0b111)>;
+def: Pat<(any_frint FPR16:$rs1), (FROUNDNX_H FPR16:$rs1, FRM_DYN)>;
 
 // fnearbyint is like frint but does not detect inexact conditions.
-def: Pat<(any_fnearbyint FPR16 : $rs1), (FROUND_H FPR16 : $rs1, 0b111)>;
+def: Pat<(any_fnearbyint FPR16:$rs1), (FROUND_H FPR16:$rs1, FRM_DYN)>;
 
-def: Pat<(any_fround FPR16 : $rs1), (FROUND_H FPR16 : $rs1, 0b100)>;
-def: Pat<(any_froundeven FPR16 : $rs1), (FROUND_H FPR16 : $rs1, 0b000)>;
-def: Pat<(any_ffloor FPR16 : $rs1), (FROUND_H FPR16 : $rs1, 0b011)>;
-def: Pat<(any_fceil FPR16 : $rs1), (FROUND_H FPR16 : $rs1, 0b010)>;
-def: Pat<(any_ftrunc FPR16 : $rs1), (FROUND_H FPR16 : $rs1, 0b001)>;
+def: Pat<(any_fround FPR16:$rs1), (FROUND_H FPR16:$rs1, FRM_RMM)>;
+def: Pat<(any_froundeven FPR16:$rs1), (FROUND_H FPR16:$rs1, FRM_RNE)>;
+def: Pat<(any_ffloor FPR16:$rs1), (FROUND_H FPR16:$rs1, FRM_RDN)>;
+def: Pat<(any_fceil FPR16:$rs1), (FROUND_H FPR16:$rs1, FRM_RUP)>;
+def: Pat<(any_ftrunc FPR16:$rs1), (FROUND_H FPR16:$rs1, FRM_RTZ)>;
 
 def: PatSetCC<FPR16, strict_fsetcc, SETLT, FLTQ_H>;
 def: PatSetCC<FPR16, strict_fsetcc, SETOLT, FLTQ_H>;

@@ -214,12 +214,12 @@ body:             |
     ; CHECK: liveins: $x10, $v8, $v26, $v27
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x11 = PseudoVSETIVLI 1, 64 /* e8, m1, ta, mu */, implicit-def $vl, implicit-def $vtype
-    ; CHECK-NEXT: $v8 = PseudoVWREDSUM_VS_M1 killed renamable $v8, killed renamable $v26, killed renamable $v27, 1, 3 /* e8 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v8 = PseudoVWREDSUM_VS_M1_E8 killed renamable $v8, killed renamable $v26, killed renamable $v27, 1, 3 /* e8 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $v26 = VMV1R_V killed $v8
     ; CHECK-NEXT: $x10 = PseudoVSETVLI killed renamable $x10, 75 /* e16, m8, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v8m8 = VL8RE8_V killed $x10
     $x11 = PseudoVSETIVLI 1, 64, implicit-def $vl, implicit-def $vtype
-    $v8 = PseudoVWREDSUM_VS_M1 killed renamable $v8, killed renamable $v26, killed renamable $v27, 1, 3, 1, implicit $vl, implicit $vtype
+    $v8 = PseudoVWREDSUM_VS_M1_E8 killed renamable $v8, killed renamable $v26, killed renamable $v27, 1, 3, 1, implicit $vl, implicit $vtype
     $v26 = COPY killed renamable $v8
     $x10 = PseudoVSETVLI killed renamable $x10, 75, implicit-def $vl, implicit-def $vtype
     $v8m8 = VL8RE8_V killed $x10

@@ -175,6 +175,10 @@ class SelectionDAGBuilder {
   /// We defer handling these until we do see it.
   MapVector<const Value*, DanglingDebugInfoVector> DanglingDebugInfoMap;
 
+  /// Cache the module flag for whether we should use debug-info assignment
+  /// tracking.
+  bool AssignmentTrackingEnabled = false;
+
 public:
   /// Loads are not emitted to the program immediately.  We bunch them up and
   /// then emit token factor nodes when possible.  This allows us to get simple
@@ -621,17 +625,17 @@ private:
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
   void visitVPLoad(const VPIntrinsic &VPIntrin, EVT VT,
-                   SmallVector<SDValue, 7> &OpValues);
+                   const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStore(const VPIntrinsic &VPIntrin,
-                    SmallVector<SDValue, 7> &OpValues);
+                    const SmallVectorImpl<SDValue> &OpValues);
   void visitVPGather(const VPIntrinsic &VPIntrin, EVT VT,
-                     SmallVector<SDValue, 7> &OpValues);
+                     const SmallVectorImpl<SDValue> &OpValues);
   void visitVPScatter(const VPIntrinsic &VPIntrin,
-                      SmallVector<SDValue, 7> &OpValues);
+                      const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStridedLoad(const VPIntrinsic &VPIntrin, EVT VT,
-                          SmallVectorImpl<SDValue> &OpValues);
+                          const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStridedStore(const VPIntrinsic &VPIntrin,
-                           SmallVectorImpl<SDValue> &OpValues);
+                           const SmallVectorImpl<SDValue> &OpValues);
   void visitVPCmp(const VPCmpIntrinsic &VPIntrin);
   void visitVectorPredicationIntrinsic(const VPIntrinsic &VPIntrin);
 
@@ -762,7 +766,7 @@ struct RegsForValue {
   /// updates them for the output Chain/Flag. If the Flag pointer is NULL, no
   /// flag is used.
   SDValue getCopyFromRegs(SelectionDAG &DAG, FunctionLoweringInfo &FuncInfo,
-                          const SDLoc &dl, SDValue &Chain, SDValue *Flag,
+                          const SDLoc &dl, SDValue &Chain, SDValue *Glue,
                           const Value *V = nullptr) const;
 
   /// Emit a series of CopyToReg nodes that copies the specified value into the
@@ -771,7 +775,7 @@ struct RegsForValue {
   /// flag is used. If V is not nullptr, then it is used in printing better
   /// diagnostic messages on error.
   void getCopyToRegs(SDValue Val, SelectionDAG &DAG, const SDLoc &dl,
-                     SDValue &Chain, SDValue *Flag, const Value *V = nullptr,
+                     SDValue &Chain, SDValue *Glue, const Value *V = nullptr,
                      ISD::NodeType PreferredExtendType = ISD::ANY_EXTEND) const;
 
   /// Add this value to the specified inlineasm node operand list. This adds the

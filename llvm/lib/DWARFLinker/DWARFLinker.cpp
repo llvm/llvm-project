@@ -2577,7 +2577,7 @@ Error DWARFLinker::link() {
       continue;
 
     if (Options.VerifyInputDWARF)
-      verify(OptContext.File);
+      verifyInput(OptContext.File);
 
     // Look for relocations that correspond to address map entries.
 
@@ -2888,15 +2888,15 @@ Error DWARFLinker::cloneModuleUnit(LinkContext &Context, RefModuleUnit &Unit,
   return Error::success();
 }
 
-bool DWARFLinker::verify(const DWARFFile &File) {
+void DWARFLinker::verifyInput(const DWARFFile &File) {
   assert(File.Dwarf);
 
+  raw_ostream &os = Options.Verbose ? errs() : nulls();
   DIDumpOptions DumpOpts;
-  if (!File.Dwarf->verify(llvm::outs(), DumpOpts.noImplicitRecursion())) {
-    reportWarning("input verification failed", File);
-    return false;
+  if (!File.Dwarf->verify(os, DumpOpts.noImplicitRecursion())) {
+    if (Options.InputVerificationHandler)
+      Options.InputVerificationHandler(File);
   }
-  return true;
 }
 
 } // namespace llvm

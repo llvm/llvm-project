@@ -329,7 +329,7 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
     ID.AddInteger(TemplateArg.NumExpansions);
     LLVM_FALLTHROUGH;
   case Template:
-    getAsTemplateOrTemplatePattern().Profile(ID);
+    ID.AddPointer(TemplateArg.Name);
     break;
 
   case Integral:

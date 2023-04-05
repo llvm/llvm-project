@@ -43,7 +43,9 @@ def verify: F<"verify">,
 
 def verify_dwarf: Separate<["--", "-"], "verify-dwarf">,
   MetaVarName<"<verification mode>">,
-  HelpText<"Run the DWARF verifier on the input and/or output. Valid options are 'input', 'output', 'all' or 'none'.">,
+  HelpText<"Run the DWARF verifier on the input and/or output. "
+           "Valid options are 'none, 'input', 'output', 'all' or 'auto' "
+           "which runs the output verifier only if input verification passed.">,
   Group<grp_general>;
 def: Joined<["--", "-"], "verify-dwarf=">, Alias<verify_dwarf>;
 

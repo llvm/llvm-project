@@ -96,6 +96,12 @@ enum SampleProfileFormat {
   SPF_Binary = 0xff
 };
 
+enum SampleProfileLayout {
+  SPL_None = 0,
+  SPL_Nest = 0x1,
+  SPL_Flat = 0x2,
+};
+
 static inline uint64_t SPMagic(SampleProfileFormat Format = SPF_Binary) {
   return uint64_t('S') << (64 - 8) | uint64_t('P') << (64 - 16) |
          uint64_t('R') << (64 - 24) | uint64_t('O') << (64 - 32) |
@@ -747,6 +753,8 @@ public:
 
   void setTotalSamples(uint64_t Num) { TotalSamples = Num; }
 
+  void setHeadSamples(uint64_t Num) { TotalHeadSamples = Num; }
+
   sampleprof_error addHeadSamples(uint64_t Num, uint64_t Weight = 1) {
     bool Overflowed;
     TotalHeadSamples =
@@ -767,6 +775,11 @@ public:
                                           uint64_t Weight = 1) {
     return BodySamples[LineLocation(LineOffset, Discriminator)].addCalledTarget(
         FName, Num, Weight);
+  }
+
+  sampleprof_error addSampleRecord(LineLocation Location,
+                                   const SampleRecord &SampleRecord, uint64_t Weight = 1) {
+    return BodySamples[Location].merge(SampleRecord, Weight);
   }
 
   // Remove a call target and decrease the body sample correspondingly. Return
@@ -933,6 +946,8 @@ public:
   const CallsiteSampleMap &getCallsiteSamples() const {
     return CallsiteSamples;
   }
+
+  CallsiteSampleMap &getCallsiteSamples() { return CallsiteSamples; }
 
   /// Return the maximum of sample counts in a function body. When SkipCallSite
   /// is false, which is the default, the return count includes samples in the
@@ -1274,12 +1289,16 @@ private:
   SampleProfileMap &ProfileMap;
 };
 
-// CSProfileConverter converts a full context-sensitive flat sample profile into
-// a nested context-sensitive sample profile.
-class CSProfileConverter {
+/// Helper class for profile conversion.
+///
+/// It supports full context-sensitive profile to nested profile conversion,
+/// nested profile to flatten profile conversion, etc.
+class ProfileConverter {
 public:
-  CSProfileConverter(SampleProfileMap &Profiles);
-  void convertProfiles();
+  ProfileConverter(SampleProfileMap &Profiles);
+  // Convert a full context-sensitive flat sample profile into a nested sample
+  // profile.
+  void convertCSProfiles();
   struct FrameNode {
     FrameNode(StringRef FName = StringRef(),
               FunctionSamples *FSamples = nullptr,
@@ -1299,9 +1318,84 @@ public:
                                      StringRef CalleeName);
   };
 
+  static void flattenProfile(SampleProfileMap &ProfileMap,
+                             bool ProfileIsCS = false) {
+    SampleProfileMap TmpProfiles;
+    flattenProfile(ProfileMap, TmpProfiles, ProfileIsCS);
+    ProfileMap = std::move(TmpProfiles);
+  }
+
+  static void flattenProfile(const SampleProfileMap &InputProfiles,
+                             SampleProfileMap &OutputProfiles,
+                             bool ProfileIsCS = false) {
+    if (ProfileIsCS) {
+      for (const auto &I : InputProfiles)
+        OutputProfiles[I.second.getName()].merge(I.second);
+      // Retain the profile name and clear the full context for each function
+      // profile.
+      for (auto &I : OutputProfiles)
+        I.second.setContext(SampleContext(I.first));
+    } else {
+      for (const auto &I : InputProfiles)
+        flattenNestedProfile(OutputProfiles, I.second);
+    }
+  }
+
 private:
+  static void flattenNestedProfile(SampleProfileMap &OutputProfiles,
+                                   const FunctionSamples &FS) {
+    // To retain the context, checksum, attributes of the original profile, make
+    // a copy of it if no profile is found.
+    SampleContext &Context = FS.getContext();
+    auto Ret = OutputProfiles.try_emplace(Context, FS);
+    FunctionSamples &Profile = Ret.first->second;
+    if (Ret.second) {
+      // When it's the copy of the old profile, just clear all the inlinees'
+      // samples.
+      Profile.getCallsiteSamples().clear();
+      // We recompute TotalSamples later, so here set to zero.
+      Profile.setTotalSamples(0);
+    } else {
+      for (const auto &[LineLocation, SampleRecord] : FS.getBodySamples()) {
+        Profile.addSampleRecord(LineLocation, SampleRecord);
+      }
+    }
+
+    assert(Profile.getCallsiteSamples().empty() &&
+           "There should be no inlinees' profiles after flattening.");
+
+    // TotalSamples might not be equal to the sum of all samples from
+    // BodySamples and CallsiteSamples. So here we use "TotalSamples =
+    // Original_TotalSamples - All_of_Callsite_TotalSamples +
+    // All_of_Callsite_HeadSamples" to compute the new TotalSamples.
+    uint64_t TotalSamples = FS.getTotalSamples();
+
+    for (const auto &I : FS.getCallsiteSamples()) {
+      for (const auto &Callee : I.second) {
+        const auto &CalleeProfile = Callee.second;
+        // Add body sample.
+        Profile.addBodySamples(I.first.LineOffset, I.first.Discriminator,
+                               CalleeProfile.getHeadSamplesEstimate());
+        // Add callsite sample.
+        Profile.addCalledTargetSamples(
+            I.first.LineOffset, I.first.Discriminator, CalleeProfile.getName(),
+            CalleeProfile.getHeadSamplesEstimate());
+        // Update total samples.
+        TotalSamples = TotalSamples >= CalleeProfile.getTotalSamples()
+                           ? TotalSamples - CalleeProfile.getTotalSamples()
+                           : 0;
+        TotalSamples += CalleeProfile.getHeadSamplesEstimate();
+        // Recursively convert callee profile.
+        flattenNestedProfile(OutputProfiles, CalleeProfile);
+      }
+    }
+    Profile.addTotalSamples(TotalSamples);
+
+    Profile.setHeadSamples(Profile.getHeadSamplesEstimate());
+  }
+
   // Nest all children profiles into the profile of Node.
-  void convertProfiles(FrameNode &Node);
+  void convertCSProfiles(FrameNode &Node);
   FrameNode *getOrCreateContextPath(const SampleContext &Context);
 
   SampleProfileMap &ProfileMap;

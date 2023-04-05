@@ -10,6 +10,7 @@
 #define LIBC_SRC_SUPPORT_STR_TO_INTEGER_H
 
 #include "src/__support/CPP/limits.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/str_to_num_result.h"
@@ -135,14 +136,16 @@ LIBC_INLINE StrToNumResult<T> strtointeger(const char *__restrict src,
 
   ptrdiff_t str_len = is_number ? (src - original_src) : 0;
 
-  if (result == abs_max) {
+  if (error_val == ERANGE) {
     if (is_positive || IS_UNSIGNED)
       return {cpp::numeric_limits<T>::max(), str_len, error_val};
     else // T is signed and there is a negative overflow
       return {cpp::numeric_limits<T>::min(), str_len, error_val};
   }
 
-  return {is_positive ? static_cast<T>(result) : -static_cast<T>(result),
+  return {is_positive
+              ? static_cast<T>(result)
+              : static_cast<T>(-static_cast<cpp::make_unsigned_t<T>>(result)),
           str_len, error_val};
 }
 

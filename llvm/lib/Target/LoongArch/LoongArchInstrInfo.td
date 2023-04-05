@@ -403,6 +403,31 @@ def fma_nsz : PatFrag<(ops node:$fj, node:$fk, node:$fa),
   return N->getFlags().hasNoSignedZeros();
 }]>;
 
+// Check if (add r, imm) can be optimized to (ADDI (ADDI r, imm0), imm1),
+// in which imm = imm0 + imm1, and both imm0 & imm1 are simm12.
+def AddiPair : PatLeaf<(imm), [{
+  if (!N->hasOneUse())
+    return false;
+  // The immediate operand must be in range [-4096,-2049] or [2048,4094].
+  int64_t Imm = N->getSExtValue();
+  return (-4096 <= Imm && Imm <= -2049) || (2048 <= Imm && Imm <= 4094);
+}]>;
+
+// Return -2048 if immediate is negative or 2047 if positive.
+def AddiPairImmLarge : SDNodeXForm<imm, [{
+  int64_t Imm = N->getSExtValue() < 0 ? -2048 : 2047;
+  return CurDAG->getTargetConstant(Imm, SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
+// Return imm - (imm < 0 ? -2048 : 2047).
+def AddiPairImmSmall : SDNodeXForm<imm, [{
+  int64_t Imm = N->getSExtValue();
+  int64_t Adj = Imm < 0 ? -2048 : 2047;
+  return CurDAG->getTargetConstant(Imm - Adj, SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
@@ -834,6 +859,13 @@ class shiftopw<SDPatternOperator operator>
     : PatFrag<(ops node:$val, node:$count),
               (operator node:$val, (i64 (shiftMask32 node:$count)))>;
 
+def mul_const_oneuse : PatFrag<(ops node:$A, node:$B),
+                               (mul node:$A, node:$B), [{
+  if (auto *N1C = dyn_cast<ConstantSDNode>(N->getOperand(1)))
+    return N1C->hasOneUse();
+  return false;
+}]>;
+
 let Predicates = [IsLA32] in {
 def : PatGprGpr<add, ADD_W>;
 def : PatGprImm<add, ADDI_W, simm12>;
@@ -898,6 +930,67 @@ def : Pat<(add GPR:$rj, simm32_hi16_lo12:$imm),
 def : Pat<(sext_inreg (add GPR:$rj, simm32_hi16_lo12:$imm), i32),
           (ADDI_W (ADDU16I_D GPR:$rj, (HI16ForAddu16idAddiPair $imm)),
                   (LO12 $imm))>;
+
+let Predicates = [IsLA32] in {
+def : Pat<(add GPR:$rj, (AddiPair:$im)),
+          (ADDI_W (ADDI_W GPR:$rj, (AddiPairImmLarge AddiPair:$im)),
+                  (AddiPairImmSmall AddiPair:$im))>;
+} // Predicates = [IsLA32]
+
+let Predicates = [IsLA64] in {
+def : Pat<(add GPR:$rj, (AddiPair:$im)),
+          (ADDI_D (ADDI_D GPR:$rj, (AddiPairImmLarge AddiPair:$im)),
+                  (AddiPairImmSmall AddiPair:$im))>;
+def : Pat<(sext_inreg (add GPR:$rj, (AddiPair:$im)), i32),
+          (ADDI_W (ADDI_W GPR:$rj, (AddiPairImmLarge AddiPair:$im)),
+                  (AddiPairImmSmall AddiPair:$im))>;
+} // Predicates = [IsLA64]
+
+let Predicates = [IsLA32] in {
+foreach Idx0 = 1...4 in {
+  foreach Idx1 = 1...4 in {
+    defvar CImm = !add(1, !shl(!add(1, !shl(1, Idx0)), Idx1));
+    def : Pat<(mul_const_oneuse GPR:$r, (i32 CImm)),
+              (ALSL_W (ALSL_W GPR:$r, GPR:$r, (i32 Idx0)),
+                      GPR:$r, (i32 Idx1))>;
+  }
+}
+foreach Idx0 = 1...4 in {
+  foreach Idx1 = 1...4 in {
+    defvar Cb = !add(1, !shl(1, Idx0));
+    defvar CImm = !add(Cb, !shl(Cb, Idx1));
+    def : Pat<(mul_const_oneuse GPR:$r, (i32 CImm)),
+              (ALSL_W (ALSL_W GPR:$r, GPR:$r, (i32 Idx0)),
+                      (ALSL_W GPR:$r, GPR:$r, (i32 Idx0)), (i32 Idx1))>;
+  }
+}
+} // Predicates = [IsLA32]
+
+let Predicates = [IsLA64] in {
+foreach Idx0 = 1...4 in {
+  foreach Idx1 = 1...4 in {
+    defvar CImm = !add(1, !shl(!add(1, !shl(1, Idx0)), Idx1));
+    def : Pat<(sext_inreg (mul_const_oneuse GPR:$r, (i64 CImm)), i32),
+              (ALSL_W (ALSL_W GPR:$r, GPR:$r, (i64 Idx0)),
+                      GPR:$r, (i64 Idx1))>;
+    def : Pat<(mul_const_oneuse GPR:$r, (i64 CImm)),
+              (ALSL_D (ALSL_D GPR:$r, GPR:$r, (i64 Idx0)),
+                      GPR:$r, (i64 Idx1))>;
+  }
+}
+foreach Idx0 = 1...4 in {
+  foreach Idx1 = 1...4 in {
+    defvar Cb = !add(1, !shl(1, Idx0));
+    defvar CImm = !add(Cb, !shl(Cb, Idx1));
+    def : Pat<(sext_inreg (mul_const_oneuse GPR:$r, (i64 CImm)), i32),
+              (ALSL_W (ALSL_W GPR:$r, GPR:$r, (i64 Idx0)),
+                      (ALSL_W GPR:$r, GPR:$r, (i64 Idx0)), (i64 Idx1))>;
+    def : Pat<(mul_const_oneuse GPR:$r, (i64 CImm)),
+              (ALSL_D (ALSL_D GPR:$r, GPR:$r, (i64 Idx0)),
+                      (ALSL_D GPR:$r, GPR:$r, (i64 Idx0)), (i64 Idx1))>;
+  }
+}
+} // Predicates = [IsLA64]
 
 foreach Idx = 1...7 in {
   defvar ShamtA = !mul(8, Idx);
@@ -982,6 +1075,8 @@ def : Pat<(add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
 let Predicates = [IsLA64] in {
 def : Pat<(add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
           (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;
+def : Pat<(sext_inreg (add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)), i32),
+          (ALSL_W GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;
 def : Pat<(loongarch_bstrpick (add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
                               (i64 31), (i64 0)),
           (ALSL_WU GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;

@@ -29,17 +29,16 @@ entry:
 define <2 x i32> @test2(ptr %arg1, ptr %arg2) {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldp q2, q0, [x0, #32]
-; CHECK-NEXT:    ldp q4, q5, [x0]
-; CHECK-NEXT:    mov z1.d, z0.d
-; CHECK-NEXT:    add z3.s, z0.s, z0.s
-; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
-; CHECK-NEXT:    mov z0.s, s1
-; CHECK-NEXT:    add z1.s, z2.s, z2.s
-; CHECK-NEXT:    stp q1, q3, [x0, #32]
-; CHECK-NEXT:    add z1.s, z4.s, z4.s
+; CHECK-NEXT:    ldp q1, q0, [x0, #32]
+; CHECK-NEXT:    add z1.s, z1.s, z1.s
+; CHECK-NEXT:    ldp q2, q3, [x0]
+; CHECK-NEXT:    add z4.s, z0.s, z0.s
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    mov z0.s, s0
+; CHECK-NEXT:    stp q1, q4, [x0, #32]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; CHECK-NEXT:    add z2.s, z5.s, z5.s
+; CHECK-NEXT:    add z1.s, z2.s, z2.s
+; CHECK-NEXT:    add z2.s, z3.s, z3.s
 ; CHECK-NEXT:    stp q1, q2, [x0]
 ; CHECK-NEXT:    ret
 entry:

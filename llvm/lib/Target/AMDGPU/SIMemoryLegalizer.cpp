@@ -561,6 +561,16 @@ public:
 };
 
 class SIGfx12CacheControl : public SIGfx11CacheControl {
+protected:
+  // Sets TH policy to \p Value if CPol operand is present in instruction \p MI.
+  // \returns Returns true if \p MI is modified, false otherwise.
+  bool setTH(const MachineBasicBlock::iterator MI,
+             AMDGPU::CPol::CPol Value) const;
+  // Sets Scope policy to \p Value if CPol operand is present in instruction \p
+  // MI. \returns Returns true if \p MI is modified, false otherwise.
+  bool setScope(const MachineBasicBlock::iterator MI,
+                AMDGPU::CPol::CPol Value) const;
+
 public:
   SIGfx12CacheControl(const GCNSubtarget &ST) : SIGfx11CacheControl(ST) {}
 
@@ -573,6 +583,11 @@ public:
 
   bool insertAcquire(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, Position Pos) const override;
+
+  bool enableVolatileAndOrNonTemporal(MachineBasicBlock::iterator &MI,
+                                      SIAtomicAddrSpace AddrSpace, SIMemOp Op,
+                                      bool IsVolatile,
+                                      bool IsNonTemporal) const override;
 
   // TODO-GFX12: We might need to introduce a GLOBAL_WB upon release.
   // bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
@@ -2134,6 +2149,36 @@ bool SIGfx11CacheControl::enableVolatileAndOrNonTemporal(
   return Changed;
 }
 
+bool SIGfx12CacheControl::setTH(const MachineBasicBlock::iterator MI,
+                                AMDGPU::CPol::CPol Value) const {
+  MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
+  if (!CPol)
+    return false;
+
+  uint64_t NewTH = Value & AMDGPU::CPol::TH;
+  if ((CPol->getImm() & AMDGPU::CPol::TH) != NewTH) {
+    CPol->setImm((CPol->getImm() & ~AMDGPU::CPol::TH) | NewTH);
+    return true;
+  }
+
+  return false;
+}
+
+bool SIGfx12CacheControl::setScope(const MachineBasicBlock::iterator MI,
+                                   AMDGPU::CPol::CPol Value) const {
+  MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
+  if (!CPol)
+    return false;
+
+  uint64_t NewScope = Value & AMDGPU::CPol::SCOPE;
+  if ((CPol->getImm() & AMDGPU::CPol::SCOPE) != NewScope) {
+    CPol->setImm((CPol->getImm() & ~AMDGPU::CPol::SCOPE) | NewScope);
+    return true;
+  }
+
+  return false;
+}
+
 bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
                                      SIAtomicScope Scope,
                                      SIAtomicAddrSpace AddrSpace,
@@ -2336,6 +2381,41 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     --MI;
 
   return true;
+}
+
+bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
+    MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
+    bool IsVolatile, bool IsNonTemporal) const {
+
+  // Only handle load and store, not atomic read-modify-write instructions.
+  assert(MI->mayLoad() ^ MI->mayStore());
+
+  // Only update load and store, not LLVM IR atomic read-modify-write
+  // instructions. The latter are always marked as volatile so cannot sensibly
+  // handle it as do not want to pessimize all atomics. Also they do not support
+  // the nontemporal attribute.
+  assert(Op == SIMemOp::LOAD || Op == SIMemOp::STORE);
+
+  bool Changed = false;
+
+  if (IsVolatile) {
+    Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SYS);
+
+    // Ensure operation has completed at system scope to cause all volatile
+    // operations to be visible outside the program in a global order. Do not
+    // request cross address space as only the global address space can be
+    // observable outside the program, so no need to cause a waitcnt for LDS
+    // address space operations.
+    Changed |= insertWait(MI, SIAtomicScope::SYSTEM, AddrSpace, Op, false,
+                          Position::AFTER);
+  }
+
+  if (IsNonTemporal) {
+    // Set non-temporal hint for all cache levels.
+    Changed |= setTH(MI, AMDGPU::CPol::TH_NT);
+  }
+
+  return Changed;
 }
 
 bool SIMemoryLegalizer::removeAtomicPseudoMIs() {

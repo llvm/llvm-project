@@ -1089,7 +1089,7 @@ struct ForallOpInterface
         forallOp.getMixedUpperBound(), forallOp.getMixedStep(),
         /*outputs=*/ValueRange(), forallOp.getMapping());
 
-    newForallOp.getBody()->getTerminator()->erase();
+    rewriter.eraseOp(newForallOp.getBody()->getTerminator());
 
     // Move over block contents of the old op.
     SmallVector<Value> replacementBbArgs;

@@ -108,6 +108,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strchrnul
+  SRCS
+    strchrnul.cpp
+  HDRS
+    strchrnul.h
+  DEPENDS
+    .string_utils
+)
+
+add_entrypoint_object(
   strcmp
   SRCS
     strcmp.cpp

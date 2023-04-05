@@ -9,10 +9,27 @@ constexpr int gimme5() {
 static_assert(gimme5() == 5, "");
 
 
-template<typename T> constexpr T identity(T t) { return t; }
+template<typename T> constexpr T identity(T t) {
+  static_assert(true, "");
+  return t;
+}
 static_assert(identity(true), "");
 static_assert(identity(true), ""); /// Compiled bytecode should be cached
 static_assert(!identity(false), "");
+
+template<typename A, typename B>
+constexpr bool sameSize() {
+  static_assert(sizeof(A) == sizeof(B), ""); // expected-error {{static assertion failed}} \
+                                             // ref-error {{static assertion failed}} \
+                                             // expected-note {{evaluates to}} \
+                                             // ref-note {{evaluates to}}
+  return true;
+}
+static_assert(sameSize<int, int>(), "");
+static_assert(sameSize<unsigned int, int>(), "");
+static_assert(sameSize<char, long>(), ""); // expected-note {{in instantiation of function template specialization}} \
+                                           // ref-note {{in instantiation of function template specialization}}
+
 
 constexpr auto add(int a, int b) -> int {
   return identity(a) + identity(b);
@@ -99,3 +116,89 @@ constexpr void invalid2() {
   huh(); // expected-error {{use of undeclared identifier}} \
          // ref-error {{use of undeclared identifier}}
 }
+
+namespace FunctionPointers {
+  constexpr int add(int a, int b) {
+    return a + b;
+  }
+
+  struct S { int a; };
+  constexpr S getS() {
+    return S{12};
+  }
+
+  constexpr int applyBinOp(int a, int b, int (*op)(int, int)) {
+    return op(a, b);
+  }
+  static_assert(applyBinOp(1, 2, add) == 3, "");
+
+  constexpr int ignoreReturnValue() {
+    int (*foo)(int, int) = add;
+
+    foo(1, 2);
+    return 1;
+  }
+  static_assert(ignoreReturnValue() == 1, "");
+
+  constexpr int createS(S (*gimme)()) {
+    gimme(); // Ignored return value
+    return gimme().a;
+  }
+  static_assert(createS(getS) == 12, "");
+
+namespace FunctionReturnType {
+  typedef int (*ptr)(int*);
+  typedef ptr (*pm)();
+
+  constexpr int fun1(int* y) {
+      return *y + 10;
+  }
+  constexpr ptr fun() {
+      return &fun1;
+  }
+  static_assert(fun() == nullptr, ""); // expected-error {{static assertion failed}} \
+                                       // ref-error {{static assertion failed}}
+
+  constexpr int foo() {
+    int (*f)(int *) = fun();
+    int m = 0;
+
+    m = f(&m);
+
+    return m;
+  }
+  static_assert(foo() == 10, "");
+
+  struct S {
+    int i;
+    void (*fp)();
+  };
+
+  constexpr S s{ 12 };
+  static_assert(s.fp == nullptr, ""); // zero-initialized function pointer.
+}
+
+}
+
+struct F {
+  constexpr bool ok() const {
+    return okRecurse();
+  }
+  constexpr bool okRecurse() const {
+    return true;
+  }
+};
+
+struct BodylessMemberFunction {
+  constexpr int first() const {
+    return second();
+  }
+  constexpr int second() const {
+    return 1;
+  }
+};
+
+constexpr int nyd(int m);
+constexpr int doit() { return nyd(10); }
+constexpr int nyd(int m) { return m; }
+static_assert(doit() == 10, "");

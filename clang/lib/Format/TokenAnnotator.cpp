@@ -1723,10 +1723,13 @@ private:
           return false;
         }
 
-        // This is the default value of a non-template type parameter, so treat
-        // it as an expression.
-        if (Contexts.back().ContextKind == tok::less)
-          return true;
+        // This is the default value of a template parameter, determine if it's
+        // type or non-type.
+        if (Contexts.back().ContextKind == tok::less) {
+          assert(Current.Previous->Previous);
+          return !Current.Previous->Previous->isOneOf(tok::kw_typename,
+                                                      tok::kw_class);
+        }
 
         Tok = Tok->MatchingParen;
         if (!Tok)
@@ -1919,7 +1922,7 @@ private:
                Style.Language == FormatStyle::LK_Java) {
       Current.setType(TT_LambdaArrow);
     } else if (Current.is(tok::arrow) && AutoFound &&
-               (Line.MustBeDeclaration || Line.InPPDirective) &&
+               (Line.MightBeFunctionDecl || Line.InPPDirective) &&
                Current.NestingLevel == 0 &&
                !Current.Previous->isOneOf(tok::kw_operator, tok::identifier)) {
       // not auto operator->() -> xxx;
@@ -3629,8 +3632,6 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       Right.MatchingParen->is(TT_CastRParen)) {
     return true;
   }
-  if (Style.isJson() && Left.is(tok::string_literal) && Right.is(tok::colon))
-    return false;
   if (Left.is(Keywords.kw_assert) && Style.Language == FormatStyle::LK_Java)
     return true;
   if (Style.ObjCSpaceAfterProperty && Line.Type == LT_ObjCProperty &&
@@ -4153,8 +4154,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.is(tok::numeric_constant) && Right.is(tok::percent))
       return Right.hasWhitespaceBefore();
   } else if (Style.isJson()) {
-    if (Right.is(tok::colon))
-      return false;
+    if (Right.is(tok::colon) && Left.is(tok::string_literal))
+      return Style.SpaceBeforeJsonColon;
   } else if (Style.isCSharp()) {
     // Require spaces around '{' and  before '}' unless they appear in
     // interpolated strings. Interpolated strings are merged into a single token

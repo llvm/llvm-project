@@ -269,9 +269,9 @@ cc_library(
         "include/mlir/Bytecode/BytecodeImplementation.h",
         "include/mlir/Interfaces/CallInterfaces.h",
         "include/mlir/Interfaces/CastInterfaces.h",
-        "include/mlir/Interfaces/SideEffectInterfaces.h",
         "include/mlir/Interfaces/DataLayoutInterfaces.h",
         "include/mlir/Interfaces/FoldInterfaces.h",
+        "include/mlir/Interfaces/SideEffectInterfaces.h",
     ],
     includes = ["include"],
     deps = [
@@ -2771,6 +2771,7 @@ cc_library(
         ":BufferizationToMemRef",
         ":ComplexToLLVM",
         ":ComplexToLibm",
+        ":ComplexToSPIRV",
         ":ComplexToStandard",
         ":ControlFlowToLLVM",
         ":ControlFlowToSPIRV",
@@ -4056,27 +4057,27 @@ cc_library(
     includes = ["include"],
     local_defines = if_cuda_available(["MLIR_GPU_TO_CUBIN_PASS_ENABLE"]),
     deps = [
+        ":AffineUtils",
         ":ArithDialect",
         ":AsmParser",
-        ":GPUToLLVMIRTranslation",
         ":AsyncDialect",
         ":ControlFlowDialect",
         ":DLTIDialect",
-        ":AffineUtils",
+        ":FuncDialect",
         ":GPUDialect",
         ":GPUPassIncGen",
-        ":MemRefDialect",
+        ":GPUToLLVMIRTranslation",
         ":IR",
+        ":LLVMToLLVMIRTranslation",
+        ":MemRefDialect",
         ":Pass",
         ":ROCDLToLLVMIRTranslation",
         ":SCFDialect",
-        ":FuncDialect",
         ":SerializeToCubin_stub",
         ":SideEffectInterfaces",
         ":Support",
-        ":Transforms",
         ":ToLLVMIRTranslation",
-        ":LLVMToLLVMIRTranslation",
+        ":Transforms",
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Support",
@@ -4094,13 +4095,13 @@ cc_library(
     ],
     local_defines = if_cuda_available(["MLIR_GPU_TO_CUBIN_PASS_ENABLE"]),
     deps = [
-        ":NVVMToLLVMIRTranslation",
-        ":ToLLVMIRTranslation",
         ":GPUDialect",
         ":GPUPassIncGen",
         ":GPUTransforms",
+        ":NVVMToLLVMIRTranslation",
         ":Pass",
         ":Support",
+        ":ToLLVMIRTranslation",
         "//llvm:Support",
     ] + if_cuda_available([
         "@cuda//:cuda_headers",
@@ -4306,8 +4307,7 @@ cc_library(
     srcs = glob([
         "lib/Conversion/AMDGPUToROCDL/*.cpp",
         "lib/Conversion/AMDGPUToROCDL/*.h",
-        "include/mlir/Conversion/GPUToROCDL/Runtimes.h",
-    ]),
+    ]) + ["include/mlir/Conversion/GPUToROCDL/Runtimes.h"],
     hdrs = glob([
         "include/mlir/Conversion/AMDGPUToROCDL/*.h",
     ]),
@@ -5669,6 +5669,20 @@ cc_library(
 )
 
 cc_library(
+    name = "TensorTransformOps",
+    srcs = glob(["lib/Dialect/Tensor/TransformOps/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Tensor/TransformOps/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":PDLDialect",
+        ":TensorDialect",
+        ":TransformDialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "Rewrite",
     srcs = glob([
         "lib/Rewrite/*.cpp",
@@ -6743,8 +6757,8 @@ cc_library(
 
 cc_library(
     name = "GPUToLLVMIRTranslation",
-    srcs = glob(["lib/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.cpp"]),
-    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"]),
+    srcs = ["lib/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.cpp"],
+    hdrs = ["include/mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"],
     includes = ["include"],
     deps = [
         ":GPUDialect",
@@ -6757,8 +6771,8 @@ cc_library(
 
 cc_library(
     name = "BuiltinToLLVMIRTranslation",
-    srcs = glob(["lib/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.cpp"]),
-    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"]),
+    srcs = ["lib/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.cpp"],
+    hdrs = ["include/mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"],
     includes = ["include"],
     deps = [
         ":IR",
@@ -6889,6 +6903,8 @@ cc_library(
 cc_library(
     name = "FromLLVMIRTranslation",
     srcs = [
+        "lib/Target/LLVMIR/DataLayoutImporter.cpp",
+        "lib/Target/LLVMIR/DataLayoutImporter.h",
         "lib/Target/LLVMIR/DebugImporter.cpp",
         "lib/Target/LLVMIR/LoopAnnotationImporter.cpp",
         "lib/Target/LLVMIR/LoopAnnotationImporter.h",
@@ -7067,6 +7083,7 @@ cc_library(
         ":ComplexDialect",
         ":ComplexToLLVM",
         ":ComplexToLibm",
+        ":ComplexToSPIRV",
         ":ControlFlowDialect",
         ":ConversionPasses",
         ":DLTIDialect",
@@ -7143,6 +7160,7 @@ cc_library(
         ":TensorDialect",
         ":TensorInferTypeOpInterfaceImpl",
         ":TensorTilingInterfaceImpl",
+        ":TensorTransformOps",
         ":TensorTransforms",
         ":TosaDialect",
         ":TosaToLinalg",
@@ -7865,10 +7883,16 @@ cc_library(
             "lib/Dialect/OpenMP/IR/*.h",
         ],
     ),
-    hdrs = glob([
-        "include/mlir/Dialect/OpenMP/*.h",
-    ]),
+    hdrs = glob(
+        [
+            "include/mlir/Dialect/OpenMP/*.h",
+        ],
+        exclude = ["include/mlir/Dialect/OpenMP/OpenMPInterfaces.h"],
+    ),
     includes = ["include"],
+    textual_hdrs = [
+        "include/mlir/Dialect/OpenMP/OpenMPInterfaces.h",
+    ],
     deps = [
         ":ControlFlowInterfaces",
         ":IR",
@@ -9363,8 +9387,8 @@ cc_library(
         ":TransformDialectInterfacesIncGen",
         ":TransformDialectUtils",
         ":TransformOpsIncGen",
-        ":Transforms",
         ":TransformTypesIncGen",
+        ":Transforms",
         "//llvm:Support",
     ],
 )
@@ -9566,6 +9590,31 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":Pass",
+        ":Support",
+        ":Transforms",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "ComplexToSPIRV",
+    srcs = glob([
+        "lib/Conversion/ComplexToSPIRV/*.cpp",
+        "lib/Conversion/ComplexToSPIRV/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/ComplexToSPIRV/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ComplexDialect",
+        ":ConversionPassIncGen",
+        ":IR",
+        ":Pass",
+        ":SPIRVCommonConversion",
+        ":SPIRVConversion",
+        ":SPIRVDialect",
         ":Support",
         ":Transforms",
         "//llvm:Core",

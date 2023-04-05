@@ -5,6 +5,12 @@
 // RUN: ld.lld -r %t %tcantunwind -o %t4
 // RUN: llvm-readobj -S %t4 | FileCheck %s
 
+// RUN: llvm-mc -filetype=obj -triple=armv7aeb-none-linux-gnueabi -mcpu=cortex-a8 %s -o %t
+// RUN: llvm-mc -filetype=obj -triple=armv7aeb-none-linux-gnueabi -mcpu=cortex-a8 %S/Inputs/arm-exidx-cantunwind.s -o %tcantunwind
+// Check that relocatable link maintains SHF_LINK_ORDER for big endian
+// RUN: ld.lld -r %t %tcantunwind -o %t4
+// RUN: llvm-readobj -S %t4 | FileCheck %s
+
 // Each assembler created .ARM.exidx section has the SHF_LINK_ORDER flag set
 // with the sh_link containing the section index of the executable section
 // containing the function it describes. To maintain this property in

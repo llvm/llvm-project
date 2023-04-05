@@ -173,7 +173,7 @@ def X86cas16 : SDNode<"X86ISD::LCMPXCHG16_DAG", SDTX86cas16pair,
                         [SDNPHasChain, SDNPInGlue, SDNPOutGlue, SDNPMayStore,
                          SDNPMayLoad, SDNPMemOperand]>;
 
-def X86retflag : SDNode<"X86ISD::RET_FLAG", SDTX86Ret,
+def X86retglue : SDNode<"X86ISD::RET_GLUE", SDTX86Ret,
                         [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def X86iret : SDNode<"X86ISD::IRET", SDTX86Ret,
                         [SDNPHasChain, SDNPOptInGlue]>;
