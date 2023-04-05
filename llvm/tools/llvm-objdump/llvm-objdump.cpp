@@ -1285,10 +1285,10 @@ static void createFakeELFSections(ObjectFile &Obj) {
 // Build ID. Returns std::nullopt if nothing was found.
 static std::optional<OwningBinary<Binary>>
 fetchBinaryByBuildID(const ObjectFile &Obj) {
-  std::optional<object::BuildIDRef> BuildID = getBuildID(&Obj);
-  if (!BuildID)
+  object::BuildIDRef BuildID = getBuildID(&Obj);
+  if (BuildID.empty())
     return std::nullopt;
-  std::optional<std::string> Path = BIDFetcher->fetch(*BuildID);
+  std::optional<std::string> Path = BIDFetcher->fetch(BuildID);
   if (!Path)
     return std::nullopt;
   Expected<OwningBinary<Binary>> DebugBinary = createBinary(*Path);
@@ -2943,13 +2943,11 @@ static void parseIntArg(const llvm::opt::InputArgList &InputArgs, int ID,
 
 static object::BuildID parseBuildIDArg(const opt::Arg *A) {
   StringRef V(A->getValue());
-  std::string Bytes;
-  if (!tryGetFromHex(V, Bytes))
+  object::BuildID BID = parseBuildID(V);
+  if (BID.empty())
     reportCmdLineError(A->getSpelling() + ": expected a build ID, but got '" +
                        V + "'");
-  ArrayRef<uint8_t> BuildID(reinterpret_cast<const uint8_t *>(Bytes.data()),
-                            Bytes.size());
-  return object::BuildID(BuildID.begin(), BuildID.end());
+  return BID;
 }
 
 void objdump::invalidArgValue(const opt::Arg *A) {

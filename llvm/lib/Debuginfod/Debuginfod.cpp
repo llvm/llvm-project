@@ -412,11 +412,11 @@ Error DebuginfodCollection::findBinaries(StringRef Path) {
         if (!Object)
           continue;
 
-        std::optional<BuildIDRef> ID = getBuildID(Object);
-        if (!ID)
+        BuildIDRef ID = getBuildID(Object);
+        if (ID.empty())
           continue;
 
-        std::string IDString = buildIDToString(*ID);
+        std::string IDString = buildIDToString(ID);
         if (Object->hasDebugInfo()) {
           std::lock_guard<sys::RWMutex> DebugBinariesGuard(DebugBinariesMutex);
           (void)DebugBinaries.try_emplace(IDString, std::move(FilePath));
