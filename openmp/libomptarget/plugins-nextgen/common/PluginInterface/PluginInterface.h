@@ -48,16 +48,14 @@ struct GenericDeviceTy;
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
 /// object is constructed without a valid __tgt_async_info, the object will use
 /// an internal one and will synchronize the current thread with the pending
-/// operations on object destruction.
+/// operations when calling AsyncInfoWrapperTy::finalize(). This latter function
+/// must be called before destroying the wrapper object.
 struct AsyncInfoWrapperTy {
-  AsyncInfoWrapperTy(Error &Err, GenericDeviceTy &Device,
-                     __tgt_async_info *AsyncInfoPtr)
-      : Err(Err), ErrOutParam(&Err), Device(Device),
-        AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {}
+  AsyncInfoWrapperTy(GenericDeviceTy &Device, __tgt_async_info *AsyncInfoPtr);
 
-  /// Synchronize with the __tgt_async_info's pending operations if it's the
-  /// internal one.
-  ~AsyncInfoWrapperTy();
+  ~AsyncInfoWrapperTy() {
+    assert(!AsyncInfoPtr && "AsyncInfoWrapperTy not finalized");
+  }
 
   /// Get the raw __tgt_async_info pointer.
   operator __tgt_async_info *() const { return AsyncInfoPtr; }
@@ -72,12 +70,20 @@ struct AsyncInfoWrapperTy {
   /// Indicate whether there is queue.
   bool hasQueue() const { return (AsyncInfoPtr->Queue != nullptr); }
 
+  // Get a reference to the error associated with the asycnhronous operations
+  // related to the async info wrapper.
+  Error &getError() { return Err; }
+
+  /// Synchronize with the __tgt_async_info's pending operations if it's the
+  /// internal async info and return the error associated with the async
+  /// operations. This function must be called before destroying the object.
+  Error finalize();
+
 private:
-  Error &Err;
-  ErrorAsOutParameter ErrOutParam;
+  Error Err;
   GenericDeviceTy &Device;
   __tgt_async_info LocalAsyncInfo;
-  __tgt_async_info *const AsyncInfoPtr;
+  __tgt_async_info *AsyncInfoPtr;
 };
 
 /// Class wrapping a __tgt_device_image and its offload entry table on a

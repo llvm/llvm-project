@@ -205,9 +205,9 @@ public:
     return RegName.equals("esp") || RegName.equals("rsp");
   }
 
-  bool validateCpuSupports(StringRef Name) const override;
+  bool validateCpuSupports(StringRef FeatureStr) const override;
 
-  bool validateCpuIs(StringRef Name) const override;
+  bool validateCpuIs(StringRef FeatureStr) const override;
 
   bool validateCPUSpecificCPUDispatch(StringRef Name) const override;
 

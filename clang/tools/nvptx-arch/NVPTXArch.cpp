@@ -49,7 +49,7 @@ CUresult (*cuGetErrorString)(CUresult, const char **);
 CUresult (*cuDeviceGet)(CUdevice *, int);
 CUresult (*cuDeviceGetAttribute)(int *, CUdevice_attribute, CUdevice);
 
-constexpr const char *DynamicCudaPath = "libcuda.so";
+constexpr const char *DynamicCudaPath = "libcuda.so.1";
 
 llvm::Error loadCUDA() {
   std::string ErrMsg;

@@ -109,22 +109,23 @@ class X86FoldTablesEmitter {
 
   };
 
-  struct CodeGenInstructionComparator {
-    // Comparator function
+  // NOTE: We check the fold tables are sorted in X86InstrFoldTables.cpp by the enum of the
+  //       instruction, which is computed in CodeGenTarget::ComputeInstrsByEnum. So we should
+  //       use the same comparator here.
+  // FIXME: Could we share the code with CodeGenTarget::ComputeInstrsByEnum?
+  struct CompareInstrsByEnum {
     bool operator()(const CodeGenInstruction *LHS,
                     const CodeGenInstruction *RHS) const {
       assert(LHS && RHS && "LHS and RHS shouldn't be nullptr");
-      bool LHSpseudo = LHS->TheDef->getValueAsBit("isPseudo");
-      bool RHSpseudo = RHS->TheDef->getValueAsBit("isPseudo");
-      if (LHSpseudo != RHSpseudo)
-        return LHSpseudo;
-
-      return LHS->TheDef->getName() < RHS->TheDef->getName();
+      const auto &D1 = *LHS->TheDef;
+      const auto &D2 = *RHS->TheDef;
+      return std::make_tuple(!D1.getValueAsBit("isPseudo"), D1.getName()) <
+             std::make_tuple(!D2.getValueAsBit("isPseudo"), D2.getName());
     }
   };
 
   typedef std::map<const CodeGenInstruction *, X86FoldTableEntry,
-                   CodeGenInstructionComparator>
+                   CompareInstrsByEnum>
       FoldTable;
   // std::vector for each folding table.
   // Table2Addr - Holds instructions which their memory form performs load+store

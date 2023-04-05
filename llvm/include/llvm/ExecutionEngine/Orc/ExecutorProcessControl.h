@@ -227,18 +227,22 @@ public:
   ///
   ///
   template <typename T, typename SPSTagT>
-  std::optional<Expected<T>> getBootstrapMapValue(StringRef Key) const {
+  Error getBootstrapMapValue(StringRef Key, std::optional<T> &Val) const {
+    Val = std::nullopt;
+
     auto I = BootstrapMap.find(Key);
     if (I == BootstrapMap.end())
-      return std::nullopt;
+      return Error::success();
 
-    T Val;
+    T Tmp;
     shared::SPSInputBuffer IB(I->second.data(), I->second.size());
-    if (!shared::SPSArgList<SPSTagT>::deserialize(IB, Val))
+    if (!shared::SPSArgList<SPSTagT>::deserialize(IB, Tmp))
       return make_error<StringError>("Could not deserialize value for key " +
                                          Key,
                                      inconvertibleErrorCode());
-    return Val;
+
+    Val = std::move(Tmp);
+    return Error::success();
   }
 
   /// Returns the bootstrap symbol map.
