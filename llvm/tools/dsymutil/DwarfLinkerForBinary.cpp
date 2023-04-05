@@ -105,23 +105,31 @@ static mc::RegisterMCTargetOptionsFlags MOF;
 
 namespace dsymutil {
 
-/// Report a warning to the user, optionally including information about a
-/// specific \p DIE related to the warning.
-void DwarfLinkerForBinary::reportWarning(const Twine &Warning,
-                                         StringRef Context,
-                                         const DWARFDie *DIE) const {
-
-  warn(Warning, Context);
-
-  if (!Options.Verbose || !DIE)
+static void dumpDIE(const DWARFDie *DIE, bool Verbose) {
+  if (!DIE || !Verbose)
     return;
 
   DIDumpOptions DumpOpts;
   DumpOpts.ChildRecurseDepth = 0;
-  DumpOpts.Verbose = Options.Verbose;
+  DumpOpts.Verbose = Verbose;
 
   WithColor::note() << "    in DIE:\n";
   DIE->dump(errs(), 6 /* Indent */, DumpOpts);
+}
+
+/// Report a warning to the user, optionally including information about a
+/// specific \p DIE related to the warning.
+void DwarfLinkerForBinary::reportWarning(Twine Warning, Twine Context,
+                                         const DWARFDie *DIE) const {
+
+  warn(Warning, Context);
+  dumpDIE(DIE, Options.Verbose);
+}
+
+void DwarfLinkerForBinary::reportError(Twine Error, Twine Context,
+                                       const DWARFDie *DIE) const {
+  error(Error, Context);
+  dumpDIE(DIE, Options.Verbose);
 }
 
 bool DwarfLinkerForBinary::createStreamer(const Triple &TheTriple,
@@ -132,10 +140,10 @@ bool DwarfLinkerForBinary::createStreamer(const Triple &TheTriple,
   Streamer = std::make_unique<DwarfStreamer>(
       Options.FileType, OutFile, Options.Translator,
       [&](const Twine &Error, StringRef Context, const DWARFDie *) {
-        error(Error, Context);
+        reportError(Error, Context);
       },
       [&](const Twine &Warning, StringRef Context, const DWARFDie *) {
-        warn(Warning, Context);
+        reportWarning(Warning, Context);
       });
   return Streamer->init(TheTriple, "__DWARF");
 }
@@ -481,8 +489,8 @@ Error DwarfLinkerForBinary::copySwiftInterfaces(StringRef Architecture) const {
 
     // copy_file attempts an APFS clone first, so this should be cheap.
     if ((EC = sys::fs::copy_file(InterfaceFile, Path.str())))
-      warn(Twine("cannot copy parseable Swift interface ") + InterfaceFile +
-           ": " + toString(errorCodeToError(EC)));
+      reportWarning(Twine("cannot copy parseable Swift interface ") +
+                    InterfaceFile + ": " + toString(errorCodeToError(EC)));
     Path.resize(BaseLength);
   }
   return Error::success();
@@ -584,8 +592,8 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
         reportWarning(Warning, Context, DIE);
       });
   GeneralLinker.setErrorHandler(
-      [&](const Twine &Error, StringRef Context, const DWARFDie *) {
-        error(Error, Context);
+      [&](const Twine &Error, StringRef Context, const DWARFDie *DIE) {
+        reportError(Error, Context, DIE);
       });
   GeneralLinker.setInputVerificationHandler([&](const DWARFFile &File) {
     reportWarning("input verification failed", File.FileName);
@@ -677,12 +685,12 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
       StringRef File = Obj->getObjectFilename();
       auto ErrorOrMem = MemoryBuffer::getFile(File);
       if (!ErrorOrMem) {
-        warn("Could not open '" + File + "'");
+        reportWarning("Could not open '" + File + "'");
         continue;
       }
       sys::fs::file_status Stat;
       if (auto Err = sys::fs::status(File, Stat)) {
-        warn(Err.message());
+        reportWarning(Err.message());
         continue;
       }
       if (!Options.NoTimestamp) {
