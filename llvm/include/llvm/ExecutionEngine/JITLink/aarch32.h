@@ -27,14 +27,18 @@ namespace aarch32 {
 enum EdgeKind_aarch32 : Edge::Kind {
 
   ///
-  /// Relocations of class Data
+  /// Relocations of class Data respect target endianness (unless otherwise
+  /// specified)
   ///
   FirstDataRelocation = Edge::FirstRelocation,
 
-  /// Plain 32-bit value relocation in target endianness
+  /// Relative 32-bit value relocation
   Data_Delta32 = FirstDataRelocation,
 
-  LastDataRelocation = Data_Delta32,
+  /// Absolute 32-bit value relocation
+  Data_Pointer32,
+
+  LastDataRelocation = Data_Pointer32,
 
   ///
   /// Relocations of class Arm (covers fixed-width 4-byte instruction subset)

@@ -200,6 +200,7 @@ Expected<int64_t> readAddendData(LinkGraph &G, Block &B, const Edge &E) {
 
   switch (Kind) {
   case Data_Delta32:
+  case Data_Pointer32:
     return SignExtend64<32>(support::endian::read32(FixupPtr, Endian));
   default:
     return make_error<JITLinkError>(
@@ -298,6 +299,13 @@ Error applyFixupData(LinkGraph &G, Block &B, const Edge &E) {
   switch (Kind) {
   case Data_Delta32: {
     int64_t Value = TargetAddress - FixupAddress + Addend;
+    if (!isInt<32>(Value))
+      return makeTargetOutOfRangeError(G, B, E);
+    Write32(Value);
+    return Error::success();
+  }
+  case Data_Pointer32: {
+    int64_t Value = TargetAddress + Addend;
     if (!isInt<32>(Value))
       return makeTargetOutOfRangeError(G, B, E);
     Write32(Value);
