@@ -10,18 +10,21 @@
 #include "TypesInternal.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <string>
+#include <optional>
 #include <utility>
 
 namespace clang::include_cleaner {
@@ -106,37 +109,68 @@ hintedHeadersForStdHeaders(llvm::ArrayRef<tooling::stdlib::Header> Headers,
   return Results;
 }
 
-// Special-case the ambiguous standard library symbols (e.g. std::move) which
-// are not supported by the tooling stdlib lib.
-llvm::SmallVector<Hinted<Header>>
-headersForSpecialSymbol(const Symbol &S, const SourceManager &SM,
-                        const PragmaIncludes *PI) {
-  if (S.kind() != Symbol::Declaration || !S.declaration().isInStdNamespace())
+// Symbol to header mapping for std::move and std::remove, based on number of
+// parameters.
+std::optional<tooling::stdlib::Header>
+headerForAmbiguousStdSymbol(const NamedDecl *ND) {
+  if (!ND->isInStdNamespace())
     return {};
-
-  const auto *FD = S.declaration().getAsFunction();
+  const auto *FD = ND->getAsFunction();
   if (!FD)
-    return {};
-
-  llvm::StringRef FName = symbolName(S);
-  llvm::SmallVector<tooling::stdlib::Header> Headers;
+    return std::nullopt;
+  llvm::StringRef FName = symbolName(*ND);
   if (FName == "move") {
     if (FD->getNumParams() == 1)
       // move(T&& t)
-      Headers.push_back(*tooling::stdlib::Header::named("<utility>"));
+      return tooling::stdlib::Header::named("<utility>");
     if (FD->getNumParams() == 3)
       // move(InputIt first, InputIt last, OutputIt dest);
-      Headers.push_back(*tooling::stdlib::Header::named("<algorithm>"));
+      return tooling::stdlib::Header::named("<algorithm>");
   } else if (FName == "remove") {
     if (FD->getNumParams() == 1)
       // remove(const char*);
-      Headers.push_back(*tooling::stdlib::Header::named("<cstdio>"));
+      return tooling::stdlib::Header::named("<cstdio>");
     if (FD->getNumParams() == 3)
       // remove(ForwardIt first, ForwardIt last, const T& value);
-      Headers.push_back(*tooling::stdlib::Header::named("<algorithm>"));
+      return tooling::stdlib::Header::named("<algorithm>");
   }
-  return applyHints(hintedHeadersForStdHeaders(Headers, SM, PI),
-                    Hints::CompleteSymbol);
+  return std::nullopt;
+}
+
+// Special-case symbols without proper locations, like the ambiguous standard
+// library symbols (e.g. std::move) or builtin declarations.
+std::optional<llvm::SmallVector<Hinted<Header>>>
+headersForSpecialSymbol(const Symbol &S, const SourceManager &SM,
+                        const PragmaIncludes *PI) {
+  // Our special casing logic only deals with decls, so bail out early for
+  // macros.
+  if (S.kind() != Symbol::Declaration)
+    return std::nullopt;
+  const auto *ND = llvm::cast<NamedDecl>(&S.declaration());
+  // We map based on names, so again bail out early if there are no names.
+  if (!ND)
+    return std::nullopt;
+  auto *II = ND->getIdentifier();
+  if (!II)
+    return std::nullopt;
+
+  // Check first for symbols that are part of our stdlib mapping. As we have
+  // header names for those.
+  if (auto Header = headerForAmbiguousStdSymbol(ND)) {
+    return applyHints(hintedHeadersForStdHeaders({*Header}, SM, PI),
+                      Hints::CompleteSymbol);
+  }
+
+  // Now check for builtin symbols, we shouldn't suggest any headers for ones
+  // without any headers.
+  if (auto ID = II->getBuiltinID()) {
+    const char *BuiltinHeader =
+        ND->getASTContext().BuiltinInfo.getHeaderName(ID);
+    if (!BuiltinHeader)
+      return llvm::SmallVector<Hinted<Header>>{};
+    // FIXME: Use the header mapping for builtins with a known header.
+  }
+  return std::nullopt;
 }
 
 } // namespace
@@ -187,11 +221,13 @@ llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
   // Get headers for all the locations providing Symbol. Same header can be
   // reached through different traversals, deduplicate those into a single
   // Header by merging their hints.
-  llvm::SmallVector<Hinted<Header>> Headers =
-      headersForSpecialSymbol(S, SM, PI);
-  if (Headers.empty())
+  llvm::SmallVector<Hinted<Header>> Headers;
+  if (auto SpecialHeaders = headersForSpecialSymbol(S, SM, PI)) {
+    Headers = std::move(*SpecialHeaders);
+  } else {
     for (auto &Loc : locateSymbol(S))
       Headers.append(applyHints(findHeaders(Loc, SM, PI), Loc.Hint));
+  }
   // If two Headers probably refer to the same file (e.g. Verbatim(foo.h) and
   // Physical(/path/to/foo.h), we won't deduplicate them or merge their hints
   llvm::stable_sort(

@@ -271,6 +271,9 @@ Bug Fixes in This Version
   (`#60887 <https://github.com/llvm/llvm-project/issues/60887>`_)
 - Fix incorrect merging of lambdas across modules.
   (`#60985 <https://github.com/llvm/llvm-project/issues/60985>`_)
+- Fix crash when handling nested immediate invocations in initializers of global
+  variables.
+  (`#58207 <https://github.com/llvm/llvm-project/issues/58207>`_)
 
 
 Bug Fixes to Compiler Builtins
@@ -331,6 +334,9 @@ AMDGPU Support
 
 X86 Support
 ^^^^^^^^^^^
+
+- Add ISA of ``AMX-COMPLEX`` which supports ``tcmmimfp16ps`` and
+  ``tcmmrlfp16ps``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -448,6 +454,12 @@ Static Analyzer
 Sanitizers
 ----------
 
+Python Binding Changes
+----------------------
+The following methods have been added:
+
+- ``clang_Location_isInSystemHeader`` exposed via the ``is_in_system_header``
+  property of the `Location` class.
 
 Additional Information
 ======================

@@ -46,6 +46,7 @@ struct Metadata {
   inline bool IsAllocated() const;
   inline u64 GetRequestedSize() const;
   inline u32 GetAllocStackId() const;
+  inline u32 GetAllocThreadId() const;
   inline void SetLsanTag(__lsan::ChunkTag tag);
   inline __lsan::ChunkTag GetLsanTag() const;
 };
@@ -100,6 +101,7 @@ class HwasanChunkView {
   uptr UsedSize() const;       // Size requested by the user
   uptr ActualSize() const;     // Size allocated by the allocator.
   u32 GetAllocStackId() const;
+  u32 GetAllocThreadId() const;
   bool FromSmallHeap() const;
   bool AddrIsInside(uptr addr) const;
 
@@ -113,13 +115,12 @@ HwasanChunkView FindHeapChunkByAddress(uptr address);
 
 // Information about one (de)allocation that happened in the past.
 // These are recorded in a thread-local ring buffer.
-// TODO: this is currently 24 bytes (20 bytes + alignment).
-// Compress it to 16 bytes or extend it to be more useful.
 struct HeapAllocationRecord {
   uptr tagged_addr;
-  u32  alloc_context_id;
-  u32  free_context_id;
-  u32  requested_size;
+  u32 alloc_thread_id;
+  u32 alloc_context_id;
+  u32 free_context_id;
+  u32 requested_size;
 };
 
 typedef RingBuffer<HeapAllocationRecord> HeapAllocationsRingBuffer;

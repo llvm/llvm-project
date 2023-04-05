@@ -283,11 +283,13 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     Normal,
     DefaultArgument,
     DataMember,
-    StaticDataMember,
     InlineVariable,
-    VariableTemplate,
+    TemplatedVariable,
     Concept
   } Kind = Normal;
+
+  bool IsInNonspecializedTemplate =
+      inTemplateInstantiation() || CurContext->isDependentContext();
 
   // Default arguments of member function parameters that appear in a class
   // definition, as well as the initializers of data members, receive special
@@ -299,15 +301,15 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
         if (LexicalDC->isRecord())
           Kind = DefaultArgument;
     } else if (VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl)) {
-      if (Var->getDeclContext()->isRecord())
-        Kind = StaticDataMember;
-      else if (Var->getMostRecentDecl()->isInline())
+      if (Var->getMostRecentDecl()->isInline())
         Kind = InlineVariable;
+      else if (Var->getDeclContext()->isRecord() && IsInNonspecializedTemplate)
+        Kind = TemplatedVariable;
       else if (Var->getDescribedVarTemplate())
-        Kind = VariableTemplate;
+        Kind = TemplatedVariable;
       else if (auto *VTS = dyn_cast<VarTemplateSpecializationDecl>(Var)) {
         if (!VTS->isExplicitSpecialization())
-          Kind = VariableTemplate;
+          Kind = TemplatedVariable;
       }
     } else if (isa<FieldDecl>(ManglingContextDecl)) {
       Kind = DataMember;
@@ -319,12 +321,9 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   // Itanium ABI [5.1.7]:
   //   In the following contexts [...] the one-definition rule requires closure
   //   types in different translation units to "correspond":
-  bool IsInNonspecializedTemplate =
-      inTemplateInstantiation() || CurContext->isDependentContext();
   switch (Kind) {
   case Normal: {
-    //  -- the bodies of non-exported nonspecialized template functions
-    //  -- the bodies of inline functions
+    //  -- the bodies of inline or templated functions
     if ((IsInNonspecializedTemplate &&
          !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
         isInInlineFunction(CurContext)) {
@@ -341,21 +340,13 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     // however the ManglingContextDecl is important for the purposes of
     // re-forming the template argument list of the lambda for constraint
     // evaluation.
-  case StaticDataMember:
-    //  -- the initializers of nonspecialized static members of template classes
-    if (!IsInNonspecializedTemplate)
-      return std::make_tuple(nullptr, ManglingContextDecl);
-    // Fall through to get the current context.
-    [[fallthrough]];
-
   case DataMember:
-    //  -- the in-class initializers of class members
+    //  -- default member initializers
   case DefaultArgument:
     //  -- default arguments appearing in class definitions
   case InlineVariable:
-    //  -- the initializers of inline variables
-  case VariableTemplate:
-    //  -- the initializers of templated variables
+  case TemplatedVariable:
+    //  -- the initializers of inline or templated variables
     return std::make_tuple(
         &Context.getManglingNumberContext(ASTContext::NeedExtraManglingDecl,
                                           ManglingContextDecl),

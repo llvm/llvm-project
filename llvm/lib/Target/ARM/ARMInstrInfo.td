@@ -460,6 +460,11 @@ def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fsub node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
 }]>;
 
+// An 'fadd' node which can be contracted into a fma
+def fadd_contract : PatFrag<(ops node:$lhs, node:$rhs),(fadd node:$lhs, node:$rhs),[{
+  return N->getFlags().hasAllowContract();
+}]>;
+
 def imm_even : ImmLeaf<i32, [{ return (Imm & 1) == 0; }]>;
 def imm_odd : ImmLeaf<i32, [{ return (Imm & 1) == 1; }]>;
 

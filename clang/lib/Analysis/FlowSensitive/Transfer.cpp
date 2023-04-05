@@ -237,7 +237,7 @@ public:
       Env.setStorageLocation(*S, *DeclLoc);
     } else {
       auto &Loc = Env.createStorageLocation(*S);
-      auto &Val = Env.takeOwnership(std::make_unique<ReferenceValue>(*DeclLoc));
+      auto &Val = Env.create<ReferenceValue>(*DeclLoc);
       Env.setStorageLocation(*S, Loc);
       Env.setValue(Loc, Val);
     }
@@ -276,8 +276,7 @@ public:
       // FIXME: reuse the ReferenceValue instead of creating a new one.
       if (auto *InitExprLoc =
               Env.getStorageLocation(*InitExpr, SkipPast::Reference)) {
-        auto &Val =
-            Env.takeOwnership(std::make_unique<ReferenceValue>(*InitExprLoc));
+        auto &Val = Env.create<ReferenceValue>(*InitExprLoc);
         Env.setValue(Loc, Val);
       }
     } else if (auto *InitExprVal = Env.getValue(*InitExpr, SkipPast::None)) {
@@ -423,8 +422,8 @@ public:
 
       auto &Loc = Env.createStorageLocation(*S);
       Env.setStorageLocation(*S, Loc);
-      Env.setValue(Loc, Env.takeOwnership(std::make_unique<ReferenceValue>(
-                            SubExprVal->getPointeeLoc())));
+      Env.setValue(Loc,
+                   Env.create<ReferenceValue>(SubExprVal->getPointeeLoc()));
       break;
     }
     case UO_AddrOf: {
@@ -437,8 +436,7 @@ public:
         break;
 
       auto &PointerLoc = Env.createStorageLocation(*S);
-      auto &PointerVal =
-          Env.takeOwnership(std::make_unique<PointerValue>(*PointeeLoc));
+      auto &PointerVal = Env.create<PointerValue>(*PointeeLoc);
       Env.setStorageLocation(*S, PointerLoc);
       Env.setValue(PointerLoc, PointerVal);
       break;
@@ -468,8 +466,7 @@ public:
 
     auto &Loc = Env.createStorageLocation(*S);
     Env.setStorageLocation(*S, Loc);
-    Env.setValue(Loc, Env.takeOwnership(
-                          std::make_unique<PointerValue>(*ThisPointeeLoc)));
+    Env.setValue(Loc, Env.create<PointerValue>(*ThisPointeeLoc));
   }
 
   void VisitReturnStmt(const ReturnStmt *S) {
@@ -523,8 +520,7 @@ public:
         } else {
           auto &Loc = Env.createStorageLocation(*S);
           Env.setStorageLocation(*S, Loc);
-          Env.setValue(Loc, Env.takeOwnership(
-                                std::make_unique<ReferenceValue>(*VarDeclLoc)));
+          Env.setValue(Loc, Env.create<ReferenceValue>(*VarDeclLoc));
         }
         return;
       }
@@ -558,8 +554,7 @@ public:
     } else {
       auto &Loc = Env.createStorageLocation(*S);
       Env.setStorageLocation(*S, Loc);
-      Env.setValue(
-          Loc, Env.takeOwnership(std::make_unique<ReferenceValue>(MemberLoc)));
+      Env.setValue(Loc, Env.create<ReferenceValue>(MemberLoc));
     }
   }
 

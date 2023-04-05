@@ -586,8 +586,8 @@ define <vscale x 8 x i16> @muladd_i16_positiveAddend(<vscale x 8 x i16> %a, <vsc
 ; CHECK-LABEL: muladd_i16_positiveAddend:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    add z0.h, z0.h, #255 // =0xff
+; CHECK-NEXT:    mov z2.h, #255 // =0xff
+; CHECK-NEXT:    mad z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 8 x i16> %a, %b
@@ -612,8 +612,8 @@ define <vscale x 16 x i8> @muladd_i8_positiveAddend(<vscale x 16 x i8> %a, <vsca
 ; CHECK-LABEL: muladd_i8_positiveAddend:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z1.b
-; CHECK-NEXT:    add z0.b, z0.b, #15 // =0xf
+; CHECK-NEXT:    mov z2.b, #15 // =0xf
+; CHECK-NEXT:    mad z0.b, p0/m, z1.b, z2.b
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 16 x i8> %a, %b
@@ -625,8 +625,8 @@ define <vscale x 16 x i8> @muladd_i8_negativeAddend(<vscale x 16 x i8> %a, <vsca
 ; CHECK-LABEL: muladd_i8_negativeAddend:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z1.b
-; CHECK-NEXT:    add z0.b, z0.b, #241 // =0xf1
+; CHECK-NEXT:    mov z2.b, #-15 // =0xfffffffffffffff1
+; CHECK-NEXT:    mad z0.b, p0/m, z1.b, z2.b
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 16 x i8> %a, %b
@@ -744,13 +744,14 @@ define <vscale x 16 x i8> @mulsub_i8_negativeAddend(<vscale x 16 x i8> %a, <vsca
   ret <vscale x 16 x i8> %2
 }
 
+; TOFIX: Should generate msb for mul+sub in this case. Shuffling operand of sub generates the required msb instruction.
 define <vscale x 8 x i16> @multiple_fused_ops(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
 ; CHECK-LABEL: multiple_fused_ops:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #200 // =0xc8
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    mul z2.h, p0/m, z2.h, z1.h
-; CHECK-NEXT:    add z2.h, z2.h, #200 // =0xc8
+; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    mla z2.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z2.h
 ; CHECK-NEXT:    sub z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
@@ -771,15 +772,15 @@ define void @mad_in_loop(ptr %dst, ptr %src1, ptr %src2, i32 %n) {
 ; CHECK-NEXT:    mov w9, w3
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    cntw x10
+; CHECK-NEXT:    mov z0.s, #1 // =0x1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    whilelo p1.s, xzr, x9
 ; CHECK-NEXT:  .LBB70_2: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x1, x8, lsl #2]
-; CHECK-NEXT:    ld1w { z1.s }, p1/z, [x2, x8, lsl #2]
-; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    add z0.s, z0.s, #1 // =0x1
-; CHECK-NEXT:    st1w { z0.s }, p1, [x0, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z1.s }, p1/z, [x1, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z2.s }, p1/z, [x2, x8, lsl #2]
+; CHECK-NEXT:    mad z1.s, p0/m, z2.s, z0.s
+; CHECK-NEXT:    st1w { z1.s }, p1, [x0, x8, lsl #2]
 ; CHECK-NEXT:    add x8, x8, x10
 ; CHECK-NEXT:    whilelo p1.s, x8, x9
 ; CHECK-NEXT:    b.mi .LBB70_2

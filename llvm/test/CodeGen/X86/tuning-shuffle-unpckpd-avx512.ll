@@ -164,120 +164,52 @@ define <8 x double> @transform_VUNPCKHPDZrrkz(<8 x double> %a, <8 x double> %b, 
   ret <8 x double> %res
 }
 
+; Check that masked vunpcklpd will not be transformed into vshufps.
 define <4 x double> @transform_VUNPCKLPDYrrkz(<4 x double> %a, <4 x double> %b, i4 %mask_int) nounwind {
-; CHECK-SKX-LABEL: transform_VUNPCKLPDYrrkz:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    kmovd %edi, %k1
-; CHECK-SKX-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: transform_VUNPCKLPDYrrkz:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    kmovd %edi, %k1
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} ymm0 {%k1} {z} = ymm0[0,1],ymm1[0,1],ymm0[4,5],ymm1[4,5]
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: transform_VUNPCKLPDYrrkz:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    kmovd %edi, %k1
-; CHECK-V4-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: transform_VUNPCKLPDYrrkz:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    kmovd %edi, %k1
-; CHECK-ZNVER4-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: transform_VUNPCKLPDYrrkz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; CHECK-NEXT:    retq
   %mask = bitcast i4 %mask_int to <4 x i1>
   %shufp = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   %res = select <4 x i1> %mask, <4 x double> %shufp, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
+; Check that masked vunpcklpd will not be transformed into vshufps.
 define <4 x double> @transform_VUNPCKHPDYrrkz(<4 x double> %a, <4 x double> %b, i4 %mask_int) nounwind {
-; CHECK-SKX-LABEL: transform_VUNPCKHPDYrrkz:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    kmovd %edi, %k1
-; CHECK-SKX-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: transform_VUNPCKHPDYrrkz:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    kmovd %edi, %k1
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} ymm0 {%k1} {z} = ymm0[2,3],ymm1[2,3],ymm0[6,7],ymm1[6,7]
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: transform_VUNPCKHPDYrrkz:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    kmovd %edi, %k1
-; CHECK-V4-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: transform_VUNPCKHPDYrrkz:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    kmovd %edi, %k1
-; CHECK-ZNVER4-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: transform_VUNPCKHPDYrrkz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; CHECK-NEXT:    retq
   %mask = bitcast i4 %mask_int to <4 x i1>
   %shufp = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
   %res = select <4 x i1> %mask, <4 x double> %shufp, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
+; Check that masked vunpcklpd will not be transformed into vshufps.
 define <2 x double> @transform_VUNPCKLPDrrkz(<2 x double> %a, <2 x double> %b, i2 %mask_int) nounwind {
-; CHECK-SKX-LABEL: transform_VUNPCKLPDrrkz:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    kmovd %edi, %k1
-; CHECK-SKX-NEXT:    vunpcklpd {{.*#+}} xmm0 {%k1} {z} = xmm0[0],xmm1[0]
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: transform_VUNPCKLPDrrkz:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    kmovd %edi, %k1
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} xmm0 {%k1} {z} = xmm0[0,1],xmm1[0,1]
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: transform_VUNPCKLPDrrkz:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    kmovd %edi, %k1
-; CHECK-V4-NEXT:    vunpcklpd {{.*#+}} xmm0 {%k1} {z} = xmm0[0],xmm1[0]
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: transform_VUNPCKLPDrrkz:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    kmovd %edi, %k1
-; CHECK-ZNVER4-NEXT:    vunpcklpd {{.*#+}} xmm0 {%k1} {z} = xmm0[0],xmm1[0]
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: transform_VUNPCKLPDrrkz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 {%k1} {z} = xmm0[0],xmm1[0]
+; CHECK-NEXT:    retq
   %mask = bitcast i2 %mask_int to <2 x i1>
   %shufp = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 0, i32 2>
   %res = select <2 x i1> %mask, <2 x double> %shufp, <2 x double> zeroinitializer
   ret <2 x double> %res
 }
 
+; Check that masked vunpcklpd will not be transformed into vshufps.
 define <2 x double> @transform_VUNPCKHPDrrkz(<2 x double> %a, <2 x double> %b, i2 %mask_int) nounwind {
-; CHECK-SKX-LABEL: transform_VUNPCKHPDrrkz:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    kmovd %edi, %k1
-; CHECK-SKX-NEXT:    vunpckhpd {{.*#+}} xmm0 {%k1} {z} = xmm0[1],xmm1[1]
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: transform_VUNPCKHPDrrkz:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    kmovd %edi, %k1
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} xmm0 {%k1} {z} = xmm0[2,3],xmm1[2,3]
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: transform_VUNPCKHPDrrkz:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    kmovd %edi, %k1
-; CHECK-V4-NEXT:    vunpckhpd {{.*#+}} xmm0 {%k1} {z} = xmm0[1],xmm1[1]
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: transform_VUNPCKHPDrrkz:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    kmovd %edi, %k1
-; CHECK-ZNVER4-NEXT:    vunpckhpd {{.*#+}} xmm0 {%k1} {z} = xmm0[1],xmm1[1]
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: transform_VUNPCKHPDrrkz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm0 {%k1} {z} = xmm0[1],xmm1[1]
+; CHECK-NEXT:    retq
   %mask = bitcast i2 %mask_int to <2 x i1>
   %shufp = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 1, i32 3>
   %res = select <2 x i1> %mask, <2 x double> %shufp, <2 x double> zeroinitializer
@@ -310,136 +242,56 @@ define <8 x double> @transform_VUNPCKHPDZrrk(<8 x double> %a, <8 x double> %b, <
   ret <8 x double> %res
 }
 
+; Check that masked vunpcklpd will not be transformed into vshufps.
 define <4 x double> @transform_VUNPCKLPDYrrk(<4 x double> %a, <4 x double> %b, <4 x double> %c, i4 %mask_int) nounwind {
-; CHECK-SKX-LABEL: transform_VUNPCKLPDYrrk:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    kmovd %edi, %k1
-; CHECK-SKX-NEXT:    vunpcklpd {{.*#+}} ymm2 {%k1} = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; CHECK-SKX-NEXT:    vmovapd %ymm2, %ymm0
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: transform_VUNPCKLPDYrrk:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    kmovd %edi, %k1
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} ymm2 {%k1} = ymm0[0,1],ymm1[0,1],ymm0[4,5],ymm1[4,5]
-; CHECK-ICX-NEXT:    vmovapd %ymm2, %ymm0
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: transform_VUNPCKLPDYrrk:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    kmovd %edi, %k1
-; CHECK-V4-NEXT:    vunpcklpd {{.*#+}} ymm2 {%k1} = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; CHECK-V4-NEXT:    vmovapd %ymm2, %ymm0
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: transform_VUNPCKLPDYrrk:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    kmovd %edi, %k1
-; CHECK-ZNVER4-NEXT:    vunpcklpd {{.*#+}} ymm2 {%k1} = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; CHECK-ZNVER4-NEXT:    vmovapd %ymm2, %ymm0
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: transform_VUNPCKLPDYrrk:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm2 {%k1} = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; CHECK-NEXT:    vmovapd %ymm2, %ymm0
+; CHECK-NEXT:    retq
   %mask = bitcast i4 %mask_int to <4 x i1>
   %shufp = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   %res = select <4 x i1> %mask, <4 x double> %shufp, <4 x double> %c
   ret <4 x double> %res
 }
 
+; Check that masked vunpcklpd will not be transformed into vshufps.
 define <4 x double> @transform_VUNPCKHPDYrrk(<4 x double> %a, <4 x double> %b, <4 x double> %c, i4 %mask_int) nounwind {
-; CHECK-SKX-LABEL: transform_VUNPCKHPDYrrk:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    kmovd %edi, %k1
-; CHECK-SKX-NEXT:    vunpckhpd {{.*#+}} ymm2 {%k1} = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; CHECK-SKX-NEXT:    vmovapd %ymm2, %ymm0
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: transform_VUNPCKHPDYrrk:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    kmovd %edi, %k1
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} ymm2 {%k1} = ymm0[2,3],ymm1[2,3],ymm0[6,7],ymm1[6,7]
-; CHECK-ICX-NEXT:    vmovapd %ymm2, %ymm0
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: transform_VUNPCKHPDYrrk:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    kmovd %edi, %k1
-; CHECK-V4-NEXT:    vunpckhpd {{.*#+}} ymm2 {%k1} = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; CHECK-V4-NEXT:    vmovapd %ymm2, %ymm0
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: transform_VUNPCKHPDYrrk:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    kmovd %edi, %k1
-; CHECK-ZNVER4-NEXT:    vunpckhpd {{.*#+}} ymm2 {%k1} = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; CHECK-ZNVER4-NEXT:    vmovapd %ymm2, %ymm0
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: transform_VUNPCKHPDYrrk:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm2 {%k1} = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; CHECK-NEXT:    vmovapd %ymm2, %ymm0
+; CHECK-NEXT:    retq
   %mask = bitcast i4 %mask_int to <4 x i1>
   %shufp = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
   %res = select <4 x i1> %mask, <4 x double> %shufp, <4 x double> %c
   ret <4 x double> %res
 }
 
+; Check that masked vunpcklpd will not be transformed into vshufps.
 define <2 x double> @transform_VUNPCKLPDrrk(<2 x double> %a, <2 x double> %b, <2 x double> %c, i2 %mask_int) nounwind {
-; CHECK-SKX-LABEL: transform_VUNPCKLPDrrk:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    kmovd %edi, %k1
-; CHECK-SKX-NEXT:    vunpcklpd {{.*#+}} xmm2 {%k1} = xmm0[0],xmm1[0]
-; CHECK-SKX-NEXT:    vmovapd %xmm2, %xmm0
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: transform_VUNPCKLPDrrk:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    kmovd %edi, %k1
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} xmm2 {%k1} = xmm0[0,1],xmm1[0,1]
-; CHECK-ICX-NEXT:    vmovapd %xmm2, %xmm0
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: transform_VUNPCKLPDrrk:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    kmovd %edi, %k1
-; CHECK-V4-NEXT:    vunpcklpd {{.*#+}} xmm2 {%k1} = xmm0[0],xmm1[0]
-; CHECK-V4-NEXT:    vmovapd %xmm2, %xmm0
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: transform_VUNPCKLPDrrk:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    kmovd %edi, %k1
-; CHECK-ZNVER4-NEXT:    vunpcklpd {{.*#+}} xmm2 {%k1} = xmm0[0],xmm1[0]
-; CHECK-ZNVER4-NEXT:    vmovapd %xmm2, %xmm0
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: transform_VUNPCKLPDrrk:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm2 {%k1} = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vmovapd %xmm2, %xmm0
+; CHECK-NEXT:    retq
   %mask = bitcast i2 %mask_int to <2 x i1>
   %shufp = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 0, i32 2>
   %res = select <2 x i1> %mask, <2 x double> %shufp, <2 x double> %c
   ret <2 x double> %res
 }
 
+; Check that masked vunpcklpd will not be transformed into vshufps.
 define <2 x double> @transform_VUNPCKHPDrrk(<2 x double> %a, <2 x double> %b, <2 x double> %c, i2 %mask_int) nounwind {
-; CHECK-SKX-LABEL: transform_VUNPCKHPDrrk:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    kmovd %edi, %k1
-; CHECK-SKX-NEXT:    vunpckhpd {{.*#+}} xmm2 {%k1} = xmm0[1],xmm1[1]
-; CHECK-SKX-NEXT:    vmovapd %xmm2, %xmm0
-; CHECK-SKX-NEXT:    retq
-;
-; CHECK-ICX-LABEL: transform_VUNPCKHPDrrk:
-; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    kmovd %edi, %k1
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} xmm2 {%k1} = xmm0[2,3],xmm1[2,3]
-; CHECK-ICX-NEXT:    vmovapd %xmm2, %xmm0
-; CHECK-ICX-NEXT:    retq
-;
-; CHECK-V4-LABEL: transform_VUNPCKHPDrrk:
-; CHECK-V4:       # %bb.0:
-; CHECK-V4-NEXT:    kmovd %edi, %k1
-; CHECK-V4-NEXT:    vunpckhpd {{.*#+}} xmm2 {%k1} = xmm0[1],xmm1[1]
-; CHECK-V4-NEXT:    vmovapd %xmm2, %xmm0
-; CHECK-V4-NEXT:    retq
-;
-; CHECK-ZNVER4-LABEL: transform_VUNPCKHPDrrk:
-; CHECK-ZNVER4:       # %bb.0:
-; CHECK-ZNVER4-NEXT:    kmovd %edi, %k1
-; CHECK-ZNVER4-NEXT:    vunpckhpd {{.*#+}} xmm2 {%k1} = xmm0[1],xmm1[1]
-; CHECK-ZNVER4-NEXT:    vmovapd %xmm2, %xmm0
-; CHECK-ZNVER4-NEXT:    retq
+; CHECK-LABEL: transform_VUNPCKHPDrrk:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm2 {%k1} = xmm0[1],xmm1[1]
+; CHECK-NEXT:    vmovapd %xmm2, %xmm0
+; CHECK-NEXT:    retq
   %mask = bitcast i2 %mask_int to <2 x i1>
   %shufp = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 1, i32 3>
   %res = select <2 x i1> %mask, <2 x double> %shufp, <2 x double> %c

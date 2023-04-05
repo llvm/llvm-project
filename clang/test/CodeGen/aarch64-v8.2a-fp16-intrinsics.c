@@ -652,7 +652,7 @@ float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
 }
 
 // CHECK-LABEL: test_vfmsh_f16
-// CHECK:  [[SUB:%.*]] = fsub half 0xH8000, %b
+// CHECK:  [[SUB:%.*]] = fneg half %b
 // CHECK:  [[ADD:%.*]] = call half @llvm.fma.f16(half [[SUB]], half %c, half %a)
 // CHECK:  ret half [[ADD]]
 float16_t test_vfmsh_f16(float16_t a, float16_t b, float16_t c) {

@@ -12,29 +12,29 @@ define i32 @foo(i8* nocapture readnone %match, i32 %cur_match, i32 %best_len, i3
 ; CHECK-NEXT:    [[IDX_EXT1:%.*]] = zext i32 [[BEST_LEN:%.*]] to i64
 ; CHECK-NEXT:    [[ADD_PTR25:%.*]] = getelementptr inbounds i8, i8* [[ADD_PTR4]], i64 [[IDX_EXT1]]
 ; CHECK-NEXT:    [[ADD_PTR36:%.*]] = getelementptr inbounds i8, i8* [[ADD_PTR25]], i64 -1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[ADD_PTR36]] to i32*
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; CHECK-NEXT:    [[CMP7:%.*]] = icmp eq i32 [[TMP1]], [[SCAN_END:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = bitcast i8* [[ADD_PTR36]] to i32*
+; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[I]], align 4
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp eq i32 [[I1]], [[SCAN_END:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP7]], label [[DO_END:%.*]], label [[IF_THEN_LR_PH:%.*]]
 ; CHECK:       if.then.lr.ph:
 ; CHECK-NEXT:    br label [[IF_THEN:%.*]]
 ; CHECK:       do.body:
-; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[TMP4:%.*]] to i64
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[I4:%.*]] to i64
 ; CHECK-NEXT:    [[ADD_PTR1:%.*]] = getelementptr inbounds i8, i8* [[WIN]], i64 [[IDX_EXT1]]
 ; CHECK-NEXT:    [[ADD_PTR22:%.*]] = getelementptr i8, i8* [[ADD_PTR1]], i64 -1
 ; CHECK-NEXT:    [[ADD_PTR3:%.*]] = getelementptr i8, i8* [[ADD_PTR22]], i64 [[IDX_EXT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[ADD_PTR3]] to i32*
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP3]], [[SCAN_END]]
+; CHECK-NEXT:    [[I2:%.*]] = bitcast i8* [[ADD_PTR3]] to i32*
+; CHECK-NEXT:    [[I3:%.*]] = load i32, i32* [[I2]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I3]], [[SCAN_END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[DO_END]], label [[IF_THEN]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[CUR_MATCH_ADDR_09:%.*]] = phi i32 [ [[CUR_MATCH]], [[IF_THEN_LR_PH]] ], [ [[TMP4]], [[DO_BODY:%.*]] ]
+; CHECK-NEXT:    [[CUR_MATCH_ADDR_09:%.*]] = phi i32 [ [[CUR_MATCH]], [[IF_THEN_LR_PH]] ], [ [[I4]], [[DO_BODY:%.*]] ]
 ; CHECK-NEXT:    [[CHAIN_LENGTH_ADDR_08:%.*]] = phi i32 [ [[CHAIN_LENGTH:%.*]], [[IF_THEN_LR_PH]] ], [ [[DEC:%.*]], [[DO_BODY]] ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CUR_MATCH_ADDR_09]], [[WMASK:%.*]]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[AND]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[PREV:%.*]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP4]] = load i32, i32* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP4]], [[LIMIT:%.*]]
+; CHECK-NEXT:    [[I4]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[I4]], [[LIMIT:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP4]], label [[LAND_LHS_TRUE:%.*]], label [[DO_END]]
 ; CHECK:       land.lhs.true:
 ; CHECK-NEXT:    [[DEC]] = add i32 [[CHAIN_LENGTH_ADDR_08]], -1
@@ -50,9 +50,9 @@ entry:
   %idx.ext1 = zext i32 %best_len to i64
   %add.ptr25 = getelementptr inbounds i8, i8* %add.ptr4, i64 %idx.ext1
   %add.ptr36 = getelementptr inbounds i8, i8* %add.ptr25, i64 -1
-  %0 = bitcast i8* %add.ptr36 to i32*
-  %1 = load i32, i32* %0, align 4
-  %cmp7 = icmp eq i32 %1, %scan_end
+  %i = bitcast i8* %add.ptr36 to i32*
+  %i1 = load i32, i32* %i, align 4
+  %cmp7 = icmp eq i32 %i1, %scan_end
   br i1 %cmp7, label %do.end, label %if.then.lr.ph
 
 if.then.lr.ph:                                    ; preds = %entry
@@ -60,24 +60,24 @@ if.then.lr.ph:                                    ; preds = %entry
 
 do.body:                                          ; preds = %land.lhs.true
   %chain_length.addr.0 = phi i32 [ %dec, %land.lhs.true ]
-  %cur_match.addr.0 = phi i32 [ %4, %land.lhs.true ]
+  %cur_match.addr.0 = phi i32 [ %i4, %land.lhs.true ]
   %idx.ext = zext i32 %cur_match.addr.0 to i64
   %add.ptr = getelementptr inbounds i8, i8* %win, i64 %idx.ext
   %add.ptr2 = getelementptr inbounds i8, i8* %add.ptr, i64 %idx.ext1
   %add.ptr3 = getelementptr inbounds i8, i8* %add.ptr2, i64 -1
-  %2 = bitcast i8* %add.ptr3 to i32*
-  %3 = load i32, i32* %2, align 4
-  %cmp = icmp eq i32 %3, %scan_end
+  %i2 = bitcast i8* %add.ptr3 to i32*
+  %i3 = load i32, i32* %i2, align 4
+  %cmp = icmp eq i32 %i3, %scan_end
   br i1 %cmp, label %do.end, label %if.then
 
-if.then:                                          ; preds = %if.then.lr.ph, %do.body
+if.then:                                          ; preds = %do.body, %if.then.lr.ph
   %cur_match.addr.09 = phi i32 [ %cur_match, %if.then.lr.ph ], [ %cur_match.addr.0, %do.body ]
   %chain_length.addr.08 = phi i32 [ %chain_length, %if.then.lr.ph ], [ %chain_length.addr.0, %do.body ]
   %and = and i32 %cur_match.addr.09, %wmask
   %idxprom = zext i32 %and to i64
   %arrayidx = getelementptr inbounds i32, i32* %prev, i64 %idxprom
-  %4 = load i32, i32* %arrayidx, align 4
-  %cmp4 = icmp ugt i32 %4, %limit
+  %i4 = load i32, i32* %arrayidx, align 4
+  %cmp4 = icmp ugt i32 %i4, %limit
   br i1 %cmp4, label %land.lhs.true, label %do.end
 
 land.lhs.true:                                    ; preds = %if.then
@@ -85,7 +85,7 @@ land.lhs.true:                                    ; preds = %if.then
   %cmp5 = icmp eq i32 %dec, 0
   br i1 %cmp5, label %do.end, label %do.body
 
-do.end:                                           ; preds = %do.body, %land.lhs.true, %if.then, %entry
+do.end:                                           ; preds = %land.lhs.true, %if.then, %do.body, %entry
   %cont.0 = phi i32 [ 1, %entry ], [ 0, %if.then ], [ 0, %land.lhs.true ], [ 1, %do.body ]
   ret i32 %cont.0
 }
@@ -110,7 +110,7 @@ define void @PR37005(i8* %base, i8** %in) {
 entry:
   br label %loop
 
-loop:
+loop:                                             ; preds = %loop, %entry
   %e1 = getelementptr inbounds i8*, i8** %in, i64 undef
   %e2 = getelementptr inbounds i8*, i8** %e1, i64 6
   %bc1 = bitcast i8** %e2 to <2 x i8*>*
@@ -142,7 +142,7 @@ define void @PR37005_2(i8* %base, i8** %in) {
 entry:
   br label %loop
 
-loop:
+loop:                                             ; preds = %loop, %entry
   %e1 = getelementptr inbounds i8*, i8** %in, i64 undef
   %e2 = getelementptr inbounds i8*, i8** %e1, i64 6
   %pi1 = ptrtoint i8** %e2 to i64
@@ -172,7 +172,7 @@ define void @PR37005_3(<2 x i8*> %base, i8** %in) {
 entry:
   br label %loop
 
-loop:
+loop:                                             ; preds = %loop, %entry
   %e1 = getelementptr inbounds i8*, i8** %in, i64 undef
   %e2 = getelementptr inbounds i8*, i8** %e1, i64 6
   %bc1 = bitcast i8** %e2 to <2 x i8*>*
@@ -202,7 +202,7 @@ define void @PR51485(<2 x i64> %v) {
 entry:
   br label %loop
 
-loop:
+loop:                                             ; preds = %loop, %entry
   %sl1 = shl nuw nsw <2 x i64> %v, <i64 7, i64 7>
   %e5 = getelementptr inbounds i8, i8* bitcast (void (<2 x i64>)* @PR51485 to i8*), <2 x i64> %sl1
   %e6 = getelementptr inbounds i8, <2 x i8*> %e5, i64 80
@@ -212,11 +212,11 @@ loop:
 
 ; Avoid folding the GEP outside the loop to inside, and increasing loop
 ; instruction count.
-define float @gep_cross_loop(i64* %_arg_, float* %_arg_3, float %_arg_8)
+define float @gep_cross_loop(i64* %_arg_, float* %_arg_3, float %_arg_8) {
 ; CHECK-LABEL: @gep_cross_loop(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[_ARG_:%.*]], align 8
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds float, float* [[_ARG_3:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[I:%.*]] = load i64, i64* [[_ARG_:%.*]], align 8
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds float, float* [[_ARG_3:%.*]], i64 [[I]]
 ; CHECK-NEXT:    br label [[FOR_COND_I:%.*]]
 ; CHECK:       for.cond.i:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[ADD11_I:%.*]], [[FOR_BODY_I:%.*]] ]
@@ -227,15 +227,14 @@ define float @gep_cross_loop(i64* %_arg_, float* %_arg_3, float %_arg_8)
 ; CHECK-NEXT:    ret float [[SUM]]
 ; CHECK:       for.body.i:
 ; CHECK-NEXT:    [[ARRAYIDX_I84_I:%.*]] = getelementptr inbounds float, float* [[ADD_PTR]], i64 [[IDX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX_I84_I]], align 4
-; CHECK-NEXT:    [[ADD_I]] = fadd fast float [[SUM]], [[TMP1]]
+; CHECK-NEXT:    [[I1:%.*]] = load float, float* [[ARRAYIDX_I84_I]], align 4
+; CHECK-NEXT:    [[ADD_I]] = fadd fast float [[SUM]], [[I1]]
 ; CHECK-NEXT:    [[ADD11_I]] = add nuw nsw i64 [[IDX]], 1
 ; CHECK-NEXT:    br label [[FOR_COND_I]]
 ;
-{
 entry:
-  %0 = load i64, i64* %_arg_, align 8
-  %add.ptr = getelementptr inbounds float, float* %_arg_3, i64 %0
+  %i = load i64, i64* %_arg_, align 8
+  %add.ptr = getelementptr inbounds float, float* %_arg_3, i64 %i
   br label %for.cond.i
 
 for.cond.i:                                       ; preds = %for.body.i, %entry
@@ -248,9 +247,9 @@ for.cond.i.i.i.preheader:                         ; preds = %for.cond.i
   ret float %sum
 
 for.body.i:                                       ; preds = %for.cond.i
-  %arrayidx.i84.i = getelementptr inbounds float, float * %add.ptr, i64 %idx
-  %1 = load float, float* %arrayidx.i84.i, align 4
-  %add.i = fadd fast float %sum, %1
+  %arrayidx.i84.i = getelementptr inbounds float, float* %add.ptr, i64 %idx
+  %i1 = load float, float* %arrayidx.i84.i, align 4
+  %add.i = fadd fast float %sum, %i1
   %add11.i = add nsw i64 %idx, 1
   br label %for.cond.i
 }
@@ -275,14 +274,14 @@ entry:
   %arg2.ext = zext i32 %arg2 to i64
   br label %loop
 
-loop:
+loop:                                             ; preds = %loop, %entry
   %arg1.ext = zext i32 %arg1 to i64
   %ptr2 = getelementptr inbounds i8, i8* %ptr, i64 %arg1.ext
   %ptr3 = getelementptr i8, i8* %ptr2, i64 %arg2.ext
   call void @use(i8* %ptr3)
   br i1 %c, label %loop, label %exit
 
-exit:
+exit:                                             ; preds = %loop
   ret void
 }
 
@@ -302,14 +301,14 @@ define void @both_inbounds_one_neg(i8* %ptr, i1 %c, i32 noundef %arg) {
 entry:
   br label %loop
 
-loop:
+loop:                                             ; preds = %loop, %entry
   %arg.ext = zext i32 %arg to i64
   %ptr2 = getelementptr inbounds i8, i8* %ptr, i64 %arg.ext
   %ptr3 = getelementptr inbounds i8, i8* %ptr2, i64 -1
   call void @use(i8* %ptr3)
   br i1 %c, label %loop, label %exit
 
-exit:
+exit:                                             ; preds = %loop
   ret void
 }
 
@@ -329,13 +328,13 @@ define void @both_inbounds_pos(i8* %ptr, i1 %c, i32 noundef %arg) {
 entry:
   br label %loop
 
-loop:
+loop:                                             ; preds = %loop, %entry
   %arg.ext = zext i32 %arg to i64
   %ptr2 = getelementptr inbounds i8, i8* %ptr, i64 %arg.ext
   %ptr3 = getelementptr inbounds i8, i8* %ptr2, i64 1
   call void @use(i8* %ptr3)
   br i1 %c, label %loop, label %exit
 
-exit:
+exit:                                             ; preds = %loop
   ret void
 }

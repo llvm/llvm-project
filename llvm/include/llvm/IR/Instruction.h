@@ -401,10 +401,15 @@ public:
   }
 
   /// This function drops non-debug unknown metadata (through
-  /// dropUnknownNonDebugMetadata). For calls, it also drops parameter and 
+  /// dropUnknownNonDebugMetadata). For calls, it also drops parameter and
   /// return attributes that can cause undefined behaviour. Both of these should
   /// be done by passes which move instructions in IR.
   void dropUBImplyingAttrsAndUnknownMetadata(ArrayRef<unsigned> KnownIDs = {});
+
+  /// Drop any attributes or metadata that can cause immediate undefined
+  /// behavior. Retain other attributes/metadata on a best-effort basis.
+  /// This should be used when speculating instructions.
+  void dropUBImplyingAttrsAndMetadata();
 
   /// Determine whether the exact flag is set.
   bool isExact() const LLVM_READONLY;
@@ -762,6 +767,17 @@ public:
   /// the current one.
   /// Determine if one instruction is the same operation as another.
   bool isSameOperationAs(const Instruction *I, unsigned flags = 0) const LLVM_READONLY;
+
+  /// This function determines if the speficied instruction has the same
+  /// "special" characteristics as the current one. This means that opcode
+  /// specific details are the same. As a common example, if we are comparing
+  /// loads, then hasSameSpecialState would compare the alignments (among
+  /// other things).
+  /// @returns true if the specific instruction has the same opcde specific
+  /// characteristics as the current one. Determine if one instruction has the
+  /// same state as another.
+  bool hasSameSpecialState(const Instruction *I2,
+                           bool IgnoreAlignment = false) const LLVM_READONLY;
 
   /// Return true if there are any uses of this instruction in blocks other than
   /// the specified block. Note that PHI nodes are considered to evaluate their

@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=arm64-none-linux-gnu -mattr=+neon < %s | FileCheck %s
+; RUN: llc -global-isel=1 -mtriple=arm64-none-linux-gnu -mattr=+neon < %s | FileCheck %s
 
 declare <8 x i8> @llvm.aarch64.neon.addp.v8i8(<8 x i8>, <8 x i8>)
 

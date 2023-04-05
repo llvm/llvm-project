@@ -10,8 +10,7 @@ declare <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64>, <4 x i64>, <4 x i64
 
 define <16 x i32> @vpternlog_d_v512_imm0(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2) {
 ; CHECK-LABEL: @vpternlog_d_v512_imm0(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> [[V0:%.*]], <16 x i32> [[V1:%.*]], <16 x i32> [[V2:%.*]], i32 0)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> zeroinitializer
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2, i32 0)
   ret <16 x i32> %r
@@ -145,7 +144,7 @@ define <8 x i32> @vpternlog_d_v256_imm14(<8 x i32> %v0, <8 x i32> %v1, <8 x i32>
 
 define <8 x i64> @vpternlog_q_v512_imm15(<8 x i64> %v0, <8 x i64> %v1, <8 x i64> %v2) {
 ; CHECK-LABEL: @vpternlog_q_v512_imm15(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> [[V0:%.*]], <8 x i64> [[V1:%.*]], <8 x i64> [[V2:%.*]], i32 15)
+; CHECK-NEXT:    [[R:%.*]] = xor <8 x i64> [[V0:%.*]], <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
 ; CHECK-NEXT:    ret <8 x i64> [[R]]
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %v0, <8 x i64> %v1, <8 x i64> %v2, i32 15)
@@ -469,7 +468,7 @@ define <8 x i32> @vpternlog_d_v256_imm50(<8 x i32> %v0, <8 x i32> %v1, <8 x i32>
 
 define <8 x i64> @vpternlog_q_v512_imm51(<8 x i64> %v0, <8 x i64> %v1, <8 x i64> %v2) {
 ; CHECK-LABEL: @vpternlog_q_v512_imm51(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> [[V0:%.*]], <8 x i64> [[V1:%.*]], <8 x i64> [[V2:%.*]], i32 51)
+; CHECK-NEXT:    [[R:%.*]] = xor <8 x i64> [[V1:%.*]], <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
 ; CHECK-NEXT:    ret <8 x i64> [[R]]
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %v0, <8 x i64> %v1, <8 x i64> %v2, i32 51)
@@ -550,7 +549,7 @@ define <4 x i64> @vpternlog_q_v256_imm59(<4 x i64> %v0, <4 x i64> %v1, <4 x i64>
 
 define <16 x i32> @vpternlog_d_v512_imm60(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2) {
 ; CHECK-LABEL: @vpternlog_d_v512_imm60(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> [[V0:%.*]], <16 x i32> [[V1:%.*]], <16 x i32> [[V2:%.*]], i32 60)
+; CHECK-NEXT:    [[R:%.*]] = xor <16 x i32> [[V0:%.*]], [[V1:%.*]]
 ; CHECK-NEXT:    ret <16 x i32> [[R]]
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2, i32 60)
@@ -775,7 +774,7 @@ define <16 x i32> @vpternlog_d_v512_imm84(<16 x i32> %v0, <16 x i32> %v1, <16 x 
 
 define <2 x i64> @vpternlog_q_v128_imm85(<2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2) {
 ; CHECK-LABEL: @vpternlog_q_v128_imm85(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> [[V0:%.*]], <2 x i64> [[V1:%.*]], <2 x i64> [[V2:%.*]], i32 85)
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i64> [[V2:%.*]], <i64 -1, i64 -1>
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, i32 85)
@@ -820,7 +819,7 @@ define <4 x i64> @vpternlog_q_v256_imm89(<4 x i64> %v0, <4 x i64> %v1, <4 x i64>
 
 define <16 x i32> @vpternlog_d_v512_imm90(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2) {
 ; CHECK-LABEL: @vpternlog_d_v512_imm90(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> [[V0:%.*]], <16 x i32> [[V1:%.*]], <16 x i32> [[V2:%.*]], i32 90)
+; CHECK-NEXT:    [[R:%.*]] = xor <16 x i32> [[V0:%.*]], [[V2:%.*]]
 ; CHECK-NEXT:    ret <16 x i32> [[R]]
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2, i32 90)
@@ -928,7 +927,7 @@ define <4 x i64> @vpternlog_q_v256_imm101(<4 x i64> %v0, <4 x i64> %v1, <4 x i64
 
 define <16 x i32> @vpternlog_d_v512_imm102(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2) {
 ; CHECK-LABEL: @vpternlog_d_v512_imm102(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> [[V0:%.*]], <16 x i32> [[V1:%.*]], <16 x i32> [[V2:%.*]], i32 102)
+; CHECK-NEXT:    [[R:%.*]] = xor <16 x i32> [[V1:%.*]], [[V2:%.*]]
 ; CHECK-NEXT:    ret <16 x i32> [[R]]
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2, i32 102)
@@ -1234,7 +1233,7 @@ define <8 x i64> @vpternlog_q_v512_imm135(<8 x i64> %v0, <8 x i64> %v1, <8 x i64
 
 define <4 x i32> @vpternlog_d_v128_imm136(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) {
 ; CHECK-LABEL: @vpternlog_d_v128_imm136(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <4 x i32> [[V2:%.*]], i32 136)
+; CHECK-NEXT:    [[R:%.*]] = and <4 x i32> [[V1:%.*]], [[V2:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, i32 136)
@@ -1450,7 +1449,7 @@ define <8 x i64> @vpternlog_q_v512_imm159(<8 x i64> %v0, <8 x i64> %v1, <8 x i64
 
 define <4 x i32> @vpternlog_d_v128_imm160(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) {
 ; CHECK-LABEL: @vpternlog_d_v128_imm160(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <4 x i32> [[V2:%.*]], i32 160)
+; CHECK-NEXT:    [[R:%.*]] = and <4 x i32> [[V0:%.*]], [[V2:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, i32 160)
@@ -1540,8 +1539,7 @@ define <2 x i64> @vpternlog_q_v128_imm169(<2 x i64> %v0, <2 x i64> %v1, <2 x i64
 
 define <8 x i32> @vpternlog_d_v256_imm170(<8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2) {
 ; CHECK-LABEL: @vpternlog_d_v256_imm170(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> [[V0:%.*]], <8 x i32> [[V1:%.*]], <8 x i32> [[V2:%.*]], i32 170)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> [[V2:%.*]]
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2, i32 170)
   ret <8 x i32> %r
@@ -1738,7 +1736,7 @@ define <4 x i64> @vpternlog_q_v256_imm191(<4 x i64> %v0, <4 x i64> %v1, <4 x i64
 
 define <16 x i32> @vpternlog_d_v512_imm192(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2) {
 ; CHECK-LABEL: @vpternlog_d_v512_imm192(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> [[V0:%.*]], <16 x i32> [[V1:%.*]], <16 x i32> [[V2:%.*]], i32 192)
+; CHECK-NEXT:    [[R:%.*]] = and <16 x i32> [[V0:%.*]], [[V1:%.*]]
 ; CHECK-NEXT:    ret <16 x i32> [[R]]
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2, i32 192)
@@ -1846,8 +1844,7 @@ define <4 x i64> @vpternlog_q_v256_imm203(<4 x i64> %v0, <4 x i64> %v1, <4 x i64
 
 define <16 x i32> @vpternlog_d_v512_imm204(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2) {
 ; CHECK-LABEL: @vpternlog_d_v512_imm204(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> [[V0:%.*]], <16 x i32> [[V1:%.*]], <16 x i32> [[V2:%.*]], i32 204)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> [[V1:%.*]]
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2, i32 204)
   ret <16 x i32> %r
@@ -2152,7 +2149,7 @@ define <8 x i64> @vpternlog_q_v512_imm237(<8 x i64> %v0, <8 x i64> %v1, <8 x i64
 
 define <4 x i32> @vpternlog_d_v128_imm238(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) {
 ; CHECK-LABEL: @vpternlog_d_v128_imm238(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <4 x i32> [[V2:%.*]], i32 238)
+; CHECK-NEXT:    [[R:%.*]] = or <4 x i32> [[V1:%.*]], [[V2:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, i32 238)
@@ -2170,8 +2167,7 @@ define <4 x i64> @vpternlog_q_v256_imm239(<4 x i64> %v0, <4 x i64> %v1, <4 x i64
 
 define <16 x i32> @vpternlog_d_v512_imm240(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2) {
 ; CHECK-LABEL: @vpternlog_d_v512_imm240(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> [[V0:%.*]], <16 x i32> [[V1:%.*]], <16 x i32> [[V2:%.*]], i32 240)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> [[V0:%.*]]
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2, i32 240)
   ret <16 x i32> %r
@@ -2260,7 +2256,7 @@ define <8 x i64> @vpternlog_q_v512_imm249(<8 x i64> %v0, <8 x i64> %v1, <8 x i64
 
 define <4 x i32> @vpternlog_d_v128_imm250(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) {
 ; CHECK-LABEL: @vpternlog_d_v128_imm250(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <4 x i32> [[V2:%.*]], i32 250)
+; CHECK-NEXT:    [[R:%.*]] = or <4 x i32> [[V0:%.*]], [[V2:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, i32 250)
@@ -2278,7 +2274,7 @@ define <4 x i64> @vpternlog_q_v256_imm251(<4 x i64> %v0, <4 x i64> %v1, <4 x i64
 
 define <16 x i32> @vpternlog_d_v512_imm252(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2) {
 ; CHECK-LABEL: @vpternlog_d_v512_imm252(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> [[V0:%.*]], <16 x i32> [[V1:%.*]], <16 x i32> [[V2:%.*]], i32 252)
+; CHECK-NEXT:    [[R:%.*]] = or <16 x i32> [[V0:%.*]], [[V1:%.*]]
 ; CHECK-NEXT:    ret <16 x i32> [[R]]
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %v0, <16 x i32> %v1, <16 x i32> %v2, i32 252)
@@ -2305,8 +2301,7 @@ define <8 x i32> @vpternlog_d_v256_imm254(<8 x i32> %v0, <8 x i32> %v1, <8 x i32
 
 define <8 x i64> @vpternlog_q_v512_imm255(<8 x i64> %v0, <8 x i64> %v1, <8 x i64> %v2) {
 ; CHECK-LABEL: @vpternlog_q_v512_imm255(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> [[V0:%.*]], <8 x i64> [[V1:%.*]], <8 x i64> [[V2:%.*]], i32 255)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %v0, <8 x i64> %v1, <8 x i64> %v2, i32 255)
   ret <8 x i64> %r
@@ -2314,8 +2309,7 @@ define <8 x i64> @vpternlog_q_v512_imm255(<8 x i64> %v0, <8 x i64> %v1, <8 x i64
 
 define <16 x i32> @vpternlog_d_constv512_imm0() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm0(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 0, i32 6, i32 1, i32 8, i32 1, i32 8, i32 7, i32 9, i32 1, i32 0, i32 8, i32 8, i32 4, i32 7, i32 0, i32 3>, <16 x i32> <i32 2, i32 7, i32 1, i32 6, i32 8, i32 5, i32 0, i32 2, i32 3, i32 5, i32 6, i32 4, i32 9, i32 4, i32 4, i32 5>, <16 x i32> <i32 2, i32 2, i32 0, i32 9, i32 3, i32 1, i32 2, i32 0, i32 8, i32 0, i32 8, i32 5, i32 5, i32 1, i32 4, i32 9>, i32 0)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> zeroinitializer
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 0, i32 6, i32 1, i32 8, i32 1, i32 8, i32 7, i32 9, i32 1, i32 0, i32 8, i32 8, i32 4, i32 7, i32 0, i32 3>, <16 x i32> <i32 2, i32 7, i32 1, i32 6, i32 8, i32 5, i32 0, i32 2, i32 3, i32 5, i32 6, i32 4, i32 9, i32 4, i32 4, i32 5>, <16 x i32> <i32 2, i32 2, i32 0, i32 9, i32 3, i32 1, i32 2, i32 0, i32 8, i32 0, i32 8, i32 5, i32 5, i32 1, i32 4, i32 9>, i32 0)
   ret <16 x i32> %r
@@ -2323,8 +2317,7 @@ define <16 x i32> @vpternlog_d_constv512_imm0() {
 
 define <2 x i64> @vpternlog_q_constv128_imm1() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm1(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 1, i64 0>, <2 x i64> <i64 6, i64 1>, <2 x i64> <i64 1, i64 9>, i32 1)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -8, i64 -10>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 1, i64 0>, <2 x i64> <i64 6, i64 1>, <2 x i64> <i64 1, i64 9>, i32 1)
   ret <2 x i64> %r
@@ -2332,8 +2325,7 @@ define <2 x i64> @vpternlog_q_constv128_imm1() {
 
 define <8 x i32> @vpternlog_d_constv256_imm2() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm2(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 5, i32 3, i32 4, i32 2, i32 4, i32 7, i32 6, i32 7>, <8 x i32> <i32 9, i32 6, i32 3, i32 5, i32 3, i32 5, i32 0, i32 9>, <8 x i32> <i32 1, i32 5, i32 4, i32 2, i32 6, i32 6, i32 4, i32 9>, i32 2)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> zeroinitializer
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 5, i32 3, i32 4, i32 2, i32 4, i32 7, i32 6, i32 7>, <8 x i32> <i32 9, i32 6, i32 3, i32 5, i32 3, i32 5, i32 0, i32 9>, <8 x i32> <i32 1, i32 5, i32 4, i32 2, i32 6, i32 6, i32 4, i32 9>, i32 2)
   ret <8 x i32> %r
@@ -2341,8 +2333,7 @@ define <8 x i32> @vpternlog_d_constv256_imm2() {
 
 define <8 x i64> @vpternlog_q_constv512_imm3() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm3(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 3, i64 4, i64 7, i64 0, i64 6, i64 5, i64 5, i64 5>, <8 x i64> <i64 8, i64 1, i64 8, i64 7, i64 3, i64 7, i64 1, i64 0>, <8 x i64> <i64 7, i64 8, i64 8, i64 2, i64 3, i64 0, i64 7, i64 5>, i32 3)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -12, i64 -6, i64 -16, i64 -8, i64 -8, i64 -8, i64 -6, i64 -6>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 3, i64 4, i64 7, i64 0, i64 6, i64 5, i64 5, i64 5>, <8 x i64> <i64 8, i64 1, i64 8, i64 7, i64 3, i64 7, i64 1, i64 0>, <8 x i64> <i64 7, i64 8, i64 8, i64 2, i64 3, i64 0, i64 7, i64 5>, i32 3)
   ret <8 x i64> %r
@@ -2350,8 +2341,7 @@ define <8 x i64> @vpternlog_q_constv512_imm3() {
 
 define <4 x i32> @vpternlog_d_constv128_imm4() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm4(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 8, i32 9, i32 1, i32 7>, <4 x i32> <i32 6, i32 0, i32 9, i32 9>, <4 x i32> <i32 0, i32 8, i32 1, i32 1>, i32 4)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 6, i32 0, i32 8, i32 8>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 8, i32 9, i32 1, i32 7>, <4 x i32> <i32 6, i32 0, i32 9, i32 9>, <4 x i32> <i32 0, i32 8, i32 1, i32 1>, i32 4)
   ret <4 x i32> %r
@@ -2359,8 +2349,7 @@ define <4 x i32> @vpternlog_d_constv128_imm4() {
 
 define <4 x i64> @vpternlog_q_constv256_imm5() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm5(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 3, i64 2, i64 5, i64 5>, <4 x i64> <i64 5, i64 0, i64 6, i64 5>, <4 x i64> <i64 6, i64 3, i64 2, i64 5>, i32 5)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -8, i64 -4, i64 -8, i64 -6>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 3, i64 2, i64 5, i64 5>, <4 x i64> <i64 5, i64 0, i64 6, i64 5>, <4 x i64> <i64 6, i64 3, i64 2, i64 5>, i32 5)
   ret <4 x i64> %r
@@ -2368,8 +2357,7 @@ define <4 x i64> @vpternlog_q_constv256_imm5() {
 
 define <16 x i32> @vpternlog_d_constv512_imm6() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm6(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 4, i32 2, i32 7, i32 5, i32 5, i32 5, i32 0, i32 3, i32 3, i32 2, i32 6, i32 3, i32 4, i32 3, i32 9, i32 4>, <16 x i32> <i32 9, i32 3, i32 3, i32 6, i32 7, i32 4, i32 0, i32 9, i32 4, i32 9, i32 2, i32 4, i32 7, i32 1, i32 3, i32 8>, <16 x i32> <i32 1, i32 1, i32 9, i32 0, i32 7, i32 0, i32 1, i32 8, i32 4, i32 3, i32 4, i32 2, i32 1, i32 5, i32 0, i32 7>, i32 6)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 8, i32 0, i32 8, i32 2, i32 0, i32 0, i32 1, i32 0, i32 0, i32 8, i32 0, i32 4, i32 2, i32 4, i32 2, i32 11>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 4, i32 2, i32 7, i32 5, i32 5, i32 5, i32 0, i32 3, i32 3, i32 2, i32 6, i32 3, i32 4, i32 3, i32 9, i32 4>, <16 x i32> <i32 9, i32 3, i32 3, i32 6, i32 7, i32 4, i32 0, i32 9, i32 4, i32 9, i32 2, i32 4, i32 7, i32 1, i32 3, i32 8>, <16 x i32> <i32 1, i32 1, i32 9, i32 0, i32 7, i32 0, i32 1, i32 8, i32 4, i32 3, i32 4, i32 2, i32 1, i32 5, i32 0, i32 7>, i32 6)
   ret <16 x i32> %r
@@ -2377,8 +2365,7 @@ define <16 x i32> @vpternlog_d_constv512_imm6() {
 
 define <2 x i64> @vpternlog_q_constv128_imm7() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm7(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 7, i64 2>, <2 x i64> <i64 0, i64 5>, <2 x i64> <i64 1, i64 6>, i32 7)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -8, i64 -7>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 7, i64 2>, <2 x i64> <i64 0, i64 5>, <2 x i64> <i64 1, i64 6>, i32 7)
   ret <2 x i64> %r
@@ -2386,8 +2373,7 @@ define <2 x i64> @vpternlog_q_constv128_imm7() {
 
 define <8 x i32> @vpternlog_d_constv256_imm8() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm8(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 8, i32 1, i32 7, i32 9, i32 8, i32 8, i32 9, i32 4>, <8 x i32> <i32 2, i32 9, i32 3, i32 6, i32 1, i32 9, i32 8, i32 8>, <8 x i32> <i32 1, i32 6, i32 8, i32 5, i32 1, i32 2, i32 0, i32 0>, i32 8)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 0, i32 0, i32 0, i32 4, i32 1, i32 0, i32 0, i32 0>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 8, i32 1, i32 7, i32 9, i32 8, i32 8, i32 9, i32 4>, <8 x i32> <i32 2, i32 9, i32 3, i32 6, i32 1, i32 9, i32 8, i32 8>, <8 x i32> <i32 1, i32 6, i32 8, i32 5, i32 1, i32 2, i32 0, i32 0>, i32 8)
   ret <8 x i32> %r
@@ -2395,8 +2381,7 @@ define <8 x i32> @vpternlog_d_constv256_imm8() {
 
 define <8 x i64> @vpternlog_q_constv512_imm9() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm9(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 8, i64 5, i64 9, i64 7, i64 3, i64 1, i64 2, i64 3>, <8 x i64> <i64 8, i64 0, i64 7, i64 5, i64 9, i64 1, i64 9, i64 7>, <8 x i64> <i64 6, i64 2, i64 2, i64 2, i64 6, i64 4, i64 7, i64 0>, i32 9)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -15, i64 -8, i64 -14, i64 -8, i64 -16, i64 -6, i64 -15, i64 -8>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 8, i64 5, i64 9, i64 7, i64 3, i64 1, i64 2, i64 3>, <8 x i64> <i64 8, i64 0, i64 7, i64 5, i64 9, i64 1, i64 9, i64 7>, <8 x i64> <i64 6, i64 2, i64 2, i64 2, i64 6, i64 4, i64 7, i64 0>, i32 9)
   ret <8 x i64> %r
@@ -2404,8 +2389,7 @@ define <8 x i64> @vpternlog_q_constv512_imm9() {
 
 define <4 x i32> @vpternlog_d_constv128_imm10() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm10(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 0, i32 5, i32 4, i32 4>, <4 x i32> <i32 1, i32 1, i32 2, i32 8>, <4 x i32> <i32 6, i32 2, i32 9, i32 4>, i32 10)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 6, i32 2, i32 9, i32 0>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 0, i32 5, i32 4, i32 4>, <4 x i32> <i32 1, i32 1, i32 2, i32 8>, <4 x i32> <i32 6, i32 2, i32 9, i32 4>, i32 10)
   ret <4 x i32> %r
@@ -2413,8 +2397,7 @@ define <4 x i32> @vpternlog_d_constv128_imm10() {
 
 define <4 x i64> @vpternlog_q_constv256_imm11() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm11(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 4, i64 1, i64 0, i64 2>, <4 x i64> <i64 6, i64 9, i64 1, i64 1>, <4 x i64> <i64 1, i64 2, i64 8, i64 6>, i32 11)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -7, i64 -10, i64 -2, i64 -4>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 4, i64 1, i64 0, i64 2>, <4 x i64> <i64 6, i64 9, i64 1, i64 1>, <4 x i64> <i64 1, i64 2, i64 8, i64 6>, i32 11)
   ret <4 x i64> %r
@@ -2422,8 +2405,7 @@ define <4 x i64> @vpternlog_q_constv256_imm11() {
 
 define <16 x i32> @vpternlog_d_constv512_imm12() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm12(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 7, i32 5, i32 4, i32 1, i32 3, i32 6, i32 9, i32 7, i32 5, i32 0, i32 3, i32 1, i32 8, i32 2, i32 8, i32 6>, <16 x i32> <i32 8, i32 0, i32 0, i32 8, i32 9, i32 2, i32 3, i32 3, i32 4, i32 2, i32 9, i32 2, i32 1, i32 9, i32 0, i32 6>, <16 x i32> <i32 1, i32 8, i32 4, i32 9, i32 1, i32 4, i32 1, i32 0, i32 9, i32 6, i32 9, i32 1, i32 0, i32 7, i32 4, i32 3>, i32 12)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 8, i32 0, i32 0, i32 8, i32 8, i32 0, i32 2, i32 0, i32 0, i32 2, i32 8, i32 2, i32 1, i32 9, i32 0, i32 0>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 7, i32 5, i32 4, i32 1, i32 3, i32 6, i32 9, i32 7, i32 5, i32 0, i32 3, i32 1, i32 8, i32 2, i32 8, i32 6>, <16 x i32> <i32 8, i32 0, i32 0, i32 8, i32 9, i32 2, i32 3, i32 3, i32 4, i32 2, i32 9, i32 2, i32 1, i32 9, i32 0, i32 6>, <16 x i32> <i32 1, i32 8, i32 4, i32 9, i32 1, i32 4, i32 1, i32 0, i32 9, i32 6, i32 9, i32 1, i32 0, i32 7, i32 4, i32 3>, i32 12)
   ret <16 x i32> %r
@@ -2431,8 +2413,7 @@ define <16 x i32> @vpternlog_d_constv512_imm12() {
 
 define <2 x i64> @vpternlog_q_constv128_imm13() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm13(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 1, i64 6>, <2 x i64> <i64 1, i64 8>, <2 x i64> <i64 8, i64 7>, i32 13)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -10, i64 -8>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 1, i64 6>, <2 x i64> <i64 1, i64 8>, <2 x i64> <i64 8, i64 7>, i32 13)
   ret <2 x i64> %r
@@ -2440,8 +2421,7 @@ define <2 x i64> @vpternlog_q_constv128_imm13() {
 
 define <8 x i32> @vpternlog_d_constv256_imm14() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm14(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 8, i32 6, i32 0, i32 5, i32 9, i32 1, i32 3, i32 1>, <8 x i32> <i32 4, i32 3, i32 9, i32 1, i32 3, i32 5, i32 2, i32 1>, <8 x i32> <i32 2, i32 2, i32 5, i32 3, i32 8, i32 6, i32 0, i32 8>, i32 14)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 6, i32 1, i32 13, i32 2, i32 2, i32 6, i32 0, i32 8>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 8, i32 6, i32 0, i32 5, i32 9, i32 1, i32 3, i32 1>, <8 x i32> <i32 4, i32 3, i32 9, i32 1, i32 3, i32 5, i32 2, i32 1>, <8 x i32> <i32 2, i32 2, i32 5, i32 3, i32 8, i32 6, i32 0, i32 8>, i32 14)
   ret <8 x i32> %r
@@ -2449,8 +2429,7 @@ define <8 x i32> @vpternlog_d_constv256_imm14() {
 
 define <8 x i64> @vpternlog_q_constv512_imm15() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm15(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 9, i64 3, i64 9, i64 9, i64 4, i64 6, i64 3, i64 5>, <8 x i64> <i64 0, i64 5, i64 5, i64 3, i64 4, i64 2, i64 5, i64 5>, <8 x i64> <i64 7, i64 5, i64 2, i64 6, i64 5, i64 2, i64 4, i64 1>, i32 15)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -10, i64 -4, i64 -10, i64 -10, i64 -5, i64 -7, i64 -4, i64 -6>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 9, i64 3, i64 9, i64 9, i64 4, i64 6, i64 3, i64 5>, <8 x i64> <i64 0, i64 5, i64 5, i64 3, i64 4, i64 2, i64 5, i64 5>, <8 x i64> <i64 7, i64 5, i64 2, i64 6, i64 5, i64 2, i64 4, i64 1>, i32 15)
   ret <8 x i64> %r
@@ -2458,8 +2437,7 @@ define <8 x i64> @vpternlog_q_constv512_imm15() {
 
 define <4 x i32> @vpternlog_d_constv128_imm16() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm16(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 0, i32 8, i32 2, i32 7>, <4 x i32> <i32 5, i32 0, i32 0, i32 9>, <4 x i32> <i32 2, i32 2, i32 2, i32 2>, i32 16)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 0, i32 8, i32 0, i32 4>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 0, i32 8, i32 2, i32 7>, <4 x i32> <i32 5, i32 0, i32 0, i32 9>, <4 x i32> <i32 2, i32 2, i32 2, i32 2>, i32 16)
   ret <4 x i32> %r
@@ -2467,8 +2445,7 @@ define <4 x i32> @vpternlog_d_constv128_imm16() {
 
 define <4 x i64> @vpternlog_q_constv256_imm17() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm17(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 5, i64 2, i64 3>, <4 x i64> <i64 8, i64 5, i64 9, i64 0>, <4 x i64> <i64 0, i64 8, i64 6, i64 4>, i32 17)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -9, i64 -14, i64 -16, i64 -5>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 5, i64 2, i64 3>, <4 x i64> <i64 8, i64 5, i64 9, i64 0>, <4 x i64> <i64 0, i64 8, i64 6, i64 4>, i32 17)
   ret <4 x i64> %r
@@ -2476,8 +2453,7 @@ define <4 x i64> @vpternlog_q_constv256_imm17() {
 
 define <16 x i32> @vpternlog_d_constv512_imm18() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm18(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 1, i32 5, i32 7, i32 0, i32 1, i32 4, i32 9, i32 3, i32 7, i32 2, i32 0, i32 4, i32 3, i32 3, i32 7, i32 5>, <16 x i32> <i32 2, i32 7, i32 7, i32 1, i32 2, i32 5, i32 5, i32 6, i32 6, i32 7, i32 2, i32 1, i32 3, i32 4, i32 4, i32 6>, <16 x i32> <i32 8, i32 8, i32 7, i32 6, i32 2, i32 7, i32 2, i32 6, i32 1, i32 8, i32 0, i32 9, i32 0, i32 0, i32 6, i32 6>, i32 18)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 9, i32 8, i32 0, i32 6, i32 1, i32 2, i32 10, i32 1, i32 0, i32 8, i32 0, i32 12, i32 0, i32 3, i32 1, i32 1>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 1, i32 5, i32 7, i32 0, i32 1, i32 4, i32 9, i32 3, i32 7, i32 2, i32 0, i32 4, i32 3, i32 3, i32 7, i32 5>, <16 x i32> <i32 2, i32 7, i32 7, i32 1, i32 2, i32 5, i32 5, i32 6, i32 6, i32 7, i32 2, i32 1, i32 3, i32 4, i32 4, i32 6>, <16 x i32> <i32 8, i32 8, i32 7, i32 6, i32 2, i32 7, i32 2, i32 6, i32 1, i32 8, i32 0, i32 9, i32 0, i32 0, i32 6, i32 6>, i32 18)
   ret <16 x i32> %r
@@ -2485,8 +2461,7 @@ define <16 x i32> @vpternlog_d_constv512_imm18() {
 
 define <2 x i64> @vpternlog_q_constv128_imm19() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm19(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 9, i64 4>, <2 x i64> <i64 2, i64 0>, <2 x i64> <i64 6, i64 8>, i32 19)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -3, i64 -1>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 9, i64 4>, <2 x i64> <i64 2, i64 0>, <2 x i64> <i64 6, i64 8>, i32 19)
   ret <2 x i64> %r
@@ -2494,8 +2469,7 @@ define <2 x i64> @vpternlog_q_constv128_imm19() {
 
 define <8 x i32> @vpternlog_d_constv256_imm20() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm20(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 5, i32 3, i32 5, i32 6, i32 1, i32 6, i32 8, i32 8>, <8 x i32> <i32 8, i32 2, i32 3, i32 4, i32 2, i32 1, i32 0, i32 8>, <8 x i32> <i32 5, i32 8, i32 1, i32 1, i32 2, i32 0, i32 7, i32 4>, i32 20)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 8, i32 1, i32 6, i32 2, i32 1, i32 7, i32 8, i32 0>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 5, i32 3, i32 5, i32 6, i32 1, i32 6, i32 8, i32 8>, <8 x i32> <i32 8, i32 2, i32 3, i32 4, i32 2, i32 1, i32 0, i32 8>, <8 x i32> <i32 5, i32 8, i32 1, i32 1, i32 2, i32 0, i32 7, i32 4>, i32 20)
   ret <8 x i32> %r
@@ -2503,8 +2477,7 @@ define <8 x i32> @vpternlog_d_constv256_imm20() {
 
 define <8 x i64> @vpternlog_q_constv512_imm21() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm21(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 7, i64 4, i64 9, i64 3, i64 3, i64 7, i64 3, i64 3>, <8 x i64> <i64 0, i64 3, i64 2, i64 1, i64 6, i64 6, i64 9, i64 4>, <8 x i64> <i64 6, i64 2, i64 0, i64 5, i64 4, i64 8, i64 1, i64 1>, i32 21)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -7, i64 -3, i64 -1, i64 -6, i64 -7, i64 -15, i64 -2, i64 -2>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 7, i64 4, i64 9, i64 3, i64 3, i64 7, i64 3, i64 3>, <8 x i64> <i64 0, i64 3, i64 2, i64 1, i64 6, i64 6, i64 9, i64 4>, <8 x i64> <i64 6, i64 2, i64 0, i64 5, i64 4, i64 8, i64 1, i64 1>, i32 21)
   ret <8 x i64> %r
@@ -2512,8 +2485,7 @@ define <8 x i64> @vpternlog_q_constv512_imm21() {
 
 define <4 x i32> @vpternlog_d_constv128_imm22() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm22(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 3, i32 9, i32 4, i32 2>, <4 x i32> <i32 8, i32 8, i32 6, i32 5>, <4 x i32> <i32 0, i32 1, i32 1, i32 9>, i32 22)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 11, i32 0, i32 3, i32 14>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 3, i32 9, i32 4, i32 2>, <4 x i32> <i32 8, i32 8, i32 6, i32 5>, <4 x i32> <i32 0, i32 1, i32 1, i32 9>, i32 22)
   ret <4 x i32> %r
@@ -2521,8 +2493,7 @@ define <4 x i32> @vpternlog_d_constv128_imm22() {
 
 define <4 x i64> @vpternlog_q_constv256_imm23() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm23(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 5, i64 5, i64 6, i64 9>, <4 x i64> <i64 8, i64 8, i64 7, i64 3>, <4 x i64> <i64 6, i64 7, i64 0, i64 2>, i32 23)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -5, i64 -6, i64 -7, i64 -4>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 5, i64 5, i64 6, i64 9>, <4 x i64> <i64 8, i64 8, i64 7, i64 3>, <4 x i64> <i64 6, i64 7, i64 0, i64 2>, i32 23)
   ret <4 x i64> %r
@@ -2530,8 +2501,7 @@ define <4 x i64> @vpternlog_q_constv256_imm23() {
 
 define <16 x i32> @vpternlog_d_constv512_imm24() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm24(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 5, i32 0, i32 9, i32 5, i32 6, i32 1, i32 4, i32 9, i32 5, i32 1, i32 0, i32 1, i32 5, i32 5, i32 9, i32 7>, <16 x i32> <i32 7, i32 6, i32 3, i32 6, i32 6, i32 9, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 1, i32 1, i32 9, i32 7>, <16 x i32> <i32 5, i32 4, i32 4, i32 0, i32 6, i32 2, i32 6, i32 5, i32 1, i32 5, i32 1, i32 0, i32 4, i32 3, i32 5, i32 3>, i32 24)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 0, i32 4, i32 8, i32 1, i32 0, i32 0, i32 2, i32 12, i32 0, i32 4, i32 0, i32 0, i32 0, i32 4, i32 0, i32 0>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 5, i32 0, i32 9, i32 5, i32 6, i32 1, i32 4, i32 9, i32 5, i32 1, i32 0, i32 1, i32 5, i32 5, i32 9, i32 7>, <16 x i32> <i32 7, i32 6, i32 3, i32 6, i32 6, i32 9, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 1, i32 1, i32 9, i32 7>, <16 x i32> <i32 5, i32 4, i32 4, i32 0, i32 6, i32 2, i32 6, i32 5, i32 1, i32 5, i32 1, i32 0, i32 4, i32 3, i32 5, i32 3>, i32 24)
   ret <16 x i32> %r
@@ -2539,8 +2509,7 @@ define <16 x i32> @vpternlog_d_constv512_imm24() {
 
 define <2 x i64> @vpternlog_q_constv128_imm25() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm25(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 8, i64 3>, <2 x i64> <i64 2, i64 5>, <2 x i64> <i64 4, i64 3>, i32 25)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -7, i64 -8>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 8, i64 3>, <2 x i64> <i64 2, i64 5>, <2 x i64> <i64 4, i64 3>, i32 25)
   ret <2 x i64> %r
@@ -2548,8 +2517,7 @@ define <2 x i64> @vpternlog_q_constv128_imm25() {
 
 define <8 x i32> @vpternlog_d_constv256_imm26() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm26(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 6, i32 4, i32 2, i32 9, i32 7, i32 6, i32 3, i32 3>, <8 x i32> <i32 3, i32 7, i32 2, i32 3, i32 9, i32 3, i32 6, i32 9>, <8 x i32> <i32 4, i32 1, i32 3, i32 3, i32 9, i32 6, i32 5, i32 0>, i32 26)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 0, i32 1, i32 1, i32 10, i32 14, i32 0, i32 4, i32 2>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 6, i32 4, i32 2, i32 9, i32 7, i32 6, i32 3, i32 3>, <8 x i32> <i32 3, i32 7, i32 2, i32 3, i32 9, i32 3, i32 6, i32 9>, <8 x i32> <i32 4, i32 1, i32 3, i32 3, i32 9, i32 6, i32 5, i32 0>, i32 26)
   ret <8 x i32> %r
@@ -2557,8 +2525,7 @@ define <8 x i32> @vpternlog_d_constv256_imm26() {
 
 define <8 x i64> @vpternlog_q_constv512_imm27() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm27(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 7, i64 6, i64 8, i64 0, i64 1, i64 3, i64 9, i64 4>, <8 x i64> <i64 6, i64 6, i64 3, i64 7, i64 8, i64 1, i64 4, i64 2>, <8 x i64> <i64 6, i64 2, i64 8, i64 6, i64 0, i64 8, i64 9, i64 9>, i32 27)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -7, i64 -7, i64 -12, i64 -2, i64 -9, i64 -2, i64 -14, i64 -3>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 7, i64 6, i64 8, i64 0, i64 1, i64 3, i64 9, i64 4>, <8 x i64> <i64 6, i64 6, i64 3, i64 7, i64 8, i64 1, i64 4, i64 2>, <8 x i64> <i64 6, i64 2, i64 8, i64 6, i64 0, i64 8, i64 9, i64 9>, i32 27)
   ret <8 x i64> %r
@@ -2566,8 +2533,7 @@ define <8 x i64> @vpternlog_q_constv512_imm27() {
 
 define <4 x i32> @vpternlog_d_constv128_imm28() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm28(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 3, i32 9, i32 7, i32 3>, <4 x i32> <i32 9, i32 6, i32 6, i32 0>, <4 x i32> <i32 0, i32 6, i32 8, i32 5>, i32 28)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 10, i32 15, i32 1, i32 2>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 3, i32 9, i32 7, i32 3>, <4 x i32> <i32 9, i32 6, i32 6, i32 0>, <4 x i32> <i32 0, i32 6, i32 8, i32 5>, i32 28)
   ret <4 x i32> %r
@@ -2575,8 +2541,7 @@ define <4 x i32> @vpternlog_d_constv128_imm28() {
 
 define <4 x i64> @vpternlog_q_constv256_imm29() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm29(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 4, i64 2, i64 9, i64 3>, <4 x i64> <i64 1, i64 7, i64 8, i64 5>, <4 x i64> <i64 6, i64 1, i64 8, i64 7>, i32 29)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -7, i64 -3, i64 -9, i64 -4>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 4, i64 2, i64 9, i64 3>, <4 x i64> <i64 1, i64 7, i64 8, i64 5>, <4 x i64> <i64 6, i64 1, i64 8, i64 7>, i32 29)
   ret <4 x i64> %r
@@ -2584,8 +2549,7 @@ define <4 x i64> @vpternlog_q_constv256_imm29() {
 
 define <16 x i32> @vpternlog_d_constv512_imm30() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm30(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 8, i32 7, i32 0, i32 1, i32 1, i32 4, i32 6, i32 5, i32 1, i32 8, i32 3, i32 4, i32 2, i32 1, i32 8, i32 3>, <16 x i32> <i32 3, i32 7, i32 8, i32 9, i32 6, i32 5, i32 4, i32 7, i32 6, i32 8, i32 9, i32 0, i32 7, i32 6, i32 0, i32 0>, <16 x i32> <i32 5, i32 4, i32 6, i32 2, i32 4, i32 6, i32 1, i32 1, i32 8, i32 8, i32 7, i32 3, i32 2, i32 3, i32 2, i32 9>, i32 30)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 15, i32 0, i32 14, i32 10, i32 7, i32 3, i32 3, i32 2, i32 15, i32 0, i32 12, i32 7, i32 5, i32 6, i32 10, i32 10>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 8, i32 7, i32 0, i32 1, i32 1, i32 4, i32 6, i32 5, i32 1, i32 8, i32 3, i32 4, i32 2, i32 1, i32 8, i32 3>, <16 x i32> <i32 3, i32 7, i32 8, i32 9, i32 6, i32 5, i32 4, i32 7, i32 6, i32 8, i32 9, i32 0, i32 7, i32 6, i32 0, i32 0>, <16 x i32> <i32 5, i32 4, i32 6, i32 2, i32 4, i32 6, i32 1, i32 1, i32 8, i32 8, i32 7, i32 3, i32 2, i32 3, i32 2, i32 9>, i32 30)
   ret <16 x i32> %r
@@ -2593,8 +2557,7 @@ define <16 x i32> @vpternlog_d_constv512_imm30() {
 
 define <2 x i64> @vpternlog_q_constv128_imm31() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm31(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 7, i64 5>, <2 x i64> <i64 2, i64 1>, <2 x i64> <i64 7, i64 4>, i32 31)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -8, i64 -6>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 7, i64 5>, <2 x i64> <i64 2, i64 1>, <2 x i64> <i64 7, i64 4>, i32 31)
   ret <2 x i64> %r
@@ -2602,8 +2565,7 @@ define <2 x i64> @vpternlog_q_constv128_imm31() {
 
 define <8 x i32> @vpternlog_d_constv256_imm32() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm32(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 5, i32 0, i32 0, i32 4, i32 5, i32 7, i32 8, i32 9>, <8 x i32> <i32 6, i32 6, i32 0, i32 0, i32 1, i32 9, i32 3, i32 4>, <8 x i32> <i32 5, i32 9, i32 4, i32 0, i32 6, i32 5, i32 9, i32 6>, i32 32)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 1, i32 0, i32 0, i32 0, i32 4, i32 4, i32 8, i32 0>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 5, i32 0, i32 0, i32 4, i32 5, i32 7, i32 8, i32 9>, <8 x i32> <i32 6, i32 6, i32 0, i32 0, i32 1, i32 9, i32 3, i32 4>, <8 x i32> <i32 5, i32 9, i32 4, i32 0, i32 6, i32 5, i32 9, i32 6>, i32 32)
   ret <8 x i32> %r
@@ -2611,8 +2573,7 @@ define <8 x i32> @vpternlog_d_constv256_imm32() {
 
 define <8 x i64> @vpternlog_q_constv512_imm33() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm33(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 4, i64 8, i64 4, i64 7, i64 1, i64 0, i64 4, i64 1>, <8 x i64> <i64 0, i64 6, i64 0, i64 2, i64 3, i64 4, i64 4, i64 2>, <8 x i64> <i64 6, i64 0, i64 9, i64 6, i64 4, i64 8, i64 0, i64 3>, i32 33)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -3, i64 -15, i64 -14, i64 -4, i64 -8, i64 -13, i64 -5, i64 -3>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 4, i64 8, i64 4, i64 7, i64 1, i64 0, i64 4, i64 1>, <8 x i64> <i64 0, i64 6, i64 0, i64 2, i64 3, i64 4, i64 4, i64 2>, <8 x i64> <i64 6, i64 0, i64 9, i64 6, i64 4, i64 8, i64 0, i64 3>, i32 33)
   ret <8 x i64> %r
@@ -2620,8 +2581,7 @@ define <8 x i64> @vpternlog_q_constv512_imm33() {
 
 define <4 x i32> @vpternlog_d_constv128_imm34() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm34(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 0, i32 5, i32 5, i32 8>, <4 x i32> <i32 7, i32 9, i32 7, i32 1>, <4 x i32> <i32 2, i32 1, i32 6, i32 5>, i32 34)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 0, i32 0, i32 0, i32 4>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 0, i32 5, i32 5, i32 8>, <4 x i32> <i32 7, i32 9, i32 7, i32 1>, <4 x i32> <i32 2, i32 1, i32 6, i32 5>, i32 34)
   ret <4 x i32> %r
@@ -2629,8 +2589,7 @@ define <4 x i32> @vpternlog_d_constv128_imm34() {
 
 define <4 x i64> @vpternlog_q_constv256_imm35() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm35(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 1, i64 4, i64 3>, <4 x i64> <i64 6, i64 8, i64 9, i64 0>, <4 x i64> <i64 5, i64 0, i64 6, i64 7>, i32 35)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -7, i64 -10, i64 -10, i64 -1>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 1, i64 4, i64 3>, <4 x i64> <i64 6, i64 8, i64 9, i64 0>, <4 x i64> <i64 5, i64 0, i64 6, i64 7>, i32 35)
   ret <4 x i64> %r
@@ -2638,8 +2597,7 @@ define <4 x i64> @vpternlog_q_constv256_imm35() {
 
 define <16 x i32> @vpternlog_d_constv512_imm36() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm36(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 5, i32 5, i32 0, i32 2, i32 3, i32 9, i32 2, i32 0, i32 3, i32 6, i32 8, i32 4, i32 6, i32 8, i32 0, i32 6>, <16 x i32> <i32 8, i32 0, i32 9, i32 3, i32 6, i32 6, i32 8, i32 8, i32 0, i32 5, i32 8, i32 7, i32 6, i32 6, i32 1, i32 2>, <16 x i32> <i32 1, i32 1, i32 2, i32 7, i32 8, i32 7, i32 8, i32 2, i32 0, i32 5, i32 6, i32 3, i32 0, i32 1, i32 6, i32 2>, i32 36)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 9, i32 1, i32 9, i32 0, i32 4, i32 1, i32 0, i32 8, i32 0, i32 0, i32 0, i32 0, i32 0, i32 6, i32 1, i32 0>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 5, i32 5, i32 0, i32 2, i32 3, i32 9, i32 2, i32 0, i32 3, i32 6, i32 8, i32 4, i32 6, i32 8, i32 0, i32 6>, <16 x i32> <i32 8, i32 0, i32 9, i32 3, i32 6, i32 6, i32 8, i32 8, i32 0, i32 5, i32 8, i32 7, i32 6, i32 6, i32 1, i32 2>, <16 x i32> <i32 1, i32 1, i32 2, i32 7, i32 8, i32 7, i32 8, i32 2, i32 0, i32 5, i32 6, i32 3, i32 0, i32 1, i32 6, i32 2>, i32 36)
   ret <16 x i32> %r
@@ -2647,8 +2605,7 @@ define <16 x i32> @vpternlog_d_constv512_imm36() {
 
 define <2 x i64> @vpternlog_q_constv128_imm37() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm37(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 8, i64 2>, <2 x i64> <i64 1, i64 5>, <2 x i64> <i64 4, i64 7>, i32 37)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -13, i64 -6>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 8, i64 2>, <2 x i64> <i64 1, i64 5>, <2 x i64> <i64 4, i64 7>, i32 37)
   ret <2 x i64> %r
@@ -2656,8 +2613,7 @@ define <2 x i64> @vpternlog_q_constv128_imm37() {
 
 define <8 x i32> @vpternlog_d_constv256_imm38() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm38(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 0, i32 9, i32 0, i32 6, i32 7, i32 7, i32 7, i32 8>, <8 x i32> <i32 2, i32 7, i32 9, i32 8, i32 4, i32 1, i32 9, i32 0>, <8 x i32> <i32 4, i32 7, i32 5, i32 5, i32 3, i32 4, i32 6, i32 5>, i32 38)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 6, i32 0, i32 12, i32 13, i32 3, i32 4, i32 14, i32 5>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 0, i32 9, i32 0, i32 6, i32 7, i32 7, i32 7, i32 8>, <8 x i32> <i32 2, i32 7, i32 9, i32 8, i32 4, i32 1, i32 9, i32 0>, <8 x i32> <i32 4, i32 7, i32 5, i32 5, i32 3, i32 4, i32 6, i32 5>, i32 38)
   ret <8 x i32> %r
@@ -2665,8 +2621,7 @@ define <8 x i32> @vpternlog_d_constv256_imm38() {
 
 define <8 x i64> @vpternlog_q_constv512_imm39() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm39(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 2, i64 4, i64 5, i64 3, i64 6, i64 4, i64 1, i64 6>, <8 x i64> <i64 2, i64 6, i64 9, i64 6, i64 7, i64 2, i64 9, i64 3>, <8 x i64> <i64 1, i64 7, i64 6, i64 2, i64 3, i64 9, i64 7, i64 0>, i32 39)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -3, i64 -7, i64 -2, i64 -4, i64 -8, i64 -5, i64 -2, i64 -7>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 2, i64 4, i64 5, i64 3, i64 6, i64 4, i64 1, i64 6>, <8 x i64> <i64 2, i64 6, i64 9, i64 6, i64 7, i64 2, i64 9, i64 3>, <8 x i64> <i64 1, i64 7, i64 6, i64 2, i64 3, i64 9, i64 7, i64 0>, i32 39)
   ret <8 x i64> %r
@@ -2674,8 +2629,7 @@ define <8 x i64> @vpternlog_q_constv512_imm39() {
 
 define <4 x i32> @vpternlog_d_constv128_imm40() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm40(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 5, i32 3, i32 2, i32 7>, <4 x i32> <i32 5, i32 4, i32 2, i32 4>, <4 x i32> <i32 2, i32 4, i32 0, i32 2>, i32 40)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 0, i32 4, i32 0, i32 2>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 5, i32 3, i32 2, i32 7>, <4 x i32> <i32 5, i32 4, i32 2, i32 4>, <4 x i32> <i32 2, i32 4, i32 0, i32 2>, i32 40)
   ret <4 x i32> %r
@@ -2683,8 +2637,7 @@ define <4 x i32> @vpternlog_d_constv128_imm40() {
 
 define <4 x i64> @vpternlog_q_constv256_imm41() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm41(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 4, i64 5, i64 5, i64 3>, <4 x i64> <i64 4, i64 3, i64 7, i64 5>, <4 x i64> <i64 6, i64 3, i64 6, i64 9>, i32 41)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -7, i64 -6, i64 -6, i64 -16>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 4, i64 5, i64 5, i64 3>, <4 x i64> <i64 4, i64 3, i64 7, i64 5>, <4 x i64> <i64 6, i64 3, i64 6, i64 9>, i32 41)
   ret <4 x i64> %r
@@ -2692,8 +2645,7 @@ define <4 x i64> @vpternlog_q_constv256_imm41() {
 
 define <16 x i32> @vpternlog_d_constv512_imm42() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm42(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 0, i32 2, i32 8, i32 9, i32 5, i32 0, i32 8, i32 6, i32 6, i32 0, i32 2, i32 9, i32 8, i32 7, i32 3, i32 8>, <16 x i32> <i32 7, i32 2, i32 2, i32 3, i32 8, i32 7, i32 5, i32 4, i32 6, i32 1, i32 5, i32 5, i32 3, i32 3, i32 6, i32 0>, <16 x i32> <i32 5, i32 5, i32 5, i32 6, i32 2, i32 7, i32 5, i32 5, i32 9, i32 2, i32 2, i32 8, i32 8, i32 7, i32 5, i32 6>, i32 42)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 5, i32 5, i32 5, i32 6, i32 2, i32 7, i32 5, i32 1, i32 9, i32 2, i32 2, i32 8, i32 8, i32 4, i32 5, i32 6>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 0, i32 2, i32 8, i32 9, i32 5, i32 0, i32 8, i32 6, i32 6, i32 0, i32 2, i32 9, i32 8, i32 7, i32 3, i32 8>, <16 x i32> <i32 7, i32 2, i32 2, i32 3, i32 8, i32 7, i32 5, i32 4, i32 6, i32 1, i32 5, i32 5, i32 3, i32 3, i32 6, i32 0>, <16 x i32> <i32 5, i32 5, i32 5, i32 6, i32 2, i32 7, i32 5, i32 5, i32 9, i32 2, i32 2, i32 8, i32 8, i32 7, i32 5, i32 6>, i32 42)
   ret <16 x i32> %r
@@ -2701,8 +2653,7 @@ define <16 x i32> @vpternlog_d_constv512_imm42() {
 
 define <2 x i64> @vpternlog_q_constv128_imm43() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm43(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 7, i64 3>, <2 x i64> <i64 8, i64 3>, <2 x i64> <i64 4, i64 9>, i32 43)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -12, i64 -4>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 7, i64 3>, <2 x i64> <i64 8, i64 3>, <2 x i64> <i64 4, i64 9>, i32 43)
   ret <2 x i64> %r
@@ -2710,8 +2661,7 @@ define <2 x i64> @vpternlog_q_constv128_imm43() {
 
 define <8 x i32> @vpternlog_d_constv256_imm44() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm44(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 0, i32 1, i32 7, i32 4, i32 5, i32 3, i32 8, i32 5>, <8 x i32> <i32 0, i32 5, i32 4, i32 1, i32 9, i32 6, i32 9, i32 6>, <8 x i32> <i32 3, i32 7, i32 1, i32 9, i32 3, i32 0, i32 9, i32 6>, i32 44)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 0, i32 4, i32 1, i32 1, i32 8, i32 4, i32 1, i32 2>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 0, i32 1, i32 7, i32 4, i32 5, i32 3, i32 8, i32 5>, <8 x i32> <i32 0, i32 5, i32 4, i32 1, i32 9, i32 6, i32 9, i32 6>, <8 x i32> <i32 3, i32 7, i32 1, i32 9, i32 3, i32 0, i32 9, i32 6>, i32 44)
   ret <8 x i32> %r
@@ -2719,8 +2669,7 @@ define <8 x i32> @vpternlog_d_constv256_imm44() {
 
 define <8 x i64> @vpternlog_q_constv512_imm45() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm45(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 6, i64 5, i64 4, i64 9, i64 5, i64 4, i64 4, i64 3>, <8 x i64> <i64 9, i64 6, i64 3, i64 1, i64 9, i64 6, i64 0, i64 1>, <8 x i64> <i64 0, i64 5, i64 8, i64 2, i64 2, i64 2, i64 2, i64 3>, i32 45)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -7, i64 -5, i64 -13, i64 -12, i64 -8, i64 -5, i64 -7, i64 -2>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 6, i64 5, i64 4, i64 9, i64 5, i64 4, i64 4, i64 3>, <8 x i64> <i64 9, i64 6, i64 3, i64 1, i64 9, i64 6, i64 0, i64 1>, <8 x i64> <i64 0, i64 5, i64 8, i64 2, i64 2, i64 2, i64 2, i64 3>, i32 45)
   ret <8 x i64> %r
@@ -2728,8 +2677,7 @@ define <8 x i64> @vpternlog_q_constv512_imm45() {
 
 define <4 x i32> @vpternlog_d_constv128_imm46() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm46(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 0, i32 2, i32 3, i32 9>, <4 x i32> <i32 1, i32 1, i32 7, i32 1>, <4 x i32> <i32 9, i32 7, i32 4, i32 6>, i32 46)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 9, i32 7, i32 4, i32 6>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 0, i32 2, i32 3, i32 9>, <4 x i32> <i32 1, i32 1, i32 7, i32 1>, <4 x i32> <i32 9, i32 7, i32 4, i32 6>, i32 46)
   ret <4 x i32> %r
@@ -2737,8 +2685,7 @@ define <4 x i32> @vpternlog_d_constv128_imm46() {
 
 define <4 x i64> @vpternlog_q_constv256_imm47() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm47(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 4, i64 4, i64 1>, <4 x i64> <i64 8, i64 0, i64 9, i64 0>, <4 x i64> <i64 3, i64 1, i64 4, i64 3>, i32 47)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -1, i64 -5, i64 -1, i64 -1>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 4, i64 4, i64 1>, <4 x i64> <i64 8, i64 0, i64 9, i64 0>, <4 x i64> <i64 3, i64 1, i64 4, i64 3>, i32 47)
   ret <4 x i64> %r
@@ -2746,8 +2693,7 @@ define <4 x i64> @vpternlog_q_constv256_imm47() {
 
 define <16 x i32> @vpternlog_d_constv512_imm48() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm48(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 3, i32 7, i32 9, i32 9, i32 7, i32 5, i32 9, i32 3, i32 3, i32 5, i32 3, i32 2, i32 5, i32 8, i32 9, i32 4>, <16 x i32> <i32 7, i32 7, i32 1, i32 3, i32 9, i32 5, i32 8, i32 8, i32 1, i32 4, i32 0, i32 1, i32 3, i32 2, i32 2, i32 6>, <16 x i32> <i32 5, i32 0, i32 7, i32 5, i32 5, i32 0, i32 3, i32 9, i32 6, i32 6, i32 9, i32 4, i32 6, i32 7, i32 6, i32 1>, i32 48)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 0, i32 0, i32 8, i32 8, i32 6, i32 0, i32 1, i32 3, i32 2, i32 1, i32 3, i32 2, i32 4, i32 8, i32 9, i32 0>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 3, i32 7, i32 9, i32 9, i32 7, i32 5, i32 9, i32 3, i32 3, i32 5, i32 3, i32 2, i32 5, i32 8, i32 9, i32 4>, <16 x i32> <i32 7, i32 7, i32 1, i32 3, i32 9, i32 5, i32 8, i32 8, i32 1, i32 4, i32 0, i32 1, i32 3, i32 2, i32 2, i32 6>, <16 x i32> <i32 5, i32 0, i32 7, i32 5, i32 5, i32 0, i32 3, i32 9, i32 6, i32 6, i32 9, i32 4, i32 6, i32 7, i32 6, i32 1>, i32 48)
   ret <16 x i32> %r
@@ -2755,8 +2701,7 @@ define <16 x i32> @vpternlog_d_constv512_imm48() {
 
 define <2 x i64> @vpternlog_q_constv128_imm49() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm49(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 0, i64 2>, <2 x i64> <i64 3, i64 4>, <2 x i64> <i64 8, i64 9>, i32 49)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -12, i64 -14>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 0, i64 2>, <2 x i64> <i64 3, i64 4>, <2 x i64> <i64 8, i64 9>, i32 49)
   ret <2 x i64> %r
@@ -2764,8 +2709,7 @@ define <2 x i64> @vpternlog_q_constv128_imm49() {
 
 define <8 x i32> @vpternlog_d_constv256_imm50() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm50(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 1, i32 9, i32 3, i32 6, i32 4, i32 4, i32 1, i32 1>, <8 x i32> <i32 1, i32 0, i32 6, i32 2, i32 1, i32 9, i32 7, i32 5>, <8 x i32> <i32 4, i32 3, i32 4, i32 3, i32 1, i32 6, i32 7, i32 4>, i32 50)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 4, i32 11, i32 1, i32 5, i32 4, i32 6, i32 0, i32 0>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 1, i32 9, i32 3, i32 6, i32 4, i32 4, i32 1, i32 1>, <8 x i32> <i32 1, i32 0, i32 6, i32 2, i32 1, i32 9, i32 7, i32 5>, <8 x i32> <i32 4, i32 3, i32 4, i32 3, i32 1, i32 6, i32 7, i32 4>, i32 50)
   ret <8 x i32> %r
@@ -2773,8 +2717,7 @@ define <8 x i32> @vpternlog_d_constv256_imm50() {
 
 define <8 x i64> @vpternlog_q_constv512_imm51() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm51(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 3, i64 0, i64 4, i64 1, i64 3, i64 3, i64 5, i64 0>, <8 x i64> <i64 1, i64 2, i64 3, i64 1, i64 5, i64 0, i64 1, i64 7>, <8 x i64> <i64 7, i64 6, i64 7, i64 8, i64 3, i64 7, i64 7, i64 8>, i32 51)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -2, i64 -3, i64 -4, i64 -2, i64 -6, i64 -1, i64 -2, i64 -8>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 3, i64 0, i64 4, i64 1, i64 3, i64 3, i64 5, i64 0>, <8 x i64> <i64 1, i64 2, i64 3, i64 1, i64 5, i64 0, i64 1, i64 7>, <8 x i64> <i64 7, i64 6, i64 7, i64 8, i64 3, i64 7, i64 7, i64 8>, i32 51)
   ret <8 x i64> %r
@@ -2782,8 +2725,7 @@ define <8 x i64> @vpternlog_q_constv512_imm51() {
 
 define <4 x i32> @vpternlog_d_constv128_imm52() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm52(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 8, i32 1, i32 4, i32 7>, <4 x i32> <i32 3, i32 7, i32 2, i32 2>, <4 x i32> <i32 2, i32 7, i32 8, i32 1>, i32 52)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 9, i32 0, i32 6, i32 5>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 8, i32 1, i32 4, i32 7>, <4 x i32> <i32 3, i32 7, i32 2, i32 2>, <4 x i32> <i32 2, i32 7, i32 8, i32 1>, i32 52)
   ret <4 x i32> %r
@@ -2791,8 +2733,7 @@ define <4 x i32> @vpternlog_d_constv128_imm52() {
 
 define <4 x i64> @vpternlog_q_constv256_imm53() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm53(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 1, i64 3, i64 0, i64 9>, <4 x i64> <i64 7, i64 1, i64 2, i64 9>, <4 x i64> <i64 5, i64 8, i64 3, i64 5>, i32 53)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -6, i64 -10, i64 -4, i64 -14>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 1, i64 3, i64 0, i64 9>, <4 x i64> <i64 7, i64 1, i64 2, i64 9>, <4 x i64> <i64 5, i64 8, i64 3, i64 5>, i32 53)
   ret <4 x i64> %r
@@ -2800,8 +2741,7 @@ define <4 x i64> @vpternlog_q_constv256_imm53() {
 
 define <16 x i32> @vpternlog_d_constv512_imm54() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm54(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 7, i32 0, i32 5, i32 2, i32 3, i32 4, i32 4, i32 6, i32 7, i32 0, i32 9, i32 9, i32 0, i32 2, i32 1, i32 9>, <16 x i32> <i32 3, i32 6, i32 2, i32 3, i32 7, i32 6, i32 4, i32 3, i32 9, i32 9, i32 0, i32 7, i32 3, i32 3, i32 8, i32 8>, <16 x i32> <i32 4, i32 3, i32 1, i32 0, i32 8, i32 2, i32 8, i32 3, i32 8, i32 0, i32 4, i32 0, i32 1, i32 6, i32 6, i32 9>, i32 54)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 4, i32 5, i32 7, i32 1, i32 12, i32 0, i32 8, i32 4, i32 6, i32 9, i32 13, i32 14, i32 2, i32 5, i32 15, i32 1>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 7, i32 0, i32 5, i32 2, i32 3, i32 4, i32 4, i32 6, i32 7, i32 0, i32 9, i32 9, i32 0, i32 2, i32 1, i32 9>, <16 x i32> <i32 3, i32 6, i32 2, i32 3, i32 7, i32 6, i32 4, i32 3, i32 9, i32 9, i32 0, i32 7, i32 3, i32 3, i32 8, i32 8>, <16 x i32> <i32 4, i32 3, i32 1, i32 0, i32 8, i32 2, i32 8, i32 3, i32 8, i32 0, i32 4, i32 0, i32 1, i32 6, i32 6, i32 9>, i32 54)
   ret <16 x i32> %r
@@ -2809,8 +2749,7 @@ define <16 x i32> @vpternlog_d_constv512_imm54() {
 
 define <2 x i64> @vpternlog_q_constv128_imm55() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm55(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 6, i64 0>, <2 x i64> <i64 4, i64 6>, <2 x i64> <i64 4, i64 2>, i32 55)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -5, i64 -3>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 6, i64 0>, <2 x i64> <i64 4, i64 6>, <2 x i64> <i64 4, i64 2>, i32 55)
   ret <2 x i64> %r
@@ -2818,8 +2757,7 @@ define <2 x i64> @vpternlog_q_constv128_imm55() {
 
 define <8 x i32> @vpternlog_d_constv256_imm56() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm56(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 9, i32 5, i32 1, i32 4, i32 1, i32 9, i32 0, i32 4>, <8 x i32> <i32 9, i32 0, i32 9, i32 5, i32 6, i32 0, i32 3, i32 5>, <8 x i32> <i32 7, i32 5, i32 4, i32 1, i32 7, i32 7, i32 5, i32 6>, i32 56)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 0, i32 5, i32 0, i32 1, i32 7, i32 9, i32 1, i32 0>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 9, i32 5, i32 1, i32 4, i32 1, i32 9, i32 0, i32 4>, <8 x i32> <i32 9, i32 0, i32 9, i32 5, i32 6, i32 0, i32 3, i32 5>, <8 x i32> <i32 7, i32 5, i32 4, i32 1, i32 7, i32 7, i32 5, i32 6>, i32 56)
   ret <8 x i32> %r
@@ -2827,8 +2765,7 @@ define <8 x i32> @vpternlog_d_constv256_imm56() {
 
 define <8 x i64> @vpternlog_q_constv512_imm57() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm57(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 7, i64 0, i64 6, i64 6, i64 8, i64 7, i64 9, i64 8>, <8 x i64> <i64 9, i64 4, i64 5, i64 9, i64 0, i64 6, i64 6, i64 0>, <8 x i64> <i64 0, i64 0, i64 4, i64 1, i64 3, i64 6, i64 2, i64 4>, i32 57)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -10, i64 -5, i64 -6, i64 -9, i64 -4, i64 -7, i64 -5, i64 -5>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 7, i64 0, i64 6, i64 6, i64 8, i64 7, i64 9, i64 8>, <8 x i64> <i64 9, i64 4, i64 5, i64 9, i64 0, i64 6, i64 6, i64 0>, <8 x i64> <i64 0, i64 0, i64 4, i64 1, i64 3, i64 6, i64 2, i64 4>, i32 57)
   ret <8 x i64> %r
@@ -2836,8 +2773,7 @@ define <8 x i64> @vpternlog_q_constv512_imm57() {
 
 define <4 x i32> @vpternlog_d_constv128_imm58() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm58(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 3, i32 5, i32 7, i32 7>, <4 x i32> <i32 9, i32 6, i32 0, i32 1>, <4 x i32> <i32 2, i32 1, i32 9, i32 7>, i32 58)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 2, i32 1, i32 15, i32 6>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 3, i32 5, i32 7, i32 7>, <4 x i32> <i32 9, i32 6, i32 0, i32 1>, <4 x i32> <i32 2, i32 1, i32 9, i32 7>, i32 58)
   ret <4 x i32> %r
@@ -2845,8 +2781,7 @@ define <4 x i32> @vpternlog_d_constv128_imm58() {
 
 define <4 x i64> @vpternlog_q_constv256_imm59() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm59(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 5, i64 2, i64 6, i64 6>, <4 x i64> <i64 8, i64 8, i64 7, i64 9>, <4 x i64> <i64 4, i64 5, i64 5, i64 6>, i32 59)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -9, i64 -9, i64 -7, i64 -10>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 5, i64 2, i64 6, i64 6>, <4 x i64> <i64 8, i64 8, i64 7, i64 9>, <4 x i64> <i64 4, i64 5, i64 5, i64 6>, i32 59)
   ret <4 x i64> %r
@@ -2854,8 +2789,7 @@ define <4 x i64> @vpternlog_q_constv256_imm59() {
 
 define <16 x i32> @vpternlog_d_constv512_imm60() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm60(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 1, i32 7, i32 5, i32 7, i32 6, i32 5, i32 6, i32 7, i32 3, i32 9, i32 7, i32 6, i32 0, i32 3, i32 5, i32 8>, <16 x i32> <i32 5, i32 3, i32 8, i32 7, i32 8, i32 5, i32 4, i32 7, i32 7, i32 9, i32 6, i32 5, i32 2, i32 8, i32 7, i32 7>, <16 x i32> <i32 2, i32 1, i32 2, i32 1, i32 7, i32 3, i32 6, i32 3, i32 5, i32 1, i32 9, i32 4, i32 4, i32 1, i32 1, i32 8>, i32 60)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 4, i32 4, i32 13, i32 0, i32 14, i32 0, i32 2, i32 0, i32 4, i32 0, i32 1, i32 3, i32 2, i32 11, i32 2, i32 15>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 1, i32 7, i32 5, i32 7, i32 6, i32 5, i32 6, i32 7, i32 3, i32 9, i32 7, i32 6, i32 0, i32 3, i32 5, i32 8>, <16 x i32> <i32 5, i32 3, i32 8, i32 7, i32 8, i32 5, i32 4, i32 7, i32 7, i32 9, i32 6, i32 5, i32 2, i32 8, i32 7, i32 7>, <16 x i32> <i32 2, i32 1, i32 2, i32 1, i32 7, i32 3, i32 6, i32 3, i32 5, i32 1, i32 9, i32 4, i32 4, i32 1, i32 1, i32 8>, i32 60)
   ret <16 x i32> %r
@@ -2863,8 +2797,7 @@ define <16 x i32> @vpternlog_d_constv512_imm60() {
 
 define <2 x i64> @vpternlog_q_constv128_imm61() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm61(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 2, i64 9>, <2 x i64> <i64 1, i64 0>, <2 x i64> <i64 5, i64 4>, i32 61)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -5, i64 -5>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 2, i64 9>, <2 x i64> <i64 1, i64 0>, <2 x i64> <i64 5, i64 4>, i32 61)
   ret <2 x i64> %r
@@ -2872,8 +2805,7 @@ define <2 x i64> @vpternlog_q_constv128_imm61() {
 
 define <8 x i32> @vpternlog_d_constv256_imm62() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm62(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 1, i32 6, i32 0, i32 8, i32 2, i32 1, i32 3, i32 6>, <8 x i32> <i32 3, i32 4, i32 8, i32 0, i32 6, i32 3, i32 7, i32 9>, <8 x i32> <i32 0, i32 9, i32 7, i32 5, i32 6, i32 8, i32 2, i32 0>, i32 62)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 2, i32 11, i32 15, i32 13, i32 4, i32 10, i32 4, i32 15>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 1, i32 6, i32 0, i32 8, i32 2, i32 1, i32 3, i32 6>, <8 x i32> <i32 3, i32 4, i32 8, i32 0, i32 6, i32 3, i32 7, i32 9>, <8 x i32> <i32 0, i32 9, i32 7, i32 5, i32 6, i32 8, i32 2, i32 0>, i32 62)
   ret <8 x i32> %r
@@ -2881,8 +2813,7 @@ define <8 x i32> @vpternlog_d_constv256_imm62() {
 
 define <8 x i64> @vpternlog_q_constv512_imm63() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm63(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 0, i64 4, i64 6, i64 0, i64 9, i64 8, i64 3, i64 3>, <8 x i64> <i64 4, i64 0, i64 8, i64 5, i64 9, i64 4, i64 1, i64 7>, <8 x i64> <i64 2, i64 7, i64 4, i64 5, i64 5, i64 6, i64 6, i64 4>, i32 63)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -10, i64 -1, i64 -2, i64 -4>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 0, i64 4, i64 6, i64 0, i64 9, i64 8, i64 3, i64 3>, <8 x i64> <i64 4, i64 0, i64 8, i64 5, i64 9, i64 4, i64 1, i64 7>, <8 x i64> <i64 2, i64 7, i64 4, i64 5, i64 5, i64 6, i64 6, i64 4>, i32 63)
   ret <8 x i64> %r
@@ -2890,8 +2821,7 @@ define <8 x i64> @vpternlog_q_constv512_imm63() {
 
 define <4 x i32> @vpternlog_d_constv128_imm64() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm64(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 7, i32 3, i32 3, i32 4>, <4 x i32> <i32 6, i32 4, i32 7, i32 6>, <4 x i32> <i32 5, i32 5, i32 9, i32 4>, i32 64)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 2, i32 0, i32 2, i32 0>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 7, i32 3, i32 3, i32 4>, <4 x i32> <i32 6, i32 4, i32 7, i32 6>, <4 x i32> <i32 5, i32 5, i32 9, i32 4>, i32 64)
   ret <4 x i32> %r
@@ -2899,8 +2829,7 @@ define <4 x i32> @vpternlog_d_constv128_imm64() {
 
 define <4 x i64> @vpternlog_q_constv256_imm65() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm65(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 7, i64 0, i64 4, i64 9>, <4 x i64> <i64 1, i64 9, i64 7, i64 2>, <4 x i64> <i64 8, i64 6, i64 1, i64 3>, i32 65)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -15, i64 -16, i64 -4, i64 -12>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 7, i64 0, i64 4, i64 9>, <4 x i64> <i64 1, i64 9, i64 7, i64 2>, <4 x i64> <i64 8, i64 6, i64 1, i64 3>, i32 65)
   ret <4 x i64> %r
@@ -2908,8 +2837,7 @@ define <4 x i64> @vpternlog_q_constv256_imm65() {
 
 define <16 x i32> @vpternlog_d_constv512_imm66() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm66(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 8, i32 8, i32 8, i32 0, i32 0, i32 8, i32 6, i32 6, i32 5, i32 4, i32 9, i32 6, i32 1, i32 3, i32 5, i32 3>, <16 x i32> <i32 4, i32 1, i32 8, i32 3, i32 8, i32 3, i32 2, i32 1, i32 4, i32 0, i32 8, i32 7, i32 1, i32 0, i32 6, i32 1>, <16 x i32> <i32 0, i32 8, i32 1, i32 5, i32 6, i32 8, i32 0, i32 9, i32 7, i32 1, i32 3, i32 7, i32 8, i32 2, i32 0, i32 4>, i32 66)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 0, i32 0, i32 9, i32 4, i32 6, i32 0, i32 2, i32 8, i32 2, i32 1, i32 10, i32 0, i32 9, i32 0, i32 4, i32 5>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 8, i32 8, i32 8, i32 0, i32 0, i32 8, i32 6, i32 6, i32 5, i32 4, i32 9, i32 6, i32 1, i32 3, i32 5, i32 3>, <16 x i32> <i32 4, i32 1, i32 8, i32 3, i32 8, i32 3, i32 2, i32 1, i32 4, i32 0, i32 8, i32 7, i32 1, i32 0, i32 6, i32 1>, <16 x i32> <i32 0, i32 8, i32 1, i32 5, i32 6, i32 8, i32 0, i32 9, i32 7, i32 1, i32 3, i32 7, i32 8, i32 2, i32 0, i32 4>, i32 66)
   ret <16 x i32> %r
@@ -2917,8 +2845,7 @@ define <16 x i32> @vpternlog_d_constv512_imm66() {
 
 define <2 x i64> @vpternlog_q_constv128_imm67() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm67(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 3, i64 5>, <2 x i64> <i64 5, i64 0>, <2 x i64> <i64 5, i64 1>, i32 67)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -8, i64 -6>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 3, i64 5>, <2 x i64> <i64 5, i64 0>, <2 x i64> <i64 5, i64 1>, i32 67)
   ret <2 x i64> %r
@@ -2926,8 +2853,7 @@ define <2 x i64> @vpternlog_q_constv128_imm67() {
 
 define <8 x i32> @vpternlog_d_constv256_imm68() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm68(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 6, i32 1, i32 4, i32 1, i32 4, i32 6, i32 6, i32 2>, <8 x i32> <i32 2, i32 1, i32 1, i32 2, i32 1, i32 7, i32 9, i32 2>, <8 x i32> <i32 3, i32 5, i32 4, i32 3, i32 7, i32 3, i32 7, i32 5>, i32 68)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 0, i32 0, i32 1, i32 0, i32 0, i32 4, i32 8, i32 2>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 6, i32 1, i32 4, i32 1, i32 4, i32 6, i32 6, i32 2>, <8 x i32> <i32 2, i32 1, i32 1, i32 2, i32 1, i32 7, i32 9, i32 2>, <8 x i32> <i32 3, i32 5, i32 4, i32 3, i32 7, i32 3, i32 7, i32 5>, i32 68)
   ret <8 x i32> %r
@@ -2935,8 +2861,7 @@ define <8 x i32> @vpternlog_d_constv256_imm68() {
 
 define <8 x i64> @vpternlog_q_constv512_imm69() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm69(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 1, i64 0, i64 2, i64 7, i64 3, i64 8, i64 8, i64 4>, <8 x i64> <i64 0, i64 5, i64 6, i64 0, i64 2, i64 7, i64 7, i64 1>, <8 x i64> <i64 9, i64 0, i64 4, i64 2, i64 8, i64 9, i64 5, i64 9>, i32 69)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -10, i64 -1, i64 -5, i64 -8, i64 -10, i64 -10, i64 -14, i64 -14>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 1, i64 0, i64 2, i64 7, i64 3, i64 8, i64 8, i64 4>, <8 x i64> <i64 0, i64 5, i64 6, i64 0, i64 2, i64 7, i64 7, i64 1>, <8 x i64> <i64 9, i64 0, i64 4, i64 2, i64 8, i64 9, i64 5, i64 9>, i32 69)
   ret <8 x i64> %r
@@ -2944,8 +2869,7 @@ define <8 x i64> @vpternlog_q_constv512_imm69() {
 
 define <4 x i32> @vpternlog_d_constv128_imm70() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm70(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 2, i32 1, i32 9, i32 2>, <4 x i32> <i32 6, i32 2, i32 5, i32 3>, <4 x i32> <i32 2, i32 9, i32 1, i32 7>, i32 70)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 4, i32 10, i32 4, i32 4>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 2, i32 1, i32 9, i32 2>, <4 x i32> <i32 6, i32 2, i32 5, i32 3>, <4 x i32> <i32 2, i32 9, i32 1, i32 7>, i32 70)
   ret <4 x i32> %r
@@ -2953,8 +2877,7 @@ define <4 x i32> @vpternlog_d_constv128_imm70() {
 
 define <4 x i64> @vpternlog_q_constv256_imm71() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm71(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 5, i64 8, i64 6, i64 0>, <4 x i64> <i64 0, i64 4, i64 8, i64 8>, <4 x i64> <i64 1, i64 1, i64 1, i64 6>, i32 71)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -6, i64 -9, i64 -7, i64 -1>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 5, i64 8, i64 6, i64 0>, <4 x i64> <i64 0, i64 4, i64 8, i64 8>, <4 x i64> <i64 1, i64 1, i64 1, i64 6>, i32 71)
   ret <4 x i64> %r
@@ -2962,8 +2885,7 @@ define <4 x i64> @vpternlog_q_constv256_imm71() {
 
 define <16 x i32> @vpternlog_d_constv512_imm72() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm72(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 8, i32 8, i32 8, i32 1, i32 1, i32 1, i32 1, i32 4, i32 1, i32 7, i32 8, i32 5, i32 8, i32 8, i32 1, i32 2>, <16 x i32> <i32 2, i32 4, i32 2, i32 8, i32 9, i32 6, i32 1, i32 8, i32 5, i32 6, i32 4, i32 2, i32 0, i32 8, i32 0, i32 0>, <16 x i32> <i32 3, i32 5, i32 4, i32 9, i32 1, i32 5, i32 1, i32 3, i32 4, i32 5, i32 5, i32 1, i32 7, i32 7, i32 1, i32 8>, i32 72)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 2, i32 4, i32 0, i32 8, i32 0, i32 4, i32 0, i32 0, i32 5, i32 2, i32 4, i32 0, i32 0, i32 8, i32 0, i32 0>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 8, i32 8, i32 8, i32 1, i32 1, i32 1, i32 1, i32 4, i32 1, i32 7, i32 8, i32 5, i32 8, i32 8, i32 1, i32 2>, <16 x i32> <i32 2, i32 4, i32 2, i32 8, i32 9, i32 6, i32 1, i32 8, i32 5, i32 6, i32 4, i32 2, i32 0, i32 8, i32 0, i32 0>, <16 x i32> <i32 3, i32 5, i32 4, i32 9, i32 1, i32 5, i32 1, i32 3, i32 4, i32 5, i32 5, i32 1, i32 7, i32 7, i32 1, i32 8>, i32 72)
   ret <16 x i32> %r
@@ -2971,8 +2893,7 @@ define <16 x i32> @vpternlog_d_constv512_imm72() {
 
 define <2 x i64> @vpternlog_q_constv128_imm73() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm73(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 3, i64 2>, <2 x i64> <i64 3, i64 1>, <2 x i64> <i64 7, i64 7>, i32 73)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -8, i64 -7>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 3, i64 2>, <2 x i64> <i64 3, i64 1>, <2 x i64> <i64 7, i64 7>, i32 73)
   ret <2 x i64> %r
@@ -2980,8 +2901,7 @@ define <2 x i64> @vpternlog_q_constv128_imm73() {
 
 define <8 x i32> @vpternlog_d_constv256_imm74() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm74(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 1, i32 4, i32 5, i32 3, i32 4, i32 0, i32 0, i32 5>, <8 x i32> <i32 2, i32 6, i32 5, i32 8, i32 4, i32 5, i32 0, i32 5>, <8 x i32> <i32 2, i32 7, i32 4, i32 4, i32 0, i32 8, i32 6, i32 3>, i32 74)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 2, i32 3, i32 1, i32 4, i32 4, i32 8, i32 6, i32 6>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 1, i32 4, i32 5, i32 3, i32 4, i32 0, i32 0, i32 5>, <8 x i32> <i32 2, i32 6, i32 5, i32 8, i32 4, i32 5, i32 0, i32 5>, <8 x i32> <i32 2, i32 7, i32 4, i32 4, i32 0, i32 8, i32 6, i32 3>, i32 74)
   ret <8 x i32> %r
@@ -2989,8 +2909,7 @@ define <8 x i32> @vpternlog_d_constv256_imm74() {
 
 define <8 x i64> @vpternlog_q_constv512_imm75() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm75(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 6, i64 1, i64 1, i64 9, i64 6, i64 7, i64 3, i64 0>, <8 x i64> <i64 0, i64 6, i64 1, i64 1, i64 2, i64 6, i64 2, i64 4>, <8 x i64> <i64 1, i64 8, i64 4, i64 8, i64 2, i64 4, i64 7, i64 5>, i32 75)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -7, i64 -8, i64 -1, i64 -9, i64 -7, i64 -6, i64 -4, i64 -1>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 6, i64 1, i64 1, i64 9, i64 6, i64 7, i64 3, i64 0>, <8 x i64> <i64 0, i64 6, i64 1, i64 1, i64 2, i64 6, i64 2, i64 4>, <8 x i64> <i64 1, i64 8, i64 4, i64 8, i64 2, i64 4, i64 7, i64 5>, i32 75)
   ret <8 x i64> %r
@@ -2998,8 +2917,7 @@ define <8 x i64> @vpternlog_q_constv512_imm75() {
 
 define <4 x i32> @vpternlog_d_constv128_imm76() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm76(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 6, i32 0, i32 0, i32 3>, <4 x i32> <i32 7, i32 1, i32 2, i32 2>, <4 x i32> <i32 6, i32 7, i32 8, i32 4>, i32 76)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 1, i32 1, i32 2, i32 2>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 6, i32 0, i32 0, i32 3>, <4 x i32> <i32 7, i32 1, i32 2, i32 2>, <4 x i32> <i32 6, i32 7, i32 8, i32 4>, i32 76)
   ret <4 x i32> %r
@@ -3007,8 +2925,7 @@ define <4 x i32> @vpternlog_d_constv128_imm76() {
 
 define <4 x i64> @vpternlog_q_constv256_imm77() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm77(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 4, i64 4, i64 6, i64 5>, <4 x i64> <i64 5, i64 5, i64 7, i64 8>, <4 x i64> <i64 8, i64 2, i64 1, i64 1>, i32 77)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -9, i64 -3, i64 -1, i64 -6>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 4, i64 4, i64 6, i64 5>, <4 x i64> <i64 5, i64 5, i64 7, i64 8>, <4 x i64> <i64 8, i64 2, i64 1, i64 1>, i32 77)
   ret <4 x i64> %r
@@ -3016,8 +2933,7 @@ define <4 x i64> @vpternlog_q_constv256_imm77() {
 
 define <16 x i32> @vpternlog_d_constv512_imm78() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm78(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 3, i32 3, i32 3, i32 5, i32 2, i32 6, i32 8, i32 2, i32 9, i32 5, i32 2, i32 1, i32 5, i32 7, i32 0, i32 3>, <16 x i32> <i32 0, i32 2, i32 4, i32 2, i32 2, i32 9, i32 8, i32 7, i32 8, i32 2, i32 7, i32 3, i32 4, i32 0, i32 5, i32 7>, <16 x i32> <i32 2, i32 0, i32 4, i32 3, i32 8, i32 2, i32 6, i32 9, i32 7, i32 4, i32 2, i32 7, i32 0, i32 8, i32 6, i32 4>, i32 78)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 0, i32 2, i32 4, i32 2, i32 10, i32 9, i32 14, i32 15, i32 14, i32 2, i32 5, i32 6, i32 4, i32 8, i32 7, i32 7>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 3, i32 3, i32 3, i32 5, i32 2, i32 6, i32 8, i32 2, i32 9, i32 5, i32 2, i32 1, i32 5, i32 7, i32 0, i32 3>, <16 x i32> <i32 0, i32 2, i32 4, i32 2, i32 2, i32 9, i32 8, i32 7, i32 8, i32 2, i32 7, i32 3, i32 4, i32 0, i32 5, i32 7>, <16 x i32> <i32 2, i32 0, i32 4, i32 3, i32 8, i32 2, i32 6, i32 9, i32 7, i32 4, i32 2, i32 7, i32 0, i32 8, i32 6, i32 4>, i32 78)
   ret <16 x i32> %r
@@ -3025,8 +2941,7 @@ define <16 x i32> @vpternlog_d_constv512_imm78() {
 
 define <2 x i64> @vpternlog_q_constv128_imm79() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm79(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 7, i64 8>, <2 x i64> <i64 6, i64 2>, <2 x i64> <i64 1, i64 2>, i32 79)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -2, i64 -9>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 7, i64 8>, <2 x i64> <i64 6, i64 2>, <2 x i64> <i64 1, i64 2>, i32 79)
   ret <2 x i64> %r
@@ -3034,8 +2949,7 @@ define <2 x i64> @vpternlog_q_constv128_imm79() {
 
 define <8 x i32> @vpternlog_d_constv256_imm80() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm80(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 1, i32 9, i32 9, i32 3, i32 5, i32 9, i32 7, i32 1>, <8 x i32> <i32 3, i32 1, i32 8, i32 2, i32 1, i32 6, i32 0, i32 1>, <8 x i32> <i32 7, i32 7, i32 3, i32 5, i32 9, i32 7, i32 3, i32 7>, i32 80)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 0, i32 8, i32 8, i32 2, i32 4, i32 8, i32 4, i32 0>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 1, i32 9, i32 9, i32 3, i32 5, i32 9, i32 7, i32 1>, <8 x i32> <i32 3, i32 1, i32 8, i32 2, i32 1, i32 6, i32 0, i32 1>, <8 x i32> <i32 7, i32 7, i32 3, i32 5, i32 9, i32 7, i32 3, i32 7>, i32 80)
   ret <8 x i32> %r
@@ -3043,8 +2957,7 @@ define <8 x i32> @vpternlog_d_constv256_imm80() {
 
 define <8 x i64> @vpternlog_q_constv512_imm81() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm81(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 3, i64 0, i64 1, i64 6, i64 7, i64 8, i64 0, i64 2>, <8 x i64> <i64 5, i64 8, i64 6, i64 1, i64 1, i64 4, i64 2, i64 7>, <8 x i64> <i64 7, i64 4, i64 9, i64 6, i64 4, i64 3, i64 4, i64 6>, i32 81)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -8, i64 -13, i64 -16, i64 -8, i64 -5, i64 -8, i64 -7, i64 -8>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 3, i64 0, i64 1, i64 6, i64 7, i64 8, i64 0, i64 2>, <8 x i64> <i64 5, i64 8, i64 6, i64 1, i64 1, i64 4, i64 2, i64 7>, <8 x i64> <i64 7, i64 4, i64 9, i64 6, i64 4, i64 3, i64 4, i64 6>, i32 81)
   ret <8 x i64> %r
@@ -3052,8 +2965,7 @@ define <8 x i64> @vpternlog_q_constv512_imm81() {
 
 define <4 x i32> @vpternlog_d_constv128_imm82() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm82(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 1, i32 2, i32 7, i32 6>, <4 x i32> <i32 9, i32 4, i32 1, i32 4>, <4 x i32> <i32 2, i32 7, i32 4, i32 1>, i32 82)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 3, i32 1, i32 3, i32 7>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 1, i32 2, i32 7, i32 6>, <4 x i32> <i32 9, i32 4, i32 1, i32 4>, <4 x i32> <i32 2, i32 7, i32 4, i32 1>, i32 82)
   ret <4 x i32> %r
@@ -3061,8 +2973,7 @@ define <4 x i32> @vpternlog_d_constv128_imm82() {
 
 define <4 x i64> @vpternlog_q_constv256_imm83() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm83(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 0, i64 0, i64 0, i64 4>, <4 x i64> <i64 4, i64 3, i64 3, i64 8>, <4 x i64> <i64 1, i64 6, i64 5, i64 6>, i32 83)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -5, i64 -4, i64 -4, i64 -13>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 0, i64 0, i64 0, i64 4>, <4 x i64> <i64 4, i64 3, i64 3, i64 8>, <4 x i64> <i64 1, i64 6, i64 5, i64 6>, i32 83)
   ret <4 x i64> %r
@@ -3070,8 +2981,7 @@ define <4 x i64> @vpternlog_q_constv256_imm83() {
 
 define <16 x i32> @vpternlog_d_constv512_imm84() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm84(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 4, i32 9, i32 0, i32 4, i32 1, i32 6, i32 4, i32 5, i32 7, i32 4, i32 4, i32 4, i32 9, i32 3, i32 0, i32 0>, <16 x i32> <i32 1, i32 1, i32 2, i32 4, i32 3, i32 8, i32 7, i32 3, i32 8, i32 5, i32 4, i32 7, i32 0, i32 9, i32 1, i32 3>, <16 x i32> <i32 5, i32 1, i32 0, i32 5, i32 3, i32 8, i32 4, i32 5, i32 5, i32 6, i32 3, i32 4, i32 5, i32 8, i32 2, i32 8>, i32 84)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 0, i32 8, i32 2, i32 0, i32 0, i32 6, i32 3, i32 2, i32 10, i32 1, i32 4, i32 3, i32 8, i32 3, i32 1, i32 3>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 4, i32 9, i32 0, i32 4, i32 1, i32 6, i32 4, i32 5, i32 7, i32 4, i32 4, i32 4, i32 9, i32 3, i32 0, i32 0>, <16 x i32> <i32 1, i32 1, i32 2, i32 4, i32 3, i32 8, i32 7, i32 3, i32 8, i32 5, i32 4, i32 7, i32 0, i32 9, i32 1, i32 3>, <16 x i32> <i32 5, i32 1, i32 0, i32 5, i32 3, i32 8, i32 4, i32 5, i32 5, i32 6, i32 3, i32 4, i32 5, i32 8, i32 2, i32 8>, i32 84)
   ret <16 x i32> %r
@@ -3079,8 +2989,7 @@ define <16 x i32> @vpternlog_d_constv512_imm84() {
 
 define <2 x i64> @vpternlog_q_constv128_imm85() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm85(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 9, i64 8>, <2 x i64> <i64 0, i64 9>, <2 x i64> <i64 9, i64 6>, i32 85)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -10, i64 -7>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 9, i64 8>, <2 x i64> <i64 0, i64 9>, <2 x i64> <i64 9, i64 6>, i32 85)
   ret <2 x i64> %r
@@ -3088,8 +2997,7 @@ define <2 x i64> @vpternlog_q_constv128_imm85() {
 
 define <8 x i32> @vpternlog_d_constv256_imm86() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm86(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 4, i32 5, i32 8, i32 5, i32 6, i32 1, i32 6, i32 1>, <8 x i32> <i32 0, i32 3, i32 7, i32 5, i32 5, i32 5, i32 6, i32 6>, <8 x i32> <i32 9, i32 0, i32 2, i32 9, i32 0, i32 4, i32 0, i32 0>, i32 86)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 13, i32 7, i32 13, i32 12, i32 7, i32 1, i32 6, i32 7>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 4, i32 5, i32 8, i32 5, i32 6, i32 1, i32 6, i32 1>, <8 x i32> <i32 0, i32 3, i32 7, i32 5, i32 5, i32 5, i32 6, i32 6>, <8 x i32> <i32 9, i32 0, i32 2, i32 9, i32 0, i32 4, i32 0, i32 0>, i32 86)
   ret <8 x i32> %r
@@ -3097,8 +3005,7 @@ define <8 x i32> @vpternlog_d_constv256_imm86() {
 
 define <8 x i64> @vpternlog_q_constv512_imm87() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm87(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 5, i64 3, i64 5, i64 6, i64 7, i64 8, i64 0, i64 7>, <8 x i64> <i64 0, i64 6, i64 0, i64 0, i64 1, i64 3, i64 4, i64 6>, <8 x i64> <i64 8, i64 9, i64 8, i64 7, i64 4, i64 5, i64 4, i64 4>, i32 87)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -1, i64 -2, i64 -1, i64 -7, i64 -5, i64 -2, i64 -5, i64 -5>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 5, i64 3, i64 5, i64 6, i64 7, i64 8, i64 0, i64 7>, <8 x i64> <i64 0, i64 6, i64 0, i64 0, i64 1, i64 3, i64 4, i64 6>, <8 x i64> <i64 8, i64 9, i64 8, i64 7, i64 4, i64 5, i64 4, i64 4>, i32 87)
   ret <8 x i64> %r
@@ -3106,8 +3013,7 @@ define <8 x i64> @vpternlog_q_constv512_imm87() {
 
 define <4 x i32> @vpternlog_d_constv128_imm88() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm88(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 9, i32 2, i32 0, i32 8>, <4 x i32> <i32 0, i32 8, i32 3, i32 4>, <4 x i32> <i32 5, i32 5, i32 3, i32 5>, i32 88)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 8, i32 2, i32 3, i32 12>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 9, i32 2, i32 0, i32 8>, <4 x i32> <i32 0, i32 8, i32 3, i32 4>, <4 x i32> <i32 5, i32 5, i32 3, i32 5>, i32 88)
   ret <4 x i32> %r
@@ -3115,8 +3021,7 @@ define <4 x i32> @vpternlog_d_constv128_imm88() {
 
 define <4 x i64> @vpternlog_q_constv256_imm89() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm89(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 1, i64 4, i64 0, i64 0>, <4 x i64> <i64 5, i64 5, i64 2, i64 6>, <4 x i64> <i64 4, i64 3, i64 5, i64 5>, i32 89)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -1, i64 -3, i64 -8, i64 -4>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 1, i64 4, i64 0, i64 0>, <4 x i64> <i64 5, i64 5, i64 2, i64 6>, <4 x i64> <i64 4, i64 3, i64 5, i64 5>, i32 89)
   ret <4 x i64> %r
@@ -3124,8 +3029,7 @@ define <4 x i64> @vpternlog_q_constv256_imm89() {
 
 define <16 x i32> @vpternlog_d_constv512_imm90() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm90(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 5, i32 0, i32 8, i32 9, i32 2, i32 1, i32 2, i32 5, i32 6, i32 5, i32 3, i32 9, i32 4, i32 8, i32 5, i32 5>, <16 x i32> <i32 2, i32 9, i32 6, i32 8, i32 3, i32 3, i32 4, i32 0, i32 2, i32 7, i32 7, i32 2, i32 6, i32 8, i32 2, i32 8>, <16 x i32> <i32 2, i32 3, i32 5, i32 0, i32 9, i32 0, i32 1, i32 7, i32 9, i32 2, i32 2, i32 5, i32 9, i32 1, i32 9, i32 9>, i32 90)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 7, i32 3, i32 13, i32 9, i32 11, i32 1, i32 3, i32 2, i32 15, i32 7, i32 1, i32 12, i32 13, i32 9, i32 12, i32 12>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 5, i32 0, i32 8, i32 9, i32 2, i32 1, i32 2, i32 5, i32 6, i32 5, i32 3, i32 9, i32 4, i32 8, i32 5, i32 5>, <16 x i32> <i32 2, i32 9, i32 6, i32 8, i32 3, i32 3, i32 4, i32 0, i32 2, i32 7, i32 7, i32 2, i32 6, i32 8, i32 2, i32 8>, <16 x i32> <i32 2, i32 3, i32 5, i32 0, i32 9, i32 0, i32 1, i32 7, i32 9, i32 2, i32 2, i32 5, i32 9, i32 1, i32 9, i32 9>, i32 90)
   ret <16 x i32> %r
@@ -3133,8 +3037,7 @@ define <16 x i32> @vpternlog_d_constv512_imm90() {
 
 define <2 x i64> @vpternlog_q_constv128_imm91() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm91(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 0, i64 5>, <2 x i64> <i64 0, i64 2>, <2 x i64> <i64 4, i64 2>, i32 91)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -1, i64 -1>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 0, i64 5>, <2 x i64> <i64 0, i64 2>, <2 x i64> <i64 4, i64 2>, i32 91)
   ret <2 x i64> %r
@@ -3142,8 +3045,7 @@ define <2 x i64> @vpternlog_q_constv128_imm91() {
 
 define <8 x i32> @vpternlog_d_constv256_imm92() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm92(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 7, i32 8, i32 1, i32 8, i32 7, i32 4, i32 9, i32 9>, <8 x i32> <i32 5, i32 5, i32 4, i32 3, i32 6, i32 9, i32 5, i32 4>, <8 x i32> <i32 2, i32 1, i32 7, i32 3, i32 8, i32 7, i32 1, i32 9>, i32 92)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 5, i32 13, i32 4, i32 11, i32 7, i32 9, i32 12, i32 4>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 7, i32 8, i32 1, i32 8, i32 7, i32 4, i32 9, i32 9>, <8 x i32> <i32 5, i32 5, i32 4, i32 3, i32 6, i32 9, i32 5, i32 4>, <8 x i32> <i32 2, i32 1, i32 7, i32 3, i32 8, i32 7, i32 1, i32 9>, i32 92)
   ret <8 x i32> %r
@@ -3151,8 +3053,7 @@ define <8 x i32> @vpternlog_d_constv256_imm92() {
 
 define <8 x i64> @vpternlog_q_constv512_imm93() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm93(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 0, i64 2, i64 4, i64 9, i64 9, i64 0, i64 9, i64 3>, <8 x i64> <i64 3, i64 5, i64 8, i64 9, i64 1, i64 5, i64 5, i64 6>, <8 x i64> <i64 7, i64 8, i64 7, i64 4, i64 5, i64 4, i64 4, i64 6>, i32 93)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -5, i64 -9, i64 -8, i64 -5, i64 -6, i64 -1, i64 -1, i64 -3>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 0, i64 2, i64 4, i64 9, i64 9, i64 0, i64 9, i64 3>, <8 x i64> <i64 3, i64 5, i64 8, i64 9, i64 1, i64 5, i64 5, i64 6>, <8 x i64> <i64 7, i64 8, i64 7, i64 4, i64 5, i64 4, i64 4, i64 6>, i32 93)
   ret <8 x i64> %r
@@ -3160,8 +3061,7 @@ define <8 x i64> @vpternlog_q_constv512_imm93() {
 
 define <4 x i32> @vpternlog_d_constv128_imm94() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm94(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 6, i32 4, i32 4, i32 0>, <4 x i32> <i32 8, i32 9, i32 4, i32 5>, <4 x i32> <i32 1, i32 1, i32 8, i32 2>, i32 94)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 15, i32 13, i32 12, i32 7>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 6, i32 4, i32 4, i32 0>, <4 x i32> <i32 8, i32 9, i32 4, i32 5>, <4 x i32> <i32 1, i32 1, i32 8, i32 2>, i32 94)
   ret <4 x i32> %r
@@ -3169,8 +3069,7 @@ define <4 x i32> @vpternlog_d_constv128_imm94() {
 
 define <4 x i64> @vpternlog_q_constv256_imm95() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm95(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 4, i64 5, i64 7, i64 4>, <4 x i64> <i64 5, i64 6, i64 1, i64 1>, <4 x i64> <i64 1, i64 8, i64 4, i64 8>, i32 95)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -1, i64 -1, i64 -5, i64 -1>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 4, i64 5, i64 7, i64 4>, <4 x i64> <i64 5, i64 6, i64 1, i64 1>, <4 x i64> <i64 1, i64 8, i64 4, i64 8>, i32 95)
   ret <4 x i64> %r
@@ -3178,8 +3077,7 @@ define <4 x i64> @vpternlog_q_constv256_imm95() {
 
 define <16 x i32> @vpternlog_d_constv512_imm96() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm96(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 1, i32 6, i32 4, i32 6, i32 9, i32 0, i32 3, i32 8, i32 9, i32 5, i32 2, i32 0, i32 0, i32 2, i32 4, i32 9>, <16 x i32> <i32 5, i32 4, i32 5, i32 2, i32 9, i32 3, i32 2, i32 7, i32 6, i32 0, i32 2, i32 4, i32 8, i32 5, i32 5, i32 8>, <16 x i32> <i32 5, i32 0, i32 8, i32 8, i32 4, i32 5, i32 8, i32 2, i32 4, i32 4, i32 5, i32 5, i32 3, i32 1, i32 6, i32 5>, i32 96)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 0, i32 4, i32 4, i32 2, i32 9, i32 0, i32 2, i32 0, i32 0, i32 4, i32 2, i32 0, i32 0, i32 0, i32 0, i32 9>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 1, i32 6, i32 4, i32 6, i32 9, i32 0, i32 3, i32 8, i32 9, i32 5, i32 2, i32 0, i32 0, i32 2, i32 4, i32 9>, <16 x i32> <i32 5, i32 4, i32 5, i32 2, i32 9, i32 3, i32 2, i32 7, i32 6, i32 0, i32 2, i32 4, i32 8, i32 5, i32 5, i32 8>, <16 x i32> <i32 5, i32 0, i32 8, i32 8, i32 4, i32 5, i32 8, i32 2, i32 4, i32 4, i32 5, i32 5, i32 3, i32 1, i32 6, i32 5>, i32 96)
   ret <16 x i32> %r
@@ -3187,8 +3085,7 @@ define <16 x i32> @vpternlog_d_constv512_imm96() {
 
 define <2 x i64> @vpternlog_q_constv128_imm97() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm97(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 3, i64 3>, <2 x i64> <i64 8, i64 6>, <2 x i64> <i64 6, i64 8>, i32 97)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -14, i64 -14>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 3, i64 3>, <2 x i64> <i64 8, i64 6>, <2 x i64> <i64 6, i64 8>, i32 97)
   ret <2 x i64> %r
@@ -3196,8 +3093,7 @@ define <2 x i64> @vpternlog_q_constv128_imm97() {
 
 define <8 x i32> @vpternlog_d_constv256_imm98() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm98(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 3, i32 4, i32 2, i32 9, i32 9, i32 6, i32 5, i32 0>, <8 x i32> <i32 1, i32 4, i32 5, i32 1, i32 8, i32 5, i32 4, i32 6>, <8 x i32> <i32 6, i32 0, i32 6, i32 9, i32 6, i32 2, i32 4, i32 8>, i32 98)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 7, i32 4, i32 2, i32 8, i32 14, i32 6, i32 0, i32 8>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 3, i32 4, i32 2, i32 9, i32 9, i32 6, i32 5, i32 0>, <8 x i32> <i32 1, i32 4, i32 5, i32 1, i32 8, i32 5, i32 4, i32 6>, <8 x i32> <i32 6, i32 0, i32 6, i32 9, i32 6, i32 2, i32 4, i32 8>, i32 98)
   ret <8 x i32> %r
@@ -3205,8 +3101,7 @@ define <8 x i32> @vpternlog_d_constv256_imm98() {
 
 define <8 x i64> @vpternlog_q_constv512_imm99() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm99(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 2, i64 9, i64 5, i64 0, i64 8, i64 0, i64 2, i64 0>, <8 x i64> <i64 9, i64 6, i64 0, i64 2, i64 5, i64 3, i64 9, i64 1>, <8 x i64> <i64 3, i64 2, i64 1, i64 0, i64 9, i64 7, i64 7, i64 8>, i32 99)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -10, i64 -16, i64 -5, i64 -3, i64 -6, i64 -4, i64 -10, i64 -2>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 2, i64 9, i64 5, i64 0, i64 8, i64 0, i64 2, i64 0>, <8 x i64> <i64 9, i64 6, i64 0, i64 2, i64 5, i64 3, i64 9, i64 1>, <8 x i64> <i64 3, i64 2, i64 1, i64 0, i64 9, i64 7, i64 7, i64 8>, i32 99)
   ret <8 x i64> %r
@@ -3214,8 +3109,7 @@ define <8 x i64> @vpternlog_q_constv512_imm99() {
 
 define <4 x i32> @vpternlog_d_constv128_imm100() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm100(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 9, i32 2, i32 3, i32 5>, <4 x i32> <i32 9, i32 2, i32 2, i32 7>, <4 x i32> <i32 4, i32 7, i32 1, i32 9>, i32 100)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 9, i32 0, i32 3, i32 6>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 9, i32 2, i32 3, i32 5>, <4 x i32> <i32 9, i32 2, i32 2, i32 7>, <4 x i32> <i32 4, i32 7, i32 1, i32 9>, i32 100)
   ret <4 x i32> %r
@@ -3223,8 +3117,7 @@ define <4 x i32> @vpternlog_d_constv128_imm100() {
 
 define <4 x i64> @vpternlog_q_constv256_imm101() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm101(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 6, i64 6, i64 2, i64 6>, <4 x i64> <i64 4, i64 0, i64 4, i64 1>, <4 x i64> <i64 9, i64 5, i64 5, i64 1>, i32 101)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -12, i64 -4, i64 -8, i64 -8>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 6, i64 6, i64 2, i64 6>, <4 x i64> <i64 4, i64 0, i64 4, i64 1>, <4 x i64> <i64 9, i64 5, i64 5, i64 1>, i32 101)
   ret <4 x i64> %r
@@ -3232,8 +3125,7 @@ define <4 x i64> @vpternlog_q_constv256_imm101() {
 
 define <16 x i32> @vpternlog_d_constv512_imm102() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm102(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 6, i32 3, i32 9, i32 4, i32 9, i32 8, i32 8, i32 3, i32 3, i32 8, i32 3, i32 4, i32 9, i32 2, i32 6, i32 5>, <16 x i32> <i32 2, i32 7, i32 7, i32 0, i32 1, i32 4, i32 2, i32 7, i32 7, i32 1, i32 1, i32 6, i32 4, i32 0, i32 1, i32 3>, <16 x i32> <i32 4, i32 2, i32 6, i32 3, i32 5, i32 1, i32 9, i32 8, i32 5, i32 3, i32 7, i32 6, i32 1, i32 2, i32 6, i32 7>, i32 102)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 6, i32 5, i32 1, i32 3, i32 4, i32 5, i32 11, i32 15, i32 2, i32 2, i32 6, i32 0, i32 5, i32 2, i32 7, i32 4>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 6, i32 3, i32 9, i32 4, i32 9, i32 8, i32 8, i32 3, i32 3, i32 8, i32 3, i32 4, i32 9, i32 2, i32 6, i32 5>, <16 x i32> <i32 2, i32 7, i32 7, i32 0, i32 1, i32 4, i32 2, i32 7, i32 7, i32 1, i32 1, i32 6, i32 4, i32 0, i32 1, i32 3>, <16 x i32> <i32 4, i32 2, i32 6, i32 3, i32 5, i32 1, i32 9, i32 8, i32 5, i32 3, i32 7, i32 6, i32 1, i32 2, i32 6, i32 7>, i32 102)
   ret <16 x i32> %r
@@ -3241,8 +3133,7 @@ define <16 x i32> @vpternlog_d_constv512_imm102() {
 
 define <2 x i64> @vpternlog_q_constv128_imm103() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm103(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 1, i64 2>, <2 x i64> <i64 2, i64 2>, <2 x i64> <i64 5, i64 1>, i32 103)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -1, i64 -1>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 1, i64 2>, <2 x i64> <i64 2, i64 2>, <2 x i64> <i64 5, i64 1>, i32 103)
   ret <2 x i64> %r
@@ -3250,8 +3141,7 @@ define <2 x i64> @vpternlog_q_constv128_imm103() {
 
 define <8 x i32> @vpternlog_d_constv256_imm104() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm104(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 6, i32 3, i32 6, i32 5, i32 8, i32 1, i32 5, i32 5>, <8 x i32> <i32 6, i32 7, i32 8, i32 8, i32 6, i32 9, i32 3, i32 7>, <8 x i32> <i32 8, i32 2, i32 4, i32 0, i32 2, i32 4, i32 9, i32 8>, i32 104)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 6, i32 1, i32 4, i32 0, i32 2, i32 1, i32 0, i32 5>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 6, i32 3, i32 6, i32 5, i32 8, i32 1, i32 5, i32 5>, <8 x i32> <i32 6, i32 7, i32 8, i32 8, i32 6, i32 9, i32 3, i32 7>, <8 x i32> <i32 8, i32 2, i32 4, i32 0, i32 2, i32 4, i32 9, i32 8>, i32 104)
   ret <8 x i32> %r
@@ -3259,8 +3149,7 @@ define <8 x i32> @vpternlog_d_constv256_imm104() {
 
 define <8 x i64> @vpternlog_q_constv512_imm105() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm105(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 1, i64 1, i64 5, i64 6, i64 1, i64 4, i64 1, i64 2>, <8 x i64> <i64 8, i64 7, i64 7, i64 5, i64 1, i64 2, i64 0, i64 5>, <8 x i64> <i64 7, i64 7, i64 8, i64 8, i64 2, i64 4, i64 4, i64 0>, i32 105)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -15, i64 -2, i64 -11, i64 -12, i64 -3, i64 -3, i64 -6, i64 -8>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 1, i64 1, i64 5, i64 6, i64 1, i64 4, i64 1, i64 2>, <8 x i64> <i64 8, i64 7, i64 7, i64 5, i64 1, i64 2, i64 0, i64 5>, <8 x i64> <i64 7, i64 7, i64 8, i64 8, i64 2, i64 4, i64 4, i64 0>, i32 105)
   ret <8 x i64> %r
@@ -3268,8 +3157,7 @@ define <8 x i64> @vpternlog_q_constv512_imm105() {
 
 define <4 x i32> @vpternlog_d_constv128_imm106() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm106(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 9, i32 7, i32 9, i32 4>, <4 x i32> <i32 7, i32 1, i32 4, i32 6>, <4 x i32> <i32 4, i32 5, i32 3, i32 4>, i32 106)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 5, i32 4, i32 3, i32 0>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 9, i32 7, i32 9, i32 4>, <4 x i32> <i32 7, i32 1, i32 4, i32 6>, <4 x i32> <i32 4, i32 5, i32 3, i32 4>, i32 106)
   ret <4 x i32> %r
@@ -3277,8 +3165,7 @@ define <4 x i32> @vpternlog_d_constv128_imm106() {
 
 define <4 x i64> @vpternlog_q_constv256_imm107() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm107(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 4, i64 4, i64 0, i64 1>, <4 x i64> <i64 9, i64 0, i64 4, i64 4>, <4 x i64> <i64 6, i64 1, i64 8, i64 8>, i32 107)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -10, i64 -5, i64 -5, i64 -6>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 4, i64 4, i64 0, i64 1>, <4 x i64> <i64 9, i64 0, i64 4, i64 4>, <4 x i64> <i64 6, i64 1, i64 8, i64 8>, i32 107)
   ret <4 x i64> %r
@@ -3286,8 +3173,7 @@ define <4 x i64> @vpternlog_q_constv256_imm107() {
 
 define <16 x i32> @vpternlog_d_constv512_imm108() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm108(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 7, i32 7, i32 3, i32 0, i32 0, i32 6, i32 6, i32 2, i32 2, i32 5, i32 0, i32 2, i32 3, i32 4, i32 6, i32 5>, <16 x i32> <i32 9, i32 1, i32 9, i32 3, i32 8, i32 9, i32 5, i32 0, i32 5, i32 0, i32 8, i32 4, i32 9, i32 4, i32 7, i32 0>, <16 x i32> <i32 8, i32 2, i32 0, i32 4, i32 7, i32 6, i32 5, i32 2, i32 4, i32 5, i32 7, i32 8, i32 7, i32 9, i32 6, i32 8>, i32 108)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 9, i32 3, i32 9, i32 3, i32 8, i32 15, i32 1, i32 2, i32 5, i32 5, i32 8, i32 4, i32 10, i32 4, i32 1, i32 0>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 7, i32 7, i32 3, i32 0, i32 0, i32 6, i32 6, i32 2, i32 2, i32 5, i32 0, i32 2, i32 3, i32 4, i32 6, i32 5>, <16 x i32> <i32 9, i32 1, i32 9, i32 3, i32 8, i32 9, i32 5, i32 0, i32 5, i32 0, i32 8, i32 4, i32 9, i32 4, i32 7, i32 0>, <16 x i32> <i32 8, i32 2, i32 0, i32 4, i32 7, i32 6, i32 5, i32 2, i32 4, i32 5, i32 7, i32 8, i32 7, i32 9, i32 6, i32 8>, i32 108)
   ret <16 x i32> %r
@@ -3295,8 +3181,7 @@ define <16 x i32> @vpternlog_d_constv512_imm108() {
 
 define <2 x i64> @vpternlog_q_constv128_imm109() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm109(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 5, i64 7>, <2 x i64> <i64 8, i64 2>, <2 x i64> <i64 7, i64 2>, i32 109)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -3, i64 -8>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 5, i64 7>, <2 x i64> <i64 8, i64 2>, <2 x i64> <i64 7, i64 2>, i32 109)
   ret <2 x i64> %r
@@ -3304,8 +3189,7 @@ define <2 x i64> @vpternlog_q_constv128_imm109() {
 
 define <8 x i32> @vpternlog_d_constv256_imm110() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm110(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 7, i32 0, i32 9, i32 1, i32 4, i32 5, i32 8, i32 6>, <8 x i32> <i32 7, i32 1, i32 4, i32 1, i32 5, i32 1, i32 1, i32 7>, <8 x i32> <i32 0, i32 4, i32 7, i32 1, i32 3, i32 0, i32 2, i32 4>, i32 110)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 7, i32 5, i32 7, i32 0, i32 7, i32 1, i32 3, i32 3>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 7, i32 0, i32 9, i32 1, i32 4, i32 5, i32 8, i32 6>, <8 x i32> <i32 7, i32 1, i32 4, i32 1, i32 5, i32 1, i32 1, i32 7>, <8 x i32> <i32 0, i32 4, i32 7, i32 1, i32 3, i32 0, i32 2, i32 4>, i32 110)
   ret <8 x i32> %r
@@ -3313,8 +3197,7 @@ define <8 x i32> @vpternlog_d_constv256_imm110() {
 
 define <8 x i64> @vpternlog_q_constv512_imm111() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm111(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 3, i64 8, i64 6, i64 9, i64 7, i64 9, i64 4, i64 2>, <8 x i64> <i64 6, i64 9, i64 5, i64 0, i64 1, i64 9, i64 8, i64 0>, <8 x i64> <i64 6, i64 1, i64 8, i64 3, i64 3, i64 2, i64 8, i64 6>, i32 111)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -4, i64 -1, i64 -3, i64 -9, i64 -6, i64 -1, i64 -5, i64 -1>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 3, i64 8, i64 6, i64 9, i64 7, i64 9, i64 4, i64 2>, <8 x i64> <i64 6, i64 9, i64 5, i64 0, i64 1, i64 9, i64 8, i64 0>, <8 x i64> <i64 6, i64 1, i64 8, i64 3, i64 3, i64 2, i64 8, i64 6>, i32 111)
   ret <8 x i64> %r
@@ -3322,8 +3205,7 @@ define <8 x i64> @vpternlog_q_constv512_imm111() {
 
 define <4 x i32> @vpternlog_d_constv128_imm112() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm112(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 8, i32 8, i32 5, i32 1>, <4 x i32> <i32 7, i32 5, i32 6, i32 0>, <4 x i32> <i32 0, i32 4, i32 0, i32 0>, i32 112)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 8, i32 8, i32 5, i32 1>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 8, i32 8, i32 5, i32 1>, <4 x i32> <i32 7, i32 5, i32 6, i32 0>, <4 x i32> <i32 0, i32 4, i32 0, i32 0>, i32 112)
   ret <4 x i32> %r
@@ -3331,8 +3213,7 @@ define <4 x i32> @vpternlog_d_constv128_imm112() {
 
 define <4 x i64> @vpternlog_q_constv256_imm113() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm113(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 6, i64 1, i64 6>, <4 x i64> <i64 7, i64 2, i64 0, i64 7>, <4 x i64> <i64 6, i64 4, i64 6, i64 0>, i32 113)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -8, i64 -1, i64 -7, i64 -2>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 6, i64 1, i64 6>, <4 x i64> <i64 7, i64 2, i64 0, i64 7>, <4 x i64> <i64 6, i64 4, i64 6, i64 0>, i32 113)
   ret <4 x i64> %r
@@ -3340,8 +3221,7 @@ define <4 x i64> @vpternlog_q_constv256_imm113() {
 
 define <16 x i32> @vpternlog_d_constv512_imm114() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm114(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 7, i32 9, i32 3, i32 9, i32 8, i32 2, i32 9, i32 4, i32 7, i32 2, i32 2, i32 5, i32 7, i32 5, i32 3, i32 6>, <16 x i32> <i32 0, i32 1, i32 9, i32 7, i32 9, i32 2, i32 3, i32 7, i32 0, i32 1, i32 4, i32 4, i32 9, i32 2, i32 2, i32 3>, <16 x i32> <i32 2, i32 0, i32 0, i32 4, i32 7, i32 3, i32 2, i32 1, i32 7, i32 7, i32 7, i32 7, i32 3, i32 8, i32 9, i32 3>, i32 114)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 7, i32 9, i32 3, i32 9, i32 14, i32 1, i32 9, i32 4, i32 7, i32 6, i32 3, i32 3, i32 6, i32 13, i32 11, i32 4>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 7, i32 9, i32 3, i32 9, i32 8, i32 2, i32 9, i32 4, i32 7, i32 2, i32 2, i32 5, i32 7, i32 5, i32 3, i32 6>, <16 x i32> <i32 0, i32 1, i32 9, i32 7, i32 9, i32 2, i32 3, i32 7, i32 0, i32 1, i32 4, i32 4, i32 9, i32 2, i32 2, i32 3>, <16 x i32> <i32 2, i32 0, i32 0, i32 4, i32 7, i32 3, i32 2, i32 1, i32 7, i32 7, i32 7, i32 7, i32 3, i32 8, i32 9, i32 3>, i32 114)
   ret <16 x i32> %r
@@ -3349,8 +3229,7 @@ define <16 x i32> @vpternlog_d_constv512_imm114() {
 
 define <2 x i64> @vpternlog_q_constv128_imm115() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm115(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 1, i64 0>, <2 x i64> <i64 4, i64 3>, <2 x i64> <i64 3, i64 7>, i32 115)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -5, i64 -4>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 1, i64 0>, <2 x i64> <i64 4, i64 3>, <2 x i64> <i64 3, i64 7>, i32 115)
   ret <2 x i64> %r
@@ -3358,8 +3237,7 @@ define <2 x i64> @vpternlog_q_constv128_imm115() {
 
 define <8 x i32> @vpternlog_d_constv256_imm116() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm116(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 3, i32 9, i32 3, i32 2, i32 9, i32 0, i32 6, i32 5>, <8 x i32> <i32 1, i32 5, i32 8, i32 0, i32 6, i32 9, i32 8, i32 8>, <8 x i32> <i32 9, i32 8, i32 9, i32 1, i32 6, i32 0, i32 4, i32 7>, i32 116)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 2, i32 13, i32 3, i32 2, i32 9, i32 9, i32 14, i32 13>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 3, i32 9, i32 3, i32 2, i32 9, i32 0, i32 6, i32 5>, <8 x i32> <i32 1, i32 5, i32 8, i32 0, i32 6, i32 9, i32 8, i32 8>, <8 x i32> <i32 9, i32 8, i32 9, i32 1, i32 6, i32 0, i32 4, i32 7>, i32 116)
   ret <8 x i32> %r
@@ -3367,8 +3245,7 @@ define <8 x i32> @vpternlog_d_constv256_imm116() {
 
 define <8 x i64> @vpternlog_q_constv512_imm117() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm117(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 2, i64 5, i64 9, i64 7, i64 2, i64 8, i64 7, i64 8>, <8 x i64> <i64 2, i64 1, i64 1, i64 2, i64 0, i64 5, i64 1, i64 9>, <8 x i64> <i64 7, i64 5, i64 2, i64 4, i64 9, i64 3, i64 8, i64 3>, i32 117)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -8, i64 -2, i64 -3, i64 -1, i64 -10, i64 -4, i64 -9, i64 -4>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 2, i64 5, i64 9, i64 7, i64 2, i64 8, i64 7, i64 8>, <8 x i64> <i64 2, i64 1, i64 1, i64 2, i64 0, i64 5, i64 1, i64 9>, <8 x i64> <i64 7, i64 5, i64 2, i64 4, i64 9, i64 3, i64 8, i64 3>, i32 117)
   ret <8 x i64> %r
@@ -3376,8 +3253,7 @@ define <8 x i64> @vpternlog_q_constv512_imm117() {
 
 define <4 x i32> @vpternlog_d_constv128_imm118() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm118(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 5, i32 3, i32 0, i32 4>, <4 x i32> <i32 5, i32 1, i32 7, i32 2>, <4 x i32> <i32 1, i32 7, i32 6, i32 8>, i32 118)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 4, i32 6, i32 1, i32 14>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 5, i32 3, i32 0, i32 4>, <4 x i32> <i32 5, i32 1, i32 7, i32 2>, <4 x i32> <i32 1, i32 7, i32 6, i32 8>, i32 118)
   ret <4 x i32> %r
@@ -3385,8 +3261,7 @@ define <4 x i32> @vpternlog_d_constv128_imm118() {
 
 define <4 x i64> @vpternlog_q_constv256_imm119() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm119(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 8, i64 5, i64 6, i64 3>, <4 x i64> <i64 9, i64 9, i64 3, i64 0>, <4 x i64> <i64 2, i64 0, i64 3, i64 5>, i32 119)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -1, i64 -1, i64 -4, i64 -1>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 8, i64 5, i64 6, i64 3>, <4 x i64> <i64 9, i64 9, i64 3, i64 0>, <4 x i64> <i64 2, i64 0, i64 3, i64 5>, i32 119)
   ret <4 x i64> %r
@@ -3394,8 +3269,7 @@ define <4 x i64> @vpternlog_q_constv256_imm119() {
 
 define <16 x i32> @vpternlog_d_constv512_imm120() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm120(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 4, i32 1, i32 9, i32 8, i32 0, i32 4, i32 8, i32 5, i32 0, i32 2, i32 5, i32 7, i32 2, i32 2, i32 3, i32 1>, <16 x i32> <i32 2, i32 5, i32 7, i32 2, i32 5, i32 0, i32 3, i32 0, i32 5, i32 1, i32 4, i32 1, i32 7, i32 3, i32 6, i32 6>, <16 x i32> <i32 4, i32 8, i32 0, i32 2, i32 8, i32 1, i32 4, i32 7, i32 1, i32 3, i32 0, i32 9, i32 5, i32 1, i32 5, i32 2>, i32 120)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 4, i32 1, i32 9, i32 10, i32 0, i32 4, i32 8, i32 5, i32 1, i32 3, i32 5, i32 6, i32 7, i32 3, i32 7, i32 3>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 4, i32 1, i32 9, i32 8, i32 0, i32 4, i32 8, i32 5, i32 0, i32 2, i32 5, i32 7, i32 2, i32 2, i32 3, i32 1>, <16 x i32> <i32 2, i32 5, i32 7, i32 2, i32 5, i32 0, i32 3, i32 0, i32 5, i32 1, i32 4, i32 1, i32 7, i32 3, i32 6, i32 6>, <16 x i32> <i32 4, i32 8, i32 0, i32 2, i32 8, i32 1, i32 4, i32 7, i32 1, i32 3, i32 0, i32 9, i32 5, i32 1, i32 5, i32 2>, i32 120)
   ret <16 x i32> %r
@@ -3403,8 +3277,7 @@ define <16 x i32> @vpternlog_d_constv512_imm120() {
 
 define <2 x i64> @vpternlog_q_constv128_imm121() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm121(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 7, i64 6>, <2 x i64> <i64 1, i64 0>, <2 x i64> <i64 1, i64 4>, i32 121)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -2, i64 -1>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 7, i64 6>, <2 x i64> <i64 1, i64 0>, <2 x i64> <i64 1, i64 4>, i32 121)
   ret <2 x i64> %r
@@ -3412,8 +3285,7 @@ define <2 x i64> @vpternlog_q_constv128_imm121() {
 
 define <8 x i32> @vpternlog_d_constv256_imm122() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm122(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 9, i32 7, i32 9, i32 1, i32 6, i32 9, i32 8, i32 7>, <8 x i32> <i32 0, i32 5, i32 1, i32 2, i32 5, i32 7, i32 7, i32 5>, <8 x i32> <i32 9, i32 8, i32 1, i32 7, i32 8, i32 0, i32 7, i32 9>, i32 122)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 9, i32 15, i32 8, i32 7, i32 14, i32 9, i32 15, i32 14>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 9, i32 7, i32 9, i32 1, i32 6, i32 9, i32 8, i32 7>, <8 x i32> <i32 0, i32 5, i32 1, i32 2, i32 5, i32 7, i32 7, i32 5>, <8 x i32> <i32 9, i32 8, i32 1, i32 7, i32 8, i32 0, i32 7, i32 9>, i32 122)
   ret <8 x i32> %r
@@ -3421,8 +3293,7 @@ define <8 x i32> @vpternlog_d_constv256_imm122() {
 
 define <8 x i64> @vpternlog_q_constv512_imm123() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm123(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 9, i64 5, i64 4, i64 4, i64 8, i64 2, i64 4, i64 0>, <8 x i64> <i64 8, i64 0, i64 1, i64 0, i64 0, i64 0, i64 9, i64 8>, <8 x i64> <i64 4, i64 0, i64 6, i64 2, i64 4, i64 2, i64 2, i64 0>, i32 123)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -1, i64 -1, i64 -2, i64 -1, i64 -1, i64 -1, i64 -10, i64 -9>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 9, i64 5, i64 4, i64 4, i64 8, i64 2, i64 4, i64 0>, <8 x i64> <i64 8, i64 0, i64 1, i64 0, i64 0, i64 0, i64 9, i64 8>, <8 x i64> <i64 4, i64 0, i64 6, i64 2, i64 4, i64 2, i64 2, i64 0>, i32 123)
   ret <8 x i64> %r
@@ -3430,8 +3301,7 @@ define <8 x i64> @vpternlog_q_constv512_imm123() {
 
 define <4 x i32> @vpternlog_d_constv128_imm124() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm124(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 6, i32 2, i32 4, i32 4>, <4 x i32> <i32 3, i32 1, i32 8, i32 6>, <4 x i32> <i32 5, i32 6, i32 1, i32 1>, i32 124)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 7, i32 3, i32 12, i32 6>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 6, i32 2, i32 4, i32 4>, <4 x i32> <i32 3, i32 1, i32 8, i32 6>, <4 x i32> <i32 5, i32 6, i32 1, i32 1>, i32 124)
   ret <4 x i32> %r
@@ -3439,8 +3309,7 @@ define <4 x i32> @vpternlog_d_constv128_imm124() {
 
 define <4 x i64> @vpternlog_q_constv256_imm125() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm125(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 7, i64 0, i64 1, i64 3>, <4 x i64> <i64 5, i64 3, i64 1, i64 1>, <4 x i64> <i64 1, i64 0, i64 8, i64 3>, i32 125)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -2, i64 -1, i64 -9, i64 -2>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 7, i64 0, i64 1, i64 3>, <4 x i64> <i64 5, i64 3, i64 1, i64 1>, <4 x i64> <i64 1, i64 0, i64 8, i64 3>, i32 125)
   ret <4 x i64> %r
@@ -3448,8 +3317,7 @@ define <4 x i64> @vpternlog_q_constv256_imm125() {
 
 define <16 x i32> @vpternlog_d_constv512_imm126() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm126(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 7, i32 2, i32 5, i32 6, i32 8, i32 3, i32 7, i32 2, i32 0, i32 4, i32 7, i32 5, i32 5, i32 9, i32 5, i32 0>, <16 x i32> <i32 1, i32 6, i32 4, i32 9, i32 9, i32 0, i32 0, i32 1, i32 8, i32 1, i32 5, i32 5, i32 1, i32 6, i32 7, i32 1>, <16 x i32> <i32 7, i32 6, i32 3, i32 8, i32 1, i32 2, i32 8, i32 7, i32 6, i32 8, i32 7, i32 1, i32 8, i32 9, i32 6, i32 2>, i32 126)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 6, i32 4, i32 7, i32 15, i32 9, i32 3, i32 15, i32 7, i32 14, i32 13, i32 2, i32 4, i32 13, i32 15, i32 3, i32 3>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 7, i32 2, i32 5, i32 6, i32 8, i32 3, i32 7, i32 2, i32 0, i32 4, i32 7, i32 5, i32 5, i32 9, i32 5, i32 0>, <16 x i32> <i32 1, i32 6, i32 4, i32 9, i32 9, i32 0, i32 0, i32 1, i32 8, i32 1, i32 5, i32 5, i32 1, i32 6, i32 7, i32 1>, <16 x i32> <i32 7, i32 6, i32 3, i32 8, i32 1, i32 2, i32 8, i32 7, i32 6, i32 8, i32 7, i32 1, i32 8, i32 9, i32 6, i32 2>, i32 126)
   ret <16 x i32> %r
@@ -3457,8 +3325,7 @@ define <16 x i32> @vpternlog_d_constv512_imm126() {
 
 define <2 x i64> @vpternlog_q_constv128_imm127() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm127(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 3, i64 0>, <2 x i64> <i64 1, i64 3>, <2 x i64> <i64 0, i64 7>, i32 127)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -1, i64 -1>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 3, i64 0>, <2 x i64> <i64 1, i64 3>, <2 x i64> <i64 0, i64 7>, i32 127)
   ret <2 x i64> %r
@@ -3466,8 +3333,7 @@ define <2 x i64> @vpternlog_q_constv128_imm127() {
 
 define <8 x i32> @vpternlog_d_constv256_imm128() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm128(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 5, i32 0, i32 5, i32 2, i32 7, i32 1, i32 0, i32 6>, <8 x i32> <i32 6, i32 7, i32 2, i32 1, i32 7, i32 0, i32 3, i32 8>, <8 x i32> <i32 8, i32 6, i32 2, i32 2, i32 9, i32 3, i32 1, i32 2>, i32 128)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 0, i32 0, i32 0>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 5, i32 0, i32 5, i32 2, i32 7, i32 1, i32 0, i32 6>, <8 x i32> <i32 6, i32 7, i32 2, i32 1, i32 7, i32 0, i32 3, i32 8>, <8 x i32> <i32 8, i32 6, i32 2, i32 2, i32 9, i32 3, i32 1, i32 2>, i32 128)
   ret <8 x i32> %r
@@ -3475,8 +3341,7 @@ define <8 x i32> @vpternlog_d_constv256_imm128() {
 
 define <8 x i64> @vpternlog_q_constv512_imm129() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm129(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 2, i64 0, i64 2, i64 2, i64 6, i64 2, i64 5, i64 2>, <8 x i64> <i64 5, i64 2, i64 2, i64 5, i64 3, i64 4, i64 4, i64 5>, <8 x i64> <i64 0, i64 2, i64 7, i64 9, i64 6, i64 0, i64 6, i64 4>, i32 129)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -8, i64 -3, i64 -6, i64 -16, i64 -6, i64 -7, i64 -4, i64 -8>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 2, i64 0, i64 2, i64 2, i64 6, i64 2, i64 5, i64 2>, <8 x i64> <i64 5, i64 2, i64 2, i64 5, i64 3, i64 4, i64 4, i64 5>, <8 x i64> <i64 0, i64 2, i64 7, i64 9, i64 6, i64 0, i64 6, i64 4>, i32 129)
   ret <8 x i64> %r
@@ -3484,8 +3349,7 @@ define <8 x i64> @vpternlog_q_constv512_imm129() {
 
 define <4 x i32> @vpternlog_d_constv128_imm130() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm130(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 0, i32 6, i32 4, i32 6>, <4 x i32> <i32 3, i32 3, i32 9, i32 5>, <4 x i32> <i32 6, i32 7, i32 6, i32 1>, i32 130)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 4, i32 2, i32 2, i32 0>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 0, i32 6, i32 4, i32 6>, <4 x i32> <i32 3, i32 3, i32 9, i32 5>, <4 x i32> <i32 6, i32 7, i32 6, i32 1>, i32 130)
   ret <4 x i32> %r
@@ -3493,8 +3357,7 @@ define <4 x i32> @vpternlog_d_constv128_imm130() {
 
 define <4 x i64> @vpternlog_q_constv256_imm131() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm131(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 6, i64 7, i64 5, i64 2>, <4 x i64> <i64 7, i64 1, i64 2, i64 4>, <4 x i64> <i64 2, i64 9, i64 9, i64 7>, i32 131)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -6, i64 -7, i64 -8, i64 -7>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 6, i64 7, i64 5, i64 2>, <4 x i64> <i64 7, i64 1, i64 2, i64 4>, <4 x i64> <i64 2, i64 9, i64 9, i64 7>, i32 131)
   ret <4 x i64> %r
@@ -3502,8 +3365,7 @@ define <4 x i64> @vpternlog_q_constv256_imm131() {
 
 define <16 x i32> @vpternlog_d_constv512_imm132() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm132(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 5, i32 7, i32 3, i32 0, i32 5, i32 3, i32 9, i32 0, i32 0, i32 6, i32 6, i32 6, i32 1, i32 5, i32 6, i32 6>, <16 x i32> <i32 4, i32 4, i32 0, i32 0, i32 6, i32 6, i32 8, i32 6, i32 5, i32 2, i32 8, i32 7, i32 7, i32 3, i32 5, i32 8>, <16 x i32> <i32 4, i32 1, i32 0, i32 4, i32 5, i32 3, i32 6, i32 0, i32 4, i32 1, i32 9, i32 0, i32 8, i32 5, i32 2, i32 4>, i32 132)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 4, i32 0, i32 0, i32 0, i32 6, i32 6, i32 0, i32 6, i32 1, i32 0, i32 0, i32 1, i32 6, i32 3, i32 1, i32 8>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 5, i32 7, i32 3, i32 0, i32 5, i32 3, i32 9, i32 0, i32 0, i32 6, i32 6, i32 6, i32 1, i32 5, i32 6, i32 6>, <16 x i32> <i32 4, i32 4, i32 0, i32 0, i32 6, i32 6, i32 8, i32 6, i32 5, i32 2, i32 8, i32 7, i32 7, i32 3, i32 5, i32 8>, <16 x i32> <i32 4, i32 1, i32 0, i32 4, i32 5, i32 3, i32 6, i32 0, i32 4, i32 1, i32 9, i32 0, i32 8, i32 5, i32 2, i32 4>, i32 132)
   ret <16 x i32> %r
@@ -3511,8 +3373,7 @@ define <16 x i32> @vpternlog_d_constv512_imm132() {
 
 define <2 x i64> @vpternlog_q_constv128_imm133() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm133(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 9, i64 8>, <2 x i64> <i64 2, i64 8>, <2 x i64> <i64 5, i64 5>, i32 133)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -14, i64 -14>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 9, i64 8>, <2 x i64> <i64 2, i64 8>, <2 x i64> <i64 5, i64 5>, i32 133)
   ret <2 x i64> %r
@@ -3520,8 +3381,7 @@ define <2 x i64> @vpternlog_q_constv128_imm133() {
 
 define <8 x i32> @vpternlog_d_constv256_imm134() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm134(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 1, i32 4, i32 7, i32 5, i32 2, i32 5, i32 4, i32 1>, <8 x i32> <i32 8, i32 0, i32 0, i32 2, i32 2, i32 7, i32 1, i32 6>, <8 x i32> <i32 5, i32 7, i32 9, i32 0, i32 0, i32 9, i32 9, i32 2>, i32 134)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 12, i32 3, i32 8, i32 2, i32 0, i32 11, i32 8, i32 4>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 1, i32 4, i32 7, i32 5, i32 2, i32 5, i32 4, i32 1>, <8 x i32> <i32 8, i32 0, i32 0, i32 2, i32 2, i32 7, i32 1, i32 6>, <8 x i32> <i32 5, i32 7, i32 9, i32 0, i32 0, i32 9, i32 9, i32 2>, i32 134)
   ret <8 x i32> %r
@@ -3529,8 +3389,7 @@ define <8 x i32> @vpternlog_d_constv256_imm134() {
 
 define <8 x i64> @vpternlog_q_constv512_imm135() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm135(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 4, i64 8, i64 6, i64 7, i64 5, i64 4, i64 4, i64 7>, <8 x i64> <i64 5, i64 2, i64 4, i64 4, i64 0, i64 0, i64 4, i64 3>, <8 x i64> <i64 3, i64 7, i64 6, i64 7, i64 0, i64 9, i64 0, i64 3>, i32 135)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -6, i64 -11, i64 -3, i64 -4, i64 -6, i64 -5, i64 -5, i64 -5>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 4, i64 8, i64 6, i64 7, i64 5, i64 4, i64 4, i64 7>, <8 x i64> <i64 5, i64 2, i64 4, i64 4, i64 0, i64 0, i64 4, i64 3>, <8 x i64> <i64 3, i64 7, i64 6, i64 7, i64 0, i64 9, i64 0, i64 3>, i32 135)
   ret <8 x i64> %r
@@ -3538,8 +3397,7 @@ define <8 x i64> @vpternlog_q_constv512_imm135() {
 
 define <4 x i32> @vpternlog_d_constv128_imm136() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm136(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 0, i32 2, i32 9, i32 2>, <4 x i32> <i32 2, i32 4, i32 1, i32 1>, <4 x i32> <i32 4, i32 6, i32 4, i32 6>, i32 136)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 0, i32 4, i32 0, i32 0>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 0, i32 2, i32 9, i32 2>, <4 x i32> <i32 2, i32 4, i32 1, i32 1>, <4 x i32> <i32 4, i32 6, i32 4, i32 6>, i32 136)
   ret <4 x i32> %r
@@ -3547,8 +3405,7 @@ define <4 x i32> @vpternlog_d_constv128_imm136() {
 
 define <4 x i64> @vpternlog_q_constv256_imm137() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm137(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 1, i64 1, i64 4>, <4 x i64> <i64 8, i64 3, i64 0, i64 4>, <4 x i64> <i64 8, i64 3, i64 5, i64 5>, i32 137)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -3, i64 -1, i64 -6, i64 -2>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 1, i64 1, i64 4>, <4 x i64> <i64 8, i64 3, i64 0, i64 4>, <4 x i64> <i64 8, i64 3, i64 5, i64 5>, i32 137)
   ret <4 x i64> %r
@@ -3556,8 +3413,7 @@ define <4 x i64> @vpternlog_q_constv256_imm137() {
 
 define <16 x i32> @vpternlog_d_constv512_imm138() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm138(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 5, i32 8, i32 5, i32 5, i32 9, i32 5, i32 3, i32 0, i32 8, i32 9, i32 4, i32 9, i32 8, i32 5, i32 0, i32 3>, <16 x i32> <i32 0, i32 2, i32 0, i32 8, i32 7, i32 4, i32 5, i32 5, i32 8, i32 8, i32 6, i32 4, i32 0, i32 7, i32 1, i32 1>, <16 x i32> <i32 6, i32 2, i32 6, i32 2, i32 1, i32 2, i32 2, i32 4, i32 6, i32 8, i32 3, i32 2, i32 1, i32 7, i32 5, i32 7>, i32 138)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 2, i32 2, i32 2, i32 2, i32 1, i32 2, i32 0, i32 4, i32 6, i32 8, i32 3, i32 2, i32 1, i32 7, i32 5, i32 5>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 5, i32 8, i32 5, i32 5, i32 9, i32 5, i32 3, i32 0, i32 8, i32 9, i32 4, i32 9, i32 8, i32 5, i32 0, i32 3>, <16 x i32> <i32 0, i32 2, i32 0, i32 8, i32 7, i32 4, i32 5, i32 5, i32 8, i32 8, i32 6, i32 4, i32 0, i32 7, i32 1, i32 1>, <16 x i32> <i32 6, i32 2, i32 6, i32 2, i32 1, i32 2, i32 2, i32 4, i32 6, i32 8, i32 3, i32 2, i32 1, i32 7, i32 5, i32 7>, i32 138)
   ret <16 x i32> %r
@@ -3565,8 +3421,7 @@ define <16 x i32> @vpternlog_d_constv512_imm138() {
 
 define <2 x i64> @vpternlog_q_constv128_imm139() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm139(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 5, i64 4>, <2 x i64> <i64 1, i64 1>, <2 x i64> <i64 7, i64 6>, i32 139)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -5, i64 -6>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 5, i64 4>, <2 x i64> <i64 1, i64 1>, <2 x i64> <i64 7, i64 6>, i32 139)
   ret <2 x i64> %r
@@ -3574,8 +3429,7 @@ define <2 x i64> @vpternlog_q_constv128_imm139() {
 
 define <8 x i32> @vpternlog_d_constv256_imm140() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm140(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 5, i32 5, i32 7, i32 7, i32 2, i32 1, i32 1, i32 4>, <8 x i32> <i32 6, i32 7, i32 9, i32 4, i32 3, i32 5, i32 8, i32 6>, <8 x i32> <i32 7, i32 7, i32 8, i32 7, i32 4, i32 7, i32 2, i32 1>, i32 140)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 6, i32 7, i32 8, i32 4, i32 1, i32 5, i32 8, i32 2>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 5, i32 5, i32 7, i32 7, i32 2, i32 1, i32 1, i32 4>, <8 x i32> <i32 6, i32 7, i32 9, i32 4, i32 3, i32 5, i32 8, i32 6>, <8 x i32> <i32 7, i32 7, i32 8, i32 7, i32 4, i32 7, i32 2, i32 1>, i32 140)
   ret <8 x i32> %r
@@ -3583,8 +3437,7 @@ define <8 x i32> @vpternlog_d_constv256_imm140() {
 
 define <8 x i64> @vpternlog_q_constv512_imm141() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm141(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 1, i64 5, i64 7, i64 6, i64 4, i64 9, i64 5, i64 5>, <8 x i64> <i64 0, i64 5, i64 1, i64 2, i64 3, i64 3, i64 7, i64 1>, <8 x i64> <i64 4, i64 6, i64 9, i64 5, i64 5, i64 3, i64 5, i64 3>, i32 141)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -6, i64 -4, i64 -15, i64 -8, i64 -5, i64 -9, i64 -1, i64 -7>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 1, i64 5, i64 7, i64 6, i64 4, i64 9, i64 5, i64 5>, <8 x i64> <i64 0, i64 5, i64 1, i64 2, i64 3, i64 3, i64 7, i64 1>, <8 x i64> <i64 4, i64 6, i64 9, i64 5, i64 5, i64 3, i64 5, i64 3>, i32 141)
   ret <8 x i64> %r
@@ -3592,8 +3445,7 @@ define <8 x i64> @vpternlog_q_constv512_imm141() {
 
 define <4 x i32> @vpternlog_d_constv128_imm142() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm142(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 2, i32 1, i32 9, i32 7>, <4 x i32> <i32 7, i32 4, i32 5, i32 2>, <4 x i32> <i32 2, i32 5, i32 1, i32 0>, i32 142)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 7, i32 4, i32 5, i32 0>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 2, i32 1, i32 9, i32 7>, <4 x i32> <i32 7, i32 4, i32 5, i32 2>, <4 x i32> <i32 2, i32 5, i32 1, i32 0>, i32 142)
   ret <4 x i32> %r
@@ -3601,8 +3453,7 @@ define <4 x i32> @vpternlog_d_constv128_imm142() {
 
 define <4 x i64> @vpternlog_q_constv256_imm143() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm143(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 3, i64 8, i64 8, i64 3>, <4 x i64> <i64 2, i64 5, i64 8, i64 0>, <4 x i64> <i64 2, i64 3, i64 0, i64 9>, i32 143)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -2, i64 -9, i64 -9, i64 -4>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 3, i64 8, i64 8, i64 3>, <4 x i64> <i64 2, i64 5, i64 8, i64 0>, <4 x i64> <i64 2, i64 3, i64 0, i64 9>, i32 143)
   ret <4 x i64> %r
@@ -3610,8 +3461,7 @@ define <4 x i64> @vpternlog_q_constv256_imm143() {
 
 define <16 x i32> @vpternlog_d_constv512_imm144() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm144(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 6, i32 9, i32 2, i32 2, i32 9, i32 5, i32 0, i32 7, i32 2, i32 0, i32 6, i32 7, i32 3, i32 3, i32 5, i32 6>, <16 x i32> <i32 8, i32 8, i32 1, i32 5, i32 3, i32 5, i32 9, i32 6, i32 8, i32 3, i32 6, i32 6, i32 7, i32 4, i32 9, i32 5>, <16 x i32> <i32 4, i32 7, i32 1, i32 5, i32 8, i32 8, i32 2, i32 7, i32 8, i32 0, i32 7, i32 9, i32 4, i32 0, i32 0, i32 2>, i32 144)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 2, i32 0, i32 2, i32 2, i32 0, i32 0, i32 0, i32 6, i32 2, i32 0, i32 6, i32 0, i32 0, i32 3, i32 4, i32 0>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 6, i32 9, i32 2, i32 2, i32 9, i32 5, i32 0, i32 7, i32 2, i32 0, i32 6, i32 7, i32 3, i32 3, i32 5, i32 6>, <16 x i32> <i32 8, i32 8, i32 1, i32 5, i32 3, i32 5, i32 9, i32 6, i32 8, i32 3, i32 6, i32 6, i32 7, i32 4, i32 9, i32 5>, <16 x i32> <i32 4, i32 7, i32 1, i32 5, i32 8, i32 8, i32 2, i32 7, i32 8, i32 0, i32 7, i32 9, i32 4, i32 0, i32 0, i32 2>, i32 144)
   ret <16 x i32> %r
@@ -3619,8 +3469,7 @@ define <16 x i32> @vpternlog_d_constv512_imm144() {
 
 define <2 x i64> @vpternlog_q_constv128_imm145() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm145(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 1, i64 2>, <2 x i64> <i64 9, i64 3>, <2 x i64> <i64 7, i64 0>, i32 145)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -15, i64 -4>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 1, i64 2>, <2 x i64> <i64 9, i64 3>, <2 x i64> <i64 7, i64 0>, i32 145)
   ret <2 x i64> %r
@@ -3628,8 +3477,7 @@ define <2 x i64> @vpternlog_q_constv128_imm145() {
 
 define <8 x i32> @vpternlog_d_constv256_imm146() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm146(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 4, i32 8, i32 4, i32 3, i32 4, i32 9, i32 8, i32 3>, <8 x i32> <i32 8, i32 5, i32 5, i32 1, i32 2, i32 5, i32 5, i32 7>, <8 x i32> <i32 6, i32 6, i32 3, i32 1, i32 0, i32 0, i32 3, i32 4>, i32 146)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 2, i32 10, i32 2, i32 3, i32 4, i32 8, i32 10, i32 0>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 4, i32 8, i32 4, i32 3, i32 4, i32 9, i32 8, i32 3>, <8 x i32> <i32 8, i32 5, i32 5, i32 1, i32 2, i32 5, i32 5, i32 7>, <8 x i32> <i32 6, i32 6, i32 3, i32 1, i32 0, i32 0, i32 3, i32 4>, i32 146)
   ret <8 x i32> %r
@@ -3637,8 +3485,7 @@ define <8 x i32> @vpternlog_d_constv256_imm146() {
 
 define <8 x i64> @vpternlog_q_constv512_imm147() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm147(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 0, i64 1, i64 2, i64 1, i64 8, i64 1, i64 4, i64 6>, <8 x i64> <i64 3, i64 1, i64 0, i64 6, i64 1, i64 5, i64 9, i64 0>, <8 x i64> <i64 6, i64 6, i64 7, i64 5, i64 8, i64 3, i64 0, i64 0>, i32 147)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -4, i64 -2, i64 -3, i64 -8, i64 -10, i64 -5, i64 -10, i64 -1>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 0, i64 1, i64 2, i64 1, i64 8, i64 1, i64 4, i64 6>, <8 x i64> <i64 3, i64 1, i64 0, i64 6, i64 1, i64 5, i64 9, i64 0>, <8 x i64> <i64 6, i64 6, i64 7, i64 5, i64 8, i64 3, i64 0, i64 0>, i32 147)
   ret <8 x i64> %r
@@ -3646,8 +3493,7 @@ define <8 x i64> @vpternlog_q_constv512_imm147() {
 
 define <4 x i32> @vpternlog_d_constv128_imm148() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm148(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 1, i32 3, i32 1, i32 7>, <4 x i32> <i32 2, i32 4, i32 9, i32 0>, <4 x i32> <i32 7, i32 0, i32 6, i32 2>, i32 148)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 0, i32 7, i32 8, i32 5>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 1, i32 3, i32 1, i32 7>, <4 x i32> <i32 2, i32 4, i32 9, i32 0>, <4 x i32> <i32 7, i32 0, i32 6, i32 2>, i32 148)
   ret <4 x i32> %r
@@ -3655,8 +3501,7 @@ define <4 x i32> @vpternlog_d_constv128_imm148() {
 
 define <4 x i64> @vpternlog_q_constv256_imm149() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm149(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 8, i64 6, i64 1>, <4 x i64> <i64 8, i64 8, i64 3, i64 9>, <4 x i64> <i64 0, i64 1, i64 2, i64 5>, i32 149)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -1, i64 -10, i64 -1, i64 -5>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 8, i64 6, i64 1>, <4 x i64> <i64 8, i64 8, i64 3, i64 9>, <4 x i64> <i64 0, i64 1, i64 2, i64 5>, i32 149)
   ret <4 x i64> %r
@@ -3664,8 +3509,7 @@ define <4 x i64> @vpternlog_q_constv256_imm149() {
 
 define <16 x i32> @vpternlog_d_constv512_imm150() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm150(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 9, i32 5, i32 7, i32 7, i32 0, i32 7, i32 0, i32 8, i32 6, i32 1, i32 6, i32 6, i32 7, i32 1, i32 0, i32 9>, <16 x i32> <i32 2, i32 8, i32 0, i32 8, i32 3, i32 0, i32 0, i32 0, i32 0, i32 6, i32 5, i32 6, i32 1, i32 9, i32 6, i32 0>, <16 x i32> <i32 2, i32 8, i32 5, i32 4, i32 1, i32 7, i32 8, i32 9, i32 4, i32 0, i32 3, i32 3, i32 3, i32 6, i32 0, i32 0>, i32 150)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 9, i32 5, i32 2, i32 11, i32 2, i32 0, i32 8, i32 1, i32 2, i32 7, i32 0, i32 3, i32 5, i32 14, i32 6, i32 9>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 9, i32 5, i32 7, i32 7, i32 0, i32 7, i32 0, i32 8, i32 6, i32 1, i32 6, i32 6, i32 7, i32 1, i32 0, i32 9>, <16 x i32> <i32 2, i32 8, i32 0, i32 8, i32 3, i32 0, i32 0, i32 0, i32 0, i32 6, i32 5, i32 6, i32 1, i32 9, i32 6, i32 0>, <16 x i32> <i32 2, i32 8, i32 5, i32 4, i32 1, i32 7, i32 8, i32 9, i32 4, i32 0, i32 3, i32 3, i32 3, i32 6, i32 0, i32 0>, i32 150)
   ret <16 x i32> %r
@@ -3673,8 +3517,7 @@ define <16 x i32> @vpternlog_d_constv512_imm150() {
 
 define <2 x i64> @vpternlog_q_constv128_imm151() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm151(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 8, i64 0>, <2 x i64> <i64 3, i64 0>, <2 x i64> <i64 2, i64 2>, i32 151)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -3, i64 -1>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 8, i64 0>, <2 x i64> <i64 3, i64 0>, <2 x i64> <i64 2, i64 2>, i32 151)
   ret <2 x i64> %r
@@ -3682,8 +3525,7 @@ define <2 x i64> @vpternlog_q_constv128_imm151() {
 
 define <8 x i32> @vpternlog_d_constv256_imm152() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm152(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 4, i32 7, i32 8, i32 6, i32 8, i32 4, i32 1, i32 8>, <8 x i32> <i32 5, i32 9, i32 5, i32 6, i32 3, i32 8, i32 7, i32 3>, <8 x i32> <i32 6, i32 5, i32 6, i32 2, i32 0, i32 0, i32 3, i32 9>, i32 152)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 4, i32 3, i32 12, i32 2, i32 8, i32 4, i32 3, i32 1>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 4, i32 7, i32 8, i32 6, i32 8, i32 4, i32 1, i32 8>, <8 x i32> <i32 5, i32 9, i32 5, i32 6, i32 3, i32 8, i32 7, i32 3>, <8 x i32> <i32 6, i32 5, i32 6, i32 2, i32 0, i32 0, i32 3, i32 9>, i32 152)
   ret <8 x i32> %r
@@ -3691,8 +3533,7 @@ define <8 x i32> @vpternlog_d_constv256_imm152() {
 
 define <8 x i64> @vpternlog_q_constv512_imm153() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm153(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 2, i64 4, i64 8, i64 4, i64 0, i64 0, i64 1, i64 4>, <8 x i64> <i64 3, i64 3, i64 6, i64 5, i64 3, i64 9, i64 3, i64 2>, <8 x i64> <i64 2, i64 0, i64 7, i64 0, i64 8, i64 7, i64 6, i64 7>, i32 153)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -2, i64 -4, i64 -2, i64 -6, i64 -12, i64 -15, i64 -6, i64 -6>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 2, i64 4, i64 8, i64 4, i64 0, i64 0, i64 1, i64 4>, <8 x i64> <i64 3, i64 3, i64 6, i64 5, i64 3, i64 9, i64 3, i64 2>, <8 x i64> <i64 2, i64 0, i64 7, i64 0, i64 8, i64 7, i64 6, i64 7>, i32 153)
   ret <8 x i64> %r
@@ -3700,8 +3541,7 @@ define <8 x i64> @vpternlog_q_constv512_imm153() {
 
 define <4 x i32> @vpternlog_d_constv128_imm154() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm154(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 8, i32 0, i32 2, i32 8>, <4 x i32> <i32 9, i32 6, i32 3, i32 9>, <4 x i32> <i32 0, i32 9, i32 3, i32 6>, i32 154)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 0, i32 9, i32 3, i32 6>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 8, i32 0, i32 2, i32 8>, <4 x i32> <i32 9, i32 6, i32 3, i32 9>, <4 x i32> <i32 0, i32 9, i32 3, i32 6>, i32 154)
   ret <4 x i32> %r
@@ -3709,8 +3549,7 @@ define <4 x i32> @vpternlog_d_constv128_imm154() {
 
 define <4 x i64> @vpternlog_q_constv256_imm155() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm155(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 5, i64 9, i64 1, i64 9>, <4 x i64> <i64 9, i64 5, i64 3, i64 6>, <4 x i64> <i64 1, i64 6, i64 8, i64 2>, i32 155)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -9, i64 -2, i64 -4, i64 -5>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 5, i64 9, i64 1, i64 9>, <4 x i64> <i64 9, i64 5, i64 3, i64 6>, <4 x i64> <i64 1, i64 6, i64 8, i64 2>, i32 155)
   ret <4 x i64> %r
@@ -3718,8 +3557,7 @@ define <4 x i64> @vpternlog_q_constv256_imm155() {
 
 define <16 x i32> @vpternlog_d_constv512_imm156() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm156(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 9, i32 6, i32 1, i32 1, i32 0, i32 1, i32 4, i32 4, i32 9, i32 7, i32 7, i32 7, i32 8, i32 8, i32 1, i32 9>, <16 x i32> <i32 9, i32 7, i32 8, i32 8, i32 1, i32 5, i32 9, i32 3, i32 5, i32 7, i32 6, i32 7, i32 6, i32 9, i32 8, i32 0>, <16 x i32> <i32 3, i32 0, i32 1, i32 0, i32 3, i32 1, i32 7, i32 6, i32 6, i32 9, i32 8, i32 5, i32 4, i32 8, i32 7, i32 2>, i32 156)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 1, i32 1, i32 8, i32 9, i32 1, i32 5, i32 9, i32 3, i32 12, i32 1, i32 1, i32 5, i32 14, i32 9, i32 8, i32 9>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 9, i32 6, i32 1, i32 1, i32 0, i32 1, i32 4, i32 4, i32 9, i32 7, i32 7, i32 7, i32 8, i32 8, i32 1, i32 9>, <16 x i32> <i32 9, i32 7, i32 8, i32 8, i32 1, i32 5, i32 9, i32 3, i32 5, i32 7, i32 6, i32 7, i32 6, i32 9, i32 8, i32 0>, <16 x i32> <i32 3, i32 0, i32 1, i32 0, i32 3, i32 1, i32 7, i32 6, i32 6, i32 9, i32 8, i32 5, i32 4, i32 8, i32 7, i32 2>, i32 156)
   ret <16 x i32> %r
@@ -3727,8 +3565,7 @@ define <16 x i32> @vpternlog_d_constv512_imm156() {
 
 define <2 x i64> @vpternlog_q_constv128_imm157() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm157(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 2, i64 1>, <2 x i64> <i64 3, i64 7>, <2 x i64> <i64 3, i64 3>, i32 157)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -1, i64 -1>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 2, i64 1>, <2 x i64> <i64 3, i64 7>, <2 x i64> <i64 3, i64 3>, i32 157)
   ret <2 x i64> %r
@@ -3736,8 +3573,7 @@ define <2 x i64> @vpternlog_q_constv128_imm157() {
 
 define <8 x i32> @vpternlog_d_constv256_imm158() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm158(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 6, i32 5, i32 6, i32 3, i32 7, i32 7, i32 5, i32 2>, <8 x i32> <i32 3, i32 6, i32 4, i32 5, i32 8, i32 4, i32 3, i32 6>, <8 x i32> <i32 5, i32 1, i32 5, i32 7, i32 2, i32 9, i32 9, i32 6>, i32 158)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 1, i32 2, i32 7, i32 5, i32 13, i32 10, i32 15, i32 6>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 6, i32 5, i32 6, i32 3, i32 7, i32 7, i32 5, i32 2>, <8 x i32> <i32 3, i32 6, i32 4, i32 5, i32 8, i32 4, i32 3, i32 6>, <8 x i32> <i32 5, i32 1, i32 5, i32 7, i32 2, i32 9, i32 9, i32 6>, i32 158)
   ret <8 x i32> %r
@@ -3745,8 +3581,7 @@ define <8 x i32> @vpternlog_d_constv256_imm158() {
 
 define <8 x i64> @vpternlog_q_constv512_imm159() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm159(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 7, i64 6, i64 7, i64 2, i64 7, i64 7, i64 7, i64 1>, <8 x i64> <i64 3, i64 7, i64 3, i64 4, i64 6, i64 1, i64 9, i64 8>, <8 x i64> <i64 3, i64 3, i64 9, i64 9, i64 9, i64 0, i64 6, i64 8>, i32 159)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -1, i64 -5, i64 -3, i64 -1, i64 -8, i64 -2, i64 -8, i64 -1>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 7, i64 6, i64 7, i64 2, i64 7, i64 7, i64 7, i64 1>, <8 x i64> <i64 3, i64 7, i64 3, i64 4, i64 6, i64 1, i64 9, i64 8>, <8 x i64> <i64 3, i64 3, i64 9, i64 9, i64 9, i64 0, i64 6, i64 8>, i32 159)
   ret <8 x i64> %r
@@ -3754,8 +3589,7 @@ define <8 x i64> @vpternlog_q_constv512_imm159() {
 
 define <4 x i32> @vpternlog_d_constv128_imm160() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm160(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 8, i32 1, i32 0, i32 4>, <4 x i32> <i32 7, i32 0, i32 0, i32 1>, <4 x i32> <i32 7, i32 3, i32 1, i32 5>, i32 160)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 0, i32 1, i32 0, i32 4>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 8, i32 1, i32 0, i32 4>, <4 x i32> <i32 7, i32 0, i32 0, i32 1>, <4 x i32> <i32 7, i32 3, i32 1, i32 5>, i32 160)
   ret <4 x i32> %r
@@ -3763,8 +3597,7 @@ define <4 x i32> @vpternlog_d_constv128_imm160() {
 
 define <4 x i64> @vpternlog_q_constv256_imm161() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm161(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 1, i64 4, i64 2, i64 3>, <4 x i64> <i64 0, i64 2, i64 1, i64 2>, <4 x i64> <i64 6, i64 7, i64 7, i64 6>, i32 161)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -8, i64 -4, i64 -6, i64 -6>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 1, i64 4, i64 2, i64 3>, <4 x i64> <i64 0, i64 2, i64 1, i64 2>, <4 x i64> <i64 6, i64 7, i64 7, i64 6>, i32 161)
   ret <4 x i64> %r
@@ -3772,8 +3605,7 @@ define <4 x i64> @vpternlog_q_constv256_imm161() {
 
 define <16 x i32> @vpternlog_d_constv512_imm162() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm162(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 8, i32 5, i32 0, i32 5, i32 8, i32 5, i32 3, i32 6, i32 6, i32 9, i32 8, i32 7, i32 1, i32 2, i32 8, i32 3>, <16 x i32> <i32 2, i32 5, i32 9, i32 1, i32 5, i32 7, i32 3, i32 5, i32 8, i32 3, i32 8, i32 1, i32 3, i32 5, i32 0, i32 8>, <16 x i32> <i32 8, i32 4, i32 7, i32 4, i32 5, i32 9, i32 2, i32 5, i32 9, i32 2, i32 9, i32 3, i32 4, i32 5, i32 7, i32 0>, i32 162)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 8, i32 4, i32 6, i32 4, i32 0, i32 9, i32 2, i32 4, i32 1, i32 0, i32 9, i32 3, i32 4, i32 0, i32 7, i32 0>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 8, i32 5, i32 0, i32 5, i32 8, i32 5, i32 3, i32 6, i32 6, i32 9, i32 8, i32 7, i32 1, i32 2, i32 8, i32 3>, <16 x i32> <i32 2, i32 5, i32 9, i32 1, i32 5, i32 7, i32 3, i32 5, i32 8, i32 3, i32 8, i32 1, i32 3, i32 5, i32 0, i32 8>, <16 x i32> <i32 8, i32 4, i32 7, i32 4, i32 5, i32 9, i32 2, i32 5, i32 9, i32 2, i32 9, i32 3, i32 4, i32 5, i32 7, i32 0>, i32 162)
   ret <16 x i32> %r
@@ -3781,8 +3613,7 @@ define <16 x i32> @vpternlog_d_constv512_imm162() {
 
 define <2 x i64> @vpternlog_q_constv128_imm163() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm163(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 2, i64 3>, <2 x i64> <i64 7, i64 2>, <2 x i64> <i64 7, i64 5>, i32 163)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -6, i64 -3>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 2, i64 3>, <2 x i64> <i64 7, i64 2>, <2 x i64> <i64 7, i64 5>, i32 163)
   ret <2 x i64> %r
@@ -3790,8 +3621,7 @@ define <2 x i64> @vpternlog_q_constv128_imm163() {
 
 define <8 x i32> @vpternlog_d_constv256_imm164() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm164(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 7, i32 1, i32 8, i32 9, i32 6, i32 4, i32 6, i32 2>, <8 x i32> <i32 2, i32 8, i32 0, i32 9, i32 1, i32 0, i32 6, i32 6>, <8 x i32> <i32 5, i32 9, i32 8, i32 2, i32 6, i32 0, i32 6, i32 6>, i32 164)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 5, i32 1, i32 8, i32 0, i32 7, i32 0, i32 6, i32 2>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 7, i32 1, i32 8, i32 9, i32 6, i32 4, i32 6, i32 2>, <8 x i32> <i32 2, i32 8, i32 0, i32 9, i32 1, i32 0, i32 6, i32 6>, <8 x i32> <i32 5, i32 9, i32 8, i32 2, i32 6, i32 0, i32 6, i32 6>, i32 164)
   ret <8 x i32> %r
@@ -3799,8 +3629,7 @@ define <8 x i32> @vpternlog_d_constv256_imm164() {
 
 define <8 x i64> @vpternlog_q_constv512_imm165() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm165(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 7, i64 6, i64 4, i64 5, i64 0, i64 3, i64 5, i64 6>, <8 x i64> <i64 6, i64 7, i64 2, i64 8, i64 6, i64 2, i64 5, i64 8>, <8 x i64> <i64 6, i64 5, i64 1, i64 9, i64 6, i64 0, i64 1, i64 2>, i32 165)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -2, i64 -4, i64 -6, i64 -13, i64 -7, i64 -4, i64 -5, i64 -5>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 7, i64 6, i64 4, i64 5, i64 0, i64 3, i64 5, i64 6>, <8 x i64> <i64 6, i64 7, i64 2, i64 8, i64 6, i64 2, i64 5, i64 8>, <8 x i64> <i64 6, i64 5, i64 1, i64 9, i64 6, i64 0, i64 1, i64 2>, i32 165)
   ret <8 x i64> %r
@@ -3808,8 +3637,7 @@ define <8 x i64> @vpternlog_q_constv512_imm165() {
 
 define <4 x i32> @vpternlog_d_constv128_imm166() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm166(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 9, i32 0, i32 4, i32 6>, <4 x i32> <i32 5, i32 0, i32 7, i32 7>, <4 x i32> <i32 6, i32 5, i32 1, i32 4>, i32 166)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 2, i32 5, i32 2, i32 5>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 9, i32 0, i32 4, i32 6>, <4 x i32> <i32 5, i32 0, i32 7, i32 7>, <4 x i32> <i32 6, i32 5, i32 1, i32 4>, i32 166)
   ret <4 x i32> %r
@@ -3817,8 +3645,7 @@ define <4 x i32> @vpternlog_d_constv128_imm166() {
 
 define <4 x i64> @vpternlog_q_constv256_imm167() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm167(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 3, i64 1, i64 6, i64 2>, <4 x i64> <i64 0, i64 4, i64 0, i64 2>, <4 x i64> <i64 6, i64 6, i64 1, i64 1>, i32 167)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -2, i64 -6, i64 -7, i64 -3>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 3, i64 1, i64 6, i64 2>, <4 x i64> <i64 0, i64 4, i64 0, i64 2>, <4 x i64> <i64 6, i64 6, i64 1, i64 1>, i32 167)
   ret <4 x i64> %r
@@ -3826,8 +3653,7 @@ define <4 x i64> @vpternlog_q_constv256_imm167() {
 
 define <16 x i32> @vpternlog_d_constv512_imm168() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm168(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 1, i32 8, i32 9, i32 5, i32 6, i32 0, i32 4, i32 6, i32 6, i32 3, i32 3, i32 5, i32 7, i32 4, i32 4, i32 7>, <16 x i32> <i32 9, i32 8, i32 0, i32 1, i32 6, i32 9, i32 4, i32 8, i32 4, i32 5, i32 0, i32 7, i32 3, i32 9, i32 2, i32 4>, <16 x i32> <i32 2, i32 4, i32 8, i32 3, i32 6, i32 0, i32 3, i32 6, i32 1, i32 9, i32 1, i32 8, i32 2, i32 1, i32 0, i32 5>, i32 168)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 0, i32 0, i32 8, i32 1, i32 6, i32 0, i32 0, i32 6, i32 0, i32 1, i32 1, i32 0, i32 2, i32 1, i32 0, i32 5>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 1, i32 8, i32 9, i32 5, i32 6, i32 0, i32 4, i32 6, i32 6, i32 3, i32 3, i32 5, i32 7, i32 4, i32 4, i32 7>, <16 x i32> <i32 9, i32 8, i32 0, i32 1, i32 6, i32 9, i32 4, i32 8, i32 4, i32 5, i32 0, i32 7, i32 3, i32 9, i32 2, i32 4>, <16 x i32> <i32 2, i32 4, i32 8, i32 3, i32 6, i32 0, i32 3, i32 6, i32 1, i32 9, i32 1, i32 8, i32 2, i32 1, i32 0, i32 5>, i32 168)
   ret <16 x i32> %r
@@ -3835,8 +3661,7 @@ define <16 x i32> @vpternlog_d_constv512_imm168() {
 
 define <2 x i64> @vpternlog_q_constv128_imm169() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm169(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 7, i64 7>, <2 x i64> <i64 5, i64 7>, <2 x i64> <i64 3, i64 7>, i32 169)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -5, i64 -1>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 7, i64 7>, <2 x i64> <i64 5, i64 7>, <2 x i64> <i64 3, i64 7>, i32 169)
   ret <2 x i64> %r
@@ -3844,8 +3669,7 @@ define <2 x i64> @vpternlog_q_constv128_imm169() {
 
 define <8 x i32> @vpternlog_d_constv256_imm170() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm170(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 8, i32 5, i32 8, i32 4, i32 3, i32 2, i32 4, i32 0>, <8 x i32> <i32 9, i32 0, i32 2, i32 6, i32 5, i32 8, i32 5, i32 3>, <8 x i32> <i32 5, i32 4, i32 1, i32 5, i32 6, i32 6, i32 5, i32 2>, i32 170)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 5, i32 4, i32 1, i32 5, i32 6, i32 6, i32 5, i32 2>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 8, i32 5, i32 8, i32 4, i32 3, i32 2, i32 4, i32 0>, <8 x i32> <i32 9, i32 0, i32 2, i32 6, i32 5, i32 8, i32 5, i32 3>, <8 x i32> <i32 5, i32 4, i32 1, i32 5, i32 6, i32 6, i32 5, i32 2>, i32 170)
   ret <8 x i32> %r
@@ -3853,8 +3677,7 @@ define <8 x i32> @vpternlog_d_constv256_imm170() {
 
 define <8 x i64> @vpternlog_q_constv512_imm171() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm171(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 2, i64 8, i64 5, i64 0, i64 6, i64 5, i64 6, i64 5>, <8 x i64> <i64 9, i64 4, i64 1, i64 0, i64 6, i64 5, i64 3, i64 9>, <8 x i64> <i64 9, i64 6, i64 5, i64 2, i64 4, i64 8, i64 6, i64 8>, i32 171)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -3, i64 -9, i64 -1, i64 -1, i64 -3, i64 -6, i64 -2, i64 -6>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 2, i64 8, i64 5, i64 0, i64 6, i64 5, i64 6, i64 5>, <8 x i64> <i64 9, i64 4, i64 1, i64 0, i64 6, i64 5, i64 3, i64 9>, <8 x i64> <i64 9, i64 6, i64 5, i64 2, i64 4, i64 8, i64 6, i64 8>, i32 171)
   ret <8 x i64> %r
@@ -3862,8 +3685,7 @@ define <8 x i64> @vpternlog_q_constv512_imm171() {
 
 define <4 x i32> @vpternlog_d_constv128_imm172() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm172(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 3, i32 6, i32 3, i32 7>, <4 x i32> <i32 4, i32 4, i32 9, i32 8>, <4 x i32> <i32 3, i32 3, i32 3, i32 5>, i32 172)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 7, i32 2, i32 11, i32 13>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 3, i32 6, i32 3, i32 7>, <4 x i32> <i32 4, i32 4, i32 9, i32 8>, <4 x i32> <i32 3, i32 3, i32 3, i32 5>, i32 172)
   ret <4 x i32> %r
@@ -3871,8 +3693,7 @@ define <4 x i32> @vpternlog_d_constv128_imm172() {
 
 define <4 x i64> @vpternlog_q_constv256_imm173() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm173(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 0, i64 1, i64 1, i64 3>, <4 x i64> <i64 5, i64 2, i64 0, i64 4>, <4 x i64> <i64 0, i64 8, i64 2, i64 9>, i32 173)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -1, i64 -10, i64 -4, i64 -11>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 0, i64 1, i64 1, i64 3>, <4 x i64> <i64 5, i64 2, i64 0, i64 4>, <4 x i64> <i64 0, i64 8, i64 2, i64 9>, i32 173)
   ret <4 x i64> %r
@@ -3880,8 +3701,7 @@ define <4 x i64> @vpternlog_q_constv256_imm173() {
 
 define <16 x i32> @vpternlog_d_constv512_imm174() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm174(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 9, i32 6, i32 9, i32 6, i32 5, i32 9, i32 4, i32 3, i32 6, i32 5, i32 3, i32 7, i32 8, i32 7, i32 7, i32 5>, <16 x i32> <i32 0, i32 5, i32 7, i32 6, i32 4, i32 4, i32 3, i32 7, i32 0, i32 2, i32 9, i32 1, i32 7, i32 5, i32 4, i32 8>, <16 x i32> <i32 3, i32 9, i32 6, i32 5, i32 6, i32 9, i32 9, i32 4, i32 9, i32 0, i32 9, i32 4, i32 5, i32 1, i32 3, i32 0>, i32 174)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 3, i32 9, i32 6, i32 5, i32 6, i32 13, i32 11, i32 4, i32 9, i32 2, i32 9, i32 4, i32 7, i32 1, i32 3, i32 8>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 9, i32 6, i32 9, i32 6, i32 5, i32 9, i32 4, i32 3, i32 6, i32 5, i32 3, i32 7, i32 8, i32 7, i32 7, i32 5>, <16 x i32> <i32 0, i32 5, i32 7, i32 6, i32 4, i32 4, i32 3, i32 7, i32 0, i32 2, i32 9, i32 1, i32 7, i32 5, i32 4, i32 8>, <16 x i32> <i32 3, i32 9, i32 6, i32 5, i32 6, i32 9, i32 9, i32 4, i32 9, i32 0, i32 9, i32 4, i32 5, i32 1, i32 3, i32 0>, i32 174)
   ret <16 x i32> %r
@@ -3889,8 +3709,7 @@ define <16 x i32> @vpternlog_d_constv512_imm174() {
 
 define <2 x i64> @vpternlog_q_constv128_imm175() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm175(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 6, i64 6>, <2 x i64> <i64 2, i64 1>, <2 x i64> <i64 8, i64 3>, i32 175)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -7, i64 -5>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 6, i64 6>, <2 x i64> <i64 2, i64 1>, <2 x i64> <i64 8, i64 3>, i32 175)
   ret <2 x i64> %r
@@ -3898,8 +3717,7 @@ define <2 x i64> @vpternlog_q_constv128_imm175() {
 
 define <8 x i32> @vpternlog_d_constv256_imm176() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm176(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 6, i32 0, i32 7, i32 3, i32 1, i32 4, i32 4, i32 3>, <8 x i32> <i32 6, i32 4, i32 1, i32 4, i32 8, i32 1, i32 8, i32 3>, <8 x i32> <i32 0, i32 1, i32 0, i32 7, i32 8, i32 5, i32 0, i32 1>, i32 176)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 0, i32 0, i32 6, i32 3, i32 1, i32 4, i32 4, i32 1>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 6, i32 0, i32 7, i32 3, i32 1, i32 4, i32 4, i32 3>, <8 x i32> <i32 6, i32 4, i32 1, i32 4, i32 8, i32 1, i32 8, i32 3>, <8 x i32> <i32 0, i32 1, i32 0, i32 7, i32 8, i32 5, i32 0, i32 1>, i32 176)
   ret <8 x i32> %r
@@ -3907,8 +3725,7 @@ define <8 x i32> @vpternlog_d_constv256_imm176() {
 
 define <8 x i64> @vpternlog_q_constv512_imm177() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm177(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 6, i64 5, i64 0, i64 7, i64 8, i64 4, i64 8, i64 7>, <8 x i64> <i64 1, i64 9, i64 9, i64 1, i64 4, i64 3, i64 5, i64 0>, <8 x i64> <i64 8, i64 7, i64 2, i64 2, i64 5, i64 2, i64 7, i64 9>, i32 177)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -10, i64 -11, i64 -12, i64 -2, i64 -6, i64 -4, i64 -8, i64 -9>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 6, i64 5, i64 0, i64 7, i64 8, i64 4, i64 8, i64 7>, <8 x i64> <i64 1, i64 9, i64 9, i64 1, i64 4, i64 3, i64 5, i64 0>, <8 x i64> <i64 8, i64 7, i64 2, i64 2, i64 5, i64 2, i64 7, i64 9>, i32 177)
   ret <8 x i64> %r
@@ -3916,8 +3733,7 @@ define <8 x i64> @vpternlog_q_constv512_imm177() {
 
 define <4 x i32> @vpternlog_d_constv128_imm178() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm178(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 7, i32 9, i32 2, i32 1>, <4 x i32> <i32 1, i32 1, i32 5, i32 3>, <4 x i32> <i32 9, i32 1, i32 5, i32 6>, i32 178)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 15, i32 9, i32 2, i32 4>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 7, i32 9, i32 2, i32 1>, <4 x i32> <i32 1, i32 1, i32 5, i32 3>, <4 x i32> <i32 9, i32 1, i32 5, i32 6>, i32 178)
   ret <4 x i32> %r
@@ -3925,8 +3741,7 @@ define <4 x i32> @vpternlog_d_constv128_imm178() {
 
 define <4 x i64> @vpternlog_q_constv256_imm179() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm179(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 8, i64 9, i64 9, i64 4>, <4 x i64> <i64 6, i64 8, i64 9, i64 1>, <4 x i64> <i64 1, i64 9, i64 5, i64 8>, i32 179)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -7, i64 -1, i64 -9, i64 -2>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 8, i64 9, i64 9, i64 4>, <4 x i64> <i64 6, i64 8, i64 9, i64 1>, <4 x i64> <i64 1, i64 9, i64 5, i64 8>, i32 179)
   ret <4 x i64> %r
@@ -3934,8 +3749,7 @@ define <4 x i64> @vpternlog_q_constv256_imm179() {
 
 define <16 x i32> @vpternlog_d_constv512_imm180() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm180(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 3, i32 9, i32 7, i32 2, i32 6, i32 5, i32 2, i32 2, i32 5, i32 8, i32 4, i32 8, i32 8, i32 0, i32 7, i32 2>, <16 x i32> <i32 7, i32 9, i32 6, i32 8, i32 6, i32 0, i32 6, i32 5, i32 1, i32 0, i32 9, i32 1, i32 7, i32 8, i32 7, i32 1>, <16 x i32> <i32 8, i32 8, i32 7, i32 0, i32 0, i32 9, i32 6, i32 4, i32 4, i32 6, i32 7, i32 4, i32 6, i32 0, i32 6, i32 7>, i32 180)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 4, i32 8, i32 7, i32 10, i32 0, i32 5, i32 2, i32 3, i32 4, i32 8, i32 12, i32 9, i32 9, i32 8, i32 6, i32 2>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 3, i32 9, i32 7, i32 2, i32 6, i32 5, i32 2, i32 2, i32 5, i32 8, i32 4, i32 8, i32 8, i32 0, i32 7, i32 2>, <16 x i32> <i32 7, i32 9, i32 6, i32 8, i32 6, i32 0, i32 6, i32 5, i32 1, i32 0, i32 9, i32 1, i32 7, i32 8, i32 7, i32 1>, <16 x i32> <i32 8, i32 8, i32 7, i32 0, i32 0, i32 9, i32 6, i32 4, i32 4, i32 6, i32 7, i32 4, i32 6, i32 0, i32 6, i32 7>, i32 180)
   ret <16 x i32> %r
@@ -3943,8 +3757,7 @@ define <16 x i32> @vpternlog_d_constv512_imm180() {
 
 define <2 x i64> @vpternlog_q_constv128_imm181() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm181(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 2, i64 2>, <2 x i64> <i64 4, i64 3>, <2 x i64> <i64 1, i64 9>, i32 181)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -2, i64 -12>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 2, i64 2>, <2 x i64> <i64 4, i64 3>, <2 x i64> <i64 1, i64 9>, i32 181)
   ret <2 x i64> %r
@@ -3952,8 +3765,7 @@ define <2 x i64> @vpternlog_q_constv128_imm181() {
 
 define <8 x i32> @vpternlog_d_constv256_imm182() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm182(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 4, i32 3, i32 8, i32 9, i32 0, i32 5, i32 5, i32 6>, <8 x i32> <i32 1, i32 2, i32 7, i32 3, i32 1, i32 1, i32 7, i32 8>, <8 x i32> <i32 8, i32 8, i32 3, i32 8, i32 4, i32 9, i32 4, i32 6>, i32 182)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 13, i32 9, i32 12, i32 10, i32 5, i32 13, i32 6, i32 14>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 4, i32 3, i32 8, i32 9, i32 0, i32 5, i32 5, i32 6>, <8 x i32> <i32 1, i32 2, i32 7, i32 3, i32 1, i32 1, i32 7, i32 8>, <8 x i32> <i32 8, i32 8, i32 3, i32 8, i32 4, i32 9, i32 4, i32 6>, i32 182)
   ret <8 x i32> %r
@@ -3961,8 +3773,7 @@ define <8 x i32> @vpternlog_d_constv256_imm182() {
 
 define <8 x i64> @vpternlog_q_constv512_imm183() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm183(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 5, i64 2, i64 5, i64 2, i64 5, i64 8, i64 0, i64 7>, <8 x i64> <i64 9, i64 3, i64 3, i64 7, i64 3, i64 3, i64 1, i64 5>, <8 x i64> <i64 2, i64 1, i64 0, i64 9, i64 6, i64 0, i64 6, i64 9>, i32 183)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -2, i64 -4, i64 -2, i64 -4, i64 -4, i64 -1, i64 -1, i64 -5>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 5, i64 2, i64 5, i64 2, i64 5, i64 8, i64 0, i64 7>, <8 x i64> <i64 9, i64 3, i64 3, i64 7, i64 3, i64 3, i64 1, i64 5>, <8 x i64> <i64 2, i64 1, i64 0, i64 9, i64 6, i64 0, i64 6, i64 9>, i32 183)
   ret <8 x i64> %r
@@ -3970,8 +3781,7 @@ define <8 x i64> @vpternlog_q_constv512_imm183() {
 
 define <4 x i32> @vpternlog_d_constv128_imm184() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm184(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 3, i32 2, i32 8, i32 2>, <4 x i32> <i32 6, i32 7, i32 8, i32 6>, <4 x i32> <i32 4, i32 5, i32 0, i32 1>, i32 184)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 5, i32 5, i32 0, i32 0>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 3, i32 2, i32 8, i32 2>, <4 x i32> <i32 6, i32 7, i32 8, i32 6>, <4 x i32> <i32 4, i32 5, i32 0, i32 1>, i32 184)
   ret <4 x i32> %r
@@ -3979,8 +3789,7 @@ define <4 x i32> @vpternlog_d_constv128_imm184() {
 
 define <4 x i64> @vpternlog_q_constv256_imm185() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm185(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 8, i64 3, i64 7, i64 0>, <4 x i64> <i64 9, i64 1, i64 2, i64 1>, <4 x i64> <i64 7, i64 8, i64 6, i64 3>, i32 185)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -15, i64 -10, i64 -1, i64 -3>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 8, i64 3, i64 7, i64 0>, <4 x i64> <i64 9, i64 1, i64 2, i64 1>, <4 x i64> <i64 7, i64 8, i64 6, i64 3>, i32 185)
   ret <4 x i64> %r
@@ -3988,8 +3797,7 @@ define <4 x i64> @vpternlog_q_constv256_imm185() {
 
 define <16 x i32> @vpternlog_d_constv512_imm186() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm186(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 9, i32 6, i32 7, i32 2, i32 8, i32 0, i32 6, i32 0, i32 3, i32 4, i32 3, i32 9, i32 7, i32 2, i32 5, i32 0>, <16 x i32> <i32 5, i32 0, i32 2, i32 3, i32 2, i32 7, i32 8, i32 6, i32 9, i32 7, i32 5, i32 0, i32 9, i32 4, i32 7, i32 7>, <16 x i32> <i32 8, i32 7, i32 0, i32 2, i32 9, i32 4, i32 4, i32 2, i32 3, i32 0, i32 1, i32 8, i32 1, i32 7, i32 5, i32 9>, i32 186)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 8, i32 7, i32 5, i32 2, i32 9, i32 4, i32 6, i32 2, i32 3, i32 0, i32 3, i32 9, i32 7, i32 7, i32 5, i32 9>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 9, i32 6, i32 7, i32 2, i32 8, i32 0, i32 6, i32 0, i32 3, i32 4, i32 3, i32 9, i32 7, i32 2, i32 5, i32 0>, <16 x i32> <i32 5, i32 0, i32 2, i32 3, i32 2, i32 7, i32 8, i32 6, i32 9, i32 7, i32 5, i32 0, i32 9, i32 4, i32 7, i32 7>, <16 x i32> <i32 8, i32 7, i32 0, i32 2, i32 9, i32 4, i32 4, i32 2, i32 3, i32 0, i32 1, i32 8, i32 1, i32 7, i32 5, i32 9>, i32 186)
   ret <16 x i32> %r
@@ -3997,8 +3805,7 @@ define <16 x i32> @vpternlog_d_constv512_imm186() {
 
 define <2 x i64> @vpternlog_q_constv128_imm187() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm187(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 9, i64 0>, <2 x i64> <i64 1, i64 3>, <2 x i64> <i64 2, i64 4>, i32 187)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -2, i64 -4>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 9, i64 0>, <2 x i64> <i64 1, i64 3>, <2 x i64> <i64 2, i64 4>, i32 187)
   ret <2 x i64> %r
@@ -4006,8 +3813,7 @@ define <2 x i64> @vpternlog_q_constv128_imm187() {
 
 define <8 x i32> @vpternlog_d_constv256_imm188() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm188(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 7, i32 2, i32 7, i32 1, i32 4, i32 3, i32 7, i32 9>, <8 x i32> <i32 7, i32 6, i32 4, i32 7, i32 5, i32 6, i32 1, i32 3>, <8 x i32> <i32 8, i32 2, i32 6, i32 5, i32 2, i32 8, i32 0, i32 9>, i32 188)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 0, i32 6, i32 7, i32 7, i32 1, i32 5, i32 6, i32 11>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 7, i32 2, i32 7, i32 1, i32 4, i32 3, i32 7, i32 9>, <8 x i32> <i32 7, i32 6, i32 4, i32 7, i32 5, i32 6, i32 1, i32 3>, <8 x i32> <i32 8, i32 2, i32 6, i32 5, i32 2, i32 8, i32 0, i32 9>, i32 188)
   ret <8 x i32> %r
@@ -4015,8 +3821,7 @@ define <8 x i32> @vpternlog_d_constv256_imm188() {
 
 define <8 x i64> @vpternlog_q_constv512_imm189() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm189(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 0, i64 4, i64 7, i64 6, i64 1, i64 8, i64 9, i64 0>, <8 x i64> <i64 7, i64 6, i64 9, i64 7, i64 5, i64 4, i64 5, i64 6>, <8 x i64> <i64 9, i64 7, i64 4, i64 7, i64 1, i64 6, i64 8, i64 1>, i32 189)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -9, i64 -2, i64 -2, i64 -1, i64 -1, i64 -3, i64 -2, i64 -2>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 0, i64 4, i64 7, i64 6, i64 1, i64 8, i64 9, i64 0>, <8 x i64> <i64 7, i64 6, i64 9, i64 7, i64 5, i64 4, i64 5, i64 6>, <8 x i64> <i64 9, i64 7, i64 4, i64 7, i64 1, i64 6, i64 8, i64 1>, i32 189)
   ret <8 x i64> %r
@@ -4024,8 +3829,7 @@ define <8 x i64> @vpternlog_q_constv512_imm189() {
 
 define <4 x i32> @vpternlog_d_constv128_imm190() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm190(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 4, i32 9, i32 9, i32 3>, <4 x i32> <i32 2, i32 1, i32 5, i32 4>, <4 x i32> <i32 5, i32 0, i32 5, i32 6>, i32 190)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 7, i32 8, i32 13, i32 7>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 4, i32 9, i32 9, i32 3>, <4 x i32> <i32 2, i32 1, i32 5, i32 4>, <4 x i32> <i32 5, i32 0, i32 5, i32 6>, i32 190)
   ret <4 x i32> %r
@@ -4033,8 +3837,7 @@ define <4 x i32> @vpternlog_d_constv128_imm190() {
 
 define <4 x i64> @vpternlog_q_constv256_imm191() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm191(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 5, i64 0, i64 6, i64 0>, <4 x i64> <i64 9, i64 8, i64 4, i64 0>, <4 x i64> <i64 3, i64 9, i64 7, i64 2>, i32 191)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 5, i64 0, i64 6, i64 0>, <4 x i64> <i64 9, i64 8, i64 4, i64 0>, <4 x i64> <i64 3, i64 9, i64 7, i64 2>, i32 191)
   ret <4 x i64> %r
@@ -4042,8 +3845,7 @@ define <4 x i64> @vpternlog_q_constv256_imm191() {
 
 define <16 x i32> @vpternlog_d_constv512_imm192() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm192(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 3, i32 2, i32 2, i32 0, i32 4, i32 7, i32 4, i32 8, i32 5, i32 1, i32 4, i32 2, i32 0, i32 9, i32 6, i32 8>, <16 x i32> <i32 9, i32 3, i32 3, i32 8, i32 7, i32 5, i32 1, i32 8, i32 9, i32 2, i32 4, i32 8, i32 0, i32 6, i32 4, i32 5>, <16 x i32> <i32 0, i32 1, i32 3, i32 8, i32 9, i32 8, i32 0, i32 3, i32 2, i32 1, i32 6, i32 9, i32 9, i32 6, i32 1, i32 5>, i32 192)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 1, i32 2, i32 2, i32 0, i32 4, i32 5, i32 0, i32 8, i32 1, i32 0, i32 4, i32 0, i32 0, i32 0, i32 4, i32 0>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 3, i32 2, i32 2, i32 0, i32 4, i32 7, i32 4, i32 8, i32 5, i32 1, i32 4, i32 2, i32 0, i32 9, i32 6, i32 8>, <16 x i32> <i32 9, i32 3, i32 3, i32 8, i32 7, i32 5, i32 1, i32 8, i32 9, i32 2, i32 4, i32 8, i32 0, i32 6, i32 4, i32 5>, <16 x i32> <i32 0, i32 1, i32 3, i32 8, i32 9, i32 8, i32 0, i32 3, i32 2, i32 1, i32 6, i32 9, i32 9, i32 6, i32 1, i32 5>, i32 192)
   ret <16 x i32> %r
@@ -4051,8 +3853,7 @@ define <16 x i32> @vpternlog_d_constv512_imm192() {
 
 define <2 x i64> @vpternlog_q_constv128_imm193() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm193(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 9, i64 4>, <2 x i64> <i64 5, i64 1>, <2 x i64> <i64 6, i64 1>, i32 193)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -15, i64 -6>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 9, i64 4>, <2 x i64> <i64 5, i64 1>, <2 x i64> <i64 6, i64 1>, i32 193)
   ret <2 x i64> %r
@@ -4060,8 +3861,7 @@ define <2 x i64> @vpternlog_q_constv128_imm193() {
 
 define <8 x i32> @vpternlog_d_constv256_imm194() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm194(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 9, i32 6, i32 7, i32 8, i32 4, i32 3, i32 3, i32 5>, <8 x i32> <i32 2, i32 5, i32 5, i32 1, i32 5, i32 4, i32 4, i32 9>, <8 x i32> <i32 4, i32 4, i32 5, i32 1, i32 3, i32 8, i32 0, i32 1>, i32 194)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 4, i32 4, i32 5, i32 0, i32 6, i32 8, i32 0, i32 1>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 9, i32 6, i32 7, i32 8, i32 4, i32 3, i32 3, i32 5>, <8 x i32> <i32 2, i32 5, i32 5, i32 1, i32 5, i32 4, i32 4, i32 9>, <8 x i32> <i32 4, i32 4, i32 5, i32 1, i32 3, i32 8, i32 0, i32 1>, i32 194)
   ret <8 x i32> %r
@@ -4069,8 +3869,7 @@ define <8 x i32> @vpternlog_d_constv256_imm194() {
 
 define <8 x i64> @vpternlog_q_constv512_imm195() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm195(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 6, i64 5, i64 1, i64 5, i64 4, i64 4, i64 2, i64 5>, <8 x i64> <i64 5, i64 1, i64 1, i64 1, i64 4, i64 0, i64 0, i64 5>, <8 x i64> <i64 1, i64 4, i64 0, i64 5, i64 5, i64 3, i64 1, i64 5>, i32 195)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -4, i64 -5, i64 -1, i64 -5, i64 -1, i64 -5, i64 -3, i64 -1>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 6, i64 5, i64 1, i64 5, i64 4, i64 4, i64 2, i64 5>, <8 x i64> <i64 5, i64 1, i64 1, i64 1, i64 4, i64 0, i64 0, i64 5>, <8 x i64> <i64 1, i64 4, i64 0, i64 5, i64 5, i64 3, i64 1, i64 5>, i32 195)
   ret <8 x i64> %r
@@ -4078,8 +3877,7 @@ define <8 x i64> @vpternlog_q_constv512_imm195() {
 
 define <4 x i32> @vpternlog_d_constv128_imm196() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm196(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 9, i32 6, i32 6, i32 6>, <4 x i32> <i32 1, i32 3, i32 9, i32 5>, <4 x i32> <i32 5, i32 4, i32 1, i32 5>, i32 196)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 1, i32 3, i32 8, i32 4>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 9, i32 6, i32 6, i32 6>, <4 x i32> <i32 1, i32 3, i32 9, i32 5>, <4 x i32> <i32 5, i32 4, i32 1, i32 5>, i32 196)
   ret <4 x i32> %r
@@ -4087,8 +3885,7 @@ define <4 x i32> @vpternlog_d_constv128_imm196() {
 
 define <4 x i64> @vpternlog_q_constv256_imm197() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm197(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 2, i64 8, i64 9>, <4 x i64> <i64 8, i64 7, i64 7, i64 8>, <4 x i64> <i64 7, i64 1, i64 1, i64 7>, i32 197)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -8, i64 -2, i64 -10, i64 -8>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 2, i64 8, i64 9>, <4 x i64> <i64 8, i64 7, i64 7, i64 8>, <4 x i64> <i64 7, i64 1, i64 1, i64 7>, i32 197)
   ret <4 x i64> %r
@@ -4096,8 +3893,7 @@ define <4 x i64> @vpternlog_q_constv256_imm197() {
 
 define <16 x i32> @vpternlog_d_constv512_imm198() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm198(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 1, i32 2, i32 6, i32 7, i32 1, i32 3, i32 5, i32 0, i32 0, i32 7, i32 3, i32 5, i32 7, i32 7, i32 8, i32 9>, <16 x i32> <i32 5, i32 9, i32 6, i32 0, i32 5, i32 8, i32 8, i32 2, i32 7, i32 6, i32 7, i32 4, i32 7, i32 1, i32 5, i32 1>, <16 x i32> <i32 3, i32 5, i32 3, i32 1, i32 6, i32 2, i32 4, i32 4, i32 3, i32 0, i32 0, i32 3, i32 5, i32 1, i32 5, i32 9>, i32 198)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 7, i32 12, i32 7, i32 0, i32 3, i32 8, i32 8, i32 6, i32 4, i32 6, i32 7, i32 6, i32 7, i32 1, i32 0, i32 1>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 1, i32 2, i32 6, i32 7, i32 1, i32 3, i32 5, i32 0, i32 0, i32 7, i32 3, i32 5, i32 7, i32 7, i32 8, i32 9>, <16 x i32> <i32 5, i32 9, i32 6, i32 0, i32 5, i32 8, i32 8, i32 2, i32 7, i32 6, i32 7, i32 4, i32 7, i32 1, i32 5, i32 1>, <16 x i32> <i32 3, i32 5, i32 3, i32 1, i32 6, i32 2, i32 4, i32 4, i32 3, i32 0, i32 0, i32 3, i32 5, i32 1, i32 5, i32 9>, i32 198)
   ret <16 x i32> %r
@@ -4105,8 +3901,7 @@ define <16 x i32> @vpternlog_d_constv512_imm198() {
 
 define <2 x i64> @vpternlog_q_constv128_imm199() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm199(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 8, i64 6>, <2 x i64> <i64 2, i64 3>, <2 x i64> <i64 4, i64 0>, i32 199)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -9, i64 -5>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 8, i64 6>, <2 x i64> <i64 2, i64 3>, <2 x i64> <i64 4, i64 0>, i32 199)
   ret <2 x i64> %r
@@ -4114,8 +3909,7 @@ define <2 x i64> @vpternlog_q_constv128_imm199() {
 
 define <8 x i32> @vpternlog_d_constv256_imm200() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm200(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 4, i32 7, i32 4, i32 2, i32 8, i32 7, i32 1, i32 3>, <8 x i32> <i32 3, i32 5, i32 1, i32 5, i32 5, i32 5, i32 1, i32 9>, <8 x i32> <i32 8, i32 8, i32 4, i32 3, i32 9, i32 9, i32 9, i32 9>, i32 200)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 0, i32 5, i32 0, i32 1, i32 1, i32 5, i32 1, i32 9>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 4, i32 7, i32 4, i32 2, i32 8, i32 7, i32 1, i32 3>, <8 x i32> <i32 3, i32 5, i32 1, i32 5, i32 5, i32 5, i32 1, i32 9>, <8 x i32> <i32 8, i32 8, i32 4, i32 3, i32 9, i32 9, i32 9, i32 9>, i32 200)
   ret <8 x i32> %r
@@ -4123,8 +3917,7 @@ define <8 x i32> @vpternlog_d_constv256_imm200() {
 
 define <8 x i64> @vpternlog_q_constv512_imm201() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm201(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 1, i64 2, i64 8, i64 1, i64 9, i64 0, i64 2, i64 3>, <8 x i64> <i64 5, i64 0, i64 5, i64 7, i64 8, i64 8, i64 8, i64 4>, <8 x i64> <i64 0, i64 7, i64 1, i64 6, i64 1, i64 8, i64 6, i64 4>, i32 201)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -5, i64 -8, i64 -13, i64 -1, i64 -2, i64 -1, i64 -15, i64 -4>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 1, i64 2, i64 8, i64 1, i64 9, i64 0, i64 2, i64 3>, <8 x i64> <i64 5, i64 0, i64 5, i64 7, i64 8, i64 8, i64 8, i64 4>, <8 x i64> <i64 0, i64 7, i64 1, i64 6, i64 1, i64 8, i64 6, i64 4>, i32 201)
   ret <8 x i64> %r
@@ -4132,8 +3925,7 @@ define <8 x i64> @vpternlog_q_constv512_imm201() {
 
 define <4 x i32> @vpternlog_d_constv128_imm202() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm202(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 1, i32 8, i32 6, i32 2>, <4 x i32> <i32 7, i32 8, i32 8, i32 3>, <4 x i32> <i32 0, i32 8, i32 8, i32 2>, i32 202)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 1, i32 8, i32 8, i32 2>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 1, i32 8, i32 6, i32 2>, <4 x i32> <i32 7, i32 8, i32 8, i32 3>, <4 x i32> <i32 0, i32 8, i32 8, i32 2>, i32 202)
   ret <4 x i32> %r
@@ -4141,8 +3933,7 @@ define <4 x i32> @vpternlog_d_constv128_imm202() {
 
 define <4 x i64> @vpternlog_q_constv256_imm203() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm203(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 0, i64 6, i64 6, i64 6>, <4 x i64> <i64 3, i64 9, i64 4, i64 9>, <4 x i64> <i64 6, i64 8, i64 0, i64 7>, i32 203)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -2, i64 -8, i64 -3, i64 -15>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 0, i64 6, i64 6, i64 6>, <4 x i64> <i64 3, i64 9, i64 4, i64 9>, <4 x i64> <i64 6, i64 8, i64 0, i64 7>, i32 203)
   ret <4 x i64> %r
@@ -4150,8 +3941,7 @@ define <4 x i64> @vpternlog_q_constv256_imm203() {
 
 define <16 x i32> @vpternlog_d_constv512_imm204() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm204(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 8, i32 0, i32 3, i32 7, i32 8, i32 9, i32 0, i32 5, i32 0, i32 5, i32 4, i32 8, i32 6, i32 3, i32 4, i32 5>, <16 x i32> <i32 9, i32 7, i32 8, i32 1, i32 3, i32 8, i32 0, i32 8, i32 1, i32 5, i32 1, i32 2, i32 0, i32 4, i32 3, i32 7>, <16 x i32> <i32 3, i32 8, i32 5, i32 5, i32 4, i32 9, i32 4, i32 1, i32 1, i32 4, i32 7, i32 4, i32 6, i32 7, i32 1, i32 1>, i32 204)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 9, i32 7, i32 8, i32 1, i32 3, i32 8, i32 0, i32 8, i32 1, i32 5, i32 1, i32 2, i32 0, i32 4, i32 3, i32 7>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 8, i32 0, i32 3, i32 7, i32 8, i32 9, i32 0, i32 5, i32 0, i32 5, i32 4, i32 8, i32 6, i32 3, i32 4, i32 5>, <16 x i32> <i32 9, i32 7, i32 8, i32 1, i32 3, i32 8, i32 0, i32 8, i32 1, i32 5, i32 1, i32 2, i32 0, i32 4, i32 3, i32 7>, <16 x i32> <i32 3, i32 8, i32 5, i32 5, i32 4, i32 9, i32 4, i32 1, i32 1, i32 4, i32 7, i32 4, i32 6, i32 7, i32 1, i32 1>, i32 204)
   ret <16 x i32> %r
@@ -4159,8 +3949,7 @@ define <16 x i32> @vpternlog_d_constv512_imm204() {
 
 define <2 x i64> @vpternlog_q_constv128_imm205() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm205(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 8, i64 3>, <2 x i64> <i64 5, i64 0>, <2 x i64> <i64 4, i64 4>, i32 205)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -9, i64 -8>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 8, i64 3>, <2 x i64> <i64 5, i64 0>, <2 x i64> <i64 4, i64 4>, i32 205)
   ret <2 x i64> %r
@@ -4168,8 +3957,7 @@ define <2 x i64> @vpternlog_q_constv128_imm205() {
 
 define <8 x i32> @vpternlog_d_constv256_imm206() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm206(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 6, i32 6, i32 9, i32 7, i32 2, i32 3, i32 0, i32 3>, <8 x i32> <i32 6, i32 7, i32 6, i32 9, i32 8, i32 1, i32 9, i32 9>, <8 x i32> <i32 2, i32 3, i32 3, i32 7, i32 7, i32 0, i32 4, i32 6>, i32 206)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 6, i32 7, i32 6, i32 9, i32 13, i32 1, i32 13, i32 13>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 6, i32 6, i32 9, i32 7, i32 2, i32 3, i32 0, i32 3>, <8 x i32> <i32 6, i32 7, i32 6, i32 9, i32 8, i32 1, i32 9, i32 9>, <8 x i32> <i32 2, i32 3, i32 3, i32 7, i32 7, i32 0, i32 4, i32 6>, i32 206)
   ret <8 x i32> %r
@@ -4177,8 +3965,7 @@ define <8 x i32> @vpternlog_d_constv256_imm206() {
 
 define <8 x i64> @vpternlog_q_constv512_imm207() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm207(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 4, i64 7, i64 4, i64 9, i64 3, i64 3, i64 0, i64 5>, <8 x i64> <i64 4, i64 0, i64 4, i64 7, i64 6, i64 7, i64 5, i64 4>, <8 x i64> <i64 8, i64 4, i64 7, i64 5, i64 9, i64 6, i64 6, i64 0>, i32 207)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -1, i64 -8, i64 -1, i64 -9, i64 -2, i64 -1, i64 -1, i64 -2>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 4, i64 7, i64 4, i64 9, i64 3, i64 3, i64 0, i64 5>, <8 x i64> <i64 4, i64 0, i64 4, i64 7, i64 6, i64 7, i64 5, i64 4>, <8 x i64> <i64 8, i64 4, i64 7, i64 5, i64 9, i64 6, i64 6, i64 0>, i32 207)
   ret <8 x i64> %r
@@ -4186,8 +3973,7 @@ define <8 x i64> @vpternlog_q_constv512_imm207() {
 
 define <4 x i32> @vpternlog_d_constv128_imm208() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm208(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 3, i32 6, i32 7, i32 9>, <4 x i32> <i32 3, i32 7, i32 7, i32 5>, <4 x i32> <i32 2, i32 4, i32 0, i32 5>, i32 208)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 3, i32 6, i32 7, i32 9>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 3, i32 6, i32 7, i32 9>, <4 x i32> <i32 3, i32 7, i32 7, i32 5>, <4 x i32> <i32 2, i32 4, i32 0, i32 5>, i32 208)
   ret <4 x i32> %r
@@ -4195,8 +3981,7 @@ define <4 x i32> @vpternlog_d_constv128_imm208() {
 
 define <4 x i64> @vpternlog_q_constv256_imm209() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm209(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 6, i64 4, i64 5, i64 1>, <4 x i64> <i64 3, i64 2, i64 1, i64 2>, <4 x i64> <i64 7, i64 8, i64 6, i64 3>, i32 209)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -6, i64 -11, i64 -7, i64 -4>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 6, i64 4, i64 5, i64 1>, <4 x i64> <i64 3, i64 2, i64 1, i64 2>, <4 x i64> <i64 7, i64 8, i64 6, i64 3>, i32 209)
   ret <4 x i64> %r
@@ -4204,8 +3989,7 @@ define <4 x i64> @vpternlog_q_constv256_imm209() {
 
 define <16 x i32> @vpternlog_d_constv512_imm210() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm210(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 9, i32 5, i32 0, i32 3, i32 2, i32 1, i32 1, i32 4, i32 9, i32 5, i32 8, i32 5, i32 8, i32 8, i32 4, i32 5>, <16 x i32> <i32 0, i32 4, i32 5, i32 6, i32 2, i32 1, i32 4, i32 5, i32 3, i32 9, i32 8, i32 9, i32 6, i32 4, i32 2, i32 4>, <16 x i32> <i32 4, i32 7, i32 1, i32 5, i32 5, i32 8, i32 4, i32 5, i32 4, i32 5, i32 1, i32 0, i32 7, i32 0, i32 0, i32 1>, i32 210)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 13, i32 6, i32 0, i32 2, i32 7, i32 9, i32 1, i32 4, i32 13, i32 1, i32 9, i32 5, i32 9, i32 8, i32 4, i32 4>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 9, i32 5, i32 0, i32 3, i32 2, i32 1, i32 1, i32 4, i32 9, i32 5, i32 8, i32 5, i32 8, i32 8, i32 4, i32 5>, <16 x i32> <i32 0, i32 4, i32 5, i32 6, i32 2, i32 1, i32 4, i32 5, i32 3, i32 9, i32 8, i32 9, i32 6, i32 4, i32 2, i32 4>, <16 x i32> <i32 4, i32 7, i32 1, i32 5, i32 5, i32 8, i32 4, i32 5, i32 4, i32 5, i32 1, i32 0, i32 7, i32 0, i32 0, i32 1>, i32 210)
   ret <16 x i32> %r
@@ -4213,8 +3997,7 @@ define <16 x i32> @vpternlog_d_constv512_imm210() {
 
 define <2 x i64> @vpternlog_q_constv128_imm211() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm211(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 8, i64 8>, <2 x i64> <i64 0, i64 4>, <2 x i64> <i64 2, i64 9>, i32 211)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -1, i64 -13>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 8, i64 8>, <2 x i64> <i64 0, i64 4>, <2 x i64> <i64 2, i64 9>, i32 211)
   ret <2 x i64> %r
@@ -4222,8 +4005,7 @@ define <2 x i64> @vpternlog_q_constv128_imm211() {
 
 define <8 x i32> @vpternlog_d_constv256_imm212() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm212(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 9, i32 8, i32 6, i32 4, i32 8, i32 9, i32 9, i32 3>, <8 x i32> <i32 2, i32 7, i32 5, i32 5, i32 3, i32 2, i32 1, i32 6>, <8 x i32> <i32 4, i32 8, i32 3, i32 1, i32 7, i32 6, i32 4, i32 7>, i32 212)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 11, i32 7, i32 4, i32 4, i32 8, i32 9, i32 9, i32 2>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 9, i32 8, i32 6, i32 4, i32 8, i32 9, i32 9, i32 3>, <8 x i32> <i32 2, i32 7, i32 5, i32 5, i32 3, i32 2, i32 1, i32 6>, <8 x i32> <i32 4, i32 8, i32 3, i32 1, i32 7, i32 6, i32 4, i32 7>, i32 212)
   ret <8 x i32> %r
@@ -4231,8 +4013,7 @@ define <8 x i32> @vpternlog_d_constv256_imm212() {
 
 define <8 x i64> @vpternlog_q_constv512_imm213() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm213(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 5, i64 0, i64 8, i64 8, i64 2, i64 8, i64 1, i64 8>, <8 x i64> <i64 8, i64 7, i64 1, i64 5, i64 0, i64 6, i64 2, i64 1>, <8 x i64> <i64 8, i64 7, i64 7, i64 0, i64 3, i64 8, i64 0, i64 1>, i32 213)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -9, i64 -8, i64 -8, i64 -1, i64 -4, i64 -9, i64 -1, i64 -2>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 5, i64 0, i64 8, i64 8, i64 2, i64 8, i64 1, i64 8>, <8 x i64> <i64 8, i64 7, i64 1, i64 5, i64 0, i64 6, i64 2, i64 1>, <8 x i64> <i64 8, i64 7, i64 7, i64 0, i64 3, i64 8, i64 0, i64 1>, i32 213)
   ret <8 x i64> %r
@@ -4240,8 +4021,7 @@ define <8 x i64> @vpternlog_q_constv512_imm213() {
 
 define <4 x i32> @vpternlog_d_constv128_imm214() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm214(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 6, i32 6, i32 7, i32 7>, <4 x i32> <i32 3, i32 1, i32 1, i32 0>, <4 x i32> <i32 6, i32 8, i32 1, i32 6>, i32 214)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 3, i32 15, i32 7, i32 1>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 6, i32 6, i32 7, i32 7>, <4 x i32> <i32 3, i32 1, i32 1, i32 0>, <4 x i32> <i32 6, i32 8, i32 1, i32 6>, i32 214)
   ret <4 x i32> %r
@@ -4249,8 +4029,7 @@ define <4 x i32> @vpternlog_d_constv128_imm214() {
 
 define <4 x i64> @vpternlog_q_constv256_imm215() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm215(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 6, i64 4, i64 3, i64 2>, <4 x i64> <i64 3, i64 5, i64 5, i64 8>, <4 x i64> <i64 2, i64 5, i64 8, i64 6>, i32 215)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -1, i64 -2, i64 -1, i64 -3>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 6, i64 4, i64 3, i64 2>, <4 x i64> <i64 3, i64 5, i64 5, i64 8>, <4 x i64> <i64 2, i64 5, i64 8, i64 6>, i32 215)
   ret <4 x i64> %r
@@ -4258,8 +4037,7 @@ define <4 x i64> @vpternlog_q_constv256_imm215() {
 
 define <16 x i32> @vpternlog_d_constv512_imm216() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm216(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 4, i32 9, i32 9, i32 1, i32 4, i32 8, i32 8, i32 8, i32 8, i32 2, i32 0, i32 9, i32 6, i32 9, i32 1, i32 1>, <16 x i32> <i32 4, i32 8, i32 8, i32 0, i32 0, i32 0, i32 9, i32 4, i32 0, i32 1, i32 1, i32 5, i32 5, i32 8, i32 9, i32 0>, <16 x i32> <i32 6, i32 2, i32 2, i32 2, i32 6, i32 3, i32 4, i32 3, i32 6, i32 6, i32 2, i32 5, i32 6, i32 6, i32 4, i32 1>, i32 216)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 4, i32 9, i32 9, i32 1, i32 0, i32 8, i32 8, i32 8, i32 8, i32 0, i32 0, i32 13, i32 4, i32 9, i32 1, i32 0>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 4, i32 9, i32 9, i32 1, i32 4, i32 8, i32 8, i32 8, i32 8, i32 2, i32 0, i32 9, i32 6, i32 9, i32 1, i32 1>, <16 x i32> <i32 4, i32 8, i32 8, i32 0, i32 0, i32 0, i32 9, i32 4, i32 0, i32 1, i32 1, i32 5, i32 5, i32 8, i32 9, i32 0>, <16 x i32> <i32 6, i32 2, i32 2, i32 2, i32 6, i32 3, i32 4, i32 3, i32 6, i32 6, i32 2, i32 5, i32 6, i32 6, i32 4, i32 1>, i32 216)
   ret <16 x i32> %r
@@ -4267,8 +4045,7 @@ define <16 x i32> @vpternlog_d_constv512_imm216() {
 
 define <2 x i64> @vpternlog_q_constv128_imm217() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm217(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 0, i64 7>, <2 x i64> <i64 0, i64 6>, <2 x i64> <i64 0, i64 8>, i32 217)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -1, i64 -9>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 0, i64 7>, <2 x i64> <i64 0, i64 6>, <2 x i64> <i64 0, i64 8>, i32 217)
   ret <2 x i64> %r
@@ -4276,8 +4053,7 @@ define <2 x i64> @vpternlog_q_constv128_imm217() {
 
 define <8 x i32> @vpternlog_d_constv256_imm218() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm218(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 6, i32 0, i32 7, i32 1, i32 5, i32 0, i32 4, i32 3>, <8 x i32> <i32 0, i32 6, i32 5, i32 7, i32 6, i32 9, i32 1, i32 0>, <8 x i32> <i32 0, i32 6, i32 1, i32 8, i32 8, i32 4, i32 0, i32 7>, i32 218)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 6, i32 6, i32 7, i32 9, i32 13, i32 4, i32 4, i32 4>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 6, i32 0, i32 7, i32 1, i32 5, i32 0, i32 4, i32 3>, <8 x i32> <i32 0, i32 6, i32 5, i32 7, i32 6, i32 9, i32 1, i32 0>, <8 x i32> <i32 0, i32 6, i32 1, i32 8, i32 8, i32 4, i32 0, i32 7>, i32 218)
   ret <8 x i32> %r
@@ -4285,8 +4061,7 @@ define <8 x i32> @vpternlog_d_constv256_imm218() {
 
 define <8 x i64> @vpternlog_q_constv512_imm219() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm219(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 1, i64 2, i64 0, i64 6, i64 7, i64 1, i64 4, i64 4>, <8 x i64> <i64 7, i64 7, i64 1, i64 1, i64 1, i64 6, i64 6, i64 1>, <8 x i64> <i64 4, i64 2, i64 3, i64 1, i64 7, i64 7, i64 3, i64 9>, i32 219)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -3, i64 -6, i64 -1, i64 -1, i64 -7, i64 -2, i64 -1, i64 -1>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 1, i64 2, i64 0, i64 6, i64 7, i64 1, i64 4, i64 4>, <8 x i64> <i64 7, i64 7, i64 1, i64 1, i64 1, i64 6, i64 6, i64 1>, <8 x i64> <i64 4, i64 2, i64 3, i64 1, i64 7, i64 7, i64 3, i64 9>, i32 219)
   ret <8 x i64> %r
@@ -4294,8 +4069,7 @@ define <8 x i64> @vpternlog_q_constv512_imm219() {
 
 define <4 x i32> @vpternlog_d_constv128_imm220() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm220(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 2, i32 4, i32 3, i32 6>, <4 x i32> <i32 0, i32 4, i32 8, i32 4>, <4 x i32> <i32 5, i32 9, i32 9, i32 8>, i32 220)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 2, i32 4, i32 10, i32 6>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 2, i32 4, i32 3, i32 6>, <4 x i32> <i32 0, i32 4, i32 8, i32 4>, <4 x i32> <i32 5, i32 9, i32 9, i32 8>, i32 220)
   ret <4 x i32> %r
@@ -4303,8 +4077,7 @@ define <4 x i32> @vpternlog_d_constv128_imm220() {
 
 define <4 x i64> @vpternlog_q_constv256_imm221() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm221(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 7, i64 2, i64 2>, <4 x i64> <i64 5, i64 3, i64 8, i64 2>, <4 x i64> <i64 9, i64 5, i64 5, i64 8>, i32 221)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -9, i64 -5, i64 -6, i64 -9>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 7, i64 2, i64 2>, <4 x i64> <i64 5, i64 3, i64 8, i64 2>, <4 x i64> <i64 9, i64 5, i64 5, i64 8>, i32 221)
   ret <4 x i64> %r
@@ -4312,8 +4085,7 @@ define <4 x i64> @vpternlog_q_constv256_imm221() {
 
 define <16 x i32> @vpternlog_d_constv512_imm222() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm222(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 2, i32 3, i32 7, i32 2, i32 5, i32 2, i32 9, i32 0, i32 7, i32 7, i32 1, i32 7, i32 9, i32 0, i32 6, i32 6>, <16 x i32> <i32 0, i32 6, i32 8, i32 7, i32 2, i32 6, i32 6, i32 2, i32 9, i32 6, i32 6, i32 2, i32 7, i32 3, i32 1, i32 5>, <16 x i32> <i32 3, i32 9, i32 0, i32 0, i32 7, i32 3, i32 5, i32 1, i32 4, i32 1, i32 7, i32 9, i32 4, i32 4, i32 0, i32 7>, i32 222)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 1, i32 14, i32 15, i32 7, i32 2, i32 7, i32 14, i32 3, i32 11, i32 6, i32 6, i32 14, i32 15, i32 7, i32 7, i32 5>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 2, i32 3, i32 7, i32 2, i32 5, i32 2, i32 9, i32 0, i32 7, i32 7, i32 1, i32 7, i32 9, i32 0, i32 6, i32 6>, <16 x i32> <i32 0, i32 6, i32 8, i32 7, i32 2, i32 6, i32 6, i32 2, i32 9, i32 6, i32 6, i32 2, i32 7, i32 3, i32 1, i32 5>, <16 x i32> <i32 3, i32 9, i32 0, i32 0, i32 7, i32 3, i32 5, i32 1, i32 4, i32 1, i32 7, i32 9, i32 4, i32 4, i32 0, i32 7>, i32 222)
   ret <16 x i32> %r
@@ -4321,8 +4093,7 @@ define <16 x i32> @vpternlog_d_constv512_imm222() {
 
 define <2 x i64> @vpternlog_q_constv128_imm223() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm223(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 4, i64 3>, <2 x i64> <i64 7, i64 9>, <2 x i64> <i64 5, i64 0>, i32 223)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -1, i64 -1>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 4, i64 3>, <2 x i64> <i64 7, i64 9>, <2 x i64> <i64 5, i64 0>, i32 223)
   ret <2 x i64> %r
@@ -4330,8 +4101,7 @@ define <2 x i64> @vpternlog_q_constv128_imm223() {
 
 define <8 x i32> @vpternlog_d_constv256_imm224() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm224(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 8, i32 7, i32 7, i32 8, i32 0, i32 7, i32 9, i32 1>, <8 x i32> <i32 8, i32 9, i32 8, i32 0, i32 8, i32 1, i32 5, i32 7>, <8 x i32> <i32 2, i32 8, i32 9, i32 2, i32 8, i32 5, i32 3, i32 0>, i32 224)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 8, i32 1, i32 1, i32 0, i32 0, i32 5, i32 1, i32 1>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 8, i32 7, i32 7, i32 8, i32 0, i32 7, i32 9, i32 1>, <8 x i32> <i32 8, i32 9, i32 8, i32 0, i32 8, i32 1, i32 5, i32 7>, <8 x i32> <i32 2, i32 8, i32 9, i32 2, i32 8, i32 5, i32 3, i32 0>, i32 224)
   ret <8 x i32> %r
@@ -4339,8 +4109,7 @@ define <8 x i32> @vpternlog_d_constv256_imm224() {
 
 define <8 x i64> @vpternlog_q_constv512_imm225() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm225(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 3, i64 1, i64 1, i64 7, i64 4, i64 7, i64 1, i64 0>, <8 x i64> <i64 0, i64 8, i64 8, i64 8, i64 8, i64 7, i64 1, i64 2>, <8 x i64> <i64 6, i64 1, i64 2, i64 2, i64 5, i64 8, i64 6, i64 3>, i32 225)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -6, i64 -9, i64 -12, i64 -14, i64 -10, i64 -9, i64 -7, i64 -4>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 3, i64 1, i64 1, i64 7, i64 4, i64 7, i64 1, i64 0>, <8 x i64> <i64 0, i64 8, i64 8, i64 8, i64 8, i64 7, i64 1, i64 2>, <8 x i64> <i64 6, i64 1, i64 2, i64 2, i64 5, i64 8, i64 6, i64 3>, i32 225)
   ret <8 x i64> %r
@@ -4348,8 +4117,7 @@ define <8 x i64> @vpternlog_q_constv512_imm225() {
 
 define <4 x i32> @vpternlog_d_constv128_imm226() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm226(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 0, i32 2, i32 3, i32 7>, <4 x i32> <i32 8, i32 6, i32 4, i32 9>, <4 x i32> <i32 9, i32 4, i32 2, i32 1>, i32 226)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 1, i32 2, i32 2, i32 1>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 0, i32 2, i32 3, i32 7>, <4 x i32> <i32 8, i32 6, i32 4, i32 9>, <4 x i32> <i32 9, i32 4, i32 2, i32 1>, i32 226)
   ret <4 x i32> %r
@@ -4357,8 +4125,7 @@ define <4 x i32> @vpternlog_d_constv128_imm226() {
 
 define <4 x i64> @vpternlog_q_constv256_imm227() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm227(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 5, i64 6, i64 3, i64 2>, <4 x i64> <i64 2, i64 7, i64 7, i64 5>, <4 x i64> <i64 1, i64 0, i64 4, i64 2>, i32 227)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -7, i64 -2, i64 -5, i64 -6>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 5, i64 6, i64 3, i64 2>, <4 x i64> <i64 2, i64 7, i64 7, i64 5>, <4 x i64> <i64 1, i64 0, i64 4, i64 2>, i32 227)
   ret <4 x i64> %r
@@ -4366,8 +4133,7 @@ define <4 x i64> @vpternlog_q_constv256_imm227() {
 
 define <16 x i32> @vpternlog_d_constv512_imm228() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm228(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 3, i32 6, i32 2, i32 9, i32 0, i32 2, i32 8, i32 6, i32 1, i32 2, i32 2, i32 8, i32 0, i32 0, i32 2, i32 0>, <16 x i32> <i32 5, i32 7, i32 0, i32 5, i32 4, i32 3, i32 7, i32 3, i32 5, i32 1, i32 3, i32 2, i32 3, i32 9, i32 4, i32 3>, <16 x i32> <i32 4, i32 3, i32 8, i32 3, i32 7, i32 4, i32 3, i32 0, i32 2, i32 7, i32 5, i32 5, i32 1, i32 4, i32 7, i32 6>, i32 228)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 1, i32 6, i32 0, i32 5, i32 0, i32 3, i32 4, i32 3, i32 5, i32 2, i32 2, i32 2, i32 2, i32 9, i32 2, i32 1>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 3, i32 6, i32 2, i32 9, i32 0, i32 2, i32 8, i32 6, i32 1, i32 2, i32 2, i32 8, i32 0, i32 0, i32 2, i32 0>, <16 x i32> <i32 5, i32 7, i32 0, i32 5, i32 4, i32 3, i32 7, i32 3, i32 5, i32 1, i32 3, i32 2, i32 3, i32 9, i32 4, i32 3>, <16 x i32> <i32 4, i32 3, i32 8, i32 3, i32 7, i32 4, i32 3, i32 0, i32 2, i32 7, i32 5, i32 5, i32 1, i32 4, i32 7, i32 6>, i32 228)
   ret <16 x i32> %r
@@ -4375,8 +4141,7 @@ define <16 x i32> @vpternlog_d_constv512_imm228() {
 
 define <2 x i64> @vpternlog_q_constv128_imm229() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm229(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 0, i64 2>, <2 x i64> <i64 9, i64 4>, <2 x i64> zeroinitializer, i32 229)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -1, i64 -3>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 0, i64 2>, <2 x i64> <i64 9, i64 4>, <2 x i64> <i64 0, i64 0>, i32 229)
   ret <2 x i64> %r
@@ -4384,8 +4149,7 @@ define <2 x i64> @vpternlog_q_constv128_imm229() {
 
 define <8 x i32> @vpternlog_d_constv256_imm230() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm230(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 7, i32 6, i32 1, i32 3, i32 7, i32 6, i32 9, i32 6>, <8 x i32> <i32 9, i32 7, i32 0, i32 4, i32 7, i32 0, i32 0, i32 8>, <8 x i32> <i32 6, i32 1, i32 1, i32 7, i32 5, i32 1, i32 3, i32 9>, i32 230)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 15, i32 6, i32 1, i32 3, i32 7, i32 1, i32 3, i32 1>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 7, i32 6, i32 1, i32 3, i32 7, i32 6, i32 9, i32 6>, <8 x i32> <i32 9, i32 7, i32 0, i32 4, i32 7, i32 0, i32 0, i32 8>, <8 x i32> <i32 6, i32 1, i32 1, i32 7, i32 5, i32 1, i32 3, i32 9>, i32 230)
   ret <8 x i32> %r
@@ -4393,8 +4157,7 @@ define <8 x i32> @vpternlog_d_constv256_imm230() {
 
 define <8 x i64> @vpternlog_q_constv512_imm231() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm231(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 9, i64 3, i64 9, i64 0, i64 3, i64 9, i64 6, i64 1>, <8 x i64> <i64 9, i64 5, i64 3, i64 3, i64 2, i64 3, i64 4, i64 7>, <8 x i64> <i64 7, i64 5, i64 0, i64 1, i64 6, i64 3, i64 7, i64 1>, i32 231)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -1, i64 -7, i64 -9, i64 -2, i64 -2, i64 -11, i64 -1, i64 -1>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 9, i64 3, i64 9, i64 0, i64 3, i64 9, i64 6, i64 1>, <8 x i64> <i64 9, i64 5, i64 3, i64 3, i64 2, i64 3, i64 4, i64 7>, <8 x i64> <i64 7, i64 5, i64 0, i64 1, i64 6, i64 3, i64 7, i64 1>, i32 231)
   ret <8 x i64> %r
@@ -4402,8 +4165,7 @@ define <8 x i64> @vpternlog_q_constv512_imm231() {
 
 define <4 x i32> @vpternlog_d_constv128_imm232() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm232(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 0, i32 7, i32 7, i32 7>, <4 x i32> <i32 9, i32 8, i32 0, i32 6>, <4 x i32> <i32 4, i32 2, i32 3, i32 5>, i32 232)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 0, i32 2, i32 3, i32 7>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 0, i32 7, i32 7, i32 7>, <4 x i32> <i32 9, i32 8, i32 0, i32 6>, <4 x i32> <i32 4, i32 2, i32 3, i32 5>, i32 232)
   ret <4 x i32> %r
@@ -4411,8 +4173,7 @@ define <4 x i32> @vpternlog_d_constv128_imm232() {
 
 define <4 x i64> @vpternlog_q_constv256_imm233() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm233(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 3, i64 4, i64 1, i64 5>, <4 x i64> <i64 2, i64 3, i64 0, i64 5>, <4 x i64> <i64 0, i64 9, i64 6, i64 9>, i32 233)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -2, i64 -15, i64 -8, i64 -9>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 3, i64 4, i64 1, i64 5>, <4 x i64> <i64 2, i64 3, i64 0, i64 5>, <4 x i64> <i64 0, i64 9, i64 6, i64 9>, i32 233)
   ret <4 x i64> %r
@@ -4420,8 +4181,7 @@ define <4 x i64> @vpternlog_q_constv256_imm233() {
 
 define <16 x i32> @vpternlog_d_constv512_imm234() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm234(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 4, i32 4, i32 2, i32 3, i32 9, i32 4, i32 8, i32 1, i32 1, i32 4, i32 7, i32 7, i32 9, i32 3, i32 4, i32 8>, <16 x i32> <i32 9, i32 4, i32 2, i32 9, i32 8, i32 0, i32 3, i32 9, i32 5, i32 8, i32 9, i32 0, i32 8, i32 7, i32 7, i32 9>, <16 x i32> <i32 5, i32 1, i32 9, i32 9, i32 8, i32 4, i32 9, i32 3, i32 5, i32 9, i32 9, i32 4, i32 7, i32 1, i32 5, i32 7>, i32 234)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 5, i32 5, i32 11, i32 9, i32 8, i32 4, i32 9, i32 3, i32 5, i32 9, i32 9, i32 4, i32 15, i32 3, i32 5, i32 15>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 4, i32 4, i32 2, i32 3, i32 9, i32 4, i32 8, i32 1, i32 1, i32 4, i32 7, i32 7, i32 9, i32 3, i32 4, i32 8>, <16 x i32> <i32 9, i32 4, i32 2, i32 9, i32 8, i32 0, i32 3, i32 9, i32 5, i32 8, i32 9, i32 0, i32 8, i32 7, i32 7, i32 9>, <16 x i32> <i32 5, i32 1, i32 9, i32 9, i32 8, i32 4, i32 9, i32 3, i32 5, i32 9, i32 9, i32 4, i32 7, i32 1, i32 5, i32 7>, i32 234)
   ret <16 x i32> %r
@@ -4429,8 +4189,7 @@ define <16 x i32> @vpternlog_d_constv512_imm234() {
 
 define <2 x i64> @vpternlog_q_constv128_imm235() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm235(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 2, i64 5>, <2 x i64> <i64 2, i64 8>, <2 x i64> <i64 8, i64 2>, i32 235)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -1, i64 -14>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 2, i64 5>, <2 x i64> <i64 2, i64 8>, <2 x i64> <i64 8, i64 2>, i32 235)
   ret <2 x i64> %r
@@ -4438,8 +4197,7 @@ define <2 x i64> @vpternlog_q_constv128_imm235() {
 
 define <8 x i32> @vpternlog_d_constv256_imm236() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm236(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 3, i32 4, i32 9, i32 5, i32 9, i32 3, i32 9, i32 0>, <8 x i32> <i32 9, i32 5, i32 6, i32 5, i32 9, i32 5, i32 4, i32 3>, <8 x i32> <i32 5, i32 5, i32 1, i32 7, i32 5, i32 8, i32 4, i32 2>, i32 236)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 9, i32 5, i32 7, i32 5, i32 9, i32 5, i32 4, i32 3>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 3, i32 4, i32 9, i32 5, i32 9, i32 3, i32 9, i32 0>, <8 x i32> <i32 9, i32 5, i32 6, i32 5, i32 9, i32 5, i32 4, i32 3>, <8 x i32> <i32 5, i32 5, i32 1, i32 7, i32 5, i32 8, i32 4, i32 2>, i32 236)
   ret <8 x i32> %r
@@ -4447,8 +4205,7 @@ define <8 x i32> @vpternlog_d_constv256_imm236() {
 
 define <8 x i64> @vpternlog_q_constv512_imm237() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm237(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 5, i64 3, i64 5, i64 9, i64 0, i64 0, i64 8, i64 5>, <8 x i64> <i64 6, i64 3, i64 7, i64 6, i64 8, i64 8, i64 7, i64 7>, <8 x i64> <i64 2, i64 9, i64 4, i64 5, i64 1, i64 7, i64 2, i64 1>, i32 237)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -2, i64 -9, i64 -1, i64 -9, i64 -2, i64 -8, i64 -9, i64 -1>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 5, i64 3, i64 5, i64 9, i64 0, i64 0, i64 8, i64 5>, <8 x i64> <i64 6, i64 3, i64 7, i64 6, i64 8, i64 8, i64 7, i64 7>, <8 x i64> <i64 2, i64 9, i64 4, i64 5, i64 1, i64 7, i64 2, i64 1>, i32 237)
   ret <8 x i64> %r
@@ -4456,8 +4213,7 @@ define <8 x i64> @vpternlog_q_constv512_imm237() {
 
 define <4 x i32> @vpternlog_d_constv128_imm238() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm238(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 8, i32 9, i32 1, i32 4>, <4 x i32> <i32 7, i32 1, i32 7, i32 3>, <4 x i32> <i32 5, i32 4, i32 8, i32 9>, i32 238)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 7, i32 5, i32 15, i32 11>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 8, i32 9, i32 1, i32 4>, <4 x i32> <i32 7, i32 1, i32 7, i32 3>, <4 x i32> <i32 5, i32 4, i32 8, i32 9>, i32 238)
   ret <4 x i32> %r
@@ -4465,8 +4221,7 @@ define <4 x i32> @vpternlog_d_constv128_imm238() {
 
 define <4 x i64> @vpternlog_q_constv256_imm239() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm239(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 8, i64 4, i64 5, i64 8>, <4 x i64> <i64 1, i64 0, i64 9, i64 6>, <4 x i64> <i64 8, i64 0, i64 5, i64 4>, i32 239)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -1, i64 -5, i64 -1, i64 -9>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 8, i64 4, i64 5, i64 8>, <4 x i64> <i64 1, i64 0, i64 9, i64 6>, <4 x i64> <i64 8, i64 0, i64 5, i64 4>, i32 239)
   ret <4 x i64> %r
@@ -4474,8 +4229,7 @@ define <4 x i64> @vpternlog_q_constv256_imm239() {
 
 define <16 x i32> @vpternlog_d_constv512_imm240() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm240(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 3, i32 8, i32 5, i32 3, i32 1, i32 4, i32 7, i32 7, i32 8, i32 7, i32 7, i32 7, i32 2, i32 0, i32 9, i32 8>, <16 x i32> <i32 8, i32 0, i32 7, i32 3, i32 9, i32 2, i32 3, i32 4, i32 7, i32 5, i32 8, i32 3, i32 8, i32 1, i32 8, i32 6>, <16 x i32> <i32 0, i32 8, i32 4, i32 1, i32 1, i32 6, i32 2, i32 7, i32 8, i32 9, i32 0, i32 0, i32 9, i32 5, i32 1, i32 3>, i32 240)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 3, i32 8, i32 5, i32 3, i32 1, i32 4, i32 7, i32 7, i32 8, i32 7, i32 7, i32 7, i32 2, i32 0, i32 9, i32 8>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 3, i32 8, i32 5, i32 3, i32 1, i32 4, i32 7, i32 7, i32 8, i32 7, i32 7, i32 7, i32 2, i32 0, i32 9, i32 8>, <16 x i32> <i32 8, i32 0, i32 7, i32 3, i32 9, i32 2, i32 3, i32 4, i32 7, i32 5, i32 8, i32 3, i32 8, i32 1, i32 8, i32 6>, <16 x i32> <i32 0, i32 8, i32 4, i32 1, i32 1, i32 6, i32 2, i32 7, i32 8, i32 9, i32 0, i32 0, i32 9, i32 5, i32 1, i32 3>, i32 240)
   ret <16 x i32> %r
@@ -4483,8 +4237,7 @@ define <16 x i32> @vpternlog_d_constv512_imm240() {
 
 define <2 x i64> @vpternlog_q_constv128_imm241() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm241(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 7, i64 6>, <2 x i64> <i64 8, i64 7>, <2 x i64> <i64 1, i64 4>, i32 241)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -9, i64 -2>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 7, i64 6>, <2 x i64> <i64 8, i64 7>, <2 x i64> <i64 1, i64 4>, i32 241)
   ret <2 x i64> %r
@@ -4492,8 +4245,7 @@ define <2 x i64> @vpternlog_q_constv128_imm241() {
 
 define <8 x i32> @vpternlog_d_constv256_imm242() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm242(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 3, i32 6, i32 0, i32 0, i32 9, i32 1, i32 9, i32 5>, <8 x i32> <i32 1, i32 3, i32 3, i32 9, i32 8, i32 3, i32 4, i32 4>, <8 x i32> <i32 5, i32 3, i32 5, i32 6, i32 7, i32 9, i32 7, i32 0>, i32 242)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 7, i32 6, i32 4, i32 6, i32 15, i32 9, i32 11, i32 5>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 3, i32 6, i32 0, i32 0, i32 9, i32 1, i32 9, i32 5>, <8 x i32> <i32 1, i32 3, i32 3, i32 9, i32 8, i32 3, i32 4, i32 4>, <8 x i32> <i32 5, i32 3, i32 5, i32 6, i32 7, i32 9, i32 7, i32 0>, i32 242)
   ret <8 x i32> %r
@@ -4501,8 +4253,7 @@ define <8 x i32> @vpternlog_d_constv256_imm242() {
 
 define <8 x i64> @vpternlog_q_constv512_imm243() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm243(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 2, i64 9, i64 0, i64 3, i64 6, i64 6, i64 7, i64 0>, <8 x i64> <i64 9, i64 5, i64 5, i64 4, i64 3, i64 2, i64 5, i64 9>, <8 x i64> <i64 0, i64 7, i64 0, i64 1, i64 4, i64 5, i64 5, i64 6>, i32 243)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -10, i64 -5, i64 -6, i64 -5, i64 -2, i64 -1, i64 -1, i64 -10>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 2, i64 9, i64 0, i64 3, i64 6, i64 6, i64 7, i64 0>, <8 x i64> <i64 9, i64 5, i64 5, i64 4, i64 3, i64 2, i64 5, i64 9>, <8 x i64> <i64 0, i64 7, i64 0, i64 1, i64 4, i64 5, i64 5, i64 6>, i32 243)
   ret <8 x i64> %r
@@ -4510,8 +4261,7 @@ define <8 x i64> @vpternlog_q_constv512_imm243() {
 
 define <4 x i32> @vpternlog_d_constv128_imm244() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm244(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 7, i32 5, i32 8, i32 7>, <4 x i32> <i32 3, i32 1, i32 1, i32 2>, <4 x i32> <i32 9, i32 3, i32 0, i32 3>, i32 244)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 7, i32 5, i32 9, i32 7>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 7, i32 5, i32 8, i32 7>, <4 x i32> <i32 3, i32 1, i32 1, i32 2>, <4 x i32> <i32 9, i32 3, i32 0, i32 3>, i32 244)
   ret <4 x i32> %r
@@ -4519,8 +4269,7 @@ define <4 x i32> @vpternlog_d_constv128_imm244() {
 
 define <4 x i64> @vpternlog_q_constv256_imm245() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm245(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 9, i64 3, i64 9, i64 6>, <4 x i64> <i64 3, i64 6, i64 1, i64 7>, <4 x i64> <i64 7, i64 3, i64 4, i64 9>, i32 245)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -7, i64 -1, i64 -5, i64 -10>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 9, i64 3, i64 9, i64 6>, <4 x i64> <i64 3, i64 6, i64 1, i64 7>, <4 x i64> <i64 7, i64 3, i64 4, i64 9>, i32 245)
   ret <4 x i64> %r
@@ -4528,8 +4277,7 @@ define <4 x i64> @vpternlog_q_constv256_imm245() {
 
 define <16 x i32> @vpternlog_d_constv512_imm246() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm246(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 7, i32 1, i32 9, i32 2, i32 5, i32 6, i32 6, i32 4, i32 9, i32 5, i32 8, i32 4, i32 0, i32 5, i32 3, i32 6>, <16 x i32> <i32 6, i32 5, i32 6, i32 4, i32 6, i32 2, i32 2, i32 7, i32 3, i32 6, i32 3, i32 0, i32 2, i32 8, i32 7, i32 9>, <16 x i32> <i32 7, i32 7, i32 1, i32 5, i32 4, i32 5, i32 4, i32 6, i32 2, i32 1, i32 6, i32 0, i32 7, i32 1, i32 6, i32 4>, i32 246)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 7, i32 3, i32 15, i32 3, i32 7, i32 7, i32 6, i32 5, i32 9, i32 7, i32 13, i32 4, i32 5, i32 13, i32 3, i32 15>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 7, i32 1, i32 9, i32 2, i32 5, i32 6, i32 6, i32 4, i32 9, i32 5, i32 8, i32 4, i32 0, i32 5, i32 3, i32 6>, <16 x i32> <i32 6, i32 5, i32 6, i32 4, i32 6, i32 2, i32 2, i32 7, i32 3, i32 6, i32 3, i32 0, i32 2, i32 8, i32 7, i32 9>, <16 x i32> <i32 7, i32 7, i32 1, i32 5, i32 4, i32 5, i32 4, i32 6, i32 2, i32 1, i32 6, i32 0, i32 7, i32 1, i32 6, i32 4>, i32 246)
   ret <16 x i32> %r
@@ -4537,8 +4285,7 @@ define <16 x i32> @vpternlog_d_constv512_imm246() {
 
 define <2 x i64> @vpternlog_q_constv128_imm247() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm247(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 2, i64 6>, <2 x i64> <i64 7, i64 7>, <2 x i64> <i64 0, i64 8>, i32 247)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -1, i64 -1>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 2, i64 6>, <2 x i64> <i64 7, i64 7>, <2 x i64> <i64 0, i64 8>, i32 247)
   ret <2 x i64> %r
@@ -4546,8 +4293,7 @@ define <2 x i64> @vpternlog_q_constv128_imm247() {
 
 define <8 x i32> @vpternlog_d_constv256_imm248() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm248(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 1, i32 2, i32 4, i32 3, i32 2, i32 6, i32 6, i32 5>, <8 x i32> <i32 6, i32 5, i32 8, i32 4, i32 4, i32 5, i32 4, i32 4>, <8 x i32> <i32 6, i32 7, i32 8, i32 3, i32 4, i32 4, i32 7, i32 6>, i32 248)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 7, i32 7, i32 12, i32 3, i32 6, i32 6, i32 6, i32 5>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 1, i32 2, i32 4, i32 3, i32 2, i32 6, i32 6, i32 5>, <8 x i32> <i32 6, i32 5, i32 8, i32 4, i32 4, i32 5, i32 4, i32 4>, <8 x i32> <i32 6, i32 7, i32 8, i32 3, i32 4, i32 4, i32 7, i32 6>, i32 248)
   ret <8 x i32> %r
@@ -4555,8 +4301,7 @@ define <8 x i32> @vpternlog_d_constv256_imm248() {
 
 define <8 x i64> @vpternlog_q_constv512_imm249() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm249(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 7, i64 5, i64 7, i64 2, i64 2, i64 4, i64 1, i64 3>, <8 x i64> <i64 4, i64 1, i64 8, i64 6, i64 0, i64 7, i64 2, i64 5>, <8 x i64> <i64 3, i64 5, i64 4, i64 6, i64 0, i64 1, i64 0, i64 7>, i32 249)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -1, i64 -1, i64 -9, i64 -1, i64 -1, i64 -3, i64 -3, i64 -1>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 7, i64 5, i64 7, i64 2, i64 2, i64 4, i64 1, i64 3>, <8 x i64> <i64 4, i64 1, i64 8, i64 6, i64 0, i64 7, i64 2, i64 5>, <8 x i64> <i64 3, i64 5, i64 4, i64 6, i64 0, i64 1, i64 0, i64 7>, i32 249)
   ret <8 x i64> %r
@@ -4564,8 +4309,7 @@ define <8 x i64> @vpternlog_q_constv512_imm249() {
 
 define <4 x i32> @vpternlog_d_constv128_imm250() {
 ; CHECK-LABEL: @vpternlog_d_constv128_imm250(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 6, i32 1, i32 3, i32 5>, <4 x i32> <i32 8, i32 4, i32 0, i32 9>, <4 x i32> <i32 3, i32 8, i32 3, i32 5>, i32 250)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> <i32 7, i32 9, i32 3, i32 5>
 ;
   %r = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> <i32 6, i32 1, i32 3, i32 5>, <4 x i32> <i32 8, i32 4, i32 0, i32 9>, <4 x i32> <i32 3, i32 8, i32 3, i32 5>, i32 250)
   ret <4 x i32> %r
@@ -4573,8 +4317,7 @@ define <4 x i32> @vpternlog_d_constv128_imm250() {
 
 define <4 x i64> @vpternlog_q_constv256_imm251() {
 ; CHECK-LABEL: @vpternlog_q_constv256_imm251(
-; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 8, i64 4, i64 3>, <4 x i64> <i64 1, i64 5, i64 8, i64 1>, <4 x i64> <i64 1, i64 9, i64 9, i64 4>, i32 251)
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    ret <4 x i64> <i64 -1, i64 -5, i64 -1, i64 -1>
 ;
   %r = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> <i64 2, i64 8, i64 4, i64 3>, <4 x i64> <i64 1, i64 5, i64 8, i64 1>, <4 x i64> <i64 1, i64 9, i64 9, i64 4>, i32 251)
   ret <4 x i64> %r
@@ -4582,8 +4325,7 @@ define <4 x i64> @vpternlog_q_constv256_imm251() {
 
 define <16 x i32> @vpternlog_d_constv512_imm252() {
 ; CHECK-LABEL: @vpternlog_d_constv512_imm252(
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 2, i32 9, i32 6, i32 2, i32 3, i32 0, i32 3, i32 3, i32 3, i32 3, i32 5, i32 0, i32 9, i32 6, i32 4, i32 7>, <16 x i32> <i32 9, i32 4, i32 6, i32 1, i32 9, i32 6, i32 6, i32 0, i32 5, i32 7, i32 6, i32 8, i32 9, i32 9, i32 5, i32 1>, <16 x i32> <i32 2, i32 8, i32 3, i32 8, i32 7, i32 7, i32 2, i32 3, i32 0, i32 6, i32 5, i32 8, i32 0, i32 2, i32 6, i32 1>, i32 252)
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    ret <16 x i32> <i32 11, i32 13, i32 6, i32 3, i32 11, i32 6, i32 7, i32 3, i32 7, i32 7, i32 7, i32 8, i32 9, i32 15, i32 5, i32 7>
 ;
   %r = tail call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> <i32 2, i32 9, i32 6, i32 2, i32 3, i32 0, i32 3, i32 3, i32 3, i32 3, i32 5, i32 0, i32 9, i32 6, i32 4, i32 7>, <16 x i32> <i32 9, i32 4, i32 6, i32 1, i32 9, i32 6, i32 6, i32 0, i32 5, i32 7, i32 6, i32 8, i32 9, i32 9, i32 5, i32 1>, <16 x i32> <i32 2, i32 8, i32 3, i32 8, i32 7, i32 7, i32 2, i32 3, i32 0, i32 6, i32 5, i32 8, i32 0, i32 2, i32 6, i32 1>, i32 252)
   ret <16 x i32> %r
@@ -4591,8 +4333,7 @@ define <16 x i32> @vpternlog_d_constv512_imm252() {
 
 define <2 x i64> @vpternlog_q_constv128_imm253() {
 ; CHECK-LABEL: @vpternlog_q_constv128_imm253(
-; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 5, i64 6>, <2 x i64> <i64 6, i64 1>, <2 x i64> <i64 5, i64 9>, i32 253)
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; CHECK-NEXT:    ret <2 x i64> <i64 -1, i64 -9>
 ;
   %r = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> <i64 5, i64 6>, <2 x i64> <i64 6, i64 1>, <2 x i64> <i64 5, i64 9>, i32 253)
   ret <2 x i64> %r
@@ -4600,8 +4341,7 @@ define <2 x i64> @vpternlog_q_constv128_imm253() {
 
 define <8 x i32> @vpternlog_d_constv256_imm254() {
 ; CHECK-LABEL: @vpternlog_d_constv256_imm254(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 5, i32 6, i32 1, i32 9, i32 4, i32 1, i32 9, i32 7>, <8 x i32> <i32 2, i32 9, i32 1, i32 5, i32 7, i32 1, i32 0, i32 9>, <8 x i32> <i32 1, i32 6, i32 2, i32 8, i32 8, i32 7, i32 0, i32 7>, i32 254)
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> <i32 7, i32 15, i32 3, i32 13, i32 15, i32 7, i32 9, i32 15>
 ;
   %r = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> <i32 5, i32 6, i32 1, i32 9, i32 4, i32 1, i32 9, i32 7>, <8 x i32> <i32 2, i32 9, i32 1, i32 5, i32 7, i32 1, i32 0, i32 9>, <8 x i32> <i32 1, i32 6, i32 2, i32 8, i32 8, i32 7, i32 0, i32 7>, i32 254)
   ret <8 x i32> %r
@@ -4609,8 +4349,7 @@ define <8 x i32> @vpternlog_d_constv256_imm254() {
 
 define <8 x i64> @vpternlog_q_constv512_imm255() {
 ; CHECK-LABEL: @vpternlog_q_constv512_imm255(
-; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 2, i64 3, i64 6, i64 0, i64 0, i64 6, i64 9, i64 3>, <8 x i64> <i64 4, i64 2, i64 1, i64 5, i64 3, i64 1, i64 5, i64 0>, <8 x i64> <i64 1, i64 5, i64 4, i64 4, i64 9, i64 7, i64 2, i64 5>, i32 255)
-; CHECK-NEXT:    ret <8 x i64> [[R]]
+; CHECK-NEXT:    ret <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
 ;
   %r = tail call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> <i64 2, i64 3, i64 6, i64 0, i64 0, i64 6, i64 9, i64 3>, <8 x i64> <i64 4, i64 2, i64 1, i64 5, i64 3, i64 1, i64 5, i64 0>, <8 x i64> <i64 1, i64 5, i64 4, i64 4, i64 9, i64 7, i64 2, i64 5>, i32 255)
   ret <8 x i64> %r

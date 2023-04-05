@@ -154,6 +154,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAMXTILE = false;
   bool HasAMXINT8 = false;
   bool HasAMXBF16 = false;
+  bool HasAMXCOMPLEX = false;
   bool HasSERIALIZE = false;
   bool HasTSXLDTRK = false;
   bool HasUINTR = false;
@@ -205,9 +206,9 @@ public:
     return RegName.equals("esp") || RegName.equals("rsp");
   }
 
-  bool validateCpuSupports(StringRef Name) const override;
+  bool validateCpuSupports(StringRef FeatureStr) const override;
 
-  bool validateCpuIs(StringRef Name) const override;
+  bool validateCpuIs(StringRef FeatureStr) const override;
 
   bool validateCPUSpecificCPUDispatch(StringRef Name) const override;
 

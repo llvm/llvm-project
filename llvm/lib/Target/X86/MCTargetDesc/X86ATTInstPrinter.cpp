@@ -178,9 +178,9 @@ bool X86ATTInstPrinter::printVecCompareInstr(const MCInst *MI,
           // Broadcast form.
           // Load size is word for TA map. Otherwise it is based on W-bit.
           if ((Desc.TSFlags & X86II::OpMapMask) == X86II::TA) {
-            assert(!(Desc.TSFlags & X86II::VEX_W) && "Unknown W-bit value!");
+            assert(!(Desc.TSFlags & X86II::REX_W) && "Unknown W-bit value!");
             printwordmem(MI, CurOp--, OS);
-          } else if (Desc.TSFlags & X86II::VEX_W) {
+          } else if (Desc.TSFlags & X86II::REX_W) {
             printqwordmem(MI, CurOp--, OS);
           } else {
             printdwordmem(MI, CurOp--, OS);
@@ -189,13 +189,13 @@ bool X86ATTInstPrinter::printVecCompareInstr(const MCInst *MI,
           // Print the number of elements broadcasted.
           unsigned NumElts;
           if (Desc.TSFlags & X86II::EVEX_L2)
-            NumElts = (Desc.TSFlags & X86II::VEX_W) ? 8 : 16;
+            NumElts = (Desc.TSFlags & X86II::REX_W) ? 8 : 16;
           else if (Desc.TSFlags & X86II::VEX_L)
-            NumElts = (Desc.TSFlags & X86II::VEX_W) ? 4 : 8;
+            NumElts = (Desc.TSFlags & X86II::REX_W) ? 4 : 8;
           else
-            NumElts = (Desc.TSFlags & X86II::VEX_W) ? 2 : 4;
+            NumElts = (Desc.TSFlags & X86II::REX_W) ? 2 : 4;
           if ((Desc.TSFlags & X86II::OpMapMask) == X86II::TA) {
-            assert(!(Desc.TSFlags & X86II::VEX_W) && "Unknown W-bit value!");
+            assert(!(Desc.TSFlags & X86II::REX_W) && "Unknown W-bit value!");
             NumElts *= 2;
           }
           OS << "{1to" << NumElts << "}";
@@ -333,7 +333,7 @@ bool X86ATTInstPrinter::printVecCompareInstr(const MCInst *MI,
         if (Desc.TSFlags & X86II::EVEX_B) {
           // Broadcast form.
           // Load size is based on W-bit as only D and Q are supported.
-          if (Desc.TSFlags & X86II::VEX_W)
+          if (Desc.TSFlags & X86II::REX_W)
             printqwordmem(MI, CurOp--, OS);
           else
             printdwordmem(MI, CurOp--, OS);
@@ -341,11 +341,11 @@ bool X86ATTInstPrinter::printVecCompareInstr(const MCInst *MI,
           // Print the number of elements broadcasted.
           unsigned NumElts;
           if (Desc.TSFlags & X86II::EVEX_L2)
-            NumElts = (Desc.TSFlags & X86II::VEX_W) ? 8 : 16;
+            NumElts = (Desc.TSFlags & X86II::REX_W) ? 8 : 16;
           else if (Desc.TSFlags & X86II::VEX_L)
-            NumElts = (Desc.TSFlags & X86II::VEX_W) ? 4 : 8;
+            NumElts = (Desc.TSFlags & X86II::REX_W) ? 4 : 8;
           else
-            NumElts = (Desc.TSFlags & X86II::VEX_W) ? 2 : 4;
+            NumElts = (Desc.TSFlags & X86II::REX_W) ? 2 : 4;
           OS << "{1to" << NumElts << "}";
         } else {
           if (Desc.TSFlags & X86II::EVEX_L2)

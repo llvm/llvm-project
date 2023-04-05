@@ -64,6 +64,10 @@ u32 HwasanChunkView::GetAllocStackId() const {
   return metadata_->GetAllocStackId();
 }
 
+u32 HwasanChunkView::GetAllocThreadId() const {
+  return metadata_->GetAllocThreadId();
+}
+
 uptr HwasanChunkView::ActualSize() const {
   return allocator.GetActuallyAllocatedSize(reinterpret_cast<void *>(block_));
 }
@@ -104,6 +108,12 @@ inline u64 Metadata::GetRequestedSize() const {
 
 inline u32 Metadata::GetAllocStackId() const {
   return atomic_load(&alloc_context_id, memory_order_relaxed);
+}
+
+inline u32 Metadata::GetAllocThreadId() const {
+  u64 context = atomic_load(&alloc_context_id, memory_order_relaxed);
+  u32 tid = context >> 32;
+  return tid;
 }
 
 void GetAllocatorStats(AllocatorStatCounters s) {
@@ -296,6 +306,7 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
   uptr orig_size = meta->GetRequestedSize();
   u32 free_context_id = StackDepotPut(*stack);
   u32 alloc_context_id = meta->GetAllocStackId();
+  u32 alloc_thread_id = meta->GetAllocThreadId();
 
   // Check tail magic.
   uptr tagged_size = TaggedSize(orig_size);
@@ -347,8 +358,9 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
   if (t) {
     allocator.Deallocate(t->allocator_cache(), aligned_ptr);
     if (auto *ha = t->heap_allocations())
-      ha->push({reinterpret_cast<uptr>(tagged_ptr), alloc_context_id,
-                free_context_id, static_cast<u32>(orig_size)});
+      ha->push({reinterpret_cast<uptr>(tagged_ptr), alloc_thread_id,
+                alloc_context_id, free_context_id,
+                static_cast<u32>(orig_size)});
   } else {
     SpinMutexLock l(&fallback_mutex);
     AllocatorCache *cache = &fallback_allocator_cache;
@@ -397,7 +409,7 @@ HwasanChunkView FindHeapChunkByAddress(uptr address) {
   return HwasanChunkView(reinterpret_cast<uptr>(block), metadata);
 }
 
-void *AllocationBegin(const void *p) {
+const void *AllocationBegin(const void *p) {
   const void *untagged_ptr = UntagPtr(p);
   if (!untagged_ptr)
     return nullptr;
@@ -411,7 +423,7 @@ void *AllocationBegin(const void *p) {
     return nullptr;
 
   tag_t tag = GetTagFromPointer((uptr)p);
-  return (void *)AddTagToPointer((uptr)beg, tag);
+  return (const void *)AddTagToPointer((uptr)beg, tag);
 }
 
 static uptr AllocationSize(const void *tagged_ptr) {
@@ -658,7 +670,7 @@ uptr __sanitizer_get_estimated_allocated_size(uptr size) { return size; }
 
 int __sanitizer_get_ownership(const void *p) { return AllocationSize(p) != 0; }
 
-void *__sanitizer_get_allocated_begin(const void *p) {
+const void *__sanitizer_get_allocated_begin(const void *p) {
   return AllocationBegin(p);
 }
 

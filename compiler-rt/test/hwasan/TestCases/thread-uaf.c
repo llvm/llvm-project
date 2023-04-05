@@ -33,7 +33,7 @@ void *Use(void *arg) {
   // CHECK: Cause: use-after-free
   // CHECK: freed by thread T2 here
   // CHECK: in Deallocate
-  // CHECK: previously allocated here:
+  // CHECK: previously allocated by thread T1 here:
   // CHECK: in Allocate
   // CHECK-DAG: Thread: T2 0x
   // CHECK-DAG: Thread: T3 0x

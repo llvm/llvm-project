@@ -51,6 +51,8 @@ source_set("sources") {
     "stats.h",
     "string_utils.cpp",
     "string_utils.h",
+    "timing.cpp",
+    "timing.h",
     "tsd.h",
     "tsd_exclusive.h",
     "tsd_shared.h",

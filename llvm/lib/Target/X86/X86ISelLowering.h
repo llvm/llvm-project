@@ -1126,7 +1126,7 @@ namespace llvm {
         unsigned OldShiftOpcode, unsigned NewShiftOpcode,
         SelectionDAG &DAG) const override;
 
-    bool preferScalarizeSplat(unsigned Opc) const override;
+    bool preferScalarizeSplat(SDNode *N) const override;
 
     bool shouldFoldConstantShiftPairToMask(const SDNode *N,
                                            CombineLevel Level) const override;
