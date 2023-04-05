@@ -2040,6 +2040,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
           DIExpression::get(AI->getContext(), ExprOperands.drop_front());
       MIRBuilder.buildFIDbgValue(getOrCreateFrameIndex(*AI), DI.getVariable(),
                                  ExprDerefRemoved);
+    } else if (translateIfSwiftAsyncArg(*V, DI, MIRBuilder,
+                                        false /*IsIndirect*/)) {
     } else {
       for (Register Reg : getOrCreateVRegs(*V)) {
         // FIXME: This does not handle register-indirect values at offset 0. The
