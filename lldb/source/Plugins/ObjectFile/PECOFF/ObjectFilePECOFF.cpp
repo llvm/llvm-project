@@ -870,6 +870,7 @@ ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
                "ObjectFilePECOFF::AppendFromExportTable - failed to get export "
                "table entry name: {0}",
                llvm::fmt_consume(std::move(err)));
+      llvm::consumeError(std::move(err));
       continue;
     }
     Symbol symbol;
@@ -891,6 +892,7 @@ ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
                  "ObjectFilePECOFF::AppendFromExportTable - failed to get "
                  "forwarder name of forwarder export '{0}': {1}",
                  sym_name, llvm::fmt_consume(std::move(err)));
+        llvm::consumeError(std::move(err));
         continue;
       }
       llvm::SmallString<256> new_name = {symbol.GetDisplayName().GetStringRef(),
@@ -906,6 +908,7 @@ ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
                "ObjectFilePECOFF::AppendFromExportTable - failed to get "
                "address of export entry '{0}': {1}",
                sym_name, llvm::fmt_consume(std::move(err)));
+      llvm::consumeError(std::move(err));
       continue;
     }
     // Skip the symbol if it doesn't look valid.
