@@ -19,15 +19,6 @@ public:
                            RegisterInfo orig_ax_info)
       : RegisterInfoInterface(target_arch), m_orig_ax_info(orig_ax_info) {}
 
-  static size_t GetGPRSizeStatic();
-  size_t GetGPRSize() const override { return GetGPRSizeStatic(); }
-
-  const lldb_private::RegisterInfo *GetRegisterInfo() const override;
-
-  uint32_t GetRegisterCount() const override;
-
-  uint32_t GetUserRegisterCount() const override;
-
   const RegisterInfo &GetOrigAxInfo() const { return m_orig_ax_info; }
 
 private:
