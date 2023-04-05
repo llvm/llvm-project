@@ -178,7 +178,7 @@ def MMX_MOVD64grr : MMXI<0x7E, MRMDestReg, (outs GR32:$dst), (ins VR64:$src),
                          "movd\t{$src, $dst|$dst, $src}",
                          [(set GR32:$dst,
                           (MMX_X86movd2w (x86mmx VR64:$src)))]>,
-                         Sched<[WriteVecMoveToGpr]>, FoldGenData<"MMX_MOVD64rr">;
+                         Sched<[WriteVecMoveToGpr]>;
 
 let isBitcast = 1 in
 def MMX_MOVD64to64rr : MMXRI<0x6E, MRMSrcReg, (outs VR64:$dst), (ins GR64:$src),

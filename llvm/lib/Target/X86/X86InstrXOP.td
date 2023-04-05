@@ -119,7 +119,7 @@ multiclass xop3op<bits<8> opc, string OpcodeStr, SDNode OpNode,
                (ins VR128:$src1, VR128:$src2),
                !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                []>,
-               XOP_4V, REX_W, Sched<[sched]>, FoldGenData<NAME#rr>;
+               XOP_4V, REX_W, Sched<[sched]>;
 }
 
 let ExeDomain = SSEPackedInt in {
@@ -316,7 +316,7 @@ multiclass xop4op<bits<8> opc, string OpcodeStr, SDNode OpNode,
                 (ins VR128:$src1, VR128:$src2, VR128:$src3),
                 !strconcat(OpcodeStr,
                 "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-                []>, XOP_4V, REX_W, Sched<[sched]>, FoldGenData<NAME#rrr>;
+                []>, XOP_4V, REX_W, Sched<[sched]>;
 }
 
 let ExeDomain = SSEPackedInt in {
@@ -361,7 +361,7 @@ multiclass xop4op_int<bits<8> opc, string OpcodeStr, RegisterClass RC,
             (ins RC:$src1, RC:$src2, RC:$src3),
             !strconcat(OpcodeStr,
             "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-            []>, XOP_4V, REX_W, Sched<[sched]>, FoldGenData<NAME#rrr>;
+            []>, XOP_4V, REX_W, Sched<[sched]>;
 }
 
 let ExeDomain = SSEPackedInt in {
@@ -450,7 +450,7 @@ multiclass xop_vpermil2<bits<8> Opc, string OpcodeStr, RegisterClass RC,
         (ins RC:$src1, RC:$src2, RC:$src3, u4imm:$src4),
         !strconcat(OpcodeStr,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
-        []>, REX_W, Sched<[sched]>, FoldGenData<NAME#rr>;
+        []>, REX_W, Sched<[sched]>;
 }
 
 let ExeDomain = SSEPackedDouble in {
