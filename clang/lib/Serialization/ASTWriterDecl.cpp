@@ -300,6 +300,20 @@ void ASTDeclWriter::Visit(Decl *D) {
     Record.AddVarDeclInit(VD);
   }
 
+  // And similarly for FieldDecls. We already serialized whether there is a
+  // default member initializer.
+  if (auto *FD = dyn_cast<FieldDecl>(D)) {
+    if (FD->hasInClassInitializer()) {
+      if (Expr *Init = FD->getInClassInitializer()) {
+        Record.push_back(1);
+        Record.AddStmt(Init);
+      } else {
+        Record.push_back(0);
+        // Initializer has not been instantiated yet.
+      }
+    }
+  }
+
   // If this declaration is also a DeclContext, write blocks for the
   // declarations that lexically stored inside its context and those
   // declarations that are visible from its context.
@@ -967,14 +981,11 @@ void ASTDeclWriter::VisitFieldDecl(FieldDecl *D) {
   VisitDeclaratorDecl(D);
   Record.push_back(D->isMutable());
 
-  FieldDecl::InitStorageKind ISK = D->InitStorage.getInt();
-  Record.push_back(ISK);
-  if (ISK == FieldDecl::ISK_CapturedVLAType)
+  Record.push_back((D->StorageKind << 1) | D->BitField);
+  if (D->StorageKind == FieldDecl::ISK_CapturedVLAType)
     Record.AddTypeRef(QualType(D->getCapturedVLAType(), 0));
-  else if (ISK)
-    Record.AddStmt(D->getInClassInitializer());
-
-  Record.AddStmt(D->getBitWidth());
+  else if (D->BitField)
+    Record.AddStmt(D->getBitWidth());
 
   if (!D->getDeclName())
     Record.AddDeclRef(Context.getInstantiatedFromUnnamedFieldDecl(D));
@@ -2044,7 +2055,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TSIType
   // FieldDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isMutable
-  Abv->Add(BitCodeAbbrevOp(0));                       // InitStyle
+  Abv->Add(BitCodeAbbrevOp(0));                       // StorageKind
   // Type Source Info
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
