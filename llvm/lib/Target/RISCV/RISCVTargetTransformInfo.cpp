@@ -1275,8 +1275,17 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   InstructionCost Cost = 0;
   if (Opcode == Instruction::Store && OpInfo.isConstant())
     Cost += getStoreImmCost(Src, OpInfo, CostKind);
-  return Cost + BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                       CostKind, OpInfo, I);
+  InstructionCost BaseCost =
+    BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                           CostKind, OpInfo, I);
+  // Assume memory ops cost scale with the number of vector registers
+  // possible accessed by the instruction.  Note that BasicTTI already
+  // handles the LT.first term for us.
+  if (std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
+      LT.second.isVector())
+    BaseCost *= getLMULCost(LT.second);
+  return Cost + BaseCost;
+
 }
 
 InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
