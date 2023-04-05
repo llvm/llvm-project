@@ -1600,131 +1600,131 @@ def int_nvvm_isspacep_shared
 
 // Environment register read
 def int_nvvm_read_ptx_sreg_envreg0
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg0">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg0">;
 def int_nvvm_read_ptx_sreg_envreg1
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg1">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg1">;
 def int_nvvm_read_ptx_sreg_envreg2
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg2">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg2">;
 def int_nvvm_read_ptx_sreg_envreg3
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg3">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg3">;
 def int_nvvm_read_ptx_sreg_envreg4
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg4">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg4">;
 def int_nvvm_read_ptx_sreg_envreg5
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg5">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg5">;
 def int_nvvm_read_ptx_sreg_envreg6
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg6">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg6">;
 def int_nvvm_read_ptx_sreg_envreg7
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg7">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg7">;
 def int_nvvm_read_ptx_sreg_envreg8
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg8">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg8">;
 def int_nvvm_read_ptx_sreg_envreg9
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg9">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg9">;
 def int_nvvm_read_ptx_sreg_envreg10
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg10">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg10">;
 def int_nvvm_read_ptx_sreg_envreg11
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg11">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg11">;
 def int_nvvm_read_ptx_sreg_envreg12
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg12">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg12">;
 def int_nvvm_read_ptx_sreg_envreg13
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg13">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg13">;
 def int_nvvm_read_ptx_sreg_envreg14
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg14">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg14">;
 def int_nvvm_read_ptx_sreg_envreg15
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg15">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg15">;
 def int_nvvm_read_ptx_sreg_envreg16
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg16">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg16">;
 def int_nvvm_read_ptx_sreg_envreg17
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg17">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg17">;
 def int_nvvm_read_ptx_sreg_envreg18
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg18">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg18">;
 def int_nvvm_read_ptx_sreg_envreg19
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg19">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg19">;
 def int_nvvm_read_ptx_sreg_envreg20
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg20">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg20">;
 def int_nvvm_read_ptx_sreg_envreg21
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg21">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg21">;
 def int_nvvm_read_ptx_sreg_envreg22
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg22">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg22">;
 def int_nvvm_read_ptx_sreg_envreg23
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg23">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg23">;
 def int_nvvm_read_ptx_sreg_envreg24
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg24">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg24">;
 def int_nvvm_read_ptx_sreg_envreg25
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg25">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg25">;
 def int_nvvm_read_ptx_sreg_envreg26
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg26">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg26">;
 def int_nvvm_read_ptx_sreg_envreg27
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg27">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg27">;
 def int_nvvm_read_ptx_sreg_envreg28
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg28">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg28">;
 def int_nvvm_read_ptx_sreg_envreg29
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg29">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg29">;
 def int_nvvm_read_ptx_sreg_envreg30
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg30">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg30">;
 def int_nvvm_read_ptx_sreg_envreg31
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable],
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.read.ptx.sreg.envreg31">,
     ClangBuiltin<"__nvvm_read_ptx_sreg_envreg31">;
 
@@ -4357,30 +4357,34 @@ multiclass PTXReadSRegIntrinsic_v4i32<string regname> {
 // FIXME: Enable this once v4i32 support is enabled in back-end.
 //    def _v4i16 : Intrinsic<[llvm_v4i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
 
-  def _x     : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
+  def _x     : DefaultAttrsIntrinsic<[llvm_i32_ty], [],
+                 [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>,
                ClangBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_x">;
-  def _y     : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
+  def _y     : DefaultAttrsIntrinsic<[llvm_i32_ty], [],
+                 [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>,
                ClangBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_y">;
-  def _z     : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
+  def _z     : DefaultAttrsIntrinsic<[llvm_i32_ty], [],
+                 [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>,
                ClangBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_z">;
-  def _w     : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
+  def _w     : DefaultAttrsIntrinsic<[llvm_i32_ty], [],
+                 [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>,
                ClangBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_w">;
 }
 
 class PTXReadSRegIntrinsic_r32<string name>
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>,
     ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
 class PTXReadSRegIntrinsic_r64<string name>
-  : DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrSpeculatable]>,
+  : DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>,
     ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
 
 // Intrinsics to read registers with non-constant values. E.g. the values that
 // do change over the kernel lifetime. Such reads should not be CSE'd.
 class PTXReadNCSRegIntrinsic_r32<string name>
-  : Intrinsic<[llvm_i32_ty], [], [IntrInaccessibleMemOnly, IntrNoCallback]>,
+  : Intrinsic<[llvm_i32_ty], [], [IntrInaccessibleMemOnly, IntrNoCallback, NoUndef<RetIndex>]>,
     ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
 class PTXReadNCSRegIntrinsic_r64<string name>
-  : Intrinsic<[llvm_i64_ty], [], [IntrInaccessibleMemOnly, IntrNoCallback]>,
+  : Intrinsic<[llvm_i64_ty], [], [IntrInaccessibleMemOnly, IntrNoCallback, NoUndef<RetIndex>]>,
     ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
 
 defm int_nvvm_read_ptx_sreg_tid : PTXReadSRegIntrinsic_v4i32<"tid">;
