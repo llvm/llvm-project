@@ -310,6 +310,26 @@ def SparseVectorization : Pass<"sparse-vectorization", "ModuleOp"> {
   ];
 }
 
+def SparseGPUCodegen : Pass<"sparse-gpu-codegen", "ModuleOp"> {
+  let summary = "Generates GPU code during sparsification";
+  let description = [{
+    Enables sparse compiler to use GPU acceleration.
+  }];
+  let constructor = "mlir::createSparseGPUCodegenPass()";
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "bufferization::BufferizationDialect",
+    "gpu::GPUDialect",
+    "linalg::LinalgDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+  let options = [
+    Option<"numThreads", "num_threads", "int32_t", "1024", "Sets the number of GPU threads">,
+  ];
+}
+
 def StorageSpecifierToLLVM : Pass<"sparse-storage-specifier-to-llvm", "ModuleOp"> {
   let summary = "Lower sparse storage specifer to llvm structure";
   let description = [{
