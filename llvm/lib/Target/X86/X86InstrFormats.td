@@ -259,12 +259,6 @@ class EVEX_CD8<int esize, CD8VForm form> {
 class XOP { Encoding OpEnc = EncXOP; }
 class XOP_4V : XOP { bit hasVEX_4V = 1; }
 
-// Specify the alternative register form instruction to replace the current
-// instruction in case it was picked during generation of memory folding tables
-class FoldGenData<string _RegisterForm> {
-  string FoldGenRegForm = _RegisterForm;
-}
-
 // Provide a specific instruction to be used by the EVEX2VEX conversion.
 class EVEX2VEXOverride<string VEXInstrName> {
   string EVEX2VEXOverride = VEXInstrName;
@@ -351,10 +345,6 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
                                 !if (hasEVEX_B,
                                      CD8_EltSize,
                                      !srl(VectSize, CD8_Form{1-0}))), 0);
-
-  // Used in the memory folding generation (TableGen backend) to point to an alternative
-  // instruction to replace the current one in case it got picked during generation.
-  string FoldGenRegForm = ?;
 
   // Used to prevent an explicit EVEX2VEX override for this instruction.
   string EVEX2VEXOverride = ?;

@@ -423,7 +423,7 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
                (ins RC:$src1, RC:$src2, RC:$src3),
                !strconcat(OpcodeStr,
                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"), []>,
-               VEX_LIG, FoldGenData<NAME#rr>, Sched<[sched]>;
+               VEX_LIG, Sched<[sched]>;
 }
 
 multiclass fma4s_int<bits<8> opc, string OpcodeStr, Operand memop,
@@ -458,7 +458,7 @@ let isCodeGenOnly = 1, hasSideEffects = 0,
                (ins VR128:$src1, VR128:$src2, VR128:$src3),
                !strconcat(OpcodeStr,
                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-               []>, VEX_LIG, FoldGenData<NAME#rr_Int>, Sched<[sched]>;
+               []>, VEX_LIG, Sched<[sched]>;
 } // isCodeGenOnly = 1
 }
 
@@ -527,12 +527,12 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in {
                (ins VR128:$src1, VR128:$src2, VR128:$src3),
                !strconcat(OpcodeStr,
                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"), []>,
-               Sched<[sched.XMM]>, FoldGenData<NAME#rr>;
+               Sched<[sched.XMM]>;
   def Yrr_REV : FMA4<opc, MRMSrcReg, (outs VR256:$dst),
                 (ins VR256:$src1, VR256:$src2, VR256:$src3),
                 !strconcat(OpcodeStr,
                 "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"), []>,
-                VEX_L, Sched<[sched.YMM]>, FoldGenData<NAME#Yrr>;
+                VEX_L, Sched<[sched.YMM]>;
 } // isCodeGenOnly = 1
 }
 
