@@ -41,8 +41,10 @@ public:
   /// Link the contents of the DebugMap.
   bool link(const DebugMap &);
 
-  void reportWarning(const Twine &Warning, StringRef Context,
+  void reportWarning(Twine Warning, Twine Context = {},
                      const DWARFDie *DIE = nullptr) const;
+  void reportError(Twine Error, Twine Context = {},
+                   const DWARFDie *DIE = nullptr) const;
 
   /// Returns true if input verification is enabled and verification errors were
   /// found.
