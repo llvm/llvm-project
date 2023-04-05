@@ -36,19 +36,27 @@ protected:
   std::array<char, 0x20> ExtraData;
 };
 
-static thread_local BumpPtrAllocator ThreadLocalAllocator;
+static LLVM_THREAD_LOCAL BumpPtrAllocator *ThreadLocalAllocator = nullptr;
 class PerThreadAllocator : public AllocatorBase<PerThreadAllocator> {
 public:
   inline LLVM_ATTRIBUTE_RETURNS_NONNULL void *Allocate(size_t Size,
                                                        size_t Alignment) {
-    return ThreadLocalAllocator.Allocate(Size, Align(Alignment));
+    return getAllocatorPtr()->Allocate(Size, Align(Alignment));
   }
-  inline size_t getBytesAllocated() const {
-    return ThreadLocalAllocator.getBytesAllocated();
+  inline size_t getBytesAllocated() {
+    return getAllocatorPtr()->getBytesAllocated();
   }
 
   // Pull in base class overloads.
   using AllocatorBase<PerThreadAllocator>::Allocate;
+
+protected:
+  BumpPtrAllocator *getAllocatorPtr() {
+    if (ThreadLocalAllocator == nullptr)
+      ThreadLocalAllocator = new BumpPtrAllocator();
+
+    return ThreadLocalAllocator;
+  }
 } Allocator;
 
 TEST(ConcurrentHashTableTest, AddStringEntries) {
