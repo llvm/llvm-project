@@ -33,7 +33,7 @@ public:
   /// such, whenever a client has an instance of instruction info, it should
   /// always be able to get register info as well (through this method).
   ///
-  const TargetRegisterInfo &getRegisterInfo() const { return RI; }
+  const MSP430RegisterInfo &getRegisterInfo() const { return RI; }
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
