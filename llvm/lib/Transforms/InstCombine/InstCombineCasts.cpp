@@ -25,63 +25,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
-/// Analyze 'Val', seeing if it is a simple linear expression.
-/// If so, decompose it, returning some value X, such that Val is
-/// X*Scale+Offset.
-///
-static Value *decomposeSimpleLinearExpr(Value *Val, unsigned &Scale,
-                                        uint64_t &Offset) {
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(Val)) {
-    Offset = CI->getZExtValue();
-    Scale  = 0;
-    return ConstantInt::get(Val->getType(), 0);
-  }
-
-  if (BinaryOperator *I = dyn_cast<BinaryOperator>(Val)) {
-    // Cannot look past anything that might overflow.
-    // We specifically require nuw because we store the Scale in an unsigned
-    // and perform an unsigned divide on it.
-    OverflowingBinaryOperator *OBI = dyn_cast<OverflowingBinaryOperator>(Val);
-    if (OBI && !OBI->hasNoUnsignedWrap()) {
-      Scale = 1;
-      Offset = 0;
-      return Val;
-    }
-
-    if (ConstantInt *RHS = dyn_cast<ConstantInt>(I->getOperand(1))) {
-      if (I->getOpcode() == Instruction::Shl) {
-        // This is a value scaled by '1 << the shift amt'.
-        Scale = UINT64_C(1) << RHS->getZExtValue();
-        Offset = 0;
-        return I->getOperand(0);
-      }
-
-      if (I->getOpcode() == Instruction::Mul) {
-        // This value is scaled by 'RHS'.
-        Scale = RHS->getZExtValue();
-        Offset = 0;
-        return I->getOperand(0);
-      }
-
-      if (I->getOpcode() == Instruction::Add) {
-        // We have X+C.  Check to see if we really have (X*C2)+C1,
-        // where C1 is divisible by C2.
-        unsigned SubScale;
-        Value *SubVal =
-          decomposeSimpleLinearExpr(I->getOperand(0), SubScale, Offset);
-        Offset += RHS->getZExtValue();
-        Scale = SubScale;
-        return SubVal;
-      }
-    }
-  }
-
-  // Otherwise, we can't look past this.
-  Scale = 1;
-  Offset = 0;
-  return Val;
-}
-
 /// Given an expression that CanEvaluateTruncated or CanEvaluateSExtd returns
 /// true for, actually insert the code to evaluate the expression.
 Value *InstCombinerImpl::EvaluateInDifferentType(Value *V, Type *Ty,
