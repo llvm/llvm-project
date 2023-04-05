@@ -203,6 +203,12 @@ std::unique_ptr<Pass> createSparseVectorizationPass(unsigned vectorLength,
                                                     bool enableVLAVectorization,
                                                     bool enableSIMDIndex32);
 
+void populateSparseGPUCodegenPatterns(RewritePatternSet &patterns,
+                                      unsigned numThreads);
+
+std::unique_ptr<Pass> createSparseGPUCodegenPass();
+std::unique_ptr<Pass> createSparseGPUCodegenPass(unsigned numThreads);
+
 //===----------------------------------------------------------------------===//
 // Registration.
 //===----------------------------------------------------------------------===//

@@ -40,6 +40,8 @@ ReproducerGenerate::ReproducerGenerate(std::error_code &EC, int Argc,
 ReproducerGenerate::~ReproducerGenerate() {
   if (GenerateOnExit && !Generated)
     generate();
+  else if (!Generated && !Root.empty())
+    sys::fs::remove_directories(Root, /* IgnoreErrors */ true);
 }
 
 void ReproducerGenerate::generate() {
