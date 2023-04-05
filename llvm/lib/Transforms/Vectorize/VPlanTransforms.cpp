@@ -643,14 +643,10 @@ static bool properlyDominates(const VPRecipeBase *A, const VPRecipeBase *B,
   if (ParentA == ParentB)
     return LocalComesBefore(A, B);
 
-  const VPRegionBlock *RegionA =
-      GetReplicateRegion(const_cast<VPRecipeBase *>(A));
-  const VPRegionBlock *RegionB =
-      GetReplicateRegion(const_cast<VPRecipeBase *>(B));
-  if (RegionA)
-    ParentA = RegionA->getExiting();
-  if (RegionB)
-    ParentB = RegionB->getExiting();
+  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(A)) &&
+         "No replicate regions expected at this point");
+  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(B)) &&
+         "No replicate regions expected at this point");
   return VPDT.properlyDominates(ParentA, ParentB);
 }
 
