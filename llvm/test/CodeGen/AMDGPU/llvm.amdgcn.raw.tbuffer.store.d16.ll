@@ -47,27 +47,16 @@ define amdgpu_kernel void @tbuffer_store_d16_x(<4 x i32> %rsrc, half %data) {
 ; GFX11-PACKED-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-PACKED-NEXT:    s_endpgm
 ;
-; GFX12-PACKED-SDAG-LABEL: tbuffer_store_d16_x:
-; GFX12-PACKED-SDAG:       ; %bb.0: ; %main_body
-; GFX12-PACKED-SDAG-NEXT:    s_clause 0x1
-; GFX12-PACKED-SDAG-NEXT:    s_load_b32 s4, s[0:1], 0x34
-; GFX12-PACKED-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX12-PACKED-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-PACKED-SDAG-NEXT:    v_mov_b32_e32 v0, s4
-; GFX12-PACKED-SDAG-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
-; GFX12-PACKED-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX12-PACKED-SDAG-NEXT:    s_endpgm
-;
-; GFX12-PACKED-GISEL-LABEL: tbuffer_store_d16_x:
-; GFX12-PACKED-GISEL:       ; %bb.0: ; %main_body
-; GFX12-PACKED-GISEL-NEXT:    s_clause 0x1
-; GFX12-PACKED-GISEL-NEXT:    s_load_b32 s4, s[0:1], 0x34
-; GFX12-PACKED-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX12-PACKED-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; GFX12-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], 0/*Invalid immediate*/ format:[BUF_FMT_10_10_10_2_SNORM]
-; GFX12-PACKED-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX12-PACKED-GISEL-NEXT:    s_endpgm
+; GFX12-PACKED-LABEL: tbuffer_store_d16_x:
+; GFX12-PACKED:       ; %bb.0: ; %main_body
+; GFX12-PACKED-NEXT:    s_clause 0x1
+; GFX12-PACKED-NEXT:    s_load_b32 s4, s[0:1], 0x34
+; GFX12-PACKED-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX12-PACKED-NEXT:    s_wait_kmcnt 0x0
+; GFX12-PACKED-NEXT:    v_mov_b32_e32 v0, s4
+; GFX12-PACKED-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX12-PACKED-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-PACKED-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.f16(half %data, <4 x i32> %rsrc, i32 0, i32 0, i32 33, i32 0)
   ret void
@@ -116,27 +105,16 @@ define amdgpu_kernel void @tbuffer_store_d16_xy(<4 x i32> %rsrc, <2 x half> %dat
 ; GFX11-PACKED-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-PACKED-NEXT:    s_endpgm
 ;
-; GFX12-PACKED-SDAG-LABEL: tbuffer_store_d16_xy:
-; GFX12-PACKED-SDAG:       ; %bb.0: ; %main_body
-; GFX12-PACKED-SDAG-NEXT:    s_clause 0x1
-; GFX12-PACKED-SDAG-NEXT:    s_load_b32 s4, s[0:1], 0x34
-; GFX12-PACKED-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX12-PACKED-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-PACKED-SDAG-NEXT:    v_mov_b32_e32 v0, s4
-; GFX12-PACKED-SDAG-NEXT:    tbuffer_store_d16_format_xy v0, off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
-; GFX12-PACKED-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX12-PACKED-SDAG-NEXT:    s_endpgm
-;
-; GFX12-PACKED-GISEL-LABEL: tbuffer_store_d16_xy:
-; GFX12-PACKED-GISEL:       ; %bb.0: ; %main_body
-; GFX12-PACKED-GISEL-NEXT:    s_clause 0x1
-; GFX12-PACKED-GISEL-NEXT:    s_load_b32 s4, s[0:1], 0x34
-; GFX12-PACKED-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX12-PACKED-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; GFX12-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xy v0, off, s[0:3], 0/*Invalid immediate*/ format:[BUF_FMT_10_10_10_2_SNORM]
-; GFX12-PACKED-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX12-PACKED-GISEL-NEXT:    s_endpgm
+; GFX12-PACKED-LABEL: tbuffer_store_d16_xy:
+; GFX12-PACKED:       ; %bb.0: ; %main_body
+; GFX12-PACKED-NEXT:    s_clause 0x1
+; GFX12-PACKED-NEXT:    s_load_b32 s4, s[0:1], 0x34
+; GFX12-PACKED-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX12-PACKED-NEXT:    s_wait_kmcnt 0x0
+; GFX12-PACKED-NEXT:    v_mov_b32_e32 v0, s4
+; GFX12-PACKED-NEXT:    tbuffer_store_d16_format_xy v0, off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX12-PACKED-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-PACKED-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.v2f16(<2 x half> %data, <4 x i32> %rsrc, i32 0, i32 0, i32 33, i32 0)
   ret void
@@ -216,7 +194,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <4 x half> %da
 ; GFX12-PACKED-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v1, s5
-; GFX12-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], off, s[0:3], 0/*Invalid immediate*/ format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX12-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
 ; GFX12-PACKED-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-PACKED-GISEL-NEXT:    s_endpgm
 main_body:
@@ -275,29 +253,17 @@ define amdgpu_kernel void @tbuffer_store_d16_xyzw(<4 x i32> %rsrc, <4 x half> %d
 ; GFX11-PACKED-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-PACKED-NEXT:    s_endpgm
 ;
-; GFX12-PACKED-SDAG-LABEL: tbuffer_store_d16_xyzw:
-; GFX12-PACKED-SDAG:       ; %bb.0: ; %main_body
-; GFX12-PACKED-SDAG-NEXT:    s_clause 0x1
-; GFX12-PACKED-SDAG-NEXT:    s_load_b64 s[4:5], s[0:1], 0x34
-; GFX12-PACKED-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX12-PACKED-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-PACKED-SDAG-NEXT:    v_mov_b32_e32 v0, s4
-; GFX12-PACKED-SDAG-NEXT:    v_mov_b32_e32 v1, s5
-; GFX12-PACKED-SDAG-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
-; GFX12-PACKED-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX12-PACKED-SDAG-NEXT:    s_endpgm
-;
-; GFX12-PACKED-GISEL-LABEL: tbuffer_store_d16_xyzw:
-; GFX12-PACKED-GISEL:       ; %bb.0: ; %main_body
-; GFX12-PACKED-GISEL-NEXT:    s_clause 0x1
-; GFX12-PACKED-GISEL-NEXT:    s_load_b64 s[4:5], s[0:1], 0x34
-; GFX12-PACKED-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX12-PACKED-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v1, s5
-; GFX12-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], off, s[0:3], 0/*Invalid immediate*/ format:[BUF_FMT_10_10_10_2_SNORM]
-; GFX12-PACKED-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX12-PACKED-GISEL-NEXT:    s_endpgm
+; GFX12-PACKED-LABEL: tbuffer_store_d16_xyzw:
+; GFX12-PACKED:       ; %bb.0: ; %main_body
+; GFX12-PACKED-NEXT:    s_clause 0x1
+; GFX12-PACKED-NEXT:    s_load_b64 s[4:5], s[0:1], 0x34
+; GFX12-PACKED-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX12-PACKED-NEXT:    s_wait_kmcnt 0x0
+; GFX12-PACKED-NEXT:    v_mov_b32_e32 v0, s4
+; GFX12-PACKED-NEXT:    v_mov_b32_e32 v1, s5
+; GFX12-PACKED-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX12-PACKED-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-PACKED-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.v4f16(<4 x half> %data, <4 x i32> %rsrc, i32 0, i32 0, i32 33, i32 0)
   ret void
@@ -307,5 +273,3 @@ declare void @llvm.amdgcn.raw.tbuffer.store.f16(half, <4 x i32>, i32, i32, i32, 
 declare void @llvm.amdgcn.raw.tbuffer.store.v2f16(<2 x half>, <4 x i32>, i32, i32, i32, i32)
 declare void @llvm.amdgcn.raw.tbuffer.store.v3f16(<3 x half>, <4 x i32>, i32, i32, i32, i32)
 declare void @llvm.amdgcn.raw.tbuffer.store.v4f16(<4 x half>, <4 x i32>, i32, i32, i32, i32)
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX12-PACKED: {{.*}}

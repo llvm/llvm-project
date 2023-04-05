@@ -5053,6 +5053,8 @@ AMDGPUInstructionSelector::selectMUBUFAddr64(MachineOperand &Root) const {
       [=](MachineInstrBuilder &MIB) { // soffset
         if (SOffset)
           MIB.addReg(SOffset);
+        else if (STI.hasRestrictedSOffset())
+          MIB.addReg(AMDGPU::SGPR_NULL);
         else
           MIB.addImm(0);
       },
@@ -5081,6 +5083,8 @@ AMDGPUInstructionSelector::selectMUBUFOffset(MachineOperand &Root) const {
       [=](MachineInstrBuilder &MIB) { // soffset
         if (SOffset)
           MIB.addReg(SOffset);
+        else if (STI.hasRestrictedSOffset())
+          MIB.addReg(AMDGPU::SGPR_NULL);
         else
           MIB.addImm(0);
       },
@@ -5095,7 +5099,10 @@ InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectBUFSOffset(MachineOperand &Root) const {
 
   Register SOffset = Root.getReg();
-  // TODO-GFX12: Generate SGPR_NULL for immediate 0.
+
+  if (STI.hasRestrictedSOffset() && mi_match(SOffset, *MRI, m_ZeroInt()))
+    SOffset = AMDGPU::SGPR_NULL;
+
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(SOffset); }}};
 }
 

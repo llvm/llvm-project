@@ -103,12 +103,11 @@ define amdgpu_cs void @mixed_vmem_types(i32 inreg %globalTable, i32 inreg %perSh
 ; GFX12-GISEL-NEXT:    s_load_b256 s[20:27], s[2:3], 0x0
 ; GFX12-GISEL-NEXT:    s_load_b256 s[36:43], s[2:3], 0x20
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, 0xbc00bc00
-; GFX12-GISEL-NEXT:    s_mov_b32 s3, 0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    image_sample_lz v1, v0, s[4:11], s[28:31] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
-; GFX12-GISEL-NEXT:    buffer_load_b32 v2, off, s[44:47], s3
-; GFX12-GISEL-NEXT:    buffer_load_b32 v3, off, s[12:15], s3
-; GFX12-GISEL-NEXT:    buffer_load_b32 v4, off, s[24:27], s3
+; GFX12-GISEL-NEXT:    buffer_load_b32 v2, off, s[44:47], null
+; GFX12-GISEL-NEXT:    buffer_load_b32 v3, off, s[12:15], null
+; GFX12-GISEL-NEXT:    buffer_load_b32 v4, off, s[24:27], null
 ; GFX12-GISEL-NEXT:    image_sample_lz v0, v0, s[36:43], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x1
 ; GFX12-GISEL-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 1.0, v1
@@ -127,7 +126,7 @@ define amdgpu_cs void @mixed_vmem_types(i32 inreg %globalTable, i32 inreg %perSh
 ; GFX12-GISEL-NEXT:    s_and_b32 s0, s0, vcc_lo
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX12-GISEL-NEXT:    buffer_store_b32 v0, off, s[16:19], s3
+; GFX12-GISEL-NEXT:    buffer_store_b32 v0, off, s[16:19], null
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 .entry:
