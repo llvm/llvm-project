@@ -240,6 +240,10 @@ Changes in existing checks
   behavior of using `i` as the prefix for enum tags, set the `EnumConstantPrefix`
   option to `i` instead of using `EnumConstantHungarianPrefix`.
 
+- Fixed a false positive in :doc:`readability-implicit-bool-conversion
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check warning would
+  be unnecessarily emitted for explicit cast using direct list initialization.
+
 - Added support to optionally ignore user-defined literals in
   :doc:`readability-magic-numbers<clang-tidy/checks/readability/magic-numbers>`.
 
