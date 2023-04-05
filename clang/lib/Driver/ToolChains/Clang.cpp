@@ -1166,8 +1166,9 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
        getToolChain().getTriple().isAMDGCN())) {
 
       // Add include/gpu-none-libc/* to our system include path. This lets us use
-      // GPU-specific system headers first. These headers should be made to be
-      // compatible with the host environment's headers.
+      // GPU-specific system headers first. 
+      // TODO: We need to find a way to make these headers compatible with the
+      // host environment.
       SmallString<128> P(llvm::sys::path::parent_path(D.InstalledDir));
       llvm::sys::path::append(P, "include");
       llvm::sys::path::append(P, "gpu-none-llvm");
