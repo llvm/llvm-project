@@ -8,6 +8,8 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestFullLtoStepping(TestBase):
 
+    # The Makefile manually invokes clang.
+    @skipIfAsan
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler="clang", compiler_version=['<', '13.0'])
     @skipUnlessDarwin
