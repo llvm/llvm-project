@@ -1879,6 +1879,40 @@ bool IRTranslator::translateConstrainedFPIntrinsic(
   return true;
 }
 
+/// If V is a swift async function argument, return the ABI register associated
+/// with it.
+static std::optional<Register>
+getRegisterIfSwiftAsyncArg(const Value &V, const MachineFunction &MF) {
+  auto *Arg = dyn_cast<Argument>(&V);
+  if (!Arg || !MF.getFunction().hasParamAttribute(Arg->getArgNo(),
+                                                  Attribute::SwiftAsync))
+    return std::nullopt;
+  return std::next(MF.getRegInfo().livein_begin(), Arg->getArgNo())->first;
+}
+
+/// If V is an async swift argument (assumed to be the value argument of
+/// DebugInst), translates DebugInst into a DBG_VALUE using the ABI register
+/// associated with V and returns true. Otherwise, returns false.
+static bool translateIfSwiftAsyncArg(const Value &V,
+                                     const DbgVariableIntrinsic &DebugInst,
+                                     MachineIRBuilder &Builder,
+                                     bool IsIndirect) {
+  auto MaybeReg = getRegisterIfSwiftAsyncArg(V, Builder.getMF());
+  if (!MaybeReg)
+    return false;
+
+  // TODO: Since this is _required_ for debug info to be correct, we should
+  // consider adding the EntryValue expression here, instead of waiting until
+  // the end of the compilation pipeline, where the MIR may have changed.
+  if (IsIndirect)
+    Builder.buildIndirectDbgValue(*MaybeReg, DebugInst.getVariable(),
+                                  DebugInst.getExpression());
+  else
+    Builder.buildDirectDbgValue(*MaybeReg, DebugInst.getVariable(),
+                                DebugInst.getExpression());
+  return true;
+}
+
 bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                            MachineIRBuilder &MIRBuilder) {
   if (auto *MI = dyn_cast<AnyMemIntrinsic>(&CI)) {
@@ -1945,20 +1979,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       // instructions (in fact, they get ignored if they *do* exist).
       MF->setVariableDbgInfo(DI.getVariable(), DI.getExpression(),
                              getOrCreateFrameIndex(*AI), DI.getDebugLoc());
+    } else if (translateIfSwiftAsyncArg(*Address, DI, MIRBuilder,
+                                        true /*IsIndirect*/)) {
     } else {
-      // Special handling for swift_async arguments. They need to
-      // describe the incoming register specified by the ABI so they
-      // can be described as entry values.
-      if (auto *Arg = dyn_cast<Argument>(Address))
-        if (MF->getFunction().hasParamAttribute(Arg->getArgNo(),
-                                                Attribute::SwiftAsync)) {
-          Register Reg =
-              std::next(MF->getRegInfo().livein_begin(), Arg->getArgNo())
-                  ->first;
-          MIRBuilder.buildIndirectDbgValue(Reg, DI.getVariable(),
-                                           DI.getExpression());
-          return true;
-        }
       // A dbg.declare describes the address of a source variable, so lower it
       // into an indirect DBG_VALUE.
       MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address),
