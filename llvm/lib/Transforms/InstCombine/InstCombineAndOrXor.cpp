@@ -2009,8 +2009,10 @@ static Instruction *canonicalizeLogicFirst(BinaryOperator &I,
     llvm_unreachable("Unexpected BinaryOp!");
   }
 
+  auto *Add = cast<BinaryOperator>(Op0);
   Value *NewBinOp = Builder.CreateBinOp(OpC, X, ConstantInt::get(Ty, *C));
-  return BinaryOperator::CreateAdd(NewBinOp, ConstantInt::get(Ty, *C2));
+  return BinaryOperator::CreateWithCopiedFlags(Instruction::Add, NewBinOp,
+                                               ConstantInt::get(Ty, *C2), Add);
 }
 
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
