@@ -1702,12 +1702,10 @@ define i1 @icmp_v16i8_v16i1(<16 x i8>, <16 x i8>) {
 define i1 @icmp_v4i64_v4i1(<4 x i64>, <4 x i64>) {
 ; SSE2-LABEL: icmp_v4i64_v4i1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm3, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE2-NEXT:    movmskps %xmm1, %eax
+; SSE2-NEXT:    pcmpeqd %xmm3, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    movmskps %xmm0, %eax
 ; SSE2-NEXT:    xorl $15, %eax
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
@@ -1752,12 +1750,10 @@ define i1 @icmp_v4i64_v4i1(<4 x i64>, <4 x i64>) {
 define i1 @icmp_v8i32_v8i1(<8 x i32>, <8 x i32>) {
 ; SSE2-LABEL: icmp_v8i32_v8i1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm3, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE2-NEXT:    movmskps %xmm1, %eax
+; SSE2-NEXT:    pcmpeqd %xmm3, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    movmskps %xmm0, %eax
 ; SSE2-NEXT:    xorl $15, %eax
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
@@ -1802,12 +1798,10 @@ define i1 @icmp_v8i32_v8i1(<8 x i32>, <8 x i32>) {
 define i1 @icmp_v16i16_v16i1(<16 x i16>, <16 x i16>) {
 ; SSE2-LABEL: icmp_v16i16_v16i1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm3, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %eax
+; SSE2-NEXT:    pcmpeqb %xmm3, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm2, %xmm0
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
@@ -1852,12 +1846,10 @@ define i1 @icmp_v16i16_v16i1(<16 x i16>, <16 x i16>) {
 define i1 @icmp_v32i8_v32i1(<32 x i8>, <32 x i8>) {
 ; SSE2-LABEL: icmp_v32i8_v32i1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm3, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %eax
+; SSE2-NEXT:    pcmpeqb %xmm3, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm2, %xmm0
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
@@ -1902,16 +1894,14 @@ define i1 @icmp_v32i8_v32i1(<32 x i8>, <32 x i8>) {
 define i1 @icmp_v8i64_v8i1(<8 x i64>, <8 x i64>) {
 ; SSE2-LABEL: icmp_v8i64_v8i1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm7, %xmm3
-; SSE2-NEXT:    pxor %xmm5, %xmm1
-; SSE2-NEXT:    por %xmm3, %xmm1
-; SSE2-NEXT:    pxor %xmm6, %xmm2
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    por %xmm2, %xmm0
-; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE2-NEXT:    movmskps %xmm1, %eax
+; SSE2-NEXT:    pcmpeqd %xmm7, %xmm3
+; SSE2-NEXT:    pcmpeqd %xmm5, %xmm1
+; SSE2-NEXT:    pand %xmm3, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm6, %xmm2
+; SSE2-NEXT:    pcmpeqd %xmm4, %xmm0
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    movmskps %xmm0, %eax
 ; SSE2-NEXT:    xorl $15, %eax
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
@@ -1964,16 +1954,14 @@ define i1 @icmp_v8i64_v8i1(<8 x i64>, <8 x i64>) {
 define i1 @icmp_v16i32_v16i1(<16 x i32>, <16 x i32>) {
 ; SSE2-LABEL: icmp_v16i32_v16i1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm7, %xmm3
-; SSE2-NEXT:    pxor %xmm5, %xmm1
-; SSE2-NEXT:    por %xmm3, %xmm1
-; SSE2-NEXT:    pxor %xmm6, %xmm2
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    por %xmm2, %xmm0
-; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE2-NEXT:    movmskps %xmm1, %eax
+; SSE2-NEXT:    pcmpeqd %xmm7, %xmm3
+; SSE2-NEXT:    pcmpeqd %xmm5, %xmm1
+; SSE2-NEXT:    pand %xmm3, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm6, %xmm2
+; SSE2-NEXT:    pcmpeqd %xmm4, %xmm0
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    movmskps %xmm0, %eax
 ; SSE2-NEXT:    xorl $15, %eax
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
@@ -2026,16 +2014,14 @@ define i1 @icmp_v16i32_v16i1(<16 x i32>, <16 x i32>) {
 define i1 @icmp_v32i16_v32i1(<32 x i16>, <32 x i16>) {
 ; SSE2-LABEL: icmp_v32i16_v32i1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm7, %xmm3
-; SSE2-NEXT:    pxor %xmm5, %xmm1
-; SSE2-NEXT:    por %xmm3, %xmm1
-; SSE2-NEXT:    pxor %xmm6, %xmm2
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    por %xmm2, %xmm0
-; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %eax
+; SSE2-NEXT:    pcmpeqb %xmm7, %xmm3
+; SSE2-NEXT:    pcmpeqb %xmm5, %xmm1
+; SSE2-NEXT:    pand %xmm3, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm6, %xmm2
+; SSE2-NEXT:    pcmpeqb %xmm4, %xmm0
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
@@ -2088,16 +2074,14 @@ define i1 @icmp_v32i16_v32i1(<32 x i16>, <32 x i16>) {
 define i1 @icmp_v64i8_v64i1(<64 x i8>, <64 x i8>) {
 ; SSE2-LABEL: icmp_v64i8_v64i1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm7, %xmm3
-; SSE2-NEXT:    pxor %xmm5, %xmm1
-; SSE2-NEXT:    por %xmm3, %xmm1
-; SSE2-NEXT:    pxor %xmm6, %xmm2
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    por %xmm2, %xmm0
-; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %eax
+; SSE2-NEXT:    pcmpeqb %xmm7, %xmm3
+; SSE2-NEXT:    pcmpeqb %xmm5, %xmm1
+; SSE2-NEXT:    pand %xmm3, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm6, %xmm2
+; SSE2-NEXT:    pcmpeqb %xmm4, %xmm0
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
