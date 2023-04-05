@@ -481,14 +481,35 @@ AArch64RegisterBankInfo::getSameKindOfOperandsMapping(
                                getValueMapping(RBIdx, Size), NumOperands);
 }
 
-/// \returns true if a given intrinsic \p ID only uses and defines FPRs.
-static bool isFPIntrinsic(unsigned ID) {
+/// \returns true if a given intrinsic only uses and defines FPRs.
+static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
+                          const MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC);
   // TODO: Add more intrinsics.
-  switch (ID) {
+  switch (MI.getIntrinsicID()) {
   default:
     return false;
   case Intrinsic::aarch64_neon_uaddlv:
+  case Intrinsic::aarch64_neon_uaddv:
+  case Intrinsic::aarch64_neon_umaxv:
+  case Intrinsic::aarch64_neon_uminv:
+  case Intrinsic::aarch64_neon_fmaxv:
+  case Intrinsic::aarch64_neon_fminv:
+  case Intrinsic::aarch64_neon_fmaxnmv:
+  case Intrinsic::aarch64_neon_fminnmv:
     return true;
+  case Intrinsic::aarch64_neon_saddlv: {
+    const LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
+    return SrcTy.getElementType().getSizeInBits() >= 16 &&
+           SrcTy.getElementCount().getFixedValue() >= 4;
+  }
+  case Intrinsic::aarch64_neon_saddv:
+  case Intrinsic::aarch64_neon_smaxv:
+  case Intrinsic::aarch64_neon_sminv: {
+    const LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
+    return SrcTy.getElementType().getSizeInBits() >= 32 &&
+           SrcTy.getElementCount().getFixedValue() >= 2;
+  }
   }
 }
 
@@ -497,7 +518,7 @@ bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
                                                const TargetRegisterInfo &TRI,
                                                unsigned Depth) const {
   unsigned Op = MI.getOpcode();
-  if (Op == TargetOpcode::G_INTRINSIC && isFPIntrinsic(MI.getIntrinsicID()))
+  if (Op == TargetOpcode::G_INTRINSIC && isFPIntrinsic(MRI, MI))
     return true;
 
   // Do we have an explicit floating point instruction?
@@ -996,9 +1017,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_INTRINSIC: {
     // Check if we know that the intrinsic has any constraints on its register
     // banks. If it does, then update the mapping accordingly.
-    unsigned ID = MI.getIntrinsicID();
     unsigned Idx = 0;
-    if (!isFPIntrinsic(ID))
+    if (!isFPIntrinsic(MRI, MI))
       break;
     for (const auto &Op : MI.explicit_operands()) {
       if (Op.isReg())
