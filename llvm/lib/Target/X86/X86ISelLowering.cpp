@@ -44976,17 +44976,16 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
       ISD::CondCode CC = cast<CondCodeSDNode>(Match.getOperand(2))->get();
       if ((BinOp == ISD::AND && CC == ISD::CondCode::SETEQ) ||
           (BinOp == ISD::OR && CC == ISD::CondCode::SETNE)) {
-        // If representable as a scalar integer:
         // For all_of(setcc(x,y,eq)) - use (iX)x == (iX)y.
         // For any_of(setcc(x,y,ne)) - use (iX)x != (iX)y.
-        EVT VecVT = Match.getOperand(0).getValueType();
-        EVT IntVT = EVT::getIntegerVT(Ctx, VecVT.getSizeInBits());
-        if (TLI.isTypeLegal(IntVT)) {
-          SDValue LHS = DAG.getFreeze(Match.getOperand(0));
-          SDValue RHS = DAG.getFreeze(Match.getOperand(1));
-          return DAG.getSetCC(DL, ExtractVT, DAG.getBitcast(IntVT, LHS),
-                              DAG.getBitcast(IntVT, RHS), CC);
-        }
+        X86::CondCode X86CC;
+        SDValue LHS = DAG.getFreeze(Match.getOperand(0));
+        SDValue RHS = DAG.getFreeze(Match.getOperand(1));
+        APInt Mask = APInt::getAllOnes(LHS.getScalarValueSizeInBits());
+        if (SDValue V = LowerVectorAllEqual(DL, LHS, RHS, CC, Mask, Subtarget,
+                                            DAG, X86CC))
+          return DAG.getNode(ISD::TRUNCATE, DL, ExtractVT,
+                             getSETCC(X86CC, V, DL, DAG));
       }
     }
     if (TLI.isTypeLegal(MatchVT)) {
@@ -44994,24 +44993,6 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
       EVT MovmskVT = EVT::getIntegerVT(Ctx, NumElts);
       Movmsk = DAG.getBitcast(MovmskVT, Match);
     } else {
-      // For all_of(setcc(x,y,eq)) - use PMOVMSKB(PCMPEQB()).
-      // For any_of(setcc(x,y,ne)) - use PMOVMSKB(NOT(PCMPEQB())).
-      if (Match.getOpcode() == ISD::SETCC) {
-        ISD::CondCode CC = cast<CondCodeSDNode>(Match.getOperand(2))->get();
-        if ((BinOp == ISD::AND && CC == ISD::CondCode::SETEQ) ||
-            (BinOp == ISD::OR && CC == ISD::CondCode::SETNE)) {
-          EVT VecSVT = Match.getOperand(0).getValueType().getScalarType();
-          if (VecSVT != MVT::i8 && (VecSVT.getSizeInBits() % 8) == 0) {
-            NumElts *= VecSVT.getSizeInBits() / 8;
-            EVT CmpVT = EVT::getVectorVT(Ctx, MVT::i8, NumElts);
-            MatchVT = EVT::getVectorVT(Ctx, MVT::i1, NumElts);
-            Match = DAG.getSetCC(
-                DL, MatchVT, DAG.getBitcast(CmpVT, Match.getOperand(0)),
-                DAG.getBitcast(CmpVT, Match.getOperand(1)), CC);
-          }
-        }
-      }
-
       // Use combineBitcastvxi1 to create the MOVMSK.
       while (NumElts > MaxElts) {
         SDValue Lo, Hi;
