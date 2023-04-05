@@ -40685,7 +40685,7 @@ static SDValue combineX86ShufflesRecursively(
     unsigned MaxDepth, bool HasVariableMask, bool AllowVariableCrossLaneMask,
     bool AllowVariablePerLaneMask, SelectionDAG &DAG,
     const X86Subtarget &Subtarget) {
-  assert(RootMask.size() > 0 &&
+  assert(!RootMask.empty() &&
          (RootMask.size() > 1 || (RootMask[0] == 0 && SrcOpIndex == 0)) &&
          "Illegal shuffle root mask");
   MVT RootVT = Root.getSimpleValueType();
@@ -50369,7 +50369,7 @@ static SDValue combineOrCmpEqZeroToCtlzSrl(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // Try to lower nodes matching the or(or, setcc(eq, cmp 0)) pattern.
-  while (ORNodes.size() > 0) {
+  while (!ORNodes.empty()) {
     OR = ORNodes.pop_back_val();
     LHS = OR->getOperand(0);
     RHS = OR->getOperand(1);
@@ -52016,7 +52016,7 @@ static bool isHorizontalBinOp(unsigned HOpcode, SDValue &LHS, SDValue &RHS,
       resolveTargetShuffleInputsAndMask(SrcOps, SrcMask);
       if (!UseSubVector && SrcOps.size() <= 2 &&
           scaleShuffleElements(SrcMask, NumElts, ScaledMask)) {
-        N0 = SrcOps.size() > 0 ? SrcOps[0] : SDValue();
+        N0 = !SrcOps.empty() ? SrcOps[0] : SDValue();
         N1 = SrcOps.size() > 1 ? SrcOps[1] : SDValue();
         ShuffleMask.assign(ScaledMask.begin(), ScaledMask.end());
       }
