@@ -891,4 +891,37 @@ define void @zext_v8i32_v8i64(ptr %in, ptr %out) #0 {
   ret void
 }
 
+define void @extend_and_mul(i32 %0, <2 x i64> %1, ptr %2) #0 {
+; CHECK-LABEL: extend_and_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.s, w0
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    uunpklo z1.d, z1.s
+; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    str q0, [x1]
+; CHECK-NEXT:    ret
+  %broadcast.splatinsert2 = insertelement <2 x i32> poison, i32 %0, i64 0
+  %broadcast.splat3 = shufflevector <2 x i32> %broadcast.splatinsert2, <2 x i32> poison, <2 x i32> zeroinitializer
+  %4 = zext <2 x i32> %broadcast.splat3 to <2 x i64>
+  %5 = mul <2 x i64> %4, %1
+  store <2 x i64> %5, ptr %2, align 2
+  ret void
+}
+
+define void @extend_no_mul(i32 %0, <2 x i64> %1, ptr %2) #0 {
+; CHECK-LABEL: extend_no_mul:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z0.d, x8
+; CHECK-NEXT:    str q0, [x1]
+; CHECK-NEXT:    ret
+entry:
+  %broadcast.splatinsert2 = insertelement <2 x i32> poison, i32 %0, i64 0
+  %broadcast.splat3 = shufflevector <2 x i32> %broadcast.splatinsert2, <2 x i32> poison, <2 x i32> zeroinitializer
+  %3 = zext <2 x i32> %broadcast.splat3 to <2 x i64>
+  store <2 x i64> %3, ptr %2, align 2
+  ret void
+}
+
 attributes #0 = { nounwind "target-features"="+sve" }

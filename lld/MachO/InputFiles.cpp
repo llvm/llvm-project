@@ -89,7 +89,7 @@ std::string lld::toString(const InputFile *f) {
     return "<internal>";
 
   // Multiple dylibs can be defined in one .tbd file.
-  if (auto dylibFile = dyn_cast<DylibFile>(f))
+  if (const auto *dylibFile = dyn_cast<DylibFile>(f))
     if (f->getName().endswith(".tbd"))
       return (f->getName() + "(" + dylibFile->installName + ")").str();
 
@@ -753,7 +753,7 @@ macho::Symbol *ObjFile::parseNonSectionSymbol(const NList &sym,
     StringRef aliasedName = StringRef(strtab + sym.n_value);
     // isPrivateExtern is the only symbol flag that has an impact on the final
     // aliased symbol.
-    auto alias = make<AliasSymbol>(this, name, aliasedName, isPrivateExtern);
+    auto *alias = make<AliasSymbol>(this, name, aliasedName, isPrivateExtern);
     aliases.push_back(alias);
     return alias;
   }
@@ -1597,8 +1597,8 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
          make_pointee_range(currentTopLevelTapi->documents())) {
       assert(child.documents().empty());
       if (path == child.getInstallName()) {
-        auto file = make<DylibFile>(child, umbrella, /*isBundleLoader=*/false,
-                                    /*explicitlyLinked=*/false);
+        auto *file = make<DylibFile>(child, umbrella, /*isBundleLoader=*/false,
+                                     /*explicitlyLinked=*/false);
         file->parseReexports(child);
         return file;
       }
@@ -1692,14 +1692,15 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     error(toString(this) +
           ": dylib has both LC_DYLD_INFO_ONLY and LC_DYLD_EXPORTS_TRIE");
     return;
-  } else if (dyldInfo) {
+  }
+
+  if (dyldInfo) {
     parseExportedSymbols(dyldInfo->export_off, dyldInfo->export_size);
   } else if (exportsTrie) {
     parseExportedSymbols(exportsTrie->dataoff, exportsTrie->datasize);
   } else {
     error("No LC_DYLD_INFO_ONLY or LC_DYLD_EXPORTS_TRIE found in " +
           toString(this));
-    return;
   }
 }
 

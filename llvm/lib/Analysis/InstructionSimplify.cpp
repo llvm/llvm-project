@@ -5508,11 +5508,11 @@ simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
     // X =  0.0: ( 0.0 - ( 0.0)) + ( 0.0) == ( 0.0) + ( 0.0) == 0.0
     if (match(Op0, m_FSub(m_AnyZeroFP(), m_Specific(Op1))) ||
         match(Op1, m_FSub(m_AnyZeroFP(), m_Specific(Op0))))
-      return ConstantFP::getNullValue(Op0->getType());
+      return ConstantFP::getZero(Op0->getType());
 
     if (match(Op0, m_FNeg(m_Specific(Op1))) ||
         match(Op1, m_FNeg(m_Specific(Op0))))
-      return ConstantFP::getNullValue(Op0->getType());
+      return ConstantFP::getZero(Op0->getType());
   }
 
   // (X - Y) + Y --> X
@@ -5616,7 +5616,7 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (match(Op1, m_AnyZeroFP())) {
     // X * 0.0 --> 0.0 (with nnan and nsz)
     if (FMF.noNaNs() && FMF.noSignedZeros())
-      return ConstantFP::getNullValue(Op0->getType());
+      return ConstantFP::getZero(Op0->getType());
 
     // +normal number * (-)0.0 --> (-)0.0
     if (isKnownNeverInfinity(Op0, Q.TLI) && isKnownNeverNaN(Op0, Q.TLI) &&
@@ -5705,7 +5705,7 @@ simplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // Requires that NaNs are off (X could be zero) and signed zeroes are
   // ignored (X could be positive or negative, so the output sign is unknown).
   if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op0, m_AnyZeroFP()))
-    return ConstantFP::getNullValue(Op0->getType());
+    return ConstantFP::getZero(Op0->getType());
 
   if (FMF.noNaNs()) {
     // X / X -> 1.0 is legal when NaNs are ignored.
@@ -5762,7 +5762,7 @@ simplifyFRemInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (FMF.noNaNs()) {
     // +0 % X -> 0
     if (match(Op0, m_PosZeroFP()))
-      return ConstantFP::getNullValue(Op0->getType());
+      return ConstantFP::getZero(Op0->getType());
     // -0 % X -> -0
     if (match(Op0, m_NegZeroFP()))
       return ConstantFP::getNegativeZero(Op0->getType());

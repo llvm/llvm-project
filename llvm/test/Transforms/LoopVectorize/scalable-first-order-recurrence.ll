@@ -6,7 +6,7 @@
 ;     b[i] =  a[i] + a[i - 1]
 ; }
 ;
-define void @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
+define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF1-LABEL: @recurrence_1
 ; CHECK-VF4UF1: for.preheader
 ; CHECK-VF4UF1: %[[SUB_1:.*]] = add i32 %n, -1
@@ -52,7 +52,7 @@ scalar.body:
   br i1 %exitcond, label %for.exit, label %scalar.body, !llvm.loop !0
 
 for.exit:
-  ret void
+  ret i32 %0
 }
 
 ; int recurrence_2(int *a, int n) {

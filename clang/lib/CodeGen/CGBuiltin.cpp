@@ -10965,14 +10965,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         *this, Intrinsic::fma, Intrinsic::experimental_constrained_fma, HalfTy,
         {EmitScalarExpr(E->getArg(1)), EmitScalarExpr(E->getArg(2)), Ops[0]});
   case NEON::BI__builtin_neon_vfmsh_f16: {
-    // FIXME: This should be an fneg instruction:
-    Value *Zero = llvm::ConstantFP::getZeroValueForNegation(HalfTy);
-    Value* Sub = Builder.CreateFSub(Zero, EmitScalarExpr(E->getArg(1)), "vsubh");
+    Value* Neg = Builder.CreateFNeg(EmitScalarExpr(E->getArg(1)), "vsubh");
 
     // NEON intrinsic puts accumulator first, unlike the LLVM fma.
     return emitCallMaybeConstrainedFPBuiltin(
         *this, Intrinsic::fma, Intrinsic::experimental_constrained_fma, HalfTy,
-        {Sub, EmitScalarExpr(E->getArg(2)), Ops[0]});
+        {Neg, EmitScalarExpr(E->getArg(2)), Ops[0]});
   }
   case NEON::BI__builtin_neon_vaddd_s64:
   case NEON::BI__builtin_neon_vaddd_u64:

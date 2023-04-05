@@ -975,7 +975,7 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
         (TSFlags & X86II::EncodingMask) == X86II::VEX &&
         (TSFlags & X86II::OpMapMask) == X86II::TB &&
         (TSFlags & X86II::FormMask) == X86II::MRMSrcReg &&
-        !(TSFlags & X86II::VEX_W) && (TSFlags & X86II::VEX_4V) &&
+        !(TSFlags & X86II::REX_W) && (TSFlags & X86II::VEX_4V) &&
         OutMI.getNumOperands() == 3) {
       if (!X86II::isX86_64ExtendedReg(OutMI.getOperand(1).getReg()) &&
           X86II::isX86_64ExtendedReg(OutMI.getOperand(2).getReg()))

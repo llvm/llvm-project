@@ -274,6 +274,20 @@ public:
     return Ret;
   }
 
+  static bool hasMaskedVariant(const CallInst &CI,
+                               std::optional<ElementCount> VF = std::nullopt) {
+    // Check whether we have at least one masked vector version of a scalar
+    // function. If no VF is specified then we check for any masked variant,
+    // otherwise we look for one that matches the supplied VF.
+    auto Mappings = VFDatabase::getMappings(CI);
+    for (VFInfo Info : Mappings)
+      if (!VF || Info.Shape.VF == *VF)
+        if (Info.isMasked())
+          return true;
+
+    return false;
+  }
+
   /// Constructor, requires a CallInst instance.
   VFDatabase(CallInst &CI)
       : M(CI.getModule()), CI(CI),

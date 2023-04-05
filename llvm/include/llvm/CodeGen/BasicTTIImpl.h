@@ -622,12 +622,8 @@ public:
     return BaseT::isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
   }
 
-  bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
-                                   AssumptionCache &AC, TargetLibraryInfo *TLI,
-                                   DominatorTree *DT,
-                                   LoopVectorizationLegality *LVL,
-                                   InterleavedAccessInfo *IAI) {
-    return BaseT::preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LVL, IAI);
+  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
+    return BaseT::preferPredicateOverEpilogue(TFI);
   }
 
   TailFoldingStyle

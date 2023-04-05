@@ -176,7 +176,6 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPURegisterBankInfo.cpp",
     "AMDGPUReleaseVGPRs.cpp",
     "AMDGPURemoveIncompatibleFunctions.cpp",
-    "AMDGPUReplaceLDSUseWithPointer.cpp",
     "AMDGPUResourceUsageAnalysis.cpp",
     "AMDGPURewriteOutArguments.cpp",
     "AMDGPURewriteUndefForPHI.cpp",

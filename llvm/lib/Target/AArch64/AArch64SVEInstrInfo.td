@@ -3166,15 +3166,15 @@ let Predicates = [HasSVEorSME] in {
   let Predicates = [NotInStreamingSVEMode] in {
   def : Pat<(sext_inreg (vector_extract (nxv16i8 ZPR:$vec), VectorIndexB:$index), i8),
             (i32 (SMOVvi8to32 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index))>;
-  def : Pat<(sext_inreg (anyext (vector_extract (nxv16i8 ZPR:$vec), VectorIndexB:$index)), i8),
+  def : Pat<(sext_inreg (anyext (i32 (vector_extract (nxv16i8 ZPR:$vec), VectorIndexB:$index))), i8),
             (i64 (SMOVvi8to64 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index))>;
 
   def : Pat<(sext_inreg (vector_extract (nxv8i16 ZPR:$vec), VectorIndexH:$index), i16),
             (i32 (SMOVvi16to32 (v8i16 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexH:$index))>;
-  def : Pat<(sext_inreg (anyext (vector_extract (nxv8i16 ZPR:$vec), VectorIndexH:$index)), i16),
+  def : Pat<(sext_inreg (anyext (i32 (vector_extract (nxv8i16 ZPR:$vec), VectorIndexH:$index))), i16),
             (i64 (SMOVvi16to64 (v8i16 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexH:$index))>;
 
-  def : Pat<(sext (vector_extract (nxv4i32 ZPR:$vec), VectorIndexS:$index)),
+  def : Pat<(sext (i32 (vector_extract (nxv4i32 ZPR:$vec), VectorIndexS:$index))),
             (i64 (SMOVvi32to64 (v4i32 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexS:$index))>;
   } // End NotInStreamingSVEMode
 

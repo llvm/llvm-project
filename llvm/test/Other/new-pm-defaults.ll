@@ -154,7 +154,7 @@
 ; CHECK-O23SZ-NEXT: Invalidating analysis: LazyValueAnalysis
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
-; CHECK-O3-NEXT: AggressiveInstCombinePass
+; CHECK-O23SZ-NEXT: Running pass: AggressiveInstCombinePass
 ; CHECK-O23SZ-NEXT: Running pass: ConstraintEliminationPass
 ; CHECK-O1-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O2-NEXT: Running pass: LibCallsShrinkWrapPass
@@ -206,6 +206,7 @@
 ; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: MemCpyOptPass
 ; CHECK-O23SZ-NEXT: Running pass: DSEPass
+; CHECK-O23SZ-NEXT: Running pass: MoveAutoInitPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23SZ-NEXT: Running pass: LCSSAPass
 ; CHECK-O23SZ-NEXT: Running pass: LICMPass

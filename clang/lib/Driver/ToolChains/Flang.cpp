@@ -157,6 +157,27 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
     // generating code for a device, so that only the relevant code is
     // emitted.
     CmdArgs.push_back("-fopenmp-is-device");
+
+    // When in OpenMP offloading mode, enable debugging on the device.
+    Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_target_debug_EQ);
+    if (Args.hasFlag(options::OPT_fopenmp_target_debug,
+                     options::OPT_fno_openmp_target_debug, /*Default=*/false))
+      CmdArgs.push_back("-fopenmp-target-debug");
+
+    // When in OpenMP offloading mode, forward assumptions information about
+    // thread and team counts in the device.
+    if (Args.hasFlag(options::OPT_fopenmp_assume_teams_oversubscription,
+                     options::OPT_fno_openmp_assume_teams_oversubscription,
+                     /*Default=*/false))
+      CmdArgs.push_back("-fopenmp-assume-teams-oversubscription");
+    if (Args.hasFlag(options::OPT_fopenmp_assume_threads_oversubscription,
+                     options::OPT_fno_openmp_assume_threads_oversubscription,
+                     /*Default=*/false))
+      CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
+    if (Args.hasArg(options::OPT_fopenmp_assume_no_thread_state))
+      CmdArgs.push_back("-fopenmp-assume-no-thread-state");
+    if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))
+      CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
   }
 }
 

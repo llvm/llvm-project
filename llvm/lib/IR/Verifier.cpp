@@ -5638,15 +5638,28 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Type *Op0ElemTy = nullptr;
     Type *Op1ElemTy = nullptr;
     switch (ID) {
-    case Intrinsic::matrix_multiply:
+    case Intrinsic::matrix_multiply: {
       NumRows = cast<ConstantInt>(Call.getArgOperand(2));
+      ConstantInt *N = cast<ConstantInt>(Call.getArgOperand(3));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(4));
+      Check(cast<FixedVectorType>(Call.getArgOperand(0)->getType())
+                    ->getNumElements() ==
+                NumRows->getZExtValue() * N->getZExtValue(),
+            "First argument of a matrix operation does not match specified "
+            "shape!");
+      Check(cast<FixedVectorType>(Call.getArgOperand(1)->getType())
+                    ->getNumElements() ==
+                N->getZExtValue() * NumColumns->getZExtValue(),
+            "Second argument of a matrix operation does not match specified "
+            "shape!");
+
       ResultTy = cast<VectorType>(Call.getType());
       Op0ElemTy =
           cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
       Op1ElemTy =
           cast<VectorType>(Call.getArgOperand(1)->getType())->getElementType();
       break;
+    }
     case Intrinsic::matrix_transpose:
       NumRows = cast<ConstantInt>(Call.getArgOperand(1));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(2));

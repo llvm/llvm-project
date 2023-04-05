@@ -200,12 +200,29 @@ public:
 
 } RecordReplay;
 
-AsyncInfoWrapperTy::~AsyncInfoWrapperTy() {
+AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
+                                       __tgt_async_info *AsyncInfoPtr)
+    : Err(Plugin::success()), Device(Device),
+      AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {
+  // Mark the success as checked. Otherwise, it would produce an error when
+  // re-assigned another error value.
+  !Err;
+}
+
+Error AsyncInfoWrapperTy::finalize() {
+  assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
+
   // If we used a local async info object we want synchronous behavior.
   // In that case, and assuming the current status code is OK, we will
   // synchronize explicitly when the object is deleted.
   if (AsyncInfoPtr == &LocalAsyncInfo && LocalAsyncInfo.Queue && !Err)
     Err = Device.synchronize(&LocalAsyncInfo);
+
+  // Invalidate the wrapper object.
+  AsyncInfoPtr = nullptr;
+
+  // Return the error associated to the async operations and the synchronize.
+  return std::move(Err);
 }
 
 Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
@@ -912,35 +929,37 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
 
 Error GenericDeviceTy::dataSubmit(void *TgtPtr, const void *HstPtr,
                                   int64_t Size, __tgt_async_info *AsyncInfo) {
-  auto Err = Plugin::success();
-  AsyncInfoWrapperTy AsyncInfoWrapper(Err, *this, AsyncInfo);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto &Err = AsyncInfoWrapper.getError();
   Err = dataSubmitImpl(TgtPtr, HstPtr, Size, AsyncInfoWrapper);
-  return Err;
+  return AsyncInfoWrapper.finalize();
 }
 
 Error GenericDeviceTy::dataRetrieve(void *HstPtr, const void *TgtPtr,
                                     int64_t Size, __tgt_async_info *AsyncInfo) {
-  auto Err = Plugin::success();
-  AsyncInfoWrapperTy AsyncInfoWrapper(Err, *this, AsyncInfo);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto &Err = AsyncInfoWrapper.getError();
   Err = dataRetrieveImpl(HstPtr, TgtPtr, Size, AsyncInfoWrapper);
-  return Err;
+  return AsyncInfoWrapper.finalize();
 }
 
 Error GenericDeviceTy::dataExchange(const void *SrcPtr, GenericDeviceTy &DstDev,
                                     void *DstPtr, int64_t Size,
                                     __tgt_async_info *AsyncInfo) {
-  auto Err = Plugin::success();
-  AsyncInfoWrapperTy AsyncInfoWrapper(Err, *this, AsyncInfo);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto &Err = AsyncInfoWrapper.getError();
   Err = dataExchangeImpl(SrcPtr, DstDev, DstPtr, Size, AsyncInfoWrapper);
-  return Err;
+  return AsyncInfoWrapper.finalize();
 }
 
 Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
                                     ptrdiff_t *ArgOffsets,
                                     KernelArgsTy &KernelArgs,
                                     __tgt_async_info *AsyncInfo) {
-  auto Err = Plugin::success();
-  AsyncInfoWrapperTy AsyncInfoWrapper(Err, *this, AsyncInfo);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
   GenericKernelTy &GenericKernel =
       *reinterpret_cast<GenericKernelTy *>(EntryPtr);
@@ -951,6 +970,7 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
         KernelArgs.NumTeams[0], KernelArgs.ThreadLimit[0], KernelArgs.Tripcount,
         AsyncInfoWrapper);
 
+  auto &Err = AsyncInfoWrapper.getError();
   Err = GenericKernel.launch(*this, ArgPtrs, ArgOffsets, KernelArgs,
                              AsyncInfoWrapper);
 
@@ -959,7 +979,7 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
     RecordReplay.saveKernelOutputInfo(GenericKernel.getName(),
                                       AsyncInfoWrapper);
 
-  return Err;
+  return AsyncInfoWrapper.finalize();
 }
 
 Error GenericDeviceTy::initAsyncInfo(__tgt_async_info **AsyncInfoPtr) {
@@ -967,10 +987,11 @@ Error GenericDeviceTy::initAsyncInfo(__tgt_async_info **AsyncInfoPtr) {
 
   *AsyncInfoPtr = new __tgt_async_info();
 
-  auto Err = Plugin::success();
-  AsyncInfoWrapperTy AsyncInfoWrapper(Err, *this, *AsyncInfoPtr);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, *AsyncInfoPtr);
+
+  auto &Err = AsyncInfoWrapper.getError();
   Err = initAsyncInfoImpl(AsyncInfoWrapper);
-  return Err;
+  return AsyncInfoWrapper.finalize();
 }
 
 Error GenericDeviceTy::initDeviceInfo(__tgt_device_info *DeviceInfo) {
@@ -994,17 +1015,19 @@ Error GenericDeviceTy::destroyEvent(void *EventPtr) {
 
 Error GenericDeviceTy::recordEvent(void *EventPtr,
                                    __tgt_async_info *AsyncInfo) {
-  auto Err = Plugin::success();
-  AsyncInfoWrapperTy AsyncInfoWrapper(Err, *this, AsyncInfo);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto &Err = AsyncInfoWrapper.getError();
   Err = recordEventImpl(EventPtr, AsyncInfoWrapper);
-  return Err;
+  return AsyncInfoWrapper.finalize();
 }
 
 Error GenericDeviceTy::waitEvent(void *EventPtr, __tgt_async_info *AsyncInfo) {
-  auto Err = Plugin::success();
-  AsyncInfoWrapperTy AsyncInfoWrapper(Err, *this, AsyncInfo);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto &Err = AsyncInfoWrapper.getError();
   Err = waitEventImpl(EventPtr, AsyncInfoWrapper);
-  return Err;
+  return AsyncInfoWrapper.finalize();
 }
 
 Error GenericDeviceTy::syncEvent(void *EventPtr) {

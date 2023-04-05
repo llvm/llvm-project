@@ -25627,7 +25627,7 @@ SDValue DAGCombiner::SimplifyVCastOp(SDNode *N, const SDLoc &DL) {
       (N0.getOpcode() == ISD::SPLAT_VECTOR ||
        TLI.isExtractVecEltCheap(VT, Index0)) &&
       TLI.isOperationLegalOrCustom(Opcode, EltVT) &&
-      TLI.preferScalarizeSplat(Opcode)) {
+      TLI.preferScalarizeSplat(N)) {
     SDValue IndexC = DAG.getVectorIdxConstant(Index0, DL);
     SDValue Elt =
         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, SrcEltVT, Src0, IndexC);

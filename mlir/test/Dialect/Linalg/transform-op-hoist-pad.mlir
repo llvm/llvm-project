@@ -68,7 +68,7 @@ transform.sequence failures(propagate) {
 
 // -----
 
-//     CHECK-LABEL: pad_and_hoist_lhs
+//     CHECK-LABEL: pad_and_hoist_lhs(
 func.func @pad_and_hoist_lhs(
   %arg0: tensor<24x12xf32>, %arg1: tensor<12x25xf32>, %arg2: tensor<24x25xf32>)
      -> tensor<24x25xf32> 

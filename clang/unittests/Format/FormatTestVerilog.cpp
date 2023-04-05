@@ -673,6 +673,77 @@ TEST_F(FormatTestVerilog, If) {
                "  x = x;");
 }
 
+TEST_F(FormatTestVerilog, Instantiation) {
+  // Without ports.
+  verifyFormat("ffnand ff1;");
+  // With named ports.
+  verifyFormat("ffnand ff1(.qbar(out1),\n"
+               "           .clear(in1),\n"
+               "           .preset(in2));");
+  // With wildcard.
+  verifyFormat("ffnand ff1(.qbar(out1),\n"
+               "           .clear(in1),\n"
+               "           .preset(in2),\n"
+               "           .*);");
+  verifyFormat("ffnand ff1(.*,\n"
+               "           .qbar(out1),\n"
+               "           .clear(in1),\n"
+               "           .preset(in2));");
+  // With unconnected ports.
+  verifyFormat("ffnand ff1(.q(),\n"
+               "           .qbar(out1),\n"
+               "           .clear(in1),\n"
+               "           .preset(in2));");
+  verifyFormat("ffnand ff1(.q(),\n"
+               "           .qbar(),\n"
+               "           .clear(),\n"
+               "           .preset());");
+  verifyFormat("ffnand ff1(,\n"
+               "           .qbar(out1),\n"
+               "           .clear(in1),\n"
+               "           .preset(in2));");
+  // With positional ports.
+  verifyFormat("ffnand ff1(out1,\n"
+               "           in1,\n"
+               "           in2);");
+  verifyFormat("ffnand ff1(,\n"
+               "           out1,\n"
+               "           in1,\n"
+               "           in2);");
+  // Multiple instantiations.
+  verifyFormat("ffnand ff1(.q(),\n"
+               "           .qbar(out1),\n"
+               "           .clear(in1),\n"
+               "           .preset(in2)),\n"
+               "       ff1(.q(),\n"
+               "           .qbar(out1),\n"
+               "           .clear(in1),\n"
+               "           .preset(in2));");
+  verifyFormat("ffnand //\n"
+               "    ff1(.q(),\n"
+               "        .qbar(out1),\n"
+               "        .clear(in1),\n"
+               "        .preset(in2)),\n"
+               "    ff1(.q(),\n"
+               "        .qbar(out1),\n"
+               "        .clear(in1),\n"
+               "        .preset(in2));");
+  // With breaking between instance ports disabled.
+  auto Style = getDefaultStyle();
+  Style.VerilogBreakBetweenInstancePorts = false;
+  verifyFormat("ffnand ff1;", Style);
+  verifyFormat("ffnand ff1(.qbar(out1), .clear(in1), .preset(in2), .*);",
+               Style);
+  verifyFormat("ffnand ff1(out1, in1, in2);", Style);
+  verifyFormat("ffnand ff1(.q(), .qbar(out1), .clear(in1), .preset(in2)),\n"
+               "       ff1(.q(), .qbar(out1), .clear(in1), .preset(in2));",
+               Style);
+  verifyFormat("ffnand //\n"
+               "    ff1(.q(), .qbar(out1), .clear(in1), .preset(in2)),\n"
+               "    ff1(.q(), .qbar(out1), .clear(in1), .preset(in2));",
+               Style);
+}
+
 TEST_F(FormatTestVerilog, Operators) {
   // Test that unary operators are not followed by space.
   verifyFormat("x = +x;");

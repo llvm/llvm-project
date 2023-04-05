@@ -358,11 +358,7 @@ public:
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
-  bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
-                                   AssumptionCache &AC, TargetLibraryInfo *TLI,
-                                   DominatorTree *DT,
-                                   LoopVectorizationLegality *LVL,
-                                   InterleavedAccessInfo *IAI);
+  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI);
 
   bool supportsScalableVectors() const { return ST->hasSVE(); }
 
