@@ -110,6 +110,7 @@ public:
   void buildCXXDestructors(const clang::CXXDestructorDecl *D) override;
   void buildCXXStructor(clang::GlobalDecl GD) override;
 
+  bool canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const override;
   mlir::cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *RD,
                                       CharUnits VPtrOffset) override;
   mlir::Value getVTableAddressPoint(BaseSubobject Base,
@@ -516,4 +517,9 @@ bool CIRGenItaniumCXXABI::isVirtualOffsetNeededForVTableField(
   if (Vptr.NearestVBase == nullptr)
     return false;
   return NeedsVTTParameter(CGF.CurGD);
+}
+
+bool CIRGenItaniumCXXABI::canSpeculativelyEmitVTable(
+    [[maybe_unused]] const CXXRecordDecl *RD) const {
+  llvm_unreachable("NYI");
 }
