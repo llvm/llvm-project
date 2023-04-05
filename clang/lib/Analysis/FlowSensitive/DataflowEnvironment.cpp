@@ -608,7 +608,7 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
     auto &AggregateLoc = *cast<AggregateStorageLocation>(&Loc);
 
     const QualType Type = AggregateLoc.getType();
-    assert(Type->isStructureOrClassType() || Type->isUnionType());
+    assert(Type->isRecordType());
 
     for (const FieldDecl *Field : DACtx->getReferencedFields(Type)) {
       assert(Field != nullptr);
@@ -708,7 +708,7 @@ Value *Environment::createValueUnlessSelfReferential(
       return &create<PointerValue>(PointeeLoc);
   }
 
-  if (Type->isStructureOrClassType() || Type->isUnionType()) {
+  if (Type->isRecordType()) {
     CreatedValuesCount++;
     llvm::DenseMap<const ValueDecl *, Value *> FieldValues;
     for (const FieldDecl *Field : DACtx->getReferencedFields(Type)) {
