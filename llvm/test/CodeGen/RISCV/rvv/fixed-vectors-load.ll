@@ -11,14 +11,8 @@ define <5 x i8> @load_v5i8(ptr %p) {
 ;
 ; RV64-LABEL: load_v5i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    ld a0, 0(a0)
-; RV64-NEXT:    sd a0, 8(sp)
-; RV64-NEXT:    addi a0, sp, 8
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
-; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   %x = load <5 x i8>, ptr %p
   ret <5 x i8> %x
@@ -39,10 +33,8 @@ define <5 x i8> @load_v5i8_align1(ptr %p) {
 ; RV32-NEXT:    slli a4, a4, 24
 ; RV32-NEXT:    or a3, a4, a3
 ; RV32-NEXT:    or a1, a3, a1
-; RV32-NEXT:    sw a1, 0(sp)
-; RV32-NEXT:    mv a1, sp
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-NEXT:    vle32.v v8, (a1)
+; RV32-NEXT:    vmv.s.x v8, a1
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
 ; RV32-NEXT:    vslidedown.vi v9, v8, 1
 ; RV32-NEXT:    vslidedown.vi v10, v8, 2
@@ -76,10 +68,8 @@ define <5 x i8> @load_v5i8_align1(ptr %p) {
 ; RV64-NEXT:    slli a4, a4, 24
 ; RV64-NEXT:    or a3, a4, a3
 ; RV64-NEXT:    or a1, a3, a1
-; RV64-NEXT:    sw a1, 0(sp)
-; RV64-NEXT:    mv a1, sp
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vle32.v v8, (a1)
+; RV64-NEXT:    vmv.s.x v8, a1
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v9, v8, 1
 ; RV64-NEXT:    vslidedown.vi v10, v8, 2
@@ -111,14 +101,8 @@ define <6 x i8> @load_v6i8(ptr %p) {
 ;
 ; RV64-LABEL: load_v6i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    ld a0, 0(a0)
-; RV64-NEXT:    sd a0, 8(sp)
-; RV64-NEXT:    addi a0, sp, 8
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
-; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   %x = load <6 x i8>, ptr %p
   ret <6 x i8> %x
