@@ -622,7 +622,7 @@ IgnoreObjectResult IgnoreObjectLocked(const void *p) {
   p = __hwasan::InTaggableRegion(reinterpret_cast<uptr>(p)) ? UntagPtr(p) : p;
   uptr addr = reinterpret_cast<uptr>(p);
   uptr chunk =
-      reinterpret_cast<uptr>(__hwasan::allocator.GetBlockBeginFastLocked(p));
+      reinterpret_cast<uptr>(__hwasan::allocator.GetBlockBegin(p));
   if (!chunk)
     return kIgnoreObjectInvalid;
   __hwasan::Metadata *metadata = reinterpret_cast<__hwasan::Metadata *>(
