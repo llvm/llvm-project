@@ -618,11 +618,10 @@ void ForEachChunk(ForEachChunkCallback callback, void *arg) {
   __hwasan::allocator.ForEachChunk(callback, arg);
 }
 
-IgnoreObjectResult IgnoreObjectLocked(const void *p) {
+IgnoreObjectResult IgnoreObject(const void *p) {
   p = __hwasan::InTaggableRegion(reinterpret_cast<uptr>(p)) ? UntagPtr(p) : p;
   uptr addr = reinterpret_cast<uptr>(p);
-  uptr chunk =
-      reinterpret_cast<uptr>(__hwasan::allocator.GetBlockBegin(p));
+  uptr chunk = reinterpret_cast<uptr>(__hwasan::allocator.GetBlockBegin(p));
   if (!chunk)
     return kIgnoreObjectInvalid;
   __hwasan::Metadata *metadata = reinterpret_cast<__hwasan::Metadata *>(
