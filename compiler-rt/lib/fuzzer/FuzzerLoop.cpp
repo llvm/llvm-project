@@ -551,6 +551,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
       II->U.size() > Size) {
     auto OldFeaturesFile = Sha1ToString(II->Sha1);
     Corpus.Replace(II, {Data, Data + Size}, TimeOfUnit);
+    WriteToOutputCorpus({Data, Data + Size}); 
     RenameFeatureSetFile(Options.FeaturesDir, OldFeaturesFile,
                          Sha1ToString(II->Sha1));
     return true;
