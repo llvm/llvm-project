@@ -4,6 +4,7 @@ set(LLVM_OPTIONAL_SOURCES
   DataLayoutAnalysis.cpp
   FlatLinearValueConstraints.cpp
   Liveness.cpp
+  CFGLoopInfo.cpp
   SliceAnalysis.cpp
 
   AliasAnalysis/LocalAliasAnalysis.cpp
@@ -24,6 +25,7 @@ add_mlir_library(MLIRAnalysis
   DataLayoutAnalysis.cpp
   FlatLinearValueConstraints.cpp
   Liveness.cpp
+  CFGLoopInfo.cpp
   SliceAnalysis.cpp
 
   AliasAnalysis/LocalAliasAnalysis.cpp
