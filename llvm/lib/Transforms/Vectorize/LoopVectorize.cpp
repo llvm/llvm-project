@@ -2491,8 +2491,6 @@ static Value *emitTransformedIndex(IRBuilderBase &B, Value *Index,
     return CreateAdd(StartValue, Offset);
   }
   case InductionDescriptor::IK_PtrInduction: {
-    assert(isa<Constant>(Step) &&
-           "Expected constant step for pointer induction");
     return B.CreateGEP(ID.getElementType(), StartValue, CreateMul(Index, Step));
   }
   case InductionDescriptor::IK_FpInduction: {
@@ -5591,35 +5589,32 @@ LoopVectorizationCostModel::selectEpilogueVectorizationFactor(
     const ElementCount MainLoopVF, const LoopVectorizationPlanner &LVP) {
   VectorizationFactor Result = VectorizationFactor::Disabled();
   if (!EnableEpilogueVectorization) {
-    LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization is disabled.\n";);
+    LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization is disabled.\n");
     return Result;
   }
 
   if (!isScalarEpilogueAllowed()) {
-    LLVM_DEBUG(
-        dbgs() << "LEV: Unable to vectorize epilogue because no epilogue is "
-                  "allowed.\n";);
+    LLVM_DEBUG(dbgs() << "LEV: Unable to vectorize epilogue because no "
+                         "epilogue is allowed.\n");
     return Result;
   }
 
   // Not really a cost consideration, but check for unsupported cases here to
   // simplify the logic.
   if (!isCandidateForEpilogueVectorization(*TheLoop, MainLoopVF)) {
-    LLVM_DEBUG(
-        dbgs() << "LEV: Unable to vectorize epilogue because the loop is "
-                  "not a supported candidate.\n";);
+    LLVM_DEBUG(dbgs() << "LEV: Unable to vectorize epilogue because the loop "
+                         "is not a supported candidate.\n");
     return Result;
   }
 
   if (EpilogueVectorizationForceVF > 1) {
-    LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization factor is forced.\n";);
+    LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization factor is forced.\n");
     ElementCount ForcedEC = ElementCount::getFixed(EpilogueVectorizationForceVF);
     if (LVP.hasPlanWithVF(ForcedEC))
       return {ForcedEC, 0, 0};
     else {
-      LLVM_DEBUG(
-          dbgs()
-              << "LEV: Epilogue vectorization forced factor is not viable.\n";);
+      LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization forced factor is not "
+                           "viable.\n");
       return Result;
     }
   }
@@ -5627,8 +5622,7 @@ LoopVectorizationCostModel::selectEpilogueVectorizationFactor(
   if (TheLoop->getHeader()->getParent()->hasOptSize() ||
       TheLoop->getHeader()->getParent()->hasMinSize()) {
     LLVM_DEBUG(
-        dbgs()
-            << "LEV: Epilogue vectorization skipped due to opt for size.\n";);
+        dbgs() << "LEV: Epilogue vectorization skipped due to opt for size.\n");
     return Result;
   }
 
@@ -5658,7 +5652,7 @@ LoopVectorizationCostModel::selectEpilogueVectorizationFactor(
 
   if (Result != VectorizationFactor::Disabled())
     LLVM_DEBUG(dbgs() << "LEV: Vectorizing epilogue loop with VF = "
-                      << Result.Width << "\n";);
+                      << Result.Width << "\n");
   return Result;
 }
 
@@ -8275,7 +8269,6 @@ VPRecipeBase *VPRecipeBuilder::tryToOptimizeInductionPHI(
   if (auto *II = Legal->getPointerInductionDescriptor(Phi)) {
     VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep(),
                                                            *PSE.getSE());
-    assert(isa<SCEVConstant>(II->getStep()));
     return new VPWidenPointerInductionRecipe(
         Phi, Operands[0], Step, *II,
         LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -9380,7 +9373,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
             PartStart, ConstantInt::get(PtrInd->getType(), Lane));
         Value *GlobalIdx = State.Builder.CreateAdd(PtrInd, Idx);
 
-        Value *Step = State.get(getOperand(1), VPIteration(0, Part));
+        Value *Step = State.get(getOperand(1), VPIteration(Part, Lane));
         Value *SclrGep = emitTransformedIndex(
             State.Builder, GlobalIdx, IndDesc.getStartValue(), Step, IndDesc);
         SclrGep->setName("next.gep");
@@ -9390,8 +9383,6 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
     return;
   }
 
-  assert(isa<SCEVConstant>(IndDesc.getStep()) &&
-         "Induction step not a SCEV constant!");
   Type *PhiType = IndDesc.getStep()->getType();
 
   // Build a pointer phi
@@ -9434,7 +9425,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
     StartOffset = State.Builder.CreateAdd(
         StartOffset, State.Builder.CreateStepVector(VecPhiType));
 
-    assert(ScalarStepValue == State.get(getOperand(1), VPIteration(0, Part)) &&
+    assert(ScalarStepValue == State.get(getOperand(1), VPIteration(Part, 0)) &&
            "scalar step must be the same across all parts");
     Value *GEP = State.Builder.CreateGEP(
         IndDesc.getElementType(), NewPointerPhi,

@@ -9,7 +9,7 @@ define i32 @fn1() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @b, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> <i32 8, i32 poison, i32 ptrtoint (ptr @fn1 to i32), i32 ptrtoint (ptr @fn1 to i32)>, <4 x i32> <i32 4, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> <i32 8, i32 poison, i32 ptrtoint (ptr @fn1 to i32), i32 poison>, <4 x i32> <i32 4, i32 1, i32 6, i32 6>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 6, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr @a, align 4

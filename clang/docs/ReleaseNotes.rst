@@ -146,6 +146,8 @@ Non-comprehensive list of changes in this release
 - Clang now supports ``__builtin_assume_separate_storage`` that indicates that
   its arguments point to objects in separate storage allocations.
 - Clang now supports expressions in ``#pragma clang __debug dump``.
+- Clang now supports declaration of multi-dimensional arrays with
+  ``__declspec(property)``.
 
 New Compiler Flags
 ------------------

@@ -896,6 +896,16 @@ public:
     });
   }
 
+  const ParsedAttr *getMSPropertyAttr() const {
+    auto It = llvm::find_if(AttrList, [](const ParsedAttr *AL) {
+      return AL->isDeclspecPropertyAttribute();
+    });
+    if (It != AttrList.end())
+      return *It;
+    return nullptr;
+  }
+  bool hasMSPropertyAttr() const { return getMSPropertyAttr(); }
+
 private:
   VecTy AttrList;
 };

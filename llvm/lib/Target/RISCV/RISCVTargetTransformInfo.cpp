@@ -334,6 +334,11 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // TODO: Most of these cases will return getInvalid in generic code, and
     // must be implemented here.
     break;
+  case TTI::SK_ExtractSubvector:
+    // Example sequence:
+    // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
+    // vslidedown.vi  v8, v9, 2
+    return LT.first * getLMULCost(LT.second);
   case TTI::SK_InsertSubvector:
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)

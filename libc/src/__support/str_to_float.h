@@ -935,13 +935,22 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
       if (result.has_error())
         output.error = result.error;
       int32_t add_to_exponent = result.value;
-      if (add_to_exponent > 100000)
-        add_to_exponent = 100000;
-      else if (add_to_exponent < -100000)
-        add_to_exponent = -100000;
-
       index += result.parsed_len;
-      exponent += add_to_exponent;
+
+      // Here we do this operation as int64 to avoid overflow.
+      int64_t temp_exponent = static_cast<int64_t>(exponent) +
+                              static_cast<int64_t>(add_to_exponent);
+
+      // If the result is in the valid range, then we use it. The valid range is
+      // also within the int32 range, so this prevents overflow issues.
+      if (temp_exponent < fputil::FPBits<T>::MAX_EXPONENT &&
+          temp_exponent > -fputil::FPBits<T>::MAX_EXPONENT) {
+        exponent = static_cast<int32_t>(temp_exponent);
+      } else if (temp_exponent > fputil::FPBits<T>::MAX_EXPONENT) {
+        exponent = fputil::FPBits<T>::MAX_EXPONENT;
+      } else {
+        exponent = -fputil::FPBits<T>::MAX_EXPONENT;
+      }
     }
   }
 
@@ -1036,12 +1045,22 @@ hexadecimal_string_to_float(const char *__restrict src,
         output.error = result.error;
 
       int32_t add_to_exponent = result.value;
-      if (add_to_exponent > 100000)
-        add_to_exponent = 100000;
-      else if (add_to_exponent < -100000)
-        add_to_exponent = -100000;
       index += result.parsed_len;
-      exponent += add_to_exponent;
+
+      // Here we do this operation as int64 to avoid overflow.
+      int64_t temp_exponent = static_cast<int64_t>(exponent) +
+                              static_cast<int64_t>(add_to_exponent);
+
+      // If the result is in the valid range, then we use it. The valid range is
+      // also within the int32 range, so this prevents overflow issues.
+      if (temp_exponent < fputil::FPBits<T>::MAX_EXPONENT &&
+          temp_exponent > -fputil::FPBits<T>::MAX_EXPONENT) {
+        exponent = static_cast<int32_t>(temp_exponent);
+      } else if (temp_exponent > fputil::FPBits<T>::MAX_EXPONENT) {
+        exponent = fputil::FPBits<T>::MAX_EXPONENT;
+      } else {
+        exponent = -fputil::FPBits<T>::MAX_EXPONENT;
+      }
     }
   }
   output.parsed_len = index;
