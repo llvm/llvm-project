@@ -192,7 +192,7 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
 //===----------------------------------------------------------------------===//
 
 multiclass sse12_move_rr<SDNode OpNode, ValueType vt, string base_opc,
-                         string asm_opr, Domain d, string Name> {
+                         string asm_opr, Domain d> {
   let isCommutable = 1 in
   def rr : SI<0x10, MRMSrcReg, (outs VR128:$dst),
               (ins VR128:$src1, VR128:$src2),
@@ -205,17 +205,16 @@ multiclass sse12_move_rr<SDNode OpNode, ValueType vt, string base_opc,
   def rr_REV : SI<0x11, MRMDestReg, (outs VR128:$dst),
                   (ins VR128:$src1, VR128:$src2),
                   !strconcat(base_opc, asm_opr), []>,
-                  Sched<[SchedWriteFShuffle.XMM]>, FoldGenData<Name#rr>;
+                  Sched<[SchedWriteFShuffle.XMM]>;
 }
 
 multiclass sse12_move<RegisterClass RC, SDNode OpNode, ValueType vt,
                       X86MemOperand x86memop, string OpcodeStr,
-                      Domain d, string Name, Predicate pred> {
+                      Domain d, Predicate pred> {
   // AVX
   let Predicates = [UseAVX, OptForSize] in
   defm V#NAME : sse12_move_rr<OpNode, vt, OpcodeStr,
-                              "\t{$src2, $src1, $dst|$dst, $src1, $src2}", d,
-                              "V"#Name>,
+                              "\t{$src2, $src1, $dst|$dst, $src1, $src2}", d>,
                               VEX_4V, VEX_LIG, VEX_WIG;
 
   def V#NAME#mr : SI<0x11, MRMDestMem, (outs), (ins x86memop:$dst, RC:$src),
@@ -226,7 +225,7 @@ multiclass sse12_move<RegisterClass RC, SDNode OpNode, ValueType vt,
   let Constraints = "$src1 = $dst" in {
     let Predicates = [pred, NoSSE41_Or_OptForSize] in
     defm NAME : sse12_move_rr<OpNode, vt, OpcodeStr,
-                              "\t{$src2, $dst|$dst, $src2}", d, Name>;
+                              "\t{$src2, $dst|$dst, $src2}", d>;
   }
 
   def NAME#mr   : SI<0x11, MRMDestMem, (outs), (ins x86memop:$dst, RC:$src),
@@ -269,9 +268,9 @@ multiclass sse12_move_rm<RegisterClass RC, ValueType vt, X86MemOperand x86memop,
 }
 
 defm MOVSS : sse12_move<FR32, X86Movss, v4f32, f32mem, "movss",
-                        SSEPackedSingle, "MOVSS", UseSSE1>, XS;
+                        SSEPackedSingle, UseSSE1>, XS;
 defm MOVSD : sse12_move<FR64, X86Movsd, v2f64, f64mem, "movsd",
-                        SSEPackedDouble, "MOVSD", UseSSE2>, XD;
+                        SSEPackedDouble, UseSSE2>, XD;
 
 let canFoldAsLoad = 1, isReMaterializable = 1 in {
   defm MOVSS : sse12_move_rm<FR32, v4f32, f32mem, loadf32, X86vzload32, "movss",
@@ -442,38 +441,38 @@ let SchedRW = [SchedWriteFMoveLS.XMM.RR] in {
   def VMOVAPSrr_REV : VPSI<0x29, MRMDestReg, (outs VR128:$dst),
                           (ins VR128:$src),
                           "movaps\t{$src, $dst|$dst, $src}", []>,
-                          VEX, VEX_WIG, FoldGenData<"VMOVAPSrr">;
+                          VEX, VEX_WIG;
   def VMOVAPDrr_REV : VPDI<0x29, MRMDestReg, (outs VR128:$dst),
                            (ins VR128:$src),
                            "movapd\t{$src, $dst|$dst, $src}", []>,
-                           VEX, VEX_WIG, FoldGenData<"VMOVAPDrr">;
+                           VEX, VEX_WIG;
   def VMOVUPSrr_REV : VPSI<0x11, MRMDestReg, (outs VR128:$dst),
                            (ins VR128:$src),
                            "movups\t{$src, $dst|$dst, $src}", []>,
-                           VEX, VEX_WIG, FoldGenData<"VMOVUPSrr">;
+                           VEX, VEX_WIG;
   def VMOVUPDrr_REV : VPDI<0x11, MRMDestReg, (outs VR128:$dst),
                            (ins VR128:$src),
                            "movupd\t{$src, $dst|$dst, $src}", []>,
-                           VEX, VEX_WIG, FoldGenData<"VMOVUPDrr">;
+                           VEX, VEX_WIG;
 } // SchedRW
 
 let SchedRW = [SchedWriteFMoveLS.YMM.RR] in {
   def VMOVAPSYrr_REV : VPSI<0x29, MRMDestReg, (outs VR256:$dst),
                             (ins VR256:$src),
                             "movaps\t{$src, $dst|$dst, $src}", []>,
-                            VEX, VEX_L, VEX_WIG, FoldGenData<"VMOVAPSYrr">;
+                            VEX, VEX_L, VEX_WIG;
   def VMOVAPDYrr_REV : VPDI<0x29, MRMDestReg, (outs VR256:$dst),
                             (ins VR256:$src),
                             "movapd\t{$src, $dst|$dst, $src}", []>,
-                            VEX, VEX_L, VEX_WIG, FoldGenData<"VMOVAPDYrr">;
+                            VEX, VEX_L, VEX_WIG;
   def VMOVUPSYrr_REV : VPSI<0x11, MRMDestReg, (outs VR256:$dst),
                             (ins VR256:$src),
                             "movups\t{$src, $dst|$dst, $src}", []>,
-                            VEX, VEX_L, VEX_WIG, FoldGenData<"VMOVUPSYrr">;
+                            VEX, VEX_L, VEX_WIG;
   def VMOVUPDYrr_REV : VPDI<0x11, MRMDestReg, (outs VR256:$dst),
                             (ins VR256:$src),
                             "movupd\t{$src, $dst|$dst, $src}", []>,
-                            VEX, VEX_L, VEX_WIG, FoldGenData<"VMOVUPDYrr">;
+                            VEX, VEX_L, VEX_WIG;
 } // SchedRW
 } // Predicate
 
@@ -514,17 +513,13 @@ def MOVUPDmr : PDI<0x11, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0,
     isMoveReg = 1, SchedRW = [SchedWriteFMoveLS.XMM.RR] in {
   def MOVAPSrr_REV : PSI<0x29, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
-                         "movaps\t{$src, $dst|$dst, $src}", []>,
-                         FoldGenData<"MOVAPSrr">;
+                         "movaps\t{$src, $dst|$dst, $src}", []>;
   def MOVAPDrr_REV : PDI<0x29, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
-                         "movapd\t{$src, $dst|$dst, $src}", []>,
-                         FoldGenData<"MOVAPDrr">;
+                         "movapd\t{$src, $dst|$dst, $src}", []>;
   def MOVUPSrr_REV : PSI<0x11, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
-                         "movups\t{$src, $dst|$dst, $src}", []>,
-                         FoldGenData<"MOVUPSrr">;
+                         "movups\t{$src, $dst|$dst, $src}", []>;
   def MOVUPDrr_REV : PDI<0x11, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
-                         "movupd\t{$src, $dst|$dst, $src}", []>,
-                         FoldGenData<"MOVUPDrr">;
+                         "movupd\t{$src, $dst|$dst, $src}", []>;
 }
 
 // Reversed version with ".s" suffix for GAS compatibility.
@@ -3303,19 +3298,19 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in {
 def VMOVDQArr_REV  : VPDI<0x7F, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
                           "movdqa\t{$src, $dst|$dst, $src}", []>,
                           Sched<[SchedWriteVecMoveLS.XMM.RR]>,
-                          VEX, VEX_WIG, FoldGenData<"VMOVDQArr">;
+                          VEX, VEX_WIG;
 def VMOVDQAYrr_REV : VPDI<0x7F, MRMDestReg, (outs VR256:$dst), (ins VR256:$src),
                           "movdqa\t{$src, $dst|$dst, $src}", []>,
                           Sched<[SchedWriteVecMoveLS.YMM.RR]>,
-                          VEX, VEX_L, VEX_WIG, FoldGenData<"VMOVDQAYrr">;
+                          VEX, VEX_L, VEX_WIG;
 def VMOVDQUrr_REV  : VSSI<0x7F, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
                           "movdqu\t{$src, $dst|$dst, $src}", []>,
                           Sched<[SchedWriteVecMoveLS.XMM.RR]>,
-                          VEX, VEX_WIG, FoldGenData<"VMOVDQUrr">;
+                          VEX, VEX_WIG;
 def VMOVDQUYrr_REV : VSSI<0x7F, MRMDestReg, (outs VR256:$dst), (ins VR256:$src),
                           "movdqu\t{$src, $dst|$dst, $src}", []>,
                           Sched<[SchedWriteVecMoveLS.YMM.RR]>,
-                          VEX, VEX_L, VEX_WIG, FoldGenData<"VMOVDQUYrr">;
+                          VEX, VEX_L, VEX_WIG;
 }
 
 let canFoldAsLoad = 1, mayLoad = 1, isReMaterializable = 1,
@@ -3371,12 +3366,11 @@ def MOVDQUrr :   I<0x6F, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
 // For Disassembler
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in {
 def MOVDQArr_REV : PDI<0x7F, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
-                       "movdqa\t{$src, $dst|$dst, $src}", []>,
-                       FoldGenData<"MOVDQArr">;
+                       "movdqa\t{$src, $dst|$dst, $src}", []>;
 
 def MOVDQUrr_REV :   I<0x7F, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
                        "movdqu\t{$src, $dst|$dst, $src}", []>,
-                       XS, Requires<[UseSSE2]>, FoldGenData<"MOVDQUrr">;
+                       XS, Requires<[UseSSE2]>;
 }
 } // SchedRW
 
@@ -5256,7 +5250,7 @@ multiclass SS41I_extract16<bits<8> opc, string OpcodeStr> {
                    (ins VR128:$src1, u8imm:$src2),
                    !strconcat(OpcodeStr,
                    "\t{$src2, $src1, $dst|$dst, $src1, $src2}"), []>,
-                   Sched<[WriteVecExtract]>, FoldGenData<NAME#rr>;
+                   Sched<[WriteVecExtract]>;
 
   let hasSideEffects = 0, mayStore = 1 in
   def mr : SS4AIi8<opc, MRMDestMem, (outs),
