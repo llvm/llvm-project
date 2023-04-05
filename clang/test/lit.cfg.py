@@ -284,10 +284,6 @@ if 'system-aix' in config.available_features:
         config.substitutions.append(('llvm-nm', 'env OBJECT_MODE=any llvm-nm'))
         config.substitutions.append(('llvm-ar', 'env OBJECT_MODE=any llvm-ar'))
 
-# Pass the crash diagnostic dir set in the os environment to LIT.
-if 'CLANG_CRASH_DIAGNOSTICS_DIR' in os.environ:
-    config.environment['CLANG_CRASH_DIAGNOSTICS_DIR'] = os.environ['CLANG_CRASH_DIAGNOSTICS_DIR']
-
 # It is not realistically possible to account for all options that could
 # possibly be present in system and user configuration files, so disable
 # default configs for the test runs.
