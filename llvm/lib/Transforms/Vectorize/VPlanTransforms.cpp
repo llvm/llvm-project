@@ -611,6 +611,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   //      2. Replace vector loop region with VPBasicBlock.
 }
 
+#ifndef NDEBUG
 static VPRegionBlock *GetReplicateRegion(VPRecipeBase *R) {
   auto *Region = dyn_cast_or_null<VPRegionBlock>(R->getParent()->getParent());
   if (Region && Region->isReplicator()) {
@@ -623,6 +624,7 @@ static VPRegionBlock *GetReplicateRegion(VPRecipeBase *R) {
   }
   return nullptr;
 }
+#endif
 
 static bool properlyDominates(const VPRecipeBase *A, const VPRecipeBase *B,
                               VPDominatorTree &VPDT) {
