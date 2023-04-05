@@ -1875,7 +1875,7 @@ void ObjCImageInfoSection::finalizeContents() {
 
   info.hasCategoryClassProperties = true;
   const InputFile *firstFile;
-  for (auto file : files) {
+  for (const InputFile *file : files) {
     ImageInfo inputInfo = parseImageInfo(file);
     info.hasCategoryClassProperties &= inputInfo.hasCategoryClassProperties;
 

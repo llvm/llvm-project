@@ -1060,7 +1060,7 @@ void Writer::finalizeAddresses() {
       if (!osec->isNeeded())
         continue;
       // Other kinds of OutputSections have already been finalized.
-      if (auto concatOsec = dyn_cast<ConcatOutputSection>(osec))
+      if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec))
         concatOsec->finalizeContents();
     }
   }
