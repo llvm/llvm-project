@@ -887,6 +887,24 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXBindTemporaryExpr(
+    const CXXBindTemporaryExpr *E) {
+
+  return this->visit(E->getSubExpr());
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXTemporaryObjectExpr(
+    const CXXTemporaryObjectExpr *E) {
+
+  if (std::optional<unsigned> LocalIndex =
+          allocateLocal(E, /*IsExtended=*/false)) {
+    return this->visitLocalInitializer(E, *LocalIndex);
+  }
+  return false;
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
     const CompoundLiteralExpr *E) {
   std::optional<PrimType> T = classify(E->getType());
