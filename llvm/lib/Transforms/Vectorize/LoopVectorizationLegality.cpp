@@ -1128,15 +1128,11 @@ bool LoopVectorizationLegality::blockCanBePredicated(
     // if we end up scalarizing due to the cost model calculations.
     // TODO: Allow other calls if they have appropriate attributes... readonly
     // and argmemonly?
-    if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-      // Check whether we have at least one masked vector version of a scalar
-      // function.
-      if (any_of(VFDatabase::getMappings(*CI),
-                 [](VFInfo &Info) { return Info.isMasked(); })) {
+    if (CallInst *CI = dyn_cast<CallInst>(&I))
+      if (VFDatabase::hasMaskedVariant(*CI)) {
         MaskedOp.insert(CI);
         continue;
       }
-    }
 
     // Loads are handled via masking (or speculated if safe to do so.)
     if (auto *LI = dyn_cast<LoadInst>(&I)) {

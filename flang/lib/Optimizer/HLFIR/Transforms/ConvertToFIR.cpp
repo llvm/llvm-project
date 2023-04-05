@@ -364,9 +364,6 @@ public:
     auto module = designate->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
 
-    if (designate.getComplexPart())
-      TODO(loc, "hlfir::designate with complex part");
-
     hlfir::Entity baseEntity(designate.getMemref());
 
     if (baseEntity.isMutableBox())
@@ -377,6 +374,7 @@ public:
     auto [base, shape] = hlfir::genVariableFirBaseShapeAndParams(
         loc, builder, baseEntity, firBaseTypeParameters);
     mlir::Type baseEleTy = hlfir::getFortranElementType(base.getType());
+    mlir::Type resultEleTy = hlfir::getFortranElementType(designateResultType);
 
     mlir::Value fieldIndex;
     if (designate.getComponent()) {
@@ -428,12 +426,7 @@ public:
       if (fieldIndex && baseEntity.isArray()) {
         // array%scalar_comp or array%array_comp(indices)
         // Generate triples for array(:, :, ...).
-        auto one = builder.createIntegerConstant(loc, idxTy, 1);
-        for (auto [lb, ub] : hlfir::genBounds(loc, builder, baseEntity)) {
-          triples.push_back(builder.createConvert(loc, idxTy, lb));
-          triples.push_back(builder.createConvert(loc, idxTy, ub));
-          triples.push_back(one);
-        }
+        triples = genFullSliceTriples(builder, loc, baseEntity);
         sliceFields.push_back(fieldIndex);
         // Add indices in the field path for "array%array_comp(indices)"
         // case.
@@ -464,7 +457,12 @@ public:
             builder.create<mlir::arith::SubIOp>(loc, substring[0], one);
         substring.push_back(designate.getTypeparams()[0]);
       }
-
+      if (designate.getComplexPart()) {
+        if (triples.empty())
+          triples = genFullSliceTriples(builder, loc, baseEntity);
+        sliceFields.push_back(builder.createIntegerConstant(
+            loc, idxTy, *designate.getComplexPart()));
+      }
       mlir::Value slice;
       if (!triples.empty())
         slice =
@@ -517,6 +515,16 @@ public:
       base = fir::factory::CharacterExprHelper{builder, loc}.genSubstringBase(
           base, designate.getSubstring()[0], resultAddressType);
 
+    // Scalar complex part ref
+    if (designate.getComplexPart()) {
+      // Sequence types should have already been handled by this point
+      assert(!designateResultType.isa<fir::SequenceType>());
+      auto index = builder.createIntegerConstant(loc, builder.getIndexType(),
+                                                 *designate.getComplexPart());
+      auto coorTy = fir::ReferenceType::get(resultEleTy);
+      base = builder.create<fir::CoordinateOp>(loc, coorTy, base, index);
+    }
+
     // Cast/embox the computed scalar address if needed.
     if (designateResultType.isa<fir::BoxCharType>()) {
       assert(designate.getTypeparams().size() == 1 &&
@@ -529,6 +537,24 @@ public:
       rewriter.replaceOp(designate, base);
     }
     return mlir::success();
+  }
+
+private:
+  // Generates triple for full slice
+  // Used for component and complex part slices when a triple is
+  // not specified
+  static llvm::SmallVector<mlir::Value>
+  genFullSliceTriples(fir::FirOpBuilder &builder, mlir::Location loc,
+                      hlfir::Entity baseEntity) {
+    llvm::SmallVector<mlir::Value> triples;
+    mlir::Type idxTy = builder.getIndexType();
+    auto one = builder.createIntegerConstant(loc, idxTy, 1);
+    for (auto [lb, ub] : hlfir::genBounds(loc, builder, baseEntity)) {
+      triples.push_back(builder.createConvert(loc, idxTy, lb));
+      triples.push_back(builder.createConvert(loc, idxTy, ub));
+      triples.push_back(one);
+    }
+    return triples;
   }
 };
 

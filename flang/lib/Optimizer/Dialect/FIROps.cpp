@@ -2327,6 +2327,8 @@ mlir::LogicalResult fir::ReboxOp::verify() {
         inputEleTy.isa<fir::RecordType>() || outEleTy.isa<mlir::NoneType>() ||
         (inputEleTy.isa<mlir::NoneType>() && outEleTy.isa<fir::RecordType>()) ||
         (getSlice() && inputEleTy.isa<fir::CharacterType>()) ||
+        (getSlice() && fir::isa_complex(inputEleTy) &&
+         outEleTy.isa<mlir::FloatType>()) ||
         areCompatibleCharacterTypes(inputEleTy, outEleTy);
     if (!typeCanMismatch)
       return emitOpError(

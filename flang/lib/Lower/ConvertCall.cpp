@@ -1188,12 +1188,16 @@ genIntrinsicRefCore(PreparedActualArguments &loweredActuals,
     // Helper to get the type of the Fortran expression in case it is a
     // computed value that must be placed in memory (logicals are computed as
     // i1, but must be placed in memory as fir.logical).
-    auto getActualFortranElementType = [&]() {
-      const Fortran::lower::SomeExpr *expr =
-          callContext.procRef.UnwrapArgExpr(arg.index());
-      assert(expr && "must be an expr");
-      mlir::Type type = converter.genType(*expr);
-      return hlfir::getFortranElementType(type);
+    auto getActualFortranElementType = [&]() -> mlir::Type {
+      if (const Fortran::lower::SomeExpr *expr =
+              callContext.procRef.UnwrapArgExpr(arg.index())) {
+
+        mlir::Type type = converter.genType(*expr);
+        return hlfir::getFortranElementType(type);
+      }
+      // TYPE(*): is already in memory anyway. Can return none
+      // here.
+      return builder.getNoneType();
     };
     // Ad-hoc argument lowering handling.
     fir::ArgLoweringRule argRules =
@@ -1617,11 +1621,33 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
   const fir::IntrinsicArgumentLoweringRules *argLowering =
       fir::getIntrinsicArgumentLowering(callContext.getProcedureName());
   for (const auto &arg : llvm::enumerate(callContext.procRef.arguments())) {
+
+    if (!arg.value()) {
+      // Absent optional.
+      loweredActuals.push_back(std::nullopt);
+      continue;
+    }
     auto *expr =
         Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg.value());
     if (!expr) {
-      // Absent optional.
-      loweredActuals.push_back(std::nullopt);
+      // TYPE(*) dummy. They are only allowed as argument of a few intrinsics
+      // that do not take optional arguments: see Fortran 2018 standard C710.
+      const Fortran::evaluate::Symbol *assumedTypeSym =
+          arg.value()->GetAssumedTypeDummy();
+      if (!assumedTypeSym)
+        fir::emitFatalError(loc,
+                            "expected assumed-type symbol as actual argument");
+      std::optional<fir::FortranVariableOpInterface> var =
+          callContext.symMap.lookupVariableDefinition(*assumedTypeSym);
+      if (!var)
+        fir::emitFatalError(loc, "assumed-type symbol was not lowered");
+      assert(
+          (!argLowering ||
+           !fir::lowerIntrinsicArgumentAs(*argLowering, arg.index())
+                .handleDynamicOptional) &&
+          "TYPE(*) are not expected to appear as optional intrinsic arguments");
+      loweredActuals.push_back(PreparedActualArgument{
+          hlfir::Entity{*var}, /*isPresent=*/std::nullopt});
       continue;
     }
     auto loweredActual = Fortran::lower::convertExprToHLFIR(

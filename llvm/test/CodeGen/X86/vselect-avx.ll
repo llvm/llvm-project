@@ -114,6 +114,20 @@ define void @test3(<4 x i32> %induction30, <4 x i16>* %tmp16, <4 x i16>* %tmp17,
 ; AVX2-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX2-NEXT:    vmovq %xmm1, (%rsi)
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test3:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-NEXT:    vpcmpleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vpmovdw %ymm0, %xmm0
+; AVX512-NEXT:    vpternlogq $226, %xmm2, %xmm0, %xmm1
+; AVX512-NEXT:    vmovq %xmm0, (%rdi)
+; AVX512-NEXT:    vmovq %xmm1, (%rsi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %tmp6 = srem <4 x i32> %induction30, <i32 3, i32 3, i32 3, i32 3>
   %tmp7 = icmp eq <4 x i32> %tmp6, zeroinitializer
   %predphi = select <4 x i1> %tmp7, <4 x i16> %tmp3, <4 x i16> %tmp12

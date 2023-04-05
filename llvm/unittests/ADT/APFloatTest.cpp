@@ -5915,7 +5915,8 @@ TEST(APFloatTest, ConvertE4M3FNUZToE5M2FNUZ) {
 TEST(APFloatTest, F8ToString) {
   for (APFloat::Semantics S :
        {APFloat::S_Float8E5M2, APFloat::S_Float8E4M3FN,
-        APFloat::S_Float8E5M2FNUZ, APFloat::S_Float8E4M3FNUZ}) {
+        APFloat::S_Float8E5M2FNUZ, APFloat::S_Float8E4M3FNUZ,
+        APFloat::S_Float8E4M3B11FNUZ}) {
     SCOPED_TRACE("Semantics=" + std::to_string(S));
     for (int i = 0; i < 256; i++) {
       SCOPED_TRACE("i=" + std::to_string(i));
@@ -5928,6 +5929,46 @@ TEST(APFloatTest, F8ToString) {
       } else {
         APFloat test2(APFloat::EnumToSemantics(S), str);
         EXPECT_TRUE(test.bitwiseIsEqual(test2));
+      }
+    }
+  }
+}
+
+TEST(APFloatTest, BitsToF8ToBits) {
+  for (APFloat::Semantics S :
+       {APFloat::S_Float8E5M2, APFloat::S_Float8E4M3FN,
+        APFloat::S_Float8E5M2FNUZ, APFloat::S_Float8E4M3FNUZ,
+        APFloat::S_Float8E4M3B11FNUZ}) {
+    SCOPED_TRACE("Semantics=" + std::to_string(S));
+    for (int i = 0; i < 256; i++) {
+      SCOPED_TRACE("i=" + std::to_string(i));
+      APInt bits_in = APInt(8, i);
+      APFloat test(APFloat::EnumToSemantics(S), bits_in);
+      APInt bits_out = test.bitcastToAPInt();
+      EXPECT_EQ(bits_in, bits_out);
+    }
+  }
+}
+
+TEST(APFloatTest, F8ToBitsToF8) {
+  for (APFloat::Semantics S :
+       {APFloat::S_Float8E5M2, APFloat::S_Float8E4M3FN,
+        APFloat::S_Float8E5M2FNUZ, APFloat::S_Float8E4M3FNUZ,
+        APFloat::S_Float8E4M3B11FNUZ}) {
+    SCOPED_TRACE("Semantics=" + std::to_string(S));
+    auto &Sem = APFloat::EnumToSemantics(S);
+    for (bool negative : {false, true}) {
+      SCOPED_TRACE("negative=" + std::to_string(negative));
+      APFloat test = APFloat::getZero(Sem, /*Negative=*/negative);
+      for (int i = 0; i < 128; i++, test.next(/*nextDown=*/negative)) {
+        SCOPED_TRACE("i=" + std::to_string(i));
+        APInt bits = test.bitcastToAPInt();
+        APFloat test2 = APFloat(Sem, bits);
+        if (test.isNaN()) {
+          EXPECT_TRUE(test2.isNaN());
+        } else {
+          EXPECT_TRUE(test.bitwiseIsEqual(test2));
+        }
       }
     }
   }

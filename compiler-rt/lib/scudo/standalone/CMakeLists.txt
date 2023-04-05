@@ -85,9 +85,7 @@ set(SCUDO_HEADERS
   stack_depot.h
   stats.h
   string_utils.h
-  # TODO(chiahungduan): Temporarily disable the timer because of the print
-  # of u64 has incorrect placeholder.
-  # timing.h
+  timing.h
   tsd_exclusive.h
   tsd_shared.h
   tsd.h
@@ -110,9 +108,7 @@ set(SCUDO_SOURCES
   report.cpp
   rss_limit_checker.cpp
   string_utils.cpp
-  # TODO(chiahungduan): Temporarily disable the timer because of the print
-  # of u64 has incorrect placeholder.
-  # timing.cpp
+  timing.cpp
   )
 
 # Enable the necessary instruction set for scudo_crc32.cpp, if available.
@@ -138,19 +134,8 @@ set(SCUDO_SOURCES_CXX_WRAPPERS
   )
 
 set(SCUDO_OBJECT_LIBS)
-set(SCUDO_LINK_LIBS)
 
 if (COMPILER_RT_HAS_GWP_ASAN)
-  if(COMPILER_RT_USE_LLVM_UNWINDER)
-    list(APPEND SCUDO_LINK_LIBS ${COMPILER_RT_UNWINDER_LINK_LIBS} dl)
-  elseif (COMPILER_RT_HAS_GCC_S_LIB)
-    list(APPEND SCUDO_LINK_LIBS gcc_s)
-  elseif (COMPILER_RT_HAS_GCC_LIB)
-    list(APPEND SCUDO_LINK_LIBS gcc)
-  else()
-    message(FATAL_ERROR "No suitable unwinder library")
-  endif()
-
   add_dependencies(scudo_standalone gwp_asan)
   list(APPEND SCUDO_OBJECT_LIBS
        RTGwpAsan RTGwpAsanBacktraceLibc RTGwpAsanSegvHandler
@@ -162,6 +147,8 @@ if (COMPILER_RT_HAS_GWP_ASAN)
   list(APPEND SCUDO_CFLAGS -DGWP_ASAN_HOOKS)
 
 endif()
+
+set(SCUDO_LINK_LIBS ${COMPILER_RT_UNWINDER_LINK_LIBS})
 
 if(COMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC)
   include_directories(${COMPILER_RT_BINARY_DIR}/../libc/include/)

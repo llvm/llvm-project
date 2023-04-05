@@ -124,14 +124,6 @@
         },
         {
           "kind": "keyword",
-          "spelling": "atomic"
-        },
-        {
-          "kind": "text",
-          "spelling": ", "
-        },
-        {
-          "kind": "keyword",
           "spelling": "copy"
         },
         {
@@ -205,30 +197,6 @@
         {
           "kind": "text",
           "spelling": " ("
-        },
-        {
-          "kind": "keyword",
-          "spelling": "atomic"
-        },
-        {
-          "kind": "text",
-          "spelling": ", "
-        },
-        {
-          "kind": "keyword",
-          "spelling": "assign"
-        },
-        {
-          "kind": "text",
-          "spelling": ", "
-        },
-        {
-          "kind": "keyword",
-          "spelling": "unsafe_unretained"
-        },
-        {
-          "kind": "text",
-          "spelling": ", "
         },
         {
           "kind": "keyword",

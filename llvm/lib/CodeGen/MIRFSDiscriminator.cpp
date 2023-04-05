@@ -18,6 +18,8 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -92,7 +94,11 @@ static uint64_t getCallStackHash(const DILocation *DIL) {
 bool MIRAddFSDiscriminators::runOnMachineFunction(MachineFunction &MF) {
   if (!EnableFSDiscriminator)
     return false;
-  if (!MF.getFunction().shouldEmitDebugInfoForProfiling())
+
+  bool HasPseudoProbe = MF.getFunction().getParent()->getNamedMetadata(
+      PseudoProbeDescMetadataName);
+
+  if (!HasPseudoProbe && !MF.getFunction().shouldEmitDebugInfoForProfiling())
     return false;
 
   bool Changed = false;
@@ -125,13 +131,22 @@ bool MIRAddFSDiscriminators::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineBasicBlock &BB : MF) {
     for (MachineInstr &I : BB) {
-      if (ImprovedFSDiscriminator && I.isMetaInstruction()) {
+      if (HasPseudoProbe) {
+        // Only assign discriminators to pseudo probe instructions. Call
+        // instructions are excluded since their dwarf discriminators are used
+        // for other purposes, i.e, storing probe ids.
+        if (!I.isPseudoProbe())
+          continue;
+      } else if (ImprovedFSDiscriminator && I.isMetaInstruction()) {
         continue;
       }
       const DILocation *DIL = I.getDebugLoc().get();
       if (!DIL)
         continue;
-      unsigned LineNo = DIL->getLine();
+
+      // Use the id of pseudo probe to compute the discriminator.
+      unsigned LineNo =
+          I.isPseudoProbe() ? I.getOperand(1).getImm() : DIL->getLine();
       if (LineNo == 0)
         continue;
       unsigned Discriminator = DIL->getDiscriminator();

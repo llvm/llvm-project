@@ -5302,6 +5302,22 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _VerilogBreakBetweenInstancePorts:
+
+**VerilogBreakBetweenInstancePorts** (``Boolean``) :versionbadge:`clang-format 17` :ref:`¶ <VerilogBreakBetweenInstancePorts>`
+  For Verilog, put each port on its own line in module instantiations.
+
+  .. code-block:: c++
+
+     true:
+     ffnand ff1(.q(),
+                .qbar(out1),
+                .clear(in1),
+                .preset(in2));
+
+     false:
+     ffnand ff1(.q(), .qbar(out1), .clear(in1), .preset(in2));
+
 .. _WhitespaceSensitiveMacros:
 
 **WhitespaceSensitiveMacros** (``List of Strings``) :versionbadge:`clang-format 11` :ref:`¶ <WhitespaceSensitiveMacros>`

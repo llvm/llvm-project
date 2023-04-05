@@ -351,3 +351,41 @@ def : Pat<(sub MxDRD8:$op, (i8 (MxSetCC_C MxCONDcs, CCR))),
           (ADDX8dd MxDRD8:$op, (MOV8di 0))>;
 def : Pat<(sub MxXRD32:$op, (i32 (MxSetCC_C MxCONDcs, CCR))),
           (ADDX32dd MxDRD32:$op, (MOV32ri 0))>;
+
+//===------------===//
+// Trap / Breakpoint
+//===------------===//
+
+let RenderMethod = "addImmOperands", ParserMethod = "parseImm" in {
+  def MxTrapImm : AsmOperandClass {
+    let Name = "MxTrapImm";
+    let PredicateMethod = "isTrapImm";
+  }
+
+  def MxBkptImm : AsmOperandClass {
+    let Name = "MxBkptImm";
+    let PredicateMethod = "isBkptImm";
+  }
+}
+
+let ParserMatchClass = MxTrapImm in
+def MxTrapimm : MxOp<i8,  MxSize8,  "i">;
+
+let ParserMatchClass = MxBkptImm in
+def MxBkptimm : MxOp<i8,  MxSize8,  "i">;
+
+def TRAP : MxInst<(outs), (ins MxTrapimm:$vect), "trap\t$vect", []> {
+  let Inst = (descend 0b0100, 0b1110, 0b0100, (operand "$vect", 4));
+}
+
+def TRAPV : MxInst<(outs), (ins), "trapv", []> {
+  let Inst = (descend 0b0100, 0b1110, 0b0111, 0b0110);
+}
+
+def BKPT : MxInst<(outs), (ins MxBkptimm:$vect), "bkpt\t$vect", []> {
+  let Inst = (descend 0b0100, 0b1000, 0b0100, 0b1 , (operand "$vect", 3));
+}
+
+def ILLEGAL : MxInst<(outs), (ins), "illegal", []> {
+  let Inst = (descend 0b0100, 0b1010, 0b1111, 0b1100);
+}
