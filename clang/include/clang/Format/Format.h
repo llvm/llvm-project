@@ -2670,6 +2670,11 @@ struct FormatStyle {
     ///        [](SomeReallyLongLambdaSignatureArgument foo) {
     ///      return;
     ///    });
+    ///
+    ///    someMethod(someOtherMethod(
+    ///        [](SomeReallyLongLambdaSignatureArgument foo) {
+    ///      return;
+    ///    }));
     /// \endcode
     LBI_OuterScope,
   };
@@ -2678,11 +2683,7 @@ struct FormatStyle {
   /// causes the lambda body to be indented one additional level relative to
   /// the indentation level of the signature. ``OuterScope`` forces the lambda
   /// body to be indented one additional level relative to the parent scope
-  /// containing the lambda signature. For callback-heavy code, it may improve
-  /// readability to have the signature indented two levels and to use
-  /// ``OuterScope``. The KJ style guide requires ``OuterScope``.
-  /// `KJ style guide
-  /// <https://github.com/capnproto/capnproto/blob/master/style-guide.md>`_
+  /// containing the lambda signature.
   /// \version 13
   LambdaBodyIndentationKind LambdaBodyIndentation;
 
@@ -4219,6 +4220,20 @@ struct FormatStyle {
   /// \version 3.7
   UseTabStyle UseTab;
 
+  /// For Verilog, put each port on its own line in module instantiations.
+  /// \code
+  ///    true:
+  ///    ffnand ff1(.q(),
+  ///               .qbar(out1),
+  ///               .clear(in1),
+  ///               .preset(in2));
+  ///
+  ///    false:
+  ///    ffnand ff1(.q(), .qbar(out1), .clear(in1), .preset(in2));
+  /// \endcode
+  /// \version 17
+  bool VerilogBreakBetweenInstancePorts;
+
   /// A vector of macros which are whitespace-sensitive and should not
   /// be touched.
   ///
@@ -4388,6 +4403,8 @@ struct FormatStyle {
            StatementAttributeLikeMacros == R.StatementAttributeLikeMacros &&
            StatementMacros == R.StatementMacros && TabWidth == R.TabWidth &&
            TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
+           VerilogBreakBetweenInstancePorts ==
+               R.VerilogBreakBetweenInstancePorts &&
            WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;
   }
 

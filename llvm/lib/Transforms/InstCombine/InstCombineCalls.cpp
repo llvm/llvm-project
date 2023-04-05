@@ -3126,49 +3126,6 @@ Instruction *InstCombinerImpl::visitCallBrInst(CallBrInst &CBI) {
   return visitCallBase(CBI);
 }
 
-/// If this cast does not affect the value passed through the varargs area, we
-/// can eliminate the use of the cast.
-static bool isSafeToEliminateVarargsCast(const CallBase &Call,
-                                         const DataLayout &DL,
-                                         const CastInst *const CI,
-                                         const int ix) {
-  if (!CI->isLosslessCast())
-    return false;
-
-  // If this is a GC intrinsic, avoid munging types.  We need types for
-  // statepoint reconstruction in SelectionDAG.
-  // TODO: This is probably something which should be expanded to all
-  // intrinsics since the entire point of intrinsics is that
-  // they are understandable by the optimizer.
-  if (isa<GCStatepointInst>(Call) || isa<GCRelocateInst>(Call) ||
-      isa<GCResultInst>(Call))
-    return false;
-
-  // Opaque pointers are compatible with any byval types.
-  PointerType *SrcTy = cast<PointerType>(CI->getOperand(0)->getType());
-  if (SrcTy->isOpaque())
-    return true;
-
-  // The size of ByVal or InAlloca arguments is derived from the type, so we
-  // can't change to a type with a different size.  If the size were
-  // passed explicitly we could avoid this check.
-  if (!Call.isPassPointeeByValueArgument(ix))
-    return true;
-
-  // The transform currently only handles type replacement for byval, not other
-  // type-carrying attributes.
-  if (!Call.isByValArgument(ix))
-    return false;
-
-  Type *SrcElemTy = SrcTy->getNonOpaquePointerElementType();
-  Type *DstElemTy = Call.getParamByValType(ix);
-  if (!SrcElemTy->isSized() || !DstElemTy->isSized())
-    return false;
-  if (DL.getTypeAllocSize(SrcElemTy) != DL.getTypeAllocSize(DstElemTy))
-    return false;
-  return true;
-}
-
 Instruction *InstCombinerImpl::tryOptimizeCall(CallInst *CI) {
   if (!CI->getCalledFunction()) return nullptr;
 
@@ -3416,32 +3373,6 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
 
   if (IntrinsicInst *II = findInitTrampoline(Callee))
     return transformCallThroughTrampoline(Call, *II);
-
-  // TODO: Drop this transform once opaque pointer transition is done.
-  FunctionType *FTy = Call.getFunctionType();
-  if (FTy->isVarArg()) {
-    int ix = FTy->getNumParams();
-    // See if we can optimize any arguments passed through the varargs area of
-    // the call.
-    for (auto I = Call.arg_begin() + FTy->getNumParams(), E = Call.arg_end();
-         I != E; ++I, ++ix) {
-      CastInst *CI = dyn_cast<CastInst>(*I);
-      if (CI && isSafeToEliminateVarargsCast(Call, DL, CI, ix)) {
-        replaceUse(*I, CI->getOperand(0));
-
-        // Update the byval type to match the pointer type.
-        // Not necessary for opaque pointers.
-        PointerType *NewTy = cast<PointerType>(CI->getOperand(0)->getType());
-        if (!NewTy->isOpaque() && Call.isByValArgument(ix)) {
-          Call.removeParamAttr(ix, Attribute::ByVal);
-          Call.addParamAttr(ix, Attribute::getWithByValType(
-                                    Call.getContext(),
-                                    NewTy->getNonOpaquePointerElementType()));
-        }
-        Changed = true;
-      }
-    }
-  }
 
   if (isa<InlineAsm>(Callee) && !Call.doesNotThrow()) {
     InlineAsm *IA = cast<InlineAsm>(Callee);

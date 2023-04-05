@@ -4,6 +4,7 @@ import getopt
 import io
 import locale
 import os
+import re
 import sys
 
 import util
@@ -13,6 +14,8 @@ class DiffFlags():
     def __init__(self):
         self.ignore_all_space = False
         self.ignore_space_change = False
+        self.ignore_matching_lines = False
+        self.ignore_matching_lines_regex = ""
         self.unified_diff = False
         self.num_context_lines = 3
         self.recursive_diff = False
@@ -95,6 +98,8 @@ def compareTwoTextFiles(flags, filepaths, filelines_bin, encoding):
         f = compose2(ignoreAllSpaceOrSpaceChange, f)
 
     for idx, lines in enumerate(filelines):
+        if flags.ignore_matching_lines:
+            lines = filter(lambda x: not re.match(r"{}".format(flags.ignore_matching_lines_regex), x), lines)
         filelines[idx]= [f(line) for line in lines]
 
     func = difflib.unified_diff if flags.unified_diff else difflib.context_diff
@@ -190,7 +195,7 @@ def main(argv):
             msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
     args = argv[1:]
     try:
-        opts, args = getopt.gnu_getopt(args, "wbuU:r", ["strip-trailing-cr"])
+        opts, args = getopt.gnu_getopt(args, "wbuI:U:r", ["strip-trailing-cr"])
     except getopt.GetoptError as err:
         sys.stderr.write("Unsupported: 'diff': %s\n" % str(err))
         sys.exit(1)
@@ -214,6 +219,9 @@ def main(argv):
                 sys.stderr.write("Error: invalid '-U' argument: {}\n"
                                  .format(a))
                 sys.exit(1)
+        elif o == "-I":
+            flags.ignore_matching_lines = True
+            flags.ignore_matching_lines_regex = a
         elif o == "-r":
             flags.recursive_diff = True
         elif o == "--strip-trailing-cr":

@@ -653,8 +653,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
                                VPInstruction::CanonicalIVIncrementNUW;
                   }) &&
            "the canonical IV should only be used by its increments or "
-           "ScalarIVSteps when "
-           "resetting the start value");
+           "ScalarIVSteps when resetting the start value");
     IV->setOperand(0, VPV);
   }
 }

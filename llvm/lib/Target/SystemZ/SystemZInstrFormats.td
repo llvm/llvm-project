@@ -4822,7 +4822,7 @@ class RotateSelectRIEf<string mnemonic, bits<16> opcode, RegisterOperand cls1,
                        RegisterOperand cls2>
   : InstRIEf<opcode, (outs cls1:$R1),
              (ins cls1:$R1src, cls2:$R2, imm32zx8:$I3, imm32zx8:$I4,
-                  imm32zx6:$I5),
+                  imm32zx8:$I5),
              mnemonic#"\t$R1, $R2, $I3, $I4, $I5", []> {
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
@@ -5107,7 +5107,7 @@ class StoreRXYPseudo<SDPatternOperator operator, RegisterOperand cls,
 class RotateSelectRIEfPseudo<RegisterOperand cls1, RegisterOperand cls2>
   : Pseudo<(outs cls1:$R1),
            (ins cls1:$R1src, cls2:$R2, imm32zx8:$I3, imm32zx8:$I4,
-                imm32zx6:$I5),
+                imm32zx8:$I5),
            []> {
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
@@ -5252,7 +5252,7 @@ class CompareAliasRI<SDPatternOperator operator, RegisterOperand cls,
 class RotateSelectAliasRIEf<RegisterOperand cls1, RegisterOperand cls2>
   : Alias<6, (outs cls1:$R1),
           (ins cls1:$R1src, cls2:$R2, imm32zx8:$I3, imm32zx8:$I4,
-               imm32zx6:$I5), []> {
+               imm32zx8:$I5), []> {
   let Constraints = "$R1 = $R1src";
 }
 

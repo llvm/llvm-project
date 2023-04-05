@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
   // LINKIFY: <a href="http://test.invalid/hwasan_symbolize.cpp:[[@LINE-1]]">
   // CHECK: hwasan_symbolize.cpp:[[@LINE-2]]
   // CHECK: Cause: heap-buffer-overflow
-  // CHECK: allocated here:
+  // CHECK: allocated by thread {{.*}} here:
   // LINKIFY: <a href="http://test.invalid/hwasan_symbolize.cpp:[[@LINE-6]]">
   // CHECK: hwasan_symbolize.cpp:[[@LINE-7]]
   return 0;

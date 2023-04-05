@@ -304,6 +304,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       }
       break;
     }
+    case TTI::SK_Transpose:
     case TTI::SK_PermuteTwoSrc: {
       if (Mask.size() >= 2 && LT.second.isFixedLengthVector()) {
         // 2 x (vrgather + cost of generating the mask constant) + cost of mask
@@ -333,6 +334,11 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // TODO: Most of these cases will return getInvalid in generic code, and
     // must be implemented here.
     break;
+  case TTI::SK_ExtractSubvector:
+    // Example sequence:
+    // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
+    // vslidedown.vi  v8, v9, 2
+    return LT.first * getLMULCost(LT.second);
   case TTI::SK_InsertSubvector:
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
@@ -435,6 +441,29 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
   InstructionCost MemCost =
       getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
   unsigned VF = FVTy->getNumElements() / Factor;
+
+  // The interleaved memory access pass will lower interleaved memory ops (i.e
+  // a load and store followed by a specific shuffle) to vlseg/vsseg
+  // intrinsics. In those cases then we can treat it as if it's just one (legal)
+  // memory op
+  if (!UseMaskForCond && !UseMaskForGaps &&
+      Factor <= TLI->getMaxSupportedInterleaveFactor()) {
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(FVTy);
+    // Need to make sure type has't been scalarized
+    if (LT.second.isFixedLengthVector()) {
+      auto *LegalFVTy = FixedVectorType::get(FVTy->getElementType(),
+                                             LT.second.getVectorNumElements());
+      // FIXME: We use the memory op cost of the *legalized* type here, becuase
+      // it's getMemoryOpCost returns a really expensive cost for types like
+      // <6 x i8>, which show up when doing interleaves of Factor=3 etc.
+      // Should the memory op cost of these be cheaper?
+      if (TLI->isLegalInterleavedAccessType(LegalFVTy, Factor, DL)) {
+        InstructionCost LegalMemCost = getMemoryOpCost(
+            Opcode, LegalFVTy, Alignment, AddressSpace, CostKind);
+        return LT.first + LegalMemCost;
+      }
+    }
+  }
 
   // An interleaved load will look like this for Factor=3:
   // %wide.vec = load <12 x i32>, ptr %3, align 4
@@ -1251,8 +1280,17 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   InstructionCost Cost = 0;
   if (Opcode == Instruction::Store && OpInfo.isConstant())
     Cost += getStoreImmCost(Src, OpInfo, CostKind);
-  return Cost + BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                       CostKind, OpInfo, I);
+  InstructionCost BaseCost =
+    BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                           CostKind, OpInfo, I);
+  // Assume memory ops cost scale with the number of vector registers
+  // possible accessed by the instruction.  Note that BasicTTI already
+  // handles the LT.first term for us.
+  if (std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
+      LT.second.isVector())
+    BaseCost *= getLMULCost(LT.second);
+  return Cost + BaseCost;
+
 }
 
 InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,

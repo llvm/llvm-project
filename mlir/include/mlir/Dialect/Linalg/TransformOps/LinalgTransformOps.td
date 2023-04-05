@@ -794,9 +794,51 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
 // HoistPadOp
 //===----------------------------------------------------------------------===//
 
+def HoistPadBuildPackingLoopNestOp :
+    Op<Transform_Dialect,
+       "structured.hoist_pad.build_packing_loop_nest",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let description = [{
+    Helper transform used to hoist a tensor.pad target operation. This operation
+    creates the packing loop nest required by the hoist_pad operation and makes
+    that functionality available independently.
+
+    TODO: In the future, we should consider rewriting as a tensor.pack after
+    hoisting since this abstraction is now available.
+
+    #### Return modes
+
+    This operation ignores non-tensor.pad ops and drops them in the result.
+    If any non-tensor.pad is passed, the transform emits a silenceable failure.
+
+    The return handle points to only the subset of successfully created packing
+    loop nests, which can be empty.
+  }];
+
+  // Also allow any !pdl.operation for simpler composition. Non-tensor.pad ops
+  // will be dropped from the results.
+  let arguments =
+    (ins TransformHandleTypeInterface:$target,
+         TransformHandleTypeInterface:$loop,
+         DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$transpose);
+  let results = (outs TransformHandleTypeInterface:$packing_loop);
+
+  let assemblyFormat = [{
+    $target
+    `above` $loop
+    (`,` `transpose` `by` $transpose^)?
+    attr-dict
+    `:` functional-type(operands, results)
+  }];
+  let hasVerifier = 1;
+}
+
 def HoistPadOp : Op<Transform_Dialect, "structured.hoist_pad",
-    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
-     TransformOpInterface, TransformEachOpTrait]> {
+    [FunctionalStyleTransformOpTrait,
+     MemoryEffectsOpInterface,
+     TransformOpInterface,
+     TransformEachOpTrait]> {
   let description = [{
     Hoist the tensor.pad target operation by at most the given number of loops.
     Optionally apply the transpose attribute to the inner dimensions.

@@ -38,11 +38,12 @@ static size_t FindBinaryId(char *Result, size_t Size) {
   if (RC == -1 && errno == ENOMEM) {
     BufSize = 64000; // should be plenty for any program.
     BufPtr = malloc(BufSize);
-    RC = loadquery(L_GETXINFO | L_IGNOREUNLOAD, BufPtr, (unsigned int)BufSize);
+    if (BufPtr != 0)
+      RC = loadquery(L_GETXINFO | L_IGNOREUNLOAD, BufPtr, (unsigned int)BufSize);
   }
 
   if (RC == -1)
-    return RC;
+    goto done;
 
   // Locate the ld_xinfo corresponding to this module.
   struct ld_xinfo *CurInfo = (struct ld_xinfo *)BufPtr;

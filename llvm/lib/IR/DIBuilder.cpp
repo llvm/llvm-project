@@ -96,8 +96,7 @@ void DIBuilder::finalize() {
   if (!RetainValues.empty())
     CUNode->replaceRetainedTypes(MDTuple::get(VMContext, RetainValues));
 
-  DISubprogramArray SPs = MDTuple::get(VMContext, AllSubprograms);
-  for (auto *SP : SPs)
+  for (auto *SP : AllSubprograms)
     finalizeSubprogram(SP);
   for (auto *N : RetainValues)
     if (auto *SP = dyn_cast<DISubprogram>(N))

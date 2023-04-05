@@ -2519,6 +2519,11 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
     resolution = pair.first;
     dueToAmbiguity = pair.second;
     if (resolution) {
+      if (context_.GetPPCBuiltinsScope() &&
+          resolution->name().ToString().rfind("__ppc_", 0) == 0) {
+        semantics::CheckPPCIntrinsic(
+            *symbol, *resolution, arguments, GetFoldingContext());
+      }
       // re-resolve name to the specific procedure
       name.symbol = const_cast<Symbol *>(resolution);
     }

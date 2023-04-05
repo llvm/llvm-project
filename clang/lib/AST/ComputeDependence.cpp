@@ -750,7 +750,7 @@ clang::computeDependence(OverloadExpr *E, bool KnownDependent,
   // If we have explicit template arguments, check for dependent
   // template arguments and whether they contain any unexpanded pack
   // expansions.
-  for (auto A : E->template_arguments())
+  for (const auto &A : E->template_arguments())
     Deps |= toExprDependence(A.getArgument().getDependence());
   return Deps;
 }

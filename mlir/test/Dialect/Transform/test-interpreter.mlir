@@ -1260,7 +1260,7 @@ transform.sequence failures(propagate) {
 
 module @named_inclusion attributes { transform.with_named_sequence } {
 
-  transform.named_sequence @foo(%arg0: !transform.any_op) -> () {
+  transform.named_sequence @foo(%arg0: !transform.any_op {transform.readonly}) -> () {
     // expected-remark @below {{applying transformation "a"}}
     transform.test_transform_op "a"
     transform.yield
@@ -1276,13 +1276,13 @@ module @named_inclusion attributes { transform.with_named_sequence } {
 
 module @named_inclusion_in_named attributes { transform.with_named_sequence } {
 
-  transform.named_sequence @foo(%arg0: !transform.any_op) -> () {
+  transform.named_sequence @foo(%arg0: !transform.any_op {transform.readonly}) -> () {
     // expected-remark @below {{applying transformation "a"}}
     transform.test_transform_op "a"
     transform.yield
   }
 
-  transform.named_sequence @bar(%arg0: !transform.any_op) -> () {
+  transform.named_sequence @bar(%arg0: !transform.any_op {transform.readonly}) -> () {
     // expected-remark @below {{applying transformation "b"}}
     transform.test_transform_op "b"
     transform.include @foo failures(propagate) (%arg0) : (!transform.any_op) -> ()
@@ -1300,7 +1300,8 @@ module @named_inclusion_in_named attributes { transform.with_named_sequence } {
 // expected-remark @below {{operation}}
 module @named_operands attributes { transform.with_named_sequence } {
 
-  transform.named_sequence @foo(%arg0: !transform.any_op, %arg1: !transform.any_value) -> () {
+  transform.named_sequence @foo(%arg0: !transform.any_op {transform.readonly},
+                                %arg1: !transform.any_value {transform.readonly}) -> () {
     transform.test_print_remark_at_operand %arg0, "operation" : !transform.any_op
     transform.test_print_remark_at_operand_value %arg1, "value" : !transform.any_value
     transform.yield
@@ -1322,7 +1323,7 @@ module @named_return attributes { transform.with_named_sequence } {
 
   // expected-remark @below {{value}}
   // expected-note @below {{value handle points to a block argument #0 in block #0 in region #0}}
-  transform.named_sequence @foo(%arg0: !transform.any_op) -> (!transform.any_op, !transform.any_value) {
+  transform.named_sequence @foo(%arg0: !transform.any_op {transform.readonly}) -> (!transform.any_op, !transform.any_value) {
     %0 = transform.test_produce_value_handle_to_self_operand %arg0 : (!transform.any_op) -> !transform.any_value
     transform.yield %arg0, %0 : !transform.any_op, !transform.any_value
   }

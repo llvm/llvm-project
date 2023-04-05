@@ -513,8 +513,9 @@ MarkupFilter::parseModule(const MarkupNode &Element) const {
   }
   if (!checkNumFields(Element, 4))
     return std::nullopt;
-  ASSIGN_OR_RETURN_NONE(SmallVector<uint8_t>, BuildID,
-                        parseBuildID(Element.Fields[3]));
+  SmallVector<uint8_t> BuildID = parseBuildID(Element.Fields[3]);
+  if (BuildID.empty())
+    return std::nullopt;
   return Module{ID, Name.str(), std::move(BuildID)};
 }
 
@@ -597,16 +598,11 @@ std::optional<uint64_t> MarkupFilter::parseFrameNumber(StringRef Str) const {
 }
 
 // Parse a build ID (%x in the spec).
-std::optional<SmallVector<uint8_t>>
-MarkupFilter::parseBuildID(StringRef Str) const {
-  std::string Bytes;
-  if (Str.empty() || Str.size() % 2 || !tryGetFromHex(Str, Bytes)) {
+object::BuildID MarkupFilter::parseBuildID(StringRef Str) const {
+  object::BuildID BID = llvm::object::parseBuildID(Str);
+  if (BID.empty())
     reportTypeError(Str, "build ID");
-    return std::nullopt;
-  }
-  ArrayRef<uint8_t> BuildID(reinterpret_cast<const uint8_t *>(Bytes.data()),
-                            Bytes.size());
-  return SmallVector<uint8_t>(BuildID.begin(), BuildID.end());
+  return BID;
 }
 
 // Parses the mode string for an mmap element.

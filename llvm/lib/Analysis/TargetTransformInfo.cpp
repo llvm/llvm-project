@@ -322,10 +322,8 @@ bool TargetTransformInfo::isHardwareLoopProfitable(
 }
 
 bool TargetTransformInfo::preferPredicateOverEpilogue(
-    Loop *L, LoopInfo *LI, ScalarEvolution &SE, AssumptionCache &AC,
-    TargetLibraryInfo *TLI, DominatorTree *DT, LoopVectorizationLegality *LVL,
-    InterleavedAccessInfo *IAI) const {
-  return TTIImpl->preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LVL, IAI);
+    TailFoldingInfo *TFI) const {
+  return TTIImpl->preferPredicateOverEpilogue(TFI);
 }
 
 TailFoldingStyle TargetTransformInfo::getPreferredTailFoldingStyle(

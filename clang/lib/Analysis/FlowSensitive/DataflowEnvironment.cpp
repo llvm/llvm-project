@@ -359,7 +359,7 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
 
     QualType ParamType = Param->getType();
     if (ParamType->isReferenceType()) {
-      auto &Val = takeOwnership(std::make_unique<ReferenceValue>(*ArgLoc));
+      auto &Val = create<ReferenceValue>(*ArgLoc);
       setValue(Loc, Val);
     } else if (auto *ArgVal = getValue(*ArgLoc)) {
       setValue(Loc, *ArgVal);
@@ -685,7 +685,7 @@ Value *Environment::createValueUnlessSelfReferential(
     // with integers, and so distinguishing them serves no purpose, but could
     // prevent convergence.
     CreatedValuesCount++;
-    return &takeOwnership(std::make_unique<IntegerValue>());
+    return &create<IntegerValue>();
   }
 
   if (Type->isReferenceType()) {
@@ -702,7 +702,7 @@ Value *Environment::createValueUnlessSelfReferential(
         setValue(PointeeLoc, *PointeeVal);
     }
 
-    return &takeOwnership(std::make_unique<ReferenceValue>(PointeeLoc));
+    return &create<ReferenceValue>(PointeeLoc);
   }
 
   if (Type->isPointerType()) {
@@ -719,7 +719,7 @@ Value *Environment::createValueUnlessSelfReferential(
         setValue(PointeeLoc, *PointeeVal);
     }
 
-    return &takeOwnership(std::make_unique<PointerValue>(PointeeLoc));
+    return &create<PointerValue>(PointeeLoc);
   }
 
   if (Type->isStructureOrClassType() || Type->isUnionType()) {
@@ -739,8 +739,7 @@ Value *Environment::createValueUnlessSelfReferential(
       Visited.erase(FieldType.getCanonicalType());
     }
 
-    return &takeOwnership(
-        std::make_unique<StructValue>(std::move(FieldValues)));
+    return &create<StructValue>(std::move(FieldValues));
   }
 
   return nullptr;

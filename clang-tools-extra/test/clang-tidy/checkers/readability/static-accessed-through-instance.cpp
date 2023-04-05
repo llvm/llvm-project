@@ -306,3 +306,60 @@ unsigned int x4 = gridDim.x;
 // CHECK-MESSAGES-NOT: :[[@LINE-1]]:10: warning: static member
 
 } // namespace Bugzilla_48758
+
+// https://github.com/llvm/llvm-project/issues/61736
+namespace llvm_issue_61736
+{
+
+struct {
+  static void f() {}
+} AnonStruct, *AnonStructPointer;
+
+class {
+  public:
+  static void f() {}
+} AnonClass, *AnonClassPointer;
+
+void testAnonymousStructAndClass() {
+  AnonStruct.f();
+  AnonStructPointer->f();
+
+  AnonClass.f();
+  AnonClassPointer->f();
+}
+
+struct Embedded {
+  struct {
+    static void f() {}
+  } static EmbeddedStruct, *EmbeddedStructPointer;
+
+  class {
+    public:
+      static void f() {}
+  } static EmbeddedClass, *EmbeddedClassPointer;
+};
+
+void testEmbeddedAnonymousStructAndClass() {
+  Embedded::EmbeddedStruct.f();
+  Embedded::EmbeddedStructPointer->f();
+
+  Embedded::EmbeddedClass.f();
+  Embedded::EmbeddedClassPointer->f();
+
+  Embedded E;
+  E.EmbeddedStruct.f();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: static member accessed through instance [readability-static-accessed-through-instance]
+  // CHECK-FIXES: {{^}}  llvm_issue_61736::Embedded::EmbeddedStruct.f();{{$}}
+  E.EmbeddedStructPointer->f();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: static member accessed through instance [readability-static-accessed-through-instance]
+  // CHECK-FIXES: {{^}}  llvm_issue_61736::Embedded::EmbeddedStructPointer->f();{{$}}
+
+  E.EmbeddedClass.f();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: static member accessed through instance [readability-static-accessed-through-instance]
+  // CHECK-FIXES: {{^}}  llvm_issue_61736::Embedded::EmbeddedClass.f();{{$}}
+  E.EmbeddedClassPointer->f();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: static member accessed through instance [readability-static-accessed-through-instance]
+  // CHECK-FIXES: {{^}}  llvm_issue_61736::Embedded::EmbeddedClassPointer->f();{{$}}
+}
+
+} // namespace llvm_issue_61736

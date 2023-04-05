@@ -297,6 +297,13 @@
 // AMX-FP16: "-target-feature" "+amx-fp16"
 // NO-AMX-FP16: "-target-feature" "-amx-fp16"
 
+// RUN: %clang -target x86_64-unknown-linux-gnu -mamx-complex %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-COMPLEX %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -mno-amx-complex %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-COMPLEX %s
+// AMX-COMPLEX: "-target-feature" "+amx-complex"
+// NO-AMX-COMPLEX: "-target-feature" "-amx-complex"
+
 // RUN: %clang --target=i386 -march=i386 -mhreset %s -### 2>&1 | FileCheck -check-prefix=HRESET %s
 // RUN: %clang --target=i386 -march=i386 -mno-hreset %s -### 2>&1 | FileCheck -check-prefix=NO-HRESET %s
 // HRESET: "-target-feature" "+hreset"

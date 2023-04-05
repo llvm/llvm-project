@@ -28,7 +28,7 @@ extern "C" {
 
   /* If a pointer lies within an allocation, it will return the start address
      of the allocation. Otherwise, it returns nullptr. */
-  void *__sanitizer_get_allocated_begin(const void *p);
+  const void *__sanitizer_get_allocated_begin(const void *p);
 
   /* Returns the number of bytes reserved for the pointer p.
      Requires (get_ownership(p) == true) or (p == 0). */

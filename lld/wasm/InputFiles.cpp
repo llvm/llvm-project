@@ -691,12 +691,16 @@ StringRef strip(StringRef s) {
 }
 
 void StubFile::parse() {
-  bool first = false;
+  bool first = true;
 
-  for (StringRef line : args::getLines(mb)) {
+  SmallVector<StringRef> lines;
+  mb.getBuffer().split(lines, '\n');
+  for (StringRef line : lines) {
+    line = line.trim();
+
     // File must begin with #STUB
     if (first) {
-      assert(line == "#STUB\n");
+      assert(line == "#STUB");
       first = false;
     }
 
@@ -713,10 +717,10 @@ void StubFile::parse() {
     symbolDependencies[sym] = {};
 
     while (rest.size()) {
-      StringRef first;
-      std::tie(first, rest) = rest.split(',');
-      first = strip(first);
-      symbolDependencies[sym].push_back(first);
+      StringRef dep;
+      std::tie(dep, rest) = rest.split(',');
+      dep = strip(dep);
+      symbolDependencies[sym].push_back(dep);
     }
   }
 }

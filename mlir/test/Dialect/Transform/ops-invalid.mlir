@@ -467,3 +467,98 @@ module attributes { transform.with_named_sequence} {
     transform.yield %arg0 : !transform.any_op
   }
 }
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  // expected-error @below {{must provide consumed/readonly status for arguments of external or called ops}}
+  transform.named_sequence @foo(%op: !transform.any_op )
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  // expected-error @below {{argument #0 cannot be both readonly and consumed}}
+  transform.named_sequence @foo(%op: !transform.any_op { transform.readonly, transform.consumed } )
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  // expected-error @below {{must provide consumed/readonly status for arguments of external or called ops}}
+  transform.named_sequence @foo(%op: !transform.any_op) {
+    transform.test_print_remark_at_operand %op, "message" : !transform.any_op
+    transform.yield
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    transform.include @foo failures(propagate) (%arg0) : (!transform.any_op) -> ()
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  // expected-error @below {{argument #0 cannot be both readonly and consumed}}
+  transform.named_sequence @foo(%op: !transform.any_op {transform.readonly, transform.consumed}) {
+    transform.test_print_remark_at_operand %op, "message" : !transform.any_op
+    transform.yield
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    transform.include @foo failures(propagate) (%arg0) : (!transform.any_op) -> ()
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  // expected-warning @below {{argument #0 is not consumed in the body but is marked as consume}}
+  transform.named_sequence @foo(%op: !transform.any_op {transform.consumed}) {
+    transform.test_print_remark_at_operand %op, "message" : !transform.any_op
+    transform.yield
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    transform.include @foo failures(propagate) (%arg0) : (!transform.any_op) -> ()
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  // expected-error @below {{argument #0 is consumed in the body but is not marked as such}}
+  transform.named_sequence @foo(%op: !transform.any_op {transform.readonly}) {
+    transform.test_consume_operand %op : !transform.any_op
+    transform.yield
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    transform.include @foo failures(propagate) (%arg0) : (!transform.any_op) -> ()
+    transform.yield
+  }
+}
+
+// -----
+
+// Checking that consumptions annotations are used correctly in invocation checks.
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @foo(%op: !transform.any_op { transform.consumed } )
+
+  // expected-error @below {{'transform.sequence' op block argument #0 has more than one potential consumer}}
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    // expected-note @below {{used here as operand #0}}
+    transform.include @foo failures(propagate) (%arg0) : (!transform.any_op) -> ()
+    // expected-note @below {{used here as operand #0}}
+    transform.include @foo failures(propagate) (%arg0) : (!transform.any_op) -> ()
+    transform.yield
+  }
+}

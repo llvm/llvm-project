@@ -22009,9 +22009,9 @@ TEST_F(FormatTest, FormatsLambdas) {
   verifyFormat("void test() {\n"
                "  (\n"
                "      []() -> auto {\n"
-               "        int b = 32;\n"
-               "        return 3;\n"
-               "      },\n"
+               "    int b = 32;\n"
+               "    return 3;\n"
+               "  },\n"
                "      foo, bar)\n"
                "      .foo();\n"
                "}",
@@ -22025,17 +22025,82 @@ TEST_F(FormatTest, FormatsLambdas) {
                "      .bar();\n"
                "}",
                Style);
-  Style = getGoogleStyle();
-  Style.LambdaBodyIndentation = FormatStyle::LBI_OuterScope;
-  verifyFormat("#define A                                       \\\n"
-               "  [] {                                          \\\n"
-               "    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx(        \\\n"
-               "        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx); \\\n"
-               "      }",
+  verifyFormat("#define A                                                  \\\n"
+               "  [] {                                                     \\\n"
+               "    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx(                   \\\n"
+               "        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx);            \\\n"
+               "  }",
                Style);
-  // TODO: The current formatting has a minor issue that's not worth fixing
-  // right now whereby the closing brace is indented relative to the signature
-  // instead of being aligned. This only happens with macros.
+  verifyFormat("void foo() {\n"
+               "  aFunction(1, b(c(foo, bar, baz, [](d) {\n"
+               "    auto f = e(d);\n"
+               "    return f;\n"
+               "  })));\n"
+               "}",
+               Style);
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  verifyFormat("void foo() {\n"
+               "  aFunction(\n"
+               "      1, b(c(\n"
+               "             [](d) -> Foo {\n"
+               "    auto f = e(d);\n"
+               "    return f;\n"
+               "  },\n"
+               "             foo, Bar{},\n"
+               "             [] {\n"
+               "    auto g = h();\n"
+               "    return g;\n"
+               "  },\n"
+               "             baz)));\n"
+               "}",
+               Style);
+  verifyFormat("void foo() {\n"
+               "  aFunction(1, b(c(foo, Bar{}, baz, [](d) -> Foo {\n"
+               "    auto f = e(\n"
+               "        foo,\n"
+               "        [&] {\n"
+               "      auto g = h();\n"
+               "      return g;\n"
+               "    },\n"
+               "        qux,\n"
+               "        [&] -> Bar {\n"
+               "      auto i = j();\n"
+               "      return i;\n"
+               "    });\n"
+               "    return f;\n"
+               "  })));\n"
+               "}",
+               Style);
+  verifyFormat("Namespace::Foo::Foo(\n"
+               "    LongClassName bar, AnotherLongClassName baz)\n"
+               "    : baz{baz}, func{[&] {\n"
+               "  auto qux = bar;\n"
+               "  return aFunkyFunctionCall(qux);\n"
+               "}} {}",
+               Style);
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.BeforeLambdaBody = true;
+  verifyFormat("void foo() {\n"
+               "  aFunction(\n"
+               "      1, b(c(foo, Bar{}, baz,\n"
+               "             [](d) -> Foo\n"
+               "  {\n"
+               "    auto f = e(\n"
+               "        [&]\n"
+               "    {\n"
+               "      auto g = h();\n"
+               "      return g;\n"
+               "    },\n"
+               "        qux,\n"
+               "        [&] -> Bar\n"
+               "    {\n"
+               "      auto i = j();\n"
+               "      return i;\n"
+               "    });\n"
+               "    return f;\n"
+               "  })));\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, LambdaWithLineComments) {

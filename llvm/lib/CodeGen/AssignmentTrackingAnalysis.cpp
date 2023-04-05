@@ -1272,7 +1272,7 @@ private:
   /// location information).
   ///@{
   void processNonDbgInstruction(Instruction &I, BlockInfo *LiveSet);
-  void processDbgInstruction(Instruction &I, BlockInfo *LiveSet);
+  void processDbgInstruction(DbgInfoIntrinsic &I, BlockInfo *LiveSet);
   /// Update \p LiveSet after encountering an instruction with a DIAssignID
   /// attachment, \p I.
   void processTaggedInstruction(Instruction &I, BlockInfo *LiveSet);
@@ -1702,8 +1702,22 @@ void AssignmentTrackingLowering::processDbgValue(DbgValueInst &DVI,
   emitDbgValue(LocKind::Val, &DVI, &DVI);
 }
 
+static bool hasZeroSizedFragment(DbgVariableIntrinsic &DVI) {
+  if (auto F = DVI.getExpression()->getFragmentInfo())
+    return F->SizeInBits == 0;
+  return false;
+}
+
 void AssignmentTrackingLowering::processDbgInstruction(
-    Instruction &I, AssignmentTrackingLowering::BlockInfo *LiveSet) {
+    DbgInfoIntrinsic &I, AssignmentTrackingLowering::BlockInfo *LiveSet) {
+  auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I);
+  if (!DVI)
+    return;
+
+  // Ignore assignments to zero bits of the variable.
+  if (hasZeroSizedFragment(*DVI))
+    return;
+
   if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
     processDbgAssign(*DAI, LiveSet);
   else if (auto *DVI = dyn_cast<DbgValueInst>(&I))
@@ -1733,10 +1747,11 @@ void AssignmentTrackingLowering::process(BasicBlock &BB, BlockInfo *LiveSet) {
       ++II;
     }
     while (II != EI) {
-      if (!isa<DbgInfoIntrinsic>(&*II))
+      auto *Dbg = dyn_cast<DbgInfoIntrinsic>(&*II);
+      if (!Dbg)
         break;
       resetInsertionPoint(*II);
-      processDbgInstruction(*II, LiveSet);
+      processDbgInstruction(*Dbg, LiveSet);
       assert(LiveSet->isValid());
       ++II;
     }

@@ -5,6 +5,9 @@ public:
   __declspec(property(get=GetX,put=PutX)) int x[];
   int GetX(int i, int j) { return i+j; } // expected-note {{'GetX' declared here}}
   void PutX(int i, int j, int k) { j = i = k; } // expected-note {{'PutX' declared here}}
+  __declspec(property(get=GetY,put=PutY)) int y[][][];
+  int GetY(int i, int j) { return i+j; } // expected-note {{'GetY' declared here}}
+  void PutY(int i, int j, int k) { j = i = k; } // expected-note {{'PutY' declared here}}
 };
 
 char *ptr;
@@ -30,6 +33,8 @@ int main(int argc, char **argv) {
   St<int> a; // expected-note {{in instantiation of member function 'St<int>::~St' requested here}}
   int j = (p1->x)[223][11][2]; // expected-error {{too many arguments to function call, expected 2, have 3}}
   (p1->x[23]) = argc; // expected-error {{too few arguments to function call, expected 3, have 2}}
+  int k = (p1->y)[223][11][2][4]; // expected-error {{too many arguments to function call, expected 2, have 4}}
+  (p1->y[23]) = argc; // expected-error {{too few arguments to function call, expected 3, have 2}}
   float j1 = (p2->x); // expected-error {{too few arguments to function call, expected 2, have 0}}
   ((p2->x)[23])[1][2] = *argv; // expected-error {{too many arguments to function call, expected 3, have 4}}
   argv = p2->x[11][22] = argc; // expected-error {{assigning to 'char **' from incompatible type 'float'}}

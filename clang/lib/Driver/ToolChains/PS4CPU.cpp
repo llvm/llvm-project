@@ -160,18 +160,12 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const bool IsPS5 = TC.getTriple().isPS5();
   assert(IsPS4 || IsPS5);
 
+  const char *PS4LTOArgs = "";
   auto AddCodeGenFlag = [&](Twine Flag) {
-    const char *Prefix = nullptr;
-    if (IsPS4 && D.getLTOMode() == LTOK_Thin)
-      Prefix = "-lto-thin-debug-options=";
-    else if (IsPS4 && D.getLTOMode() == LTOK_Full)
-      Prefix = "-lto-debug-options=";
+    if (IsPS4)
+      PS4LTOArgs = Args.MakeArgString(Twine(PS4LTOArgs) + " " + Flag);
     else if (IsPS5)
-      Prefix = "-plugin-opt=";
-    else
-      llvm_unreachable("new LTO mode?");
-
-    CmdArgs.push_back(Args.MakeArgString(Twine(Prefix) + Flag));
+      CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=") + Flag));
   };
 
   if (UseLTO) {
@@ -185,6 +179,18 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     if (Arg *A = Args.getLastArg(options::OPT_fcrash_diagnostics_dir))
       AddCodeGenFlag(Twine("-crash-diagnostics-dir=") + A->getValue());
+
+    if (IsPS4) {
+      const char *Prefix = nullptr;
+      if (D.getLTOMode() == LTOK_Thin)
+        Prefix = "-lto-thin-debug-options=";
+      else if (D.getLTOMode() == LTOK_Full)
+        Prefix = "-lto-debug-options=";
+      else
+        llvm_unreachable("new LTO mode?");
+
+      CmdArgs.push_back(Args.MakeArgString(Twine(Prefix) + PS4LTOArgs));
+    }
   }
 
   if (IsPS5 && UseLTO) {

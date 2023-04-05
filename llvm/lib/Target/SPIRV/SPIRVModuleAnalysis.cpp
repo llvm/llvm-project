@@ -386,47 +386,6 @@ void SPIRVModuleAnalysis::numberRegistersGlobally(const Module &M) {
   }
 }
 
-// Find OpIEqual and OpBranchConditional instructions originating from
-// OpSwitches, mark them skipped for emission. Also mark MBB skipped if it
-// contains only these instructions.
-static void processSwitches(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
-                            MachineModuleInfo *MMI) {
-  DenseSet<Register> SwitchRegs;
-  for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    MachineFunction *MF = MMI->getMachineFunction(*F);
-    if (!MF)
-      continue;
-    for (MachineBasicBlock &MBB : *MF)
-      for (MachineInstr &MI : MBB) {
-        if (MAI.getSkipEmission(&MI))
-          continue;
-        if (MI.getOpcode() == SPIRV::OpSwitch) {
-          assert(MI.getOperand(0).isReg());
-          SwitchRegs.insert(MI.getOperand(0).getReg());
-        }
-        if (MI.getOpcode() == SPIRV::OpISubS &&
-            SwitchRegs.contains(MI.getOperand(2).getReg())) {
-          SwitchRegs.insert(MI.getOperand(0).getReg());
-          MAI.setSkipEmission(&MI);
-        }
-        if ((MI.getOpcode() != SPIRV::OpIEqual &&
-             MI.getOpcode() != SPIRV::OpULessThanEqual) ||
-            !MI.getOperand(2).isReg() ||
-            !SwitchRegs.contains(MI.getOperand(2).getReg()))
-          continue;
-        Register CmpReg = MI.getOperand(0).getReg();
-        MachineInstr *CBr = MI.getNextNode();
-        assert(CBr && CBr->getOpcode() == SPIRV::OpBranchConditional &&
-               CBr->getOperand(0).isReg() &&
-               CBr->getOperand(0).getReg() == CmpReg);
-        MAI.setSkipEmission(&MI);
-        MAI.setSkipEmission(CBr);
-        if (&MBB.front() == &MI && &MBB.back() == CBr)
-          MAI.MBBsToSkip.insert(&MBB);
-      }
-  }
-}
-
 // RequirementHandler implementations.
 void SPIRV::RequirementHandler::getAndAddRequirements(
     SPIRV::OperandCategory::OperandCategory Category, uint32_t i,
@@ -1019,8 +978,6 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
   addDecorations(M, *TII, MMI, *ST, MAI);
 
   collectReqs(M, MAI, MMI, *ST);
-
-  processSwitches(M, MAI, MMI);
 
   // Process type/const/global var/func decl instructions, number their
   // destination registers from 0 to N, collect Extensions and Capabilities.

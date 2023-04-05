@@ -75,6 +75,8 @@ public:
                                  PerThreadStringAllocator, StringPoolEntryInfo>(
             Allocator, InitialSize) {}
 
+  PerThreadStringAllocator &getAllocatorRef() { return Allocator; }
+
 private:
   PerThreadStringAllocator Allocator;
 };

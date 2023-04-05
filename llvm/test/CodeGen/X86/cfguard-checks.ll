@@ -1,7 +1,7 @@
-; RUN: llc -opaque-pointers=0 < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X32
-; RUN: llc -opaque-pointers=0 < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64,X64_MSVC
-; RUN: llc -opaque-pointers=0 < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefixes=X32,X32_MINGW
-; RUN: llc -opaque-pointers=0 < %s -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefixes=X64,X64_MINGW
+; RUN: llc < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X32
+; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64,X64_MSVC
+; RUN: llc < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefixes=X32,X32_MINGW
+; RUN: llc < %s -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefixes=X64,X64_MINGW
 ; Control Flow Guard is currently only available on Windows
 
 ; Test that Control Flow Guard checks are correctly added when required.
@@ -13,9 +13,9 @@ declare i32 @target_func()
 ; Test that Control Flow Guard checks are not added on calls with the "guard_nocf" attribute.
 define i32 @func_guard_nocf() {
 entry:
-  %func_ptr = alloca i32 ()*, align 8
-  store i32 ()* @target_func, i32 ()** %func_ptr, align 8
-  %0 = load i32 ()*, i32 ()** %func_ptr, align 8
+  %func_ptr = alloca ptr, align 8
+  store ptr @target_func, ptr %func_ptr, align 8
+  %0 = load ptr, ptr %func_ptr, align 8
   %1 = call i32 %0() #0
   ret i32 %1
 
@@ -36,9 +36,9 @@ attributes #0 = { "guard_nocf" }
 ; FIXME Ideally these checks should be added as a single call instruction, as in the optimized case.
 define i32 @func_optnone_cf() #1 {
 entry:
-  %func_ptr = alloca i32 ()*, align 8
-  store i32 ()* @target_func, i32 ()** %func_ptr, align 8
-  %0 = load i32 ()*, i32 ()** %func_ptr, align 8
+  %func_ptr = alloca ptr, align 8
+  store ptr @target_func, ptr %func_ptr, align 8
+  %0 = load ptr, ptr %func_ptr, align 8
   %1 = call i32 %0()
   ret i32 %1
 
@@ -47,8 +47,7 @@ entry:
 	; X32: 	     leal  _target_func, %eax
 	; X32: 	     movl  %eax, (%esp)
 	; X32: 	     movl  (%esp), %ecx
-	; X32: 	     movl ___guard_check_icall_fptr, %eax
-	; X32: 	     calll *%eax
+	; X32: 	     calll *___guard_check_icall_fptr
 	; X32-NEXT:  calll *%ecx
 
   ; On x86_64, __guard_dispatch_icall_fptr tail calls the function, so there should be only one call instruction.
@@ -64,9 +63,9 @@ attributes #1 = { noinline optnone }
 ; Test that Control Flow Guard checks are correctly added in optimized code (common case).
 define i32 @func_cf() {
 entry:
-  %func_ptr = alloca i32 ()*, align 8
-  store i32 ()* @target_func, i32 ()** %func_ptr, align 8
-  %0 = load i32 ()*, i32 ()** %func_ptr, align 8
+  %func_ptr = alloca ptr, align 8
+  store ptr @target_func, ptr %func_ptr, align 8
+  %0 = load ptr, ptr %func_ptr, align 8
   %1 = call i32 %0()
   ret i32 %1
 
@@ -86,20 +85,20 @@ entry:
 
 
 ; Test that Control Flow Guard checks are correctly added on invoke instructions.
-define i32 @func_cf_invoke() personality i8* bitcast (void ()* @h to i8*) {
+define i32 @func_cf_invoke() personality ptr @h {
 entry:
   %0 = alloca i32, align 4
-  %func_ptr = alloca i32 ()*, align 8
-  store i32 ()* @target_func, i32 ()** %func_ptr, align 8
-  %1 = load i32 ()*, i32 ()** %func_ptr, align 8
+  %func_ptr = alloca ptr, align 8
+  store ptr @target_func, ptr %func_ptr, align 8
+  %1 = load ptr, ptr %func_ptr, align 8
   %2 = invoke i32 %1()
           to label %invoke.cont unwind label %lpad
 invoke.cont:                                      ; preds = %entry
   ret i32 %2
 
 lpad:                                             ; preds = %entry
-  %tmp = landingpad { i8*, i32 }
-          catch i8* null
+  %tmp = landingpad { ptr, i32 }
+          catch ptr null
   ret i32 -1
 
   ; On i686, the call to __guard_check_icall_fptr should come immediately before the call to the target function.
@@ -129,9 +128,9 @@ declare double @target_func_doubles(double, double, double, double)
 
 define double @func_cf_doubles() {
 entry:
-  %func_ptr = alloca double (double, double, double, double)*, align 8
-  store double (double, double, double, double)* @target_func_doubles, double (double, double, double, double)** %func_ptr, align 8
-  %0 = load double (double, double, double, double)*, double (double, double, double, double)** %func_ptr, align 8
+  %func_ptr = alloca ptr, align 8
+  store ptr @target_func_doubles, ptr %func_ptr, align 8
+  %0 = load ptr, ptr %func_ptr, align 8
   %1 = call double %0(double 1.000000e+00, double 2.000000e+00, double 3.000000e+00, double 4.000000e+00)
   ret double %1
 
@@ -163,9 +162,9 @@ entry:
 ; Test that Control Flow Guard checks are correctly added for tail calls.
 define i32 @func_cf_tail() {
 entry:
-  %func_ptr = alloca i32 ()*, align 8
-  store i32 ()* @target_func, i32 ()** %func_ptr, align 8
-  %0 = load i32 ()*, i32 ()** %func_ptr, align 8
+  %func_ptr = alloca ptr, align 8
+  store ptr @target_func, ptr %func_ptr, align 8
+  %0 = load ptr, ptr %func_ptr, align 8
   %1 = musttail call i32 %0()
   ret i32 %1
 
@@ -184,18 +183,17 @@ entry:
 }
 
 
-%struct.Foo = type { i32 (%struct.Foo*)** }
+%struct.Foo = type { ptr }
 
 ; Test that Control Flow Guard checks are correctly added for variadic musttail
 ; calls. These are used for MS C++ ABI virtual member pointer thunks.
 ; PR44049
-define i32 @vmptr_thunk(%struct.Foo* inreg %p) {
+define i32 @vmptr_thunk(ptr inreg %p) {
 entry:
-  %vptr.addr = getelementptr inbounds %struct.Foo, %struct.Foo* %p, i32 0, i32 0
-  %vptr = load i32 (%struct.Foo*)**, i32 (%struct.Foo*)*** %vptr.addr
-  %slot = getelementptr inbounds i32 (%struct.Foo*)*, i32 (%struct.Foo*)** %vptr, i32 1
-  %vmethod = load i32 (%struct.Foo*)*, i32 (%struct.Foo*)** %slot
-  %rv = musttail call i32 %vmethod(%struct.Foo* inreg %p)
+  %vptr = load ptr, ptr %p
+  %slot = getelementptr inbounds ptr, ptr %vptr, i32 1
+  %vmethod = load ptr, ptr %slot
+  %rv = musttail call i32 %vmethod(ptr inreg %p)
   ret i32 %rv
 
   ; On i686, the call to __guard_check_icall_fptr should come immediately before the call to the target function.
@@ -224,10 +222,10 @@ entry:
 define i32 @func_cf_setjmp() {
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
-  store i32 0, i32* %1, align 4
-  store i32 -1, i32* %2, align 4
-  %3 = call i8* @llvm.frameaddress(i32 0)
-  %4 = call i32 @_setjmp(i8* bitcast ([16 x %struct._SETJMP_FLOAT128]* @buf1 to i8*), i8* %3) #2
+  store i32 0, ptr %1, align 4
+  store i32 -1, ptr %2, align 4
+  %3 = call ptr @llvm.frameaddress(i32 0)
+  %4 = call i32 @_setjmp(ptr @buf1, ptr %3) #2
 
   ; X32-LABEL: func_cf_setjmp
   ; X32:       calll __setjmp
@@ -237,8 +235,8 @@ define i32 @func_cf_setjmp() {
   ; X64:       callq _setjmp
   ; X64-NEXT:  $cfgsj_func_cf_setjmp0:
 
-  %5 = call i8* @llvm.frameaddress(i32 0)
-  %6 = call i32 @_setjmp(i8* bitcast ([16 x %struct._SETJMP_FLOAT128]* @buf1 to i8*), i8* %5) #2
+  %5 = call ptr @llvm.frameaddress(i32 0)
+  %6 = call i32 @_setjmp(ptr @buf1, ptr %5) #2
 
   ; X32:       calll __setjmp
   ; X32-NEXT:  $cfgsj_func_cf_setjmp1:
@@ -246,8 +244,8 @@ define i32 @func_cf_setjmp() {
   ; X64:       callq _setjmp
   ; X64-NEXT:  $cfgsj_func_cf_setjmp1:
 
-  store i32 1, i32* %2, align 4
-  %7 = load i32, i32* %2, align 4
+  store i32 1, ptr %2, align 4
+  %7 = load i32, ptr %2, align 4
   ret i32 %7
 
   ; X32:       .section .gljmp$y,"dr"
@@ -259,10 +257,10 @@ define i32 @func_cf_setjmp() {
   ; X64-NEXT:  .symidx $cfgsj_func_cf_setjmp1
 }
 
-declare i8* @llvm.frameaddress(i32)
+declare ptr @llvm.frameaddress(i32)
 
 ; Function Attrs: returns_twice
-declare dso_local i32 @_setjmp(i8*, i8*) #2
+declare dso_local i32 @_setjmp(ptr, ptr) #2
 
 attributes #2 = { returns_twice }
 

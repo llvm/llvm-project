@@ -3683,6 +3683,13 @@ multiclass MVE_VCMLA_m<MVEVectorVTInfo VTI> {
                              (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
                              imm:$rot))>;
 
+    def: Pat<(VTI.Vec (fadd_contract MQPR:$Qd_src,
+                            (int_arm_mve_vcmulq imm:$rot,
+                              (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm)))),
+              (VTI.Vec (Inst (VTI.Vec MQPR:$Qd_src),
+                             (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                             imm:$rot))>;
+
     def : Pat<(VTI.Vec (int_arm_mve_vcmlaq_predicated
                             imm:$rot, (VTI.Vec MQPR:$Qd_src),
                             (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
@@ -3690,7 +3697,6 @@ multiclass MVE_VCMLA_m<MVEVectorVTInfo VTI> {
               (VTI.Vec (Inst (VTI.Vec MQPR:$Qd_src), (VTI.Vec MQPR:$Qn),
                              (VTI.Vec MQPR:$Qm), imm:$rot,
                              ARMVCCThen, (VTI.Pred VCCR:$mask), zero_reg))>;
-
   }
 }
 

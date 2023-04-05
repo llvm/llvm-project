@@ -273,9 +273,9 @@ let isCall = 1 in
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     isCodeGenOnly = 1, Uses = [ESP, SSP] in {
   def TCRETURNdi : PseudoI<(outs), (ins i32imm_brtarget:$dst, i32imm:$offset),
-                           []>, Sched<[WriteJump]>, NotMemoryFoldable;
+                           []>, Sched<[WriteJump]>;
   def TCRETURNri : PseudoI<(outs), (ins ptr_rc_tailcall:$dst, i32imm:$offset),
-                           []>, Sched<[WriteJump]>, NotMemoryFoldable;
+                           []>, Sched<[WriteJump]>;
   let mayLoad = 1 in
   def TCRETURNmi : PseudoI<(outs), (ins i32mem_TC:$dst, i32imm:$offset),
                            []>, Sched<[WriteJumpLd]>;
@@ -350,11 +350,11 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
                                []>, Sched<[WriteJump]>;
   def TCRETURNri64   : PseudoI<(outs),
                                (ins ptr_rc_tailcall:$dst, i32imm:$offset),
-                               []>, Sched<[WriteJump]>, NotMemoryFoldable;
+                               []>, Sched<[WriteJump]>;
   let mayLoad = 1 in
   def TCRETURNmi64   : PseudoI<(outs),
                                (ins i64mem_TC:$dst, i32imm:$offset),
-                               []>, Sched<[WriteJumpLd]>, NotMemoryFoldable;
+                               []>, Sched<[WriteJumpLd]>;
 
   def TAILJMPd64 : PseudoI<(outs), (ins i64i32imm_brtarget:$dst),
                            []>, Sched<[WriteJump]>;

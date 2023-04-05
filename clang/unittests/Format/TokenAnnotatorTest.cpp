@@ -1645,6 +1645,18 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   EXPECT_TOKEN_PRECEDENCE(Tokens[1], prec::Assignment);
   EXPECT_TOKEN(Tokens[3], tok::lessequal, TT_BinaryOperator);
   EXPECT_TOKEN_PRECEDENCE(Tokens[3], prec::Relational);
+
+  // Port lists in module instantiation.
+  Tokens = Annotate("module_x instance_1(port_1), instance_2(port_2);");
+  ASSERT_EQ(Tokens.size(), 12u);
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_VerilogInstancePortLParen);
+  EXPECT_TOKEN(Tokens[7], tok::l_paren, TT_VerilogInstancePortLParen);
+  Tokens = Annotate("module_x #(parameter) instance_1(port_1), "
+                    "instance_2(port_2);");
+  ASSERT_EQ(Tokens.size(), 16u);
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_VerilogInstancePortLParen);
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_VerilogInstancePortLParen);
+  EXPECT_TOKEN(Tokens[11], tok::l_paren, TT_VerilogInstancePortLParen);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandConstructors) {

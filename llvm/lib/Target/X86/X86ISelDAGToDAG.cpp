@@ -1034,18 +1034,27 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       break;
     }
     case ISD::VSELECT: {
-      // Replace VSELECT with non-mask conditions with with BLENDV.
-      if (N->getOperand(0).getValueType().getVectorElementType() == MVT::i1)
+      // Replace VSELECT with non-mask conditions with with BLENDV/VPTERNLOG.
+      EVT EleVT = N->getOperand(0).getValueType().getVectorElementType();
+      if (EleVT == MVT::i1)
         break;
 
       assert(Subtarget->hasSSE41() && "Expected SSE4.1 support!");
       assert(N->getValueType(0).getVectorElementType() != MVT::i16 &&
              "We can't replace VSELECT with BLENDV in vXi16!");
-      SDValue Blendv =
-          CurDAG->getNode(X86ISD::BLENDV, SDLoc(N), N->getValueType(0),
-                          N->getOperand(0), N->getOperand(1), N->getOperand(2));
+      SDValue R;
+      if (Subtarget->hasVLX() && CurDAG->ComputeNumSignBits(N->getOperand(0)) ==
+                                     EleVT.getSizeInBits()) {
+        R = CurDAG->getNode(X86ISD::VPTERNLOG, SDLoc(N), N->getValueType(0),
+                            N->getOperand(0), N->getOperand(1), N->getOperand(2),
+                            CurDAG->getTargetConstant(0xCA, SDLoc(N), MVT::i8));
+      } else {
+        R = CurDAG->getNode(X86ISD::BLENDV, SDLoc(N), N->getValueType(0),
+                            N->getOperand(0), N->getOperand(1),
+                            N->getOperand(2));
+      }
       --I;
-      CurDAG->ReplaceAllUsesWith(N, Blendv.getNode());
+      CurDAG->ReplaceAllUsesWith(N, R.getNode());
       ++I;
       MadeChange = true;
       continue;
