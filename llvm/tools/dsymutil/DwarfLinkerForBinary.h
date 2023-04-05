@@ -211,6 +211,8 @@ private:
       std::vector<MachOUtils::DwarfRelocationApplicationInfo>
           &RelocationsToApply) const;
 
+  Error copySwiftInterfaces(StringRef Architecture) const;
+
   void copySwiftReflectionMetadata(
       const llvm::dsymutil::DebugMapObject *Obj, DwarfStreamer *Streamer,
       std::vector<uint64_t> &SectionToOffsetInDwarf,
