@@ -249,11 +249,18 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
           if (Pair.second.MustExecInstr) {
             LI->setAAMetadata(Pair.second.MustExecInstr->getAAMetadata());
             LI->copyMetadata(*Pair.second.MustExecInstr,
-                             {LLVMContext::MD_range, LLVMContext::MD_nonnull,
-                              LLVMContext::MD_dereferenceable,
+                             {LLVMContext::MD_dereferenceable,
                               LLVMContext::MD_dereferenceable_or_null,
-                              LLVMContext::MD_align, LLVMContext::MD_noundef,
+                              LLVMContext::MD_noundef,
                               LLVMContext::MD_nontemporal});
+            // Only transfer poison-generating metadata if we also have
+            // !noundef.
+            // TODO: Without !noundef, we could merge this metadata across
+            // all promoted loads.
+            if (LI->hasMetadata(LLVMContext::MD_noundef))
+              LI->copyMetadata(*Pair.second.MustExecInstr,
+                               {LLVMContext::MD_range, LLVMContext::MD_nonnull,
+                                LLVMContext::MD_align});
           }
           Args.push_back(LI);
           ArgAttrVec.push_back(AttributeSet());
