@@ -1238,6 +1238,8 @@ private:
 
   bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
                                               LLT Ty2) const override;
+
+  bool preferScalarizeSplat(SDNode *N) const override;
 };
 
 namespace AArch64 {
