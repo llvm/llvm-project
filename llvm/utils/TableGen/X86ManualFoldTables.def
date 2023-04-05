@@ -209,13 +209,29 @@ NOFOLD(VPBLENDMQZrrkz)
 NOFOLD(VPBLENDMWZ128rrkz)
 NOFOLD(VPBLENDMWZ256rrkz)
 NOFOLD(VPBLENDMWZrrkz)
+NOFOLD(UD1Lr)
+NOFOLD(UD1Qr)
+NOFOLD(UD1Wr)
+// Exclude these two b/c they would conflict with {MMX_MOVD64from64rr, MMX_MOVQ64mr} in unfolding table
+NOFOLD(MMX_MOVQ64rr)
+NOFOLD(MMX_MOVQ64rr_REV)
+// INSERTPSrm has no count_s while INSERTPSrr has count_s.
+// count_s is to indicate which element in dst vector is inserted.
+// if count_s!=0, we can not fold INSERTPSrr into INSERTPSrm
+//
+// the following folding can happen when count_s==0
+// load xmm0, m32
+// insertpsrr xmm1, xmm0, imm
+// =>
+// insertpsrm xmm1, m32, imm
+NOFOLD(INSERTPSrr)
 #undef NOFOLD
 
 #ifndef ENTRY
 #define ENTRY(REG, MEM, FLAGS)
 #endif
-// Part1: These following records are for manually mapping instructions that
-// do not match by their encoding.
+// The following entries are added manually b/c the encodings of reg form does not match the
+// encoding of memory form
 ENTRY(ADD16ri_DB, ADD16mi, TB_NO_REVERSE)
 ENTRY(ADD16ri8_DB, ADD16mi8, TB_NO_REVERSE)
 ENTRY(ADD16rr_DB, ADD16mr, TB_NO_REVERSE)
@@ -272,25 +288,4 @@ ENTRY(VMOVDI2SSrr, VMOVSSrm_alt, 0)
 ENTRY(MOVSDrr, MOVLPDrm, TB_NO_REVERSE)
 ENTRY(VMOVSDZrr, VMOVLPDZ128rm, TB_NO_REVERSE)
 ENTRY(VMOVSDrr, VMOVLPDrm, TB_NO_REVERSE)
-
-// Part2: These following records are for manually mapping instructions that
-// have same opcode.
-//
-// INSERTPSrm has no count_s while INSERTPSrr has count_s.
-// count_s is to indicate which element in dst vector is inserted.
-// if count_s!=0, we can't fold INSERTPSrr into INSERTPSrm
-//
-// the following folding can happen when count_s==0
-// load xmm0, m32
-// insertpsrr xmm1, xmm0, imm
-// =>
-// insertpsrm xmm1, m32, imm
-ENTRY(INSERTPSrr, INSERTPSrm, TB_NO_REVERSE | TB_NO_FORWARD)
-ENTRY(UD1Lr, UD1Lm, TB_NO_REVERSE | TB_NO_FORWARD)
-ENTRY(UD1Qr, UD1Qm, TB_NO_REVERSE | TB_NO_FORWARD)
-ENTRY(UD1Wr, UD1Wm, TB_NO_REVERSE | TB_NO_FORWARD)
-// Exclude this b/c it would conflicts with {MMX_MOVD64from64rr, MMX_MOVQ64mr} in unfolding table
-ENTRY(MMX_MOVQ64rr, MMX_MOVQ64mr, TB_NO_FORWARD | TB_NO_REVERSE)
-// Exclude this b/c it would conflicts with  {MMX_MOVD64from64rr, MMX_MOVQ64rm} in unfolding table
-ENTRY(MMX_MOVQ64rr, MMX_MOVQ64rm, TB_NO_FORWARD | TB_NO_REVERSE)
 #undef ENTRY

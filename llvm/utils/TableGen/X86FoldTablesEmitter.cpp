@@ -85,9 +85,6 @@ class X86FoldTablesEmitter {
         : RegInst(RegInst), MemInst(MemInst) {}
 
     void print(formatted_raw_ostream &OS) const {
-      // Stop printing record if it can't fold and unfold.
-      if(CannotUnfold && CannotFold)
-        return;
       OS.indent(2);
       OS << "{X86::" << RegInst->TheDef->getName() << ", ";
       OS  << "X86::" << MemInst->TheDef->getName() << ", ";
