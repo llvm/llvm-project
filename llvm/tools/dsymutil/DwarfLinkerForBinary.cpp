@@ -105,42 +105,6 @@ static mc::RegisterMCTargetOptionsFlags MOF;
 
 namespace dsymutil {
 
-static Error copySwiftInterfaces(
-    const std::map<std::string, std::string> &ParseableSwiftInterfaces,
-    StringRef Architecture, const LinkOptions &Options) {
-  std::error_code EC;
-  SmallString<128> InputPath;
-  SmallString<128> Path;
-  sys::path::append(Path, *Options.ResourceDir, "Swift", Architecture);
-  if ((EC = sys::fs::create_directories(Path.str(), true,
-                                        sys::fs::perms::all_all)))
-    return make_error<StringError>(
-        "cannot create directory: " + toString(errorCodeToError(EC)), EC);
-  unsigned BaseLength = Path.size();
-
-  for (auto &I : ParseableSwiftInterfaces) {
-    StringRef ModuleName = I.first;
-    StringRef InterfaceFile = I.second;
-    if (!Options.PrependPath.empty()) {
-      InputPath.clear();
-      sys::path::append(InputPath, Options.PrependPath, InterfaceFile);
-      InterfaceFile = InputPath;
-    }
-    sys::path::append(Path, ModuleName);
-    Path.append(".swiftinterface");
-    if (Options.Verbose)
-      outs() << "copy parseable Swift interface " << InterfaceFile << " -> "
-             << Path.str() << '\n';
-
-    // copy_file attempts an APFS clone first, so this should be cheap.
-    if ((EC = sys::fs::copy_file(InterfaceFile, Path.str())))
-      warn(Twine("cannot copy parseable Swift interface ") + InterfaceFile +
-           ": " + toString(errorCodeToError(EC)));
-    Path.resize(BaseLength);
-  }
-  return Error::success();
-}
-
 /// Report a warning to the user, optionally including information about a
 /// specific \p DIE related to the warning.
 void DwarfLinkerForBinary::reportWarning(const Twine &Warning,
@@ -490,6 +454,40 @@ void DwarfLinkerForBinary::collectRelocationsToApplyToSwiftReflectionSections(
   }
 }
 
+Error DwarfLinkerForBinary::copySwiftInterfaces(StringRef Architecture) const {
+  std::error_code EC;
+  SmallString<128> InputPath;
+  SmallString<128> Path;
+  sys::path::append(Path, *Options.ResourceDir, "Swift", Architecture);
+  if ((EC = sys::fs::create_directories(Path.str(), true,
+                                        sys::fs::perms::all_all)))
+    return make_error<StringError>(
+        "cannot create directory: " + toString(errorCodeToError(EC)), EC);
+  unsigned BaseLength = Path.size();
+
+  for (auto &I : ParseableSwiftInterfaces) {
+    StringRef ModuleName = I.first;
+    StringRef InterfaceFile = I.second;
+    if (!Options.PrependPath.empty()) {
+      InputPath.clear();
+      sys::path::append(InputPath, Options.PrependPath, InterfaceFile);
+      InterfaceFile = InputPath;
+    }
+    sys::path::append(Path, ModuleName);
+    Path.append(".swiftinterface");
+    if (Options.Verbose)
+      outs() << "copy parseable Swift interface " << InterfaceFile << " -> "
+             << Path.str() << '\n';
+
+    // copy_file attempts an APFS clone first, so this should be cheap.
+    if ((EC = sys::fs::copy_file(InterfaceFile, Path.str())))
+      warn(Twine("cannot copy parseable Swift interface ") + InterfaceFile +
+           ": " + toString(errorCodeToError(EC)));
+    Path.resize(BaseLength);
+  }
+  return Error::success();
+}
+
 void DwarfLinkerForBinary::copySwiftReflectionMetadata(
     const llvm::dsymutil::DebugMapObject *Obj, DwarfStreamer *Streamer,
     std::vector<uint64_t> &SectionToOffsetInDwarf,
@@ -762,8 +760,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
 
   if (Options.ResourceDir && !ParseableSwiftInterfaces.empty()) {
     StringRef ArchName = Triple::getArchTypeName(Map.getTriple().getArch());
-    if (auto E =
-            copySwiftInterfaces(ParseableSwiftInterfaces, ArchName, Options))
+    if (auto E = copySwiftInterfaces(ArchName))
       return error(toString(std::move(E)));
   }
 
