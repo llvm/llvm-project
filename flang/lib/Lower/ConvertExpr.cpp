@@ -1844,7 +1844,8 @@ public:
         const Fortran::evaluate::Symbol *assumedTypeSym =
             arg.value()->GetAssumedTypeDummy();
         auto symBox = symMap.lookupSymbol(*assumedTypeSym);
-        operands.emplace_back(symBox.getAddr());
+        operands.emplace_back(
+            converter.getSymbolExtendedValue(*assumedTypeSym, &symMap));
         continue;
       }
       if (!expr) {
