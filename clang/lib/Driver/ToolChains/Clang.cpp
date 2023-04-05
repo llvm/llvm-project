@@ -1190,7 +1190,8 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
                                     const Driver &D, const ArgList &Args,
                                     ArgStringList &CmdArgs,
                                     const InputInfo &Output,
-                                    const InputInfoList &Inputs) const {
+                                    const InputInfoList &Inputs,
+                                    std::optional<StringRef> &Sysroot) const {
   const bool IsIAMCU = getToolChain().getTriple().isOSIAMCU();
 
   CheckPreprocessingOptions(D, Args);
@@ -1428,10 +1429,15 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   // -isysroot to the CC1 invocation.
   StringRef sysroot = C.getSysRoot();
   if (sysroot != "") {
-    if (!Args.hasArg(options::OPT_isysroot)) {
+    if (Arg *A = Args.getLastArg(options::OPT_isysroot)) {
+      Sysroot = A->getValue();
+    } else {
       CmdArgs.push_back("-isysroot");
       CmdArgs.push_back(C.getArgs().MakeArgString(sysroot));
+      Sysroot = sysroot;
     }
+  } else if (Arg *A = Args.getLastArg(options::OPT_isysroot)) {
+    Sysroot = A->getValue();
   }
 
   // Parse additional include paths from environment variables.
@@ -4524,6 +4530,52 @@ static void ProcessVSRuntimeLibrary(const ArgList &Args,
   }
 }
 
+void Clang::AddPrefixMappingOptions(const ArgList &Args, ArgStringList &CmdArgs,
+                                    const Driver &D,
+                                    std::optional<StringRef> Sysroot) const {
+  auto IsPathApplicableAsPrefix = [](std::optional<StringRef> Path) {
+    return Path && llvm::sys::path::is_absolute(*Path) &&
+           *Path != llvm::sys::path::root_path(*Path);
+  };
+
+  if (Arg *A = Args.getLastArg(options::OPT_fdepscan_prefix_map_sdk_EQ)) {
+    if (IsPathApplicableAsPrefix(Sysroot)) {
+      CmdArgs.push_back(Args.MakeArgString(Twine("-fdepscan-prefix-map=") +
+                                           *Sysroot + "=" + A->getValue()));
+    } else {
+      // FIXME: warning if we cannot infer sdk
+    }
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_fdepscan_prefix_map_toolchain_EQ)) {
+    StringRef ResourceDir = D.ResourceDir;
+    StringRef Guess = llvm::sys::path::parent_path(ResourceDir);
+    for (StringRef Dir : {"clang", "lib", "usr"}) {
+      if (llvm::sys::path::filename(Guess) != Dir)
+        break;
+      Guess = llvm::sys::path::parent_path(Guess);
+    }
+    if (IsPathApplicableAsPrefix(Guess)) {
+      CmdArgs.push_back(Args.MakeArgString(Twine("-fdepscan-prefix-map=") +
+                                           Guess + "=" + A->getValue()));
+    } else {
+      // FIXME: warning if we cannot infer toolchain
+    }
+  }
+
+  for (const Arg *A : Args.filtered(options::OPT_fdepscan_prefix_map_EQ)) {
+    A->claim();
+    StringRef Map = A->getValue();
+    StringRef Prefix = Map.split('=').first;
+    if (Prefix.size() == Map.size() || !IsPathApplicableAsPrefix(Prefix)) {
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << A->getValue() << A->getOption().getName();
+    } else {
+      A->render(Args, CmdArgs);
+    }
+  }
+}
+
 void Clang::ConstructJob(Compilation &C, const JobAction &Job,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
@@ -4640,19 +4692,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
     D.Diag(diag::err_drv_clang_unsupported) << "C++ for IAMCU";
 
   {
-    const OptSpecifier DepScanOpts[] = {
-        options::OPT_fdepscan_EQ,
-        options::OPT_fdepscan_include_tree,
-        options::OPT_fdepscan_share_EQ,
-        options::OPT_fdepscan_share_identifier,
-        options::OPT_fdepscan_share_parent,
-        options::OPT_fdepscan_share_parent_EQ,
-        options::OPT_fno_depscan_share,
-        options::OPT_fdepscan_share_stop_EQ,
-        options::OPT_fdepscan_daemon_EQ,
-        options::OPT_fdepscan_prefix_map_EQ,
-        options::OPT_fdepscan_prefix_map_sdk_EQ,
-        options::OPT_fdepscan_prefix_map_toolchain_EQ};
+    const OptSpecifier DepScanOpts[] = {options::OPT_fdepscan_EQ,
+                                        options::OPT_fdepscan_include_tree,
+                                        options::OPT_fdepscan_share_EQ,
+                                        options::OPT_fdepscan_share_identifier,
+                                        options::OPT_fdepscan_share_parent,
+                                        options::OPT_fdepscan_share_parent_EQ,
+                                        options::OPT_fno_depscan_share,
+                                        options::OPT_fdepscan_share_stop_EQ,
+                                        options::OPT_fdepscan_daemon_EQ};
 
     // Handle depscan.
     if (Job.getKind() == Action::DepscanJobClass) {
@@ -5890,8 +5938,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   // preprocessor.
   //
   // FIXME: Support -fpreprocessed
+  std::optional<StringRef> Sysroot;
   if (types::getPreprocessedType(InputType) != types::TY_INVALID)
-    AddPreprocessingOptions(C, JA, D, Args, CmdArgs, Output, Inputs);
+    AddPreprocessingOptions(C, JA, D, Args, CmdArgs, Output, Inputs, Sysroot);
+
+  // Handle -fdepscan-prefix-map-* options
+  AddPrefixMappingOptions(Args, CmdArgs, D, Sysroot);
 
   // Don't warn about "clang -c -DPIC -fPIC test.i" because libtool.m4 assumes
   // that "The compiler can only warn and ignore the option if not recognized".
