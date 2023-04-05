@@ -401,15 +401,10 @@ public:
   }
 
   /// This function drops non-debug unknown metadata (through
-  /// dropUnknownNonDebugMetadata). For calls, it also drops parameter and
+  /// dropUnknownNonDebugMetadata). For calls, it also drops parameter and 
   /// return attributes that can cause undefined behaviour. Both of these should
   /// be done by passes which move instructions in IR.
   void dropUBImplyingAttrsAndUnknownMetadata(ArrayRef<unsigned> KnownIDs = {});
-
-  /// Drop any attributes or metadata that can cause immediate undefined
-  /// behavior. Retain other attributes/metadata on a best-effort basis.
-  /// This should be used when speculating instructions.
-  void dropUBImplyingAttrsAndMetadata();
 
   /// Determine whether the exact flag is set.
   bool isExact() const LLVM_READONLY;

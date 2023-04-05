@@ -16,6 +16,8 @@ class Universal64TestCase(TestBase):
         # The dynamic loader doesn't support fat64 executables so we can't
         # actually launch them here.
 
+    # The Makefile manually invokes clang.
+    @skipIfAsan
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
     @skipIf(macos_version=["<", "11.0"])
@@ -24,6 +26,8 @@ class Universal64TestCase(TestBase):
         self.build(debug_info="dsym")
         self.do_test()
 
+    # The Makefile manually invokes clang.
+    @skipIfAsan
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
     @skipIf(macos_version=["<", "11.0"])

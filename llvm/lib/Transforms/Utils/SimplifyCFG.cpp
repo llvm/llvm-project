@@ -1117,12 +1117,16 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
                      RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     VMap[&BonusInst] = NewBonusInst;
 
-    // If we speculated an instruction, we need to drop any metadata that may
-    // result in undefined behavior, as the metadata might have been valid
+    // If we moved a load, we cannot any longer claim any knowledge about
+    // its potential value. The previous information might have been valid
     // only given the branch precondition.
+    // For an analogous reason, we must also drop all the metadata whose
+    // semantics we don't understand. We *can* preserve !annotation, because
+    // it is tied to the instruction itself, not the value or position.
     // Similarly strip attributes on call parameters that may cause UB in
     // location the call is moved to.
-    NewBonusInst->dropUBImplyingAttrsAndMetadata();
+    NewBonusInst->dropUBImplyingAttrsAndUnknownMetadata(
+        LLVMContext::MD_annotation);
 
     NewBonusInst->insertInto(PredBlock, PTI->getIterator());
     NewBonusInst->takeName(&BonusInst);
@@ -3019,7 +3023,7 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   }
 
   // Metadata can be dependent on the condition we are hoisting above.
-  // Strip all UB-implying metadata on the instruction. Drop the debug loc
+  // Conservatively strip all metadata on the instruction. Drop the debug loc
   // to avoid making it appear as if the condition is a constant, which would
   // be misleading while debugging.
   // Similarly strip attributes that maybe dependent on condition we are
@@ -3030,7 +3034,7 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
       if (!isa<DbgAssignIntrinsic>(&I))
         I.setDebugLoc(DebugLoc());
     }
-    I.dropUBImplyingAttrsAndMetadata();
+    I.dropUBImplyingAttrsAndUnknownMetadata();
 
     // Drop ephemeral values.
     if (EphTracker.contains(&I)) {
