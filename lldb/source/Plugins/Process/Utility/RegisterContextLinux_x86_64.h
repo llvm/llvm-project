@@ -29,7 +29,6 @@ private:
   const lldb_private::RegisterInfo *m_register_info_p;
   uint32_t m_register_info_count;
   uint32_t m_user_register_count;
-  lldb_private::RegisterInfo m_orig_rax_info;
 };
 
 #endif
