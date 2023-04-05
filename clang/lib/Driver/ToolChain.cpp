@@ -86,7 +86,8 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
     addIfExists(getLibraryPaths(), Path);
   for (const auto &Path : getStdlibPaths())
     addIfExists(getFilePaths(), Path);
-  addIfExists(getFilePaths(), getArchSpecificLibPath());
+  for (const auto &Path : getArchSpecificLibPaths())
+    addIfExists(getFilePaths(), Path);
 }
 
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
@@ -621,11 +622,20 @@ ToolChain::path_list ToolChain::getStdlibPaths() const {
   return Paths;
 }
 
-std::string ToolChain::getArchSpecificLibPath() const {
-  SmallString<128> Path(getDriver().ResourceDir);
-  llvm::sys::path::append(Path, "lib", getOSLibName(),
-                          llvm::Triple::getArchTypeName(getArch()));
-  return std::string(Path.str());
+ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
+  path_list Paths;
+
+  auto AddPath = [&](const ArrayRef<StringRef> &SS) {
+    SmallString<128> Path(getDriver().ResourceDir);
+    llvm::sys::path::append(Path, "lib");
+    for (auto &S : SS)
+      llvm::sys::path::append(Path, S);
+    Paths.push_back(std::string(Path.str()));
+  };
+
+  AddPath({getTriple().str()});
+  AddPath({getOSLibName(), llvm::Triple::getArchTypeName(getArch())});
+  return Paths;
 }
 
 bool ToolChain::needsProfileRT(const ArgList &Args) {
