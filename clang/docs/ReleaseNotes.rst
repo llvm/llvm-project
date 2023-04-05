@@ -271,6 +271,9 @@ Bug Fixes in This Version
   (`#60887 <https://github.com/llvm/llvm-project/issues/60887>`_)
 - Fix incorrect merging of lambdas across modules.
   (`#60985 <https://github.com/llvm/llvm-project/issues/60985>`_)
+- Fix crash when handling nested immediate invocations in initializers of global
+  variables.
+  (`#58207 <https://github.com/llvm/llvm-project/issues/58207>`_)
 
 
 Bug Fixes to Compiler Builtins
