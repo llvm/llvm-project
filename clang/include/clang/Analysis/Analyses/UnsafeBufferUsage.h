@@ -43,7 +43,7 @@ public:
 
   /// Returns the text indicating that the user needs to provide input there:
   virtual std::string
-  getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") {
+  getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") const {
     std::string s = std::string("<# ");
     s += HintTextToUser;
     s += " #>";
