@@ -718,6 +718,9 @@ Bug Fixes in This Version
 - Fix crash when attempting to perform parenthesized initialization of an
   aggregate with a base class with only non-public constructors.
   (`#62296 <https://github.com/llvm/llvm-project/issues/62296>`_)
+- Fix crash when handling nested immediate invocations in initializers of global
+  variables.
+  (`#58207 <https://github.com/llvm/llvm-project/issues/58207>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
