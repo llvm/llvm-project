@@ -3167,23 +3167,6 @@ bool CastInst::isIntegerCast() const {
   }
 }
 
-bool CastInst::isLosslessCast() const {
-  // Only BitCast can be lossless, exit fast if we're not BitCast
-  if (getOpcode() != Instruction::BitCast)
-    return false;
-
-  // Identity cast is always lossless
-  Type *SrcTy = getOperand(0)->getType();
-  Type *DstTy = getType();
-  if (SrcTy == DstTy)
-    return true;
-
-  // Pointer to pointer is always lossless.
-  if (SrcTy->isPointerTy())
-    return DstTy->isPointerTy();
-  return false;  // Other types have no identity values
-}
-
 /// This function determines if the CastInst does not require any bits to be
 /// changed in order to effect the cast. Essentially, it identifies cases where
 /// no code gen is necessary for the cast, hence the name no-op cast.  For
