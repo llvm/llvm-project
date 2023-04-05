@@ -3540,11 +3540,7 @@ the configuration (without a prefix: ``Auto``).
   causes the lambda body to be indented one additional level relative to
   the indentation level of the signature. ``OuterScope`` forces the lambda
   body to be indented one additional level relative to the parent scope
-  containing the lambda signature. For callback-heavy code, it may improve
-  readability to have the signature indented two levels and to use
-  ``OuterScope``. The KJ style guide requires ``OuterScope``.
-  `KJ style guide
-  <https://github.com/capnproto/capnproto/blob/master/style-guide.md>`_
+  containing the lambda signature.
 
   Possible values:
 
@@ -3568,6 +3564,11 @@ the configuration (without a prefix: ``Auto``).
            [](SomeReallyLongLambdaSignatureArgument foo) {
          return;
        });
+
+       someMethod(someOtherMethod(
+           [](SomeReallyLongLambdaSignatureArgument foo) {
+         return;
+       }));
 
 
 
