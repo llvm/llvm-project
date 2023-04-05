@@ -80,11 +80,11 @@ MachineInstrBuilder MachineIRBuilder::buildFIDbgValue(int FI,
   assert(
       cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(getDL()) &&
       "Expected inlined-at fields to agree");
-  return buildInstr(TargetOpcode::DBG_VALUE)
-      .addFrameIndex(FI)
-      .addImm(0)
-      .addMetadata(Variable)
-      .addMetadata(Expr);
+  return insertInstr(buildInstrNoInsert(TargetOpcode::DBG_VALUE)
+                         .addFrameIndex(FI)
+                         .addImm(0)
+                         .addMetadata(Variable)
+                         .addMetadata(Expr));
 }
 
 MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
