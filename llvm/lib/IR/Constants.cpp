@@ -1009,13 +1009,6 @@ Constant *ConstantFP::getZero(Type *Ty, bool Negative) {
   return C;
 }
 
-Constant *ConstantFP::getZeroValueForNegation(Type *Ty) {
-  if (Ty->isFPOrFPVectorTy())
-    return getNegativeZero(Ty);
-
-  return Constant::getNullValue(Ty);
-}
-
 
 // ConstantFP accessors.
 ConstantFP* ConstantFP::get(LLVMContext &Context, const APFloat& V) {
@@ -2601,8 +2594,7 @@ Constant *ConstantExpr::getShuffleVector(Constant *V1, Constant *V2,
 Constant *ConstantExpr::getNeg(Constant *C, bool HasNUW, bool HasNSW) {
   assert(C->getType()->isIntOrIntVectorTy() &&
          "Cannot NEG a nonintegral value!");
-  return getSub(ConstantFP::getZeroValueForNegation(C->getType()),
-                C, HasNUW, HasNSW);
+  return getSub(ConstantInt::get(C->getType(), 0), C, HasNUW, HasNSW);
 }
 
 Constant *ConstantExpr::getNot(Constant *C) {

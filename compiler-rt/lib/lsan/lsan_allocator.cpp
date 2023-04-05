@@ -145,7 +145,7 @@ void GetAllocatorCacheRange(uptr *begin, uptr *end) {
   *end = *begin + sizeof(AllocatorCache);
 }
 
-void *GetMallocBegin(const void *p) {
+const void *GetMallocBegin(const void *p) {
   if (!p)
     return nullptr;
   void *beg = allocator.GetBlockBegin(p);
@@ -158,7 +158,7 @@ void *GetMallocBegin(const void *p) {
     return nullptr;
   if (m->requested_size == 0)
     return nullptr;
-  return (void *)beg;
+  return (const void *)beg;
 }
 
 uptr GetMallocUsableSize(const void *p) {
@@ -380,7 +380,7 @@ SANITIZER_INTERFACE_ATTRIBUTE
 int __sanitizer_get_ownership(const void *p) { return Metadata(p) != nullptr; }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void * __sanitizer_get_allocated_begin(const void *p) {
+const void * __sanitizer_get_allocated_begin(const void *p) {
   return GetMallocBegin(p);
 }
 

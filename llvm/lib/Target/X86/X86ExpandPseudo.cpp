@@ -49,7 +49,7 @@ public:
   const X86MachineFunctionInfo *X86FI = nullptr;
   const X86FrameLowering *X86FL = nullptr;
 
-  bool runOnMachineFunction(MachineFunction &Fn) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().set(
@@ -77,7 +77,7 @@ private:
   /// placed into separate block guarded by check for al register(for SystemV
   /// abi).
   void ExpandVastartSaveXmmRegs(
-      MachineBasicBlock *MBB,
+      MachineBasicBlock *EntryBlk,
       MachineBasicBlock::iterator VAStartPseudoInstr) const;
 };
 char X86ExpandPseudo::ID = 0;
@@ -562,6 +562,8 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     MI.setDesc(TII->get(Opc));
     return true;
   }
+  case X86::PTCMMIMFP16PSV:
+  case X86::PTCMMRLFP16PSV:
   case X86::PTDPBSSDV:
   case X86::PTDPBSUDV:
   case X86::PTDPBUSDV:
@@ -573,6 +575,8 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       MI.removeOperand(i);
     unsigned Opc;
     switch (Opcode) {
+    case X86::PTCMMIMFP16PSV:  Opc = X86::TCMMIMFP16PS; break;
+    case X86::PTCMMRLFP16PSV:  Opc = X86::TCMMRLFP16PS; break;
     case X86::PTDPBSSDV:   Opc = X86::TDPBSSD; break;
     case X86::PTDPBSUDV:   Opc = X86::TDPBSUD; break;
     case X86::PTDPBUSDV:   Opc = X86::TDPBUSD; break;

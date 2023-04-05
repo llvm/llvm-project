@@ -195,7 +195,9 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
       target_compile_options(${internal_target_name} PRIVATE -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto)
     elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-      target_compile_options(${internal_target_name} PRIVATE -march=${LIBC_GPU_TARGET_ARCHITECTURE})
+      target_compile_options(${internal_target_name} PRIVATE
+                             -march=${LIBC_GPU_TARGET_ARCHITECTURE}
+                             --cuda-path=${LIBC_CUDA_ROOT})
     endif()
     target_include_directories(${internal_target_name} PRIVATE ${include_dirs})
     if(full_deps_list)

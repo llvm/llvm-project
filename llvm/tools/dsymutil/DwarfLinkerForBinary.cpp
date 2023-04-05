@@ -105,59 +105,32 @@ static mc::RegisterMCTargetOptionsFlags MOF;
 
 namespace dsymutil {
 
-static Error copySwiftInterfaces(
-    const std::map<std::string, std::string> &ParseableSwiftInterfaces,
-    StringRef Architecture, const LinkOptions &Options) {
-  std::error_code EC;
-  SmallString<128> InputPath;
-  SmallString<128> Path;
-  sys::path::append(Path, *Options.ResourceDir, "Swift", Architecture);
-  if ((EC = sys::fs::create_directories(Path.str(), true,
-                                        sys::fs::perms::all_all)))
-    return make_error<StringError>(
-        "cannot create directory: " + toString(errorCodeToError(EC)), EC);
-  unsigned BaseLength = Path.size();
-
-  for (auto &I : ParseableSwiftInterfaces) {
-    StringRef ModuleName = I.first;
-    StringRef InterfaceFile = I.second;
-    if (!Options.PrependPath.empty()) {
-      InputPath.clear();
-      sys::path::append(InputPath, Options.PrependPath, InterfaceFile);
-      InterfaceFile = InputPath;
-    }
-    sys::path::append(Path, ModuleName);
-    Path.append(".swiftinterface");
-    if (Options.Verbose)
-      outs() << "copy parseable Swift interface " << InterfaceFile << " -> "
-             << Path.str() << '\n';
-
-    // copy_file attempts an APFS clone first, so this should be cheap.
-    if ((EC = sys::fs::copy_file(InterfaceFile, Path.str())))
-      warn(Twine("cannot copy parseable Swift interface ") + InterfaceFile +
-           ": " + toString(errorCodeToError(EC)));
-    Path.resize(BaseLength);
-  }
-  return Error::success();
-}
-
-/// Report a warning to the user, optionally including information about a
-/// specific \p DIE related to the warning.
-void DwarfLinkerForBinary::reportWarning(const Twine &Warning,
-                                         StringRef Context,
-                                         const DWARFDie *DIE) const {
-
-  warn(Warning, Context);
-
-  if (!Options.Verbose || !DIE)
+static void dumpDIE(const DWARFDie *DIE, bool Verbose) {
+  if (!DIE || !Verbose)
     return;
 
   DIDumpOptions DumpOpts;
   DumpOpts.ChildRecurseDepth = 0;
-  DumpOpts.Verbose = Options.Verbose;
+  DumpOpts.Verbose = Verbose;
 
   WithColor::note() << "    in DIE:\n";
   DIE->dump(errs(), 6 /* Indent */, DumpOpts);
+}
+
+/// Report a warning to the user, optionally including information about a
+/// specific \p DIE related to the warning.
+void DwarfLinkerForBinary::reportWarning(Twine Warning, Twine Context,
+                                         const DWARFDie *DIE) const {
+  std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
+  warn(Warning, Context);
+  dumpDIE(DIE, Options.Verbose);
+}
+
+void DwarfLinkerForBinary::reportError(Twine Error, Twine Context,
+                                       const DWARFDie *DIE) const {
+  std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
+  error(Error, Context);
+  dumpDIE(DIE, Options.Verbose);
 }
 
 bool DwarfLinkerForBinary::createStreamer(const Triple &TheTriple,
@@ -168,10 +141,10 @@ bool DwarfLinkerForBinary::createStreamer(const Triple &TheTriple,
   Streamer = std::make_unique<DwarfStreamer>(
       Options.FileType, OutFile, Options.Translator,
       [&](const Twine &Error, StringRef Context, const DWARFDie *) {
-        error(Error, Context);
+        reportError(Error, Context);
       },
       [&](const Twine &Warning, StringRef Context, const DWARFDie *) {
-        warn(Warning, Context);
+        reportWarning(Warning, Context);
       });
   return Streamer->init(TheTriple, "__DWARF");
 }
@@ -490,6 +463,40 @@ void DwarfLinkerForBinary::collectRelocationsToApplyToSwiftReflectionSections(
   }
 }
 
+Error DwarfLinkerForBinary::copySwiftInterfaces(StringRef Architecture) const {
+  std::error_code EC;
+  SmallString<128> InputPath;
+  SmallString<128> Path;
+  sys::path::append(Path, *Options.ResourceDir, "Swift", Architecture);
+  if ((EC = sys::fs::create_directories(Path.str(), true,
+                                        sys::fs::perms::all_all)))
+    return make_error<StringError>(
+        "cannot create directory: " + toString(errorCodeToError(EC)), EC);
+  unsigned BaseLength = Path.size();
+
+  for (auto &I : ParseableSwiftInterfaces) {
+    StringRef ModuleName = I.first;
+    StringRef InterfaceFile = I.second;
+    if (!Options.PrependPath.empty()) {
+      InputPath.clear();
+      sys::path::append(InputPath, Options.PrependPath, InterfaceFile);
+      InterfaceFile = InputPath;
+    }
+    sys::path::append(Path, ModuleName);
+    Path.append(".swiftinterface");
+    if (Options.Verbose)
+      outs() << "copy parseable Swift interface " << InterfaceFile << " -> "
+             << Path.str() << '\n';
+
+    // copy_file attempts an APFS clone first, so this should be cheap.
+    if ((EC = sys::fs::copy_file(InterfaceFile, Path.str())))
+      reportWarning(Twine("cannot copy parseable Swift interface ") +
+                    InterfaceFile + ": " + toString(errorCodeToError(EC)));
+    Path.resize(BaseLength);
+  }
+  return Error::success();
+}
+
 void DwarfLinkerForBinary::copySwiftReflectionMetadata(
     const llvm::dsymutil::DebugMapObject *Obj, DwarfStreamer *Streamer,
     std::vector<uint64_t> &SectionToOffsetInDwarf,
@@ -586,8 +593,8 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
         reportWarning(Warning, Context, DIE);
       });
   GeneralLinker.setErrorHandler(
-      [&](const Twine &Error, StringRef Context, const DWARFDie *) {
-        error(Error, Context);
+      [&](const Twine &Error, StringRef Context, const DWARFDie *DIE) {
+        reportError(Error, Context, DIE);
       });
   GeneralLinker.setInputVerificationHandler([&](const DWARFFile &File) {
     reportWarning("input verification failed", File.FileName);
@@ -679,12 +686,12 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
       StringRef File = Obj->getObjectFilename();
       auto ErrorOrMem = MemoryBuffer::getFile(File);
       if (!ErrorOrMem) {
-        warn("Could not open '" + File + "'");
+        reportWarning("Could not open '" + File + "'");
         continue;
       }
       sys::fs::file_status Stat;
       if (auto Err = sys::fs::status(File, Stat)) {
-        warn(Err.message());
+        reportWarning(Err.message());
         continue;
       }
       if (!Options.NoTimestamp) {
@@ -762,8 +769,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
 
   if (Options.ResourceDir && !ParseableSwiftInterfaces.empty()) {
     StringRef ArchName = Triple::getArchTypeName(Map.getTriple().getArch());
-    if (auto E =
-            copySwiftInterfaces(ParseableSwiftInterfaces, ArchName, Options))
+    if (auto E = copySwiftInterfaces(ArchName))
       return error(toString(std::move(E)));
   }
 

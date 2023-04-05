@@ -17860,6 +17860,7 @@ static void EvaluateAndDiagnoseImmediateInvocation(
   bool Result = CE->EvaluateAsConstantExpr(
       Eval, SemaRef.getASTContext(), ConstantExprKind::ImmediateInvocation);
   if (!Result || !Notes.empty()) {
+    SemaRef.FailedImmediateInvocations.insert(CE);
     Expr *InnerExpr = CE->getSubExpr()->IgnoreImplicit();
     if (auto *FunctionalCast = dyn_cast<CXXFunctionalCastExpr>(InnerExpr))
       InnerExpr = FunctionalCast->getSubExpr();
@@ -17904,10 +17905,16 @@ static void RemoveNestedImmediateInvocation(
                              [E](Sema::ImmediateInvocationCandidate Elem) {
                                return Elem.getPointer() == E;
                              });
-      assert(It != IISet.rend() &&
-             "ConstantExpr marked IsImmediateInvocation should "
-             "be present");
-      It->setInt(1); // Mark as deleted
+      // It is possible that some subexpression of the current immediate
+      // invocation was handled from another expression evaluation context. Do
+      // not handle the current immediate invocation if some of its
+      // subexpressions failed before.
+      if (It == IISet.rend()) {
+        if (SemaRef.FailedImmediateInvocations.contains(E))
+          CurrentII->setInt(1);
+      } else {
+        It->setInt(1); // Mark as deleted
+      }
     }
     ExprResult TransformConstantExpr(ConstantExpr *E) {
       if (!E->isImmediateInvocation())
@@ -17980,10 +17987,13 @@ HandleImmediateInvocations(Sema &SemaRef,
       SemaRef.RebuildingImmediateInvocation)
     return;
 
-  /// When we have more then 1 ImmediateInvocationCandidates we need to check
-  /// for nested ImmediateInvocationCandidates. when we have only 1 we only
-  /// need to remove ReferenceToConsteval in the immediate invocation.
-  if (Rec.ImmediateInvocationCandidates.size() > 1) {
+  /// When we have more than 1 ImmediateInvocationCandidates or previously
+  /// failed immediate invocations, we need to check for nested
+  /// ImmediateInvocationCandidates in order to avoid duplicate diagnostics.
+  /// Otherwise we only need to remove ReferenceToConsteval in the immediate
+  /// invocation.
+  if (Rec.ImmediateInvocationCandidates.size() > 1 ||
+      !SemaRef.FailedImmediateInvocations.empty()) {
 
     /// Prevent sema calls during the tree transform from adding pointers that
     /// are already in the sets.

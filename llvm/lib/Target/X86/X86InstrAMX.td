@@ -215,3 +215,45 @@ let Predicates = [HasAMXFP16, In64BitMode] in {
     }
   }
 } // HasAMXTILE, HasAMXFP16
+
+let Predicates = [HasAMXCOMPLEX, In64BitMode] in {
+  let SchedRW = [WriteSystem] in {
+    let Constraints = "$src1 = $dst" in {
+      def TCMMIMFP16PS   : I<0x6c, MRMSrcReg4VOp3, (outs TILE:$dst),
+                            (ins TILE:$src1, TILE:$src2, TILE:$src3),
+                            "tcmmimfp16ps\t{$src3, $src2, $src1|$src1, $src2, $src3}",
+                            []>, T8PD, VEX_4V;
+      def TCMMRLFP16PS : I<0x6c, MRMSrcReg4VOp3, (outs TILE:$dst),
+                            (ins TILE:$src1, TILE:$src2, TILE:$src3),
+                            "tcmmrlfp16ps\t{$src3, $src2, $src1|$src1, $src2, $src3}",
+                            []>, VEX_4V, VEX_WIG, T8PS;
+
+    } // Constraints = "$src1 = $dst"
+
+    let Constraints = "$src4 = $dst" in {
+      def PTCMMIMFP16PSV : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
+                                  GR16:$src2, GR16:$src3, TILE:$src4,
+                                  TILE:$src5, TILE:$src6),
+                                  [(set TILE: $dst,
+                                  (int_x86_tcmmimfp16ps_internal GR16:$src1, GR16:$src2,
+                                   GR16:$src3, TILE:$src4, TILE:$src5, TILE:$src6))]>;
+      def PTCMMRLFP16PSV : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
+                                  GR16:$src2, GR16:$src3, TILE:$src4,
+                                  TILE:$src5, TILE:$src6),
+                                  [(set TILE: $dst,
+                                  (int_x86_tcmmrlfp16ps_internal GR16:$src1, GR16:$src2,
+                                   GR16:$src3, TILE:$src4, TILE:$src5, TILE:$src6))]>;
+    }
+
+    let usesCustomInserter = 1 in {
+      def PTCMMIMFP16PS : PseudoI<(outs), (ins u8imm:$src1,
+                                u8imm:$src2, u8imm:$src3),
+                                [(int_x86_tcmmimfp16ps timm:$src1,
+                                  timm:$src2, timm:$src3)]>;
+      def PTCMMRLFP16PS : PseudoI<(outs), (ins u8imm:$src1,
+                                u8imm:$src2, u8imm:$src3),
+                                [(int_x86_tcmmrlfp16ps timm:$src1,
+                                  timm:$src2, timm:$src3)]>;
+    }
+  } // SchedRW = [WriteSystem]
+}

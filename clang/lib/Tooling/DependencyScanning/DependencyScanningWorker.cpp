@@ -66,30 +66,19 @@ using PrebuiltModuleFilesT = decltype(HeaderSearchOptions::PrebuiltModuleFiles);
 class PrebuiltModuleListener : public ASTReaderListener {
 public:
   PrebuiltModuleListener(PrebuiltModuleFilesT &PrebuiltModuleFiles,
-                         llvm::StringSet<> &InputFiles, bool VisitInputFiles,
                          llvm::SmallVector<std::string> &NewModuleFiles)
-      : PrebuiltModuleFiles(PrebuiltModuleFiles), InputFiles(InputFiles),
-        VisitInputFiles(VisitInputFiles), NewModuleFiles(NewModuleFiles) {}
+      : PrebuiltModuleFiles(PrebuiltModuleFiles),
+        NewModuleFiles(NewModuleFiles) {}
 
   bool needsImportVisitation() const override { return true; }
-  bool needsInputFileVisitation() override { return VisitInputFiles; }
-  bool needsSystemInputFileVisitation() override { return VisitInputFiles; }
 
   void visitImport(StringRef ModuleName, StringRef Filename) override {
     if (PrebuiltModuleFiles.insert({ModuleName.str(), Filename.str()}).second)
       NewModuleFiles.push_back(Filename.str());
   }
 
-  bool visitInputFile(StringRef Filename, bool isSystem, bool isOverridden,
-                      bool isExplicitModule) override {
-    InputFiles.insert(Filename);
-    return true;
-  }
-
 private:
   PrebuiltModuleFilesT &PrebuiltModuleFiles;
-  llvm::StringSet<> &InputFiles;
-  bool VisitInputFiles;
   llvm::SmallVector<std::string> &NewModuleFiles;
 };
 
@@ -97,13 +86,10 @@ private:
 /// transitively imports and contributing input files.
 static void visitPrebuiltModule(StringRef PrebuiltModuleFilename,
                                 CompilerInstance &CI,
-                                PrebuiltModuleFilesT &ModuleFiles,
-                                llvm::StringSet<> &InputFiles,
-                                bool VisitInputFiles) {
+                                PrebuiltModuleFilesT &ModuleFiles) {
   // List of module files to be processed.
   llvm::SmallVector<std::string> Worklist{PrebuiltModuleFilename.str()};
-  PrebuiltModuleListener Listener(ModuleFiles, InputFiles, VisitInputFiles,
-                                  Worklist);
+  PrebuiltModuleListener Listener(ModuleFiles, Worklist);
 
   while (!Worklist.empty())
     ASTReader::readASTFileControlBlock(
@@ -204,15 +190,13 @@ public:
 
     ScanInstance.createSourceManager(*FileMgr);
 
-    llvm::StringSet<> PrebuiltModulesInputFiles;
     // Store the list of prebuilt module files into header search options. This
     // will prevent the implicit build to create duplicate modules and will
     // force reuse of the existing prebuilt module files instead.
     if (!ScanInstance.getPreprocessorOpts().ImplicitPCHInclude.empty())
       visitPrebuiltModule(
           ScanInstance.getPreprocessorOpts().ImplicitPCHInclude, ScanInstance,
-          ScanInstance.getHeaderSearchOpts().PrebuiltModuleFiles,
-          PrebuiltModulesInputFiles, /*VisitInputFiles=*/DepFS != nullptr);
+          ScanInstance.getHeaderSearchOpts().PrebuiltModuleFiles);
 
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {

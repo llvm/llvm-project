@@ -802,7 +802,7 @@ public:
   }
 
   // Return true if the target wants to transform Op(Splat(X)) -> Splat(Op(X))
-  virtual bool preferScalarizeSplat(unsigned Opc) const { return true; }
+  virtual bool preferScalarizeSplat(SDNode *N) const { return true; }
 
   /// Return true if the target wants to use the optimization that
   /// turns ext(promotableInst1(...(promotableInstN(load)))) into

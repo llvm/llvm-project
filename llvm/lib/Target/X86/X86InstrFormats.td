@@ -231,10 +231,9 @@ class TAPD : TA { Prefix OpPrefix = PD; }
 class TAXD : TA { Prefix OpPrefix = XD; }
 class TAXS : TA { Prefix OpPrefix = XS; }
 class VEX    { Encoding OpEnc = EncVEX; }
-class VEX_W    { bit HasVEX_W = 1; }
 class VEX_WIG  { bit IgnoresVEX_W = 1; }
-// Special version of VEX_W that can be changed to VEX.W==0 for EVEX2VEX.
-class VEX_W1X  { bit HasVEX_W = 1; bit EVEX_W1_VEX_W0 = 1; }
+// Special version of REX_W that can be changed to VEX.W==0 for EVEX2VEX.
+class VEX_W1X  { bit hasREX_W = 1; bit EVEX_W1_VEX_W0 = 1; }
 class VEX_4V : VEX { bit hasVEX_4V = 1; }
 class VEX_L  { bit hasVEX_L = 1; }
 class VEX_LIG { bit ignoresVEX_L = 1; }
@@ -260,19 +259,10 @@ class EVEX_CD8<int esize, CD8VForm form> {
 class XOP { Encoding OpEnc = EncXOP; }
 class XOP_4V : XOP { bit hasVEX_4V = 1; }
 
-// Specify the alternative register form instruction to replace the current
-// instruction in case it was picked during generation of memory folding tables
-class FoldGenData<string _RegisterForm> {
-  string FoldGenRegForm = _RegisterForm;
-}
-
 // Provide a specific instruction to be used by the EVEX2VEX conversion.
 class EVEX2VEXOverride<string VEXInstrName> {
   string EVEX2VEXOverride = VEXInstrName;
 }
-
-// Mark the instruction as "illegal to memory fold/unfold"
-class NotMemoryFoldable { bit isMemoryFoldable = 0; }
 
 // Prevent EVEX->VEX conversion from considering this instruction.
 class NotEVEX2VEXConvertible { bit notEVEX2VEXConvertible = 1; }
@@ -324,8 +314,7 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   bit hasREPPrefix = 0;     // Does this inst have a REP prefix?
   Encoding OpEnc = EncNormal; // Encoding used by this instruction
   bits<2> OpEncBits = OpEnc.Value;
-  bit HasVEX_W = 0;         // Does this inst set the VEX_W field?
-  bit IgnoresVEX_W = 0;     // Does this inst ignore VEX_W field?
+  bit IgnoresVEX_W = 0;     // Does this inst ignore REX_W field?
   bit EVEX_W1_VEX_W0 = 0;   // This EVEX inst with VEX.W==1 can become a VEX
                             // instruction with VEX.W == 0.
   bit hasVEX_4V = 0;        // Does this inst require the VEX.VVVV field?
@@ -357,14 +346,9 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
                                      CD8_EltSize,
                                      !srl(VectSize, CD8_Form{1-0}))), 0);
 
-  // Used in the memory folding generation (TableGen backend) to point to an alternative
-  // instruction to replace the current one in case it got picked during generation.
-  string FoldGenRegForm = ?;
-
   // Used to prevent an explicit EVEX2VEX override for this instruction.
   string EVEX2VEXOverride = ?;
 
-  bit isMemoryFoldable = 1;     // Is it allowed to memory fold/unfold this instruction?
   bit notEVEX2VEXConvertible = 0; // Prevent EVEX->VEX conversion.
   bit ExplicitVEXPrefix = 0; // Force the instruction to use VEX encoding.
   // Force to check predicate before compress EVEX to VEX encoding.
@@ -384,19 +368,16 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   let TSFlags{28-27} = ExeDomain.Value;
   let TSFlags{30-29} = OpEncBits;
   let TSFlags{38-31} = Opcode;
-  // Currently no need for second bit in TSFlags - W Ignore is equivalent to 0.
-  let TSFlags{39}    = HasVEX_W;
-  let TSFlags{40}    = hasVEX_4V;
-  let TSFlags{41}    = hasVEX_L;
-  let TSFlags{42}    = hasEVEX_K;
-  let TSFlags{43}    = hasEVEX_Z;
-  let TSFlags{44}    = hasEVEX_L2;
-  let TSFlags{45}    = hasEVEX_B;
-  // If we run out of TSFlags bits, it's possible to encode this in 3 bits.
-  let TSFlags{52-46} = CD8_Scale;
-  let TSFlags{53}    = hasEVEX_RC;
-  let TSFlags{54}    = hasNoTrackPrefix;
-  let TSFlags{55}    = ExplicitVEXPrefix;
+  let TSFlags{39}    = hasVEX_4V;
+  let TSFlags{40}    = hasVEX_L;
+  let TSFlags{41}    = hasEVEX_K;
+  let TSFlags{42}    = hasEVEX_Z;
+  let TSFlags{43}    = hasEVEX_L2;
+  let TSFlags{44}    = hasEVEX_B;
+  let TSFlags{47-45} = !if(!eq(CD8_Scale, 0), 0, !add(!logtwo(CD8_Scale), 1));
+  let TSFlags{48}    = hasEVEX_RC;
+  let TSFlags{49}    = hasNoTrackPrefix;
+  let TSFlags{50}    = ExplicitVEXPrefix;
 }
 
 class PseudoI<dag oops, dag iops, list<dag> pattern>
@@ -990,7 +971,7 @@ class RS2I<bits<8> o, Format F, dag outs, dag ins, string asm,
       : S2I<o, F, outs, ins, asm, pattern>, REX_W;
 class VRS2I<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag> pattern>
-      : VS2I<o, F, outs, ins, asm, pattern>, VEX_W;
+      : VS2I<o, F, outs, ins, asm, pattern>, REX_W;
 
 // MMX Instruction templates
 //

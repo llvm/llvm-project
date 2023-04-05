@@ -66,6 +66,7 @@ static_library("Utils") {
     "MetaRenamer.cpp",
     "MisExpect.cpp",
     "ModuleUtils.cpp",
+    "MoveAutoInit.cpp",
     "NameAnonGlobals.cpp",
     "PredicateInfo.cpp",
     "PromoteMemoryToRegister.cpp",

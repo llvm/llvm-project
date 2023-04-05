@@ -1566,6 +1566,15 @@ struct CounterCoverageMappingBuilder
     // Lambdas are treated as their own functions for now, so we shouldn't
     // propagate counts into them.
   }
+
+  void VisitPseudoObjectExpr(const PseudoObjectExpr *POE) {
+    // Just visit syntatic expression as this is what users actually write.
+    VisitStmt(POE->getSyntacticForm());
+  }
+
+  void VisitOpaqueValueExpr(const OpaqueValueExpr* OVE) {
+    Visit(OVE->getSourceExpr());
+  }
 };
 
 } // end anonymous namespace

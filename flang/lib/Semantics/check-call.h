@@ -37,6 +37,13 @@ bool CheckArguments(const evaluate::characteristics::Procedure &,
     bool treatingExternalAsImplicit,
     const evaluate::SpecificIntrinsic *intrinsic);
 
+bool CheckPPCIntrinsic(const Symbol &generic, const Symbol &specific,
+    const evaluate::ActualArguments &actuals,
+    evaluate::FoldingContext &context);
+bool CheckArgumentIsConstantExprInRange(
+    const evaluate::ActualArguments &actuals, int index, int lowerBound,
+    int upperBound, parser::ContextualMessages &messages);
+
 // Checks actual arguments for the purpose of resolving a generic interface.
 bool CheckInterfaceForGeneric(const evaluate::characteristics::Procedure &,
     evaluate::ActualArguments &, const evaluate::FoldingContext &,

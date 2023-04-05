@@ -35,7 +35,7 @@ int main() {
   // CHECK: #0 {{.*}} in {{.*}}free{{.*}} {{.*}}hwasan_allocation_functions.cpp
   // CHECK: #1 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-19]]
 
-  // CHECK: previously allocated here:
+  // CHECK: previously allocated by thread {{.*}} here:
   // CHECK: #0 {{.*}} in {{.*}}malloc{{.*}} {{.*}}hwasan_allocation_functions.cpp
   // CHECK: #1 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-24]]
   // CHECK: Memory tags around the buggy address (one tag corresponds to 16 bytes):

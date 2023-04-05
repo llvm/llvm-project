@@ -15,6 +15,13 @@ void test(void) {
                                   pedantic-warning {{use of an empty initializer is a C2x extension}}
   int j = (int){}; // compat-warning {{use of an empty initializer is incompatible with C standards before C2x}} \
                       pedantic-warning {{use of an empty initializer is a C2x extension}}
+
+  // C2x 6.7.10p4 says, in part: An array of unknown size shall not be
+  // initialized by an empty initializer.
+  // However, Clang allows zero-sized arrays as an extension in both C and C++,
+  // and this initialization form will deduce the array extent as zero. Given
+  // that we support empty initialization of an unbounded array in C++, we also
+  // support it in C.
   int unknown_size[] = {}; // pedantic-warning {{zero size arrays are an extension}} \
                               pedantic-warning {{use of an empty initializer is a C2x extension}} \
                               compat-warning {{use of an empty initializer is incompatible with C standards before C2x}}

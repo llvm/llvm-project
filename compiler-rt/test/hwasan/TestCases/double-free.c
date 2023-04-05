@@ -18,7 +18,7 @@ int main() {
   // of the fault. With TCO the free frame can be replaced with the interceptor.
   // CHECK: in {{.*}}free
   // CHECK: freed by thread {{.*}} here:
-  // CHECK: previously allocated here:
+  // CHECK: previously allocated by thread {{.*}} here:
   // CHECK: Memory tags around the buggy address (one tag corresponds to 16 bytes):
   // CHECK: =>{{.*}}[[MEM_TAG]]
   fprintf(stderr, "DONE\n");

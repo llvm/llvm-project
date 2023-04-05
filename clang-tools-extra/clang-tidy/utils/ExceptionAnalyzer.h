@@ -21,11 +21,11 @@ namespace clang::tidy::utils {
 /// custom exception types.
 class ExceptionAnalyzer {
 public:
-  enum class State : std::int8_t {
-    Throwing = 0,    ///< The function can definitely throw given an AST.
-    NotThrowing = 1, ///< This function can not throw, given an AST.
-    Unknown = 2,     ///< This can happen for extern functions without available
-                     ///< definition.
+  enum class State {
+    Throwing,    ///< The function can definitely throw given an AST.
+    NotThrowing, ///< This function can not throw, given an AST.
+    Unknown,     ///< This can happen for extern functions without available
+                 ///< definition.
   };
 
   /// Bundle the gathered information about an entity like a function regarding
@@ -144,7 +144,7 @@ private:
 
   bool IgnoreBadAlloc = true;
   llvm::StringSet<> IgnoredExceptions;
-  std::map<const FunctionDecl *, ExceptionInfo> FunctionCache;
+  llvm::DenseMap<const FunctionDecl *, ExceptionInfo> FunctionCache{32u};
 };
 
 } // namespace clang::tidy::utils

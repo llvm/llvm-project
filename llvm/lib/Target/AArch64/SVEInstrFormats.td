@@ -3198,10 +3198,12 @@ multiclass sve_int_3op_p_mladdsub<SDPatternOperator op> {
   def _UNDEF_S : PredThreeOpPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
   def _UNDEF_D : PredThreeOpPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
 
-  def : SVE_4_Op_Pat<nxv16i8, op, nxv16i1, nxv16i8, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _UNDEF_B)>;
-  def : SVE_4_Op_Pat<nxv8i16, op, nxv8i1,  nxv8i16, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _UNDEF_H)>;
-  def : SVE_4_Op_Pat<nxv4i32, op, nxv4i1,  nxv4i32, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _UNDEF_S)>;
-  def : SVE_4_Op_Pat<nxv2i64, op, nxv2i1,  nxv2i64, nxv2i64, nxv2i64, !cast<Instruction>(NAME # _UNDEF_D)>;
+  let  AddedComplexity = 9 in {
+    def : SVE_4_Op_Pat<nxv16i8, op, nxv16i1, nxv16i8, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _UNDEF_B)>;
+    def : SVE_4_Op_Pat<nxv8i16, op, nxv8i1,  nxv8i16, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _UNDEF_H)>;
+    def : SVE_4_Op_Pat<nxv4i32, op, nxv4i1,  nxv4i32, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _UNDEF_S)>;
+    def : SVE_4_Op_Pat<nxv2i64, op, nxv2i1,  nxv2i64, nxv2i64, nxv2i64, !cast<Instruction>(NAME # _UNDEF_D)>;
+  }
 }
 
 //===----------------------------------------------------------------------===//

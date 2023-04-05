@@ -50,6 +50,7 @@ _exit U
 abort U
 access U
 aligned_alloc U
+arc4random U
 bcmp U
 calloc U
 catclose U

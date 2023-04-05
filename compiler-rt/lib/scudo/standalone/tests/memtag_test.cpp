@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "common.h"
+#include "mem_map.h"
 #include "memtag.h"
 #include "platform.h"
 #include "tests/scudo_unit_test.h"
@@ -45,20 +46,23 @@ protected:
       GTEST_SKIP() << "Memory tagging is not supported";
 
     BufferSize = getPageSizeCached();
-    Buffer = reinterpret_cast<u8 *>(
-        map(nullptr, BufferSize, "MemtagTest", MAP_MEMTAG, &Data));
-    Addr = reinterpret_cast<uptr>(Buffer);
+    scudo::MemMapT MemMap;
+    ASSERT_TRUE(MemMap.map(/*Addr=*/0U, BufferSize, "MemtagTest", MAP_MEMTAG));
+    Addr = MemMap.getBase();
+    Buffer = reinterpret_cast<u8 *>(Addr);
     EXPECT_TRUE(isAligned(Addr, archMemoryTagGranuleSize()));
     EXPECT_EQ(Addr, untagPointer(Addr));
   }
 
   void TearDown() override {
-    if (Buffer)
-      unmap(Buffer, BufferSize, 0, &Data);
+    if (Buffer) {
+      ASSERT_TRUE(MemMap.isAllocated());
+      MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+    }
   }
 
   uptr BufferSize = 0;
-  MapPlatformData Data = {};
+  scudo::MemMapT MemMap;
   u8 *Buffer = nullptr;
   uptr Addr = 0;
 };
@@ -179,7 +183,7 @@ TEST_F(MemtagTest, StoreTags) {
     EXPECT_EQ(LoadPtr, loadTag(LoadPtr));
 
     // Reset tags without using StoreTags.
-    releasePagesToOS(Addr, 0, BufferSize, &Data);
+    MemMap.releasePagesToOS(Addr, BufferSize);
   }
 }
 
