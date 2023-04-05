@@ -37,6 +37,7 @@
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
 #include "flang/Optimizer/Builder/Runtime/Ragged.h"
+#include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
@@ -1030,7 +1031,7 @@ private:
   /// values in \p valueList and targets corresponding labels in \p labelList.
   /// If no value matches the selector, branch to \p defaultEval.
   ///
-  /// There are two special cases.
+  /// Three cases require special processing.
   ///
   /// An empty \p valueList indicates an ArithmeticIfStmt context that requires
   /// two comparisons against 0 or 0.0. The selector may have either INTEGER
@@ -1041,6 +1042,11 @@ private:
   /// any positive (IOSTAT) value. A missing (zero) label requires a branch
   /// to \p defaultEval for that value.
   ///
+  /// A non-null \p errorBlock indicates an AssignedGotoStmt context that
+  /// must always branch to an explicit target. There is no valid defaultEval
+  /// in this case. Generate a branch to \p errorBlock for an AssignedGotoStmt
+  /// that violates this program requirement.
+  ///
   /// If this is not an ArithmeticIfStmt and no targets have exit code,
   /// generate a SelectOp. Otherwise, for each target, if it has exit code,
   /// branch to a new block, insert exit code, and then branch to the target.
@@ -1048,12 +1054,14 @@ private:
   void genMultiwayBranch(mlir::Value selector,
                          llvm::SmallVector<int64_t> valueList,
                          llvm::SmallVector<Fortran::parser::Label> labelList,
-                         const Fortran::lower::pft::Evaluation &defaultEval) {
+                         const Fortran::lower::pft::Evaluation &defaultEval,
+                         mlir::Block *errorBlock = nullptr) {
     bool inArithmeticIfContext = valueList.empty();
     assert(((inArithmeticIfContext && labelList.size() == 2) ||
             (valueList.size() && labelList.size() == valueList.size())) &&
            "mismatched multiway branch targets");
-    bool defaultHasExitCode = hasExitCode(defaultEval);
+    mlir::Block *defaultBlock = errorBlock ? errorBlock : defaultEval.block;
+    bool defaultHasExitCode = !errorBlock && hasExitCode(defaultEval);
     bool hasAnyExitCode = defaultHasExitCode;
     if (!hasAnyExitCode)
       for (auto label : labelList)
@@ -1073,7 +1081,7 @@ private:
         assert(block && "missing multiway branch block");
         blockList.push_back(block);
       }
-      blockList.push_back(defaultEval.block);
+      blockList.push_back(defaultBlock);
       if (valueList[branchCount - 1] == 0) // Swap IO ERR and default blocks.
         std::swap(blockList[branchCount - 1], blockList[branchCount]);
       builder->create<fir::SelectOp>(loc, selector, valueList, blockList);
@@ -1112,11 +1120,11 @@ private:
             builder->createIntegerConstant(loc, selectorType,
                                            valueList[label.index()]));
       // Branch to a new block with exit code and then to the target, or branch
-      // directly to the target. defaultEval is the "else" target.
+      // directly to the target. defaultBlock is the "else" target.
       bool lastBranch = label.index() == branchCount - 1;
       mlir::Block *nextBlock =
           lastBranch && !defaultHasExitCode
-              ? defaultEval.block
+              ? defaultBlock
               : builder->getBlock()->splitBlock(builder->getInsertionPoint());
       const Fortran::lower::pft::Evaluation &targetEval =
           label.value() ? evalOfLabel(label.value()) : defaultEval;
@@ -1344,50 +1352,48 @@ private:
   }
 
   void genFIR(const Fortran::parser::AssignedGotoStmt &stmt) {
-    // Program requirement 1990 8.2.4 -
-    //
-    //   At the time of execution of an assigned GOTO statement, the integer
-    //   variable must be defined with the value of a statement label of a
-    //   branch target statement that appears in the same scoping unit.
-    //   Note that the variable may be defined with a statement label value
-    //   only by an ASSIGN statement in the same scoping unit as the assigned
-    //   GOTO statement.
-
+    // See Fortran 90 Clause 8.2.4.
+    // Relax the requirement that the GOTO variable must have a value in the
+    // label list when a list is present, and allow a branch to any non-format
+    // target that has an ASSIGN statement for the variable.
     mlir::Location loc = toLocation();
     Fortran::lower::pft::Evaluation &eval = getEval();
+    Fortran::lower::pft::FunctionLikeUnit &owningProc =
+        *eval.getOwningProcedure();
     const Fortran::lower::pft::SymbolLabelMap &symbolLabelMap =
-        eval.getOwningProcedure()->assignSymbolLabelMap;
+        owningProc.assignSymbolLabelMap;
+    const Fortran::lower::pft::LabelEvalMap &labelEvalMap =
+        owningProc.labelEvaluationMap;
     const Fortran::semantics::Symbol &symbol =
         *std::get<Fortran::parser::Name>(stmt.t).symbol;
-    auto selectExpr =
-        builder->create<fir::LoadOp>(loc, getSymbolAddress(symbol));
-    auto iter = symbolLabelMap.find(symbol);
-    if (iter == symbolLabelMap.end()) {
-      // Fail for a nonconforming program unit that does not have any ASSIGN
-      // statements. The front end should check for this.
-      mlir::emitError(loc, "(semantics issue) no assigned goto targets");
-      exit(1);
-    }
-    auto labelSet = iter->second;
+    auto labelSetIter = symbolLabelMap.find(symbol);
     llvm::SmallVector<int64_t> valueList;
     llvm::SmallVector<Fortran::parser::Label> labelList;
-    // Add labels from an explicit list. The list may have duplicates.
-    for (Fortran::parser::Label label :
-         std::get<std::list<Fortran::parser::Label>>(stmt.t)) {
-      // Ignore duplicates.
-      if (labelSet.count(label) && !llvm::is_contained(labelList, label)) {
-        valueList.push_back(label); // label as an integer
-        labelList.push_back(label);
+    if (labelSetIter != symbolLabelMap.end()) {
+      for (auto &label : labelSetIter->second) {
+        const auto evalIter = labelEvalMap.find(label);
+        assert(evalIter != labelEvalMap.end() && "assigned goto label missing");
+        if (evalIter->second->block) { // non-format statement
+          valueList.push_back(label);  // label as an integer
+          labelList.push_back(label);
+        }
       }
     }
-    // Absent an explicit list, add all possible label targets.
-    if (labelList.empty())
-      for (auto &label : labelSet) {
-        valueList.push_back(label); // label as an integer
-        labelList.push_back(label);
-      }
-    // Add a nop/fallthrough branch for a nonconforming program.
-    genMultiwayBranch(selectExpr, valueList, labelList, eval.nonNopSuccessor());
+    if (!labelList.empty()) {
+      auto selectExpr =
+          builder->create<fir::LoadOp>(loc, getSymbolAddress(symbol));
+      // Add a default error target in case the goto is nonconforming.
+      mlir::Block *errorBlock =
+          builder->getBlock()->splitBlock(builder->getInsertionPoint());
+      genMultiwayBranch(selectExpr, valueList, labelList,
+                        eval.nonNopSuccessor(), errorBlock);
+      startBlock(errorBlock);
+    }
+    fir::runtime::genReportFatalUserError(
+        *builder, loc,
+        "Assigned GOTO variable '" + symbol.name().ToString() +
+            "' does not have a valid target label value");
+    builder->create<fir::UnreachableOp>(loc);
   }
 
   /// Collect DO CONCURRENT or FORALL loop control information.
