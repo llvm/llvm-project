@@ -201,6 +201,10 @@ public:
       mlir::Location loc, StringRef Name, mlir::Type Ty,
       mlir::cir::GlobalLinkageKind Linkage, clang::CharUnits Alignment);
 
+  /// Emit any vtables which we deferred and still have a use for.
+  void buildDeferredVTables();
+  bool shouldOpportunisticallyEmitVTables();
+
   llvm::DenseMap<mlir::Attribute, mlir::cir::GlobalOp> ConstantStringMap;
 
   /// Return a constant array for the given string.

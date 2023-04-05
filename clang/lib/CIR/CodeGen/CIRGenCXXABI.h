@@ -145,6 +145,11 @@ public:
   isVirtualOffsetNeededForVTableField(CIRGenFunction &CGF,
                                       CIRGenFunction::VPtr Vptr) = 0;
 
+  /// Determine whether it's possible to emit a vtable for \p RD, even
+  /// though we do not know that the vtable has been marked as used by semantic
+  /// analysis.
+  virtual bool canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const = 0;
+
   /// Get the address point of the vtable for the given base subobject.
   virtual mlir::Value
   getVTableAddressPoint(BaseSubobject Base,

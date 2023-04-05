@@ -154,7 +154,7 @@ public:
   //   /// (if the class has virtual bases).
   //   void GenerateClassData(const CXXRecordDecl *RD);
 
-  //   bool isVTableExternal(const CXXRecordDecl *RD);
+  bool isVTableExternal(const clang::CXXRecordDecl *RD);
 
   /// Returns the type of a vtable with the given layout. Normally a struct of
   /// arrays of pointers, with one struct element for each vtable in the vtable
