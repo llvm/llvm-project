@@ -408,7 +408,7 @@ public:
 
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
-  bool preferScalarizeSplat(unsigned Opc) const override;
+  bool preferScalarizeSplat(SDNode *N) const override;
 
   bool softPromoteHalfType() const override { return true; }
 
