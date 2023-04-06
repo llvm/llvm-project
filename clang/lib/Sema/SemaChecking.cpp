@@ -15884,10 +15884,7 @@ bool Sema::CheckParmsForFunctionDef(ArrayRef<ParmVarDecl *> Parameters,
                                     bool CheckParameterNames) {
   bool HasInvalidParm = false;
   for (ParmVarDecl *Param : Parameters) {
-    if (!Param) {
-      HasInvalidParm = true;
-      continue;
-    }
+    assert(Param && "null in a parameter list");
     // C99 6.7.5.3p4: the parameters in a parameter type list in a
     // function declarator that is part of a function definition of
     // that function shall not have incomplete type.

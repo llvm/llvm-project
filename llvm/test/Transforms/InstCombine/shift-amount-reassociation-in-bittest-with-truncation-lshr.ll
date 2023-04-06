@@ -43,8 +43,8 @@ define i1 @n0(i32 %x, i64 %y, i32 %len) {
 define i1 @t1(i64 %y, i32 %len) {
 ; CHECK-LABEL: @t1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[Y:%.*]], 4294901760
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len
   %t1 = shl i32 65535, %t0
@@ -60,8 +60,8 @@ define i1 @t1(i64 %y, i32 %len) {
 define i1 @t1_single_bit(i64 %y, i32 %len) {
 ; CHECK-LABEL: @t1_single_bit(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[Y:%.*]], 2147483648
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len
   %t1 = shl i32 32768, %t0
@@ -101,8 +101,8 @@ define i1 @n2(i64 %y, i32 %len) {
 define i1 @t3(i32 %x, i32 %len) {
 ; CHECK-LABEL: @t3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len
   %t1 = shl i32 %x, %t0
@@ -118,8 +118,8 @@ define i1 @t3(i32 %x, i32 %len) {
 define i1 @t3_singlebit(i32 %x, i32 %len) {
 ; CHECK-LABEL: @t3_singlebit(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len
   %t1 = shl i32 %x, %t0
@@ -167,8 +167,8 @@ define <2 x i1> @t5_vec(<2 x i64> %y, <2 x i32> %len) {
 ; CHECK-LABEL: @t5_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[Y:%.*]], <i64 16, i64 16>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i64> [[TMP1]], <i64 65535, i64 32767>
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i64> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne <2 x i64> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[T5]]
 ;
   %t0 = sub <2 x i32> <i32 32, i32 32>, %len
   %t1 = shl <2 x i32> <i32 65535, i32 32767>, %t0
@@ -208,8 +208,8 @@ define <2 x i1> @n6_vec(<2 x i64> %y, <2 x i32> %len) {
 define <2 x i1> @t7_vec(<2 x i32> %x, <2 x i32> %len) {
 ; CHECK-LABEL: @t7_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[T5]]
 ;
   %t0 = sub <2 x i32> <i32 32, i32 32>, %len
   %t1 = shl <2 x i32> %x, %t0
@@ -253,8 +253,8 @@ define i1 @t9_highest_bit(i32 %x, i64 %y, i32 %len) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[Y:%.*]], 63
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 0
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 64, %len
   %t1 = shl i32 %x, %t0
@@ -295,8 +295,8 @@ define i1 @t11_no_shift(i32 %x, i64 %y, i32 %len) {
 ; CHECK-LABEL: @t11_no_shift(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    ret i1 [[TMP3]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 64, %len
   %t1 = shl i32 %x, %t0
@@ -384,8 +384,8 @@ define <2 x i1> @n12_bad(<2 x i32> %x, <2 x i64> %y, <2 x i32> %len) {
 define i1 @t13_x_is_one(i64 %y, i32 %len) {
 ; CHECK-LABEL: @t13_x_is_one(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[Y:%.*]], 65536
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len
   %t1 = shl i32 1, %t0
@@ -416,8 +416,8 @@ define <2 x i1> @t15_vec_x_is_one_or_zero(<2 x i64> %y, <2 x i32> %len) {
 ; CHECK-LABEL: @t15_vec_x_is_one_or_zero(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[Y:%.*]], <i64 48, i64 48>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i64> [[TMP1]], <i64 1, i64 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i64> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne <2 x i64> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[T5]]
 ;
   %t0 = sub <2 x i32> <i32 64, i32 64>, %len
   %t1 = shl <2 x i32> <i32 1, i32 0>, %t0
@@ -453,8 +453,8 @@ define <2 x i1> @t16_vec_y_is_one_or_zero(<2 x i32> %x, <2 x i32> %len) {
 ; And that's the main motivational pattern:
 define i1 @rawspeed_signbit(i64 %storage, i32 %nbits) {
 ; CHECK-LABEL: @rawspeed_signbit(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[STORAGE:%.*]], -1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[ISBITUNSET:%.*]] = icmp sgt i64 [[STORAGE:%.*]], -1
+; CHECK-NEXT:    ret i1 [[ISBITUNSET]]
 ;
   %skipnbits = sub nsw i32 64, %nbits
   %skipnbitswide = zext i32 %skipnbits to i64

@@ -5427,12 +5427,14 @@ let Predicates = [HasVInstructions] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 1 in {
   def PseudoReadVLENB : Pseudo<(outs GPR:$rd), (ins),
                                [(set GPR:$rd, (riscv_read_vlenb))]>,
+                        PseudoInstExpansion<(CSRRS GPR:$rd, SysRegVLENB.Encoding, X0)>,
                         Sched<[WriteRdVLENB]>;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 1,
     Uses = [VL] in
-def PseudoReadVL : Pseudo<(outs GPR:$rd), (ins), []>;
+def PseudoReadVL : Pseudo<(outs GPR:$rd), (ins), []>,
+                   PseudoInstExpansion<(CSRRS GPR:$rd, SysRegVL.Encoding, X0)>;
 
 foreach lmul = MxList in {
   foreach nf = NFSet<lmul>.L in {

@@ -15,8 +15,8 @@
 define i1 @p0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @p0(
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i8 [[TMP0]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp uge i8 [[TMP0]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = lshr i8 -1, %y
   %tmp1 = and i8 %tmp0, %x
@@ -31,8 +31,8 @@ define i1 @p0(i8 %x, i8 %y) {
 define <2 x i1> @p1_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @p1_vec(
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i8> <i8 -1, i8 -1>, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge <2 x i8> [[TMP0]], [[X:%.*]]
-; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp uge <2 x i8> [[TMP0]], [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %tmp0 = lshr <2 x i8> <i8 -1, i8 -1>, %y
   %tmp1 = and <2 x i8> %tmp0, %x
@@ -43,8 +43,8 @@ define <2 x i1> @p1_vec(<2 x i8> %x, <2 x i8> %y) {
 define <3 x i1> @p2_vec_undef(<3 x i8> %x, <3 x i8> %y) {
 ; CHECK-LABEL: @p2_vec_undef(
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr <3 x i8> <i8 -1, i8 undef, i8 -1>, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge <3 x i8> [[TMP0]], [[X:%.*]]
-; CHECK-NEXT:    ret <3 x i1> [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp uge <3 x i8> [[TMP0]], [[X:%.*]]
+; CHECK-NEXT:    ret <3 x i1> [[RET]]
 ;
   %tmp0 = lshr <3 x i8> <i8 -1, i8 undef, i8 -1>, %y
   %tmp1 = and <3 x i8> %tmp0, %x
@@ -62,8 +62,8 @@ define i1 @c0(i8 %y) {
 ; CHECK-LABEL: @c0(
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i8 [[X]], [[TMP0]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ule i8 [[X]], [[TMP0]]
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = lshr i8 -1, %y
   %x = call i8 @gen8()
@@ -76,8 +76,8 @@ define i1 @c1(i8 %y) {
 ; CHECK-LABEL: @c1(
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i8 [[X]], [[TMP0]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ule i8 [[X]], [[TMP0]]
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = lshr i8 -1, %y
   %x = call i8 @gen8()
@@ -90,8 +90,8 @@ define i1 @c2(i8 %y) {
 ; CHECK-LABEL: @c2(
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i8 [[X]], [[TMP0]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ule i8 [[X]], [[TMP0]]
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = lshr i8 -1, %y
   %x = call i8 @gen8()
@@ -110,8 +110,8 @@ define i1 @oneuse0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @oneuse0(
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i8 [[TMP0]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp uge i8 [[TMP0]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = lshr i8 -1, %y
   call void @use8(i8 %tmp0)
@@ -125,8 +125,8 @@ define i1 @oneuse1(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[TMP0]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[TMP1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i8 [[TMP0]], [[X]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp uge i8 [[TMP0]], [[X]]
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = lshr i8 -1, %y
   %tmp1 = and i8 %tmp0, %x
@@ -141,8 +141,8 @@ define i1 @oneuse2(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @use8(i8 [[TMP0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[TMP0]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[TMP1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i8 [[TMP0]], [[X]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp uge i8 [[TMP0]], [[X]]
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = lshr i8 -1, %y
   call void @use8(i8 %tmp0)

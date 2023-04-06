@@ -127,8 +127,8 @@ define i3 @bitcasted_inselt_wide_source_not_modulo_elt_not_half_weird_types(i15 
 
 define i8 @bitcasted_inselt_wide_source_wrong_insert(<2 x i32> %v, i32 %x) {
 ; ANY-LABEL: @bitcasted_inselt_wide_source_wrong_insert(
-; ANY-NEXT:    [[B:%.*]] = bitcast <2 x i32> [[V:%.*]] to <8 x i8>
-; ANY-NEXT:    [[R:%.*]] = extractelement <8 x i8> [[B]], i64 2
+; ANY-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[V:%.*]] to <8 x i8>
+; ANY-NEXT:    [[R:%.*]] = extractelement <8 x i8> [[TMP1]], i64 2
 ; ANY-NEXT:    ret i8 [[R]]
 ;
   %i = insertelement <2 x i32> %v, i32 %x, i32 1

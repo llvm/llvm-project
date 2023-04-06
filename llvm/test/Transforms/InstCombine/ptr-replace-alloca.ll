@@ -415,7 +415,6 @@ entry:
 define i8 @select_diff_addrspace_remove_alloca(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @select_diff_addrspace_remove_alloca(
 ; CHECK-NEXT:  entry:
-; CHECK-NOT:     [[ALLOCA:%.*]] = alloca [32 x i8]
 ; CHECK-NEXT:    ret i8 0
 ;
 entry:
