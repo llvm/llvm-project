@@ -269,19 +269,19 @@ static bool isNOREXRegClass(const Record *Op) {
   return Op->getName().contains("_NOREX");
 }
 
-// Function object - Operator() returns true if the given VEX instruction
-// matches the EVEX instruction of this object.
+// Function object - Operator() returns true if the given Reg instruction
+// matches the Mem instruction of this object.
 class IsMatch {
   const CodeGenInstruction *MemInst;
-  unsigned Variant;
+  const X86Disassembler::RecognizableInstrBase MemRI;
+  const unsigned Variant;
 
 public:
   IsMatch(const CodeGenInstruction *Inst, unsigned V)
-      : MemInst(Inst), Variant(V) {}
+      : MemInst(Inst), MemRI(*MemInst), Variant(V) {}
 
   bool operator()(const CodeGenInstruction *RegInst) {
     X86Disassembler::RecognizableInstrBase RegRI(*RegInst);
-    X86Disassembler::RecognizableInstrBase MemRI(*MemInst);
     const Record *RegRec = RegInst->TheDef;
     const Record *MemRec = MemInst->TheDef;
 
@@ -302,27 +302,23 @@ public:
         X86Disassembler::getMnemonic(RegInst, Variant))
       return false;
 
-    // Return false if one (at least) of the encoding fields of both
-    // instructions do not match.
-    if (RegRI.Encoding != MemRI.Encoding || RegRI.Opcode != MemRI.Opcode ||
-        RegRI.OpPrefix != MemRI.OpPrefix || RegRI.OpMap != MemRI.OpMap ||
-        RegRI.OpSize != MemRI.OpSize || RegRI.AdSize != MemRI.AdSize ||
-        RegRI.HasREX_W != MemRI.HasREX_W ||
-        RegRI.HasVEX_4V != MemRI.HasVEX_4V ||
-        RegRI.HasVEX_L != MemRI.HasVEX_L ||
-        RegRI.IgnoresVEX_L != MemRI.IgnoresVEX_L ||
-        RegRI.IgnoresVEX_W != MemRI.IgnoresVEX_W ||
-        RegRI.HasEVEX_K != MemRI.HasEVEX_K ||
-        RegRI.HasEVEX_KZ != MemRI.HasEVEX_KZ ||
-        RegRI.HasEVEX_L2 != MemRI.HasEVEX_L2 ||
-        RegRec->getValueAsBit("hasEVEX_RC") !=
-            MemRec->getValueAsBit("hasEVEX_RC") ||
-        RegRec->getValueAsBit("hasLockPrefix") !=
-            MemRec->getValueAsBit("hasLockPrefix") ||
-        RegRec->getValueAsBit("hasNoTrackPrefix") !=
-            MemRec->getValueAsBit("hasNoTrackPrefix") ||
-        RegRec->getValueAsBit("EVEX_W1_VEX_W0") !=
-            MemRec->getValueAsBit("EVEX_W1_VEX_W0"))
+    // Return false if any of the following fields of does not match.
+    if (std::make_tuple(RegRI.Encoding, RegRI.Opcode, RegRI.OpPrefix,
+                        RegRI.OpMap, RegRI.OpSize, RegRI.AdSize, RegRI.HasREX_W,
+                        RegRI.HasVEX_4V, RegRI.HasVEX_L, RegRI.IgnoresVEX_L,
+                        RegRI.IgnoresVEX_W, RegRI.HasEVEX_K, RegRI.HasEVEX_KZ,
+                        RegRI.HasEVEX_L2, RegRec->getValueAsBit("hasEVEX_RC"),
+                        RegRec->getValueAsBit("hasLockPrefix"),
+                        RegRec->getValueAsBit("hasNoTrackPrefix"),
+                        RegRec->getValueAsBit("EVEX_W1_VEX_W0")) !=
+        std::make_tuple(MemRI.Encoding, MemRI.Opcode, MemRI.OpPrefix,
+                        MemRI.OpMap, MemRI.OpSize, MemRI.AdSize, MemRI.HasREX_W,
+                        MemRI.HasVEX_4V, MemRI.HasVEX_L, MemRI.IgnoresVEX_L,
+                        MemRI.IgnoresVEX_W, MemRI.HasEVEX_K, MemRI.HasEVEX_KZ,
+                        MemRI.HasEVEX_L2, MemRec->getValueAsBit("hasEVEX_RC"),
+                        MemRec->getValueAsBit("hasLockPrefix"),
+                        MemRec->getValueAsBit("hasNoTrackPrefix"),
+                        MemRec->getValueAsBit("EVEX_W1_VEX_W0")))
       return false;
 
     // Make sure the sizes of the operands of both instructions suit each other.
