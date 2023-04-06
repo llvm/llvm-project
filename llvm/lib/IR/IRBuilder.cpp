@@ -1410,12 +1410,6 @@ CallInst *IRBuilderBase::CreateAlignmentAssumption(const DataLayout &DL,
   return CreateAlignmentAssumptionHelper(DL, PtrValue, Alignment, OffsetValue);
 }
 
-CallInst *IRBuilderBase::CreateNonNullAssumption(Value *PtrValue) {
-  Value *Vals[] = { PtrValue };
-  OperandBundleDefT<Value *> NonNullOpB("nonnull", Vals);
-  return CreateAssumption(ConstantInt::getTrue(getContext()), {NonNullOpB});
-}
-
 IRBuilderDefaultInserter::~IRBuilderDefaultInserter() = default;
 IRBuilderCallbackInserter::~IRBuilderCallbackInserter() = default;
 IRBuilderFolder::~IRBuilderFolder() = default;
