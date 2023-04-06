@@ -14,6 +14,7 @@ set(LLVM_OPTIONAL_SOURCES
   ShapedOpInterfaces.cpp
   SideEffectInterfaces.cpp
   TilingInterface.cpp
+  ValueBoundsOpInterface.cpp
   VectorInterfaces.cpp
   ViewLikeInterface.cpp
   )
@@ -51,5 +52,19 @@ add_mlir_interface_library(SideEffectInterfaces)
 add_mlir_interface_library(TilingInterface)
 add_mlir_interface_library(VectorInterfaces)
 add_mlir_interface_library(ViewLikeInterface)
+
+add_mlir_library(MLIRValueBoundsOpInterface
+  ValueBoundsOpInterface.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
+
+  DEPENDS
+  MLIRValueBoundsOpInterfaceIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRAnalysis
+  MLIRIR
+  )
 
 add_subdirectory(Utils)
