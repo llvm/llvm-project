@@ -76,8 +76,7 @@ class X86FoldTablesEmitter {
     bool CannotFold = false;
     bool IsLoad = false;
     bool IsStore = false;
-    bool IsAligned = false;
-    unsigned int Alignment = 0;
+    Align Alignment;
 
     X86FoldTableEntry() = default;
     X86FoldTableEntry(const CodeGenInstruction *RegInst,
@@ -98,8 +97,8 @@ class X86FoldTablesEmitter {
         Attrs += "TB_NO_REVERSE|";
       if (CannotFold)
         Attrs += "TB_NO_FORWARD|";
-      if (IsAligned)
-        Attrs += "TB_ALIGN_" + std::to_string(Alignment) + "|";
+      if (Alignment != Align(1))
+        Attrs += "TB_ALIGN_" + std::to_string(Alignment.value()) + "|";
 
       StringRef SimplifiedAttrs = StringRef(Attrs).rtrim("|");
       if (SimplifiedAttrs.empty())
@@ -388,9 +387,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
     Result.CannotFold = (S & TB_NO_FORWARD) != 0;
     Result.IsLoad = (S & TB_FOLDED_LOAD) != 0;
     Result.IsStore = (S & TB_FOLDED_STORE) != 0;
-    Result.IsAligned = (S & TB_ALIGN_MASK) != 0;
-    auto AlignValue = (S & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT;
-    Result.Alignment = AlignValue > 0 ? (1 << (AlignValue - 1)) : 0;
+    Result.Alignment = Align(1ULL << ((S & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT));
     Table[RegInstr] = Result;
     return;
   }
@@ -442,14 +439,12 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   if (isExplicitAlign(RegInstr)) {
     // The instruction require explicitly aligned memory.
     BitsInit *VectSize = RegRec->getValueAsBitsInit("VectSize");
-    Result.IsAligned = true;
-    Result.Alignment = byteFromBitsInit(VectSize);
+    Result.Alignment = Align(byteFromBitsInit(VectSize));
   } else if (!Enc && !isExplicitUnalign(RegInstr) &&
              getMemOperandSize(MemOpRec) > 64) {
     // Instructions with XOP/VEX/EVEX encoding do not require alignment while
     // SSE packed vector instructions require a 16 byte alignment.
-    Result.IsAligned = true;
-    Result.Alignment = 16;
+    Result.Alignment = Align(16);
   }
   // Expand is only ever created as a masked instruction. It is not safe to
   // unfold a masked expand because we don't know if it came from an expand load

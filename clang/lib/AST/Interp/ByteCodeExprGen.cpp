@@ -92,8 +92,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_FloatingCast: {
     if (!this->visit(SubExpr))
       return false;
-    const auto *TargetSemantics =
-        &Ctx.getASTContext().getFloatTypeSemantics(CE->getType());
+    const auto *TargetSemantics = &Ctx.getFloatSemantics(CE->getType());
     return this->emitCastFP(TargetSemantics, getRoundingMode(CE), CE);
   }
 
@@ -105,8 +104,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
-    const auto *TargetSemantics =
-        &Ctx.getASTContext().getFloatTypeSemantics(CE->getType());
+    const auto *TargetSemantics = &Ctx.getFloatSemantics(CE->getType());
     llvm::RoundingMode RM = getRoundingMode(CE);
     return this->emitCastIntegralFloating(*FromT, TargetSemantics, RM, CE);
   }
@@ -601,8 +599,7 @@ bool ByteCodeExprGen<Emitter>::VisitFloatCompoundAssignOperator(
 
   // If necessary, convert LHS to its computation type.
   if (LHS->getType() != LHSComputationType) {
-    const auto *TargetSemantics =
-        &Ctx.getASTContext().getFloatTypeSemantics(LHSComputationType);
+    const auto *TargetSemantics = &Ctx.getFloatSemantics(LHSComputationType);
 
     if (!this->emitCastFP(TargetSemantics, RM, E))
       return false;
@@ -635,8 +632,7 @@ bool ByteCodeExprGen<Emitter>::VisitFloatCompoundAssignOperator(
 
   // If necessary, convert result to LHS's type.
   if (LHS->getType() != ResultType) {
-    const auto *TargetSemantics =
-        &Ctx.getASTContext().getFloatTypeSemantics(LHS->getType());
+    const auto *TargetSemantics = &Ctx.getFloatSemantics(LHS->getType());
 
     if (!this->emitCastFP(TargetSemantics, RM, E))
       return false;
@@ -957,8 +953,10 @@ bool ByteCodeExprGen<Emitter>::visitZeroInitializer(PrimType T, const Expr *E) {
     return this->emitNullPtr(E);
   case PT_FnPtr:
     return this->emitNullFnPtr(E);
-  case PT_Float:
-    assert(false);
+  case PT_Float: {
+    return this->emitConstFloat(
+        APFloat::getZero(Ctx.getFloatSemantics(E->getType())), E);
+  }
   }
   llvm_unreachable("unknown primitive type");
 }
@@ -1881,13 +1879,13 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
     return this->emitGetPtrLocal(Offset, E);
   } else if (auto GlobalIndex = P.getGlobal(D)) {
     if (IsReference)
-      return this->emitGetGlobal(PT_Ptr, *GlobalIndex, E);
+      return this->emitGetGlobalPtr(*GlobalIndex, E);
 
     return this->emitGetPtrGlobal(*GlobalIndex, E);
   } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
     if (auto It = this->Params.find(PVD); It != this->Params.end()) {
       if (IsReference)
-        return this->emitGetParam(PT_Ptr, It->second, E);
+        return this->emitGetParamPtr(It->second, E);
       return this->emitGetPtrParam(It->second, E);
     }
   }

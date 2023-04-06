@@ -12574,9 +12574,9 @@ define <32 x i8> @mgather_baseidx_v32i8(ptr %base, <32 x i8> %idxs, <32 x i1> %m
 ; RV64V-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; RV64V-NEXT:    vluxei64.v v10, (a0), v16, v0.t
 ; RV64V-NEXT:    li a0, 32
-; RV64V-NEXT:    vsetvli zero, a0, e8, m2, tu, ma
+; RV64V-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; RV64V-NEXT:    vslideup.vi v12, v10, 16
-; RV64V-NEXT:    vmv2r.v v8, v12
+; RV64V-NEXT:    vmv.v.v v8, v12
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_baseidx_v32i8:
