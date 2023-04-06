@@ -160,7 +160,7 @@ define void @fpround_v8f32_v8f16(ptr %x, ptr %y) {
 ; LMULMAX1-NEXT:    vle32.v v9, (a2)
 ; LMULMAX1-NEXT:    vfncvt.f.f.w v10, v8
 ; LMULMAX1-NEXT:    vfncvt.f.f.w v8, v9
-; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v10, v8, 4
 ; LMULMAX1-NEXT:    vse16.v v10, (a1)
 ; LMULMAX1-NEXT:    ret
@@ -210,7 +210,7 @@ define void @fpround_v8f64_v8f16(ptr %x, ptr %y) {
 ; LMULMAX1-NEXT:    vfncvt.rod.f.f.w v10, v8
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; LMULMAX1-NEXT:    vfncvt.f.f.w v8, v10
-; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v9, v8, 6
 ; LMULMAX1-NEXT:    vse16.v v9, (a1)
 ; LMULMAX1-NEXT:    ret

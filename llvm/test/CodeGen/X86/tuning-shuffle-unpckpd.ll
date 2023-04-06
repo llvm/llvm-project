@@ -11,7 +11,7 @@ define <8 x float> @transform_VUNPCKLPDYrr(<8 x float> %a, <8 x float> %b) nounw
 ;
 ; CHECK-ICX-LABEL: transform_VUNPCKLPDYrr:
 ; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,1],ymm1[0,1],ymm0[4,5],ymm1[4,5]
+; CHECK-ICX-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; CHECK-ICX-NEXT:    retq
   %shufp = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 4, i32 5, i32 12, i32 13>
   ret <8 x float> %shufp
@@ -25,7 +25,7 @@ define <8 x float> @transform_VUNPCKHPDYrr(<8 x float> %a, <8 x float> %b) nounw
 ;
 ; CHECK-ICX-LABEL: transform_VUNPCKHPDYrr:
 ; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3],ymm0[6,7],ymm1[6,7]
+; CHECK-ICX-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
 ; CHECK-ICX-NEXT:    retq
   %shufp = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 2, i32 3, i32 10, i32 11, i32 6, i32 7, i32 14, i32 15>
   ret <8 x float> %shufp
@@ -39,7 +39,7 @@ define <4 x float> @transform_VUNPCKLPDrr(<4 x float> %a, <4 x float> %b) nounwi
 ;
 ; CHECK-ICX-LABEL: transform_VUNPCKLPDrr:
 ; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,1]
+; CHECK-ICX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-ICX-NEXT:    retq
   %shufp = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   ret <4 x float> %shufp
@@ -53,7 +53,7 @@ define <4 x float> @transform_VUNPCKHPDrr(<4 x float> %a, <4 x float> %b) nounwi
 ;
 ; CHECK-ICX-LABEL: transform_VUNPCKHPDrr:
 ; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3],xmm1[2,3]
+; CHECK-ICX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
 ; CHECK-ICX-NEXT:    retq
   %shufp = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   ret <4 x float> %shufp

@@ -368,3 +368,14 @@ namespace EmptyCtor {
   constexpr piecewise_construct_t piecewise_construct =
     piecewise_construct_t();
 };
+
+namespace ConditionalInit {
+  struct S { int a; };
+
+  constexpr S getS(bool b) {
+    return b ? S{12} : S{13};
+  }
+
+  static_assert(getS(true).a == 12, "");
+  static_assert(getS(false).a == 13, "");
+};

@@ -5,8 +5,7 @@
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  transform.bufferization.one_shot_bufferize %0
-      {target_is_module = false}
+  %1 = transform.bufferization.one_shot_bufferize %0 : (!pdl.operation) -> !pdl.operation
 }
 
 // CHECK-LABEL: func @test_function(
@@ -34,8 +33,8 @@ func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  transform.bufferization.one_shot_bufferize %0
-      {target_is_module = false, test_analysis_only = true}
+  %1 = transform.bufferization.one_shot_bufferize %0
+      {test_analysis_only = true} : (!pdl.operation) -> !pdl.operation
 }
 
 // CHECK-LABEL: func @test_function_analysis(
@@ -58,7 +57,7 @@ transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   // expected-error @+1 {{bufferization failed}}
-  transform.bufferization.one_shot_bufferize %0 {target_is_module = false}
+  %1 = transform.bufferization.one_shot_bufferize %0 : (!pdl.operation) -> !pdl.operation
 }
 
 func.func @test_unknown_op_failure() -> (tensor<?xf32>) {
@@ -69,12 +68,10 @@ func.func @test_unknown_op_failure() -> (tensor<?xf32>) {
 
 // -----
 
-// Test One-Shot Bufferize transform failure with a module op.
-
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
   // %arg1 is the module
-  transform.bufferization.one_shot_bufferize %arg1
+  %0 = transform.bufferization.one_shot_bufferize %arg1 : (!pdl.operation) -> !pdl.operation
 }
 
 module {
@@ -103,9 +100,8 @@ module {
 
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
-  transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %arg1 {
-    target_is_module = true,
-    bufferize_function_boundaries = true }
+  %0 = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %arg1
+    { bufferize_function_boundaries = true } : (!pdl.operation) -> !pdl.operation
 }
 
 // CHECK: func.func @matmul(
@@ -133,4 +129,25 @@ func.func @empty_to_tensor_alloc() -> tensor<2x2xf32> {
   // CHECK: bufferization.alloc_tensor
   %0 = tensor.empty() : tensor<2x2xf32>
   return %0 : tensor<2x2xf32>
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+  transform.bufferization.eliminate_empty_tensors %0
+}
+
+// CHECK-LABEL: func @empty_tensor_elimination(
+//       CHECK:   tensor.extract_slice
+//       CHECK:   linalg.fill
+//       CHECK:   tensor.insert_slice
+func.func @empty_tensor_elimination(
+    %t: tensor<10xf32>, %f: f32) -> tensor<10xf32> {
+  %0 = tensor.empty() : tensor<5xf32>
+  %1 = linalg.fill ins(%f : f32) outs(%0 : tensor<5xf32>) -> tensor<5xf32>
+  %2 = tensor.insert_slice %1 into %t [1][5][1]
+      : tensor<5xf32> into tensor<10xf32>
+  return %2 : tensor<10xf32>
 }

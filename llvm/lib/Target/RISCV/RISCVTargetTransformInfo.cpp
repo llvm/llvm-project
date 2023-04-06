@@ -1277,6 +1277,12 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                               TTI::TargetCostKind CostKind,
                                               TTI::OperandValueInfo OpInfo,
                                               const Instruction *I) {
+  EVT VT = TLI->getValueType(DL, Src, true);
+  // Type legalization can't handle structs
+  if (VT == MVT::Other)
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
+
   InstructionCost Cost = 0;
   if (Opcode == Instruction::Store && OpInfo.isConstant())
     Cost += getStoreImmCost(Src, OpInfo, CostKind);

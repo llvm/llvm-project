@@ -316,7 +316,7 @@ function(runtime_register_target name)
   endif()
 
   set(${name}_extra_args ${ARG_CMAKE_ARGS})
-  string(REPLACE ";" "|" LVM_ENABLE_RUNTIMES_PASSTHROUGH "${LLVM_ENABLE_RUNTIMES}")
+  string(REPLACE ";" "|" LLVM_ENABLE_RUNTIMES_PASSTHROUGH "${LLVM_ENABLE_RUNTIMES}")
   list(APPEND ${name}_extra_args -DLLVM_ENABLE_RUNTIMES=${LLVM_ENABLE_RUNTIMES_PASSTHROUGH})
   list(APPEND ${name}_extra_args -DLLVM_USE_LINKER=${LLVM_USE_LINKER})
 

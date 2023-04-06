@@ -4345,6 +4345,28 @@ bool FieldDecl::isAnonymousStructOrUnion() const {
   return false;
 }
 
+Expr *FieldDecl::getInClassInitializer() const {
+  if (!hasInClassInitializer())
+    return nullptr;
+
+  LazyDeclStmtPtr InitPtr = BitField ? InitAndBitWidth->Init : Init;
+  return cast_or_null<Expr>(
+      InitPtr.isOffset() ? InitPtr.get(getASTContext().getExternalSource())
+                         : InitPtr.get(nullptr));
+}
+
+void FieldDecl::setInClassInitializer(Expr *NewInit) {
+  setLazyInClassInitializer(LazyDeclStmtPtr(NewInit));
+}
+
+void FieldDecl::setLazyInClassInitializer(LazyDeclStmtPtr NewInit) {
+  assert(hasInClassInitializer() && !getInClassInitializer());
+  if (BitField)
+    InitAndBitWidth->Init = NewInit;
+  else
+    Init = NewInit;
+}
+
 unsigned FieldDecl::getBitWidthValue(const ASTContext &Ctx) const {
   assert(isBitField() && "not a bitfield");
   return getBitWidth()->EvaluateKnownConstInt(Ctx).getZExtValue();
@@ -4405,6 +4427,8 @@ unsigned FieldDecl::getFieldIndex() const {
 
   for (auto *Field : RD->fields()) {
     Field->getCanonicalDecl()->CachedFieldIndex = Index + 1;
+    assert(Field->getCanonicalDecl()->CachedFieldIndex == Index + 1 &&
+           "overflow in field numbering");
     ++Index;
   }
 
@@ -4424,11 +4448,11 @@ SourceRange FieldDecl::getSourceRange() const {
 void FieldDecl::setCapturedVLAType(const VariableArrayType *VLAType) {
   assert((getParent()->isLambda() || getParent()->isCapturedRecord()) &&
          "capturing type in non-lambda or captured record.");
-  assert(InitStorage.getInt() == ISK_NoInit &&
-         InitStorage.getPointer() == nullptr &&
-         "bit width, initializer or captured type already set");
-  InitStorage.setPointerAndInt(const_cast<VariableArrayType *>(VLAType),
-                               ISK_CapturedVLAType);
+  assert(StorageKind == ISK_NoInit && !BitField &&
+         "bit-field or field with default member initializer cannot capture "
+         "VLA type");
+  StorageKind = ISK_CapturedVLAType;
+  CapturedVLAType = VLAType;
 }
 
 //===----------------------------------------------------------------------===//

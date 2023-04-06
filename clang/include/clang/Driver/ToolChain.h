@@ -492,9 +492,9 @@ public:
   // Returns target specific standard library paths.
   path_list getStdlibPaths() const;
 
-  // Returns <ResourceDir>/lib/<OSName>/<arch>.  This is used by runtimes (such
-  // as OpenMP) to find arch-specific libraries.
-  virtual std::string getArchSpecificLibPath() const;
+  // Returns <ResourceDir>/lib/<OSName>/<arch> or <ResourceDir>/lib/<triple>.
+  // This is used by runtimes (such as OpenMP) to find arch-specific libraries.
+  virtual path_list getArchSpecificLibPaths() const;
 
   // Returns <OSname> part of above.
   virtual StringRef getOSLibName() const;

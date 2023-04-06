@@ -309,7 +309,7 @@ define <32 x i8> @vpgather_baseidx_v32i8(ptr %base, <32 x i8> %idxs, <32 x i1> %
 ; RV64-NEXT:    vmv1r.v v0, v10
 ; RV64-NEXT:    vluxei64.v v8, (a0), v16, v0.t
 ; RV64-NEXT:    li a0, 32
-; RV64-NEXT:    vsetvli zero, a0, e8, m2, tu, ma
+; RV64-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; RV64-NEXT:    vslideup.vi v8, v12, 16
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds i8, ptr %base, <32 x i8> %idxs
@@ -2512,9 +2512,8 @@ define <32 x double> @vpgather_baseidx_v32f64(ptr %base, <32 x i64> %idxs, <32 x
 ; RV32-NEXT:    vnsrl.wi v24, v16, 0
 ; RV32-NEXT:    vnsrl.wi v16, v8, 0
 ; RV32-NEXT:    li a2, 32
-; RV32-NEXT:    vsetvli zero, a2, e32, m8, tu, ma
+; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; RV32-NEXT:    vslideup.vi v16, v24, 16
-; RV32-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; RV32-NEXT:    li a3, 16
 ; RV32-NEXT:    vsll.vi v16, v16, 3
 ; RV32-NEXT:    mv a2, a1

@@ -2372,15 +2372,21 @@ cc_library(
     srcs = glob(["lib/Dialect/SparseTensor/Pipelines/*.cpp"]),
     hdrs = ["include/mlir/Dialect/SparseTensor/Pipelines/Passes.h"],
     includes = ["include"],
+    local_defines = if_cuda_available(["MLIR_GPU_TO_CUBIN_PASS_ENABLE"]),
     deps = [
         ":ArithTransforms",
         ":BufferizationTransforms",
         ":ConversionPasses",
         ":FuncDialect",
         ":FuncTransforms",
+        ":GPUDialect",
+        ":GPUToNVVMTransforms",
+        ":GPUTransforms",
         ":LinalgTransforms",
         ":MemRefTransforms",
+        ":NVVMDialect",
         ":Pass",
+        ":SerializeToCubin",
         ":SparseTensorDialect",
         ":SparseTensorTransforms",
         ":TensorTransforms",
@@ -2662,6 +2668,7 @@ cc_library(
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
         ":Support",
+        ":ValueBoundsOpInterface",
         "//llvm:Support",
     ],
 )
@@ -2830,7 +2837,9 @@ cc_library(
         ":SCFDialect",
         ":SCFUtils",
         ":Support",
+        ":TensorDialect",
         ":Transforms",
+        ":ValueBoundsOpInterface",
         ":VectorDialect",
         ":VectorUtils",
         "//llvm:Support",
@@ -5647,8 +5656,12 @@ cc_library(
         "include/mlir/Transforms/InliningUtils.h",
         "lib/Dialect/Tensor/IR/TensorDialect.cpp",
         "lib/Dialect/Tensor/IR/TensorOps.cpp",
+        "lib/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.cpp",
     ],
-    hdrs = ["include/mlir/Dialect/Tensor/IR/Tensor.h"],
+    hdrs = [
+        "include/mlir/Dialect/Tensor/IR/Tensor.h",
+        "include/mlir/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.h",
+    ],
     includes = ["include"],
     deps = [
         ":AffineDialect",
@@ -5667,6 +5680,7 @@ cc_library(
         ":Support",
         ":TensorOpsIncGen",
         ":TilingInterface",
+        ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
     ],
@@ -7182,6 +7196,7 @@ cc_library(
         ":ArithToLLVM",
         ":ArithToSPIRV",
         ":ArithTransforms",
+        ":ArithValueBoundsOpInterfaceImpl",
         ":ArmNeonDialect",
         ":ArmSVEDialect",
         ":ArmSVETransforms",
@@ -8802,6 +8817,64 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "ValueBoundsOpInterfaceTdFiles",
+    srcs = [
+        "include/mlir/Interfaces/ValueBoundsOpInterface.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "ValueBoundsOpInterfaceIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Interfaces/ValueBoundsOpInterface.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Interfaces/ValueBoundsOpInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Interfaces/ValueBoundsOpInterface.td",
+    deps = [
+        ":ValueBoundsOpInterfaceTdFiles",
+    ],
+)
+
+cc_library(
+    name = "ValueBoundsOpInterface",
+    srcs = ["lib/Interfaces/ValueBoundsOpInterface.cpp"],
+    hdrs = ["include/mlir/Interfaces/ValueBoundsOpInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":Analysis",
+        ":DestinationStyleOpInterface",
+        ":IR",
+        ":Support",
+        ":ValueBoundsOpInterfaceIncGen",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "ArithValueBoundsOpInterfaceImpl",
+    srcs = ["lib/Dialect/Arith/IR/ValueBoundsOpInterfaceImpl.cpp"],
+    hdrs = ["include/mlir/Dialect/Arith/IR/ValueBoundsOpInterfaceImpl.h"],
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":IR",
+        ":ValueBoundsOpInterface",
+    ],
+)
+
 cc_library(
     name = "TilingInterface",
     srcs = ["lib/Interfaces/TilingInterface.cpp"],
@@ -9900,12 +9973,11 @@ gentbl_cc_library(
 
 cc_library(
     name = "ArithDialect",
-    srcs = glob(
-        [
-            "lib/Dialect/Arith/IR/*.cpp",
-            "lib/Dialect/Arith/IR/*.h",
-        ],
-    ),
+    srcs = [
+        "lib/Dialect/Arith/IR/ArithDialect.cpp",
+        "lib/Dialect/Arith/IR/ArithOps.cpp",
+        "lib/Dialect/Arith/IR/InferIntRangeInterfaceImpls.cpp",
+    ],
     hdrs = [
         "include/mlir/Dialect/Arith/IR/Arith.h",
         "include/mlir/Transforms/InliningUtils.h",
@@ -10197,6 +10269,7 @@ cc_library(
     ),
     hdrs = [
         "include/mlir/Dialect/MemRef/IR/MemRef.h",
+        "include/mlir/Dialect/MemRef/IR/ValueBoundsOpInterfaceImpl.h",
         "include/mlir/Dialect/MemRef/Utils/MemRefUtils.h",
     ],
     includes = ["include"],
@@ -10211,6 +10284,7 @@ cc_library(
         ":MemRefBaseIncGen",
         ":MemRefOpsIncGen",
         ":ShapedOpInterfaces",
+        ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
         "//llvm:TargetParser",

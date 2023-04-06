@@ -373,7 +373,8 @@ multiclass VPatExtendSDNode_V<list<SDNode> ops, string inst_name, string suffix,
   }
 }
 
-multiclass VPatConvertI2FPSDNode_V<SDNode vop, string instruction_name> {
+multiclass VPatConvertI2FPSDNode_V<SDPatternOperator vop,
+                                   string instruction_name> {
   foreach fvti = AllFloatVectors in {
     defvar ivti = GetIntVTypeInfo<fvti>.Vti;
     def : Pat<(fvti.Vector (vop (ivti.Vector ivti.RegClass:$rs1))),
@@ -382,7 +383,8 @@ multiclass VPatConvertI2FPSDNode_V<SDNode vop, string instruction_name> {
   }
 }
 
-multiclass VPatConvertFP2ISDNode_V<SDNode vop, string instruction_name> {
+multiclass VPatConvertFP2ISDNode_V<SDPatternOperator vop,
+                                   string instruction_name> {
   foreach fvti = AllFloatVectors in {
     defvar ivti = GetIntVTypeInfo<fvti>.Vti;
     def : Pat<(ivti.Vector (vop (fvti.Vector fvti.RegClass:$rs1))),
@@ -391,7 +393,8 @@ multiclass VPatConvertFP2ISDNode_V<SDNode vop, string instruction_name> {
   }
 }
 
-multiclass VPatWConvertI2FPSDNode_V<SDNode vop, string instruction_name> {
+multiclass VPatWConvertI2FPSDNode_V<SDPatternOperator vop,
+                                    string instruction_name> {
   foreach vtiToWti = AllWidenableIntToFloatVectors in {
     defvar ivti = vtiToWti.Vti;
     defvar fwti = vtiToWti.Wti;
@@ -401,7 +404,8 @@ multiclass VPatWConvertI2FPSDNode_V<SDNode vop, string instruction_name> {
   }
 }
 
-multiclass VPatWConvertFP2ISDNode_V<SDNode vop, string instruction_name> {
+multiclass VPatWConvertFP2ISDNode_V<SDPatternOperator vop,
+                                    string instruction_name> {
   foreach fvtiToFWti = AllWidenableFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar iwti = GetIntVTypeInfo<fvtiToFWti.Wti>.Vti;
@@ -411,7 +415,8 @@ multiclass VPatWConvertFP2ISDNode_V<SDNode vop, string instruction_name> {
   }
 }
 
-multiclass VPatNConvertI2FPSDNode_W<SDNode vop, string instruction_name> {
+multiclass VPatNConvertI2FPSDNode_W<SDPatternOperator vop,
+                                    string instruction_name> {
   foreach fvtiToFWti = AllWidenableFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar iwti = GetIntVTypeInfo<fvtiToFWti.Wti>.Vti;
@@ -421,7 +426,8 @@ multiclass VPatNConvertI2FPSDNode_W<SDNode vop, string instruction_name> {
   }
 }
 
-multiclass VPatNConvertFP2ISDNode_W<SDNode vop, string instruction_name> {
+multiclass VPatNConvertFP2ISDNode_W<SDPatternOperator vop,
+                                    string instruction_name> {
   foreach vtiToWti = AllWidenableIntToFloatVectors in {
     defvar vti = vtiToWti.Vti;
     defvar fwti = vtiToWti.Wti;
@@ -1080,22 +1086,22 @@ foreach fvti = AllFloatVectors in {
 }
 
 // 13.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions
-defm : VPatConvertFP2ISDNode_V<fp_to_sint, "PseudoVFCVT_RTZ_X_F_V">;
-defm : VPatConvertFP2ISDNode_V<fp_to_uint, "PseudoVFCVT_RTZ_XU_F_V">;
-defm : VPatConvertI2FPSDNode_V<sint_to_fp, "PseudoVFCVT_F_X_V">;
-defm : VPatConvertI2FPSDNode_V<uint_to_fp, "PseudoVFCVT_F_XU_V">;
+defm : VPatConvertFP2ISDNode_V<any_fp_to_sint, "PseudoVFCVT_RTZ_X_F_V">;
+defm : VPatConvertFP2ISDNode_V<any_fp_to_uint, "PseudoVFCVT_RTZ_XU_F_V">;
+defm : VPatConvertI2FPSDNode_V<any_sint_to_fp, "PseudoVFCVT_F_X_V">;
+defm : VPatConvertI2FPSDNode_V<any_uint_to_fp, "PseudoVFCVT_F_XU_V">;
 
 // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
-defm : VPatWConvertFP2ISDNode_V<fp_to_sint, "PseudoVFWCVT_RTZ_X_F_V">;
-defm : VPatWConvertFP2ISDNode_V<fp_to_uint, "PseudoVFWCVT_RTZ_XU_F_V">;
-defm : VPatWConvertI2FPSDNode_V<sint_to_fp, "PseudoVFWCVT_F_X_V">;
-defm : VPatWConvertI2FPSDNode_V<uint_to_fp, "PseudoVFWCVT_F_XU_V">;
+defm : VPatWConvertFP2ISDNode_V<any_fp_to_sint, "PseudoVFWCVT_RTZ_X_F_V">;
+defm : VPatWConvertFP2ISDNode_V<any_fp_to_uint, "PseudoVFWCVT_RTZ_XU_F_V">;
+defm : VPatWConvertI2FPSDNode_V<any_sint_to_fp, "PseudoVFWCVT_F_X_V">;
+defm : VPatWConvertI2FPSDNode_V<any_uint_to_fp, "PseudoVFWCVT_F_XU_V">;
 
 // 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
-defm : VPatNConvertFP2ISDNode_W<fp_to_sint, "PseudoVFNCVT_RTZ_X_F_W">;
-defm : VPatNConvertFP2ISDNode_W<fp_to_uint, "PseudoVFNCVT_RTZ_XU_F_W">;
-defm : VPatNConvertI2FPSDNode_W<sint_to_fp, "PseudoVFNCVT_F_X_W">;
-defm : VPatNConvertI2FPSDNode_W<uint_to_fp, "PseudoVFNCVT_F_XU_W">;
+defm : VPatNConvertFP2ISDNode_W<any_fp_to_sint, "PseudoVFNCVT_RTZ_X_F_W">;
+defm : VPatNConvertFP2ISDNode_W<any_fp_to_uint, "PseudoVFNCVT_RTZ_XU_F_W">;
+defm : VPatNConvertI2FPSDNode_W<any_sint_to_fp, "PseudoVFNCVT_F_X_W">;
+defm : VPatNConvertI2FPSDNode_W<any_uint_to_fp, "PseudoVFNCVT_F_XU_W">;
 foreach fvtiToFWti = AllWidenableFloatVectors in {
   defvar fvti = fvtiToFWti.Vti;
   defvar fwti = fvtiToFWti.Wti;

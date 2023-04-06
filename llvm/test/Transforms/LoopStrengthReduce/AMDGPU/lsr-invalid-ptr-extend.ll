@@ -16,10 +16,12 @@ define amdgpu_kernel void @scaledregtest() local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       loopexit:
+; CHECK-NEXT:    [[SCEVGEP13_LCSSA:%.*]] = phi ptr [ [[SCEVGEP13:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[SCEVGEP11_LCSSA:%.*]] = phi ptr addrspace(5) [ [[SCEVGEP11:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY_1:%.*]]
 ; CHECK:       for.body.1:
-; CHECK-NEXT:    [[LSR_IV5:%.*]] = phi ptr addrspace(5) [ [[SCEVGEP6:%.*]], [[FOR_BODY_1]] ], [ [[SCEVGEP11:%.*]], [[LOOPEXIT:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP2:%.*]], [[FOR_BODY_1]] ], [ [[SCEVGEP13:%.*]], [[LOOPEXIT]] ]
+; CHECK-NEXT:    [[LSR_IV5:%.*]] = phi ptr addrspace(5) [ [[SCEVGEP6:%.*]], [[FOR_BODY_1]] ], [ [[SCEVGEP11_LCSSA]], [[LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP2:%.*]], [[FOR_BODY_1]] ], [ [[SCEVGEP13_LCSSA]], [[LOOPEXIT]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[LSR_IV5]], align 8
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[LSR_IV1]], align 8
 ; CHECK-NEXT:    [[SCEVGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 8

@@ -26,6 +26,7 @@ add_llvm_target(RISCVCodeGen
   RISCVExpandPseudoInsts.cpp
   RISCVFrameLowering.cpp
   RISCVGatherScatterLowering.cpp
+  RISCVInsertNTLHInsts.cpp
   RISCVInsertVSETVLI.cpp
   RISCVInstrInfo.cpp
   RISCVISelDAGToDAG.cpp
