@@ -19,8 +19,8 @@ include "mlir/IR/OpBase.td"
 
 def OneShotBufferizeOp
     : Op<Transform_Dialect, "bufferization.one_shot_bufferize",
-        [DeclareOpInterfaceMethods<TransformOpInterface>,
-         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+        [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+         DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let description = [{
     Indicates that the given `target` op should be bufferized with One-Shot
     Bufferize. The bufferization can be configured with various attributes that
@@ -28,10 +28,8 @@ def OneShotBufferizeOp
     `one-shot-bufferize` pass. More information can be found in the pass
     documentation.
 
-    If `target_is_module` is set, `target` must be a module. In that case the
-    `target` handle can be reused by other transform ops. When bufferizing other
-    ops, the `target` handled is freed after bufferization and can no longer be
-    used.
+    The targeted ops must be modules or functions. This is because there is
+    always a single, bufferized replacement op for such targets.
 
     Note: Only ops that implement `BufferizableOpInterface` are bufferized. All
     other ops are ignored if `allow_unknown_ops`. If `allow_unknown_ops` is
@@ -39,24 +37,28 @@ def OneShotBufferizeOp
     Many ops implement `BufferizableOpInterface` via an external model. These
     external models must be registered when applying this transform op;
     otherwise, said ops would be considered non-bufferizable.
+
+    #### Return modes
+
+    This operation consumes the `target` handle and produces the `transformed`
+    handle.
   }];
 
   let arguments = (
-      ins PDL_Operation:$target,
+      ins TransformHandleTypeInterface:$target,
       OptionalAttr<LayoutMapOption>:$function_boundary_type_conversion,
       DefaultValuedAttr<BoolAttr, "false">:$allow_return_allocs,
       DefaultValuedAttr<BoolAttr, "false">:$allow_unknown_ops,
       DefaultValuedAttr<BoolAttr, "false">:$bufferize_function_boundaries,
       DefaultValuedAttr<BoolAttr, "true">:$create_deallocs,
-      DefaultValuedAttr<BoolAttr, "true">:$target_is_module,
       DefaultValuedAttr<BoolAttr, "false">:$test_analysis_only,
       DefaultValuedAttr<BoolAttr, "false">:$print_conflicts);
 
-  let results = (outs);
+  let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat = [{
     (`layout` `{` $function_boundary_type_conversion^ `}`)?
-    $target attr-dict
+    $target attr-dict `:` functional-type($target, results)
   }];
 }
 

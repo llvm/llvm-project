@@ -16,6 +16,7 @@
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
+#include "mlir/IR/FunctionInterfaces.h"
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -41,12 +42,12 @@ transform::OneShotBufferizeOp::apply(TransformResults &transformResults,
 
   ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
   for (Operation *target : payloadOps) {
+    if (!isa<ModuleOp, FunctionOpInterface>(target))
+      return emitSilenceableError() << "expected module or function target";
     auto moduleOp = dyn_cast<ModuleOp>(target);
-    if (getTargetIsModule() && !moduleOp)
-      return emitSilenceableError() << "expected ModuleOp target";
     if (options.bufferizeFunctionBoundaries) {
       if (!moduleOp)
-        return emitSilenceableError() << "expected ModuleOp target";
+        return emitSilenceableError() << "expected module target";
       if (failed(bufferization::runOneShotModuleBufferize(moduleOp, options)))
         return emitSilenceableError() << "bufferization failed";
     } else {
@@ -55,19 +56,10 @@ transform::OneShotBufferizeOp::apply(TransformResults &transformResults,
     }
   }
 
+  // This transform op is currently restricted to ModuleOps and function ops.
+  // Such ops are modified in-place.
+  transformResults.set(getTransformed().cast<OpResult>(), payloadOps);
   return DiagnosedSilenceableFailure::success();
-}
-
-void transform::OneShotBufferizeOp::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  // Handles that are not modules are not longer usable.
-  if (!getTargetIsModule()) {
-    consumesHandle(getTarget(), effects);
-  } else {
-    onlyReadsHandle(getTarget(), effects);
-  }
-
-  modifiesPayload(effects);
 }
 
 //===----------------------------------------------------------------------===//
