@@ -14,11 +14,37 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
+
+/// Create a float constant.
+static Value createFloatConst(Location loc, Type type, double value,
+                              OpBuilder &b) {
+  auto attr = b.getFloatAttr(getElementTypeOrSelf(type), value);
+  if (auto shapedTy = dyn_cast<ShapedType>(type)) {
+    return b.create<arith::ConstantOp>(loc,
+                                       DenseElementsAttr::get(shapedTy, attr));
+  }
+
+  return b.create<arith::ConstantOp>(loc, attr);
+}
+
+/// Create a float constant.
+static Value createIntConst(Location loc, Type type, int64_t value,
+                            OpBuilder &b) {
+  auto attr = b.getIntegerAttr(getElementTypeOrSelf(type), value);
+  if (auto shapedTy = dyn_cast<ShapedType>(type)) {
+    return b.create<arith::ConstantOp>(loc,
+                                       DenseElementsAttr::get(shapedTy, attr));
+  }
+
+  return b.create<arith::ConstantOp>(loc, attr);
+}
 
 /// Expands tanh op into
 ///   1) 1-exp^{-2x} / 1+exp^{-2x}, if x => 0
@@ -26,10 +52,8 @@ using namespace mlir;
 static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
   auto floatType = op.getOperand().getType();
   Location loc = op.getLoc();
-  auto floatOne = rewriter.getFloatAttr(floatType, 1.0);
-  auto floatTwo = rewriter.getFloatAttr(floatType, 2.0);
-  Value one = rewriter.create<arith::ConstantOp>(loc, floatOne);
-  Value two = rewriter.create<arith::ConstantOp>(loc, floatTwo);
+  Value one = createFloatConst(loc, floatType, 1.0, rewriter);
+  Value two = createFloatConst(loc, floatType, 2.0, rewriter);
   Value doubledX = rewriter.create<arith::MulFOp>(loc, op.getOperand(), two);
 
   // Case 1: tanh(x) = 1-exp^{-2x} / 1+exp^{-2x}
@@ -46,8 +70,7 @@ static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
   Value negativeRes = rewriter.create<arith::DivFOp>(loc, dividend, divisor);
 
   // tanh(x) = x >= 0 ? positiveRes : negativeRes
-  auto floatZero = rewriter.getFloatAttr(floatType, 0.0);
-  Value zero = rewriter.create<arith::ConstantOp>(loc, floatZero);
+  Value zero = createFloatConst(loc, floatType, 0.0, rewriter);
   Value cmpRes = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OGE,
                                                 op.getOperand(), zero);
   rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cmpRes, positiveRes,
@@ -55,6 +78,7 @@ static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
   return success();
 }
 
+// Converts math.tan to math.sin, math.cos, and arith.divf.
 static LogicalResult convertTanOp(math::TanOp op, PatternRewriter &rewriter) {
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operand = op.getOperand();
@@ -66,52 +90,47 @@ static LogicalResult convertTanOp(math::TanOp op, PatternRewriter &rewriter) {
   return success();
 }
 
+// Converts math.ctlz to scf and arith operations. This is done
+// by performing a binary search on the bits.
 static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
                                    PatternRewriter &rewriter) {
   auto operand = op.getOperand();
-  auto elementTy = operand.getType();
-  auto resultTy = op.getType();
+  auto operandTy = operand.getType();
+  auto eTy = getElementTypeOrSelf(operandTy);
   Location loc = op.getLoc();
 
-  int bitWidth = elementTy.getIntOrFloatBitWidth();
-  auto zero =
-      rewriter.create<arith::ConstantOp>(loc, IntegerAttr::get(elementTy, 0));
-  auto leadingZeros = rewriter.create<arith::ConstantOp>(
-      loc, IntegerAttr::get(elementTy, bitWidth));
+  int32_t bitwidth = eTy.getIntOrFloatBitWidth();
+  if (bitwidth > 64)
+    return failure();
 
-  SmallVector<Value> operands = {operand, leadingZeros, zero};
-  SmallVector<Type> types = {elementTy, elementTy, elementTy};
-  SmallVector<Location> locations = {loc, loc, loc};
+  uint64_t allbits = -1;
+  if (bitwidth < 64) {
+    allbits = allbits >> (64 - bitwidth);
+  }
 
-  auto whileOp = rewriter.create<scf::WhileOp>(
-      loc, types, operands,
-      [&](OpBuilder &beforeBuilder, Location beforeLoc, ValueRange args) {
-        // The conditional block of the while loop.
-        Value input = args[0];
-        Value zero = args[2];
+  Value x = operand;
+  Value count = createIntConst(loc, operandTy, 0, rewriter);
+  for (int32_t bw = bitwidth; bw > 1; bw = bw / 2) {
+    auto half = bw / 2;
+    auto bits = createIntConst(loc, operandTy, half, rewriter);
+    auto mask = createIntConst(loc, operandTy, allbits >> half, rewriter);
 
-        Value inputNotZero = beforeBuilder.create<arith::CmpIOp>(
-            loc, arith::CmpIPredicate::ne, input, zero);
-        beforeBuilder.create<scf::ConditionOp>(loc, inputNotZero, args);
-      },
-      [&](OpBuilder &afterBuilder, Location afterLoc, ValueRange args) {
-        // The body of the while loop: shift right until reaching a value of 0.
-        Value input = args[0];
-        Value leadingZeros = args[1];
+    Value pred =
+        rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ule, x, mask);
+    Value add = rewriter.create<arith::AddIOp>(loc, count, bits);
+    Value shift = rewriter.create<arith::ShLIOp>(loc, x, bits);
 
-        auto one = afterBuilder.create<arith::ConstantOp>(
-            loc, IntegerAttr::get(elementTy, 1));
-        auto shifted =
-            afterBuilder.create<arith::ShRUIOp>(loc, resultTy, input, one);
-        auto leadingZerosMinusOne = afterBuilder.create<arith::SubIOp>(
-            loc, resultTy, leadingZeros, one);
+    x = rewriter.create<arith::SelectOp>(loc, pred, shift, x);
+    count = rewriter.create<arith::SelectOp>(loc, pred, add, count);
+  }
 
-        afterBuilder.create<scf::YieldOp>(
-            loc, ValueRange({shifted, leadingZerosMinusOne, args[2]}));
-      });
+  Value zero = createIntConst(loc, operandTy, 0, rewriter);
+  Value pred = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
+                                              operand, zero);
 
-  rewriter.setInsertionPointAfter(whileOp);
-  rewriter.replaceOp(op, whileOp->getResult(1));
+  Value bwval = createIntConst(loc, operandTy, bitwidth, rewriter);
+  Value sel = rewriter.create<arith::SelectOp>(loc, pred, bwval, count);
+  rewriter.replaceOp(op, sel);
   return success();
 }
 
