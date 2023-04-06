@@ -717,8 +717,8 @@ void coro() try {
 )cpp";
   EXPECT_TRUE(matchesConditionally(
       CoroWithTryCatchDeclCode,
-      coroutineBodyStmt(hasBody(cxxTryStmt(has(compoundStmt(has(
-          declStmt(containsDeclaration(0, varDecl(hasName("thevar")))))))))),
+      coroutineBodyStmt(hasBody(compoundStmt(has(cxxTryStmt(has(compoundStmt(has(
+          declStmt(containsDeclaration(0, varDecl(hasName("thevar")))))))))))),
       true, {"-std=c++20", "-I/"}, M));
 }
 
