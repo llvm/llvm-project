@@ -8372,9 +8372,11 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
     // When building the Swift stdlib with debug info these will
     // show up in "Swift.o", but we already imported them and
     // manually importing them will fail.
+    // Also skip the "std" module, as the C++ standard library will be
+    // imported as "CxxStdlib", which should also be imported.
     if (module.path.size() &&
         llvm::StringSwitch<bool>(module.path.front().GetStringRef())
-            .Cases("Swift", "SwiftShims", "Builtin", true)
+            .Cases("Swift", "SwiftShims", "Builtin", "std", true)
             .Default(false))
       continue;
 
