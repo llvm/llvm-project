@@ -1245,11 +1245,22 @@ LogicalResult arith::ExtFOp::verify() { return verifyExtOp<FloatType>(*this); }
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::TruncIOp::fold(FoldAdaptor adaptor) {
-  // trunci(zexti(a)) -> a
-  // trunci(sexti(a)) -> a
   if (matchPattern(getOperand(), m_Op<arith::ExtUIOp>()) ||
-      matchPattern(getOperand(), m_Op<arith::ExtSIOp>()))
-    return getOperand().getDefiningOp()->getOperand(0);
+      matchPattern(getOperand(), m_Op<arith::ExtSIOp>())) {
+    Value src = getOperand().getDefiningOp()->getOperand(0);
+    Type srcType = getElementTypeOrSelf(src.getType());
+    Type dstType = getElementTypeOrSelf(getType());
+    // trunci(zexti(a)) -> trunci(a)
+    // trunci(sexti(a)) -> trunci(a)
+    if (srcType.cast<IntegerType>().getWidth() >
+        dstType.cast<IntegerType>().getWidth()) {
+      setOperand(src);
+      return getResult();
+    }
+    // trunci(zexti(a)) -> a
+    // trunci(sexti(a)) -> a
+    return src;
+  }
 
   // trunci(trunci(a)) -> trunci(a))
   if (matchPattern(getOperand(), m_Op<arith::TruncIOp>())) {
