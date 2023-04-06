@@ -150,6 +150,10 @@ public:
   /// analysis.
   virtual bool canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const = 0;
 
+  /// Emits the VTable definitions required for the given record type.
+  virtual void emitVTableDefinitions(CIRGenVTables &CGVT,
+                                     const CXXRecordDecl *RD) = 0;
+
   /// Get the address point of the vtable for the given base subobject.
   virtual mlir::Value
   getVTableAddressPoint(BaseSubobject Base,

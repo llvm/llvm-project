@@ -120,6 +120,8 @@ public:
   mlir::Value getVTableAddressPointInStructor(
       CIRGenFunction &CGF, const CXXRecordDecl *VTableClass, BaseSubobject Base,
       const CXXRecordDecl *NearestVBase) override;
+  void emitVTableDefinitions(CIRGenVTables &CGVT,
+                             const CXXRecordDecl *RD) override;
 
   /// TODO(cir): seems like could be shared between LLVM IR and CIR codegen.
   bool mayNeedDestruction(const VarDecl *VD) const {
@@ -521,5 +523,14 @@ bool CIRGenItaniumCXXABI::isVirtualOffsetNeededForVTableField(
 
 bool CIRGenItaniumCXXABI::canSpeculativelyEmitVTable(
     [[maybe_unused]] const CXXRecordDecl *RD) const {
+  llvm_unreachable("NYI");
+}
+
+void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &CGVT,
+                                                const CXXRecordDecl *RD) {
+  auto VTable = getAddrOfVTable(RD, CharUnits());
+  if (VTable.hasInitializer())
+    return;
+
   llvm_unreachable("NYI");
 }

@@ -205,6 +205,10 @@ public:
   void buildDeferredVTables();
   bool shouldOpportunisticallyEmitVTables();
 
+  /// Return the appropriate linkage for the vtable, VTT, and type information
+  /// of the given class.
+  mlir::cir::GlobalLinkageKind getVTableLinkage(const CXXRecordDecl *RD);
+
   llvm::DenseMap<mlir::Attribute, mlir::cir::GlobalOp> ConstantStringMap;
 
   /// Return a constant array for the given string.

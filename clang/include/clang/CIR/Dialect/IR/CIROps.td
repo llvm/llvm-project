@@ -1119,6 +1119,7 @@ def GlobalOp : CIR_Op<"global", [Symbol]> {
     bool isDeclaration() {
       return !getInitialValue();
     }
+    bool hasInitializer() { return !isDeclaration(); }
     bool hasAvailableExternallyLinkage() {
       return mlir::cir::isAvailableExternallyLinkage(getLinkage());
     }
