@@ -21,8 +21,8 @@
 b Dylib.swift:9
 run
 target v foofoo
-p input
-p input
+expression input
+expression input
 
 # The {{ }} avoids accidentally matching the input script!
 # CHECK: {{Swift}} error in fallback scratch context
