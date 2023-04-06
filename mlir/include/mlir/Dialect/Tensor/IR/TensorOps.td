@@ -974,8 +974,8 @@ class Tensor_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
     Tensor_Op<mnemonic, !listconcat(traits, [
       DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
       Pure])>,
-    Arguments<(ins AnyTensor:$src, IndexListArrayAttr:$reassociation)>,
-    Results<(outs AnyTensor:$result)> {
+    Arguments<(ins AnyRankedTensor:$src, IndexListArrayAttr:$reassociation)>,
+    Results<(outs AnyRankedTensor:$result)> {
 
   code commonExtraClassDeclaration = [{
     static StringRef getReassociationAttrStrName() { return "reassociation"; }
@@ -1210,7 +1210,7 @@ def Tensor_PadOp : Tensor_Op<"pad", [
   }];
 
   let arguments = (ins
-    AnyTensor:$source,
+    AnyRankedTensor:$source,
     Variadic<Index>:$low,
     Variadic<Index>:$high,
     DenseI64ArrayAttr:$static_low,
@@ -1219,7 +1219,7 @@ def Tensor_PadOp : Tensor_Op<"pad", [
 
   let regions = (region SizedRegion<1>:$region);
 
-  let results = (outs AnyTensor:$result);
+  let results = (outs AnyRankedTensor:$result);
 
   // TODO: Remove custom<InferType> when AllTypesMatch supports opt. operands.
   let assemblyFormat = [{
@@ -1678,8 +1678,8 @@ class Tensor_RelayoutOp<string mnemonic, list<Trait> traits = []> :
                    "$_self">])> {
 
   code commonExtraClassDeclaration = [{
-    size_t getSourceRank() { return getSource().getType().getRank(); };
-    size_t getDestRank() { return getDest().getType().getRank(); };
+    size_t getSourceRank() { return getSourceType().getRank(); };
+    size_t getDestRank() { return getDestType().getRank(); };
     RankedTensorType getSourceType() {
       return getSource().getType().cast<RankedTensorType>(); };
     RankedTensorType getDestType() {
