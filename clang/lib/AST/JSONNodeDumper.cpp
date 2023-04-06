@@ -770,6 +770,12 @@ void JSONNodeDumper::VisitNamedDecl(const NamedDecl *ND) {
     if (isa<RequiresExprBodyDecl>(ND->getDeclContext()))
       return;
 
+    // If the declaration is dependent or is in a dependent context, then the
+    // mangling is unlikely to be meaningful (and in some cases may cause
+    // "don't know how to mangle this" assertion failures.
+    if (ND->isTemplated())
+      return;
+
     // Mangled names are not meaningful for locals, and may not be well-defined
     // in the case of VLAs.
     auto *VD = dyn_cast<VarDecl>(ND);
