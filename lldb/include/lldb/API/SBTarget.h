@@ -390,7 +390,8 @@ public:
   /// \return
   ///     An error to indicate success, fail, and any reason for
   ///     failure.
-  [[deprecated("Use SetModuleLoadAddress(lldb::SBModule, uint64_t)")]]
+  LLDB_DEPRECATED("Use SetModuleLoadAddress(lldb::SBModule, uint64_t)",
+                  "SetModuleLoadAddress(lldb::SBModule, uint64_t)")
   lldb::SBError SetModuleLoadAddress(lldb::SBModule module,
                                      int64_t sections_offset);
 #endif
