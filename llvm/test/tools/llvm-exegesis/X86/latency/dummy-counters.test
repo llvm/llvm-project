@@ -1,0 +1,12 @@
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency -opcode-name=LEA64r --use-dummy-perf-counters | FileCheck %s
+# TODO Support non-Linux systems
+# REQUIRES: exegesis-can-execute-x86_64, system-linux
+
+CHECK:      ---
+CHECK-NEXT: mode: latency
+CHECK-NEXT: key:
+CHECK-NEXT:   instructions:
+CHECK-NEXT:     LEA64r
+# 'measurements' field should not contain misleading values
+CHECK:      measurements:    []
+CHECK:      assembled_snippet: {{[A-Z0-9]+}}{{$}}

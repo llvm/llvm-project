@@ -9,6 +9,7 @@
 
 #include "LatencyBenchmarkRunner.h"
 #include "ParallelSnippetGenerator.h"
+#include "PerfHelper.h"
 #include "SerialSnippetGenerator.h"
 #include "UopsBenchmarkRunner.h"
 #include "llvm/ADT/Twine.h"
@@ -92,8 +93,9 @@ ExegesisTarget::createBenchmarkRunner(
               .concat(ModeName)
               .concat(
                   "' mode, sched model does not define a cycle counter. You "
-                  "can pass --skip-measurements to skip the actual "
-                  "benchmarking."));
+                  "can pass --benchmark-phase=... to skip the actual "
+                  "benchmarking or --use-dummy-perf-counters to not query "
+                  "the kernel for real event counts."));
     }
     return createLatencyBenchmarkRunner(State, Mode, BenchmarkPhaseSelector,
                                         ResultAggMode);
@@ -102,8 +104,9 @@ ExegesisTarget::createBenchmarkRunner(
         !PfmCounters.UopsCounter && !PfmCounters.IssueCounters)
       return make_error<Failure>(
           "can't run 'uops' mode, sched model does not define uops or issue "
-          "counters. You can pass --skip-measurements to skip the actual "
-          "benchmarking.");
+          "counters. You can pass --benchmark-phase=... to skip the actual "
+          "benchmarking or --use-dummy-perf-counters to not query the kernel "
+          "for real event counts.");
     return createUopsBenchmarkRunner(State, BenchmarkPhaseSelector,
                                      ResultAggMode);
   }
@@ -138,6 +141,9 @@ static_assert(std::is_trivial_v<PfmCountersInfo>,
               "We shouldn't have dynamic initialization here");
 const PfmCountersInfo PfmCountersInfo::Default = {nullptr, nullptr, nullptr,
                                                   0u};
+const PfmCountersInfo PfmCountersInfo::Dummy = {
+    pfm::PerfEvent::DummyEventString, pfm::PerfEvent::DummyEventString, nullptr,
+    0u};
 
 const PfmCountersInfo &ExegesisTarget::getPfmCounters(StringRef CpuName) const {
   assert(llvm::is_sorted(
@@ -159,6 +165,10 @@ const PfmCountersInfo &ExegesisTarget::getPfmCounters(StringRef CpuName) const {
   }
   assert(Found->PCI && "Missing counters");
   return *Found->PCI;
+}
+
+const PfmCountersInfo &ExegesisTarget::getDummyPfmCounters() const {
+  return PfmCountersInfo::Dummy;
 }
 
 ExegesisTarget::SavedState::~SavedState() {} // anchor.
