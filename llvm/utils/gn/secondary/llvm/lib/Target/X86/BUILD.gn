@@ -1,10 +1,5 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
-declare_args() {
-  # Buggy, only use if you know what you're doing.
-  x86_gen_fold_tables = false
-}
-
 tablegen("X86GenCallingConv") {
   visibility = [ ":LLVMX86CodeGen" ]
   args = [ "-gen-callingconv" ]
@@ -29,6 +24,12 @@ tablegen("X86GenFastISel") {
   td_file = "X86.td"
 }
 
+tablegen("X86GenFoldTables") {
+  visibility = [ ":LLVMX86CodeGen" ]
+  args = [ "-gen-x86-fold-tables" ]
+  td_file = "X86.td"
+}
+
 tablegen("X86GenGlobalISel") {
   visibility = [ ":LLVMX86CodeGen" ]
   args = [ "-gen-global-isel" ]
@@ -41,20 +42,13 @@ tablegen("X86GenRegisterBank") {
   td_file = "X86.td"
 }
 
-if (x86_gen_fold_tables) {
-  tablegen("X86GenFoldTables") {
-    visibility = [ ":LLVMX86CodeGen" ]
-    args = [ "-gen-x86-fold-tables" ]
-    td_file = "X86.td"
-  }
-}
-
 static_library("LLVMX86CodeGen") {
   deps = [
     ":X86GenCallingConv",
     ":X86GenDAGISel",
     ":X86GenEVEX2VEXTables",
     ":X86GenFastISel",
+    ":X86GenFoldTables",
     ":X86GenGlobalISel",
     ":X86GenRegisterBank",
     "MCTargetDesc",
@@ -73,9 +67,6 @@ static_library("LLVMX86CodeGen") {
     "//llvm/lib/Transforms/CFGuard",
     "//llvm/lib/Transforms/Instrumentation",
   ]
-  if (x86_gen_fold_tables) {
-    deps += [ ":X86GenFoldTables" ]
-  }
   sources = [
     "X86ArgumentStackSlotRebase.cpp",
     "X86AsmPrinter.cpp",
