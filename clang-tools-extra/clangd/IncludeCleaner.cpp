@@ -405,9 +405,14 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
         // through an #include.
         while (SM.getFileID(Loc) != SM.getMainFileID())
           Loc = SM.getIncludeLoc(SM.getFileID(Loc));
-        const auto *Token = AST.getTokens().spelledTokenAt(Loc);
-        MissingIncludeDiagInfo DiagInfo{Ref.Target, Token->range(SM),
-                                        Providers};
+        auto TouchingTokens =
+            syntax::spelledTokensTouching(Loc, AST.getTokens());
+        assert(!TouchingTokens.empty());
+        // Loc points to the start offset of the ref token, here we use the last
+        // element of the TouchingTokens, e.g. avoid getting the "::" for
+        // "ns::^abc".
+        MissingIncludeDiagInfo DiagInfo{
+            Ref.Target, TouchingTokens.back().range(SM), Providers};
         MissingIncludes.push_back(std::move(DiagInfo));
       });
   std::vector<const Inclusion *> UnusedIncludes =
