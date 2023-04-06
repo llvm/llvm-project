@@ -47,7 +47,8 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
   TypeConverter::SignatureConversion signatureConversion(
       gpuFuncOp.front().getNumArguments());
   Type funcType = getTypeConverter()->convertFunctionSignature(
-      gpuFuncOp.getFunctionType(), /*isVariadic=*/false, signatureConversion);
+      gpuFuncOp.getFunctionType(), /*isVariadic=*/false,
+      getTypeConverter()->getOptions().useBarePtrCallConv, signatureConversion);
 
   // Create the new function operation. Only copy those attributes that are
   // not specific to function modeling.
