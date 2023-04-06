@@ -1,6 +1,7 @@
 # -*- Python -*-
 
 import os
+import re
 
 def get_required_attr(config, attr_name):
   attr_value = getattr(config, attr_name, None)
@@ -22,9 +23,11 @@ if hasattr(config, 'profile_lit_binary_dir') and \
         config.profile_lit_binary_dir is not None:
     config.test_exec_root = os.path.join(config.profile_lit_binary_dir, config.name)
 
+target_is_msvc = bool(re.match(r'.*-windows-msvc$', config.target_triple))
+
 if config.host_os in ['Linux']:
   extra_link_flags = ["-ldl"]
-elif config.host_os in ['Windows']:
+elif target_is_msvc:
   # InstrProf is incompatible with incremental linking. Disable it as a
   # workaround.
   extra_link_flags = ["-Wl,-incremental:no"]

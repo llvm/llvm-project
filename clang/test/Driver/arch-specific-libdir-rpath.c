@@ -75,6 +75,15 @@
 // RUN:     -frtlib-add-rpath 2>&1 \
 // RUN:   | FileCheck --check-prefixes=RESDIR,NO-LIBPATH,NO-RPATH %s
 
+// Test that the driver adds an per-target arch-specific subdirectory in
+// {RESOURCE_DIR}/lib/{triple} to the linker search path and to '-rpath'
+//
+// RUN: %clang %s -### 2>&1 --target=x86_64-linux-gnu \
+// RUN:     -fsanitize=address -shared-libasan \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -frtlib-add-rpath \
+// RUN:   | FileCheck --check-prefixes=PERTARGET %s
+
 // RESDIR: "-resource-dir" "[[RESDIR:[^"]*]]"
 //
 // LIBPATH-X86_64: -L[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}
@@ -88,3 +97,7 @@
 //
 // NO-LIBPATH-NOT: "-L{{[^"]*Inputs(/|\\\\)resource_dir}}"
 // NO-RPATH-NOT:   "-rpath" {{.*(/|\\\\)Inputs(/|\\\\)resource_dir}}
+
+// PERTARGET: "-resource-dir" "[[PTRESDIR:[^"]*]]"
+// PERTARGET: -L[[PTRESDIR]]{{(/|\\\\)lib(/|\\\\)x86_64-unknown-linux-gnu}}
+// PERTARGET:   "-rpath" "[[PTRESDIR]]{{(/|\\\\)lib(/|\\\\)x86_64-unknown-linux-gnu}}"

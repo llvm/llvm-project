@@ -6206,9 +6206,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         isTwoAddrFold || (OpNum == 0 && I->Flags & TB_FOLDED_LOAD) || OpNum > 0;
     bool FoldedStore =
         isTwoAddrFold || (OpNum == 0 && I->Flags & TB_FOLDED_STORE);
-    MaybeAlign MinAlign =
-        decodeMaybeAlign((I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT);
-    if (MinAlign && Alignment < *MinAlign)
+    if (Alignment < Align(1ULL << ((I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT)))
       return nullptr;
     bool NarrowToMOV32rm = false;
     if (Size) {

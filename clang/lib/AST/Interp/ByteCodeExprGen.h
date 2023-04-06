@@ -181,6 +181,9 @@ protected:
     return this->emitPopPtr(I);
   }
 
+  bool visitConditional(const AbstractConditionalOperator *E,
+                        llvm::function_ref<bool(const Expr *)> V);
+
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsMutable,
                                   bool IsExtended = false);

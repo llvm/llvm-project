@@ -1920,3 +1920,4 @@ include "RISCVInstrInfoZicond.td"
 
 include "RISCVInstrInfoXVentana.td"
 include "RISCVInstrInfoXTHead.td"
+include "RISCVInstrInfoZihintntl.td"

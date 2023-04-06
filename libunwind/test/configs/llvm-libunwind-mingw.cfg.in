@@ -1,0 +1,25 @@
+# This testing configuration handles running the test suite against LLVM's libunwind
+# using either a DLL or a static library, with MinGW/Clang on Windows.
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}', ''))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -I %{include} -funwind-tables'
+))
+config.substitutions.append(('%{link_flags}',
+    '-L %{lib} -lunwind'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %T --env PATH=%{lib} -- '
+))
+
+import os, site
+site.addsitedir(os.path.join('@LIBUNWIND_LIBCXX_PATH@', 'utils'))
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)
