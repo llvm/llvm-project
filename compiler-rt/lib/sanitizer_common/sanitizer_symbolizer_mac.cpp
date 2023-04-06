@@ -163,7 +163,7 @@ bool AtosSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
   uptr start_address = AddressInfo::kUnknown;
   if (!ParseCommandOutput(buf, addr, &stack->info.function, &stack->info.module,
                           &stack->info.file, &line, &start_address)) {
-    process_ = nullptr;
+    Report("WARNING: atos failed to symbolize address \"0x%zx\"\n", addr);
     return false;
   }
   stack->info.line = (int)line;
