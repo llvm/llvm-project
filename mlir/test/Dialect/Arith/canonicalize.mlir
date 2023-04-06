@@ -619,6 +619,26 @@ func.func @truncExtui(%arg0: i32) -> i32 {
   return %trunci : i32
 }
 
+// CHECK-LABEL: @truncExtui2
+//       CHECK:  %[[ARG0:.+]]: i32
+//       CHECK:  %[[CST:.*]] = arith.trunci %[[ARG0:.+]] : i32 to i16
+//       CHECK:   return  %[[CST:.*]]
+func.func @truncExtui2(%arg0: i32) -> i16 {
+  %extui = arith.extui %arg0 : i32 to i64
+  %trunci = arith.trunci %extui : i64 to i16
+  return %trunci : i16
+}
+
+// CHECK-LABEL: @truncExtuiVector
+//       CHECK:  %[[ARG0:.+]]: vector<2xi32>
+//       CHECK:  %[[CST:.*]] = arith.trunci %[[ARG0:.+]] : vector<2xi32> to vector<2xi16>
+//       CHECK:   return  %[[CST:.*]]
+func.func @truncExtuiVector(%arg0: vector<2xi32>) -> vector<2xi16> {
+  %extsi = arith.extui %arg0 : vector<2xi32> to vector<2xi64>
+  %trunci = arith.trunci %extsi : vector<2xi64> to vector<2xi16>
+  return %trunci : vector<2xi16>
+}
+
 // CHECK-LABEL: @truncExtsi
 //       CHECK-NOT:  trunci
 //       CHECK:   return  %arg0
@@ -626,6 +646,26 @@ func.func @truncExtsi(%arg0: i32) -> i32 {
   %extsi = arith.extsi %arg0 : i32 to i64
   %trunci = arith.trunci %extsi : i64 to i32
   return %trunci : i32
+}
+
+// CHECK-LABEL: @truncExtsi2
+//       CHECK:  %[[ARG0:.+]]: i32
+//       CHECK:  %[[CST:.*]] = arith.trunci %[[ARG0:.+]] : i32 to i16
+//       CHECK:   return  %[[CST:.*]]
+func.func @truncExtsi2(%arg0: i32) -> i16 {
+  %extsi = arith.extsi %arg0 : i32 to i64
+  %trunci = arith.trunci %extsi : i64 to i16
+  return %trunci : i16
+}
+
+// CHECK-LABEL: @truncExtsiVector
+//       CHECK:  %[[ARG0:.+]]: vector<2xi32>
+//       CHECK:  %[[CST:.*]] = arith.trunci %[[ARG0:.+]] : vector<2xi32> to vector<2xi16>
+//       CHECK:   return  %[[CST:.*]]
+func.func @truncExtsiVector(%arg0: vector<2xi32>) -> vector<2xi16> {
+  %extsi = arith.extsi %arg0 : vector<2xi32> to vector<2xi64>
+  %trunci = arith.trunci %extsi : vector<2xi64> to vector<2xi16>
+  return %trunci : vector<2xi16>
 }
 
 // CHECK-LABEL: @truncConstantSplat

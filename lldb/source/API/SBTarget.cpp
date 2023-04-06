@@ -2093,6 +2093,18 @@ SBError SBTarget::SetModuleLoadAddress(lldb::SBModule module,
                                        int64_t slide_offset) {
   LLDB_INSTRUMENT_VA(this, module, slide_offset);
 
+  if (slide_offset < 0) {
+    SBError sb_error;
+    sb_error.SetErrorStringWithFormat("slide must be positive");
+    return sb_error;
+  }
+
+  return SetModuleLoadAddress(module, static_cast<uint64_t>(slide_offset));
+}
+
+SBError SBTarget::SetModuleLoadAddress(lldb::SBModule module,
+                                               uint64_t slide_offset) {
+
   SBError sb_error;
 
   TargetSP target_sp(GetSP());

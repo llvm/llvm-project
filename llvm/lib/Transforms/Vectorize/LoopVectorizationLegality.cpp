@@ -452,8 +452,12 @@ static bool storeToSameAddress(ScalarEvolution *SE, StoreInst *A,
 
 int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
                                                 Value *Ptr) const {
+  // FIXME: Currently, the set of symbolic strides is sometimes queried before
+  // it's collected.  This happens from canVectorizeWithIfConvert, when the
+  // pointer is checked to reference consecutive elements suitable for a
+  // masked access.
   const ValueToValueMap &Strides =
-      getSymbolicStrides() ? *getSymbolicStrides() : ValueToValueMap();
+    LAI ? LAI->getSymbolicStrides() : ValueToValueMap();
 
   Function *F = TheLoop->getHeader()->getParent();
   bool OptForSize = F->hasOptSize() ||

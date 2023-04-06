@@ -7,9 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
 MCCodeEmitter::MCCodeEmitter() = default;
 
 MCCodeEmitter::~MCCodeEmitter() = default;
+
+void MCCodeEmitter::encodeInstruction(const MCInst &Inst,
+                                      SmallVectorImpl<char> &CB,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
+  raw_svector_ostream OS(CB);
+  encodeInstruction(Inst, OS, Fixups, STI);
+}

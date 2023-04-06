@@ -209,8 +209,8 @@ Type LLVMTypeConverter::convertComplexType(ComplexType type) {
 // pointer-to-function types.
 Type LLVMTypeConverter::convertFunctionType(FunctionType type) {
   SignatureConversion conversion(type.getNumInputs());
-  Type converted =
-      convertFunctionSignature(type, /*isVariadic=*/false, conversion);
+  Type converted = convertFunctionSignature(
+      type, /*isVariadic=*/false, options.useBarePtrCallConv, conversion);
   if (!converted)
     return {};
   return getPointerType(converted);
@@ -221,12 +221,12 @@ Type LLVMTypeConverter::convertFunctionType(FunctionType type) {
 // Function has one VoidType result.  If MLIR Function has more than one result,
 // they are into an LLVM StructType in their order of appearance.
 Type LLVMTypeConverter::convertFunctionSignature(
-    FunctionType funcTy, bool isVariadic,
+    FunctionType funcTy, bool isVariadic, bool useBarePtrCallConv,
     LLVMTypeConverter::SignatureConversion &result) {
   // Select the argument converter depending on the calling convention.
-  auto funcArgConverter = options.useBarePtrCallConv
-                              ? barePtrFuncArgTypeConverter
-                              : structFuncArgTypeConverter;
+  useBarePtrCallConv = useBarePtrCallConv || options.useBarePtrCallConv;
+  auto funcArgConverter = useBarePtrCallConv ? barePtrFuncArgTypeConverter
+                                             : structFuncArgTypeConverter;
   // Convert argument types one by one and check for errors.
   for (auto [idx, type] : llvm::enumerate(funcTy.getInputs())) {
     SmallVector<Type, 8> converted;
@@ -238,9 +238,10 @@ Type LLVMTypeConverter::convertFunctionSignature(
   // If function does not return anything, create the void result type,
   // if it returns on element, convert it, otherwise pack the result types into
   // a struct.
-  Type resultType = funcTy.getNumResults() == 0
-                        ? LLVM::LLVMVoidType::get(&getContext())
-                        : packFunctionResults(funcTy.getResults());
+  Type resultType =
+      funcTy.getNumResults() == 0
+          ? LLVM::LLVMVoidType::get(&getContext())
+          : packFunctionResults(funcTy.getResults(), useBarePtrCallConv);
   if (!resultType)
     return {};
   return LLVM::LLVMFunctionType::get(resultType, result.getConvertedTypes(),
@@ -472,8 +473,9 @@ Type LLVMTypeConverter::convertVectorType(VectorType type) {
 /// UnrankedMemRefType, are converted following the specific rules for the
 /// calling convention. Calling convention independent types are converted
 /// following the default LLVM type conversions.
-Type LLVMTypeConverter::convertCallingConventionType(Type type) {
-  if (options.useBarePtrCallConv)
+Type LLVMTypeConverter::convertCallingConventionType(Type type,
+                                                     bool useBarePtrCallConv) {
+  if (useBarePtrCallConv)
     if (auto memrefTy = type.dyn_cast<BaseMemRefType>())
       return convertMemRefToBarePtr(memrefTy);
 
@@ -498,16 +500,18 @@ void LLVMTypeConverter::promoteBarePtrsToDescriptors(
 /// supported LLVM IR type.  In particular, if more than one value is returned,
 /// create an LLVM IR structure type with elements that correspond to each of
 /// the MLIR types converted with `convertType`.
-Type LLVMTypeConverter::packFunctionResults(TypeRange types) {
+Type LLVMTypeConverter::packFunctionResults(TypeRange types,
+                                            bool useBarePtrCallConv) {
   assert(!types.empty() && "expected non-empty list of type");
 
+  useBarePtrCallConv |= options.useBarePtrCallConv;
   if (types.size() == 1)
-    return convertCallingConventionType(types.front());
+    return convertCallingConventionType(types.front(), useBarePtrCallConv);
 
   SmallVector<Type, 8> resultTypes;
   resultTypes.reserve(types.size());
   for (auto t : types) {
-    auto converted = convertCallingConventionType(t);
+    auto converted = convertCallingConventionType(t, useBarePtrCallConv);
     if (!converted || !LLVM::isCompatibleType(converted))
       return {};
     resultTypes.push_back(converted);
@@ -530,17 +534,18 @@ Value LLVMTypeConverter::promoteOneMemRefDescriptor(Location loc, Value operand,
   return allocated;
 }
 
-SmallVector<Value, 4> LLVMTypeConverter::promoteOperands(Location loc,
-                                                         ValueRange opOperands,
-                                                         ValueRange operands,
-                                                         OpBuilder &builder) {
+SmallVector<Value, 4>
+LLVMTypeConverter::promoteOperands(Location loc, ValueRange opOperands,
+                                   ValueRange operands, OpBuilder &builder,
+                                   bool useBarePtrCallConv) {
   SmallVector<Value, 4> promotedOperands;
   promotedOperands.reserve(operands.size());
+  useBarePtrCallConv |= options.useBarePtrCallConv;
   for (auto it : llvm::zip(opOperands, operands)) {
     auto operand = std::get<0>(it);
     auto llvmOperand = std::get<1>(it);
 
-    if (options.useBarePtrCallConv) {
+    if (useBarePtrCallConv) {
       // For the bare-ptr calling convention, we only have to extract the
       // aligned pointer of a memref.
       if (auto memrefType = operand.getType().dyn_cast<MemRefType>()) {
@@ -603,7 +608,8 @@ LogicalResult mlir::structFuncArgTypeConverter(LLVMTypeConverter &converter,
 LogicalResult mlir::barePtrFuncArgTypeConverter(LLVMTypeConverter &converter,
                                                 Type type,
                                                 SmallVectorImpl<Type> &result) {
-  auto llvmTy = converter.convertCallingConventionType(type);
+  auto llvmTy =
+      converter.convertCallingConventionType(type, /*useBarePtrCallConv=*/true);
   if (!llvmTy)
     return failure();
 

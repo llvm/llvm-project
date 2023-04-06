@@ -31,7 +31,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <vector>
 
@@ -486,8 +485,7 @@ void MCMachOStreamer::emitInstToData(const MCInst &Inst,
 
   SmallVector<MCFixup, 4> Fixups;
   SmallString<256> Code;
-  raw_svector_ostream VecOS(Code);
-  getAssembler().getEmitter().encodeInstruction(Inst, VecOS, Fixups, STI);
+  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
 
   // Add the fixups and data.
   for (MCFixup &Fixup : Fixups) {

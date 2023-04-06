@@ -268,7 +268,7 @@ define void @test14(ptr %foo) nofree {
 ; TODO: free call marked no-free ->  %foo must be null
 define void @test15(ptr %foo) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    call void @free(ptr [[FOO:%.*]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @free(ptr [[FOO:%.*]]) #[[ATTR8:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @free(ptr %foo) nofree

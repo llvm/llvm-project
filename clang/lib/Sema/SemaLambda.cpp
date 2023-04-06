@@ -956,8 +956,7 @@ void Sema::CompleteLambdaCallOperator(
     CheckParmsForFunctionDef(Params, /*CheckParameterNames=*/false);
     Method->setParams(Params);
     for (auto P : Method->parameters()) {
-      if (!P)
-        continue;
+      assert(P && "null in a parameter list");
       P->setOwningFunction(Method);
     }
   }

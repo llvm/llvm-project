@@ -670,6 +670,9 @@ def adhoc_codesign : Flag<["-"], "adhoc_codesign">,
 def no_adhoc_codesign : Flag<["-"], "no_adhoc_codesign">,
     HelpText<"Do not write an ad-hoc code signature to the output file (default for x86_64 binaries)">,
     Group<grp_rare>;
+def reproducible : Flag<["-"], "reproducible">,
+    HelpText<"Make the output reproducible by removing timestamps and other non-deterministic data. This is the default behavior.">,
+    Group<grp_rare>;
 def version_details : Flag<["-"], "version_details">,
     HelpText<"Print the linker version in JSON form">,
     Flags<[HelpHidden]>,

@@ -5,7 +5,7 @@
 
 define i1 @slt_to_ult(i8 %x, i8 %y) {
 ; CHECK-LABEL: @slt_to_ult(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 %x, %y
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = xor i8 %x, 128
@@ -18,7 +18,7 @@ define i1 @slt_to_ult(i8 %x, i8 %y) {
 
 define <2 x i1> @slt_to_ult_splat(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @slt_to_ult_splat(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> %x, %y
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %a = xor <2 x i8> %x, <i8 128, i8 128>
@@ -31,7 +31,7 @@ define <2 x i1> @slt_to_ult_splat(<2 x i8> %x, <2 x i8> %y) {
 
 define i1 @ult_to_slt(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ult_to_slt(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 %x, %y
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = xor i8 %x, 128
@@ -42,7 +42,7 @@ define i1 @ult_to_slt(i8 %x, i8 %y) {
 
 define <2 x i1> @ult_to_slt_splat(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @ult_to_slt_splat(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> %x, %y
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %a = xor <2 x i8> %x, <i8 128, i8 128>
@@ -55,7 +55,7 @@ define <2 x i1> @ult_to_slt_splat(<2 x i8> %x, <2 x i8> %y) {
 
 define i1 @slt_to_ugt(i8 %x, i8 %y) {
 ; CHECK-LABEL: @slt_to_ugt(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 %x, %y
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = xor i8 %x, 127
@@ -66,7 +66,7 @@ define i1 @slt_to_ugt(i8 %x, i8 %y) {
 
 define <2 x i1> @slt_to_ugt_splat(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @slt_to_ugt_splat(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i8> %x, %y
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %a = xor <2 x i8> %x, <i8 127, i8 127>
@@ -79,7 +79,7 @@ define <2 x i1> @slt_to_ugt_splat(<2 x i8> %x, <2 x i8> %y) {
 
 define i1 @ult_to_sgt(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ult_to_sgt(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 %x, %y
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = xor i8 %x, 127
@@ -90,7 +90,7 @@ define i1 @ult_to_sgt(i8 %x, i8 %y) {
 
 define <2 x i1> @ult_to_sgt_splat(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @ult_to_sgt_splat(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> %x, %y
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %a = xor <2 x i8> %x, <i8 127, i8 127>
@@ -103,7 +103,7 @@ define <2 x i1> @ult_to_sgt_splat(<2 x i8> %x, <2 x i8> %y) {
 
 define i1 @sge_to_ugt(i8 %x) {
 ; CHECK-LABEL: @sge_to_ugt(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 %x, -114
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], -114
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = xor i8 %x, 128
@@ -113,7 +113,7 @@ define i1 @sge_to_ugt(i8 %x) {
 
 define <2 x i1> @sge_to_ugt_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @sge_to_ugt_splat(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i8> %x, <i8 -114, i8 -114>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i8> [[X:%.*]], <i8 -114, i8 -114>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %a = xor <2 x i8> %x, <i8 128, i8 128>
@@ -125,7 +125,7 @@ define <2 x i1> @sge_to_ugt_splat(<2 x i8> %x) {
 
 define i1 @uge_to_sgt(i8 %x) {
 ; CHECK-LABEL: @uge_to_sgt(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 %x, -114
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], -114
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = xor i8 %x, 128
@@ -135,7 +135,7 @@ define i1 @uge_to_sgt(i8 %x) {
 
 define <2 x i1> @uge_to_sgt_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @uge_to_sgt_splat(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> %x, <i8 -114, i8 -114>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -114, i8 -114>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %a = xor <2 x i8> %x, <i8 128, i8 128>
@@ -147,7 +147,7 @@ define <2 x i1> @uge_to_sgt_splat(<2 x i8> %x) {
 
 define i1 @sge_to_ult(i8 %x) {
 ; CHECK-LABEL: @sge_to_ult(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 %x, 113
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X:%.*]], 113
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = xor i8 %x, 127
@@ -157,7 +157,7 @@ define i1 @sge_to_ult(i8 %x) {
 
 define <2 x i1> @sge_to_ult_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @sge_to_ult_splat(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> %x, <i8 113, i8 113>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[X:%.*]], <i8 113, i8 113>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %a = xor <2 x i8> %x, <i8 127, i8 127>
@@ -169,7 +169,7 @@ define <2 x i1> @sge_to_ult_splat(<2 x i8> %x) {
 
 define i1 @uge_to_slt(i8 %x) {
 ; CHECK-LABEL: @uge_to_slt(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 %x, 113
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 113
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = xor i8 %x, 127
@@ -179,7 +179,7 @@ define i1 @uge_to_slt(i8 %x) {
 
 define <2 x i1> @uge_to_slt_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @uge_to_slt_splat(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> %x, <i8 113, i8 113>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 113, i8 113>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %a = xor <2 x i8> %x, <i8 127, i8 127>
@@ -192,8 +192,8 @@ define <2 x i1> @uge_to_slt_splat(<2 x i8> %x) {
 
 define <8 x i1> @sgt_to_ugt_bitcasted_splat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @sgt_to_ugt_bitcasted_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> %x to <8 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> %y to <8 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[X:%.*]] to <8 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[Y:%.*]] to <8 x i8>
 ; CHECK-NEXT:    [[E:%.*]] = icmp ugt <8 x i8> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <8 x i1> [[E]]
 ;

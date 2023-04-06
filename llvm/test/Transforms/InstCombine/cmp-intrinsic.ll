@@ -217,7 +217,7 @@ define <2 x i1> @ctlz_ult_other_v2i32(<2 x i32> %x) {
 
 define <2 x i1> @ctlz_ult_other_multiuse_v2i32(<2 x i32> %x, ptr %p) {
 ; CHECK-LABEL: @ctlz_ult_other_multiuse_v2i32(
-; CHECK-NEXT:    [[LZ:%.*]] = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[LZ:%.*]] = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[X:%.*]], i1 false), !range [[RNG0]]
 ; CHECK-NEXT:    store <2 x i32> [[LZ]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> [[X]], <i32 65535, i32 65535>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
@@ -424,7 +424,7 @@ define <2 x i1> @cttz_ult_other_v2i32(<2 x i32> %x) {
 
 define <2 x i1> @cttz_ult_other_multiuse_v2i32(<2 x i32> %x, ptr %p) {
 ; CHECK-LABEL: @cttz_ult_other_multiuse_v2i32(
-; CHECK-NEXT:    [[TZ:%.*]] = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[TZ:%.*]] = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 false), !range [[RNG0]]
 ; CHECK-NEXT:    store <2 x i32> [[TZ]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[TZ]], <i32 16, i32 16>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
