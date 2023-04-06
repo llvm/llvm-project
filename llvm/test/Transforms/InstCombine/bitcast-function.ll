@@ -150,8 +150,8 @@ define void @bitcast_vector_ptrs_same_size(ptr noalias %source, ptr noalias %des
 ; CHECK-LABEL: define void @bitcast_vector_ptrs_same_size
 ; CHECK-SAME: (ptr noalias [[SOURCE:%.*]], ptr noalias [[DEST:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x ptr>, ptr [[SOURCE]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call <2 x ptr> @func_v2i32p(<2 x ptr> [[TMP1]]) #[[ATTR1]]
+; CHECK-NEXT:    [[TMP:%.*]] = load <2 x ptr>, ptr [[SOURCE]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x ptr> @func_v2i32p(<2 x ptr> [[TMP]]) #[[ATTR1]]
 ; CHECK-NEXT:    store <2 x ptr> [[CALL]], ptr [[DEST]], align 8
 ; CHECK-NEXT:    ret void
 ;

@@ -93,8 +93,8 @@ define void @multi_phi(i32 signext %n) {
 ; CHECK-NEXT:    [[ADD_I:%.*]] = fadd float [[SUB_I]], [[TMP0]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_0]], 1
 ; CHECK-NEXT:    [[BIT0:%.*]] = and i32 [[INC]], 1
-; CHECK-NEXT:    [[EVEN:%.*]] = icmp eq i32 [[BIT0]], 0
-; CHECK-NEXT:    br i1 [[EVEN]], label [[EVEN_BB:%.*]], label [[ODD_BB]]
+; CHECK-NEXT:    [[EVEN_NOT_NOT:%.*]] = icmp eq i32 [[BIT0]], 0
+; CHECK-NEXT:    br i1 [[EVEN_NOT_NOT]], label [[EVEN_BB:%.*]], label [[ODD_BB]]
 ; CHECK:       even.bb:
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd float [[SUB_I]], [[ADD_I]]
 ; CHECK-NEXT:    br label [[ODD_BB]]

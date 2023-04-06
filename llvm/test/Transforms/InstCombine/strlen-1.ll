@@ -95,8 +95,8 @@ define i1 @test_simplify8(ptr %str_p) {
 
 define i32 @test_simplify9(i1 %x) {
 ; CHECK-LABEL: @test_simplify9(
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[X:%.*]], i32 5, i32 6
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[L:%.*]] = select i1 [[X:%.*]], i32 5, i32 6
+; CHECK-NEXT:    ret i32 [[L]]
 ;
   %s = select i1 %x, ptr @hello, ptr @longer
   %l = call i32 @strlen(ptr %s)
@@ -108,8 +108,8 @@ define i32 @test_simplify9(i1 %x) {
 
 define i32 @test_simplify10_inbounds(i32 %x) {
 ; CHECK-LABEL: @test_simplify10_inbounds(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 5, [[X:%.*]]
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[HELLO_L:%.*]] = sub i32 5, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[HELLO_L]]
 ;
   %hello_p = getelementptr inbounds [6 x i8], ptr @hello, i32 0, i32 %x
   %hello_l = call i32 @strlen(ptr %hello_p)
@@ -118,8 +118,8 @@ define i32 @test_simplify10_inbounds(i32 %x) {
 
 define i32 @test_simplify10_no_inbounds(i32 %x) {
 ; CHECK-LABEL: @test_simplify10_no_inbounds(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 5, [[X:%.*]]
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[HELLO_L:%.*]] = sub i32 5, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[HELLO_L]]
 ;
   %hello_p = getelementptr [6 x i8], ptr @hello, i32 0, i32 %x
   %hello_l = call i32 @strlen(ptr %hello_p)
@@ -131,8 +131,8 @@ define i32 @test_simplify10_no_inbounds(i32 %x) {
 define i32 @test_simplify11(i32 %x) {
 ; CHECK-LABEL: @test_simplify11(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw nsw i32 9, [[AND]]
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[HELLO_L:%.*]] = sub nuw nsw i32 9, [[AND]]
+; CHECK-NEXT:    ret i32 [[HELLO_L]]
 ;
   %and = and i32 %x, 7
   %hello_p = getelementptr inbounds [13 x i8], ptr @null_hello_mid, i32 0, i32 %and
