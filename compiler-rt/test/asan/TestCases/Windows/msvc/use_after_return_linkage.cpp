@@ -1,5 +1,3 @@
-// UNSUPPORTED: target={{.*-windows-gnu}}
-
 // Make sure LIBCMT doesn't accidentally get added to the list of DEFAULTLIB
 // directives.
 
