@@ -2,34 +2,33 @@
 ; RUN:   -mcpu=pwr9 -mtriple=powerpc64 < %s | FileCheck %s
 define dso_local <16 x i8> @ConvertExtractedMaskBitsToVect(<16 x i8> noundef %0) local_unnamed_addr #0 {
 ; CHECK: .LCPI0_0:
-; CHECK-NEXT: .byte	7                               # 0x7
-; CHECK-NEXT: .byte	7                               # 0x7
-; CHECK-NEXT: .byte	7                               # 0x7
-; CHECK-NEXT: .byte	7                               # 0x7
-; CHECK-NEXT: .byte	7                               # 0x7
-; CHECK-NEXT: .byte	7                               # 0x7
-; CHECK-NEXT: .byte	7                               # 0x7
-; CHECK-NEXT: .byte	7                               # 0x7
-; CHECK-NEXT: .byte	16                              # 0x10
-; CHECK-NEXT: .byte	16                              # 0x10
-; CHECK-NEXT: .byte	16                              # 0x10
-; CHECK-NEXT: .byte	16                              # 0x10
-; CHECK-NEXT: .byte	16                              # 0x10
-; CHECK-NEXT: .byte	16                              # 0x10
-; CHECK-NEXT: .byte	16                              # 0x10
-; CHECK-NEXT: .byte	16                              # 0x10
+; CHECK-NEXT: .byte	23                               # 0x17
+; CHECK-NEXT: .byte	23                               # 0x17
+; CHECK-NEXT: .byte	23                               # 0x17
+; CHECK-NEXT: .byte	23                               # 0x17
+; CHECK-NEXT: .byte	23                               # 0x17
+; CHECK-NEXT: .byte	23                               # 0x17
+; CHECK-NEXT: .byte	23                               # 0x17
+; CHECK-NEXT: .byte	23                               # 0x17
+; CHECK-NEXT: .byte	0                                # 0x0
+; CHECK-NEXT: .byte	0                                # 0x0
+; CHECK-NEXT: .byte	0                                # 0x0
+; CHECK-NEXT: .byte	0                                # 0x0
+; CHECK-NEXT: .byte	0                                # 0x0
+; CHECK-NEXT: .byte	0                                # 0x0
+; CHECK-NEXT: .byte	0                                # 0x0
+; CHECK-NEXT: .byte	0                                # 0x0
 ; CHECK-LABEL: ConvertExtractedMaskBitsToVect:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
-; CHECK-NEXT:    xxlxor v4, v4, v4
 ; CHECK-NEXT:    xxlxor v3, v3, v3
 ; CHECK-NEXT:    addi r3, r3, .LCPI0_0@toc@l
 ; CHECK-NEXT:    lxv vs0, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, .LCPI0_1@toc@ha
 ; CHECK-NEXT:    addi r3, r3, .LCPI0_1@toc@l
-; CHECK-NEXT:    xxperm v4, v2, vs0
+; CHECK-NEXT:    xxperm v2, v3, vs0
 ; CHECK-NEXT:    lxv vs0, 0(r3)
-; CHECK-NEXT:    xxland v2, v4, vs0
+; CHECK-NEXT:    xxland v2, v2, vs0
 ; CHECK-NEXT:    vcmpequb v2, v2, v3
 ; CHECK-NEXT:    xxlnor v2, v2, v2
 ; CHECK-NEXT:    blr
@@ -46,34 +45,33 @@ define dso_local <16 x i8> @ConvertExtractedMaskBitsToVect(<16 x i8> noundef %0)
 
 define dso_local <16 x i8> @ConvertExtractedMaskBitsToVect2(<16 x i8> noundef %0) local_unnamed_addr #0 {
 ; CHECK: .LCPI1_0:
-; CHECK-NEXT: .byte	7                               # 0x7
-; CHECK-NEXT: .byte	7                               # 0x7
-; CHECK-NEXT: .byte	7                               # 0x7
-; CHECK-NEXT: .byte	7                               # 0x7
-; CHECK-NEXT: .byte	7                               # 0x7
-; CHECK-NEXT: .byte	7                               # 0x7
-; CHECK-NEXT: .byte	7                               # 0x7
-; CHECK-NEXT: .byte	7                               # 0x7
-; CHECK-NEXT: .byte	16                              # 0x10
-; CHECK-NEXT: .byte	16                              # 0x10
-; CHECK-NEXT: .byte	16                              # 0x10
-; CHECK-NEXT: .byte	16                              # 0x10
-; CHECK-NEXT: .byte	16                              # 0x10
-; CHECK-NEXT: .byte	16                              # 0x10
-; CHECK-NEXT: .byte	16                              # 0x10
-; CHECK-NEXT: .byte	16                              # 0x10
+; CHECK-NEXT: .byte	23                               # 0x17
+; CHECK-NEXT: .byte	23                               # 0x17
+; CHECK-NEXT: .byte	23                               # 0x17
+; CHECK-NEXT: .byte	23                               # 0x17
+; CHECK-NEXT: .byte	23                               # 0x17
+; CHECK-NEXT: .byte	23                               # 0x17
+; CHECK-NEXT: .byte	23                               # 0x17
+; CHECK-NEXT: .byte	23                               # 0x17
+; CHECK-NEXT: .byte	0                                # 0x0
+; CHECK-NEXT: .byte	0                                # 0x0
+; CHECK-NEXT: .byte	0                                # 0x0
+; CHECK-NEXT: .byte	0                                # 0x0
+; CHECK-NEXT: .byte	0                                # 0x0
+; CHECK-NEXT: .byte	0                                # 0x0
+; CHECK-NEXT: .byte	0                                # 0x0
+; CHECK-NEXT: .byte	0                                # 0x0
 ; CHECK-LABEL: ConvertExtractedMaskBitsToVect2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
-; CHECK-NEXT:    xxlxor v4, v4, v4
 ; CHECK-NEXT:    xxlxor v3, v3, v3
 ; CHECK-NEXT:    addi r3, r3, .LCPI1_0@toc@l
 ; CHECK-NEXT:    lxv vs0, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, .LCPI1_1@toc@ha
 ; CHECK-NEXT:    addi r3, r3, .LCPI1_1@toc@l
-; CHECK-NEXT:    xxperm v4, v2, vs0
+; CHECK-NEXT:    xxperm v2, v3, vs0
 ; CHECK-NEXT:    lxv vs0, 0(r3)
-; CHECK-NEXT:    xxland v2, v4, vs0
+; CHECK-NEXT:    xxland v2, v2, vs0
 ; CHECK-NEXT:    vcmpequb v2, v2, v3
 ; CHECK-NEXT:    xxlnor v2, v2, v2
 ; CHECK-NEXT:    blr
@@ -90,34 +88,33 @@ define dso_local <16 x i8> @ConvertExtractedMaskBitsToVect2(<16 x i8> noundef %0
 
 define dso_local <16 x i8> @ConvertExtractedMaskBitsToVect3(<8 x i16> noundef %0) local_unnamed_addr #0 {
 ; CHECK: .LCPI2_0:
-; CHECK-NEXT: .byte	6                                # 0x6
-; CHECK-NEXT: .byte	7                                # 0x7
-; CHECK-NEXT: .byte	6                                # 0x6
-; CHECK-NEXT: .byte	7                                # 0x7
-; CHECK-NEXT: .byte	6                                # 0x6
-; CHECK-NEXT: .byte	7                                # 0x7
-; CHECK-NEXT: .byte	6                                # 0x6
-; CHECK-NEXT: .byte	7                                # 0x7
-; CHECK-NEXT: .byte	16                               # 0x10
-; CHECK-NEXT: .byte	16                               # 0x10
-; CHECK-NEXT: .byte	16                               # 0x10
-; CHECK-NEXT: .byte	16                               # 0x10
-; CHECK-NEXT: .byte	16                               # 0x10
-; CHECK-NEXT: .byte	16                               # 0x10
-; CHECK-NEXT: .byte	16                               # 0x10
-; CHECK-NEXT: .byte	16                               # 0x10
+; CHECK-NEXT: .byte	22                                # 0x16
+; CHECK-NEXT: .byte	23                                # 0x17
+; CHECK-NEXT: .byte	22                                # 0x16
+; CHECK-NEXT: .byte	23                                # 0x17
+; CHECK-NEXT: .byte	22                                # 0x16
+; CHECK-NEXT: .byte	23                                # 0x17
+; CHECK-NEXT: .byte	22                                # 0x16
+; CHECK-NEXT: .byte	23                                # 0x17
+; CHECK-NEXT: .byte	0                                 # 0x0
+; CHECK-NEXT: .byte	0                                 # 0x0
+; CHECK-NEXT: .byte	0                                 # 0x0
+; CHECK-NEXT: .byte	0                                 # 0x0
+; CHECK-NEXT: .byte	0                                 # 0x0
+; CHECK-NEXT: .byte	0                                 # 0x0
+; CHECK-NEXT: .byte	0                                 # 0x0
+; CHECK-NEXT: .byte	0                                 # 0x0
 ; CHECK-LABEL: ConvertExtractedMaskBitsToVect3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
-; CHECK-NEXT:    xxlxor v4, v4, v4
 ; CHECK-NEXT:    xxlxor v3, v3, v3
 ; CHECK-NEXT:    addi r3, r3, .LCPI2_0@toc@l
 ; CHECK-NEXT:    lxv vs0, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, .LCPI2_1@toc@ha
 ; CHECK-NEXT:    addi r3, r3, .LCPI2_1@toc@l
-; CHECK-NEXT:    xxperm v4, v2, vs0
+; CHECK-NEXT:    xxperm v2, v3, vs0
 ; CHECK-NEXT:    lxv vs0, 0(r3)
-; CHECK-NEXT:    xxland v2, v4, vs0
+; CHECK-NEXT:    xxland v2, v2, vs0
 ; CHECK-NEXT:    vcmpequb v2, v2, v3
 ; CHECK-NEXT:    xxlnor v2, v2, v2
 ; CHECK-NEXT:    blr
