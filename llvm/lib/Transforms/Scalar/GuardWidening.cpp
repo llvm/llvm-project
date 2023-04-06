@@ -593,10 +593,35 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig, Instruction *InsertPt) {
   Instruction *InsertPtAtDef = getFreezeInsertPt(Orig, DT);
   if (!InsertPtAtDef)
     return new FreezeInst(Orig, "gw.freeze", InsertPt);
+  if (isa<Constant>(Orig) || isa<GlobalValue>(Orig))
+    return new FreezeInst(Orig, "gw.freeze", InsertPtAtDef);
+
   SmallSet<Value *, 16> Visited;
   SmallVector<Value *, 16> Worklist;
   SmallSet<Instruction *, 16> DropPoisonFlags;
   SmallVector<Value *, 16> NeedFreeze;
+  DenseMap<Value *, FreezeInst *> CacheOfFreezes;
+
+  // A bit overloaded data structures. Visited contains constant/GV
+  // if we already met it. In this case CacheOfFreezes has a freeze if it is
+  // required.
+  auto handleConstantOrGlobal = [&](Use &U) {
+    Value *Def = U.get();
+    if (!isa<Constant>(Def) && !isa<GlobalValue>(Def))
+      return false;
+
+    if (Visited.insert(Def).second) {
+      if (isGuaranteedNotToBePoison(Def, nullptr, InsertPt, &DT))
+        return true;
+      CacheOfFreezes[Def] = new FreezeInst(Def, Def->getName() + ".gw.fr",
+                                           getFreezeInsertPt(Def, DT));
+    }
+
+    if (CacheOfFreezes.count(Def))
+      U.set(CacheOfFreezes[Def]);
+    return true;
+  };
+
   Worklist.push_back(Orig);
   while (!Worklist.empty()) {
     Value *V = Worklist.pop_back_val();
@@ -621,29 +646,22 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig, Instruction *InsertPt) {
       continue;
     }
     DropPoisonFlags.insert(I);
-    append_range(Worklist, I->operands());
+    for (Use &U : I->operands())
+      if (!handleConstantOrGlobal(U))
+        Worklist.push_back(U.get());
   }
   for (Instruction *I : DropPoisonFlags)
     I->dropPoisonGeneratingFlagsAndMetadata();
 
   Value *Result = Orig;
-  SmallPtrSet<Value *, 16> NeedFreezeSet(NeedFreeze.begin(), NeedFreeze.end());
   for (Value *V : NeedFreeze) {
     auto *FreezeInsertPt = getFreezeInsertPt(V, DT);
     FreezeInst *FI = new FreezeInst(V, V->getName() + ".gw.fr", FreezeInsertPt);
     ++FreezeAdded;
     if (V == Orig)
       Result = FI;
-    if (isa<Instruction>(V) || isa<Argument>(V))
-      V->replaceUsesWithIf(
-          FI, [&](const Use & U)->bool { return U.getUser() != FI; });
-    else
-      // if it is a constant or global, just make a change only in instructions
-      // we visited and which are not marked as NeedFreeze itself.
-      V->replaceUsesWithIf(FI, [&](const Use & U)->bool {
-        return U.getUser() != FI && Visited.contains(U) &&
-               !NeedFreezeSet.count(U);
-      });
+    V->replaceUsesWithIf(
+        FI, [&](const Use & U)->bool { return U.getUser() != FI; });
   }
 
   return Result;

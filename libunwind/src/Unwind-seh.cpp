@@ -238,7 +238,7 @@ unwind_phase2_forced(unw_context_t *uc,
     // Update info about this frame.
     unw_proc_info_t frameInfo;
     if (__unw_get_proc_info(&cursor2, &frameInfo) != UNW_ESUCCESS) {
-      _LIBUNWIND_TRACE_UNWINDING("unwind_phase2_forced(ex_ojb=%p): __unw_step "
+      _LIBUNWIND_TRACE_UNWINDING("unwind_phase2_forced(ex_ojb=%p): __unw_get_proc_info "
                                  "failed => _URC_END_OF_STACK",
                                  (void *)exception_object);
       return _URC_FATAL_PHASE2_ERROR;

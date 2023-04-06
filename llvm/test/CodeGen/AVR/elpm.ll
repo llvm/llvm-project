@@ -28,6 +28,32 @@ define i16 @foo0(i16 %a, i16 %b) {
 ; CHECK-NEXT:    sub r24, r18
 ; CHECK-NEXT:    sbc r25, r19
 ; CHECK-NEXT:    ret
+;
+; NOX-LABEL: foo0:
+; NOX:       ; %bb.0: ; %entry
+; NOX-NEXT:    lsl r22
+; NOX-NEXT:    rol r23
+; NOX-NEXT:    subi r22, lo8(-(arr0))
+; NOX-NEXT:    sbci r23, hi8(-(arr0))
+; NOX-NEXT:    movw r30, r22
+; NOX-NEXT:    lpm
+; NOX-NEXT:    mov r18, r0
+; NOX-NEXT:    adiw r30, 1
+; NOX-NEXT:    lpm
+; NOX-NEXT:    mov r19, r0
+; NOX-NEXT:    lsl r24
+; NOX-NEXT:    rol r25
+; NOX-NEXT:    subi r24, lo8(-(arr0))
+; NOX-NEXT:    sbci r25, hi8(-(arr0))
+; NOX-NEXT:    movw r30, r24
+; NOX-NEXT:    lpm
+; NOX-NEXT:    mov r24, r0
+; NOX-NEXT:    adiw r30, 1
+; NOX-NEXT:    lpm
+; NOX-NEXT:    mov r25, r0
+; NOX-NEXT:    sub r24, r18
+; NOX-NEXT:    sbc r25, r19
+; NOX-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds [4 x i16], [4 x i16] addrspace(1)* @arr0, i16 0, i16 %a
   %0 = load i16, i16 addrspace(1)* %arrayidx, align 1
@@ -59,6 +85,34 @@ define i16 @foo1(i16 %a, i16 %b) {
 ; CHECK-NEXT:    sub r24, r20
 ; CHECK-NEXT:    sbc r25, r21
 ; CHECK-NEXT:    ret
+;
+; NOX-LABEL: foo1:
+; NOX:       ; %bb.0: ; %entry
+; NOX-NEXT:    lsl r22
+; NOX-NEXT:    rol r23
+; NOX-NEXT:    subi r22, lo8(-(arr1))
+; NOX-NEXT:    sbci r23, hi8(-(arr1))
+; NOX-NEXT:    movw r30, r22
+; NOX-NEXT:    ldi r18, 1
+; NOX-NEXT:    out 59, r18
+; NOX-NEXT:    elpm
+; NOX-NEXT:    mov r20, r0
+; NOX-NEXT:    adiw r30, 1
+; NOX-NEXT:    elpm
+; NOX-NEXT:    mov r21, r0
+; NOX-NEXT:    lsl r24
+; NOX-NEXT:    rol r25
+; NOX-NEXT:    subi r24, lo8(-(arr0))
+; NOX-NEXT:    sbci r25, hi8(-(arr0))
+; NOX-NEXT:    movw r30, r24
+; NOX-NEXT:    lpm
+; NOX-NEXT:    mov r24, r0
+; NOX-NEXT:    adiw r30, 1
+; NOX-NEXT:    lpm
+; NOX-NEXT:    mov r25, r0
+; NOX-NEXT:    sub r24, r20
+; NOX-NEXT:    sbc r25, r21
+; NOX-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds [4 x i16], [4 x i16] addrspace(1)* @arr0, i16 0, i16 %a
   %0 = load i16, i16 addrspace(1)* %arrayidx, align 1
@@ -90,6 +144,34 @@ define i16 @foo2(i16 %a, i16 %b) {
 ; CHECK-NEXT:    sub r24, r18
 ; CHECK-NEXT:    sbc r25, r19
 ; CHECK-NEXT:    ret
+;
+; NOX-LABEL: foo2:
+; NOX:       ; %bb.0: ; %entry
+; NOX-NEXT:    lsl r24
+; NOX-NEXT:    rol r25
+; NOX-NEXT:    subi r24, lo8(-(arr2))
+; NOX-NEXT:    sbci r25, hi8(-(arr2))
+; NOX-NEXT:    movw r30, r24
+; NOX-NEXT:    ldi r18, 2
+; NOX-NEXT:    out 59, r18
+; NOX-NEXT:    elpm
+; NOX-NEXT:    mov r24, r0
+; NOX-NEXT:    adiw r30, 1
+; NOX-NEXT:    elpm
+; NOX-NEXT:    mov r25, r0
+; NOX-NEXT:    lsl r22
+; NOX-NEXT:    rol r23
+; NOX-NEXT:    subi r22, lo8(-(arr0))
+; NOX-NEXT:    sbci r23, hi8(-(arr0))
+; NOX-NEXT:    movw r30, r22
+; NOX-NEXT:    lpm
+; NOX-NEXT:    mov r18, r0
+; NOX-NEXT:    adiw r30, 1
+; NOX-NEXT:    lpm
+; NOX-NEXT:    mov r19, r0
+; NOX-NEXT:    sub r24, r18
+; NOX-NEXT:    sbc r25, r19
+; NOX-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds [4 x i16], [4 x i16] addrspace(3)* @arr2, i16 0, i16 %a
   %0 = load i16, i16 addrspace(3)* %arrayidx, align 1
@@ -123,6 +205,36 @@ define i16 @foo3(i16 %a, i16 %b) {
 ; CHECK-NEXT:    sub r24, r20
 ; CHECK-NEXT:    sbc r25, r21
 ; CHECK-NEXT:    ret
+;
+; NOX-LABEL: foo3:
+; NOX:       ; %bb.0: ; %entry
+; NOX-NEXT:    lsl r22
+; NOX-NEXT:    rol r23
+; NOX-NEXT:    subi r22, lo8(-(arr1))
+; NOX-NEXT:    sbci r23, hi8(-(arr1))
+; NOX-NEXT:    movw r30, r22
+; NOX-NEXT:    ldi r18, 1
+; NOX-NEXT:    out 59, r18
+; NOX-NEXT:    elpm
+; NOX-NEXT:    mov r20, r0
+; NOX-NEXT:    adiw r30, 1
+; NOX-NEXT:    elpm
+; NOX-NEXT:    mov r21, r0
+; NOX-NEXT:    lsl r24
+; NOX-NEXT:    rol r25
+; NOX-NEXT:    subi r24, lo8(-(arr2))
+; NOX-NEXT:    sbci r25, hi8(-(arr2))
+; NOX-NEXT:    movw r30, r24
+; NOX-NEXT:    ldi r18, 2
+; NOX-NEXT:    out 59, r18
+; NOX-NEXT:    elpm
+; NOX-NEXT:    mov r24, r0
+; NOX-NEXT:    adiw r30, 1
+; NOX-NEXT:    elpm
+; NOX-NEXT:    mov r25, r0
+; NOX-NEXT:    sub r24, r20
+; NOX-NEXT:    sbc r25, r21
+; NOX-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds [4 x i16], [4 x i16] addrspace(3)* @arr2, i16 0, i16 %a
   %0 = load i16, i16 addrspace(3)* %arrayidx, align 1

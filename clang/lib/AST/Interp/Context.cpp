@@ -133,6 +133,12 @@ unsigned Context::getCharBit() const {
   return Ctx.getTargetInfo().getCharWidth();
 }
 
+/// Simple wrapper around getFloatTypeSemantics() to make code a
+/// little shorter.
+const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
+  return Ctx.getFloatTypeSemantics(T);
+}
+
 bool Context::Run(State &Parent, Function *Func, APValue &Result) {
   InterpState State(Parent, *P, Stk, *this);
   State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, {});

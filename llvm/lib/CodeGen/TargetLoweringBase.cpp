@@ -875,10 +875,10 @@ void TargetLoweringBase::initActions() {
     // Named vector shuffles default to expand.
     setOperationAction(ISD::VECTOR_SPLICE, VT, Expand);
 
-    // VP_SREM/UREM default to expand.
-    // TODO: Expand all VP intrinsics.
-    setOperationAction(ISD::VP_SREM, VT, Expand);
-    setOperationAction(ISD::VP_UREM, VT, Expand);
+    // VP operations default to expand.
+#define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \
+    setOperationAction(ISD::SDOPC, VT, Expand);
+#include "llvm/IR/VPIntrinsics.def"
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.

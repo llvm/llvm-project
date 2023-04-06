@@ -43,9 +43,7 @@ if(NOT ANDROID)
   endif()
 endif()
 
-if(COMPILER_RT_STANDALONE_BUILD)
-  umbrella_lit_testsuite_begin(check-compiler-rt)
-endif()
+umbrella_lit_testsuite_begin(check-compiler-rt)
 
 function(compiler_rt_test_runtime runtime)
   string(TOUPPER ${runtime} runtime_uppercase)
@@ -110,12 +108,12 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
   add_subdirectory(shadowcallstack)
 endif()
 
-if(COMPILER_RT_STANDALONE_BUILD)
-  # Now that we've traversed all the directories and know all the lit testsuites,
-  # introduce a rule to run to run all of them.
-  add_custom_target(compiler-rt-test-depends DEPENDS ${LLVM_COMPILER_RT_LIT_DEPENDS})
-  umbrella_lit_testsuite_end(check-compiler-rt)
+# Now that we've traversed all the directories and know all the lit testsuites,
+# introduce a rule to run to run all of them.
+add_custom_target(compiler-rt-test-depends DEPENDS ${LLVM_COMPILER_RT_LIT_DEPENDS})
+umbrella_lit_testsuite_end(check-compiler-rt)
 
+if(COMPILER_RT_STANDALONE_BUILD)
   if(NOT TARGET check-all)
     add_custom_target(check-all)
   endif()

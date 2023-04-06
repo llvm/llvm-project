@@ -3330,6 +3330,54 @@ define i1 @allzeros_v8i64_and4(<8 x i64> %arg) {
   ret i1 %tmp3
 }
 
+; FCMP may use ISD::SETNE when nnan, don't attempt to use LowerVectorAllEqual.
+define i1 @allzeros_v8f32_nnan(<8 x float> %a0) {
+; SSE-LABEL: allzeros_v8f32_nnan:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm2, %xmm2
+; SSE-NEXT:    cmpneqps %xmm2, %xmm1
+; SSE-NEXT:    cmpneqps %xmm2, %xmm0
+; SSE-NEXT:    packssdw %xmm1, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %eax
+; SSE-NEXT:    testl %eax, %eax
+; SSE-NEXT:    setne %al
+; SSE-NEXT:    retq
+;
+; AVX1OR2-LABEL: allzeros_v8f32_nnan:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1OR2-NEXT:    vcmpneqps %ymm1, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vmovmskps %ymm0, %eax
+; AVX1OR2-NEXT:    testl %eax, %eax
+; AVX1OR2-NEXT:    setne %al
+; AVX1OR2-NEXT:    vzeroupper
+; AVX1OR2-NEXT:    retq
+;
+; KNL-LABEL: allzeros_v8f32_nnan:
+; KNL:       # %bb.0:
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; KNL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; KNL-NEXT:    vcmpneqps %zmm1, %zmm0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    testb %al, %al
+; KNL-NEXT:    setne %al
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: allzeros_v8f32_nnan:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; SKX-NEXT:    vcmpneqps %ymm1, %ymm0, %k0
+; SKX-NEXT:    kortestb %k0, %k0
+; SKX-NEXT:    setne %al
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+  %1 = fcmp nnan une <8 x float> %a0, zeroinitializer
+  %2 = bitcast <8 x i1> %1 to i8
+  %3 = icmp ne i8 %2, 0
+  ret i1 %3
+}
+
 ; The below are IR patterns that should directly represent the behavior of a
 ; MOVMSK instruction.
 

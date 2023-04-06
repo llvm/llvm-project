@@ -97,9 +97,9 @@ private:
   bool expandASRW15Rd(Block &MBB, BlockIt MBBI);
 
   // Common implementation of LPMWRdZ and ELPMWRdZ.
-  bool expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsExt);
+  bool expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsELPM);
   // Common implementation of LPMBRdZ and ELPMBRdZ.
-  bool expandLPMBELPMB(Block &MBB, BlockIt MBBI, bool IsExt);
+  bool expandLPMBELPMB(Block &MBB, BlockIt MBBI, bool IsELPM);
 };
 
 char AVRExpandPseudo::ID = 0;
@@ -812,19 +812,21 @@ bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-bool AVRExpandPseudo::expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsExt) {
+bool AVRExpandPseudo::expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsELPM) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
+  Register SrcLoReg, SrcHiReg;
   bool SrcIsKill = MI.getOperand(1).isKill();
-  unsigned OpLo = IsExt ? AVR::ELPMRdZPi : AVR::LPMRdZPi;
-  unsigned OpHi = IsExt ? AVR::ELPMRdZ : AVR::LPMRdZ;
+  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
+  bool IsLPMRn = IsELPM ? STI.hasELPMX() : STI.hasLPMX();
+
   TRI->splitReg(DstReg, DstLoReg, DstHiReg);
+  TRI->splitReg(SrcReg, SrcLoReg, SrcHiReg);
 
   // Set the I/O register RAMPZ for ELPM.
-  if (IsExt) {
-    const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
+  if (IsELPM) {
     Register Bank = MI.getOperand(2).getReg();
     // out RAMPZ, rtmp
     buildMI(MBB, MBBI, AVR::OUTARr).addImm(STI.getIORegRAMPZ()).addReg(Bank);
@@ -833,18 +835,81 @@ bool AVRExpandPseudo::expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsExt) {
   // This is enforced by the @earlyclobber constraint.
   assert(DstReg != SrcReg && "SrcReg and DstReg cannot be the same");
 
-  // Load low byte.
-  auto MIBLO = buildMI(MBB, MBBI, OpLo)
-                   .addReg(DstLoReg, RegState::Define)
-                   .addReg(SrcReg);
+  if (IsLPMRn) {
+    unsigned OpLo = IsELPM ? AVR::ELPMRdZPi : AVR::LPMRdZPi;
+    unsigned OpHi = IsELPM ? AVR::ELPMRdZ : AVR::LPMRdZ;
+    // Load low byte.
+    auto MIBLO = buildMI(MBB, MBBI, OpLo)
+                     .addReg(DstLoReg, RegState::Define)
+                     .addReg(SrcReg);
+    // Load high byte.
+    auto MIBHI = buildMI(MBB, MBBI, OpHi)
+                     .addReg(DstHiReg, RegState::Define)
+                     .addReg(SrcReg, getKillRegState(SrcIsKill));
+    MIBLO.setMemRefs(MI.memoperands());
+    MIBHI.setMemRefs(MI.memoperands());
+  } else {
+    unsigned Opc = IsELPM ? AVR::ELPM : AVR::LPM;
+    // Load low byte, and copy to the low destination register.
+    auto MIBLO = buildMI(MBB, MBBI, Opc);
+    buildMI(MBB, MBBI, AVR::MOVRdRr)
+        .addReg(DstLoReg, RegState::Define)
+        .addReg(AVR::R0, RegState::Kill);
+    MIBLO.setMemRefs(MI.memoperands());
+    // Increase the Z register by 1.
+    if (STI.hasADDSUBIW()) {
+      // adiw r31:r30, 1
+      auto MIINC = buildMI(MBB, MBBI, AVR::ADIWRdK)
+                       .addReg(SrcReg, RegState::Define)
+                       .addReg(SrcReg, getKillRegState(SrcIsKill))
+                       .addImm(1);
+      MIINC->getOperand(3).setIsDead();
+    } else {
+      // subi r30, 255
+      // sbci r31, 255
+      buildMI(MBB, MBBI, AVR::SUBIRdK)
+          .addReg(SrcLoReg, RegState::Define)
+          .addReg(SrcLoReg, getKillRegState(SrcIsKill))
+          .addImm(255);
+      auto MIZHI = buildMI(MBB, MBBI, AVR::SBCIRdK)
+                       .addReg(SrcHiReg, RegState::Define)
+                       .addReg(SrcHiReg, getKillRegState(SrcIsKill))
+                       .addImm(255);
+      MIZHI->getOperand(3).setIsDead();
+      MIZHI->getOperand(4).setIsKill();
+    }
+    // Load high byte, and copy to the high destination register.
+    auto MIBHI = buildMI(MBB, MBBI, Opc);
+    buildMI(MBB, MBBI, AVR::MOVRdRr)
+        .addReg(DstHiReg, RegState::Define)
+        .addReg(AVR::R0, RegState::Kill);
+    MIBHI.setMemRefs(MI.memoperands());
+  }
 
-  // Load high byte.
-  auto MIBHI = buildMI(MBB, MBBI, OpHi)
-                   .addReg(DstHiReg, RegState::Define)
-                   .addReg(SrcReg, getKillRegState(SrcIsKill));
-
-  MIBLO.setMemRefs(MI.memoperands());
-  MIBHI.setMemRefs(MI.memoperands());
+  // Restore the Z register if it is not killed.
+  if (!SrcIsKill) {
+    if (STI.hasADDSUBIW()) {
+      // sbiw r31:r30, 1
+      auto MIDEC = buildMI(MBB, MBBI, AVR::SBIWRdK)
+                       .addReg(SrcReg, RegState::Define)
+                       .addReg(SrcReg, getKillRegState(SrcIsKill))
+                       .addImm(1);
+      MIDEC->getOperand(3).setIsDead();
+    } else {
+      // subi r30, 1
+      // sbci r31, 0
+      buildMI(MBB, MBBI, AVR::SUBIRdK)
+          .addReg(SrcLoReg, RegState::Define)
+          .addReg(SrcLoReg, getKillRegState(SrcIsKill))
+          .addImm(1);
+      auto MIZHI = buildMI(MBB, MBBI, AVR::SBCIRdK)
+                       .addReg(SrcHiReg, RegState::Define)
+                       .addReg(SrcHiReg, getKillRegState(SrcIsKill))
+                       .addImm(0);
+      MIZHI->getOperand(3).setIsDead();
+      MIZHI->getOperand(4).setIsKill();
+    }
+  }
 
   MI.eraseFromParent();
   return true;
@@ -860,23 +925,23 @@ bool AVRExpandPseudo::expand<AVR::ELPMWRdZ>(Block &MBB, BlockIt MBBI) {
   return expandLPMWELPMW(MBB, MBBI, true);
 }
 
-bool AVRExpandPseudo::expandLPMBELPMB(Block &MBB, BlockIt MBBI, bool IsExt) {
+bool AVRExpandPseudo::expandLPMBELPMB(Block &MBB, BlockIt MBBI, bool IsELPM) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
   bool SrcIsKill = MI.getOperand(1).isKill();
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
-  bool HasX = IsExt ? STI.hasELPMX() : STI.hasLPMX();
+  bool IsLPMRn = IsELPM ? STI.hasELPMX() : STI.hasLPMX();
 
   // Set the I/O register RAMPZ for ELPM (out RAMPZ, rtmp).
-  if (IsExt) {
+  if (IsELPM) {
     Register BankReg = MI.getOperand(2).getReg();
     buildMI(MBB, MBBI, AVR::OUTARr).addImm(STI.getIORegRAMPZ()).addReg(BankReg);
   }
 
   // Load byte.
-  if (HasX) {
-    unsigned Opc = IsExt ? AVR::ELPMRdZ : AVR::LPMRdZ;
+  if (IsLPMRn) {
+    unsigned Opc = IsELPM ? AVR::ELPMRdZ : AVR::LPMRdZ;
     auto MILB = buildMI(MBB, MBBI, Opc)
                     .addReg(DstReg, RegState::Define)
                     .addReg(SrcReg, getKillRegState(SrcIsKill));
@@ -884,7 +949,7 @@ bool AVRExpandPseudo::expandLPMBELPMB(Block &MBB, BlockIt MBBI, bool IsExt) {
   } else {
     // For the basic ELPM/LPM instruction, its operand[0] is the implicit
     // 'Z' register, and its operand[1] is the implicit 'R0' register.
-    unsigned Opc = IsExt ? AVR::ELPM : AVR::LPM;
+    unsigned Opc = IsELPM ? AVR::ELPM : AVR::LPM;
     auto MILB = buildMI(MBB, MBBI, Opc);
     buildMI(MBB, MBBI, AVR::MOVRdRr)
         .addReg(DstReg, RegState::Define)

@@ -139,9 +139,9 @@ OHOS::OHOS(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   SelectedMultilib = Result.SelectedMultilib;
 
   getFilePaths().clear();
-  std::string CandidateLibPath = getArchSpecificLibPath();
-  if (getVFS().exists(CandidateLibPath))
-    getFilePaths().push_back(CandidateLibPath);
+  for (const auto &CandidateLibPath : getArchSpecificLibPaths())
+    if (getVFS().exists(CandidateLibPath))
+      getFilePaths().push_back(CandidateLibPath);
 
   getLibraryPaths().clear();
   for (auto &Path : getRuntimePaths())
@@ -401,9 +401,12 @@ void OHOS::addProfileRTLibs(const llvm::opt::ArgList &Args,
   ToolChain::addProfileRTLibs(Args, CmdArgs);
 }
 
-std::string OHOS::getArchSpecificLibPath() const {
+ToolChain::path_list OHOS::getArchSpecificLibPaths() const {
+  ToolChain::path_list Paths;
   llvm::Triple Triple = getTriple();
-  return makePath({getDriver().ResourceDir, "lib", getMultiarchTriple(Triple)});
+  Paths.push_back(
+      makePath({getDriver().ResourceDir, "lib", getMultiarchTriple(Triple)}));
+  return Paths;
 }
 
 ToolChain::UnwindLibType OHOS::GetUnwindLibType(const llvm::opt::ArgList &Args) const {

@@ -83,7 +83,8 @@ protected:
   SanitizerMask getSupportedSanitizers() const override;
   void addProfileRTLibs(const llvm::opt::ArgList &Args,
                              llvm::opt::ArgStringList &CmdArgs) const override;
-  std::string getArchSpecificLibPath() const override;
+  path_list getArchSpecificLibPaths() const override;
+
 private:
   Multilib SelectedMultilib;
 };

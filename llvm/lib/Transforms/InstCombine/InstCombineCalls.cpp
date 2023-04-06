@@ -3642,24 +3642,6 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     if (CallerPAL.hasParamAttr(i, Attribute::ByVal) !=
         Callee->getAttributes().hasParamAttr(i, Attribute::ByVal))
       return false; // Cannot transform to or from byval.
-
-    // If the parameter is passed as a byval argument, then we have to have a
-    // sized type and the sized type has to have the same size as the old type.
-    if (ParamTy != ActTy && CallerPAL.hasParamAttr(i, Attribute::ByVal)) {
-      PointerType *ParamPTy = dyn_cast<PointerType>(ParamTy);
-      if (!ParamPTy)
-        return false;
-
-      if (!ParamPTy->isOpaque()) {
-        Type *ParamElTy = ParamPTy->getNonOpaquePointerElementType();
-        if (!ParamElTy->isSized())
-          return false;
-
-        Type *CurElTy = Call.getParamByValType(i);
-        if (DL.getTypeAllocSize(CurElTy) != DL.getTypeAllocSize(ParamElTy))
-          return false;
-      }
-    }
   }
 
   if (Callee->isDeclaration()) {
@@ -3720,16 +3702,8 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     // type. Note that we made sure all incompatible ones are safe to drop.
     AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(
         ParamTy, AttributeFuncs::ASK_SAFE_TO_DROP);
-    if (CallerPAL.hasParamAttr(i, Attribute::ByVal) &&
-        !ParamTy->isOpaquePointerTy()) {
-      AttrBuilder AB(Ctx, CallerPAL.getParamAttrs(i).removeAttributes(
-                              Ctx, IncompatibleAttrs));
-      AB.addByValAttr(ParamTy->getNonOpaquePointerElementType());
-      ArgAttrs.push_back(AttributeSet::get(Ctx, AB));
-    } else {
-      ArgAttrs.push_back(
-          CallerPAL.getParamAttrs(i).removeAttributes(Ctx, IncompatibleAttrs));
-    }
+    ArgAttrs.push_back(
+        CallerPAL.getParamAttrs(i).removeAttributes(Ctx, IncompatibleAttrs));
   }
 
   // If the function takes more arguments than the call was taking, add them

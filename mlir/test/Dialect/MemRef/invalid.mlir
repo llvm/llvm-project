@@ -910,7 +910,7 @@ func.func @test_alloc_memref_map_rank_mismatch() {
 // -----
 
 func.func @rank(%0: f32) {
-  // expected-error@+1 {{'memref.rank' op operand #0 must be unranked.memref of any type values or memref of any type values}}
+  // expected-error@+1 {{'memref.rank' op operand #0 must be ranked or unranked memref of any type values}}
   "memref.rank"(%0): (f32)->index
   return
 }

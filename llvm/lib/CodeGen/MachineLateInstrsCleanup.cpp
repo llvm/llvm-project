@@ -39,8 +39,8 @@ STATISTIC(NumRemoved, "Number of redundant instructions removed.");
 namespace {
 
 class MachineLateInstrsCleanup : public MachineFunctionPass {
-  const TargetRegisterInfo *TRI;
-  const TargetInstrInfo *TII;
+  const TargetRegisterInfo *TRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
 
   // Data structures to map regs to their definitions per MBB.
   using Reg2DefMap = std::map<Register, MachineInstr*>;

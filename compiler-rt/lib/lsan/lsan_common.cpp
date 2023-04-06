@@ -997,7 +997,7 @@ void __lsan_ignore_object(const void *p) {
   // Cannot use PointsIntoChunk or LsanMetadata here, since the allocator is not
   // locked.
   Lock l(&global_mutex);
-  IgnoreObjectResult res = IgnoreObjectLocked(p);
+  IgnoreObjectResult res = IgnoreObject(p);
   if (res == kIgnoreObjectInvalid)
     VReport(1, "__lsan_ignore_object(): no heap object found at %p\n", p);
   if (res == kIgnoreObjectAlreadyIgnored)
