@@ -46812,27 +46812,27 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       VT.getVectorElementType() == MVT::i1 &&
       (DCI.isBeforeLegalize() || (VT != MVT::v64i1 || Subtarget.is64Bit()))) {
     EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VT.getVectorNumElements());
-    bool LHSIsConst = ISD::isBuildVectorOfConstantSDNodes(LHS.getNode());
-    bool RHSIsConst = ISD::isBuildVectorOfConstantSDNodes(RHS.getNode());
+    if (DCI.isBeforeLegalize() || TLI.isTypeLegal(IntVT)) {
+      bool LHSIsConst = ISD::isBuildVectorOfConstantSDNodes(LHS.getNode());
+      bool RHSIsConst = ISD::isBuildVectorOfConstantSDNodes(RHS.getNode());
 
-    if ((LHSIsConst ||
-         (LHS.getOpcode() == ISD::BITCAST &&
-          LHS.getOperand(0).getValueType() == IntVT)) &&
-        (RHSIsConst ||
-         (RHS.getOpcode() == ISD::BITCAST &&
-          RHS.getOperand(0).getValueType() == IntVT))) {
-      if (LHSIsConst)
-        LHS = combinevXi1ConstantToInteger(LHS, DAG);
-      else
-        LHS = LHS.getOperand(0);
+      if ((LHSIsConst || (LHS.getOpcode() == ISD::BITCAST &&
+                          LHS.getOperand(0).getValueType() == IntVT)) &&
+          (RHSIsConst || (RHS.getOpcode() == ISD::BITCAST &&
+                          RHS.getOperand(0).getValueType() == IntVT))) {
+        if (LHSIsConst)
+          LHS = combinevXi1ConstantToInteger(LHS, DAG);
+        else
+          LHS = LHS.getOperand(0);
 
-      if (RHSIsConst)
-        RHS = combinevXi1ConstantToInteger(RHS, DAG);
-      else
-        RHS = RHS.getOperand(0);
+        if (RHSIsConst)
+          RHS = combinevXi1ConstantToInteger(RHS, DAG);
+        else
+          RHS = RHS.getOperand(0);
 
-      SDValue Select = DAG.getSelect(DL, IntVT, Cond, LHS, RHS);
-      return DAG.getBitcast(VT, Select);
+        SDValue Select = DAG.getSelect(DL, IntVT, Cond, LHS, RHS);
+        return DAG.getBitcast(VT, Select);
+      }
     }
   }
 
