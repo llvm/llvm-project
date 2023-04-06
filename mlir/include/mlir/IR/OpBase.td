@@ -801,7 +801,7 @@ def AnyStaticShapeTensor : StaticShapeTensorOf<[AnyType]>;
 //===----------------------------------------------------------------------===//
 // Memref type.
 
-// Unranked Memref type
+// Any unranked memref whose element type is from the given `allowedTypes` list.
 class UnrankedMemRefOf<list<Type> allowedTypes> :
     ShapedContainerType<allowedTypes,
                         IsUnrankedMemRefTypePred, "unranked.memref",
@@ -809,10 +809,11 @@ class UnrankedMemRefOf<list<Type> allowedTypes> :
 
 def AnyUnrankedMemRef : UnrankedMemRefOf<[AnyType]>;
 
-// Memrefs are blocks of data with fixed type and rank.
+// Any ranked memref whose element type is from the given `allowedTypes` list.
 class MemRefOf<list<Type> allowedTypes> :
     ShapedContainerType<allowedTypes, IsMemRefTypePred, "memref",
                         "::mlir::MemRefType">;
+
 class Non0RankedMemRefOf<list<Type> allowedTypes> :
     ConfinedType<MemRefOf<allowedTypes>, [HasRankGreaterOrEqualPred<1>],
          "non-0-ranked." # MemRefOf<allowedTypes>.summary,
@@ -821,10 +822,18 @@ class Non0RankedMemRefOf<list<Type> allowedTypes> :
 def AnyMemRef : MemRefOf<[AnyType]>;
 def AnyNon0RankedMemRef : Non0RankedMemRefOf<[AnyType]>;
 
-class RankedOrUnrankedMemRefOf<list<Type> allowedTypes>:
-    AnyTypeOf<[UnrankedMemRefOf<allowedTypes>, MemRefOf<allowedTypes>]>;
+// Any memref (ranked or unranked) whose element type is from the given
+// `allowedTypes` list, and which additionally satisfies an optional list of
+// predicates.
+class RankedOrUnrankedMemRefOf<
+    list<Type> allowedTypes,
+    list<Pred> preds = [],
+    string summary = "ranked or unranked memref">
+  : ShapedContainerType<allowedTypes,
+      And<!listconcat([IsBaseMemRefTypePred], preds)>,
+      summary, "::mlir::BaseMemRefType">;
 
-def AnyRankedOrUnrankedMemRef: AnyTypeOf<[AnyUnrankedMemRef, AnyMemRef]>;
+def AnyRankedOrUnrankedMemRef  : RankedOrUnrankedMemRefOf<[AnyType]>;
 def AnyNon0RankedOrUnrankedMemRef:
     AnyTypeOf<[AnyUnrankedMemRef, AnyNon0RankedMemRef]>;
 
