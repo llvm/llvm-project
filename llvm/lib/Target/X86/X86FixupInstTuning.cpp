@@ -156,6 +156,8 @@ bool X86FixupInstTuningPass::processInstruction(
 
   // `vunpcklpd/vmovlhps r, r` -> `vshufps r, r, 0x44`
   // `vunpckhpd/vmovlhps r, r` -> `vshufps r, r, 0xee`
+  // `vunpcklpd r, r, k` -> `vshufpd r, r, 0x00`
+  // `vunpckhpd r, r, k` -> `vshufpd r, r, 0xff`
   // iff `vshufps` is faster than `vunpck{l|h}pd`. Otherwise stick with
   // `vunpck{l|h}pd` as it uses less code size.
   // TODO: Look into using `{VP}UNPCK{L|H}QDQ{...}` instead of `{V}SHUF{...}PS`
@@ -168,11 +170,12 @@ bool X86FixupInstTuningPass::processInstruction(
     MI.addOperand(MachineOperand::CreateImm(MaskImm));
     return true;
   };
+
   auto ProcessUNPCKLPDrr = [&](unsigned NewOpc) -> bool {
-    return ProcessUNPCKPD(NewOpc, 0x44);
+    return ProcessUNPCKPD(NewOpc, 0x00);
   };
   auto ProcessUNPCKHPDrr = [&](unsigned NewOpc) -> bool {
-    return ProcessUNPCKPD(NewOpc, 0xee);
+    return ProcessUNPCKPD(NewOpc, 0xff);
   };
 
   switch (Opc) {
@@ -240,23 +243,47 @@ bool X86FixupInstTuningPass::processInstruction(
     // VMOVLHPS is always 128 bits.
   case X86::VMOVLHPSZrr:
   case X86::VUNPCKLPDZ128rr:
-    return ProcessUNPCKLPDrr(X86::VSHUFPSZ128rri);
+    return ProcessUNPCKLPDrr(X86::VSHUFPDZ128rri);
   case X86::VUNPCKLPDZ256rr:
-    return ProcessUNPCKLPDrr(X86::VSHUFPSZ256rri);
+    return ProcessUNPCKLPDrr(X86::VSHUFPDZ256rri);
   case X86::VUNPCKLPDZrr:
-    return ProcessUNPCKLPDrr(X86::VSHUFPSZrri);
+    return ProcessUNPCKLPDrr(X86::VSHUFPDZrri);
+  case X86::VUNPCKLPDZ128rrk:
+    return ProcessUNPCKLPDrr(X86::VSHUFPDZ128rrik);
+  case X86::VUNPCKLPDZ256rrk:
+    return ProcessUNPCKLPDrr(X86::VSHUFPDZ256rrik);
+  case X86::VUNPCKLPDZrrk:
+    return ProcessUNPCKLPDrr(X86::VSHUFPDZrrik);
+  case X86::VUNPCKLPDZ128rrkz:
+    return ProcessUNPCKLPDrr(X86::VSHUFPDZ128rrikz);
+  case X86::VUNPCKLPDZ256rrkz:
+    return ProcessUNPCKLPDrr(X86::VSHUFPDZ256rrikz);
+  case X86::VUNPCKLPDZrrkz:
+    return ProcessUNPCKLPDrr(X86::VSHUFPDZrrikz);
   case X86::UNPCKHPDrr:
-    return ProcessUNPCKHPDrr(X86::SHUFPSrri);
+    return ProcessUNPCKHPDrr(X86::SHUFPDrri);
   case X86::VUNPCKHPDrr:
-    return ProcessUNPCKHPDrr(X86::VSHUFPSrri);
+    return ProcessUNPCKHPDrr(X86::VSHUFPDrri);
   case X86::VUNPCKHPDYrr:
-    return ProcessUNPCKHPDrr(X86::VSHUFPSYrri);
+    return ProcessUNPCKHPDrr(X86::VSHUFPDYrri);
   case X86::VUNPCKHPDZ128rr:
-    return ProcessUNPCKHPDrr(X86::VSHUFPSZ128rri);
+    return ProcessUNPCKHPDrr(X86::VSHUFPDZ128rri);
   case X86::VUNPCKHPDZ256rr:
-    return ProcessUNPCKHPDrr(X86::VSHUFPSZ256rri);
+    return ProcessUNPCKHPDrr(X86::VSHUFPDZ256rri);
   case X86::VUNPCKHPDZrr:
-    return ProcessUNPCKHPDrr(X86::VSHUFPSZrri);
+    return ProcessUNPCKHPDrr(X86::VSHUFPDZrri);
+  case X86::VUNPCKHPDZ128rrk:
+    return ProcessUNPCKHPDrr(X86::VSHUFPDZ128rrik);
+  case X86::VUNPCKHPDZ256rrk:
+    return ProcessUNPCKHPDrr(X86::VSHUFPDZ256rrik);
+  case X86::VUNPCKHPDZrrk:
+    return ProcessUNPCKHPDrr(X86::VSHUFPDZrrik);
+  case X86::VUNPCKHPDZ128rrkz:
+    return ProcessUNPCKHPDrr(X86::VSHUFPDZ128rrikz);
+  case X86::VUNPCKHPDZ256rrkz:
+    return ProcessUNPCKHPDrr(X86::VSHUFPDZ256rrikz);
+  case X86::VUNPCKHPDZrrkz:
+    return ProcessUNPCKHPDrr(X86::VSHUFPDZrrikz);
   default:
     return false;
   }
