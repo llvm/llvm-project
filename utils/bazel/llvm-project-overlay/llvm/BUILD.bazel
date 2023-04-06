@@ -200,9 +200,9 @@ cc_library(
             "lib/Support/Unix/*.inc",
         ]),
     }) + [
-        "lib/Support/BLAKE3/blake3_impl.h",
         "lib/Support/BLAKE3/blake3.c",
         "lib/Support/BLAKE3/blake3_dispatch.c",
+        "lib/Support/BLAKE3/blake3_impl.h",
         "lib/Support/BLAKE3/blake3_portable.c",
         "lib/Support/BLAKE3/llvm_blake3_prefix.h",
     ] + select({
@@ -210,10 +210,10 @@ cc_library(
             "lib/Support/BLAKE3/blake3_neon.c",
         ],
         "@platforms//cpu:x86_64": [
-            "lib/Support/BLAKE3/blake3_sse2_x86-64_unix.S",
-            "lib/Support/BLAKE3/blake3_sse41_x86-64_unix.S",
             "lib/Support/BLAKE3/blake3_avx2_x86-64_unix.S",
             "lib/Support/BLAKE3/blake3_avx512_x86-64_unix.S",
+            "lib/Support/BLAKE3/blake3_sse2_x86-64_unix.S",
+            "lib/Support/BLAKE3/blake3_sse41_x86-64_unix.S",
         ],
         "//conditions:default": [
         ],
@@ -357,9 +357,9 @@ cc_library(
             "include/llvm/LinkAllPasses.h",
         ],
     ) + [
-        "include/llvm/IR/Value.def",
         "include/llvm-c/Comdat.h",
         "include/llvm-c/DebugInfo.h",
+        "include/llvm/IR/Value.def",
     ],
     copts = llvm_copts,
 )
@@ -599,8 +599,8 @@ cc_library(
 
 cc_binary(
     name = "llvm-tblgen",
-    deps = [":UtilsTableGen"],
     stamp = 0,
+    deps = [":UtilsTableGen"],
 )
 
 cc_library(
@@ -615,7 +615,6 @@ cc_library(
         # regular dependency.
         "include/llvm/MC/*.h",
     ]),
-    alwayslink = True,
     copts = llvm_copts,
     textual_hdrs = glob(["utils/TableGen/*.def"]),
     deps = [
@@ -624,6 +623,7 @@ cc_library(
         ":TableGen",
         ":config",
     ],
+    alwayslink = True,
 )
 
 gentbl(
@@ -2019,6 +2019,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-global-isel", "lib/Target/X86/X86GenGlobalISel.inc"),
             ("-gen-callingconv", "lib/Target/X86/X86GenCallingConv.inc"),
             ("-gen-subtarget", "lib/Target/X86/X86GenSubtargetInfo.inc"),
+            ("-gen-x86-fold-tables -asmwriternum=1", "lib/Target/X86/X86GenFoldTables.inc"),
             ("-gen-x86-EVEX2VEX-tables", "lib/Target/X86/X86GenEVEX2VEXTables.inc"),
             ("-gen-exegesis", "lib/Target/X86/X86GenExegesis.inc"),
             ("-gen-x86-mnemonic-tables -asmwriternum=1", "lib/Target/X86/X86GenMnemonicTables.inc"),
