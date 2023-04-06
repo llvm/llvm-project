@@ -597,14 +597,13 @@ cc_library(
     ],
 )
 
-cc_binary(
-    name = "llvm-tblgen",
-    stamp = 0,
-    deps = [":UtilsTableGen"],
+cc_library(
+    name = "llvm-tblgen-headers",
+    textual_hdrs = glob(["utils/TableGen/*.def"]),
 )
 
-cc_library(
-    name = "UtilsTableGen",
+cc_binary(
+    name = "llvm-tblgen",
     srcs = glob([
         "utils/TableGen/*.cpp",
         "utils/TableGen/*.inc",
@@ -616,14 +615,14 @@ cc_library(
         "include/llvm/MC/*.h",
     ]),
     copts = llvm_copts,
-    textual_hdrs = glob(["utils/TableGen/*.def"]),
+    stamp = 0,
     deps = [
         ":LLVMTableGenGlobalISel",
         ":Support",
         ":TableGen",
         ":config",
+        ":llvm-tblgen-headers",
     ],
-    alwayslink = True,
 )
 
 gentbl(
