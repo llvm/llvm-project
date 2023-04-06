@@ -40,6 +40,8 @@ struct UnimplementedFeature {
   static bool setDLLImportDLLExport() { return false; }
   static bool setPartition() { return false; }
   static bool setGlobalVisibility() { return false; }
+  static bool hiddenVisibility() { return false; }
+  static bool protectedVisibility() { return false; }
 
   // Sanitizers
   static bool reportGlobalToASan() { return false; }

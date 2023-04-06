@@ -2098,3 +2098,20 @@ bool CIRGenModule::shouldOpportunisticallyEmitVTables() {
     llvm_unreachable("NYI");
   return codeGenOpts.OptimizationLevel > 0;
 }
+
+mlir::Value CIRGenModule::getAddrOfRTTIDescriptor(QualType Ty, bool ForEH) {
+  // Return a bogus pointer if RTTI is disabled, unless it's for EH.
+  // FIXME: should we even be calling this method if RTTI is disabled
+  // and it's not for EH?
+  if ((!ForEH && !getLangOpts().RTTI) || getLangOpts().CUDAIsDevice ||
+      (getLangOpts().OpenMP && getLangOpts().OpenMP && getTriple().isNVPTX())) {
+    llvm_unreachable("NYI");
+  }
+
+  if (ForEH && Ty->isObjCObjectPointerType() &&
+      getLangOpts().ObjCRuntime.isGNUFamily()) {
+    llvm_unreachable("NYI");
+  }
+
+  return getCXXABI().getAddrOfRTTIDescriptor(Ty);
+}

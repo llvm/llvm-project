@@ -209,6 +209,22 @@ public:
   /// of the given class.
   mlir::cir::GlobalLinkageKind getVTableLinkage(const CXXRecordDecl *RD);
 
+  /// Get the address of the RTTI descriptor for the given type.
+  mlir::Value getAddrOfRTTIDescriptor(QualType Ty, bool ForEH = false);
+
+  /// TODO(cir): add CIR visibility bits.
+  static mlir::SymbolTable::Visibility getCIRVisibility(Visibility V) {
+    switch (V) {
+    case DefaultVisibility:
+      return mlir::SymbolTable::Visibility::Public;
+    case HiddenVisibility:
+      return mlir::SymbolTable::Visibility::Private;
+    case ProtectedVisibility:
+      llvm_unreachable("NYI");
+    }
+    llvm_unreachable("unknown visibility!");
+  }
+
   llvm::DenseMap<mlir::Attribute, mlir::cir::GlobalOp> ConstantStringMap;
 
   /// Return a constant array for the given string.
