@@ -2908,6 +2908,7 @@ def Unavailable : InheritableAttr {
                  "IR_ARCInitReturnsUnrelated",
                  "IR_ARCFieldWithOwnership"], 1, /*fake*/ 1>];
   let Documentation = [Undocumented];
+  let MeaningfulToClassTemplateDefinition = 1;
 }
 
 def DiagnoseIf : InheritableAttr {
