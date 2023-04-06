@@ -8,8 +8,6 @@ declare void @h(ptr %p, ptr %q, ptr %z)
 define void @f(ptr %p, ptr %q, ptr %z) {
 ; CHECK-LABEL: define void @f
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[Z:%.*]]) {
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P]]) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[Z]]) ]
 ; CHECK-NEXT:    call void @h(ptr [[P]], ptr [[Q]], ptr [[Z]])
 ; CHECK-NEXT:    ret void
 ;
