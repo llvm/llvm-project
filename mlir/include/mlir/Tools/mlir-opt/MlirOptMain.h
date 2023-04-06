@@ -35,12 +35,12 @@ class PassManager;
 /// supported options.
 /// The API is fluent, and the options are sorted in alphabetical order below.
 /// The options can be exposed to the LLVM command line by registering them
-/// with `MlirOptMainConfig::registerCLOptions(DialectRegistry &);` and creating
-/// a config using `auto config = MlirOptMainConfig::createFromCLOptions();`.
+/// with `MlirOptMainConfig::registerCLOptions();` and creating a config using
+/// `auto config = MlirOptMainConfig::createFromCLOptions();`.
 class MlirOptMainConfig {
 public:
   /// Register the options as global LLVM command line options.
-  static void registerCLOptions(DialectRegistry &dialectRegistry);
+  static void registerCLOptions();
 
   /// Create a new config with the default set from the CL options.
   static MlirOptMainConfig createFromCLOptions();

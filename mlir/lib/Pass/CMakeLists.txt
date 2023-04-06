@@ -3,7 +3,6 @@ add_mlir_library(MLIRPass
   Pass.cpp
   PassCrashRecovery.cpp
   PassManagerOptions.cpp
-  PassPlugin.cpp
   PassRegistry.cpp
   PassStatistics.cpp
   PassTiming.cpp

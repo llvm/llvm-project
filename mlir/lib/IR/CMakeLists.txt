@@ -14,7 +14,6 @@ add_mlir_library(MLIRIR
   BuiltinTypeInterfaces.cpp
   Diagnostics.cpp
   Dialect.cpp
-  DialectPlugin.cpp
   DialectResourceBlobManager.cpp
   Dominance.cpp
   ExtensibleDialect.cpp
