@@ -21,11 +21,9 @@
 #include "llvm/Support/ToolOutputFile.h"
 
 #include "Standalone/StandaloneDialect.h"
-#include "Standalone/StandalonePasses.h"
 
 int main(int argc, char **argv) {
   mlir::registerAllPasses();
-  mlir::standalone::registerPasses();
   // TODO: Register standalone passes here.
 
   mlir::DialectRegistry registry;
