@@ -130,3 +130,24 @@ func.func @empty_to_tensor_alloc() -> tensor<2x2xf32> {
   %0 = tensor.empty() : tensor<2x2xf32>
   return %0 : tensor<2x2xf32>
 }
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+  transform.bufferization.eliminate_empty_tensors %0
+}
+
+// CHECK-LABEL: func @empty_tensor_elimination(
+//       CHECK:   tensor.extract_slice
+//       CHECK:   linalg.fill
+//       CHECK:   tensor.insert_slice
+func.func @empty_tensor_elimination(
+    %t: tensor<10xf32>, %f: f32) -> tensor<10xf32> {
+  %0 = tensor.empty() : tensor<5xf32>
+  %1 = linalg.fill ins(%f : f32) outs(%0 : tensor<5xf32>) -> tensor<5xf32>
+  %2 = tensor.insert_slice %1 into %t [1][5][1]
+      : tensor<5xf32> into tensor<10xf32>
+  return %2 : tensor<10xf32>
+}

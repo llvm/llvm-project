@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
@@ -59,6 +60,37 @@ transform::OneShotBufferizeOp::apply(TransformResults &transformResults,
   // This transform op is currently restricted to ModuleOps and function ops.
   // Such ops are modified in-place.
   transformResults.set(getTransformed().cast<OpResult>(), payloadOps);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// EliminateEmptyTensorsOp
+//===----------------------------------------------------------------------===//
+
+void transform::EliminateEmptyTensorsOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTarget(), effects);
+  modifiesPayload(effects);
+}
+
+DiagnosedSilenceableFailure
+transform::EliminateEmptyTensorsOp::apply(TransformResults &transformResults,
+                                          TransformState &state) {
+  IRRewriter rewriter(getContext());
+  OneShotBufferizationOptions options;
+  options.allowReturnAllocs = true;
+
+  ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
+  for (Operation *target : payloadOps) {
+    OneShotAnalysisState state(target, options);
+    if (failed(analyzeOp(target, state)))
+      return mlir::emitSilenceableFailure(target->getLoc())
+             << "failed to analyze op";
+    if (failed(bufferization::insertSliceAnchoredEmptyTensorEliminationStep(
+            rewriter, target, state)))
+      return mlir::emitSilenceableFailure(target->getLoc())
+             << "failed to eliminate insert_slice anchored tensor.empty ops";
+  }
   return DiagnosedSilenceableFailure::success();
 }
 

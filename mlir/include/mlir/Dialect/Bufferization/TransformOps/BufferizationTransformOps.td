@@ -17,6 +17,13 @@ include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def Transform_EmptyOp : Transform_ConcreteOpType<"tensor.empty">;
+def Transform_AllocTensorOp : Transform_ConcreteOpType<"bufferization.alloc_tensor">;
+
+//===----------------------------------------------------------------------===//
+// OneShotBufferizeOp
+//===----------------------------------------------------------------------===//
+
 def OneShotBufferizeOp
     : Op<Transform_Dialect, "bufferization.one_shot_bufferize",
         [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
@@ -63,12 +70,65 @@ def OneShotBufferizeOp
 }
 
 //===----------------------------------------------------------------------===//
-// EmptyTensorToAllocTensorOp
+// EliminateEmptyTensorsOp
 //===----------------------------------------------------------------------===//
 
+def EliminateEmptyTensorsOp
+    : Op<Transform_Dialect, "bufferization.eliminate_empty_tensors",
+        [DeclareOpInterfaceMethods<TransformOpInterface>,
+         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let description = [{
+    Try to eliminate all `tensor.empty` ops within the targeted op by replacing
+    them with a destination tensor.
 
-def Transform_EmptyOp : Transform_ConcreteOpType<"tensor.empty">;
-def Transform_AllocTensorOp : Transform_ConcreteOpType<"bufferization.alloc_tensor">;
+    `tensor.empty` ops cannot be bufferizes. They can either be converted to
+    `bufferization.alloc_tensor` or replaced with another tensor (via this
+    transform). `tensor.empty` does not specify the contents of the returned
+    tensor so their results can be replaced with arbitrary tensor values as long
+    as the dimensions match.
+
+    This transform looks for `tensor.empty` ops where the SSA use-def chain of
+    the result ends in a supported "anchor op" (always following the aliasing
+    OpOperand/OpResult chain). Currently supported anchor ops are:
+    - `tensor.insert_slice`
+    - `bufferization.yield` (inside `bufferization.alloc_tensor`)
+
+    Example:
+
+    ```
+    %0 = tensor.empty() : tensor<5xf32>
+    %1 = linalg.fill ... outs(%0)
+    %2 = tensor.insert_slice %1 into %t[1][5][1]
+    ```
+
+    Is rewritten with:
+    ```
+    %0 = tensor.extract_slice %t[1][5][1]
+    %1 = linalg.fill ... outs(%0)
+    %2 = tensor.insert_slice %1 into %t[1][5][1]
+    ```
+
+    The above example can bufferize without an allocation (in the absence of
+    other conflicts) because there is no longer a `tensor.empty` op.
+
+    See `-eliminate-empty-tensors` for more details.
+
+    #### Return modes
+
+    This transform reads the target handle and modifies the payload. It does
+    not produce any handle.
+  }];
+
+  let arguments = (ins PDL_Operation:$target);
+
+  let results = (outs);
+
+  let assemblyFormat = "$target attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// EmptyTensorToAllocTensorOp
+//===----------------------------------------------------------------------===//
 
 def EmptyTensorToAllocTensorOp
     : Op<Transform_Dialect, "bufferization.empty_tensor_to_alloc_tensor",
