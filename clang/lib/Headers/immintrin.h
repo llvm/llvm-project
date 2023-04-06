@@ -626,7 +626,7 @@ _storebe_i64(void * __P, long long __D) {
 #endif
 
 #if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
-    defined(__AMXCOMPLEX__)
+    defined(__AMX_COMPLEX__)
 #include <amxcomplexintrin.h>
 #endif
 

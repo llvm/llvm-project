@@ -208,7 +208,8 @@ constexpr FeatureBitset FeaturesSapphireRapids =
     FeatureSERIALIZE | FeatureSHSTK | FeatureTSXLDTRK | FeatureUINTR |
     FeatureWAITPKG;
 constexpr FeatureBitset FeaturesGraniteRapids =
-    FeaturesSapphireRapids | FeatureAMX_FP16 | FeaturePREFETCHI;
+    FeaturesSapphireRapids | FeatureAMX_FP16 | FeaturePREFETCHI |
+    FeatureAMX_COMPLEX;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
