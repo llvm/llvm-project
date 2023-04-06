@@ -31,6 +31,10 @@ struct TestReifyValueBounds
   TestReifyValueBounds() = default;
   TestReifyValueBounds(const TestReifyValueBounds &pass) : PassWrapper(pass){};
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<AffineDialect>();
+  }
+
   void runOnOperation() override;
 
 private:
