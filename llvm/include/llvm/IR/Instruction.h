@@ -636,7 +636,11 @@ public:
   bool isVolatile() const LLVM_READONLY;
 
   /// Return true if this instruction may throw an exception.
-  bool mayThrow() const LLVM_READONLY;
+  ///
+  /// If IncludePhaseOneUnwind is set, this will also include cases where
+  /// phase one unwinding may unwind past this frame due to skipping of
+  /// cleanup landingpads.
+  bool mayThrow(bool IncludePhaseOneUnwind = false) const LLVM_READONLY;
 
   /// Return true if this instruction behaves like a memory fence: it can load
   /// or store to memory location without being given a memory location.
