@@ -231,8 +231,8 @@ define <2 x i8> @test13a(i8 %x1, i8 %x2) {
 ; CHECK-LABEL: @test13a(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> undef, i8 [[X2:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8> [[TMP1]], i8 [[X1:%.*]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i8> [[TMP2]], <i8 7, i8 5>
-; CHECK-NEXT:    ret <2 x i8> [[TMP3]]
+; CHECK-NEXT:    [[D:%.*]] = add <2 x i8> [[TMP2]], <i8 7, i8 5>
+; CHECK-NEXT:    ret <2 x i8> [[D]]
 ;
   %A = insertelement <2 x i8> poison, i8 %x1, i32 0
   %B = insertelement <2 x i8> %A, i8 %x2, i32 1
@@ -280,8 +280,8 @@ define <3 x i32> @div_wider(i32 %y, i32 %z) {
 define <3 x i8> @fold_inselts_with_widening_shuffle(i8 %x, i8 %y) {
 ; CHECK-LABEL: @fold_inselts_with_widening_shuffle(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i8> undef, i8 [[X:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x i8> [[TMP1]], i8 [[Y:%.*]], i64 1
-; CHECK-NEXT:    ret <3 x i8> [[TMP2]]
+; CHECK-NEXT:    [[WIDEN:%.*]] = insertelement <3 x i8> [[TMP1]], i8 [[Y:%.*]], i64 1
+; CHECK-NEXT:    ret <3 x i8> [[WIDEN]]
 ;
   %ins0 = insertelement <2 x i8> poison, i8 %x, i32 0
   %ins1 = insertelement <2 x i8> %ins0, i8 %y, i32 1
@@ -302,8 +302,8 @@ define <2 x i8> @test13b(i8 %x) {
 define <2 x i8> @test13c(i8 %x1, i8 %x2) {
 ; CHECK-LABEL: @test13c(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> undef, i8 [[X1:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8> [[TMP1]], i8 [[X2:%.*]], i64 1
-; CHECK-NEXT:    ret <2 x i8> [[TMP2]]
+; CHECK-NEXT:    [[C:%.*]] = insertelement <2 x i8> [[TMP1]], i8 [[X2:%.*]], i64 1
+; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
   %A = insertelement <4 x i8> poison, i8 %x1, i32 0
   %B = insertelement <4 x i8> %A, i8 %x2, i32 2

@@ -70,8 +70,8 @@ define i1 @logical_or_cond_reuse(i1 %a, i1 %b) {
 
 define i1 @logical_and_not_cond_reuse(i1 %a, i1 %b) {
 ; CHECK-LABEL: @logical_and_not_cond_reuse(
-; CHECK-NEXT:    [[A_NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A_NOT]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[NOT_A]], i1 true, i1 [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a.not = xor i1 %a, true
@@ -81,8 +81,8 @@ define i1 @logical_and_not_cond_reuse(i1 %a, i1 %b) {
 
 define i1 @logical_or_not_cond_reuse(i1 %a, i1 %b) {
 ; CHECK-LABEL: @logical_or_not_cond_reuse(
-; CHECK-NEXT:    [[A_NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A_NOT]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[NOT_A]], i1 [[B:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a.not = xor i1 %a, true

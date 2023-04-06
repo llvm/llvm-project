@@ -340,6 +340,7 @@ define void @store_to_constant() {
 define void @store_to_readonly_noalias(ptr readonly noalias %0) {
 ; CHECK-LABEL: @store_to_readonly_noalias(
 ; CHECK-NEXT:    ret void
+;
   store i32 3, ptr %0, align 4
   ret void
 }

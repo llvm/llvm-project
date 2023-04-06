@@ -66,8 +66,8 @@ define i64 @test_nuw(ptr %base, i64 %idx) {
 define i32 @test_inbounds_nuw_trunc(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @test_inbounds_nuw_trunc(
 ; CHECK-NEXT:    [[IDX_TR:%.*]] = trunc i64 [[IDX:%.*]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[IDX_TR]], 2
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[D:%.*]] = shl i32 [[IDX_TR]], 2
+; CHECK-NEXT:    ret i32 [[D]]
 ;
   %p2 = getelementptr inbounds [0 x i32], ptr %base, i64 0, i64 %idx
   %i1 = ptrtoint ptr %base to i64
@@ -173,8 +173,8 @@ define i64 @test_inbounds_nuw_multi_index(ptr %base, i64 %idx, i64 %idx2) {
 ; rdar://7362831
 define i32 @test23(ptr %P, i64 %A){
 ; CHECK-LABEL: @test23(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[A:%.*]] to i32
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[G:%.*]] = trunc i64 [[A:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[G]]
 ;
   %B = getelementptr inbounds i8, ptr %P, i64 %A
   %C = ptrtoint ptr %B to i64
@@ -187,8 +187,8 @@ define i32 @test23(ptr %P, i64 %A){
 
 define i8 @test23_as1(ptr addrspace(1) %P, i16 %A) {
 ; CHECK-LABEL: @test23_as1(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[A:%.*]] to i8
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    [[G:%.*]] = trunc i16 [[A:%.*]] to i8
+; CHECK-NEXT:    ret i8 [[G]]
 ;
   %B = getelementptr inbounds i8, ptr addrspace(1) %P, i16 %A
   %C = ptrtoint ptr addrspace(1) %B to i16
