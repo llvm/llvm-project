@@ -24,7 +24,8 @@ namespace exegesis {
 
 Expected<LLVMState> LLVMState::Create(std::string TripleName,
                                       std::string CpuName,
-                                      const StringRef Features) {
+                                      const StringRef Features,
+                                      bool UseDummyPerfCounters) {
   if (TripleName.empty())
     TripleName = Triple::normalize(sys::getDefaultTargetTriple());
 
@@ -73,16 +74,17 @@ Expected<LLVMState> LLVMState::Create(std::string TripleName,
         "no Exegesis target for triple " + TripleName,
         llvm::inconvertibleErrorCode());
   }
-  return LLVMState(std::move(TM), ET, CpuName);
+  const PfmCountersInfo &PCI = UseDummyPerfCounters
+                                   ? ET->getDummyPfmCounters()
+                                   : ET->getPfmCounters(CpuName);
+  return LLVMState(std::move(TM), ET, &PCI);
 }
 
 LLVMState::LLVMState(std::unique_ptr<const TargetMachine> TM,
-                     const ExegesisTarget *ET, const StringRef CpuName)
-    : TheExegesisTarget(ET), TheTargetMachine(std::move(TM)),
+                     const ExegesisTarget *ET, const PfmCountersInfo *PCI)
+    : TheExegesisTarget(ET), TheTargetMachine(std::move(TM)), PfmCounters(PCI),
       OpcodeNameToOpcodeIdxMapping(createOpcodeNameToOpcodeIdxMapping()),
       RegNameToRegNoMapping(createRegNameToRegNoMapping()) {
-  PfmCounters = &TheExegesisTarget->getPfmCounters(CpuName);
-
   BitVector ReservedRegs = getFunctionReservedRegs(getTargetMachine());
   for (const unsigned Reg : TheExegesisTarget->getUnavailableRegisters())
     ReservedRegs.set(Reg);
