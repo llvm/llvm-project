@@ -222,6 +222,11 @@ Changes to the Debug Info
   auto-upgraded to ``@llvm.dbg.value`` with ``DW_OP_deref`` appended to the
   ``DIExpression`` (`D144793 <https://reviews.llvm.org/D144793>`_).
 
+* When a template class annotated with the ``[[clang::preferred_name]]`` attribute
+  were to appear in a ``DW_AT_type``, the type will now be that of the preferred_name
+  instead. This change is only enabled when compiling with `-glldb`.
+  (`D145803 <https://reviews.llvm.org/D145803>`_)
+
 Changes to the LLVM tools
 ---------------------------------
 * llvm-lib now supports the /def option for generating a Windows import library from a definition file.
