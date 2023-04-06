@@ -1248,7 +1248,7 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // context.
     NewCond = B.CreateFreeze(NewCond);
 
-    widenWidenableBranch(WidenableBR, NewCond);
+    widenWidenableBranch(WidenableBR, NewCond, *LI);
 
     Value *OldCond = BI->getCondition();
     BI->setCondition(ConstantInt::get(OldCond->getType(), !ExitIfTrue));
