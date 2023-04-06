@@ -2836,7 +2836,9 @@ cc_library(
         ":SCFDialect",
         ":SCFUtils",
         ":Support",
+        ":TensorDialect",
         ":Transforms",
+        ":ValueBoundsOpInterface",
         ":VectorDialect",
         ":VectorUtils",
         "//llvm:Support",
@@ -5653,8 +5655,12 @@ cc_library(
         "include/mlir/Transforms/InliningUtils.h",
         "lib/Dialect/Tensor/IR/TensorDialect.cpp",
         "lib/Dialect/Tensor/IR/TensorOps.cpp",
+        "lib/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.cpp",
     ],
-    hdrs = ["include/mlir/Dialect/Tensor/IR/Tensor.h"],
+    hdrs = [
+        "include/mlir/Dialect/Tensor/IR/Tensor.h",
+        "include/mlir/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.h",
+    ],
     includes = ["include"],
     deps = [
         ":AffineDialect",
@@ -5673,6 +5679,7 @@ cc_library(
         ":Support",
         ":TensorOpsIncGen",
         ":TilingInterface",
+        ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
     ],
@@ -8804,6 +8811,52 @@ cc_library(
         ":VectorTransforms",
         ":VectorUtils",
         ":X86VectorTransforms",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "ValueBoundsOpInterfaceTdFiles",
+    srcs = [
+        "include/mlir/Interfaces/ValueBoundsOpInterface.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "ValueBoundsOpInterfaceIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Interfaces/ValueBoundsOpInterface.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Interfaces/ValueBoundsOpInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Interfaces/ValueBoundsOpInterface.td",
+    deps = [
+        ":ValueBoundsOpInterfaceTdFiles",
+    ],
+)
+
+cc_library(
+    name = "ValueBoundsOpInterface",
+    srcs = ["lib/Interfaces/ValueBoundsOpInterface.cpp"],
+    hdrs = ["include/mlir/Interfaces/ValueBoundsOpInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":Analysis",
+        ":DestinationStyleOpInterface",
+        ":IR",
+        ":Support",
+        ":ValueBoundsOpInterfaceIncGen",
         "//llvm:Support",
     ],
 )

@@ -12,6 +12,7 @@ add_mlir_interface(RuntimeVerifiableOpInterface)
 add_mlir_interface(ShapedOpInterfaces)
 add_mlir_interface(SideEffectInterfaces)
 add_mlir_interface(TilingInterface)
+add_mlir_interface(ValueBoundsOpInterface)
 add_mlir_interface(VectorInterfaces)
 add_mlir_interface(ViewLikeInterface)
 
