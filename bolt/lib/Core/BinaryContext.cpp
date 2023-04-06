@@ -2289,9 +2289,8 @@ bool BinaryContext::validateInstructionEncoding(
 
   SmallString<256> Code;
   SmallVector<MCFixup, 4> Fixups;
-  raw_svector_ostream VecOS(Code);
 
-  MCE->encodeInstruction(Inst, VecOS, Fixups, *STI);
+  MCE->encodeInstruction(Inst, Code, Fixups, *STI);
   auto OutputSequence = ArrayRef<uint8_t>((uint8_t *)Code.data(), Code.size());
   if (InputSequence != OutputSequence) {
     if (opts::Verbosity > 1) {

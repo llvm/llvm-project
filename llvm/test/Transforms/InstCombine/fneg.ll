@@ -706,8 +706,8 @@ define float @select_common_op_fneg_false(float %x, i1 %b) {
 
 define float @fabs(float %a) {
 ; CHECK-LABEL: @fabs(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz float @llvm.fabs.f32(float [[A:%.*]])
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[FNEG1:%.*]] = call nnan ninf nsz float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    ret float [[FNEG1]]
 ;
   %fneg = fneg float %a
   %cmp = fcmp ogt float %a, %fneg
@@ -761,8 +761,8 @@ define float @fnabs_2_nsz(float %a) {
 
 define float @fnabs_2_nsz_nnan(float %a) {
 ; CHECK-LABEL: @fnabs_2_nsz_nnan(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz float @llvm.fabs.f32(float [[A:%.*]])
-; CHECK-NEXT:    [[FNEG1:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = call nnan nsz float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[FNEG1:%.*]] = fneg float [[SEL]]
 ; CHECK-NEXT:    ret float [[FNEG1]]
 ;
   %fneg = fneg float %a

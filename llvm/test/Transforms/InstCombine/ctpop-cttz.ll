@@ -20,7 +20,7 @@ define i32 @ctpop1(i32 %0) {
 
 define <2 x i32> @ctpop1v(<2 x i32> %0) {
 ; CHECK-LABEL: @ctpop1v(
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP0:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP0:%.*]], i1 false), !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub nuw nsw <2 x i32> <i32 32, i32 32>, [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
 ;
@@ -63,7 +63,7 @@ define i32 @ctpop2(i32 %0) {
 
 define <2 x i32> @ctpop2v(<2 x i32> %0) {
 ; CHECK-LABEL: @ctpop2v(
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP0:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP0:%.*]], i1 false), !range [[RNG0]]
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %2 = xor <2 x i32> %0, <i32 -1, i32 -1>
@@ -106,7 +106,7 @@ define i32 @ctpop3(i32 %0) {
 
 define <2 x i32> @ctpop3v(<2 x i32> %0) {
 ; CHECK-LABEL: @ctpop3v(
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP0:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP0:%.*]], i1 false), !range [[RNG0]]
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %2 = sub <2 x i32> zeroinitializer, %0
@@ -118,7 +118,7 @@ define <2 x i32> @ctpop3v(<2 x i32> %0) {
 
 define <2 x i32> @ctpop3v_undef(<2 x i32> %0) {
 ; CHECK-LABEL: @ctpop3v_undef(
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP0:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP0:%.*]], i1 false), !range [[RNG0]]
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %2 = sub <2 x i32> zeroinitializer, %0

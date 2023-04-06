@@ -929,6 +929,19 @@ def GPU_HostRegisterOp : GPU_Op<"host_register">,
   let assemblyFormat = "$value attr-dict `:` type($value)";
 }
 
+def GPU_HostUnregisterOp : GPU_Op<"host_unregister">,
+    Arguments<(ins AnyUnrankedMemRef:$value)> {
+  let summary = "Unregisters a memref for access from device.";
+  let description = [{
+      This op unmaps the provided host buffer from the device address space.
+
+      This operation may not be supported in every environment, there is not yet a
+          way to check at runtime whether this feature is supported.
+  }];
+
+  let assemblyFormat = "$value attr-dict `:` type($value)";
+}
+
 def GPU_WaitOp : GPU_Op<"wait", [GPU_AsyncOpInterface]> {
   let summary = "Wait for async gpu ops to complete.";
   let description = [{

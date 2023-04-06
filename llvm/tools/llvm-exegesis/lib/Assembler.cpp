@@ -132,8 +132,8 @@ void BasicBlockFiller::addReturn(const DebugLoc &DL) {
 
     FunctionLoweringInfo FuncInfo;
     FuncInfo.CanLowerReturn = true;
-    MF.getSubtarget().getCallLowering()->lowerReturn(MIB, nullptr, {},
-                                                     FuncInfo);
+    MF.getSubtarget().getCallLowering()->lowerReturn(MIB, nullptr, {}, FuncInfo,
+                                                     0);
   }
 }
 

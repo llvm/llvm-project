@@ -65,6 +65,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strnlen
     libc.src.string.strpbrk
     libc.src.string.strrchr
+    libc.src.string.strsep
     libc.src.string.strsignal
     libc.src.string.strspn
     libc.src.string.strstr
