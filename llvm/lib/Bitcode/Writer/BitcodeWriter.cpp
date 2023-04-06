@@ -5189,7 +5189,7 @@ void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
   std::vector<uint8_t> YkModuleData;
   if (YkAllocLLVMBCSection) {
     // Write length field.
-    size_t ModuleDataSize = ModuleData.size();
+    uint64_t ModuleDataSize = ModuleData.size();
     uint8_t *Bytes = reinterpret_cast<uint8_t *>(&ModuleDataSize);
     for (size_t I = 0; I < sizeof(ModuleDataSize); I++)
       YkModuleData.push_back(Bytes[I]);
@@ -5208,9 +5208,18 @@ void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
   llvm::GlobalVariable *GV = new llvm::GlobalVariable(
       M, ModuleConstant->getType(), true, SymLinkage, ModuleConstant);
   GV->setSection(getSectionNameForBitcode(T));
-  // Set alignment to 1 to prevent padding between two contributions from input
-  // sections after linking.
-  GV->setAlignment(Align(1));
+
+  if (YkAllocLLVMBCSection) {
+    // For Yk there will only ever be one embedded (LTO'd) module. This gives
+    // us the freedom to align the section so that we can read our size header
+    // without issue.
+    GV->setAlignment(Align(sizeof(uint64_t)));
+  } else {
+    // Set alignment to 1 to prevent padding between two contributions from input
+    // sections after linking.
+    GV->setAlignment(Align(1));
+  }
+
   UsedArray.push_back(
       ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, UsedElementType));
   if (llvm::GlobalVariable *Old =
