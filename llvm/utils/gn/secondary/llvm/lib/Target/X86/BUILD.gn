@@ -26,7 +26,10 @@ tablegen("X86GenFastISel") {
 
 tablegen("X86GenFoldTables") {
   visibility = [ ":LLVMX86CodeGen" ]
-  args = [ "-gen-x86-fold-tables" ]
+  args = [
+    "-gen-x86-fold-tables",
+    "-asmwriternum=1",
+  ]
   td_file = "X86.td"
 }
 
