@@ -12,8 +12,8 @@ define i1 @test_eq(i1 %cond) {
 ; CHECK:       merge:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
-; CHECK-NEXT:    ret i1 [[TMP0]]
+; CHECK-NEXT:    [[COMPARE:%.*]] = xor i1 [[COND]], true
+; CHECK-NEXT:    ret i1 [[COMPARE]]
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false

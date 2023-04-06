@@ -76,8 +76,8 @@ define <4 x float> @dead_shuffle_elt(<4 x float> %x, <2 x float> %y) nounwind {
 define <2 x float> @test_fptrunc(double %f) {
 ; CHECK-LABEL: @test_fptrunc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[F:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x float>
-; CHECK-NEXT:    ret <2 x float> [[TMP2]]
+; CHECK-NEXT:    [[RET:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x float>
+; CHECK-NEXT:    ret <2 x float> [[RET]]
 ;
   %t9 = insertelement <4 x double> poison, double %f, i32 0
   %t10 = insertelement <4 x double> %t9, double 0.000000e+00, i32 1
@@ -91,8 +91,8 @@ define <2 x float> @test_fptrunc(double %f) {
 define <2 x double> @test_fpext(float %f) {
 ; CHECK-LABEL: @test_fpext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[F:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
-; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+; CHECK-NEXT:    [[RET:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
+; CHECK-NEXT:    ret <2 x double> [[RET]]
 ;
   %t9 = insertelement <4 x float> poison, float %f, i32 0
   %t10 = insertelement <4 x float> %t9, float 0.000000e+00, i32 1

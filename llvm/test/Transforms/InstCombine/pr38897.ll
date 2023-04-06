@@ -7,9 +7,9 @@ define i32 @sharpening(i32 %b340, i1 %c, i1 %d, i32 %e, i32 %f, i32 %g, i32 %h) 
 ; CHECK-NEXT:    [[SMAX58:%.*]] = select i1 [[C:%.*]], i32 [[E:%.*]], i32 [[F:%.*]]
 ; CHECK-NEXT:    [[SMAX59:%.*]] = select i1 [[D:%.*]], i32 [[G:%.*]], i32 [[H:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[SMAX59]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 -1)
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smax.i32(i32 [[SMAX58]], i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP14:%.*]] = xor i32 [[TMP2]], -1
+; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 -1)
+; CHECK-NEXT:    [[SMAX61:%.*]] = call i32 @llvm.smax.i32(i32 [[SMAX58]], i32 [[TMP12]])
+; CHECK-NEXT:    [[TMP14:%.*]] = xor i32 [[SMAX61]], -1
 ; CHECK-NEXT:    ret i32 [[TMP14]]
 ;
 entry:

@@ -338,7 +338,8 @@ public:
     auto dstType = typeConverter.convertType(op.getPointer().getType());
     if (!dstType)
       return failure();
-    rewriter.replaceOpWithNewOp<LLVM::AddressOfOp>(op, dstType, op.getVariable());
+    rewriter.replaceOpWithNewOp<LLVM::AddressOfOp>(op, dstType,
+                                                   op.getVariable());
     return success();
   }
 };
@@ -582,7 +583,8 @@ public:
     }
 
     rewriter.replaceOpWithNewOp<LLVM::ExtractValueOp>(
-        op, adaptor.getComposite(), LLVM::convertArrayToIndices(op.getIndices()));
+        op, adaptor.getComposite(),
+        LLVM::convertArrayToIndices(op.getIndices()));
     return success();
   }
 };
@@ -1146,7 +1148,8 @@ public:
     Block *falseBlock = condBrOp.getFalseBlock();
     rewriter.setInsertionPointToEnd(currentBlock);
     rewriter.create<LLVM::CondBrOp>(loc, condBrOp.getCondition(), trueBlock,
-                                    condBrOp.getTrueTargetOperands(), falseBlock,
+                                    condBrOp.getTrueTargetOperands(),
+                                    falseBlock,
                                     condBrOp.getFalseTargetOperands());
 
     rewriter.inlineRegionBefore(op.getBody(), continueBlock);
@@ -1329,7 +1332,8 @@ public:
     TypeConverter::SignatureConversion signatureConverter(
         funcType.getNumInputs());
     auto llvmType = typeConverter.convertFunctionSignature(
-        funcType, /*isVariadic=*/false, signatureConverter);
+        funcType, /*isVariadic=*/false, /*useBarePtrCallConv=*/false,
+        signatureConverter);
     if (!llvmType)
       return failure();
 

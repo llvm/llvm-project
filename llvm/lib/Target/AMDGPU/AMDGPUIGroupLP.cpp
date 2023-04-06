@@ -61,15 +61,6 @@ static cl::opt<bool> UseCostHeur(
              "Experimentally, results are mixed, so this should be set on a "
              "case-by-case basis."));
 
-static cl::opt<bool> EnableLowerBound(
-    "amdgpu-igrouplp-exact-solver-lower-bound", cl::Hidden,
-    cl::desc("Whether to use a lower bound when calculating the cost "
-             "for a partial fit using the exact solver. The lower bound "
-             "calculates the cost of assigning the remaining instructions "
-             "under idealized conditions. The LB reduces the overall search "
-             "space but adds time complexity per branch explored."),
-    cl::init(false));
-
 // Components of the mask that determines which instruction types may be may be
 // classified into a SchedGroup.
 enum class SchedGroupMask {
@@ -118,11 +109,7 @@ private:
 
   const SIInstrInfo *TII;
 
-  // Try to add and edge from SU A to SU B. This returns false if there is a
-  // dependency which makes adding the A->B edge impossible, otherwise it
-  // returns true. The result is that it will return true even if no edge was
-  // added. For example, if there is already an edge between A->B, this will
-  // return true, even though DAG->addEdge does not add edge.
+  // Try to add and edge from SU A to SU B.
   bool tryAddEdge(SUnit *A, SUnit *B);
 
   // Use SGMask to determine whether we can classify MI as a member of this
@@ -144,7 +131,7 @@ public:
   // Add DAG dependencies and track which edges are added, and the count of
   // missed edges
   int link(SUnit &SU, bool MakePred,
-           SmallVectorImpl<std::pair<SUnit *, SUnit *>> &AddedEdges);
+           std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
 
   // Add DAG dependencies from all SUnits in this SchedGroup and this SU.
   // Use the predicate to determine whether SU should be a predecessor (P =
@@ -256,9 +243,6 @@ class PipelineSolver {
   int BestCost = -1;
   int CurrCost = 0;
 
-  // A lower bound on the optimal cost for a complete pipeline
-  int StaticLowerBound = 0;
-
   // Index pointing to the conflicting instruction that is currently being
   // fitted
   int CurrConflInstNo = 0;
@@ -286,19 +270,14 @@ class PipelineSolver {
   void populateReadyList(SUToCandSGsPair &CurrSU,
                          SmallVectorImpl<std::pair<int, int>> &ReadyList,
                          SmallVectorImpl<SchedGroup> &SyncPipeline);
-  // Calculate best cost assignment of an unassigned SU without assigning it.
-  // The sum of these costs across SUs represents a Lower Bound on the true best
-  // cost for the set of unassigned SUs.
-  int calculateLowerBound();
   // Add edges corresponding to the SchedGroups as assigned by solver
   void makePipeline();
   // Add the edges from the SU to the other SchedGroups in pipeline, and
   // return the number of edges missed.
   int addEdges(SmallVectorImpl<SchedGroup> &SyncPipeline, SUnit *SU, int SGID,
-               SmallVectorImpl<std::pair<SUnit *, SUnit *>> &AddedEdges,
-               int BestCost = -1);
+               std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
   // Remove the edges passed via AddedEdges
-  void removeEdges(SmallVectorImpl<std::pair<SUnit *, SUnit *>> &AddedEdges);
+  void removeEdges(const std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
   // Convert the passed in maps to arrays for bidirectional iterators
   void convertSyncMapsToArrays();
 
@@ -416,7 +395,7 @@ void PipelineSolver::makePipeline() {
 
 int PipelineSolver::addEdges(
     SmallVectorImpl<SchedGroup> &SyncPipeline, SUnit *SU, int SGID,
-    SmallVectorImpl<std::pair<SUnit *, SUnit *>> &AddedEdges, int BestCost) {
+    std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges) {
   int AddedCost = 0;
   bool MakePred = false;
 
@@ -427,8 +406,6 @@ int PipelineSolver::addEdges(
   // linked as a predecessor of the subsequent SchedGroups
   auto GroupNo = (int)SyncPipeline.size() - 1;
   for (; GroupNo >= 0; GroupNo--) {
-    if (BestCost != -1 && AddedCost >= BestCost)
-      return AddedCost;
     if (SyncPipeline[GroupNo].getSGID() == SGID) {
       MakePred = true;
       continue;
@@ -442,18 +419,15 @@ int PipelineSolver::addEdges(
 }
 
 void PipelineSolver::removeEdges(
-    SmallVectorImpl<std::pair<SUnit *, SUnit *>> &EdgesToRemove) {
+    const std::vector<std::pair<SUnit *, SUnit *>> &EdgesToRemove) {
   // Only remove the edges that we have added when testing
   // the fit.
   for (auto &PredSuccPair : EdgesToRemove) {
     SUnit *Pred = PredSuccPair.first;
     SUnit *Succ = PredSuccPair.second;
 
-    auto Match =
-        std::find_if(Succ->Preds.begin(), Succ->Preds.end(), [&Pred](SDep &P) {
-          return P.getSUnit() == Pred && P.isArtificial();
-        });
-
+    auto Match = llvm::find_if(
+        Succ->Preds, [&Pred](SDep &P) { return P.getSUnit() == Pred; });
     if (Match != Succ->Preds.end()) {
       assert(Match->isArtificial());
       Succ->removePred(*Match);
@@ -504,7 +478,7 @@ bool PipelineSolver::checkOptimal() {
     if (BestCost == -1 || CurrCost < BestCost) {
       BestPipeline = CurrPipeline;
       BestCost = CurrCost;
-      LLVM_DEBUG(dbgs() << "Found Fit with cost " << BestCost << '\n');
+      LLVM_DEBUG(dbgs() << "Found Fit with cost " << BestCost << "\n");
     }
     assert(BestCost >= 0);
   }
@@ -513,7 +487,7 @@ bool PipelineSolver::checkOptimal() {
   if (MaxBranchesExplored > 0 && BranchesExplored >= MaxBranchesExplored)
     DoneExploring = true;
 
-  return (DoneExploring || BestCost == StaticLowerBound);
+  return (DoneExploring || BestCost == 0);
 }
 
 void PipelineSolver::populateReadyList(
@@ -522,9 +496,8 @@ void PipelineSolver::populateReadyList(
   assert(CurrSU.second.size() >= 1);
   auto I = CurrSU.second.rbegin();
   auto E = CurrSU.second.rend();
-  SmallVector<std::pair<SUnit *, SUnit *>, 16> AddedEdges;
   for (; I != E; ++I) {
-
+    std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
     int CandSGID = *I;
     SchedGroup *Match;
     for (auto &SG : SyncPipeline) {
@@ -537,7 +510,6 @@ void PipelineSolver::populateReadyList(
         ReadyList.push_back(std::pair(*I, MissPenalty));
         continue;
       }
-      AddedEdges.clear();
 
       int TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, AddedEdges);
       ReadyList.push_back(std::pair(*I, TempCost));
@@ -556,52 +528,6 @@ void PipelineSolver::populateReadyList(
   assert(ReadyList.size() == CurrSU.second.size());
 }
 
-int PipelineSolver::calculateLowerBound() {
-  if (CurrSyncGroupIdx >= (int)CurrPipeline.size())
-    return 0;
-  int TempConflInstNo = CurrConflInstNo;
-  int TmpSyncGroupIdx = CurrSyncGroupIdx;
-  int MinimumCost = 0;
-  SmallVector<std::pair<SUnit *, SUnit *>, 16> AddedEdges;
-
-  for (; TmpSyncGroupIdx < (int)CurrPipeline.size(); TmpSyncGroupIdx++) {
-    auto SyncPipeline = CurrPipeline[TmpSyncGroupIdx];
-    for (; TempConflInstNo < (int)PipelineInstrs[TmpSyncGroupIdx].size();
-         TempConflInstNo++) {
-      auto CurrSU = PipelineInstrs[TmpSyncGroupIdx][TempConflInstNo];
-      auto I = CurrSU.second.rbegin();
-      auto E = CurrSU.second.rend();
-      int MinCostForSU = -1;
-      for (; I != E; I++) {
-        int CandSGID = *I;
-        SchedGroup *Match;
-        for (auto &SG : SyncPipeline) {
-          if (SG.getSGID() == CandSGID)
-            Match = &SG;
-        }
-
-        if (Match->isFull()) {
-          if (MinCostForSU == -1 || MissPenalty < MinCostForSU)
-            MinCostForSU = MissPenalty;
-          continue;
-        }
-        AddedEdges.clear();
-        int TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID,
-                                AddedEdges, MinCostForSU);
-        if (MinCostForSU == -1 || TempCost < MinCostForSU)
-          MinCostForSU = TempCost;
-
-        removeEdges(AddedEdges);
-        if (MinCostForSU == 0)
-          break;
-      }
-      MinimumCost += MinCostForSU;
-    }
-    TempConflInstNo = 0;
-  }
-  return MinimumCost;
-}
-
 bool PipelineSolver::solveExact() {
   if (checkOptimal())
     return true;
@@ -614,13 +540,12 @@ bool PipelineSolver::solveExact() {
          PipelineInstrs[CurrSyncGroupIdx].size());
   SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
   LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
-                    << ") in Pipeline # " << CurrSyncGroupIdx << '\n');
+                    << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
 
   // SchedGroup -> Cost pairs
   SmallVector<std::pair<int, int>, 4> ReadyList;
   // Prioritize the candidate sched groups in terms of lowest cost first
   populateReadyList(CurrSU, ReadyList, CurrPipeline[CurrSyncGroupIdx]);
-  SmallVector<std::pair<SUnit *, SUnit *>, 16> AddedEdges;
 
   auto I = ReadyList.begin();
   auto E = ReadyList.end();
@@ -633,6 +558,7 @@ bool PipelineSolver::solveExact() {
 
     int CandSGID = I->first;
     int AddedCost = 0;
+    std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
     auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
     SchedGroup *Match;
     for (auto &SG : SyncPipeline) {
@@ -645,22 +571,19 @@ bool PipelineSolver::solveExact() {
 
     LLVM_DEBUG(dbgs() << "Assigning to SchedGroup with Mask "
                       << (int)Match->getMask() << "and ID " << CandSGID
-                      << '\n');
+                      << "\n");
     Match->add(*CurrSU.first);
-    AddedEdges.clear();
     AddedCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, AddedEdges);
-    LLVM_DEBUG(dbgs() << "Cost of Assignment: " << AddedCost << '\n');
+    LLVM_DEBUG(dbgs() << "Cost of Assignment: " << AddedCost << "\n");
     CurrCost += AddedCost;
     advancePosition();
     ++BranchesExplored;
     bool FinishedExploring = false;
     // If the Cost after adding edges is greater than a known solution,
     // backtrack
-    int LBCost =
-        (EnableLowerBound && BestCost != -1) ? calculateLowerBound() : 0;
-    if (BestCost == -1 || CurrCost + LBCost < BestCost) {
+    if (CurrCost < BestCost || BestCost == -1) {
       if (solveExact()) {
-        FinishedExploring = BestCost != StaticLowerBound;
+        FinishedExploring = BestCost != 0;
         if (!FinishedExploring)
           return true;
       }
@@ -686,7 +609,7 @@ bool PipelineSolver::solveExact() {
   bool FinishedExploring = false;
   if (CurrCost < BestCost || BestCost == -1) {
     if (solveExact()) {
-      bool FinishedExploring = BestCost != StaticLowerBound;
+      bool FinishedExploring = BestCost != 0;
       if (!FinishedExploring)
         return true;
     }
@@ -699,7 +622,7 @@ bool PipelineSolver::solveExact() {
 
 bool PipelineSolver::solveGreedy() {
   BestCost = 0;
-  SmallVector<std::pair<SUnit *, SUnit *>, 16> AddedEdges;
+  std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
 
   while (static_cast<size_t>(CurrSyncGroupIdx) < PipelineInstrs.size()) {
     SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
@@ -709,7 +632,7 @@ bool PipelineSolver::solveGreedy() {
     int BestGroupID = -1;
     auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
     LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
-                      << ") in Pipeline # " << CurrSyncGroupIdx << '\n');
+                      << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
 
     // Since we have added the potential SchedGroups from bottom up, but
     // traversed the DAG from top down, parse over the groups from last to
@@ -718,7 +641,7 @@ bool PipelineSolver::solveGreedy() {
     auto I = CurrSU.second.rbegin();
     auto E = CurrSU.second.rend();
     for (; I != E; ++I) {
-      SmallVector<std::pair<SUnit *, SUnit *>, 16> AddedEdges;
+      std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
       int CandSGID = *I;
       SchedGroup *Match;
       for (auto &SG : SyncPipeline) {
@@ -727,15 +650,14 @@ bool PipelineSolver::solveGreedy() {
       }
 
       LLVM_DEBUG(dbgs() << "Trying SGID # " << CandSGID << " with Mask "
-                        << (int)Match->getMask() << '\n');
+                        << (int)Match->getMask() << "\n");
 
       if (Match->isFull()) {
         LLVM_DEBUG(dbgs() << "SGID # " << CandSGID << " is full\n");
         continue;
       }
-      TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, AddedEdges,
-                          BestNodeCost);
-      LLVM_DEBUG(dbgs() << "Cost of Group " << TempCost << '\n');
+      TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, AddedEdges);
+      LLVM_DEBUG(dbgs() << "Cost of Group " << TempCost << "\n");
       if (TempCost < BestNodeCost || BestNodeCost == -1) {
         BestGroup = Match;
         BestNodeCost = TempCost;
@@ -750,7 +672,7 @@ bool PipelineSolver::solveGreedy() {
       BestGroup->add(*CurrSU.first);
       addEdges(SyncPipeline, CurrSU.first, BestGroupID, AddedEdges);
       LLVM_DEBUG(dbgs() << "Best Group has ID: " << BestGroupID << " and Mask"
-                        << (int)BestGroup->getMask() << '\n');
+                        << (int)BestGroup->getMask() << "\n");
       BestCost += TempCost;
     } else
       BestCost += MissPenalty;
@@ -787,14 +709,11 @@ void PipelineSolver::solve() {
     LLVM_DEBUG(dbgs() << "Starting Greedy pipeline solver\n");
     solveGreedy();
     reset();
-    LLVM_DEBUG(dbgs() << "Greedy produced best cost of " << BestCost << '\n');
-    StaticLowerBound = calculateLowerBound();
-    LLVM_DEBUG(dbgs() << "Lower Bound on Pipeline Cost is " << StaticLowerBound
-                      << '\n');
-    if (BestCost > StaticLowerBound) {
+    LLVM_DEBUG(dbgs() << "Greedy produced best cost of " << BestCost << "\n");
+    if (BestCost > 0) {
       LLVM_DEBUG(dbgs() << "Starting EXACT pipeline solver\n");
       solveExact();
-      LLVM_DEBUG(dbgs() << "Exact produced best cost of " << BestCost << '\n');
+      LLVM_DEBUG(dbgs() << "Exact produced best cost of " << BestCost << "\n");
     }
   } else { // Use the Greedy Algorithm by default
     LLVM_DEBUG(dbgs() << "Starting GREEDY pipeline solver\n");
@@ -978,7 +897,7 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
 }
 
 int SchedGroup::link(SUnit &SU, bool MakePred,
-                     SmallVectorImpl<std::pair<SUnit *, SUnit *>> &AddedEdges) {
+                     std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges) {
   int MissedEdges = 0;
   for (auto *A : Collection) {
     SUnit *B = &SU;
@@ -987,6 +906,10 @@ int SchedGroup::link(SUnit &SU, bool MakePred,
     if (MakePred)
       std::swap(A, B);
 
+    if (DAG->IsReachable(B, A))
+      continue;
+    // tryAddEdge returns false if there is a dependency that makes adding
+    // the A->B edge impossible, otherwise it returns true;
     bool Added = tryAddEdge(A, B);
     if (Added)
       AddedEdges.push_back(std::pair(A, B));

@@ -435,6 +435,10 @@ foreach i = [0,1,2,4,6] in
 def AtLeastM680 # i # "0" : Predicate<"Subtarget->atLeastM680"#i#"0()">,
                             AssemblerPredicate<(all_of
                                                 !cast<SubtargetFeature>("FeatureISA"#i#"0"))>;
+def AtLeastM68881 : Predicate<"Subtarget->atLeastM68881()">,
+                    AssemblerPredicate<(all_of FeatureISA881)>;
+def AtLeastM68882 : Predicate<"Subtarget->atLeastM68882()">,
+                    AssemblerPredicate<(all_of FeatureISA882)>;
 
 //===----------------------------------------------------------------------===//
 // Condition Codes

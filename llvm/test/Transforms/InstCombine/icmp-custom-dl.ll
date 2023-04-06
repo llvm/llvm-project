@@ -72,8 +72,8 @@ define i1 @test60_addrspacecast(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[J:%.*]] to i32
 ; CHECK-NEXT:    [[I_TR:%.*]] = trunc i64 [[I:%.*]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[I_TR]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[TMP3]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %bit = addrspacecast ptr %foo to ptr addrspace(3)
   %gep1 = getelementptr inbounds i32, ptr addrspace(3) %bit, i64 %i
@@ -87,8 +87,8 @@ define i1 @test60_addrspacecast_smaller(ptr %foo, i16 %i, i64 %j) {
 ; CHECK-LABEL: @test60_addrspacecast_smaller(
 ; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i16 [[I:%.*]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[J:%.*]] to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i16 [[GEP1_IDX]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[GEP1_IDX]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %bit = addrspacecast ptr %foo to ptr addrspace(1)
   %gep1 = getelementptr inbounds i32, ptr addrspace(1) %bit, i16 %i
@@ -102,8 +102,8 @@ define i1 @test60_addrspacecast_larger(ptr addrspace(1) %foo, i32 %i, i16 %j) {
 ; CHECK-LABEL: @test60_addrspacecast_larger(
 ; CHECK-NEXT:    [[I_TR:%.*]] = trunc i32 [[I:%.*]] to i16
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i16 [[I_TR]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i16 [[TMP1]], [[J:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[TMP1]], [[J:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %bit = addrspacecast ptr addrspace(1) %foo to ptr addrspace(2)
   %gep1 = getelementptr inbounds i32, ptr addrspace(2) %bit, i32 %i

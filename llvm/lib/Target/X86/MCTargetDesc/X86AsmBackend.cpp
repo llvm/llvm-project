@@ -844,8 +844,7 @@ bool X86AsmBackend::padInstructionViaRelaxation(MCRelaxableFragment &RF,
 
   SmallVector<MCFixup, 4> Fixups;
   SmallString<15> Code;
-  raw_svector_ostream VecOS(Code);
-  Emitter.encodeInstruction(Relaxed, VecOS, Fixups, *RF.getSubtargetInfo());
+  Emitter.encodeInstruction(Relaxed, Code, Fixups, *RF.getSubtargetInfo());
   const unsigned OldSize = RF.getContents().size();
   const unsigned NewSize = Code.size();
   assert(NewSize >= OldSize && "size decrease during relaxation?");

@@ -954,9 +954,15 @@ static void generateUnrolledLoop(
       annotateFn(i, clonedOp, builder);
     }
 
-    // Update yielded values.
-    for (unsigned i = 0, e = lastYielded.size(); i < e; i++)
-      lastYielded[i] = operandMap.lookup(yieldedValues[i]);
+    // Update yielded values. If the yielded value is defined outside the
+    // `loopBodyBlock` or if it is a BlockArgument then it won't be cloned, thus
+    // the `lastYielded` value remains unchanged. Else, update the `lastYielded`
+    // value with the clone corresponding to the yielded value.
+    for (unsigned i = 0, e = lastYielded.size(); i < e; i++) {
+      Operation *defOp = yieldedValues[i].getDefiningOp();
+      if (defOp && defOp->getBlock() == loopBodyBlock)
+        lastYielded[i] = operandMap.lookup(yieldedValues[i]);
+    }
   }
 
   // Make sure we annotate the Ops in the original body. We do this last so that
