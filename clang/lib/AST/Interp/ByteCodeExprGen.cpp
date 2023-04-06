@@ -953,8 +953,10 @@ bool ByteCodeExprGen<Emitter>::visitZeroInitializer(PrimType T, const Expr *E) {
     return this->emitNullPtr(E);
   case PT_FnPtr:
     return this->emitNullFnPtr(E);
-  case PT_Float:
-    assert(false);
+  case PT_Float: {
+    return this->emitConstFloat(
+        APFloat::getZero(Ctx.getFloatSemantics(E->getType())), E);
+  }
   }
   llvm_unreachable("unknown primitive type");
 }

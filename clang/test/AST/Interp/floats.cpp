@@ -78,3 +78,17 @@ namespace compound {
   }
   static_assert(f2() == __FLT_MAX__, "");
 }
+
+namespace ZeroInit {
+  template<typename FloatT>
+  struct A {
+    int a;
+    FloatT f;
+  };
+
+  constexpr A<float> a{12};
+  static_assert(a.f == 0.0f);
+
+  constexpr A<double> b{12};
+  static_assert(a.f == 0.0);
+};
