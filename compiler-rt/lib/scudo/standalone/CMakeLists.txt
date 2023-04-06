@@ -71,6 +71,8 @@ set(SCUDO_HEADERS
   list.h
   local_cache.h
   memtag.h
+  mem_map.h
+  mem_map_base.h
   mutex.h
   options.h
   platform.h
@@ -104,6 +106,7 @@ set(SCUDO_SOURCES
   flags.cpp
   fuchsia.cpp
   linux.cpp
+  mem_map.cpp
   release.cpp
   report.cpp
   rss_limit_checker.cpp

@@ -146,6 +146,8 @@ Non-comprehensive list of changes in this release
 - Clang now supports ``__builtin_assume_separate_storage`` that indicates that
   its arguments point to objects in separate storage allocations.
 - Clang now supports expressions in ``#pragma clang __debug dump``.
+- Clang now supports declaration of multi-dimensional arrays with
+  ``__declspec(property)``.
 
 New Compiler Flags
 ------------------
@@ -274,7 +276,9 @@ Bug Fixes in This Version
 - Fix crash when handling nested immediate invocations in initializers of global
   variables.
   (`#58207 <https://github.com/llvm/llvm-project/issues/58207>`_)
-
+- Fix crash when generating code coverage information for `PseudoObjectExpr` in 
+  Clang AST.
+  (`#45481 <https://github.com/llvm/llvm-project/issues/45481>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -423,6 +427,7 @@ clang-format
   put the initializers on the next line only.
 - Add additional Qualifier Ordering support for special cases such
   as templates, requires clauses, long qualified names.
+- Fix all known issues associated with ``LambdaBodyIndentation: OuterScope``.
 
 libclang
 --------

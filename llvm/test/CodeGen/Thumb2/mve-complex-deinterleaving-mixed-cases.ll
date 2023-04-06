@@ -390,14 +390,13 @@ entry:
 define <4 x float> @mul_addequal(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: mul_addequal:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    add.w r12, sp, #16
 ; CHECK-NEXT:    vmov d0, r0, r1
 ; CHECK-NEXT:    mov r0, sp
-; CHECK-NEXT:    add r1, sp, #16
+; CHECK-NEXT:    vldrw.u32 q2, [r12]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vmov d1, r2, r3
-; CHECK-NEXT:    vldrw.u32 q2, [r1]
-; CHECK-NEXT:    vcmul.f32 q3, q0, q1, #0
-; CHECK-NEXT:    vadd.f32 q2, q3, q2
+; CHECK-NEXT:    vcmla.f32 q2, q0, q1, #0
 ; CHECK-NEXT:    vcmla.f32 q2, q0, q1, #90
 ; CHECK-NEXT:    vmov r0, r1, d4
 ; CHECK-NEXT:    vmov r2, r3, d5

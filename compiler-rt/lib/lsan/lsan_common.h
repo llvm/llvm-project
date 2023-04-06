@@ -154,7 +154,7 @@ class LsanMetadata {
 void ForEachChunk(ForEachChunkCallback callback, void *arg);
 
 // Helper for __lsan_ignore_object().
-IgnoreObjectResult IgnoreObjectLocked(const void *p);
+IgnoreObjectResult IgnoreObject(const void *p);
 
 // The rest of the LSan interface which is implemented by library.
 

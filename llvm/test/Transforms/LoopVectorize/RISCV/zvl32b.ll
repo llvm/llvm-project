@@ -19,16 +19,13 @@ define void @vector_add_i16(ptr noalias nocapture %a, i16 %v, i64 %n) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i16>, ptr [[TMP2]], align 2
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i16> [[WIDE_VEC]], <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i16> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> [[TMP3]], <4 x ptr> [[TMP0]], i32 2, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> [[TMP0]], i32 2, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i16> poison)
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i16> [[WIDE_MASKED_GATHER]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> [[TMP1]], <4 x ptr> [[TMP0]], i32 2, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1020
-; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1020
+; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

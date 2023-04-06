@@ -129,6 +129,38 @@ static llvm::cl::opt<bool>
                        llvm::cl::desc("enable openmp device compilation"),
                        llvm::cl::init(false));
 
+// A simplified subset of the OpenMP RTL Flags from Flang, only the primary
+// positive options are available, no negative options e.g. fopen_assume* vs
+// fno_open_assume*
+static llvm::cl::opt<uint32_t> setOpenMPTargetDebug(
+    "fopenmp-target-debug",
+    llvm::cl::desc("Enable debugging in the OpenMP offloading device RTL"),
+    llvm::cl::init(0));
+
+static llvm::cl::opt<bool> setOpenMPThreadSubscription(
+    "fopenmp-assume-threads-oversubscription",
+    llvm::cl::desc("Assume work-shared loops do not have more "
+                   "iterations than participating threads."),
+    llvm::cl::init(false));
+
+static llvm::cl::opt<bool> setOpenMPTeamSubscription(
+    "fopenmp-assume-teams-oversubscription",
+    llvm::cl::desc("Assume distributed loops do not have more iterations than "
+                   "participating teams."),
+    llvm::cl::init(false));
+
+static llvm::cl::opt<bool> setOpenMPNoThreadState(
+    "fopenmp-assume-no-thread-state",
+    llvm::cl::desc(
+        "Assume that no thread in a parallel region will modify an ICV."),
+    llvm::cl::init(false));
+
+static llvm::cl::opt<bool> setOpenMPNoNestedParallelism(
+    "fopenmp-assume-no-nested-parallelism",
+    llvm::cl::desc("Assume that no thread in a parallel region will encounter "
+                   "a parallel region."),
+    llvm::cl::init(false));
+
 static llvm::cl::opt<bool> enableOpenACC("fopenacc",
                                          llvm::cl::desc("enable openacc"),
                                          llvm::cl::init(false));
@@ -244,8 +276,13 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
       kindMap, loweringOptions, {});
   burnside.lower(parseTree, semanticsContext);
   mlir::ModuleOp mlirModule = burnside.getModule();
-  if (enableOpenMP)
-    setOffloadModuleInterfaceAttributes(mlirModule, enableOpenMPDevice);
+  if (enableOpenMP) {
+    auto offloadModuleOpts =
+        OffloadModuleOpts(setOpenMPTargetDebug, setOpenMPTeamSubscription,
+                          setOpenMPThreadSubscription, setOpenMPNoThreadState,
+                          setOpenMPNoNestedParallelism, enableOpenMPDevice);
+    setOffloadModuleInterfaceAttributes(mlirModule, offloadModuleOpts);
+  }
   std::error_code ec;
   std::string outputName = outputFilename;
   if (!outputName.size())

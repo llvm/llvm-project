@@ -2699,10 +2699,6 @@ def fopenmp_gpu_threads_per_team_EQ : Joined<["-"], "fopenmp-gpu-threads-per-tea
   Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 def fopenmp_target_xteam_reduction_blocksize_EQ : Joined<["-"], "fopenmp-target-xteam-reduction-blocksize=">, Group<f_Group>,
   Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
-def fopenmp_target_debug : Flag<["-"], "fopenmp-target-debug">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>,
-  HelpText<"Enable debugging in the OpenMP offloading device RTL">;
-def fno_openmp_target_debug : Flag<["-"], "fno-openmp-target-debug">, Group<f_Group>, Flags<[NoArgumentUnused]>;
-def fopenmp_target_debug_EQ : Joined<["-"], "fopenmp-target-debug=">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 def fopenmp_target_fast : Flag<["-"], "fopenmp-target-fast">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 def fno_openmp_target_fast : Flag<["-"], "fno-openmp-target-fast">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 def fopenmp_target_ignore_env_vars : Flag<["-"], "fopenmp-target-ignore-env-vars">, Group<f_Group>, 
@@ -2721,30 +2717,47 @@ def fno_openmp_target_big_jump_loop : Flag<["-"], "fno-openmp-target-big-jump-lo
   Flags<[CC1Option, NoArgumentUnused, HelpHidden]>, 
   HelpText<"Do not use the big-jump-loop code generation technique">,
   MarshallingInfoFlag<LangOpts<"OpenMPTargetBigJumpLoop">>;
-def fopenmp_assume_teams_oversubscription : Flag<["-"], "fopenmp-assume-teams-oversubscription">,
-  Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
-def fopenmp_assume_threads_oversubscription : Flag<["-"], "fopenmp-assume-threads-oversubscription">,
-  Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
-def fno_openmp_assume_teams_oversubscription : Flag<["-"], "fno-openmp-assume-teams-oversubscription">,
-  Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
-def fno_openmp_assume_threads_oversubscription : Flag<["-"], "fno-openmp-assume-threads-oversubscription">,
-  Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
-def fopenmp_assume_no_thread_state : Flag<["-"], "fopenmp-assume-no-thread-state">, Group<f_Group>,
-  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>,
-  HelpText<"Assert no thread in a parallel region modifies an ICV">,
-  MarshallingInfoFlag<LangOpts<"OpenMPNoThreadState">>;
+
+//===----------------------------------------------------------------------===//
+// Shared cc1 + fc1 OpenMP Target Options
+//===----------------------------------------------------------------------===//
+
+let Flags = [CC1Option, FC1Option, NoArgumentUnused] in {
+let Group = f_Group in {
+
+def fopenmp_target_debug : Flag<["-"], "fopenmp-target-debug">,
+  HelpText<"Enable debugging in the OpenMP offloading device RTL">;
+def fno_openmp_target_debug : Flag<["-"], "fno-openmp-target-debug">;
+
+} // let Group = f_Group
+} // let Flags = [CC1Option, FC1Option, NoArgumentUnused]
+
+let Flags = [CC1Option, FC1Option, NoArgumentUnused, HelpHidden] in {
+let Group = f_Group in {
+
+def fopenmp_target_debug_EQ : Joined<["-"], "fopenmp-target-debug=">;
+def fopenmp_assume_teams_oversubscription : Flag<["-"], "fopenmp-assume-teams-oversubscription">;
+def fopenmp_assume_threads_oversubscription : Flag<["-"], "fopenmp-assume-threads-oversubscription">;
+def fno_openmp_assume_teams_oversubscription : Flag<["-"], "fno-openmp-assume-teams-oversubscription">;
+def fno_openmp_assume_threads_oversubscription : Flag<["-"], "fno-openmp-assume-threads-oversubscription">;
 def fno_openmp_assume_no_thread_state : Flag<["-"], "fno-openmp-assume-no-thread-state">, Group<f_Group>,
   Flags<[CC1Option, NoArgumentUnused, HelpHidden]>,
   HelpText<"Assert that a thread in a parallel region may modify an ICV">,
   MarshallingInfoFlag<LangOpts<"OpenMPNoThreadState">>;
-def fopenmp_assume_no_nested_parallelism : Flag<["-"], "fopenmp-assume-no-nested-parallelism">, Group<f_Group>,
-  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>,
+def fopenmp_assume_no_thread_state : Flag<["-"], "fopenmp-assume-no-thread-state">,
+  HelpText<"Assert no thread in a parallel region modifies an ICV">,
+  MarshallingInfoFlag<LangOpts<"OpenMPNoThreadState">>;
+def fopenmp_assume_no_nested_parallelism : Flag<["-"], "fopenmp-assume-no-nested-parallelism">,
   HelpText<"Assert no nested parallel regions in the GPU">,
   MarshallingInfoFlag<LangOpts<"OpenMPNoNestedParallelism">>;
 def fno_openmp_assume_no_nested_parallelism : Flag<["-"], "fno-openmp-assume-no-nested-parallelism">, Group<f_Group>,
   Flags<[CC1Option, NoArgumentUnused, HelpHidden]>,
   HelpText<"Assert that a nested parallel region may be used in the GPU">,
   MarshallingInfoFlag<LangOpts<"OpenMPNoNestedParallelism">>;
+
+} // let Group = f_Group
+} // let Flags = [CC1Option, FC1Option, NoArgumentUnused, HelpHidden]
+
 def fopenmp_offload_mandatory : Flag<["-"], "fopenmp-offload-mandatory">, Group<f_Group>,
   Flags<[CC1Option, NoArgumentUnused]>,
   HelpText<"Do not create a host fallback if offloading to the device fails.">,

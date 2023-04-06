@@ -16,7 +16,8 @@ define void @zext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 ; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 1 For instruction:   %conv = zext i8 %0 to i32
 ; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 2 For instruction:   %conv = zext i8 %0 to i32
 ; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 4 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 8 For instruction:   %conv = zext i8 %0 to i32
+; CHECK-COST: LV: Found an estimated cost of 0 for VF vscale x 8 For instruction:   %conv = zext i8 %0 to i32
+
 ; CHECK-LABEL: define void @zext_i8_i16
 ; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i32 [[LEN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -99,7 +100,8 @@ define void @sext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 ; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 1 For instruction:   %conv = sext i8 %0 to i32
 ; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 2 For instruction:   %conv = sext i8 %0 to i32
 ; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 4 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 8 For instruction:   %conv = sext i8 %0 to i32
+; CHECK-COST: LV: Found an estimated cost of 0 for VF vscale x 8 For instruction:   %conv = sext i8 %0 to i32
+
 ; CHECK-LABEL: define void @sext_i8_i16
 ; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i32 [[LEN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:

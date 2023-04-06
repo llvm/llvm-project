@@ -334,6 +334,11 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // TODO: Most of these cases will return getInvalid in generic code, and
     // must be implemented here.
     break;
+  case TTI::SK_ExtractSubvector:
+    // Example sequence:
+    // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
+    // vslidedown.vi  v8, v9, 2
+    return LT.first * getLMULCost(LT.second);
   case TTI::SK_InsertSubvector:
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
@@ -1272,11 +1277,26 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                               TTI::TargetCostKind CostKind,
                                               TTI::OperandValueInfo OpInfo,
                                               const Instruction *I) {
+  EVT VT = TLI->getValueType(DL, Src, true);
+  // Type legalization can't handle structs
+  if (VT == MVT::Other)
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
+
   InstructionCost Cost = 0;
   if (Opcode == Instruction::Store && OpInfo.isConstant())
     Cost += getStoreImmCost(Src, OpInfo, CostKind);
-  return Cost + BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                       CostKind, OpInfo, I);
+  InstructionCost BaseCost =
+    BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                           CostKind, OpInfo, I);
+  // Assume memory ops cost scale with the number of vector registers
+  // possible accessed by the instruction.  Note that BasicTTI already
+  // handles the LT.first term for us.
+  if (std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
+      LT.second.isVector())
+    BaseCost *= getLMULCost(LT.second);
+  return Cost + BaseCost;
+
 }
 
 InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,

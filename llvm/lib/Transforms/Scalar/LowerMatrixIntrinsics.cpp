@@ -1324,6 +1324,8 @@ public:
   void lowerDotProduct(CallInst *MatMul,
                        SmallPtrSet<Instruction *, 16> &FusedInsts,
                        FastMathFlags FMF) {
+    if (MatrixLayout != MatrixLayoutTy::ColumnMajor)
+      return;
     ShapeInfo LShape(MatMul->getArgOperand(2), MatMul->getArgOperand(3));
     ShapeInfo RShape(MatMul->getArgOperand(3), MatMul->getArgOperand(4));
 
@@ -1348,8 +1350,7 @@ public:
                            m_Intrinsic<Intrinsic::matrix_column_major_load>(
                                m_Value(), m_SpecificInt(N)))));
     };
-    if (!IsSupportedArg(RHS, RShape.NumColumns) ||
-        !IsSupportedArg(LHS, LShape.NumColumns))
+    if (!IsSupportedArg(RHS, RShape.NumColumns))
       return;
 
     // We compare the costs of a vector.reduce.add to sequential add.
@@ -1389,7 +1390,6 @@ public:
       return Op;
     };
     LHS = FlattenArg(LHS);
-    RHS = FlattenArg(RHS);
 
     // Insert mul/fmul and llvm.vector.reduce.fadd
     Value *Mul =

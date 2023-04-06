@@ -8,6 +8,7 @@ elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
   set(TEST_COMPILE_FLAGS
     -march=${LIBC_GPU_TARGET_ARCHITECTURE}
     --target=${LIBC_GPU_TARGET_TRIPLE}
+    --cuda-path=${LIBC_CUDA_ROOT}
   )
 endif()
 

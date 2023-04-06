@@ -10205,14 +10205,19 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       CheckHLSLEntryPoint(NewFD);
       if (!NewFD->isInvalidDecl()) {
         auto Env = TargetInfo.getTriple().getEnvironment();
-        AttributeCommonInfo AL(NewFD->getBeginLoc());
         HLSLShaderAttr::ShaderType ShaderType =
             static_cast<HLSLShaderAttr::ShaderType>(
                 hlsl::getStageFromEnvironment(Env));
         // To share code with HLSLShaderAttr, add HLSLShaderAttr to entry
         // function.
-        if (HLSLShaderAttr *Attr = mergeHLSLShaderAttr(NewFD, AL, ShaderType))
-          NewFD->addAttr(Attr);
+        if (HLSLShaderAttr *NT = NewFD->getAttr<HLSLShaderAttr>()) {
+          if (NT->getType() != ShaderType)
+            Diag(NT->getLocation(), diag::err_hlsl_entry_shader_attr_mismatch)
+                << NT;
+        } else {
+          NewFD->addAttr(HLSLShaderAttr::Create(Context, ShaderType,
+                                                NewFD->getBeginLoc()));
+        }
       }
     }
     // HLSL does not support specifying an address space on a function return

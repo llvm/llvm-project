@@ -608,7 +608,7 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
     auto &AggregateLoc = *cast<AggregateStorageLocation>(&Loc);
 
     const QualType Type = AggregateLoc.getType();
-    assert(Type->isStructureOrClassType() || Type->isUnionType());
+    assert(Type->isRecordType());
 
     for (const FieldDecl *Field : DACtx->getReferencedFields(Type)) {
       assert(Field != nullptr);
@@ -688,9 +688,9 @@ Value *Environment::createValueUnlessSelfReferential(
     return &create<IntegerValue>();
   }
 
-  if (Type->isReferenceType()) {
+  if (Type->isReferenceType() || Type->isPointerType()) {
     CreatedValuesCount++;
-    QualType PointeeType = Type->castAs<ReferenceType>()->getPointeeType();
+    QualType PointeeType = Type->getPointeeType();
     auto &PointeeLoc = createStorageLocation(PointeeType);
 
     if (Visited.insert(PointeeType.getCanonicalType()).second) {
@@ -702,27 +702,13 @@ Value *Environment::createValueUnlessSelfReferential(
         setValue(PointeeLoc, *PointeeVal);
     }
 
-    return &create<ReferenceValue>(PointeeLoc);
+    if (Type->isReferenceType())
+      return &create<ReferenceValue>(PointeeLoc);
+    else
+      return &create<PointerValue>(PointeeLoc);
   }
 
-  if (Type->isPointerType()) {
-    CreatedValuesCount++;
-    QualType PointeeType = Type->castAs<PointerType>()->getPointeeType();
-    auto &PointeeLoc = createStorageLocation(PointeeType);
-
-    if (Visited.insert(PointeeType.getCanonicalType()).second) {
-      Value *PointeeVal = createValueUnlessSelfReferential(
-          PointeeType, Visited, Depth, CreatedValuesCount);
-      Visited.erase(PointeeType.getCanonicalType());
-
-      if (PointeeVal != nullptr)
-        setValue(PointeeLoc, *PointeeVal);
-    }
-
-    return &create<PointerValue>(PointeeLoc);
-  }
-
-  if (Type->isStructureOrClassType() || Type->isUnionType()) {
+  if (Type->isRecordType()) {
     CreatedValuesCount++;
     llvm::DenseMap<const ValueDecl *, Value *> FieldValues;
     for (const FieldDecl *Field : DACtx->getReferencedFields(Type)) {

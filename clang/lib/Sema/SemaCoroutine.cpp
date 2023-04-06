@@ -1137,6 +1137,18 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
   Body = CoroutineBodyStmt::Create(Context, Builder);
 }
 
+static CompoundStmt *buildCoroutineBody(Stmt *Body, ASTContext &Context) {
+  if (auto *CS = dyn_cast<CompoundStmt>(Body))
+    return CS;
+
+  // The body of the coroutine may be a try statement if it is in
+  // 'function-try-block' syntax. Here we wrap it into a compound
+  // statement for consistency.
+  assert(isa<CXXTryStmt>(Body) && "Unimaged coroutine body type");
+  return CompoundStmt::Create(Context, {Body}, FPOptionsOverride(),
+                              SourceLocation(), SourceLocation());
+}
+
 CoroutineStmtBuilder::CoroutineStmtBuilder(Sema &S, FunctionDecl &FD,
                                            sema::FunctionScopeInfo &Fn,
                                            Stmt *Body)
@@ -1144,7 +1156,7 @@ CoroutineStmtBuilder::CoroutineStmtBuilder(Sema &S, FunctionDecl &FD,
       IsPromiseDependentType(
           !Fn.CoroutinePromise ||
           Fn.CoroutinePromise->getType()->isDependentType()) {
-  this->Body = Body;
+  this->Body = buildCoroutineBody(Body, S.getASTContext());
 
   for (auto KV : Fn.CoroutineParameterMoves)
     this->ParamMovesVector.push_back(KV.second);

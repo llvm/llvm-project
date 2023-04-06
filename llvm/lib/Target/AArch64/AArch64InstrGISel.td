@@ -302,3 +302,108 @@ def : Pat<(int_aarch64_stlxp GPR64:$lo, GPR64:$hi, GPR64:$addr),
           (STLXPX GPR64:$lo, GPR64:$hi, GPR64:$addr)>;
 def : Pat<(int_aarch64_stxp GPR64:$lo, GPR64:$hi, GPR64:$addr),
           (STXPX GPR64:$lo, GPR64:$hi, GPR64:$addr)>;
+
+multiclass SIMDAcrossLanesSignedIntrinsicBHS<string baseOpc, Intrinsic intOp> {
+  def : Pat<(i32 (intOp (v8i8 V64:$Rn))),
+        (i32 (SMOVvi8to32
+          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+            (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), bsub),
+          (i64 0)))>;
+  def : Pat<(i32 (intOp (v16i8 V128:$Rn))),
+        (i32 (SMOVvi8to32
+          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+           (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), bsub),
+          (i64 0)))>;
+
+  def : Pat<(i32 (intOp (v4i16 V64:$Rn))),
+        (i32 (SMOVvi16to32
+          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+           (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn), hsub),
+          (i64 0)))>;
+  def : Pat<(i32 (intOp (v8i16 V128:$Rn))),
+        (i32 (SMOVvi16to32
+          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+           (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn), hsub),
+          (i64 0)))>;
+
+  def : Pat<(i32 (intOp (v4i32 V128:$Rn))),
+        (i32 (EXTRACT_SUBREG
+          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+           (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn), ssub),
+          ssub))>;
+}
+
+multiclass SIMDAcrossLanesUnsignedIntrinsicBHS<string baseOpc,
+                                                Intrinsic intOp> {
+  def : Pat<(i32 (intOp (v8i8 V64:$Rn))),
+        (i32 (EXTRACT_SUBREG
+          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+            (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), bsub),
+          ssub))>;
+  def : Pat<(i32 (intOp (v16i8 V128:$Rn))),
+        (i32 (EXTRACT_SUBREG
+          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+            (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), bsub),
+          ssub))>;
+
+  def : Pat<(i32 (intOp (v4i16 V64:$Rn))),
+          (i32 (EXTRACT_SUBREG
+            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+              (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn), hsub),
+            ssub))>;
+  def : Pat<(i32 (intOp (v8i16 V128:$Rn))),
+        (i32 (EXTRACT_SUBREG
+          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+            (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn), hsub),
+          ssub))>;
+
+  def : Pat<(i32 (intOp (v4i32 V128:$Rn))),
+        (i32 (EXTRACT_SUBREG
+          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+            (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn), ssub),
+          ssub))>;
+}
+
+
+defm : SIMDAcrossLanesSignedIntrinsicBHS<"ADDV", int_aarch64_neon_saddv>;
+// vaddv_[su]32 is special; -> ADDP Vd.2S,Vn.2S,Vm.2S; return Vd.s[0];Vn==Vm
+def : Pat<(i32 (int_aarch64_neon_saddv (v2i32 V64:$Rn))),
+          (i32 (EXTRACT_SUBREG
+            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+              (ADDPv2i32 V64:$Rn, V64:$Rn), dsub),
+            ssub))>;
+
+defm : SIMDAcrossLanesUnsignedIntrinsicBHS<"ADDV", int_aarch64_neon_uaddv>;
+def : Pat<(i32 (int_aarch64_neon_uaddv (v2i32 V64:$Rn))),
+          (i32 (EXTRACT_SUBREG
+            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+              (ADDPv2i32 V64:$Rn, V64:$Rn), dsub),
+            ssub))>;
+
+defm : SIMDAcrossLanesSignedIntrinsicBHS<"SMAXV", int_aarch64_neon_smaxv>;
+def : Pat<(i32 (int_aarch64_neon_smaxv (v2i32 V64:$Rn))),
+          (i32 (EXTRACT_SUBREG
+            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+              (SMAXPv2i32 V64:$Rn, V64:$Rn), dsub),
+            ssub))>;
+
+defm : SIMDAcrossLanesSignedIntrinsicBHS<"SMINV", int_aarch64_neon_sminv>;
+def : Pat<(i32 (int_aarch64_neon_sminv (v2i32 V64:$Rn))),
+          (i32 (EXTRACT_SUBREG
+            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+              (SMINPv2i32 V64:$Rn, V64:$Rn), dsub),
+            ssub))>;
+
+defm : SIMDAcrossLanesUnsignedIntrinsicBHS<"UMAXV", int_aarch64_neon_umaxv>;
+def : Pat<(i32 (int_aarch64_neon_umaxv (v2i32 V64:$Rn))),
+          (i32 (EXTRACT_SUBREG
+            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+              (UMAXPv2i32 V64:$Rn, V64:$Rn), dsub),
+            ssub))>;
+
+defm : SIMDAcrossLanesUnsignedIntrinsicBHS<"UMINV", int_aarch64_neon_uminv>;
+def : Pat<(i32 (int_aarch64_neon_uminv (v2i32 V64:$Rn))),
+          (i32 (EXTRACT_SUBREG
+            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+              (UMINPv2i32 V64:$Rn, V64:$Rn), dsub),
+            ssub))>;

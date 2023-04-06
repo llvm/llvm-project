@@ -56,7 +56,6 @@ FunctionPass *createAMDGPUMachineCFGStructurizerPass();
 FunctionPass *createAMDGPUPropagateAttributesEarlyPass(const TargetMachine *);
 ModulePass *createAMDGPUPropagateAttributesLatePass(const TargetMachine *);
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
-ModulePass *createAMDGPUReplaceLDSUseWithPointerPass();
 ModulePass *createAMDGPULowerModuleLDSPass();
 FunctionPass *createSIModeRegisterPass();
 FunctionPass *createGCNPreRAOptimizationsPass();
@@ -142,14 +141,6 @@ struct AMDGPUPropagateAttributesLatePass
 
 private:
   TargetMachine &TM;
-};
-
-void initializeAMDGPUReplaceLDSUseWithPointerPass(PassRegistry &);
-extern char &AMDGPUReplaceLDSUseWithPointerID;
-
-struct AMDGPUReplaceLDSUseWithPointerPass
-    : PassInfoMixin<AMDGPUReplaceLDSUseWithPointerPass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 void initializeAMDGPULowerModuleLDSPass(PassRegistry &);

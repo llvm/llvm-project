@@ -20,16 +20,18 @@ transform.sequence failures(propagate) {
     : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
   %2 = get_closest_isolated_parent %1 : (!pdl.operation) -> !pdl.operation
   transform.structured.vectorize %2
-  transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %module_op 
-    {bufferize_function_boundaries = true, allow_return_allocs = true}
+  %b = transform.bufferization.one_shot_bufferize
+      layout{IdentityLayoutMap} %module_op
+      {bufferize_function_boundaries = true, allow_return_allocs = true}
+      : (!pdl.operation) -> !pdl.operation
 
-  %f = transform.structured.match ops{["func.func"]} in %module_op 
+  %f = transform.structured.match ops{["func.func"]} in %b
     : (!pdl.operation) -> !pdl.operation
 
   // TODO: group these lower-level controls into various properly named vector
   // lowering TD macros.
   %func = transform.vector.lower_contraction %f
-    lowering_strategy = "outerproduct" 
+    lowering_strategy = "outerproduct"
       : (!pdl.operation) -> !pdl.operation
 
   %func_2 = transform.vector.apply_transfer_permutation_patterns %func

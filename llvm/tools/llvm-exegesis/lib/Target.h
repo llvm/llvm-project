@@ -59,6 +59,7 @@ struct PfmCountersInfo {
   unsigned NumIssueCounters;
 
   static const PfmCountersInfo Default;
+  static const PfmCountersInfo Dummy;
 };
 
 struct CpuAndPfmCounters {
@@ -177,6 +178,10 @@ public:
   // Returns the Pfm counters for the given CPU (or the default if no pfm
   // counters are defined for this CPU).
   const PfmCountersInfo &getPfmCounters(StringRef CpuName) const;
+
+  // Returns dummy Pfm counters which can be used to execute generated snippet
+  // without access to performance counters.
+  const PfmCountersInfo &getDummyPfmCounters() const;
 
   // Saves the CPU state that needs to be preserved when running a benchmark,
   // and returns and RAII object that restores the state on destruction.

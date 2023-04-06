@@ -24148,12 +24148,12 @@ static bool matchScalarReduction(SDValue Op, ISD::NodeType BinOp,
 
 // Helper function for comparing all bits of two vectors.
 static SDValue LowerVectorAllEqual(const SDLoc &DL, SDValue LHS, SDValue RHS,
-                                   ISD::CondCode CC, const APInt &Mask,
+                                   ISD::CondCode CC, const APInt &OriginalMask,
                                    const X86Subtarget &Subtarget,
                                    SelectionDAG &DAG, X86::CondCode &X86CC) {
   EVT VT = LHS.getValueType();
   unsigned ScalarSize = VT.getScalarSizeInBits();
-  if (Mask.getBitWidth() != ScalarSize) {
+  if (OriginalMask.getBitWidth() != ScalarSize) {
     assert(ScalarSize == 1 && "Element Mask vs Vector bitwidth mismatch");
     return SDValue();
   }
@@ -24162,8 +24162,14 @@ static SDValue LowerVectorAllEqual(const SDLoc &DL, SDValue LHS, SDValue RHS,
   if (!llvm::has_single_bit<uint32_t>(VT.getSizeInBits()))
     return SDValue();
 
+  // FCMP may use ISD::SETNE when nnan - early out if we manage to get here.
+  if (VT.isFloatingPoint())
+    return SDValue();
+
   assert((CC == ISD::SETEQ || CC == ISD::SETNE) && "Unsupported ISD::CondCode");
   X86CC = (CC == ISD::SETEQ ? X86::COND_E : X86::COND_NE);
+
+  APInt Mask = OriginalMask;
 
   auto MaskBits = [&](SDValue Src) {
     if (Mask.isAllOnes())
@@ -24205,6 +24211,18 @@ static SDValue LowerVectorAllEqual(const SDLoc &DL, SDValue LHS, SDValue RHS,
 
   // Split down to 128/256/512-bit vector.
   unsigned TestSize = UseKORTEST ? 512 : (Subtarget.hasAVX() ? 256 : 128);
+
+  // If the input vector has vector elements wider than the target test size,
+  // then cast to <X x i64> so it will safely split.
+  if (ScalarSize > TestSize) {
+    if (!Mask.isAllOnes())
+      return SDValue();
+    VT = EVT::getVectorVT(*DAG.getContext(), MVT::i64, VT.getSizeInBits() / 64);
+    LHS = DAG.getBitcast(VT, LHS);
+    RHS = DAG.getBitcast(VT, RHS);
+    Mask = APInt::getAllOnes(64);
+  }
+
   if (VT.getSizeInBits() > TestSize) {
     KnownBits KnownRHS = DAG.computeKnownBits(RHS);
     if (KnownRHS.isConstant() && KnownRHS.getConstant() == Mask) {
@@ -24215,6 +24233,25 @@ static SDValue LowerVectorAllEqual(const SDLoc &DL, SDValue LHS, SDValue RHS,
         LHS = DAG.getNode(ISD::AND, DL, VT, Split.first, Split.second);
       }
       RHS = DAG.getAllOnesConstant(DL, VT);
+    } else if (!UsePTEST && !KnownRHS.isZero()) {
+      // MOVMSK Special Case:
+      // ALLOF(CMPEQ(X,Y)) -> AND(CMPEQ(X[0],Y[0]),CMPEQ(X[1],Y[1]),....)
+      MVT SVT = ScalarSize >= 32 ? MVT::i32 : MVT::i8;
+      VT = MVT::getVectorVT(SVT, VT.getSizeInBits() / SVT.getSizeInBits());
+      LHS = DAG.getBitcast(VT, MaskBits(LHS));
+      RHS = DAG.getBitcast(VT, MaskBits(RHS));
+      EVT BoolVT = VT.changeVectorElementType(MVT::i1);
+      SDValue V = DAG.getSetCC(DL, BoolVT, LHS, RHS, ISD::SETEQ);
+      V = DAG.getSExtOrTrunc(V, DL, VT);
+      while (VT.getSizeInBits() > TestSize) {
+        auto Split = DAG.SplitVector(V, DL);
+        VT = Split.first.getValueType();
+        V = DAG.getNode(ISD::AND, DL, VT, Split.first, Split.second);
+      }
+      V = DAG.getNOT(DL, V, VT);
+      V = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, V);
+      return DAG.getNode(X86ISD::CMP, DL, MVT::i32, V,
+                         DAG.getConstant(0, DL, MVT::i32));
     } else {
       // Convert to a ICMP_EQ(XOR(LHS,RHS),0) pattern.
       SDValue V = DAG.getNode(ISD::XOR, DL, VT, LHS, RHS);
@@ -44733,17 +44770,16 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
       ISD::CondCode CC = cast<CondCodeSDNode>(Match.getOperand(2))->get();
       if ((BinOp == ISD::AND && CC == ISD::CondCode::SETEQ) ||
           (BinOp == ISD::OR && CC == ISD::CondCode::SETNE)) {
-        // If representable as a scalar integer:
         // For all_of(setcc(x,y,eq)) - use (iX)x == (iX)y.
         // For any_of(setcc(x,y,ne)) - use (iX)x != (iX)y.
-        EVT VecVT = Match.getOperand(0).getValueType();
-        EVT IntVT = EVT::getIntegerVT(Ctx, VecVT.getSizeInBits());
-        if (TLI.isTypeLegal(IntVT)) {
-          SDValue LHS = DAG.getFreeze(Match.getOperand(0));
-          SDValue RHS = DAG.getFreeze(Match.getOperand(1));
-          return DAG.getSetCC(DL, ExtractVT, DAG.getBitcast(IntVT, LHS),
-                              DAG.getBitcast(IntVT, RHS), CC);
-        }
+        X86::CondCode X86CC;
+        SDValue LHS = DAG.getFreeze(Match.getOperand(0));
+        SDValue RHS = DAG.getFreeze(Match.getOperand(1));
+        APInt Mask = APInt::getAllOnes(LHS.getScalarValueSizeInBits());
+        if (SDValue V = LowerVectorAllEqual(DL, LHS, RHS, CC, Mask, Subtarget,
+                                            DAG, X86CC))
+          return DAG.getNode(ISD::TRUNCATE, DL, ExtractVT,
+                             getSETCC(X86CC, V, DL, DAG));
       }
     }
     if (TLI.isTypeLegal(MatchVT)) {
@@ -44751,24 +44787,6 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
       EVT MovmskVT = EVT::getIntegerVT(Ctx, NumElts);
       Movmsk = DAG.getBitcast(MovmskVT, Match);
     } else {
-      // For all_of(setcc(x,y,eq)) - use PMOVMSKB(PCMPEQB()).
-      // For any_of(setcc(x,y,ne)) - use PMOVMSKB(NOT(PCMPEQB())).
-      if (Match.getOpcode() == ISD::SETCC) {
-        ISD::CondCode CC = cast<CondCodeSDNode>(Match.getOperand(2))->get();
-        if ((BinOp == ISD::AND && CC == ISD::CondCode::SETEQ) ||
-            (BinOp == ISD::OR && CC == ISD::CondCode::SETNE)) {
-          EVT VecSVT = Match.getOperand(0).getValueType().getScalarType();
-          if (VecSVT != MVT::i8 && (VecSVT.getSizeInBits() % 8) == 0) {
-            NumElts *= VecSVT.getSizeInBits() / 8;
-            EVT CmpVT = EVT::getVectorVT(Ctx, MVT::i8, NumElts);
-            MatchVT = EVT::getVectorVT(Ctx, MVT::i1, NumElts);
-            Match = DAG.getSetCC(
-                DL, MatchVT, DAG.getBitcast(CmpVT, Match.getOperand(0)),
-                DAG.getBitcast(CmpVT, Match.getOperand(1)), CC);
-          }
-        }
-      }
-
       // Use combineBitcastvxi1 to create the MOVMSK.
       while (NumElts > MaxElts) {
         SDValue Lo, Hi;

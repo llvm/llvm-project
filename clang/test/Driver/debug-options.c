@@ -390,8 +390,8 @@
 // LDGARANGE: {{".*ld.*"}} {{.*}}
 // LDGARANGE-NOT: "-plugin-opt=-generate-arange-section"
 // LLDGARANGE: {{".*lld.*"}} {{.*}} "-plugin-opt=-generate-arange-section"
-// SNLDTLTOGARANGE: {{".*orbis-ld.*"}} {{.*}} "-lto-thin-debug-options=-generate-arange-section"
-// SNLDFLTOGARANGE: {{".*orbis-ld.*"}} {{.*}} "-lto-debug-options=-generate-arange-section"
+// SNLDTLTOGARANGE: {{".*orbis-ld.*"}} {{.*}} "-lto-thin-debug-options= -generate-arange-section"
+// SNLDFLTOGARANGE: {{".*orbis-ld.*"}} {{.*}} "-lto-debug-options= -generate-arange-section"
 
 // PUB: -gpubnames
 //

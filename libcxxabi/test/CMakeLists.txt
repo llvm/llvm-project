@@ -8,7 +8,7 @@ macro(pythonize_bool var)
 endmacro()
 
 pythonize_bool(LIBCXXABI_USE_LLVM_UNWINDER)
-set(LIBCXXABI_EXECUTOR "${Python3_EXECUTABLE} ${LIBCXXABI_LIBCXX_PATH}/utils/run.py" CACHE STRING
+set(LIBCXXABI_EXECUTOR "\\\"${Python3_EXECUTABLE}\\\" ${LIBCXXABI_LIBCXX_PATH}/utils/run.py" CACHE STRING
     "Executor to use when running tests.")
 
 if (LIBCXXABI_ENABLE_SHARED)
