@@ -326,6 +326,11 @@ Miscellaneous Bug Fixes
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Dumping the AST to JSON no longer causes a failed assertion when targetting
+  the Microsoft ABI and the AST to be dumped contains dependent names that
+  would not typically be mangled.
+  (`#61440 <https://github.com/llvm/llvm-project/issues/61440>`_)
+
 Target Specific Changes
 -----------------------
 
