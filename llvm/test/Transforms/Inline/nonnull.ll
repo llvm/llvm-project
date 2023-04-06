@@ -99,11 +99,10 @@ define void @caller3(ptr %arg) {
   ret void
 }
 
-; Positive test - arg is known non null
 define void @caller4(ptr dereferenceable(8) %arg) {
 ; CHECK-LABEL: define void @caller4
 ; CHECK-SAME: (ptr dereferenceable(8) [[ARG:%.*]]) {
-; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    call void @callee(ptr dereferenceable(8) [[ARG]])
 ; CHECK-NEXT:    ret void
 ;
   call void @callee(ptr dereferenceable(8) %arg)
@@ -123,24 +122,7 @@ define void @caller5(ptr dereferenceable(8) %arg) {
 define void @caller6(ptr %arg) {
 ; CHECK-LABEL: define void @caller6
 ; CHECK-SAME: (ptr [[ARG:%.*]]) {
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[ARG]], null
-; CHECK-NEXT:    br i1 [[CMP_I]], label [[EXPENSIVE_I:%.*]], label [[DONE_I:%.*]]
-; CHECK:       expensive.i:
-; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br label [[CALLEE_EXIT:%.*]]
-; CHECK:       done.i:
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br label [[CALLEE_EXIT]]
-; CHECK:       callee.exit:
+; CHECK-NEXT:    call void @callee(ptr dereferenceable(8) [[ARG]])
 ; CHECK-NEXT:    ret void
 ;
   call void @callee(ptr dereferenceable(8) %arg)
