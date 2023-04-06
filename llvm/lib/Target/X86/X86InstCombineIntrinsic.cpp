@@ -1620,9 +1620,8 @@ static Value *simplifyTernarylogic(const IntrinsicInst &II,
     break;
   }
 
-  assert(Res.first == nullptr ||
-         Res.second == Imm &&
-             "Simplification of ternary logic does not verify!");
+  assert((Res.first == nullptr || Res.second == Imm) &&
+         "Simplification of ternary logic does not verify!");
   return Res.first;
 }
 
