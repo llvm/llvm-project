@@ -1503,6 +1503,58 @@ defm : RVVStridedSegLoad<"vlsseg">;
 defm : RVVIndexedSegLoad<"vluxseg">;
 defm : RVVIndexedSegLoad<"vloxseg">;
 }
+
+multiclass RVVUnitStridedSegLoadTuple<string op> {
+  foreach type = ["i"] in {
+    defvar eew = !cond(!eq(type, "i") : "32");
+      foreach nf = [2] in {
+        let Name = op # nf # "e" # eew # "_v_tuple",
+            OverloadedName = op # nf # "e" # eew # "_tuple",
+            IRName = op # nf,
+            MaskedIRName = op # nf # "_mask",
+            NF = nf,
+            ManualCodegen = [{
+    {
+      assert(((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+            (!IsMasked && (PolicyAttrs & RVV_VTA))) &&
+            "FIXME: Only handling default policy (TAMA) for now");
+
+      llvm::Type *ElementVectorType = cast<StructType>(ResultType)->elements()[0];
+      IntrinsicTypes = {ElementVectorType, Ops.back()->getType()};
+      SmallVector<llvm::Value*, 12> Operands;
+
+      Operands.append(NF, llvm::PoisonValue::get(ElementVectorType));
+
+      unsigned Offset = IsMasked ? 1 : 0;
+      Operands.push_back(Ops[Offset]); // Ptr
+      if (IsMasked)
+        Operands.push_back(Ops[0]);
+      Operands.push_back(Ops[Offset + 1]); // VL
+      if (IsMasked)
+        Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+
+      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+      if (ReturnValue.isNull())
+        return LoadValue;
+      else
+        return Builder.CreateStore(LoadValue, ReturnValue.getValue());
+    }
+    }] in {
+          defvar T = "(Tuple:" # nf # ")";
+          def : RVVBuiltin<"v", T # "vPCe", type>;
+      }
+    }
+  }
+}
+// TODO: Extend for policy
+let UnMaskedPolicyScheme = NonePolicy,
+    MaskedPolicyScheme = NonePolicy,
+    IsTuple = true in {
+defm : RVVUnitStridedSegLoadTuple<"vlseg">;
+}
+
 let UnMaskedPolicyScheme = NonePolicy,
     MaskedPolicyScheme = NonePolicy in {
 defm : RVVUnitStridedSegStore<"vsseg">;
