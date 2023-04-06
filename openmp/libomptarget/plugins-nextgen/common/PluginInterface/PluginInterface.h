@@ -542,7 +542,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Deinitialize the device and free all its resources. After this call, the
   /// device is no longer considered ready, so no queries or modifications are
   /// allowed.
-  Error deinit();
+  Error deinit(GenericPluginTy &Plugin);
   virtual Error deinitImpl() = 0;
 
   /// Load the binary image into the device and return the target table.

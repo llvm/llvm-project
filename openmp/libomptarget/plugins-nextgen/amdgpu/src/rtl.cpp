@@ -55,6 +55,10 @@
 #include "hsa/hsa_ext_amd.h"
 #endif
 
+#ifdef OMPT_SUPPORT
+extern void OmptCallbackInit();
+#endif
+
 namespace llvm {
 namespace omp {
 namespace target {
@@ -2515,6 +2519,10 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     // Setup the memory pools of available for the host.
     if (auto Err = HostDevice->init())
       return std::move(Err);
+
+#ifdef OMPT_SUPPORT
+    ::OmptCallbackInit();
+#endif
 
     return NumDevices;
   }

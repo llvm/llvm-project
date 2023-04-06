@@ -49,6 +49,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
         PRIVATE
         elf_common
         MemoryManager
+        OMPT
         PluginInterface
         ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
         ${OPENMP_PTHREAD_LIB}

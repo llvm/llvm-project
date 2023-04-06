@@ -82,6 +82,7 @@ add_llvm_library(omptarget.rtl.amdgpu.nextgen SHARED
   PRIVATE
   elf_common
   MemoryManager
+  OMPT
   PluginInterface
   ${LIBOMPTARGET_DEP_LIBRARIES}
   ${OPENMP_PTHREAD_LIB}

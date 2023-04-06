@@ -32,6 +32,10 @@ using namespace omp;
 using namespace target;
 using namespace plugin;
 
+#ifdef OMPT_SUPPORT
+#include "ompt_device_callbacks.h"
+#endif
+
 GenericPluginTy *Plugin::SpecificPlugin = nullptr;
 
 namespace llvm::omp::target::plugin {
@@ -448,6 +452,12 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   if (auto Err = initImpl(Plugin))
     return Err;
 
+#ifdef OMPT_SUPPORT
+  ompt_device_callbacks.prepare_devices(Plugin.getNumDevices());
+  ompt_device_callbacks.ompt_callback_device_initialize(
+      DeviceId, getComputeUnitKind().c_str());
+#endif
+
   // Read and reinitialize the envars that depend on the device initialization.
   // Notice these two envars may change the stack size and heap size of the
   // device, so they need the device properly initialized.
@@ -489,8 +499,8 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   return Plugin::success();
 }
 
-Error GenericDeviceTy::deinit() {
-  // Delete the memory manager before deinitilizing the device. Otherwise,
+Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
+  // Delete the memory manager before deinitializing the device. Otherwise,
   // we may delete device allocations after the device is deinitialized.
   if (MemoryManager)
     delete MemoryManager;
@@ -499,9 +509,13 @@ Error GenericDeviceTy::deinit() {
   if (RecordReplay.isRecordingOrReplaying())
     RecordReplay.deinit();
 
+#ifdef OMPT_SUPPORT
+  for (int i = 0; i < Plugin.getNumDevices(); ++i)
+    ompt_device_callbacks.ompt_callback_device_finalize(i);
+#endif
+
   return deinitImpl();
 }
-
 Expected<__tgt_target_table *>
 GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                             const __tgt_device_image *InputTgtImage) {
@@ -538,6 +552,15 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   // Register all offload entries of the image.
   if (auto Err = registerOffloadEntries(*Image))
     return std::move(Err);
+
+#ifdef OMPT_SUPPORT
+  size_t Bytes = getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
+  ompt_device_callbacks.ompt_callback_device_load(
+      DeviceId, nullptr /* FileName */, 0 /* File Offset */,
+      nullptr /* VmaInFile */, Bytes /* ImgSize */,
+      InputTgtImage->ImageStart /* HostAddr */, nullptr /* DeviceAddr */,
+      0 /* FIXME: ModuleId */);
+#endif
 
   // Return the pointer to the table of entries.
   return Image->getOffloadEntryTable();
@@ -1166,7 +1189,7 @@ Error GenericPluginTy::deinitDevice(int32_t DeviceId) {
     return Plugin::success();
 
   // Deinitialize the device and release its resources.
-  if (auto Err = Devices[DeviceId]->deinit())
+  if (auto Err = Devices[DeviceId]->deinit(*this))
     return Err;
 
   // Delete the device and invalidate its reference.
@@ -1582,6 +1605,9 @@ int32_t __tgt_rtl_init_async_info(int32_t DeviceId,
            DPxPTR(*AsyncInfoPtr), DeviceId, toString(std::move(Err)).data());
     return OFFLOAD_FAIL;
   }
+
+  // OMPT_IF_BUILT_AND_ENABLED(
+  //     DeviceInfo().doOmptDeviceInitialize(DeviceId, GetInfoName));
 
   return OFFLOAD_SUCCESS;
 }

@@ -6,23 +6,17 @@
 #
 ##===----------------------------------------------------------------------===##
 #
-# Common parts which can be used by all plugins
+# Aggregation of parts which can be used by OpenMP tools
 #
 ##===----------------------------------------------------------------------===##
 
-# NOTE: Don't try to build `PluginInterface` using `add_llvm_library` because we
-# don't want to export `PluginInterface` while `add_llvm_library` requires that.
-add_library(PluginInterface OBJECT
-  PluginInterface.cpp GlobalHandler.cpp JIT.cpp)
-
-# Only enable JIT for those targets that LLVM can support.
-string(TOUPPER "${LLVM_TARGETS_TO_BUILD}" TargetsSupported)
-foreach(Target ${TargetsSupported})
-  target_compile_definitions(PluginInterface PRIVATE "LIBOMPTARGET_JIT_${Target}")
-endforeach()
+# NOTE: Don't try to build `OMPT` using `add_llvm_library` because we
+# don't want to export `OMPT` while `add_llvm_library` requires that.
+add_library(OMPT OBJECT
+  OmptCallback.cpp)
 
 # This is required when using LLVM libraries.
-llvm_update_compile_flags(PluginInterface)
+llvm_update_compile_flags(OMPT)
 
 if (LLVM_LINK_LLVM_DYLIB)
   set(llvm_libs LLVM)
@@ -55,25 +49,24 @@ else()
   )
 endif()
 
-target_link_libraries(PluginInterface
+target_link_libraries(OMPT
   PUBLIC
     ${llvm_libs}
     elf_common
     MemoryManager
-    OMPT
 )
 
 # Define the TARGET_NAME and DEBUG_PREFIX.
-target_compile_definitions(PluginInterface PRIVATE
-  TARGET_NAME="PluginInterface"
-  DEBUG_PREFIX="PluginInterface"
+target_compile_definitions(OMPT PRIVATE
+  TARGET_NAME="OMPT"
+  DEBUG_PREFIX="OMPT"
 )
 
-target_include_directories(PluginInterface
+target_include_directories(OMPT
   INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE ${LIBOMPTARGET_INCLUDE_DIR}
 )
 
-set_target_properties(PluginInterface PROPERTIES
+set_target_properties(OMPT PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   CXX_VISIBILITY_PRESET protected)
