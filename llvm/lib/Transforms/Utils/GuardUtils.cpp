@@ -11,6 +11,7 @@
 
 #include "llvm/Transforms/Utils/GuardUtils.h"
 #include "llvm/Analysis/GuardUtils.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -78,8 +79,18 @@ void llvm::makeGuardControlFlowExplicit(Function *DeoptIntrinsic,
   }
 }
 
+#ifndef NDEBUG
+static bool isLoopInvariantWidenableCond(Value *WCCond, const Loop &L) {
+  bool IsLoopInv = L.isLoopInvariant(WCCond);
+  if (IsLoopInv || !isa<Instruction>(WCCond))
+    return IsLoopInv;
 
-void llvm::widenWidenableBranch(BranchInst *WidenableBR, Value *NewCond) {
+  return L.hasLoopInvariantOperands(cast<Instruction>(WCCond));
+}
+#endif
+
+void llvm::widenWidenableBranch(BranchInst *WidenableBR, Value *NewCond,
+                                const LoopInfo &LI) {
   assert(isWidenableBranch(WidenableBR) && "precondition");
 
   // The tempting trivially option is to produce something like this:
@@ -90,6 +101,13 @@ void llvm::widenWidenableBranch(BranchInst *WidenableBR, Value *NewCond) {
   Use *C, *WC;
   BasicBlock *IfTrueBB, *IfFalseBB;
   parseWidenableBranch(WidenableBR, C, WC, IfTrueBB, IfFalseBB);
+#ifndef NDEBUG
+  bool IsLoopInvariantWidenableBR = false;
+  auto *L = LI.getLoopFor(WidenableBR->getParent());
+  if (L)
+    IsLoopInvariantWidenableBR =
+        isLoopInvariantWidenableCond(WidenableBR->getCondition(), *L);
+#endif
   if (!C) {
     // br (wc()), ... form
     IRBuilder<> B(WidenableBR);
@@ -102,15 +120,33 @@ void llvm::widenWidenableBranch(BranchInst *WidenableBR, Value *NewCond) {
     // Condition is only guaranteed to dominate branch
     WCAnd->moveBefore(WidenableBR);    
   }
+#ifndef NDEBUG
+  if (IsLoopInvariantWidenableBR) {
+    auto *L = LI.getLoopFor(WidenableBR->getParent());
+    // NB! This can also be loop-varying if we missed hoisting the IR out, which
+    // was infact loop-invariant. This would imply a pass-ordering issue and the
+    // assert should be dealt with as such.
+    assert(isLoopInvariantWidenableCond(WidenableBR->getCondition(), *L) &&
+           "Loop invariant widenable condition made loop variant!");
+  }
+#endif
   assert(isWidenableBranch(WidenableBR) && "preserve widenabiliy");
 }
 
-void llvm::setWidenableBranchCond(BranchInst *WidenableBR, Value *NewCond) {
+void llvm::setWidenableBranchCond(BranchInst *WidenableBR, Value *NewCond,
+                                  const LoopInfo &LI) {
   assert(isWidenableBranch(WidenableBR) && "precondition");
 
   Use *C, *WC;
   BasicBlock *IfTrueBB, *IfFalseBB;
   parseWidenableBranch(WidenableBR, C, WC, IfTrueBB, IfFalseBB);
+#ifndef NDEBUG
+  bool IsLoopInvariantWidenableBR = false;
+  auto *L = LI.getLoopFor(WidenableBR->getParent());
+  if (L)
+    IsLoopInvariantWidenableBR =
+        isLoopInvariantWidenableCond(WidenableBR->getCondition(), *L);
+#endif
   if (!C) {
     // br (wc()), ... form
     IRBuilder<> B(WidenableBR);
@@ -122,5 +158,15 @@ void llvm::setWidenableBranchCond(BranchInst *WidenableBR, Value *NewCond) {
     WCAnd->moveBefore(WidenableBR);
     C->set(NewCond);
   }
+#ifndef NDEBUG
+  if (IsLoopInvariantWidenableBR) {
+    auto *L = LI.getLoopFor(WidenableBR->getParent());
+    // NB! This can also be loop-varying if we missed hoisting the IR out, which
+    // was infact loop-invariant. This would imply a pass-ordering issue and the
+    // assert should be dealt with as such.
+    assert(isLoopInvariantWidenableCond(WidenableBR->getCondition(), *L) &&
+           "Loop invariant widenable condition made loop variant!");
+  }
+#endif
   assert(isWidenableBranch(WidenableBR) && "preserve widenabiliy");
 }
