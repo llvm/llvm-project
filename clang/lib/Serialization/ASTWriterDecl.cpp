@@ -2500,7 +2500,20 @@ void ASTWriter::WriteDeclAbbrevs() {
 /// relatively painless since they would presumably only do it for top-level
 /// decls.
 static bool isRequiredDecl(const Decl *D, ASTContext &Context,
-                           bool WritingModule) {
+                           Module *WritingModule) {
+  // Named modules have different semantics than header modules. Every named
+  // module units owns a translation unit. So the importer of named modules
+  // doesn't need to deserilize everything ahead of time.
+  if (WritingModule && WritingModule->isModulePurview()) {
+    // The PragmaCommentDecl and PragmaDetectMismatchDecl are MSVC's extension.
+    // And the behavior of MSVC for such cases will leak this to the module
+    // users. Given pragma is not a standard thing, the compiler has the space
+    // to do their own decision. Let's follow MSVC here.
+    if (isa<PragmaCommentDecl, PragmaDetectMismatchDecl>(D))
+      return true;
+    return false;
+  }
+
   // An ObjCMethodDecl is never considered as "required" because its
   // implementation container always is.
 
