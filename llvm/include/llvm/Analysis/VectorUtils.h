@@ -367,13 +367,6 @@ unsigned getGEPInductionOperand(const GetElementPtrInst *Gep);
 /// operand, it returns that instead.
 Value *stripGetElementPtr(Value *Ptr, ScalarEvolution *SE, Loop *Lp);
 
-/// If a value has only one user that is a CastInst, return it.
-Value *getUniqueCastUse(Value *Ptr, Loop *Lp, Type *Ty);
-
-/// Get the stride of a pointer access in a loop. Looks for symbolic
-/// strides "a[i*stride]". Returns the symbolic stride, or null otherwise.
-Value *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp);
-
 /// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted
 /// from the vector.
