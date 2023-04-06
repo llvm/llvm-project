@@ -2218,13 +2218,12 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
   raw_ostream &OS = getCommentOS();
   SmallString<256> Code;
   SmallVector<MCFixup, 4> Fixups;
-  raw_svector_ostream VecOS(Code);
 
   // If we have no code emitter, don't emit code.
   if (!getAssembler().getEmitterPtr())
     return;
 
-  getAssembler().getEmitter().encodeInstruction(Inst, VecOS, Fixups, STI);
+  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
 
   // If we are showing fixups, create symbolic markers in the encoded
   // representation. We do this by making a per-bit map to the fixup item index,
