@@ -96,6 +96,18 @@ def AffineApplyOp : Affine_Op<"apply", [Pure]> {
     /// Returns true if the result of this operation is a symbol for all its
     /// uses in `region`.
     bool isValidSymbol(Region *region);
+
+    /// Returns all dimension operands.
+    ValueRange getDimOperands() {
+      return OperandRange{getOperands().begin(),
+                          getOperands().begin() + getMap().getNumDims()};
+    }
+
+    /// Returns all symbol operands.
+    ValueRange getSymbolOperands() {
+      return OperandRange{getOperands().begin() + getMap().getNumDims(),
+                          getOperands().end()};
+    }
   }];
 
   let hasCanonicalizer = 1;
