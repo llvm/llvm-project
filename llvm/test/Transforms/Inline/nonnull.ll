@@ -54,6 +54,7 @@ done:
 define void @caller(ptr nonnull %arg) {
 ; CHECK-LABEL: define void @caller
 ; CHECK-SAME: (ptr nonnull [[ARG:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[ARG]]) ]
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    ret void
 ;
@@ -75,6 +76,7 @@ define void @caller2(ptr %arg) {
 define void @caller3(ptr %arg) {
 ; CHECK-LABEL: define void @caller3
 ; CHECK-SAME: (ptr [[ARG:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[ARG]]) ]
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[ARG]], null
 ; CHECK-NEXT:    br i1 [[CMP_I]], label [[EXPENSIVE_I:%.*]], label [[DONE_I:%.*]]
 ; CHECK:       expensive.i:
