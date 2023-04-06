@@ -123,8 +123,8 @@ block2:
 define i32 @zext_or_eq_ult_add(i32 %i) {
 ; CHECK-LABEL: @zext_or_eq_ult_add(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[I:%.*]], -3
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 3
-; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[O:%.*]] = icmp ult i32 [[TMP1]], 3
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[O]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %i, -3
@@ -138,8 +138,8 @@ define i32 @zext_or_eq_ult_add(i32 %i) {
 define i32 @select_zext_or_eq_ult_add(i32 %i) {
 ; CHECK-LABEL: @select_zext_or_eq_ult_add(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[I:%.*]], -3
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 3
-; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[NARROW:%.*]] = icmp ult i32 [[TMP1]], 3
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %i, -3

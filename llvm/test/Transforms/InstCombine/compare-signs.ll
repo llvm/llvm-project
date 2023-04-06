@@ -6,8 +6,8 @@
 define i32 @test1(i32 %a, i32 %b) nounwind readnone {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], -1
-; CHECK-NEXT:    [[T3:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[T2:%.*]] = icmp sgt i32 [[TMP1]], -1
+; CHECK-NEXT:    [[T3:%.*]] = zext i1 [[T2]] to i32
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = icmp sgt i32 %a, -1
@@ -23,8 +23,8 @@ define i32 @test2(i32 %a, i32 %b) nounwind readnone {
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 3
 ; CHECK-NEXT:    [[DOTLOBIT:%.*]] = and i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[DOTLOBIT]], 1
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[T3:%.*]] = xor i32 [[DOTLOBIT]], 1
+; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = and i32 %a, 8
   %t1 = and i32 %b, 8

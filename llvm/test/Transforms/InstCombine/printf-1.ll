@@ -166,8 +166,8 @@ define i32 @test_no_simplify3() {
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
 ; CHECK-IPRINTF-LABEL: @test_no_simplify3(
-; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ...) @iprintf(ptr noundef nonnull dereferenceable(1) @h)
-; CHECK-IPRINTF-NEXT:    ret i32 [[TMP1]]
+; CHECK-IPRINTF-NEXT:    [[RET:%.*]] = call i32 (ptr, ...) @iprintf(ptr noundef nonnull dereferenceable(1) @h)
+; CHECK-IPRINTF-NEXT:    ret i32 [[RET]]
 ;
   %ret = call i32 (ptr, ...) @printf(ptr @h)
   ret i32 %ret

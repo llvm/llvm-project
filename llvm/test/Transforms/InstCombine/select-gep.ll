@@ -59,8 +59,8 @@ define ptr @test1d(ptr %p, ptr %q) {
 
 define ptr @test2(ptr %p, i64 %x, i64 %y) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umax.i64(i64 [[X:%.*]], i64 [[Y:%.*]])
-; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[SELECT_V:%.*]] = call i64 @llvm.umax.i64(i64 [[X:%.*]], i64 [[Y:%.*]])
+; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[SELECT_V]]
 ; CHECK-NEXT:    ret ptr [[SELECT]]
 ;
   %gep1 = getelementptr inbounds i32, ptr %p, i64 %x
