@@ -1881,13 +1881,13 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
     return this->emitGetPtrLocal(Offset, E);
   } else if (auto GlobalIndex = P.getGlobal(D)) {
     if (IsReference)
-      return this->emitGetGlobal(PT_Ptr, *GlobalIndex, E);
+      return this->emitGetGlobalPtr(*GlobalIndex, E);
 
     return this->emitGetPtrGlobal(*GlobalIndex, E);
   } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
     if (auto It = this->Params.find(PVD); It != this->Params.end()) {
       if (IsReference)
-        return this->emitGetParam(PT_Ptr, It->second, E);
+        return this->emitGetParamPtr(It->second, E);
       return this->emitGetPtrParam(It->second, E);
     }
   }
