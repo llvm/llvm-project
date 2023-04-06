@@ -389,7 +389,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
     Result.IsLoad = (S & TB_FOLDED_LOAD) != 0;
     Result.IsStore = (S & TB_FOLDED_STORE) != 0;
     Result.IsAligned = (S & TB_ALIGN_MASK) != 0;
-    Result.Alignment = Align(1 << ((S & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT));
+    Result.Alignment = Align(1ULL << ((S & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT));
     Table[RegInstr] = Result;
     return;
   }
