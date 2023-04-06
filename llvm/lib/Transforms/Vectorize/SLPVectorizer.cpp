@@ -13037,6 +13037,12 @@ public:
           continue;
         IgnoreList.insert(RdxOp);
       }
+    // Intersect the fast-math-flags from all reduction operations.
+    FastMathFlags RdxFMF;
+    RdxFMF.set();
+    for (Value *U : IgnoreList)
+      if (auto *FPMO = dyn_cast<FPMathOperator>(U))
+        RdxFMF &= FPMO->getFastMathFlags();
     bool IsCmpSelMinMax = isCmpSelMinMax(cast<Instruction>(ReductionRoot));
 
     // Need to track reduced vals, they may be changed during vectorization of
@@ -13297,12 +13303,6 @@ public:
 
         V.computeMinimumValueSizes();
 
-        // Intersect the fast-math-flags from all reduction operations.
-        FastMathFlags RdxFMF;
-        RdxFMF.set();
-        for (Value *U : IgnoreList)
-          if (auto *FPMO = dyn_cast<FPMathOperator>(U))
-            RdxFMF &= FPMO->getFastMathFlags();
         // Estimate cost.
         InstructionCost TreeCost = V.getTreeCost(VL);
         InstructionCost ReductionCost =
