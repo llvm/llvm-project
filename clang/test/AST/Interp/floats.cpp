@@ -87,8 +87,8 @@ namespace ZeroInit {
   };
 
   constexpr A<float> a{12};
-  static_assert(a.f == 0.0f);
+  static_assert(a.f == 0.0f, "");
 
   constexpr A<double> b{12};
-  static_assert(a.f == 0.0);
+  static_assert(a.f == 0.0, "");
 };
