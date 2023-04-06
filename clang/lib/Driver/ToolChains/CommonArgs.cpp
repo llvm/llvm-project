@@ -818,10 +818,11 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
                     options::OPT_fno_rtlib_add_rpath, DefaultValue))
     return;
 
-  std::string CandidateRPath = TC.getArchSpecificLibPath();
-  if (TC.getVFS().exists(CandidateRPath)) {
-    CmdArgs.push_back("-rpath");
-    CmdArgs.push_back(Args.MakeArgString(CandidateRPath));
+  for (const auto &CandidateRPath : TC.getArchSpecificLibPaths()) {
+    if (TC.getVFS().exists(CandidateRPath)) {
+      CmdArgs.push_back("-rpath");
+      CmdArgs.push_back(Args.MakeArgString(CandidateRPath));
+    }
   }
 }
 
