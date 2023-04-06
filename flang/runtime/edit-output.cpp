@@ -139,6 +139,8 @@ bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
   case 'Z':
     return EditBOZOutput<4>(
         io, edit, reinterpret_cast<const unsigned char *>(&n), KIND);
+  case 'L':
+    return EditLogicalOutput(io, edit, *reinterpret_cast<const char *>(&n));
   case 'A': // legacy extension
     return EditCharacterOutput(
         io, edit, reinterpret_cast<char *>(&n), sizeof n);
@@ -589,6 +591,8 @@ template <int KIND> bool RealOutputEditing<KIND>::Edit(const DataEdit &edit) {
         common::BitsForBinaryPrecision(common::PrecisionOfRealKind(KIND)) >> 3);
   case 'G':
     return Edit(EditForGOutput(edit));
+  case 'L':
+    return EditLogicalOutput(io_, edit, *reinterpret_cast<const char *>(&x_));
   case 'A': // legacy extension
     return EditCharacterOutput(
         io_, edit, reinterpret_cast<char *>(&x_), sizeof x_);
@@ -712,6 +716,8 @@ bool EditCharacterOutput(IoStatementState &io, const DataEdit &edit,
   case 'Z':
     return EditBOZOutput<4>(io, edit,
         reinterpret_cast<const unsigned char *>(x), sizeof(CHAR) * length);
+  case 'L':
+    return EditLogicalOutput(io, edit, *reinterpret_cast<const char *>(x));
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with a CHARACTER data item",

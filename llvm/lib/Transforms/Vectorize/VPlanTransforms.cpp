@@ -611,6 +611,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   //      2. Replace vector loop region with VPBasicBlock.
 }
 
+#ifndef NDEBUG
 static VPRegionBlock *GetReplicateRegion(VPRecipeBase *R) {
   auto *Region = dyn_cast_or_null<VPRegionBlock>(R->getParent()->getParent());
   if (Region && Region->isReplicator()) {
@@ -623,6 +624,7 @@ static VPRegionBlock *GetReplicateRegion(VPRecipeBase *R) {
   }
   return nullptr;
 }
+#endif
 
 static bool properlyDominates(const VPRecipeBase *A, const VPRecipeBase *B,
                               VPDominatorTree &VPDT) {
@@ -643,14 +645,10 @@ static bool properlyDominates(const VPRecipeBase *A, const VPRecipeBase *B,
   if (ParentA == ParentB)
     return LocalComesBefore(A, B);
 
-  const VPRegionBlock *RegionA =
-      GetReplicateRegion(const_cast<VPRecipeBase *>(A));
-  const VPRegionBlock *RegionB =
-      GetReplicateRegion(const_cast<VPRecipeBase *>(B));
-  if (RegionA)
-    ParentA = RegionA->getExiting();
-  if (RegionB)
-    ParentB = RegionB->getExiting();
+  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(A)) &&
+         "No replicate regions expected at this point");
+  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(B)) &&
+         "No replicate regions expected at this point");
   return VPDT.properlyDominates(ParentA, ParentB);
 }
 

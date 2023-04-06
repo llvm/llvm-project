@@ -566,13 +566,14 @@ void ASTDeclReader::Visit(Decl *D) {
     ID->TypeForDecl = Reader.GetType(DeferredTypeID).getTypePtrOrNull();
   } else if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     // FunctionDecl's body was written last after all other Stmts/Exprs.
-    // We only read it if FD doesn't already have a body (e.g., from another
-    // module).
-    // FIXME: Can we diagnose ODR violations somehow?
     if (Record.readInt())
       ReadFunctionDefinition(FD);
   } else if (auto *VD = dyn_cast<VarDecl>(D)) {
     ReadVarDeclInit(VD);
+  } else if (auto *FD = dyn_cast<FieldDecl>(D)) {
+    if (FD->hasInClassInitializer() && Record.readInt()) {
+      FD->setLazyInClassInitializer(LazyDeclStmtPtr(GetCurrentCursorOffset()));
+    }
   }
 }
 
@@ -1501,15 +1502,13 @@ void ASTDeclReader::VisitFieldDecl(FieldDecl *FD) {
   VisitDeclaratorDecl(FD);
   FD->Mutable = Record.readInt();
 
-  if (auto ISK = static_cast<FieldDecl::InitStorageKind>(Record.readInt())) {
-    FD->InitStorage.setInt(ISK);
-    FD->InitStorage.setPointer(ISK == FieldDecl::ISK_CapturedVLAType
-                                   ? Record.readType().getAsOpaquePtr()
-                                   : Record.readExpr());
-  }
-
-  if (auto *BW = Record.readExpr())
-    FD->setBitWidth(BW);
+  unsigned Bits = Record.readInt();
+  FD->StorageKind = Bits >> 1;
+  if (FD->StorageKind == FieldDecl::ISK_CapturedVLAType)
+    FD->CapturedVLAType =
+        cast<VariableArrayType>(Record.readType().getTypePtr());
+  else if (Bits & 1)
+    FD->setBitWidth(Record.readExpr());
 
   if (!FD->getDeclName()) {
     if (auto *Tmpl = readDeclAs<FieldDecl>())
@@ -4464,7 +4463,7 @@ void ASTDeclReader::UpdateDecl(Decl *D,
 
       // Only apply the update if the field still has an uninstantiated
       // default member initializer.
-      if (FD->hasInClassInitializer() && !FD->getInClassInitializer()) {
+      if (FD->hasInClassInitializer() && !FD->hasNonNullInClassInitializer()) {
         if (DefaultInit)
           FD->setInClassInitializer(DefaultInit);
         else

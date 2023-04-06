@@ -45,8 +45,7 @@ DataflowAnalysisContext::getReferencedFields(QualType Type) {
 }
 
 StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
-  if (!Type.isNull() &&
-      (Type->isStructureOrClassType() || Type->isUnionType())) {
+  if (!Type.isNull() && Type->isRecordType()) {
     llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
     // During context-sensitive analysis, a struct may be allocated in one
     // function, but its field accessed in a function lower in the stack than
@@ -59,10 +58,9 @@ StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
                                             : getReferencedFields(Type);
     for (const FieldDecl *Field : Fields)
       FieldLocs.insert({Field, &createStorageLocation(Field->getType())});
-    return takeOwnership(
-        std::make_unique<AggregateStorageLocation>(Type, std::move(FieldLocs)));
+    return create<AggregateStorageLocation>(Type, std::move(FieldLocs));
   }
-  return takeOwnership(std::make_unique<ScalarStorageLocation>(Type));
+  return create<ScalarStorageLocation>(Type);
 }
 
 StorageLocation &
@@ -90,8 +88,7 @@ DataflowAnalysisContext::getOrCreateNullPointerValue(QualType PointeeType) {
   auto Res = NullPointerVals.try_emplace(CanonicalPointeeType, nullptr);
   if (Res.second) {
     auto &PointeeLoc = createStorageLocation(CanonicalPointeeType);
-    Res.first->second =
-        &takeOwnership(std::make_unique<PointerValue>(PointeeLoc));
+    Res.first->second = &create<PointerValue>(PointeeLoc);
   }
   return *Res.first->second;
 }
@@ -112,8 +109,7 @@ BoolValue &DataflowAnalysisContext::getOrCreateConjunction(BoolValue &LHS,
   auto Res = ConjunctionVals.try_emplace(makeCanonicalBoolValuePair(LHS, RHS),
                                          nullptr);
   if (Res.second)
-    Res.first->second =
-        &takeOwnership(std::make_unique<ConjunctionValue>(LHS, RHS));
+    Res.first->second = &create<ConjunctionValue>(LHS, RHS);
   return *Res.first->second;
 }
 
@@ -125,15 +121,14 @@ BoolValue &DataflowAnalysisContext::getOrCreateDisjunction(BoolValue &LHS,
   auto Res = DisjunctionVals.try_emplace(makeCanonicalBoolValuePair(LHS, RHS),
                                          nullptr);
   if (Res.second)
-    Res.first->second =
-        &takeOwnership(std::make_unique<DisjunctionValue>(LHS, RHS));
+    Res.first->second = &create<DisjunctionValue>(LHS, RHS);
   return *Res.first->second;
 }
 
 BoolValue &DataflowAnalysisContext::getOrCreateNegation(BoolValue &Val) {
   auto Res = NegationVals.try_emplace(&Val, nullptr);
   if (Res.second)
-    Res.first->second = &takeOwnership(std::make_unique<NegationValue>(Val));
+    Res.first->second = &create<NegationValue>(Val);
   return *Res.first->second;
 }
 
@@ -144,8 +139,7 @@ BoolValue &DataflowAnalysisContext::getOrCreateImplication(BoolValue &LHS,
 
   auto Res = ImplicationVals.try_emplace(std::make_pair(&LHS, &RHS), nullptr);
   if (Res.second)
-    Res.first->second =
-        &takeOwnership(std::make_unique<ImplicationValue>(LHS, RHS));
+    Res.first->second = &create<ImplicationValue>(LHS, RHS);
   return *Res.first->second;
 }
 
@@ -157,13 +151,12 @@ BoolValue &DataflowAnalysisContext::getOrCreateIff(BoolValue &LHS,
   auto Res = BiconditionalVals.try_emplace(makeCanonicalBoolValuePair(LHS, RHS),
                                            nullptr);
   if (Res.second)
-    Res.first->second =
-        &takeOwnership(std::make_unique<BiconditionalValue>(LHS, RHS));
+    Res.first->second = &create<BiconditionalValue>(LHS, RHS);
   return *Res.first->second;
 }
 
 AtomicBoolValue &DataflowAnalysisContext::makeFlowConditionToken() {
-  return createAtomicBoolValue();
+  return create<AtomicBoolValue>();
 }
 
 void DataflowAnalysisContext::addFlowConditionConstraint(
@@ -384,8 +377,8 @@ DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
 
 DataflowAnalysisContext::DataflowAnalysisContext(std::unique_ptr<Solver> S,
                                                  Options Opts)
-    : S(std::move(S)), TrueVal(createAtomicBoolValue()),
-      FalseVal(createAtomicBoolValue()), Opts(Opts) {
+    : S(std::move(S)), TrueVal(create<AtomicBoolValue>()),
+      FalseVal(create<AtomicBoolValue>()), Opts(Opts) {
   assert(this->S != nullptr);
   // If the -dataflow-log command-line flag was set, synthesize a logger.
   // This is ugly but provides a uniform method for ad-hoc debugging dataflow-

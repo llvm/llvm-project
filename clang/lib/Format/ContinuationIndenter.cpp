@@ -1125,8 +1125,14 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
            Style.IndentWidth;
   }
 
-  if (NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block))
-    return Current.NestingLevel == 0 ? State.FirstIndent : CurrentState.Indent;
+  if (NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block)) {
+    if (Current.NestingLevel == 0 ||
+        (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
+         State.NextToken->is(TT_LambdaLBrace))) {
+      return State.FirstIndent;
+    }
+    return CurrentState.Indent;
+  }
   if ((Current.isOneOf(tok::r_brace, tok::r_square) ||
        (Current.is(tok::greater) &&
         (Style.Language == FormatStyle::LK_Proto ||
@@ -1830,6 +1836,10 @@ void ContinuationIndenter::moveStatePastScopeCloser(LineState &State) {
 }
 
 void ContinuationIndenter::moveStateToNewBlock(LineState &State) {
+  if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
+      State.NextToken->is(TT_LambdaLBrace)) {
+    State.Stack.back().NestedBlockIndent = State.FirstIndent;
+  }
   unsigned NestedBlockIndent = State.Stack.back().NestedBlockIndent;
   // ObjC block sometimes follow special indentation rules.
   unsigned NewIndent =

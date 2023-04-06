@@ -10,13 +10,13 @@ declare i1 @llvm.vector.reduce.and.v2i1(<2 x i1>)
 declare i1 @llvm.vector.reduce.and.v4i1(<4 x i1>)
 declare i1 @llvm.vector.reduce.and.v8i1(<8 x i1>)
 
-; FIXME: All four versions are semantically equivalent and should produce same asm as scalar version.
+; All four versions are semantically equivalent and should produce same asm as scalar version.
 
 define i1 @intrinsic_v2i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X64-LABEL: intrinsic_v2i8:
 ; X64:       # %bb.0: # %bb
-; X64-NEXT:    movzwl (%rdi), %eax
-; X64-NEXT:    cmpw %ax, (%rsi)
+; X64-NEXT:    movzwl (%rsi), %eax
+; X64-NEXT:    cmpw (%rdi), %ax
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
@@ -24,8 +24,8 @@ define i1 @intrinsic_v2i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl (%eax), %eax
-; X86-NEXT:    cmpw %ax, (%ecx)
+; X86-NEXT:    movzwl (%ecx), %ecx
+; X86-NEXT:    cmpw (%eax), %cx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
@@ -39,8 +39,8 @@ bb:
 define i1 @intrinsic_v4i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X64-LABEL: intrinsic_v4i8:
 ; X64:       # %bb.0: # %bb
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    cmpl %eax, (%rsi)
+; X64-NEXT:    movl (%rsi), %eax
+; X64-NEXT:    cmpl (%rdi), %eax
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
@@ -48,8 +48,8 @@ define i1 @intrinsic_v4i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%eax), %eax
-; X86-NEXT:    cmpl %eax, (%ecx)
+; X86-NEXT:    movl (%ecx), %ecx
+; X86-NEXT:    cmpl (%eax), %ecx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:
@@ -63,8 +63,8 @@ bb:
 define i1 @intrinsic_v8i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X64-LABEL: intrinsic_v8i8:
 ; X64:       # %bb.0: # %bb
-; X64-NEXT:    movq (%rdi), %rax
-; X64-NEXT:    cmpq %rax, (%rsi)
+; X64-NEXT:    movq (%rsi), %rax
+; X64-NEXT:    cmpq (%rdi), %rax
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
@@ -72,11 +72,11 @@ define i1 @intrinsic_v8i8(ptr align 1 %arg, ptr align 1 %arg1) {
 ; X86:       # %bb.0: # %bb
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vpmovmskb %xmm0, %eax
-; X86-NEXT:    cmpb $-1, %al
+; X86-NEXT:    movl (%ecx), %edx
+; X86-NEXT:    movl 4(%ecx), %ecx
+; X86-NEXT:    xorl 4(%eax), %ecx
+; X86-NEXT:    xorl (%eax), %edx
+; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 bb:

@@ -405,6 +405,7 @@ def : SourceOfDivergence<int_amdgcn_swmmac_f32_16x16x32_bf8_bf8>;
 def : SourceOfDivergence<int_amdgcn_if>;
 def : SourceOfDivergence<int_amdgcn_else>;
 def : SourceOfDivergence<int_amdgcn_loop>;
+def : SourceOfDivergence<int_amdgcn_inverse_ballot>;
 
 foreach intr = AMDGPUImageDimAtomicIntrinsics in
 def : SourceOfDivergence<intr>;

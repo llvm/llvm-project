@@ -35,9 +35,6 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
               RefType RT = RefType::Explicit) {
     if (!ND || Loc.isInvalid())
       return;
-    // Don't report builtin symbols.
-    if (const auto *II = ND->getIdentifier(); II && II->getBuiltinID() > 0)
-      return;
     Callback(Loc, *cast<NamedDecl>(ND->getCanonicalDecl()), RT);
   }
 

@@ -225,6 +225,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     LLVM_DEBUG(dbgs() << "      existing dbg.assign is: " << *DbgAssign
                       << "\n");
     auto *Expr = DbgAssign->getExpression();
+    bool SetKillLocation = false;
 
     if (IsSplit) {
       std::optional<DIExpression::FragmentInfo> BaseFragment = std::nullopt;
@@ -252,11 +253,19 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
           // relative fragment too?
           NewFragment->OffsetInBits -= CurrentFragment->OffsetInBits;
         }
-
-        auto E = DIExpression::createFragmentExpression(
-            Expr, NewFragment->OffsetInBits, NewFragment->SizeInBits);
-        assert(E && "Failed to create fragment expr!");
-        Expr = *E;
+        // Add the new fragment info to the existing expression if possible.
+        if (auto E = DIExpression::createFragmentExpression(
+                Expr, NewFragment->OffsetInBits, NewFragment->SizeInBits)) {
+          Expr = *E;
+        } else {
+          // Otherwise, add the new fragment info to an empty expression and
+          // discard the value component of this dbg.assign as the value cannot
+          // be computed with the new fragment.
+          Expr = *DIExpression::createFragmentExpression(
+              DIExpression::get(Expr->getContext(), std::nullopt),
+              NewFragment->OffsetInBits, NewFragment->SizeInBits);
+          SetKillLocation = true;
+        }
       }
     }
 
@@ -281,7 +290,8 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     // This should be a very rare situation as it requires the value being
     // stored to differ from the dbg.assign (i.e., the value has been
     // represented differently in the debug intrinsic for some reason).
-    if (DbgAssign->hasArgList() && Value)
+    SetKillLocation |= DbgAssign->hasArgList() && Value;
+    if (SetKillLocation)
       NewAssign->setKillLocation();
 
     // We could use more precision here at the cost of some additional (code)

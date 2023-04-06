@@ -25,166 +25,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
-/// Analyze 'Val', seeing if it is a simple linear expression.
-/// If so, decompose it, returning some value X, such that Val is
-/// X*Scale+Offset.
-///
-static Value *decomposeSimpleLinearExpr(Value *Val, unsigned &Scale,
-                                        uint64_t &Offset) {
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(Val)) {
-    Offset = CI->getZExtValue();
-    Scale  = 0;
-    return ConstantInt::get(Val->getType(), 0);
-  }
-
-  if (BinaryOperator *I = dyn_cast<BinaryOperator>(Val)) {
-    // Cannot look past anything that might overflow.
-    // We specifically require nuw because we store the Scale in an unsigned
-    // and perform an unsigned divide on it.
-    OverflowingBinaryOperator *OBI = dyn_cast<OverflowingBinaryOperator>(Val);
-    if (OBI && !OBI->hasNoUnsignedWrap()) {
-      Scale = 1;
-      Offset = 0;
-      return Val;
-    }
-
-    if (ConstantInt *RHS = dyn_cast<ConstantInt>(I->getOperand(1))) {
-      if (I->getOpcode() == Instruction::Shl) {
-        // This is a value scaled by '1 << the shift amt'.
-        Scale = UINT64_C(1) << RHS->getZExtValue();
-        Offset = 0;
-        return I->getOperand(0);
-      }
-
-      if (I->getOpcode() == Instruction::Mul) {
-        // This value is scaled by 'RHS'.
-        Scale = RHS->getZExtValue();
-        Offset = 0;
-        return I->getOperand(0);
-      }
-
-      if (I->getOpcode() == Instruction::Add) {
-        // We have X+C.  Check to see if we really have (X*C2)+C1,
-        // where C1 is divisible by C2.
-        unsigned SubScale;
-        Value *SubVal =
-          decomposeSimpleLinearExpr(I->getOperand(0), SubScale, Offset);
-        Offset += RHS->getZExtValue();
-        Scale = SubScale;
-        return SubVal;
-      }
-    }
-  }
-
-  // Otherwise, we can't look past this.
-  Scale = 1;
-  Offset = 0;
-  return Val;
-}
-
-/// If we find a cast of an allocation instruction, try to eliminate the cast by
-/// moving the type information into the alloc.
-Instruction *InstCombinerImpl::PromoteCastOfAllocation(BitCastInst &CI,
-                                                       AllocaInst &AI) {
-  PointerType *PTy = cast<PointerType>(CI.getType());
-  // Opaque pointers don't have an element type we could replace with.
-  if (PTy->isOpaque())
-    return nullptr;
-
-  IRBuilderBase::InsertPointGuard Guard(Builder);
-  Builder.SetInsertPoint(&AI);
-
-  // Get the type really allocated and the type casted to.
-  Type *AllocElTy = AI.getAllocatedType();
-  Type *CastElTy = PTy->getNonOpaquePointerElementType();
-  if (!AllocElTy->isSized() || !CastElTy->isSized()) return nullptr;
-
-  // This optimisation does not work for cases where the cast type
-  // is scalable and the allocated type is not. This because we need to
-  // know how many times the casted type fits into the allocated type.
-  // For the opposite case where the allocated type is scalable and the
-  // cast type is not this leads to poor code quality due to the
-  // introduction of 'vscale' into the calculations. It seems better to
-  // bail out for this case too until we've done a proper cost-benefit
-  // analysis.
-  bool AllocIsScalable = isa<ScalableVectorType>(AllocElTy);
-  bool CastIsScalable = isa<ScalableVectorType>(CastElTy);
-  if (AllocIsScalable != CastIsScalable) return nullptr;
-
-  Align AllocElTyAlign = DL.getABITypeAlign(AllocElTy);
-  Align CastElTyAlign = DL.getABITypeAlign(CastElTy);
-  if (CastElTyAlign < AllocElTyAlign) return nullptr;
-
-  // If the allocation has multiple uses, only promote it if we are strictly
-  // increasing the alignment of the resultant allocation.  If we keep it the
-  // same, we open the door to infinite loops of various kinds.
-  if (!AI.hasOneUse() && CastElTyAlign == AllocElTyAlign) return nullptr;
-
-  // The alloc and cast types should be either both fixed or both scalable.
-  uint64_t AllocElTySize = DL.getTypeAllocSize(AllocElTy).getKnownMinValue();
-  uint64_t CastElTySize = DL.getTypeAllocSize(CastElTy).getKnownMinValue();
-  if (CastElTySize == 0 || AllocElTySize == 0) return nullptr;
-
-  // If the allocation has multiple uses, only promote it if we're not
-  // shrinking the amount of memory being allocated.
-  uint64_t AllocElTyStoreSize =
-      DL.getTypeStoreSize(AllocElTy).getKnownMinValue();
-  uint64_t CastElTyStoreSize = DL.getTypeStoreSize(CastElTy).getKnownMinValue();
-  if (!AI.hasOneUse() && CastElTyStoreSize < AllocElTyStoreSize) return nullptr;
-
-  // See if we can satisfy the modulus by pulling a scale out of the array
-  // size argument.
-  unsigned ArraySizeScale;
-  uint64_t ArrayOffset;
-  Value *NumElements = // See if the array size is a decomposable linear expr.
-    decomposeSimpleLinearExpr(AI.getOperand(0), ArraySizeScale, ArrayOffset);
-
-  // If we can now satisfy the modulus, by using a non-1 scale, we really can
-  // do the xform.
-  if ((AllocElTySize*ArraySizeScale) % CastElTySize != 0 ||
-      (AllocElTySize*ArrayOffset   ) % CastElTySize != 0) return nullptr;
-
-  // We don't currently support arrays of scalable types.
-  assert(!AllocIsScalable || (ArrayOffset == 1 && ArraySizeScale == 0));
-
-  unsigned Scale = (AllocElTySize*ArraySizeScale)/CastElTySize;
-  Value *Amt = nullptr;
-  if (Scale == 1) {
-    Amt = NumElements;
-  } else {
-    Amt = ConstantInt::get(AI.getArraySize()->getType(), Scale);
-    // Insert before the alloca, not before the cast.
-    Amt = Builder.CreateMul(Amt, NumElements);
-  }
-
-  if (uint64_t Offset = (AllocElTySize*ArrayOffset)/CastElTySize) {
-    Value *Off = ConstantInt::get(AI.getArraySize()->getType(),
-                                  Offset, true);
-    Amt = Builder.CreateAdd(Amt, Off);
-  }
-
-  AllocaInst *New = Builder.CreateAlloca(CastElTy, AI.getAddressSpace(), Amt);
-  New->setAlignment(AI.getAlign());
-  New->takeName(&AI);
-  New->setUsedWithInAlloca(AI.isUsedWithInAlloca());
-  New->setMetadata(LLVMContext::MD_DIAssignID,
-                   AI.getMetadata(LLVMContext::MD_DIAssignID));
-
-  replaceAllDbgUsesWith(AI, *New, *New, DT);
-
-  // If the allocation has multiple real uses, insert a cast and change all
-  // things that used it to use the new cast.  This will also hack on CI, but it
-  // will die soon.
-  if (!AI.hasOneUse()) {
-    // New is the allocation instruction, pointer typed. AI is the original
-    // allocation instruction, also pointer typed. Thus, cast to use is BitCast.
-    Value *NewCast = Builder.CreateBitCast(New, AI.getType(), "tmpcast");
-    replaceInstUsesWith(AI, NewCast);
-    eraseInstFromFunction(AI);
-  }
-  return replaceInstUsesWith(CI, New);
-}
-
 /// Given an expression that CanEvaluateTruncated or CanEvaluateSExtd returns
 /// true for, actually insert the code to evaluate the expression.
 Value *InstCombinerImpl::EvaluateInDifferentType(Value *V, Type *Ty,
@@ -2714,57 +2554,6 @@ Instruction *InstCombinerImpl::optimizeBitCastFromPhi(CastInst &CI,
   return RetVal;
 }
 
-static Instruction *convertBitCastToGEP(BitCastInst &CI, IRBuilderBase &Builder,
-                                        const DataLayout &DL) {
-  Value *Src = CI.getOperand(0);
-  PointerType *SrcPTy = cast<PointerType>(Src->getType());
-  PointerType *DstPTy = cast<PointerType>(CI.getType());
-
-  // Bitcasts involving opaque pointers cannot be converted into a GEP.
-  if (SrcPTy->isOpaque() || DstPTy->isOpaque())
-    return nullptr;
-
-  Type *DstElTy = DstPTy->getNonOpaquePointerElementType();
-  Type *SrcElTy = SrcPTy->getNonOpaquePointerElementType();
-
-  // When the type pointed to is not sized the cast cannot be
-  // turned into a gep.
-  if (!SrcElTy->isSized())
-    return nullptr;
-
-  // If the source and destination are pointers, and this cast is equivalent
-  // to a getelementptr X, 0, 0, 0...  turn it into the appropriate gep.
-  // This can enhance SROA and other transforms that want type-safe pointers.
-  unsigned NumZeros = 0;
-  while (SrcElTy && SrcElTy != DstElTy) {
-    SrcElTy = GetElementPtrInst::getTypeAtIndex(SrcElTy, (uint64_t)0);
-    ++NumZeros;
-  }
-
-  // If we found a path from the src to dest, create the getelementptr now.
-  if (SrcElTy == DstElTy) {
-    SmallVector<Value *, 8> Idxs(NumZeros + 1, Builder.getInt32(0));
-    GetElementPtrInst *GEP = GetElementPtrInst::Create(
-        SrcPTy->getNonOpaquePointerElementType(), Src, Idxs);
-
-    // If the source pointer is dereferenceable, then assume it points to an
-    // allocated object and apply "inbounds" to the GEP.
-    bool CanBeNull, CanBeFreed;
-    if (Src->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed)) {
-      // In a non-default address space (not 0), a null pointer can not be
-      // assumed inbounds, so ignore that case (dereferenceable_or_null).
-      // The reason is that 'null' is not treated differently in these address
-      // spaces, and we consequently ignore the 'gep inbounds' special case
-      // for 'null' which allows 'inbounds' on 'null' if the indices are
-      // zeros.
-      if (SrcPTy->getAddressSpace() == 0 || !CanBeNull)
-        GEP->setIsInBounds();
-    }
-    return GEP;
-  }
-  return nullptr;
-}
-
 Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
   // If the operands are integer typed then apply the integer transforms,
   // otherwise just apply the common ones.
@@ -2776,19 +2565,6 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
   // be replaced by the operand.
   if (DestTy == Src->getType())
     return replaceInstUsesWith(CI, Src);
-
-  if (isa<PointerType>(SrcTy) && isa<PointerType>(DestTy)) {
-    // If we are casting a alloca to a pointer to a type of the same
-    // size, rewrite the allocation instruction to allocate the "right" type.
-    // There is no need to modify malloc calls because it is their bitcast that
-    // needs to be cleaned up.
-    if (AllocaInst *AI = dyn_cast<AllocaInst>(Src))
-      if (Instruction *V = PromoteCastOfAllocation(CI, *AI))
-        return V;
-
-    if (Instruction *I = convertBitCastToGEP(CI, Builder, DL))
-      return I;
-  }
 
   if (FixedVectorType *DestVTy = dyn_cast<FixedVectorType>(DestTy)) {
     // Beware: messing with this target-specific oddity may cause trouble.
@@ -2932,23 +2708,5 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
 }
 
 Instruction *InstCombinerImpl::visitAddrSpaceCast(AddrSpaceCastInst &CI) {
-  // If the destination pointer element type is not the same as the source's
-  // first do a bitcast to the destination type, and then the addrspacecast.
-  // This allows the cast to be exposed to other transforms.
-  Value *Src = CI.getOperand(0);
-  PointerType *SrcTy = cast<PointerType>(Src->getType()->getScalarType());
-  PointerType *DestTy = cast<PointerType>(CI.getType()->getScalarType());
-
-  if (!SrcTy->hasSameElementTypeAs(DestTy)) {
-    Type *MidTy =
-        PointerType::getWithSamePointeeType(DestTy, SrcTy->getAddressSpace());
-    // Handle vectors of pointers.
-    if (VectorType *VT = dyn_cast<VectorType>(CI.getType()))
-      MidTy = VectorType::get(MidTy, VT->getElementCount());
-
-    Value *NewBitCast = Builder.CreateBitCast(Src, MidTy);
-    return new AddrSpaceCastInst(NewBitCast, CI.getType());
-  }
-
   return commonPointerCastTransforms(CI);
 }

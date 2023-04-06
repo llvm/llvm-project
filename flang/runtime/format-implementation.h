@@ -479,7 +479,8 @@ std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
       }
     }
   }
-  if (edit.descriptor == 'A') { // width is optional for A[w]
+  if (edit.descriptor == 'A' || edit.descriptor == 'L') {
+    // width is optional for A[w] or L[w]
     auto ch{PeekNext()};
     if (ch >= '0' && ch <= '9') {
       edit.width = GetIntField(context);

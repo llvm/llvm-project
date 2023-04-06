@@ -32,7 +32,7 @@ define <8 x float> @transform_VUNPCKLPDYrr(<8 x float> %a, <8 x float> %b) nounw
 ;
 ; CHECK-ICX-LABEL: transform_VUNPCKLPDYrr:
 ; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,1],ymm1[0,1],ymm0[4,5],ymm1[4,5]
+; CHECK-ICX-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; CHECK-ICX-NEXT:    retq
 ;
 ; CHECK-V4-LABEL: transform_VUNPCKLPDYrr:
@@ -61,7 +61,7 @@ define <8 x float> @transform_VUNPCKHPDYrr(<8 x float> %a, <8 x float> %b) nounw
 ;
 ; CHECK-ICX-LABEL: transform_VUNPCKHPDYrr:
 ; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3],ymm0[6,7],ymm1[6,7]
+; CHECK-ICX-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
 ; CHECK-ICX-NEXT:    retq
 ;
 ; CHECK-V4-LABEL: transform_VUNPCKHPDYrr:
@@ -90,7 +90,7 @@ define <4 x float> @transform_VUNPCKLPDrr(<4 x float> %a, <4 x float> %b) nounwi
 ;
 ; CHECK-ICX-LABEL: transform_VUNPCKLPDrr:
 ; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,1]
+; CHECK-ICX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-ICX-NEXT:    retq
 ;
 ; CHECK-V4-LABEL: transform_VUNPCKLPDrr:
@@ -119,7 +119,7 @@ define <4 x float> @transform_VUNPCKHPDrr(<4 x float> %a, <4 x float> %b) nounwi
 ;
 ; CHECK-ICX-LABEL: transform_VUNPCKHPDrr:
 ; CHECK-ICX:       # %bb.0:
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3],xmm1[2,3]
+; CHECK-ICX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
 ; CHECK-ICX-NEXT:    retq
 ;
 ; CHECK-V4-LABEL: transform_VUNPCKHPDrr:
@@ -174,7 +174,7 @@ define <4 x double> @transform_VUNPCKLPDYrrkz(<4 x double> %a, <4 x double> %b, 
 ; CHECK-ICX-LABEL: transform_VUNPCKLPDYrrkz:
 ; CHECK-ICX:       # %bb.0:
 ; CHECK-ICX-NEXT:    kmovd %edi, %k1
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} ymm0 {%k1} {z} = ymm0[0,1],ymm1[0,1],ymm0[4,5],ymm1[4,5]
+; CHECK-ICX-NEXT:    vshufpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; CHECK-ICX-NEXT:    retq
 ;
 ; CHECK-V4-LABEL: transform_VUNPCKLPDYrrkz:
@@ -182,6 +182,12 @@ define <4 x double> @transform_VUNPCKLPDYrrkz(<4 x double> %a, <4 x double> %b, 
 ; CHECK-V4-NEXT:    kmovd %edi, %k1
 ; CHECK-V4-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; CHECK-V4-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: transform_VUNPCKLPDYrrkz:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    kmovd %edi, %k1
+; CHECK-AVX512-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; CHECK-AVX512-NEXT:    retq
 ;
 ; CHECK-ZNVER4-LABEL: transform_VUNPCKLPDYrrkz:
 ; CHECK-ZNVER4:       # %bb.0:
@@ -204,7 +210,7 @@ define <4 x double> @transform_VUNPCKHPDYrrkz(<4 x double> %a, <4 x double> %b, 
 ; CHECK-ICX-LABEL: transform_VUNPCKHPDYrrkz:
 ; CHECK-ICX:       # %bb.0:
 ; CHECK-ICX-NEXT:    kmovd %edi, %k1
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} ymm0 {%k1} {z} = ymm0[2,3],ymm1[2,3],ymm0[6,7],ymm1[6,7]
+; CHECK-ICX-NEXT:    vshufpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
 ; CHECK-ICX-NEXT:    retq
 ;
 ; CHECK-V4-LABEL: transform_VUNPCKHPDYrrkz:
@@ -212,6 +218,12 @@ define <4 x double> @transform_VUNPCKHPDYrrkz(<4 x double> %a, <4 x double> %b, 
 ; CHECK-V4-NEXT:    kmovd %edi, %k1
 ; CHECK-V4-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
 ; CHECK-V4-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: transform_VUNPCKHPDYrrkz:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    kmovd %edi, %k1
+; CHECK-AVX512-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; CHECK-AVX512-NEXT:    retq
 ;
 ; CHECK-ZNVER4-LABEL: transform_VUNPCKHPDYrrkz:
 ; CHECK-ZNVER4:       # %bb.0:
@@ -234,7 +246,7 @@ define <2 x double> @transform_VUNPCKLPDrrkz(<2 x double> %a, <2 x double> %b, i
 ; CHECK-ICX-LABEL: transform_VUNPCKLPDrrkz:
 ; CHECK-ICX:       # %bb.0:
 ; CHECK-ICX-NEXT:    kmovd %edi, %k1
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} xmm0 {%k1} {z} = xmm0[0,1],xmm1[0,1]
+; CHECK-ICX-NEXT:    vshufpd {{.*#+}} xmm0 {%k1} {z} = xmm0[0],xmm1[0]
 ; CHECK-ICX-NEXT:    retq
 ;
 ; CHECK-V4-LABEL: transform_VUNPCKLPDrrkz:
@@ -242,6 +254,12 @@ define <2 x double> @transform_VUNPCKLPDrrkz(<2 x double> %a, <2 x double> %b, i
 ; CHECK-V4-NEXT:    kmovd %edi, %k1
 ; CHECK-V4-NEXT:    vunpcklpd {{.*#+}} xmm0 {%k1} {z} = xmm0[0],xmm1[0]
 ; CHECK-V4-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: transform_VUNPCKLPDrrkz:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    kmovd %edi, %k1
+; CHECK-AVX512-NEXT:    vunpcklpd {{.*#+}} xmm0 {%k1} {z} = xmm0[0],xmm1[0]
+; CHECK-AVX512-NEXT:    retq
 ;
 ; CHECK-ZNVER4-LABEL: transform_VUNPCKLPDrrkz:
 ; CHECK-ZNVER4:       # %bb.0:
@@ -264,7 +282,7 @@ define <2 x double> @transform_VUNPCKHPDrrkz(<2 x double> %a, <2 x double> %b, i
 ; CHECK-ICX-LABEL: transform_VUNPCKHPDrrkz:
 ; CHECK-ICX:       # %bb.0:
 ; CHECK-ICX-NEXT:    kmovd %edi, %k1
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} xmm0 {%k1} {z} = xmm0[2,3],xmm1[2,3]
+; CHECK-ICX-NEXT:    vshufpd {{.*#+}} xmm0 {%k1} {z} = xmm0[1],xmm1[1]
 ; CHECK-ICX-NEXT:    retq
 ;
 ; CHECK-V4-LABEL: transform_VUNPCKHPDrrkz:
@@ -272,6 +290,12 @@ define <2 x double> @transform_VUNPCKHPDrrkz(<2 x double> %a, <2 x double> %b, i
 ; CHECK-V4-NEXT:    kmovd %edi, %k1
 ; CHECK-V4-NEXT:    vunpckhpd {{.*#+}} xmm0 {%k1} {z} = xmm0[1],xmm1[1]
 ; CHECK-V4-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: transform_VUNPCKHPDrrkz:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    kmovd %edi, %k1
+; CHECK-AVX512-NEXT:    vunpckhpd {{.*#+}} xmm0 {%k1} {z} = xmm0[1],xmm1[1]
+; CHECK-AVX512-NEXT:    retq
 ;
 ; CHECK-ZNVER4-LABEL: transform_VUNPCKHPDrrkz:
 ; CHECK-ZNVER4:       # %bb.0:
@@ -321,7 +345,7 @@ define <4 x double> @transform_VUNPCKLPDYrrk(<4 x double> %a, <4 x double> %b, <
 ; CHECK-ICX-LABEL: transform_VUNPCKLPDYrrk:
 ; CHECK-ICX:       # %bb.0:
 ; CHECK-ICX-NEXT:    kmovd %edi, %k1
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} ymm2 {%k1} = ymm0[0,1],ymm1[0,1],ymm0[4,5],ymm1[4,5]
+; CHECK-ICX-NEXT:    vshufpd {{.*#+}} ymm2 {%k1} = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; CHECK-ICX-NEXT:    vmovapd %ymm2, %ymm0
 ; CHECK-ICX-NEXT:    retq
 ;
@@ -331,6 +355,13 @@ define <4 x double> @transform_VUNPCKLPDYrrk(<4 x double> %a, <4 x double> %b, <
 ; CHECK-V4-NEXT:    vunpcklpd {{.*#+}} ymm2 {%k1} = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; CHECK-V4-NEXT:    vmovapd %ymm2, %ymm0
 ; CHECK-V4-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: transform_VUNPCKLPDYrrk:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    kmovd %edi, %k1
+; CHECK-AVX512-NEXT:    vunpcklpd {{.*#+}} ymm2 {%k1} = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; CHECK-AVX512-NEXT:    vmovapd %ymm2, %ymm0
+; CHECK-AVX512-NEXT:    retq
 ;
 ; CHECK-ZNVER4-LABEL: transform_VUNPCKLPDYrrk:
 ; CHECK-ZNVER4:       # %bb.0:
@@ -355,7 +386,7 @@ define <4 x double> @transform_VUNPCKHPDYrrk(<4 x double> %a, <4 x double> %b, <
 ; CHECK-ICX-LABEL: transform_VUNPCKHPDYrrk:
 ; CHECK-ICX:       # %bb.0:
 ; CHECK-ICX-NEXT:    kmovd %edi, %k1
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} ymm2 {%k1} = ymm0[2,3],ymm1[2,3],ymm0[6,7],ymm1[6,7]
+; CHECK-ICX-NEXT:    vshufpd {{.*#+}} ymm2 {%k1} = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
 ; CHECK-ICX-NEXT:    vmovapd %ymm2, %ymm0
 ; CHECK-ICX-NEXT:    retq
 ;
@@ -365,6 +396,13 @@ define <4 x double> @transform_VUNPCKHPDYrrk(<4 x double> %a, <4 x double> %b, <
 ; CHECK-V4-NEXT:    vunpckhpd {{.*#+}} ymm2 {%k1} = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
 ; CHECK-V4-NEXT:    vmovapd %ymm2, %ymm0
 ; CHECK-V4-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: transform_VUNPCKHPDYrrk:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    kmovd %edi, %k1
+; CHECK-AVX512-NEXT:    vunpckhpd {{.*#+}} ymm2 {%k1} = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; CHECK-AVX512-NEXT:    vmovapd %ymm2, %ymm0
+; CHECK-AVX512-NEXT:    retq
 ;
 ; CHECK-ZNVER4-LABEL: transform_VUNPCKHPDYrrk:
 ; CHECK-ZNVER4:       # %bb.0:
@@ -389,7 +427,7 @@ define <2 x double> @transform_VUNPCKLPDrrk(<2 x double> %a, <2 x double> %b, <2
 ; CHECK-ICX-LABEL: transform_VUNPCKLPDrrk:
 ; CHECK-ICX:       # %bb.0:
 ; CHECK-ICX-NEXT:    kmovd %edi, %k1
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} xmm2 {%k1} = xmm0[0,1],xmm1[0,1]
+; CHECK-ICX-NEXT:    vshufpd {{.*#+}} xmm2 {%k1} = xmm0[0],xmm1[0]
 ; CHECK-ICX-NEXT:    vmovapd %xmm2, %xmm0
 ; CHECK-ICX-NEXT:    retq
 ;
@@ -399,6 +437,13 @@ define <2 x double> @transform_VUNPCKLPDrrk(<2 x double> %a, <2 x double> %b, <2
 ; CHECK-V4-NEXT:    vunpcklpd {{.*#+}} xmm2 {%k1} = xmm0[0],xmm1[0]
 ; CHECK-V4-NEXT:    vmovapd %xmm2, %xmm0
 ; CHECK-V4-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: transform_VUNPCKLPDrrk:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    kmovd %edi, %k1
+; CHECK-AVX512-NEXT:    vunpcklpd {{.*#+}} xmm2 {%k1} = xmm0[0],xmm1[0]
+; CHECK-AVX512-NEXT:    vmovapd %xmm2, %xmm0
+; CHECK-AVX512-NEXT:    retq
 ;
 ; CHECK-ZNVER4-LABEL: transform_VUNPCKLPDrrk:
 ; CHECK-ZNVER4:       # %bb.0:
@@ -423,7 +468,7 @@ define <2 x double> @transform_VUNPCKHPDrrk(<2 x double> %a, <2 x double> %b, <2
 ; CHECK-ICX-LABEL: transform_VUNPCKHPDrrk:
 ; CHECK-ICX:       # %bb.0:
 ; CHECK-ICX-NEXT:    kmovd %edi, %k1
-; CHECK-ICX-NEXT:    vshufps {{.*#+}} xmm2 {%k1} = xmm0[2,3],xmm1[2,3]
+; CHECK-ICX-NEXT:    vshufpd {{.*#+}} xmm2 {%k1} = xmm0[1],xmm1[1]
 ; CHECK-ICX-NEXT:    vmovapd %xmm2, %xmm0
 ; CHECK-ICX-NEXT:    retq
 ;
@@ -433,6 +478,13 @@ define <2 x double> @transform_VUNPCKHPDrrk(<2 x double> %a, <2 x double> %b, <2
 ; CHECK-V4-NEXT:    vunpckhpd {{.*#+}} xmm2 {%k1} = xmm0[1],xmm1[1]
 ; CHECK-V4-NEXT:    vmovapd %xmm2, %xmm0
 ; CHECK-V4-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: transform_VUNPCKHPDrrk:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    kmovd %edi, %k1
+; CHECK-AVX512-NEXT:    vunpckhpd {{.*#+}} xmm2 {%k1} = xmm0[1],xmm1[1]
+; CHECK-AVX512-NEXT:    vmovapd %xmm2, %xmm0
+; CHECK-AVX512-NEXT:    retq
 ;
 ; CHECK-ZNVER4-LABEL: transform_VUNPCKHPDrrk:
 ; CHECK-ZNVER4:       # %bb.0:

@@ -1993,6 +1993,17 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       MIRBuilder.buildIndirectDbgValue(0, DI.getVariable(), DI.getExpression());
     } else if (const auto *CI = dyn_cast<Constant>(V)) {
       MIRBuilder.buildConstDbgValue(*CI, DI.getVariable(), DI.getExpression());
+    } else if (auto *AI = dyn_cast<AllocaInst>(V);
+               AI && AI->isStaticAlloca() &&
+               DI.getExpression()->startsWithDeref()) {
+      // If the value is an alloca and the expression starts with a
+      // dereference, track a stack slot instead of a register, as registers
+      // may be clobbered.
+      auto ExprOperands = DI.getExpression()->getElements();
+      auto *ExprDerefRemoved =
+          DIExpression::get(AI->getContext(), ExprOperands.drop_front());
+      MIRBuilder.buildFIDbgValue(getOrCreateFrameIndex(*AI), DI.getVariable(),
+                                 ExprDerefRemoved);
     } else {
       for (Register Reg : getOrCreateVRegs(*V)) {
         // FIXME: This does not handle register-indirect values at offset 0. The

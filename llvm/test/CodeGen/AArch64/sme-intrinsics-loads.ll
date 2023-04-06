@@ -259,39 +259,40 @@ define void @ldr(ptr %ptr) {
 define void @ldr_with_off_15(ptr %ptr) {
 ; CHECK-LABEL: ldr_with_off_15:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, wzr
+; CHECK-NEXT:    mov w12, #15 // =0xf
 ; CHECK-NEXT:    add x8, x0, #15
 ; CHECK-NEXT:    ldr za[w12, 0], [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr i8, ptr %ptr, i64 15
-  call void @llvm.aarch64.sme.ldr(i32 0, ptr %base)
+  call void @llvm.aarch64.sme.ldr(i32 15, ptr %base)
   ret void;
 }
 
 define void @ldr_with_off_15mulvl(ptr %ptr) {
 ; CHECK-LABEL: ldr_with_off_15mulvl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, wzr
-; CHECK-NEXT:    ldr za[w12, 15], [x0, #15, mul vl]
+; CHECK-NEXT:    mov w12, #15 // =0xf
+; CHECK-NEXT:    addvl x8, x0, #15
+; CHECK-NEXT:    ldr za[w12, 0], [x8]
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %mulvl = mul i64 %vscale, 240
   %base = getelementptr i8, ptr %ptr, i64 %mulvl
-  call void @llvm.aarch64.sme.ldr(i32 0, ptr %base)
+  call void @llvm.aarch64.sme.ldr(i32 15, ptr %base)
   ret void;
 }
 
 define void @ldr_with_off_16mulvl(ptr %ptr) {
 ; CHECK-LABEL: ldr_with_off_16mulvl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w12, wzr
+; CHECK-NEXT:    mov w12, #16 // =0x10
 ; CHECK-NEXT:    addvl x8, x0, #16
 ; CHECK-NEXT:    ldr za[w12, 0], [x8]
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %mulvl = mul i64 %vscale, 256
   %base = getelementptr i8, ptr %ptr, i64 %mulvl
-  call void @llvm.aarch64.sme.ldr(i32 0, ptr %base)
+  call void @llvm.aarch64.sme.ldr(i32 16, ptr %base)
   ret void;
 }
 

@@ -51,8 +51,6 @@ void InternalFree(void *p, InternalAllocatorCache *cache = nullptr);
 void InternalAllocatorLock();
 void InternalAllocatorUnlock();
 InternalAllocator *internal_allocator();
-int __sanitizer_get_allocation_bounds(const void *p, void **start,
-                                      unsigned long long *size);
 } // namespace __sanitizer
 
 #endif // SANITIZER_ALLOCATOR_INTERNAL_H

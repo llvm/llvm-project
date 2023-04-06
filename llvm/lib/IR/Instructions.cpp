@@ -3073,42 +3073,42 @@ BinaryOperator *BinaryOperator::Create(BinaryOps Op, Value *S1, Value *S2,
 
 BinaryOperator *BinaryOperator::CreateNeg(Value *Op, const Twine &Name,
                                           Instruction *InsertBefore) {
-  Value *zero = ConstantFP::getZeroValueForNegation(Op->getType());
+  Value *Zero = ConstantInt::get(Op->getType(), 0);
   return new BinaryOperator(Instruction::Sub,
-                            zero, Op,
+                            Zero, Op,
                             Op->getType(), Name, InsertBefore);
 }
 
 BinaryOperator *BinaryOperator::CreateNeg(Value *Op, const Twine &Name,
                                           BasicBlock *InsertAtEnd) {
-  Value *zero = ConstantFP::getZeroValueForNegation(Op->getType());
+  Value *Zero = ConstantInt::get(Op->getType(), 0);
   return new BinaryOperator(Instruction::Sub,
-                            zero, Op,
+                            Zero, Op,
                             Op->getType(), Name, InsertAtEnd);
 }
 
 BinaryOperator *BinaryOperator::CreateNSWNeg(Value *Op, const Twine &Name,
                                              Instruction *InsertBefore) {
-  Value *zero = ConstantFP::getZeroValueForNegation(Op->getType());
-  return BinaryOperator::CreateNSWSub(zero, Op, Name, InsertBefore);
+  Value *Zero = ConstantInt::get(Op->getType(), 0);
+  return BinaryOperator::CreateNSWSub(Zero, Op, Name, InsertBefore);
 }
 
 BinaryOperator *BinaryOperator::CreateNSWNeg(Value *Op, const Twine &Name,
                                              BasicBlock *InsertAtEnd) {
-  Value *zero = ConstantFP::getZeroValueForNegation(Op->getType());
-  return BinaryOperator::CreateNSWSub(zero, Op, Name, InsertAtEnd);
+  Value *Zero = ConstantInt::get(Op->getType(), 0);
+  return BinaryOperator::CreateNSWSub(Zero, Op, Name, InsertAtEnd);
 }
 
 BinaryOperator *BinaryOperator::CreateNUWNeg(Value *Op, const Twine &Name,
                                              Instruction *InsertBefore) {
-  Value *zero = ConstantFP::getZeroValueForNegation(Op->getType());
-  return BinaryOperator::CreateNUWSub(zero, Op, Name, InsertBefore);
+  Value *Zero = ConstantInt::get(Op->getType(), 0);
+  return BinaryOperator::CreateNUWSub(Zero, Op, Name, InsertBefore);
 }
 
 BinaryOperator *BinaryOperator::CreateNUWNeg(Value *Op, const Twine &Name,
                                              BasicBlock *InsertAtEnd) {
-  Value *zero = ConstantFP::getZeroValueForNegation(Op->getType());
-  return BinaryOperator::CreateNUWSub(zero, Op, Name, InsertAtEnd);
+  Value *Zero = ConstantInt::get(Op->getType(), 0);
+  return BinaryOperator::CreateNUWSub(Zero, Op, Name, InsertAtEnd);
 }
 
 BinaryOperator *BinaryOperator::CreateNot(Value *Op, const Twine &Name,
@@ -3165,23 +3165,6 @@ bool CastInst::isIntegerCast() const {
       return getOperand(0)->getType()->isIntegerTy() &&
         getType()->isIntegerTy();
   }
-}
-
-bool CastInst::isLosslessCast() const {
-  // Only BitCast can be lossless, exit fast if we're not BitCast
-  if (getOpcode() != Instruction::BitCast)
-    return false;
-
-  // Identity cast is always lossless
-  Type *SrcTy = getOperand(0)->getType();
-  Type *DstTy = getType();
-  if (SrcTy == DstTy)
-    return true;
-
-  // Pointer to pointer is always lossless.
-  if (SrcTy->isPointerTy())
-    return DstTy->isPointerTy();
-  return false;  // Other types have no identity values
 }
 
 /// This function determines if the CastInst does not require any bits to be

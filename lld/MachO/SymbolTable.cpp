@@ -459,8 +459,8 @@ static bool canSuggestExternCForCXX(StringRef ref, StringRef def) {
 // the suggested symbol, which is either in the symbol table, or in the same
 // file of sym.
 static const Symbol *getAlternativeSpelling(const Undefined &sym,
-                                            std::string &pre_hint,
-                                            std::string &post_hint) {
+                                            std::string &preHint,
+                                            std::string &postHint) {
   DenseMap<StringRef, const Symbol *> map;
   if (sym.getFile() && sym.getFile()->kind() == InputFile::ObjKind) {
     // Build a map of local defined symbols.
@@ -540,28 +540,28 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
         const Symbol *s = suggest((Twine("_") + buf).str());
         free(buf);
         if (s) {
-          pre_hint = ": extern \"C\" ";
+          preHint = ": extern \"C\" ";
           return s;
         }
       }
   } else {
-    StringRef name_without_underscore = name;
-    name_without_underscore.consume_front("_");
+    StringRef nameWithoutUnderscore = name;
+    nameWithoutUnderscore.consume_front("_");
     const Symbol *s = nullptr;
     for (auto &it : map)
-      if (canSuggestExternCForCXX(name_without_underscore, it.first)) {
+      if (canSuggestExternCForCXX(nameWithoutUnderscore, it.first)) {
         s = it.second;
         break;
       }
     if (!s)
       for (Symbol *sym : symtab->getSymbols())
-        if (canSuggestExternCForCXX(name_without_underscore, sym->getName())) {
+        if (canSuggestExternCForCXX(nameWithoutUnderscore, sym->getName())) {
           s = sym;
           break;
         }
     if (s) {
-      pre_hint = " to declare ";
-      post_hint = " as extern \"C\"?";
+      preHint = " to declare ";
+      postHint = " as extern \"C\"?";
       return s;
     }
   }
@@ -605,11 +605,11 @@ static void reportUndefinedSymbol(const Undefined &sym,
             .str();
 
   if (correctSpelling) {
-    std::string pre_hint = ": ", post_hint;
+    std::string preHint = ": ", postHint;
     if (const Symbol *corrected =
-            getAlternativeSpelling(sym, pre_hint, post_hint)) {
+            getAlternativeSpelling(sym, preHint, postHint)) {
       message +=
-          "\n>>> did you mean" + pre_hint + toString(*corrected) + post_hint;
+          "\n>>> did you mean" + preHint + toString(*corrected) + postHint;
       if (corrected->getFile())
         message += "\n>>> defined in: " + toString(corrected->getFile());
     }

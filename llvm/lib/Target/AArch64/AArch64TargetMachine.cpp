@@ -510,7 +510,6 @@ public:
   bool addLegalizeMachineIR() override;
   void addPreRegBankSelect() override;
   bool addRegBankSelect() override;
-  void addPreGlobalInstructionSelect() override;
   bool addGlobalInstructionSelect() override;
   void addMachineSSAOptimization() override;
   bool addILPOpts() override;
@@ -672,10 +671,12 @@ bool AArch64PassConfig::addIRTranslator() {
 }
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
-  if (getOptLevel() == CodeGenOpt::None)
+  if (getOptLevel() == CodeGenOpt::None) {
     addPass(createAArch64O0PreLegalizerCombiner());
-  else {
+    addPass(new Localizer());
+  } else {
     addPass(createAArch64PreLegalizerCombiner());
+    addPass(new Localizer());
     if (EnableGISelLoadStoreOptPreLegal)
       addPass(new LoadStoreOpt());
   }
@@ -699,10 +700,6 @@ void AArch64PassConfig::addPreRegBankSelect() {
 bool AArch64PassConfig::addRegBankSelect() {
   addPass(new RegBankSelect());
   return false;
-}
-
-void AArch64PassConfig::addPreGlobalInstructionSelect() {
-  addPass(new Localizer());
 }
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {

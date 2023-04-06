@@ -18,9 +18,8 @@ declare double @llvm.pow.f64(double, double)
 declare double @llvm.powi.f64.i32(double, i32)
 declare double @llvm.log.f64(double)
 declare double @llvm.exp.f64(double)
+declare double @llvm.roundeven.f64(double)
 declare i32 @llvm.lround(double)
-
-
 
 define fp128 @fp128libcalls(fp128 %x, fp128 %y, i32 %z) {
   ; compiler-rt call
@@ -236,18 +235,19 @@ define i32 @f64libcalls(double %x, double %y, i32 %z) {
 ; CHECK-LABEL: f64libcalls:
 ; CHECK:         .functype f64libcalls (f64, f64, i32) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get $push8=, 0
-; CHECK-NEXT:    call $push0=, cos, $pop8
+; CHECK-NEXT:    local.get $push9=, 0
+; CHECK-NEXT:    call $push0=, cos, $pop9
 ; CHECK-NEXT:    call $push1=, log10, $pop0
-; CHECK-NEXT:    local.get $push9=, 1
-; CHECK-NEXT:    call $push2=, pow, $pop1, $pop9
-; CHECK-NEXT:    local.get $push10=, 2
-; CHECK-NEXT:    call $push3=, __powidf2, $pop2, $pop10
+; CHECK-NEXT:    local.get $push10=, 1
+; CHECK-NEXT:    call $push2=, pow, $pop1, $pop10
+; CHECK-NEXT:    local.get $push11=, 2
+; CHECK-NEXT:    call $push3=, __powidf2, $pop2, $pop11
 ; CHECK-NEXT:    call $push4=, log, $pop3
 ; CHECK-NEXT:    call $push5=, exp, $pop4
 ; CHECK-NEXT:    call $push6=, cbrt, $pop5
-; CHECK-NEXT:    call $push7=, lround, $pop6
-; CHECK-NEXT:    return $pop7
+; CHECK-NEXT:    call $push7=, roundeven, $pop6
+; CHECK-NEXT:    call $push8=, lround, $pop7
+; CHECK-NEXT:    return $pop8
  %a = call double @llvm.cos.f64(double %x)
  %b = call double @llvm.log10.f64(double %a)
  %c = call double @llvm.pow.f64(double %b, double %y)
@@ -255,8 +255,9 @@ define i32 @f64libcalls(double %x, double %y, i32 %z) {
  %e = call double @llvm.log.f64(double %d)
  %f = call double @llvm.exp.f64(double %e)
  %g = call fast double @llvm.pow.f64(double %f, double 0x3FD5555555555555)
- %h = call i32 @llvm.lround(double %g)
- ret i32 %h
+ %h = call double @llvm.roundeven.f64(double %g)
+ %i = call i32 @llvm.lround(double %h)
+ ret i32 %i
 }
 
 ; fcmp ord and unord (RTLIB::O_F32 / RTLIB::UO_F32 etc) are a special case (see

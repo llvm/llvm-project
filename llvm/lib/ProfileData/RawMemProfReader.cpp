@@ -337,12 +337,11 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
 
 Error RawMemProfReader::setupForSymbolization() {
   auto *Object = cast<object::ObjectFile>(Binary.getBinary());
-  auto BuildIdOr = object::getBuildID(Object);
-  if (!BuildIdOr.has_value())
+  object::BuildIDRef BinaryId = object::getBuildID(Object);
+  if (BinaryId.empty())
     return make_error<StringError>(Twine("No build id found in binary ") +
                                        Binary.getBinary()->getFileName(),
                                    inconvertibleErrorCode());
-  llvm::ArrayRef<uint8_t> BinaryId = BuildIdOr.value();
 
   int NumMatched = 0;
   for (const auto &Entry : SegmentInfo) {

@@ -296,6 +296,7 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addUsedIfAvailable<LiveStacks>();
       AU.addUsedIfAvailable<LiveVariables>();
+      AU.addUsedIfAvailable<SlotIndexes>();
       AU.setPreservesAll();
       MachineFunctionPass::getAnalysisUsage(AU);
     }

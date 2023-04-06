@@ -13,6 +13,7 @@
 #include "common.h"
 #include "list.h"
 #include "local_cache.h"
+#include "mem_map.h"
 #include "memtag.h"
 #include "options.h"
 #include "release.h"
@@ -103,10 +104,11 @@ public:
     SmallerBlockReleasePageDelta =
         PagesInGroup * (1 + MinSizeClass / 16U) / 100;
 
-    DCHECK_EQ(PrimaryBase, 0U);
     // Reserve the space required for the Primary.
-    PrimaryBase = reinterpret_cast<uptr>(map(
-        nullptr, PrimarySize, "scudo:primary_reserve", MAP_NOACCESS, &Data));
+    CHECK(ReservedMemory.create(/*Addr=*/0U, PrimarySize,
+                                "scudo:primary_reserve"));
+    PrimaryBase = ReservedMemory.getBase();
+    DCHECK_NE(PrimaryBase, 0U);
 
     u32 Seed;
     const u64 Time = getMonotonicTimeFast();
@@ -141,8 +143,7 @@ public:
       *Region = {};
     }
     if (PrimaryBase)
-      unmap(reinterpret_cast<void *>(PrimaryBase), PrimarySize, UNMAP_ALL,
-            &Data);
+      ReservedMemory.release();
     PrimaryBase = 0U;
   }
 
@@ -449,7 +450,7 @@ private:
     uptr AllocatedUser GUARDED_BY(Mutex) = 0;
     // The minimum size of pushed blocks to trigger page release.
     uptr TryReleaseThreshold GUARDED_BY(Mutex) = 0;
-    MapPlatformData Data GUARDED_BY(Mutex) = {};
+    MemMapT MemMap = {};
     ReleaseToOsInfo ReleaseInfo GUARDED_BY(Mutex) = {};
     bool Exhausted GUARDED_BY(Mutex) = false;
   };
@@ -459,11 +460,13 @@ private:
   };
   static_assert(sizeof(RegionInfo) % SCUDO_CACHE_LINE_SIZE == 0, "");
 
+  // TODO: `PrimaryBase` can be obtained from ReservedMemory. This needs to be
+  // deprecated.
   uptr PrimaryBase = 0;
+  ReservedMemoryT ReservedMemory = {};
   // The minimum size of pushed blocks that we will try to release the pages in
   // that size class.
   uptr SmallerBlockReleasePageDelta = 0;
-  MapPlatformData Data = {};
   atomic_s32 ReleaseToOsIntervalMs = {};
   alignas(SCUDO_CACHE_LINE_SIZE) RegionInfo RegionInfoArray[NumClasses];
 
@@ -742,14 +745,18 @@ private:
         Region->Exhausted = true;
         return false;
       }
-      if (MappedUser == 0)
-        Region->Data = Data;
-      if (UNLIKELY(!map(
-              reinterpret_cast<void *>(RegionBeg + MappedUser), MapSize,
-              "scudo:primary",
+      // TODO: Consider allocating MemMap in init().
+      if (!Region->MemMap.isAllocated()) {
+        Region->MemMap = ReservedMemory.dispatch(
+            getRegionBaseByClassId(ClassId), RegionSize);
+      }
+      DCHECK(Region->MemMap.isAllocated());
+
+      if (UNLIKELY(!Region->MemMap.remap(
+              RegionBeg + MappedUser, MapSize, "scudo:primary",
               MAP_ALLOWNOMEM | MAP_RESIZABLE |
-                  (useMemoryTagging<Config>(Options.load()) ? MAP_MEMTAG : 0),
-              &Region->Data))) {
+                  (useMemoryTagging<Config>(Options.load()) ? MAP_MEMTAG
+                                                            : 0)))) {
         return false;
       }
       Region->MappedUser += MapSize;
@@ -1082,7 +1089,8 @@ private:
     const uptr ReleaseRangeSize = ReleaseEnd - ReleaseBase;
     const uptr ReleaseOffset = ReleaseBase - Region->RegionBeg;
 
-    ReleaseRecorder Recorder(Region->RegionBeg, ReleaseOffset, &Region->Data);
+    RegionReleaseRecorder<MemMapT> Recorder(&Region->MemMap, Region->RegionBeg,
+                                            ReleaseOffset);
     PageReleaseContext Context(BlockSize, /*NumberOfRegions=*/1U,
                                ReleaseRangeSize, ReleaseOffset);
 

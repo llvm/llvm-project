@@ -42,8 +42,8 @@ define i16 @popcount256(ptr nocapture nonnull readonly %0) {
 ; CHECK-NEXT:    // implicit-def: $q1
 ; CHECK-NEXT:    fmov s1, s2
 ; CHECK-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-NEXT:    fmov w0, s1
 ; CHECK-NEXT:    mov w10, wzr
+; CHECK-NEXT:    fmov w0, s1
 ; CHECK-NEXT:    mov w9, w0
 ; CHECK-NEXT:    mov w8, w10
 ; CHECK-NEXT:    bfi x9, x8, #32, #32
@@ -81,8 +81,8 @@ define <1 x i128> @popcount1x128(<1 x i128> %0) {
 ; CHECK-NEXT:    // implicit-def: $q0
 ; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    // kill: def $x0 killed $w0
 ; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    bfi x0, x8, #32, #32

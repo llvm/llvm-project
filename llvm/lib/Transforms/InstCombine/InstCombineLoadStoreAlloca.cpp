@@ -436,7 +436,7 @@ void PointerReplacer::replacePointer(Value *V) {
 #ifndef NDEBUG
   auto *PT = cast<PointerType>(Root.getType());
   auto *NT = cast<PointerType>(V->getType());
-  assert(PT != NT && PT->hasSameElementTypeAs(NT) && "Invalid usage");
+  assert(PT != NT && "Invalid usage");
 #endif
   WorkMap[&Root] = V;
 

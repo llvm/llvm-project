@@ -1318,6 +1318,29 @@ void transform::onlyReadsPayload(
   effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
 }
 
+void transform::getConsumedBlockArguments(
+    Block &block, llvm::SmallDenseSet<unsigned int> &consumedArguments) {
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  for (Operation &nested : block) {
+    auto iface = dyn_cast<MemoryEffectOpInterface>(nested);
+    if (!iface)
+      continue;
+
+    effects.clear();
+    iface.getEffects(effects);
+    for (const MemoryEffects::EffectInstance &effect : effects) {
+      BlockArgument argument =
+          dyn_cast_or_null<BlockArgument>(effect.getValue());
+      if (!argument || argument.getOwner() != &block ||
+          !isa<MemoryEffects::Free>(effect.getEffect()) ||
+          effect.getResource() != transform::TransformMappingResource::get()) {
+        continue;
+      }
+      consumedArguments.insert(argument.getArgNumber());
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Utilities for TransformOpInterface.
 //===----------------------------------------------------------------------===//

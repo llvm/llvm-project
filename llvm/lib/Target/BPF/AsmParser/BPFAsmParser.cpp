@@ -253,6 +253,14 @@ public:
         .Case("ll", true)
         .Case("skb", true)
         .Case("s", true)
+        .Case("atomic_fetch_add", true)
+        .Case("atomic_fetch_and", true)
+        .Case("atomic_fetch_or", true)
+        .Case("atomic_fetch_xor", true)
+        .Case("xchg_64", true)
+        .Case("xchg32_32", true)
+        .Case("cmpxchg_64", true)
+        .Case("cmpxchg32_32", true)
         .Default(false);
   }
 };
@@ -482,6 +490,11 @@ bool BPFAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     // Attempt to parse token as register
     if (parseRegister(Operands) == MatchOperand_Success)
       continue;
+
+    if (getLexer().is(AsmToken::Comma)) {
+      getLexer().Lex();
+      continue;
+    }
 
     // Attempt to parse token as an immediate
     if (parseImmediate(Operands) != MatchOperand_Success) {
