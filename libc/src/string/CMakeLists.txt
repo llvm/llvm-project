@@ -326,6 +326,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strsep
+  SRCS
+    strsep.cpp
+  HDRS
+    strsep.h
+  DEPENDS
+    .string_utils
+)
+
+add_entrypoint_object(
   strsignal
   SRCS
     strsignal.cpp

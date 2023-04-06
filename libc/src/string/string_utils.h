@@ -182,6 +182,7 @@ LIBC_INLINE size_t complementary_span(const char *src, const char *segment) {
 // is found is then stored within 'context' for subsequent calls. Subsequent
 // calls will use 'context' when a nullptr is passed in for 'src'. Once the null
 // terminating character is reached, returns a nullptr.
+template <bool SkipDelim = true>
 LIBC_INLINE char *string_token(char *__restrict src,
                                const char *__restrict delimiter_string,
                                char **__restrict saveptr) {
@@ -193,8 +194,9 @@ LIBC_INLINE char *string_token(char *__restrict src,
   for (; *delimiter_string != '\0'; ++delimiter_string)
     delimiter_set.set(*delimiter_string);
 
-  for (; *src != '\0' && delimiter_set.test(*src); ++src)
-    ;
+  if constexpr (SkipDelim)
+    for (; *src != '\0' && delimiter_set.test(*src); ++src)
+      ;
   if (*src == '\0') {
     *saveptr = src;
     return nullptr;
