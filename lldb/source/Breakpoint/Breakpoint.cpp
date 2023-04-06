@@ -37,11 +37,6 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
 
-ConstString Breakpoint::GetEventIdentifier() {
-  static ConstString g_identifier("event-identifier.breakpoint.changed");
-  return g_identifier;
-}
-
 const char *Breakpoint::g_option_names[static_cast<uint32_t>(
     Breakpoint::OptionNames::LastOptionName)]{"Names", "Hardware"};
 
