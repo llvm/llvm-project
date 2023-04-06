@@ -604,6 +604,26 @@ struct TestVectorExtractStridedSliceLowering
   }
 };
 
+struct TestVectorBreakDownBitCast
+    : public PassWrapper<TestVectorBreakDownBitCast,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorBreakDownBitCast)
+
+  StringRef getArgument() const final {
+    return "test-vector-break-down-bitcast";
+  }
+  StringRef getDescription() const final {
+    return "Test pattern that breaks down vector.bitcast ops ";
+  }
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateBreakDownVectorBitCastOpPatterns(patterns, [](BitCastOp op) {
+      return op.getSourceVectorType().getShape().back() > 4;
+    });
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
 struct TestCreateVectorBroadcast
     : public PassWrapper<TestCreateVectorBroadcast,
                          OperationPass<func::FuncOp>> {
@@ -687,6 +707,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorDistribution>();
 
   PassRegistration<TestVectorExtractStridedSliceLowering>();
+
+  PassRegistration<TestVectorBreakDownBitCast>();
 
   PassRegistration<TestCreateVectorBroadcast>();
 
