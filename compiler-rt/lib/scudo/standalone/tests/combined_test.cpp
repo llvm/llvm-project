@@ -12,7 +12,6 @@
 #include "allocator_config.h"
 #include "chunk.h"
 #include "combined.h"
-#include "mem_map.h"
 
 #include <condition_variable>
 #include <memory>
@@ -496,12 +495,11 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ThreadedCombined) {
 // process's signal handlers (GWP-ASan used to do this).
 TEST(ScudoCombinedDeathTest, SKIP_ON_FUCHSIA(testSEGV)) {
   const scudo::uptr Size = 4 * scudo::getPageSizeCached();
-  scudo::ReservedMemoryT ReservedMemory;
-  ASSERT_TRUE(ReservedMemory.create(/*Addr=*/0U, Size, "testSEGV"));
-  void *P = reinterpret_cast<void *>(ReservedMemory.getBase());
-  ASSERT_NE(P, nullptr);
+  scudo::MapPlatformData Data = {};
+  void *P = scudo::map(nullptr, Size, "testSEGV", MAP_NOACCESS, &Data);
+  EXPECT_NE(P, nullptr);
   EXPECT_DEATH(memset(P, 0xaa, Size), "");
-  ReservedMemory.release();
+  scudo::unmap(P, Size, UNMAP_ALL, &Data);
 }
 
 struct DeathSizeClassConfig {
