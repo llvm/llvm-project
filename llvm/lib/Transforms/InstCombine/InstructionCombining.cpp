@@ -1340,28 +1340,6 @@ Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
   return nullptr;
 }
 
-/// Given a pointer type and a constant offset, determine whether or not there
-/// is a sequence of GEP indices into the pointed type that will land us at the
-/// specified offset. If so, fill them into NewIndices and return the resultant
-/// element type, otherwise return null.
-static Type *findElementAtOffset(PointerType *PtrTy, int64_t IntOffset,
-                                 SmallVectorImpl<Value *> &NewIndices,
-                                 const DataLayout &DL) {
-  // Only used by visitGEPOfBitcast(), which is skipped for opaque pointers.
-  Type *Ty = PtrTy->getNonOpaquePointerElementType();
-  if (!Ty->isSized())
-    return nullptr;
-
-  APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), IntOffset);
-  SmallVector<APInt> Indices = DL.getGEPIndicesForOffset(Ty, Offset);
-  if (!Offset.isZero())
-    return nullptr;
-
-  for (const APInt &Index : Indices)
-    NewIndices.push_back(ConstantInt::get(PtrTy->getContext(), Index));
-  return Ty;
-}
-
 static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
   // If this GEP has only 0 indices, it is the same pointer as
   // Src. If Src is not a trivial GEP too, don't combine
@@ -2128,111 +2106,6 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   return nullptr;
 }
 
-// Note that we may have also stripped an address space cast in between.
-Instruction *InstCombinerImpl::visitGEPOfBitcast(BitCastInst *BCI,
-                                                 GetElementPtrInst &GEP) {
-  // With opaque pointers, there is no pointer element type we can use to
-  // adjust the GEP type.
-  PointerType *SrcType = cast<PointerType>(BCI->getSrcTy());
-  if (SrcType->isOpaque())
-    return nullptr;
-
-  Type *GEPEltType = GEP.getSourceElementType();
-  Type *SrcEltType = SrcType->getNonOpaquePointerElementType();
-  Value *SrcOp = BCI->getOperand(0);
-
-  // GEP directly using the source operand if this GEP is accessing an element
-  // of a bitcasted pointer to vector or array of the same dimensions:
-  // gep (bitcast <c x ty>* X to [c x ty]*), Y, Z --> gep X, Y, Z
-  // gep (bitcast [c x ty]* X to <c x ty>*), Y, Z --> gep X, Y, Z
-  auto areMatchingArrayAndVecTypes = [](Type *ArrTy, Type *VecTy,
-                                        const DataLayout &DL) {
-    auto *VecVTy = cast<FixedVectorType>(VecTy);
-    return ArrTy->getArrayElementType() == VecVTy->getElementType() &&
-           ArrTy->getArrayNumElements() == VecVTy->getNumElements() &&
-           DL.getTypeAllocSize(ArrTy) == DL.getTypeAllocSize(VecTy);
-  };
-  if (GEP.getNumOperands() == 3 &&
-      ((GEPEltType->isArrayTy() && isa<FixedVectorType>(SrcEltType) &&
-        areMatchingArrayAndVecTypes(GEPEltType, SrcEltType, DL)) ||
-       (isa<FixedVectorType>(GEPEltType) && SrcEltType->isArrayTy() &&
-        areMatchingArrayAndVecTypes(SrcEltType, GEPEltType, DL)))) {
-
-    // Create a new GEP here, as using `setOperand()` followed by
-    // `setSourceElementType()` won't actually update the type of the
-    // existing GEP Value. Causing issues if this Value is accessed when
-    // constructing an AddrSpaceCastInst
-    SmallVector<Value *, 8> Indices(GEP.indices());
-    Value *NGEP =
-        Builder.CreateGEP(SrcEltType, SrcOp, Indices, "", GEP.isInBounds());
-    NGEP->takeName(&GEP);
-
-    // Preserve GEP address space to satisfy users
-    if (NGEP->getType()->getPointerAddressSpace() != GEP.getAddressSpace())
-      return new AddrSpaceCastInst(NGEP, GEP.getType());
-
-    return replaceInstUsesWith(GEP, NGEP);
-  }
-
-  // See if we can simplify:
-  //   X = bitcast A* to B*
-  //   Y = gep X, <...constant indices...>
-  // into a gep of the original struct. This is important for SROA and alias
-  // analysis of unions. If "A" is also a bitcast, wait for A/X to be merged.
-  unsigned OffsetBits = DL.getIndexTypeSizeInBits(GEP.getType());
-  APInt Offset(OffsetBits, 0);
-
-  // If the bitcast argument is an allocation, The bitcast is for convertion
-  // to actual type of allocation. Removing such bitcasts, results in having
-  // GEPs with i8* base and pure byte offsets. That means GEP is not aware of
-  // struct or array hierarchy.
-  // By avoiding such GEPs, phi translation and MemoryDependencyAnalysis have
-  // a better chance to succeed.
-  if (!isa<BitCastInst>(SrcOp) && GEP.accumulateConstantOffset(DL, Offset) &&
-      !isAllocationFn(SrcOp, &TLI)) {
-    // If this GEP instruction doesn't move the pointer, just replace the GEP
-    // with a bitcast of the real input to the dest type.
-    if (!Offset) {
-      // If the bitcast is of an allocation, and the allocation will be
-      // converted to match the type of the cast, don't touch this.
-      if (isa<AllocaInst>(SrcOp)) {
-        // See if the bitcast simplifies, if so, don't nuke this GEP yet.
-        if (Instruction *I = visitBitCast(*BCI)) {
-          if (I != BCI) {
-            I->takeName(BCI);
-            I->insertInto(BCI->getParent(), BCI->getIterator());
-            replaceInstUsesWith(*BCI, I);
-          }
-          return &GEP;
-        }
-      }
-
-      if (SrcType->getPointerAddressSpace() != GEP.getAddressSpace())
-        return new AddrSpaceCastInst(SrcOp, GEP.getType());
-      return new BitCastInst(SrcOp, GEP.getType());
-    }
-
-    // Otherwise, if the offset is non-zero, we need to find out if there is a
-    // field at Offset in 'A's type.  If so, we can pull the cast through the
-    // GEP.
-    SmallVector<Value *, 8> NewIndices;
-    if (findElementAtOffset(SrcType, Offset.getSExtValue(), NewIndices, DL)) {
-      Value *NGEP = Builder.CreateGEP(SrcEltType, SrcOp, NewIndices, "",
-                                      GEP.isInBounds());
-
-      if (NGEP->getType() == GEP.getType())
-        return replaceInstUsesWith(GEP, NGEP);
-      NGEP->takeName(&GEP);
-
-      if (NGEP->getType()->getPointerAddressSpace() != GEP.getAddressSpace())
-        return new AddrSpaceCastInst(NGEP, GEP.getType());
-      return new BitCastInst(NGEP, GEP.getType());
-    }
-  }
-
-  return nullptr;
-}
-
 Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   Value *PtrOp = GEP.getOperand(0);
   SmallVector<Value *, 8> Indices(GEP.indices());
@@ -2622,23 +2495,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       }
     }
   }
-
-  // addrspacecast between types is canonicalized as a bitcast, then an
-  // addrspacecast. To take advantage of the below bitcast + struct GEP, look
-  // through the addrspacecast.
-  Value *ASCStrippedPtrOp = PtrOp;
-  if (auto *ASC = dyn_cast<AddrSpaceCastInst>(PtrOp)) {
-    //   X = bitcast A addrspace(1)* to B addrspace(1)*
-    //   Y = addrspacecast A addrspace(1)* to B addrspace(2)*
-    //   Z = gep Y, <...constant indices...>
-    // Into an addrspacecasted GEP of the struct.
-    if (auto *BC = dyn_cast<BitCastInst>(ASC->getOperand(0)))
-      ASCStrippedPtrOp = BC;
-  }
-
-  if (auto *BCI = dyn_cast<BitCastInst>(ASCStrippedPtrOp))
-    if (Instruction *I = visitGEPOfBitcast(BCI, GEP))
-      return I;
 
   if (!GEP.isInBounds()) {
     unsigned IdxWidth =
