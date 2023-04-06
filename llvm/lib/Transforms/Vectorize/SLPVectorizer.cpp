@@ -9411,9 +9411,11 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
         continue;
       auto *EI = cast<ExtractElementInst>(E->Scalars[I]);
       VecBase = EI->getVectorOperand();
-      // If all users are vectorized - can delete the extractelement itself.
-      if (any_of(EI->users(),
-                 [&](User *U) { return !ScalarToTreeEntry.count(U); }))
+      // If the only one use is vectorized - can delete the extractelement
+      // itself.
+      if (!EI->hasOneUse() || any_of(EI->users(), [&](User *U) {
+            return !ScalarToTreeEntry.count(U);
+          }))
         continue;
       eraseInstruction(EI);
     }
