@@ -186,37 +186,86 @@ static bool hasPtrTailcallRegClass(const CodeGenInstruction *Inst) {
   });
 }
 
-// Calculates the integer value representing the BitsInit object
-static inline uint64_t getValueFromBitsInit(const BitsInit *B) {
-  assert(B->getNumBits() <= sizeof(uint64_t) * 8 && "BitInits' too long!");
+static uint8_t byteFromBitsInit(const BitsInit *B) {
+  unsigned N = B->getNumBits();
+  assert(N <= 8 && "Field is too large for uint8_t!");
 
-  uint64_t Value = 0;
-  for (unsigned i = 0, e = B->getNumBits(); i != e; ++i) {
-    BitInit *Bit = cast<BitInit>(B->getBit(i));
-    Value |= uint64_t(Bit->getValue()) << i;
+  uint8_t Value = 0;
+  for (unsigned I = 0; I != N; ++I) {
+    BitInit *Bit = cast<BitInit>(B->getBit(I));
+    Value |= Bit->getValue() << I;
   }
   return Value;
 }
 
-// Return true if the instruction defined as a register flavor.
-static inline bool hasRegisterFormat(const Record *Inst) {
-  const BitsInit *FormBits = Inst->getValueAsBitsInit("FormBits");
-  uint64_t FormBitsNum = getValueFromBitsInit(FormBits);
-
-  // Values from X86Local namespace defined in X86RecognizableInstr.cpp
-  return FormBitsNum >= X86Local::MRMDestReg && FormBitsNum <= X86Local::MRM7r;
+static bool mayFoldFromForm(uint8_t Form) {
+  switch (Form) {
+  default:
+    return Form >= X86Local::MRM0r && Form <= X86Local::MRM7r;
+  case X86Local::MRMXr:
+  case X86Local::MRMXrCC:
+  case X86Local::MRMDestReg:
+  case X86Local::MRMSrcReg:
+  case X86Local::MRMSrcReg4VOp3:
+  case X86Local::MRMSrcRegOp4:
+  case X86Local::MRMSrcRegCC:
+    return true;
+  }
 }
 
-// Return true if the instruction defined as a memory flavor.
-static inline bool hasMemoryFormat(const Record *Inst) {
-  const BitsInit *FormBits = Inst->getValueAsBitsInit("FormBits");
-  uint64_t FormBitsNum = getValueFromBitsInit(FormBits);
-
-  // Values from X86Local namespace defined in X86RecognizableInstr.cpp
-  return FormBitsNum >= X86Local::MRMDestMem && FormBitsNum <= X86Local::MRM7m;
+static bool mayFoldToForm(uint8_t Form) {
+  switch (Form) {
+  default:
+    return Form >= X86Local::MRM0m && Form <= X86Local::MRM7m;
+  case X86Local::MRMXm:
+  case X86Local::MRMXmCC:
+  case X86Local::MRMDestMem:
+  case X86Local::MRMSrcMem:
+  case X86Local::MRMSrcMem4VOp3:
+  case X86Local::MRMSrcMemOp4:
+  case X86Local::MRMSrcMemCC:
+    return true;
+  }
 }
 
-static inline bool isNOREXRegClass(const Record *Op) {
+static bool mayFoldFromLeftToRight(uint8_t LHS, uint8_t RHS) {
+  switch (LHS) {
+  default:
+    llvm_unreachable("Unexpected Form!");
+  case X86Local::MRM0r:
+    return RHS == X86Local::MRM0m;
+  case X86Local::MRM1r:
+    return RHS == X86Local::MRM1m;
+  case X86Local::MRM2r:
+    return RHS == X86Local::MRM2m;
+  case X86Local::MRM3r:
+    return RHS == X86Local::MRM3m;
+  case X86Local::MRM4r:
+    return RHS == X86Local::MRM4m;
+  case X86Local::MRM5r:
+    return RHS == X86Local::MRM5m;
+  case X86Local::MRM6r:
+    return RHS == X86Local::MRM6m;
+  case X86Local::MRM7r:
+    return RHS == X86Local::MRM7m;
+  case X86Local::MRMXr:
+    return RHS == X86Local::MRMXm;
+  case X86Local::MRMXrCC:
+    return RHS == X86Local::MRMXmCC;
+  case X86Local::MRMDestReg:
+    return RHS == X86Local::MRMDestMem;
+  case X86Local::MRMSrcReg:
+    return RHS == X86Local::MRMSrcMem;
+  case X86Local::MRMSrcReg4VOp3:
+    return RHS == X86Local::MRMSrcMem4VOp3;
+  case X86Local::MRMSrcRegOp4:
+    return RHS == X86Local::MRMSrcMemOp4;
+  case X86Local::MRMSrcRegCC:
+    return RHS == X86Local::MRMSrcMemCC;
+  }
+}
+
+static bool isNOREXRegClass(const Record *Op) {
   return Op->getName().contains("_NOREX");
 }
 
@@ -240,9 +289,7 @@ public:
     if (RegRI.HasEVEX_B != 0 || MemRI.HasEVEX_B != 0)
       return false;
 
-    // Instruction's format - The register form's "Form" field should be
-    // the opposite of the memory form's "Form" field.
-    if (!areOppositeForms(RegRI.Form, MemRI.Form))
+    if (!mayFoldFromLeftToRight(RegRI.Form, MemRI.Form))
       return false;
 
     // X86 encoding is crazy, e.g
@@ -325,31 +372,6 @@ public:
 
     return true;
   }
-
-private:
-  // Return true of the 2 given forms are the opposite of each other.
-  bool areOppositeForms(unsigned RegForm, unsigned MemForm) {
-    if ((MemForm == X86Local::MRM0m && RegForm == X86Local::MRM0r) ||
-        (MemForm == X86Local::MRM1m && RegForm == X86Local::MRM1r) ||
-        (MemForm == X86Local::MRM2m && RegForm == X86Local::MRM2r) ||
-        (MemForm == X86Local::MRM3m && RegForm == X86Local::MRM3r) ||
-        (MemForm == X86Local::MRM4m && RegForm == X86Local::MRM4r) ||
-        (MemForm == X86Local::MRM5m && RegForm == X86Local::MRM5r) ||
-        (MemForm == X86Local::MRM6m && RegForm == X86Local::MRM6r) ||
-        (MemForm == X86Local::MRM7m && RegForm == X86Local::MRM7r) ||
-        (MemForm == X86Local::MRMXm && RegForm == X86Local::MRMXr) ||
-        (MemForm == X86Local::MRMXmCC && RegForm == X86Local::MRMXrCC) ||
-        (MemForm == X86Local::MRMDestMem && RegForm == X86Local::MRMDestReg) ||
-        (MemForm == X86Local::MRMSrcMem && RegForm == X86Local::MRMSrcReg) ||
-        (MemForm == X86Local::MRMSrcMem4VOp3 &&
-         RegForm == X86Local::MRMSrcReg4VOp3) ||
-        (MemForm == X86Local::MRMSrcMemOp4 &&
-         RegForm == X86Local::MRMSrcRegOp4) ||
-        (MemForm == X86Local::MRMSrcMemCC && RegForm == X86Local::MRMSrcRegCC))
-      return true;
-
-    return false;
-  }
 };
 
 } // end anonymous namespace
@@ -420,21 +442,18 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   } else if (RegInstr->isMoveReg && Result.IsStore)
     Result.CannotUnfold = true;
 
-  uint64_t Enc = getValueFromBitsInit(RegRec->getValueAsBitsInit("OpEncBits"));
+  uint8_t Enc = byteFromBitsInit(RegRec->getValueAsBitsInit("OpEncBits"));
   if (isExplicitAlign(RegInstr)) {
     // The instruction require explicitly aligned memory.
     BitsInit *VectSize = RegRec->getValueAsBitsInit("VectSize");
-    uint64_t Value = getValueFromBitsInit(VectSize);
     Result.IsAligned = true;
-    Result.Alignment = Value;
-  } else if (Enc != X86Local::XOP && Enc != X86Local::VEX &&
-             Enc != X86Local::EVEX) {
-    // Instructions with VEX encoding do not require alignment.
-    if (!isExplicitUnalign(RegInstr) && getMemOperandSize(MemOpRec) > 64) {
-      // SSE packed vector instructions require a 16 byte alignment.
-      Result.IsAligned = true;
-      Result.Alignment = 16;
-    }
+    Result.Alignment = byteFromBitsInit(VectSize);
+  } else if (!Enc && !isExplicitUnalign(RegInstr) &&
+             getMemOperandSize(MemOpRec) > 64) {
+    // Instructions with XOP/VEX/EVEX encoding do not require alignment while
+    // SSE packed vector instructions require a 16 byte alignment.
+    Result.IsAligned = true;
+    Result.Alignment = 16;
   }
   // Expand is only ever created as a masked instruction. It is not safe to
   // unfold a masked expand because we don't know if it came from an expand load
@@ -539,12 +558,14 @@ void X86FoldTablesEmitter::run(raw_ostream &o) {
       continue;
 
     // Add all the memory form instructions to MemInsts, and all the register
-    // form instructions to RegInsts[Opc], where Opc in the opcode of each
+    // form instructions to RegInsts[Opc], where Opc is the opcode of each
     // instructions. this helps reducing the runtime of the backend.
-    if (hasMemoryFormat(Rec))
+    const BitsInit *FormBits = Rec->getValueAsBitsInit("FormBits");
+    uint8_t Form = byteFromBitsInit(FormBits);
+    if (mayFoldToForm(Form))
       MemInsts.push_back(Inst);
-    else if (hasRegisterFormat(Rec)) {
-      uint8_t Opc = getValueFromBitsInit(Rec->getValueAsBitsInit("Opcode"));
+    else if (mayFoldFromForm(Form)) {
+      uint8_t Opc = byteFromBitsInit(Rec->getValueAsBitsInit("Opcode"));
       RegInsts[Opc].push_back(Inst);
     }
   }
@@ -555,7 +576,7 @@ void X86FoldTablesEmitter::run(raw_ostream &o) {
   // instruction.
   for (const CodeGenInstruction *MemInst : MemInsts) {
     uint8_t Opc =
-        getValueFromBitsInit(MemInst->TheDef->getValueAsBitsInit("Opcode"));
+        byteFromBitsInit(MemInst->TheDef->getValueAsBitsInit("Opcode"));
 
     auto RegInstsIt = RegInsts.find(Opc);
     if (RegInstsIt == RegInsts.end())
