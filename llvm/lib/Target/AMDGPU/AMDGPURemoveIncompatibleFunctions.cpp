@@ -14,8 +14,7 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
@@ -108,27 +107,6 @@ FeatureBitset expandImpliedFeatures(const FeatureBitset &Features) {
   }
   return Result;
 }
-
-static int DK_IncompatibleFn = getNextAvailablePluginDiagnosticKind();
-
-struct DiagnosticInfoRemovingIncompatibleFunction
-    : public DiagnosticInfoWithLocationBase {
-  DiagnosticInfoRemovingIncompatibleFunction(Function &F, Twine M)
-      : DiagnosticInfoWithLocationBase(DiagnosticKind(DK_IncompatibleFn),
-                                       DS_Remark, F, DiagnosticLocation()),
-        Msg(M.str()) {}
-
-  void print(DiagnosticPrinter &DP) const override {
-    DP << getFunction().getName() << ": removing function: " << Msg;
-  }
-
-  static bool classof(const DiagnosticInfo *DI) {
-    return DI->getKind() == DK_IncompatibleFn;
-  }
-
-  std::string Msg;
-};
-
 } // end anonymous namespace
 
 bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
@@ -150,8 +128,6 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
   if (!GPUInfo)
     return false;
 
-  LLVMContext &Ctx = F.getContext();
-
   // Get all the features implied by the current GPU, and recursively expand
   // the features that imply other features.
   //
@@ -167,10 +143,17 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
   // GPU's feature set. We only check a predetermined set of features.
   for (unsigned Feature : FeaturesToCheck) {
     if (ST->hasFeature(Feature) && !GPUFeatureBits.test(Feature)) {
-      DiagnosticInfoRemovingIncompatibleFunction DiagInfo(
-          F, "+" + getFeatureName(Feature) +
-                 " is not supported on the current target");
-      Ctx.diagnose(DiagInfo);
+      OptimizationRemarkEmitter ORE(&F);
+      ORE.emit([&]() {
+        // Note: we print the function name as part of the diagnostic because if
+        // debug info is not present, users get "<unknown>:0:0" as the debug
+        // loc. If we didn't print the function name there would be no way to
+        // tell which function got removed.
+        return OptimizationRemark(DEBUG_TYPE, "AMDGPUIncompatibleFnRemoved", &F)
+               << "removing function '" << F.getName() << "': +"
+               << getFeatureName(Feature)
+               << " is not supported on the current target";
+      });
       return true;
     }
   }
