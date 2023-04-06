@@ -240,6 +240,10 @@ def IsUnrankedMemRefTypePred
 def IsUnrankedTensorTypePred
         : CPred<"$_self.isa<::mlir::UnrankedTensorType>()">;
 
+// Whether a type is a RankedTensorType
+def IsRankedTensorTypePred
+        : CPred<"$_self.isa<::mlir::RankedTensorType>()">;
+
 // Whether a type is a BaseMemRefType
 def IsBaseMemRefTypePred
         : CPred<"$_self.isa<::mlir::BaseMemRefType>()">;
@@ -721,11 +725,21 @@ def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped",
 //===----------------------------------------------------------------------===//
 // Tensor types.
 
-// Unranked tensor type whose element type is from the given
-// `allowedTypes` list.
-class UnrankedTensorOf<list<Type> allowedTypes>
-  : ShapedContainerType<allowedTypes, IsUnrankedTensorTypePred,
-      "unranked.tensor", "::mlir::UnrankedTensorType">;
+// Unranked tensor type whose element type is from the given `allowedTypes`
+// list, and which additionally satisfies an optional list of predicates.
+class UnrankedTensorOf<list<Type> allowedTypes, list<Pred> preds = [],
+                       string summary = "unranked tensor">
+  : ShapedContainerType<
+      allowedTypes, And<!listconcat([IsUnrankedTensorTypePred], preds)>,
+      summary, "::mlir::UnrankedTensorType">;
+
+// Ranked tensor type whose element type is from the given `allowedTypes` list,
+// and which additionally satisfies an optional list of predicates.
+class RankedTensorOf<list<Type> allowedTypes, list<Pred> preds = [],
+                     string summary = "ranked tensor">
+  : ShapedContainerType<
+      allowedTypes, And<!listconcat([IsRankedTensorTypePred], preds)>,
+      summary, "::mlir::RankedTensorType">;
 
 // Any tensor type whose element type is from the given `allowedTypes`
 // list, and which additionally satisfies an optional list of predicates.
@@ -754,12 +768,6 @@ def F16Tensor  : TensorOf<[F16]>;
 def F32Tensor  : TensorOf<[F32]>;
 def F64Tensor  : TensorOf<[F64]>;
 
-class RankedTensorOf<
-    list<Type> allowedTypes,
-    list<Pred> preds = [],
-    string summary = "ranked tensor">
-  : TensorOf<allowedTypes, !listconcat([HasRankPred], preds), summary>;
-
 class Non0RankedTensorOf<list<Type> allowedTypes>
   : TensorOf<allowedTypes, [HasRankGreaterOrEqualPred<1>],
       "non-0-ranked.tensor">;
@@ -768,12 +776,13 @@ def AnyRankedTensor : RankedTensorOf<[AnyType]>;
 def AnyNon0RankedTensor  : Non0RankedTensorOf<[AnyType]>;
 def AnyUnrankedTensor  : UnrankedTensorOf<[AnyType]>;
 
-def AnyNon0RankedOrUnrankedTensor:
-    AnyTypeOf<[AnyUnrankedTensor, AnyNon0RankedTensor]>;
+def AnyNon0RankedOrUnrankedTensor
+  : AnyTypeOf<[AnyUnrankedTensor, AnyNon0RankedTensor],
+              "non-0-ranked or unranked tensor", "::mlir::TensorType">;
 
 // Ranked tensor type with one of the specified types and ranks.
 class TensorRankOf<list<Type> allowedTypes, list<int> ranks>
-  : TensorOf<allowedTypes,
+  : RankedTensorOf<allowedTypes,
       [HasAnyRankOfPred<ranks>],
       !interleave(!foreach(rank, ranks, rank # "D"), "/") # " tensor">;
 
@@ -784,7 +793,8 @@ class 3DTensorOf<list<Type> allowedTypes> : TensorRankOf<allowedTypes, [3]>;
 class 4DTensorOf<list<Type> allowedTypes> : TensorRankOf<allowedTypes, [4]>;
 
 class StaticShapeTensorOf<list<Type> allowedTypes>
-  : TensorOf<allowedTypes, [HasStaticShapePred], "statically shaped tensor">;
+  : RankedTensorOf<allowedTypes, [HasStaticShapePred],
+                   "statically shaped tensor">;
 
 def AnyStaticShapeTensor : StaticShapeTensorOf<[AnyType]>;
 

@@ -30,9 +30,8 @@ using namespace mlir;
 // ToyToAffine RewritePatterns
 //===----------------------------------------------------------------------===//
 
-/// Convert the given TensorType into the corresponding MemRefType.
-static MemRefType convertTensorToMemRef(TensorType type) {
-  assert(type.hasRank() && "expected only ranked shapes");
+/// Convert the given RankedTensorType into the corresponding MemRefType.
+static MemRefType convertTensorToMemRef(RankedTensorType type) {
   return MemRefType::get(type.getShape(), type.getElementType());
 }
 
@@ -63,7 +62,7 @@ using LoopIterationFn = function_ref<Value(
 static void lowerOpToLoops(Operation *op, ValueRange operands,
                            PatternRewriter &rewriter,
                            LoopIterationFn processIteration) {
-  auto tensorType = (*op->result_type_begin()).cast<TensorType>();
+  auto tensorType = (*op->result_type_begin()).cast<RankedTensorType>();
   auto loc = op->getLoc();
 
   // Insert an allocation and deallocation for the result of this operation.
@@ -144,7 +143,7 @@ struct ConstantOpLowering : public OpRewritePattern<toy::ConstantOp> {
 
     // When lowering the constant operation, we allocate and assign the constant
     // values to a corresponding memref allocation.
-    auto tensorType = op.getType().cast<TensorType>();
+    auto tensorType = op.getType().cast<RankedTensorType>();
     auto memRefType = convertTensorToMemRef(tensorType);
     auto alloc = insertAllocAndDealloc(memRefType, loc, rewriter);
 
