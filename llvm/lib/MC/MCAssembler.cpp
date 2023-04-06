@@ -996,8 +996,7 @@ bool MCAssembler::relaxInstruction(MCAsmLayout &Layout,
   // probably do so more efficiently in many cases.
   SmallVector<MCFixup, 4> Fixups;
   SmallString<256> Code;
-  raw_svector_ostream VecOS(Code);
-  getEmitter().encodeInstruction(Relaxed, VecOS, Fixups, *F.getSubtargetInfo());
+  getEmitter().encodeInstruction(Relaxed, Code, Fixups, *F.getSubtargetInfo());
 
   // Update the fragment.
   F.setInst(Relaxed);

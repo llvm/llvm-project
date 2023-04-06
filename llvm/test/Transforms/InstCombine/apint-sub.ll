@@ -38,8 +38,8 @@ define i108 @test4(i108 %A, i108 %x) {
 
 define i19 @test5(i19 %A, i19 %Bok, i19 %Cok) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[D1:%.*]] = sub i19 [[COK:%.*]], [[BOK:%.*]]
-; CHECK-NEXT:    [[E:%.*]] = add i19 [[D1]], [[A:%.*]]
+; CHECK-NEXT:    [[D_NEG:%.*]] = sub i19 [[COK:%.*]], [[BOK:%.*]]
+; CHECK-NEXT:    [[E:%.*]] = add i19 [[D_NEG]], [[A:%.*]]
 ; CHECK-NEXT:    ret i19 [[E]]
 ;
   %D = sub i19 %Bok, %Cok
@@ -99,8 +99,8 @@ define i1 @test11(i9 %A, i9 %B) {
 
 define i43 @test12(i43 %A) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[C:%.*]] = lshr i43 [[A:%.*]], 42
-; CHECK-NEXT:    ret i43 [[C]]
+; CHECK-NEXT:    [[B_NEG:%.*]] = lshr i43 [[A:%.*]], 42
+; CHECK-NEXT:    ret i43 [[B_NEG]]
 ;
   %B = ashr i43 %A, 42
   %C = sub i43 0, %B
@@ -109,8 +109,8 @@ define i43 @test12(i43 %A) {
 
 define i79 @test13(i79 %A) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[C:%.*]] = ashr i79 [[A:%.*]], 78
-; CHECK-NEXT:    ret i79 [[C]]
+; CHECK-NEXT:    [[B_NEG:%.*]] = ashr i79 [[A:%.*]], 78
+; CHECK-NEXT:    ret i79 [[B_NEG]]
 ;
   %B = lshr i79 %A, 78
   %C = sub i79 0, %B
@@ -119,8 +119,8 @@ define i79 @test13(i79 %A) {
 
 define i1024 @test14(i1024 %A) {
 ; CHECK-LABEL: @test14(
-; CHECK-NEXT:    [[D:%.*]] = ashr i1024 [[A:%.*]], 1023
-; CHECK-NEXT:    ret i1024 [[D]]
+; CHECK-NEXT:    [[B_NEG:%.*]] = ashr i1024 [[A:%.*]], 1023
+; CHECK-NEXT:    ret i1024 [[B_NEG]]
 ;
   %B = lshr i1024 %A, 1023
   %C = bitcast i1024 %B to i1024
@@ -130,8 +130,8 @@ define i1024 @test14(i1024 %A) {
 
 define i51 @test16(i51 %A) {
 ; CHECK-LABEL: @test16(
-; CHECK-NEXT:    [[Y:%.*]] = sdiv i51 [[A:%.*]], -1123
-; CHECK-NEXT:    ret i51 [[Y]]
+; CHECK-NEXT:    [[X_NEG:%.*]] = sdiv i51 [[A:%.*]], -1123
+; CHECK-NEXT:    ret i51 [[X_NEG]]
 ;
   %X = sdiv i51 %A, 1123
   %Y = sub i51 0, %X

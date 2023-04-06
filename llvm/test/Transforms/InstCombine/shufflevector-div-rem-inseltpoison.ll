@@ -89,8 +89,8 @@ define <2 x i16> @test_udiv(i16 %a, i1 %cmp) {
 define <2 x float> @test_fdiv(float %a, float %b, i1 %cmp) {
 ; CHECK-LABEL: @test_fdiv(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float [[A:%.*]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fdiv <2 x float> [[TMP1]], <float undef, float 3.000000e+00>
-; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x float> <float 7.700000e+01, float 9.900000e+01>, <2 x float> [[TMP2]]
+; CHECK-NEXT:    [[SPLAT_OP:%.*]] = fdiv <2 x float> [[TMP1]], <float undef, float 3.000000e+00>
+; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x float> <float 7.700000e+01, float 9.900000e+01>, <2 x float> [[SPLAT_OP]]
 ; CHECK-NEXT:    ret <2 x float> [[T2]]
 ;
   %splatinsert = insertelement <2 x float> poison, float %a, i32 0
@@ -106,8 +106,8 @@ define <2 x float> @test_fdiv(float %a, float %b, i1 %cmp) {
 define <2 x float> @test_frem(float %a, float %b, i1 %cmp) {
 ; CHECK-LABEL: @test_frem(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float [[A:%.*]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = frem <2 x float> [[TMP1]], <float undef, float 3.000000e+00>
-; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x float> <float 7.700000e+01, float 9.900000e+01>, <2 x float> [[TMP2]]
+; CHECK-NEXT:    [[SPLAT_OP:%.*]] = frem <2 x float> [[TMP1]], <float undef, float 3.000000e+00>
+; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x float> <float 7.700000e+01, float 9.900000e+01>, <2 x float> [[SPLAT_OP]]
 ; CHECK-NEXT:    ret <2 x float> [[T2]]
 ;
   %splatinsert = insertelement <2 x float> poison, float %a, i32 0

@@ -53,8 +53,7 @@ void MCWinCOFFStreamer::emitInstToData(const MCInst &Inst,
 
   SmallVector<MCFixup, 4> Fixups;
   SmallString<256> Code;
-  raw_svector_ostream VecOS(Code);
-  getAssembler().getEmitter().encodeInstruction(Inst, VecOS, Fixups, STI);
+  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
 
   // Add the fixups and data.
   for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {

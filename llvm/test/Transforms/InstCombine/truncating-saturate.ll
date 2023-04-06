@@ -10,8 +10,8 @@ define i8 @testi16i8(i16 %add) {
 ; CHECK-LABEL: @testi16i8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smax.i16(i16 [[ADD:%.*]], i16 -128)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.smin.i16(i16 [[TMP1]], i16 127)
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i16 [[TMP2]] to i8
-; CHECK-NEXT:    ret i8 [[TMP3]]
+; CHECK-NEXT:    [[COND_I:%.*]] = trunc i16 [[TMP2]] to i8
+; CHECK-NEXT:    ret i8 [[COND_I]]
 ;
   %sh = lshr i16 %add, 8
   %conv.i = trunc i16 %sh to i8
@@ -29,8 +29,8 @@ define i32 @testi64i32(i64 %add) {
 ; CHECK-LABEL: @testi64i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.smax.i64(i64 [[ADD:%.*]], i64 -2147483648)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP1]], i64 2147483647)
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[COND_I:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    ret i32 [[COND_I]]
 ;
   %sh = lshr i64 %add, 32
   %conv.i = trunc i64 %sh to i32
@@ -48,8 +48,8 @@ define i16 @testi32i16i8(i32 %add) {
 ; CHECK-LABEL: @testi32i16i8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[ADD:%.*]], i32 -128)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 127)
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
-; CHECK-NEXT:    ret i16 [[TMP3]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
 ;
   %a = add i32 %add, 128
   %cmp = icmp ult i32 %a, 256
@@ -64,8 +64,8 @@ define <4 x i16> @testv4i32i16i8(<4 x i32> %add) {
 ; CHECK-LABEL: @testv4i32i16i8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[ADD:%.*]], <4 x i32> <i32 -128, i32 -128, i32 -128, i32 -128>)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[TMP1]], <4 x i32> <i32 127, i32 127, i32 127, i32 127>)
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <4 x i32> [[TMP2]] to <4 x i16>
-; CHECK-NEXT:    ret <4 x i16> [[TMP3]]
+; CHECK-NEXT:    [[R:%.*]] = trunc <4 x i32> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    ret <4 x i16> [[R]]
 ;
   %a = add <4 x i32> %add, <i32 128, i32 128, i32 128, i32 128>
   %cmp = icmp ult <4 x i32> %a, <i32 256, i32 256, i32 256, i32 256>
@@ -79,8 +79,8 @@ define <4 x i16> @testv4i32i16i8(<4 x i32> %add) {
 define i32 @testi32i32i8(i32 %add) {
 ; CHECK-LABEL: @testi32i32i8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[ADD:%.*]], i32 -128)
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 127)
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 127)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %add, 128
   %cmp = icmp ult i32 %a, 256
@@ -94,8 +94,8 @@ define i16 @test_truncfirst(i32 %add) {
 ; CHECK-LABEL: @test_truncfirst(
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[ADD:%.*]] to i16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smax.i16(i16 [[T]], i16 -128)
-; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.smin.i16(i16 [[TMP1]], i16 127)
-; CHECK-NEXT:    ret i16 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.smin.i16(i16 [[TMP1]], i16 127)
+; CHECK-NEXT:    ret i16 [[R]]
 ;
   %t = trunc i32 %add to i16
   %a = add i16 %t, 128
@@ -149,8 +149,8 @@ define <4 x i8> @testv4i16i8(<4 x i16> %add) {
 ; CHECK-LABEL: @testv4i16i8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.smax.v4i16(<4 x i16> [[ADD:%.*]], <4 x i16> <i16 -128, i16 -128, i16 -128, i16 -128>)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP1]], <4 x i16> <i16 127, i16 127, i16 127, i16 127>)
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <4 x i16> [[TMP2]] to <4 x i8>
-; CHECK-NEXT:    ret <4 x i8> [[TMP3]]
+; CHECK-NEXT:    [[COND_I:%.*]] = trunc <4 x i16> [[TMP2]] to <4 x i8>
+; CHECK-NEXT:    ret <4 x i8> [[COND_I]]
 ;
   %sh = lshr <4 x i16> %add, <i16 8, i16 8, i16 8, i16 8>
   %conv.i = trunc <4 x i16> %sh to <4 x i8>
@@ -188,8 +188,8 @@ define i8 @testi16i8_revcmp(i16 %add) {
 ; CHECK-LABEL: @testi16i8_revcmp(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smax.i16(i16 [[ADD:%.*]], i16 -128)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.smin.i16(i16 [[TMP1]], i16 127)
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i16 [[TMP2]] to i8
-; CHECK-NEXT:    ret i8 [[TMP3]]
+; CHECK-NEXT:    [[COND_I:%.*]] = trunc i16 [[TMP2]] to i8
+; CHECK-NEXT:    ret i8 [[COND_I]]
 ;
   %sh = lshr i16 %add, 8
   %conv.i = trunc i16 %sh to i8
@@ -207,8 +207,8 @@ define i8 @testi16i8_revselect(i16 %add) {
 ; CHECK-LABEL: @testi16i8_revselect(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smax.i16(i16 [[ADD:%.*]], i16 -128)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.smin.i16(i16 [[TMP1]], i16 127)
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i16 [[TMP2]] to i8
-; CHECK-NEXT:    ret i8 [[TMP3]]
+; CHECK-NEXT:    [[COND_I:%.*]] = trunc i16 [[TMP2]] to i8
+; CHECK-NEXT:    ret i8 [[COND_I]]
 ;
   %sh = lshr i16 %add, 8
   %conv.i = trunc i16 %sh to i8
@@ -253,8 +253,8 @@ define i16 @differentconsts(i32 %x, i16 %replacement_low, i16 %replacement_high)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], 127
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[X]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], i16 256, i16 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i16 -1, i16 [[TMP4]]
-; CHECK-NEXT:    ret i16 [[TMP5]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i16 -1, i16 [[TMP4]]
+; CHECK-NEXT:    ret i16 [[R]]
 ;
   %t0 = icmp slt i32 %x, 128
   %t1 = select i1 %t0, i16 256, i16 65535
@@ -342,8 +342,8 @@ define i8 @badimm4(i16 %add) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i16 [[ADD]], 127
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i16 [[ADD]] to i8
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], i8 -127, i8 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i8 126, i8 [[TMP4]]
-; CHECK-NEXT:    ret i8 [[TMP5]]
+; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[TMP2]], i8 126, i8 [[TMP4]]
+; CHECK-NEXT:    ret i8 [[COND_I]]
 ;
   %sh = lshr i16 %add, 8
   %conv.i = trunc i16 %sh to i8
@@ -513,9 +513,9 @@ define i16 @differentconsts_useadd(i32 %x, i16 %replacement_low, i16 %replacemen
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], 127
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[X]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], i16 256, i16 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i16 -1, i16 [[TMP4]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i16 -1, i16 [[TMP4]]
 ; CHECK-NEXT:    call void @use(i32 [[T2]])
-; CHECK-NEXT:    ret i16 [[TMP5]]
+; CHECK-NEXT:    ret i16 [[R]]
 ;
   %t0 = icmp slt i32 %x, 128
   %t1 = select i1 %t0, i16 256, i16 65535

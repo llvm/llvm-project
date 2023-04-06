@@ -38,6 +38,9 @@ void populateArithWideIntEmulationPatterns(
 /// Add patterns to expand Arith ceil/floor division ops.
 void populateCeilFloorDivExpandOpsPatterns(RewritePatternSet &patterns);
 
+/// Add patterns to expand Arith bf16 patterns to lower level bitcasts/shifts.
+void populateExpandBFloat16Patterns(RewritePatternSet &patterns);
+
 /// Add patterns to expand Arith ops.
 void populateArithExpandOpsPatterns(RewritePatternSet &patterns);
 
