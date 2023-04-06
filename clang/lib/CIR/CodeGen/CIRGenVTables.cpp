@@ -135,14 +135,113 @@ void CIRGenModule::buildDeferredVTables() {
 
   for (const CXXRecordDecl *RD : DeferredVTables)
     if (shouldEmitVTableAtEndOfTranslationUnit(*this, RD)) {
-      llvm_unreachable("NYI");
-      // VTables.GenerateClassData(RD);
+      VTables.GenerateClassData(RD);
     } else if (shouldOpportunisticallyEmitVTables()) {
       llvm_unreachable("NYI");
-      // OpportunisticVTables.push_back(RD);
     }
 
   assert(savedSize == DeferredVTables.size() &&
          "deferred extra vtables during vtable emission?");
   DeferredVTables.clear();
+}
+
+void CIRGenVTables::GenerateClassData(const CXXRecordDecl *RD) {
+  assert(!UnimplementedFeature::generateDebugInfo());
+
+  if (RD->getNumVBases())
+    llvm_unreachable("NYI");
+
+  CGM.getCXXABI().emitVTableDefinitions(*this, RD);
+  llvm_unreachable("NYI");
+}
+
+/// Compute the required linkage of the vtable for the given class.
+///
+/// Note that we only call this at the end of the translation unit.
+mlir::cir::GlobalLinkageKind
+CIRGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
+  if (!RD->isExternallyVisible())
+    return mlir::cir::GlobalLinkageKind::InternalLinkage;
+
+  // We're at the end of the translation unit, so the current key
+  // function is fully correct.
+  const CXXMethodDecl *keyFunction = astCtx.getCurrentKeyFunction(RD);
+  if (keyFunction && !RD->hasAttr<DLLImportAttr>()) {
+    // If this class has a key function, use that to determine the
+    // linkage of the vtable.
+    const FunctionDecl *def = nullptr;
+    if (keyFunction->hasBody(def))
+      keyFunction = cast<CXXMethodDecl>(def);
+
+    switch (keyFunction->getTemplateSpecializationKind()) {
+    case TSK_Undeclared:
+    case TSK_ExplicitSpecialization:
+      assert(
+          (def || codeGenOpts.OptimizationLevel > 0 ||
+           codeGenOpts.getDebugInfo() != llvm::codegenoptions::NoDebugInfo) &&
+          "Shouldn't query vtable linkage without key function, "
+          "optimizations, or debug info");
+      if (!def && codeGenOpts.OptimizationLevel > 0)
+        return mlir::cir::GlobalLinkageKind::AvailableExternallyLinkage;
+
+      if (keyFunction->isInlined())
+        return !astCtx.getLangOpts().AppleKext
+                   ? mlir::cir::GlobalLinkageKind::LinkOnceODRLinkage
+                   : mlir::cir::GlobalLinkageKind::InternalLinkage;
+
+      return mlir::cir::GlobalLinkageKind::ExternalLinkage;
+
+    case TSK_ImplicitInstantiation:
+      return !astCtx.getLangOpts().AppleKext
+                 ? mlir::cir::GlobalLinkageKind::LinkOnceODRLinkage
+                 : mlir::cir::GlobalLinkageKind::InternalLinkage;
+
+    case TSK_ExplicitInstantiationDefinition:
+      return !astCtx.getLangOpts().AppleKext
+                 ? mlir::cir::GlobalLinkageKind::WeakODRLinkage
+                 : mlir::cir::GlobalLinkageKind::InternalLinkage;
+
+    case TSK_ExplicitInstantiationDeclaration:
+      llvm_unreachable("Should not have been asked to emit this");
+    }
+  }
+
+  // -fapple-kext mode does not support weak linkage, so we must use
+  // internal linkage.
+  if (astCtx.getLangOpts().AppleKext)
+    return mlir::cir::GlobalLinkageKind::InternalLinkage;
+
+  auto DiscardableODRLinkage = mlir::cir::GlobalLinkageKind::LinkOnceODRLinkage;
+  auto NonDiscardableODRLinkage = mlir::cir::GlobalLinkageKind::WeakODRLinkage;
+  if (RD->hasAttr<DLLExportAttr>()) {
+    // Cannot discard exported vtables.
+    DiscardableODRLinkage = NonDiscardableODRLinkage;
+  } else if (RD->hasAttr<DLLImportAttr>()) {
+    // Imported vtables are available externally.
+    DiscardableODRLinkage =
+        mlir::cir::GlobalLinkageKind::AvailableExternallyLinkage;
+    NonDiscardableODRLinkage =
+        mlir::cir::GlobalLinkageKind::AvailableExternallyLinkage;
+  }
+
+  switch (RD->getTemplateSpecializationKind()) {
+  case TSK_Undeclared:
+  case TSK_ExplicitSpecialization:
+  case TSK_ImplicitInstantiation:
+    return DiscardableODRLinkage;
+
+  case TSK_ExplicitInstantiationDeclaration:
+    // Explicit instantiations in MSVC do not provide vtables, so we must emit
+    // our own.
+    if (getTarget().getCXXABI().isMicrosoft())
+      return DiscardableODRLinkage;
+    return shouldEmitAvailableExternallyVTable(*this, RD)
+               ? mlir::cir::GlobalLinkageKind::AvailableExternallyLinkage
+               : mlir::cir::GlobalLinkageKind::ExternalLinkage;
+
+  case TSK_ExplicitInstantiationDefinition:
+    return NonDiscardableODRLinkage;
+  }
+
+  llvm_unreachable("Invalid TemplateSpecializationKind!");
 }

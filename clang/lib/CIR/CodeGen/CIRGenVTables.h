@@ -148,11 +148,10 @@ public:
   //   /// EmitThunks - Emit the associated thunks for the given global decl.
   //   void EmitThunks(GlobalDecl GD);
 
-  //   /// GenerateClassData - Generate all the class data required to be
-  //   /// generated upon definition of a KeyFunction.  This includes the
-  //   /// vtable, the RTTI data structure (if RTTI is enabled) and the VTT
-  //   /// (if the class has virtual bases).
-  //   void GenerateClassData(const CXXRecordDecl *RD);
+  /// Generate all the class data required to be generated upon definition of a
+  /// KeyFunction. This includes the vtable, the RTTI data structure (if RTTI
+  /// is enabled) and the VTT (if the class has virtual bases).
+  void GenerateClassData(const clang::CXXRecordDecl *RD);
 
   bool isVTableExternal(const clang::CXXRecordDecl *RD);
 
