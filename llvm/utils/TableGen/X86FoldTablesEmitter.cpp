@@ -148,7 +148,7 @@ private:
   // Decides to which table to add the entry with the given instructions.
   // S sets the strategy of adding the TB_NO_REVERSE flag.
   void updateTables(const CodeGenInstruction *RegInstr,
-                    const CodeGenInstruction *MemInstr, const uint16_t S = 0,
+                    const CodeGenInstruction *MemInstr, uint16_t S = 0,
                     bool IsManual = false);
 
   // Generates X86FoldTableEntry with the given instructions and fill it with
@@ -323,11 +323,10 @@ public:
     // Make sure the sizes of the operands of both instructions suit each other.
     // This is needed for instructions with intrinsic version (_Int).
     // Where the only difference is the size of the operands.
-    // For example: VUCOMISDZrm and Int_VUCOMISDrm
+    // For example: VUCOMISDZrm and VUCOMISDrm_Int
     // Also for instructions that their EVEX version was upgraded to work with
     // k-registers. For example VPCMPEQBrm (xmm output register) and
     // VPCMPEQBZ128rm (k register output register).
-    bool ArgFolded = false;
     unsigned MemOutSize = MemRec->getValueAsDag("OutOperandList")->getNumArgs();
     unsigned RegOutSize = RegRec->getValueAsDag("OutOperandList")->getNumArgs();
     unsigned MemInSize = MemRec->getValueAsDag("InOperandList")->getNumArgs();
@@ -338,34 +337,36 @@ public:
     unsigned RegStartIdx =
         (MemOutSize + 1 == RegOutSize) && (MemInSize == RegInSize) ? 1 : 0;
 
-    for (unsigned i = 0, e = MemInst->Operands.size(); i < e; i++) {
-      Record *MemOpRec = MemInst->Operands[i].Rec;
-      Record *RegOpRec = RegInst->Operands[i + RegStartIdx].Rec;
+    bool FoundFoldedOp = false;
+    for (unsigned I = 0, E = MemInst->Operands.size(); I != E; I++) {
+      Record *MemOpRec = MemInst->Operands[I].Rec;
+      Record *RegOpRec = RegInst->Operands[I + RegStartIdx].Rec;
 
       if (MemOpRec == RegOpRec)
         continue;
 
-      if (isRegisterOperand(MemOpRec) && isRegisterOperand(RegOpRec)) {
-        if (getRegOperandSize(MemOpRec) != getRegOperandSize(RegOpRec) ||
-            isNOREXRegClass(MemOpRec) != isNOREXRegClass(RegOpRec))
-          return false;
-      } else if (isMemoryOperand(MemOpRec) && isMemoryOperand(RegOpRec)) {
-        if (getMemOperandSize(MemOpRec) != getMemOperandSize(RegOpRec))
-          return false;
-      } else if (isImmediateOperand(MemOpRec) && isImmediateOperand(RegOpRec)) {
-        if (MemOpRec->getValueAsDef("Type") != RegOpRec->getValueAsDef("Type"))
-          return false;
-      } else {
-        // Only one operand can be folded.
-        if (ArgFolded)
-          return false;
+      if (isRegisterOperand(MemOpRec) && isRegisterOperand(RegOpRec) &&
+          ((getRegOperandSize(MemOpRec) != getRegOperandSize(RegOpRec)) ||
+           (isNOREXRegClass(MemOpRec) != isNOREXRegClass(RegOpRec))))
+        return false;
 
-        assert(isRegisterOperand(RegOpRec) && isMemoryOperand(MemOpRec));
-        ArgFolded = true;
-      }
+      if (isMemoryOperand(MemOpRec) && isMemoryOperand(RegOpRec) &&
+          (getMemOperandSize(MemOpRec) != getMemOperandSize(RegOpRec)))
+        return false;
+
+      if (isImmediateOperand(MemOpRec) && isImmediateOperand(RegOpRec) &&
+          (MemOpRec->getValueAsDef("Type") != RegOpRec->getValueAsDef("Type")))
+        return false;
+
+      // Only one operand can be folded.
+      if (FoundFoldedOp)
+        return false;
+
+      assert(isRegisterOperand(RegOpRec) && isMemoryOperand(MemOpRec));
+      FoundFoldedOp = true;
     }
 
-    return true;
+    return FoundFoldedOp;
   }
 };
 
@@ -458,7 +459,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
 
 void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
                                         const CodeGenInstruction *MemInstr,
-                                        const uint16_t S, bool IsManual) {
+                                        uint16_t S, bool IsManual) {
 
   Record *RegRec = RegInstr->TheDef;
   Record *MemRec = MemInstr->TheDef;
