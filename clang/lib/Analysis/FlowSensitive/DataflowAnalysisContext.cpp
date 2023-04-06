@@ -45,8 +45,7 @@ DataflowAnalysisContext::getReferencedFields(QualType Type) {
 }
 
 StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
-  if (!Type.isNull() &&
-      (Type->isStructureOrClassType() || Type->isUnionType())) {
+  if (!Type.isNull() && Type->isRecordType()) {
     llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
     // During context-sensitive analysis, a struct may be allocated in one
     // function, but its field accessed in a function lower in the stack than

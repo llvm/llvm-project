@@ -4,9 +4,9 @@ Contributing to LLVM
 
 
 Thank you for your interest in contributing to LLVM! There are multiple ways to
-contribute, and we appreciate all contributions. In case you
-have questions, you can either use the `Forum`_
-or the #llvm channel on `irc.oftc.net`_.
+contribute, and we appreciate all contributions. In case you have questions,
+you can either use the `Forum`_ or, for a more interactive chat, go to our
+`Discord server`_ or the IRC #llvm channel on `irc.oftc.net`_.
 
 If you want to contribute code, please familiarize yourself with the :doc:`DeveloperPolicy`.
 
@@ -195,6 +195,7 @@ of LLVM's high-level design, as well as its internals:
   .. __: http://www.aosabook.org/en/llvm.html
 
 .. _Forum: https://discourse.llvm.org
+.. _Discord server: https://discord.gg/xS7Z362
 .. _irc.oftc.net: irc://irc.oftc.net/llvm
 .. _good first issue: https://github.com/llvm/llvm-project/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22
 .. _bug tracker: https://github.com/llvm/llvm-project/issues
