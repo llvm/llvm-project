@@ -12,19 +12,14 @@ define i32 @foo(ptr addrspace(1) %arg) {
 ; CHECK-SAME: (ptr addrspace(1) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[INIT_VAL:%.*]] = load i32, ptr addrspace(1) [[ARG]], align 4
+; CHECK-NEXT:    [[WIDENABLE_COND11:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    br label [[LOOP_OUTER:%.*]]
 ; CHECK:       loop_outer:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[PHI36:%.*]], [[OUTER_LOOP_LATCH:%.*]] ], [ 42, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[PHI21:%.*]] = phi i32 [ [[ADD39:%.*]], [[OUTER_LOOP_LATCH]] ], [ [[INIT_VAL]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[ADD27:%.*]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[ICMP28:%.*]] = icmp eq i32 [[ADD27]], 60
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 -2, [[IV]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 8)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], [[UMIN]]
-; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[TMP1]]
-; CHECK-NEXT:    [[WIDENABLE_COND11:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[WIDENABLE_COND11]]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[INNER_LOOP_PH:%.*]], label [[DEOPT9:%.*]]
+; CHECK-NEXT:    br i1 [[WIDENABLE_COND11]], label [[INNER_LOOP_PH:%.*]], label [[DEOPT9:%.*]]
 ; CHECK:       inner_loop_ph:
 ; CHECK-NEXT:    store atomic i32 606, ptr addrspace(1) [[ARG]] unordered, align 4
 ; CHECK-NEXT:    br label [[INNER_LOOP:%.*]]
@@ -33,7 +28,7 @@ define i32 @foo(ptr addrspace(1) %arg) {
 ; CHECK-NEXT:    [[PHI44:%.*]] = phi i32 [ [[ADD27]], [[INNER_LOOP_PH]] ], [ [[ADD48:%.*]], [[INNER_LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[ADD48]] = add i32 [[PHI44]], 1
 ; CHECK-NEXT:    [[ICMP49:%.*]] = icmp eq i32 [[ADD48]], 0
-; CHECK-NEXT:    br i1 false, label [[DEOPT57:%.*]], label [[INNER_LOOP_LATCH]]
+; CHECK-NEXT:    br i1 [[ICMP49]], label [[DEOPT57:%.*]], label [[INNER_LOOP_LATCH]]
 ; CHECK:       inner_loop_latch:
 ; CHECK-NEXT:    store atomic i32 606, ptr addrspace(1) [[ARG]] unordered, align 4
 ; CHECK-NEXT:    [[ADD55]] = add nuw nsw i32 [[PHI43]], 1
