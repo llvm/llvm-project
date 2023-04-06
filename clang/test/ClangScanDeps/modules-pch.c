@@ -7,6 +7,7 @@
 
 // Scan dependencies of the PCH:
 //
+// RUN: rm -f %t/cdb_pch.json
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_pch.json > %t/cdb_pch.json
 // RUN: clang-scan-deps -compilation-database %t/cdb_pch.json -format experimental-full \
 // RUN:   -module-files-dir %t/build > %t/result_pch.json
@@ -94,6 +95,7 @@
 
 // Scan dependencies of the TU:
 //
+// RUN: rm -f %t/cdb_tu.json
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_tu.json > %t/cdb_tu.json
 // RUN: clang-scan-deps -compilation-database %t/cdb_tu.json -format experimental-full \
 // RUN:   -module-files-dir %t/build > %t/result_tu.json
@@ -142,6 +144,7 @@
 
 // Scan dependencies of the TU that has common modules with the PCH:
 //
+// RUN: rm -f %t/cdb_tu_with_common.json
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_tu_with_common.json > %t/cdb_tu_with_common.json
 // RUN: clang-scan-deps -compilation-database %t/cdb_tu_with_common.json -format experimental-full \
 // RUN:   -module-files-dir %t/build > %t/result_tu_with_common.json
