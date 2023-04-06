@@ -371,6 +371,30 @@ public:
   ///     failure.
   lldb::SBError ClearSectionLoadAddress(lldb::SBSection section);
 
+#ifndef SWIG
+  /// Slide all file addresses for all module sections so that \a module
+  /// appears to loaded at these slide addresses.
+  ///
+  /// When you need all sections within a module to be loaded at a
+  /// rigid slide from the addresses found in the module object file,
+  /// this function will allow you to easily and quickly slide all
+  /// module sections.
+  ///
+  /// \param[in] module
+  ///     The module to load.
+  ///
+  /// \param[in] sections_offset
+  ///     An offset that will be applied to all section file addresses
+  ///     (the virtual addresses found in the object file itself).
+  ///
+  /// \return
+  ///     An error to indicate success, fail, and any reason for
+  ///     failure.
+  [[deprecated("Use SetModuleLoadAddress(lldb::SBModule, uint64_t)")]]
+  lldb::SBError SetModuleLoadAddress(lldb::SBModule module,
+                                     int64_t sections_offset);
+#endif
+
   /// Slide all file addresses for all module sections so that \a module
   /// appears to loaded at these slide addresses.
   ///
@@ -390,7 +414,7 @@ public:
   ///     An error to indicate success, fail, and any reason for
   ///     failure.
   lldb::SBError SetModuleLoadAddress(lldb::SBModule module,
-                                     int64_t sections_offset);
+                                     uint64_t sections_offset);
 
   /// Clear the section base load addresses for all sections in a module.
   ///
