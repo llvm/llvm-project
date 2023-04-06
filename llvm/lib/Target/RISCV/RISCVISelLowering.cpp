@@ -577,7 +577,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Mask VTs are custom-expanded into a series of standard nodes
       setOperationAction({ISD::TRUNCATE, ISD::CONCAT_VECTORS,
-                          ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR},
+                          ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
+                          ISD::SCALAR_TO_VECTOR},
                          VT, Custom);
 
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT}, VT,
@@ -703,9 +704,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
            ISD::EXPERIMENTAL_VP_STRIDED_STORE, ISD::VP_GATHER, ISD::VP_SCATTER},
           VT, Custom);
 
-      setOperationAction(
-          {ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR},
-          VT, Custom);
+      setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
+                          ISD::EXTRACT_SUBVECTOR, ISD::SCALAR_TO_VECTOR},
+                         VT, Custom);
 
       setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
@@ -798,9 +799,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
 
-      setOperationAction(
-          {ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR},
-          VT, Custom);
+      setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
+                          ISD::EXTRACT_SUBVECTOR, ISD::SCALAR_TO_VECTOR},
+                         VT, Custom);
 
       setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
@@ -876,6 +877,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT},
                            VT, Custom);
+
+        setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Custom);
 
         setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
 
@@ -4138,6 +4141,25 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerINSERT_VECTOR_ELT(Op, DAG);
   case ISD::EXTRACT_VECTOR_ELT:
     return lowerEXTRACT_VECTOR_ELT(Op, DAG);
+  case ISD::SCALAR_TO_VECTOR: {
+    MVT VT = Op.getSimpleValueType();
+    SDLoc DL(Op);
+    SDValue Scalar = Op.getOperand(0);
+    if (VT.getVectorElementType() == MVT::i1) {
+      MVT WideVT = VT.changeVectorElementType(MVT::i8);
+      SDValue V = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, WideVT, Scalar);
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, V);
+    }
+    MVT ContainerVT = VT;
+    if (VT.isFixedLengthVector())
+      ContainerVT = getContainerForFixedLengthVector(VT);
+    SDValue VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
+    SDValue V = DAG.getNode(RISCVISD::VMV_S_X_VL, DL, ContainerVT,
+                            DAG.getUNDEF(ContainerVT), Scalar, VL);
+    if (VT.isFixedLengthVector())
+      V = convertFromScalableVector(VT, V, DAG, Subtarget);
+    return V;
+  }
   case ISD::VSCALE: {
     MVT VT = Op.getSimpleValueType();
     SDLoc DL(Op);
