@@ -363,11 +363,11 @@ private:
   }
 
   struct CachedBlock {
-    uptr CommitBase;
-    uptr CommitSize;
-    uptr BlockBegin;
-    MemMapT MemMap;
-    u64 Time;
+    uptr CommitBase = 0;
+    uptr CommitSize = 0;
+    uptr BlockBegin = 0;
+    MemMapT MemMap = {};
+    u64 Time = 0;
   };
 
   void releaseIfOlderThan(CachedBlock &Entry, u64 Time) REQUIRES(Mutex) {
