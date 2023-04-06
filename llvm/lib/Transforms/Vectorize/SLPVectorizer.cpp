@@ -8458,7 +8458,12 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
                   ->getIncomingBlock(EntryPtr->UserTreeIndices.front().EdgeIdx)
                   ->getTerminator()
             : &EntryUserInst;
-    if (!CheckOrdering(EntryI))
+    if (!CheckOrdering(EntryI) &&
+        (ParentBB != EntryI->getParent() ||
+         TE->UserTreeIndices.front().UserTE !=
+             EntryPtr->UserTreeIndices.front().UserTE ||
+         TE->UserTreeIndices.front().EdgeIdx <
+             EntryPtr->UserTreeIndices.front().EdgeIdx))
       continue;
     for (Value *V : EntryPtr->Scalars)
       if (!isConstant(V))
@@ -9646,9 +9651,9 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
             isGuaranteedNotToBePoison(Vec1) && isGuaranteedNotToBePoison(Vec2);
         ShuffleBuilder.add(Vec1, Vec2, ExtractMask);
       } else if (Vec1) {
+        IsUsedInExpr = FindReusedSplat(ExtractMask);
         ShuffleBuilder.add(Vec1, ExtractMask);
         IsNonPoisoned &= isGuaranteedNotToBePoison(Vec1);
-        IsUsedInExpr = FindReusedSplat(ExtractMask);
       } else {
         ShuffleBuilder.add(PoisonValue::get(FixedVectorType::get(
                                ScalarTy, GatheredScalars.size())),
@@ -9657,10 +9662,10 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
     }
     if (GatherShuffle) {
       if (Entries.size() == 1) {
+        IsUsedInExpr = FindReusedSplat(Mask);
         ShuffleBuilder.add(Entries.front()->VectorizedValue, Mask);
         IsNonPoisoned &=
             isGuaranteedNotToBePoison(Entries.front()->VectorizedValue);
-        IsUsedInExpr = FindReusedSplat(Mask);
       } else {
         ShuffleBuilder.add(Entries.front()->VectorizedValue,
                            Entries.back()->VectorizedValue, Mask);
