@@ -2543,6 +2543,9 @@ public:
   CallInst *CreateAlignmentAssumption(const DataLayout &DL, Value *PtrValue,
                                       Value *Alignment,
                                       Value *OffsetValue = nullptr);
+  /// Create an assume intrinsic call that represents a nonnull
+  /// assumption on the provided pointer.
+  CallInst *CreateNonNullAssumption(Value *PtrValue);
 };
 
 /// This provides a uniform API for creating instructions and inserting
