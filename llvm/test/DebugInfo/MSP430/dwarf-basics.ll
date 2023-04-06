@@ -35,7 +35,7 @@
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_low_pc    (0x{{.*}})
 ; CHECK:     DW_AT_high_pc   (0x{{.*}})
-; CHECK:     DW_AT_frame_base        (DW_OP_reg1 SPB)
+; CHECK:     DW_AT_frame_base        (DW_OP_reg1 SP)
 ; CHECK:     DW_AT_name      ("f")
 ; CHECK:     DW_AT_decl_file ("/tmp{{[/\\]}}dwarf-basics.c")
 ; CHECK:     DW_AT_decl_line (5)
@@ -45,14 +45,14 @@
 
 ; CHECK:       DW_TAG_formal_parameter
 ; CHECK:         DW_AT_location        (0x{{.*}}:
-; CHECK:            [0x0000, 0x0004): DW_OP_reg12 R12B)
+; CHECK:            [0x0000, 0x0004): DW_OP_reg12 R12)
 ; CHECK:         DW_AT_name    ("y")
 ; CHECK:         DW_AT_decl_file       ("/tmp{{[/\\]}}dwarf-basics.c")
 ; CHECK:         DW_AT_decl_line       (5)
 ; CHECK:         DW_AT_type    (0x{{.*}} "long int")
 
 ; CHECK:       DW_TAG_formal_parameter
-; CHECK:         DW_AT_location        (DW_OP_reg14 R14B)
+; CHECK:         DW_AT_location        (DW_OP_reg14 R14)
 ; CHECK:         DW_AT_name    ("p")
 ; CHECK:         DW_AT_decl_file       ("/tmp{{[/\\]}}dwarf-basics.c")
 ; CHECK:         DW_AT_decl_line       (5)

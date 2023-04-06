@@ -14,12 +14,21 @@
 #ifndef MLIR_DIALECT_AFFINE_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_AFFINE_TRANSFORMS_TRANSFORMS_H
 
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
+class AffineApplyOp;
+class Location;
+class OpBuilder;
+class OpFoldResult;
 class RewritePatternSet;
 class RewriterBase;
-class AffineApplyOp;
+class Value;
+
+namespace presburger {
+enum class BoundType;
+} // namespace presburger
 
 /// Populate patterns that expand affine index operations into more fundamental
 /// operations (not necessarily restricted to Affine dialect).
@@ -39,6 +48,32 @@ void reorderOperandsByHoistability(RewriterBase &rewriter, AffineApplyOp op);
 /// Note that this can be undone by canonicalization which tries to
 /// maximally compose chains of AffineApplyOps.
 FailureOr<AffineApplyOp> decompose(RewriterBase &rewriter, AffineApplyOp op);
+
+/// Reify a bound for the given index-typed value or shape dimension size in
+/// terms of the owning op's operands. `dim` must be `nullopt` if and only if
+/// `value` is index-typed.
+FailureOr<OpFoldResult> reifyValueBound(OpBuilder &b, Location loc,
+                                        presburger::BoundType type, Value value,
+                                        std::optional<int64_t> dim);
+
+/// Reify a bound for the given index-typed value or shape dimension size in
+/// terms of SSA values for which `stopCondition` is met. `dim` must be
+/// `nullopt` if and only if `value` is index-typed.
+///
+/// Example:
+/// %0 = arith.addi %a, %b : index
+/// %1 = arith.addi %0, %c : index
+///
+/// * If `stopCondition` evaluates to "true" for %0 and %c, "%0 + %c" is an EQ
+///   bound for %1.
+/// * If `stopCondition` evaluates to "true" for %a, %b and %c, "%a + %b + %c"
+///   is an EQ bound for %1.
+/// * Otherwise, if the owners of %a, %b or %c do not implement the
+///   ValueBoundsOpInterface, no bound can be computed.
+FailureOr<OpFoldResult>
+reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
+                Value value, std::optional<int64_t> dim,
+                ValueBoundsConstraintSet::StopConditionFn stopCondition);
 
 } // namespace mlir
 

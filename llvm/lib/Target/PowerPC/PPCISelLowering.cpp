@@ -10228,14 +10228,16 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
   if (isLittleEndian)
     std::swap(V1, V2);
 
-  if (Subtarget.isISA3_0() && (V1->hasOneUse() || V2->hasOneUse())) {
+  if (Subtarget.hasVSX() && Subtarget.hasP9Vector() &&
+      (V1->hasOneUse() || V2->hasOneUse())) {
     LLVM_DEBUG(dbgs() << "At least one of two input vectors are dead - using "
                          "XXPERM instead\n");
     Opcode = PPCISD::XXPERM;
 
-    // if V2 is dead, then we swap V1 and V2 so we can
-    // use V2 as the destination instead.
-    if (!V1->hasOneUse() && V2->hasOneUse()) {
+    // The second input to XXPERM is also an output so if the second input has
+    // multiple uses then copying is necessary, as a result we want the
+    // single-use operand to be used as the second input to prevent copying.
+    if (!V2->hasOneUse() && V1->hasOneUse()) {
       std::swap(V1, V2);
       NeedSwap = !NeedSwap;
     }
