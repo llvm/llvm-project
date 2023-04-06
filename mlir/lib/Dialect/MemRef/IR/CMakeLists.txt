@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRMemRefDialect
   MemRefDialect.cpp
   MemRefOps.cpp
+  ValueBoundsOpInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${PROJECT_SOURCE_DIR}/inlude/mlir/Dialect/MemRefDialect
@@ -21,5 +22,6 @@ add_mlir_dialect_library(MLIRMemRefDialect
   MLIRIR
   MLIRShapedOpInterfaces
   MLIRSideEffectInterfaces
+  MLIRValueBoundsOpInterface
   MLIRViewLikeInterface
 )
