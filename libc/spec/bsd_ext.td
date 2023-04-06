@@ -15,6 +15,11 @@ def BsdExtensions : StandardSpec<"BSDExtensions"> {
             RetValSpec<SizeTType>,
             [ArgSpec<CharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<SizeTType>]
         >,
+        FunctionSpec<
+            "strsep",
+            RetValSpec<CharPtr>,
+            [ArgSpec<CharRestrictedPtrPtr>, ArgSpec<ConstCharRestrictedPtr>]
+        >,
       ]
   >;
 
