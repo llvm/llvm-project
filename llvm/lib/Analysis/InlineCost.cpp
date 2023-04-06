@@ -1732,7 +1732,7 @@ bool CallAnalyzer::isKnownNonNullInCallee(Value *V) {
   // parameter attribute, but that's a less interesting case because hopefully
   // the callee would already have been simplified based on that.
   if (Argument *A = dyn_cast<Argument>(V))
-    if (paramHasAttr(A, Attribute::NonNull) || paramHasAttr(A, Attribute::Dereferenceable))
+    if (paramHasAttr(A, Attribute::NonNull))
       return true;
 
   // Is this an alloca in the caller?  This is distinct from the attribute case
