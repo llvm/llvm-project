@@ -36,7 +36,7 @@ public:
     FileID FID;
     Module *Submodule;
   };
-  /// The module that is imported by an \c #include directive or \c @import.
+  /// The module that is imported by an \c #include directive or \c \@import.
   struct IncludeModule {
     SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> ImportPath;
     // Whether this module should only be "marked visible" rather than imported.
