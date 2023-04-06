@@ -5,8 +5,7 @@
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  transform.bufferization.one_shot_bufferize %0
-      {target_is_module = false}
+  %1 = transform.bufferization.one_shot_bufferize %0 : (!pdl.operation) -> !pdl.operation
 }
 
 // CHECK-LABEL: func @test_function(
@@ -34,8 +33,8 @@ func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  transform.bufferization.one_shot_bufferize %0
-      {target_is_module = false, test_analysis_only = true}
+  %1 = transform.bufferization.one_shot_bufferize %0
+      {test_analysis_only = true} : (!pdl.operation) -> !pdl.operation
 }
 
 // CHECK-LABEL: func @test_function_analysis(
@@ -58,7 +57,7 @@ transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
   %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   // expected-error @+1 {{bufferization failed}}
-  transform.bufferization.one_shot_bufferize %0 {target_is_module = false}
+  %1 = transform.bufferization.one_shot_bufferize %0 : (!pdl.operation) -> !pdl.operation
 }
 
 func.func @test_unknown_op_failure() -> (tensor<?xf32>) {
@@ -69,12 +68,10 @@ func.func @test_unknown_op_failure() -> (tensor<?xf32>) {
 
 // -----
 
-// Test One-Shot Bufferize transform failure with a module op.
-
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
   // %arg1 is the module
-  transform.bufferization.one_shot_bufferize %arg1
+  %0 = transform.bufferization.one_shot_bufferize %arg1 : (!pdl.operation) -> !pdl.operation
 }
 
 module {
@@ -103,9 +100,8 @@ module {
 
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
-  transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %arg1 {
-    target_is_module = true,
-    bufferize_function_boundaries = true }
+  %0 = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %arg1
+    { bufferize_function_boundaries = true } : (!pdl.operation) -> !pdl.operation
 }
 
 // CHECK: func.func @matmul(

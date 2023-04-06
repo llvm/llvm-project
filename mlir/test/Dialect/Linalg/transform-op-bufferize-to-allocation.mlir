@@ -61,7 +61,7 @@ transform.sequence failures(propagate) {
   %1 = transform.get_result %0[0] : (!pdl.operation) -> !transform.any_value
   %2 = transform.structured.bufferize_to_allocation %1
   // Make sure that One-Shot Bufferize can bufferize the rest.
-  transform.bufferization.one_shot_bufferize %arg1
+  %3 = transform.bufferization.one_shot_bufferize %arg1 : (!pdl.operation) -> !pdl.operation
 }
 
 // -----
@@ -108,7 +108,7 @@ transform.sequence failures(propagate) {
   %1 = test_produce_value_handle_to_argument_of_parent_block %0, 0 : (!pdl.operation) -> !transform.any_value
   %2 = transform.structured.bufferize_to_allocation %1 {memory_space = 4}
   // Make sure that One-Shot Bufferize can bufferize the rest.
-  transform.bufferization.one_shot_bufferize %arg1
+  %3 = transform.bufferization.one_shot_bufferize %arg1 : (!pdl.operation) -> !pdl.operation
 }
 
 // -----
