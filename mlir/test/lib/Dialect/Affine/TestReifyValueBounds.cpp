@@ -9,6 +9,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Pass/Pass.h"
@@ -33,7 +35,8 @@ struct TestReifyValueBounds
   TestReifyValueBounds(const TestReifyValueBounds &pass) : PassWrapper(pass){};
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect>();
+    registry
+        .insert<AffineDialect, tensor::TensorDialect, memref::MemRefDialect>();
   }
 
   void runOnOperation() override;
@@ -101,13 +104,14 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
 
       // Prepare stop condition. By default, reify in terms of the op's
       // operands. No stop condition is used when a constant was requested.
-      std::function<bool(Value)> stopCondition = [&](Value v) {
-        // Reify in terms of SSA values that are different from `value`.
-        return v != value;
-      };
+      std::function<bool(Value, std::optional<int64_t>)> stopCondition =
+          [&](Value v, std::optional<int64_t> d) {
+            // Reify in terms of SSA values that are different from `value`.
+            return v != value;
+          };
       if (reifyToFuncArgs) {
         // Reify in terms of function block arguments.
-        stopCondition = stopCondition = [](Value v) {
+        stopCondition = stopCondition = [](Value v, std::optional<int64_t> d) {
           auto bbArg = v.dyn_cast<BlockArgument>();
           if (!bbArg)
             return false;
