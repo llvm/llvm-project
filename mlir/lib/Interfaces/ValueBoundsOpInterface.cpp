@@ -214,9 +214,6 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
   assertValidValueDim(value, dim);
 #endif // NDEBUG
 
-  // Only EQ bounds are supported at the moment.
-  assert(type == BoundType::EQ && "unsupported bound type");
-
   Builder b(value.getContext());
   mapOperands.clear();
 
@@ -249,15 +246,38 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
   SmallVector<AffineMap> lb(1), ub(1);
   cstr.cstr.getSliceBounds(pos, 1, value.getContext(), &lb, &ub,
                            /*getClosedUB=*/true);
+
   // Note: There are TODOs in the implementation of `getSliceBounds`. In such a
   // case, no lower/upper bound can be computed at the moment.
-  if (lb.empty() || !lb[0] || ub.empty() || !ub[0] ||
-      lb[0].getNumResults() != 1 || ub[0].getNumResults() != 1)
+  // EQ, UB bounds: upper bound is needed.
+  if ((type != BoundType::LB) &&
+      (ub.empty() || !ub[0] || ub[0].getNumResults() == 0))
+    return failure();
+  // EQ, LB bounds: lower bound is needed.
+  if ((type != BoundType::UB) &&
+      (lb.empty() || !lb[0] || lb[0].getNumResults() == 0))
     return failure();
 
-  // Look for same lower and upper bound: EQ bound.
-  if (ub[0] != lb[0])
+  // TODO: Generate an affine map with multiple results.
+  if (type != BoundType::LB)
+    assert(ub.size() == 1 && ub[0].getNumResults() == 1 &&
+           "multiple bounds not supported");
+  if (type != BoundType::UB)
+    assert(lb.size() == 1 && lb[0].getNumResults() == 1 &&
+           "multiple bounds not supported");
+
+  // EQ bound: lower and upper bound must match.
+  if (type == BoundType::EQ && ub[0] != lb[0])
     return failure();
+
+  AffineMap bound;
+  if (type == BoundType::EQ || type == BoundType::LB) {
+    bound = lb[0];
+  } else {
+    // Computed UB is a closed bound. Turn into an open bound.
+    bound = AffineMap::get(ub[0].getNumDims(), ub[0].getNumSymbols(),
+                           ub[0].getResult(0) + 1);
+  }
 
   // Gather all SSA values that are used in the computed bound.
   assert(cstr.cstr.getNumDimAndSymbolVars() == cstr.positionToValueDim.size() &&
@@ -273,10 +293,10 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
     bool used = false;
     bool isDim = i < cstr.cstr.getNumDimVars();
     if (isDim) {
-      if (lb[0].isFunctionOfDim(i))
+      if (bound.isFunctionOfDim(i))
         used = true;
     } else {
-      if (lb[0].isFunctionOfSymbol(i - cstr.cstr.getNumDimVars()))
+      if (bound.isFunctionOfSymbol(i - cstr.cstr.getNumDimVars()))
         used = true;
     }
 
@@ -312,7 +332,7 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
     mapOperands.push_back(std::make_pair(value, dim));
   }
 
-  resultMap = lb[0].replaceDimsAndSymbols(replacementDims, replacementSymbols,
+  resultMap = bound.replaceDimsAndSymbols(replacementDims, replacementSymbols,
                                           numDims, numSymbols);
   return success();
 }

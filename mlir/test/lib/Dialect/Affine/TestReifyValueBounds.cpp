@@ -16,6 +16,7 @@
 #define PASS_NAME "test-affine-reify-value-bounds"
 
 using namespace mlir;
+using mlir::presburger::BoundType;
 
 namespace {
 
@@ -45,6 +46,16 @@ private:
 
 } // namespace
 
+FailureOr<BoundType> parseBoundType(std::string type) {
+  if (type == "EQ")
+    return BoundType::EQ;
+  if (type == "LB")
+    return BoundType::LB;
+  if (type == "UB")
+    return BoundType::UB;
+  return failure();
+}
+
 /// Look for "test.reify_bound" ops in the input and replace their results with
 /// the reified values.
 static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
@@ -67,6 +78,17 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
         return WalkResult::skip();
       }
 
+      // Get bound type.
+      std::string boundTypeStr = "EQ";
+      if (auto boundTypeAttr = op->getAttrOfType<StringAttr>("type"))
+        boundTypeStr = boundTypeAttr.str();
+      auto boundType = parseBoundType(boundTypeStr);
+      if (failed(boundType)) {
+        op->emitOpError("invalid op");
+        return WalkResult::interrupt();
+      }
+
+      // Get shape dimension (if any).
       auto dim = value.getType().isIndex()
                      ? std::nullopt
                      : std::make_optional<int64_t>(
@@ -77,8 +99,8 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
       FailureOr<OpFoldResult> reified;
       if (!reifyToFuncArgs) {
         // Reify in terms of the op's operands.
-        reified = reifyValueBound(rewriter, op->getLoc(),
-                                  presburger::BoundType::EQ, value, dim);
+        reified =
+            reifyValueBound(rewriter, op->getLoc(), *boundType, value, dim);
       } else {
         // Reify in terms of function block arguments.
         auto stopCondition = [](Value v) {
@@ -88,9 +110,8 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
           return isa<FunctionOpInterface>(
               bbArg.getParentBlock()->getParentOp());
         };
-        reified =
-            reifyValueBound(rewriter, op->getLoc(), presburger::BoundType::EQ,
-                            value, dim, stopCondition);
+        reified = reifyValueBound(rewriter, op->getLoc(), *boundType, value,
+                                  dim, stopCondition);
       }
       if (failed(reified)) {
         op->emitOpError("could not reify bound");

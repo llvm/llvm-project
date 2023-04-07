@@ -38,6 +38,48 @@ struct AffineApplyOpInterface
   }
 };
 
+struct AffineMinOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<AffineMinOpInterface,
+                                                   AffineMinOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto minOp = cast<AffineMinOp>(op);
+    assert(value == minOp.getResult() && "invalid value");
+
+    // Align affine map results with dims/symbols in the constraint set.
+    for (AffineExpr expr : minOp.getAffineMap().getResults()) {
+      SmallVector<AffineExpr> dimReplacements = llvm::to_vector(llvm::map_range(
+          minOp.getDimOperands(), [&](Value v) { return cstr.getExpr(v); }));
+      SmallVector<AffineExpr> symReplacements = llvm::to_vector(llvm::map_range(
+          minOp.getSymbolOperands(), [&](Value v) { return cstr.getExpr(v); }));
+      AffineExpr bound =
+          expr.replaceDimsAndSymbols(dimReplacements, symReplacements);
+      cstr.bound(value) <= bound;
+    }
+  };
+};
+
+struct AffineMaxOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<AffineMaxOpInterface,
+                                                   AffineMaxOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto maxOp = cast<AffineMaxOp>(op);
+    assert(value == maxOp.getResult() && "invalid value");
+
+    // Align affine map results with dims/symbols in the constraint set.
+    for (AffineExpr expr : maxOp.getAffineMap().getResults()) {
+      SmallVector<AffineExpr> dimReplacements = llvm::to_vector(llvm::map_range(
+          maxOp.getDimOperands(), [&](Value v) { return cstr.getExpr(v); }));
+      SmallVector<AffineExpr> symReplacements = llvm::to_vector(llvm::map_range(
+          maxOp.getSymbolOperands(), [&](Value v) { return cstr.getExpr(v); }));
+      AffineExpr bound =
+          expr.replaceDimsAndSymbols(dimReplacements, symReplacements);
+      cstr.bound(value) >= bound;
+    }
+  };
+};
+
 } // namespace
 } // namespace mlir
 
@@ -45,5 +87,7 @@ void mlir::affine::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, AffineDialect *dialect) {
     AffineApplyOp::attachInterface<AffineApplyOpInterface>(*ctx);
+    AffineMaxOp::attachInterface<AffineMaxOpInterface>(*ctx);
+    AffineMinOp::attachInterface<AffineMinOpInterface>(*ctx);
   });
 }
