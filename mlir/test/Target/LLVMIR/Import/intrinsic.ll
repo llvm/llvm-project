@@ -125,6 +125,14 @@ define void @bitreverse_test(i32 %0, <8 x i32> %1) {
   %4 = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %1)
   ret void
 }
+; CHECK-LABEL:  llvm.func @bitswap_test
+define void @bitswap_test(i32 %0, <8 x i32> %1) {
+  ; CHECK:   llvm.intr.bswap(%{{.*}}) : (i32) -> i32
+  %3 = call i32 @llvm.bswap.i32(i32 %0)
+  ; CHECK:   llvm.intr.bswap(%{{.*}}) : (vector<8xi32>) -> vector<8xi32>
+  %4 = call <8 x i32> @llvm.bswap.v8i32(<8 x i32> %1)
+  ret void
+}
 ; CHECK-LABEL:  llvm.func @ctlz_test
 define void @ctlz_test(i32 %0, <8 x i32> %1) {
   ; CHECK:   %[[FALSE:.+]] = llvm.mlir.constant(false) : i1
@@ -150,6 +158,24 @@ define void @ctpop_test(i32 %0, <8 x i32> %1) {
   %3 = call i32 @llvm.ctpop.i32(i32 %0)
   ; CHECK:   llvm.intr.ctpop(%{{.*}}) : (vector<8xi32>) -> vector<8xi32>
   %4 = call <8 x i32> @llvm.ctpop.v8i32(<8 x i32> %1)
+  ret void
+}
+
+; CHECK-LABEL:  llvm.func @fshl_test
+define void @fshl_test(i32 %0, i32 %1, i32 %2, <8 x i32> %3, <8 x i32> %4, <8 x i32> %5) {
+  ; CHECK:   llvm.intr.fshl(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, i32, i32) -> i32
+  %7 = call i32 @llvm.fshl.i32(i32 %0, i32 %1, i32 %2)
+  ; CHECK:   llvm.intr.fshl(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  %8 = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> %3, <8 x i32> %4, <8 x i32> %5)
+  ret void
+}
+
+; CHECK-LABEL:  llvm.func @fshr_test
+define void @fshr_test(i32 %0, i32 %1, i32 %2, <8 x i32> %3, <8 x i32> %4, <8 x i32> %5) {
+  ; CHECK:   llvm.intr.fshr(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, i32, i32) -> i32
+  %7 = call i32 @llvm.fshr.i32(i32 %0, i32 %1, i32 %2)
+  ; CHECK:   llvm.intr.fshr(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  %8 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %3, <8 x i32> %4, <8 x i32> %5)
   ret void
 }
 
@@ -665,12 +691,18 @@ declare float @llvm.pow.f32(float, float)
 declare <8 x float> @llvm.pow.v8f32(<8 x float>, <8 x float>)
 declare i32 @llvm.bitreverse.i32(i32)
 declare <8 x i32> @llvm.bitreverse.v8i32(<8 x i32>)
+declare i32 @llvm.bswap.i32(i32)
+declare <8 x i32> @llvm.bswap.v8i32(<8 x i32>)
 declare i32 @llvm.ctlz.i32(i32, i1 immarg)
 declare <8 x i32> @llvm.ctlz.v8i32(<8 x i32>, i1 immarg)
 declare i32 @llvm.cttz.i32(i32, i1 immarg)
 declare <8 x i32> @llvm.cttz.v8i32(<8 x i32>, i1 immarg)
 declare i32 @llvm.ctpop.i32(i32)
 declare <8 x i32> @llvm.ctpop.v8i32(<8 x i32>)
+declare i32 @llvm.fshl.i32(i32, i32, i32)
+declare <8 x i32> @llvm.fshl.v8i32(<8 x i32>, <8 x i32>, <8 x i32>)
+declare i32 @llvm.fshr.i32(i32, i32, i32)
+declare <8 x i32> @llvm.fshr.v8i32(<8 x i32>, <8 x i32>, <8 x i32>)
 declare float @llvm.maximum.f32(float, float)
 declare <8 x float> @llvm.maximum.v8f32(<8 x float>, <8 x float>)
 declare float @llvm.minimum.f32(float, float)
