@@ -152,7 +152,7 @@ namespace PR42513_comment3 {
 namespace GH61851 {
 namespace A {
 inline namespace B {
-  inline constexpr struct {} foo;
+  constexpr struct {} foo;
 }
 
 template <typename T>
