@@ -1391,12 +1391,20 @@ public:
 class VPInterleaveRecipe : public VPRecipeBase {
   const InterleaveGroup<Instruction> *IG;
 
+  /// Indicates if the interleave group is in a conditional block and requires a
+  /// mask.
   bool HasMask = false;
+
+  /// Indicates if gaps between members of the group need to be masked out or if
+  /// unusued gaps can be loaded speculatively.
+  bool NeedsMaskForGaps = false;
 
 public:
   VPInterleaveRecipe(const InterleaveGroup<Instruction> *IG, VPValue *Addr,
-                     ArrayRef<VPValue *> StoredValues, VPValue *Mask)
-      : VPRecipeBase(VPDef::VPInterleaveSC, {Addr}), IG(IG) {
+                     ArrayRef<VPValue *> StoredValues, VPValue *Mask,
+                     bool NeedsMaskForGaps)
+      : VPRecipeBase(VPDef::VPInterleaveSC, {Addr}), IG(IG),
+        NeedsMaskForGaps(NeedsMaskForGaps) {
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (Instruction *I = IG->getMember(i)) {
         if (I->getType()->isVoidTy())
