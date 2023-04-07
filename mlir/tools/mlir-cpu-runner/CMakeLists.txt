@@ -22,3 +22,5 @@ target_link_libraries(mlir-cpu-runner PRIVATE
   MLIRTargetLLVMIRExport
   MLIRSupport
   )
+
+export_executable_symbols(mlir-cpu-runner)

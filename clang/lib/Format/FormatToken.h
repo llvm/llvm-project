@@ -949,6 +949,7 @@ struct AdditionalKeywords {
     kw_CF_OPTIONS = &IdentTable.get("CF_OPTIONS");
     kw_NS_CLOSED_ENUM = &IdentTable.get("NS_CLOSED_ENUM");
     kw_NS_ENUM = &IdentTable.get("NS_ENUM");
+    kw_NS_ERROR_ENUM = &IdentTable.get("NS_ERROR_ENUM");
     kw_NS_OPTIONS = &IdentTable.get("NS_OPTIONS");
 
     kw_as = &IdentTable.get("as");
@@ -1334,6 +1335,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_CF_OPTIONS;
   IdentifierInfo *kw_NS_CLOSED_ENUM;
   IdentifierInfo *kw_NS_ENUM;
+  IdentifierInfo *kw_NS_ERROR_ENUM;
   IdentifierInfo *kw_NS_OPTIONS;
   IdentifierInfo *kw___except;
   IdentifierInfo *kw___has_include;

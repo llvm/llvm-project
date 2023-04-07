@@ -2641,8 +2641,15 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
           hadError = true;
         } else {
           // Typo correction didn't find anything.
-          SemaRef.Diag(D->getFieldLoc(), diag::err_field_designator_unknown)
-            << FieldName << CurrentObjectType;
+          SourceLocation Loc = D->getFieldLoc();
+
+          // The loc can be invalid with a "null" designator (i.e. an anonymous
+          // union/struct). Do our best to approximate the location.
+          if (Loc.isInvalid())
+            Loc = IList->getBeginLoc();
+
+          SemaRef.Diag(Loc, diag::err_field_designator_unknown)
+            << FieldName << CurrentObjectType << DIE->getSourceRange();
           ++Index;
           return true;
         }

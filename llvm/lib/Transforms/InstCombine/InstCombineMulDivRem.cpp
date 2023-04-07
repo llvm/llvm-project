@@ -185,6 +185,9 @@ static Value *foldMulShl1(BinaryOperator &Mul, bool CommuteOperands,
   return nullptr;
 }
 
+static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
+                       bool DoFold);
+
 Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   if (Value *V =
@@ -477,6 +480,26 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
                             m_c_Mul(m_UMax(m_Value(X), m_Value(Y)),
                                     m_c_UMin(m_Deferred(X), m_Deferred(Y))))))
     return BinaryOperator::CreateWithCopiedFlags(Instruction::Mul, X, Y, &I);
+
+  // (mul Op0 Op1):
+  //    if Log2(Op0) folds away ->
+  //        (shl Op1, Log2(Op0))
+  //    if Log2(Op1) folds away ->
+  //        (shl Op0, Log2(Op1))
+  if (takeLog2(Builder, Op0, /*Depth*/ 0, /*DoFold*/ false)) {
+    Value *Res = takeLog2(Builder, Op0, /*Depth*/ 0, /*DoFold*/ true);
+    BinaryOperator *Shl = BinaryOperator::CreateShl(Op1, Res);
+    // We can only propegate nuw flag.
+    Shl->setHasNoUnsignedWrap(HasNUW);
+    return Shl;
+  }
+  if (takeLog2(Builder, Op1, /*Depth*/ 0, /*DoFold*/ false)) {
+    Value *Res = takeLog2(Builder, Op1, /*Depth*/ 0, /*DoFold*/ true);
+    BinaryOperator *Shl = BinaryOperator::CreateShl(Op0, Res);
+    // We can only propegate nuw flag.
+    Shl->setHasNoUnsignedWrap(HasNUW);
+    return Shl;
+  }
 
   bool Changed = false;
   if (!HasNSW && willNotOverflowSignedMul(Op0, Op1, I)) {
