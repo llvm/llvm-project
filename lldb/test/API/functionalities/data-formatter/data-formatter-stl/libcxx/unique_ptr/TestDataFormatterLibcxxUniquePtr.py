@@ -22,7 +22,7 @@ class TestCase(TestBase):
 
     def make_expected_basic_string_ptr(self) -> str:
         if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
-            return f'std::unique_ptr<std::basic_string<char> >'
+            return f'std::unique_ptr<std::string>'
         else:
             return 'std::unique_ptr<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, ' \
                    'std::default_delete<std::basic_string<char, std::char_traits<char>, std::allocator<char> > > >'
