@@ -1151,6 +1151,12 @@ bool AVRTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
       return false;
     }
 
+    // FIXME: We temporarily disable post increment load from program memory,
+    //        due to bug https://github.com/llvm/llvm-project/issues/59914.
+    if (const LoadSDNode *LD = dyn_cast<LoadSDNode>(N))
+      if (AVR::isProgramMemoryAccess(LD))
+        return false;
+
     Base = Op->getOperand(0);
     Offset = DAG.getConstant(RHSC, DL, MVT::i8);
     AM = ISD::POST_INC;
