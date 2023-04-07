@@ -100,6 +100,34 @@ namespace dr606 { // dr606: yes
 #endif
 }
 
+namespace dr607 { // dr607: yes
+namespace example1 {
+struct Y {};
+
+template <typename T> struct X : public virtual Y {};
+
+template <typename T> class A : public X<T> {
+  template <typename S> A(S) : S() {}
+};
+
+template A<int>::A(Y);
+} // namespace example1
+
+namespace example2 {
+namespace N {
+struct B {
+  B(int);
+};
+typedef B typedef_B;
+struct D : B {
+  D();
+};
+} // namespace N
+
+N::D::D() : typedef_B(0) {}
+} // namespace example2
+} // namespace dr607
+
 namespace dr608 { // dr608: yes
   struct A { virtual void f(); };
   struct B : A {};
