@@ -1,3 +1,4 @@
+// REQUIRES: asserts
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -std=c++11 -dwarf-ext-refs -fmodule-format=obj \
 // RUN:     -fmodule-map-file=%S/Inputs/gmodules-preferred-name-typedef.modulemap \
