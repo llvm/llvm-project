@@ -91,7 +91,7 @@ llvm.func @binary_int_intr_wrong_type(%arg0 : i32, %arg1 : f32) -> f32 {
 // -----
 
 llvm.func @ternary_float_intr_wrong_type(%arg0 : f32, %arg1 : f32, %arg2 : i32) -> f32 {
-  // expected-error @below{{op operand #2 must be floating-point or LLVM dialect-compatible vector of floating-point}}
+  // expected-error @below{{op operand #2 must be floating point LLVM type or LLVM dialect-compatible vector of floating point LLVM type}}
   %0 = "llvm.intr.fma"(%arg0, %arg1, %arg2) : (f32, f32, i32) -> f32
   llvm.return %0 : f32
 }
