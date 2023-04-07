@@ -1735,7 +1735,7 @@ multiclass VPseudoILoad<bit Ordered> {
         // Calculate emul = eew * lmul / sew
         defvar octuple_emul = !srl(!mul(eew, octuple_lmul), log2<sew>.val);
         if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
-          defvar LInfo = lmul.MX;
+          defvar DataLInfo = lmul.MX;
           defvar IdxLInfo = octuple_to_str<octuple_emul>.ret;
           defvar idx_lmul = !cast<LMULInfo>("V_" # IdxLInfo);
           defvar Vreg = lmul.vrclass;
@@ -1743,16 +1743,16 @@ multiclass VPseudoILoad<bit Ordered> {
           defvar HasConstraint = !ne(sew, eew);
           defvar Order = !if(Ordered, "O", "U");
           let VLMul = lmul.value in {
-            def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo :
+            def "EI" # eew # "_V_" # IdxLInfo # "_" # DataLInfo :
               VPseudoILoadNoMask<Vreg, IdxVreg, eew, idx_lmul.value, Ordered, HasConstraint>,
-              VLXSched<eew, Order, LInfo>;
-            def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo # "_TU":
+              VLXSched<eew, Order, DataLInfo, IdxLInfo>;
+            def "EI" # eew # "_V_" # IdxLInfo # "_" # DataLInfo # "_TU":
               VPseudoILoadNoMaskTU<Vreg, IdxVreg, eew, idx_lmul.value, Ordered, HasConstraint>,
-              VLXSched<eew, Order, LInfo>;
-            def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo # "_MASK" :
+              VLXSched<eew, Order, DataLInfo, IdxLInfo>;
+            def "EI" # eew # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
               VPseudoILoadMask<Vreg, IdxVreg, eew, idx_lmul.value, Ordered, HasConstraint>,
               RISCVMaskedPseudo</*MaskOpIdx*/ 3>,
-              VLXSched<eew, Order, LInfo>;
+              VLXSched<eew, Order, DataLInfo, IdxLInfo>;
           }
         }
       }
@@ -1809,19 +1809,19 @@ multiclass VPseudoIStore<bit Ordered> {
         // Calculate emul = eew * lmul / sew
         defvar octuple_emul = !srl(!mul(eew, octuple_lmul), log2<sew>.val);
         if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
-          defvar LInfo = lmul.MX;
+          defvar DataLInfo = lmul.MX;
           defvar IdxLInfo = octuple_to_str<octuple_emul>.ret;
           defvar idx_lmul = !cast<LMULInfo>("V_" # IdxLInfo);
           defvar Vreg = lmul.vrclass;
           defvar IdxVreg = idx_lmul.vrclass;
           defvar Order = !if(Ordered, "O", "U");
           let VLMul = lmul.value in {
-            def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo :
+            def "EI" # eew # "_V_" # IdxLInfo # "_" # DataLInfo :
               VPseudoIStoreNoMask<Vreg, IdxVreg, eew, idx_lmul.value, Ordered>,
-              VSXSched<eew, Order, LInfo>;
-            def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo # "_MASK" :
+              VSXSched<eew, Order, DataLInfo, IdxLInfo>;
+            def "EI" # eew # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
               VPseudoIStoreMask<Vreg, IdxVreg, eew, idx_lmul.value, Ordered>,
-              VSXSched<eew, Order, LInfo>;
+              VSXSched<eew, Order, DataLInfo, IdxLInfo>;
           }
         }
       }
