@@ -215,7 +215,7 @@ struct scoped_test_env
     // but the caller is not (std::filesystem also uses uintmax_t rather than
     // off_t). On a 32-bit system this allows us to create a file larger than
     // 2GB.
-    std::string create_file(fs::path filename_path, uintmax_t size = 0) {
+    std::string create_file(fs::path filename_path, std::uintmax_t size = 0) {
         std::string filename = sanitize_path(filename_path.string());
 
         if (size >
