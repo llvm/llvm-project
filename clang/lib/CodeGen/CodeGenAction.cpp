@@ -86,7 +86,7 @@ namespace clang {
   };
 
   static void reportOptRecordError(Error E, DiagnosticsEngine &Diags,
-                                   const CodeGenOptions CodeGenOpts) {
+                                   const CodeGenOptions &CodeGenOpts) {
     handleAllErrors(
         std::move(E),
       [&](const LLVMRemarkSetupFileError &E) {

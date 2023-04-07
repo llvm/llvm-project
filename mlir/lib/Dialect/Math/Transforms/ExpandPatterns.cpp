@@ -90,6 +90,18 @@ static LogicalResult convertTanOp(math::TanOp op, PatternRewriter &rewriter) {
   return success();
 }
 
+static LogicalResult convertFmaFOp(math::FmaOp op, PatternRewriter &rewriter) {
+  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+  Value operandA = op.getOperand(0);
+  Value operandB = op.getOperand(1);
+  Value operandC = op.getOperand(2);
+  Type type = op.getType();
+  Value mult = b.create<arith::MulFOp>(type, operandA, operandB);
+  Value add = b.create<arith::AddFOp>(type, mult, operandC);
+  rewriter.replaceOp(op, add);
+  return success();
+}
+
 // Converts math.ctlz to scf and arith operations. This is done
 // by performing a binary search on the bits.
 static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
@@ -144,4 +156,8 @@ void mlir::populateExpandTanPattern(RewritePatternSet &patterns) {
 
 void mlir::populateExpandTanhPattern(RewritePatternSet &patterns) {
   patterns.add(convertTanhOp);
+}
+
+void mlir::populateExpandFmaFPattern(RewritePatternSet &patterns) {
+  patterns.add(convertFmaFOp);
 }
