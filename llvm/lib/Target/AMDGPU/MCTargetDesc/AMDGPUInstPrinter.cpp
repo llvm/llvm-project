@@ -455,6 +455,60 @@ void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
   }
 }
 
+static const MCRegisterClass *getVGPRRegClass(MCPhysReg Reg,
+                                              const MCRegisterInfo &MRI) {
+  const unsigned VGPRClasses[] = {
+    AMDGPU::VGPR_32RegClassID,
+    AMDGPU::VReg_64RegClassID,
+    AMDGPU::VReg_96RegClassID,
+    AMDGPU::VReg_128RegClassID,
+    AMDGPU::VReg_160RegClassID,
+    AMDGPU::VReg_192RegClassID,
+    AMDGPU::VReg_224RegClassID,
+    AMDGPU::VReg_256RegClassID,
+    AMDGPU::VReg_288RegClassID,
+    AMDGPU::VReg_320RegClassID,
+    AMDGPU::VReg_352RegClassID,
+    AMDGPU::VReg_384RegClassID,
+    AMDGPU::VReg_512RegClassID,
+    AMDGPU::VReg_1024RegClassID,
+    AMDGPU::VGPR_LO16RegClassID,
+    AMDGPU::VGPR_HI16RegClassID
+  };
+
+  for (unsigned RCID : VGPRClasses) {
+    const MCRegisterClass &RC = MRI.getRegClass(RCID);
+    if (RC.contains(Reg))
+      return &RC;
+  }
+
+  return nullptr;
+}
+
+// \returns a low 256 vgpr representing a high vgpr \p Reg [v256..v512] or
+// \p Reg itself otherwise.
+static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCRegisterInfo &MRI) {
+  const MCRegisterClass *RC = getVGPRRegClass(Reg, MRI);
+  if (!RC)
+    return Reg;
+
+  // This is a low VGPR if its first regunit starts below the first regunit
+  // of the high VGPR v256.
+  if (*MCRegUnitRootIterator(*MCRegUnitIterator(Reg, &MRI), &MRI) <
+      AMDGPU::VGPR256_LO16)
+    return Reg;
+
+  // The encoding of the high and the low half of the VGPR file is the same.
+  // For example encoding of the v0 is the same as v256, v1 is the same as v257
+  // etc, with v255 having the same encoding as v511. All register classes are
+  // sorted, so to get a low VGPR representing a high VGPR we just need to scan
+  // its register class until we find a first register with the same encoding.
+  unsigned Idx = MRI.getEncodingValue(Reg);
+  return *llvm::find_if(*RC, [&MRI, Idx](MCPhysReg Reg) {
+    return MRI.getEncodingValue(Reg) == Idx;
+  });
+}
+
 void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
                                         const MCRegisterInfo &MRI) {
 #if !defined(NDEBUG)
@@ -470,7 +524,8 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   }
 #endif
 
-  StringRef RegName(getRegisterName(RegNo));
+  unsigned PrintReg = getRegForPrinting(RegNo, MRI);
+  StringRef RegName(getRegisterName(PrintReg));
   if (!Keep16BitSuffixes)
     if (!RegName.consume_back(".l"))
       RegName.consume_back(".h");
