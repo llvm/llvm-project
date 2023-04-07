@@ -30,6 +30,8 @@
 
 #include "print_tracing.h"
 
+#include "memtype.h"
+
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -1729,6 +1731,17 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = AMDGPUSignalManager.init(OMPX_InitialNumSignals))
       return Err;
 
+    // Initialize memspace table to keep track of coarse grain memory regions
+    // in USM mode
+    if (Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+      // TODO: add framework for multiple systems supporting
+      // unified_shared_memory
+      coarse_grain_mem_tab = new AMDGPUMemTypeBitFieldTable(
+          AMDGPU_X86_64_SystemConfiguration::max_addressable_byte +
+              1, // memory size
+          AMDGPU_X86_64_SystemConfiguration::page_size);
+    }
+
     return Plugin::success();
   }
 
@@ -2136,6 +2149,34 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
+  Error setCoarseGrainMemoryImpl(void *ptr, int64_t size) override final {
+    // track coarse grain memory pages in local table
+    coarse_grain_mem_tab->insert((const uintptr_t)ptr, size);
+
+    // Instruct ROCr that the [ptr, ptr+size-1] pages are
+    // coarse grain
+    hsa_amd_svm_attribute_pair_t tt;
+    tt.attribute = HSA_AMD_SVM_ATTRIB_GLOBAL_FLAG;
+    tt.value = HSA_AMD_SVM_GLOBAL_FLAG_COARSE_GRAINED;
+    hsa_status_t err = hsa_amd_svm_attributes_set(ptr, size, &tt, 1);
+    if (err != HSA_STATUS_SUCCESS) {
+      return Plugin::error("Failed to switch memotry to coarse grain mode.");
+    }
+
+    return Plugin::success();
+  }
+
+  uint32_t queryCoarseGrainMemoryImpl(const void *ptr,
+                                      int64_t size) override final {
+
+    // if the table is not yet allocated, it means we have not yet gone through
+    // an OpenMP pragma or API that would provoke intialization of the RTL
+    if (!coarse_grain_mem_tab)
+      return 0;
+
+    return coarse_grain_mem_tab->contains((const uintptr_t)ptr, size);
+  }
+
   /// Create an event.
   Error createEventImpl(void **EventPtrStorage) override {
     AMDGPUEventTy **Event = reinterpret_cast<AMDGPUEventTy **>(EventPtrStorage);
@@ -2287,6 +2328,9 @@ private:
 
   /// List of device packet queues.
   std::vector<AMDGPUQueueTy> Queues;
+
+  // Data structure used to keep track of coarse grain memory regions
+  AMDGPUMemTypeBitFieldTable *coarse_grain_mem_tab = nullptr;
 };
 
 Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
