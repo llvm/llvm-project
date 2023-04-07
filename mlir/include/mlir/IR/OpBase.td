@@ -1296,11 +1296,14 @@ class TypedStrAttr<Type ty>
 // Base class for attributes containing types. Example:
 //   def IntTypeAttr : TypeAttrBase<"IntegerType", "integer type attribute">
 // defines a type attribute containing an integer type.
-class TypeAttrBase<string retType, string summary> :
+class TypeAttrBase<string retType, string summary,
+                        Pred typePred = CPred<"true">> :
     Attr<And<[
       CPred<"$_self.isa<::mlir::TypeAttr>()">,
       CPred<"$_self.cast<::mlir::TypeAttr>().getValue().isa<"
-            # retType # ">()">]>,
+            # retType # ">()">,
+      SubstLeaves<"$_self",
+                    "$_self.cast<::mlir::TypeAttr>().getValue()", typePred>]>,
     summary> {
   let storageType = [{ ::mlir::TypeAttr }];
   let returnType = retType;
@@ -1313,7 +1316,8 @@ def TypeAttr : TypeAttrBase<"::mlir::Type", "any type attribute"> {
 }
 
 class TypeAttrOf<Type ty>
-   : TypeAttrBase<ty.cppClassName, "type attribute of " # ty.summary> {
+   : TypeAttrBase<ty.cppClassName, "type attribute of " # ty.summary,
+                    ty.predicate> {
   let constBuilderCall = "::mlir::TypeAttr::get($0)";
 }
 

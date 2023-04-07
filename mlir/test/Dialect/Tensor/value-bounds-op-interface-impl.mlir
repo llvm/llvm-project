@@ -80,6 +80,27 @@ func.func @extract_slice_static(%t: tensor<?xf32>) -> index {
 
 // -----
 
+func.func @extract_slice_dynamic_constant(%t: tensor<?xf32>, %sz: index) -> index {
+  %0 = tensor.extract_slice %t[2][%sz][1] : tensor<?xf32> to tensor<?xf32>
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_constant_bound"(%0) {dim = 0} : (tensor<?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @extract_slice_static_constant(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
+//       CHECK:   %[[c5:.*]] = arith.constant 5 : index
+//       CHECK:   return %[[c5]]
+func.func @extract_slice_static_constant(%t: tensor<?xf32>) -> index {
+  %0 = tensor.extract_slice %t[2][5][1] : tensor<?xf32> to tensor<5xf32>
+  %1 = "test.reify_constant_bound"(%0) {dim = 0} : (tensor<5xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
 // CHECK-LABEL: func @extract_slice_rank_reduce(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>, %[[sz:.*]]: index
 //       CHECK:   return %[[sz]]

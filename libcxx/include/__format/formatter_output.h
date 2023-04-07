@@ -14,9 +14,12 @@
 #include <__algorithm/ranges_fill_n.h>
 #include <__algorithm/ranges_for_each.h>
 #include <__algorithm/ranges_transform.h>
+#include <__charconv/to_chars_integral.h>
+#include <__charconv/to_chars_result.h>
 #include <__chrono/statically_widen.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__errc>
 #include <__format/buffer.h>
 #include <__format/concepts.h>
 #include <__format/escaped_output_table.h>
@@ -29,7 +32,6 @@
 #include <__type_traits/make_unsigned.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
-#include <charconv>
 #include <cstddef>
 #include <string>
 #include <string_view>

@@ -92,7 +92,7 @@ struct VectorizerTestPass
   void testComposeMaps(llvm::raw_ostream &outs);
 
   /// Test for 'vectorizeAffineLoopNest' utility.
-  void testVecAffineLoopNest();
+  void testVecAffineLoopNest(llvm::raw_ostream &outs);
 };
 
 } // namespace
@@ -226,7 +226,7 @@ void VectorizerTestPass::testComposeMaps(llvm::raw_ostream &outs) {
 }
 
 /// Test for 'vectorizeAffineLoopNest' utility.
-void VectorizerTestPass::testVecAffineLoopNest() {
+void VectorizerTestPass::testVecAffineLoopNest(llvm::raw_ostream &outs) {
   std::vector<SmallVector<AffineForOp, 2>> loops;
   gatherLoops(getOperation(), loops);
 
@@ -239,6 +239,13 @@ void VectorizerTestPass::testVecAffineLoopNest() {
   VectorizationStrategy strategy;
   strategy.vectorSizes.push_back(4 /*vectorization factor*/);
   strategy.loopToVectorDim[outermostLoop] = 0;
+
+  ReductionLoopMap reductionLoops;
+  SmallVector<LoopReduction, 2> reductions;
+  if (!isLoopParallel(outermostLoop, &reductions)) {
+    outs << "Outermost loop cannot be parallel\n";
+    return;
+  }
   std::vector<SmallVector<AffineForOp, 2>> loopsToVectorize;
   loopsToVectorize.push_back({outermostLoop});
   (void)vectorizeAffineLoopNest(loopsToVectorize, strategy);
@@ -273,7 +280,7 @@ void VectorizerTestPass::runOnOperation() {
   }
 
   if (clTestVecAffineLoopNest)
-    testVecAffineLoopNest();
+    testVecAffineLoopNest(outs);
 
   if (!outs.str().empty()) {
     emitRemark(UnknownLoc::get(&getContext()), outs.str());

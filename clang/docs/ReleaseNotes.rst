@@ -213,6 +213,9 @@ Improvements to Clang's diagnostics
 - There were some cases in which the diagnostic for the unavailable attribute
   might not be issued, this fixes those cases.
   (`61815 <https://github.com/llvm/llvm-project/issues/61815>`_)
+- Clang now avoids unnecessary diagnostic warnings for obvious expressions in
+  the case of binary operators with logical OR operations.
+  (`#57906 <https://github.com/llvm/llvm-project/issues/57906>`_)
 
 Bug Fixes in This Version
 -------------------------

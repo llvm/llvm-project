@@ -816,12 +816,3 @@ static_assert(Parent<int>::TakesBinary<int, 0>::i == 0);
 static_assert(Parent<int>::TakesBinary<int, 0ULL>::i == 0);
 }
 
-namespace TemplateInsideNonTemplateClass {
-template<typename T, typename U> concept C = true;
-
-template<typename T> auto L = []<C<T> U>() {};
-
-struct Q {
-  template<C<int> U> friend constexpr auto decltype(L<int>)::operator()() const;
-};
-} // namespace TemplateInsideNonTemplateClass

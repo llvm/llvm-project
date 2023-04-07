@@ -154,8 +154,8 @@ bool X86FixupInstTuningPass::processInstruction(
     return true;
   };
 
-  // `vunpcklpd/vmovlhps r, r` -> `vshufps r, r, 0x44`
-  // `vunpckhpd/vmovlhps r, r` -> `vshufps r, r, 0xee`
+  // `vunpcklpd/vmovlhps r, r` -> `vshufpd r, r, 0x00`
+  // `vunpckhpd/vmovlhps r, r` -> `vshufpd r, r, 0xff`
   // `vunpcklpd r, r, k` -> `vshufpd r, r, 0x00`
   // `vunpckhpd r, r, k` -> `vshufpd r, r, 0xff`
   // iff `vshufps` is faster than `vunpck{l|h}pd`. Otherwise stick with
@@ -234,12 +234,12 @@ bool X86FixupInstTuningPass::processInstruction(
     // processors where its safe.
   case X86::MOVLHPSrr:
   case X86::UNPCKLPDrr:
-    return ProcessUNPCKLPDrr(X86::SHUFPSrri);
+    return ProcessUNPCKLPDrr(X86::SHUFPDrri);
   case X86::VMOVLHPSrr:
   case X86::VUNPCKLPDrr:
-    return ProcessUNPCKLPDrr(X86::VSHUFPSrri);
+    return ProcessUNPCKLPDrr(X86::VSHUFPDrri);
   case X86::VUNPCKLPDYrr:
-    return ProcessUNPCKLPDrr(X86::VSHUFPSYrri);
+    return ProcessUNPCKLPDrr(X86::VSHUFPDYrri);
     // VMOVLHPS is always 128 bits.
   case X86::VMOVLHPSZrr:
   case X86::VUNPCKLPDZ128rr:
