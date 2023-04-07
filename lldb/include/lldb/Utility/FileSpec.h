@@ -253,7 +253,7 @@ public:
   /// (files with a ".c", ".cpp", ".m", ".mm" (many more) extension).
   ///
   /// \return
-  ///     \b true if the filespec represents an implementation source
+  ///     \b true if the FileSpec represents an implementation source
   ///     file, \b false otherwise.
   bool IsSourceImplementationFile() const;
 
@@ -327,7 +327,7 @@ public:
   /// Returns a ConstString that represents the extension of the filename for
   /// this FileSpec object. If this object does not represent a file, or the
   /// filename has no extension, ConstString(nullptr) is returned. The dot
-  /// ('.') character is not returned as part of the extension
+  /// ('.') character is the first character in the returned string.
   ///
   /// \return Returns the extension of the file as a ConstString object.
   ConstString GetFileNameExtension() const;
