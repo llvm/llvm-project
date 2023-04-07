@@ -372,6 +372,13 @@ struct AMDGPUMemoryPoolTy {
     return Plugin::check(Status, "Error in hsa_amd_agents_allow_access: %s");
   }
 
+  Error zeroInitializeMemory(void *Ptr, size_t Size) {
+    uint64_t Rounded = sizeof(uint32_t) * ((Size + 3) / sizeof(uint32_t));
+    hsa_status_t Status =
+        hsa_amd_memory_fill(Ptr, 0, Rounded / sizeof(uint32_t));
+    return Plugin::check(Status, "Error in hsa_amd_memory_fill: %s");
+  }
+
 private:
   /// Get attribute from the memory pool.
   template <typename Ty>
@@ -530,8 +537,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Create an AMDGPU kernel with a name and an execution mode.
   AMDGPUKernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode)
       : GenericKernelTy(Name, ExecutionMode),
-        GlobalTy_device_st_buf("service_thread_buf", sizeof(uint64_t)),
-        ImplicitArgsSize(sizeof(utils::AMDGPUImplicitArgsTy)) {}
+        GlobalTy_device_st_buf("service_thread_buf", sizeof(uint64_t)) {}
 
   /// Initialize the AMDGPU kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -599,11 +605,11 @@ struct AMDGPUKernelTy : public GenericKernelTy {
       MaxNumThreads = ConstWGSize;
     }
 
-    if (AMDImage.getELFABIVersion() > llvm::ELF::ELFABIVERSION_AMDGPU_HSA_V4) {
-      fprintf(stderr, "ERROR: COV5 not supported with Nextgen plugin\n");
-      return Plugin::error("Nextgen plugin not supported with COV5. \
-		      Use LIBOMPTARGET_NEXTGEN_PLUGINS=OFF");
-    }
+    ImplicitArgsSize =
+        (AMDImage.getELFABIVersion() < llvm::ELF::ELFABIVERSION_AMDGPU_HSA_V5)
+            ? utils::COV4_SIZE
+            : utils::COV5_SIZE;
+    DP("ELFABIVersion: %d\n", AMDImage.getELFABIVersion());
 
     // Get additional kernel info read from image
     KernelInfo = AMDImage.getKernelInfo(getName());
@@ -658,6 +664,10 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Get the HSA kernel object representing the kernel function.
   uint64_t getKernelObject() const { return KernelObject; }
 
+  /// Get the size of implicitargs based on the code object version
+  /// @return 56 for cov4 and 256 for cov5
+  uint32_t getImplicitArgsSize() const { return ImplicitArgsSize; }
+
 private:
   /// The kernel object to execute.
   uint64_t KernelObject;
@@ -668,7 +678,7 @@ private:
   uint32_t PrivateSize;
 
   /// The size of implicit kernel arguments.
-  const uint32_t ImplicitArgsSize;
+  uint32_t ImplicitArgsSize;
 
   /// Additional Info for the AMD GPU Kernel
   std::optional<utils::KernelMetaDataTy> KernelInfo;
@@ -1834,6 +1844,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Take the first timepoints.
     OMPT_IF_ENABLED(startH2DTimeRate(&HostRef1, &DeviceRef1););
 
+    if (auto Err = preAllocateDeviceMemoryPool())
+      return Err;
+
     char GPUName[64];
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_NAME, GPUName))
       return Err;
@@ -2481,6 +2494,43 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       hsa_amd_profiling_set_profiler_enabled(Q.getHsaQueue(), Enable);
   }
 
+  /// Get the address of pointer to the preallocated device memory pool.
+  void **getPreAllocatedDeviceMemoryPool() {
+    return &PreAllocatedDeviceMemoryPool;
+  }
+
+  /// Allocate and zero initialize a small memory pool from the coarse grained
+  /// device memory of each device.
+  Error preAllocateDeviceMemoryPool() {
+    Error Err = retrieveAllMemoryPools();
+    if (Err)
+      return Plugin::error("Unable to retieve all memmory pools");
+
+    void *DevPtr;
+    for (AMDGPUMemoryPoolTy *MemoryPool : AllMemoryPools) {
+      if (MemoryPool->isCoarseGrained()) {
+        DevPtr = nullptr;
+        size_t PreAllocSize = utils::PER_DEVICE_PREALLOC_SIZE;
+
+        Err = MemoryPool->allocate(PreAllocSize, &DevPtr);
+        if (Err)
+          return Plugin::error("Device memory pool preallocation failed");
+
+        Err = MemoryPool->enableAccess(DevPtr, PreAllocSize, {getAgent()});
+        if (Err)
+          return Plugin::error("Preallocated device memory pool inaccessible");
+
+        Err = MemoryPool->zeroInitializeMemory(DevPtr, PreAllocSize);
+        if (Err)
+          return Plugin::error(
+              "Zero initialization of preallocated device memory pool failed");
+
+        PreAllocatedDeviceMemoryPool = DevPtr;
+      }
+    }
+    return Plugin::success();
+  }
+
 private:
   using AMDGPUStreamRef = AMDGPUResourceRef<AMDGPUStreamTy>;
   using AMDGPUEventRef = AMDGPUResourceRef<AMDGPUEventTy>;
@@ -2541,6 +2591,9 @@ private:
 
   // Data structure used to keep track of coarse grain memory regions
   AMDGPUMemTypeBitFieldTable *coarse_grain_mem_tab = nullptr;
+
+  /// Pointer to the preallocated device memory pool
+  void *PreAllocatedDeviceMemoryPool;
 };
 
 Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
@@ -2576,7 +2629,6 @@ Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
 
   if (auto Err = utils::readAMDGPUMetaDataFromImage(
           getMemoryBuffer(), KernelInfoMap, ELFABIVersion))
-
     return Err;
 
   return Plugin::success();
@@ -2946,9 +2998,8 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   }
 
   // Initialize implicit arguments.
-  utils::AMDGPUImplicitArgsTy *ImplArgs =
-      reinterpret_cast<utils::AMDGPUImplicitArgsTy *>(
-          advanceVoidPtr(AllArgs, KernelArgsSize));
+  uint8_t *ImplArgs =
+      static_cast<uint8_t *>(advanceVoidPtr(AllArgs, KernelArgsSize));
 
   // Initialize the implicit arguments to zero.
   std::memset(ImplArgs, 0, ImplicitArgsSize);
@@ -2960,6 +3011,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     std::memcpy(AllArgs, *static_cast<void **>(Args),
                 sizeof(void *) * KernelArgs.NumArgs);
 
+  uint64_t Buffer = 0;
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
   AMDGPUStreamTy &Stream = AMDGPUDevice.getStream(AsyncInfoWrapper);
   if (needs_host_services) {
@@ -2969,7 +3021,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     hsa_amd_memory_pool_t device_mem_pool =
         AMDGPUDevice.getCoarseGrainedMemoryPool()->get();
     hsa_queue_t *hsa_queue = Stream.getQueue()->getHsaQueue();
-    uint64_t Buffer =
+    Buffer =
         utils::hostrpc_assign_buffer(AMDGPUDevice.getAgent(), hsa_queue, devid,
                                      host_mem_pool, device_mem_pool);
     GlobalTy GlobalTy_host_st_buf("service_thread_buf", sizeof(uint64_t),
@@ -2984,6 +3036,48 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
        (void *)Buffer);
   } else {
     DP("No hostrpc buffer or service thread required\n");
+  }
+
+  if (getImplicitArgsSize() < utils::COV5_SIZE) {
+    DP("Setting fields of ImplicitArgs for COV4\n");
+    memcpy(&ImplArgs[utils::COV4_HOSTCALL_PTR_OFFSET], &Buffer,
+           utils::HOSTCALL_PTR_SIZE);
+  } else {
+    DP("Setting fields of ImplicitArgs for COV5\n");
+    uint16_t Remainder = 0;
+    uint16_t GridDims = 1;
+    uint32_t NumThreadsYZ = 1;
+    uint16_t NumBlocksYZ = 0;
+    memcpy(&ImplArgs[utils::COV5_BLOCK_COUNT_X_OFFSET], &NumBlocks,
+           utils::COV5_BLOCK_COUNT_X_SIZE);
+    memcpy(&ImplArgs[utils::COV5_BLOCK_COUNT_Y_OFFSET], &NumBlocksYZ,
+           utils::COV5_BLOCK_COUNT_Y_SIZE);
+    memcpy(&ImplArgs[utils::COV5_BLOCK_COUNT_Z_OFFSET], &NumBlocksYZ,
+           utils::COV5_BLOCK_COUNT_Z_SIZE);
+
+    memcpy(&ImplArgs[utils::COV5_GROUP_SIZE_X_OFFSET], &NumThreads,
+           utils::COV5_GROUP_SIZE_X_SIZE);
+    memcpy(&ImplArgs[utils::COV5_GROUP_SIZE_Y_OFFSET], &NumThreadsYZ,
+           utils::COV5_GROUP_SIZE_Y_SIZE);
+    memcpy(&ImplArgs[utils::COV5_GROUP_SIZE_Z_OFFSET], &NumThreadsYZ,
+           utils::COV5_GROUP_SIZE_Z_SIZE);
+
+    memcpy(&ImplArgs[utils::COV5_REMAINDER_X_OFFSET], &Remainder,
+           utils::COV5_REMAINDER_X_SIZE);
+    memcpy(&ImplArgs[utils::COV5_REMAINDER_Y_OFFSET], &Remainder,
+           utils::COV5_REMAINDER_Y_SIZE);
+    memcpy(&ImplArgs[utils::COV5_REMAINDER_Z_OFFSET], &Remainder,
+           utils::COV5_REMAINDER_Z_SIZE);
+
+    memcpy(&ImplArgs[utils::COV5_GRID_DIMS_OFFSET], &GridDims,
+           utils::COV5_GRID_DIMS_SIZE);
+
+    memcpy(&ImplArgs[utils::COV5_HOSTCALL_PTR_OFFSET], &Buffer,
+           utils::HOSTCALL_PTR_SIZE);
+
+    memcpy(&ImplArgs[utils::COV5_HEAPV1_PTR_OFFSET],
+           AMDGPUDevice.getPreAllocatedDeviceMemoryPool(),
+           utils::COV5_HEAPV1_PTR_SIZE);
   }
 
   // Push the kernel launch into the stream.

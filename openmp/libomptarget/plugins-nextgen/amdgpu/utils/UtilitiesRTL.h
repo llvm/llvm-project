@@ -32,19 +32,52 @@ namespace target {
 namespace plugin {
 namespace utils {
 
-// The implicit arguments of AMDGPU kernels.
-struct AMDGPUImplicitArgsTy {
-  uint64_t OffsetX;
-  uint64_t OffsetY;
-  uint64_t OffsetZ;
-  uint64_t HostcallPtr;
-  uint64_t Unused0;
-  uint64_t Unused1;
-  uint64_t Unused2;
-};
+/// A list of offsets required by the ABI of code object versions 4 and 5.
+enum COV_OFFSETS : uint32_t {
+  COV4_SIZE = 56,
+  COV4_HOSTCALL_PTR_OFFSET = 24,
+  HOSTCALL_PTR_SIZE = 8,
 
-static_assert(sizeof(AMDGPUImplicitArgsTy) == 56,
-              "Unexpected size of implicit arguments");
+  COV5_SIZE = 256,
+
+  COV5_BLOCK_COUNT_X_OFFSET = 0,
+  COV5_BLOCK_COUNT_X_SIZE = 4,
+
+  COV5_BLOCK_COUNT_Y_OFFSET = 4,
+  COV5_BLOCK_COUNT_Y_SIZE = 4,
+
+  COV5_BLOCK_COUNT_Z_OFFSET = 8,
+  COV5_BLOCK_COUNT_Z_SIZE = 4,
+
+  COV5_GROUP_SIZE_X_OFFSET = 12,
+  COV5_GROUP_SIZE_X_SIZE = 2,
+
+  COV5_GROUP_SIZE_Y_OFFSET = 14,
+  COV5_GROUP_SIZE_Y_SIZE = 2,
+
+  COV5_GROUP_SIZE_Z_OFFSET = 16,
+  COV5_GROUP_SIZE_Z_SIZE = 2,
+
+  COV5_REMAINDER_X_OFFSET = 18,
+  COV5_REMAINDER_X_SIZE = 2,
+
+  COV5_REMAINDER_Y_OFFSET = 20,
+  COV5_REMAINDER_Y_SIZE = 2,
+
+  COV5_REMAINDER_Z_OFFSET = 22,
+  COV5_REMAINDER_Z_SIZE = 2,
+
+  COV5_GRID_DIMS_OFFSET = 64,
+  COV5_GRID_DIMS_SIZE = 2,
+
+  COV5_HOSTCALL_PTR_OFFSET = 80,
+
+  COV5_HEAPV1_PTR_OFFSET = 96,
+  COV5_HEAPV1_PTR_SIZE = 8,
+
+  // 128 KB
+  PER_DEVICE_PREALLOC_SIZE = 131072
+};
 
 /// Parse a TargetID to get processor arch and feature map.
 /// Returns processor subarch.
@@ -296,7 +329,6 @@ private:
 Error readAMDGPUMetaDataFromImage(MemoryBufferRef MemBuffer,
                                   StringMap<KernelMetaDataTy> &KernelInfoMap,
                                   uint16_t &ELFABIVersion) {
-
   Error Err = Error::success(); // Used later as out-parameter
 
   auto ELFOrError = object::ELF64LEFile::create(MemBuffer.getBuffer());
@@ -307,6 +339,7 @@ Error readAMDGPUMetaDataFromImage(MemoryBufferRef MemBuffer,
   ArrayRef<object::ELF64LE::Shdr> Sections = cantFail(ELFObj.sections());
   KernelInfoReader Reader(KernelInfoMap);
 
+  // Read the code object version from ELF image header
   auto Header = ELFObj.getHeader();
   ELFABIVersion = (uint8_t)(Header.e_ident[ELF::EI_ABIVERSION]);
   DP("ELFABIVERSION Version: %u\n", ELFABIVersion);
