@@ -879,7 +879,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #  endif
 
 #  if __has_cpp_attribute(nodiscard)
-#    define _LIBCPP_NODISCARD [[nodiscard]]
+#    define _LIBCPP_NODISCARD [[__nodiscard__]]
 #  else
 // We can't use GCC's [[gnu::warn_unused_result]] and
 // __attribute__((warn_unused_result)), because GCC does not silence them via
@@ -1198,7 +1198,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 // [[msvc::no_unique_address]], this should be preferred though.
 #    define _LIBCPP_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
 #  elif __has_cpp_attribute(no_unique_address)
-#    define _LIBCPP_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#    define _LIBCPP_NO_UNIQUE_ADDRESS [[__no_unique_address__]]
 #  else
 #    define _LIBCPP_NO_UNIQUE_ADDRESS /* nothing */
 // Note that this can be replaced by #error as soon as clang-cl

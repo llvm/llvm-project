@@ -12,6 +12,8 @@
 #include "uglify_attributes.hpp"
 
 #include <algorithm>
+#include <array>
+#include <span>
 #include <string_view>
 
 namespace {
@@ -23,15 +25,43 @@ bool isUgly(std::string_view str) {
   return str.find("__") != std::string_view::npos;
 }
 
+std::vector<const char*> get_standard_attributes(const clang::LangOptions& lang_opts) {
+  std::vector<const char*> attributes = {"noreturn", "carries_dependency"};
+
+  if (lang_opts.CPlusPlus14)
+    attributes.emplace_back("deprecated");
+
+  if (lang_opts.CPlusPlus17) {
+    attributes.emplace_back("fallthrough");
+    attributes.emplace_back("nodiscard");
+    attributes.emplace_back("maybe_unused");
+  }
+
+  if (lang_opts.CPlusPlus20) {
+    attributes.emplace_back("likely");
+    attributes.emplace_back("unlikely");
+    attributes.emplace_back("no_unique_address");
+  }
+
+  if (lang_opts.CPlusPlus2b) {
+    attributes.emplace_back("assume");
+  }
+
+  return attributes;
+}
+
 AST_MATCHER(clang::Attr, isPretty) {
   if (Node.isKeywordAttribute())
     return false;
-  if (Node.isCXX11Attribute() && !Node.hasScope()) // TODO: reject standard attributes that are version extensions
-    return false;
+  if (Node.isCXX11Attribute() && !Node.hasScope()) {
+    if (isUgly(Node.getAttrName()->getName()))
+      return false;
+    return !llvm::is_contained(
+        get_standard_attributes(Finder->getASTContext().getLangOpts()), Node.getAttrName()->getName());
+  }
   if (Node.hasScope())
     if (!isUgly(Node.getScopeName()->getName()))
       return true;
-
   if (Node.getAttrName())
     return !isUgly(Node.getAttrName()->getName());
 
@@ -39,9 +69,7 @@ AST_MATCHER(clang::Attr, isPretty) {
 }
 
 std::optional<std::string> getUglyfiedCXX11Attr(const clang::Attr& attr) {
-  // Don't try to fix attributes with `using` in them.
-  if (std::ranges::search(std::string_view(attr.getSpelling()), std::string_view("::")).empty())
-    return std::nullopt;
+  // TODO: Don't emit FixItHints for attributes with `using` in them or emit correct fixes.
 
   std::string attr_string;
   if (attr.isClangScope())
@@ -84,11 +112,11 @@ void uglify_attributes::registerMatchers(clang::ast_matchers::MatchFinder* finde
 }
 
 void uglify_attributes::check(const clang::ast_matchers::MatchFinder::MatchResult& result) {
-  if (const auto* call = result.Nodes.getNodeAs<clang::Attr>("normal_attribute"); call != nullptr) {
-    auto diagnostic = diag(call->getLoc(), "Non-standard attributes should use the _Ugly spelling");
-    auto uglified   = getUglified(*call);
+  if (const auto* attr = result.Nodes.getNodeAs<clang::Attr>("normal_attribute"); attr != nullptr) {
+    auto diagnostic = diag(attr->getLoc(), "Non-standard attributes should use the _Ugly spelling");
+    auto uglified   = getUglified(*attr);
     if (uglified.has_value()) {
-      diagnostic << clang::FixItHint::CreateReplacement(call->getRange(), *uglified);
+      diagnostic << clang::FixItHint::CreateReplacement(attr->getRange(), *uglified);
     }
   }
 }
