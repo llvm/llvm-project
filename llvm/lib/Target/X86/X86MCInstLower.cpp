@@ -108,8 +108,7 @@ void X86AsmPrinter::StackMapShadowTracker::count(MCInst &Inst,
   if (InShadow) {
     SmallString<256> Code;
     SmallVector<MCFixup, 4> Fixups;
-    raw_svector_ostream VecOS(Code);
-    CodeEmitter->encodeInstruction(Inst, VecOS, Fixups, STI);
+    CodeEmitter->encodeInstruction(Inst, Code, Fixups, STI);
     CurrentShadowSize += Code.size();
     if (CurrentShadowSize >= RequiredShadowSize)
       InShadow = false; // The shadow is big enough. Stop counting.
@@ -1446,8 +1445,7 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
   SmallString<256> Code;
   if (!EmptyInst) {
     SmallVector<MCFixup, 4> Fixups;
-    raw_svector_ostream VecOS(Code);
-    CodeEmitter->encodeInstruction(MCI, VecOS, Fixups, getSubtargetInfo());
+    CodeEmitter->encodeInstruction(MCI, Code, Fixups, getSubtargetInfo());
   }
 
   if (Code.size() < MinSize) {

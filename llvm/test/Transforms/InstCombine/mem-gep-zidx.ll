@@ -22,7 +22,7 @@ define void @test2(i32 signext %x, i64 %v) #0 {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[P:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    store i64 [[V:%.*]], ptr [[P]], align 8
-; CHECK-NEXT:    call void @foo(ptr nonnull [[P]]) #1
+; CHECK-NEXT:    call void @foo(ptr nonnull [[P]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %p = alloca i64

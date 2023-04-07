@@ -25,8 +25,8 @@ define void @fold_isdigit(i16 %c) {
 ; CHECK-NEXT:    call void @sink(i16 0)
 ; CHECK-NEXT:    [[ISDIGITTMP:%.*]] = add i16 [[C:%.*]], -48
 ; CHECK-NEXT:    [[ISDIGIT:%.*]] = icmp ult i16 [[ISDIGITTMP]], 10
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[ISDIGIT]] to i16
-; CHECK-NEXT:    call void @sink(i16 [[TMP1]])
+; CHECK-NEXT:    [[IC:%.*]] = zext i1 [[ISDIGIT]] to i16
+; CHECK-NEXT:    call void @sink(i16 [[IC]])
 ; CHECK-NEXT:    ret void
 ;
   %i0 = call i16 @isdigit(i16 0)

@@ -1536,8 +1536,7 @@ bool BinaryFunction::scanExternalRefs() {
     // Emit the instruction using temp emitter and generate relocations.
     SmallString<256> Code;
     SmallVector<MCFixup, 4> Fixups;
-    raw_svector_ostream VecOS(Code);
-    Emitter.MCE->encodeInstruction(Instruction, VecOS, Fixups, *BC.STI);
+    Emitter.MCE->encodeInstruction(Instruction, Code, Fixups, *BC.STI);
 
     // Create relocation for every fixup.
     for (const MCFixup &Fixup : Fixups) {

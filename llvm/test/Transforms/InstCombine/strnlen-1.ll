@@ -69,8 +69,8 @@ define i64 @fold_strnlen_ax_1() {
 ; CHECK-LABEL: @fold_strnlen_ax_1(
 ; CHECK-NEXT:    [[STRNLEN_CHAR0:%.*]] = load i8, ptr @ax, align 1
 ; CHECK-NEXT:    [[STRNLEN_CHAR0CMP:%.*]] = icmp ne i8 [[STRNLEN_CHAR0]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[STRNLEN_CHAR0CMP]] to i64
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[LEN:%.*]] = zext i1 [[STRNLEN_CHAR0CMP]] to i64
+; CHECK-NEXT:    ret i64 [[LEN]]
 ;
   %len = call i64 @strnlen(ptr @ax, i64 1)
   ret i64 %len

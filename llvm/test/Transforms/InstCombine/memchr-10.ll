@@ -18,7 +18,7 @@ declare ptr @memchr(ptr, i32, i64)
 
 define i1 @call_memchr_ap5_c_1_eq_a(i32 %c, i64 %n) {
 ; CHECK-LABEL: @call_memchr_ap5_c_1_eq_a(
-; CHECK-NEXT:    ret i1
+; CHECK-NEXT:    ret i1 poison
 ;
   %pap5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
   %qap5 = getelementptr [5 x i8], ptr @a5, i32 1, i32 0
@@ -32,7 +32,7 @@ define i1 @call_memchr_ap5_c_1_eq_a(i32 %c, i64 %n) {
 
 define i1 @call_memchr_ap5_c_5_eq_a(i32 %c, i64 %n) {
 ; CHECK-LABEL: @call_memchr_ap5_c_5_eq_a(
-; CHECK-NEXT:    ret i1
+; CHECK-NEXT:    ret i1 poison
 ;
   %pap5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
   %qap5 = getelementptr [5 x i8], ptr @a5, i32 1, i32 0

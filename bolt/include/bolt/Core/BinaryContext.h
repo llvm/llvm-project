@@ -1227,8 +1227,7 @@ public:
       Emitter = this->MCE.get();
     SmallString<256> Code;
     SmallVector<MCFixup, 4> Fixups;
-    raw_svector_ostream VecOS(Code);
-    Emitter->encodeInstruction(Inst, VecOS, Fixups, *STI);
+    Emitter->encodeInstruction(Inst, Code, Fixups, *STI);
     return Code.size();
   }
 

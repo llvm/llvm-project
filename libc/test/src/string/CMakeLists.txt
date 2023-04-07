@@ -309,6 +309,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  strsep_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strsep_test.cpp
+  DEPENDS
+    libc.src.string.strsep
+)
+
+add_libc_unittest(
   strsignal_test
   SUITE
     libc_string_unittests

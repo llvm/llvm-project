@@ -26,8 +26,8 @@ define i8 @positive_samevar(i8 %x, i8 %y) {
 
 define i8 @positive_sameconst(i8 %x) {
 ; CHECK-LABEL: @positive_sameconst(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -8
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[X:%.*]], -8
+; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %tmp0 = ashr i8 %x, 3
   %ret = shl i8 %tmp0, 3
@@ -386,8 +386,8 @@ define <2 x i8> @positive_samevar_vec(<2 x i8> %x, <2 x i8> %y) {
 
 define <2 x i8> @positive_sameconst_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @positive_sameconst_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -8, i8 -8>
-; CHECK-NEXT:    ret <2 x i8> [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[X:%.*]], <i8 -8, i8 -8>
+; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
   %tmp0 = ashr <2 x i8> %x, <i8 3, i8 3>
   %ret = shl <2 x i8> %tmp0, <i8 3, i8 3>
