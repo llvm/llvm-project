@@ -30,8 +30,6 @@
 #include "mlir/Support/Timing.h"
 #include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/ParseUtilities.h"
-#include "mlir/Tools/Plugins/DialectPlugin.h"
-#include "mlir/Tools/Plugins/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
@@ -103,41 +101,15 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::desc("Run the verifier after each transformation pass"),
         cl::location(verifyPassesFlag), cl::init(true));
 
-    static cl::list<std::string> passPlugins(
-        "load-pass-plugin", cl::desc("Load passes from plugin library"));
-    /// Set the callback to load a pass plugin.
-    passPlugins.setCallback([&](const std::string &pluginPath) {
-      auto plugin = PassPlugin::load(pluginPath);
-      if (!plugin) {
-        errs() << "Failed to load passes from '" << pluginPath
-               << "'. Request ignored.\n";
-        return;
-      }
-      plugin.get().registerPassRegistryCallbacks();
-    });
-
-    static cl::list<std::string> dialectPlugins(
-        "load-dialect-plugin", cl::desc("Load dialects from plugin library"));
-    this->dialectPlugins = std::addressof(dialectPlugins);
-
     static PassPipelineCLParser passPipeline("", "Compiler passes to run", "p");
     setPassPipelineParser(passPipeline);
   }
-
-  /// Set the callback to load a dialect plugin.
-  void setDialectPluginsCallback(DialectRegistry &registry);
-
-  /// Pointer to static dialectPlugins variable in constructor, needed by
-  /// setDialectPluginsCallback(DialectRegistry&).
-  cl::list<std::string> *dialectPlugins = nullptr;
 };
 } // namespace
 
 ManagedStatic<MlirOptMainConfigCLOptions> clOptionsConfig;
 
-void MlirOptMainConfig::registerCLOptions(DialectRegistry &registry) {
-  clOptionsConfig->setDialectPluginsCallback(registry);
-}
+void MlirOptMainConfig::registerCLOptions() { *clOptionsConfig; }
 
 MlirOptMainConfig MlirOptMainConfig::createFromCLOptions() {
   return *clOptionsConfig;
@@ -160,19 +132,6 @@ MlirOptMainConfig &MlirOptMainConfig::setPassPipelineParser(
     return success();
   };
   return *this;
-}
-
-void MlirOptMainConfigCLOptions::setDialectPluginsCallback(
-    DialectRegistry &registry) {
-  dialectPlugins->setCallback([&](const std::string &pluginPath) {
-    auto plugin = DialectPlugin::load(pluginPath);
-    if (!plugin) {
-      errs() << "Failed to load dialect plugin from '" << pluginPath
-             << "'. Request ignored.\n";
-      return;
-    };
-    plugin.get().registerDialectRegistryCallbacks(registry);
-  });
 }
 
 /// Set the ExecutionContext on the context and handle the observers.
@@ -406,7 +365,7 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   InitLLVM y(argc, argv);
 
   // Register any command line options.
-  MlirOptMainConfig::registerCLOptions(registry);
+  MlirOptMainConfig::registerCLOptions();
   registerAsmPrinterCLOptions();
   registerMLIRContextCLOptions();
   registerPassManagerCLOptions();
