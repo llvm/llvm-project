@@ -28,12 +28,13 @@ TEST(LlvmLibcLog10fTest, SpecialNumbers) {
   EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::log10f(-0.0f),
                               FE_DIVBYZERO);
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::log10f(-1.0f), FE_INVALID);
-  EXPECT_FP_EQ(zero, __llvm_libc::log10f(1.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, __llvm_libc::log10f(1.0f));
 }
 
 TEST(LlvmLibcLog10fTest, TrickyInputs) {
-  constexpr int N = 15;
+  constexpr int N = 21;
   constexpr uint32_t INPUTS[N] = {
+      0x3f800000U /*1.0f*/,
       0x41200000U /*10.0f*/,
       0x42c80000U /*100.0f*/,
       0x447a0000U /*1,000.0f*/,
@@ -49,6 +50,11 @@ TEST(LlvmLibcLog10fTest, TrickyInputs) {
       0x08ae'a356U /*0x1.5d46acp-110f*/,
       0x1c7d'a337U /*0x1.fb466ep-71f*/,
       0x69c8'c583U /*0x1.918b06p+84f*/,
+      0x0efe'ee7aU /*0x1.fddcf4p-98f*/,
+      0x3f5f'de1bU /*0x1.bfbc36p-1f*/,
+      0x3f80'70d8U /*0x1.00e1bp0f*/,
+      0x120b'93dcU /*0x1.1727b8p-91f*/,
+      0x13ae'78d3U /*0x1.5cf1a6p-88f*/,
   };
 
   for (int i = 0; i < N; ++i) {

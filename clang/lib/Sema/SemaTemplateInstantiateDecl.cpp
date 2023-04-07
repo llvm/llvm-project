@@ -2293,7 +2293,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     // Filter out previous declarations that don't match the scope. The only
     // effect this has is to remove declarations found in inline namespaces
     // for friend declarations with unqualified names.
-    if (isFriend && !QualifierLoc && !FunctionTemplate) {
+    if (isFriend && !QualifierLoc) {
       SemaRef.FilterLookupForScope(Previous, DC, /*Scope=*/ nullptr,
                                    /*ConsiderLinkage=*/ true,
                                    QualifierLoc.hasQualifier());

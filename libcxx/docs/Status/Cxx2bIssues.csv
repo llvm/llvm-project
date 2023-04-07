@@ -266,7 +266,7 @@
 "`3834 <https://wg21.link/LWG3834>`__","Missing ``constexpr`` for ``std::intmax_t`` math functions in ``<cinttypes>``","February 2023","","",""
 "`3839 <https://wg21.link/LWG3839>`__","``range_formatter``'s ``set_separator``, ``set_brackets``, and ``underlying`` functions should be ``noexcept``","February 2023","|Complete|","17.0","|format|"
 "`3841 <https://wg21.link/LWG3841>`__","``<version>`` should not be ""all freestanding""","February 2023","","",""
-"`3842 <https://wg21.link/LWG3842>`__","Unclear wording for ``precision`` in ``chrono-format-spec``","February 2023","","","|format|"
+"`3842 <https://wg21.link/LWG3842>`__","Unclear wording for ``precision`` in ``chrono-format-spec``","February 2023","|Complete|","16.0","|format|"
 "`3848 <https://wg21.link/LWG3848>`__","``adjacent_view``, ``adjacent_transform_view`` and ``slide_view`` missing ``base`` accessor","February 2023","","","|ranges|"
 "`3849 <https://wg21.link/LWG3849>`__","``cartesian_product_view::iterator``'s default constructor is overconstrained","February 2023","","","|ranges|"
 "`3850 <https://wg21.link/LWG3850>`__","``views::as_const`` on ``empty_view<T>`` should return ``empty_view<const T>``","February 2023","","","|ranges|"

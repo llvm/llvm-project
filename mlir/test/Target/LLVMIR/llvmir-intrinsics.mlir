@@ -143,8 +143,8 @@ llvm.func @bitreverse_test(%arg0: i32, %arg1: vector<8xi32>) {
   llvm.return
 }
 
-// CHECK-LABEL: @bitswap_test
-llvm.func @bitswap_test(%arg0: i32, %arg1: vector<8xi32>) {
+// CHECK-LABEL: @byteswap_test
+llvm.func @byteswap_test(%arg0: i32, %arg1: vector<8xi32>) {
   // CHECK: call i32 @llvm.bswap.i32
   "llvm.intr.bswap"(%arg0) : (i32) -> i32
   // CHECK: call <8 x i32> @llvm.bswap.v8i32

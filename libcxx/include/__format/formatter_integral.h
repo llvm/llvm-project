@@ -10,9 +10,13 @@
 #ifndef _LIBCPP___FORMAT_FORMATTER_INTEGRAL_H
 #define _LIBCPP___FORMAT_FORMATTER_INTEGRAL_H
 
+#include <__charconv/to_chars_integral.h>
+#include <__charconv/to_chars_result.h>
+#include <__charconv/traits.h>
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__errc>
 #include <__format/concepts.h>
 #include <__format/format_error.h>
 #include <__format/formatter_output.h>
@@ -20,7 +24,6 @@
 #include <__type_traits/make_unsigned.h>
 #include <__utility/unreachable.h>
 #include <array>
-#include <charconv>
 #include <limits>
 #include <string>
 #include <string_view>
