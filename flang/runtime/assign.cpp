@@ -381,10 +381,7 @@ static void Assign(
       // when the components are polymorphic; when they're not, they're both
       // not, and their declared types will match.
       int nestedFlags{MaybeReallocate | PolymorphicLHS};
-      if (comp.genre() != typeInfo::Component::Genre::Allocatable &&
-          (flags & ComponentCanBeDefinedAssignment)) {
-        // Allocatable components are assigned via intrinsic assignment,
-        // not defined assignment (see F'2018 10.2.1.3 paragraph 13).
+      if (flags & ComponentCanBeDefinedAssignment) {
         nestedFlags |= CanBeDefinedAssignment | ComponentCanBeDefinedAssignment;
       }
       switch (comp.genre()) {
@@ -441,6 +438,15 @@ static void Assign(
             }
             if (!fromDesc->IsAllocated()) {
               continue; // F'2018 10.2.1.3(13)(2)
+            }
+
+            // F'2018 10.2.1.3(13) (2)
+            // If from is allocated, allocate to with the same type.
+            if (nestedFlags & CanBeDefinedAssignment) {
+              if (AllocateAssignmentLHS(
+                      *toDesc, *fromDesc, terminator, nestedFlags) != StatOk) {
+                return;
+              }
             }
           }
           Assign(*toDesc, *fromDesc, terminator, nestedFlags);
