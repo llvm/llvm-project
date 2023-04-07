@@ -9,7 +9,9 @@ declare i32 @llvm.umin.i32(i32 %a, i32 %b)
 define i32 @uadd_min_max(i32 %a, i32 %b) {
 ; CHECK-LABEL: @uadd_min_max(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[MIN]], [[MAX]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -22,7 +24,9 @@ entry:
 define i32 @uadd_min_max_comm(i32 %a, i32 %b) {
 ; CHECK-LABEL: @uadd_min_max_comm(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[B:%.*]], i32 [[A:%.*]])
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[MIN]], [[MAX]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -35,7 +39,9 @@ entry:
 define i32 @uadd_min_max_nuw_nsw(i32 %a, i32 %b) {
 ; CHECK-LABEL: @uadd_min_max_nuw_nsw(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[MIN]], [[MAX]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -48,7 +54,9 @@ entry:
 define i32 @sadd_min_max(i32 %a, i32 %b) {
 ; CHECK-LABEL: @sadd_min_max(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[MIN]], [[MAX]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -61,7 +69,9 @@ entry:
 define i32 @sadd_min_max_comm(i32 %a, i32 %b) {
 ; CHECK-LABEL: @sadd_min_max_comm(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.smax.i32(i32 [[B:%.*]], i32 [[A:%.*]])
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[MIN]], [[MAX]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -74,7 +84,9 @@ entry:
 define i32 @sadd_min_max_nuw_nsw(i32 %a, i32 %b) {
 ; CHECK-LABEL: @sadd_min_max_nuw_nsw(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[MIN]], [[MAX]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
