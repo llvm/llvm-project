@@ -471,6 +471,13 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (Instruction *Ext = narrowMathIfNoOverflow(I))
     return Ext;
 
+  // min(X, Y) * max(X, Y) => X * Y.
+  if (match(&I, m_CombineOr(m_c_Mul(m_SMax(m_Value(X), m_Value(Y)),
+                                    m_c_SMin(m_Deferred(X), m_Deferred(Y))),
+                            m_c_Mul(m_UMax(m_Value(X), m_Value(Y)),
+                                    m_c_UMin(m_Deferred(X), m_Deferred(Y))))))
+    return BinaryOperator::CreateWithCopiedFlags(Instruction::Mul, X, Y, &I);
+
   bool Changed = false;
   if (!HasNSW && willNotOverflowSignedMul(Op0, Op1, I)) {
     Changed = true;
