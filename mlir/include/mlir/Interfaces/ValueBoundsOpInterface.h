@@ -16,6 +16,8 @@
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "llvm/ADT/SetVector.h"
 
+#include <queue>
+
 namespace mlir {
 
 using ValueDimList = SmallVector<std::pair<Value, std::optional<int64_t>>>;
@@ -100,6 +102,24 @@ public:
                                     std::optional<int64_t> dim,
                                     StopConditionFn stopCondition);
 
+  /// Compute a constant bound for the given index-typed value or shape
+  /// dimension size.
+  ///
+  /// `dim` must be `nullopt` if and only if `value` is index-typed. This
+  /// function traverses the backward slice of the given value in a
+  /// worklist-driven manner until `stopCondition` evaluates to "true". The
+  /// constraint set is populated according to `ValueBoundsOpInterface` for each
+  /// visited value. (No constraints are added for values for which the stop
+  /// condition evaluates to "true".)
+  ///
+  /// The stop condition is optional: If none is specified, the backward slice
+  /// is traversed in a breadth-first manner until a constant bound could be
+  /// computed.
+  static FailureOr<int64_t>
+  computeConstantBound(presburger::BoundType type, Value value,
+                       std::optional<int64_t> dim = std::nullopt,
+                       StopConditionFn stopCondition = nullptr);
+
   /// Add a bound for the given index-typed value or shaped value. This function
   /// returns a builder that adds the bound.
   BoundBuilder bound(Value value) { return BoundBuilder(*this, value); }
@@ -162,7 +182,7 @@ protected:
   DenseMap<ValueDim, int64_t> valueDimToPosition;
 
   /// Worklist of values/shape dimensions that have not been processed yet.
-  SetVector<int64_t> worklist;
+  std::queue<int64_t> worklist;
 
   /// Constraint system of equalities and inequalities.
   FlatLinearConstraints cstr;

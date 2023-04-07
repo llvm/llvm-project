@@ -63,7 +63,8 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
   IRRewriter rewriter(funcOp.getContext());
   WalkResult result = funcOp.walk([&](Operation *op) {
     // Look for test.reify_bound ops.
-    if (op->getName().getStringRef() == "test.reify_bound") {
+    if (op->getName().getStringRef() == "test.reify_bound" ||
+        op->getName().getStringRef() == "test.reify_constant_bound") {
       if (op->getNumOperands() != 1 || op->getNumResults() != 1 ||
           !op->getResultTypes()[0].isIndex()) {
         op->emitOpError("invalid op");
@@ -94,22 +95,37 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
                      : std::make_optional<int64_t>(
                            op->getAttrOfType<IntegerAttr>("dim").getInt());
 
-      // Reify value bound.
-      rewriter.setInsertionPointAfter(op);
-      FailureOr<OpFoldResult> reified;
-      if (!reifyToFuncArgs) {
-        // Reify in terms of the op's operands.
-        reified =
-            reifyValueBound(rewriter, op->getLoc(), *boundType, value, dim);
-      } else {
+      // Check if a constant was requested.
+      bool constant =
+          op->getName().getStringRef() == "test.reify_constant_bound";
+
+      // Prepare stop condition. By default, reify in terms of the op's
+      // operands. No stop condition is used when a constant was requested.
+      std::function<bool(Value)> stopCondition = [&](Value v) {
+        // Reify in terms of SSA values that are different from `value`.
+        return v != value;
+      };
+      if (reifyToFuncArgs) {
         // Reify in terms of function block arguments.
-        auto stopCondition = [](Value v) {
+        stopCondition = stopCondition = [](Value v) {
           auto bbArg = v.dyn_cast<BlockArgument>();
           if (!bbArg)
             return false;
           return isa<FunctionOpInterface>(
               bbArg.getParentBlock()->getParentOp());
         };
+      }
+
+      // Reify value bound
+      rewriter.setInsertionPointAfter(op);
+      FailureOr<OpFoldResult> reified = failure();
+      if (constant) {
+        auto reifiedConst = ValueBoundsConstraintSet::computeConstantBound(
+            *boundType, value, dim, /*stopCondition=*/nullptr);
+        if (succeeded(reifiedConst))
+          reified =
+              FailureOr<OpFoldResult>(rewriter.getIndexAttr(*reifiedConst));
+      } else {
         reified = reifyValueBound(rewriter, op->getLoc(), *boundType, value,
                                   dim, stopCondition);
       }
