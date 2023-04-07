@@ -108,6 +108,10 @@ public:
     /// of header files.
     ModuleMapModule,
 
+    /// This is a module that was defined by a module map and built out
+    /// of header files as part of an \c IncludeTree.
+    IncludeTreeModuleMap,
+
     /// This is a C++20 module interface unit.
     ModuleInterfaceUnit,
 
@@ -175,7 +179,9 @@ public:
 
   bool isPrivateModule() const { return Kind == PrivateModuleFragment; }
 
-  bool isModuleMapModule() const { return Kind == ModuleMapModule; }
+  bool isModuleMapModule() const {
+    return Kind == ModuleMapModule || Kind == IncludeTreeModuleMap;
+  }
 
 private:
   /// The submodules of this module, indexed by name.
@@ -191,10 +197,6 @@ private:
 
   /// The \c ActionCache key for this module, if any.
   Optional<std::string> ModuleCacheKey;
-
-  /// The CAS filesystem root ID for implicit modules built with the dependency
-  /// scanner, if any.
-  Optional<std::string> CASFileSystemRootID;
 
   /// The top-level headers associated with this module.
   llvm::SmallSetVector<const FileEntry *, 2> TopHeaders;
@@ -636,14 +638,6 @@ public:
     getTopLevelModule()->ModuleCacheKey = std::move(Key);
   }
 
-  Optional<std::string> getCASFileSystemRootID() const {
-    return getTopLevelModule()->CASFileSystemRootID;
-  }
-
-  void setCASFileSystemRootID(std::string ID) {
-    assert(!getCASFileSystemRootID() || *getCASFileSystemRootID() == ID);
-    getTopLevelModule()->CASFileSystemRootID = std::move(ID);
-  }
 
   /// Retrieve the directory for which this module serves as the
   /// umbrella.

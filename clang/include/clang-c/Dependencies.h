@@ -310,18 +310,8 @@ typedef size_t CXModuleLookupOutputCallback(void *Context,
                                             char *Output, size_t MaxLen);
 
 /**
- * See \c clang_experimental_DependencyScannerWorker_getFileDependencies_v5.
- * Returns diagnostics in an unstructured CXString instead of CXDiagnosticSet.
- */
-CINDEX_LINKAGE enum CXErrorCode
-clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
-    CXDependencyScannerWorker Worker, int argc, const char *const *argv,
-    const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
-    CXModuleDiscoveredCallback *MDC, void *MLOContext,
-    CXModuleLookupOutputCallback *MLO, unsigned Options,
-    CXFileDependenciesList **Out, CXString *error);
-
-/**
+ * Deprecated, use \c clang_experimental_DependencyScannerWorker_getDepGraph.
+ *
  * Calculates the list of file dependencies for a particular compiler
  * invocation.
  *
@@ -351,19 +341,275 @@ clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
  * \param [out] Out A non-NULL pointer to store the resulting dependencies. The
  *                  output must be freed by calling
  *                  \c clang_experimental_FileDependenciesList_dispose.
- * \param [out] OutDiags The diagnostics emitted during scanning. These must be
- *                       always freed by calling \c clang_disposeDiagnosticSet.
+ * \param [out] error the error string to pass back to client (if any).
  *
  * \returns \c CXError_Success on success; otherwise a non-zero \c CXErrorCode
  * indicating the kind of error.
  */
 CINDEX_LINKAGE enum CXErrorCode
-clang_experimental_DependencyScannerWorker_getFileDependencies_v5(
+clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
     CXDependencyScannerWorker Worker, int argc, const char *const *argv,
     const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
     CXModuleDiscoveredCallback *MDC, void *MLOContext,
     CXModuleLookupOutputCallback *MLO, unsigned Options,
-    CXFileDependenciesList **Out, CXDiagnosticSet *OutDiags);
+    CXFileDependenciesList **Out, CXString *error);
+
+/**
+ * Output of \c clang_experimental_DependencyScannerWorker_getDepGraph.
+ */
+typedef struct CXOpaqueDepGraph *CXDepGraph;
+
+/**
+ * An individual module dependency that is part of an overall compilation
+ * \c CXDepGraph.
+ */
+typedef struct CXOpaqueDepGraphModule *CXDepGraphModule;
+
+/**
+ * An individual command-line invocation that is part of an overall compilation
+ * \c CXDepGraph.
+ */
+typedef struct CXOpaqueDepGraphTUCommand *CXDepGraphTUCommand;
+
+/**
+ * Settings to use for the
+ * \c clang_experimental_DependencyScannerWorker_getDepGraph action.
+ */
+typedef struct CXOpaqueDependencyScannerWorkerScanSettings
+    *CXDependencyScannerWorkerScanSettings;
+
+/**
+ * Creates a set of settings for
+ * \c clang_experimental_DependencyScannerWorker_getDepGraph action.
+ * Must be disposed with
+ * \c clang_experimental_DependencyScannerWorkerScanSettings_dispose.
+ * Memory for settings is not copied. Any provided pointers must be valid until
+ * the call to \c clang_experimental_DependencyScannerWorker_getDepGraph.
+ *
+ * \param argc the number of compiler invocation arguments (including argv[0]).
+ * \param argv the compiler driver invocation arguments (including argv[0]).
+ * \param ModuleName If non-null, the dependencies of the named module are
+ *                   returned. Otherwise, the dependencies of the whole
+ *                   translation unit are returned.
+ * \param WorkingDirectory the directory in which the invocation runs.
+ * \param MLOContext the context that will be passed to \c MLO each time it is
+ *                   called.
+ * \param MLO a callback that is called to determine the paths of output files
+ *            for each module dependency. This may receive the same module on
+ *            different workers. This should be NULL if
+ *            \c clang_experimental_DependencyScannerService_create_v1 was
+ *            called with \c CXDependencyMode_Flat. This callback will be called
+ *            on the same thread that called \c
+ *            clang_experimental_DependencyScannerWorker_getDepGraph.
+ */
+CINDEX_LINKAGE CXDependencyScannerWorkerScanSettings
+clang_experimental_DependencyScannerWorkerScanSettings_create(
+    int argc, const char *const *argv, const char *ModuleName,
+    const char *WorkingDirectory, void *MLOContext,
+    CXModuleLookupOutputCallback *MLO);
+
+/**
+ * Dispose of a \c CXDependencyScannerWorkerScanSettings object.
+ */
+CINDEX_LINKAGE void
+    clang_experimental_DependencyScannerWorkerScanSettings_dispose(
+        CXDependencyScannerWorkerScanSettings);
+
+/**
+ * Produces the dependency graph for a particular compiler invocation.
+ *
+ * \param Settings object created via
+ *     \c clang_experimental_DependencyScannerWorkerScanSettings_create.
+ * \param [out] Out A non-NULL pointer to store the resulting dependencies. The
+ *                  output must be freed by calling
+ *                  \c clang_experimental_DepGraph_dispose.
+ *
+ * \returns \c CXError_Success on success; otherwise a non-zero \c CXErrorCode
+ * indicating the kind of error. When returning \c CXError_Failure there will
+ * be a \c CXDepGraph object on \p Out that can be used to get diagnostics via
+ * \c clang_experimental_DepGraph_getDiagnostics.
+ */
+CINDEX_LINKAGE enum CXErrorCode
+clang_experimental_DependencyScannerWorker_getDepGraph(
+    CXDependencyScannerWorker, CXDependencyScannerWorkerScanSettings Settings,
+    CXDepGraph *Out);
+
+/**
+ * Dispose of a \c CXDepGraph object.
+ */
+CINDEX_LINKAGE void clang_experimental_DepGraph_dispose(CXDepGraph);
+
+/**
+ * \returns the number of \c CXDepGraphModule objects in the graph.
+ */
+CINDEX_LINKAGE size_t clang_experimental_DepGraph_getNumModules(CXDepGraph);
+
+/**
+ * \returns the \c CXDepGraphModule object at the given \p Index.
+ *
+ * The \c CXDepGraphModule object is only valid to use while \c CXDepGraph is
+ * valid. Must be disposed with \c clang_experimental_DepGraphModule_dispose.
+ */
+CINDEX_LINKAGE CXDepGraphModule
+clang_experimental_DepGraph_getModule(CXDepGraph, size_t Index);
+
+CINDEX_LINKAGE void clang_experimental_DepGraphModule_dispose(CXDepGraphModule);
+
+/**
+ * \returns the name of the module. This may include `:` for C++20 module
+ * partitions, or a header-name for C++20 header units.
+ *
+ * The string is only valid to use while the \c CXDepGraphModule object is
+ * valid.
+ */
+CINDEX_LINKAGE
+const char *clang_experimental_DepGraphModule_getName(CXDepGraphModule);
+
+/**
+ * \returns the context hash of a module represents the set of compiler options
+ * that may make one version of a module incompatible from another. This
+ * includes things like language mode, predefined macros, header search paths,
+ * etc...
+ *
+ * Modules with the same name but a different \c ContextHash should be treated
+ * as separate modules for the purpose of a build.
+ *
+ * The string is only valid to use while the \c CXDepGraphModule object is
+ * valid.
+ */
+CINDEX_LINKAGE
+const char *clang_experimental_DepGraphModule_getContextHash(CXDepGraphModule);
+
+/**
+ * \returns the path to the modulemap file which defines this module. If there's
+ * no modulemap (e.g. for a C++ module) returns \c NULL.
+ *
+ * This can be used to explicitly build this module. This file will
+ * additionally appear in \c FileDeps as a dependency.
+ *
+ * The string is only valid to use while the \c CXDepGraphModule object is
+ * valid.
+ */
+CINDEX_LINKAGE const char *
+    clang_experimental_DepGraphModule_getModuleMapPath(CXDepGraphModule);
+
+/**
+ * \returns the list of files which this module directly depends on.
+ *
+ * If any of these change then the module needs to be rebuilt.
+ *
+ * The strings are only valid to use while the \c CXDepGraphModule object is
+ * valid.
+ */
+CINDEX_LINKAGE CXCStringArray
+    clang_experimental_DepGraphModule_getFileDeps(CXDepGraphModule);
+
+/**
+ * \returns the list of modules which this module direct depends on.
+ *
+ * This does include the context hash. The format is
+ * `<module-name>:<context-hash>`
+ *
+ * The strings are only valid to use while the \c CXDepGraphModule object is
+ * valid.
+ */
+CINDEX_LINKAGE CXCStringArray
+    clang_experimental_DepGraphModule_getModuleDeps(CXDepGraphModule);
+
+/**
+ * \returns the canonical command line to build this module.
+ *
+ * The strings are only valid to use while the \c CXDepGraphModule object is
+ * valid.
+ */
+CINDEX_LINKAGE CXCStringArray
+    clang_experimental_DepGraphModule_getBuildArguments(CXDepGraphModule);
+
+/**
+ * \returns the \c ActionCache key for this module, if any.
+ */
+CINDEX_LINKAGE
+const char *clang_experimental_DepGraphModule_getCacheKey(CXDepGraphModule);
+
+/**
+ * \returns the number \c CXDepGraphTUCommand objects in the graph.
+ */
+CINDEX_LINKAGE size_t clang_experimental_DepGraph_getNumTUCommands(CXDepGraph);
+
+/**
+ * \returns the \c CXDepGraphTUCommand object at the given \p Index.
+ *
+ * The \c CXDepGraphTUCommand object is only valid to use while \c CXDepGraph is
+ * valid. Must be disposed with \c clang_experimental_DepGraphTUCommand_dispose.
+ */
+CINDEX_LINKAGE CXDepGraphTUCommand
+clang_experimental_DepGraph_getTUCommand(CXDepGraph, size_t Index);
+
+/**
+ * Dispose of a \c CXDepGraphTUCommand object.
+ */
+CINDEX_LINKAGE void
+    clang_experimental_DepGraphTUCommand_dispose(CXDepGraphTUCommand);
+
+/**
+ * \returns the executable name for the command.
+ *
+ * The string is only valid to use while the \c CXDepGraphTUCommand object is
+ * valid.
+ */
+CINDEX_LINKAGE const char *
+    clang_experimental_DepGraphTUCommand_getExecutable(CXDepGraphTUCommand);
+
+/**
+ * \returns the canonical command line to build this translation unit.
+ *
+ * The strings are only valid to use while the \c CXDepGraphTUCommand object is
+ * valid.
+ */
+CINDEX_LINKAGE CXCStringArray
+    clang_experimental_DepGraphTUCommand_getBuildArguments(CXDepGraphTUCommand);
+
+/**
+ * \returns the \c ActionCache key for this translation unit, if any.
+ */
+CINDEX_LINKAGE const char *
+    clang_experimental_DepGraphTUCommand_getCacheKey(CXDepGraphTUCommand);
+
+/**
+ * \returns the list of files which this translation unit directly depends on.
+ *
+ * The strings are only valid to use while the \c CXDepGraph object is valid.
+ */
+CINDEX_LINKAGE
+CXCStringArray clang_experimental_DepGraph_getTUFileDeps(CXDepGraph);
+
+/**
+ * \returns the list of modules which this translation unit direct depends on.
+ *
+ * This does include the context hash. The format is
+ * `<module-name>:<context-hash>`
+ *
+ * The strings are only valid to use while the \c CXDepGraph object is valid.
+ */
+CINDEX_LINKAGE
+CXCStringArray clang_experimental_DepGraph_getTUModuleDeps(CXDepGraph);
+
+/**
+ * \returns the context hash of the C++20 module this translation unit exports.
+ *
+ * If the translation unit is not a module then this is empty.
+ *
+ * The string is only valid to use while the \c CXDepGraph object is valid.
+ */
+CINDEX_LINKAGE
+const char *clang_experimental_DepGraph_getTUContextHash(CXDepGraph);
+
+/**
+ * \returns The diagnostics emitted during scanning. These must be always freed
+ * by calling \c clang_disposeDiagnosticSet.
+ */
+CINDEX_LINKAGE
+CXDiagnosticSet clang_experimental_DepGraph_getDiagnostics(CXDepGraph);
 
 /**
  * @}

@@ -918,6 +918,9 @@ def warn_defined_in_function_type_macro : Extension<
   "macro expansion producing 'defined' has undefined behavior">,
   InGroup<ExpansionToDefined>;
 
+def err_pp_missing_module_include_tree : Error<
+  "no module named '%0' declared in include-tree module map">, DefaultFatal;
+
 let CategoryName = "Nullability Issue" in {
 
 def err_pp_assume_nonnull_syntax : Error<"expected 'begin' or 'end'">;

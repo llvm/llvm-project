@@ -162,11 +162,9 @@ private:
 
 llvm::Expected<llvm::cas::ObjectProxy>
 DependencyScanningTool::getDependencyTree(
-    const std::vector<std::string> &CommandLine, StringRef CWD,
-    DepscanPrefixMapping PrefixMapping) {
+    const std::vector<std::string> &CommandLine, StringRef CWD) {
   GetDependencyTree Consumer(*Worker.getCASFS());
-  auto Controller = createCASFSActionController(nullptr, *Worker.getCASFS(),
-                                                std::move(PrefixMapping));
+  auto Controller = createCASFSActionController(nullptr, *Worker.getCASFS());
   auto Result =
       Worker.computeDependencies(CWD, CommandLine, Consumer, *Controller);
   if (Result)
@@ -178,10 +176,9 @@ llvm::Expected<llvm::cas::ObjectProxy>
 DependencyScanningTool::getDependencyTreeFromCompilerInvocation(
     std::shared_ptr<CompilerInvocation> Invocation, StringRef CWD,
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
-    bool DiagGenerationAsCompilation, DepscanPrefixMapping PrefixMapping) {
+    bool DiagGenerationAsCompilation) {
   GetDependencyTree Consumer(*Worker.getCASFS());
-  auto Controller = createCASFSActionController(nullptr, *Worker.getCASFS(),
-                                                std::move(PrefixMapping));
+  auto Controller = createCASFSActionController(nullptr, *Worker.getCASFS());
   Worker.computeDependenciesFromCompilerInvocation(
       std::move(Invocation), CWD, Consumer, *Controller, DiagsConsumer,
       VerboseOS, DiagGenerationAsCompilation);
@@ -190,10 +187,9 @@ DependencyScanningTool::getDependencyTreeFromCompilerInvocation(
 
 Expected<cas::IncludeTreeRoot> DependencyScanningTool::getIncludeTree(
     cas::ObjectStore &DB, const std::vector<std::string> &CommandLine,
-    StringRef CWD, const DepscanPrefixMapping &PrefixMapping) {
+    StringRef CWD, LookupModuleOutputCallback LookupModuleOutput) {
   GetIncludeTree Consumer(DB);
-  auto Controller =
-      createIncludeTreeActionController(DB, std::move(PrefixMapping));
+  auto Controller = createIncludeTreeActionController(LookupModuleOutput, DB);
   llvm::Error Result =
       Worker.computeDependencies(CWD, CommandLine, Consumer, *Controller);
   if (Result)
@@ -204,12 +200,11 @@ Expected<cas::IncludeTreeRoot> DependencyScanningTool::getIncludeTree(
 Expected<cas::IncludeTreeRoot>
 DependencyScanningTool::getIncludeTreeFromCompilerInvocation(
     cas::ObjectStore &DB, std::shared_ptr<CompilerInvocation> Invocation,
-    StringRef CWD, const DepscanPrefixMapping &PrefixMapping,
+    StringRef CWD, LookupModuleOutputCallback LookupModuleOutput,
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
     bool DiagGenerationAsCompilation) {
   GetIncludeTree Consumer(DB);
-  auto Controller =
-      createIncludeTreeActionController(DB, std::move(PrefixMapping));
+  auto Controller = createIncludeTreeActionController(LookupModuleOutput, DB);
   Worker.computeDependenciesFromCompilerInvocation(
       std::move(Invocation), CWD, Consumer, *Controller, DiagsConsumer,
       VerboseOS, DiagGenerationAsCompilation);
@@ -220,11 +215,9 @@ llvm::Expected<TranslationUnitDeps>
 DependencyScanningTool::getTranslationUnitDependencies(
     const std::vector<std::string> &CommandLine, StringRef CWD,
     const llvm::StringSet<> &AlreadySeen,
-    LookupModuleOutputCallback LookupModuleOutput,
-    DepscanPrefixMapping PrefixMapping) {
+    LookupModuleOutputCallback LookupModuleOutput) {
   FullDependencyConsumer Consumer(AlreadySeen);
-  auto Controller =
-      createActionController(LookupModuleOutput, std::move(PrefixMapping));
+  auto Controller = createActionController(LookupModuleOutput);
   llvm::Error Result =
       Worker.computeDependencies(CWD, CommandLine, Consumer, *Controller);
   if (Result)
@@ -235,11 +228,9 @@ DependencyScanningTool::getTranslationUnitDependencies(
 llvm::Expected<ModuleDepsGraph> DependencyScanningTool::getModuleDependencies(
     StringRef ModuleName, const std::vector<std::string> &CommandLine,
     StringRef CWD, const llvm::StringSet<> &AlreadySeen,
-    LookupModuleOutputCallback LookupModuleOutput,
-    DepscanPrefixMapping PrefixMapping) {
+    LookupModuleOutputCallback LookupModuleOutput) {
   FullDependencyConsumer Consumer(AlreadySeen);
-  auto Controller =
-      createActionController(LookupModuleOutput, std::move(PrefixMapping));
+  auto Controller = createActionController(LookupModuleOutput);
   llvm::Error Result = Worker.computeDependencies(CWD, CommandLine, Consumer,
                                                   *Controller, ModuleName);
   if (Result)
@@ -255,6 +246,7 @@ TranslationUnitDeps FullDependencyConsumer::takeTranslationUnitDeps() {
   TU.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
   TU.Commands = std::move(Commands);
   TU.CASFileSystemRootID = std::move(CASFileSystemRootID);
+  TU.IncludeTreeID = std::move(IncludeTreeID);
 
   for (auto &&M : ClangModuleDeps) {
     auto &MD = M.second;
@@ -290,20 +282,17 @@ CallbackActionController::~CallbackActionController() {}
 std::unique_ptr<DependencyActionController>
 DependencyScanningTool::createActionController(
     DependencyScanningWorker &Worker,
-    LookupModuleOutputCallback LookupModuleOutput,
-    DepscanPrefixMapping PrefixMapping) {
+    LookupModuleOutputCallback LookupModuleOutput) {
   if (Worker.getScanningFormat() == ScanningOutputFormat::FullIncludeTree)
-    return createIncludeTreeActionController(*Worker.getCAS(), std::move(PrefixMapping));
+    return createIncludeTreeActionController(LookupModuleOutput,
+                                             *Worker.getCAS());
   if (auto CacheFS = Worker.getCASFS())
-    return createCASFSActionController(LookupModuleOutput, *CacheFS,
-                                       std::move(PrefixMapping));
+    return createCASFSActionController(LookupModuleOutput, *CacheFS);
   return std::make_unique<CallbackActionController>(LookupModuleOutput);
 }
 
 std::unique_ptr<DependencyActionController>
 DependencyScanningTool::createActionController(
-    LookupModuleOutputCallback LookupModuleOutput,
-    DepscanPrefixMapping PrefixMapping) {
-  return createActionController(Worker, std::move(LookupModuleOutput),
-                                std::move(PrefixMapping));
+    LookupModuleOutputCallback LookupModuleOutput) {
+  return createActionController(Worker, std::move(LookupModuleOutput));
 }

@@ -3019,7 +3019,8 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
 
 static void determineInputFromIncludeTree(
     StringRef IncludeTreeID, CASOptions &CASOpts, DiagnosticsEngine &Diags,
-    Optional<cas::IncludeTreeRoot> &IncludeTree, StringRef &InputFilename) {
+    Optional<cas::IncludeTreeRoot> &IncludeTree,
+    Optional<llvm::MemoryBufferRef> &Buffer, StringRef &InputFilename) {
   assert(!IncludeTreeID.empty());
   auto reportError = [&](llvm::Error &&E) {
     Diags.Report(diag::err_fe_unable_to_load_include_tree)
@@ -3046,8 +3047,18 @@ static void determineInputFromIncludeTree(
   auto FilenameBlob = BaseFile->getFilename();
   if (!FilenameBlob)
     return reportError(FilenameBlob.takeError());
+
   InputFilename = FilenameBlob->getData();
   IncludeTree = *Root;
+
+  if (InputFilename != Module::getModuleInputBufferName())
+    return;
+
+  // Handle <module-include> buffer
+  auto Contents = BaseFile->getContents();
+  if (!Contents)
+    return reportError(Contents.takeError());
+  Buffer = llvm::MemoryBufferRef(Contents->getData(), InputFilename);
 }
 
 static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
@@ -3275,13 +3286,14 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.Inputs.clear();
 
   Optional<cas::IncludeTreeRoot> Tree;
+  Optional<llvm::MemoryBufferRef> TreeInputBuffer;
   if (!Opts.CASIncludeTreeID.empty()) {
     if (!Inputs.empty()) {
       Diags.Report(diag::err_drv_inputs_and_include_tree);
     }
     StringRef InputFilename;
     determineInputFromIncludeTree(Opts.CASIncludeTreeID, CASOpts, Diags, Tree,
-                                  InputFilename);
+                                  TreeInputBuffer, InputFilename);
     if (!InputFilename.empty())
       Inputs.push_back(InputFilename.str());
   }
@@ -3320,8 +3332,16 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
 
   if (Tree) {
     FrontendInputFile &InputFile = Opts.Inputs.back();
-    InputFile = FrontendInputFile(Tree->getRef(), InputFile.getFile(),
-                                  InputFile.getKind(), InputFile.isSystem());
+    if (TreeInputBuffer) {
+      // This is automatically set to modulemap when building a module; revert
+      // to a source file for the module includes buffer.
+      auto Kind = InputFile.getKind().withFormat(InputKind::Source);
+      InputFile = FrontendInputFile(Tree->getRef(), *TreeInputBuffer, Kind,
+                                    InputFile.isSystem());
+    } else {
+      InputFile = FrontendInputFile(Tree->getRef(), InputFile.getFile(),
+                                    InputFile.getKind(), InputFile.isSystem());
+    }
   }
 
   Opts.DashX = DashX;

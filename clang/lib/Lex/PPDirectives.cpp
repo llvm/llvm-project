@@ -1973,38 +1973,86 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     return;
   }
 
-  if (auto *CActions = getPPCachedActions()) {
-    DiscardUntilEndOfDirective();
-    SourceLocation IncludePos = FilenameTok.getLocation();
-    // If the filename string was the result of macro expansions, set the
-    // include position on the file where it will be included and after the
-    // expansions.
-    if (IncludePos.isMacroID())
-      IncludePos = SourceMgr.getExpansionRange(IncludePos).getEnd();
-    Optional<FileID> FID = CActions->handleIncludeDirective(
-        *this, IncludePos, CurLexer->getSourceLocation());
-    if (!FID) {
-      // FIXME: Report \p Callbacks->FileSkipped? Note that it currently
-      // requires the resolved FileEntry for this particular #include.
-      return;
-    }
-    const FileEntry *FE = SourceMgr.getFileEntryForID(*FID);
-    bool IsImport =
-        IncludeTok.getIdentifierInfo()->getPPKeywordID() == tok::pp_import;
-    if (FE && IsImport) {
-      HeaderInfo.getFileInfo(FE).isImport = true;
-    }
-    EnterSourceFile(*FID, nullptr, FilenameTok.getLocation(),
-                    /*IsFirstIncludeOfFile*/ true);
-    return;
-  }
-
   // Verify that there is nothing after the filename, other than EOD.  Note
   // that we allow macros that expand to nothing after the filename, because
   // this falls into the category of "#include pp-tokens new-line" specified
   // in C99 6.10.2p4.
   SourceLocation EndLoc =
       CheckEndOfDirective(IncludeTok.getIdentifierInfo()->getNameStart(), true);
+
+  if (auto *CActions = getPPCachedActions()) {
+    SourceLocation IncludePos = FilenameTok.getLocation();
+    // If the filename string was the result of macro expansions, set the
+    // include position on the file where it will be included and after the
+    // expansions.
+    if (IncludePos.isMacroID())
+      IncludePos = SourceMgr.getExpansionRange(IncludePos).getEnd();
+    auto Include = CActions->handleIncludeDirective(
+        *this, IncludePos, CurLexer->getSourceLocation());
+
+    if (auto *File = std::get_if<PPCachedActions::IncludeFile>(&Include)) {
+      const FileEntry *FE = SourceMgr.getFileEntryForID(File->FID);
+      bool IsImport =
+          IncludeTok.getIdentifierInfo()->getPPKeywordID() == tok::pp_import;
+      if (FE && IsImport) {
+        HeaderInfo.getFileInfo(FE).isImport = true;
+      }
+      EnterSourceFile(File->FID, nullptr, FilenameTok.getLocation(),
+                      /*IsFirstIncludeOfFile*/ true);
+
+      if (Module *SM = File->Submodule) {
+        assert(!CurLexerSubmodule &&
+               "should not have marked this as a module yet");
+        CurLexerSubmodule = SM;
+        EnterSubmodule(SM, EndLoc, /*ForPragma=*/false);
+        EnterAnnotationToken(SourceRange(HashLoc, EndLoc),
+                             tok::annot_module_begin, SM);
+      }
+      return;
+    }
+    if (auto *Import = std::get_if<PPCachedActions::IncludeModule>(&Include)) {
+      ModuleLoadResult Imported;
+      if (Import->VisibilityOnly) {
+        ModuleMap &MMap = getHeaderSearchInfo().getModuleMap();
+        Module *M = nullptr;
+        for (auto &NameLoc : Import->ImportPath) {
+          M = MMap.lookupModuleQualified(NameLoc.first->getName(), M);
+          if (!M)
+            break;
+        }
+        if (!M) {
+          Diags->Report(diag::err_pp_missing_module_include_tree)
+              << getLangOpts().CurrentModule;
+
+          return;
+        }
+        Imported = M;
+      } else {
+        Imported = TheModuleLoader.loadModule(
+            IncludeTok.getLocation(), Import->ImportPath, Module::Hidden,
+            /*IsIncludeDirective=*/true);
+        if (!Imported) {
+          assert(hadModuleLoaderFatalFailure() && "unexpected failure kind");
+          if (hadModuleLoaderFatalFailure()) {
+            IncludeTok.setKind(tok::eof);
+            CurLexer->cutOffLexing();
+          }
+          return;
+        }
+      }
+
+      makeModuleVisible(Imported, EndLoc);
+      if (IncludeTok.getIdentifierInfo()->getPPKeywordID() !=
+          tok::pp___include_macros)
+        EnterAnnotationToken(SourceRange(HashLoc, EndLoc),
+                             tok::annot_module_include, Imported);
+      return;
+    }
+    assert(std::holds_alternative<std::monostate>(Include));
+    // FIXME: Report \p Callbacks->FileSkipped? Note that it currently
+    // requires the resolved FileEntry for this particular #include.
+    return;
+  }
 
   auto Action = HandleHeaderIncludeOrImport(HashLoc, IncludeTok, FilenameTok,
                                             EndLoc, LookupFrom, LookupFromFile);

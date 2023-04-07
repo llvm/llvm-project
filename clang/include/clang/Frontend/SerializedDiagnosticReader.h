@@ -65,6 +65,9 @@ public:
   /// Read the diagnostics in \c File
   std::error_code readDiagnostics(StringRef File);
 
+  /// Read the diagnostics in \c Buffer.
+  std::error_code readDiagnostics(llvm::MemoryBufferRef Buffer);
+
 private:
   enum class Cursor;
 

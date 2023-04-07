@@ -22,8 +22,7 @@ namespace {
 class CASFSActionController : public CallbackActionController {
 public:
   CASFSActionController(LookupModuleOutputCallback LookupModuleOutput,
-                        llvm::cas::CachingOnDiskFileSystem &CacheFS,
-                        DepscanPrefixMapping PrefixMapping);
+                        llvm::cas::CachingOnDiskFileSystem &CacheFS);
 
   llvm::Error initialize(CompilerInstance &ScanInstance,
                          CompilerInvocation &NewInvocation) override;
@@ -38,7 +37,6 @@ public:
 
 private:
   llvm::cas::CachingOnDiskFileSystem &CacheFS;
-  DepscanPrefixMapping PrefixMapping;
   std::optional<llvm::TreePathPrefixMapper> Mapper;
   CASOptions CASOpts;
 };
@@ -46,17 +44,15 @@ private:
 
 CASFSActionController::CASFSActionController(
     LookupModuleOutputCallback LookupModuleOutput,
-    llvm::cas::CachingOnDiskFileSystem &CacheFS,
-    DepscanPrefixMapping PrefixMapping)
-    : CallbackActionController(std::move(LookupModuleOutput)), CacheFS(CacheFS),
-      PrefixMapping(std::move(PrefixMapping)) {}
+    llvm::cas::CachingOnDiskFileSystem &CacheFS)
+    : CallbackActionController(std::move(LookupModuleOutput)),
+      CacheFS(CacheFS) {}
 
 Error CASFSActionController::initialize(CompilerInstance &ScanInstance,
                                         CompilerInvocation &NewInvocation) {
   // Setup prefix mapping.
   Mapper.emplace(&CacheFS);
-  if (Error E = PrefixMapping.configurePrefixMapper(NewInvocation, *Mapper))
-    return E;
+  DepscanPrefixMapping::configurePrefixMapper(NewInvocation, *Mapper);
 
   const PreprocessorOptions &PPOpts = ScanInstance.getPreprocessorOpts();
   if (!PPOpts.Includes.empty() || !PPOpts.ImplicitPCHInclude.empty())
@@ -176,7 +172,7 @@ Error CASFSActionController::finalizeModuleBuild(
   Module *M = ModuleScanInstance.getPreprocessor().getCurrentModule();
   assert(M && "finalizing without a module");
 
-  M->setCASFileSystemRootID(RootID->toString());
+  ModuleScanInstance.getASTContext().setCASFileSystemRootID(RootID->toString());
   return Error::success();
 }
 
@@ -197,8 +193,6 @@ Error CASFSActionController::finalizeModuleInvocation(CompilerInvocation &CI,
 std::unique_ptr<DependencyActionController>
 dependencies::createCASFSActionController(
     LookupModuleOutputCallback LookupModuleOutput,
-    llvm::cas::CachingOnDiskFileSystem &CacheFS,
-    DepscanPrefixMapping PrefixMapping) {
-  return std::make_unique<CASFSActionController>(LookupModuleOutput, CacheFS,
-                                                 std::move(PrefixMapping));
+    llvm::cas::CachingOnDiskFileSystem &CacheFS) {
+  return std::make_unique<CASFSActionController>(LookupModuleOutput, CacheFS);
 }

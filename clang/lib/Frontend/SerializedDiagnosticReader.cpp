@@ -34,7 +34,12 @@ std::error_code SerializedDiagnosticReader::readDiagnostics(StringRef File) {
   if (!Buffer)
     return SDError::CouldNotLoad;
 
-  llvm::BitstreamCursor Stream(**Buffer);
+  return readDiagnostics(**Buffer);
+}
+
+std::error_code
+SerializedDiagnosticReader::readDiagnostics(llvm::MemoryBufferRef Buffer) {
+  llvm::BitstreamCursor Stream(Buffer);
   Optional<llvm::BitstreamBlockInfo> BlockInfo;
 
   if (Stream.AtEndOfStream())

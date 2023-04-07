@@ -71,6 +71,9 @@ struct TranslationUnitDeps {
   /// The CASID for input file dependency tree.
   llvm::Optional<std::string> CASFileSystemRootID;
 
+  /// The include-tree for input file dependency tree.
+  llvm::Optional<std::string> IncludeTreeID;
+
   /// The sequence of commands required to build the translation unit. Commands
   /// should be executed in order.
   ///
@@ -103,8 +106,7 @@ public:
 
   /// Collect dependency tree.
   llvm::Expected<llvm::cas::ObjectProxy>
-  getDependencyTree(const std::vector<std::string> &CommandLine, StringRef CWD,
-                    DepscanPrefixMapping PrefixMapping = {});
+  getDependencyTree(const std::vector<std::string> &CommandLine, StringRef CWD);
 
   /// If \p DiagGenerationAsCompilation is true it will generate error
   /// diagnostics same way as the normal compilation, with "N errors generated"
@@ -114,13 +116,12 @@ public:
   getDependencyTreeFromCompilerInvocation(
       std::shared_ptr<CompilerInvocation> Invocation, StringRef CWD,
       DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
-      bool DiagGenerationAsCompilation,
-      DepscanPrefixMapping PrefixMapping = {});
+      bool DiagGenerationAsCompilation);
 
   Expected<cas::IncludeTreeRoot>
   getIncludeTree(cas::ObjectStore &DB,
                  const std::vector<std::string> &CommandLine, StringRef CWD,
-                 const DepscanPrefixMapping &PrefixMapping);
+                 LookupModuleOutputCallback LookupModuleOutput);
 
   /// If \p DiagGenerationAsCompilation is true it will generate error
   /// diagnostics same way as the normal compilation, with "N errors generated"
@@ -128,7 +129,7 @@ public:
   /// \p DiagOpts.DiagnosticSerializationFile setting is set for the invocation.
   Expected<cas::IncludeTreeRoot> getIncludeTreeFromCompilerInvocation(
       cas::ObjectStore &DB, std::shared_ptr<CompilerInvocation> Invocation,
-      StringRef CWD, const DepscanPrefixMapping &PrefixMapping,
+      StringRef CWD, LookupModuleOutputCallback LookupModuleOutput,
       DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
       bool DiagGenerationAsCompilation);
 
@@ -150,8 +151,7 @@ public:
   getTranslationUnitDependencies(const std::vector<std::string> &CommandLine,
                                  StringRef CWD,
                                  const llvm::StringSet<> &AlreadySeen,
-                                 LookupModuleOutputCallback LookupModuleOutput,
-                                 DepscanPrefixMapping PrefixMapping);
+                                 LookupModuleOutputCallback LookupModuleOutput);
 
   /// Given a compilation context specified via the Clang driver command-line,
   /// gather modular dependencies of module with the given name, and return the
@@ -160,8 +160,7 @@ public:
   getModuleDependencies(StringRef ModuleName,
                         const std::vector<std::string> &CommandLine,
                         StringRef CWD, const llvm::StringSet<> &AlreadySeen,
-                        LookupModuleOutputCallback LookupModuleOutput,
-                        DepscanPrefixMapping PrefixMapping);
+                        LookupModuleOutputCallback LookupModuleOutput);
 
   ScanningOutputFormat getScanningFormat() const {
     return Worker.getScanningFormat();
@@ -182,13 +181,11 @@ public:
 
   static std::unique_ptr<DependencyActionController>
   createActionController(DependencyScanningWorker &Worker,
-                         LookupModuleOutputCallback LookupModuleOutput,
-                         DepscanPrefixMapping PrefixMapping);
+                         LookupModuleOutputCallback LookupModuleOutput);
 
 private:
   std::unique_ptr<DependencyActionController>
-  createActionController(LookupModuleOutputCallback LookupModuleOutput,
-                         DepscanPrefixMapping PrefixMapping);
+  createActionController(LookupModuleOutputCallback LookupModuleOutput);
 
 private:
   DependencyScanningWorker Worker;
@@ -225,6 +222,10 @@ public:
     CASFileSystemRootID = std::move(ID);
   }
 
+  void handleIncludeTreeID(std::string ID) override {
+    IncludeTreeID = std::move(ID);
+  }
+
   TranslationUnitDeps takeTranslationUnitDeps();
   ModuleDepsGraph takeModuleGraphDeps();
 
@@ -236,6 +237,7 @@ private:
   std::vector<Command> Commands;
   std::string ContextHash;
   Optional<std::string> CASFileSystemRootID;
+  Optional<std::string> IncludeTreeID;
   std::vector<std::string> OutputPaths;
   const llvm::StringSet<> &AlreadySeen;
 };

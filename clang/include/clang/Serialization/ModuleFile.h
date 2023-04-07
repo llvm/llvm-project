@@ -143,6 +143,10 @@ public:
   /// scanner, or empty.
   std::string CASFileSystemRootID;
 
+  /// The include-tree root ID for implicit modules built with the dependency
+  /// scanner, or empty.
+  std::string IncludeTreeID;
+
   /// The name of the module.
   std::string ModuleName;
 

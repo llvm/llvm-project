@@ -640,10 +640,14 @@ public:
       : CAS(CAS), Cache(Cache), ModuleCache(ModuleCache), Diags(Diags) {}
 
   bool readCASFileSystemRootID(StringRef RootID, bool Complain) override;
+  bool readIncludeTreeID(StringRef ID, bool Complain) override;
   bool readModuleCacheKey(StringRef ModuleName, StringRef Filename,
                           StringRef CacheKey) override;
 
 private:
+  bool checkCASID(bool Complain, StringRef RootID, unsigned ParseDiagID,
+                  unsigned MissingDiagID);
+
   cas::ObjectStore &CAS;
   cas::ActionCache &Cache;
   InMemoryModuleCache &ModuleCache;
@@ -2077,8 +2081,12 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
           PrivateModule, PP->getIdentifierInfo(Module->Name)->getTokenID());
       PrivPath.push_back(std::make_pair(&II, Path[0].second));
 
+      std::string FileName;
+      // If there is a modulemap module or prebuilt module, load it.
       if (PP->getHeaderSearchInfo().lookupModule(PrivateModule, ImportLoc, true,
-                                                 !IsInclusionDirective))
+                                                 !IsInclusionDirective) ||
+          selectModuleSource(nullptr, PrivateModule, FileName, BuiltModules,
+                             PP->getHeaderSearchInfo()) != MS_ModuleNotFound)
         Sub = loadModule(ImportLoc, PrivPath, Visibility, IsInclusionDirective);
       if (Sub) {
         MapPrivateSubModToTopLevel = true;
@@ -2431,21 +2439,36 @@ bool CompileCacheASTReaderHelper::readModuleCacheKey(StringRef ModuleName,
       Filename, CacheKey, "imported module", CAS, Cache, ModuleCache, Diags);
 }
 
-bool CompileCacheASTReaderHelper::readCASFileSystemRootID(StringRef RootID,
-                                                          bool Complain) {
-  // Verify that RootID is in the CAS. Otherwise the module cache probably was
-  // created with a different CAS.
+/// Verify that ID is in the CAS. Otherwise the module cache probably was
+/// created with a different CAS.
+bool CompileCacheASTReaderHelper::checkCASID(bool Complain, StringRef RootID,
+                                             unsigned ParseDiagID,
+                                             unsigned MissingDiagID) {
   std::optional<cas::CASID> ID;
   if (errorToBool(CAS.parseID(RootID).moveInto(ID))) {
     if (Complain)
-      Diags.Report(diag::err_cas_cannot_parse_root_id) << RootID;
+      Diags.Report(ParseDiagID) << RootID;
     return true;
   }
   if (errorToBool(CAS.getProxy(*ID).takeError())) {
     if (Complain) {
-      Diags.Report(diag::err_cas_missing_root_id) << RootID;
+      Diags.Report(MissingDiagID) << RootID;
     }
     return true;
   }
   return false;
+}
+
+bool CompileCacheASTReaderHelper::readCASFileSystemRootID(StringRef RootID,
+                                                          bool Complain) {
+  return checkCASID(Complain, RootID, diag::err_cas_cannot_parse_root_id,
+                    diag::err_cas_missing_root_id);
+}
+
+bool CompileCacheASTReaderHelper::readIncludeTreeID(StringRef ID,
+                                                    bool Complain) {
+  // Verify that ID is in the CAS. Otherwise the module cache probably was
+  // created with a different CAS.
+  return checkCASID(Complain, ID, diag::err_cas_cannot_parse_include_tree_id,
+                    diag::err_cas_missing_include_tree_id);
 }

@@ -29,17 +29,30 @@ void tooling::dependencies::configureInvocationForCaching(
   // Clear this otherwise it defeats the purpose of making the compilation key
   // independent of certain arguments.
   CI.getCodeGenOpts().DwarfDebugFlags.clear();
+  if (FrontendOpts.ProgramAction == frontend::GeneratePCH) {
+    // Clear paths that are emitted into binaries; they do not affect PCH.
+    // For modules this is handled in ModuleDepCollector.
+    CI.getCodeGenOpts().CoverageDataFile.clear();
+    CI.getCodeGenOpts().CoverageNotesFile.clear();
+  }
 
   // "Fix" the CAS options.
   auto &FileSystemOpts = CI.getFileSystemOpts();
   if (ProduceIncludeTree) {
     FrontendOpts.CASIncludeTreeID = std::move(RootID);
     FrontendOpts.Inputs.clear();
+    FrontendOpts.ModuleMapFiles.clear();
+    HeaderSearchOptions &HSOpts = CI.getHeaderSearchOpts();
+    HeaderSearchOptions OriginalHSOpts;
+    std::swap(HSOpts, OriginalHSOpts);
     // Preserve sysroot path to accommodate lookup for 'SDKSettings.json' during
     // availability checking.
-    std::string OriginalSysroot = CI.getHeaderSearchOpts().Sysroot;
-    CI.getHeaderSearchOpts() = HeaderSearchOptions();
-    CI.getHeaderSearchOpts().Sysroot = OriginalSysroot;
+    HSOpts.Sysroot = std::move(OriginalHSOpts.Sysroot);
+    // Preserve resource-dir, which is added back by cc1_main if missing, and
+    // affects the cache key.
+    HSOpts.ResourceDir = std::move(OriginalHSOpts.ResourceDir);
+    // Preserve fmodule-file options.
+    HSOpts.PrebuiltModuleFiles = std::move(OriginalHSOpts.PrebuiltModuleFiles);
     auto &PPOpts = CI.getPreprocessorOpts();
     // We don't need this because we save the contents of the PCH file in the
     // include tree root.
@@ -164,68 +177,38 @@ void DepscanPrefixMapping::remapInvocationPaths(CompilerInvocation &Invocation,
   Mapper.mapInPlace(CodeGenOpts.ProfileInstrumentUsePath);
   Mapper.mapInPlace(CodeGenOpts.SampleProfileFile);
   Mapper.mapInPlace(CodeGenOpts.ProfileRemappingFile);
+
+  // Dependency output options.
+  // Note: these are not in the cache key, but they are in the module context
+  // hash, which indirectly impacts the cache key when importing a module.
+  // In the future we may change how -fmodule-file-cache-key works when
+  // remapping to avoid needing this.
+  for (auto &ExtraDep : Invocation.getDependencyOutputOpts().ExtraDeps)
+    Mapper.mapInPlace(ExtraDep.first);
 }
 
-Error DepscanPrefixMapping::configurePrefixMapper(
-    const CompilerInvocation &Invocation, llvm::PrefixMapper &Mapper) const {
-  auto isPathApplicableAsPrefix = [](StringRef Path) -> bool {
-    if (Path.empty())
-      return false;
-    if (llvm::sys::path::is_relative(Path))
-      return false;
-    if (Path == llvm::sys::path::root_path(Path))
-      return false;
-    return true;
-  };
+void DepscanPrefixMapping::configurePrefixMapper(const CompilerInvocation &CI,
+                                                 llvm::PrefixMapper &Mapper) {
+  return configurePrefixMapper(CI.getFrontendOpts().PathPrefixMappings, Mapper);
+}
 
-  const HeaderSearchOptions &HSOpts = Invocation.getHeaderSearchOpts();
+void DepscanPrefixMapping::configurePrefixMapper(
+    ArrayRef<std::string> PathPrefixMappings, llvm::PrefixMapper &Mapper) {
+  if (PathPrefixMappings.empty())
+    return;
 
-  if (NewSDKPath) {
-    StringRef SDK = HSOpts.Sysroot;
-    if (isPathApplicableAsPrefix(SDK))
-      // Need a new copy of the string since the invocation will be modified.
-      Mapper.add({SDK, *NewSDKPath});
-  }
-  if (NewToolchainPath) {
-    // Look up for the toolchain, assuming resources are at
-    // <toolchain>/usr/lib/clang/<VERSION>. Return a shallower guess if the
-    // directories do not match.
-    //
-    // FIXME: Should this append ".." instead of calling parent_path?
-    StringRef ResourceDir = HSOpts.ResourceDir;
-    StringRef Guess = llvm::sys::path::parent_path(ResourceDir);
-    for (StringRef Dir : {"clang", "lib", "usr"}) {
-      if (llvm::sys::path::filename(Guess) != Dir)
-        break;
-      Guess = llvm::sys::path::parent_path(Guess);
-    }
-    if (isPathApplicableAsPrefix(Guess))
-      // Need a new copy of the string since the invocation will be modified.
-      Mapper.add({Guess, *NewToolchainPath});
-  }
-  if (!PrefixMap.empty()) {
-    llvm::SmallVector<llvm::MappedPrefix> Split;
-    llvm::MappedPrefix::transformJoinedIfValid(PrefixMap, Split);
-    for (auto &MappedPrefix : Split) {
-      if (isPathApplicableAsPrefix(MappedPrefix.Old)) {
-        Mapper.add(MappedPrefix);
-      } else {
-        return createStringError(llvm::errc::invalid_argument,
-                                 "invalid prefix map: '" + MappedPrefix.Old +
-                                     "=" + MappedPrefix.New + "'");
-      }
-    }
-  }
+  llvm::SmallVector<llvm::MappedPrefix> Split;
+  llvm::MappedPrefix::transformJoinedIfValid(PathPrefixMappings, Split);
+  for (auto &MappedPrefix : Split)
+    Mapper.add(MappedPrefix);
 
   Mapper.sort();
-  return Error::success();
 }
 
 Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
     DependencyScanningTool &Tool, DiagnosticConsumer &DiagsConsumer,
     raw_ostream *VerboseOS, CompilerInvocation &Invocation,
-    StringRef WorkingDirectory, const DepscanPrefixMapping &PrefixMapping,
-    llvm::cas::ObjectStore &DB) {
+    StringRef WorkingDirectory, llvm::cas::ObjectStore &DB) {
   // Override the CASOptions. They may match (the caller having sniffed them
   // out of InputArgs) but if they have been overridden we want the new ones.
   Invocation.getCASOpts() = Tool.getCASOpts();
@@ -242,8 +225,7 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
         Tool.getCachingFileSystem());
   }
   llvm::PrefixMapper &Mapper = *MapperPtr;
-  if (Error E = PrefixMapping.configurePrefixMapper(Invocation, Mapper))
-    return std::move(E);
+  DepscanPrefixMapping::configurePrefixMapper(Invocation, Mapper);
 
   auto ScanInvocation = std::make_shared<CompilerInvocation>(Invocation);
   // An error during dep-scanning is treated as if the main compilation has
@@ -252,17 +234,18 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
 
   Optional<llvm::cas::CASID> Root;
   if (ProduceIncludeTree) {
-    if (Error E = Tool.getIncludeTreeFromCompilerInvocation(
-                          DB, std::move(ScanInvocation), WorkingDirectory,
-                          PrefixMapping, DiagsConsumer, VerboseOS,
-                          /*DiagGenerationAsCompilation*/ true)
-                      .moveInto(Root))
+    if (Error E =
+            Tool.getIncludeTreeFromCompilerInvocation(
+                    DB, std::move(ScanInvocation), WorkingDirectory,
+                    /*LookupModuleOutput=*/nullptr, DiagsConsumer, VerboseOS,
+                    /*DiagGenerationAsCompilation*/ true)
+                .moveInto(Root))
       return std::move(E);
   } else {
     if (Error E = Tool.getDependencyTreeFromCompilerInvocation(
                           std::move(ScanInvocation), WorkingDirectory,
                           DiagsConsumer, VerboseOS,
-                          /*DiagGenerationAsCompilation*/ true, PrefixMapping)
+                          /*DiagGenerationAsCompilation*/ true)
                       .moveInto(Root))
       return std::move(E);
   }
