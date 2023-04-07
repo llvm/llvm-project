@@ -121,7 +121,7 @@ int64_t ValueBoundsConstraintSet::insert(Value value,
   for (int64_t i = pos, e = positionToValueDim.size(); i < e; ++i)
     valueDimToPosition[positionToValueDim[i]] = i;
 
-  worklist.insert(pos);
+  worklist.push(pos);
   return pos;
 }
 
@@ -148,7 +148,8 @@ static Operation *getOwnerOfValue(Value value) {
 
 void ValueBoundsConstraintSet::processWorklist(StopConditionFn stopCondition) {
   while (!worklist.empty()) {
-    int64_t pos = worklist.pop_back_val();
+    int64_t pos = worklist.front();
+    worklist.pop();
     ValueDim valueDim = positionToValueDim[pos];
     Value value = valueDim.first;
     int64_t dim = valueDim.second;
@@ -335,6 +336,33 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
   resultMap = bound.replaceDimsAndSymbols(replacementDims, replacementSymbols,
                                           numDims, numSymbols);
   return success();
+}
+
+FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
+    presburger::BoundType type, Value value, std::optional<int64_t> dim,
+    StopConditionFn stopCondition) {
+#ifndef NDEBUG
+  assertValidValueDim(value, dim);
+#endif // NDEBUG
+
+  // Process the backward slice of `value` (i.e., reverse use-def chain) until
+  // `stopCondition` is met.
+  ValueBoundsConstraintSet cstr(value, dim);
+  int64_t pos = cstr.getPos(value, dim);
+  if (stopCondition) {
+    cstr.processWorklist(stopCondition);
+  } else {
+    // No stop condition specified: Keep adding constraints until a bound could
+    // be computed.
+    cstr.processWorklist(/*stopCondition=*/[&](Value v) {
+      return cstr.cstr.getConstantBound64(type, pos).has_value();
+    });
+  }
+
+  // Compute constant bound for `valueDim`.
+  if (auto bound = cstr.cstr.getConstantBound64(type, pos))
+    return type == BoundType::UB ? *bound + 1 : *bound;
+  return failure();
 }
 
 ValueBoundsConstraintSet::BoundBuilder &
