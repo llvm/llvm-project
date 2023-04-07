@@ -5,9 +5,9 @@ define i32 @PR38915(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @PR38915(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[Y:%.*]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP3]], i32 [[Z:%.*]])
-; CHECK-NEXT:    [[M2N:%.*]] = xor i32 [[TMP4]], -1
+; CHECK-NEXT:    [[M1N:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 [[TMP2]])
+; CHECK-NEXT:    [[M2:%.*]] = call i32 @llvm.smax.i32(i32 [[M1N]], i32 [[Z:%.*]])
+; CHECK-NEXT:    [[M2N:%.*]] = xor i32 [[M2]], -1
 ; CHECK-NEXT:    ret i32 [[M2N]]
 ;
   %xn = sub i32 0, %x

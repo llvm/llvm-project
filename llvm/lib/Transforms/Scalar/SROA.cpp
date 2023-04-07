@@ -126,17 +126,18 @@ namespace {
 /// Calculate the fragment of a variable to use when slicing a store
 /// based on the slice dimensions, existing fragment, and base storage
 /// fragment.
-/// Note that a returned value of std::nullopt indicates that there is
-/// no appropriate fragment available (rather than meaning use the whole
-/// variable, which is a common usage). Because the store is being sliced
-/// we always expect a fragment - there's never a case where the whole
-/// variable should be used.
-static std::optional<DIExpression::FragmentInfo>
-calculateFragment(uint64_t NewStorageSliceOffsetInBits,
+/// Results:
+/// UseFrag - Use Target as the new fragment.
+/// UseNoFrag - The new slice already covers the whole variable.
+/// Skip - The new alloca slice doesn't include this variable.
+enum FragCalcResult { UseFrag, UseNoFrag, Skip };
+static FragCalcResult
+calculateFragment(DILocalVariable *Variable,
+                  uint64_t NewStorageSliceOffsetInBits,
                   uint64_t NewStorageSliceSizeInBits,
                   std::optional<DIExpression::FragmentInfo> StorageFragment,
-                  std::optional<DIExpression::FragmentInfo> CurrentFragment) {
-  DIExpression::FragmentInfo Target;
+                  std::optional<DIExpression::FragmentInfo> CurrentFragment,
+                  DIExpression::FragmentInfo &Target) {
   // If the base storage describes part of the variable apply the offset and
   // the size constraint.
   if (StorageFragment) {
@@ -149,20 +150,32 @@ calculateFragment(uint64_t NewStorageSliceOffsetInBits,
     Target.OffsetInBits = NewStorageSliceOffsetInBits;
   }
 
+  // If this slice extracts the entirety of an independent variable from a
+  // larger alloca, do not produce a fragment expression, as the variable is
+  // not fragmented.
+  if (!CurrentFragment) {
+    if (auto Size = Variable->getSizeInBits()) {
+      // Treat the current fragment as covering the whole variable.
+      CurrentFragment =  DIExpression::FragmentInfo(*Size, 0);
+      if (Target == CurrentFragment)
+        return UseNoFrag;
+    }
+  }
+
   // No additional work to do if there isn't a fragment already, or there is
   // but it already exactly describes the new assignment.
   if (!CurrentFragment || *CurrentFragment == Target)
-    return Target;
+    return UseFrag;
 
   // Reject the target fragment if it doesn't fit wholly within the current
   // fragment. TODO: We could instead chop up the target to fit in the case of
   // a partial overlap.
   if (Target.startInBits() < CurrentFragment->startInBits() ||
       Target.endInBits() > CurrentFragment->endInBits())
-    return std::nullopt;
+    return Skip;
 
   // Target fits within the current fragment, return it.
-  return Target;
+  return UseFrag;
 }
 
 static DebugVariable getAggregateVariable(DbgVariableIntrinsic *DVI) {
@@ -237,25 +250,24 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
       }
       std::optional<DIExpression::FragmentInfo> CurrentFragment =
           Expr->getFragmentInfo();
-      std::optional<DIExpression::FragmentInfo> NewFragment =
-          calculateFragment(OldAllocaOffsetInBits, SliceSizeInBits,
-                            BaseFragment, CurrentFragment);
-      // Note that std::nullopt here means "skip this fragment" rather than
-      // "there is no fragment / use the whole variable".
-      if (!NewFragment)
-        continue;
+      DIExpression::FragmentInfo NewFragment;
+      FragCalcResult Result = calculateFragment(
+          DbgAssign->getVariable(), OldAllocaOffsetInBits, SliceSizeInBits,
+          BaseFragment, CurrentFragment, NewFragment);
 
-      if (!(NewFragment == CurrentFragment)) {
+      if (Result == Skip)
+        continue;
+      if (Result == UseFrag && !(NewFragment == CurrentFragment)) {
         if (CurrentFragment) {
           // Rewrite NewFragment to be relative to the existing one (this is
           // what createFragmentExpression wants).  CalculateFragment has
           // already resolved the size for us. FIXME: Should it return the
           // relative fragment too?
-          NewFragment->OffsetInBits -= CurrentFragment->OffsetInBits;
+          NewFragment.OffsetInBits -= CurrentFragment->OffsetInBits;
         }
         // Add the new fragment info to the existing expression if possible.
         if (auto E = DIExpression::createFragmentExpression(
-                Expr, NewFragment->OffsetInBits, NewFragment->SizeInBits)) {
+                Expr, NewFragment.OffsetInBits, NewFragment.SizeInBits)) {
           Expr = *E;
         } else {
           // Otherwise, add the new fragment info to an empty expression and
@@ -263,7 +275,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
           // be computed with the new fragment.
           Expr = *DIExpression::createFragmentExpression(
               DIExpression::get(Expr->getContext(), std::nullopt),
-              NewFragment->OffsetInBits, NewFragment->SizeInBits);
+              NewFragment.OffsetInBits, NewFragment.SizeInBits);
           SetKillLocation = true;
         }
       }

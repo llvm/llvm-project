@@ -14,7 +14,6 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Host.h"
@@ -136,9 +135,8 @@ bool LLVMState::canAssemble(const MCInst &Inst) const {
           *TheTargetMachine->getMCInstrInfo(), Context));
   assert(CodeEmitter && "unable to create code emitter");
   SmallVector<char, 16> Tmp;
-  raw_svector_ostream OS(Tmp);
   SmallVector<MCFixup, 4> Fixups;
-  CodeEmitter->encodeInstruction(Inst, OS, Fixups,
+  CodeEmitter->encodeInstruction(Inst, Tmp, Fixups,
                                  *TheTargetMachine->getMCSubtargetInfo());
   return Tmp.size() > 0;
 }

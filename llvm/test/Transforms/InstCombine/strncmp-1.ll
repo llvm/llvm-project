@@ -16,8 +16,8 @@ define i32 @test1(ptr %str2) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[STRCMPLOAD:%.*]] = load i8, ptr [[STR2:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[STRCMPLOAD]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i32 0, [[TMP1]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TEMP1:%.*]] = sub nsw i32 0, [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TEMP1]]
 ;
 
   %temp1 = call i32 @strncmp(ptr @null, ptr %str2, i32 10)
@@ -28,8 +28,8 @@ define i32 @test1(ptr %str2) {
 define i32 @test2(ptr %str1) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[STRCMPLOAD:%.*]] = load i8, ptr [[STR1:%.*]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[STRCMPLOAD]] to i32
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TEMP1:%.*]] = zext i8 [[STRCMPLOAD]] to i32
+; CHECK-NEXT:    ret i32 [[TEMP1]]
 ;
 
   %temp1 = call i32 @strncmp(ptr %str1, ptr @null, i32 10)

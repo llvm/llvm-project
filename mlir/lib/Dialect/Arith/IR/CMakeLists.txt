@@ -13,7 +13,6 @@ add_mlir_dialect_library(MLIRArithDialect
   ArithOps.cpp
   ArithDialect.cpp
   InferIntRangeInterfaceImpls.cpp
-  ValueBoundsOpInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Arith
@@ -28,7 +27,6 @@ add_mlir_dialect_library(MLIRArithDialect
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRIR
-  MLIRValueBoundsOpInterface
   )
 
 add_mlir_dialect_library(MLIRArithValueBoundsOpInterfaceImpl

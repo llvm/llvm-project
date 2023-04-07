@@ -37,7 +37,7 @@
 #endif
 
 #if defined(__ARM_FEATURE_FMA) || defined(__AVX2__) || defined(__FMA__) ||     \
-    defined(__riscv)
+    defined(__LIBC_RISCV_USE_FMA)
 #define LIBC_TARGET_CPU_HAS_FMA
 #endif
 

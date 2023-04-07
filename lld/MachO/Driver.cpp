@@ -1644,9 +1644,10 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
         std::make_pair(arg->getValue(0), arg->getValue(1)));
   }
 
-  // FIXME: Add a commandline flag for this too.
   if (const char *zero = getenv("ZERO_AR_DATE"))
     config->zeroModTime = strcmp(zero, "0") != 0;
+  if (args.getLastArg(OPT_reproducible))
+    config->zeroModTime = true;
 
   std::array<PlatformType, 3> encryptablePlatforms{
       PLATFORM_IOS, PLATFORM_WATCHOS, PLATFORM_TVOS};
