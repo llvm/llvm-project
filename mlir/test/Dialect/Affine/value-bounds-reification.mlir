@@ -26,6 +26,8 @@ func.func @reify_through_chain(%sz0: index, %sz2: index) -> (index, index, index
 // CHECK-LABEL: func @reify_slice_bound(
 //       CHECK:   %[[c5:.*]] = arith.constant 5 : index
 //       CHECK:   "test.some_use"(%[[c5]])
+//       CHECK:   %[[c5:.*]] = arith.constant 5 : index
+//       CHECK:   "test.some_use"(%[[c5]])
 func.func @reify_slice_bound(%t: tensor<?x?xi32>, %idx: index, %ub: index, %f: f32) {
   %c0 = arith.constant 0 : index
   %c4 = arith.constant 4 : index
@@ -33,8 +35,12 @@ func.func @reify_slice_bound(%t: tensor<?x?xi32>, %idx: index, %ub: index, %f: f
     %sz = affine.min affine_map<(d0)[s0] -> (-d0 + s0, 4)>(%iv)[%ub]
     %slice = tensor.extract_slice %t[%idx, %iv] [1, %sz] [1, 1] : tensor<?x?xi32> to tensor<1x?xi32>
     %filled = linalg.fill ins(%f : f32) outs(%slice : tensor<1x?xi32>) -> tensor<1x?xi32>
+
     %bound = "test.reify_bound"(%filled) {dim = 1, type = "UB"} : (tensor<1x?xi32>) -> (index)
     "test.some_use"(%bound) : (index) -> ()
+
+    %bound_const = "test.reify_constant_bound"(%filled) {dim = 1, type = "UB"} : (tensor<1x?xi32>) -> (index)
+    "test.some_use"(%bound_const) : (index) -> ()
   }
   return
 }
@@ -77,6 +83,11 @@ func.func @reify_slice_bound2(%lb0: index, %ub0: index, %step0: index,
     %lb1_ub = "test.reify_bound"(%lb1) {type = "UB"} : (index) -> (index)
     "test.some_use"(%lb1_ub) : (index) -> ()
 
+    // CHECK: %[[c129:.*]] = arith.constant 129 : index
+    // CHECK: "test.some_use"(%[[c129]])
+    %lb1_ub_const = "test.reify_constant_bound"(%lb1) {type = "UB"} : (index) -> (index)
+    "test.some_use"(%lb1_ub_const) : (index) -> ()
+
     scf.for %iv1 = %lb1 to %ub1 step %c32 {
       // CHECK: %[[c32:.*]] = arith.constant 32 : index
       // CHECK: "test.some_use"(%[[c32]])
@@ -94,6 +105,11 @@ func.func @reify_slice_bound2(%lb0: index, %ub0: index, %step0: index,
         // CHECK: "test.some_use"(%[[c32]])
         %matmul_ub = "test.reify_bound"(%matmul) {dim = 1, type = "UB"} : (tensor<1x?xi32>) -> (index)
         "test.some_use"(%matmul_ub) : (index) -> ()
+
+        // CHECK: %[[c32:.*]] = arith.constant 32 : index
+        // CHECK: "test.some_use"(%[[c32]])
+        %matmul_ub_const = "test.reify_constant_bound"(%matmul) {dim = 1, type = "UB"} : (tensor<1x?xi32>) -> (index)
+        "test.some_use"(%matmul_ub_const) : (index) -> ()
       }
     }
   }
