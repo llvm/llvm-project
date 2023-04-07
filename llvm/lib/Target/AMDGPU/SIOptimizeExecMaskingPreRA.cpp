@@ -106,7 +106,7 @@ static bool isDefBetween(const SIRegisterInfo &TRI,
 
 // Optimize sequence
 //    %sel = V_CNDMASK_B32_e64 0, 1, %cc
-//    %cmp = V_CMP_NE_U32 1, %1
+//    %cmp = V_CMP_NE_U32 1, %sel
 //    $vcc = S_AND_B64 $exec, %cmp
 //    S_CBRANCH_VCC[N]Z
 // =>
