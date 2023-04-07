@@ -46,7 +46,7 @@ public:
   uint32_t SetSelectedFrame(lldb_private::StackFrame *frame);
 
   /// Get the currently selected frame index.
-  uint32_t GetSelectedFrameIndex() const;
+  uint32_t GetSelectedFrameIndex();
 
   /// Mark a stack frame as the currently selected frame using the frame index
   /// \p idx. Like \ref GetFrameAtIndex, invisible frames cannot be selected.
@@ -110,6 +110,8 @@ protected:
 
   void SetCurrentInlinedDepth(uint32_t new_depth);
 
+  void SelectMostRelevantFrame();
+
   typedef std::vector<lldb::StackFrameSP> collection;
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
@@ -134,8 +136,10 @@ protected:
   /// changes.
   collection m_frames;
 
-  /// The currently selected frame.
-  uint32_t m_selected_frame_idx;
+  /// The currently selected frame. An optional is used to record whether anyone
+  /// has set the selected frame on this stack yet. We only let recognizers
+  /// change the frame if this is the first time GetSelectedFrame is called.
+  std::optional<uint32_t> m_selected_frame_idx;
 
   /// The number of concrete frames fetched while filling the frame list. This
   /// is only used when synthetic frames are enabled.

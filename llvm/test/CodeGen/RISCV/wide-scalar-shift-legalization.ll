@@ -296,17 +296,16 @@ define void @lshr_8bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV32I-NEXT:    sll a3, a3, a5
 ; RV32I-NEXT:    or a0, a0, a3
 ; RV32I-NEXT:  .LBB3_3:
-; RV32I-NEXT:    slti a3, a4, 0
-; RV32I-NEXT:    neg a3, a3
-; RV32I-NEXT:    and a1, a3, a1
+; RV32I-NEXT:    srai a4, a4, 31
+; RV32I-NEXT:    and a1, a4, a1
 ; RV32I-NEXT:    sb a1, 4(a2)
-; RV32I-NEXT:    sb a0, 0(a2)
 ; RV32I-NEXT:    srli a3, a1, 16
 ; RV32I-NEXT:    sb a3, 6(a2)
 ; RV32I-NEXT:    srli a3, a1, 24
 ; RV32I-NEXT:    sb a3, 7(a2)
 ; RV32I-NEXT:    srli a1, a1, 8
 ; RV32I-NEXT:    sb a1, 5(a2)
+; RV32I-NEXT:    sb a0, 0(a2)
 ; RV32I-NEXT:    srli a1, a0, 16
 ; RV32I-NEXT:    sb a1, 2(a2)
 ; RV32I-NEXT:    srli a1, a0, 24
@@ -430,23 +429,22 @@ define void @shl_8bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV32I-NEXT:    srl a3, a3, a5
 ; RV32I-NEXT:    or a0, a0, a3
 ; RV32I-NEXT:  .LBB4_3:
-; RV32I-NEXT:    slti a3, a4, 0
-; RV32I-NEXT:    neg a3, a3
-; RV32I-NEXT:    and a1, a3, a1
-; RV32I-NEXT:    sb a0, 4(a2)
+; RV32I-NEXT:    srai a4, a4, 31
+; RV32I-NEXT:    and a1, a4, a1
 ; RV32I-NEXT:    sb a1, 0(a2)
-; RV32I-NEXT:    srli a3, a0, 16
-; RV32I-NEXT:    sb a3, 6(a2)
-; RV32I-NEXT:    srli a3, a0, 24
-; RV32I-NEXT:    sb a3, 7(a2)
-; RV32I-NEXT:    srli a0, a0, 8
-; RV32I-NEXT:    sb a0, 5(a2)
-; RV32I-NEXT:    srli a0, a1, 16
-; RV32I-NEXT:    sb a0, 2(a2)
-; RV32I-NEXT:    srli a0, a1, 24
-; RV32I-NEXT:    sb a0, 3(a2)
+; RV32I-NEXT:    sb a0, 4(a2)
+; RV32I-NEXT:    srli a3, a1, 16
+; RV32I-NEXT:    sb a3, 2(a2)
+; RV32I-NEXT:    srli a3, a1, 24
+; RV32I-NEXT:    sb a3, 3(a2)
 ; RV32I-NEXT:    srli a1, a1, 8
 ; RV32I-NEXT:    sb a1, 1(a2)
+; RV32I-NEXT:    srli a1, a0, 16
+; RV32I-NEXT:    sb a1, 6(a2)
+; RV32I-NEXT:    srli a1, a0, 24
+; RV32I-NEXT:    sb a1, 7(a2)
+; RV32I-NEXT:    srli a0, a0, 8
+; RV32I-NEXT:    sb a0, 5(a2)
 ; RV32I-NEXT:    ret
   %src = load i64, ptr %src.ptr, align 1
   %bitOff = load i64, ptr %bitOff.ptr, align 1
@@ -670,11 +668,9 @@ define void @lshr_16bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV64I-NEXT:    sll a3, a3, a5
 ; RV64I-NEXT:    or a0, a0, a3
 ; RV64I-NEXT:  .LBB6_3:
-; RV64I-NEXT:    slti a3, a4, 0
-; RV64I-NEXT:    neg a3, a3
-; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    srai a4, a4, 63
+; RV64I-NEXT:    and a1, a4, a1
 ; RV64I-NEXT:    sb a1, 8(a2)
-; RV64I-NEXT:    sb a0, 0(a2)
 ; RV64I-NEXT:    srli a3, a1, 56
 ; RV64I-NEXT:    sb a3, 15(a2)
 ; RV64I-NEXT:    srli a3, a1, 48
@@ -689,6 +685,7 @@ define void @lshr_16bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV64I-NEXT:    sb a3, 10(a2)
 ; RV64I-NEXT:    srli a1, a1, 8
 ; RV64I-NEXT:    sb a1, 9(a2)
+; RV64I-NEXT:    sb a0, 0(a2)
 ; RV64I-NEXT:    srli a1, a0, 56
 ; RV64I-NEXT:    sb a1, 7(a2)
 ; RV64I-NEXT:    srli a1, a0, 48
@@ -954,39 +951,38 @@ define void @shl_16bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV64I-NEXT:    srl a3, a3, a5
 ; RV64I-NEXT:    or a0, a0, a3
 ; RV64I-NEXT:  .LBB7_3:
-; RV64I-NEXT:    slti a3, a4, 0
-; RV64I-NEXT:    neg a3, a3
-; RV64I-NEXT:    and a1, a3, a1
-; RV64I-NEXT:    sb a0, 8(a2)
+; RV64I-NEXT:    srai a4, a4, 63
+; RV64I-NEXT:    and a1, a4, a1
 ; RV64I-NEXT:    sb a1, 0(a2)
-; RV64I-NEXT:    srli a3, a0, 56
-; RV64I-NEXT:    sb a3, 15(a2)
-; RV64I-NEXT:    srli a3, a0, 48
-; RV64I-NEXT:    sb a3, 14(a2)
-; RV64I-NEXT:    srli a3, a0, 40
-; RV64I-NEXT:    sb a3, 13(a2)
-; RV64I-NEXT:    srli a3, a0, 32
-; RV64I-NEXT:    sb a3, 12(a2)
-; RV64I-NEXT:    srli a3, a0, 24
-; RV64I-NEXT:    sb a3, 11(a2)
-; RV64I-NEXT:    srli a3, a0, 16
-; RV64I-NEXT:    sb a3, 10(a2)
-; RV64I-NEXT:    srli a0, a0, 8
-; RV64I-NEXT:    sb a0, 9(a2)
-; RV64I-NEXT:    srli a0, a1, 56
-; RV64I-NEXT:    sb a0, 7(a2)
-; RV64I-NEXT:    srli a0, a1, 48
-; RV64I-NEXT:    sb a0, 6(a2)
-; RV64I-NEXT:    srli a0, a1, 40
-; RV64I-NEXT:    sb a0, 5(a2)
-; RV64I-NEXT:    srli a0, a1, 32
-; RV64I-NEXT:    sb a0, 4(a2)
-; RV64I-NEXT:    srli a0, a1, 24
-; RV64I-NEXT:    sb a0, 3(a2)
-; RV64I-NEXT:    srli a0, a1, 16
-; RV64I-NEXT:    sb a0, 2(a2)
+; RV64I-NEXT:    sb a0, 8(a2)
+; RV64I-NEXT:    srli a3, a1, 56
+; RV64I-NEXT:    sb a3, 7(a2)
+; RV64I-NEXT:    srli a3, a1, 48
+; RV64I-NEXT:    sb a3, 6(a2)
+; RV64I-NEXT:    srli a3, a1, 40
+; RV64I-NEXT:    sb a3, 5(a2)
+; RV64I-NEXT:    srli a3, a1, 32
+; RV64I-NEXT:    sb a3, 4(a2)
+; RV64I-NEXT:    srli a3, a1, 24
+; RV64I-NEXT:    sb a3, 3(a2)
+; RV64I-NEXT:    srli a3, a1, 16
+; RV64I-NEXT:    sb a3, 2(a2)
 ; RV64I-NEXT:    srli a1, a1, 8
 ; RV64I-NEXT:    sb a1, 1(a2)
+; RV64I-NEXT:    srli a1, a0, 56
+; RV64I-NEXT:    sb a1, 15(a2)
+; RV64I-NEXT:    srli a1, a0, 48
+; RV64I-NEXT:    sb a1, 14(a2)
+; RV64I-NEXT:    srli a1, a0, 40
+; RV64I-NEXT:    sb a1, 13(a2)
+; RV64I-NEXT:    srli a1, a0, 32
+; RV64I-NEXT:    sb a1, 12(a2)
+; RV64I-NEXT:    srli a1, a0, 24
+; RV64I-NEXT:    sb a1, 11(a2)
+; RV64I-NEXT:    srli a1, a0, 16
+; RV64I-NEXT:    sb a1, 10(a2)
+; RV64I-NEXT:    srli a0, a0, 8
+; RV64I-NEXT:    sb a0, 9(a2)
 ; RV64I-NEXT:    ret
 ;
 ; RV32I-LABEL: shl_16bytes:

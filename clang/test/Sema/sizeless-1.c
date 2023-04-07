@@ -89,7 +89,7 @@ void func(int sel) {
   svint8_t bad_brace_init_int8_1 = {local_int8, 0};    // expected-warning {{excess elements in initializer for indivisible sizeless type 'svint8_t'}}
   svint8_t bad_brace_init_int8_2 = {0};                // expected-error {{incompatible type 'int'}}
   svint8_t bad_brace_init_int8_3 = {local_int16};      // expected-error {{incompatible type 'svint16_t'}}
-  svint8_t bad_brace_init_int8_4 = {[0] = local_int8}; // expected-error {{designator in initializer for indivisible sizeless type 'svint8_t'}}
+  svint8_t bad_brace_init_int8_4 = {[0] = local_int8}; // expected-error {{initialization of non-aggregate type 'svint8_t' (aka '__SVInt8_t') with a designated initializer list}}
   svint8_t bad_brace_init_int8_5 = {{local_int8}};     // expected-warning {{too many braces around initializer}}
   svint8_t bad_brace_init_int8_6 = {{local_int8, 0}};  // expected-warning {{too many braces around initializer}}
 

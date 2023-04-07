@@ -34,6 +34,7 @@ static_library("modernize") {
     "ReplaceRandomShuffleCheck.cpp",
     "ReturnBracedInitListCheck.cpp",
     "ShrinkToFitCheck.cpp",
+    "TypeTraitsCheck.cpp",
     "UnaryStaticAssertCheck.cpp",
     "UseAutoCheck.cpp",
     "UseBoolLiteralsCheck.cpp",

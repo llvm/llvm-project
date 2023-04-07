@@ -3749,7 +3749,8 @@ struct FormatStyle {
   /// \version 7
   bool SpaceBeforeInheritanceColon;
 
-  /// If ``true``, a space will be add before a JSON colon.
+  /// If ``true``, a space will be added before a JSON colon. For other
+  /// languages, e.g. JavaScript, use ``SpacesInContainerLiterals`` instead.
   /// \code
   ///    true:                                  false:
   ///    {                                      {
@@ -4032,8 +4033,9 @@ struct FormatStyle {
   /// \version 10
   bool SpacesInConditionalStatement;
 
-  /// If ``true``, spaces are inserted inside container literals (e.g.
-  /// ObjC and Javascript array and dict literals).
+  /// If ``true``, spaces are inserted inside container literals (e.g.  ObjC and
+  /// Javascript array and dict literals). For JSON, use
+  /// ``SpaceBeforeJsonColon`` instead.
   /// \code{.js}
   ///    true:                                  false:
   ///    var arr = [ 1, 2, 3 ];         vs.     var arr = [1, 2, 3];

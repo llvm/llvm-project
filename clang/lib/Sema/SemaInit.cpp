@@ -2641,8 +2641,15 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
           hadError = true;
         } else {
           // Typo correction didn't find anything.
-          SemaRef.Diag(D->getFieldLoc(), diag::err_field_designator_unknown)
-            << FieldName << CurrentObjectType;
+          SourceLocation Loc = D->getFieldLoc();
+
+          // The loc can be invalid with a "null" designator (i.e. an anonymous
+          // union/struct). Do our best to approximate the location.
+          if (Loc.isInvalid())
+            Loc = IList->getBeginLoc();
+
+          SemaRef.Diag(Loc, diag::err_field_designator_unknown)
+            << FieldName << CurrentObjectType << DIE->getSourceRange();
           ++Index;
           return true;
         }
@@ -3595,6 +3602,7 @@ bool InitializationSequence::isAmbiguous() const {
   case FK_ExplicitConstructor:
   case FK_AddressOfUnaddressableFunction:
   case FK_ParenthesizedListInitFailed:
+  case FK_DesignatedInitForNonAggregate:
     return false;
 
   case FK_ReferenceInitOverloadFailed:
@@ -4432,6 +4440,22 @@ static void TryListInitialization(Sema &S,
     return;
   }
 
+  // C++20 [dcl.init.list]p3:
+  // - If the braced-init-list contains a designated-initializer-list, T shall
+  //   be an aggregate class. [...] Aggregate initialization is performed.
+  //
+  // We allow arrays here too in order to support array designators.
+  //
+  // FIXME: This check should precede the handling of reference initialization.
+  // We follow other compilers in allowing things like 'Aggr &&a = {.x = 1};'
+  // as a tentative DR resolution.
+  bool IsDesignatedInit = InitList->hasDesignatedInit();
+  if (!DestType->isAggregateType() && IsDesignatedInit) {
+    Sequence.SetFailed(
+        InitializationSequence::FK_DesignatedInitForNonAggregate);
+    return;
+  }
+
   // C++11 [dcl.init.list]p3, per DR1467:
   // - If T is a class type and the initializer list has a single element of
   //   type cv U, where U is T or a class derived from T, the object is
@@ -4443,7 +4467,8 @@ static void TryListInitialization(Sema &S,
   //   (8.5.2 [dcl.init.string]), initialization is performed as described
   //   in that section.
   // - Otherwise, if T is an aggregate, [...] (continue below).
-  if (S.getLangOpts().CPlusPlus11 && InitList->getNumInits() == 1) {
+  if (S.getLangOpts().CPlusPlus11 && InitList->getNumInits() == 1 &&
+      !IsDesignatedInit) {
     if (DestType->isRecordType()) {
       QualType InitType = InitList->getInit(0)->getType();
       if (S.Context.hasSameUnqualifiedType(InitType, DestType) ||
@@ -4485,7 +4510,7 @@ static void TryListInitialization(Sema &S,
   //   - If T is an aggregate, aggregate initialization is performed.
   if ((DestType->isRecordType() && !DestType->isAggregateType()) ||
       (S.getLangOpts().CPlusPlus11 &&
-       S.isStdInitializerList(DestType, nullptr))) {
+       S.isStdInitializerList(DestType, nullptr) && !IsDesignatedInit)) {
     if (S.getLangOpts().CPlusPlus11) {
       //   - Otherwise, if the initializer list has no elements and T is a
       //     class type with a default constructor, the object is
@@ -9794,6 +9819,12 @@ bool InitializationSequence::Diagnose(Sema &S,
     TryOrBuildParenListInitialization(S, Entity, Kind, Args, *this,
                                       /*VerifyOnly=*/false);
     break;
+
+  case FK_DesignatedInitForNonAggregate:
+    InitListExpr *InitList = cast<InitListExpr>(Args[0]);
+    S.Diag(Kind.getLocation(), diag::err_designated_init_for_non_aggregate)
+        << Entity.getType() << InitList->getSourceRange();
+    break;
   }
 
   PrintInitLocationNote(S, Entity);
@@ -9963,6 +9994,10 @@ void InitializationSequence::dump(raw_ostream &OS) const {
 
     case FK_ParenthesizedListInitFailed:
       OS << "parenthesized list initialization failed";
+      break;
+
+    case FK_DesignatedInitForNonAggregate:
+      OS << "designated initializer for non-aggregate type";
       break;
     }
     OS << '\n';
