@@ -1,9 +1,7 @@
 RUN: not llvm-remarkutil yaml2bitstream %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --check-prefix=YAMLPARSER
 RUN: not llvm-remarkutil instruction-count --parser=yaml %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --check-prefix=YAMLPARSER
-RUN: not llvm-remarkutil annotation-count --parser=yaml --annotation-type=remark %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --check-prefix=YAMLPARSER
 RUN: llvm-remarkutil bitstream2yaml %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=BITSTREAM2YAML
 RUN: llvm-remarkutil instruction-count --parser=bitstream %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=SIZEBITSTREAM
-RUN: llvm-remarkutil annotation-count --parser=bitstream --annotation-type=remark %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=ANNOTATIONBITSTREAM
 
 ; YAMLPARSER: error: document root is not of mapping type.
 
@@ -11,7 +9,4 @@ RUN: llvm-remarkutil annotation-count --parser=bitstream --annotation-type=remar
 ; BITSTREAM2YAML-NOT: error
 
 ; SIZEBITSTREAM-LABEL: Function,InstructionCount
-; SIZEBITSTREAM-EMPTY:
-
-; ANNOTATIONBITSTREAM-LABEL: Function,Count
-; ANNOTATIONBITSTREAM-EMPTY: 
+; SIZEBITSTREAM-EMPTY

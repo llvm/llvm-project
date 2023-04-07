@@ -38,10 +38,6 @@ static cl::SubCommand
 static cl::SubCommand InstructionCount(
     "instruction-count",
     "Function instruction count information (requires asm-printer remarks)");
-static cl::SubCommand
-    AnnotationCount("annotation-count",
-                    "Collect count information from annotation remarks (uses "
-                    "AnnotationRemarksPass)");
 } // namespace subopts
 
 // Keep input + output help + names consistent across the various modes via a
@@ -53,14 +49,6 @@ static cl::SubCommand
   static cl::opt<std::string> OutputFileName(                                  \
       "o", cl::init("-"), cl::cat(RemarkUtilCategory), cl::desc("Output"),     \
       cl::value_desc("filename"), cl::sub(SUBOPT));
-
-// Keep Input format and names consistent accross the modes via a macro.
-#define INPUT_FORMAT_COMMAND_LINE_OPTIONS(SUBOPT)                              \
-  static cl::opt<Format> InputFormat(                                          \
-      "parser", cl::desc("Input remark format to parse"),                      \
-      cl::values(clEnumValN(Format::YAML, "yaml", "YAML"),                     \
-                 clEnumValN(Format::Bitstream, "bitstream", "Bitstream")),     \
-      cl::sub(SUBOPT));
 namespace yaml2bitstream {
 /// Remark format to parse.
 static constexpr Format InputFormat = Format::YAML;
@@ -78,17 +66,13 @@ INPUT_OUTPUT_COMMAND_LINE_OPTIONS(subopts::Bitstream2YAML)
 } // namespace bitstream2yaml
 
 namespace instructioncount {
-INPUT_FORMAT_COMMAND_LINE_OPTIONS(subopts::InstructionCount)
+static cl::opt<Format> InputFormat(
+    "parser", cl::desc("Input remark format to parse"),
+    cl::values(clEnumValN(Format::YAML, "yaml", "YAML"),
+               clEnumValN(Format::Bitstream, "bitstream", "Bitstream")),
+    cl::sub(subopts::InstructionCount));
 INPUT_OUTPUT_COMMAND_LINE_OPTIONS(subopts::InstructionCount)
 } // namespace instructioncount
-
-namespace annotationcount {
-INPUT_FORMAT_COMMAND_LINE_OPTIONS(subopts::AnnotationCount)
-static cl::opt<std::string> AnnotationTypeToCollect(
-    "annotation-type", cl::desc("annotation-type remark to collect count for"),
-    cl::sub(subopts::AnnotationCount));
-INPUT_OUTPUT_COMMAND_LINE_OPTIONS(subopts::AnnotationCount)
-} // namespace annotationcount
 
 /// \returns A MemoryBuffer for the input file on success, and an Error
 /// otherwise.
@@ -270,51 +254,6 @@ static Error tryInstructionCount() {
 }
 } // namespace instructioncount
 
-namespace annotationcount {
-static Error tryAnnotationCount() {
-  // Create the output buffer.
-  auto MaybeOF = getOutputFileWithFlags(OutputFileName,
-                                        /*Flags = */ sys::fs::OF_TextWithCRLF);
-  if (!MaybeOF)
-    return MaybeOF.takeError();
-  auto OF = std::move(*MaybeOF);
-  // Create a parser for the user-specified input format.
-  auto MaybeBuf = getInputMemoryBuffer(InputFileName);
-  if (!MaybeBuf)
-    return MaybeBuf.takeError();
-  auto MaybeParser = createRemarkParser(InputFormat, (*MaybeBuf)->getBuffer());
-  if (!MaybeParser)
-    return MaybeParser.takeError();
-  // Emit CSV header.
-  OF->os() << "Function,Count\n";
-  // Parse all remarks. When we see the specified remark collect the count
-  // information.
-  auto &Parser = **MaybeParser;
-  auto MaybeRemark = Parser.next();
-  for (; MaybeRemark; MaybeRemark = Parser.next()) {
-    auto &Remark = **MaybeRemark;
-    if (Remark.RemarkName != "AnnotationSummary")
-      continue;
-    auto *RemarkNameArg = find_if(Remark.Args, [](const Argument &Arg) {
-      return Arg.Key == "type" && Arg.Val == AnnotationTypeToCollect;
-    });
-    if (RemarkNameArg == Remark.Args.end())
-      continue;
-    auto *CountArg = find_if(
-        Remark.Args, [](const Argument &Arg) { return Arg.Key == "count"; });
-    assert(CountArg != Remark.Args.end() &&
-           "Expected annotation-type remark to have a count key?");
-    OF->os() << Remark.FunctionName << "," << CountArg->Val << "\n";
-  }
-  auto E = MaybeRemark.takeError();
-  if (!E.isA<EndOfFileError>())
-    return E;
-  consumeError(std::move(E));
-  OF->keep();
-  return Error::success();
-}
-
-} // namespace annotationcount
 /// Handle user-specified suboptions (e.g. yaml2bitstream, bitstream2yaml).
 /// \returns An Error if the specified suboption fails or if no suboption was
 /// specified. Otherwise, Error::success().
@@ -325,9 +264,6 @@ static Error handleSuboptions() {
     return yaml2bitstream::tryYAML2Bitstream();
   if (subopts::InstructionCount)
     return instructioncount::tryInstructionCount();
-  if (subopts::AnnotationCount)
-    return annotationcount::tryAnnotationCount();
-
   return make_error<StringError>(
       "Please specify a subcommand. (See -help for options)",
       inconvertibleErrorCode());
