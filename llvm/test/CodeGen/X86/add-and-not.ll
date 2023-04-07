@@ -318,10 +318,8 @@ define i64 @add_and_xor_const_zext_trunc(i64 %x) {
 ;
 ; X64-LABEL: add_and_xor_const_zext_trunc:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    notl %eax
-; X64-NEXT:    andl $1, %eax
-; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    orq $1, %rax
 ; X64-NEXT:    retq
   %t = trunc i64 %x to i32
   %xor = xor i32 %t, -1
@@ -341,9 +339,7 @@ define i64 @add_and_xor_const_zext_trunc_var(i64 %x, i64 %y) {
 ;
 ; X64-LABEL: add_and_xor_const_zext_trunc_var:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    notl %eax
-; X64-NEXT:    andl %esi, %eax
+; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    orq %rdi, %rax
 ; X64-NEXT:    retq
   %tx = trunc i64 %x to i32
