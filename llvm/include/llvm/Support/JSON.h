@@ -767,7 +767,7 @@ bool fromJSON(const Value &E, std::optional<T> &Out, Path P) {
     Out = std::nullopt;
     return true;
   }
-  T Result;
+  T Result = {};
   if (!fromJSON(E, Result, P))
     return false;
   Out = std::move(Result);
