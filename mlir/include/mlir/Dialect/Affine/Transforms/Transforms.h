@@ -51,14 +51,15 @@ FailureOr<AffineApplyOp> decompose(RewriterBase &rewriter, AffineApplyOp op);
 
 /// Reify a bound for the given index-typed value or shape dimension size in
 /// terms of the owning op's operands. `dim` must be `nullopt` if and only if
-/// `value` is index-typed.
+/// `value` is index-typed. LB and EQ bounds are closed, UB bounds are open.
 FailureOr<OpFoldResult> reifyValueBound(OpBuilder &b, Location loc,
                                         presburger::BoundType type, Value value,
                                         std::optional<int64_t> dim);
 
 /// Reify a bound for the given index-typed value or shape dimension size in
 /// terms of SSA values for which `stopCondition` is met. `dim` must be
-/// `nullopt` if and only if `value` is index-typed.
+/// `nullopt` if and only if `value` is index-typed. LB and EQ bounds are
+/// closed, UB bounds are open.
 ///
 /// Example:
 /// %0 = arith.addi %a, %b : index

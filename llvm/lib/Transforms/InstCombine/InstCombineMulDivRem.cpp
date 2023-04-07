@@ -471,6 +471,13 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (Instruction *Ext = narrowMathIfNoOverflow(I))
     return Ext;
 
+  // min(X, Y) * max(X, Y) => X * Y.
+  if (match(&I, m_CombineOr(m_c_Mul(m_SMax(m_Value(X), m_Value(Y)),
+                                    m_c_SMin(m_Deferred(X), m_Deferred(Y))),
+                            m_c_Mul(m_UMax(m_Value(X), m_Value(Y)),
+                                    m_c_UMin(m_Deferred(X), m_Deferred(Y))))))
+    return BinaryOperator::CreateWithCopiedFlags(Instruction::Mul, X, Y, &I);
+
   bool Changed = false;
   if (!HasNSW && willNotOverflowSignedMul(Op0, Op1, I)) {
     Changed = true;
@@ -764,6 +771,20 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   if (matchSimpleRecurrence(&I, PN, Start, Step) && I.hasNoNaNs() &&
       I.hasNoSignedZeros() && match(Start, m_Zero()))
     return replaceInstUsesWith(I, Start);
+
+  // minimun(X, Y) * maximum(X, Y) => X * Y.
+  if (match(&I,
+            m_c_FMul(m_Intrinsic<Intrinsic::maximum>(m_Value(X), m_Value(Y)),
+                     m_c_Intrinsic<Intrinsic::minimum>(m_Deferred(X),
+                                                       m_Deferred(Y))))) {
+    BinaryOperator *Result = BinaryOperator::CreateFMulFMF(X, Y, &I);
+    // We cannot preserve ninf if nnan flag is not set.
+    // If X is NaN and Y is Inf then in original program we had NaN * NaN,
+    // while in optimized version NaN * Inf and this is a poison with ninf flag.
+    if (!Result->hasNoNaNs())
+      Result->setHasNoInfs(false);
+    return Result;
+  }
 
   return nullptr;
 }

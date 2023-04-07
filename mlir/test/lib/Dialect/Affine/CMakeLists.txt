@@ -25,5 +25,7 @@ add_mlir_library(MLIRAffineTransformsTestPasses
   MLIRIR
   MLIRPass
   MLIRSupport
+  MLIRMemRefDialect
+  MLIRTensorDialect
   MLIRVectorUtils
   )

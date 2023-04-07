@@ -428,6 +428,38 @@ def AddiPairImmSmall : SDNodeXForm<imm, [{
                                    N->getValueType(0));
 }]>;
 
+// Check if (mul r, imm) can be optimized to (SLLI (ALSL r, r, i0), i1),
+// in which imm = (1 + (1 << i0)) << i1.
+def AlslSlliImm : PatLeaf<(imm), [{
+  if (!N->hasOneUse())
+    return false;
+  uint64_t Imm = N->getZExtValue();
+  unsigned I1 = llvm::countr_zero(Imm);
+  uint64_t Rem = Imm >> I1;
+  return Rem == 3 || Rem == 5 || Rem == 9 || Rem == 17;
+}]>;
+
+def AlslSlliImmI1 : SDNodeXForm<imm, [{
+  uint64_t Imm = N->getZExtValue();
+  unsigned I1 = llvm::countr_zero(Imm);
+  return CurDAG->getTargetConstant(I1, SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
+def AlslSlliImmI0 : SDNodeXForm<imm, [{
+  uint64_t Imm = N->getZExtValue();
+  unsigned I1 = llvm::countr_zero(Imm);
+  uint64_t I0;
+  switch (Imm >> I1) {
+  case 3:  I0 = 1; break;
+  case 5:  I0 = 2; break;
+  case 9:  I0 = 3; break;
+  default: I0 = 4; break;
+  }
+  return CurDAG->getTargetConstant(I0, SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
@@ -990,6 +1022,21 @@ foreach Idx0 = 1...4 in {
                       (ALSL_D GPR:$r, GPR:$r, (i64 Idx0)), (i64 Idx1))>;
   }
 }
+} // Predicates = [IsLA64]
+
+let Predicates = [IsLA32] in {
+def : Pat<(mul GPR:$rj, (AlslSlliImm:$im)),
+          (SLLI_W (ALSL_W GPR:$rj, GPR:$rj, (AlslSlliImmI0 AlslSlliImm:$im)),
+                  (AlslSlliImmI1 AlslSlliImm:$im))>;
+} // Predicates = [IsLA32]
+
+let Predicates = [IsLA64] in {
+def : Pat<(sext_inreg (mul GPR:$rj, (AlslSlliImm:$im)), i32),
+          (SLLI_W (ALSL_W GPR:$rj, GPR:$rj, (AlslSlliImmI0 AlslSlliImm:$im)),
+                  (AlslSlliImmI1 AlslSlliImm:$im))>;
+def : Pat<(mul GPR:$rj, (AlslSlliImm:$im)),
+          (SLLI_D (ALSL_D GPR:$rj, GPR:$rj, (AlslSlliImmI0 AlslSlliImm:$im)),
+                  (AlslSlliImmI1 AlslSlliImm:$im))>;
 } // Predicates = [IsLA64]
 
 foreach Idx = 1...7 in {
