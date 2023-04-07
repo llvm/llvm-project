@@ -545,6 +545,9 @@ protected:
 
   void InitializeFirstCodeAddress();
 
+  void GetCompileOptions(
+      std::unordered_map<lldb::CompUnitSP, lldb_private::Args> &args) override;
+
   lldb::ModuleWP m_debug_map_module_wp;
   SymbolFileDWARFDebugMap *m_debug_map_symfile;
 
