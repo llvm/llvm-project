@@ -84,7 +84,11 @@ public:
   /// The stop condition when traversing the backward slice of a shaped value/
   /// index-type value. The traversal continues until the stop condition
   /// evaluates to "true" for a value.
-  using StopConditionFn = function_ref<bool(Value)>;
+  ///
+  /// The first parameter of the function is the shaped value/index-typed
+  /// value. The second parameter is the dimension in case of a shaped value.
+  using StopConditionFn =
+      function_ref<bool(Value, std::optional<int64_t> /*dim*/)>;
 
   /// Compute a bound for the given index-typed value or shape dimension size.
   /// The computed bound is stored in `resultMap`. The operands of the bound are
@@ -92,15 +96,25 @@ public:
   /// or a shaped value and a dimension.
   ///
   /// `dim` must be `nullopt` if and only if `value` is index-typed. The bound
-  /// is computed in terms of values for which `stopCondition` evaluates to
-  /// "true". To that end, the backward slice (reverse use-def chain) of the
-  /// given value is visited in a worklist-driven manner and the constraint set
-  /// is populated according to `ValueBoundsOpInterface` for each visited value.
+  /// is computed in terms of values/dimensions for which `stopCondition`
+  /// evaluates to "true". To that end, the backward slice (reverse use-def
+  /// chain) of the given value is visited in a worklist-driven manner and the
+  /// constraint set is populated according to `ValueBoundsOpInterface` for each
+  /// visited value.
   static LogicalResult computeBound(AffineMap &resultMap,
                                     ValueDimList &mapOperands,
                                     presburger::BoundType type, Value value,
                                     std::optional<int64_t> dim,
                                     StopConditionFn stopCondition);
+
+  /// Compute a bound in terms of the values/dimensions in `dependencies`. The
+  /// computed bound consists of only constant terms and dependent values (or
+  /// dimension sizes thereof).
+  static LogicalResult computeBound(AffineMap &resultMap,
+                                    ValueDimList &mapOperands,
+                                    presburger::BoundType type, Value value,
+                                    std::optional<int64_t> dim,
+                                    ValueDimList dependencies);
 
   /// Compute a constant bound for the given index-typed value or shape
   /// dimension size.
