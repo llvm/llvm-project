@@ -4782,7 +4782,8 @@ the configuration (without a prefix: ``Auto``).
 .. _SpaceBeforeJsonColon:
 
 **SpaceBeforeJsonColon** (``Boolean``) :versionbadge:`clang-format 17` :ref:`¶ <SpaceBeforeJsonColon>`
-  If ``true``, a space will be add before a JSON colon.
+  If ``true``, a space will be added before a JSON colon. For other
+  languages, e.g. JavaScript, use ``SpacesInContainerLiterals`` instead.
 
   .. code-block:: c++
 
@@ -5100,8 +5101,9 @@ the configuration (without a prefix: ``Auto``).
 .. _SpacesInContainerLiterals:
 
 **SpacesInContainerLiterals** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <SpacesInContainerLiterals>`
-  If ``true``, spaces are inserted inside container literals (e.g.
-  ObjC and Javascript array and dict literals).
+  If ``true``, spaces are inserted inside container literals (e.g.  ObjC and
+  Javascript array and dict literals). For JSON, use
+  ``SpaceBeforeJsonColon`` instead.
 
   .. code-block:: js
 
