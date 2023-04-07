@@ -614,3 +614,54 @@ def : Pat<(i8  (trunc i32:$src)),
           (EXTRACT_SUBREG MxXRD32:$src, MxSubRegIndex8Lo)>;
 def : Pat<(i8  (trunc i16:$src)),
           (EXTRACT_SUBREG MxXRD16:$src, MxSubRegIndex8Lo)>;
+
+//===----------------------------------------------------------------------===//
+// FMOVE
+//===----------------------------------------------------------------------===//
+
+let Defs = [FPS] in
+class MxFMove<string size, dag outs, dag ins, list<dag> pattern,
+              string rounding = "">
+    : MxInst<outs, ins,
+             "f"#rounding#"move."#size#"\t$src, $dst", pattern> {
+  // Only FMOVE uses FPC
+  let Uses = !if(!eq(rounding, ""), [FPC], []);
+
+  // FSMOVE and FDMOVE are only available after M68040
+  let Predicates = [!if(!eq(rounding, ""), AtLeastM68881, AtLeastM68040)];
+}
+
+// FPDR <- FPDR
+class MxFMove_FF<string rounding, int size,
+                 MxOpBundle Opnd = !cast<MxOpBundle>("MxOp"#size#"AddrMode_fpr")>
+    : MxFMove<"x", (outs Opnd.Op:$dst), (ins Opnd.Op:$src),
+              [(null_frag)], rounding> {
+  let Inst = (ascend
+    (descend 0b1111,
+      /*COPROCESSOR ID*/0b001,
+      0b000,
+      /*MODE + REGISTER*/0b000000
+    ),
+    (descend 0b0, /* R/M */0b0, 0b0,
+      /*SOURCE SPECIFIER*/
+      (operand "$src", 3),
+      /*DESTINATION*/
+      (operand "$dst", 3),
+      /*OPMODE*/
+      !cond(!eq(rounding, "s"): 0b1000000,
+            !eq(rounding, "d"): 0b1000100,
+            true: 0b0000000)
+    )
+  );
+}
+
+foreach rounding = ["", "s", "d"] in {
+  def F # !toupper(rounding) # MOV80fp_fp : MxFMove_FF<rounding, 80>;
+
+  // We don't have `fmove.s` or `fmove.d` because values will be converted to
+  // f80 upon storing into the register, but FMOV32/64fp_fp are still needed
+  // to make codegen easier.
+  let isCodeGenOnly = true in
+  foreach size = [32, 64] in
+    def F # !toupper(rounding) # MOV # size # fp_fp : MxFMove_FF<rounding, size>;
+}
