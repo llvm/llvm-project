@@ -86,10 +86,10 @@ struct PadOpInterface
     auto padOp = cast<PadOp>(op);
     assert(value == padOp.getResult() && "invalid value");
 
-    AffineExpr expr = cstr.getExpr(padOp.getSource(), dim) +
-                      cstr.getExpr(padOp.getMixedLowPad()[dim]) +
-                      cstr.getExpr(padOp.getMixedHighPad()[dim]);
-    cstr.bound(value)[dim] == expr;
+    AffineExpr srcSize = cstr.getExpr(padOp.getSource(), dim);
+    AffineExpr lowPad = cstr.getExpr(padOp.getMixedLowPad()[dim]);
+    AffineExpr highPad = cstr.getExpr(padOp.getMixedHighPad()[dim]);
+    cstr.bound(value)[dim] == srcSize + lowPad + highPad;
   }
 };
 
