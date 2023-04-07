@@ -50,6 +50,11 @@ class TestSwiftRegex(TestBase):
         self.build()
         lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', self.main_source_spec)
+
+        # Make sure we can use the extended syntax without enabling anything.
+        self.expect('e -- #/Order from <(.*)>, type: (.*), count in dozen: ([0-9]+)/#',
+                    substrs=['_StringProcessing.Regex<(Substring, Substring, Substring, Substring)>'])
+
         self.runCmd(
             "settings set target.experimental.swift-enable-bare-slash-regex true")
         self.expect('e -- /Order from <(.*)>, type: (.*), count in dozen: ([0-9]+)/',
