@@ -18,6 +18,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -38,7 +39,7 @@ StackFrameList::StackFrameList(Thread &thread,
                                const lldb::StackFrameListSP &prev_frames_sp,
                                bool show_inline_frames)
     : m_thread(thread), m_prev_frames_sp(prev_frames_sp), m_mutex(), m_frames(),
-      m_selected_frame_idx(0), m_concrete_frames_fetched(0),
+      m_selected_frame_idx(), m_concrete_frames_fetched(0),
       m_current_inlined_depth(UINT32_MAX),
       m_current_inlined_pc(LLDB_INVALID_ADDRESS),
       m_show_inlined_frames(show_inline_frames) {
@@ -252,7 +253,7 @@ struct CallDescriptor {
 using CallSequence = std::vector<CallDescriptor>;
 
 /// Find the unique path through the call graph from \p begin (with return PC
-/// \p return_pc) to \p end. On success this path is stored into \p path, and 
+/// \p return_pc) to \p end. On success this path is stored into \p path, and
 /// on failure \p path is unchanged.
 static void FindInterveningFrames(Function &begin, Function &end,
                                   ExecutionContext &exe_ctx, Target &target,
@@ -781,9 +782,46 @@ bool StackFrameList::SetFrameAtIndex(uint32_t idx, StackFrameSP &frame_sp) {
   return false; // resize failed, out of memory?
 }
 
-uint32_t StackFrameList::GetSelectedFrameIndex() const {
+void StackFrameList::SelectMostRelevantFrame() {
+  // Don't call into the frame recognizers on the private state thread as
+  // they can cause code to run in the target, and that can cause deadlocks
+  // when fetching stop events for the expression.
+  if (m_thread.GetProcess()->CurrentThreadIsPrivateStateThread())
+    return;
+
+  Log *log = GetLog(LLDBLog::Thread);
+
+  // Only the top frame should be recognized.
+  StackFrameSP frame_sp = GetFrameAtIndex(0);
+  if (!frame_sp) {
+    LLDB_LOG(log, "Failed to construct Frame #0");
+    return;
+  }
+
+  RecognizedStackFrameSP recognized_frame_sp = frame_sp->GetRecognizedFrame();
+
+  if (!recognized_frame_sp) {
+    LLDB_LOG(log, "Frame #0 not recognized");
+    return;
+  }
+
+  if (StackFrameSP most_relevant_frame_sp =
+          recognized_frame_sp->GetMostRelevantFrame()) {
+    LLDB_LOG(log, "Found most relevant frame at index {0}",
+             most_relevant_frame_sp->GetFrameIndex());
+    SetSelectedFrame(most_relevant_frame_sp.get());
+  } else {
+    LLDB_LOG(log, "No relevant frame!");
+  }
+}
+
+uint32_t StackFrameList::GetSelectedFrameIndex() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  return m_selected_frame_idx;
+  if (!m_selected_frame_idx)
+    SelectMostRelevantFrame();
+  if (!m_selected_frame_idx)
+    m_selected_frame_idx = 0;
+  return *m_selected_frame_idx;
 }
 
 uint32_t StackFrameList::SetSelectedFrame(lldb_private::StackFrame *frame) {
@@ -792,17 +830,19 @@ uint32_t StackFrameList::SetSelectedFrame(lldb_private::StackFrame *frame) {
   const_iterator begin = m_frames.begin();
   const_iterator end = m_frames.end();
   m_selected_frame_idx = 0;
+
   for (pos = begin; pos != end; ++pos) {
     if (pos->get() == frame) {
       m_selected_frame_idx = std::distance(begin, pos);
       uint32_t inlined_depth = GetCurrentInlinedDepth();
       if (inlined_depth != UINT32_MAX)
-        m_selected_frame_idx -= inlined_depth;
+        m_selected_frame_idx = *m_selected_frame_idx - inlined_depth;
       break;
     }
   }
+
   SetDefaultFileAndLineToSelectedFrame();
-  return m_selected_frame_idx;
+  return *m_selected_frame_idx;
 }
 
 bool StackFrameList::SetSelectedFrameByIndex(uint32_t idx) {
@@ -830,10 +870,16 @@ void StackFrameList::SetDefaultFileAndLineToSelectedFrame() {
 
 // The thread has been run, reset the number stack frames to zero so we can
 // determine how many frames we have lazily.
+// Note, we don't actually re-use StackFrameLists, we always make a new
+// StackFrameList every time we stop, and then copy frame information frame
+// by frame from the old to the new StackFrameList.  So the comment above,
+// does not describe how StackFrameLists are currently used.
+// Clear is currently only used to clear the list in the destructor.
 void StackFrameList::Clear() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_frames.clear();
   m_concrete_frames_fetched = 0;
+  m_selected_frame_idx.reset();
 }
 
 lldb::StackFrameSP
