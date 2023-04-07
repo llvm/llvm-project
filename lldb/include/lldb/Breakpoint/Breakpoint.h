@@ -80,7 +80,6 @@ namespace lldb_private {
 class Breakpoint : public std::enable_shared_from_this<Breakpoint>,
                    public Stoppoint {
 public:
-  static ConstString GetEventIdentifier();
   static const char *
       BreakpointEventTypeAsCString(lldb::BreakpointEventType type);
 

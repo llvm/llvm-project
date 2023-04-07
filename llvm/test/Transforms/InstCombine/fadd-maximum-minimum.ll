@@ -9,9 +9,7 @@ declare <4 x float>    @llvm.maximum.v4f32(<4 x float> %Val0, <4 x float> %Val1)
 define float @test(float %a, float %b) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minimum.f32(float [[A:%.*]], float [[B:%.*]])
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maximum.f32(float [[A]], float [[B]])
-; CHECK-NEXT:    [[RES:%.*]] = fadd float [[MIN]], [[MAX]]
+; CHECK-NEXT:    [[RES:%.*]] = fadd float [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
 entry:
@@ -24,9 +22,7 @@ entry:
 define float @test_comm1(float %a, float %b) {
 ; CHECK-LABEL: @test_comm1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minimum.f32(float [[A:%.*]], float [[B:%.*]])
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maximum.f32(float [[A]], float [[B]])
-; CHECK-NEXT:    [[RES:%.*]] = fadd float [[MAX]], [[MIN]]
+; CHECK-NEXT:    [[RES:%.*]] = fadd float [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
 entry:
@@ -39,9 +35,7 @@ entry:
 define float @test_comm2(float %a, float %b) {
 ; CHECK-LABEL: @test_comm2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minimum.f32(float [[A:%.*]], float [[B:%.*]])
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maximum.f32(float [[B]], float [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fadd float [[MIN]], [[MAX]]
+; CHECK-NEXT:    [[RES:%.*]] = fadd float [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
 entry:
@@ -54,9 +48,7 @@ entry:
 define float @test_comm3(float %a, float %b) {
 ; CHECK-LABEL: @test_comm3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minimum.f32(float [[A:%.*]], float [[B:%.*]])
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maximum.f32(float [[B]], float [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fadd float [[MAX]], [[MIN]]
+; CHECK-NEXT:    [[RES:%.*]] = fadd float [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
 entry:
@@ -69,9 +61,7 @@ entry:
 define <4 x float> @test_vect(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test_vect(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MIN:%.*]] = call <4 x float> @llvm.minimum.v4f32(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]])
-; CHECK-NEXT:    [[MAX:%.*]] = call <4 x float> @llvm.maximum.v4f32(<4 x float> [[B]], <4 x float> [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fadd <4 x float> [[MIN]], [[MAX]]
+; CHECK-NEXT:    [[RES:%.*]] = fadd <4 x float> [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
 entry:
@@ -84,9 +74,7 @@ entry:
 define float @test_flags(float %a, float %b) {
 ; CHECK-LABEL: @test_flags(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minimum.f32(float [[A:%.*]], float [[B:%.*]])
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maximum.f32(float [[A]], float [[B]])
-; CHECK-NEXT:    [[RES:%.*]] = fadd fast float [[MIN]], [[MAX]]
+; CHECK-NEXT:    [[RES:%.*]] = fadd fast float [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
 entry:
@@ -99,9 +87,7 @@ entry:
 define float @test_flags2(float %a, float %b) {
 ; CHECK-LABEL: @test_flags2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minimum.f32(float [[A:%.*]], float [[B:%.*]])
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maximum.f32(float [[A]], float [[B]])
-; CHECK-NEXT:    [[RES:%.*]] = fadd reassoc ninf nsz arcp contract afn float [[MIN]], [[MAX]]
+; CHECK-NEXT:    [[RES:%.*]] = fadd reassoc nsz arcp contract afn float [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
 entry:

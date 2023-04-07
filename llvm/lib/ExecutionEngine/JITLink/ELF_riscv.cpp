@@ -322,63 +322,52 @@ private:
     case R_RISCV_ADD8: {
       int64_t Value =
           (E.getTarget().getAddress() +
-           *(reinterpret_cast<const uint8_t *>(FixupAddress.getValue())) +
-           E.getAddend())
+           *(reinterpret_cast<const uint8_t *>(FixupPtr)) + E.getAddend())
               .getValue();
       *FixupPtr = static_cast<uint8_t>(Value);
       break;
     }
     case R_RISCV_ADD16: {
       int64_t Value = (E.getTarget().getAddress() +
-                       support::endian::read16le(reinterpret_cast<const void *>(
-                           FixupAddress.getValue())) +
-                       E.getAddend())
+                       support::endian::read16le(FixupPtr) + E.getAddend())
                           .getValue();
       *(little16_t *)FixupPtr = static_cast<uint16_t>(Value);
       break;
     }
     case R_RISCV_ADD32: {
       int64_t Value = (E.getTarget().getAddress() +
-                       support::endian::read32le(reinterpret_cast<const void *>(
-                           FixupAddress.getValue())) +
-                       E.getAddend())
+                       support::endian::read32le(FixupPtr) + E.getAddend())
                           .getValue();
       *(little32_t *)FixupPtr = static_cast<uint32_t>(Value);
       break;
     }
     case R_RISCV_ADD64: {
       int64_t Value = (E.getTarget().getAddress() +
-                       support::endian::read64le(reinterpret_cast<const void *>(
-                           FixupAddress.getValue())) +
-                       E.getAddend())
+                       support::endian::read64le(FixupPtr) + E.getAddend())
                           .getValue();
       *(little64_t *)FixupPtr = static_cast<uint64_t>(Value);
       break;
     }
     case R_RISCV_SUB8: {
-      int64_t Value =
-          *(reinterpret_cast<const uint8_t *>(FixupAddress.getValue())) -
-          E.getTarget().getAddress().getValue() - E.getAddend();
+      int64_t Value = *(reinterpret_cast<const uint8_t *>(FixupPtr)) -
+                      E.getTarget().getAddress().getValue() - E.getAddend();
       *FixupPtr = static_cast<uint8_t>(Value);
       break;
     }
     case R_RISCV_SUB16: {
-      int64_t Value = support::endian::read16le(reinterpret_cast<const void *>(
-                          FixupAddress.getValue())) -
+      int64_t Value = support::endian::read16le(FixupPtr) -
                       E.getTarget().getAddress().getValue() - E.getAddend();
       *(little16_t *)FixupPtr = static_cast<uint32_t>(Value);
       break;
     }
     case R_RISCV_SUB32: {
-      int64_t Value = support::endian::read32le(reinterpret_cast<const void *>(
-                          FixupAddress.getValue())) -
+      int64_t Value = support::endian::read32le(FixupPtr) -
                       E.getTarget().getAddress().getValue() - E.getAddend();
       *(little32_t *)FixupPtr = static_cast<uint32_t>(Value);
       break;
     }
     case R_RISCV_SUB64: {
-      int64_t Value = support::endian::read64le(reinterpret_cast<const void *>(
-                          FixupAddress.getValue())) -
+      int64_t Value = support::endian::read64le(FixupPtr) -
                       E.getTarget().getAddress().getValue() - E.getAddend();
       *(little64_t *)FixupPtr = static_cast<uint64_t>(Value);
       break;
@@ -419,8 +408,7 @@ private:
       break;
     }
     case R_RISCV_SUB6: {
-      int64_t Value =
-          *(reinterpret_cast<const uint8_t *>(FixupAddress.getValue())) & 0x3f;
+      int64_t Value = *(reinterpret_cast<const uint8_t *>(FixupPtr)) & 0x3f;
       Value -= E.getTarget().getAddress().getValue() - E.getAddend();
       *FixupPtr = (*FixupPtr & 0xc0) | (static_cast<uint8_t>(Value) & 0x3f);
       break;

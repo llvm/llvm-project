@@ -1107,6 +1107,9 @@ public:
     /// Parenthesized list initialization failed at some point.
     /// This is a C++20 feature.
     FK_ParenthesizedListInitFailed,
+
+    // A designated initializer was provided for a non-aggregate type.
+    FK_DesignatedInitForNonAggregate,
   };
 
 private:

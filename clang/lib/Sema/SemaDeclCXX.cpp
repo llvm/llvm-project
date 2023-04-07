@@ -16718,7 +16718,8 @@ static bool UsefulToPrintExpr(const Expr *E) {
 /// Try to print more useful information about a failed static_assert
 /// with expression \E
 void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
-  if (const auto *Op = dyn_cast<BinaryOperator>(E)) {
+  if (const auto *Op = dyn_cast<BinaryOperator>(E);
+      Op && Op->getOpcode() != BO_LOr) {
     const Expr *LHS = Op->getLHS()->IgnoreParenImpCasts();
     const Expr *RHS = Op->getRHS()->IgnoreParenImpCasts();
 

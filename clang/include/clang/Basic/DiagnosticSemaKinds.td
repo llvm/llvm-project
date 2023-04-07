@@ -2190,6 +2190,8 @@ def err_reference_has_multiple_inits : Error<
   "reference cannot be initialized with multiple values">;
 def err_init_non_aggr_init_list : Error<
   "initialization of non-aggregate type %0 with an initializer list">;
+def err_designated_init_for_non_aggregate : Error<
+  "initialization of non-aggregate type %0 with a designated initializer list">;
 def err_init_reference_member_uninitialized : Error<
   "reference member of type %0 uninitialized">;
 def note_uninit_reference_member : Note<

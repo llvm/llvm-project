@@ -133,6 +133,12 @@ New checks
   Checks that all implicit and explicit inline functions in header files are
   tagged with the ``LIBC_INLINE`` macro.
 
+- New :doc:`modernize-type-traits
+  <clang-tidy/checks/modernize/type-traits>` check.
+
+  Converts standard library type traits of the form ``traits<...>::type`` and
+  ``traits<...>::value`` into ``traits_t<...>`` and ``traits_v<...>`` respectively.
+
 - New :doc:`readability-avoid-unconditional-preprocessor-if
   <clang-tidy/checks/readability/avoid-unconditional-preprocessor-if>` check.
 
@@ -169,6 +175,10 @@ Changes in existing checks
   in :doc:`bugprone-dynamic-static-initializers
   <clang-tidy/checks/bugprone/dynamic-static-initializers>` check.
   Global options of the same name should be used instead.
+
+- Improved :doc:`bugprone-fold-init-type
+  <clang-tidy/checks/bugprone/fold-init-type>` to handle iterators that do not
+  define `value_type` type aliases.
 
 - Deprecated check-local options `HeaderFileExtensions` and `ImplementationFileExtensions`
   in :doc:`bugprone-suspicious-include
