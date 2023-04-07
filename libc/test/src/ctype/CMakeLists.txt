@@ -1,7 +1,7 @@
 add_libc_testsuite(libc_ctype_unittests)
 
 add_libc_unittest(
-  isalnum
+  isalnum_test
   SUITE
     libc_ctype_unittests
   SRCS
@@ -11,7 +11,7 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  isalpha
+  isalpha_test
   SUITE
     libc_ctype_unittests
   SRCS
@@ -21,7 +21,7 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  isascii
+  isascii_test
   SUITE
     libc_ctype_unittests
   SRCS
@@ -31,7 +31,7 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  isblank
+  isblank_test
   SUITE
     libc_ctype_unittests
   SRCS
@@ -41,7 +41,7 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  iscntrl
+  iscntrl_test
   SUITE
     libc_ctype_unittests
   SRCS
@@ -51,7 +51,7 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  isdigit
+  isdigit_test
   SUITE
     libc_ctype_unittests
   SRCS
@@ -61,7 +61,7 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  isgraph
+  isgraph_test
   SUITE
     libc_ctype_unittests
   SRCS
@@ -71,7 +71,7 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  islower
+  islower_test
   SUITE
     libc_ctype_unittests
   SRCS
@@ -81,7 +81,7 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  isprint
+  isprint_test
   SUITE
     libc_ctype_unittests
   SRCS
@@ -91,7 +91,7 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  ispunct
+  ispunct_test
   SUITE
     libc_ctype_unittests
   SRCS
@@ -101,7 +101,7 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  isspace
+  isspace_test
   SUITE
     libc_ctype_unittests
   SRCS
@@ -111,7 +111,7 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  isupper
+  isupper_test
   SUITE
     libc_ctype_unittests
   SRCS
@@ -121,7 +121,7 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  isxdigit
+  isxdigit_test
   SUITE
     libc_ctype_unittests
   SRCS
@@ -131,7 +131,7 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  toascii
+  toascii_test
   SUITE
     libc_ctype_unittests
   SRCS
@@ -141,7 +141,7 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  tolower
+  tolower_test
   SUITE
     libc_ctype_unittests
   SRCS
@@ -151,7 +151,7 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  toupper
+  toupper_test
   SUITE
     libc_ctype_unittests
   SRCS
