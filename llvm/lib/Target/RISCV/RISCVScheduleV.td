@@ -402,15 +402,15 @@ def ReadVSETVLI       : SchedRead;
 def ReadVSETVL        : SchedRead;
 
 // 7. Vector Loads and Stores
-defm "" : LMULSchedReads<"ReadVLDX">;
-defm "" : LMULSchedReads<"ReadVSTX">;
+def ReadVLDX : SchedRead;
+def ReadVSTX : SchedRead;
 // 7.4. Vector Unit-Stride Instructions
 defm "" : LMULSchedReads<"ReadVSTEV">;
 // 7.4.1. Vector Unit-Strided Mask
 defm "" : LMULSchedReads<"ReadVSTM">;
 // 7.5. Vector Strided Instructions
-defm "" : LMULSchedReads<"ReadVLDSX">;
-defm "" : LMULSchedReads<"ReadVSTSX">;
+def ReadVLDSX : SchedRead;
+def ReadVSTSX : SchedRead;
 defm "" : LMULSchedReads<"ReadVSTS8V">;
 defm "" : LMULSchedReads<"ReadVSTS16V">;
 defm "" : LMULSchedReads<"ReadVSTS32V">;
@@ -814,12 +814,12 @@ def : ReadAdvance<ReadVSETVLI, 0>;
 def : ReadAdvance<ReadVSETVL, 0>;
 
 // 7. Vector Loads and Stores
-defm "" : LMULReadAdvance<"ReadVLDX", 0>;
-defm "" : LMULReadAdvance<"ReadVSTX", 0>;
+def : ReadAdvance<ReadVLDX, 0>;
+def : ReadAdvance<ReadVSTX, 0>;
 defm "" : LMULReadAdvance<"ReadVSTEV", 0>;
 defm "" : LMULReadAdvance<"ReadVSTM", 0>;
-defm "" : LMULReadAdvance<"ReadVLDSX", 0>;
-defm "" : LMULReadAdvance<"ReadVSTSX", 0>;
+def : ReadAdvance<ReadVLDSX, 0>;
+def : ReadAdvance<ReadVSTSX, 0>;
 defm "" : LMULReadAdvance<"ReadVSTS8V", 0>;
 defm "" : LMULReadAdvance<"ReadVSTS16V", 0>;
 defm "" : LMULReadAdvance<"ReadVSTS32V", 0>;

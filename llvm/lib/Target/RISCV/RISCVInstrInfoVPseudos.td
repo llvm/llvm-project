@@ -1701,10 +1701,9 @@ multiclass VPseudoLoadMask {
   foreach mti = AllMasks in {
     defvar mx = mti.LMul.MX;
     defvar WriteVLDM_MX = !cast<SchedWrite>("WriteVLDM_" # mx);
-    defvar ReadVLDX_MX = !cast<SchedRead>("ReadVLDX_" # mx);
     let VLMul = mti.LMul.value in {
       def "_V_" # mti.BX : VPseudoUSLoadNoMask<VR, /*EEW*/1, /*DummyMask*/0>,
-        Sched<[WriteVLDM_MX, ReadVLDX_MX]>;
+        Sched<[WriteVLDM_MX, ReadVLDX]>;
     }
   }
 }
@@ -1780,10 +1779,9 @@ multiclass VPseudoStoreMask {
   foreach mti = AllMasks in {
     defvar mx = mti.LMul.MX;
     defvar WriteVSTM_MX = !cast<SchedWrite>("WriteVSTM_" # mx);
-    defvar ReadVSTX_MX = !cast<SchedRead>("ReadVSTX_" # mx);
     let VLMul = mti.LMul.value in {
       def "_V_" # mti.BX : VPseudoUSStoreNoMask<VR, /*EEW*/1, /*DummyMask*/0>,
-        Sched<[WriteVSTM_MX, ReadVSTX_MX]>;
+        Sched<[WriteVSTM_MX, ReadVSTX]>;
     }
   }
 }
