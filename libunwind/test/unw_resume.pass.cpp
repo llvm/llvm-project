@@ -16,11 +16,6 @@
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan
 
-// FIXME: The return address register($ra/$r1) is restored with a destroyed base
-// address register($a0/$r4) in the assembly file `UnwindRegistersRestore.S` on
-// LoongArch. And we will fix this issue in the next commit.
-// XFAIL: target={{loongarch64-.+}}
-
 #include <libunwind.h>
 
 void test_unw_resume() {
