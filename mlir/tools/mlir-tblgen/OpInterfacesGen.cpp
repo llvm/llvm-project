@@ -602,10 +602,15 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
 
 bool InterfaceGenerator::emitInterfaceDecls() {
   llvm::emitSourceFileHeader("Interface Declarations", os);
-
-  for (const llvm::Record *def : defs)
+  // Sort according to ID, so defs are emitted in the order in which they appear
+  // in the Tablegen file.
+  std::vector<llvm::Record *> sortedDefs(defs);
+  llvm::sort(sortedDefs, [](llvm::Record *lhs, llvm::Record *rhs) {
+    return lhs->getID() < rhs->getID();
+  });
+  for (const llvm::Record *def : sortedDefs)
     emitInterfaceDecl(Interface(def));
-  for (const llvm::Record *def : defs)
+  for (const llvm::Record *def : sortedDefs)
     emitModelMethodsDef(Interface(def));
   return false;
 }
