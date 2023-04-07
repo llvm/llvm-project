@@ -160,7 +160,7 @@ struct SatisfactionStackRAII {
   Sema &SemaRef;
   bool Inserted = false;
   SatisfactionStackRAII(Sema &SemaRef, const NamedDecl *ND,
-                        llvm::FoldingSetNodeID FSNID)
+                        const llvm::FoldingSetNodeID &FSNID)
       : SemaRef(SemaRef) {
       if (ND) {
       SemaRef.PushSatisfactionStackEntry(ND, FSNID);
@@ -1351,7 +1351,7 @@ static NormalForm makeDNF(const NormalizedConstraint &Normalized) {
 }
 
 template<typename AtomicSubsumptionEvaluator>
-static bool subsumes(NormalForm PDNF, NormalForm QCNF,
+static bool subsumes(const NormalForm &PDNF, const NormalForm &QCNF,
                      AtomicSubsumptionEvaluator E) {
   // C++ [temp.constr.order] p2
   //   Then, P subsumes Q if and only if, for every disjunctive clause Pi in the
