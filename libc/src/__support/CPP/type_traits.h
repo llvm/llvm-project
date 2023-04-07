@@ -86,15 +86,25 @@ template <typename T> struct is_arithmetic {
 template <typename T>
 inline constexpr bool is_arithmetic_v = is_arithmetic<T>::value;
 
+namespace details {
+template <typename T, bool = is_arithmetic<T>::value>
+struct is_signed : integral_constant<bool, (T(-1) < T(0))> {};
+template <typename T> struct is_signed<T, false> : false_type {};
+
+template <typename T, bool = is_arithmetic<T>::value>
+struct is_unsigned : integral_constant<bool, (T(-1) > T(0))> {};
+template <typename T> struct is_unsigned<T, false> : false_type {};
+} // namespace details
+
 template <typename T> struct is_signed {
-  static constexpr bool value = is_arithmetic<T>::value && (T(-1) < T(0));
+  static constexpr bool value = details::is_signed<T>::value;
   constexpr operator bool() const { return value; }
   constexpr bool operator()() const { return value; }
 };
 template <typename T> inline constexpr bool is_signed_v = is_signed<T>::value;
 
 template <typename T> struct is_unsigned {
-  static constexpr bool value = is_arithmetic<T>::value && (T(-1) > T(0));
+  static constexpr bool value = details::is_unsigned<T>::value;
   constexpr operator bool() const { return value; }
   constexpr bool operator()() const { return value; }
 };
