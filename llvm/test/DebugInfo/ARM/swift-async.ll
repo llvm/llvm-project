@@ -1,7 +1,7 @@
 ; RUN: llc -O0 -filetype=obj < %s | llvm-dwarfdump --name n - | FileCheck %s
 ;
 ; CHECK: DW_TAG_formal_parameter
-; FIXME-CHECK-NEXT: DW_AT_location	(DW_OP_entry_value(DW_OP_reg22 W22), DW_OP_deref, DW_OP_plus_uconst 0x18, DW_OP_plus_uconst 0x8)
+; CHECK-NEXT: DW_AT_location	(DW_OP_entry_value(DW_OP_reg22 W22), DW_OP_deref, DW_OP_plus_uconst 0x18, DW_OP_plus_uconst 0x8)
 ; CHECK: DW_AT_name	("n")
 
 ; ModuleID = '/tmp/t.ll'
