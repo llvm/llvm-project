@@ -576,7 +576,9 @@ exit:
 
 ; GCN-LABEL: {{^}}test_mfma_nested_loop_zeroinit:
 
-; GCN-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
+; GFX908-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
+; GFX90A:          v_accvgpr_write_b32 [[LEAD:a[0-9]+]], 0
+; GFX90A-COUNT-31: v_accvgpr_mov_b32 a{{[0-9]+}}, [[LEAD]]
 
 ; Check that we do not copy agprs to vgprs and back in an outer loop.
 

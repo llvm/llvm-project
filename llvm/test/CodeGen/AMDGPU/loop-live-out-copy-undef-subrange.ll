@@ -10,36 +10,22 @@ define <3 x float> @liveout_undef_subrange(<3 x float> %arg) {
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_f32_e32 v3, v2, v2
+; CHECK-NEXT:    v_add_f32_e32 v0, v0, v0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    s_branch .LBB0_2
-; CHECK-NEXT:  .LBB0_1: ; %Flow13
-; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    s_or_b64 exec, exec, s[10:11]
-; CHECK-NEXT:    s_and_b64 s[6:7], exec, s[8:9]
-; CHECK-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
-; CHECK-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    s_cbranch_execz .LBB0_6
-; CHECK-NEXT:  .LBB0_2: ; %bb1
+; CHECK-NEXT:    ; kill: killed $vgpr1
+; CHECK-NEXT:  .LBB0_1: ; %bb1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_cmp_eq_f32_e64 s[6:7], 0, v2
 ; CHECK-NEXT:    v_cmp_neq_f32_e32 vcc, 0, v2
-; CHECK-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; CHECK-NEXT:  ; %bb.3: ; %bb2
-; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    v_mul_f32_e32 v2, v3, v2
-; CHECK-NEXT:    s_or_b64 s[6:7], s[6:7], exec
-; CHECK-NEXT:  ; %bb.4: ; %Flow
-; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    s_or_b64 exec, exec, s[8:9]
-; CHECK-NEXT:    s_mov_b64 s[8:9], -1
-; CHECK-NEXT:    s_and_saveexec_b64 s[10:11], s[6:7]
-; CHECK-NEXT:    s_cbranch_execz .LBB0_1
-; CHECK-NEXT:  ; %bb.5: ; %bb3
-; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    s_xor_b64 s[8:9], exec, -1
-; CHECK-NEXT:    s_branch .LBB0_1
-; CHECK-NEXT:  .LBB0_6: ; %DummyReturnBlock
+; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; CHECK-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; CHECK-NEXT:    s_cbranch_execnz .LBB0_1
+; CHECK-NEXT:  ; %bb.2: ; %bb2
+; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:    v_mul_f32_e32 v2, v3, v2
+; CHECK-NEXT:    s_mov_b64 s[4:5], 0
+; CHECK-NEXT:    s_cbranch_execnz .LBB0_1
+; CHECK-NEXT:  ; %bb.3: ; %DummyReturnBlock
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 bb:
   br label %bb1
