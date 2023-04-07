@@ -3,8 +3,8 @@
 declare void @use_i8(i8)
 define i8 @mul_selectp2_x(i8 %x, i1 %c) {
 ; CHECK-LABEL: @mul_selectp2_x(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 2, i8 4
-; CHECK-NEXT:    [[R:%.*]] = mul i8 [[S]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i8 1, i8 2
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = select i1 %c, i8 2, i8 4
@@ -15,8 +15,8 @@ define i8 @mul_selectp2_x(i8 %x, i1 %c) {
 
 define i8 @mul_selectp2_x_propegate_nuw(i8 %x, i1 %c) {
 ; CHECK-LABEL: @mul_selectp2_x_propegate_nuw(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 2, i8 4
-; CHECK-NEXT:    [[R:%.*]] = mul nuw nsw i8 [[S]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i8 1, i8 2
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = select i1 %c, i8 2, i8 4
@@ -28,7 +28,8 @@ define i8 @mul_selectp2_x_propegate_nuw(i8 %x, i1 %c) {
 define i8 @mul_selectp2_x_multiuse_fixme(i8 %x, i1 %c) {
 ; CHECK-LABEL: @mul_selectp2_x_multiuse_fixme(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 2, i8 4
-; CHECK-NEXT:    [[R:%.*]] = mul i8 [[S]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C]], i8 1, i8 2
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    call void @use_i8(i8 [[S]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -40,9 +41,8 @@ define i8 @mul_selectp2_x_multiuse_fixme(i8 %x, i1 %c) {
 
 define i8 @mul_selectp2_x_non_const(i8 %x, i1 %c, i8 %yy) {
 ; CHECK-LABEL: @mul_selectp2_x_non_const(
-; CHECK-NEXT:    [[Y:%.*]] = shl nuw i8 1, [[YY:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 2, i8 [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = mul i8 [[S]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i8 1, i8 [[YY:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %y = shl i8 1, %yy
@@ -54,8 +54,8 @@ define i8 @mul_selectp2_x_non_const(i8 %x, i1 %c, i8 %yy) {
 define i8 @mul_selectp2_x_non_const_multiuse(i8 %x, i1 %c, i8 %yy) {
 ; CHECK-LABEL: @mul_selectp2_x_non_const_multiuse(
 ; CHECK-NEXT:    [[Y:%.*]] = shl nuw i8 1, [[YY:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 2, i8 [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = mul i8 [[S]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i8 1, i8 [[YY]]
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    call void @use_i8(i8 [[Y]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -69,8 +69,8 @@ define i8 @mul_selectp2_x_non_const_multiuse(i8 %x, i1 %c, i8 %yy) {
 define i8 @mul_x_selectp2(i8 %xx, i1 %c) {
 ; CHECK-LABEL: @mul_x_selectp2(
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[XX:%.*]], [[XX]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 8, i8 1
-; CHECK-NEXT:    [[R:%.*]] = mul i8 [[X]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i8 3, i8 0
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %x = mul i8 %xx, %xx
@@ -93,8 +93,8 @@ define i8 @mul_select_nonp2_x_fail(i8 %x, i1 %c) {
 define <2 x i8> @mul_x_selectp2_vec(<2 x i8> %xx, i1 %c) {
 ; CHECK-LABEL: @mul_x_selectp2_vec(
 ; CHECK-NEXT:    [[X:%.*]] = mul <2 x i8> [[XX:%.*]], [[XX]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], <2 x i8> <i8 8, i8 16>, <2 x i8> <i8 4, i8 1>
-; CHECK-NEXT:    [[R:%.*]] = mul <2 x i8> [[X]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], <2 x i8> <i8 3, i8 4>, <2 x i8> <i8 2, i8 0>
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i8> [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %x = mul <2 x i8> %xx, %xx
