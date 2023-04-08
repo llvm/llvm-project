@@ -103,6 +103,7 @@ complex stdexcept
 complex version
 concepts cstddef
 concepts version
+condition_variable cerrno
 condition_variable cstddef
 condition_variable ctime
 condition_variable iosfwd
@@ -110,7 +111,7 @@ condition_variable limits
 condition_variable new
 condition_variable ratio
 condition_variable stdexcept
-condition_variable system_error
+condition_variable string
 condition_variable typeinfo
 condition_variable version
 coroutine compare
@@ -213,7 +214,6 @@ filesystem new
 filesystem ratio
 filesystem string
 filesystem string_view
-filesystem system_error
 filesystem version
 format array
 format cmath
@@ -271,6 +271,7 @@ functional typeinfo
 functional unordered_map
 functional vector
 functional version
+future cerrno
 future cstddef
 future cstdint
 future cstdlib
@@ -282,7 +283,7 @@ future mutex
 future new
 future ratio
 future stdexcept
-future system_error
+future string
 future thread
 future typeinfo
 future version
@@ -297,7 +298,6 @@ ios cstring
 ios iosfwd
 ios mutex
 ios string
-ios system_error
 ios version
 iosfwd version
 iostream ios
@@ -337,6 +337,7 @@ list stdexcept
 list tuple
 list version
 locale cctype
+locale cerrno
 locale cstddef
 locale cstdint
 locale cstdio
@@ -381,6 +382,7 @@ memory_resource new
 memory_resource stdexcept
 memory_resource tuple
 memory_resource version
+mutex cerrno
 mutex cstddef
 mutex cstdint
 mutex ctime
@@ -389,7 +391,7 @@ mutex limits
 mutex new
 mutex ratio
 mutex stdexcept
-mutex system_error
+mutex string
 mutex tuple
 mutex typeinfo
 mutex version
@@ -411,6 +413,7 @@ optional new
 optional stdexcept
 optional version
 ostream bitset
+ostream cerrno
 ostream cstddef
 ostream cstdint
 ostream cstring
@@ -422,6 +425,7 @@ ostream locale
 ostream new
 ostream stdexcept
 ostream streambuf
+ostream string
 ostream typeinfo
 ostream version
 queue compare
@@ -498,7 +502,8 @@ shared_mutex ctime
 shared_mutex iosfwd
 shared_mutex limits
 shared_mutex ratio
-shared_mutex system_error
+shared_mutex stdexcept
+shared_mutex string
 shared_mutex version
 source_location cstdint
 source_location version
@@ -554,13 +559,11 @@ strstream version
 system_error cerrno
 system_error compare
 system_error cstddef
-system_error cstdint
-system_error cstring
-system_error limits
 system_error stdexcept
 system_error string
 system_error version
 thread array
+thread cerrno
 thread compare
 thread cstddef
 thread cstdint
@@ -573,7 +576,6 @@ thread ratio
 thread stdexcept
 thread string
 thread string_view
-thread system_error
 thread tuple
 thread vector
 thread version

@@ -367,11 +367,18 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 #include <__chrono/time_point.h>
 #include <__config>
 #include <__exception/exception_ptr.h>
+#include <__memory/allocator.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/allocator_destructor.h>
+#include <__memory/allocator_traits.h>
+#include <__memory/compressed_pair.h>
+#include <__memory/pointer_traits.h>
 #include <__memory/shared_ptr.h>
 #include <__memory/unique_ptr.h>
 #include <__memory/uses_allocator.h>
+#include <__system_error/error_category.h>
+#include <__system_error/error_code.h>
+#include <__system_error/error_condition.h>
 #include <__type_traits/aligned_storage.h>
 #include <__type_traits/alignment_of.h>
 #include <__type_traits/strip_signature.h>
@@ -380,7 +387,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 #include <__utility/move.h>
 #include <mutex>
 #include <new>
-#include <system_error>
+#include <stdexcept>
 #include <thread>
 #include <version>
 
@@ -2462,6 +2469,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <atomic>
 #  include <cstdlib>
 #  include <exception>
+#  include <system_error>
 #endif
 
 #endif // _LIBCPP_FUTURE
