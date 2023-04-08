@@ -37,7 +37,7 @@ class ExecutorProcessControl;
 class LLJIT {
   template <typename, typename, typename> friend class LLJITBuilderSetters;
 
-  friend void setUpGenericLLVMIRPlatform(LLJIT &J);
+  friend Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J);
 
 public:
   /// Initializer support for LLJIT.
@@ -69,6 +69,20 @@ public:
 
   /// Returns a reference to the JITDylib representing the JIT'd main program.
   JITDylib &getMainJITDylib() { return *Main; }
+
+  /// Returns the ProcessSymbols JITDylib, which by default reflects non-JIT'd
+  /// symbols in the host process.
+  ///
+  /// Note: JIT'd code should not be added to the ProcessSymbols JITDylib. Use
+  /// the main JITDylib or a custom JITDylib instead.
+  JITDylibSP getProcessSymbolsJITDylib();
+
+  /// Returns the Platform JITDylib, which will contain the ORC runtime (if
+  /// given) and any platform symbols.
+  ///
+  /// Note: JIT'd code should not be added to the Platform JITDylib. Use the
+  /// main JITDylib or a custom JITDylib instead.
+  JITDylibSP getPlatformJITDylib();
 
   /// Returns the JITDylib with the given name, or nullptr if no JITDylib with
   /// that name exists.
@@ -108,9 +122,12 @@ public:
   /// input or elsewhere in the environment then the client should check
   /// (e.g. by calling getJITDylibByName) that the given name is not already in
   /// use.
-  Expected<JITDylib &> createJITDylib(std::string Name) {
-    return ES->createJITDylib(std::move(Name));
-  }
+  Expected<JITDylib &> createJITDylib(std::string Name);
+
+  /// Returns the default link order for this LLJIT instance. This link order
+  /// will be appended to the link order of JITDylibs created by LLJIT's
+  /// createJITDylib method.
+  JITDylibSearchOrder defaultLinkOrder() { return DefaultLinks; }
 
   /// Adds an IR module with the given ResourceTracker.
   Error addIRModule(ResourceTrackerSP RT, ThreadSafeModule TSM);
@@ -228,7 +245,11 @@ protected:
   std::unique_ptr<ExecutionSession> ES;
   std::unique_ptr<PlatformSupport> PS;
 
+  JITDylib *ProcessSymbols = nullptr;
+  JITDylib *Platform = nullptr;
   JITDylib *Main = nullptr;
+
+  JITDylibSearchOrder DefaultLinks;
 
   DataLayout DL;
   Triple TT;
@@ -284,12 +305,17 @@ public:
       std::function<Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>(
           JITTargetMachineBuilder JTMB)>;
 
-  using PlatformSetupFunction = std::function<Error(LLJIT &J)>;
+  using ProcessSymbolsJITDylibSetupFunction =
+      std::function<Error(JITDylib &JD)>;
+
+  using PlatformSetupFunction = unique_function<Expected<JITDylibSP>(LLJIT &J)>;
 
   std::unique_ptr<ExecutorProcessControl> EPC;
   std::unique_ptr<ExecutionSession> ES;
   std::optional<JITTargetMachineBuilder> JTMB;
   std::optional<DataLayout> DL;
+  bool LinkProcessSymbolsByDefault = true;
+  ProcessSymbolsJITDylibSetupFunction SetupProcessSymbolsJITDylib;
   ObjectLinkingLayerCreator CreateObjectLinkingLayer;
   CompileFunctionCreator CreateCompileFunction;
   PlatformSetupFunction SetUpPlatform;
@@ -339,6 +365,28 @@ public:
   /// the target's default data layout will be used.
   SetterImpl &setDataLayout(std::optional<DataLayout> DL) {
     impl().DL = std::move(DL);
+    return impl();
+  }
+
+  /// The LinkProcessSymbolsDyDefault flag determines whether the "Process"
+  /// JITDylib will be added to the default link order at LLJIT construction
+  /// time. If true, the Process JITDylib will be added as the last item in the
+  /// default link order. If false (or if the Process JITDylib is disabled via
+  /// setProcessSymbolsJITDylibSetup) then the Process JITDylib will not appear
+  /// in the default link order.
+  SetterImpl &setLinkProcessSymbolsByDefault(bool LinkProcessSymbolsByDefault) {
+    impl().LinkProcessSymbolsByDefault = LinkProcessSymbolsByDefault;
+    return impl();
+  }
+
+  /// Set a setup function for the process symbols dylib. If not provided,
+  /// but LinkProcessSymbolsJITDylibByDefault is true, then the process-symbols
+  /// JITDylib will be configured with a DynamicLibrarySearchGenerator with a
+  /// default symbol filter.
+  SetterImpl &setProcessSymbolsJITDylibSetup(
+      LLJITBuilderState::ProcessSymbolsJITDylibSetupFunction
+          SetupProcessSymbolsJITDylib) {
+    impl().SetupProcessSymbolsJITDylib = std::move(SetupProcessSymbolsJITDylib);
     return impl();
   }
 
@@ -473,20 +521,49 @@ class LLLazyJITBuilder
       public LLLazyJITBuilderSetters<LLLazyJIT, LLLazyJITBuilder,
                                      LLLazyJITBuilderState> {};
 
-/// Configure the LLJIT instance to use orc runtime support. 
-Error setUpOrcPlatform(LLJIT& J);
+/// Configure the LLJIT instance to use orc runtime support. This overload
+/// assumes that the client has manually configured a Platform object.
+Error setUpOrcPlatformManually(LLJIT &J);
+
+/// Configure the LLJIT instance to use the ORC runtime and the detected
+/// native target for the executor.
+class ExecutorNativePlatform {
+public:
+  /// Set up using path to Orc runtime.
+  ExecutorNativePlatform(std::string OrcRuntimePath)
+      : OrcRuntime(std::move(OrcRuntimePath)) {}
+
+  /// Set up using the given memory buffer.
+  ExecutorNativePlatform(std::unique_ptr<MemoryBuffer> OrcRuntimeMB)
+      : OrcRuntime(std::move(OrcRuntimeMB)) {}
+
+  // TODO: add compiler-rt.
+
+  /// Add a path to the VC runtime.
+  ExecutorNativePlatform &addVCRuntime(std::string VCRuntimePath,
+                                       bool StaticVCRuntime) {
+    VCRuntime = {std::move(VCRuntimePath), StaticVCRuntime};
+    return *this;
+  }
+
+  Expected<JITDylibSP> operator()(LLJIT &J);
+
+private:
+  std::variant<std::string, std::unique_ptr<MemoryBuffer>> OrcRuntime;
+  std::optional<std::pair<std::string, bool>> VCRuntime;
+};
 
 /// Configure the LLJIT instance to scrape modules for llvm.global_ctors and
 /// llvm.global_dtors variables and (if present) build initialization and
 /// deinitialization functions. Platform specific initialization configurations
 /// should be preferred where available.
-void setUpGenericLLVMIRPlatform(LLJIT &J);
+Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J);
 
 /// Configure the LLJIT instance to disable platform support explicitly. This is
 /// useful in two cases: for platforms that don't have such requirements and for
 /// platforms, that we have no explicit support yet and that don't work well
 /// with the generic IR platform.
-Error setUpInactivePlatform(LLJIT &J);
+Expected<JITDylibSP> setUpInactivePlatform(LLJIT &J);
 
 } // End namespace orc
 } // End namespace llvm

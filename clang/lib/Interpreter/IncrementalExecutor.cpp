@@ -43,15 +43,6 @@ IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
     Err = JitOrErr.takeError();
     return;
   }
-
-  const char Pref = Jit->getDataLayout().getGlobalPrefix();
-  // Discover symbols from the process as a fallback.
-  if (auto PSGOrErr = DynamicLibrarySearchGenerator::GetForCurrentProcess(Pref))
-    Jit->getMainJITDylib().addGenerator(std::move(*PSGOrErr));
-  else {
-    Err = PSGOrErr.takeError();
-    return;
-  }
 }
 
 IncrementalExecutor::~IncrementalExecutor() {}

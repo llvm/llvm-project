@@ -218,13 +218,6 @@ int main(int argc, char *argv[]) {
           .create());
 
   if (!InputObjects.empty()) {
-
-    // If we have input objects then reflect process symbols so the input
-    // objects can do interesting things, like call printf.
-    J->getMainJITDylib().addGenerator(
-        ExitOnErr(DynamicLibrarySearchGenerator::GetForCurrentProcess(
-            J->getDataLayout().getGlobalPrefix())));
-
     // Load the input objects.
     for (auto InputObject : InputObjects) {
       auto ObjBuffer =
