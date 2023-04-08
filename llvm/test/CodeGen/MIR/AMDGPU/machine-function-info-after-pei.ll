@@ -26,6 +26,8 @@
 ; AFTER-PEI-NEXT:   workGroupIDX:    { reg: '$sgpr6' }
 ; AFTER-PEI-NEXT:   privateSegmentWaveByteOffset: { reg: '$sgpr7' }
 ; AFTER-PEI-NEXT:   workItemIDX:     { reg: '$vgpr0' }
+; AFTER-PEI-NEXT: psInputAddr:     0
+; AFTER-PEI-NEXT: psInputEnable:   0
 ; AFTER-PEI-NEXT: mode:
 ; AFTER-PEI-NEXT:   ieee:            true
 ; AFTER-PEI-NEXT:   dx10-clamp:      true

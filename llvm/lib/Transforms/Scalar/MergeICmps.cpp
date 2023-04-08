@@ -49,6 +49,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -639,10 +640,11 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
 
   if (Comparisons.size() == 1) {
     LLVM_DEBUG(dbgs() << "Only one comparison, updating branches\n");
-    Value *const LhsLoad =
-        Builder.CreateLoad(FirstCmp.Lhs().LoadI->getType(), Lhs);
-    Value *const RhsLoad =
-        Builder.CreateLoad(FirstCmp.Rhs().LoadI->getType(), Rhs);
+    // Use clone to keep the metadata
+    Instruction *const LhsLoad = Builder.Insert(FirstCmp.Lhs().LoadI->clone());
+    Instruction *const RhsLoad = Builder.Insert(FirstCmp.Rhs().LoadI->clone());
+    LhsLoad->replaceUsesOfWith(LhsLoad->getOperand(0), Lhs);
+    RhsLoad->replaceUsesOfWith(RhsLoad->getOperand(0), Rhs);
     // There are no blocks to merge, just do the comparison.
     IsEqual = Builder.CreateICmpEQ(LhsLoad, RhsLoad);
   } else {
