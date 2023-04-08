@@ -71,6 +71,7 @@ protected:
     A2 = findInstructionByNameOrNull(F, "A2");
     A3 = findInstructionByNameOrNull(F, "A3");
     A4 = findInstructionByNameOrNull(F, "A4");
+    A5 = findInstructionByNameOrNull(F, "A5");
 
     CxtI = findInstructionByNameOrNull(F, "CxtI");
     CxtI2 = findInstructionByNameOrNull(F, "CxtI2");
@@ -82,7 +83,7 @@ protected:
   Function *F = nullptr;
   Instruction *A = nullptr;
   // Instructions (optional)
-  Instruction *A2 = nullptr, *A3 = nullptr, *A4 = nullptr;
+  Instruction *A2 = nullptr, *A3 = nullptr, *A4 = nullptr, *A5 = nullptr;
 
   // Context instructions (optional)
   Instruction *CxtI = nullptr, *CxtI2 = nullptr, *CxtI3 = nullptr;
@@ -1538,6 +1539,40 @@ TEST_F(ComputeKnownFPClassTest, SIToFP) {
   expectKnownFPClass(fcFinite, std::nullopt, A);
   expectKnownFPClass(fcFinite, std::nullopt, A2);
   expectKnownFPClass(~fcNan, std::nullopt, A3);
+}
+
+TEST_F(ComputeKnownFPClassTest, FAdd) {
+  parseAssembly(
+      "define float @test(float nofpclass(nan inf) %nnan.ninf, float nofpclass(nan) %nnan, float nofpclass(qnan) %no.qnan, float %unknown) {\n"
+      "  %A = fadd float %nnan, %nnan.ninf"
+      "  %A2 = fadd float %nnan.ninf, %nnan"
+      "  %A3 = fadd float %nnan.ninf, %unknown"
+      "  %A4 = fadd float %nnan.ninf, %no.qnan"
+      "  %A5 = fadd float %nnan, %nnan"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcFinite | fcInf, std::nullopt, A);
+  expectKnownFPClass(fcFinite | fcInf, std::nullopt, A2);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A3);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A4);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A5);
+}
+
+TEST_F(ComputeKnownFPClassTest, FSub) {
+  parseAssembly(
+      "define float @test(float nofpclass(nan inf) %nnan.ninf, float nofpclass(nan) %nnan, float nofpclass(qnan) %no.qnan, float %unknown) {\n"
+      "  %A = fsub float %nnan, %nnan.ninf"
+      "  %A2 = fsub float %nnan.ninf, %nnan"
+      "  %A3 = fsub float %nnan.ninf, %unknown"
+      "  %A4 = fsub float %nnan.ninf, %no.qnan"
+      "  %A5 = fsub float %nnan, %nnan"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcFinite | fcInf, std::nullopt, A);
+  expectKnownFPClass(fcFinite | fcInf, std::nullopt, A2);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A3);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A4);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A5);
 }
 
 TEST_F(ValueTrackingTest, isNonZeroRecurrence) {
