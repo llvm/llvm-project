@@ -928,6 +928,11 @@ isgraph(_CharT __c, const locale& __loc)
 }
 
 template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI bool isblank(_CharT __c, const locale& __loc) {
+    return std::use_facet<ctype<_CharT> >(__loc).is(ctype_base::blank, __c);
+}
+
+template <class _CharT>
 inline _LIBCPP_INLINE_VISIBILITY
 _CharT
 toupper(_CharT __c, const locale& __loc)
