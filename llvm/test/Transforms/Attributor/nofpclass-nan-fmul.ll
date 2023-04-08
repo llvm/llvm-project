@@ -52,7 +52,7 @@ define float @ret_fmul_dynamic_nonan_nozero__nonan_nozero(float nofpclass(nan ze
 }
 
 define float @ret_fmul_ieee_nonan_noinf__nonan_noinf(float nofpclass(nan inf) %arg0, float nofpclass(nan inf) %arg1) #0 {
-; CHECK-LABEL: define float @ret_fmul_ieee_nonan_noinf__nonan_noinf
+; CHECK-LABEL: define nofpclass(nan) float @ret_fmul_ieee_nonan_noinf__nonan_noinf
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG0:%.*]], float nofpclass(nan inf) [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FMUL]]
