@@ -124,12 +124,12 @@ void ConcatNestedNamespacesCheck::reportDiagnostic(
   SmallVector<SourceRange, 6> Backs;
   Backs.reserve(Namespaces.size());
 
-  NamespaceDecl const *LastND = nullptr;
+  NamespaceDecl const *LastNonNestND = nullptr;
 
   for (const NamespaceDecl *ND : Namespaces) {
     if (ND->isNested())
       continue;
-    LastND = ND;
+    LastNonNestND = ND;
     std::optional<SourceRange> SR =
         getCleanedNamespaceFrontRange(ND, SM, LangOpts);
     if (!SR.has_value())
@@ -137,7 +137,7 @@ void ConcatNestedNamespacesCheck::reportDiagnostic(
     Fronts.push_back(SR.value());
     Backs.push_back(getCleanedNamespaceBackRange(ND, SM, LangOpts));
   }
-  if (LastND == nullptr || Fronts.empty() || Backs.empty())
+  if (LastNonNestND == nullptr || Fronts.empty() || Backs.empty())
     return;
   // the last one should be handled specially
   Fronts.pop_back();
@@ -147,9 +147,11 @@ void ConcatNestedNamespacesCheck::reportDiagnostic(
   for (SourceRange const &Front : Fronts)
     DB << FixItHint::CreateRemoval(Front);
   DB << FixItHint::CreateReplacement(
-      SourceRange{LastND->getBeginLoc(), LastND->getLocation()},
+      SourceRange{LastNonNestND->getBeginLoc(),
+                  Namespaces.back()->getLocation()},
       ConcatNameSpace);
-  if (LastRBrace != SourceRange{LastND->getRBraceLoc(), LastND->getRBraceLoc()})
+  if (LastRBrace !=
+      SourceRange{LastNonNestND->getRBraceLoc(), LastNonNestND->getRBraceLoc()})
     DB << FixItHint::CreateReplacement(LastRBrace,
                                        ("} // " + ConcatNameSpace).str());
   for (SourceRange const &Back : llvm::reverse(Backs))
