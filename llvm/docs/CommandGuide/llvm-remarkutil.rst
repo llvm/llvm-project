@@ -74,6 +74,8 @@ CSV format is as follows:
   Function,InstructionCount
   foo,123
 
+.. _annotation-count_subcommand:
+
 annotation-count
 ~~~~~~~~~~~~~~~~~
 
