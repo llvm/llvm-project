@@ -1336,7 +1336,7 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
     std::lock_guard<std::mutex> Lock(PluginMutex);
     auto I = ObjCImageInfos.find(&MR.getTargetJITDylib());
     assert(I != ObjCImageInfos.end() && "Missing __objc_imageinfo");
-    assert(std::get<2>(I->second) && "Null __objc_imageinfo");
+    assert(I->second.Addr && "Null __objc_imageinfo");
     Sec.addr = I->second.Addr - SecBlock.getAddress();
     Sec.size = 8;
   }
