@@ -637,10 +637,10 @@ public:
       if (parseSignature(Signature.get()))
         return true;
       // Got signature as block type, don't need more
-      ExpectBlockType = false;
       TC.setLastSig(*Signature.get());
       if (ExpectBlockType)
         NestingStack.back().Sig = *Signature.get();
+      ExpectBlockType = false;
       auto &Ctx = getContext();
       // The "true" here will cause this to be a nameless symbol.
       MCSymbol *Sym = Ctx.createTempSymbol("typeindex", true);

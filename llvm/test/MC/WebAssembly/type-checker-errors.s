@@ -221,9 +221,16 @@ drop_empty_stack_while_popping:
   drop
   end_function
 
-end_block_insufficient_values_on_stack:
-  .functype end_block_insufficient_values_on_stack () -> ()
+end_block_insufficient_values_on_stack_1:
+  .functype end_block_insufficient_values_on_stack_1 () -> ()
   block i32
+# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
+  end_block
+  end_function
+
+end_block_insufficient_values_on_stack_2:
+  .functype end_block_insufficient_values_on_stack_2 () -> ()
+  block () -> (i32)
 # CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
   end_block
   end_function
