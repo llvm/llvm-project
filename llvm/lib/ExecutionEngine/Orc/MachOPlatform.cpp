@@ -1274,11 +1274,11 @@ Error MachOPlatform::MachOPlatformPlugin::createObjCRuntimeObject(
   size_t NumRuntimeSections = 0;
 
   for (auto ObjCRuntimeSectionName : ObjCRuntimeObjectSectionsData)
-    if (auto *Sec = G.findSectionByName(ObjCRuntimeSectionName))
+    if (G.findSectionByName(ObjCRuntimeSectionName))
       ++NumRuntimeSections;
 
   for (auto ObjCRuntimeSectionName : ObjCRuntimeObjectSectionsText) {
-    if (auto *Sec = G.findSectionByName(ObjCRuntimeSectionName)) {
+    if (G.findSectionByName(ObjCRuntimeSectionName)) {
       ++NumRuntimeSections;
       NeedTextSegment = true;
     }
