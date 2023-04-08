@@ -208,8 +208,7 @@ LiveVariables::FindLastPartialDef(Register Reg,
     return nullptr;
 
   PartDefRegs.insert(LastDefReg);
-  for (unsigned i = 0, e = LastDef->getNumOperands(); i != e; ++i) {
-    MachineOperand &MO = LastDef->getOperand(i);
+  for (MachineOperand &MO : LastDef->operands()) {
     if (!MO.isReg() || !MO.isDef() || MO.getReg() == 0)
       continue;
     Register DefReg = MO.getReg();
