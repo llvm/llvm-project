@@ -52,7 +52,9 @@ Configuration files:
                                  options. Example:
                                    CheckOptions:
                                      some-check.SomeOption: 'some value'
-  Checks                       - Same as '--checks'.
+  Checks                       - Same as '--checks'. Additionally, the list of
+                                 globs can be specified as a list instead of a
+                                 string.
   ExtraArgs                    - Same as '--extra-args'.
   ExtraArgsBefore              - Same as '--extra-args-before'.
   FormatStyle                  - Same as '--format-style'.
