@@ -127,7 +127,8 @@ void print(llvm::raw_ostream &OS, const Pointer &P, ASTContext &Ctx,
   }
 
   // Drop the first pointer since we print it unconditionally anyway.
-  Levels.erase(Levels.begin());
+  if (!Levels.empty())
+    Levels.erase(Levels.begin());
 
   printDesc(P.getDeclDesc());
   for (const auto &It : Levels) {
