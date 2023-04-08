@@ -36,6 +36,8 @@
 # FULL-NEXT: workItemIDX:     { reg: '$vgpr0' }
 # FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+# FULL-NEXT: psInputAddr:     0
+# FULL-NEXT: psInputEnable:   0
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -135,6 +137,8 @@ body:             |
 # FULL-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+# FULL-NEXT: psInputAddr:     0
+# FULL-NEXT: psInputEnable:   0
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -205,6 +209,8 @@ body:             |
 # FULL-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+# FULL-NEXT: psInputAddr:     0
+# FULL-NEXT: psInputEnable:   0
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -276,6 +282,8 @@ body:             |
 # FULL-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+# FULL-NEXT: psInputAddr:     0
+# FULL-NEXT: psInputEnable:   0
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true

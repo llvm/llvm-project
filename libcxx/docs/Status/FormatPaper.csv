@@ -1,7 +1,7 @@
 Section,Description,Dependencies,Assignee,Status,First released version
 `P1361 <https://wg21.link/P1361>`__ `P2372 <https://wg21.link/P2372>`__,"Formatting chrono"
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::duration<Rep, Period>``",,Mark de Wever,|Complete|, Clang 16
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::sys_time<Duration>``",,Mark de Wever,|In Progress|,
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::sys_time<Duration>``",,Mark de Wever,|Complete|, Clang 17
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::utc_time<Duration>``",A ``<chrono>`` implementation,Not assigned,,,
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::tai_time<Duration>``",A ``<chrono>`` implementation,Not assigned,,,
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::gps_time<Duration>``",A ``<chrono>`` implementation,Not assigned,,,
@@ -40,5 +40,5 @@ Section,Description,Dependencies,Assignee,Status,First released version
 `[format.range.fmtstr] <https://wg21.link/format.range.fmtstr>`_,"Formatting for ranges: strings",,Mark de Wever,|In Progress|,
 `[format.range.fmtstr] <https://wg21.link/format.range.fmtstr>`_,"Formatting for ranges: strings",,Mark de Wever,|In Progress|,
 "`P2693R1 <https://wg21.link/P2693R1>`__","Formatting ``thread::id`` and ``stacktrace``"
-`[thread.thread.id] <https://wg21.link/thread.thread.id>`_,"Formatting ``thread::id``",,Mark de Wever,|In Progress|,
+`[thread.thread.id] <https://wg21.link/thread.thread.id>`_,"Formatting ``thread::id``",,Mark de Wever,|Complete|,Clang 17
 `[stacktrace.format] <https://wg21.link/stacktrace.format>`_,"Formatting ``stacktrace``",A ``<stacktrace>`` implementation,Mark de Wever,,

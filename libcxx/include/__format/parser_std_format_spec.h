@@ -143,6 +143,7 @@ inline constexpr __fields __fields_pointer{.__type_ = true};
 #  if _LIBCPP_STD_VER >= 23
 inline constexpr __fields __fields_tuple{.__use_range_fill_ = true};
 inline constexpr __fields __fields_range{.__use_range_fill_ = true};
+inline constexpr __fields __fields_fill_align_width{};
 #  endif
 
 enum class _LIBCPP_ENUM_VIS __alignment : uint8_t {

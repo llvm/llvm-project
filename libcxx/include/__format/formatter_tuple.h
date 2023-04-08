@@ -53,32 +53,37 @@ struct _LIBCPP_TEMPLATE_VIS __formatter_tuple {
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __parse_ctx) {
     auto __begin = __parser_.__parse(__parse_ctx, __format_spec::__fields_tuple);
 
-    // [format.tuple]/7
-    //   ... For each element e in underlying_, if e.set_debug_format()
-    //   is a valid expression, calls e.set_debug_format().
-    // TODO FMT this can be removed when P2733 is accepted.
-    std::__for_each_index_sequence(make_index_sequence<sizeof...(_Args)>(), [&]<size_t _Index> {
-      std::__set_debug_format(std::get<_Index>(__underlying_));
-    });
-
     auto __end = __parse_ctx.end();
-    if (__begin == __end)
-      return __begin;
-
-    if (*__begin == _CharT('m')) {
-      if constexpr (sizeof...(_Args) == 2) {
-        set_separator(_LIBCPP_STATICALLY_WIDEN(_CharT, ": "));
+    if (__begin != __end) {
+      if (*__begin == _CharT('m')) {
+        if constexpr (sizeof...(_Args) == 2) {
+          set_separator(_LIBCPP_STATICALLY_WIDEN(_CharT, ": "));
+          set_brackets({}, {});
+          ++__begin;
+        } else
+          std::__throw_format_error("The format specifier m requires a pair or a two-element tuple");
+      } else if (*__begin == _CharT('n')) {
         set_brackets({}, {});
         ++__begin;
-      } else
-        std::__throw_format_error("The format specifier m requires a pair or a two-element tuple");
-    } else if (*__begin == _CharT('n')) {
-      set_brackets({}, {});
-      ++__begin;
+      }
     }
 
     if (__begin != __end && *__begin != _CharT('}'))
       std::__throw_format_error("The format-spec should consume the input or end with a '}'");
+
+    __parse_ctx.advance_to(__begin);
+
+    // [format.tuple]/7
+    //   ... For each element e in underlying_, if e.set_debug_format()
+    //   is a valid expression, calls e.set_debug_format().
+    std::__for_each_index_sequence(make_index_sequence<sizeof...(_Args)>(), [&]<size_t _Index> {
+      auto& __formatter = std::get<_Index>(__underlying_);
+      __formatter.parse(__parse_ctx);
+      // Unlike the range_formatter we don't guard against evil parsers. Since
+      // this format-spec never has a format-spec for the underlying type
+      // adding the test would give additional overhead.
+      std::__set_debug_format(__formatter);
+    });
 
     return __begin;
   }
@@ -120,35 +125,7 @@ struct _LIBCPP_TEMPLATE_VIS __formatter_tuple {
     std::__for_each_index_sequence(make_index_sequence<sizeof...(_Args)>(), [&]<size_t _Index> {
       if constexpr (_Index)
         __ctx.advance_to(std::ranges::copy(__separator_, __ctx.out()).out);
-
-        // During review Victor suggested to make the exposition only
-        // __underlying_ member a local variable. Currently the Standard
-        // requires nested debug-enabled formatter specializations not to
-        // output escaped output. P2733 fixes that bug, once accepted the
-        // code below can be used.
-        // (Note when a paper allows parsing a tuple-underlying-spec the
-        // exposition only member needs to be a class member. Earlier
-        // revisions of P2286 proposed that, but this was not pursued,
-        // due to time constrains and complexity of the matter.)
-        // TODO FMT This can be updated after P2733 is accepted.
-#  if 0
-      // P2286 uses an exposition only member in the formatter
-      //   tuple<formatter<remove_cvref_t<_Args>, _CharT>...> __underlying_;
-      // This was used in earlier versions of the paper since
-      // __underlying_.parse(...) was called. This is no longer the case
-      // so we can reduce the scope of the formatter.
-      //
-      // It does require the underlying's parse effect to be moved here too.
-      using _Arg = tuple_element<_Index, decltype(__tuple)>;
-      formatter<remove_cvref_t<_Args>, _CharT> __underlying;
-
-      // [format.tuple]/7
-      //   ... For each element e in underlying_, if e.set_debug_format()
-      //   is a valid expression, calls e.set_debug_format().
-      std::__set_debug_format(__underlying);
-#  else
       __ctx.advance_to(std::get<_Index>(__underlying_).format(std::get<_Index>(__tuple), __ctx));
-#  endif
     });
 
     return std::ranges::copy(__closing_bracket_, __ctx.out()).out;

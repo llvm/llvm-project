@@ -30,6 +30,8 @@
 ; CHECK-NEXT: workGroupIDX: { reg: '$sgpr6' }
 ; CHECK-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr7' }
 ; CHECK-NEXT: workItemIDX: { reg: '$vgpr0' }
+; CHECK-NEXT: psInputAddr: 0
+; CHECK-NEXT: psInputEnable: 0
 ; CHECK-NEXT: mode:
 ; CHECK-NEXT: ieee: true
 ; CHECK-NEXT: dx10-clamp: true
@@ -71,6 +73,8 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: argumentInfo:
 ; CHECK-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr3' }
 ; CHECK-NEXT: implicitBufferPtr: { reg: '$sgpr0_sgpr1' }
+; CHECK-NEXT: psInputAddr: 1
+; CHECK-NEXT: psInputEnable: 1
 ; CHECK-NEXT: mode:
 ; CHECK-NEXT: ieee: false
 ; CHECK-NEXT: dx10-clamp: true
@@ -84,6 +88,16 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: body:
 define amdgpu_ps void @ps_shader(i32 %arg0, i32 inreg %arg1) {
+  %gep = getelementptr inbounds [128 x i32], ptr addrspace(2) @gds, i32 0, i32 %arg0
+  atomicrmw add ptr addrspace(2) %gep, i32 8 seq_cst
+  ret void
+}
+
+; CHECK-LABEL: {{^}}name: ps_shader_ps_input_enable
+; CHECK: machineFunctionInfo:
+; CHECK: psInputAddr: 36983
+; CHECK-NEXT: psInputEnable: 1{{$}}
+define amdgpu_ps void @ps_shader_ps_input_enable(i32 %arg0, i32 inreg %arg1) #7 {
   %gep = getelementptr inbounds [128 x i32], ptr addrspace(2) @gds, i32 0, i32 %arg0
   atomicrmw add ptr addrspace(2) %gep, i32 8 seq_cst
   ret void
@@ -126,6 +140,8 @@ define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
 ; CHECK-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 ; CHECK-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 ; CHECK-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+; CHECK-NEXT: psInputAddr: 0
+; CHECK-NEXT: psInputEnable: 0
 ; CHECK-NEXT: mode:
 ; CHECK-NEXT: ieee: true
 ; CHECK-NEXT: dx10-clamp: true
@@ -173,6 +189,8 @@ define void @function() {
 ; CHECK-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 ; CHECK-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 ; CHECK-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+; CHECK-NEXT: psInputAddr: 0
+; CHECK-NEXT: psInputEnable: 0
 ; CHECK-NEXT: mode:
 ; CHECK-NEXT: ieee: true
 ; CHECK-NEXT: dx10-clamp: true
@@ -255,3 +273,4 @@ attributes #3 = { "amdgpu-dx10-clamp" = "false" "amdgpu-ieee" = "false" }
 attributes #4 = { "amdgpu-32bit-address-high-bits"="0xffff8000" }
 attributes #5 = { "amdgpu-gds-size"="4096" }
 attributes #6 = { convergent nounwind readnone willreturn }
+attributes #7 = { "InitialPSInputAddr"="36983" }
