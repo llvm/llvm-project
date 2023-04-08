@@ -21,6 +21,7 @@ Subcommands
   * :ref:`yaml2bitstream_subcommand` - Reserialize YAML remarks to bitstream.
   * :ref:`instruction-count_subcommand` - Output function instruction counts.
   * :ref:`annotation-count_subcommand` - Output remark type count from annotation remarks.
+
 .. _bitstream2yaml_subcommand:
 
 bitstream2yaml
