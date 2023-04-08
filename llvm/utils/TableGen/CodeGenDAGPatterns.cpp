@@ -819,56 +819,41 @@ void TypeInfer::expandOverloads(TypeSetByHwMode &VTS) {
 
 void TypeInfer::expandOverloads(TypeSetByHwMode::SetType &Out,
                                 const TypeSetByHwMode::SetType &Legal) {
-  std::set<MVT> Ovs;
-  for (MVT T : Out) {
-    if (!T.isOverloaded())
-      continue;
-
-    Ovs.insert(T);
-    // MachineValueTypeSet allows iteration and erasing.
-    Out.erase(T);
-  }
-
-  for (MVT Ov : Ovs) {
-    switch (Ov.SimpleTy) {
-      case MVT::iPTRAny:
-        Out.insert(MVT::iPTR);
-        return;
-      case MVT::iAny:
-        for (MVT T : MVT::integer_valuetypes())
-          if (Legal.count(T))
-            Out.insert(T);
-        for (MVT T : MVT::integer_fixedlen_vector_valuetypes())
-          if (Legal.count(T))
-            Out.insert(T);
-        for (MVT T : MVT::integer_scalable_vector_valuetypes())
-          if (Legal.count(T))
-            Out.insert(T);
-        return;
-      case MVT::fAny:
-        for (MVT T : MVT::fp_valuetypes())
-          if (Legal.count(T))
-            Out.insert(T);
-        for (MVT T : MVT::fp_fixedlen_vector_valuetypes())
-          if (Legal.count(T))
-            Out.insert(T);
-        for (MVT T : MVT::fp_scalable_vector_valuetypes())
-          if (Legal.count(T))
-            Out.insert(T);
-        return;
-      case MVT::vAny:
-        for (MVT T : MVT::vector_valuetypes())
-          if (Legal.count(T))
-            Out.insert(T);
-        return;
-      case MVT::Any:
-        for (MVT T : MVT::all_valuetypes())
-          if (Legal.count(T))
-            Out.insert(T);
-        return;
-      default:
-        break;
-    }
+  if (Out.count(MVT::iPTRAny)) {
+    Out.erase(MVT::iPTRAny);
+    Out.insert(MVT::iPTR);
+  } else if (Out.count(MVT::iAny)) {
+    Out.erase(MVT::iAny);
+    for (MVT T : MVT::integer_valuetypes())
+      if (Legal.count(T))
+        Out.insert(T);
+    for (MVT T : MVT::integer_fixedlen_vector_valuetypes())
+      if (Legal.count(T))
+        Out.insert(T);
+    for (MVT T : MVT::integer_scalable_vector_valuetypes())
+      if (Legal.count(T))
+        Out.insert(T);
+  } else if (Out.count(MVT::fAny)) {
+    Out.erase(MVT::fAny);
+    for (MVT T : MVT::fp_valuetypes())
+      if (Legal.count(T))
+        Out.insert(T);
+    for (MVT T : MVT::fp_fixedlen_vector_valuetypes())
+      if (Legal.count(T))
+        Out.insert(T);
+    for (MVT T : MVT::fp_scalable_vector_valuetypes())
+      if (Legal.count(T))
+        Out.insert(T);
+  } else if (Out.count(MVT::vAny)) {
+    Out.erase(MVT::vAny);
+    for (MVT T : MVT::vector_valuetypes())
+      if (Legal.count(T))
+        Out.insert(T);
+  } else if (Out.count(MVT::Any)) {
+    Out.erase(MVT::Any);
+    for (MVT T : MVT::all_valuetypes())
+      if (Legal.count(T))
+        Out.insert(T);
   }
 }
 
