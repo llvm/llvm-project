@@ -175,7 +175,8 @@ void test_P1361() {
 // Tests for P1636 Formatters for library types
 //
 // The paper hasn't been voted in so currently all formatters are disabled.
-// TODO validate whether the test is correct after the paper has been accepted.
+// Note the paper has been abandoned, the types are kept since other papers may
+// introduce these formatters.
 template <class CharT>
 void test_P1636() {
   assert_is_not_formattable<std::basic_streambuf<CharT>, CharT>();
@@ -191,7 +192,7 @@ void test_P1636() {
     assert_is_not_formattable<std::sub_match<CharT*>, CharT>();
 #endif
 #ifndef TEST_HAS_NO_THREADS
-  assert_is_not_formattable<std::thread::id, CharT>();
+  assert_is_formattable<std::thread::id, CharT>();
 #endif
   assert_is_not_formattable<std::unique_ptr<int>, CharT>();
 }

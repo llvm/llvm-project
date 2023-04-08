@@ -79,6 +79,7 @@
     __cpp_lib_expected                             202202L [C++2b]
     __cpp_lib_filesystem                           201703L [C++17]
     __cpp_lib_format                               202106L [C++20]
+    __cpp_lib_formatters                           202302L [C++2b]
     __cpp_lib_forward_like                         202207L [C++2b]
     __cpp_lib_gcd_lcm                              201606L [C++17]
     __cpp_lib_generic_associative_lookup           201304L [C++14]
@@ -429,6 +430,10 @@
 
 # ifdef __cpp_lib_format
 #   error "__cpp_lib_format should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_formatters
+#   error "__cpp_lib_formatters should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_forward_like
@@ -1084,6 +1089,10 @@
 
 # ifdef __cpp_lib_format
 #   error "__cpp_lib_format should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_formatters
+#   error "__cpp_lib_formatters should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_forward_like
@@ -1853,6 +1862,10 @@
 
 # ifdef __cpp_lib_format
 #   error "__cpp_lib_format should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_formatters
+#   error "__cpp_lib_formatters should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_forward_like
@@ -2901,6 +2914,10 @@
 #   ifdef __cpp_lib_format
 #     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_formatters
+#   error "__cpp_lib_formatters should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_forward_like
@@ -4137,6 +4154,19 @@
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_format
 #     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_formatters
+#     error "__cpp_lib_formatters should be defined in c++2b"
+#   endif
+#   if __cpp_lib_formatters != 202302L
+#     error "__cpp_lib_formatters should have the value 202302L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_formatters
+#     error "__cpp_lib_formatters should not be defined because it is unimplemented in libc++!"
 #   endif
 # endif
 
