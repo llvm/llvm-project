@@ -80,12 +80,12 @@ const SCEV *createTripCountSCEV(Type *IdxTy, PredicatedScalarEvolution &PSE);
 
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
-/// [1, 9) = {1, 2, 4, 8}
+/// [1, 16) = {1, 2, 4, 8}
 struct VFRange {
   // A power of 2.
   const ElementCount Start;
 
-  // Need not be a power of 2. If End <= Start range is empty.
+  // A power of 2. If End <= Start range is empty.
   ElementCount End;
 
   bool isEmpty() const {
@@ -98,6 +98,8 @@ struct VFRange {
            "Both Start and End should have the same scalable flag");
     assert(isPowerOf2_32(Start.getKnownMinValue()) &&
            "Expected Start to be a power of 2");
+    assert(isPowerOf2_32(End.getKnownMinValue()) &&
+           "Expected End to be a power of 2");
   }
 
   /// Iterator to iterate over vectorization factors in a VFRange.
@@ -121,13 +123,8 @@ struct VFRange {
 
   iterator begin() { return iterator(Start); }
   iterator end() {
-    ElementCount EndVF = End;
-    // Make sure the end iterator is a power-of-2 so != comparisons with end
-    // work as expected.
-    if (!isPowerOf2_64(End.getKnownMinValue()))
-      EndVF = ElementCount::get(NextPowerOf2(End.getKnownMinValue()),
-                                End.isScalable());
-    return iterator(EndVF);
+    assert(isPowerOf2_32(End.getKnownMinValue()));
+    return iterator(End);
   }
 };
 
