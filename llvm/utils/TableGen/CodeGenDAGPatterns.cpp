@@ -218,7 +218,7 @@ bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
   bool IsSimple = isSimple();
   bool VTSIsSimple = VTS.isSimple();
   if (IsSimple && VTSIsSimple)
-    return *begin() == *VTS.begin();
+    return getSimple() == VTS.getSimple();
 
   // Speedup: We have a default if the set is simple.
   bool HaveDefault = IsSimple || hasDefault();
