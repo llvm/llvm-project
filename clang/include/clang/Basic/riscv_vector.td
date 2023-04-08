@@ -1795,6 +1795,55 @@ multiclass RVVIndexedSegLoadTuple<string op> {
   }
 }
 
+multiclass RVVIndexedSegStoreTuple<string op> {
+  foreach type = ["i"] in {
+    foreach eew_info = [["32", "(Log2EEW:5)"]] in {
+      defvar eew = eew_info[0];
+      defvar eew_type = eew_info[1];
+      foreach nf = [2] in {
+        let Name = op # nf # "ei" # eew # "_v_tuple",
+            OverloadedName = op # nf # "ei" # eew # "_tuple",
+            IRName = op # nf,
+            MaskedIRName = op # nf # "_mask",
+            NF = nf,
+            HasMaskedOffOperand = false,
+            MaskedPolicyScheme = NonePolicy,
+            ManualCodegen = [{
+    {
+      // Masked
+      // Builtin: (mask, ptr, index, v_tuple, vl)
+      // Intrinsic: (val0, val1, ..., ptr, index, mask, vl)
+      // Unmasked
+      // Builtin: (ptr, index, v_tuple, vl)
+      // Intrinsic: (val0, val1, ..., ptr, index, vl)
+      unsigned Offset = IsMasked ? 1 : 0;
+      llvm::Value *VTupleOperand = Ops[Offset + 2];
+
+      SmallVector<llvm::Value*, 12> Operands;
+      for (unsigned I = 0; I < NF; ++I) {
+        llvm::Value *V = Builder.CreateExtractValue(VTupleOperand, {I});
+        Operands.push_back(V);
+      }
+      Operands.push_back(Ops[Offset]); // Ptr
+      Operands.push_back(Ops[Offset + 1]); // Idx
+      if (IsMasked)
+        Operands.push_back(Ops[0]);
+      Operands.push_back(Ops[Offset + 3]); // VL
+
+      IntrinsicTypes = {Operands[0]->getType(), Ops[Offset + 1]->getType(),
+                        Operands.back()->getType()};
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+      return Builder.CreateCall(F, Operands, "");
+    }
+            }] in {
+          defvar T = "(Tuple:" # nf # ")";
+          def : RVVBuiltin<"v", "0Pe" # eew_type # "Uv" # T # "v", type>;
+        }
+      }
+    }
+  }
+}
+
 // TODO: Extend for policy
 let UnMaskedPolicyScheme = NonePolicy,
     MaskedPolicyScheme = NonePolicy,
@@ -1811,6 +1860,8 @@ let UnMaskedPolicyScheme = NonePolicy,
     IsTuple = true in {
 defm : RVVUnitStridedSegStoreTuple<"vsseg">;
 defm : RVVStridedSegStoreTuple<"vssseg">;
+defm : RVVIndexedSegStoreTuple<"vsuxseg">;
+defm : RVVIndexedSegStoreTuple<"vsoxseg">;
 }
 
 
