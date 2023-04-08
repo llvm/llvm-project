@@ -9,6 +9,7 @@
 #ifndef LLVM_MC_MCSYMBOLCOFF_H
 #define LLVM_MC_MCSYMBOLCOFF_H
 
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCSymbol.h"
 #include <cstdint>
 

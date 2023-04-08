@@ -76,6 +76,29 @@ SourceLocation findNextTerminator(SourceLocation Start, const SourceManager &SM,
 }
 
 std::optional<Token>
+findNextTokenIncludingComments(SourceLocation Start, const SourceManager &SM,
+                               const LangOptions &LangOpts) {
+  // `Lexer::findNextToken` will ignore comment
+  if (Start.isMacroID())
+    return std::nullopt;
+  Start = Lexer::getLocForEndOfToken(Start, 0, SM, LangOpts);
+  // Break down the source location.
+  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Start);
+  bool InvalidTemp = false;
+  StringRef File = SM.getBufferData(LocInfo.first, &InvalidTemp);
+  if (InvalidTemp)
+    return std::nullopt;
+  // Lex from the start of the given location.
+  Lexer L(SM.getLocForStartOfFile(LocInfo.first), LangOpts, File.begin(),
+          File.data() + LocInfo.second, File.end());
+  L.SetCommentRetentionState(true);
+  // Find the token.
+  Token Tok;
+  L.LexFromRawLexer(Tok);
+  return Tok;
+}
+
+std::optional<Token>
 findNextTokenSkippingComments(SourceLocation Start, const SourceManager &SM,
                               const LangOptions &LangOpts) {
   while (Start.isValid()) {
