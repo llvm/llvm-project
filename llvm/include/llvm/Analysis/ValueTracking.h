@@ -249,6 +249,22 @@ struct KnownFPClass {
     return (KnownFPClasses & fcInf) == fcNone;
   }
 
+  /// Return true if it's known this can never be a subnormal
+  bool isKnownNeverSubnormal() const {
+    return (KnownFPClasses & fcSubnormal) == fcNone;
+  }
+
+  /// Return true if it's known this can never be a zero. This means a literal
+  /// [+-]0, and does not include denormal inputs implicitly treated as [+-]0.
+  bool isKnownNeverZero() const {
+    return (KnownFPClasses & fcZero) == fcNone;
+  }
+
+  /// Return true if it's know this can never be interpreted as a zero. This
+  /// extends isKnownNeverZero to cover the case where the assumed
+  /// floating-point mode for the function interprets denormals as zero.
+  bool isKnownNeverLogicalZero(const Function &F, Type *Ty) const;
+
   KnownFPClass &operator|=(const KnownFPClass &RHS) {
     KnownFPClasses = KnownFPClasses | RHS.KnownFPClasses;
 
