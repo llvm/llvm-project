@@ -132,6 +132,18 @@ struct DenormalMode {
            Input != DenormalModeKind::Invalid;
   }
 
+  /// Return true if input denormals must be implicitly treated as 0.
+  constexpr bool inputsAreZero() const {
+    return Input == DenormalModeKind::PreserveSign ||
+           Input == DenormalModeKind::PositiveZero;
+  }
+
+  /// Return true if output denormals should be flushed to 0.
+  constexpr bool outputsAreZero() const {
+    return Output == DenormalModeKind::PreserveSign ||
+           Output == DenormalModeKind::PositiveZero;
+  }
+
   inline void print(raw_ostream &OS) const;
 
   inline std::string str() const {

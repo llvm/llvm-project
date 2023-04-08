@@ -4,9 +4,9 @@
 declare float @llvm.canonicalize.f32(float)
 
 define float @ret_canonicalize(float %arg0) {
-; CHECK-LABEL: define float @ret_canonicalize
+; CHECK-LABEL: define nofpclass(snan) float @ret_canonicalize
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10:[0-9]+]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.canonicalize.f32(float %arg0)
@@ -14,9 +14,9 @@ define float @ret_canonicalize(float %arg0) {
 }
 
 define float @ret_canonicalize_noinf(float nofpclass(inf) %arg0) {
-; CHECK-LABEL: define float @ret_canonicalize_noinf
+; CHECK-LABEL: define nofpclass(snan inf) float @ret_canonicalize_noinf
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.canonicalize.f32(float %arg0)
@@ -24,9 +24,9 @@ define float @ret_canonicalize_noinf(float nofpclass(inf) %arg0) {
 }
 
 define float @ret_canonicalize_dynamic_denormal(float nofpclass(inf) %arg0) "denormal-fp-math"="dynamic,dynamic" {
-; CHECK-LABEL: define float @ret_canonicalize_dynamic_denormal
+; CHECK-LABEL: define nofpclass(snan inf) float @ret_canonicalize_dynamic_denormal
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.canonicalize.f32(float %arg0)
@@ -34,9 +34,9 @@ define float @ret_canonicalize_dynamic_denormal(float nofpclass(inf) %arg0) "den
 }
 
 define float @ret_canonicalize_daz_denormal(float nofpclass(inf) %arg0) "denormal-fp-math"="dynamic,preserve-sign" {
-; CHECK-LABEL: define float @ret_canonicalize_daz_denormal
+; CHECK-LABEL: define nofpclass(snan inf sub) float @ret_canonicalize_daz_denormal
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf sub) float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.canonicalize.f32(float %arg0)
@@ -44,9 +44,9 @@ define float @ret_canonicalize_daz_denormal(float nofpclass(inf) %arg0) "denorma
 }
 
 define float @ret_canonicalize_dapz_denormal(float nofpclass(inf) %arg0) "denormal-fp-math"="dynamic,positive-zero" {
-; CHECK-LABEL: define float @ret_canonicalize_dapz_denormal
+; CHECK-LABEL: define nofpclass(snan inf nzero sub) float @ret_canonicalize_dapz_denormal
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf nzero sub) float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.canonicalize.f32(float %arg0)
@@ -54,9 +54,9 @@ define float @ret_canonicalize_dapz_denormal(float nofpclass(inf) %arg0) "denorm
 }
 
 define float @ret_canonicalize_ftpz_dapz_denormal(float nofpclass(inf) %arg0) "denormal-fp-math"="positive-zero,preserve-sign" {
-; CHECK-LABEL: define float @ret_canonicalize_ftpz_dapz_denormal
+; CHECK-LABEL: define nofpclass(snan inf sub) float @ret_canonicalize_ftpz_dapz_denormal
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR5:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf sub) float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.canonicalize.f32(float %arg0)
@@ -64,9 +64,9 @@ define float @ret_canonicalize_ftpz_dapz_denormal(float nofpclass(inf) %arg0) "d
 }
 
 define float @ret_canonicalize_ftpz_ieee_denormal(float nofpclass(inf) %arg0) "denormal-fp-math"="positive-zero,ieee" {
-; CHECK-LABEL: define float @ret_canonicalize_ftpz_ieee_denormal
+; CHECK-LABEL: define nofpclass(snan inf nzero sub) float @ret_canonicalize_ftpz_ieee_denormal
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR6:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf nzero sub) float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.canonicalize.f32(float %arg0)
@@ -74,9 +74,9 @@ define float @ret_canonicalize_ftpz_ieee_denormal(float nofpclass(inf) %arg0) "d
 }
 
 define float @ret_canonicalize_ftpz_dynamic_denormal(float nofpclass(inf) %arg0) "denormal-fp-math"="positive-zero,dynamic" {
-; CHECK-LABEL: define float @ret_canonicalize_ftpz_dynamic_denormal
+; CHECK-LABEL: define nofpclass(snan inf sub) float @ret_canonicalize_ftpz_dynamic_denormal
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR7:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf sub) float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.canonicalize.f32(float %arg0)
@@ -84,9 +84,9 @@ define float @ret_canonicalize_ftpz_dynamic_denormal(float nofpclass(inf) %arg0)
 }
 
 define float @ret_canonicalize_ftz_denormal(float nofpclass(inf) %arg0) "denormal-fp-math"="preserve-sign,dynamic" {
-; CHECK-LABEL: define float @ret_canonicalize_ftz_denormal
+; CHECK-LABEL: define nofpclass(snan inf sub) float @ret_canonicalize_ftz_denormal
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR8:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf sub) float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.canonicalize.f32(float %arg0)
@@ -94,9 +94,9 @@ define float @ret_canonicalize_ftz_denormal(float nofpclass(inf) %arg0) "denorma
 }
 
 define float @ret_canonicalize_ieee_denormal(float nofpclass(inf) %arg0) "denormal-fp-math"="ieee,ieee" {
-; CHECK-LABEL: define float @ret_canonicalize_ieee_denormal
+; CHECK-LABEL: define nofpclass(snan inf) float @ret_canonicalize_ieee_denormal
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR9:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.canonicalize.f32(float [[ARG0]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.canonicalize.f32(float %arg0)
