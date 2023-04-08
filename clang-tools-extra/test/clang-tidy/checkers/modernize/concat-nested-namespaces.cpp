@@ -105,7 +105,7 @@ namespace n26::n27 {
 namespace n28 {
 namespace n29::n30 {
 // CHECK-MESSAGES-DAG: :[[@LINE-3]]:1: warning: nested namespaces can be concatenated [modernize-concat-nested-namespaces]
-// CHECK-FIXES: namespace n26::n27::n28::n29::n30
+// CHECK-FIXES: namespace n26::n27::n28::n29::n30 {
 void t() {}
 } // namespace n29::n30
 } // namespace n28

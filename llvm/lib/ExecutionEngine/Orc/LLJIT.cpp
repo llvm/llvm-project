@@ -714,11 +714,17 @@ Error LLJITBuilderState::prepareForConstruction() {
       EPC = std::move(*EPCOrErr);
     else
       return EPCOrErr.takeError();
-  } else
+  } else if (EPC) {
     LLVM_DEBUG({
       dbgs() << "Using explicitly specified ExecutorProcessControl instance "
              << EPC.get() << "\n";
     });
+  } else {
+    LLVM_DEBUG({
+      dbgs() << "Using explicitly specified ExecutionSession instance "
+             << ES.get() << "\n";
+    });
+  }
 
   // If the client didn't configure any linker options then auto-configure the
   // JIT linker.
