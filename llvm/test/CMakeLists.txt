@@ -185,7 +185,6 @@ if(LLVM_BUILD_EXAMPLES)
     OrcV2CBindingsBasicUsage
     OrcV2CBindingsAddObjectFile
     OrcV2CBindingsRemovableCode
-    OrcV2CBindingsReflectProcessSymbols
     OrcV2CBindingsLazy
     OrcV2CBindingsVeryLazy
     )

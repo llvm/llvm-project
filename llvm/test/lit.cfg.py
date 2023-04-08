@@ -188,7 +188,6 @@ tools.extend([
     ToolSubst('OrcV2CBindingsBasicUsage', unresolved='ignore'),
     ToolSubst('OrcV2CBindingsAddObjectFile', unresolved='ignore'),
     ToolSubst('OrcV2CBindingsRemovableCode', unresolved='ignore'),
-    ToolSubst('OrcV2CBindingsReflectProcessSymbols', unresolved='ignore'),
     ToolSubst('OrcV2CBindingsLazy', unresolved='ignore'),
     ToolSubst('OrcV2CBindingsVeryLazy', unresolved='ignore'),
     ToolSubst('dxil-dis', unresolved='ignore')])
