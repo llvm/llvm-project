@@ -165,17 +165,22 @@ isInUnspecifiedPointerContext(internal::Matcher<Stmt> InnerMatcher) {
   // 1. an argument of a function call (except the callee has [[unsafe_...]]
   // attribute), or
   // 2. the operand of a cast operation; or
-  // ...
+  // 3. the operand of a comparator operation; or
   auto CallArgMatcher =
-      callExpr(hasAnyArgument(allOf(
-                   hasPointerType() /* array also decays to pointer type*/,
-                   InnerMatcher)),
-               unless(callee(functionDecl(hasAttr(attr::UnsafeBufferUsage)))));
+      callExpr(forEachArgumentWithParam(InnerMatcher,
+                  hasPointerType() /* array also decays to pointer type*/),
+          unless(callee(functionDecl(hasAttr(attr::UnsafeBufferUsage)))));
+
   auto CastOperandMatcher =
       explicitCastExpr(hasCastKind(CastKind::CK_PointerToIntegral),
                        castSubExpr(allOf(hasPointerType(), InnerMatcher)));
 
- return stmt(anyOf(CallArgMatcher, CastOperandMatcher));
+  auto CompOperandMatcher =
+      binaryOperator(hasAnyOperatorName("!=", "==", "<", "<=", ">", ">="),
+                     eachOf(hasLHS(allOf(hasPointerType(), InnerMatcher)),
+                            hasRHS(allOf(hasPointerType(), InnerMatcher))));
+
+  return stmt(anyOf(CallArgMatcher, CastOperandMatcher, CompOperandMatcher));
   // FIXME: any more cases? (UPC excludes the RHS of an assignment.  For now we
   // don't have to check that.)
 }
@@ -486,6 +491,41 @@ public:
       return {DRE};
     }
     return {};
+  }
+};
+
+// Fixable gadget to handle stand alone pointers of the form `UPC(DRE)` in the
+// unspecified pointer context (isInUnspecifiedPointerContext). The gadget emits
+// fixit of the form `UPC(DRE.data())`.
+class UPCStandalonePointerGadget : public FixableGadget {
+private:
+  static constexpr const char *const DeclRefExprTag = "StandalonePointer";
+  const DeclRefExpr *Node;
+
+public:
+  UPCStandalonePointerGadget(const MatchFinder::MatchResult &Result)
+      : FixableGadget(Kind::UPCStandalonePointer),
+        Node(Result.Nodes.getNodeAs<DeclRefExpr>(DeclRefExprTag)) {
+    assert(Node != nullptr && "Expecting a non-null matching result");
+  }
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::UPCStandalonePointer;
+  }
+
+  static Matcher matcher() {
+    auto ArrayOrPtr = anyOf(hasPointerType(), hasArrayType());
+    auto target = expr(
+        ignoringParenImpCasts(declRefExpr(allOf(ArrayOrPtr, to(varDecl()))).bind(DeclRefExprTag)));
+    return stmt(isInUnspecifiedPointerContext(target));
+  }
+
+  virtual std::optional<FixItList> getFixits(const Strategy &S) const override;
+
+  virtual const Stmt *getBaseStmt() const override { return Node; }
+
+  virtual DeclUseList getClaimedVarUseSites() const override {
+    return {Node};
   }
 };
 
@@ -1065,6 +1105,31 @@ PointerDereferenceGadget::getFixits(const Strategy &S) const {
     llvm_unreachable("Strategy not implemented yet!");
   case Strategy::Kind::Wontfix:
     llvm_unreachable("Invalid strategy!");
+  }
+
+  return std::nullopt;
+}
+
+// Generates fix-its replacing an expression of the form UPC(DRE) with
+// `DRE.data()`
+std::optional<FixItList> UPCStandalonePointerGadget::getFixits(const Strategy &S)
+      const {
+  const auto VD = cast<VarDecl>(Node->getDecl());
+  switch (S.lookup(VD)) {
+    case Strategy::Kind::Span: {
+      ASTContext &Ctx = VD->getASTContext();
+      SourceManager &SM = Ctx.getSourceManager();
+      // Inserts the .data() after the DRE
+      SourceLocation endOfOperand = getEndCharLoc(Node, SM, Ctx.getLangOpts());
+
+      return FixItList{{FixItHint::CreateInsertion(
+          endOfOperand.getLocWithOffset(1), ".data()")}};
+    }
+    case Strategy::Kind::Wontfix:
+    case Strategy::Kind::Iterator:
+    case Strategy::Kind::Array:
+    case Strategy::Kind::Vector:
+      llvm_unreachable("unsupported strategies for FixableGadgets");
   }
 
   return std::nullopt;

@@ -22,7 +22,6 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/EPCIndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
@@ -152,9 +151,6 @@ int main(int argc, char *argv[]) {
   EPCIU->createLazyCallThroughManager(
       J->getExecutionSession(), ExecutorAddr::fromPtr(&reportErrorAndExit));
   auto ISM = EPCIU->createIndirectStubsManager();
-  J->getMainJITDylib().addGenerator(
-      ExitOnErr(EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
-          J->getExecutionSession())));
 
   // (4) Add modules.
   ExitOnErr(J->addIRModule(ExitOnErr(parseExampleModule(FooMod, "foo-mod"))));

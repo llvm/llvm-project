@@ -105,7 +105,7 @@ namespace n26::n27 {
 namespace n28 {
 namespace n29::n30 {
 // CHECK-MESSAGES-DAG: :[[@LINE-3]]:1: warning: nested namespaces can be concatenated [modernize-concat-nested-namespaces]
-// CHECK-FIXES: namespace n26::n27::n28::n29::n30
+// CHECK-FIXES: namespace n26::n27::n28::n29::n30 {
 void t() {}
 } // namespace n29::n30
 } // namespace n28
@@ -143,7 +143,7 @@ void t() {}
 #endif
 } // namespace n40
 } // namespace n39
-// CHECK-FIXES: }
+// CHECK-FIXES: } // namespace n39::n40
 
 namespace n41 {
 namespace n42 {
@@ -154,7 +154,59 @@ void t() {}
 #endif
 } // namespace n42
 } // namespace n41
-// CHECK-FIXES: }
+// CHECK-FIXES: } // namespace n41::n42
+
+
+// CHECK-MESSAGES-DAG: :[[@LINE+1]]:1: warning: nested namespaces can be concatenated [modernize-concat-nested-namespaces]
+namespace n43 {
+#define N43_INNER
+namespace n44 {
+void foo() {}
+} // namespace n44
+#undef N43_INNER
+} // namespace n43
+// CHECK-FIXES: #define N43_INNER
+// CHECK-FIXES: namespace n43::n44 {
+// CHECK-FIXES: } // namespace n43::n44
+// CHECK-FIXES: #undef N43_INNER
+
+// CHECK-MESSAGES-DAG: :[[@LINE+1]]:1: warning: nested namespaces can be concatenated [modernize-concat-nested-namespaces]
+namespace n45{
+#define N45_INNER
+namespace n46
+{
+#pragma clang diagnostic push
+namespace n47 {
+void foo() {}
+} // namespace n47
+#pragma clang diagnostic pop
+} //namespace n46
+#undef N45_INNER
+} //namespace n45
+// CHECK-FIXES: #define N45_INNER
+// CHECK-FIXES: #pragma clang diagnostic push
+// CHECK-FIXES: namespace n45::n46::n47 {
+// CHECK-FIXES: } // namespace n45::n46::n47
+// CHECK-FIXES: #pragma clang diagnostic pop
+// CHECK-FIXES: #undef N45_INNER
+
+// CHECK-MESSAGES-DAG: :[[@LINE+1]]:1: warning: nested namespaces can be concatenated [modernize-concat-nested-namespaces]
+namespace avoid_add_close_comment {
+namespace inner {
+void foo() {}
+}
+}
+// CHECK-FIXES: namespace avoid_add_close_comment::inner {
+// CHECK-FIXES-NOT: } // namespace avoid_add_close_comment::inner
+
+// CHECK-MESSAGES-DAG: :[[@LINE+1]]:1: warning: nested namespaces can be concatenated [modernize-concat-nested-namespaces]
+namespace avoid_change_close_comment {
+namespace inner {
+void foo() {}
+} // namespace inner and other comments
+} // namespace avoid_change_close_comment and other comments
+// CHECK-FIXES: namespace avoid_change_close_comment::inner {
+// CHECK-FIXES-NOT: } // namespace avoid_add_close_comment::inner
 
 int main() {
   n26::n27::n28::n29::n30::t();

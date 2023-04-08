@@ -85,6 +85,7 @@ __cpp_lib_execution                                     201902L <execution>
 __cpp_lib_expected                                      202202L <expected>
 __cpp_lib_filesystem                                    201703L <filesystem>
 __cpp_lib_format                                        202106L <format>
+__cpp_lib_formatters                                    202302L <stacktrace> <thread>
 __cpp_lib_forward_like                                  202207L <utility>
 __cpp_lib_gcd_lcm                                       201606L <numeric>
 __cpp_lib_generic_associative_lookup                    201304L <map> <set>
@@ -397,6 +398,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_constexpr_memory                     202202L
 # define __cpp_lib_constexpr_typeinfo                   202106L
 # define __cpp_lib_expected                             202202L
+# if !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+// #   define __cpp_lib_formatters                         202302L
+# endif
 # define __cpp_lib_forward_like                         202207L
 # define __cpp_lib_invoke_r                             202106L
 # define __cpp_lib_is_scoped_enum                       202011L

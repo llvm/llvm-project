@@ -119,3 +119,15 @@ func.func @ctlz_vector(%arg: vector<4xi32>) -> vector<4xi32> {
 
 // CHECK-LABEL: @ctlz_vector
 // CHECK-NOT: math.ctlz
+
+// -----
+
+// CHECK-LABEL:    func @fmaf_func
+// CHECK-SAME:     ([[ARG0:%.+]]: f64, [[ARG1:%.+]]: f64, [[ARG2:%.+]]: f64) -> f64
+func.func @fmaf_func(%a: f64, %b: f64, %c: f64) -> f64 {
+  // CHECK-NEXT:     [[MULF:%.+]] = arith.mulf [[ARG0]], [[ARG1]]
+  // CHECK-NEXT:     [[ADDF:%.+]] = arith.addf [[MULF]], [[ARG2]]
+  // CHECK-NEXT:     return [[ADDF]]
+  %ret = math.fma %a, %b, %c : f64
+  return %ret : f64
+}

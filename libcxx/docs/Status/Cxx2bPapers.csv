@@ -113,7 +113,7 @@
 "`P2713R1 <https://wg21.link/P2713R1>`__","LWG", "Escaping improvements in ``std::format``","February 2023","","","|format|"
 "`P2675R1 <https://wg21.link/P2675R1>`__","LWG", "``format``'s width estimation is too approximate and not forward compatible","February 2023","","","|format|"
 "`P2572R1 <https://wg21.link/P2572R1>`__","LWG", "``std::format`` fill character allowances","February 2023","","","|format|"
-"`P2693R1 <https://wg21.link/P2693R1>`__","LWG", "Formatting ``thread::id`` and ``stacktrace``","February 2023","","","|format|"
+"`P2693R1 <https://wg21.link/P2693R1>`__","LWG", "Formatting ``thread::id`` and ``stacktrace``","February 2023","|Partial| [#note-P2693R1]_","","|format|"
 "`P2679R2 <https://wg21.link/P2679R2>`__","LWG", "Fixing ``std::start_lifetime_as`` for arrays","February 2023","","",""
 "`P2674R1 <https://wg21.link/P2674R1>`__","LWG", "A trait for implicit lifetime types","February 2023","","",""
 "`P2655R3 <https://wg21.link/P2655R3>`__","LWG", "``common_reference_t`` of ``reference_wrapper`` Should Be a Reference Type","February 2023","","",""
