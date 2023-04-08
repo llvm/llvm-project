@@ -168,6 +168,12 @@ if(LLVM_ENABLE_PIC)
   )
   set_property(TARGET mlir_async_runtime PROPERTY CXX_VISIBILITY_PRESET hidden)
   target_compile_definitions(mlir_async_runtime PRIVATE mlir_async_runtime_EXPORTS)
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # Don't export symbols from link-time dependencies, these are internal
+    # implementation details.
+    # FIXME: Add a similar fix for Windows.
+    target_link_options(mlir_async_runtime PRIVATE "-Wl,-exclude-libs,ALL")
+  endif()
 
   if(MLIR_ENABLE_CUDA_RUNNER)
     # Configure CUDA support. Using check_language first allows us to give a

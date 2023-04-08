@@ -9,6 +9,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Pass/Pass.h"
@@ -16,6 +18,7 @@
 #define PASS_NAME "test-affine-reify-value-bounds"
 
 using namespace mlir;
+using mlir::presburger::BoundType;
 
 namespace {
 
@@ -32,7 +35,8 @@ struct TestReifyValueBounds
   TestReifyValueBounds(const TestReifyValueBounds &pass) : PassWrapper(pass){};
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect>();
+    registry
+        .insert<AffineDialect, tensor::TensorDialect, memref::MemRefDialect>();
   }
 
   void runOnOperation() override;
@@ -45,6 +49,16 @@ private:
 
 } // namespace
 
+FailureOr<BoundType> parseBoundType(std::string type) {
+  if (type == "EQ")
+    return BoundType::EQ;
+  if (type == "LB")
+    return BoundType::LB;
+  if (type == "UB")
+    return BoundType::UB;
+  return failure();
+}
+
 /// Look for "test.reify_bound" ops in the input and replace their results with
 /// the reified values.
 static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
@@ -52,7 +66,8 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
   IRRewriter rewriter(funcOp.getContext());
   WalkResult result = funcOp.walk([&](Operation *op) {
     // Look for test.reify_bound ops.
-    if (op->getName().getStringRef() == "test.reify_bound") {
+    if (op->getName().getStringRef() == "test.reify_bound" ||
+        op->getName().getStringRef() == "test.reify_constant_bound") {
       if (op->getNumOperands() != 1 || op->getNumResults() != 1 ||
           !op->getResultTypes()[0].isIndex()) {
         op->emitOpError("invalid op");
@@ -67,30 +82,56 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
         return WalkResult::skip();
       }
 
+      // Get bound type.
+      std::string boundTypeStr = "EQ";
+      if (auto boundTypeAttr = op->getAttrOfType<StringAttr>("type"))
+        boundTypeStr = boundTypeAttr.str();
+      auto boundType = parseBoundType(boundTypeStr);
+      if (failed(boundType)) {
+        op->emitOpError("invalid op");
+        return WalkResult::interrupt();
+      }
+
+      // Get shape dimension (if any).
       auto dim = value.getType().isIndex()
                      ? std::nullopt
                      : std::make_optional<int64_t>(
                            op->getAttrOfType<IntegerAttr>("dim").getInt());
 
-      // Reify value bound.
-      rewriter.setInsertionPointAfter(op);
-      FailureOr<OpFoldResult> reified;
-      if (!reifyToFuncArgs) {
-        // Reify in terms of the op's operands.
-        reified = reifyValueBound(rewriter, op->getLoc(),
-                                  presburger::BoundType::EQ, value, dim);
-      } else {
+      // Check if a constant was requested.
+      bool constant =
+          op->getName().getStringRef() == "test.reify_constant_bound";
+
+      // Prepare stop condition. By default, reify in terms of the op's
+      // operands. No stop condition is used when a constant was requested.
+      std::function<bool(Value, std::optional<int64_t>)> stopCondition =
+          [&](Value v, std::optional<int64_t> d) {
+            // Reify in terms of SSA values that are different from `value`.
+            return v != value;
+          };
+      if (reifyToFuncArgs) {
         // Reify in terms of function block arguments.
-        auto stopCondition = [](Value v) {
+        stopCondition = stopCondition = [](Value v, std::optional<int64_t> d) {
           auto bbArg = v.dyn_cast<BlockArgument>();
           if (!bbArg)
             return false;
           return isa<FunctionOpInterface>(
               bbArg.getParentBlock()->getParentOp());
         };
-        reified =
-            reifyValueBound(rewriter, op->getLoc(), presburger::BoundType::EQ,
-                            value, dim, stopCondition);
+      }
+
+      // Reify value bound
+      rewriter.setInsertionPointAfter(op);
+      FailureOr<OpFoldResult> reified = failure();
+      if (constant) {
+        auto reifiedConst = ValueBoundsConstraintSet::computeConstantBound(
+            *boundType, value, dim, /*stopCondition=*/nullptr);
+        if (succeeded(reifiedConst))
+          reified =
+              FailureOr<OpFoldResult>(rewriter.getIndexAttr(*reifiedConst));
+      } else {
+        reified = reifyValueBound(rewriter, op->getLoc(), *boundType, value,
+                                  dim, stopCondition);
       }
       if (failed(reified)) {
         op->emitOpError("could not reify bound");

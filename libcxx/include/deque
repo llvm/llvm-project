@@ -2399,7 +2399,7 @@ __synth_three_way_result<_Tp>
 operator<=>(const deque<_Tp, _Allocator>& __x, const deque<_Tp, _Allocator>& __y)
 {
     return std::lexicographical_compare_three_way(
-        __x.begin(), __x.end(), __y.begin(), __y.end(), __synth_three_way);
+        __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way<_Tp, _Tp>);
 }
 
 #endif // _LIBCPP_STD_VER <= 17

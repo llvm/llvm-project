@@ -85,7 +85,7 @@ int main(int, char**)
     static_assert(!std::is_invocable_v<L, std::int16_t>);
     static_assert(!std::is_invocable_v<L, std::int32_t>);
     static_assert(!std::is_invocable_v<L, std::int64_t>);
-    static_assert(!std::is_invocable_v<L, intmax_t>);
+    static_assert(!std::is_invocable_v<L, std::intmax_t>);
     static_assert(!std::is_invocable_v<L, std::intptr_t>);
     static_assert(!std::is_invocable_v<L, std::ptrdiff_t>);
 
@@ -116,7 +116,7 @@ int main(int, char**)
     static_assert(test<std::uint16_t>());
     static_assert(test<std::uint32_t>());
     static_assert(test<std::uint64_t>());
-    static_assert(test<uintmax_t>());
+    static_assert(test<std::uintmax_t>());
     static_assert(test<std::uintptr_t>());
     static_assert(test<std::size_t>());
 
@@ -132,7 +132,7 @@ int main(int, char**)
     test<std::uint16_t>();
     test<std::uint32_t>();
     test<std::uint64_t>();
-    test<uintmax_t>();
+    test<std::uintmax_t>();
     test<std::uintptr_t>();
     test<std::size_t>();
 

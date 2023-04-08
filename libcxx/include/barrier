@@ -135,7 +135,7 @@ public:
               __expected_adjustment_(0), __completion_(std::move(__completion)), __phase_(0)
     {
     }
-    [[nodiscard]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    [[__nodiscard__]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     arrival_token arrive(ptrdiff_t __update)
     {
         auto const __old_phase = __phase_.load(memory_order_relaxed);
@@ -305,7 +305,7 @@ public:
     barrier(barrier const&) = delete;
     barrier& operator=(barrier const&) = delete;
 
-    [[nodiscard]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    [[__nodiscard__]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     arrival_token arrive(ptrdiff_t __update = 1)
     {
         return __b_.arrive(__update);

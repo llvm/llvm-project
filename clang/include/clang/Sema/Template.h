@@ -261,6 +261,23 @@ enum class TemplateSubstitutionKind : char {
     }
     ArgListsIterator end() { return TemplateArgumentLists.end(); }
     ConstArgListsIterator end() const { return TemplateArgumentLists.end(); }
+
+    LLVM_DUMP_METHOD void dump() const {
+      LangOptions LO;
+      LO.CPlusPlus = true;
+      LO.Bool = true;
+      PrintingPolicy PP(LO);
+      llvm::errs() << "NumRetainedOuterLevels: " << NumRetainedOuterLevels
+                   << "\n";
+      for (unsigned Depth = NumRetainedOuterLevels; Depth < getNumLevels();
+           ++Depth) {
+        llvm::errs() << Depth << ": ";
+        printTemplateArgumentList(
+            llvm::errs(),
+            TemplateArgumentLists[getNumLevels() - Depth - 1].Args, PP);
+        llvm::errs() << "\n";
+      }
+    }
   };
 
   /// The context in which partial ordering of function templates occurs.

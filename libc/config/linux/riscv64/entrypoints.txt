@@ -72,6 +72,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strstr
     libc.src.string.strtok
     libc.src.string.strtok_r
+    libc.src.string.strxfrm
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs

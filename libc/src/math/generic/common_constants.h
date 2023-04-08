@@ -17,6 +17,9 @@ extern const double ONE_OVER_F[128];
 // Lookup table for log(f) = log(1 + n*2^(-7)) where n = 0..127.
 extern const double LOG_F[128];
 
+// Lookup table for range reduction constants r for logarithms.
+extern const float R[128];
+
 // Lookup table for exp(m) with m = -104, ..., 89.
 //   -104 = floor(log(single precision's min denormal))
 //     89 = ceil(log(single precision's max normal))

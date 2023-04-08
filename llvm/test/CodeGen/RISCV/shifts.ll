@@ -26,8 +26,7 @@ define i64 @lshr64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    sll a1, a1, a2
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:  .LBB0_3:
-; RV32I-NEXT:    slti a1, a4, 0
-; RV32I-NEXT:    neg a1, a1
+; RV32I-NEXT:    srai a1, a4, 31
 ; RV32I-NEXT:    and a1, a1, a3
 ; RV32I-NEXT:    ret
 ;
@@ -119,8 +118,7 @@ define i64 @shl64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    srl a0, a0, a2
 ; RV32I-NEXT:    or a1, a1, a0
 ; RV32I-NEXT:  .LBB4_3:
-; RV32I-NEXT:    slti a0, a4, 0
-; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    srai a0, a4, 31
 ; RV32I-NEXT:    and a0, a0, a3
 ; RV32I-NEXT:    ret
 ;
@@ -285,8 +283,7 @@ define i128 @lshr128(i128 %a, i128 %b) nounwind {
 ; RV64I-NEXT:    sll a1, a1, a2
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:  .LBB6_3:
-; RV64I-NEXT:    slti a1, a4, 0
-; RV64I-NEXT:    neg a1, a1
+; RV64I-NEXT:    srai a1, a4, 63
 ; RV64I-NEXT:    and a1, a1, a3
 ; RV64I-NEXT:    ret
   %1 = lshr i128 %a, %b
@@ -574,8 +571,7 @@ define i128 @shl128(i128 %a, i128 %b) nounwind {
 ; RV64I-NEXT:    srl a0, a0, a2
 ; RV64I-NEXT:    or a1, a1, a0
 ; RV64I-NEXT:  .LBB8_3:
-; RV64I-NEXT:    slti a0, a4, 0
-; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    srai a0, a4, 63
 ; RV64I-NEXT:    and a0, a0, a3
 ; RV64I-NEXT:    ret
   %1 = shl i128 %a, %b
