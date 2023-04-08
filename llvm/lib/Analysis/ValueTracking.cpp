@@ -4437,6 +4437,17 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.copysign(KnownSign);
         break;
       }
+      case Intrinsic::sin:
+      case Intrinsic::cos: {
+        // Return NaN on infinite inputs.
+        KnownFPClass KnownSrc;
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedClasses, KnownSrc, Depth + 1, Q, TLI);
+        Known.knownNot(fcInf);
+        if (KnownSrc.isKnownNeverNaN() && KnownSrc.isKnownNeverInfinity())
+          Known.knownNot(fcNan);
+        break;
+      }
       default:
         break;
       }
