@@ -116,6 +116,11 @@ static cl::opt<unsigned> OutlinerReruns(
     cl::desc(
         "Number of times to rerun the outliner after the initial outline"));
 
+static cl::opt<unsigned> OutlinerBenefitThreshold(
+    "outliner-benefit-threshold", cl::init(1), cl::Hidden,
+    cl::desc(
+        "The minimum size in bytes before an outlining candidate is accepted"));
+
 namespace {
 
 /// Maps \p MachineInstrs to unsigned integers and stores the mappings.
@@ -664,7 +669,7 @@ void MachineOutliner::findCandidates(
       continue;
 
     // Is it better to outline this candidate than not?
-    if (OF->getBenefit() < 1) {
+    if (OF->getBenefit() < OutlinerBenefitThreshold) {
       emitNotOutliningCheaperRemark(StringLen, CandidatesForRepeatedSeq, *OF);
       continue;
     }
@@ -840,7 +845,7 @@ bool MachineOutliner::outline(Module &M,
     });
 
     // If we made it unbeneficial to outline this function, skip it.
-    if (OF.getBenefit() < 1)
+    if (OF.getBenefit() < OutlinerBenefitThreshold)
       continue;
 
     // It's beneficial. Create the function and outline its sequence's
