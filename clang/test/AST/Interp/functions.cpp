@@ -214,10 +214,10 @@ namespace InvalidCall {
     }
   };
   constexpr S s;
-  static_assert(s.a() == 1); // expected-error {{not an integral constant expression}} \
-                             // expected-note {{in call to}} \
-                             // ref-error {{not an integral constant expression}} \
-                             // ref-note {{in call to}}
+  static_assert(s.a() == 1, ""); // expected-error {{not an integral constant expression}} \
+                                 // expected-note {{in call to}} \
+                                 // ref-error {{not an integral constant expression}} \
+                                 // ref-note {{in call to}}
 
   /// This used to cause an assertion failure in the new constant interpreter.
   constexpr void func(); // expected-note {{declared here}} \
