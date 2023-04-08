@@ -50,11 +50,17 @@ enum class status : std::uint16_t { foo = 0xAAAA, bar = 0x5555, foobar = 0xAA55 
 // The formatter for a user-defined type used to test the handle formatter.
 template <class CharT>
 struct std::formatter<status, CharT> {
-  int type = 0;
+  // During the 2023 Issaquah meeting LEWG made it clear a formatter is
+  // required to call its parse function. LWG3892 Adds the wording for that
+  // requirement. Therefore this formatter is initialized in an invalid state.
+  // A call to parse sets it in a valid state and a call to format validates
+  // the state.
+  int type = -1;
 
   constexpr auto parse(basic_format_parse_context<CharT>& parse_ctx) -> decltype(parse_ctx.begin()) {
     auto begin = parse_ctx.begin();
-    auto end = parse_ctx.end();
+    auto end   = parse_ctx.end();
+    type       = 0;
     if (begin == end)
       return begin;
 
@@ -87,6 +93,9 @@ struct std::formatter<status, CharT> {
     const char* begin = names[0];
     const char* end = names[0];
     switch (type) {
+    case -1:
+      throw_format_error("The formatter's parse function has not been called.");
+
     case 0:
       begin = buffer;
       buffer[0] = '0';
@@ -125,11 +134,57 @@ struct std::formatter<status, CharT> {
   }
 
 private:
-  void throw_format_error(const char* s) {
+  void throw_format_error(const char* s) const {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     throw std::format_error(s);
 #else
     (void)s;
+    std::abort();
+#endif
+  }
+};
+
+struct parse_call_validator {
+  struct parse_function_not_called {};
+
+  friend constexpr auto operator<=>(const parse_call_validator& lhs, const parse_call_validator& rhs) {
+    return &lhs <=> &rhs;
+  }
+};
+
+// The formatter for a user-defined type used to test the handle formatter.
+//
+// Like std::formatter<status, CharT> this formatter validates that parse is
+// called. This formatter is intended to be used when the formatter's parse is
+// called directly and not with format. In that case the format-spec does not
+// require a terminating }. The tests must be written in a fashion where this
+// formatter is always called with an empty format-spec. This requirement
+// allows testing of certain code paths that are never reached by using a
+// well-formed format-string in the format functions.
+template <class CharT>
+struct std::formatter<parse_call_validator, CharT> {
+  bool parse_called{false};
+
+  constexpr auto parse(basic_format_parse_context<CharT>& parse_ctx) -> decltype(parse_ctx.begin()) {
+    auto begin = parse_ctx.begin();
+    auto end   = parse_ctx.end();
+    assert(begin == end);
+    parse_called = true;
+    return begin;
+  }
+
+  auto format(parse_call_validator, auto& ctx) const -> decltype(ctx.out()) {
+    if (!parse_called)
+      throw_error<parse_call_validator::parse_function_not_called>();
+    return ctx.out();
+  }
+
+private:
+  template <class T>
+  [[noreturn]] void throw_error() const {
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    throw T{};
+#else
     std::abort();
 #endif
   }

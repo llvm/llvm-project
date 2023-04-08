@@ -6371,7 +6371,7 @@ static bool isSymbolUsedInExpression(const MCSymbol *Sym, const MCExpr *Value) {
   case MCExpr::SymbolRef: {
     const MCSymbol &S =
         static_cast<const MCSymbolRefExpr *>(Value)->getSymbol();
-    if (S.isVariable())
+    if (S.isVariable() && !S.isWeakExternal())
       return isSymbolUsedInExpression(Sym, S.getVariableValue());
     return &S == Sym;
   }

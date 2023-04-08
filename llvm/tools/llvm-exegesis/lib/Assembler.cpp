@@ -164,10 +164,9 @@ BitVector getFunctionReservedRegs(const TargetMachine &TM) {
   std::unique_ptr<Module> Module = createModule(Context, TM.createDataLayout());
   // TODO: This only works for targets implementing LLVMTargetMachine.
   const LLVMTargetMachine &LLVMTM = static_cast<const LLVMTargetMachine &>(TM);
-  std::unique_ptr<MachineModuleInfoWrapperPass> MMIWP =
-      std::make_unique<MachineModuleInfoWrapperPass>(&LLVMTM);
+  auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(&LLVMTM);
   MachineFunction &MF = createVoidVoidPtrMachineFunction(
-      FunctionID, Module.get(), &MMIWP.get()->getMMI());
+      FunctionID, Module.get(), &MMIWP->getMMI());
   // Saving reserved registers for client.
   return MF.getSubtarget().getRegisterInfo()->getReservedRegs(MF);
 }

@@ -448,3 +448,59 @@ TEST(FileSpecTest, TestAbsoluteCaching) {
   file.PrependPathComponent("/tmp");
   EXPECT_TRUE(file.IsAbsolute());
 }
+
+TEST(FileSpecTest, TestFileNameExtensions) {
+  FileSpec dylib = PosixSpec("/tmp/foo.dylib");
+  FileSpec exe = PosixSpec("/tmp/foo");
+  FileSpec dSYM = PosixSpec("/tmp/foo.dSYM/");
+  FileSpec just_dot = PosixSpec("/tmp/bar.");
+
+  EXPECT_TRUE(dylib.GetFileNameExtension() == ".dylib");
+  EXPECT_TRUE(exe.GetFileNameExtension() == ConstString(nullptr));
+  EXPECT_TRUE(dSYM.GetFileNameExtension() == ".dSYM");
+  EXPECT_TRUE(just_dot.GetFileNameExtension() == ".");
+
+  FileSpec dll = WindowsSpec("C:\\tmp\\foo.dll");
+  FileSpec win_noext = WindowsSpec("C:\\tmp\\foo");
+
+  EXPECT_TRUE(dll.GetFileNameExtension() == ".dll");
+  EXPECT_TRUE(win_noext.GetFileNameExtension() == ConstString(nullptr));
+}
+
+TEST(FileSpecTest, TestFileNameStrippingExtension) {
+  FileSpec dylib = PosixSpec("/tmp/foo.dylib");
+  FileSpec exe = PosixSpec("/tmp/foo");
+  FileSpec just_dot = PosixSpec("/tmp/bar.");
+
+  EXPECT_TRUE(dylib.GetFileNameStrippingExtension() == "foo");
+  EXPECT_TRUE(exe.GetFileNameStrippingExtension() == "foo");
+  EXPECT_TRUE(just_dot.GetFileNameStrippingExtension() == "bar");
+
+  FileSpec dll = WindowsSpec("C:\\tmp\\foo.dll");
+  FileSpec win_noext = WindowsSpec("C:\\tmp\\foo");
+
+  EXPECT_TRUE(dll.GetFileNameStrippingExtension() == "foo");
+  EXPECT_TRUE(win_noext.GetFileNameStrippingExtension() == "foo");
+}
+
+TEST(FileSpecTest, TestIsSourceImplementationFile) {
+  FileSpec c_src = PosixSpec("/tmp/foo.c");
+  FileSpec txt_file = PosixSpec("/tmp/foo.txt");
+  FileSpec executable = PosixSpec("/tmp/foo");
+  FileSpec just_dot = PosixSpec("/tmp/bar.");
+
+  EXPECT_TRUE(c_src.IsSourceImplementationFile());
+  EXPECT_FALSE(txt_file.IsSourceImplementationFile());
+  EXPECT_FALSE(executable.IsSourceImplementationFile());
+  EXPECT_FALSE(just_dot.IsSourceImplementationFile());
+
+  FileSpec cpp_src = WindowsSpec("C:\\tmp\\foo.cpp");
+  FileSpec dll = WindowsSpec("C:\\tmp\\foo.dll");
+  FileSpec win_noext = WindowsSpec("C:\\tmp\\foo");
+  FileSpec exe = WindowsSpec("C:\\tmp\\foo.exe");
+
+  EXPECT_TRUE(cpp_src.IsSourceImplementationFile());
+  EXPECT_FALSE(dll.IsSourceImplementationFile());
+  EXPECT_FALSE(win_noext.IsSourceImplementationFile());
+  EXPECT_FALSE(exe.IsSourceImplementationFile());
+}

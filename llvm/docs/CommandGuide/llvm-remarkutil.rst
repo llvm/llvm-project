@@ -20,6 +20,7 @@ Subcommands
   * :ref:`bitstream2yaml_subcommand` - Reserialize bitstream remarks to YAML.
   * :ref:`yaml2bitstream_subcommand` - Reserialize YAML remarks to bitstream.
   * :ref:`instruction-count_subcommand` - Output function instruction counts.
+  * :ref:`annotation-count_subcommand` - Output remark type count from annotation remarks.
 
 .. _bitstream2yaml_subcommand:
 
@@ -71,4 +72,27 @@ CSV format is as follows:
 
 ::
   Function,InstructionCount
+  foo,123
+
+.. _annotation-count_subcommand:
+
+annotation-count
+~~~~~~~~~~~~~~~~~
+
+.. program:: llvm-remarkutil annotation-count
+
+USAGE: :program:`llvm-remarkutil` annotation-count <input file> --parser=<bitstream|yaml> --annotation-type=<type> -o <output file>
+
+Summary
+^^^^^^^
+
+Outputs a count for annotation-type `<type>` remark for every function. The count expresses
+the number of remark checks inserted at the function.
+
+Annotation count remarks require AnnotationRemarksPass remarks.
+
+CSV format is as follows:
+
+::
+  Function,Count
   foo,123

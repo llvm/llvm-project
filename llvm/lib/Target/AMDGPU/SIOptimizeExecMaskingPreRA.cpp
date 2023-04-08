@@ -294,7 +294,13 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
 
       LIS->removeVRegDefAt(*SelLI, SelIdx.getRegSlot());
       LIS->RemoveMachineInstrFromMaps(*Sel);
+      bool ShrinkSel = Sel->getOperand(0).readsReg();
       Sel->eraseFromParent();
+      if (ShrinkSel) {
+        // The result of the V_CNDMASK was a subreg def which counted as a read
+        // from the other parts of the reg. Shrink their live ranges.
+        LIS->shrinkToUses(SelLI);
+      }
     }
   }
 

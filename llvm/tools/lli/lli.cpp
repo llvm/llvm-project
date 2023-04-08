@@ -27,7 +27,6 @@
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
-#include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
@@ -35,7 +34,6 @@
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
-#include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
@@ -236,20 +234,22 @@ namespace {
       cl::desc("Do not resolve lli process symbols in JIT'd code"),
       cl::init(false));
 
-  enum class LLJITPlatform { Inactive, DetectHost, ORC, GenericIR };
+  enum class LLJITPlatform { Inactive, Auto, ExecutorNative, GenericIR };
 
-  cl::opt<LLJITPlatform>
-      Platform("lljit-platform", cl::desc("Platform to use with LLJIT"),
-               cl::init(LLJITPlatform::DetectHost),
-               cl::values(clEnumValN(LLJITPlatform::DetectHost, "DetectHost",
-                                     "Select based on JIT target triple"),
-                          clEnumValN(LLJITPlatform::ORC, "ORC",
-                                     "Use ORCPlatform with the ORC runtime"),
-                          clEnumValN(LLJITPlatform::GenericIR, "GenericIR",
-                                     "Use LLJITGenericIRPlatform"),
-                          clEnumValN(LLJITPlatform::Inactive, "Inactive",
-                                     "Disable platform support explicitly")),
-               cl::Hidden);
+  cl::opt<LLJITPlatform> Platform(
+      "lljit-platform", cl::desc("Platform to use with LLJIT"),
+      cl::init(LLJITPlatform::Auto),
+      cl::values(clEnumValN(LLJITPlatform::Auto, "Auto",
+                            "Like 'ExecutorNative' if ORC runtime "
+                            "provided, otherwise like 'GenericIR'"),
+                 clEnumValN(LLJITPlatform::ExecutorNative, "ExecutorNative",
+                            "Use the native platform for the executor."
+                            "Requires -orc-runtime"),
+                 clEnumValN(LLJITPlatform::GenericIR, "GenericIR",
+                            "Use LLJITGenericIRPlatform"),
+                 clEnumValN(LLJITPlatform::Inactive, "Inactive",
+                            "Disable platform support explicitly")),
+      cl::Hidden);
 
   enum class DumpKind {
     NoDump,
@@ -864,6 +864,9 @@ int runOrcJIT(const char *ProgName) {
       .setRelocationModel(codegen::getExplicitRelocModel())
       .setCodeModel(codegen::getExplicitCodeModel());
 
+  // Link process symbols unless NoProcessSymbols is set.
+  Builder.setLinkProcessSymbolsByDefault(!NoProcessSymbols);
+
   // FIXME: Setting a dummy call-through manager in non-lazy mode prevents the
   // JIT builder to instantiate a default (which would fail with an error for
   // unsupported architectures).
@@ -905,17 +908,15 @@ int runOrcJIT(const char *ProgName) {
 
   // Set up LLJIT platform.
   LLJITPlatform P = Platform;
-  if (P == LLJITPlatform::DetectHost) {
-    if (JITLinker == JITLinkerKind::JITLink && !OrcRuntime.empty() &&
-        (TT->isOSBinFormatMachO() || TT->isOSBinFormatELF()))
-      P = LLJITPlatform::ORC;
-    else
-      P = LLJITPlatform::GenericIR;
-  }
+  if (P == LLJITPlatform::Auto)
+    P = OrcRuntime.empty() ? LLJITPlatform::GenericIR
+                           : LLJITPlatform::ExecutorNative;
+
   switch (P) {
-  case LLJITPlatform::ORC:
-    Builder.setPlatformSetUp(orc::setUpOrcPlatform);
+  case LLJITPlatform::ExecutorNative: {
+    Builder.setPlatformSetUp(orc::ExecutorNativePlatform(OrcRuntime));
     break;
+  }
   case LLJITPlatform::GenericIR:
     // Nothing to do: LLJITBuilder will use this by default.
     break;
@@ -934,7 +935,7 @@ int runOrcJIT(const char *ProgName) {
     Builder.setObjectLinkingLayerCreator([&EPC, &P](orc::ExecutionSession &ES,
                                                     const Triple &TT) {
       auto L = std::make_unique<orc::ObjectLinkingLayer>(ES, EPC->getMemMgr());
-      if (P != LLJITPlatform::ORC) {
+      if (P != LLJITPlatform::ExecutorNative) {
         L->addPlugin(std::make_unique<orc::EHFrameRegistrationPlugin>(
             ES, ExitOnErr(orc::EPCEHFrameRegistrar::Create(ES))));
         L->addPlugin(std::make_unique<orc::DebugObjectManagerPlugin>(
@@ -982,46 +983,12 @@ int runOrcJIT(const char *ProgName) {
         return TSM;
       });
 
-  orc::MangleAndInterner Mangle(J->getExecutionSession(), J->getDataLayout());
-
-  // Unless they've been explicitly disabled, make process symbols available to
-  // JIT'd code.
-  if (!NoProcessSymbols)
-    J->getMainJITDylib().addGenerator(
-        ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
-            J->getDataLayout().getGlobalPrefix(),
-            [MainName = Mangle("main")](const orc::SymbolStringPtr &Name) {
-              return Name != MainName;
-            })));
-
-  if (GenerateBuiltinFunctions.size() > 0)
+  if (GenerateBuiltinFunctions.size() > 0) {
+    // Add LLI builtins.
+    orc::MangleAndInterner Mangle(J->getExecutionSession(), J->getDataLayout());
     J->getMainJITDylib().addGenerator(
         std::make_unique<LLIBuiltinFunctionGenerator>(GenerateBuiltinFunctions,
                                                       Mangle));
-
-  if (P == LLJITPlatform::ORC) {
-    if (auto *OLL = llvm::dyn_cast<llvm::orc::ObjectLinkingLayer>(ObjLayer)) {
-      auto &ES = J->getExecutionSession();
-      if (TT->isOSBinFormatMachO()) {
-        if (auto P = llvm::orc::MachOPlatform::Create(
-                ES, *OLL, J->getMainJITDylib(), OrcRuntime.c_str()))
-          ES.setPlatform(std::move(*P));
-        else
-          ExitOnErr(P.takeError());
-      } else if (TT->isOSBinFormatELF()) {
-        if (auto P = llvm::orc::ELFNixPlatform::Create(
-                ES, *OLL, J->getMainJITDylib(), OrcRuntime.c_str()))
-          ES.setPlatform(std::move(*P));
-        else
-          ExitOnErr(P.takeError());
-      } else {
-        errs() << "No ORC platform support\n";
-        exit(1);
-      }
-    } else {
-      errs() << "ORC platform requires JITLink\n";
-      exit(1);
-    }
   }
 
   // Regular modules are greedy: They materialize as a whole and trigger
