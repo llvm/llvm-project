@@ -120,3 +120,9 @@ extern inline void g(); // extern g
 // CHECK-MESSAGES-NOMSCOMPAT: :[[@LINE-1]]:20: warning: redundant 'g' declaration
 // CHECK-FIXES-NOMSCOMPAT: {{^}}// extern g{{$}}
 #endif
+
+// PR42068
+extern "C" int externX;
+int dummyBeforeBegin;extern "C" int externX;int dummyAfterEnd;
+// CHECK-MESSAGES: :[[@LINE-1]]:37: warning: redundant 'externX' declaration [readability-redundant-declaration]
+// CHECK-FIXES: {{^}}int dummyBeforeBegin;int dummyAfterEnd;{{$}}

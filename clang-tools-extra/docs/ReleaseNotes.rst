@@ -275,6 +275,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/misleading-indentation>` check when warning would
   be unnecessarily emitted for template dependent ``if constexpr``.
 
+- Fixed incorrect fixes in :doc:`readability-redundant-declaration
+  <clang-tidy/checks/readability/redundant-declaration>` check when linkage
+  (like ``extern "C"``) is explicitly specified.
+
 - Improved :doc:`readability-static-accessed-through-instance
   <clang-tidy/checks/readability/static-accessed-through-instance>` check to
   support unscoped enumerations through instances and fixed usage of anonymous
@@ -298,7 +302,7 @@ Changes in existing checks
   ``DISABLED_`` in the test suite name.
 
 - Fixed an issue in :doc:`modernize-concat-nested-namespaces
-  <clang-tidy/checks/modernize/concat-nested-namespaces>` when using macro between 
+  <clang-tidy/checks/modernize/concat-nested-namespaces>` when using macro between
   namespace declarations could result incorrect fix.
 
 - Fixed a false positive in :doc:`performance-no-automatic-move
