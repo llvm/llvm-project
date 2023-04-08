@@ -506,9 +506,9 @@ public:
 
     ~TargetEventData() override;
 
-    static ConstString GetFlavorString();
+    static llvm::StringRef GetFlavorString();
 
-    ConstString GetFlavor() const override {
+    llvm::StringRef GetFlavor() const override {
       return TargetEventData::GetFlavorString();
     }
 

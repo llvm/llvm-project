@@ -3929,12 +3929,11 @@ Process::ProcessEventData::ProcessEventData(const ProcessSP &process_sp,
 
 Process::ProcessEventData::~ProcessEventData() = default;
 
-ConstString Process::ProcessEventData::GetFlavorString() {
-  static ConstString g_flavor("Process::ProcessEventData");
-  return g_flavor;
+llvm::StringRef Process::ProcessEventData::GetFlavorString() {
+  return "Process::ProcessEventData";
 }
 
-ConstString Process::ProcessEventData::GetFlavor() const {
+llvm::StringRef Process::ProcessEventData::GetFlavor() const {
   return ProcessEventData::GetFlavorString();
 }
 
