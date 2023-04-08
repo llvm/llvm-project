@@ -286,6 +286,10 @@ template <class Duration>
 using sys_seconds = sys_time<seconds>;                  // C++20
 using sys_days    = sys_time<days>;                     // C++20
 
+template<class charT, class traits, class Duration>     // C++20
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const sys_time<Duration>& tp);
+
 class file_clock                                        // C++20
 {
 public:
@@ -682,6 +686,8 @@ bool operator>=(const time_zone& x, const time_zone& y) noexcept;
 }  // chrono
 
 namespace std {
+  template<class Duration, class charT>
+    struct formatter<chrono::sys_time<Duration>, charT>;                          // C++20
   template<class Rep, class Period, class charT>
     struct formatter<chrono::duration<Rep, Period>, charT>;                       // C++20
   template<class charT> struct formatter<chrono::day, charT>;                     // C++20
