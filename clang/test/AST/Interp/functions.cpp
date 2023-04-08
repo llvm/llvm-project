@@ -218,4 +218,17 @@ namespace InvalidCall {
                              // expected-note {{in call to}} \
                              // ref-error {{not an integral constant expression}} \
                              // ref-note {{in call to}}
+
+  /// This used to cause an assertion failure in the new constant interpreter.
+  constexpr void func(); // expected-note {{declared here}} \
+                         // ref-note {{declared here}}
+  struct SS {
+    constexpr SS() { func(); } // expected-note {{undefined function }} \
+                               // ref-note {{undefined function}}
+  };
+  constexpr SS ss; // expected-error {{must be initialized by a constant expression}} \
+                   // expected-note {{in call to 'SS()'}} \
+                   // ref-error {{must be initialized by a constant expression}} \
+                   // ref-note {{in call to 'SS()'}}
+
 }
