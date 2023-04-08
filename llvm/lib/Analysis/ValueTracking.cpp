@@ -4727,6 +4727,40 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           Known.knownNot(fcNan);
         break;
       }
+      case Intrinsic::minnum:
+      case Intrinsic::maxnum: {
+        KnownFPClass Known2;
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                            Known, Depth + 1, Q, TLI);
+        computeKnownFPClass(II->getArgOperand(1), DemandedElts, InterestedClasses,
+                            Known2, Depth + 1, Q, TLI);
+
+        bool NeverNaN = Known.isKnownNeverNaN() || Known2.isKnownNeverNaN();
+        Known |= Known2;
+
+        // If either operand is not NaN, the result is not NaN.
+        if (NeverNaN)
+          Known.knownNot(fcNan);
+
+        // Fixup zero handling if denormals could be returned as a zero.
+        //
+        // As there's no spec for denormal flushing, be conservative with the
+        // treatment of denormals that could be flushed to zero. For older
+        // subtargets on AMDGPU the min/max instructions would not flush the
+        // output and return the original value.
+        //
+        // TODO: This could be refined based on the sign
+        if ((Known.KnownFPClasses & fcZero) != fcNone &&
+            !Known.isKnownNeverSubnormal()) {
+          const Function *Parent = II->getFunction();
+          DenormalMode Mode = Parent->getDenormalMode(
+              II->getType()->getScalarType()->getFltSemantics());
+          if (Mode != DenormalMode::getIEEE())
+            Known.KnownFPClasses |= fcZero;
+        }
+
+        break;
+      }
       case Intrinsic::canonicalize: {
         computeKnownFPClass(II->getArgOperand(0), DemandedElts,
                             InterestedClasses, Known, Depth + 1, Q, TLI);
