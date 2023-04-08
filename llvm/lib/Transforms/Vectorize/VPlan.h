@@ -99,6 +99,36 @@ struct VFRange {
     assert(isPowerOf2_32(Start.getKnownMinValue()) &&
            "Expected Start to be a power of 2");
   }
+
+  /// Iterator to iterate over vectorization factors in a VFRange.
+  class iterator
+      : public iterator_facade_base<iterator, std::forward_iterator_tag,
+                                    ElementCount> {
+    ElementCount VF;
+
+  public:
+    iterator(ElementCount VF) : VF(VF) {}
+
+    bool operator==(const iterator &Other) const { return VF == Other.VF; }
+
+    ElementCount operator*() const { return VF; }
+
+    iterator &operator++() {
+      VF *= 2;
+      return *this;
+    }
+  };
+
+  iterator begin() { return iterator(Start); }
+  iterator end() {
+    ElementCount EndVF = End;
+    // Make sure the end iterator is a power-of-2 so != comparisons with end
+    // work as expected.
+    if (!isPowerOf2_64(End.getKnownMinValue()))
+      EndVF = ElementCount::get(NextPowerOf2(End.getKnownMinValue()),
+                                End.isScalable());
+    return iterator(EndVF);
+  }
 };
 
 using VPlanPtr = std::unique_ptr<VPlan>;
