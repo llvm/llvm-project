@@ -1926,6 +1926,12 @@ OpFoldResult ReinterpretCastOp::fold(FoldAdaptor /*operands*/) {
     return getResult();
   }
 
+  // reinterpret_cast(x) w/o offset/shape/stride changes -> x
+  if (!ShapedType::isDynamicShape(getType().getShape()) &&
+      src.getType() == getType() && getStaticOffsets().front() == 0) {
+    return src;
+  }
+
   return nullptr;
 }
 
