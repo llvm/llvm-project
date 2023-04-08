@@ -297,6 +297,10 @@ Changes in existing checks
   <clang-tidy/checks/google/readability-avoid-underscore-in-googletest-name>` when using
   ``DISABLED_`` in the test suite name.
 
+- Fixed an issue in :doc:`modernize-concat-nested-namespaces
+  <clang-tidy/checks/modernize/concat-nested-namespaces>` when using macro between 
+  namespace declarations could result incorrect fix.
+
 - Fixed a false positive in :doc:`performance-no-automatic-move
   <clang-tidy/checks/performance/no-automatic-move>` when warning would be
   emitted for a const local variable to which NRVO is applied.
