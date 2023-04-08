@@ -44,18 +44,44 @@ template <typename InfoT>
 void union_modes(const InfoByHwMode<InfoT> &A,
                  const InfoByHwMode<InfoT> &B,
                  SmallVectorImpl<unsigned> &Modes) {
-  SmallSet<unsigned, 4> U;
-  for (const auto &P : A)
-    U.insert(P.first);
-  for (const auto &P : B)
-    U.insert(P.first);
-  // Make sure that the default mode is last on the list.
+  auto AI = A.begin();
+  auto BI = B.begin();
+
+  // Skip default mode, but remember if we had one.
   bool HasDefault = false;
-  for (unsigned M : U)
-    if (M != DefaultMode)
-      Modes.push_back(M);
-    else
-      HasDefault = true;
+  if (AI != A.end() && AI->first == DefaultMode) {
+    HasDefault = true;
+    ++AI;
+  }
+  if (BI != A.end() && BI->first == DefaultMode) {
+    HasDefault = true;
+    ++BI;
+  }
+
+  while (AI != A.end()) {
+    // If we're done with B, finish A.
+    if (BI == B.end()) {
+      for (; AI != A.end(); ++AI)
+        Modes.push_back(AI->first);
+      break;
+    }
+
+    if (BI->first < AI->first) {
+      Modes.push_back(BI->first);
+      ++BI;
+    } else {
+      Modes.push_back(AI->first);
+      if (AI->first == BI->first)
+        ++BI;
+      ++AI;
+    }
+  }
+
+  // Finish B.
+  for (; BI != B.end(); ++BI)
+    Modes.push_back(BI->first);
+
+  // Make sure that the default mode is last on the list.
   if (HasDefault)
     Modes.push_back(DefaultMode);
 }
