@@ -29,8 +29,8 @@ private:
   using NamespaceContextVec = llvm::SmallVector<const NamespaceDecl *, 6>;
   using NamespaceString = llvm::SmallString<40>;
 
-  void reportDiagnostic(const SourceRange &FrontReplacement,
-                        const SourceRange &BackReplacement);
+  void reportDiagnostic(const SourceManager &Sources,
+                        const LangOptions &LangOpts);
   NamespaceString concatNamespaces();
   NamespaceContextVec Namespaces;
 };
