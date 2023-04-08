@@ -592,7 +592,6 @@ libcxx/include/stdexcept
 libcxx/include/stdint.h
 libcxx/include/stdio.h
 libcxx/include/stdlib.h
-libcxx/include/__std_stream
 libcxx/include/streambuf
 libcxx/include/string
 libcxx/include/__string/char_traits.h
@@ -806,6 +805,7 @@ libcxx/src/random_shuffle.cpp
 libcxx/src/regex.cpp
 libcxx/src/shared_mutex.cpp
 libcxx/src/stdexcept.cpp
+libcxx/src/__std_stream
 libcxx/src/string.cpp
 libcxx/src/strstream.cpp
 libcxx/src/support/ibm/mbsnrtowcs.cpp

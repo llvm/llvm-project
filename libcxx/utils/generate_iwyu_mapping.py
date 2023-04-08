@@ -53,7 +53,6 @@ def generate_map(include):
         elif i == '__mutex_base': continue
         elif i == '__node_handle': public = ['map', 'set', 'unordered_map', 'unordered_set']
         elif i == '__split_buffer': public = ['deque', 'vector']
-        elif i == '__std_stream': public = ['iostream']
         elif i == '__threading_support': public = ['atomic', 'mutex', 'semaphore', 'thread']
         elif i == '__tree': public = ['map', 'set']
         elif i == '__undef_macros': continue
