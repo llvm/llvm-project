@@ -342,6 +342,10 @@ public:
 
   /// Set an ExecutionSession for this instance.
   SetterImpl &setExecutionSession(std::unique_ptr<ExecutionSession> ES) {
+    assert(
+        !impl().EPC &&
+        "setExecutionSession should not be called if an ExecutorProcessControl "
+        "object has already been set");
     impl().ES = std::move(ES);
     return impl();
   }
