@@ -26,20 +26,20 @@ template <class CharT, class TestFunction, class ExceptionTest>
 void test_char(TestFunction check, ExceptionTest check_exception) {
   std::map<CharT, CharT> input{{CharT('a'), CharT('A')}, {CharT('c'), CharT('C')}, {CharT('b'), CharT('B')}};
 
-  check(SV("{a: A, b: B, c: C}"), SV("{}"), input);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}"), SV("{}"), input);
 
   // ***** underlying has no format-spec
 
   // *** align-fill & width ***
-  check(SV("{a: A, b: B, c: C}     "), SV("{:23}"), input);
-  check(SV("{a: A, b: B, c: C}*****"), SV("{:*<23}"), input);
-  check(SV("__{a: A, b: B, c: C}___"), SV("{:_^23}"), input);
-  check(SV("#####{a: A, b: B, c: C}"), SV("{:#>23}"), input);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}     "), SV("{:35}"), input);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}*****"), SV("{:*<35}"), input);
+  check(SV("__{'a': 'A', 'b': 'B', 'c': 'C'}___"), SV("{:_^35}"), input);
+  check(SV("#####{'a': 'A', 'b': 'B', 'c': 'C'}"), SV("{:#>35}"), input);
 
-  check(SV("{a: A, b: B, c: C}     "), SV("{:{}}"), input, 23);
-  check(SV("{a: A, b: B, c: C}*****"), SV("{:*<{}}"), input, 23);
-  check(SV("__{a: A, b: B, c: C}___"), SV("{:_^{}}"), input, 23);
-  check(SV("#####{a: A, b: B, c: C}"), SV("{:#>{}}"), input, 23);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}     "), SV("{:{}}"), input, 35);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}*****"), SV("{:*<{}}"), input, 35);
+  check(SV("__{'a': 'A', 'b': 'B', 'c': 'C'}___"), SV("{:_^{}}"), input, 35);
+  check(SV("#####{'a': 'A', 'b': 'B', 'c': 'C'}"), SV("{:#>{}}"), input, 35);
 
   check_exception("The format-spec range-fill field contains an invalid character", SV("{:}<}"), input);
   check_exception("The format-spec range-fill field contains an invalid character", SV("{:{<}"), input);
@@ -63,10 +63,10 @@ void test_char(TestFunction check, ExceptionTest check_exception) {
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), input);
 
   // *** n
-  check(SV("__a: A, b: B, c: C___"), SV("{:_^21n}"), input);
+  check(SV("__'a': 'A', 'b': 'B', 'c': 'C'___"), SV("{:_^33n}"), input);
 
   // *** type ***
-  check(SV("__{a: A, b: B, c: C}___"), SV("{:_^23m}"), input); // the m type does the same as the default.
+  check(SV("__{'a': 'A', 'b': 'B', 'c': 'C'}___"), SV("{:_^35m}"), input); // the m type does the same as the default.
   check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
   check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
 
@@ -134,20 +134,20 @@ void test_char_to_wchar(TestFunction check, ExceptionTest check_exception) {
   std::map<char, char> input{{'a', 'A'}, {'c', 'C'}, {'b', 'B'}};
 
   using CharT = wchar_t;
-  check(SV("{a: A, b: B, c: C}"), SV("{}"), input);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}"), SV("{}"), input);
 
   // ***** underlying has no format-spec
 
   // *** align-fill & width ***
-  check(SV("{a: A, b: B, c: C}     "), SV("{:23}"), input);
-  check(SV("{a: A, b: B, c: C}*****"), SV("{:*<23}"), input);
-  check(SV("__{a: A, b: B, c: C}___"), SV("{:_^23}"), input);
-  check(SV("#####{a: A, b: B, c: C}"), SV("{:#>23}"), input);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}     "), SV("{:35}"), input);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}*****"), SV("{:*<35}"), input);
+  check(SV("__{'a': 'A', 'b': 'B', 'c': 'C'}___"), SV("{:_^35}"), input);
+  check(SV("#####{'a': 'A', 'b': 'B', 'c': 'C'}"), SV("{:#>35}"), input);
 
-  check(SV("{a: A, b: B, c: C}     "), SV("{:{}}"), input, 23);
-  check(SV("{a: A, b: B, c: C}*****"), SV("{:*<{}}"), input, 23);
-  check(SV("__{a: A, b: B, c: C}___"), SV("{:_^{}}"), input, 23);
-  check(SV("#####{a: A, b: B, c: C}"), SV("{:#>{}}"), input, 23);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}     "), SV("{:{}}"), input, 35);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}*****"), SV("{:*<{}}"), input, 35);
+  check(SV("__{'a': 'A', 'b': 'B', 'c': 'C'}___"), SV("{:_^{}}"), input, 35);
+  check(SV("#####{'a': 'A', 'b': 'B', 'c': 'C'}"), SV("{:#>{}}"), input, 35);
 
   check_exception("The format-spec range-fill field contains an invalid character", SV("{:}<}"), input);
   check_exception("The format-spec range-fill field contains an invalid character", SV("{:{<}"), input);
@@ -171,10 +171,10 @@ void test_char_to_wchar(TestFunction check, ExceptionTest check_exception) {
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), input);
 
   // *** n
-  check(SV("__a: A, b: B, c: C___"), SV("{:_^21n}"), input);
+  check(SV("__'a': 'A', 'b': 'B', 'c': 'C'___"), SV("{:_^33n}"), input);
 
   // *** type ***
-  check(SV("__{a: A, b: B, c: C}___"), SV("{:_^23m}"), input); // the m type does the same as the default.
+  check(SV("__{'a': 'A', 'b': 'B', 'c': 'C'}___"), SV("{:_^35m}"), input); // the m type does the same as the default.
   check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
   check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
 
@@ -642,20 +642,20 @@ void test_string(TestFunction check, ExceptionTest check_exception) {
   std::map<std::basic_string<CharT>, std::basic_string<CharT>> input{
       {STR("hello"), STR("HELLO")}, {STR("world"), STR("WORLD")}};
 
-  check(SV(R"({hello: HELLO, world: WORLD})"), SV("{}"), input);
+  check(SV(R"({"hello": "HELLO", "world": "WORLD"})"), SV("{}"), input);
 
   // ***** underlying has no format-spec
 
   // *** align-fill & width ***
-  check(SV(R"({hello: HELLO, world: WORLD}     )"), SV("{:33}"), input);
-  check(SV(R"({hello: HELLO, world: WORLD}*****)"), SV("{:*<33}"), input);
-  check(SV(R"(__{hello: HELLO, world: WORLD}___)"), SV("{:_^33}"), input);
-  check(SV(R"(#####{hello: HELLO, world: WORLD})"), SV("{:#>33}"), input);
+  check(SV(R"({"hello": "HELLO", "world": "WORLD"}     )"), SV("{:41}"), input);
+  check(SV(R"({"hello": "HELLO", "world": "WORLD"}*****)"), SV("{:*<41}"), input);
+  check(SV(R"(__{"hello": "HELLO", "world": "WORLD"}___)"), SV("{:_^41}"), input);
+  check(SV(R"(#####{"hello": "HELLO", "world": "WORLD"})"), SV("{:#>41}"), input);
 
-  check(SV(R"({hello: HELLO, world: WORLD}     )"), SV("{:{}}"), input, 33);
-  check(SV(R"({hello: HELLO, world: WORLD}*****)"), SV("{:*<{}}"), input, 33);
-  check(SV(R"(__{hello: HELLO, world: WORLD}___)"), SV("{:_^{}}"), input, 33);
-  check(SV(R"(#####{hello: HELLO, world: WORLD})"), SV("{:#>{}}"), input, 33);
+  check(SV(R"({"hello": "HELLO", "world": "WORLD"}     )"), SV("{:{}}"), input, 41);
+  check(SV(R"({"hello": "HELLO", "world": "WORLD"}*****)"), SV("{:*<{}}"), input, 41);
+  check(SV(R"(__{"hello": "HELLO", "world": "WORLD"}___)"), SV("{:_^{}}"), input, 41);
+  check(SV(R"(#####{"hello": "HELLO", "world": "WORLD"})"), SV("{:#>{}}"), input, 41);
 
   check_exception("The format-spec range-fill field contains an invalid character", SV("{:}<}"), input);
   check_exception("The format-spec range-fill field contains an invalid character", SV("{:{<}"), input);
@@ -677,10 +677,10 @@ void test_string(TestFunction check, ExceptionTest check_exception) {
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), input);
 
   // *** n
-  check(SV(R"(__hello: HELLO, world: WORLD___)"), SV("{:_^31n}"), input);
+  check(SV(R"(__"hello": "HELLO", "world": "WORLD"___)"), SV("{:_^39n}"), input);
 
   // *** type ***
-  check(SV(R"(__{hello: HELLO, world: WORLD}___)"), SV("{:_^33m}"), input);
+  check(SV(R"(__{"hello": "HELLO", "world": "WORLD"}___)"), SV("{:_^41m}"), input);
   check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
   check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
 

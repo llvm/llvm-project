@@ -308,3 +308,4 @@
 "`3881 <https://wg21.link/LWG3881>`__","Incorrect formatting of container adapters backed by ``std::string``","February 2023","|Complete|","17.0","|format|"
 "","","","","",""
 "`3343 <https://wg21.link/LWG3343>`__","Ordering of calls to ``unlock()`` and ``notify_all()`` in Effects element of ``notify_all_at_thread_exit()`` should be reversed","Not Yet Adopted","|Complete|","16.0",""
+"`3892 <https://wg21.link/LWG3892>`__","Incorrect formatting of nested ranges and tuples","Not Yet Adopted","|Complete|","17.0",""

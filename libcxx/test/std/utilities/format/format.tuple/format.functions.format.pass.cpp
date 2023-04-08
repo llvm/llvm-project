@@ -40,7 +40,7 @@ auto test = []<class CharT, class... Args>(
   std::basic_string<CharT> out = std::format(fmt, std::forward<Args>(args)...);
   TEST_REQUIRE(out == expected,
                TEST_WRITE_CONCATENATED(
-                   "\nFormat string   ", fmt, "\nExpected output ", expected, "\nActual output   ", out, '\n'));
+                   "\nFormat string   ", fmt.get(), "\nExpected output ", expected, "\nActual output   ", out, '\n'));
 };
 
 auto test_exception = []<class CharT, class... Args>(std::string_view, std::basic_string_view<CharT>, Args&&...) {

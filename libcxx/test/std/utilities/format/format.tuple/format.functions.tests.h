@@ -288,18 +288,18 @@ void test_nested(TestFunction check, ExceptionTest check_exception, Nested&& inp
   //   P2733 Fix handling of empty specifiers in std::format
   // addressed this.
 
-  check(SV("(42, (hello, red))"), SV("{}"), input);
+  check(SV("(42, (\"hello\", \"red\"))"), SV("{}"), input);
 
   // *** align-fill & width ***
-  check(SV("(42, (hello, red))     "), SV("{:23}"), input);
-  check(SV("(42, (hello, red))*****"), SV("{:*<23}"), input);
-  check(SV("__(42, (hello, red))___"), SV("{:_^23}"), input);
-  check(SV("#####(42, (hello, red))"), SV("{:#>23}"), input);
+  check(SV("(42, (\"hello\", \"red\"))     "), SV("{:27}"), input);
+  check(SV("(42, (\"hello\", \"red\"))*****"), SV("{:*<27}"), input);
+  check(SV("__(42, (\"hello\", \"red\"))___"), SV("{:_^27}"), input);
+  check(SV("#####(42, (\"hello\", \"red\"))"), SV("{:#>27}"), input);
 
-  check(SV("(42, (hello, red))     "), SV("{:{}}"), input, 23);
-  check(SV("(42, (hello, red))*****"), SV("{:*<{}}"), input, 23);
-  check(SV("__(42, (hello, red))___"), SV("{:_^{}}"), input, 23);
-  check(SV("#####(42, (hello, red))"), SV("{:#>{}}"), input, 23);
+  check(SV("(42, (\"hello\", \"red\"))     "), SV("{:{}}"), input, 27);
+  check(SV("(42, (\"hello\", \"red\"))*****"), SV("{:*<{}}"), input, 27);
+  check(SV("__(42, (\"hello\", \"red\"))___"), SV("{:_^{}}"), input, 27);
+  check(SV("#####(42, (\"hello\", \"red\"))"), SV("{:#>{}}"), input, 27);
 
   check_exception("The format-spec range-fill field contains an invalid character", SV("{:}<}"), input);
   check_exception("The format-spec range-fill field contains an invalid character", SV("{:{<}"), input);
@@ -323,8 +323,8 @@ void test_nested(TestFunction check, ExceptionTest check_exception, Nested&& inp
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), input);
 
   // *** type ***
-  check(SV("__42: (hello, red)___"), SV("{:_^21m}"), input);
-  check(SV("__42, (hello, red)___"), SV("{:_^21n}"), input);
+  check(SV("__42: (\"hello\", \"red\")___"), SV("{:_^25m}"), input);
+  check(SV("__42, (\"hello\", \"red\")___"), SV("{:_^25n}"), input);
 
   for (CharT c : SV("aAbBcdeEfFgGopsxX?")) {
     check_exception("The format-spec should consume the input or end with a '}'",
