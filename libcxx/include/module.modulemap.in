@@ -1725,10 +1725,6 @@ module std [system] {
   module __mbstate_t         { private header "__mbstate_t.h"       export * }
   module __node_handle       { private header "__node_handle"       export * }
   module __split_buffer      { private header "__split_buffer"      export * }
-  module __std_stream        {
-    @requires_LIBCXX_ENABLE_LOCALIZATION@
-    private header "__std_stream" export *
-  }
   module __threading_support {         header "__threading_support" export * }
   module __tree              {         header "__tree"              export * }
   module __undef_macros      {         header "__undef_macros"      export * }

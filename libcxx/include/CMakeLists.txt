@@ -568,7 +568,6 @@ set(files
   __ranges/views.h
   __ranges/zip_view.h
   __split_buffer
-  __std_stream
   __string/char_traits.h
   __string/constexpr_c_functions.h
   __string/extern_template_lists.h
