@@ -111,7 +111,11 @@ public:
         Builder.getFloatAttr(Ty, E->getValue()));
   }
   mlir::Value VisitCharacterLiteral(const CharacterLiteral *E) {
-    llvm_unreachable("NYI");
+    mlir::Type Ty = CGF.getCIRType(E->getType());
+    auto newOp = Builder.create<mlir::cir::ConstantOp>(
+        CGF.getLoc(E->getExprLoc()), Ty,
+        Builder.getIntegerAttr(Ty, E->getValue()));
+    return newOp;
   }
   mlir::Value VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E) {
     llvm_unreachable("NYI");
