@@ -250,7 +250,7 @@
 "`3032 <https://wg21.link/LWG3032>`__","``ValueSwappable`` requirement missing for ``push_heap`` and ``make_heap``","February 2023","","",""
 "`3085 <https://wg21.link/LWG3085>`__","``char_traits::copy`` precondition too weak","February 2023","","",""
 "`3664 <https://wg21.link/LWG3664>`__","`LWG 3392 <https://wg21.link/LWG3392>`__ ``broke std::ranges::distance(a, a+3)``","February 2023","","","|ranges|"
-"`3720 <https://wg21.link/LWG3720>`__","Restrict the valid types of ``arg-id`` for width and precision in ``std-format-spec``","February 2023","","","|format|"
+"`3720 <https://wg21.link/LWG3720>`__","Restrict the valid types of ``arg-id`` for width and precision in ``std-format-spec``","February 2023","|Complete|","17.0","|format|"
 "`3756 <https://wg21.link/LWG3756>`__","Is the ``std::atomic_flag`` class signal-safe?","February 2023","","",""
 "`3769 <https://wg21.link/LWG3769>`__","``basic_const_iterator::operator==`` causes infinite constraint recursion","February 2023","","","|spaceship|"
 "`3807 <https://wg21.link/LWG3807>`__","The feature test macro for ``ranges::find_last`` should be renamed","February 2023","","","|ranges|"
