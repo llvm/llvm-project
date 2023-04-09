@@ -14,6 +14,7 @@
 #include <__config>
 #include <cctype>
 #include <cstdint>
+#include <cstdlib>
 #include <locale.h>
 #include <mutex>
 #include <string>
@@ -924,6 +925,11 @@ bool
 isgraph(_CharT __c, const locale& __loc)
 {
     return std::use_facet<ctype<_CharT> >(__loc).is(ctype_base::graph, __c);
+}
+
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI bool isblank(_CharT __c, const locale& __loc) {
+    return std::use_facet<ctype<_CharT> >(__loc).is(ctype_base::blank, __c);
 }
 
 template <class _CharT>
