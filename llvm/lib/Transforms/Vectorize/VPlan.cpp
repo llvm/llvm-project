@@ -1108,10 +1108,6 @@ void VPSlotTracker::assignSlot(const VPValue *V) {
 }
 
 void VPSlotTracker::assignSlots(const VPlan &Plan) {
-
-  for (const auto &P : Plan.VPExternalDefs)
-    assignSlot(P.second);
-
   assignSlot(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
     assignSlot(Plan.BackedgeTakenCount);
