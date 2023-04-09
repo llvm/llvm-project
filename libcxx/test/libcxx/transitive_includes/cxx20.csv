@@ -219,7 +219,6 @@ exception type_traits
 exception version
 execution version
 expected cstddef
-expected cstdlib
 expected initializer_list
 expected new
 expected version
