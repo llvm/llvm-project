@@ -393,6 +393,18 @@ struct KnownFPClass {
       KnownFPClasses &= (fcPositive | fcNan);
   }
 
+  // Propagate knowledge that a non-NaN source implies the result can also not
+  // be a NaN. For unconstrained operations, signaling nans are not guaranteed
+  // to be quieted but cannot be introduced.
+  void propagateNaN(const KnownFPClass &Src, bool PreserveSign = false) {
+    if (Src.isKnownNever(fcNan)) {
+      knownNot(fcNan);
+      if (PreserveSign)
+        SignBit = Src.SignBit;
+    } else if (Src.isKnownNever(fcSNan))
+      knownNot(fcSNan);
+  }
+
   void resetAll() { *this = KnownFPClass(); }
 };
 
