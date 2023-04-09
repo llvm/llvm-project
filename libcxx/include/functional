@@ -554,6 +554,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <atomic>
 #  include <concepts>
+#  include <cstdlib>
 #  include <exception>
 #  include <tuple>
 #  include <type_traits>
