@@ -2425,12 +2425,6 @@ public:
 
   void addLiveOut(PHINode *PN, VPValue *V);
 
-  void clearLiveOuts() {
-    for (auto &KV : LiveOuts)
-      delete KV.second;
-    LiveOuts.clear();
-  }
-
   void removeLiveOut(PHINode *PN) {
     delete LiveOuts[PN];
     LiveOuts.erase(PN);
