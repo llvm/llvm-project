@@ -154,8 +154,8 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
   check_exception("A format-spec arg-id replacement exceeds the maximum supported value", SV("hello {:{}}"), world,
                   unsigned(-1));
   check_exception("Argument index out of bounds", SV("hello {:{}}"), world);
-  check_exception("A format-spec arg-id replacement argument isn't an integral type", SV("hello {:{}}"), world,
-                  universe);
+  check_exception(
+      "Replacement argument isn't a standard signed or unsigned integer type", SV("hello {:{}}"), world, universe);
   check_exception("Using manual argument numbering in automatic argument numbering mode", SV("hello {:{0}}"), world, 1);
   check_exception("Using automatic argument numbering in manual argument numbering mode", SV("hello {0:{}}"), world, 1);
   // Arg-id may not have leading zeros.
@@ -178,8 +178,8 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
   check_exception("A format-spec arg-id replacement exceeds the maximum supported value", SV("hello {:.{}}"), world,
                   ~0u);
   check_exception("Argument index out of bounds", SV("hello {:.{}}"), world);
-  check_exception("A format-spec arg-id replacement argument isn't an integral type", SV("hello {:.{}}"), world,
-                  universe);
+  check_exception(
+      "Replacement argument isn't a standard signed or unsigned integer type", SV("hello {:.{}}"), world, universe);
   check_exception("Using manual argument numbering in automatic argument numbering mode", SV("hello {:.{0}}"), world,
                   1);
   check_exception("Using automatic argument numbering in manual argument numbering mode", SV("hello {0:.{}}"), world,
@@ -662,7 +662,7 @@ void format_test_signed_integer(TestFunction check, ExceptionTest check_exceptio
 #ifndef TEST_HAS_NO_INT128
   format_test_integer<__int128_t, CharT>(check, check_exception);
 #endif
-  // *** check the minma and maxima ***
+  // *** check the minima and maxima ***
   check(SV("-0b10000000"), SV("{:#b}"), std::numeric_limits<std::int8_t>::min());
   check(SV("-0200"), SV("{:#o}"), std::numeric_limits<std::int8_t>::min());
   check(SV("-128"), SV("{:#}"), std::numeric_limits<std::int8_t>::min());
