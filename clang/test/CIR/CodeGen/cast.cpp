@@ -14,3 +14,26 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 // CHECK:    %4 = cir.load %1 : cir.ptr <i8>, i8
 // CHECK:    cir.return %4 : i8
 // CHECK:  }
+
+
+int cStyleCasts_0(unsigned x1, int x2) {
+// CHECK: cir.func @_{{.*}}cStyleCasts_0{{.*}}
+
+  char a = (char)x1; // truncate
+  // CHECK: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : i32), i8
+
+  short b = (short)x2; // truncate with sign
+  // CHECK: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : i32), i16
+
+  long long c = (long long)x1; // zero extend
+  // CHECK: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : i32), i64
+
+  long long d = (long long)x2; // sign extend
+  // CHECK: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : i32), i64
+
+  int arr[3];
+  int* e = (int*)arr; // explicit pointer decay
+  // CHECK: %{{[0-9]+}} = cir.cast(array_to_ptrdecay, %{{[0-9]+}} : !cir.ptr<!cir.array<i32 x 3>>), !cir.ptr<i32>
+
+  return 0;
+}
