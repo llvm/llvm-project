@@ -4658,6 +4658,41 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                                       Known, Depth, Q, TLI);
         break;
       }
+      case Intrinsic::log:
+      case Intrinsic::log10:
+      case Intrinsic::log2:
+      case Intrinsic::experimental_constrained_log:
+      case Intrinsic::experimental_constrained_log10:
+      case Intrinsic::experimental_constrained_log2: {
+        // log(+inf) -> +inf
+        // log([+-]0.0) -> -inf
+        // log(-inf) -> nan
+        // log(-x) -> nan
+        if ((InterestedClasses & (fcNan | fcInf)) == fcNone)
+          break;
+
+        FPClassTest InterestedSrcs = InterestedClasses;
+        if ((InterestedClasses & fcNegInf) != fcNone)
+          InterestedSrcs |= fcZero | fcSubnormal;
+        if ((InterestedClasses & fcNan) != fcNone)
+          InterestedSrcs |= fcNan | KnownFPClass::OrderedLessThanZeroMask;
+
+        KnownFPClass KnownSrc;
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
+                            KnownSrc, Depth + 1, Q, TLI);
+
+        if (KnownSrc.isKnownNeverPosInfinity())
+          Known.knownNot(fcPosInf);
+
+        if (KnownSrc.isKnownNeverNaN() &&
+            KnownSrc.cannotBeOrderedLessThanZero())
+          Known.knownNot(fcNan);
+
+        if (KnownSrc.isKnownNeverLogicalZero(*II->getFunction(), II->getType()))
+          Known.knownNot(fcNegInf);
+
+        break;
+      }
       case Intrinsic::arithmetic_fence: {
         computeKnownFPClass(II->getArgOperand(0), DemandedElts,
                             InterestedClasses, Known, Depth + 1, Q, TLI);
