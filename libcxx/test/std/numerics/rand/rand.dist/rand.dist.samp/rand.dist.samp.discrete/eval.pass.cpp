@@ -17,6 +17,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <cstdlib>
 #include <random>
 #include <vector>
 

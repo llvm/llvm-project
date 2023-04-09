@@ -23,7 +23,6 @@
 #include <__utility/declval.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
-#include <cstdlib>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

@@ -84,7 +84,7 @@ AffineExpr ValueBoundsConstraintSet::getExpr(Value value,
 
   // Dynamic value: add to constraint set.
   ValueDim valueDim = std::make_pair(value, dim.value_or(kIndexValue));
-  if (valueDimToPosition.find(valueDim) == valueDimToPosition.end())
+  if (!valueDimToPosition.contains(valueDim))
     (void)insert(value, dim);
   int64_t pos = getPos(value, dim);
   return pos < cstr.getNumDimVars()
@@ -112,8 +112,7 @@ int64_t ValueBoundsConstraintSet::insert(Value value,
 #endif // NDEBUG
 
   ValueDim valueDim = std::make_pair(value, dim.value_or(kIndexValue));
-  assert((valueDimToPosition.find(valueDim) == valueDimToPosition.end()) &&
-         "already mapped");
+  assert(!valueDimToPosition.contains(valueDim) && "already mapped");
   int64_t pos = isSymbol ? cstr.appendVar(VarKind::Symbol)
                          : cstr.appendVar(VarKind::SetDim);
   positionToValueDim.insert(positionToValueDim.begin() + pos, valueDim);

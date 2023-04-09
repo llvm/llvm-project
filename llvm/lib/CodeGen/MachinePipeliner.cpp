@@ -2651,8 +2651,7 @@ bool SMSchedule::isLoopCarriedDefOfUse(SwingSchedulerDAG *SSD,
   if (!isLoopCarried(SSD, *Phi))
     return false;
   unsigned LoopReg = getLoopPhiReg(*Phi, Phi->getParent());
-  for (unsigned i = 0, e = Def->getNumOperands(); i != e; ++i) {
-    MachineOperand &DMO = Def->getOperand(i);
+  for (MachineOperand &DMO : Def->operands()) {
     if (!DMO.isReg() || !DMO.isDef())
       continue;
     if (DMO.getReg() == LoopReg)
