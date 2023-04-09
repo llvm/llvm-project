@@ -281,7 +281,7 @@ end_if_insufficient_values_on_stack_2:
   if i32
   i32.const 2
   else
-# FIXME: Should complain about insufficient values on the stack.
+# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
   end_if
   drop
   end_function
@@ -292,8 +292,8 @@ end_if_type_mismatch_2:
   if i32
   i32.const 2
   else
-# FIXME: Should complain about a type mismatch.
   f32.const 3.0
+# CHECK: :[[@LINE+1]]:3: error: end got f32, expected i32
   end_if
   drop
   end_function
@@ -322,20 +322,26 @@ else_type_mismatch:
   end_function
 
 .tagtype tag_i32 i32
+.tagtype tag_f32 f32
 
 end_try_insufficient_values_on_stack:
   .functype end_try_insufficient_values_on_stack () -> ()
   try i32
+  i32.const 0
+  catch_all
 # CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
   end_try
+  drop
   end_function
 
 end_try_type_mismatch:
   .functype end_try_type_mismatch () -> ()
   try i32
-  f32.const 1.0
+  i32.const 0
+  catch tag_f32
 # CHECK: :[[@LINE+1]]:3: error: end got f32, expected i32
   end_try
+  drop
   end_function
 
 catch_insufficient_values_on_stack:
