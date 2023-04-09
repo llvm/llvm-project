@@ -271,3 +271,26 @@ TEST(ELFTest, DataRegionTest) {
   EXPECT_THAT_ERROR(Region[3].takeError(), FailedWithMessage(ErrMsg2));
   EXPECT_THAT_ERROR(Region[4].takeError(), FailedWithMessage(ErrMsg2));
 }
+
+// Test the sysV and the gnu hash functions, particularly with UTF-8 unicode.
+// Use names long enough for the hash's recycling of the high bits to kick in.
+// Explicitly encode the UTF-8 to avoid encoding transliterations.
+TEST(ELFTest, Hash) {
+  EXPECT_EQ(hashSysV("FooBarBazToto"), 0x5ec3e8fU);
+  EXPECT_EQ(hashGnu("FooBarBazToto"), 0x5478be61U);
+
+  // boom💥pants
+  EXPECT_EQ(hashSysV("boom\xf0\x9f\x92\xa5pants"), 0x5a0cf53U);
+  EXPECT_EQ(hashGnu("boom\xf0\x9f\x92\xa5pants"), 0xf5dda2deU);
+
+  // woot!🧙 💑 🌈
+  EXPECT_EQ(hashSysV("woot!\xf0\x9f\xa7\x99 \xf0\x9f\x92\x91 "
+                     "\xf0\x9f\x8c\x88"), 0x3522e38U);
+  EXPECT_EQ(hashGnu("woot!\xf0\x9f\xa7\x99 \xf0\x9f\x92\x91 "
+                    "\xf0\x9f\x8c\x88"), 0xf7603f3U);
+
+  // This string hashes to 0x100000000 in the originally formulated function,
+  // when long is 64 bits -- but that was never the intent. The code was
+  // presuming 32-bit long. Thus make sure that extra bit doesn't appear. 
+  EXPECT_EQ(hashSysV("ZZZZZW9p"), 0U);
+}
