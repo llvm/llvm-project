@@ -60,7 +60,7 @@ class TestCase(TestBase):
 
         valobj = self.expect_var_path(
             "up_str",
-            type="std::unique_ptr<std::basic_string<char> >",
+            type="std::unique_ptr<std::string>",
             summary='"hello"',
             children=[ValueCheck(name="__value_", summary='"hello"')],
         )

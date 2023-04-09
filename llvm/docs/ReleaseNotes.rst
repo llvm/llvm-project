@@ -169,6 +169,11 @@ Changes to the Debug Info
 
 During this release ...
 
+* When a template class annotated with the ``[[clang::preferred_name]]`` attribute
+  were to appear in a ``DW_AT_type``, the type will now be that of the preferred_name
+  instead. This is only enabled when tuned for LLDB at the moment.
+  (`D145803 <https://reviews.llvm.org/D145803>`_)
+
 Changes to the LLVM tools
 ---------------------------------
 
