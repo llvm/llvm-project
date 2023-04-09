@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -28,7 +29,7 @@ int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
   registry.insert<mlir::BuiltinDialect, mlir::arith::ArithDialect,
                   mlir::cir::CIRDialect, mlir::memref::MemRefDialect,
-                  mlir::LLVM::LLVMDialect>();
+                  mlir::LLVM::LLVMDialect, mlir::DLTIDialect>();
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return cir::createConvertMLIRToLLVMPass();
