@@ -829,6 +829,7 @@ system_error stdexcept
 system_error string
 system_error type_traits
 system_error version
+thread array
 thread chrono
 thread compare
 thread cstddef
@@ -838,11 +839,15 @@ thread ctime
 thread functional
 thread iosfwd
 thread limits
+thread locale
 thread new
 thread ratio
+thread string
+thread string_view
 thread system_error
 thread tuple
 thread type_traits
+thread vector
 thread version
 tuple compare
 tuple cstddef
