@@ -69,7 +69,6 @@ namespace pmr {
 #include <__type_traits/aligned_storage.h>
 #include <__utility/move.h>
 #include <cstddef>
-#include <cstdlib>
 #include <experimental/__config>
 #include <experimental/__memory>
 #include <limits>
@@ -432,6 +431,7 @@ _LIBCPP_POP_MACROS
 #  include <atomic>
 #  include <climits>
 #  include <concepts>
+#  include <cstdlib>
 #  include <cstring>
 #  include <ctime>
 #  include <iterator>

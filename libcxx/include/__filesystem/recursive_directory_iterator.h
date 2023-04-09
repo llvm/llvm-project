@@ -19,8 +19,9 @@
 #include <__memory/shared_ptr.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
+#include <__system_error/error_code.h>
+#include <__utility/move.h>
 #include <cstddef>
-#include <system_error>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

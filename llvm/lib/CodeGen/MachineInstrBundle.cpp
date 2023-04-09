@@ -58,8 +58,7 @@ bool UnpackMachineBundles::runOnMachineFunction(MachineFunction &MF) {
       if (MI->isBundle()) {
         while (++MII != MIE && MII->isBundledWithPred()) {
           MII->unbundleFromPred();
-          for (unsigned i = 0, e = MII->getNumOperands(); i != e; ++i) {
-            MachineOperand &MO = MII->getOperand(i);
+          for (MachineOperand &MO  : MII->operands()) {
             if (MO.isReg() && MO.isInternalRead())
               MO.setIsInternalRead(false);
           }
@@ -149,8 +148,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
     if (MII->isDebugInstr())
       continue;
 
-    for (unsigned i = 0, e = MII->getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MII->getOperand(i);
+    for (MachineOperand &MO : MII->operands()) {
       if (!MO.isReg())
         continue;
       if (MO.isDef()) {

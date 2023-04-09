@@ -589,6 +589,10 @@ set(files
   __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
   __support/xlocale/__strtonum_fallback.h
+  __system_error/error_category.h
+  __system_error/error_code.h
+  __system_error/error_condition.h
+  __system_error/system_error.h
   __thread/poll_with_backoff.h
   __thread/timed_backoff_policy.h
   __threading_support

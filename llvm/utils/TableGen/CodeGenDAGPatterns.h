@@ -211,21 +211,16 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool isMachineValueType() const {
-    return isDefaultOnly() && Map.begin()->second.size() == 1;
+    return isSimple() && getSimple().size() == 1;
   }
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   MVT getMachineValueType() const {
     assert(isMachineValueType());
-    return *Map.begin()->second.begin();
+    return *getSimple().begin();
   }
 
   bool isPossible() const;
-
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
-  bool isDefaultOnly() const {
-    return Map.size() == 1 && Map.begin()->first == DefaultMode;
-  }
 
   bool isPointer() const {
     return getValueTypeByHwMode().isPointer();

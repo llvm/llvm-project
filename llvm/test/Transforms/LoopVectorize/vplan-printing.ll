@@ -470,7 +470,7 @@ declare float @llvm.fmuladd.f32(float, float, float)
 define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-LABEL: Checking a loop in 'print_expand_scev'
 ; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK-NEXT: Live-in vp<%0> = vector-trip-count
+; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:   EMIT vp<[[EXP_SCEV:%.+]]> = EXPAND SCEV (1 + (%y /u 492802768830814060))<nuw><nsw>
@@ -488,7 +488,7 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE store ir<%v3>, ir<%gep>
 ; CHECK-NEXT:     EMIT vp<[[CAN_INC:%.+]]> = VF * UF +(nuw)  vp<[[CAN_IV]]>
-; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_INC]]> vp<%0>
+; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_INC]]> vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block

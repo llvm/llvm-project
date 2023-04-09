@@ -158,6 +158,7 @@ concepts cstddef
 concepts type_traits
 concepts version
 condition_variable atomic
+condition_variable cerrno
 condition_variable concepts
 condition_variable cstddef
 condition_variable cstdint
@@ -170,6 +171,7 @@ condition_variable limits
 condition_variable new
 condition_variable ratio
 condition_variable stdexcept
+condition_variable string
 condition_variable system_error
 condition_variable type_traits
 condition_variable typeinfo
@@ -212,7 +214,6 @@ exception type_traits
 exception version
 execution version
 expected cstddef
-expected cstdlib
 expected initializer_list
 expected new
 expected version
@@ -397,6 +398,7 @@ functional utility
 functional vector
 functional version
 future atomic
+future cerrno
 future chrono
 future cstddef
 future cstdint
@@ -410,6 +412,7 @@ future mutex
 future new
 future ratio
 future stdexcept
+future string
 future system_error
 future thread
 future type_traits
@@ -495,6 +498,7 @@ list typeinfo
 list version
 locale atomic
 locale cctype
+locale cerrno
 locale concepts
 locale cstdarg
 locale cstddef
@@ -558,6 +562,7 @@ memory_resource stdexcept
 memory_resource tuple
 memory_resource version
 mutex atomic
+mutex cerrno
 mutex concepts
 mutex cstddef
 mutex cstdint
@@ -571,6 +576,7 @@ mutex limits
 mutex new
 mutex ratio
 mutex stdexcept
+mutex string
 mutex system_error
 mutex tuple
 mutex type_traits
@@ -615,6 +621,7 @@ optional variant
 optional version
 ostream atomic
 ostream bitset
+ostream cerrno
 ostream concepts
 ostream cstddef
 ostream cstdint
@@ -629,6 +636,7 @@ ostream locale
 ostream new
 ostream stdexcept
 ostream streambuf
+ostream string
 ostream type_traits
 ostream typeinfo
 ostream version
@@ -743,6 +751,8 @@ shared_mutex ctime
 shared_mutex iosfwd
 shared_mutex limits
 shared_mutex ratio
+shared_mutex stdexcept
+shared_mutex string
 shared_mutex system_error
 shared_mutex type_traits
 shared_mutex version
@@ -833,6 +843,7 @@ system_error string
 system_error type_traits
 system_error version
 thread array
+thread cerrno
 thread chrono
 thread compare
 thread cstddef
@@ -845,6 +856,7 @@ thread limits
 thread locale
 thread new
 thread ratio
+thread stdexcept
 thread string
 thread string_view
 thread system_error
