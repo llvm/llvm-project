@@ -8,7 +8,7 @@ Number,Name,Standard,Assignee,Status,First released version
 "`P2093R14 <https://wg21.link/P2093R14>`__","Formatted output","C++23"
 "`P2286R8 <https://wg21.link/P2286R8>`__","Formatting Ranges","C++23","Mark de Wever","|Complete|",Clang 16
 "`P2508R1 <https://wg21.link/P2508R1>`__","Exposing ``std::basic-format-string``","C++23","Mark de Wever","|Complete|", Clang 15
-"`P2585R0 <https://wg21.link/P2585R0>`__","Improving default container formatting","C++23","Mark de Wever","|In progress|"
+"`P2585R0 <https://wg21.link/P2585R0>`__","Improving default container formatting","C++23","Mark de Wever","|Complete|", Clang 17
 "`P2539R4 <https://wg21.link/P2539R4>`__","Should the output of ``std::print`` to a terminal be synchronized with the underlying stream?","C++23"
 "`P2713R1 <https://wg21.link/P2713R1>`__","Escaping improvements in ``std::format``","C++23","Mark de Wever",""
 "`P2675R1 <https://wg21.link/P2675R1>`__","``format``'s width estimation is too approximate and not forward compatible","C++23","Mark de Wever",""
