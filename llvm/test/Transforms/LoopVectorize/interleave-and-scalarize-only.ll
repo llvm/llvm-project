@@ -167,7 +167,7 @@ exit:
 
 ; DBG-LABEL: 'first_order_recurrence_using_induction'
 ; DBG:      VPlan 'Initial VPlan for VF={1},UF>=1' {
-; DBG-NEXT: Live-in vp<%1> = vector-trip-count
+; DBG-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
 ; DBG-NEXT: Successor(s): vector loop
@@ -181,7 +181,7 @@ exit:
 ; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for> vp<[[SCALAR_STEPS]]>
 ; DBG-NEXT:     CLONE store vp<[[SPLICE]]>, ir<%dst>
 ; DBG-NEXT:     EMIT vp<[[IV_INC:%.+]]> = VF * UF +(nuw)  vp<[[CAN_IV]]>
-; DBG-NEXT:     EMIT branch-on-count  vp<[[IV_INC]]> vp<%1>
+; DBG-NEXT:     EMIT branch-on-count  vp<[[IV_INC]]> vp<[[VTC]]>
 ; DBG-NEXT:   No successors
 ; DBG-NEXT: }
 ; DBG-NEXT: Successor(s): middle.block
