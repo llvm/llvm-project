@@ -8247,7 +8247,8 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
   // Guard against huge trip counts (this requires checking
   // for zero to handle the case where the trip count == -1 and the
   // addition wraps).
-  if (!Result || Result->getValue().getActiveBits() > 32 ||
+  assert(Result && "SCEVConstant expected to have non-null ConstantInt");
+  if (Result->getValue().getActiveBits() > 32 ||
       Result->getValue().getActiveBits() == 0)
     return 1;
 
