@@ -1974,7 +1974,17 @@ void TreePatternNode::dump() const {
 bool TreePatternNode::isIsomorphicTo(const TreePatternNode *N,
                                      const MultipleUseVarSet &DepVars) const {
   if (N == this) return true;
-  if (N->isLeaf() != isLeaf() || getExtTypes() != N->getExtTypes() ||
+  if (N->isLeaf() != isLeaf())
+    return false;
+
+  // Check operator of non-leaves early since it can be cheaper than checking
+  // types.
+  if (!isLeaf())
+    if (N->getOperator() != getOperator() ||
+        N->getNumChildren() != getNumChildren())
+      return false;
+
+  if (getExtTypes() != N->getExtTypes() ||
       getPredicateCalls() != N->getPredicateCalls() ||
       getTransformFn() != N->getTransformFn())
     return false;
@@ -1989,8 +1999,6 @@ bool TreePatternNode::isIsomorphicTo(const TreePatternNode *N,
     return getLeafValue() == N->getLeafValue();
   }
 
-  if (N->getOperator() != getOperator() ||
-      N->getNumChildren() != getNumChildren()) return false;
   for (unsigned i = 0, e = getNumChildren(); i != e; ++i)
     if (!getChild(i)->isIsomorphicTo(N->getChild(i), DepVars))
       return false;
