@@ -9,7 +9,6 @@
 #include <__assert>
 #include <limits>
 #include <mutex>
-#include <system_error>
 
 #include "include/atomic_support.h"
 

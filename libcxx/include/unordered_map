@@ -2647,6 +2647,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <algorithm>
 #  include <bit>
 #  include <concepts>
+#  include <cstdlib>
 #  include <iterator>
 #  include <type_traits>
 #endif

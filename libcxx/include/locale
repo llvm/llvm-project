@@ -203,6 +203,7 @@ template <class charT> class messages_byname;
 #include <__locale>
 #include <__memory/unique_ptr.h>
 #include <__type_traits/make_unsigned.h>
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>

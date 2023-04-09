@@ -29,6 +29,7 @@
 // throw.
 
 #include <random>
+#include <string>
 #include <system_error>
 #include <cassert>
 

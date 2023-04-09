@@ -235,7 +235,7 @@ template <class Clock, class Duration1, class Duration2>
 template <class Clock, class Duration1, class Duration2>
    bool operator==(const time_point<Clock, Duration1>& lhs, const time_point<Clock, Duration2>& rhs);
 template <class Clock, class Duration1, class Duration2>
-   bool operator!=(const time_point<Clock, Duration1>& lhs, const time_point<Clock, Duration2>& rhs);
+   bool operator!=(const time_point<Clock, Duration1>& lhs, const time_point<Clock, Duration2>& rhs); // removed in C++20
 template <class Clock, class Duration1, class Duration2>
    bool operator< (const time_point<Clock, Duration1>& lhs, const time_point<Clock, Duration2>& rhs);
 template <class Clock, class Duration1, class Duration2>
@@ -244,6 +244,10 @@ template <class Clock, class Duration1, class Duration2>
    bool operator> (const time_point<Clock, Duration1>& lhs, const time_point<Clock, Duration2>& rhs);
 template <class Clock, class Duration1, class Duration2>
    bool operator>=(const time_point<Clock, Duration1>& lhs, const time_point<Clock, Duration2>& rhs);
+template<class Clock, class Duration1,
+         three_way_comparable_with<Duration1> Duration2>
+  constexpr auto operator<=>(const time_point<Clock, Duration1>& lhs,
+                             const time_point<Clock, Duration2>& rhs);                                // since C++20
 
 // time_point_cast (constexpr in C++14)
 

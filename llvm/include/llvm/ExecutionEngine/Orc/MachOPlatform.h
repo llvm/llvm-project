@@ -156,6 +156,12 @@ private:
       ExecutorAddrRange CompactUnwindSection;
     };
 
+    struct ObjCImageInfo {
+      uint32_t Version = 0;
+      uint32_t Flags = 0;
+      ExecutorAddr Addr;
+    };
+
     Error bootstrapPipelineStart(jitlink::LinkGraph &G);
     Error bootstrapPipelineRecordRuntimeFunctions(jitlink::LinkGraph &G);
     Error bootstrapPipelineEnd(jitlink::LinkGraph &G);
@@ -165,8 +171,8 @@ private:
     Error associateJITDylibHeaderSymbol(jitlink::LinkGraph &G,
                                         MaterializationResponsibility &MR);
 
-    Error preserveInitSections(jitlink::LinkGraph &G,
-                               MaterializationResponsibility &MR);
+    Error preserveImportantSections(jitlink::LinkGraph &G,
+                                    MaterializationResponsibility &MR);
 
     Error processObjCImageInfo(jitlink::LinkGraph &G,
                                MaterializationResponsibility &MR);
@@ -178,12 +184,16 @@ private:
     Error registerObjectPlatformSections(jitlink::LinkGraph &G, JITDylib &JD,
                                          bool InBootstrapPhase);
 
+    Error createObjCRuntimeObject(jitlink::LinkGraph &G);
+    Error populateObjCRuntimeObject(jitlink::LinkGraph &G,
+                                    MaterializationResponsibility &MR);
+
     std::mutex PluginMutex;
     MachOPlatform &MP;
 
     // FIXME: ObjCImageInfos and HeaderAddrs need to be cleared when
     // JITDylibs are removed.
-    DenseMap<JITDylib *, std::pair<uint32_t, uint32_t>> ObjCImageInfos;
+    DenseMap<JITDylib *, ObjCImageInfo> ObjCImageInfos;
     DenseMap<JITDylib *, ExecutorAddr> HeaderAddrs;
     InitSymbolDepMap InitSymbolDeps;
   };
@@ -253,6 +263,10 @@ private:
       ES.intern("___orc_rt_macho_deregister_object_platform_sections")};
   RuntimeFunction CreatePThreadKey{
       ES.intern("___orc_rt_macho_create_pthread_key")};
+  RuntimeFunction RegisterObjCRuntimeObject{
+      ES.intern("___orc_rt_macho_register_objc_runtime_object")};
+  RuntimeFunction DeregisterObjCRuntimeObject{
+      ES.intern("___orc_rt_macho_deregister_objc_runtime_object")};
 
   DenseMap<JITDylib *, SymbolLookupSet> RegisteredInitSymbols;
 

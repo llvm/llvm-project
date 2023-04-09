@@ -188,7 +188,6 @@ typedef basic_fstream<wchar_t> wfstream;
 #include <__utility/swap.h>
 #include <__utility/unreachable.h>
 #include <cstdio>
-#include <cstdlib>
 #include <istream>
 #include <ostream>
 #include <typeinfo>
@@ -1752,6 +1751,7 @@ _LIBCPP_POP_MACROS
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <atomic>
 #  include <concepts>
+#  include <cstdlib>
 #  include <iosfwd>
 #  include <limits>
 #  include <new>
