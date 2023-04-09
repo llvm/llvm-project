@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-header-guard %s
-// RUN: %clang_cc1 -fsyntax-only -Wheader-guard %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -Wheader-guard -fno-diagnostics-show-line-numbers %s 2>&1 | FileCheck %s
 
 #include "Inputs/good-header-guard.h"
 #include "Inputs/no-define.h"
