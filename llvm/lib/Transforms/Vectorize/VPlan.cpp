@@ -580,7 +580,9 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 VPlan::~VPlan() {
-  clearLiveOuts();
+  for (auto &KV : LiveOuts)
+    delete KV.second;
+  LiveOuts.clear();
 
   if (Entry) {
     VPValue DummyValue;

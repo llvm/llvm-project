@@ -1878,6 +1878,7 @@ std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
   return getAssignmentInfoImpl(DL, AI, SizeInBits);
 }
 
+/// Returns nullptr if the assignment shouldn't be attributed to this variable.
 static CallInst *emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
                                Instruction &StoreLikeInst,
                                const VarRecord &VarRec, DIBuilder &DIB) {
@@ -1885,9 +1886,24 @@ static CallInst *emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
   assert(ID && "Store instruction must have DIAssignID metadata");
   (void)ID;
 
+  bool StoreToWholeVariable = Info.StoreToWholeAlloca;
+  if (auto Size = VarRec.Var->getSizeInBits()) {
+    // Discard stores to bits outside this variable. NOTE: trackAssignments
+    // doesn't understand base expressions yet, so all variables that reach
+    // here are guaranteed to start at offset 0 in the alloca.
+    // TODO: Could we truncate the fragment expression instead of discarding
+    // the assignment?
+    if (Info.OffsetInBits + Info.SizeInBits > *Size)
+      return nullptr;
+    // FIXME: As noted above - only variables at offset 0 are handled
+    // currently.
+    StoreToWholeVariable = Info.OffsetInBits == /*VarOffsetInAlloca*/ 0 &&
+                           Info.SizeInBits == *Size;
+  }
+
   DIExpression *Expr =
       DIExpression::get(StoreLikeInst.getContext(), std::nullopt);
-  if (!Info.StoreToWholeAlloca) {
+  if (!StoreToWholeVariable) {
     auto R = DIExpression::createFragmentExpression(Expr, Info.OffsetInBits,
                                                     Info.SizeInBits);
     assert(R.has_value() && "failed to create fragment expression");
@@ -1987,7 +2003,7 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
         auto *Assign =
             emitDbgAssign(*Info, ValueComponent, DestComponent, I, R, DIB);
         (void)Assign;
-        LLVM_DEBUG(errs() << " > INSERT: " << *Assign << "\n");
+        LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
       }
     }
   }
