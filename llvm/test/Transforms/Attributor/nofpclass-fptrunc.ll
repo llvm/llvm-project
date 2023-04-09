@@ -12,7 +12,7 @@ define float @ret_fptrunc(double %arg0) {
 }
 
 define float @ret_fptrunc_nonan(double nofpclass(nan) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_nonan
+; CHECK-LABEL: define nofpclass(nan) float @ret_fptrunc_nonan
 ; CHECK-SAME: (double nofpclass(nan) [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -102,7 +102,7 @@ define float @ret_fptrunc_nonzero(double nofpclass(nzero) %arg0) {
 }
 
 define float @ret_fptrunc_nonan_noinf(double nofpclass(nan inf) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_nonan_noinf
+; CHECK-LABEL: define nofpclass(nan) float @ret_fptrunc_nonan_noinf
 ; CHECK-SAME: (double nofpclass(nan inf) [[ARG0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
