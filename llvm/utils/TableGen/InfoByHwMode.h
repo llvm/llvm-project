@@ -139,7 +139,7 @@ struct InfoByHwMode {
     return Map.size() == 1 && Map.begin()->first == DefaultMode;
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
-  InfoT getSimple() const {
+  const InfoT &getSimple() const {
     assert(isSimple());
     return Map.begin()->second;
   }

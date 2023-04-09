@@ -14,8 +14,9 @@
 #include <__config>
 #include <__memory/addressof.h>
 #include <__mutex/tag_types.h>
+#include <__system_error/system_error.h>
 #include <__utility/swap.h>
-#include <system_error>
+#include <cerrno>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

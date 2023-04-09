@@ -14,11 +14,13 @@
 #include <__config>
 #include <__filesystem/path.h>
 #include <__memory/shared_ptr.h>
+#include <__system_error/error_code.h>
+#include <__system_error/system_error.h>
 #include <__utility/forward.h>
 #include <__verbose_abort>
 #include <iosfwd>
 #include <new>
-#include <system_error>
+#include <string>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -12,9 +12,9 @@
 #define _LARGE_TIME_API
 #endif
 
-#include <cerrno>        // errno
+#include <__system_error/system_error.h>
+#include <cerrno> // errno
 #include <chrono>
-#include <system_error>  // __throw_system_error
 
 #if defined(__MVS__)
 #include <__support/ibm/gettod_zos.h> // gettimeofdayMonotonic

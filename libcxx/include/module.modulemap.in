@@ -904,6 +904,7 @@ module std [system] {
         private header "__format/format_context.h"
         export optional
         export locale
+        export __locale
       }
       module format_error                    { private header "__format/format_error.h" }
       module format_functions                {
@@ -1433,7 +1434,22 @@ module std [system] {
   }
   module system_error {
     header "system_error"
+    export __errc
     export *
+    module __system_error {
+      module error_category  { private header "__system_error/error_category.h" }
+      module error_code {
+        private header "__system_error/error_code.h"
+        export functional.__functional.hash
+        export functional.__functional.unary_function
+      }
+      module error_condition {
+        private header "__system_error/error_condition.h"
+        export functional.__functional.hash
+        export functional.__functional.unary_function
+      }
+      module system_error { private header "__system_error/system_error.h" }
+    }
   }
   module thread {
     @requires_LIBCXX_ENABLE_THREADS@

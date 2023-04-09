@@ -168,6 +168,7 @@ basic_ostream<wchar_t, traits>& operator<<(basic_ostream<wchar_t, traits>&, cons
 #include <__exception/operations.h>
 #include <__memory/shared_ptr.h>
 #include <__memory/unique_ptr.h>
+#include <__system_error/error_code.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_base_of.h>
