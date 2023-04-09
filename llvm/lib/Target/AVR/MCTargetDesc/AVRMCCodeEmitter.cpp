@@ -146,7 +146,8 @@ unsigned AVRMCCodeEmitter::encodeMemri(const MCInst &MI, unsigned OpNo,
 
   switch (RegOp.getReg()) {
   default:
-    llvm_unreachable("Expected either Y or Z register");
+    Ctx.reportError(MI.getLoc(), "Expected either Y or Z register");
+    return 0;
   case AVR::R31R30:
     RegBit = 0;
     break; // Z register
@@ -164,7 +165,7 @@ unsigned AVRMCCodeEmitter::encodeMemri(const MCInst &MI, unsigned OpNo,
     Fixups.push_back(MCFixup::create(0, OffsetOp.getExpr(),
                                      MCFixupKind(AVR::fixup_6), MI.getLoc()));
   } else {
-    llvm_unreachable("invalid value for offset");
+    llvm_unreachable("Invalid value for offset");
   }
 
   return (RegBit << 6) | OffsetBits;
