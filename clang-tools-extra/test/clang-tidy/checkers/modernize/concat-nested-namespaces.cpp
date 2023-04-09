@@ -21,10 +21,16 @@ void t();
 } // namespace n2
 
 namespace n5 {
-inline namespace n6 {
+inline namespace inline_ns {
 void t();
-}
+} // namespace inline_ns
 } // namespace n5
+
+namespace n6 {
+namespace [[deprecated]] attr_ns {
+void t();
+} // namespace attr_ns
+} // namespace n6
 
 namespace n7 {
 void t();
