@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <mutex>
 #include <shared_mutex>
+#include <system_error>
 #include <thread>
 #include <vector>
 

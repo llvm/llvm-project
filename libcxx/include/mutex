@@ -719,6 +719,7 @@ _LIBCPP_POP_MACROS
 #  include <initializer_list>
 #  include <new>
 #  include <stdexcept>
+#  include <system_error>
 #  include <type_traits>
 #  include <typeinfo>
 #endif

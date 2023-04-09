@@ -810,8 +810,8 @@ bool TypeInfer::EnforceSameSize(TypeSetByHwMode &A, TypeSetByHwMode &B) {
 void TypeInfer::expandOverloads(TypeSetByHwMode &VTS) {
   ValidateOnExit _1(VTS, *this);
   const TypeSetByHwMode &Legal = getLegalTypes();
-  assert(Legal.isDefaultOnly() && "Default-mode only expected");
-  const TypeSetByHwMode::SetType &LegalTypes = Legal.get(DefaultMode);
+  assert(Legal.isSimple() && "Default-mode only expected");
+  const TypeSetByHwMode::SetType &LegalTypes = Legal.getSimple();
 
   for (auto &I : VTS)
     expandOverloads(I.second, LegalTypes);
@@ -866,7 +866,7 @@ const TypeSetByHwMode &TypeInfer::getLegalTypes() {
       LegalTypes.insert(I.second);
     LegalTypesCached = true;
   }
-  assert(LegalCache.isDefaultOnly() && "Default-mode only expected");
+  assert(LegalCache.isSimple() && "Default-mode only expected");
   return LegalCache;
 }
 
@@ -1770,7 +1770,7 @@ bool TreePatternNode::ContainsUnresolvedType(TreePattern &TP) const {
 
 bool TreePatternNode::hasProperTypeByHwMode() const {
   for (const TypeSetByHwMode &S : Types)
-    if (!S.isDefaultOnly())
+    if (!S.isSimple())
       return true;
   for (const TreePatternNodePtr &C : Children)
     if (C->hasProperTypeByHwMode())
