@@ -322,7 +322,9 @@ public:
     }
   }
 
-  void push(NestingType NT) { NestingStack.push_back({NT, wasm::WasmSignature()}); }
+  void push(NestingType NT, wasm::WasmSignature Sig = wasm::WasmSignature()) {
+    NestingStack.push_back({NT, Sig});
+  }
 
   bool pop(StringRef Ins, NestingType NT1, NestingType NT2 = Undefined) {
     if (NestingStack.empty())
@@ -333,6 +335,19 @@ public:
                    nestingString(Top.NT).second + ", instead got: " + Ins);
     TC.setLastSig(Top.Sig);
     NestingStack.pop_back();
+    return false;
+  }
+
+  // Pop a NestingType and push a new NestingType with the same signature. Used
+  // for if-else and try-catch(_all).
+  bool popAndPushWithSameSignature(StringRef Ins, NestingType PopNT,
+                                   NestingType PushNT) {
+    if (NestingStack.empty())
+      return error(Twine("End of block construct with no start: ") + Ins);
+    auto Sig = NestingStack.back().Sig;
+    if (pop(Ins, PopNT))
+      return true;
+    push(PushNT, Sig);
     return false;
   }
 
@@ -587,17 +602,14 @@ public:
       push(If);
       ExpectBlockType = true;
     } else if (Name == "else") {
-      if (pop(Name, If))
+      if (popAndPushWithSameSignature(Name, If, Else))
         return true;
-      push(Else);
     } else if (Name == "catch") {
-      if (pop(Name, Try))
+      if (popAndPushWithSameSignature(Name, Try, Try))
         return true;
-      push(Try);
     } else if (Name == "catch_all") {
-      if (pop(Name, Try))
+      if (popAndPushWithSameSignature(Name, Try, CatchAll))
         return true;
-      push(CatchAll);
     } else if (Name == "end_if") {
       if (pop(Name, If, Else))
         return true;
