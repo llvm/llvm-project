@@ -285,6 +285,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <initializer_list>
 #  include <new>
 #  include <stdexcept>
+#  include <system_error>
 #  include <type_traits>
 #  include <typeinfo>
 #endif

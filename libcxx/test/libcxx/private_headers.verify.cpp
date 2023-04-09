@@ -604,6 +604,10 @@ END-SCRIPT
 #include <__string/char_traits.h> // expected-error@*:* {{use of private header from outside its module: '__string/char_traits.h'}}
 #include <__string/constexpr_c_functions.h> // expected-error@*:* {{use of private header from outside its module: '__string/constexpr_c_functions.h'}}
 #include <__string/extern_template_lists.h> // expected-error@*:* {{use of private header from outside its module: '__string/extern_template_lists.h'}}
+#include <__system_error/error_category.h> // expected-error@*:* {{use of private header from outside its module: '__system_error/error_category.h'}}
+#include <__system_error/error_code.h> // expected-error@*:* {{use of private header from outside its module: '__system_error/error_code.h'}}
+#include <__system_error/error_condition.h> // expected-error@*:* {{use of private header from outside its module: '__system_error/error_condition.h'}}
+#include <__system_error/system_error.h> // expected-error@*:* {{use of private header from outside its module: '__system_error/system_error.h'}}
 #include <__thread/poll_with_backoff.h> // expected-error@*:* {{use of private header from outside its module: '__thread/poll_with_backoff.h'}}
 #include <__thread/timed_backoff_policy.h> // expected-error@*:* {{use of private header from outside its module: '__thread/timed_backoff_policy.h'}}
 #include <__tuple_dir/apply_cv.h> // expected-error@*:* {{use of private header from outside its module: '__tuple_dir/apply_cv.h'}}
