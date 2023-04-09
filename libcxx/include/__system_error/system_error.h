@@ -22,30 +22,26 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-class _LIBCPP_TYPE_VIS system_error
-    : public runtime_error
-{
-    error_code __ec_;
-public:
-    system_error(error_code __ec, const string& __what_arg);
-    system_error(error_code __ec, const char* __what_arg);
-    system_error(error_code __ec);
-    system_error(int __ev, const error_category& __ecat, const string& __what_arg);
-    system_error(int __ev, const error_category& __ecat, const char* __what_arg);
-    system_error(int __ev, const error_category& __ecat);
-    system_error(const system_error&) _NOEXCEPT = default;
-    ~system_error() _NOEXCEPT override;
+class _LIBCPP_TYPE_VIS system_error : public runtime_error {
+  error_code __ec_;
 
-    _LIBCPP_INLINE_VISIBILITY
-    const error_code& code() const _NOEXCEPT {return __ec_;}
+public:
+  system_error(error_code __ec, const string& __what_arg);
+  system_error(error_code __ec, const char* __what_arg);
+  system_error(error_code __ec);
+  system_error(int __ev, const error_category& __ecat, const string& __what_arg);
+  system_error(int __ev, const error_category& __ecat, const char* __what_arg);
+  system_error(int __ev, const error_category& __ecat);
+  system_error(const system_error&) _NOEXCEPT = default;
+  ~system_error() _NOEXCEPT override;
+
+  _LIBCPP_INLINE_VISIBILITY const error_code& code() const _NOEXCEPT { return __ec_; }
 
 private:
-    static string __init(const error_code&, string);
+  static string __init(const error_code&, string);
 };
 
-_LIBCPP_NORETURN _LIBCPP_FUNC_VIS
-void __throw_system_error(int __ev, const char* __what_arg);
-
+_LIBCPP_NORETURN _LIBCPP_FUNC_VIS void __throw_system_error(int __ev, const char* __what_arg);
 
 _LIBCPP_END_NAMESPACE_STD
 #endif // _LIBCPP___SYSTEM_ERROR_SYSTEM_ERROR_H

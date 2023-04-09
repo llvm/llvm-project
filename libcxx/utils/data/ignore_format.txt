@@ -611,10 +611,6 @@ libcxx/include/__support/solaris/xlocale.h
 libcxx/include/__support/win32/locale_win32.h
 libcxx/include/__support/xlocale/__nop_locale_mgmt.h
 libcxx/include/__system_error/errc.h
-libcxx/include/__system_error/error_category.h
-libcxx/include/__system_error/error_code.h
-libcxx/include/__system_error/error_condition.h
-libcxx/include/__system_error/system_error.h
 libcxx/include/thread
 libcxx/include/__threading_support
 libcxx/include/__thread/poll_with_backoff.h
