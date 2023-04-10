@@ -3892,12 +3892,14 @@ void InnerLoopVectorizer::fixFixedOrderRecurrence(
       auto *Idx = Builder.CreateSub(RuntimeVF, ConstantInt::get(IdxTy, 2));
       ExtractForPhiUsedOutsideLoop = Builder.CreateExtractElement(
           Incoming, Idx, "vector.recur.extract.for.phi");
-    } else if (UF > 1)
+    } else {
+      assert(UF > 1 && "VF and UF cannot both be 1");
       // When loop is unrolled without vectorizing, initialize
       // ExtractForPhiUsedOutsideLoop with the value just prior to unrolled
       // value of `Incoming`. This is analogous to the vectorized case above:
       // extracting the second last element when VF > 1.
       ExtractForPhiUsedOutsideLoop = State.get(PreviousDef, UF - 2);
+    }
 
     for (VPLiveOut *LiveOut : LiveOuts) {
       assert(!Cost->requiresScalarEpilogue(VF));
