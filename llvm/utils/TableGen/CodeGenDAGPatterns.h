@@ -1021,13 +1021,14 @@ class DAGInstruction {
   TreePatternNodePtr ResultPattern;
 
 public:
-  DAGInstruction(const std::vector<Record*> &results,
-                 const std::vector<Record*> &operands,
-                 const std::vector<Record*> &impresults,
+  DAGInstruction(std::vector<Record *> &&results,
+                 std::vector<Record *> &&operands,
+                 std::vector<Record *> &&impresults,
                  TreePatternNodePtr srcpattern = nullptr,
                  TreePatternNodePtr resultpattern = nullptr)
-    : Results(results), Operands(operands), ImpResults(impresults),
-      SrcPattern(srcpattern), ResultPattern(resultpattern) {}
+      : Results(std::move(results)), Operands(std::move(operands)),
+        ImpResults(std::move(impresults)), SrcPattern(srcpattern),
+        ResultPattern(resultpattern) {}
 
   unsigned getNumResults() const { return Results.size(); }
   unsigned getNumOperands() const { return Operands.size(); }
