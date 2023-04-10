@@ -247,7 +247,7 @@ computeHash(llvm::MutableArrayRef<uint8_t> hashBuf,
 
 static void makeUUID(unsigned version, llvm::ArrayRef<uint8_t> fileHash,
                      llvm::MutableArrayRef<uint8_t> output) {
-  assert(version == 4 || version == 5 && "Unknown UUID version");
+  assert((version == 4 || version == 5) && "Unknown UUID version");
   assert(output.size() == 16 && "Wrong size for UUID output");
   if (version == 5) {
     // Build a valid v5 UUID from a hardcoded (randomly-generated) namespace
