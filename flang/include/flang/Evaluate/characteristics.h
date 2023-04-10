@@ -219,6 +219,7 @@ struct DummyDataObject {
   std::vector<Expr<SubscriptInteger>> coshape;
   common::Intent intent{common::Intent::Default};
   Attrs attrs;
+  common::IgnoreTKRSet ignoreTKR;
 };
 
 // 15.3.2.3

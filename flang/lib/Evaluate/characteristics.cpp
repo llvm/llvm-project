@@ -314,6 +314,11 @@ bool DummyDataObject::IsCompatibleWith(
     }
     return false;
   }
+  if (ignoreTKR != actual.ignoreTKR) {
+    if (whyNot) {
+      *whyNot = "incompatible !DIR$ IGNORE_TKR directives";
+    }
+  }
   return true;
 }
 
@@ -331,8 +336,8 @@ static common::Intent GetIntent(const semantics::Attrs &attrs) {
 
 std::optional<DummyDataObject> DummyDataObject::Characterize(
     const semantics::Symbol &symbol, FoldingContext &context) {
-  if (symbol.has<semantics::ObjectEntityDetails>() ||
-      symbol.has<semantics::EntityDetails>()) {
+  if (const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()};
+      object || symbol.has<semantics::EntityDetails>()) {
     if (auto type{TypeAndShape::Characterize(symbol, context)}) {
       std::optional<DummyDataObject> result{std::move(*type)};
       using semantics::Attr;
@@ -348,6 +353,7 @@ std::optional<DummyDataObject> DummyDataObject::Characterize(
               {Attr::TARGET, DummyDataObject::Attr::Target},
           });
       result->intent = GetIntent(symbol.attrs());
+      result->ignoreTKR = GetIgnoreTKR(symbol);
       return result;
     }
   }
@@ -1254,9 +1260,10 @@ private:
   bool Distinguishable(const DummyDataObject &, const DummyDataObject &) const;
   bool Distinguishable(const DummyProcedure &, const DummyProcedure &) const;
   bool Distinguishable(const FunctionResult &, const FunctionResult &) const;
-  bool Distinguishable(const TypeAndShape &, const TypeAndShape &) const;
+  bool Distinguishable(
+      const TypeAndShape &, const TypeAndShape &, common::IgnoreTKRSet) const;
   bool IsTkrCompatible(const DummyArgument &, const DummyArgument &) const;
-  bool IsTkrCompatible(const TypeAndShape &, const TypeAndShape &) const;
+  bool IsTkCompatible(const DummyDataObject &, const DummyDataObject &) const;
   const DummyArgument *GetAtEffectivePosition(
       const DummyArguments &, int) const;
   const DummyArgument *GetPassArg(const Procedure &) const;
@@ -1432,7 +1439,7 @@ bool DistinguishUtils::Distinguishable(
 bool DistinguishUtils::Distinguishable(
     const DummyDataObject &x, const DummyDataObject &y) const {
   using Attr = DummyDataObject::Attr;
-  if (Distinguishable(x.type, y.type)) {
+  if (Distinguishable(x.type, y.type, x.ignoreTKR | y.ignoreTKR)) {
     return true;
   } else if (x.attrs.test(Attr::Allocatable) && y.attrs.test(Attr::Pointer) &&
       y.intent != common::Intent::In) {
@@ -1481,7 +1488,8 @@ bool DistinguishUtils::Distinguishable(
   return common::visit(
       common::visitors{
           [&](const TypeAndShape &z) {
-            return Distinguishable(z, std::get<TypeAndShape>(y.u));
+            return Distinguishable(
+                z, std::get<TypeAndShape>(y.u), common::IgnoreTKRSet{});
           },
           [&](const CopyableIndirection<Procedure> &z) {
             return Distinguishable(z.value(),
@@ -1491,24 +1499,39 @@ bool DistinguishUtils::Distinguishable(
       x.u);
 }
 
-bool DistinguishUtils::Distinguishable(
-    const TypeAndShape &x, const TypeAndShape &y) const {
-  return !IsTkrCompatible(x, y) && !IsTkrCompatible(y, x);
+bool DistinguishUtils::Distinguishable(const TypeAndShape &x,
+    const TypeAndShape &y, common::IgnoreTKRSet ignoreTKR) const {
+  if (!x.type().IsTkCompatibleWith(y.type(), ignoreTKR) &&
+      !y.type().IsTkCompatibleWith(x.type(), ignoreTKR)) {
+    return true;
+  }
+  if (ignoreTKR.test(common::IgnoreTKR::Rank)) {
+  } else if (x.attrs().test(TypeAndShape::Attr::AssumedRank) ||
+      y.attrs().test(TypeAndShape::Attr::AssumedRank)) {
+  } else if (x.Rank() != y.Rank()) {
+    return true;
+  }
+  return false;
 }
 
 // Compatibility based on type, kind, and rank
+
 bool DistinguishUtils::IsTkrCompatible(
     const DummyArgument &x, const DummyArgument &y) const {
   const auto *obj1{std::get_if<DummyDataObject>(&x.u)};
   const auto *obj2{std::get_if<DummyDataObject>(&y.u)};
-  return obj1 && obj2 && IsTkrCompatible(obj1->type, obj2->type);
+  return obj1 && obj2 && IsTkCompatible(*obj1, *obj2) &&
+      (obj1->type.Rank() == obj2->type.Rank() ||
+          obj1->type.attrs().test(TypeAndShape::Attr::AssumedRank) ||
+          obj2->type.attrs().test(TypeAndShape::Attr::AssumedRank) ||
+          obj1->ignoreTKR.test(common::IgnoreTKR::Rank) ||
+          obj2->ignoreTKR.test(common::IgnoreTKR::Rank));
 }
-bool DistinguishUtils::IsTkrCompatible(
-    const TypeAndShape &x, const TypeAndShape &y) const {
-  return x.type().IsTkCompatibleWith(y.type()) &&
-      (x.attrs().test(TypeAndShape::Attr::AssumedRank) ||
-          y.attrs().test(TypeAndShape::Attr::AssumedRank) ||
-          x.Rank() == y.Rank());
+
+bool DistinguishUtils::IsTkCompatible(
+    const DummyDataObject &x, const DummyDataObject &y) const {
+  return x.type.type().IsTkCompatibleWith(
+      y.type.type(), x.ignoreTKR | y.ignoreTKR);
 }
 
 // Return the argument at the given index, ignoring the passed arg
