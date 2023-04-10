@@ -1,22 +1,37 @@
-OP =  -O1
-CXX = /home/tanmay/Documents/Tools/llvm-project/build/bin/clang $(DEBUG_FLAG) $(NO_DATA_DUMP) $(MEMORY_OPT) -g
-OPT = /home/tanmay/Documents/Tools/llvm-project/build/bin/opt
-LLI = /home/tanmay/Documents/Tools/llvm-project/build/bin/lli
+LLVM_PROJECT_ROOT = /home/tanmay/Documents/Tools/llvm-project
+RUN_TIME_LIB_ROOT = /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis
 
-# make build_pass [DEBUG_FLAG=-DFAF_DEBUG<=debug level>] [NO_DATA_DUMP=-DNO_DATA_DUMP] [MEMORYOPT=-DMEMORY_OPT]
-build_pass:
-	$(CXX) --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AtomicCondition.h \
-		   --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AmplificationFactor.h \
-	$(OP) -S -emit-llvm ex1.c \
-    	  -o ex1.ll
-	$(OPT) -passes=error-analysis -S ex1.ll \
-								  -o ex1_ac.ll
+# -emit-pristine-llvm: https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang8-emit-pristine-llvm
+# -fno-slp-vectorize: https://llvm.org/docs/Vectorizers.html#the-slp-vectorizer
+OP = -O1 -fno-slp-vectorize
+CXX = $(LLVM_PROJECT_ROOT)/build/bin/clang
+# [DEBUG_FLAG=-DFAF_DEBUG<=debug level>] [MEMORYOPT=-DMEMORY_OPT]
+CXX_FLAGS = $(DEBUG_FLAG) -DMEMORY_OPT -g -S -emit-llvm
 
-run_pass:
+OPT = $(LLVM_PROJECT_ROOT)/build/bin/opt
+OPT_FLAGS = -S -passes=error-analysis
+
+LLI = $(LLVM_PROJECT_ROOT)/build/bin/lli
+
+RUN_TIME_LIB_FLAGS = -function-to-analyze atomUExample \
+					-evaluations 0
+
+RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.h \
+				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AmplificationFactor.h \
+				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h \
+				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/Statistics.h
+
+run: ex1_ac.ll
 	$(LLI) ex1_ac.ll
+
+ex1_ac.ll: ex1.ll
+	$(OPT) $(OPT_FLAGS) $(RUN_TIME_LIB_FLAGS) ex1.ll -o ex1_ac.ll
+
+ex1.ll:
+	$(CXX) $(CXX_FLAGS) $(RUN_TIME_FILES) $(OP) ex1.c -o ex1.ll
 
 build_original:
 	gcc ex1.c -lm -o ex1.out
 
 clean:
-	rm -rf .fAF_logs a.out ex1.ll ex1_ac.ll ex1.out
+	rm -rf ex1.ll ex1_ac.ll .fAF_logs ex1_ac.out ex1.out *.txt

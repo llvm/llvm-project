@@ -2,7 +2,8 @@ LLVM_PROJECT_ROOT = /home/tanmay/Documents/Tools/llvm-project
 RUN_TIME_LIB_ROOT = /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis
 
 # -emit-pristine-llvm: https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang8-emit-pristine-llvm
-OP = -emit-pristine-llvm
+# -fno-slp-vectorize: https://llvm.org/docs/Vectorizers.html#the-slp-vectorizer
+OP = -O1 -fno-slp-vectorize
 CXX = $(LLVM_PROJECT_ROOT)/build/bin/clang
 # [DEBUG_FLAG=-DFAF_DEBUG<=debug level>] [MEMORYOPT=-DMEMORY_OPT]
 CXX_FLAGS = $(DEBUG_FLAG) $(MEMORY_OPT) -g -S -emit-llvm

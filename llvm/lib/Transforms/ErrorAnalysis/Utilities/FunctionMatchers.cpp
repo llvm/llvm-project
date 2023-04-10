@@ -41,7 +41,8 @@ bool isSinFunction(const string FunctionName) {
            FunctionName.compare("sinf") == 0 ||
            FunctionName.compare("cpf_sin") == 0 ||
            FunctionName.compare("cpf_sinf") == 0 ||
-           FunctionName.find("llvm.sin.")  != std::string::npos;
+           FunctionName.compare("llvm.sin.f32") == 0 ||
+           FunctionName.compare("llvm.sin.f64") == 0;
   }
 
   return false;
@@ -53,7 +54,8 @@ bool isCosFunction(const string FunctionName) {
            FunctionName.compare("cosf") == 0 ||
            FunctionName.compare("cpf_cos") == 0 ||
            FunctionName.compare("cpf_cosf") == 0 ||
-           FunctionName.find("llvm.cos.")  != std::string::npos;
+           FunctionName.compare("llvm.cos.f32") == 0 ||
+           FunctionName.compare("llvm.cos.f64") == 0;
   }
 
   return false;
@@ -64,7 +66,9 @@ bool isTanFunction(const string FunctionName) {
     return FunctionName.compare("tan") == 0 ||
            FunctionName.compare("tanf") == 0 ||
            FunctionName.compare("cpf_tan") == 0 ||
-           FunctionName.find("llvm.tan.")  != std::string::npos;
+           FunctionName.compare("cpf_tanf") == 0 ||
+           FunctionName.compare("llvm.tan.f32") == 0 ||
+           FunctionName.compare("llvm.tan.f64") == 0;
   }
 
   return false;
@@ -75,7 +79,9 @@ bool isSinhFunction(const string FunctionName) {
     return FunctionName.compare("sinh") == 0 ||
            FunctionName.compare("sinhf") == 0 ||
            FunctionName.compare("cpf_sinh") == 0 ||
-           FunctionName.compare("cpf_sinhf") == 0;
+           FunctionName.compare("cpf_sinhf") == 0 ||
+           FunctionName.compare("llvm.sinh.f32") == 0 ||
+           FunctionName.compare("llvm.sinh.f64") == 0;
   }
 
   return false;
@@ -86,7 +92,9 @@ bool isCoshFunction(const string FunctionName) {
     return FunctionName.compare("cosh") == 0 ||
            FunctionName.compare("coshf") == 0 ||
            FunctionName.compare("cpf_cosh") == 0 ||
-           FunctionName.compare("cpf_coshf") == 0;
+           FunctionName.compare("cpf_coshf") == 0 ||
+           FunctionName.compare("llvm.cosh.f32") == 0 ||
+           FunctionName.compare("llvm.cosh.f64") == 0;
   }
 
   return false;
@@ -97,7 +105,9 @@ bool isTanhFunction(const string FunctionName) {
     return FunctionName.compare("tanh") == 0 ||
            FunctionName.compare("tanhf") == 0 ||
            FunctionName.compare("cpf_tanh") == 0 ||
-           FunctionName.compare("cpf_tanhf") == 0;
+           FunctionName.compare("cpf_tanhf") == 0 ||
+           FunctionName.compare("llvm.tanh.f32") == 0 ||
+           FunctionName.compare("llvm.tanh.f64") == 0;
   }
 
   return false;
@@ -109,7 +119,8 @@ bool isExpFunction(const string FunctionName) {
            FunctionName.compare("expf") == 0 ||
            FunctionName.compare("cpf_exp") == 0 ||
            FunctionName.compare("cpf_expf") == 0 ||
-           FunctionName.find("llvm.exp.")  != std::string::npos;
+           FunctionName.compare("llvm.exp.f32") == 0 ||
+           FunctionName.compare("llvm.exp.f64") == 0;
   }
 
   return false;
@@ -121,7 +132,8 @@ bool isLogFunction(const string FunctionName) {
            FunctionName.compare("logf") == 0 ||
            FunctionName.compare("cpf_log") == 0 ||
            FunctionName.compare("cpf_logf") == 0 ||
-           FunctionName.find("llvm.log.")  != std::string::npos;
+           FunctionName.compare("llvm.log.f32") == 0 ||
+           FunctionName.compare("llvm.log.f64") == 0;
   }
 
   return false;
@@ -133,7 +145,8 @@ bool isSqrtFunction(const string FunctionName) {
            FunctionName.compare("sqrtf") == 0 ||
            FunctionName.compare("cpf_sqrt") == 0 ||
            FunctionName.compare("cpf_sqrtf") == 0 ||
-           FunctionName.find("llvm.sqrt.")  != std::string::npos;
+           FunctionName.compare("llvm.sqrt.f32") == 0 ||
+           FunctionName.compare("llvm.sqrt.f64") == 0;
   }
 
   return false;
@@ -160,8 +173,10 @@ bool isDivFunction(const string FunctionName) {
 }
 
 bool isFMAFuncton(const string FunctionName) {
-  return FunctionName.find("llvm.fmuladd.") != std::string::npos ||
-         FunctionName.find("llvm.fma.")  != std::string::npos ||
+  return FunctionName.compare("llvm.fmuladd.f32") == 0 ||
+         FunctionName.compare("llvm.fmuladd.f64") == 0 ||
+         FunctionName.compare("llvm.fma.f32") == 0 ||
+         FunctionName.compare("llvm.fma.f64") == 0 ||
          FunctionName.compare("cpf_fma") == 0 ||
          FunctionName.compare("cpf_fmaf") == 0;
 }
