@@ -15,6 +15,14 @@ module LLVM_AsmParser {
   module * { export * }
 }
 
+module LLVM_CodeGenTypes {
+  requires cplusplus
+
+  module LLT {
+    header "CodeGen/LowLevelType.h" export *
+  }
+}
+
 // A module covering CodeGen/ and Target/. These are intertwined
 // and codependent, and thus notionally form a single module.
 module LLVM_Backend {

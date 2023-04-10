@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMLanaiAsmParser
   LanaiAsmParser.cpp
 
   LINK_COMPONENTS
+  CodeGen
   LanaiDesc
   LanaiInfo
   MC

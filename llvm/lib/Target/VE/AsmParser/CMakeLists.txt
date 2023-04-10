@@ -2,6 +2,7 @@ add_llvm_component_library(LLVMVEAsmParser
   VEAsmParser.cpp
 
   LINK_COMPONENTS
+  CodeGen
   MC
   MCParser
   Support
