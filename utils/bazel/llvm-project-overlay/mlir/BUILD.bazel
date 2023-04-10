@@ -6529,6 +6529,7 @@ cc_library(
         ":LLVMDialect",
         ":MathDialect",
         ":Pass",
+        ":SCFDialect",
         ":Transforms",
         ":VectorDialect",
         ":VectorUtils",
