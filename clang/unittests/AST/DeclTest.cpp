@@ -139,10 +139,12 @@ TEST(Decl, AsmLabelAttr) {
   NamedDecl *DeclG = *(++DeclS->method_begin());
 
   // Attach asm labels to the decls: one literal, and one not.
-  DeclF->addAttr(::new (Ctx) AsmLabelAttr(Ctx, SourceLocation(), "foo",
-                                          /*LiteralLabel=*/true));
-  DeclG->addAttr(::new (Ctx) AsmLabelAttr(Ctx, SourceLocation(), "goo",
-                                          /*LiteralLabel=*/false));
+  DeclF->addAttr(::new (Ctx) AsmLabelAttr(
+      Ctx, AttributeCommonInfo{SourceLocation()}, "foo",
+      /*LiteralLabel=*/true));
+  DeclG->addAttr(::new (Ctx) AsmLabelAttr(
+      Ctx, AttributeCommonInfo{SourceLocation()}, "goo",
+      /*LiteralLabel=*/false));
 
   // Mangle the decl names.
   std::string MangleF, MangleG;
