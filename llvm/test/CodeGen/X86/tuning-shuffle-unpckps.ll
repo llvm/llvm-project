@@ -8,87 +8,222 @@
 
 
 define <8 x float> @transform_VUNPCKLPSYrr(<8 x float> %a, <8 x float> %b) nounwind {
-; CHECK-LABEL: transform_VUNPCKLPSYrr:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
-; CHECK-NEXT:    retq
+; CHECK-AVX2-LABEL: transform_VUNPCKLPSYrr:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-ICX-NO-BYPASS-DELAY-LABEL: transform_VUNPCKLPSYrr:
+; CHECK-ICX-NO-BYPASS-DELAY:       # %bb.0:
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-ICX-BYPASS-DELAY-LABEL: transform_VUNPCKLPSYrr:
+; CHECK-ICX-BYPASS-DELAY:       # %bb.0:
+; CHECK-ICX-BYPASS-DELAY-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
+; CHECK-ICX-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-SNB-LABEL: transform_VUNPCKLPSYrr:
+; CHECK-SNB:       # %bb.0:
+; CHECK-SNB-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
+; CHECK-SNB-NEXT:    retq
   %shufp = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
   ret <8 x float> %shufp
 }
 
 define <8 x float> @transform_VUNPCKHPSYrr(<8 x float> %a, <8 x float> %b) nounwind {
-; CHECK-LABEL: transform_VUNPCKHPSYrr:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
-; CHECK-NEXT:    retq
+; CHECK-AVX2-LABEL: transform_VUNPCKHPSYrr:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-ICX-NO-BYPASS-DELAY-LABEL: transform_VUNPCKHPSYrr:
+; CHECK-ICX-NO-BYPASS-DELAY:       # %bb.0:
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    vpunpckhdq {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-ICX-BYPASS-DELAY-LABEL: transform_VUNPCKHPSYrr:
+; CHECK-ICX-BYPASS-DELAY:       # %bb.0:
+; CHECK-ICX-BYPASS-DELAY-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
+; CHECK-ICX-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-SNB-LABEL: transform_VUNPCKHPSYrr:
+; CHECK-SNB:       # %bb.0:
+; CHECK-SNB-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
+; CHECK-SNB-NEXT:    retq
   %shufp = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
   ret <8 x float> %shufp
 }
 
 define <4 x float> @transform_VUNPCKLPSrr(<4 x float> %a, <4 x float> %b) nounwind {
-; CHECK-LABEL: transform_VUNPCKLPSrr:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; CHECK-NEXT:    retq
+; CHECK-AVX2-LABEL: transform_VUNPCKLPSrr:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-ICX-NO-BYPASS-DELAY-LABEL: transform_VUNPCKLPSrr:
+; CHECK-ICX-NO-BYPASS-DELAY:       # %bb.0:
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-ICX-BYPASS-DELAY-LABEL: transform_VUNPCKLPSrr:
+; CHECK-ICX-BYPASS-DELAY:       # %bb.0:
+; CHECK-ICX-BYPASS-DELAY-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-ICX-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-SNB-NO-BYPASS-DELAY-LABEL: transform_VUNPCKLPSrr:
+; CHECK-SNB-NO-BYPASS-DELAY:       # %bb.0:
+; CHECK-SNB-NO-BYPASS-DELAY-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-SNB-NO-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-SNB-BYPASS-DELAY-LABEL: transform_VUNPCKLPSrr:
+; CHECK-SNB-BYPASS-DELAY:       # %bb.0:
+; CHECK-SNB-BYPASS-DELAY-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-SNB-BYPASS-DELAY-NEXT:    retq
   %shufp = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
   ret <4 x float> %shufp
 }
 
 define <4 x float> @transform_VUNPCKHPSrr(<4 x float> %a, <4 x float> %b) nounwind {
-; CHECK-LABEL: transform_VUNPCKHPSrr:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; CHECK-NEXT:    retq
+; CHECK-AVX2-LABEL: transform_VUNPCKHPSrr:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-ICX-NO-BYPASS-DELAY-LABEL: transform_VUNPCKHPSrr:
+; CHECK-ICX-NO-BYPASS-DELAY:       # %bb.0:
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-ICX-BYPASS-DELAY-LABEL: transform_VUNPCKHPSrr:
+; CHECK-ICX-BYPASS-DELAY:       # %bb.0:
+; CHECK-ICX-BYPASS-DELAY-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-ICX-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-SNB-NO-BYPASS-DELAY-LABEL: transform_VUNPCKHPSrr:
+; CHECK-SNB-NO-BYPASS-DELAY:       # %bb.0:
+; CHECK-SNB-NO-BYPASS-DELAY-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-SNB-NO-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-SNB-BYPASS-DELAY-LABEL: transform_VUNPCKHPSrr:
+; CHECK-SNB-BYPASS-DELAY:       # %bb.0:
+; CHECK-SNB-BYPASS-DELAY-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-SNB-BYPASS-DELAY-NEXT:    retq
   %shufp = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
   ret <4 x float> %shufp
 }
 
 define <8 x float> @transform_VUNPCKLPSYrm(<8 x float> %a, ptr %pb) nounwind {
-; CHECK-LABEL: transform_VUNPCKLPSYrm:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5]
-; CHECK-NEXT:    retq
+; CHECK-AVX2-LABEL: transform_VUNPCKLPSYrm:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5]
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-ICX-NO-BYPASS-DELAY-LABEL: transform_VUNPCKLPSYrm:
+; CHECK-ICX-NO-BYPASS-DELAY:       # %bb.0:
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5]
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-ICX-BYPASS-DELAY-LABEL: transform_VUNPCKLPSYrm:
+; CHECK-ICX-BYPASS-DELAY:       # %bb.0:
+; CHECK-ICX-BYPASS-DELAY-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5]
+; CHECK-ICX-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-SNB-LABEL: transform_VUNPCKLPSYrm:
+; CHECK-SNB:       # %bb.0:
+; CHECK-SNB-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5]
+; CHECK-SNB-NEXT:    retq
   %b = load <8 x float>, ptr %pb
   %shufp = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
   ret <8 x float> %shufp
 }
 
 define <8 x float> @transform_VUNPCKHPSYrm(<8 x float> %a, ptr %pb) nounwind {
-; CHECK-LABEL: transform_VUNPCKHPSYrm:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7]
-; CHECK-NEXT:    retq
+; CHECK-AVX2-LABEL: transform_VUNPCKHPSYrm:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7]
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-ICX-NO-BYPASS-DELAY-LABEL: transform_VUNPCKHPSYrm:
+; CHECK-ICX-NO-BYPASS-DELAY:       # %bb.0:
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    vpunpckhdq {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7]
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-ICX-BYPASS-DELAY-LABEL: transform_VUNPCKHPSYrm:
+; CHECK-ICX-BYPASS-DELAY:       # %bb.0:
+; CHECK-ICX-BYPASS-DELAY-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7]
+; CHECK-ICX-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-SNB-LABEL: transform_VUNPCKHPSYrm:
+; CHECK-SNB:       # %bb.0:
+; CHECK-SNB-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7]
+; CHECK-SNB-NEXT:    retq
   %b = load <8 x float>, ptr %pb
   %shufp = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
   ret <8 x float> %shufp
 }
 
 define <4 x float> @transform_VUNPCKLPSrm(<4 x float> %a, ptr %pb) nounwind {
-; CHECK-LABEL: transform_VUNPCKLPSrm:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; CHECK-NEXT:    retq
+; CHECK-AVX2-LABEL: transform_VUNPCKLPSrm:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-ICX-NO-BYPASS-DELAY-LABEL: transform_VUNPCKLPSrm:
+; CHECK-ICX-NO-BYPASS-DELAY:       # %bb.0:
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-ICX-BYPASS-DELAY-LABEL: transform_VUNPCKLPSrm:
+; CHECK-ICX-BYPASS-DELAY:       # %bb.0:
+; CHECK-ICX-BYPASS-DELAY-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-ICX-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-SNB-NO-BYPASS-DELAY-LABEL: transform_VUNPCKLPSrm:
+; CHECK-SNB-NO-BYPASS-DELAY:       # %bb.0:
+; CHECK-SNB-NO-BYPASS-DELAY-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-SNB-NO-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-SNB-BYPASS-DELAY-LABEL: transform_VUNPCKLPSrm:
+; CHECK-SNB-BYPASS-DELAY:       # %bb.0:
+; CHECK-SNB-BYPASS-DELAY-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-SNB-BYPASS-DELAY-NEXT:    retq
   %b = load <4 x float>, ptr %pb
   %shufp = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
   ret <4 x float> %shufp
 }
 
 define <4 x float> @transform_VUNPCKHPSrm(<4 x float> %a, ptr %pb) nounwind {
-; CHECK-LABEL: transform_VUNPCKHPSrm:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    retq
+; CHECK-AVX2-LABEL: transform_VUNPCKHPSrm:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-ICX-NO-BYPASS-DELAY-LABEL: transform_VUNPCKHPSrm:
+; CHECK-ICX-NO-BYPASS-DELAY:       # %bb.0:
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-ICX-NO-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-ICX-BYPASS-DELAY-LABEL: transform_VUNPCKHPSrm:
+; CHECK-ICX-BYPASS-DELAY:       # %bb.0:
+; CHECK-ICX-BYPASS-DELAY-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-ICX-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-SNB-NO-BYPASS-DELAY-LABEL: transform_VUNPCKHPSrm:
+; CHECK-SNB-NO-BYPASS-DELAY:       # %bb.0:
+; CHECK-SNB-NO-BYPASS-DELAY-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-SNB-NO-BYPASS-DELAY-NEXT:    retq
+;
+; CHECK-SNB-BYPASS-DELAY-LABEL: transform_VUNPCKHPSrm:
+; CHECK-SNB-BYPASS-DELAY:       # %bb.0:
+; CHECK-SNB-BYPASS-DELAY-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-SNB-BYPASS-DELAY-NEXT:    retq
   %b = load <4 x float>, ptr %pb
   %shufp = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
   ret <4 x float> %shufp
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK-AVX2: {{.*}}
+; CHECK: {{.*}}
 ; CHECK-ICX: {{.*}}
-; CHECK-ICX-BYPASS-DELAY: {{.*}}
-; CHECK-ICX-NO-BYPASS-DELAY: {{.*}}
 ; CHECK-SKL: {{.*}}
-; CHECK-SNB: {{.*}}
-; CHECK-SNB-BYPASS-DELAY: {{.*}}
-; CHECK-SNB-NO-BYPASS-DELAY: {{.*}}
 ; CHECK-V3: {{.*}}
