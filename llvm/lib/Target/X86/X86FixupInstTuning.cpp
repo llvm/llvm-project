@@ -147,7 +147,7 @@ bool X86FixupInstTuningPass::processInstruction(
   auto ProcessVPERMILPSmi = [&](unsigned NewOpc) -> bool {
     // TODO: Might be work adding bypass delay if -Os/-Oz is enabled as
     // `vpshufd` saves a byte of code size.
-    if (!ST->hasNoDomainDelayShuffle() &&
+    if (!ST->hasNoDomainDelayShuffle() ||
         !NewOpcPreferable(NewOpc, /*ReplaceInTie*/ false))
       return false;
     MI.setDesc(TII->get(NewOpc));
