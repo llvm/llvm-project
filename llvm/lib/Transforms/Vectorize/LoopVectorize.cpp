@@ -3861,13 +3861,14 @@ void InnerLoopVectorizer::fixFixedOrderRecurrence(
   Value *Incoming = State.get(PreviousDef, UF - 1);
   auto *ExtractForScalar = Incoming;
   auto *IdxTy = Builder.getInt32Ty();
+  Value *RuntimeVF = nullptr;
   if (VF.isVector()) {
     auto *One = ConstantInt::get(IdxTy, 1);
     Builder.SetInsertPoint(LoopMiddleBlock->getTerminator());
-    auto *RuntimeVF = getRuntimeVF(Builder, IdxTy, VF);
+    RuntimeVF = getRuntimeVF(Builder, IdxTy, VF);
     auto *LastIdx = Builder.CreateSub(RuntimeVF, One);
-    ExtractForScalar = Builder.CreateExtractElement(ExtractForScalar, LastIdx,
-                                                    "vector.recur.extract");
+    ExtractForScalar =
+        Builder.CreateExtractElement(Incoming, LastIdx, "vector.recur.extract");
   }
 
   auto RecurSplice = cast<VPInstruction>(*PhiR->user_begin());
@@ -3888,7 +3889,6 @@ void InnerLoopVectorizer::fixFixedOrderRecurrence(
     // LoopMiddleBlock, when the scalar loop is not run at all.
     Value *ExtractForPhiUsedOutsideLoop = nullptr;
     if (VF.isVector()) {
-      auto *RuntimeVF = getRuntimeVF(Builder, IdxTy, VF);
       auto *Idx = Builder.CreateSub(RuntimeVF, ConstantInt::get(IdxTy, 2));
       ExtractForPhiUsedOutsideLoop = Builder.CreateExtractElement(
           Incoming, Idx, "vector.recur.extract.for.phi");
