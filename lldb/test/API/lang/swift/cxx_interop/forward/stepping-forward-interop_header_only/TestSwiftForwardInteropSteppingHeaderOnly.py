@@ -12,7 +12,7 @@ class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
     def test_step_into_function(self):
         """ Test that stepping into a simple C++ function works"""
         self.build()
-        self.runCmd('setting set target.experimental.swift-enable-cxx-interop true')
+        
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Break here for function', lldb.SBFileSpec('main.swift'))
 
@@ -29,7 +29,7 @@ class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
     def test_step_over_function(self):
         """ Test that stepping over a simple C++ function works"""
         self.build()
-        self.runCmd('setting set target.experimental.swift-enable-cxx-interop true')
+        
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Break here for function', lldb.SBFileSpec('main.swift'))
 
@@ -44,7 +44,7 @@ class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
     def test_step_into_method(self):
         """ Test that stepping into a C++ method works"""
         self.build()
-        self.runCmd('setting set target.experimental.swift-enable-cxx-interop true')
+        
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Break here for method', lldb.SBFileSpec('main.swift'))
 
@@ -61,7 +61,7 @@ class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
     def test_step_over_method(self):
         """ Test that stepping over a C++ method works"""
         self.build()
-        self.runCmd('setting set target.experimental.swift-enable-cxx-interop true')
+        
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Break here for method', lldb.SBFileSpec('main.swift'))
 
@@ -75,7 +75,7 @@ class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
     def test_step_into_constructor(self):
         """ Test that stepping into a simple C++ constructor works"""
         self.build()
-        self.runCmd('setting set target.experimental.swift-enable-cxx-interop true')
+        
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Break here for constructor', lldb.SBFileSpec('main.swift'))
 
@@ -95,7 +95,7 @@ class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
     def test_step_over_constructor(self):
         """ Test that stepping over a simple C++ constructor works"""
         self.build()
-        self.runCmd('setting set target.experimental.swift-enable-cxx-interop true')
+        
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Break here for constructor', lldb.SBFileSpec('main.swift'))
 
@@ -112,7 +112,7 @@ class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
     def test_step_into_extension(self):
         """ Test that stepping into a C++ function defined in an extension works"""
         self.build()
-        self.runCmd('setting set target.experimental.swift-enable-cxx-interop true')
+        
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Break here for extension', lldb.SBFileSpec('main.swift'))
 
@@ -129,7 +129,7 @@ class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
     def test_step_over_extension(self):
         """ Test that stepping over a C++ function defined in an extension works"""
         self.build()
-        self.runCmd('setting set target.experimental.swift-enable-cxx-interop true')
+        
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Break here for extension', lldb.SBFileSpec('main.swift'))
 
@@ -143,7 +143,7 @@ class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
     def test_step_into_call_operator(self):
         """ Test that stepping into a C++ call operator works"""
         self.build()
-        self.runCmd('setting set target.experimental.swift-enable-cxx-interop true')
+        
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Break here for call operator', lldb.SBFileSpec('main.swift'))
 
@@ -160,7 +160,7 @@ class TestSwiftForwardInteropSteppingHeaderOnly(TestBase):
     def test_step_over_call_operator(self):
         """ Test that stepping over a C++ call operator works"""
         self.build()
-        self.runCmd('setting set target.experimental.swift-enable-cxx-interop true')
+        
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Break here for call operator', lldb.SBFileSpec('main.swift'))
 

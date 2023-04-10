@@ -182,7 +182,7 @@ public:
 
   bool GetSwiftEnableBareSlashRegex() const;
 
-  bool GetSwiftEnableCxxInterop() const;
+  EnableSwiftCxxInterop GetEnableSwiftCxxInterop() const;
 
   bool GetSwiftAutoImportFrameworks() const;
 
@@ -1265,6 +1265,7 @@ public:
   /// Return whether this is the Swift REPL.
   bool IsSwiftREPL();
 
+  bool IsSwiftCxxInteropEnabled();
 private:
   void DisplayFallbackSwiftContextErrors(
       SwiftASTContextForExpressions *swift_ast_ctx);
@@ -1746,6 +1747,11 @@ private:
 
   Target(const Target &) = delete;
   const Target &operator=(const Target &) = delete;
+
+#ifdef LLDB_ENABLE_SWIFT
+  LazyBool m_is_swift_cxx_interop_enabled = eLazyBoolCalculate;
+#endif // LLDB_ENABLE_SWIFT
+
 };
 
 } // namespace lldb_private
