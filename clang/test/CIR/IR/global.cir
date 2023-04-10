@@ -12,6 +12,9 @@ module {
     %0 = cir.get_global @a : cir.ptr <i32>
     cir.return
   }
+  cir.global external @table = #cir.global_view<@s> : !cir.ptr<i8>
+  cir.global external @elt_ptr = #cir.global_view<@rgb, [1]> : !cir.ptr<i8>
+  cir.global external @table_of_ptrs = #cir.const_array<[#cir.global_view<@rgb, [1]> : !cir.ptr<i8>] : !cir.array<!cir.ptr<i8> x 1>>
 }
 
 // CHECK: cir.global external @a = 3 : i32

@@ -179,9 +179,12 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return op->emitOpError("symbolref expects pointer type");
   }
 
+  if (attrType.isa<mlir::cir::GlobalViewAttr>())
+    return success();
+
   assert(attrType.isa<TypedAttr>() && "What else could we be looking at here?");
-  return op->emitOpError("cannot have value of type ")
-         << attrType.cast<TypedAttr>().getType();
+  return op->emitOpError("global with type ")
+         << attrType.cast<TypedAttr>().getType() << " not supported";
 }
 
 LogicalResult ConstantOp::verify() {

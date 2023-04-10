@@ -105,6 +105,66 @@ def SignedOverflowBehaviorAttr : AttrDef<CIR_Dialect, "SignedOverflowBehavior"> 
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalViewAttr
+//===----------------------------------------------------------------------===//
+
+def GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [TypedAttrInterface]> {
+  let summary = "Provides constant access to a global address";
+  let description = [{
+    Get constant address of global `symbol` and optionally apply offsets to
+    access existing subelements. It provides a way to access globals from other
+    global and always produces a pointer.
+
+    The type of the input symbol can be different from `#cir.global_view`
+    output type, since a given view of the global might require a static
+    cast for initializing other globals.
+
+    A list of indices can be optionally passed and each element indexes
+    the underlying type one level deep. For `symbol` types like `!cir.array`
+    and `!cir.struct`, it leads to the constant address of sub-elements, while
+    for `!cir.ptr` base an offset can be applied.
+
+    Example:
+
+    ```
+      cir.global external @s = @".str2": !cir.ptr<i8>
+      cir.global external @x = #cir.global_view<@s> : !cir.ptr<i8>
+
+      cir.global external @rgb = #cir.const_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
+      cir.global external @elt_ptr = #cir.global_view<@rgb, [1]> : !cir.ptr<i8>
+      cir.global external @table_of_ptrs = #cir.const_array<[#cir.global_view<@rgb, [1]> : !cir.ptr<i8>] : !cir.array<!cir.ptr<i8> x 1>>
+    ```
+  }];
+
+  // `$type` is the `self` type of the attribute (i.e. the type of the
+  // Attribute itself).
+  //
+  // `symbol` is the actual attribute StringAttr for the global symbol this
+  // refers to.
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        "FlatSymbolRefAttr":$symbol,
+                        OptionalParameter<"ArrayAttr">:$indices);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Type":$type,
+                                        "FlatSymbolRefAttr":$symbol,
+                                        CArg<"ArrayAttr", "{}">:$indices), [{
+      return $_get(type.getContext(), type, symbol, indices);
+    }]>
+  ];
+
+  // Enable verifier.
+  // let genVerifyDecl = 1;
+
+  let assemblyFormat = [{
+    `<`
+    $symbol
+    (`,` $indices^)?
+    `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // AST Wrappers
 //===----------------------------------------------------------------------===//
 
