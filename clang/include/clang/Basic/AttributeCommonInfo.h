@@ -76,11 +76,11 @@ protected:
   static constexpr unsigned SpellingNotCalculated = 0xf;
 
 public:
-  AttributeCommonInfo(SourceRange AttrRange)
+  explicit AttributeCommonInfo(SourceRange AttrRange)
       : AttrRange(AttrRange), ScopeLoc(), AttrKind(0), SyntaxUsed(0),
         SpellingIndex(SpellingNotCalculated) {}
 
-  AttributeCommonInfo(SourceLocation AttrLoc)
+  explicit AttributeCommonInfo(SourceLocation AttrLoc)
       : AttrRange(AttrLoc), ScopeLoc(), AttrKind(0), SyntaxUsed(0),
         SpellingIndex(SpellingNotCalculated) {}
 

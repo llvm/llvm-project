@@ -666,6 +666,10 @@ public:
   VPLiveOut(PHINode *Phi, VPValue *Op)
       : VPUser({Op}, VPUser::VPUserID::LiveOut), Phi(Phi) {}
 
+  static inline bool classof(const VPUser *U) {
+    return U->getVPUserID() == VPUser::VPUserID::LiveOut;
+  }
+
   /// Fixup the wrapped LCSSA phi node in the unique exit block.  This simply
   /// means we need to add the appropriate incoming value from the middle
   /// block as exiting edges from the scalar epilogue loop (if present) are
