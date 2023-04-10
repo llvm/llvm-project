@@ -9,6 +9,7 @@ add_llvm_component_library(LLVMSPIRVDesc
   SPIRVInstPrinter.cpp
 
   LINK_COMPONENTS
+  CodeGen
   MC
   SPIRVInfo
   Support

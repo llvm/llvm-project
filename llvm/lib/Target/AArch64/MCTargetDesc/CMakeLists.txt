@@ -16,6 +16,7 @@ add_llvm_component_library(LLVMAArch64Desc
   AArch64Info
   AArch64Utils
   BinaryFormat
+  CodeGen
   MC
   Support
   TargetParser
