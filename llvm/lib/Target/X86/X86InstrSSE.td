@@ -7236,7 +7236,9 @@ multiclass avx_vnni_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
              !strconcat(OpcodeStr, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
              [(set VR128:$dst, (v4i32 (OpNode VR128:$src1, VR128:$src2,
                                       (loadv4i32 addr:$src3))))]>,
-             VEX_4V, Sched<[SchedWriteVecIMul.XMM]>;
+             VEX_4V, Sched<[SchedWriteVecIMul.XMM.Folded,
+                            SchedWriteVecIMul.XMM.ReadAfterFold,
+                            SchedWriteVecIMul.XMM.ReadAfterFold]>;
 
   let isCommutable = IsCommutable in
   def Yrr  : AVX8I<opc, MRMSrcReg, (outs VR256:$dst),
@@ -7244,14 +7246,16 @@ multiclass avx_vnni_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
              !strconcat(OpcodeStr, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
              [(set VR256:$dst, (v8i32 (OpNode VR256:$src1,
                                        VR256:$src2, VR256:$src3)))]>,
-             VEX_4V, VEX_L, Sched<[SchedWriteVecIMul.XMM]>;
+             VEX_4V, VEX_L, Sched<[SchedWriteVecIMul.YMM]>;
 
   def Yrm  : AVX8I<opc, MRMSrcMem, (outs VR256:$dst),
              (ins VR256:$src1, VR256:$src2, i256mem:$src3),
              !strconcat(OpcodeStr, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
              [(set VR256:$dst, (v8i32 (OpNode VR256:$src1, VR256:$src2,
                                       (loadv8i32 addr:$src3))))]>,
-             VEX_4V, VEX_L, Sched<[SchedWriteVecIMul.XMM]>;
+             VEX_4V, VEX_L, Sched<[SchedWriteVecIMul.YMM.Folded,
+                                   SchedWriteVecIMul.YMM.ReadAfterFold,
+                                   SchedWriteVecIMul.YMM.ReadAfterFold]>;
 }
 
 defm VPDPBUSD   : avx_vnni_rm<0x50, "vpdpbusd", X86Vpdpbusd, 0>;
