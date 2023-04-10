@@ -375,8 +375,8 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   ; CHECK-NEXT:   [[S_ADD_I32_24:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_BUFFER_LOAD_DWORD_IMM8]], -594, implicit-def dead $scc
   ; CHECK-NEXT:   [[V_OR_B32_e64_67:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[S_ADD_I32_24]], [[V_OR_B32_e64_66]], implicit $exec
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 0, [[V_OR_B32_e64_67]], implicit $exec
-  ; CHECK-NEXT:   undef %693.sub3:vreg_128 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[V_CMP_EQ_U32_e64_]], implicit $exec
-  ; CHECK-NEXT:   IMAGE_STORE_V4_V2_gfx10 %693, undef %578:vreg_64, [[S_LOAD_DWORDX8_IMM]], 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 7)
+  ; CHECK-NEXT:   undef %624.sub3:vreg_128 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[V_CMP_EQ_U32_e64_]], implicit $exec
+  ; CHECK-NEXT:   IMAGE_STORE_V4_V2_gfx10 %624, undef %578:vreg_64, [[S_LOAD_DWORDX8_IMM]], 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 7)
   ; CHECK-NEXT:   S_ENDPGM 0
 .expVert:
   %0 = extractelement <31 x i32> %userData, i64 2
