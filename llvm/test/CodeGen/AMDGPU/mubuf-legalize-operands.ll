@@ -154,9 +154,6 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
-; W64-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
-; W64-O0-NEXT:    ; kill: def $vgpr7 killed $vgpr7 killed $exec
-; W64-O0-NEXT:    ; kill: def $vgpr4 killed $vgpr4 killed $exec
 ; W64-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
 ; W64-O0-NEXT:    v_mov_b32_e32 v1, v7
 ; W64-O0-NEXT:    v_mov_b32_e32 v2, v6
@@ -500,9 +497,6 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
-; W64-O0-NEXT:    ; kill: def $vgpr5 killed $vgpr5 killed $exec
-; W64-O0-NEXT:    ; kill: def $vgpr4 killed $vgpr4 killed $exec
-; W64-O0-NEXT:    ; kill: def $vgpr3 killed $vgpr3 killed $exec
 ; W64-O0-NEXT:    ; kill: def $vgpr14 killed $vgpr14 def $vgpr14_vgpr15_vgpr16_vgpr17 killed $exec
 ; W64-O0-NEXT:    v_mov_b32_e32 v15, v5
 ; W64-O0-NEXT:    s_waitcnt vmcnt(3)
@@ -518,9 +512,6 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
-; W64-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 killed $exec
-; W64-O0-NEXT:    ; kill: def $vgpr8 killed $vgpr8 killed $exec
-; W64-O0-NEXT:    ; kill: def $vgpr7 killed $vgpr7 killed $exec
 ; W64-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4_vgpr5 killed $exec
 ; W64-O0-NEXT:    v_mov_b32_e32 v3, v8
 ; W64-O0-NEXT:    v_mov_b32_e32 v4, v7
@@ -532,7 +523,6 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
-; W64-O0-NEXT:    ; kill: def $vgpr12 killed $vgpr12 killed $exec
 ; W64-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; W64-O0-NEXT:    v_mov_b32_e32 v2, v12
 ; W64-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
@@ -540,7 +530,6 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
-; W64-O0-NEXT:    ; kill: def $vgpr10 killed $vgpr10 killed $exec
 ; W64-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; W64-O0-NEXT:    v_mov_b32_e32 v1, v10
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
@@ -1007,9 +996,6 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
-; W64-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
-; W64-O0-NEXT:    ; kill: def $vgpr11 killed $vgpr11 killed $exec
-; W64-O0-NEXT:    ; kill: def $vgpr9 killed $vgpr9 killed $exec
 ; W64-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
 ; W64-O0-NEXT:    v_mov_b32_e32 v1, v11
 ; W64-O0-NEXT:    v_mov_b32_e32 v2, v10
@@ -1018,9 +1004,6 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
-; W64-O0-NEXT:    ; kill: def $vgpr13 killed $vgpr13 killed $exec
-; W64-O0-NEXT:    ; kill: def $vgpr7 killed $vgpr7 killed $exec
-; W64-O0-NEXT:    ; kill: def $vgpr6 killed $vgpr6 killed $exec
 ; W64-O0-NEXT:    ; kill: def $vgpr13 killed $vgpr13 def $vgpr13_vgpr14_vgpr15_vgpr16 killed $exec
 ; W64-O0-NEXT:    v_mov_b32_e32 v14, v7
 ; W64-O0-NEXT:    v_mov_b32_e32 v15, v6
@@ -1032,7 +1015,6 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; W64-O0-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:40 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
-; W64-O0-NEXT:    ; kill: def $vgpr12 killed $vgpr12 killed $exec
 ; W64-O0-NEXT:    ; kill: def $vgpr4 killed $vgpr4 def $vgpr4_vgpr5 killed $exec
 ; W64-O0-NEXT:    v_mov_b32_e32 v5, v12
 ; W64-O0-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
