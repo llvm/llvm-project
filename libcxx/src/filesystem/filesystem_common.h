@@ -12,6 +12,7 @@
 #include <__assert>
 #include <__config>
 #include <array>
+#include <cerrno>
 #include <chrono>
 #include <climits>
 #include <cstdarg>

@@ -27,9 +27,6 @@
 // This test uses --trace-includes, which is not supported by GCC.
 // UNSUPPORTED: gcc
 
-// This test doesn't work on AIX, but it should. Needs investigation.
-// XFAIL: buildhost=aix
-
 // This test is not supported when we remove the transitive includes provided for backwards
 // compatibility. When we bulk-remove them, we'll adjust the includes that are expected by
 // this test instead.

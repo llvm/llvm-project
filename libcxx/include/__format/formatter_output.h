@@ -19,7 +19,6 @@
 #include <__chrono/statically_widen.h>
 #include <__concepts/same_as.h>
 #include <__config>
-#include <__errc>
 #include <__format/buffer.h>
 #include <__format/concepts.h>
 #include <__format/escaped_output_table.h>
@@ -29,6 +28,7 @@
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/concepts.h>
 #include <__iterator/readable_traits.h> // iter_value_t
+#include <__system_error/errc.h>
 #include <__type_traits/make_unsigned.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
