@@ -12577,7 +12577,8 @@ multiclass VNNI_rmb<bits<8> Op, string OpStr, SDNode OpNode,
                                    (VTI.VT (OpNode VTI.RC:$src1, VTI.RC:$src2,
                                             (VTI.VT (VTI.LdFrag addr:$src3))))>,
                                    EVEX_4V, EVEX_CD8<32, CD8VF>, T8PD,
-                                   Sched<[sched.Folded, sched.ReadAfterFold]>;
+                                   Sched<[sched.Folded, sched.ReadAfterFold,
+                                          sched.ReadAfterFold]>;
   defm mb :   AVX512_maskable_3src<Op, MRMSrcMem, VTI, (outs VTI.RC:$dst),
                                    (ins VTI.RC:$src2, VTI.ScalarMemOp:$src3),
                                    OpStr, "${src3}"#VTI.BroadcastStr#", $src2",
@@ -12585,7 +12586,8 @@ multiclass VNNI_rmb<bits<8> Op, string OpStr, SDNode OpNode,
                                    (OpNode VTI.RC:$src1, VTI.RC:$src2,
                                     (VTI.VT (VTI.BroadcastLdFrag addr:$src3)))>,
                                    EVEX_4V, EVEX_CD8<32, CD8VF>, EVEX_B,
-                                   T8PD, Sched<[sched.Folded, sched.ReadAfterFold]>;
+                                   T8PD, Sched<[sched.Folded, sched.ReadAfterFold,
+                                                sched.ReadAfterFold]>;
   }
 }
 
