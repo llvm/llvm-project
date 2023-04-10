@@ -154,14 +154,18 @@ bool X86FixupInstTuningPass::processInstruction(
     return true;
   };
 
-  // `vunpcklpd/vmovlhps r, r` -> `vshufpd r, r, 0x00`
-  // `vunpckhpd/vmovlhps r, r` -> `vshufpd r, r, 0xff`
-  // `vunpcklpd r, r, k` -> `vshufpd r, r, 0x00`
-  // `vunpckhpd r, r, k` -> `vshufpd r, r, 0xff`
-  // iff `vshufps` is faster than `vunpck{l|h}pd`. Otherwise stick with
-  // `vunpck{l|h}pd` as it uses less code size.
-  // TODO: Look into using `{VP}UNPCK{L|H}QDQ{...}` instead of `{V}SHUF{...}PS`
-  // as the replacement. `{VP}UNPCK{L|H}QDQ{...}` has no codesize cost.
+  // `vunpcklpd/vmovlhps r, r` -> `vunpcklqdq r, r`/`vshufpd r, r, 0x00`
+  // `vunpckhpd/vmovlhps r, r` -> `vunpckhqdq r, r`/`vshufpd r, r, 0xff`
+  // `vunpcklpd r, r, k` -> `vunpcklqdq r, r, k`/`vshufpd r, r, k, 0x00`
+  // `vunpckhpd r, r, k` -> `vunpckhqdq r, r, k`/`vshufpd r, r, k, 0xff`
+  // `vunpcklpd r, m` -> `vunpcklqdq r, m, k`
+  // `vunpckhpd r, m` -> `vunpckhqdq r, m, k`
+  // `vunpcklpd r, m, k` -> `vunpcklqdq r, m, k`
+  // `vunpckhpd r, m, k` -> `vunpckhqdq r, m, k`
+  // 1) If no bypass delay and `vunpck{l|h}qdq` faster than `vunpck{l|h}pd`
+  //        -> `vunpck{l|h}qdq`
+  // 2) If `vshufpd` faster than `vunpck{l|h}pd`
+  //        -> `vshufpd`
   auto ProcessUNPCKPD = [&](unsigned NewOpc, unsigned MaskImm) -> bool {
     if (!NewOpcPreferable(NewOpc, /*ReplaceInTie*/ false))
       return false;
@@ -171,11 +175,32 @@ bool X86FixupInstTuningPass::processInstruction(
     return true;
   };
 
-  auto ProcessUNPCKLPDrr = [&](unsigned NewOpc) -> bool {
+  auto ProcessUNPCKPDToIntDomain = [&](unsigned NewOpc) -> bool {
+    // TODO it may be worth it to set ReplaceInTie to `true` as there is no real
+    // downside to the integer unpck, but if someone doesn't specify exact
+    // target we won't find it faster.
+    if (!ST->hasNoDomainDelayShuffle() ||
+        !NewOpcPreferable(NewOpc, /*ReplaceInTie*/ false))
+      return false;
+    MI.setDesc(TII->get(NewOpc));
+    return true;
+  };
+
+  auto ProcessUNPCKLPDrr = [&](unsigned NewOpcIntDomain,
+                               unsigned NewOpc) -> bool {
+    if (ProcessUNPCKPDToIntDomain(NewOpcIntDomain))
+      return true;
     return ProcessUNPCKPD(NewOpc, 0x00);
   };
-  auto ProcessUNPCKHPDrr = [&](unsigned NewOpc) -> bool {
+  auto ProcessUNPCKHPDrr = [&](unsigned NewOpcIntDomain,
+                               unsigned NewOpc) -> bool {
+    if (ProcessUNPCKPDToIntDomain(NewOpcIntDomain))
+      return true;
     return ProcessUNPCKPD(NewOpc, 0xff);
+  };
+
+  auto ProcessUNPCKPDrm = [&](unsigned NewOpcIntDomain) -> bool {
+    return ProcessUNPCKPDToIntDomain(NewOpcIntDomain);
   };
 
   switch (Opc) {
@@ -226,64 +251,106 @@ bool X86FixupInstTuningPass::processInstruction(
   case X86::VPERMILPSZmik:
     return ProcessVPERMILPSmi(X86::VPSHUFDZmik);
 
-    // TODO: {V}UNPCK{L|H}PD{...} is probably safe to transform to
-    // `{VP}UNPCK{L|H}QDQ{...}` which gets the same perf benefit as
-    // `{V}SHUF{...}PS` but 1) without increasing code size and 2) can also
-    // handle the `mr` case. ICL doesn't have a domain penalty for replacing
-    // float unpck -> int unpck, but at this time, I haven't verified the set of
-    // processors where its safe.
   case X86::MOVLHPSrr:
   case X86::UNPCKLPDrr:
-    return ProcessUNPCKLPDrr(X86::SHUFPDrri);
+    return ProcessUNPCKLPDrr(X86::PUNPCKLQDQrr, X86::SHUFPDrri);
   case X86::VMOVLHPSrr:
   case X86::VUNPCKLPDrr:
-    return ProcessUNPCKLPDrr(X86::VSHUFPDrri);
+    return ProcessUNPCKLPDrr(X86::VPUNPCKLQDQrr, X86::VSHUFPDrri);
   case X86::VUNPCKLPDYrr:
-    return ProcessUNPCKLPDrr(X86::VSHUFPDYrri);
+    return ProcessUNPCKLPDrr(X86::VPUNPCKLQDQYrr, X86::VSHUFPDYrri);
     // VMOVLHPS is always 128 bits.
   case X86::VMOVLHPSZrr:
   case X86::VUNPCKLPDZ128rr:
-    return ProcessUNPCKLPDrr(X86::VSHUFPDZ128rri);
+    return ProcessUNPCKLPDrr(X86::VPUNPCKLQDQZ128rr, X86::VSHUFPDZ128rri);
   case X86::VUNPCKLPDZ256rr:
-    return ProcessUNPCKLPDrr(X86::VSHUFPDZ256rri);
+    return ProcessUNPCKLPDrr(X86::VPUNPCKLQDQZ256rr, X86::VSHUFPDZ256rri);
   case X86::VUNPCKLPDZrr:
-    return ProcessUNPCKLPDrr(X86::VSHUFPDZrri);
+    return ProcessUNPCKLPDrr(X86::VPUNPCKLQDQZrr, X86::VSHUFPDZrri);
   case X86::VUNPCKLPDZ128rrk:
-    return ProcessUNPCKLPDrr(X86::VSHUFPDZ128rrik);
+    return ProcessUNPCKLPDrr(X86::VPUNPCKLQDQZ128rrk, X86::VSHUFPDZ128rrik);
   case X86::VUNPCKLPDZ256rrk:
-    return ProcessUNPCKLPDrr(X86::VSHUFPDZ256rrik);
+    return ProcessUNPCKLPDrr(X86::VPUNPCKLQDQZ256rrk, X86::VSHUFPDZ256rrik);
   case X86::VUNPCKLPDZrrk:
-    return ProcessUNPCKLPDrr(X86::VSHUFPDZrrik);
+    return ProcessUNPCKLPDrr(X86::VPUNPCKLQDQZrrk, X86::VSHUFPDZrrik);
   case X86::VUNPCKLPDZ128rrkz:
-    return ProcessUNPCKLPDrr(X86::VSHUFPDZ128rrikz);
+    return ProcessUNPCKLPDrr(X86::VPUNPCKLQDQZ128rrkz, X86::VSHUFPDZ128rrikz);
   case X86::VUNPCKLPDZ256rrkz:
-    return ProcessUNPCKLPDrr(X86::VSHUFPDZ256rrikz);
+    return ProcessUNPCKLPDrr(X86::VPUNPCKLQDQZ256rrkz, X86::VSHUFPDZ256rrikz);
   case X86::VUNPCKLPDZrrkz:
-    return ProcessUNPCKLPDrr(X86::VSHUFPDZrrikz);
+    return ProcessUNPCKLPDrr(X86::VPUNPCKLQDQZrrkz, X86::VSHUFPDZrrikz);
   case X86::UNPCKHPDrr:
-    return ProcessUNPCKHPDrr(X86::SHUFPDrri);
+    return ProcessUNPCKHPDrr(X86::PUNPCKHQDQrr, X86::SHUFPDrri);
   case X86::VUNPCKHPDrr:
-    return ProcessUNPCKHPDrr(X86::VSHUFPDrri);
+    return ProcessUNPCKHPDrr(X86::VPUNPCKHQDQrr, X86::VSHUFPDrri);
   case X86::VUNPCKHPDYrr:
-    return ProcessUNPCKHPDrr(X86::VSHUFPDYrri);
+    return ProcessUNPCKHPDrr(X86::VPUNPCKHQDQYrr, X86::VSHUFPDYrri);
   case X86::VUNPCKHPDZ128rr:
-    return ProcessUNPCKHPDrr(X86::VSHUFPDZ128rri);
+    return ProcessUNPCKHPDrr(X86::VPUNPCKHQDQZ128rr, X86::VSHUFPDZ128rri);
   case X86::VUNPCKHPDZ256rr:
-    return ProcessUNPCKHPDrr(X86::VSHUFPDZ256rri);
+    return ProcessUNPCKHPDrr(X86::VPUNPCKHQDQZ256rr, X86::VSHUFPDZ256rri);
   case X86::VUNPCKHPDZrr:
-    return ProcessUNPCKHPDrr(X86::VSHUFPDZrri);
+    return ProcessUNPCKHPDrr(X86::VPUNPCKHQDQZrr, X86::VSHUFPDZrri);
   case X86::VUNPCKHPDZ128rrk:
-    return ProcessUNPCKHPDrr(X86::VSHUFPDZ128rrik);
+    return ProcessUNPCKHPDrr(X86::VPUNPCKHQDQZ128rrk, X86::VSHUFPDZ128rrik);
   case X86::VUNPCKHPDZ256rrk:
-    return ProcessUNPCKHPDrr(X86::VSHUFPDZ256rrik);
+    return ProcessUNPCKHPDrr(X86::VPUNPCKHQDQZ256rrk, X86::VSHUFPDZ256rrik);
   case X86::VUNPCKHPDZrrk:
-    return ProcessUNPCKHPDrr(X86::VSHUFPDZrrik);
+    return ProcessUNPCKHPDrr(X86::VPUNPCKHQDQZrrk, X86::VSHUFPDZrrik);
   case X86::VUNPCKHPDZ128rrkz:
-    return ProcessUNPCKHPDrr(X86::VSHUFPDZ128rrikz);
+    return ProcessUNPCKHPDrr(X86::VPUNPCKHQDQZ128rrkz, X86::VSHUFPDZ128rrikz);
   case X86::VUNPCKHPDZ256rrkz:
-    return ProcessUNPCKHPDrr(X86::VSHUFPDZ256rrikz);
+    return ProcessUNPCKHPDrr(X86::VPUNPCKHQDQZ256rrkz, X86::VSHUFPDZ256rrikz);
   case X86::VUNPCKHPDZrrkz:
-    return ProcessUNPCKHPDrr(X86::VSHUFPDZrrikz);
+    return ProcessUNPCKHPDrr(X86::VPUNPCKHQDQZrrkz, X86::VSHUFPDZrrikz);
+  case X86::UNPCKLPDrm:
+    return ProcessUNPCKPDrm(X86::PUNPCKLQDQrm);
+  case X86::VUNPCKLPDrm:
+    return ProcessUNPCKPDrm(X86::VPUNPCKLQDQrm);
+  case X86::VUNPCKLPDYrm:
+    return ProcessUNPCKPDrm(X86::VPUNPCKLQDQYrm);
+  case X86::VUNPCKLPDZ128rm:
+    return ProcessUNPCKPDrm(X86::VPUNPCKLQDQZ128rm);
+  case X86::VUNPCKLPDZ256rm:
+    return ProcessUNPCKPDrm(X86::VPUNPCKLQDQZ256rm);
+  case X86::VUNPCKLPDZrm:
+    return ProcessUNPCKPDrm(X86::VPUNPCKLQDQZrm);
+  case X86::VUNPCKLPDZ128rmk:
+    return ProcessUNPCKPDrm(X86::VPUNPCKLQDQZ128rmk);
+  case X86::VUNPCKLPDZ256rmk:
+    return ProcessUNPCKPDrm(X86::VPUNPCKLQDQZ256rmk);
+  case X86::VUNPCKLPDZrmk:
+    return ProcessUNPCKPDrm(X86::VPUNPCKLQDQZrmk);
+  case X86::VUNPCKLPDZ128rmkz:
+    return ProcessUNPCKPDrm(X86::VPUNPCKLQDQZ128rmkz);
+  case X86::VUNPCKLPDZ256rmkz:
+    return ProcessUNPCKPDrm(X86::VPUNPCKLQDQZ256rmkz);
+  case X86::VUNPCKLPDZrmkz:
+    return ProcessUNPCKPDrm(X86::VPUNPCKLQDQZrmkz);
+  case X86::UNPCKHPDrm:
+    return ProcessUNPCKPDrm(X86::PUNPCKHQDQrm);
+  case X86::VUNPCKHPDrm:
+    return ProcessUNPCKPDrm(X86::VPUNPCKHQDQrm);
+  case X86::VUNPCKHPDYrm:
+    return ProcessUNPCKPDrm(X86::VPUNPCKHQDQYrm);
+  case X86::VUNPCKHPDZ128rm:
+    return ProcessUNPCKPDrm(X86::VPUNPCKHQDQZ128rm);
+  case X86::VUNPCKHPDZ256rm:
+    return ProcessUNPCKPDrm(X86::VPUNPCKHQDQZ256rm);
+  case X86::VUNPCKHPDZrm:
+    return ProcessUNPCKPDrm(X86::VPUNPCKHQDQZrm);
+  case X86::VUNPCKHPDZ128rmk:
+    return ProcessUNPCKPDrm(X86::VPUNPCKHQDQZ128rmk);
+  case X86::VUNPCKHPDZ256rmk:
+    return ProcessUNPCKPDrm(X86::VPUNPCKHQDQZ256rmk);
+  case X86::VUNPCKHPDZrmk:
+    return ProcessUNPCKPDrm(X86::VPUNPCKHQDQZrmk);
+  case X86::VUNPCKHPDZ128rmkz:
+    return ProcessUNPCKPDrm(X86::VPUNPCKHQDQZ128rmkz);
+  case X86::VUNPCKHPDZ256rmkz:
+    return ProcessUNPCKPDrm(X86::VPUNPCKHQDQZ256rmkz);
+  case X86::VUNPCKHPDZrmkz:
+    return ProcessUNPCKPDrm(X86::VPUNPCKHQDQZrmkz);
   default:
     return false;
   }
