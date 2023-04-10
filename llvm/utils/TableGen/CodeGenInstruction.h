@@ -16,7 +16,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/MachineValueType.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include <cassert>
 #include <string>
 #include <utility>
