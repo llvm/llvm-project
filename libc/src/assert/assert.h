@@ -8,7 +8,7 @@
 
 #include "src/assert/__assert_fail.h"
 
-// There is no header guard here since assert is intended to capable of being
+// There is no header guard here since assert is intended to be capable of being
 // included multiple times with NDEBUG defined differently, causing different
 // behavior.
 
