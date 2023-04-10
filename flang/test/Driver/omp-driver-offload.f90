@@ -7,6 +7,42 @@
 ! CHECK-OPENMP: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}}.f90"
 ! CHECK-OPENMP-NOT: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-device" {{.*}}.f90"
 
+! Test regular -fopenmp with offload, and invocation filtering options
+! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: -fopenmp --offload-arch=gfx90a --offload-arch=sm_70 \
+! RUN: --target=aarch64-unknown-linux-gnu \
+! RUN:   | FileCheck %s --check-prefix=OFFLOAD-HOST-AND-DEVICE
+
+! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: -fopenmp --offload-arch=gfx90a --offload-arch=sm_70 --offload-host-device \
+! RUN: --target=aarch64-unknown-linux-gnu \
+! RUN:   | FileCheck %s --check-prefix=OFFLOAD-HOST-AND-DEVICE
+
+! OFFLOAD-HOST-AND-DEVICE: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
+! OFFLOAD-HOST-AND-DEVICE-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "amdgcn-amd-amdhsa"
+! OFFLOAD-HOST-AND-DEVICE-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "nvptx64-nvidia-cuda"
+! OFFLOAD-HOST-AND-DEVICE: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
+
+! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: -fopenmp --offload-arch=gfx90a --offload-arch=sm_70 --offload-host-only \
+! RUN: --target=aarch64-unknown-linux-gnu \
+! RUN:   | FileCheck %s --check-prefix=OFFLOAD-HOST
+
+! OFFLOAD-HOST: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
+! OFFLOAD-HOST-NOT: "-triple" "amdgcn-amd-amdhsa"
+! OFFLOAD-HOST-NOT: "-triple" "nvptx64-nvidia-cuda"
+! OFFLOAD-HOST-NOT: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
+
+! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: -fopenmp --offload-arch=gfx90a --offload-arch=sm_70 --offload-device-only \
+! RUN: --target=aarch64-unknown-linux-gnu \
+! RUN:   | FileCheck %s --check-prefix=OFFLOAD-DEVICE
+
+! OFFLOAD-DEVICE: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
+! OFFLOAD-DEVICE-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "amdgcn-amd-amdhsa"
+! OFFLOAD-DEVICE-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "nvptx64-nvidia-cuda"
+! OFFLOAD-DEVICE-NOT: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
+
 ! Test regular -fopenmp with offload for basic fopenmp-is-device flag addition and correct fopenmp 
 ! RUN: %flang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa %s 2>&1 | FileCheck --check-prefixes=CHECK-OPENMP-IS-DEVICE %s
 ! CHECK-OPENMP-IS-DEVICE: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-device" {{.*}}.f90"
