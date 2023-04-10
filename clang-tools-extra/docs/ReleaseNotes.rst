@@ -302,8 +302,8 @@ Changes in existing checks
   ``DISABLED_`` in the test suite name.
 
 - Improved :doc:`modernize-concat-nested-namespaces
-  <clang-tidy/checks/modernize/concat-nested-namespaces>` to fix incorrect fixes when 
-  using macro between namespace declarations and false positive when using namespace 
+  <clang-tidy/checks/modernize/concat-nested-namespaces>` to fix incorrect fixes when
+  using macro between namespace declarations and false positive when using namespace
   with attributes.
 
 - Fixed a false positive in :doc:`performance-no-automatic-move

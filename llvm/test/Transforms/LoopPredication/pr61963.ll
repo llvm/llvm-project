@@ -12,19 +12,14 @@ define i32 @foo(ptr addrspace(1) %arg) {
 ; CHECK-SAME: (ptr addrspace(1) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[INIT_VAL:%.*]] = load i32, ptr addrspace(1) [[ARG]], align 4
+; CHECK-NEXT:    [[WIDENABLE_COND11:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    br label [[LOOP_OUTER:%.*]]
 ; CHECK:       loop_outer:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[PHI36:%.*]], [[OUTER_LOOP_LATCH:%.*]] ], [ 42, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[PHI21:%.*]] = phi i32 [ [[ADD39:%.*]], [[OUTER_LOOP_LATCH]] ], [ [[INIT_VAL]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[ADD27:%.*]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[ICMP28:%.*]] = icmp eq i32 [[ADD27]], 60
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 -2, [[IV]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 8)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], [[UMIN]]
-; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[TMP1]]
-; CHECK-NEXT:    [[WIDENABLE_COND11:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[WIDENABLE_COND11]]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[INNER_LOOP_PH:%.*]], label [[DEOPT9:%.*]]
+; CHECK-NEXT:    br i1 [[WIDENABLE_COND11]], label [[INNER_LOOP_PH:%.*]], label [[DEOPT9:%.*]]
 ; CHECK:       inner_loop_ph:
 ; CHECK-NEXT:    store atomic i32 606, ptr addrspace(1) [[ARG]] unordered, align 4
 ; CHECK-NEXT:    br label [[INNER_LOOP:%.*]]
@@ -33,7 +28,7 @@ define i32 @foo(ptr addrspace(1) %arg) {
 ; CHECK-NEXT:    [[PHI44:%.*]] = phi i32 [ [[ADD27]], [[INNER_LOOP_PH]] ], [ [[ADD48:%.*]], [[INNER_LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[ADD48]] = add i32 [[PHI44]], 1
 ; CHECK-NEXT:    [[ICMP49:%.*]] = icmp eq i32 [[ADD48]], 0
-; CHECK-NEXT:    br i1 false, label [[DEOPT57:%.*]], label [[INNER_LOOP_LATCH]]
+; CHECK-NEXT:    br i1 [[ICMP49]], label [[DEOPT57:%.*]], label [[INNER_LOOP_LATCH]]
 ; CHECK:       inner_loop_latch:
 ; CHECK-NEXT:    store atomic i32 606, ptr addrspace(1) [[ARG]] unordered, align 4
 ; CHECK-NEXT:    [[ADD55]] = add nuw nsw i32 [[PHI43]], 1
@@ -45,10 +40,10 @@ define i32 @foo(ptr addrspace(1) %arg) {
 ; CHECK-NEXT:    br label [[LOOP_OUTER]]
 ; CHECK:       deopt9:
 ; CHECK-NEXT:    [[LCSSA:%.*]] = phi i32 [ [[INIT_VAL]], [[LOOP_OUTER]] ]
-; CHECK-NEXT:    [[CALL53:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32(i32 13) [ "deopt"(i32 0, i32 1, i32 1291853205, i32 127, i32 3, i32 13, i32 0, i32 0, i32 8, i32 3, i32 1, i32 3, i32 606, i32 7, ptr null, i32 7, ptr null, i32 3, i32 52, i32 7, ptr null, i32 3, i32 36, i32 7, ptr null, i32 7, ptr null, i32 3, i32 1, i32 3, i32 0, i32 0, i32 8, i32 3, i32 [[LCSSA]], i32 3, i32 42, i32 7, ptr null) ]
+; CHECK-NEXT:    [[CALL53:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32(i32 13) [ "deopt"(i32 606, i32 [[LCSSA]]) ]
 ; CHECK-NEXT:    ret i32 [[CALL53]]
 ; CHECK:       deopt57:
-; CHECK-NEXT:    [[CALL62:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32(i32 12) [ "deopt"(i32 0, i32 1, i32 1291853205, i32 99, i32 2, i32 13, i32 0, i32 3, i32 0, i32 3, i32 0, i32 7, ptr null, i32 7, ptr null, i32 3, i32 0, i32 7, ptr null, i32 3, i32 24, i32 7, ptr null, i32 7, ptr null, i32 3, i32 1, i32 3, i32 60, i32 0, i32 8, i32 3, i32 59, i32 3, i32 poison, i32 7, ptr null) ]
+; CHECK-NEXT:    [[CALL62:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32(i32 12) [ "deopt"(i32 7) ]
 ; CHECK-NEXT:    ret i32 [[CALL62]]
 ;
 entry:
@@ -87,11 +82,11 @@ outer_loop_latch:                                             ; preds = %inner_l
 
 deopt9:                                           ; preds = %loop_outer
   %lcssa = phi i32 [ %init_val, %loop_outer ]
-  %call53 = call i32 (...) @llvm.experimental.deoptimize.i32(i32 13) [ "deopt"(i32 0, i32 1, i32 1291853205, i32 127, i32 3, i32 13, i32 0, i32 0, i32 8, i32 3, i32 1, i32 3, i32 606, i32 7, ptr null, i32 7, ptr null, i32 3, i32 52, i32 7, ptr null, i32 3, i32 36, i32 7, ptr null, i32 7, ptr null, i32 3, i32 1, i32 3, i32 0, i32 0, i32 8, i32 3, i32 %lcssa, i32 3, i32 42, i32 7, ptr null) ]
+  %call53 = call i32 (...) @llvm.experimental.deoptimize.i32(i32 13) [ "deopt"(i32 606, i32 %lcssa) ]
   ret i32 %call53
 
 deopt57:                                             ; preds = %inner_loop
-  %call62 = call i32 (...) @llvm.experimental.deoptimize.i32(i32 12) [ "deopt"(i32 0, i32 1, i32 1291853205, i32 99, i32 2, i32 13, i32 0, i32 3, i32 0, i32 3, i32 0, i32 7, ptr null, i32 7, ptr null, i32 3, i32 0, i32 7, ptr null, i32 3, i32 24, i32 7, ptr null, i32 7, ptr null, i32 3, i32 1, i32 3, i32 60, i32 0, i32 8, i32 3, i32 59, i32 3, i32 poison, i32 7, ptr null) ]
+  %call62 = call i32 (...) @llvm.experimental.deoptimize.i32(i32 12) [ "deopt"(i32 7) ]
   ret i32 %call62
 }
 

@@ -1085,8 +1085,8 @@ exit:
 define void @test_memssa() {
 ; CHECK-LABEL: @test_memssa(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[TMP:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    br i1 [[TMP]], label [[BB3:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    unreachable
