@@ -4362,12 +4362,38 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
 
-  const APFloat *C;
-  if (match(V, m_APFloat(C))) {
-    // We know all of the classes for a scalar constant or a splat vector
-    // constant!
-    Known.KnownFPClasses = C->classify();
-    Known.SignBit = C->isNegative();
+  if (auto *CFP = dyn_cast_or_null<ConstantFP>(V)) {
+    Known.KnownFPClasses = CFP->getValueAPF().classify();
+    Known.SignBit = CFP->isNegative();
+    return;
+  }
+
+  // Try to handle fixed width vector constants
+  auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
+  const Constant *CV = dyn_cast<Constant>(V);
+  if (VFVTy && CV) {
+    Known.KnownFPClasses = fcNone;
+
+    // For vectors, verify that each element is not NaN.
+    unsigned NumElts = VFVTy->getNumElements();
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *Elt = CV->getAggregateElement(i);
+      if (!Elt) {
+        Known = KnownFPClass();
+        return;
+      }
+      if (isa<UndefValue>(Elt))
+        continue;
+      auto *CElt = dyn_cast<ConstantFP>(Elt);
+      if (!CElt) {
+        Known = KnownFPClass();
+        return;
+      }
+
+      KnownFPClass KnownElt{CElt->getValueAPF().classify(), CElt->isNegative()};
+      Known |= KnownElt;
+    }
+
     return;
   }
 
