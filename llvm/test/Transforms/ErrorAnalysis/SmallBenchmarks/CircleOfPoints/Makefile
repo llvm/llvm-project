@@ -1,8 +1,7 @@
 LLVM_PROJECT_ROOT = /home/tanmay/Documents/Tools/llvm-project
 RUN_TIME_LIB_ROOT = /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis
 
-# -emit-pristine-llvm: https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang8-emit-pristine-llvm
-OP = -emit-pristine-llvm
+OP =  -O1
 CXX = $(LLVM_PROJECT_ROOT)/build/bin/clang
 # [DEBUG_FLAG=-DFAF_DEBUG<=debug level>] [MEMORYOPT=-DMEMORY_OPT]
 CXX_FLAGS = $(DEBUG_FLAG) $(MEMORY_OPT) -g -S -emit-llvm
@@ -12,25 +11,25 @@ OPT_FLAGS = -S -passes=error-analysis
 
 LLI = $(LLVM_PROJECT_ROOT)/build/bin/lli
 
-RUN_TIME_LIB_FLAGS = -function-to-analyze solve_lorenz \
-					-evaluations 10
+RUN_TIME_LIB_FLAGS = -function-to-analyze compute_center \
+					-evaluations 0
 
 RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.h \
 				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AmplificationFactor.h \
 				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h \
 				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/Statistics.h
 
-run: lorenz_simple_ac.ll
-	$(LLI) lorenz_simple_ac.ll
+run: circleofpts_ac.ll
+	$(LLI) circleofpts_ac.ll
 
-lorenz_simple_ac.ll: lorenz_simple.ll
-	$(OPT) $(OPT_FLAGS) $(RUN_TIME_LIB_FLAGS) lorenz_simple.ll -o lorenz_simple_ac.ll
+circleofpts_ac.ll: circleofpts.ll
+	$(OPT) $(OPT_FLAGS) $(RUN_TIME_LIB_FLAGS) circleofpts.ll -o circleofpts_ac.ll
 
-lorenz_simple.ll:
-	$(CXX) $(CXX_FLAGS) $(RUN_TIME_FILES) $(OP) lorenz_simple.c -o lorenz_simple.ll
+circleofpts.ll:
+	$(CXX) $(CXX_FLAGS) $(RUN_TIME_FILES) $(OP) circleofpts.cpp -o circleofpts.ll
 
 build_original:
-	gcc lorenz_simple.c -lm -o lorenz_simple.out
+	gcc circleofpts.cpp -lm -o circleofpts.out
 
 clean:
-	rm -rf lorenz_simple.ll lorenz_simple_ac.ll .fAF_logs a.out *.txt
+	rm -rf circleofpts.ll circleofpts_ac.ll .fAF_logs a.out *.txt

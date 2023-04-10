@@ -1,0 +1,1 @@
+Several implementations of asin(). Given to me by Ian Briggs for testing LLFPTrax. Never got around to using it.
