@@ -635,6 +635,14 @@ def HasVendorXTHeadVdot : Predicate<"Subtarget->hasVendorXTHeadVdot()">,
                                     AssemblerPredicate<(all_of FeatureVendorXTHeadVdot),
                                     "'xtheadvdot' (T-Head Vector Extensions for Dot)">;
 
+def FeatureVendorXSfvcp
+    : SubtargetFeature<"xsfvcp", "HasVendorXSfvcp", "true",
+                       "XSfvcp (SiFive Custom Vector Coprocessor Interface Instructions)",
+                       [FeatureStdExtZve32x]>;
+def HasVendorXSfvcp : Predicate<"Subtarget->hasVendorXSfvcp()">,
+                                AssemblerPredicate<(all_of FeatureVendorXSfvcp),
+                                "'XSfvcp' (SiFive Custom Vector Coprocessor Interface Instructions)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
