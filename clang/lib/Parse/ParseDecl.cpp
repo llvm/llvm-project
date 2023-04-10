@@ -3803,6 +3803,10 @@ void Parser::ParseDeclarationSpecifiers(
         }
         if (!NextToken().isOneOf(tok::kw_auto, tok::kw_decltype))
             goto DoneWithDeclSpec;
+
+        if (TemplateId && !isInvalid && Actions.CheckTypeConstraint(TemplateId))
+            TemplateId = nullptr;
+
         ConsumeAnnotationToken();
         SourceLocation AutoLoc = Tok.getLocation();
         if (TryConsumeToken(tok::kw_decltype)) {
