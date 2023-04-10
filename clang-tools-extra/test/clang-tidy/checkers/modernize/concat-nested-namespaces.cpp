@@ -214,6 +214,18 @@ void foo() {}
 // CHECK-FIXES: namespace avoid_change_close_comment::inner {
 // CHECK-FIXES-NOT: } // namespace avoid_add_close_comment::inner
 
+namespace /*::*/ comment_colon_1 {
+void foo() {}
+} // namespace comment_colon_1
+// CHECK-FIXES: namespace /*::*/ comment_colon_1 {
+
+// CHECK-MESSAGES-DAG: :[[@LINE+1]]:1: warning: nested namespaces can be concatenated [modernize-concat-nested-namespaces]
+namespace /*::*/ comment_colon_2 {
+namespace comment_colon_2 {
+void foo() {}
+} // namespace comment_colon_2
+} // namespace comment_colon_2
+
 int main() {
   n26::n27::n28::n29::n30::t();
 #ifdef IEXIST
