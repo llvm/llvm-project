@@ -1330,9 +1330,9 @@ packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
                    ArrayRef<int64_t> mnkPaddedSizesNextMultipleOf,
                    ArrayRef<int64_t> mnkOrder) {
   assert(mnkPackedSizes.size() == 3 && "unexpected num of packing sizes");
-  assert(mnkPaddedSizesNextMultipleOf.empty() ||
-         mnkPaddedSizesNextMultipleOf.size() == 3 &&
-             "num of packing sizes next multiple should be empty or of size 3");
+  assert((mnkPaddedSizesNextMultipleOf.empty() ||
+          mnkPaddedSizesNextMultipleOf.size() == 3) &&
+         "num of packing sizes next multiple should be empty or of size 3");
   assert(mnkOrder.size() == 3 && "unexpected mnkOrder size");
   assert(isPermutationVector(mnkOrder) && "expected a permutation");
 
