@@ -673,3 +673,20 @@ bool MachineRegisterInfo::isGeneralPurposeRegister(const MachineFunction &MF,
                                                    MCRegister Reg) const {
   return getTargetRegisterInfo()->isGeneralPurposeRegister(MF, Reg);
 }
+
+// BEGIN SWIFT
+bool llvm::isSwiftAsyncContext(const MachineFunction &MF, Register Reg) {
+  const llvm::Function &F = MF.getFunction();
+  if (!MF.getProperties().hasProperty(
+          MachineFunctionProperties::Property::TracksLiveness))
+    return false;
+  unsigned I = 0;
+  for (auto R : MF.getRegInfo().liveins()) {
+    if (R.first == (unsigned)Reg &&
+        F.hasParamAttribute(I, Attribute::SwiftAsync))
+      return true;
+    ++I;
+  }
+  return false;
+}
+// END SWIFT
