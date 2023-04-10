@@ -2569,6 +2569,11 @@ let HasMasked = false, HasVL = false, IRName = "" in {
   let Name = "vset_v", Log2LMUL = [0, 1, 2], MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
       {
+        if (isa<StructType>(ResultType)) // For tuple type
+          // Insert value (operand 2) into index (operand 1) of vtuple (operand 0)
+          return Builder.CreateInsertValue(
+            Ops[0], Ops[2],
+            {(unsigned)cast<ConstantInt>(Ops[1])->getZExtValue()});
         auto *ResVecTy = cast<ScalableVectorType>(ResultType);
         auto *VecTy = cast<ScalableVectorType>(Ops[2]->getType());
         // Mask to only valid indices.
@@ -2585,6 +2590,12 @@ let HasMasked = false, HasVL = false, IRName = "" in {
     foreach dst_lmul = ["(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
       def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "v" # dst_lmul # "vKzv", "csilxfd">;
       def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "Uv" # dst_lmul #"UvKzUv", "csil">;
+    }
+    foreach nf = [2] in {
+      let Log2LMUL = [0] in {
+        defvar T = "(Tuple:" # nf # ")";
+        def : RVVBuiltin<T # "vv", T # "v" # T # "vKzv", "i", "v">;
+      }
     }
   }
 }
