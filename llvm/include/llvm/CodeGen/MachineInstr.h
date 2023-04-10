@@ -1946,6 +1946,10 @@ struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr*> {
   }
 };
 
+// BEGIN SWIFT
+bool isSwiftAsyncContext(const MachineFunction &MF, Register Reg);
+// END SWIFT
+  
 //===----------------------------------------------------------------------===//
 // Debugging Support
 

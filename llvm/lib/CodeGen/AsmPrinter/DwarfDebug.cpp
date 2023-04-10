@@ -1562,6 +1562,20 @@ static bool validThroughout(LexicalScopes &LScopes,
   if (LSRange.size() == 0)
     return false;
 
+  // BEGIN SWIFT
+  // Swift async function handling.
+  {
+    auto &MI = *DbgValue;
+    auto MF = MBB->getParent();
+    auto *Expr = MI.getDebugExpression();
+    if (Expr && Expr->isEntryValue())
+      for (const MachineOperand &MO : MI.debug_operands())
+        if (MO.isReg() && MO.getReg() != 0)
+          if (isSwiftAsyncContext(*MF, MO.getReg()))
+            return true;
+  }
+  // END SWIFT
+
   const MachineInstr *LScopeBegin = LSRange.front().first;
   // If the scope starts before the DBG_VALUE then we may have a negative
   // result. Otherwise the location is live coming into the scope and we
