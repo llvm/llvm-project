@@ -252,7 +252,7 @@ int main(int argc, char *argv[]) {
   if (numNames != 4) {
     printf("amd_populate_mangled_names Failed: "
            "produced %zu executable names (expected 4)\n",
-           Count);
+           numNames);
     exit(1);
   }
 
