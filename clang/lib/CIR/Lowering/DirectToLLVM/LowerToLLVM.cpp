@@ -194,6 +194,30 @@ public:
           mlir::cir::CmpOpKind::ne, src, zero);
       break;
     }
+    case mlir::cir::CastKind::integral: {
+      auto oldSourceType =
+          castOp->getOperands().front().getType().cast<mlir::IntegerType>();
+      auto sourceValue = adaptor.getOperands().front();
+      auto sourceType = sourceValue.getType().cast<mlir::IntegerType>();
+      auto targetType = getTypeConverter()
+                            ->convertType(castOp.getResult().getType())
+                            .cast<mlir::IntegerType>();
+
+      // Target integer is smaller: truncate source value.
+      if (targetType.getWidth() < sourceType.getWidth()) {
+        rewriter.replaceOpWithNewOp<mlir::LLVM::TruncOp>(castOp, targetType,
+                                                         sourceValue);
+      } else {
+        // FIXME: CIR codegen does not distiguishes singned/unsinged types.
+        if (oldSourceType.isUnsigned())
+          rewriter.replaceOpWithNewOp<mlir::LLVM::ZExtOp>(castOp, targetType,
+                                                          sourceValue);
+        else
+          rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(castOp, targetType,
+                                                          sourceValue);
+      }
+      break;
+    }
     default:
       llvm_unreachable("NYI");
     }
