@@ -294,7 +294,9 @@ private:
 /// Reads the AMDGPU specific metadata from the ELF file and propagates the
 /// KernelInfoMap
 Error readAMDGPUMetaDataFromImage(MemoryBufferRef MemBuffer,
-                                  StringMap<KernelMetaDataTy> &KernelInfoMap) {
+                                  StringMap<KernelMetaDataTy> &KernelInfoMap,
+                                  uint16_t &ELFABIVersion) {
+
   Error Err = Error::success(); // Used later as out-parameter
 
   auto ELFOrError = object::ELF64LEFile::create(MemBuffer.getBuffer());
@@ -304,6 +306,12 @@ Error readAMDGPUMetaDataFromImage(MemoryBufferRef MemBuffer,
   const object::ELF64LEFile ELFObj = ELFOrError.get();
   ArrayRef<object::ELF64LE::Shdr> Sections = cantFail(ELFObj.sections());
   KernelInfoReader Reader(KernelInfoMap);
+
+  auto Header = ELFObj.getHeader();
+  ELFABIVersion = (uint8_t)(Header.e_ident[ELF::EI_ABIVERSION]);
+  DP("ELFABIVERSION Version: %u\n", ELFABIVersion);
+  printf("ELFABIVERSION Version: %u\n", ELFABIVersion);
+
   for (const auto &S : Sections) {
     if (S.sh_type != ELF::SHT_NOTE)
       continue;

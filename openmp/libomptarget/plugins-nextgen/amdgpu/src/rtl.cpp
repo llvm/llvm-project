@@ -403,6 +403,9 @@ struct AMDGPUDeviceImageTy : public DeviceImageTy {
   /// Get the executable.
   hsa_executable_t getExecutable() const { return Executable; }
 
+  /// Get to Code Object Version of the ELF
+  uint16_t getELFABIVersion() const { return ELFABIVersion; }
+
   /// Find an HSA device symbol by its name on the executable.
   Expected<hsa_executable_symbol_t>
   findDeviceSymbol(GenericDeviceTy &Device, StringRef SymbolName) const;
@@ -426,6 +429,7 @@ private:
   hsa_executable_t Executable;
   hsa_code_object_t CodeObject;
   StringMap<utils::KernelMetaDataTy> KernelInfoMap;
+  uint16_t ELFABIVersion;
 };
 
 /// Class implementing the AMDGPU kernel functionalities which derives from the
@@ -501,6 +505,12 @@ struct AMDGPUKernelTy : public GenericKernelTy {
               ? Device.getDefaultNumThreads()
               : ConstWGSize;
       MaxNumThreads = ConstWGSize;
+    }
+
+    if (AMDImage.getELFABIVersion() > llvm::ELF::ELFABIVERSION_AMDGPU_HSA_V4) {
+      fprintf(stderr, "ERROR: COV5 not supported with Nextgen plugin\n");
+      return Plugin::error("Nextgen plugin not supported with COV5. \
+		      Use LIBOMPTARGET_NEXTGEN_PLUGINS=OFF");
     }
 
     // Get additional kernel info read from image
@@ -2364,8 +2374,9 @@ Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
   if (Result)
     return Plugin::error("Loaded HSA executable does not validate");
 
-  if (auto Err =
-          utils::readAMDGPUMetaDataFromImage(getMemoryBuffer(), KernelInfoMap))
+  if (auto Err = utils::readAMDGPUMetaDataFromImage(
+          getMemoryBuffer(), KernelInfoMap, ELFABIVersion))
+
     return Err;
 
   return Plugin::success();
