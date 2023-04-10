@@ -166,7 +166,9 @@ bool X86FixupInstTuningPass::processInstruction(
   //        -> `vunpck{l|h}qdq`
   // 2) If `vshufpd` faster than `vunpck{l|h}pd`
   //        -> `vshufpd`
-  auto ProcessUNPCKPD = [&](unsigned NewOpc, unsigned MaskImm) -> bool {
+  //
+  // `vunpcklps` -> `vunpckldq` (for all operand types if no bypass delay)
+  auto ProcessUNPCK = [&](unsigned NewOpc, unsigned MaskImm) -> bool {
     if (!NewOpcPreferable(NewOpc, /*ReplaceInTie*/ false))
       return false;
 
@@ -175,7 +177,7 @@ bool X86FixupInstTuningPass::processInstruction(
     return true;
   };
 
-  auto ProcessUNPCKPDToIntDomain = [&](unsigned NewOpc) -> bool {
+  auto ProcessUNPCKToIntDomain = [&](unsigned NewOpc) -> bool {
     // TODO it may be worth it to set ReplaceInTie to `true` as there is no real
     // downside to the integer unpck, but if someone doesn't specify exact
     // target we won't find it faster.
@@ -188,19 +190,23 @@ bool X86FixupInstTuningPass::processInstruction(
 
   auto ProcessUNPCKLPDrr = [&](unsigned NewOpcIntDomain,
                                unsigned NewOpc) -> bool {
-    if (ProcessUNPCKPDToIntDomain(NewOpcIntDomain))
+    if (ProcessUNPCKToIntDomain(NewOpcIntDomain))
       return true;
-    return ProcessUNPCKPD(NewOpc, 0x00);
+    return ProcessUNPCK(NewOpc, 0x00);
   };
   auto ProcessUNPCKHPDrr = [&](unsigned NewOpcIntDomain,
                                unsigned NewOpc) -> bool {
-    if (ProcessUNPCKPDToIntDomain(NewOpcIntDomain))
+    if (ProcessUNPCKToIntDomain(NewOpcIntDomain))
       return true;
-    return ProcessUNPCKPD(NewOpc, 0xff);
+    return ProcessUNPCK(NewOpc, 0xff);
   };
 
   auto ProcessUNPCKPDrm = [&](unsigned NewOpcIntDomain) -> bool {
-    return ProcessUNPCKPDToIntDomain(NewOpcIntDomain);
+    return ProcessUNPCKToIntDomain(NewOpcIntDomain);
+  };
+
+  auto ProcessUNPCKPS = [&](unsigned NewOpc) -> bool {
+    return ProcessUNPCKToIntDomain(NewOpc);
   };
 
   switch (Opc) {
@@ -351,6 +357,103 @@ bool X86FixupInstTuningPass::processInstruction(
     return ProcessUNPCKPDrm(X86::VPUNPCKHQDQZ256rmkz);
   case X86::VUNPCKHPDZrmkz:
     return ProcessUNPCKPDrm(X86::VPUNPCKHQDQZrmkz);
+
+  case X86::UNPCKLPSrr:
+    return ProcessUNPCKPS(X86::PUNPCKLDQrr);
+  case X86::VUNPCKLPSrr:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQrr);
+  case X86::VUNPCKLPSYrr:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQYrr);
+  case X86::VUNPCKLPSZ128rr:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZ128rr);
+  case X86::VUNPCKLPSZ256rr:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZ256rr);
+  case X86::VUNPCKLPSZrr:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZrr);
+  case X86::VUNPCKLPSZ128rrk:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZ128rrk);
+  case X86::VUNPCKLPSZ256rrk:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZ256rrk);
+  case X86::VUNPCKLPSZrrk:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZrrk);
+  case X86::VUNPCKLPSZ128rrkz:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZ128rrkz);
+  case X86::VUNPCKLPSZ256rrkz:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZ256rrkz);
+  case X86::VUNPCKLPSZrrkz:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZrrkz);
+  case X86::UNPCKHPSrr:
+    return ProcessUNPCKPS(X86::PUNPCKHDQrr);
+  case X86::VUNPCKHPSrr:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQrr);
+  case X86::VUNPCKHPSYrr:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQYrr);
+  case X86::VUNPCKHPSZ128rr:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZ128rr);
+  case X86::VUNPCKHPSZ256rr:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZ256rr);
+  case X86::VUNPCKHPSZrr:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZrr);
+  case X86::VUNPCKHPSZ128rrk:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZ128rrk);
+  case X86::VUNPCKHPSZ256rrk:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZ256rrk);
+  case X86::VUNPCKHPSZrrk:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZrrk);
+  case X86::VUNPCKHPSZ128rrkz:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZ128rrkz);
+  case X86::VUNPCKHPSZ256rrkz:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZ256rrkz);
+  case X86::VUNPCKHPSZrrkz:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZrrkz);
+  case X86::UNPCKLPSrm:
+    return ProcessUNPCKPS(X86::PUNPCKLDQrm);
+  case X86::VUNPCKLPSrm:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQrm);
+  case X86::VUNPCKLPSYrm:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQYrm);
+  case X86::VUNPCKLPSZ128rm:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZ128rm);
+  case X86::VUNPCKLPSZ256rm:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZ256rm);
+  case X86::VUNPCKLPSZrm:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZrm);
+  case X86::VUNPCKLPSZ128rmk:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZ128rmk);
+  case X86::VUNPCKLPSZ256rmk:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZ256rmk);
+  case X86::VUNPCKLPSZrmk:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZrmk);
+  case X86::VUNPCKLPSZ128rmkz:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZ128rmkz);
+  case X86::VUNPCKLPSZ256rmkz:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZ256rmkz);
+  case X86::VUNPCKLPSZrmkz:
+    return ProcessUNPCKPS(X86::VPUNPCKLDQZrmkz);
+  case X86::UNPCKHPSrm:
+    return ProcessUNPCKPS(X86::PUNPCKHDQrm);
+  case X86::VUNPCKHPSrm:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQrm);
+  case X86::VUNPCKHPSYrm:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQYrm);
+  case X86::VUNPCKHPSZ128rm:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZ128rm);
+  case X86::VUNPCKHPSZ256rm:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZ256rm);
+  case X86::VUNPCKHPSZrm:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZrm);
+  case X86::VUNPCKHPSZ128rmk:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZ128rmk);
+  case X86::VUNPCKHPSZ256rmk:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZ256rmk);
+  case X86::VUNPCKHPSZrmk:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZrmk);
+  case X86::VUNPCKHPSZ128rmkz:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZ128rmkz);
+  case X86::VUNPCKHPSZ256rmkz:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZ256rmkz);
+  case X86::VUNPCKHPSZrmkz:
+    return ProcessUNPCKPS(X86::VPUNPCKHDQZrmkz);
   default:
     return false;
   }
