@@ -11,7 +11,7 @@ class TestSwiftForwardInteropTypedefType(TestBase):
     @swiftTest
     def test_class(self):
         self.build()
-        self.runCmd('setting set target.experimental.swift-enable-cxx-interop true')
+        
         _, _, _, _= lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
