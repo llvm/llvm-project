@@ -481,17 +481,20 @@ int getNumberOfComputationPaths(AFTable *AFTable) {
   return NumberOfComputationPaths;
 }
 
-// Compute the Average Amplification Factor.
+// Compute the Average Amplification Factor incrementally.
 double getAverageAmplificationFactor(AFTable *AFTable) {
   double AverageAmplificationFactor = 0.0;
+  int NumberOfComputationPaths = 0;
   for (uint64_t I = 0; I < AFTable->ListLength; ++I) {
     if (AFTable->AFItems[I]->RootNode) {
-      for (int J = 0; J < AFTable->AFItems[I]->NumAFComponents; ++J) {
-        AverageAmplificationFactor += AFTable->AFItems[I]->Components[J]->AFs[0];
-      }
+      for (int J = 0; J < AFTable->AFItems[I]->NumAFComponents; ++J, ++NumberOfComputationPaths)
+        // Average is computed as m_n = m_(n-1) + (a_n - m_(n-1))/n
+        AverageAmplificationFactor += (AFTable->AFItems[I]->Components[J]->AFs[0]-AverageAmplificationFactor) /
+                                      (NumberOfComputationPaths+1);
     }
   }
-  AverageAmplificationFactor /= getNumberOfComputationPaths(AFTable);
+
+  assert(NumberOfComputationPaths == getNumberOfComputationPaths(AFTable));
   return AverageAmplificationFactor;
 }
 
@@ -506,6 +509,7 @@ int InstructionExecutionCounter;
 int FunctionInstanceCounter;
 AFTable *AFs;
 AFProduct **Paths;
+Statistics *Stats;
 
 /*----------------------------------------------------------------------------*/
 /* Utility Functions                                                          */
@@ -686,6 +690,9 @@ void fAFInitialize() {
   }
   AFs->ListLength = 0;
 
+  // Allocating Memory for Stats
+  Stats = statisticsNew();
+
   return ;
 }
 
@@ -794,16 +801,21 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
       NewAFComponent->ACWRTs[0] = OperandIndex;
       NewAFComponent->ProductTails[0] =
           (*AFItemWRTOperands[OperandIndex])->Components[CandidateIndex];
-      NewAFComponent->AFs[0] = (*AFItemWRTOperands[OperandIndex])
-                                   ->Components[CandidateIndex]
-                                   ->AFs[0] *
-                               (*AC)->ACWRTOperands[OperandIndex];
+      NewAFComponent->AFs[0] = GreatestAF;
       NewAFComponent->Height = (*AFItemWRTOperands[OperandIndex])
                                    ->Components[CandidateIndex]
                                    ->Height +
                                1;
       NewAFComponent->NumberOfInputs++;
       AFComponentCounter++;
+
+      // Update the statistics.
+      updateStatistics(Stats,
+                       GreatestAF,
+                       (*AC)->ACWRTOperands[OperandIndex],
+                       GreatestAF/((*AFItemWRTOperands[OperandIndex])
+                                       ->Components[CandidateIndex]
+                                       ->Height + 1));
     } else {
       fAFCreateAFProduct(&NewAFComponent, AFComponentCounter,
                          NumFunctionEvaluations);
@@ -815,6 +827,12 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
           (*AC)->ACWRTOperands[OperandIndex];
       NewAFComponent->NumberOfInputs++;
       AFComponentCounter++;
+
+      // Update the statistics.
+      updateStatistics(Stats,
+                       (*AC)->ACWRTOperands[OperandIndex],
+                       (*AC)->ACWRTOperands[OperandIndex],
+                       (*AC)->ACWRTOperands[OperandIndex]);
     }
 
     // Add this new AFProduct to the new AFItem
@@ -982,6 +1000,12 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
 #endif
 
         AFItemComponentIndex++;
+
+        // Update the statistics
+        updateStatistics(Stats,
+                         UpdatingAFComponent->AFs[UpdatingAFComponent->NumberOfInputs-1],
+                         (*AC)->ACWRTOperands[OperandIndex],
+                         UpdatingAFComponent->AFs[UpdatingAFComponent->NumberOfInputs-1]/UpdatingAFComponent->Height);
       }
     } else {
       // Create a new AFProduct and copy the ACItem and set the AF.
@@ -1017,6 +1041,12 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
 #endif
 
       AFItemComponentIndex++;
+
+      // Update the statistics
+      updateStatistics(Stats,
+                       UpdatingAFComponent->AFs[UpdatingAFComponent->NumberOfInputs-1],
+                       (*AC)->ACWRTOperands[OperandIndex],
+                       UpdatingAFComponent->AFs[UpdatingAFComponent->NumberOfInputs-1]);
     }
   }
 
@@ -1130,6 +1160,10 @@ void fAFPrintStatistics() {
   printf("Number of Computation Paths\t\t\t: %d\n", getNumberOfComputationPaths(AFs));
   printf("Number of Floating-Point Operations\t: %lu\n", AFs->ListLength);
   printf("Average Amplification Factor\t\t: %0.15lf\n", getAverageAmplificationFactor(AFs));
+
+  printStatistics(Stats);
+
+  statisticsDelete(Stats);
 
 #if FAF_DEBUG
   printf("\nPrinted Statistics\n");
