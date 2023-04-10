@@ -92,13 +92,17 @@ def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]>
   let genVerifyDecl = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// SignedOverflowBehaviorAttr
+//===----------------------------------------------------------------------===//
+
 def SignedOverflowBehaviorAttr : AttrDef<CIR_Dialect, "SignedOverflowBehavior"> {
-    let mnemonic = "signed_overflow_behavior";
-    let parameters = (ins
-      "sob::SignedOverflowBehavior":$behavior
-    );
-    let hasCustomAssemblyFormat = 1;
-  }
+  let mnemonic = "signed_overflow_behavior";
+  let parameters = (ins
+    "sob::SignedOverflowBehavior":$behavior
+  );
+  let hasCustomAssemblyFormat = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // AST Wrappers
