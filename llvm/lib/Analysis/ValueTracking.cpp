@@ -4042,129 +4042,6 @@ bool llvm::SignBitMustBeZero(const Value *V, const DataLayout &DL,
   return cannotBeOrderedLessThanZeroImpl(V, DL, TLI, true, 0);
 }
 
-bool llvm::isKnownNeverNaN(const Value *V, const DataLayout &DL,
-                           const TargetLibraryInfo *TLI, unsigned Depth,
-                           AssumptionCache *AC, const Instruction *CtxI,
-                           const DominatorTree *DT,
-                           OptimizationRemarkEmitter *ORE, bool UseInstrInfo) {
-  assert(V->getType()->isFPOrFPVectorTy() && "Querying for NaN on non-FP type");
-
-  // If we're told that NaNs won't happen, assume they won't.
-  if (auto *FPMathOp = dyn_cast<FPMathOperator>(V))
-    if (FPMathOp->hasNoNaNs())
-      return true;
-
-  if (const auto *Arg = dyn_cast<Argument>(V)) {
-    if ((Arg->getNoFPClass() & fcNan) == fcNan)
-      return true;
-  }
-
-  // TODO: Use fpclass like API for isKnown queries and distinguish snan from
-  // qnan.
-  if (const auto *CB = dyn_cast<CallBase>(V)) {
-    FPClassTest Mask = CB->getRetNoFPClass();
-    if ((Mask & fcNan) == fcNan)
-      return true;
-  }
-
-  // Handle scalar constants.
-  if (auto *CFP = dyn_cast<ConstantFP>(V))
-    return !CFP->isNaN();
-
-  if (Depth == MaxAnalysisRecursionDepth)
-    return false;
-
-  if (auto *Inst = dyn_cast<Instruction>(V)) {
-    switch (Inst->getOpcode()) {
-    case Instruction::FAdd:
-    case Instruction::FSub:
-      // Adding positive and negative infinity produces NaN.
-      return isKnownNeverNaN(Inst->getOperand(0), DL, TLI, Depth + 1) &&
-             isKnownNeverNaN(Inst->getOperand(1), DL, TLI, Depth + 1) &&
-             (isKnownNeverInfinity(Inst->getOperand(0), DL, TLI, Depth + 1) ||
-              isKnownNeverInfinity(Inst->getOperand(1), DL, TLI, Depth + 1));
-
-    case Instruction::FMul:
-      // Zero multiplied with infinity produces NaN.
-      // FIXME: If neither side can be zero fmul never produces NaN.
-      return isKnownNeverNaN(Inst->getOperand(0), DL, TLI, Depth + 1) &&
-             isKnownNeverInfinity(Inst->getOperand(0), DL, TLI, Depth + 1) &&
-             isKnownNeverNaN(Inst->getOperand(1), DL, TLI, Depth + 1) &&
-             isKnownNeverInfinity(Inst->getOperand(1), DL, TLI, Depth + 1);
-
-    case Instruction::FDiv:
-    case Instruction::FRem:
-      // FIXME: Only 0/0, Inf/Inf, Inf REM x and x REM 0 produce NaN.
-      return false;
-
-    case Instruction::Select: {
-      return isKnownNeverNaN(Inst->getOperand(1), DL, TLI, Depth + 1) &&
-             isKnownNeverNaN(Inst->getOperand(2), DL, TLI, Depth + 1);
-    }
-    case Instruction::SIToFP:
-    case Instruction::UIToFP:
-      return true;
-    case Instruction::FPTrunc:
-    case Instruction::FPExt:
-    case Instruction::FNeg:
-      return isKnownNeverNaN(Inst->getOperand(0), DL, TLI, Depth + 1);
-    default:
-      break;
-    }
-  }
-
-  if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::canonicalize:
-    case Intrinsic::fabs:
-    case Intrinsic::copysign:
-    case Intrinsic::exp:
-    case Intrinsic::exp2:
-    case Intrinsic::floor:
-    case Intrinsic::ceil:
-    case Intrinsic::trunc:
-    case Intrinsic::rint:
-    case Intrinsic::nearbyint:
-    case Intrinsic::round:
-    case Intrinsic::roundeven:
-    case Intrinsic::arithmetic_fence:
-      return isKnownNeverNaN(II->getArgOperand(0), DL, TLI, Depth + 1);
-    case Intrinsic::sqrt:
-      return isKnownNeverNaN(II->getArgOperand(0), DL, TLI, Depth + 1) &&
-             CannotBeOrderedLessThanZero(II->getArgOperand(0), DL, TLI);
-    case Intrinsic::minnum:
-    case Intrinsic::maxnum:
-      // If either operand is not NaN, the result is not NaN.
-      return isKnownNeverNaN(II->getArgOperand(0), DL, TLI, Depth + 1) ||
-             isKnownNeverNaN(II->getArgOperand(1), DL, TLI, Depth + 1);
-    default:
-      return false;
-    }
-  }
-
-  // Try to handle fixed width vector constants
-  auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
-  if (VFVTy && isa<Constant>(V)) {
-    // For vectors, verify that each element is not NaN.
-    unsigned NumElts = VFVTy->getNumElements();
-    for (unsigned i = 0; i != NumElts; ++i) {
-      Constant *Elt = cast<Constant>(V)->getAggregateElement(i);
-      if (!Elt)
-        return false;
-      if (isa<UndefValue>(Elt))
-        continue;
-      auto *CElt = dyn_cast<ConstantFP>(Elt);
-      if (!CElt || CElt->isNaN())
-        return false;
-    }
-    // All elements were confirmed not-NaN or undefined.
-    return true;
-  }
-
-  // Was not able to prove that V never contains NaN
-  return false;
-}
-
 /// Return true if it's possible to assume IEEE treatment of input denormals in
 /// \p F for \p Val.
 static bool inputDenormalIsIEEE(const Function &F, const Type *Ty) {
@@ -4491,9 +4368,8 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   // Infinity needs a range check.
 }
 
-// TODO: Merge implementations of isKnownNeverNaN, isKnownNeverInfinity,
-// CannotBeNegativeZero, cannotBeOrderedLessThanZero into here.
-
+// TODO: Merge implementations of CannotBeNegativeZero,
+// cannotBeOrderedLessThanZero into here.
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                          FPClassTest InterestedClasses, KnownFPClass &Known,
                          unsigned Depth, const Query &Q,
