@@ -2456,6 +2456,7 @@ _LIBCPP_POP_MACROS
 #  include <algorithm>
 #  include <atomic>
 #  include <concepts>
+#  include <cstdlib>
 #  include <functional>
 #  include <iosfwd>
 #  include <iterator>

@@ -285,7 +285,7 @@ public:
     const Record *MemRec = MemInst->TheDef;
 
     // EVEX_B means different things for memory and register forms.
-    if (RegRI.HasEVEX_B != 0 || MemRI.HasEVEX_B != 0)
+    if (RegRI.HasEVEX_B || MemRI.HasEVEX_B)
       return false;
 
     if (!mayFoldFromLeftToRight(RegRI.Form, MemRI.Form))

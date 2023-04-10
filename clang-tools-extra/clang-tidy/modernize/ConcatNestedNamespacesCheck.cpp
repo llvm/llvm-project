@@ -31,8 +31,9 @@ static StringRef getRawStringRef(const SourceRange &Range,
   return Lexer::getSourceText(TextRange, Sources, LangOpts);
 }
 
-static bool anonymousOrInlineNamespace(const NamespaceDecl &ND) {
-  return ND.isAnonymousNamespace() || ND.isInlineNamespace();
+static bool unsupportedNamespace(const NamespaceDecl &ND) {
+  return ND.isAnonymousNamespace() || ND.isInlineNamespace() ||
+         !ND.attrs().empty();
 }
 
 static bool singleNamedNamespaceChild(const NamespaceDecl &ND) {
@@ -41,7 +42,7 @@ static bool singleNamedNamespaceChild(const NamespaceDecl &ND) {
     return false;
 
   const auto *ChildNamespace = dyn_cast<const NamespaceDecl>(*Decls.begin());
-  return ChildNamespace && !anonymousOrInlineNamespace(*ChildNamespace);
+  return ChildNamespace && !unsupportedNamespace(*ChildNamespace);
 }
 
 static bool alreadyConcatenated(std::size_t NumCandidates,
@@ -166,7 +167,7 @@ void ConcatNestedNamespacesCheck::check(
   if (!locationsInSameFile(Sources, ND.getBeginLoc(), ND.getRBraceLoc()))
     return;
 
-  if (anonymousOrInlineNamespace(ND))
+  if (unsupportedNamespace(ND))
     return;
 
   Namespaces.push_back(&ND);

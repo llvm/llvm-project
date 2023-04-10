@@ -1,7 +1,6 @@
 algorithm climits
 algorithm cstddef
 algorithm cstdint
-algorithm cstdlib
 algorithm cstring
 algorithm initializer_list
 algorithm iosfwd
@@ -10,7 +9,6 @@ algorithm new
 algorithm version
 any cstddef
 any cstdint
-any cstdlib
 any cstring
 any initializer_list
 any limits
@@ -20,7 +18,6 @@ any typeinfo
 any version
 array compare
 array cstddef
-array cstdlib
 array initializer_list
 array limits
 array stdexcept
@@ -44,13 +41,11 @@ barrier new
 barrier ratio
 barrier version
 bit cstdint
-bit cstdlib
 bit limits
 bit version
 bitset climits
 bitset cstddef
 bitset cstdint
-bitset cstdlib
 bitset cstring
 bitset initializer_list
 bitset iosfwd
@@ -64,7 +59,6 @@ charconv cerrno
 charconv cmath
 charconv cstddef
 charconv cstdint
-charconv cstdlib
 charconv initializer_list
 charconv limits
 chrono array
@@ -92,6 +86,7 @@ cmath version
 codecvt cctype
 codecvt cstddef
 codecvt cstdint
+codecvt cstdlib
 codecvt cstring
 codecvt mutex
 codecvt string
@@ -108,15 +103,15 @@ complex stdexcept
 complex version
 concepts cstddef
 concepts version
+condition_variable cerrno
 condition_variable cstddef
-condition_variable cstdlib
 condition_variable ctime
 condition_variable iosfwd
 condition_variable limits
 condition_variable new
 condition_variable ratio
 condition_variable stdexcept
-condition_variable system_error
+condition_variable string
 condition_variable typeinfo
 condition_variable version
 coroutine compare
@@ -133,7 +128,6 @@ cwctype cctype
 deque compare
 deque cstddef
 deque cstdint
-deque cstdlib
 deque cstring
 deque initializer_list
 deque limits
@@ -146,7 +140,6 @@ exception cstdlib
 exception version
 execution version
 expected cstddef
-expected cstdlib
 expected initializer_list
 expected new
 expected version
@@ -162,7 +155,6 @@ experimental/list list
 experimental/map experimental/memory_resource
 experimental/map map
 experimental/memory_resource cstddef
-experimental/memory_resource cstdlib
 experimental/memory_resource experimental/utility
 experimental/memory_resource limits
 experimental/memory_resource new
@@ -213,7 +205,6 @@ filesystem cerrno
 filesystem compare
 filesystem cstddef
 filesystem cstdint
-filesystem cstdlib
 filesystem ctime
 filesystem iomanip
 filesystem iosfwd
@@ -223,7 +214,6 @@ filesystem new
 filesystem ratio
 filesystem string
 filesystem string_view
-filesystem system_error
 filesystem version
 format array
 format cmath
@@ -245,7 +235,6 @@ format version
 forward_list compare
 forward_list cstddef
 forward_list cstdint
-forward_list cstdlib
 forward_list cstring
 forward_list initializer_list
 forward_list limits
@@ -270,7 +259,6 @@ fstream version
 functional array
 functional cstddef
 functional cstdint
-functional cstdlib
 functional cstring
 functional initializer_list
 functional iosfwd
@@ -283,6 +271,7 @@ functional typeinfo
 functional unordered_map
 functional vector
 functional version
+future cerrno
 future cstddef
 future cstdint
 future cstdlib
@@ -294,7 +283,7 @@ future mutex
 future new
 future ratio
 future stdexcept
-future system_error
+future string
 future thread
 future typeinfo
 future version
@@ -304,11 +293,11 @@ iomanip version
 ios cctype
 ios cstddef
 ios cstdint
+ios cstdlib
 ios cstring
 ios iosfwd
 ios mutex
 ios string
-ios system_error
 ios version
 iosfwd version
 iostream ios
@@ -323,7 +312,6 @@ istream version
 iterator compare
 iterator concepts
 iterator cstddef
-iterator cstdlib
 iterator initializer_list
 iterator iosfwd
 iterator limits
@@ -341,7 +329,6 @@ limits version
 list compare
 list cstddef
 list cstdint
-list cstdlib
 list cstring
 list initializer_list
 list limits
@@ -350,6 +337,7 @@ list stdexcept
 list tuple
 list version
 locale cctype
+locale cerrno
 locale cstddef
 locale cstdint
 locale cstdio
@@ -367,7 +355,6 @@ locale string
 locale version
 map compare
 map cstddef
-map cstdlib
 map initializer_list
 map limits
 map new
@@ -378,7 +365,6 @@ map version
 memory compare
 memory cstddef
 memory cstdint
-memory cstdlib
 memory cstring
 memory initializer_list
 memory iosfwd
@@ -396,16 +382,16 @@ memory_resource new
 memory_resource stdexcept
 memory_resource tuple
 memory_resource version
+mutex cerrno
 mutex cstddef
 mutex cstdint
-mutex cstdlib
 mutex ctime
 mutex iosfwd
 mutex limits
 mutex new
 mutex ratio
 mutex stdexcept
-mutex system_error
+mutex string
 mutex tuple
 mutex typeinfo
 mutex version
@@ -427,9 +413,9 @@ optional new
 optional stdexcept
 optional version
 ostream bitset
+ostream cerrno
 ostream cstddef
 ostream cstdint
-ostream cstdlib
 ostream cstring
 ostream initializer_list
 ostream ios
@@ -439,11 +425,11 @@ ostream locale
 ostream new
 ostream stdexcept
 ostream streambuf
+ostream string
 ostream typeinfo
 ostream version
 queue compare
 queue cstddef
-queue cstdlib
 queue deque
 queue initializer_list
 queue limits
@@ -452,7 +438,6 @@ queue version
 random cmath
 random cstddef
 random cstdint
-random cstdlib
 random initializer_list
 random iosfwd
 random limits
@@ -462,7 +447,6 @@ random vector
 random version
 ranges compare
 ranges cstddef
-ranges cstdlib
 ranges initializer_list
 ranges iosfwd
 ranges iterator
@@ -505,7 +489,6 @@ semaphore ratio
 semaphore version
 set compare
 set cstddef
-set cstdlib
 set initializer_list
 set limits
 set new
@@ -519,7 +502,8 @@ shared_mutex ctime
 shared_mutex iosfwd
 shared_mutex limits
 shared_mutex ratio
-shared_mutex system_error
+shared_mutex stdexcept
+shared_mutex string
 shared_mutex version
 source_location cstdint
 source_location version
@@ -538,7 +522,6 @@ stack cstddef
 stack deque
 stack initializer_list
 stack version
-stdexcept cstdlib
 stdexcept iosfwd
 streambuf cstdint
 streambuf ios
@@ -549,7 +532,6 @@ string compare
 string cstddef
 string cstdint
 string cstdio
-string cstdlib
 string cstring
 string cwchar
 string initializer_list
@@ -564,7 +546,6 @@ string_view compare
 string_view cstddef
 string_view cstdint
 string_view cstdio
-string_view cstdlib
 string_view cstring
 string_view cwchar
 string_view initializer_list
@@ -578,13 +559,11 @@ strstream version
 system_error cerrno
 system_error compare
 system_error cstddef
-system_error cstdint
-system_error cstring
-system_error limits
 system_error stdexcept
 system_error string
 system_error version
 thread array
+thread cerrno
 thread compare
 thread cstddef
 thread cstdint
@@ -597,7 +576,6 @@ thread ratio
 thread stdexcept
 thread string
 thread string_view
-thread system_error
 thread tuple
 thread vector
 thread version
@@ -612,12 +590,10 @@ typeindex typeinfo
 typeindex version
 typeinfo cstddef
 typeinfo cstdint
-typeinfo cstdlib
 unordered_map cmath
 unordered_map compare
 unordered_map cstddef
 unordered_map cstdint
-unordered_map cstdlib
 unordered_map cstring
 unordered_map initializer_list
 unordered_map limits
@@ -630,7 +606,6 @@ unordered_set cmath
 unordered_set compare
 unordered_set cstddef
 unordered_set cstdint
-unordered_set cstdlib
 unordered_set cstring
 unordered_set initializer_list
 unordered_set limits
@@ -647,7 +622,6 @@ utility version
 valarray cmath
 valarray cstddef
 valarray cstdint
-valarray cstdlib
 valarray initializer_list
 valarray limits
 valarray new
@@ -666,7 +640,6 @@ vector climits
 vector compare
 vector cstddef
 vector cstdint
-vector cstdlib
 vector cstring
 vector initializer_list
 vector iosfwd

@@ -327,8 +327,8 @@ class MicrosoftCXXNameMangler {
 
   typedef llvm::DenseMap<const void *, StringRef> TemplateArgStringMap;
   TemplateArgStringMap TemplateArgStrings;
-  llvm::StringSaver TemplateArgStringStorage;
   llvm::BumpPtrAllocator TemplateArgStringStorageAlloc;
+  llvm::StringSaver TemplateArgStringStorage;
 
   typedef std::set<std::pair<int, bool>> PassObjectSizeArgsSet;
   PassObjectSizeArgsSet PassObjectSizeArgs;

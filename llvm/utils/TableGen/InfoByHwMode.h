@@ -110,20 +110,27 @@ struct InfoByHwMode {
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool hasMode(unsigned M) const { return Map.find(M) != Map.end(); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
-  bool hasDefault() const { return hasMode(DefaultMode); }
+  bool hasDefault() const {
+    return !Map.empty() && Map.begin()->first == DefaultMode;
+  }
 
   InfoT &get(unsigned Mode) {
-    if (!hasMode(Mode)) {
-      assert(hasMode(DefaultMode));
-      Map.insert({Mode, Map.at(DefaultMode)});
-    }
-    return Map.at(Mode);
+    auto F = Map.find(Mode);
+    if (F != Map.end())
+      return F->second;
+
+    // Copy and insert the default mode which should be first.
+    assert(hasDefault());
+    auto P = Map.insert({Mode, Map.begin()->second});
+    return P.first->second;
   }
   const InfoT &get(unsigned Mode) const {
     auto F = Map.find(Mode);
-    if (Mode != DefaultMode && F == Map.end())
-      F = Map.find(DefaultMode);
-    assert(F != Map.end());
+    if (F != Map.end())
+      return F->second;
+    // Get the default mode which should be first.
+    F = Map.begin();
+    assert(F != Map.end() && F->first == DefaultMode);
     return F->second;
   }
 
@@ -132,7 +139,7 @@ struct InfoByHwMode {
     return Map.size() == 1 && Map.begin()->first == DefaultMode;
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
-  InfoT getSimple() const {
+  const InfoT &getSimple() const {
     assert(isSimple());
     return Map.begin()->second;
   }
