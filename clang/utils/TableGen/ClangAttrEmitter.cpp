@@ -2530,8 +2530,15 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
           return &R == P.second;
         });
 
+    enum class CreateKind {
+      WithAttributeCommonInfo,
+      WithSourceRange,
+      WithNoArgs,
+    };
+
     // Emit CreateImplicit factory methods.
-    auto emitCreate = [&](bool Implicit, bool DelayedArgsOnly, bool emitFake) {
+    auto emitCreate = [&](bool Implicit, bool DelayedArgsOnly,
+                          bool emitFake, CreateKind Kind) {
       if (Header)
         OS << "  static ";
       OS << R.getName() << "Attr *";
@@ -2555,9 +2562,10 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
         OS << ", ";
         DelayedArgs->writeCtorParameters(OS);
       }
-      OS << ", const AttributeCommonInfo &CommonInfo";
-      if (Header && Implicit)
-        OS << " = {SourceRange{}}";
+      if (Kind == CreateKind::WithAttributeCommonInfo)
+        OS << ", const AttributeCommonInfo &CommonInfo";
+      else if (Kind == CreateKind::WithSourceRange)
+        OS << ", SourceRange R";
       OS << ")";
       if (Header) {
         OS << ";\n";
@@ -2566,7 +2574,13 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
 
       OS << " {\n";
       OS << "  auto *A = new (Ctx) " << R.getName();
-      OS << "Attr(Ctx, CommonInfo";
+      if (Kind == CreateKind::WithAttributeCommonInfo)
+        OS << "Attr(Ctx, CommonInfo";
+      else if (Kind == CreateKind::WithSourceRange)
+        OS << "Attr(Ctx, AttributeCommonInfo{R}";
+      else if (Kind == CreateKind::WithNoArgs)
+        OS << "Attr(Ctx, AttributeCommonInfo{SourceLocation{}}";
+
       if (!DelayedArgsOnly) {
         for (auto const &ai : Args) {
           if (ai->isFake() && !emitFake)
@@ -2662,9 +2676,19 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
       OS << "}\n\n";
     };
 
+    auto emitBothImplicitAndNonCreates = [&](bool DelayedArgsOnly,
+                                             bool emitFake, CreateKind Kind) {
+      emitCreate(true, DelayedArgsOnly, emitFake, Kind);
+      emitCreate(false, DelayedArgsOnly, emitFake, Kind);
+    };
+
     auto emitCreates = [&](bool DelayedArgsOnly, bool emitFake) {
-      emitCreate(true, DelayedArgsOnly, emitFake);
-      emitCreate(false, DelayedArgsOnly, emitFake);
+      emitBothImplicitAndNonCreates(DelayedArgsOnly, emitFake,
+                                    CreateKind::WithNoArgs);
+      emitBothImplicitAndNonCreates(DelayedArgsOnly, emitFake,
+                                    CreateKind::WithAttributeCommonInfo);
+      emitBothImplicitAndNonCreates(DelayedArgsOnly, emitFake,
+                                    CreateKind::WithSourceRange);
       emitCreateNoCI(true, DelayedArgsOnly, emitFake);
       emitCreateNoCI(false, DelayedArgsOnly, emitFake);
     };
