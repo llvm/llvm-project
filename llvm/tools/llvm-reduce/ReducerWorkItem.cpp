@@ -372,6 +372,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
   DstMF->setHasEHCatchret(SrcMF->hasEHCatchret());
   DstMF->setHasEHScopes(SrcMF->hasEHScopes());
   DstMF->setHasEHFunclets(SrcMF->hasEHFunclets());
+  DstMF->setIsOutlined(SrcMF->isOutlined());
 
   if (!SrcMF->getLandingPads().empty() ||
       !SrcMF->getCodeViewAnnotations().empty() ||

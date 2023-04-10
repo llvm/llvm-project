@@ -468,6 +468,7 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   MF.setHasEHCatchret(YamlMF.HasEHCatchret);
   MF.setHasEHScopes(YamlMF.HasEHScopes);
   MF.setHasEHFunclets(YamlMF.HasEHFunclets);
+  MF.setIsOutlined(YamlMF.IsOutlined);
 
   if (YamlMF.Legalized)
     MF.getProperties().set(MachineFunctionProperties::Property::Legalized);
