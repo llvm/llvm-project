@@ -1562,7 +1562,13 @@ public:
     assert(HstPtr != nullptr && HstOrPoolPtr != nullptr &&
            "Both HstPtr and HstOrPoolPtr must be non-null");
     if (HstOrPoolPtr != HstPtr) {
-      DP("Releasing %p into pool without unlocking\n", HstOrPoolPtr);
+      // Note that mapEntering and mapExiting may have the same location, i.e.
+      // the same HstPtr. In that case, the small pool will avoid attempting a
+      // double release by just bailing out. We could avoid calling release
+      // multiple times on the same pointer but that would involve computing an
+      // intersection between mapEntering and mapExiting, something we don't do
+      // today.
+      DP("If found, releasing %p into pool without unlocking\n", HstOrPoolPtr);
       DeviceInfo().getSmallPoolMgr().releaseIntoPool(Size, HstPtr);
       return HSA_STATUS_SUCCESS;
     }

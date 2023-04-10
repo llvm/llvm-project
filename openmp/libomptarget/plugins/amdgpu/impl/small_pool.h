@@ -174,9 +174,10 @@ public:
 
     // Lock the pool and its associated info
     std::unique_lock<std::mutex> Lck(SPInfo->SmallPoolInfoMutex);
-    // HostPtr must be found
-    assert(SPInfo->PoolMap.find(HstPtr) != SPInfo->PoolMap.end() &&
-           "HstPtr must be found");
+    // Release may be called multiple times for the same HstPtr. Hence, tolerate
+    // not finding the pointer, it must have been released in a prior call.
+    if (SPInfo->PoolMap.find(HstPtr) == SPInfo->PoolMap.end())
+      return;
     void *PoolPtr = SPInfo->PoolMap.find(HstPtr)->second;
     assert(PoolPtr != nullptr && "Prior allocated object must be valid");
     SPInfo->PoolMap.erase(HstPtr);
