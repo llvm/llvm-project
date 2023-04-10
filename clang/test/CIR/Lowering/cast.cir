@@ -30,6 +30,8 @@ module {
     %4 = cir.alloca i16, cir.ptr <i16>, ["b", init] {alignment = 2 : i64}
     %5 = cir.alloca i64, cir.ptr <i64>, ["c", init] {alignment = 8 : i64}
     %6 = cir.alloca i64, cir.ptr <i64>, ["d", init] {alignment = 8 : i64}
+    %17 = cir.alloca !cir.array<i32 x 3>, cir.ptr <!cir.array<i32 x 3>>, ["arr"] {alignment = 4 : i64}
+    %18 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["e", init] {alignment = 8 : i64}
     cir.store %arg0, %0 : i32, cir.ptr <i32>
     cir.store %arg1, %1 : i32, cir.ptr <i32>
     %7 = cir.load %0 : cir.ptr <i32>, i32
@@ -49,6 +51,9 @@ module {
     %14 = cir.cast(integral, %13 : i32), i64
     // MLIR: %{{[0-9]+}} = llvm.sext %{{[0-9]+}} : i32 to i64
     cir.store %14, %6 : i64, cir.ptr <i64>
+    %19 = cir.cast(array_to_ptrdecay, %17 : !cir.ptr<!cir.array<i32 x 3>>), !cir.ptr<i32>
+    // MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr
+    cir.store %19, %18 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
     %15 = cir.const(0 : i32) : i32
     cir.store %15, %2 : i32, cir.ptr <i32>
     %16 = cir.load %2 : cir.ptr <i32>, i32

@@ -180,11 +180,26 @@ class CIRCastOpLowering : public mlir::OpConversionPattern<mlir::cir::CastOp> {
 public:
   using mlir::OpConversionPattern<mlir::cir::CastOp>::OpConversionPattern;
 
+  inline mlir::Type convertTy(mlir::Type ty) const {
+    return getTypeConverter()->convertType(ty);
+  }
+
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::CastOp castOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto src = adaptor.getSrc();
     switch (castOp.getKind()) {
+    case mlir::cir::CastKind::array_to_ptrdecay: {
+      const auto ptrTy = castOp.getType().cast<mlir::cir::PointerType>();
+      auto sourceValue = adaptor.getOperands().front();
+      auto targetType =
+          getTypeConverter()->convertType(castOp->getResult(0).getType());
+      auto elementTy = convertTy(ptrTy.getPointee());
+      auto offset = llvm::SmallVector<mlir::LLVM::GEPArg>{0};
+      rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+          castOp, targetType, elementTy, sourceValue, offset);
+      break;
+    }
     case mlir::cir::CastKind::int_to_bool: {
       auto zero = rewriter.create<mlir::cir::ConstantOp>(
           src.getLoc(), src.getType(),
