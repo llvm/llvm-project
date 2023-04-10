@@ -147,7 +147,7 @@ foreach(archname ${HOSTRPC_ARCHS})
       if (${archname} STREQUAL "amdgcn")
          set(openmp_device_args 
 	      -I../../runtime/src  # to pickup omp.h, we may need a dependency
-	      -I${ROCDL_INC_OCLC}
+	      -I${ROCDL_INC_OCLC} -O${optimization_level}
 	      -fopenmp -fopenmp-cuda-mode -mllvm -openmp-opt-disable 
 	      -std=c++17 -fvisibility=hidden 
 	      -fopenmp-targets=${triple} -Xopenmp-target=${triple} -march=${mcpu}
