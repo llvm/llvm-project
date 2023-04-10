@@ -6,16 +6,13 @@ module {
     %4 = cir.cast(int_to_bool, %arg0 : i32), !cir.bool
     cir.return %arg0 : i32
   }
-}
 
-//      MLIR: module {
-// MLIR-NEXT:  llvm.func @foo(%arg0: i32) -> i32 {
+//      MLIR:  llvm.func @foo(%arg0: i32) -> i32 {
 // MLIR-NEXT:    [[v0:%[0-9]]] = llvm.mlir.constant(0 : i32) : i32
 // MLIR-NEXT:    [[v1:%[0-9]]] = llvm.icmp "ne" %arg0, %0 : i32
 // MLIR-NEXT:    [[v2:%[0-9]]] = llvm.zext %1 : i1 to i8
 // MLIR-NEXT:    llvm.return %arg0 : i32
 // MLIR-NEXT:  }
-// MLIR-NEXT:}
 
 
 //      LLVM: define i32 @foo(i32 %0) {
@@ -23,3 +20,38 @@ module {
 // LLVM-NEXT:   %3 = zext i1 %2 to i8
 // LLVM-NEXT:   ret i32 %0
 // LLVM-NEXT: }
+
+  cir.func @cStyleCasts(%arg0: i32, %arg1: i32) -> i32 {
+    // MLIR: llvm.func @cStyleCasts(%arg0: i32, %arg1: i32) -> i32 {
+    %0 = cir.alloca i32, cir.ptr <i32>, ["x1", init] {alignment = 4 : i64}
+    %1 = cir.alloca i32, cir.ptr <i32>, ["x2", init] {alignment = 4 : i64}
+    %2 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64}
+    %3 = cir.alloca i8, cir.ptr <i8>, ["a", init] {alignment = 1 : i64}
+    %4 = cir.alloca i16, cir.ptr <i16>, ["b", init] {alignment = 2 : i64}
+    %5 = cir.alloca i64, cir.ptr <i64>, ["c", init] {alignment = 8 : i64}
+    %6 = cir.alloca i64, cir.ptr <i64>, ["d", init] {alignment = 8 : i64}
+    cir.store %arg0, %0 : i32, cir.ptr <i32>
+    cir.store %arg1, %1 : i32, cir.ptr <i32>
+    %7 = cir.load %0 : cir.ptr <i32>, i32
+    %8 = cir.cast(integral, %7 : i32), i8
+    // MLIR: %{{[0-9]+}} = llvm.trunc %{{[0-9]+}} : i32 to i8
+    cir.store %8, %3 : i8, cir.ptr <i8>
+    %9 = cir.load %1 : cir.ptr <i32>, i32
+    %10 = cir.cast(integral, %9 : i32), i16
+    // MLIR: %{{[0-9]+}} = llvm.trunc %{{[0-9]+}} : i32 to i16
+    cir.store %10, %4 : i16, cir.ptr <i16>
+    %11 = cir.load %0 : cir.ptr <i32>, i32
+    %12 = cir.cast(integral, %11 : i32), i64
+    // FIXME: this should be a zext, but we don't distinguish signed/unsigned
+    // MLIR: %{{[0-9]+}} = llvm.sext %{{[0-9]+}} : i32 to i64
+    cir.store %12, %5 : i64, cir.ptr <i64>
+    %13 = cir.load %1 : cir.ptr <i32>, i32
+    %14 = cir.cast(integral, %13 : i32), i64
+    // MLIR: %{{[0-9]+}} = llvm.sext %{{[0-9]+}} : i32 to i64
+    cir.store %14, %6 : i64, cir.ptr <i64>
+    %15 = cir.const(0 : i32) : i32
+    cir.store %15, %2 : i32, cir.ptr <i32>
+    %16 = cir.load %2 : cir.ptr <i32>, i32
+    cir.return %16 : i32
+  }
+}
