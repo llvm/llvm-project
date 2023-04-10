@@ -689,6 +689,7 @@ INTERCEPTOR(hsa_status_t, hsa_amd_memory_async_copy, void* dst,
     num_dep_signals, dep_signals, completion_signal);
 }
 
+#if HSA_AMD_INTERFACE_VERSION_MINOR>=1
 INTERCEPTOR(hsa_status_t, hsa_amd_memory_async_copy_on_engine, void* dst,
   hsa_agent_t dst_agent, const void* src, hsa_agent_t src_agent, size_t size,
   uint32_t num_dep_signals, const hsa_signal_t* dep_signals,
@@ -708,6 +709,7 @@ INTERCEPTOR(hsa_status_t, hsa_amd_memory_async_copy_on_engine, void* dst,
     dst, dst_agent, src, src_agent, size, num_dep_signals, dep_signals,
     completion_signal, engine_id, force_copy_on_sdma);
 }
+#endif
 
 void InitializeAmdgpuInterceptors() {
   ASAN_INTERCEPT_FUNC(hsa_memory_copy);
@@ -715,7 +717,9 @@ void InitializeAmdgpuInterceptors() {
   ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_free);
   ASAN_INTERCEPT_FUNC(hsa_amd_agents_allow_access);
   ASAN_INTERCEPT_FUNC(hsa_amd_memory_async_copy);
+#if HSA_AMD_INTERFACE_VERSION_MINOR>=1
   ASAN_INTERCEPT_FUNC(hsa_amd_memory_async_copy_on_engine);
+#endif
 }
 
 void ENSURE_HSA_INITED() {
