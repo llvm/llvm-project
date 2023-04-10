@@ -704,6 +704,7 @@ struct MachineFunction {
   bool HasEHCatchret = false;
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
+  bool IsOutlined = false;
 
   bool FailsVerification = false;
   bool TracksDebugUserValues = false;
@@ -742,6 +743,7 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapOptional("hasEHCatchret", MF.HasEHCatchret, false);
     YamlIO.mapOptional("hasEHScopes", MF.HasEHScopes, false);
     YamlIO.mapOptional("hasEHFunclets", MF.HasEHFunclets, false);
+    YamlIO.mapOptional("isOutlined", MF.IsOutlined, false);
     YamlIO.mapOptional("debugInstrRef", MF.UseDebugInstrRef, false);
 
     YamlIO.mapOptional("failsVerification", MF.FailsVerification, false);

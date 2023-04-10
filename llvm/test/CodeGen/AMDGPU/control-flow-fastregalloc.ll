@@ -43,7 +43,7 @@
 
 
 ; Spill val register
-; GCN: v_add_i32_e32 [[VAL:v[0-9]+]], vcc, [[LOAD1]], [[RELOAD_LOAD0]]
+; GCN: v_add_i32_e32 [[VAL:v[0-9]+]], vcc, [[RELOAD_LOAD0]], [[LOAD1]]
 ; GCN: buffer_store_dword [[VAL]], off, s[0:3], 0 offset:[[VAL_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 
 ; VMEM: [[ENDIF]]:
@@ -110,15 +110,15 @@ endif:
 
 ; GCN: [[LOOP:.LBB[0-9]+_[0-9]+]]:
 ; GCN: buffer_load_dword v[[VAL_LOOP_RELOAD:[0-9]+]], off, s[0:3], 0 offset:[[LOAD0_OFFSET]] ; 4-byte Folded Reload
-; GCN: v_subrev_i32_e32 [[VAL_LOOP:v[0-9]+]], vcc, v{{[0-9]+}}, v[[VAL_LOOP_RELOAD]]
+; GCN: v_sub_i32_e32 v[[VAL_LOOP_RELOAD]], vcc, v[[VAL_LOOP_RELOAD]], v{{[0-9]+}}
 ; GCN: s_cmp_lg_u32
 ; VMEM: buffer_store_dword
 ; VMEM: buffer_store_dword
 ; VMEM: buffer_store_dword
-; GCN: buffer_store_dword [[VAL_LOOP]], off, s[0:3], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
+; GCN: buffer_store_dword v[[VAL_LOOP_RELOAD]], off, s[0:3], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
 ; GCN-NEXT: s_cbranch_scc1 [[LOOP]]
 
-; GCN: buffer_store_dword [[VAL_LOOP]], off, s[0:3], 0 offset:[[VAL_SUB_OFFSET:[0-9]+]] ; 4-byte Folded Spill
+; GCN: buffer_store_dword v[[VAL_LOOP_RELOAD]], off, s[0:3], 0 offset:[[VAL_SUB_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 
 ; GCN: [[END]]:
 ; VGPR: v_readlane_b32 s[[S_RELOAD_SAVEEXEC_LO:[0-9]+]], [[SPILL_VGPR]], [[SAVEEXEC_LO_LANE]]
@@ -219,14 +219,14 @@ end:
 ; GCN: ; %bb.{{[0-9]+}}: ; %if
 ; GCN: buffer_load_dword v[[LOAD0_RELOAD:[0-9]+]], off, s[0:3], 0 offset:[[LOAD0_OFFSET]] ; 4-byte Folded Reload
 ; GCN: ds_read_b32
-; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, v{{[0-9]+}}, v[[LOAD0_RELOAD]]
-; GCN: buffer_store_dword [[ADD]], off, s[0:3], 0 offset:[[RESULT_OFFSET]] ; 4-byte Folded Spill
+; GCN: v_add_i32_e32 v[[LOAD0_RELOAD]], vcc, v[[LOAD0_RELOAD]], [[ADD:v[0-9]+]]
+; GCN: buffer_store_dword v[[LOAD0_RELOAD]], off, s[0:3], 0 offset:[[RESULT_OFFSET]] ; 4-byte Folded Spill
 ; GCN-NEXT: s_branch [[ENDIF:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: [[ELSE]]: ; %else
 ; GCN: buffer_load_dword v[[LOAD0_RELOAD:[0-9]+]], off, s[0:3], 0 offset:[[LOAD0_OFFSET]] ; 4-byte Folded Reload
-; GCN: v_subrev_i32_e32 [[SUB:v[0-9]+]], vcc, v{{[0-9]+}}, v[[LOAD0_RELOAD]]
-; GCN: buffer_store_dword [[ADD]], off, s[0:3], 0 offset:[[FLOW_RESULT_OFFSET:[0-9]+]] ; 4-byte Folded Spill
+; GCN: v_sub_i32_e32 v[[LOAD0_RELOAD]], vcc, v[[LOAD0_RELOAD]], v{{[0-9]+}}
+; GCN: buffer_store_dword v[[LOAD0_RELOAD]], off, s[0:3], 0 offset:[[FLOW_RESULT_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 ; GCN-NEXT: s_branch [[FLOW]]
 
 ; GCN: [[ENDIF]]:
