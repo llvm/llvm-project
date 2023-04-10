@@ -111,7 +111,7 @@ void OpenACCDataOperandConversion::runOnOperation() {
   ConversionTarget target(*context);
   target.addLegalDialect<fir::FIROpsDialect>();
   target.addLegalDialect<LLVM::LLVMDialect>();
-  target.addLegalOp<mlir::UnrealizedConversionCastOp>();
+  target.addLegalOp<UnrealizedConversionCastOp>();
 
   auto allDataOperandsAreConverted = [](ValueRange operands) {
     for (Value operand : operands) {
