@@ -21,6 +21,9 @@ module LLVM_CodeGenTypes {
   module LLT {
     header "CodeGen/LowLevelType.h" export *
   }
+  module MVT {
+    header "CodeGen/MachineValueType.h" export *
+  }
 }
 
 // A module covering CodeGen/ and Target/. These are intertwined

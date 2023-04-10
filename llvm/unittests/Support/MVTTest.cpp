@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 // Make sure the generated version of MachineValueType.h to be equivalent to
-// the constant version of llvm/Support/MachineValueType.h.
+// the constant version of llvm/CodeGen/MachineValueType.h.
 //
 //===----------------------------------------------------------------------===//
 
 #include "MachineValueType.h"
-#include "llvm/Support/MachineValueType.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "gtest/gtest.h"
 #include <limits>
 #include <string>
