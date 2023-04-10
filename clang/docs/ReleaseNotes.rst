@@ -288,6 +288,8 @@ Bug Fixes in This Version
 - Fix the assertion hit when a template consteval function appears in a nested
   consteval/constexpr call chain.
   (`#61142 <https://github.com/llvm/llvm-project/issues/61142>`_)
+- Clang now better diagnose placeholder types constrained with a concept that is
+  not a type concept.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
