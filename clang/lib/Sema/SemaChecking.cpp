@@ -4522,9 +4522,12 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
     ASTContext::BuiltinVectorTypeInfo VecInfo =
         Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(
             TheCall->getArg(0)->getType().getCanonicalType().getTypePtr()));
-    unsigned MaxIndex =
-        (VecInfo.EC.getKnownMinValue() * VecInfo.NumVectors) /
-        (ResVecInfo.EC.getKnownMinValue() * ResVecInfo.NumVectors);
+    unsigned MaxIndex;
+    if (VecInfo.NumVectors != 1) // vget for tuple type
+      MaxIndex = VecInfo.NumVectors;
+    else // vget for non-tuple type
+      MaxIndex = (VecInfo.EC.getKnownMinValue() * VecInfo.NumVectors) /
+                 (ResVecInfo.EC.getKnownMinValue() * ResVecInfo.NumVectors);
     return SemaBuiltinConstantArgRange(TheCall, 1, 0, MaxIndex - 1);
   }
   case RISCVVector::BI__builtin_rvv_vset_v: {
