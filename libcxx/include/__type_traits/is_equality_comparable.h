@@ -43,14 +43,14 @@ struct __is_equality_comparable<_Tp, _Up, __void_t<decltype(std::declval<_Tp>() 
 //   always compared.
 
 template <class _Tp, class _Up>
-struct __is_trivially_equality_comparable
+struct __libcpp_is_trivially_equality_comparable
     : integral_constant<bool,
                         __is_equality_comparable<_Tp, _Up>::value && is_integral<_Tp>::value &&
                             is_same<__remove_cv_t<_Tp>, __remove_cv_t<_Up> >::value> {};
 
 // TODO: Use is_pointer_inverconvertible_base_of
 template <class _Tp, class _Up>
-struct __is_trivially_equality_comparable<_Tp*, _Up*>
+struct __libcpp_is_trivially_equality_comparable<_Tp*, _Up*>
     : integral_constant<
           bool,
           __is_equality_comparable<_Tp*, _Up*>::value &&
