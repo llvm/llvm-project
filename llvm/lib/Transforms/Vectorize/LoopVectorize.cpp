@@ -3900,24 +3900,22 @@ void InnerLoopVectorizer::fixFixedOrderRecurrence(
   Phi->setIncomingValueForBlock(LoopScalarPreHeader, Start);
   Phi->setName("scalar.recur");
 
-  // Finally, fix users of the recurrence outside the loop. The users will need
-  // either the last value of the scalar recurrence or the last value of the
-  // vector recurrence we extracted in the middle block. Since the loop is in
-  // LCSSA form, we just need to find all the phi nodes for the original scalar
-  // recurrence in the exit block, and then add an edge for the middle block.
-  // Note that LCSSA does not imply single entry when the original scalar loop
-  // had multiple exiting edges (as we always run the last iteration in the
-  // scalar epilogue); in that case, there is no edge from middle to exit and
-  // and thus no phis which needed updated.
-  if (!Cost->requiresScalarEpilogue(VF)) {
-    SmallPtrSet<PHINode *, 2> ToFix;
-    for (User *U : Phi->users())
-      if (isa<PHINode>(U) && cast<Instruction>(U)->getParent() == LoopExitBlock)
-        ToFix.insert(cast<PHINode>(U));
-    for (PHINode *LCSSAPhi : ToFix) {
-      LCSSAPhi->addIncoming(ExtractForPhiUsedOutsideLoop, LoopMiddleBlock);
-      State.Plan->removeLiveOut(LCSSAPhi);
-    }
+  auto RecurSplice = cast<VPInstruction>(*PhiR->user_begin());
+  assert(PhiR->getNumUsers() == 1 &&
+         RecurSplice->getOpcode() ==
+             VPInstruction::FirstOrderRecurrenceSplice &&
+         "recurrence phi must have a single user: FirstOrderRecurrenceSplice");
+  SmallVector<VPLiveOut *> LiveOuts;
+  for (VPUser *U : RecurSplice->users())
+    if (auto *LiveOut = dyn_cast<VPLiveOut>(U))
+      LiveOuts.push_back(LiveOut);
+
+  for (VPLiveOut *LiveOut : LiveOuts) {
+    assert(!Cost->requiresScalarEpilogue(VF) &&
+           "no live-outs expected when scalar epilogue is required");
+    PHINode *LCSSAPhi = LiveOut->getPhi();
+    LCSSAPhi->addIncoming(ExtractForPhiUsedOutsideLoop, LoopMiddleBlock);
+    State.Plan->removeLiveOut(LCSSAPhi);
   }
 }
 
