@@ -15,6 +15,20 @@
 
 namespace clang::tidy::modernize {
 
+using NamespaceName = llvm::SmallString<40>;
+
+class NS : public llvm::SmallVector<const NamespaceDecl *, 6> {
+public:
+  std::optional<SourceRange>
+  getCleanedNamespaceFrontRange(const SourceManager &SM,
+                                const LangOptions &LangOpts) const;
+  SourceRange getReplacedNamespaceFrontRange() const;
+  SourceRange getNamespaceBackRange(const SourceManager &SM,
+                                    const LangOptions &LangOpts) const;
+  SourceRange getDefaultNamespaceBackRange() const;
+  NamespaceName getName() const;
+};
+
 class ConcatNestedNamespacesCheck : public ClangTidyCheck {
 public:
   ConcatNestedNamespacesCheck(StringRef Name, ClangTidyContext *Context)
@@ -26,12 +40,10 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  using NamespaceContextVec = llvm::SmallVector<const NamespaceDecl *, 6>;
-  using NamespaceString = llvm::SmallString<40>;
+  using NamespaceContextVec = llvm::SmallVector<NS, 6>;
 
   void reportDiagnostic(const SourceManager &Sources,
                         const LangOptions &LangOpts);
-  NamespaceString concatNamespaces();
   NamespaceContextVec Namespaces;
 };
 } // namespace clang::tidy::modernize
