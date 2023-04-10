@@ -2314,8 +2314,6 @@ def err_auto_variable_cannot_appear_in_own_initializer : Error<
 def err_binding_cannot_appear_in_own_initializer : Error<
   "binding %0 cannot appear in the initializer of its own "
   "decomposition declaration">;
-def err_illegal_decl_array_of_auto : Error<
-  "'%0' declared as array of %1">;
 def err_new_array_of_auto : Error<
   "cannot allocate array of 'auto'">;
 def err_auto_not_allowed : Error<
