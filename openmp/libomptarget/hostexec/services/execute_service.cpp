@@ -182,11 +182,25 @@ static void handler_SERVICE_FREE(uint32_t device_id, uint64_t *payload) {
   payload[0] = (uint64_t)err;
 }
 
+static bool trace_init = false;
+static bool host_exec_trace;
+static char* TrcStrs[HOSTEXEC_SID_VOID+1] = {"unsed", "terminate", "device_malloc",
+        "host_malloc", "free", "printf", "fprintf", "ftnassign", "sanatizer",
+        "uint", "uint64", "double", "int", "long", "float" , "void"};
 // The consumer thread will serialize each active lane and call execute_service
 // for the service request. These services are intended to be architecturally
 // independent.
 void execute_service(uint32_t service_id, uint32_t device_id,
                      uint64_t *payload) {
+  if (!trace_init) {
+    trace_init = true;
+    if (char *EnvStr = getenv("LIBOMPTARGET_HOSTEXEC_TRACE"))
+      host_exec_trace = std::atoi(EnvStr) != 0;
+  }
+  if (host_exec_trace)
+    fprintf(stderr, "Hostexec service: %s SrvId: %d DevId: %d PayLoad: %lu\n",
+                    TrcStrs[service_id], service_id, device_id, payload[0]);
+
   switch (service_id) {
   case HOSTEXEC_SID_PRINTF:
     handler_SERVICE_PRINTF(device_id, payload);
