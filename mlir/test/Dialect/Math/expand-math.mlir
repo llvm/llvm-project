@@ -131,3 +131,20 @@ func.func @fmaf_func(%a: f64, %b: f64, %c: f64) -> f64 {
   %ret = math.fma %a, %b, %c : f64
   return %ret : f64
 }
+
+// -----
+
+// CHECK-LABEL:     func @floorf_func
+// CHECK-SAME:      ([[ARG0:%.+]]: f64) -> f64
+func.func @floorf_func(%a: f64) -> f64 {
+  // CHECK-DAG:   [[CST:%.+]] = arith.constant 0.000
+  // CHECK-DAG:   [[CST_0:%.+]] = arith.constant -1.000
+  // CHECK-NEXT:   [[CVTI:%.+]] = arith.fptosi [[ARG0]]
+  // CHECK-NEXT:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
+  // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf olt, [[ARG0]], [[CST]]
+  // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[CST_0]], [[CST]]
+  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[CVTF]], [[INCR]]
+  // CHECK-NEXT:   return [[ADDF]]
+  %ret = math.floor %a : f64
+  return %ret : f64
+}
