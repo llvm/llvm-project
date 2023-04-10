@@ -220,6 +220,10 @@ Changes in existing checks
   <clang-tidy/checks/misc/definitions-in-headers>` to avoid warning on
   declarations inside anonymous namespaces.
 
+- Improved :doc:`misc-unused-parameters
+  <clang-tidy/checks/misc/unused-parameters>` check with new `IgnoreVirtual`
+  option to optionally ignore virtual methods.
+
 - Deprecated check-local options `HeaderFileExtensions`
   in :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` check.
