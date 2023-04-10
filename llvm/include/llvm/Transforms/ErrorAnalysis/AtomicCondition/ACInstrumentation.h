@@ -55,7 +55,8 @@ public:
                                        int FunctionType);
   void instrumentCallsForAFComputation(Instruction *BaseInstruction,
                                        BasicBlock::iterator *InstructionIterator,
-                                       long int *NumInstrumentedInstructions);
+                                       long int *NumInstrumentedInstructions,
+                                       int FunctionType);
 
   Value *instrumentPhiNodeForAF(Value *OriginalPHI,
                                 long *NumInstrumentedInstructions);
@@ -80,26 +81,24 @@ public:
                          BasicBlock::iterator *InstructionIterator);
 
   /// Instruction based functions
-  // Categorized by operations
-  static bool canHaveGraphNode(const Instruction *Inst);
+  // Categorized by instructions
   static bool isPhiNode(const Instruction *Inst);
-  static bool isMemoryLoadOperation(const Instruction *Inst);
-  static bool isIntegerToFloatCastOperation(const Instruction *Inst);
-  static bool isFloatToFloatCastOperation(const Instruction *Inst);
-  static bool isUnaryOperation(const Instruction *Inst);
-  static bool isBinaryOperation(const Instruction *Inst);
-  static bool isOtherOperation(const Instruction *Inst);
+  static bool isMemoryLoadInstruction(const Instruction *Inst);
+  static bool isIntegerToFloatCastInstruction(const Instruction *Inst);
+  static bool isFloatToFloatCastInstruction(const Instruction *Inst);
+  static bool isUnaryInstruction(const Instruction *Inst);
+  static bool isBinaryInstruction(const Instruction *Inst);
+  static bool isTernaryInstruction(const Instruction *Inst);
   static bool isNonACInstrinsicFunction(const Instruction *Inst);
   static bool isNonACFloatPointInstruction(const Instruction *Inst);
 
   // Categorized by Data Type
-//  static bool isFPOperation(const Instruction *Inst);
-  static bool isSingleFPOperation(const Instruction *Inst);
-  static bool isDoubleFPOperation(const Instruction *Inst);
+//  static bool isFPInstruction(const Instruction *Inst);
+  static bool isSingleFPInstruction(const Instruction *Inst);
+  static bool isDoubleFPInstruction(const Instruction *Inst);
 
   /// Function based functions
   static bool isUnwantedFunction(const Function *Func);
-  static bool isFunctionOfInterest(const Function *Func);
 
   // Other Utilities
   void mapFloatCastToAFValue(Instruction *Inst,

@@ -73,6 +73,7 @@ struct AFProduct {
   // List of Pointers to Amplification data corresponding to executions with separate inputs.
   // (We assume the computation paths do not change for separate inputs.)
   ACItem **Factors; // Pointers to ACItems of the root operations.
+  int *ACWRTs;  // Operand WRT which the AC we consider in this product from ACItem.
   struct AFProduct **ProductTails; // Pointers to AFProducts of the next operations along a computation path.
   char **Inputs; // Register names of the inputs.
   double *AFs; // Amplification Factors.
@@ -104,6 +105,16 @@ void fAFCreateAFProduct(AFProduct **AddressToAllocateAt,
     (*AddressToAllocateAt)->Factors[I] = NULL;
   }
 
+  if(((*AddressToAllocateAt)->ACWRTs = (int *)malloc(sizeof(int *) *
+                                                      LengthOfLists)) == NULL) {
+    printf("#fAF: Not enough memory for AFs!");
+    exit(EXIT_FAILURE);
+  }
+  // Initialize all ACWRTs to -1 which denotes that the ACWRT is not set.
+  for (int I = 0; I < LengthOfLists; ++I) {
+    (*AddressToAllocateAt)->ACWRTs[I] = -1;
+  }
+
   if(((*AddressToAllocateAt)->ProductTails = (AFProduct **)malloc(sizeof(AFProduct *) *
                                                            LengthOfLists)) == NULL) {
     printf("#fAF: Not enough memory for ProductTails!");
@@ -129,9 +140,9 @@ void fAFCreateAFProduct(AFProduct **AddressToAllocateAt,
     printf("#fAF: Not enough memory for AFs!");
     exit(EXIT_FAILURE);
   }
-  // Initialize all AFs to 0.0
+  // Initialize all AFs to 1.0 (i.e. no amplification)
   for (int I = 0; I < LengthOfLists; ++I) {
-    (*AddressToAllocateAt)->AFs[I] = 0.0;
+    (*AddressToAllocateAt)->AFs[I] = 1.0;
   }
 
   (*AddressToAllocateAt)->Height = 1;
@@ -154,10 +165,9 @@ void fAFPrintAFProduct(AFProduct *ProductObject) {
   }
   printf("],\n");
 
-  printf("\t\t\t\"ACItemStrings\": [\"%s\"",
-         ProductObject->Factors[0]->ResultVar);
+  printf("\t\t\t\"ACWRTs\": [%d", ProductObject->ACWRTs[0]);
   for (int I = 1; I < ProductObject->NumberOfInputs; ++I) {
-    printf(",\"%s\"", ProductObject->Factors[I]->ResultVar);
+    printf(",%d", ProductObject->ACWRTs[I]);
   }
   printf("],\n");
 
@@ -239,9 +249,9 @@ void fAFStoreAFProducts(FILE *FP, AFProduct **ObjectPointerList, uint64_t NumObj
     }
     fprintf(FP, "],\n");
 
-    fprintf(FP, "\t\t\t\"ACItemStrings\": [\"%s\"", ObjectPointerList[J]->Factors[0]->ResultVar);
+    fprintf(FP, "\t\t\t\"ACWRTs\": [%d", ObjectPointerList[J]->ACWRTs[0]);
     for (int I = 1; I < ObjectPointerList[J]->NumberOfInputs; ++I) {
-      fprintf(FP, ",\"%s\"", ObjectPointerList[J]->Factors[I]->ResultVar);
+      fprintf(FP, ",%d", ObjectPointerList[J]->ACWRTs[I]);
     }
     fprintf(FP, "],\n");
 
@@ -375,9 +385,9 @@ void fAFStoreAFItems(FILE *FP, AFItem **ObjectPointerList, uint64_t NumObjects) 
       }
       fprintf(FP, "],\n");
 
-      fprintf(FP, "\t\t\t\"ACItemStrings\": [\"%s\"", ObjectPointerList[K]->Components[J]->Factors[0]->ResultVar);
+      fprintf(FP, "\t\t\t\"ACWRTs\": [%d", ObjectPointerList[K]->Components[J]->ACWRTs[0]);
       for (int I = 1; I < ObjectPointerList[K]->Components[J]->NumberOfInputs; ++I) {
-        fprintf(FP, ",\"%s\"", ObjectPointerList[K]->Components[J]->Factors[I]->ResultVar);
+        fprintf(FP, ",%d", ObjectPointerList[K]->Components[J]->ACWRTs[I]);
       }
       fprintf(FP, "],\n");
 
@@ -436,12 +446,18 @@ struct AFTable {
 typedef struct AFTable AFTable;
 
 void fAFCreateAFTable(AFTable **AddressToAllocateAt) {
+#if FAF_DEBUG
+  printf("Initializing Amplification Factor Module\n");
+#endif
+
   if((*AddressToAllocateAt = (AFTable *)malloc(sizeof(AFTable))) == NULL) {
     printf("#fAF: Not enough memory for AFItem!");
     exit(EXIT_FAILURE);
   }
 
-  return ;
+#if FAF_DEBUG
+  printf("Amplification Factor Module Initialized\n");
+#endif
 }
 
 // Gets the number of AFItems in the AFTable that are RootNodes (These will correspond
@@ -561,9 +577,9 @@ void fAFStoreInFile(AFItem **ObjectToStore) {
     }
     fprintf(FP, "],\n");
 
-    fprintf(FP, "\t\t\t\"ACItemStrings\": [\"%s\"", (*ObjectToStore)->Components[J]->Factors[0]->ResultVar);
+    fprintf(FP, "\t\t\t\"ACItemStrings\": [%d", (*ObjectToStore)->Components[J]->ACWRTs[0]);
     for (int I = 1; I < (*ObjectToStore)->Components[J]->NumberOfInputs; ++I) {
-      fprintf(FP, ",\"%s\"", (*ObjectToStore)->Components[J]->Factors[I]->ResultVar);
+      fprintf(FP, ",%d", (*ObjectToStore)->Components[J]->ACWRTs[I]);
     }
     fprintf(FP, "],\n");
 
@@ -775,6 +791,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
                                       ->Components[CandidateIndex]
                                       ->Inputs[0];
       NewAFComponent->Factors[0] = *AC;
+      NewAFComponent->ACWRTs[0] = OperandIndex;
       NewAFComponent->ProductTails[0] =
           (*AFItemWRTOperands[OperandIndex])->Components[CandidateIndex];
       NewAFComponent->AFs[0] = (*AFItemWRTOperands[OperandIndex])
@@ -793,6 +810,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
       NewAFComponent->Inputs[NewAFComponent->NumberOfInputs] =
           (*AC)->OperandNames[OperandIndex];
       NewAFComponent->Factors[NewAFComponent->NumberOfInputs] = *AC;
+      NewAFComponent->ACWRTs[NewAFComponent->NumberOfInputs] = OperandIndex;
       NewAFComponent->AFs[NewAFComponent->NumberOfInputs] =
           (*AC)->ACWRTOperands[OperandIndex];
       NewAFComponent->NumberOfInputs++;
@@ -863,7 +881,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
                                         InstructionExecutionCounter);
   if (UpdatingAFItem == NULL) {
 #if FAF_DEBUG >= 3
-    printf("Creating a new AFItem\n");
+    printf("\t\t\tCreating a new AFItem\n");
 #endif
     NewAFItem = 1;
 
@@ -931,6 +949,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
                 ->Components[AFItemsChildComponentIndex]
                 ->Inputs;
         UpdatingAFComponent->Factors[UpdatingAFComponent->NumberOfInputs] = *AC;
+        UpdatingAFComponent->ACWRTs[UpdatingAFComponent->NumberOfInputs] = OperandIndex;
         UpdatingAFComponent->ProductTails[UpdatingAFComponent->NumberOfInputs] =
             (*AFItemWRTOperands[OperandIndex])
                 ->Components[AFItemsChildComponentIndex];
@@ -977,6 +996,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
       UpdatingAFComponent->Inputs[UpdatingAFComponent->NumberOfInputs] =
           (*AC)->OperandNames[OperandIndex];
       UpdatingAFComponent->Factors[UpdatingAFComponent->NumberOfInputs] = *AC;
+      UpdatingAFComponent->ACWRTs[UpdatingAFComponent->NumberOfInputs] = OperandIndex;
       UpdatingAFComponent->ProductTails[UpdatingAFComponent->NumberOfInputs] =
           NULL;
       UpdatingAFComponent->AFs[UpdatingAFComponent->NumberOfInputs] =

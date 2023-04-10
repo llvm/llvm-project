@@ -50,7 +50,8 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction, string Functi
     // Only configuring functions with certain prefixes
     if (!CurrentFunction->hasName()) {
 
-    } else if (CurrentFunction->getName().compare(FunctionToAnalyze) == 0) {
+    } else if (CurrentFunction->getName().str().find(FunctionToAnalyze) !=
+               std::string::npos) {
       confFunction(CurrentFunction, &FunctionToInstrument,
                    GlobalValue::LinkageTypes::ExternalLinkage);
     } else if (CurrentFunction->getName().str().find("fAFInitialize") !=
@@ -111,7 +112,7 @@ void ACInstrumentation::instrumentCallsToAnalyzeInstruction(
                                   NumInstrumentedInstructions, F);
 
   instrumentCallsForAFComputation(BaseInstruction, InstructionIterator,
-                                  NumInstrumentedInstructions);
+                                  NumInstrumentedInstructions, F);
 }
 
 // Instruments a call to calculate atomic condition
@@ -125,19 +126,26 @@ void ACInstrumentation::instrumentCallsForACComputation(
   // Positioning the instruction builder
   IRBuilder<> InstructionBuilder((*InstructionIterator)->getNextNode());
   std::vector<Value *> ACArgs;
-  int NumOperands = (int)BaseInstruction->getNumOperands();
-//  if (BaseInstruction->getOpcode() == Instruction::Call &&
-//      static_cast<CallInst *>(BaseInstruction)
-//          ->getCalledFunction()
-//          ->isIntrinsic())
-//    NumOperands--;
-  if (BaseInstruction->getOpcode() == Instruction::Call)
-    NumOperands--;
+  int NumOperands = getFunctionNumOperands(FunctionType);
 
+  bool IsCpFloatFunction = false;
+  if(BaseInstruction->getOpcode() == Instruction::Call &&
+      (static_cast<const CallInst *>(BaseInstruction)->getCalledFunction() &&
+       isCPFloatFunction(
+           static_cast<const CallInst *>(BaseInstruction)->getCalledFunction())))
+    IsCpFloatFunction = true;
+
+  Value *ResultNamePointer;
   // Creating a Global string for the Register the Result of this instruction is
   // stored in.
-  Value *ResultNamePointer = createRegisterNameGlobalString(
-      static_cast<Instruction *>(BaseInstruction), BaseInstruction->getModule());
+  if(IsCpFloatFunction) {
+    ResultNamePointer = createRegisterNameGlobalString(static_cast<Instruction *>(BaseInstruction->getOperand(0)),
+                                                              BaseInstruction->getModule());
+  } else {
+    ResultNamePointer = createRegisterNameGlobalString(
+        static_cast<Instruction *>(BaseInstruction),
+        BaseInstruction->getModule());
+  }
 
   std::vector<Value *> OpRegisterNamesArray;
   std::vector<Value *> OperandValuesArray;
@@ -145,21 +153,33 @@ void ACInstrumentation::instrumentCallsForACComputation(
   // Looping through operands of BaseInstruction
   for (int I = 0; I < NumOperands; ++I) {
     // Creating a Global string representing the register name of operand if
-    // if is not a constant.
+    // it is not a constant.
     Value *OpRegisterNamePointer;
-    if (!(isa<Constant>(BaseInstruction->getOperand(I))))
+    if (!(isa<Constant>(BaseInstruction->getOperand(I)))) {
       OpRegisterNamePointer = createRegisterNameGlobalString(
           static_cast<Instruction *>(BaseInstruction->getOperand(I)),
           BaseInstruction->getModule());
+      if(IsCpFloatFunction)
+        OpRegisterNamePointer = createRegisterNameGlobalString(static_cast<Instruction *>(BaseInstruction->getOperand(I+1)),
+                                                              BaseInstruction->getModule());
+    }
     else
       OpRegisterNamePointer = EmptyValuePointer;
 
 
     OpRegisterNamesArray.push_back(OpRegisterNamePointer);
 
-    Value *OperandValue = BaseInstruction->getOperand(I);
-    // Create a Cast Instruction to double in case operation is float operation.
-    if (isSingleFPOperation(&*BaseInstruction)) {
+    Value *OperandValue;
+    if(IsCpFloatFunction) {
+      OperandValue = InstructionBuilder.CreateLoad(InstructionBuilder.getDoubleTy(),
+                                                          BaseInstruction->getOperand(I+1));
+      (*InstructionIterator)++;
+      (*NumInstrumentedInstructions)++;
+    } else {
+      OperandValue = BaseInstruction->getOperand(I);
+    }
+    // Create a Cast Instruction to double in case Instruction is float Instruction.
+    if (isSingleFPInstruction(&*BaseInstruction)) {
       if (OpRegisterNamePointer != EmptyValuePointer) {
         OperandValue = InstructionBuilder.CreateFPCast(
             BaseInstruction->getOperand(I),
@@ -215,9 +235,10 @@ void ACInstrumentation::instrumentCallsForACComputation(
   (*NumInstrumentedInstructions) += 4 * NumOperands + 5;
   (*InstructionIterator)++;
 
-  std::pair<Value *, Value *> InstructionACPair =
-      std::make_pair(BaseInstruction, ACComputingCallInstruction);
-  InstructionACMap.insert(InstructionACPair);
+  if(IsCpFloatFunction)
+      InstructionACMap[BaseInstruction->getOperand(0)] = ACComputingCallInstruction;
+  else
+    InstructionACMap[BaseInstruction] = ACComputingCallInstruction;
 
   assert(ACComputingCallInstruction && "Invalid call instruction!");
   return;
@@ -225,10 +246,10 @@ void ACInstrumentation::instrumentCallsForACComputation(
 
 void ACInstrumentation::instrumentCallsForAFComputation(
     Instruction *BaseInstruction, BasicBlock::iterator *InstructionIterator,
-    long *NumInstrumentedInstructions) {
+    long *NumInstrumentedInstructions, int FunctionType) {
   // Ensuring AFComputingFunction is linked
   assert((ACComputingFunction != nullptr) && "Function not initialized!");
-  assert((getFunctionEnum(BaseInstruction) != -1) &&
+  assert((FunctionType != -1) &&
          "Function cannot be analyzed");
 
   // Positioning the instruction builder
@@ -238,28 +259,46 @@ void ACInstrumentation::instrumentCallsForAFComputation(
 
   std::vector<Value *> AFArray;
 
-  int NumOperands = (int)BaseInstruction->getNumOperands();
-//  if (BaseInstruction->getOpcode() == Instruction::Call &&
-//      static_cast<CallInst *>(BaseInstruction)
-//          ->getCalledFunction()
-//          ->isIntrinsic())
-  if (BaseInstruction->getOpcode() == Instruction::Call)
-    NumOperands--;
+  int NumOperands = getFunctionNumOperands(FunctionType);
+
+  bool IsCpFloatFunction = false;
+  if(BaseInstruction->getOpcode() == Instruction::Call &&
+      (static_cast<const CallInst *>(BaseInstruction)->getCalledFunction() &&
+       isCPFloatFunction(
+           static_cast<const CallInst *>(BaseInstruction)->getCalledFunction())))
+    IsCpFloatFunction = true;
 
   for (int I = 0; I < NumOperands; ++I) {
-    if (getFunctionEnum(
+    if (IsCpFloatFunction) {
+      if (InstructionAFMap.find(BaseInstruction->getOperand(I+1)) != InstructionAFMap.end())
+        AFArray.push_back(InstructionAFMap[BaseInstruction->getOperand(I+1)]);
+      else
+        AFArray.push_back(
+            ConstantPointerNull::get(InstructionBuilder.getPtrTy()));
+    }
+    // Case when operand is another floating-point instruction for which we can
+    // and must have instrumented an AFComputingFunction call.
+    else if (getFunctionEnum(
             static_cast<Instruction *>(BaseInstruction->getOperand(I))) != -1) {
-      assert(InstructionAFMap.count(BaseInstruction->getOperand(I)) == 1);
+      assert(InstructionAFMap.find(BaseInstruction->getOperand(I)) != InstructionAFMap.end() &&
+             "AFComputingFunction call not found for operand!");
       AFArray.push_back(InstructionAFMap[BaseInstruction->getOperand(I)]);
-    } else if (isFloatToFloatCastOperation(static_cast<const Instruction *>(
+    }
+    // Case when operand is a float-to-float cast instruction for which we do not
+    // instrument an AFComputingFunction call but it is mapped to an AFComputingFunction
+    // call instrumented for ITS operand.
+    else if (isFloatToFloatCastInstruction(static_cast<const Instruction *>(
                    BaseInstruction->getOperand(I))) &&
-               InstructionAFMap.count(BaseInstruction->getOperand(I)) == 1) {
+               InstructionAFMap.find(BaseInstruction->getOperand(I)) != InstructionAFMap.end()) {
       AFArray.push_back(InstructionAFMap[BaseInstruction->getOperand(I)]);
-    } else if (isa<Instruction>(BaseInstruction->getOperand(I)) &&
+    }
+    // Case when operand is a phi node and we need to instrument a phi node for
+    // AFComputingFunctions corresponding to it.
+    else if (isa<Instruction>(BaseInstruction->getOperand(I)) &&
                static_cast<Instruction *>(BaseInstruction->getOperand(I))
                        ->getOpcode() == Instruction::PHI) {
       // Case when operand is a phi node.
-      if(InstructionAFMap.count(BaseInstruction->getOperand(I)) == 0) {
+      if(InstructionAFMap.find(BaseInstruction->getOperand(I)) == InstructionAFMap.end()) {
         // If Phi node is not yet instrumented, instrument it.
         instrumentPhiNodeForAF(BaseInstruction->getOperand(I), NumInstrumentedInstructions);
       }
@@ -279,7 +318,10 @@ void ACInstrumentation::instrumentCallsForAFComputation(
                                                                   FunctionInstanceCounter);
   (*InstructionIterator)++;
 
-  AFArgs.push_back(InstructionACMap[BaseInstruction]);
+  if (IsCpFloatFunction)
+    AFArgs.push_back(InstructionACMap[BaseInstruction->getOperand(0)]);
+  else
+    AFArgs.push_back(InstructionACMap[BaseInstruction]);
   AFArgs.push_back(AllocatedAFArray);
   AFArgs.push_back(InstructionBuilder.getInt32(NumOperands));
   AFArgs.push_back(FunctionInstanceIdLoader);
@@ -297,9 +339,10 @@ void ACInstrumentation::instrumentCallsForAFComputation(
   *NumInstrumentedInstructions += 2 * NumOperands + 4;
   (*InstructionIterator)++;
 
-  std::pair<Value *, Value *> InstructionAFPair =
-      std::make_pair(BaseInstruction, AFComputingCallInstruction);
-  InstructionAFMap.insert(InstructionAFPair);
+  if(IsCpFloatFunction)
+    InstructionAFMap[BaseInstruction->getOperand(0)] = AFComputingCallInstruction;
+  else
+    InstructionAFMap[BaseInstruction] = AFComputingCallInstruction;
 
   assert(AFComputingCallInstruction && "Invalid call instruction!");
   return;
@@ -328,7 +371,7 @@ ACInstrumentation::instrumentPhiNodeForAF(Value *OriginalPHI,
     Value *IncomingValue =
         static_cast<PHINode *>(OriginalPHI)->getIncomingValue(I);
 
-    if (InstructionAFMap.count(IncomingValue) == 1)
+    if (InstructionAFMap.find(IncomingValue) != InstructionAFMap.end())
       static_cast<PHINode *>(AFPhi)->addIncoming(
           InstructionAFMap[IncomingValue], IncomingBlock);
     else
@@ -339,9 +382,7 @@ ACInstrumentation::instrumentPhiNodeForAF(Value *OriginalPHI,
 
   (*NumInstrumentedInstructions)++;
 
-  std::pair<Value *, Value *> InstructionAFPair =
-      std::make_pair(OriginalPHI, AFPhi);
-  InstructionAFMap.insert(InstructionAFPair);
+  InstructionAFMap[OriginalPHI] = AFPhi;
 
   return AFPhi;
 }
@@ -362,13 +403,13 @@ Value *ACInstrumentation::instrumentSelectForAF(
   // Setting the AF Values to propagate for the True and False cases.
   Value *TrueAFValue, *FalseAFValue;
   if (getFunctionEnum(static_cast<Instruction *>(TrueValue)) != -1) {
-    assert(InstructionAFMap.count(TrueValue) == 1  &&
+    assert(InstructionAFMap.find(TrueValue) != InstructionAFMap.end()  &&
            "InstructionAFMap does not contain value for this key.");
     TrueAFValue = InstructionAFMap[TrueValue];
   } else if(static_cast<Instruction*>(TrueValue)->getOpcode() == Instruction::PHI &&
-        InstructionAFMap.count(TrueValue) == 0) {
+        InstructionAFMap.find(TrueValue) == InstructionAFMap.end()) {
     instrumentPhiNodeForAF(TrueValue, NumInstrumentedInstructions);
-    assert(InstructionAFMap.count(TrueValue) == 1  &&
+    assert(InstructionAFMap.find(TrueValue) != InstructionAFMap.end()  &&
            "InstructionAFMap does not contain value for this key.");
     TrueAFValue = InstructionAFMap[TrueValue];
   }
@@ -376,13 +417,13 @@ Value *ACInstrumentation::instrumentSelectForAF(
     TrueAFValue = ConstantPointerNull::get(InstructionBuilder.getPtrTy());
 
   if (getFunctionEnum(static_cast<Instruction *>(FalseValue)) != -1) {
-    assert(InstructionAFMap.count(FalseValue) == 1  &&
+    assert(InstructionAFMap.find(FalseValue) != InstructionAFMap.end()  &&
            "InstructionAFMap does not contain value for this key.");
     FalseAFValue = InstructionAFMap[FalseValue];
   } else if(static_cast<Instruction*>(FalseValue)->getOpcode() == Instruction::PHI &&
-        InstructionAFMap.count(FalseValue) == 0) {
+        InstructionAFMap.find(FalseValue) == InstructionAFMap.end()) {
     instrumentPhiNodeForAF(FalseValue, NumInstrumentedInstructions);
-    assert(InstructionAFMap.count(FalseValue) == 1  &&
+    assert(InstructionAFMap.find(FalseValue) != InstructionAFMap.end()  &&
            "InstructionAFMap does not contain value for this key.");
     FalseAFValue = InstructionAFMap[FalseValue];
   }
@@ -485,23 +526,22 @@ void ACInstrumentation::instrumentBasicBlock(
     if (this->FunctionToInstrument &&
         BB->getParent()->getName().compare(this->FunctionToInstrument->getName()) == 0) {
       // Branch based on kind of Instruction
-      if (isFloatToFloatCastOperation(&*I)) {
+      if (isFloatToFloatCastInstruction(&*I)) {
         mapFloatCastToAFValue(&*I, NumInstrumentedInstructions);
-      } else if (isOtherOperation(&*I)) {
+      } else if (isTernaryInstruction(&*I)) {
         instrumentCallsToAnalyzeInstruction(CurrentInstruction, &I,
                                             NumInstrumentedInstructions);
-      } else if (isUnaryOperation(&*I)) {
+      } else if (isUnaryInstruction(&*I)) {
         instrumentCallsToAnalyzeInstruction(CurrentInstruction, &I,
                                             NumInstrumentedInstructions);
-      } else if (isBinaryOperation(&*I)) {
+      } else if (isBinaryInstruction(&*I)) {
         instrumentCallsToAnalyzeInstruction(CurrentInstruction, &I,
                                             NumInstrumentedInstructions);
       } else if ((&*I)->getOpcode() == Instruction::Select) {
-        std::pair<Value *, Value *> InstructionAFPair = std::make_pair(
-            CurrentInstruction,
-            instrumentSelectForAF(CurrentInstruction, &I,
-                                  NumInstrumentedInstructions));
-        InstructionAFMap.insert(InstructionAFPair);
+        assert(InstructionAFMap.find(CurrentInstruction) == InstructionAFMap.end() &&
+               "InstructionAFMap already contains this instruction.");
+        InstructionAFMap[CurrentInstruction] = instrumentSelectForAF(CurrentInstruction, &I,
+                                                                     NumInstrumentedInstructions);
       }
 
       // CurrentInstruction is updated to the BasicBlock iterators position as the
@@ -564,14 +604,14 @@ void ACInstrumentation::instrumentBasicBlock(
     for (BasicBlock::phi_iterator I = BB->phis().begin(); I != BB->phis().end(); ++I) {
       Value *OriginalPHI = &*I;
 
-      if(InstructionAFMap.count(OriginalPHI) == 1) {
+      if(InstructionAFMap.find(OriginalPHI) != InstructionAFMap.end()) {
         Value *AFPhi = InstructionAFMap[OriginalPHI];
 
         // Iterate through all the incoming values of AFPhi and replace null values
         // with the mapped value of corresponding OriginalPHI from InstructionAFMap
         for (unsigned J = 0; J < static_cast<PHINode *>(OriginalPHI)->getNumIncomingValues(); J++) {
           if (isa<ConstantPointerNull>(static_cast<PHINode *>(AFPhi)->getIncomingValue(J))
-              && InstructionAFMap.count(static_cast<PHINode *>(OriginalPHI)->getIncomingValue(J)) == 1) {
+              && InstructionAFMap.find(static_cast<PHINode *>(OriginalPHI)->getIncomingValue(J)) != InstructionAFMap.end()) {
             Value *IncomingValue = InstructionAFMap[static_cast<PHINode *>(OriginalPHI)->getIncomingValue(J)];
             static_cast<PHINode *>(AFPhi)->setIncomingValue(J, IncomingValue);
           }
@@ -690,60 +730,51 @@ ACInstrumentation::createArrayInIR(vector<Value *> ArrayOfValues,
   return Array;
 }
 
-bool ACInstrumentation::canHaveGraphNode(const Instruction *Inst) {
-  return isMemoryLoadOperation(Inst) || isUnaryOperation(Inst) ||
-         isBinaryOperation(Inst) || isOtherOperation(Inst);
-}
-
 bool ACInstrumentation::isPhiNode(const Instruction *Inst) {
   return Inst->getOpcode() == Instruction::PHI;
 }
 
-bool ACInstrumentation::isMemoryLoadOperation(const Instruction *Inst) {
+bool ACInstrumentation::isMemoryLoadInstruction(const Instruction *Inst) {
   return Inst->getOpcode() == Instruction::Alloca ||
          Inst->getOpcode() == Instruction::Load;
 }
 
-bool ACInstrumentation::isIntegerToFloatCastOperation(const Instruction *Inst) {
+bool ACInstrumentation::isIntegerToFloatCastInstruction(const Instruction *Inst) {
   return Inst->getOpcode() == Instruction::UIToFP ||
          Inst->getOpcode() == Instruction::SIToFP;
 }
 
-bool ACInstrumentation::isFloatToFloatCastOperation(const Instruction *Inst) {
+bool ACInstrumentation::isFloatToFloatCastInstruction(const Instruction *Inst) {
   return Inst->getOpcode() == Instruction::FPTrunc ||
          Inst->getOpcode() == Instruction::FPExt;
 }
 
-bool ACInstrumentation::isUnaryOperation(const Instruction *Inst) {
+bool ACInstrumentation::isUnaryInstruction(const Instruction *Inst) {
   return Inst->getOpcode() == Instruction::FNeg ||
          (Inst->getOpcode() == Instruction::Call &&
           (static_cast<const CallInst *>(Inst)->getCalledFunction() &&
-           isFunctionOfInterest(
+           isUnaryFunction(
                static_cast<const CallInst *>(Inst)->getCalledFunction())));
 }
 
 // TODO: Check for FRem case.
-bool ACInstrumentation::isBinaryOperation(const Instruction *Inst) {
+bool ACInstrumentation::isBinaryInstruction(const Instruction *Inst) {
   return Inst->getOpcode() == Instruction::FAdd ||
          Inst->getOpcode() == Instruction::FSub ||
          Inst->getOpcode() == Instruction::FMul ||
-         Inst->getOpcode() == Instruction::FDiv;
+         Inst->getOpcode() == Instruction::FDiv ||
+         (Inst->getOpcode() == Instruction::Call &&
+          (static_cast<const CallInst *>(Inst)->getCalledFunction() &&
+           isBinaryFunction(
+               static_cast<const CallInst *>(Inst)->getCalledFunction())));
 }
 
-bool ACInstrumentation::isOtherOperation(const Instruction *Inst) {
+bool ACInstrumentation::isTernaryInstruction(const Instruction *Inst) {
   return (Inst->getOpcode() == Instruction::Call &&
           static_cast<const CallInst *>(Inst)->getCalledFunction() &&
           static_cast<const CallInst *>(Inst)->getCalledFunction()->hasName() &&
-          (static_cast<const CallInst *>(Inst)
-                   ->getCalledFunction()
-                   ->getName()
-                   .str()
-                   .find("llvm.fmuladd") != std::string::npos ||
-           static_cast<const CallInst *>(Inst)
-                   ->getCalledFunction()
-                   ->getName()
-                   .str()
-                   .find("llvm.fma") != std::string::npos));
+          isTernaryFunction(
+              static_cast<const CallInst *>(Inst)->getCalledFunction()));
 }
 
 bool ACInstrumentation::isNonACInstrinsicFunction(const Instruction *Inst) {
@@ -760,8 +791,8 @@ bool ACInstrumentation::isNonACFloatPointInstruction(const Instruction *Inst) {
   return false;
 }
 
-bool ACInstrumentation::isSingleFPOperation(const Instruction *Inst) {
-  if (isUnaryOperation(Inst)) {
+bool ACInstrumentation::isSingleFPInstruction(const Instruction *Inst) {
+  if (isUnaryInstruction(Inst)) {
     switch (Inst->getOpcode()) {
     case 12:
       return Inst->getOperand(0)->getType()->isFloatTy();
@@ -773,10 +804,10 @@ bool ACInstrumentation::isSingleFPOperation(const Instruction *Inst) {
           ->getType()
           ->isFloatTy();
     default:
-      //      errs() << "Not an FP32 operation.\n";
+      //      errs() << "Not an FP32 Instruction.\n";
       break;
     }
-  } else if (isBinaryOperation(Inst)) {
+  } else if (isBinaryInstruction(Inst)) {
     return Inst->getOperand(0)->getType()->isFloatTy() &&
            Inst->getOperand(1)->getType()->isFloatTy();
   } else if (Inst->getOpcode() == Instruction::PHI) {
@@ -786,8 +817,8 @@ bool ACInstrumentation::isSingleFPOperation(const Instruction *Inst) {
   return false;
 }
 
-bool ACInstrumentation::isDoubleFPOperation(const Instruction *Inst) {
-  if (isUnaryOperation(Inst)) {
+bool ACInstrumentation::isDoubleFPInstruction(const Instruction *Inst) {
+  if (isUnaryInstruction(Inst)) {
     switch (Inst->getOpcode()) {
     case 12:
       return Inst->getOperand(0)->getType()->isDoubleTy();
@@ -799,10 +830,10 @@ bool ACInstrumentation::isDoubleFPOperation(const Instruction *Inst) {
           ->getType()
           ->isDoubleTy();
     default:
-      //      errs() << "Not an FP64 operation.\n";
+      //      errs() << "Not an FP64 Instruction.\n";
       break;
     }
-  } else if (isBinaryOperation(Inst)) {
+  } else if (isBinaryInstruction(Inst)) {
     return Inst->getOperand(0)->getType()->isDoubleTy() &&
            Inst->getOperand(1)->getType()->isDoubleTy();
   } else if (Inst->getOpcode() == Instruction::PHI) {
@@ -822,53 +853,28 @@ bool ACInstrumentation::isUnwantedFunction(const Function *Func) {
          Func->getName().str().find("ACItem") != std::string::npos;
 }
 
-bool ACInstrumentation::isFunctionOfInterest(const Function *Func) {
-  if (Func->hasName()) {
-    string FunctionName = Func->getName().str();
-    transform(FunctionName.begin(), FunctionName.end(), FunctionName.begin(),
-              ::tolower);
-    return FunctionName.find("sin") != std::string::npos ||
-           FunctionName.find("cos") != std::string::npos ||
-           FunctionName.find("tan") != std::string::npos ||
-           FunctionName.find("exp") != std::string::npos ||
-           FunctionName.find("log") != std::string::npos ||
-           FunctionName.find("sqrt") != std::string::npos;
-  }
-  return false;
-}
-
 void ACInstrumentation::mapFloatCastToAFValue(Instruction *Inst,
                                               long *NumInstrumentedInstructions) {
   if (Inst->getOpcode() == Instruction::FPTrunc) {
-    if (InstructionAFMap.count(static_cast<const FPTruncInst *>(Inst)->getOperand(0)) == 0
+    if (InstructionAFMap.find(static_cast<const FPTruncInst *>(Inst)->getOperand(0)) == InstructionAFMap.end()
         && isPhiNode(static_cast<const Instruction *>(static_cast<const FPTruncInst *>(Inst)->getOperand(0)))) {
       // If the operand of the FPTruncInst is a PHINode, then we need to instrument
       // a corresponding PHINode for the AF value.
       instrumentPhiNodeForAF(static_cast<const FPTruncInst *>(Inst)->getOperand(0),
                              NumInstrumentedInstructions);
     }
-    if (InstructionAFMap.count(static_cast<const FPTruncInst *>(Inst)->getOperand(0)) == 1) {
-      std::pair<Value *, Value *> InstructionAFPair = std::make_pair(
-          (Value *)Inst,
-          InstructionAFMap[static_cast<const FPTruncInst *>(Inst)->getOperand(
-              0)]);
-      InstructionAFMap.insert(InstructionAFPair);
-    }
+    if (InstructionAFMap.find(static_cast<const FPTruncInst *>(Inst)->getOperand(0)) != InstructionAFMap.end())
+      InstructionAFMap[Inst] = InstructionAFMap[static_cast<const FPTruncInst *>(Inst)->getOperand(0)];
   } else if(Inst->getOpcode() == Instruction::FPExt) {
-    if(InstructionAFMap.count(static_cast<const FPExtInst *>(Inst)->getOperand(0)) == 0
+    if(InstructionAFMap.find(static_cast<const FPExtInst *>(Inst)->getOperand(0)) == InstructionAFMap.end()
         && isPhiNode(static_cast<const Instruction *>(static_cast<const FPExtInst *>(Inst)->getOperand(0)))) {
       // If the operand of the FPExtInst is a PHINode, then we need to instrument
       // a corresponding PHINode for the AF value.
       instrumentPhiNodeForAF(static_cast<const FPExtInst *>(Inst)->getOperand(0),
                                  NumInstrumentedInstructions);
     }
-    if(InstructionAFMap.count(static_cast<const FPExtInst *>(Inst)->getOperand(0)) == 1) {
-      std::pair<Value *, Value *> InstructionAFPair = std::make_pair(
-          (Value *)Inst,
-          InstructionAFMap[static_cast<const FPExtInst *>(Inst)->getOperand(
-              0)]);
-      InstructionAFMap.insert(InstructionAFPair);
-    }
+    if(InstructionAFMap.find(static_cast<const FPExtInst *>(Inst)->getOperand(0)) != InstructionAFMap.end())
+      InstructionAFMap[Inst] = InstructionAFMap[static_cast<const FPExtInst *>(Inst)->getOperand(0)];
   }
 }
 

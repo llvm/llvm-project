@@ -893,6 +893,8 @@ ACItem **fACComputeAC(const char *ResultVar,
     //    printf("AC of tan(x) | x=%lf is %lf.\n", OperandValues[0], Item.ACWRTOperands[0]);
     break;
   case 7:
+    assert(OperandValues[0] >= -1.0 && OperandValues[0] <= 1.0 &&
+           "asin(x) is not defined for x outside [-1,1]." );
     Item.HPResult = asin(OperandValues[0]);
 
     Item.ACWRTOperands[0] = fabs(OperandValues[0] / (sqrt(1-pow(OperandValues[0],2)) * asin(OperandValues[0])));
@@ -901,6 +903,8 @@ ACItem **fACComputeAC(const char *ResultVar,
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);
     break;
   case 8:
+    assert(OperandValues[0] >= -1.0 && OperandValues[0] <= 1.0 &&
+               "acos(x) is not defined for x outside [-1,1]." );
     Item.HPResult = acos(OperandValues[0]);
 
     Item.ACWRTOperands[0] = fabs(-OperandValues[0] / (sqrt(1-pow(OperandValues[0],2)) * acos(OperandValues[0])));
@@ -909,6 +913,8 @@ ACItem **fACComputeAC(const char *ResultVar,
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);
     break;
   case 9:
+    assert(OperandValues[0] >= -1.0 && OperandValues[0] <= 1.0 &&
+               "atan(x) is not defined for x outside [-1,1]." );
     Item.HPResult = atan(OperandValues[0]);
 
     Item.ACWRTOperands[0] = fabs(OperandValues[0] / (pow(OperandValues[0],2)+1 * atan(OperandValues[0])));
@@ -949,6 +955,7 @@ ACItem **fACComputeAC(const char *ResultVar,
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);
     break;
   case 14:
+    assert(OperandValues[0] >= 0.0 && "log(x) is not defined for x <= 0." );
     Item.HPResult = log(OperandValues[0]);
 
     Item.ACWRTOperands[0] = fabs(1/log(OperandValues[0]));
@@ -956,6 +963,7 @@ ACItem **fACComputeAC(const char *ResultVar,
 
     Item.ACStrings[0] = fACDumpAtomicConditionString(OperandNames, OperandValues, F, 0);break;
   case 15:
+    assert(OperandValues[0] >= 0.0 && "sqrt(x) is not defined for x <= 0.");
     Item.HPResult = sqrt(OperandValues[0]);
 
     Item.ACWRTOperands[0] = 0.5;
