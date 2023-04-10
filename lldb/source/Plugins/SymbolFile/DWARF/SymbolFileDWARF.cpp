@@ -4352,3 +4352,30 @@ Status SymbolFileDWARF::CalculateFrameVariableError(StackFrame &frame) {
   return Status("no variable information is available in debug info for this "
                 "compile unit");
 }
+
+void SymbolFileDWARF::GetCompileOptions(
+    std::unordered_map<lldb::CompUnitSP, lldb_private::Args> &args) {
+
+  const uint32_t num_compile_units = GetNumCompileUnits();
+
+  for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
+    lldb::CompUnitSP comp_unit = GetCompileUnitAtIndex(cu_idx);
+    if (!comp_unit)
+      continue;
+
+    DWARFUnit *dwarf_cu = GetDWARFCompileUnit(comp_unit.get());
+    if (!dwarf_cu)
+      continue;
+
+    const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
+    if (!die)
+      continue;
+
+    const char *flags = die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
+
+    if (!flags)
+      continue;
+    args.insert({comp_unit, Args(flags)});
+  }
+}
+

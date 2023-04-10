@@ -162,6 +162,9 @@ public:
   // Statistics overrides.
   lldb_private::ModuleList GetDebugInfoModules() override;
 
+  void GetCompileOptions(
+      std::unordered_map<lldb::CompUnitSP, lldb_private::Args> &args) override;
+
 protected:
   enum { kHaveInitializedOSOs = (1 << 0), kNumFlags };
 
