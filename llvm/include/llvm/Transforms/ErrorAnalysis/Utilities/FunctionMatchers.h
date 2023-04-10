@@ -23,8 +23,15 @@ bool isTanhFunction(const string FunctionName);
 bool isExpFunction(const string FunctionName);
 bool isLogFunction(const string FunctionName);
 bool isSqrtFunction(const string FunctionName);
+
+bool isAddFunction(const string FunctionName);
+bool isSubFunction(const string FunctionName);
+bool isMulFunction(const string FunctionName);
+bool isDivFunction(const string FunctionName);
+
 bool isFMAFuncton(const string FunctionName);
 bool isPrintFunction(const string FunctionName);
+bool isCPFloatFunction(const string FunctionName);
 
 } // namespace atomiccondition
 

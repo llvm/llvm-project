@@ -130,10 +130,76 @@ bool isInstructionOfInterest(Instruction *Inst) {
   return false;
 }
 
+bool isUnaryFunction(const Function *Func) {
+  if (Func->hasName()) {
+    string FunctionName = Func->getName().str();
+    transform(FunctionName.begin(), FunctionName.end(), FunctionName.begin(),
+              ::tolower);
+    return isASinFunction(FunctionName) ||
+           isACosFunction(FunctionName) ||
+           isATanFunction(FunctionName) ||
+           isSinFunction(FunctionName) ||
+           isCosFunction(FunctionName) ||
+           isTanFunction(FunctionName) ||
+           isSinhFunction(FunctionName) ||
+           isCoshFunction(FunctionName) ||
+           isTanhFunction(FunctionName) ||
+           isExpFunction(FunctionName) ||
+           isLogFunction(FunctionName) ||
+           isSqrtFunction(FunctionName);
+  }
+  return false;
+}
+
+bool isBinaryFunction(const Function *Func) {
+  if (Func->hasName()) {
+    string FunctionName = Func->getName().str();
+    transform(FunctionName.begin(), FunctionName.end(), FunctionName.begin(),
+              ::tolower);
+    return isAddFunction(FunctionName) ||
+           isSubFunction(FunctionName) ||
+           isMulFunction(FunctionName) ||
+           isDivFunction(FunctionName);
+  }
+  return false;
+}
+
+bool isTernaryFunction(const Function *Func) {
+  if (Func->hasName()) {
+    string FunctionName = Func->getName().str();
+    transform(FunctionName.begin(), FunctionName.end(), FunctionName.begin(),
+              ::tolower);
+    return isFMAFuncton(FunctionName);
+  }
+  return false;
+}
+
+bool isFunctionOfInterest(const Function *Func) {
+  if (Func->hasName()) {
+    string FunctionName = Func->getName().str();
+    transform(FunctionName.begin(), FunctionName.end(), FunctionName.begin(),
+              ::tolower);
+    return isUnaryFunction(Func) ||
+           isBinaryFunction(Func) ||
+           isTernaryFunction(Func);
+  }
+  return false;
+}
+
+bool isCPFloatFunction(const Function *Func) {
+  if (Func->hasName()) {
+    string FunctionName = Func->getName().str();
+    transform(FunctionName.begin(), FunctionName.end(), FunctionName.begin(),
+              ::tolower);
+    return isCPFloatFunction(FunctionName);
+  }
+  return false;
+}
+
+
 // Functions defined in AtomicCondition library
 int getFunctionEnum(Instruction *Inst) {
   string FunctionName = "";
-
   switch (Inst->getOpcode()) {
   case 12:
     return Func::Neg;
@@ -150,7 +216,7 @@ int getFunctionEnum(Instruction *Inst) {
         static_cast<CallInst*>(Inst)->getCalledFunction()->hasName())
       FunctionName = static_cast<CallInst*>(Inst)->getCalledFunction()->getName().str();
     transform(FunctionName.begin(), FunctionName.end(), FunctionName.begin(), ::tolower);
-    if (isASinFunction(FunctionName))
+    if(isASinFunction(FunctionName))
       return Func::ArcSin;
     if(isACosFunction(FunctionName))
       return Func::ArcCos;
@@ -174,12 +240,48 @@ int getFunctionEnum(Instruction *Inst) {
       return Func::Log;
     if(isSqrtFunction(FunctionName))
       return Func::Sqrt;
+    if(isAddFunction(FunctionName))
+      return Func::Add;
+    if(isSubFunction(FunctionName))
+      return Func::Sub;
+    if(isMulFunction(FunctionName))
+      return Func::Mul;
+    if(isDivFunction(FunctionName))
+      return Func::Div;
     if(isFMAFuncton(FunctionName))
       return Func::FMA;
     return -1;
   default:
     //    errs() << BaseInstruction << " is not a Binary Instruction.\n";
     return -1;
+  }
+}
+
+int getFunctionNumOperands(int FunctionEnum) {
+  switch (FunctionEnum) {
+    case Func::Neg:
+    case Func::ArcSin:
+    case Func::ArcCos:
+    case Func::ArcTan:
+    case Func::Sinh:
+    case Func::Cosh:
+    case Func::Tanh:
+    case Func::Sin:
+    case Func::Cos:
+    case Func::Tan:
+    case Func::Exp:
+    case Func::Log:
+    case Func::Sqrt:
+      return 1;
+    case Func::Add:
+    case Func::Sub:
+    case Func::Mul:
+    case Func::Div:
+      return 2;
+    case Func::FMA:
+      return 3;
+    default:
+      return -1;
   }
 }
 

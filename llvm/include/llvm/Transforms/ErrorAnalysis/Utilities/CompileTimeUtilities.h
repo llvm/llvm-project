@@ -20,7 +20,13 @@ Value *createInstructionGlobalString(Instruction *Inst);
 Value *createStringRefGlobalString(StringRef StringObj, Instruction *Inst);
 std::string getInstructionAsString(Instruction *Inst);
 bool isInstructionOfInterest(Instruction *Inst);
+bool isUnaryFunction(const Function *Func);
+bool isBinaryFunction(const Function *Func);
+bool isTernaryFunction(const Function *Func);
+bool isFunctionOfInterest(const Function *Func);
+bool isCPFloatFunction(const Function *Func);
 int getFunctionEnum(Instruction *Inst);
+int getFunctionNumOperands(int FunctionEnum);
 
 } // namespace atomiccondition
 
