@@ -725,6 +725,7 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
 
   MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
   MachineFunction &MF = MMI.getOrCreateMachineFunction(*F);
+  MF.setIsOutlined(true);
   MachineBasicBlock &MBB = *MF.CreateMachineBasicBlock();
 
   // Insert the new function into the module.

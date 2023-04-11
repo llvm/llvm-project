@@ -2077,25 +2077,25 @@ void TreePatternNode::InlinePatternFragments(
   if (TP.hasError())
     return;
 
-  if (isLeaf()) {
+  if (T->isLeaf()) {
     OutAlternatives.push_back(T);  // nothing to do.
     return;
   }
 
-  Record *Op = getOperator();
+  Record *Op = T->getOperator();
 
   if (!Op->isSubClassOf("PatFrags")) {
-    if (getNumChildren() == 0) {
+    if (T->getNumChildren() == 0) {
       OutAlternatives.push_back(T);
       return;
     }
 
     // Recursively inline children nodes.
-    std::vector<std::vector<TreePatternNodePtr> > ChildAlternatives;
-    ChildAlternatives.resize(getNumChildren());
-    for (unsigned i = 0, e = getNumChildren(); i != e; ++i) {
-      TreePatternNodePtr Child = getChildShared(i);
-      Child->InlinePatternFragments(Child, TP, ChildAlternatives[i]);
+    std::vector<std::vector<TreePatternNodePtr>> ChildAlternatives(
+        T->getNumChildren());
+    for (unsigned i = 0, e = T->getNumChildren(); i != e; ++i) {
+      TreePatternNodePtr Child = T->getChildShared(i);
+      InlinePatternFragments(Child, TP, ChildAlternatives[i]);
       // If there are no alternatives for any child, there are no
       // alternatives for this expression as whole.
       if (ChildAlternatives[i].empty())
@@ -2111,8 +2111,7 @@ void TreePatternNode::InlinePatternFragments(
     }
 
     // The end result is an all-pairs construction of the resultant pattern.
-    std::vector<unsigned> Idxs;
-    Idxs.resize(ChildAlternatives.size());
+    std::vector<unsigned> Idxs(ChildAlternatives.size());
     bool NotDone;
     do {
       // Create the variant and add it to the output list.
@@ -2120,18 +2119,18 @@ void TreePatternNode::InlinePatternFragments(
       for (unsigned i = 0, e = ChildAlternatives.size(); i != e; ++i)
         NewChildren.push_back(ChildAlternatives[i][Idxs[i]]);
       TreePatternNodePtr R = std::make_shared<TreePatternNode>(
-          getOperator(), std::move(NewChildren), getNumTypes());
+          T->getOperator(), std::move(NewChildren), T->getNumTypes());
 
       // Copy over properties.
-      R->setName(getName());
-      R->setNamesAsPredicateArg(getNamesAsPredicateArg());
-      R->setPredicateCalls(getPredicateCalls());
-      R->setGISelFlagsRecord(getGISelFlagsRecord());
-      R->setTransformFn(getTransformFn());
-      for (unsigned i = 0, e = getNumTypes(); i != e; ++i)
-        R->setType(i, getExtType(i));
-      for (unsigned i = 0, e = getNumResults(); i != e; ++i)
-        R->setResultIndex(i, getResultIndex(i));
+      R->setName(T->getName());
+      R->setNamesAsPredicateArg(T->getNamesAsPredicateArg());
+      R->setPredicateCalls(T->getPredicateCalls());
+      R->setGISelFlagsRecord(T->getGISelFlagsRecord());
+      R->setTransformFn(T->getTransformFn());
+      for (unsigned i = 0, e = T->getNumTypes(); i != e; ++i)
+        R->setType(i, T->getExtType(i));
+      for (unsigned i = 0, e = T->getNumResults(); i != e; ++i)
+        R->setResultIndex(i, T->getResultIndex(i));
 
       // Register alternative.
       OutAlternatives.push_back(R);
@@ -2157,7 +2156,7 @@ void TreePatternNode::InlinePatternFragments(
   TreePattern *Frag = TP.getDAGPatterns().getPatternFragment(Op);
 
   // Verify that we are passing the right number of operands.
-  if (Frag->getNumArgs() != Children.size()) {
+  if (Frag->getNumArgs() != T->getNumChildren()) {
     TP.error("'" + Op->getName() + "' fragment requires " +
              Twine(Frag->getNumArgs()) + " operands!");
     return;
@@ -2171,7 +2170,7 @@ void TreePatternNode::InlinePatternFragments(
   // Compute the map of formal to actual arguments.
   std::map<std::string, TreePatternNodePtr> ArgMap;
   for (unsigned i = 0, e = Frag->getNumArgs(); i != e; ++i) {
-    TreePatternNodePtr Child = getChildShared(i);
+    TreePatternNodePtr Child = T->getChildShared(i);
     if (Scope != 0) {
       Child = Child->clone();
       Child->addNameAsPredicateArg(ScopedName(Scope, Frag->getArgName(i)));
@@ -2192,20 +2191,20 @@ void TreePatternNode::InlinePatternFragments(
 
     // Transfer types.  Note that the resolved alternative may have fewer
     // (but not more) results than the PatFrags node.
-    FragTree->setName(getName());
+    FragTree->setName(T->getName());
     for (unsigned i = 0, e = FragTree->getNumTypes(); i != e; ++i)
-      FragTree->UpdateNodeType(i, getExtType(i), TP);
+      FragTree->UpdateNodeType(i, T->getExtType(i), TP);
 
     if (Op->isSubClassOf("GISelFlags"))
       FragTree->setGISelFlagsRecord(Op);
 
     // Transfer in the old predicates.
-    for (const TreePredicateCall &Pred : getPredicateCalls())
+    for (const TreePredicateCall &Pred : T->getPredicateCalls())
       FragTree->addPredicateCall(Pred);
 
     // The fragment we inlined could have recursive inlining that is needed.  See
     // if there are any pattern fragments in it and inline them as needed.
-    FragTree->InlinePatternFragments(FragTree, TP, OutAlternatives);
+    InlinePatternFragments(FragTree, TP, OutAlternatives);
   }
 }
 
@@ -3938,9 +3937,8 @@ void CodeGenDAGPatterns::parseInstructionPattern(
   // Create and insert the instruction.
   // FIXME: InstImpResults should not be part of DAGInstruction.
   Record *R = I.getRecord();
-  DAGInsts.emplace(std::piecewise_construct, std::forward_as_tuple(R),
-                   std::forward_as_tuple(Results, Operands, InstImpResults,
-                                         SrcPattern, ResultPattern));
+  DAGInsts.try_emplace(R, std::move(Results), std::move(Operands),
+                       std::move(InstImpResults), SrcPattern, ResultPattern);
 
   LLVM_DEBUG(I.dump());
 }
@@ -3980,9 +3978,8 @@ void CodeGenDAGPatterns::ParseInstructions() {
       }
 
       // Create and insert the instruction.
-      std::vector<Record*> ImpResults;
-      Instructions.insert(std::make_pair(Instr,
-                            DAGInstruction(Results, Operands, ImpResults)));
+      Instructions.try_emplace(Instr, std::move(Results), std::move(Operands),
+                               std::vector<Record *>());
       continue;  // no pattern.
     }
 
@@ -4508,8 +4505,7 @@ static void CombineChildVariants(
       return;
 
   // The end result is an all-pairs construction of the resultant pattern.
-  std::vector<unsigned> Idxs;
-  Idxs.resize(ChildVariants.size());
+  std::vector<unsigned> Idxs(ChildVariants.size());
   bool NotDone;
   do {
 #ifndef NDEBUG
@@ -4670,8 +4666,8 @@ static void GenerateVariantsOf(TreePatternNodePtr N,
   }
 
   // Compute permutations of all children.
-  std::vector<std::vector<TreePatternNodePtr>> ChildVariants;
-  ChildVariants.resize(N->getNumChildren());
+  std::vector<std::vector<TreePatternNodePtr>> ChildVariants(
+      N->getNumChildren());
   for (unsigned i = 0, e = N->getNumChildren(); i != e; ++i)
     GenerateVariantsOf(N->getChildShared(i), ChildVariants[i], CDP, DepVars);
 

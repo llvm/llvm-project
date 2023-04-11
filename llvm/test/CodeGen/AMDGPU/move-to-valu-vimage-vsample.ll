@@ -24,18 +24,11 @@ define amdgpu_ps float @vimage_move_to_valu(<8 x i32> %rsrc) {
   ; GFX11-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX11-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX11-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX11-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY7]], implicit $exec
-  ; GFX11-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY6]], implicit $exec
-  ; GFX11-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY5]], implicit $exec
-  ; GFX11-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY4]], implicit $exec
-  ; GFX11-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY2]], implicit $exec
-  ; GFX11-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY1]], implicit $exec
-  ; GFX11-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY]], implicit $exec
-  ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_256 = REG_SEQUENCE killed [[COPY8]], %subreg.sub0, killed [[COPY9]], %subreg.sub1, killed [[COPY10]], %subreg.sub2, killed [[COPY11]], %subreg.sub3, [[COPY3]], %subreg.sub4, killed [[COPY12]], %subreg.sub5, killed [[COPY13]], %subreg.sub6, killed [[COPY14]], %subreg.sub7
+  ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1, [[COPY5]], %subreg.sub2, [[COPY4]], %subreg.sub3, [[COPY3]], %subreg.sub4, [[COPY2]], %subreg.sub5, [[COPY1]], %subreg.sub6, [[COPY]], %subreg.sub7
   ; GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
-  ; GFX11-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; GFX11-NEXT:   [[COPY16:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY15]], %subreg.sub0, [[COPY16]], %subreg.sub1
+  ; GFX11-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+  ; GFX11-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+  ; GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1
   ; GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.1:
@@ -95,14 +88,7 @@ define amdgpu_ps float @vimage_move_to_valu(<8 x i32> %rsrc) {
   ; GFX12-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX12-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX12-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY7]], implicit $exec
-  ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY6]], implicit $exec
-  ; GFX12-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY5]], implicit $exec
-  ; GFX12-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY4]], implicit $exec
-  ; GFX12-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY2]], implicit $exec
-  ; GFX12-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY1]], implicit $exec
-  ; GFX12-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY]], implicit $exec
-  ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_256 = REG_SEQUENCE killed [[COPY8]], %subreg.sub0, killed [[COPY9]], %subreg.sub1, killed [[COPY10]], %subreg.sub2, killed [[COPY11]], %subreg.sub3, [[COPY3]], %subreg.sub4, killed [[COPY12]], %subreg.sub5, killed [[COPY13]], %subreg.sub6, killed [[COPY14]], %subreg.sub7
+  ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1, [[COPY5]], %subreg.sub2, [[COPY4]], %subreg.sub3, [[COPY3]], %subreg.sub4, [[COPY2]], %subreg.sub5, [[COPY1]], %subreg.sub6, [[COPY]], %subreg.sub7
   ; GFX12-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX12-NEXT: {{  $}}
@@ -173,14 +159,7 @@ define amdgpu_ps float @vsample_move_to_valu_rsrc(<8 x i32> %rsrc, <4 x i32> inr
   ; GFX11-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX11-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX11-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX11-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY11]], implicit $exec
-  ; GFX11-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY10]], implicit $exec
-  ; GFX11-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY9]], implicit $exec
-  ; GFX11-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY7]], implicit $exec
-  ; GFX11-NEXT:   [[COPY16:%[0-9]+]]:vgpr_32 = COPY [[COPY6]], implicit $exec
-  ; GFX11-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[COPY5]], implicit $exec
-  ; GFX11-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY4]], implicit $exec
-  ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_256 = REG_SEQUENCE killed [[COPY12]], %subreg.sub0, killed [[COPY13]], %subreg.sub1, killed [[COPY14]], %subreg.sub2, [[COPY8]], %subreg.sub3, killed [[COPY15]], %subreg.sub4, killed [[COPY16]], %subreg.sub5, killed [[COPY17]], %subreg.sub6, killed [[COPY18]], %subreg.sub7
+  ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[COPY11]], %subreg.sub0, [[COPY10]], %subreg.sub1, [[COPY9]], %subreg.sub2, [[COPY8]], %subreg.sub3, [[COPY7]], %subreg.sub4, [[COPY6]], %subreg.sub5, [[COPY5]], %subreg.sub6, [[COPY4]], %subreg.sub7
   ; GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY1]], %subreg.sub2, [[COPY]], %subreg.sub3
   ; GFX11-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
@@ -246,14 +225,7 @@ define amdgpu_ps float @vsample_move_to_valu_rsrc(<8 x i32> %rsrc, <4 x i32> inr
   ; GFX12-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX12-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX12-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX12-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY11]], implicit $exec
-  ; GFX12-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY10]], implicit $exec
-  ; GFX12-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY9]], implicit $exec
-  ; GFX12-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY7]], implicit $exec
-  ; GFX12-NEXT:   [[COPY16:%[0-9]+]]:vgpr_32 = COPY [[COPY6]], implicit $exec
-  ; GFX12-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[COPY5]], implicit $exec
-  ; GFX12-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY4]], implicit $exec
-  ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_256 = REG_SEQUENCE killed [[COPY12]], %subreg.sub0, killed [[COPY13]], %subreg.sub1, killed [[COPY14]], %subreg.sub2, [[COPY8]], %subreg.sub3, killed [[COPY15]], %subreg.sub4, killed [[COPY16]], %subreg.sub5, killed [[COPY17]], %subreg.sub6, killed [[COPY18]], %subreg.sub7
+  ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[COPY11]], %subreg.sub0, [[COPY10]], %subreg.sub1, [[COPY9]], %subreg.sub2, [[COPY8]], %subreg.sub3, [[COPY7]], %subreg.sub4, [[COPY6]], %subreg.sub5, [[COPY5]], %subreg.sub6, [[COPY4]], %subreg.sub7
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY1]], %subreg.sub2, [[COPY]], %subreg.sub3
   ; GFX12-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
@@ -322,10 +294,7 @@ define amdgpu_ps float @vsample_move_to_valu_samp(<8 x i32> inreg %rsrc, <4 x i3
   ; GFX11-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX11-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX11-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX11-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY3]], implicit $exec
-  ; GFX11-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY2]], implicit $exec
-  ; GFX11-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY]], implicit $exec
-  ; GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[COPY12]], %subreg.sub0, killed [[COPY13]], %subreg.sub1, [[COPY1]], %subreg.sub2, killed [[COPY14]], %subreg.sub3
+  ; GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY1]], %subreg.sub2, [[COPY]], %subreg.sub3
   ; GFX11-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX11-NEXT: {{  $}}
@@ -377,10 +346,7 @@ define amdgpu_ps float @vsample_move_to_valu_samp(<8 x i32> inreg %rsrc, <4 x i3
   ; GFX12-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX12-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX12-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX12-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY3]], implicit $exec
-  ; GFX12-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[COPY2]], implicit $exec
-  ; GFX12-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY]], implicit $exec
-  ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[COPY12]], %subreg.sub0, killed [[COPY13]], %subreg.sub1, [[COPY1]], %subreg.sub2, killed [[COPY14]], %subreg.sub3
+  ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY1]], %subreg.sub2, [[COPY]], %subreg.sub3
   ; GFX12-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX12-NEXT: {{  $}}
