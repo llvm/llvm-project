@@ -50,6 +50,15 @@ namespace dr1815 { // dr1815: no
 #endif
 }
 
+namespace dr1822 { // dr1822: yes
+#if __cplusplus >= 201103L
+  int a;
+  auto x = [] (int a) {
+#pragma clang __debug dump a // CHECK: ParmVarDecl
+  };
+#endif
+}
+
 namespace dr1872 { // dr1872: 9
 #if __cplusplus >= 201103L
   template<typename T> struct A : T {
