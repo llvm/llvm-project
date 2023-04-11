@@ -7,20 +7,17 @@
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=rocket-rv64 | FileCheck -check-prefix=MCPU-ROCKET64 %s
 // MCPU-ROCKET64: "-nostdsysteminc" "-target-cpu" "rocket-rv64"
 // MCPU-ROCKET64: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-ROCKET64: "-target-feature" "+64bit"
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=syntacore-scr1-base | FileCheck -check-prefix=MCPU-SYNTACORE-SCR1-BASE %s
 // MCPU-SYNTACORE-SCR1-BASE: "-target-cpu" "syntacore-scr1-base"
 // MCPU-SYNTACORE-SCR1-BASE: "-target-feature" "+c"
 // MCPU-SYNTACORE-SCR1-BASE: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-SYNTACORE-SCR1-BASE: "-target-feature" "-64bit"
 // MCPU-SYNTACORE-SCR1-BASE: "-target-abi" "ilp32"
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=syntacore-scr1-max | FileCheck -check-prefix=MCPU-SYNTACORE-SCR1-MAX %s
 // MCPU-SYNTACORE-SCR1-MAX: "-target-cpu" "syntacore-scr1-max"
 // MCPU-SYNTACORE-SCR1-MAX: "-target-feature" "+m" "-target-feature" "+c"
 // MCPU-SYNTACORE-SCR1-MAX: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-SYNTACORE-SCR1-MAX: "-target-feature" "-64bit"
 // MCPU-SYNTACORE-SCR1-MAX: "-target-abi" "ilp32"
 
 // We cannot check much for -mcpu=native, but it should be replaced by a valid CPU string.
@@ -92,7 +89,6 @@
 // MCPU-ABI-SIFIVE-S21: "-target-feature" "+m" "-target-feature" "+a"
 // MCPU-ABI-SIFIVE-S21: "-target-feature" "+c"
 // MCPU-ABI-SIFIVE-S21: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-ABI-SIFIVE-S21: "-target-feature" "+64bit"
 // MCPU-ABI-SIFIVE-S21: "-target-abi" "lp64"
 
 // mcpu with mabi option
@@ -101,7 +97,6 @@
 // MCPU-ABI-SIFIVE-S51: "-target-feature" "+m" "-target-feature" "+a"
 // MCPU-ABI-SIFIVE-S51: "-target-feature" "+c"
 // MCPU-ABI-SIFIVE-S51: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-ABI-SIFIVE-S51: "-target-feature" "+64bit"
 // MCPU-ABI-SIFIVE-S51: "-target-abi" "lp64"
 
 // mcpu with default march
@@ -110,7 +105,6 @@
 // MCPU-SIFIVE-S54: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
 // MCPU-SIFIVE-S54: "-target-feature" "+c"
 // MCPU-SIFIVE-S54: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-SIFIVE-S54: "-target-feature" "+64bit"
 // MCPU-SIFIVE-S54: "-target-abi" "lp64d"
 
 // mcpu with mabi option
@@ -119,7 +113,6 @@
 // MCPU-SIFIVE-S76: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
 // MCPU-SIFIVE-S76: "-target-feature" "+c"
 // MCPU-SIFIVE-S76: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-SIFIVE-S76: "-target-feature" "+64bit"
 // MCPU-SIFIVE-S76: "-target-abi" "lp64d"
 
 // mcpu with default march
@@ -128,7 +121,6 @@
 // MCPU-SIFIVE-U54: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
 // MCPU-SIFIVE-U54: "-target-feature" "+c"
 // MCPU-SIFIVE-U54: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-SIFIVE-U54: "-target-feature" "+64bit"
 // MCPU-SIFIVE-U54: "-target-abi" "lp64d"
 
 // mcpu with mabi option
@@ -137,7 +129,6 @@
 // MCPU-ABI-SIFIVE-U54: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
 // MCPU-ABI-SIFIVE-U54: "-target-feature" "+c"
 // MCPU-ABI-SIFIVE-U54: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-ABI-SIFIVE-U54: "-target-feature" "+64bit"
 // MCPU-ABI-SIFIVE-U54: "-target-abi" "lp64"
 
 // mcpu with default march
@@ -154,7 +145,6 @@
 // MCPU-ABI-SIFIVE-U74: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
 // MCPU-ABI-SIFIVE-U74: "-target-feature" "+c"
 // MCPU-ABI-SIFIVE-U74: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-ABI-SIFIVE-U74: "-target-feature" "+64bit"
 // MCPU-ABI-SIFIVE-U74: "-target-abi" "lp64"
 
 // march overwrite mcpu's default march
