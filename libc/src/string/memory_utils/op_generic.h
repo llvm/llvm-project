@@ -254,32 +254,22 @@ template <typename T, typename... TS> struct Memset {
 // Memmove
 ///////////////////////////////////////////////////////////////////////////////
 
-template <size_t Size, size_t MaxSize> struct Memmove {
-  static_assert(is_power2(MaxSize));
-  using T = details::getTypeFor<Size, MaxSize>;
-  static constexpr size_t SIZE = Size;
+template <typename T> struct Memmove {
+  static constexpr size_t SIZE = sum_sizeof<T>();
 
   LIBC_INLINE static void block(Ptr dst, CPtr src) {
-    if constexpr (details::is_void_v<T>) {
-      deferred_static_assert("Unimplemented Size");
-    } else {
-      store<T>(dst, load<T>(src));
-    }
+    store<T>(dst, load<T>(src));
   }
 
   LIBC_INLINE static void head_tail(Ptr dst, CPtr src, size_t count) {
-    const size_t offset = count - Size;
-    if constexpr (details::is_void_v<T>) {
-      deferred_static_assert("Unimplemented Size");
-    } else {
-      // The load and store operations can be performed in any order as long as
-      // they are not interleaved. More investigations are needed to determine
-      // the best order.
-      const auto head = load<T>(src);
-      const auto tail = load<T>(src + offset);
-      store<T>(dst, head);
-      store<T>(dst + offset, tail);
-    }
+    const size_t offset = count - SIZE;
+    // The load and store operations can be performed in any order as long as
+    // they are not interleaved. More investigations are needed to determine
+    // the best order.
+    const auto head = load<T>(src);
+    const auto tail = load<T>(src + offset);
+    store<T>(dst, head);
+    store<T>(dst + offset, tail);
   }
 
   // Align forward suitable when dst < src. The alignment is performed with
@@ -305,8 +295,8 @@ template <size_t Size, size_t MaxSize> struct Memmove {
     Ptr prev_dst = dst;
     CPtr prev_src = src;
     size_t prev_count = count;
-    align_to_next_boundary<Size, AlignOn>(dst, src, count);
-    adjust(Size, dst, src, count);
+    align_to_next_boundary<SIZE, AlignOn>(dst, src, count);
+    adjust(SIZE, dst, src, count);
     head_tail(prev_dst, prev_src, prev_count - count);
   }
 
@@ -333,9 +323,9 @@ template <size_t Size, size_t MaxSize> struct Memmove {
     Ptr headtail_dst = dst + count;
     CPtr headtail_src = src + count;
     size_t headtail_size = 0;
-    align_to_next_boundary<Size, AlignOn>(headtail_dst, headtail_src,
+    align_to_next_boundary<SIZE, AlignOn>(headtail_dst, headtail_src,
                                           headtail_size);
-    adjust(-2 * Size, headtail_dst, headtail_src, headtail_size);
+    adjust(-2 * SIZE, headtail_dst, headtail_src, headtail_size);
     head_tail(headtail_dst, headtail_src, headtail_size);
     count -= headtail_size;
   }
@@ -356,15 +346,15 @@ template <size_t Size, size_t MaxSize> struct Memmove {
   // [_______________________SSSSSSSS_____]
   LIBC_INLINE static void loop_and_tail_forward(Ptr dst, CPtr src,
                                                 size_t count) {
-    static_assert(Size > 1, "a loop of size 1 does not need tail");
-    const size_t tail_offset = count - Size;
+    static_assert(SIZE > 1, "a loop of size 1 does not need tail");
+    const size_t tail_offset = count - SIZE;
     const auto tail_value = load<T>(src + tail_offset);
     size_t offset = 0;
     LIBC_LOOP_NOUNROLL
     do {
       block(dst + offset, src + offset);
-      offset += Size;
-    } while (offset < count - Size);
+      offset += SIZE;
+    } while (offset < count - SIZE);
     store<T>(dst + tail_offset, tail_value);
   }
 
@@ -384,13 +374,13 @@ template <size_t Size, size_t MaxSize> struct Memmove {
   // [_____SSSSSSSS_______________________]
   LIBC_INLINE static void loop_and_tail_backward(Ptr dst, CPtr src,
                                                  size_t count) {
-    static_assert(Size > 1, "a loop of size 1 does not need tail");
+    static_assert(SIZE > 1, "a loop of size 1 does not need tail");
     const auto head_value = load<T>(src);
-    ptrdiff_t offset = count - Size;
+    ptrdiff_t offset = count - SIZE;
     LIBC_LOOP_NOUNROLL
     do {
       block(dst + offset, src + offset);
-      offset -= Size;
+      offset -= SIZE;
     } while (offset >= 0);
     store<T>(dst, head_value);
   }
