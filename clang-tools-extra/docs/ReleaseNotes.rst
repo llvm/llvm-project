@@ -314,8 +314,8 @@ Changes in existing checks
 
 - Improved :doc:`modernize-concat-nested-namespaces
   <clang-tidy/checks/modernize/concat-nested-namespaces>` to fix incorrect fixes when
-  using macro between namespace declarations and false positive when using namespace
-  with attributes.
+  using macro between namespace declarations, to fix false positive when using namespace
+  with attributes and to support nested inline namespace introduced in c++20.
 
 - Fixed a false positive in :doc:`performance-no-automatic-move
   <clang-tidy/checks/performance/no-automatic-move>` when warning would be
