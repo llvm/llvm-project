@@ -153,7 +153,8 @@ public:
   /// Emits the VTable definitions required for the given record type.
   virtual void emitVTableDefinitions(CIRGenVTables &CGVT,
                                      const CXXRecordDecl *RD) = 0;
-  virtual mlir::Value getAddrOfRTTIDescriptor(QualType Ty) = 0;
+  virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
+                                                  QualType Ty) = 0;
 
   /// Get the address point of the vtable for the given base subobject.
   virtual mlir::Value
