@@ -2071,7 +2071,7 @@ void TreePatternNode::SubstituteFormalArguments(
 /// fragments, return the set of inlined versions (this can be more than
 /// one if a PatFrags record has multiple alternatives).
 void TreePatternNode::InlinePatternFragments(
-  TreePatternNodePtr T, TreePattern &TP,
+  const TreePatternNodePtr &T, TreePattern &TP,
   std::vector<TreePatternNodePtr> &OutAlternatives) {
 
   if (TP.hasError())
