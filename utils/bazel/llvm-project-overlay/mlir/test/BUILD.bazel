@@ -47,6 +47,7 @@ expand_template(
         "@MLIR_RUN_ARM_SVE_TESTS@": "0",
         "@MLIR_RUN_X86VECTOR_TESTS@": "0",
         "@MLIR_RUN_CUDA_TENSOR_CORE_TESTS@": "0",
+        "@MLIR_RUN_CUDA_SM80_TESTS@": "0",
         "@MLIR_INCLUDE_INTEGRATION_TESTS@": "0",
         "@SHLIBDIR@": package_path("//llvm:BUILD"),
     },
