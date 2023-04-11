@@ -14557,10 +14557,9 @@ void RISCVTargetLowering::LowerAsmOperandForConstraint(
       return;
     case 'J':
       // Validate & create an integer zero operand.
-      if (auto *C = dyn_cast<ConstantSDNode>(Op))
-        if (C->getZExtValue() == 0)
-          Ops.push_back(
-              DAG.getTargetConstant(0, SDLoc(Op), Subtarget.getXLenVT()));
+      if (isNullConstant(Op))
+        Ops.push_back(
+            DAG.getTargetConstant(0, SDLoc(Op), Subtarget.getXLenVT()));
       return;
     case 'K':
       // Validate & create a 5-bit unsigned immediate operand.

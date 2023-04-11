@@ -11362,8 +11362,7 @@ SDValue SITargetLowering::performAddCarrySubCarryCombine(SDNode *N,
   if (N->getValueType(0) != MVT::i32)
     return SDValue();
 
-  auto C = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (!C || C->getZExtValue() != 0)
+  if (!isNullConstant(N->getOperand(1)))
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
