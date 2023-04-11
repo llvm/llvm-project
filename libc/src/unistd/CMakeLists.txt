@@ -192,13 +192,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  swab
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.swab
-)
-
-add_entrypoint_object(
   symlink
   ALIAS
   DEPENDS
@@ -274,6 +267,17 @@ add_entrypoint_object(
     libc.src.__support.CPP.string_view
     libc.src.__support.File.file
     libc.src.stdio.fprintf
+)
+
+add_entrypoint_object(
+  swab
+  SRCS
+    swab.cpp
+  HDRS
+    swab.h
+  DEPENDS
+    libc.include.unistd
+    libc.src.__support.CPP.optional
 )
 
 # These aren't actual external per-se, but this is just an easy way to create
