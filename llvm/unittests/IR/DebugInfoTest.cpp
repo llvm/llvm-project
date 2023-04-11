@@ -370,6 +370,12 @@ TEST(DbgAssignIntrinsicTest, replaceVariableLocationOp) {
   // Replace both.
   TEST_REPLACE(/*Old*/ P2, /*New*/ P1, /*Value*/ P1, /*Address*/ P1);
 
+  // Replace address only, value uses a DIArgList.
+  // Value = {DIArgList(V1)}, Addr = P1.
+  DAI->setRawLocation(DIArgList::get(C, ValueAsMetadata::get(V1)));
+  DAI->setExpression(DIExpression::get(
+      C, {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_stack_value}));
+  TEST_REPLACE(/*Old*/ P1, /*New*/ P2, /*Value*/ V1, /*Address*/ P2);
 #undef TEST_REPLACE
 }
 
