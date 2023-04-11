@@ -3093,6 +3093,9 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Args.hasArg(OPT_fclangir) || Args.hasArg(OPT_emit_cir))
     Opts.UseClangIRPipeline = true;
 
+  if (Args.hasArg(OPT_fclangir_direct_lowering))
+    Opts.ClangIRDirectLowering = true;
+
   if (Args.hasArg(OPT_clangir_disable_passes))
     Opts.ClangIRDisablePasses = true;
 
