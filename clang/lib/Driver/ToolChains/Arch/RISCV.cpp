@@ -53,8 +53,7 @@ static bool getRISCFeaturesFromMcpu(const llvm::Triple &Triple, StringRef Mcpu,
                                     std::vector<StringRef> &Features) {
   bool Is64Bit = Triple.isRISCV64();
   llvm::RISCV::CPUKind CPUKind = llvm::RISCV::parseCPUKind(Mcpu);
-  return llvm::RISCV::checkCPUKind(CPUKind, Is64Bit) &&
-         llvm::RISCV::getCPUFeaturesExceptStdExt(CPUKind, Features);
+  return llvm::RISCV::checkCPUKind(CPUKind, Is64Bit);
 }
 
 void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
