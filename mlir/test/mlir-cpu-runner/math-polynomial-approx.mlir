@@ -610,6 +610,43 @@ func.func @cbrt() {
   return
 }
 
+// -------------------------------------------------------------------------- //
+// floor.
+// -------------------------------------------------------------------------- //
+func.func @func_floorf32(%a : f32) {
+  %r = math.floor %a : f32
+  vector.print %r : f32
+  return
+}
+
+func.func @floorf() {
+  // CHECK: 3
+  %a = arith.constant 3.8 : f32
+  call @func_floorf32(%a) : (f32) -> ()
+
+  // CHECK: -4
+  %b = arith.constant -3.8 : f32
+  call @func_floorf32(%b) : (f32) -> ()
+
+  // CHECK: 0
+  %c = arith.constant 0.0 : f32
+  call @func_floorf32(%c) : (f32) -> ()
+
+  // CHECK: -5
+  %d = arith.constant -4.2 : f32
+  call @func_floorf32(%d) : (f32) -> ()
+
+  // CHECK: -2
+  %e = arith.constant -2.0 : f32
+  call @func_floorf32(%e) : (f32) -> ()
+
+  // CHECK: 2
+  %f = arith.constant 2.0 : f32
+  call @func_floorf32(%f) : (f32) -> ()
+
+  return
+}
+
 func.func @main() {
   call @tanh(): () -> ()
   call @log(): () -> ()
@@ -623,6 +660,7 @@ func.func @main() {
   call @atan() : () -> ()
   call @atan2() : () -> ()
   call @cbrt() : () -> ()
+  call @floorf() : () -> ()
   return
 }
 
