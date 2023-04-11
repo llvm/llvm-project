@@ -552,10 +552,8 @@ def C_LDSP : CStackLoad<0b011, "c.ldsp", GPRNoX0, uimm9_lsb000>,
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_JR : RVInst16CR<0b1000, 0b10, (outs), (ins GPRNoX0:$rs1),
                       "c.jr", "$rs1">, Sched<[WriteJmpReg]> {
-  let isBranch = 1;
   let isBarrier = 1;
   let isTerminator = 1;
-  let isIndirectBranch = 1;
   let rs2 = 0;
 }
 
