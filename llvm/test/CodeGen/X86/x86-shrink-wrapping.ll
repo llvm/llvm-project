@@ -639,11 +639,11 @@ declare hidden fastcc ptr @find_temp_slot_from_address(ptr readonly)
 define void @useLEA(ptr readonly %x) {
 ; ENABLE-LABEL: useLEA:
 ; ENABLE:       ## %bb.0: ## %entry
+; ENABLE-NEXT:    testq %rdi, %rdi
+; ENABLE-NEXT:    je LBB8_8
+; ENABLE-NEXT:  ## %bb.1: ## %if.end
 ; ENABLE-NEXT:    pushq %rax
 ; ENABLE-NEXT:    .cfi_def_cfa_offset 16
-; ENABLE-NEXT:    testq %rdi, %rdi
-; ENABLE-NEXT:    je LBB8_7
-; ENABLE-NEXT:  ## %bb.1: ## %if.end
 ; ENABLE-NEXT:    cmpw $66, (%rdi)
 ; ENABLE-NEXT:    jne LBB8_7
 ; ENABLE-NEXT:  ## %bb.2: ## %lor.lhs.false
@@ -652,12 +652,13 @@ define void @useLEA(ptr readonly %x) {
 ; ENABLE-NEXT:    leal -54(%rax), %ecx
 ; ENABLE-NEXT:    cmpl $14, %ecx
 ; ENABLE-NEXT:    ja LBB8_3
-; ENABLE-NEXT:  ## %bb.8: ## %lor.lhs.false
+; ENABLE-NEXT:  ## %bb.9: ## %lor.lhs.false
 ; ENABLE-NEXT:    movl $24599, %edx ## imm = 0x6017
 ; ENABLE-NEXT:    btl %ecx, %edx
 ; ENABLE-NEXT:    jae LBB8_3
-; ENABLE-NEXT:  LBB8_7: ## %cleanup
-; ENABLE-NEXT:    popq %rax
+; ENABLE-NEXT:  LBB8_7:
+; ENABLE-NEXT:    addq $8, %rsp
+; ENABLE-NEXT:  LBB8_8: ## %cleanup
 ; ENABLE-NEXT:    retq
 ; ENABLE-NEXT:  LBB8_3: ## %lor.lhs.false
 ; ENABLE-NEXT:    cmpl $134, %eax
@@ -671,8 +672,7 @@ define void @useLEA(ptr readonly %x) {
 ; ENABLE-NEXT:    je LBB8_7
 ; ENABLE-NEXT:  ## %bb.6: ## %if.then.60
 ; ENABLE-NEXT:    movb $1, 57(%rax)
-; ENABLE-NEXT:    popq %rax
-; ENABLE-NEXT:    retq
+; ENABLE-NEXT:    jmp LBB8_7
 ;
 ; DISABLE-LABEL: useLEA:
 ; DISABLE:       ## %bb.0: ## %entry
