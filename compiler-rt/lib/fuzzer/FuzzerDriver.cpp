@@ -501,7 +501,6 @@ int MinimizeCrashInputInternalStep(Fuzzer *F, InputCorpus *Corpus) {
   F->MinimizeCrashLoop(U);
   Printf("INFO: Done MinimizeCrashInputInternalStep, no crashes found\n");
   exit(0);
-  return 0;
 }
 
 void Merge(Fuzzer *F, FuzzingOptions &Options,
