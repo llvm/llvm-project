@@ -54,7 +54,7 @@ namespace fir {
 #define DEBUG_TYPE "flang-codegen"
 
 // fir::LLVMTypeConverter for converting to LLVM IR dialect types.
-#include "TypeConverter.h"
+#include "flang/Optimizer/CodeGen/TypeConverter.h"
 
 // TODO: This should really be recovered from the specified target.
 static constexpr unsigned defaultAlign = 8;
