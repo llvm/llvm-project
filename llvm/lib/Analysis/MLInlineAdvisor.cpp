@@ -38,10 +38,13 @@ static cl::opt<std::string> InteractiveChannelBaseName(
         "Base file path for the interactive mode. The incoming filename should "
         "have the name <inliner-interactive-channel-base>.in, while the "
         "outgoing name should be <inliner-interactive-channel-base>.out"));
-static cl::opt<bool> InteractiveIncludeDefault(
-    "inliner-interactive-include-default", cl::Hidden,
-    cl::desc(
-        "In interactive mode, also send the default policy decision."));
+static const std::string InclDefaultMsg =
+    (Twine("In interactive mode, also send the default policy decision: ") +
+     DefaultDecisionName + ".")
+        .str();
+static cl::opt<bool>
+    InteractiveIncludeDefault("inliner-interactive-include-default", cl::Hidden,
+                              cl::desc(InclDefaultMsg));
 
 #if defined(LLVM_HAVE_TF_AOT_INLINERSIZEMODEL)
 // codegen-ed file
