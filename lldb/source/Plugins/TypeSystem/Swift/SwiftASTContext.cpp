@@ -5267,6 +5267,7 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
     swift_flags |= eTypeHasDynamicSelf;
   switch (type_kind) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinTuple:
@@ -5413,6 +5414,7 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinTuple:
@@ -5901,6 +5903,7 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinTuple:
@@ -6002,6 +6005,7 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinTuple:
@@ -6140,6 +6144,7 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinTuple:
@@ -6369,6 +6374,7 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinTuple:
@@ -6556,6 +6562,7 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinTuple:
@@ -6709,6 +6716,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinTuple:
@@ -7017,6 +7025,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     const swift::TypeKind type_kind = swift_can_type->getKind();
     switch (type_kind) {
     case swift::TypeKind::BuiltinDefaultActorStorage:
+    case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
     case swift::TypeKind::BuiltinExecutor:
     case swift::TypeKind::BuiltinJob:
     case swift::TypeKind::BuiltinTuple:
@@ -7401,6 +7410,7 @@ bool SwiftASTContext::DumpTypeValue(
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
+  case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinTuple:
