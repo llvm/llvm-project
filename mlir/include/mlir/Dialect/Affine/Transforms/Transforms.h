@@ -51,15 +51,21 @@ FailureOr<AffineApplyOp> decompose(RewriterBase &rewriter, AffineApplyOp op);
 
 /// Reify a bound for the given index-typed value or shape dimension size in
 /// terms of the owning op's operands. `dim` must be `nullopt` if and only if
-/// `value` is index-typed. LB and EQ bounds are closed, UB bounds are open.
+/// `value` is index-typed.
+///
+/// By default, lower/equal bounds are closed and upper bounds are open. If
+/// `closedUB` is set to "true", upper bounds are also closed.
 FailureOr<OpFoldResult> reifyValueBound(OpBuilder &b, Location loc,
                                         presburger::BoundType type, Value value,
-                                        std::optional<int64_t> dim);
+                                        std::optional<int64_t> dim,
+                                        bool closedUB = false);
 
 /// Reify a bound for the given index-typed value or shape dimension size in
 /// terms of SSA values for which `stopCondition` is met. `dim` must be
-/// `nullopt` if and only if `value` is index-typed. LB and EQ bounds are
-/// closed, UB bounds are open.
+/// `nullopt` if and only if `value` is index-typed.
+///
+/// By default, lower/equal bounds are closed and upper bounds are open. If
+/// `closedUB` is set to "true", upper bounds are also closed.
 ///
 /// Example:
 /// %0 = arith.addi %a, %b : index
@@ -74,7 +80,8 @@ FailureOr<OpFoldResult> reifyValueBound(OpBuilder &b, Location loc,
 FailureOr<OpFoldResult>
 reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
                 Value value, std::optional<int64_t> dim,
-                ValueBoundsConstraintSet::StopConditionFn stopCondition);
+                ValueBoundsConstraintSet::StopConditionFn stopCondition,
+                bool closedUB = false);
 
 } // namespace mlir
 

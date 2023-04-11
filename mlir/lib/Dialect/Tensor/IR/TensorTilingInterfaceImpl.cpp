@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Interfaces/TilingInterface.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -263,8 +264,10 @@ static UnpackTileDimInfo getUnpackTileDimInfo(OpBuilder &b, UnPackOp unpackOp,
   OpFoldResult innerTileSize = dimAndTileMapping[tileDim];
 
   info.isAlignedToInnerTileSize = false;
-  FailureOr<int64_t> cstSize = linalg::getConstantUpperBoundForIndex(
-      getValueOrCreateConstantIndexOp(b, loc, tileSize));
+  FailureOr<int64_t> cstSize = ValueBoundsConstraintSet::computeConstantBound(
+      presburger::BoundType::UB,
+      getValueOrCreateConstantIndexOp(b, loc, tileSize), /*dim=*/std::nullopt,
+      /*stopCondition=*/nullptr, /*closedUB=*/true);
   std::optional<int64_t> cstInnerSize = getConstantIntValue(innerTileSize);
   if (!failed(cstSize) && cstInnerSize) {
     if (*cstSize % *cstInnerSize == 0)
