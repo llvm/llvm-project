@@ -1414,7 +1414,10 @@ bool FPPassManager::runOnFunction(Function &F) {
     FunctionPass *FP = getContainedPass(Index);
     bool LocalChanged = false;
 
-    llvm::TimeTraceScope PassScope("RunPass", FP->getPassName());
+    // Call getPassName only when required. The call itself is fairly cheap, but
+    // still virtual and repeated calling adds unnecessary overhead.
+    llvm::TimeTraceScope PassScope(
+        "RunPass", [FP]() { return std::string(FP->getPassName()); });
 
     dumpPassInfo(FP, EXECUTION_MSG, ON_FUNCTION_MSG, F.getName());
     dumpRequiredSet(FP);
