@@ -3257,6 +3257,10 @@ public:
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.cpp.inc"
         >();
+    registerTransformOps<
+#define GET_OP_LIST
+#include "mlir/Dialect/Linalg/TransformOps/LinalgMatchOps.cpp.inc"
+        >();
   }
 };
 } // namespace
