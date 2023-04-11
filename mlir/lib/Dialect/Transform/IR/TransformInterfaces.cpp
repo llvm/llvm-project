@@ -840,19 +840,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
 
   // If a silenceable failure was produced, some results may be unset, set them
   // to empty lists.
-  if (result.isSilenceableFailure()) {
-    for (OpResult opResult : transform->getResults()) {
-      if (results.isSet(opResult.getResultNumber()))
-        continue;
-
-      if (opResult.getType().isa<TransformParamTypeInterface>())
-        results.setParams(opResult, {});
-      else if (opResult.getType().isa<TransformValueHandleTypeInterface>())
-        results.setValues(opResult, {});
-      else
-        results.set(opResult, {});
-    }
-  }
+  if (result.isSilenceableFailure())
+    results.setRemainingToEmpty(transform);
 
   // Remove the mapping for the operand if it is consumed by the operation. This
   // allows us to catch use-after-free with assertions later on.
@@ -1056,6 +1045,14 @@ void transform::TransformResults::setMappedValues(
   assert(diag.succeeded() && "incorrect mapping");
 #endif // NDEBUG
   (void)diag.silence();
+}
+
+void transform::TransformResults::setRemainingToEmpty(
+    transform::TransformOpInterface transform) {
+  for (OpResult opResult : transform->getResults()) {
+    if (!isSet(opResult.getResultNumber()))
+      setMappedValues(opResult, {});
+  }
 }
 
 ArrayRef<Operation *>

@@ -243,6 +243,4 @@ public:
 } // namespace transform
 } // namespace mlir
 
-#include "mlir/Dialect/Transform/IR/TransformDialectEnums.h.inc"
-
 #endif // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMDIALECT_H

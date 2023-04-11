@@ -617,6 +617,10 @@ public:
   /// operations.
   void setMappedValues(OpResult handle, ArrayRef<MappedValue> values);
 
+  /// Sets the currently unset results to empty lists of the kind expected by
+  /// the corresponding results of the given `transform` op.
+  void setRemainingToEmpty(TransformOpInterface transform);
+
 private:
   /// Creates an instance of TransformResults that expects mappings for
   /// `numSegments` values, which may be associated with payload operations or

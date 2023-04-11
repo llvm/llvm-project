@@ -68,4 +68,9 @@ class Transform_ConcreteOpType<string opname>
          "Transform IR handle to " # opname # " operations",
          "::mlir::transform::OperationType">;
 
+def TransformAnyHandle : Type<
+    Or<[TransformHandleTypeInterface.predicate,
+        TransformValueHandleTypeInterface.predicate]>,
+    "transform operation or value handle">;
+
 #endif  // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMTYPES
