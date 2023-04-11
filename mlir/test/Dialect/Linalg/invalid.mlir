@@ -725,3 +725,11 @@ func.func @broadcast_size_1_extension_not_supported(
       dimensions = [1]
   func.return %bcast : tensor<4x?x16xf32>
 }
+
+// -----
+
+func.func @missing_iterator_types() {
+  // expected-error @below {{expected "iterator_types" array attribute}}
+  linalg.generic {} ins() outs()
+  return
+}
