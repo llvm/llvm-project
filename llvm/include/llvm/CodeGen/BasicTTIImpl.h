@@ -284,6 +284,10 @@ public:
 
   bool isAlwaysUniform(const Value *V) { return false; }
 
+  bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
+    return false;
+  }
+
   unsigned getFlatAddressSpace() {
     // Return an invalid address space.
     return -1;
