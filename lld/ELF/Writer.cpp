@@ -2635,6 +2635,23 @@ template <class ELFT> void Writer<ELFT>::setPhdrs(Partition &part) {
     OutputSection *first = p->firstSec;
     OutputSection *last = p->lastSec;
 
+    // .ARM.exidx sections may not be within a single .ARM.exidx
+    // output section. We always want to describe just the
+    // SyntheticSection.
+    if (part.armExidx && p->p_type == PT_ARM_EXIDX) {
+      p->p_filesz = part.armExidx->getSize();
+      p->p_memsz = part.armExidx->getSize();
+      p->p_offset = first->offset + part.armExidx->outSecOff;
+      p->p_vaddr = first->addr + part.armExidx->outSecOff;
+      p->p_align = part.armExidx->addralign;
+      if (part.elfHeader)
+        p->p_offset -= part.elfHeader->getParent()->offset;
+
+      if (!p->hasLMA)
+        p->p_paddr = first->getLMA() + part.armExidx->outSecOff;
+      return;
+    }
+
     if (first) {
       p->p_filesz = last->offset - first->offset;
       if (last->type != SHT_NOBITS)
