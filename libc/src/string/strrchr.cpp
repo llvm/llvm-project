@@ -9,17 +9,12 @@
 #include "src/string/strrchr.h"
 
 #include "src/__support/common.h"
+#include "src/string/string_utils.h"
 
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(char *, strrchr, (const char *src, int c)) {
-  const char ch = static_cast<char>(c);
-  char *last_occurrence = nullptr;
-  for (; *src; ++src) {
-    if (*src == ch)
-      last_occurrence = const_cast<char *>(src);
-  }
-  return last_occurrence;
+  return internal::strrchr_implementation(src, c);
 }
 
 } // namespace __llvm_libc
