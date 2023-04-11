@@ -25,6 +25,8 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
@@ -38,6 +40,8 @@
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Casting.h"
+#include <optional>
 
 using namespace cir;
 using namespace llvm;
@@ -509,6 +513,168 @@ public:
   }
 };
 
+template <typename T>
+mlir::DenseElementsAttr
+convertToDenseElementsAttr(mlir::cir::ConstArrayAttr attr) {
+  auto type = attr.getType().cast<mlir::cir::ArrayType>().getEltType();
+  auto values = llvm::SmallVector<T, 8>{};
+  for (auto element : attr.getValue().cast<mlir::ArrayAttr>())
+    values.push_back(element.cast<mlir::IntegerAttr>().getInt());
+  return mlir::DenseElementsAttr::get(
+      mlir::RankedTensorType::get({(int64_t)values.size()}, type),
+      llvm::ArrayRef(values));
+}
+
+std::optional<mlir::Attribute>
+lowerConstArrayAttr(mlir::cir::ConstArrayAttr constArr) {
+
+  // Ensure ConstArrayAttr has a type.
+  auto typedConstArr = constArr.dyn_cast<mlir::TypedAttr>();
+  assert(typedConstArr && "cir::ConstArrayAttr is not a mlir::TypedAttr");
+
+  // Ensure ConstArrayAttr type is a ArrayType.
+  auto cirArrayType = typedConstArr.getType().dyn_cast<mlir::cir::ArrayType>();
+  assert(cirArrayType && "cir::ConstArrayAttr is not a cir::ArrayType");
+
+  // Is a ConstArrayAttr with an cir::ArrayType: fetch element type.
+  auto type = cirArrayType.getEltType();
+
+  if (type.isInteger(8))
+    return convertToDenseElementsAttr<int8_t>(constArr);
+  if (type.isInteger(16))
+    return convertToDenseElementsAttr<int16_t>(constArr);
+  if (type.isInteger(32))
+    return convertToDenseElementsAttr<int32_t>(constArr);
+  if (type.isInteger(64))
+    return convertToDenseElementsAttr<int64_t>(constArr);
+
+  return std::nullopt;
+}
+
+mlir::LLVM::Linkage convertLinkage(mlir::cir::GlobalLinkageKind linkage) {
+  using CIR = mlir::cir::GlobalLinkageKind;
+  using LLVM = mlir::LLVM::Linkage;
+
+  switch (linkage) {
+  case CIR::AvailableExternallyLinkage:
+    return LLVM::AvailableExternally;
+  case CIR::CommonLinkage:
+    return LLVM::Common;
+  case CIR::ExternalLinkage:
+    return LLVM::External;
+  case CIR::ExternalWeakLinkage:
+    return LLVM::ExternWeak;
+  case CIR::InternalLinkage:
+    return LLVM::Internal;
+  case CIR::LinkOnceAnyLinkage:
+    return LLVM::Linkonce;
+  case CIR::LinkOnceODRLinkage:
+    return LLVM::LinkonceODR;
+  case CIR::PrivateLinkage:
+    return LLVM::Private;
+  case CIR::WeakAnyLinkage:
+    return LLVM::Weak;
+  case CIR::WeakODRLinkage:
+    return LLVM::WeakODR;
+  };
+}
+
+class CIRGetGlobalOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::GetGlobalOp> {
+public:
+  using OpConversionPattern<mlir::cir::GetGlobalOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::GetGlobalOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto type = getTypeConverter()->convertType(op.getType());
+    auto symbol = op.getName();
+    rewriter.replaceOpWithNewOp<mlir::LLVM::AddressOfOp>(op, type, symbol);
+    return mlir::success();
+  }
+};
+
+class CIRGlobalOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::GlobalOp> {
+public:
+  using OpConversionPattern<mlir::cir::GlobalOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::GlobalOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+
+    // Fetch required values to create LLVM op.
+    auto type = getTypeConverter()->convertType(op.getSymType());
+    auto isConst = op.getConstant();
+    auto linkage = convertLinkage(op.getLinkage());
+    auto symbol = op.getSymName();
+    auto init = op.getInitialValue();
+
+    // Check for missing funcionalities.
+    if (!init.has_value()) {
+      op.emitError() << "uninitialized globals are not yet supported.";
+      return mlir::failure();
+    }
+
+    // Initializer is a constant array: convert it to a compatible llvm init.
+    if (auto constArr = init.value().dyn_cast<mlir::cir::ConstArrayAttr>()) {
+      if (auto attr = constArr.getValue().dyn_cast<mlir::StringAttr>()) {
+        init = rewriter.getStringAttr(attr.getValue());
+      } else if (auto attr = constArr.getValue().dyn_cast<mlir::ArrayAttr>()) {
+        if (!(init = lowerConstArrayAttr(constArr))) {
+          op.emitError()
+              << "unsupported lowering for #cir.const_array with element type "
+              << type;
+          return mlir::failure();
+        }
+      } else {
+        op.emitError()
+            << "unsupported lowering for #cir.const_array with value "
+            << constArr.getValue();
+        return mlir::failure();
+      }
+    } else if (llvm::isa<mlir::IntegerAttr, mlir::FloatAttr>(init.value())) {
+      // Nothing to do since LLVM already supports these types as initializers.
+    }
+    // Initializer is a global: load global value in initializer block.
+    else if (auto attr = init.value().dyn_cast<mlir::FlatSymbolRefAttr>()) {
+      auto newGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
+          op, type, isConst, linkage, symbol, mlir::Attribute());
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+
+      // Create initializer block.
+      auto *newBlock = new mlir::Block();
+      newGlobalOp.getRegion().push_back(newBlock);
+
+      // Fetch global used as initializer.
+      auto sourceSymbol =
+          dyn_cast<mlir::LLVM::GlobalOp>(mlir::SymbolTable::lookupSymbolIn(
+              op->getParentOfType<mlir::ModuleOp>(), attr.getValue()));
+
+      // Load and return the initializer value.
+      rewriter.setInsertionPointToEnd(newBlock);
+      auto addressOfOp = rewriter.create<mlir::LLVM::AddressOfOp>(
+          op->getLoc(), mlir::LLVM::LLVMPointerType::get(getContext()),
+          sourceSymbol.getSymName());
+      llvm::SmallVector<mlir::LLVM::GEPArg> offset{0};
+      auto gepOp = rewriter.create<mlir::LLVM::GEPOp>(
+          op->getLoc(), type, sourceSymbol.getType(), addressOfOp.getResult(),
+          offset);
+      rewriter.create<mlir::LLVM::ReturnOp>(op->getLoc(), gepOp.getResult());
+
+      return mlir::success();
+    } else {
+      op.emitError() << "usupported initializer '" << init.value() << "'";
+      return mlir::failure();
+    }
+
+    // Rewrite op.
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
+        op, type, isConst, linkage, symbol, init.value());
+    return mlir::success();
+  }
+};
+
 class CIRUnaryOpLowering
     : public mlir::OpConversionPattern<mlir::cir::UnaryOp> {
 public:
@@ -839,7 +1005,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                CIRPtrStrideOpLowering, CIRCallLowering, CIRUnaryOpLowering,
                CIRBinOpLowering, CIRLoadLowering, CIRConstantLowering,
                CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering,
-               CIRScopeOpLowering, CIRCastOpLowering, CIRIfLowering>(
+               CIRScopeOpLowering, CIRCastOpLowering, CIRIfLowering,
+               CIRGlobalOpLowering, CIRGetGlobalOpLowering>(
       converter, patterns.getContext());
 }
 

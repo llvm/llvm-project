@@ -76,3 +76,34 @@ int use_func() { return func<int>(); }
 // CHECK-NEXT:    %2 = cir.load %0 : cir.ptr <i32>, i32
 // CHECK-NEXT:    cir.return %2 : i32
 // CHECK-NEXT:  }
+
+
+char string[] = "whatnow";
+// CHECK: cir.global external @string = #cir.const_array<[119 : i8, 104 : i8, 97 : i8, 116 : i8, 110 : i8, 111 : i8, 119 : i8, 0 : i8] : !cir.array<i8 x 8>> : !cir.array<i8 x 8>
+unsigned uint[] = {255};
+// CHECK: cir.global external @uint = #cir.const_array<[255 : i32] : !cir.array<i32 x 1>> : !cir.array<i32 x 1>
+short sshort[] = {11111, 22222};
+// CHECK: cir.global external @sshort = #cir.const_array<[11111 : i16, 22222 : i16] : !cir.array<i16 x 2>> : !cir.array<i16 x 2>
+int sint[] = {123, 456, 789};
+// CHECK: cir.global external @sint = #cir.const_array<[123 : i32, 456 : i32, 789 : i32] : !cir.array<i32 x 3>> : !cir.array<i32 x 3>
+long long ll[] = {999999999, 0, 0, 0};
+// CHECK: cir.global external @ll = #cir.const_array<[999999999, 0, 0, 0] : !cir.array<i64 x 4>> : !cir.array<i64 x 4>
+
+void get_globals() {
+  // CHECK: cir.func @_Z11get_globalsv()
+  char *s = string;
+  // CHECK: %[[RES:[0-9]+]] = cir.get_global @string : cir.ptr <!cir.array<i8 x 8>>
+  // CHECK: %{{[0-9]+}} = cir.cast(array_to_ptrdecay, %[[RES]] : !cir.ptr<!cir.array<i8 x 8>>), !cir.ptr<i8>
+  unsigned *u = uint;
+  // CHECK: %[[RES:[0-9]+]] = cir.get_global @uint : cir.ptr <!cir.array<i32 x 1>>
+  // CHECK: %{{[0-9]+}} = cir.cast(array_to_ptrdecay, %[[RES]] : !cir.ptr<!cir.array<i32 x 1>>), !cir.ptr<i32>
+  short *ss = sshort;
+  // CHECK: %[[RES:[0-9]+]] = cir.get_global @sshort : cir.ptr <!cir.array<i16 x 2>>
+  // CHECK: %{{[0-9]+}} = cir.cast(array_to_ptrdecay, %[[RES]] : !cir.ptr<!cir.array<i16 x 2>>), !cir.ptr<i16>
+  int *si = sint;
+  // CHECK: %[[RES:[0-9]+]] = cir.get_global @sint : cir.ptr <!cir.array<i32 x 3>>
+  // CHECK: %{{[0-9]+}} = cir.cast(array_to_ptrdecay, %[[RES]] : !cir.ptr<!cir.array<i32 x 3>>), !cir.ptr<i32>
+  long long *l = ll;
+  // CHECK: %[[RES:[0-9]+]] = cir.get_global @ll : cir.ptr <!cir.array<i64 x 4>>
+  // CHECK: %{{[0-9]+}} = cir.cast(array_to_ptrdecay, %[[RES]] : !cir.ptr<!cir.array<i64 x 4>>), !cir.ptr<i64>
+}
