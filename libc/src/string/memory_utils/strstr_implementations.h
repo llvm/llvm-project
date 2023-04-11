@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_STRSTR_IMPLEMENTATIONS_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_STRSTR_IMPLEMENTATIONS_H
 
+#include "src/string/memory_utils/memmem_implementations.h"
+#include "src/string/string_utils.h"
 #include <stddef.h>
 
 namespace __llvm_libc {
@@ -16,16 +18,10 @@ namespace __llvm_libc {
 template <typename Comp>
 constexpr static char *strstr_implementation(const char *haystack,
                                              const char *needle, Comp &&comp) {
-  // TODO: This is a simple brute force implementation. This can be
-  // improved upon using well known string matching algorithms.
-  for (size_t i = 0; comp(haystack[i], 0); ++i) {
-    size_t j = 0;
-    for (; comp(haystack[i + j], 0) && !comp(haystack[i + j], needle[j]); ++j)
-      ;
-    if (!comp(needle[j], 0))
-      return const_cast<char *>(haystack + i);
-  }
-  return nullptr;
+  void *result = memmem_implementation(
+      static_cast<const void *>(haystack), internal::string_length(haystack),
+      static_cast<const void *>(needle), internal::string_length(needle), comp);
+  return static_cast<char *>(result);
 }
 
 } // namespace __llvm_libc
