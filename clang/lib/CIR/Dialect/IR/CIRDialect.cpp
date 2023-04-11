@@ -181,6 +181,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
 
   if (attrType.isa<mlir::cir::GlobalViewAttr>())
     return success();
+  if (attrType.isa<mlir::cir::TypeInfoAttr>())
+    return success();
 
   assert(attrType.isa<TypedAttr>() && "What else could we be looking at here?");
   return op->emitOpError("global with type ")
@@ -1103,7 +1105,10 @@ LogicalResult GlobalOp::verify() {
     break;
   case GlobalLinkageKind::ExternalLinkage:
   case GlobalLinkageKind::ExternalWeakLinkage:
-    if (isPrivate())
+    // FIXME: mlir's concept of visibility gets tricky with LLVM ones,
+    // for instance, symbol declarations cannot be "public", so we
+    // have to mark them "private" to workaround the symbol verifier.
+    if (isPrivate() && !isDeclaration())
       return emitError() << "private visibility not allowed with '"
                          << stringifyGlobalLinkageKind(getLinkage())
                          << "' linkage";
@@ -1811,6 +1816,37 @@ LogicalResult ASTRecordDeclAttr::verify(
     emitError() << "expected non-null AST declaration";
     return failure();
   }
+  return success();
+}
+
+LogicalResult TypeInfoAttr::verify(
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    ::mlir::Type type, ArrayAttr info) {
+  auto sTy = type.dyn_cast_or_null<mlir::cir::StructType>();
+  if (!sTy) {
+    emitError() << "expected !cir.struct type";
+    return failure();
+  }
+
+  if (sTy.getMembers().size() != info.size()) {
+    emitError() << "number of typeinfo elements must match result type";
+    return failure();
+  }
+
+  unsigned attrIdx = 0;
+  for (auto &member : sTy.getMembers()) {
+    auto gview = info[attrIdx].dyn_cast_or_null<GlobalViewAttr>();
+    if (!gview) {
+      emitError() << "expected GlobalViewAttr attribute";
+      return failure();
+    }
+    if (member != gview.getType()) {
+      emitError() << "typeinfo element must match result element type";
+      return failure();
+    }
+    attrIdx++;
+  }
+
   return success();
 }
 

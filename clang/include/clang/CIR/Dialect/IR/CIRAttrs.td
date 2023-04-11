@@ -119,10 +119,11 @@ def GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [TypedAttrInterface]>
     output type, since a given view of the global might require a static
     cast for initializing other globals.
 
-    A list of indices can be optionally passed and each element indexes
-    the underlying type one level deep. For `symbol` types like `!cir.array`
+    A list of indices can be optionally passed and each element subsequently
+    indexes underlying types. For `symbol` types like `!cir.array`
     and `!cir.struct`, it leads to the constant address of sub-elements, while
-    for `!cir.ptr` base an offset can be applied.
+    for `!cir.ptr`, an offset is applied. The first index is relative to the
+    original symbol type, not the produced one.
 
     Example:
 
@@ -136,11 +137,6 @@ def GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [TypedAttrInterface]>
     ```
   }];
 
-  // `$type` is the `self` type of the attribute (i.e. the type of the
-  // Attribute itself).
-  //
-  // `symbol` is the actual attribute StringAttr for the global symbol this
-  // refers to.
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
                         "FlatSymbolRefAttr":$symbol,
                         OptionalParameter<"ArrayAttr">:$indices);
@@ -153,14 +149,57 @@ def GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [TypedAttrInterface]>
     }]>
   ];
 
-  // Enable verifier.
   // let genVerifyDecl = 1;
-
   let assemblyFormat = [{
     `<`
-    $symbol
-    (`,` $indices^)?
+      $symbol
+      (`,` $indices^)?
     `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// TypeInfoAttr
+//===----------------------------------------------------------------------===//
+
+def TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
+  let summary = "Represents a typeinfo used for RTTI";
+  let description = [{
+    The typeinfo data for a given class is stored into an ArrayAttr. The
+    layout is determined by the C++ ABI used (clang only implements
+    itanium on CIRGen).
+
+    The verifier enforces that the output type is always a `!cir.struct`,
+    and that the ArrayAttr element types match the equivalent member type
+    for the resulting struct.
+
+    Example:
+
+    ```
+    cir.global "private" constant external @type_info_A : !cir.ptr<i8>
+    cir.global external @type_info_B = #cir.typeinfo< 
+      [#cir.global_view<@type_info_A> : !cir.ptr<i8>] : !cir.struct<"", !cir.ptr<i8>>
+    >
+    ```
+  }];
+
+  // FIXME: move from ArrayAttr to a ConstStructAttr once it lands?
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        "ArrayAttr":$info);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Type":$type,
+                                        "ArrayAttr":$info), [{
+      return $_get(type.getContext(), type, info);
+    }]>
+  ];
+
+  // Checks struct element types should match the array for every equivalent
+  // element type.
+  let genVerifyDecl = 1;
+
+  let assemblyFormat = [{
+    `<` $info `:` $type `>`
   }];
 }
 

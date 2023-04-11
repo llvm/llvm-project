@@ -263,3 +263,16 @@ cir.func coroutine @good_yield() {
   }
   cir.return
 }
+
+// -----
+
+module {
+  // Note MLIR requires "private" for global declarations, should get
+  // rid of this somehow in favor of clarity?
+  cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE : !cir.ptr<i32>
+
+  cir.global external @type_info_B = #cir.typeinfo< // expected-error {{typeinfo element must match result element type}} 
+    [#cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2]> : !cir.ptr<i16>]
+    : !cir.struct<"", !cir.ptr<i8>>
+  >
+} // expected-error {{'cir.global' expected constant attribute to match type}}
