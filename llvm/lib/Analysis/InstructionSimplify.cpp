@@ -1949,13 +1949,15 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1,
   return nullptr;
 }
 
-static Value *simplifyAndOrOfFCmps(const DataLayout &DL,
-                                   const TargetLibraryInfo *TLI, FCmpInst *LHS,
+static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
                                    FCmpInst *RHS, bool IsAnd) {
   Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
   Value *RHS0 = RHS->getOperand(0), *RHS1 = RHS->getOperand(1);
   if (LHS0->getType() != RHS0->getType())
     return nullptr;
+
+  const DataLayout &DL = Q.DL;
+  const TargetLibraryInfo *TLI = Q.TLI;
 
   FCmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
   if ((PredL == FCmpInst::FCMP_ORD && PredR == FCmpInst::FCMP_ORD && IsAnd) ||
@@ -1968,8 +1970,10 @@ static Value *simplifyAndOrOfFCmps(const DataLayout &DL,
     // (fcmp uno NNAN, X) | (fcmp uno Y, X) --> fcmp uno Y, X
     // (fcmp uno X, NNAN) | (fcmp uno X, Y) --> fcmp uno X, Y
     // (fcmp uno X, NNAN) | (fcmp uno Y, X) --> fcmp uno Y, X
-    if (((LHS1 == RHS0 || LHS1 == RHS1) && isKnownNeverNaN(LHS0, DL, TLI)) ||
-        ((LHS0 == RHS0 || LHS0 == RHS1) && isKnownNeverNaN(LHS1, DL, TLI)))
+    if (((LHS1 == RHS0 || LHS1 == RHS1) &&
+         isKnownNeverNaN(LHS0, DL, TLI, 0, Q.AC, Q.CxtI, Q.DT)) ||
+        ((LHS0 == RHS0 || LHS0 == RHS1) &&
+         isKnownNeverNaN(LHS1, DL, TLI, 0, Q.AC, Q.CxtI, Q.DT)))
       return RHS;
 
     // (fcmp ord X, Y) & (fcmp ord NNAN, X) --> fcmp ord X, Y
@@ -1980,8 +1984,10 @@ static Value *simplifyAndOrOfFCmps(const DataLayout &DL,
     // (fcmp uno Y, X) | (fcmp uno NNAN, X) --> fcmp uno Y, X
     // (fcmp uno X, Y) | (fcmp uno X, NNAN) --> fcmp uno X, Y
     // (fcmp uno Y, X) | (fcmp uno X, NNAN) --> fcmp uno Y, X
-    if (((RHS1 == LHS0 || RHS1 == LHS1) && isKnownNeverNaN(RHS0, DL, TLI)) ||
-        ((RHS0 == LHS0 || RHS0 == LHS1) && isKnownNeverNaN(RHS1, DL, TLI)))
+    if (((RHS1 == LHS0 || RHS1 == LHS1) &&
+         isKnownNeverNaN(RHS0, DL, TLI, 0, Q.AC, Q.CxtI, Q.DT)) ||
+        ((RHS0 == LHS0 || RHS0 == LHS1) &&
+         isKnownNeverNaN(RHS1, DL, TLI, 0, Q.AC, Q.CxtI, Q.DT)))
       return LHS;
   }
 
@@ -2009,7 +2015,7 @@ static Value *simplifyAndOrOfCmps(const SimplifyQuery &Q, Value *Op0,
   auto *FCmp0 = dyn_cast<FCmpInst>(Op0);
   auto *FCmp1 = dyn_cast<FCmpInst>(Op1);
   if (FCmp0 && FCmp1)
-    V = simplifyAndOrOfFCmps(Q.DL, Q.TLI, FCmp0, FCmp1, IsAnd);
+    V = simplifyAndOrOfFCmps(Q, FCmp0, FCmp1, IsAnd);
 
   if (!V)
     return nullptr;
