@@ -3569,9 +3569,10 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
   if (VS.isOverrideSpecified())
     Member->addAttr(OverrideAttr::Create(Context, VS.getOverrideLoc()));
   if (VS.isFinalSpecified())
-    Member->addAttr(FinalAttr::Create(
-        Context, VS.getFinalLoc(), AttributeCommonInfo::AS_Keyword,
-        static_cast<FinalAttr::Spelling>(VS.isFinalSpelledSealed())));
+    Member->addAttr(FinalAttr::Create(Context, VS.getFinalLoc(),
+                                      VS.isFinalSpelledSealed()
+                                          ? FinalAttr::Keyword_sealed
+                                          : FinalAttr::Keyword_final));
 
   if (VS.getLastLocation().isValid()) {
     // Update the end location of a method that has a virt-specifiers.
