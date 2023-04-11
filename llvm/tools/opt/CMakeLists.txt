@@ -31,7 +31,6 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(opt
   AnalysisWrappers.cpp
-  BreakpointPrinter.cpp
   NewPMDriver.cpp
   opt.cpp
 

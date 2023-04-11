@@ -23,7 +23,6 @@ executable("opt") {
   ]
   sources = [
     "AnalysisWrappers.cpp",
-    "BreakpointPrinter.cpp",
     "NewPMDriver.cpp",
     "opt.cpp",
   ]
