@@ -1168,11 +1168,10 @@ void TextDiagnostic::emitSnippetAndCaret(
   // Find the set of lines to include.
   const unsigned MaxLines = DiagOpts->SnippetLineLimit;
   std::pair<unsigned, unsigned> Lines = {CaretLineNo, CaretLineNo};
-  for (SmallVectorImpl<CharSourceRange>::iterator I = Ranges.begin(),
-                                                  E = Ranges.end();
-       I != E; ++I)
-    if (auto OptionalRange = findLinesForRange(*I, FID, SM))
+  for (auto &I : Ranges) {
+    if (auto OptionalRange = findLinesForRange(I, FID, SM))
       Lines = maybeAddRange(Lines, *OptionalRange, MaxLines);
+  }
 
   for (unsigned LineNo = Lines.first; LineNo != Lines.second + 1; ++LineNo) {
     const char *BufStart = BufData.data();
@@ -1212,10 +1211,8 @@ void TextDiagnostic::emitSnippetAndCaret(
     std::string CaretLine(sourceColMap.columns(), ' ');
 
     // Highlight all of the characters covered by Ranges with ~ characters.
-    for (SmallVectorImpl<CharSourceRange>::iterator I = Ranges.begin(),
-                                                    E = Ranges.end();
-         I != E; ++I)
-      highlightRange(*I, LineNo, FID, sourceColMap, CaretLine, SM, LangOpts);
+    for (auto &I : Ranges)
+      highlightRange(I, LineNo, FID, sourceColMap, CaretLine, SM, LangOpts);
 
     // Next, insert the caret itself.
     if (CaretLineNo == LineNo) {
