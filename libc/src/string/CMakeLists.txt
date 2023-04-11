@@ -32,6 +32,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  index
+  SRCS
+    index.cpp
+  HDRS
+    index.h
+  DEPENDS
+    .memory_utils.strchr_implementation
+)
+
+add_entrypoint_object(
   memccpy
   SRCS
     memccpy.cpp
@@ -65,6 +75,16 @@ add_entrypoint_object(
     memrchr.cpp
   HDRS
     memrchr.h
+)
+
+add_entrypoint_object(
+  rindex
+  SRCS
+    rindex.cpp
+  HDRS
+    rindex.h
+  DEPENDS
+    .memory_utils.strchr_implementation
 )
 
 add_entrypoint_object(
