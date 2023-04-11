@@ -1102,7 +1102,8 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit) {
 llvm::json::Object
 CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
                                   llvm::StringRef debug_adaptor_path,
-                                  llvm::StringRef comm_file) {
+                                  llvm::StringRef comm_file,
+                                  lldb::pid_t debugger_pid) {
   llvm::json::Object reverse_request;
   reverse_request.try_emplace("type", "request");
   reverse_request.try_emplace("command", "runInTerminal");
@@ -1115,8 +1116,13 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
   auto launch_request_arguments = launch_request.getObject("arguments");
   // The program path must be the first entry in the "args" field
   std::vector<std::string> args = {
-      debug_adaptor_path.str(), "--comm-file", comm_file.str(),
-      "--launch-target", GetString(launch_request_arguments, "program").str()};
+      debug_adaptor_path.str(), "--comm-file", comm_file.str()};
+  if (debugger_pid != LLDB_INVALID_PROCESS_ID) {
+    args.push_back("--debugger-pid");
+    args.push_back(std::to_string(debugger_pid));
+  }
+  args.push_back("--launch-target");
+  args.push_back(GetString(launch_request_arguments, "program").str());
   std::vector<std::string> target_args =
       GetStrings(launch_request_arguments, "args");
   args.insert(args.end(), target_args.begin(), target_args.end());

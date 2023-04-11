@@ -58,8 +58,7 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
         program = self.getBuildArtifact("a.out")
         source = 'main.c'
         self.build_and_launch(
-            program, stopOnEntry=True, runInTerminal=True, args=["foobar"],
-            env=["FOO=bar"])
+            program, runInTerminal=True, args=["foobar"], env=["FOO=bar"])
 
         breakpoint_line = line_number(source, '// breakpoint')
 
@@ -90,7 +89,7 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
             return
         self.build_and_create_debug_adaptor()
         response = self.launch(
-            "INVALIDPROGRAM", stopOnEntry=True, runInTerminal=True, args=["foobar"], env=["FOO=bar"], expectFailure=True)
+            "INVALIDPROGRAM", runInTerminal=True, args=["foobar"], env=["FOO=bar"], expectFailure=True)
         self.assertFalse(response['success'])
         self.assertIn("Could not create a target for a program 'INVALIDPROGRAM': unable to find executable",
             response['message'])
