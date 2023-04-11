@@ -192,6 +192,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  swab
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.swab
+)
+
+add_entrypoint_object(
   symlink
   ALIAS
   DEPENDS
