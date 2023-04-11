@@ -124,3 +124,41 @@ subroutine omp_target_data
    !$omp end target data
    !CHECK: }
 end subroutine omp_target_data
+
+!===============================================================================
+! Target with region
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target() {
+subroutine omp_target
+   !CHECK: %[[VAL_0:.*]] = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_targetEa"}
+   integer :: a(1024)
+   !CHECK: omp.target   map((tofrom -> %[[VAL_0]] : !fir.ref<!fir.array<1024xi32>>)) {
+   !$omp target map(tofrom: a)
+      !CHECK: %[[VAL_1:.*]] = arith.constant 10 : i32
+      !CHECK: %[[VAL_2:.*]] = arith.constant 1 : i64
+      !CHECK: %[[VAL_3:.*]] = arith.constant 1 : i64
+      !CHECK: %[[VAL_4:.*]] = arith.subi %[[VAL_2]], %[[VAL_3]] : i64
+      !CHECK: %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_4]] : (!fir.ref<!fir.array<1024xi32>>, i64) -> !fir.ref<i32>
+      !CHECK: fir.store %[[VAL_1]] to %[[VAL_5]] : !fir.ref<i32>
+      a(1) = 10
+   !CHECK: omp.terminator
+   !$omp end target
+   !CHECK: }
+end subroutine omp_target
+
+!===============================================================================
+! Target `thread_limit` clause
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_thread_limit() {
+subroutine omp_target_thread_limit
+   integer :: a
+   !CHECK: %[[VAL_1:.*]] = arith.constant 64 : i32
+   !CHECK: omp.target   thread_limit(%[[VAL_1]] : i32) map((tofrom -> %[[VAL_0]] : !fir.ref<i32>)) {
+   !$omp target map(tofrom: a) thread_limit(64)
+      a = 10
+   !CHECK: omp.terminator
+   !$omp end target
+   !CHECK: }
+end subroutine omp_target_thread_limit
