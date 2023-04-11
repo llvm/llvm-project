@@ -777,18 +777,23 @@ ParseResult GenericOp::parse(OpAsmParser &parser, OperationState &result) {
   // The name is unimportant as we will overwrite result.attributes.
   // The core linalg traits must contain the information necessary to pass the
   // verifier.
+  llvm::SMLoc attributeLocation = parser.getCurrentLocation();
   if (parser.parseAttribute(dictAttr, "_", result.attributes))
     return failure();
   result.attributes.assign(dictAttr.getValue().begin(),
                            dictAttr.getValue().end());
 
-  // Convert array of string into an array of IteratyType enums. This is needed,
-  // because tests still use the old format when 'iterator_types' attribute is
-  // represented as an array of strings.
+  // Convert array of string into an array of IteratorType enums. This is
+  // needed, because tests still use the old format when 'iterator_types'
+  // attribute is represented as an array of strings.
   // TODO: Remove this conversion once tests are fixed.
-  ArrayAttr iteratorTypes =
-      result.attributes.get(getIteratorTypesAttrName(result.name))
-          .cast<ArrayAttr>();
+  auto iteratorTypes = dyn_cast_or_null<ArrayAttr>(
+      result.attributes.get(getIteratorTypesAttrName(result.name)));
+  if (!iteratorTypes) {
+    return parser.emitError(attributeLocation)
+           << "expected " << getIteratorTypesAttrName(result.name)
+           << " array attribute";
+  }
 
   SmallVector<Attribute> iteratorTypeAttrs;
 
