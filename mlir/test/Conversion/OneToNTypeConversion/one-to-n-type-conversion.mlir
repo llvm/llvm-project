@@ -15,7 +15,7 @@
 // CHECK-TUP-LABEL: func.func @pack_unpack(
 // CHECK-TUP-SAME:                          %[[ARG0:.*]]: i1,
 // CHECK-TUP-SAME:                          %[[ARG1:.*]]: i2) -> (i1, i2) {
-// CHECK-TUP-NEXT:    return %[[ARG0]], %[[ARG1]] : i1, i2
+// CHECK-TUP-DAG:     return %[[ARG0]], %[[ARG1]] : i1, i2
 func.func @pack_unpack(%arg0: i1, %arg1: i2) -> (i1, i2) {
   %0 = "test.make_tuple"() : () -> tuple<>
   %1 = "test.make_tuple"(%arg1) : (i2) -> tuple<i2>
@@ -39,46 +39,46 @@ func.func @pack_unpack(%arg0: i1, %arg1: i2) -> (i1, i2) {
 // unconverted function arguments to each of the return values (which have
 // redundancy among themselves).
 //
-// CHECK-TUP-LABEL: func.func @materializations(
-// CHECK-TUP-SAME:                              %[[ARG0:.*]]: tuple<tuple<>, i1, tuple<tuple<i2>>>) -> (i1, i2) {
-// CHECK-TUP-NEXT:    %0 = "test.get_tuple_element"(%arg0) {index = 0 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<>
-// CHECK-TUP-NEXT:    %1 = "test.get_tuple_element"(%arg0) {index = 1 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> i1
-// CHECK-TUP-NEXT:    %2 = "test.get_tuple_element"(%arg0) {index = 2 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<tuple<i2>>
-// CHECK-TUP-NEXT:    %3 = "test.get_tuple_element"(%2) {index = 0 : i32} : (tuple<tuple<i2>>) -> tuple<i2>
-// CHECK-TUP-NEXT:    %4 = "test.get_tuple_element"(%3) {index = 0 : i32} : (tuple<i2>) -> i2
-// CHECK-TUP-NEXT:    %5 = "test.get_tuple_element"(%arg0) {index = 0 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<>
-// CHECK-TUP-NEXT:    %6 = "test.get_tuple_element"(%arg0) {index = 1 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> i1
-// CHECK-TUP-NEXT:    %7 = "test.get_tuple_element"(%arg0) {index = 2 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<tuple<i2>>
-// CHECK-TUP-NEXT:    %8 = "test.get_tuple_element"(%7) {index = 0 : i32} : (tuple<tuple<i2>>) -> tuple<i2>
-// CHECK-TUP-NEXT:    %9 = "test.get_tuple_element"(%8) {index = 0 : i32} : (tuple<i2>) -> i2
-// CHECK-TUP-NEXT:    return %1, %9 : i1, i2
+// CHECK-TUP-LABEL: func.func @materializations_tuple_args(
+// CHECK-TUP-SAME:                                         %[[ARG0:.*]]: tuple<tuple<>, i1, tuple<tuple<i2>>>) -> (i1, i2) {
+// CHECK-TUP-DAG:     %[[V0:.*]] = "test.get_tuple_element"(%[[ARG0]]) {index = 0 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<>
+// CHECK-TUP-DAG:     %[[V1:.*]] = "test.get_tuple_element"(%[[ARG0]]) {index = 1 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> i1
+// CHECK-TUP-DAG:     %[[V2:.*]] = "test.get_tuple_element"(%[[ARG0]]) {index = 2 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<tuple<i2>>
+// CHECK-TUP-DAG:     %[[V3:.*]] = "test.get_tuple_element"(%[[V2]]) {index = 0 : i32} : (tuple<tuple<i2>>) -> tuple<i2>
+// CHECK-TUP-DAG:     %[[V4:.*]] = "test.get_tuple_element"(%[[V3]]) {index = 0 : i32} : (tuple<i2>) -> i2
+// CHECK-TUP-DAG:     %[[V5:.*]] = "test.get_tuple_element"(%[[ARG0]]) {index = 0 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<>
+// CHECK-TUP-DAG:     %[[V6:.*]] = "test.get_tuple_element"(%[[ARG0]]) {index = 1 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> i1
+// CHECK-TUP-DAG:     %[[V7:.*]] = "test.get_tuple_element"(%[[ARG0]]) {index = 2 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<tuple<i2>>
+// CHECK-TUP-DAG:     %[[V8:.*]] = "test.get_tuple_element"(%[[V7]]) {index = 0 : i32} : (tuple<tuple<i2>>) -> tuple<i2>
+// CHECK-TUP-DAG:     %[[V9:.*]] = "test.get_tuple_element"(%[[V8]]) {index = 0 : i32} : (tuple<i2>) -> i2
+// CHECK-TUP-DAG:     return %[[V1]], %[[V9]] : i1, i2
 
 // If we only convert the func ops, argument materializations are created from
 // the converted tuple elements back to the tuples that the `get_tuple_element`
 // ops expect.
 //
-// CHECK-FUNC-LABEL: func.func @materializations(
-// CHECK-FUNC-SAME:                              %[[ARG0:.*]]: i1,
-// CHECK-FUNC-SAME:                              %[[ARG1:.*]]: i2) -> (i1, i2) {
-// CHECK-FUNC-NEXT:    %0 = "test.make_tuple"() : () -> tuple<>
-// CHECK-FUNC-NEXT:    %1 = "test.make_tuple"(%arg1) : (i2) -> tuple<i2>
-// CHECK-FUNC-NEXT:    %2 = "test.make_tuple"(%1) : (tuple<i2>) -> tuple<tuple<i2>>
-// CHECK-FUNC-NEXT:    %3 = "test.make_tuple"(%0, %arg0, %2) : (tuple<>, i1, tuple<tuple<i2>>) -> tuple<tuple<>, i1, tuple<tuple<i2>>>
-// CHECK-FUNC-NEXT:    %4 = "test.get_tuple_element"(%3) {index = 0 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<>
-// CHECK-FUNC-NEXT:    %5 = "test.get_tuple_element"(%3) {index = 1 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> i1
-// CHECK-FUNC-NEXT:    %6 = "test.get_tuple_element"(%3) {index = 2 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<tuple<i2>>
-// CHECK-FUNC-NEXT:    %7 = "test.get_tuple_element"(%6) {index = 0 : i32} : (tuple<tuple<i2>>) -> tuple<i2>
-// CHECK-FUNC-NEXT:    %8 = "test.get_tuple_element"(%7) {index = 0 : i32} : (tuple<i2>) -> i2
-// CHECK-FUNC-NEXT:    return %5, %8 : i1, i2
+// CHECK-FUNC-LABEL: func.func @materializations_tuple_args(
+// CHECK-FUNC-SAME:                                         %[[ARG0:.*]]: i1,
+// CHECK-FUNC-SAME:                                         %[[ARG1:.*]]: i2) -> (i1, i2) {
+// CHECK-FUNC-DAG:     %[[V0:.*]] = "test.make_tuple"() : () -> tuple<>
+// CHECK-FUNC-DAG:     %[[V1:.*]] = "test.make_tuple"(%[[ARG1]]) : (i2) -> tuple<i2>
+// CHECK-FUNC-DAG:     %[[V2:.*]] = "test.make_tuple"(%[[V1]]) : (tuple<i2>) -> tuple<tuple<i2>>
+// CHECK-FUNC-DAG:     %[[V3:.*]] = "test.make_tuple"(%[[V0]], %[[ARG0]], %[[V2]]) : (tuple<>, i1, tuple<tuple<i2>>) -> tuple<tuple<>, i1, tuple<tuple<i2>>>
+// CHECK-FUNC-DAG:     %[[V4:.*]] = "test.get_tuple_element"(%[[V3]]) {index = 0 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<>
+// CHECK-FUNC-DAG:     %[[V5:.*]] = "test.get_tuple_element"(%[[V3]]) {index = 1 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> i1
+// CHECK-FUNC-DAG:     %[[V6:.*]] = "test.get_tuple_element"(%[[V3]]) {index = 2 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<tuple<i2>>
+// CHECK-FUNC-DAG:     %[[V7:.*]] = "test.get_tuple_element"(%[[V6]]) {index = 0 : i32} : (tuple<tuple<i2>>) -> tuple<i2>
+// CHECK-FUNC-DAG:     %[[V8:.*]] = "test.get_tuple_element"(%[[V7]]) {index = 0 : i32} : (tuple<i2>) -> i2
+// CHECK-FUNC-DAG:     return %[[V5]], %[[V8]] : i1, i2
 
 // If we convert both tuple and func ops, basically everything disappears.
 //
-// CHECK-BOTH-LABEL: func.func @materializations(
-// CHECK-BOTH-SAME:                              %[[ARG0:.*]]: i1,
-// CHECK-BOTH-SAME:                              %[[ARG1:.*]]: i2) -> (i1, i2) {
-// CHECK-BOTH-NEXT:    return %arg0, %arg1 : i1, i2
+// CHECK-BOTH-LABEL: func.func @materializations_tuple_args(
+// CHECK-BOTH-SAME:                                         %[[ARG0:.*]]: i1,
+// CHECK-BOTH-SAME:                                         %[[ARG1:.*]]: i2) -> (i1, i2) {
+// CHECK-BOTH-DAG:     return %[[ARG0]], %[[ARG1]] : i1, i2
 
-func.func @materializations(%arg0: tuple<tuple<>, i1, tuple<tuple<i2>>>) -> (i1, i2) {
+func.func @materializations_tuple_args(%arg0: tuple<tuple<>, i1, tuple<tuple<i2>>>) -> (i1, i2) {
   %0 = "test.get_tuple_element"(%arg0) {index = 0 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<>
   %1 = "test.get_tuple_element"(%arg0) {index = 1 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> i1
   %2 = "test.get_tuple_element"(%arg0) {index = 2 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<tuple<i2>>
@@ -97,41 +97,41 @@ func.func @materializations(%arg0: tuple<tuple<>, i1, tuple<tuple<i2>>>) -> (i1,
 // to the operands of the unconverted op with the original type (i.e.,
 // `return`).
 
-// CHECK-TUP-LABEL: func.func @materializations(
-// CHECK-TUP-SAME:                              %[[ARG0:.*]]: i1,
-// CHECK-TUP-SAME:                              %[[ARG1:.*]]: i2) -> tuple<tuple<>, i1, tuple<tuple<i2>>> {
-// CHECK-TUP-NEXT:    %[[V0:.*]] = "test.make_tuple"() : () -> tuple<>
-// CHECK-TUP-NEXT:    %[[V1:.*]] = "test.make_tuple"(%[[ARG1]]) : (i2) -> tuple<i2>
-// CHECK-TUP-NEXT:    %[[V2:.*]] = "test.make_tuple"(%[[V1]]) : (tuple<i2>) -> tuple<tuple<i2>>
-// CHECK-TUP-NEXT:    %[[V3:.*]] = "test.make_tuple"(%[[V0]], %[[ARG0]], %[[V2]]) : (tuple<>, i1, tuple<tuple<i2>>) -> tuple<tuple<>, i1, tuple<tuple<i2>>>
-// CHECK-TUP-NEXT:    return %[[V3]] : tuple<tuple<>, i1, tuple<tuple<i2>>>
+// CHECK-TUP-LABEL: func.func @materializations_tuple_return(
+// CHECK-TUP-SAME:                                           %[[ARG0:.*]]: i1,
+// CHECK-TUP-SAME:                                           %[[ARG1:.*]]: i2) -> tuple<tuple<>, i1, tuple<tuple<i2>>> {
+// CHECK-TUP-DAG:     %[[V0:.*]] = "test.make_tuple"() : () -> tuple<>
+// CHECK-TUP-DAG:     %[[V1:.*]] = "test.make_tuple"(%[[ARG1]]) : (i2) -> tuple<i2>
+// CHECK-TUP-DAG:     %[[V2:.*]] = "test.make_tuple"(%[[V1]]) : (tuple<i2>) -> tuple<tuple<i2>>
+// CHECK-TUP-DAG:     %[[V3:.*]] = "test.make_tuple"(%[[V0]], %[[ARG0]], %[[V2]]) : (tuple<>, i1, tuple<tuple<i2>>) -> tuple<tuple<>, i1, tuple<tuple<i2>>>
+// CHECK-TUP-DAG:     return %[[V3]] : tuple<tuple<>, i1, tuple<tuple<i2>>>
 
 // If we only convert the func ops, target materializations are created from
 // original tuples produced by `make_tuple` to its constituent elements that the
 // converted op (i.e., `return`) expect.
 //
-// CHECK-FUNC-LABEL: func.func @materializations(
-// CHECK-FUNC-SAME:                              %[[ARG0:.*]]: i1,
-// CHECK-FUNC-SAME:                              %[[ARG1:.*]]: i2) -> (i1, i2) {
-// CHECK-FUNC-NEXT:    %0 = "test.make_tuple"() : () -> tuple<>
-// CHECK-FUNC-NEXT:    %1 = "test.make_tuple"(%arg1) : (i2) -> tuple<i2>
-// CHECK-FUNC-NEXT:    %2 = "test.make_tuple"(%1) : (tuple<i2>) -> tuple<tuple<i2>>
-// CHECK-FUNC-NEXT:    %3 = "test.make_tuple"(%0, %arg0, %2) : (tuple<>, i1, tuple<tuple<i2>>) -> tuple<tuple<>, i1, tuple<tuple<i2>>>
-// CHECK-FUNC-NEXT:    %4 = "test.get_tuple_element"(%3) {index = 0 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<>
-// CHECK-FUNC-NEXT:    %5 = "test.get_tuple_element"(%3) {index = 1 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> i1
-// CHECK-FUNC-NEXT:    %6 = "test.get_tuple_element"(%3) {index = 2 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<tuple<i2>>
-// CHECK-FUNC-NEXT:    %7 = "test.get_tuple_element"(%6) {index = 0 : i32} : (tuple<tuple<i2>>) -> tuple<i2>
-// CHECK-FUNC-NEXT:    %8 = "test.get_tuple_element"(%7) {index = 0 : i32} : (tuple<i2>) -> i2
-// CHECK-FUNC-NEXT:    return %5, %8 : i1, i2
+// CHECK-FUNC-LABEL: func.func @materializations_tuple_return(
+// CHECK-FUNC-SAME:                                           %[[ARG0:.*]]: i1,
+// CHECK-FUNC-SAME:                                           %[[ARG1:.*]]: i2) -> (i1, i2) {
+// CHECK-FUNC-DAG:     %[[V0:.*]] = "test.make_tuple"() : () -> tuple<>
+// CHECK-FUNC-DAG:     %[[V1:.*]] = "test.make_tuple"(%[[ARG1]]) : (i2) -> tuple<i2>
+// CHECK-FUNC-DAG:     %[[V2:.*]] = "test.make_tuple"(%[[V1]]) : (tuple<i2>) -> tuple<tuple<i2>>
+// CHECK-FUNC-DAG:     %[[V3:.*]] = "test.make_tuple"(%[[V0]], %[[ARG0]], %[[V2]]) : (tuple<>, i1, tuple<tuple<i2>>) -> tuple<tuple<>, i1, tuple<tuple<i2>>>
+// CHECK-FUNC-DAG:     %[[V4:.*]] = "test.get_tuple_element"(%[[V3]]) {index = 0 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<>
+// CHECK-FUNC-DAG:     %[[V5:.*]] = "test.get_tuple_element"(%[[V3]]) {index = 1 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> i1
+// CHECK-FUNC-DAG:     %[[V6:.*]] = "test.get_tuple_element"(%[[V3]]) {index = 2 : i32} : (tuple<tuple<>, i1, tuple<tuple<i2>>>) -> tuple<tuple<i2>>
+// CHECK-FUNC-DAG:     %[[V7:.*]] = "test.get_tuple_element"(%[[V6]]) {index = 0 : i32} : (tuple<tuple<i2>>) -> tuple<i2>
+// CHECK-FUNC-DAG:     %[[V8:.*]] = "test.get_tuple_element"(%[[V7]]) {index = 0 : i32} : (tuple<i2>) -> i2
+// CHECK-FUNC-DAG:     return %[[V5]], %[[V8]] : i1, i2
 
 // If we convert both tuple and func ops, basically everything disappears.
 //
-// CHECK-BOTH-LABEL: func.func @materializations(
-// CHECK-BOTH-SAME:                              %[[ARG0:.*]]: i1,
-// CHECK-BOTH-SAME:                              %[[ARG1:.*]]: i2) -> (i1, i2) {
-// CHECK-BOTH-NEXT:    return %arg0, %arg1 : i1, i2
+// CHECK-BOTH-LABEL: func.func @materializations_tuple_return(
+// CHECK-BOTH-SAME:                                           %[[ARG0:.*]]: i1,
+// CHECK-BOTH-SAME:                                           %[[ARG1:.*]]: i2) -> (i1, i2) {
+// CHECK-BOTH-DAG:     return %[[ARG0]], %[[ARG1]] : i1, i2
 
-func.func @materializations(%arg0: i1, %arg1: i2) -> tuple<tuple<>, i1, tuple<tuple<i2>>> {
+func.func @materializations_tuple_return(%arg0: i1, %arg1: i2) -> tuple<tuple<>, i1, tuple<tuple<i2>>> {
   %0 = "test.make_tuple"() : () -> tuple<>
   %1 = "test.make_tuple"(%arg1) : (i2) -> tuple<i2>
   %2 = "test.make_tuple"(%1) : (tuple<i2>) -> tuple<tuple<i2>>
