@@ -924,6 +924,8 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
 ModulePassManager
 PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                                                ThinOrFullLTOPhase Phase) {
+  assert(Level != OptimizationLevel::O0 &&
+         "Should not be used for O0 pipeline");
   ModulePassManager MPM;
 
   // Place pseudo probe instrumentation as the first pass of the pipeline to
@@ -1000,8 +1002,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
   // Try to perform OpenMP specific optimizations on the module. This is a
   // (quick!) no-op if there are no OpenMP runtime calls present in the module.
-  if (Level != OptimizationLevel::O0)
-    MPM.addPass(OpenMPOptPass());
+  MPM.addPass(OpenMPOptPass());
 
   if (AttributorRun & AttributorRunOption::MODULE)
     MPM.addPass(AttributorPass());
