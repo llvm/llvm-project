@@ -173,7 +173,7 @@
 // FAIL-MCPU-NAME: error: unsupported argument 'generic-rv321' to option '-mcpu='
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=generic-rv32 -march=rv64i | FileCheck -check-prefix=MISMATCH-ARCH %s
-// MISMATCH-ARCH: error: unsupported argument 'generic-rv32' to option '-mcpu='
+// MISMATCH-ARCH: cpu 'generic-rv32' does not support rv64
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=generic-rv64 | FileCheck -check-prefix=MISMATCH-MCPU %s
-// MISMATCH-MCPU: error: unsupported argument 'generic-rv64' to option '-mcpu='
+// MISMATCH-MCPU: error: cpu 'generic-rv64' does not support rv32
