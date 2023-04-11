@@ -5,6 +5,10 @@
 ;; it used a fragment that can't be split (the first check directive below).
 ;; NOTE: If createFragmentExpression gets smarter it may be necessary to create
 ;; a new test case.
+;; In some cases a dbg.assign with a poison value is replaced with a non-poison
+;; value. This needs reworking, but as a stop-gap we need to ensure this
+;; doesn't cause invalid expressions to be created. Check we don't do it when
+;; the expression uses more than one location operand (DW_OP_arg n).
 
 ; CHECK: if.then:
 ; CHECK: dbg.value(metadata i32 poison, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32))
@@ -14,6 +18,9 @@
 ; CHECK: if.else:
 ; CHECK: dbg.value(metadata i32 2, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32))
 ; CHECK: dbg.value(metadata i32 0, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32))
+
+; CHECK: if.inner:
+; CHECK: call void @llvm.dbg.value(metadata i32 poison, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value))
 
 ; CHECK: end:
 ; CHECK: dbg.value(metadata i32 %{{.*}}, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32))
@@ -37,6 +44,11 @@ if.then:
 if.else:
   store i64 2, ptr %codepoint, align 4, !DIAssignID !28
   call void @llvm.dbg.assign(metadata i32 2, metadata !15, metadata !DIExpression(), metadata !28, metadata ptr %codepoint, metadata !DIExpression()), !dbg !26
+  br i1 %cmp, label %end, label %if.inner
+
+if.inner:
+  store i32 3, ptr %codepoint, align 4, !DIAssignID !29
+  call void @llvm.dbg.assign(metadata i32 poison, metadata !15, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), metadata !29, metadata ptr %codepoint, metadata !DIExpression()), !dbg !26
   br label %end
 
 end:
@@ -63,3 +75,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !26 = !DILocation(line: 0, scope: !18)
 !27 = distinct !DIAssignID()
 !28 = distinct !DIAssignID()
+!29 = distinct !DIAssignID()
