@@ -41,6 +41,7 @@ void TestExpandMathPass::runOnOperation() {
   populateExpandTanhPattern(patterns);
   populateExpandFmaFPattern(patterns);
   populateExpandFloorFPattern(patterns);
+  populateExpandCeilFPattern(patterns);
   (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 
