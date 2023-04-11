@@ -302,7 +302,6 @@ set(files
   __coroutine/trivial_awaitables.h
   __debug
   __debug_utils/randomize_range.h
-  __errc
   __exception/exception.h
   __exception/exception_ptr.h
   __exception/nested_exception.h
@@ -589,6 +588,7 @@ set(files
   __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
   __support/xlocale/__strtonum_fallback.h
+  __system_error/errc.h
   __system_error/error_category.h
   __system_error/error_code.h
   __system_error/error_condition.h

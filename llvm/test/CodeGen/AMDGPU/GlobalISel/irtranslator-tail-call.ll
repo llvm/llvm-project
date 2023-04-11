@@ -17,7 +17,7 @@ define void @tail_call_void_func_void() {
   ; CHECK-NEXT:   [[PRED_COPY6:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[PRED_COPY7:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[PRED_COPY8:%[0-9]+]]:sgpr_64 = PRED_COPY $sgpr4_sgpr5
-  ; CHECK-NEXT:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_void
+  ; CHECK-NEXT:   [[GV:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @external_void_func_void
   ; CHECK-NEXT:   [[PRED_COPY9:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY8]]
   ; CHECK-NEXT:   [[PRED_COPY10:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY7]]
   ; CHECK-NEXT:   [[PRED_COPY11:%[0-9]+]]:_(p4) = PRED_COPY [[PRED_COPY6]]

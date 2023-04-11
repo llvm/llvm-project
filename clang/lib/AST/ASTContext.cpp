@@ -2832,7 +2832,7 @@ bool ASTContext::hasUniqueObjectRepresentations(QualType Ty) const {
   // All integrals and enums are unique.
   if (Ty->isIntegralOrEnumerationType()) {
     // Except _BitInt types that have padding bits.
-    if (const auto *BIT = dyn_cast<BitIntType>(Ty))
+    if (const auto *BIT = Ty->getAs<BitIntType>())
       return getTypeSize(BIT) == BIT->getNumBits();
 
     return true;

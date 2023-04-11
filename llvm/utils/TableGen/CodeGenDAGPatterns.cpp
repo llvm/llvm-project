@@ -2071,7 +2071,7 @@ void TreePatternNode::SubstituteFormalArguments(
 /// fragments, return the set of inlined versions (this can be more than
 /// one if a PatFrags record has multiple alternatives).
 void TreePatternNode::InlinePatternFragments(
-  TreePatternNodePtr T, TreePattern &TP,
+  const TreePatternNodePtr &T, TreePattern &TP,
   std::vector<TreePatternNodePtr> &OutAlternatives) {
 
   if (TP.hasError())
@@ -4695,17 +4695,10 @@ static void GenerateVariantsOf(TreePatternNodePtr N,
     }
     // Consider the commuted order.
     if (NoRegisters) {
-      std::vector<std::vector<TreePatternNodePtr>> Variants;
-      unsigned i = 0;
-      if (isCommIntrinsic)
-        Variants.push_back(std::move(ChildVariants[i++])); // Intrinsic id.
-      Variants.push_back(std::move(ChildVariants[i + 1]));
-      Variants.push_back(std::move(ChildVariants[i]));
-      i += 2;
-      // Remaining operands are not commuted.
-      for (; i != N->getNumChildren(); ++i)
-        Variants.push_back(std::move(ChildVariants[i]));
-      CombineChildVariants(N, Variants, OutVariants, CDP, DepVars);
+      // Swap the first two operands after the intrinsic id, if present.
+      unsigned i = isCommIntrinsic ? 1 : 0;
+      std::swap(ChildVariants[i], ChildVariants[i + 1]);
+      CombineChildVariants(N, ChildVariants, OutVariants, CDP, DepVars);
     }
   }
 }

@@ -14,6 +14,7 @@
 #endif
 
 #include <cassert>
+#include <cerrno>
 #include <chrono>
 #include <cstdint>
 #include <cstdio> // for printf

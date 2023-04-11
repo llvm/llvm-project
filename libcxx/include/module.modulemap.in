@@ -1437,7 +1437,8 @@ module std [system] {
     export __errc
     export *
     module __system_error {
-      module error_category  { private header "__system_error/error_category.h" }
+      module errc           { private header "__system_error/errc.h" }
+      module error_category { private header "__system_error/error_category.h" }
       module error_code {
         private header "__system_error/error_code.h"
         export functional.__functional.hash
@@ -1449,6 +1450,7 @@ module std [system] {
         export functional.__functional.unary_function
       }
       module system_error { private header "__system_error/system_error.h" }
+
     }
   }
   module thread {
@@ -1715,7 +1717,6 @@ module std [system] {
   module __availability      { private header "__availability"      export * }
   module __bit_reference     { private header "__bit_reference"     export * }
   module __debug             {         header "__debug"             export * }
-  module __errc              { private header "__errc"              export * }
   module __hash_table        {         header "__hash_table"        export * }
   module __locale            {
     @requires_LIBCXX_ENABLE_LOCALIZATION@

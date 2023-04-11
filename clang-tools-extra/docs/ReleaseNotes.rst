@@ -98,6 +98,9 @@ Improvements to clang-tidy
   `ImplementationFileExtensions`, replacing the check-local options of the
   same name.
 
+- Support specifying `Checks` as a YAML list in the `.clang-tidy` configuration
+  file.
+
 New checks
 ^^^^^^^^^^
 
@@ -219,6 +222,10 @@ Changes in existing checks
 - Fixed false positive in :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` to avoid warning on
   declarations inside anonymous namespaces.
+
+- Improved :doc:`misc-unused-parameters
+  <clang-tidy/checks/misc/unused-parameters>` check with new `IgnoreVirtual`
+  option to optionally ignore virtual methods.
 
 - Deprecated check-local options `HeaderFileExtensions`
   in :doc:`misc-unused-using-decls
