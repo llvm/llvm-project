@@ -158,7 +158,7 @@ static LogicalResult genForeachOnSparseConstant(ForeachOp op,
 
   // Foreach on constant.
   foreachInSparseConstant(
-      loc, rewriter, attr, op.getOrder().value_or(AffineMap()),
+      rewriter, loc, attr, op.getOrder().value_or(AffineMap()),
       [&reduc, &rewriter, op](ArrayRef<Value> cvs, Value v) mutable {
         SmallVector<Value> args;
         args.append(cvs.begin(), cvs.end());
@@ -372,7 +372,7 @@ public:
         dstSizes.push_back(constantIndex(rewriter, loc, d));
     } else {
       ArrayRef<DynSize> dstShape = dstTp.getDimShape();
-      genReshapeDstShape(loc, rewriter, dstSizes, srcSizes, dstShape,
+      genReshapeDstShape(rewriter, loc, dstSizes, srcSizes, dstShape,
                          op.getReassociationIndices());
       for (auto [idx, shape] : llvm::enumerate(dstShape)) {
         if (shape == ShapedType::kDynamic)
