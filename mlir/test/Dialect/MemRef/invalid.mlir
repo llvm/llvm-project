@@ -179,7 +179,7 @@ func.func @memref_reinterpret_cast_incompatible_memory_space(%in: memref<*xf32>)
 // -----
 
 func.func @memref_reinterpret_cast_offset_mismatch(%in: memref<?xf32>) {
-  // expected-error @+1 {{expected result type with offset = 2 instead of 1}}
+  // expected-error @+1 {{expected result type with offset = 1 instead of 2}}
   %out = memref.reinterpret_cast %in to
            offset: [1], sizes: [10], strides: [1]
          : memref<?xf32> to memref<10xf32, strided<[1], offset: 2>>
@@ -209,7 +209,7 @@ func.func @memref_reinterpret_cast_offset_mismatch(%in: memref<?xf32>) {
 // -----
 
 func.func @memref_reinterpret_cast_no_map_but_offset(%in: memref<?xf32>) {
-  // expected-error @+1 {{expected result type with offset = 0 instead of 2}}
+  // expected-error @+1 {{expected result type with offset = 2 instead of 0}}
   %out = memref.reinterpret_cast %in to offset: [2], sizes: [10], strides: [1]
          : memref<?xf32> to memref<10xf32>
   return
