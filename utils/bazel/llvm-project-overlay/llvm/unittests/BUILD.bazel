@@ -455,6 +455,7 @@ cc_test(
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
+    features = ["-layering_check"],  # #include "../lib/CodeGen/RegisterCoalescer.h"
 )
 
 cc_test(
