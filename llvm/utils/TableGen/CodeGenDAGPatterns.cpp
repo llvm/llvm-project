@@ -2116,6 +2116,7 @@ void TreePatternNode::InlinePatternFragments(
     do {
       // Create the variant and add it to the output list.
       std::vector<TreePatternNodePtr> NewChildren;
+      NewChildren.reserve(ChildAlternatives.size());
       for (unsigned i = 0, e = ChildAlternatives.size(); i != e; ++i)
         NewChildren.push_back(ChildAlternatives[i][Idxs[i]]);
       TreePatternNodePtr R = std::make_shared<TreePatternNode>(
