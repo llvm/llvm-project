@@ -40,6 +40,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect
+  MLIRAffineTransforms
   MLIRAffineUtils
   MLIRAnalysis
   MLIRArithDialect
@@ -69,6 +70,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRTensorTransforms
   MLIRTransforms
   MLIRTransformUtils
+  MLIRValueBoundsOpInterface
   MLIRVectorDialect
   MLIRVectorTransforms
   MLIRVectorUtils
