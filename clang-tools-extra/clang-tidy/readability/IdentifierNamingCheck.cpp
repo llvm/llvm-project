@@ -339,6 +339,12 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
     }
     TypeName = Type.erase(0, Type.find_first_not_of(" "));
 
+    // Remove template parameters
+    const size_t Pos = Type.find("<");
+    if (Pos != std::string::npos) {
+      TypeName = Type.erase(Pos, Type.size() - Pos);
+    }
+
     // Replace spaces with single space.
     for (size_t Pos = 0; (Pos = Type.find("  ", Pos)) != std::string::npos;
          Pos += strlen(" ")) {
@@ -364,11 +370,13 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
     for (auto Kw : TailsOfMultiWordType) {
       size_t Pos = Type.rfind(Kw.data());
       if (Pos != std::string::npos) {
-        Type = Type.substr(0, Pos + Kw.size());
+        const size_t PtrCount = getAsteriskCount(Type, ND);
+        Type = Type.substr(0, Pos + Kw.size() + PtrCount);
         RedundantRemoved = true;
         break;
       }
     }
+
     TypeName = Type.erase(0, Type.find_first_not_of(" "));
     if (!RedundantRemoved) {
       std::size_t FoundSpace = Type.find(" ");
@@ -585,15 +593,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getDataTypePrefix(
   }
 
   // Pointers
-  size_t PtrCount = [&](std::string TypeName) -> size_t {
-    size_t Pos = TypeName.find('*');
-    size_t Count = 0;
-    for (; Pos < TypeName.length(); Pos++, Count++) {
-      if ('*' != TypeName[Pos])
-        break;
-    }
-    return Count;
-  }(ModifiedTypeName);
+  size_t PtrCount = getAsteriskCount(ModifiedTypeName);
   if (PtrCount > 0) {
     ModifiedTypeName = [&](std::string Str, StringRef From, StringRef To) {
       size_t StartPos = 0;
@@ -689,6 +689,28 @@ std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
     Initial += tolower(Word[0]);
 
   return Initial;
+}
+
+size_t IdentifierNamingCheck::HungarianNotation::getAsteriskCount(
+    const std::string &TypeName) const {
+  size_t Pos = TypeName.find('*');
+  size_t Count = 0;
+  for (; Pos < TypeName.length(); Pos++, Count++) {
+    if ('*' != TypeName[Pos])
+      break;
+  }
+  return Count;
+}
+
+size_t IdentifierNamingCheck::HungarianNotation::getAsteriskCount(
+    const std::string &TypeName, const NamedDecl *ND) const {
+  size_t PtrCount = 0;
+  if (const auto *TD = dyn_cast<ValueDecl>(ND)) {
+    QualType QT = TD->getType();
+    if (QT->isPointerType())
+      PtrCount = getAsteriskCount(TypeName);
+  }
+  return PtrCount;
 }
 
 void IdentifierNamingCheck::HungarianNotation::loadDefaultConfig(

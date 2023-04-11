@@ -355,6 +355,14 @@ uint8_t *ValueU8Ptr;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global pointer 'ValueU8Ptr' [readability-identifier-naming]
 // CHECK-FIXES: {{^}}uint8_t *custpcustu8ValueU8Ptr;
 
+unsigned char *ValueUcPtr;
+// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for global pointer 'ValueUcPtr' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}unsigned char *custpcustucValueUcPtr;
+
+unsigned char **ValueUcPtr2;
+// CHECK-MESSAGES: :[[@LINE-1]]:17: warning: invalid case style for global pointer 'ValueUcPtr2' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}unsigned char **custpcustpcustucValueUcPtr2;
+
 void MyFunc2(void* Val){}
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: invalid case style for pointer parameter 'Val' [readability-identifier-naming]
 // CHECK-FIXES: {{^}}void MyFunc2(void* custpcustvVal){}
