@@ -133,8 +133,8 @@ static StringRef CopyString(ASTContext &ctx, StringRef string) {
 static AttributeCommonInfo getDummyAttrInfo() {
   return AttributeCommonInfo(SourceRange(),
                              AttributeCommonInfo::UnknownAttribute,
-                             AttributeCommonInfo::AS_GNU,
-                             /*Spelling*/0);
+                             {AttributeCommonInfo::AS_GNU,
+                             /*Spelling*/0});
 }
 
 namespace {
@@ -687,8 +687,8 @@ static void ProcessAPINotes(Sema &S, TypedefNameDecl *D,
         }
         AttributeCommonInfo syntaxInfo{SourceRange(),
                                        AttributeCommonInfo::AT_SwiftNewType,
-                                       AttributeCommonInfo::AS_GNU,
-                                       SwiftNewTypeAttr::GNU_swift_wrapper};
+                                       {AttributeCommonInfo::AS_GNU,
+                                       SwiftNewTypeAttr::GNU_swift_wrapper}};
         return new (S.Context) SwiftNewTypeAttr(S.Context, syntaxInfo, kind);
     });
   }
