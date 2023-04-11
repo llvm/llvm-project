@@ -125,16 +125,20 @@ class VSSSched<int n, string suffix = "WorstCase"> : Sched<[
   ReadVSTX, ReadVSTSX, ReadVMask
 ]>;
 
-class VLXSched<int n, string o, string suffix = "WorstCase"> : Sched<[
-  !cast<SchedReadWrite>("WriteVLD" #o #"X" #n #"_" # suffix),
+class VLXSched<int n, string o,
+               string dataSuffix = "WorstCase",
+               string idxSuffix = "WorstCase"> : Sched<[
+  !cast<SchedReadWrite>("WriteVLD" #o #"X" #n #"_" # dataSuffix),
   ReadVLDX,
-  !cast<SchedReadWrite>("ReadVLD" #o #"XV_" # suffix), ReadVMask
+  !cast<SchedReadWrite>("ReadVLD" #o #"XV_" # idxSuffix), ReadVMask
 ]>;
 
-class VSXSched<int n, string o, string suffix = "WorstCase"> : Sched<[
-  !cast<SchedReadWrite>("WriteVST" #o #"X" #n #"_"#suffix),
-  !cast<SchedReadWrite>("ReadVST" #o #"X" #n #"_"#suffix),
-  ReadVSTX, !cast<SchedReadWrite>("ReadVST" #o #"XV_"#suffix), ReadVMask
+class VSXSched<int n, string o,
+               string dataSuffix = "WorstCase",
+               string idxSuffix = "WorstCase"> : Sched<[
+  !cast<SchedReadWrite>("WriteVST" #o #"X" #n #"_"#dataSuffix),
+  !cast<SchedReadWrite>("ReadVST" #o #"X" #n #"_"#dataSuffix),
+  ReadVSTX, !cast<SchedReadWrite>("ReadVST" #o #"XV_"#idxSuffix), ReadVMask
 ]>;
 
 class VLFSched<string suffix = "WorstCase"> : Sched<[
