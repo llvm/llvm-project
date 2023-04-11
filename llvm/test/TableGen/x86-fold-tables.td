@@ -3,5 +3,5 @@
 //      fix the vulnerable rules in X86FoldTablesEmitter.cpp until the diff is reasonable
 //   2. cp <generated_file> x86-fold-tables.inc
 
-// REQUIRES: x86-registered-target
-// RUN: diff %p/x86-fold-tables.inc %llvm_lib_dir/Target/X86/X86GenFoldTables.inc
+// RUN: llvm-tblgen -gen-x86-fold-tables -asmwriternum=1 %p/../../lib/Target/X86/X86.td -I %p/../../lib/Target/X86 -I %p/../../include -o %t
+// RUN: diff %p/x86-fold-tables.inc %t
