@@ -310,7 +310,6 @@ Error readAMDGPUMetaDataFromImage(MemoryBufferRef MemBuffer,
   auto Header = ELFObj.getHeader();
   ELFABIVersion = (uint8_t)(Header.e_ident[ELF::EI_ABIVERSION]);
   DP("ELFABIVERSION Version: %u\n", ELFABIVersion);
-  printf("ELFABIVERSION Version: %u\n", ELFABIVersion);
 
   for (const auto &S : Sections) {
     if (S.sh_type != ELF::SHT_NOTE)
