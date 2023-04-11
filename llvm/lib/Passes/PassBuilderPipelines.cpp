@@ -1414,12 +1414,12 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
 
+  if (PGOOpt && PGOOpt->DebugInfoForProfiling)
+    MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
+
   // Apply module pipeline start EP callback.
   for (auto &C : PipelineStartEPCallbacks)
     C(MPM, Level);
-
-  if (PGOOpt && PGOOpt->DebugInfoForProfiling)
-    MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
 
   const ThinOrFullLTOPhase LTOPhase = LTOPreLink
                                           ? ThinOrFullLTOPhase::FullLTOPreLink
