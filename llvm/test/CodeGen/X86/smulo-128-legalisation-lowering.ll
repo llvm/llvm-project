@@ -16,12 +16,12 @@ define zeroext i1 @smuloi128(i128 %v1, i128 %v2, ptr %res) {
 ; X64-NEXT:    .cfi_offset %r15, -16
 ; X64-NEXT:    movq %rdx, %rbx
 ; X64-NEXT:    movq %rdi, %r11
-; X64-NEXT:    movq %rsi, %rdi
-; X64-NEXT:    sarq $63, %rdi
+; X64-NEXT:    movq %rsi, %rdx
+; X64-NEXT:    sarq $63, %rdx
 ; X64-NEXT:    movq %rcx, %r9
-; X64-NEXT:    imulq %rdi, %r9
-; X64-NEXT:    movq %rdx, %rax
-; X64-NEXT:    mulq %rdi
+; X64-NEXT:    imulq %rdx, %r9
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    mulq %rdx
 ; X64-NEXT:    movq %rdx, %rdi
 ; X64-NEXT:    movq %rax, %r14
 ; X64-NEXT:    addq %rax, %rdi
