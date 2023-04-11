@@ -8,13 +8,7 @@ declare i64 @llvm.amdgcn.ds.add.gs.reg.rtn.i64(i32, i32 immarg)
 define amdgpu_gs void @test_add_32(i32 %arg) {
 ; CHECK-LABEL: test_add_32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
 ; CHECK-NEXT:    ds_add_gs_reg_rtn v[0:1], v0 offset:16 gds
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
-; CHECK-NEXT:    buffer_gl0_inv
-; CHECK-NEXT:    buffer_gl1_inv
 ; CHECK-NEXT:    s_endpgm
   %unused = call i32 @llvm.amdgcn.ds.add.gs.reg.rtn.i32(i32 %arg, i32 16)
   ret void
@@ -23,13 +17,8 @@ define amdgpu_gs void @test_add_32(i32 %arg) {
 define amdgpu_gs void @test_add_32_use(i32 %arg, ptr addrspace(1) %out) {
 ; CHECK-LABEL: test_add_32_use:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
 ; CHECK-NEXT:    ds_add_gs_reg_rtn v[3:4], v0 offset:16 gds
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
-; CHECK-NEXT:    buffer_gl0_inv
-; CHECK-NEXT:    buffer_gl1_inv
 ; CHECK-NEXT:    global_store_b32 v[1:2], v3, off
 ; CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-NEXT:    s_endpgm
@@ -41,13 +30,7 @@ define amdgpu_gs void @test_add_32_use(i32 %arg, ptr addrspace(1) %out) {
 define amdgpu_gs void @test_add_64(i32 %arg) {
 ; CHECK-LABEL: test_add_64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
 ; CHECK-NEXT:    ds_add_gs_reg_rtn v[0:1], v0 offset:32 gds
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
-; CHECK-NEXT:    buffer_gl0_inv
-; CHECK-NEXT:    buffer_gl1_inv
 ; CHECK-NEXT:    s_endpgm
   %unused = call i64 @llvm.amdgcn.ds.add.gs.reg.rtn.i64(i32 %arg, i32 32)
   ret void
@@ -56,13 +39,8 @@ define amdgpu_gs void @test_add_64(i32 %arg) {
 define amdgpu_gs void @test_add_64_use(i32 %arg, ptr addrspace(1) %out) {
 ; CHECK-LABEL: test_add_64_use:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
 ; CHECK-NEXT:    ds_add_gs_reg_rtn v[3:4], v0 offset:32 gds
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
-; CHECK-NEXT:    buffer_gl0_inv
-; CHECK-NEXT:    buffer_gl1_inv
 ; CHECK-NEXT:    global_store_b64 v[1:2], v[3:4], off
 ; CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-NEXT:    s_endpgm
