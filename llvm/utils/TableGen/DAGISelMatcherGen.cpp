@@ -603,16 +603,17 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
     // Get the slot we recorded the value in from the name on the node.
     unsigned RecNodeEntry = MatchedComplexPatterns[i].second;
 
-    const ComplexPattern &CP = *N->getComplexPatternInfo(CGP);
+    const ComplexPattern *CP = N->getComplexPatternInfo(CGP);
+    assert(CP && "Not a valid ComplexPattern!");
 
     // Emit a CheckComplexPat operation, which does the match (aborting if it
     // fails) and pushes the matched operands onto the recorded nodes list.
-    AddMatcher(new CheckComplexPatMatcher(CP, RecNodeEntry,
-                                          N->getName(), NextRecordedOperandNo));
+    AddMatcher(new CheckComplexPatMatcher(*CP, RecNodeEntry, N->getName(),
+                                          NextRecordedOperandNo));
 
     // Record the right number of operands.
-    NextRecordedOperandNo += CP.getNumOperands();
-    if (CP.hasProperty(SDNPHasChain)) {
+    NextRecordedOperandNo += CP->getNumOperands();
+    if (CP->hasProperty(SDNPHasChain)) {
       // If the complex pattern has a chain, then we need to keep track of the
       // fact that we just recorded a chain input.  The chain input will be
       // matched as the last operand of the predicate if it was successful.
