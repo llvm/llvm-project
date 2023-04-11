@@ -85,15 +85,32 @@ public:
   // Attribute helpers
   // -----------------
   //
-
   mlir::TypedAttr getZeroAttr(mlir::Type t) {
     return mlir::cir::ZeroAttr::get(getContext(), t);
   }
 
-  mlir::cir::ConstantOp getZero(mlir::Location loc, mlir::Type ty) {
-    // TODO: dispatch creation for primitive types.
-    assert(ty.isa<mlir::cir::StructType>() && "NYI for other types");
-    return create<mlir::cir::ConstantOp>(loc, ty, getZeroAttr(ty));
+  mlir::cir::ConstArrayAttr getString(llvm::StringRef str, mlir::Type eltTy,
+                                      unsigned size = 0) {
+    unsigned finalSize = size ? size : str.size();
+    auto arrayTy = mlir::cir::ArrayType::get(getContext(), eltTy, finalSize);
+    return getConstArray(mlir::StringAttr::get(str, arrayTy), arrayTy);
+  }
+
+  mlir::cir::ConstArrayAttr getConstArray(mlir::Attribute attrs,
+                                          mlir::cir::ArrayType arrayTy) {
+    return mlir::cir::ConstArrayAttr::get(arrayTy, attrs);
+  }
+
+  mlir::cir::TypeInfoAttr getTypeInfo(mlir::ArrayAttr fieldsAttr) {
+    llvm::SmallVector<mlir::Type, 4> members;
+    for (auto &f : fieldsAttr) {
+      auto gva = f.dyn_cast<mlir::cir::GlobalViewAttr>();
+      assert(gva && "expected #cir.global_view attribute for element");
+      members.push_back(gva.getType());
+    }
+    auto structType = mlir::cir::StructType::get(getContext(), members, "",
+                                                 /*body=*/true);
+    return mlir::cir::TypeInfoAttr::get(structType, fieldsAttr);
   }
 
   //
@@ -155,6 +172,12 @@ public:
                                          mlir::IntegerAttr::get(ty, 0));
   }
 
+  mlir::cir::ConstantOp getZero(mlir::Location loc, mlir::Type ty) {
+    // TODO: dispatch creation for primitive types.
+    assert(ty.isa<mlir::cir::StructType>() && "NYI for other types");
+    return create<mlir::cir::ConstantOp>(loc, ty, getZeroAttr(ty));
+  }
+
   //
   // Block handling helpers
   // ----------------------
@@ -175,7 +198,6 @@ public:
   // Operation creation helpers
   // --------------------------
   //
-
   mlir::Value createFPExt(mlir::Value v, mlir::Type destType) {
     if (getIsFPConstrained())
       llvm_unreachable("constrainedfp NYI");

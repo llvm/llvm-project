@@ -98,6 +98,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct"> {
   let extraClassDeclaration = [{
   public:
     void dropAst();
+    size_t getNumElements() const { return getMembers().size(); }
   }];
 
   let extraClassDefinition = [{

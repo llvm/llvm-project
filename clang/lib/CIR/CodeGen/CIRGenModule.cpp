@@ -383,9 +383,10 @@ mlir::Value CIRGenModule::getGlobalValue(const Decl *D) {
   return CurCGF->symbolTable.lookup(D);
 }
 
-static mlir::cir::GlobalOp createGlobalOp(CIRGenModule &CGM, mlir::Location loc,
-                                          StringRef name, mlir::Type t,
-                                          bool isCst = false) {
+mlir::cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &CGM,
+                                                 mlir::Location loc,
+                                                 StringRef name, mlir::Type t,
+                                                 bool isCst) {
   mlir::cir::GlobalOp g;
   auto &builder = CGM.getBuilder();
   {
@@ -497,8 +498,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
 
   // mlir::SymbolTable::Visibility::Public is the default, no need to explicitly
   // mark it as such.
-  auto GV = createGlobalOp(*this, loc, MangledName, Ty,
-                           /*isConstant=*/false);
+  auto GV = CIRGenModule::createGlobalOp(*this, loc, MangledName, Ty,
+                                         /*isConstant=*/false);
 
   // If we already created a global with the same mangled name (but different
   // type) before, take its name and remove it from its parent.
@@ -903,11 +904,7 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *E) {
     Str.resize(finalSize);
 
     auto eltTy = getTypes().ConvertType(CAT->getElementType());
-    auto TheType =
-        mlir::cir::ArrayType::get(builder.getContext(), eltTy, finalSize);
-    auto constArray = mlir::cir::ConstArrayAttr::get(
-        TheType, mlir::StringAttr::get(Str, TheType));
-    return constArray;
+    return builder.getString(Str, eltTy, finalSize);
   }
 
   assert(0 && "not implemented");
@@ -938,8 +935,8 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr C,
 
   // Create a global variable for this string
   // FIXME(cir): check for insertion point in module level.
-  auto GV = createGlobalOp(CGM, loc, GlobalName, C.getType(),
-                           !CGM.getLangOpts().WritableStrings);
+  auto GV = CIRGenModule::createGlobalOp(CGM, loc, GlobalName, C.getType(),
+                                         !CGM.getLangOpts().WritableStrings);
 
   // Set up extra information and add to the module
   GV.setAlignmentAttr(CGM.getSize(Alignment));
@@ -2065,11 +2062,10 @@ mlir::cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
     OldGV = GV;
   }
 
-  // // Create a new variable.
-  GV = createGlobalOp(*this, loc, Name, Ty);
+  // Create a new variable.
+  GV = CIRGenModule::createGlobalOp(*this, loc, Name, Ty);
 
   // Set up extra information and add to the module
-
   GV.setLinkageAttr(
       mlir::cir::GlobalLinkageKindAttr::get(builder.getContext(), Linkage));
   mlir::SymbolTable::setSymbolVisibility(
@@ -2099,7 +2095,8 @@ bool CIRGenModule::shouldOpportunisticallyEmitVTables() {
   return codeGenOpts.OptimizationLevel > 0;
 }
 
-mlir::Value CIRGenModule::getAddrOfRTTIDescriptor(QualType Ty, bool ForEH) {
+mlir::Attribute CIRGenModule::getAddrOfRTTIDescriptor(mlir::Location loc,
+                                                      QualType Ty, bool ForEH) {
   // Return a bogus pointer if RTTI is disabled, unless it's for EH.
   // FIXME: should we even be calling this method if RTTI is disabled
   // and it's not for EH?
@@ -2113,5 +2110,47 @@ mlir::Value CIRGenModule::getAddrOfRTTIDescriptor(QualType Ty, bool ForEH) {
     llvm_unreachable("NYI");
   }
 
-  return getCXXABI().getAddrOfRTTIDescriptor(Ty);
+  return getCXXABI().getAddrOfRTTIDescriptor(loc, Ty);
 }
+
+/// TODO(cir): once we have cir.module, add this as a convenience method there.
+///
+/// Look up the specified global in the module symbol table.
+///   1. If it does not exist, add a declaration of the global and return it.
+///   2. Else, the global exists but has the wrong type: return the function
+///      with a constantexpr cast to the right type.
+///   3. Finally, if the existing global is the correct declaration, return the
+///      existing global.
+mlir::cir::GlobalOp CIRGenModule::getOrInsertGlobal(
+    mlir::Location loc, StringRef Name, mlir::Type Ty,
+    llvm::function_ref<mlir::cir::GlobalOp()> CreateGlobalCallback) {
+  // See if we have a definition for the specified global already.
+  auto GV = dyn_cast_or_null<mlir::cir::GlobalOp>(getGlobalValue(Name));
+  if (!GV) {
+    GV = CreateGlobalCallback();
+  }
+  assert(GV && "The CreateGlobalCallback is expected to create a global");
+
+  // If the variable exists but has the wrong type, return a bitcast to the
+  // right type.
+  auto GVTy = GV.getSymType();
+  assert(!UnimplementedFeature::addressSpace());
+  auto PTy = builder.getPointerTo(Ty);
+
+  if (GVTy != PTy)
+    llvm_unreachable("NYI");
+
+  // Otherwise, we just found the existing function or a prototype.
+  return GV;
+}
+
+// Overload to construct a global variable using its constructor's defaults.
+mlir::cir::GlobalOp CIRGenModule::getOrInsertGlobal(mlir::Location loc,
+                                                    StringRef Name,
+                                                    mlir::Type Ty) {
+  return getOrInsertGlobal(loc, Name, Ty, [&] {
+    return CIRGenModule::createGlobalOp(*this, loc, Name,
+                                        builder.getPointerTo(Ty));
+  });
+}
+

@@ -34,6 +34,7 @@ add_clang_library(clangCIR
   CIRGenerator.cpp
   CIRPasses.cpp
   CIRRecordLayoutBuilder.cpp
+  ConstantInitBuilder.cpp
   TargetInfo.cpp
 
   DEPENDS

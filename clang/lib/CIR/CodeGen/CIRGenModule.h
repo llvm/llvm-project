@@ -183,6 +183,27 @@ public:
                                   std::optional<mlir::Type> Ty,
                                   ForDefinition_t IsForDefinition);
 
+  /// TODO(cir): once we have cir.module, add this as a convenience method
+  /// there instead of here.
+  ///
+  /// Look up the specified global in the module symbol table.
+  ///   1. If it does not exist, add a declaration of the global and return it.
+  ///   2. Else, the global exists but has the wrong type: return the function
+  ///      with a constantexpr cast to the right type.
+  ///   3. Finally, if the existing global is the correct declaration, return
+  ///      the existing global.
+  mlir::cir::GlobalOp getOrInsertGlobal(
+      mlir::Location loc, StringRef Name, mlir::Type Ty,
+      llvm::function_ref<mlir::cir::GlobalOp()> CreateGlobalCallback);
+
+  // Overload to construct a global variable using its constructor's defaults.
+  mlir::cir::GlobalOp getOrInsertGlobal(mlir::Location loc, StringRef Name,
+                                        mlir::Type Ty);
+
+  static mlir::cir::GlobalOp createGlobalOp(CIRGenModule &CGM,
+                                            mlir::Location loc, StringRef name,
+                                            mlir::Type t, bool isCst = false);
+
   /// Return the mlir::Value for the address of the given global variable.
   /// If Ty is non-null and if the global doesn't exist, then it will be created
   /// with the specified type instead of whatever the normal requested type
@@ -210,7 +231,8 @@ public:
   mlir::cir::GlobalLinkageKind getVTableLinkage(const CXXRecordDecl *RD);
 
   /// Get the address of the RTTI descriptor for the given type.
-  mlir::Value getAddrOfRTTIDescriptor(QualType Ty, bool ForEH = false);
+  mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc, QualType Ty,
+                                          bool ForEH = false);
 
   /// TODO(cir): add CIR visibility bits.
   static mlir::SymbolTable::Visibility getCIRVisibility(Visibility V) {

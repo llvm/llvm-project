@@ -1199,6 +1199,7 @@ buildArrayConstant(CIRGenModule &CGM, mlir::Type DesiredType,
                    mlir::Type CommonElementType, unsigned ArrayBound,
                    SmallVectorImpl<mlir::TypedAttr> &Elements,
                    mlir::TypedAttr Filler) {
+  auto &builder = CGM.getBuilder();
   auto isNullValue = [&](mlir::Attribute f) {
     // TODO(cir): introduce char type in CIR and check for that instead.
     auto intVal = f.dyn_cast_or_null<mlir::IntegerAttr>();
@@ -1244,10 +1245,10 @@ buildArrayConstant(CIRGenModule &CGM, mlir::Type DesiredType,
     for (auto const &Element : Elements)
       Eles.push_back(Element);
 
-    return mlir::cir::ConstArrayAttr::get(
-        mlir::cir::ArrayType::get(CGM.getBuilder().getContext(),
-                                  CommonElementType, ArrayBound),
-        mlir::ArrayAttr::get(CGM.getBuilder().getContext(), Eles));
+    return builder.getConstArray(
+        mlir::ArrayAttr::get(builder.getContext(), Eles),
+        mlir::cir::ArrayType::get(builder.getContext(), CommonElementType,
+                                  ArrayBound));
   }
 
   // We have mixed types. Use a packed struct.
