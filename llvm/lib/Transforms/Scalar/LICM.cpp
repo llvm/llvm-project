@@ -104,7 +104,7 @@ STATISTIC(NumPromotionCandidates, "Number of promotion candidates");
 STATISTIC(NumLoadPromoted, "Number of load-only promotions");
 STATISTIC(NumLoadStorePromoted, "Number of load and store promotions");
 STATISTIC(NumMinMaxHoisted,
-          "Number min/max expressions hoisted out of the loop");
+          "Number of min/max expressions hoisted out of the loop");
 
 /// Memory promotion is enabled by default.
 static cl::opt<bool>
