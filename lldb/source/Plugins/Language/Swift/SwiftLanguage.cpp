@@ -1090,7 +1090,7 @@ SwiftLanguage::GetHardcodedSynthetics() {
 
       Log *log(GetLog(LLDBLog::DataFormatters));
 
-      if (!valobj.GetTargetSP()->GetSwiftEnableCxxInterop())
+      if (!valobj.GetTargetSP()->IsSwiftCxxInteropEnabled())
         return nullptr;
 
       CompilerType type(valobj.GetCompilerType());

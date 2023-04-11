@@ -1564,7 +1564,8 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   swift_ast_sp->m_module = &module;
   swift_ast_sp->GetLanguageOptions().EnableAccessControl = false;
   swift_ast_sp->GetLanguageOptions().EnableCXXInterop =
-      Target::GetGlobalProperties().GetSwiftEnableCxxInterop();
+      module.IsSwiftCxxInteropEnabled();
+
   bool found_swift_modules = false;
   SymbolFile *sym_file = module.GetSymbolFile();
 
@@ -1950,7 +1951,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   swift_ast_sp->m_is_scratch_context = true;
 
   swift_ast_sp->GetLanguageOptions().EnableCXXInterop =
-      target.GetSwiftEnableCxxInterop();
+      target.IsSwiftCxxInteropEnabled();
   bool handled_sdk_path = false;
   const size_t num_images = target.GetImages().GetSize();
 
@@ -4825,6 +4826,8 @@ void SwiftASTContext::LogConfiguration() {
   for (std::string &extra_arg : clang_importer_options.ExtraArgs) {
     HEALTH_LOG_PRINTF("    %s", extra_arg.c_str());
   }
+  HEALTH_LOG_PRINTF("  Swift/C++ interop mode: %s",
+                    m_ast_context_ap->LangOpts.EnableCXXInterop ? "on" : "off");
 }
 
 bool SwiftASTContext::HasTarget() {
