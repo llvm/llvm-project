@@ -1207,6 +1207,48 @@ void Module::ReportWarningToolchainMismatch(
     }
   }
 }
+
+bool Module::IsSwiftCxxInteropEnabled() {
+  switch (m_is_swift_cxx_interop_enabled) {
+  case eLazyBoolYes:
+    return true;
+  case eLazyBoolNo:
+    return false;
+  case eLazyBoolCalculate:
+    break;
+  }
+  EnableSwiftCxxInterop interop_enabled =
+      Target::GetGlobalProperties().GetEnableSwiftCxxInterop();
+  switch (interop_enabled) {
+  case eEnableSwiftCxxInterop:
+    m_is_swift_cxx_interop_enabled = eLazyBoolYes;
+    break;
+  case eDisableSwiftCxxInterop:
+    m_is_swift_cxx_interop_enabled = eLazyBoolNo;
+    break;
+  case eAutoDetectSwiftCxxInterop: {
+    // Look for the "-enable-experimental-cxx-interop" compile flag in the args
+    // of the compile units this module is composed of.
+    auto *sym_file = GetSymbolFile();
+    if (sym_file) {
+      auto options = sym_file->GetCompileOptions();
+      for (auto &[_, args] : options) {
+        for (const char *arg : args.GetArgumentArrayRef()) {
+          if (strcmp(arg, "-enable-experimental-cxx-interop") == 0) {
+            m_is_swift_cxx_interop_enabled = eLazyBoolYes;
+            break;
+          }
+        }
+        if (m_is_swift_cxx_interop_enabled == eLazyBoolYes)
+          break;
+      }
+    }
+    if (m_is_swift_cxx_interop_enabled == eLazyBoolCalculate)
+      m_is_swift_cxx_interop_enabled = eLazyBoolNo;
+  }
+  }
+  return m_is_swift_cxx_interop_enabled == eLazyBoolYes;
+}
 #endif
 
 void Module::ReportErrorIfModifyDetected(const char *format, ...) {

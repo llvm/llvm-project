@@ -849,6 +849,8 @@ public:
   void
   ReportWarningToolchainMismatch(CompileUnit &comp_unit,
                                  llvm::Optional<lldb::user_id_t> debugger_id);
+
+  bool IsSwiftCxxInteropEnabled();
 #endif
 
   // Return true if the file backing this module has changed since the module
@@ -1174,6 +1176,10 @@ private:
 
   Module(const Module &) = delete;
   const Module &operator=(const Module &) = delete;
+
+#ifdef LLDB_ENABLE_SWIFT
+  LazyBool m_is_swift_cxx_interop_enabled = eLazyBoolCalculate;
+#endif
 };
 
 } // namespace lldb_private
