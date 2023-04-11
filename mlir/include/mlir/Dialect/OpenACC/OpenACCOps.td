@@ -343,9 +343,7 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data", [AttrSizedOperandSegments]> {
 // 2.9 loop Construct
 //===----------------------------------------------------------------------===//
 
-def OpenACC_LoopOp : OpenACC_Op<"loop",
-      [AttrSizedOperandSegments,
-       SingleBlockImplicitTerminator<"acc::YieldOp">]> {
+def OpenACC_LoopOp : OpenACC_Op<"loop", [AttrSizedOperandSegments]> {
   let summary = "loop construct";
 
   let description = [{
@@ -366,7 +364,6 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     } attributes { collapse = 3 }
     ```
   }];
-
 
   let arguments = (ins OptionalAttr<I64Attr>:$collapse,
                        Optional<IntOrIndex>:$gangNum,
