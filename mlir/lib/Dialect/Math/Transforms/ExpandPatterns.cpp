@@ -46,6 +46,13 @@ static Value createIntConst(Location loc, Type type, int64_t value,
   return b.create<arith::ConstantOp>(loc, attr);
 }
 
+static Value createTruncatedFPValue(Value operand, ImplicitLocOpBuilder &b) {
+  Type opType = operand.getType();
+  Value fixedConvert = b.create<arith::FPToSIOp>(b.getI64Type(), operand);
+  Value fpFixedConvert = b.create<arith::SIToFPOp>(opType, fixedConvert);
+  return fpFixedConvert;
+}
+
 /// Expands tanh op into
 ///   1) 1-exp^{-2x} / 1+exp^{-2x}, if x => 0
 ///   2) exp^{2x}-1 / exp^{2x}+1  , if x < 0
@@ -112,8 +119,7 @@ static LogicalResult convertFloorOp(math::FloorOp op,
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operand = op.getOperand();
   Type opType = operand.getType();
-  Value fixedConvert = b.create<arith::FPToSIOp>(b.getI64Type(), operand);
-  Value fpFixedConvert = b.create<arith::SIToFPOp>(opType, fixedConvert);
+  Value fpFixedConvert = createTruncatedFPValue(operand, b);
 
   // Creating constants for later use.
   Value zero = createFloatConst(op->getLoc(), opType, 0.00, rewriter);
@@ -123,6 +129,30 @@ static LogicalResult convertFloorOp(math::FloorOp op,
       b.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, operand, zero);
   Value incrValue =
       b.create<arith::SelectOp>(op->getLoc(), negCheck, negOne, zero);
+  Value ret = b.create<arith::AddFOp>(opType, fpFixedConvert, incrValue);
+  rewriter.replaceOp(op, ret);
+  return success();
+}
+
+// Converts a ceilf() function to the following:
+// ceilf(float x) ->
+//      y = (float)(int) x
+//      if (x > y) then incr = 1 else incr = 0
+//      y = y + incr   <= replace this op with the ceilf op.
+static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
+  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+  Value operand = op.getOperand();
+  Type opType = operand.getType();
+  Value fpFixedConvert = createTruncatedFPValue(operand, b);
+
+  // Creating constants for later use.
+  Value zero = createFloatConst(op->getLoc(), opType, 0.00, rewriter);
+  Value one = createFloatConst(op->getLoc(), opType, 1.00, rewriter);
+
+  Value gtCheck = b.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, operand,
+                                          fpFixedConvert);
+  Value incrValue = b.create<arith::SelectOp>(op->getLoc(), gtCheck, one, zero);
+
   Value ret = b.create<arith::AddFOp>(opType, fpFixedConvert, incrValue);
   rewriter.replaceOp(op, ret);
   return success();
@@ -187,6 +217,11 @@ void mlir::populateExpandTanhPattern(RewritePatternSet &patterns) {
 void mlir::populateExpandFmaFPattern(RewritePatternSet &patterns) {
   patterns.add(convertFmaFOp);
 }
+
+void mlir::populateExpandCeilFPattern(RewritePatternSet &patterns) {
+  patterns.add(convertCeilOp);
+}
+
 void mlir::populateExpandFloorFPattern(RewritePatternSet &patterns) {
   patterns.add(convertFloorOp);
 }

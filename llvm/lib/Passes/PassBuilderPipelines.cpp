@@ -925,6 +925,8 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
 ModulePassManager
 PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                                                ThinOrFullLTOPhase Phase) {
+  assert(Level != OptimizationLevel::O0 &&
+         "Should not be used for O0 pipeline");
   ModulePassManager MPM;
 
   // Place pseudo probe instrumentation as the first pass of the pipeline to
@@ -989,8 +991,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
     // Do not invoke ICP in the LTOPrelink phase as it makes it hard
     // for the profile annotation to be accurate in the LTO backend.
-    if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink &&
-        Phase != ThinOrFullLTOPhase::FullLTOPreLink)
+    if (!isLTOPreLink(Phase))
       // We perform early indirect call promotion here, before globalopt.
       // This is important for the ThinLTO backend phase because otherwise
       // imported available_externally functions look unreferenced and are
@@ -1001,8 +1002,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
   // Try to perform OpenMP specific optimizations on the module. This is a
   // (quick!) no-op if there are no OpenMP runtime calls present in the module.
-  if (Level != OptimizationLevel::O0)
-    MPM.addPass(OpenMPOptPass());
+  MPM.addPass(OpenMPOptPass());
 
   if (AttributorRun & AttributorRunOption::MODULE)
     MPM.addPass(AttributorPass());
@@ -1024,8 +1024,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
               IPSCCPOptions(/*AllowFuncSpec=*/
                             Level != OptimizationLevel::Os &&
                             Level != OptimizationLevel::Oz &&
-                            Phase != ThinOrFullLTOPhase::ThinLTOPreLink &&
-                            Phase != ThinOrFullLTOPhase::FullLTOPreLink)));
+                            !isLTOPreLink(Phase))));
 
   // Attach metadata to indirect call sites indicating the set of functions
   // they may target at run-time. This should follow IPSCCP.
@@ -1234,8 +1233,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
 ModulePassManager
 PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
                                              ThinOrFullLTOPhase LTOPhase) {
-  const bool LTOPreLink = (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink ||
-                           LTOPhase == ThinOrFullLTOPhase::FullLTOPreLink);
+  const bool LTOPreLink = isLTOPreLink(LTOPhase);
   ModulePassManager MPM;
 
   // Run partial inlining pass to partially inline functions that have
@@ -1419,12 +1417,12 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
 
+  if (PGOOpt && PGOOpt->DebugInfoForProfiling)
+    MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
+
   // Apply module pipeline start EP callback.
   for (auto &C : PipelineStartEPCallbacks)
     C(MPM, Level);
-
-  if (PGOOpt && PGOOpt->DebugInfoForProfiling)
-    MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
 
   const ThinOrFullLTOPhase LTOPhase = LTOPreLink
                                           ? ThinOrFullLTOPhase::FullLTOPreLink
