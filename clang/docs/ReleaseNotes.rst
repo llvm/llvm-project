@@ -290,6 +290,8 @@ Bug Fixes in This Version
   (`#61142 <https://github.com/llvm/llvm-project/issues/61142>`_)
 - Clang now better diagnose placeholder types constrained with a concept that is
   not a type concept.
+- Fix crash when a doc comment contains a line splicing.
+  (`#62054 <https://github.com/llvm/llvm-project/issues/62054>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

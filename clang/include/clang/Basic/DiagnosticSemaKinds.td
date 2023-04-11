@@ -11377,6 +11377,8 @@ def err_coro_invalid_addr_of_label : Error<
 let CategoryName = "Documentation Issue" in {
 def warn_not_a_doxygen_trailing_member_comment : Warning<
   "not a Doxygen trailing comment">, InGroup<Documentation>, DefaultIgnore;
+def warn_splice_in_doxygen_comment : Warning<
+  "line splicing in Doxygen comments are not supported">, InGroup<Documentation>, DefaultIgnore;
 } // end of documentation issue category
 
 let CategoryName = "Nullability Issue" in {
