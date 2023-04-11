@@ -85,6 +85,26 @@ define <2 x double> @returned_negzero_vector() {
   ret <2 x double> <double -0.0, double -0.0>
 }
 
+; Test a vector element that's a constant but not ConstantFP.
+define <2 x double> @returned_strange_constant_vector_elt() {
+; CHECK-LABEL: define <2 x double> @returned_strange_constant_vector_elt() {
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    ret <2 x double> <double -0.000000e+00, double bitcast (i64 ptrtoint (ptr @unknown to i64) to double)>
+;
+  call void @unknown()
+  ret <2 x double> <double -0.0, double bitcast (i64 ptrtoint (ptr @unknown to i64) to double)>
+}
+
+; Test a vector element that's an undef/poison
+define <3 x double> @returned_undef_constant_vector_elt() {
+; CHECK-LABEL: define <3 x double> @returned_undef_constant_vector_elt() {
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    ret <3 x double> <double -0.000000e+00, double poison, double undef>
+;
+  call void @unknown()
+  ret <3 x double> <double -0.0, double poison, double undef>
+}
+
 define <2 x double> @returned_qnan_zero_vector() {
 ; CHECK-LABEL: define noundef <2 x double> @returned_qnan_zero_vector() {
 ; CHECK-NEXT:    call void @unknown()
@@ -747,4 +767,65 @@ define <2 x half> @sitofp_v2i17_to_v2i17(<2 x i17> %arg) {
 ;
   %cvt = sitofp <2 x i17> %arg to <2 x half>
   ret <2 x half> %cvt
+}
+
+define float @assume_intersection_not_zero_and_not_nan(float %arg) {
+; CHECK-LABEL: define nofpclass(all) float @assume_intersection_not_zero_and_not_nan
+; CHECK-SAME: (float returned nofpclass(all) [[ARG:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IS_NOT_ZERO_OR_NAN:%.*]] = fcmp une float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_NOT_ZERO_OR_NAN]]) #[[ATTR6]]
+; CHECK-NEXT:    [[IS_ORD:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_ORD]]) #[[ATTR6]]
+; CHECK-NEXT:    call void @extern.use(float nofpclass(all) [[ARG]])
+; CHECK-NEXT:    ret float [[ARG]]
+;
+entry:
+  %is.not.zero.or.nan = fcmp une float %arg, 0.0
+  call void @llvm.assume(i1 %is.not.zero.or.nan)
+  %is.ord = fcmp ord float %arg, 0.0
+  call void @llvm.assume(i1 %is.ord)
+  call void @extern.use(float %arg)
+  ret float %arg
+}
+
+define float @assume_intersection_class(float %arg) {
+; CHECK-LABEL: define nofpclass(psub norm) float @assume_intersection_class
+; CHECK-SAME: (float returned nofpclass(psub norm) [[ARG:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[POS_NORMAL_OR_POS_SUBNORMAL:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(psub norm) [[ARG]], i32 noundef 384) #[[ATTR6]]
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[POS_NORMAL_OR_POS_SUBNORMAL]]) #[[ATTR6]]
+; CHECK-NEXT:    [[IS_NORMAL:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(psub norm) [[ARG]], i32 noundef 264) #[[ATTR6]]
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_NORMAL]]) #[[ATTR6]]
+; CHECK-NEXT:    call void @extern.use(float nofpclass(psub norm) [[ARG]])
+; CHECK-NEXT:    ret float [[ARG]]
+;
+entry:
+  %pos.normal.or.pos.subnormal = call i1 @llvm.is.fpclass.f32(float %arg, i32 384)
+  call void @llvm.assume(i1 %pos.normal.or.pos.subnormal)
+  %is.normal = call i1 @llvm.is.fpclass.f32(float %arg, i32 264)
+  call void @llvm.assume(i1 %is.normal)
+
+  call void @extern.use(float %arg)
+  ret float %arg
+}
+
+define float @assume_intersection_none(float %arg) {
+; CHECK-LABEL: define nofpclass(all) float @assume_intersection_none
+; CHECK-SAME: (float returned nofpclass(all) [[ARG:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(all) [[ARG]], i32 noundef 682) #[[ATTR6]]
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[CLASS1]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CLASS2:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(all) [[ARG]], i32 noundef 341) #[[ATTR6]]
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[CLASS2]]) #[[ATTR6]]
+; CHECK-NEXT:    call void @extern.use(float nofpclass(all) [[ARG]])
+; CHECK-NEXT:    ret float [[ARG]]
+;
+entry:
+  %class1 = call i1 @llvm.is.fpclass.f32(float %arg, i32 682)
+  call void @llvm.assume(i1 %class1)
+  %class2 = call i1 @llvm.is.fpclass.f32(float %arg, i32 341)
+  call void @llvm.assume(i1 %class2)
+  call void @extern.use(float %arg)
+  ret float %arg
 }
