@@ -981,6 +981,13 @@ if.end61:                                         ; preds = %if.then59, %while.e
 define void @fir(ptr nocapture readonly %S, ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %blockSize) {
 ; CHECK-LABEL: fir:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    cmp r3, #8
+; CHECK-NEXT:    blo.w .LBB16_13
+; CHECK-NEXT:  @ %bb.1: @ %if.then
+; CHECK-NEXT:    lsrs.w r12, r3, #2
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB16_2: @ %while.body.lr.ph
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; CHECK-NEXT:    .pad #4
@@ -989,12 +996,6 @@ define void @fir(ptr nocapture readonly %S, ptr nocapture readonly %pSrc, ptr no
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    .pad #32
 ; CHECK-NEXT:    sub sp, #32
-; CHECK-NEXT:    cmp r3, #8
-; CHECK-NEXT:    blo.w .LBB16_12
-; CHECK-NEXT:  @ %bb.1: @ %if.then
-; CHECK-NEXT:    lsrs.w r12, r3, #2
-; CHECK-NEXT:    beq.w .LBB16_12
-; CHECK-NEXT:  @ %bb.2: @ %while.body.lr.ph
 ; CHECK-NEXT:    ldrh r6, [r0]
 ; CHECK-NEXT:    movs r5, #1
 ; CHECK-NEXT:    ldrd r4, r10, [r0, #4]
@@ -1106,11 +1107,13 @@ define void @fir(ptr nocapture readonly %S, ptr nocapture readonly %pSrc, ptr no
 ; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r4, r4, r0, lsl #2
 ; CHECK-NEXT:    b .LBB16_4
-; CHECK-NEXT:  .LBB16_12: @ %if.end
+; CHECK-NEXT:  .LBB16_12:
 ; CHECK-NEXT:    add sp, #32
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; CHECK-NEXT:  .LBB16_13: @ %if.end
+; CHECK-NEXT:    bx lr
 entry:
   %pState1 = getelementptr inbounds %struct.arm_fir_instance_f32, ptr %S, i32 0, i32 1
   %i = load ptr, ptr %pState1, align 4
