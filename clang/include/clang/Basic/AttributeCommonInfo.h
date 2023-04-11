@@ -80,50 +80,58 @@ protected:
   static constexpr unsigned SpellingNotCalculated = 0xf;
 
 public:
+  /// Combines information about the source-code form of an attribute,
+  /// including its syntax and spelling.
+  class Form {
+  public:
+    constexpr Form(Syntax SyntaxUsed,
+                   unsigned SpellingIndex = SpellingNotCalculated)
+        : SyntaxUsed(SyntaxUsed), SpellingIndex(SpellingIndex) {}
+
+    Syntax getSyntax() const { return Syntax(SyntaxUsed); }
+    unsigned getSpellingIndex() const { return SpellingIndex; }
+
+  private:
+    unsigned SyntaxUsed : 4;
+    unsigned SpellingIndex : 4;
+  };
+
   AttributeCommonInfo(const IdentifierInfo *AttrName,
                       const IdentifierInfo *ScopeName, SourceRange AttrRange,
-                      SourceLocation ScopeLoc, Syntax SyntaxUsed)
+                      SourceLocation ScopeLoc, Form FormUsed)
       : AttrName(AttrName), ScopeName(ScopeName), AttrRange(AttrRange),
         ScopeLoc(ScopeLoc),
-        AttrKind(getParsedKind(AttrName, ScopeName, SyntaxUsed)),
-        SyntaxUsed(SyntaxUsed), SpellingIndex(SpellingNotCalculated) {}
+        AttrKind(getParsedKind(AttrName, ScopeName, FormUsed.getSyntax())),
+        SyntaxUsed(FormUsed.getSyntax()),
+        SpellingIndex(FormUsed.getSpellingIndex()) {}
 
   AttributeCommonInfo(const IdentifierInfo *AttrName,
                       const IdentifierInfo *ScopeName, SourceRange AttrRange,
-                      SourceLocation ScopeLoc, Kind AttrKind, Syntax SyntaxUsed)
+                      SourceLocation ScopeLoc, Kind AttrKind, Form FormUsed)
       : AttrName(AttrName), ScopeName(ScopeName), AttrRange(AttrRange),
-        ScopeLoc(ScopeLoc), AttrKind(AttrKind), SyntaxUsed(SyntaxUsed),
-        SpellingIndex(SpellingNotCalculated) {}
-
-  AttributeCommonInfo(const IdentifierInfo *AttrName,
-                      const IdentifierInfo *ScopeName, SourceRange AttrRange,
-                      SourceLocation ScopeLoc, Kind AttrKind, Syntax SyntaxUsed,
-                      unsigned Spelling)
-      : AttrName(AttrName), ScopeName(ScopeName), AttrRange(AttrRange),
-        ScopeLoc(ScopeLoc), AttrKind(AttrKind), SyntaxUsed(SyntaxUsed),
-        SpellingIndex(Spelling) {}
+        ScopeLoc(ScopeLoc), AttrKind(AttrKind),
+        SyntaxUsed(FormUsed.getSyntax()),
+        SpellingIndex(FormUsed.getSpellingIndex()) {}
 
   AttributeCommonInfo(const IdentifierInfo *AttrName, SourceRange AttrRange,
-                      Syntax SyntaxUsed)
+                      Form FormUsed)
       : AttrName(AttrName), ScopeName(nullptr), AttrRange(AttrRange),
-        ScopeLoc(), AttrKind(getParsedKind(AttrName, ScopeName, SyntaxUsed)),
-        SyntaxUsed(SyntaxUsed), SpellingIndex(SpellingNotCalculated) {}
+        ScopeLoc(),
+        AttrKind(getParsedKind(AttrName, ScopeName, FormUsed.getSyntax())),
+        SyntaxUsed(FormUsed.getSyntax()),
+        SpellingIndex(FormUsed.getSpellingIndex()) {}
 
-  AttributeCommonInfo(SourceRange AttrRange, Kind K, Syntax SyntaxUsed)
+  AttributeCommonInfo(SourceRange AttrRange, Kind K, Form FormUsed)
       : AttrName(nullptr), ScopeName(nullptr), AttrRange(AttrRange), ScopeLoc(),
-        AttrKind(K), SyntaxUsed(SyntaxUsed),
-        SpellingIndex(SpellingNotCalculated) {}
-
-  AttributeCommonInfo(SourceRange AttrRange, Kind K, Syntax SyntaxUsed,
-                      unsigned Spelling)
-      : AttrName(nullptr), ScopeName(nullptr), AttrRange(AttrRange), ScopeLoc(),
-        AttrKind(K), SyntaxUsed(SyntaxUsed), SpellingIndex(Spelling) {}
+        AttrKind(K), SyntaxUsed(FormUsed.getSyntax()),
+        SpellingIndex(FormUsed.getSpellingIndex()) {}
 
   AttributeCommonInfo(AttributeCommonInfo &&) = default;
   AttributeCommonInfo(const AttributeCommonInfo &) = default;
 
   Kind getParsedKind() const { return Kind(AttrKind); }
   Syntax getSyntax() const { return Syntax(SyntaxUsed); }
+  Form getForm() const { return Form(getSyntax(), SpellingIndex); }
   const IdentifierInfo *getAttrName() const { return AttrName; }
   SourceLocation getLoc() const { return AttrRange.getBegin(); }
   SourceRange getRange() const { return AttrRange; }
