@@ -354,14 +354,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  swab
-  SRCS
-    swab.cpp
-  HDRS
-    ../swab.h
-)
-
-add_entrypoint_object(
   symlink
   SRCS
     symlink.cpp
