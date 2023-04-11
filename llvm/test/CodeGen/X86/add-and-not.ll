@@ -308,28 +308,44 @@ define ptr @gep_and_xor_const(ptr %a) {
   ret i8* %p
 }
 
-define i64 @add_and_xor_const_ext_trunc(i64 %x) {
-; X86-LABEL: add_and_xor_const_ext_trunc:
+define i64 @add_and_xor_const_zext_trunc(i64 %x) {
+; X86-LABEL: add_and_xor_const_zext_trunc:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    notl %eax
-; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    addl %ecx, %eax
-; X86-NEXT:    adcl $0, %edx
+; X86-NEXT:    orl $1, %eax
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: add_and_xor_const_ext_trunc:
+; X64-LABEL: add_and_xor_const_zext_trunc:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    notl %eax
-; X64-NEXT:    andl $1, %eax
-; X64-NEXT:    addq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    orq $1, %rax
 ; X64-NEXT:    retq
   %t = trunc i64 %x to i32
   %xor = xor i32 %t, -1
   %and = and i32 %xor, 1
+  %ext = zext i32 %and to i64
+  %add = add i64 %ext, %x
+  ret i64 %add
+}
+
+define i64 @add_and_xor_const_zext_trunc_var(i64 %x, i64 %y) {
+; X86-LABEL: add_and_xor_const_zext_trunc_var:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: add_and_xor_const_zext_trunc_var:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    retq
+  %tx = trunc i64 %x to i32
+  %ty = trunc i64 %y to i32
+  %xor = xor i32 %tx, -1
+  %and = and i32 %ty, %xor
   %ext = zext i32 %and to i64
   %add = add i64 %ext, %x
   ret i64 %add

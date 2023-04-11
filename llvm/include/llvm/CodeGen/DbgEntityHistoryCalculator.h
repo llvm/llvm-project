@@ -124,7 +124,7 @@ public:
   EntriesMap::const_iterator end() const { return VarEntries.end(); }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void dump(StringRef FuncName) const;
 #endif
 };
 

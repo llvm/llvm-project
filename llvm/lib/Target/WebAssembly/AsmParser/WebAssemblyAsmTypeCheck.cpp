@@ -44,9 +44,9 @@ extern StringRef GetMnemonic(unsigned Opc);
 namespace llvm {
 
 WebAssemblyAsmTypeCheck::WebAssemblyAsmTypeCheck(MCAsmParser &Parser,
-                                                 const MCInstrInfo &MII, bool is64)
-    : Parser(Parser), MII(MII), is64(is64) {
-}
+                                                 const MCInstrInfo &MII,
+                                                 bool is64)
+    : Parser(Parser), MII(MII), is64(is64) {}
 
 void WebAssemblyAsmTypeCheck::funcDecl(const wasm::WasmSignature &Sig) {
   LocalTypes.assign(Sig.Params.begin(), Sig.Params.end());
@@ -117,7 +117,7 @@ bool WebAssemblyAsmTypeCheck::getLocal(SMLoc ErrorLoc, const MCInst &Inst,
   auto Local = static_cast<size_t>(Inst.getOperand(0).getImm());
   if (Local >= LocalTypes.size())
     return typeError(ErrorLoc, StringRef("no local type specified for index ") +
-                          std::to_string(Local));
+                                   std::to_string(Local));
   Type = LocalTypes[Local];
   return false;
 }
@@ -138,17 +138,18 @@ bool WebAssemblyAsmTypeCheck::checkEnd(SMLoc ErrorLoc, bool PopVals) {
     auto EVT = LastSig.Returns[i];
     auto PVT = Stack[Stack.size() - LastSig.Returns.size() + i];
     if (PVT != EVT)
-      return typeError(
-          ErrorLoc, StringRef("end got ") + WebAssembly::typeToString(PVT) +
-                        ", expected " + WebAssembly::typeToString(EVT));
+      return typeError(ErrorLoc,
+                       StringRef("end got ") + WebAssembly::typeToString(PVT) +
+                           ", expected " + WebAssembly::typeToString(EVT));
   }
   return false;
 }
 
 bool WebAssemblyAsmTypeCheck::checkSig(SMLoc ErrorLoc,
-                                       const wasm::WasmSignature& Sig) {
+                                       const wasm::WasmSignature &Sig) {
   for (auto VT : llvm::reverse(Sig.Params))
-    if (popType(ErrorLoc, VT)) return true;
+    if (popType(ErrorLoc, VT))
+      return true;
   Stack.insert(Stack.end(), Sig.Returns.begin(), Sig.Returns.end());
   return false;
 }
@@ -187,7 +188,7 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc, const MCInst &Inst,
     [[fallthrough]];
   default:
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
-                                    " missing .globaltype");
+                                   " missing .globaltype");
   }
   return false;
 }
@@ -325,8 +326,10 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       return true;
   } else if (Name == "call_indirect" || Name == "return_call_indirect") {
     // Function value.
-    if (popType(ErrorLoc, wasm::ValType::I32)) return true;
-    if (checkSig(ErrorLoc, LastSig)) return true;
+    if (popType(ErrorLoc, wasm::ValType::I32))
+      return true;
+    if (checkSig(ErrorLoc, LastSig))
+      return true;
     if (Name == "return_call_indirect" && endOfFunction(ErrorLoc))
       return true;
   } else if (Name == "call" || Name == "return_call") {
@@ -339,7 +342,8 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       return typeError(Operands[1]->getStartLoc(), StringRef("symbol ") +
                                                        WasmSym->getName() +
                                                        " missing .functype");
-    if (checkSig(ErrorLoc, *Sig)) return true;
+    if (checkSig(ErrorLoc, *Sig))
+      return true;
     if (Name == "return_call" && endOfFunction(ErrorLoc))
       return true;
   } else if (Name == "unreachable") {
