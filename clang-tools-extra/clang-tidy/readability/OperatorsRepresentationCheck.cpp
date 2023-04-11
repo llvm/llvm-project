@@ -108,7 +108,7 @@ static bool isNotOperatorStr(llvm::StringRef Value) {
 
 static bool isSeparator(char C) noexcept {
   constexpr llvm::StringRef Separators(" \t\r\n\0()<>{};,");
-  return llvm::is_contained(Separators, C);
+  return Separators.contains(C);
 }
 
 static bool needEscaping(llvm::StringRef Operator) {
