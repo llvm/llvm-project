@@ -27,12 +27,12 @@ llvm.func @tbaa(%arg0: !llvm.ptr) {
 module {
   llvm.func @tbaa(%arg0: !llvm.ptr) {
     %0 = llvm.mlir.constant(1 : i8) : i8
-    // expected-error@below {{expected '@metadata::@group1' to resolve to a llvm.tbaa_tag}}
-    llvm.store %0, %arg0 {tbaa = [@metadata::@group1]} : i8, !llvm.ptr
+    // expected-error@below {{expected '@metadata::@domain' to resolve to a llvm.tbaa_tag}}
+    llvm.store %0, %arg0 {tbaa = [@metadata::@domain]} : i8, !llvm.ptr
     llvm.return
   }
   llvm.metadata @metadata {
-    llvm.access_group @group1
+    llvm.alias_scope_domain @domain
   }
 }
 

@@ -206,7 +206,7 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
     OptionalParameter<"LoopUnswitchAttr">:$unswitch,
     OptionalParameter<"BoolAttr">:$mustProgress,
     OptionalParameter<"BoolAttr">:$isVectorized,
-    OptionalArrayRefParameter<"SymbolRefAttr">:$parallelAccesses
+    OptionalArrayRefParameter<"AccessGroupAttr">:$parallelAccesses
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -500,11 +500,37 @@ def LLVM_DISubroutineTypeAttr : LLVM_Attr<"DISubroutineType", "di_subroutine_typ
     OptionalArrayRefParameter<"DITypeAttr">:$types
   );
   let builders = [
-    TypeBuilder<(ins "ArrayRef<DITypeAttr>":$types), [{
+    AttrBuilder<(ins "ArrayRef<DITypeAttr>":$types), [{
       return $_get($_ctxt, /*callingConvention=*/0, types);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// AccessGroupAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_AccessGroupAttr : LLVM_Attr<"AccessGroup", "access_group"> {
+  let parameters = (ins
+    "int64_t":$id,
+    "DistinctSequenceAttr":$elem_of
+  );
+  let builders = [
+    AttrBuilder<(ins "DistinctSequenceAttr":$sequence), [{
+      return $_get($_ctxt, sequence.getNextID(), sequence);
+    }]>
+  ];
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// AccessGroupArrayAttr
+//===----------------------------------------------------------------------===//
+
+def AccessGroupArrayAttr :
+  TypedArrayAttrBase<LLVM_AccessGroupAttr, "access group array attribute"> {
+  let constBuilderCall = ?;
 }
 
 //===----------------------------------------------------------------------===//

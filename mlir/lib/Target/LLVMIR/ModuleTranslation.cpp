@@ -442,8 +442,8 @@ ModuleTranslation::ModuleTranslation(Operation *module,
     : mlirModule(module), llvmModule(std::move(llvmModule)),
       debugTranslation(
           std::make_unique<DebugTranslation>(module, *this->llvmModule)),
-      loopAnnotationTranslation(std::make_unique<LoopAnnotationTranslation>(
-          module, *this->llvmModule)),
+      loopAnnotationTranslation(
+          std::make_unique<LoopAnnotationTranslation>(*this->llvmModule)),
       typeTranslator(this->llvmModule->getContext()),
       iface(module->getContext()) {
   assert(satisfiesLLVMModule(mlirModule) &&
@@ -1017,10 +1017,6 @@ LogicalResult ModuleTranslation::convertFunctions() {
   return success();
 }
 
-LogicalResult ModuleTranslation::createAccessGroupMetadata() {
-  return loopAnnotationTranslation->createAccessGroupMetadata();
-}
-
 void ModuleTranslation::setAccessGroupsMetadata(AccessGroupOpInterface op,
                                                 llvm::Instruction *inst) {
   if (llvm::MDNode *node = loopAnnotationTranslation->getAccessGroups(op))
@@ -1325,8 +1321,6 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   if (failed(translator.convertFunctionSignatures()))
     return nullptr;
   if (failed(translator.convertGlobals()))
-    return nullptr;
-  if (failed(translator.createAccessGroupMetadata()))
     return nullptr;
   if (failed(translator.createAliasScopeMetadata()))
     return nullptr;

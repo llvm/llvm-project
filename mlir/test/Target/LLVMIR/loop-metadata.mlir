@@ -233,6 +233,10 @@ llvm.func @unswitchOptions() {
 
 // -----
 
+#distinct_sequence = #llvm.distinct_sequence<scope = @loopOptions, state = 2>
+#access_group0 = #llvm.access_group<id = 0, elem_of = #distinct_sequence>
+#access_group1 = #llvm.access_group<id = 1, elem_of = #distinct_sequence>
+
 // CHECK-LABEL: @loopOptions
 llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
     %0 = llvm.mlir.constant(0 : i32) : i32
@@ -245,37 +249,32 @@ llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
           licm = <disable = true>,
           interleave = <count = 1>,
           unroll = <disable = true>, pipeline = <disable = true, initiationinterval = 2>,
-          parallelAccesses = @metadata::@group1, @metadata::@group2>}
+          parallelAccesses = #access_group0, #access_group1>}
   ^bb4:
     %3 = llvm.add %1, %arg2  : i32
     // CHECK: = load i32, ptr %{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE:[0-9]+]]
-    %5 = llvm.load %4 {access_groups = [@metadata::@group1, @metadata::@group2]} : !llvm.ptr -> i32
+    %5 = llvm.load %4 {access_groups = [#access_group0, #access_group1]} : !llvm.ptr -> i32
     // CHECK: store i32 %{{.*}}, ptr %{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
-    llvm.store %5, %4 {access_groups = [@metadata::@group1, @metadata::@group2]} : i32, !llvm.ptr
+    llvm.store %5, %4 {access_groups = [#access_group0, #access_group1]} : i32, !llvm.ptr
     // CHECK: = atomicrmw add ptr %{{.*}}, i32 %{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
-    %6 = llvm.atomicrmw add %4, %5 monotonic {access_groups = [@metadata::@group1, @metadata::@group2]} : !llvm.ptr, i32
+    %6 = llvm.atomicrmw add %4, %5 monotonic {access_groups = [#access_group0, #access_group1]} : !llvm.ptr, i32
     // CHECK: = cmpxchg ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
-    %7 = llvm.cmpxchg %4, %5, %6 acq_rel monotonic {access_groups = [@metadata::@group1, @metadata::@group2]} : !llvm.ptr, i32
+    %7 = llvm.cmpxchg %4, %5, %6 acq_rel monotonic {access_groups = [#access_group0, #access_group1]} : !llvm.ptr, i32
     %8 = llvm.mlir.constant(0 : i1) : i1
     %9 = llvm.mlir.constant(42 : i8) : i8
     // CHECK: llvm.memcpy{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
-    "llvm.intr.memcpy"(%4, %4, %0, %8) {access_groups = [@metadata::@group1, @metadata::@group2]} : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+    "llvm.intr.memcpy"(%4, %4, %0, %8) {access_groups = [#access_group0, #access_group1]} : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
     // CHECK: llvm.memset{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
-    "llvm.intr.memset"(%4, %9, %0, %8) {access_groups = [@metadata::@group1, @metadata::@group2]} : (!llvm.ptr, i8, i32, i1) -> ()
+    "llvm.intr.memset"(%4, %9, %0, %8) {access_groups = [#access_group0, #access_group1]} : (!llvm.ptr, i8, i32, i1) -> ()
     // CHECK: br label {{.*}} !llvm.loop ![[LOOP_NODE]]
     llvm.br ^bb3(%3 : i32) {loop_annotation = #llvm.loop_annotation<
           licm = <disable = true>,
           interleave = <count = 1>,
           unroll = <disable = true>, pipeline = <disable = true, initiationinterval = 2>,
-          parallelAccesses = @metadata::@group1, @metadata::@group2>}
+          parallelAccesses = #access_group0, #access_group1>}
 
   ^bb5:
     llvm.return
-}
-
-llvm.metadata @metadata {
-  llvm.access_group @group1
-  llvm.access_group @group2
 }
 
 // CHECK: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}

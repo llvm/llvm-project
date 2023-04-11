@@ -42,6 +42,14 @@
 // CHECK-DAG: #[[UNSWITCH:.*]] = #llvm.loop_unswitch<partialDisable = true>
 #unswitch = #llvm.loop_unswitch<partialDisable = true>
 
+// CHECK-DAG: #[[DISTINCT:.*]] = #llvm.distinct_sequence<scope = @loop_annotation, state = 2>
+#distinct_sequence = #llvm.distinct_sequence<scope = @loop_annotation, state = 2>
+
+// CHECK-DAG: #[[GROUP0:.*]] = #llvm.access_group<id = 0, elem_of = #[[DISTINCT]]>
+#access_group0 = #llvm.access_group<id = 0, elem_of = #distinct_sequence>
+// CHECK-DAG: #[[GROUP1:.*]] = #llvm.access_group<id = 1, elem_of = #[[DISTINCT]]>
+#access_group1 = #llvm.access_group<id = 1, elem_of = #distinct_sequence>
+
 // CHECK: #[[LOOP_ANNOT:.*]] = #llvm.loop_annotation<
 // CHECK-DAG: disableNonforced = false
 // CHECK-DAG: mustProgress = true
@@ -53,7 +61,7 @@
 // CHECK-DAG: peeled = #[[PEELED]]
 // CHECK-DAG: unswitch = #[[UNSWITCH]]
 // CHECK-DAG: isVectorized = false
-// CHECK-DAG: parallelAccesses = @metadata::@group1, @metadata::@group2>
+// CHECK-DAG: parallelAccesses =  #[[GROUP0]], #[[GROUP1]]>
 #loopMD = #llvm.loop_annotation<disableNonforced = false,
         mustProgress = true,
         vectorize = #vectorize,
@@ -66,7 +74,7 @@
         peeled = #peeled,
         unswitch = #unswitch,
         isVectorized = false,
-        parallelAccesses = @metadata::@group1, @metadata::@group2>
+        parallelAccesses = #access_group0, #access_group1>
 
 // CHECK: llvm.func @loop_annotation
 llvm.func @loop_annotation() {
@@ -74,9 +82,4 @@ llvm.func @loop_annotation() {
   llvm.br ^bb1 {llvm.loop = #loopMD}
 ^bb1:
   llvm.return
-}
-
-llvm.metadata @metadata {
-  llvm.access_group @group1
-  llvm.access_group @group2
 }

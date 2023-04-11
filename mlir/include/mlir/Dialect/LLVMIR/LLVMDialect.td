@@ -15,7 +15,6 @@ def LLVM_Dialect : Dialect {
   let name = "llvm";
   let cppNamespace = "::mlir::LLVM";
 
-  let useDefaultAttributePrinterParser = 1;
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
   let hasOperationAttrVerify = 1;
@@ -76,6 +75,8 @@ def LLVM_Dialect : Dialect {
 
     Type parseType(DialectAsmParser &p) const override;
     void printType(Type, DialectAsmPrinter &p) const override;
+    Attribute parseAttribute(DialectAsmParser &parser, Type type) const override;
+    void printAttribute(Attribute attr, DialectAsmPrinter &os) const override;
 
   private:
     /// Verifies a parameter attribute attached to a parameter of type

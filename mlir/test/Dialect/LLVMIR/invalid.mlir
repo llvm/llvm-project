@@ -887,80 +887,80 @@ llvm.mlir.global appending @non_array_type_global_appending_linkage() : i32
 
 // -----
 
-module {
-  llvm.func @loopOptions() {
-      // expected-error@below {{expected '@func1' to reference a metadata op}}
-      llvm.br ^bb4 {loop_annotation = #llvm.loop_annotation<parallelAccesses = @func1>}
-    ^bb4:
-      llvm.return
-  }
-  llvm.func @func1() {
+llvm.func @loopOptions() {
+    // expected-error@below {{expected '<'}}
+    // expected-error@below {{failed to parse LoopAnnotationAttr parameter 'parallelAccesses' which is to be a `::llvm::ArrayRef<AccessGroupAttr>`}}
+    llvm.br ^bb4 {loop_annotation = #llvm.loop_annotation<parallelAccesses = 42 : i32>}
+  ^bb4:
     llvm.return
-  }
 }
 
 // -----
 
-module {
-  llvm.func @loopOptions() {
-      // expected-error@below {{expected '@metadata' to reference an access_group op}}
-      llvm.br ^bb4 {loop_annotation = #llvm.loop_annotation<parallelAccesses = @metadata>}
-    ^bb4:
-      llvm.return
-  }
-  llvm.metadata @metadata {
-  }
-}
+// expected-error@below {{struct has duplicate parameter 'state'}}
+#distinct_sequence = #llvm.distinct_sequence<state = 0, state = 1>
 
 // -----
 
-module {
-  llvm.func @accessGroups(%arg0 : !llvm.ptr) {
-      // expected-error@below {{expected '@func1' to specify a fully qualified reference}}
-      %0 = llvm.load %arg0 { "access_groups" = [@func1] } : !llvm.ptr -> i32
-      llvm.return
-  }
-  llvm.func @func1() {
+// expected-error@below {{expected integer value}}
+// expected-error@below {{failed to parse DistinctSequenceAttr parameter 'state' which is to be a 'int64_t'}}
+#distinct_sequence = #llvm.distinct_sequence<state = "text">
+
+// -----
+
+// expected-error@below {{expected a parameter name in struct}}
+#distinct_sequence = #llvm.distinct_sequence<unknown = 0>
+
+// -----
+
+// expected-error@below {{struct is missing required parameter 'scope'}}
+#distinct_sequence = #llvm.distinct_sequence<state = 0>
+
+// -----
+
+// expected-error@below {{struct is missing required parameter 'state'}}
+#distinct_sequence = #llvm.distinct_sequence<scope = @foo>
+
+// -----
+
+#distinct_sequence = #llvm.distinct_sequence<scope = @bar, state = 1>
+#access_group = #llvm.access_group<id = 0, elem_of = #distinct_sequence>
+
+llvm.func @parallel_accesses() {
+    // expected-error@below {{op expected distinct sequence scope '@bar' to resolve to the parent operation}}
+    llvm.br ^bb4 {loop_annotation = #llvm.loop_annotation<parallelAccesses = #access_group>}
+  ^bb4:
     llvm.return
-  }
 }
 
 // -----
 
-module {
-  llvm.func @accessGroups(%arg0 : i32, %arg1 : !llvm.ptr) {
-      // expected-error@below {{expected '@accessGroups::@group1' to reference a metadata op}}
-      llvm.store %arg0, %arg1 { "access_groups" = [@accessGroups::@group1] } : i32, !llvm.ptr
-      llvm.return
-  }
-  llvm.metadata @metadata {
-  }
+#distinct_sequence = #llvm.distinct_sequence<scope = @foo, state = 1>
+#access_group = #llvm.access_group<id = 0, elem_of = #distinct_sequence>
+
+llvm.func @access_groups(%arg0 : !llvm.ptr) {
+    // expected-error@below {{op expected distinct sequence scope '@foo' to resolve to the parent operation}}
+    %0 = llvm.load %arg0 { "access_groups" = [#access_group] } : !llvm.ptr -> i32
+    llvm.return
 }
 
 // -----
 
-module {
-  llvm.func @accessGroups(%arg0 : !llvm.ptr, %arg1 : f32) {
-      // expected-error@below {{expected '@metadata::@group1' to be a valid reference}}
-      %0 = llvm.atomicrmw fadd %arg0, %arg1 monotonic { "access_groups" = [@metadata::@group1] } : !llvm.ptr, f32
-      llvm.return
-  }
-  llvm.metadata @metadata {
-  }
+#distinct_sequence = #llvm.distinct_sequence<scope = @access_groups, state = 1>
+#access_group = #llvm.access_group<id = 1, elem_of = #distinct_sequence>
+
+llvm.func @access_groups(%arg0 : !llvm.ptr) {
+    // expected-error@below {{op expected access group id '1' to be lower than the sequence state '1'}}
+    %0 = llvm.load %arg0 { "access_groups" = [#access_group] } : !llvm.ptr -> i32
+    llvm.return
 }
 
 // -----
 
-module {
-  llvm.func @accessGroups(%arg0 : !llvm.ptr, %arg1 : i32, %arg2 : i32) {
-      // expected-error@below {{expected '@metadata::@scope' to resolve to a llvm.access_group}}
-      %0 = llvm.cmpxchg %arg0, %arg1, %arg2 acq_rel monotonic { "access_groups" = [@metadata::@scope] } : !llvm.ptr, i32
-      llvm.return
-  }
-  llvm.metadata @metadata {
-    llvm.alias_scope_domain @domain
-    llvm.alias_scope @scope { domain = @domain }
-  }
+llvm.func @access_groups(%arg0 : !llvm.ptr) {
+    // expected-error@below {{attribute 'access_groups' failed to satisfy constraint: access group array attribute}}
+    %0 = llvm.load %arg0 { "access_groups" = [42 : i32] } : !llvm.ptr -> i32
+    llvm.return
 }
 
 // -----
@@ -987,12 +987,12 @@ module {
 
 module {
   llvm.func @aliasScope(%arg0 : i32, %arg1 : !llvm.ptr) {
-      // expected-error@below {{expected '@metadata::@group' to resolve to a llvm.alias_scope}}
-      llvm.store %arg0, %arg1 { "alias_scopes" = [@metadata::@group] } : i32, !llvm.ptr
+      // expected-error@below {{expected '@metadata::@root' to resolve to a llvm.alias_scope}}
+      llvm.store %arg0, %arg1 { "alias_scopes" = [@metadata::@root] } : i32, !llvm.ptr
       llvm.return
   }
   llvm.metadata @metadata {
-    llvm.access_group @group
+    llvm.tbaa_root @root {id = "Simple C/C++ TBAA"}
   }
 }
 
@@ -1000,12 +1000,12 @@ module {
 
 module {
   llvm.func @aliasScope(%arg0 : !llvm.ptr, %arg1 : f32) {
-      // expected-error@below {{expected '@metadata::@group' to resolve to a llvm.alias_scope}}
-      %0 = llvm.atomicrmw fadd %arg0, %arg1 monotonic { "noalias_scopes" = [@metadata::@group] } : !llvm.ptr, f32
+      // expected-error@below {{expected '@metadata::@root' to resolve to a llvm.alias_scope}}
+      %0 = llvm.atomicrmw fadd %arg0, %arg1 monotonic { "noalias_scopes" = [@metadata::@root] } : !llvm.ptr, f32
       llvm.return
   }
   llvm.metadata @metadata {
-    llvm.access_group @group
+    llvm.tbaa_root @root {id = "Simple C/C++ TBAA"}
   }
 }
 
@@ -1013,9 +1013,9 @@ module {
 
 module {
   llvm.metadata @metadata {
-    llvm.access_group @group
-    // expected-error@below {{expected 'group' to reference a domain operation in the same region}}
-    llvm.alias_scope @scope { domain = @group }
+    llvm.tbaa_root @root {id = "Simple C/C++ TBAA"}
+    // expected-error@below {{expected 'root' to reference a domain operation in the same region}}
+    llvm.alias_scope @scope { domain = @root }
   }
 }
 

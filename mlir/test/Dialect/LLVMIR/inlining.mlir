@@ -59,16 +59,14 @@ func.func @test_not_inline() -> i32 {
 
 // -----
 
-llvm.metadata @metadata {
-  llvm.access_group @group
-  llvm.return
-}
+#distinct_sequence = #llvm.distinct_sequence<scope = @with_mem_attr, state = 1>
+#access_group = #llvm.access_group<id = 0, elem_of = #distinct_sequence>
 
 func.func private @with_mem_attr(%ptr : !llvm.ptr) {
   %0 = llvm.mlir.constant(42 : i32) : i32
   // Do not inline load/store operations that carry attributes requiring
   // handling while inlining, until this is supported by the inliner.
-  llvm.store %0, %ptr { access_groups = [@metadata::@group] }: i32, !llvm.ptr
+  llvm.store %0, %ptr { access_groups = [#access_group] }: i32, !llvm.ptr
   return
 }
 

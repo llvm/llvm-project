@@ -280,10 +280,6 @@ private:
   LogicalResult convertGlobals();
   LogicalResult convertOneFunction(LLVMFuncOp func);
 
-  /// Process access_group LLVM Metadata operations and create LLVM
-  /// metadata nodes.
-  LogicalResult createAccessGroupMetadata();
-
   /// Process alias.scope LLVM Metadata operations and create LLVM
   /// metadata nodes for them and their domains.
   LogicalResult createAliasScopeMetadata();

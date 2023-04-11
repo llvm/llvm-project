@@ -53,7 +53,7 @@ def AccessGroupOpInterface : OpInterface<"AccessGroupOpInterface"> {
     An interface for memory operations that can carry access groups metadata.
     It provides setters and getters for the operation's access groups attribute.
     The default implementations of the interface methods expect the operation
-    to have an attribute of type ArrayAttr named access_groups.
+    to have an array attribute named access_groups.
   }];
 
   let cppNamespace = "::mlir::LLVM";

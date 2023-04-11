@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/ModuleImport.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "AttrKindDetail.h"
@@ -153,7 +154,7 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
       typeTranslator(*mlirModule->getContext()),
       debugImporter(std::make_unique<DebugImporter>(mlirModule)),
       loopAnnotationImporter(
-          std::make_unique<LoopAnnotationImporter>(builder)) {
+          std::make_unique<LoopAnnotationImporter>(mlirModule.getContext())) {
   builder.setInsertionPointToStart(mlirModule.getBody());
 }
 
@@ -408,11 +409,11 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
   return success();
 }
 
-LogicalResult
-ModuleImport::processAccessGroupMetadata(const llvm::MDNode *node) {
+LogicalResult ModuleImport::processAccessGroupMetadata(
+    const llvm::MDNode *node, DistinctSequenceAttr distinctSequence) {
   Location loc = mlirModule.getLoc();
-  if (failed(loopAnnotationImporter->translateAccessGroup(
-          node, loc, getGlobalMetadataOp())))
+  if (failed(loopAnnotationImporter->translateAccessGroup(node, loc,
+                                                          distinctSequence)))
     return emitError(loc) << "unsupported access group node: "
                           << diagMD(node, llvmModule.get());
   return success();
@@ -515,11 +516,13 @@ LogicalResult ModuleImport::convertMetadata() {
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(mlirModule.getBody());
   for (const llvm::Function &func : llvmModule->functions()) {
+    auto distinctSequence = DistinctSequenceAttr::get(
+        SymbolRefAttr::get(StringAttr::get(context, func.getName())));
     for (const llvm::Instruction &inst : llvm::instructions(func)) {
       // Convert access group metadata nodes.
       if (llvm::MDNode *node =
               inst.getMetadata(llvm::LLVMContext::MD_access_group))
-        if (failed(processAccessGroupMetadata(node)))
+        if (failed(processAccessGroupMetadata(node, distinctSequence)))
           return failure();
 
       // Convert alias analysis metadata nodes.
@@ -1650,9 +1653,9 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
   return success();
 }
 
-FailureOr<SmallVector<SymbolRefAttr>>
+FailureOr<SmallVector<AccessGroupAttr>>
 ModuleImport::lookupAccessGroupAttrs(const llvm::MDNode *node) const {
-  return loopAnnotationImporter->lookupAccessGroupAttrs(node);
+  return loopAnnotationImporter->lookupAccessGroupsAttr(node);
 }
 
 LoopAnnotationAttr

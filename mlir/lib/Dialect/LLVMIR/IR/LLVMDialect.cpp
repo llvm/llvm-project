@@ -274,31 +274,12 @@ LogicalResult AllocaOp::verify() {
 // LLVM::BrOp
 //===----------------------------------------------------------------------===//
 
-/// Check if the `loopAttr` references correct symbols.
-static LogicalResult verifyLoopAnnotationAttr(LoopAnnotationAttr loopAttr,
-                                              Operation *op) {
+/// Verify the access group attributes referenced by the loop annotations.
+static LogicalResult verifyLoopAnnotationAttr(Operation *op,
+                                              LoopAnnotationAttr loopAttr) {
   if (!loopAttr)
     return success();
-  // If the `llvm.loop` attribute is present, enforce the following structure,
-  // which the module translation can assume.
-  ArrayRef<SymbolRefAttr> parallelAccesses = loopAttr.getParallelAccesses();
-  if (parallelAccesses.empty())
-    return success();
-  for (SymbolRefAttr accessGroupRef : parallelAccesses) {
-    StringAttr metadataName = accessGroupRef.getRootReference();
-    auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
-        op->getParentOp(), metadataName);
-    if (!metadataOp)
-      return op->emitOpError() << "expected '" << accessGroupRef
-                               << "' to reference a metadata op";
-    StringAttr accessGroupName = accessGroupRef.getLeafReference();
-    Operation *accessGroupOp =
-        SymbolTable::lookupNearestSymbolFrom(metadataOp, accessGroupName);
-    if (!accessGroupOp)
-      return op->emitOpError() << "expected '" << accessGroupRef
-                               << "' to reference an access_group op";
-  }
-  return success();
+  return verifyAccessGroups(op, loopAttr.getParallelAccesses());
 }
 
 SuccessorOperands BrOp::getSuccessorOperands(unsigned index) {
@@ -307,7 +288,7 @@ SuccessorOperands BrOp::getSuccessorOperands(unsigned index) {
 }
 
 LogicalResult BrOp::verify() {
-  return verifyLoopAnnotationAttr(getLoopAnnotationAttr(), *this);
+  return verifyLoopAnnotationAttr(*this, getLoopAnnotationAttr());
 }
 
 //===----------------------------------------------------------------------===//
@@ -318,10 +299,6 @@ SuccessorOperands CondBrOp::getSuccessorOperands(unsigned index) {
   assert(index < getNumSuccessors() && "invalid successor index");
   return SuccessorOperands(index == 0 ? getTrueDestOperandsMutable()
                                       : getFalseDestOperandsMutable());
-}
-
-LogicalResult CondBrOp::verify() {
-  return verifyLoopAnnotationAttr(getLoopAnnotationAttr(), *this);
 }
 
 void CondBrOp::build(OpBuilder &builder, OperationState &result,
@@ -336,6 +313,10 @@ void CondBrOp::build(OpBuilder &builder, OperationState &result,
 
   build(builder, result, condition, trueOperands, falseOperands, weightsAttr,
         /*loop_annotation=*/{}, trueDest, falseDest);
+}
+
+LogicalResult CondBrOp::verify() {
+  return verifyLoopAnnotationAttr(*this, getLoopAnnotationAttr());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2789,17 +2770,18 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
     return TypeSwitch<Attribute, AliasResult>(attr)
-        .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-              DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
-              DILexicalBlockFileAttr, DILocalVariableAttr, DINamespaceAttr,
-              DINullTypeAttr, DISubprogramAttr, DISubroutineTypeAttr,
-              LoopAnnotationAttr, LoopVectorizeAttr, LoopInterleaveAttr,
-              LoopUnrollAttr, LoopUnrollAndJamAttr, LoopLICMAttr,
-              LoopDistributeAttr, LoopPipelineAttr, LoopPeeledAttr,
-              LoopUnswitchAttr>([&](auto attr) {
-          os << decltype(attr)::getMnemonic();
-          return AliasResult::OverridableAlias;
-        })
+        .Case<AccessGroupAttr, DIBasicTypeAttr, DICompileUnitAttr,
+              DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
+              DILexicalBlockAttr, DILexicalBlockFileAttr, DILocalVariableAttr,
+              DINamespaceAttr, DINullTypeAttr, DISubprogramAttr,
+              DISubroutineTypeAttr, DistinctSequenceAttr, LoopAnnotationAttr,
+              LoopVectorizeAttr, LoopInterleaveAttr, LoopUnrollAttr,
+              LoopUnrollAndJamAttr, LoopLICMAttr, LoopDistributeAttr,
+              LoopPipelineAttr, LoopPeeledAttr, LoopUnswitchAttr>(
+            [&](auto attr) {
+              os << decltype(attr)::getMnemonic();
+              return AliasResult::OverridableAlias;
+            })
         .Default([](Attribute) { return AliasResult::NoAlias; });
   }
 };

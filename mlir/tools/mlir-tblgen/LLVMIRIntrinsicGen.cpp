@@ -217,7 +217,7 @@ static bool emitIntrinsic(const llvm::Record &record, llvm::raw_ostream &os) {
   llvm::SmallVector<llvm::StringRef, 8> operands(intr.getNumOperands(),
                                                  "LLVM_Type");
   if (requiresAccessGroup)
-    operands.push_back("OptionalAttr<SymbolRefArrayAttr>:$access_groups");
+    operands.push_back("OptionalAttr<AccessGroupArrayAttr>:$access_groups");
   if (requiresAliasAnalysis) {
     operands.push_back("OptionalAttr<SymbolRefArrayAttr>:$alias_scopes");
     operands.push_back("OptionalAttr<SymbolRefArrayAttr>:$noalias_scopes");

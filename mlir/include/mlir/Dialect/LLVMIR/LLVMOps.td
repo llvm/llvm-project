@@ -1126,26 +1126,6 @@ def LLVM_AliasScopeMetadataOp : LLVM_Op<"alias_scope", [
   let hasVerifier = 1;
 }
 
-def LLVM_AccessGroupMetadataOp : LLVM_Op<"access_group", [
-  HasParent<"MetadataOp">, Symbol
-]> {
-  let arguments = (ins
-    SymbolNameAttr:$sym_name
-  );
-  let summary = "LLVM dialect access group metadata.";
-  let description = [{
-    Defines an access group metadata that can be attached to any instruction
-    that potentially accesses memory. The access group may be attached to a
-    memory accessing instruction via the `llvm.access.group` metadata and
-    a branch instruction in the loop latch block via the
-    `llvm.loop.parallel_accesses` metadata.
-
-    See the following link for more details:
-    https://llvm.org/docs/LangRef.html#llvm-access-group-metadata
-  }];
-  let assemblyFormat = "$sym_name attr-dict";
-}
-
 def LLVM_TBAARootMetadataOp : LLVM_Op<"tbaa_root", [
   HasParent<"MetadataOp">, Symbol
 ]> {

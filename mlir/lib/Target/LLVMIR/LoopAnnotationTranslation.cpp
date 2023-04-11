@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopAnnotationTranslation.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -217,14 +218,13 @@ llvm::MDNode *LoopAnnotationConversion::convert() {
   if (auto options = attr.getUnswitch())
     convertLoopOptions(options);
 
-  ArrayRef<SymbolRefAttr> parallelAccessGroups = attr.getParallelAccesses();
+  ArrayRef<AccessGroupAttr> parallelAccessGroups = attr.getParallelAccesses();
   if (!parallelAccessGroups.empty()) {
     SmallVector<llvm::Metadata *> parallelAccess;
     parallelAccess.push_back(
         llvm::MDString::get(ctx, "llvm.loop.parallel_accesses"));
-    for (SymbolRefAttr accessGroupRef : parallelAccessGroups)
-      parallelAccess.push_back(
-          loopAnnotationTranslation.getAccessGroup(op, accessGroupRef));
+    for (AccessGroupAttr group : parallelAccessGroups)
+      parallelAccess.push_back(loopAnnotationTranslation.getAccessGroup(group));
     metadataNodes.push_back(llvm::MDNode::get(ctx, parallelAccess));
   }
 
@@ -254,38 +254,26 @@ LoopAnnotationTranslation::translateLoopAnnotation(LoopAnnotationAttr attr,
   return loopMD;
 }
 
-LogicalResult LoopAnnotationTranslation::createAccessGroupMetadata() {
-  mlirModule->walk([&](LLVM::MetadataOp metadatas) {
-    metadatas.walk([&](LLVM::AccessGroupMetadataOp op) {
-      llvm::MDNode *accessGroup =
-          llvm::MDNode::getDistinct(llvmModule.getContext(), {});
-      accessGroupMetadataMapping.insert({op, accessGroup});
-    });
-  });
-  return success();
+llvm::MDNode *LoopAnnotationTranslation::getAccessGroup(AccessGroupAttr group) {
+  auto it = accessGroupMetadataMapping.find(group);
+  if (it != accessGroupMetadataMapping.end())
+    return it->getSecond();
+
+  llvm::MDNode *accessGroup =
+      llvm::MDNode::getDistinct(llvmModule.getContext(), {});
+  accessGroupMetadataMapping.insert({group, accessGroup});
+  return accessGroup;
 }
 
 llvm::MDNode *
-LoopAnnotationTranslation::getAccessGroup(Operation *op,
-                                          SymbolRefAttr accessGroupRef) const {
-  auto metadataName = accessGroupRef.getRootReference();
-  auto accessGroupName = accessGroupRef.getLeafReference();
-  auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
-      op->getParentOp(), metadataName);
-  auto *accessGroupOp =
-      SymbolTable::lookupNearestSymbolFrom(metadataOp, accessGroupName);
-  return accessGroupMetadataMapping.lookup(accessGroupOp);
-}
-
-llvm::MDNode *
-LoopAnnotationTranslation::getAccessGroups(AccessGroupOpInterface op) const {
-  ArrayAttr accessGroupRefs = op.getAccessGroupsOrNull();
-  if (!accessGroupRefs || accessGroupRefs.empty())
+LoopAnnotationTranslation::getAccessGroups(AccessGroupOpInterface op) {
+  ArrayAttr accessGroups = op.getAccessGroupsOrNull();
+  if (!accessGroups || accessGroups.empty())
     return nullptr;
 
   SmallVector<llvm::Metadata *> groupMDs;
-  for (SymbolRefAttr groupRef : accessGroupRefs.getAsRange<SymbolRefAttr>())
-    groupMDs.push_back(getAccessGroup(op, groupRef));
+  for (auto group : accessGroups.getAsRange<AccessGroupAttr>())
+    groupMDs.push_back(getAccessGroup(group));
   if (groupMDs.size() == 1)
     return llvm::cast<llvm::MDNode>(groupMDs.front());
   return llvm::MDNode::get(llvmModule.getContext(), groupMDs);

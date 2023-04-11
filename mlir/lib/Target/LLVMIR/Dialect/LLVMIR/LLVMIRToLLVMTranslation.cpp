@@ -158,18 +158,18 @@ static LogicalResult setTBAAAttr(const llvm::MDNode *node, Operation *op,
 static LogicalResult setAccessGroupsAttr(const llvm::MDNode *node,
                                          Operation *op,
                                          LLVM::ModuleImport &moduleImport) {
-  FailureOr<SmallVector<SymbolRefAttr>> accessGroups =
+  FailureOr<SmallVector<AccessGroupAttr>> groups =
       moduleImport.lookupAccessGroupAttrs(node);
-  if (failed(accessGroups))
+  if (failed(groups))
     return failure();
 
   auto iface = dyn_cast<AccessGroupOpInterface>(op);
   if (!iface)
     return failure();
 
-  iface.setAccessGroups(ArrayAttr::get(
-      iface.getContext(),
-      SmallVector<Attribute>{accessGroups->begin(), accessGroups->end()}));
+  iface.setAccessGroups(
+      ArrayAttr::get(iface->getContext(),
+                     SmallVector<Attribute>{groups->begin(), groups->end()}));
   return success();
 }
 

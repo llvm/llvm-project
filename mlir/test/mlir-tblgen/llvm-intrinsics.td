@@ -50,7 +50,7 @@
 // It does not implement the alias analysis interface.
 // GROUPS: 0>
 // It has an access group attribute.
-// GROUPS: OptionalAttr<SymbolRefArrayAttr>:$access_groups
+// GROUPS: OptionalAttr<AccessGroupArrayAttr>:$access_groups
 
 //---------------------------------------------------------------------------//
 

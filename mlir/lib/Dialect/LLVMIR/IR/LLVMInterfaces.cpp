@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 using namespace mlir;
@@ -82,18 +83,6 @@ LogicalResult verifySymbolRefsPointTo(Operation *op, StringRef name,
 }
 
 //===----------------------------------------------------------------------===//
-// AccessGroupOpInterface
-//===----------------------------------------------------------------------===//
-
-LogicalResult mlir::LLVM::detail::verifyAccessGroupOpInterface(Operation *op) {
-  auto iface = cast<AccessGroupOpInterface>(op);
-  if (failed(verifySymbolRefsPointTo<LLVM::AccessGroupMetadataOp>(
-          iface, "access groups", iface.getAccessGroupsOrNull())))
-    return failure();
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // AliasAnalysisOpInterface
 //===----------------------------------------------------------------------===//
 
@@ -109,6 +98,18 @@ mlir::LLVM::detail::verifyAliasAnalysisOpInterface(Operation *op) {
   if (failed(verifySymbolRefsPointTo<LLVM::TBAATagOp>(
           iface, "tbaa tags", iface.getTBAATagsOrNull())))
     return failure();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AccessGroupOpInterface
+//===----------------------------------------------------------------------===//
+
+LogicalResult mlir::LLVM::detail::verifyAccessGroupOpInterface(Operation *op) {
+  auto iface = cast<AccessGroupOpInterface>(op);
+  if (ArrayAttr groups = iface.getAccessGroupsOrNull())
+    return verifyAccessGroups(
+        op, llvm::to_vector(groups.getAsRange<AccessGroupAttr>()));
   return success();
 }
 

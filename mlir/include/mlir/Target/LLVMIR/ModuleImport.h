@@ -14,6 +14,7 @@
 #ifndef MLIR_TARGET_LLVMIR_MODULEIMPORT_H
 #define MLIR_TARGET_LLVMIR_MODULEIMPORT_H
 
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Target/LLVMIR/Import.h"
@@ -180,10 +181,10 @@ public:
     return tbaaMapping.lookup(node);
   }
 
-  /// Returns the symbol references pointing to the access group operations that
-  /// map to the access group nodes starting from the access group metadata
-  /// `node`. Returns failure, if any of the symbol references cannot be found.
-  FailureOr<SmallVector<SymbolRefAttr>>
+  /// Returns the access group attributes that map to the access group nodes
+  /// starting from the access group metadata `node`. Returns failure if the
+  /// lookup fails for any of the access groups.
+  FailureOr<SmallVector<AccessGroupAttr>>
   lookupAccessGroupAttrs(const llvm::MDNode *node) const;
 
   /// Returns the loop annotation attribute that corresponds to the given LLVM
@@ -285,10 +286,13 @@ private:
   /// invocation of this function).
   LogicalResult processTBAAMetadata(const llvm::MDNode *node);
   /// Converts all LLVM access groups starting from `node` to MLIR access group
-  /// operations and stores a mapping from every nested access group node to the
-  /// symbol pointing to the translated operation. Returns success if all
-  /// conversions succeed and failure otherwise.
-  LogicalResult processAccessGroupMetadata(const llvm::MDNode *node);
+  /// operations and stores a mapping from every nested access group to the
+  /// translated attribute. Uses `distinctSequence` to generate the function
+  /// specific access group identifiers. Returns success if all conversions
+  /// succeed and failure otherwise.
+  LogicalResult
+  processAccessGroupMetadata(const llvm::MDNode *node,
+                             DistinctSequenceAttr distinctSequence);
   /// Converts all LLVM alias scopes and domains starting from `node` to MLIR
   /// alias scope and domain operations and stores a mapping from every nested
   /// alias scope or alias domain node to the symbol pointing to the translated
