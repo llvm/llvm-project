@@ -2908,7 +2908,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
       GetLanguageOptions(), GetTypeCheckerOptions(), GetSILOptions(),
       GetSearchPathOptions(), GetClangImporterOptions(),
       GetSymbolGraphOptions(), GetSourceManager(), GetDiagnosticEngine(),
-      /*OutputBackend=*/nullptr, ReportModuleLoadingProgress));
+      ReportModuleLoadingProgress));
   m_diagnostic_consumer_ap.reset(new StoringDiagnosticConsumer(*this));
 
   if (getenv("LLDB_SWIFT_DUMP_DIAGS")) {
