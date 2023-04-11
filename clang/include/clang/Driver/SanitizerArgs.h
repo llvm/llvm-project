@@ -119,6 +119,10 @@ public:
     return MemtagMode;
   }
 
+  bool hasShadowCallStack() const {
+    return Sanitizers.has(SanitizerKind::ShadowCallStack);
+  }
+
   bool requiresPIE() const;
   bool needsUnwindTables() const;
   bool needsLTO() const;
