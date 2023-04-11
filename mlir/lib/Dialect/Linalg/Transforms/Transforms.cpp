@@ -27,6 +27,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -139,7 +140,9 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
     }
     // Otherwise, try to compute a constant upper bound for the size value.
     FailureOr<int64_t> upperBound =
-        getConstantUpperBoundForIndex(en.value().get<Value>());
+        ValueBoundsConstraintSet::computeConstantBound(
+            presburger::BoundType::UB, en.value().get<Value>(),
+            /*dim=*/std::nullopt, /*stopCondition=*/nullptr, /*closedUB=*/true);
     if (failed(upperBound)) {
       LLVM_DEBUG(DBGS() << "count not compute a bonding box for padding");
       return rewriter.notifyMatchFailure(
