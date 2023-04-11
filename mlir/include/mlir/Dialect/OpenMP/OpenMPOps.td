@@ -45,10 +45,10 @@ class OpenMP_Attr<string name, string attrMnemonic,
 }
 
 def IsDeviceAttr : OpenMP_Attr<"IsDevice", "isdevice"> {
-  let parameters = (ins 
+  let parameters = (ins
     "bool":$is_device
   );
-  
+
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
@@ -57,14 +57,14 @@ def IsDeviceAttr : OpenMP_Attr<"IsDevice", "isdevice"> {
 //===----------------------------------------------------------------------===//
 
 def FlagsAttr : OpenMP_Attr<"Flags", "flags"> {
-  let parameters = (ins 
+  let parameters = (ins
     DefaultValuedParameter<"uint32_t", "0">:$debug_kind,
     DefaultValuedParameter<"bool", "false">:$assume_teams_oversubscription,
     DefaultValuedParameter<"bool", "false">:$assume_threads_oversubscription,
     DefaultValuedParameter<"bool", "false">:$assume_no_thread_state,
     DefaultValuedParameter<"bool", "false">:$assume_no_nested_parallelism
   );
-  
+
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
@@ -1065,24 +1065,29 @@ def TargetOp : OpenMP_Op<"target",[AttrSizedOperandSegments]> {
     The optional $nowait elliminates the implicit barrier so the parent task can make progress
     even if the target task is not yet completed.
 
-    TODO:  map, is_device_ptr, depend, defaultmap, in_reduction
+    TODO:  is_device_ptr, depend, defaultmap, in_reduction
 
   }];
 
   let arguments = (ins Optional<I1>:$if_expr,
                        Optional<AnyInteger>:$device,
                        Optional<AnyInteger>:$thread_limit,
-                       UnitAttr:$nowait);
+                       UnitAttr:$nowait,
+                       Variadic<OpenMP_PointerLikeType>:$map_operands,
+                       OptionalAttr<I64ArrayAttr>:$map_types);
 
   let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{
     oilist( `if` `(` $if_expr `)`
-          | `device` `(` $device `:` type($device) `)`
-          | `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
-          | `nowait` $nowait
+    | `device` `(` $device `:` type($device) `)`
+    | `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
+    | `nowait` $nowait
+    | `map` `(` custom<MapClause>($map_operands, type($map_operands), $map_types) `)`
     ) $region attr-dict
   }];
+
+  let hasVerifier = 1;
 }
 
 
