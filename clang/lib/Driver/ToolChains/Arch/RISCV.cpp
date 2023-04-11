@@ -49,11 +49,20 @@ static bool getArchFeatures(const Driver &D, StringRef Arch,
 }
 
 // Get features except standard extension feature
-static bool getRISCFeaturesFromMcpu(const llvm::Triple &Triple, StringRef Mcpu,
+static void getRISCFeaturesFromMcpu(const Driver &D, const Arg *A,
+                                    const llvm::Triple &Triple,
+                                    StringRef Mcpu,
                                     std::vector<StringRef> &Features) {
   bool Is64Bit = Triple.isRISCV64();
   llvm::RISCV::CPUKind CPUKind = llvm::RISCV::parseCPUKind(Mcpu);
-  return llvm::RISCV::checkCPUKind(CPUKind, Is64Bit);
+  if (!llvm::RISCV::checkCPUKind(CPUKind, Is64Bit)) {
+    // Try inverting Is64Bit in case the CPU is valid, but for the wrong target.
+    if (llvm::RISCV::checkCPUKind(CPUKind, !Is64Bit))
+      D.Diag(clang::diag::err_drv_invalid_riscv_cpu_name_for_target) << Mcpu << Is64Bit;
+    else
+      D.Diag(clang::diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Mcpu;
+  }
 }
 
 void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
@@ -70,9 +79,8 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     StringRef CPU = A->getValue();
     if (CPU == "native")
       CPU = llvm::sys::getHostCPUName();
-    if (!getRISCFeaturesFromMcpu(Triple, CPU, Features))
-      D.Diag(clang::diag::err_drv_unsupported_option_argument)
-          << A->getSpelling() << CPU;
+
+    getRISCFeaturesFromMcpu(D, A, Triple, CPU, Features);
   }
 
   // Handle features corresponding to "-ffixed-X" options
