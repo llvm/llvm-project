@@ -4,6 +4,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -13,6 +14,8 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "gtest/gtest.h"
+
+#include "../lib/CodeGen/RegisterCoalescer.h"
 
 using namespace llvm;
 
@@ -160,6 +163,26 @@ static void testSplitAt(MachineFunction &MF, LiveIntervals &LIS,
 
   // Split block and update live intervals
   MBB.splitAt(SplitInstr, false, &LIS);
+}
+
+/**
+ * Helper function to test for interference between a hard register and a
+ * virtual register live ranges.
+ */
+static bool checkRegUnitInterference(LiveIntervals &LIS,
+                                     const TargetRegisterInfo &TRI,
+                                     const LiveInterval &VirtReg,
+                                     MCRegister PhysReg) {
+  if (VirtReg.empty())
+    return false;
+  CoalescerPair CP(VirtReg.reg(), PhysReg, TRI);
+
+  for (MCRegUnitIterator Units(PhysReg, &TRI); Units.isValid(); ++Units) {
+    const LiveRange &UnitRange = LIS.getRegUnit(*Units);
+    if (VirtReg.overlaps(UnitRange, CP, *LIS.getSlotIndexes()))
+      return true;
+  }
+  return false;
 }
 
 static void liveIntervalTest(StringRef MIRFunc, LiveIntervalTest T) {
@@ -681,6 +704,42 @@ TEST(LiveIntervalTest, RepairIntervals) {
     };
     LIS.repairIntervalsInRange(MBB, Instr2, Instr3, OrigRegs);
   });
+}
+
+TEST(LiveIntervalTest, AdjacentIntervals) {
+  liveIntervalTest(
+      R"MIR(
+    successors: %bb.1, %bb.2
+
+    $vgpr1 = IMPLICIT_DEF
+    S_NOP 0, implicit $vgpr1
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
+    S_BRANCH %bb.1
+  bb.1:
+    $vgpr0, dead renamable $vcc = V_ADD_CO_U32_e64 %1, %2, 0, implicit $exec
+    S_NOP 0, implicit $vgpr0
+    S_BRANCH %bb.3
+  bb.2:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1, dead renamable $vcc = V_ADD_CO_U32_e64 %1, %2, 0, implicit $exec
+    S_NOP 0, implicit $vgpr0, implicit $vgpr1
+    S_BRANCH %bb.3
+  bb.3:
+)MIR",
+      [](MachineFunction &MF, LiveIntervals &LIS) {
+        const auto &R1 =
+            LIS.getInterval(getMI(MF, 2, 0).getOperand(0).getReg());
+        const auto &R2 =
+            LIS.getInterval(getMI(MF, 3, 0).getOperand(0).getReg());
+        MCRegister V1 = getMI(MF, 1, 2).getOperand(0).getReg().asMCReg();
+
+        ASSERT_FALSE(checkRegUnitInterference(
+            LIS, *MF.getSubtarget().getRegisterInfo(), R1, V1));
+        ASSERT_FALSE(checkRegUnitInterference(
+            LIS, *MF.getSubtarget().getRegisterInfo(), R2, V1));
+      });
 }
 
 int main(int argc, char **argv) {
