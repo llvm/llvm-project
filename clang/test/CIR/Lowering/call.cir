@@ -9,7 +9,6 @@ module {
     cir.call @a() : () -> ()
     cir.return
   }
-}
 
 //      MLIR: llvm.func @a() {
 // MLIR-NEXT:   llvm.return
@@ -26,3 +25,15 @@ module {
 // LLVM-NEXT:   call void @a()
 // LLVM-NEXT:   ret void
 // LLVM-NEXT: }
+
+  // check operands and results type lowering
+  cir.func @callee(!cir.ptr<i32>) -> !cir.ptr<i32> attributes {sym_visibility = "private"}
+  // MLIR: llvm.func @callee(!llvm.ptr) -> !llvm.ptr
+  cir.func @caller(%arg0: !cir.ptr<i32>) -> !cir.ptr<i32> {
+  // MLIR: llvm.func @caller(%arg0: !llvm.ptr) -> !llvm.ptr
+    %0 = cir.call @callee(%arg0) : (!cir.ptr<i32>) -> !cir.ptr<i32>
+    // MLIR: %{{[0-9]+}} = llvm.call @callee(%arg0) : (!llvm.ptr) -> !llvm.ptr
+    cir.return %0 : !cir.ptr<i32>
+  }
+
+} // end module
