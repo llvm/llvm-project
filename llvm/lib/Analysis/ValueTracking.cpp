@@ -4343,7 +4343,7 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
 
 static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
                                                   const Query &Q) {
-  FPClassTest KnownFromAssume = fcNone;
+  FPClassTest KnownFromAssume = fcAllFlags;
 
   // Try to restrict the floating-point classes based on information from
   // assumptions.
@@ -4369,19 +4369,19 @@ static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
           fcmpToClassTest(Pred, *F, LHS, RHS, true);
       // First see if we can fold in fabs/fneg into the test.
       if (TestedValue == V)
-        KnownFromAssume |= TestedMask;
+        KnownFromAssume &= TestedMask;
       else {
         // Try again without the lookthrough if we found a different source
         // value.
         auto [TestedValue, TestedMask] =
             fcmpToClassTest(Pred, *F, LHS, RHS, false);
         if (TestedValue == V)
-          KnownFromAssume |= TestedMask;
+          KnownFromAssume &= TestedMask;
       }
     } else if (match(I->getArgOperand(0),
                      m_Intrinsic<Intrinsic::is_fpclass>(
                          m_Value(LHS), m_ConstantInt(ClassVal)))) {
-      KnownFromAssume |= static_cast<FPClassTest>(ClassVal);
+      KnownFromAssume &= static_cast<FPClassTest>(ClassVal);
     }
   }
 
@@ -4467,8 +4467,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       KnownNotFromFlags |= fcInf;
   }
 
-  if (Q.AC)
-    KnownNotFromFlags |= computeKnownFPClassFromAssumes(V, Q);
+  if (Q.AC) {
+    FPClassTest AssumedClasses = computeKnownFPClassFromAssumes(V, Q);
+    KnownNotFromFlags |= ~AssumedClasses;
+  }
 
   // We no longer need to find out about these bits from inputs if we can
   // assume this from flags/attributes.
