@@ -657,6 +657,8 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
         ArrayRef<Value *> ACStoreCallArgsRef(ACStoreCallArgs);
         ArrayRef<Value *> AFStoreCallArgsRef(AFStoreCallArgs);
         ArrayRef<Value *> PrintAFPathsCallArgsRef(PrintAFPathsCallArgs);
+
+        PrintStatisticsCallArgs.push_back(InstructionBuilder.getInt32(Evaluations+1));
         ArrayRef<Value *> PrintStatisticsCallArgsRef(PrintStatisticsCallArgs);
 
         InstructionBuilder.SetInsertPoint(CurrentInstruction);

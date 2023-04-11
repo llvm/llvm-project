@@ -6,7 +6,7 @@ RUN_TIME_LIB_ROOT = /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/
 OP = -O1 -fno-slp-vectorize
 CXX = $(LLVM_PROJECT_ROOT)/build/bin/clang
 # [DEBUG_FLAG=-DFAF_DEBUG<=debug level>] [MEMORYOPT=-DMEMORY_OPT]
-CXX_FLAGS = $(DEBUG_FLAG) -DMEMORY_OPT -g -S -emit-llvm
+CXX_FLAGS = $(DEBUG_FLAG) -g -S -emit-llvm -DFAF_DEBUG=3
 
 OPT = $(LLVM_PROJECT_ROOT)/build/bin/opt
 OPT_FLAGS = -S -passes=error-analysis
@@ -14,7 +14,7 @@ OPT_FLAGS = -S -passes=error-analysis
 LLI = $(LLVM_PROJECT_ROOT)/build/bin/lli
 
 RUN_TIME_LIB_FLAGS = -function-to-analyze atomUExample \
-					-evaluations 0
+					-evaluations 10
 
 RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.h \
 				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AmplificationFactor.h \

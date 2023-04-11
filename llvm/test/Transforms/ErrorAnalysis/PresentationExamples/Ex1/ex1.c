@@ -7,19 +7,15 @@
 
 #define TYPE double
 #define PRINT_PRECISION_FORMAT "%0.15lf"
+#define COS cos
 
 __attribute__((noinline))
 TYPE atomUExample(TYPE x) {
-  TYPE v1 = cosf(x);
-  TYPE v2 = 1.0-v1;
-  TYPE v3 = x*x;
-  TYPE v4 = v2/v3;
-  return v4;
+  return (1.0-COS(x))/(x*x);;
 }
 
 int main() {
-  TYPE x = 0.0;
+  TYPE x = 0.0000001;
   printf("x = "PRINT_PRECISION_FORMAT"\n", atomUExample(x));
   return 0;
 }
-

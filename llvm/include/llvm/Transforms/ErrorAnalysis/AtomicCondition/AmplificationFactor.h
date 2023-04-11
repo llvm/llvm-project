@@ -338,20 +338,18 @@ void fAFCreateAFItem(AFItem **AddressToAllocateAt,
   return ;
 }
 
-// Gets the AFItem with FunctionEvaluationId, InstructionId and
-// InstructionExecutionId from List of AFItems.
-AFItem *fAFGetAFItemFromList(AFItem **AFItemList,
+// Gets the index of the AFItem * with InstructionId and InstructionExecutionId
+// from List of AFItem*.
+int fAFGetAFItemFromList(AFItem **AFItemList,
                              int NumAFItems,
-                             int FunctionEvaluationId,
                              int InstructionId,
                              int InstructionExecutionId) {
   for (int I = 0; I < NumAFItems; ++I)
-    if (AFItemList[I]->FunctionEvaluationId == FunctionEvaluationId &&
-        AFItemList[I]->InstructionId == InstructionId &&
+    if (AFItemList[I]->InstructionId == InstructionId &&
         AFItemList[I]->InstructionExecutionId == InstructionExecutionId)
-      return AFItemList[I];
+      return I;
 
-  return NULL;
+  return -1;
 }
 
 // Function to write NumObjects number of AFItems from ObjectPointerList into
@@ -482,20 +480,43 @@ int getNumberOfComputationPaths(AFTable *AFTable) {
 }
 
 // Compute the Average Amplification Factor incrementally.
-double getAverageAmplificationFactor(AFTable *AFTable) {
-  double AverageAmplificationFactor = 0.0;
+double getAverageAmplificationFactor(AFTable *AFTable, int NumFunctionEvaluations) {
+  double* AverageAmplificationFactor;
+
+  if((AverageAmplificationFactor = (double *)malloc(sizeof(double )*NumFunctionEvaluations)) == NULL) {
+    printf("#fAF: Not enough memory for AverageAmplificationFactors!");
+    exit(EXIT_FAILURE);
+  }
+  // Initialize the AverageAmplificationFactor array to 0.
+  for (int I = 0; I < NumFunctionEvaluations; ++I) {
+    AverageAmplificationFactor[I] = 0;
+  }
+
   int NumberOfComputationPaths = 0;
+
   for (uint64_t I = 0; I < AFTable->ListLength; ++I) {
     if (AFTable->AFItems[I]->RootNode) {
-      for (int J = 0; J < AFTable->AFItems[I]->NumAFComponents; ++J, ++NumberOfComputationPaths)
-        // Average is computed as m_n = m_(n-1) + (a_n - m_(n-1))/n
-        AverageAmplificationFactor += (AFTable->AFItems[I]->Components[J]->AFs[0]-AverageAmplificationFactor) /
-                                      (NumberOfComputationPaths+1);
+      for (int J = 0; J < AFTable->AFItems[I]->NumAFComponents; ++J, ++NumberOfComputationPaths) {
+        for (int K = 0; K < NumFunctionEvaluations; ++K) {
+          // Average is computed as m_n = m_(n-1) + (a_n - m_(n-1))/n
+          AverageAmplificationFactor[K] +=
+              (AFTable->AFItems[I]->Components[J]->AFs[K] -
+               AverageAmplificationFactor[K]) /
+              (NumberOfComputationPaths + 1);
+        }
+      }
     }
   }
 
+  // Find the greatest from AverageAmplificationFactor array.
+  double GreatestAverageAmplificationFactor = 0;
+  for (int I = 0; I < NumFunctionEvaluations; ++I) {
+    if (AverageAmplificationFactor[I] > GreatestAverageAmplificationFactor)
+      GreatestAverageAmplificationFactor = AverageAmplificationFactor[I];
+  }
+
   assert(NumberOfComputationPaths == getNumberOfComputationPaths(AFTable));
-  return AverageAmplificationFactor;
+  return GreatestAverageAmplificationFactor;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -651,14 +672,12 @@ int fAFisMemoryOpInstruction(char *InstructionString) {
 int fAFComparator(const void *A, const void *B) {
   double AF1 = fabs((*(AFProduct **)A)->AFs[0]);
   for (int I = 0; I < (*(AFProduct **)A)->NumberOfInputs; ++I) {
-    if((*(AFProduct **)A)->ProductTails[I]!=NULL &&
-        fabs((*(AFProduct **)A)->AFs[I]) > AF1)
+    if(fabs((*(AFProduct **)A)->AFs[I]) > AF1)
       AF1 = fabs((*(AFProduct **)A)->AFs[I]);
   }
   double AF2 = fabs((*(AFProduct **)B)->AFs[0]);
   for (int I = 0; I < (*(AFProduct **)B)->NumberOfInputs; ++I) {
-    if((*(AFProduct **)B)->ProductTails[I]!=NULL &&
-            fabs((*(AFProduct **)B)->AFs[I]) > AF2)
+    if(fabs((*(AFProduct **)B)->AFs[I]) > AF2)
       AF2 = fabs((*(AFProduct **)B)->AFs[I]);
   }
 
@@ -893,20 +912,23 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
   int NewAFItem = 0;
 
   // Find an existing AFItem with the same InstructionId and InstructionExecutionId or create a new one.
+  int AFItemIndex = fAFGetAFItemFromList(AFs->AFItems, AFs->ListLength,
+                                         InstructionId, InstructionExecutionCounter);
   AFItem *UpdatingAFItem = NULL;
-  UpdatingAFItem = fAFGetAFItemFromList(AFs->AFItems, AFs->ListLength,
-                                        FunctionEvaluationId, InstructionId,
-                                        InstructionExecutionCounter);
-  if (UpdatingAFItem == NULL) {
+  if (AFItemIndex == -1) {
 #if FAF_DEBUG >= 3
     printf("\t\t\tCreating a new AFItem\n");
 #endif
     NewAFItem = 1;
 
-    fAFCreateAFItem(&UpdatingAFItem, AFItemCounter, FunctionEvaluationId,
+    fAFCreateAFItem(&AFs->AFItems[AFs->ListLength], AFItemCounter, FunctionEvaluationId,
                     InstructionId, InstructionExecutionCounter, 0);
+    AFs->ListLength++;
+    AFItemIndex = AFs->ListLength - 1;
+    UpdatingAFItem = AFs->AFItems[AFs->ListLength - 1];
     AFItemCounter++;
-  }
+  } else
+    UpdatingAFItem = AFs->AFItems[AFItemIndex];
 
   int TotalAFComponents = 0;
 
@@ -941,7 +963,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
     printf("\t\tOperandIndex: %d\n", OperandIndex);
 #endif
     if (AFItemWRTOperands[OperandIndex] != NULL) {
-      if(!NewAFItem)
+      if(NewAFItem)
         // Change status of the children of this AFItem to NOT root nodes.
         (*AFItemWRTOperands[OperandIndex])->RootNode = 0;
 
@@ -1050,9 +1072,6 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
     }
   }
 
-  //  Add AFItem to the AFTable
-  AFs->AFItems[AFs->ListLength] = UpdatingAFItem;
-  AFs->ListLength++;
   InstructionExecutionCounter++;
 
 #if FAF_DEBUG >= 2
@@ -1064,7 +1083,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
 #endif
 
   //  Return the AFItem
-  return &AFs->AFItems[AFs->ListLength - 1];
+  return &AFs->AFItems[AFItemIndex];
 }
 #endif
 
@@ -1151,7 +1170,7 @@ void fAFPrintTopFromAllAmplificationPaths() {
 }
 
 // Prints the Statistics of the Analysis
-void fAFPrintStatistics() {
+void fAFPrintStatistics(int NumFunctionEvaluations) {
 #if FAF_DEBUG
   printf("\nPrinting Statistics\n");
 #endif
@@ -1159,7 +1178,7 @@ void fAFPrintStatistics() {
   printf("Number of Computation DAGs\t\t\t: %d\n", getNumberOfComputationDAGs(AFs));
   printf("Number of Computation Paths\t\t\t: %d\n", getNumberOfComputationPaths(AFs));
   printf("Number of Floating-Point Operations\t: %lu\n", AFs->ListLength);
-  printf("Average Amplification Factor\t\t: %0.15lf\n", getAverageAmplificationFactor(AFs));
+  printf("Average Amplification Factor\t\t: %0.15lf\n", getAverageAmplificationFactor(AFs, NumFunctionEvaluations));
 
   printStatistics(Stats);
 
