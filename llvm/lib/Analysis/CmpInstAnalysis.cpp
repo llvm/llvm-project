@@ -79,7 +79,7 @@ bool llvm::decomposeBitTestICmp(Value *LHS, Value *RHS,
   using namespace PatternMatch;
 
   const APInt *C;
-  if (!match(RHS, m_APInt(C)))
+  if (!match(RHS, m_APIntAllowUndef(C)))
     return false;
 
   switch (Pred) {
