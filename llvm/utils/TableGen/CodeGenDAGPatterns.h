@@ -948,10 +948,10 @@ public:
   /// PatFrags references.  This may increase the number of trees in the
   /// pattern if a PatFrags has multiple alternatives.
   void InlinePatternFragments() {
-    std::vector<TreePatternNodePtr> Copy = Trees;
-    Trees.clear();
-    for (unsigned i = 0, e = Copy.size(); i != e; ++i)
-      Copy[i]->InlinePatternFragments(Copy[i], *this, Trees);
+    std::vector<TreePatternNodePtr> Copy;
+    Trees.swap(Copy);
+    for (const TreePatternNodePtr &C : Copy)
+      TreePatternNode::InlinePatternFragments(C, *this, Trees);
   }
 
   /// InferAllTypes - Infer/propagate as many types throughout the expression
