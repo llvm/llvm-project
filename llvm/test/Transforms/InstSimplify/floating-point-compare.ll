@@ -393,6 +393,34 @@ define i1 @fabs_fcmp-nnan_is_positive_or_zero(double %x) {
   ret i1 %cmp
 }
 
+define i1 @fabs_fcmp_oge0-assume-nnan_is_positive_or_zero(double %x) {
+; CHECK-LABEL: @fabs_fcmp_oge0-assume-nnan_is_positive_or_zero(
+; CHECK-NEXT:    [[FABS:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord double [[FABS]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs = tail call double @llvm.fabs.f64(double %x)
+  %ord = fcmp ord double %fabs, 0.0
+  call void @llvm.assume(i1 %ord)
+  %cmp = fcmp oge double %fabs, 0.0
+  ret i1 %cmp
+}
+
+define i1 @fabs_fcmp_olt0_-assume-nnan_is_positive_or_zero(double %x) {
+; CHECK-LABEL: @fabs_fcmp_olt0_-assume-nnan_is_positive_or_zero(
+; CHECK-NEXT:    [[FABS:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord double [[FABS]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
+; CHECK-NEXT:    ret i1 false
+;
+  %fabs = tail call double @llvm.fabs.f64(double %x)
+  %ord = fcmp ord double %fabs, 0.0
+  call void @llvm.assume(i1 %ord)
+  %cmp = fcmp olt double %fabs, 0.0
+  ret i1 %cmp
+}
+
 define <2 x i1> @fabs_fcmp-nnan_is_positive_or_zero_vec(<2 x double> %x) {
 ; CHECK-LABEL: @fabs_fcmp-nnan_is_positive_or_zero_vec(
 ; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
