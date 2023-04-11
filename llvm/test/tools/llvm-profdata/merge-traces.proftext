@@ -1,0 +1,49 @@
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s -o %t.profdata
+# RUN: llvm-profdata show --temporal-profile-traces %t.profdata | FileCheck %s --check-prefixes=SAMPLE1,SEEN1
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %t.profdata -o %t.profdata
+# RUN: llvm-profdata show --temporal-profile-traces %t.profdata | FileCheck %s --check-prefixes=SAMPLE2,SEEN2
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %t.profdata -o %t.profdata
+# RUN: llvm-profdata show --temporal-profile-traces %t.profdata | FileCheck %s --check-prefixes=SAMPLE2,SEEN3
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %t.profdata -o %t.profdata
+# RUN: llvm-profdata show --temporal-profile-traces %t.profdata | FileCheck %s --check-prefixes=SAMPLE2,SEEN4
+
+# SEEN1: Temporal Profile Traces (samples=1 seen=1):
+# SEEN2: Temporal Profile Traces (samples=2 seen=2):
+# SEEN3: Temporal Profile Traces (samples=2 seen=3):
+# SEEN4: Temporal Profile Traces (samples=2 seen=4):
+# SAMPLE1: Temporal Profile Trace 0 (count=3):
+# SAMPLE1:   a
+# SAMPLE1:   b
+# SAMPLE1:   c
+# SAMPLE2: Temporal Profile Trace 1 (count=3):
+# SAMPLE2:   a
+# SAMPLE2:   b
+# SAMPLE2:   c
+
+# Header
+:ir
+:temporal_prof_traces
+# Num Traces
+1
+# Trace Stream Size:
+1
+a, b, c
+
+
+a
+# Func Hash:
+0x1234
+# Num Counters:
+1
+# Counter Values:
+101
+
+b
+0x5678
+1
+202
+
+c
+0xabcd
+1
+303

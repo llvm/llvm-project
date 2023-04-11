@@ -25,6 +25,7 @@
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
+#include <random>
 
 namespace llvm {
 
@@ -41,6 +42,15 @@ public:
 private:
   bool Sparse;
   StringMap<ProfilingData> FunctionData;
+  /// The maximum length of a single temporal profile trace.
+  uint64_t MaxTemporalProfTraceLength;
+  /// The maximum number of stored temporal profile traces.
+  uint64_t TemporalProfTraceReservoirSize;
+  /// The total number of temporal profile traces seen.
+  uint64_t TemporalProfTraceStreamSize = 0;
+  /// The list of temporal profile traces.
+  SmallVector<TemporalProfTraceTy> TemporalProfTraces;
+  std::mt19937 RNG;
 
   // A map to hold memprof data per function. The lower 64 bits obtained from
   // the md5 hash of the function name is used to index into the map.
@@ -60,7 +70,9 @@ private:
   InstrProfRecordWriterTrait *InfoObj;
 
 public:
-  InstrProfWriter(bool Sparse = false);
+  InstrProfWriter(bool Sparse = false,
+                  uint64_t TemporalProfTraceReservoirSize = 0,
+                  uint64_t MaxTemporalProfTraceLength = 0);
   ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }
@@ -73,6 +85,11 @@ public:
   void addRecord(NamedInstrProfRecord &&I, function_ref<void(Error)> Warn) {
     addRecord(std::move(I), 1, Warn);
   }
+
+  /// Add \p SrcTraces using reservoir sampling where \p SrcStreamSize is the
+  /// total number of temporal profiling traces the source has seen.
+  void addTemporalProfileTraces(SmallVector<TemporalProfTraceTy> SrcTraces,
+                                uint64_t SrcStreamSize);
 
   /// Add a memprof record for a function identified by its \p Id.
   void addMemProfRecord(const GlobalValue::GUID Id,
@@ -95,6 +112,10 @@ public:
 
   /// Write the profile in text format to \c OS
   Error writeText(raw_fd_ostream &OS);
+
+  /// Write temporal profile trace data to the header in text format to \c OS
+  void writeTextTemporalProfTraceData(raw_fd_ostream &OS,
+                                      InstrProfSymtab &Symtab);
 
   Error validateRecord(const InstrProfRecord &Func);
 
@@ -158,6 +179,8 @@ private:
   void addRecord(StringRef Name, uint64_t Hash, InstrProfRecord &&I,
                  uint64_t Weight, function_ref<void(Error)> Warn);
   bool shouldEncodeData(const ProfilingData &PD);
+  /// Add \p Trace using reservoir sampling.
+  void addTemporalProfileTrace(TemporalProfTraceTy Trace);
 
   Error writeImpl(ProfOStream &OS);
 };

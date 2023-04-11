@@ -1376,9 +1376,13 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version9,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version10,
         "Please update the reading code below if a new field has been added, "
         "if not add a case statement to fall through to the latest version.");
+  case 10ull:
+    H.TemporalProfTracesOffset =
+        read(Buffer, offsetOf(&Header::TemporalProfTracesOffset));
+    LLVM_FALLTHROUGH;
   case 9ull:
     H.BinaryIdOffset = read(Buffer, offsetOf(&Header::BinaryIdOffset));
     [[fallthrough]];
@@ -1398,10 +1402,13 @@ size_t Header::size() const {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version9,
+    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version10,
                   "Please update the size computation below if a new field has "
                   "been added to the header, if not add a case statement to "
                   "fall through to the latest version.");
+  case 10ull:
+    return offsetOf(&Header::TemporalProfTracesOffset) +
+           sizeof(Header::TemporalProfTracesOffset);
   case 9ull:
     return offsetOf(&Header::BinaryIdOffset) + sizeof(Header::BinaryIdOffset);
   case 8ull:

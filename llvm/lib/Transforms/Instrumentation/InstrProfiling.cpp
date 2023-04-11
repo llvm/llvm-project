@@ -421,6 +421,9 @@ bool InstrProfiling::lowerIntrinsics(Function *F) {
       } else if (auto *IPI = dyn_cast<InstrProfIncrementInst>(&Instr)) {
         lowerIncrement(IPI);
         MadeChange = true;
+      } else if (auto *IPC = dyn_cast<InstrProfTimestampInst>(&Instr)) {
+        lowerTimestamp(IPC);
+        MadeChange = true;
       } else if (auto *IPC = dyn_cast<InstrProfCoverInst>(&Instr)) {
         lowerCover(IPC);
         MadeChange = true;
@@ -510,6 +513,7 @@ static bool containsProfilingIntrinsics(Module &M) {
   return containsIntrinsic(llvm::Intrinsic::instrprof_cover) ||
          containsIntrinsic(llvm::Intrinsic::instrprof_increment) ||
          containsIntrinsic(llvm::Intrinsic::instrprof_increment_step) ||
+         containsIntrinsic(llvm::Intrinsic::instrprof_timestamp) ||
          containsIntrinsic(llvm::Intrinsic::instrprof_value_profile);
 }
 
@@ -670,6 +674,9 @@ Value *InstrProfiling::getCounterAddress(InstrProfInstBase *I) {
   auto *Counters = getOrCreateRegionCounters(I);
   IRBuilder<> Builder(I);
 
+  if (isa<InstrProfTimestampInst>(I))
+    Counters->setAlignment(Align(8));
+
   auto *Addr = Builder.CreateConstInBoundsGEP2_32(
       Counters->getValueType(), Counters, 0, I->getIndex()->getZExtValue());
 
@@ -709,6 +716,21 @@ void InstrProfiling::lowerCover(InstrProfCoverInst *CoverInstruction) {
   // We store zero to represent that this block is covered.
   Builder.CreateStore(Builder.getInt8(0), Addr);
   CoverInstruction->eraseFromParent();
+}
+
+void InstrProfiling::lowerTimestamp(
+    InstrProfTimestampInst *TimestampInstruction) {
+  assert(TimestampInstruction->getIndex()->isZeroValue() &&
+         "timestamp probes are always the first probe for a function");
+  auto &Ctx = M->getContext();
+  auto *TimestampAddr = getCounterAddress(TimestampInstruction);
+  IRBuilder<> Builder(TimestampInstruction);
+  auto *CalleeTy =
+      FunctionType::get(Type::getVoidTy(Ctx), TimestampAddr->getType(), false);
+  auto Callee = M->getOrInsertFunction(
+      INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_SET_TIMESTAMP), CalleeTy);
+  Builder.CreateCall(Callee, {TimestampAddr});
+  TimestampInstruction->eraseFromParent();
 }
 
 void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
