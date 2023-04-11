@@ -136,6 +136,9 @@ public:
   /// Return true if profile includes a memory profile.
   virtual bool hasMemoryProfile() const = 0;
 
+  /// Return true if this has a temporal profile.
+  virtual bool hasTemporalProfile() const = 0;
+
   /// Returns a BitsetEnum describing the attributes of the profile. To check
   /// individual attributes prefer using the helpers above.
   virtual InstrProfKind getProfileKind() const = 0;
@@ -157,6 +160,10 @@ public:
 
 protected:
   std::unique_ptr<InstrProfSymtab> Symtab;
+  /// A list of temporal profile traces.
+  SmallVector<TemporalProfTraceTy> TemporalProfTraces;
+  /// The total number of temporal profile traces seen.
+  uint64_t TemporalProfTraceStreamSize = 0;
 
   /// Set the current error and return same.
   Error error(instrprof_error Err, const std::string &ErrMsg = "") {
@@ -201,6 +208,15 @@ public:
   static Expected<std::unique_ptr<InstrProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer,
          const InstrProfCorrelator *Correlator = nullptr);
+
+  /// \returns a list of temporal profile traces.
+  virtual const SmallVector<TemporalProfTraceTy> &getTemporalProfTraces() {
+    return TemporalProfTraces;
+  }
+  /// \returns the total number of temporal profile traces seen.
+  uint64_t getTemporalProfTraceStreamSize() {
+    return TemporalProfTraceStreamSize;
+  }
 };
 
 /// Reader for the simple text based instrprof format.
@@ -221,6 +237,8 @@ private:
   InstrProfKind ProfileKind = InstrProfKind::Unknown;
 
   Error readValueProfileData(InstrProfRecord &Record);
+
+  Error readTemporalProfTraceData();
 
 public:
   TextInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer_)
@@ -260,6 +278,10 @@ public:
     return false;
   }
 
+  bool hasTemporalProfile() const override {
+    return static_cast<bool>(ProfileKind & InstrProfKind::TemporalProfile);
+  }
+
   InstrProfKind getProfileKind() const override { return ProfileKind; }
 
   /// Read the header.
@@ -289,6 +311,8 @@ private:
   /// If available, this hold the ProfileData array used to correlate raw
   /// instrumentation data to their functions.
   const InstrProfCorrelatorImpl<IntPtrT> *Correlator;
+  /// A list of timestamps paired with a function name reference.
+  std::vector<std::pair<uint64_t, uint64_t>> TemporalProfTimestamps;
   bool ShouldSwapBytes;
   // The value of the version field of the raw profile data header. The lower 56
   // bits specifies the format version and the most significant 8 bits specify
@@ -360,6 +384,10 @@ public:
     return false;
   }
 
+  bool hasTemporalProfile() const override {
+    return (Version & VARIANT_MASK_TEMPORAL_PROF) != 0;
+  }
+
   /// Returns a BitsetEnum describing the attributes of the raw instr profile.
   InstrProfKind getProfileKind() const override;
 
@@ -367,6 +395,8 @@ public:
     assert(Symtab.get());
     return *Symtab.get();
   }
+
+  const SmallVector<TemporalProfTraceTy> &getTemporalProfTraces() override;
 
 private:
   Error createSymtab(InstrProfSymtab &Symtab);
@@ -505,6 +535,7 @@ struct InstrProfReaderIndexBase {
   virtual bool hasSingleByteCoverage() const = 0;
   virtual bool functionEntryOnly() const = 0;
   virtual bool hasMemoryProfile() const = 0;
+  virtual bool hasTemporalProfile() const = 0;
   virtual InstrProfKind getProfileKind() const = 0;
   virtual Error populateSymtab(InstrProfSymtab &) = 0;
 };
@@ -573,6 +604,10 @@ public:
 
   bool hasMemoryProfile() const override {
     return (FormatVersion & VARIANT_MASK_MEMPROF) != 0;
+  }
+
+  bool hasTemporalProfile() const override {
+    return (FormatVersion & VARIANT_MASK_TEMPORAL_PROF) != 0;
   }
 
   InstrProfKind getProfileKind() const override;
@@ -653,6 +688,10 @@ public:
   bool functionEntryOnly() const override { return Index->functionEntryOnly(); }
 
   bool hasMemoryProfile() const override { return Index->hasMemoryProfile(); }
+
+  bool hasTemporalProfile() const override {
+    return Index->hasTemporalProfile();
+  }
 
   /// Returns a BitsetEnum describing the attributes of the indexed instr
   /// profile.

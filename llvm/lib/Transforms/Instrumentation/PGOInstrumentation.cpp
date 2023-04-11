@@ -280,6 +280,10 @@ static cl::opt<bool>
                               cl::desc("Create a dot file of CFGs with block "
                                        "coverage inference information"));
 
+static cl::opt<bool> PGOTemporalInstrumentation(
+    "pgo-temporal-instrumentation",
+    cl::desc("Use this option to enable temporal instrumentation"));
+
 static cl::opt<bool>
     PGOFixEntryCount("pgo-fix-entry-count", cl::init(true), cl::Hidden,
                      cl::desc("Fix function entry count in profile use."));
@@ -397,6 +401,8 @@ static GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS) {
         VARIANT_MASK_BYTE_COVERAGE | VARIANT_MASK_FUNCTION_ENTRY_ONLY;
   if (PGOBlockCoverage)
     ProfileVersion |= VARIANT_MASK_BYTE_COVERAGE;
+  if (PGOTemporalInstrumentation)
+    ProfileVersion |= VARIANT_MASK_TEMPORAL_PROF;
   auto IRLevelVersionVariable = new GlobalVariable(
       M, IntTy64, true, GlobalValue::WeakAnyLinkage,
       Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);
@@ -924,6 +930,18 @@ static void instrumentOneFunc(
       InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
 
   uint32_t I = 0;
+  if (PGOTemporalInstrumentation) {
+    NumCounters += PGOBlockCoverage ? 8 : 1;
+    auto &EntryBB = F.getEntryBlock();
+    IRBuilder<> Builder(&EntryBB, EntryBB.getFirstInsertionPt());
+    // llvm.instrprof.timestamp(i8* <name>, i64 <hash>, i32 <num-counters>,
+    //                          i32 <index>)
+    Builder.CreateCall(
+        Intrinsic::getDeclaration(M, Intrinsic::instrprof_timestamp),
+        {Name, CFGHash, Builder.getInt32(NumCounters), Builder.getInt32(I)});
+    I += PGOBlockCoverage ? 8 : 1;
+  }
+
   for (auto *InstrBB : InstrumentBBs) {
     IRBuilder<> Builder(InstrBB, InstrBB->getFirstInsertionPt());
     assert(Builder.GetInsertPoint() != InstrBB->end() &&
