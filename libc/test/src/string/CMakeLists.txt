@@ -14,6 +14,23 @@ add_libc_unittest(
     LibcMemoryHelpers
 )
 
+add_header_library(
+  strchr_test_support
+  HDRS
+    StrchrTest.h
+)
+
+add_libc_unittest(
+  index_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    index_test.cpp
+  DEPENDS
+    libc.src.string.index
+    .strchr_test_support
+)
+
 add_libc_unittest(
   memccpy_test
   SUITE
@@ -55,6 +72,17 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  rindex_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    rindex_test.cpp
+  DEPENDS
+    libc.src.string.rindex
+    .strchr_test_support
+)
+
+add_libc_unittest(
   stpcpy_test
   SUITE
     libc_string_unittests
@@ -92,6 +120,7 @@ add_libc_unittest(
     strchr_test.cpp
   DEPENDS
     libc.src.string.strchr
+    .strchr_test_support
 )
 
 add_libc_unittest(
@@ -306,6 +335,7 @@ add_libc_unittest(
     strrchr_test.cpp
   DEPENDS
     libc.src.string.strrchr
+    .strchr_test_support
 )
 
 add_libc_unittest(

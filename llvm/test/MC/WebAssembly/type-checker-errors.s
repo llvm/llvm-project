@@ -221,9 +221,16 @@ drop_empty_stack_while_popping:
   drop
   end_function
 
-end_block_insufficient_values_on_stack:
-  .functype end_block_insufficient_values_on_stack () -> ()
+end_block_insufficient_values_on_stack_1:
+  .functype end_block_insufficient_values_on_stack_1 () -> ()
   block i32
+# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
+  end_block
+  end_function
+
+end_block_insufficient_values_on_stack_2:
+  .functype end_block_insufficient_values_on_stack_2 () -> ()
+  block () -> (i32)
 # CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
   end_block
   end_function
@@ -251,16 +258,16 @@ end_loop_type_mismatch:
   end_loop
   end_function
 
-end_if_insufficient_values_on_stack:
-  .functype end_if_insufficient_values_on_stack () -> ()
+end_if_insufficient_values_on_stack_1:
+  .functype end_if_insufficient_values_on_stack_1 () -> ()
   i32.const 1
   if i32
 # CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
   end_if
   end_function
 
-end_if_type_mismatch:
-  .functype end_if_type_mismatch () -> ()
+end_if_type_mismatch_1:
+  .functype end_if_type_mismatch_1 () -> ()
   i32.const 1
   if f32
   i32.const 1
@@ -268,42 +275,130 @@ end_if_type_mismatch:
   end_if
   end_function
 
-else_insufficient_values_on_stack:
-  .functype else_insufficient_values_on_stack () -> ()
+end_if_insufficient_values_on_stack_2:
+  .functype end_if_insufficient_values_on_stack_2 () -> ()
   i32.const 1
   if i32
   i32.const 2
   else
-# FIXME: Should complain about insufficient values on the stack.
+# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
   end_if
-# FIXME: Should complain about superflous value on the stack.
+  drop
+  end_function
+
+end_if_type_mismatch_2:
+  .functype end_if_type_mismatch_2 () -> ()
+  i32.const 1
+  if i32
+  i32.const 2
+  else
+  f32.const 3.0
+# CHECK: :[[@LINE+1]]:3: error: end got f32, expected i32
+  end_if
+  drop
+  end_function
+
+else_insufficient_values_on_stack:
+  .functype else_insufficient_values_on_stack () -> ()
+  i32.const 1
+  if i32
+# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
+  else
+  i32.const 0
+  end_if
+  drop
   end_function
 
 else_type_mismatch:
   .functype else_type_mismatch () -> ()
   i32.const 1
   if i32
-  i32.const 2
+  f32.const 0.0
+# CHECK: :[[@LINE+1]]:3: error: popped f32, expected i32
   else
-# FIXME: Should complain about a type mismatch.
-  f32.const 3.0
+  i32.const 0
   end_if
   drop
   end_function
 
+.tagtype tag_i32 i32
+.tagtype tag_f32 f32
+
 end_try_insufficient_values_on_stack:
   .functype end_try_insufficient_values_on_stack () -> ()
   try i32
+  i32.const 0
+  catch_all
 # CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
   end_try
+  drop
   end_function
 
 end_try_type_mismatch:
   .functype end_try_type_mismatch () -> ()
   try i32
-  f32.const 1.0
+  i32.const 0
+  catch tag_f32
 # CHECK: :[[@LINE+1]]:3: error: end got f32, expected i32
   end_try
+  drop
+  end_function
+
+catch_insufficient_values_on_stack:
+  .functype catch_insufficient_values_on_stack () -> ()
+  try i32
+# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
+  catch tag_i32
+  end_try
+  drop
+  end_function
+
+catch_type_mismatch:
+  .functype catch_type_mismatch () -> ()
+  try i32
+  f32.const 1.0
+# CHECK: :[[@LINE+1]]:3: error: popped f32, expected i32
+  catch tag_i32
+  end_try
+  drop
+  end_function
+
+catch_all_insufficient_values_on_stack:
+  .functype catch_all_insufficient_values_on_stack () -> ()
+  try i32
+# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
+  catch_all
+  i32.const 0
+  end_try
+  drop
+  end_function
+
+catch_all_type_mismatch:
+  .functype catch_all_type_mismatch () -> ()
+  try i32
+  f32.const 1.0
+# CHECK: :[[@LINE+1]]:3: error: popped f32, expected i32
+  catch_all
+  i32.const 0
+  end_try
+  drop
+  end_function
+
+delegate_insufficient_values_on_stack:
+  .functype delegate_insufficient_values_on_stack () -> ()
+  try i32
+# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
+  delegate 0
+  drop
+  end_function
+
+delegate_type_mismatch:
+  .functype delegate_type_mismatch () -> ()
+  try i32
+  f32.const 1.0
+# CHECK: :[[@LINE+1]]:3: error: end got f32, expected i32
+  delegate 0
+  drop
   end_function
 
 end_function_empty_stack_while_popping:
@@ -460,7 +555,6 @@ catch_missing_tagtype:
 
 catch_superfluous_value_at_end:
   .functype catch_superfluous_value_at_end () -> ()
-  .tagtype tag_i32 i32
   try
   catch tag_i32
   end_try
@@ -512,4 +606,95 @@ other_insn_test_3:
   f32.const 2.0
   f32.add
 # CHECK: :[[@LINE+1]]:3: error: 1 superfluous return values
+  end_function
+
+# Unreachable code within 'block' does not affect type checking after
+# 'end_block'
+check_after_unreachable_within_block:
+  .functype check_after_unreachable_within_block () -> ()
+  block
+  unreachable
+  end_block
+# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+  drop
+  end_function
+
+# Unreachable code within 'loop' does not affect type checking after 'end_loop'
+check_after_unreachable_within_loop:
+  .functype check_after_unreachable_within_loop () -> ()
+  loop
+  unreachable
+  end_loop
+# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+  drop
+  end_function
+
+# Unreachable code within 'if' does not affect type checking after 'end_if'
+check_after_unreachable_within_if_1:
+  .functype check_after_unreachable_within_if_1 () -> ()
+  i32.const 0
+  if
+  unreachable
+  else
+  unreachable
+  end_if
+# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+  drop
+  end_function
+
+# Unreachable code within 'if' does not affect type checking after 'else'
+check_after_unreachable_within_if_2:
+  .functype check_after_unreachable_within_if_2 () -> ()
+  i32.const 0
+  if
+  unreachable
+  else
+# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+  drop
+  end_if
+  end_function
+
+# Unreachable code within 'try' does not affect type checking after 'end_try'
+check_after_unreachable_within_try_1:
+  .functype check_after_unreachable_within_try_1 () -> ()
+  try
+  unreachable
+  catch_all
+  unreachable
+  end_try
+# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+  drop
+  end_function
+
+# Unreachable code within 'try' does not affect type checking after 'catch'
+check_after_unreachable_within_try_2:
+  .functype check_after_unreachable_within_try_2 () -> ()
+  try
+  unreachable
+  catch tag_i32
+  drop
+# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+  drop
+  end_try
+  end_function
+
+# Unreachable code within 'try' does not affect type checking after 'catch_all'
+check_after_unreachable_within_try_3:
+  .functype check_after_unreachable_within_try_3 () -> ()
+  try
+  unreachable
+  catch_all
+# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+  drop
+  end_try
+  end_function
+
+# Unreachable code within 'try' does not affect type checking after 'delegate'
+check_after_unreachable_within_try_4:
+  .functype check_after_unreachable_within_try_4 () -> ()
+  try
+  unreachable
+  delegate 0
+# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+  drop
   end_function

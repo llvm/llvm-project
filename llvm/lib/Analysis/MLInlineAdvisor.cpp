@@ -41,9 +41,7 @@ static cl::opt<std::string> InteractiveChannelBaseName(
 static cl::opt<bool> InteractiveIncludeDefault(
     "inliner-interactive-include-default", cl::Hidden,
     cl::desc(
-        (Twine("In interactive mode, also send the default policy decision: ") +
-         DefaultDecisionName + ".")
-            .str()));
+        "In interactive mode, also send the default policy decision."));
 
 #if defined(LLVM_HAVE_TF_AOT_INLINERSIZEMODEL)
 // codegen-ed file

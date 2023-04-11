@@ -94,44 +94,6 @@ OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value source,
 /// constructing the necessary DimOp operators.
 SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b);
 
-/// Computes an upper bound for the result `value` of an index computation.
-/// Translates AffineMinOps and AffineApplyOps along the use-def chains of the
-/// index computation to affine constraints and projects out intermediate
-/// values. The method sets `boundMap` to an affine map that given
-/// `boundOperands` evaluates to an upper bound for the index computation.
-///
-/// If constantRequired is true, only returns the constant bounds (potentially
-/// over-approximating) and fails when not possible.
-///
-/// Example:
-/// ```
-/// %dim0 = dim %tensor, %c0
-/// %dim1 = dim %tensor, %c1
-/// %0 = affine.min affine.map<(d0) -> (40, d0)> (%dim0)
-/// %1 = affine.apply affine.map<(d0, d1) -> (d0 + d1)> (%0, %dim1)
-/// ```
-/// getUpperBoundForIndex(%1, boundMap, boundOperands)
-/// set the output parameters to:
-/// - boundMap = affine.map<(d0) -> (d0 + 40)>
-/// - boundOperands = [%dim1]
-void getUpperBoundForIndex(Value value, AffineMap &boundMap,
-                           SmallVectorImpl<Value> &boundOperands,
-                           bool constantRequired = false);
-
-/// Returns a constant upper bound for the result `value` of an index
-/// computation. Calls `getUpperBoundForIndex` and returns a constant upper
-/// bound if the result of `boundMap` is a constant expression and failure
-/// otherwise.
-///
-/// Example:
-/// ```
-/// %0 = affine.min affine.map<(d0) -> (40, d0)> (%d0)
-/// %1 = affine.apply affine.map<(d0) -> (d0 + 2)> (%0)
-/// ```
-/// getConstantUpperBoundForIndex(%1) returns 42
-/// (boundsMap = affine.map<() -> (42)>)
-FailureOr<int64_t> getConstantUpperBoundForIndex(Value value);
-
 /// Create a tensor::PadOp that pads `source` to the size of the statically
 /// sized `type` whose static sizes are assumed to be greater than the dynamic
 /// `source` size. The padding introduces trailing `pad` values until the

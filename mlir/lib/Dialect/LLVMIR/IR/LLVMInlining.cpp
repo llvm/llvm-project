@@ -348,7 +348,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
   }
 
   Value handleArgument(OpBuilder &builder, Operation *call, Operation *callable,
-                       Value argument, Type targetType,
+                       Value argument,
                        DictionaryAttr argumentAttrs) const final {
     if (std::optional<NamedAttribute> attr =
             argumentAttrs.getNamed(LLVM::LLVMDialect::getByValAttrName())) {

@@ -200,11 +200,8 @@ define <2 x i1> @positive_vec_nonsplat(<2 x i32> %arg) {
 
 define <3 x i1> @positive_vec_undef0(<3 x i32> %arg) {
 ; CHECK-LABEL: @positive_vec_undef0(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <3 x i32> [[ARG:%.*]], <i32 -1, i32 undef, i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[ARG]], <i32 128, i32 128, i32 128>
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult <3 x i32> [[T2]], <i32 256, i32 256, i32 256>
-; CHECK-NEXT:    [[T4:%.*]] = and <3 x i1> [[T1]], [[T3]]
-; CHECK-NEXT:    ret <3 x i1> [[T4]]
+; CHECK-NEXT:    [[T4_SIMPLIFIED:%.*]] = icmp ult <3 x i32> [[ARG:%.*]], <i32 128, i32 128, i32 128>
+; CHECK-NEXT:    ret <3 x i1> [[T4_SIMPLIFIED]]
 ;
   %t1 = icmp sgt <3 x i32> %arg, <i32 -1, i32 undef, i32 -1>
   %t2 = add <3 x i32> %arg, <i32 128, i32 128, i32 128>

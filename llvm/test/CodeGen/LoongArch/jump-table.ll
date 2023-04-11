@@ -98,7 +98,7 @@ define void @switch_4_arms(i32 %in, ptr %out) nounwind {
 ; LA32-JT-NEXT:    b .LBB0_5
 ; LA32-JT-NEXT:  .LBB0_4: # %bb4
 ; LA32-JT-NEXT:    ori $a0, $zero, 1
-; LA32-JT-NEXT:  .LBB0_5: # %exit
+; LA32-JT-NEXT:  .LBB0_5:
 ; LA32-JT-NEXT:    st.w $a0, $a1, 0
 ; LA32-JT-NEXT:  .LBB0_6: # %exit
 ; LA32-JT-NEXT:    ret
@@ -123,7 +123,7 @@ define void @switch_4_arms(i32 %in, ptr %out) nounwind {
 ; LA64-JT-NEXT:    b .LBB0_5
 ; LA64-JT-NEXT:  .LBB0_4: # %bb4
 ; LA64-JT-NEXT:    ori $a0, $zero, 1
-; LA64-JT-NEXT:  .LBB0_5: # %exit
+; LA64-JT-NEXT:  .LBB0_5:
 ; LA64-JT-NEXT:    st.w $a0, $a1, 0
 ; LA64-JT-NEXT:  .LBB0_6: # %exit
 ; LA64-JT-NEXT:    ret
