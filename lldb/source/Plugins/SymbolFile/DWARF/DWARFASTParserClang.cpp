@@ -1351,6 +1351,11 @@ TypeSP DWARFASTParserClang::ParsePointerToMemberType(
   Type *class_type =
       dwarf->ResolveTypeUID(attrs.containing_type.Reference(), true);
 
+  // Check to make sure pointers are not NULL before attempting to
+  // dereference them.
+  if ((class_type == nullptr) || (pointee_type == nullptr))
+    return nullptr;
+
   CompilerType pointee_clang_type = pointee_type->GetForwardCompilerType();
   CompilerType class_clang_type = class_type->GetForwardCompilerType();
 
