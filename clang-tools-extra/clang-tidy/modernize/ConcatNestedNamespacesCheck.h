@@ -26,13 +26,16 @@ public:
   SourceRange getNamespaceBackRange(const SourceManager &SM,
                                     const LangOptions &LangOpts) const;
   SourceRange getDefaultNamespaceBackRange() const;
-  NamespaceName getName() const;
+  void appendName(NamespaceName &Str) const;
+  void appendCloseComment(NamespaceName &Str) const;
 };
 
 class ConcatNestedNamespacesCheck : public ClangTidyCheck {
 public:
   ConcatNestedNamespacesCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
+  bool unsupportedNamespace(const NamespaceDecl &ND, bool IsChild) const;
+  bool singleNamedNamespaceChild(const NamespaceDecl &ND) const;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus17;
   }
