@@ -216,10 +216,12 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
       auto *bldr = &converter.getFirOpBuilder();
       auto stackSaveFn = fir::factory::getLlvmStackSave(builder);
       auto stackSaveSymbol = bldr->getSymbolRefAttr(stackSaveFn.getName());
-      mlir::Value sp = bldr->create<fir::CallOp>(
-                               loc, stackSaveFn.getFunctionType().getResults(),
-                               stackSaveSymbol, mlir::ValueRange{})
-                           .getResult(0);
+      mlir::Value sp;
+      fir::CallOp call = bldr->create<fir::CallOp>(
+          loc, stackSaveFn.getFunctionType().getResults(), stackSaveSymbol,
+          mlir::ValueRange{});
+      if (call.getNumResults() != 0)
+        sp = call.getResult(0);
       stmtCtx.attachCleanup([bldr, loc, sp]() {
         auto stackRestoreFn = fir::factory::getLlvmStackRestore(*bldr);
         auto stackRestoreSymbol =
@@ -401,14 +403,16 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
           loc, funcType.getResults(), builder.getStringAttr(procName),
           passObject, operands, nullptr);
     }
-    callResult = dispatch.getResult(0);
     callNumResults = dispatch.getNumResults();
+    if (callNumResults != 0)
+      callResult = dispatch.getResult(0);
   } else {
     // Standard procedure call with fir.call.
     auto call = builder.create<fir::CallOp>(loc, funcType.getResults(),
                                             funcSymbolAttr, operands);
-    callResult = call.getResult(0);
     callNumResults = call.getNumResults();
+    if (callNumResults != 0)
+      callResult = call.getResult(0);
   }
 
   if (caller.mustSaveResult()) {

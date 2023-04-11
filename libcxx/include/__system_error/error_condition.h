@@ -12,8 +12,8 @@
 
 #include <__compare/ordering.h>
 #include <__config>
-#include <__errc>
 #include <__functional/unary_function.h>
+#include <__system_error/errc.h>
 #include <__system_error/error_category.h>
 #include <cstddef>
 #include <string>

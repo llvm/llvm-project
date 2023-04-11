@@ -506,7 +506,14 @@ public:
 #endif
 
   DISPATCHER_CONTEXT *getDispatcherContext() { return &_dispContext; }
-  void setDispatcherContext(DISPATCHER_CONTEXT *disp) { _dispContext = *disp; }
+  void setDispatcherContext(DISPATCHER_CONTEXT *disp) {
+    _dispContext = *disp;
+    _info.lsda = reinterpret_cast<unw_word_t>(_dispContext.HandlerData);
+    if (_dispContext.LanguageHandler) {
+      _info.handler = reinterpret_cast<unw_word_t>(__libunwind_seh_personality);
+    } else
+      _info.handler = 0;
+  }
 
   // libunwind does not and should not depend on C++ library which means that we
   // need our own definition of inline placement new.
@@ -1978,6 +1985,9 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
       uint32_t lastcode = (xdata->CountOfCodes + 1) & ~1;
       const uint32_t *handler = reinterpret_cast<uint32_t *>(&xdata->UnwindCodes[lastcode]);
       _info.lsda = reinterpret_cast<unw_word_t>(handler+1);
+      _dispContext.HandlerData = reinterpret_cast<void *>(_info.lsda);
+      _dispContext.LanguageHandler =
+          reinterpret_cast<EXCEPTION_ROUTINE *>(base + *handler);
       if (*handler) {
         _info.handler = reinterpret_cast<unw_word_t>(__libunwind_seh_personality);
       } else

@@ -134,6 +134,7 @@ extern const std::vector<TensorSpec> FeatureMap;
 extern const char *const DecisionName;
 extern const TensorSpec InlineDecisionSpec;
 extern const char *const DefaultDecisionName;
+extern const TensorSpec DefaultDecisionSpec;
 extern const char *const RewardName;
 
 using InlineFeatures = std::vector<int64_t>;

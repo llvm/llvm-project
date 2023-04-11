@@ -820,7 +820,7 @@ public:   // Higher level manipulation routines.
   /// fragments, return the set of inlined versions (this can be more than
   /// one if a PatFrags record has multiple alternatives).
   static void
-  InlinePatternFragments(TreePatternNodePtr T, TreePattern &TP,
+  InlinePatternFragments(const TreePatternNodePtr &T, TreePattern &TP,
                          std::vector<TreePatternNodePtr> &OutAlternatives);
 
   /// ApplyTypeConstraints - Apply all of the type constraints relevant to

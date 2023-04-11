@@ -13,6 +13,7 @@ add_flang_library(FIRSupport
   LINK_LIBS
   ${dialect_libs}
   MLIRBuiltinToLLVMIRTranslation
+  MLIROpenACCToLLVMIRTranslation
   MLIROpenMPToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport

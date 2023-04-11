@@ -1829,19 +1829,19 @@ public:
     auto input = adaptor.getOperands()[0];
     auto indices = adaptor.getOperands()[1];
 
+    auto valuesTy =
+        op.getValues().getType().dyn_cast_or_null<RankedTensorType>();
     auto resultTy = op.getType().cast<ShapedType>();
 
-    auto dynamicDimsOr = checkHasDynamicBatchDims(
-        rewriter, op, {input, indices, op.getOutput()});
-    if (!dynamicDimsOr.has_value())
-      return rewriter.notifyMatchFailure(
-          op, "tosa.gather currently only supports dynamic batch dimensions");
-    SmallVector<Value> dynamicDims = *dynamicDimsOr;
+    if (!valuesTy)
+      return rewriter.notifyMatchFailure(op, "unranked tensors not supported");
+
+    auto dynamicDims = inferDynamicDimsForGather(
+        rewriter, op.getLoc(), adaptor.getValues(), adaptor.getIndices());
 
     auto resultElementTy = resultTy.getElementType();
 
     auto loc = op.getLoc();
-
     auto emptyTensor =
         rewriter
             .create<tensor::EmptyOp>(loc, resultTy.getShape(), resultElementTy,
@@ -1871,6 +1871,24 @@ public:
         });
     rewriter.replaceOp(op, genericOp.getResult(0));
     return success();
+  }
+
+  static llvm::SmallVector<Value> inferDynamicDimsForGather(OpBuilder &builder,
+                                                            Location loc,
+                                                            Value values,
+                                                            Value indices) {
+    llvm::SmallVector<Value> results;
+
+    auto addDynamicDimension = [&](Value source, int64_t dim) {
+      auto dynamicDim = tensor::createDimValue(builder, loc, source, dim);
+      if (auto dimValue = dynamicDim.value().dyn_cast<Value>())
+        results.push_back(dimValue);
+    };
+
+    addDynamicDimension(values, 0);
+    addDynamicDimension(indices, 1);
+    addDynamicDimension(values, 2);
+    return results;
   }
 };
 
