@@ -11,6 +11,9 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "value-bounds-op-interface"
 
 using namespace mlir;
 using presburger::BoundType;
@@ -61,8 +64,14 @@ void ValueBoundsConstraintSet::addBound(BoundType type, int64_t pos,
   LogicalResult status = cstr.addBound(
       type, pos,
       AffineMap::get(cstr.getNumDimVars(), cstr.getNumSymbolVars(), expr));
-  (void)status;
-  assert(succeeded(status) && "failed to add bound to constraint system");
+  if (failed(status)) {
+    // Non-pure (e.g., semi-affine) expressions are not yet supported by
+    // FlatLinearConstraints. However, we can just ignore such failures here.
+    // Even without this bound, there may be enough information in the
+    // constraint system to compute the requested bound. In case this bound is
+    // actually needed, `computeBound` will return `failure`.
+    LLVM_DEBUG(llvm::dbgs() << "Failed to add bound: " << expr << "\n");
+  }
 }
 
 AffineExpr ValueBoundsConstraintSet::getExpr(Value value,
