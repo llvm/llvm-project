@@ -59,9 +59,9 @@ void ProBoundsArrayToPointerDecayCheck::registerMatchers(MatchFinder *Finder) {
               unless(hasParentIgnoringImpCasts(explicitCastExpr())),
               unless(isInsideOfRangeBeginEndStmt()),
               unless(hasSourceExpression(ignoringParens(stringLiteral()))),
-              unless(hasSourceExpression(ignoringParens(conditionalOperator(
-                  allOf(hasTrueExpression(stringLiteral()),
-                        hasFalseExpression(stringLiteral())))))))
+              unless(hasSourceExpression(ignoringParens(
+                  conditionalOperator(hasTrueExpression(stringLiteral()),
+                                      hasFalseExpression(stringLiteral()))))))
               .bind("cast")),
       this);
 }
