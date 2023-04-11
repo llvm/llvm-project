@@ -97,7 +97,7 @@ define <2 x double> @returned_strange_constant_vector_elt() {
 
 ; Test a vector element that's an undef/poison
 define <3 x double> @returned_undef_constant_vector_elt() {
-; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) <3 x double> @returned_undef_constant_vector_elt() {
+; CHECK-LABEL: define <3 x double> @returned_undef_constant_vector_elt() {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret <3 x double> <double -0.000000e+00, double poison, double undef>
 ;
@@ -106,7 +106,7 @@ define <3 x double> @returned_undef_constant_vector_elt() {
 }
 
 define <2 x double> @returned_qnan_zero_vector() {
-; CHECK-LABEL: define noundef nofpclass(snan inf nzero sub norm) <2 x double> @returned_qnan_zero_vector() {
+; CHECK-LABEL: define noundef <2 x double> @returned_qnan_zero_vector() {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0.000000e+00>
 ;
