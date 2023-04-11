@@ -2,6 +2,40 @@
 ; RUN: llc < %s -mtriple=i686-apple-darwin | FileCheck -check-prefix=DARWIN %s
 ; RUN: opt < %s -O2 | llc -mtriple=x86_64-apple-darwin | FileCheck -check-prefix=DARWIN-OPT %s
 
+define i64 @or_and_fold(i64 %x, i64 %y) {
+; DARWIN-LABEL: or_and_fold:
+; DARWIN:       ## %bb.0:
+; DARWIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; DARWIN-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; DARWIN-NEXT:    retl
+;
+; DARWIN-OPT-LABEL: or_and_fold:
+; DARWIN-OPT:       ## %bb.0:
+; DARWIN-OPT-NEXT:    movq %rdi, %rax
+; DARWIN-OPT-NEXT:    retq
+  %and = and i64 %x, %y
+  %or = or i64 %x, %and
+  ret i64 %or
+}
+
+define i32 @or_and_trunc_fold(i64 %x, i64 %y) {
+; DARWIN-LABEL: or_and_trunc_fold:
+; DARWIN:       ## %bb.0:
+; DARWIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; DARWIN-NEXT:    retl
+;
+; DARWIN-OPT-LABEL: or_and_trunc_fold:
+; DARWIN-OPT:       ## %bb.0:
+; DARWIN-OPT-NEXT:    movq %rdi, %rax
+; DARWIN-OPT-NEXT:    ## kill: def $eax killed $eax killed $rax
+; DARWIN-OPT-NEXT:    retq
+  %tx = trunc i64 %x to i32
+  %and = and i64 %x, %y
+  %tand = trunc i64 %and to i32
+  %or = or i32 %tx, %tand
+  ret i32 %or
+}
+
 ; The dag combiner should fold together (x&127)|(y&16711680) -> (x|y)&c1
 ; in this case.
 
