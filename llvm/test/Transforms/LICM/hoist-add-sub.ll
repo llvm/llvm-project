@@ -114,6 +114,57 @@ failed:
   ret i32 -2
 }
 
+; Range info is missing for x, cannot prove no-overflow. Should not hoist.
+define i32 @test_01_neg(ptr %p, ptr %x_p, ptr %length_p) {
+; CHECK-LABEL: define i32 @test_01_neg
+; CHECK-SAME: (ptr [[P:%.*]], ptr [[X_P:%.*]], ptr [[LENGTH_P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P]], align 4
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, ptr [[LENGTH_P]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[ARITH:%.*]] = sub nsw i32 [[X]], [[IV]]
+; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp slt i32 [[ARITH]], 4
+; CHECK-NEXT:    br i1 [[X_CHECK]], label [[OUT_OF_BOUNDS:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
+; CHECK-NEXT:    store i32 1, ptr [[EL_PTR]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[LENGTH]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i32 [ [[IV_NEXT]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_NEXT_LCSSA]]
+; CHECK:       out_of_bounds:
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  %x = load i32, ptr %x_p
+  %length = load i32, ptr %length_p, !range !0
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %arith = sub nsw i32 %x, %iv
+  %x_check = icmp slt i32 %arith, 4
+  br i1 %x_check, label %out_of_bounds, label %backedge
+
+backedge:
+  %el.ptr = getelementptr i32, ptr %p, i32 %iv
+  store i32 1, ptr %el.ptr
+  %iv.next = add nuw nsw i32 %iv, 4
+  %loop_cond = icmp slt i32 %iv.next, %length
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv.next
+
+out_of_bounds:
+  ret i32 -1
+}
+
+
 ; TODO: x + iv < 4 ==> iv < 4 - x
 define i32 @test_02(ptr %p, ptr %x_p, ptr %length_p) {
 ; CHECK-LABEL: define i32 @test_02
