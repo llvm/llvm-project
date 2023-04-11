@@ -779,8 +779,8 @@ SBProcess::GetStructuredDataFromEvent(const lldb::SBEvent &event) {
 bool SBProcess::EventIsProcessEvent(const SBEvent &event) {
   LLDB_INSTRUMENT_VA(event);
 
-  return (event.GetBroadcasterClass() == SBProcess::GetBroadcasterClass()) &&
-         !EventIsStructuredDataEvent(event);
+  return Process::ProcessEventData::GetEventDataFromEvent(event.get()) !=
+         nullptr;
 }
 
 bool SBProcess::EventIsStructuredDataEvent(const lldb::SBEvent &event) {
