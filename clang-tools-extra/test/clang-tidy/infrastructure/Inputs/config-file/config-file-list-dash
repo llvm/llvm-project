@@ -1,0 +1,5 @@
+Checks:
+  - "-*"
+  - "hicpp-uppercase-literal-suffix"
+  - "hicpp-use-auto"
+  - "hicpp-use-emplace"
