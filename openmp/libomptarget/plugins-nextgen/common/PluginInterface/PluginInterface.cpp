@@ -1099,21 +1099,6 @@ Error GenericDeviceTy::initDeviceInfo(__tgt_device_info *DeviceInfo) {
   return initDeviceInfoImpl(DeviceInfo);
 }
 
-Error GenericDeviceTy::setCoarseGrainMemory(void *ptr, int64_t size) {
-  assert(ptr != nullptr);
-  assert(size > 0);
-
-  return setCoarseGrainMemoryImpl(ptr, size);
-}
-
-uint32_t GenericDeviceTy::queryCoarseGrainMemory(const void *ptr,
-                                                 int64_t size) {
-  assert(ptr != nullptr);
-  assert(size > 0);
-
-  return queryCoarseGrainMemory(ptr, size);
-}
-
 Error GenericDeviceTy::printInfo() {
   // TODO: Print generic information here
   return printInfoImpl();
@@ -1357,10 +1342,6 @@ void *__tgt_rtl_data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
     return nullptr;
   }
   assert(*AllocOrErr && "Null pointer upon successful allocation");
-
-  // Method has no effect when the CUDA Plugin is used.
-  if (Kind == TARGET_ALLOC_SHARED)
-    __tgt_rtl_set_coarse_grain_mem_region(DeviceId, HostPtr, Size);
 
   return *AllocOrErr;
 }
@@ -1644,38 +1625,6 @@ int32_t __tgt_rtl_init_device_info(int32_t DeviceId,
   }
 
   return OFFLOAD_SUCCESS;
-}
-
-// Register mapped or allocated memory (with omp_target_alloc or omp_alloc)
-// as coarse grain
-// \arg DeviceId is the ID of the device for which the memory should be switched
-// to coarse grain mode. \arg ptr is the base pointer of the region to be
-// registered as coarse grain \arg size is the size of the memory region to be
-// registered as coarse grain
-int __tgt_rtl_set_coarse_grain_mem_region(int32_t DeviceId, void *ptr,
-                                          int64_t size) {
-
-  auto SetMemToCoarseGrainOrErr =
-      Plugin::get().getDevice(DeviceId).setCoarseGrainMemory(ptr, size);
-
-  if (!SetMemToCoarseGrainOrErr) {
-    REPORT("Failure switching memory region to coarse grain mode (ptr: %p, "
-           "size: %ld)\n",
-           ptr, size);
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-// Query if [ptr, ptr+size] belongs to coarse grain memory region
-int32_t __tgt_rtl_query_coarse_grain_mem_region(int32_t DeviceId,
-                                                const void *ptr, int64_t size) {
-
-  auto QueryCoarseGrainReturnValue =
-      Plugin::get().getDevice(DeviceId).queryCoarseGrainMemory(ptr, size);
-
-  return QueryCoarseGrainReturnValue;
 }
 
 #ifdef __cplusplus

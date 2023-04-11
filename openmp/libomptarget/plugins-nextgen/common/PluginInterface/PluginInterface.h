@@ -650,14 +650,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error initDeviceInfo(__tgt_device_info *DeviceInfo);
   virtual Error initDeviceInfoImpl(__tgt_device_info *DeviceInfo) = 0;
 
-  // Switch memory region to coarse grain mode
-  Error setCoarseGrainMemory(void *ptr, int64_t size);
-  virtual Error setCoarseGrainMemoryImpl(void *ptr, int64_t size) {}
-  
-  // Query if memory region is coarse grained
-  uint32_t queryCoarseGrainMemory(const void *ptr, int64_t size);
-  virtual uint32_t queryCoarseGrainMemoryImpl(const void *ptr, int64_t size) { return 0; }
-
   /// Create an event.
   Error createEvent(void **EventPtrStorage);
   virtual Error createEventImpl(void **EventPtrStorage) = 0;
