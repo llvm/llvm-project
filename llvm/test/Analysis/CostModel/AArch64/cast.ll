@@ -38,7 +38,6 @@ define void @ext() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z2i16i64 = zext <2 x i16> undef to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s2i32i64 = sext <2 x i32> undef to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z2i32i64 = zext <2 x i32> undef to <2 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z4i1i32 = zext <4 x i1> undef to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4i8i16 = sext <4 x i8> undef to <4 x i16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z4i8i16 = zext <4 x i8> undef to <4 x i16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4i8i32 = sext <4 x i8> undef to <4 x i32>
@@ -110,9 +109,6 @@ define void @ext() {
   %z2i16i64 = zext <2 x i16> undef to <2 x i64>
   %s2i32i64 = sext <2 x i32> undef to <2 x i64>
   %z2i32i64 = zext <2 x i32> undef to <2 x i64>
-
-  %z4i1i32 = zext <4 x i1>  undef to <4 x i32>
-
 
   %s4i8i16 = sext <4 x i8>  undef to <4 x i16>
   %z4i8i16 = zext <4 x i8>  undef to <4 x i16>

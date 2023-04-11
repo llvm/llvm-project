@@ -44,9 +44,9 @@ define void @add() #0 {
 ; CHECK: cost of [[#div(511,VBITS)+1]] for instruction:   %add512.i16 = add <32 x i16> undef, undef
 ; CHECK: cost of [[#div(511,VBITS)+1]] for instruction:   %add512.i32 = add <16 x i32> undef, undef
 ; CHECK: cost of [[#div(511,VBITS)+1]] for instruction:   %add512.i64 = add <8 x i64> undef, undef
-; CHECK: cost of [[#div(511,VBITS)+1]] for instruction:   %add512.f16 = fadd <32 x half> undef, undef
-; CHECK: cost of [[#div(511,VBITS)+1]] for instruction:   %add512.f32 = fadd <16 x float> undef, undef
-; CHECK: cost of [[#div(511,VBITS)+1]] for instruction:   %add512.f64 = fadd <8 x double> undef, undef
+; CHECK: cost of [[#mul(div(511,VBITS)+1,2)]] for instruction:   %add512.f16 = fadd <32 x half> undef, undef
+; CHECK: cost of [[#mul(div(511,VBITS)+1,2)]] for instruction:   %add512.f32 = fadd <16 x float> undef, undef
+; CHECK: cost of [[#mul(div(511,VBITS)+1,2)]] for instruction:   %add512.f64 = fadd <8 x double> undef, undef
   %add512.i8 = add <64 x i8> undef, undef
   %add512.i16 = add <32 x i16> undef, undef
   %add512.i32 = add <16 x i32> undef, undef
