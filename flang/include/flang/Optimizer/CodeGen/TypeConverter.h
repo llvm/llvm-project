@@ -13,9 +13,9 @@
 #ifndef FORTRAN_OPTIMIZER_CODEGEN_TYPECONVERTER_H
 #define FORTRAN_OPTIMIZER_CODEGEN_TYPECONVERTER_H
 
-#include "TBAABuilder.h"
-#include "Target.h"
 #include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
+#include "flang/Optimizer/CodeGen/TBAABuilder.h"
+#include "flang/Optimizer/CodeGen/Target.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"

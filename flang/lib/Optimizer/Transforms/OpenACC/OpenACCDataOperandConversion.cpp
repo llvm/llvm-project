@@ -23,7 +23,7 @@ namespace fir {
 } // namespace fir
 
 #define DEBUG_TYPE "flang-openacc-conversion"
-#include "../CodeGen/TypeConverter.h"
+#include "flang/Optimizer/CodeGen/TypeConverter.h"
 
 using namespace fir;
 using namespace mlir;
