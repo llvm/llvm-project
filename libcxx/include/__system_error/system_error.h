@@ -35,7 +35,7 @@ public:
   system_error(const system_error&) _NOEXCEPT = default;
   ~system_error() _NOEXCEPT override;
 
-  _LIBCPP_INLINE_VISIBILITY const error_code& code() const _NOEXCEPT { return __ec_; }
+  _LIBCPP_HIDE_FROM_ABI const error_code& code() const _NOEXCEPT { return __ec_; }
 
 private:
   static string __init(const error_code&, string);
@@ -44,4 +44,5 @@ private:
 _LIBCPP_NORETURN _LIBCPP_FUNC_VIS void __throw_system_error(int __ev, const char* __what_arg);
 
 _LIBCPP_END_NAMESPACE_STD
+
 #endif // _LIBCPP___SYSTEM_ERROR_SYSTEM_ERROR_H
