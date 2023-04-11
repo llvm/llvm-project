@@ -1007,14 +1007,30 @@ static std::string getAPIntText(APInt Val) {
 template <typename NodeTy>
 static SourceLocation getEndCharLoc(const NodeTy *Node, const SourceManager &SM,
                                     const LangOptions &LangOpts) {
-  return Lexer::getLocForEndOfToken(Node->getEndLoc(), 1, SM, LangOpts);
+  unsigned TkLen = Lexer::MeasureTokenLength(Node->getEndLoc(), SM, LangOpts);
+  SourceLocation Loc = Node->getEndLoc().getLocWithOffset(TkLen - 1);
+
+  // We expect `Loc` to be valid. The location is obtained by moving forward
+  // from the beginning of the token 'len(token)-1' characters. The file ID of
+  // the locations within a token must be consistent.
+  assert(Loc.isValid() && "Expected the source location of the last"
+                          "character of an AST Node to be always valid");
+  return Loc;
 }
 
 // Return the source location just past the last character of the AST `Node`.
 template <typename NodeTy>
 static SourceLocation getPastLoc(const NodeTy *Node, const SourceManager &SM,
                                  const LangOptions &LangOpts) {
-  return Lexer::getLocForEndOfToken(Node->getEndLoc(), 0, SM, LangOpts);
+  SourceLocation Loc =
+      Lexer::getLocForEndOfToken(Node->getEndLoc(), 0, SM, LangOpts);
+
+  // We expect `Loc` to be valid as it is either associated to a file ID or
+  //   it must be the end of a macro expansion. (see
+  //   `Lexer::getLocForEndOfToken`)
+  assert(Loc.isValid() && "Expected the source location just past the last "
+                          "character of an AST Node to be always valid");
+  return Loc;
 }
 
 // Return text representation of an `Expr`.
@@ -1179,9 +1195,25 @@ fixUPCAddressofArraySubscriptWithSpan(const UnaryOperator *Node) {
 static FixItList
 populateInitializerFixItWithSpan(const Expr *Init, const ASTContext &Ctx,
                                  const StringRef UserFillPlaceHolder) {
-  FixItList FixIts{};
   const SourceManager &SM = Ctx.getSourceManager();
   const LangOptions &LangOpts = Ctx.getLangOpts();
+
+  // If `Init` has a constant value that is (or equivalent to) a
+  // NULL pointer, we use the default constructor to initialize the span
+  // object, i.e., a `std:span` variable declaration with no initializer.
+  // So the fix-it is just to remove the initializer.
+  if (Init->isNullPointerConstant(
+          std::remove_const_t<ASTContext &>(Ctx),
+          // FIXME: Why does this function not ask for `const ASTContext
+          // &`? It should. Maybe worth an NFC patch later.
+          Expr::NullPointerConstantValueDependence::
+              NPC_ValueDependentIsNotNull)) {
+    SourceRange SR(Init->getBeginLoc(), getEndCharLoc(Init, SM, LangOpts));
+
+    return {FixItHint::CreateRemoval(SR)};
+  }
+
+  FixItList FixIts{};
   std::string ExtentText = UserFillPlaceHolder.data();
   StringRef One = "1";
 
@@ -1254,8 +1286,8 @@ static FixItList fixVarDeclWithSpan(const VarDecl *D, const ASTContext &Ctx,
     FixItList InitFixIts =
         populateInitializerFixItWithSpan(Init, Ctx, UserFillPlaceHolder);
 
-    if (InitFixIts.empty())
-      return {}; // Something wrong with fixing initializer, give up
+    assert(!InitFixIts.empty() &&
+           "Unable to fix initializer of unsafe variable declaration");
     // The loc right before the initializer:
     ReplacementLastLoc = Init->getBeginLoc().getLocWithOffset(-1);
     FixIts.insert(FixIts.end(), std::make_move_iterator(InitFixIts.begin()),
@@ -1318,8 +1350,8 @@ static bool overlapWithMacro(const FixItList &FixIts) {
   // FIXME: For now we only check if the range (or the first token) is (part of)
   // a macro expansion.  Ideally, we want to check for all tokens in the range.
   return llvm::any_of(FixIts, [](const FixItHint &Hint) {
-    auto BeginLoc = Hint.RemoveRange.getBegin();
-    if (BeginLoc.isMacroID())
+    auto Range = Hint.RemoveRange;
+    if (Range.getBegin().isMacroID() || Range.getEnd().isMacroID())
       // If the range (or the first token) is (part of) a macro expansion:
       return true;
     return false;
