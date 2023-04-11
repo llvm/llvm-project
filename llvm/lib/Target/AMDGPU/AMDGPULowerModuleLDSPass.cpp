@@ -20,9 +20,8 @@
 // This model means the GPU runtime can specify the amount of memory allocated.
 // If this is more than the kernel assumed, the excess can be made available
 // using a language specific feature, which IR represents as a variable with
-// no initializer. This feature is not yet implemented for non-kernel functions.
-// This lowering could be extended to handle that use case, but would probably
-// require closer integration with promoteAllocaToLDS.
+// no initializer. This feature is referred to here as "Dynamic LDS" and is
+// lowered slightly differently to the normal case.
 //
 // Consequences of this GPU feature:
 // - memory is limited and exceeding it halts compilation
@@ -65,10 +64,10 @@
 //   Kernel |                Yes |               Yes |              No |
 //   Hybrid |                Yes |           Partial |             Yes |
 //
-// Module spends LDS memory to save cycles. Table spends cycles and global
-// memory to save LDS. Kernel is as fast as kernel allocation but only works
-// for variables that are known reachable from a single kernel. Hybrid picks
-// between all three. When forced to choose between LDS and cycles it minimises
+// "Module" spends LDS memory to save cycles. "Table" spends cycles and global
+// memory to save LDS. "Kernel" is as fast as kernel allocation but only works
+// for variables that are known reachable from a single kernel. "Hybrid" picks
+// between all three. When forced to choose between LDS and cycles we minimise
 // LDS use.
 
 // The "module" lowering implemented here finds LDS variables which are used by
@@ -114,6 +113,68 @@
 // - Implementations that instantiate templates per-kernel where those templates
 //   use LDS are expected to hit the "Kernel" lowering strategy
 // - The runtime properties impose a cost in compiler implementation complexity
+//
+// Dynamic LDS implementation
+// Dynamic LDS is lowered similarly to the "table" strategy above and uses the
+// same intrinsic to identify which kernel is at the root of the dynamic call
+// graph. This relies on the specified behaviour that all dynamic LDS variables
+// alias one another, i.e. are at the same address, with respect to a given
+// kernel. Therefore this pass creates new dynamic LDS variables for each kernel
+// that allocates any dynamic LDS and builds a table of addresses out of those.
+// The AMDGPUPromoteAlloca pass skips kernels that use dynamic LDS.
+// The corresponding optimisation for "kernel" lowering where the table lookup
+// is elided is not implemented.
+//
+//
+// Implementation notes / limitations
+// A single LDS global variable represents an instance per kernel that can reach
+// said variables. This pass essentially specialises said variables per kernel.
+// Handling ConstantExpr during the pass complicated this significantly so now
+// all ConstantExpr uses of LDS variables are expanded to instructions. This
+// may need amending when implementing non-undef initialisers.
+//
+// Lowering is split between this IR pass and the back end. This pass chooses
+// where given variables should be allocated and marks them with metadata,
+// MD_absolute_symbol. The backend places the variables in coincidentally the
+// same location and raises a fatal error if something has gone awry. This works
+// in practice because the only pass between this one and the backend that
+// changes LDS is PromoteAlloca and the changes it makes do not conflict.
+//
+// Addresses are written to constant global arrays based on the same metadata.
+//
+// The backend lowers LDS variables in the order of traversal of the function.
+// This is at odds with the deterministic layout required. The workaround is to
+// allocate the fixed-address variables immediately upon starting the function
+// where they can be placed as intended. This requires a means of mapping from
+// the function to the variables that it allocates. For the module scope lds,
+// this is via metadata indicating whether the variable is not required. If a
+// pass deletes that metadata, a fatal error on disagreement with the absolute
+// symbol metadata will occur. For kernel scope and dynamic, this is by _name_
+// correspondence between the function and the variable. It requires the
+// kernel to have a name (which is only a limitation for tests in practice) and
+// for nothing to rename the corresponding symbols. This is a hazard if the pass
+// is run multiple times during debugging. Alternative schemes considered all
+// involve bespoke metadata.
+//
+// If the name correspondence can be replaced, multiple distinct kernels that
+// have the same memory layout can map to the same kernel id (as the address
+// itself is handled by the absolute symbol metadata) and that will allow more
+// uses of the "kernel" style faster lowering and reduce the size of the lookup
+// tables.
+//
+// There is a test that checks this does not fire for a graphics shader. This
+// lowering is expected to work for graphics if the isKernel test is changed.
+//
+// The current markUsedByKernel is sufficient for PromoteAlloca but is elided
+// before codegen. Replacing this with an equivalent intrinsic which lasts until
+// shortly after the machine function lowering of LDS would help break the name
+// mapping. The other part needed is probably to amend PromoteAlloca to embed
+// the LDS variables it creates in the same struct created here. That avoids the
+// current hazard where a PromoteAlloca LDS variable might be allocated before
+// the kernel scope (and thus error on the address check). Given a new invariant
+// that no LDS variables exist outside of the structs managed here, and an
+// intrinsic that lasts until after the LDS frame lowering, it should be
+// possible to drop the name mapping and fold equivalent memory layouts.
 //
 //===----------------------------------------------------------------------===//
 
