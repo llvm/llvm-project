@@ -105,6 +105,8 @@ STATISTIC(NumLoadPromoted, "Number of load-only promotions");
 STATISTIC(NumLoadStorePromoted, "Number of load and store promotions");
 STATISTIC(NumMinMaxHoisted,
           "Number of min/max expressions hoisted out of the loop");
+STATISTIC(NumGEPsHoisted,
+          "Number of geps reassociated and hoisted out of the loop");
 
 /// Memory promotion is enabled by default.
 static cl::opt<bool>
@@ -2553,6 +2555,7 @@ static bool hoistArithmetics(Instruction &I, Loop &L,
   // into (x < min(INV1, INV2)), and hoisting the invariant part of this
   // expression out of the loop.
   if (hoistMinMax(I, L, SafetyInfo, MSSAU)) {
+    ++NumHoisted;
     ++NumMinMaxHoisted;
     return true;
   }
@@ -2560,6 +2563,7 @@ static bool hoistArithmetics(Instruction &I, Loop &L,
   // Try to hoist GEPs by reassociation.
   if (hoistGEP(I, L, SafetyInfo, MSSAU, AC, DT)) {
     ++NumHoisted;
+    ++NumGEPsHoisted;
     return true;
   }
 
