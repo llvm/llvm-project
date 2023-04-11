@@ -962,7 +962,7 @@ public:
   /// (at every loop iteration).  It is, at the same time, the minimum number
   /// of times S is divisible by 2.  For example, given {4,+,8} it returns 2.
   /// If S is guaranteed to be 0, it returns the bitwidth of S.
-  uint32_t GetMinTrailingZeros(const SCEV *S);
+  uint32_t getMinTrailingZeros(const SCEV *S);
 
   /// Determine the unsigned range for a particular SCEV.
   /// NOTE: This returns a copy of the reference returned by getRangeRef.
@@ -1438,7 +1438,7 @@ private:
   ArrayRef<Value *> getSCEVValues(const SCEV *S);
 
   /// Private helper method for the GetMinTrailingZeros method
-  uint32_t GetMinTrailingZerosImpl(const SCEV *S);
+  uint32_t getMinTrailingZerosImpl(const SCEV *S);
 
   /// Information about the number of times a particular loop exit may be
   /// reached before exiting the loop.
