@@ -2514,8 +2514,12 @@ static bool hoistGEP(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   if (!L.isLoopInvariant(SrcPtr) || !all_of(GEP->indices(), LoopInvariant))
     return false;
 
-  assert(!all_of(Src->indices(), LoopInvariant) &&
-         "Would have been hoisted already");
+  // This can only happen if !AllowSpeculation, otherwise this would already be
+  // handled.
+  // FIXME: Should we respect AllowSpeculation in these reassociation folds?
+  // The flag exists to prevent metadata dropping, which is not relevant here.
+  if (all_of(Src->indices(), LoopInvariant))
+    return false;
 
   // The swapped GEPs are inbounds if both original GEPs are inbounds
   // and the sign of the offsets is the same. For simplicity, only
