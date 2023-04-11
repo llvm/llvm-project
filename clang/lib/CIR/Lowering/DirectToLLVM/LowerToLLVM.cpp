@@ -37,6 +37,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace cir;
 using namespace llvm;
@@ -389,9 +390,15 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::CallOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+    llvm::SmallVector<mlir::Type, 8> llvmResults;
+    auto cirResults = op.getResultTypes();
+
+    if (getTypeConverter()->convertTypes(cirResults, llvmResults).failed())
+      return mlir::failure();
+
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-        op, op.getResultTypes(), op.getCalleeAttr(), op.getArgOperands());
-    return mlir::LogicalResult::success();
+        op, llvmResults, op.getCalleeAttr(), adaptor.getOperands());
+    return mlir::success();
   }
 };
 
