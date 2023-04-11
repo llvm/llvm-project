@@ -105,6 +105,8 @@ add_entrypoint_object(
     strchr.cpp
   HDRS
     strchr.h
+  DEPENDS
+    .string_utils
 )
 
 add_entrypoint_object(
@@ -323,6 +325,8 @@ add_entrypoint_object(
     strrchr.cpp
   HDRS
     strrchr.h
+  DEPENDS
+    .string_utils
 )
 
 add_entrypoint_object(
