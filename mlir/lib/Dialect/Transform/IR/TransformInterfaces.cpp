@@ -669,8 +669,14 @@ checkRepeatedConsumptionInOperand(ArrayRef<T> payload,
 
 DiagnosedSilenceableFailure
 transform::TransformState::applyTransform(TransformOpInterface transform) {
-  LLVM_DEBUG(DBGS() << "\n"; DBGS() << "applying: " << transform << "\n");
-  LLVM_DEBUG(DBGS() << "On top-level payload:\n" << *getTopLevel(););
+  LLVM_DEBUG({
+    DBGS() << "applying: ";
+    transform->print(llvm::dbgs(), OpPrintingFlags().skipRegions());
+    llvm::dbgs() << "\n";
+  });
+  DEBUG_WITH_TYPE(DEBUG_TYPE_FULL,
+                  DBGS() << "Top-level payload before application:\n"
+                         << *getTopLevel() << "\n");
   auto printOnFailureRAII = llvm::make_scope_exit([this] {
     (void)this;
     LLVM_DEBUG(DBGS() << "Failing Top-level payload:\n"; getTopLevel()->print(
