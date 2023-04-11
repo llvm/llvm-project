@@ -2408,11 +2408,19 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     // We know that they are legal. See LowerAdd in ISelLowering.
     return LT.first;
 
+  case ISD::FNEG:
   case ISD::FADD:
   case ISD::FSUB:
+    // Increase the cost for half and bfloat types if not architecturally
+    // supported.
+    if ((Ty->getScalarType()->isHalfTy() && !ST->hasFullFP16()) ||
+        (Ty->getScalarType()->isBFloatTy() && !ST->hasBF16()))
+      return 2 * LT.first;
+    if (!Ty->getScalarType()->isFP128Ty())
+      return LT.first;
+    LLVM_FALLTHROUGH;
   case ISD::FMUL:
   case ISD::FDIV:
-  case ISD::FNEG:
     // These nodes are marked as 'custom' just to lower them to SVE.
     // We know said lowering will incur no additional cost.
     if (!Ty->getScalarType()->isFP128Ty())
