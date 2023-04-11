@@ -379,10 +379,7 @@ define i1 @fold_mask_cmps_to_true_logical(i32 %x) {
 
 define <2 x i1> @nomask_splat_and_B_allones(<2 x i32> %A) {
 ; CHECK-LABEL: @nomask_splat_and_B_allones(
-; CHECK-NEXT:    [[TST1:%.*]] = icmp slt <2 x i32> [[A:%.*]], <i32 0, i32 poison>
-; CHECK-NEXT:    [[MASK2:%.*]] = and <2 x i32> [[A]], <i32 1879048192, i32 1879048192>
-; CHECK-NEXT:    [[TST2:%.*]] = icmp eq <2 x i32> [[MASK2]], <i32 1879048192, i32 1879048192>
-; CHECK-NEXT:    [[RES:%.*]] = and <2 x i1> [[TST1]], [[TST2]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp ugt <2 x i32> [[A:%.*]], <i32 -268435457, i32 -268435457>
 ; CHECK-NEXT:    ret <2 x i1> [[RES]]
 ;
   %tst1 = icmp slt <2 x i32> %A, <i32 0, i32 poison>
@@ -394,10 +391,8 @@ define <2 x i1> @nomask_splat_and_B_allones(<2 x i32> %A) {
 
 define <2 x i1> @nomask_splat_and_B_mixed(<2 x i32> %A) {
 ; CHECK-LABEL: @nomask_splat_and_B_mixed(
-; CHECK-NEXT:    [[TST1:%.*]] = icmp sgt <2 x i32> [[A:%.*]], <i32 -1, i32 poison>
-; CHECK-NEXT:    [[MASK2:%.*]] = and <2 x i32> [[A]], <i32 1879048192, i32 1879048192>
-; CHECK-NEXT:    [[TST2:%.*]] = icmp eq <2 x i32> [[MASK2]], <i32 1879048192, i32 1879048192>
-; CHECK-NEXT:    [[RES:%.*]] = and <2 x i1> [[TST1]], [[TST2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 -268435456, i32 -268435456>
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 1879048192, i32 1879048192>
 ; CHECK-NEXT:    ret <2 x i1> [[RES]]
 ;
   %tst1 = icmp sgt <2 x i32> %A, <i32 -1, i32 poison>
