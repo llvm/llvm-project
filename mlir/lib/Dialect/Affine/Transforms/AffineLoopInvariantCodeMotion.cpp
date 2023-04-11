@@ -99,7 +99,7 @@ bool isOpLoopInvariant(Operation &op, Value indVar, ValueRange iterArgs,
   } else if (!matchPattern(&op, m_Constant())) {
     // Register op in the set of ops that have users.
     opsWithUsers.insert(&op);
-    if (isa<AffineMapAccessInterface>(op)) {
+    if (isa<AffineReadOpInterface, AffineWriteOpInterface>(op)) {
       auto read = dyn_cast<AffineReadOpInterface>(op);
       Value memref = read ? read.getMemRef()
                           : cast<AffineWriteOpInterface>(op).getMemRef();

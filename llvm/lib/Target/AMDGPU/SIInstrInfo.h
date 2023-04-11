@@ -41,6 +41,41 @@ class ScheduleHazardRecognizer;
 static const MachineMemOperand::Flags MONoClobber =
     MachineMemOperand::MOTargetFlag1;
 
+/// Utility to store machine instructions worklist.
+struct SIInstrWorklist {
+  SIInstrWorklist() : InstrList() {}
+
+  void insert(MachineInstr *MI);
+
+  MachineInstr *top() const {
+    auto iter = InstrList.begin();
+    return *iter;
+  }
+
+  void erase_top() {
+    auto iter = InstrList.begin();
+    InstrList.erase(iter);
+  }
+
+  bool empty() const { return InstrList.empty(); }
+
+  void clear() {
+    InstrList.clear();
+    DeferredList.clear();
+  }
+
+  bool isDeferred(MachineInstr *MI);
+
+  SetVector<MachineInstr *> &getDeferredList() { return DeferredList; }
+
+private:
+  /// InstrList contains the MachineInstrs.
+  SetVector<MachineInstr *> InstrList;
+  /// Deferred instructions are specific MachineInstr
+  /// that will be added by insert method.
+  SetVector<MachineInstr *> DeferredList;
+};
+
 class SIInstrInfo final : public AMDGPUGenInstrInfo {
 private:
   const SIRegisterInfo RI;
@@ -81,57 +116,50 @@ private:
   void swapOperands(MachineInstr &Inst) const;
 
   std::pair<bool, MachineBasicBlock *>
-  moveScalarAddSub(SetVectorType &Worklist, MachineInstr &Inst,
+  moveScalarAddSub(SIInstrWorklist &Worklist, MachineInstr &Inst,
                    MachineDominatorTree *MDT = nullptr) const;
 
-  void lowerSelect(SetVectorType &Worklist, MachineInstr &Inst,
+  void lowerSelect(SIInstrWorklist &Worklist, MachineInstr &Inst,
                    MachineDominatorTree *MDT = nullptr) const;
 
-  void lowerScalarAbs(SetVectorType &Worklist,
-                      MachineInstr &Inst) const;
+  void lowerScalarAbs(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
 
-  void lowerScalarXnor(SetVectorType &Worklist,
-                       MachineInstr &Inst) const;
+  void lowerScalarXnor(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
 
-  void splitScalarNotBinop(SetVectorType &Worklist,
-                           MachineInstr &Inst,
+  void splitScalarNotBinop(SIInstrWorklist &Worklist, MachineInstr &Inst,
                            unsigned Opcode) const;
 
-  void splitScalarBinOpN2(SetVectorType &Worklist,
-                          MachineInstr &Inst,
+  void splitScalarBinOpN2(SIInstrWorklist &Worklist, MachineInstr &Inst,
                           unsigned Opcode) const;
 
-  void splitScalar64BitUnaryOp(SetVectorType &Worklist,
-                               MachineInstr &Inst, unsigned Opcode,
-                               bool Swap = false) const;
+  void splitScalar64BitUnaryOp(SIInstrWorklist &Worklist, MachineInstr &Inst,
+                               unsigned Opcode, bool Swap = false) const;
 
-  void splitScalar64BitAddSub(SetVectorType &Worklist, MachineInstr &Inst,
+  void splitScalar64BitAddSub(SIInstrWorklist &Worklist, MachineInstr &Inst,
                               MachineDominatorTree *MDT = nullptr) const;
 
-  void splitScalar64BitBinaryOp(SetVectorType &Worklist, MachineInstr &Inst,
+  void splitScalar64BitBinaryOp(SIInstrWorklist &Worklist, MachineInstr &Inst,
                                 unsigned Opcode,
                                 MachineDominatorTree *MDT = nullptr) const;
 
-  void splitScalar64BitXnor(SetVectorType &Worklist, MachineInstr &Inst,
-                                MachineDominatorTree *MDT = nullptr) const;
+  void splitScalar64BitXnor(SIInstrWorklist &Worklist, MachineInstr &Inst,
+                            MachineDominatorTree *MDT = nullptr) const;
 
-  void splitScalar64BitBCNT(SetVectorType &Worklist,
+  void splitScalar64BitBCNT(SIInstrWorklist &Worklist,
                             MachineInstr &Inst) const;
-  void splitScalar64BitBFE(SetVectorType &Worklist,
-                           MachineInstr &Inst) const;
-  void movePackToVALU(SetVectorType &Worklist,
-                      MachineRegisterInfo &MRI,
+  void splitScalar64BitBFE(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
+  void movePackToVALU(SIInstrWorklist &Worklist, MachineRegisterInfo &MRI,
                       MachineInstr &Inst) const;
 
   void addUsersToMoveToVALUWorklist(Register Reg, MachineRegisterInfo &MRI,
-                                    SetVectorType &Worklist) const;
+                                    SIInstrWorklist &Worklist) const;
 
   void addSCCDefUsersToVALUWorklist(MachineOperand &Op,
                                     MachineInstr &SCCDefInst,
-                                    SetVectorType &Worklist,
+                                    SIInstrWorklist &Worklist,
                                     Register NewCond = Register()) const;
   void addSCCDefsToVALUWorklist(MachineInstr *SCCUseInst,
-                                SetVectorType &Worklist) const;
+                                SIInstrWorklist &Worklist) const;
 
   const TargetRegisterClass *
   getDestEquivalentVGPRClass(const MachineInstr &Inst) const;
@@ -1008,11 +1036,14 @@ public:
   /// was moved to VGPR. \returns true if succeeded.
   bool moveFlatAddrToVGPR(MachineInstr &Inst) const;
 
-  /// Replace this instruction's opcode with the equivalent VALU
-  /// opcode.  This function will also move the users of \p MI to the
-  /// VALU if necessary. If present, \p MDT is updated.
-  MachineBasicBlock *moveToVALU(MachineInstr &MI,
-                                MachineDominatorTree *MDT = nullptr) const;
+  /// Replace the instructions opcode with the equivalent VALU
+  /// opcode.  This function will also move the users of MachineInstruntions
+  /// in the \p WorkList to the VALU if necessary. If present, \p MDT is
+  /// updated.
+  void moveToVALU(SIInstrWorklist &Worklist, MachineDominatorTree *MDT) const;
+
+  void moveToVALUImpl(SIInstrWorklist &Worklist, MachineDominatorTree *MDT,
+                      MachineInstr &Inst) const;
 
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;
