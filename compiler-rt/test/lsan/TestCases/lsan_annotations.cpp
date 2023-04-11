@@ -5,11 +5,14 @@
 #include <sanitizer/lsan_interface.h>
 #include <stdlib.h>
 
-int *x, *y;
+int *x, *y, *z;
 
 int main() {
   x = new int;
   __lsan_ignore_object(x);
+
+  z = new int[1000000];  // Large enough for the secondary allocator.
+  __lsan_ignore_object(z);
 
   {
     __lsan::ScopedDisabler disabler;
