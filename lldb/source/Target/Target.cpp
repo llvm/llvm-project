@@ -5327,9 +5327,8 @@ Target::TargetEventData::TargetEventData(const lldb::TargetSP &target_sp,
 
 Target::TargetEventData::~TargetEventData() = default;
 
-ConstString Target::TargetEventData::GetFlavorString() {
-  static ConstString g_flavor("Target::TargetEventData");
-  return g_flavor;
+llvm::StringRef Target::TargetEventData::GetFlavorString() {
+  return "Target::TargetEventData";
 }
 
 void Target::TargetEventData::Dump(Stream *s) const {

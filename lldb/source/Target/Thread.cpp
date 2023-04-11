@@ -151,9 +151,8 @@ uint64_t ThreadProperties::GetMaxBacktraceDepth() const {
 
 // Thread Event Data
 
-ConstString Thread::ThreadEventData::GetFlavorString() {
-  static ConstString g_flavor("Thread::ThreadEventData");
-  return g_flavor;
+llvm::StringRef Thread::ThreadEventData::GetFlavorString() {
+  return "Thread::ThreadEventData";
 }
 
 Thread::ThreadEventData::ThreadEventData(const lldb::ThreadSP thread_sp)
