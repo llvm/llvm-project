@@ -9103,7 +9103,7 @@ std::optional<VPlanPtr> LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   VPlanTransforms::mergeBlocksIntoPredecessors(*Plan);
 
   assert(VPlanVerifier::verifyPlanIsValid(*Plan) && "VPlan is invalid");
-  return Plan;
+  return std::make_optional(std::move(Plan));
 }
 
 VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
