@@ -19,6 +19,6 @@ int main() {
     y = new int;
   }
 
-  x = y = nullptr;
+  x = y = z = nullptr;
   return 0;
 }
