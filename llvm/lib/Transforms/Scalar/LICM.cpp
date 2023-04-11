@@ -170,6 +170,10 @@ static bool pointerInvalidatedByLoop(MemorySSA *MSSA, MemoryUse *MU,
                                      bool InvariantGroup);
 static bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA,
                                       MemoryUse &MU);
+/// Aggregates various functions for hoisting computations out of loop.
+static bool hoistArithmetics(Instruction &I, Loop &L,
+                             ICFLoopSafetyInfo &SafetyInfo,
+                             MemorySSAUpdater &MSSAU);
 /// Try to simplify things like (A < INV_1 AND icmp A < INV_2) into (A <
 /// min(INV_1, INV_2)), if INV_1 and INV_2 are both loop invariants and their
 /// minimun can be computed outside of loop, and X is not a loop-invariant.
@@ -983,11 +987,9 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
         }
       }
 
-      // Optimize complex patterns, such as (x < INV1 && x < INV2), turning them
-      // into (x < min(INV1, INV2)), and hoisting the invariant part of this
-      // expression out of the loop.
-      if (hoistMinMax(I, *CurLoop, *SafetyInfo, MSSAU)) {
-        ++NumMinMaxHoisted;
+      // Try to reassociate instructions so that part of computations can be
+      // done out of loop.
+      if (hoistArithmetics(I, *CurLoop, *SafetyInfo, MSSAU)) {
         Changed = true;
         continue;
       }
@@ -2491,6 +2493,19 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   eraseInstruction(*cast<Instruction>(Cond1), SafetyInfo, MSSAU);
   eraseInstruction(*cast<Instruction>(Cond2), SafetyInfo, MSSAU);
   return true;
+}
+
+static bool hoistArithmetics(Instruction &I, Loop &L,
+                             ICFLoopSafetyInfo &SafetyInfo,
+                             MemorySSAUpdater &MSSAU) {
+  // Optimize complex patterns, such as (x < INV1 && x < INV2), turning them
+  // into (x < min(INV1, INV2)), and hoisting the invariant part of this
+  // expression out of the loop.
+  if (hoistMinMax(I, L, SafetyInfo, MSSAU)) {
+    ++NumMinMaxHoisted;
+    return true;
+  }
+  return false;
 }
 
 /// Little predicate that returns true if the specified basic block is in
