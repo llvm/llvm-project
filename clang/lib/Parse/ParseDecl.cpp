@@ -214,14 +214,14 @@ void Parser::ParseGNUAttributes(ParsedAttributes &Attrs,
 
       if (Tok.isNot(tok::l_paren)) {
         Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
-                     ParsedAttr::AS_GNU);
+                     ParsedAttr::Form::GNU());
         continue;
       }
 
       // Handle "parameterized" attributes
       if (!LateAttrs || !isAttributeLateParsed(*AttrName)) {
         ParseGNUAttributeArgs(AttrName, AttrNameLoc, Attrs, &EndLoc, nullptr,
-                              SourceLocation(), ParsedAttr::AS_GNU, D);
+                              SourceLocation(), ParsedAttr::Form::GNU(), D);
         continue;
       }
 
@@ -726,14 +726,14 @@ bool Parser::ParseMicrosoftDeclSpecArgs(IdentifierInfo *AttrName,
     if (!HasInvalidAccessor)
       Attrs.addNewPropertyAttr(AttrName, AttrNameLoc, nullptr, SourceLocation(),
                                AccessorNames[AK_Get], AccessorNames[AK_Put],
-                               ParsedAttr::AS_Declspec);
+                               ParsedAttr::Form::Declspec());
     T.skipToEnd();
     return !HasInvalidAccessor;
   }
 
   unsigned NumArgs =
       ParseAttributeArgsCommon(AttrName, AttrNameLoc, Attrs, nullptr, nullptr,
-                               SourceLocation(), ParsedAttr::AS_Declspec);
+                               SourceLocation(), ParsedAttr::Form::Declspec());
 
   // If this attribute's args were parsed, and it was expected to have
   // arguments but none were provided, emit a diagnostic.
@@ -816,7 +816,7 @@ void Parser::ParseMicrosoftDeclSpecs(ParsedAttributes &Attrs) {
 
       if (!AttrHandled)
         Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
-                     ParsedAttr::AS_Declspec);
+                     ParsedAttr::Form::Declspec());
     }
     T.consumeClose();
     EndLoc = T.getCloseLocation();
