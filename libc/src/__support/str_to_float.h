@@ -943,13 +943,12 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
 
       // If the result is in the valid range, then we use it. The valid range is
       // also within the int32 range, so this prevents overflow issues.
-      if (temp_exponent < fputil::FPBits<T>::MAX_EXPONENT &&
-          temp_exponent > -fputil::FPBits<T>::MAX_EXPONENT) {
-        exponent = static_cast<int32_t>(temp_exponent);
-      } else if (temp_exponent > fputil::FPBits<T>::MAX_EXPONENT) {
+      if (temp_exponent > fputil::FPBits<T>::MAX_EXPONENT) {
         exponent = fputil::FPBits<T>::MAX_EXPONENT;
-      } else {
+      } else if (temp_exponent < -fputil::FPBits<T>::MAX_EXPONENT) {
         exponent = -fputil::FPBits<T>::MAX_EXPONENT;
+      } else {
+        exponent = static_cast<int32_t>(temp_exponent);
       }
     }
   }
