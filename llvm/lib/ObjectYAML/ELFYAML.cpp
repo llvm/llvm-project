@@ -707,6 +707,10 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   case ELF::EM_MSP430:
     ECase(SHT_MSP430_ATTRIBUTES);
     break;
+  case ELF::EM_AARCH64:
+    ECase(SHT_AARCH64_MEMTAG_GLOBALS_STATIC);
+    ECase(SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC);
+    break;
   default:
     // Nothing to do.
     break;
