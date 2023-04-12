@@ -69,8 +69,8 @@ struct RTLInfoTy {
   typedef int32_t(wait_event_ty)(int32_t, void *, __tgt_async_info *);
   typedef int32_t(sync_event_ty)(int32_t, void *);
   typedef int32_t(destroy_event_ty)(int32_t, void *);
-  typedef int(set_coarse_grain_mem_region_ty)(void *, int64_t);
-  typedef int32_t(query_coarse_grain_mem_region_ty)(void *, int64_t);
+  typedef int(set_coarse_grain_mem_region_ty)(int32_t, void *, int64_t);
+  typedef int32_t(query_coarse_grain_mem_region_ty)(int32_t, void *, int64_t);
   typedef int32_t(enable_access_to_all_agents_ty)(void *, int32_t);
   typedef int32_t(release_async_info_ty)(int32_t, __tgt_async_info *);
   typedef int32_t(init_async_info_ty)(int32_t, __tgt_async_info **);

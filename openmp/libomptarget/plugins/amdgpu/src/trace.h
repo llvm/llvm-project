@@ -347,22 +347,22 @@ int32_t __tgt_rtl_synchronize(int32_t device_id,
 }
 #define __tgt_rtl_synchronize(...) __tgt_rtl_synchronize_impl(__VA_ARGS__)
 
-static int32_t __tgt_rtl_set_coarse_grain_mem_region_impl(void *ptr,
+static int32_t __tgt_rtl_set_coarse_grain_mem_region_impl(int32_t DeviceId, void *ptr,
                                                           int64_t size);
-int32_t __tgt_rtl_set_coarse_grain_mem_region(void *ptr, int64_t size) {
-  auto t = detail::log<int32_t>(__func__, ptr, size);
-  int32_t r = __tgt_rtl_set_coarse_grain_mem_region_impl(ptr, size);
+int32_t __tgt_rtl_set_coarse_grain_mem_region(int32_t DeviceId, void *ptr, int64_t size) {
+  auto t = detail::log<int32_t>(__func__, DeviceId, ptr, size);
+  int32_t r = __tgt_rtl_set_coarse_grain_mem_region_impl(DeviceId, ptr, size);
   t.res(r);
   return r;
 }
 #define __tgt_rtl_set_coarse_grain_mem_region(...)                             \
   __tgt_rtl_set_coarse_grain_mem_region_impl(__VA_ARGS__)
 
-static int32_t __tgt_rtl_query_coarse_grain_mem_region_impl(const void *ptr,
+static int32_t __tgt_rtl_query_coarse_grain_mem_region_impl(int32_t DeviceId, const void *ptr,
                                                             int64_t size);
-int32_t __tgt_rtl_query_coarse_grain_mem_region(const void *ptr, int64_t size) {
-  auto t = detail::log<int32_t>(__func__, ptr, size);
-  int32_t r = __tgt_rtl_query_coarse_grain_mem_region_impl(ptr, size);
+int32_t __tgt_rtl_query_coarse_grain_mem_region(int32_t DeviceId, const void *ptr, int64_t size) {
+  auto t = detail::log<int32_t>(__func__, DeviceId, ptr, size);
+  int32_t r = __tgt_rtl_query_coarse_grain_mem_region_impl(DeviceId, ptr, size);
   t.res(r);
   return r;
 }

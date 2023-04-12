@@ -3606,7 +3606,7 @@ void *__tgt_rtl_data_alloc(int DeviceId, int64_t Size, void *, int32_t Kind) {
   hsa_status_t Err = hsa_amd_memory_pool_allocate(MemoryPool, Size, 0, &Ptr);
 
   if (Kind == TARGET_ALLOC_SHARED) {
-    __tgt_rtl_set_coarse_grain_mem_region(Ptr, Size);
+    __tgt_rtl_set_coarse_grain_mem_region(DeviceId, Ptr, Size);
   }
 
   DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", Size,
@@ -3766,7 +3766,7 @@ int32_t __tgt_rtl_synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfo) {
 // as coarse grain
 // \arg ptr is the base pointer of the region to be registered as coarse grain
 // \arg size is the size of the memory region to be registered as coarse grain
-int __tgt_rtl_set_coarse_grain_mem_region(void *ptr, int64_t size) {
+int __tgt_rtl_set_coarse_grain_mem_region(int32_t DeviceId, void *ptr, int64_t size) {
   // track coarse grain memory pages in local table
   coarse_grain_mem_tab->insert((const uintptr_t)ptr, size);
 
@@ -3784,7 +3784,7 @@ int __tgt_rtl_set_coarse_grain_mem_region(void *ptr, int64_t size) {
 }
 
 // Query if [ptr, ptr+size] belongs to coarse grain memory region
-int32_t __tgt_rtl_query_coarse_grain_mem_region(const void *ptr, int64_t size) {
+int32_t __tgt_rtl_query_coarse_grain_mem_region(int32_t DeviceId, const void *ptr, int64_t size) {
   // if the table is not yet allocated, it means we have not yet gone through
   // an OpenMP pragma or API that would provoke intialization of the RTL
   if (!coarse_grain_mem_tab)

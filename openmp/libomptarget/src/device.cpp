@@ -380,7 +380,7 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
       if (!PM->RTLs.DisableAllocationsForMapsOnApus &&
           !PM->RTLs.EnableFineGrainedMemory && HstPtrBegin &&
           RTL->set_coarse_grain_mem_region) {
-        RTL->set_coarse_grain_mem_region(HstPtrBegin, Size);
+        RTL->set_coarse_grain_mem_region(DeviceID, HstPtrBegin, Size);
       }
 
       if (!PM->RTLs.NoUSMMapChecks) {
