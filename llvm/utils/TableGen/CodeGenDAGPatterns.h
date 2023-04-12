@@ -816,12 +816,12 @@ public:   // Higher level manipulation routines.
   void
   SubstituteFormalArguments(std::map<std::string, TreePatternNodePtr> &ArgMap);
 
-  /// InlinePatternFragments - If this pattern refers to any pattern
+  /// InlinePatternFragments - If \p T pattern refers to any pattern
   /// fragments, return the set of inlined versions (this can be more than
   /// one if a PatFrags record has multiple alternatives).
-  void InlinePatternFragments(TreePatternNodePtr T,
-                              TreePattern &TP,
-                              std::vector<TreePatternNodePtr> &OutAlternatives);
+  static void
+  InlinePatternFragments(TreePatternNodePtr T, TreePattern &TP,
+                         std::vector<TreePatternNodePtr> &OutAlternatives);
 
   /// ApplyTypeConstraints - Apply all of the type constraints relevant to
   /// this node and its children in the tree.  This returns true if it makes a
@@ -1021,13 +1021,14 @@ class DAGInstruction {
   TreePatternNodePtr ResultPattern;
 
 public:
-  DAGInstruction(const std::vector<Record*> &results,
-                 const std::vector<Record*> &operands,
-                 const std::vector<Record*> &impresults,
+  DAGInstruction(std::vector<Record *> &&results,
+                 std::vector<Record *> &&operands,
+                 std::vector<Record *> &&impresults,
                  TreePatternNodePtr srcpattern = nullptr,
                  TreePatternNodePtr resultpattern = nullptr)
-    : Results(results), Operands(operands), ImpResults(impresults),
-      SrcPattern(srcpattern), ResultPattern(resultpattern) {}
+      : Results(std::move(results)), Operands(std::move(operands)),
+        ImpResults(std::move(impresults)), SrcPattern(srcpattern),
+        ResultPattern(resultpattern) {}
 
   unsigned getNumResults() const { return Results.size(); }
   unsigned getNumOperands() const { return Operands.size(); }
