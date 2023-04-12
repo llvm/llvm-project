@@ -131,6 +131,94 @@ define i32 @load_load_noundef(ptr %p) {
   ret i32 %c
 }
 
+declare void @use.i64(i64)
+declare void @use.i32(i32)
+
+define void @load_ptr_nonnull_to_i64(ptr %p) {
+; CHECK-LABEL: define void @load_ptr_nonnull_to_i64
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8, !nonnull !6
+; CHECK-NEXT:    [[VAL_INT:%.*]] = ptrtoint ptr [[VAL]] to i64
+; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
+; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
+; CHECK-NEXT:    ret void
+;
+  %val = load ptr, ptr %p, align 8, !nonnull !{}
+  %val.int = ptrtoint ptr %val to i64
+  %val2 = load i64, ptr %p, align 8
+  call void @use.i64(i64 %val.int)
+  call void @use.i64(i64 %val2)
+  ret void
+}
+
+define void @load_ptr_nonnull_noundef_to_i64(ptr %p) {
+; CHECK-LABEL: define void @load_ptr_nonnull_noundef_to_i64
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8, !nonnull !6, !noundef !6
+; CHECK-NEXT:    [[VAL_INT:%.*]] = ptrtoint ptr [[VAL]] to i64
+; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
+; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
+; CHECK-NEXT:    ret void
+;
+  %val = load ptr, ptr %p, align 8, !nonnull !{}, !noundef !{}
+  %val.int = ptrtoint ptr %val to i64
+  %val2 = load i64, ptr %p, align 8
+  call void @use.i64(i64 %val.int)
+  call void @use.i64(i64 %val2)
+  ret void
+}
+
+define void @load_ptr_invariant_load_to_i64(ptr %p) {
+; CHECK-LABEL: define void @load_ptr_invariant_load_to_i64
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8, !invariant.load !6
+; CHECK-NEXT:    [[VAL_INT:%.*]] = ptrtoint ptr [[VAL]] to i64
+; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
+; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
+; CHECK-NEXT:    ret void
+;
+  %val = load ptr, ptr %p, align 8, !invariant.load !{}
+  %val.int = ptrtoint ptr %val to i64
+  %val2 = load i64, ptr %p, align 8
+  call void @use.i64(i64 %val.int)
+  call void @use.i64(i64 %val2)
+  ret void
+}
+
+define void @load_ptr_nonnull_to_i32(ptr %p) {
+; CHECK-LABEL: define void @load_ptr_nonnull_to_i32
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8, !nonnull !6
+; CHECK-NEXT:    [[VAL_INT:%.*]] = ptrtoint ptr [[VAL]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[VAL_INT]] to i32
+; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
+; CHECK-NEXT:    call void @use.i32(i32 [[TMP1]])
+; CHECK-NEXT:    ret void
+;
+  %val = load ptr, ptr %p, align 8, !nonnull !{}
+  %val.int = ptrtoint ptr %val to i64
+  %val2 = load i32, ptr %p, align 8
+  call void @use.i64(i64 %val.int)
+  call void @use.i32(i32 %val2)
+  ret void
+}
+
+define void @load_i64_range_to_i32_range(ptr %p) {
+; CHECK-LABEL: define void @load_i64_range_to_i32_range
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[P]], align 8, !range [[RNG7:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[VAL]] to i32
+; CHECK-NEXT:    call void @use.i64(i64 [[VAL]])
+; CHECK-NEXT:    call void @use.i32(i32 [[TMP1]])
+; CHECK-NEXT:    ret void
+;
+  %val = load i64, ptr %p, align 8, !range !{i64 0, i64 10}
+  %val2 = load i32, ptr %p, align 8, !range !{i32 0, i32 10}
+  call void @use.i64(i64 %val)
+  call void @use.i32(i32 %val2)
+  ret void
+}
+
 !0 = !{i32 0, i32 2}
 !1 = !{i32 3, i32 5}
 !2 = !{i32 2, i32 5}
@@ -151,4 +239,5 @@ define i32 @load_load_noundef(ptr %p) {
 ; CHECK: [[RNG4]] = !{i32 10, i32 1}
 ; CHECK: [[RNG5]] = !{i32 3, i32 4, i32 5, i32 2}
 ; CHECK: [[META6:![0-9]+]] = !{}
+; CHECK: [[RNG7]] = !{i64 0, i64 10}
 ;.
