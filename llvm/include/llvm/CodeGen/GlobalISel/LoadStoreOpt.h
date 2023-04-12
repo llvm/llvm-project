@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_GLOBALISEL_LOADSTOREOPT_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -130,6 +131,10 @@ private:
   bool processMergeCandidate(StoreMergeCandidate &C);
   bool mergeBlockStores(MachineBasicBlock &MBB);
   bool mergeFunctionStores(MachineFunction &MF);
+
+  bool mergeTruncStore(GStore &StoreMI,
+                       SmallPtrSetImpl<GStore *> &DeletedStores);
+  bool mergeTruncStoresBlock(MachineBasicBlock &MBB);
 
   /// Initialize some target-specific data structures for the store merging
   /// optimization. \p AddrSpace indicates which address space to use when
