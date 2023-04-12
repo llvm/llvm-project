@@ -135,7 +135,7 @@ void fAFCreateAFProduct(AFProduct **AddressToAllocateAt,
     (*AddressToAllocateAt)->Inputs[I] = NULL;
   }
 
-  if(((*AddressToAllocateAt)->AFs = (double *)malloc(sizeof(double *) *
+  if(((*AddressToAllocateAt)->AFs = (double *)malloc(sizeof(double) *
                                                         LengthOfLists)) == NULL) {
     printf("#fAF: Not enough memory for AFs!");
     exit(EXIT_FAILURE);
@@ -197,7 +197,7 @@ void fAFPrintAFProduct(AFProduct *ProductObject) {
     if(isinf(ProductObject->AFs[I]))
       printf(", \"inf\"");
     else
-      printf(",%0.15lf", ProductObject->AFs[I]);
+      printf(", %0.15lf", ProductObject->AFs[I]);
   }
   printf("],\n");
 }
@@ -483,7 +483,7 @@ int getNumberOfComputationPaths(AFTable *AFTable) {
 double getAverageAmplificationFactor(AFTable *AFTable, int NumFunctionEvaluations) {
   double* AverageAmplificationFactor;
 
-  if((AverageAmplificationFactor = (double *)malloc(sizeof(double )*NumFunctionEvaluations)) == NULL) {
+  if((AverageAmplificationFactor = (double *)malloc(sizeof(double)*NumFunctionEvaluations)) == NULL) {
     printf("#fAF: Not enough memory for AverageAmplificationFactors!");
     exit(EXIT_FAILURE);
   }
@@ -998,7 +998,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
                 ->Components[AFItemsChildComponentIndex]
                 ->AFs[(*AFItemWRTOperands[OperandIndex])
                           ->Components[AFItemsChildComponentIndex]
-                          ->NumberOfInputs] *
+                          ->NumberOfInputs-1] *
             (*AC)->ACWRTOperands[OperandIndex];
         UpdatingAFComponent->Height =
             (*AFItemWRTOperands[OperandIndex])
@@ -1075,10 +1075,11 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
   InstructionExecutionCounter++;
 
 #if FAF_DEBUG >= 2
-  printf("\n\tAFItem Created\n");
-  printf("\t\tAFId: %d\n", AFs->AFItems[AFs->ListLength - 1]->ItemId);
+  if(NewAFItem)
+    printf("\n\tAFItem Created");
+  printf("\n\t\tAFId: %d\n", AFs->AFItems[AFItemIndex]->ItemId);
   printf("\t\tNumComponents: %d\n",
-         AFs->AFItems[AFs->ListLength - 1]->NumAFComponents);
+         AFs->AFItems[AFItemIndex]->NumAFComponents);
   printf("\n");
 #endif
 
