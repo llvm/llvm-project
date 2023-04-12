@@ -281,7 +281,8 @@ Error TextInstrProfReader::readHeader() {
 /// Temporal profile trace data is stored in the header immediately after
 /// ":temporal_prof_traces". The first integer is the number of traces, the
 /// second integer is the stream size, then the following lines are the actual
-/// traces which consist of a comma separated list of function names.
+/// traces which consist of a weight and a comma separated list of function
+/// names.
 Error TextInstrProfReader::readTemporalProfTraceData() {
   if ((++Line).is_at_end())
     return error(instrprof_error::eof);
@@ -301,10 +302,17 @@ Error TextInstrProfReader::readTemporalProfTraceData() {
       return error(instrprof_error::eof);
 
     TemporalProfTraceTy Trace;
+    if (Line->getAsInteger(0, Trace.Weight))
+      return error(instrprof_error::malformed);
+
+    if ((++Line).is_at_end())
+      return error(instrprof_error::eof);
+
     SmallVector<StringRef> FuncNames;
     Line->split(FuncNames, ",", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
     for (auto &FuncName : FuncNames)
-      Trace.push_back(IndexedInstrProf::ComputeHash(FuncName.trim()));
+      Trace.FunctionNameRefs.push_back(
+          IndexedInstrProf::ComputeHash(FuncName.trim()));
     TemporalProfTraces.push_back(std::move(Trace));
   }
   return success();
@@ -438,8 +446,9 @@ InstrProfKind RawInstrProfReader<IntPtrT>::getProfileKind() const {
 }
 
 template <class IntPtrT>
-const SmallVector<TemporalProfTraceTy> &
-RawInstrProfReader<IntPtrT>::getTemporalProfTraces() {
+SmallVector<TemporalProfTraceTy> &
+RawInstrProfReader<IntPtrT>::getTemporalProfTraces(
+    std::optional<uint64_t> Weight) {
   if (TemporalProfTimestamps.empty()) {
     assert(TemporalProfTraces.empty());
     return TemporalProfTraces;
@@ -447,8 +456,10 @@ RawInstrProfReader<IntPtrT>::getTemporalProfTraces() {
   // Sort functions by their timestamps to build the trace.
   std::sort(TemporalProfTimestamps.begin(), TemporalProfTimestamps.end());
   TemporalProfTraceTy Trace;
+  if (Weight)
+    Trace.Weight = *Weight;
   for (auto &[TimestampValue, NameRef] : TemporalProfTimestamps)
-    Trace.push_back(NameRef);
+    Trace.FunctionNameRefs.push_back(NameRef);
   TemporalProfTraces = {std::move(Trace)};
   return TemporalProfTraces;
 }
@@ -1147,19 +1158,21 @@ Error IndexedInstrProfReader::readHeader() {
     TemporalProfTraceStreamSize =
         support::endian::readNext<uint64_t, little, unaligned>(Ptr);
     for (unsigned i = 0; i < NumTraces; i++) {
-      // Expect at least one 64 bit field: NumFunctions
-      if (Ptr + sizeof(uint64_t) > PtrEnd)
+      // Expect at least two 64 bit fields: Weight and NumFunctions
+      if (Ptr + 2 * sizeof(uint64_t) > PtrEnd)
         return error(instrprof_error::truncated);
+      TemporalProfTraceTy Trace;
+      Trace.Weight =
+          support::endian::readNext<uint64_t, little, unaligned>(Ptr);
       const uint64_t NumFunctions =
           support::endian::readNext<uint64_t, little, unaligned>(Ptr);
       // Expect at least NumFunctions 64 bit fields
       if (Ptr + NumFunctions * sizeof(uint64_t) > PtrEnd)
         return error(instrprof_error::truncated);
-      TemporalProfTraceTy Trace;
       for (unsigned j = 0; j < NumFunctions; j++) {
         const uint64_t NameRef =
             support::endian::readNext<uint64_t, little, unaligned>(Ptr);
-        Trace.push_back(NameRef);
+        Trace.FunctionNameRefs.push_back(NameRef);
       }
       TemporalProfTraces.push_back(std::move(Trace));
     }
