@@ -180,6 +180,14 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (Arg *A = Args.getLastArg(options::OPT_fcrash_diagnostics_dir))
       AddCodeGenFlag(Twine("-crash-diagnostics-dir=") + A->getValue());
 
+    StringRef Parallelism = getLTOParallelism(Args, D);
+    if (!Parallelism.empty()) {
+      if (IsPS4)
+        AddCodeGenFlag(Twine("-threads=") + Parallelism);
+      else
+        CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=jobs=") + Parallelism));
+    }
+
     if (IsPS4) {
       const char *Prefix = nullptr;
       if (D.getLTOMode() == LTOK_Thin)
@@ -191,12 +199,6 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
       CmdArgs.push_back(Args.MakeArgString(Twine(Prefix) + PS4LTOArgs));
     }
-  }
-
-  if (IsPS5 && UseLTO) {
-    StringRef Parallelism = getLTOParallelism(Args, D);
-    if (!Parallelism.empty())
-      CmdArgs.push_back(Args.MakeArgString("-plugin-opt=jobs=" + Parallelism));
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))

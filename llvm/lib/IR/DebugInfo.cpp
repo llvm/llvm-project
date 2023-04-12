@@ -1886,26 +1886,35 @@ static CallInst *emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
   assert(ID && "Store instruction must have DIAssignID metadata");
   (void)ID;
 
+  const uint64_t StoreStartBit = Info.OffsetInBits;
+  const uint64_t StoreEndBit = Info.OffsetInBits + Info.SizeInBits;
+
+  uint64_t FragStartBit = StoreStartBit;
+  uint64_t FragEndBit = StoreEndBit;
+
   bool StoreToWholeVariable = Info.StoreToWholeAlloca;
   if (auto Size = VarRec.Var->getSizeInBits()) {
-    // Discard stores to bits outside this variable. NOTE: trackAssignments
-    // doesn't understand base expressions yet, so all variables that reach
-    // here are guaranteed to start at offset 0 in the alloca.
-    // TODO: Could we truncate the fragment expression instead of discarding
-    // the assignment?
-    if (Info.OffsetInBits + Info.SizeInBits > *Size)
+    // NOTE: trackAssignments doesn't understand base expressions yet, so all
+    // variables that reach here are guaranteed to start at offset 0 in the
+    // alloca.
+    const uint64_t VarStartBit = 0;
+    const uint64_t VarEndBit = *Size;
+
+    // FIXME: trim FragStartBit when nonzero VarStartBit is supported.
+    FragEndBit = std::min(FragEndBit, VarEndBit);
+
+    // Discard stores to bits outside this variable.
+    if (FragStartBit >= FragEndBit)
       return nullptr;
-    // FIXME: As noted above - only variables at offset 0 are handled
-    // currently.
-    StoreToWholeVariable = Info.OffsetInBits == /*VarOffsetInAlloca*/ 0 &&
-                           Info.SizeInBits == *Size;
+
+    StoreToWholeVariable = FragStartBit <= VarStartBit && FragEndBit >= *Size;
   }
 
   DIExpression *Expr =
       DIExpression::get(StoreLikeInst.getContext(), std::nullopt);
   if (!StoreToWholeVariable) {
-    auto R = DIExpression::createFragmentExpression(Expr, Info.OffsetInBits,
-                                                    Info.SizeInBits);
+    auto R = DIExpression::createFragmentExpression(Expr, FragStartBit,
+                                                    FragEndBit - FragStartBit);
     assert(R.has_value() && "failed to create fragment expression");
     Expr = *R;
   }

@@ -323,6 +323,37 @@ func.func @testloopop() -> () {
 
 // -----
 
+func.func @acc_loop_multiple_block() {
+  acc.parallel {
+    acc.loop {
+      %c1 = arith.constant 1 : index
+      cf.br ^bb1(%c1 : index)
+    ^bb1(%9: index):
+      %c0 = arith.constant 0 : index
+      %12 = arith.cmpi sgt, %9, %c0 : index
+      cf.cond_br %12, ^bb2, ^bb3
+    ^bb2:
+      %c1_0 = arith.constant 1 : index
+      %c10 = arith.constant 10 : index
+      %22 = arith.subi %c10, %c1_0 : index
+      cf.br ^bb1(%22 : index)
+    ^bb3:
+      acc.yield
+    }
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @acc_loop_multiple_block()
+// CHECK: acc.parallel
+// CHECK: acc.loop
+// CHECK-3: ^bb{{.*}}
+// CHECK: acc.yield
+// CHECK: acc.yield
+
+// -----
+
 func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
   %i64value = arith.constant 1 : i64
   %i32value = arith.constant 1 : i32

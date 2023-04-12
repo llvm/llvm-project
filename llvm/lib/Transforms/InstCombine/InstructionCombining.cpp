@@ -196,6 +196,10 @@ std::optional<Value *> InstCombiner::targetSimplifyDemandedVectorEltsIntrinsic(
   return std::nullopt;
 }
 
+bool InstCombiner::isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
+  return TTI.isValidAddrSpaceCast(FromAS, ToAS);
+}
+
 Value *InstCombinerImpl::EmitGEPOffset(User *GEP) {
   return llvm::emitGEPOffset(&Builder, DL, GEP);
 }

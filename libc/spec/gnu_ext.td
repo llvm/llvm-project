@@ -57,7 +57,12 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
       [], // Macros
       [], // Types
       [], // Enumerations
-      [ 
+      [
+         FunctionSpec<
+            "memmem",
+            RetValSpec<VoidPtr>,
+            [ArgSpec<ConstVoidPtr>, ArgSpec<SizeTType>, ArgSpec<ConstVoidPtr>, ArgSpec<SizeTType>]
+        >,
         FunctionSpec<
             "memrchr",
             RetValSpec<VoidPtr>,

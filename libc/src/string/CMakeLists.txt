@@ -60,6 +60,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  memmem
+  SRCS
+    memmem.cpp
+  HDRS
+    memmem.h
+  DEPENDS
+    .memory_utils.memmem_implementation
+)
+
+add_entrypoint_object(
   memchr
   SRCS
     memchr.cpp

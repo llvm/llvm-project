@@ -60,4 +60,5 @@ Library Working Group Issues Status
 
 .. note::
 
+   .. [#note-LWG3750] LWG3750 Only ``__cpp_lib_format_ranges`` is fully implemented.
    .. [#note-LWG3798] LWG3798: ``join_with_view``, ``zip_transform_view``, and ``adjacent_transform_view`` haven't been done yet since these types aren't implemented yet.

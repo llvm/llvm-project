@@ -510,7 +510,8 @@ class JSONCrashLogParser(CrashLogParser):
         for json_image in json_images:
             img_uuid = uuid.UUID(json_image['uuid'])
             low = int(json_image['base'])
-            high = int(0)
+            high = low + int(
+                json_image['size']) if 'size' in json_image else low
             name = json_image['name'] if 'name' in json_image else ''
             path = json_image['path'] if 'path' in json_image else ''
             version = ''
