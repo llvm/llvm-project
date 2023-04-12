@@ -289,7 +289,7 @@ class GuardWideningImpl {
     widenCondCommon(getCondition(ToWiden), NewCondition, InsertPt, Result,
                     InvertCondition);
     if (isGuardAsWidenableBranch(ToWiden)) {
-      setWidenableBranchCond(cast<BranchInst>(ToWiden), Result, LI);
+      setWidenableBranchCond(cast<BranchInst>(ToWiden), Result);
       return;
     }
     setCondition(ToWiden, Result);

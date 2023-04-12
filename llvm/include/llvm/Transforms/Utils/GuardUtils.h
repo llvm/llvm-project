@@ -17,7 +17,6 @@ namespace llvm {
 class BranchInst;
 class CallInst;
 class Function;
-class LoopInfo;
 class Value;
 
 /// Splits control flow at point of \p Guard, replacing it with explicit branch
@@ -33,14 +32,12 @@ void makeGuardControlFlowExplicit(Function *DeoptIntrinsic, CallInst *Guard,
 /// Given a branch we know is widenable (defined per Analysis/GuardUtils.h),
 /// widen it such that condition 'NewCond' is also known to hold on the taken
 /// path.  Branch remains widenable after transform.
-void widenWidenableBranch(BranchInst *WidenableBR, Value *NewCond,
-                          const LoopInfo &LI);
+void widenWidenableBranch(BranchInst *WidenableBR, Value *NewCond);
 
 /// Given a branch we know is widenable (defined per Analysis/GuardUtils.h),
 /// *set* it's condition such that (only) 'Cond' is known to hold on the taken
 /// path and that the branch remains widenable after transform.
-void setWidenableBranchCond(BranchInst *WidenableBR, Value *Cond,
-                            const LoopInfo &LI);
+void setWidenableBranchCond(BranchInst *WidenableBR, Value *Cond);
 
 } // llvm
 
