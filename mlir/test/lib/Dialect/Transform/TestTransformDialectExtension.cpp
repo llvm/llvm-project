@@ -352,6 +352,12 @@ DiagnosedSilenceableFailure mlir::test::TestEmitRemarkAndEraseOperandOp::apply(
   return DiagnosedSilenceableFailure::success();
 }
 
+void mlir::test::TestEmitRemarkAndEraseOperandOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::consumesHandle(getTarget(), effects);
+  transform::modifiesPayload(effects);
+}
+
 DiagnosedSilenceableFailure mlir::test::TestWrongNumberOfResultsOp::applyToOne(
     Operation *target, transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
