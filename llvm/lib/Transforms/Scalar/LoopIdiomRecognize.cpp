@@ -1001,7 +1001,7 @@ static const SCEV *getTripCount(const SCEV *BECount, Type *IntPtr,
           DL->getTypeSizeInBits(IntPtr) &&
       SE->isLoopEntryGuardedByCond(
           CurLoop, ICmpInst::ICMP_NE, BECount,
-          SE->getNegativeSCEV(SE->getOne(BECount->getType())))) {
+          SE->getMinusOne(BECount->getType()))) {
     TripCountS = SE->getZeroExtendExpr(
         SE->getAddExpr(BECount, SE->getOne(BECount->getType()), SCEV::FlagNUW),
         IntPtr);

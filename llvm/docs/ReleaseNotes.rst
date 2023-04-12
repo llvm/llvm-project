@@ -161,6 +161,11 @@ Changes to the RISC-V Backend
 * I, F, D, and A extension versions have been update to the 20191214 spec versions.
   New version I2.1, F2.2, D2.2, A2.1. This should not impact code generation.
   Immpacts versions accepted in ``-march`` and reported in ELF attributes.
+* Changed the ShadowCallStack register from ``x18`` (``s2``) to ``x3``
+  (``gp``). Note this breaks the existing non-standard ABI for ShadowCallStack
+  on RISC-V, but conforms with the new "platform register" defined in the
+  RISC-V psABI (for more details see the 
+  `psABI discussion <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/issues/370>`_).
 
 Changes to the WebAssembly Backend
 ----------------------------------

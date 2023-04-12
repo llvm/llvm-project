@@ -11,6 +11,7 @@
 #include "Diagnostics.h"
 #include "Headers.h"
 #include "ParsedAST.h"
+#include "Preamble.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "URI.h"
@@ -112,12 +113,12 @@ static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
       return false;
     // Check if main file is the public interface for a private header. If so we
     // shouldn't diagnose it as unused.
-    if(auto PHeader = PI->getPublic(*FE); !PHeader.empty()) {
+    if (auto PHeader = PI->getPublic(*FE); !PHeader.empty()) {
       PHeader = PHeader.trim("<>\"");
       // Since most private -> public mappings happen in a verbatim way, we
       // check textually here. This might go wrong in presence of symlinks or
       // header mappings. But that's not different than rest of the places.
-      if(AST.tuPath().endswith(PHeader))
+      if (AST.tuPath().endswith(PHeader))
         return false;
     }
   }
@@ -360,6 +361,7 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
   include_cleaner::Includes ConvertedIncludes =
       convertIncludes(SM, Includes.MainFileIncludes);
   const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID());
+  auto *PreamblePatch = PreamblePatch::getPatchEntry(AST.tuPath(), SM);
 
   std::vector<include_cleaner::SymbolReference> Macros =
       collectMacroReferences(AST);
@@ -374,7 +376,7 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
         bool Satisfied = false;
         for (const auto &H : Providers) {
           if (H.kind() == include_cleaner::Header::Physical &&
-              H.physical() == MainFile) {
+              (H.physical() == MainFile || H.physical() == PreamblePatch)) {
             Satisfied = true;
             continue;
           }

@@ -666,6 +666,7 @@ TEST(PreamblePatch, DiagnosticsToPreamble) {
   Config Cfg;
   Cfg.Diagnostics.AllowStalePreamble = true;
   Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
+  Cfg.Diagnostics.MissingIncludes = Config::IncludesPolicy::Strict;
   WithContextValue WithCfg(Config::Key, std::move(Cfg));
 
   llvm::StringMap<std::string> AdditionalFiles;
@@ -699,6 +700,8 @@ $foo[[#include "foo.h"]])");
   {
     Annotations Code("#define [[FOO]] 1\n");
     // Check ranges for notes.
+    // This also makes sure we don't generate missing-include diagnostics
+    // because macros are redefined in preamble-patch.
     Annotations NewCode(R"(#define BARXYZ 1
 #define $foo1[[FOO]] 1
 void foo();
@@ -863,6 +866,27 @@ TEST(PreamblePatch, MacroAndMarkHandling) {
     EXPECT_THAT(AST->getMarks(),
                 UnorderedElementsAre(Mark(NewCode.range("x"), " XX"),
                                      Mark(NewCode.range("y"), " YY")));
+  }
+}
+
+TEST(PreamblePatch, PatchFileEntry) {
+  Annotations Code(R"cpp(#define FOO)cpp");
+  Annotations NewCode(R"cpp(
+#define BAR
+#define FOO)cpp");
+  {
+    auto AST = createPatchedAST(Code.code(), Code.code());
+    EXPECT_EQ(
+        PreamblePatch::getPatchEntry(AST->tuPath(), AST->getSourceManager()),
+        nullptr);
+  }
+  {
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
+    auto *FE =
+        PreamblePatch::getPatchEntry(AST->tuPath(), AST->getSourceManager());
+    ASSERT_NE(FE, nullptr);
+    EXPECT_THAT(FE->getName().str(),
+                testing::EndsWith(PreamblePatch::HeaderName.str()));
   }
 }
 

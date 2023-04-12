@@ -32,7 +32,7 @@ public:
 #if defined(_LIBCPP_ERROR_CATEGORY_DEFINE_LEGACY_INLINE_FUNCTIONS)
   error_category() noexcept;
 #else
-  _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14 error_category() _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 error_category() _NOEXCEPT = default;
 #endif
   error_category(const error_category&)            = delete;
   error_category& operator=(const error_category&) = delete;
@@ -43,7 +43,7 @@ public:
   virtual bool equivalent(const error_code& __code, int __condition) const _NOEXCEPT;
   virtual string message(int __ev) const = 0;
 
-  _LIBCPP_INLINE_VISIBILITY bool operator==(const error_category& __rhs) const _NOEXCEPT { return this == &__rhs; }
+  _LIBCPP_HIDE_FROM_ABI bool operator==(const error_category& __rhs) const _NOEXCEPT { return this == &__rhs; }
 
 #if _LIBCPP_STD_VER >= 20
 
@@ -53,9 +53,9 @@ public:
 
 #else  // _LIBCPP_STD_VER >= 20
 
-  _LIBCPP_INLINE_VISIBILITY bool operator!=(const error_category& __rhs) const _NOEXCEPT { return !(*this == __rhs); }
+  _LIBCPP_HIDE_FROM_ABI bool operator!=(const error_category& __rhs) const _NOEXCEPT { return !(*this == __rhs); }
 
-  _LIBCPP_INLINE_VISIBILITY bool operator<(const error_category& __rhs) const _NOEXCEPT { return this < &__rhs; }
+  _LIBCPP_HIDE_FROM_ABI bool operator<(const error_category& __rhs) const _NOEXCEPT { return this < &__rhs; }
 
 #endif // _LIBCPP_STD_VER >= 20
 

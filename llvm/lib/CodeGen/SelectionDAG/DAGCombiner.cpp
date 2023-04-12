@@ -10323,8 +10323,10 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
       return DAG.getNode(ISD::SRL, SDLoc(N), VT, N0.getOperand(0), N1);
   }
 
-  // fold (srl (ctlz x), "5") -> x  iff x has one bit set (the low bit).
+  // fold (srl (ctlz x), "5") -> x  iff x has one bit set (the low bit), and x has a power
+  // of two bitwidth. The "5" represents (log2 (bitwidth x)).
   if (N1C && N0.getOpcode() == ISD::CTLZ &&
+      isPowerOf2_32(OpSizeInBits) &&
       N1C->getAPIntValue() == Log2_32(OpSizeInBits)) {
     KnownBits Known = DAG.computeKnownBits(N0.getOperand(0));
 

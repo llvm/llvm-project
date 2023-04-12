@@ -452,10 +452,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTruncStoreAction(MVT::f64, MVT::f16, Expand);
   }
 
-  if (Subtarget.is64Bit())
+  if (Subtarget.is64Bit()) {
     setOperationAction({ISD::FP_TO_UINT, ISD::FP_TO_SINT,
                         ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT},
                        MVT::i32, Custom);
+    setOperationAction(ISD::LROUND, MVT::i32, Custom);
+  }
 
   if (Subtarget.hasStdExtF()) {
     setOperationAction({ISD::FP_TO_UINT_SAT, ISD::FP_TO_SINT_SAT}, XLenVT,
@@ -8489,6 +8491,37 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(Result);
     if (IsStrict)
       Results.push_back(Chain);
+    break;
+  }
+  case ISD::LROUND: {
+    SDValue Op0 = N->getOperand(0);
+    EVT Op0VT = Op0.getValueType();
+    if (getTypeAction(*DAG.getContext(), Op0.getValueType()) !=
+        TargetLowering::TypeSoftenFloat) {
+      if (!isTypeLegal(Op0VT))
+        return;
+
+      // In absense of Zfh, promote f16 to f32, then convert.
+      if (Op0.getValueType() == MVT::f16 && !Subtarget.hasStdExtZfh())
+        Op0 = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op0);
+
+      SDValue Res =
+          DAG.getNode(RISCVISD::FCVT_W_RV64, DL, MVT::i64, Op0,
+                      DAG.getTargetConstant(RISCVFPRndMode::RMM, DL, MVT::i64));
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
+    // If the FP type needs to be softened, emit a library call to lround. We'll
+    // need to truncate the result. We assume any value that doesn't fit in i32
+    // is allowed to return an unspecified value.
+    RTLIB::Libcall LC =
+        Op0.getValueType() == MVT::f64 ? RTLIB::LROUND_F64 : RTLIB::LROUND_F32;
+    MakeLibCallOptions CallOptions;
+    EVT OpVT = Op0.getValueType();
+    CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64, true);
+    SDValue Result = makeLibCall(DAG, LC, MVT::i64, Op0, CallOptions, DL).first;
+    Result = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Result);
+    Results.push_back(Result);
     break;
   }
   case ISD::READCYCLECOUNTER: {

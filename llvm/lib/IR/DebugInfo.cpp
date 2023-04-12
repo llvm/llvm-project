@@ -2043,6 +2043,9 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
         continue;
       if (AllocaInst *Alloca =
               dyn_cast<AllocaInst>(DDI->getAddress()->stripPointerCasts())) {
+        // FIXME: Skip VLAs for now (let these variables use dbg.declares).
+        if (!Alloca->isStaticAlloca())
+          continue;
         DbgDeclares[Alloca].insert(DDI);
         Vars[Alloca].insert(VarRecord(DDI));
       }

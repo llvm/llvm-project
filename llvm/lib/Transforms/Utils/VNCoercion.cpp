@@ -332,43 +332,27 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
   return SrcVal;
 }
 
-/// This function is called when we have a memdep query of a load that ends up
-/// being a clobbering store.  This means that the store provides bits used by
-/// the load but the pointers don't must-alias.  Check this case to see if
-/// there is anything more we can do before we give up.
-Value *getStoreValueForLoad(Value *SrcVal, unsigned Offset, Type *LoadTy,
-                            Instruction *InsertPt, const DataLayout &DL) {
+Value *getValueForLoad(Value *SrcVal, unsigned Offset, Type *LoadTy,
+                       Instruction *InsertPt, const DataLayout &DL) {
 
+#ifndef NDEBUG
+  unsigned SrcValSize = DL.getTypeStoreSize(SrcVal->getType()).getFixedValue();
+  unsigned LoadSize = DL.getTypeStoreSize(LoadTy).getFixedValue();
+  assert(Offset + LoadSize <= SrcValSize);
+#endif
   IRBuilder<> Builder(InsertPt);
   SrcVal = getStoreValueForLoadHelper(SrcVal, Offset, LoadTy, Builder, DL);
   return coerceAvailableValueToLoadType(SrcVal, LoadTy, Builder, DL);
 }
 
-Constant *getConstantStoreValueForLoad(Constant *SrcVal, unsigned Offset,
-                                       Type *LoadTy, const DataLayout &DL) {
+Constant *getConstantValueForLoad(Constant *SrcVal, unsigned Offset,
+                                  Type *LoadTy, const DataLayout &DL) {
+#ifndef NDEBUG
+  unsigned SrcValSize = DL.getTypeStoreSize(SrcVal->getType()).getFixedValue();
+  unsigned LoadSize = DL.getTypeStoreSize(LoadTy).getFixedValue();
+  assert(Offset + LoadSize <= SrcValSize);
+#endif
   return ConstantFoldLoadFromConst(SrcVal, LoadTy, APInt(32, Offset), DL);
-}
-
-Value *getLoadValueForLoad(LoadInst *SrcVal, unsigned Offset, Type *LoadTy,
-                           Instruction *InsertPt, const DataLayout &DL) {
-#ifndef NDEBUG
-  unsigned SrcValStoreSize =
-      DL.getTypeStoreSize(SrcVal->getType()).getFixedValue();
-  unsigned LoadSize = DL.getTypeStoreSize(LoadTy).getFixedValue();
-  assert(Offset + LoadSize <= SrcValStoreSize);
-#endif
-  return getStoreValueForLoad(SrcVal, Offset, LoadTy, InsertPt, DL);
-}
-
-Constant *getConstantLoadValueForLoad(Constant *SrcVal, unsigned Offset,
-                                      Type *LoadTy, const DataLayout &DL) {
-#ifndef NDEBUG
-  unsigned SrcValStoreSize =
-      DL.getTypeStoreSize(SrcVal->getType()).getFixedValue();
-  unsigned LoadSize = DL.getTypeStoreSize(LoadTy).getFixedValue();
-  assert(Offset + LoadSize <= SrcValStoreSize);
-#endif
-  return getConstantStoreValueForLoad(SrcVal, Offset, LoadTy, DL);
 }
 
 /// This function is called when we have a
