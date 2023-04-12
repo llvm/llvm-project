@@ -617,7 +617,8 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
     // Create pad(extract_slice(x)).
     Value newSliceOp = b.create<tensor::ExtractSliceOp>(
         loc, padOp.getSource(), newOffsets, newLengths, newStrides);
-    auto newPadOp = b.create<PadOp>(loc, Type(), newSliceOp, newLows, newHighs);
+    auto newPadOp = b.create<PadOp>(loc, Type(), newSliceOp, newLows, newHighs,
+                                    /*nofold=*/padOp.getNofold());
 
     // Copy region to new PadOp.
     IRMapping bvm;
