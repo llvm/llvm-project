@@ -20,7 +20,7 @@
 #define INSTR_PROF_VALUE_PROF_DATA
 #include "profile/InstrProfData.inc"
 
-uint32_t __llvm_profile_global_timestamp = 1;
+static uint32_t __llvm_profile_global_timestamp = 1;
 
 COMPILER_RT_VISIBILITY
 void INSTR_PROF_PROFILE_SET_TIMESTAMP(uint64_t *Probe) {
