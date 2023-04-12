@@ -11,7 +11,6 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
-#include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
@@ -56,30 +55,7 @@ DiagnosedSilenceableFailure tileToForallOpImpl(
     ArrayRef<OpFoldResult> mixedTileSizes, std::optional<ArrayAttr> mapping,
     SmallVector<Operation *> &tileOps, SmallVector<Operation *> &tiledOps);
 
-namespace detail {
-LogicalResult verifyStructuredOpPredicateOpTrait(Operation *op,
-                                                 Value structuredOpHandle);
-} // namespace detail
-
-template <typename OpTy>
-class StructuredOpPredicateOpTrait
-    : public OpTrait::TraitBase<OpTy, StructuredOpPredicateOpTrait> {
-public:
-  static LogicalResult verifyTrait(Operation *op) {
-    static_assert(
-        OpTy::template hasTrait<SingleOpMatcherOpTrait>(),
-        "StructuredOpPredicateOpTrait requires SingleOpMatcherOpTrait");
-
-    return detail::verifyStructuredOpPredicateOpTrait(
-        op, cast<OpTy>(op).getOperandHandle());
-  }
-};
-
 } // namespace transform
-
-namespace linalg {
-void registerTransformDialectExtension(DialectRegistry &registry);
-} // namespace linalg
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
@@ -90,8 +66,5 @@ void registerTransformDialectExtension(DialectRegistry &registry);
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h.inc"
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/Linalg/TransformOps/LinalgMatchOps.h.inc"
 
 #endif // MLIR_DIALECT_LINALG_TRANSFORMOPS_LINALGTRANSFORMOPS_H
