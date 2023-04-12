@@ -282,7 +282,7 @@ DiagnosedSilenceableFailure transform::TakeAssumedBranchOp::applyToOne(
 
 void transform::TakeAssumedBranchOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTarget(), effects);
+  onlyReadsHandle(getTarget(), effects);
   modifiesPayload(effects);
 }
 

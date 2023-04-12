@@ -12,10 +12,33 @@ transform.sequence failures(propagate) {
 ^bb0(%arg1: !transform.any_op):
   %if = transform.structured.match ops{["scf.if"]} in %arg1 
     : (!transform.any_op) -> !transform.any_op
-
   // expected-error @+1 {{requires an scf.if op with a single-block `else` region}}
   transform.scf.take_assumed_branch %if take_else_branch 
     : (!transform.any_op) -> ()
+}
+
+// -----
+
+// CHECK-LABEL: if_no_else
+func.func @if_no_else(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
+  scf.if %cond {
+    "some_op"(%cond, %b) : (i1, memref<?xf32>) -> ()
+    scf.yield
+  }
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg1: !transform.any_op):
+  %if = transform.structured.match ops{["scf.if"]} in %arg1 
+    : (!transform.any_op) -> !transform.any_op
+  %some_op = transform.structured.match ops{["some_op"]} in %arg1 
+    : (!transform.any_op) -> !transform.any_op
+
+  transform.scf.take_assumed_branch %if : (!transform.any_op) -> ()
+  
+  // Handle to formerly nested `some_op` is still valid after the transform.
+  transform.print %some_op: !transform.any_op
 }
 
 // -----
