@@ -262,10 +262,6 @@ bool TargetTransformInfo::hasBranchDivergence() const {
   return TTIImpl->hasBranchDivergence();
 }
 
-bool TargetTransformInfo::useGPUDivergenceAnalysis() const {
-  return TTIImpl->useGPUDivergenceAnalysis();
-}
-
 bool TargetTransformInfo::isSourceOfDivergence(const Value *V) const {
   return TTIImpl->isSourceOfDivergence(V);
 }
