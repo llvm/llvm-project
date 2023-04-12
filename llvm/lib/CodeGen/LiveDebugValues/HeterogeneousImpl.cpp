@@ -47,6 +47,12 @@ using namespace llvm;
 
 STATISTIC(NumInserted, "Number of DBG_DEF instructions inserted");
 
+static cl::opt<unsigned> OutputDbgDefLimit(
+    "livedebugvalues-output-dbg-def-limit",
+    cl::desc(
+        "Maximum output DBG_DEF insts supported by debug range extension"),
+    cl::init(500000), cl::Hidden);
+
 namespace {
 
 class HeterogeneousLDV : public LDVImpl {
@@ -82,17 +88,32 @@ bool HeterogeneousLDV::ExtendRanges(MachineFunction &MF,
 #ifndef NDEBUG
   // To diagnose kills which are not dominated by a corresponding def we record
   // kills which were successfully reached by a def.
-  SmallPtrSet<MachineInstr *, 16> ReachedDbgKills;
+  DenseSet<std::pair<int, DILifetime*>> ReachedDbgKills;
 #endif
 
   std::vector<MachineInstr *> OriginalDbgDefs;
+  DenseSet<std::pair<int, DILifetime*>> DbgKills;
 
   // We will insert additional DBG_DEFs which we do not want to consider, so we
   // record the set present on entry to the pass.
-  for (auto &&MBB : MF)
-    for (auto &&MI : MBB)
+  unsigned NumMBBs = 0;
+  for (auto &&MBB : MF) {
+    ++NumMBBs;
+    for (auto &&MI : MBB) {
       if (MI.isDebugDef())
         OriginalDbgDefs.push_back(&MI);
+      else if (MI.isDebugKill())
+        DbgKills.insert({MBB.getNumber(), MI.getDebugLifetime()});
+    }
+  }
+
+  if (NumMBBs > InputBBLimit && OriginalDbgDefs.size() > InputDbgValLimit) {
+    LLVM_DEBUG(dbgs() << "Disabling HeterogeneousLDV: " << MF.getName()
+                      << " has " << NumMBBs << " basic blocks and "
+                      << OriginalDbgDefs.size()
+                      << " input DBG_DEFs, exceeding limits.\n");
+    return false;
+  }
 
 #ifndef NDEBUG
   SmallPtrSet<DILifetime *, 16> ReachedLifetimes;
@@ -103,10 +124,18 @@ bool HeterogeneousLDV::ExtendRanges(MachineFunction &MF,
            "Bounded lifetime referenced by more than a single def");
 #endif
 
-
+  std::deque<MachineBasicBlock *> PendingMBBs;
+  SmallPtrSet<MachineBasicBlock *, 16> SeenMBBs;
   for (auto &&DbgDef : OriginalDbgDefs) {
-    std::deque<MachineBasicBlock *> PendingMBBs{DbgDef->getParent()};
-    SmallPtrSet<MachineBasicBlock *, 16> SeenMBBs{DbgDef->getParent()};
+    if (NumInserted > OutputDbgDefLimit) {
+      LLVM_DEBUG(dbgs() << "Disabling VarLocBasedLDV: " << MF.getName()
+                        << " generated too many DBG_DEFs.\n");
+      return Changed;
+    }
+    PendingMBBs.clear();
+    PendingMBBs.push_front(DbgDef->getParent());
+    SeenMBBs.clear();
+    SeenMBBs.insert(DbgDef->getParent());
     while (!PendingMBBs.empty()) {
       MachineBasicBlock *MBB = PendingMBBs.front();
       PendingMBBs.pop_front();
@@ -114,17 +143,11 @@ bool HeterogeneousLDV::ExtendRanges(MachineFunction &MF,
       // First scan if this block kills the lifetime of the def we are
       // currently processing. If so, we don't want to consider any successors
       // of MBB.
-      auto MBBI = find_if(MBB->instrs(), [&](auto &&MI) {
-        return MI.isDebugKill() &&
-               MI.getDebugLifetime() == DbgDef->getDebugLifetime();
-      });
-      if (MBBI != MBB->end()) {
-#ifndef NDEBUG
-        bool Inserted = ReachedDbgKills.insert(&*MBBI).second;
-        (void)Inserted;
-        assert(Inserted &&
+      if (DbgKills.contains({MBB->getNumber(), DbgDef->getDebugLifetime()})) {
+        assert(ReachedDbgKills
+                   .insert({MBB->getNumber(), DbgDef->getDebugLifetime()})
+                   .second &&
                "Should never revisit a DBG_KILL in livedebugvalues");
-#endif
         continue;
       }
 
@@ -149,7 +172,8 @@ bool HeterogeneousLDV::ExtendRanges(MachineFunction &MF,
   for (auto &&MBB : MF)
     for (auto &&MI : MBB)
       assert(!MI.isDebugKill() ||
-             ReachedDbgKills.count(&MI) && "Orphaned DBG_KILL");
+          ReachedDbgKills.contains({MBB.getNumber(), MI.getDebugLifetime()}) &&
+              "Orphaned DBG_KILL");
 #endif
 
   return Changed;
