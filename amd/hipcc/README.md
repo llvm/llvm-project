@@ -74,4 +74,4 @@ The hipcc and hipconfig executables are created in the current build folder. The
 
 ### <a name="testing"></a> hipcc: testing
 
-Currently hipcc/hipconfig executables are tested by building and executing HIP tests. Seperate tests for hipcc/hipconfig is currently not planned.   
+Currently hipcc/hipconfig executables are tested by building and executing HIP tests. Separate tests for hipcc/hipconfig is currently not planned.   
