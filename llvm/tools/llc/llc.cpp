@@ -699,13 +699,17 @@ static int compileModule(char **argv, LLVMContext &Context) {
       if (!MIR) {
         WithColor::warning(errs(), argv[0])
             << "run-pass is for .mir file only.\n";
+        delete MMIWP;
         return 1;
       }
-      TargetPassConfig &TPC = *LLVMTM.createPassConfig(PM);
+      TargetPassConfig *PTPC = LLVMTM.createPassConfig(PM);
+      TargetPassConfig &TPC = *PTPC;
       if (TPC.hasLimitedCodeGenPipeline()) {
         WithColor::warning(errs(), argv[0])
             << "run-pass cannot be used with "
             << TPC.getLimitedCodeGenPipelineReason(" and ") << ".\n";
+        delete PTPC;
+        delete MMIWP;
         return 1;
       }
 

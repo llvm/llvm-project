@@ -181,6 +181,16 @@ bool transform::TrackingListener::isNewOp(Operation *op) const {
   return it->second.contains(op);
 }
 
+LogicalResult transform::TrackingListener::notifyMatchFailure(
+    Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
+  LLVM_DEBUG({
+    Diagnostic diag(loc, DiagnosticSeverity::Remark);
+    reasonCallback(diag);
+    DBGS() << "Match Failure : " << diag.str() << "\n";
+  });
+  return failure();
+}
+
 void transform::TrackingListener::notifyOperationInserted(Operation *op) {
   newOps[op->getName()].insert(op);
 }
@@ -200,6 +210,19 @@ void transform::TrackingListener::notifyOperationRemoved(Operation *op) {
   });
 }
 
+/// Return true if `a` happens before `b`, i.e., `a` or one of its ancestors
+/// properly dominates `b` and `b` is not inside `a`.
+static bool happensBefore(Operation *a, Operation *b) {
+  do {
+    if (a->isProperAncestor(b))
+      return false;
+    if (Operation *bAncestor = a->getBlock()->findAncestorOpInBlock(*b)) {
+      return a->isBeforeInBlock(bAncestor);
+    }
+  } while ((a = a->getParentOp()));
+  return false;
+}
+
 void transform::TrackingListener::notifyOperationReplaced(
     Operation *op, ValueRange newValues) {
   assert(op->getNumResults() == newValues.size() &&
@@ -210,13 +233,30 @@ void transform::TrackingListener::notifyOperationReplaced(
     (void)replacePayloadValue(oldValue, newValue);
 
   // Replace op handle.
-  Operation *replacement = findReplacementOp(op, newValues);
-  if (succeeded(replacePayloadOp(op, replacement))) {
-    // If the op is tracked but no replacement op was found, send a
-    // notification.
-    if (!replacement)
-      notifyPayloadReplacementNotFound(op, newValues);
+  SmallVector<Value> opHandles;
+  if (failed(getTransformState().getHandlesForPayloadOp(op, opHandles))) {
+    // Op is not tracked.
+    return;
   }
+  auto hasAliveUser = [&]() {
+    for (Value v : opHandles)
+      for (Operation *user : v.getUsers())
+        if (!happensBefore(user, transformOp))
+          return true;
+    return false;
+  };
+  if (!hasAliveUser()) {
+    // The op is tracked but the corresponding handles are dead.
+    (void)replacePayloadOp(op, nullptr);
+    return;
+  }
+
+  Operation *replacement = findReplacementOp(op, newValues);
+  // If the op is tracked but no replacement op was found, send a
+  // notification.
+  if (!replacement)
+    notifyPayloadReplacementNotFound(op, newValues);
+  (void)replacePayloadOp(op, replacement);
 }
 
 //===----------------------------------------------------------------------===//
@@ -339,7 +379,8 @@ transform::AlternativesOp::apply(transform::TransformResults &results,
     if (!failed) {
       // We will be using the clones, so cancel their scheduled deletion.
       deleteClones.release();
-      IRRewriter rewriter(getContext());
+      TrackingListener listener(state, *this);
+      IRRewriter rewriter(getContext(), &listener);
       for (const auto &kvp : llvm::zip(originals, clones)) {
         Operation *original = std::get<0>(kvp);
         Operation *clone = std::get<1>(kvp);

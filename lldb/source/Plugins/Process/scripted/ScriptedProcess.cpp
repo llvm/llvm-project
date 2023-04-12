@@ -168,7 +168,7 @@ Status ScriptedProcess::DoLaunch(Module *exe_module,
   return {};
 }
 
-void ScriptedProcess::DidLaunch() {
+void ScriptedProcess::DidResume() {
   m_pid = GetInterface().GetProcessID();
   GetLoadedDynamicLibrariesInfos();
 }

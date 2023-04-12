@@ -606,7 +606,7 @@ define void @srem_v16i32(ptr %a, ptr %b) #0 {
 ;
 ; VBITS_GE_256-LABEL: srem_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
+; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
@@ -680,13 +680,13 @@ define void @srem_v64i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x i64> @srem_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(1,0) #0 {
 ; CHECK-LABEL: srem_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    ptrue p0.d, vl1
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    sdiv z2.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    mls z0.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    mul z1.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    sub d0, d0, d1
 ; CHECK-NEXT:    ret
   %res = srem <1 x i64> %op1, %op2
   ret <1 x i64> %res
@@ -697,13 +697,13 @@ define <1 x i64> @srem_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(1,0) #
 define <2 x i64> @srem_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(1,0) #0 {
 ; CHECK-LABEL: srem_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    sdiv z2.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    mls z0.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    mul z1.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    sub v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %res = srem <2 x i64> %op1, %op2
   ret <2 x i64> %res
@@ -730,32 +730,34 @@ define void @srem_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @srem_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_128-LABEL: srem_v8i64:
 ; VBITS_GE_128:       // %bb.0:
-; VBITS_GE_128-NEXT:    ldp q0, q1, [x0, #32]
+; VBITS_GE_128-NEXT:    ldp q4, q5, [x1]
 ; VBITS_GE_128-NEXT:    ptrue p0.d, vl2
-; VBITS_GE_128-NEXT:    ldp q2, q3, [x1, #32]
+; VBITS_GE_128-NEXT:    ldp q7, q6, [x1, #32]
+; VBITS_GE_128-NEXT:    ldp q0, q1, [x0, #32]
+; VBITS_GE_128-NEXT:    ldp q2, q3, [x0]
+; VBITS_GE_128-NEXT:    movprfx z16, z3
+; VBITS_GE_128-NEXT:    sdiv z16.d, p0/m, z16.d, z5.d
+; VBITS_GE_128-NEXT:    movprfx z17, z2
+; VBITS_GE_128-NEXT:    sdiv z17.d, p0/m, z17.d, z4.d
+; VBITS_GE_128-NEXT:    mul z5.d, p0/m, z5.d, z16.d
 ; VBITS_GE_128-NEXT:    movprfx z16, z1
-; VBITS_GE_128-NEXT:    sdiv z16.d, p0/m, z16.d, z3.d
-; VBITS_GE_128-NEXT:    mls z1.d, p0/m, z16.d, z3.d
-; VBITS_GE_128-NEXT:    movprfx z3, z0
-; VBITS_GE_128-NEXT:    sdiv z3.d, p0/m, z3.d, z2.d
-; VBITS_GE_128-NEXT:    mls z0.d, p0/m, z3.d, z2.d
-; VBITS_GE_128-NEXT:    ldp q4, q5, [x0]
-; VBITS_GE_128-NEXT:    ldp q7, q6, [x1]
-; VBITS_GE_128-NEXT:    movprfx z16, z5
 ; VBITS_GE_128-NEXT:    sdiv z16.d, p0/m, z16.d, z6.d
-; VBITS_GE_128-NEXT:    movprfx z2, z4
-; VBITS_GE_128-NEXT:    sdiv z2.d, p0/m, z2.d, z7.d
+; VBITS_GE_128-NEXT:    mul z4.d, p0/m, z4.d, z17.d
+; VBITS_GE_128-NEXT:    movprfx z17, z0
+; VBITS_GE_128-NEXT:    sdiv z17.d, p0/m, z17.d, z7.d
+; VBITS_GE_128-NEXT:    mul z6.d, p0/m, z6.d, z16.d
+; VBITS_GE_128-NEXT:    mul z7.d, p0/m, z7.d, z17.d
+; VBITS_GE_128-NEXT:    sub v0.2d, v0.2d, v7.2d
+; VBITS_GE_128-NEXT:    sub v1.2d, v1.2d, v6.2d
+; VBITS_GE_128-NEXT:    sub v2.2d, v2.2d, v4.2d
 ; VBITS_GE_128-NEXT:    stp q0, q1, [x0, #32]
-; VBITS_GE_128-NEXT:    movprfx z0, z4
-; VBITS_GE_128-NEXT:    mls z0.d, p0/m, z2.d, z7.d
-; VBITS_GE_128-NEXT:    movprfx z1, z5
-; VBITS_GE_128-NEXT:    mls z1.d, p0/m, z16.d, z6.d
-; VBITS_GE_128-NEXT:    stp q0, q1, [x0]
+; VBITS_GE_128-NEXT:    sub v0.2d, v3.2d, v5.2d
+; VBITS_GE_128-NEXT:    stp q2, q0, [x0]
 ; VBITS_GE_128-NEXT:    ret
 ;
 ; VBITS_GE_256-LABEL: srem_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
@@ -1424,7 +1426,7 @@ define void @urem_v16i32(ptr %a, ptr %b) #0 {
 ;
 ; VBITS_GE_256-LABEL: urem_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
+; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
@@ -1498,13 +1500,13 @@ define void @urem_v64i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x i64> @urem_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(1,0) #0 {
 ; CHECK-LABEL: urem_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    ptrue p0.d, vl1
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    udiv z2.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    mls z0.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    mul z1.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    sub d0, d0, d1
 ; CHECK-NEXT:    ret
   %res = urem <1 x i64> %op1, %op2
   ret <1 x i64> %res
@@ -1515,13 +1517,13 @@ define <1 x i64> @urem_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(1,0) #
 define <2 x i64> @urem_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(1,0) #0 {
 ; CHECK-LABEL: urem_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    udiv z2.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    mls z0.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    mul z1.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    sub v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %res = urem <2 x i64> %op1, %op2
   ret <2 x i64> %res
@@ -1548,32 +1550,34 @@ define void @urem_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @urem_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_128-LABEL: urem_v8i64:
 ; VBITS_GE_128:       // %bb.0:
-; VBITS_GE_128-NEXT:    ldp q0, q1, [x0, #32]
+; VBITS_GE_128-NEXT:    ldp q4, q5, [x1]
 ; VBITS_GE_128-NEXT:    ptrue p0.d, vl2
-; VBITS_GE_128-NEXT:    ldp q2, q3, [x1, #32]
+; VBITS_GE_128-NEXT:    ldp q7, q6, [x1, #32]
+; VBITS_GE_128-NEXT:    ldp q0, q1, [x0, #32]
+; VBITS_GE_128-NEXT:    ldp q2, q3, [x0]
+; VBITS_GE_128-NEXT:    movprfx z16, z3
+; VBITS_GE_128-NEXT:    udiv z16.d, p0/m, z16.d, z5.d
+; VBITS_GE_128-NEXT:    movprfx z17, z2
+; VBITS_GE_128-NEXT:    udiv z17.d, p0/m, z17.d, z4.d
+; VBITS_GE_128-NEXT:    mul z5.d, p0/m, z5.d, z16.d
 ; VBITS_GE_128-NEXT:    movprfx z16, z1
-; VBITS_GE_128-NEXT:    udiv z16.d, p0/m, z16.d, z3.d
-; VBITS_GE_128-NEXT:    mls z1.d, p0/m, z16.d, z3.d
-; VBITS_GE_128-NEXT:    movprfx z3, z0
-; VBITS_GE_128-NEXT:    udiv z3.d, p0/m, z3.d, z2.d
-; VBITS_GE_128-NEXT:    mls z0.d, p0/m, z3.d, z2.d
-; VBITS_GE_128-NEXT:    ldp q4, q5, [x0]
-; VBITS_GE_128-NEXT:    ldp q7, q6, [x1]
-; VBITS_GE_128-NEXT:    movprfx z16, z5
 ; VBITS_GE_128-NEXT:    udiv z16.d, p0/m, z16.d, z6.d
-; VBITS_GE_128-NEXT:    movprfx z2, z4
-; VBITS_GE_128-NEXT:    udiv z2.d, p0/m, z2.d, z7.d
+; VBITS_GE_128-NEXT:    mul z4.d, p0/m, z4.d, z17.d
+; VBITS_GE_128-NEXT:    movprfx z17, z0
+; VBITS_GE_128-NEXT:    udiv z17.d, p0/m, z17.d, z7.d
+; VBITS_GE_128-NEXT:    mul z6.d, p0/m, z6.d, z16.d
+; VBITS_GE_128-NEXT:    mul z7.d, p0/m, z7.d, z17.d
+; VBITS_GE_128-NEXT:    sub v0.2d, v0.2d, v7.2d
+; VBITS_GE_128-NEXT:    sub v1.2d, v1.2d, v6.2d
+; VBITS_GE_128-NEXT:    sub v2.2d, v2.2d, v4.2d
 ; VBITS_GE_128-NEXT:    stp q0, q1, [x0, #32]
-; VBITS_GE_128-NEXT:    movprfx z0, z4
-; VBITS_GE_128-NEXT:    mls z0.d, p0/m, z2.d, z7.d
-; VBITS_GE_128-NEXT:    movprfx z1, z5
-; VBITS_GE_128-NEXT:    mls z1.d, p0/m, z16.d, z6.d
-; VBITS_GE_128-NEXT:    stp q0, q1, [x0]
+; VBITS_GE_128-NEXT:    sub v0.2d, v3.2d, v5.2d
+; VBITS_GE_128-NEXT:    stp q2, q0, [x0]
 ; VBITS_GE_128-NEXT:    ret
 ;
 ; VBITS_GE_256-LABEL: urem_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]

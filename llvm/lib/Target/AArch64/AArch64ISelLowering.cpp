@@ -17804,64 +17804,9 @@ static SDValue performSubAddMULCombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::SUB, SDLoc(N), VT, Sub, M2);
 }
 
-// This works on the patterns of:
-//   add v1, (mul v2, v3)
-//   sub v1, (mul v2, v3)
-// for vectors of type <1 x i64> and <2 x i64> when SVE is available.
-// It will transform the add/sub to a scalable version, so that we can
-// make use of SVE's MLA/MLS that will be generated for that pattern
-static SDValue performMulAddSubCombine(SDNode *N, SelectionDAG &DAG) {
-  // Before using SVE's features, check first if it's available.
-  if (!DAG.getSubtarget<AArch64Subtarget>().hasSVE())
-    return SDValue();
-
-  if (N->getOpcode() != ISD::ADD && N->getOpcode() != ISD::SUB)
-    return SDValue();
-
-  if (!N->getValueType(0).isFixedLengthVector())
-    return SDValue();
-
-  SDValue MulValue, Op, ExtractIndexValue, ExtractOp;
-
-  if (N->getOperand(0)->getOpcode() == ISD::EXTRACT_SUBVECTOR) {
-    ExtractOp = N->getOperand(0);
-    Op = N->getOperand(1);
-  } else if (N->getOperand(1)->getOpcode() == ISD::EXTRACT_SUBVECTOR) {
-    ExtractOp = N->getOperand(1);
-    Op = N->getOperand(0);
-  } else
-    return SDValue();
-
-  MulValue = ExtractOp.getOperand(0);
-  ExtractIndexValue = ExtractOp.getOperand(1);
-
-  if (!ExtractOp.hasOneUse() && !MulValue.hasOneUse())
-    return SDValue();
-
-  // If the Opcode is NOT MUL, then that is NOT the expected pattern:
-  if (MulValue.getOpcode() != AArch64ISD::MUL_PRED)
-    return SDValue();
-
-  // If the Mul value type is NOT scalable vector, then that is NOT the expected
-  // pattern:
-  EVT VT = MulValue.getValueType();
-  if (!VT.isScalableVector())
-    return SDValue();
-
-  // If the ConstValue is NOT 0, then that is NOT the expected pattern:
-  if (!cast<ConstantSDNode>(ExtractIndexValue)->isZero())
-    return SDValue();
-
-  SDValue ScaledOp = convertToScalableVector(DAG, VT, Op);
-  SDValue NewValue = DAG.getNode(N->getOpcode(), SDLoc(N), VT, {ScaledOp, MulValue});
-  return convertFromScalableVector(DAG, N->getValueType(0), NewValue);
-}
-
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG) {
-  if (SDValue Val = performMulAddSubCombine(N, DAG))
-    return Val;
   // Try to change sum of two reductions.
   if (SDValue Val = performAddUADDVCombine(N, DAG))
     return Val;

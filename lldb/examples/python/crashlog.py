@@ -1111,11 +1111,16 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result)
     launch_info.SetProcessPluginName("ScriptedProcess")
     launch_info.SetScriptedProcessClassName("crashlog_scripted_process.CrashLogScriptedProcess")
     launch_info.SetScriptedProcessDictionary(structured_data)
+    launch_info.SetLaunchFlags(lldb.eLaunchFlagStopAtEntry)
+
     error = lldb.SBError()
     process = target.Launch(launch_info, error)
 
     if not process or error.Fail():
         raise InteractiveCrashLogException("couldn't launch Scripted Process", error)
+
+    process.GetScriptedImplementation().set_crashlog(crashlog)
+    process.Continue()
 
     if not options.skip_status:
         @contextlib.contextmanager
