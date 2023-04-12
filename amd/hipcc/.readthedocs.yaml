@@ -1,0 +1,14 @@
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+version: 2
+
+sphinx:
+   configuration: docs/conf.py
+
+formats: [htmlzip]
+
+python:
+   version: "3.8"
+   install:
+   - requirements: docs/.sphinx/requirements.txt
