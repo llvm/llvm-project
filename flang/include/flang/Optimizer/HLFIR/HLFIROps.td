@@ -793,4 +793,25 @@ def hlfir_ShapeOfOp : hlfir_Op<"shape_of", [Pure]> {
   let builders = [OpBuilder<(ins "mlir::Value":$expr)>];
 }
 
+def hlfir_GetExtentOp : hlfir_Op<"get_extent", [Pure]> {
+  let summary = "Get an extent value from a fir.shape";
+  let description = [{
+    Gets an extent value from a fir.shape. The dimension argument uses C style
+    indexing and so should be between 0 and 1 less than the rank of the shape
+  }];
+
+  let arguments = (ins fir_ShapeType:$shape,
+                       IndexAttr:$dim);
+
+  let results = (outs Index);
+
+  let hasVerifier = 1;
+
+  let assemblyFormat = [{
+    $shape attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [OpBuilder<(ins "mlir::Value":$shape, "unsigned":$dim)>];
+}
+
 #endif // FORTRAN_DIALECT_HLFIR_OPS
