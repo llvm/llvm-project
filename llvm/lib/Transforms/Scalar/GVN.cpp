@@ -986,7 +986,7 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
   if (isSimpleValue()) {
     Res = getSimpleValue();
     if (Res->getType() != LoadTy) {
-      Res = getStoreValueForLoad(Res, Offset, LoadTy, InsertPt, DL);
+      Res = getValueForLoad(Res, Offset, LoadTy, InsertPt, DL);
 
       LLVM_DEBUG(dbgs() << "GVN COERCED NONLOCAL VAL:\nOffset: " << Offset
                         << "  " << *getSimpleValue() << '\n'
@@ -998,7 +998,7 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
     if (CoercedLoad->getType() == LoadTy && Offset == 0) {
       Res = CoercedLoad;
     } else {
-      Res = getLoadValueForLoad(CoercedLoad, Offset, LoadTy, InsertPt, DL);
+      Res = getValueForLoad(CoercedLoad, Offset, LoadTy, InsertPt, DL);
       LLVM_DEBUG(dbgs() << "GVN COERCED NONLOCAL LOAD:\nOffset: " << Offset
                         << "  " << *getCoercedLoadValue() << '\n'
                         << *Res << '\n'
