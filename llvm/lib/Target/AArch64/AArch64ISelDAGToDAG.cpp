@@ -243,6 +243,18 @@ public:
     return false;
   }
 
+  bool SelectDupNegativeZero(SDValue N) {
+    switch(N->getOpcode()) {
+    case AArch64ISD::DUP:
+    case ISD::SPLAT_VECTOR: {
+      ConstantFPSDNode *Const = dyn_cast<ConstantFPSDNode>(N->getOperand(0));
+      return Const && Const->isZero() && Const->isNegative();
+    }
+    }
+
+    return false;
+  }
+
   template<MVT::SimpleValueType VT>
   bool SelectSVEAddSubImm(SDValue N, SDValue &Imm, SDValue &Shift) {
     return SelectSVEAddSubImm(N, VT, Imm, Shift);

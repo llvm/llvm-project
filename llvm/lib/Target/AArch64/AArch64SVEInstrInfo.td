@@ -208,6 +208,10 @@ def AArch64fadd_p_nsz : PatFrag<(ops node:$op1, node:$op2, node:$op3),
                                 (AArch64fadd_p node:$op1, node:$op2, node:$op3), [{
   return N->getFlags().hasNoSignedZeros();
 }]>;
+def AArch64fsub_p_nsz : PatFrag<(ops node:$op1, node:$op2, node:$op3),
+                                (AArch64fsub_p node:$op1, node:$op2, node:$op3), [{
+  return N->getFlags().hasNoSignedZeros();
+}]>;
 
 def SDT_AArch64Arith_Imm : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVT<3,i32>,
@@ -416,10 +420,11 @@ def AArch64eor3 : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_eor3 node:$op1, node:$op2, node:$op3),
                             (xor node:$op1, (xor node:$op2, node:$op3))]>;
 
-class fma_patfrags<SDPatternOperator intrinsic, SDPatternOperator sdnode>
+class fma_patfrags<SDPatternOperator intrinsic, SDPatternOperator add_zero, SDPatternOperator add_negzero>
     : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
                [(intrinsic node:$pred, node:$op1, node:$op2, node:$op3),
-                (sdnode (SVEAllActive), node:$op1, (vselect node:$pred, (AArch64fmul_p_oneuse (SVEAllActive), node:$op2, node:$op3), (SVEDup0)))],
+                (add_zero (SVEAllActive), node:$op1, (vselect node:$pred, (AArch64fmul_p_oneuse (SVEAllActive), node:$op2, node:$op3), (SVEDup0))),
+                (add_negzero (SVEAllActive), node:$op1, (vselect node:$pred, (AArch64fmul_p_oneuse (SVEAllActive), node:$op2, node:$op3), (SVEDupNeg0)))],
                [{
   if ((N->getOpcode() != AArch64ISD::FADD_PRED) &&
       (N->getOpcode() != AArch64ISD::FSUB_PRED))
@@ -427,8 +432,8 @@ class fma_patfrags<SDPatternOperator intrinsic, SDPatternOperator sdnode>
   return N->getFlags().hasAllowContract();
 }]>;
 
-def AArch64fmla_m1 : fma_patfrags<int_aarch64_sve_fmla, AArch64fadd_p_nsz>;
-def AArch64fmls_m1 : fma_patfrags<int_aarch64_sve_fmls, AArch64fsub_p>;
+def AArch64fmla_m1 : fma_patfrags<int_aarch64_sve_fmla, AArch64fadd_p_nsz, AArch64fadd_p>;
+def AArch64fmls_m1 : fma_patfrags<int_aarch64_sve_fmls, AArch64fsub_p, AArch64fsub_p_nsz>;
 
 def AArch64smax_m1 : EitherVSelectOrPassthruPatFrags<int_aarch64_sve_smax, AArch64smax_p>;
 def AArch64umax_m1 : EitherVSelectOrPassthruPatFrags<int_aarch64_sve_umax, AArch64umax_p>;
