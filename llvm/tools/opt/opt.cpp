@@ -274,15 +274,6 @@ static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
 
-static inline void addPass(legacy::PassManagerBase &PM, Pass *P) {
-  // Add the pass to the pass manager...
-  PM.add(P);
-
-  // If we are verifying all of the intermediate steps, add the verifier...
-  if (VerifyEach)
-    PM.add(createVerifierPass());
-}
-
 //===----------------------------------------------------------------------===//
 // CodeGen-related helper functions.
 //
@@ -663,9 +654,8 @@ int main(int argc, char **argv) {
 
   if (UseNPM) {
     if (legacy::debugPassSpecified()) {
-      errs()
-          << "-debug-pass does not work with the new PM, either use "
-             "-debug-pass-manager, or use the legacy PM (-enable-new-pm=0)\n";
+      errs() << "-debug-pass does not work with the new PM, either use "
+                "-debug-pass-manager, or use the legacy PM\n";
       return 1;
     }
     auto NumOLevel = OptLevelO0 + OptLevelO1 + OptLevelO2 + OptLevelO3 +
@@ -773,8 +763,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  std::unique_ptr<legacy::FunctionPassManager> FPasses;
-
   if (TM) {
     // FIXME: We should dyn_cast this when supported.
     auto &LTM = static_cast<LLVMTargetMachine &>(*TM);
@@ -785,21 +773,18 @@ int main(int argc, char **argv) {
   // Create a new optimization pass for each one specified on the command line
   for (unsigned i = 0; i < PassList.size(); ++i) {
     const PassInfo *PassInf = PassList[i];
-    Pass *P = nullptr;
-    if (PassInf->getNormalCtor())
-      P = PassInf->getNormalCtor()();
-    else
+    if (PassInf->getNormalCtor()) {
+      Pass *P = PassInf->getNormalCtor()();
+      if (P) {
+        // Add the pass to the pass manager.
+        Passes.add(P);
+        // If we are verifying all of the intermediate steps, add the verifier.
+        if (VerifyEach)
+          Passes.add(createVerifierPass());
+      }
+    } else
       errs() << argv[0] << ": cannot create pass: "
              << PassInf->getPassName() << "\n";
-    if (P)
-      addPass(Passes, P);
-  }
-
-  if (FPasses) {
-    FPasses->doInitialization();
-    for (Function &F : *M)
-      FPasses->run(F);
-    FPasses->doFinalization();
   }
 
   // Check that the module is well formed on completion of optimization
