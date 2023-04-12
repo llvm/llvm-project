@@ -219,6 +219,9 @@ let Definition = "target" in {
   def DebugUtilityExpression: Property<"debug-utility-expression", "Boolean">,
     DefaultFalse,
     Desc<"Enable debugging of LLDB-internal utility expressions.">;
+  def EnableTrampolineSupport: Property<"enable-trampoline-support", "Boolean">,
+    Global, DefaultTrue,
+    Desc<"Enable trampoline support in LLDB. Trampoline support includes stepping through trampolines directly to their targets, stepping out of trampolines directly to their callers, and automatically filtering out trampolines as possible breakpoint locations when set by name.">;
 }
 
 let Definition = "process_experimental" in {

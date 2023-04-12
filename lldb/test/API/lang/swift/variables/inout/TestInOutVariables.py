@@ -72,19 +72,19 @@ class TestInOutVariables(TestBase):
 
         ivar = x_actual.GetChildAtIndex(0).GetChildAtIndex(0)
         ovar = x_actual.GetChildAtIndex(1)
-        self.assertTrue(
-            ivar.GetName() == "ivar", "Name: %s is not ivar %s" %
+        self.assertEquals(
+            ivar.GetName(), "ivar", "Name: %s is not ivar %s" %
             (ivar.GetName(), message_end))
-        self.assertTrue(
-            ovar.GetName() == "ovar",
+        self.assertEquals(
+            ovar.GetName(), "ovar",
             "ovar is not ovar %s" %
             (message_end))
-        self.assertTrue(
-            ivar.GetValue() == ivar_value,
+        self.assertEquals(
+            ivar.GetValue(), ivar_value,
             "ivar wrong %s" %
             (message_end))
-        self.assertTrue(
-            ovar.GetValue() == ovar_value,
+        self.assertEquals(
+            ovar.GetValue(), ovar_value,
             "ovar wrong %s" %
             (message_end))
 

@@ -274,9 +274,11 @@ Function *DWARFASTParserSwift::ParseFunctionFromDWARF(
           decl_column));
 
     const user_id_t func_user_id = die.GetID();
+    bool is_generic_trampoline = die.IsGenericTrampoline();
     func_sp.reset(new Function(&comp_unit, func_user_id, func_user_id,
-                               func_name, nullptr, func_range,
-                               can_throw)); // first address range
+                               func_name, nullptr,
+                               func_range, // first address range
+                               can_throw, is_generic_trampoline));
 
     if (func_sp.get() != NULL) {
       if (frame_base.IsValid())

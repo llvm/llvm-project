@@ -289,6 +289,12 @@ public:
 
   bool GetDebugUtilityExpression() const;
 
+  /// Trampoline support includes stepping through trampolines directly to their
+  /// targets, stepping out of trampolines directly to their callers, and
+  /// automatically filtering out trampolines as possible breakpoint locations
+  /// when set by name.
+  bool GetEnableTrampolineSupport() const;
+
 private:
   // Callbacks for m_launch_info.
   void Arg0ValueChangedCallback();

@@ -52,9 +52,9 @@ class TestSwiftObjCMainConflictingDylibsFailingImport(TestBase):
         
         # This initially fails with the shared scratch context and is
         # then retried with the per-dylib scratch context.
-        # self.expect("p bar", "expected result", substrs=["$R0", "42"])
-        # self.expect("p $R0", "expected result", substrs=["$R1", "42"])
-        # self.expect("p $R1", "expected result", substrs=["$R2", "42"])
+        # self.expect("expression bar", "expected result", substrs=["$R0", "42"])
+        # self.expect("expression $R0", "expected result", substrs=["$R1", "42"])
+        # self.expect("expression $R1", "expected result", substrs=["$R2", "42"])
         
         # This works by accident because the search paths are in the right order.
         foo_breakpoint = target.BreakpointCreateBySourceRegex(
@@ -64,7 +64,7 @@ class TestSwiftObjCMainConflictingDylibsFailingImport(TestBase):
         # FIXME: The following expression evaluator tests are disabled
         # because it's nondeterministic which one will work.
 
-        # self.expect("p foo", "expected result", substrs=["$R3", "23"])
-        # self.expect("p $R3", "expected result", substrs=["23"])
-        # self.expect("p $R4", "expected result", substrs=["23"])
+        # self.expect("expression foo", "expected result", substrs=["$R3", "23"])
+        # self.expect("expression $R3", "expected result", substrs=["23"])
+        # self.expect("expression $R4", "expected result", substrs=["23"])
 

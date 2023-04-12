@@ -222,6 +222,17 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
     // We may have set the plan up above in the FrameIsOlder section:
 
     if (!m_sub_plan_sp)
+      m_sub_plan_sp = thread.QueueThreadPlanForStepThroughGenericTrampoline(
+          false, m_stop_others, m_status);
+    if (log) {
+      if (m_sub_plan_sp)
+        LLDB_LOGF(log, "Found a generic step through plan: %s",
+                  m_sub_plan_sp->GetName());
+      else
+        LLDB_LOGF(log, "No generic step through plan found.");
+    }
+
+    if (!m_sub_plan_sp)
       m_sub_plan_sp = thread.QueueThreadPlanForStepThrough(
           m_stack_id, false, stop_others, m_status);
 

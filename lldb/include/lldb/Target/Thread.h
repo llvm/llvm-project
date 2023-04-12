@@ -902,6 +902,27 @@ public:
                                 bool abort_other_plans, bool stop_other_threads,
                                 Status &status);
 
+  /// Gets the plan used to step through a function with a generic trampoline. A
+  /// generic trampoline is one without a function target, which the thread plan
+  /// will attempt to step through until it finds a place where it makes sense
+  /// to stop at. 
+  /// \param[in] abort_other_plans
+  ///    \b true if we discard the currently queued plans and replace them with
+  ///    this one.
+  ///    Otherwise this plan will go on the end of the plan stack.
+  ///
+  /// \param[in] stop_other_threads
+  ///    \b true if we will stop other threads while we single step this one.
+  ///
+  /// \param[out] status
+  ///     A status with an error if queuing failed.
+  ///
+  /// \return
+  ///     A shared pointer to the newly queued thread plan, or nullptr if the
+  ///     plan could not be queued.
+  virtual lldb::ThreadPlanSP QueueThreadPlanForStepThroughGenericTrampoline(
+      bool abort_other_plans, lldb::RunMode stop_other_threads, Status &status);
+
   /// Gets the plan used to continue from the current PC.
   /// This is a simple plan, mostly useful as a backstop when you are continuing
   /// for some particular purpose.

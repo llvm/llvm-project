@@ -18,6 +18,7 @@
 #include "tsan_interceptors.h"
 #include "tsan_interface.h"
 #include "tsan_interface_ann.h"
+#include "tsan_spinlock_defs_mac.h"
 #include "sanitizer_common/sanitizer_addrhashmap.h"
 
 #include <errno.h>

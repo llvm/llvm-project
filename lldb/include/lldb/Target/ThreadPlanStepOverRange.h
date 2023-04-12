@@ -30,7 +30,6 @@ public:
   bool ShouldStop(Event *event_ptr) override;
 
 protected:
-  bool DoPlanExplainsStop(Event *event_ptr) override;
   bool DoWillResume(lldb::StateType resume_state, bool current_plan) override;
 
   void SetFlagsToDefault() override {

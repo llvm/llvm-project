@@ -22,6 +22,7 @@ TEST(VirtualOutputConfigTest, construct) {
   EXPECT_TRUE(OutputConfig().getDiscardOnSignal());
   EXPECT_TRUE(OutputConfig().getAtomicWrite());
   EXPECT_TRUE(OutputConfig().getImplyCreateDirectories());
+  EXPECT_FALSE(OutputConfig().getOnlyIfDifferent());
 
   // Test inverted defaults.
   EXPECT_TRUE(OutputConfig().getNoText());
@@ -29,6 +30,7 @@ TEST(VirtualOutputConfigTest, construct) {
   EXPECT_FALSE(OutputConfig().getNoDiscardOnSignal());
   EXPECT_FALSE(OutputConfig().getNoAtomicWrite());
   EXPECT_FALSE(OutputConfig().getNoImplyCreateDirectories());
+  EXPECT_TRUE(OutputConfig().getNoOnlyIfDifferent());
 }
 
 TEST(VirtualOutputConfigTest, set) {

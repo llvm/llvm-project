@@ -16,7 +16,8 @@
 # RUN: dsymutil -verify-dwarf=input -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-INPUT-FAIL
 # RUN: dsymutil -verify-dwarf=none -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-SUCCESS
 # RUN: not dsymutil -verify-dwarf=bogus -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=BOGUS
-# RUN: not dsymutil -verify-dwarf=all -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-OUTPUT-FAIL,QUIET-INPUT-FAIL,VERBOSE-INPUT-FAIL
+# RUN: not dsymutil -verify-dwarf=all -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-OUTPUT-FAIL,QUIET-INPUT-FAIL
+# RUN: not dsymutil -verify-dwarf=all -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=VERBOSE-INPUT-FAIL
 
 # VERBOSE-INPUT-FAIL-DAG: error: Abbreviation declaration contains multiple DW_AT_language attributes.
 # QUIET-INPUT-FAIL-DAG: warning: input verification failed

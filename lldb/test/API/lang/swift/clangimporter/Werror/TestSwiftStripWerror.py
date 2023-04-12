@@ -28,7 +28,7 @@ class TestSwiftWerror(TestBase):
         log = self.getBuildArtifact("types.log")
         self.expect("log enable lldb types -f "+log)
         
-        self.expect("p foo", DATA_TYPES_DISPLAYED_CORRECTLY, substrs=["42"])
+        self.expect("expression foo", DATA_TYPES_DISPLAYED_CORRECTLY, substrs=["42"])
         sanity = 0
         import io
         logfile = io.open(log, "r", encoding='utf-8')

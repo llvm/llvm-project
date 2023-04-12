@@ -84,6 +84,9 @@ public:
                                           bool &is_debugger_specific);
 
   static lldb::SBStructuredData
+  GetProgressDataFromEvent(const lldb::SBEvent &event);
+
+  static lldb::SBStructuredData
   GetDiagnosticFromEvent(const lldb::SBEvent &event);
 
   lldb::SBDebugger &operator=(const lldb::SBDebugger &rhs);

@@ -8,6 +8,7 @@ HELP: Dsymutil Options:
 CHECK: -accelerator
 CHECK: -arch <arch>
 CHECK: -dump-debug-map
+CHECK: -fat64
 CHECK: -flat
 CHECK: -gen-reproducer
 CHECK: -help

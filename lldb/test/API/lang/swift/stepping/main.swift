@@ -205,7 +205,7 @@ func main () -> Void
     indirect.protocol_func(20)
 
     var cd_maker = 
-    { 
+    { // Opening brace
         (arg : Int) -> ConformsDirectly in  // Step into cd_maker stops at closure decl instead.
             return ConformsDirectly(arg) // Step into should stop here in closure.
     }

@@ -63,15 +63,21 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
   OptionsWithRaw args{command};
   StringRef expr = args.GetRawPart();
 
-  if (args.HasArgs()) {
-    if (!ParseOptionsAndNotify(args.GetArgs(), result, m_option_group,
-                               m_exe_ctx))
-      return false;
-  } else if (command.empty()) {
+  if (expr.empty()) {
     result.AppendErrorWithFormatv("'{0}' takes a variable or expression",
                                   m_cmd_name);
     return false;
   }
+
+  if (args.HasArgs()) {
+    if (!ParseOptionsAndNotify(args.GetArgs(), result, m_option_group,
+                               m_exe_ctx))
+      return false;
+  }
+
+  // If the user has not specified, default to disabling persistent results.
+  if (m_expr_options.suppress_persistent_result == eLazyBoolCalculate)
+    m_expr_options.suppress_persistent_result = eLazyBoolYes;
 
   auto verbosity = GetDebugger().GetDWIMPrintVerbosity();
 
@@ -84,7 +90,7 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   DumpValueObjectOptions dump_options = m_varobj_options.GetAsDumpOptions(
       m_expr_options.m_verbosity, m_format_options.GetFormat());
-  dump_options.SetHideName(eval_options.GetSuppressPersistentResult());
+  dump_options.SetHideRootName(eval_options.GetSuppressPersistentResult());
 
   StackFrame *frame = m_exe_ctx.GetFramePtr();
 

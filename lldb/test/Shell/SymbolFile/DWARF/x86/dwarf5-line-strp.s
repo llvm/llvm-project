@@ -3,7 +3,7 @@
 # UNSUPPORTED: system-darwin, system-windows
 
 # RUN: llvm-mc -filetype=obj -o %t -triple x86_64-pc-linux %s
-# RUN: %lldb %t -o "p main" \
+# RUN: %lldb %t -o "expression main" \
 # RUN:   -o exit | FileCheck %s
 
 # CHECK: (void (*)()) $0 = 0x0000000000000000

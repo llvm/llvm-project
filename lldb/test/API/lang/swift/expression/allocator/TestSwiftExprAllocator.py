@@ -19,4 +19,4 @@ class TestSwiftExprAllocator(lldbtest.TestBase):
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'))
 
-        self.expect("p x", substrs=['23'])
+        self.expect("expression x", substrs=['23'])

@@ -41,6 +41,7 @@
 #include "lldb/Target/ThreadPlanStepOverBreakpoint.h"
 #include "lldb/Target/ThreadPlanStepOverRange.h"
 #include "lldb/Target/ThreadPlanStepThrough.h"
+#include "lldb/Target/ThreadPlanStepThroughGenericTrampoline.h"
 #include "lldb/Target/ThreadPlanStepUntil.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Target/UnwindLLDB.h"
@@ -1388,6 +1389,17 @@ ThreadPlanSP Thread::QueueThreadPlanForStepThrough(StackID &return_stack_id,
   if (!thread_plan_sp || !thread_plan_sp->ValidatePlan(nullptr))
     return ThreadPlanSP();
 
+  status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
+  return thread_plan_sp;
+}
+
+ThreadPlanSP Thread::QueueThreadPlanForStepThroughGenericTrampoline(
+    bool abort_other_plans, lldb::RunMode stop_other_threads, Status &status) {
+  ThreadPlanSP thread_plan_sp(
+      new ThreadPlanStepThroughGenericTrampoline(*this, stop_other_threads));
+
+  if (!thread_plan_sp || !thread_plan_sp->ValidatePlan(nullptr))
+    return ThreadPlanSP();
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
 }

@@ -35,6 +35,7 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/OptionParsing.h"
 #include "lldb/Utility/Timer.h"
@@ -924,7 +925,7 @@ void SwiftLanguageRuntimeImpl::ModulesDidLoad(const ModuleList &module_list) {
 
 std::string 
 SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Result(ValueObject &object) {
-  Log *log(GetLog(LLDBLog::DataFormatters));
+  Log *log(GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions));
   std::string expr_string
       = llvm::formatv("Swift._DebuggerSupport.stringForPrintObject({0})",
                       object.GetName().GetCString()).str();
@@ -936,7 +937,7 @@ SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Result(ValueObject &object) {
 
 std::string 
 SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Ref(ValueObject &object) {
-  Log *log(GetLog(LLDBLog::DataFormatters));
+  Log *log(GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions));
 
   StreamString expr_string;
   std::string expr_str 
@@ -960,7 +961,7 @@ std::string
 SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Copy(ValueObject &object,
     lldb::addr_t &copy_location)
 {
-  Log *log(GetLog(LLDBLog::DataFormatters));
+  Log *log(GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions));
 
   ValueObjectSP static_sp(object.GetStaticValue());
 
@@ -1028,7 +1029,7 @@ SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(ValueObject &object,
     std::string &expr_string, 
     Stream &result)
 {
-  Log *log(GetLog(LLDBLog::DataFormatters));
+  Log *log(GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions));
   ValueObjectSP result_sp;
   EvaluateExpressionOptions eval_options;
   eval_options.SetLanguage(lldb::eLanguageTypeSwift);

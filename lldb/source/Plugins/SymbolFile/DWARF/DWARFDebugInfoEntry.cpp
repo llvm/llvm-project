@@ -679,6 +679,12 @@ DWARFDebugInfoEntry::GetMangledName(const DWARFUnit *cu,
   return name;
 }
 
+bool
+DWARFDebugInfoEntry::GetIsGenericTrampoline(const DWARFUnit *cu) const {
+  DWARFFormValue form_value;
+  return GetAttributeValue(cu, DW_AT_trampoline, form_value, nullptr, true) != 0;
+}
+
 // GetPubname
 //
 // Get value the name for a DIE as it should appear for a .debug_pubnames or

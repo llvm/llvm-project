@@ -22,7 +22,7 @@ class TestSwiftRewriteClangPaths(TestBase):
         self.runCmd('log enable lldb types -f "%s"' % log)
         target, process, thread, bkpt = lldbutil.run_to_name_breakpoint(
             self, 'main')
-        self.expect("p 1", substrs=["1"])
+        self.expect("expression 1", substrs=["1"])
 
         # Scan through the types log.
         import io

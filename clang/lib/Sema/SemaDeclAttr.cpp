@@ -6687,6 +6687,12 @@ static void handleSwiftAsyncName(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) SwiftAsyncNameAttr(S.Context, AL, Name));
 }
 
+static void handleTransparentStepping(Sema &S, Decl *D,
+                                          const ParsedAttr &AL) {
+  D->addAttr(::new (S.Context)
+                 TransparentSteppingAttr(S.Context, AL));
+}
+
 static void handleSwiftNewType(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Make sure that there is an identifier as the annotation's single argument.
   if (!AL.checkExactlyNumArgs(S, 1))
@@ -8947,6 +8953,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_NoDebug:
     handleNoDebugAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_TransparentStepping:
+    handleTransparentStepping(S, D, AL);
     break;
   case ParsedAttr::AT_CmseNSEntry:
     handleCmseNSEntryAttr(S, D, AL);

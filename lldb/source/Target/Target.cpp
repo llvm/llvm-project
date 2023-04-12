@@ -5341,6 +5341,12 @@ bool TargetProperties::GetDebugUtilityExpression() const {
       nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
+bool TargetProperties::GetEnableTrampolineSupport() const {
+  const uint32_t idx = ePropertyEnableTrampolineSupport;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
+}
+
 void TargetProperties::SetDebugUtilityExpression(bool debug) {
   const uint32_t idx = ePropertyDebugUtilityExpression;
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, debug);

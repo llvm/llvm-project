@@ -86,10 +86,18 @@ option(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS
   "Fail to configure if certain requirements are not met for testing." OFF)
 
 # BEGIN SWIFT MOD
-option(LLDB_ENABLE_SWIFT_SUPPORT "Enable swift support" ON)
 option(LLDB_ENABLE_WERROR "Fail and stop if a warning is triggered." ${LLVM_ENABLE_WERROR})
 if(LLDB_ENABLE_SWIFT_SUPPORT)
   add_definitions( -DLLDB_ENABLE_SWIFT )
+else()
+  # LLVM_DISTRIBUTION_COMPONENTS may have swift-specific things in them (e.g.
+  # repl_swift). This may be set in a cache where LLDB_ENABLE_SWIFT_SUPPORT does
+  # not yet have a value. We have to touch up LLVM_DISTRIBUTION_COMPONENTS after
+  # the fact.
+  if(LLVM_DISTRIBUTION_COMPONENTS)
+    list(REMOVE_ITEM LLVM_DISTRIBUTION_COMPONENTS repl_swift)
+    set(LLVM_DISTRIBUTION_COMPONENTS ${LLVM_DISTRIBUTION_COMPONENTS} CACHE STRING "" FORCE)
+  endif()
 endif()
 # END SWIFT CODE
 
@@ -210,17 +218,19 @@ else ()
 endif ()
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/../clang/include")
 
-if(NOT LLDB_BUILT_STANDALONE)
-  if (LLVM_EXTERNAL_SWIFT_SOURCE_DIR)
-    include_directories(${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}/include)
-    include_directories(${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}/stdlib/public/SwiftShims)
+if(LLDB_ENABLE_SWIFT_SUPPORT)
+  if(NOT LLDB_BUILT_STANDALONE)
+    if (LLVM_EXTERNAL_SWIFT_SOURCE_DIR)
+      include_directories(${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}/include)
+      include_directories(${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}/stdlib/public/SwiftShims)
+    else ()
+      include_directories(${CMAKE_SOURCE_DIR}/tools/swift/include)
+      include_directories(${CMAKE_SOURCE_DIR}/tools/swift/stdlib/public/SwiftShims)
+    endif ()
+    include_directories("${CMAKE_CURRENT_BINARY_DIR}/../swift/include")
   else ()
-    include_directories(${CMAKE_SOURCE_DIR}/tools/swift/include)
-    include_directories(${CMAKE_SOURCE_DIR}/tools/swift/stdlib/public/SwiftShims)
-  endif ()
-  include_directories("${CMAKE_CURRENT_BINARY_DIR}/../swift/include")
-else ()
-  include_directories("${SWIFT_INCLUDE_DIRS}")
+    include_directories("${SWIFT_INCLUDE_DIRS}")
+  endif()
 endif()
 
 # GCC silently accepts any -Wno-<foo> option, but warns about those options

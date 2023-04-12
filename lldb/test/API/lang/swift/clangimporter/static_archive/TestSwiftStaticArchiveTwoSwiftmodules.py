@@ -52,7 +52,7 @@ class TestSwiftStaticArchiveTwoSwiftmodules(TestBase):
         # This test tests that the search paths from all swiftmodules
         # that are part of the main binary are honored.
         self.expect("fr var foo", "expected result", substrs=["23"])
-        self.expect("p foo", "expected result", substrs=["$R0", "i", "23"])
+        self.expect("expression foo", "expected result", substrs=["$R0", "i", "23"])
         process.Continue()
         self.expect("fr var bar", "expected result", substrs=["42"])
-        self.expect("p bar", "expected result", substrs=["j", "42"])
+        self.expect("expression bar", "expected result", substrs=["j", "42"])

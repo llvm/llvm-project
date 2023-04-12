@@ -40,18 +40,18 @@ frame variable *a
 # CHECK-NEXT:   j = 42
 # CHECK-NEXT: }
 
-print a->f()
-# CHECK-LABEL: print a->f()
+expression a->f()
+# CHECK-LABEL: expression a->f()
 # CHECK: (int) $0 = 47
 
-print ns::A()
-# CHECK-LABEL: print ns::A()
+expression ns::A()
+# CHECK-LABEL: expression ns::A()
 # CHECK: (ns::A) $1 = (i = 147)
 
-print ns::A().i + a->i
-# CHECK-LABEL: print ns::A().i + a->i
+expression ns::A().i + a->i
+# CHECK-LABEL: expression ns::A().i + a->i
 # CHECK: (int) $2 = 194
 
-print ns::A().getA()
+expression ns::A().getA()
 # CHECK-LABEL: ns::A().getA()
 # CHECK: (A) $3 = (i = 146)

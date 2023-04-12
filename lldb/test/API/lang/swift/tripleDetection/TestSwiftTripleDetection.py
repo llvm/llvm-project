@@ -26,7 +26,7 @@ class TestSwiftTripleDetection(TestBase):
                                                               arch+"-apple-macos-unknown")
         bkpt = target.BreakpointCreateByName("main")
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.expect("p 1")
+        self.expect("expression 1")
         import io
         types_logfile = io.open(types_log, "r", encoding='utf-8')
 

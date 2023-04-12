@@ -13,8 +13,8 @@ extension Measurement where UnitType == UnitAngle {
   }
 
   func f() {
-    return //%self.expect('p self.radians', substrs=["CGFloat) $R0", "= 1.745"])
-           //%self.expect('p self', substrs=["Measurement<UnitAngle>"])
+    return //%self.expect('expression self.radians', substrs=["CGFloat) $R0", "= 1.745"])
+           //%self.expect('expression self', substrs=["Measurement<UnitAngle>"])
   }
 }
 

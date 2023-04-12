@@ -25,7 +25,7 @@ class TestSwiftRuntimeLibraryPath(lldbtest.TestBase):
         target, process, thread, bkpt = lldbutil.run_to_name_breakpoint(
             self, 'main')
 
-        self.expect("p 1")
+        self.expect("expression 1")
         import io
         logfile = io.open(log, "r", encoding='utf-8')
         in_expr_log = 0

@@ -39,13 +39,13 @@ struct Struct {
 }
 
 func foo (_ x: inout Class) {
-	print(x.ivar)
-	x.ivar += 1 // Set breakpoint here for Class access
+	print(x.ivar) // Set breakpoint here for Class access
+	x.ivar += 1
 }
 
 func foo(_ x: inout Struct) {
-	print(x.ivar)
-	x.ivar += 1 // Set breakpoint here for Struct access
+	print(x.ivar) // Set breakpoint here for Struct access
+	x.ivar += 1
 }
 
 func fn_ptrs (_ str: Struct) {

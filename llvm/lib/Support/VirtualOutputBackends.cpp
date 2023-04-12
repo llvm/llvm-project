@@ -337,6 +337,89 @@ Error OnDiskOutputFile::initializeStream() {
   return Error::success();
 }
 
+namespace {
+class OpenFileRAII {
+  static const int InvalidFd = -1;
+
+public:
+  int Fd = InvalidFd;
+
+  ~OpenFileRAII() {
+    if (Fd != InvalidFd)
+      llvm::sys::Process::SafelyCloseFileDescriptor(Fd);
+  }
+};
+
+enum class FileDifference : uint8_t {
+  /// The source and destination paths refer to the exact same file.
+  IdenticalFile,
+  /// The source and destination paths refer to separate files with identical
+  /// contents.
+  SameContents,
+  /// The source and destination paths refer to separate files with different
+  /// contents.
+  DifferentContents
+};
+} // end anonymous namespace
+
+static Expected<FileDifference>
+areFilesDifferent(const llvm::Twine &Source, const llvm::Twine &Destination) {
+  if (sys::fs::equivalent(Source, Destination))
+    return FileDifference::IdenticalFile;
+
+  OpenFileRAII SourceFile;
+  sys::fs::file_status SourceStatus;
+  // If we can't open the source file, fail.
+  if (std::error_code EC = sys::fs::openFileForRead(Source, SourceFile.Fd))
+    return convertToOutputError(Source, EC);
+
+  // If we can't stat the source file, fail.
+  if (std::error_code EC = sys::fs::status(SourceFile.Fd, SourceStatus))
+    return convertToOutputError(Source, EC);
+
+  OpenFileRAII DestFile;
+  sys::fs::file_status DestStatus;
+  // If we can't open the destination file, report different.
+  if (std::error_code Error =
+          sys::fs::openFileForRead(Destination, DestFile.Fd))
+    return FileDifference::DifferentContents;
+
+  // If we can't open the destination file, report different.
+  if (std::error_code Error = sys::fs::status(DestFile.Fd, DestStatus))
+    return FileDifference::DifferentContents;
+
+  // If the files are different sizes, they must be different.
+  uint64_t Size = SourceStatus.getSize();
+  if (Size != DestStatus.getSize())
+    return FileDifference::DifferentContents;
+
+  // If both files are zero size, they must be the same.
+  if (Size == 0)
+    return FileDifference::SameContents;
+
+  // The two files match in size, so we have to compare the bytes to determine
+  // if they're the same.
+  std::error_code SourceRegionErr;
+  sys::fs::mapped_file_region SourceRegion(
+      sys::fs::convertFDToNativeFile(SourceFile.Fd),
+      sys::fs::mapped_file_region::readonly, Size, 0, SourceRegionErr);
+  if (SourceRegionErr)
+    return convertToOutputError(Source, SourceRegionErr);
+
+  std::error_code DestRegionErr;
+  sys::fs::mapped_file_region DestRegion(
+      sys::fs::convertFDToNativeFile(DestFile.Fd),
+      sys::fs::mapped_file_region::readonly, Size, 0, DestRegionErr);
+
+  if (DestRegionErr)
+    return FileDifference::DifferentContents;
+
+  if (memcmp(SourceRegion.const_data(), DestRegion.const_data(), Size) != 0)
+    return FileDifference::DifferentContents;
+
+  return FileDifference::SameContents;
+}
+
 Error OnDiskOutputFile::keep() {
   // Destroy the streams to flush them.
   BufferOS.reset();
@@ -350,6 +433,25 @@ Error OnDiskOutputFile::keep() {
 
   if (!TempPath)
     return Error::success();
+
+  if (Config.getOnlyIfDifferent()) {
+    auto Result = areFilesDifferent(*TempPath, OutputPath);
+    if (!Result)
+      return Result.takeError();
+    switch (*Result) {
+    case FileDifference::IdenticalFile:
+      // Do nothing for a self-move.
+      return Error::success();
+
+    case FileDifference::SameContents:
+      // Files are identical; remove the source file.
+      (void) sys::fs::remove(*TempPath);
+      return Error::success();
+
+    case FileDifference::DifferentContents:
+      break; // Rename the file.
+    }
+  }
 
   // Move temporary to the final output path and remove it if that fails.
   std::error_code RenameEC = sys::fs::rename(*TempPath, OutputPath);

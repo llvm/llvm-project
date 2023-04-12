@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/ThreadPlanShouldStopHere.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
@@ -96,10 +97,16 @@ bool ThreadPlanShouldStopHere::DefaultShouldStopHereCallback(
   // independently.  If this ever
   // becomes expensive (this one isn't) we can try to have this set a state
   // that the StepFromHere can use.
-  if (frame) {
-    SymbolContext sc;
-    sc = frame->GetSymbolContext(eSymbolContextLineEntry);
-    if (sc.line_entry.line == 0)
+  SymbolContext sc;
+  sc = frame->GetSymbolContext(eSymbolContextLineEntry);
+
+  if (sc.line_entry.line == 0)
+    should_stop_here = false;
+
+  // If we're in a trampoline, don't stop by default.
+  if (Target::GetGlobalProperties().GetEnableTrampolineSupport()) {
+    sc = frame->GetSymbolContext(lldb::eSymbolContextFunction);
+    if (sc.function && sc.function->IsGenericTrampoline())
       should_stop_here = false;
   }
 

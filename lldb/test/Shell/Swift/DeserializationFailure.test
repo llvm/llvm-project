@@ -15,7 +15,7 @@
 b main
 run
 # Create a SwiftASTContext, to induce error output.
-p 1
+expression 1
 
 # The {{ }} avoids accidentally matching the input script!
 # CHECK: a.out:{{ }}{{.*}}The serialized module is corrupted.

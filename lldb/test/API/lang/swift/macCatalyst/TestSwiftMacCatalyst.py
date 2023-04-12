@@ -36,7 +36,7 @@ class TestSwiftMacCatalyst(TestBase):
         self.expect("fr v s", "Hello macCatalyst")
         expr_log = self.getBuildArtifact("expr.log")
         self.expect('log enable lldb expr -f "%s"' % expr_log)
-        self.expect("p s", "Hello macCatalyst")
+        self.expect("expression s", "Hello macCatalyst")
         import io
         expr_logfile = io.open(expr_log, "r", encoding='utf-8')
 
