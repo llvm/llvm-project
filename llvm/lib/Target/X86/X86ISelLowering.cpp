@@ -47321,8 +47321,6 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
     if (Op0 == Op1) {
       SDValue BC = peekThroughBitcasts(Op0);
       EVT BCVT = BC.getValueType();
-      assert(BCVT.isVector() && DAG.getTargetLoweringInfo().isTypeLegal(BCVT) &&
-             "Unexpected vector type");
 
       // TESTZ(AND(X,Y),AND(X,Y)) == TESTZ(X,Y)
       if (BC.getOpcode() == ISD::AND || BC.getOpcode() == X86ISD::FAND) {
@@ -47342,29 +47340,32 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
       // If every element is an all-sign value, see if we can use MOVMSK to
       // more efficiently extract the sign bits and compare that.
       // TODO: Handle TESTC with comparison inversion.
+      // TODO: When can we use TESTPS/TESTPD instead?
       // TODO: Can we remove SimplifyMultipleUseDemandedBits and rely on
       // MOVMSK combines to make sure its never worse than PTEST?
-      unsigned EltBits = BCVT.getScalarSizeInBits();
-      if (DAG.ComputeNumSignBits(BC) == EltBits) {
-        assert(VT == MVT::i32 && "Expected i32 EFLAGS comparison result");
-        APInt SignMask = APInt::getSignMask(EltBits);
-        const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-        if (SDValue Res =
-                TLI.SimplifyMultipleUseDemandedBits(BC, SignMask, DAG)) {
-          // For vXi16 cases we need to use pmovmksb and extract every other
-          // sign bit.
-          SDLoc DL(EFLAGS);
-          if (EltBits == 16) {
-            MVT MovmskVT = BCVT.is128BitVector() ? MVT::v16i8 : MVT::v32i8;
-            Res = DAG.getBitcast(MovmskVT, Res);
-            Res = getPMOVMSKB(DL, Res, DAG, Subtarget);
-            Res = DAG.getNode(ISD::AND, DL, MVT::i32, Res,
-                              DAG.getConstant(0xAAAAAAAA, DL, MVT::i32));
-          } else {
-            Res = getPMOVMSKB(DL, Res, DAG, Subtarget);
+      if (BCVT.isVector() && DAG.getTargetLoweringInfo().isTypeLegal(BCVT)) {
+        unsigned EltBits = BCVT.getScalarSizeInBits();
+        if (DAG.ComputeNumSignBits(BC) == EltBits) {
+          assert(VT == MVT::i32 && "Expected i32 EFLAGS comparison result");
+          APInt SignMask = APInt::getSignMask(EltBits);
+          const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+          if (SDValue Res =
+                  TLI.SimplifyMultipleUseDemandedBits(BC, SignMask, DAG)) {
+            // For vXi16 cases we need to use pmovmksb and extract every other
+            // sign bit.
+            SDLoc DL(EFLAGS);
+            if (EltBits == 16) {
+              MVT MovmskVT = BCVT.is128BitVector() ? MVT::v16i8 : MVT::v32i8;
+              Res = DAG.getBitcast(MovmskVT, Res);
+              Res = getPMOVMSKB(DL, Res, DAG, Subtarget);
+              Res = DAG.getNode(ISD::AND, DL, MVT::i32, Res,
+                                DAG.getConstant(0xAAAAAAAA, DL, MVT::i32));
+            } else {
+              Res = getPMOVMSKB(DL, Res, DAG, Subtarget);
+            }
+            return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Res,
+                               DAG.getConstant(0, DL, MVT::i32));
           }
-          return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Res,
-                             DAG.getConstant(0, DL, MVT::i32));
         }
       }
     }
