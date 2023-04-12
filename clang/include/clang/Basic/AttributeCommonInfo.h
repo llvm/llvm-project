@@ -25,7 +25,7 @@ public:
   /// The style used to specify an attribute.
   enum Syntax {
     /// __attribute__((...))
-    AS_GNU,
+    AS_GNU = 1,
 
     /// [[...]]
     AS_CXX11,
@@ -122,37 +122,32 @@ public:
 
   AttributeCommonInfo(const IdentifierInfo *AttrName,
                       const IdentifierInfo *ScopeName, SourceRange AttrRange,
-                      SourceLocation ScopeLoc, Form FormUsed)
-      : AttrName(AttrName), ScopeName(ScopeName), AttrRange(AttrRange),
-        ScopeLoc(ScopeLoc),
-        AttrKind(getParsedKind(AttrName, ScopeName, FormUsed.getSyntax())),
-        SyntaxUsed(FormUsed.getSyntax()),
-        SpellingIndex(FormUsed.getSpellingIndex()),
-        IsAlignas(FormUsed.isAlignas()) {}
-
-  AttributeCommonInfo(const IdentifierInfo *AttrName,
-                      const IdentifierInfo *ScopeName, SourceRange AttrRange,
                       SourceLocation ScopeLoc, Kind AttrKind, Form FormUsed)
       : AttrName(AttrName), ScopeName(ScopeName), AttrRange(AttrRange),
         ScopeLoc(ScopeLoc), AttrKind(AttrKind),
         SyntaxUsed(FormUsed.getSyntax()),
         SpellingIndex(FormUsed.getSpellingIndex()),
-        IsAlignas(FormUsed.isAlignas()) {}
+        IsAlignas(FormUsed.isAlignas()) {
+    assert(SyntaxUsed >= AS_GNU && SyntaxUsed <= AS_Implicit &&
+           "Invalid syntax!");
+  }
+
+  AttributeCommonInfo(const IdentifierInfo *AttrName,
+                      const IdentifierInfo *ScopeName, SourceRange AttrRange,
+                      SourceLocation ScopeLoc, Form FormUsed)
+      : AttributeCommonInfo(
+            AttrName, ScopeName, AttrRange, ScopeLoc,
+            getParsedKind(AttrName, ScopeName, FormUsed.getSyntax()),
+            FormUsed) {}
 
   AttributeCommonInfo(const IdentifierInfo *AttrName, SourceRange AttrRange,
                       Form FormUsed)
-      : AttrName(AttrName), ScopeName(nullptr), AttrRange(AttrRange),
-        ScopeLoc(),
-        AttrKind(getParsedKind(AttrName, ScopeName, FormUsed.getSyntax())),
-        SyntaxUsed(FormUsed.getSyntax()),
-        SpellingIndex(FormUsed.getSpellingIndex()),
-        IsAlignas(FormUsed.isAlignas()) {}
+      : AttributeCommonInfo(AttrName, nullptr, AttrRange, SourceLocation(),
+                            FormUsed) {}
 
   AttributeCommonInfo(SourceRange AttrRange, Kind K, Form FormUsed)
-      : AttrName(nullptr), ScopeName(nullptr), AttrRange(AttrRange), ScopeLoc(),
-        AttrKind(K), SyntaxUsed(FormUsed.getSyntax()),
-        SpellingIndex(FormUsed.getSpellingIndex()),
-        IsAlignas(FormUsed.isAlignas()) {}
+      : AttributeCommonInfo(nullptr, nullptr, AttrRange, SourceLocation(), K,
+                            FormUsed) {}
 
   AttributeCommonInfo(AttributeCommonInfo &&) = default;
   AttributeCommonInfo(const AttributeCommonInfo &) = default;
