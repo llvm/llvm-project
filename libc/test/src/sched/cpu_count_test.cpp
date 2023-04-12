@@ -1,4 +1,4 @@
-//===-- Unittests for sched_getaffinity and sched_setaffinity -------------===//
+//===-- Unittests for __sched_cpu_count -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,7 @@
 #include <sched.h>
 #include <sys/syscall.h>
 
-TEST(LlvmLibcSchedAffinityTest, SmokeTest) {
+TEST(LlvmLibcSchedCpuCountTest, SmokeTest) {
   cpu_set_t mask;
   libc_errno = 0;
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
