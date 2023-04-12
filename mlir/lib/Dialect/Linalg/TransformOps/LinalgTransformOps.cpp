@@ -1818,7 +1818,7 @@ transform::HoistPadOp::applyToOne(tensor::PadOp target,
                                   transform::TransformState &state) {
   tensor::PadOp hoistedPadOp;
   SmallVector<GenericOp> transposeOps;
-  TrackingListener listener(state);
+  TrackingListener listener(state, *this);
   IRRewriter rewriter(target->getContext(), &listener);
   FailureOr<Value> result =
       hoistPaddingOnTensors(rewriter, target, getNumLoops(), getTranspose(),
@@ -3068,7 +3068,7 @@ transform::VectorizeOp::applyToOne(Operation *target,
   if (getVectorizePadding())
     linalg::populatePadOpVectorizationPatterns(patterns);
 
-  TrackingListener listener(state);
+  TrackingListener listener(state, *this);
   GreedyRewriteConfig config;
   config.listener = &listener;
   if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns), config)))
