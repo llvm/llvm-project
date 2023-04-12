@@ -10,10 +10,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8s8
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
-    ; CHECK: [[CTLZ:%[0-9]+]]:_(<8 x s8>) = G_CTLZ [[COPY]](<8 x s8>)
-    ; CHECK: $d0 = COPY [[CTLZ]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(<8 x s8>) = G_CTLZ [[COPY]](<8 x s8>)
+    ; CHECK-NEXT: $d0 = COPY [[CTLZ]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s8>) = COPY $d0
     %1:_(<8 x s8>) = G_CTLZ %0(<8 x s8>)
     $d0 = COPY %1(<8 x s8>)
@@ -30,10 +31,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4s16
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK: [[CTLZ:%[0-9]+]]:_(<4 x s16>) = G_CTLZ [[COPY]](<4 x s16>)
-    ; CHECK: $d0 = COPY [[CTLZ]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(<4 x s16>) = G_CTLZ [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: $d0 = COPY [[CTLZ]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s16>) = COPY $d0
     %1:_(<4 x s16>) = G_CTLZ %0(<4 x s16>)
     $d0 = COPY %1(<4 x s16>)
@@ -50,10 +52,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2s32
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[CTLZ:%[0-9]+]]:_(<2 x s32>) = G_CTLZ [[COPY]](<2 x s32>)
-    ; CHECK: $d0 = COPY [[CTLZ]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(<2 x s32>) = G_CTLZ [[COPY]](<2 x s32>)
+    ; CHECK-NEXT: $d0 = COPY [[CTLZ]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = G_CTLZ %0(<2 x s32>)
     $d0 = COPY %1(<2 x s32>)
@@ -70,11 +73,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_s64
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
-    ; CHECK: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[COPY1]](s64)
-    ; CHECK: $d0 = COPY [[CTLZ]](s64)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
+    ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[COPY1]](s64)
+    ; CHECK-NEXT: $d0 = COPY [[CTLZ]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(s64) = COPY $d0
     %2:_(s64) = COPY %0(s64)
     %1:_(s64) = G_CTLZ %2(s64)
@@ -91,11 +95,12 @@ body:             |
     liveins: $s0
     ; CHECK-LABEL: name: test_s32
     ; CHECK: liveins: $s0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[COPY1]](s32)
-    ; CHECK: $s0 = COPY [[CTLZ]](s32)
-    ; CHECK: RET_ReallyLR implicit $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[COPY1]](s32)
+    ; CHECK-NEXT: $s0 = COPY [[CTLZ]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %0:_(s32) = COPY $s0
     %2:_(s32) = COPY %0(s32)
     %1:_(s32) = G_CTLZ %2(s32)
@@ -113,10 +118,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_v16s8
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
-    ; CHECK: [[CTLZ:%[0-9]+]]:_(<16 x s8>) = G_CTLZ [[COPY]](<16 x s8>)
-    ; CHECK: $q0 = COPY [[CTLZ]](<16 x s8>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(<16 x s8>) = G_CTLZ [[COPY]](<16 x s8>)
+    ; CHECK-NEXT: $q0 = COPY [[CTLZ]](<16 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<16 x s8>) = COPY $q0
     %1:_(<16 x s8>) = G_CTLZ %0(<16 x s8>)
     $q0 = COPY %1(<16 x s8>)
@@ -133,10 +139,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8s16
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK: [[CTLZ:%[0-9]+]]:_(<8 x s16>) = G_CTLZ [[COPY]](<8 x s16>)
-    ; CHECK: $q0 = COPY [[CTLZ]](<8 x s16>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(<8 x s16>) = G_CTLZ [[COPY]](<8 x s16>)
+    ; CHECK-NEXT: $q0 = COPY [[CTLZ]](<8 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(<8 x s16>) = G_CTLZ %0(<8 x s16>)
     $q0 = COPY %1(<8 x s16>)
@@ -153,10 +160,11 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4s32
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[CTLZ:%[0-9]+]]:_(<4 x s32>) = G_CTLZ [[COPY]](<4 x s32>)
-    ; CHECK: $q0 = COPY [[CTLZ]](<4 x s32>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(<4 x s32>) = G_CTLZ [[COPY]](<4 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[CTLZ]](<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = G_CTLZ %0(<4 x s32>)
     $q0 = COPY %1(<4 x s32>)
@@ -174,11 +182,12 @@ body:             |
     liveins: $s0
     ; CHECK-LABEL: name: test_s32_zeroundef
     ; CHECK: liveins: $s0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[COPY1]](s32)
-    ; CHECK: $s0 = COPY [[CTLZ]](s32)
-    ; CHECK: RET_ReallyLR implicit $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[COPY1]](s32)
+    ; CHECK-NEXT: $s0 = COPY [[CTLZ]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %0:_(s32) = COPY $s0
     %2:_(s32) = COPY %0(s32)
     %1:_(s32) = G_CTLZ_ZERO_UNDEF %2(s32)
@@ -196,11 +205,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_s64_zeroundef
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
-    ; CHECK: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[COPY1]](s64)
-    ; CHECK: $d0 = COPY [[CTLZ]](s64)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
+    ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[COPY1]](s64)
+    ; CHECK-NEXT: $d0 = COPY [[CTLZ]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(s64) = COPY $d0
     %2:_(s64) = COPY %0(s64)
     %1:_(s64) = G_CTLZ_ZERO_UNDEF %2(s64)
