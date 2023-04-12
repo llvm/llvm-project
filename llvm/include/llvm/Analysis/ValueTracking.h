@@ -239,6 +239,10 @@ struct KnownFPClass {
   std::optional<bool> SignBit;
 
 
+  bool isUnknown() const {
+    return KnownFPClasses == fcAllFlags && !SignBit;
+  }
+
   /// Return true if it's known this can never be a nan.
   bool isKnownNeverNaN() const {
     return (KnownFPClasses & fcNan) == fcNone;
