@@ -58,7 +58,6 @@ add_llvm_component_library(LLVMTransformUtils
   MetaRenamer.cpp
   MisExpect.cpp
   ModuleUtils.cpp
-  MoveAutoInit.cpp
   NameAnonGlobals.cpp
   PredicateInfo.cpp
   PromoteMemoryToRegister.cpp
