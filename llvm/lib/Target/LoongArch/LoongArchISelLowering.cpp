@@ -3181,7 +3181,7 @@ bool LoongArchTargetLowering::decomposeMulByConstant(LLVMContext &Context,
         return false;
       // We do not consider the case `(-Imm - ImmSmall).isPowerOf2()`,
       // since it needs one more instruction than other 3 cases.
-      APInt ImmSmall = APInt(Imm.getBitWidth(), 1 << Shifts, true);
+      APInt ImmSmall = APInt(Imm.getBitWidth(), 1ULL << Shifts, true);
       if ((Imm - ImmSmall).isPowerOf2() || (Imm + ImmSmall).isPowerOf2() ||
           (ImmSmall - Imm).isPowerOf2())
         return true;
