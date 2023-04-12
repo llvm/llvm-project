@@ -1335,3 +1335,92 @@ module @named_return attributes { transform.with_named_sequence } {
     transform.test_print_remark_at_operand_value %0#1, "value" : !transform.any_value
   }
 }
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @match1(%current: !transform.any_op {transform.readonly}) -> (!transform.any_op) {
+    transform.test_succeed_if_operand_of_op_kind %current, "test.some_op" : !transform.any_op
+    transform.yield %current : !transform.any_op
+  }
+
+  transform.named_sequence @match2(%current: !transform.any_op {transform.readonly}) -> (!transform.any_op) {
+    transform.test_succeed_if_operand_of_op_kind %current, "func.func" : !transform.any_op
+    transform.yield %current : !transform.any_op
+  }
+
+  transform.named_sequence @action1(%current: !transform.any_op {transform.readonly}) {
+    transform.test_print_remark_at_operand %current, "matched1" : !transform.any_op
+    transform.yield
+  }
+  transform.named_sequence @action2(%current: !transform.any_op {transform.readonly}) {
+    transform.test_print_remark_at_operand %current, "matched2" : !transform.any_op
+    transform.yield
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+    transform.foreach_match in %root
+        @match1 -> @action1,
+        @match2 -> @action2
+      : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
+  }
+
+  // expected-remark @below {{matched2}}
+  func.func private @foo()
+  // expected-remark @below {{matched2}}
+  func.func private @bar()
+  "test.testtest"() : () -> ()
+  // expected-remark @below {{matched1}}
+  "test.some_op"() : () -> ()
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @match(!transform.any_op {transform.readonly})
+  transform.named_sequence @action()
+
+  transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+    // expected-error @below {{unresolved external symbol @match}}
+    transform.foreach_match in %root
+      @match -> @action : (!transform.any_op) -> !transform.any_op
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @match(%arg: !transform.any_op {transform.readonly}) {
+    transform.yield
+  }
+  transform.named_sequence @action()
+
+  transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+    // expected-error @below {{unresolved external symbol @action}}
+    transform.foreach_match in %root
+      @match -> @action : (!transform.any_op) -> !transform.any_op
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @match(%arg: !transform.any_op {transform.readonly}) {
+    // expected-error @below {{expected operations in the match part to implement MatchOpInterface}}
+    transform.test_print_remark_at_operand %arg, "remark" : !transform.any_op
+    transform.yield
+  }
+  transform.named_sequence @action() {
+    transform.yield
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+    transform.foreach_match in %root
+      @match -> @action : (!transform.any_op) -> !transform.any_op
+  }
+}

@@ -17,9 +17,11 @@
 #include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
+
 namespace transform {
 
 class TransformOpInterface;
+class TransformResults;
 
 /// Options controlling the application of transform operations by the
 /// TransformState.
@@ -400,6 +402,11 @@ private:
     return it->second;
   }
 
+  /// Updates the state to include the associations between op results and the
+  /// provided result of applying a transform op.
+  LogicalResult updateStateFromResults(const TransformResults &results,
+                                       ResultRange opResults);
+
   /// Sets the payload IR ops associated with the given transform IR value
   /// (handle). A payload op may be associated multiple handles as long as
   /// at most one of them gets consumed by further transformations.
@@ -690,6 +697,11 @@ LogicalResult verifyTransformOpInterface(Operation *op);
 void prepareValueMappings(
     SmallVectorImpl<SmallVector<transform::MappedValue>> &mappings,
     ValueRange values, const transform::TransformState &state);
+
+/// Populates `results` with payload associations that match exactly those of
+/// the operands to `block`'s terminator.
+void forwardTerminatorOperands(Block *block, transform::TransformState &state,
+                               transform::TransformResults &results);
 } // namespace detail
 
 /// This trait is supposed to be attached to Transform dialect operations that
