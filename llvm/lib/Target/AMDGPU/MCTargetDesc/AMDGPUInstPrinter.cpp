@@ -455,47 +455,14 @@ void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
   }
 }
 
-static const MCRegisterClass *getVGPRRegClass(MCPhysReg Reg,
-                                              const MCRegisterInfo &MRI) {
-  const unsigned VGPRClasses[] = {
-    AMDGPU::VGPR_32RegClassID,
-    AMDGPU::VReg_64RegClassID,
-    AMDGPU::VReg_96RegClassID,
-    AMDGPU::VReg_128RegClassID,
-    AMDGPU::VReg_160RegClassID,
-    AMDGPU::VReg_192RegClassID,
-    AMDGPU::VReg_224RegClassID,
-    AMDGPU::VReg_256RegClassID,
-    AMDGPU::VReg_288RegClassID,
-    AMDGPU::VReg_320RegClassID,
-    AMDGPU::VReg_352RegClassID,
-    AMDGPU::VReg_384RegClassID,
-    AMDGPU::VReg_512RegClassID,
-    AMDGPU::VReg_1024RegClassID,
-    AMDGPU::VGPR_LO16RegClassID,
-    AMDGPU::VGPR_HI16RegClassID
-  };
-
-  for (unsigned RCID : VGPRClasses) {
-    const MCRegisterClass &RC = MRI.getRegClass(RCID);
-    if (RC.contains(Reg))
-      return &RC;
-  }
-
-  return nullptr;
-}
-
 // \returns a low 256 vgpr representing a high vgpr \p Reg [v256..v512] or
 // \p Reg itself otherwise.
 static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCRegisterInfo &MRI) {
-  const MCRegisterClass *RC = getVGPRRegClass(Reg, MRI);
-  if (!RC)
-    return Reg;
+  const MCRegisterClass *RC;
+  bool IsHigh;
 
-  // This is a low VGPR if its first regunit starts below the first regunit
-  // of the high VGPR v256.
-  if (*MCRegUnitRootIterator(*MCRegUnitIterator(Reg, &MRI), &MRI) <
-      AMDGPU::VGPR256_LO16)
+  std::tie(IsHigh, RC) = AMDGPU::isHighVGPR(Reg, MRI);
+  if (!IsHigh)
     return Reg;
 
   // The encoding of the high and the low half of the VGPR file is the same.

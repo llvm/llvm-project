@@ -761,16 +761,18 @@ public:
   // If \p SkipSrc is set to true then constraints for source operands are not
   // checked.
   bool hasInvalidOperand(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+                         const MCRegisterInfo &MRI,
                          bool SkipSrc = false) const {
-    return getInvalidCompOperandIndex(GetRegIdx, SkipSrc).has_value();
+    return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc).has_value();
   }
 
   // Check VOPD operands constraints.
   // Return the index of an invalid component operand, if any.
   // If \p SkipSrc is set to true then constraints for source operands are not
-  // checked.
+  // checked except for being from the same halves of VGPR file on gfx1210.
   std::optional<unsigned> getInvalidCompOperandIndex(
       std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+      const MCRegisterInfo &MRI,
       bool SkipSrc = false) const;
 
 private:
@@ -1425,6 +1427,16 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
+
+/// \returns a register class for the physical register \p Reg if it is a VGPR
+/// or nullptr otherwise.
+const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
+                                           const MCRegisterInfo &MRI);
+
+/// \returns true if a physical register \p Reg is a VGPR starting above v255.
+/// If this is a VGPR also returns it register class.
+std::pair<bool, const MCRegisterClass*> isHighVGPR(MCPhysReg Reg,
+                                                   const MCRegisterInfo &MRI);
 
 } // end namespace AMDGPU
 

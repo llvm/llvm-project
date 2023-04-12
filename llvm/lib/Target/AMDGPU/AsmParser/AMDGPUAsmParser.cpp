@@ -3723,7 +3723,7 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
 
   const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
   auto InvalidCompOprIdx =
-      InstInfo.getInvalidCompOperandIndex(getVRegIdx, SkipSrc);
+      InstInfo.getInvalidCompOperandIndex(getVRegIdx, *TRI, SkipSrc);
   if (!InvalidCompOprIdx)
     return true;
 

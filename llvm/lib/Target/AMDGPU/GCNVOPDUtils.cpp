@@ -109,7 +109,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                  FirstMI.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
                  SecondMI.getOpcode() == AMDGPU::V_MOV_B32_e32;
 
-  if (InstInfo.hasInvalidOperand(getVRegIdx, SkipSrc))
+  if (InstInfo.hasInvalidOperand(getVRegIdx, *TRI, SkipSrc))
     return false;
 
   LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << FirstMI

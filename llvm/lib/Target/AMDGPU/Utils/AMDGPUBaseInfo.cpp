@@ -643,18 +643,26 @@ unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
 }
 
 std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
-    std::function<unsigned(unsigned, unsigned)> GetRegIdx, bool SkipSrc) const {
+    std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+    const MCRegisterInfo &MRI, bool SkipSrc) const {
 
   auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx);
   auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx);
 
-  const unsigned CompOprNum =
-      SkipSrc ? Component::DST_NUM : Component::MAX_OPR_NUM;
   unsigned CompOprIdx;
-  for (CompOprIdx = 0; CompOprIdx < CompOprNum; ++CompOprIdx) {
+  for (CompOprIdx = 0; CompOprIdx < Component::MAX_OPR_NUM; ++CompOprIdx) {
     unsigned BanksNum = BANKS_NUM[CompOprIdx];
-    if (OpXRegs[CompOprIdx] && OpYRegs[CompOprIdx] &&
-        (OpXRegs[CompOprIdx] % BanksNum == OpYRegs[CompOprIdx] % BanksNum))
+    if (!OpXRegs[CompOprIdx] || !OpYRegs[CompOprIdx])
+      continue;
+
+    if (isHighVGPR(OpXRegs[CompOprIdx], MRI).first !=
+        isHighVGPR(OpYRegs[CompOprIdx], MRI).first)
+      return CompOprIdx;
+
+    if (SkipSrc && CompOprIdx >= Component::DST_NUM)
+      continue;
+
+    if (OpXRegs[CompOprIdx] % BanksNum == OpYRegs[CompOprIdx] % BanksNum)
       return CompOprIdx;
   }
 
@@ -2926,6 +2934,52 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
   return isGFX11Plus(STI) ? getGfx11PlusBufferFormatInfo(Format)
                           : isGFX10(STI) ? getGfx10BufferFormatInfo(Format)
                                          : getGfx9BufferFormatInfo(Format);
+}
+
+const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
+                                           const MCRegisterInfo &MRI) {
+  const unsigned VGPRClasses[] = {
+    AMDGPU::VGPR_32RegClassID,
+    AMDGPU::VReg_64RegClassID,
+    AMDGPU::VReg_96RegClassID,
+    AMDGPU::VReg_128RegClassID,
+    AMDGPU::VReg_160RegClassID,
+    AMDGPU::VReg_192RegClassID,
+    AMDGPU::VReg_224RegClassID,
+    AMDGPU::VReg_256RegClassID,
+    AMDGPU::VReg_288RegClassID,
+    AMDGPU::VReg_320RegClassID,
+    AMDGPU::VReg_352RegClassID,
+    AMDGPU::VReg_384RegClassID,
+    AMDGPU::VReg_512RegClassID,
+    AMDGPU::VReg_1024RegClassID,
+    AMDGPU::VGPR_LO16RegClassID,
+    AMDGPU::VGPR_HI16RegClassID
+  };
+
+  for (unsigned RCID : VGPRClasses) {
+    const MCRegisterClass &RC = MRI.getRegClass(RCID);
+    if (RC.contains(Reg))
+      return &RC;
+  }
+
+  return nullptr;
+}
+
+std::pair<bool, const MCRegisterClass*> isHighVGPR(MCPhysReg Reg,
+                                                   const MCRegisterInfo &MRI) {
+  const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
+  if (!RC)
+    return std::make_pair(false, RC);
+
+  // This is a high VGPR if its first regunit is between VGPR256_LO16 and
+  // VGPR511_LO16 or VGPR256_HI16 and VGPR511_HI16.
+  auto Root = *MCRegUnitRootIterator(*MCRegUnitIterator(Reg, &MRI), &MRI);
+  bool IsHigh =
+      (Root >= AMDGPU::VGPR256_LO16 && Root <= AMDGPU::VGPR511_LO16) ||
+      (Root >= AMDGPU::VGPR256_HI16 && Root <= AMDGPU::VGPR511_HI16);
+
+  return std::make_pair(IsHigh, RC);
 }
 
 } // namespace AMDGPU
