@@ -50,6 +50,13 @@ protected:
   virtual Operation *findReplacementOp(Operation *op,
                                        ValueRange newValues) const;
 
+  /// Notify the listener that the pattern failed to match the given operation,
+  /// and provide a callback to populate a diagnostic with the reason why the
+  /// failure occurred.
+  LogicalResult
+  notifyMatchFailure(Location loc,
+                     function_ref<void(Diagnostic &)> reasonCallback) override;
+
   /// This function is called when a tracked payload op is dropped because no
   /// replacement op was found. Derived classes can implement this function for
   /// custom error handling.
