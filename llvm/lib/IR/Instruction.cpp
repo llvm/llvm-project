@@ -734,13 +734,18 @@ bool Instruction::isVolatile() const {
 }
 
 bool Instruction::mayThrow() const {
-  if (const CallInst *CI = dyn_cast<CallInst>(this))
-    return !CI->doesNotThrow();
-  if (const auto *CRI = dyn_cast<CleanupReturnInst>(this))
-    return CRI->unwindsToCaller();
-  if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(this))
-    return CatchSwitch->unwindsToCaller();
-  return isa<ResumeInst>(this);
+  switch (getOpcode()) {
+  case Instruction::Call:
+    return !cast<CallInst>(this)->doesNotThrow();
+  case Instruction::CleanupRet:
+    return cast<CleanupReturnInst>(this)->unwindsToCaller();
+  case Instruction::CatchSwitch:
+    return cast<CatchSwitchInst>(this)->unwindsToCaller();
+  case Instruction::Resume:
+    return true;
+  default:
+    return false;
+  }
 }
 
 bool Instruction::mayHaveSideEffects() const {
