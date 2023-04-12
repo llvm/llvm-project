@@ -771,7 +771,7 @@ void FormatManager::LoadSystemFormatters() {
   fourchar_flags.SetCascades(true).SetSkipPointers(true).SetSkipReferences(
       true);
 
-  AddFormat(sys_category_sp, lldb::eFormatOSType, ConstString("FourCharCode"),
+  AddFormat(sys_category_sp, lldb::eFormatOSType, "FourCharCode",
             fourchar_flags);
 }
 
@@ -788,32 +788,19 @@ void FormatManager::LoadVectorFormatters() {
       .SetShowMembersOneLiner(true)
       .SetHideItemNames(true);
 
-  AddStringSummary(vectors_category_sp, "${var.uint128}",
-                   ConstString("builtin_type_vec128"), vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("float[4]"),
+  AddStringSummary(vectors_category_sp, "${var.uint128}", "builtin_type_vec128",
                    vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("int32_t[4]"),
-                   vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("int16_t[8]"),
-                   vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("vDouble"),
-                   vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("vFloat"),
-                   vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("vSInt8"),
-                   vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("vSInt16"),
-                   vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("vSInt32"),
-                   vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("vUInt16"),
-                   vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("vUInt8"),
-                   vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("vUInt16"),
-                   vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("vUInt32"),
-                   vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("vBool32"),
-                   vector_flags);
+  AddStringSummary(vectors_category_sp, "", "float[4]", vector_flags);
+  AddStringSummary(vectors_category_sp, "", "int32_t[4]", vector_flags);
+  AddStringSummary(vectors_category_sp, "", "int16_t[8]", vector_flags);
+  AddStringSummary(vectors_category_sp, "", "vDouble", vector_flags);
+  AddStringSummary(vectors_category_sp, "", "vFloat", vector_flags);
+  AddStringSummary(vectors_category_sp, "", "vSInt8", vector_flags);
+  AddStringSummary(vectors_category_sp, "", "vSInt16", vector_flags);
+  AddStringSummary(vectors_category_sp, "", "vSInt32", vector_flags);
+  AddStringSummary(vectors_category_sp, "", "vUInt16", vector_flags);
+  AddStringSummary(vectors_category_sp, "", "vUInt8", vector_flags);
+  AddStringSummary(vectors_category_sp, "", "vUInt16", vector_flags);
+  AddStringSummary(vectors_category_sp, "", "vUInt32", vector_flags);
+  AddStringSummary(vectors_category_sp, "", "vBool32", vector_flags);
 }
