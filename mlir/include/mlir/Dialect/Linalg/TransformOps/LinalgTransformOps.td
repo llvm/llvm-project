@@ -2005,4 +2005,42 @@ def HoistRedundantTensorSubsetsOp :
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// InsertSliceToCopyOp
+//===----------------------------------------------------------------------===//
+
+def InsertSliceToCopyOp :
+  Op<Transform_Dialect, "structured.insert_slice_to_copy",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformEachOpTrait, TransformOpInterface]> {
+  let description = [{
+    Targeted rewrite of an tensor.insert_slice to linalg.copy.
+    This is useful to materialize copies explicitly before bufferization and 
+    transform them, avoiding the need to rediscover them after bufferization.
+
+    If the insert_slice source is already a linalg.copy, only return the source
+    op (i.e. do not create an additional linalg.copy op).
+
+    #### Return modes:
+
+    The operation always succeeds and returns a handle to the relevant 
+    linalg.copy op.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results) ";
+
+  let builders = [
+    OpBuilder<(ins "Value":$target)>,
+  ];
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::tensor::InsertSliceOp target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 #endif // LINALG_TRANSFORM_OPS
