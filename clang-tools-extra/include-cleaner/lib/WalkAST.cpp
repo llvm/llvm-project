@@ -8,8 +8,10 @@
 
 #include "AnalysisInternal.h"
 #include "clang-include-cleaner/Types.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -72,17 +74,25 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
   // Picks the most specific specialization for a
   // (Deduced)TemplateSpecializationType, while prioritizing using-decls.
   NamedDecl *getMostRelevantTemplatePattern(const T *TST) {
-    // This is the underlying decl used by TemplateSpecializationType, can be
-    // null when type is dependent.
-    auto *RD = TST->getAsTagDecl();
-    auto *ND = resolveTemplateName(TST->getTemplateName());
     // In case of exported template names always prefer the using-decl. This
     // implies we'll point at the using-decl even when there's an explicit
     // specializaiton using the exported name, but that's rare.
+    auto *ND = resolveTemplateName(TST->getTemplateName());
     if (llvm::isa_and_present<UsingShadowDecl, TypeAliasTemplateDecl>(ND))
       return ND;
-    // Fallback to primary template for dependent instantiations.
-    return RD ? RD : ND;
+    // This is the underlying decl used by TemplateSpecializationType, can be
+    // null when type is dependent if so fallback to primary template.
+    CXXRecordDecl *TD = TST->getAsCXXRecordDecl();
+    if (!TD)
+      return ND;
+    // We ignore explicit instantiations. This might imply marking the wrong
+    // declaration as used in specific cases, but seems like the right trade-off
+    // in general (e.g. we don't want to include a custom library that has an
+    // explicit specialization of a common type).
+    if (auto *Pat = TD->getTemplateInstantiationPattern())
+      return Pat;
+    // For explicit specializations, use the specialized decl directly.
+    return TD;
   }
 
 public:
@@ -179,6 +189,23 @@ public:
     // type-checking purposes.
     if (D->isThisDeclarationADefinition() && D->getIntegerTypeSourceInfo())
       report(D->getLocation(), D);
+    return true;
+  }
+
+  // Report a reference from explicit specializations to the specialized
+  // template. Implicit ones are filtered out by RAV and explicit instantiations
+  // are already traversed through typelocs.
+  bool
+  VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *CTSD) {
+    if (CTSD->isExplicitSpecialization())
+      report(CTSD->getLocation(),
+             CTSD->getSpecializedTemplate()->getTemplatedDecl());
+    return true;
+  }
+  bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *VTSD) {
+    if (VTSD->isExplicitSpecialization())
+      report(VTSD->getLocation(),
+             VTSD->getSpecializedTemplate()->getTemplatedDecl());
     return true;
   }
 
