@@ -349,7 +349,8 @@ transform::AlternativesOp::apply(transform::TransformResults &results,
     if (!failed) {
       // We will be using the clones, so cancel their scheduled deletion.
       deleteClones.release();
-      IRRewriter rewriter(getContext());
+      TrackingListener listener(state);
+      IRRewriter rewriter(getContext(), &listener);
       for (const auto &kvp : llvm::zip(originals, clones)) {
         Operation *original = std::get<0>(kvp);
         Operation *clone = std::get<1>(kvp);
