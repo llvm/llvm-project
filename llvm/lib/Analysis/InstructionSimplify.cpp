@@ -4021,8 +4021,9 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
 
   // Fold (un)ordered comparison if we can determine there are no NaNs.
   if (Pred == FCmpInst::FCMP_UNO || Pred == FCmpInst::FCMP_ORD)
-    if (FMF.noNaNs() || (isKnownNeverNaN(LHS, Q.DL, Q.TLI) &&
-                         isKnownNeverNaN(RHS, Q.DL, Q.TLI)))
+    if (FMF.noNaNs() ||
+        (isKnownNeverNaN(LHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT) &&
+         isKnownNeverNaN(RHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT)))
       return ConstantInt::get(RetTy, Pred == FCmpInst::FCMP_ORD);
 
   // NaN is unordered; NaN is not ordered.
