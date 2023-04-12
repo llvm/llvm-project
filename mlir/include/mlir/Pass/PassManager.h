@@ -21,10 +21,6 @@
 #include <vector>
 #include <optional>
 
-namespace llvm {
-class Any;
-} // namespace llvm
-
 namespace mlir {
 class AnalysisManager;
 class MLIRContext;
