@@ -39,8 +39,9 @@ using SequenceBodyBuilderArgsFn =
 class TrackingListener : public RewriterBase::Listener,
                          public TransformState::Extension {
 public:
-  explicit TrackingListener(TransformState &state)
-      : TransformState::Extension(state) {}
+  /// Create a new TrackingListener for usage in the specified transform op.
+  explicit TrackingListener(TransformState &state, TransformOpInterface op)
+      : TransformState::Extension(state), transformOp(op) {}
 
 protected:
   /// Return a replacement payload op for the given op, which is going to be
@@ -78,6 +79,9 @@ private:
 
   /// Ops that were newly created during the transform.
   DenseMap<OperationName, DenseSet<Operation *>> newOps;
+
+  /// The transform op in which this TrackingListener is used.
+  TransformOpInterface transformOp;
 };
 
 } // namespace transform
