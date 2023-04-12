@@ -74,8 +74,21 @@ class LegalizeDataOpForLLVMTranslation : public ConvertOpToLLVMPattern<Op> {
       }
     }
 
-    builder.replaceOpWithNewOp<Op>(op, TypeRange(), convertedOperands,
-                                   op.getOperation()->getAttrs());
+    if constexpr (std::is_same_v<Op, acc::ParallelOp> ||
+                  std::is_same_v<Op, acc::DataOp>) {
+      auto newOp =
+          builder.create<Op>(op.getLoc(), TypeRange(), convertedOperands,
+                             op.getOperation()->getAttrs());
+      builder.inlineRegionBefore(op.getRegion(), newOp.getRegion(),
+                                 newOp.getRegion().end());
+      if (failed(builder.convertRegionTypes(&newOp.getOperation()->getRegion(0),
+                                            *this->getTypeConverter())))
+        return failure();
+      builder.eraseOp(op);
+    } else {
+      builder.replaceOpWithNewOp<Op>(op, TypeRange(), convertedOperands,
+                                     op.getOperation()->getAttrs());
+    }
 
     return success();
   }
