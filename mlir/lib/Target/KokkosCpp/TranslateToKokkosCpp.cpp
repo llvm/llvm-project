@@ -1200,6 +1200,10 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, ModuleOp moduleOp
 }
 
 static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp functionOp) {
+  llvm::StringRef functionOpName = functionOp.getName();
+  if (functionOpName == "main") {
+    functionOpName = "mymain";
+  }
   // We need to declare variables at top if the function has multiple blocks.
   if (!emitter.shouldDeclareVariablesAtTop() &&
       functionOp.getBlocks().size() > 1) {
@@ -1212,7 +1216,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   {
     if (failed(emitter.emitTypes(functionOp.getLoc(), functionOp.getFunctionType().getResults())))
       return failure();
-    os << ' ' << functionOp.getName() << '(';
+    os << ' ' << functionOpName << '(';
     if (failed(interleaveCommaWithError(functionOp.getArgumentTypes(), os,
       [&](Type argType) -> LogicalResult
       {
@@ -1229,7 +1233,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   if (failed(emitter.emitTypes(functionOp.getLoc(),
                                functionOp.getResultTypes())))
     return failure();
-  os << ' ' << functionOp.getName();
+  os << ' ' << functionOpName;
   os << "(";
   if (failed(interleaveCommaWithError(
           functionOp.getArguments(), os,
@@ -1305,7 +1309,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   if(!emitter.emittingPython())
     return success();
   // Emit a wrapper function without Kokkos::View for Python to call
-  os << "extern \"C\" void " << "py_" << functionOp.getName() << '(';
+  os << "extern \"C\" void " << "py_" << functionOpName << '(';
   // Put the results first: primitives and memrefs are both passed by pointer.
   // Python interface will enforce LayoutRight on all numpy arrays.
   //
@@ -1376,7 +1380,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
       os << "*, Kokkos::HostSpace>(param" << i << ", " << span << "));\n";
     }
   }
-  os << "auto results = " << functionOp.getName() << "(";
+  os << "auto results = " << functionOpName << "(";
   //Construct a Kokkos::View for each memref input, from raw pointer.
   for(size_t i = 0; i < numParams; i++)
   {
@@ -1431,7 +1435,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   }
   os.unindent();
   os << "}\n";
-  // Now that the native function (name: "py_" + functionOp.getName())
+  // Now that the native function (name: "py_" + functionOpName)
   // exists, generate the Python function to call it.
   //
   // Get the NumPy type corresponding to MLIR primitive.
@@ -1476,7 +1480,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   //  - copy out the results to Python and then free the Kokkos temporaries.
   auto& py_os = emitter.py_ostream();
   //NOTE: this function is a member of the module's class, but py_os is already indented to write methods.
-  py_os << "def " << functionOp.getName() << "(self, ";
+  py_os << "def " << functionOpName << "(self, ";
   for(size_t i = 0; i < numParams; i++)
   {
     if(i != 0)
@@ -1537,7 +1541,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
     }
   }
   // Generate the native call. It always returns void.
-  py_os << "self.libHandle.py_" << functionOp.getName() << "(";
+  py_os << "self.libHandle.py_" << functionOpName << "(";
   // Outputs go first
   for(size_t i = 0; i < numResults; i++)
   {
