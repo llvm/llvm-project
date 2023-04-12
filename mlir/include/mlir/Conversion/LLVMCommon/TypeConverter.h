@@ -56,12 +56,18 @@ public:
                                 bool useBarePtrCallConv,
                                 SignatureConversion &result);
 
-  /// Convert a non-empty list of types to be returned from a function into a
-  /// supported LLVM IR type.  In particular, if more than one value is
-  /// returned, create an LLVM IR structure type with elements that correspond
-  /// to each of the MLIR types converted with `convertType`.
+  /// Convert a non-empty list of types to be returned from a function into an
+  /// LLVM-compatible type. In particular, if more than one value is returned,
+  /// create an LLVM dialect structure type with elements that correspond to
+  /// each of the types converted with `convertCallingConventionType`.
   Type packFunctionResults(TypeRange types,
                            bool useBarePointerCallConv = false);
+
+  /// Convert a non-empty list of types of values produced by an operation into
+  /// an LLVM-compatible type. In particular, if more than one value is
+  /// produced, create a literal structure with elements that correspond to each
+  /// of the LLVM-compatible types converted with `convertType`.
+  Type packOperationResults(TypeRange types);
 
   /// Convert a type in the context of the default or bare pointer calling
   /// convention. Calling convention sensitive types, such as MemRefType and
