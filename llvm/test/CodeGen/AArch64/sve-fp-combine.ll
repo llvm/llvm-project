@@ -1116,11 +1116,7 @@ define <vscale x 2 x double> @fsub_sel_fmul_d_nsz(<vscale x 2 x double> %a, <vsc
 define <vscale x 8 x half> @fadd_sel_fmul_h_negzero(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: fadd_sel_fmul_h_negzero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32768 // =0x8000
-; CHECK-NEXT:    fmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    sel z1.h, p0, z1.h, z2.h
-; CHECK-NEXT:    fadd z0.h, z0.h, z1.h
+; CHECK-NEXT:    fmla z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %fmul = fmul <vscale x 8 x half> %b, %c
   %nz = fneg <vscale x 8 x half> zeroinitializer
@@ -1132,11 +1128,7 @@ define <vscale x 8 x half> @fadd_sel_fmul_h_negzero(<vscale x 8 x half> %a, <vsc
 define <vscale x 4 x float> @fadd_sel_fmul_s_negzero(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: fadd_sel_fmul_s_negzero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
-; CHECK-NEXT:    fmul z1.s, z1.s, z2.s
-; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    fadd z0.s, z0.s, z1.s
+; CHECK-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
 ; CHECK-NEXT:    ret
   %fmul = fmul <vscale x 4 x float> %b, %c
   %nz = fneg <vscale x 4 x float> zeroinitializer
@@ -1148,11 +1140,7 @@ define <vscale x 4 x float> @fadd_sel_fmul_s_negzero(<vscale x 4 x float> %a, <v
 define <vscale x 2 x double> @fadd_sel_fmul_d_negzero(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: fadd_sel_fmul_d_negzero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
-; CHECK-NEXT:    fmul z1.d, z1.d, z2.d
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
-; CHECK-NEXT:    fadd z0.d, z0.d, z1.d
+; CHECK-NEXT:    fmla z0.d, p0/m, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %fmul = fmul <vscale x 2 x double> %b, %c
   %nz = fneg <vscale x 2 x double> zeroinitializer
@@ -1214,11 +1202,7 @@ define <vscale x 2 x double> @fsub_sel_fmul_d_negzero(<vscale x 2 x double> %a, 
 define <vscale x 8 x half> @fadd_sel_fmul_h_negzero_nsz(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: fadd_sel_fmul_h_negzero_nsz:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32768 // =0x8000
-; CHECK-NEXT:    fmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    sel z1.h, p0, z1.h, z2.h
-; CHECK-NEXT:    fadd z0.h, z0.h, z1.h
+; CHECK-NEXT:    fmla z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %fmul = fmul <vscale x 8 x half> %b, %c
   %nz = fneg <vscale x 8 x half> zeroinitializer
@@ -1230,11 +1214,7 @@ define <vscale x 8 x half> @fadd_sel_fmul_h_negzero_nsz(<vscale x 8 x half> %a, 
 define <vscale x 4 x float> @fadd_sel_fmul_s_negzero_nsz(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: fadd_sel_fmul_s_negzero_nsz:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
-; CHECK-NEXT:    fmul z1.s, z1.s, z2.s
-; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    fadd z0.s, z0.s, z1.s
+; CHECK-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
 ; CHECK-NEXT:    ret
   %fmul = fmul <vscale x 4 x float> %b, %c
   %nz = fneg <vscale x 4 x float> zeroinitializer
@@ -1246,11 +1226,7 @@ define <vscale x 4 x float> @fadd_sel_fmul_s_negzero_nsz(<vscale x 4 x float> %a
 define <vscale x 2 x double> @fadd_sel_fmul_d_negzero_nsz(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: fadd_sel_fmul_d_negzero_nsz:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
-; CHECK-NEXT:    fmul z1.d, z1.d, z2.d
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
-; CHECK-NEXT:    fadd z0.d, z0.d, z1.d
+; CHECK-NEXT:    fmla z0.d, p0/m, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %fmul = fmul <vscale x 2 x double> %b, %c
   %nz = fneg <vscale x 2 x double> zeroinitializer
@@ -1262,11 +1238,7 @@ define <vscale x 2 x double> @fadd_sel_fmul_d_negzero_nsz(<vscale x 2 x double> 
 define <vscale x 8 x half> @fsub_sel_fmul_h_negzero_nsz(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: fsub_sel_fmul_h_negzero_nsz:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32768 // =0x8000
-; CHECK-NEXT:    fmul z1.h, z1.h, z2.h
-; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    sel z1.h, p0, z1.h, z2.h
-; CHECK-NEXT:    fsub z0.h, z0.h, z1.h
+; CHECK-NEXT:    fmls z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %fmul = fmul <vscale x 8 x half> %b, %c
   %nz = fneg <vscale x 8 x half> zeroinitializer
@@ -1278,11 +1250,7 @@ define <vscale x 8 x half> @fsub_sel_fmul_h_negzero_nsz(<vscale x 8 x half> %a, 
 define <vscale x 4 x float> @fsub_sel_fmul_s_negzero_nsz(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: fsub_sel_fmul_s_negzero_nsz:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
-; CHECK-NEXT:    fmul z1.s, z1.s, z2.s
-; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    fsub z0.s, z0.s, z1.s
+; CHECK-NEXT:    fmls z0.s, p0/m, z1.s, z2.s
 ; CHECK-NEXT:    ret
   %fmul = fmul <vscale x 4 x float> %b, %c
   %nz = fneg <vscale x 4 x float> zeroinitializer
@@ -1294,11 +1262,7 @@ define <vscale x 4 x float> @fsub_sel_fmul_s_negzero_nsz(<vscale x 4 x float> %a
 define <vscale x 2 x double> @fsub_sel_fmul_d_negzero_nsz(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: fsub_sel_fmul_d_negzero_nsz:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
-; CHECK-NEXT:    fmul z1.d, z1.d, z2.d
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
-; CHECK-NEXT:    fsub z0.d, z0.d, z1.d
+; CHECK-NEXT:    fmls z0.d, p0/m, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %fmul = fmul <vscale x 2 x double> %b, %c
   %nz = fneg <vscale x 2 x double> zeroinitializer
