@@ -512,3 +512,9 @@ func.func @bad_shapeof2(%arg0: !hlfir.expr<10xi32>) {
   // expected-error@+1 {{'hlfir.shape_of' op result rank and expr rank do not match}}
   %0 = hlfir.shape_of %arg0 : (!hlfir.expr<10xi32>) -> !fir.shape<42>
 }
+
+// -----
+func.func @bad_getextent(%arg0: !fir.shape<1>) {
+  // expected-error@+1 {{'hlfir.get_extent' op dimension index out of bounds}}
+  %0 = hlfir.get_extent %arg0 {dim = 1 : index} : (!fir.shape<1>) -> index
+}
