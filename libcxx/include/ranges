@@ -391,8 +391,8 @@ namespace std {
 #include <iterator>
 
 // [tuple.helper]
-#include <__tuple_dir/tuple_element.h>
-#include <__tuple_dir/tuple_size.h>
+#include <__tuple/tuple_element.h>
+#include <__tuple/tuple_size.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

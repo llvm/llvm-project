@@ -10,8 +10,8 @@
 #define _LIBCPP___TUPLE_PAIR_LIKE_H
 
 #include <__config>
-#include <__tuple_dir/tuple_like.h>
-#include <__tuple_dir/tuple_size.h>
+#include <__tuple/tuple_like.h>
+#include <__tuple/tuple_size.h>
 #include <__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

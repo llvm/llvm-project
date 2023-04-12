@@ -2068,10 +2068,14 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
     (void)Markers;
     for (DbgDeclareInst *DDI : P.second) {
       // Assert that the alloca that DDI uses is now linked to a dbg.assign
-      // describing the same variable (i.e. check that this dbg.declare
-      // has been replaced by a dbg.assign).
+      // describing the same variable (i.e. check that this dbg.declare has
+      // been replaced by a dbg.assign). Use DebugVariableAggregate to Discard
+      // the fragment part because trackAssignments may alter the
+      // fragment. e.g. if the alloca is smaller than the variable, then
+      // trackAssignments will create an alloca-sized fragment for the
+      // dbg.assign.
       assert(llvm::any_of(Markers, [DDI](DbgAssignIntrinsic *DAI) {
-        return DebugVariable(DAI) == DebugVariable(DDI);
+        return DebugVariableAggregate(DAI) == DebugVariableAggregate(DDI);
       }));
       // Delete DDI because the variable location is now tracked using
       // assignment tracking.

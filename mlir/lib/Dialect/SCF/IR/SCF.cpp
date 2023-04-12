@@ -3788,13 +3788,129 @@ struct WhileUnusedArg : public OpRewritePattern<WhileOp> {
     return success();
   }
 };
+
+/// Remove duplicated ConditionOp args.
+struct WhileRemoveDuplicatedResults : public OpRewritePattern<WhileOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WhileOp op,
+                                PatternRewriter &rewriter) const override {
+    Block &beforeBlock = op.getBefore().front();
+    Block &afterBlock = op.getAfter().front();
+
+    auto condOp = cast<ConditionOp>(beforeBlock.getTerminator());
+    ValueRange condOpArgs = condOp.getArgs();
+    llvm::SmallDenseMap<Value, unsigned> argsMap;
+    SmallVector<Value> newArgs;
+    for (auto arg : condOpArgs) {
+      if (!argsMap.count(arg)) {
+        auto pos = static_cast<unsigned>(argsMap.size());
+        argsMap.insert({arg, pos});
+        newArgs.emplace_back(arg);
+      }
+    }
+
+    if (argsMap.size() == condOpArgs.size())
+      return rewriter.notifyMatchFailure(op, "No results to remove");
+
+    ValueRange argsRange(newArgs);
+    auto emptyBuilder = [](OpBuilder &, Location, ValueRange) {
+      // Nothing
+    };
+
+    Location loc = op.getLoc();
+    auto newWhileOp = rewriter.create<scf::WhileOp>(
+        loc, argsRange.getTypes(), op.getInits(), emptyBuilder, emptyBuilder);
+    Block &newBeforeBlock = newWhileOp.getBefore().front();
+    Block &newAfterBlock = newWhileOp.getAfter().front();
+
+    SmallVector<Value> afterArgsMapping;
+    SmallVector<Value> resultsMapping;
+    for (auto &&[i, arg] : llvm::enumerate(condOpArgs)) {
+      auto it = argsMap.find(arg);
+      assert(it != argsMap.end());
+      auto pos = it->second;
+      afterArgsMapping.emplace_back(newAfterBlock.getArgument(pos));
+      resultsMapping.emplace_back(newWhileOp->getResult(pos));
+    }
+
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(condOp);
+    rewriter.replaceOpWithNewOp<ConditionOp>(condOp, condOp.getCondition(),
+                                             argsRange);
+
+    rewriter.mergeBlocks(&beforeBlock, &newBeforeBlock,
+                         newBeforeBlock.getArguments());
+    rewriter.mergeBlocks(&afterBlock, &newAfterBlock, afterArgsMapping);
+    rewriter.replaceOp(op, resultsMapping);
+    return success();
+  }
+};
+
+/// Remove unused init/yield args.
+struct WhileRemoveUnusedArgs : public mlir::OpRewritePattern<WhileOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WhileOp op,
+                                PatternRewriter &rewriter) const override {
+    Block &beforeBlock = op.getBefore().front();
+    Block &afterBlock = op.getAfter().front();
+
+    auto yield = cast<YieldOp>(afterBlock.getTerminator());
+
+    llvm::BitVector argsToRemove;
+    SmallVector<Value> newInits;
+    SmallVector<Value> newYieldArgs;
+
+    bool changed = false;
+    for (auto &&[arg, init, yieldArg] : llvm::zip(
+             beforeBlock.getArguments(), op.getInits(), yield.getResults())) {
+      bool empty = arg.use_empty();
+      argsToRemove.push_back(empty);
+      if (empty) {
+        changed = true;
+        continue;
+      }
+
+      newInits.emplace_back(init);
+      newYieldArgs.emplace_back(yieldArg);
+    }
+
+    if (!changed)
+      return rewriter.notifyMatchFailure(op, "No args to remove");
+
+    beforeBlock.eraseArguments(argsToRemove);
+
+    auto emptyBuilder = [](OpBuilder &, Location, ValueRange) {
+      // Nothing
+    };
+
+    Location loc = op.getLoc();
+    auto newWhileOp = rewriter.create<WhileOp>(
+        loc, op->getResultTypes(), newInits, emptyBuilder, emptyBuilder);
+    Block &newBeforeBlock = newWhileOp.getBefore().front();
+    Block &newAfterBlock = newWhileOp.getAfter().front();
+
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(yield);
+    rewriter.replaceOpWithNewOp<YieldOp>(yield, newYieldArgs);
+
+    rewriter.mergeBlocks(&beforeBlock, &newBeforeBlock,
+                         newBeforeBlock.getArguments());
+    rewriter.mergeBlocks(&afterBlock, &newAfterBlock,
+                         newAfterBlock.getArguments());
+    rewriter.replaceOp(op, newWhileOp.getResults());
+    return success();
+  }
+};
 } // namespace
 
 void WhileOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
   results.add<RemoveLoopInvariantArgsFromBeforeBlock,
               RemoveLoopInvariantValueYielded, WhileConditionTruth,
-              WhileCmpCond, WhileUnusedResult>(context);
+              WhileCmpCond, WhileUnusedResult, WhileRemoveDuplicatedResults,
+              WhileRemoveUnusedArgs>(context);
 }
 
 //===----------------------------------------------------------------------===//
