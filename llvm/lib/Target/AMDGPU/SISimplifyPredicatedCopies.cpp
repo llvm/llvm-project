@@ -27,6 +27,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -57,9 +58,11 @@ public:
 private:
   bool isWWMCopy(const MachineInstr &MI);
   bool isSCCLiveAtMI(const MachineInstr &MI);
+  void addToWWMSpills(MachineFunction &MF, Register Reg);
 
   LiveIntervals *LIS;
   SlotIndexes *Indexes;
+  VirtRegMap *VRM;
   const SIRegisterInfo *TRI;
   const MachineRegisterInfo *MRI;
   SIMachineFunctionInfo *MFI;
@@ -70,6 +73,7 @@ private:
 INITIALIZE_PASS_BEGIN(SISimplifyPredicatedCopies, DEBUG_TYPE,
                       "SI Simplify Predicated Copies", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
 INITIALIZE_PASS_END(SISimplifyPredicatedCopies, DEBUG_TYPE,
                     "SI Simplify Predicated Copies", false, false)
 
@@ -109,6 +113,20 @@ bool SISimplifyPredicatedCopies::isSCCLiveAtMI(const MachineInstr &MI) {
   return LR.liveAt(Idx);
 }
 
+// If \p Reg is assigned with a physical VGPR, add the latter into wwm-spills
+// for preserving its entire lanes at function prolog/epilog.
+void SISimplifyPredicatedCopies::addToWWMSpills(MachineFunction &MF,
+                                                Register Reg) {
+  if (!VRM || Reg.isPhysical())
+    return;
+
+  Register PhysReg = VRM->getPhys(Reg);
+  assert(PhysReg != VirtRegMap::NO_PHYS_REG &&
+         "should have allocated a physical register");
+
+  MFI->allocateWWMSpill(MF, PhysReg);
+}
+
 bool SISimplifyPredicatedCopies::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -116,6 +134,7 @@ bool SISimplifyPredicatedCopies::runOnMachineFunction(MachineFunction &MF) {
   MFI = MF.getInfo<SIMachineFunctionInfo>();
   LIS = getAnalysisIfAvailable<LiveIntervals>();
   Indexes = getAnalysisIfAvailable<SlotIndexes>();
+  VRM = getAnalysisIfAvailable<VirtRegMap>();
   TRI = ST.getRegisterInfo();
   MRI = &MF.getRegInfo();
   bool Changed = false;
@@ -147,6 +166,7 @@ bool SISimplifyPredicatedCopies::runOnMachineFunction(MachineFunction &MF) {
             TII->insertScratchExecCopy(MF, MBB, InsertPt, DL, RegForExecCopy,
                                        isSCCLiveAtMI(MI), Indexes);
             TII->restoreExec(MF, MBB, ++InsertPt, DL, RegForExecCopy, Indexes);
+            addToWWMSpills(MF, MI.getOperand(0).getReg());
             LLVM_DEBUG(dbgs() << "WWM copy manipulation for " << MI);
           }
 
