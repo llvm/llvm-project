@@ -25,17 +25,22 @@ public:
 static_assert(std::ranges::contiguous_range<UncheckedRange<int*, int*>>);
 
 // almost an input_iterator
-class InputIteratorNotDerivedFrom {
+template <class T>
+class InputIteratorNotDerivedFromGeneric {
 public:
   using difference_type = long;
-  using value_type = int;
+  using value_type = T;
   using iterator_category = void;
 
-  InputIteratorNotDerivedFrom& operator++();
+  InputIteratorNotDerivedFromGeneric& operator++();
   void operator++(int);
-  const int& operator*() const;
+  const T& operator*() const;
 };
 
+using InputIteratorNotDerivedFrom = InputIteratorNotDerivedFromGeneric<int>;
+
+template <class T>
+using InputRangeNotDerivedFromGeneric = UncheckedRange<InputIteratorNotDerivedFromGeneric<T>>;
 using InputRangeNotDerivedFrom = UncheckedRange<InputIteratorNotDerivedFrom>;
 
 static_assert(std::input_or_output_iterator<InputIteratorNotDerivedFrom>);
