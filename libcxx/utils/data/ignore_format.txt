@@ -805,7 +805,7 @@ libcxx/src/random_shuffle.cpp
 libcxx/src/regex.cpp
 libcxx/src/shared_mutex.cpp
 libcxx/src/stdexcept.cpp
-libcxx/src/__std_stream
+libcxx/src/std_stream.h
 libcxx/src/string.cpp
 libcxx/src/strstream.cpp
 libcxx/src/support/ibm/mbsnrtowcs.cpp

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STD_STREAM
-#define _LIBCPP___STD_STREAM
+#ifndef _LIBCPP_STD_STREAM_H
+#define _LIBCPP_STD_STREAM_H
 
 #include <__config>
 #include <__locale>
@@ -358,4 +358,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___STD_STREAM
+#endif // _LIBCPP_STD_STREAM_H
