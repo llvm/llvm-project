@@ -157,7 +157,6 @@ define i32 @testpsz_128_signbit(<4 x float> %c, <4 x float> %d, i32 %a, i32 %b) 
 ; CHECK-LABEL: testpsz_128_signbit:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; CHECK-NEXT:    vtestps %xmm1, %xmm0
 ; CHECK-NEXT:    cmovnel %esi, %eax
 ; CHECK-NEXT:    retq
@@ -174,11 +173,6 @@ define i32 @testpsnzc_256_signbit(<8 x float> %c, <8 x float> %d, i32 %a, i32 %b
 ; CHECK-LABEL: testpsnzc_256_signbit:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; CHECK-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vpcmpgtd %xmm0, %xmm3, %xmm0
-; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vtestps %ymm1, %ymm0
 ; CHECK-NEXT:    cmovnel %esi, %eax
 ; CHECK-NEXT:    vzeroupper
