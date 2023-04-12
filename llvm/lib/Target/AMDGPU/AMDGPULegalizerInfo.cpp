@@ -4534,31 +4534,6 @@ AMDGPULegalizerInfo::splitBufferOffsets(MachineIRBuilder &B,
   return std::pair(BaseReg, ImmOffset);
 }
 
-/// Update \p MMO based on the offset inputs to a raw/struct buffer intrinsic.
-void AMDGPULegalizerInfo::updateBufferMMO(MachineMemOperand *MMO,
-                                          Register VOffset, Register SOffset,
-                                          unsigned ImmOffset, Register VIndex,
-                                          MachineRegisterInfo &MRI) const {
-  std::optional<ValueAndVReg> MaybeVOffsetVal =
-      getIConstantVRegValWithLookThrough(VOffset, MRI);
-  std::optional<ValueAndVReg> MaybeSOffsetVal =
-      getIConstantVRegValWithLookThrough(SOffset, MRI);
-  std::optional<ValueAndVReg> MaybeVIndexVal =
-      getIConstantVRegValWithLookThrough(VIndex, MRI);
-  // If the combined VOffset + SOffset + ImmOffset + strided VIndex is constant,
-  // update the MMO with that offset. The stride is unknown so we can only do
-  // this if VIndex is constant 0.
-  if (MaybeVOffsetVal && MaybeSOffsetVal && MaybeVIndexVal &&
-      MaybeVIndexVal->Value == 0) {
-    uint64_t TotalOffset = MaybeVOffsetVal->Value.getZExtValue() +
-                           MaybeSOffsetVal->Value.getZExtValue() + ImmOffset;
-    MMO->setOffset(TotalOffset);
-  } else {
-    // We don't have a constant combined offset to use in the MMO. Give up.
-    MMO->setValue((Value *)nullptr);
-  }
-}
-
 /// Handle register layout difference for f16 images for some subtargets.
 Register AMDGPULegalizerInfo::handleD16VData(MachineIRBuilder &B,
                                              MachineRegisterInfo &MRI,
@@ -4696,7 +4671,6 @@ bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
   unsigned AuxiliaryData = MI.getOperand(5 + OpOffset).getImm();
 
   std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
-  updateBufferMMO(MMO, VOffset, SOffset, ImmOffset, VIndex, MRI);
 
   unsigned Opc;
   if (IsTyped) {
@@ -4820,7 +4794,6 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
   const bool Unpacked = ST.hasUnpackedD16VMem();
 
   std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
-  updateBufferMMO(MMO, VOffset, SOffset, ImmOffset, VIndex, MRI);
 
   unsigned Opc;
 
@@ -5054,7 +5027,6 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
 
   unsigned ImmOffset;
   std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
-  updateBufferMMO(MMO, VOffset, SOffset, ImmOffset, VIndex, *B.getMRI());
 
   auto MIB = B.buildInstr(getBufferAtomicPseudo(IID));
 

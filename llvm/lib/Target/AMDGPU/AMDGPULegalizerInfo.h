@@ -166,9 +166,6 @@ public:
 
   std::pair<Register, unsigned> splitBufferOffsets(MachineIRBuilder &B,
                                                    Register OrigOffset) const;
-  void updateBufferMMO(MachineMemOperand *MMO, Register VOffset,
-                       Register SOffset, unsigned ImmOffset, Register VIndex,
-                       MachineRegisterInfo &MRI) const;
 
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                           Register Reg, bool ImageStore = false) const;

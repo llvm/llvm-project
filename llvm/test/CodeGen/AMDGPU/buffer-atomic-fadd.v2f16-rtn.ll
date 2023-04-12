@@ -101,7 +101,7 @@ define amdgpu_ps <2 x half> @buffer_ptr_atomic_fadd_v2f16_offset_rtn(<2 x half> 
   ; GFX90A_GFX940-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub1
   ; GFX90A_GFX940-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
-  ; GFX90A_GFX940-NEXT:   [[BUFFER_ATOMIC_PK_ADD_F16_OFFSET_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_PK_ADD_F16_OFFSET_RTN [[COPY5]], killed [[REG_SEQUENCE2]], [[COPY]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX90A_GFX940-NEXT:   [[BUFFER_ATOMIC_PK_ADD_F16_OFFSET_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_PK_ADD_F16_OFFSET_RTN [[COPY5]], killed [[REG_SEQUENCE2]], [[COPY]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32) on %ir.rsrc, align 1, addrspace 8)
   ; GFX90A_GFX940-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_PK_ADD_F16_OFFSET_RTN]]
   ; GFX90A_GFX940-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   %ret = call <2 x half> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2f16(<2 x half> %val, ptr addrspace(8) %rsrc, i32 0, i32 %soffset, i32 0)
@@ -127,7 +127,7 @@ define amdgpu_ps <2 x half> @buffer_ptr_atomic_fadd_v2f16_offen_rtn(<2 x half> %
   ; GFX90A_GFX940-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub1
   ; GFX90A_GFX940-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY10]], %subreg.sub0, killed [[COPY9]], %subreg.sub1, killed [[COPY8]], %subreg.sub2, killed [[COPY7]], %subreg.sub3
-  ; GFX90A_GFX940-NEXT:   [[BUFFER_ATOMIC_PK_ADD_F16_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_PK_ADD_F16_OFFEN_RTN [[COPY6]], [[COPY1]], killed [[REG_SEQUENCE2]], [[COPY]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX90A_GFX940-NEXT:   [[BUFFER_ATOMIC_PK_ADD_F16_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_PK_ADD_F16_OFFEN_RTN [[COPY6]], [[COPY1]], killed [[REG_SEQUENCE2]], [[COPY]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32) on %ir.rsrc, align 1, addrspace 8)
   ; GFX90A_GFX940-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_PK_ADD_F16_OFFEN_RTN]]
   ; GFX90A_GFX940-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   %ret = call <2 x half> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2f16(<2 x half> %val, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -153,7 +153,7 @@ define amdgpu_ps <2 x half> @buffer_ptr_atomic_fadd_v2f16_idxen_rtn(<2 x half> %
   ; GFX90A_GFX940-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub1
   ; GFX90A_GFX940-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY10]], %subreg.sub0, killed [[COPY9]], %subreg.sub1, killed [[COPY8]], %subreg.sub2, killed [[COPY7]], %subreg.sub3
-  ; GFX90A_GFX940-NEXT:   [[BUFFER_ATOMIC_PK_ADD_F16_IDXEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_PK_ADD_F16_IDXEN_RTN [[COPY6]], [[COPY1]], killed [[REG_SEQUENCE2]], [[COPY]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX90A_GFX940-NEXT:   [[BUFFER_ATOMIC_PK_ADD_F16_IDXEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_PK_ADD_F16_IDXEN_RTN [[COPY6]], [[COPY1]], killed [[REG_SEQUENCE2]], [[COPY]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32) on %ir.rsrc, align 1, addrspace 8)
   ; GFX90A_GFX940-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_PK_ADD_F16_IDXEN_RTN]]
   ; GFX90A_GFX940-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   %ret = call <2 x half> @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.v2f16(<2 x half> %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 %soffset, i32 0)
@@ -181,7 +181,7 @@ define amdgpu_ps <2 x half> @buffer_ptr_atomic_fadd_v2f16_bothen_rtn(<2 x half> 
   ; GFX90A_GFX940-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY11]], %subreg.sub0, killed [[COPY10]], %subreg.sub1, killed [[COPY9]], %subreg.sub2, killed [[COPY8]], %subreg.sub3
   ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GFX90A_GFX940-NEXT:   [[BUFFER_ATOMIC_PK_ADD_F16_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_PK_ADD_F16_BOTHEN_RTN [[COPY7]], killed [[REG_SEQUENCE3]], killed [[REG_SEQUENCE2]], [[COPY]], 0, 3, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX90A_GFX940-NEXT:   [[BUFFER_ATOMIC_PK_ADD_F16_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_PK_ADD_F16_BOTHEN_RTN [[COPY7]], killed [[REG_SEQUENCE3]], killed [[REG_SEQUENCE2]], [[COPY]], 0, 3, implicit $exec :: (volatile dereferenceable load store (s32) on %ir.rsrc, align 1, addrspace 8)
   ; GFX90A_GFX940-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_PK_ADD_F16_BOTHEN_RTN]]
   ; GFX90A_GFX940-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   %ret = call <2 x half> @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.v2f16(<2 x half> %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 2)
