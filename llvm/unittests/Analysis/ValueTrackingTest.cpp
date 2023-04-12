@@ -1616,6 +1616,59 @@ TEST_F(ComputeKnownFPClassTest, FMulNoZero) {
   expectKnownFPClass(fcAllFlags, std::nullopt, A7);
 }
 
+TEST_F(ComputeKnownFPClassTest, CannotBeOrderedLessThanZero) {
+  parseAssembly("define float @test(float %arg) {\n"
+                "  %A = fmul float %arg, %arg"
+                "  ret float %A\n"
+                "}\n");
+
+  Type *FPTy = Type::getDoubleTy(M->getContext());
+  const DataLayout &DL = M->getDataLayout();
+
+  EXPECT_TRUE(
+      computeKnownFPClass(ConstantFP::getZero(FPTy, /*Negative=*/false), DL)
+          .cannotBeOrderedLessThanZero());
+  EXPECT_TRUE(
+      computeKnownFPClass(ConstantFP::getZero(FPTy, /*Negative=*/true), DL)
+          .cannotBeOrderedLessThanZero());
+
+  EXPECT_TRUE(computeKnownFPClass(ConstantFP::getInfinity(FPTy, false), DL)
+                  .cannotBeOrderedLessThanZero());
+  EXPECT_FALSE(computeKnownFPClass(ConstantFP::getInfinity(FPTy, true), DL)
+                   .cannotBeOrderedLessThanZero());
+
+  EXPECT_TRUE(computeKnownFPClass(ConstantFP::get(FPTy, 1.0), DL)
+                  .cannotBeOrderedLessThanZero());
+  EXPECT_FALSE(computeKnownFPClass(ConstantFP::get(FPTy, -1.0), DL)
+                   .cannotBeOrderedLessThanZero());
+
+  EXPECT_TRUE(
+      computeKnownFPClass(
+          ConstantFP::get(FPTy, APFloat::getSmallest(FPTy->getFltSemantics(),
+                                                     /*Negative=*/false)),
+          DL)
+          .cannotBeOrderedLessThanZero());
+  EXPECT_FALSE(
+      computeKnownFPClass(
+          ConstantFP::get(FPTy, APFloat::getSmallest(FPTy->getFltSemantics(),
+                                                     /*Negative=*/true)),
+          DL)
+          .cannotBeOrderedLessThanZero());
+
+  EXPECT_TRUE(
+      computeKnownFPClass(ConstantFP::getQNaN(FPTy, /*Negative=*/false), DL)
+          .cannotBeOrderedLessThanZero());
+  EXPECT_TRUE(
+      computeKnownFPClass(ConstantFP::getQNaN(FPTy, /*Negative=*/true), DL)
+          .cannotBeOrderedLessThanZero());
+  EXPECT_TRUE(
+      computeKnownFPClass(ConstantFP::getSNaN(FPTy, /*Negative=*/false), DL)
+          .cannotBeOrderedLessThanZero());
+  EXPECT_TRUE(
+      computeKnownFPClass(ConstantFP::getSNaN(FPTy, /*Negative=*/true), DL)
+          .cannotBeOrderedLessThanZero());
+}
+
 TEST_F(ValueTrackingTest, isNonZeroRecurrence) {
   parseAssembly(R"(
     define i1 @test(i8 %n, i8 %r) {
