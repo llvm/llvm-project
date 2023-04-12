@@ -29,6 +29,15 @@ TEST(LlvmLibcGetRandomTest, InvalidBuffer) {
   libc_errno = 0;
 }
 
+TEST(LlvmLibcGetRandomTest, ReturnsSize) {
+  static constexpr size_t SIZE = 8192;
+  uint8_t buf[SIZE];
+  for (size_t i = 0; i < SIZE; ++i) {
+    // Without GRND_RANDOM set this should never fail.
+    ASSERT_EQ(__llvm_libc::getrandom(buf, i, 0), static_cast<ssize_t>(i));
+  }
+}
+
 TEST(LlvmLibcGetRandomTest, PiEstimation) {
   static constexpr size_t LIMIT = 10000000;
   static constexpr double PI = 3.14159265358979;
