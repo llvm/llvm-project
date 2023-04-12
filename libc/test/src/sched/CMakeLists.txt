@@ -17,6 +17,17 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  yield_test
+  SUITE
+    libc_sched_unittests
+  SRCS
+    yield_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.sched.sched_yield
+)
+
+add_libc_unittest(
   cpu_count_test
   SUITE
     libc_sched_unittests
