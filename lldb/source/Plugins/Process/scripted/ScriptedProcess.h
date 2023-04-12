@@ -47,6 +47,8 @@ public:
 
   Status DoLaunch(Module *exe_module, ProcessLaunchInfo &launch_info) override;
 
+  void DidLaunch() override;
+
   void DidResume() override;
 
   Status DoResume() override;
