@@ -318,15 +318,14 @@ start:
 }
 
 ;
-; testz(ashr(X,bw-1),-1) -> movmsk(X)
+; testz(ashr(X,bw-1),-1) -> testpd/testps/pmovmskb(X)
 ;
 
 define i32 @ptestz_v2i64_signbits(<2 x i64> %c, i32 %a, i32 %b) {
 ; CHECK-LABEL: ptestz_v2i64_signbits:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    vmovmskpd %xmm0, %ecx
-; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    vtestpd %xmm0, %xmm0
 ; CHECK-NEXT:    cmovnel %esi, %eax
 ; CHECK-NEXT:    retq
   %t1 = ashr <2 x i64> %c, <i64 63, i64 63>
@@ -352,8 +351,7 @@ define i32 @ptestz_v8i32_signbits(<8 x i32> %c, i32 %a, i32 %b) {
 ; AVX2-LABEL: ptestz_v8i32_signbits:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    vmovmskps %ymm0, %ecx
-; AVX2-NEXT:    testl %ecx, %ecx
+; AVX2-NEXT:    vtestps %ymm0, %ymm0
 ; AVX2-NEXT:    cmovnel %esi, %eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
