@@ -1304,3 +1304,218 @@ define i64 @mul_i64_4352(i64 %a) {
   %b = mul i64 %a, 4352
   ret i64 %b
 }
+
+define signext i32 @mul_i32_65792(i32 %a) {
+; LA32-LABEL: mul_i32_65792:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a0, 8
+; LA32-NEXT:    slli.w $a0, $a0, 16
+; LA32-NEXT:    add.w $a0, $a0, $a1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_65792:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 8
+; LA64-NEXT:    slli.d $a0, $a0, 16
+; LA64-NEXT:    add.w $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 65792
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_65280(i32 %a) {
+; LA32-LABEL: mul_i32_65280:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a0, 8
+; LA32-NEXT:    slli.w $a0, $a0, 16
+; LA32-NEXT:    sub.w $a0, $a0, $a1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_65280:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 8
+; LA64-NEXT:    slli.d $a0, $a0, 16
+; LA64-NEXT:    sub.w $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 65280
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_minus_65280(i32 %a) {
+; LA32-LABEL: mul_i32_minus_65280:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a0, 16
+; LA32-NEXT:    slli.w $a0, $a0, 8
+; LA32-NEXT:    sub.w $a0, $a0, $a1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_minus_65280:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 16
+; LA64-NEXT:    slli.d $a0, $a0, 8
+; LA64-NEXT:    sub.w $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %b = mul i32 %a, -65280
+  ret i32 %b
+}
+
+define i64 @mul_i64_65792(i64 %a) {
+; LA32-LABEL: mul_i64_65792:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a2, 16
+; LA32-NEXT:    ori $a2, $a2, 256
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_65792:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 8
+; LA64-NEXT:    slli.d $a0, $a0, 16
+; LA64-NEXT:    add.d $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 65792
+  ret i64 %b
+}
+
+define i64 @mul_i64_65280(i64 %a) {
+; LA32-LABEL: mul_i64_65280:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a2, 15
+; LA32-NEXT:    ori $a2, $a2, 3840
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_65280:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 8
+; LA64-NEXT:    slli.d $a0, $a0, 16
+; LA64-NEXT:    sub.d $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 65280
+  ret i64 %b
+}
+
+define i64 @mul_i64_minus_65280(i64 %a) {
+; LA32-LABEL: mul_i64_minus_65280:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a2, -16
+; LA32-NEXT:    ori $a2, $a2, 256
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    sub.w $a3, $a3, $a0
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_minus_65280:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 16
+; LA64-NEXT:    slli.d $a0, $a0, 8
+; LA64-NEXT:    sub.d $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %b = mul i64 %a, -65280
+  ret i64 %b
+}
+
+;; This multiplication is not transformed, due to
+;; 1088 can be composed via a single ORI.
+define i64 @mul_i64_1088(i64 %a) {
+; LA32-LABEL: mul_i64_1088:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 1088
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_1088:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 4
+; LA64-NEXT:    slli.d $a0, $a0, 6
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 1088
+  ret i64 %b
+}
+
+;; This multiplication is not transformed, due to
+;; -992 can be composed via a single ADDI.
+define i64 @mul_i64_minus_992(i64 %a) {
+; LA32-LABEL: mul_i64_minus_992:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a2, $zero, -992
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    sub.w $a3, $a3, $a0
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_minus_992:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.w $a1, $zero, -992
+; LA64-NEXT:    mul.d $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %b = mul i64 %a, -992
+  ret i64 %b
+}
+
+;; This multiplication is not transformed, due to
+;; 4456448 can be composed via a single LUI.
+define i64 @mul_i64_4456448(i64 %a) {
+; LA32-LABEL: mul_i64_4456448:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a2, 1088
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_4456448:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 4
+; LA64-NEXT:    slli.d $a0, $a0, 18
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 4456448
+  ret i64 %b
+}
+
+;; This multiplication is not transformed, due to
+;; 65280 is used multiple times.
+define i64 @mul_i64_65280_twice(i64 %a, i64 %b) {
+; LA32-LABEL: mul_i64_65280_twice:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a4, 15
+; LA32-NEXT:    ori $a4, $a4, 3840
+; LA32-NEXT:    mul.w $a3, $a3, $a4
+; LA32-NEXT:    mulh.wu $a5, $a2, $a4
+; LA32-NEXT:    add.w $a3, $a5, $a3
+; LA32-NEXT:    mul.w $a1, $a1, $a4
+; LA32-NEXT:    mulh.wu $a5, $a0, $a4
+; LA32-NEXT:    add.w $a1, $a5, $a1
+; LA32-NEXT:    xor $a1, $a1, $a3
+; LA32-NEXT:    mul.w $a2, $a2, $a4
+; LA32-NEXT:    mul.w $a0, $a0, $a4
+; LA32-NEXT:    xor $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_65280_twice:
+; LA64:       # %bb.0:
+; LA64-NEXT:    lu12i.w $a2, 15
+; LA64-NEXT:    ori $a2, $a2, 3840
+; LA64-NEXT:    mul.d $a1, $a1, $a2
+; LA64-NEXT:    mul.d $a0, $a0, $a2
+; LA64-NEXT:    xor $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %c = mul i64 %a, 65280
+  %d = mul i64 %b, 65280
+  %e = xor i64 %c, %d
+  ret i64 %e
+}

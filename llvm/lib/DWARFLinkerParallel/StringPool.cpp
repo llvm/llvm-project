@@ -7,6 +7,3 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DWARFLinkerParallel/StringPool.h"
-
-thread_local llvm::BumpPtrAllocator
-    llvm::dwarflinker_parallel::PerThreadStringAllocator::ThreadLocalAllocator;

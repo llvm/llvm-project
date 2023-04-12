@@ -240,7 +240,10 @@ for locale, alts in locales.items():
 DEFAULT_FEATURES += [
   Feature(name='darwin', when=lambda cfg: '__APPLE__' in compilerMacros(cfg)),
   Feature(name='windows', when=lambda cfg: '_WIN32' in compilerMacros(cfg)),
-  Feature(name='windows-dll', when=lambda cfg: '_WIN32' in compilerMacros(cfg) and programSucceeds(cfg, """
+  Feature(name='windows-dll', when=lambda cfg: '_WIN32' in compilerMacros(cfg) and sourceBuilds(cfg, """
+            #include <iostream>
+            int main(int, char**) { return 0; }
+          """) and programSucceeds(cfg, """
             #include <iostream>
             #include <windows.h>
             #include <winnt.h>

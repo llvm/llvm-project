@@ -55,8 +55,7 @@ static func::ReturnOp getAssumedUniqueReturnOp(FuncOp funcOp) {
 
 /// Return the index-th bufferized function argument type. This assumes that the
 /// specified argument is a tensor. If the tensor is ranked, a layout map may be
-/// specified by the user. If no layout map is specified, the default layout map
-/// (as per `options.functionBoundaryTypeConversion`) is used.
+/// specified by the user (as per `options.functionArgTypeConverterFn`).
 static BaseMemRefType
 getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
                              const BufferizationOptions &options) {
@@ -64,17 +63,8 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
       funcOp.getFunctionType().getInput(index).dyn_cast<TensorType>();
   assert(tensorType && "expected TensorType");
 
-  BaseMemRefType memrefType;
-  if (options.functionBoundaryTypeConversion ==
-      LayoutMapOption::IdentityLayoutMap) {
-    memrefType = getMemRefTypeWithStaticIdentityLayout(
-        tensorType, *options.defaultMemorySpace);
-  } else {
-    // Note: Layout maps on function parameters cannot be inferred. The best we
-    // can do at the moment is "fully dynamic".
-    memrefType = getMemRefTypeWithFullyDynamicLayout(
-        tensorType, *options.defaultMemorySpace);
-  }
+  BaseMemRefType memrefType = options.functionArgTypeConverterFn(
+      tensorType, *options.defaultMemorySpace, funcOp, options);
 
   auto layoutAttr = funcOp.getArgAttrOfType<AffineMapAttr>(
       index, BufferizationDialect::kBufferLayoutAttrName);
@@ -423,16 +413,10 @@ struct FuncOpInterface
         continue;
       }
 
-      BaseMemRefType resultType;
-      if (options.functionBoundaryTypeConversion ==
-          LayoutMapOption::IdentityLayoutMap) {
-        resultType = getMemRefTypeWithStaticIdentityLayout(
-            tensorType, *options.defaultMemorySpace);
-      } else {
-        // Note: If `InferLayoutMap`, cast are later folded away.
-        resultType = getMemRefTypeWithFullyDynamicLayout(
-            tensorType, *options.defaultMemorySpace);
-      }
+      // Note: If `inferFunctionResultLayout = true`, cast are later folded
+      // away.
+      BaseMemRefType resultType = options.functionArgTypeConverterFn(
+          tensorType, *options.defaultMemorySpace, funcOp, options);
       Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
           loc, resultType, returnVal);
       returnValues.push_back(toMemrefOp);

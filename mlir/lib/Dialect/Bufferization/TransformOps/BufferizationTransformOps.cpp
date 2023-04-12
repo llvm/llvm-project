@@ -38,8 +38,8 @@ transform::OneShotBufferizeOp::apply(TransformResults &transformResults,
   options.testAnalysisOnly = getTestAnalysisOnly();
   options.printConflicts = getPrintConflicts();
   if (getFunctionBoundaryTypeConversion().has_value())
-    options.functionBoundaryTypeConversion =
-        *getFunctionBoundaryTypeConversion();
+    options.setFunctionBoundaryTypeConversion(
+        *getFunctionBoundaryTypeConversion());
 
   ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
   for (Operation *target : payloadOps) {
