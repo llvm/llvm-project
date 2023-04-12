@@ -12,13 +12,13 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/Target/KokkosCpp/KokkosCppEmitter.h"
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -28,6 +28,7 @@
 #include <utility>
 
 #include <iostream>
+//#include <unistd.h>
 
 #define DEBUG_TYPE "translate-to-kokkos-cpp"
 
@@ -102,10 +103,10 @@ struct KokkosCppEmitter {
   LogicalResult emitTupleType(Location loc, ArrayRef<Type> types);
 
   /// Emits an assignment for a variable which has been declared previously.
-  LogicalResult emitVariableAssignment(OpResult result);
+  LogicalResult emitVariableAssignment(Value result);
 
   /// Emits a variable declaration for a result of an operation.
-  LogicalResult emitVariableDeclaration(OpResult result,
+  LogicalResult emitVariableDeclaration(Value result,
                                         bool trailingSemicolon);
 
   /// Emits the variable declaration and assignment prefix for 'op'.
@@ -423,6 +424,34 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
 }
 
 static LogicalResult printOperation(KokkosCppEmitter &emitter,
+                                    memref::AllocaOp op) {
+  Operation *operation = op.getOperation();
+  OpResult result = operation->getResult(0);
+  MemRefType type = op.getType();
+
+  // Only emit an assignment as the variable was already declared when printing
+  // the FuncOp.
+  if (emitter.shouldDeclareVariablesAtTop()) {
+    if (failed(emitter.emitVariableAssignment(result)))
+      return failure();
+    //Emit a Kokkos::View constructor call. Use the variable name as label.
+    if (failed(emitter.emitType(op.getLoc(), type)))
+      return failure();
+    emitter << "(Kokkos::view_alloc(Kokkos::WithoutInitializing, \"" << emitter.getOrCreateName(result) << "\"))";
+    return success();
+  }
+
+  // Emit a variable declaration.
+  if (failed(emitter.emitAssignPrefix(*operation)))
+    return failure();
+
+  if (failed(emitter.emitType(op.getLoc(), type)))
+    return failure();
+  emitter << "(Kokkos::view_alloc(Kokkos::WithoutInitializing, \"" << emitter.getOrCreateName(result) << "\"))";
+  return success();
+}
+
+static LogicalResult printOperation(KokkosCppEmitter &emitter,
                                     memref::StoreOp op) {
   //TODO: if in host code, use a mirror view?
   emitter << emitter.getOrCreateName(op.getMemref()) << "(";
@@ -443,17 +472,17 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
                                     memref::LoadOp op) {
   //TODO: if in host code, use a mirror view?
   if(failed(emitter.emitType(op.getLoc(), op.getResult().getType())))
-    return failure();
+    return op.emitError("Failed to emit LoadOp result type");
   emitter << ' ' << emitter.getOrCreateName(op.getResult()) << " = ";
   if(failed(emitter.emitValue(op.getMemRef())))
-    return failure();
+    return op.emitError("Failed to emit the LoadOp's memref value");
   emitter << "(";
   for(auto iter = op.getIndices().begin(); iter != op.getIndices().end(); iter++)
   {
     if(iter != op.getIndices().begin())
       emitter << ", ";
     if(failed(emitter.emitValue(*iter)))
-      return failure();
+      return op.emitError("Failed to emit a LoadOp index");
   }
   emitter << ")";
   return success();
@@ -582,7 +611,6 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
 
 static LogicalResult printOperation(KokkosCppEmitter &emitter,
                                     memref::CastOp op) {
-  //TODO: for dynamic sized dest type, would need to handle the non-static extents here
   if(failed(emitter.emitType(op.getLoc(), op.getDest().getType())))
     return failure();
   emitter << ' ' << emitter.getOrCreateName(op.getDest()) << "(";
@@ -591,7 +619,16 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
   emitter << ".data()";
   if(auto dstType = op.getDest().getType().dyn_cast<MemRefType>())
   {
-    //Dst is a ranked memref - assume it has static extents here.
+    //Static-extent Kokkos views need no other ctor arguments than the pointer.
+    //Dynamic-extent need each extent.
+    if(!dstType.hasStaticShape()) {
+      auto srcType = op.getSource().getType().dyn_cast<MemRefType>();
+      if(!srcType.hasStaticShape())
+        return op.emitError("memref.cast: cast from one dynamic-shape memref to another not supported");
+      for(auto extent : srcType.getShape()) {
+        emitter << ", " << extent;
+      }
+    }
   }
   else if(auto dstType = op.getDest().getType().dyn_cast<UnrankedMemRefType>())
   {
@@ -812,6 +849,73 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ForOp forOp)
     emitter << ";";
   }
 
+  return success();
+}
+
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::WhileOp whileOp) {
+  //Declare the before args, after args, and results.
+  for (auto pair : llvm::zip(whileOp.getBeforeArguments(), whileOp.getInits())) {
+  //for (OpResult beforeArg : whileOp.getBeforeArguments()) {
+    // Before args are initialized to the whileOp's "inits"
+    if(failed(emitter.emitType(whileOp.getLoc(), std::get<0>(pair).getType())))
+      return failure();
+    emitter << ' ' << emitter.getOrCreateName(std::get<0>(pair)) << " = ";
+    if(failed(emitter.emitValue(std::get<1>(pair))))
+      return failure();
+  }
+  for (auto afterArg : whileOp.getAfterArguments()) {
+    if (failed(emitter.emitVariableDeclaration(afterArg, /*trailingSemicolon=*/true)))
+      return failure();
+  }
+  for (OpResult result : whileOp.getResults()) {
+    if (failed(emitter.emitVariableDeclaration(result, /*trailingSemicolon=*/true)))
+      return failure();
+  }
+
+  emitter << "/*\n";
+  emitter << "Hello from while op.\n";
+  emitter << "Inits:\n";
+  for(auto a : whileOp.getInits())
+    emitter << "  " << emitter.getOrCreateName(a) << "\n";
+  emitter << "Before block args:\n";
+  for(auto a : whileOp.getBeforeArguments())
+    emitter << "  " << emitter.getOrCreateName(a) << "\n";
+  emitter << "After block args:\n";
+  for(auto a : whileOp.getAfterArguments())
+    emitter << "  " << emitter.getOrCreateName(a) << "\n";
+  emitter << "*/\n";
+
+  emitter << "while(true) {\n";
+  emitter.ostream().indent();
+
+  //Emit the "before" block(s)
+  for (auto& beforeOp : whileOp.getBefore().getOps()) {
+    if (failed(emitter.emitOperation(beforeOp, /*trailingSemicolon=*/true)))
+      return failure();
+  }
+
+  //Emit the "after" block(s)
+  for (auto& afterOp : whileOp.getAfter().getOps()) {
+    if (failed(emitter.emitOperation(afterOp, /*trailingSemicolon=*/true)))
+      return failure();
+  }
+  emitter.ostream().unindent();
+  emitter << "}\n";
+
+  return success();
+}
+
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ConditionOp condOp) {
+  //The condition value should already be in scope. Just break out of loop if it's falsey.
+  emitter << "if(";
+  if(failed(emitter.emitValue(condOp.getCondition())))
+    return failure();
+  emitter << ") {\n";
+  emitter << "}\n";
+  emitter << "else {\n";
+  //Condition false: breaking out of loop
+  emitter << "break\n";
+  emitter << "}\n";
   return success();
 }
 
@@ -1096,6 +1200,10 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, ModuleOp moduleOp
 }
 
 static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp functionOp) {
+  llvm::StringRef functionOpName = functionOp.getName();
+  if (functionOpName == "main") {
+    functionOpName = "mymain";
+  }
   // We need to declare variables at top if the function has multiple blocks.
   if (!emitter.shouldDeclareVariablesAtTop() &&
       functionOp.getBlocks().size() > 1) {
@@ -1108,7 +1216,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   {
     if (failed(emitter.emitTypes(functionOp.getLoc(), functionOp.getFunctionType().getResults())))
       return failure();
-    os << ' ' << functionOp.getName() << '(';
+    os << ' ' << functionOpName << '(';
     if (failed(interleaveCommaWithError(functionOp.getArgumentTypes(), os,
       [&](Type argType) -> LogicalResult
       {
@@ -1125,7 +1233,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   if (failed(emitter.emitTypes(functionOp.getLoc(),
                                functionOp.getResultTypes())))
     return failure();
-  os << ' ' << functionOp.getName();
+  os << ' ' << functionOpName;
   os << "(";
   if (failed(interleaveCommaWithError(
           functionOp.getArguments(), os,
@@ -1201,7 +1309,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   if(!emitter.emittingPython())
     return success();
   // Emit a wrapper function without Kokkos::View for Python to call
-  os << "extern \"C\" void " << "py_" << functionOp.getName() << '(';
+  os << "extern \"C\" void " << "py_" << functionOpName << '(';
   // Put the results first: primitives and memrefs are both passed by pointer.
   // Python interface will enforce LayoutRight on all numpy arrays.
   //
@@ -1272,7 +1380,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
       os << "*, Kokkos::HostSpace>(param" << i << ", " << span << "));\n";
     }
   }
-  os << "auto results = " << functionOp.getName() << "(";
+  os << "auto results = " << functionOpName << "(";
   //Construct a Kokkos::View for each memref input, from raw pointer.
   for(size_t i = 0; i < numParams; i++)
   {
@@ -1327,7 +1435,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   }
   os.unindent();
   os << "}\n";
-  // Now that the native function (name: "py_" + functionOp.getName())
+  // Now that the native function (name: "py_" + functionOpName)
   // exists, generate the Python function to call it.
   //
   // Get the NumPy type corresponding to MLIR primitive.
@@ -1372,7 +1480,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   //  - copy out the results to Python and then free the Kokkos temporaries.
   auto& py_os = emitter.py_ostream();
   //NOTE: this function is a member of the module's class, but py_os is already indented to write methods.
-  py_os << "def " << functionOp.getName() << "(self, ";
+  py_os << "def " << functionOpName << "(self, ";
   for(size_t i = 0; i < numParams; i++)
   {
     if(i != 0)
@@ -1433,7 +1541,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
     }
   }
   // Generate the native call. It always returns void.
-  py_os << "self.libHandle.py_" << functionOp.getName() << "(";
+  py_os << "self.libHandle.py_" << functionOpName << "(";
   // Outputs go first
   for(size_t i = 0; i < numResults; i++)
   {
@@ -1515,7 +1623,7 @@ bool KokkosCppEmitter::shouldMapToUnsigned(IntegerType::SignednessSemantics val)
   llvm_unreachable("Unexpected IntegerType::SignednessSemantics");
 }
 
-bool KokkosCppEmitter::hasValueInScope(Value val) { return valueMapper.count(val); }
+bool KokkosCppEmitter::hasValueInScope(Value val) { return valueMapper.count(val) || isScalarConstant(val); }
 
 bool KokkosCppEmitter::hasBlockLabel(Block &block) {
   return blockMapper.count(&block);
@@ -1642,7 +1750,8 @@ LogicalResult KokkosCppEmitter::emitOperands(Operation &op) {
   auto emitOperandName = [&](Value result) -> LogicalResult {
     if (!hasValueInScope(result))
       return op.emitOpError() << "operand value not in scope";
-    os << getOrCreateName(result);
+    if(failed(emitValue(result)))
+      return failure();
     return success();
   };
   return interleaveCommaWithError(op.getOperands(), os, emitOperandName);
@@ -1693,22 +1802,35 @@ KokkosCppEmitter::emitValue(Value val)
   }
 }
 
-LogicalResult KokkosCppEmitter::emitVariableAssignment(OpResult result) {
+LogicalResult KokkosCppEmitter::emitVariableAssignment(Value result) {
   if (!hasValueInScope(result)) {
-    return result.getDefiningOp()->emitOpError(
-        "result variable for the operation has not been declared");
+    auto op = result.getDefiningOp();
+    if(op) {
+      return op->emitOpError(
+          "result variable for the operation has not been declared");
+    }
+    else {
+      return failure();
+    }
   }
   os << getOrCreateName(result) << " = ";
   return success();
 }
 
-LogicalResult KokkosCppEmitter::emitVariableDeclaration(OpResult result,
+LogicalResult KokkosCppEmitter::emitVariableDeclaration(Value result,
                                                   bool trailingSemicolon) {
+  auto op = result.getDefiningOp();
   if (hasValueInScope(result)) {
-    return result.getDefiningOp()->emitError(
-        "result variable for the operation already declared");
+    if(op) {
+      return op->emitError(
+          "result variable for the operation already declared");
+    }
+    else {
+      return failure();
+    }
   }
-  if (failed(emitType(result.getOwner()->getLoc(), result.getType())))
+  Location loc = op ? op->getLoc() : Location(LocationAttr());
+  if (failed(emitType(loc, result.getType())))
     return failure();
   os << " " << getOrCreateName(result);
   if (trailingSemicolon)
@@ -2194,7 +2316,25 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, math::RsqrtOp op)
   return success();
 }
 
+static LogicalResult printOperation(KokkosCppEmitter &emitter,
+                                    LLVM::NullOp op) {
+  // Make sure the result type is a pointer (raw, not a memref).
+  // Emit this is a raw null pointer, not an unallocated Kokkos::View
+  if (!op.getResult().getType().isa<LLVM::LLVMPointerType>()) {
+    return op.emitOpError("LLVM::NullOp has a non-pointer result type");
+  }
+  if(failed(emitter.emitType(op.getLoc(), op.getResult().getType())))
+    return failure();
+  emitter << ' ' << emitter.getOrCreateName(op.getResult()) << " = nullptr";
+  return success();
+}
+
 LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
+  if(auto constantOp = dyn_cast<arith::ConstantOp>(&op)) {
+    //arith.constant is not directly emitted in the code, so always skip the
+    // "// arith.constant" comment and trailing semicolon.
+    return printOperation(*this, constantOp);
+  }
   os << "// " << op.getName() << '\n';
   LogicalResult status =
       llvm::TypeSwitch<Operation *, LogicalResult>(&op)
@@ -2208,10 +2348,10 @@ LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemico
           .Case<func::CallOp, func::ConstantOp, func::ReturnOp>(
               [&](auto op) { return printOperation(*this, op); })
           // SCF ops.
-          .Case<scf::ForOp, scf::IfOp, scf::YieldOp, scf::ParallelOp>(
+          .Case<scf::ForOp, scf::WhileOp, scf::IfOp, scf::YieldOp, scf::ConditionOp, scf::ParallelOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Arithmetic ops: general
-          .Case<arith::ConstantOp, arith::FPToUIOp, arith::NegFOp, arith::CmpFOp, arith::CmpIOp, arith::SelectOp>(
+          .Case<arith::FPToUIOp, arith::NegFOp, arith::CmpFOp, arith::CmpIOp, arith::SelectOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Arithmetic ops: standard binary infix operators. All have the same syntax "result = lhs <operator> rhs;".
           // ArithBinaryInfixOperator<Op>::get() will provide the <operator>.
@@ -2240,7 +2380,10 @@ LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemico
           .Case<math::SqrtOp, math::AbsIOp, math::AbsFOp, math::ExpOp, math::Exp2Op, math::SinOp, math::CosOp, math::AtanOp, math::TanhOp, math::ErfOp, math::LogOp, math::Log2Op>(
               [&](auto op) { return printMathOperation(*this, op); })
           // Memref ops.
-          .Case<memref::GlobalOp, memref::GetGlobalOp, memref::AllocOp, memref::StoreOp, memref::LoadOp, memref::CopyOp, memref::SubViewOp, memref::CollapseShapeOp, memref::CastOp>(
+          .Case<memref::GlobalOp, memref::GetGlobalOp, memref::AllocOp, memref::AllocaOp, memref::StoreOp, memref::LoadOp, memref::CopyOp, memref::SubViewOp, memref::CollapseShapeOp, memref::CastOp>(
+              [&](auto op) { return printOperation(*this, op); })
+          // LLVM ops.
+          .Case<LLVM::NullOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Other operations are unknown/unsupported.
           .Default([&](Operation *) {
@@ -2379,9 +2522,13 @@ LogicalResult KokkosCppEmitter::emitType(Location loc, Type type) {
     os << "Kokkos::View<";
     if (failed(emitType(loc, mrType.getElementType())))
       return failure();
-    for(auto extent : mrType.getShape())
-    {
-      os << '[' << extent << ']';
+    for(auto extent : mrType.getShape()) {
+      if(mrType.hasStaticShape()) {
+          os << '[' << extent << ']';
+      }
+      else {
+          os << '*';
+      }
     }
     os << ", Kokkos::LayoutRight>";
     return success();
@@ -2425,6 +2572,12 @@ LogicalResult KokkosCppEmitter::emitTupleType(Location loc, ArrayRef<Type> types
 
 //Version for when we are just emitting C++
 LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, bool declareVariablesAtTop) {
+  /*
+  std::cout << "Hello from K emitter: proc " << getpid() << '\n';
+  std::cout << "Enter anything to proceed: ";
+  std::string asdf;
+  std::cin >> asdf;
+  */
   KokkosCppEmitter emitter(os, declareVariablesAtTop);
   //Global preamble.
   emitter << "#include <Kokkos_Core.hpp>\n";
@@ -2436,8 +2589,13 @@ LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, bool d
 }
 
 //Version for when we are emitting both C++ and Python wrappers
-LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, raw_ostream &py_os,
-                                    bool declareVariablesAtTop) {
+LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, raw_ostream &py_os, bool declareVariablesAtTop) {
+  /*
+  std::cout << "Hello from K emitter: proc " << getpid() << '\n';
+  std::cout << "Enter anything to proceed: ";
+  std::string asdf;
+  std::cin >> asdf;
+  */
   KokkosCppEmitter emitter(os, py_os, declareVariablesAtTop);
   //Emit the Python ctypes boilerplate first - function wrappers need to come after this.
   if(failed(emitter.emitPythonBoilerplate()))
