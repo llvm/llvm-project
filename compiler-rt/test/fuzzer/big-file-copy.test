@@ -1,0 +1,6 @@
+REQUIRES: darwin
+UNSUPPORTED: tvos || watchos
+RUN: %cpp_compiler %S/BigFileCopy.cpp -o %t
+RUN: %run %t -runs=1 -rss_limit_mb=4096 2>big-file-out.txt; result=$?
+RUN: %run rm -f big-file.txt big-file-out.txt
+RUN: (exit $result)
