@@ -344,7 +344,7 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   }
 
   if (Reader->hasTemporalProfile()) {
-    auto &Traces = Reader->getTemporalProfTraces();
+    auto &Traces = Reader->getTemporalProfTraces(Input.Weight);
     if (!Traces.empty())
       WC->Writer.addTemporalProfileTraces(
           Traces, Reader->getTemporalProfTraceStreamSize());
@@ -1279,8 +1279,8 @@ static int merge_main(int argc, const char *argv[]) {
       "temporal-profile-trace-reservoir-size", cl::init(100),
       cl::desc("The maximum number of stored temporal profile traces (default: "
                "100)"));
-  cl::opt<uint64_t> MaxTemporalProfTraceLength(
-      "max-temporal-profile-trace-length", cl::init(10000),
+  cl::opt<uint64_t> TemporalProfMaxTraceLength(
+      "temporal-profile-max-trace-length", cl::init(10000),
       cl::desc("The maximum length of a single temporal profile trace "
                "(default: 10000)"));
 
@@ -1326,7 +1326,7 @@ static int merge_main(int argc, const char *argv[]) {
     mergeInstrProfile(WeightedInputs, DebugInfoFilename, Remapper.get(),
                       OutputFilename, OutputFormat,
                       TemporalProfTraceReservoirSize,
-                      MaxTemporalProfTraceLength, OutputSparse, NumThreads,
+                      TemporalProfMaxTraceLength, OutputSparse, NumThreads,
                       FailureMode, ProfiledBinary);
   else
     mergeSampleProfile(WeightedInputs, Remapper.get(), OutputFilename,
@@ -2635,9 +2635,9 @@ static int showInstrProfile(
     OS << "Temporal Profile Traces (samples=" << Traces.size()
        << " seen=" << Reader->getTemporalProfTraceStreamSize() << "):\n";
     for (unsigned i = 0; i < Traces.size(); i++) {
-      OS << "  Temporal Profile Trace " << i << " (count=" << Traces[i].size()
-         << "):\n";
-      for (auto &NameRef : Traces[i])
+      OS << "  Temporal Profile Trace " << i << " (weight=" << Traces[i].Weight
+         << " count=" << Traces[i].FunctionNameRefs.size() << "):\n";
+      for (auto &NameRef : Traces[i].FunctionNameRefs)
         OS << "    " << Reader->getSymtab().getFuncName(NameRef) << "\n";
     }
   }
