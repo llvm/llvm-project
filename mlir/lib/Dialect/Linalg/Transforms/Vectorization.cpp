@@ -1282,7 +1282,7 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
 
 static LogicalResult vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op) {
   // TODO: Masking only supports dynamic generic ops for now.
-  if (!isa<linalg::GenericOp, linalg::FillOp>(op))
+  if (!isa<linalg::GenericOp, linalg::FillOp, linalg::CopyOp>(op))
     return failure();
 
   LDBG("Dynamically-shaped op meets vectorization pre-conditions\n");
