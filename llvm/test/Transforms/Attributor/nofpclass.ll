@@ -884,3 +884,141 @@ define float @returned_extractvalue([4 x float] nofpclass(nan) %array) {
   %extract = extractvalue [4 x float] %array, 0
   ret float %extract
 }
+
+define float @return_nofpclass_freeze_nan_arg(float nofpclass(nan) %arg) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define noundef float @return_nofpclass_freeze_nan_arg
+; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[ARG]]
+; CHECK-NEXT:    ret float [[FREEZE]]
+;
+  %freeze = freeze float %arg
+  ret float %freeze
+}
+
+define float @return_nofpclass_extractelement_freeze_pinf_arg(<2 x float> nofpclass(pinf) %arg) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define noundef float @return_nofpclass_extractelement_freeze_pinf_arg
+; CHECK-SAME: (<2 x float> nofpclass(pinf) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[FREEZE:%.*]] = freeze <2 x float> [[ARG]]
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <2 x float> [[FREEZE]], i32 0
+; CHECK-NEXT:    ret float [[ELT]]
+;
+  %freeze = freeze <2 x float> %arg
+  %elt = extractelement <2 x float> %freeze, i32 0
+  ret float %elt
+}
+
+define <4 x float> @insertelement_constant_chain() {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan ninf nzero sub) <4 x float> @insertelement_constant_chain
+; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-NEXT:    [[INS_0:%.*]] = insertelement <4 x float> poison, float 1.000000e+00, i32 0
+; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <4 x float> [[INS_0]], float 0.000000e+00, i32 1
+; CHECK-NEXT:    [[INS_2:%.*]] = insertelement <4 x float> [[INS_1]], float -9.000000e+00, i32 2
+; CHECK-NEXT:    [[INS_3:%.*]] = insertelement <4 x float> [[INS_2]], float 0x7FF0000000000000, i32 3
+; CHECK-NEXT:    ret <4 x float> [[INS_3]]
+;
+  %ins.0 = insertelement <4 x float> poison, float 1.0, i32 0
+  %ins.1 = insertelement <4 x float> %ins.0, float 0.0, i32 1
+  %ins.2 = insertelement <4 x float> %ins.1, float -9.0, i32 2
+  %ins.3 = insertelement <4 x float> %ins.2, float 0x7FF0000000000000, i32 3
+  ret <4 x float> %ins.3
+}
+
+define <vscale x 4 x float> @insertelement_scalable_constant_chain() {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define <vscale x 4 x float> @insertelement_scalable_constant_chain
+; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-NEXT:    [[INS_0:%.*]] = insertelement <vscale x 4 x float> poison, float 1.000000e+00, i32 0
+; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <vscale x 4 x float> [[INS_0]], float 0.000000e+00, i32 1
+; CHECK-NEXT:    [[INS_2:%.*]] = insertelement <vscale x 4 x float> [[INS_1]], float -9.000000e+00, i32 2
+; CHECK-NEXT:    [[INS_3:%.*]] = insertelement <vscale x 4 x float> [[INS_2]], float 0x7FF0000000000000, i32 3
+; CHECK-NEXT:    ret <vscale x 4 x float> [[INS_3]]
+;
+  %ins.0 = insertelement <vscale x 4 x float> poison, float 1.0, i32 0
+  %ins.1 = insertelement <vscale x 4 x float> %ins.0, float 0.0, i32 1
+  %ins.2 = insertelement <vscale x 4 x float> %ins.1, float -9.0, i32 2
+  %ins.3 = insertelement <vscale x 4 x float> %ins.2, float 0x7FF0000000000000, i32 3
+  ret <vscale x 4 x float> %ins.3
+}
+
+define <4 x float> @insertelement_unknown_base(<4 x float> %arg0) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define <4 x float> @insertelement_unknown_base
+; CHECK-SAME: (<4 x float> [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x float> [[ARG0]], float 0.000000e+00, i32 1
+; CHECK-NEXT:    ret <4 x float> [[INSERT]]
+;
+  %insert = insertelement <4 x float> %arg0, float 0.0, i32 1
+  ret <4 x float> %insert
+}
+
+define float @insertelement_extractelement_same(<4 x float> %arg0) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @insertelement_extractelement_same
+; CHECK-SAME: (<4 x float> [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x float> [[ARG0]], float 0.000000e+00, i32 1
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x float> [[INSERT]], i32 1
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %insert = insertelement <4 x float> %arg0, float 0.0, i32 1
+  %extract = extractelement <4 x float> %insert, i32 1
+  ret float %extract
+}
+
+define float @insertelement_extractelement_different(<4 x float> nofpclass(zero) %arg0) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(zero) float @insertelement_extractelement_different
+; CHECK-SAME: (<4 x float> nofpclass(zero) [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x float> [[ARG0]], float 0.000000e+00, i32 1
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x float> [[INSERT]], i32 2
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %insert = insertelement <4 x float> %arg0, float 0.0, i32 1
+  %extract = extractelement <4 x float> %insert, i32 2
+  ret float %extract
+}
+
+define float @insertelement_extractelement_unknown(<4 x float> nofpclass(zero) %arg0, i32 %idx) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nzero) float @insertelement_extractelement_unknown
+; CHECK-SAME: (<4 x float> nofpclass(zero) [[ARG0:%.*]], i32 [[IDX:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x float> [[ARG0]], float 0.000000e+00, i32 1
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x float> [[INSERT]], i32 [[IDX]]
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %insert = insertelement <4 x float> %arg0, float 0.0, i32 1
+  %extract = extractelement <4 x float> %insert, i32 %idx
+  ret float %extract
+}
+
+define <4 x float> @insertelement_index_oob_chain() {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define <4 x float> @insertelement_index_oob_chain
+; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x float> zeroinitializer, float 0x7FF0000000000000, i32 4
+; CHECK-NEXT:    ret <4 x float> [[INSERT]]
+;
+  %insert = insertelement <4 x float> zeroinitializer, float 0x7FF0000000000000, i32 4
+  ret <4 x float> %insert
+}
+
+define <2 x float> @multiple_extractelement(<4 x float> nofpclass(zero) %arg0) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(zero) <2 x float> @multiple_extractelement
+; CHECK-SAME: (<4 x float> nofpclass(zero) [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x float> [[ARG0]], float 0.000000e+00, i32 1
+; CHECK-NEXT:    [[EXTRACT2:%.*]] = extractelement <4 x float> [[INSERT]], i32 2
+; CHECK-NEXT:    [[EXTRACT3:%.*]] = extractelement <4 x float> [[INSERT]], i32 3
+; CHECK-NEXT:    [[INS_0:%.*]] = insertelement <2 x float> poison, float [[EXTRACT3]], i32 0
+; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <2 x float> [[INS_0]], float [[EXTRACT2]], i32 1
+; CHECK-NEXT:    ret <2 x float> [[INS_1]]
+;
+  %insert = insertelement <4 x float> %arg0, float 0.0, i32 1
+  %extract2 = extractelement <4 x float> %insert, i32 2
+  %extract3 = extractelement <4 x float> %insert, i32 3
+  %ins.0 = insertelement <2 x float> poison, float %extract3, i32 0
+  %ins.1 = insertelement <2 x float> %ins.0, float %extract2, i32 1
+  ret <2 x float> %ins.1
+}
