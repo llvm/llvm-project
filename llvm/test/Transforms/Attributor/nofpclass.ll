@@ -829,3 +829,58 @@ entry:
   call void @extern.use(float %arg)
   ret float %arg
 }
+
+define float @returned_extractelement_dynamic_index(<4 x float> nofpclass(nan) %vec, i32 %idx) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan) float @returned_extractelement_dynamic_index
+; CHECK-SAME: (<4 x float> nofpclass(nan) [[VEC:%.*]], i32 [[IDX:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x float> [[VEC]], i32 [[IDX]]
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %extract = extractelement <4 x float> %vec, i32 %idx
+  ret float %extract
+}
+
+define float @returned_extractelement_index0(<4 x float> nofpclass(nan) %vec) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan) float @returned_extractelement_index0
+; CHECK-SAME: (<4 x float> nofpclass(nan) [[VEC:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x float> [[VEC]], i32 0
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %extract = extractelement <4 x float> %vec, i32 0
+  ret float %extract
+}
+
+define float @returned_extractelement_index_oob(<4 x float> nofpclass(nan) %vec) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan) float @returned_extractelement_index_oob
+; CHECK-SAME: (<4 x float> nofpclass(nan) [[VEC:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x float> [[VEC]], i32 5
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %extract = extractelement <4 x float> %vec, i32 5
+  ret float %extract
+}
+
+define float @returned_extractelement_scalable(<vscale x 4 x float> nofpclass(nan) %vec) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define float @returned_extractelement_scalable
+; CHECK-SAME: (<vscale x 4 x float> nofpclass(nan) [[VEC:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <vscale x 4 x float> [[VEC]], i32 0
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %extract = extractelement <vscale x 4 x float> %vec, i32 0
+  ret float %extract
+}
+
+define float @returned_extractvalue([4 x float] nofpclass(nan) %array) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan) float @returned_extractvalue
+; CHECK-SAME: ([4 x float] nofpclass(nan) [[ARRAY:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractvalue [4 x float] [[ARRAY]], 0
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %extract = extractvalue [4 x float] %array, 0
+  ret float %extract
+}
