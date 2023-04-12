@@ -213,3 +213,14 @@ namespace dr2396 { // dr2396: no
   // void g(A a) { a.operator decltype(B()) B::*(); }
   // void g2(A a) { a.operator B decltype(B())::*(); }
 }
+
+#if __cplusplus >= 201103L
+namespace dr2397 { // dr2397: 17
+  void foo() {
+    int a[5];
+
+    auto (&b)[5] = a;
+    auto (*c)[5] = &a;
+  }
+} // namespace dr2397
+#endif
