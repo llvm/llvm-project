@@ -787,7 +787,7 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
 
 /// Print out the file/line/column information and include trace.
 ///
-/// This method handlen the emission of the diagnostic location information.
+/// This method handles the emission of the diagnostic location information.
 /// This includes extracting as much location information as is present for
 /// the diagnostic and printing it, as well as any include stack or source
 /// ranges necessary.
