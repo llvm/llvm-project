@@ -181,6 +181,16 @@ bool transform::TrackingListener::isNewOp(Operation *op) const {
   return it->second.contains(op);
 }
 
+LogicalResult transform::TrackingListener::notifyMatchFailure(
+    Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
+  LLVM_DEBUG({
+    Diagnostic diag(loc, DiagnosticSeverity::Remark);
+    reasonCallback(diag);
+    DBGS() << "Match Failure : " << diag.str() << "\n";
+  });
+  return failure();
+}
+
 void transform::TrackingListener::notifyOperationInserted(Operation *op) {
   newOps[op->getName()].insert(op);
 }
