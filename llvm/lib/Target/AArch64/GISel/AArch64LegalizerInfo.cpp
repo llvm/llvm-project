@@ -683,7 +683,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_CTLZ)
       .legalForCartesianProduct(
           {s32, s64, v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
-      .scalarize(1);
+      .scalarize(1)
+      .widenScalarToNextPow2(1, /*Min=*/32)
+      .clampScalar(1, s32, s64)
+      .scalarSameSizeAs(0, 1);
   getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).lower();
 
   // TODO: Custom lowering for v2s32, v4s32, v2s64.
