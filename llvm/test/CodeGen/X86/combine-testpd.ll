@@ -149,6 +149,51 @@ define i32 @testpdnzc_256_invert0(<4 x double> %c, <4 x double> %d, i32 %a, i32 
   ret i32 %t5
 }
 
+;
+; SimplifyDemandedBits - only the sign bit is required
+;
+
+define i32 @testpdc_128_signbit(<2 x double> %c, <2 x double> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: testpdc_128_signbit:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    vtestpd %xmm1, %xmm0
+; CHECK-NEXT:    cmovael %esi, %eax
+; CHECK-NEXT:    retq
+  %t0 = bitcast <2 x double> %c to <2 x i64>
+  %t1 = ashr <2 x i64> %t0, <i64 63, i64 63>
+  %t2 = bitcast <2 x i64> %t1 to <2 x double>
+  %t3 = call i32 @llvm.x86.avx.vtestc.pd(<2 x double> %t2, <2 x double> %d)
+  %t4 = icmp ne i32 %t3, 0
+  %t5 = select i1 %t4, i32 %a, i32 %b
+  ret i32 %t5
+}
+
+define i32 @testpdz_256_signbit(<4 x double> %c, <4 x double> %d, i32 %a, i32 %b) {
+; CHECK-LABEL: testpdz_256_signbit:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vpcmpgtq %xmm0, %xmm3, %xmm0
+; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; CHECK-NEXT:    vtestpd %ymm1, %ymm0
+; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %t0 = bitcast <4 x double> %c to <4 x i64>
+  %t1 = icmp sgt <4 x i64> zeroinitializer, %t0
+  %t2 = sext <4 x i1> %t1 to <4 x i64>
+  %t3 = bitcast <4 x i64> %t2 to <4 x double>
+  %t4 = call i32 @llvm.x86.avx.vtestz.pd.256(<4 x double> %t3, <4 x double> %d)
+  %t5 = icmp ne i32 %t4, 0
+  %t6 = select i1 %t5, i32 %a, i32 %b
+  ret i32 %t6
+}
+
 declare i32 @llvm.x86.avx.vtestz.pd(<2 x double>, <2 x double>) nounwind readnone
 declare i32 @llvm.x86.avx.vtestc.pd(<2 x double>, <2 x double>) nounwind readnone
 declare i32 @llvm.x86.avx.vtestnzc.pd(<2 x double>, <2 x double>) nounwind readnone
