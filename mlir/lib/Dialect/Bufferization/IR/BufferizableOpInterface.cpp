@@ -339,7 +339,7 @@ defaultUnknownTypeConverter(Value value, Attribute memorySpace,
                                              memorySpace);
 }
 
-}; // namespace
+} // namespace
 
 // Default constructor for BufferizationOptions.
 BufferizationOptions::BufferizationOptions()
