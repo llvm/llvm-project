@@ -2395,7 +2395,7 @@ void Sema::ActOnComment(SourceRange Comment) {
       SourceMgr.isInSystemHeader(Comment.getBegin()))
     return;
   RawComment RC(SourceMgr, Comment, LangOpts.CommentOpts, false);
-  if (RC.isAlmostTrailingComment()) {
+  if (RC.isAlmostTrailingComment() || RC.hasUnsupportedSplice(SourceMgr)) {
     SourceRange MagicMarkerRange(Comment.getBegin(),
                                  Comment.getBegin().getLocWithOffset(3));
     StringRef MagicMarkerText;
@@ -2406,6 +2406,11 @@ void Sema::ActOnComment(SourceRange Comment) {
     case RawComment::RCK_OrdinaryC:
       MagicMarkerText = "/**<";
       break;
+    case RawComment::RCK_Invalid:
+      // FIXME: are there other scenarios that could produce an invalid
+      // raw comment here?
+      Diag(Comment.getBegin(), diag::warn_splice_in_doxygen_comment);
+      return;
     default:
       llvm_unreachable("if this is an almost Doxygen comment, "
                        "it should be ordinary");
