@@ -2,10 +2,11 @@
 import sys, os, re, urllib.request
 
 
-default_issue_list_path = 'cwg_index.html'
+clang_www_dir = os.path.dirname(__file__)
+default_issue_list_path = os.path.join(clang_www_dir, 'cwg_index.html')
 issue_list_url = "https://www.open-std.org/jtc1/sc22/wg21/docs/cwg_index.html"
-output = 'cxx_dr_status.html'
-dr_test_dir = '../test/CXX/drs'
+output = os.path.join(clang_www_dir, 'cxx_dr_status.html')
+dr_test_dir = os.path.join(clang_www_dir, '../test/CXX/drs')
 
 class DR:
   def __init__(self, section, issue, url, status, title):
