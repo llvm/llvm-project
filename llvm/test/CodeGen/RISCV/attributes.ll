@@ -71,6 +71,8 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zve32x -mattr=+experimental-zvksh %s -o - | FileCheck --check-prefix=RV32ZVKSH %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zve32x -mattr=+experimental-zvkt %s -o - | FileCheck --check-prefix=RV32ZVKT %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zicond %s -o - | FileCheck --check-prefix=RV32ZICOND %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-smaia %s -o - | FileCheck --check-prefixes=CHECK,RV32SMAIA %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-ssaia %s -o - | FileCheck --check-prefixes=CHECK,RV32SSAIA %s
 
 ; RUN: llc -mtriple=riscv64 %s -o - | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m %s -o - | FileCheck --check-prefixes=CHECK,RV64M %s
@@ -149,6 +151,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zve32x -mattr=+experimental-zvksh %s -o - | FileCheck --check-prefix=RV64ZVKSH %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zve32x -mattr=+experimental-zvkt %s -o - | FileCheck --check-prefix=RV64ZVKT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zicond %s -o - | FileCheck --check-prefix=RV64ZICOND %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-smaia %s -o - | FileCheck --check-prefixes=CHECK,RV64SMAIA %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssaia %s -o - | FileCheck --check-prefixes=CHECK,RV64SSAIA %s
 
 ; CHECK: .attribute 4, 16
 
@@ -222,6 +226,8 @@
 ; RV32ZVKSH: .attribute 5, "rv32i2p1_zicsr2p0_zve32x1p0_zvksh0p5_zvl32b1p0"
 ; RV32ZVKT: .attribute 5, "rv32i2p1_zicsr2p0_zve32x1p0_zvkt0p5_zvl32b1p0"
 ; RV32ZICOND: .attribute 5, "rv32i2p1_zicond1p0"
+; RV32SMAIA: .attribute 5, "rv32i2p1_smaia1p0"
+; RV32SSAIA: .attribute 5, "rv32i2p1_ssaia1p0"
 
 ; RV64M: .attribute 5, "rv64i2p1_m2p0"
 ; RV64ZMMUL: .attribute 5, "rv64i2p1_zmmul1p0"
@@ -299,6 +305,8 @@
 ; RV64ZVKSH: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zvksh0p5_zvl32b1p0"
 ; RV64ZVKT: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zvkt0p5_zvl32b1p0"
 ; RV64ZICOND: .attribute 5, "rv64i2p1_zicond1p0"
+; RV64SMAIA: .attribute 5, "rv64i2p1_smaia1p0"
+; RV64SSAIA: .attribute 5, "rv64i2p1_ssaia1p0"
 
 define i32 @addi(i32 %a) {
   %1 = add i32 %a, 1
