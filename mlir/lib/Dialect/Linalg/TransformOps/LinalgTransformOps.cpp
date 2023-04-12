@@ -3233,6 +3233,36 @@ transform::HoistRedundantTensorSubsetsOp::applyToOne(
 }
 
 //===----------------------------------------------------------------------===//
+// InsertSliceToCopyOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::InsertSliceToCopyOp::applyToOne(
+    tensor::InsertSliceOp target, transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  if (auto copySource = target.getSource().getDefiningOp<linalg::CopyOp>()) {
+    results.push_back(copySource);
+    return DiagnosedSilenceableFailure::success();
+  }
+
+  TrackingListener listener(state, *this);
+  IRRewriter rewriter(target->getContext(), &listener);
+  rewriter.setInsertionPoint(target);
+  Value extracted = rewriter.create<tensor::ExtractSliceOp>(
+      target.getLoc(), target.getDest(), target.getMixedOffsets(),
+      target.getMixedSizes(), target.getMixedStrides());
+  Value copied = rewriter
+                     .create<linalg::CopyOp>(target.getLoc(),
+                                             target.getSource(), extracted)
+                     .getResult(0);
+  rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
+      target, copied, target.getDest(), target.getMixedOffsets(),
+      target.getMixedSizes(), target.getMixedStrides());
+
+  results.push_back(copied.getDefiningOp());
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//
 
