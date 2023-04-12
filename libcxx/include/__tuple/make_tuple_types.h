@@ -12,11 +12,11 @@
 #include <__config>
 #include <__fwd/array.h>
 #include <__fwd/tuple.h>
-#include <__tuple_dir/apply_cv.h>
-#include <__tuple_dir/tuple_element.h>
-#include <__tuple_dir/tuple_indices.h>
-#include <__tuple_dir/tuple_size.h>
-#include <__tuple_dir/tuple_types.h>
+#include <__tuple/apply_cv.h>
+#include <__tuple/tuple_element.h>
+#include <__tuple/tuple_indices.h>
+#include <__tuple/tuple_size.h>
+#include <__tuple/tuple_types.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_reference.h>
 #include <cstddef>

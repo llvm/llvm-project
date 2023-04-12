@@ -1467,18 +1467,18 @@ module std [system] {
     header "tuple"
     export *
 
-    module apply_cv         { private header "__tuple_dir/apply_cv.h" }
+    module apply_cv         { private header "__tuple/apply_cv.h" }
     module get_fwd          { private header "__fwd/get.h" }
-    module make_tuple_types { private header "__tuple_dir/make_tuple_types.h" }
-    module pair_like        { private header "__tuple_dir/pair_like.h" }
-    module sfinae_helpers   { private header "__tuple_dir/sfinae_helpers.h" }
-    module tuple_element    { private header "__tuple_dir/tuple_element.h" }
+    module make_tuple_types { private header "__tuple/make_tuple_types.h" }
+    module pair_like        { private header "__tuple/pair_like.h" }
+    module sfinae_helpers   { private header "__tuple/sfinae_helpers.h" }
+    module tuple_element    { private header "__tuple/tuple_element.h" }
     module tuple_fwd        { private header "__fwd/tuple.h" }
-    module tuple_indices    { private header "__tuple_dir/tuple_indices.h" }
-    module tuple_like       { private header "__tuple_dir/tuple_like.h" }
-    module tuple_like_ext   { private header "__tuple_dir/tuple_like_ext.h" }
-    module tuple_size       { private header "__tuple_dir/tuple_size.h" }
-    module tuple_types      { private header "__tuple_dir/tuple_types.h" }
+    module tuple_indices    { private header "__tuple/tuple_indices.h" }
+    module tuple_like       { private header "__tuple/tuple_like.h" }
+    module tuple_like_ext   { private header "__tuple/tuple_like_ext.h" }
+    module tuple_size       { private header "__tuple/tuple_size.h" }
+    module tuple_types      { private header "__tuple/tuple_types.h" }
   }
   module type_traits {
     header "type_traits"
