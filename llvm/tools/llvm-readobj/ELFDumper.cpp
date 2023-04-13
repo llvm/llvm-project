@@ -221,7 +221,7 @@ public:
   void printArchSpecificInfo() override;
   void printStackMap() const override;
   void printMemtag() override;
-  ArrayRef<uint8_t> getMemtagGlobalsSectionContents(uintptr_t ExpectedAddr);
+  ArrayRef<uint8_t> getMemtagGlobalsSectionContents(uint64_t ExpectedAddr);
 
   // Hash histogram shows statistics of how efficient the hash was for the
   // dynamic symbol table. The table shows the number of hash buckets for
@@ -5977,7 +5977,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
 
 template <class ELFT>
 ArrayRef<uint8_t>
-ELFDumper<ELFT>::getMemtagGlobalsSectionContents(uintptr_t ExpectedAddr) {
+ELFDumper<ELFT>::getMemtagGlobalsSectionContents(uint64_t ExpectedAddr) {
   for (const typename ELFT::Shdr &Sec : cantFail(Obj.sections())) {
     if (Sec.sh_type != SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC)
       continue;
@@ -6010,8 +6010,8 @@ constexpr uint64_t MemtagGranuleSize = 16;
 template <typename ELFT> void ELFDumper<ELFT>::printMemtag() {
   if (Obj.getHeader().e_machine != EM_AARCH64) return;
   std::vector<std::pair<std::string, std::string>> DynamicEntries;
-  size_t MemtagGlobalsSz = 0;
-  uintptr_t MemtagGlobals = 0;
+  uint64_t MemtagGlobalsSz = 0;
+  uint64_t MemtagGlobals = 0;
   for (const typename ELFT::Dyn &Entry : dynamic_table()) {
     uintX_t Tag = Entry.getTag();
     switch (Tag) {
