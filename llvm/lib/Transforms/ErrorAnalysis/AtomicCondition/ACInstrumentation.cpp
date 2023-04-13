@@ -469,6 +469,7 @@ void ACInstrumentation::instrumentMarkedFunction(BasicBlock::iterator *Instructi
 
 
   // Providing a seed value
+  Instruction *BaseInstruction = &(**InstructionIterator);
   srand((unsigned) time(NULL));
 
   for (int I = 0; I < Evaluations; ++I) {
@@ -479,16 +480,28 @@ void ACInstrumentation::instrumentMarkedFunction(BasicBlock::iterator *Instructi
          ArgumentIterator != LastArgument; ++ArgumentIterator) {
       // If the argument is a float type, generate a random floating point number and add it to the argument list.
       if (ArgumentIterator->getType()->isFloatTy()) {
-        Value *RandomFloat = ConstantFP::get(Type::getFloatTy(ArgumentIterator->getContext()),
-                                             static_cast<float>(rand()) /
-                                                 static_cast<float>(RAND_MAX));
+        Value *RandomFloat = InstructionBuilder.CreateFAdd(BaseInstruction->getOperand(ArgumentIterator->getArgNo()),
+                                                           ConstantFP::get(Type::getFloatTy(ArgumentIterator->getContext()),
+                                                                           static_cast<float >(rand()) /
+                                                                               static_cast<float>(RAND_MAX) * pow(2, -10)));
+        (*NumInstrumentedInstructions)++;
+        (*InstructionIterator)++;
+//        Value *RandomFloat = ConstantFP::get(Type::getFloatTy(ArgumentIterator->getContext()),
+//                                             static_cast<float >(rand()) /
+//                                                 static_cast<float>(RAND_MAX));
         Args.push_back(RandomFloat);
       }
       // If the argument is a double type, generate a random floating point number and add it to the argument list.
       else if (ArgumentIterator->getType()->isDoubleTy()) {
-        Value *RandomFloat = ConstantFP::get(Type::getDoubleTy(ArgumentIterator->getContext()),
-                                             static_cast<double>(rand()) /
-                                                 static_cast<double>(RAND_MAX));
+        Value *RandomFloat = InstructionBuilder.CreateFAdd(BaseInstruction->getOperand(ArgumentIterator->getArgNo()),
+                                                           ConstantFP::get(Type::getDoubleTy(ArgumentIterator->getContext()),
+                                                                           static_cast<double >(rand()) /
+                                                                               static_cast<double>(RAND_MAX) * pow(2, -10)));
+        (*NumInstrumentedInstructions)++;
+        (*InstructionIterator)++;
+//        Value *RandomFloat = ConstantFP::get(Type::getDoubleTy(ArgumentIterator->getContext()),
+//                                             static_cast<double>(rand()) /
+//                                                 static_cast<double>(RAND_MAX));
         Args.push_back(RandomFloat);
       }
       // If the argument is an integer type, generate a random integer number
@@ -794,55 +807,11 @@ bool ACInstrumentation::isNonACFloatPointInstruction(const Instruction *Inst) {
 }
 
 bool ACInstrumentation::isSingleFPInstruction(const Instruction *Inst) {
-  if (isUnaryInstruction(Inst)) {
-    switch (Inst->getOpcode()) {
-    case 12:
-      return Inst->getOperand(0)->getType()->isFloatTy();
-    case 56:
-      // Assuming that operand 0 for this call instruction contains the operand
-      // used to calculate the AC.
-      return static_cast<const CallInst *>(Inst)
-          ->getArgOperand(0)
-          ->getType()
-          ->isFloatTy();
-    default:
-      //      errs() << "Not an FP32 Instruction.\n";
-      break;
-    }
-  } else if (isBinaryInstruction(Inst)) {
-    return Inst->getOperand(0)->getType()->isFloatTy() &&
-           Inst->getOperand(1)->getType()->isFloatTy();
-  } else if (Inst->getOpcode() == Instruction::PHI) {
-    return static_cast<const PHINode *>(Inst)->getType()->isFloatTy();
-  }
-
-  return false;
+  return Inst->getType()->isFloatTy();
 }
 
 bool ACInstrumentation::isDoubleFPInstruction(const Instruction *Inst) {
-  if (isUnaryInstruction(Inst)) {
-    switch (Inst->getOpcode()) {
-    case 12:
-      return Inst->getOperand(0)->getType()->isDoubleTy();
-    case 56:
-      // Assuming that operand 0 for this call instruction contains the operand
-      // used to calculate the AC.
-      return static_cast<const CallInst *>(Inst)
-          ->getArgOperand(0)
-          ->getType()
-          ->isDoubleTy();
-    default:
-      //      errs() << "Not an FP64 Instruction.\n";
-      break;
-    }
-  } else if (isBinaryInstruction(Inst)) {
-    return Inst->getOperand(0)->getType()->isDoubleTy() &&
-           Inst->getOperand(1)->getType()->isDoubleTy();
-  } else if (Inst->getOpcode() == Instruction::PHI) {
-    return static_cast<const PHINode *>(Inst)->getType()->isDoubleTy();
-  }
-
-  return false;
+  return Inst->getType()->isDoubleTy();
 }
 
 bool ACInstrumentation::isUnwantedFunction(const Function *Func) {

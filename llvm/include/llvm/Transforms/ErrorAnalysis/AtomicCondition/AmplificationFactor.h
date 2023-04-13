@@ -519,6 +519,20 @@ double getAverageAmplificationFactor(AFTable *AFTable, int NumFunctionEvaluation
   return GreatestAverageAmplificationFactor;
 }
 
+// Get Height of the longest computation path in the program.
+int getLongestComputationPathHeight(AFTable *AFTable) {
+  int LongestComputationPathHeight = 0;
+  for (uint64_t I = 0; I < AFTable->ListLength; ++I) {
+    if (AFTable->AFItems[I]->RootNode) {
+      for (int J = 0; J < AFTable->AFItems[I]->NumAFComponents; ++J) {
+        if (AFTable->AFItems[I]->Components[J]->Height > LongestComputationPathHeight)
+          LongestComputationPathHeight = AFTable->AFItems[I]->Components[J]->Height;
+      }
+    }
+  }
+  return LongestComputationPathHeight;
+}
+
 /*----------------------------------------------------------------------------*/
 /* Globals                                                                    */
 /*----------------------------------------------------------------------------*/
@@ -1182,6 +1196,8 @@ void fAFPrintStatistics(int NumFunctionEvaluations) {
   printf("Average Amplification Factor\t\t: %0.15lf\n", getAverageAmplificationFactor(AFs, NumFunctionEvaluations));
 
   printStatistics(Stats);
+
+  printf("Longest Path Length\t\t\t: %d\n", getLongestComputationPathHeight(AFs));
 
   statisticsDelete(Stats);
 

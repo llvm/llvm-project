@@ -6,7 +6,7 @@ RUN_TIME_LIB_ROOT = /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/
 OP = -O1 -fno-slp-vectorize
 CXX = $(LLVM_PROJECT_ROOT)/build/bin/clang
 # [DEBUG_FLAG=-DFAF_DEBUG<=debug level>] [MEMORYOPT=-DMEMORY_OPT]
-CXX_FLAGS = $(DEBUG_FLAG) $(MEMORY_OPT) -g -S -emit-llvm
+CXX_FLAGS = $(DEBUG_FLAG) $(MEMORYOPT) -g -S -emit-llvm
 
 OPT = $(LLVM_PROJECT_ROOT)/build/bin/opt
 OPT_FLAGS = -S -passes=error-analysis
@@ -14,7 +14,7 @@ OPT_FLAGS = -S -passes=error-analysis
 LLI = $(LLVM_PROJECT_ROOT)/build/bin/lli
 
 RUN_TIME_LIB_FLAGS = -function-to-analyze solve_lorenz \
-					-evaluations 10
+					-evaluations 0
 
 RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.h \
 				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AmplificationFactor.h \
@@ -34,4 +34,5 @@ build_original:
 	gcc lorenz_simple.c -lm -o lorenz_simple.out
 
 clean:
-	rm -rf lorenz_simple.ll lorenz_simple_ac.ll .fAF_logs a.out *.txt
+	rm -rf lorenz_simple.ll lorenz_simple_ac.ll a.out lorenz_simple.out *.txt \
+#	.fAF_logs

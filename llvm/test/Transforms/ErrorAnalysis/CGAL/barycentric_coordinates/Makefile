@@ -6,7 +6,7 @@ RUN_TIME_LIB_ROOT = /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/
 OP = -O1 -fno-slp-vectorize
 CXX = $(LLVM_PROJECT_ROOT)/build/bin/clang
 # [DEBUG_FLAG=-DFAF_DEBUG<=debug level>] [MEMORYOPT=-DMEMORY_OPT]
-CXX_FLAGS = $(DEBUG_FLAG) $(MEMORY_OPT) -g -S -emit-llvm
+CXX_FLAGS = $(DEBUG_FLAG) -DMEMORY_OPT -g -S -emit-llvm
 
 OPT = $(LLVM_PROJECT_ROOT)/build/bin/opt
 OPT_FLAGS = -S -passes=error-analysis
@@ -34,4 +34,5 @@ build_original:
 	gcc barycentric_coordinates.c -o barycentric_coordinates.out
 
 clean:
-	rm -rf barycentric_coordinates.ll barycentric_coordinates_ac.ll .fAF_logs a.out *.txt
+	rm -rf barycentric_coordinates.ll barycentric_coordinates_ac.ll a.out barycentric_coordinates.out *.txt \
+#	.fAF_logs

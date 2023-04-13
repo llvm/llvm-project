@@ -65,10 +65,10 @@ void updateStatistics(Statistics *Object, double NewAmplificationFactor,
 
 // Print Statistics
 void printStatistics(Statistics *Object) {
-  printf("Highest Amplification Factor: %f\n",
+  printf("Highest Amplification Factor: %0.15lf\n",
          Object->HighestAmplificationFactor);
-  printf("Highest Condition Number: %f\n", Object->HighestConditionNumber);
-  printf("Highest Amplification Density: %f\n",
+  printf("Highest Condition Number: %0.15lf\n", Object->HighestConditionNumber);
+  printf("Highest Amplification Density: %0.15lf\n",
          Object->HighestAmplificationDensity);
 }
 
