@@ -715,14 +715,6 @@ def load_or_combine : GICombineRule<
     [{ return Helper.matchLoadOrCombine(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
-
-def truncstore_merge_matcdata : GIDefMatchData<"MergeTruncStoresInfo">;
-def truncstore_merge : GICombineRule<
-  (defs root:$root, truncstore_merge_matcdata:$info),
-  (match (wip_match_opcode G_STORE):$root,
-   [{ return Helper.matchTruncStoreMerge(*${root}, ${info}); }]),
-  (apply [{ Helper.applyTruncStoreMerge(*${root}, ${info}); }])>;
-
 def extend_through_phis_matchdata: GIDefMatchData<"MachineInstr*">;
 def extend_through_phis : GICombineRule<
   (defs root:$root, extend_through_phis_matchdata:$matchinfo),
@@ -1105,7 +1097,7 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     unmerge_zext_to_zext, merge_unmerge, trunc_ext_fold, trunc_shift,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
-    truncstore_merge, div_rem_to_divrem, funnel_shift_combines,
+    div_rem_to_divrem, funnel_shift_combines,
     form_bitfield_extract, constant_fold, fabs_fneg_fold,
     intdiv_combines, mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
