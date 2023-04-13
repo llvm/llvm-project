@@ -226,6 +226,15 @@ bool WebAssemblyDebugValueManager::isInsertSamePlace(
   return true;
 }
 
+// Returns true if any instruction in MBB has the same debug location as DL.
+// Also returns true if DL is an empty location.
+static bool hasSameDebugLoc(const MachineBasicBlock *MBB, DebugLoc DL) {
+  for (const auto &MI : *MBB)
+    if (MI.getDebugLoc() == DL)
+      return true;
+  return false;
+}
+
 // Sink 'Def', and also sink its eligible DBG_VALUEs to the place before
 // 'Insert'. Convert the original DBG_VALUEs into undefs.
 //
@@ -263,6 +272,12 @@ void WebAssemblyDebugValueManager::sink(MachineInstr *Insert) {
       getSinkableDebugValues(Insert);
 
   // Sink Def first.
+  //
+  // When moving to a different BB, we preserve the debug loc only if the
+  // destination BB contains the same location. See
+  // https://llvm.org/docs/HowToUpdateDebugInfo.html#when-to-preserve-an-instruction-location.
+  if (Def->getParent() != MBB && !hasSameDebugLoc(MBB, Def->getDebugLoc()))
+      Def->setDebugLoc(DebugLoc());
   MBB->splice(Insert, Def->getParent(), Def);
 
   if (DbgValues.empty())
@@ -344,6 +359,11 @@ void WebAssemblyDebugValueManager::cloneSink(MachineInstr *Insert,
   // Clone Def first.
   if (CloneDef) {
     MachineInstr *Clone = MF->CloneMachineInstr(Def);
+    // When cloning to a different BB, we preserve the debug loc only if the
+    // destination BB contains the same location. See
+    // https://llvm.org/docs/HowToUpdateDebugInfo.html#when-to-preserve-an-instruction-location.
+    if (Def->getParent() != MBB && !hasSameDebugLoc(MBB, Def->getDebugLoc()))
+      Clone->setDebugLoc(DebugLoc());
     if (NewReg != CurrentReg && NewReg.isValid())
       Clone->getOperand(0).setReg(NewReg);
     MBB->insert(Insert, Clone);
