@@ -32,7 +32,7 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
         FunctionSpec<"exp10f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
       ]
   >;
- 
+
   HeaderSpec Sched = HeaderSpec<
       "sched.h",
       [], // Macros
@@ -51,7 +51,7 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
         >,
       ]
   >;
- 
+
   HeaderSpec String = HeaderSpec<
       "string.h",
       [], // Macros
