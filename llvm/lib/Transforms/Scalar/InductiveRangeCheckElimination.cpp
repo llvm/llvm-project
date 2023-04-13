@@ -739,6 +739,19 @@ static bool isSafeIncreasingBound(const SCEV *Start,
           SE.isLoopEntryGuardedByCond(L, BoundPred, BoundSCEV, Limit));
 }
 
+/// Returns estimate for max latch taken count of the loop of the narrowest
+/// available type. If the latch block has such estimate, it is returned.
+/// Otherwise, we use max exit count of whole loop (that is potentially of wider
+/// type than latch check itself), which is still better than no estimate.
+static const SCEV *getNarrowestLatchMaxTakenCountEstimate(ScalarEvolution &SE,
+                                                          const Loop &L) {
+  const SCEV *FromBlock =
+      SE.getExitCount(&L, L.getLoopLatch(), ScalarEvolution::SymbolicMaximum);
+  if (isa<SCEVCouldNotCompute>(FromBlock))
+    return SE.getSymbolicMaxBackedgeTakenCount(&L);
+  return FromBlock;
+}
+
 std::optional<LoopStructure>
 LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
                                   const char *&FailureReason) {
@@ -781,12 +794,12 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
     return std::nullopt;
   }
 
-  const SCEV *LatchCount = SE.getExitCount(&L, Latch);
-  if (isa<SCEVCouldNotCompute>(LatchCount)) {
+  const SCEV *MaxBETakenCount = getNarrowestLatchMaxTakenCountEstimate(SE, L);
+  if (isa<SCEVCouldNotCompute>(MaxBETakenCount)) {
     FailureReason = "could not compute latch count";
     return std::nullopt;
   }
-  assert(SE.getLoopDisposition(LatchCount, &L) ==
+  assert(SE.getLoopDisposition(MaxBETakenCount, &L) ==
              ScalarEvolution::LoopInvariant &&
          "loop variant exit count doesn't make sense!");
 
@@ -1392,12 +1405,12 @@ Loop *LoopConstrainer::createClonedLoopStructure(Loop *Original, Loop *Parent,
 
 bool LoopConstrainer::run() {
   BasicBlock *Preheader = nullptr;
-  const SCEV *LatchTakenCount =
-      SE.getExitCount(&OriginalLoop, MainLoopStructure.Latch);
+  const SCEV *MaxBETakenCount =
+      getNarrowestLatchMaxTakenCountEstimate(SE, OriginalLoop);
   Preheader = OriginalLoop.getLoopPreheader();
-  assert(!isa<SCEVCouldNotCompute>(LatchTakenCount) && Preheader != nullptr &&
+  assert(!isa<SCEVCouldNotCompute>(MaxBETakenCount) && Preheader != nullptr &&
          "preconditions!");
-  ExitCountTy = cast<IntegerType>(LatchTakenCount->getType());
+  ExitCountTy = cast<IntegerType>(MaxBETakenCount->getType());
 
   OriginalPreheader = Preheader;
   MainLoopPreheader = Preheader;
