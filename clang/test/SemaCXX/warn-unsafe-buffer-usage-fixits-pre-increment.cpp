@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple=arm-apple -std=c++20 -Wunsafe-buffer-usage -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 void foo(int * , int *);
 

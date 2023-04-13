@@ -22217,7 +22217,7 @@ static void replaceBoolVectorBitcast(SDNode *N,
   SDLoc DL(N);
   SDValue Op = N->getOperand(0);
   EVT VT = N->getValueType(0);
-  EVT SrcVT = Op.getValueType();
+  [[maybe_unused]] EVT SrcVT = Op.getValueType();
   assert(SrcVT.isVector() && SrcVT.getVectorElementType() == MVT::i1 &&
          "Must be bool vector.");
 

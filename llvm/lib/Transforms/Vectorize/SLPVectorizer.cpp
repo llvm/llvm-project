@@ -9198,7 +9198,7 @@ public:
       R.eraseInstruction(EI);
     }
     return VecBase;
-  };
+  }
   /// Checks if the specified entry \p E needs to be delayed because of its
   /// dependency nodes.
   Value *needToDelay(const TreeEntry *E, ArrayRef<const TreeEntry *> Deps) {
@@ -9212,7 +9212,7 @@ public:
     Value *Vec = Builder.CreateAlignedLoad(
         VecTy, PoisonValue::get(VecTy->getPointerTo()), MaybeAlign());
     return Vec;
-  };
+  }
   /// Adds 2 input vectors and the mask for their shuffling.
   void add(Value *V1, Value *V2, ArrayRef<int> Mask) {
     assert(V1 && V2 && !Mask.empty() && "Expected non-empty input vectors.");

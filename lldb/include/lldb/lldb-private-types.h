@@ -11,7 +11,6 @@
 
 #if defined(__cplusplus)
 
-#include "lldb/Target/RegisterFlags.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -27,6 +26,7 @@ class DynamicLibrary;
 namespace lldb_private {
 class Platform;
 class ExecutionContext;
+class RegisterFlags;
 
 typedef llvm::sys::DynamicLibrary (*LoadPluginCallbackType)(
     const lldb::DebuggerSP &debugger_sp, const FileSpec &spec, Status &error);
