@@ -260,7 +260,7 @@ static void *MsanCalloc(StackTrace *stack, uptr nmemb, uptr size) {
   return MsanAllocate(stack, nmemb * size, sizeof(u64), true);
 }
 
-const void *AllocationBegin(const void *p) {
+static const void *AllocationBegin(const void *p) {
   if (!p)
     return nullptr;
   void *beg = allocator.GetBlockBegin(p);

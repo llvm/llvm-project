@@ -761,9 +761,6 @@ bool MCExpr::evaluateAsValue(MCValue &Res, const MCAsmLayout &Layout) const {
 }
 
 static bool canExpand(const MCSymbol &Sym, bool InSet) {
-  if (Sym.isWeakExternal())
-    return false;
-
   const MCExpr *Expr = Sym.getVariableValue();
   const auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr);
   if (Inner) {
@@ -1000,8 +997,6 @@ MCFragment *MCExpr::findAssociatedFragment() const {
   case SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(this);
     const MCSymbol &Sym = SRE->getSymbol();
-    if (Sym.isWeakExternal())
-      return nullptr;
     return Sym.getFragment();
   }
 

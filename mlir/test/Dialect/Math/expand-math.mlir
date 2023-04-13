@@ -165,3 +165,27 @@ func.func @ceilf_func(%a: f64) -> f64 {
   %ret = math.ceil %a : f64
   return %ret : f64
 }
+
+// -----
+
+// CHECK-LABEL:     func @exp2f_func
+// CHECK-SAME:      ([[ARG0:%.+]]: f64) -> f64
+func.func @exp2f_func(%a: f64) -> f64 {
+  // CHECK-DAG:     [[CST:%.+]]  = arith.constant 0.69314718055994529
+  // CHECK:         [[MULF:%.+]] = arith.mulf [[ARG0]], [[CST]]
+  // CHECK:         [[EXP:%.+]]  = math.exp [[MULF]]
+  // CHECK:         return [[EXP]]
+  %ret = math.exp2 %a : f64
+  return %ret : f64
+}
+
+// CHECK-LABEL:     func @exp2f_func_tensor
+// CHECK-SAME:      ([[ARG0:%.+]]: tensor<1xf32>) -> tensor<1xf32>
+func.func @exp2f_func_tensor(%a: tensor<1xf32>) -> tensor<1xf32> {
+  // CHECK-DAG:     [[CST:%.+]]  = arith.constant dense<0.693147182>
+  // CHECK:         [[MULF:%.+]] = arith.mulf [[ARG0]], [[CST]]
+  // CHECK:         [[EXP:%.+]]  = math.exp [[MULF]]
+  // CHECK:         return [[EXP]]
+  %ret = math.exp2 %a : tensor<1xf32>
+  return %ret : tensor<1xf32>
+}

@@ -355,6 +355,10 @@ defm relax: BB<"relax",
   "Enable target-specific relaxations if supported (default)",
   "Disable target-specific relaxations">;
 
+defm relax_gp: BB<"relax-gp",
+  "Enable global pointer relaxation",
+  "Disable global pointer relaxation (default)">;
+
 defm reproduce:
   EEq<"reproduce",
      "Write tar file containing inputs and command to reproduce link">;
