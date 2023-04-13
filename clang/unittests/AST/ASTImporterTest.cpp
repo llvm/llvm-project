@@ -8624,7 +8624,6 @@ TEST_P(ASTImporterOptionSpecificTestBase,
 
       auto X = 0 ? (RPX1){} : (RPY1){};
       )";
-  Decl *ToTU = getToTuDecl("", Lang_CXX11);
   Decl *FromTU = getTuDecl(Code, Lang_CXX11);
 
   auto *FromX =
