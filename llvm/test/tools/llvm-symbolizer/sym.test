@@ -66,7 +66,7 @@ RUN: llvm-addr2line -pafi --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCh
 #ZERO: ??
 #ZERO: ??:0:0
 #
-#A2L:         ??:0
+#A2L:         some text
 #A2L_A-NEXT:  0x40054d
 #A2L_F-NEXT:  inctwo
 #A2L-NEXT:    {{[/\]+}}tmp{{[/\]+}}x.c:3{{$}}
@@ -74,9 +74,9 @@ RUN: llvm-addr2line -pafi --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCh
 #A2L_I-NEXT:  {{[/\]+}}tmp{{[/\]+}}x.c:7{{$}}
 #A2L_FI-NEXT: main
 #A2L_I-NEXT:  {{[/\]+}}tmp{{[/\]+}}x.c:14{{$}}
-#A2L-NEXT:    ??:0
+#A2L-NEXT:    some text2
 
-#A2LP:          ??:0
+#A2LP:          some text
 #A2LP_A-NEXT:   0x40054d: {{[/\]+}}tmp{{[/\]+}}x.c:3{{$}}
 #A2LP_F-NEXT:   inctwo at {{[/\]+}}tmp{{[/\]+}}x.c:3{{$}}
 #A2LP_AF-NEXT:  0x40054d: inctwo at {{[/\]+}}tmp{{[/\]+}}x.c:3{{$}}
@@ -84,4 +84,4 @@ RUN: llvm-addr2line -pafi --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCh
 #A2LP_I-NEXT:   {{[/\]+}}tmp{{[/\]+}}x.c:14{{$}}
 #A2LP_FI-NEXT:   (inlined by) inc at {{[/\]+}}tmp{{[/\]+}}x.c:7{{$}}
 #A2LP_FI-NEXT:   (inlined by) main at {{[/\]+}}tmp{{[/\]+}}x.c:14{{$}}
-#A2LP-NEXT:     ??:0
+#A2LP-NEXT:     some text2
