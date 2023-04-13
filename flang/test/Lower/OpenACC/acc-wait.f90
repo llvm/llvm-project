@@ -7,7 +7,7 @@ subroutine acc_update
   logical :: ifCondition = .TRUE.
 
   !$acc wait
-!CHECK: acc.wait{{$}}
+!CHECK: acc.wait{{ *}}{{$}}
 
   !$acc wait if(.true.)
 !CHECK: [[IF1:%.*]] = arith.constant true
@@ -21,7 +21,7 @@ subroutine acc_update
   !$acc wait(1, 2)
 !CHECK: [[WAIT1:%.*]] = arith.constant 1 : i32
 !CHECK: [[WAIT2:%.*]] = arith.constant 2 : i32
-!CHECK: acc.wait([[WAIT1]], [[WAIT2]] : i32, i32){{$}}
+!CHECK: acc.wait([[WAIT1]], [[WAIT2]] : i32, i32){{ *}}{{$}}
 
   !$acc wait(1) async
 !CHECK: [[WAIT3:%.*]] = arith.constant 1 : i32

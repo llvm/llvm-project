@@ -974,8 +974,8 @@ MachineBasicBlock *MachineBasicBlock::getFallThrough(bool JumpToFallThrough) {
 
   // If there is some explicit branch to the fallthrough block, it can obviously
   // reach, even though the branch should get folded to fall through implicitly.
-  if (!JumpToFallThrough && (MachineFunction::iterator(TBB) == Fallthrough ||
-                           MachineFunction::iterator(FBB) == Fallthrough))
+  if (JumpToFallThrough && (MachineFunction::iterator(TBB) == Fallthrough ||
+                            MachineFunction::iterator(FBB) == Fallthrough))
     return &*Fallthrough;
 
   // If it's an unconditional branch to some block not the fall through, it

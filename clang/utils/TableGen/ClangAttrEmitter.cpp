@@ -2378,6 +2378,16 @@ static void emitClangAttrAcceptsExprPack(RecordKeeper &Records,
   OS << "#endif // CLANG_ATTR_ACCEPTS_EXPR_PACK\n\n";
 }
 
+static void emitFormInitializer(raw_ostream &OS,
+                                const FlattenedSpelling &Spelling,
+                                StringRef SpellingIndex) {
+  bool IsAlignas =
+      (Spelling.variety() == "Keyword" && Spelling.name() == "alignas");
+  OS << "{AttributeCommonInfo::AS_" << Spelling.variety() << ", "
+     << SpellingIndex << ", " << (IsAlignas ? "true" : "false")
+     << " /*IsAlignas*/}";
+}
+
 static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
                            bool Header) {
   std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr");
@@ -2505,15 +2515,8 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
           return &R == P.second;
         });
 
-    enum class CreateKind {
-      WithAttributeCommonInfo,
-      WithSourceRange,
-      WithNoArgs,
-    };
-
     // Emit CreateImplicit factory methods.
-    auto emitCreate = [&](bool Implicit, bool DelayedArgsOnly,
-                          bool emitFake, CreateKind Kind) {
+    auto emitCreate = [&](bool Implicit, bool DelayedArgsOnly, bool emitFake) {
       if (Header)
         OS << "  static ";
       OS << R.getName() << "Attr *";
@@ -2537,10 +2540,7 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
         OS << ", ";
         DelayedArgs->writeCtorParameters(OS);
       }
-      if (Kind == CreateKind::WithAttributeCommonInfo)
-        OS << ", const AttributeCommonInfo &CommonInfo";
-      else if (Kind == CreateKind::WithSourceRange)
-        OS << ", SourceRange R";
+      OS << ", const AttributeCommonInfo &CommonInfo";
       OS << ")";
       if (Header) {
         OS << ";\n";
@@ -2549,12 +2549,7 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
 
       OS << " {\n";
       OS << "  auto *A = new (Ctx) " << R.getName();
-      if (Kind == CreateKind::WithAttributeCommonInfo)
-        OS << "Attr(Ctx, CommonInfo";
-      else if (Kind == CreateKind::WithSourceRange)
-        OS << "Attr(Ctx, AttributeCommonInfo{R}";
-      else if (Kind == CreateKind::WithNoArgs)
-        OS << "Attr(Ctx, AttributeCommonInfo{SourceLocation{}}";
+      OS << "Attr(Ctx, CommonInfo";
 
       if (!DelayedArgsOnly) {
         for (auto const &ai : Args) {
@@ -2606,11 +2601,13 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
         OS << ", ";
         DelayedArgs->writeCtorParameters(OS);
       }
-      OS << ", SourceRange Range, AttributeCommonInfo::Syntax Syntax";
-      if (!ElideSpelling) {
-        OS << ", " << R.getName() << "Attr::Spelling S";
+      OS << ", SourceRange Range";
+      if (Header)
+        OS << " = {}";
+      if (Spellings.size() > 1) {
+        OS << ", Spelling S";
         if (Header)
-          OS << " = static_cast<Spelling>(SpellingNotCalculated)";
+          OS << " = " << SemanticToSyntacticMap[0];
       }
       OS << ")";
       if (Header) {
@@ -2626,9 +2623,31 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
       else
         OS << "NoSemaHandlerAttribute";
 
-      OS << ", Syntax";
-      if (!ElideSpelling)
-        OS << ", S";
+      if (Spellings.size() == 0) {
+        OS << ", AttributeCommonInfo::Form::Implicit()";
+      } else if (Spellings.size() == 1) {
+        OS << ", ";
+        emitFormInitializer(OS, Spellings[0], "0");
+      } else {
+        OS << ", (\n";
+        std::set<std::string> Uniques;
+        unsigned Idx = 0;
+        for (auto I = Spellings.begin(), E = Spellings.end(); I != E;
+             ++I, ++Idx) {
+          const FlattenedSpelling &S = *I;
+          const auto &Name = SemanticToSyntacticMap[Idx];
+          if (Uniques.insert(Name).second) {
+            OS << "    S == " << Name << " ? AttributeCommonInfo::Form";
+            emitFormInitializer(OS, S, Name);
+            OS << " :\n";
+          }
+        }
+        OS << "    (llvm_unreachable(\"Unknown attribute spelling!\"), "
+           << " AttributeCommonInfo::Form";
+        emitFormInitializer(OS, Spellings[0], "0");
+        OS << "))";
+      }
+
       OS << ");\n";
       OS << "  return Create";
       if (Implicit)
@@ -2651,19 +2670,9 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
       OS << "}\n\n";
     };
 
-    auto emitBothImplicitAndNonCreates = [&](bool DelayedArgsOnly,
-                                             bool emitFake, CreateKind Kind) {
-      emitCreate(true, DelayedArgsOnly, emitFake, Kind);
-      emitCreate(false, DelayedArgsOnly, emitFake, Kind);
-    };
-
     auto emitCreates = [&](bool DelayedArgsOnly, bool emitFake) {
-      emitBothImplicitAndNonCreates(DelayedArgsOnly, emitFake,
-                                    CreateKind::WithNoArgs);
-      emitBothImplicitAndNonCreates(DelayedArgsOnly, emitFake,
-                                    CreateKind::WithAttributeCommonInfo);
-      emitBothImplicitAndNonCreates(DelayedArgsOnly, emitFake,
-                                    CreateKind::WithSourceRange);
+      emitCreate(true, DelayedArgsOnly, emitFake);
+      emitCreate(false, DelayedArgsOnly, emitFake);
       emitCreateNoCI(true, DelayedArgsOnly, emitFake);
       emitCreateNoCI(false, DelayedArgsOnly, emitFake);
     };
@@ -3467,6 +3476,10 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   OS << "case AttributeCommonInfo::Syntax::AS_Keyword:\n";
   OS << "case AttributeCommonInfo::Syntax::AS_ContextSensitiveKeyword:\n";
   OS << "  llvm_unreachable(\"hasAttribute not supported for keyword\");\n";
+  OS << "  return 0;\n";
+  OS << "case AttributeCommonInfo::Syntax::AS_Implicit:\n";
+  OS << "  llvm_unreachable (\"hasAttribute not supported for "
+        "AS_Implicit\");\n";
   OS << "  return 0;\n";
 
   OS << "}\n";

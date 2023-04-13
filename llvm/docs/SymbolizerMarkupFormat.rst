@@ -33,7 +33,7 @@ text. It's specifically intended not to require sanitizing plain text, such as
 the HTML/XML requirement to replace ``<`` with ``&lt;`` and the like.
 
 :doc:`llvm-symbolizer <CommandGuide/llvm-symbolizer>` includes a symbolizing
-filter via its ``--filter`` option.
+filter via its ``--filter-markup`` option.
 
 Scope and assumptions
 =====================

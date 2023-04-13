@@ -1749,33 +1749,60 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
         } else if (reason == "trap") {
           // Let the trap just use the standard signal stop reason below...
         } else if (reason == "watchpoint") {
+          // We will have between 1 and 3 fields in the description.
+          //
+          // \a wp_addr which is the original start address that
+          // lldb requested be watched, or an address that the
+          // hardware reported.  This address should be within the
+          // range of a currently active watchpoint region - lldb
+          // should be able to find a watchpoint with this address.
+          //
+          // \a wp_index is the hardware watchpoint register number.
+          //
+          // \a wp_hit_addr is the actual address reported by the hardware,
+          // which may be outside the range of a region we are watching.
+          //
+          // On MIPS, we may get a false watchpoint exception where an
+          // access to the same 8 byte granule as a watchpoint will trigger,
+          // even if the access was not within the range of the watched
+          // region. When we get a \a wp_hit_addr outside the range of any
+          // set watchpoint, continue execution without making it visible to
+          // the user.
+          //
+          // On ARM, a related issue where a large access that starts
+          // before the watched region (and extends into the watched
+          // region) may report a hit address before the watched region.
+          // lldb will not find the "nearest" watchpoint to
+          // disable/step/re-enable it, so one of the valid watchpoint
+          // addresses should be provided as \a wp_addr.
           StringExtractor desc_extractor(description.c_str());
           addr_t wp_addr = desc_extractor.GetU64(LLDB_INVALID_ADDRESS);
           uint32_t wp_index = desc_extractor.GetU32(LLDB_INVALID_INDEX32);
           addr_t wp_hit_addr = desc_extractor.GetU64(LLDB_INVALID_ADDRESS);
           watch_id_t watch_id = LLDB_INVALID_WATCH_ID;
-          if (wp_addr != LLDB_INVALID_ADDRESS) {
-            WatchpointSP wp_sp;
+          bool silently_continue = false;
+          WatchpointSP wp_sp;
+          if (wp_hit_addr != LLDB_INVALID_ADDRESS) {
+            wp_sp = GetTarget().GetWatchpointList().FindByAddress(wp_hit_addr);
+            // On MIPS, \a wp_hit_addr outside the range of a watched
+            // region means we should silently continue, it is a false hit.
             ArchSpec::Core core = GetTarget().GetArchitecture().GetCore();
-            if ((core >= ArchSpec::kCore_mips_first &&
-                 core <= ArchSpec::kCore_mips_last) ||
-                (core >= ArchSpec::eCore_arm_generic &&
-                 core <= ArchSpec::eCore_arm_aarch64))
-              wp_sp =
-                  GetTarget().GetWatchpointList().FindByAddress(wp_hit_addr);
-            if (!wp_sp)
-              wp_sp = GetTarget().GetWatchpointList().FindByAddress(wp_addr);
-            if (wp_sp) {
-              wp_sp->SetHardwareIndex(wp_index);
-              watch_id = wp_sp->GetID();
-            }
+            if (!wp_sp && core >= ArchSpec::kCore_mips_first &&
+                core <= ArchSpec::kCore_mips_last)
+              silently_continue = true;
+          }
+          if (!wp_sp && wp_addr != LLDB_INVALID_ADDRESS)
+            wp_sp = GetTarget().GetWatchpointList().FindByAddress(wp_addr);
+          if (wp_sp) {
+            wp_sp->SetHardwareIndex(wp_index);
+            watch_id = wp_sp->GetID();
           }
           if (watch_id == LLDB_INVALID_WATCH_ID) {
             Log *log(GetLog(GDBRLog::Watchpoints));
             LLDB_LOGF(log, "failed to find watchpoint");
           }
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithWatchpointID(
-              *thread_sp, watch_id, wp_hit_addr));
+              *thread_sp, watch_id, silently_continue));
           handled = true;
         } else if (reason == "exception") {
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithException(
@@ -2202,6 +2229,9 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         if (wp_sp)
           wp_index = wp_sp->GetHardwareIndex();
 
+        // Rewrite gdb standard watch/rwatch/awatch to
+        // "reason:watchpoint" + "description:ADDR",
+        // which is parsed in SetThreadStopInfo.
         reason = "watchpoint";
         StreamString ostr;
         ostr.Printf("%" PRIu64 " %" PRIu32, wp_addr, wp_index);

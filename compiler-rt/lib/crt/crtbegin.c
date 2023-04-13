@@ -60,6 +60,10 @@ __asm__(".pushsection .init,\"ax\",%progbits\n\t"
 __asm__(".pushsection .init,\"ax\",%progbits\n\t"
         "bl __do_init\n\t"
         ".popsection");
+#elif defined(__mips__)
+__asm__(".pushsection .init,\"ax\",@progbits\n\t"
+        "jal __do_init\n\t"
+        ".popsection");
 #elif defined(__powerpc__) || defined(__powerpc64__)
 __asm__(".pushsection .init,\"ax\",@progbits\n\t"
         "bl __do_init\n\t"
@@ -108,6 +112,10 @@ __asm__(".pushsection .fini,\"ax\",@progbits\n\t"
 #elif defined(__arm__) || defined(__aarch64__)
 __asm__(".pushsection .fini,\"ax\",%progbits\n\t"
         "bl __do_fini\n\t"
+        ".popsection");
+#elif defined(__mips__)
+__asm__(".pushsection .fini,\"ax\",@progbits\n\t"
+        "jal __do_fini\n\t"
         ".popsection");
 #elif defined(__powerpc__) || defined(__powerpc64__)
 __asm__(".pushsection .fini,\"ax\",@progbits\n\t"

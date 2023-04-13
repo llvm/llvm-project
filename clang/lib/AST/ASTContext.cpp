@@ -13083,7 +13083,7 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
 static auto unwrapSugar(SplitQualType &T, Qualifiers &QTotal) {
   SmallVector<SplitQualType, 8> R;
   while (true) {
-    QTotal += T.Quals;
+    QTotal.addConsistentQualifiers(T.Quals);
     QualType NT = T.Ty->getLocallyUnqualifiedSingleStepDesugaredType();
     if (NT == QualType(T.Ty, 0))
       break;

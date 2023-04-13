@@ -961,7 +961,6 @@
 // RUN:   | FileCheck --check-prefix=CHECK-HWASAN-X86-64-LINUX %s
 //
 // CHECK-HWASAN-X86-64-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-HWASAN-X86-64-LINUX: "-pie"
 // CHECK-HWASAN-X86-64-LINUX-NOT: "-lc"
 // CHECK-HWASAN-X86-64-LINUX: libclang_rt.hwasan-x86_64.a"
 // CHECK-HWASAN-X86-64-LINUX-NOT: "--export-dynamic"
@@ -979,7 +978,6 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SHARED-HWASAN-X86-64-LINUX %s
 //
 // CHECK-SHARED-HWASAN-X86-64-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-SHARED-HWASAN-X86-64-LINUX: "-pie"
 // CHECK-SHARED-HWASAN-X86-64-LINUX-NOT: "-lc"
 // CHECK-SHARED-HWASAN-X86-64-LINUX: libclang_rt.hwasan-x86_64.so"
 // CHECK-SHARED-HWASAN-X86-64-LINUX-NOT: "-lpthread"
@@ -996,7 +994,6 @@
 // RUN:   | FileCheck --check-prefix=CHECK-DSO-SHARED-HWASAN-X86-64-LINUX %s
 //
 // CHECK-DSO-SHARED-HWASAN-X86-64-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-DSO_SHARED-HWASAN-X86-64-LINUX: "-pie"
 // CHECK-DSO-SHARED-HWASAN-X86-64-LINUX-NOT: "-lc"
 // CHECK-DSO-SHARED-HWASAN-X86-64-LINUX: libclang_rt.hwasan-x86_64.so"
 // CHECK-DSO-SHARED-HWASAN-X86-64-LINUX-NOT: "-lpthread"
@@ -1013,7 +1010,6 @@
 // RUN:   | FileCheck --check-prefix=CHECK-HWASAN-AARCH64-LINUX %s
 //
 // CHECK-HWASAN-AARCH64-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-HWASAN-AARCH64-LINUX: "-pie"
 // CHECK-HWASAN-AARCH64-LINUX-NOT: "-lc"
 // CHECK-HWASAN-AARCH64-LINUX: libclang_rt.hwasan-aarch64.a"
 // CHECK-HWASAN-AARCH64-LINUX-NOT: "--export-dynamic"
@@ -1032,7 +1028,6 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SHARED-HWASAN-AARCH64-LINUX %s
 //
 // CHECK-SHARED-HWASAN-AARCH64-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-SHARED-HWASAN-AARCH64-LINUX: "-pie"
 // CHECK-SHARED-HWASAN-AARCH64-LINUX-NOT: "-lc"
 // CHECK-SHARED-HWASAN-AARCH64-LINUX: libclang_rt.hwasan-aarch64.so"
 // CHECK-SHARED-HWASAN-AARCH64-LINUX-NOT: "-lpthread"
@@ -1049,7 +1044,6 @@
 // RUN:   | FileCheck --check-prefix=CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX %s
 //
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-DSO_SHARED-HWASAN-AARCH64-LINUX: "-pie"
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "-lc"
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX: libclang_rt.hwasan-aarch64.so"
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "-lpthread"

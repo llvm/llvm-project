@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -145,6 +146,12 @@ void MachineInstr::moveBefore(MachineInstr *MovePos) {
 /// return null.
 MachineRegisterInfo *MachineInstr::getRegInfo() {
   if (MachineBasicBlock *MBB = getParent())
+    return &MBB->getParent()->getRegInfo();
+  return nullptr;
+}
+
+const MachineRegisterInfo *MachineInstr::getRegInfo() const {
+  if (const MachineBasicBlock *MBB = getParent())
     return &MBB->getParent()->getRegInfo();
   return nullptr;
 }
@@ -2397,4 +2404,73 @@ unsigned MachineInstr::getDebugInstrNum(MachineFunction &MF) {
   if (DebugInstrNum == 0)
     DebugInstrNum = MF.getNewDebugInstrNum();
   return DebugInstrNum;
+}
+
+std::tuple<LLT, LLT> MachineInstr::getFirst2LLTs() const {
+  return std::tuple(getRegInfo()->getType(getOperand(0).getReg()),
+                    getRegInfo()->getType(getOperand(1).getReg()));
+}
+
+std::tuple<LLT, LLT, LLT> MachineInstr::getFirst3LLTs() const {
+  return std::tuple(getRegInfo()->getType(getOperand(0).getReg()),
+                    getRegInfo()->getType(getOperand(1).getReg()),
+                    getRegInfo()->getType(getOperand(2).getReg()));
+}
+
+std::tuple<LLT, LLT, LLT, LLT> MachineInstr::getFirst4LLTs() const {
+  return std::tuple(getRegInfo()->getType(getOperand(0).getReg()),
+                    getRegInfo()->getType(getOperand(1).getReg()),
+                    getRegInfo()->getType(getOperand(2).getReg()),
+                    getRegInfo()->getType(getOperand(3).getReg()));
+}
+
+std::tuple<LLT, LLT, LLT, LLT, LLT> MachineInstr::getFirst5LLTs() const {
+  return std::tuple(getRegInfo()->getType(getOperand(0).getReg()),
+                    getRegInfo()->getType(getOperand(1).getReg()),
+                    getRegInfo()->getType(getOperand(2).getReg()),
+                    getRegInfo()->getType(getOperand(3).getReg()),
+                    getRegInfo()->getType(getOperand(4).getReg()));
+}
+
+std::tuple<Register, LLT, Register, LLT>
+MachineInstr::getFirst2RegLLTs() const {
+  Register Reg0 = getOperand(0).getReg();
+  Register Reg1 = getOperand(1).getReg();
+  return std::tuple(Reg0, getRegInfo()->getType(Reg0), Reg1,
+                    getRegInfo()->getType(Reg1));
+}
+
+std::tuple<Register, LLT, Register, LLT, Register, LLT>
+MachineInstr::getFirst3RegLLTs() const {
+  Register Reg0 = getOperand(0).getReg();
+  Register Reg1 = getOperand(1).getReg();
+  Register Reg2 = getOperand(2).getReg();
+  return std::tuple(Reg0, getRegInfo()->getType(Reg0), Reg1,
+                    getRegInfo()->getType(Reg1), Reg2,
+                    getRegInfo()->getType(Reg2));
+}
+
+std::tuple<Register, LLT, Register, LLT, Register, LLT, Register, LLT>
+MachineInstr::getFirst4RegLLTs() const {
+  Register Reg0 = getOperand(0).getReg();
+  Register Reg1 = getOperand(1).getReg();
+  Register Reg2 = getOperand(2).getReg();
+  Register Reg3 = getOperand(3).getReg();
+  return std::tuple(
+      Reg0, getRegInfo()->getType(Reg0), Reg1, getRegInfo()->getType(Reg1),
+      Reg2, getRegInfo()->getType(Reg2), Reg3, getRegInfo()->getType(Reg3));
+}
+
+std::tuple<Register, LLT, Register, LLT, Register, LLT, Register, LLT, Register,
+           LLT>
+MachineInstr::getFirst5RegLLTs() const {
+  Register Reg0 = getOperand(0).getReg();
+  Register Reg1 = getOperand(1).getReg();
+  Register Reg2 = getOperand(2).getReg();
+  Register Reg3 = getOperand(3).getReg();
+  Register Reg4 = getOperand(4).getReg();
+  return std::tuple(
+      Reg0, getRegInfo()->getType(Reg0), Reg1, getRegInfo()->getType(Reg1),
+      Reg2, getRegInfo()->getType(Reg2), Reg3, getRegInfo()->getType(Reg3),
+      Reg4, getRegInfo()->getType(Reg4));
 }

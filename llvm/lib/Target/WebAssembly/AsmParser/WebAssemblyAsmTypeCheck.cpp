@@ -51,6 +51,7 @@ WebAssemblyAsmTypeCheck::WebAssemblyAsmTypeCheck(MCAsmParser &Parser,
 void WebAssemblyAsmTypeCheck::funcDecl(const wasm::WasmSignature &Sig) {
   LocalTypes.assign(Sig.Params.begin(), Sig.Params.end());
   ReturnTypes.assign(Sig.Returns.begin(), Sig.Returns.end());
+  BrStack.emplace_back(Sig.Returns.begin(), Sig.Returns.end());
 }
 
 void WebAssemblyAsmTypeCheck::localDecl(
@@ -122,7 +123,36 @@ bool WebAssemblyAsmTypeCheck::getLocal(SMLoc ErrorLoc, const MCInst &Inst,
   return false;
 }
 
+static std::optional<std::string>
+checkStackTop(const SmallVectorImpl<wasm::ValType> &ExpectedStackTop,
+              const SmallVectorImpl<wasm::ValType> &Got) {
+  for (size_t I = 0; I < ExpectedStackTop.size(); I++) {
+    auto EVT = ExpectedStackTop[I];
+    auto PVT = Got[Got.size() - ExpectedStackTop.size() + I];
+    if (PVT != EVT)
+      return std::string{"got "} + WebAssembly::typeToString(PVT) +
+             ", expected " + WebAssembly::typeToString(EVT);
+  }
+  return std::nullopt;
+}
+
+bool WebAssemblyAsmTypeCheck::checkBr(SMLoc ErrorLoc, size_t Level) {
+  if (Level >= BrStack.size())
+    return typeError(ErrorLoc,
+                     StringRef("br: invalid depth ") + std::to_string(Level));
+  const SmallVector<wasm::ValType, 4> &Expected =
+      BrStack[BrStack.size() - Level - 1];
+  if (Expected.size() > Stack.size())
+    return typeError(ErrorLoc, "br: insufficient values on the type stack");
+  auto IsStackTopInvalid = checkStackTop(Expected, Stack);
+  if (IsStackTopInvalid)
+    return typeError(ErrorLoc, "br " + IsStackTopInvalid.value());
+  return false;
+}
+
 bool WebAssemblyAsmTypeCheck::checkEnd(SMLoc ErrorLoc, bool PopVals) {
+  if (!PopVals)
+    BrStack.pop_back();
   if (LastSig.Returns.size() > Stack.size())
     return typeError(ErrorLoc, "end: insufficient values on the type stack");
 
@@ -134,14 +164,9 @@ bool WebAssemblyAsmTypeCheck::checkEnd(SMLoc ErrorLoc, bool PopVals) {
     return false;
   }
 
-  for (size_t i = 0; i < LastSig.Returns.size(); i++) {
-    auto EVT = LastSig.Returns[i];
-    auto PVT = Stack[Stack.size() - LastSig.Returns.size() + i];
-    if (PVT != EVT)
-      return typeError(ErrorLoc,
-                       StringRef("end got ") + WebAssembly::typeToString(PVT) +
-                           ", expected " + WebAssembly::typeToString(EVT));
-  }
+  auto IsStackTopInvalid = checkStackTop(LastSig.Returns, Stack);
+  if (IsStackTopInvalid)
+    return typeError(ErrorLoc, "end " + IsStackTopInvalid.value());
   return false;
 }
 
@@ -300,6 +325,14 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
   } else if (Name == "drop") {
     if (popType(ErrorLoc, {}))
       return true;
+  } else if (Name == "try" || Name == "block" || Name == "loop" ||
+             Name == "if") {
+    if (Name == "if" && popType(ErrorLoc, wasm::ValType::I32))
+      return true;
+    if (Name == "loop")
+      BrStack.emplace_back(LastSig.Params.begin(), LastSig.Params.end());
+    else
+      BrStack.emplace_back(LastSig.Returns.begin(), LastSig.Returns.end());
   } else if (Name == "end_block" || Name == "end_loop" || Name == "end_if" ||
              Name == "else" || Name == "end_try" || Name == "catch" ||
              Name == "catch_all" || Name == "delegate") {
@@ -321,6 +354,12 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       // "params" part
       Stack.insert(Stack.end(), Sig->Params.begin(), Sig->Params.end());
     }
+  } else if (Name == "br") {
+    const MCOperand &Operand = Inst.getOperand(0);
+    if (!Operand.isImm())
+      return false;
+    if (checkBr(ErrorLoc, static_cast<size_t>(Operand.getImm())))
+      return true;
   } else if (Name == "return") {
     if (endOfFunction(ErrorLoc))
       return true;

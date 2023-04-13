@@ -1916,11 +1916,47 @@ public:
     }
   }
 
+  std::tuple<Register, Register> getFirst2Regs() const {
+    return std::tuple(getOperand(0).getReg(), getOperand(1).getReg());
+  }
+
+  std::tuple<Register, Register, Register> getFirst3Regs() const {
+    return std::tuple(getOperand(0).getReg(), getOperand(1).getReg(),
+                      getOperand(2).getReg());
+  }
+
+  std::tuple<Register, Register, Register, Register> getFirst4Regs() const {
+    return std::tuple(getOperand(0).getReg(), getOperand(1).getReg(),
+                      getOperand(2).getReg(), getOperand(3).getReg());
+  }
+
+  std::tuple<Register, Register, Register, Register, Register>
+  getFirst5Regs() const {
+    return std::tuple(getOperand(0).getReg(), getOperand(1).getReg(),
+                      getOperand(2).getReg(), getOperand(3).getReg(),
+                      getOperand(4).getReg());
+  }
+
+  std::tuple<LLT, LLT> getFirst2LLTs() const;
+  std::tuple<LLT, LLT, LLT> getFirst3LLTs() const;
+  std::tuple<LLT, LLT, LLT, LLT> getFirst4LLTs() const;
+  std::tuple<LLT, LLT, LLT, LLT, LLT> getFirst5LLTs() const;
+
+  std::tuple<Register, LLT, Register, LLT> getFirst2RegLLTs() const;
+  std::tuple<Register, LLT, Register, LLT, Register, LLT>
+  getFirst3RegLLTs() const;
+  std::tuple<Register, LLT, Register, LLT, Register, LLT, Register, LLT>
+  getFirst4RegLLTs() const;
+  std::tuple<Register, LLT, Register, LLT, Register, LLT, Register, LLT,
+             Register, LLT>
+  getFirst5RegLLTs() const;
+
 private:
   /// If this instruction is embedded into a MachineFunction, return the
   /// MachineRegisterInfo object for the current function, otherwise
   /// return null.
   MachineRegisterInfo *getRegInfo();
+  const MachineRegisterInfo *getRegInfo() const;
 
   /// Unlink all of the register operands in this instruction from their
   /// respective use lists.  This requires that the operands already be on their

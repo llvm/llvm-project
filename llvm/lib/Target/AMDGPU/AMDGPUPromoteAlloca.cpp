@@ -124,6 +124,14 @@ public:
   }
 };
 
+unsigned getMaxVGPRs(const TargetMachine &TM, const Function &F) {
+  if (!TM.getTargetTriple().isAMDGCN())
+    return 128;
+
+  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+  return ST.getMaxNumVGPRs(ST.getWavesPerEU(F).first);
+}
+
 } // end anonymous namespace
 
 char AMDGPUPromoteAlloca::ID = 0;
@@ -176,16 +184,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F) {
   if (!ST.isPromoteAllocaEnabled())
     return false;
 
-  if (IsAMDGCN) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    MaxVGPRs = ST.getMaxNumVGPRs(ST.getWavesPerEU(F).first);
-    // A non-entry function has only 32 caller preserved registers.
-    // Do not promote alloca which will force spilling.
-    if (!AMDGPU::isEntryFunctionCC(F.getCallingConv()))
-      MaxVGPRs = std::min(MaxVGPRs, 32u);
-  } else {
-    MaxVGPRs = 128;
-  }
+  MaxVGPRs = getMaxVGPRs(TM, F);
 
   bool SufficientLDS = hasSufficientLocalMem(F);
   bool Changed = false;
@@ -1200,17 +1199,7 @@ bool promoteAllocasToVector(Function &F, TargetMachine &TM) {
   if (!ST.isPromoteAllocaEnabled())
     return false;
 
-  unsigned MaxVGPRs;
-  if (TM.getTargetTriple().getArch() == Triple::amdgcn) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    MaxVGPRs = ST.getMaxNumVGPRs(ST.getWavesPerEU(F).first);
-    // A non-entry function has only 32 caller preserved registers.
-    // Do not promote alloca which will force spilling.
-    if (!AMDGPU::isEntryFunctionCC(F.getCallingConv()))
-      MaxVGPRs = std::min(MaxVGPRs, 32u);
-  } else {
-    MaxVGPRs = 128;
-  }
+  const unsigned MaxVGPRs = getMaxVGPRs(TM, F);
 
   bool Changed = false;
   BasicBlock &EntryBB = *F.begin();

@@ -630,6 +630,20 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  HeaderSpec Sched = HeaderSpec<
+      "sched.h",
+      [], // Macros
+      [PidT, SizeTType, CpuSetT], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+            "sched_yield",
+            RetValSpec<IntType>,
+            []
+        >,
+      ]
+  >;
+
   HeaderSpec String = HeaderSpec<
     "string.h",
     [
@@ -1300,6 +1314,7 @@ def POSIX : StandardSpec<"POSIX"> {
     Errno,
     FCntl,
     PThread,
+    Sched,
     Signal,
     Spawn,
     StdIO,
