@@ -22,27 +22,28 @@ class CrashLogScriptedProcess(ScriptedProcess):
         if hasattr(self.crashlog, 'asb'):
             self.extended_thread_info = self.crashlog.asb
 
-        def load_images(self, images):
-            #TODO: Add to self.loaded_images and load images in lldb
-            if images:
-                for image in images:
-                    if image not in self.loaded_images:
-                        if image.uuid == uuid.UUID(int=0):
-                            continue
-                        err = image.add_module(self.target)
-                        if err:
-                            # Append to SBCommandReturnObject
-                            print(err)
-                        else:
-                            self.loaded_images.append(image)
+        if self.load_all_images:
+            for image in self.crashlog.images:
+                image.resolve = True
+        else:
+            for thread in self.crashlog.threads:
+                if thread.did_crash():
+                    for ident in thread.idents:
+                        for image in self.crashlog.find_images_with_identifier(ident):
+                            image.resolve = True
+
+        for image in self.crashlog.images:
+            if image not in self.loaded_images:
+                if image.uuid == uuid.UUID(int=0):
+                    continue
+                err = image.add_module(self.target)
+                if err:
+                    # Append to SBCommandReturnObject
+                    print(err)
+                else:
+                    self.loaded_images.append(image)
 
         for thread in self.crashlog.threads:
-            if self.load_all_images:
-                load_images(self, self.crashlog.images)
-            elif thread.did_crash():
-                for ident in thread.idents:
-                    load_images(self, self.crashlog.find_images_with_identifier(ident))
-
             if hasattr(thread, 'app_specific_backtrace') and thread.app_specific_backtrace:
                 # We don't want to include the Application Specific Backtrace
                 # Thread into the Scripted Process' Thread list.
