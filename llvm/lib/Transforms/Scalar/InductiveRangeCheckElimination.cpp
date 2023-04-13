@@ -145,8 +145,7 @@ class InductiveRangeCheck {
   Use *CheckUse = nullptr;
 
   static bool parseRangeCheckICmp(Loop *L, ICmpInst *ICI, ScalarEvolution &SE,
-                                  Value *&Index, Value *&Length,
-                                  bool &IsSigned);
+                                  Value *&Index, Value *&Length);
 
   static void
   extractRangeChecksFromCond(Loop *L, ScalarEvolution &SE, Use &ConditionUse,
@@ -291,7 +290,7 @@ INITIALIZE_PASS_END(IRCELegacyPass, "irce", "Inductive range check elimination",
 bool
 InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
                                          ScalarEvolution &SE, Value *&Index,
-                                         Value *&Length, bool &IsSigned) {
+                                         Value *&Length) {
   auto IsLoopInvariant = [&SE, L](Value *V) {
     return SE.isLoopInvariant(SE.getSCEV(V), L);
   };
@@ -308,7 +307,6 @@ InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
     std::swap(LHS, RHS);
     [[fallthrough]];
   case ICmpInst::ICMP_SGE:
-    IsSigned = true;
     if (match(RHS, m_ConstantInt<0>())) {
       Index = LHS;
       return true; // Lower.
@@ -319,7 +317,6 @@ InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
     std::swap(LHS, RHS);
     [[fallthrough]];
   case ICmpInst::ICMP_SGT:
-    IsSigned = true;
     if (match(RHS, m_ConstantInt<-1>())) {
       Index = LHS;
       return true; // Lower.
@@ -336,7 +333,6 @@ InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
     std::swap(LHS, RHS);
     [[fallthrough]];
   case ICmpInst::ICMP_UGT:
-    IsSigned = false;
     if (IsLoopInvariant(LHS)) {
       Index = RHS;
       Length = LHS;
@@ -370,8 +366,7 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
     return;
 
   Value *Length = nullptr, *Index;
-  bool IsSigned;
-  if (!parseRangeCheckICmp(L, ICI, SE, Index, Length, IsSigned))
+  if (!parseRangeCheckICmp(L, ICI, SE, Index, Length))
     return;
 
   const auto *IndexAddRec = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(Index));
