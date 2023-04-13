@@ -542,6 +542,16 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
         return failure();
     }
 
+    if (useBarePtrCallConv) {
+      for (auto it : callOp->getOperands()) {
+        Type operandType = it.getType();
+        if (operandType.isa<UnrankedMemRefType>()) {
+          // Unranked memref is not supported in the bare pointer calling
+          // convention.
+          return failure();
+        }
+      }
+    }
     auto promoted = this->getTypeConverter()->promoteOperands(
         callOp.getLoc(), /*opOperands=*/callOp->getOperands(),
         adaptor.getOperands(), rewriter, useBarePtrCallConv);
