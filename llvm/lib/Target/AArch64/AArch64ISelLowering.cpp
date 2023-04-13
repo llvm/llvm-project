@@ -14583,10 +14583,6 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
 bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
                                                   ShuffleVectorInst *SVI,
                                                   unsigned Factor) const {
-  // Skip if streaming compatible SVE is enabled, because it generates invalid
-  // code in streaming mode when SVE length is not specified.
-  if (Subtarget->forceStreamingCompatibleSVE())
-    return false;
 
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
