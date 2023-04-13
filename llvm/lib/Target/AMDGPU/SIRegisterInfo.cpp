@@ -2506,10 +2506,12 @@ unsigned SIRegisterInfo::getHWRegIndex(MCRegister Reg) const {
     const TargetRegisterClass *RC = getPhysRegBaseClass(Reg);
     // VGPRs 0..255 and 256..511 have the same encoding value
     // and bit 8 is always set.
-    if (RC && isVGPRClass(RC) &&
-        *MCRegUnitRootIterator(*MCRegUnitIterator(Reg, this), this) >=
-            AMDGPU::VGPR256_LO16)
-      return Idx & 0x1ff;
+    if (RC && isVGPRClass(RC)) {
+      auto Root = *MCRegUnitRootIterator(*MCRegUnitIterator(Reg, this), this);
+      if ((Root >= AMDGPU::VGPR256_LO16 && Root <= AMDGPU::VGPR511_LO16) ||
+          (Root >= AMDGPU::VGPR256_HI16 && Root <= AMDGPU::VGPR511_HI16))
+        return Idx & 0x1ff;
+    }
   }
 
   return Idx & 0xff;
