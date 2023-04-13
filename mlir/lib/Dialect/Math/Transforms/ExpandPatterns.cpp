@@ -158,6 +158,22 @@ static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
   return success();
 }
 
+// exp2f(float x) -> exp(x * ln(2))
+//   Proof: Let's say 2^x = y
+//   ln(2^x) = ln(y)
+//   x * ln(2) = ln(y) => e ^(x*ln(2)) = y
+static LogicalResult convertExp2fOp(math::Exp2Op op,
+                                    PatternRewriter &rewriter) {
+  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+  Value operand = op.getOperand();
+  Type opType = operand.getType();
+  Value ln2 = createFloatConst(op->getLoc(), opType, llvm::numbers::ln2, b);
+  Value mult = b.create<arith::MulFOp>(opType, operand, ln2);
+  Value exp = b.create<math::ExpOp>(op->getLoc(), mult);
+  rewriter.replaceOp(op, exp);
+  return success();
+}
+
 // Converts math.ctlz to scf and arith operations. This is done
 // by performing a binary search on the bits.
 static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
@@ -220,6 +236,10 @@ void mlir::populateExpandFmaFPattern(RewritePatternSet &patterns) {
 
 void mlir::populateExpandCeilFPattern(RewritePatternSet &patterns) {
   patterns.add(convertCeilOp);
+}
+
+void mlir::populateExpandExp2FPattern(RewritePatternSet &patterns) {
+  patterns.add(convertExp2fOp);
 }
 
 void mlir::populateExpandFloorFPattern(RewritePatternSet &patterns) {
