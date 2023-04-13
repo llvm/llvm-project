@@ -698,3 +698,110 @@ check_after_unreachable_within_try_4:
 # CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
   drop
   end_function
+
+br_invalid_type_loop:
+  .functype br_invalid_type_loop () -> ()
+  i32.const 1
+  loop (i32) -> (f32)
+    drop
+    f32.const 1.0
+# CHECK: :[[@LINE+1]]:5: error: br got f32, expected i32
+    br 0
+  end_loop
+  drop
+  end_function
+
+br_invalid_type_block:
+  .functype br_invalid_type_block () -> ()
+  i32.const 1
+  block (i32) -> (f32)
+# CHECK: :[[@LINE+1]]:5: error: br got i32, expected f32
+    br 0
+    f32.const 1.0
+  end_block
+  drop
+  end_function
+
+br_invalid_type_if:
+  .functype br_invalid_type_if () -> ()
+  i32.const 1
+  if f32
+    f32.const 1.0
+  else
+    i32.const 1
+# CHECK: :[[@LINE+1]]:5: error: br got i32, expected f32
+    br 0
+  end_if
+  drop
+  end_function
+
+br_invalid_type_try:
+  .functype br_invalid_type_try () -> ()
+  try f32
+    i32.const 1
+# CHECK: :[[@LINE+1]]:5: error: br got i32, expected f32
+    br 0
+  catch tag_f32
+  end_try
+  drop
+  end_function
+
+br_invalid_type_catch:
+  .functype br_invalid_type_catch () -> ()
+  try f32
+    f32.const 1.0
+  catch tag_i32
+# CHECK: :[[@LINE+1]]:5: error: br got i32, expected f32
+    br 0
+  end_try
+  drop
+  end_function
+
+br_invalid_type_catch_all:
+  .functype br_invalid_type_catch_all () -> ()
+  try f32
+    f32.const 1.0
+  catch_all
+    i32.const 1
+# CHECK: :[[@LINE+1]]:5: error: br got i32, expected f32
+    br 0
+  end_try
+  drop
+  end_function
+
+br_invalid_depth_out_of_range:
+  .functype br_invalid_depth_out_of_range () -> ()
+  block
+  block
+  block
+# CHECK: :[[@LINE+1]]:5: error: br: invalid depth 4
+    br 4
+  end_block
+  end_block
+  end_block
+  end_function
+
+br_incorrect_signature:
+  .functype br_incorrect_signature () -> ()
+  block f32
+    block i32
+      i32.const 1
+# CHECK: :[[@LINE+1]]:7: error: br got i32, expected f32
+      br 1
+    end_block
+    drop
+    f32.const 1.0
+  end_block
+  drop
+  end_function
+
+br_incorrect_func_signature:
+  .functype br_incorrect_func_signature () -> (i32)
+  block f32
+    f32.const 1.0
+# CHECK: :[[@LINE+1]]:5: error: br got f32, expected i32
+    br 1
+  end_block
+  drop
+  i32.const 1
+  end_function
