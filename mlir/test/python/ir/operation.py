@@ -516,6 +516,8 @@ def testOperationAttributes():
   print(f"Attribute type {fattr.type}, value {fattr.value}")
   # CHECK: Attribute value text
   print(f"Attribute value {sattr.value}")
+  # CHECK: Attribute value b'text'
+  print(f"Attribute value {sattr.value_bytes}")
 
   # We don't know in which order the attributes are stored.
   # CHECK-DAG: NamedAttribute(dependent="text")
