@@ -1559,17 +1559,57 @@ for this region.
 //                          "signal" stopped due to an actual unix signal, not
 //                              just the debugger using a unix signal to keep
 //                              the GDB remote client happy.
-//                          "watchpoint". Should be used in conjunction with
-//                              the "watch"/"rwatch"/"awatch" key value pairs.
+//                          "watchpoint". Can be used with of the 
+//                              "watch"/"rwatch"/"awatch" key value pairs.
+//                              Or can be used *instead* of those keys, 
+//                              with the specially formatted "description" field.
 //                          "exception" an exception stop reason. Use with
 //                              the "description" key/value pair to describe the
 //                              exceptional event the user should see as the stop
 //                              reason.
 //  "description" ascii-hex An ASCII hex string that contains a more descriptive
-//                          reason that the thread stopped. This is only needed
-//                          if none of the key/value pairs are enough to
-//                          describe why something stopped.
+//           reason that the thread stopped. This is only needed
+//           if none of the key/value pairs are enough to
+//           describe why something stopped.
 //
+//           For "reason:watchpoint", "description" is an ascii-hex
+//           encoded string with between one and three base10 numbers,
+//           space separated.  The three numbers are
+//             1. watchpoint address.  This address should always be within
+//                a memory region lldb has a watchpoint on.  
+//                On architectures where the actual reported hit address may
+//                be outside the watchpoint that was triggered, the remote
+//                stub should determine which watchpoint was triggered and
+//                report an address from within its range.
+//             2. watchpoint hardware register index number.
+//             3. actual watchpoint trap address, which may be outside
+//                the range of any watched region of memory. On MIPS, an addr
+//                outside a watched range means lldb should disable the wp, 
+//                step, re-enable the wp and continue silently.
+//
+//           On MIPS, the low 3 bits are masked so if a watchpoint is on 
+//           0x1004, a 2-byte write to 0x1000 will trigger the watchpoint 
+//           (a false positive hit), and lldb needs to disable the 
+//           watchpoint at 0x1004, inst-step, then re-enable the watchpoint
+//           and not make this a user visible event. The description here 
+//           would be "0x1004 0 0x1000". lldb needs a known watchpoint address
+//           in the first field, so it can disable it & step.
+//
+//           On AArch64 we have a related issue, where you watch 4 bytes at 
+//           0x1004, an instruction does an 8-byte write starting at 
+//           0x1000 (a true watchpoint hit) and the hardware may report the 
+//           trap address as 0x1000 - before the watched memory region - 
+//           with the write extending into the watched region.  This can 
+//           be reported as "0x1004 0 0x1000".  lldb will use 0x1004 to 
+//           identify which Watchpoint was triggered, and can report 0x1000 
+//           to the user.  The behavior of silently stepping over the 
+//           watchpoint, with an 3rd field addr outside the range, is 
+//           restricted to MIPS.
+//           There may be false-positive watchpoint hits on AArch64 as well,
+//           in the SVE Streaming Mode, but that is less common (see ESR 
+//           register flag "WPF", "Watchpoint might be False-Positive") and
+//           not currently handled by lldb.
+//           
 //  "threads"     comma-sep-base16  A list of thread ids for all threads (including
 //                                  the thread that we're reporting as stopped) that
 //                                  are live in the process right now.  lldb may
