@@ -530,6 +530,9 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   } attributes {waitAttr}
   acc.serial {
   } attributes {selfAttr}
+  acc.serial {
+    acc.yield
+  } attributes {selfAttr}
   return
 }
 
@@ -576,6 +579,9 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK:      acc.serial {
 // CHECK-NEXT: } attributes {waitAttr}
 // CHECK:      acc.serial {
+// CHECK-NEXT: } attributes {selfAttr}
+// CHECK:      acc.serial {
+// CHECK:        acc.yield
 // CHECK-NEXT: } attributes {selfAttr}
 
 // -----
