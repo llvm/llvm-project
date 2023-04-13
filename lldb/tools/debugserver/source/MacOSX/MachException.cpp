@@ -158,6 +158,19 @@ bool MachException::Data::GetStopInfo(
     return true;
   }
 
+#if defined(__arm64__) || defined(__aarch64__)
+  if (exc_type == EXC_BREAKPOINT && exc_data[0] == EXC_ARM_DA_DEBUG &&
+      exc_data.size() > 1) {
+    stop_info->reason = eStopTypeWatchpoint;
+    stop_info->details.watchpoint.mach_exception_addr = exc_data[1];
+    stop_info->details.watchpoint.addr = INVALID_NUB_ADDRESS;
+    if (exc_data.size() > 2) {
+      stop_info->details.watchpoint.hw_idx = exc_data[2];
+    }
+    return true;
+  }
+#endif
+
   // We always stop with a mach exceptions
   stop_info->reason = eStopTypeException;
   // Save the EXC_XXXX exception type
