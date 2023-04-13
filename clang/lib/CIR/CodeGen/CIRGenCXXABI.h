@@ -156,6 +156,12 @@ public:
   virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                                   QualType Ty) = 0;
 
+  /// Returns true if the given destructor type should be emitted as a linkonce
+  /// delegating thunk, regardless of whether the dtor is defined in this TU or
+  /// not.
+  virtual bool useThunkForDtorVariant(const CXXDestructorDecl *Dtor,
+                                      CXXDtorType DT) const = 0;
+
   /// Get the address point of the vtable for the given base subobject.
   virtual mlir::Value
   getVTableAddressPoint(BaseSubobject Base,

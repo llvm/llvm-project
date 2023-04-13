@@ -701,11 +701,12 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
 
 const CIRGenFunctionInfo &CIRGenTypes::arrangeGlobalDeclaration(GlobalDecl GD) {
   assert(!dyn_cast<ObjCMethodDecl>(GD.getDecl()) &&
-         "This is reported as a FIXME in codegen");
+         "This is reported as a FIXME in LLVM codegen");
   const auto *FD = cast<FunctionDecl>(GD.getDecl());
 
-  assert(!isa<CXXConstructorDecl>(GD.getDecl()) &&
-         !isa<CXXDestructorDecl>(GD.getDecl()) && "NYI");
+  if (isa<CXXConstructorDecl>(GD.getDecl()) ||
+      isa<CXXDestructorDecl>(GD.getDecl()))
+    return arrangeCXXStructorDeclaration(GD);
 
   return arrangeFunctionDeclaration(FD);
 }

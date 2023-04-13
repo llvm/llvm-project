@@ -271,42 +271,62 @@ ConstantAggregateBuilderBase::getOffsetFromGlobalTo(size_t end) const {
   return offset;
 }
 
-mlir::Attribute ConstantAggregateBuilderBase::finishArray(mlir::Type eltTy) {
-  llvm_unreachable("NYI");
-  // markFinished();
+// FIXME(cir): ideally we should use CIRGenBuilder for both static function
+// bellow by threading ConstantAggregateBuilderBase through
+// ConstantAggregateBuilderBase.
+static mlir::cir::ConstArrayAttr getConstArray(mlir::Attribute attrs,
+                                               mlir::cir::ArrayType arrayTy) {
+  return mlir::cir::ConstArrayAttr::get(arrayTy, attrs);
+}
 
-  // auto &buffer = getBuffer();
-  // assert((Begin < buffer.size() || (Begin == buffer.size() && eltTy)) &&
-  //        "didn't add any array elements without element type");
-  // auto elts = llvm::ArrayRef(buffer).slice(Begin);
-  // if (!eltTy)
-  //   eltTy = elts[0]->getType();
-  // auto type = llvm::ArrayType::get(eltTy, elts.size());
-  // auto constant = llvm::ConstantArray::get(type, elts);
-  // buffer.erase(buffer.begin() + Begin, buffer.end());
-  // return constant;
+mlir::Attribute ConstantAggregateBuilderBase::finishArray(mlir::Type eltTy) {
+  markFinished();
+
+  auto &buffer = getBuffer();
+  assert((Begin < buffer.size() || (Begin == buffer.size() && eltTy)) &&
+         "didn't add any array elements without element type");
+  auto elts = llvm::ArrayRef(buffer).slice(Begin);
+  if (!eltTy) {
+    llvm_unreachable("NYI");
+    // Uncomment this once we get a testcase.
+    // auto tAttr = elts[0].dyn_cast<mlir::TypedAttr>();
+    // assert(tAttr && "expected typed attribute");
+    // eltTy = tAttr.getType();
+  }
+
+  auto constant = getConstArray(
+      mlir::ArrayAttr::get(eltTy.getContext(), elts),
+      mlir::cir::ArrayType::get(eltTy.getContext(), eltTy, elts.size()));
+  buffer.erase(buffer.begin() + Begin, buffer.end());
+  return constant;
 }
 
 mlir::Attribute
 ConstantAggregateBuilderBase::finishStruct(mlir::cir::StructType ty) {
+  markFinished();
+
+  auto &buffer = getBuffer();
+  auto elts = llvm::ArrayRef(buffer).slice(Begin);
+
+  if (ty == nullptr && elts.empty()) {
+    llvm_unreachable("NYI");
+    // ty = mlir::cir::StructType::get(Builder.CGM.getLLVMContext(), {},
+    // Packed);
+  }
+
+  mlir::Attribute constant;
+  if (ty) {
+    llvm_unreachable("NYI");
+    // assert(ty->isPacked() == Packed);
+    // constant = llvm::ConstantStruct::get(ty, elts);
+  } else {
+    assert(!Packed && "NYI");
+    // constant = llvm::ConstantStruct::getAnon(elts, Packed);
+    // getAnonStruct(mlir::ArrayAttr::get(ty.getContext(), elts))
+    llvm_unreachable("NYI");
+  }
+
   llvm_unreachable("NYI");
-  // markFinished();
-
-  // auto &buffer = getBuffer();
-  // auto elts = llvm::ArrayRef(buffer).slice(Begin);
-
-  // if (ty == nullptr && elts.empty())
-  //   ty = mlir::cir::StructType::get(Builder.CGM.getLLVMContext(), {},
-  //   Packed);
-
-  // mlir::Attribute constant;
-  // if (ty) {
-  //   assert(ty->isPacked() == Packed);
-  //   constant = llvm::ConstantStruct::get(ty, elts);
-  // } else {
-  //   constant = llvm::ConstantStruct::getAnon(elts, Packed);
-  // }
-
-  // buffer.erase(buffer.begin() + Begin, buffer.end());
-  // return constant;
+  buffer.erase(buffer.begin() + Begin, buffer.end());
+  return constant;
 }

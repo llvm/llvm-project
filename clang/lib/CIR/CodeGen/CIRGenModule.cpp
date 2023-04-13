@@ -1402,8 +1402,6 @@ mlir::cir::FuncOp
 CIRGenModule::GetAddrOfFunction(clang::GlobalDecl GD, mlir::Type Ty,
                                 bool ForVTable, bool DontDefer,
                                 ForDefinition_t IsForDefinition) {
-  assert(!ForVTable && "NYI");
-
   assert(!cast<FunctionDecl>(GD.getDecl())->isConsteval() &&
          "consteval function should never be emitted");
 
@@ -1412,7 +1410,15 @@ CIRGenModule::GetAddrOfFunction(clang::GlobalDecl GD, mlir::Type Ty,
     Ty = getTypes().ConvertType(FD->getType());
   }
 
-  assert(!dyn_cast<CXXDestructorDecl>(GD.getDecl()) && "NYI");
+  // Devirtualized destructor calls may come through here instead of via
+  // getAddrOfCXXStructor. Make sure we use the MS ABI base destructor instead
+  // of the complete destructor when necessary.
+  if (const auto *DD = dyn_cast<CXXDestructorDecl>(GD.getDecl())) {
+    if (getTarget().getCXXABI().isMicrosoft() &&
+        GD.getDtorType() == Dtor_Complete &&
+        DD->getParent()->getNumVBases() == 0)
+      llvm_unreachable("NYI");
+  }
 
   StringRef MangledName = getMangledName(GD);
   auto F = GetOrCreateCIRFunction(MangledName, Ty, GD, ForVTable, DontDefer,
@@ -1600,7 +1606,6 @@ mlir::Location CIRGenModule::getLocForFunction(const clang::FunctionDecl *FD) {
 mlir::cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
     StringRef MangledName, mlir::Type Ty, GlobalDecl GD, bool ForVTable,
     bool DontDefer, bool IsThunk, ForDefinition_t IsForDefinition) {
-  assert(!ForVTable && "NYI");
   assert(!IsThunk && "NYI");
 
   const auto *D = GD.getDecl();
@@ -1696,8 +1701,11 @@ mlir::cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
     // All MSVC dtors other than the base dtor are linkonce_odr and delegate to
     // each other bottoming out wiht the base dtor. Therefore we emit non-base
     // dtors on usage, even if there is no dtor definition in the TU.
-    if (D && isa<CXXDestructorDecl>(D))
-      llvm_unreachable("NYI");
+    if (isa_and_nonnull<CXXDestructorDecl>(D) &&
+        getCXXABI().useThunkForDtorVariant(cast<CXXDestructorDecl>(D),
+                                           GD.getDtorType())) {
+      llvm_unreachable("NYI"); // addDeferredDeclToEmit(GD);
+    }
 
     // This is the first use or definition of a mangled name. If there is a
     // deferred decl with this name, remember that we need to emit it at the end

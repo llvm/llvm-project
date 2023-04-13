@@ -125,6 +125,13 @@ public:
                              const CXXRecordDecl *RD) override;
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                           QualType Ty) override;
+  bool useThunkForDtorVariant(const CXXDestructorDecl *Dtor,
+                              CXXDtorType DT) const override {
+    // Itanium does not emit any destructor variant as an inline thunk.
+    // Delegating may occur as an optimization, but all variants are either
+    // emitted with external linkage or as linkonce if they are inline and used.
+    return false;
+  }
 
   /// TODO(cir): seems like could be shared between LLVM IR and CIR codegen.
   bool mayNeedDestruction(const VarDecl *VD) const {
@@ -1440,18 +1447,18 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &CGVT,
     return;
 
   ItaniumVTableContext &VTContext = CGM.getItaniumVTableContext();
-  [[maybe_unused]] const VTableLayout &VTLayout = VTContext.getVTableLayout(RD);
-  [[maybe_unused]] auto Linkage = CGM.getVTableLinkage(RD);
-  [[maybe_unused]] auto RTTI = CGM.getAddrOfRTTIDescriptor(
+  const VTableLayout &VTLayout = VTContext.getVTableLayout(RD);
+  auto Linkage = CGM.getVTableLinkage(RD);
+  auto RTTI = CGM.getAddrOfRTTIDescriptor(
       CGM.getLoc(RD->getBeginLoc()), CGM.getASTContext().getTagDeclType(RD));
 
   // Create and set the initializer.
   ConstantInitBuilder builder(CGM);
-  [[maybe_unused]] auto components = builder.beginStruct();
+  auto components = builder.beginStruct();
 
   CGVT.createVTableInitializer(components, VTLayout, RTTI,
                                mlir::cir::isLocalLinkage(Linkage));
-  // components.finishAndSetAsInitializer(VTable);
+  components.finishAndSetAsInitializer(VTable);
 
   llvm_unreachable("NYI");
 

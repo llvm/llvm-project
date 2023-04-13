@@ -246,7 +246,7 @@ void CIRGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       // return llvm::ConstantExpr::getBitCast(fn, CGM.Int8PtrTy);
     };
 
-    // mlir::Attribute fnPtr;
+    mlir::cir::FuncOp fnPtr;
     // Pure virtual member functions.
     if (cast<CXXMethodDecl>(GD.getDecl())->isPureVirtual()) {
       llvm_unreachable("NYI");
@@ -275,17 +275,16 @@ void CIRGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
 
       // Otherwise we can use the method definition directly.
     } else {
-      llvm_unreachable("NYI");
-      // llvm::Type *fnTy = CGM.getTypes().GetFunctionTypeForVTable(GD);
-      // fnPtr = CGM.GetAddrOfFunction(GD, fnTy, /*ForVTable=*/true);
+      auto fnTy = CGM.getTypes().GetFunctionTypeForVTable(GD);
+      fnPtr = CGM.GetAddrOfFunction(GD, fnTy, /*ForVTable=*/true);
     }
 
     if (useRelativeLayout()) {
       llvm_unreachable("NYI");
     } else {
-      llvm_unreachable("NYI");
-      // return builder.add(llvm::ConstantExpr::getBitCast(fnPtr,
-      // CGM.Int8PtrTy));
+      return builder.add(mlir::cir::GlobalViewAttr::get(
+          CGM.getBuilder().getInt8PtrTy(),
+          mlir::FlatSymbolRefAttr::get(fnPtr.getSymNameAttr())));
     }
   }
 
