@@ -1057,6 +1057,60 @@ check_failed:
   ret i32 -1
 }
 
+; Check that fake wide exit doesn't inhibit the transform.
+define i16 @test_fake_wide_exit(i64 %x) {
+; CHECK-LABEL: define i16 @test_fake_wide_exit
+; CHECK-SAME: (i64 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV_WIDE:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_WIDE_NEXT:%.*]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[RC:%.*]] = icmp slt i32 [[IV]], 100
+; CHECK-NEXT:    br i1 true, label [[CHECKED:%.*]], label [[CHECK_FAILED:%.*]]
+; CHECK:       checked:
+; CHECK-NEXT:    [[RC_WIDE:%.*]] = icmp ult i64 [[IV_WIDE]], [[X]]
+; CHECK-NEXT:    br i1 [[RC_WIDE]], label [[BACKEDGE]], label [[CHECK_FAILED]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_WIDE_NEXT]] = add i64 [[IV_WIDE]], 1
+; CHECK-NEXT:    [[NARROW_IV:%.*]] = trunc i32 [[IV_NEXT]] to i16
+; CHECK-NEXT:    [[LATCH_COND:%.*]] = icmp slt i16 [[NARROW_IV]], 100
+; CHECK-NEXT:    br i1 [[LATCH_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[NARROW_IV_LCSSA:%.*]] = phi i16 [ [[NARROW_IV]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i16 [[NARROW_IV_LCSSA]]
+; CHECK:       check_failed:
+; CHECK-NEXT:    ret i16 -1
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %backedge ]
+  %iv.wide = phi i64 [ 0, %entry ], [ %iv.wide.next, %backedge ]
+  %rc = icmp slt i32 %iv, 100
+  br i1 %rc, label %checked, label %check_failed
+
+checked:
+  %rc.wide = icmp ult i64 %iv.wide, %x
+  br i1 %rc.wide, label %backedge, label %check_failed
+
+backedge:
+  %iv.next = add i32 %iv, 1
+  %iv.wide.next = add i64 %iv.wide, 1
+  %narrow.iv = trunc i32 %iv.next to i16
+  %latch.cond = icmp slt i16 %narrow.iv, 100
+  br i1 %latch.cond, label %loop, label %exit
+
+exit:
+  ret i16 %narrow.iv
+
+check_failed:
+  ret i16 -1
+}
+
+
 !0 = !{i32 0, i32 2147483647}
 !1 = !{i64 0, i64 9223372036854775807}
 !2 = !{i32 1, i32 2147483647}
