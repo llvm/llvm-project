@@ -100,8 +100,6 @@ Error buildTables_ELF_x86_64(LinkGraph &G) {
 namespace llvm {
 namespace jitlink {
 
-// This should become a template as the ELFFile is so a lot of this could become
-// generic
 class ELFLinkGraphBuilder_x86_64 : public ELFLinkGraphBuilder<object::ELF64LE> {
 private:
   using ELFT = object::ELF64LE;
