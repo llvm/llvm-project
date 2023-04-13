@@ -189,3 +189,21 @@ func.func @exp2f_func_tensor(%a: tensor<1xf32>) -> tensor<1xf32> {
   %ret = math.exp2 %a : tensor<1xf32>
   return %ret : tensor<1xf32>
 }
+
+// -----
+
+// CHECK-LABEL:      func @roundf_func
+// CHECK-SAME:      ([[ARG0:%.+]]: f64) -> f64
+func.func @roundf_func(%a: f64) -> f64 {
+  // CHECK-DAG:   [[CST:%.+]] = arith.constant 0.000
+  // CHECK-DAG:   [[CST_0:%.+]] = arith.constant 5.000000e-01
+  // CHECK-DAG:   [[CST_1:%.+]] = arith.constant -5.000000e-01
+  // CHECK-DAG:  [[COMP:%.+]] = arith.cmpf oge, [[ARG0]], [[CST]]
+  // CHECK-DAG:  [[SEL:%.+]] = arith.select [[COMP]], [[CST_0]], [[CST_1]]
+  // CHECK-DAG:  [[ADDF:%.+]] = arith.addf [[ARG0]], [[SEL]]
+  // CHECK-DAG:   [[CVTI:%.+]] = arith.fptosi [[ADDF]]
+  // CHECK-DAG:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
+  // CHECK:   return [[CVTF]]
+  %ret = math.round %a : f64
+  return %ret : f64
+}
