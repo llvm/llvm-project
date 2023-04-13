@@ -10128,9 +10128,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   NewFD->setParams(Params);
 
   if (D.getDeclSpec().isNoreturnSpecified())
-    NewFD->addAttr(C11NoReturnAttr::Create(Context,
-                                           D.getDeclSpec().getNoreturnSpecLoc(),
-                                           AttributeCommonInfo::AS_Keyword));
+    NewFD->addAttr(
+        C11NoReturnAttr::Create(Context, D.getDeclSpec().getNoreturnSpecLoc()));
 
   // Functions returning a variably modified type violate C99 6.7.5.2p2
   // because all functions have linkage.
@@ -10145,7 +10144,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       !NewFD->hasAttr<SectionAttr>())
     NewFD->addAttr(PragmaClangTextSectionAttr::CreateImplicit(
         Context, PragmaClangTextSection.SectionName,
-        PragmaClangTextSection.PragmaLocation, AttributeCommonInfo::AS_Pragma));
+        PragmaClangTextSection.PragmaLocation));
 
   // Apply an implicit SectionAttr if #pragma code_seg is active.
   if (CodeSegStack.CurrentValue && D.isFunctionDefinition() &&
@@ -10166,8 +10165,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   if (StrictGuardStackCheckStack.CurrentValue && D.isFunctionDefinition() &&
       !NewFD->hasAttr<StrictGuardStackCheckAttr>())
     NewFD->addAttr(StrictGuardStackCheckAttr::CreateImplicit(
-        Context, PragmaClangTextSection.PragmaLocation,
-        AttributeCommonInfo::AS_Pragma));
+        Context, PragmaClangTextSection.PragmaLocation));
 
   // Apply an implicit CodeSegAttr from class declspec or
   // apply an implicit SectionAttr from #pragma code_seg if active.
@@ -14219,8 +14217,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     // attribute.
     if (CurInitSeg && var->getInit())
       var->addAttr(InitSegAttr::CreateImplicit(Context, CurInitSeg->getString(),
-                                               CurInitSegLoc,
-                                               AttributeCommonInfo::AS_Pragma));
+                                               CurInitSegLoc));
   }
 
   // All the following checks are C++ only.
@@ -14322,23 +14319,19 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
     if (PragmaClangBSSSection.Valid)
       VD->addAttr(PragmaClangBSSSectionAttr::CreateImplicit(
           Context, PragmaClangBSSSection.SectionName,
-          PragmaClangBSSSection.PragmaLocation,
-          AttributeCommonInfo::AS_Pragma));
+          PragmaClangBSSSection.PragmaLocation));
     if (PragmaClangDataSection.Valid)
       VD->addAttr(PragmaClangDataSectionAttr::CreateImplicit(
           Context, PragmaClangDataSection.SectionName,
-          PragmaClangDataSection.PragmaLocation,
-          AttributeCommonInfo::AS_Pragma));
+          PragmaClangDataSection.PragmaLocation));
     if (PragmaClangRodataSection.Valid)
       VD->addAttr(PragmaClangRodataSectionAttr::CreateImplicit(
           Context, PragmaClangRodataSection.SectionName,
-          PragmaClangRodataSection.PragmaLocation,
-          AttributeCommonInfo::AS_Pragma));
+          PragmaClangRodataSection.PragmaLocation));
     if (PragmaClangRelroSection.Valid)
       VD->addAttr(PragmaClangRelroSectionAttr::CreateImplicit(
           Context, PragmaClangRelroSection.SectionName,
-          PragmaClangRelroSection.PragmaLocation,
-          AttributeCommonInfo::AS_Pragma));
+          PragmaClangRelroSection.PragmaLocation));
   }
 
   if (auto *DD = dyn_cast<DecompositionDecl>(ThisDecl)) {

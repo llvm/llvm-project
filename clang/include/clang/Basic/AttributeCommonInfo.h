@@ -51,6 +51,10 @@ public:
 
     /// <vardecl> : <semantic>
     AS_HLSLSemantic,
+
+    /// The attibute has no source code manifestation and is only created
+    /// implicitly.
+    AS_Implicit
   };
   enum Kind {
 #define PARSED_ATTR(NAME) AT_##NAME,
@@ -76,14 +80,6 @@ protected:
   static constexpr unsigned SpellingNotCalculated = 0xf;
 
 public:
-  explicit AttributeCommonInfo(SourceRange AttrRange)
-      : AttrRange(AttrRange), ScopeLoc(), AttrKind(0), SyntaxUsed(0),
-        SpellingIndex(SpellingNotCalculated) {}
-
-  explicit AttributeCommonInfo(SourceLocation AttrLoc)
-      : AttrRange(AttrLoc), ScopeLoc(), AttrKind(0), SyntaxUsed(0),
-        SpellingIndex(SpellingNotCalculated) {}
-
   AttributeCommonInfo(const IdentifierInfo *AttrName,
                       const IdentifierInfo *ScopeName, SourceRange AttrRange,
                       SourceLocation ScopeLoc, Syntax SyntaxUsed)
