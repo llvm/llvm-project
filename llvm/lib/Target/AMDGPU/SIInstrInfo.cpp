@@ -4973,15 +4973,15 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   case AMDGPU::S_CMP_NEQ_F16: return AMDGPU::V_CMP_NEQ_F16_e64;
   case AMDGPU::S_CMP_NLT_F16: return AMDGPU::V_CMP_NLT_F16_e64;
   case AMDGPU::V_S_EXP_F32_e64: return AMDGPU::V_EXP_F32_e64;
-  case AMDGPU::V_S_EXP_F16_e64: return AMDGPU::V_EXP_F16_e64;
+  case AMDGPU::V_S_EXP_F16_e64: return AMDGPU::V_EXP_F16_t16_e64;
   case AMDGPU::V_S_LOG_F32_e64: return AMDGPU::V_LOG_F32_e64;
-  case AMDGPU::V_S_LOG_F16_e64: return AMDGPU::V_LOG_F16_e64;
+  case AMDGPU::V_S_LOG_F16_e64: return AMDGPU::V_LOG_F16_t16_e64;
   case AMDGPU::V_S_RCP_F32_e64: return AMDGPU::V_RCP_F32_e64;
-  case AMDGPU::V_S_RCP_F16_e64: return AMDGPU::V_RCP_F16_e64;
+  case AMDGPU::V_S_RCP_F16_e64: return AMDGPU::V_RCP_F16_t16_e64;
   case AMDGPU::V_S_RSQ_F32_e64: return AMDGPU::V_RSQ_F32_e64;
-  case AMDGPU::V_S_RSQ_F16_e64: return AMDGPU::V_RSQ_F16_e64;
+  case AMDGPU::V_S_RSQ_F16_e64: return AMDGPU::V_RSQ_F16_t16_e64;
   case AMDGPU::V_S_SQRT_F32_e64: return AMDGPU::V_SQRT_F32_e64;
-  case AMDGPU::V_S_SQRT_F16_e64: return AMDGPU::V_SQRT_F16_e64;
+  case AMDGPU::V_S_SQRT_F16_e64: return AMDGPU::V_SQRT_F16_t16_e64;
   }
   llvm_unreachable(
       "Unexpected scalar opcode without corresponding vector one!");
