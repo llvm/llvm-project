@@ -666,9 +666,8 @@ public:
     WatchpointSP watchpoint_sp;
   };
 
-  StopInfoWatchpoint(Thread &thread, break_id_t watch_id,
-                     lldb::addr_t watch_hit_addr)
-      : StopInfo(thread, watch_id), m_watch_hit_addr(watch_hit_addr) {}
+  StopInfoWatchpoint(Thread &thread, break_id_t watch_id, bool silently_skip_wp)
+      : StopInfo(thread, watch_id), m_silently_skip_wp(silently_skip_wp) {}
 
   ~StopInfoWatchpoint() override = default;
 
@@ -893,27 +892,9 @@ protected:
 
         WatchpointSentry sentry(process_sp, wp_sp);
 
-        /*
-         * MIPS: Last 3bits of the watchpoint address are masked by the kernel.
-         * For example:
-         * 'n' is at 0x120010d00 and 'm' is 0x120010d04. When a watchpoint is
-         * set at 'm', then
-         * watch exception is generated even when 'n' is read/written. To handle
-         * this case,
-         * server emulates the instruction at PC and finds the base address of
-         * the load/store
-         * instruction and appends it in the description of the stop-info
-         * packet. If watchpoint
-         * is not set on this address by user then this do not stop.
-        */
-        if (m_watch_hit_addr != LLDB_INVALID_ADDRESS) {
-          WatchpointSP wp_hit_sp =
-              thread_sp->CalculateTarget()->GetWatchpointList().FindByAddress(
-                  m_watch_hit_addr);
-          if (!wp_hit_sp) {
-            m_should_stop = false;
-            wp_sp->IncrementFalseAlarmsAndReviseHitCount();
-          }
+        if (m_silently_skip_wp) {
+          m_should_stop = false;
+          wp_sp->IncrementFalseAlarmsAndReviseHitCount();
         }
 
         if (wp_sp->GetHitCount() <= wp_sp->GetIgnoreCount()) {
@@ -1035,7 +1016,17 @@ private:
   
   bool m_should_stop = false;
   bool m_should_stop_is_valid = false;
-  lldb::addr_t m_watch_hit_addr;
+  // A false watchpoint hit has happened -
+  // the thread stopped with a watchpoint
+  // hit notification, but the watched region
+  // was not actually accessed (as determined
+  // by the gdb stub we're talking to).
+  // Continue past this watchpoint without
+  // notifying the user; on some targets this
+  // may mean disable wp, instruction step,
+  // re-enable wp, continue.
+  // On others, just continue.
+  bool m_silently_skip_wp = false;
   bool m_step_over_plan_complete = false;
   bool m_using_step_over_plan = false;
 };
@@ -1372,10 +1363,11 @@ StopInfoSP StopInfo::CreateStopReasonWithBreakpointSiteID(Thread &thread,
   return StopInfoSP(new StopInfoBreakpoint(thread, break_id, should_stop));
 }
 
-StopInfoSP
-StopInfo::CreateStopReasonWithWatchpointID(Thread &thread, break_id_t watch_id,
-                                           lldb::addr_t watch_hit_addr) {
-  return StopInfoSP(new StopInfoWatchpoint(thread, watch_id, watch_hit_addr));
+StopInfoSP StopInfo::CreateStopReasonWithWatchpointID(Thread &thread,
+                                                      break_id_t watch_id,
+                                                      bool silently_continue) {
+  return StopInfoSP(
+      new StopInfoWatchpoint(thread, watch_id, silently_continue));
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithSignal(Thread &thread, int signo,

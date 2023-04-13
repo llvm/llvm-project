@@ -85,26 +85,5 @@ void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64) {
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 }
 
-// Get all features except standard extension feature
-bool getCPUFeaturesExceptStdExt(CPUKind Kind,
-                                std::vector<StringRef> &Features) {
-  const CPUInfo &Info = RISCVCPUInfo[static_cast<unsigned>(Kind)];
-
-  if (Info.isInvalid())
-    return false;
-
-  if (Info.is64Bit())
-    Features.push_back("+64bit");
-  else
-    Features.push_back("-64bit");
-
-  return true;
-}
-
-bool isX18ReservedByDefault(const Triple &TT) {
-  // X18 is reserved for the ShadowCallStack ABI (even when not enabled).
-  return TT.isOSFuchsia() || TT.isAndroid();
-}
-
 } // namespace RISCV
 } // namespace llvm

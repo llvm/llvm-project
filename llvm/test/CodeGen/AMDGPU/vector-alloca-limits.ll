@@ -139,8 +139,8 @@ entry:
 }
 
 ; OPT-LABEL: @func_alloca_9xi64_max256(
-; OPT: alloca
-; OPT-NOT: <9 x i64>
+; OPT-NOT: alloca
+; OPT: <9 x i64>
 ; LIMIT32: alloca
 ; LIMIT32-NOT: <9 x i64>
 define void @func_alloca_9xi64_max256(ptr addrspace(1) %out, i32 %index) #2 {

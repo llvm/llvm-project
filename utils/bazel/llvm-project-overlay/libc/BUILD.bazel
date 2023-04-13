@@ -1591,6 +1591,7 @@ libc_support_library(
         "src/string/memory_utils/memset_implementations.h",
         "src/string/memory_utils/strcmp_implementations.h",
         "src/string/memory_utils/strstr_implementations.h",
+        "src/string/memory_utils/memmem_implementations.h",
         "src/string/memory_utils/x86_64/memcmp_implementations.h",
         "src/string/memory_utils/x86_64/memcpy_implementations.h",
     ],

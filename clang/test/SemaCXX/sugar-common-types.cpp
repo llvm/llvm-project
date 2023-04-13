@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++20 -fenable-matrix -triple i686-pc-win32
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++20 -x objective-c++ -fobjc-arc -fenable-matrix -triple i686-pc-win32
 
 enum class N {};
 
@@ -131,3 +131,14 @@ using UPY1 = C::type1;
 auto t32 = 0 ? (UPX1){} : (UPY1){};
 N t33 = t32;  // expected-error {{lvalue of type 'C::type1' (aka 'int *')}}
 N t34 = *t32; // expected-error {{lvalue of type 'B1' (aka 'int')}}
+
+// See https://github.com/llvm/llvm-project/issues/61419
+namespace PR61419 {
+  template <class T0, class T1> struct pair {
+    T0 first;
+    T1 second;
+  };
+
+  extern const pair<id, id> p;
+  id t = false ? p.first : p.second;
+} // namespace PR61419

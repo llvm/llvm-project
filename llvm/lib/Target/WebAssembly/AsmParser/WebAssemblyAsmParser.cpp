@@ -247,15 +247,14 @@ public:
   WebAssemblyAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                        const MCInstrInfo &MII, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, STI, MII), Parser(Parser),
-        Lexer(Parser.getLexer()),
-        is64(STI.getTargetTriple().isArch64Bit()),
+        Lexer(Parser.getLexer()), is64(STI.getTargetTriple().isArch64Bit()),
         TC(Parser, MII, is64), SkipTypeCheck(Options.MCNoTypeCheck) {
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
     // Don't type check if this is inline asm, since that is a naked sequence of
     // instructions without a function/locals decl.
     auto &SM = Parser.getSourceManager();
     auto BufferName =
-      SM.getBufferInfo(SM.getMainFileID()).Buffer->getBufferIdentifier();
+        SM.getBufferInfo(SM.getMainFileID()).Buffer->getBufferIdentifier();
     if (BufferName == "<inline asm>")
       SkipTypeCheck = true;
   }
@@ -322,7 +321,9 @@ public:
     }
   }
 
-  void push(NestingType NT) { NestingStack.push_back({NT, wasm::WasmSignature()}); }
+  void push(NestingType NT, wasm::WasmSignature Sig = wasm::WasmSignature()) {
+    NestingStack.push_back({NT, Sig});
+  }
 
   bool pop(StringRef Ins, NestingType NT1, NestingType NT2 = Undefined) {
     if (NestingStack.empty())
@@ -333,6 +334,19 @@ public:
                    nestingString(Top.NT).second + ", instead got: " + Ins);
     TC.setLastSig(Top.Sig);
     NestingStack.pop_back();
+    return false;
+  }
+
+  // Pop a NestingType and push a new NestingType with the same signature. Used
+  // for if-else and try-catch(_all).
+  bool popAndPushWithSameSignature(StringRef Ins, NestingType PopNT,
+                                   NestingType PushNT) {
+    if (NestingStack.empty())
+      return error(Twine("End of block construct with no start: ") + Ins);
+    auto Sig = NestingStack.back().Sig;
+    if (pop(Ins, PopNT))
+      return true;
+    push(PushNT, Sig);
     return false;
   }
 
@@ -587,17 +601,14 @@ public:
       push(If);
       ExpectBlockType = true;
     } else if (Name == "else") {
-      if (pop(Name, If))
+      if (popAndPushWithSameSignature(Name, If, Else))
         return true;
-      push(Else);
     } else if (Name == "catch") {
-      if (pop(Name, Try))
+      if (popAndPushWithSameSignature(Name, Try, Try))
         return true;
-      push(Try);
     } else if (Name == "catch_all") {
-      if (pop(Name, Try))
+      if (popAndPushWithSameSignature(Name, Try, CatchAll))
         return true;
-      push(CatchAll);
     } else if (Name == "end_if") {
       if (pop(Name, If, Else))
         return true;
@@ -637,10 +648,10 @@ public:
       if (parseSignature(Signature.get()))
         return true;
       // Got signature as block type, don't need more
-      ExpectBlockType = false;
       TC.setLastSig(*Signature.get());
       if (ExpectBlockType)
         NestingStack.back().Sig = *Signature.get();
+      ExpectBlockType = false;
       auto &Ctx = getContext();
       // The "true" here will cause this to be a nameless symbol.
       MCSymbol *Sym = Ctx.createTempSymbol("typeindex", true);
@@ -690,7 +701,7 @@ public:
           parseSingleInteger(true, Operands);
           if (checkForP2AlignIfLoadStore(Operands, Name))
             return true;
-        } else if(Lexer.is(AsmToken::Real)) {
+        } else if (Lexer.is(AsmToken::Real)) {
           if (parseSingleFloat(true, Operands))
             return true;
         } else if (!parseSpecialFloatMaybe(true, Operands)) {
@@ -966,7 +977,8 @@ public:
         DirectiveID.getString() == ".int16" ||
         DirectiveID.getString() == ".int32" ||
         DirectiveID.getString() == ".int64") {
-      if (CheckDataSection()) return true;
+      if (CheckDataSection())
+        return true;
       const MCExpr *Val;
       SMLoc End;
       if (Parser.parseExpression(Val, End))
@@ -978,7 +990,8 @@ public:
     }
 
     if (DirectiveID.getString() == ".asciz") {
-      if (CheckDataSection()) return true;
+      if (CheckDataSection())
+        return true;
       std::string S;
       if (Parser.parseEscapedString(S))
         return error("Cannot parse string constant: ", Lexer.getTok());

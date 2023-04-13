@@ -49,6 +49,8 @@ public:
 
   void DidLaunch() override;
 
+  void DidResume() override;
+
   Status DoResume() override;
 
   Status DoAttachToProcessWithID(lldb::pid_t pid,

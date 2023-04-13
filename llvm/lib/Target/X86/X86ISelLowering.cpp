@@ -13288,47 +13288,52 @@ static SDValue lowerShuffleAsUNPCKAndPermute(const SDLoc &DL, MVT VT,
   SDValue Ops[2] = {DAG.getUNDEF(VT), DAG.getUNDEF(VT)};
 
   // Determine UNPCKL/UNPCKH type and operand order.
-  for (int Lane = 0; Lane != NumElts; Lane += NumLaneElts) {
-    for (int Elt = 0; Elt != NumLaneElts; ++Elt) {
-      int M = Mask[Lane + Elt];
-      if (M < 0)
-        continue;
+  for (int Elt = 0; Elt != NumElts; ++Elt) {
+    int M = Mask[Elt];
+    if (M < 0)
+      continue;
 
-      SDValue &Op = Ops[Elt & 1];
-      if (M < NumElts && (Op.isUndef() || Op == V1))
-        Op = V1;
-      else if (NumElts <= M && (Op.isUndef() || Op == V2))
-        Op = V2;
-      else
-        return SDValue();
+    // Normalize the mask value depending on whether it's V1 or V2.
+    int NormM = M;
+    SDValue &Op = Ops[Elt & 1];
+    if (M < NumElts && (Op.isUndef() || Op == V1))
+      Op = V1;
+    else if (NumElts <= M && (Op.isUndef() || Op == V2)) {
+      Op = V2;
+      NormM -= NumElts;
+    } else
+      return SDValue();
 
+    bool MatchLoAnyLane = false, MatchHiAnyLane = false;
+    for (int Lane = 0; Lane != NumElts; Lane += NumLaneElts) {
       int Lo = Lane, Mid = Lane + NumHalfLaneElts, Hi = Lane + NumLaneElts;
-      MatchLo &= isUndefOrInRange(M, Lo, Mid) ||
-                 isUndefOrInRange(M, NumElts + Lo, NumElts + Mid);
-      MatchHi &= isUndefOrInRange(M, Mid, Hi) ||
-                 isUndefOrInRange(M, NumElts + Mid, NumElts + Hi);
-      if (!MatchLo && !MatchHi)
-        return SDValue();
+      MatchLoAnyLane |= isUndefOrInRange(NormM, Lo, Mid);
+      MatchHiAnyLane |= isUndefOrInRange(NormM, Mid, Hi);
+      if (MatchLoAnyLane || MatchHiAnyLane) {
+        assert((MatchLoAnyLane ^ MatchHiAnyLane) &&
+               "Failed to match UNPCKLO/UNPCKHI");
+        break;
+      }
     }
+    MatchLo &= MatchLoAnyLane;
+    MatchHi &= MatchHiAnyLane;
+    if (!MatchLo && !MatchHi)
+      return SDValue();
   }
   assert((MatchLo ^ MatchHi) && "Failed to match UNPCKLO/UNPCKHI");
 
-  // Now check that each pair of elts come from the same unpack pair
-  // and set the permute mask based on each pair.
-  // TODO - Investigate cases where we permute individual elements.
+  // Element indices have changed after unpacking. Calculate permute mask
+  // so that they will be put back to the position as dictated by the
+  // original shuffle mask indices.
   SmallVector<int, 32> PermuteMask(NumElts, -1);
-  for (int Lane = 0; Lane != NumElts; Lane += NumLaneElts) {
-    for (int Elt = 0; Elt != NumLaneElts; Elt += 2) {
-      int M0 = Mask[Lane + Elt + 0];
-      int M1 = Mask[Lane + Elt + 1];
-      if (0 <= M0 && 0 <= M1 &&
-          (M0 % NumHalfLaneElts) != (M1 % NumHalfLaneElts))
-        return SDValue();
-      if (0 <= M0)
-        PermuteMask[Lane + Elt + 0] = Lane + (2 * (M0 % NumHalfLaneElts));
-      if (0 <= M1)
-        PermuteMask[Lane + Elt + 1] = Lane + (2 * (M1 % NumHalfLaneElts)) + 1;
-    }
+  for (int Elt = 0; Elt != NumElts; ++Elt) {
+    int M = Mask[Elt];
+    if (NumElts <= M)
+      PermuteMask[Elt] = NumLaneElts * ((M - NumElts) / NumLaneElts) +
+                         (2 * (M % NumHalfLaneElts)) + 1;
+    else if (0 <= M)
+      PermuteMask[Elt] =
+          NumLaneElts * (M / NumLaneElts) + (2 * (M % NumHalfLaneElts));
   }
 
   unsigned UnpckOp = MatchLo ? X86ISD::UNPCKL : X86ISD::UNPCKH;
@@ -13548,6 +13553,24 @@ static bool isNoopOrBroadcastShuffleMask(ArrayRef<int> Mask) {
   return isNoopShuffleMask(Mask) || isBroadcastShuffleMask(Mask);
 }
 
+/// Check if the Mask consists of the same element repeated multiple times.
+static bool isSingleElementRepeatedMask(ArrayRef<int> Mask) {
+  size_t NumUndefs = 0;
+  std::optional<int> UniqueElt;
+  for (int Elt : Mask) {
+    if (Elt == SM_SentinelUndef) {
+      NumUndefs++;
+      continue;
+    }
+    if (UniqueElt.has_value() && UniqueElt.value() != Elt)
+      return false;
+    UniqueElt = Elt;
+  }
+  // Make sure the element is repeated enough times by checking the number of
+  // undefs is small.
+  return NumUndefs <= Mask.size() / 2 && UniqueElt.has_value();
+}
+
 /// Generic routine to decompose a shuffle and blend into independent
 /// blends and permutes.
 ///
@@ -13623,9 +13646,17 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
     if (SDValue BlendPerm = lowerShuffleAsBlendAndPermute(DL, VT, V1, V2, Mask,
                                                           DAG, true))
       return BlendPerm;
-    if (SDValue UnpackPerm = lowerShuffleAsUNPCKAndPermute(DL, VT, V1, V2, Mask,
-                                                           DAG))
-      return UnpackPerm;
+    // If either input vector provides only a single element which is repeated
+    // multiple times, unpacking from both input vectors would generate worse
+    // code. e.g. for
+    // t5: v16i8 = vector_shuffle<16,0,16,1,16,2,16,3,16,4,16,5,16,6,16,7> t2, t4
+    // it is better to process t4 first to create a vector of t4[0], then unpack
+    // that vector with t2.
+    if (!isSingleElementRepeatedMask(V1Mask) &&
+        !isSingleElementRepeatedMask(V2Mask))
+      if (SDValue UnpackPerm =
+              lowerShuffleAsUNPCKAndPermute(DL, VT, V1, V2, Mask, DAG))
+        return UnpackPerm;
     if (SDValue RotatePerm = lowerShuffleAsByteRotateAndPermute(
             DL, VT, V1, V2, Mask, Subtarget, DAG))
       return RotatePerm;
@@ -43742,6 +43773,20 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
       return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewSrc));
     return false;
   }
+  case X86ISD::TESTP: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+    MVT OpVT = Op0.getSimpleValueType();
+    assert((OpVT.getVectorElementType() == MVT::f32 ||
+            OpVT.getVectorElementType() == MVT::f64) &&
+           "Illegal vector type for X86ISD::TESTP");
+
+    // TESTPS/TESTPD only demands the sign bits of ALL the elements.
+    KnownBits KnownSrc;
+    APInt SignMask = APInt::getSignMask(OpVT.getScalarSizeInBits());
+    return SimplifyDemandedBits(Op0, SignMask, KnownSrc, TLO, Depth + 1) ||
+           SimplifyDemandedBits(Op1, SignMask, KnownSrc, TLO, Depth + 1);
+  }
   case X86ISD::BEXTR:
   case X86ISD::BEXTRI: {
     SDValue Op0 = Op.getOperand(0);
@@ -46763,7 +46808,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // Attempt to convert a (vXi1 bitcast(iX Cond)) selection mask before it might
   // get split by legalization.
   if (N->getOpcode() == ISD::VSELECT && Cond.getOpcode() == ISD::BITCAST &&
-      CondVT.getVectorElementType() == MVT::i1 && Cond.hasOneUse() &&
+      CondVT.getVectorElementType() == MVT::i1 &&
       TLI.isTypeLegal(VT.getScalarType())) {
     EVT ExtCondVT = VT.changeVectorElementTypeToInteger();
     if (SDValue ExtCond = combineToExtendBoolVectorInReg(
@@ -47321,8 +47366,6 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
     if (Op0 == Op1) {
       SDValue BC = peekThroughBitcasts(Op0);
       EVT BCVT = BC.getValueType();
-      assert(BCVT.isVector() && DAG.getTargetLoweringInfo().isTypeLegal(BCVT) &&
-             "Unexpected vector type");
 
       // TESTZ(AND(X,Y),AND(X,Y)) == TESTZ(X,Y)
       if (BC.getOpcode() == ISD::AND || BC.getOpcode() == X86ISD::FAND) {
@@ -47339,32 +47382,40 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
                            DAG.getBitcast(OpVT, BC.getOperand(1)));
       }
 
-      // If every element is an all-sign value, see if we can use MOVMSK to
-      // more efficiently extract the sign bits and compare that.
+      // If every element is an all-sign value, see if we can use TESTP/MOVMSK
+      // to more efficiently extract the sign bits and compare that.
       // TODO: Handle TESTC with comparison inversion.
       // TODO: Can we remove SimplifyMultipleUseDemandedBits and rely on
-      // MOVMSK combines to make sure its never worse than PTEST?
-      unsigned EltBits = BCVT.getScalarSizeInBits();
-      if (DAG.ComputeNumSignBits(BC) == EltBits) {
-        assert(VT == MVT::i32 && "Expected i32 EFLAGS comparison result");
-        APInt SignMask = APInt::getSignMask(EltBits);
-        const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-        if (SDValue Res =
-                TLI.SimplifyMultipleUseDemandedBits(BC, SignMask, DAG)) {
-          // For vXi16 cases we need to use pmovmksb and extract every other
-          // sign bit.
-          SDLoc DL(EFLAGS);
-          if (EltBits == 16) {
-            MVT MovmskVT = BCVT.is128BitVector() ? MVT::v16i8 : MVT::v32i8;
-            Res = DAG.getBitcast(MovmskVT, Res);
-            Res = getPMOVMSKB(DL, Res, DAG, Subtarget);
-            Res = DAG.getNode(ISD::AND, DL, MVT::i32, Res,
-                              DAG.getConstant(0xAAAAAAAA, DL, MVT::i32));
-          } else {
-            Res = getPMOVMSKB(DL, Res, DAG, Subtarget);
+      // TESTP/MOVMSK combines to make sure its never worse than PTEST?
+      if (BCVT.isVector() && DAG.getTargetLoweringInfo().isTypeLegal(BCVT)) {
+        unsigned EltBits = BCVT.getScalarSizeInBits();
+        if (DAG.ComputeNumSignBits(BC) == EltBits) {
+          assert(VT == MVT::i32 && "Expected i32 EFLAGS comparison result");
+          APInt SignMask = APInt::getSignMask(EltBits);
+          const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+          if (SDValue Res =
+                  TLI.SimplifyMultipleUseDemandedBits(BC, SignMask, DAG)) {
+            // For vXi16 cases we need to use pmovmksb and extract every other
+            // sign bit.
+            SDLoc DL(EFLAGS);
+            if (EltBits == 32 || EltBits == 64) {
+              MVT FloatSVT = MVT::getFloatingPointVT(EltBits);
+              MVT FloatVT =
+                  MVT::getVectorVT(FloatSVT, OpVT.getSizeInBits() / EltBits);
+              Res = DAG.getBitcast(FloatVT, Res);
+              return DAG.getNode(X86ISD::TESTP, SDLoc(EFLAGS), VT, Res, Res);
+            } else if (EltBits == 16) {
+              MVT MovmskVT = BCVT.is128BitVector() ? MVT::v16i8 : MVT::v32i8;
+              Res = DAG.getBitcast(MovmskVT, Res);
+              Res = getPMOVMSKB(DL, Res, DAG, Subtarget);
+              Res = DAG.getNode(ISD::AND, DL, MVT::i32, Res,
+                                DAG.getConstant(0xAAAAAAAA, DL, MVT::i32));
+            } else {
+              Res = getPMOVMSKB(DL, Res, DAG, Subtarget);
+            }
+            return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Res,
+                               DAG.getConstant(0, DL, MVT::i32));
           }
-          return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Res,
-                             DAG.getConstant(0, DL, MVT::i32));
         }
       }
     }
@@ -54657,6 +54708,21 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineTESTP(SDNode *N, SelectionDAG &DAG,
+                            TargetLowering::DAGCombinerInfo &DCI,
+                            const X86Subtarget &Subtarget) {
+  MVT VT = N->getSimpleValueType(0);
+  unsigned NumBits = VT.getScalarSizeInBits();
+
+  // Simplify the inputs.
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  APInt DemandedMask(APInt::getAllOnes(NumBits));
+  if (TLI.SimplifyDemandedBits(SDValue(N, 0), DemandedMask, DCI))
+    return SDValue(N, 0);
+
+  return SDValue();
+}
+
 static SDValue combineX86GatherScatter(SDNode *N, SelectionDAG &DAG,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const X86Subtarget &Subtarget) {
@@ -57544,6 +57610,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::FMADDSUB:
   case X86ISD::FMSUBADD:    return combineFMADDSUB(N, DAG, DCI);
   case X86ISD::MOVMSK:      return combineMOVMSK(N, DAG, DCI, Subtarget);
+  case X86ISD::TESTP:       return combineTESTP(N, DAG, DCI, Subtarget);
   case X86ISD::MGATHER:
   case X86ISD::MSCATTER:
     return combineX86GatherScatter(N, DAG, DCI, Subtarget);

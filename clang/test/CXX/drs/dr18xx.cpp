@@ -2,7 +2,8 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2a -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2b -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus < 201103L
 // expected-error@+1 {{variadic macro}}
@@ -47,6 +48,52 @@ namespace dr1815 { // dr1815: no
 
   struct B { int &&r = 0; }; // expected-error {{binds to a temporary}} expected-note {{default member init}}
   B b; // expected-note {{here}}
+#endif
+}
+
+namespace dr1822 { // dr1822: yes
+#if __cplusplus >= 201103L
+  int a;
+  auto x = [] (int a) {
+#pragma clang __debug dump a // CHECK: ParmVarDecl
+  };
+#endif
+}
+
+namespace dr1837 { // dr1837: 3.3
+#if __cplusplus >= 201103L
+  template <typename T>
+  struct Fish { static const bool value = true; };
+
+  struct Other {
+    int p();
+    auto q() -> decltype(p()) *;
+  };
+
+  class Outer {
+    friend auto Other::q() -> decltype(this->p()) *; // expected-error {{invalid use of 'this'}}
+    int g();
+    int f() {
+      extern void f(decltype(this->g()) *);
+      struct Inner {
+        static_assert(Fish<decltype(this->g())>::value, ""); // expected-error {{invalid use of 'this'}}
+        enum { X = Fish<decltype(this->f())>::value }; // expected-error {{invalid use of 'this'}}
+        struct Inner2 : Fish<decltype(this->g())> { }; // expected-error {{invalid use of 'this'}}
+        friend void f(decltype(this->g()) *); // expected-error {{invalid use of 'this'}}
+        friend auto Other::q() -> decltype(this->p()) *; // expected-error {{invalid use of 'this'}}
+      };
+      return 0;
+    }
+  };
+
+  struct A {
+    int f();
+    bool b = [] {
+      struct Local {
+        static_assert(sizeof(this->f()) == sizeof(int), "");
+      };
+    };
+  };
 #endif
 }
 

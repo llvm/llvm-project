@@ -356,20 +356,19 @@ struct TestInlinerInterface : public DialectInlinerInterface {
   }
 
   Value handleArgument(OpBuilder &builder, Operation *call, Operation *callable,
-                       Value argument, Type targetType,
+                       Value argument,
                        DictionaryAttr argumentAttrs) const final {
     if (!argumentAttrs.contains("test.handle_argument"))
       return argument;
-    return builder.create<TestTypeChangerOp>(call->getLoc(), targetType,
+    return builder.create<TestTypeChangerOp>(call->getLoc(), argument.getType(),
                                              argument);
   }
 
   Value handleResult(OpBuilder &builder, Operation *call, Operation *callable,
-                     Value result, Type targetType,
-                     DictionaryAttr resultAttrs) const final {
+                     Value result, DictionaryAttr resultAttrs) const final {
     if (!resultAttrs.contains("test.handle_result"))
       return result;
-    return builder.create<TestTypeChangerOp>(call->getLoc(), targetType,
+    return builder.create<TestTypeChangerOp>(call->getLoc(), result.getType(),
                                              result);
   }
 

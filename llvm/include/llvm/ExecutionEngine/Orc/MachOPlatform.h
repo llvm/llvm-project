@@ -159,7 +159,6 @@ private:
     struct ObjCImageInfo {
       uint32_t Version = 0;
       uint32_t Flags = 0;
-      ExecutorAddr Addr;
     };
 
     Error bootstrapPipelineStart(jitlink::LinkGraph &G);

@@ -452,10 +452,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTruncStoreAction(MVT::f64, MVT::f16, Expand);
   }
 
-  if (Subtarget.is64Bit())
+  if (Subtarget.is64Bit()) {
     setOperationAction({ISD::FP_TO_UINT, ISD::FP_TO_SINT,
                         ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT},
                        MVT::i32, Custom);
+    setOperationAction(ISD::LROUND, MVT::i32, Custom);
+  }
 
   if (Subtarget.hasStdExtF()) {
     setOperationAction({ISD::FP_TO_UINT_SAT, ISD::FP_TO_SINT_SAT}, XLenVT,
@@ -1224,8 +1226,8 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_seg6_store:
   case Intrinsic::riscv_seg7_store:
   case Intrinsic::riscv_seg8_store:
-    // Operands are (vec, ..., vec, ptr, vl, int_id)
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.getNumOperands() - 3,
+    // Operands are (vec, ..., vec, ptr, vl)
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 2,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ false);
   case Intrinsic::riscv_vle:
@@ -1254,6 +1256,156 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vsoxei:
   case Intrinsic::riscv_vsuxei:
     return SetRVVLoadStoreInfo(/*PtrOp*/ 1,
+                               /*IsStore*/ true,
+                               /*IsUnitStrided*/ false);
+  case Intrinsic::riscv_vlseg2:
+  case Intrinsic::riscv_vlseg3:
+  case Intrinsic::riscv_vlseg4:
+  case Intrinsic::riscv_vlseg5:
+  case Intrinsic::riscv_vlseg6:
+  case Intrinsic::riscv_vlseg7:
+  case Intrinsic::riscv_vlseg8:
+  case Intrinsic::riscv_vlseg2ff:
+  case Intrinsic::riscv_vlseg3ff:
+  case Intrinsic::riscv_vlseg4ff:
+  case Intrinsic::riscv_vlseg5ff:
+  case Intrinsic::riscv_vlseg6ff:
+  case Intrinsic::riscv_vlseg7ff:
+  case Intrinsic::riscv_vlseg8ff:
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 2,
+                               /*IsStore*/ false,
+                               /*IsUnitStrided*/ false);
+  case Intrinsic::riscv_vlseg2_mask:
+  case Intrinsic::riscv_vlseg3_mask:
+  case Intrinsic::riscv_vlseg4_mask:
+  case Intrinsic::riscv_vlseg5_mask:
+  case Intrinsic::riscv_vlseg6_mask:
+  case Intrinsic::riscv_vlseg7_mask:
+  case Intrinsic::riscv_vlseg8_mask:
+  case Intrinsic::riscv_vlseg2ff_mask:
+  case Intrinsic::riscv_vlseg3ff_mask:
+  case Intrinsic::riscv_vlseg4ff_mask:
+  case Intrinsic::riscv_vlseg5ff_mask:
+  case Intrinsic::riscv_vlseg6ff_mask:
+  case Intrinsic::riscv_vlseg7ff_mask:
+  case Intrinsic::riscv_vlseg8ff_mask:
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
+                               /*IsStore*/ false,
+                               /*IsUnitStrided*/ false);
+  case Intrinsic::riscv_vlsseg2:
+  case Intrinsic::riscv_vlsseg3:
+  case Intrinsic::riscv_vlsseg4:
+  case Intrinsic::riscv_vlsseg5:
+  case Intrinsic::riscv_vlsseg6:
+  case Intrinsic::riscv_vlsseg7:
+  case Intrinsic::riscv_vlsseg8:
+  case Intrinsic::riscv_vloxseg2:
+  case Intrinsic::riscv_vloxseg3:
+  case Intrinsic::riscv_vloxseg4:
+  case Intrinsic::riscv_vloxseg5:
+  case Intrinsic::riscv_vloxseg6:
+  case Intrinsic::riscv_vloxseg7:
+  case Intrinsic::riscv_vloxseg8:
+  case Intrinsic::riscv_vluxseg2:
+  case Intrinsic::riscv_vluxseg3:
+  case Intrinsic::riscv_vluxseg4:
+  case Intrinsic::riscv_vluxseg5:
+  case Intrinsic::riscv_vluxseg6:
+  case Intrinsic::riscv_vluxseg7:
+  case Intrinsic::riscv_vluxseg8:
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 3,
+                               /*IsStore*/ false,
+                               /*IsUnitStrided*/ false);
+  case Intrinsic::riscv_vlsseg2_mask:
+  case Intrinsic::riscv_vlsseg3_mask:
+  case Intrinsic::riscv_vlsseg4_mask:
+  case Intrinsic::riscv_vlsseg5_mask:
+  case Intrinsic::riscv_vlsseg6_mask:
+  case Intrinsic::riscv_vlsseg7_mask:
+  case Intrinsic::riscv_vlsseg8_mask:
+  case Intrinsic::riscv_vloxseg2_mask:
+  case Intrinsic::riscv_vloxseg3_mask:
+  case Intrinsic::riscv_vloxseg4_mask:
+  case Intrinsic::riscv_vloxseg5_mask:
+  case Intrinsic::riscv_vloxseg6_mask:
+  case Intrinsic::riscv_vloxseg7_mask:
+  case Intrinsic::riscv_vloxseg8_mask:
+  case Intrinsic::riscv_vluxseg2_mask:
+  case Intrinsic::riscv_vluxseg3_mask:
+  case Intrinsic::riscv_vluxseg4_mask:
+  case Intrinsic::riscv_vluxseg5_mask:
+  case Intrinsic::riscv_vluxseg6_mask:
+  case Intrinsic::riscv_vluxseg7_mask:
+  case Intrinsic::riscv_vluxseg8_mask:
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 5,
+                               /*IsStore*/ false,
+                               /*IsUnitStrided*/ false);
+  case Intrinsic::riscv_vsseg2:
+  case Intrinsic::riscv_vsseg3:
+  case Intrinsic::riscv_vsseg4:
+  case Intrinsic::riscv_vsseg5:
+  case Intrinsic::riscv_vsseg6:
+  case Intrinsic::riscv_vsseg7:
+  case Intrinsic::riscv_vsseg8:
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 2,
+                               /*IsStore*/ true,
+                               /*IsUnitStrided*/ false);
+  case Intrinsic::riscv_vsseg2_mask:
+  case Intrinsic::riscv_vsseg3_mask:
+  case Intrinsic::riscv_vsseg4_mask:
+  case Intrinsic::riscv_vsseg5_mask:
+  case Intrinsic::riscv_vsseg6_mask:
+  case Intrinsic::riscv_vsseg7_mask:
+  case Intrinsic::riscv_vsseg8_mask:
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 3,
+                               /*IsStore*/ true,
+                               /*IsUnitStrided*/ false);
+  case Intrinsic::riscv_vssseg2:
+  case Intrinsic::riscv_vssseg3:
+  case Intrinsic::riscv_vssseg4:
+  case Intrinsic::riscv_vssseg5:
+  case Intrinsic::riscv_vssseg6:
+  case Intrinsic::riscv_vssseg7:
+  case Intrinsic::riscv_vssseg8:
+  case Intrinsic::riscv_vsoxseg2:
+  case Intrinsic::riscv_vsoxseg3:
+  case Intrinsic::riscv_vsoxseg4:
+  case Intrinsic::riscv_vsoxseg5:
+  case Intrinsic::riscv_vsoxseg6:
+  case Intrinsic::riscv_vsoxseg7:
+  case Intrinsic::riscv_vsoxseg8:
+  case Intrinsic::riscv_vsuxseg2:
+  case Intrinsic::riscv_vsuxseg3:
+  case Intrinsic::riscv_vsuxseg4:
+  case Intrinsic::riscv_vsuxseg5:
+  case Intrinsic::riscv_vsuxseg6:
+  case Intrinsic::riscv_vsuxseg7:
+  case Intrinsic::riscv_vsuxseg8:
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 3,
+                               /*IsStore*/ true,
+                               /*IsUnitStrided*/ false);
+  case Intrinsic::riscv_vssseg2_mask:
+  case Intrinsic::riscv_vssseg3_mask:
+  case Intrinsic::riscv_vssseg4_mask:
+  case Intrinsic::riscv_vssseg5_mask:
+  case Intrinsic::riscv_vssseg6_mask:
+  case Intrinsic::riscv_vssseg7_mask:
+  case Intrinsic::riscv_vssseg8_mask:
+  case Intrinsic::riscv_vsoxseg2_mask:
+  case Intrinsic::riscv_vsoxseg3_mask:
+  case Intrinsic::riscv_vsoxseg4_mask:
+  case Intrinsic::riscv_vsoxseg5_mask:
+  case Intrinsic::riscv_vsoxseg6_mask:
+  case Intrinsic::riscv_vsoxseg7_mask:
+  case Intrinsic::riscv_vsoxseg8_mask:
+  case Intrinsic::riscv_vsuxseg2_mask:
+  case Intrinsic::riscv_vsuxseg3_mask:
+  case Intrinsic::riscv_vsuxseg4_mask:
+  case Intrinsic::riscv_vsuxseg5_mask:
+  case Intrinsic::riscv_vsuxseg6_mask:
+  case Intrinsic::riscv_vsuxseg7_mask:
+  case Intrinsic::riscv_vsuxseg8_mask:
+    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ false);
   }
@@ -8341,6 +8493,37 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(Chain);
     break;
   }
+  case ISD::LROUND: {
+    SDValue Op0 = N->getOperand(0);
+    EVT Op0VT = Op0.getValueType();
+    if (getTypeAction(*DAG.getContext(), Op0.getValueType()) !=
+        TargetLowering::TypeSoftenFloat) {
+      if (!isTypeLegal(Op0VT))
+        return;
+
+      // In absense of Zfh, promote f16 to f32, then convert.
+      if (Op0.getValueType() == MVT::f16 && !Subtarget.hasStdExtZfh())
+        Op0 = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op0);
+
+      SDValue Res =
+          DAG.getNode(RISCVISD::FCVT_W_RV64, DL, MVT::i64, Op0,
+                      DAG.getTargetConstant(RISCVFPRndMode::RMM, DL, MVT::i64));
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
+    // If the FP type needs to be softened, emit a library call to lround. We'll
+    // need to truncate the result. We assume any value that doesn't fit in i32
+    // is allowed to return an unspecified value.
+    RTLIB::Libcall LC =
+        Op0.getValueType() == MVT::f64 ? RTLIB::LROUND_F64 : RTLIB::LROUND_F32;
+    MakeLibCallOptions CallOptions;
+    EVT OpVT = Op0.getValueType();
+    CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64, true);
+    SDValue Result = makeLibCall(DAG, LC, MVT::i64, Op0, CallOptions, DL).first;
+    Result = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Result);
+    Results.push_back(Result);
+    break;
+  }
   case ISD::READCYCLECOUNTER: {
     assert(!Subtarget.is64Bit() &&
            "READCYCLECOUNTER only has custom type legalization on riscv32");
@@ -14557,10 +14740,9 @@ void RISCVTargetLowering::LowerAsmOperandForConstraint(
       return;
     case 'J':
       // Validate & create an integer zero operand.
-      if (auto *C = dyn_cast<ConstantSDNode>(Op))
-        if (C->getZExtValue() == 0)
-          Ops.push_back(
-              DAG.getTargetConstant(0, SDLoc(Op), Subtarget.getXLenVT()));
+      if (isNullConstant(Op))
+        Ops.push_back(
+            DAG.getTargetConstant(0, SDLoc(Op), Subtarget.getXLenVT()));
       return;
     case 'K':
       // Validate & create a 5-bit unsigned immediate operand.

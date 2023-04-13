@@ -20,14 +20,13 @@ void PreferRegisterOverUnsignedCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       traverse(TK_AsIs,
-               valueDecl(allOf(
-                   hasType(qualType(isUnsignedInteger()).bind("varType")),
-                   varDecl(hasInitializer(exprWithCleanups(
-                               has(implicitCastExpr(has(cxxMemberCallExpr(
-                                   allOf(on(RegisterClassMatch),
+               valueDecl(hasType(qualType(isUnsignedInteger()).bind("varType")),
+                         varDecl(hasInitializer(exprWithCleanups(
+                                     has(implicitCastExpr(has(cxxMemberCallExpr(
+                                         on(RegisterClassMatch),
                                          has(memberExpr(hasDeclaration(
-                                             cxxConversionDecl())))))))))))
-                       .bind("var")))),
+                                             cxxConversionDecl()))))))))))
+                             .bind("var"))),
       this);
 }
 

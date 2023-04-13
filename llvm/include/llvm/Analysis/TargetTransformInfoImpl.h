@@ -95,6 +95,10 @@ public:
 
   bool isAlwaysUniform(const Value *V) const { return false; }
 
+  bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
+    return false;
+  }
+
   unsigned getFlatAddressSpace() const { return -1; }
 
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
@@ -717,13 +721,14 @@ public:
   }
 
   InstructionCost getMinMaxReductionCost(VectorType *, VectorType *, bool,
+                                         FastMathFlags,
                                          TTI::TargetCostKind) const {
     return 1;
   }
 
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *Ty,
-                                           std::optional<FastMathFlags> FMF,
+                                           FastMathFlags FMF,
                                            TTI::TargetCostKind CostKind) const {
     return 1;
   }

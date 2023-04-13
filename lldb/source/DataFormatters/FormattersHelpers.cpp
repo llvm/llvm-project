@@ -23,77 +23,78 @@ using namespace lldb_private::formatters;
 
 void lldb_private::formatters::AddFormat(
     TypeCategoryImpl::SharedPointer category_sp, lldb::Format format,
-    ConstString type_name, TypeFormatImpl::Flags flags, bool regex) {
+    llvm::StringRef type_name, TypeFormatImpl::Flags flags, bool regex) {
   lldb::TypeFormatImplSP format_sp(new TypeFormatImpl_Format(format, flags));
 
   FormatterMatchType match_type =
       regex ? eFormatterMatchRegex : eFormatterMatchExact;
-  category_sp->AddTypeFormat(type_name.GetStringRef(), match_type, format_sp);
+  category_sp->AddTypeFormat(type_name, match_type, format_sp);
 }
 
 void lldb_private::formatters::AddSummary(
     TypeCategoryImpl::SharedPointer category_sp, TypeSummaryImplSP summary_sp,
-    ConstString type_name, bool regex) {
+    llvm::StringRef type_name, bool regex) {
   FormatterMatchType match_type =
       regex ? eFormatterMatchRegex : eFormatterMatchExact;
-  category_sp->AddTypeSummary(type_name.GetStringRef(), match_type, summary_sp);
+  category_sp->AddTypeSummary(type_name, match_type, summary_sp);
 }
 
 void lldb_private::formatters::AddStringSummary(
     TypeCategoryImpl::SharedPointer category_sp, const char *string,
-    ConstString type_name, TypeSummaryImpl::Flags flags, bool regex) {
+    llvm::StringRef type_name, TypeSummaryImpl::Flags flags, bool regex) {
   lldb::TypeSummaryImplSP summary_sp(new StringSummaryFormat(flags, string));
 
   FormatterMatchType match_type =
       regex ? eFormatterMatchRegex : eFormatterMatchExact;
-  category_sp->AddTypeSummary(type_name.GetStringRef(), match_type, summary_sp);
+  category_sp->AddTypeSummary(type_name, match_type, summary_sp);
 }
 
 void lldb_private::formatters::AddOneLineSummary(
-    TypeCategoryImpl::SharedPointer category_sp, ConstString type_name,
+    TypeCategoryImpl::SharedPointer category_sp, llvm::StringRef type_name,
     TypeSummaryImpl::Flags flags, bool regex) {
   flags.SetShowMembersOneLiner(true);
   lldb::TypeSummaryImplSP summary_sp(new StringSummaryFormat(flags, ""));
 
   FormatterMatchType match_type =
       regex ? eFormatterMatchRegex : eFormatterMatchExact;
-  category_sp->AddTypeSummary(type_name.GetStringRef(), match_type, summary_sp);
+  category_sp->AddTypeSummary(type_name, match_type, summary_sp);
 }
 
 void lldb_private::formatters::AddCXXSummary(
     TypeCategoryImpl::SharedPointer category_sp,
     CXXFunctionSummaryFormat::Callback funct, const char *description,
-    ConstString type_name, TypeSummaryImpl::Flags flags, bool regex) {
+    llvm::StringRef type_name, TypeSummaryImpl::Flags flags, bool regex) {
   lldb::TypeSummaryImplSP summary_sp(
       new CXXFunctionSummaryFormat(flags, funct, description));
 
   FormatterMatchType match_type =
       regex ? eFormatterMatchRegex : eFormatterMatchExact;
-  category_sp->AddTypeSummary(type_name.GetStringRef(), match_type, summary_sp);
+  category_sp->AddTypeSummary(type_name, match_type, summary_sp);
 }
 
 void lldb_private::formatters::AddCXXSynthetic(
     TypeCategoryImpl::SharedPointer category_sp,
     CXXSyntheticChildren::CreateFrontEndCallback generator,
-    const char *description, ConstString type_name,
+    const char *description, llvm::StringRef type_name,
     ScriptedSyntheticChildren::Flags flags, bool regex) {
   lldb::SyntheticChildrenSP synth_sp(
       new CXXSyntheticChildren(flags, description, generator));
   FormatterMatchType match_type =
       regex ? eFormatterMatchRegex : eFormatterMatchExact;
-  category_sp->AddTypeSynthetic(type_name.GetStringRef(), match_type, synth_sp);
+  category_sp->AddTypeSynthetic(type_name, match_type, synth_sp);
 }
 
 void lldb_private::formatters::AddFilter(
     TypeCategoryImpl::SharedPointer category_sp,
     std::vector<std::string> children, const char *description,
-    ConstString type_name, ScriptedSyntheticChildren::Flags flags, bool regex) {
+    llvm::StringRef type_name, ScriptedSyntheticChildren::Flags flags,
+    bool regex) {
   TypeFilterImplSP filter_sp(new TypeFilterImpl(flags));
   for (auto child : children)
     filter_sp->AddExpressionPath(child);
   FormatterMatchType match_type =
       regex ? eFormatterMatchRegex : eFormatterMatchExact;
-  category_sp->AddTypeFilter(type_name.GetStringRef(), match_type, filter_sp);
+  category_sp->AddTypeFilter(type_name, match_type, filter_sp);
 }
 
 size_t lldb_private::formatters::ExtractIndexFromString(const char *item_name) {

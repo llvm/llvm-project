@@ -14,7 +14,6 @@
 
 #include "llvm/Transforms/Vectorize.h"
 #include "llvm-c/Initialization.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/PassRegistry.h"
 

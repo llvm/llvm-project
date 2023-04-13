@@ -33,13 +33,13 @@
 #define CSTR(S) MAKE_CSTRING(CharT, S)
 
 template <class T, class StringT, class StringViewT, class CharT>
-void test(StringT expected, StringViewT fmt, const CharT* a) {
+void test(StringT expected, StringViewT fmt, const CharT* a, std::size_t offset) {
   auto parse_ctx = std::basic_format_parse_context<CharT>(fmt);
   std::formatter<T, CharT> formatter;
   static_assert(std::semiregular<decltype(formatter)>);
 
   auto it = formatter.parse(parse_ctx);
-  assert(it == fmt.end() - (!fmt.empty() && fmt.back() == '}'));
+  assert(it == fmt.end() - offset);
 
   StringT result;
   auto out = std::back_inserter(result);
@@ -61,9 +61,9 @@ void test_termination_condition(StringT expected, StringT f, const CharT* arg) {
   std::basic_string_view<CharT> fmt{f};
   assert(fmt.back() == CharT('}') && "Pre-condition failure");
 
-  test<ArgumentT>(expected, fmt, arg);
+  test<ArgumentT>(expected, fmt, arg, 1);
   fmt.remove_suffix(1);
-  test<ArgumentT>(expected, fmt, arg);
+  test<ArgumentT>(expected, fmt, arg, 0);
 }
 
 #if TEST_STD_VER > 20

@@ -318,9 +318,9 @@ ItaniumABILanguageRuntime::CreateInstance(Process *process,
 class CommandObjectMultiwordItaniumABI_Demangle : public CommandObjectParsed {
 public:
   CommandObjectMultiwordItaniumABI_Demangle(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "demangle",
-                            "Demangle a C++ mangled name.",
-                            "language cplusplus demangle") {
+      : CommandObjectParsed(
+            interpreter, "demangle", "Demangle a C++ mangled name.",
+            "language cplusplus demangle [<mangled-name> ...]") {
     CommandArgumentEntry arg;
     CommandArgumentData index_arg;
 

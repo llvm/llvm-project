@@ -121,8 +121,6 @@ private:
 public:
   GNUPrinter(raw_ostream &OS, raw_ostream &ES, PrinterConfig &Config)
       : PlainPrinterBase(OS, ES, Config) {}
-
-  void printInvalidCommand(const Request &Request, StringRef Command) override;
 };
 
 class JSONPrinter : public DIPrinter {

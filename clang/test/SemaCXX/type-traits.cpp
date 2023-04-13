@@ -2970,6 +2970,12 @@ namespace ErrorType {
   bool b = __has_unique_object_representations(T);
 };
 
+static_assert(!has_unique_object_representations<_BitInt(7)>::value, "BitInt:");
+static_assert(has_unique_object_representations<_BitInt(8)>::value, "BitInt:");
+static_assert(!has_unique_object_representations<_BitInt(127)>::value, "BitInt:");
+static_assert(has_unique_object_representations<_BitInt(128)>::value, "BitInt:");
+
+
 namespace PR46209 {
   // Foo has both a trivial assignment operator and a non-trivial one.
   struct Foo {

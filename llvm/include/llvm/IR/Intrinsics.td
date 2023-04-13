@@ -627,6 +627,10 @@ def int_instrprof_increment_step : Intrinsic<[],
                                         [llvm_ptr_ty, llvm_i64_ty,
                                          llvm_i32_ty, llvm_i32_ty, llvm_i64_ty]>;
 
+// A timestamp for instrumentation based profiling.
+def int_instrprof_timestamp : Intrinsic<[], [llvm_ptr_ty, llvm_i64_ty,
+                                             llvm_i32_ty, llvm_i32_ty]>;
+
 // A call to profile runtime for value profiling of target expressions
 // through instrumentation based profiling.
 def int_instrprof_value_profile : Intrinsic<[],

@@ -1437,7 +1437,8 @@ module std [system] {
     export __errc
     export *
     module __system_error {
-      module error_category  { private header "__system_error/error_category.h" }
+      module errc           { private header "__system_error/errc.h" }
+      module error_category { private header "__system_error/error_category.h" }
       module error_code {
         private header "__system_error/error_code.h"
         export functional.__functional.hash
@@ -1449,6 +1450,7 @@ module std [system] {
         export functional.__functional.unary_function
       }
       module system_error { private header "__system_error/system_error.h" }
+
     }
   }
   module thread {
@@ -1465,18 +1467,18 @@ module std [system] {
     header "tuple"
     export *
 
-    module apply_cv         { private header "__tuple_dir/apply_cv.h" }
+    module apply_cv         { private header "__tuple/apply_cv.h" }
     module get_fwd          { private header "__fwd/get.h" }
-    module make_tuple_types { private header "__tuple_dir/make_tuple_types.h" }
-    module pair_like        { private header "__tuple_dir/pair_like.h" }
-    module sfinae_helpers   { private header "__tuple_dir/sfinae_helpers.h" }
-    module tuple_element    { private header "__tuple_dir/tuple_element.h" }
+    module make_tuple_types { private header "__tuple/make_tuple_types.h" }
+    module pair_like        { private header "__tuple/pair_like.h" }
+    module sfinae_helpers   { private header "__tuple/sfinae_helpers.h" }
+    module tuple_element    { private header "__tuple/tuple_element.h" }
     module tuple_fwd        { private header "__fwd/tuple.h" }
-    module tuple_indices    { private header "__tuple_dir/tuple_indices.h" }
-    module tuple_like       { private header "__tuple_dir/tuple_like.h" }
-    module tuple_like_ext   { private header "__tuple_dir/tuple_like_ext.h" }
-    module tuple_size       { private header "__tuple_dir/tuple_size.h" }
-    module tuple_types      { private header "__tuple_dir/tuple_types.h" }
+    module tuple_indices    { private header "__tuple/tuple_indices.h" }
+    module tuple_like       { private header "__tuple/tuple_like.h" }
+    module tuple_like_ext   { private header "__tuple/tuple_like_ext.h" }
+    module tuple_size       { private header "__tuple/tuple_size.h" }
+    module tuple_types      { private header "__tuple/tuple_types.h" }
   }
   module type_traits {
     header "type_traits"
@@ -1715,7 +1717,6 @@ module std [system] {
   module __availability      { private header "__availability"      export * }
   module __bit_reference     { private header "__bit_reference"     export * }
   module __debug             {         header "__debug"             export * }
-  module __errc              { private header "__errc"              export * }
   module __hash_table        {         header "__hash_table"        export * }
   module __locale            {
     @requires_LIBCXX_ENABLE_LOCALIZATION@
@@ -1724,10 +1725,6 @@ module std [system] {
   module __mbstate_t         { private header "__mbstate_t.h"       export * }
   module __node_handle       { private header "__node_handle"       export * }
   module __split_buffer      { private header "__split_buffer"      export * }
-  module __std_stream        {
-    @requires_LIBCXX_ENABLE_LOCALIZATION@
-    private header "__std_stream" export *
-  }
   module __threading_support {         header "__threading_support" export * }
   module __tree              {         header "__tree"              export * }
   module __undef_macros      {         header "__undef_macros"      export * }

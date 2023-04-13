@@ -622,7 +622,7 @@ static LogicalResult verifySynchronizationHint(Operation *op, uint64_t hint) {
 }
 
 //===----------------------------------------------------------------------===//
-// Parser, printer and verifier for Target Data
+// Parser, printer and verifier for Target
 //===----------------------------------------------------------------------===//
 /// Parses a Map Clause.
 ///
@@ -756,7 +756,7 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
 }
 
 static LogicalResult verifyMapClause(Operation *op, OperandRange map_operands,
-                                     ArrayAttr map_types) {
+                                     std::optional<ArrayAttr> map_types) {
   // Helper function to get bitwise AND of `value` and 'flag'
   auto bitAnd = [](int64_t value,
                    llvm::omp::OpenMPOffloadMappingFlags flag) -> bool {
@@ -765,10 +765,13 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange map_operands,
                std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                flag);
   };
-  if (map_operands.size() != map_types.size())
+  if (!map_types.has_value())
+    return success();
+
+  if (map_operands.size() != map_types->size())
     return failure();
 
-  for (const auto &mapTypeOp : map_types) {
+  for (const auto &mapTypeOp : *map_types) {
     int64_t mapTypeBits = 0x00;
 
     if (!mapTypeOp.isa<mlir::IntegerAttr>())
@@ -783,12 +786,14 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange map_operands,
     bool del = bitAnd(mapTypeBits,
                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE);
 
-    if (isa<DataOp>(op) && del)
-      return failure();
+    if ((isa<DataOp>(op) || isa<TargetOp>(op)) && del)
+      return emitError(op->getLoc(),
+                       "to, from, tofrom and alloc map types are permitted");
     if (isa<EnterDataOp>(op) && (from || del))
-      return failure();
+      return emitError(op->getLoc(), "to and alloc map types are permitted");
     if (isa<ExitDataOp>(op) && to)
-      return failure();
+      return emitError(op->getLoc(),
+                       "from, release and delete map types are permitted");
   }
 
   return success();
@@ -803,6 +808,10 @@ LogicalResult EnterDataOp::verify() {
 }
 
 LogicalResult ExitDataOp::verify() {
+  return verifyMapClause(*this, getMapOperands(), getMapTypes());
+}
+
+LogicalResult TargetOp::verify() {
   return verifyMapClause(*this, getMapOperands(), getMapTypes());
 }
 

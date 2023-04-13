@@ -89,7 +89,7 @@ C++20 Feature Support
   an error to a warning under the ``-Wreserved-module-identifier`` warning
   group. This warning is enabled by default. This addresses `#61446
   <https://github.com/llvm/llvm-project/issues/61446>`_ and allows easier
-  building of precompiled modules. This diagnostic may be strengthened into an
+  building of standard modules. This diagnostic may be strengthened into an
   error again in the future once there is a less fragile way to mark a module
   as being part of the implementation rather than a user module.
 
@@ -103,6 +103,8 @@ C++2b Feature Support
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Implemented `DR2397 <https://wg21.link/CWG2397>`_ which allows ``auto`` specifier for pointers
+  and reference to arrays.
 
 C Language Changes
 ------------------
@@ -288,6 +290,10 @@ Bug Fixes in This Version
 - Fix the assertion hit when a template consteval function appears in a nested
   consteval/constexpr call chain.
   (`#61142 <https://github.com/llvm/llvm-project/issues/61142>`_)
+- Clang now better diagnose placeholder types constrained with a concept that is
+  not a type concept.
+- Fix crash when a doc comment contains a line splicing.
+  (`#62054 <https://github.com/llvm/llvm-project/issues/62054>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

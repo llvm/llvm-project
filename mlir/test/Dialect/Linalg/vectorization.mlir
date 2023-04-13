@@ -2737,3 +2737,23 @@ transform.sequence failures(propagate) {
   transform.structured.masked_vectorize %0 vector_sizes [8, 16]
 }
 
+// -----
+
+// CHECK-LABEL: func @test_masked_vectorize_linalg_copy
+func.func @test_masked_vectorize_linalg_copy(%A : memref<?x?xf32>, %B : memref<?x?xf32>) {
+  // CHECK: %[[c0:.*]] = arith.constant 0 : index
+  // CHECK: %[[d0:.*]] = memref.dim %{{.*}}, %[[c0]] : memref<?x?xf32>
+  // CHECK: %[[c1:.*]] = arith.constant 1 : index
+  // CHECK: %[[d1:.*]] = memref.dim %{{.*}}, %[[c1]] : memref<?x?xf32>
+  // CHECK: %[[mask:.*]] = vector.create_mask %[[d0]], %[[d1]] : vector<2x4xi1>
+  // CHECK: vector.mask %[[mask]] {{.*}} vector.transfer_read %{{.*}} {in_bounds = [true, true]} : memref<?x?xf32>, vector<2x4xf32> } : vector<2x4xi1> -> vector<2x4xf32>
+  // CHECK: vector.mask %[[mask]] {{.*}} vector.transfer_write %{{.*}} {in_bounds = [true, true]} : vector<2x4xf32>, memref<?x?xf32> } : vector<2x4xi1>
+  linalg.copy ins(%A : memref<?x?xf32>) outs(%B : memref<?x?xf32>)
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.copy"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+  transform.structured.masked_vectorize %0 vector_sizes [2, 4]
+}

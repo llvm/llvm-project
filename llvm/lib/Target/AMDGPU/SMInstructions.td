@@ -997,6 +997,8 @@ foreach vt = SReg_512.RegTypes in {
 defm : SMRD_Pattern <"S_LOAD_DWORDX16", vt>;
 }
 
+} // End let AddedComplexity = 100
+
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORD",     i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX2",   v2i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX4",   v4i32>;
@@ -1008,7 +1010,6 @@ defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX2",   v2f32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX4",   v4f32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX8",   v8f32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX16",  v16f32>;
-} // End let AddedComplexity = 100
 
 let OtherPredicates = [HasSMemTimeInst] in {
 def : GCNPat <

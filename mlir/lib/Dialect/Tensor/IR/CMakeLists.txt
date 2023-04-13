@@ -71,4 +71,5 @@ add_mlir_dialect_library(MLIRTensorTilingInterfaceImpl
   MLIRTensorDialect
   MLIRTensorUtils
   MLIRTilingInterface
+  MLIRValueBoundsOpInterface
   )

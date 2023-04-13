@@ -13648,6 +13648,33 @@ Semantics:
 """"""""""
 See description of '``llvm.instrprof.increment``' intrinsic.
 
+'``llvm.instrprof.timestamp``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.instrprof.timestamp(i8* <name>, i64 <hash>,
+                                             i32 <num-counters>, i32 <index>)
+
+Overview:
+"""""""""
+
+The '``llvm.instrprof.timestamp``' intrinsic is used to implement temporal
+profiling.
+
+Arguments:
+""""""""""
+The arguments are the same as '``llvm.instrprof.increment``'. The ``index`` is
+expected to always be zero.
+
+Semantics:
+""""""""""
+Similar to the '``llvm.instrprof.increment``' intrinsic, but it stores a
+timestamp representing when this function was executed for the first time.
+
 '``llvm.instrprof.cover``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

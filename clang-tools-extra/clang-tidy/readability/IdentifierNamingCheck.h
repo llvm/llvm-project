@@ -91,6 +91,11 @@ public:
     bool checkOptionValid(int StyleKindIndex) const;
     bool isOptionEnabled(StringRef OptionKey,
                          const llvm::StringMap<std::string> &StrMap) const;
+
+    size_t getAsteriskCount(const std::string &TypeName) const;
+    size_t getAsteriskCount(const std::string &TypeName,
+                            const NamedDecl *ND) const;
+
     void loadDefaultConfig(
         IdentifierNamingCheck::HungarianNotationOption &HNOption) const;
     void loadFileConfig(
