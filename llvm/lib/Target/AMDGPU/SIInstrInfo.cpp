@@ -4627,7 +4627,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
-  if (isDS(MI) && !AMDGPU::hasGDS(ST)) {
+  if (isDS(MI) && !ST.hasGDS()) {
     const MachineOperand *GDSOp = getNamedOperand(MI, AMDGPU::OpName::gds);
     if (GDSOp && GDSOp->getImm() != 0) {
       ErrInfo = "GDS is not supported on this subtarget";
