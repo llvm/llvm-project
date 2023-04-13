@@ -1549,14 +1549,14 @@ const DerivedTypeSpec *GetDtvArgDerivedType(const Symbol &proc) {
   }
 }
 
-bool HasDefinedIo(GenericKind::DefinedIo which, const DerivedTypeSpec &derived,
+bool HasDefinedIo(common::DefinedIo which, const DerivedTypeSpec &derived,
     const Scope *scope) {
   if (const Scope * dtScope{derived.scope()}) {
     for (const auto &pair : *dtScope) {
       const Symbol &symbol{*pair.second};
       if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
         GenericKind kind{generic->kind()};
-        if (const auto *io{std::get_if<GenericKind::DefinedIo>(&kind.u)}) {
+        if (const auto *io{std::get_if<common::DefinedIo>(&kind.u)}) {
           if (*io == which) {
             return true; // type-bound GENERIC exists
           }
@@ -1585,57 +1585,6 @@ bool HasDefinedIo(GenericKind::DefinedIo which, const DerivedTypeSpec &derived,
     }
   }
   return false;
-}
-
-static std::pair<const Symbol *, bool /*isPolymorphic*/>
-FindNonTypeBoundDefinedIo(const Scope &scope, const evaluate::DynamicType &type,
-    GenericKind::DefinedIo io) {
-  if (const DerivedTypeSpec * derived{evaluate::GetDerivedTypeSpec(type)}) {
-    if (const Symbol * symbol{scope.FindSymbol(GenericKind::AsFortran(io))}) {
-      if (const auto *generic{symbol->detailsIf<GenericDetails>()}) {
-        for (const auto &ref : generic->specificProcs()) {
-          const Symbol &specific{ref->GetUltimate()};
-          if (const DeclTypeSpec * dtvTypeSpec{GetDtvArgTypeSpec(specific)}) {
-            if (const DerivedTypeSpec * dtvDerived{dtvTypeSpec->AsDerived()}) {
-              if (evaluate::AreSameDerivedType(*derived, *dtvDerived)) {
-                return {&specific, dtvTypeSpec->IsPolymorphic()};
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  return {nullptr, false};
-}
-
-std::pair<const Symbol *, bool /*isPolymorphic*/> FindNonTypeBoundDefinedIo(
-    const SemanticsContext &context, const parser::OutputItem &item,
-    bool isFormatted) {
-  if (const auto *expr{std::get_if<parser::Expr>(&item.u)};
-      expr && expr->typedExpr && expr->typedExpr->v) {
-    if (auto type{expr->typedExpr->v->GetType()}) {
-      return FindNonTypeBoundDefinedIo(context.FindScope(expr->source), *type,
-          isFormatted ? GenericKind::DefinedIo::WriteFormatted
-                      : GenericKind::DefinedIo::WriteUnformatted);
-    }
-  }
-  return {nullptr, false};
-}
-
-std::pair<const Symbol *, bool /*isPolymorphic*/> FindNonTypeBoundDefinedIo(
-    const SemanticsContext &context, const parser::InputItem &item,
-    bool isFormatted) {
-  if (const auto *var{std::get_if<parser::Variable>(&item.u)};
-      var && var->typedExpr && var->typedExpr->v) {
-    if (auto type{var->typedExpr->v->GetType()}) {
-      return FindNonTypeBoundDefinedIo(context.FindScope(var->GetSource()),
-          *type,
-          isFormatted ? GenericKind::DefinedIo::ReadFormatted
-                      : GenericKind::DefinedIo::ReadUnformatted);
-    }
-  }
-  return {nullptr, false};
 }
 
 } // namespace Fortran::semantics

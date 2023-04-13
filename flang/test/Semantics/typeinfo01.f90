@@ -88,7 +88,7 @@ module m06
 !CHECK: .c.t2, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(component) shape: 0_8:0_8 init:[component::component(name=.n.t,genre=1_1,category=5_1,kind=0_1,rank=0_1,offset=0_8,characterlen=value(genre=1_1,value=0_8),derived=.dt.t,lenvalue=NULL(),bounds=NULL(),initialization=NULL())]
 !CHECK: .dt.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=.v.t,name=.n.t,sizeinbytes=0_8,uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=NULL(),component=NULL(),procptr=NULL(),special=.s.t,specialbitset=2_4,hasparent=0_1,noinitializationneeded=1_1,nodestructionneeded=1_1,nofinalizationneeded=1_1)
 !CHECK: .dt.t2, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=.v.t2,name=.n.t2,sizeinbytes=0_8,uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=NULL(),component=.c.t2,procptr=NULL(),special=NULL(),specialbitset=0_4,hasparent=1_1,noinitializationneeded=1_1,nodestructionneeded=1_1,nofinalizationneeded=1_1)
-!CHECK: .s.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:0_8 init:[specialbinding::specialbinding(which=1_1,isargdescriptorset=3_1,proc=s1)]
+!CHECK: .s.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:0_8 init:[specialbinding::specialbinding(which=1_1,isargdescriptorset=3_1,istypebound=1_1,proc=s1)]
 !CHECK: .v.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(binding) shape: 0_8:0_8 init:[binding::binding(proc=s1,name=.n.s1)]
 !CHECK: .v.t2, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(binding) shape: 0_8:0_8 init:[binding::binding(proc=s2,name=.n.s1)]
 end module
@@ -105,7 +105,7 @@ module m07
     class(t), intent(in) :: y
   end subroutine
 !CHECK: .dt.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=.v.t,name=.n.t,sizeinbytes=0_8,uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=NULL(),component=NULL(),procptr=NULL(),special=.s.t,specialbitset=4_4,hasparent=0_1,noinitializationneeded=1_1,nodestructionneeded=1_1,nofinalizationneeded=1_1)
-!CHECK: .s.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:0_8 init:[specialbinding::specialbinding(which=2_1,isargdescriptorset=3_1,proc=s1)]
+!CHECK: .s.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:0_8 init:[specialbinding::specialbinding(which=2_1,isargdescriptorset=3_1,istypebound=1_1,proc=s1)]
 !CHECK: .v.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(binding) shape: 0_8:0_8 init:[binding::binding(proc=s1,name=.n.s1)]
 end module
 
@@ -125,7 +125,7 @@ module m08
     type(t), intent(in) :: x
   end subroutine
 !CHECK: .dt.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.t,sizeinbytes=0_8,uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=NULL(),component=NULL(),procptr=NULL(),special=.s.t,specialbitset=3200_4,hasparent=0_1,noinitializationneeded=1_1,nodestructionneeded=0_1,nofinalizationneeded=0_1)
-!CHECK: .s.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:2_8 init:[specialbinding::specialbinding(which=7_1,isargdescriptorset=0_1,proc=s3),specialbinding(which=10_1,isargdescriptorset=1_1,proc=s1),specialbinding(which=11_1,isargdescriptorset=0_1,proc=s2)]
+!CHECK: .s.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:2_8 init:[specialbinding::specialbinding(which=7_1,isargdescriptorset=0_1,istypebound=1_1,proc=s3),specialbinding(which=10_1,isargdescriptorset=1_1,istypebound=1_1,proc=s1),specialbinding(which=11_1,isargdescriptorset=0_1,istypebound=1_1,proc=s2)]
 end module
 
 module m09
@@ -167,7 +167,7 @@ module m09
     character(len=*), intent(inout) :: iomsg
   end subroutine
 !CHECK: .dt.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=.v.t,name=.n.t,sizeinbytes=0_8,uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=NULL(),component=NULL(),procptr=NULL(),special=.s.t,specialbitset=120_4,hasparent=0_1,noinitializationneeded=1_1,nodestructionneeded=1_1,nofinalizationneeded=1_1)
-!CHECK: .s.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:3_8 init:[specialbinding::specialbinding(which=3_1,isargdescriptorset=1_1,proc=rf),specialbinding(which=4_1,isargdescriptorset=1_1,proc=ru),specialbinding(which=5_1,isargdescriptorset=1_1,proc=wf),specialbinding(which=6_1,isargdescriptorset=1_1,proc=wu)]
+!CHECK: .s.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:3_8 init:[specialbinding::specialbinding(which=3_1,isargdescriptorset=1_1,istypebound=1_1,proc=rf),specialbinding(which=4_1,isargdescriptorset=1_1,istypebound=1_1,proc=ru),specialbinding(which=5_1,isargdescriptorset=1_1,istypebound=1_1,proc=wf),specialbinding(which=6_1,isargdescriptorset=1_1,istypebound=1_1,proc=wu)]
 !CHECK: .v.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(binding) shape: 0_8:3_8 init:[binding::binding(proc=rf,name=.n.rf),binding(proc=ru,name=.n.ru),binding(proc=wf,name=.n.wf),binding(proc=wu,name=.n.wu)]
 end module
 
@@ -216,7 +216,7 @@ module m10
     character(len=*), intent(inout) :: iomsg
   end subroutine
 !CHECK: .dt.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.t,sizeinbytes=0_8,uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=NULL(),component=NULL(),procptr=NULL(),special=.s.t,specialbitset=120_4,hasparent=0_1,noinitializationneeded=1_1,nodestructionneeded=1_1,nofinalizationneeded=1_1)
-!CHECK: .s.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:3_8 init:[specialbinding::specialbinding(which=3_1,isargdescriptorset=0_1,proc=rf),specialbinding(which=4_1,isargdescriptorset=0_1,proc=ru),specialbinding(which=5_1,isargdescriptorset=0_1,proc=wf),specialbinding(which=6_1,isargdescriptorset=0_1,proc=wu)]
+!CHECK: .s.t, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:3_8 init:[specialbinding::specialbinding(which=3_1,isargdescriptorset=0_1,istypebound=0_1,proc=rf),specialbinding(which=4_1,isargdescriptorset=0_1,istypebound=0_1,proc=ru),specialbinding(which=5_1,isargdescriptorset=0_1,istypebound=0_1,proc=wf),specialbinding(which=6_1,isargdescriptorset=0_1,istypebound=0_1,proc=wu)]
 end module
 
 module m11
@@ -259,7 +259,7 @@ module m13
    contains
     procedure :: assign1, assign2
     generic :: assignment(=) => assign1, assign2
-    ! CHECK: .s.t1, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:0_8 init:[specialbinding::specialbinding(which=2_1,isargdescriptorset=3_1,proc=assign1)]
+    ! CHECK: .s.t1, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:0_8 init:[specialbinding::specialbinding(which=2_1,isargdescriptorset=3_1,istypebound=1_1,proc=assign1)]
   end type
  contains
   impure elemental subroutine assign1(to, from)

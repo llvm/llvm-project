@@ -445,8 +445,6 @@ private:
 // defined assignment, intrinsic operator, or defined I/O.
 struct GenericKind {
   ENUM_CLASS(OtherKind, Name, DefinedOp, Assignment, Concat)
-  ENUM_CLASS(DefinedIo, // defined io
-      ReadFormatted, ReadUnformatted, WriteFormatted, WriteUnformatted)
   GenericKind() : u{OtherKind::Name} {}
   template <typename T> GenericKind(const T &x) { u = x; }
   bool IsName() const { return Is(OtherKind::Name); }
@@ -455,9 +453,9 @@ struct GenericKind {
   bool IsIntrinsicOperator() const;
   bool IsOperator() const;
   std::string ToString() const;
-  static SourceName AsFortran(DefinedIo);
+  static SourceName AsFortran(common::DefinedIo);
   std::variant<OtherKind, common::NumericOperator, common::LogicalOperator,
-      common::RelationalOperator, DefinedIo>
+      common::RelationalOperator, common::DefinedIo>
       u;
 
 private:
