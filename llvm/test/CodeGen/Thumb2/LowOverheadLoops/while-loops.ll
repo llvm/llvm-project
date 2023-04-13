@@ -53,12 +53,10 @@ if.end:                                           ; preds = %do.body, %entry
 define void @nested(ptr nocapture readonly %x, ptr nocapture readnone %y, ptr nocapture %z, i32 %m, i32 %n) {
 ; CHECK-LABEL: nested:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    it eq
-; CHECK-NEXT:    bxeq lr
-; CHECK-NEXT:  .LBB1_1: @ %for.body.preheader
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    cbz r3, .LBB1_8
+; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    ldr.w r12, [sp, #24]
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    b .LBB1_4
@@ -93,9 +91,8 @@ define void @nested(ptr nocapture readonly %x, ptr nocapture readnone %y, ptr no
 ; CHECK-NEXT:    sub.w r12, r12, r5
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:    b .LBB1_3
-; CHECK-NEXT:  .LBB1_8:
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, lr}
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:  .LBB1_8: @ %for.cond.cleanup
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
 entry:
   %cmp20.not = icmp eq i32 %m, 0
   br i1 %cmp20.not, label %for.cond.cleanup, label %for.body

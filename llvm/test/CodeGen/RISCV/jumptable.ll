@@ -97,7 +97,7 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV32I-SMALL-NEXT:    j .LBB1_8
 ; RV32I-SMALL-NEXT:  .LBB1_7: # %bb6
 ; RV32I-SMALL-NEXT:    li a0, 200
-; RV32I-SMALL-NEXT:  .LBB1_8:
+; RV32I-SMALL-NEXT:  .LBB1_8: # %exit
 ; RV32I-SMALL-NEXT:    sw a0, 0(a1)
 ; RV32I-SMALL-NEXT:  .LBB1_9: # %exit
 ; RV32I-SMALL-NEXT:    ret
@@ -132,7 +132,7 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV32I-MEDIUM-NEXT:    j .LBB1_8
 ; RV32I-MEDIUM-NEXT:  .LBB1_7: # %bb6
 ; RV32I-MEDIUM-NEXT:    li a0, 200
-; RV32I-MEDIUM-NEXT:  .LBB1_8:
+; RV32I-MEDIUM-NEXT:  .LBB1_8: # %exit
 ; RV32I-MEDIUM-NEXT:    sw a0, 0(a1)
 ; RV32I-MEDIUM-NEXT:  .LBB1_9: # %exit
 ; RV32I-MEDIUM-NEXT:    ret
@@ -168,7 +168,7 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV32I-PIC-NEXT:    j .LBB1_8
 ; RV32I-PIC-NEXT:  .LBB1_7: # %bb6
 ; RV32I-PIC-NEXT:    li a0, 200
-; RV32I-PIC-NEXT:  .LBB1_8:
+; RV32I-PIC-NEXT:  .LBB1_8: # %exit
 ; RV32I-PIC-NEXT:    sw a0, 0(a1)
 ; RV32I-PIC-NEXT:  .LBB1_9: # %exit
 ; RV32I-PIC-NEXT:    ret
@@ -202,7 +202,7 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV64I-SMALL-NEXT:    j .LBB1_8
 ; RV64I-SMALL-NEXT:  .LBB1_7: # %bb6
 ; RV64I-SMALL-NEXT:    li a0, 200
-; RV64I-SMALL-NEXT:  .LBB1_8:
+; RV64I-SMALL-NEXT:  .LBB1_8: # %exit
 ; RV64I-SMALL-NEXT:    sw a0, 0(a1)
 ; RV64I-SMALL-NEXT:  .LBB1_9: # %exit
 ; RV64I-SMALL-NEXT:    ret
@@ -237,7 +237,7 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV64I-MEDIUM-NEXT:    j .LBB1_8
 ; RV64I-MEDIUM-NEXT:  .LBB1_7: # %bb6
 ; RV64I-MEDIUM-NEXT:    li a0, 200
-; RV64I-MEDIUM-NEXT:  .LBB1_8:
+; RV64I-MEDIUM-NEXT:  .LBB1_8: # %exit
 ; RV64I-MEDIUM-NEXT:    sw a0, 0(a1)
 ; RV64I-MEDIUM-NEXT:  .LBB1_9: # %exit
 ; RV64I-MEDIUM-NEXT:    ret
@@ -273,7 +273,7 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV64I-PIC-NEXT:    j .LBB1_8
 ; RV64I-PIC-NEXT:  .LBB1_7: # %bb6
 ; RV64I-PIC-NEXT:    li a0, 200
-; RV64I-PIC-NEXT:  .LBB1_8:
+; RV64I-PIC-NEXT:  .LBB1_8: # %exit
 ; RV64I-PIC-NEXT:    sw a0, 0(a1)
 ; RV64I-PIC-NEXT:  .LBB1_9: # %exit
 ; RV64I-PIC-NEXT:    ret
