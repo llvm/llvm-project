@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/JITLink/ELF_aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_i386.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_loongarch.h"
+#include "llvm/ExecutionEngine/JITLink/ELF_ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_riscv.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
 #include "llvm/Object/ELF.h"
@@ -63,6 +64,7 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer) {
   if (memcmp(Buffer.data(), ELF::ElfMagic, strlen(ELF::ElfMagic)) != 0)
     return make_error<JITLinkError>("ELF magic not valid");
 
+  uint8_t DataEncoding = Buffer.data()[ELF::EI_DATA];
   Expected<uint16_t> TargetMachineArch = readTargetMachineArch(Buffer);
   if (!TargetMachineArch)
     return TargetMachineArch.takeError();
@@ -74,6 +76,12 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer) {
     return createLinkGraphFromELFObject_aarch32(ObjectBuffer);
   case ELF::EM_LOONGARCH:
     return createLinkGraphFromELFObject_loongarch(ObjectBuffer);
+  case ELF::EM_PPC64: {
+    if (DataEncoding == ELF::ELFDATA2LSB)
+      return createLinkGraphFromELFObject_ppc64le(ObjectBuffer);
+    else
+      return createLinkGraphFromELFObject_ppc64(ObjectBuffer);
+  }
   case ELF::EM_RISCV:
     return createLinkGraphFromELFObject_riscv(ObjectBuffer);
   case ELF::EM_X86_64:
@@ -102,6 +110,12 @@ void link_ELF(std::unique_ptr<LinkGraph> G,
   case Triple::loongarch32:
   case Triple::loongarch64:
     link_ELF_loongarch(std::move(G), std::move(Ctx));
+    return;
+  case Triple::ppc64:
+    link_ELF_ppc64(std::move(G), std::move(Ctx));
+    return;
+  case Triple::ppc64le:
+    link_ELF_ppc64le(std::move(G), std::move(Ctx));
     return;
   case Triple::riscv32:
   case Triple::riscv64:
