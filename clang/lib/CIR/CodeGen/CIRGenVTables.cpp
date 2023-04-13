@@ -157,16 +157,18 @@ void CIRGenVTables::GenerateClassData(const CXXRecordDecl *RD) {
   llvm_unreachable("NYI");
 }
 
-static void AddPointerLayoutOffset(const CIRGenModule &CGM,
+static void AddPointerLayoutOffset(CIRGenModule &CGM,
                                    ConstantArrayBuilder &builder,
                                    CharUnits offset) {
-  llvm_unreachable("NYI");
+  assert(offset.getQuantity() == 0 && "NYI");
+  builder.add(mlir::cir::NullAttr::get(CGM.getBuilder().getContext(),
+                                       CGM.getBuilder().getInt8PtrTy()));
   // builder.add(llvm::ConstantExpr::getIntToPtr(
   //     llvm::ConstantInt::get(CGM.PtrDiffTy, offset.getQuantity()),
   //     CGM.Int8PtrTy));
 }
 
-static void AddRelativeLayoutOffset(const CIRGenModule &CGM,
+static void AddRelativeLayoutOffset(CIRGenModule &CGM,
                                     ConstantArrayBuilder &builder,
                                     CharUnits offset) {
   llvm_unreachable("NYI");
@@ -202,9 +204,9 @@ void CIRGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       //                             vtableHasLocalLinkage,
       //                             /*isCompleteDtor=*/false);
     } else {
-      llvm_unreachable("NYI");
-      // return builder.add(llvm::ConstantExpr::getBitCast(rtti,
-      // CGM.Int8PtrTy));
+      assert(rtti.isa<mlir::cir::GlobalViewAttr>() &&
+             "expected GlobalViewAttr");
+      return builder.add(rtti);
     }
 
   case VTableComponent::CK_FunctionPointer:
