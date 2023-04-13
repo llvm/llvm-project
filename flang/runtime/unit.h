@@ -165,14 +165,14 @@ private:
   // Points to the active alternative (if any) in u_ for use as a Cookie
   std::optional<IoStatementState> io_;
 
-  // A stack of child I/O pseudo-units for user-defined derived type
-  // I/O that have this unit number.
+  // A stack of child I/O pseudo-units for defined I/O that have this
+  // unit number.
   OwningPtr<ChildIo> child_;
 };
 
-// A pseudo-unit for child I/O statements in user-defined derived type
-// I/O subroutines; it forwards operations to the parent I/O statement,
-// which can also be a child I/O statement.
+// A pseudo-unit for child I/O statements in defined I/O subroutines;
+// it forwards operations to the parent I/O statement, which might also
+// be a child I/O statement.
 class ChildIo {
 public:
   ChildIo(IoStatementState &parent, OwningPtr<ChildIo> &&previous)

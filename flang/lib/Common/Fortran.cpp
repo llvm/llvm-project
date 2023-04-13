@@ -60,4 +60,18 @@ const char *AsFortran(RelationalOperator opr) {
   }
 }
 
+const char *AsFortran(DefinedIo x) {
+  switch (x) {
+    SWITCH_COVERS_ALL_CASES
+  case DefinedIo::ReadFormatted:
+    return "read(formatted)";
+  case DefinedIo::ReadUnformatted:
+    return "read(unformatted)";
+  case DefinedIo::WriteFormatted:
+    return "write(formatted)";
+  case DefinedIo::WriteUnformatted:
+    return "write(unformatted)";
+  }
+}
+
 } // namespace Fortran::common

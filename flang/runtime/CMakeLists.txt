@@ -130,6 +130,7 @@ add_flang_library(FortranRuntime
   memory.cpp
   misc-intrinsic.cpp
   namelist.cpp
+  non-tbp-dio.cpp
   numeric.cpp
   ragged.cpp
   random.cpp
