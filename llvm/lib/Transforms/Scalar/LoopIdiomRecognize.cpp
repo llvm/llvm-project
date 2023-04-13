@@ -1003,11 +1003,11 @@ static const SCEV *getTripCount(const SCEV *BECount, Type *IntPtr,
           CurLoop, ICmpInst::ICMP_NE, BECount,
           SE->getMinusOne(BECount->getType()))) {
     TripCountS = SE->getZeroExtendExpr(
-        SE->getAddExpr(BECount, SE->getOne(BECount->getType()), SCEV::FlagNUW),
+        SE->getAddExpr(BECount, SE->getOne(BECount->getType())),
         IntPtr);
   } else {
     TripCountS = SE->getAddExpr(SE->getTruncateOrZeroExtend(BECount, IntPtr),
-                                SE->getOne(IntPtr), SCEV::FlagNUW);
+                                SE->getOne(IntPtr));
   }
 
   return TripCountS;
