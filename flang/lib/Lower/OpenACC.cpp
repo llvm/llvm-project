@@ -575,14 +575,11 @@ createParallelOp(Fortran::lower::AbstractConverter &converter,
           firOpBuilder, currentLocation, operands, operandSegments);
 
   if (addAsyncAttr)
-    parallelOp->setAttr(mlir::acc::ParallelOp::getAsyncAttrName(),
-                        firOpBuilder.getUnitAttr());
+    parallelOp.setAsyncAttrAttr(firOpBuilder.getUnitAttr());
   if (addWaitAttr)
-    parallelOp->setAttr(mlir::acc::ParallelOp::getWaitAttrName(),
-                        firOpBuilder.getUnitAttr());
+    parallelOp.setWaitAttrAttr(firOpBuilder.getUnitAttr());
   if (addSelfAttr)
-    parallelOp->setAttr(mlir::acc::ParallelOp::getSelfAttrName(),
-                        firOpBuilder.getUnitAttr());
+    parallelOp.setSelfAttrAttr(firOpBuilder.getUnitAttr());
 
   return parallelOp;
 }

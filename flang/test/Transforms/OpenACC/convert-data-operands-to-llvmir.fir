@@ -93,9 +93,9 @@ func.func @_QQsub_parallel() attributes {fir.bindc_name = "test"} {
 // CHECK-LABEL: func.func @_QQsub_parallel() attributes {fir.bindc_name = "test"} {
 // CHECK: %[[ADDR:.*]] = fir.address_of(@_QFEa) : !fir.ref<!fir.array<10xf32>>
 // CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[ADDR]] : !fir.ref<!fir.array<10xf32>> to !llvm.ptr<array<10 x f32>>
-// CHECK: acc.parallel copyin(%[[CAST]]: !llvm.ptr<array<10 x f32>>) {
+// CHECK: acc.parallel copyin(%[[CAST]] : !llvm.ptr<array<10 x f32>>) {
 // CHECK:   acc.loop
 
 // LLVMIR-LABEL: llvm.func @_QQsub_parallel() attributes {fir.bindc_name = "test"} {
 // LLVMIR: %[[ADDR:.*]] = llvm.mlir.addressof @_QFEa : !llvm.ptr<array<10 x f32>>
-// LLVMIR: acc.parallel copyin(%[[ADDR]]: !llvm.ptr<array<10 x f32>>) {
+// LLVMIR: acc.parallel copyin(%[[ADDR]] : !llvm.ptr<array<10 x f32>>) {
