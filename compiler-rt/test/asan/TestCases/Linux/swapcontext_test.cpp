@@ -1,9 +1,9 @@
 // Check that ASan plays well with easy cases of makecontext/swapcontext.
 
-// RUN: %clangxx_asan -O0 %s -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_asan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_asan -O2 %s -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_asan -O3 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O0 %s -o %t && %run %t
+// RUN: %clangxx_asan -O3 %s -o %t && %run %t
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=never -O0 %s -o %t && %run %t
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=never -O3 %s -o %t && %run %t
 //
 // This test is too sublte to try on non-x86 arch for now.
 // Android and musl do not support swapcontext.
@@ -76,22 +76,12 @@ int Run(int arg, int mode, char *child_stack) {
 
 int main(int argc, char **argv) {
   char stack[kStackSize + 1];
-  // CHECK: WARNING: ASan doesn't fully support makecontext/swapcontext
   int ret = 0;
   ret += Run(argc - 1, 0, stack);
-  printf("Test1 passed\n");
-  // CHECK: Test1 passed
   ret += Run(argc - 1, 1, stack);
-  printf("Test2 passed\n");
-  // CHECK: Test2 passed
   char *heap = new char[kStackSize + 1];
   ret += Run(argc - 1, 0, heap);
-  printf("Test3 passed\n");
-  // CHECK: Test3 passed
   ret += Run(argc - 1, 1, heap);
-  printf("Test4 passed\n");
-  // CHECK: Test4 passed
-
   delete [] heap;
   return ret;
 }
