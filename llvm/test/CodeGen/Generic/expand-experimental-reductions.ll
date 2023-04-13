@@ -225,9 +225,8 @@ define i64 @smax_i64(<2 x i64> %vec) {
 ; CHECK-LABEL: @smax_i64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <2 x i64> [[VEC]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <2 x i1> [[RDX_MINMAX_CMP]], <2 x i64> [[VEC]], <2 x i64> [[RDX_SHUF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[RDX_MINMAX_SELECT]], i32 0
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <2 x i64> @llvm.smax.v2i64(<2 x i64> [[VEC]], <2 x i64> [[RDX_SHUF]])
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[RDX_MINMAX]], i32 0
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
@@ -239,9 +238,8 @@ define i64 @smin_i64(<2 x i64> %vec) {
 ; CHECK-LABEL: @smin_i64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp slt <2 x i64> [[VEC]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <2 x i1> [[RDX_MINMAX_CMP]], <2 x i64> [[VEC]], <2 x i64> [[RDX_SHUF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[RDX_MINMAX_SELECT]], i32 0
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <2 x i64> @llvm.smin.v2i64(<2 x i64> [[VEC]], <2 x i64> [[RDX_SHUF]])
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[RDX_MINMAX]], i32 0
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
@@ -253,9 +251,8 @@ define i64 @umax_i64(<2 x i64> %vec) {
 ; CHECK-LABEL: @umax_i64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ugt <2 x i64> [[VEC]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <2 x i1> [[RDX_MINMAX_CMP]], <2 x i64> [[VEC]], <2 x i64> [[RDX_SHUF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[RDX_MINMAX_SELECT]], i32 0
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <2 x i64> @llvm.umax.v2i64(<2 x i64> [[VEC]], <2 x i64> [[RDX_SHUF]])
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[RDX_MINMAX]], i32 0
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
@@ -267,9 +264,8 @@ define i64 @umin_i64(<2 x i64> %vec) {
 ; CHECK-LABEL: @umin_i64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ult <2 x i64> [[VEC]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <2 x i1> [[RDX_MINMAX_CMP]], <2 x i64> [[VEC]], <2 x i64> [[RDX_SHUF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[RDX_MINMAX_SELECT]], i32 0
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <2 x i64> @llvm.umin.v2i64(<2 x i64> [[VEC]], <2 x i64> [[RDX_SHUF]])
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[RDX_MINMAX]], i32 0
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:

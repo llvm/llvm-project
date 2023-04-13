@@ -903,8 +903,12 @@ static void processStubLibraries() {
                 ": undefined symbol: " + toString(*needed) +
                 ". Required by " + toString(*sym));
         } else {
-          LLVM_DEBUG(llvm::dbgs()
-                     << "force export: " << toString(*needed) << "\n");
+          if (needed->traced)
+            message(toString(stub_file) + ": exported " + toString(*needed) +
+                    " due to import of " + name);
+          else
+            LLVM_DEBUG(llvm::dbgs()
+                       << "force export: " << toString(*needed) << "\n");
           needed->forceExport = true;
           if (auto *lazy = dyn_cast<LazySymbol>(needed)) {
             lazy->fetch();

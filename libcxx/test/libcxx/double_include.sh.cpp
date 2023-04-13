@@ -13,9 +13,6 @@
 // RUN: %{cxx} -o %t.exe %t.first.o %t.second.o %{flags} %{link_flags}
 // RUN: %{run}
 
-// The system-provided <uchar.h> seems to be broken on AIX
-// XFAIL: LIBCXX-AIX-FIXME
-
 // Prevent <ext/hash_map> from generating deprecated warnings for this test.
 #if defined(__DEPRECATED)
 #    undef __DEPRECATED

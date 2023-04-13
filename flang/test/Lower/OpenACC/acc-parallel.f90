@@ -40,7 +40,7 @@ subroutine acc_parallel
   !$acc end parallel
 
 !CHECK:      [[ASYNC1:%.*]] = arith.constant 1 : i32
-!CHECK:      acc.parallel async([[ASYNC1]]: i32) {
+!CHECK:      acc.parallel async([[ASYNC1]] : i32) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
@@ -48,7 +48,7 @@ subroutine acc_parallel
   !$acc end parallel
 
 !CHECK:      [[ASYNC2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK:      acc.parallel async([[ASYNC2]]: i32) {
+!CHECK:      acc.parallel async([[ASYNC2]] : i32) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
@@ -63,7 +63,7 @@ subroutine acc_parallel
   !$acc end parallel
 
 !CHECK:      [[WAIT1:%.*]] = arith.constant 1 : i32
-!CHECK:      acc.parallel wait([[WAIT1]]: i32) {
+!CHECK:      acc.parallel wait([[WAIT1]] : i32) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
@@ -72,7 +72,7 @@ subroutine acc_parallel
 
 !CHECK:      [[WAIT2:%.*]] = arith.constant 1 : i32
 !CHECK:      [[WAIT3:%.*]] = arith.constant 2 : i32
-!CHECK:      acc.parallel wait([[WAIT2]]: i32, [[WAIT3]]: i32) {
+!CHECK:      acc.parallel wait([[WAIT2]], [[WAIT3]] : i32, i32) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
@@ -81,7 +81,7 @@ subroutine acc_parallel
 
 !CHECK:      [[WAIT4:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
 !CHECK:      [[WAIT5:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK:      acc.parallel wait([[WAIT4]]: i32, [[WAIT5]]: i32) {
+!CHECK:      acc.parallel wait([[WAIT4]], [[WAIT5]] : i32, i32) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
@@ -89,7 +89,7 @@ subroutine acc_parallel
   !$acc end parallel
 
 !CHECK:      [[NUMGANGS1:%.*]] = arith.constant 1 : i32
-!CHECK:      acc.parallel num_gangs([[NUMGANGS1]]: i32) {
+!CHECK:      acc.parallel num_gangs([[NUMGANGS1]] : i32) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
@@ -97,7 +97,7 @@ subroutine acc_parallel
   !$acc end parallel
 
 !CHECK:      [[NUMGANGS2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK:      acc.parallel num_gangs([[NUMGANGS2]]: i32) {
+!CHECK:      acc.parallel num_gangs([[NUMGANGS2]] : i32) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
@@ -105,7 +105,7 @@ subroutine acc_parallel
   !$acc end parallel
 
 !CHECK:      [[NUMWORKERS1:%.*]] = arith.constant 10 : i32
-!CHECK:      acc.parallel num_workers([[NUMWORKERS1]]: i32) {
+!CHECK:      acc.parallel num_workers([[NUMWORKERS1]] : i32) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
@@ -113,7 +113,7 @@ subroutine acc_parallel
   !$acc end parallel
 
 !CHECK:      [[NUMWORKERS2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK:      acc.parallel num_workers([[NUMWORKERS2]]: i32) {
+!CHECK:      acc.parallel num_workers([[NUMWORKERS2]] : i32) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
@@ -121,7 +121,7 @@ subroutine acc_parallel
   !$acc end parallel
 
 !CHECK:      [[VECTORLENGTH1:%.*]] = arith.constant 128 : i32
-!CHECK:      acc.parallel vector_length([[VECTORLENGTH1]]: i32) {
+!CHECK:      acc.parallel vector_length([[VECTORLENGTH1]] : i32) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
@@ -129,7 +129,7 @@ subroutine acc_parallel
   !$acc end parallel
 
 !CHECK:      [[VECTORLENGTH2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK:      acc.parallel vector_length([[VECTORLENGTH2]]: i32) {
+!CHECK:      acc.parallel vector_length([[VECTORLENGTH2]] : i32) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
@@ -176,70 +176,70 @@ subroutine acc_parallel
   !$acc parallel copy(a, b, c)
   !$acc end parallel
 
-!CHECK:      acc.parallel copy([[A]]: !fir.ref<!fir.array<10x10xf32>>, [[B]]: !fir.ref<!fir.array<10x10xf32>>, [[C]]: !fir.ref<!fir.array<10x10xf32>>) {
+!CHECK:      acc.parallel copy([[A]], [[B]], [[C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
   !$acc parallel copy(a) copy(b) copy(c)
   !$acc end parallel
 
-!CHECK:      acc.parallel copy([[A]]: !fir.ref<!fir.array<10x10xf32>>, [[B]]: !fir.ref<!fir.array<10x10xf32>>, [[C]]: !fir.ref<!fir.array<10x10xf32>>) {
+!CHECK:      acc.parallel copy([[A]], [[B]], [[C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
   !$acc parallel copyin(a) copyin(readonly: b, c)
   !$acc end parallel
 
-!CHECK:      acc.parallel copyin([[A]]: !fir.ref<!fir.array<10x10xf32>>) copyin_readonly([[B]]: !fir.ref<!fir.array<10x10xf32>>, [[C]]: !fir.ref<!fir.array<10x10xf32>>) {
+!CHECK:      acc.parallel copyin([[A]] : !fir.ref<!fir.array<10x10xf32>>) copyin_readonly([[B]], [[C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
   !$acc parallel copyout(a) copyout(zero: b) copyout(c)
   !$acc end parallel
 
-!CHECK:      acc.parallel copyout([[A]]: !fir.ref<!fir.array<10x10xf32>>, [[C]]: !fir.ref<!fir.array<10x10xf32>>) copyout_zero([[B]]: !fir.ref<!fir.array<10x10xf32>>) {
+!CHECK:      acc.parallel copyout([[A]], [[C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) copyout_zero([[B]] : !fir.ref<!fir.array<10x10xf32>>) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
   !$acc parallel create(a, b) create(zero: c)
   !$acc end parallel
 
-!CHECK:      acc.parallel create([[A]]: !fir.ref<!fir.array<10x10xf32>>, [[B]]: !fir.ref<!fir.array<10x10xf32>>) create_zero([[C]]: !fir.ref<!fir.array<10x10xf32>>) {
+!CHECK:      acc.parallel create([[A]], [[B]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) create_zero([[C]] : !fir.ref<!fir.array<10x10xf32>>) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
   !$acc parallel no_create(a, b) create(zero: c)
   !$acc end parallel
 
-!CHECK:      acc.parallel create_zero([[C]]: !fir.ref<!fir.array<10x10xf32>>) no_create([[A]]: !fir.ref<!fir.array<10x10xf32>>, [[B]]: !fir.ref<!fir.array<10x10xf32>>) {
+!CHECK:      acc.parallel create_zero([[C]] : !fir.ref<!fir.array<10x10xf32>>) no_create([[A]], [[B]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
   !$acc parallel present(a, b, c)
   !$acc end parallel
 
-!CHECK:      acc.parallel present([[A]]: !fir.ref<!fir.array<10x10xf32>>, [[B]]: !fir.ref<!fir.array<10x10xf32>>, [[C]]: !fir.ref<!fir.array<10x10xf32>>) {
+!CHECK:      acc.parallel present([[A]], [[B]], [[C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
   !$acc parallel deviceptr(a) deviceptr(c)
   !$acc end parallel
 
-!CHECK:      acc.parallel deviceptr([[A]]: !fir.ref<!fir.array<10x10xf32>>, [[C]]: !fir.ref<!fir.array<10x10xf32>>) {
+!CHECK:      acc.parallel deviceptr([[A]], [[C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
   !$acc parallel attach(d, e)
   !$acc end parallel
 
-!CHECK:      acc.parallel attach([[D]]: !fir.ref<!fir.box<!fir.ptr<f32>>>, [[E]]: !fir.ref<!fir.box<!fir.ptr<f32>>>) {
+!CHECK:      acc.parallel attach([[D]], [[E]] : !fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
   !$acc parallel private(a) firstprivate(b) private(c)
   !$acc end parallel
 
-!CHECK:      acc.parallel private([[A]]: !fir.ref<!fir.array<10x10xf32>>, [[C]]: !fir.ref<!fir.array<10x10xf32>>) firstprivate([[B]]: !fir.ref<!fir.array<10x10xf32>>) {
+!CHECK:      acc.parallel firstprivate([[B]] : !fir.ref<!fir.array<10x10xf32>>) private([[A]], [[C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
