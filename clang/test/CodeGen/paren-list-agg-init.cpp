@@ -99,6 +99,14 @@ namespace gh62266 {
   };
 }
 
+namespace gh61567 {
+  // CHECK-DAG: [[STRUCT_I:%.*I.*]] = type { i32, ptr }
+  struct I {
+    int a;
+    int&& r = 2;
+  };
+}
+
 // CHECK-DAG: [[A1:@.*a1.*]] = internal constant [[STRUCT_A]] { i8 3, double 2.000000e+00 }, align 8
 constexpr A a1(3.1, 2.0);
 // CHECK-DAG: [[A2:@.*a2.*]] = internal constant [[STRUCT_A]] { i8 99, double 0.000000e+00 }, align 8
@@ -442,5 +450,66 @@ namespace gh62266 {
   // CHECK-NEXT: ret void
   void foo20() {
     H<2> h(1);
+  }
+}
+
+namespace gh61567 {
+  int foo20();
+
+  // CHECK: define {{.*}} void @{{.*foo21.*}} {
+  // CHECK-NEXT: entry
+  // CHECK-NEXT: [[AGG_TMP_ENSURED:%.*]] = alloca [[STRUCT_I]], align 8
+  // CHECK-NEXT: [[REF_TMP:%.*]] = alloca i32, align 4
+  // CHECK-NEXT: [[A:%.*a.*]] = getelementptr inbounds [[STRUCT_I]], ptr [[AGG_TMP_ENSURED]], i32 0, i32 0
+  // CHECK-NEXT: store i32 0, ptr [[A]], align 8
+  // CHECK-NEXT: [[R:%.*r.*]] = getelementptr inbounds [[STRUCT_I]], ptr [[AGG_TMP_ENSURED]], i32 0, i32 1
+  // CHECK-NEXT: store i32 1, ptr [[REF_TMP]], align 4
+  // CHECK-NEXT: store ptr [[REF_TMP]], ptr [[R]], align 8
+  // CHECK-NEXT: ret void
+  void foo21() {
+    I(0, 1);
+  }
+
+  // CHECK: define {{.*}} void @{{.*foo22.*}} {
+  // CHECK-NEXT: entry
+  // CHECK-NEXT: [[AGG_TMP_ENSURED:%.*]] = alloca [[STRUCT_I]], align 8
+  // CHECK-NEXT: [[REF_TMP:%.*]] = alloca i32, align 4
+  // CHECK-NEXT: [[A:%.*a.*]] = getelementptr inbounds [[STRUCT_I]], ptr [[AGG_TMP_ENSURED]], i32 0, i32 0
+  // CHECK-NEXT: store i32 0, ptr [[A]], align 8
+  // CHECK-NEXT: [[R:%.*r.*]] = getelementptr inbounds [[STRUCT_I]], ptr [[AGG_TMP_ENSURED]], i32 0, i32 1
+  // CHECK-NEXT: [[CALL:%.*call*]] = call noundef i32 @{{.*foo20.*}}
+  // CHECK-NEXT: store i32 [[CALL]], ptr [[REF_TMP]], align 4
+  // CHECK-NEXT: store ptr [[REF_TMP]], ptr [[R]], align 8
+  // CHECK-NEXT: ret void
+  void foo22() {
+    I(0, foo20());
+  }
+
+  // CHECK: define {{.*}} void @{{.*foo23.*}}(i32 noundef [[I:%.*i.*]])
+  // CHECK-NEXT: entry
+  // CHECK-NEXT: [[I_ADDR:%.*i.*]] = alloca i32, align 4
+  // CHECK-NEXT: [[AGG_TMP_ENSURED:%.*]] = alloca [[STRUCT_I]], align 8
+  // CHECK-NEXT: store i32 [[I]], ptr [[I_ADDR]], align 4
+  // CHECK-NEXT: [[A:%.*a.*]] = getelementptr inbounds [[STRUCT_I]], ptr [[AGG_TMP_ENSURED]], i32 0, i32 0
+  // CHECK-NEXT: store i32 0, ptr [[A]], align 8
+  // CHECK-NEXT: [[R:%.*r.*]] = getelementptr inbounds [[STRUCT_I]], ptr [[AGG_TMP_ENSURED]], i32 0, i32 1
+  // CHECK-NEXT: store ptr [[I_ADDR]], ptr [[R]], align 8
+  // CHECK-NEXT: ret void
+  void foo23(int i) {
+    I(0, static_cast<int&&>(i));
+  }
+
+  // CHECK: define {{.*}} void @{{.*foo24.*}} {
+  // CHECK-NEXT: entry
+  // CHECK-NEXT: [[AGG_TMP_ENSURED:%.*]] = alloca [[STRUCT_I]], align 8
+  // CHECK-NEXT: [[REF_TMP:%.*]] = alloca i32, align 4
+  // CHECK-NEXT: [[A:%.*a.*]] = getelementptr inbounds [[STRUCT_I]], ptr [[AGG_TMP_ENSURED]], i32 0, i32 0
+  // CHECK-NEXT: store i32 0, ptr [[A]], align 8
+  // CHECK-NEXT: [[R:%.*r.*]] = getelementptr inbounds [[STRUCT_I]], ptr [[AGG_TMP_ENSURED]], i32 0, i32 1
+  // CHECK-NEXT: store i32 2, ptr [[REF_TMP]], align 4
+  // CHECK-NEXT: store ptr [[REF_TMP]], ptr [[R]], align 8
+  // CHECK-NEXT: ret void
+  void foo24() {
+    I(0);
   }
 }

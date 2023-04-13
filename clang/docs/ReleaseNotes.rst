@@ -373,9 +373,15 @@ Bug Fixes to C++ Support
 - Fix bug in the computation of the ``__has_unique_object_representations``
   builtin for types with unnamed bitfields.
   (`#61336 <https://github.com/llvm/llvm-project/issues/61336>`_)
+<<<<<<< HEAD
 - Fix default member initializers sometimes being ignored when performing
   parenthesized aggregate initialization of templated types.
   (`#62266 <https://github.com/llvm/llvm-project/issues/62266>`_)
+=======
+- Fix overly aggressive lifetime checks for parenthesized aggregate
+  initialization.
+  (`#61567 <https://github.com/llvm/llvm-project/issues/61567>`_)
+>>>>>>> c7422b289522 ([clang] Fix overly aggressive lifetime checks for parenthesized aggregate initialization)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
