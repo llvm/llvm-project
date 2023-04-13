@@ -4633,8 +4633,7 @@ define i1 @zext_notbool_and_ne0(i2 %x, i8 %y) {
 
 define i1 @or_positive_sgt_zero(i8 %a) {
 ; CHECK-LABEL: @or_positive_sgt_zero(
-; CHECK-NEXT:    [[B:%.*]] = or i8 [[A:%.*]], 24
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[B]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %b = or i8 %a, 24
@@ -4644,8 +4643,7 @@ define i1 @or_positive_sgt_zero(i8 %a) {
 
 define <2 x i1> @or_postive_sgt_zero_vec(<2 x i8> %a) {
 ; CHECK-LABEL: @or_postive_sgt_zero_vec(
-; CHECK-NEXT:    [[B:%.*]] = or <2 x i8> [[A:%.*]], <i8 24, i8 24>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[B]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[A:%.*]], <i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
 
@@ -4697,8 +4695,7 @@ define <2 x i1> @or_poison_vec_sge_zero_vec(<2 x i8> %a) {
 
 define i1 @or_positive_sge_postive(i8 %a) {
 ; CHECK-LABEL: @or_positive_sge_postive(
-; CHECK-NEXT:    [[B:%.*]] = or i8 [[A:%.*]], 24
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[B]], 23
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %b = or i8 %a, 24
@@ -4708,8 +4705,7 @@ define i1 @or_positive_sge_postive(i8 %a) {
 
 define <2 x i1> @or_postive_sge_positive_vec(<2 x i8> %a) {
 ; CHECK-LABEL: @or_postive_sge_positive_vec(
-; CHECK-NEXT:    [[B:%.*]] = or <2 x i8> [[A:%.*]], <i8 24, i8 24>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[B]], <i8 23, i8 23>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[A:%.*]], <i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
 
@@ -4730,8 +4726,7 @@ define <2 x i1> @or_poison_vec_sge_positive_vec(<2 x i8> %a) {
 
 define i1 @or_positive_sle_zero(i8 %a) {
 ; CHECK-LABEL: @or_positive_sle_zero(
-; CHECK-NEXT:    [[B:%.*]] = or i8 [[A:%.*]], 24
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[B]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %b = or i8 %a, 24
@@ -4741,8 +4736,7 @@ define i1 @or_positive_sle_zero(i8 %a) {
 
 define <2 x i1> @or_postive_sle_zero_vec(<2 x i8> %a) {
 ; CHECK-LABEL: @or_postive_sle_zero_vec(
-; CHECK-NEXT:    [[B:%.*]] = or <2 x i8> [[A:%.*]], <i8 24, i8 24>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[B]], <i8 1, i8 1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[A:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
 
@@ -4794,8 +4788,7 @@ define <2 x i1> @or_poison_vec_slt_zero_vec(<2 x i8> %a) {
 
 define i1 @or_positive_slt_postive(i8 %a) {
 ; CHECK-LABEL: @or_positive_slt_postive(
-; CHECK-NEXT:    [[B:%.*]] = or i8 [[A:%.*]], 24
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[B]], 24
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[A:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %b = or i8 %a, 24
@@ -4805,8 +4798,7 @@ define i1 @or_positive_slt_postive(i8 %a) {
 
 define <2 x i1> @or_postive_slt_positive_vec(<2 x i8> %a) {
 ; CHECK-LABEL: @or_postive_slt_positive_vec(
-; CHECK-NEXT:    [[B:%.*]] = or <2 x i8> [[A:%.*]], <i8 24, i8 24>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[B]], <i8 24, i8 24>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[A:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
 
@@ -4965,7 +4957,7 @@ define i1 @or_positive_sgt_zero_multi_use(i8 %a) {
 ; CHECK-LABEL: @or_positive_sgt_zero_multi_use(
 ; CHECK-NEXT:    [[B:%.*]] = or i8 [[A:%.*]], 24
 ; CHECK-NEXT:    call void @use_i8(i8 [[B]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[B]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %b = or i8 %a, 24
