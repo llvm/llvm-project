@@ -279,6 +279,25 @@ isVectorizableLoopBodyWithOpCond(AffineForOp loop,
     return false;
   }
 
+  // No vectorization for ops with operand or result types that are not
+  // vectorizable.
+  auto types = matcher::Op([](Operation &op) -> bool {
+    if (llvm::any_of(op.getOperandTypes(), [](Type type) {
+          if (MemRefType t = dyn_cast<MemRefType>(type))
+            return !VectorType::isValidElementType(t.getElementType());
+          return !VectorType::isValidElementType(type);
+        }))
+      return true;
+    return llvm::any_of(op.getResultTypes(), [](Type type) {
+      return !VectorType::isValidElementType(type);
+    });
+  });
+  SmallVector<NestedMatch, 8> opsMatched;
+  types.match(forOp, &opsMatched);
+  if (!opsMatched.empty()) {
+    return false;
+  }
+
   // No vectorization across unknown regions.
   auto regions = matcher::Op([](Operation &op) -> bool {
     return op.getNumRegions() != 0 && !isa<AffineIfOp, AffineForOp>(op);
