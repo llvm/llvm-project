@@ -182,6 +182,21 @@ Changes to LLDB
 
 Changes to Sanitizers
 ---------------------
+* For Darwin users that override weak symbols, note that the dynamic linker will
+  only consider symbols in other mach-o modules which themselves contain at
+  least one weak symbol. A consequence is that if your program or dylib contains
+  an intended override of a weak symbol, then it must contain at least one weak
+  symbol as well for the override to take effect.
+
+  Example:
+
+  .. code-block:: c
+
+    // Add this to make sure your override takes effect
+    __attribute__((weak,unused)) unsigned __enableOverrides;
+
+    // Example override
+    extern "C" const char *__asan_default_options() { ... }
 
 
 Other Changes
