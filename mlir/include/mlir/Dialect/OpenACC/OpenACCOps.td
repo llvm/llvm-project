@@ -497,7 +497,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop", [AttrSizedOperandSegments]> {
 
 // Yield operation for the acc.loop and acc.parallel operations.
 def OpenACC_YieldOp : OpenACC_Op<"yield", [Terminator,
-    ParentOneOf<["ParallelOp, LoopOp"]>]> {
+    ParentOneOf<["ParallelOp, LoopOp, SerialOp"]>]> {
   let summary = "Acc yield and termination operation";
 
   let description = [{
