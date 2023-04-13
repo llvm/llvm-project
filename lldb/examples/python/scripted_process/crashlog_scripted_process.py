@@ -100,9 +100,6 @@ class CrashLogScriptedProcess(ScriptedProcess):
         # from it.
         return self.loaded_images
 
-    def get_process_id(self) -> int:
-        return self.pid
-
     def should_stop(self) -> bool:
         return True
 

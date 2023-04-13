@@ -168,7 +168,10 @@ Status ScriptedProcess::DoLaunch(Module *exe_module,
   return {};
 }
 
+void ScriptedProcess::DidLaunch() { m_pid = GetInterface().GetProcessID(); }
+
 void ScriptedProcess::DidResume() {
+  // Update the PID again, in case the user provided a placeholder pid at launch
   m_pid = GetInterface().GetProcessID();
   GetLoadedDynamicLibrariesInfos();
 }
