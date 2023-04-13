@@ -1054,14 +1054,11 @@ static const SCEV *NoopOrExtend(const SCEV *S, Type *Ty, ScalarEvolution &SE,
 
 std::optional<LoopConstrainer::SubRanges>
 LoopConstrainer::calculateSubRanges(bool IsSignedPredicate) const {
-  const IntegerType *Ty = ExitCountTy;
-
   auto *RTy = cast<IntegerType>(Range.getType());
-
   // We only support wide range checks and narrow latches.
-  if (!AllowNarrowLatchCondition && RTy != Ty)
+  if (!AllowNarrowLatchCondition && RTy != ExitCountTy)
     return std::nullopt;
-  if (RTy->getBitWidth() < Ty->getBitWidth())
+  if (RTy->getBitWidth() < ExitCountTy->getBitWidth())
     return std::nullopt;
 
   LoopConstrainer::SubRanges Result;
