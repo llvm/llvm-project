@@ -35,6 +35,7 @@ FIXABLE_GADGET(DerefSimplePtrArithFixable)
 FIXABLE_GADGET(PointerDereference)
 FIXABLE_GADGET(UPCAddressofArraySubscript) // '&DRE[any]' in an Unspecified Pointer Context
 FIXABLE_GADGET(UPCStandalonePointer)
+FIXABLE_GADGET(UPCPreIncrement)            // '++Ptr' in an Unspecified Pointer Context
 
 #undef FIXABLE_GADGET
 #undef WARNING_GADGET

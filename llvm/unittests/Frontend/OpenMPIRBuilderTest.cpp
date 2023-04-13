@@ -161,7 +161,7 @@ static omp::ScheduleKind getSchedKind(omp::OMPScheduleType SchedType) {
 class OpenMPIRBuilderTest : public testing::Test {
 protected:
   void SetUp() override {
-    Ctx.setOpaquePointers(false); // TODO: Update tests for opaque pointers.
+    Ctx.setOpaquePointers(true);
     M.reset(new Module("MyModule", Ctx));
     FunctionType *FTy =
         FunctionType::get(Type::getVoidTy(Ctx), {Type::getInt32Ty(Ctx)},
@@ -680,8 +680,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
   EXPECT_EQ(&OutlinedFn->getEntryBlock(), PrivAI->getParent());
   EXPECT_EQ(OutlinedFn->getNumUses(), 1U);
   User *Usr = OutlinedFn->user_back();
-  ASSERT_TRUE(isa<ConstantExpr>(Usr));
-  CallInst *ForkCI = dyn_cast<CallInst>(Usr->user_back());
+  ASSERT_TRUE(isa<CallInst>(Usr));
+  CallInst *ForkCI = dyn_cast<CallInst>(Usr);
   ASSERT_NE(ForkCI, nullptr);
 
   EXPECT_EQ(ForkCI->getCalledFunction()->getName(), "__kmpc_fork_call");
@@ -689,7 +689,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
   EXPECT_TRUE(isa<GlobalVariable>(ForkCI->getArgOperand(0)));
   EXPECT_EQ(ForkCI->getArgOperand(1),
             ConstantInt::get(Type::getInt32Ty(Ctx), 1U));
-  EXPECT_EQ(ForkCI->getArgOperand(2), Usr);
+  EXPECT_EQ(ForkCI, Usr);
   Value *StoredValue =
       findStoredValueInAggregateAt(Ctx, ForkCI->getArgOperand(3), 0);
   EXPECT_EQ(StoredValue, F->arg_begin());
@@ -776,8 +776,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested) {
 
     EXPECT_EQ(OutlinedFn.getNumUses(), 1U);
     User *Usr = OutlinedFn.user_back();
-    ASSERT_TRUE(isa<ConstantExpr>(Usr));
-    CallInst *ForkCI = dyn_cast<CallInst>(Usr->user_back());
+    ASSERT_TRUE(isa<CallInst>(Usr));
+    CallInst *ForkCI = dyn_cast<CallInst>(Usr);
     ASSERT_NE(ForkCI, nullptr);
 
     EXPECT_EQ(ForkCI->getCalledFunction()->getName(), "__kmpc_fork_call");
@@ -785,7 +785,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested) {
     EXPECT_TRUE(isa<GlobalVariable>(ForkCI->getArgOperand(0)));
     EXPECT_EQ(ForkCI->getArgOperand(1),
               ConstantInt::get(Type::getInt32Ty(Ctx), 0U));
-    EXPECT_EQ(ForkCI->getArgOperand(2), Usr);
+    EXPECT_EQ(ForkCI, Usr);
   }
 }
 
@@ -885,8 +885,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested2Inner) {
 
     EXPECT_EQ(OutlinedFn.getNumUses(), 1U);
     User *Usr = OutlinedFn.user_back();
-    ASSERT_TRUE(isa<ConstantExpr>(Usr));
-    CallInst *ForkCI = dyn_cast<CallInst>(Usr->user_back());
+    ASSERT_TRUE(isa<CallInst>(Usr));
+    CallInst *ForkCI = dyn_cast<CallInst>(Usr);
     ASSERT_NE(ForkCI, nullptr);
 
     EXPECT_EQ(ForkCI->getCalledFunction()->getName(), "__kmpc_fork_call");
@@ -894,7 +894,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested2Inner) {
     EXPECT_TRUE(isa<GlobalVariable>(ForkCI->getArgOperand(0)));
     EXPECT_EQ(ForkCI->getArgOperand(1),
               ConstantInt::get(Type::getInt32Ty(Ctx), 0U));
-    EXPECT_EQ(ForkCI->getArgOperand(2), Usr);
+    EXPECT_EQ(ForkCI, Usr);
   }
 }
 
@@ -990,10 +990,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelIfCond) {
 
   CallInst *ForkCI = nullptr;
   for (User *Usr : OutlinedFn->users()) {
-    ASSERT_TRUE(isa<ConstantExpr>(Usr));
-    ASSERT_EQ(Usr->getNumUses(), 1U);
-    ASSERT_TRUE(isa<CallInst>(Usr->user_back()));
-    ForkCI = cast<CallInst>(Usr->user_back());
+    ASSERT_TRUE(isa<CallInst>(Usr));
+    ForkCI = cast<CallInst>(Usr);
   }
 
   EXPECT_EQ(ForkCI->getCalledFunction()->getName(), "__kmpc_fork_call_if");
@@ -3298,14 +3296,9 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicReadFlt) {
   IntegerType *IntCastTy =
       IntegerType::get(M->getContext(), Float32->getScalarSizeInBits());
 
-  BitCastInst *CastFrmFlt = cast<BitCastInst>(VVal->getNextNode());
-  EXPECT_EQ(CastFrmFlt->getSrcTy(), Float32->getPointerTo());
-  EXPECT_EQ(CastFrmFlt->getDestTy(), IntCastTy->getPointerTo());
-  EXPECT_EQ(CastFrmFlt->getOperand(0), XVal);
-
-  LoadInst *AtomicLoad = cast<LoadInst>(CastFrmFlt->getNextNode());
+  LoadInst *AtomicLoad = cast<LoadInst>(VVal->getNextNode());
   EXPECT_TRUE(AtomicLoad->isAtomic());
-  EXPECT_EQ(AtomicLoad->getPointerOperand(), CastFrmFlt);
+  EXPECT_EQ(AtomicLoad->getPointerOperand(), XVal);
 
   BitCastInst *CastToFlt = cast<BitCastInst>(AtomicLoad->getNextNode());
   EXPECT_EQ(CastToFlt->getSrcTy(), IntCastTy);
@@ -3391,16 +3384,11 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicWriteFlt) {
   IntegerType *IntCastTy =
       IntegerType::get(M->getContext(), Float32->getScalarSizeInBits());
 
-  BitCastInst *CastFrmFlt = cast<BitCastInst>(XVal->getNextNode());
-  EXPECT_EQ(CastFrmFlt->getSrcTy(), Float32->getPointerTo());
-  EXPECT_EQ(CastFrmFlt->getDestTy(), IntCastTy->getPointerTo());
-  EXPECT_EQ(CastFrmFlt->getOperand(0), XVal);
-
   Value *ExprCast = Builder.CreateBitCast(ValToWrite, IntCastTy);
 
-  StoreInst *StoreofAtomic = cast<StoreInst>(CastFrmFlt->getNextNode());
+  StoreInst *StoreofAtomic = cast<StoreInst>(XVal->getNextNode());
   EXPECT_EQ(StoreofAtomic->getValueOperand(), ExprCast);
-  EXPECT_EQ(StoreofAtomic->getPointerOperand(), CastFrmFlt);
+  EXPECT_EQ(StoreofAtomic->getPointerOperand(), XVal);
   EXPECT_TRUE(StoreofAtomic->isAtomic());
 
   Builder.CreateRetVoid();
@@ -3569,19 +3557,13 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateFloat) {
   AtomicCmpXchgInst *CmpExchg =
       dyn_cast<AtomicCmpXchgInst>(ExVI1->getAggregateOperand());
   EXPECT_NE(CmpExchg, nullptr);
-  BitCastInst *BitCastNew =
-      dyn_cast<BitCastInst>(CmpExchg->getPointerOperand());
-  EXPECT_NE(BitCastNew, nullptr);
-  EXPECT_EQ(BitCastNew->getOperand(0), XVal);
+  EXPECT_EQ(CmpExchg->getPointerOperand(), XVal);
   EXPECT_EQ(CmpExchg->getCompareOperand(), Phi);
   EXPECT_EQ(CmpExchg->getSuccessOrdering(), AtomicOrdering::Monotonic);
 
   LoadInst *Ld = dyn_cast<LoadInst>(CmpExchg->getNewValOperand());
   EXPECT_NE(Ld, nullptr);
-  BitCastInst *BitCastOld = dyn_cast<BitCastInst>(Ld->getPointerOperand());
-  EXPECT_NE(BitCastOld, nullptr);
-  EXPECT_EQ(UpdateTemp, BitCastOld->getOperand(0));
-
+  EXPECT_EQ(UpdateTemp, Ld->getPointerOperand());
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -4024,8 +4006,14 @@ static InstTy *findSingleUserInBlock(Value *V, BasicBlock *BB) {
     auto *Inst = dyn_cast<InstTy>(U);
     if (!Inst || Inst->getParent() != BB)
       continue;
-    if (Result)
-      return nullptr;
+    if (Result) {
+      if (auto *SI = dyn_cast<StoreInst>(Inst)) {
+        if (V == SI->getValueOperand())
+          continue;
+      } else {
+        return nullptr;
+      }
+    }
     Result = Inst;
   }
   return Result;
@@ -4250,7 +4238,7 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   findCalls(F, omp::RuntimeFunction::OMPRTL___kmpc_fork_call, OMPBuilder,
             ForkCalls);
   ASSERT_EQ(ForkCalls.size(), 1u);
-  Value *CalleeVal = cast<Constant>(ForkCalls[0]->getOperand(2))->getOperand(0);
+  Value *CalleeVal = ForkCalls[0]->getOperand(2);
   Function *Outlined = dyn_cast<Function>(CalleeVal);
   EXPECT_NE(Outlined, nullptr);
 
@@ -4294,9 +4282,7 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
 
   // Check that the local array is passed to the function.
   ASSERT_NE(LocalArrayPtr, nullptr);
-  BitCastInst *BitCast = dyn_cast<BitCastInst>(LocalArrayPtr);
-  ASSERT_NE(BitCast, nullptr);
-  EXPECT_EQ(BitCast->getOperand(0), LocalArray);
+  EXPECT_EQ(LocalArrayPtr, LocalArray);
 
   // Find the GEP instructions preceding stores to the local array.
   Value *FirstArrayElemPtr = nullptr;
@@ -4307,18 +4293,17 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
 
   // Check that the values stored into the local array are privatized reduction
   // variables.
-  auto *FirstStored = dyn_cast_or_null<BitCastInst>(
+  auto *FirstPrivatized = dyn_cast_or_null<AllocaInst>(
       findStoredValue<GetElementPtrInst>(FirstArrayElemPtr));
-  auto *SecondStored = dyn_cast_or_null<BitCastInst>(
+  auto *SecondPrivatized = dyn_cast_or_null<AllocaInst>(
       findStoredValue<GetElementPtrInst>(SecondArrayElemPtr));
-  ASSERT_NE(FirstStored, nullptr);
-  ASSERT_NE(SecondStored, nullptr);
-  Value *FirstPrivatized = FirstStored->getOperand(0);
-  Value *SecondPrivatized = SecondStored->getOperand(0);
-  EXPECT_TRUE(
-      isSimpleBinaryReduction(FirstPrivatized, FirstStored->getParent()));
-  EXPECT_TRUE(
-      isSimpleBinaryReduction(SecondPrivatized, SecondStored->getParent()));
+  ASSERT_NE(FirstPrivatized, nullptr);
+  ASSERT_NE(SecondPrivatized, nullptr);
+  ASSERT_TRUE(isa<Instruction>(FirstArrayElemPtr));
+  EXPECT_TRUE(isSimpleBinaryReduction(
+      FirstPrivatized, cast<Instruction>(FirstArrayElemPtr)->getParent()));
+  EXPECT_TRUE(isSimpleBinaryReduction(
+      SecondPrivatized, cast<Instruction>(FirstArrayElemPtr)->getParent()));
 
   // Check that the result of the runtime reduction call is used for further
   // dispatch.
@@ -4355,27 +4340,20 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   // reductions after extracting reduction variables from its arguments.
   Function *ReductionFn = cast<Function>(ReductionFnVal);
   BasicBlock *FnReductionBB = &ReductionFn->getEntryBlock();
-  auto *Bitcast =
-      findSingleUserInBlock<BitCastInst>(ReductionFn->getArg(0), FnReductionBB);
   Value *FirstLHSPtr;
   Value *SecondLHSPtr;
-  ASSERT_TRUE(findGEPZeroOne(Bitcast, FirstLHSPtr, SecondLHSPtr));
+  ASSERT_TRUE(
+      findGEPZeroOne(ReductionFn->getArg(0), FirstLHSPtr, SecondLHSPtr));
   Value *Opaque = findSingleUserInBlock<LoadInst>(FirstLHSPtr, FnReductionBB);
   ASSERT_NE(Opaque, nullptr);
-  Bitcast = findSingleUserInBlock<BitCastInst>(Opaque, FnReductionBB);
-  ASSERT_NE(Bitcast, nullptr);
-  EXPECT_TRUE(isSimpleBinaryReduction(Bitcast, FnReductionBB));
+  EXPECT_TRUE(isSimpleBinaryReduction(Opaque, FnReductionBB));
   Opaque = findSingleUserInBlock<LoadInst>(SecondLHSPtr, FnReductionBB);
   ASSERT_NE(Opaque, nullptr);
-  Bitcast = findSingleUserInBlock<BitCastInst>(Opaque, FnReductionBB);
-  ASSERT_NE(Bitcast, nullptr);
-  EXPECT_TRUE(isSimpleBinaryReduction(Bitcast, FnReductionBB));
+  EXPECT_TRUE(isSimpleBinaryReduction(Opaque, FnReductionBB));
 
-  Bitcast =
-      findSingleUserInBlock<BitCastInst>(ReductionFn->getArg(1), FnReductionBB);
   Value *FirstRHS;
   Value *SecondRHS;
-  EXPECT_TRUE(findGEPZeroOne(Bitcast, FirstRHS, SecondRHS));
+  EXPECT_TRUE(findGEPZeroOne(ReductionFn->getArg(1), FirstRHS, SecondRHS));
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
@@ -4511,9 +4489,9 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
   findCalls(F, omp::RuntimeFunction::OMPRTL___kmpc_fork_call, OMPBuilder,
             ForkCalls);
   ASSERT_EQ(ForkCalls.size(), 2u);
-  Value *CalleeVal = cast<Constant>(ForkCalls[0]->getOperand(2))->getOperand(0);
+  Value *CalleeVal = ForkCalls[0]->getOperand(2);
   Function *FirstCallee = cast<Function>(CalleeVal);
-  CalleeVal = cast<Constant>(ForkCalls[1]->getOperand(2))->getOperand(0);
+  CalleeVal = ForkCalls[1]->getOperand(2);
   Function *SecondCallee = cast<Function>(CalleeVal);
   EXPECT_NE(FirstCallee, SecondCallee);
 
@@ -4531,32 +4509,22 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
 
   // Each reduction function does its own kind of reduction.
   BasicBlock *FnReductionBB = &AddReduction->getEntryBlock();
-  auto *Bitcast = findSingleUserInBlock<BitCastInst>(AddReduction->getArg(0),
-                                                     FnReductionBB);
-  ASSERT_NE(Bitcast, nullptr);
-  Value *FirstLHSPtr =
-      findSingleUserInBlock<GetElementPtrInst>(Bitcast, FnReductionBB);
+  Value *FirstLHSPtr = findSingleUserInBlock<GetElementPtrInst>(
+      AddReduction->getArg(0), FnReductionBB);
   ASSERT_NE(FirstLHSPtr, nullptr);
   Value *Opaque = findSingleUserInBlock<LoadInst>(FirstLHSPtr, FnReductionBB);
   ASSERT_NE(Opaque, nullptr);
-  Bitcast = findSingleUserInBlock<BitCastInst>(Opaque, FnReductionBB);
-  ASSERT_NE(Bitcast, nullptr);
   Instruction::BinaryOps Opcode = Instruction::FAdd;
-  EXPECT_TRUE(isSimpleBinaryReduction(Bitcast, FnReductionBB, &Opcode));
+  EXPECT_TRUE(isSimpleBinaryReduction(Opaque, FnReductionBB, &Opcode));
 
   FnReductionBB = &XorReduction->getEntryBlock();
-  Bitcast = findSingleUserInBlock<BitCastInst>(XorReduction->getArg(0),
-                                               FnReductionBB);
-  ASSERT_NE(Bitcast, nullptr);
-  Value *SecondLHSPtr =
-      findSingleUserInBlock<GetElementPtrInst>(Bitcast, FnReductionBB);
+  Value *SecondLHSPtr = findSingleUserInBlock<GetElementPtrInst>(
+      XorReduction->getArg(0), FnReductionBB);
   ASSERT_NE(FirstLHSPtr, nullptr);
   Opaque = findSingleUserInBlock<LoadInst>(SecondLHSPtr, FnReductionBB);
   ASSERT_NE(Opaque, nullptr);
-  Bitcast = findSingleUserInBlock<BitCastInst>(Opaque, FnReductionBB);
-  ASSERT_NE(Bitcast, nullptr);
   Opcode = Instruction::Xor;
-  EXPECT_TRUE(isSimpleBinaryReduction(Bitcast, FnReductionBB, &Opcode));
+  EXPECT_TRUE(isSimpleBinaryReduction(Opaque, FnReductionBB, &Opcode));
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateSectionsSimple) {
@@ -5352,13 +5320,9 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskDepend) {
   EXPECT_EQ(NumDeps->getZExtValue(), 1U);
 
   // Check for the `DepInfo` array argument
-  BitCastInst *DepArrayPtr =
-      dyn_cast<BitCastInst>(TaskAllocCall->getOperand(4));
-  ASSERT_NE(DepArrayPtr, nullptr);
-  AllocaInst *DepArray = dyn_cast<AllocaInst>(DepArrayPtr->getOperand(0));
+  AllocaInst *DepArray = dyn_cast<AllocaInst>(TaskAllocCall->getOperand(4));
   ASSERT_NE(DepArray, nullptr);
   Value::user_iterator DepArrayI = DepArray->user_begin();
-  EXPECT_EQ(*DepArrayI, DepArrayPtr);
   ++DepArrayI;
   Value::user_iterator DepInfoI = DepArrayI->user_begin();
   // Check for the `DependKind` flag in the `DepInfo` array

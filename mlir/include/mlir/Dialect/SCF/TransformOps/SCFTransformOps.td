@@ -215,4 +215,45 @@ def LoopCoalesceOp : Op<Transform_Dialect, "loop.coalesce", [
   }];
 }
 
+def TakeAssumedBranchOp : Op<Transform_Dialect, "scf.take_assumed_branch", [
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+  TransformOpInterface, TransformEachOpTrait]> {
+  let description = [{
+    Given an scf.if conditional, inject user-defined information that it is
+    always safe to execute only the if or else branch. 
+    
+    This is achieved by just replacing the scf.if by the content of one of its
+    branches.
+
+    This is particularly useful for user-controlled rewriting of conditionals
+    that exist solely to guard against out-of-bounds behavior.
+
+    At the moment, no assume or assert operation is emitted as it is not always
+    desirable. In the future, this may be controlled by a dedicated attribute.
+
+    #### Return modes
+
+    The transform only consumes its operand and does not produce any result.
+    The transform definitely fails if `take_else_branch` is specified and the
+    `else` region is empty.
+  }];
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       OptionalAttr<UnitAttr>:$take_else_branch);
+  let results = (outs);
+
+  let assemblyFormat = [{
+      $target
+      (`take_else_branch` $take_else_branch^)?
+      attr-dict
+       `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::scf::IfOp ifOp,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 #endif // SCF_TRANSFORM_OPS

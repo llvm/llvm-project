@@ -17,6 +17,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sched_yield
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sched_yield
+)
+
+add_entrypoint_object(
   __sched_getcpucount
   ALIAS
   DEPENDS

@@ -413,6 +413,28 @@ TEST(IncludeCleaner, MacroExpandedThroughIncludes) {
   EXPECT_EQ(RefRange, Findings[1].SymRefRange);
 }
 
+TEST(IncludeCleaner, NoCrash) {
+  TestTU TU;
+  Annotations MainCode(R"cpp(
+    #include "all.h"
+    void test() {
+      [[1s]];
+    }
+    )cpp");
+  TU.Code = MainCode.code();
+  TU.AdditionalFiles["foo.h"] =
+      guard("int operator\"\"s(unsigned long long) { return 0; }");
+  TU.AdditionalFiles["all.h"] = guard("#include \"foo.h\"");
+  ParsedAST AST = TU.build();
+  const auto &MissingIncludes =
+      computeIncludeCleanerFindings(AST).MissingIncludes;
+  EXPECT_THAT(MissingIncludes, testing::SizeIs(1));
+  auto &SM = AST.getSourceManager();
+  EXPECT_EQ(
+      halfOpenToRange(SM, MissingIncludes.front().SymRefRange.toCharRange(SM)),
+      MainCode.range());
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -test-affine-reify-value-bounds -verify-diagnostics \
-// RUN:     -split-input-file | FileCheck %s
+// RUN:     -verify-diagnostics -split-input-file | FileCheck %s
 
 // CHECK: #[[$map:.*]] = affine_map<()[s0] -> (s0 + 5)>
 // CHECK-LABEL: func @arith_addi(
@@ -39,6 +39,16 @@ func.func @arith_muli(%a: index) -> index {
   %1 = arith.muli %0, %a : index
   %2 = "test.reify_bound"(%1) : (index) -> (index)
   return %2 : index
+}
+
+// -----
+
+func.func @arith_muli_non_pure(%a: index, %b: index) -> index {
+  %0 = arith.muli %a, %b : index
+  // Semi-affine expressions (such as "symbol * symbol") are not supported.
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_bound"(%0) : (index) -> (index)
+  return %1 : index
 }
 
 // -----

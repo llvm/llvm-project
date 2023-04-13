@@ -39,6 +39,16 @@ def BsdExtensions : StandardSpec<"BSDExtensions"> {
             RetValSpec<IntType>,
             [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<SizeTType>]
         >,
+        FunctionSpec<
+            "index",
+            RetValSpec<CharPtr>,
+            [ArgSpec<ConstCharPtr>, ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+            "rindex",
+            RetValSpec<CharPtr>,
+            [ArgSpec<ConstCharPtr>, ArgSpec<IntType>]
+        >,
       ]
   >;
 

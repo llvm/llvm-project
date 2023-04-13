@@ -1300,7 +1300,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
         SourceLocation AttrNameLoc = ConsumeToken();
         Attributes.addNew(AttrName, AttrNameLoc, /*ScopeName=*/nullptr,
                           AttrNameLoc, /*ArgsUnion=*/nullptr,
-                          /*numArgs=*/0, ParsedAttr::AS_Keyword);
+                          /*numArgs=*/0, tok::kw___noinline__);
       } else if (Tok.is(tok::kw___attribute))
         ParseGNUAttributes(Attributes, /*LatePArsedAttrList=*/nullptr, &D);
       else

@@ -33,8 +33,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc::generic {
-
+namespace __llvm_libc {
 // Compiler types using the vector attributes.
 using uint8x1_t = uint8_t __attribute__((__vector_size__(1)));
 using uint8x2_t = uint8_t __attribute__((__vector_size__(2)));
@@ -43,13 +42,14 @@ using uint8x8_t = uint8_t __attribute__((__vector_size__(8)));
 using uint8x16_t = uint8_t __attribute__((__vector_size__(16)));
 using uint8x32_t = uint8_t __attribute__((__vector_size__(32)));
 using uint8x64_t = uint8_t __attribute__((__vector_size__(64)));
+} // namespace __llvm_libc
 
+namespace __llvm_libc::generic {
 // We accept three types of values as elements for generic operations:
 // - scalar : unsigned integral types
 // - vector : compiler types using the vector attributes
 // - array  : a cpp::array<T, N> where T is itself either a scalar or a vector.
 // The following traits help discriminate between these cases.
-
 template <typename T>
 constexpr bool is_scalar_v = cpp::is_integral_v<T> && cpp::is_unsigned_v<T>;
 
@@ -109,20 +109,8 @@ template <typename T> T splat(uint8_t value) {
     T Out;
     // This for loop is optimized out for vector types.
     for (size_t i = 0; i < sizeof(T); ++i)
-      Out[i] = static_cast<uint8_t>(value);
+      Out[i] = value;
     return Out;
-  }
-}
-
-template <typename T> void set(Ptr dst, uint8_t value) {
-  static_assert(is_element_type_v<T>);
-  if constexpr (is_scalar_v<T> || is_vector_v<T>) {
-    store<T>(dst, splat<T>(value));
-  } else if constexpr (is_array_v<T>) {
-    using value_type = typename T::value_type;
-    const value_type Splat = splat<value_type>(value);
-    for (size_t I = 0; I < array_size_v<T>; ++I)
-      store<value_type>(dst + (I * sizeof(value_type)), Splat);
   }
 }
 
@@ -149,9 +137,7 @@ constexpr bool is_decreasing_size() {
 }
 
 template <size_t Size, typename... Ts> struct Largest;
-template <size_t Size> struct Largest<Size> {
-  using type = uint8_t;
-};
+template <size_t Size> struct Largest<Size> : cpp::type_identity<uint8_t> {};
 template <size_t Size, typename T, typename... Ts>
 struct Largest<Size, T, Ts...> {
   using next = Largest<Size, Ts...>;
@@ -178,6 +164,11 @@ template <typename First, typename... Ts> struct SupportedTypes {
   template <size_t Size>
   using TypeFor = typename details::Largest<Size, First, Ts...>::type;
 };
+
+// Returns the sum of the sizeof of all the TS types.
+template <typename... TS> static constexpr size_t sum_sizeof() {
+  return (... + sizeof(TS));
+}
 
 // Map from sizes to structures offering static load, store and splat methods.
 // Note: On platforms lacking vector support, we use the ArrayType below and
@@ -220,27 +211,23 @@ using getTypeFor = cpp::conditional_t<
 
 ///////////////////////////////////////////////////////////////////////////////
 // Memset
-// The MaxSize template argument gives the maximum size handled natively by the
-// platform. For instance on x86 with AVX support this would be 32. If a size
-// greater than MaxSize is requested we break the operation down in smaller
-// pieces of size MaxSize.
 ///////////////////////////////////////////////////////////////////////////////
-template <size_t Size, size_t MaxSize> struct Memset {
-  static_assert(is_power2(MaxSize));
-  static constexpr size_t SIZE = Size;
+
+template <typename T, typename... TS> struct Memset {
+  static constexpr size_t SIZE = sum_sizeof<T, TS...>();
 
   LIBC_INLINE static void block(Ptr dst, uint8_t value) {
-    if constexpr (Size == 3) {
-      Memset<1, MaxSize>::block(dst + 2, value);
-      Memset<2, MaxSize>::block(dst, value);
-    } else {
-      using T = details::getTypeFor<Size, MaxSize>;
-      if constexpr (details::is_void_v<T>) {
-        deferred_static_assert("Unimplemented Size");
-      } else {
-        set<T>(dst, value);
-      }
+    static_assert(is_element_type_v<T>);
+    if constexpr (is_scalar_v<T> || is_vector_v<T>) {
+      store<T>(dst, splat<T>(value));
+    } else if constexpr (is_array_v<T>) {
+      using value_type = typename T::value_type;
+      const auto Splat = splat<value_type>(value);
+      for (size_t I = 0; I < array_size_v<T>; ++I)
+        store<value_type>(dst + (I * sizeof(value_type)), Splat);
     }
+    if constexpr (sizeof...(TS))
+      Memset<TS...>::block(dst + sizeof(T), value);
   }
 
   LIBC_INLINE static void tail(Ptr dst, uint8_t value, size_t count) {
@@ -253,7 +240,7 @@ template <size_t Size, size_t MaxSize> struct Memset {
   }
 
   LIBC_INLINE static void loop_and_tail(Ptr dst, uint8_t value, size_t count) {
-    static_assert(SIZE > 1);
+    static_assert(SIZE > 1, "a loop of size 1 does not need tail");
     size_t offset = 0;
     do {
       block(dst + offset, value);
@@ -267,32 +254,22 @@ template <size_t Size, size_t MaxSize> struct Memset {
 // Memmove
 ///////////////////////////////////////////////////////////////////////////////
 
-template <size_t Size, size_t MaxSize> struct Memmove {
-  static_assert(is_power2(MaxSize));
-  using T = details::getTypeFor<Size, MaxSize>;
-  static constexpr size_t SIZE = Size;
+template <typename T> struct Memmove {
+  static constexpr size_t SIZE = sum_sizeof<T>();
 
   LIBC_INLINE static void block(Ptr dst, CPtr src) {
-    if constexpr (details::is_void_v<T>) {
-      deferred_static_assert("Unimplemented Size");
-    } else {
-      store<T>(dst, load<T>(src));
-    }
+    store<T>(dst, load<T>(src));
   }
 
   LIBC_INLINE static void head_tail(Ptr dst, CPtr src, size_t count) {
-    const size_t offset = count - Size;
-    if constexpr (details::is_void_v<T>) {
-      deferred_static_assert("Unimplemented Size");
-    } else {
-      // The load and store operations can be performed in any order as long as
-      // they are not interleaved. More investigations are needed to determine
-      // the best order.
-      const auto head = load<T>(src);
-      const auto tail = load<T>(src + offset);
-      store<T>(dst, head);
-      store<T>(dst + offset, tail);
-    }
+    const size_t offset = count - SIZE;
+    // The load and store operations can be performed in any order as long as
+    // they are not interleaved. More investigations are needed to determine
+    // the best order.
+    const auto head = load<T>(src);
+    const auto tail = load<T>(src + offset);
+    store<T>(dst, head);
+    store<T>(dst + offset, tail);
   }
 
   // Align forward suitable when dst < src. The alignment is performed with
@@ -318,8 +295,8 @@ template <size_t Size, size_t MaxSize> struct Memmove {
     Ptr prev_dst = dst;
     CPtr prev_src = src;
     size_t prev_count = count;
-    align_to_next_boundary<Size, AlignOn>(dst, src, count);
-    adjust(Size, dst, src, count);
+    align_to_next_boundary<SIZE, AlignOn>(dst, src, count);
+    adjust(SIZE, dst, src, count);
     head_tail(prev_dst, prev_src, prev_count - count);
   }
 
@@ -346,9 +323,9 @@ template <size_t Size, size_t MaxSize> struct Memmove {
     Ptr headtail_dst = dst + count;
     CPtr headtail_src = src + count;
     size_t headtail_size = 0;
-    align_to_next_boundary<Size, AlignOn>(headtail_dst, headtail_src,
+    align_to_next_boundary<SIZE, AlignOn>(headtail_dst, headtail_src,
                                           headtail_size);
-    adjust(-2 * Size, headtail_dst, headtail_src, headtail_size);
+    adjust(-2 * SIZE, headtail_dst, headtail_src, headtail_size);
     head_tail(headtail_dst, headtail_src, headtail_size);
     count -= headtail_size;
   }
@@ -369,15 +346,15 @@ template <size_t Size, size_t MaxSize> struct Memmove {
   // [_______________________SSSSSSSS_____]
   LIBC_INLINE static void loop_and_tail_forward(Ptr dst, CPtr src,
                                                 size_t count) {
-    static_assert(Size > 1, "a loop of size 1 does not need tail");
-    const size_t tail_offset = count - Size;
+    static_assert(SIZE > 1, "a loop of size 1 does not need tail");
+    const size_t tail_offset = count - SIZE;
     const auto tail_value = load<T>(src + tail_offset);
     size_t offset = 0;
     LIBC_LOOP_NOUNROLL
     do {
       block(dst + offset, src + offset);
-      offset += Size;
-    } while (offset < count - Size);
+      offset += SIZE;
+    } while (offset < count - SIZE);
     store<T>(dst + tail_offset, tail_value);
   }
 
@@ -397,13 +374,13 @@ template <size_t Size, size_t MaxSize> struct Memmove {
   // [_____SSSSSSSS_______________________]
   LIBC_INLINE static void loop_and_tail_backward(Ptr dst, CPtr src,
                                                  size_t count) {
-    static_assert(Size > 1, "a loop of size 1 does not need tail");
+    static_assert(SIZE > 1, "a loop of size 1 does not need tail");
     const auto head_value = load<T>(src);
-    ptrdiff_t offset = count - Size;
+    ptrdiff_t offset = count - SIZE;
     LIBC_LOOP_NOUNROLL
     do {
       block(dst + offset, src + offset);
-      offset -= Size;
+      offset -= SIZE;
     } while (offset >= 0);
     store<T>(dst, head_value);
   }

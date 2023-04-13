@@ -23,7 +23,7 @@ LLVM_LIBC_FUNCTION(ssize_t, getrandom,
     libc_errno = -ret;
     return -1;
   }
-  return 0;
+  return ret;
 }
 
 } // namespace __llvm_libc

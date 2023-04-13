@@ -38,8 +38,8 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 size_t __constexpr_st
 template <class _Tp, class _Up>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int
 __constexpr_memcmp(const _Tp* __lhs, const _Up* __rhs, size_t __count) {
-  static_assert(
-      __is_trivially_equality_comparable<_Tp, _Up>::value, "_Tp and _Up have to be trivially equality comparable");
+  static_assert(__libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
+                "_Tp and _Up have to be trivially equality comparable");
 
   if (__libcpp_is_constant_evaluated()) {
 #ifdef _LIBCPP_COMPILER_CLANG_BASED

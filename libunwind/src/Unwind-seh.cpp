@@ -217,6 +217,7 @@ __libunwind_seh_personality(int version, _Unwind_Action state,
                                                            disp_ctx->ContextRecord,
                                                            disp_ctx);
   switch (ms_act) {
+  case ExceptionContinueExecution: return _URC_END_OF_STACK;
   case ExceptionContinueSearch: return _URC_CONTINUE_UNWIND;
   case 4 /*ExceptionExecuteHandler*/:
     return phase2 ? _URC_INSTALL_CONTEXT : _URC_HANDLER_FOUND;
@@ -304,6 +305,12 @@ unwind_phase2_forced(unw_context_t *uc,
         // We may get control back if landing pad calls _Unwind_Resume().
         __unw_resume(&cursor2);
         break;
+      case _URC_END_OF_STACK:
+        _LIBUNWIND_TRACE_UNWINDING("unwind_phase2_forced(ex_ojb=%p): "
+                                   "personality returned "
+                                   "_URC_END_OF_STACK",
+                                   (void *)exception_object);
+        break;
       default:
         // Personality routine returned an unknown result code.
         _LIBUNWIND_TRACE_UNWINDING("unwind_phase2_forced(ex_ojb=%p): "
@@ -312,6 +319,8 @@ unwind_phase2_forced(unw_context_t *uc,
                                    (void *)exception_object, personalityResult);
         return _URC_FATAL_PHASE2_ERROR;
       }
+      if (personalityResult == _URC_END_OF_STACK)
+        break;
     }
   }
 

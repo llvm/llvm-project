@@ -36,23 +36,23 @@
 #define SV(S) MAKE_STRING_VIEW(CharT, S)
 
 template <class Arg, class StringViewT>
-constexpr void test(StringViewT fmt) {
+constexpr void test(StringViewT fmt, std::size_t offset) {
   using CharT    = typename StringViewT::value_type;
   auto parse_ctx = std::basic_format_parse_context<CharT>(fmt);
   std::formatter<Arg, CharT> formatter;
   static_assert(std::semiregular<decltype(formatter)>);
 
   std::same_as<typename StringViewT::iterator> auto it = formatter.parse(parse_ctx);
-  assert(it == fmt.end() - (!fmt.empty() && fmt.back() == '}'));
+  assert(it == fmt.end() - offset);
 }
 
 template <class CharT, class Arg>
 constexpr void test() {
-  test<Arg>(SV(""));
-  test<Arg>(SV("42"));
+  test<Arg>(SV(""), 0);
+  test<Arg>(SV("42"), 0);
 
-  test<Arg>(SV("}"));
-  test<Arg>(SV("42}"));
+  test<Arg>(SV("}"), 1);
+  test<Arg>(SV("42}"), 1);
 }
 
 template <class CharT>

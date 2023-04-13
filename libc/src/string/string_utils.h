@@ -224,6 +224,25 @@ LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
   return len;
 }
 
+template <bool ReturnNull = true>
+constexpr static char *strchr_implementation(const char *src, int c) {
+  char ch = static_cast<char>(c);
+  for (; *src && *src != ch; ++src)
+    ;
+  char *ret = ReturnNull ? nullptr : const_cast<char *>(src);
+  return *src == ch ? const_cast<char *>(src) : ret;
+}
+
+constexpr static char *strrchr_implementation(const char *src, int c) {
+  char ch = static_cast<char>(c);
+  char *last_occurrence = nullptr;
+  for (; *src; ++src) {
+    if (*src == ch)
+      last_occurrence = const_cast<char *>(src);
+  }
+  return last_occurrence;
+}
+
 } // namespace internal
 } // namespace __llvm_libc
 

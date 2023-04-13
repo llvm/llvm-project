@@ -510,7 +510,8 @@ class JSONCrashLogParser(CrashLogParser):
         for json_image in json_images:
             img_uuid = uuid.UUID(json_image['uuid'])
             low = int(json_image['base'])
-            high = int(0)
+            high = low + int(
+                json_image['size']) if 'size' in json_image else low
             name = json_image['name'] if 'name' in json_image else ''
             path = json_image['path'] if 'path' in json_image else ''
             version = ''
@@ -1110,11 +1111,16 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result)
     launch_info.SetProcessPluginName("ScriptedProcess")
     launch_info.SetScriptedProcessClassName("crashlog_scripted_process.CrashLogScriptedProcess")
     launch_info.SetScriptedProcessDictionary(structured_data)
+    launch_info.SetLaunchFlags(lldb.eLaunchFlagStopAtEntry)
+
     error = lldb.SBError()
     process = target.Launch(launch_info, error)
 
     if not process or error.Fail():
         raise InteractiveCrashLogException("couldn't launch Scripted Process", error)
+
+    process.GetScriptedImplementation().set_crashlog(crashlog)
+    process.Continue()
 
     if not options.skip_status:
         @contextlib.contextmanager

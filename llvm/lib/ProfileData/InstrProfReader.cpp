@@ -60,6 +60,9 @@ static InstrProfKind getProfileKindFromVersion(uint64_t Version) {
   if (Version & VARIANT_MASK_MEMPROF) {
     ProfileKind |= InstrProfKind::MemProf;
   }
+  if (Version & VARIANT_MASK_TEMPORAL_PROF) {
+    ProfileKind |= InstrProfKind::TemporalProfile;
+  }
   return ProfileKind;
 }
 
@@ -264,9 +267,45 @@ Error TextInstrProfReader::readHeader() {
       ProfileKind |= InstrProfKind::FunctionEntryInstrumentation;
     else if (Str.equals_insensitive("not_entry_first"))
       ProfileKind &= ~InstrProfKind::FunctionEntryInstrumentation;
-    else
+    else if (Str.equals_insensitive("temporal_prof_traces")) {
+      ProfileKind |= InstrProfKind::TemporalProfile;
+      if (auto Err = readTemporalProfTraceData())
+        return error(std::move(Err));
+    } else
       return error(instrprof_error::bad_header);
     ++Line;
+  }
+  return success();
+}
+
+/// Temporal profile trace data is stored in the header immediately after
+/// ":temporal_prof_traces". The first integer is the number of traces, the
+/// second integer is the stream size, then the following lines are the actual
+/// traces which consist of a comma separated list of function names.
+Error TextInstrProfReader::readTemporalProfTraceData() {
+  if ((++Line).is_at_end())
+    return error(instrprof_error::eof);
+
+  uint32_t NumTraces;
+  if (Line->getAsInteger(0, NumTraces))
+    return error(instrprof_error::malformed);
+
+  if ((++Line).is_at_end())
+    return error(instrprof_error::eof);
+
+  if (Line->getAsInteger(0, TemporalProfTraceStreamSize))
+    return error(instrprof_error::malformed);
+
+  for (uint32_t i = 0; i < NumTraces; i++) {
+    if ((++Line).is_at_end())
+      return error(instrprof_error::eof);
+
+    TemporalProfTraceTy Trace;
+    SmallVector<StringRef> FuncNames;
+    Line->split(FuncNames, ",", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+    for (auto &FuncName : FuncNames)
+      Trace.push_back(IndexedInstrProf::ComputeHash(FuncName.trim()));
+    TemporalProfTraces.push_back(std::move(Trace));
   }
   return success();
 }
@@ -396,6 +435,22 @@ Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
 template <class IntPtrT>
 InstrProfKind RawInstrProfReader<IntPtrT>::getProfileKind() const {
   return getProfileKindFromVersion(Version);
+}
+
+template <class IntPtrT>
+const SmallVector<TemporalProfTraceTy> &
+RawInstrProfReader<IntPtrT>::getTemporalProfTraces() {
+  if (TemporalProfTimestamps.empty()) {
+    assert(TemporalProfTraces.empty());
+    return TemporalProfTraces;
+  }
+  // Sort functions by their timestamps to build the trace.
+  std::sort(TemporalProfTimestamps.begin(), TemporalProfTimestamps.end());
+  TemporalProfTraceTy Trace;
+  for (auto &[TimestampValue, NameRef] : TemporalProfTimestamps)
+    Trace.push_back(NameRef);
+  TemporalProfTraces = {std::move(Trace)};
+  return TemporalProfTraces;
 }
 
 template <class IntPtrT>
@@ -582,6 +637,23 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
   for (uint32_t I = 0; I < NumCounters; I++) {
     const char *Ptr =
         CountersStart + CounterBaseOffset + I * getCounterTypeSize();
+    if (I == 0 && hasTemporalProfile()) {
+      uint64_t TimestampValue = swap(*reinterpret_cast<const uint64_t *>(Ptr));
+      if (TimestampValue != 0 &&
+          TimestampValue != std::numeric_limits<uint64_t>::max()) {
+        TemporalProfTimestamps.emplace_back(TimestampValue,
+                                            swap(Data->NameRef));
+        TemporalProfTraceStreamSize = 1;
+      }
+      if (hasSingleByteCoverage()) {
+        // In coverage mode, getCounterTypeSize() returns 1 byte but our
+        // timestamp field has size uint64_t. Increment I so that the next
+        // iteration of this for loop points to the byte after the timestamp
+        // field, i.e., I += 8.
+        I += 7;
+      }
+      continue;
+    }
     if (hasSingleByteCoverage()) {
       // A value of zero signifies the block is covered.
       Record.Counts.push_back(*Ptr == 0 ? 1 : 0);
@@ -632,7 +704,7 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) 
     if (Error E = readNextHeader(getNextHeaderPos()))
       return error(std::move(E));
 
-  // Read name ad set it in Record.
+  // Read name and set it in Record.
   if (Error E = readName(Record))
     return error(std::move(E));
 
@@ -1059,6 +1131,38 @@ Error IndexedInstrProfReader::readHeader() {
     if (BinaryIdsStart > (const unsigned char *)DataBuffer->getBufferEnd())
       return make_error<InstrProfError>(instrprof_error::malformed,
                                         "corrupted binary ids");
+  }
+
+  if (GET_VERSION(Header->formatVersion()) >= 10 &&
+      Header->formatVersion() & VARIANT_MASK_TEMPORAL_PROF) {
+    uint64_t TemporalProfTracesOffset =
+        endian::byte_swap<uint64_t, little>(Header->TemporalProfTracesOffset);
+    const unsigned char *Ptr = Start + TemporalProfTracesOffset;
+    const auto *PtrEnd = (const unsigned char *)DataBuffer->getBufferEnd();
+    // Expect at least two 64 bit fields: NumTraces, and TraceStreamSize
+    if (Ptr + 2 * sizeof(uint64_t) > PtrEnd)
+      return error(instrprof_error::truncated);
+    const uint64_t NumTraces =
+        support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+    TemporalProfTraceStreamSize =
+        support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+    for (unsigned i = 0; i < NumTraces; i++) {
+      // Expect at least one 64 bit field: NumFunctions
+      if (Ptr + sizeof(uint64_t) > PtrEnd)
+        return error(instrprof_error::truncated);
+      const uint64_t NumFunctions =
+          support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+      // Expect at least NumFunctions 64 bit fields
+      if (Ptr + NumFunctions * sizeof(uint64_t) > PtrEnd)
+        return error(instrprof_error::truncated);
+      TemporalProfTraceTy Trace;
+      for (unsigned j = 0; j < NumFunctions; j++) {
+        const uint64_t NameRef =
+            support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+        Trace.push_back(NameRef);
+      }
+      TemporalProfTraces.push_back(std::move(Trace));
+    }
   }
 
   // Load the remapping table now if requested.

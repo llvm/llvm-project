@@ -250,7 +250,7 @@ void llvm::calculateCXXStateForAsynchEH(const BasicBlock *BB, int State,
       // Retrive the new State
       State = EHInfo.CxxUnwindMap[State].ToState; // Retrive next State
     } else if (isa<InvokeInst>(TI)) {
-      auto *Call = dyn_cast<CallBase>(TI);
+      auto *Call = cast<CallBase>(TI);
       const Function *Fn = Call->getCalledFunction();
       if (Fn && Fn->isIntrinsic() &&
           (Fn->getIntrinsicID() == Intrinsic::seh_scope_begin ||
@@ -318,7 +318,7 @@ void llvm::calculateSEHStateForAsynchEH(const BasicBlock *BB, int State,
       // Retrive the new State.
       State = EHInfo.SEHUnwindMap[State].ToState; // Retrive next State
     } else if (isa<InvokeInst>(TI)) {
-      auto *Call = dyn_cast<CallBase>(TI);
+      auto *Call = cast<CallBase>(TI);
       const Function *Fn = Call->getCalledFunction();
       if (Fn && Fn->isIntrinsic() &&
           Fn->getIntrinsicID() == Intrinsic::seh_try_begin)

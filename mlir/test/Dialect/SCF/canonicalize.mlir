@@ -1197,6 +1197,60 @@ func.func @while_cmp_rhs(%arg0 : i32) {
 
 // -----
 
+// CHECK-LABEL: @while_duplicated_res
+func.func @while_duplicated_res() -> (i32, i32) {
+  %0:2 = scf.while () : () -> (i32, i32) {
+    %val = "test.val"() : () -> i32
+    %condition = "test.condition"() : () -> i1
+    scf.condition(%condition) %val, %val : i32, i32
+  } do {
+  ^bb0(%val2: i32, %val3: i32):
+    "test.use"(%val2, %val3) : (i32, i32) -> ()
+    scf.yield
+  }
+  return %0#0, %0#1: i32, i32
+}
+// CHECK:         %[[RES:.*]] = scf.while : () -> i32 {
+// CHECK:         %[[VAL:.*]] = "test.val"() : () -> i32
+// CHECK:         %[[COND:.*]] = "test.condition"() : () -> i1
+// CHECK:           scf.condition(%[[COND]]) %[[VAL]] : i32
+// CHECK:         } do {
+// CHECK:         ^bb0(%[[ARG:.*]]: i32):
+// CHECK:           "test.use"(%[[ARG]], %[[ARG]]) : (i32, i32) -> ()
+// CHECK:           scf.yield
+// CHECK:         }
+// CHECK:         return %[[RES]], %[[RES]] : i32, i32
+
+// -----
+
+// CHECK-LABEL: @while_unused_arg
+func.func @while_unused_arg(%val0: i32) -> i32 {
+  %0 = scf.while (%val1 = %val0) : (i32) -> i32 {
+    %val = "test.val"() : () -> i32
+    %condition = "test.condition"() : () -> i1
+    scf.condition(%condition) %val: i32
+  } do {
+  ^bb0(%val2: i32):
+    "test.use"(%val2) : (i32) -> ()
+    %val1 = "test.val1"() : () -> i32
+    scf.yield %val1 : i32
+  }
+  return %0 : i32
+}
+// CHECK:         %[[RES:.*]] = scf.while : () -> i32 {
+// CHECK:         %[[VAL:.*]] = "test.val"() : () -> i32
+// CHECK:         %[[COND:.*]] = "test.condition"() : () -> i1
+// CHECK:           scf.condition(%[[COND]]) %[[VAL]] : i32
+// CHECK:         } do {
+// CHECK:         ^bb0(%[[ARG:.*]]: i32):
+// CHECK:           "test.use"(%[[ARG]]) : (i32) -> ()
+// CHECK:           scf.yield
+// CHECK:         }
+// CHECK:         return %[[RES]] : i32
+
+
+// -----
+
 // CHECK-LABEL: @combineIfs
 func.func @combineIfs(%arg0 : i1, %arg2: i64) -> (i32, i32) {
   %res = scf.if %arg0 -> i32 {

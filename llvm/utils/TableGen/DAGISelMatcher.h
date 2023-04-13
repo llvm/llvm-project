@@ -23,6 +23,7 @@
 namespace llvm {
   struct CodeGenRegister;
   class CodeGenDAGPatterns;
+  class CodeGenInstruction;
   class Matcher;
   class PatternToMatch;
   class raw_ostream;
@@ -997,7 +998,7 @@ private:
 /// EmitNodeMatcherCommon - Common class shared between EmitNode and
 /// MorphNodeTo.
 class EmitNodeMatcherCommon : public Matcher {
-  std::string OpcodeName;
+  const CodeGenInstruction &CGI;
   const SmallVector<MVT::SimpleValueType, 3> VTs;
   const SmallVector<unsigned, 6> Operands;
   bool HasChain, HasInGlue, HasOutGlue, HasMemRefs;
@@ -1007,18 +1008,17 @@ class EmitNodeMatcherCommon : public Matcher {
   /// operands in the root of the pattern.  The rest are appended to this node.
   int NumFixedArityOperands;
 public:
-  EmitNodeMatcherCommon(const std::string &opcodeName,
+  EmitNodeMatcherCommon(const CodeGenInstruction &cgi,
                         ArrayRef<MVT::SimpleValueType> vts,
-                        ArrayRef<unsigned> operands,
-                        bool hasChain, bool hasInGlue, bool hasOutGlue,
-                        bool hasmemrefs,
+                        ArrayRef<unsigned> operands, bool hasChain,
+                        bool hasInGlue, bool hasOutGlue, bool hasmemrefs,
                         int numfixedarityoperands, bool isMorphNodeTo)
-    : Matcher(isMorphNodeTo ? MorphNodeTo : EmitNode), OpcodeName(opcodeName),
-      VTs(vts.begin(), vts.end()), Operands(operands.begin(), operands.end()),
-      HasChain(hasChain), HasInGlue(hasInGlue), HasOutGlue(hasOutGlue),
-      HasMemRefs(hasmemrefs), NumFixedArityOperands(numfixedarityoperands) {}
+      : Matcher(isMorphNodeTo ? MorphNodeTo : EmitNode), CGI(cgi),
+        VTs(vts.begin(), vts.end()), Operands(operands.begin(), operands.end()),
+        HasChain(hasChain), HasInGlue(hasInGlue), HasOutGlue(hasOutGlue),
+        HasMemRefs(hasmemrefs), NumFixedArityOperands(numfixedarityoperands) {}
 
-  const std::string &getOpcodeName() const { return OpcodeName; }
+  const CodeGenInstruction &getInstruction() const { return CGI; }
 
   unsigned getNumVTs() const { return VTs.size(); }
   MVT::SimpleValueType getVT(unsigned i) const {
@@ -1056,16 +1056,15 @@ class EmitNodeMatcher : public EmitNodeMatcherCommon {
   void anchor() override;
   unsigned FirstResultSlot;
 public:
-  EmitNodeMatcher(const std::string &opcodeName,
+  EmitNodeMatcher(const CodeGenInstruction &cgi,
                   ArrayRef<MVT::SimpleValueType> vts,
-                  ArrayRef<unsigned> operands,
-                  bool hasChain, bool hasInGlue, bool hasOutGlue,
-                  bool hasmemrefs,
-                  int numfixedarityoperands, unsigned firstresultslot)
-  : EmitNodeMatcherCommon(opcodeName, vts, operands, hasChain,
-                          hasInGlue, hasOutGlue, hasmemrefs,
-                          numfixedarityoperands, false),
-    FirstResultSlot(firstresultslot) {}
+                  ArrayRef<unsigned> operands, bool hasChain, bool hasInGlue,
+                  bool hasOutGlue, bool hasmemrefs, int numfixedarityoperands,
+                  unsigned firstresultslot)
+      : EmitNodeMatcherCommon(cgi, vts, operands, hasChain, hasInGlue,
+                              hasOutGlue, hasmemrefs, numfixedarityoperands,
+                              false),
+        FirstResultSlot(firstresultslot) {}
 
   unsigned getFirstResultSlot() const { return FirstResultSlot; }
 
@@ -1079,17 +1078,15 @@ class MorphNodeToMatcher : public EmitNodeMatcherCommon {
   void anchor() override;
   const PatternToMatch &Pattern;
 public:
-  MorphNodeToMatcher(const std::string &opcodeName,
+  MorphNodeToMatcher(const CodeGenInstruction &cgi,
                      ArrayRef<MVT::SimpleValueType> vts,
-                     ArrayRef<unsigned> operands,
-                     bool hasChain, bool hasInGlue, bool hasOutGlue,
-                     bool hasmemrefs,
+                     ArrayRef<unsigned> operands, bool hasChain, bool hasInGlue,
+                     bool hasOutGlue, bool hasmemrefs,
                      int numfixedarityoperands, const PatternToMatch &pattern)
-    : EmitNodeMatcherCommon(opcodeName, vts, operands, hasChain,
-                            hasInGlue, hasOutGlue, hasmemrefs,
-                            numfixedarityoperands, true),
-      Pattern(pattern) {
-  }
+      : EmitNodeMatcherCommon(cgi, vts, operands, hasChain, hasInGlue,
+                              hasOutGlue, hasmemrefs, numfixedarityoperands,
+                              true),
+        Pattern(pattern) {}
 
   const PatternToMatch &getPattern() const { return Pattern; }
 

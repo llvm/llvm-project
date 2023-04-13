@@ -804,6 +804,8 @@ private:
   /// Returns a pointer to the use list for the given result, which may be
   /// either inline or out-of-line.
   detail::OpResultImpl *getOpResultImpl(unsigned resultNumber) {
+    assert(resultNumber < getNumResults() &&
+           "Result number is out of range for operation");
     unsigned maxInlineResults = detail::OpResultImpl::getMaxInlineResults();
     if (resultNumber < maxInlineResults)
       return getInlineOpResult(resultNumber);

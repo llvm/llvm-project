@@ -27,6 +27,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -79,7 +80,7 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
 
   // Fail if `paddingValues` specifies no padding value.
   if (opOperand->getOperandNumber() >= paddingValues.size()) {
-    return rewriter.notifyMatchFailure(opToPad, "no padding value specified");
+    return rewriter.notifyMatchFailure(opToPad, "--no padding value specified");
   }
   Attribute paddingAttr = paddingValues[opOperand->getOperandNumber()];
   Type paddingType = rewriter.getType<NoneType>();
@@ -101,8 +102,8 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
   if (!sliceOp && !emptyOp) {
     // TODO: may want to add support for going through loop iter args.
     // This is not strictly necessary as we can pad before hoisting but it would
-    // make the system overall more resilient to minor transformation
-    // reorderings.
+    // make the system more resilient to minor transformation reordering.
+    LLVM_DEBUG(DBGS() << "--not defined by an extractSlice or emptyOp\n");
     return rewriter.notifyMatchFailure(
         opToPad, "not defined by an extractSlice or emptyOp");
   }
@@ -110,7 +111,7 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
   llvm::SmallBitVector droppedDims;
   SmallVector<OpFoldResult> mixedSizes;
   if (sliceOp) {
-    // Compute the dropped dimensions if `sliceOp` is ranke-reducing.
+    // Compute the dropped dimensions if `sliceOp` is rank-reducing.
     droppedDims = sliceOp.getDroppedDims();
     mixedSizes = sliceOp.getMixedSizes();
   }
@@ -118,32 +119,42 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
     mixedSizes = emptyOp.getMixedSizes();
     droppedDims.resize(mixedSizes.size());
   }
+  LLVM_DEBUG(llvm::interleaveComma(mixedSizes, DBGS() << "--mixedSizes:  ");
+             llvm::dbgs() << "\n");
 
   // Upper bound the sizes to obtain a static bounding box.
   SmallVector<int64_t> paddedShape(shape.begin(), shape.end());
   int64_t shapeIdx = 0;
   for (const auto &en : enumerate(mixedSizes)) {
+    LLVM_DEBUG(DBGS() << "----mixedSizes:  " << en.value() << "\n");
     // Skip dropped dimensions.
-    if (droppedDims.test(en.index()))
+    if (droppedDims.test(en.index())) {
+      LLVM_DEBUG(DBGS() << "------dim is dropped, SKIP\n");
       continue;
+    }
     // Skip dimensions that do not require padding.
     if (!shapeDimsToPad.contains(shapeIdx)) {
       shapeIdx++;
+      LLVM_DEBUG(DBGS() << "------dim does not require padding, SKIP\n");
       continue;
     }
     // If the size is an attribute add it directly to `paddedShape`.
     if (en.value().is<Attribute>()) {
       paddedShape[shapeIdx++] =
           en.value().get<Attribute>().dyn_cast<IntegerAttr>().getInt();
+      LLVM_DEBUG(
+          DBGS() << "------dim is an attr, add it to padded shape, SKIP\n");
       continue;
     }
     // Otherwise, try to compute a constant upper bound for the size value.
     FailureOr<int64_t> upperBound =
-        getConstantUpperBoundForIndex(en.value().get<Value>());
+        ValueBoundsConstraintSet::computeConstantBound(
+            presburger::BoundType::UB, en.value().get<Value>(),
+            /*dim=*/std::nullopt, /*stopCondition=*/nullptr, /*closedUB=*/true);
     if (failed(upperBound)) {
-      LLVM_DEBUG(DBGS() << "count not compute a bonding box for padding");
+      LLVM_DEBUG(DBGS() << "--count not compute a bounding box for padding");
       return rewriter.notifyMatchFailure(
-          opToPad, "count not compute a bonding box for padding");
+          opToPad, "count not compute a bounding box for padding");
     }
     paddedShape[shapeIdx++] = *upperBound;
   }
@@ -153,6 +164,8 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
   // Pad the operand to the bounding box defined by `paddedShape`.
   auto paddedTensorType = RankedTensorType::get(
       paddedShape, getElementTypeOrSelf(opOperand->get()));
+  LLVM_DEBUG(DBGS() << "--SUCCESS, makeComposedPadHighOp with type: "
+                    << paddedTensorType);
   return makeComposedPadHighOp(rewriter, opToPad->getLoc(), paddedTensorType,
                                opOperand->get(), paddingValue, nofold);
 }
@@ -541,7 +554,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
 
   // Step 2. Propagate packing to all LinalgOp operands.
   SmallVector<Value> inputsAndInits, results;
-  for (const auto& operandsList :
+  for (const auto &operandsList :
        {linalgOp.getDpsInputOperands(), linalgOp.getDpsInitOperands()}) {
     for (OpOperand *opOperandPtr : operandsList) {
       int64_t pos = opOperandPtr->getOperandNumber();

@@ -137,11 +137,9 @@ define amdgpu_kernel void @memcpy_constant_intrinsic_ptr_to_alloca(ptr addrspace
 ; Alloca is written through a flat pointer
 define i8 @memcpy_constant_arg_ptr_to_alloca_addrspacecast_to_flat(ptr addrspace(4) noalias readonly align 4 dereferenceable(32) %arg, i32 %idx) {
 ; CHECK-LABEL: @memcpy_constant_arg_ptr_to_alloca_addrspacecast_to_flat(
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 4, addrspace(5)
-; CHECK-NEXT:    [[ALLOCA_CAST_ASC:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p4.i64(ptr noundef nonnull align 1 dereferenceable(31) [[ALLOCA_CAST_ASC]], ptr addrspace(4) noundef align 4 dereferenceable(31) [[ARG:%.*]], i64 31, i1 false)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [32 x i8], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[IDX:%.*]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(5) [[GEP]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [32 x i8], ptr addrspace(4) [[ARG:%.*]], i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(4) [[GEP]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
   %alloca = alloca [32 x i8], align 4, addrspace(5)
@@ -155,9 +153,7 @@ define i8 @memcpy_constant_arg_ptr_to_alloca_addrspacecast_to_flat(ptr addrspace
 ; Alloca is only addressed through flat pointer.
 define i8 @memcpy_constant_arg_ptr_to_alloca_addrspacecast_to_flat2(ptr addrspace(4) noalias readonly align 4 dereferenceable(32) %arg, i32 %idx) {
 ; CHECK-LABEL: @memcpy_constant_arg_ptr_to_alloca_addrspacecast_to_flat2(
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 4, addrspace(5)
-; CHECK-NEXT:    [[ALLOCA_CAST_ASC:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p4.i64(ptr noundef nonnull align 1 dereferenceable(32) [[ALLOCA_CAST_ASC]], ptr addrspace(4) noundef align 4 dereferenceable(32) [[ARG:%.*]], i64 32, i1 false)
+; CHECK-NEXT:    [[ALLOCA_CAST_ASC:%.*]] = addrspacecast ptr addrspace(4) [[ARG:%.*]] to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [32 x i8], ptr [[ALLOCA_CAST_ASC]], i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
@@ -202,9 +198,7 @@ bb:
 define amdgpu_kernel void @byref_infloop_addrspacecast(ptr %scratch, ptr addrspace(4) byref(%struct.ty) align 4 %arg) local_unnamed_addr #1 {
 ; CHECK-LABEL: @byref_infloop_addrspacecast(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [4 x i32], align 4, addrspace(5)
-; CHECK-NEXT:    [[ADDRSPACECAST_ALLOCA:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p4.i64(ptr noundef nonnull align 4 dereferenceable(16) [[ADDRSPACECAST_ALLOCA]], ptr addrspace(4) noundef align 4 dereferenceable(16) [[ARG:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    [[ADDRSPACECAST_ALLOCA:%.*]] = addrspacecast ptr addrspace(4) [[ARG:%.*]] to ptr
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) [[SCRATCH:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[ADDRSPACECAST_ALLOCA]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
