@@ -4,11 +4,10 @@
 define arm_aapcs_vfpcc void @test(ptr noalias nocapture readonly %off, ptr noalias nocapture %data, ptr noalias nocapture %dst, i32 %n) {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    cmp r3, #1
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    bxlt lr
-; CHECK-NEXT:  .LBB0_1: @ %for.cond1.preheader.us.preheader
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    cmp r3, #1
+; CHECK-NEXT:    blt .LBB0_7
+; CHECK-NEXT:  @ %bb.1: @ %for.cond1.preheader.us.preheader
 ; CHECK-NEXT:    mov r8, r3
 ; CHECK-NEXT:    lsl.w r12, r3, #1
 ; CHECK-NEXT:    movs r3, #0
@@ -48,9 +47,8 @@ define arm_aapcs_vfpcc void @test(ptr noalias nocapture readonly %off, ptr noali
 ; CHECK-NEXT:    add r4, r12
 ; CHECK-NEXT:    cmp r3, r8
 ; CHECK-NEXT:    bne .LBB0_2
-; CHECK-NEXT:  @ %bb.7:
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, lr}
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:  .LBB0_7: @ %for.cond.cleanup
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
 entry:
   %cmp252 = icmp sgt i32 %n, 0
   br i1 %cmp252, label %for.cond1.preheader.us, label %for.cond.cleanup

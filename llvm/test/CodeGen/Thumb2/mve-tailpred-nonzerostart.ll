@@ -58,12 +58,11 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 define arm_aapcs_vfpcc void @start11(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, float %a, i32 %n) {
 ; CHECK-LABEL: start11:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    cmp r3, #1
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    bxlt lr
-; CHECK-NEXT:  .LBB1_1: @ %vector.ph
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    cmp r3, #1
+; CHECK-NEXT:    blt .LBB1_3
+; CHECK-NEXT:  @ %bb.1: @ %vector.ph
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    adds r4, r3, #3
 ; CHECK-NEXT:    adr r5, .LCPI1_0
@@ -86,9 +85,8 @@ define arm_aapcs_vfpcc void @start11(ptr nocapture readonly %x, ptr nocapture re
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrwt.32 q3, [r2], #16
 ; CHECK-NEXT:    bne .LBB1_2
-; CHECK-NEXT:  @ %bb.3:
-; CHECK-NEXT:    pop.w {r4, r5, r7, lr}
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:  .LBB1_3: @ %for.cond.cleanup
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.4:
 ; CHECK-NEXT:  .LCPI1_0:

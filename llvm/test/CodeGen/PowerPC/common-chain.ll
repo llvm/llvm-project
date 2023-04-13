@@ -137,14 +137,14 @@ define i64 @not_perfect_chain_all_same_offset_fail(ptr %p, i64 %offset, i64 %bas
 ; CHECK-LABEL: not_perfect_chain_all_same_offset_fail:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpdi r6, 0
+; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    ble cr0, .LBB1_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    sldi r7, r4, 1
+; CHECK-NEXT:    sldi r9, r4, 2
 ; CHECK-NEXT:    add r5, r3, r5
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    add r8, r4, r7
-; CHECK-NEXT:    sldi r9, r4, 2
 ; CHECK-NEXT:    mtctr r6
 ; CHECK-NEXT:    add r10, r4, r9
 ; CHECK-NEXT:    .p2align 4
@@ -161,11 +161,12 @@ define i64 @not_perfect_chain_all_same_offset_fail(ptr %p, i64 %offset, i64 %bas
 ; CHECK-NEXT:    mulld r6, r6, r0
 ; CHECK-NEXT:    maddld r3, r6, r30, r3
 ; CHECK-NEXT:    bdnz .LBB1_2
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:  # %bb.3: # %for.cond.cleanup
 ; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB1_4:
 ; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    blr
 entry:
   %mul = shl nsw i64 %offset, 1
@@ -424,20 +425,20 @@ define i64 @not_same_offset_fail(ptr %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-LABEL: not_same_offset_fail:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpdi r6, 0
-; CHECK-NEXT:    ble cr0, .LBB4_4
-; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    add r5, r3, r5
-; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    mtctr r6
+; CHECK-NEXT:    ble cr0, .LBB4_3
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    mulli r11, r4, 10
 ; CHECK-NEXT:    sldi r8, r4, 2
+; CHECK-NEXT:    add r5, r3, r5
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    add r8, r4, r8
 ; CHECK-NEXT:    sldi r9, r4, 3
-; CHECK-NEXT:    sub r10, r9, r4
+; CHECK-NEXT:    mtctr r6
 ; CHECK-NEXT:    sldi r7, r4, 1
+; CHECK-NEXT:    sub r10, r9, r4
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_2: # %for.body
 ; CHECK-NEXT:    #
@@ -454,13 +455,13 @@ define i64 @not_same_offset_fail(ptr %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-NEXT:    mulld r6, r6, r29
 ; CHECK-NEXT:    maddld r3, r6, r28, r3
 ; CHECK-NEXT:    bdnz .LBB4_2
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    b .LBB4_4
+; CHECK-NEXT:  .LBB4_3:
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:  .LBB4_4: # %for.cond.cleanup
 ; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB4_4:
-; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    blr
 entry:
   %mul = shl nsw i64 %offset, 1
