@@ -188,6 +188,27 @@ Value ParallelOp::getDataOperand(unsigned i) {
 }
 
 //===----------------------------------------------------------------------===//
+// SerialOp
+//===----------------------------------------------------------------------===//
+
+unsigned SerialOp::getNumDataOperands() {
+  return getReductionOperands().size() + getCopyOperands().size() +
+         getCopyinOperands().size() + getCopyinReadonlyOperands().size() +
+         getCopyoutOperands().size() + getCopyoutZeroOperands().size() +
+         getCreateOperands().size() + getCreateZeroOperands().size() +
+         getNoCreateOperands().size() + getPresentOperands().size() +
+         getDevicePtrOperands().size() + getAttachOperands().size() +
+         getGangPrivateOperands().size() + getGangFirstPrivateOperands().size();
+}
+
+Value SerialOp::getDataOperand(unsigned i) {
+  unsigned numOptional = getAsync() ? 1 : 0;
+  numOptional += getIfCond() ? 1 : 0;
+  numOptional += getSelfCond() ? 1 : 0;
+  return getOperand(getWaitOperands().size() + numOptional + i);
+}
+
+//===----------------------------------------------------------------------===//
 // LoopOp
 //===----------------------------------------------------------------------===//
 
