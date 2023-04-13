@@ -29,17 +29,11 @@ define { <8 x i32>, <8 x i32> } @splitTransposeDecode_8_avx2(<16 x i16> %a, <16 
 ;
 ; AVX2-LABEL: splitTransposeDecode_8_avx2:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpermq {{.*#+}} ymm2 = ymm1[0,2,0,2]
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = <0,1,8,9,2,3,10,11,u,u,u,u,u,u,u,u,4,5,12,13,6,7,14,15,u,u,u,u,u,u,u,u>
-; AVX2-NEXT:    vpshufb %ymm3, %ymm2, %ymm2
-; AVX2-NEXT:    vpermq {{.*#+}} ymm4 = ymm0[0,2,0,2]
-; AVX2-NEXT:    vpshufb %ymm3, %ymm4, %ymm4
-; AVX2-NEXT:    vpunpcklwd {{.*#+}} ymm2 = ymm4[0],ymm2[0],ymm4[1],ymm2[1],ymm4[2],ymm2[2],ymm4[3],ymm2[3],ymm4[8],ymm2[8],ymm4[9],ymm2[9],ymm4[10],ymm2[10],ymm4[11],ymm2[11]
-; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[1,3,1,3]
-; AVX2-NEXT:    vpshufb %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[1,3,1,3]
-; AVX2-NEXT:    vpshufb %ymm3, %ymm0, %ymm0
-; AVX2-NEXT:    vpunpcklwd {{.*#+}} ymm1 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11]
+; AVX2-NEXT:    vpunpcklwd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11]
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,4,1,5,2,6,3,7]
+; AVX2-NEXT:    vpermd %ymm2, %ymm3, %ymm2
+; AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15]
+; AVX2-NEXT:    vpermd %ymm0, %ymm3, %ymm1
 ; AVX2-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVX2-NEXT:    retq
 ;
@@ -72,17 +66,11 @@ define { <8 x i32>, <8 x i32> } @splitTransposeDecode_8_avx2(<16 x i16> %a, <16 
 ;
 ; XOPAVX2-LABEL: splitTransposeDecode_8_avx2:
 ; XOPAVX2:       # %bb.0:
-; XOPAVX2-NEXT:    vpermq {{.*#+}} ymm2 = ymm1[0,2,0,2]
-; XOPAVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = <0,1,8,9,2,3,10,11,u,u,u,u,u,u,u,u,4,5,12,13,6,7,14,15,u,u,u,u,u,u,u,u>
-; XOPAVX2-NEXT:    vpshufb %ymm3, %ymm2, %ymm2
-; XOPAVX2-NEXT:    vpermq {{.*#+}} ymm4 = ymm0[0,2,0,2]
-; XOPAVX2-NEXT:    vpshufb %ymm3, %ymm4, %ymm4
-; XOPAVX2-NEXT:    vpunpcklwd {{.*#+}} ymm2 = ymm4[0],ymm2[0],ymm4[1],ymm2[1],ymm4[2],ymm2[2],ymm4[3],ymm2[3],ymm4[8],ymm2[8],ymm4[9],ymm2[9],ymm4[10],ymm2[10],ymm4[11],ymm2[11]
-; XOPAVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[1,3,1,3]
-; XOPAVX2-NEXT:    vpshufb %ymm3, %ymm1, %ymm1
-; XOPAVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[1,3,1,3]
-; XOPAVX2-NEXT:    vpshufb %ymm3, %ymm0, %ymm0
-; XOPAVX2-NEXT:    vpunpcklwd {{.*#+}} ymm1 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11]
+; XOPAVX2-NEXT:    vpunpcklwd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11]
+; XOPAVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,4,1,5,2,6,3,7]
+; XOPAVX2-NEXT:    vpermd %ymm2, %ymm3, %ymm2
+; XOPAVX2-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15]
+; XOPAVX2-NEXT:    vpermd %ymm0, %ymm3, %ymm1
 ; XOPAVX2-NEXT:    vmovdqa %ymm2, %ymm0
 ; XOPAVX2-NEXT:    retq
   %shuffle.i = shufflevector <16 x i16> %a, <16 x i16> %b, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27>
