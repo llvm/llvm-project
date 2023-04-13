@@ -1453,10 +1453,11 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &CGVT,
   ConstantInitBuilder builder(CGM);
   [[maybe_unused]] auto components = builder.beginStruct();
 
-  llvm_unreachable("NYI");
   CGVT.createVTableInitializer(components, VTLayout, RTTI,
                                mlir::cir::isLocalLinkage(Linkage));
   // components.finishAndSetAsInitializer(VTable);
+
+  llvm_unreachable("NYI");
 
   // // Set the correct linkage.
   // VTable->setLinkage(Linkage);
