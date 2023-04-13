@@ -35,6 +35,8 @@ static bool UseRelativeLayout(const CIRGenModule &CGM) {
          CGM.getItaniumVTableContext().isRelativeLayout();
 }
 
+bool CIRGenVTables::useRelativeLayout() const { return UseRelativeLayout(CGM); }
+
 mlir::Type CIRGenModule::getVTableComponentType() {
   mlir::Type ptrTy = builder.getInt8PtrTy();
   if (UseRelativeLayout(*this))
@@ -153,6 +155,172 @@ void CIRGenVTables::GenerateClassData(const CXXRecordDecl *RD) {
 
   CGM.getCXXABI().emitVTableDefinitions(*this, RD);
   llvm_unreachable("NYI");
+}
+
+static void AddPointerLayoutOffset(const CIRGenModule &CGM,
+                                   ConstantArrayBuilder &builder,
+                                   CharUnits offset) {
+  llvm_unreachable("NYI");
+  // builder.add(llvm::ConstantExpr::getIntToPtr(
+  //     llvm::ConstantInt::get(CGM.PtrDiffTy, offset.getQuantity()),
+  //     CGM.Int8PtrTy));
+}
+
+static void AddRelativeLayoutOffset(const CIRGenModule &CGM,
+                                    ConstantArrayBuilder &builder,
+                                    CharUnits offset) {
+  llvm_unreachable("NYI");
+  // builder.add(llvm::ConstantInt::get(CGM.Int32Ty, offset.getQuantity()));
+}
+
+void CIRGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
+                                       const VTableLayout &layout,
+                                       unsigned componentIndex,
+                                       mlir::Attribute rtti,
+                                       unsigned &nextVTableThunkIndex,
+                                       unsigned vtableAddressPoint,
+                                       bool vtableHasLocalLinkage) {
+  auto &component = layout.vtable_components()[componentIndex];
+
+  auto addOffsetConstant =
+      useRelativeLayout() ? AddRelativeLayoutOffset : AddPointerLayoutOffset;
+
+  switch (component.getKind()) {
+  case VTableComponent::CK_VCallOffset:
+    return addOffsetConstant(CGM, builder, component.getVCallOffset());
+
+  case VTableComponent::CK_VBaseOffset:
+    return addOffsetConstant(CGM, builder, component.getVBaseOffset());
+
+  case VTableComponent::CK_OffsetToTop:
+    return addOffsetConstant(CGM, builder, component.getOffsetToTop());
+
+  case VTableComponent::CK_RTTI:
+    if (useRelativeLayout()) {
+      llvm_unreachable("NYI");
+      // return addRelativeComponent(builder, rtti, vtableAddressPoint,
+      //                             vtableHasLocalLinkage,
+      //                             /*isCompleteDtor=*/false);
+    } else {
+      llvm_unreachable("NYI");
+      // return builder.add(llvm::ConstantExpr::getBitCast(rtti,
+      // CGM.Int8PtrTy));
+    }
+
+  case VTableComponent::CK_FunctionPointer:
+  case VTableComponent::CK_CompleteDtorPointer:
+  case VTableComponent::CK_DeletingDtorPointer: {
+    GlobalDecl GD = component.getGlobalDecl();
+
+    if (CGM.getLangOpts().CUDA) {
+      llvm_unreachable("NYI");
+    }
+
+    [[maybe_unused]] auto getSpecialVirtualFn =
+        [&](StringRef name) -> mlir::Attribute {
+      // FIXME(PR43094): When merging comdat groups, lld can select a local
+      // symbol as the signature symbol even though it cannot be accessed
+      // outside that symbol's TU. The relative vtables ABI would make
+      // __cxa_pure_virtual and __cxa_deleted_virtual local symbols, and
+      // depending on link order, the comdat groups could resolve to the one
+      // with the local symbol. As a temporary solution, fill these components
+      // with zero. We shouldn't be calling these in the first place anyway.
+      if (useRelativeLayout())
+        llvm_unreachable("NYI");
+
+      // For NVPTX devices in OpenMP emit special functon as null pointers,
+      // otherwise linking ends up with unresolved references.
+      if (CGM.getLangOpts().OpenMP && CGM.getLangOpts().OpenMP &&
+          CGM.getTriple().isNVPTX())
+        llvm_unreachable("NYI");
+
+      llvm_unreachable("NYI");
+      // llvm::FunctionType *fnTy =
+      //     llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
+      // llvm::Constant *fn = cast<llvm::Constant>(
+      //     CGM.CreateRuntimeFunction(fnTy, name).getCallee());
+      // if (auto f = dyn_cast<llvm::Function>(fn))
+      //   f->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+      // return llvm::ConstantExpr::getBitCast(fn, CGM.Int8PtrTy);
+    };
+
+    // mlir::Attribute fnPtr;
+    // Pure virtual member functions.
+    if (cast<CXXMethodDecl>(GD.getDecl())->isPureVirtual()) {
+      llvm_unreachable("NYI");
+      // if (!PureVirtualFn)
+      //   PureVirtualFn =
+      //       getSpecialVirtualFn(CGM.getCXXABI().GetPureVirtualCallName());
+      // fnPtr = PureVirtualFn;
+
+      // Deleted virtual member functions.
+    } else if (cast<CXXMethodDecl>(GD.getDecl())->isDeleted()) {
+      llvm_unreachable("NYI");
+      // if (!DeletedVirtualFn)
+      //   DeletedVirtualFn =
+      //       getSpecialVirtualFn(CGM.getCXXABI().GetDeletedVirtualCallName());
+      // fnPtr = DeletedVirtualFn;
+
+      // Thunks.
+    } else if (nextVTableThunkIndex < layout.vtable_thunks().size() &&
+               layout.vtable_thunks()[nextVTableThunkIndex].first ==
+                   componentIndex) {
+      llvm_unreachable("NYI");
+      // auto &thunkInfo = layout.vtable_thunks()[nextVTableThunkIndex].second;
+
+      // nextVTableThunkIndex++;
+      // fnPtr = maybeEmitThunk(GD, thunkInfo, /*ForVTable=*/true);
+
+      // Otherwise we can use the method definition directly.
+    } else {
+      llvm_unreachable("NYI");
+      // llvm::Type *fnTy = CGM.getTypes().GetFunctionTypeForVTable(GD);
+      // fnPtr = CGM.GetAddrOfFunction(GD, fnTy, /*ForVTable=*/true);
+    }
+
+    if (useRelativeLayout()) {
+      llvm_unreachable("NYI");
+    } else {
+      llvm_unreachable("NYI");
+      // return builder.add(llvm::ConstantExpr::getBitCast(fnPtr,
+      // CGM.Int8PtrTy));
+    }
+  }
+
+  case VTableComponent::CK_UnusedFunctionPointer:
+    if (useRelativeLayout())
+      llvm_unreachable("NYI");
+    else {
+      llvm_unreachable("NYI");
+      // return builder.addNullPointer(CGM.Int8PtrTy);
+    }
+  }
+
+  llvm_unreachable("Unexpected vtable component kind");
+}
+
+void CIRGenVTables::createVTableInitializer(ConstantStructBuilder &builder,
+                                            const VTableLayout &layout,
+                                            mlir::Attribute rtti,
+                                            bool vtableHasLocalLinkage) {
+  auto componentType = getVTableComponentType();
+
+  const auto &addressPoints = layout.getAddressPointIndices();
+  unsigned nextVTableThunkIndex = 0;
+  for (unsigned vtableIndex = 0, endIndex = layout.getNumVTables();
+       vtableIndex != endIndex; ++vtableIndex) {
+    auto vtableElem = builder.beginArray(componentType);
+
+    size_t vtableStart = layout.getVTableOffset(vtableIndex);
+    size_t vtableEnd = vtableStart + layout.getVTableSize(vtableIndex);
+    for (size_t componentIndex = vtableStart; componentIndex < vtableEnd;
+         ++componentIndex) {
+      addVTableComponent(vtableElem, layout, componentIndex, rtti,
+                         nextVTableThunkIndex, addressPoints[vtableIndex],
+                         vtableHasLocalLinkage);
+    }
+    vtableElem.finishAndAddTo(builder);
+  }
 }
 
 /// Compute the required linkage of the vtable for the given class.

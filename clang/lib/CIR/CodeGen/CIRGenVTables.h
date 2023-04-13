@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENVTABLES_H
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENVTABLES_H
 
+#include "ConstantInitBuilder.h"
 #include "clang/AST/BaseSubobject.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/GlobalDecl.h"
@@ -62,11 +63,11 @@ class CIRGenVTables {
   //                                  const ThunkInfo &ThunkAdjustments,
   //                                  bool ForVTable);
 
-  //   void addVTableComponent(ConstantArrayBuilder &builder,
-  //                           const VTableLayout &layout, unsigned
-  //                           componentIndex, llvm::Constant *rtti, unsigned
-  //                           &nextVTableThunkIndex, unsigned
-  //                           vtableAddressPoint, bool vtableHasLocalLinkage);
+  void addVTableComponent(ConstantArrayBuilder &builder,
+                          const VTableLayout &layout, unsigned componentIndex,
+                          mlir::Attribute rtti, unsigned &nextVTableThunkIndex,
+                          unsigned vtableAddressPoint,
+                          bool vtableHasLocalLinkage);
 
   //   /// Add a 32-bit offset to a component relative to the vtable when using
   //   the
@@ -98,9 +99,9 @@ class CIRGenVTables {
 public:
   /// Add vtable components for the given vtable layout to the given
   /// global initializer.
-  //   void createVTableInitializer(ConstantStructBuilder &builder,
-  //                                const VTableLayout &layout, llvm::Constant
-  //                                *rtti, bool vtableHasLocalLinkage);
+  void createVTableInitializer(ConstantStructBuilder &builder,
+                               const VTableLayout &layout, mlir::Attribute rtti,
+                               bool vtableHasLocalLinkage);
 
   CIRGenVTables(CIRGenModule &CGM);
 
