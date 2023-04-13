@@ -8250,7 +8250,6 @@ mlir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp
 mlir/lib/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.cpp
 mlir/lib/Dialect/Tensor/Transforms/Bufferize.cpp
 mlir/lib/Dialect/Tensor/Transforms/PassDetail.h
-mlir/lib/Dialect/Tensor/Transforms/SplitPadding.cpp
 mlir/lib/Dialect/Tensor/Utils/Utils.cpp
 mlir/lib/Dialect/Tosa/IR/TosaOps.cpp
 mlir/lib/Dialect/Tosa/Transforms/TosaDecomposeConv2D.cpp
