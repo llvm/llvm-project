@@ -824,6 +824,9 @@ Bug Fixes to C++ Support
 - Fix default member initializers sometimes being ignored when performing
   parenthesized aggregate initialization of templated types.
   (`#62266 <https://github.com/llvm/llvm-project/issues/62266>`_)
+- Fix overly aggressive lifetime checks for parenthesized aggregate
+  initialization.
+  (`#61567 <https://github.com/llvm/llvm-project/issues/61567>`_)
 
 Concepts Specific Fixes:
 

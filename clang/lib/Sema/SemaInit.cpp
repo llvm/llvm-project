@@ -1186,6 +1186,7 @@ static void warnBracedScalarInit(Sema &S, const InitializedEntity &Entity,
   case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
   case InitializedEntity::EK_Binding:
   case InitializedEntity::EK_StmtExprResult:
+  case InitializedEntity::EK_ParenAggInitMember:
     llvm_unreachable("unexpected braced scalar init");
   }
 
@@ -3348,6 +3349,7 @@ DeclarationName InitializedEntity::getName() const {
 
   case EK_Variable:
   case EK_Member:
+  case EK_ParenAggInitMember:
   case EK_Binding:
   case EK_TemplateParameter:
     return Variable.VariableOrMember->getDeclName();
@@ -3379,6 +3381,7 @@ ValueDecl *InitializedEntity::getDecl() const {
   switch (getKind()) {
   case EK_Variable:
   case EK_Member:
+  case EK_ParenAggInitMember:
   case EK_Binding:
   case EK_TemplateParameter:
     return Variable.VariableOrMember;
@@ -3420,6 +3423,7 @@ bool InitializedEntity::allowsNRVO() const {
   case EK_Parameter_CF_Audited:
   case EK_TemplateParameter:
   case EK_Member:
+  case EK_ParenAggInitMember:
   case EK_Binding:
   case EK_New:
   case EK_Temporary:
@@ -3454,7 +3458,10 @@ unsigned InitializedEntity::dumpImpl(raw_ostream &OS) const {
   case EK_Result: OS << "Result"; break;
   case EK_StmtExprResult: OS << "StmtExprResult"; break;
   case EK_Exception: OS << "Exception"; break;
-  case EK_Member: OS << "Member"; break;
+  case EK_Member:
+  case EK_ParenAggInitMember:
+    OS << "Member";
+    break;
   case EK_Binding: OS << "Binding"; break;
   case EK_New: OS << "New"; break;
   case EK_Temporary: OS << "Temporary"; break;
@@ -5274,179 +5281,224 @@ static void TryOrBuildParenListInitialization(
     Sema &S, const InitializedEntity &Entity, const InitializationKind &Kind,
     ArrayRef<Expr *> Args, InitializationSequence &Sequence, bool VerifyOnly,
     ExprResult *Result = nullptr) {
-  unsigned ArgIndexToProcess = 0;
+  unsigned EntityIndexToProcess = 0;
   SmallVector<Expr *, 4> InitExprs;
   QualType ResultType;
   Expr *ArrayFiller = nullptr;
   FieldDecl *InitializedFieldInUnion = nullptr;
 
-  // Process entities (i.e. array members, base classes, or class fields) by
-  // adding an initialization expression to InitExprs for each entity to
-  // initialize.
-  auto ProcessEntities = [&](auto Range) -> bool {
-    bool IsUnionType = Entity.getType()->isUnionType();
-    for (InitializedEntity SubEntity : Range) {
-      // Unions should only have one initializer expression.
-      // If there are more initializers than it will be caught when we check
-      // whether Index equals Args.size().
-      if (ArgIndexToProcess == 1 && IsUnionType)
-        return true;
+  auto HandleInitializedEntity = [&](const InitializedEntity &SubEntity,
+                                     const InitializationKind &SubKind,
+                                     Expr *Arg, Expr **InitExpr = nullptr) {
+    InitializationSequence IS = [&]() {
+      if (Arg)
+        return InitializationSequence(S, SubEntity, SubKind, Arg);
+      return InitializationSequence(S, SubEntity, SubKind, std::nullopt);
+    }();
 
-      bool IsMember = SubEntity.getKind() == InitializedEntity::EK_Member;
-
-      // Unnamed bitfields should not be initialized at all, either with an arg
-      // or by default.
-      if (IsMember && cast<FieldDecl>(SubEntity.getDecl())->isUnnamedBitfield())
-        continue;
-
-      if (ArgIndexToProcess < Args.size()) {
-        // There are still expressions in Args that haven't been processed.
-        // Let's match them to the current entity to initialize.
-        Expr *E = Args[ArgIndexToProcess++];
-
-        // Incomplete array types indicate flexible array members. Do not allow
-        // paren list initializations of structs with these members, as GCC
-        // doesn't either.
-        if (IsMember) {
-          auto *FD = cast<FieldDecl>(SubEntity.getDecl());
-          if (FD->getType()->isIncompleteArrayType()) {
-            if (!VerifyOnly) {
-              S.Diag(E->getBeginLoc(), diag::err_flexible_array_init)
-                  << SourceRange(E->getBeginLoc(), E->getEndLoc());
-              S.Diag(FD->getLocation(), diag::note_flexible_array_member) << FD;
-            }
-            Sequence.SetFailed(
-                InitializationSequence::FK_ParenthesizedListInitFailed);
-            return false;
-          }
-        }
-
-        InitializationKind SubKind = InitializationKind::CreateForInit(
-            E->getExprLoc(), /*isDirectInit=*/false, E);
-        InitializationSequence SubSeq(S, SubEntity, SubKind, E);
-
-        if (SubSeq.Failed()) {
-          if (!VerifyOnly)
-            SubSeq.Diagnose(S, SubEntity, SubKind, E);
-          else
-            Sequence.SetFailed(
-                InitializationSequence::FK_ParenthesizedListInitFailed);
-
-          return false;
-        }
-        if (!VerifyOnly) {
-          ExprResult ER = SubSeq.Perform(S, SubEntity, SubKind, E);
-          InitExprs.push_back(ER.get());
-          if (IsMember && IsUnionType)
-            InitializedFieldInUnion = cast<FieldDecl>(SubEntity.getDecl());
-        }
+    if (IS.Failed()) {
+      if (!VerifyOnly) {
+        if (Arg)
+          IS.Diagnose(S, SubEntity, SubKind, Arg);
+        else
+          IS.Diagnose(S, SubEntity, SubKind, std::nullopt);
       } else {
-        // We've processed all of the args, but there are still entities that
-        // have to be initialized.
-        if (IsMember) {
-          // C++ [dcl.init]p17.6.2.2
-          //   The remaining elements are initialized with their default member
-          //   initializers, if any
-          auto *FD = cast<FieldDecl>(SubEntity.getDecl());
-          if (FD->hasInClassInitializer()) {
-            if (!VerifyOnly) {
-              ExprResult DIE = S.BuildCXXDefaultInitExpr(FD->getLocation(), FD);
-              if (DIE.isInvalid())
-                return false;
-              S.checkInitializerLifetime(SubEntity, DIE.get());
-              InitExprs.push_back(DIE.get());
-            }
-            continue;
-          }
-        }
-        // Remaining class elements without default member initializers and
-        // array elements are value initialized:
-        //
-        // C++ [dcl.init]p17.6.2.2
-        //   The remaining elements...otherwise are value initialzed
-        //
-        // C++ [dcl.init]p17.5
-        //   if the destination type is an array, the object is initialized as
-        // . follows. Let x1, . . . , xk be the elements of the expression-list
-        //   ...Let n denote the array size...the ith array element is...value-
-        //   initialized for each k < i <= n.
-        InitializationKind SubKind = InitializationKind::CreateValue(
-            Kind.getLocation(), Kind.getLocation(), Kind.getLocation(), true);
-        InitializationSequence SubSeq(S, SubEntity, SubKind, std::nullopt);
-        if (SubSeq.Failed()) {
-          if (!VerifyOnly)
-            SubSeq.Diagnose(S, SubEntity, SubKind, std::nullopt);
-          return false;
-        }
-        if (!VerifyOnly) {
-          ExprResult ER = SubSeq.Perform(S, SubEntity, SubKind, std::nullopt);
-          if (SubEntity.getKind() == InitializedEntity::EK_ArrayElement) {
-            ArrayFiller = ER.get();
-            return true;
-          }
-          InitExprs.push_back(ER.get());
-        }
+        Sequence.SetFailed(
+            InitializationSequence::FK_ParenthesizedListInitFailed);
       }
+
+      return false;
+    }
+    if (!VerifyOnly) {
+      ExprResult ER;
+      if (Arg)
+        ER = IS.Perform(S, SubEntity, SubKind, Arg);
+      else
+        ER = IS.Perform(S, SubEntity, SubKind, std::nullopt);
+      if (InitExpr)
+        *InitExpr = ER.get();
+      else
+        InitExprs.push_back(ER.get());
     }
     return true;
   };
 
   if (const ArrayType *AT =
           S.getASTContext().getAsArrayType(Entity.getType())) {
-
     SmallVector<InitializedEntity, 4> ElementEntities;
     uint64_t ArrayLength;
-    // C++ [dcl.init]p17.5
+    // C++ [dcl.init]p16.5
     //   if the destination type is an array, the object is initialized as
     //   follows. Let x1, . . . , xk be the elements of the expression-list. If
-    //   the destination type is an array of unknown bound, it is define as
+    //   the destination type is an array of unknown bound, it is defined as
     //   having k elements.
     if (const ConstantArrayType *CAT =
-            S.getASTContext().getAsConstantArrayType(Entity.getType()))
+            S.getASTContext().getAsConstantArrayType(Entity.getType())) {
       ArrayLength = CAT->getSize().getZExtValue();
-    else
+      ResultType = Entity.getType();
+    } else if (const VariableArrayType *VAT =
+                   S.getASTContext().getAsVariableArrayType(Entity.getType())) {
+      // Braced-initialization of variable array types is not allowed, even if
+      // the size is greater than or equal to the number of args, so we don't
+      // allow them to be initialized via parenthesized aggregate initialization
+      // either.
+      const Expr *SE = VAT->getSizeExpr();
+      S.Diag(SE->getBeginLoc(), diag::err_variable_object_no_init)
+          << SE->getSourceRange();
+      return;
+    } else {
+      assert(isa<IncompleteArrayType>(Entity.getType()));
       ArrayLength = Args.size();
+    }
+    EntityIndexToProcess = ArrayLength;
 
-    if (ArrayLength >= Args.size()) {
-      for (uint64_t I = 0; I < ArrayLength; ++I)
-        ElementEntities.push_back(
-            InitializedEntity::InitializeElement(S.getASTContext(), I, Entity));
-
-      if (!ProcessEntities(ElementEntities))
+    //   ...the ith array element is copy-initialized with xi for each
+    //   1 <= i <= k
+    for (Expr *E : Args) {
+      InitializedEntity SubEntity = InitializedEntity::InitializeElement(
+          S.getASTContext(), EntityIndexToProcess, Entity);
+      InitializationKind SubKind = InitializationKind::CreateForInit(
+          E->getExprLoc(), /*isDirectInit=*/false, E);
+      if (!HandleInitializedEntity(SubEntity, SubKind, E))
         return;
+    }
+    //   ...and value-initialized for each k < i <= n;
+    if (ArrayLength > Args.size()) {
+      InitializedEntity SubEntity = InitializedEntity::InitializeElement(
+          S.getASTContext(), Args.size(), Entity);
+      InitializationKind SubKind = InitializationKind::CreateValue(
+          Kind.getLocation(), Kind.getLocation(), Kind.getLocation(), true);
+      if (!HandleInitializedEntity(SubEntity, SubKind, nullptr, &ArrayFiller))
+        return;
+    }
 
+    if (ResultType.isNull()) {
       ResultType = S.Context.getConstantArrayType(
           AT->getElementType(), llvm::APInt(/*numBits=*/32, ArrayLength),
-          nullptr, ArrayType::Normal, 0);
+          /*SizeExpr=*/nullptr, ArrayType::Normal, 0);
     }
   } else if (auto *RT = Entity.getType()->getAs<RecordType>()) {
+    bool IsUnion = RT->isUnionType();
     const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
 
-    auto BaseRange = map_range(RD->bases(), [&](auto &base) {
-      return InitializedEntity::InitializeBase(S.getASTContext(), &base, false,
-                                               &Entity);
-    });
-    auto FieldRange = map_range(RD->fields(), [](auto *field) {
-      return InitializedEntity::InitializeMember(field);
-    });
+    if (!IsUnion) {
+      for (const CXXBaseSpecifier &Base : RD->bases()) {
+        InitializedEntity SubEntity = InitializedEntity::InitializeBase(
+            S.getASTContext(), &Base, false, &Entity);
+        if (EntityIndexToProcess < Args.size()) {
+          // C++ [dcl.init]p16.6.2.2.
+          //   ...the object is initialized is follows. Let e1, ..., en be the
+          //   elements of the aggregate([dcl.init.aggr]). Let x1, ..., xk be
+          //   the elements of the expression-list...The element ei is
+          //   copy-initialized with xi for 1 <= i <= k.
+          Expr *E = Args[EntityIndexToProcess];
+          InitializationKind SubKind = InitializationKind::CreateForInit(
+              E->getExprLoc(), /*isDirectInit=*/false, E);
+          if (!HandleInitializedEntity(SubEntity, SubKind, E))
+            return;
+        } else {
+          // We've processed all of the args, but there are still base classes
+          // that have to be initialized.
+          // C++ [dcl.init]p17.6.2.2
+          //   The remaining elements...otherwise are value initialzed
+          InitializationKind SubKind = InitializationKind::CreateValue(
+              Kind.getLocation(), Kind.getLocation(), Kind.getLocation(),
+              /*IsImplicit=*/true);
+          if (!HandleInitializedEntity(SubEntity, SubKind, nullptr))
+            return;
+        }
+        EntityIndexToProcess++;
+      }
+    }
 
-    if (!ProcessEntities(BaseRange))
-      return;
+    for (FieldDecl *FD : RD->fields()) {
+      // Unnamed bitfields should not be initialized at all, either with an arg
+      // or by default.
+      if (FD->isUnnamedBitfield())
+        continue;
 
-    if (!ProcessEntities(FieldRange))
-      return;
+      InitializedEntity SubEntity =
+          InitializedEntity::InitializeMemberFromParenAggInit(FD);
 
+      if (EntityIndexToProcess < Args.size()) {
+        //   ...The element ei is copy-initialized with xi for 1 <= i <= k.
+        Expr *E = Args[EntityIndexToProcess];
+
+        // Incomplete array types indicate flexible array members. Do not allow
+        // paren list initializations of structs with these members, as GCC
+        // doesn't either.
+        if (FD->getType()->isIncompleteArrayType()) {
+          if (!VerifyOnly) {
+            S.Diag(E->getBeginLoc(), diag::err_flexible_array_init)
+                << SourceRange(E->getBeginLoc(), E->getEndLoc());
+            S.Diag(FD->getLocation(), diag::note_flexible_array_member) << FD;
+          }
+          Sequence.SetFailed(
+              InitializationSequence::FK_ParenthesizedListInitFailed);
+          return;
+        }
+
+        InitializationKind SubKind = InitializationKind::CreateForInit(
+            E->getExprLoc(), /*isDirectInit=*/false, E);
+        if (!HandleInitializedEntity(SubEntity, SubKind, E))
+          return;
+
+        // Unions should have only one initializer expression, so we bail out
+        // after processing the first field. If there are more initializers then
+        // it will be caught when we later check whether EntityIndexToProcess is
+        // less than Args.size();
+        if (IsUnion) {
+          InitializedFieldInUnion = FD;
+          EntityIndexToProcess = 1;
+          break;
+        }
+      } else {
+        // We've processed all of the args, but there are still members that
+        // have to be initialized.
+        if (FD->hasInClassInitializer()) {
+          if (!VerifyOnly) {
+            // C++ [dcl.init]p16.6.2.2
+            //   The remaining elements are initialized with their default
+            //   member initializers, if any
+            ExprResult DIE = S.BuildCXXDefaultInitExpr(FD->getLocation(), FD);
+            if (DIE.isInvalid())
+              return;
+            S.checkInitializerLifetime(SubEntity, DIE.get());
+            InitExprs.push_back(DIE.get());
+          }
+        } else {
+          // C++ [dcl.init]p17.6.2.2
+          //   The remaining elements...otherwise are value initialzed
+          if (FD->getType()->isReferenceType()) {
+            Sequence.SetFailed(
+                InitializationSequence::FK_ParenthesizedListInitFailed);
+            if (!VerifyOnly) {
+              SourceRange SR = Kind.getParenOrBraceRange();
+              S.Diag(SR.getEnd(), diag::err_init_reference_member_uninitialized)
+                  << FD->getType() << SR;
+              S.Diag(FD->getLocation(), diag::note_uninit_reference_member);
+            }
+            return;
+          }
+          InitializationKind SubKind = InitializationKind::CreateValue(
+              Kind.getLocation(), Kind.getLocation(), Kind.getLocation(), true);
+          if (!HandleInitializedEntity(SubEntity, SubKind, nullptr))
+            return;
+        }
+      }
+      EntityIndexToProcess++;
+    }
     ResultType = Entity.getType();
   }
 
   // Not all of the args have been processed, so there must've been more args
-  // then were required to initialize the element.
-  if (ArgIndexToProcess < Args.size()) {
+  // than were required to initialize the element.
+  if (EntityIndexToProcess < Args.size()) {
     Sequence.SetFailed(InitializationSequence::FK_ParenthesizedListInitFailed);
     if (!VerifyOnly) {
       QualType T = Entity.getType();
       int InitKind = T->isArrayType() ? 0 : T->isUnionType() ? 3 : 4;
-      SourceRange ExcessInitSR(Args[ArgIndexToProcess]->getBeginLoc(),
+      SourceRange ExcessInitSR(Args[EntityIndexToProcess]->getBeginLoc(),
                                Args.back()->getEndLoc());
       S.Diag(Kind.getLocation(), diag::err_excess_initializers)
           << InitKind << ExcessInitSR;
@@ -6412,6 +6464,7 @@ getAssignmentAction(const InitializedEntity &Entity, bool Diagnose = false) {
     return Sema::AA_Converting;
 
   case InitializedEntity::EK_Member:
+  case InitializedEntity::EK_ParenAggInitMember:
   case InitializedEntity::EK_Binding:
   case InitializedEntity::EK_ArrayElement:
   case InitializedEntity::EK_VectorElement:
@@ -6432,6 +6485,7 @@ static bool shouldBindAsTemporary(const InitializedEntity &Entity) {
   switch (Entity.getKind()) {
   case InitializedEntity::EK_ArrayElement:
   case InitializedEntity::EK_Member:
+  case InitializedEntity::EK_ParenAggInitMember:
   case InitializedEntity::EK_Result:
   case InitializedEntity::EK_StmtExprResult:
   case InitializedEntity::EK_New:
@@ -6476,6 +6530,7 @@ static bool shouldDestroyEntity(const InitializedEntity &Entity) {
       return false;
 
     case InitializedEntity::EK_Member:
+    case InitializedEntity::EK_ParenAggInitMember:
     case InitializedEntity::EK_Binding:
     case InitializedEntity::EK_Variable:
     case InitializedEntity::EK_Parameter:
@@ -6512,6 +6567,7 @@ static SourceLocation getInitializationLoc(const InitializedEntity &Entity,
 
   case InitializedEntity::EK_ArrayElement:
   case InitializedEntity::EK_Member:
+  case InitializedEntity::EK_ParenAggInitMember:
   case InitializedEntity::EK_Parameter:
   case InitializedEntity::EK_Parameter_CF_Audited:
   case InitializedEntity::EK_TemplateParameter:
@@ -7080,7 +7136,15 @@ static LifetimeResult getEntityLifetime(
   case InitializedEntity::EK_Exception:
     // FIXME: Can we diagnose lifetime problems with exceptions?
     return {nullptr, LK_FullExpression};
+
+  case InitializedEntity::EK_ParenAggInitMember:
+    //   -- A temporary object bound to a reference element of an aggregate of
+    //      class type initialized from a parenthesized expression-list
+    //      [dcl.init, 9.3] persists until the completion of the full-expression
+    //      containing the expression-list.
+    return {nullptr, LK_FullExpression};
   }
+
   llvm_unreachable("unknown entity kind");
 }
 
@@ -9196,7 +9260,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
     S.checkInitializerLifetime(Entity, Init);
 
   // Diagnose non-fatal problems with the completed initialization.
-  if (Entity.getKind() == InitializedEntity::EK_Member &&
+  if (InitializedEntity::EntityKind EK = Entity.getKind();
+      (EK == InitializedEntity::EK_Member ||
+       EK == InitializedEntity::EK_ParenAggInitMember) &&
       cast<FieldDecl>(Entity.getDecl())->isBitField())
     S.CheckBitFieldInitialization(Kind.getLocation(),
                                   cast<FieldDecl>(Entity.getDecl()),
@@ -9650,7 +9716,8 @@ bool InitializationSequence::Diagnose(Sema &S,
       case OR_No_Viable_Function:
         if (Kind.getKind() == InitializationKind::IK_Default &&
             (Entity.getKind() == InitializedEntity::EK_Base ||
-             Entity.getKind() == InitializedEntity::EK_Member) &&
+             Entity.getKind() == InitializedEntity::EK_Member ||
+             Entity.getKind() == InitializedEntity::EK_ParenAggInitMember) &&
             isa<CXXConstructorDecl>(S.CurContext)) {
           // This is implicit default initialization of a member or
           // base within a constructor. If no viable function was
