@@ -13628,7 +13628,7 @@ private:
             cast<VectorType>(CmpInst::makeCmpResultType(VectorTy));
         VectorCost =
             TTI->getMinMaxReductionCost(VectorTy, VecCondTy,
-                                        /*IsUnsigned=*/false, CostKind);
+                                        /*IsUnsigned=*/false, FMF, CostKind);
       }
       CmpInst::Predicate RdxPred = getMinMaxReductionPredicate(RdxKind);
       ScalarCost = EvaluateScalarCost([&]() {
@@ -13650,7 +13650,7 @@ private:
         bool IsUnsigned =
             RdxKind == RecurKind::UMax || RdxKind == RecurKind::UMin;
         VectorCost = TTI->getMinMaxReductionCost(VectorTy, VecCondTy,
-                                                 IsUnsigned, CostKind);
+                                                 IsUnsigned, FMF, CostKind);
       }
       CmpInst::Predicate RdxPred = getMinMaxReductionPredicate(RdxKind);
       ScalarCost = EvaluateScalarCost([&]() {
