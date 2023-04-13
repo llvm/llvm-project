@@ -251,6 +251,12 @@ Changes to LLDB
 * LLDB is now able to show the subtype of signals found in a core file. For example
   memory tagging specific segfaults such as ``SIGSEGV: sync tag check fault``.
 
+* LLDB can now display register fields if they are described in target XML sent
+  by a debug server such as ``gdbserver`` (``lldb-server`` does not currently produce
+  this information). Fields are only printed when reading named registers, for
+  example ``register read cpsr``. They are not shown when reading a register set,
+  ``register read -s 0``.
+
 Changes to Sanitizers
 ---------------------
 * For Darwin users that override weak symbols, note that the dynamic linker will

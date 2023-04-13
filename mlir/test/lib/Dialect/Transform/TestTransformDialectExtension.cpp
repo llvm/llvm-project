@@ -505,6 +505,9 @@ mlir::test::TestReportNumberOfTrackedHandlesNestedUnder::apply(
 void mlir::test::TestPrintParamOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   transform::onlyReadsHandle(getParam(), effects);
+  if (getAnchor())
+    transform::onlyReadsHandle(getAnchor(), effects);
+  transform::onlyReadsPayload(effects);
 }
 
 DiagnosedSilenceableFailure
@@ -512,8 +515,15 @@ mlir::test::TestPrintParamOp::apply(transform::TransformResults &results,
                                     transform::TransformState &state) {
   std::string str;
   llvm::raw_string_ostream os(str);
+  if (getMessage())
+    os << *getMessage() << " ";
   llvm::interleaveComma(state.getParams(getParam()), os);
-  auto diag = emitRemark() << os.str();
+  if (!getAnchor()) {
+    emitRemark() << os.str();
+    return DiagnosedSilenceableFailure::success();
+  }
+  for (Operation *payload : state.getPayloadOps(getAnchor()))
+    ::mlir::emitRemark(payload->getLoc()) << os.str();
   return DiagnosedSilenceableFailure::success();
 }
 

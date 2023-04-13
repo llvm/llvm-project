@@ -145,6 +145,9 @@ TEST(WalkAST, ClassTemplates) {
 
   // Implicit instantiations references most relevant template.
   EXPECT_THAT(
+      testWalk("template<typename> struct $explicit^Foo;", "^Foo<int> x();"),
+      ElementsAre(Decl::Kind::ClassTemplate));
+  EXPECT_THAT(
       testWalk("template<typename> struct $explicit^Foo {};", "^Foo<int> x;"),
       ElementsAre(Decl::CXXRecord));
   EXPECT_THAT(testWalk(R"cpp(
@@ -154,9 +157,15 @@ TEST(WalkAST, ClassTemplates) {
               ElementsAre(Decl::ClassTemplateSpecialization));
   EXPECT_THAT(testWalk(R"cpp(
     template<typename> struct Foo {};
-    template<typename T> struct $explicit^Foo<T*> { void x(); };)cpp",
+    template<typename T> struct $explicit^Foo<T*> {};)cpp",
                        "^Foo<int *> x;"),
               ElementsAre(Decl::ClassTemplatePartialSpecialization));
+  // Incomplete instantiations don't have a specific specialization associated.
+  EXPECT_THAT(testWalk(R"cpp(
+    template<typename> struct $explicit^Foo;
+    template<typename T> struct Foo<T*>;)cpp",
+                       "^Foo<int *> x();"),
+              ElementsAre(Decl::Kind::ClassTemplate));
   EXPECT_THAT(testWalk(R"cpp(
     template<typename> struct $explicit^Foo {};
     template struct Foo<int>;)cpp",

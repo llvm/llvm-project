@@ -378,6 +378,46 @@ def IncludeOp : TransformDialectOp<"include",
   }];
 }
 
+def MatchOperationNameOp : TransformDialectOp<"match.operation_name",
+    [SingleOpMatcher,
+     MatchOpInterface,
+     MemoryEffectsOpInterface]> {
+  let summary = "Matches a single operation of one of the given kinds";
+  let description = [{
+    Succeeds if the operation associated with the operand handle has one of the
+    given operation names. Produces a silenceable failure otherwise.
+
+    If more than one payload operation is associated with the operand handle,
+    produces a definite failure.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$operand_handle,
+                       StrArrayAttr:$op_names);
+  let assemblyFormat =
+      "$operand_handle $op_names attr-dict `:` type($operand_handle)";
+  let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
+}
+
+def MatchParamCmpIOp : Op<Transform_Dialect, "match.param.cmpi", [
+    DeclareOpInterfaceMethods<TransformOpInterface>,
+    MatchOpInterface,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    SameTypeOperands]> {
+  let summary =
+    "Matches if two parameter lists are associated with the same value";
+  let description = [{
+    Succeeds if all of the co-indexed values associated with the given
+    parameters relate as specified by the predicate (greater than, less than,
+    equal to, or their combinations). Comparison treats all values as signed.
+    Produces a silenceable failure otherwise.
+  }];
+  let arguments = (ins TransformParamTypeInterface:$param,
+                       TransformParamTypeInterface:$reference,
+                       MatchCmpIPredicateAttr:$predicate);
+  let assemblyFormat =
+      "$predicate $param `,` $reference attr-dict `:` type($param)";
+}
+
 def MergeHandlesOp : TransformDialectOp<"merge_handles",
     [DeclareOpInterfaceMethods<TransformOpInterface, ["allowsRepeatedHandleOperands"]>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
@@ -499,6 +539,24 @@ def SplitHandlesOp : TransformDialectOp<"split_handles",
     $handle `in` `[` $num_result_handles `]`
     attr-dict `:` functional-type(operands, results)
   }];
+}
+
+def ParamConstantOp : Op<Transform_Dialect, "param.constant", [
+    MatchOpInterface,
+    DeclareOpInterfaceMethods<TransformOpInterface>,
+    MemoryEffectsOpInterface,
+    ParamProducerTransformOpTrait]> {
+  let summary = "Produces a new transform dialect parameter value associated "
+                "with the given attribute";
+  let description = [{
+    Produces a new transform dialect parameter associated with the singleton
+    list containing the given attribute. The operation itself always succeeds,
+    but the general association check may fail if the parameter type does not
+    accept the given kind of attribute as valid.
+  }];
+  let arguments = (ins AnyAttr:$value);
+  let results = (outs TransformParamTypeInterface:$param);
+  let assemblyFormat = "$value attr-dict `->` type($param)";
 }
 
 def PDLMatchOp : TransformDialectOp<"pdl_match",

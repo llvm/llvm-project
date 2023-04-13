@@ -699,8 +699,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_CTTZ)
       .lowerIf(isVector(0))
-      .clampScalar(0, s32, s64)
-      .scalarSameSizeAs(1, 0)
+      .widenScalarToNextPow2(1, /*Min=*/32)
+      .clampScalar(1, s32, s64)
+      .scalarSameSizeAs(0, 1)
       .legalIf([=](const LegalityQuery &Query) {
         return (HasCSSC && typeInSet(0, {s32, s64})(Query));
       })

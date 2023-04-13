@@ -253,6 +253,15 @@ public:
   static void AutoCompleteProcessName(llvm::StringRef partial_name,
                                       CompletionRequest &request);
 
+  // Register Type Provider
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             RegisterTypeBuilderCreateInstance create_callback);
+
+  static bool
+  UnregisterPlugin(RegisterTypeBuilderCreateInstance create_callback);
+
+  static lldb::RegisterTypeBuilderSP GetRegisterTypeBuilder(Target &target);
+
   // ScriptInterpreter
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              lldb::ScriptLanguage script_lang,
