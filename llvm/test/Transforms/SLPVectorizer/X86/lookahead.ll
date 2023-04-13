@@ -524,36 +524,22 @@ define i1 @ExtractIdxNotConstantInt2(float %a, float %b, float %c, <4 x float> %
 
 
 define i1 @foo(float %a, float %b, float %c, <4 x float> %vec, i64 %idx2) {
-; SSE-LABEL: @foo(
-; SSE-NEXT:    [[VECEXT_I291_I166:%.*]] = extractelement <4 x float> [[VEC:%.*]], i64 0
-; SSE-NEXT:    [[SUB14_I167:%.*]] = fsub float undef, [[VECEXT_I291_I166]]
-; SSE-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A:%.*]], i32 0
-; SSE-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[C:%.*]], i32 1
-; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[VEC]], <4 x float> poison, <2 x i32> <i32 undef, i32 1>
-; SSE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[SUB14_I167]], i32 0
-; SSE-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP2]], [[TMP4]]
-; SSE-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> <float poison, float 3.000000e+01>, float [[B:%.*]], i32 0
-; SSE-NEXT:    [[TMP7:%.*]] = fsub <2 x float> [[TMP5]], [[TMP6]]
-; SSE-NEXT:    [[TMP8:%.*]] = fadd <2 x float> [[TMP7]], <float 1.000000e+01, float 2.000000e+00>
-; SSE-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP8]], i32 0
-; SSE-NEXT:    [[TMP10:%.*]] = extractelement <2 x float> [[TMP8]], i32 1
-; SSE-NEXT:    [[MUL123_I184:%.*]] = fmul float [[TMP9]], [[TMP10]]
-; SSE-NEXT:    [[CMP_I185:%.*]] = fcmp ogt float [[MUL123_I184]], 0.000000e+00
-; SSE-NEXT:    ret i1 [[CMP_I185]]
-;
-; AVX-LABEL: @foo(
-; AVX-NEXT:    [[VECEXT_I291_I166:%.*]] = extractelement <4 x float> [[VEC:%.*]], i64 0
-; AVX-NEXT:    [[SUB14_I167:%.*]] = fsub float undef, [[VECEXT_I291_I166]]
-; AVX-NEXT:    [[FM:%.*]] = fmul float [[A:%.*]], [[SUB14_I167]]
-; AVX-NEXT:    [[SUB25_I168:%.*]] = fsub float [[FM]], [[B:%.*]]
-; AVX-NEXT:    [[VECEXT_I276_I169:%.*]] = extractelement <4 x float> [[VEC]], i64 1
-; AVX-NEXT:    [[ADD36_I173:%.*]] = fadd float [[SUB25_I168]], 1.000000e+01
-; AVX-NEXT:    [[MUL72_I179:%.*]] = fmul float [[C:%.*]], [[VECEXT_I276_I169]]
-; AVX-NEXT:    [[ADD78_I180:%.*]] = fsub float [[MUL72_I179]], 3.000000e+01
-; AVX-NEXT:    [[ADD79_I181:%.*]] = fadd float 2.000000e+00, [[ADD78_I180]]
-; AVX-NEXT:    [[MUL123_I184:%.*]] = fmul float [[ADD36_I173]], [[ADD79_I181]]
-; AVX-NEXT:    [[CMP_I185:%.*]] = fcmp ogt float [[MUL123_I184]], 0.000000e+00
-; AVX-NEXT:    ret i1 [[CMP_I185]]
+; CHECK-LABEL: @foo(
+; CHECK-NEXT:    [[VECEXT_I291_I166:%.*]] = extractelement <4 x float> [[VEC:%.*]], i64 0
+; CHECK-NEXT:    [[SUB14_I167:%.*]] = fsub float undef, [[VECEXT_I291_I166]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[C:%.*]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[VEC]], <4 x float> poison, <2 x i32> <i32 undef, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[SUB14_I167]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> <float poison, float 3.000000e+01>, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x float> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x float> [[TMP7]], <float 1.000000e+01, float 2.000000e+00>
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x float> [[TMP8]], i32 1
+; CHECK-NEXT:    [[MUL123_I184:%.*]] = fmul float [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[CMP_I185:%.*]] = fcmp ogt float [[MUL123_I184]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP_I185]]
 ;
   %vecext.i291.i166 = extractelement <4 x float> %vec, i64 0
   %sub14.i167 = fsub float undef, %vecext.i291.i166

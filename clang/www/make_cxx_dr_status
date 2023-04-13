@@ -232,7 +232,7 @@ for dr in drs:
 
   out_file.write('''
   <tr%s id="%s">
-    <td><a href="https://wg21.link/cwg%s">%s</a></td>
+    <td><a href="https://cplusplus.github.io/CWG/issues/%s.html">%s</a></td>
     <td>%s</td>
     <td>%s</td>
     <td%s align="center">%s</td>

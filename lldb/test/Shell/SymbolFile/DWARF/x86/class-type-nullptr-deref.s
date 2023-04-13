@@ -2,7 +2,9 @@
 # null), LLDB does not try to dereference the null pointer.
 
 # RUN: llvm-mc --triple x86_64-pc-linux %s --filetype=obj -o %t
-# RUN: %lldb %t -o "target variable x" -o exit 2>&1
+# RUN: %lldb %t -o "target variable x" -o exit 2>&1 | FileCheck %s
+
+# CHECK: 'Unable to determine byte size.'
 
 # This tests a fix for a crash. If things are working we don't get a segfault.
 

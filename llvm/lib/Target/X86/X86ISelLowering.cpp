@@ -47174,7 +47174,7 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
             // For vXi16 cases we need to use pmovmksb and extract every other
             // sign bit.
             SDLoc DL(EFLAGS);
-            if (EltBits == 32 || EltBits == 64) {
+            if ((EltBits == 32 || EltBits == 64) && Subtarget.hasAVX()) {
               MVT FloatSVT = MVT::getFloatingPointVT(EltBits);
               MVT FloatVT =
                   MVT::getVectorVT(FloatSVT, OpVT.getSizeInBits() / EltBits);
