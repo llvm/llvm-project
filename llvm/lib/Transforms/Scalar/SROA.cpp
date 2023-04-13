@@ -302,7 +302,9 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     // This should be a very rare situation as it requires the value being
     // stored to differ from the dbg.assign (i.e., the value has been
     // represented differently in the debug intrinsic for some reason).
-    SetKillLocation |= DbgAssign->hasArgList() && Value;
+    SetKillLocation |=
+        Value && (DbgAssign->hasArgList() ||
+                  !DbgAssign->getExpression()->isSingleLocationExpression());
     if (SetKillLocation)
       NewAssign->setKillLocation();
 

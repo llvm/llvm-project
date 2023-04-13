@@ -53,7 +53,7 @@ void union_modes(const InfoByHwMode<InfoT> &A,
     HasDefault = true;
     ++AI;
   }
-  if (BI != A.end() && BI->first == DefaultMode) {
+  if (BI != B.end() && BI->first == DefaultMode) {
     HasDefault = true;
     ++BI;
   }

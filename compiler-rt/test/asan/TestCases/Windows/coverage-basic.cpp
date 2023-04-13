@@ -5,9 +5,6 @@
 //
 // RUN: %sancov print *.sancov | FileCheck %s
 
-// FIXME: Investigate failure on MinGW.
-// XFAIL: target={{.*-windows-gnu}}
-
 #include <stdio.h>
 
 void foo() { fputs("FOO", stderr); }

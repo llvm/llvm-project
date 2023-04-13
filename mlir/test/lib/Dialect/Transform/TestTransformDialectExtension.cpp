@@ -209,6 +209,25 @@ void mlir::test::TestConsumeOperandOfOpKindOrFail::getEffects(
   transform::modifiesPayload(effects);
 }
 
+DiagnosedSilenceableFailure
+mlir::test::TestSucceedIfOperandOfOpKind::matchOperation(
+    Operation *op, transform::TransformResults &results,
+    transform::TransformState &state) {
+  if (op->getName().getStringRef() != getOpKind()) {
+    return emitSilenceableError()
+           << "op expected the operand to be associated with a payload op of "
+              "kind "
+           << getOpKind() << " got " << op->getName().getStringRef();
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestSucceedIfOperandOfOpKind::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getOperand(), effects);
+  transform::onlyReadsPayload(effects);
+}
+
 DiagnosedSilenceableFailure mlir::test::TestPrintRemarkAtOperandOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   ArrayRef<Operation *> payload = state.getPayloadOps(getOperand());
@@ -350,6 +369,12 @@ DiagnosedSilenceableFailure mlir::test::TestEmitRemarkAndEraseOperandOp::apply(
   if (getFailAfterErase())
     return emitSilenceableError() << "silenceable error";
   return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestEmitRemarkAndEraseOperandOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::consumesHandle(getTarget(), effects);
+  transform::modifiesPayload(effects);
 }
 
 DiagnosedSilenceableFailure mlir::test::TestWrongNumberOfResultsOp::applyToOne(

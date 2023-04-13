@@ -1039,12 +1039,11 @@ Breakpoint::BreakpointEventData::BreakpointEventData(
 
 Breakpoint::BreakpointEventData::~BreakpointEventData() = default;
 
-ConstString Breakpoint::BreakpointEventData::GetFlavorString() {
-  static ConstString g_flavor("Breakpoint::BreakpointEventData");
-  return g_flavor;
+llvm::StringRef Breakpoint::BreakpointEventData::GetFlavorString() {
+  return "Breakpoint::BreakpointEventData";
 }
 
-ConstString Breakpoint::BreakpointEventData::GetFlavor() const {
+llvm::StringRef Breakpoint::BreakpointEventData::GetFlavor() const {
   return BreakpointEventData::GetFlavorString();
 }
 

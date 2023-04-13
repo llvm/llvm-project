@@ -20,6 +20,12 @@ extern const double LOG_F[128];
 // Lookup table for range reduction constants r for logarithms.
 extern const float R[128];
 
+// Lookup table for range reduction constants r for logarithms.
+extern const double RD[128];
+
+// Lookup table for -log(r)
+extern const double LOG_R[128];
+
 // Lookup table for exp(m) with m = -104, ..., 89.
 //   -104 = floor(log(single precision's min denormal))
 //     89 = ceil(log(single precision's max normal))

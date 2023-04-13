@@ -1136,6 +1136,20 @@ bool llvm::isKnownNonNegativeInLoop(const SCEV *S, const Loop *L,
          SE.isLoopEntryGuardedByCond(L, ICmpInst::ICMP_SGE, S, Zero);
 }
 
+bool llvm::isKnownPositiveInLoop(const SCEV *S, const Loop *L,
+                                 ScalarEvolution &SE) {
+  const SCEV *Zero = SE.getZero(S->getType());
+  return SE.isAvailableAtLoopEntry(S, L) &&
+         SE.isLoopEntryGuardedByCond(L, ICmpInst::ICMP_SGT, S, Zero);
+}
+
+bool llvm::isKnownNonPositiveInLoop(const SCEV *S, const Loop *L,
+                                    ScalarEvolution &SE) {
+  const SCEV *Zero = SE.getZero(S->getType());
+  return SE.isAvailableAtLoopEntry(S, L) &&
+         SE.isLoopEntryGuardedByCond(L, ICmpInst::ICMP_SLE, S, Zero);
+}
+
 bool llvm::cannotBeMinInLoop(const SCEV *S, const Loop *L, ScalarEvolution &SE,
                              bool Signed) {
   unsigned BitWidth = cast<IntegerType>(S->getType())->getBitWidth();

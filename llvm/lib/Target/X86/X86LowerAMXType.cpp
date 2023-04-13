@@ -488,7 +488,7 @@ static void replaceWithTileLoad(Use &U, Value *Ptr, bool IsPHI = false) {
   // Get tile shape.
   IntrinsicInst *II = nullptr;
   if (IsPHI) {
-    Value *PhiOp = dyn_cast<PHINode>(V)->getIncomingValue(0);
+    Value *PhiOp = cast<PHINode>(V)->getIncomingValue(0);
     II = cast<IntrinsicInst>(PhiOp);
   } else {
     II = cast<IntrinsicInst>(V);

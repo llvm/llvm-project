@@ -33,27 +33,27 @@
 #include "test_macros.h"
 
 template <class FormatterT, class StringViewT>
-constexpr void test_parse(StringViewT fmt) {
+constexpr void test_parse(StringViewT fmt, std::size_t offset) {
   using CharT    = typename StringViewT::value_type;
   auto parse_ctx = std::basic_format_parse_context<CharT>(fmt);
   FormatterT formatter;
   static_assert(std::semiregular<decltype(formatter)>);
 
   std::same_as<typename StringViewT::iterator> auto it = formatter.parse(parse_ctx);
-  assert(it == fmt.end() - (!fmt.empty() && fmt.back() == '}'));
+  assert(it == fmt.end() - offset);
 }
 
 template <class StringViewT>
-constexpr void test_formatters(StringViewT fmt) {
+constexpr void test_formatters(StringViewT fmt, std::size_t offset) {
   using CharT = typename StringViewT::value_type;
-  test_parse<std::formatter<test_range_format_string<std::basic_string<CharT>>, CharT>>(fmt);
-  test_parse<std::formatter<test_range_format_debug_string<std::basic_string<CharT>>, CharT>>(fmt);
+  test_parse<std::formatter<test_range_format_string<std::basic_string<CharT>>, CharT>>(fmt, offset);
+  test_parse<std::formatter<test_range_format_debug_string<std::basic_string<CharT>>, CharT>>(fmt, offset);
 }
 
 template <class CharT>
 constexpr void test_char_type() {
-  test_formatters(SV(""));
-  test_formatters(SV("}"));
+  test_formatters(SV(""), 0);
+  test_formatters(SV("}"), 1);
 }
 
 constexpr bool test() {

@@ -1277,6 +1277,8 @@ bool MachProcess::GetThreadStoppedReason(nub_thread_t tid,
   if (m_thread_list.GetThreadStoppedReason(tid, stop_info)) {
     if (m_did_exec)
       stop_info->reason = eStopTypeExec;
+    if (stop_info->reason == eStopTypeWatchpoint)
+      RefineWatchpointStopInfo(tid, stop_info);
     return true;
   }
   return false;
@@ -1418,6 +1420,135 @@ void MachProcess::StopProfileThread() {
   pthread_join(m_profile_thread, NULL);
   m_profile_thread = NULL;
   m_profile_events.ResetEvents(eMachProcessProfileCancel);
+}
+
+/// return 1 if bit position \a bit is set in \a value
+static uint32_t bit(uint32_t value, uint32_t bit) {
+  return (value >> bit) & 1u;
+}
+
+// return the bitfield "value[msbit:lsbit]".
+static uint64_t bits(uint64_t value, uint32_t msbit, uint32_t lsbit) {
+  assert(msbit >= lsbit);
+  uint64_t shift_left = sizeof(value) * 8 - 1 - msbit;
+  value <<=
+      shift_left; // shift anything above the msbit off of the unsigned edge
+  value >>= shift_left + lsbit; // shift it back again down to the lsbit
+                                // (including undoing any shift from above)
+  return value;                 // return our result
+}
+
+void MachProcess::RefineWatchpointStopInfo(
+    nub_thread_t tid, struct DNBThreadStopInfo *stop_info) {
+  const DNBBreakpoint *wp = m_watchpoints.FindNearestWatchpoint(
+      stop_info->details.watchpoint.mach_exception_addr);
+  if (wp) {
+    stop_info->details.watchpoint.addr = wp->Address();
+    stop_info->details.watchpoint.hw_idx = wp->GetHardwareIndex();
+    DNBLogThreadedIf(LOG_WATCHPOINTS,
+                     "MachProcess::RefineWatchpointStopInfo "
+                     "mach exception addr 0x%llx moved in to nearest "
+                     "watchpoint, 0x%llx-0x%llx",
+                     stop_info->details.watchpoint.mach_exception_addr,
+                     wp->Address(), wp->Address() + wp->ByteSize() - 1);
+  } else {
+    stop_info->details.watchpoint.addr =
+        stop_info->details.watchpoint.mach_exception_addr;
+  }
+
+  stop_info->details.watchpoint.esr_fields_set = false;
+  std::optional<uint64_t> esr, far;
+  nub_size_t num_reg_sets = 0;
+  const DNBRegisterSetInfo *reg_sets = GetRegisterSetInfo(tid, &num_reg_sets);
+  for (nub_size_t set = 0; set < num_reg_sets; set++) {
+    if (reg_sets[set].registers == NULL)
+      continue;
+    for (uint32_t reg = 0; reg < reg_sets[set].num_registers; ++reg) {
+      if (strcmp(reg_sets[set].registers[reg].name, "esr") == 0) {
+        DNBRegisterValue reg_value;
+        if (GetRegisterValue(tid, set, reg, &reg_value)) {
+          esr = reg_value.value.uint64;
+        }
+      }
+      if (strcmp(reg_sets[set].registers[reg].name, "far") == 0) {
+        DNBRegisterValue reg_value;
+        if (GetRegisterValue(tid, set, reg, &reg_value)) {
+          far = reg_value.value.uint64;
+        }
+      }
+    }
+  }
+
+  if (esr && far) {
+    if (*far != stop_info->details.watchpoint.mach_exception_addr) {
+      // AFAIK the kernel is going to put the FAR value in the mach
+      // exception, if they don't match, it's interesting enough to log it.
+      DNBLogThreadedIf(LOG_WATCHPOINTS,
+                       "MachProcess::RefineWatchpointStopInfo mach exception "
+                       "addr 0x%llx but FAR register has value 0x%llx",
+                       stop_info->details.watchpoint.mach_exception_addr, *far);
+    }
+    uint32_t exception_class = bits(*esr, 31, 26);
+
+    // "Watchpoint exception from a lower Exception level"
+    if (exception_class == 0b110100) {
+      stop_info->details.watchpoint.esr_fields_set = true;
+      // Documented in the ARM ARM A-Profile Dec 2022 edition
+      // Section D17.2 ("General system control registers"),
+      // Section D17.2.37 "ESR_EL1, Exception Syndrome Register (EL1)",
+      // "Field Descriptions"
+      // "ISS encoding for an exception from a Watchpoint exception"
+      uint32_t iss = bits(*esr, 23, 0);
+      stop_info->details.watchpoint.esr_fields.iss = iss;
+      stop_info->details.watchpoint.esr_fields.wpt =
+          bits(iss, 23, 18); // Watchpoint number
+      stop_info->details.watchpoint.esr_fields.wptv =
+          bit(iss, 17); // Watchpoint number Valid
+      stop_info->details.watchpoint.esr_fields.wpf =
+          bit(iss, 16); // Watchpoint might be false-positive
+      stop_info->details.watchpoint.esr_fields.fnp =
+          bit(iss, 15); // FAR not Precise
+      stop_info->details.watchpoint.esr_fields.vncr =
+          bit(iss, 13); // watchpoint from use of VNCR_EL2 reg by EL1
+      stop_info->details.watchpoint.esr_fields.fnv =
+          bit(iss, 10); // FAR not Valid
+      stop_info->details.watchpoint.esr_fields.cm =
+          bit(iss, 6); // Cache maintenance
+      stop_info->details.watchpoint.esr_fields.wnr =
+          bit(iss, 6); // Write not Read
+      stop_info->details.watchpoint.esr_fields.dfsc =
+          bits(iss, 5, 0); // Data Fault Status Code
+
+      DNBLogThreadedIf(LOG_WATCHPOINTS,
+                       "ESR watchpoint fields parsed: "
+                       "iss = 0x%x, wpt = %u, wptv = %d, wpf = %d, fnp = %d, "
+                       "vncr = %d, fnv = %d, cm = %d, wnr = %d, dfsc = 0x%x",
+                       stop_info->details.watchpoint.esr_fields.iss,
+                       stop_info->details.watchpoint.esr_fields.wpt,
+                       stop_info->details.watchpoint.esr_fields.wptv,
+                       stop_info->details.watchpoint.esr_fields.wpf,
+                       stop_info->details.watchpoint.esr_fields.fnp,
+                       stop_info->details.watchpoint.esr_fields.vncr,
+                       stop_info->details.watchpoint.esr_fields.fnv,
+                       stop_info->details.watchpoint.esr_fields.cm,
+                       stop_info->details.watchpoint.esr_fields.wnr,
+                       stop_info->details.watchpoint.esr_fields.dfsc);
+
+      if (stop_info->details.watchpoint.esr_fields.wptv) {
+        DNBLogThreadedIf(LOG_WATCHPOINTS,
+                         "Watchpoint Valid field true, "
+                         "finding startaddr of watchpoint %d",
+                         stop_info->details.watchpoint.esr_fields.wpt);
+        stop_info->details.watchpoint.hw_idx =
+            stop_info->details.watchpoint.esr_fields.wpt;
+        const DNBBreakpoint *wp = m_watchpoints.FindByHardwareIndex(
+            stop_info->details.watchpoint.esr_fields.wpt);
+        if (wp) {
+          stop_info->details.watchpoint.addr = wp->Address();
+        }
+      }
+    }
+  }
 }
 
 bool MachProcess::StartProfileThread() {

@@ -321,6 +321,39 @@ func.func @_QPopenmp_target_data_region() {
 
 // -----
 
+func.func @_QPomp_target() {
+  %0 = fir.alloca !fir.array<512xi32> {bindc_name = "a", uniq_name = "_QFomp_targetEa"}
+  %c64_i32 = arith.constant 64 : i32
+  omp.target   thread_limit(%c64_i32 : i32) map((tofrom -> %0 : !fir.ref<!fir.array<512xi32>>)) {
+    %c10_i32 = arith.constant 10 : i32
+    %c1_i64 = arith.constant 1 : i64
+    %c1_i64_0 = arith.constant 1 : i64
+    %1 = arith.subi %c1_i64, %c1_i64_0 : i64
+    %2 = fir.coordinate_of %0, %1 : (!fir.ref<!fir.array<512xi32>>, i64) -> !fir.ref<i32>
+    fir.store %c10_i32 to %2 : !fir.ref<i32>
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL:   llvm.func @_QPomp_target() {
+// CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x !llvm.array<512 x i32> {bindc_name = "a", in_type = !fir.array<512xi32>, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFomp_targetEa"} : (i64) -> !llvm.ptr<array<512 x i32>>
+// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(64 : i32) : i32
+// CHECK:           omp.target   thread_limit(%[[VAL_2]] : i32) map((tofrom -> %[[VAL_1]] : !llvm.ptr<array<512 x i32>>)) {
+// CHECK:             %[[VAL_3:.*]] = llvm.mlir.constant(10 : i32) : i32
+// CHECK:             %[[VAL_4:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:             %[[VAL_5:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:             %[[VAL_6:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:             %[[VAL_7:.*]] = llvm.getelementptr %[[VAL_1]][0, %[[VAL_6]]] : (!llvm.ptr<array<512 x i32>>, i64) -> !llvm.ptr<i32>
+// CHECK:             llvm.store %[[VAL_3]], %[[VAL_7]] : !llvm.ptr<i32>
+// CHECK:             omp.terminator
+// CHECK:           }
+// CHECK:           llvm.return
+// CHECK:         }
+
+// -----
+
 func.func @_QPsimdloop_with_nested_loop() {
   %0 = fir.alloca i32 {adapt.valuebyref}
   %1 = fir.alloca !fir.array<10xi32> {bindc_name = "a", uniq_name = "_QFsimdloop_with_nested_loopEa"}
@@ -501,7 +534,7 @@ func.func @_QPsb() {
 // CHECK:    %[[RES:.*]] = llvm.icmp "eq" %[[ARGVAL_1]], %[[ARGVAL_2]] : i1
 // CHECK:    %[[RES_EXT:.*]] = llvm.zext %[[RES]] : i1 to i32
 // CHECK:    omp.yield(%[[RES_EXT]] : i32)
-// CHECK:  } 
+// CHECK:  }
 // CHECK-LABEL:  @_QPsimple_reduction
 // CHECK-SAME: %[[ARRAY_REF:.*]]: !llvm.ptr<array<100 x i32>>
 // CHECK:    %[[RED_ACCUMULATOR:.*]] = llvm.alloca %2 x i32 {bindc_name = "x", in_type = !fir.logical<4>, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFsimple_reductionEx"} : (i64) -> !llvm.ptr<i32>
@@ -526,7 +559,7 @@ omp.reduction.declare @eqv_reduction : !fir.logical<4> init {
   %2 = arith.cmpi eq, %0, %1 : i1
   %3 = fir.convert %2 : (i1) -> !fir.logical<4>
   omp.yield(%3 : !fir.logical<4>)
-} 
+}
 func.func @_QPsimple_reduction(%arg0: !fir.ref<!fir.array<100x!fir.logical<4>>> {fir.bindc_name = "y"}) {
   %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_reductionEi"}
   %1 = fir.alloca !fir.logical<4> {bindc_name = "x", uniq_name = "_QFsimple_reductionEx"}

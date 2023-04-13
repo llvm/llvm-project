@@ -2000,12 +2000,14 @@ def int_amdgcn_permlane64 :
 def int_amdgcn_ds_add_gs_reg_rtn :
   ClangBuiltin<"__builtin_amdgcn_ds_add_gs_reg_rtn">,
   Intrinsic<[llvm_anyint_ty], [llvm_i32_ty, llvm_i32_ty],
-            [ImmArg<ArgIndex<1>>, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+            [ImmArg<ArgIndex<1>>, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree],
+            "", [SDNPMemOperand]>;
 
 def int_amdgcn_ds_sub_gs_reg_rtn :
   ClangBuiltin<"__builtin_amdgcn_ds_sub_gs_reg_rtn">,
   Intrinsic<[llvm_anyint_ty], [llvm_i32_ty, llvm_i32_ty],
-            [ImmArg<ArgIndex<1>>, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+            [ImmArg<ArgIndex<1>>, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree],
+            "", [SDNPMemOperand]>;
 
 def int_amdgcn_ds_bvh_stack_rtn :
   Intrinsic<

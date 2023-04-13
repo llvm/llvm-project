@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/Initialization.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"

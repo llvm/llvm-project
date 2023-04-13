@@ -139,6 +139,11 @@ AST_MATCHER_P(CastExpr, castSubExpr, internal::Matcher<Expr>, innerMatcher) {
   return innerMatcher.matches(*Node.getSubExpr(), Finder, Builder);
 }
 
+// Matches a `UnaryOperator` whose operator is pre-increment:
+AST_MATCHER(UnaryOperator, isPreInc) {
+  return Node.getOpcode() == UnaryOperator::Opcode::UO_PreInc;
+}  
+
 // Returns a matcher that matches any expression 'e' such that `innerMatcher`
 // matches 'e' and 'e' is in an Unspecified Lvalue Context.
 static auto isInUnspecifiedLvalueContext(internal::Matcher<Expr> innerMatcher) {
@@ -163,24 +168,40 @@ static internal::Matcher<Stmt>
 isInUnspecifiedPointerContext(internal::Matcher<Stmt> InnerMatcher) {
   // A UPC can be
   // 1. an argument of a function call (except the callee has [[unsafe_...]]
-  // attribute), or
-  // 2. the operand of a cast operation; or
+  //    attribute), or
+  // 2. the operand of a pointer-to-(integer or bool) cast operation; or
   // 3. the operand of a comparator operation; or
+  // 4. the operand of a pointer subtraction operation
+  //    (i.e., computing the distance between two pointers); or ...
+
   auto CallArgMatcher =
       callExpr(forEachArgumentWithParam(InnerMatcher,
                   hasPointerType() /* array also decays to pointer type*/),
           unless(callee(functionDecl(hasAttr(attr::UnsafeBufferUsage)))));
 
   auto CastOperandMatcher =
-      explicitCastExpr(hasCastKind(CastKind::CK_PointerToIntegral),
-                       castSubExpr(allOf(hasPointerType(), InnerMatcher)));
+      castExpr(anyOf(hasCastKind(CastKind::CK_PointerToIntegral),
+		     hasCastKind(CastKind::CK_PointerToBoolean)),
+	       castSubExpr(allOf(hasPointerType(), InnerMatcher)));
 
   auto CompOperandMatcher =
       binaryOperator(hasAnyOperatorName("!=", "==", "<", "<=", ">", ">="),
                      eachOf(hasLHS(allOf(hasPointerType(), InnerMatcher)),
                             hasRHS(allOf(hasPointerType(), InnerMatcher))));
 
-  return stmt(anyOf(CallArgMatcher, CastOperandMatcher, CompOperandMatcher));
+  // A matcher that matches pointer subtractions:
+  auto PtrSubtractionMatcher =
+      binaryOperator(hasOperatorName("-"),
+		     // Note that here we need both LHS and RHS to be
+		     // pointer. Then the inner matcher can match any of
+		     // them:
+		     allOf(hasLHS(hasPointerType()),
+			   hasRHS(hasPointerType())),
+		     eachOf(hasLHS(InnerMatcher),
+			    hasRHS(InnerMatcher)));
+
+  return stmt(anyOf(CallArgMatcher, CastOperandMatcher, CompOperandMatcher,
+		    PtrSubtractionMatcher));
   // FIXME: any more cases? (UPC excludes the RHS of an assignment.  For now we
   // don't have to check that.)
 }
@@ -703,6 +724,46 @@ public:
 };
 } // namespace
 
+
+// Representing a pointer type expression of the form `++Ptr` in an Unspecified
+// Pointer Context (UPC):
+class UPCPreIncrementGadget : public FixableGadget {
+private:
+  static constexpr const char *const UPCPreIncrementTag =
+    "PointerPreIncrementUnderUPC";
+  const UnaryOperator *Node; // the `++Ptr` node
+
+public:
+  UPCPreIncrementGadget(const MatchFinder::MatchResult &Result)
+    : FixableGadget(Kind::UPCPreIncrement),
+      Node(Result.Nodes.getNodeAs<UnaryOperator>(UPCPreIncrementTag)) {
+    assert(Node != nullptr && "Expecting a non-null matching result");
+  }
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::UPCPreIncrement;
+  }
+
+  static Matcher matcher() {
+    // Note here we match `++Ptr` for any expression `Ptr` of pointer type.
+    // Although currently we can only provide fix-its when `Ptr` is a DRE, we
+    // can have the matcher be general, so long as `getClaimedVarUseSites` does
+    // things right.
+    return stmt(isInUnspecifiedPointerContext(expr(ignoringImpCasts(
+								    unaryOperator(isPreInc(),
+										  hasUnaryOperand(declRefExpr())
+										  ).bind(UPCPreIncrementTag)))));
+  }
+
+  virtual std::optional<FixItList> getFixits(const Strategy &S) const override;
+
+  virtual const Stmt *getBaseStmt() const override { return Node; }
+
+  virtual DeclUseList getClaimedVarUseSites() const override {
+    return {dyn_cast<DeclRefExpr>(Node->getSubExpr())};
+  }
+};
+
 // Representing a fixable expression of the form `*(ptr + 123)` or `*(123 +
 // ptr)`:
 class DerefSimplePtrArithFixableGadget : public FixableGadget {
@@ -1007,14 +1068,30 @@ static std::string getAPIntText(APInt Val) {
 template <typename NodeTy>
 static SourceLocation getEndCharLoc(const NodeTy *Node, const SourceManager &SM,
                                     const LangOptions &LangOpts) {
-  return Lexer::getLocForEndOfToken(Node->getEndLoc(), 1, SM, LangOpts);
+  unsigned TkLen = Lexer::MeasureTokenLength(Node->getEndLoc(), SM, LangOpts);
+  SourceLocation Loc = Node->getEndLoc().getLocWithOffset(TkLen - 1);
+
+  // We expect `Loc` to be valid. The location is obtained by moving forward
+  // from the beginning of the token 'len(token)-1' characters. The file ID of
+  // the locations within a token must be consistent.
+  assert(Loc.isValid() && "Expected the source location of the last"
+                          "character of an AST Node to be always valid");
+  return Loc;
 }
 
 // Return the source location just past the last character of the AST `Node`.
 template <typename NodeTy>
 static SourceLocation getPastLoc(const NodeTy *Node, const SourceManager &SM,
                                  const LangOptions &LangOpts) {
-  return Lexer::getLocForEndOfToken(Node->getEndLoc(), 0, SM, LangOpts);
+  SourceLocation Loc =
+      Lexer::getLocForEndOfToken(Node->getEndLoc(), 0, SM, LangOpts);
+
+  // We expect `Loc` to be valid as it is either associated to a file ID or
+  //   it must be the end of a macro expansion. (see
+  //   `Lexer::getLocForEndOfToken`)
+  assert(Loc.isValid() && "Expected the source location just past the last "
+                          "character of an AST Node to be always valid");
+  return Loc;
 }
 
 // Return text representation of an `Expr`.
@@ -1164,6 +1241,36 @@ fixUPCAddressofArraySubscriptWithSpan(const UnaryOperator *Node) {
       FixItHint::CreateReplacement(Node->getSourceRange(), SS.str())};
 }
 
+
+std::optional<FixItList> UPCPreIncrementGadget::getFixits(const Strategy &S) const {
+  DeclUseList DREs = getClaimedVarUseSites();
+
+  if (DREs.size() != 1)
+    return std::nullopt; // In cases of `++Ptr` where `Ptr` is not a DRE, we
+                         // give up
+  if (const VarDecl *VD = dyn_cast<VarDecl>(DREs.front()->getDecl())) {
+    if (S.lookup(VD) == Strategy::Kind::Span) {
+      FixItList Fixes;
+      std::stringstream SS;
+      const Stmt *PreIncNode = getBaseStmt();
+      StringRef varName = VD->getName();
+      const ASTContext &Ctx = VD->getASTContext();
+
+      // To transform UPC(++p) to UPC((p = p.subspan(1)).data()):
+      SS << "(" << varName.data() << " = " << varName.data()
+         << ".subspan(1)).data()";
+      Fixes.push_back(FixItHint::CreateReplacement(
+          SourceRange(PreIncNode->getBeginLoc(),
+                      getEndCharLoc(PreIncNode, Ctx.getSourceManager(),
+                                    Ctx.getLangOpts())),
+          SS.str()));
+      return Fixes;
+    }
+  }
+  return std::nullopt; // Not in the cases that we can handle for now, give up.
+}
+
+
 // For a non-null initializer `Init` of `T *` type, this function returns
 // `FixItHint`s producing a list initializer `{Init,  S}` as a part of a fix-it
 // to output stream.
@@ -1179,9 +1286,25 @@ fixUPCAddressofArraySubscriptWithSpan(const UnaryOperator *Node) {
 static FixItList
 populateInitializerFixItWithSpan(const Expr *Init, const ASTContext &Ctx,
                                  const StringRef UserFillPlaceHolder) {
-  FixItList FixIts{};
   const SourceManager &SM = Ctx.getSourceManager();
   const LangOptions &LangOpts = Ctx.getLangOpts();
+
+  // If `Init` has a constant value that is (or equivalent to) a
+  // NULL pointer, we use the default constructor to initialize the span
+  // object, i.e., a `std:span` variable declaration with no initializer.
+  // So the fix-it is just to remove the initializer.
+  if (Init->isNullPointerConstant(
+          std::remove_const_t<ASTContext &>(Ctx),
+          // FIXME: Why does this function not ask for `const ASTContext
+          // &`? It should. Maybe worth an NFC patch later.
+          Expr::NullPointerConstantValueDependence::
+              NPC_ValueDependentIsNotNull)) {
+    SourceRange SR(Init->getBeginLoc(), getEndCharLoc(Init, SM, LangOpts));
+
+    return {FixItHint::CreateRemoval(SR)};
+  }
+
+  FixItList FixIts{};
   std::string ExtentText = UserFillPlaceHolder.data();
   StringRef One = "1";
 
@@ -1254,8 +1377,8 @@ static FixItList fixVarDeclWithSpan(const VarDecl *D, const ASTContext &Ctx,
     FixItList InitFixIts =
         populateInitializerFixItWithSpan(Init, Ctx, UserFillPlaceHolder);
 
-    if (InitFixIts.empty())
-      return {}; // Something wrong with fixing initializer, give up
+    assert(!InitFixIts.empty() &&
+           "Unable to fix initializer of unsafe variable declaration");
     // The loc right before the initializer:
     ReplacementLastLoc = Init->getBeginLoc().getLocWithOffset(-1);
     FixIts.insert(FixIts.end(), std::make_move_iterator(InitFixIts.begin()),
@@ -1318,8 +1441,8 @@ static bool overlapWithMacro(const FixItList &FixIts) {
   // FIXME: For now we only check if the range (or the first token) is (part of)
   // a macro expansion.  Ideally, we want to check for all tokens in the range.
   return llvm::any_of(FixIts, [](const FixItHint &Hint) {
-    auto BeginLoc = Hint.RemoveRange.getBegin();
-    if (BeginLoc.isMacroID())
+    auto Range = Hint.RemoveRange;
+    if (Range.getBegin().isMacroID() || Range.getEnd().isMacroID())
       // If the range (or the first token) is (part of) a macro expansion:
       return true;
     return false;

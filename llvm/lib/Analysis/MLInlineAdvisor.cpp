@@ -38,6 +38,13 @@ static cl::opt<std::string> InteractiveChannelBaseName(
         "Base file path for the interactive mode. The incoming filename should "
         "have the name <inliner-interactive-channel-base>.in, while the "
         "outgoing name should be <inliner-interactive-channel-base>.out"));
+static const std::string InclDefaultMsg =
+    (Twine("In interactive mode, also send the default policy decision: ") +
+     DefaultDecisionName + ".")
+        .str();
+static cl::opt<bool>
+    InteractiveIncludeDefault("inliner-interactive-include-default", cl::Hidden,
+                              cl::desc(InclDefaultMsg));
 
 #if defined(LLVM_HAVE_TF_AOT_INLINERSIZEMODEL)
 // codegen-ed file
@@ -48,7 +55,8 @@ using CompiledModelType = NoopSavedModelImpl;
 #endif
 
 std::unique_ptr<InlineAdvisor>
-llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM) {
+llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
+                            std::function<bool(CallBase &)> GetDefaultAdvice) {
   if (!llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() &&
       InteractiveChannelBaseName.empty())
     return nullptr;
@@ -56,12 +64,17 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM) {
   if (InteractiveChannelBaseName.empty())
     AOTRunner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
         M.getContext(), FeatureMap, DecisionName);
-  else
+  else {
+    auto Features = FeatureMap;
+    if (InteractiveIncludeDefault)
+      Features.push_back(DefaultDecisionSpec);
     AOTRunner = std::make_unique<InteractiveModelRunner>(
-        M.getContext(), FeatureMap, InlineDecisionSpec,
+        M.getContext(), Features, InlineDecisionSpec,
         InteractiveChannelBaseName + ".out",
         InteractiveChannelBaseName + ".in");
-  return std::make_unique<MLInlineAdvisor>(M, MAM, std::move(AOTRunner));
+  }
+  return std::make_unique<MLInlineAdvisor>(M, MAM, std::move(AOTRunner),
+                                           GetDefaultAdvice);
 }
 
 #define DEBUG_TYPE "inline-ml"
@@ -96,6 +109,8 @@ const char *const llvm::DecisionName = "inlining_decision";
 const TensorSpec llvm::InlineDecisionSpec =
     TensorSpec::createSpec<int64_t>(DecisionName, {1});
 const char *const llvm::DefaultDecisionName = "inlining_default";
+const TensorSpec llvm::DefaultDecisionSpec =
+    TensorSpec::createSpec<int64_t>(DefaultDecisionName, {1});
 const char *const llvm::RewardName = "delta_size";
 
 CallBase *getInlinableCS(Instruction &I) {
@@ -108,11 +123,13 @@ CallBase *getInlinableCS(Instruction &I) {
   return nullptr;
 }
 
-MLInlineAdvisor::MLInlineAdvisor(Module &M, ModuleAnalysisManager &MAM,
-                                 std::unique_ptr<MLModelRunner> Runner)
+MLInlineAdvisor::MLInlineAdvisor(
+    Module &M, ModuleAnalysisManager &MAM,
+    std::unique_ptr<MLModelRunner> Runner,
+    std::function<bool(CallBase &)> GetDefaultAdvice)
     : InlineAdvisor(
           M, MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
-      ModelRunner(std::move(Runner)),
+      ModelRunner(std::move(Runner)), GetDefaultAdvice(GetDefaultAdvice),
       CG(MAM.getResult<LazyCallGraphAnalysis>(M)),
       InitialIRSize(getModuleIRSize()), CurrentIRSize(InitialIRSize) {
   assert(ModelRunner);
@@ -393,7 +410,10 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
     *ModelRunner->getTensor<int64_t>(inlineCostFeatureToMlFeature(
         static_cast<InlineCostFeatureIndex>(I))) = CostFeatures->at(I);
   }
-
+  // This one would have been set up to be right at the end.
+  if (!InteractiveChannelBaseName.empty() && InteractiveIncludeDefault)
+    *ModelRunner->getTensor<int64_t>(InlineCostFeatureIndex::NumberOfFeatures) =
+        GetDefaultAdvice(CB);
   return getAdviceFromModel(CB, ORE);
 }
 

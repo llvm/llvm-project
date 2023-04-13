@@ -7,7 +7,6 @@ add_mlir_dialect_library(MLIRTensorTransforms
   FoldTensorSubsetOps.cpp
   MergeConsecutiveInsertExtractSlicePatterns.cpp
   ReshapePatterns.cpp
-  SplitPaddingPatterns.cpp
   SwapExtractSliceWithProducerPatterns.cpp
 
   ADDITIONAL_HEADER_DIRS

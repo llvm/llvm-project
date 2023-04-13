@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TBAABuilder.h"
+#include "flang/Optimizer/CodeGen/TBAABuilder.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"

@@ -978,17 +978,15 @@ public:
         MatrixInsts.push_back(&I);
       }
 
-    // Second, try to fuse candidates.
+    // Second, try to lower any dot products
     SmallPtrSet<Instruction *, 16> FusedInsts;
+    for (CallInst *CI : MaybeFusableInsts)
+      lowerDotProduct(CI, FusedInsts, getFastMathFlags(CI));
+
+    // Third, try to fuse candidates.
     for (CallInst *CI : MaybeFusableInsts)
       LowerMatrixMultiplyFused(CI, FusedInsts);
 
-    // Third, try to lower any dot products
-    for (CallInst *CI : MaybeFusableInsts) {
-      if (FusedInsts.contains(CI)) // skip if already fused
-        continue;
-      lowerDotProduct(CI, FusedInsts, getFastMathFlags(CI));
-    }
     Changed = !FusedInsts.empty();
 
     // Fourth, lower remaining instructions with shape information.
@@ -1324,7 +1322,8 @@ public:
   void lowerDotProduct(CallInst *MatMul,
                        SmallPtrSet<Instruction *, 16> &FusedInsts,
                        FastMathFlags FMF) {
-    if (MatrixLayout != MatrixLayoutTy::ColumnMajor)
+    if (FusedInsts.contains(MatMul) ||
+        MatrixLayout != MatrixLayoutTy::ColumnMajor)
       return;
     ShapeInfo LShape(MatMul->getArgOperand(2), MatMul->getArgOperand(3));
     ShapeInfo RShape(MatMul->getArgOperand(3), MatMul->getArgOperand(4));
@@ -1410,7 +1409,8 @@ public:
     Result = Builder.CreateInsertElement(PoisonValue::get(MatMul->getType()),
                                          Result, uint64_t(0));
     MatMul->replaceAllUsesWith(Result);
-    MatMul->eraseFromParent();
+    FusedInsts.insert(MatMul);
+    ToRemove.push_back(MatMul);
   }
 
   /// Compute \p Result += \p A * \p B for input matrices with left-associating

@@ -10,8 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
@@ -459,11 +461,22 @@ HoistPaddingAnalysis::getPackedTensorSizes(RewriterBase &rewriter,
   // of the enclosing loops.
   for (auto forOp : packingLoops) {
     // Compute an upper bound `ubVal` for the upper bound of `forOp`.
-    AffineMap boundMap;
-    SmallVector<Value> boundOperands;
-    getUpperBoundForIndex(forOp.getUpperBound(), boundMap, boundOperands);
-    Value ubVal =
-        rewriter.createOrFold<AffineMinOp>(loc, boundMap, boundOperands);
+    FailureOr<OpFoldResult> loopUb = reifyValueBound(
+        rewriter, loc, presburger::BoundType::UB, forOp.getUpperBound(),
+        /*dim=*/std::nullopt, /*stopCondition=*/
+        [&](Value v, std::optional<int64_t> d) {
+          if (v == forOp.getUpperBound())
+            return false;
+          // Compute a bound that is independent of any affine op results.
+          Operation *op = v.getDefiningOp();
+          if (!op)
+            return true;
+          return !isa<AffineMinOp, AffineMaxOp, AffineApplyOp>(op);
+        },
+        /*closedUB=*/true);
+    assert(succeeded(loopUb) && "could not get upper bound");
+    Value ubVal = getValueOrCreateConstantIndexOp(rewriter, loc, *loopUb);
+
     // Compute the maximal packing loop length as (ub - lb).ceilDiv(step) and
     // store the result to `dynamicTensorSizes`.
     // TODO: instead of using the lower bound of `forOp` directly, implement a

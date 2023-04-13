@@ -1410,6 +1410,17 @@ public:
   }
 };
 
+/// This represents the llvm.instrprof.timestamp intrinsic.
+class InstrProfTimestampInst : public InstrProfInstBase {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::instrprof_timestamp;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
 /// This represents the llvm.instrprof.value.profile intrinsic.
 class InstrProfValueProfileInst : public InstrProfInstBase {
 public:

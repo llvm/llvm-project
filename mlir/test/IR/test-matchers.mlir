@@ -41,3 +41,14 @@ func.func @test2(%a: f32) -> f32 {
 // CHECK-LABEL: test2
 //       CHECK:   Pattern add(add(a, constant), a) matched and bound constant to: 1.000000e+00
 //       CHECK:   Pattern add(add(a, constant), a) matched
+
+func.func @test3(%a: f32) -> f32 {
+  %0 = "test.name"() {value = 1.0 : f32} : () -> f32
+  %1 = arith.addf %a, %0: f32
+  %2 = arith.mulf %a, %1 fastmath<fast>: f32
+  return %2: f32
+}
+
+// CHECK-LABEL: test3
+//       CHECK:   Pattern mul(*, add(*, m_Op("test.name"))) matched
+//       CHECK:   Pattern m_Attr("fastmath") matched and bound value to: fast

@@ -146,6 +146,7 @@ template <> struct hash<std::error_condition>;
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__system_error/errc.h>
 #include <__system_error/error_category.h>
 #include <__system_error/error_code.h>
 #include <__system_error/error_condition.h>

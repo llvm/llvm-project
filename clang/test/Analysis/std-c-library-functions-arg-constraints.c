@@ -30,9 +30,9 @@ int isalnum(int);
 
 void test_alnum_concrete(int v) {
   int ret = isalnum(256); // \
-  // report-warning{{The 1st argument to 'isalnum' should be an unsigned char value or EOF}} \
-  // bugpath-warning{{The 1st argument to 'isalnum' should be an unsigned char value or EOF}} \
-  // bugpath-note{{The 1st argument to 'isalnum' should be an unsigned char value or EOF}}
+  // report-warning{{The 1st argument to 'isalnum' is 256 but should be an unsigned char value or EOF}} \
+  // bugpath-warning{{The 1st argument to 'isalnum' is 256 but should be an unsigned char value or EOF}} \
+  // bugpath-note{{The 1st argument to 'isalnum' is 256 but should be an unsigned char value or EOF}}
   (void)ret;
 }
 
@@ -55,9 +55,9 @@ void test_alnum_symbolic2(int x) {
     // bugpath-note{{Taking true branch}}
 
     int ret = isalnum(x); // \
-    // report-warning{{The 1st argument to 'isalnum' should be an unsigned char value or EOF}} \
-    // bugpath-warning{{The 1st argument to 'isalnum' should be an unsigned char value or EOF}} \
-    // bugpath-note{{The 1st argument to 'isalnum' should be an unsigned char value or EOF}}
+    // report-warning{{The 1st argument to 'isalnum' is >= 256 but should be an unsigned char value or EOF}} \
+    // bugpath-warning{{The 1st argument to 'isalnum' is >= 256 but should be an unsigned char value or EOF}} \
+    // bugpath-note{{The 1st argument to 'isalnum' is >= 256 but should be an unsigned char value or EOF}}
 
     (void)ret;
   }
@@ -67,9 +67,9 @@ int toupper(int);
 
 void test_toupper_concrete(int v) {
   int ret = toupper(256); // \
-  // report-warning{{The 1st argument to 'toupper' should be an unsigned char value or EOF}} \
-  // bugpath-warning{{The 1st argument to 'toupper' should be an unsigned char value or EOF}} \
-  // bugpath-note{{The 1st argument to 'toupper' should be an unsigned char value or EOF}}
+  // report-warning{{The 1st argument to 'toupper' is 256 but should be an unsigned char value or EOF}} \
+  // bugpath-warning{{The 1st argument to 'toupper' is 256 but should be an unsigned char value or EOF}} \
+  // bugpath-note{{The 1st argument to 'toupper' is 256 but should be an unsigned char value or EOF}}
   (void)ret;
 }
 
@@ -91,9 +91,9 @@ void test_toupper_symbolic2(int x) {
     // bugpath-note{{Taking true branch}}
 
     int ret = toupper(x); // \
-    // report-warning{{The 1st argument to 'toupper' should be an unsigned char value or EOF}} \
-    // bugpath-warning{{The 1st argument to 'toupper' should be an unsigned char value or EOF}} \
-    // bugpath-note{{The 1st argument to 'toupper' should be an unsigned char value or EOF}}
+    // report-warning{{The 1st argument to 'toupper' is >= 256 but should be an unsigned char value or EOF}} \
+    // bugpath-warning{{The 1st argument to 'toupper' is >= 256 but should be an unsigned char value or EOF}} \
+    // bugpath-note{{The 1st argument to 'toupper' is >= 256 but should be an unsigned char value or EOF}}
 
     (void)ret;
   }
@@ -103,9 +103,9 @@ int tolower(int);
 
 void test_tolower_concrete(int v) {
   int ret = tolower(256); // \
-  // report-warning{{The 1st argument to 'tolower' should be an unsigned char value or EOF}} \
-  // bugpath-warning{{The 1st argument to 'tolower' should be an unsigned char value or EOF}} \
-  // bugpath-note{{The 1st argument to 'tolower' should be an unsigned char value or EOF}}
+  // report-warning{{The 1st argument to 'tolower' is 256 but should be an unsigned char value or EOF}} \
+  // bugpath-warning{{The 1st argument to 'tolower' is 256 but should be an unsigned char value or EOF}} \
+  // bugpath-note{{The 1st argument to 'tolower' is 256 but should be an unsigned char value or EOF}}
   (void)ret;
 }
 
@@ -127,9 +127,9 @@ void test_tolower_symbolic2(int x) {
     // bugpath-note{{Taking true branch}}
 
     int ret = tolower(x); // \
-    // report-warning{{The 1st argument to 'tolower' should be an unsigned char value or EOF}} \
-    // bugpath-warning{{The 1st argument to 'tolower' should be an unsigned char value or EOF}} \
-    // bugpath-note{{The 1st argument to 'tolower' should be an unsigned char value or EOF}}
+    // report-warning{{The 1st argument to 'tolower' is >= 256 but should be an unsigned char value or EOF}} \
+    // bugpath-warning{{The 1st argument to 'tolower' is >= 256 but should be an unsigned char value or EOF}} \
+    // bugpath-note{{The 1st argument to 'tolower' is >= 256 but should be an unsigned char value or EOF}}
 
     (void)ret;
   }
@@ -139,9 +139,9 @@ int toascii(int);
 
 void test_toascii_concrete(int v) {
   int ret = toascii(256); // \
-  // report-warning{{The 1st argument to 'toascii' should be an unsigned char value or EOF}} \
-  // bugpath-warning{{The 1st argument to 'toascii' should be an unsigned char value or EOF}} \
-  // bugpath-note{{The 1st argument to 'toascii' should be an unsigned char value or EOF}}
+  // report-warning{{The 1st argument to 'toascii' is 256 but should be an unsigned char value or EOF}} \
+  // bugpath-warning{{The 1st argument to 'toascii' is 256 but should be an unsigned char value or EOF}} \
+  // bugpath-note{{The 1st argument to 'toascii' is 256 but should be an unsigned char value or EOF}}
   (void)ret;
 }
 
@@ -163,9 +163,9 @@ void test_toascii_symbolic2(int x) {
     // bugpath-note{{Taking true branch}}
 
     int ret = toascii(x); // \
-    // report-warning{{The 1st argument to 'toascii' should be an unsigned char value or EOF}} \
-    // bugpath-warning{{The 1st argument to 'toascii' should be an unsigned char value or EOF}} \
-    // bugpath-note{{The 1st argument to 'toascii' should be an unsigned char value or EOF}}
+    // report-warning{{The 1st argument to 'toascii' is >= 256 but should be an unsigned char value or EOF}} \
+    // bugpath-warning{{The 1st argument to 'toascii' is >= 256 but should be an unsigned char value or EOF}} \
+    // bugpath-note{{The 1st argument to 'toascii' is >= 256 but should be an unsigned char value or EOF}}
 
     (void)ret;
   }
@@ -176,9 +176,9 @@ typedef typeof(sizeof(int)) size_t;
 size_t fread(void *restrict, size_t, size_t, FILE *restrict);
 void test_notnull_concrete(FILE *fp) {
   fread(0, sizeof(int), 10, fp); // \
-  // report-warning{{The 1st argument to 'fread' should not be NULL}} \
-  // bugpath-warning{{The 1st argument to 'fread' should not be NULL}} \
-  // bugpath-note{{The 1st argument to 'fread' should not be NULL}}
+  // report-warning{{The 1st argument to 'fread' is NULL but should not be NULL}} \
+  // bugpath-warning{{The 1st argument to 'fread' is NULL but should not be NULL}} \
+  // bugpath-note{{The 1st argument to 'fread' is NULL but should not be NULL}}
 }
 void test_notnull_symbolic(FILE *fp, int *buf) {
   fread(buf, sizeof(int), 10, fp);
@@ -192,9 +192,9 @@ void test_notnull_symbolic2(FILE *fp, int *buf) {
   if (!buf)                          // bugpath-note{{Assuming 'buf' is null}} \
             // bugpath-note{{Taking true branch}}
     fread(buf, sizeof(int), 10, fp); // \
-    // report-warning{{The 1st argument to 'fread' should not be NULL}} \
-    // bugpath-warning{{The 1st argument to 'fread' should not be NULL}} \
-    // bugpath-note{{The 1st argument to 'fread' should not be NULL}}
+    // report-warning{{The 1st argument to 'fread' is NULL but should not be NULL}} \
+    // bugpath-warning{{The 1st argument to 'fread' is NULL but should not be NULL}} \
+    // bugpath-note{{The 1st argument to 'fread' is NULL but should not be NULL}}
 }
 void test_no_node_after_bug(FILE *fp, size_t size, size_t n, void *buf) {
   if (fp) // \
@@ -202,9 +202,9 @@ void test_no_node_after_bug(FILE *fp, size_t size, size_t n, void *buf) {
   // bugpath-note{{Taking false branch}}
     return;
   size_t ret = fread(buf, size, n, fp); // \
-  // report-warning{{The 4th argument to 'fread' should not be NULL}} \
-  // bugpath-warning{{The 4th argument to 'fread' should not be NULL}} \
-  // bugpath-note{{The 4th argument to 'fread' should not be NULL}}
+  // report-warning{{The 4th argument to 'fread' is NULL but should not be NULL}} \
+  // bugpath-warning{{The 4th argument to 'fread' is NULL but should not be NULL}} \
+  // bugpath-note{{The 4th argument to 'fread' is NULL but should not be NULL}}
   clang_analyzer_warnIfReached(); // not reachable
 }
 
@@ -220,9 +220,9 @@ void ARR38_C_F(FILE *file) {
   // The 3rd parameter should be the number of elements to read, not
   // the size in bytes.
   fread(wbuf, size, nitems, file); // \
-  // report-warning{{The size of the 1st argument to 'fread' should be equal to or greater than the value of the 2nd argument times the 3rd argument}} \
-  // bugpath-warning{{The size of the 1st argument to 'fread' should be equal to or greater than the value of the 2nd argument times the 3rd argument}} \
-  // bugpath-note{{The size of the 1st argument to 'fread' should be equal to or greater than the value of the 2nd argument times the 3rd argument}}
+  // report-warning{{The 1st argument to 'fread' is out of the accepted range; It should be a buffer with size equal to or greater than the value of the 2nd argument times the 3rd argument}} \
+  // bugpath-warning{{The 1st argument to 'fread' is out of the accepted range; It should be a buffer with size equal to or greater than the value of the 2nd argument times the 3rd argument}} \
+  // bugpath-note{{The 1st argument to 'fread' is out of the accepted range; It should be a buffer with size equal to or greater than the value of the 2nd argument times the 3rd argument}}
 }
 
 int __two_constrained_args(int, int);
@@ -255,18 +255,18 @@ void test_multiple_constraints_on_same_arg(int x) {
 int __variadic(void *stream, const char *format, ...);
 void test_arg_constraint_on_variadic_fun(void) {
   __variadic(0, "%d%d", 1, 2); // \
-  // report-warning{{The 1st argument to '__variadic' should not be NULL}} \
-  // bugpath-warning{{The 1st argument to '__variadic' should not be NULL}} \
-  // bugpath-note{{The 1st argument to '__variadic' should not be NULL}}
+  // report-warning{{The 1st argument to '__variadic' is NULL but should not be NULL}} \
+  // bugpath-warning{{The 1st argument to '__variadic' is NULL but should not be NULL}} \
+  // bugpath-note{{The 1st argument to '__variadic' is NULL but should not be NULL}}
 }
 
 int __buf_size_arg_constraint(const void *, size_t);
 void test_buf_size_concrete(void) {
   char buf[3];                       // bugpath-note{{'buf' initialized here}}
   __buf_size_arg_constraint(buf, 4); // \
-  // report-warning{{The size of the 1st argument to '__buf_size_arg_constraint' should be equal to or greater than the value of the 2nd argument}} \
-  // bugpath-warning{{The size of the 1st argument to '__buf_size_arg_constraint' should be equal to or greater than the value of the 2nd argument}} \
-  // bugpath-note{{The size of the 1st argument to '__buf_size_arg_constraint' should be equal to or greater than the value of the 2nd argument}}
+  // report-warning{{The 1st argument to '__buf_size_arg_constraint' is out of the accepted range; It should be a buffer with size equal to or greater than the value of the 2nd argument}} \
+  // bugpath-warning{{The 1st argument to '__buf_size_arg_constraint' is out of the accepted range; It should be a buffer with size equal to or greater than the value of the 2nd argument}} \
+  // bugpath-note{{The 1st argument to '__buf_size_arg_constraint' is out of the accepted range; It should be a buffer with size equal to or greater than the value of the 2nd argument}}
 }
 void test_buf_size_symbolic(int s) {
   char buf[3];
@@ -291,9 +291,9 @@ int __buf_size_arg_constraint_mul(const void *, size_t, size_t);
 void test_buf_size_concrete_with_multiplication(void) {
   short buf[3];                                         // bugpath-note{{'buf' initialized here}}
   __buf_size_arg_constraint_mul(buf, 4, sizeof(short)); // \
-  // report-warning{{The size of the 1st argument to '__buf_size_arg_constraint_mul' should be equal to or greater than the value of the 2nd argument times the 3rd argument}} \
-  // bugpath-warning{{The size of the 1st argument to '__buf_size_arg_constraint_mul' should be equal to or greater than the value of the 2nd argument times the 3rd argument}} \
-  // bugpath-note{{The size of the 1st argument to '__buf_size_arg_constraint_mul' should be equal to or greater than the value of the 2nd argument times the 3rd argument}}
+  // report-warning{{The 1st argument to '__buf_size_arg_constraint_mul' is out of the accepted range; It should be a buffer with size equal to or greater than the value of the 2nd argument times the 3rd argument}} \
+  // bugpath-warning{{The 1st argument to '__buf_size_arg_constraint_mul' is out of the accepted range; It should be a buffer with size equal to or greater than the value of the 2nd argument times the 3rd argument}} \
+  // bugpath-note{{The 1st argument to '__buf_size_arg_constraint_mul' is out of the accepted range; It should be a buffer with size equal to or greater than the value of the 2nd argument times the 3rd argument}}
 }
 void test_buf_size_symbolic_with_multiplication(size_t s) {
   short buf[3];
@@ -317,7 +317,7 @@ int __buf_size_arg_constraint_concrete(const void *);
 void test_min_buf_size(void) {
   char buf[9];// bugpath-note{{'buf' initialized here}}
   __buf_size_arg_constraint_concrete(buf); // \
-  // report-warning{{The size of the 1st argument to '__buf_size_arg_constraint_concrete' should be equal to or greater than 10}} \
-  // bugpath-warning{{The size of the 1st argument to '__buf_size_arg_constraint_concrete' should be equal to or greater than 10}} \
-  // bugpath-note{{The size of the 1st argument to '__buf_size_arg_constraint_concrete' should be equal to or greater than 10}}
+  // report-warning{{The 1st argument to '__buf_size_arg_constraint_concrete' is out of the accepted range; It should be a buffer with size equal to or greater than 10}} \
+  // bugpath-warning{{The 1st argument to '__buf_size_arg_constraint_concrete' is out of the accepted range; It should be a buffer with size equal to or greater than 10}} \
+  // bugpath-note{{The 1st argument to '__buf_size_arg_constraint_concrete' is out of the accepted range; It should be a buffer with size equal to or greater than 10}}
 }

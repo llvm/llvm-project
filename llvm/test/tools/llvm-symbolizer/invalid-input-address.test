@@ -14,23 +14,10 @@ RUN: llvm-symbolizer --obj=%p/Inputs/addr.exe < %t.inp | FileCheck --check-prefi
 RUN: llvm-symbolizer --obj=%p/Inputs/addr.exe "some text" "some text2" | FileCheck --check-prefix=BAD-INPUT %s
 RUN: llvm-symbolizer --obj=%p/Inputs/addr.exe @%t.rsp | FileCheck --check-prefix=BAD-INPUT %s
 
-# Test bad input in GNU-compatible output mode.
-RUN: llvm-symbolizer --obj=%p/Inputs/addr.exe --output-style=GNU < %t.inp | FileCheck --check-prefix=GNU-BAD-INPUT %s
-RUN: llvm-symbolizer --obj=%p/Inputs/addr.exe --output-style=GNU "some text" "some text2" | FileCheck --check-prefix=GNU-BAD-INPUT %s
-RUN: llvm-symbolizer --obj=%p/Inputs/addr.exe --output-style=GNU @%t.rsp | FileCheck --check-prefix=GNU-BAD-INPUT %s
+# Test bad input address values for the GNU-compatible version.
+RUN: llvm-addr2line --obj=%p/Inputs/addr.exe < %t.inp | FileCheck --check-prefix=BAD-INPUT %s
+RUN: llvm-addr2line --obj=%p/Inputs/addr.exe "some text" "some text2" | FileCheck --check-prefix=BAD-INPUT %s
+RUN: llvm-addr2line --obj=%p/Inputs/addr.exe @%t.rsp | FileCheck --check-prefix=BAD-INPUT %s
 
 BAD-INPUT:      some text
 BAD-INPUT-NEXT: some text2
-
-# Test bad input address values for the GNU-compatible version.
-RUN: llvm-addr2line --obj=%p/Inputs/addr.exe < %t.inp | FileCheck --check-prefix=GNU-BAD-INPUT %s
-RUN: llvm-addr2line --obj=%p/Inputs/addr.exe "some text" "some text2" | FileCheck --check-prefix=GNU-BAD-INPUT %s
-RUN: llvm-addr2line --obj=%p/Inputs/addr.exe @%t.rsp | FileCheck --check-prefix=GNU-BAD-INPUT %s
-
-# Test bad input address values for the GNU-compatible version if output mode is LLVM.
-RUN: llvm-addr2line --obj=%p/Inputs/addr.exe --output-style=LLVM < %t.inp | FileCheck --check-prefix=BAD-INPUT %s
-RUN: llvm-addr2line --obj=%p/Inputs/addr.exe --output-style=LLVM "some text" "some text2" | FileCheck --check-prefix=BAD-INPUT %s
-RUN: llvm-addr2line --obj=%p/Inputs/addr.exe --output-style=LLVM @%t.rsp | FileCheck --check-prefix=BAD-INPUT %s
-
-GNU-BAD-INPUT:      ??:0
-GNU-BAD-INPUT-NEXT: ??:0

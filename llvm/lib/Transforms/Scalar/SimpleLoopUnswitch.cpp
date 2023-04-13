@@ -3167,6 +3167,8 @@ static bool collectUnswitchCandidatesWithInjections(
     if (!match(Term, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
                           m_BasicBlock(IfTrue), m_BasicBlock(IfFalse))))
       continue;
+    if (!LHS->getType()->isIntegerTy())
+      continue;
     canonicalizeForInvariantConditionInjection(Pred, LHS, RHS, IfTrue, IfFalse,
                                                L);
     if (!shouldTryInjectInvariantCondition(Pred, LHS, RHS, IfTrue, IfFalse, L))

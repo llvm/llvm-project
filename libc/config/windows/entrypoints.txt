@@ -25,6 +25,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.memchr
     libc.src.string.memcmp
     libc.src.string.memcpy
+    libc.src.string.memmem
     libc.src.string.memmove
     libc.src.string.mempcpy
     libc.src.string.memrchr

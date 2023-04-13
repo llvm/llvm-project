@@ -208,8 +208,8 @@ struct OneShotBufferizePass
       opt.analysisHeuristic = parseHeuristicOption(analysisHeuristic);
       opt.copyBeforeWrite = copyBeforeWrite;
       opt.createDeallocs = createDeallocs;
-      opt.functionBoundaryTypeConversion =
-          parseLayoutMapOption(functionBoundaryTypeConversion);
+      opt.setFunctionBoundaryTypeConversion(
+          parseLayoutMapOption(functionBoundaryTypeConversion));
       if (mustInferMemorySpace)
         opt.defaultMemorySpace = std::nullopt;
       opt.printConflicts = printConflicts;

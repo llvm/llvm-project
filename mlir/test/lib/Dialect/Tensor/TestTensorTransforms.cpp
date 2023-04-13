@@ -43,11 +43,6 @@ struct TestTensorTransforms
 
   void runOnOperation() override;
 
-  Option<bool> testSplitPaddingPatterns{
-      *this, "test-split-padding-patterns",
-      llvm::cl::desc("Test patterns to split tensor.pad ops"),
-      llvm::cl::init(false)};
-
   Option<bool> testFoldConstantExtractSlice{
       *this, "test-fold-constant-extract-slice",
       llvm::cl::desc("Test folding arith.constant and tensor.extract_slice"),
@@ -108,12 +103,6 @@ static void applyEmptyOpFoldingPatterns(Operation *rootOp) {
 static void applyFoldIntoPackAndUnpackPatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateFoldIntoPackAndUnpackPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
-}
-
-static void applySplitPaddingPatterns(Operation *rootOp) {
-  RewritePatternSet patterns(rootOp->getContext());
-  tensor::populateSplitPaddingPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
 }
 
@@ -291,8 +280,6 @@ void TestTensorTransforms::runOnOperation() {
   Operation *rootOp = getOperation();
   if (testSimplifyPackPatterns)
     applySimplifyPackPatterns(rootOp);
-  if (testSplitPaddingPatterns)
-    applySplitPaddingPatterns(rootOp);
   if (testFoldConstantExtractSlice)
     applyFoldConstantExtractSlicePatterns(rootOp);
   if (testFoldConsecutiveInsertExtractSlice)

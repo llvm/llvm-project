@@ -26,6 +26,7 @@ class LinalgOp;
 } // namespace linalg
 
 namespace tensor {
+class InsertSliceOp;
 class PackOp;
 class PadOp;
 class UnPackOp;

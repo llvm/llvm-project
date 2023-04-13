@@ -1350,7 +1350,7 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
     char *name = (char *)arg5;
     COMMON_INTERCEPTOR_READ_RANGE(ctx, name, internal_strlen(name) + 1);
   }
-  int res = REAL(prctl(option, arg2, arg3, arg4, arg5));
+  int res = REAL(prctl)(option, arg2, arg3, arg4, arg5);
   if (option == PR_SET_NAME) {
     char buff[16];
     internal_strncpy(buff, (char *)arg2, 15);

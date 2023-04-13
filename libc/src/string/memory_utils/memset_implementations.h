@@ -26,86 +26,101 @@ namespace __llvm_libc {
 inline_memset_embedded_tiny(Ptr dst, uint8_t value, size_t count) {
   LIBC_LOOP_NOUNROLL
   for (size_t offset = 0; offset < count; ++offset)
-    generic::Memset<1, 1>::block(dst + offset, value);
+    generic::Memset<uint8_t>::block(dst + offset, value);
 }
 
 #if defined(LIBC_TARGET_ARCH_IS_X86)
-template <size_t MaxSize>
 [[maybe_unused]] LIBC_INLINE static void
 inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
+#if defined(__AVX512F__)
+  using uint128_t = uint8x16_t;
+  using uint256_t = uint8x32_t;
+  using uint512_t = uint8x64_t;
+#elif defined(__AVX__)
+  using uint128_t = uint8x16_t;
+  using uint256_t = uint8x32_t;
+  using uint512_t = cpp::array<uint8x32_t, 2>;
+#elif defined(__SSE2__)
+  using uint128_t = uint8x16_t;
+  using uint256_t = cpp::array<uint8x16_t, 2>;
+  using uint512_t = cpp::array<uint8x16_t, 4>;
+#else
+  using uint128_t = cpp::array<uint64_t, 2>;
+  using uint256_t = cpp::array<uint64_t, 4>;
+  using uint512_t = cpp::array<uint64_t, 8>;
+#endif
+
   if (count == 0)
     return;
   if (count == 1)
-    return generic::Memset<1, MaxSize>::block(dst, value);
+    return generic::Memset<uint8_t>::block(dst, value);
   if (count == 2)
-    return generic::Memset<2, MaxSize>::block(dst, value);
+    return generic::Memset<uint16_t>::block(dst, value);
   if (count == 3)
-    return generic::Memset<3, MaxSize>::block(dst, value);
+    return generic::Memset<uint16_t, uint8_t>::block(dst, value);
   if (count <= 8)
-    return generic::Memset<4, MaxSize>::head_tail(dst, value, count);
+    return generic::Memset<uint32_t>::head_tail(dst, value, count);
   if (count <= 16)
-    return generic::Memset<8, MaxSize>::head_tail(dst, value, count);
+    return generic::Memset<uint64_t>::head_tail(dst, value, count);
   if (count <= 32)
-    return generic::Memset<16, MaxSize>::head_tail(dst, value, count);
+    return generic::Memset<uint128_t>::head_tail(dst, value, count);
   if (count <= 64)
-    return generic::Memset<32, MaxSize>::head_tail(dst, value, count);
+    return generic::Memset<uint256_t>::head_tail(dst, value, count);
   if (count <= 128)
-    return generic::Memset<64, MaxSize>::head_tail(dst, value, count);
+    return generic::Memset<uint512_t>::head_tail(dst, value, count);
   // Aligned loop
-  generic::Memset<32, MaxSize>::block(dst, value);
+  generic::Memset<uint256_t>::block(dst, value);
   align_to_next_boundary<32>(dst, count);
-  return generic::Memset<32, MaxSize>::loop_and_tail(dst, value, count);
+  return generic::Memset<uint256_t>::loop_and_tail(dst, value, count);
 }
 #endif // defined(LIBC_TARGET_ARCH_IS_X86)
 
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64)
-template <size_t MaxSize>
 [[maybe_unused]] LIBC_INLINE static void
 inline_memset_aarch64(Ptr dst, uint8_t value, size_t count) {
+  static_assert(aarch64::kNeon, "aarch64 supports vector types");
+  using uint128_t = uint8x16_t;
+  using uint256_t = uint8x32_t;
+  using uint512_t = uint8x64_t;
   if (count == 0)
     return;
   if (count <= 3) {
-    generic::Memset<1, MaxSize>::block(dst, value);
+    generic::Memset<uint8_t>::block(dst, value);
     if (count > 1)
-      generic::Memset<2, MaxSize>::tail(dst, value, count);
+      generic::Memset<uint16_t>::tail(dst, value, count);
     return;
   }
   if (count <= 8)
-    return generic::Memset<4, MaxSize>::head_tail(dst, value, count);
+    return generic::Memset<uint32_t>::head_tail(dst, value, count);
   if (count <= 16)
-    return generic::Memset<8, MaxSize>::head_tail(dst, value, count);
+    return generic::Memset<uint64_t>::head_tail(dst, value, count);
   if (count <= 32)
-    return generic::Memset<16, MaxSize>::head_tail(dst, value, count);
+    return generic::Memset<uint128_t>::head_tail(dst, value, count);
   if (count <= (32 + 64)) {
-    generic::Memset<32, MaxSize>::block(dst, value);
+    generic::Memset<uint256_t>::block(dst, value);
     if (count <= 64)
-      return generic::Memset<32, MaxSize>::tail(dst, value, count);
-    generic::Memset<32, MaxSize>::block(dst + 32, value);
-    generic::Memset<32, MaxSize>::tail(dst, value, count);
+      return generic::Memset<uint256_t>::tail(dst, value, count);
+    generic::Memset<uint256_t>::block(dst + 32, value);
+    generic::Memset<uint256_t>::tail(dst, value, count);
     return;
   }
   if (count >= 448 && value == 0 && aarch64::neon::hasZva()) {
-    generic::Memset<64, MaxSize>::block(dst, 0);
+    generic::Memset<uint512_t>::block(dst, 0);
     align_to_next_boundary<64>(dst, count);
-    return aarch64::neon::BzeroCacheLine<64>::loop_and_tail(dst, 0, count);
+    return aarch64::neon::BzeroCacheLine::loop_and_tail(dst, 0, count);
   } else {
-    generic::Memset<16, MaxSize>::block(dst, value);
+    generic::Memset<uint128_t>::block(dst, value);
     align_to_next_boundary<16>(dst, count);
-    return generic::Memset<64, MaxSize>::loop_and_tail(dst, value, count);
+    return generic::Memset<uint512_t>::loop_and_tail(dst, value, count);
   }
 }
 #endif // defined(LIBC_TARGET_ARCH_IS_AARCH64)
 
 LIBC_INLINE static void inline_memset(Ptr dst, uint8_t value, size_t count) {
 #if defined(LIBC_TARGET_ARCH_IS_X86)
-  static constexpr size_t kMaxSize = x86::kAvx512F ? 64
-                                     : x86::kAvx   ? 32
-                                     : x86::kSse2  ? 16
-                                                   : 8;
-  return inline_memset_x86<kMaxSize>(dst, value, count);
+  return inline_memset_x86(dst, value, count);
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
-  static constexpr size_t kMaxSize = aarch64::kNeon ? 16 : 8;
-  return inline_memset_aarch64<kMaxSize>(dst, value, count);
+  return inline_memset_aarch64(dst, value, count);
 #else
   return inline_memset_embedded_tiny(dst, value, count);
 #endif

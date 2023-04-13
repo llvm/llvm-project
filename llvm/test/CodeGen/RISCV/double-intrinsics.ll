@@ -907,7 +907,8 @@ define iXLen @lrint_f64(double %a) nounwind {
   ret iXLen %1
 }
 
-declare iXLen @llvm.lround.iXLen.f64(double)
+declare i32 @llvm.lround.i32.f64(double)
+declare i64 @llvm.lround.i64.f64(double)
 
 define iXLen @lround_f64(double %a) nounwind {
 ; RV32IFD-LABEL: lround_f64:
@@ -939,6 +940,33 @@ define iXLen @lround_f64(double %a) nounwind {
 ; RV64I-NEXT:    ret
   %1 = call iXLen @llvm.lround.iXLen.f64(double %a)
   ret iXLen %1
+}
+
+define i32 @lround_i32_f64(double %a) nounwind {
+; CHECKIFD-LABEL: lround_i32_f64:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    fcvt.w.d a0, fa0, rmm
+; CHECKIFD-NEXT:    ret
+;
+; RV32I-LABEL: lround_i32_f64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call lround@plt
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: lround_i32_f64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call lround@plt
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call i32 @llvm.lround.i32.f64(double %a)
+  ret i32 %1
 }
 
 declare i64 @llvm.llrint.i64.f64(double)

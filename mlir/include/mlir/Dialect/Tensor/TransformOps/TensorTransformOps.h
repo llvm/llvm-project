@@ -22,8 +22,7 @@ namespace tensor {
 /// replacements.
 class TrackingListener : public transform::TrackingListener {
 public:
-  explicit TrackingListener(transform::TransformState &state)
-      : transform::TrackingListener(state) {}
+  using transform::TrackingListener::TrackingListener;
 
 protected:
   Operation *findReplacementOp(Operation *op,

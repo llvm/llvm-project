@@ -650,6 +650,39 @@ convertConstantOpMmaSync(RewriterBase &rewriter, arith::ConstantOp op,
   return success();
 }
 
+/// Check if the loaded matrix operand requires transposed.
+/// Transposed Map Example:
+/// Example 1   : (..., d0, d1) -> (d1 * 1, d0 * 2)
+/// Example 2   : (d0, d1, d2, d3) -> (d3, d2)
+/// The code below checks if the output 2D is transposed using a generalized
+/// version     : (d0, d1, dn, ..., dm, ...) -> (dm, dn)
+/// Returns     : true; if m > n, false o.w.
+static FailureOr<bool> isTransposed(vector::TransferReadOp op) {
+  mlir::AffineMap map = op.getPermutationMap();
+
+  if (map.getNumResults() != 2) {
+    LLVM_DEBUG(DBGS() << "Failed because the result of `vector.transfer_read` "
+                         "is not a 2d operand\n");
+    return failure();
+  }
+
+  // Output 2D matrix dimensions in the order of d0, d1.
+  mlir::AffineExpr dM = map.getResult(0);
+  mlir::AffineExpr dN = map.getResult(1);
+
+  //  Find the position of these expressions in the input.
+  auto exprM = dM.dyn_cast<AffineDimExpr>();
+  auto exprN = dN.dyn_cast<AffineDimExpr>();
+
+  if (!exprM || !exprN) {
+    LLVM_DEBUG(DBGS() << "Failed because expressions are not affine dim "
+                         "expressions, then transpose cannot be determined.\n");
+    return failure();
+  }
+
+  return exprM.getPosition() > exprN.getPosition();
+}
+
 static LogicalResult
 creatLdMatrixCompatibleLoads(RewriterBase &rewriter, vector::TransferReadOp op,
                              llvm::DenseMap<Value, Value> &valueMapping) {
@@ -671,9 +704,16 @@ creatLdMatrixCompatibleLoads(RewriterBase &rewriter, vector::TransferReadOp op,
     return rewriter.notifyMatchFailure(op, "not mma sync reg info");
   }
 
-  FailureOr<nvgpu::LdMatrixParams> params = nvgpu::getLdMatrixParams(
-      *warpMatrixInfo,
-      /*transpose=*/!op.getPermutationMap().isMinorIdentity());
+  FailureOr<bool> transpose = isTransposed(op);
+  if (failed(transpose)) {
+    LLVM_DEBUG(DBGS() << "failed to determine the transpose\n");
+    return rewriter.notifyMatchFailure(
+        op, "Op should likely not be converted to a nvgpu.ldmatrix call.");
+  }
+
+  FailureOr<nvgpu::LdMatrixParams> params =
+      nvgpu::getLdMatrixParams(*warpMatrixInfo, *transpose);
+
   if (failed(params)) {
     LLVM_DEBUG(
         DBGS()
@@ -698,9 +738,9 @@ creatLdMatrixCompatibleLoads(RewriterBase &rewriter, vector::TransferReadOp op,
   SmallVector<Value, 4> indices;
   getXferIndices<vector::TransferReadOp>(rewriter, op, *offsets, {laneId},
                                          indices);
+
   nvgpu::LdMatrixOp newOp = rewriter.create<nvgpu::LdMatrixOp>(
-      loc, vectorType, op.getSource(), indices,
-      !op.getPermutationMap().isMinorIdentity(), params->numTiles);
+      loc, vectorType, op.getSource(), indices, *transpose, params->numTiles);
   valueMapping[op] = newOp->getResult(0);
   return success();
 }

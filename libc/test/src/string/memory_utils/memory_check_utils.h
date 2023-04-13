@@ -75,8 +75,8 @@ static inline void Randomize(cpp::span<char> buffer) {
 }
 
 // Copy one span to another.
-__attribute__((no_builtin)) static inline void
-ReferenceCopy(cpp::span<char> dst, const cpp::span<char> src) {
+static inline void ReferenceCopy(cpp::span<char> dst,
+                                 const cpp::span<char> src) {
   assert(dst.size() == src.size());
   for (size_t i = 0; i < dst.size(); ++i)
     dst[i] = src[i];

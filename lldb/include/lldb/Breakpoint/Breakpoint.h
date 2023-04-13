@@ -105,11 +105,11 @@ public:
 
     ~BreakpointEventData() override;
 
-    static ConstString GetFlavorString();
-    
+    static llvm::StringRef GetFlavorString();
+
     Log *GetLogChannel() override;
 
-    ConstString GetFlavor() const override;
+    llvm::StringRef GetFlavor() const override;
 
     lldb::BreakpointEventType GetBreakpointEventType() const;
 

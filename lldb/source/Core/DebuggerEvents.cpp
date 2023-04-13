@@ -23,12 +23,11 @@ static const T *GetEventDataFromEventImpl(const Event *event_ptr) {
   return nullptr;
 }
 
-ConstString ProgressEventData::GetFlavorString() {
-  static ConstString g_flavor("ProgressEventData");
-  return g_flavor;
+llvm::StringRef ProgressEventData::GetFlavorString() {
+  return "ProgressEventData";
 }
 
-ConstString ProgressEventData::GetFlavor() const {
+llvm::StringRef ProgressEventData::GetFlavor() const {
   return ProgressEventData::GetFlavorString();
 }
 
@@ -94,12 +93,11 @@ void DiagnosticEventData::Dump(Stream *s) const {
   s->Flush();
 }
 
-ConstString DiagnosticEventData::GetFlavorString() {
-  static ConstString g_flavor("DiagnosticEventData");
-  return g_flavor;
+llvm::StringRef DiagnosticEventData::GetFlavorString() {
+  return "DiagnosticEventData";
 }
 
-ConstString DiagnosticEventData::GetFlavor() const {
+llvm::StringRef DiagnosticEventData::GetFlavor() const {
   return DiagnosticEventData::GetFlavorString();
 }
 
@@ -124,12 +122,11 @@ DiagnosticEventData::GetAsStructuredData(const Event *event_ptr) {
   return dictionary_sp;
 }
 
-ConstString SymbolChangeEventData::GetFlavorString() {
-  static ConstString g_flavor("SymbolChangeEventData");
-  return g_flavor;
+llvm::StringRef SymbolChangeEventData::GetFlavorString() {
+  return "SymbolChangeEventData";
 }
 
-ConstString SymbolChangeEventData::GetFlavor() const {
+llvm::StringRef SymbolChangeEventData::GetFlavor() const {
   return SymbolChangeEventData::GetFlavorString();
 }
 

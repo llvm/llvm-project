@@ -190,7 +190,7 @@ static RecordDecl *buildRecordForGlobalizedVars(
           IntegerLiteral::Create(C, Align,
                                  C.getIntTypeForBitwidth(32, /*Signed=*/0),
                                  SourceLocation()),
-          {}, AttributeCommonInfo::AS_GNU, AlignedAttr::GNU_aligned));
+          {}, AlignedAttr::GNU_aligned));
     }
     GlobalizedRD->addDecl(Field);
     MappedDeclsFields.try_emplace(VD, Field);

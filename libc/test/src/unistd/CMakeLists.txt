@@ -226,6 +226,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  swab_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    swab_test.cpp
+  DEPENDS
+    libc.src.unistd.swab
+)
+
+add_libc_unittest(
   readlink_test
   SUITE
     libc_unistd_unittests
