@@ -478,6 +478,15 @@
       "source" : "A",
       "base" : 0,
       "uuid" : "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "arch": "arm64",
+      "base": 12345,
+      "name": "bogus.dylib",
+      "path": "/usr/lib/system/bogus.dylib",
+      "size": 1000,
+      "source": "P",
+      "uuid": "11111111-2222-3333-4444-555555555555"
     }
   ],
   "userID": 501,
