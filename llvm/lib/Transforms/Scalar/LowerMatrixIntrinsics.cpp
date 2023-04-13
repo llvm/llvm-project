@@ -1344,12 +1344,13 @@ public:
     auto IsSupportedArg = [](Value *Op, unsigned N) {
       if (!isa<Instruction>(Op))
         return true;
-      return match(Op, m_OneUse(m_CombineOr(
-                           m_Load(m_Value()),
-                           m_Intrinsic<Intrinsic::matrix_column_major_load>(
-                               m_Value(), m_SpecificInt(N)))));
+      return match(
+          Op, m_OneUse(m_CombineOr(
+                  m_Load(m_Value()),
+                  m_Intrinsic<Intrinsic::matrix_column_major_load>(
+                      m_Value(), m_SpecificInt(N)))));
     };
-    if (!IsSupportedArg(RHS, RShape.NumColumns))
+    if (!IsSupportedArg(LHS, RShape.NumColumns))
       return;
 
     // We compare the costs of a vector.reduce.add to sequential add.
