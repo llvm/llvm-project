@@ -138,7 +138,7 @@ define i32 @load_load_noundef(ptr %p) {
 define void @load_dereferenceable_dominating(ptr %p) {
 ; CHECK-LABEL: define void @load_dereferenceable_dominating
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[P]], align 8
+; CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[P]], align 8, !dereferenceable !7
 ; CHECK-NEXT:    call void @use.ptr(ptr [[A]])
 ; CHECK-NEXT:    call void @use.ptr(ptr [[A]])
 ; CHECK-NEXT:    ret void
