@@ -29,6 +29,16 @@
 // RUN: %clang -### -target i686-pc-openbsd %s -femulated-tls -fno-emulated-tls 2>&1 \
 // RUN: | FileCheck -check-prefix=NOEMU %s
 
+// Test that when lto is used any -emualted-tls flags are passed to the linker
+// LINUX and Android have different defaults for EmulatedTLS
+// RUN: %clang -### -flto --target=riscv64-linux -fno-emulated-tls %s 2>&1 \
+// RUN: | FileCheck %s --check-prefix=LTO_NOEMUTLS
+// RUN: %clang -### -flto --target=riscv64-linux-android10000 -femulated-tls %s 2>&1 \
+// RUN: | FileCheck %s --check-prefix=LTO_EMUTLS
+// RUN: %clang -### -flto --target=riscv64-linux -femulated-tls %s 2>&1 \
+// RUN: | FileCheck %s --check-prefix=LTO_EMUTLS
+// RUN: %clang -### -flto --target=riscv64-linux-android10000 -fno-emulated-tls %s 2>&1 \
+// RUN: | FileCheck %s --check-prefix=LTO_NOEMUTLS
 
 // Default without -f[no-]emulated-tls, will be decided by the target triple.
 // DEFAULT-NOT: "-cc1" {{.*}}"-femulated-tls"
@@ -40,3 +50,10 @@
 
 // NOEMU: "-cc1" {{.*}}"-fno-emulated-tls"
 // NOEMU-NOT: "-cc1" {{.*}}"-femulated-tls"
+
+// LTO related checks
+// LTO_NOEMUTLS: plugin-opt=-emulated-tls=0
+// LTO_NOEMUTLS-NOT: plugin-opt=-emulated-tls=1
+
+// LTO_EMUTLS: plugin-opt=-emulated-tls=1
+// LTO_EMUTLS-NOT: plugin-opt=-emulated-tls=0

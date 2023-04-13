@@ -820,7 +820,7 @@ public:   // Higher level manipulation routines.
   /// fragments, return the set of inlined versions (this can be more than
   /// one if a PatFrags record has multiple alternatives).
   static void
-  InlinePatternFragments(TreePatternNodePtr T, TreePattern &TP,
+  InlinePatternFragments(const TreePatternNodePtr &T, TreePattern &TP,
                          std::vector<TreePatternNodePtr> &OutAlternatives);
 
   /// ApplyTypeConstraints - Apply all of the type constraints relevant to
@@ -948,10 +948,10 @@ public:
   /// PatFrags references.  This may increase the number of trees in the
   /// pattern if a PatFrags has multiple alternatives.
   void InlinePatternFragments() {
-    std::vector<TreePatternNodePtr> Copy = Trees;
-    Trees.clear();
-    for (unsigned i = 0, e = Copy.size(); i != e; ++i)
-      Copy[i]->InlinePatternFragments(Copy[i], *this, Trees);
+    std::vector<TreePatternNodePtr> Copy;
+    Trees.swap(Copy);
+    for (const TreePatternNodePtr &C : Copy)
+      TreePatternNode::InlinePatternFragments(C, *this, Trees);
   }
 
   /// InferAllTypes - Infer/propagate as many types throughout the expression

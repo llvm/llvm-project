@@ -12,3 +12,20 @@ void foo() {
   return;
   }
 }
+
+__declspec(noreturn) void bar();
+class baz {
+public:
+  ~baz();
+};
+
+// CHECK: define dso_local void @"?qux@@YAXXZ
+// CHECK: invoke void @llvm.seh.scope.begin()
+// CHECK-NOT: llvm.seh.try
+// CHECK-NOT: llvm.seh.scope.end
+
+// We don't need to generate llvm.seh.scope.end for unreachable.
+void qux() {
+  baz a;
+  bar();
+}

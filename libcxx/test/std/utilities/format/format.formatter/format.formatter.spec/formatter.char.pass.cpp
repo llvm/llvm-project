@@ -33,14 +33,14 @@
 #define SV(S) MAKE_STRING_VIEW(CharT, S)
 
 template <class StringT, class StringViewT, class ArgumentT>
-void test(StringT expected, StringViewT fmt, ArgumentT arg) {
+void test(StringT expected, StringViewT fmt, ArgumentT arg, std::size_t offset) {
   using CharT = typename StringT::value_type;
   auto parse_ctx = std::basic_format_parse_context<CharT>(fmt);
   std::formatter<ArgumentT, CharT> formatter;
   static_assert(std::semiregular<decltype(formatter)>);
 
   auto it = formatter.parse(parse_ctx);
-  assert(it == fmt.end() - (!fmt.empty() && fmt.back() == '}'));
+  assert(it == fmt.end() - offset);
 
   StringT result;
   auto out = std::back_inserter(result);
@@ -62,9 +62,9 @@ void test_termination_condition(StringT expected, StringT f, ArgumentT arg) {
   std::basic_string_view<CharT> fmt{f};
   assert(fmt.back() == CharT('}') && "Pre-condition failure");
 
-  test(expected, fmt, arg);
+  test(expected, fmt, arg, 1);
   fmt.remove_suffix(1);
-  test(expected, fmt, arg);
+  test(expected, fmt, arg, 0);
 }
 
 #if TEST_STD_VER > 20

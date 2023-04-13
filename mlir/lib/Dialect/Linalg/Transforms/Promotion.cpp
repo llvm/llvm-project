@@ -23,6 +23,7 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "llvm/ADT/MapVector.h"
@@ -234,7 +235,9 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
       Value materializedSize =
           getValueOrCreateConstantIndexOp(b, loc, rangeValue.size);
       FailureOr<int64_t> upperBound =
-          getConstantUpperBoundForIndex(materializedSize);
+          ValueBoundsConstraintSet::computeConstantBound(
+              presburger::BoundType::UB, materializedSize, /*dim=*/std::nullopt,
+              /*stopCondition=*/nullptr, /*closedUB=*/true);
       size = failed(upperBound)
                  ? materializedSize
                  : b.create<arith::ConstantIndexOp>(loc, *upperBound);

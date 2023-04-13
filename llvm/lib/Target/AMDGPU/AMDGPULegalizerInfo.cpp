@@ -2500,7 +2500,8 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
   else
     MIB.addGlobalAddress(GV, Offset + 12, GAFlags + 1);
 
-  B.getMRI()->setRegClass(PCReg, &AMDGPU::SReg_64RegClass);
+  if (!B.getMRI()->getRegClassOrNull(PCReg))
+    B.getMRI()->setRegClass(PCReg, &AMDGPU::SReg_64RegClass);
 
   if (PtrTy.getSizeInBits() == 32)
     B.buildExtract(DstReg, PCReg, 0);

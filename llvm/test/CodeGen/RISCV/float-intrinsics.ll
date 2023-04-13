@@ -1013,7 +1013,8 @@ define iXLen @lrint_f32(float %a) nounwind {
   ret iXLen %1
 }
 
-declare iXLen @llvm.lround.iXLen.f32(float)
+declare i32 @llvm.lround.i32.f32(float)
+declare i64 @llvm.lround.i64.f32(float)
 
 define iXLen @lround_f32(float %a) nounwind {
 ; RV32IF-LABEL: lround_f32:
@@ -1045,6 +1046,40 @@ define iXLen @lround_f32(float %a) nounwind {
 ; RV64I-NEXT:    ret
   %1 = call iXLen @llvm.lround.iXLen.f32(float %a)
   ret iXLen %1
+}
+
+; We support i32 lround on RV64 even though long isn't 32 bits. This is needed
+; by flang.
+define i32 @lround_i32_f32(float %a) nounwind {
+; RV32IF-LABEL: lround_i32_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fcvt.w.s a0, fa0, rmm
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: lround_i32_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fcvt.w.s a0, fa0, rmm
+; RV64IF-NEXT:    ret
+;
+; RV32I-LABEL: lround_i32_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call lroundf@plt
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: lround_i32_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call lroundf@plt
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call i32 @llvm.lround.i32.f32(float %a)
+  ret i32 %1
 }
 
 declare i64 @llvm.llrint.i64.f32(float)

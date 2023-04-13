@@ -72,7 +72,13 @@ add_header_library(
 )
 
 add_header_library(
-  strstr_implementation
+ strstr_implementation
   HDRS
     strstr_implementations.h
+)
+
+add_header_library(
+  memmem_implementation
+  HDRS
+    memmem_implementations.h
 )

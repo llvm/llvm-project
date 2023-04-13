@@ -264,6 +264,70 @@ unreachable:
   unreachable
 }
 
+define void @cleanuppad() personality ptr @__gxx_personality_v0 {
+; CHECK: Function Attrs: noreturn nounwind
+; CHECK-LABEL: define {{[^@]+}}@cleanuppad
+; CHECK-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:    invoke void @do_throw()
+; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[CPAD:%.*]]
+; CHECK:       cpad:
+; CHECK-NEXT:    [[CP:%.*]] = cleanuppad within none []
+; CHECK-NEXT:    call void @abort()
+; CHECK-NEXT:    unreachable
+; CHECK:       unreachable:
+; CHECK-NEXT:    unreachable
+;
+  invoke void @do_throw()
+  to label %unreachable unwind label %cpad
+
+cpad:
+  %cp = cleanuppad within none []
+  call void @abort()
+  unreachable
+
+unreachable:
+  unreachable
+}
+
+define void @catchswitch_cleanuppad() personality ptr @__gxx_personality_v0 {
+; CHECK: Function Attrs: noreturn nounwind
+; CHECK-LABEL: define {{[^@]+}}@catchswitch_cleanuppad
+; CHECK-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:    invoke void @do_throw()
+; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[CS:%.*]]
+; CHECK:       cs:
+; CHECK-NEXT:    [[TOK:%.*]] = catchswitch within none [label %catch] unwind label [[CPAD:%.*]]
+; CHECK:       catch:
+; CHECK-NEXT:    [[C:%.*]] = catchpad within [[TOK]] [ptr @catch_ty, i32 0, ptr null]
+; CHECK-NEXT:    call void @abort()
+; CHECK-NEXT:    unreachable
+; CHECK:       cpad:
+; CHECK-NEXT:    [[CP:%.*]] = cleanuppad within none []
+; CHECK-NEXT:    call void @abort()
+; CHECK-NEXT:    unreachable
+; CHECK:       unreachable:
+; CHECK-NEXT:    unreachable
+;
+  invoke void @do_throw()
+  to label %unreachable unwind label %cs
+
+cs:
+  %tok = catchswitch within none [label %catch] unwind label %cpad
+
+catch:
+  %c = catchpad within %tok [ptr @catch_ty, i32 0, ptr null]
+  call void @abort()
+  unreachable
+
+cpad:
+  %cp = cleanuppad within none []
+  call void @abort()
+  unreachable
+
+unreachable:
+  unreachable
+}
+
 declare i32 @__gxx_personality_v0(...)
 
 declare ptr @__cxa_begin_catch(ptr)

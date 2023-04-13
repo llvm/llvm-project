@@ -2,7 +2,9 @@
 // RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++2a %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++2b %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+
 
 #if __cplusplus >= 201103L
 namespace dr2338 { // dr2338: 12
@@ -169,6 +171,20 @@ void g() {
 } //namespace dr2303
 #endif
 
+namespace dr2370 { // dr2370: no
+namespace N {
+typedef int type;
+void g(type);
+void h(type);
+} // namespace N
+class C {
+  typedef N::type N_type;
+  // FIXME: `type` should be searched for in N
+  // friend void N::g(type);
+  friend void N::h(N_type);
+};
+} // namespace dr2370
+
 // dr2385: na
 
 namespace dr2394 { // dr2394: 15
@@ -197,3 +213,14 @@ namespace dr2396 { // dr2396: no
   // void g(A a) { a.operator decltype(B()) B::*(); }
   // void g2(A a) { a.operator B decltype(B())::*(); }
 }
+
+#if __cplusplus >= 201103L
+namespace dr2397 { // dr2397: 17
+  void foo() {
+    int a[5];
+
+    auto (&b)[5] = a;
+    auto (*c)[5] = &a;
+  }
+} // namespace dr2397
+#endif

@@ -19,6 +19,7 @@ class FuncOp;
 } // namespace func
 namespace scf {
 class ForOp;
+class IfOp;
 } // namespace scf
 } // namespace mlir
 

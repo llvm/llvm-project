@@ -331,10 +331,6 @@ class VSCodeTestCaseBase(TestBase):
         if not (response and response['success']):
             self.assertTrue(response['success'],
                             'launch failed (%s)' % (response['message']))
-        # We need to trigger a request_configurationDone after we've successfully
-        # attached a runInTerminal process to finish initialization.
-        if runInTerminal:
-            self.vscode.request_configurationDone()
         return response
 
 

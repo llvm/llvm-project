@@ -11,6 +11,9 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "value-bounds-op-interface"
 
 using namespace mlir;
 using presburger::BoundType;
@@ -61,8 +64,14 @@ void ValueBoundsConstraintSet::addBound(BoundType type, int64_t pos,
   LogicalResult status = cstr.addBound(
       type, pos,
       AffineMap::get(cstr.getNumDimVars(), cstr.getNumSymbolVars(), expr));
-  (void)status;
-  assert(succeeded(status) && "failed to add bound to constraint system");
+  if (failed(status)) {
+    // Non-pure (e.g., semi-affine) expressions are not yet supported by
+    // FlatLinearConstraints. However, we can just ignore such failures here.
+    // Even without this bound, there may be enough information in the
+    // constraint system to compute the requested bound. In case this bound is
+    // actually needed, `computeBound` will return `failure`.
+    LLVM_DEBUG(llvm::dbgs() << "Failed to add bound: " << expr << "\n");
+  }
 }
 
 AffineExpr ValueBoundsConstraintSet::getExpr(Value value,
@@ -210,13 +219,15 @@ void ValueBoundsConstraintSet::projectOut(
 
 LogicalResult ValueBoundsConstraintSet::computeBound(
     AffineMap &resultMap, ValueDimList &mapOperands, presburger::BoundType type,
-    Value value, std::optional<int64_t> dim, StopConditionFn stopCondition) {
+    Value value, std::optional<int64_t> dim, StopConditionFn stopCondition,
+    bool closedUB) {
 #ifndef NDEBUG
   assertValidValueDim(value, dim);
   assert(!stopCondition(value, dim) &&
          "stop condition should not be satisfied for starting point");
 #endif // NDEBUG
 
+  int64_t ubAdjustment = closedUB ? 0 : 1;
   Builder b(value.getContext());
   mapOperands.clear();
 
@@ -224,6 +235,9 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
     // Special case: If the stop condition is satisfied for the input
     // value/dimension, directly return it.
     mapOperands.push_back(std::make_pair(value, dim));
+    AffineExpr bound = b.getAffineDimExpr(0);
+    if (type == BoundType::UB)
+      bound = bound + ubAdjustment;
     resultMap = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0,
                                b.getAffineDimExpr(0));
     return success();
@@ -279,9 +293,9 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
   if (type == BoundType::EQ || type == BoundType::LB) {
     bound = lb[0];
   } else {
-    // Computed UB is a closed bound. Turn into an open bound.
+    // Computed UB is a closed bound.
     bound = AffineMap::get(ub[0].getNumDims(), ub[0].getNumSymbols(),
-                           ub[0].getResult(0) + 1);
+                           ub[0].getResult(0) + ubAdjustment);
   }
 
   // Gather all SSA values that are used in the computed bound.
@@ -344,17 +358,19 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
 
 LogicalResult ValueBoundsConstraintSet::computeBound(
     AffineMap &resultMap, ValueDimList &mapOperands, presburger::BoundType type,
-    Value value, std::optional<int64_t> dim, ValueDimList dependencies) {
-  return computeBound(resultMap, mapOperands, type, value, dim,
-                      [&](Value v, std::optional<int64_t> d) {
-                        return llvm::is_contained(dependencies,
-                                                  std::make_pair(v, d));
-                      });
+    Value value, std::optional<int64_t> dim, ValueDimList dependencies,
+    bool closedUB) {
+  return computeBound(
+      resultMap, mapOperands, type, value, dim,
+      [&](Value v, std::optional<int64_t> d) {
+        return llvm::is_contained(dependencies, std::make_pair(v, d));
+      },
+      closedUB);
 }
 
 FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
     presburger::BoundType type, Value value, std::optional<int64_t> dim,
-    StopConditionFn stopCondition) {
+    StopConditionFn stopCondition, bool closedUB) {
 #ifndef NDEBUG
   assertValidValueDim(value, dim);
 #endif // NDEBUG
@@ -375,8 +391,9 @@ FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
   }
 
   // Compute constant bound for `valueDim`.
+  int64_t ubAdjustment = closedUB ? 0 : 1;
   if (auto bound = cstr.cstr.getConstantBound64(type, pos))
-    return type == BoundType::UB ? *bound + 1 : *bound;
+    return type == BoundType::UB ? *bound + ubAdjustment : *bound;
   return failure();
 }
 

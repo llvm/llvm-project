@@ -17,6 +17,7 @@
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
+include "mlir/Dialect/Transform/IR/MatchInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
@@ -115,6 +116,20 @@ def TestConsumeOperandOfOpKindOrFail
   let cppNamespace = "::mlir::test";
 }
 
+def TestSucceedIfOperandOfOpKind
+  : Op<Transform_Dialect, "test_succeed_if_operand_of_op_kind",
+       [MatchOpInterface,
+        SingleOpMatcher,
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let arguments = (ins
+    TransformHandleTypeInterface:$operand_handle,
+    StrAttr:$op_kind);
+  let assemblyFormat =
+      "$operand_handle `,` $op_kind attr-dict `:` type($operand_handle)";
+  let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
+  let cppNamespace = "::mlir::test";
+}
+
 def TestPrintRemarkAtOperandOp
   : Op<Transform_Dialect, "test_print_remark_at_operand",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
@@ -203,7 +218,8 @@ def TestBranchingTransformOpTerminator
 def TestEmitRemarkAndEraseOperandOp
   : Op<Transform_Dialect, "test_emit_remark_and_erase_operand",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
-     MemoryEffectsOpInterface, FunctionalStyleTransformOpTrait]> {
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     FunctionalStyleTransformOpTrait]> {
   let arguments = (ins PDL_Operation:$target, StrAttr:$remark,
                    UnitAttr:$fail_after_erase);
   let assemblyFormat = "$target `,` $remark attr-dict";

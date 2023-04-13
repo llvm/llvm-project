@@ -506,7 +506,14 @@ public:
 #endif
 
   DISPATCHER_CONTEXT *getDispatcherContext() { return &_dispContext; }
-  void setDispatcherContext(DISPATCHER_CONTEXT *disp) { _dispContext = *disp; }
+  void setDispatcherContext(DISPATCHER_CONTEXT *disp) {
+    _dispContext = *disp;
+    _info.lsda = reinterpret_cast<unw_word_t>(_dispContext.HandlerData);
+    if (_dispContext.LanguageHandler) {
+      _info.handler = reinterpret_cast<unw_word_t>(__libunwind_seh_personality);
+    } else
+      _info.handler = 0;
+  }
 
   // libunwind does not and should not depend on C++ library which means that we
   // need our own definition of inline placement new.
@@ -572,6 +579,7 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
   _dispContext.HistoryTable = &_histTable;
   // Initialize MS context from ours.
   R r(context);
+  RtlCaptureContext(&_msContext);
   _msContext.ContextFlags = CONTEXT_CONTROL|CONTEXT_INTEGER|CONTEXT_FLOATING_POINT;
 #if defined(_LIBUNWIND_TARGET_X86_64)
   _msContext.Rax = r.getRegister(UNW_X86_64_RAX);
@@ -679,7 +687,7 @@ template <typename A, typename R>
 bool UnwindCursor<A, R>::validReg(int regNum) {
   if (regNum == UNW_REG_IP || regNum == UNW_REG_SP) return true;
 #if defined(_LIBUNWIND_TARGET_X86_64)
-  if (regNum >= UNW_X86_64_RAX && regNum <= UNW_X86_64_R15) return true;
+  if (regNum >= UNW_X86_64_RAX && regNum <= UNW_X86_64_RIP) return true;
 #elif defined(_LIBUNWIND_TARGET_ARM)
   if ((regNum >= UNW_ARM_R0 && regNum <= UNW_ARM_R15) ||
       regNum == UNW_ARM_RA_AUTH_CODE)
@@ -694,6 +702,7 @@ template <typename A, typename R>
 unw_word_t UnwindCursor<A, R>::getReg(int regNum) {
   switch (regNum) {
 #if defined(_LIBUNWIND_TARGET_X86_64)
+  case UNW_X86_64_RIP:
   case UNW_REG_IP: return _msContext.Rip;
   case UNW_X86_64_RAX: return _msContext.Rax;
   case UNW_X86_64_RDX: return _msContext.Rdx;
@@ -744,6 +753,7 @@ template <typename A, typename R>
 void UnwindCursor<A, R>::setReg(int regNum, unw_word_t value) {
   switch (regNum) {
 #if defined(_LIBUNWIND_TARGET_X86_64)
+  case UNW_X86_64_RIP:
   case UNW_REG_IP: _msContext.Rip = value; break;
   case UNW_X86_64_RAX: _msContext.Rax = value; break;
   case UNW_X86_64_RDX: _msContext.Rdx = value; break;
@@ -1978,6 +1988,9 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
       uint32_t lastcode = (xdata->CountOfCodes + 1) & ~1;
       const uint32_t *handler = reinterpret_cast<uint32_t *>(&xdata->UnwindCodes[lastcode]);
       _info.lsda = reinterpret_cast<unw_word_t>(handler+1);
+      _dispContext.HandlerData = reinterpret_cast<void *>(_info.lsda);
+      _dispContext.LanguageHandler =
+          reinterpret_cast<EXCEPTION_ROUTINE *>(base + *handler);
       if (*handler) {
         _info.handler = reinterpret_cast<unw_word_t>(__libunwind_seh_personality);
       } else

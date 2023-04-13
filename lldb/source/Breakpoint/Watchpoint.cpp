@@ -337,12 +337,11 @@ Watchpoint::WatchpointEventData::WatchpointEventData(
 
 Watchpoint::WatchpointEventData::~WatchpointEventData() = default;
 
-ConstString Watchpoint::WatchpointEventData::GetFlavorString() {
-  static ConstString g_flavor("Watchpoint::WatchpointEventData");
-  return g_flavor;
+llvm::StringRef Watchpoint::WatchpointEventData::GetFlavorString() {
+  return "Watchpoint::WatchpointEventData";
 }
 
-ConstString Watchpoint::WatchpointEventData::GetFlavor() const {
+llvm::StringRef Watchpoint::WatchpointEventData::GetFlavor() const {
   return WatchpointEventData::GetFlavorString();
 }
 

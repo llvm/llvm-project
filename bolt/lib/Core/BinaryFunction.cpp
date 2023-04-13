@@ -2038,6 +2038,7 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
       MCInst *PrevInstr = PrevBB->getLastNonPseudoInstr();
       assert(PrevInstr && "no previous instruction for a fall through");
       if (MIB->isUnconditionalBranch(Instr) &&
+          !MIB->isIndirectBranch(*PrevInstr) &&
           !MIB->isUnconditionalBranch(*PrevInstr) &&
           !MIB->getConditionalTailCall(*PrevInstr) &&
           !MIB->isReturn(*PrevInstr)) {

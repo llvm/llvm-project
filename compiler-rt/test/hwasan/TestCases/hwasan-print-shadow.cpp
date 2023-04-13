@@ -18,9 +18,7 @@ int main() {
   alloc[79] = 0xee;
   alloc[95] = 0xff;
 
-  // __hwasan_tag_memory expects untagged pointers.
-  char *p = (char *)__hwasan_tag_pointer(alloc, 0);
-  assert(p);
+  char *p = alloc;
 
   // Write tags to shadow.
   __hwasan_tag_memory(p, 1, 32);

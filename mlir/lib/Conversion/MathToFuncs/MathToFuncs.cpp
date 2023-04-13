@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
@@ -22,6 +23,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Debug.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOFUNCS
@@ -29,6 +31,9 @@ namespace mlir {
 } // namespace mlir
 
 using namespace mlir;
+
+#define DEBUG_TYPE "math-to-funcs"
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 namespace {
 // Pattern to convert vector operations to scalar operations.
@@ -41,14 +46,14 @@ public:
 };
 
 // Callback type for getting pre-generated FuncOp implementing
-// a power operation of the given type.
-using GetPowerFuncCallbackTy = function_ref<func::FuncOp(Type)>;
+// an operation of the given type.
+using GetFuncCallbackTy = function_ref<func::FuncOp(Operation *, Type)>;
 
 // Pattern to convert scalar IPowIOp into a call of outlined
 // software implementation.
 class IPowIOpLowering : public OpRewritePattern<math::IPowIOp> {
 public:
-  IPowIOpLowering(MLIRContext *context, GetPowerFuncCallbackTy cb)
+  IPowIOpLowering(MLIRContext *context, GetFuncCallbackTy cb)
       : OpRewritePattern<math::IPowIOp>(context), getFuncOpCallback(cb) {}
 
   /// Convert IPowI into a call to a local function implementing
@@ -58,14 +63,14 @@ public:
                                 PatternRewriter &rewriter) const final;
 
 private:
-  GetPowerFuncCallbackTy getFuncOpCallback;
+  GetFuncCallbackTy getFuncOpCallback;
 };
 
 // Pattern to convert scalar FPowIOp into a call of outlined
 // software implementation.
 class FPowIOpLowering : public OpRewritePattern<math::FPowIOp> {
 public:
-  FPowIOpLowering(MLIRContext *context, GetPowerFuncCallbackTy cb)
+  FPowIOpLowering(MLIRContext *context, GetFuncCallbackTy cb)
       : OpRewritePattern<math::FPowIOp>(context), getFuncOpCallback(cb) {}
 
   /// Convert FPowI into a call to a local function implementing
@@ -75,7 +80,24 @@ public:
                                 PatternRewriter &rewriter) const final;
 
 private:
-  GetPowerFuncCallbackTy getFuncOpCallback;
+  GetFuncCallbackTy getFuncOpCallback;
+};
+
+// Pattern to convert scalar ctlz into a call of outlined software
+// implementation.
+class CtlzOpLowering : public OpRewritePattern<math::CountLeadingZerosOp> {
+public:
+  CtlzOpLowering(MLIRContext *context, GetFuncCallbackTy cb)
+      : OpRewritePattern<math::CountLeadingZerosOp>(context),
+        getFuncOpCallback(cb) {}
+
+  /// Convert ctlz into a call to a local function implementing
+  /// the count leading zeros operation.
+  LogicalResult matchAndRewrite(math::CountLeadingZerosOp op,
+                                PatternRewriter &rewriter) const final;
+
+private:
+  GetFuncCallbackTy getFuncOpCallback;
 };
 } // namespace
 
@@ -346,7 +368,7 @@ IPowIOpLowering::matchAndRewrite(math::IPowIOp op,
 
   // The outlined software implementation must have been already
   // generated.
-  func::FuncOp elementFunc = getFuncOpCallback(baseType);
+  func::FuncOp elementFunc = getFuncOpCallback(op, baseType);
   if (!elementFunc)
     return rewriter.notifyMatchFailure(op, "missing software implementation");
 
@@ -571,11 +593,176 @@ FPowIOpLowering::matchAndRewrite(math::FPowIOp op,
 
   // The outlined software implementation must have been already
   // generated.
-  func::FuncOp elementFunc = getFuncOpCallback(funcType);
+  func::FuncOp elementFunc = getFuncOpCallback(op, funcType);
   if (!elementFunc)
     return rewriter.notifyMatchFailure(op, "missing software implementation");
 
   rewriter.replaceOpWithNewOp<func::CallOp>(op, elementFunc, op.getOperands());
+  return success();
+}
+
+/// Create function to implement the ctlz function the given \p elementType type
+/// inside \p module. The \p elementType must be IntegerType, an the created
+/// function has 'IntegerType (*)(IntegerType)' function type.
+///
+/// template <typename T>
+/// T __mlir_math_ctlz_*(T x) {
+///     bits = sizeof(x) * 8;
+///     if (x == 0)
+///       return bits;
+///
+///     uint32_t n = 0;
+///     for (int i = 1; i < bits; ++i) {
+///         if (x < 0) continue;
+///         n++;
+///         x <<= 1;
+///     }
+///     return n;
+/// }
+///
+/// Converts to (for i32):
+///
+/// func.func private @__mlir_math_ctlz_i32(%arg: i32) -> i32 {
+///   %c_32 = arith.constant 32 : index
+///   %c_0 = arith.constant 0 : i32
+///   %arg_eq_zero = arith.cmpi eq, %arg, %c_0 : i1
+///   %out = scf.if %arg_eq_zero {
+///     scf.yield %c_32 : i32
+///   } else {
+///     %c_1index = arith.constant 1 : index
+///     %c_1i32 = arith.constant 1 : i32
+///     %n = arith.constant 0 : i32
+///     %arg_out, %n_out = scf.for %i = %c_1index to %c_32 step %c_1index
+///         iter_args(%arg_iter = %arg, %n_iter = %n) -> (i32, i32) {
+///       %cond = arith.cmpi slt, %arg_iter, %c_0 : i32
+///       %yield_val = scf.if %cond {
+///         scf.yield %arg_iter, %n_iter : i32, i32
+///       } else {
+///         %arg_next = arith.shli %arg_iter, %c_1i32 : i32
+///         %n_next = arith.addi %n_iter, %c_1i32 : i32
+///         scf.yield %arg_next, %n_next : i32, i32
+///       }
+///       scf.yield %yield_val: i32, i32
+///     }
+///     scf.yield %n_out : i32
+///   }
+///   return %out: i32
+/// }
+static func::FuncOp createCtlzFunc(ModuleOp *module, Type elementType) {
+  if (!elementType.isa<IntegerType>()) {
+    LLVM_DEBUG({
+      DBGS() << "non-integer element type for CtlzFunc; type was: ";
+      elementType.print(llvm::dbgs());
+    });
+    llvm_unreachable("non-integer element type");
+  }
+  int64_t bitWidth = elementType.getIntOrFloatBitWidth();
+
+  Location loc = module->getLoc();
+  ImplicitLocOpBuilder builder =
+      ImplicitLocOpBuilder::atBlockEnd(loc, module->getBody());
+
+  std::string funcName("__mlir_math_ctlz");
+  llvm::raw_string_ostream nameOS(funcName);
+  nameOS << '_' << elementType;
+  FunctionType funcType =
+      FunctionType::get(builder.getContext(), {elementType}, elementType);
+  auto funcOp = builder.create<func::FuncOp>(funcName, funcType);
+
+  // LinkonceODR ensures that there is only one implementation of this function
+  // across all math.ctlz functions that are lowered in this way.
+  LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
+  Attribute linkage =
+      LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
+  funcOp->setAttr("llvm.linkage", linkage);
+  funcOp.setPrivate();
+
+  // set the insertion point to the start of the function
+  Block *funcBody = funcOp.addEntryBlock();
+  builder.setInsertionPointToStart(funcBody);
+
+  Value arg = funcOp.getArgument(0);
+  Type indexType = builder.getIndexType();
+  Value bitWidthValue = builder.create<arith::ConstantOp>(
+      elementType, builder.getIntegerAttr(elementType, bitWidth));
+  Value zeroValue = builder.create<arith::ConstantOp>(
+      elementType, builder.getIntegerAttr(elementType, 0));
+
+  Value inputEqZero =
+      builder.create<arith::CmpIOp>(arith::CmpIPredicate::eq, arg, zeroValue);
+
+  // if input == 0, return bit width, else enter loop.
+  scf::IfOp ifOp = builder.create<scf::IfOp>(
+      elementType, inputEqZero, /*addThenBlock=*/true, /*addElseBlock=*/true);
+  ifOp.getThenBodyBuilder().create<scf::YieldOp>(loc, bitWidthValue);
+
+  auto elseBuilder =
+      ImplicitLocOpBuilder::atBlockEnd(loc, &ifOp.getElseRegion().front());
+
+  Value oneIndex = elseBuilder.create<arith::ConstantOp>(
+      indexType, elseBuilder.getIndexAttr(1));
+  Value oneValue = elseBuilder.create<arith::ConstantOp>(
+      elementType, elseBuilder.getIntegerAttr(elementType, 1));
+  Value bitWidthIndex = elseBuilder.create<arith::ConstantOp>(
+      indexType, elseBuilder.getIndexAttr(bitWidth));
+  Value nValue = elseBuilder.create<arith::ConstantOp>(
+      elementType, elseBuilder.getIntegerAttr(elementType, 0));
+
+  auto loop = elseBuilder.create<scf::ForOp>(
+      oneIndex, bitWidthIndex, oneIndex,
+      // Initial values for two loop induction variables, the arg which is being
+      // shifted left in each iteration, and the n value which tracks the count
+      // of leading zeros.
+      ValueRange{arg, nValue},
+      // Callback to build the body of the for loop
+      //   if (arg < 0) {
+      //     continue;
+      //   } else {
+      //     n++;
+      //     arg <<= 1;
+      //   }
+      [&](OpBuilder &b, Location loc, Value iv, ValueRange args) {
+        Value argIter = args[0];
+        Value nIter = args[1];
+
+        Value argIsNonNegative = b.create<arith::CmpIOp>(
+            loc, arith::CmpIPredicate::slt, argIter, zeroValue);
+        scf::IfOp ifOp = b.create<scf::IfOp>(
+            loc, argIsNonNegative,
+            [&](OpBuilder &b, Location loc) {
+              // If arg is negative, continue (effectively, break)
+              b.create<scf::YieldOp>(loc, ValueRange{argIter, nIter});
+            },
+            [&](OpBuilder &b, Location loc) {
+              // Otherwise, increment n and shift arg left.
+              Value nNext = b.create<arith::AddIOp>(loc, nIter, oneValue);
+              Value argNext = b.create<arith::ShLIOp>(loc, argIter, oneValue);
+              b.create<scf::YieldOp>(loc, ValueRange{argNext, nNext});
+            });
+        b.create<scf::YieldOp>(loc, ifOp.getResults());
+      });
+  elseBuilder.create<scf::YieldOp>(loop.getResult(1));
+
+  builder.create<func::ReturnOp>(ifOp.getResult(0));
+  return funcOp;
+}
+
+/// Convert ctlz into a call to a local function implementing the ctlz
+/// operation.
+LogicalResult CtlzOpLowering::matchAndRewrite(math::CountLeadingZerosOp op,
+                                              PatternRewriter &rewriter) const {
+  if (op.getType().template dyn_cast<VectorType>())
+    return rewriter.notifyMatchFailure(op, "non-scalar operation");
+
+  Type type = getElementTypeOrSelf(op.getResult().getType());
+  func::FuncOp elementFunc = getFuncOpCallback(op, type);
+  if (!elementFunc)
+    return rewriter.notifyMatchFailure(op, [&](::mlir::Diagnostic &diag) {
+      diag << "Missing software implementation for op " << op->getName()
+           << " and type " << type;
+    });
+
+  rewriter.replaceOpWithNewOp<func::CallOp>(op, elementFunc, op.getOperand());
   return success();
 }
 
@@ -595,13 +782,13 @@ private:
   bool isFPowIConvertible(math::FPowIOp op);
 
   // Generate outlined implementations for power operations
-  // and store them in powerFuncs map.
-  void preprocessPowOperations();
+  // and store them in funcImpls map.
+  void generateOpImplementations();
 
-  // A map between function types deduced from power operations
-  // and the corresponding outlined software implementations
-  // of these operations.
-  DenseMap<Type, func::FuncOp> powerFuncs;
+  // A map between pairs of (operation, type) deduced from operations that this
+  // pass will convert, and the corresponding outlined software implementations
+  // of these operations for the given type.
+  DenseMap<std::pair<OperationName, Type>, func::FuncOp> funcImpls;
 };
 } // namespace
 
@@ -611,17 +798,28 @@ bool ConvertMathToFuncsPass::isFPowIConvertible(math::FPowIOp op) {
   return (expTy && expTy.getWidth() >= minWidthOfFPowIExponent);
 }
 
-void ConvertMathToFuncsPass::preprocessPowOperations() {
+void ConvertMathToFuncsPass::generateOpImplementations() {
   ModuleOp module = getOperation();
 
   module.walk([&](Operation *op) {
     TypeSwitch<Operation *>(op)
+        .Case<math::CountLeadingZerosOp>([&](math::CountLeadingZerosOp op) {
+          Type resultType = getElementTypeOrSelf(op.getResult().getType());
+
+          // Generate the software implementation of this operation,
+          // if it has not been generated yet.
+          auto key = std::pair(op->getName(), resultType);
+          auto entry = funcImpls.try_emplace(key, func::FuncOp{});
+          if (entry.second)
+            entry.first->second = createCtlzFunc(&module, resultType);
+        })
         .Case<math::IPowIOp>([&](math::IPowIOp op) {
           Type resultType = getElementTypeOrSelf(op.getResult().getType());
 
           // Generate the software implementation of this operation,
           // if it has not been generated yet.
-          auto entry = powerFuncs.try_emplace(resultType, func::FuncOp{});
+          auto key = std::pair(op->getName(), resultType);
+          auto entry = funcImpls.try_emplace(key, func::FuncOp{});
           if (entry.second)
             entry.first->second = createElementIPowIFunc(&module, resultType);
         })
@@ -635,7 +833,8 @@ void ConvertMathToFuncsPass::preprocessPowOperations() {
           // if it has not been generated yet.
           // FPowI implementations are mapped via the FunctionType
           // created from the operation's result and operands.
-          auto entry = powerFuncs.try_emplace(funcType, func::FuncOp{});
+          auto key = std::pair(op->getName(), funcType);
+          auto entry = funcImpls.try_emplace(key, func::FuncOp{});
           if (entry.second)
             entry.first->second = createElementFPowIFunc(&module, funcType);
         });
@@ -646,27 +845,34 @@ void ConvertMathToFuncsPass::runOnOperation() {
   ModuleOp module = getOperation();
 
   // Create outlined implementations for power operations.
-  preprocessPowOperations();
+  generateOpImplementations();
 
   RewritePatternSet patterns(&getContext());
-  patterns.add<VecOpToScalarOp<math::IPowIOp>, VecOpToScalarOp<math::FPowIOp>>(
+  patterns.add<VecOpToScalarOp<math::IPowIOp>, VecOpToScalarOp<math::FPowIOp>,
+               VecOpToScalarOp<math::CountLeadingZerosOp>>(
       patterns.getContext());
 
-  // For the given Type Returns FuncOp stored in powerFuncs map.
-  auto getPowerFuncOpByType = [&](Type type) -> func::FuncOp {
-    auto it = powerFuncs.find(type);
-    if (it == powerFuncs.end())
+  // For the given Type Returns FuncOp stored in funcImpls map.
+  auto getFuncOpByType = [&](Operation *op, Type type) -> func::FuncOp {
+    auto it = funcImpls.find(std::pair(op->getName(), type));
+    if (it == funcImpls.end())
       return {};
 
     return it->second;
   };
   patterns.add<IPowIOpLowering, FPowIOpLowering>(patterns.getContext(),
-                                                 getPowerFuncOpByType);
+                                                 getFuncOpByType);
+
+  if (convertCtlz)
+    patterns.add<CtlzOpLowering>(patterns.getContext(), getFuncOpByType);
 
   ConversionTarget target(getContext());
   target.addLegalDialect<arith::ArithDialect, cf::ControlFlowDialect,
-                         func::FuncDialect, vector::VectorDialect>();
+                         func::FuncDialect, scf::SCFDialect,
+                         vector::VectorDialect>();
+
   target.addIllegalOp<math::IPowIOp>();
+  target.addIllegalOp<math::CountLeadingZerosOp>();
   target.addDynamicallyLegalOp<math::FPowIOp>(
       [this](math::FPowIOp op) { return !isFPowIConvertible(op); });
   if (failed(applyPartialConversion(module, target, std::move(patterns))))

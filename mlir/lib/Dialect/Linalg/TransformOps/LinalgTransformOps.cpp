@@ -1330,9 +1330,9 @@ packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
                    ArrayRef<int64_t> mnkPaddedSizesNextMultipleOf,
                    ArrayRef<int64_t> mnkOrder) {
   assert(mnkPackedSizes.size() == 3 && "unexpected num of packing sizes");
-  assert(mnkPaddedSizesNextMultipleOf.empty() ||
-         mnkPaddedSizesNextMultipleOf.size() == 3 &&
-             "num of packing sizes next multiple should be empty or of size 3");
+  assert((mnkPaddedSizesNextMultipleOf.empty() ||
+          mnkPaddedSizesNextMultipleOf.size() == 3) &&
+         "num of packing sizes next multiple should be empty or of size 3");
   assert(mnkOrder.size() == 3 && "unexpected mnkOrder size");
   assert(isPermutationVector(mnkOrder) && "expected a permutation");
 
@@ -1818,7 +1818,8 @@ transform::HoistPadOp::applyToOne(tensor::PadOp target,
                                   transform::TransformState &state) {
   tensor::PadOp hoistedPadOp;
   SmallVector<GenericOp> transposeOps;
-  IRRewriter rewriter(target->getContext());
+  TrackingListener listener(state, *this);
+  IRRewriter rewriter(target->getContext(), &listener);
   FailureOr<Value> result =
       hoistPaddingOnTensors(rewriter, target, getNumLoops(), getTranspose(),
                             hoistedPadOp, transposeOps);
@@ -3067,7 +3068,7 @@ transform::VectorizeOp::applyToOne(Operation *target,
   if (getVectorizePadding())
     linalg::populatePadOpVectorizationPatterns(patterns);
 
-  TrackingListener listener(state);
+  TrackingListener listener(state, *this);
   GreedyRewriteConfig config;
   config.listener = &listener;
   if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns), config)))
@@ -3228,6 +3229,36 @@ transform::HoistRedundantTensorSubsetsOp::applyToOne(
     hoistRedundantSubsetExtractInsert(rewriter, forOp);
   });
   results.push_back(target);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// InsertSliceToCopyOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::InsertSliceToCopyOp::applyToOne(
+    tensor::InsertSliceOp target, transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  if (auto copySource = target.getSource().getDefiningOp<linalg::CopyOp>()) {
+    results.push_back(copySource);
+    return DiagnosedSilenceableFailure::success();
+  }
+
+  TrackingListener listener(state, *this);
+  IRRewriter rewriter(target->getContext(), &listener);
+  rewriter.setInsertionPoint(target);
+  Value extracted = rewriter.create<tensor::ExtractSliceOp>(
+      target.getLoc(), target.getDest(), target.getMixedOffsets(),
+      target.getMixedSizes(), target.getMixedStrides());
+  Value copied = rewriter
+                     .create<linalg::CopyOp>(target.getLoc(),
+                                             target.getSource(), extracted)
+                     .getResult(0);
+  rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
+      target, copied, target.getDest(), target.getMixedOffsets(),
+      target.getMixedSizes(), target.getMixedStrides());
+
+  results.push_back(copied.getDefiningOp());
   return DiagnosedSilenceableFailure::success();
 }
 

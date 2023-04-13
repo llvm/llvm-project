@@ -435,6 +435,7 @@ multiclass SVE_1_Op_PassthruUndef_Round_Pat<ValueType vtd, SDPatternOperator op,
 }
 
 def SVEDup0 : ComplexPattern<vAny, 0, "SelectDupZero", []>;
+def SVEDupNeg0 : ComplexPattern<vAny, 0, "SelectDupNegativeZero", []>;
 
 class SVE_1_Op_PassthruZero_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
                    ValueType vt2, Instruction inst>

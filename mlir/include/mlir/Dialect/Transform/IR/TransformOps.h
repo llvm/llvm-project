@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_TRANSFORM_IR_TRANSFORMOPS_H
 
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
+#include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/FunctionInterfaces.h"
@@ -39,8 +40,9 @@ using SequenceBodyBuilderArgsFn =
 class TrackingListener : public RewriterBase::Listener,
                          public TransformState::Extension {
 public:
-  explicit TrackingListener(TransformState &state)
-      : TransformState::Extension(state) {}
+  /// Create a new TrackingListener for usage in the specified transform op.
+  explicit TrackingListener(TransformState &state, TransformOpInterface op)
+      : TransformState::Extension(state), transformOp(op) {}
 
 protected:
   /// Return a replacement payload op for the given op, which is going to be
@@ -49,6 +51,13 @@ protected:
   /// that defining op is used as a replacement.
   virtual Operation *findReplacementOp(Operation *op,
                                        ValueRange newValues) const;
+
+  /// Notify the listener that the pattern failed to match the given operation,
+  /// and provide a callback to populate a diagnostic with the reason why the
+  /// failure occurred.
+  LogicalResult
+  notifyMatchFailure(Location loc,
+                     function_ref<void(Diagnostic &)> reasonCallback) override;
 
   /// This function is called when a tracked payload op is dropped because no
   /// replacement op was found. Derived classes can implement this function for
@@ -71,6 +80,9 @@ private:
 
   /// Ops that were newly created during the transform.
   DenseMap<OperationName, DenseSet<Operation *>> newOps;
+
+  /// The transform op in which this TrackingListener is used.
+  TransformOpInterface transformOp;
 };
 
 } // namespace transform

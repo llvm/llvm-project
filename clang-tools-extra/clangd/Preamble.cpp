@@ -738,6 +738,14 @@ static std::vector<Diag> patchDiags(llvm::ArrayRef<Diag> BaselineDiags,
   return PatchedDiags;
 }
 
+static std::string getPatchName(llvm::StringRef FileName) {
+  // This shouldn't coincide with any real file name.
+  llvm::SmallString<128> PatchName;
+  llvm::sys::path::append(PatchName, llvm::sys::path::parent_path(FileName),
+                          PreamblePatch::HeaderName);
+  return PatchName.str().str();
+}
+
 PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
                                     const ParseInputs &Modified,
                                     const PreambleData &Baseline,
@@ -776,11 +784,7 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
 
   PreamblePatch PP;
   PP.Baseline = &Baseline;
-  // This shouldn't coincide with any real file name.
-  llvm::SmallString<128> PatchName;
-  llvm::sys::path::append(PatchName, llvm::sys::path::parent_path(FileName),
-                          PreamblePatch::HeaderName);
-  PP.PatchFileName = PatchName.str().str();
+  PP.PatchFileName = getPatchName(FileName);
   PP.ModifiedBounds = ModifiedScan->Bounds;
 
   llvm::raw_string_ostream Patch(PP.PatchContents);
@@ -920,6 +924,14 @@ const MainFileMacros &PreamblePatch::mainFileMacros() const {
   if (PatchContents.empty())
     return Baseline->Macros;
   return PatchedMacros;
+}
+
+const FileEntry *PreamblePatch::getPatchEntry(llvm::StringRef MainFilePath,
+                                              const SourceManager &SM) {
+  auto PatchFilePath = getPatchName(MainFilePath);
+  if (auto File = SM.getFileManager().getFile(PatchFilePath))
+    return *File;
+  return nullptr;
 }
 } // namespace clangd
 } // namespace clang

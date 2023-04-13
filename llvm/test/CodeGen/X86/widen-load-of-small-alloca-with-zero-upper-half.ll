@@ -3,10 +3,10 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+sse2,-bmi2,-slow-shld | FileCheck %s --check-prefixes=ALL,X64,X64-NO-BMI2,X64-SHLD,X64-NO-BMI2-HAVE-SHLD
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+sse2,+bmi2,+slow-shld | FileCheck %s --check-prefixes=ALL,X64,X64-BMI2,X64-NO-SHLD,X64-HAVE-BMI2-NO-SHLD
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+sse2,+bmi2,-slow-shld | FileCheck %s --check-prefixes=ALL,X64,X64-BMI2,X64-SHLD,X64-HAVE-BMI2-HAVE-SHLD
-; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -mattr=+sse2,-bmi2,+slow-shld | FileCheck %s --check-prefixes=ALL,X32,X32-NO-BMI2,X32-NO-SHLD,X32-NO-BMI2-NO-SHLD
-; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -mattr=+sse2,-bmi2,-slow-shld | FileCheck %s --check-prefixes=ALL,X32,X32-NO-BMI2,X32-SHLD,X32-NO-BMI2-HAVE-SHLD
-; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -mattr=+sse2,+bmi2,+slow-shld | FileCheck %s --check-prefixes=ALL,X32,X32-BMI2,X32-NO-SHLD,X32-HAVE-BMI2-NO-SHLD
-; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -mattr=+sse2,+bmi2,-slow-shld | FileCheck %s --check-prefixes=ALL,X32,X32-BMI2,X32-SHLD,X32-HAVE-BMI2-HAVE-SHLD
+; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -mattr=+sse2,-bmi2,+slow-shld | FileCheck %s --check-prefixes=ALL,X86,X86-NO-BMI2,X86-NO-SHLD,X86-NO-BMI2-NO-SHLD
+; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -mattr=+sse2,-bmi2,-slow-shld | FileCheck %s --check-prefixes=ALL,X86,X86-NO-BMI2,X86-SHLD,X86-NO-BMI2-HAVE-SHLD
+; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -mattr=+sse2,+bmi2,+slow-shld | FileCheck %s --check-prefixes=ALL,X86,X86-BMI2,X86-NO-SHLD,X86-HAVE-BMI2-NO-SHLD
+; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -mattr=+sse2,+bmi2,-slow-shld | FileCheck %s --check-prefixes=ALL,X86,X86-BMI2,X86-SHLD,X86-HAVE-BMI2-HAVE-SHLD
 
 define void @load_1byte_chunk_of_2byte_alloca_with_zero_upper_half(ptr %src, i64 %byteOff, ptr %dst) nounwind {
 ; X64-NO-BMI2-LABEL: load_1byte_chunk_of_2byte_alloca_with_zero_upper_half:
@@ -26,28 +26,28 @@ define void @load_1byte_chunk_of_2byte_alloca_with_zero_upper_half(ptr %src, i64
 ; X64-BMI2-NEXT:    movb %al, (%rdx)
 ; X64-BMI2-NEXT:    retq
 ;
-; X32-NO-BMI2-LABEL: load_1byte_chunk_of_2byte_alloca_with_zero_upper_half:
-; X32-NO-BMI2:       # %bb.0:
-; X32-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NO-BMI2-NEXT:    movzbl (%eax), %eax
-; X32-NO-BMI2-NEXT:    shll $3, %ecx
-; X32-NO-BMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X32-NO-BMI2-NEXT:    shrl %cl, %eax
-; X32-NO-BMI2-NEXT:    movb %al, (%edx)
-; X32-NO-BMI2-NEXT:    retl
+; X86-NO-BMI2-LABEL: load_1byte_chunk_of_2byte_alloca_with_zero_upper_half:
+; X86-NO-BMI2:       # %bb.0:
+; X86-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NO-BMI2-NEXT:    movzbl (%eax), %eax
+; X86-NO-BMI2-NEXT:    shll $3, %ecx
+; X86-NO-BMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-NO-BMI2-NEXT:    shrl %cl, %eax
+; X86-NO-BMI2-NEXT:    movb %al, (%edx)
+; X86-NO-BMI2-NEXT:    retl
 ;
-; X32-BMI2-LABEL: load_1byte_chunk_of_2byte_alloca_with_zero_upper_half:
-; X32-BMI2:       # %bb.0:
-; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-BMI2-NEXT:    movzbl (%edx), %edx
-; X32-BMI2-NEXT:    shll $3, %ecx
-; X32-BMI2-NEXT:    shrxl %ecx, %edx, %ecx
-; X32-BMI2-NEXT:    movb %cl, (%eax)
-; X32-BMI2-NEXT:    retl
+; X86-BMI2-LABEL: load_1byte_chunk_of_2byte_alloca_with_zero_upper_half:
+; X86-BMI2:       # %bb.0:
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-BMI2-NEXT:    movzbl (%edx), %edx
+; X86-BMI2-NEXT:    shll $3, %ecx
+; X86-BMI2-NEXT:    shrxl %ecx, %edx, %ecx
+; X86-BMI2-NEXT:    movb %cl, (%eax)
+; X86-BMI2-NEXT:    retl
   %init1 = load i8, ptr %src, align 1
   %intermediate.sroa.0.0.vec.insert = insertelement <2 x i8> <i8 poison, i8 0>, i8 %init1, i64 0
   %intermediate.val.frozen = freeze <2 x i8> %intermediate.sroa.0.0.vec.insert
@@ -81,30 +81,30 @@ define void @load_1byte_chunk_of_4byte_alloca_with_zero_upper_half(ptr %src, i64
 ; X64-BMI2-NEXT:    movb %al, (%rdx)
 ; X64-BMI2-NEXT:    retq
 ;
-; X32-NO-BMI2-LABEL: load_1byte_chunk_of_4byte_alloca_with_zero_upper_half:
-; X32-NO-BMI2:       # %bb.0:
-; X32-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NO-BMI2-NEXT:    movzwl (%edx), %edx
-; X32-NO-BMI2-NEXT:    movzwl %dx, %edx
-; X32-NO-BMI2-NEXT:    shll $3, %ecx
-; X32-NO-BMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X32-NO-BMI2-NEXT:    shrl %cl, %edx
-; X32-NO-BMI2-NEXT:    movb %dl, (%eax)
-; X32-NO-BMI2-NEXT:    retl
+; X86-NO-BMI2-LABEL: load_1byte_chunk_of_4byte_alloca_with_zero_upper_half:
+; X86-NO-BMI2:       # %bb.0:
+; X86-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NO-BMI2-NEXT:    movzwl (%edx), %edx
+; X86-NO-BMI2-NEXT:    movzwl %dx, %edx
+; X86-NO-BMI2-NEXT:    shll $3, %ecx
+; X86-NO-BMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-NO-BMI2-NEXT:    shrl %cl, %edx
+; X86-NO-BMI2-NEXT:    movb %dl, (%eax)
+; X86-NO-BMI2-NEXT:    retl
 ;
-; X32-BMI2-LABEL: load_1byte_chunk_of_4byte_alloca_with_zero_upper_half:
-; X32-BMI2:       # %bb.0:
-; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-BMI2-NEXT:    movzwl (%edx), %edx
-; X32-BMI2-NEXT:    movzwl %dx, %edx
-; X32-BMI2-NEXT:    shll $3, %ecx
-; X32-BMI2-NEXT:    shrxl %ecx, %edx, %ecx
-; X32-BMI2-NEXT:    movb %cl, (%eax)
-; X32-BMI2-NEXT:    retl
+; X86-BMI2-LABEL: load_1byte_chunk_of_4byte_alloca_with_zero_upper_half:
+; X86-BMI2:       # %bb.0:
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-BMI2-NEXT:    movzwl (%edx), %edx
+; X86-BMI2-NEXT:    movzwl %dx, %edx
+; X86-BMI2-NEXT:    shll $3, %ecx
+; X86-BMI2-NEXT:    shrxl %ecx, %edx, %ecx
+; X86-BMI2-NEXT:    movb %cl, (%eax)
+; X86-BMI2-NEXT:    retl
   %init = load <2 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <2 x i8> %init, <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <4 x i8> %intermediate.sroa.0.0.vec.expand, <4 x i8> <i8 poison, i8 poison, i8 0, i8 0>, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
@@ -139,30 +139,30 @@ define void @load_2byte_chunk_of_4byte_alloca_with_zero_upper_half(ptr %src, i64
 ; X64-BMI2-NEXT:    movw %ax, (%rdx)
 ; X64-BMI2-NEXT:    retq
 ;
-; X32-NO-BMI2-LABEL: load_2byte_chunk_of_4byte_alloca_with_zero_upper_half:
-; X32-NO-BMI2:       # %bb.0:
-; X32-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NO-BMI2-NEXT:    movzwl (%edx), %edx
-; X32-NO-BMI2-NEXT:    movzwl %dx, %edx
-; X32-NO-BMI2-NEXT:    shll $3, %ecx
-; X32-NO-BMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X32-NO-BMI2-NEXT:    shrl %cl, %edx
-; X32-NO-BMI2-NEXT:    movw %dx, (%eax)
-; X32-NO-BMI2-NEXT:    retl
+; X86-NO-BMI2-LABEL: load_2byte_chunk_of_4byte_alloca_with_zero_upper_half:
+; X86-NO-BMI2:       # %bb.0:
+; X86-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NO-BMI2-NEXT:    movzwl (%edx), %edx
+; X86-NO-BMI2-NEXT:    movzwl %dx, %edx
+; X86-NO-BMI2-NEXT:    shll $3, %ecx
+; X86-NO-BMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-NO-BMI2-NEXT:    shrl %cl, %edx
+; X86-NO-BMI2-NEXT:    movw %dx, (%eax)
+; X86-NO-BMI2-NEXT:    retl
 ;
-; X32-BMI2-LABEL: load_2byte_chunk_of_4byte_alloca_with_zero_upper_half:
-; X32-BMI2:       # %bb.0:
-; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-BMI2-NEXT:    movzwl (%edx), %edx
-; X32-BMI2-NEXT:    movzwl %dx, %edx
-; X32-BMI2-NEXT:    shll $3, %ecx
-; X32-BMI2-NEXT:    shrxl %ecx, %edx, %ecx
-; X32-BMI2-NEXT:    movw %cx, (%eax)
-; X32-BMI2-NEXT:    retl
+; X86-BMI2-LABEL: load_2byte_chunk_of_4byte_alloca_with_zero_upper_half:
+; X86-BMI2:       # %bb.0:
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-BMI2-NEXT:    movzwl (%edx), %edx
+; X86-BMI2-NEXT:    movzwl %dx, %edx
+; X86-BMI2-NEXT:    shll $3, %ecx
+; X86-BMI2-NEXT:    shrxl %ecx, %edx, %ecx
+; X86-BMI2-NEXT:    movw %cx, (%eax)
+; X86-BMI2-NEXT:    retl
   %init = load <2 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <2 x i8> %init, <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <4 x i8> %intermediate.sroa.0.0.vec.expand, <4 x i8> <i8 poison, i8 poison, i8 0, i8 0>, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
@@ -196,102 +196,102 @@ define void @load_1byte_chunk_of_8byte_alloca_with_zero_upper_half(ptr %src, i64
 ; X64-BMI2-NEXT:    movb %al, (%rdx)
 ; X64-BMI2-NEXT:    retq
 ;
-; X32-NO-BMI2-NO-SHLD-LABEL: load_1byte_chunk_of_8byte_alloca_with_zero_upper_half:
-; X32-NO-BMI2-NO-SHLD:       # %bb.0:
-; X32-NO-BMI2-NO-SHLD-NEXT:    pushl %ebx
-; X32-NO-BMI2-NO-SHLD-NEXT:    pushl %edi
-; X32-NO-BMI2-NO-SHLD-NEXT:    pushl %esi
-; X32-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NO-BMI2-NO-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NO-BMI2-NO-SHLD-NEXT:    shll $3, %eax
-; X32-NO-BMI2-NO-SHLD-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; X32-NO-BMI2-NO-SHLD-NEXT:    movd %xmm1, %ebx
-; X32-NO-BMI2-NO-SHLD-NEXT:    movd %xmm0, %esi
-; X32-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X32-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %esi
-; X32-NO-BMI2-NO-SHLD-NEXT:    notb %cl
-; X32-NO-BMI2-NO-SHLD-NEXT:    leal (%ebx,%ebx), %edi
-; X32-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %edi
-; X32-NO-BMI2-NO-SHLD-NEXT:    orl %esi, %edi
-; X32-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X32-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %ebx
-; X32-NO-BMI2-NO-SHLD-NEXT:    testb $32, %al
-; X32-NO-BMI2-NO-SHLD-NEXT:    cmovel %edi, %ebx
-; X32-NO-BMI2-NO-SHLD-NEXT:    movb %bl, (%edx)
-; X32-NO-BMI2-NO-SHLD-NEXT:    popl %esi
-; X32-NO-BMI2-NO-SHLD-NEXT:    popl %edi
-; X32-NO-BMI2-NO-SHLD-NEXT:    popl %ebx
-; X32-NO-BMI2-NO-SHLD-NEXT:    retl
+; X86-NO-BMI2-NO-SHLD-LABEL: load_1byte_chunk_of_8byte_alloca_with_zero_upper_half:
+; X86-NO-BMI2-NO-SHLD:       # %bb.0:
+; X86-NO-BMI2-NO-SHLD-NEXT:    pushl %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    pushl %edi
+; X86-NO-BMI2-NO-SHLD-NEXT:    pushl %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NO-BMI2-NO-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NO-BMI2-NO-SHLD-NEXT:    shll $3, %eax
+; X86-NO-BMI2-NO-SHLD-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-NO-BMI2-NO-SHLD-NEXT:    movd %xmm1, %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    movd %xmm0, %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
+; X86-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    notb %cl
+; X86-NO-BMI2-NO-SHLD-NEXT:    leal (%ebx,%ebx), %edi
+; X86-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %edi
+; X86-NO-BMI2-NO-SHLD-NEXT:    orl %esi, %edi
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
+; X86-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    testb $32, %al
+; X86-NO-BMI2-NO-SHLD-NEXT:    cmovel %edi, %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    movb %bl, (%edx)
+; X86-NO-BMI2-NO-SHLD-NEXT:    popl %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    popl %edi
+; X86-NO-BMI2-NO-SHLD-NEXT:    popl %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    retl
 ;
-; X32-NO-BMI2-HAVE-SHLD-LABEL: load_1byte_chunk_of_8byte_alloca_with_zero_upper_half:
-; X32-NO-BMI2-HAVE-SHLD:       # %bb.0:
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    pushl %esi
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    shll $3, %ecx
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %esi
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %edx
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    shrdl %cl, %edx, %esi
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    shrl %cl, %edx
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    testb $32, %cl
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    cmovel %esi, %edx
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movb %dl, (%eax)
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    popl %esi
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    retl
+; X86-NO-BMI2-HAVE-SHLD-LABEL: load_1byte_chunk_of_8byte_alloca_with_zero_upper_half:
+; X86-NO-BMI2-HAVE-SHLD:       # %bb.0:
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    pushl %esi
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    shll $3, %ecx
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %esi
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %edx
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    shrdl %cl, %edx, %esi
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    shrl %cl, %edx
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    testb $32, %cl
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    cmovel %esi, %edx
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movb %dl, (%eax)
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    popl %esi
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    retl
 ;
-; X32-HAVE-BMI2-NO-SHLD-LABEL: load_1byte_chunk_of_8byte_alloca_with_zero_upper_half:
-; X32-HAVE-BMI2-NO-SHLD:       # %bb.0:
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    pushl %ebx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    pushl %edi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    pushl %esi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    shll $3, %ecx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movd %xmm1, %edx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movd %xmm0, %esi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %esi, %esi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %ebx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    notb %bl
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    leal (%edx,%edx), %edi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %edi, %edi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %edi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %edx, %edx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    testb $32, %cl
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    cmovel %edi, %edx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movb %dl, (%eax)
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    popl %esi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    popl %edi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    popl %ebx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    retl
+; X86-HAVE-BMI2-NO-SHLD-LABEL: load_1byte_chunk_of_8byte_alloca_with_zero_upper_half:
+; X86-HAVE-BMI2-NO-SHLD:       # %bb.0:
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    pushl %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    pushl %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    pushl %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shll $3, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movd %xmm1, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movd %xmm0, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %esi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    notb %bl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%edx,%edx), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %edi, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    testb $32, %cl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    cmovel %edi, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movb %dl, (%eax)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    retl
 ;
-; X32-HAVE-BMI2-HAVE-SHLD-LABEL: load_1byte_chunk_of_8byte_alloca_with_zero_upper_half:
-; X32-HAVE-BMI2-HAVE-SHLD:       # %bb.0:
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    pushl %ebx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    pushl %esi
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    shll $3, %ecx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %edx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %esi
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    shrdl %cl, %esi, %edx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    shrxl %ecx, %esi, %ebx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    testb $32, %cl
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    cmovel %edx, %ebx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movb %bl, (%eax)
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    popl %esi
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    popl %ebx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    retl
+; X86-HAVE-BMI2-HAVE-SHLD-LABEL: load_1byte_chunk_of_8byte_alloca_with_zero_upper_half:
+; X86-HAVE-BMI2-HAVE-SHLD:       # %bb.0:
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    pushl %ebx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    pushl %esi
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    shll $3, %ecx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %edx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %esi
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    shrdl %cl, %esi, %edx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    shrxl %ecx, %esi, %ebx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    testb $32, %cl
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    cmovel %edx, %ebx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movb %bl, (%eax)
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    popl %esi
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    popl %ebx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    retl
   %init = load <4 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <4 x i8> %init, <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <8 x i8> %intermediate.sroa.0.0.vec.expand, <8 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
@@ -325,100 +325,100 @@ define void @load_2byte_chunk_of_8byte_alloca_with_zero_upper_half(ptr %src, i64
 ; X64-BMI2-NEXT:    movw %ax, (%rdx)
 ; X64-BMI2-NEXT:    retq
 ;
-; X32-NO-BMI2-NO-SHLD-LABEL: load_2byte_chunk_of_8byte_alloca_with_zero_upper_half:
-; X32-NO-BMI2-NO-SHLD:       # %bb.0:
-; X32-NO-BMI2-NO-SHLD-NEXT:    pushl %ebx
-; X32-NO-BMI2-NO-SHLD-NEXT:    pushl %edi
-; X32-NO-BMI2-NO-SHLD-NEXT:    pushl %esi
-; X32-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NO-BMI2-NO-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NO-BMI2-NO-SHLD-NEXT:    shll $3, %eax
-; X32-NO-BMI2-NO-SHLD-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; X32-NO-BMI2-NO-SHLD-NEXT:    movd %xmm1, %esi
-; X32-NO-BMI2-NO-SHLD-NEXT:    movd %xmm0, %edi
-; X32-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X32-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %edi
-; X32-NO-BMI2-NO-SHLD-NEXT:    notb %cl
-; X32-NO-BMI2-NO-SHLD-NEXT:    leal (%esi,%esi), %ebx
-; X32-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %ebx
-; X32-NO-BMI2-NO-SHLD-NEXT:    orl %edi, %ebx
-; X32-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X32-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %esi
-; X32-NO-BMI2-NO-SHLD-NEXT:    testb $32, %al
-; X32-NO-BMI2-NO-SHLD-NEXT:    cmovel %ebx, %esi
-; X32-NO-BMI2-NO-SHLD-NEXT:    movw %si, (%edx)
-; X32-NO-BMI2-NO-SHLD-NEXT:    popl %esi
-; X32-NO-BMI2-NO-SHLD-NEXT:    popl %edi
-; X32-NO-BMI2-NO-SHLD-NEXT:    popl %ebx
-; X32-NO-BMI2-NO-SHLD-NEXT:    retl
+; X86-NO-BMI2-NO-SHLD-LABEL: load_2byte_chunk_of_8byte_alloca_with_zero_upper_half:
+; X86-NO-BMI2-NO-SHLD:       # %bb.0:
+; X86-NO-BMI2-NO-SHLD-NEXT:    pushl %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    pushl %edi
+; X86-NO-BMI2-NO-SHLD-NEXT:    pushl %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NO-BMI2-NO-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NO-BMI2-NO-SHLD-NEXT:    shll $3, %eax
+; X86-NO-BMI2-NO-SHLD-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-NO-BMI2-NO-SHLD-NEXT:    movd %xmm1, %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    movd %xmm0, %edi
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
+; X86-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %edi
+; X86-NO-BMI2-NO-SHLD-NEXT:    notb %cl
+; X86-NO-BMI2-NO-SHLD-NEXT:    leal (%esi,%esi), %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    orl %edi, %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
+; X86-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    testb $32, %al
+; X86-NO-BMI2-NO-SHLD-NEXT:    cmovel %ebx, %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    movw %si, (%edx)
+; X86-NO-BMI2-NO-SHLD-NEXT:    popl %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    popl %edi
+; X86-NO-BMI2-NO-SHLD-NEXT:    popl %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    retl
 ;
-; X32-NO-BMI2-HAVE-SHLD-LABEL: load_2byte_chunk_of_8byte_alloca_with_zero_upper_half:
-; X32-NO-BMI2-HAVE-SHLD:       # %bb.0:
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    pushl %esi
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    shll $3, %ecx
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %edx
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %esi
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    shrdl %cl, %esi, %edx
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    shrl %cl, %esi
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    testb $32, %cl
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    cmovel %edx, %esi
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movw %si, (%eax)
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    popl %esi
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    retl
+; X86-NO-BMI2-HAVE-SHLD-LABEL: load_2byte_chunk_of_8byte_alloca_with_zero_upper_half:
+; X86-NO-BMI2-HAVE-SHLD:       # %bb.0:
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    pushl %esi
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    shll $3, %ecx
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %edx
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %esi
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    shrdl %cl, %esi, %edx
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    shrl %cl, %esi
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    testb $32, %cl
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    cmovel %edx, %esi
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movw %si, (%eax)
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    popl %esi
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    retl
 ;
-; X32-HAVE-BMI2-NO-SHLD-LABEL: load_2byte_chunk_of_8byte_alloca_with_zero_upper_half:
-; X32-HAVE-BMI2-NO-SHLD:       # %bb.0:
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    pushl %ebx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    pushl %edi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    pushl %esi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    shll $3, %ecx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movd %xmm1, %edx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movd %xmm0, %esi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %esi, %esi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %ebx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    notb %bl
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    leal (%edx,%edx), %edi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %edi, %edi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %edi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %edx, %edx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    testb $32, %cl
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    cmovel %edi, %edx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movw %dx, (%eax)
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    popl %esi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    popl %edi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    popl %ebx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    retl
+; X86-HAVE-BMI2-NO-SHLD-LABEL: load_2byte_chunk_of_8byte_alloca_with_zero_upper_half:
+; X86-HAVE-BMI2-NO-SHLD:       # %bb.0:
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    pushl %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    pushl %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    pushl %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shll $3, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movd %xmm1, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movd %xmm0, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %esi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    notb %bl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%edx,%edx), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %edi, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    testb $32, %cl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    cmovel %edi, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movw %dx, (%eax)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    retl
 ;
-; X32-HAVE-BMI2-HAVE-SHLD-LABEL: load_2byte_chunk_of_8byte_alloca_with_zero_upper_half:
-; X32-HAVE-BMI2-HAVE-SHLD:       # %bb.0:
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    pushl %esi
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    shll $3, %ecx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %edx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %esi
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    shrdl %cl, %esi, %edx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    shrxl %ecx, %esi, %esi
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    testb $32, %cl
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    cmovel %edx, %esi
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movw %si, (%eax)
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    popl %esi
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    retl
+; X86-HAVE-BMI2-HAVE-SHLD-LABEL: load_2byte_chunk_of_8byte_alloca_with_zero_upper_half:
+; X86-HAVE-BMI2-HAVE-SHLD:       # %bb.0:
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    pushl %esi
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    shll $3, %ecx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %edx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %esi
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    shrdl %cl, %esi, %edx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    shrxl %ecx, %esi, %esi
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    testb $32, %cl
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    cmovel %edx, %esi
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movw %si, (%eax)
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    popl %esi
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    retl
   %init = load <4 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <4 x i8> %init, <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <8 x i8> %intermediate.sroa.0.0.vec.expand, <8 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
@@ -451,100 +451,100 @@ define void @load_4byte_chunk_of_8byte_alloca_with_zero_upper_half(ptr %src, i64
 ; X64-BMI2-NEXT:    movl %eax, (%rdx)
 ; X64-BMI2-NEXT:    retq
 ;
-; X32-NO-BMI2-NO-SHLD-LABEL: load_4byte_chunk_of_8byte_alloca_with_zero_upper_half:
-; X32-NO-BMI2-NO-SHLD:       # %bb.0:
-; X32-NO-BMI2-NO-SHLD-NEXT:    pushl %ebx
-; X32-NO-BMI2-NO-SHLD-NEXT:    pushl %edi
-; X32-NO-BMI2-NO-SHLD-NEXT:    pushl %esi
-; X32-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NO-BMI2-NO-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NO-BMI2-NO-SHLD-NEXT:    shll $3, %eax
-; X32-NO-BMI2-NO-SHLD-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; X32-NO-BMI2-NO-SHLD-NEXT:    movd %xmm1, %esi
-; X32-NO-BMI2-NO-SHLD-NEXT:    movd %xmm0, %edi
-; X32-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X32-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %edi
-; X32-NO-BMI2-NO-SHLD-NEXT:    notb %cl
-; X32-NO-BMI2-NO-SHLD-NEXT:    leal (%esi,%esi), %ebx
-; X32-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %ebx
-; X32-NO-BMI2-NO-SHLD-NEXT:    orl %edi, %ebx
-; X32-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X32-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %esi
-; X32-NO-BMI2-NO-SHLD-NEXT:    testb $32, %al
-; X32-NO-BMI2-NO-SHLD-NEXT:    cmovel %ebx, %esi
-; X32-NO-BMI2-NO-SHLD-NEXT:    movl %esi, (%edx)
-; X32-NO-BMI2-NO-SHLD-NEXT:    popl %esi
-; X32-NO-BMI2-NO-SHLD-NEXT:    popl %edi
-; X32-NO-BMI2-NO-SHLD-NEXT:    popl %ebx
-; X32-NO-BMI2-NO-SHLD-NEXT:    retl
+; X86-NO-BMI2-NO-SHLD-LABEL: load_4byte_chunk_of_8byte_alloca_with_zero_upper_half:
+; X86-NO-BMI2-NO-SHLD:       # %bb.0:
+; X86-NO-BMI2-NO-SHLD-NEXT:    pushl %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    pushl %edi
+; X86-NO-BMI2-NO-SHLD-NEXT:    pushl %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NO-BMI2-NO-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NO-BMI2-NO-SHLD-NEXT:    shll $3, %eax
+; X86-NO-BMI2-NO-SHLD-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-NO-BMI2-NO-SHLD-NEXT:    movd %xmm1, %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    movd %xmm0, %edi
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
+; X86-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %edi
+; X86-NO-BMI2-NO-SHLD-NEXT:    notb %cl
+; X86-NO-BMI2-NO-SHLD-NEXT:    leal (%esi,%esi), %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    shll %cl, %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    orl %edi, %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
+; X86-NO-BMI2-NO-SHLD-NEXT:    shrl %cl, %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    testb $32, %al
+; X86-NO-BMI2-NO-SHLD-NEXT:    cmovel %ebx, %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    movl %esi, (%edx)
+; X86-NO-BMI2-NO-SHLD-NEXT:    popl %esi
+; X86-NO-BMI2-NO-SHLD-NEXT:    popl %edi
+; X86-NO-BMI2-NO-SHLD-NEXT:    popl %ebx
+; X86-NO-BMI2-NO-SHLD-NEXT:    retl
 ;
-; X32-NO-BMI2-HAVE-SHLD-LABEL: load_4byte_chunk_of_8byte_alloca_with_zero_upper_half:
-; X32-NO-BMI2-HAVE-SHLD:       # %bb.0:
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    pushl %esi
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    shll $3, %ecx
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %edx
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %esi
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    shrdl %cl, %esi, %edx
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    shrl %cl, %esi
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    testb $32, %cl
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    cmovel %edx, %esi
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    movl %esi, (%eax)
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    popl %esi
-; X32-NO-BMI2-HAVE-SHLD-NEXT:    retl
+; X86-NO-BMI2-HAVE-SHLD-LABEL: load_4byte_chunk_of_8byte_alloca_with_zero_upper_half:
+; X86-NO-BMI2-HAVE-SHLD:       # %bb.0:
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    pushl %esi
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    shll $3, %ecx
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %edx
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %esi
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    shrdl %cl, %esi, %edx
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    shrl %cl, %esi
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    testb $32, %cl
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    cmovel %edx, %esi
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    movl %esi, (%eax)
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    popl %esi
+; X86-NO-BMI2-HAVE-SHLD-NEXT:    retl
 ;
-; X32-HAVE-BMI2-NO-SHLD-LABEL: load_4byte_chunk_of_8byte_alloca_with_zero_upper_half:
-; X32-HAVE-BMI2-NO-SHLD:       # %bb.0:
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    pushl %ebx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    pushl %edi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    pushl %esi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    shll $3, %ecx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movd %xmm1, %edx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movd %xmm0, %esi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %esi, %esi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %ebx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    notb %bl
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    leal (%edx,%edx), %edi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %edi, %edi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %edi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %edx, %edx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    testb $32, %cl
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    cmovel %edi, %edx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, (%eax)
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    popl %esi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    popl %edi
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    popl %ebx
-; X32-HAVE-BMI2-NO-SHLD-NEXT:    retl
+; X86-HAVE-BMI2-NO-SHLD-LABEL: load_4byte_chunk_of_8byte_alloca_with_zero_upper_half:
+; X86-HAVE-BMI2-NO-SHLD:       # %bb.0:
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    pushl %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    pushl %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    pushl %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shll $3, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movd %xmm1, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movd %xmm0, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %esi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    notb %bl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%edx,%edx), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %edi, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    testb $32, %cl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    cmovel %edi, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, (%eax)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    retl
 ;
-; X32-HAVE-BMI2-HAVE-SHLD-LABEL: load_4byte_chunk_of_8byte_alloca_with_zero_upper_half:
-; X32-HAVE-BMI2-HAVE-SHLD:       # %bb.0:
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    pushl %esi
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    shll $3, %ecx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %edx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %esi
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    shrdl %cl, %esi, %edx
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    shrxl %ecx, %esi, %esi
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    testb $32, %cl
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    cmovel %edx, %esi
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    movl %esi, (%eax)
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    popl %esi
-; X32-HAVE-BMI2-HAVE-SHLD-NEXT:    retl
+; X86-HAVE-BMI2-HAVE-SHLD-LABEL: load_4byte_chunk_of_8byte_alloca_with_zero_upper_half:
+; X86-HAVE-BMI2-HAVE-SHLD:       # %bb.0:
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    pushl %esi
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    shll $3, %ecx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %edx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movd %xmm0, %esi
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    shrdl %cl, %esi, %edx
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    shrxl %ecx, %esi, %esi
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    testb $32, %cl
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    cmovel %edx, %esi
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    movl %esi, (%eax)
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    popl %esi
+; X86-HAVE-BMI2-HAVE-SHLD-NEXT:    retl
   %init = load <4 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <4 x i8> %init, <4 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <8 x i8> %intermediate.sroa.0.0.vec.expand, <8 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
@@ -627,32 +627,32 @@ define void @load_1byte_chunk_of_16byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    movb %sil, (%rdx)
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    retq
 ;
-; X32-LABEL: load_1byte_chunk_of_16byte_alloca_with_zero_upper_half:
-; X32:       # %bb.0:
-; X32-NEXT:    subl $32, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    shll $3, %ecx
-; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
-; X32-NEXT:    movd %xmm0, (%esp)
-; X32-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movzbl %cl, %ecx
-; X32-NEXT:    movzbl (%esp,%ecx), %ecx
-; X32-NEXT:    movb %cl, (%eax)
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    retl
+; X86-LABEL: load_1byte_chunk_of_16byte_alloca_with_zero_upper_half:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    shll $3, %ecx
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    shrb $3, %cl
+; X86-NEXT:    andb $15, %cl
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    movzbl (%esp,%ecx), %ecx
+; X86-NEXT:    movb %cl, (%eax)
+; X86-NEXT:    addl $32, %esp
+; X86-NEXT:    retl
   %init = load <8 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <8 x i8> %init, <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <16 x i8> %intermediate.sroa.0.0.vec.expand, <16 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -737,32 +737,32 @@ define void @load_2byte_chunk_of_16byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    movw %si, (%rdx)
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    retq
 ;
-; X32-LABEL: load_2byte_chunk_of_16byte_alloca_with_zero_upper_half:
-; X32:       # %bb.0:
-; X32-NEXT:    subl $32, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    shll $3, %ecx
-; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
-; X32-NEXT:    movd %xmm0, (%esp)
-; X32-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movzbl %cl, %ecx
-; X32-NEXT:    movl (%esp,%ecx), %ecx
-; X32-NEXT:    movw %cx, (%eax)
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    retl
+; X86-LABEL: load_2byte_chunk_of_16byte_alloca_with_zero_upper_half:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    shll $3, %ecx
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    shrb $3, %cl
+; X86-NEXT:    andb $15, %cl
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    movl (%esp,%ecx), %ecx
+; X86-NEXT:    movw %cx, (%eax)
+; X86-NEXT:    addl $32, %esp
+; X86-NEXT:    retl
   %init = load <8 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <8 x i8> %init, <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <16 x i8> %intermediate.sroa.0.0.vec.expand, <16 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -846,32 +846,32 @@ define void @load_4byte_chunk_of_16byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    movl %esi, (%rdx)
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    retq
 ;
-; X32-LABEL: load_4byte_chunk_of_16byte_alloca_with_zero_upper_half:
-; X32:       # %bb.0:
-; X32-NEXT:    subl $32, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    shll $3, %ecx
-; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
-; X32-NEXT:    movd %xmm0, (%esp)
-; X32-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movzbl %cl, %ecx
-; X32-NEXT:    movl (%esp,%ecx), %ecx
-; X32-NEXT:    movl %ecx, (%eax)
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    retl
+; X86-LABEL: load_4byte_chunk_of_16byte_alloca_with_zero_upper_half:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    shll $3, %ecx
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    shrb $3, %cl
+; X86-NEXT:    andb $15, %cl
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    movl (%esp,%ecx), %ecx
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    addl $32, %esp
+; X86-NEXT:    retl
   %init = load <8 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <8 x i8> %init, <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <16 x i8> %intermediate.sroa.0.0.vec.expand, <16 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -955,34 +955,34 @@ define void @load_8byte_chunk_of_16byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    movq %rsi, (%rdx)
 ; X64-HAVE-BMI2-HAVE-SHLD-NEXT:    retq
 ;
-; X32-LABEL: load_8byte_chunk_of_16byte_alloca_with_zero_upper_half:
-; X32:       # %bb.0:
-; X32-NEXT:    subl $32, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    shll $3, %ecx
-; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
-; X32-NEXT:    movd %xmm0, (%esp)
-; X32-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movzbl %cl, %ecx
-; X32-NEXT:    movl (%esp,%ecx), %edx
-; X32-NEXT:    movl 4(%esp,%ecx), %ecx
-; X32-NEXT:    movl %ecx, 4(%eax)
-; X32-NEXT:    movl %edx, (%eax)
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    retl
+; X86-LABEL: load_8byte_chunk_of_16byte_alloca_with_zero_upper_half:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    shll $3, %ecx
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    shrb $3, %cl
+; X86-NEXT:    andb $15, %cl
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    movl (%esp,%ecx), %edx
+; X86-NEXT:    movl 4(%esp,%ecx), %ecx
+; X86-NEXT:    movl %ecx, 4(%eax)
+; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    addl $32, %esp
+; X86-NEXT:    retl
   %init = load <8 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <8 x i8> %init, <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <16 x i8> %intermediate.sroa.0.0.vec.expand, <16 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -1016,39 +1016,39 @@ define void @load_1byte_chunk_of_32byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X64-NEXT:    movb %al, (%rdx)
 ; X64-NEXT:    retq
 ;
-; X32-LABEL: load_1byte_chunk_of_32byte_alloca_with_zero_upper_half:
-; X32:       # %bb.0:
-; X32-NEXT:    subl $64, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movdqu (%edx), %xmm0
-; X32-NEXT:    shll $3, %ecx
-; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
-; X32-NEXT:    movd %xmm0, (%esp)
-; X32-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    movzbl %cl, %ecx
-; X32-NEXT:    movzbl (%esp,%ecx), %ecx
-; X32-NEXT:    movb %cl, (%eax)
-; X32-NEXT:    addl $64, %esp
-; X32-NEXT:    retl
+; X86-LABEL: load_1byte_chunk_of_32byte_alloca_with_zero_upper_half:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $64, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movdqu (%edx), %xmm0
+; X86-NEXT:    shll $3, %ecx
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    shrb $3, %cl
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    movzbl (%esp,%ecx), %ecx
+; X86-NEXT:    movb %cl, (%eax)
+; X86-NEXT:    addl $64, %esp
+; X86-NEXT:    retl
   %init = load <16 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <16 x i8> %init, <16 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <32 x i8> %intermediate.sroa.0.0.vec.expand, <32 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
@@ -1083,39 +1083,39 @@ define void @load_2byte_chunk_of_32byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X64-NEXT:    movw %ax, (%rdx)
 ; X64-NEXT:    retq
 ;
-; X32-LABEL: load_2byte_chunk_of_32byte_alloca_with_zero_upper_half:
-; X32:       # %bb.0:
-; X32-NEXT:    subl $64, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movdqu (%edx), %xmm0
-; X32-NEXT:    shll $3, %ecx
-; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
-; X32-NEXT:    movd %xmm0, (%esp)
-; X32-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    movzbl %cl, %ecx
-; X32-NEXT:    movl (%esp,%ecx), %ecx
-; X32-NEXT:    movw %cx, (%eax)
-; X32-NEXT:    addl $64, %esp
-; X32-NEXT:    retl
+; X86-LABEL: load_2byte_chunk_of_32byte_alloca_with_zero_upper_half:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $64, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movdqu (%edx), %xmm0
+; X86-NEXT:    shll $3, %ecx
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    shrb $3, %cl
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    movl (%esp,%ecx), %ecx
+; X86-NEXT:    movw %cx, (%eax)
+; X86-NEXT:    addl $64, %esp
+; X86-NEXT:    retl
   %init = load <16 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <16 x i8> %init, <16 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <32 x i8> %intermediate.sroa.0.0.vec.expand, <32 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
@@ -1149,39 +1149,39 @@ define void @load_4byte_chunk_of_32byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X64-NEXT:    movl %eax, (%rdx)
 ; X64-NEXT:    retq
 ;
-; X32-LABEL: load_4byte_chunk_of_32byte_alloca_with_zero_upper_half:
-; X32:       # %bb.0:
-; X32-NEXT:    subl $64, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movdqu (%edx), %xmm0
-; X32-NEXT:    shll $3, %ecx
-; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
-; X32-NEXT:    movd %xmm0, (%esp)
-; X32-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    movzbl %cl, %ecx
-; X32-NEXT:    movl (%esp,%ecx), %ecx
-; X32-NEXT:    movl %ecx, (%eax)
-; X32-NEXT:    addl $64, %esp
-; X32-NEXT:    retl
+; X86-LABEL: load_4byte_chunk_of_32byte_alloca_with_zero_upper_half:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $64, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movdqu (%edx), %xmm0
+; X86-NEXT:    shll $3, %ecx
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    shrb $3, %cl
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    movl (%esp,%ecx), %ecx
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    addl $64, %esp
+; X86-NEXT:    retl
   %init = load <16 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <16 x i8> %init, <16 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <32 x i8> %intermediate.sroa.0.0.vec.expand, <32 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
@@ -1215,41 +1215,41 @@ define void @load_8byte_chunk_of_32byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X64-NEXT:    movq %rax, (%rdx)
 ; X64-NEXT:    retq
 ;
-; X32-LABEL: load_8byte_chunk_of_32byte_alloca_with_zero_upper_half:
-; X32:       # %bb.0:
-; X32-NEXT:    subl $64, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movdqu (%edx), %xmm0
-; X32-NEXT:    shll $3, %ecx
-; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
-; X32-NEXT:    movd %xmm0, (%esp)
-; X32-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    movzbl %cl, %ecx
-; X32-NEXT:    movl (%esp,%ecx), %edx
-; X32-NEXT:    movl 4(%esp,%ecx), %ecx
-; X32-NEXT:    movl %ecx, 4(%eax)
-; X32-NEXT:    movl %edx, (%eax)
-; X32-NEXT:    addl $64, %esp
-; X32-NEXT:    retl
+; X86-LABEL: load_8byte_chunk_of_32byte_alloca_with_zero_upper_half:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $64, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movdqu (%edx), %xmm0
+; X86-NEXT:    shll $3, %ecx
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    shrb $3, %cl
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    movl (%esp,%ecx), %edx
+; X86-NEXT:    movl 4(%esp,%ecx), %ecx
+; X86-NEXT:    movl %ecx, 4(%eax)
+; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    addl $64, %esp
+; X86-NEXT:    retl
   %init = load <16 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <16 x i8> %init, <16 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <32 x i8> %intermediate.sroa.0.0.vec.expand, <32 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
@@ -1285,49 +1285,49 @@ define void @load_16byte_chunk_of_32byte_alloca_with_zero_upper_half(ptr %src, i
 ; X64-NEXT:    movq %rcx, (%rdx)
 ; X64-NEXT:    retq
 ;
-; X32-LABEL: load_16byte_chunk_of_32byte_alloca_with_zero_upper_half:
-; X32:       # %bb.0:
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    subl $64, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movdqu (%edx), %xmm0
-; X32-NEXT:    shll $3, %ecx
-; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
-; X32-NEXT:    movd %xmm0, (%esp)
-; X32-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    movzbl %cl, %ecx
-; X32-NEXT:    movl (%esp,%ecx), %edx
-; X32-NEXT:    movl 4(%esp,%ecx), %esi
-; X32-NEXT:    movl 8(%esp,%ecx), %edi
-; X32-NEXT:    movl 12(%esp,%ecx), %ecx
-; X32-NEXT:    movl %ecx, 12(%eax)
-; X32-NEXT:    movl %edi, 8(%eax)
-; X32-NEXT:    movl %esi, 4(%eax)
-; X32-NEXT:    movl %edx, (%eax)
-; X32-NEXT:    addl $64, %esp
-; X32-NEXT:    popl %esi
-; X32-NEXT:    popl %edi
-; X32-NEXT:    retl
+; X86-LABEL: load_16byte_chunk_of_32byte_alloca_with_zero_upper_half:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $64, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movdqu (%edx), %xmm0
+; X86-NEXT:    shll $3, %ecx
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    shrb $3, %cl
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    movl (%esp,%ecx), %edx
+; X86-NEXT:    movl 4(%esp,%ecx), %esi
+; X86-NEXT:    movl 8(%esp,%ecx), %edi
+; X86-NEXT:    movl 12(%esp,%ecx), %ecx
+; X86-NEXT:    movl %ecx, 12(%eax)
+; X86-NEXT:    movl %edi, 8(%eax)
+; X86-NEXT:    movl %esi, 4(%eax)
+; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    addl $64, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    retl
   %init = load <16 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <16 x i8> %init, <16 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <32 x i8> %intermediate.sroa.0.0.vec.expand, <32 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
@@ -1369,57 +1369,57 @@ define void @load_1byte_chunk_of_64byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X64-NEXT:    movb %al, (%rdx)
 ; X64-NEXT:    retq
 ;
-; X32-LABEL: load_1byte_chunk_of_64byte_alloca_with_zero_upper_half:
-; X32:       # %bb.0:
-; X32-NEXT:    subl $128, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movdqu (%edx), %xmm0
-; X32-NEXT:    movdqu 16(%edx), %xmm1
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm7 = xmm1[3,3,3,3]
-; X32-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm0, (%esp)
-; X32-NEXT:    movd %xmm7, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm6, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm5, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm4, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    andl $63, %ecx
-; X32-NEXT:    movzbl (%esp,%ecx), %ecx
-; X32-NEXT:    movb %cl, (%eax)
-; X32-NEXT:    addl $128, %esp
-; X32-NEXT:    retl
+; X86-LABEL: load_1byte_chunk_of_64byte_alloca_with_zero_upper_half:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $128, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movdqu (%edx), %xmm0
+; X86-NEXT:    movdqu 16(%edx), %xmm1
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm7 = xmm1[3,3,3,3]
+; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movd %xmm7, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm6, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm5, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm4, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    andl $63, %ecx
+; X86-NEXT:    movzbl (%esp,%ecx), %ecx
+; X86-NEXT:    movb %cl, (%eax)
+; X86-NEXT:    addl $128, %esp
+; X86-NEXT:    retl
   %init = load <32 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <32 x i8> %init, <32 x i8> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <64 x i8> %intermediate.sroa.0.0.vec.expand, <64 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 96, i32 97, i32 98, i32 99, i32 100, i32 101, i32 102, i32 103, i32 104, i32 105, i32 106, i32 107, i32 108, i32 109, i32 110, i32 111, i32 112, i32 113, i32 114, i32 115, i32 116, i32 117, i32 118, i32 119, i32 120, i32 121, i32 122, i32 123, i32 124, i32 125, i32 126, i32 127>
@@ -1462,57 +1462,57 @@ define void @load_2byte_chunk_of_64byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X64-NEXT:    movw %ax, (%rdx)
 ; X64-NEXT:    retq
 ;
-; X32-LABEL: load_2byte_chunk_of_64byte_alloca_with_zero_upper_half:
-; X32:       # %bb.0:
-; X32-NEXT:    subl $128, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movdqu (%edx), %xmm0
-; X32-NEXT:    movdqu 16(%edx), %xmm1
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm7 = xmm1[3,3,3,3]
-; X32-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm0, (%esp)
-; X32-NEXT:    movd %xmm7, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm6, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm5, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm4, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    andl $63, %ecx
-; X32-NEXT:    movl (%esp,%ecx), %ecx
-; X32-NEXT:    movw %cx, (%eax)
-; X32-NEXT:    addl $128, %esp
-; X32-NEXT:    retl
+; X86-LABEL: load_2byte_chunk_of_64byte_alloca_with_zero_upper_half:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $128, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movdqu (%edx), %xmm0
+; X86-NEXT:    movdqu 16(%edx), %xmm1
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm7 = xmm1[3,3,3,3]
+; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movd %xmm7, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm6, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm5, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm4, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    andl $63, %ecx
+; X86-NEXT:    movl (%esp,%ecx), %ecx
+; X86-NEXT:    movw %cx, (%eax)
+; X86-NEXT:    addl $128, %esp
+; X86-NEXT:    retl
   %init = load <32 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <32 x i8> %init, <32 x i8> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <64 x i8> %intermediate.sroa.0.0.vec.expand, <64 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 96, i32 97, i32 98, i32 99, i32 100, i32 101, i32 102, i32 103, i32 104, i32 105, i32 106, i32 107, i32 108, i32 109, i32 110, i32 111, i32 112, i32 113, i32 114, i32 115, i32 116, i32 117, i32 118, i32 119, i32 120, i32 121, i32 122, i32 123, i32 124, i32 125, i32 126, i32 127>
@@ -1554,57 +1554,57 @@ define void @load_4byte_chunk_of_64byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X64-NEXT:    movl %eax, (%rdx)
 ; X64-NEXT:    retq
 ;
-; X32-LABEL: load_4byte_chunk_of_64byte_alloca_with_zero_upper_half:
-; X32:       # %bb.0:
-; X32-NEXT:    subl $128, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movdqu (%edx), %xmm0
-; X32-NEXT:    movdqu 16(%edx), %xmm1
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm7 = xmm1[3,3,3,3]
-; X32-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm0, (%esp)
-; X32-NEXT:    movd %xmm7, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm6, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm5, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm4, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    andl $63, %ecx
-; X32-NEXT:    movl (%esp,%ecx), %ecx
-; X32-NEXT:    movl %ecx, (%eax)
-; X32-NEXT:    addl $128, %esp
-; X32-NEXT:    retl
+; X86-LABEL: load_4byte_chunk_of_64byte_alloca_with_zero_upper_half:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $128, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movdqu (%edx), %xmm0
+; X86-NEXT:    movdqu 16(%edx), %xmm1
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm7 = xmm1[3,3,3,3]
+; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movd %xmm7, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm6, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm5, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm4, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    andl $63, %ecx
+; X86-NEXT:    movl (%esp,%ecx), %ecx
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    addl $128, %esp
+; X86-NEXT:    retl
   %init = load <32 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <32 x i8> %init, <32 x i8> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <64 x i8> %intermediate.sroa.0.0.vec.expand, <64 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 96, i32 97, i32 98, i32 99, i32 100, i32 101, i32 102, i32 103, i32 104, i32 105, i32 106, i32 107, i32 108, i32 109, i32 110, i32 111, i32 112, i32 113, i32 114, i32 115, i32 116, i32 117, i32 118, i32 119, i32 120, i32 121, i32 122, i32 123, i32 124, i32 125, i32 126, i32 127>
@@ -1646,59 +1646,59 @@ define void @load_8byte_chunk_of_64byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X64-NEXT:    movq %rax, (%rdx)
 ; X64-NEXT:    retq
 ;
-; X32-LABEL: load_8byte_chunk_of_64byte_alloca_with_zero_upper_half:
-; X32:       # %bb.0:
-; X32-NEXT:    subl $128, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movdqu (%edx), %xmm0
-; X32-NEXT:    movdqu 16(%edx), %xmm1
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm7 = xmm1[3,3,3,3]
-; X32-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm0, (%esp)
-; X32-NEXT:    movd %xmm7, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm6, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm5, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm4, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    andl $63, %ecx
-; X32-NEXT:    movl (%esp,%ecx), %edx
-; X32-NEXT:    movl 4(%esp,%ecx), %ecx
-; X32-NEXT:    movl %ecx, 4(%eax)
-; X32-NEXT:    movl %edx, (%eax)
-; X32-NEXT:    addl $128, %esp
-; X32-NEXT:    retl
+; X86-LABEL: load_8byte_chunk_of_64byte_alloca_with_zero_upper_half:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $128, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movdqu (%edx), %xmm0
+; X86-NEXT:    movdqu 16(%edx), %xmm1
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm7 = xmm1[3,3,3,3]
+; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movd %xmm7, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm6, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm5, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm4, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    andl $63, %ecx
+; X86-NEXT:    movl (%esp,%ecx), %edx
+; X86-NEXT:    movl 4(%esp,%ecx), %ecx
+; X86-NEXT:    movl %ecx, 4(%eax)
+; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    addl $128, %esp
+; X86-NEXT:    retl
   %init = load <32 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <32 x i8> %init, <32 x i8> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <64 x i8> %intermediate.sroa.0.0.vec.expand, <64 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 96, i32 97, i32 98, i32 99, i32 100, i32 101, i32 102, i32 103, i32 104, i32 105, i32 106, i32 107, i32 108, i32 109, i32 110, i32 111, i32 112, i32 113, i32 114, i32 115, i32 116, i32 117, i32 118, i32 119, i32 120, i32 121, i32 122, i32 123, i32 124, i32 125, i32 126, i32 127>
@@ -1742,67 +1742,67 @@ define void @load_16byte_chunk_of_64byte_alloca_with_zero_upper_half(ptr %src, i
 ; X64-NEXT:    movq %rax, (%rdx)
 ; X64-NEXT:    retq
 ;
-; X32-LABEL: load_16byte_chunk_of_64byte_alloca_with_zero_upper_half:
-; X32:       # %bb.0:
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    subl $128, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movdqu (%edx), %xmm0
-; X32-NEXT:    movdqu 16(%edx), %xmm1
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm7 = xmm1[3,3,3,3]
-; X32-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm0, (%esp)
-; X32-NEXT:    movd %xmm7, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm6, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm5, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm4, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    andl $63, %ecx
-; X32-NEXT:    movl (%esp,%ecx), %edx
-; X32-NEXT:    movl 4(%esp,%ecx), %esi
-; X32-NEXT:    movl 8(%esp,%ecx), %edi
-; X32-NEXT:    movl 12(%esp,%ecx), %ecx
-; X32-NEXT:    movl %ecx, 12(%eax)
-; X32-NEXT:    movl %edi, 8(%eax)
-; X32-NEXT:    movl %esi, 4(%eax)
-; X32-NEXT:    movl %edx, (%eax)
-; X32-NEXT:    addl $128, %esp
-; X32-NEXT:    popl %esi
-; X32-NEXT:    popl %edi
-; X32-NEXT:    retl
+; X86-LABEL: load_16byte_chunk_of_64byte_alloca_with_zero_upper_half:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $128, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movdqu (%edx), %xmm0
+; X86-NEXT:    movdqu 16(%edx), %xmm1
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm7 = xmm1[3,3,3,3]
+; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm0, (%esp)
+; X86-NEXT:    movd %xmm7, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm6, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm5, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm4, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    andl $63, %ecx
+; X86-NEXT:    movl (%esp,%ecx), %edx
+; X86-NEXT:    movl 4(%esp,%ecx), %esi
+; X86-NEXT:    movl 8(%esp,%ecx), %edi
+; X86-NEXT:    movl 12(%esp,%ecx), %ecx
+; X86-NEXT:    movl %ecx, 12(%eax)
+; X86-NEXT:    movl %edi, 8(%eax)
+; X86-NEXT:    movl %esi, 4(%eax)
+; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    addl $128, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    retl
   %init = load <32 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <32 x i8> %init, <32 x i8> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <64 x i8> %intermediate.sroa.0.0.vec.expand, <64 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 96, i32 97, i32 98, i32 99, i32 100, i32 101, i32 102, i32 103, i32 104, i32 105, i32 106, i32 107, i32 108, i32 109, i32 110, i32 111, i32 112, i32 113, i32 114, i32 115, i32 116, i32 117, i32 118, i32 119, i32 120, i32 121, i32 122, i32 123, i32 124, i32 125, i32 126, i32 127>
@@ -1850,83 +1850,83 @@ define void @load_32byte_chunk_of_64byte_alloca_with_zero_upper_half(ptr %src, i
 ; X64-NEXT:    movq %rax, (%rdx)
 ; X64-NEXT:    retq
 ;
-; X32-LABEL: load_32byte_chunk_of_64byte_alloca_with_zero_upper_half:
-; X32:       # %bb.0:
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    subl $136, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movdqu (%ecx), %xmm0
-; X32-NEXT:    movdqu 16(%ecx), %xmm1
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,1,1,1]
-; X32-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[2,3,2,3]
-; X32-NEXT:    pshufd {{.*#+}} xmm7 = xmm1[3,3,3,3]
-; X32-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm7, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm6, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm5, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm4, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X32-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    andl $63, %eax
-; X32-NEXT:    movl 8(%esp,%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    movl 12(%esp,%eax), %ecx
-; X32-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; X32-NEXT:    movl 16(%esp,%eax), %esi
-; X32-NEXT:    movl 20(%esp,%eax), %edi
-; X32-NEXT:    movl 24(%esp,%eax), %ebx
-; X32-NEXT:    movl 28(%esp,%eax), %ebp
-; X32-NEXT:    movl 32(%esp,%eax), %edx
-; X32-NEXT:    movl 36(%esp,%eax), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %ecx, 28(%eax)
-; X32-NEXT:    movl %edx, 24(%eax)
-; X32-NEXT:    movl %ebp, 20(%eax)
-; X32-NEXT:    movl %ebx, 16(%eax)
-; X32-NEXT:    movl %edi, 12(%eax)
-; X32-NEXT:    movl %esi, 8(%eax)
-; X32-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; X32-NEXT:    movl %ecx, 4(%eax)
-; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X32-NEXT:    movl %ecx, (%eax)
-; X32-NEXT:    addl $136, %esp
-; X32-NEXT:    popl %esi
-; X32-NEXT:    popl %edi
-; X32-NEXT:    popl %ebx
-; X32-NEXT:    popl %ebp
-; X32-NEXT:    retl
+; X86-LABEL: load_32byte_chunk_of_64byte_alloca_with_zero_upper_half:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $136, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movdqu (%ecx), %xmm0
+; X86-NEXT:    movdqu 16(%ecx), %xmm1
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,1,1,1]
+; X86-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[2,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm7 = xmm1[3,3,3,3]
+; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm7, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm6, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm5, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm4, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    andl $63, %eax
+; X86-NEXT:    movl 8(%esp,%eax), %ecx
+; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 12(%esp,%eax), %ecx
+; X86-NEXT:    movl %ecx, (%esp) # 4-byte Spill
+; X86-NEXT:    movl 16(%esp,%eax), %esi
+; X86-NEXT:    movl 20(%esp,%eax), %edi
+; X86-NEXT:    movl 24(%esp,%eax), %ebx
+; X86-NEXT:    movl 28(%esp,%eax), %ebp
+; X86-NEXT:    movl 32(%esp,%eax), %edx
+; X86-NEXT:    movl 36(%esp,%eax), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %ecx, 28(%eax)
+; X86-NEXT:    movl %edx, 24(%eax)
+; X86-NEXT:    movl %ebp, 20(%eax)
+; X86-NEXT:    movl %ebx, 16(%eax)
+; X86-NEXT:    movl %edi, 12(%eax)
+; X86-NEXT:    movl %esi, 8(%eax)
+; X86-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; X86-NEXT:    movl %ecx, 4(%eax)
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    addl $136, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
   %init = load <32 x i8>, ptr %src, align 1
   %intermediate.sroa.0.0.vec.expand = shufflevector <32 x i8> %init, <32 x i8> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %intermediate.sroa.0.0.vecblend = shufflevector <64 x i8> %intermediate.sroa.0.0.vec.expand, <64 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 96, i32 97, i32 98, i32 99, i32 100, i32 101, i32 102, i32 103, i32 104, i32 105, i32 106, i32 107, i32 108, i32 109, i32 110, i32 111, i32 112, i32 113, i32 114, i32 115, i32 116, i32 117, i32 118, i32 119, i32 120, i32 121, i32 122, i32 123, i32 124, i32 125, i32 126, i32 127>
@@ -1941,7 +1941,7 @@ define void @load_32byte_chunk_of_64byte_alloca_with_zero_upper_half(ptr %src, i
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; ALL: {{.*}}
-; X32-NO-SHLD: {{.*}}
-; X32-SHLD: {{.*}}
+; X86-NO-SHLD: {{.*}}
+; X86-SHLD: {{.*}}
 ; X64-NO-SHLD: {{.*}}
 ; X64-SHLD: {{.*}}

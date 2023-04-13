@@ -1418,8 +1418,7 @@ struct SparseNewOpConverter : public OpConversionPattern<NewOp> {
       // instead of just accessing the reader's memory directly.
       Value dimSizes = genAlloca(rewriter, loc, dimRank, indexTp);
       createFuncCall(rewriter, loc, "copySparseTensorReaderDimSizes", {},
-                     {reader, dimSizes}, EmitCInterface::On)
-          .getResult(0);
+                     {reader, dimSizes}, EmitCInterface::On);
       for (const auto &d : llvm::enumerate(dstTp.getDimShape()))
         if (ShapedType::isDynamic(d.value()))
           dynSizes.push_back(rewriter.create<memref::LoadOp>(

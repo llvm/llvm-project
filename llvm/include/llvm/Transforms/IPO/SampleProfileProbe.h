@@ -22,7 +22,6 @@
 #include <unordered_map>
 
 namespace llvm {
-class Any;
 class BasicBlock;
 class Function;
 class Instruction;

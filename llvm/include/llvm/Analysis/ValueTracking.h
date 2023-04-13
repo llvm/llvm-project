@@ -238,6 +238,17 @@ struct KnownFPClass {
   /// definitely set or false if the sign bit is definitely unset.
   std::optional<bool> SignBit;
 
+
+  /// Return true if it's known this can never be a nan.
+  bool isKnownNeverNaN() const {
+    return (KnownFPClasses & fcNan) == fcNone;
+  }
+
+  /// Return true if it's known this can never be an infinity.
+  bool isKnownNeverInfinity() const {
+    return (KnownFPClasses & fcInf) == fcNone;
+  }
+
   KnownFPClass &operator|=(const KnownFPClass &RHS) {
     KnownFPClasses = KnownFPClasses | RHS.KnownFPClasses;
 

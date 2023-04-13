@@ -796,12 +796,12 @@ public:
   /// it. If an explicit branch to the fallthrough block is not allowed,
   /// set JumpToFallThrough to be false. Non-null return is a conservative
   /// answer.
-  MachineBasicBlock *getFallThrough(bool JumpToFallThrough = false);
+  MachineBasicBlock *getFallThrough(bool JumpToFallThrough = true);
 
   /// Return the fallthrough block if the block can implicitly
   /// transfer control to it's successor, whether by a branch or
   /// a fallthrough. Non-null return is a conservative answer.
-  MachineBasicBlock *getLogicalFallThrough() { return getFallThrough(true); }
+  MachineBasicBlock *getLogicalFallThrough() { return getFallThrough(false); }
 
   /// Return true if the block can implicitly transfer control to the
   /// block after it by falling off the end of it.  This should return

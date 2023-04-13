@@ -624,3 +624,41 @@ entry:
 }
 
 declare <1 x i16> @llvm.matrix.multiply.v1i16.v6i16.v6i16(<6 x i16>, <6 x i16>, i32, i32, i32)
+
+define void @transposed_multiply_feeding_dot_produc_v4i32() {
+; CHECK-LABEL: @transposed_multiply_feeding_dot_produc_v4i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SCALAR_SPLAT_SPLAT_I_I_I_I:%.*]] = shufflevector <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <4 x i32> [[SCALAR_SPLAT_SPLAT_I_I_I_I]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <4 x i32> [[SCALAR_SPLAT_SPLAT_I_I_I_I]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x i32> [[SPLIT]], <2 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP0:%.*]] = mul <2 x i32> [[BLOCK]], zeroinitializer
+; CHECK-NEXT:    [[BLOCK2:%.*]] = shufflevector <2 x i32> [[SPLIT1]], <2 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i32> [[BLOCK2]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> undef, <2 x i32> [[TMP3]], <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[BLOCK3:%.*]] = shufflevector <2 x i32> [[SPLIT]], <2 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = mul <2 x i32> [[BLOCK3]], zeroinitializer
+; CHECK-NEXT:    [[BLOCK4:%.*]] = shufflevector <2 x i32> [[SPLIT1]], <2 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <2 x i32> [[BLOCK4]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> undef, <2 x i32> [[TMP8]], <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP11:%.*]] = mul <4 x i32> [[TMP10]], zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <1 x i32> poison, i32 [[TMP12]], i64 0
+; CHECK-NEXT:    ret void
+;
+entry:
+  %scalar.splat.splat.i.i.i.i = shufflevector <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
+  %0 = call <4 x i32> @llvm.matrix.multiply.v4i32.v4i32.v4i32(<4 x i32> zeroinitializer, <4 x i32> %scalar.splat.splat.i.i.i.i, i32 2, i32 2, i32 2)
+  %1 = call <4 x i32> @llvm.matrix.transpose.v4i32(<4 x i32> %0, i32 4, i32 1)
+  %2 = call <1 x i32> @llvm.matrix.multiply.v1i32.v4i32.v4i32(<4 x i32> %1, <4 x i32> zeroinitializer, i32 1, i32 4, i32 1)
+  ret void
+}
+
+declare <4 x i32> @llvm.matrix.transpose.v4i32(<4 x i32>, i32 immarg, i32 immarg)
+
+declare <4 x i32> @llvm.matrix.multiply.v4i32.v4i32.v4i32(<4 x i32>, <4 x i32>, i32 immarg, i32 immarg, i32 immarg)

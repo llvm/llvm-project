@@ -553,7 +553,7 @@ void __hwasan_store16_noabort(uptr p) {
 }
 
 void __hwasan_tag_memory(uptr p, u8 tag, uptr sz) {
-  TagMemoryAligned(p, sz, tag);
+  TagMemoryAligned(UntagAddr(p), sz, tag);
 }
 
 uptr __hwasan_tag_pointer(uptr p, u8 tag) {

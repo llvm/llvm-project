@@ -156,7 +156,6 @@ static Value &widenDistinctValues(QualType Type, Value &Prev,
 
 /// Initializes a global storage value.
 static void insertIfGlobal(const Decl &D,
-                           llvm::DenseSet<const FieldDecl *> &Fields,
                            llvm::DenseSet<const VarDecl *> &Vars) {
   if (auto *V = dyn_cast<VarDecl>(&D))
     if (V->hasGlobalStorage())
@@ -166,7 +165,7 @@ static void insertIfGlobal(const Decl &D,
 static void getFieldsAndGlobalVars(const Decl &D,
                                    llvm::DenseSet<const FieldDecl *> &Fields,
                                    llvm::DenseSet<const VarDecl *> &Vars) {
-  insertIfGlobal(D, Fields, Vars);
+  insertIfGlobal(D, Vars);
   if (const auto *Decomp = dyn_cast<DecompositionDecl>(&D))
     for (const auto *B : Decomp->bindings())
       if (auto *ME = dyn_cast_or_null<MemberExpr>(B->getBinding()))
@@ -191,11 +190,11 @@ static void getFieldsAndGlobalVars(const Stmt &S,
       for (auto *D : DS->getDeclGroup())
           getFieldsAndGlobalVars(*D, Fields, Vars);
   } else if (auto *E = dyn_cast<DeclRefExpr>(&S)) {
-    insertIfGlobal(*E->getDecl(), Fields, Vars);
+    insertIfGlobal(*E->getDecl(), Vars);
   } else if (auto *E = dyn_cast<MemberExpr>(&S)) {
     // FIXME: should we be using `E->getFoundDecl()`?
     const ValueDecl *VD = E->getMemberDecl();
-    insertIfGlobal(*VD, Fields, Vars);
+    insertIfGlobal(*VD, Vars);
     if (const auto *FD = dyn_cast<FieldDecl>(VD))
       Fields.insert(FD);
   }

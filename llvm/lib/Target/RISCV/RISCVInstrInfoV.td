@@ -105,83 +105,80 @@ class VMVRSched<int n> : Sched<[
 
 class VLESched<string suffix = "WorstCase"> : Sched<[
   !cast<SchedReadWrite>("WriteVLDE_"#suffix),
-  !cast<SchedReadWrite>("ReadVLDX_"#suffix), ReadVMask
+  ReadVLDX, ReadVMask
 ]>;
 
 class VSESched<string suffix = "WorstCase"> : Sched<[
   !cast<SchedReadWrite>("WriteVSTE_" # suffix),
   !cast<SchedReadWrite>("ReadVSTEV_" # suffix),
-  !cast<SchedReadWrite>("ReadVSTX_" # suffix), ReadVMask
+  ReadVSTX, ReadVMask
 ]>;
 
 class VLSSched<int n, string suffix = "WorstCase"> : Sched<[
   !cast<SchedReadWrite>("WriteVLDS" #n #"_" # suffix),
-  !cast<SchedReadWrite>("ReadVLDX_" # suffix),
-  !cast<SchedReadWrite>("ReadVLDSX_" # suffix), ReadVMask
+  ReadVLDX, ReadVLDSX, ReadVMask
 ]>;
 
 class VSSSched<int n, string suffix = "WorstCase"> : Sched<[
   !cast<SchedReadWrite>("WriteVSTS" #n #"_"#suffix),
   !cast<SchedReadWrite>("ReadVSTS" #n #"V_"#suffix),
-  !cast<SchedReadWrite>("ReadVSTX_"#suffix),
-  !cast<SchedReadWrite>("ReadVSTSX_"#suffix), ReadVMask
+  ReadVSTX, ReadVSTSX, ReadVMask
 ]>;
 
-class VLXSched<int n, string o, string suffix = "WorstCase"> : Sched<[
-  !cast<SchedReadWrite>("WriteVLD" #o #"X" #n #"_" # suffix),
-  !cast<SchedReadWrite>("ReadVLDX_" # suffix),
-  !cast<SchedReadWrite>("ReadVLD" #o #"XV_" # suffix), ReadVMask
+class VLXSched<int n, string o,
+               string dataSuffix = "WorstCase",
+               string idxSuffix = "WorstCase"> : Sched<[
+  !cast<SchedReadWrite>("WriteVLD" #o #"X" #n #"_" # dataSuffix),
+  ReadVLDX,
+  !cast<SchedReadWrite>("ReadVLD" #o #"XV_" # idxSuffix), ReadVMask
 ]>;
 
-class VSXSched<int n, string o, string suffix = "WorstCase"> : Sched<[
-  !cast<SchedReadWrite>("WriteVST" #o #"X" #n #"_"#suffix),
-  !cast<SchedReadWrite>("ReadVST" #o #"X" #n #"_"#suffix),
-  !cast<SchedReadWrite>("ReadVSTX_"#suffix),
-  !cast<SchedReadWrite>("ReadVST" #o #"XV_"#suffix), ReadVMask
+class VSXSched<int n, string o,
+               string dataSuffix = "WorstCase",
+               string idxSuffix = "WorstCase"> : Sched<[
+  !cast<SchedReadWrite>("WriteVST" #o #"X" #n #"_"#dataSuffix),
+  !cast<SchedReadWrite>("ReadVST" #o #"X" #n #"_"#dataSuffix),
+  ReadVSTX, !cast<SchedReadWrite>("ReadVST" #o #"XV_"#idxSuffix), ReadVMask
 ]>;
 
 class VLFSched<string suffix = "WorstCase"> : Sched<[
   !cast<SchedReadWrite>("WriteVLDFF_" # suffix),
-  !cast<SchedReadWrite>("ReadVLDX_" # suffix), ReadVMask
+  ReadVLDX, ReadVMask
 ]>;
 
 // Unit-Stride Segment Loads and Stores
 class VLSEGSched<int nf, int eew, string suffix = "WorstCase"> : Sched<[
   !cast<SchedReadWrite>("WriteVLSEG" #nf #"e" #eew #"_"#suffix),
-  !cast<SchedReadWrite>("ReadVLDX_"#suffix), ReadVMask
+  ReadVLDX, ReadVMask
 ]>;
 class VSSEGSched<int nf, int eew, string suffix = "WorstCase"> : Sched<[
   !cast<SchedReadWrite>("WriteVSSEG" #nf #"e" #eew #"_"#suffix),
   !cast<SchedReadWrite>("ReadVSTEV_"#suffix),
-  !cast<SchedReadWrite>("ReadVSTX_"#suffix), ReadVMask
+  ReadVSTX, ReadVMask
 ]>;
 class VLSEGFFSched<int nf, int eew, string suffix = "WorstCase"> : Sched<[
   !cast<SchedReadWrite>("WriteVLSEGFF" #nf #"e" #eew #"_"#suffix),
-  !cast<SchedReadWrite>("ReadVLDX_"#suffix), ReadVMask
+  ReadVLDX, ReadVMask
 ]>;
 // Strided Segment Loads and Stores
 class VLSSEGSched<int nf, int eew, string suffix = "WorstCase"> : Sched<[
   !cast<SchedReadWrite>("WriteVLSSEG" #nf #"e" #eew #"_"#suffix),
-  !cast<SchedReadWrite>("ReadVLDX_"#suffix),
-  !cast<SchedReadWrite>("ReadVLDSX_"#suffix), ReadVMask
+  ReadVLDX, ReadVLDSX, ReadVMask
 ]>;
 class VSSSEGSched<int nf, int eew, string suffix = "WorstCase"> : Sched<[
   !cast<SchedReadWrite>("WriteVSSSEG" #nf #"e" #eew #"_"#suffix),
   !cast<SchedReadWrite>("ReadVSTS" #eew #"V_"#suffix),
-  !cast<SchedReadWrite>("ReadVSTX_"#suffix),
-  !cast<SchedReadWrite>("ReadVSTSX_"#suffix), ReadVMask
+  ReadVSTX, ReadVSTSX, ReadVMask
 ]>;
 // Indexed Segment Loads and Stores
 class VLXSEGSched<int nf, int eew, string o, string suffix = "WorstCase"> : Sched<[
   !cast<SchedReadWrite>("WriteVL" #o #"XSEG" #nf #"e" #eew #"_"#suffix),
-  !cast<SchedReadWrite>("ReadVLDX_"#suffix),
-  !cast<SchedReadWrite>("ReadVLD" #o #"XV" #"_"#suffix), ReadVMask
+  ReadVLDX, !cast<SchedReadWrite>("ReadVLD" #o #"XV" #"_"#suffix), ReadVMask
 ]>;
 class VSXSEGSched<int nf, int eew, string o, string suffix = "WorstCase"> : Sched<[
   !cast<SchedReadWrite>("WriteVS" #o #"XSEG" #nf #"e" #eew #"_"#suffix),
   !cast<SchedReadWrite>("ReadVST" #o #"X" #eew # "_"#suffix),
-  !cast<SchedReadWrite>("ReadVSTX_"#suffix),
-  !cast<SchedReadWrite>("ReadVST" #o #"XV" # "_"#suffix), ReadVMask
+  ReadVSTX, !cast<SchedReadWrite>("ReadVST" #o #"XV" # "_"#suffix), ReadVMask
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -972,12 +969,12 @@ multiclass VWholeLoadN<bits<3> nf, string opcodestr, RegisterClass VRC> {
     defvar s = !cast<SchedWrite>("WriteVLD" # !add(nf, 1) # "R");
 
     def E # l # _V : VWholeLoad<nf, w, opcodestr # "e" # l # ".v", VRC>,
-                     Sched<[s, ReadVLDX_WorstCase]>;
+                     Sched<[s, ReadVLDX]>;
   }
 }
 multiclass VWholeLoadEEW64<bits<3> nf, string opcodestr, RegisterClass VRC, SchedReadWrite schedrw> {
   def E64_V : VWholeLoad<nf, LSWidth64, opcodestr # "e64.v", VRC>,
-              Sched<[schedrw, ReadVLDX_WorstCase]>;
+              Sched<[schedrw, ReadVLDX]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1017,9 +1014,9 @@ defm "" : VIndexLoadStore<[8, 16, 32]>;
 
 let Predicates = [HasVInstructions] in {
 def VLM_V : VUnitStrideLoadMask<"vlm.v">,
-             Sched<[WriteVLDM_WorstCase, ReadVLDX_WorstCase]>;
+             Sched<[WriteVLDM_WorstCase, ReadVLDX]>;
 def VSM_V : VUnitStrideStoreMask<"vsm.v">,
-             Sched<[WriteVSTM_WorstCase, ReadVSTM_WorstCase, ReadVSTX_WorstCase]>;
+             Sched<[WriteVSTM_WorstCase, ReadVSTM_WorstCase, ReadVSTX]>;
 def : InstAlias<"vle1.v $vd, (${rs1})",
                 (VLM_V VR:$vd, GPR:$rs1), 0>;
 def : InstAlias<"vse1.v $vs3, (${rs1})",
@@ -1031,13 +1028,13 @@ defm VL4R : VWholeLoadN<3, "vl4r", VRM4>;
 defm VL8R : VWholeLoadN<7, "vl8r", VRM8>;
 
 def VS1R_V : VWholeStore<0, "vs1r.v", VR>,
-             Sched<[WriteVST1R, ReadVST1R, ReadVSTX_WorstCase]>;
+             Sched<[WriteVST1R, ReadVST1R, ReadVSTX]>;
 def VS2R_V : VWholeStore<1, "vs2r.v", VRM2>,
-             Sched<[WriteVST2R, ReadVST2R, ReadVSTX_WorstCase]>;
+             Sched<[WriteVST2R, ReadVST2R, ReadVSTX]>;
 def VS4R_V : VWholeStore<3, "vs4r.v", VRM4>,
-             Sched<[WriteVST4R, ReadVST4R, ReadVSTX_WorstCase]>;
+             Sched<[WriteVST4R, ReadVST4R, ReadVSTX]>;
 def VS8R_V : VWholeStore<7, "vs8r.v", VRM8>,
-             Sched<[WriteVST8R, ReadVST8R, ReadVSTX_WorstCase]>;
+             Sched<[WriteVST8R, ReadVST8R, ReadVSTX]>;
 
 def : InstAlias<"vl1r.v $vd, (${rs1})", (VL1RE8_V VR:$vd, GPR:$rs1)>;
 def : InstAlias<"vl2r.v $vd, (${rs1})", (VL2RE8_V VRM2:$vd, GPR:$rs1)>;

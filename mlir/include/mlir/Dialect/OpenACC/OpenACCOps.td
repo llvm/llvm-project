@@ -202,21 +202,23 @@ def OpenACC_DataOp : OpenACC_Op<"data",
   }];
 
   let assemblyFormat = [{
-    ( `if` `(` $ifCond^ `)` )?
-    ( `copy` `(` $copyOperands^ `:` type($copyOperands) `)` )?
-    ( `copyin` `(` $copyinOperands^ `:` type($copyinOperands) `)` )?
-    ( `copyin_readonly` `(` $copyinReadonlyOperands^ `:`
-        type($copyinReadonlyOperands) `)` )?
-    ( `copyout` `(` $copyoutOperands^ `:` type($copyoutOperands) `)` )?
-    ( `copyout_zero` `(` $copyoutZeroOperands^ `:`
-        type($copyoutZeroOperands) `)` )?
-    ( `create` `(` $createOperands^ `:` type($createOperands) `)` )?
-    ( `create_zero` `(` $createZeroOperands^ `:`
-        type($createZeroOperands) `)` )?
-    ( `no_create` `(` $noCreateOperands^ `:` type($noCreateOperands) `)` )?
-    ( `present` `(` $presentOperands^ `:` type($presentOperands) `)` )?
-    ( `deviceptr` `(` $deviceptrOperands^ `:` type($deviceptrOperands) `)` )?
-    ( `attach` `(` $attachOperands^ `:` type($attachOperands) `)` )?
+    oilist(
+        `if` `(` $ifCond `)`
+      | `copy` `(` $copyOperands `:` type($copyOperands) `)`
+      | `copyin` `(` $copyinOperands `:` type($copyinOperands) `)`
+      | `copyin_readonly` `(` $copyinReadonlyOperands `:`
+            type($copyinReadonlyOperands) `)`
+      | `copyout` `(` $copyoutOperands `:` type($copyoutOperands) `)`
+      | `copyout_zero` `(` $copyoutZeroOperands `:`
+            type($copyoutZeroOperands) `)`
+      | `create` `(` $createOperands `:` type($createOperands) `)`
+      | `create_zero` `(` $createZeroOperands `:`
+            type($createZeroOperands) `)`
+      | `no_create` `(` $noCreateOperands `:` type($noCreateOperands) `)`
+      | `present` `(` $presentOperands `:` type($presentOperands) `)`
+      | `deviceptr` `(` $deviceptrOperands `:` type($deviceptrOperands) `)`
+      | `attach` `(` $attachOperands `:` type($attachOperands) `)`
+    )
     $region attr-dict-with-keyword
   }];
   let hasVerifier = 1;
@@ -272,15 +274,17 @@ def OpenACC_EnterDataOp : OpenACC_Op<"enter_data", [AttrSizedOperandSegments]> {
   }];
 
   let assemblyFormat = [{
-    ( `if` `(` $ifCond^ `)` )?
-    ( `async` `(` $asyncOperand^ `:` type($asyncOperand) `)` )?
-    ( `wait_devnum` `(` $waitDevnum^ `:` type($waitDevnum) `)` )?
-    ( `wait` `(` $waitOperands^ `:` type($waitOperands) `)` )?
-    ( `copyin` `(` $copyinOperands^ `:` type($copyinOperands) `)` )?
-    ( `create` `(` $createOperands^ `:` type($createOperands) `)` )?
-    ( `create_zero` `(` $createZeroOperands^ `:`
-        type($createZeroOperands) `)` )?
-    ( `attach` `(` $attachOperands^ `:` type($attachOperands) `)` )?
+    oilist(
+        `if` `(` $ifCond `)`
+      | `async` `(` $asyncOperand `:` type($asyncOperand) `)`
+      | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
+      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `copyin` `(` $copyinOperands `:` type($copyinOperands) `)`
+      | `create` `(` $createOperands `:` type($createOperands) `)`
+      | `create_zero` `(` $createZeroOperands `:`
+          type($createZeroOperands) `)`
+      | `attach` `(` $attachOperands `:` type($attachOperands) `)`
+    )
     attr-dict-with-keyword
   }];
 
@@ -325,13 +329,15 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data", [AttrSizedOperandSegments]> {
   }];
 
   let assemblyFormat = [{
-    ( `if` `(` $ifCond^ `)` )?
-    ( `async` `(` $asyncOperand^ `:` type($asyncOperand) `)` )?
-    ( `wait_devnum` `(` $waitDevnum^ `:` type($waitDevnum) `)` )?
-    ( `wait` `(` $waitOperands^ `:` type($waitOperands) `)` )?
-    ( `copyout` `(` $copyoutOperands^ `:` type($copyoutOperands) `)` )?
-    ( `delete` `(` $deleteOperands^ `:` type($deleteOperands) `)` )?
-    ( `detach` `(` $detachOperands^ `:` type($detachOperands) `)` )?
+    oilist(
+        `if` `(` $ifCond `)`
+      | `async` `(` $asyncOperand `:` type($asyncOperand) `)`
+      | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
+      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `copyout` `(` $copyoutOperands `:` type($copyoutOperands) `)`
+      | `delete` `(` $deleteOperands `:` type($deleteOperands) `)`
+      | `detach` `(` $detachOperands `:` type($detachOperands) `)`
+    )
     attr-dict-with-keyword
   }];
 
@@ -343,9 +349,7 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data", [AttrSizedOperandSegments]> {
 // 2.9 loop Construct
 //===----------------------------------------------------------------------===//
 
-def OpenACC_LoopOp : OpenACC_Op<"loop",
-      [AttrSizedOperandSegments,
-       SingleBlockImplicitTerminator<"acc::YieldOp">]> {
+def OpenACC_LoopOp : OpenACC_Op<"loop", [AttrSizedOperandSegments]> {
   let summary = "loop construct";
 
   let description = [{
@@ -366,7 +370,6 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     } attributes { collapse = 3 }
     ```
   }];
-
 
   let arguments = (ins OptionalAttr<I64Attr>:$collapse,
                        Optional<IntOrIndex>:$gangNum,
@@ -447,9 +450,11 @@ def OpenACC_InitOp : OpenACC_Op<"init", [AttrSizedOperandSegments]> {
                        Optional<I1>:$ifCond);
 
   let assemblyFormat = [{
-    ( `device_type` `(` $deviceTypeOperands^ `:` type($deviceTypeOperands) `)` )?
-    ( `device_num` `(` $deviceNumOperand^ `:` type($deviceNumOperand) `)` )?
-    ( `if` `(` $ifCond^ `)` )? attr-dict-with-keyword
+    oilist(
+        `device_type` `(` $deviceTypeOperands `:` type($deviceTypeOperands) `)`
+      | `device_num` `(` $deviceNumOperand `:` type($deviceNumOperand) `)`
+      | `if` `(` $ifCond `)`
+    ) attr-dict-with-keyword
   }];
   let hasVerifier = 1;
 }
@@ -478,9 +483,10 @@ def OpenACC_ShutdownOp : OpenACC_Op<"shutdown", [AttrSizedOperandSegments]> {
                        Optional<I1>:$ifCond);
 
   let assemblyFormat = [{
-    ( `device_type` `(` $deviceTypeOperands^ `:` type($deviceTypeOperands) `)` )?
-    ( `device_num` `(` $deviceNumOperand^ `:` type($deviceNumOperand) `)` )?
-    ( `if` `(` $ifCond^ `)` )? attr-dict-with-keyword
+    oilist(`device_type` `(` $deviceTypeOperands `:` type($deviceTypeOperands) `)`
+    |`device_num` `(` $deviceNumOperand `:` type($deviceNumOperand) `)`
+    |`if` `(` $ifCond `)`
+    ) attr-dict-with-keyword
   }];
   let hasVerifier = 1;
 }
@@ -525,14 +531,16 @@ def OpenACC_UpdateOp : OpenACC_Op<"update", [AttrSizedOperandSegments]> {
   }];
 
   let assemblyFormat = [{
-    ( `if` `(` $ifCond^ `)` )?
-    ( `async` `(` $asyncOperand^ `:` type($asyncOperand) `)` )?
-    ( `wait_devnum` `(` $waitDevnum^ `:` type($waitDevnum) `)` )?
-    ( `device_type` `(` $deviceTypeOperands^ `:`
-        type($deviceTypeOperands) `)` )?
-    ( `wait` `(` $waitOperands^ `:` type($waitOperands) `)` )?
-    ( `host` `(` $hostOperands^ `:` type($hostOperands) `)` )?
-    ( `device` `(` $deviceOperands^ `:` type($deviceOperands) `)` )?
+    oilist(
+        `if` `(` $ifCond `)`
+      | `async` `(` $asyncOperand `:` type($asyncOperand) `)`
+      | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
+      | `device_type` `(` $deviceTypeOperands `:`
+          type($deviceTypeOperands) `)`
+      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `host` `(` $hostOperands `:` type($hostOperands) `)`
+      | `device` `(` $deviceOperands `:` type($deviceOperands) `)`
+    )
     attr-dict-with-keyword
   }];
 
@@ -567,9 +575,10 @@ def OpenACC_WaitOp : OpenACC_Op<"wait", [AttrSizedOperandSegments]> {
 
   let assemblyFormat = [{
     ( `(` $waitOperands^ `:` type($waitOperands) `)` )?
-    ( `async` `(` $asyncOperand^ `:` type($asyncOperand) `)` )?
-    ( `wait_devnum` `(` $waitDevnum^ `:` type($waitDevnum) `)` )?
-    ( `if` `(` $ifCond^ `)` )? attr-dict-with-keyword
+    oilist(`async` `(` $asyncOperand `:` type($asyncOperand) `)`
+      |`wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
+      |`if` `(` $ifCond `)`
+    ) attr-dict-with-keyword
   }];
   let hasVerifier = 1;
 }

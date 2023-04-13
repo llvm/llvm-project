@@ -47,6 +47,7 @@ class ScriptedProcess(metaclass=ABCMeta):
         self.loaded_images = []
         self.metadata = {}
         self.capabilities = {}
+        self.pid = 42
 
     def get_capabilities(self):
         """ Get a dictionary containing the process capabilities.
@@ -138,7 +139,7 @@ class ScriptedProcess(metaclass=ABCMeta):
         Returns:
             int: The scripted process identifier.
         """
-        return 0
+        return self.pid
 
     def launch(self):
         """ Simulate the scripted process launch.

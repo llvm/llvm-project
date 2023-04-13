@@ -764,6 +764,13 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
       D.Diag(clang::diag::warn_drv_fjmc_for_elf_only);
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_femulated_tls,
+                               options::OPT_fno_emulated_tls)) {
+    bool Enable = A->getOption().getID() == options::OPT_femulated_tls;
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine(PluginOptPrefix) + "-emulated-tls=" + (Enable ? "1" : "0")));
+  }
+
   if (Args.hasFlag(options::OPT_fstack_size_section,
                    options::OPT_fno_stack_size_section, false))
     CmdArgs.push_back(

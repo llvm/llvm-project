@@ -7,11 +7,6 @@ Buildbot
 LLVM Buildbot is the place where volunteers provide build machines. Everyone can
 `add a buildbot for LLDB <https://llvm.org/docs/HowToAddABuilder.html>`_.
 
-* `lldb-x64-windows-ninja <https://lab.llvm.org/buildbot/#/builders/83>`_
-* `lldb-x86_64-debian <https://lab.llvm.org/buildbot/#/builders/68>`_
-* `lldb-aarch64-ubuntu <https://lab.llvm.org/buildbot/#/builders/96>`_
-* `lldb-arm-ubuntu <https://lab.llvm.org/buildbot/#/builders/17>`_
-
 An overview of all LLDB builders can be found here:
 
 `https://lab.llvm.org/buildbot/#/builders?tags=lldb <https://lab.llvm.org/buildbot/#/builders?tags=lldb>`_

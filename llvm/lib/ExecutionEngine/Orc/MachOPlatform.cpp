@@ -10,6 +10,7 @@
 
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
+#include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -261,6 +262,9 @@ static StringRef ObjCRuntimeObjectSectionsText[] = {
 
 static StringRef ObjCRuntimeObjectSectionName =
     "__llvm_jitlink_ObjCRuntimeRegistrationObject";
+
+static StringRef ObjCImageInfoSymbolName =
+    "__llvm_jitlink_macho_objc_imageinfo";
 
 } // end anonymous namespace
 
@@ -758,15 +762,15 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
     // If the object contains an init symbol other than the header start symbol
     // then add passes to preserve, process and register the init
     // sections/symbols.
-    Config.PrePrunePasses.push_back(
-        [this, &MR](LinkGraph &G) { return preserveImportantSections(G, MR); });
+    Config.PrePrunePasses.push_back([this, &MR](LinkGraph &G) {
+      if (auto Err = preserveImportantSections(G, MR))
+        return Err;
+      return processObjCImageInfo(G, MR);
+    });
     Config.PostPrunePasses.push_back(
         [this](LinkGraph &G) { return createObjCRuntimeObject(G); });
-    Config.PostAllocationPasses.push_back([this, &MR](LinkGraph &G) {
-      if (auto Err = processObjCImageInfo(G, MR))
-        return Err;
-      return populateObjCRuntimeObject(G, MR);
-    });
+    Config.PostAllocationPasses.push_back(
+        [this, &MR](LinkGraph &G) { return populateObjCRuntimeObject(G, MR); });
   }
 
   // Insert TLV lowering at the start of the PostPrunePasses, since we want
@@ -1023,8 +1027,14 @@ Error MachOPlatform::MachOPlatformPlugin::processObjCImageInfo(
   } else {
     // We haven't registered an __objc_imageinfo section yet. Register and
     // move on. The section should already be marked no-dead-strip.
-    ObjCImageInfos[&MR.getTargetJITDylib()] = {Version, Flags,
-                                               ObjCImageInfoBlock.getAddress()};
+    G.addDefinedSymbol(ObjCImageInfoBlock, 0, ObjCImageInfoSymbolName,
+                       ObjCImageInfoBlock.getSize(), jitlink::Linkage::Strong,
+                       jitlink::Scope::Hidden, false, true);
+    if (auto Err = MR.defineMaterializing(
+            {{MR.getExecutionSession().intern(ObjCImageInfoSymbolName),
+              JITSymbolFlags()}}))
+      return Err;
+    ObjCImageInfos[&MR.getTargetJITDylib()] = {Version, Flags};
   }
 
   return Error::success();
@@ -1312,33 +1322,84 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
   if (!ObjCRuntimeObjectSec)
     return Error::success();
 
+  switch (G.getTargetTriple().getArch()) {
+  case Triple::aarch64:
+  case Triple::x86_64:
+    // Supported.
+    break;
+  default:
+    return make_error<StringError>("Unrecognized MachO arch in triple " +
+                                       G.getTargetTriple().str(),
+                                   inconvertibleErrorCode());
+  }
+
   auto &SecBlock = **ObjCRuntimeObjectSec->blocks().begin();
 
-  std::vector<MachO::section_64> TextSections, DataSections;
-  auto AddSection = [&](MachO::section_64 &Sec, jitlink::Section &GraphSec) {
+  struct SecDesc {
+    MachO::section_64 Sec;
+    unique_function<void(size_t RecordOffset)> AddFixups;
+  };
+
+  std::vector<SecDesc> TextSections, DataSections;
+  auto AddSection = [&](SecDesc &SD, jitlink::Section &GraphSec) {
     jitlink::SectionRange SR(GraphSec);
     StringRef FQName = GraphSec.getName();
-    memset(&Sec, 0, sizeof(MachO::section_64));
-    memcpy(Sec.sectname, FQName.drop_front(7).data(), FQName.size() - 7);
-    memcpy(Sec.segname, FQName.data(), 6);
-    Sec.addr = SR.getStart() - SecBlock.getAddress();
-    Sec.size = SR.getSize();
-    Sec.flags = MachO::S_REGULAR;
+    memset(&SD.Sec, 0, sizeof(MachO::section_64));
+    memcpy(SD.Sec.sectname, FQName.drop_front(7).data(), FQName.size() - 7);
+    memcpy(SD.Sec.segname, FQName.data(), 6);
+    SD.Sec.addr = SR.getStart() - SecBlock.getAddress();
+    SD.Sec.size = SR.getSize();
+    SD.Sec.flags = MachO::S_REGULAR;
   };
 
   // Add the __objc_imageinfo section.
   {
     DataSections.push_back({});
-    auto &Sec = DataSections.back();
-    memset(&Sec, 0, sizeof(Sec));
-    strcpy(Sec.sectname, "__objc_imageinfo");
-    strcpy(Sec.segname, "__DATA");
-    std::lock_guard<std::mutex> Lock(PluginMutex);
-    auto I = ObjCImageInfos.find(&MR.getTargetJITDylib());
-    assert(I != ObjCImageInfos.end() && "Missing __objc_imageinfo");
-    assert(I->second.Addr && "Null __objc_imageinfo");
-    Sec.addr = I->second.Addr - SecBlock.getAddress();
-    Sec.size = 8;
+    auto &SD = DataSections.back();
+    memset(&SD.Sec, 0, sizeof(SD.Sec));
+    strcpy(SD.Sec.sectname, "__objc_imageinfo");
+    strcpy(SD.Sec.segname, "__DATA");
+    SD.Sec.size = 8;
+    SD.AddFixups = [&](size_t RecordOffset) {
+      jitlink::Edge::Kind PointerEdge = jitlink::Edge::Invalid;
+      switch (G.getTargetTriple().getArch()) {
+      case Triple::aarch64:
+        PointerEdge = jitlink::aarch64::Pointer64;
+        break;
+      case Triple::x86_64:
+        PointerEdge = jitlink::x86_64::Pointer64;
+        break;
+      default:
+        llvm_unreachable("Unsupported architecture");
+      }
+
+      // Look for an existing __objc_imageinfo symbol.
+      jitlink::Symbol *ObjCImageInfoSym = nullptr;
+      for (auto *Sym : G.external_symbols())
+        if (Sym->getName() == ObjCImageInfoSymbolName) {
+          ObjCImageInfoSym = Sym;
+          break;
+        }
+      if (!ObjCImageInfoSym)
+        for (auto *Sym : G.absolute_symbols())
+          if (Sym->getName() == ObjCImageInfoSymbolName) {
+            ObjCImageInfoSym = Sym;
+            break;
+          }
+      if (!ObjCImageInfoSym)
+        for (auto *Sym : G.defined_symbols())
+          if (Sym->hasName() && Sym->getName() == ObjCImageInfoSymbolName) {
+            ObjCImageInfoSym = Sym;
+            break;
+          }
+      if (!ObjCImageInfoSym)
+        ObjCImageInfoSym =
+            &G.addExternalSymbol(ObjCImageInfoSymbolName, 8, false);
+
+      SecBlock.addEdge(PointerEdge,
+                       RecordOffset + ((char *)&SD.Sec.addr - (char *)&SD.Sec),
+                       *ObjCImageInfoSym, -SecBlock.getAddress().getValue());
+    };
   }
 
   for (auto ObjCRuntimeSectionName : ObjCRuntimeObjectSectionsData) {
@@ -1355,6 +1416,11 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
     }
   }
 
+  assert(ObjCRuntimeObjectSec->blocks_size() == 1 &&
+         "Unexpected number of blocks in runtime sections object");
+
+  // Build the header struct up-front. This also gives us a chance to check
+  // that the triple is supported, which we'll assume below.
   MachO::mach_header_64 Hdr;
   Hdr.magic = MachO::MH_MAGIC_64;
   switch (G.getTargetTriple().getArch()) {
@@ -1367,9 +1433,7 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
     Hdr.cpusubtype = MachO::CPU_SUBTYPE_X86_64_ALL;
     break;
   default:
-    return make_error<StringError>("Unrecognized MachO arch in triple " +
-                                       G.getTargetTriple().str(),
-                                   inconvertibleErrorCode());
+    llvm_unreachable("Unsupported architecture");
   }
 
   Hdr.filetype = MachO::MH_DYLIB;
@@ -1380,10 +1444,7 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
   Hdr.flags = 0;
   Hdr.reserved = 0;
 
-  assert(ObjCRuntimeObjectSec->blocks_size() == 1 &&
-         "Unexpected number of blocks in runtime sections object");
   auto SecContent = SecBlock.getAlreadyMutableContent();
-
   char *P = SecContent.data();
   auto WriteMachOStruct = [&](auto S) {
     if (G.getEndianness() != support::endian::system_endianness())
@@ -1392,8 +1453,7 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
     P += sizeof(S);
   };
 
-  auto WriteSegment = [&](StringRef Name,
-                          const std::vector<MachO::section_64> &Secs) {
+  auto WriteSegment = [&](StringRef Name, std::vector<SecDesc> &Secs) {
     MachO::segment_command_64 SegLC;
     memset(&SegLC, 0, sizeof(SegLC));
     memcpy(SegLC.segname, Name.data(), Name.size());
@@ -1402,8 +1462,11 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
                     Secs.size() * sizeof(MachO::section_64);
     SegLC.nsects = Secs.size();
     WriteMachOStruct(SegLC);
-    for (auto &Sec : Secs)
-      WriteMachOStruct(Sec);
+    for (auto &SD : Secs) {
+      if (SD.AddFixups)
+        SD.AddFixups(P - SecContent.data());
+      WriteMachOStruct(SD.Sec);
+    }
   };
 
   WriteMachOStruct(Hdr);
