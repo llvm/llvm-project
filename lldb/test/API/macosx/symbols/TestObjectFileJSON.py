@@ -29,8 +29,9 @@ class TestObjectFileJSON(TestBase):
 
     @no_debug_info_test
     def test_target(self):
+        triple = "arm64-apple-macosx13.0.0"
         data = {
-            "triple": self.TRIPLE,
+            "triple": triple,
             "uuid": str(uuid.uuid4()),
             "type": "executable",
         }
@@ -40,7 +41,7 @@ class TestObjectFileJSON(TestBase):
 
         target = self.dbg.CreateTarget(json_object_file)
         self.assertTrue(target.IsValid())
-        self.assertEqual(target.GetTriple(), self.TRIPLE)
+        self.assertEqual(target.GetTriple(), triple)
 
     @no_debug_info_test
     def test_module(self):
@@ -49,7 +50,7 @@ class TestObjectFileJSON(TestBase):
         target = self.dbg.CreateTarget(exe)
 
         data = {
-            "triple": self.TRIPLE,
+            "triple": target.GetTriple(),
             "uuid": str(uuid.uuid4()),
         }
 
@@ -60,7 +61,7 @@ class TestObjectFileJSON(TestBase):
         self.assertFalse(module.IsValid())
 
         data = {
-            "triple": self.TRIPLE,
+            "triple": target.GetTriple(),
             "uuid": str(uuid.uuid4()),
             "type": "sharedlibrary",
             "sections": [
