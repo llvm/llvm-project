@@ -4625,7 +4625,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     break;
   }
-  case Instruction::ExtractValue: {
+  case Instruction::ExtractValue:
+  case Instruction::Freeze: {
     computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
                         Known, Depth + 1, Q, TLI);
     break;
