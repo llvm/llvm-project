@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_LINALG_UTILS_UTILS_H
 
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Utils/IndexingUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "llvm/ADT/StringSet.h"
@@ -83,16 +84,6 @@ bool isParallelIterator(utils::IteratorType iteratorType);
 
 /// Check if iterator type  has "reduction" semantics.
 bool isReductionIterator(utils::IteratorType iteratorType);
-
-/// Helper function that creates a memref::DimOp or tensor::DimOp depending on
-/// the type of `source`.
-Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim);
-OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value source,
-                               int64_t dim);
-
-/// Given an operation, retrieves the value of each dynamic dimension through
-/// constructing the necessary DimOp operators.
-SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b);
 
 /// Create a tensor::PadOp that pads `source` to the size of the statically
 /// sized `type` whose static sizes are assumed to be greater than the dynamic
@@ -271,6 +262,7 @@ struct FusionInfo {
 /// transformation).
 FailureOr<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
                                            OpOperand &consumerOpOperand);
+
 /// Tensor counterpart of `fuseProducerOfBuffer`.
 /// This implements the fusion part of the "tileAndFuse on tensors"
 /// transformation and thus requires the `consumerOpOperand` to be a
