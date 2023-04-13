@@ -28,18 +28,27 @@ entry:
 ; CHECK-LABEL: {{[\.]?}}shrinkwrapme:
 ; CHECK:            # %bb.0:
 ; CHECK-NEXT:         cmpwi
-; CHECKAIX:           blt
-
 ; Prolog code
-; CHECK:            # %bb.1:
 ; CHECK64-COUNT-18:   std
+
 ; CHECK32-COUNT-18:   stw
+
+; CHECK:              ble 0, {{.*}}BB0_3
+; CHECKAIX:           blt 0, {{.*}}BB0_3
+; CHECK:            # %bb.1:
+; CHECK:              li
+; CHECK:            {{.*}}BB0_2:
+; CHECK:              add
+; CHECK:              bdnz {{.*}}BB0_2
+; CHECK-NEXT:         b {{.*}}BB0_4
+; CHECK:            {{.*}}BB0_3:
+; CHECK-NEXT:         li
+; CHECK:            {{.*}}BB0_4:
 
 ; Epilog code
 ; CHECK64-COUNT-18:   ld
+;
 ; CHECK32-COUNT-18:   lwz
-; CHECK:              blr
 
-; CHECK:            {{.*}}BB0_4:
-; CHECK-NEXT:         li
+; CHECK:              blr
 }
