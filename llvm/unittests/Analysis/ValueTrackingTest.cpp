@@ -1527,8 +1527,8 @@ TEST_F(ComputeKnownFPClassTest, UIToFP) {
       "  %A2 = uitofp i16 %arg1 to half"
       "  ret float %A\n"
       "}\n");
-  expectKnownFPClass(fcPosFinite, false, A);
-  expectKnownFPClass(fcPositive, false, A2);
+  expectKnownFPClass(fcPosFinite & ~fcSubnormal, false, A);
+  expectKnownFPClass(fcPositive & ~fcSubnormal, false, A2);
 }
 
 TEST_F(ComputeKnownFPClassTest, SIToFP) {
@@ -1539,9 +1539,9 @@ TEST_F(ComputeKnownFPClassTest, SIToFP) {
       "  %A3 = sitofp i17 %arg2 to half"
       "  ret float %A\n"
       "}\n");
-  expectKnownFPClass(fcFinite & ~fcNegZero, std::nullopt, A);
-  expectKnownFPClass(fcFinite & ~fcNegZero, std::nullopt, A2);
-  expectKnownFPClass(~(fcNan | fcNegZero), std::nullopt, A3);
+  expectKnownFPClass(fcFinite & ~fcNegZero & ~fcSubnormal, std::nullopt, A);
+  expectKnownFPClass(fcFinite & ~fcNegZero & ~fcSubnormal, std::nullopt, A2);
+  expectKnownFPClass(~(fcNan | fcNegZero | fcSubnormal), std::nullopt, A3);
 }
 
 TEST_F(ComputeKnownFPClassTest, FAdd) {

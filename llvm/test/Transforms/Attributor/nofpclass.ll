@@ -685,7 +685,7 @@ define float @pass_nofpclass_inf_through_memory(float nofpclass(inf) %arg) {
 
 define float @uitofp_i32_to_f32(i32 %arg) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @uitofp_i32_to_f32
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @uitofp_i32_to_f32
 ; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp i32 [[ARG]] to float
 ; CHECK-NEXT:    ret float [[CVT]]
@@ -696,7 +696,7 @@ define float @uitofp_i32_to_f32(i32 %arg) {
 
 define float @sitofp_i32_to_f32(i32 %arg) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan inf nzero) float @sitofp_i32_to_f32
+; CHECK-LABEL: define nofpclass(nan inf nzero sub) float @sitofp_i32_to_f32
 ; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp i32 [[ARG]] to float
 ; CHECK-NEXT:    ret float [[CVT]]
@@ -707,7 +707,7 @@ define float @sitofp_i32_to_f32(i32 %arg) {
 
 define <2 x float> @uitofp_v2i32_to_v2f32(<2 x i32> %arg) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) <2 x float> @uitofp_v2i32_to_v2f32
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) <2 x float> @uitofp_v2i32_to_v2f32
 ; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp <2 x i32> [[ARG]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[CVT]]
@@ -718,7 +718,7 @@ define <2 x float> @uitofp_v2i32_to_v2f32(<2 x i32> %arg) {
 
 define <2 x float> @sitofp_v2i32_to_v2i32(<2 x i32> %arg) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan inf nzero) <2 x float> @sitofp_v2i32_to_v2i32
+; CHECK-LABEL: define nofpclass(nan inf nzero sub) <2 x float> @sitofp_v2i32_to_v2i32
 ; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp <2 x i32> [[ARG]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[CVT]]
@@ -729,7 +729,7 @@ define <2 x float> @sitofp_v2i32_to_v2i32(<2 x i32> %arg) {
 
 define half @uitofp_i17_to_f16(i17 %arg) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) half @uitofp_i17_to_f16
+; CHECK-LABEL: define nofpclass(nan ninf nzero sub nnorm) half @uitofp_i17_to_f16
 ; CHECK-SAME: (i17 [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp i17 [[ARG]] to half
 ; CHECK-NEXT:    ret half [[CVT]]
@@ -740,7 +740,7 @@ define half @uitofp_i17_to_f16(i17 %arg) {
 
 define half @sitofp_i17_to_f16(i17 %arg) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan nzero) half @sitofp_i17_to_f16
+; CHECK-LABEL: define nofpclass(nan nzero sub) half @sitofp_i17_to_f16
 ; CHECK-SAME: (i17 [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp i17 [[ARG]] to half
 ; CHECK-NEXT:    ret half [[CVT]]
@@ -751,7 +751,7 @@ define half @sitofp_i17_to_f16(i17 %arg) {
 
 define <2 x half> @uitofp_v2i17_to_v2f16(<2 x i17> %arg) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) <2 x half> @uitofp_v2i17_to_v2f16
+; CHECK-LABEL: define nofpclass(nan ninf nzero sub nnorm) <2 x half> @uitofp_v2i17_to_v2f16
 ; CHECK-SAME: (<2 x i17> [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp <2 x i17> [[ARG]] to <2 x half>
 ; CHECK-NEXT:    ret <2 x half> [[CVT]]
@@ -762,7 +762,7 @@ define <2 x half> @uitofp_v2i17_to_v2f16(<2 x i17> %arg) {
 
 define <2 x half> @sitofp_v2i17_to_v2i17(<2 x i17> %arg) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan nzero) <2 x half> @sitofp_v2i17_to_v2i17
+; CHECK-LABEL: define nofpclass(nan nzero sub) <2 x half> @sitofp_v2i17_to_v2i17
 ; CHECK-SAME: (<2 x i17> [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp <2 x i17> [[ARG]] to <2 x half>
 ; CHECK-NEXT:    ret <2 x half> [[CVT]]
@@ -1188,9 +1188,9 @@ define float @shufflevector_extractelt3(<2 x float> %arg0, <2 x float> nofpclass
 
 define float @constrained_sitofp(i32 %arg) strictfp {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
-; CHECK-LABEL: define nofpclass(nan nzero) float @constrained_sitofp
+; CHECK-LABEL: define nofpclass(nan nzero sub) float @constrained_sitofp
 ; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR5:[0-9]+]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call nofpclass(nan nzero) float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR7]]
+; CHECK-NEXT:    [[VAL:%.*]] = call nofpclass(nan nzero sub) float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1199,9 +1199,9 @@ define float @constrained_sitofp(i32 %arg) strictfp {
 
 define float @constrained_uitofp(i32 %arg) strictfp {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
-; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @constrained_uitofp
+; CHECK-LABEL: define nofpclass(nan ninf nzero sub nnorm) float @constrained_uitofp
 ; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR5]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR7]]
+; CHECK-NEXT:    [[VAL:%.*]] = call nofpclass(nan ninf nzero sub nnorm) float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
