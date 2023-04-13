@@ -329,7 +329,7 @@ LogicalResult LLVM::detail::oneToOneRewrite(
   SmallVector<Type> resultTypes;
   if (numResults != 0) {
     resultTypes.push_back(
-        typeConverter.packFunctionResults(op->getResultTypes()));
+        typeConverter.packOperationResults(op->getResultTypes()));
     if (!resultTypes.back())
       return failure();
   }

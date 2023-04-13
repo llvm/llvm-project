@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/PDL/IR/PDLOps.h"
 #include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
@@ -531,8 +532,8 @@ transform::ForeachMatchOp::apply(transform::TransformResults &results,
         if (diag.isDefiniteFailure())
           return WalkResult::interrupt();
         if (diag.isSilenceableFailure()) {
-          DEBUG_MATCHER(DBGS_MATCHER()
-                        << "matcher " << matcher.getName() << " failed\n");
+          DEBUG_MATCHER(DBGS_MATCHER() << "matcher " << matcher.getName()
+                                       << " failed: " << diag.getMessage());
           continue;
         }
 
@@ -1169,6 +1170,118 @@ transform::IncludeOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
              cast<FunctionOpInterface>(*target),
              /*alsoVerifyInternal=*/true)
       .checkAndReport();
+}
+
+//===----------------------------------------------------------------------===//
+// MatchOperationNameOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::MatchOperationNameOp::matchOperation(
+    Operation *current, transform::TransformResults &results,
+    transform::TransformState &state) {
+  StringRef currentOpName = current->getName().getStringRef();
+  for (auto acceptedAttr : getOpNames().getAsRange<StringAttr>()) {
+    if (acceptedAttr.getValue() == currentOpName)
+      return DiagnosedSilenceableFailure::success();
+  }
+  return emitSilenceableError() << "wrong operation name";
+}
+
+//===----------------------------------------------------------------------===//
+// MatchParamCmpIOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::MatchParamCmpIOp::apply(transform::TransformResults &results,
+                                   transform::TransformState &state) {
+  auto signedAPIntAsString = [&](APInt value) {
+    std::string str;
+    llvm::raw_string_ostream os(str);
+    value.print(os, /*isSigned=*/true);
+    return os.str();
+  };
+
+  ArrayRef<Attribute> params = state.getParams(getParam());
+  ArrayRef<Attribute> references = state.getParams(getReference());
+
+  if (params.size() != references.size()) {
+    return emitSilenceableError()
+           << "parameters have different payload lengths (" << params.size()
+           << " vs " << references.size() << ")";
+  }
+
+  for (auto &&[i, param, reference] : llvm::enumerate(params, references)) {
+    auto intAttr = param.dyn_cast<IntegerAttr>();
+    auto refAttr = reference.dyn_cast<IntegerAttr>();
+    if (!intAttr || !refAttr) {
+      return emitDefiniteFailure()
+             << "non-integer parameter value not expected";
+    }
+    if (intAttr.getType() != refAttr.getType()) {
+      return emitDefiniteFailure()
+             << "mismatching integer attribute types in parameter #" << i;
+    }
+    APInt value = intAttr.getValue();
+    APInt refValue = refAttr.getValue();
+
+    // TODO: this copy will not be necessary in C++20.
+    int64_t position = i;
+    auto reportError = [&](StringRef direction) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError() << "expected parameter to be " << direction
+                                 << " " << signedAPIntAsString(refValue)
+                                 << ", got " << signedAPIntAsString(value);
+      diag.attachNote(getParam().getLoc())
+          << "value # " << position
+          << " associated with the parameter defined here";
+      return diag;
+    };
+
+    switch (getPredicate()) {
+    case MatchCmpIPredicate::eq:
+      if (value.eq(refValue))
+        break;
+      return reportError("equal to");
+    case MatchCmpIPredicate::ne:
+      if (value.ne(refValue))
+        break;
+      return reportError("not equal to");
+    case MatchCmpIPredicate::lt:
+      if (value.slt(refValue))
+        break;
+      return reportError("less than");
+    case MatchCmpIPredicate::le:
+      if (value.sle(refValue))
+        break;
+      return reportError("less than or equal to");
+    case MatchCmpIPredicate::gt:
+      if (value.sgt(refValue))
+        break;
+      return reportError("greater than");
+    case MatchCmpIPredicate::ge:
+      if (value.sge(refValue))
+        break;
+      return reportError("greater than or equal to");
+    }
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::MatchParamCmpIOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getParam(), effects);
+  onlyReadsHandle(getReference(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// ParamConstantOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::ParamConstantOp::apply(transform::TransformResults &results,
+                                  transform::TransformState &state) {
+  results.setParams(cast<OpResult>(getParam()), {getValue()});
+  return DiagnosedSilenceableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//

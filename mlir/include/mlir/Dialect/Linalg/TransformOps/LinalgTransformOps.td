@@ -9,13 +9,14 @@
 #ifndef LINALG_TRANSFORM_OPS
 #define LINALG_TRANSFORM_OPS
 
+include "mlir/Dialect/Linalg/TransformOps/LinalgTransformEnums.td"
+include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Dialect/SCF/IR/DeviceMappingInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/RegionKindInterface.td"
 
@@ -343,14 +344,6 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
 //===----------------------------------------------------------------------===//
 // MatchOp
 //===----------------------------------------------------------------------===//
-
-def MatchInterfaceEnum : I32EnumAttr<"MatchInterfaceEnum", "An interface to match",
-    [
-      I32EnumAttrCase<"LinalgOp", 0>,
-      I32EnumAttrCase<"TilingInterface", 1>
-    ]>{
-  let cppNamespace = "mlir::transform";
-}
 
 def MatchOp : Op<Transform_Dialect, "structured.match",
     [MemoryEffectsOpInterface,

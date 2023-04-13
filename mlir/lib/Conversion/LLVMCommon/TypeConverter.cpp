@@ -496,10 +496,31 @@ void LLVMTypeConverter::promoteBarePtrsToDescriptors(
                                                     memrefTy, values[i]);
 }
 
-/// Convert a non-empty list of types to be returned from a function into a
-/// supported LLVM IR type.  In particular, if more than one value is returned,
-/// create an LLVM IR structure type with elements that correspond to each of
-/// the MLIR types converted with `convertType`.
+/// Convert a non-empty list of types of values produced by an operation into an
+/// LLVM-compatible type. In particular, if more than one value is
+/// produced, create a literal structure with elements that correspond to each
+/// of the types converted with `convertType`.
+Type LLVMTypeConverter::packOperationResults(TypeRange types) {
+  assert(!types.empty() && "expected non-empty list of type");
+  if (types.size() == 1)
+    return convertType(types[0]);
+
+  SmallVector<Type> resultTypes;
+  resultTypes.reserve(types.size());
+  for (Type type : types) {
+    Type converted = convertType(type);
+    if (!converted || !LLVM::isCompatibleType(converted))
+      return {};
+    resultTypes.push_back(converted);
+  }
+
+  return LLVM::LLVMStructType::getLiteral(&getContext(), resultTypes);
+}
+
+/// Convert a non-empty list of types to be returned from a function into an
+/// LLVM-compatible type. In particular, if more than one value is returned,
+/// create an LLVM dialect structure type with elements that correspond to each
+/// of the types converted with `convertCallingConventionType`.
 Type LLVMTypeConverter::packFunctionResults(TypeRange types,
                                             bool useBarePtrCallConv) {
   assert(!types.empty() && "expected non-empty list of type");
@@ -508,7 +529,7 @@ Type LLVMTypeConverter::packFunctionResults(TypeRange types,
   if (types.size() == 1)
     return convertCallingConventionType(types.front(), useBarePtrCallConv);
 
-  SmallVector<Type, 8> resultTypes;
+  SmallVector<Type> resultTypes;
   resultTypes.reserve(types.size());
   for (auto t : types) {
     auto converted = convertCallingConventionType(t, useBarePtrCallConv);
