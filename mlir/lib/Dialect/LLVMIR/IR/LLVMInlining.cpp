@@ -37,11 +37,17 @@ static bool hasLifetimeMarkers(LLVM::AllocaOp allocaOp) {
   return false;
 }
 
-/// Move all alloca operations with a constant size in the former entry block of
-/// the newly inlined callee into the entry block of the caller, and insert
-/// lifetime intrinsics that limit their scope to the inlined blocks.
-static void moveConstantAllocasToEntryBlock(
-    iterator_range<Region::iterator> inlinedBlocks) {
+/// Handles alloca operations in the inlined blocks:
+/// - Moves all alloca operations with a constant size in the former entry block
+///   of the callee into the entry block of the caller, so they become part of
+///   the function prologue/epilogue during code generation.
+/// - Inserts lifetime intrinsics that limit the scope of inlined static allocas
+///   to the inlined blocks.
+/// - Inserts StackSave and StackRestore operations if dynamic allocas were
+///   inlined.
+static void
+handleInlinedAllocas(Operation *call,
+                     iterator_range<Region::iterator> inlinedBlocks) {
   Block *calleeEntryBlock = &(*inlinedBlocks.begin());
   Block *callerEntryBlock = &(*calleeEntryBlock->getParent()->begin());
   if (calleeEntryBlock == callerEntryBlock)
@@ -49,21 +55,43 @@ static void moveConstantAllocasToEntryBlock(
     return;
   SmallVector<std::tuple<LLVM::AllocaOp, IntegerAttr, bool>> allocasToMove;
   bool shouldInsertLifetimes = false;
-  // Conservatively only move alloca operations that are part of the entry block
-  // and do not inspect nested regions, since they may execute conditionally or
-  // have other unknown semantics.
+  bool hasDynamicAlloca = false;
+  // Conservatively only move static alloca operations that are part of the
+  // entry block and do not inspect nested regions, since they may execute
+  // conditionally or have other unknown semantics.
   for (auto allocaOp : calleeEntryBlock->getOps<LLVM::AllocaOp>()) {
     IntegerAttr arraySize;
-    if (!matchPattern(allocaOp.getArraySize(), m_Constant(&arraySize)))
+    if (!matchPattern(allocaOp.getArraySize(), m_Constant(&arraySize))) {
+      hasDynamicAlloca = true;
       continue;
+    }
     bool shouldInsertLifetime =
         arraySize.getValue() != 0 && !hasLifetimeMarkers(allocaOp);
     shouldInsertLifetimes |= shouldInsertLifetime;
     allocasToMove.emplace_back(allocaOp, arraySize, shouldInsertLifetime);
   }
-  if (allocasToMove.empty())
+  // Check the remaining inlined blocks for dynamic allocas as well.
+  for (Block &block : llvm::drop_begin(inlinedBlocks)) {
+    if (hasDynamicAlloca)
+      break;
+    hasDynamicAlloca =
+        llvm::any_of(block.getOps<LLVM::AllocaOp>(), [](auto allocaOp) {
+          return !matchPattern(allocaOp.getArraySize(), m_Constant());
+        });
+  }
+  if (allocasToMove.empty() && !hasDynamicAlloca)
     return;
-  OpBuilder builder(callerEntryBlock, callerEntryBlock->begin());
+  OpBuilder builder(calleeEntryBlock, calleeEntryBlock->begin());
+  Value stackPtr;
+  if (hasDynamicAlloca) {
+    // This may result in multiple stacksave/stackrestore intrinsics in the same
+    // scope if some are already present in the body of the caller. This is not
+    // invalid IR, but LLVM cleans these up in InstCombineCalls.cpp, along with
+    // other cases where the stacksave/stackrestore is redundant.
+    stackPtr = builder.create<LLVM::StackSaveOp>(
+        call->getLoc(), LLVM::LLVMPointerType::get(call->getContext()));
+  }
+  builder.setInsertionPoint(callerEntryBlock, callerEntryBlock->begin());
   for (auto &[allocaOp, arraySize, shouldInsertLifetime] : allocasToMove) {
     auto newConstant = builder.create<LLVM::ConstantOp>(
         allocaOp->getLoc(), allocaOp.getArraySize().getType(), arraySize);
@@ -78,19 +106,20 @@ static void moveConstantAllocasToEntryBlock(
     allocaOp->moveAfter(newConstant);
     allocaOp.getArraySizeMutable().assign(newConstant.getResult());
   }
-  if (!shouldInsertLifetimes)
+  if (!shouldInsertLifetimes && !hasDynamicAlloca)
     return;
   // Insert a lifetime end intrinsic before each return in the callee function.
   for (Block &block : inlinedBlocks) {
     if (!block.getTerminator()->hasTrait<OpTrait::ReturnLike>())
       continue;
     builder.setInsertionPoint(block.getTerminator());
+    if (hasDynamicAlloca)
+      builder.create<LLVM::StackRestoreOp>(call->getLoc(), stackPtr);
     for (auto &[allocaOp, arraySize, shouldInsertLifetime] : allocasToMove) {
-      if (!shouldInsertLifetime)
-        continue;
-      builder.create<LLVM::LifetimeEndOp>(
-          allocaOp.getLoc(), arraySize.getValue().getLimitedValue(),
-          allocaOp.getResult());
+      if (shouldInsertLifetime)
+        builder.create<LLVM::LifetimeEndOp>(
+            allocaOp.getLoc(), arraySize.getValue().getLimitedValue(),
+            allocaOp.getResult());
     }
   }
 }
@@ -308,6 +337,8 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
             LLVM::MemcpyOp,
             LLVM::MemmoveOp,
             LLVM::MemsetOp,
+            LLVM::StackRestoreOp,
+            LLVM::StackSaveOp,
             LLVM::StoreOp,
             LLVM::UnreachableOp>(op))
       return true;
@@ -369,12 +400,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
   void processInlinedCallBlocks(
       Operation *call,
       iterator_range<Region::iterator> inlinedBlocks) const override {
-    // Alloca operations with a constant size that were in the entry block of
-    // the callee should be moved to the entry block of the caller, as this will
-    // fold into prologue/epilogue code during code generation.
-    // This is not implemented as a standalone pattern because we need to know
-    // which newly inlined block was previously the entry block of the callee.
-    moveConstantAllocasToEntryBlock(inlinedBlocks);
+    handleInlinedAllocas(call, inlinedBlocks);
   }
 
   // Keeping this (immutable) state on the interface allows us to look up
