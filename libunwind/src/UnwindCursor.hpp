@@ -686,7 +686,7 @@ template <typename A, typename R>
 bool UnwindCursor<A, R>::validReg(int regNum) {
   if (regNum == UNW_REG_IP || regNum == UNW_REG_SP) return true;
 #if defined(_LIBUNWIND_TARGET_X86_64)
-  if (regNum >= UNW_X86_64_RAX && regNum <= UNW_X86_64_R15) return true;
+  if (regNum >= UNW_X86_64_RAX && regNum <= UNW_X86_64_RIP) return true;
 #elif defined(_LIBUNWIND_TARGET_ARM)
   if ((regNum >= UNW_ARM_R0 && regNum <= UNW_ARM_R15) ||
       regNum == UNW_ARM_RA_AUTH_CODE)
@@ -701,6 +701,7 @@ template <typename A, typename R>
 unw_word_t UnwindCursor<A, R>::getReg(int regNum) {
   switch (regNum) {
 #if defined(_LIBUNWIND_TARGET_X86_64)
+  case UNW_X86_64_RIP:
   case UNW_REG_IP: return _msContext.Rip;
   case UNW_X86_64_RAX: return _msContext.Rax;
   case UNW_X86_64_RDX: return _msContext.Rdx;
@@ -751,6 +752,7 @@ template <typename A, typename R>
 void UnwindCursor<A, R>::setReg(int regNum, unw_word_t value) {
   switch (regNum) {
 #if defined(_LIBUNWIND_TARGET_X86_64)
+  case UNW_X86_64_RIP:
   case UNW_REG_IP: _msContext.Rip = value; break;
   case UNW_X86_64_RAX: _msContext.Rax = value; break;
   case UNW_X86_64_RDX: _msContext.Rdx = value; break;
