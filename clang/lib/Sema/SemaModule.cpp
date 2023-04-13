@@ -162,7 +162,8 @@ static bool DiagReservedModuleName(Sema &S, const IdentifierInfo *II,
   case Invalid:
     return S.Diag(Loc, diag::err_invalid_module_name) << II;
   case Reserved:
-    return S.Diag(Loc, diag::warn_reserved_module_name) << II;
+    S.Diag(Loc, diag::warn_reserved_module_name) << II;
+    return false;
   }
   llvm_unreachable("fell off a fully covered switch");
 }
@@ -267,10 +268,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   if (!getSourceManager().isInSystemHeader(Path[0].second) &&
       (FirstComponentName == "std" ||
        (FirstComponentName.startswith("std") &&
-        llvm::all_of(FirstComponentName.drop_front(3), &llvm::isDigit)))) {
+        llvm::all_of(FirstComponentName.drop_front(3), &llvm::isDigit))))
     Diag(Path[0].second, diag::warn_reserved_module_name) << Path[0].first;
-    return nullptr;
-  }
 
   // Then test all of the components in the path to see if any of them are
   // using another kind of reserved or invalid identifier.
