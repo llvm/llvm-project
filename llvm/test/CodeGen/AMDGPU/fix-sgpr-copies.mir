@@ -156,8 +156,8 @@ body:             |
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_CVT_F16_U16_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F16_U16_e64 [[DEF]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GCN-NEXT: %6:sreg_64_xexec = nofpexcept V_CMP_LT_F16_e64 0, [[V_CVT_F16_U16_e64_]], 0, [[DEF1]], 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed %6, implicit $exec
+    ; GCN-NEXT: [[V_CMP_LT_F16_t16_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_LT_F16_t16_e64 0, [[V_CVT_F16_U16_e64_]], 0, [[DEF1]], 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed [[V_CMP_LT_F16_t16_e64_]], implicit $exec
     %0:vgpr_32 = IMPLICIT_DEF
     %1:sreg_32 = IMPLICIT_DEF
     %2:vgpr_32 = V_CVT_F16_U16_e64 %0:vgpr_32, 0, 0, implicit $mode, implicit $exec
