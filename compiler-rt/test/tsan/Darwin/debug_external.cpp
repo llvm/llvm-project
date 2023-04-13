@@ -8,6 +8,17 @@
 
 #include "../test.h"
 
+extern "C" {
+void __tsan_on_report(void *report);
+int __tsan_get_report_loc(void *report, unsigned long idx, const char **type,
+                          void **addr, void **start,
+                          unsigned long *size, int *tid, int *fd,
+                          int *suppressable, void **trace,
+                          unsigned long trace_size);
+int __tsan_get_report_loc_object_type(void *report, unsigned long idx,
+                                      const char **object_type);
+}
+
 void *Thread(void *arg) {
   barrier_wait(&barrier);
   *((long *)arg) = 42;
