@@ -291,9 +291,9 @@ void InstrProfWriter::addBinaryIds(ArrayRef<llvm::object::BuildID> BIs) {
 }
 
 void InstrProfWriter::addTemporalProfileTrace(TemporalProfTraceTy Trace) {
-  if (Trace.size() > MaxTemporalProfTraceLength)
-    Trace.resize(MaxTemporalProfTraceLength);
-  if (Trace.empty())
+  if (Trace.FunctionNameRefs.size() > MaxTemporalProfTraceLength)
+    Trace.FunctionNameRefs.resize(MaxTemporalProfTraceLength);
+  if (Trace.FunctionNameRefs.empty())
     return;
 
   if (TemporalProfTraceStreamSize < TemporalProfTraceReservoirSize) {
@@ -311,7 +311,7 @@ void InstrProfWriter::addTemporalProfileTrace(TemporalProfTraceTy Trace) {
 }
 
 void InstrProfWriter::addTemporalProfileTraces(
-    SmallVector<TemporalProfTraceTy> SrcTraces, uint64_t SrcStreamSize) {
+    SmallVectorImpl<TemporalProfTraceTy> &SrcTraces, uint64_t SrcStreamSize) {
   // Assume that the source has the same reservoir size as the destination to
   // avoid needing to record it in the indexed profile format.
   bool IsDestSampled =
@@ -356,7 +356,7 @@ void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
   for (auto &I : IPW.BinaryIds)
     addBinaryIds(I);
 
-  addTemporalProfileTraces(std::move(IPW.TemporalProfTraces),
+  addTemporalProfileTraces(IPW.TemporalProfTraces,
                            IPW.TemporalProfTraceStreamSize);
 
   MemProfFrameData.reserve(IPW.MemProfFrameData.size());
@@ -591,8 +591,9 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
     OS.write(TemporalProfTraces.size());
     OS.write(TemporalProfTraceStreamSize);
     for (auto &Trace : TemporalProfTraces) {
-      OS.write(Trace.size());
-      for (auto &NameRef : Trace)
+      OS.write(Trace.Weight);
+      OS.write(Trace.FunctionNameRefs.size());
+      for (auto &NameRef : Trace.FunctionNameRefs)
         OS.write(NameRef);
     }
   }
@@ -779,7 +780,8 @@ void InstrProfWriter::writeTextTemporalProfTraceData(raw_fd_ostream &OS,
   OS << "# Temporal Profile Trace Stream Size:\n"
      << TemporalProfTraceStreamSize << "\n";
   for (auto &Trace : TemporalProfTraces) {
-    for (auto &NameRef : Trace)
+    OS << "# Weight:\n" << Trace.Weight << "\n";
+    for (auto &NameRef : Trace.FunctionNameRefs)
       OS << Symtab.getFuncName(NameRef) << ",";
     OS << "\n";
   }

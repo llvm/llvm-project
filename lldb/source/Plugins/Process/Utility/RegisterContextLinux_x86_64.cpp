@@ -163,6 +163,7 @@ RegisterContextLinux_x86_64::RegisterContextLinux_x86_64(
            {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
             LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
            nullptr,
+           nullptr,
            nullptr}),
       m_register_info_p(GetRegisterInfoPtr(target_arch)),
       m_register_info_count(GetRegisterInfoCount(target_arch)),

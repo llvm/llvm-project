@@ -84,7 +84,8 @@ public:
   Options *GetOptions() override { return &m_option_group; }
 
   bool DumpRegister(const ExecutionContext &exe_ctx, Stream &strm,
-                    RegisterContext *reg_ctx, const RegisterInfo *reg_info) {
+                    RegisterContext *reg_ctx, const RegisterInfo *reg_info,
+                    bool print_flags) {
     if (reg_info) {
       RegisterValue reg_value;
 
@@ -95,7 +96,8 @@ public:
         bool prefix_with_name = !prefix_with_altname;
         DumpRegisterValue(reg_value, &strm, reg_info, prefix_with_name,
                           prefix_with_altname, m_format_options.GetFormat(), 8,
-                          exe_ctx.GetBestExecutionContextScope());
+                          exe_ctx.GetBestExecutionContextScope(), print_flags,
+                          exe_ctx.GetTargetSP());
         if ((reg_info->encoding == eEncodingUint) ||
             (reg_info->encoding == eEncodingSint)) {
           Process *process = exe_ctx.GetProcessPtr();
@@ -142,7 +144,8 @@ public:
         if (primitive_only && reg_info && reg_info->value_regs)
           continue;
 
-        if (DumpRegister(exe_ctx, strm, reg_ctx, reg_info))
+        if (DumpRegister(exe_ctx, strm, reg_ctx, reg_info,
+                         /*print_flags=*/false))
           ++available_count;
         else
           ++unavailable_count;
@@ -218,7 +221,8 @@ protected:
           reg_info = reg_ctx->GetRegisterInfoByName(arg_str);
 
           if (reg_info) {
-            if (!DumpRegister(m_exe_ctx, strm, reg_ctx, reg_info))
+            if (!DumpRegister(m_exe_ctx, strm, reg_ctx, reg_info,
+                              /*print_flags=*/true))
               strm.Printf("%-12s = error: unavailable\n", reg_info->name);
           } else {
             result.AppendErrorWithFormat("Invalid register name '%s'.\n",

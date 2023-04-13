@@ -490,9 +490,9 @@ public:
         "data",
         [](PyOpaqueAttribute &self) {
           MlirStringRef stringRef = mlirOpaqueAttrGetData(self);
-          return py::str(stringRef.data, stringRef.length);
+          return py::bytes(stringRef.data, stringRef.length);
         },
-        "Returns the data for the Opaqued attributes as a string");
+        "Returns the data for the Opaqued attributes as `bytes`");
   }
 };
 
@@ -528,6 +528,13 @@ public:
           return py::str(stringRef.data, stringRef.length);
         },
         "Returns the value of the string attribute");
+    c.def_property_readonly(
+        "value_bytes",
+        [](PyStringAttribute &self) {
+          MlirStringRef stringRef = mlirStringAttrGetValue(self);
+          return py::bytes(stringRef.data, stringRef.length);
+        },
+        "Returns the value of the string attribute as `bytes`");
   }
 };
 

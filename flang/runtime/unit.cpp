@@ -9,6 +9,7 @@
 #include "unit.h"
 #include "io-error.h"
 #include "lock.h"
+#include "tools.h"
 #include "unit-map.h"
 #include <cstdio>
 #include <limits>
@@ -417,8 +418,7 @@ bool ExternalFileUnit::SetVariableFormattedRecordLength() {
   } else if (FrameLength() > recordOffsetInFrame_) {
     const char *record{Frame() + recordOffsetInFrame_};
     std::size_t bytes{FrameLength() - recordOffsetInFrame_};
-    if (const char *nl{
-            reinterpret_cast<const char *>(std::memchr(record, '\n', bytes))}) {
+    if (const char *nl{FindCharacter(record, '\n', bytes)}) {
       recordLength = nl - record;
       if (*recordLength > 0 && record[*recordLength - 1] == '\r') {
         --*recordLength;
@@ -621,6 +621,7 @@ void ExternalFileUnit::FlushOutput(IoErrorHandler &handler) {
       // needs to advance frameOffsetInFile_ to prevent attempts at
       // impossible seeks
       CommitWrites();
+      leftTabLimit.reset();
     }
   }
   Flush(handler);

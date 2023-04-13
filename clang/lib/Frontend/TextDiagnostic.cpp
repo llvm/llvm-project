@@ -787,7 +787,7 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
 
 /// Print out the file/line/column information and include trace.
 ///
-/// This method handlen the emission of the diagnostic location information.
+/// This method handles the emission of the diagnostic location information.
 /// This includes extracting as much location information as is present for
 /// the diagnostic and printing it, as well as any include stack or source
 /// ranges necessary.
@@ -856,15 +856,14 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
     FileID CaretFileID = Loc.getExpansionLoc().getFileID();
     bool PrintedRange = false;
 
-    for (ArrayRef<CharSourceRange>::const_iterator RI = Ranges.begin(),
-         RE = Ranges.end();
-         RI != RE; ++RI) {
+    for (const auto &R : Ranges) {
       // Ignore invalid ranges.
-      if (!RI->isValid()) continue;
+      if (!R.isValid())
+        continue;
 
       auto &SM = Loc.getManager();
-      SourceLocation B = SM.getExpansionLoc(RI->getBegin());
-      CharSourceRange ERange = SM.getExpansionRange(RI->getEnd());
+      SourceLocation B = SM.getExpansionLoc(R.getBegin());
+      CharSourceRange ERange = SM.getExpansionRange(R.getEnd());
       SourceLocation E = ERange.getEnd();
       bool IsTokenRange = ERange.isTokenRange();
 
@@ -1068,51 +1067,51 @@ static std::string buildFixItInsertionLine(FileID FID,
     return FixItInsertionLine;
   unsigned PrevHintEndCol = 0;
 
-  for (ArrayRef<FixItHint>::iterator I = Hints.begin(), E = Hints.end();
-       I != E; ++I) {
-    if (!I->CodeToInsert.empty()) {
-      // We have an insertion hint. Determine whether the inserted
-      // code contains no newlines and is on the same line as the caret.
-      std::pair<FileID, unsigned> HintLocInfo
-        = SM.getDecomposedExpansionLoc(I->RemoveRange.getBegin());
-      if (FID == HintLocInfo.first &&
-          LineNo == SM.getLineNumber(HintLocInfo.first, HintLocInfo.second) &&
-          StringRef(I->CodeToInsert).find_first_of("\n\r") == StringRef::npos) {
-        // Insert the new code into the line just below the code
-        // that the user wrote.
-        // Note: When modifying this function, be very careful about what is a
-        // "column" (printed width, platform-dependent) and what is a
-        // "byte offset" (SourceManager "column").
-        unsigned HintByteOffset
-          = SM.getColumnNumber(HintLocInfo.first, HintLocInfo.second) - 1;
+  for (const auto &H : Hints) {
+    if (H.CodeToInsert.empty())
+      continue;
 
-        // The hint must start inside the source or right at the end
-        assert(HintByteOffset < static_cast<unsigned>(map.bytes())+1);
-        unsigned HintCol = map.byteToContainingColumn(HintByteOffset);
+    // We have an insertion hint. Determine whether the inserted
+    // code contains no newlines and is on the same line as the caret.
+    std::pair<FileID, unsigned> HintLocInfo =
+        SM.getDecomposedExpansionLoc(H.RemoveRange.getBegin());
+    if (FID == HintLocInfo.first &&
+        LineNo == SM.getLineNumber(HintLocInfo.first, HintLocInfo.second) &&
+        StringRef(H.CodeToInsert).find_first_of("\n\r") == StringRef::npos) {
+      // Insert the new code into the line just below the code
+      // that the user wrote.
+      // Note: When modifying this function, be very careful about what is a
+      // "column" (printed width, platform-dependent) and what is a
+      // "byte offset" (SourceManager "column").
+      unsigned HintByteOffset =
+          SM.getColumnNumber(HintLocInfo.first, HintLocInfo.second) - 1;
 
-        // If we inserted a long previous hint, push this one forwards, and add
-        // an extra space to show that this is not part of the previous
-        // completion. This is sort of the best we can do when two hints appear
-        // to overlap.
-        //
-        // Note that if this hint is located immediately after the previous
-        // hint, no space will be added, since the location is more important.
-        if (HintCol < PrevHintEndCol)
-          HintCol = PrevHintEndCol + 1;
+      // The hint must start inside the source or right at the end
+      assert(HintByteOffset < static_cast<unsigned>(map.bytes()) + 1);
+      unsigned HintCol = map.byteToContainingColumn(HintByteOffset);
 
-        // This should NOT use HintByteOffset, because the source might have
-        // Unicode characters in earlier columns.
-        unsigned NewFixItLineSize = FixItInsertionLine.size() +
-          (HintCol - PrevHintEndCol) + I->CodeToInsert.size();
-        if (NewFixItLineSize > FixItInsertionLine.size())
-          FixItInsertionLine.resize(NewFixItLineSize, ' ');
+      // If we inserted a long previous hint, push this one forwards, and add
+      // an extra space to show that this is not part of the previous
+      // completion. This is sort of the best we can do when two hints appear
+      // to overlap.
+      //
+      // Note that if this hint is located immediately after the previous
+      // hint, no space will be added, since the location is more important.
+      if (HintCol < PrevHintEndCol)
+        HintCol = PrevHintEndCol + 1;
 
-        std::copy(I->CodeToInsert.begin(), I->CodeToInsert.end(),
-                  FixItInsertionLine.end() - I->CodeToInsert.size());
+      // This should NOT use HintByteOffset, because the source might have
+      // Unicode characters in earlier columns.
+      unsigned NewFixItLineSize = FixItInsertionLine.size() +
+                                  (HintCol - PrevHintEndCol) +
+                                  H.CodeToInsert.size();
+      if (NewFixItLineSize > FixItInsertionLine.size())
+        FixItInsertionLine.resize(NewFixItLineSize, ' ');
 
-        PrevHintEndCol =
-          HintCol + llvm::sys::locale::columnWidth(I->CodeToInsert);
-      }
+      std::copy(H.CodeToInsert.begin(), H.CodeToInsert.end(),
+                FixItInsertionLine.end() - H.CodeToInsert.size());
+
+      PrevHintEndCol = HintCol + llvm::sys::locale::columnWidth(H.CodeToInsert);
     }
   }
 
@@ -1168,7 +1167,7 @@ void TextDiagnostic::emitSnippetAndCaret(
   // Find the set of lines to include.
   const unsigned MaxLines = DiagOpts->SnippetLineLimit;
   std::pair<unsigned, unsigned> Lines = {CaretLineNo, CaretLineNo};
-  for (auto &I : Ranges) {
+  for (const auto &I : Ranges) {
     if (auto OptionalRange = findLinesForRange(I, FID, SM))
       Lines = maybeAddRange(Lines, *OptionalRange, MaxLines);
   }
@@ -1211,7 +1210,7 @@ void TextDiagnostic::emitSnippetAndCaret(
     std::string CaretLine(sourceColMap.columns(), ' ');
 
     // Highlight all of the characters covered by Ranges with ~ characters.
-    for (auto &I : Ranges)
+    for (const auto &I : Ranges)
       highlightRange(I, LineNo, FID, sourceColMap, CaretLine, SM, LangOpts);
 
     // Next, insert the caret itself.
@@ -1315,24 +1314,21 @@ void TextDiagnostic::emitParseableFixits(ArrayRef<FixItHint> Hints,
 
   // We follow FixItRewriter's example in not (yet) handling
   // fix-its in macros.
-  for (ArrayRef<FixItHint>::iterator I = Hints.begin(), E = Hints.end();
-       I != E; ++I) {
-    if (I->RemoveRange.isInvalid() ||
-        I->RemoveRange.getBegin().isMacroID() ||
-        I->RemoveRange.getEnd().isMacroID())
+  for (const auto &H : Hints) {
+    if (H.RemoveRange.isInvalid() || H.RemoveRange.getBegin().isMacroID() ||
+        H.RemoveRange.getEnd().isMacroID())
       return;
   }
 
-  for (ArrayRef<FixItHint>::iterator I = Hints.begin(), E = Hints.end();
-       I != E; ++I) {
-    SourceLocation BLoc = I->RemoveRange.getBegin();
-    SourceLocation ELoc = I->RemoveRange.getEnd();
+  for (const auto &H : Hints) {
+    SourceLocation BLoc = H.RemoveRange.getBegin();
+    SourceLocation ELoc = H.RemoveRange.getEnd();
 
     std::pair<FileID, unsigned> BInfo = SM.getDecomposedLoc(BLoc);
     std::pair<FileID, unsigned> EInfo = SM.getDecomposedLoc(ELoc);
 
     // Adjust for token ranges.
-    if (I->RemoveRange.isTokenRange())
+    if (H.RemoveRange.isTokenRange())
       EInfo.second += Lexer::MeasureTokenLength(ELoc, SM, LangOpts);
 
     // We specifically do not do word-wrapping or tab-expansion here,
@@ -1348,7 +1344,7 @@ void TextDiagnostic::emitParseableFixits(ArrayRef<FixItHint> Hints,
       << '-' << SM.getLineNumber(EInfo.first, EInfo.second)
       << ':' << SM.getColumnNumber(EInfo.first, EInfo.second)
       << "}:\"";
-    OS.write_escaped(I->CodeToInsert);
+    OS.write_escaped(H.CodeToInsert);
     OS << "\"\n";
   }
 }

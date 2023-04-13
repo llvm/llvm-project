@@ -575,14 +575,11 @@ createParallelOp(Fortran::lower::AbstractConverter &converter,
           firOpBuilder, currentLocation, operands, operandSegments);
 
   if (addAsyncAttr)
-    parallelOp->setAttr(mlir::acc::ParallelOp::getAsyncAttrName(),
-                        firOpBuilder.getUnitAttr());
+    parallelOp.setAsyncAttrAttr(firOpBuilder.getUnitAttr());
   if (addWaitAttr)
-    parallelOp->setAttr(mlir::acc::ParallelOp::getWaitAttrName(),
-                        firOpBuilder.getUnitAttr());
+    parallelOp.setWaitAttrAttr(firOpBuilder.getUnitAttr());
   if (addSelfAttr)
-    parallelOp->setAttr(mlir::acc::ParallelOp::getSelfAttrName(),
-                        firOpBuilder.getUnitAttr());
+    parallelOp.setSelfAttrAttr(firOpBuilder.getUnitAttr());
 
   return parallelOp;
 }
@@ -704,6 +701,12 @@ genACC(Fortran::lower::AbstractConverter &converter,
   } else if (blockDirective.v == llvm::acc::ACCD_data) {
     genACCDataOp(converter, currentLocation, semanticsContext, stmtCtx,
                  accClauseList);
+  } else if (blockDirective.v == llvm::acc::ACCD_serial) {
+    TODO(currentLocation, "serial construct lowering");
+  } else if (blockDirective.v == llvm::acc::ACCD_kernels) {
+    TODO(currentLocation, "kernels construct lowering");
+  } else if (blockDirective.v == llvm::acc::ACCD_host_data) {
+    TODO(currentLocation, "host_data construct lowering");
   }
 }
 

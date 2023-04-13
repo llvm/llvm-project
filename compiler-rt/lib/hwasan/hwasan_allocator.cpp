@@ -409,7 +409,7 @@ HwasanChunkView FindHeapChunkByAddress(uptr address) {
   return HwasanChunkView(reinterpret_cast<uptr>(block), metadata);
 }
 
-const void *AllocationBegin(const void *p) {
+static const void *AllocationBegin(const void *p) {
   const void *untagged_ptr = UntagPtr(p);
   if (!untagged_ptr)
     return nullptr;

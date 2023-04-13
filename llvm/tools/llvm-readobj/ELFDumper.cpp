@@ -221,7 +221,7 @@ public:
   void printArchSpecificInfo() override;
   void printStackMap() const override;
   void printMemtag() override;
-  ArrayRef<uint8_t> getMemtagGlobalsSectionContents(uintptr_t ExpectedAddr);
+  ArrayRef<uint8_t> getMemtagGlobalsSectionContents(uint64_t ExpectedAddr);
 
   // Hash histogram shows statistics of how efficient the hash was for the
   // dynamic symbol table. The table shows the number of hash buckets for
@@ -5753,6 +5753,12 @@ const NoteType CoreNoteTypes[] = {
      "NT_ARM_HW_BREAK (AArch hardware breakpoint registers)"},
     {ELF::NT_ARM_HW_WATCH,
      "NT_ARM_HW_WATCH (AArch hardware watchpoint registers)"},
+    {ELF::NT_ARM_SVE, "NT_ARM_SVE (AArch64 SVE registers)"},
+    {ELF::NT_ARM_PAC_MASK,
+     "NT_ARM_PAC_MASK (AArch64 Pointer Authentication code masks)"},
+    {ELF::NT_ARM_SSVE, "NT_ARM_SSVE (AArch64 Streaming SVE registers)"},
+    {ELF::NT_ARM_ZA, "NT_ARM_ZA (AArch64 SME ZA registers)"},
+    {ELF::NT_ARM_ZT, "NT_ARM_ZT (AArch64 SME ZT registers)"},
 
     {ELF::NT_FILE, "NT_FILE (mapped files)"},
     {ELF::NT_PRXFPREG, "NT_PRXFPREG (user_xfpregs structure)"},
@@ -5973,7 +5979,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
 
 template <class ELFT>
 ArrayRef<uint8_t>
-ELFDumper<ELFT>::getMemtagGlobalsSectionContents(uintptr_t ExpectedAddr) {
+ELFDumper<ELFT>::getMemtagGlobalsSectionContents(uint64_t ExpectedAddr) {
   for (const typename ELFT::Shdr &Sec : cantFail(Obj.sections())) {
     if (Sec.sh_type != SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC)
       continue;
@@ -6006,8 +6012,8 @@ constexpr uint64_t MemtagGranuleSize = 16;
 template <typename ELFT> void ELFDumper<ELFT>::printMemtag() {
   if (Obj.getHeader().e_machine != EM_AARCH64) return;
   std::vector<std::pair<std::string, std::string>> DynamicEntries;
-  size_t MemtagGlobalsSz = 0;
-  uintptr_t MemtagGlobals = 0;
+  uint64_t MemtagGlobalsSz = 0;
+  uint64_t MemtagGlobals = 0;
   for (const typename ELFT::Dyn &Entry : dynamic_table()) {
     uintX_t Tag = Entry.getTag();
     switch (Tag) {

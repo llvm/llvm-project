@@ -208,8 +208,13 @@ public:
   create(std::unique_ptr<MemoryBuffer> Buffer,
          const InstrProfCorrelator *Correlator = nullptr);
 
+  /// \param Weight for raw profiles use this as the temporal profile trace
+  ///               weight
   /// \returns a list of temporal profile traces.
-  virtual const SmallVector<TemporalProfTraceTy> &getTemporalProfTraces() {
+  virtual SmallVector<TemporalProfTraceTy> &
+  getTemporalProfTraces(std::optional<uint64_t> Weight = {}) {
+    // For non-raw profiles we ignore the input weight and instead use the
+    // weights already in the traces.
     return TemporalProfTraces;
   }
   /// \returns the total number of temporal profile traces seen.
@@ -395,7 +400,8 @@ public:
     return *Symtab.get();
   }
 
-  const SmallVector<TemporalProfTraceTy> &getTemporalProfTraces() override;
+  SmallVector<TemporalProfTraceTy> &
+  getTemporalProfTraces(std::optional<uint64_t> Weight = {}) override;
 
 private:
   Error createSymtab(InstrProfSymtab &Symtab);

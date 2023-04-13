@@ -145,7 +145,7 @@ void GetAllocatorCacheRange(uptr *begin, uptr *end) {
   *end = *begin + sizeof(AllocatorCache);
 }
 
-const void *GetMallocBegin(const void *p) {
+static const void *GetMallocBegin(const void *p) {
   if (!p)
     return nullptr;
   void *beg = allocator.GetBlockBegin(p);

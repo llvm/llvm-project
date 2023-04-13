@@ -20347,13 +20347,7 @@ RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
     case 'w':
       if (VT == MVT::Other)
         break;
-      if (VT == MVT::f16)
-        return RCPair(0U, Subtarget->hasFullFP16() ? &ARM::HPRRegClass
-                                                   : &ARM::SPRRegClass);
-      if (VT == MVT::bf16)
-        return RCPair(0U, Subtarget->hasBF16() ? &ARM::HPRRegClass
-                                               : &ARM::SPRRegClass);
-      if (VT == MVT::f32)
+      if (VT == MVT::f32 || VT == MVT::f16 || VT == MVT::bf16)
         return RCPair(0U, &ARM::SPRRegClass);
       if (VT.getSizeInBits() == 64)
         return RCPair(0U, &ARM::DPRRegClass);
@@ -20363,7 +20357,7 @@ RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
     case 'x':
       if (VT == MVT::Other)
         break;
-      if (VT == MVT::f32)
+      if (VT == MVT::f32 || VT == MVT::f16 || VT == MVT::bf16)
         return RCPair(0U, &ARM::SPR_8RegClass);
       if (VT.getSizeInBits() == 64)
         return RCPair(0U, &ARM::DPR_8RegClass);
@@ -20373,13 +20367,7 @@ RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
     case 't':
       if (VT == MVT::Other)
         break;
-      if (VT == MVT::f16)
-        return RCPair(0U, Subtarget->hasFullFP16() ? &ARM::HPRRegClass
-                                                   : &ARM::SPRRegClass);
-      if (VT == MVT::bf16)
-        return RCPair(0U, Subtarget->hasBF16() ? &ARM::HPRRegClass
-                                               : &ARM::SPRRegClass);
-      if (VT == MVT::f32 || VT == MVT::i32)
+      if (VT == MVT::f32 || VT == MVT::i32 || VT == MVT::f16 || VT == MVT::bf16)
         return RCPair(0U, &ARM::SPRRegClass);
       if (VT.getSizeInBits() == 64)
         return RCPair(0U, &ARM::DPR_VFP2RegClass);

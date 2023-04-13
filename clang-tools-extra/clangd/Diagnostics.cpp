@@ -715,9 +715,9 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     D.InsideMainFile = isInsideMainFile(PatchLoc, SM);
     D.Range = diagnosticRange(Info, *LangOpts);
     auto FID = SM.getFileID(Info.getLocation());
-    if (auto *FE = SM.getFileEntryForID(FID)) {
+    if (const auto FE = SM.getFileEntryRefForID(FID)) {
       D.File = FE->getName().str();
-      D.AbsFile = getCanonicalPath(FE, SM);
+      D.AbsFile = getCanonicalPath(*FE, SM);
     }
     D.ID = Info.getID();
     return D;

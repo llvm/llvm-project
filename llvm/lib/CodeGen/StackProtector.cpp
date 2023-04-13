@@ -482,18 +482,15 @@ bool StackProtector::InsertStackProtectors() {
     if (&BB == FailBB)
       continue;
     Instruction *CheckLoc = dyn_cast<ReturnInst>(BB.getTerminator());
-    if (!CheckLoc && !DisableCheckNoReturn) {
-      for (auto &Inst : BB) {
-        auto *CB = dyn_cast<CallBase>(&Inst);
-        if (!CB)
-          continue;
-        if (!CB->doesNotReturn())
-          continue;
-        // Do stack check before non-return calls (e.g: __cxa_throw)
-        CheckLoc = CB;
-        break;
-      }
-    }
+    if (!CheckLoc && !DisableCheckNoReturn)
+      for (auto &Inst : BB)
+        if (auto *CB = dyn_cast<CallBase>(&Inst))
+          // Do stack check before noreturn calls that aren't nounwind (e.g:
+          // __cxa_throw).
+          if (CB->doesNotReturn() && !CB->doesNotThrow()) {
+            CheckLoc = CB;
+            break;
+          }
 
     if (!CheckLoc)
       continue;

@@ -265,7 +265,7 @@ public:
         return true;
       }
 
-      DispImm = Inst.getOperand(I).getImm() << 2;
+      DispImm = Inst.getOperand(I).getImm() * 4;
       return true;
     }
     return false;

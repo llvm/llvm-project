@@ -10,9 +10,6 @@
 // This is important notably because the LLDB data formatters use
 // libc++ headers with modules enabled.
 
-// The system-provided <uchar.h> seems to be broken on AIX
-// XFAIL: LIBCXX-AIX-FIXME
-
 // GCC doesn't support -fcxx-modules
 // UNSUPPORTED: gcc
 

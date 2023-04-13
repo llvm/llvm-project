@@ -250,6 +250,78 @@ struct S {
 constexpr S s;
 static_assert(s.m() == 1, "");
 
+namespace InitializerTemporaries {
+  class Bar {
+  private:
+    int a;
+
+  public:
+    constexpr Bar() : a(10) {}
+    constexpr int getA() const { return a; }
+  };
+
+  class Foo {
+  public:
+    int a;
+
+    constexpr Foo() : a(Bar().getA()) {}
+  };
+  constexpr Foo F;
+  static_assert(F.a == 10, "");
+
+
+  /// Needs constexpr destructors.
+#if __cplusplus >= 202002L
+  /// Does
+  ///    Arr[Pos] = Value;
+  ///    ++Pos;
+  /// in its destructor.
+  class BitSetter {
+  private:
+    int *Arr;
+    int &Pos;
+    int Value;
+
+  public:
+    constexpr BitSetter(int *Arr, int &Pos, int Value) :
+      Arr(Arr), Pos(Pos), Value(Value) {}
+
+    constexpr int getValue() const { return 0; }
+    constexpr ~BitSetter() {
+      Arr[Pos] = Value;
+      ++Pos;
+    }
+  };
+
+  class Test {
+    int a, b, c;
+  public:
+    constexpr Test(int *Arr, int &Pos) :
+      a(BitSetter(Arr, Pos, 1).getValue()),
+      b(BitSetter(Arr, Pos, 2).getValue()),
+      c(BitSetter(Arr, Pos, 3).getValue())
+    {}
+  };
+
+
+  constexpr int T(int Index) {
+    int Arr[] = {0, 0, 0};
+    int Pos = 0;
+
+    {
+      auto T = Test(Arr, Pos);
+      // End of scope, should destroy Test.
+    }
+
+    return Arr[Index];
+  }
+
+  static_assert(T(0) == 1);
+  static_assert(T(1) == 2);
+  static_assert(T(2) == 3);
+#endif
+}
+
 #if __cplusplus >= 201703L
 namespace BaseInit {
   class _A {public: int a;};
@@ -379,3 +451,40 @@ namespace ConditionalInit {
   static_assert(getS(true).a == 12, "");
   static_assert(getS(false).a == 13, "");
 };
+/// FIXME: The following tests are broken.
+///   They are using CXXDefaultInitExprs which contain a CXXThisExpr. The This pointer
+///   in those refers to the declaration we are currently initializing, *not* the
+///   This pointer of the current stack frame. This is something we haven't
+///   implemented in the new interpreter yet.
+namespace DeclRefs {
+  struct A{ int m; const int &f = m; }; // expected-note {{implicit use of 'this'}}
+
+  constexpr A a{10}; // expected-error {{must be initialized by a constant expression}}
+  static_assert(a.m == 10, "");
+  static_assert(a.f == 10, ""); // expected-error {{not an integral constant expression}} \
+                                // expected-note {{read of object outside its lifetime}}
+
+  class Foo {
+  public:
+    int z = 1337;
+    constexpr int a() const {
+      A b{this->z};
+
+      return b.f;
+    }
+  };
+  constexpr Foo f;
+  static_assert(f.a() == 1337, "");
+
+
+  struct B {
+    A a = A{100};
+  };
+  constexpr B b;
+  /// FIXME: The following two lines don't work because we don't get the
+  ///   pointers on the LHS correct. They make us run into an assertion
+  ///   in CheckEvaluationResult. However, this may just be caused by the
+  ///   problems in the previous examples.
+  //static_assert(b.a.m == 100, "");
+  //static_assert(b.a.f == 100, "");
+}
