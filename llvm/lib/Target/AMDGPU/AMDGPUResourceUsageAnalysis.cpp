@@ -338,11 +338,9 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           break;
         }
 
-        if (AMDGPU::SReg_32RegClass.contains(Reg) ||
-            AMDGPU::SReg_LO16RegClass.contains(Reg) ||
+        if (AMDGPU::SGPR_32RegClass.contains(Reg) ||
+            AMDGPU::SGPR_LO16RegClass.contains(Reg) ||
             AMDGPU::SGPR_HI16RegClass.contains(Reg)) {
-          assert(!AMDGPU::TTMP_32RegClass.contains(Reg) &&
-                 "trap handler registers should not be used");
           IsSGPR = true;
           Width = 1;
         } else if (AMDGPU::VGPR_32RegClass.contains(Reg) ||
@@ -355,9 +353,7 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           IsSGPR = false;
           IsAGPR = true;
           Width = 1;
-        } else if (AMDGPU::SReg_64RegClass.contains(Reg)) {
-          assert(!AMDGPU::TTMP_64RegClass.contains(Reg) &&
-                 "trap handler registers should not be used");
+        } else if (AMDGPU::SGPR_64RegClass.contains(Reg)) {
           IsSGPR = true;
           Width = 2;
         } else if (AMDGPU::VReg_64RegClass.contains(Reg)) {
@@ -377,9 +373,7 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           IsSGPR = false;
           IsAGPR = true;
           Width = 3;
-        } else if (AMDGPU::SReg_128RegClass.contains(Reg)) {
-          assert(!AMDGPU::TTMP_128RegClass.contains(Reg) &&
-                 "trap handler registers should not be used");
+        } else if (AMDGPU::SGPR_128RegClass.contains(Reg)) {
           IsSGPR = true;
           Width = 4;
         } else if (AMDGPU::VReg_128RegClass.contains(Reg)) {
@@ -420,8 +414,6 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           IsAGPR = true;
           Width = 7;
         } else if (AMDGPU::SReg_256RegClass.contains(Reg)) {
-          assert(!AMDGPU::TTMP_256RegClass.contains(Reg) &&
-                 "trap handler registers should not be used");
           IsSGPR = true;
           Width = 8;
         } else if (AMDGPU::VReg_256RegClass.contains(Reg)) {
@@ -472,8 +464,6 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           IsAGPR = true;
           Width = 12;
         } else if (AMDGPU::SReg_512RegClass.contains(Reg)) {
-          assert(!AMDGPU::TTMP_512RegClass.contains(Reg) &&
-                 "trap handler registers should not be used");
           IsSGPR = true;
           Width = 16;
         } else if (AMDGPU::VReg_512RegClass.contains(Reg)) {
@@ -494,7 +484,12 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           IsAGPR = true;
           Width = 32;
         } else {
-          llvm_unreachable("Unknown register class");
+          assert((AMDGPU::TTMP_32RegClass.contains(Reg) ||
+                  AMDGPU::TTMP_64RegClass.contains(Reg) ||
+                  AMDGPU::TTMP_128RegClass.contains(Reg) ||
+                  AMDGPU::TTMP_256RegClass.contains(Reg) ||
+                  AMDGPU::TTMP_512RegClass.contains(Reg)) &&
+                 "Unknown register class");
         }
         unsigned HWReg = TRI.getHWRegIndex(Reg);
         int MaxUsed = HWReg + Width - 1;
