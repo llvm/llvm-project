@@ -80,6 +80,15 @@ void transform::LowerMaskedTransfersOp::populatePatterns(
 }
 
 //===----------------------------------------------------------------------===//
+// MaterializeMasksOp
+//===----------------------------------------------------------------------===//
+
+void transform::MaterializeMasksOp::populatePatterns(RewritePatternSet &patterns) {
+  populateVectorMaskMaterializationPatterns(patterns,
+                                            /*force32BitVectorIndices=*/false);
+}
+
+//===----------------------------------------------------------------------===//
 // LowerMultiReductionOp
 //===----------------------------------------------------------------------===//
 
