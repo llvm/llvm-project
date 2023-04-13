@@ -120,8 +120,8 @@ public:
   cir::CIRGenBuilderTy &getBuilder() const { return Builder; }
   CIRGenModule &getModule() const { return CGM; }
 
-  /// isFuncTypeConvertible - Utility to check whether a function type can be
-  /// converted to a CIR type (i.e. doesn't depend on an incomplete tag type).
+  /// Utility to check whether a function type can be converted to a CIR type
+  /// (i.e. doesn't depend on an incomplete tag type).
   bool isFuncTypeConvertible(const clang::FunctionType *FT);
   bool isFuncParamTypeConvertible(clang::QualType Ty);
 
@@ -186,6 +186,11 @@ public:
   mlir::FunctionType GetFunctionType(const CIRGenFunctionInfo &Info);
 
   mlir::FunctionType GetFunctionType(clang::GlobalDecl GD);
+
+  /// Get the LLVM function type for use in a vtable, given a CXXMethodDecl. If
+  /// the method to has an incomplete return type, and/or incomplete argument
+  /// types, this will return the opaque type.
+  mlir::FunctionType GetFunctionTypeForVTable(clang::GlobalDecl GD);
 
   // The arrangement methods are split into three families:
   //   - those meant to drive the signature and prologue/epilogue

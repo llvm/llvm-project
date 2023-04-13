@@ -259,6 +259,18 @@ mlir::FunctionType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
                                  resultType ? resultType : mlir::TypeRange());
 }
 
+mlir::FunctionType CIRGenTypes::GetFunctionTypeForVTable(GlobalDecl GD) {
+  const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
+  const FunctionProtoType *FPT = MD->getType()->getAs<FunctionProtoType>();
+
+  if (!isFuncTypeConvertible(FPT)) {
+    llvm_unreachable("NYI");
+    // return llvm::StructType::get(getLLVMContext());
+  }
+
+  return GetFunctionType(GD);
+}
+
 CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &CGF) const {
   assert(!isVirtual() && "Virtual NYI");
   return *this;
