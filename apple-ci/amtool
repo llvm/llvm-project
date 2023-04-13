@@ -1,0 +1,345 @@
+#!/usr/bin/env python3
+"""
+Tool to reproduce and resolve the issues reported by the automerger.
+"""
+
+import argparse
+import json
+import logging
+import shlex
+import subprocess
+import sys
+from typing import List, Optional
+
+log = logging.getLogger()
+
+REMOTE = 'https://github.com/apple/llvm-project.git'
+
+class GitError(Exception):
+    """
+    An exception thrown if the git command failed.
+
+    Attributes
+    ----------
+    args : List[str]
+    The list of arguments passed to `git`.
+    returncode : int
+    The exit code of the `git` process.
+    stdout : str
+    The output of `git`.
+    stderr : str
+    The error output of `git`.
+    """
+
+    def __init__(self, args, returncode: int, stdout: str, stderr: str):
+        self.args = args
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+
+    def __repr__(self):
+        return f'GitError({self.args}, {self.returncode}, "{self.stdout}", "{self.stderr}")'
+
+
+def _git_to_str(args: List[str]):
+    return 'git ' + ' '.join(map(lambda arg: shlex.quote(arg), args))
+
+
+def invoke(*cmd, git_dir: Optional[str] = None,
+           stdin: Optional[str] = None,
+           stdout=None,
+           stderr=subprocess.PIPE,
+           strip: bool = True, ignore_error: bool = False,
+           timeout: Optional[int] = None):
+    """ Invokes a git subprocess with the passed string arguments and return
+        the stdout of the git command as a string if text otherwise a file
+        handle.
+    """
+    if git_dir is not None:
+        all_args = ['-C', git_dir] + list(cmd)
+    else:
+        all_args = list(cmd)
+    log.debug('$ %s', _git_to_str(all_args))
+    p = subprocess.Popen(['git'] + all_args,
+                         stdout=stdout,
+                         stderr=stderr,
+                         stdin=subprocess.PIPE if stdin else None,
+                         universal_newlines=True)
+    out, err = p.communicate(input=stdin, timeout=timeout)
+    if p.returncode == 0:
+        if out:
+            if strip:
+                out = out.rstrip()
+            for line in out.splitlines():
+                log.debug('STDOUT: %s', line)
+        if err:
+            for line in err.rstrip().splitlines():
+                log.debug('STDERR: %s', line)
+        return out
+    log.debug('EXIT STATUS: %d', p.returncode)
+    if err:
+        for line in err.rstrip().splitlines():
+            log.debug('STDERR: %s', line)
+    if ignore_error:
+        return None
+    raise GitError(all_args, p.returncode, out, err)
+
+
+def git(*cmd, **kwargs):
+    """ Invokes a git subprocess with the passed string arguments and return
+        the stdout of the git command.
+    """
+    return invoke(*cmd, **kwargs, stdout=subprocess.PIPE)
+
+
+class Commit:
+    """ Represents the commit being merged."""
+    def __init__(self, sha: str):
+        self.sha = sha
+
+    def short_sha(self):
+        return self.sha[0:12]
+
+    def get_previous_commit(self):
+        return git('rev-parse', self.sha + '^')
+
+
+class MergeId:
+    """ Encapsulates the merge ID constructed by the automerger and the
+        corresponding git operations.
+    """
+    prefix = 'refs/am'
+
+    def __init__(self, merge_id: str):
+        self.merge_id = merge_id
+        parts = merge_id.split('_')
+        try:
+            self.commit = Commit(parts[0])
+            self.target_branch = '/'.join(parts[1:])
+        except IndexError:
+            log.error("Merge Id not correctly formed.")
+
+    @property
+    def ref_name(self):
+        return self.prefix + "/changes/" + self.merge_id
+
+    @property
+    def merge_candidate_ref_name(self):
+        return self.prefix + "/merge-candidate/" + self.merge_id
+
+    def get_previous_merge_id(self):
+        previous_commit = self.commit.get_previous_commit()
+        return MergeId(self.merge_id.replace(self.commit.sha, previous_commit))
+
+    @staticmethod
+    def fetch(*args):
+        """Helper function for the "git fetch" command."""
+        try:
+            git('fetch', *args)
+            return True
+        except GitError as e:
+            if e.returncode == 128:
+                return False
+            raise e
+
+    def fetch_ref_name(self):
+        refspec = self.ref_name + ":" + self.ref_name
+        return self.fetch(REMOTE, self.target_branch, refspec)
+
+    def fetch_merge_candidate_ref_name(self):
+        refspec = self.merge_candidate_ref_name + ":" + self.merge_candidate_ref_name
+        return self.fetch(REMOTE, refspec)
+
+    @staticmethod
+    def checkout(*args):
+        """Helper function for the "git checkout" command."""
+        try:
+            git('checkout', *args)
+            return (True, '')
+        except GitError as e:
+            return (False, e.stderr)
+
+    def checkout_merge_candidate(self):
+        """Checkout the merge candidate for this merge ID."""
+        return self.checkout(self.merge_candidate_ref_name)
+
+    def checkout_target_branch(self):
+        """Checkout the target branch for this merge ID."""
+        if self.fetch(REMOTE, self.target_branch):
+            return self.checkout('FETCH_HEAD')
+        return (False, '')
+
+    def get_source_branch_name(self):
+        """Get the source branch name (upstream) for this target branch."""
+        content = None
+        if self.fetch(REMOTE, 'repo/apple-llvm-config/am'):
+            content = git('cat-file', '-p',
+                          'FETCH_HEAD:apple-llvm-config/am/am-config.json')
+        if not content:
+            return None
+        config = json.loads(content)
+        if not config:
+            return None
+        for json_dict in config:
+            if json_dict['target'] == self.target_branch:
+                return json_dict['upstream']
+        return None
+
+    def merge(self):
+        source_branch = self.get_source_branch_name()
+        if not source_branch:
+            log.error(f"Could not figure out the source branch for {self.target_branch}.")
+        try:
+            git('merge', '--no-edit', "-X", "diff-algorithm=histogram",
+                "--summary", self.ref_name, '-m',
+                f"Merge commit '{self.commit.short_sha()}' from {source_branch} into {self.target_branch}")
+            return True
+        except GitError as e:
+            if 'CONFLICT' in e.stdout:
+                return False
+            raise e
+
+    def push(self):
+        try:
+            git('push', REMOTE, f'HEAD:{self.ref_name}')
+            return (True, '')
+        except GitError as e:
+            return (False, e.stdout)
+
+
+def parse_args():
+    """Parse the command line arguments."""
+
+    parser = argparse.ArgumentParser(description="Automerger Tool")
+    parser.add_argument('-v', '--verbose', action='store_true', required=False,
+            help='enable verbose outout and show commands being run')
+
+    subparsers = parser.add_subparsers(dest='command', required=True,
+            help='the command to run')
+    # Reproduce
+    parser_reproduce = subparsers.add_parser('reproduce',
+            help='Reproduce the issue observed when performing  merge')
+    parser_reproduce.add_argument('id', help='the merge ID to reproduce')
+    # Push
+    parser_push = subparsers.add_parser('push',
+            help='push the resolution, so that the automerger can pick it up')
+
+    args = parser.parse_args()
+    return args
+
+
+def main():
+    args = parse_args()
+
+    # Default to INFO level. Increase to DEBUG level if verbose flag passed.
+    log_level = logging.INFO
+    if args.verbose:
+        log_level = logging.DEBUG
+
+    log.setLevel(log_level)
+    # create console handler with a higher log level
+    ch = logging.StreamHandler()
+    ch.setLevel(log_level)
+    # create formatter and add it to the handlers
+    ch_fomatter = logging.Formatter('%(levelname)s: %(message)s')
+    ch.setFormatter(ch_fomatter)
+    # add the handlers to the logger
+    log.addHandler(ch)
+
+    # File to record the merge ID locally so we can use it in  the `push`
+    # command without having the user enter it again.
+    record = '.am.txt'
+
+    # Reproduce mode.
+    if args.command == "reproduce":
+        log.info('Attempting to reproduce the issue.')
+        merge_id = MergeId(args.id)
+
+        # Record the ref locally so we can use it in  the `push` command
+        # without having the user enter it again.
+        with open(record, 'w') as f:
+            f.write(args.id)
+
+        # Fetch the ref. If we failed to fetch then just return because it is
+        # likely that the commit has already been merged and the ref deleted.
+        log.info('Fetching the ref and the target branch ...')
+        status = merge_id.fetch_ref_name()
+        if not status:
+            log.error('Unable to fetch the ref. Are you in the right repo? Or, is it already merged?')
+            return 1
+        log.info('Successfully fetched.')
+
+        # Fetch the merge candidate ref for the previous commit and check it
+        # out in order to apply this commit on top of it. This allows us to
+        # reproduce just this issue and not any other issues in the prior
+        # commits which have not been merged yet.
+        # If we failed to fetch then it is likely that the previous commit has
+        # already been merged. Checkout the target branch in that case.
+        previous_merge_id = merge_id.get_previous_merge_id()
+        log.info('Fetching the previous commit ...')
+        status = previous_merge_id.fetch_merge_candidate_ref_name()
+        if not status:
+            log.info('Previous commit already merged. Checking out the target branch instead.')
+            status, msg = merge_id.checkout_target_branch()
+            if not status:
+                log.error('Failed to checkout.')
+                log.error(msg)
+                return 1
+            log.info('Successfully checked out the target branch.')
+        else:
+            log.info('Successfully fetched.')
+            log.info('Now checking out the previous commit.')
+            status, msg = previous_merge_id.checkout_merge_candidate()
+            if not status:
+                log.error('Failed to checkout.')
+                log.error(msg)
+                return 1
+            log.info('Successfully checked out the previous commit.')
+
+        # Perform the merge.
+        log.info('Performing the merge ...')
+        rc = merge_id.merge()
+        if not rc:
+            log.info('Please resolve the conflicts and push the merge commit.')
+            return 0
+        log.info('No merge conflict seen. Is this a build/test failure?')
+        log.info('Please resolve the issue and push the commit.')
+        return 0
+
+    # Push mode.
+    elif args.command == "push":
+        # Read the ref saved locally by the `reproduce` command.
+        try:
+            with open(record, 'r') as f:
+                content = f.read()
+        except FileNotFoundError:
+            log.error('Did you run the `reproduce` command before?')
+            return 1
+        log.debug(f'Content : {content}')
+
+        # Check if we happen to be still in the middle of the merge.
+        # Proceed to push if otherwise the merge has been concluded.
+        try:
+            git('rev-parse', '--verify', '--quiet', 'MERGE_HEAD')
+            log.error('Looks like you are in the middle of the merge.')
+            log.error('Please conclude the merge before pushing.')
+            return 1
+        except GitError:
+            pass
+
+        # Save the commit sha so that we can include it in the output message.
+        merge_commit = git('rev-parse', '--short', 'HEAD')
+
+        # Perform the push.
+        merge_id = MergeId(content)
+        log.info("Pushing ...")
+        status, msg = merge_id.push()
+        if not status:
+            log.error('Failed to push.')
+            log.error(msg)
+            return 1
+        log.info(f'Successfully pushed `{merge_commit}`.')
+
+
+if __name__ == '__main__':
+    sys.exit(main())
