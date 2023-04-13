@@ -61,10 +61,13 @@ public:
     return StringView(First + N, Last);
   }
 
-  StringView dropBack(size_t N = 1) const {
-    if (N >= size())
-      N = size();
-    return StringView(First, Last - N);
+  void remove_prefix(size_t N) {
+    assert(size() >= N);
+    First += N;
+  }
+  void remove_suffix(size_t N) {
+    assert(size() >= N);
+    Last -= N;
   }
 
   char front() const {
