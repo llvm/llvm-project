@@ -139,7 +139,7 @@
 ; CHECK-O-NEXT: Running pass: InlinerPass
 ; CHECK-O-NEXT: Running pass: InlinerPass
 ; CHECK-O-NEXT: Running pass: PostOrderFunctionAttrsPass
-; CHECK-O3-NEXT: Running pass: ArgumentPromotionPass
+; CHECK-O-NEXT: Running pass: ArgumentPromotionPass
 ; CHECK-O2-NEXT: Running pass: OpenMPOptCGSCCPass on (foo)
 ; CHECK-O3-NEXT: Running pass: OpenMPOptCGSCCPass on (foo)
 ; CHECK-EP-CGSCC-LATE-NEXT: Running pass: NoOpCGSCCPass

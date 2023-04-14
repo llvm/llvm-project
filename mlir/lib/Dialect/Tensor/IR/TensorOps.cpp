@@ -3086,6 +3086,10 @@ void ParallelInsertSliceOp::getCanonicalizationPatterns(
               InsertSliceOpSourceCastInserter<ParallelInsertSliceOp>>(context);
 }
 
+llvm::SmallBitVector ParallelInsertSliceOp::getDroppedDims() {
+  return ::getDroppedDims(getSourceType().getShape(), getMixedSizes());
+}
+
 //===----------------------------------------------------------------------===//
 // ScatterOp
 //===----------------------------------------------------------------------===//

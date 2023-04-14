@@ -15,6 +15,7 @@ static_library("utils") {
     "Aliasing.cpp",
     "DeclRefExprUtils.cpp",
     "ExceptionAnalyzer.cpp",
+    "ExceptionSpecAnalyzer.cpp",
     "ExprSequence.cpp",
     "FileExtensionsUtils.cpp",
     "FixItHintUtils.cpp",
