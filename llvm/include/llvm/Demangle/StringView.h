@@ -31,8 +31,6 @@ public:
 
   template <size_t N>
   StringView(const char (&Str)[N]) : First(Str), Last(Str + N - 1) {}
-  StringView(const char *First_, const char *Last_)
-      : First(First_), Last(Last_) {}
   StringView(const char *First_, size_t Len)
       : First(First_), Last(First_ + Len) {}
   StringView(const char *Str) : First(Str), Last(Str + std::strlen(Str)) {}
