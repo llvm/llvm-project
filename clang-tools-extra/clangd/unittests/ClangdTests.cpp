@@ -1310,6 +1310,50 @@ TEST(ClangdServer, RespectsTweakFormatting) {
   });
   N.wait();
 }
+
+TEST(ClangdServer, InactiveRegions) {
+  struct InactiveRegionsCallback : ClangdServer::Callbacks {
+    std::vector<std::vector<Range>> FoundInactiveRegions;
+
+    void onInactiveRegionsReady(PathRef FIle,
+                                std::vector<Range> InactiveRegions) override {
+      FoundInactiveRegions.push_back(std::move(InactiveRegions));
+    }
+  };
+
+  MockFS FS;
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags.push_back("-DCMDMACRO");
+  auto Opts = ClangdServer::optsForTest();
+  Opts.PublishInactiveRegions = true;
+  InactiveRegionsCallback Callback;
+  ClangdServer Server(CDB, FS, Opts, &Callback);
+  Annotations Source(R"cpp(
+#define PREAMBLEMACRO 42
+#if PREAMBLEMACRO > 40
+  #define ACTIVE
+$inactive1[[#else
+  #define INACTIVE
+#endif]]
+int endPreamble;
+$inactive2[[#ifndef CMDMACRO
+    int inactiveInt;
+#endif]]
+#undef CMDMACRO
+$inactive3[[#ifdef CMDMACRO
+  int inactiveInt2;
+#else]]
+  int activeInt;
+#endif
+  )cpp");
+  Server.addDocument(testPath("foo.cpp"), Source.code());
+  ASSERT_TRUE(Server.blockUntilIdleForTest());
+  EXPECT_THAT(Callback.FoundInactiveRegions,
+              ElementsAre(ElementsAre(Source.range("inactive1"),
+                                      Source.range("inactive2"),
+                                      Source.range("inactive3"))));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

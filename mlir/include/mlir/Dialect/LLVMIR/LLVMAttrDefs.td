@@ -9,9 +9,8 @@
 #ifndef LLVMIR_ATTRDEFS
 #define LLVMIR_ATTRDEFS
 
+include "mlir/Dialect/LLVMIR/LLVMDialect.td"
 include "mlir/IR/AttrTypeBase.td"
-include "mlir/Dialect/LLVMIR/LLVMEnums.td"
-include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 
 // All of the attributes will extend this class.
 class LLVM_Attr<string name, string attrMnemonic,
@@ -28,15 +27,6 @@ class LLVM_Attr<string name, string attrMnemonic,
 def CConvAttr : LLVM_Attr<"CConv", "cconv"> {
   let parameters = (ins "CConv":$CallingConv);
   let assemblyFormat = "`<` $CallingConv `>`";
-}
-
-//===----------------------------------------------------------------------===//
-// FastmathFlagsAttr
-//===----------------------------------------------------------------------===//
-
-def LLVM_FastmathFlagsAttr :
-    EnumAttr<LLVM_Dialect, FastmathFlags, "fastmath"> {
-  let assemblyFormat = "`<` $value `>`";
 }
 
 //===----------------------------------------------------------------------===//

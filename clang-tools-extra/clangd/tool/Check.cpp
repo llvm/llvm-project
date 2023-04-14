@@ -344,7 +344,8 @@ public:
 
   void buildSemanticHighlighting(std::optional<Range> LineRange) {
     log("Building semantic highlighting");
-    auto Highlights = getSemanticHighlightings(*AST);
+    auto Highlights =
+        getSemanticHighlightings(*AST, /*IncludeInactiveRegionTokens=*/true);
     for (const auto HL : Highlights)
       if (!LineRange || LineRange->contains(HL.R))
         vlog(" {0} {1} {2}", HL.R, HL.Kind, HL.Modifiers);

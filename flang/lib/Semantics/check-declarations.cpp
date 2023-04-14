@@ -586,9 +586,8 @@ void CheckHelper::CheckAssumedTypeEntity( // C709
             symbol.name());
       }
       if (details.IsArray() && details.shape().IsExplicitShape()) {
-        messages_.Say(
-            "Assumed-type array argument 'arg8' must be assumed shape,"
-            " assumed size, or assumed rank"_err_en_US,
+        messages_.Say("Assumed-type array argument '%s' must be assumed shape,"
+                      " assumed size, or assumed rank"_err_en_US,
             symbol.name());
       }
     }
