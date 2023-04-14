@@ -89,7 +89,7 @@ static void OnStackUnwind(const SignalContext &sig, const void *,
 }
 
 void LsanOnDeadlySignal(int signo, void *siginfo, void *context) {
-  HandleDeadlySignal(siginfo, context, GetCurrentThread(), &OnStackUnwind,
+  HandleDeadlySignal(siginfo, context, GetCurrentThreadId(), &OnStackUnwind,
                      nullptr);
 }
 
