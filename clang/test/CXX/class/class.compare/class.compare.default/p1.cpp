@@ -226,3 +226,26 @@ void f2() {
   (void)(b == 0);
 }
 } // namespace p2085_2
+
+namespace GH61417 {
+struct A {
+  unsigned x : 1;
+  unsigned   : 0;
+  unsigned y : 1;
+
+  constexpr A() : x(0), y(0) {}
+  bool operator==(const A& rhs) const noexcept = default;
+};
+
+void f1() {
+  constexpr A a, b;
+  constexpr bool c = (a == b); // no diagnostic, we should not be comparing the
+                               // unnamed bit-field which is indeterminate
+}
+
+void f2() {
+    A a, b;
+    bool c = (a == b); // no diagnostic nor crash during codegen attempting to
+                       // access info for unnamed bit-field
+}
+}
