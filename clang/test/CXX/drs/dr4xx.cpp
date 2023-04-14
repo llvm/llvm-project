@@ -124,6 +124,7 @@ namespace dr406 { // dr406: yes
 }
 
 namespace dr407 { // dr407: 3.8
+                  // NB: reused by dr1894 and dr2199
   struct S;
   typedef struct S S;
   void f() {
