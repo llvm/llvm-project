@@ -298,21 +298,6 @@ TypeSystemSwiftTypeRef::GetClangTypeNode(CompilerType clang_type,
   if (clang_type.IsPointerType(&pointee))
     clang_type = pointee;
   llvm::StringRef clang_name = clang_type.GetTypeName().GetStringRef();
-  // FIXME: Create a higher-level entry point for this by generalizing
-  // ClangAdapter.
-  struct Adapter {
-    struct Context {
-      swift::ASTContext *AST;
-      llvm::StringRef getSwiftName(swift::KnownFoundationEntity entity) {
-        if (AST)
-          return AST->getSwiftName(entity);
-        return "<error: no Swift context>";
-      }
-      Context(swift::ASTContext *ctx) : AST(ctx){};
-    } SwiftContext;
-    Adapter(swift::ASTContext *ctx) : SwiftContext(ctx){};
-  } Impl(GetSwiftASTContext() ? GetSwiftASTContext()->GetASTContext()
-                              : nullptr);
 #define MAP_TYPE(C_TYPE_NAME, C_TYPE_KIND, C_TYPE_BITWIDTH, SWIFT_MODULE_NAME, \
                  SWIFT_TYPE_NAME, CAN_BE_MISSING, C_NAME_MAPPING)              \
   if (clang_name.equals(C_TYPE_NAME)) {                                        \
