@@ -4,6 +4,7 @@ module {
   cir.global external @a = 3 : i32
   cir.global external @rgb = #cir.const_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
   cir.global external @b = #cir.const_array<"example\00" : !cir.array<i8 x 8>>
+  cir.global external @rgb2 = #cir.const_struct<{0 : i8, 5 : i64, #cir.null : !cir.ptr<i8>}> : !cir.struct<"", i8, i64, !cir.ptr<i8>>
   cir.global "private" constant internal @".str" : !cir.array<i8 x 8> {alignment = 1 : i64}
   cir.global "private" internal @c : i32
   cir.global "private" constant internal @".str2" = #cir.const_array<"example\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
