@@ -112,10 +112,10 @@ New checks
   This check relies heavily on, but is not exclusive to, the functions from
   the *Annex K. "Bounds-checking interfaces"* of C11.
 
-- New :doc:`cppcoreguidelines-avoid-capture-default-when-capturing-this
-  <clang-tidy/checks/cppcoreguidelines/avoid-capture-default-when-capturing-this>` check.
+- New :doc:`cppcoreguidelines-misleading-capture-default-by-value
+  <clang-tidy/checks/cppcoreguidelines/misleading-capture-default-by-value>` check.
 
-  Warns when lambda specify a capture default and capture ``this``.
+  Warns when lambda specify a by-value capture default and capture ``this``.
 
 - New :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>` check.
