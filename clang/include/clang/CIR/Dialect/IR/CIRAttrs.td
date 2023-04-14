@@ -93,6 +93,39 @@ def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]>
 }
 
 //===----------------------------------------------------------------------===//
+// ConstStructAttr
+//===----------------------------------------------------------------------===//
+
+def ConstStructAttr : CIR_Attr<"ConstStruct", "const_struct",
+                               [TypedAttrInterface]> {
+  let summary = "Represents a constant struct";
+  let description = [{
+    Effectively supports "struct-like" constants. It's must be built from
+    an `mlir::ArrayAttr `instance where each elements is a typed attribute
+    (`mlir::TypedAttribute`).
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        "ArrayAttr":$members);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::cir::StructType":$type,
+                                        "ArrayAttr":$members), [{
+      return $_get(type.getContext(), type, members);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    `<`
+      custom<ConstStructMembers>($type, $members)
+    `>`
+  }];
+
+  // let hasCustomAssemblyFormat = 1;
+  // let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // SignedOverflowBehaviorAttr
 //===----------------------------------------------------------------------===//
 
