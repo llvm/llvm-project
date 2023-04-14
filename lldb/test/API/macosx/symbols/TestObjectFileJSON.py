@@ -7,6 +7,7 @@ import json
 import uuid
 import os
 import shutil
+import time
 
 
 class TestObjectFileJSON(TestBase):
@@ -80,6 +81,9 @@ class TestObjectFileJSON(TestBase):
                 }
             ],
         }
+
+        # Sleep to ensure the new file has a different timestamp
+        time.sleep(2)
         self.emitJSON(data, json_object_file)
 
         module = target.AddModule(self.toModuleSpec(json_object_file))
