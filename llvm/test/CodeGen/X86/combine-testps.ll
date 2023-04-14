@@ -187,6 +187,27 @@ define i32 @testpsnzc_256_signbit(<8 x float> %c, <8 x float> %d, i32 %a, i32 %b
   ret i32 %t6
 }
 
+define i32 @testpsc_256_signbit_multiuse(<8 x float> %c, i32 %a, i32 %b) {
+; CHECK-LABEL: testpsc_256_signbit_multiuse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vpsrad $31, %xmm0, %xmm1
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vpsrad $31, %xmm0, %xmm0
+; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; CHECK-NEXT:    vtestps %ymm0, %ymm0
+; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %t0 = bitcast <8 x float> %c to <8 x i32>
+  %t1 = ashr <8 x i32> %t0, <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>
+  %t2 = bitcast <8 x i32> %t1 to <8 x float>
+  %t3 = call i32 @llvm.x86.avx.vtestz.ps.256(<8 x float> %t2, <8 x float> %t2)
+  %t4 = icmp ne i32 %t3, 0
+  %t5 = select i1 %t4, i32 %a, i32 %b
+  ret i32 %t5
+}
+
 declare i32 @llvm.x86.avx.vtestz.ps(<4 x float>, <4 x float>) nounwind readnone
 declare i32 @llvm.x86.avx.vtestc.ps(<4 x float>, <4 x float>) nounwind readnone
 declare i32 @llvm.x86.avx.vtestnzc.ps(<4 x float>, <4 x float>) nounwind readnone
