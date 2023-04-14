@@ -36,7 +36,6 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdio>
@@ -84,16 +83,6 @@ public:
 };
 } // namespace
 
-static std::string ToolName;
-
-static void printError(const ErrorInfoBase &EI, StringRef Path) {
-  WithColor::error(errs(), ToolName);
-  if (!EI.isA<FileError>())
-    errs() << "'" << Path << "': ";
-  EI.log(errs());
-  errs() << '\n';
-}
-
 template <typename T>
 static void print(const Request &Request, Expected<T> &ResOrErr,
                   DIPrinter &Printer) {
@@ -107,7 +96,8 @@ static void print(const Request &Request, Expected<T> &ResOrErr,
   bool PrintEmpty = true;
   handleAllErrors(std::move(ResOrErr.takeError()),
                   [&](const ErrorInfoBase &EI) {
-                    PrintEmpty = Printer.printError(Request, EI);
+                    PrintEmpty = Printer.printError(
+                        Request, EI, "LLVMSymbolizer: error reading file: ");
                   });
 
   if (PrintEmpty)
@@ -388,8 +378,7 @@ int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   sys::InitializeCOMRAII COM(sys::COMThreadingMode::MultiThreaded);
 
-  ToolName = argv[0];
-  bool IsAddr2Line = sys::path::stem(ToolName).contains("addr2line");
+  bool IsAddr2Line = sys::path::stem(argv[0]).contains("addr2line");
   BumpPtrAllocator A;
   StringSaver Saver(A);
   SymbolizerOptTable Tbl;
@@ -472,11 +461,11 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<DIPrinter> Printer;
   if (Style == OutputStyle::GNU)
-    Printer = std::make_unique<GNUPrinter>(outs(), printError, Config);
+    Printer = std::make_unique<GNUPrinter>(outs(), errs(), Config);
   else if (Style == OutputStyle::JSON)
     Printer = std::make_unique<JSONPrinter>(outs(), Config);
   else
-    Printer = std::make_unique<LLVMPrinter>(outs(), printError, Config);
+    Printer = std::make_unique<LLVMPrinter>(outs(), errs(), Config);
 
   std::vector<std::string> InputAddresses = Args.getAllArgValues(OPT_INPUT);
   if (InputAddresses.empty()) {
