@@ -1236,7 +1236,7 @@ Expected<StringRef> ELFFile<ELFT>::getSectionName(const Elf_Shdr &Section,
 /// This function returns the hash value for a symbol in the .dynsym section
 /// Name of the API remains consistent as specified in the libelf
 /// REF : http://www.sco.com/developers/gabi/latest/ch5.dynamic.html#hash
-inline unsigned hashSysV(StringRef SymbolName) {
+inline uint32_t hashSysV(StringRef SymbolName) {
   uint32_t H = 0;
   for (uint8_t C : SymbolName) {
     H = (H << 4) + C;
