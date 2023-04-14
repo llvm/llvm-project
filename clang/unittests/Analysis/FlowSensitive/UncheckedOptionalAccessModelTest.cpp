@@ -1784,8 +1784,7 @@ TEST_P(UncheckedOptionalAccessTest, ValueOr) {
   )");
 }
 
-TEST_P(UncheckedOptionalAccessTest, ValueOrComparison) {
-  // Pointers.
+TEST_P(UncheckedOptionalAccessTest, ValueOrComparisonPointers) {
   ExpectDiagnosticsFor(
       R"code(
     #include "unchecked_optional_access_test.h"
@@ -1798,8 +1797,9 @@ TEST_P(UncheckedOptionalAccessTest, ValueOrComparison) {
       }
     }
   )code");
+}
 
-  // Integers.
+TEST_P(UncheckedOptionalAccessTest, ValueOrComparisonIntegers) {
   ExpectDiagnosticsFor(
       R"code(
     #include "unchecked_optional_access_test.h"
@@ -1812,8 +1812,9 @@ TEST_P(UncheckedOptionalAccessTest, ValueOrComparison) {
       }
     }
   )code");
+}
 
-  // Strings.
+TEST_P(UncheckedOptionalAccessTest, ValueOrComparisonStrings) {
   ExpectDiagnosticsFor(
       R"code(
     #include "unchecked_optional_access_test.h"
@@ -1839,9 +1840,9 @@ TEST_P(UncheckedOptionalAccessTest, ValueOrComparison) {
       }
     }
   )code");
+}
 
-  // Pointer-to-optional.
-  //
+TEST_P(UncheckedOptionalAccessTest, ValueOrComparisonPointerToOptional) {
   // FIXME: make `opt` a parameter directly, once we ensure that all `optional`
   // values have a `has_value` property.
   ExpectDiagnosticsFor(
