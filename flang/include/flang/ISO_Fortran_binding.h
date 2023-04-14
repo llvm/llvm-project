@@ -43,7 +43,8 @@ typedef unsigned char CFI_attribute_t;
 typedef signed char CFI_type_t;
 /* These codes are required to be macros (i.e., #ifdef will work).
  * They are not required to be distinct, but neither are they required
- * to have had their synonyms combined.
+ * to have had their synonyms combined.  Codes marked as extensions may be
+ * place holders for as yet unimplemented types.
  */
 #define CFI_type_signed_char 1
 #define CFI_type_short 2
@@ -55,7 +56,7 @@ typedef signed char CFI_type_t;
 #define CFI_type_int16_t 8
 #define CFI_type_int32_t 9
 #define CFI_type_int64_t 10
-#define CFI_type_int128_t 11 /* extension kind=16 */
+#define CFI_type_int128_t 11 /* extension */
 #define CFI_type_int_least8_t 12
 #define CFI_type_int_least16_t 13
 #define CFI_type_int_least32_t 14
@@ -87,8 +88,8 @@ typedef signed char CFI_type_t;
 #define CFI_type_char 40
 #define CFI_type_cptr 41
 #define CFI_type_struct 42
-#define CFI_type_char16_t 43 /* extension kind=2 */
-#define CFI_type_char32_t 44 /* extension kind=4 */
+#define CFI_type_char16_t 43 /* extension */
+#define CFI_type_char32_t 44 /* extension */
 #define CFI_TYPE_LAST CFI_type_char32_t
 #define CFI_type_other (-1) // must be negative
 
