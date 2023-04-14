@@ -7,4 +7,4 @@ STDOUT: ??:0:0
 STDOUT: ??
 STDOUT: ??:0:0
 
-STDERR-COUNT-2: llvm-symbolizer{{.*}}: error: 'ABAD': could not find build ID
+STDERR-COUNT-2: LLVMSymbolizer: error reading file: could not find build ID 'ABAD'

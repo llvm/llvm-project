@@ -266,8 +266,11 @@ void PlainPrinterBase::printInvalidCommand(const Request &Request,
 }
 
 bool PlainPrinterBase::printError(const Request &Request,
-                                  const ErrorInfoBase &ErrorInfo) {
-  ErrHandler(ErrorInfo, Request.ModuleName);
+                                  const ErrorInfoBase &ErrorInfo,
+                                  StringRef ErrorBanner) {
+  ES << ErrorBanner;
+  ErrorInfo.log(ES);
+  ES << '\n';
   // Print an empty struct too.
   return true;
 }
@@ -371,11 +374,13 @@ void JSONPrinter::printInvalidCommand(const Request &Request,
                                       StringRef Command) {
   printError(Request,
              StringError("unable to parse arguments: " + Command,
-                         std::make_error_code(std::errc::invalid_argument)));
+                         std::make_error_code(std::errc::invalid_argument)),
+             "");
 }
 
 bool JSONPrinter::printError(const Request &Request,
-                             const ErrorInfoBase &ErrorInfo) {
+                             const ErrorInfoBase &ErrorInfo,
+                             StringRef ErrorBanner) {
   json::Object Json = toJSON(Request, ErrorInfo.message());
   if (ObjectList)
     ObjectList->push_back(std::move(Json));
