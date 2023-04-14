@@ -47,13 +47,6 @@ public:
         Scratch(Scratch) {}
 
 private:
-  Expected<int64_t> runAndMeasure(const char *Counters) const override {
-    auto ResultOrError = runAndSample(Counters);
-    if (ResultOrError)
-      return ResultOrError.get()[0];
-    return ResultOrError.takeError();
-  }
-
   static void
   accumulateCounterValues(const llvm::SmallVector<int64_t, 4> &NewValues,
                           llvm::SmallVector<int64_t, 4> *Result) {
