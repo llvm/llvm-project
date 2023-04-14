@@ -163,19 +163,15 @@ SIPreAllocateWWMRegs::printWWMInfo(const MachineInstr &MI) {
 
   unsigned Opc = MI.getOpcode();
 
-  if (Opc == AMDGPU::ENTER_STRICT_WWM || Opc == AMDGPU::ENTER_STRICT_WQM ||
-      Opc == AMDGPU::ENTER_PSEUDO_WM) {
+  if (Opc == AMDGPU::ENTER_STRICT_WWM || Opc == AMDGPU::ENTER_STRICT_WQM) {
     dbgs() << "Entering ";
   } else {
-    assert(Opc == AMDGPU::EXIT_STRICT_WWM || Opc == AMDGPU::EXIT_STRICT_WQM ||
-           Opc == AMDGPU::EXIT_PSEUDO_WM);
+    assert(Opc == AMDGPU::EXIT_STRICT_WWM || Opc == AMDGPU::EXIT_STRICT_WQM);
     dbgs() << "Exiting ";
   }
 
   if (Opc == AMDGPU::ENTER_STRICT_WWM || Opc == AMDGPU::EXIT_STRICT_WWM) {
     dbgs() << "Strict WWM ";
-  } else if (Opc == AMDGPU::ENTER_PSEUDO_WM || Opc == AMDGPU::EXIT_PSEUDO_WM) {
-    dbgs() << "Pseudo WWM/WQM ";
   } else {
     assert(Opc == AMDGPU::ENTER_STRICT_WQM || Opc == AMDGPU::EXIT_STRICT_WQM);
     dbgs() << "Strict WQM ";
@@ -218,16 +214,14 @@ bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
         RegsAssigned |= processDef(MI.getOperand(0));
 
       if (MI.getOpcode() == AMDGPU::ENTER_STRICT_WWM ||
-          MI.getOpcode() == AMDGPU::ENTER_STRICT_WQM ||
-          MI.getOpcode() == AMDGPU::ENTER_PSEUDO_WM) {
+          MI.getOpcode() == AMDGPU::ENTER_STRICT_WQM) {
         LLVM_DEBUG(printWWMInfo(MI));
         InWWM = true;
         continue;
       }
 
       if (MI.getOpcode() == AMDGPU::EXIT_STRICT_WWM ||
-          MI.getOpcode() == AMDGPU::EXIT_STRICT_WQM ||
-          MI.getOpcode() == AMDGPU::EXIT_PSEUDO_WM) {
+          MI.getOpcode() == AMDGPU::EXIT_STRICT_WQM) {
         LLVM_DEBUG(printWWMInfo(MI));
         InWWM = false;
       }
