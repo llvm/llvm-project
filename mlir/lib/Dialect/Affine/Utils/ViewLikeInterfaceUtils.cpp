@@ -77,32 +77,49 @@ LogicalResult mlir::mergeOffsetsSizesAndStrides(
       combinedOffsets, combinedSizes, combinedStrides);
 }
 
-void mlir::resolveSourceIndicesOffsetsAndStrides(
-    RewriterBase &rewriter, Location loc, ArrayRef<OpFoldResult> mixedOffsets,
-    ArrayRef<OpFoldResult> mixedStrides,
-    const llvm::SmallBitVector &rankReducedDims, ValueRange indicesVals,
-    SmallVectorImpl<Value> &sourceIndices) {
+void mlir::resolveIndicesIntoOpWithOffsetsAndStrides(
+    RewriterBase &rewriter, Location loc,
+    ArrayRef<OpFoldResult> mixedSourceOffsets,
+    ArrayRef<OpFoldResult> mixedSourceStrides,
+    const llvm::SmallBitVector &rankReducedDims,
+    ArrayRef<OpFoldResult> consumerIndices,
+    SmallVectorImpl<Value> &resolvedIndices) {
   OpFoldResult zero = rewriter.getIndexAttr(0);
 
   // For each dimension that is rank-reduced, add a zero to the indices.
   int64_t indicesDim = 0;
   SmallVector<OpFoldResult> indices;
-  for (auto dim : llvm::seq<int64_t>(0, mixedOffsets.size())) {
+  for (auto dim : llvm::seq<int64_t>(0, mixedSourceOffsets.size())) {
     OpFoldResult ofr =
-        (rankReducedDims.test(dim)) ? zero : indicesVals[indicesDim++];
+        (rankReducedDims.test(dim)) ? zero : consumerIndices[indicesDim++];
     indices.push_back(ofr);
   }
 
-  sourceIndices.resize(indices.size());
-  sourceIndices.clear();
+  resolvedIndices.resize(indices.size());
+  resolvedIndices.clear();
   for (auto [offset, index, stride] :
-       llvm::zip_equal(mixedOffsets, indices, mixedStrides)) {
+       llvm::zip_equal(mixedSourceOffsets, indices, mixedSourceStrides)) {
     AffineExpr off, idx, str;
     bindSymbols(rewriter.getContext(), off, idx, str);
     OpFoldResult ofr = makeComposedFoldedAffineApply(
         rewriter, loc, AffineMap::get(0, 3, off + idx * str),
         {offset, index, stride});
-    sourceIndices.push_back(
+    resolvedIndices.push_back(
         getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
+  }
+}
+
+void mlir::resolveSizesIntoOpWithSizes(
+    ArrayRef<OpFoldResult> sourceSizes, ArrayRef<OpFoldResult> destSizes,
+    const llvm::SmallBitVector &rankReducedSourceDims,
+    SmallVectorImpl<OpFoldResult> &resolvedSizes) {
+  int64_t dim = 0;
+  int64_t srcRank = sourceSizes.size();
+  for (int64_t srcDim = 0; srcDim < srcRank; ++srcDim) {
+    if (rankReducedSourceDims[srcDim]) {
+      resolvedSizes.push_back(sourceSizes[srcDim]);
+      continue;
+    }
+    resolvedSizes.push_back(destSizes[dim++]);
   }
 }

@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_NOEXCEPTMOVECONSTRUCTORCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "../utils/ExceptionSpecAnalyzer.h"
 
 namespace clang::tidy::performance {
 
@@ -25,10 +26,13 @@ public:
   NoexceptMoveConstructorCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus11;
+    return LangOpts.CPlusPlus11 && LangOpts.CXXExceptions;
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  utils::ExceptionSpecAnalyzer SpecAnalyzer;
 };
 
 } // namespace clang::tidy::performance

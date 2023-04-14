@@ -202,8 +202,7 @@ bool Demangler::demangle(StringView Mangled) {
     return false;
   }
   size_t Dot = Mangled.find('.');
-  Input = Mangled.substr(0, Dot);
-  StringView Suffix = Mangled.dropFront(Dot);
+  Input = Dot == StringView::npos ? Mangled : Mangled.substr(0, Dot);
 
   demanglePath(IsInType::No);
 
@@ -215,9 +214,9 @@ bool Demangler::demangle(StringView Mangled) {
   if (Position != Input.size())
     Error = true;
 
-  if (!Suffix.empty()) {
+  if (Dot != StringView::npos) {
     print(" (");
-    print(Suffix);
+    print(Mangled.substr(Dot));
     print(")");
   }
 
@@ -1123,7 +1122,7 @@ static bool decodePunycode(StringView Input, OutputBuffer &Output) {
         return false;
       // Code points are padded with zeros while decoding is in progress.
       char UTF8[4] = {C};
-      Output += StringView(UTF8, UTF8 + 4);
+      Output += StringView(UTF8, 4);
     }
     // Skip over the delimiter.
     ++InputIdx;

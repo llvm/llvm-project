@@ -1697,7 +1697,7 @@ PDBASTParser *SymbolFilePDB::GetPDBAstParser() {
 
 lldb_private::CompilerDeclContext
 SymbolFilePDB::FindNamespace(lldb_private::ConstString name,
-                             const CompilerDeclContext &parent_decl_ctx) {
+                             const CompilerDeclContext &parent_decl_ctx, bool) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   auto type_system_or_err =
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);

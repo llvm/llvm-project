@@ -17,6 +17,7 @@
 #include "CodeGenIntrinsics.h"
 #include "CodeGenTarget.h"
 #include "SDNodeProperties.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -42,7 +43,7 @@ class TreePatternNode;
 class CodeGenDAGPatterns;
 
 /// Shared pointer for TreePatternNode.
-using TreePatternNodePtr = std::shared_ptr<TreePatternNode>;
+using TreePatternNodePtr = IntrusiveRefCntPtr<TreePatternNode>;
 
 /// This represents a set of MVTs. Since the underlying type for the MVT
 /// is uint8_t, there are at most 256 values. To reduce the number of memory
@@ -623,7 +624,7 @@ struct TreePredicateCall {
   }
 };
 
-class TreePatternNode {
+class TreePatternNode : public RefCountedBase<TreePatternNode> {
   /// The type of each node result.  Before and during type inference, each
   /// result may be a set of possible types.  After (successful) type inference,
   /// each is a single concrete type.

@@ -4437,6 +4437,17 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.copysign(KnownSign);
         break;
       }
+      case Intrinsic::sin:
+      case Intrinsic::cos: {
+        // Return NaN on infinite inputs.
+        KnownFPClass KnownSrc;
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedClasses, KnownSrc, Depth + 1, Q, TLI);
+        Known.knownNot(fcInf);
+        if (KnownSrc.isKnownNeverNaN() && KnownSrc.isKnownNeverInfinity())
+          Known.knownNot(fcNan);
+        break;
+      }
       default:
         break;
       }
@@ -4489,6 +4500,19 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     break;
   }
+  case Instruction::FPTrunc: {
+    if ((InterestedClasses & fcNan) == fcNone)
+      break;
+
+    KnownFPClass KnownSrc;
+    computeKnownFPClass(Op->getOperand(0), DemandedElts,
+                        InterestedClasses, KnownSrc, Depth + 1, Q, TLI);
+    if (KnownSrc.isKnownNeverNaN())
+      Known.knownNot(fcNan);
+
+    // Infinity needs a range check.
+    break;
+  }
   case Instruction::SIToFP:
   case Instruction::UIToFP: {
     // Cannot produce nan
@@ -4511,6 +4535,29 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.knownNot(fcInf);
     }
 
+    break;
+  }
+  case Instruction::ExtractElement: {
+    // Look through extract element. If the index is non-constant or
+    // out-of-range demand all elements, otherwise just the extracted element.
+    const Value *Vec = Op->getOperand(0);
+    const Value *Idx = Op->getOperand(1);
+    auto *CIdx = dyn_cast<ConstantInt>(Idx);
+
+    if (auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType())) {
+      unsigned NumElts = VecTy->getNumElements();
+      APInt DemandedVecElts = APInt::getAllOnes(NumElts);
+      if (CIdx && CIdx->getValue().ult(NumElts))
+        DemandedVecElts = APInt::getOneBitSet(NumElts, CIdx->getZExtValue());
+      return computeKnownFPClass(Vec, DemandedVecElts, InterestedClasses, Known,
+                                 Depth + 1, Q, TLI);
+    }
+
+    break;
+  }
+  case Instruction::ExtractValue: {
+    computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
+                        Known, Depth + 1, Q, TLI);
     break;
   }
   default:

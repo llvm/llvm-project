@@ -765,7 +765,7 @@ SymbolNode *Demangler::demangleMD5Name(StringView &MangledName) {
     return nullptr;
   }
   const char *Start = MangledName.begin();
-  MangledName = MangledName.dropFront(MD5Last + 1);
+  MangledName.remove_prefix(MD5Last + 1);
 
   // There are two additional special cases for MD5 names:
   // 1. For complete object locators where the object name is long enough
@@ -779,7 +779,7 @@ SymbolNode *Demangler::demangleMD5Name(StringView &MangledName) {
   //    either.
   MangledName.consumeFront("??_R4@");
 
-  StringView MD5(Start, MangledName.begin());
+  StringView MD5(Start, MangledName.begin() - Start);
   SymbolNode *S = Arena.alloc<SymbolNode>(NodeKind::Md5Symbol);
   S->Name = synthesizeQualifiedName(Arena, MD5);
 
@@ -902,7 +902,7 @@ std::pair<uint64_t, bool> Demangler::demangleNumber(StringView &MangledName) {
 
   if (startsWithDigit(MangledName)) {
     uint64_t Ret = MangledName[0] - '0' + 1;
-    MangledName = MangledName.dropFront(1);
+    MangledName.remove_prefix(1);
     return {Ret, IsNegative};
   }
 
@@ -910,7 +910,7 @@ std::pair<uint64_t, bool> Demangler::demangleNumber(StringView &MangledName) {
   for (size_t i = 0; i < MangledName.size(); ++i) {
     char C = MangledName[i];
     if (C == '@') {
-      MangledName = MangledName.dropFront(i + 1);
+      MangledName.remove_prefix(i + 1);
       return {Ret, IsNegative};
     }
     if ('A' <= C && C <= 'P') {
@@ -1050,7 +1050,7 @@ uint8_t Demangler::demangleCharLiteral(StringView &MangledName) {
     // Don't append the null terminator.
     uint8_t C1 = rebasedHexDigitToNumber(Nibbles[0]);
     uint8_t C2 = rebasedHexDigitToNumber(Nibbles[1]);
-    MangledName = MangledName.dropFront(2);
+    MangledName.remove_prefix(2);
     return (C1 << 4) | C2;
   }
 
@@ -1310,7 +1310,7 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
   if (CrcEndPos == StringView::npos)
     goto StringLiteralError;
   CRC = MangledName.substr(0, CrcEndPos);
-  MangledName = MangledName.dropFront(CrcEndPos + 1);
+  MangledName.remove_prefix(CrcEndPos + 1);
   if (MangledName.empty())
     goto StringLiteralError;
 
@@ -1391,7 +1391,7 @@ StringView Demangler::demangleSimpleString(StringView &MangledName,
     if (i == 0)
       break;
     S = MangledName.substr(0, i);
-    MangledName = MangledName.dropFront(i + 1);
+    MangledName.remove_prefix(i + 1);
 
     if (Memorize)
       memorizeString(S);

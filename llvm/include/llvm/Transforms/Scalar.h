@@ -26,13 +26,6 @@ class Pass;
 
 //===----------------------------------------------------------------------===//
 //
-// AlignmentFromAssumptions - Use assume intrinsics to set load/store
-// alignments.
-//
-FunctionPass *createAlignmentFromAssumptionsPass();
-
-//===----------------------------------------------------------------------===//
-//
 // RedundantDbgInstElimination - This pass removes redundant dbg intrinsics
 // without modifying the CFG of the function.  It is a FunctionPass.
 //
@@ -75,23 +68,9 @@ Pass *createLoopGuardWideningPass();
 
 //===----------------------------------------------------------------------===//
 //
-// BitTrackingDCE - This pass uses a bit-tracking DCE algorithm in order to
-// remove computations of dead bits.
-//
-FunctionPass *createBitTrackingDCEPass();
-
-//===----------------------------------------------------------------------===//
-//
 // SROA - Replace aggregates or pieces of aggregates with scalar SSA values.
 //
 FunctionPass *createSROAPass(bool PreserveCFG = true);
-
-//===----------------------------------------------------------------------===//
-//
-// InductiveRangeCheckElimination - Transform loops to elide range checks on
-// linear functions of the induction variable.
-//
-Pass *createInductiveRangeCheckEliminationPass();
 
 //===----------------------------------------------------------------------===//
 //
