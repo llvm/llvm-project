@@ -267,6 +267,8 @@ bool Language::LanguageIsCPlusPlus(LanguageType language) {
   case eLanguageTypeC_plus_plus_03:
   case eLanguageTypeC_plus_plus_11:
   case eLanguageTypeC_plus_plus_14:
+  case eLanguageTypeC_plus_plus_17:
+  case eLanguageTypeC_plus_plus_20:
   case eLanguageTypeObjC_plus_plus:
     return true;
   default:
@@ -306,6 +308,8 @@ bool Language::LanguageIsCFamily(LanguageType language) {
   case eLanguageTypeC_plus_plus_03:
   case eLanguageTypeC_plus_plus_11:
   case eLanguageTypeC_plus_plus_14:
+  case eLanguageTypeC_plus_plus_17:
+  case eLanguageTypeC_plus_plus_20:
   case eLanguageTypeObjC_plus_plus:
   case eLanguageTypeObjC:
     return true;
@@ -329,6 +333,8 @@ LanguageType Language::GetPrimaryLanguage(LanguageType language) {
   case eLanguageTypeC_plus_plus_03:
   case eLanguageTypeC_plus_plus_11:
   case eLanguageTypeC_plus_plus_14:
+  case eLanguageTypeC_plus_plus_17:
+  case eLanguageTypeC_plus_plus_20:
     return eLanguageTypeC_plus_plus;
   case eLanguageTypeC:
   case eLanguageTypeC89:
