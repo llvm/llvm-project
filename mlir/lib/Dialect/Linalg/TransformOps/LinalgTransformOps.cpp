@@ -790,7 +790,7 @@ static FailureOr<LowerPackResult> lowerPack(RewriterBase &rewriter,
       packingMetadata.reassociations);
   Value paddingValue = packOp.getPaddingValue();
   if (!paddingValue) {
-    rewriter.create<arith::ConstantOp>(
+    paddingValue = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getZeroAttr(getElementTypeOrSelf(collapsed)));
   }
   auto padOp =
