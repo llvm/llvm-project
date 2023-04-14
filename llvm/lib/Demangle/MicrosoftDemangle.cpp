@@ -779,7 +779,7 @@ SymbolNode *Demangler::demangleMD5Name(StringView &MangledName) {
   //    either.
   MangledName.consumeFront("??_R4@");
 
-  StringView MD5(Start, MangledName.begin());
+  StringView MD5(Start, MangledName.begin() - Start);
   SymbolNode *S = Arena.alloc<SymbolNode>(NodeKind::Md5Symbol);
   S->Name = synthesizeQualifiedName(Arena, MD5);
 
