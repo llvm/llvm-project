@@ -3504,8 +3504,9 @@ class CXXUnresolvedConstructExpr final
   friend class ASTStmtReader;
   friend TrailingObjects;
 
-  /// The type being constructed.
-  TypeSourceInfo *TSI;
+  /// The type being constructed, and whether the construct expression models
+  /// list initialization or not.
+  llvm::PointerIntPair<TypeSourceInfo *, 1> TypeAndInitForm;
 
   /// The location of the left parentheses ('(').
   SourceLocation LParenLoc;
@@ -3515,30 +3516,31 @@ class CXXUnresolvedConstructExpr final
 
   CXXUnresolvedConstructExpr(QualType T, TypeSourceInfo *TSI,
                              SourceLocation LParenLoc, ArrayRef<Expr *> Args,
-                             SourceLocation RParenLoc);
+                             SourceLocation RParenLoc, bool IsListInit);
 
   CXXUnresolvedConstructExpr(EmptyShell Empty, unsigned NumArgs)
-      : Expr(CXXUnresolvedConstructExprClass, Empty), TSI(nullptr) {
+      : Expr(CXXUnresolvedConstructExprClass, Empty) {
     CXXUnresolvedConstructExprBits.NumArgs = NumArgs;
   }
 
 public:
-  static CXXUnresolvedConstructExpr *Create(const ASTContext &Context,
-                                            QualType T, TypeSourceInfo *TSI,
-                                            SourceLocation LParenLoc,
-                                            ArrayRef<Expr *> Args,
-                                            SourceLocation RParenLoc);
+  static CXXUnresolvedConstructExpr *
+  Create(const ASTContext &Context, QualType T, TypeSourceInfo *TSI,
+         SourceLocation LParenLoc, ArrayRef<Expr *> Args,
+         SourceLocation RParenLoc, bool IsListInit);
 
   static CXXUnresolvedConstructExpr *CreateEmpty(const ASTContext &Context,
                                                  unsigned NumArgs);
 
   /// Retrieve the type that is being constructed, as specified
   /// in the source code.
-  QualType getTypeAsWritten() const { return TSI->getType(); }
+  QualType getTypeAsWritten() const { return getTypeSourceInfo()->getType(); }
 
   /// Retrieve the type source information for the type being
   /// constructed.
-  TypeSourceInfo *getTypeSourceInfo() const { return TSI; }
+  TypeSourceInfo *getTypeSourceInfo() const {
+    return TypeAndInitForm.getPointer();
+  }
 
   /// Retrieve the location of the left parentheses ('(') that
   /// precedes the argument list.
@@ -3553,7 +3555,7 @@ public:
   /// Determine whether this expression models list-initialization.
   /// If so, there will be exactly one subexpression, which will be
   /// an InitListExpr.
-  bool isListInitialization() const { return LParenLoc.isInvalid(); }
+  bool isListInitialization() const { return TypeAndInitForm.getInt(); }
 
   /// Retrieve the number of arguments.
   unsigned getNumArgs() const { return CXXUnresolvedConstructExprBits.NumArgs; }

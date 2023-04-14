@@ -33,7 +33,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
-#include "llvm-c/Initialization.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -4401,10 +4400,6 @@ INITIALIZE_PASS_END(InstructionCombiningPass, "instcombine",
 // Initialization Routines
 void llvm::initializeInstCombine(PassRegistry &Registry) {
   initializeInstructionCombiningPassPass(Registry);
-}
-
-void LLVMInitializeInstCombine(LLVMPassRegistryRef R) {
-  initializeInstructionCombiningPassPass(*unwrap(R));
 }
 
 FunctionPass *llvm::createInstructionCombiningPass() {

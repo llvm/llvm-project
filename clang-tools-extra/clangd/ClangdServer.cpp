@@ -61,9 +61,11 @@ namespace {
 struct UpdateIndexCallbacks : public ParsingCallbacks {
   UpdateIndexCallbacks(FileIndex *FIndex,
                        ClangdServer::Callbacks *ServerCallbacks,
-                       const ThreadsafeFS &TFS, AsyncTaskRunner *Tasks)
+                       const ThreadsafeFS &TFS, AsyncTaskRunner *Tasks,
+                       bool CollectInactiveRegions)
       : FIndex(FIndex), ServerCallbacks(ServerCallbacks), TFS(TFS),
-        Stdlib{std::make_shared<StdLibSet>()}, Tasks(Tasks) {}
+        Stdlib{std::make_shared<StdLibSet>()}, Tasks(Tasks),
+        CollectInactiveRegions(CollectInactiveRegions) {}
 
   void onPreambleAST(PathRef Path, llvm::StringRef Version,
                      const CompilerInvocation &CI, ASTContext &Ctx,
@@ -113,6 +115,10 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
       Publish([&]() {
         ServerCallbacks->onDiagnosticsReady(Path, AST.version(),
                                             std::move(Diagnostics));
+        if (CollectInactiveRegions) {
+          ServerCallbacks->onInactiveRegionsReady(
+              Path, std::move(AST.getMacros().SkippedRanges));
+        }
       });
   }
 
@@ -139,6 +145,7 @@ private:
   const ThreadsafeFS &TFS;
   std::shared_ptr<StdLibSet> Stdlib;
   AsyncTaskRunner *Tasks;
+  bool CollectInactiveRegions;
 };
 
 class DraftStoreFS : public ThreadsafeFS {
@@ -189,6 +196,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       LineFoldingOnly(Opts.LineFoldingOnly),
       PreambleParseForwardingFunctions(Opts.PreambleParseForwardingFunctions),
       ImportInsertions(Opts.ImportInsertions),
+      PublishInactiveRegions(Opts.PublishInactiveRegions),
       WorkspaceRoot(Opts.WorkspaceRoot),
       Transient(Opts.ImplicitCancellation ? TUScheduler::InvalidateOnUpdate
                                           : TUScheduler::NoInvalidation),
@@ -201,7 +209,8 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
   WorkScheduler.emplace(CDB, TUScheduler::Options(Opts),
                         std::make_unique<UpdateIndexCallbacks>(
                             DynamicIdx.get(), Callbacks, TFS,
-                            IndexTasks ? &*IndexTasks : nullptr));
+                            IndexTasks ? &*IndexTasks : nullptr,
+                            PublishInactiveRegions));
   // Adds an index to the stack, at higher priority than existing indexes.
   auto AddIndex = [&](SymbolIndex *Idx) {
     if (this->Index != nullptr) {
@@ -956,12 +965,17 @@ void ClangdServer::documentLinks(PathRef File,
 
 void ClangdServer::semanticHighlights(
     PathRef File, Callback<std::vector<HighlightingToken>> CB) {
-  auto Action =
-      [CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
-        if (!InpAST)
-          return CB(InpAST.takeError());
-        CB(clangd::getSemanticHighlightings(InpAST->AST));
-      };
+
+  auto Action = [CB = std::move(CB),
+                 PublishInactiveRegions = PublishInactiveRegions](
+                    llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    // Include inactive regions in semantic highlighting tokens only if the
+    // client doesn't support a dedicated protocol for being informed about
+    // them.
+    CB(clangd::getSemanticHighlightings(InpAST->AST, !PublishInactiveRegions));
+  };
   WorkScheduler->runWithAST("SemanticHighlights", File, std::move(Action),
                             Transient);
 }

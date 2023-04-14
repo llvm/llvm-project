@@ -88,11 +88,16 @@ public:
   class FunctionExecutor {
   public:
     virtual ~FunctionExecutor();
-    // FIXME deprecate this.
-    virtual Expected<int64_t> runAndMeasure(const char *Counters) const = 0;
 
+    Expected<llvm::SmallVector<int64_t, 4>>
+    runAndSample(const char *Counters) const;
+
+  protected:
+    static void
+    accumulateCounterValues(const llvm::SmallVectorImpl<int64_t> &NewValues,
+                            llvm::SmallVectorImpl<int64_t> *Result);
     virtual Expected<llvm::SmallVector<int64_t, 4>>
-    runAndSample(const char *Counters) const = 0;
+    runWithCounter(StringRef CounterName) const = 0;
   };
 
 protected:

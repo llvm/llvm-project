@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar.h"
-#include "llvm-c/Initialization.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -82,8 +81,4 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializePlaceBackedgeSafepointsLegacyPassPass(Registry);
   initializePlaceSafepointsLegacyPassPass(Registry);
   initializeLoopSimplifyCFGLegacyPassPass(Registry);
-}
-
-void LLVMInitializeScalarOpts(LLVMPassRegistryRef R) {
-  initializeScalarOpts(*unwrap(R));
 }

@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils.h"
-#include "llvm-c/Initialization.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
@@ -41,9 +40,4 @@ void llvm::initializeTransformUtils(PassRegistry &Registry) {
   initializeInjectTLIMappingsLegacyPass(Registry);
   initializeFixIrreduciblePass(Registry);
   initializeUnifyLoopExitsLegacyPassPass(Registry);
-}
-
-/// LLVMInitializeTransformUtils - C binding for initializeTransformUtilsPasses.
-void LLVMInitializeTransformUtils(LLVMPassRegistryRef R) {
-  initializeTransformUtils(*unwrap(R));
 }

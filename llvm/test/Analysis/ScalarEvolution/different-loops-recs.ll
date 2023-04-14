@@ -275,7 +275,7 @@ define void @test_04() {
 ; CHECK:       %tmp9 = sext i8 %tmp8 to i64
 ; CHECK-NEXT:  -->  (sext i8 %tmp8 to i64) U: [-128,128) S: [-128,128)
 ; CHECK:       %tmp10 = sub i64 %tmp9, %tmp7
-; CHECK-NEXT:  -->  ((sext i8 %tmp8 to i64) + {-2,+,-1}<nw><%loop2>) U: [9223372036854775682,126) S: [9223372036854775682,126)
+; CHECK-NEXT:  -->  ((sext i8 %tmp8 to i64) + {-2,+,-1}<nsw><%loop2>) U: [9223372036854775682,126) S: [9223372036854775682,126)
 ; CHECK:       %tmp11 = add i64 %tmp10, undef
 ; CHECK-NEXT:  -->  ((sext i8 %tmp8 to i64) + {(-2 + undef),+,-1}<nw><%loop2>)
 ; CHECK:       %tmp13 = trunc i64 %tmp11 to i32

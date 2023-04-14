@@ -768,11 +768,10 @@ public:
     } else if (ultimate.has<semantics::AssocEntityDetails>()) {
       return Base::operator()(ultimate); // use expr
     } else if (semantics::IsPointer(ultimate) ||
-        semantics::IsAssumedShape(ultimate)) {
+        semantics::IsAssumedShape(ultimate) || IsAssumedRank(ultimate)) {
       return std::nullopt;
-    } else if (const auto *details{
-                   ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
-      return !details->IsAssumedRank();
+    } else if (ultimate.has<semantics::ObjectEntityDetails>()) {
+      return true;
     } else {
       return Base::operator()(ultimate);
     }
@@ -936,6 +935,7 @@ template std::optional<bool> IsContiguous(const Component &, FoldingContext &);
 template std::optional<bool> IsContiguous(
     const ComplexPart &, FoldingContext &);
 template std::optional<bool> IsContiguous(const CoarrayRef &, FoldingContext &);
+template std::optional<bool> IsContiguous(const Symbol &, FoldingContext &);
 
 // IsErrorExpr()
 struct IsErrorExprHelper : public AnyTraverse<IsErrorExprHelper, bool> {

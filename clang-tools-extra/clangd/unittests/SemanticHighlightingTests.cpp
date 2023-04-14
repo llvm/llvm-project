@@ -89,7 +89,8 @@ void checkHighlightings(llvm::StringRef Code,
   for (auto File : AdditionalFiles)
     TU.AdditionalFiles.insert({File.first, std::string(File.second)});
   auto AST = TU.build();
-  auto Actual = getSemanticHighlightings(AST);
+  auto Actual =
+      getSemanticHighlightings(AST, /*IncludeInactiveRegionTokens=*/true);
   for (auto &Token : Actual)
     Token.Modifiers &= ModifierMask;
 
