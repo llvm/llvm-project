@@ -4333,6 +4333,7 @@ td_library(
     name = "LLVMOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/LLVMIR/LLVMAttrDefs.td",
+        "include/mlir/Dialect/LLVMIR/LLVMDialect.td",
         "include/mlir/Dialect/LLVMIR/LLVMEnums.td",
         "include/mlir/Dialect/LLVMIR/LLVMInterfaces.td",
         "include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.td",

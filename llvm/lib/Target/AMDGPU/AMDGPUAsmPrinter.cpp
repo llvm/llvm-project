@@ -441,7 +441,7 @@ amdhsa::kernel_descriptor_t AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(
 
   assert(isUInt<32>(PI.ScratchSize));
   assert(isUInt<32>(PI.getComputePGMRSrc1(STM)));
-  assert(isUInt<32>(PI.ComputePGMRSrc2));
+  assert(isUInt<32>(PI.getComputePGMRSrc2()));
 
   KernelDescriptor.group_segment_fixed_size = PI.LDSSize;
   KernelDescriptor.private_segment_fixed_size = PI.ScratchSize;
@@ -450,7 +450,7 @@ amdhsa::kernel_descriptor_t AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(
   KernelDescriptor.kernarg_size = STM.getKernArgSegmentSize(F, MaxKernArgAlign);
 
   KernelDescriptor.compute_pgm_rsrc1 = PI.getComputePGMRSrc1(STM);
-  KernelDescriptor.compute_pgm_rsrc2 = PI.ComputePGMRSrc2;
+  KernelDescriptor.compute_pgm_rsrc2 = PI.getComputePGMRSrc2();
   KernelDescriptor.kernel_code_properties = getAmdhsaKernelCodeProperties(MF);
 
   assert(STM.hasGFX90AInsts() || CurrentProgramInfo.ComputePGMRSrc3GFX90A == 0);
@@ -579,28 +579,27 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OutStreamer->emitRawComment(
       " WaveLimiterHint : " + Twine(MFI->needsWaveLimiter()), false);
 
-    OutStreamer->emitRawComment(
-      " COMPUTE_PGM_RSRC2:SCRATCH_EN: " +
-      Twine(G_00B84C_SCRATCH_EN(CurrentProgramInfo.ComputePGMRSrc2)), false);
-    OutStreamer->emitRawComment(
-      " COMPUTE_PGM_RSRC2:USER_SGPR: " +
-      Twine(G_00B84C_USER_SGPR(CurrentProgramInfo.ComputePGMRSrc2)), false);
-    OutStreamer->emitRawComment(
-      " COMPUTE_PGM_RSRC2:TRAP_HANDLER: " +
-      Twine(G_00B84C_TRAP_HANDLER(CurrentProgramInfo.ComputePGMRSrc2)), false);
-    OutStreamer->emitRawComment(
-      " COMPUTE_PGM_RSRC2:TGID_X_EN: " +
-      Twine(G_00B84C_TGID_X_EN(CurrentProgramInfo.ComputePGMRSrc2)), false);
-    OutStreamer->emitRawComment(
-      " COMPUTE_PGM_RSRC2:TGID_Y_EN: " +
-      Twine(G_00B84C_TGID_Y_EN(CurrentProgramInfo.ComputePGMRSrc2)), false);
-    OutStreamer->emitRawComment(
-      " COMPUTE_PGM_RSRC2:TGID_Z_EN: " +
-      Twine(G_00B84C_TGID_Z_EN(CurrentProgramInfo.ComputePGMRSrc2)), false);
-    OutStreamer->emitRawComment(
-      " COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: " +
-      Twine(G_00B84C_TIDIG_COMP_CNT(CurrentProgramInfo.ComputePGMRSrc2)),
-      false);
+    OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:SCRATCH_EN: " +
+                                    Twine(CurrentProgramInfo.ScratchEnable),
+                                false);
+    OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:USER_SGPR: " +
+                                    Twine(CurrentProgramInfo.UserSGPR),
+                                false);
+    OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:TRAP_HANDLER: " +
+                                    Twine(CurrentProgramInfo.TrapHandlerEnable),
+                                false);
+    OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:TGID_X_EN: " +
+                                    Twine(CurrentProgramInfo.TGIdXEnable),
+                                false);
+    OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:TGID_Y_EN: " +
+                                    Twine(CurrentProgramInfo.TGIdYEnable),
+                                false);
+    OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:TGID_Z_EN: " +
+                                    Twine(CurrentProgramInfo.TGIdZEnable),
+                                false);
+    OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: " +
+                                    Twine(CurrentProgramInfo.TIdIGCompCount),
+                                false);
 
     assert(STM.hasGFX90AInsts() ||
            CurrentProgramInfo.ComputePGMRSrc3GFX90A == 0);
@@ -922,22 +921,21 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // anything to disable it if we know the stack isn't used here. We may still
   // have emitted code reading it to initialize scratch, but if that's unused
   // reading garbage should be OK.
-  const bool EnablePrivateSegment =
+  ProgInfo.ScratchEnable =
       ProgInfo.ScratchBlocks > 0 || ProgInfo.DynamicCallStack;
-  ProgInfo.ComputePGMRSrc2 =
-      S_00B84C_SCRATCH_EN(EnablePrivateSegment) |
-      S_00B84C_USER_SGPR(MFI->getNumUserSGPRs()) |
-      // For AMDHSA, TRAP_HANDLER must be zero, as it is populated by the CP.
-      S_00B84C_TRAP_HANDLER(STM.isAmdHsaOS() ? 0 : STM.isTrapHandlerEnabled()) |
-      S_00B84C_TGID_X_EN(MFI->hasWorkGroupIDX()) |
-      S_00B84C_TGID_Y_EN(MFI->hasWorkGroupIDY()) |
-      S_00B84C_TGID_Z_EN(MFI->hasWorkGroupIDZ()) |
-      S_00B84C_TG_SIZE_EN(MFI->hasWorkGroupInfo()) |
-      S_00B84C_TIDIG_COMP_CNT(TIDIGCompCnt) |
-      S_00B84C_EXCP_EN_MSB(0) |
-      // For AMDHSA, LDS_SIZE must be zero, as it is populated by the CP.
-      S_00B84C_LDS_SIZE(STM.isAmdHsaOS() ? 0 : ProgInfo.LDSBlocks) |
-      S_00B84C_EXCP_EN(0);
+  ProgInfo.UserSGPR = MFI->getNumUserSGPRs();
+  // For AMDHSA, TRAP_HANDLER must be zero, as it is populated by the CP.
+  ProgInfo.TrapHandlerEnable =
+      STM.isAmdHsaOS() ? 0 : STM.isTrapHandlerEnabled();
+  ProgInfo.TGIdXEnable = MFI->hasWorkGroupIDX();
+  ProgInfo.TGIdYEnable = MFI->hasWorkGroupIDY();
+  ProgInfo.TGIdZEnable = MFI->hasWorkGroupIDZ();
+  ProgInfo.TGSizeEnable = MFI->hasWorkGroupInfo();
+  ProgInfo.TIdIGCompCount = TIDIGCompCnt;
+  ProgInfo.EXCPEnMSB = 0;
+  // For AMDHSA, LDS_SIZE must be zero, as it is populated by the CP.
+  ProgInfo.LdsSize = STM.isAmdHsaOS() ? 0 : ProgInfo.LDSBlocks;
+  ProgInfo.EXCPEnable = 0;
 
   if (STM.hasGFX90AInsts()) {
     AMDHSA_BITS_SET(ProgInfo.ComputePGMRSrc3GFX90A,
@@ -978,7 +976,7 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
     OutStreamer->emitInt32(CurrentProgramInfo.getComputePGMRSrc1(STM));
 
     OutStreamer->emitInt32(R_00B84C_COMPUTE_PGM_RSRC2);
-    OutStreamer->emitInt32(CurrentProgramInfo.ComputePGMRSrc2);
+    OutStreamer->emitInt32(CurrentProgramInfo.getComputePGMRSrc2());
 
     OutStreamer->emitInt32(R_00B860_COMPUTE_TMPRING_SIZE);
     OutStreamer->emitInt32(
@@ -1042,25 +1040,87 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
   }
 
   MD->setNumUsedSgprs(CC, CurrentProgramInfo.NumSGPRsForWavesPerEU);
-  MD->setRsrc1(CC, CurrentProgramInfo.getPGMRSrc1(CC, STM));
-  if (AMDGPU::isCompute(CC)) {
-    MD->setRsrc2(CC, CurrentProgramInfo.ComputePGMRSrc2);
+  if (MD->getPALMajorVersion() < 3) {
+    MD->setRsrc1(CC, CurrentProgramInfo.getPGMRSrc1(CC, STM));
+    if (AMDGPU::isCompute(CC)) {
+      MD->setRsrc2(CC, CurrentProgramInfo.getComputePGMRSrc2());
+    } else {
+      if (CurrentProgramInfo.ScratchBlocks > 0)
+        MD->setRsrc2(CC, S_00B84C_SCRATCH_EN(1));
+    }
   } else {
-    if (CurrentProgramInfo.ScratchBlocks > 0)
-      MD->setRsrc2(CC, S_00B84C_SCRATCH_EN(1));
+    // Priority?
+    MD->setHwStage(CC, ".float_mode", CurrentProgramInfo.FloatMode);
+    // Priv?
+    // DX10Clamp?
+    MD->setHwStage(CC, ".debug_mode", (bool)CurrentProgramInfo.DebugMode);
+    MD->setHwStage(CC, ".ieee_mode", (bool)CurrentProgramInfo.IEEEMode);
+    MD->setHwStage(CC, ".wgp_mode", (bool)CurrentProgramInfo.WgpMode);
+    MD->setHwStage(CC, ".mem_ordered", (bool)CurrentProgramInfo.MemOrdered);
+
+    if (AMDGPU::isCompute(CC)) {
+      MD->setHwStage(CC, ".scratch_en", (bool)CurrentProgramInfo.ScratchEnable);
+      MD->setHwStage(CC, ".trap_present",
+                     (bool)CurrentProgramInfo.TrapHandlerEnable);
+
+      // Compute registers
+      // If the front-end has set tgid_x/y/z_en - assert that the
+      // CurrentProgramInfo is consistent (usually set with function attributes
+      // amdgpu-no-workgroup-id-x etc.).
+      assert(MD->checkComputeRegisters(".tgid_x_en",
+                                       (bool)CurrentProgramInfo.TGIdXEnable));
+      assert(MD->checkComputeRegisters(".tgid_y_en",
+                                       (bool)CurrentProgramInfo.TGIdYEnable));
+      assert(MD->checkComputeRegisters(".tgid_z_en",
+                                       (bool)CurrentProgramInfo.TGIdZEnable));
+
+      // EXCPEnMSB?
+      const unsigned LdsDwGranularity = 128;
+      MD->setHwStage(CC, ".lds_size",
+                     (unsigned)(CurrentProgramInfo.LdsSize * LdsDwGranularity *
+                                sizeof(uint32_t)));
+      MD->setHwStage(CC, ".excp_en", CurrentProgramInfo.EXCPEnable);
+    } else {
+      MD->setHwStage(CC, ".scratch_en", (bool)CurrentProgramInfo.ScratchEnable);
+    }
   }
+
   // ScratchSize is in bytes, 16 aligned.
   MD->setScratchSize(CC, alignTo(CurrentProgramInfo.ScratchSize, 16));
   if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS) {
     unsigned ExtraLDSSize = STM.getGeneration() >= AMDGPUSubtarget::GFX11
                                 ? divideCeil(CurrentProgramInfo.LDSBlocks, 2)
                                 : CurrentProgramInfo.LDSBlocks;
-    MD->setRsrc2(CC, S_00B02C_EXTRA_LDS_SIZE(ExtraLDSSize));
-    MD->setSpiPsInputEna(MFI->getPSInputEnable());
-    MD->setSpiPsInputAddr(MFI->getPSInputAddr());
+    if (MD->getPALMajorVersion() < 3) {
+      MD->setRsrc2(CC, S_00B02C_EXTRA_LDS_SIZE(ExtraLDSSize));
+      MD->setSpiPsInputEna(MFI->getPSInputEnable());
+      MD->setSpiPsInputAddr(MFI->getPSInputAddr());
+    } else {
+      // Graphics registers
+      MD->setGraphicsRegisters(".ps_extra_lds_size", ExtraLDSSize);
+      // Set PsInputEna and PsInputAddr .spi_ps_input_ena and .spi_ps_input_addr
+      static StringLiteral const PsInputFields[] = {
+          ".persp_sample_ena",    ".persp_center_ena",
+          ".persp_centroid_ena",  ".persp_pull_model_ena",
+          ".linear_sample_ena",   ".linear_center_ena",
+          ".linear_centroid_ena", ".line_stipple_tex_ena",
+          ".pos_x_float_ena",     ".pos_y_float_ena",
+          ".pos_z_float_ena",     ".pos_w_float_ena",
+          ".front_face_ena",      ".ancillary_ena",
+          ".sample_coverage_ena", ".pos_fixed_pt_ena"};
+      unsigned PSInputEna = MFI->getPSInputEnable();
+      unsigned PSInputAddr = MFI->getPSInputAddr();
+      for (auto [Idx, Field] : enumerate(PsInputFields)) {
+        MD->setGraphicsRegisters(".spi_ps_input_ena", Field,
+                                 (bool)((PSInputEna >> Idx) & 1));
+        MD->setGraphicsRegisters(".spi_ps_input_addr", Field,
+                                 (bool)((PSInputAddr >> Idx) & 1));
+      }
+    }
   }
 
-  if (STM.isWave32())
+  // For version 3 and above the wave front size is already set in the metadata
+  if (MD->getPALMajorVersion() < 3 && STM.isWave32())
     MD->setWave32(MF.getFunction().getCallingConv());
 }
 
@@ -1073,7 +1133,7 @@ void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
   // Set compute registers
   MD->setRsrc1(CallingConv::AMDGPU_CS,
                CurrentProgramInfo.getPGMRSrc1(CallingConv::AMDGPU_CS, ST));
-  MD->setRsrc2(CallingConv::AMDGPU_CS, CurrentProgramInfo.ComputePGMRSrc2);
+  MD->setRsrc2(CallingConv::AMDGPU_CS, CurrentProgramInfo.getComputePGMRSrc2());
 
   // Set optional info
   MD->setFunctionLdsSize(MF, CurrentProgramInfo.LDSSize);
@@ -1109,7 +1169,7 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
 
   Out.compute_pgm_resource_registers =
       CurrentProgramInfo.getComputePGMRSrc1(STM) |
-      (CurrentProgramInfo.ComputePGMRSrc2 << 32);
+      (CurrentProgramInfo.getComputePGMRSrc2() << 32);
   Out.code_properties |= AMD_CODE_PROPERTY_IS_PTR64;
 
   if (CurrentProgramInfo.DynamicCallStack)

@@ -3097,7 +3097,12 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       assert(UseMI.getOperand(1).getReg().isVirtual());
     }
 
-    UseMI.setDesc(get(NewOpc));
+    const MCInstrDesc &NewMCID = get(NewOpc);
+    if (DstReg.isPhysical() &&
+        !RI.getRegClass(NewMCID.operands()[0].RegClass)->contains(DstReg))
+      return false;
+
+    UseMI.setDesc(NewMCID);
     UseMI.getOperand(1).ChangeToImmediate(Imm.getSExtValue());
     UseMI.addImplicitDefUseOperands(*UseMI.getParent()->getParent());
     return true;
