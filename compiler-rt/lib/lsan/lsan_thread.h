@@ -52,6 +52,7 @@ u32 ThreadCreate(u32 tid, bool detached, void *arg = nullptr);
 void ThreadFinish();
 
 u32 GetCurrentThread();
+inline u32 GetCurrentThreadId() { return GetCurrentThread(); }
 void SetCurrentThread(u32 tid);
 ThreadContext *CurrentThreadContext();
 void EnsureMainThreadIDIsCorrect();
