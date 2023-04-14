@@ -15,6 +15,8 @@
 #define FORTRAN_SEMANTICS_RUNTIME_TYPE_INFO_H_
 
 #include "flang/Common/reference.h"
+#include "flang/Semantics/symbol.h"
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -24,12 +26,6 @@ class raw_ostream;
 }
 
 namespace Fortran::semantics {
-class Scope;
-class SemanticsContext;
-class Symbol;
-
-using SymbolRef = common::Reference<const Symbol>;
-using SymbolVector = std::vector<SymbolRef>;
 
 struct RuntimeDerivedTypeTables {
   Scope *schemata{nullptr};
@@ -51,6 +47,15 @@ constexpr char bindingDescCompName[]{"binding"};
 constexpr char procCompName[]{"proc"};
 
 SymbolVector CollectBindings(const Scope &dtScope);
+
+struct NonTbpDefinedIo {
+  const Symbol *subroutine;
+  common::DefinedIo definedIo;
+  bool isDtvArgPolymorphic;
+};
+
+std::multimap<const Symbol *, NonTbpDefinedIo>
+CollectNonTbpDefinedIoGenericInterfaces(const Scope &scope);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_RUNTIME_TYPE_INFO_H_

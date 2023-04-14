@@ -35,6 +35,8 @@ import shlex
 import sys
 import time
 import uuid
+import json
+import tempfile
 
 
 class Address:
@@ -230,6 +232,7 @@ class Image:
     def __init__(self, path, uuid=None):
         self.path = path
         self.resolved_path = None
+        self.resolve = False
         self.resolved = False
         self.unavailable = False
         self.uuid = uuid
@@ -240,6 +243,7 @@ class Image:
         self.module = None
         self.symfile = None
         self.slide = None
+        self.symbols = dict()
 
     @classmethod
     def InitWithSBTargetAndSBModule(cls, target, module):
@@ -372,14 +376,32 @@ class Image:
             uuid_str = self.get_normalized_uuid_string()
             if uuid_str:
                 self.module = target.AddModule(None, None, uuid_str)
-            if not self.module:
+            if not self.module and self.resolve:
                 self.locate_module_and_debug_symbols()
-                if self.unavailable:
-                    return None
-                resolved_path = self.get_resolved_path()
-                self.module = target.AddModule(
-                    resolved_path, None, uuid_str, self.symfile)
-            if not self.module:
+                if not self.unavailable:
+                    resolved_path = self.get_resolved_path()
+                    self.module = target.AddModule(
+                        resolved_path, None, uuid_str, self.symfile)
+            if not self.module and self.section_infos:
+                name = os.path.basename(self.path)
+                with tempfile.NamedTemporaryFile(suffix='.' + name) as tf:
+                    data = {
+                        'triple': target.triple,
+                        'uuid': uuid_str,
+                        'type': 'sharedlibrary',
+                        'sections': list(),
+                        'symbols': list()
+                    }
+                    for section in self.section_infos:
+                        data['sections'].append({
+                            'name' : section.name,
+                            'size': section.end_addr - section.start_addr
+                            })
+                    data['symbols'] = list(self.symbols.values())
+                    with open(tf.name, 'w') as f:
+                        f.write(json.dumps(data, indent=4))
+                    self.module = target.AddModule(tf.name, None, uuid_str)
+            if not self.module and not self.unavailable:
                 return 'error: unable to get module for (%s) "%s"' % (
                     self.arch, self.get_resolved_path())
             if self.has_section_load_info():

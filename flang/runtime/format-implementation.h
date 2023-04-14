@@ -423,7 +423,7 @@ std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
       ++offset_;
     }
   } else if (edit.descriptor == 'D' && Capitalize(PeekNext()) == 'T') {
-    // DT['iotype'][(v_list)] user-defined derived type I/O
+    // DT['iotype'][(v_list)] defined I/O
     edit.descriptor = DataEdit::DefinedDerivedType;
     ++offset_;
     if (auto quote{static_cast<char>(PeekNext())};
