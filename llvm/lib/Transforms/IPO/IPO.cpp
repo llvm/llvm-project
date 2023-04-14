@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm-c/Initialization.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
@@ -27,8 +26,4 @@ void llvm::initializeIPO(PassRegistry &Registry) {
   initializeLoopExtractorLegacyPassPass(Registry);
   initializeSingleLoopExtractorPass(Registry);
   initializeBarrierNoopPass(Registry);
-}
-
-void LLVMInitializeIPO(LLVMPassRegistryRef R) {
-  initializeIPO(*unwrap(R));
 }

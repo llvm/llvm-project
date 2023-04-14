@@ -1341,43 +1341,67 @@ public:
     if (!IsIntVec && !FMF.allowReassoc())
       return;
 
-    auto IsSupportedArg = [](Value *Op, unsigned N) {
-      if (!isa<Instruction>(Op))
-        return true;
-      return match(
-          Op, m_OneUse(m_CombineOr(
-                  m_Load(m_Value()),
-                  m_Intrinsic<Intrinsic::matrix_column_major_load>(
-                      m_Value(), m_SpecificInt(N)))));
+    auto CanBeFlattened = [](Value *Op) {
+      return match(Op, m_OneUse(m_CombineOr(
+                           m_Load(m_Value()),
+                           m_Intrinsic<Intrinsic::matrix_column_major_load>(
+                               m_Value(), m_SpecificInt(1)))));
     };
-    if (!IsSupportedArg(LHS, RShape.NumColumns))
-      return;
+    // Returns the cost benefit of using \p Op with the dot product lowering. If
+    // the returned cost is < 0, the argument is cheaper to use in the
+    // dot-product lowering.
+    auto GetCostForArg = [this, &CanBeFlattened](Value *Op, unsigned N) {
+      if (!isa<Instruction>(Op))
+        return InstructionCost(0);
+
+      FixedVectorType *VecTy = cast<FixedVectorType>(Op->getType());
+      Type *EltTy = VecTy->getElementType();
+
+      if (CanBeFlattened(Op)) {
+        if (N == 1)
+          return InstructionCost(0);
+
+        return TTI.getMemoryOpCost(Instruction::Load, VecTy, Align(1), 0) -
+               N * TTI.getMemoryOpCost(Instruction::Load, EltTy, Align(1), 0);
+      }
+
+      InstructionCost EmbedCost(0);
+      // Roughly estimate the cost for embedding the columns into a vector.
+      for (unsigned I = 1; I < N; ++I)
+        EmbedCost +=
+            TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
+                               std::nullopt, TTI::TCK_RecipThroughput);
+      return EmbedCost;
+    };
+    auto LHSCost = GetCostForArg(LHS, LShape.NumColumns);
 
     // We compare the costs of a vector.reduce.add to sequential add.
     int AddOpCode = IsIntVec ? Instruction::Add : Instruction::FAdd;
-    FastMathFlags FMFReassoc;
-    FMFReassoc.setAllowReassoc();
-    InstructionCost ReductionCost = TTI.getArithmeticReductionCost(
-        AddOpCode, cast<VectorType>(LHS->getType()), FMFReassoc);
+    int MulOpCode = IsIntVec ? Instruction::Mul : Instruction::FMul;
+    InstructionCost ReductionCost =
+        TTI.getArithmeticReductionCost(
+            AddOpCode, cast<VectorType>(LHS->getType()),
+            IsIntVec ? std::nullopt : std::optional(FMF)) +
+        TTI.getArithmeticInstrCost(MulOpCode, LHS->getType());
     InstructionCost SequentialAddCost =
         TTI.getArithmeticInstrCost(AddOpCode, ElementType) *
-        (LShape.NumColumns - 1);
-    if (ReductionCost >= SequentialAddCost)
+            (LShape.NumColumns - 1) +
+        TTI.getArithmeticInstrCost(MulOpCode, ElementType) *
+            (LShape.NumColumns);
+    if ((LHSCost + ReductionCost - SequentialAddCost) > InstructionCost(0))
       return;
 
     FusedInsts.insert(MatMul);
     IRBuilder<> Builder(MatMul);
-    auto FlattenArg = [&Builder, &FusedInsts](Value *Op) -> Value * {
+    auto FlattenArg = [&Builder, &FusedInsts,
+                       &CanBeFlattened](Value *Op) -> Value * {
       // Matmul must be the only user of loads because we don't use LowerLoad
       // for row vectors (LowerLoad results in scalar loads and shufflevectors
       // instead of single vector load).
-      if (!match(Op, m_CombineOr(
-                         m_Load(m_Value()),
-                         m_Intrinsic<Intrinsic::matrix_column_major_load>()))) {
+      if (!CanBeFlattened(Op))
         return Op;
-      }
-      FusedInsts.insert(cast<Instruction>(Op));
 
+      FusedInsts.insert(cast<Instruction>(Op));
       // If vector uses the builtin load, lower to a LoadInst
       Value *Ptr;
       if (match(Op, m_Intrinsic<Intrinsic::matrix_column_major_load>(

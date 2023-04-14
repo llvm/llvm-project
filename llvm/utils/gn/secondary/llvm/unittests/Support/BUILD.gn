@@ -1,7 +1,15 @@
+import("//llvm/utils/TableGen/tablegen.gni")
 import("//third-party/unittest/unittest.gni")
+
+tablegen("GenVT") {
+  visibility = [ ":SupportTests" ]
+  args = [ "-gen-vt" ]
+  td_file = "//llvm/include/llvm/CodeGen/ValueTypes.td"
+}
 
 unittest("SupportTests") {
   deps = [
+    ":GenVT",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
@@ -55,6 +63,7 @@ unittest("SupportTests") {
     "LineIteratorTest.cpp",
     "LockFileManagerTest.cpp",
     "MD5Test.cpp",
+    "MVTTest.cpp",
     "ManagedStatic.cpp",
     "MatchersTest.cpp",
     "MathExtrasTest.cpp",
