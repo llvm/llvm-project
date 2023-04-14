@@ -5816,31 +5816,32 @@ define dso_local signext i16 @atommax2(ptr nocapture noundef %ptr, i16 noundef s
 ;
 ; AIX32-LABEL: atommax2:
 ; AIX32:       # %bb.0: # %entry
-; AIX32-NEXT:    li 6, 0
+; AIX32-NEXT:    li 7, 0
 ; AIX32-NEXT:    rlwinm 5, 3, 3, 27, 27
+; AIX32-NEXT:    extsh 6, 4
 ; AIX32-NEXT:    sync
 ; AIX32-NEXT:    xori 5, 5, 16
-; AIX32-NEXT:    ori 6, 6, 65535
-; AIX32-NEXT:    slw 7, 4, 5
-; AIX32-NEXT:    slw 6, 6, 5
+; AIX32-NEXT:    ori 7, 7, 65535
+; AIX32-NEXT:    slw 8, 6, 5
+; AIX32-NEXT:    slw 7, 7, 5
 ; AIX32-NEXT:    rlwinm 3, 3, 0, 0, 29
-; AIX32-NEXT:    and 7, 7, 6
+; AIX32-NEXT:    and 8, 8, 7
 ; AIX32-NEXT:  L..BB9_1: # %entry
 ; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 8, 0, 3
-; AIX32-NEXT:    and 9, 8, 6
-; AIX32-NEXT:    srw 9, 9, 5
-; AIX32-NEXT:    extsh 9, 9
-; AIX32-NEXT:    cmpw 9, 4
+; AIX32-NEXT:    lwarx 9, 0, 3
+; AIX32-NEXT:    and 10, 9, 7
+; AIX32-NEXT:    srw 10, 10, 5
+; AIX32-NEXT:    extsh 10, 10
+; AIX32-NEXT:    cmpw 10, 6
 ; AIX32-NEXT:    bgt 0, L..BB9_3
 ; AIX32-NEXT:  # %bb.2: # %entry
 ; AIX32-NEXT:    #
-; AIX32-NEXT:    andc 9, 8, 6
-; AIX32-NEXT:    or 9, 7, 9
-; AIX32-NEXT:    stwcx. 9, 0, 3
+; AIX32-NEXT:    andc 10, 9, 7
+; AIX32-NEXT:    or 10, 8, 10
+; AIX32-NEXT:    stwcx. 10, 0, 3
 ; AIX32-NEXT:    bne 0, L..BB9_1
 ; AIX32-NEXT:  L..BB9_3: # %entry
-; AIX32-NEXT:    srw 3, 8, 5
+; AIX32-NEXT:    srw 3, 9, 5
 ; AIX32-NEXT:    lwsync
 ; AIX32-NEXT:    clrlwi 3, 3, 16
 ; AIX32-NEXT:    extsh 3, 3
