@@ -150,22 +150,15 @@ Status ScriptedProcess::DoLoadCore() {
 
 Status ScriptedProcess::DoLaunch(Module *exe_module,
                                  ProcessLaunchInfo &launch_info) {
-  /* FIXME: This doesn't reflect how lldb actually launches a process.
-           In reality, it attaches to debugserver, then resume the process. */
+  LLDB_LOGF(GetLog(LLDBLog::Process), "ScriptedProcess::%s launching process", __FUNCTION__);
+  
+  /* MARK: This doesn't reflect how lldb actually launches a process.
+           In reality, it attaches to debugserver, then resume the process.
+           That's not true in all cases.  If debugserver is remote, lldb
+           asks debugserver to launch the process for it. */
   Status error = GetInterface().Launch();
-  SetPrivateState(eStateRunning);
-
-  if (error.Fail())
-    return error;
-
-  // TODO: Fetch next state from stopped event queue then send stop event
-  //  const StateType state = SetThreadStopInfo(response);
-  //  if (state != eStateInvalid) {
-  //    SetPrivateState(state);
-
   SetPrivateState(eStateStopped);
-
-  return {};
+  return error;
 }
 
 void ScriptedProcess::DidLaunch() { m_pid = GetInterface().GetProcessID(); }
@@ -177,25 +170,9 @@ void ScriptedProcess::DidResume() {
 }
 
 Status ScriptedProcess::DoResume() {
-  Log *log = GetLog(LLDBLog::Process);
-  // FIXME: Fetch data from thread.
-  const StateType thread_resume_state = eStateRunning;
-  LLDB_LOGF(log, "ScriptedProcess::%s thread_resume_state = %s", __FUNCTION__,
-            StateAsCString(thread_resume_state));
+  LLDB_LOGF(GetLog(LLDBLog::Process), "ScriptedProcess::%s resuming process", __FUNCTION__);
 
-  bool resume = (thread_resume_state == eStateRunning);
-  assert(thread_resume_state == eStateRunning && "invalid thread resume state");
-
-  Status error;
-  if (resume) {
-    LLDB_LOGF(log, "ScriptedProcess::%s sending resume", __FUNCTION__);
-
-    SetPrivateState(eStateRunning);
-    SetPrivateState(eStateStopped);
-    error = GetInterface().Resume();
-  }
-
-  return error;
+  return GetInterface().Resume();
 }
 
 Status ScriptedProcess::DoAttach(const ProcessAttachInfo &attach_info) {
@@ -224,19 +201,6 @@ Status ScriptedProcess::DoAttachToProcessWithName(
 
 void ScriptedProcess::DidAttach(ArchSpec &process_arch) {
   process_arch = GetArchitecture();
-}
-
-Status ScriptedProcess::DoStop() {
-  Log *log = GetLog(LLDBLog::Process);
-
-  if (GetInterface().ShouldStop()) {
-    SetPrivateState(eStateStopped);
-    LLDB_LOGF(log, "ScriptedProcess::%s Immediate stop", __FUNCTION__);
-    return {};
-  }
-
-  LLDB_LOGF(log, "ScriptedProcess::%s Delayed stop", __FUNCTION__);
-  return GetInterface().Stop();
 }
 
 Status ScriptedProcess::DoDestroy() { return Status(); }
