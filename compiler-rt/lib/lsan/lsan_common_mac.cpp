@@ -50,7 +50,7 @@ struct RegionScanState {
 
 typedef struct {
   int disable_counter;
-  u32 current_thread_id;
+  ThreadContextLsanBase *current_thread;
   AllocatorCache cache;
 } thread_local_data_t;
 
@@ -99,12 +99,14 @@ void EnableInThisThread() {
   --*disable_counter;
 }
 
-u32 GetCurrentThread() {
+ThreadContextLsanBase *GetCurrentThread() {
   thread_local_data_t *data = get_tls_val(false);
-  return data ? data->current_thread_id : kInvalidTid;
+  return data ? data->current_thread : nullptr;
 }
 
-void SetCurrentThread(u32 tid) { get_tls_val(true)->current_thread_id = tid; }
+void SetCurrentThread(ThreadContextLsanBase *tctx) {
+  get_tls_val(true)->current_thread = tctx;
+}
 
 AllocatorCache *GetAllocatorCache() { return &get_tls_val(true)->cache; }
 
