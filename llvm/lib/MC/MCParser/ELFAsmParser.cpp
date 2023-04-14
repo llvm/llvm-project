@@ -317,15 +317,23 @@ static unsigned parseSectionFlags(const Triple &TT, StringRef flagsStr,
       flags |= ELF::SHF_TLS;
       break;
     case 'c':
+      if (TT.getArch() != Triple::xcore)
+        return -1U;
       flags |= ELF::XCORE_SHF_CP_SECTION;
       break;
     case 'd':
+      if (TT.getArch() != Triple::xcore)
+        return -1U;
       flags |= ELF::XCORE_SHF_DP_SECTION;
       break;
     case 'y':
+      if (!(TT.isARM() || TT.isThumb()))
+        return -1U;
       flags |= ELF::SHF_ARM_PURECODE;
       break;
     case 's':
+      if (TT.getArch() != Triple::hexagon)
+        return -1U;
       flags |= ELF::SHF_HEX_GPREL;
       break;
     case 'G':
