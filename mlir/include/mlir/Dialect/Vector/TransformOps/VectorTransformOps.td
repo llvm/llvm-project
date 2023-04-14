@@ -162,6 +162,25 @@ def LowerMaskedTransfersOp : TransformWithPatternsOp<"vector.lower_masked_transf
   }];
 }
 
+def MaterializeMasksOp : TransformWithPatternsOp<"vector.materialize_masks"> {
+  let description = [{
+    Indicates that mask operations nested under the isolated from above op 
+    `target` should be lowered to fine-grained arithemtic operations.
+
+    This is usually the last step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$results);
+
+  let assemblyFormat = [{
+    $target
+    attr-dict
+    `:` functional-type($target, results)
+  }];
+}
+
 // TODO: evolve lowering_strategy to proper enums.
 def LowerMultiReductionOp
     : TransformWithPatternsOp<"vector.lower_multi_reduction"> {

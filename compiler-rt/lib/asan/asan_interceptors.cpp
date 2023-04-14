@@ -258,12 +258,36 @@ static void ClearShadowMemoryForContextStack(uptr stack, uptr ssize) {
   PoisonShadow(bottom, ssize, 0);
 }
 
-INTERCEPTOR(int, getcontext, struct ucontext_t *ucp) {
-  // API does not requires to have ucp clean, and sets only part of fields. We
-  // use ucp->uc_stack to unpoison new stack. We prefer to have zeroes then
-  // uninitialized bytes.
-  ResetContextStack(ucp);
-  return REAL(getcontext)(ucp);
+INTERCEPTOR(void, makecontext, struct ucontext_t *ucp, void (*func)(), int argc,
+            ...) {
+  va_list ap;
+  uptr args[64];
+  // We don't know a better way to forward ... into REAL function. We can
+  // increase args size if neccecary.
+  CHECK_LE(argc, ARRAY_SIZE(args));
+  internal_memset(args, 0, sizeof(args));
+  va_start(ap, argc);
+  for (int i = 0; i < argc; ++i) args[i] = va_arg(ap, uptr);
+  va_end(ap);
+
+#    define ENUMERATE_ARRAY_4(start) \
+      args[start], args[start + 1], args[start + 2], args[start + 3]
+#    define ENUMERATE_ARRAY_16(start)                         \
+      ENUMERATE_ARRAY_4(start), ENUMERATE_ARRAY_4(start + 4), \
+          ENUMERATE_ARRAY_4(start + 8), ENUMERATE_ARRAY_4(start + 12)
+#    define ENUMERATE_ARRAY_64()                                             \
+      ENUMERATE_ARRAY_16(0), ENUMERATE_ARRAY_16(16), ENUMERATE_ARRAY_16(32), \
+          ENUMERATE_ARRAY_16(48)
+
+  REAL(makecontext)
+  ((struct ucontext_t *)ucp, func, argc, ENUMERATE_ARRAY_64());
+
+#    undef ENUMERATE_ARRAY_4
+#    undef ENUMERATE_ARRAY_16
+#    undef ENUMERATE_ARRAY_64
+
+  // Sign the stack so we can identify it for unpoisoning.
+  SignContextStack(ucp);
 }
 
 INTERCEPTOR(int, swapcontext, struct ucontext_t *oucp,
@@ -279,9 +303,6 @@ INTERCEPTOR(int, swapcontext, struct ucontext_t *oucp,
   uptr stack, ssize;
   ReadContextStack(ucp, &stack, &ssize);
   ClearShadowMemoryForContextStack(stack, ssize);
-
-  // See getcontext interceptor.
-  ResetContextStack(oucp);
 
 #    if __has_attribute(__indirect_return__) && \
         (defined(__x86_64__) || defined(__i386__))
@@ -761,11 +782,11 @@ void InitializeAsanInterceptors() {
   // Intecept jump-related functions.
   ASAN_INTERCEPT_FUNC(longjmp);
 
-#if ASAN_INTERCEPT_SWAPCONTEXT
-  ASAN_INTERCEPT_FUNC(getcontext);
+#  if ASAN_INTERCEPT_SWAPCONTEXT
   ASAN_INTERCEPT_FUNC(swapcontext);
-#endif
-#if ASAN_INTERCEPT__LONGJMP
+  ASAN_INTERCEPT_FUNC(makecontext);
+#  endif
+#  if ASAN_INTERCEPT__LONGJMP
   ASAN_INTERCEPT_FUNC(_longjmp);
 #endif
 #if ASAN_INTERCEPT___LONGJMP_CHK
