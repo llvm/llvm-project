@@ -17,13 +17,12 @@ using namespace llvm;
 using llvm::itanium_demangle::ForwardTemplateReference;
 using llvm::itanium_demangle::Node;
 using llvm::itanium_demangle::NodeKind;
-using llvm::itanium_demangle::StringView;
 
 namespace {
 struct FoldingSetNodeIDBuilder {
   llvm::FoldingSetNodeID &ID;
   void operator()(const Node *P) { ID.AddPointer(P); }
-  void operator()(StringView Str) {
+  void operator()(std::string_view Str) {
     ID.AddString(llvm::StringRef(Str.begin(), Str.size()));
   }
   template <typename T>
@@ -292,7 +291,7 @@ parseMaybeMangledName(CanonicalizingDemangler &Demangler, StringRef Mangling,
     N = Demangler.parse();
   else
     N = Demangler.make<itanium_demangle::NameType>(
-        StringView(Mangling.data(), Mangling.size()));
+        std::string_view(Mangling.data(), Mangling.size()));
   return reinterpret_cast<ItaniumManglingCanonicalizer::Key>(N);
 }
 
