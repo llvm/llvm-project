@@ -25,6 +25,7 @@
 #include "UdtRecordCompleter.h"
 #include "SymbolFileNativePDB.h"
 #include <optional>
+#include <string_view>
 
 using namespace lldb_private;
 using namespace lldb_private::npdb;
@@ -174,7 +175,7 @@ PdbAstBuilder::CreateDeclInfoForType(const TagRecord &record, TypeIndex ti) {
     return CreateDeclInfoForUndecoratedName(record.Name);
 
   llvm::ms_demangle::Demangler demangler;
-  StringView sv(record.UniqueName.begin(), record.UniqueName.size());
+  std::string_view sv(record.UniqueName.begin(), record.UniqueName.size());
   llvm::ms_demangle::TagTypeNode *ttn = demangler.parseTagUniqueName(sv);
   if (demangler.Error)
     return {m_clang.GetTranslationUnitDecl(), std::string(record.UniqueName)};
