@@ -54,3 +54,23 @@ uint64_t SIProgramInfo::getPGMRSrc1(CallingConv::ID CC) const {
   }
   return Reg;
 }
+
+uint64_t SIProgramInfo::getComputePGMRSrc2() const {
+  uint64_t Reg =
+      S_00B84C_SCRATCH_EN(ScratchEnable) | S_00B84C_USER_SGPR(UserSGPR) |
+      S_00B84C_TRAP_HANDLER(TrapHandlerEnable) |
+      S_00B84C_TGID_X_EN(TGIdXEnable) | S_00B84C_TGID_Y_EN(TGIdYEnable) |
+      S_00B84C_TGID_Z_EN(TGIdZEnable) | S_00B84C_TG_SIZE_EN(TGSizeEnable) |
+      S_00B84C_TIDIG_COMP_CNT(TIdIGCompCount) |
+      S_00B84C_EXCP_EN_MSB(EXCPEnMSB) | S_00B84C_LDS_SIZE(LdsSize) |
+      S_00B84C_EXCP_EN(EXCPEnable);
+
+  return Reg;
+}
+
+uint64_t SIProgramInfo::getPGMRSrc2(CallingConv::ID CC) const {
+  if (AMDGPU::isCompute(CC))
+    return getComputePGMRSrc2();
+
+  return 0;
+}

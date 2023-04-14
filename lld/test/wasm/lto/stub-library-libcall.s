@@ -1,6 +1,6 @@
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t_main.o %t/main.s
-# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t_foo.o %t/foo.s
+# RUN: llvm-as %S/Inputs/foo.ll -o %t_foo.o
 # RUN: llvm-as %S/Inputs/libcall.ll -o %t_libcall.o
 # RUN: wasm-ld %t_main.o %t_libcall.o %t_foo.o %p/Inputs/stub.so -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s
@@ -25,12 +25,6 @@ _start:
     call func_with_libcall
     end_function
 
-#--- foo.s
-.globl foo
-foo:
-  .functype foo () -> ()
-  end_function
-
 # CHECK:         Imports:
 # CHECK-NEXT:      - Module:          env
 # CHECK-NEXT:        Field:           memcpy
@@ -46,4 +40,4 @@ foo:
 # CHECK-NEXT:         Index:           1
 # CHECK-NEXT:       - Name:            foo
 # CHECK-NEXT:         Kind:            FUNCTION
-# CHECK-NEXT:         Index:           2
+# CHECK-NEXT:         Index:           3

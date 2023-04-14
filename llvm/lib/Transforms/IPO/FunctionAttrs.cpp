@@ -1378,7 +1378,7 @@ static bool InstrBreaksNonConvergent(Instruction &I,
 
 /// Helper for NoUnwind inference predicate InstrBreaksAttribute.
 static bool InstrBreaksNonThrowing(Instruction &I, const SCCNodeSet &SCCNodes) {
-  if (!I.mayThrow())
+  if (!I.mayThrow(/* IncludePhaseOneUnwind */ true))
     return false;
   if (const auto *CI = dyn_cast<CallInst>(&I)) {
     if (Function *Callee = CI->getCalledFunction()) {

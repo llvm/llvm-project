@@ -2,6 +2,51 @@
 # RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx908 -verify-machineinstrs -run-pass peephole-opt -o - %s | FileCheck -check-prefix=GCN %s
 
 ---
+name:            fold_simm_virtual
+body:             |
+  bb.0:
+
+    ; GCN-LABEL: name: fold_simm_virtual
+    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GCN-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG
+    %0:sreg_32 = S_MOV_B32 0
+    %1:sreg_32 = COPY killed %0
+    SI_RETURN_TO_EPILOG
+
+...
+
+---
+name:            fold_simm_physical
+body:             |
+  bb.0:
+
+    ; GCN-LABEL: name: fold_simm_physical
+    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr1 = S_MOV_B32 0
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG
+    %0:sreg_32 = S_MOV_B32 0
+    $sgpr1 = COPY killed %0
+    SI_RETURN_TO_EPILOG
+
+...
+
+---
+name:            dont_fold_simm_scc
+body:             |
+  bb.0:
+
+    ; GCN-LABEL: name: dont_fold_simm_scc
+    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GCN-NEXT: $scc = COPY killed [[S_MOV_B32_]]
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG
+    %0:sreg_32 = S_MOV_B32 0
+    $scc = COPY killed %0
+    SI_RETURN_TO_EPILOG
+
+...
+
+---
 name:            fold_simm_16_sub_to_lo
 body:             |
   bb.0:

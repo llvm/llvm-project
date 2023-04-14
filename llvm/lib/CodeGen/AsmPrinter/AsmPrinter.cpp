@@ -133,7 +133,7 @@ static cl::opt<std::string> BasicBlockProfileDump(
     "mbb-profile-dump", cl::Hidden,
     cl::desc("Basic block profile dump for external cost modelling. If "
              "matching up BBs with afterwards, the compilation must be "
-             "performed with -fbasic-block-sections=labels. Enabling this "
+             "performed with -basic-block-sections=labels. Enabling this "
              "flag during in-process ThinLTO is not supported."));
 
 const char DWARFGroupName[] = "dwarf";
@@ -1952,14 +1952,19 @@ void AsmPrinter::emitFunctionBody() {
 
   OutStreamer->addBlankLine();
 
-  // Output MBB numbers, function names, and frequencies if the flag to dump
+  // Output MBB ids, function names, and frequencies if the flag to dump
   // MBB profile information has been set
   if (MBBProfileDumpFileOutput) {
+    if (!MF->hasBBLabels())
+      MF->getContext().reportError(
+          SMLoc(),
+          "Unable to find BB labels for MBB profile dump. -mbb-profile-dump "
+          "must be called with -basic-block-sections=labels");
     MachineBlockFrequencyInfo &MBFI =
         getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
     for (const auto &MBB : *MF) {
       *MBBProfileDumpFileOutput.get()
-          << MF->getName() << "," << MBB.getNumber() << ","
+          << MF->getName() << "," << MBB.getBBID() << ","
           << MBFI.getBlockFreqRelativeToEntryBlock(&MBB) << "\n";
     }
   }

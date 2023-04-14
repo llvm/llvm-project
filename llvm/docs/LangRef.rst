@@ -6660,7 +6660,8 @@ or switch that it is attached to is completely unpredictable.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The existence of the ``!dereferenceable`` metadata on the instruction
-tells the optimizer that the value loaded is known to be dereferenceable.
+tells the optimizer that the value loaded is known to be dereferenceable,
+otherwise the behavior is undefined.
 The number of bytes known to be dereferenceable is specified by the integer
 value in the metadata node. This is analogous to the ''dereferenceable''
 attribute on parameters and return values.
@@ -6672,7 +6673,7 @@ attribute on parameters and return values.
 
 The existence of the ``!dereferenceable_or_null`` metadata on the
 instruction tells the optimizer that the value loaded is known to be either
-dereferenceable or null.
+dereferenceable or null, otherwise the behavior is undefined.
 The number of bytes known to be dereferenceable is specified by the integer
 value in the metadata node. This is analogous to the ''dereferenceable_or_null''
 attribute on parameters and return values.

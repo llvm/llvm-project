@@ -9,6 +9,7 @@ define void @foo(ptr %a, i32 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    rlwinm r5, r3, 3, 27, 28
 ; CHECK-NEXT:    li r6, 255
+; CHECK-NEXT:    extsb r4, r4
 ; CHECK-NEXT:    sync
 ; CHECK-NEXT:    xori r5, r5, 24
 ; CHECK-NEXT:    rlwinm r3, r3, 0, 0, 29
