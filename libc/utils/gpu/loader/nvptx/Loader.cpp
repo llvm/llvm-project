@@ -14,8 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Loader.h"
-
-#include "src/__support/RPC/rpc.h"
+#include "Server.h"
 
 #include "cuda.h"
 #include <cstddef>
@@ -33,30 +32,6 @@ struct kernel_args_t {
   void *outbox;
   void *buffer;
 };
-
-static __llvm_libc::rpc::Server server;
-
-/// Queries the RPC client at least once and performs server-side work if there
-/// are any active requests.
-void handle_server() {
-  while (server.handle(
-      [&](__llvm_libc::rpc::Buffer *buffer) {
-        switch (static_cast<__llvm_libc::rpc::Opcode>(buffer->data[0])) {
-        case __llvm_libc::rpc::Opcode::PRINT_TO_STDERR: {
-          fputs(reinterpret_cast<const char *>(&buffer->data[1]), stderr);
-          break;
-        }
-        case __llvm_libc::rpc::Opcode::EXIT: {
-          exit(buffer->data[1]);
-          break;
-        }
-        default:
-          return;
-        };
-      },
-      [](__llvm_libc::rpc::Buffer *buffer) {}))
-    ;
-}
 
 static void handle_error(CUresult err) {
   if (err == CUDA_SUCCESS)
@@ -155,7 +130,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
                          CU_LAUNCH_PARAM_END};
 
   // Initialize the RPC server's buffer for host-device communication.
-  server.reset(server_inbox, server_outbox, buffer);
+  server.reset(&lock, server_inbox, server_outbox, buffer);
 
   // Call the kernel with the given arguments.
   if (CUresult err = cuLaunchKernel(
