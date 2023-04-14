@@ -229,7 +229,16 @@ LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
                                       ? LLDB_FILE_ADDRESS_BIT
                                       : std::prev(pair_iterator)->first;
 
-  uint64_t tagged_address = start_tagged_address + addr.GetFileAddress();
+  auto *section_list = module_containing_pointer->GetSectionList();
+  if (section_list->GetSize() == 0) {
+    LLDB_LOG(log,
+             "[MemoryReader] Module with empty section list.");
+    return {};
+  }
+
+  uint64_t tagged_address =
+      start_tagged_address + addr.GetFileAddress() -
+      section_list->GetSectionAtIndex(0)->GetFileAddress();
 
   if (tagged_address >= std::get<uint64_t>(*pair_iterator)) {
     // If the tagged address invades the next image's tagged address space,
@@ -241,11 +250,19 @@ LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
     return process_pointer;
   }
 
+  swift::remote::RemoteAbsolutePointer tagged_pointer("", tagged_address);
+  if (tagged_address !=
+      (uint64_t)signedPointerStripper(tagged_pointer).getOffset()) {
+    lldb_assert(false, "Tagged pointer runs into pointer authentication mask!",
+                __FUNCTION__, __FILE__, __LINE__);
+    return process_pointer;
+  }
+
   LLDB_LOGV(log,
             "[MemoryReader] Successfully resolved pointer {0:x} read from "
             "{1:x} to tagged address {2:x}.",
             readValue, address.getAddressData(), tagged_address);
-  return swift::remote::RemoteAbsolutePointer("", tagged_address);
+  return tagged_pointer;
 }
 
 bool LLDBMemoryReader::readBytes(swift::remote::RemoteAddress address,
@@ -454,13 +471,28 @@ LLDBMemoryReader::addModuleToAddressMap(ModuleSP module,
   if (section_list_size == 0)
     return {};
 
+  auto first_section = section_list->GetSectionAtIndex(0);
   auto last_section =
       section_list->GetSectionAtIndex(section_list->GetSize() - 1);
-  // The virtual file address + the size of last section gives us the total size
-  // of this image in memory.
-  uint64_t size = last_section->GetFileAddress() + last_section->GetByteSize();
+
+  // The total size is the last section's file address plus size, subtracting the 
+  // first section's file address.
+  auto start_file_address = first_section->GetFileAddress();
+  uint64_t end_file_address =
+      last_section->GetFileAddress() + last_section->GetByteSize();
+  auto size = end_file_address - start_file_address;
   auto module_end_address = module_start_address + size;
 
+  if (module_end_address !=
+      (uint64_t)signedPointerStripper(
+          swift::remote::RemoteAbsolutePointer("", module_end_address))
+          .getOffset()) {
+    lldb_assert(false,
+                "LLDBMemoryReader module to address map ran into pointer "
+                "authentication mask!",
+                __FUNCTION__, __FILE__, __LINE__);
+    return {};
+  }
   // The address for the next image is the next pointer aligned address
   // available after the end of the current image.
   uint64_t next_module_start_address = llvm::alignTo(module_end_address, 8);
@@ -502,6 +534,12 @@ LLDBMemoryReader::getFileAddressAndModuleForTaggedAddress(
   }
 
   ModuleSP module = pair_iterator->second;
+  auto *section_list = module->GetSectionList();
+  if (section_list->GetSize() == 0) {
+    LLDB_LOG(log,
+             "[MemoryReader] Module with empty section list.");
+    return {};
+  }
   uint64_t file_address;
   if (pair_iterator == m_range_module_map.begin())
     // Since this is the first registered module,
@@ -509,8 +547,13 @@ LLDBMemoryReader::getFileAddressAndModuleForTaggedAddress(
     file_address = tagged_address & ~LLDB_FILE_ADDRESS_BIT;
   else
     // The end of the previous section is the start of the current one.
+    // We also need to add the first section's file address since we remove it
+    // when constructing the range to module map.
     file_address = tagged_address - std::prev(pair_iterator)->first;
 
+  // We also need to add the module's file address, since we subtract it when 
+  // building the range to module map.
+  file_address += section_list->GetSectionAtIndex(0)->GetFileAddress();
   return {{file_address, module}};
 }
 
