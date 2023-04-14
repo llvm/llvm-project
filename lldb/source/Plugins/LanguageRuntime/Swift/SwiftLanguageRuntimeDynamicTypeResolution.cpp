@@ -780,7 +780,7 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
     llvm::StringRef member_name) {
   auto scratch_ctx =
       instance_type.GetTypeSystem().dyn_cast_or_null<SwiftASTContext>();
-  if (scratch_ctx->HasFatalErrors())
+  if (scratch_ctx == nullptr || scratch_ctx->HasFatalErrors())
     return {};
 
   auto *remote_ast = &GetRemoteASTContext(*scratch_ctx);
