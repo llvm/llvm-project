@@ -2006,9 +2006,10 @@ ASTStmtReader::VisitCXXUnresolvedConstructExpr(CXXUnresolvedConstructExpr *E) {
   Record.skipInts(1);
   for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
     E->setArg(I, Record.readSubExpr());
-  E->TSI = readTypeSourceInfo();
+  E->TypeAndInitForm.setPointer(readTypeSourceInfo());
   E->setLParenLoc(readSourceLocation());
   E->setRParenLoc(readSourceLocation());
+  E->TypeAndInitForm.setInt(Record.readInt());
 }
 
 void ASTStmtReader::VisitOverloadExpr(OverloadExpr *E) {

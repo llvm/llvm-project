@@ -22,6 +22,7 @@
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -3741,7 +3742,8 @@ struct WhileCmpCond : public OpRewritePattern<scf::WhileOp> {
   }
 };
 
-struct WhileUnusedArg : public OpRewritePattern<WhileOp> {
+/// Remove unused init/yield args.
+struct WhileRemoveUnusedArgs : public OpRewritePattern<WhileOp> {
   using OpRewritePattern<WhileOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(WhileOp op,
@@ -3749,42 +3751,52 @@ struct WhileUnusedArg : public OpRewritePattern<WhileOp> {
 
     if (!llvm::any_of(op.getBeforeArguments(),
                       [](Value arg) { return arg.use_empty(); }))
-      return failure();
+      return rewriter.notifyMatchFailure(op, "No args to remove");
 
     YieldOp yield = op.getYieldOp();
 
     // Collect results mapping, new terminator args and new result types.
     SmallVector<Value> newYields;
     SmallVector<Value> newInits;
-    llvm::BitVector argsToErase(op.getBeforeArguments().size());
-    for (const auto &it : llvm::enumerate(llvm::zip(
-             op.getBeforeArguments(), yield.getOperands(), op.getInits()))) {
-      Value beforeArg = std::get<0>(it.value());
-      Value yieldValue = std::get<1>(it.value());
-      Value initValue = std::get<2>(it.value());
+    llvm::BitVector argsToErase;
+
+    size_t argsCount = op.getBeforeArguments().size();
+    newYields.reserve(argsCount);
+    newInits.reserve(argsCount);
+    argsToErase.reserve(argsCount);
+    for (auto &&[beforeArg, yieldValue, initValue] : llvm::zip(
+             op.getBeforeArguments(), yield.getOperands(), op.getInits())) {
       if (beforeArg.use_empty()) {
-        argsToErase.set(it.index());
+        argsToErase.push_back(true);
       } else {
+        argsToErase.push_back(false);
         newYields.emplace_back(yieldValue);
         newInits.emplace_back(initValue);
       }
     }
 
-    if (argsToErase.none())
-      return failure();
+    Block &beforeBlock = op.getBefore().front();
+    Block &afterBlock = op.getAfter().front();
 
-    rewriter.startRootUpdate(op);
-    op.getBefore().front().eraseArguments(argsToErase);
-    rewriter.finalizeRootUpdate(op);
+    beforeBlock.eraseArguments(argsToErase);
 
-    WhileOp replacement =
-        rewriter.create<WhileOp>(op.getLoc(), op.getResultTypes(), newInits);
-    replacement.getBefore().takeBody(op.getBefore());
-    replacement.getAfter().takeBody(op.getAfter());
-    rewriter.replaceOp(op, replacement.getResults());
+    Location loc = op.getLoc();
+    auto newWhileOp =
+        rewriter.create<WhileOp>(loc, op.getResultTypes(), newInits,
+                                 /*beforeBody*/ nullptr, /*afterBody*/ nullptr);
+    Block &newBeforeBlock = newWhileOp.getBefore().front();
+    Block &newAfterBlock = newWhileOp.getAfter().front();
 
+    OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(yield);
     rewriter.replaceOpWithNewOp<YieldOp>(yield, newYields);
+
+    rewriter.mergeBlocks(&beforeBlock, &newBeforeBlock,
+                         newBeforeBlock.getArguments());
+    rewriter.mergeBlocks(&afterBlock, &newAfterBlock,
+                         newAfterBlock.getArguments());
+
+    rewriter.replaceOp(op, newWhileOp.getResults());
     return success();
   }
 };
@@ -3795,23 +3807,27 @@ struct WhileRemoveDuplicatedResults : public OpRewritePattern<WhileOp> {
 
   LogicalResult matchAndRewrite(WhileOp op,
                                 PatternRewriter &rewriter) const override {
-    Block &beforeBlock = op.getBefore().front();
-    Block &afterBlock = op.getAfter().front();
-
-    auto condOp = cast<ConditionOp>(beforeBlock.getTerminator());
+    ConditionOp condOp = op.getConditionOp();
     ValueRange condOpArgs = condOp.getArgs();
+
+    llvm::SmallPtrSet<Value, 8> argsSet;
+    for (Value arg : condOpArgs)
+      argsSet.insert(arg);
+
+    if (argsSet.size() == condOpArgs.size())
+      return rewriter.notifyMatchFailure(op, "No results to remove");
+
     llvm::SmallDenseMap<Value, unsigned> argsMap;
     SmallVector<Value> newArgs;
-    for (auto arg : condOpArgs) {
+    argsMap.reserve(condOpArgs.size());
+    newArgs.reserve(condOpArgs.size());
+    for (Value arg : condOpArgs) {
       if (!argsMap.count(arg)) {
         auto pos = static_cast<unsigned>(argsMap.size());
         argsMap.insert({arg, pos});
         newArgs.emplace_back(arg);
       }
     }
-
-    if (argsMap.size() == condOpArgs.size())
-      return rewriter.notifyMatchFailure(op, "No results to remove");
 
     ValueRange argsRange(newArgs);
 
@@ -3837,64 +3853,13 @@ struct WhileRemoveDuplicatedResults : public OpRewritePattern<WhileOp> {
     rewriter.replaceOpWithNewOp<ConditionOp>(condOp, condOp.getCondition(),
                                              argsRange);
 
+    Block &beforeBlock = op.getBefore().front();
+    Block &afterBlock = op.getAfter().front();
+
     rewriter.mergeBlocks(&beforeBlock, &newBeforeBlock,
                          newBeforeBlock.getArguments());
     rewriter.mergeBlocks(&afterBlock, &newAfterBlock, afterArgsMapping);
     rewriter.replaceOp(op, resultsMapping);
-    return success();
-  }
-};
-
-/// Remove unused init/yield args.
-struct WhileRemoveUnusedArgs : public mlir::OpRewritePattern<WhileOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(WhileOp op,
-                                PatternRewriter &rewriter) const override {
-    Block &beforeBlock = op.getBefore().front();
-    Block &afterBlock = op.getAfter().front();
-
-    auto yield = cast<YieldOp>(afterBlock.getTerminator());
-
-    llvm::BitVector argsToRemove;
-    SmallVector<Value> newInits;
-    SmallVector<Value> newYieldArgs;
-
-    bool changed = false;
-    for (auto &&[arg, init, yieldArg] : llvm::zip(
-             beforeBlock.getArguments(), op.getInits(), yield.getResults())) {
-      bool empty = arg.use_empty();
-      argsToRemove.push_back(empty);
-      if (empty) {
-        changed = true;
-        continue;
-      }
-
-      newInits.emplace_back(init);
-      newYieldArgs.emplace_back(yieldArg);
-    }
-
-    if (!changed)
-      return rewriter.notifyMatchFailure(op, "No args to remove");
-
-    beforeBlock.eraseArguments(argsToRemove);
-
-    Location loc = op.getLoc();
-    auto newWhileOp =
-        rewriter.create<WhileOp>(loc, op->getResultTypes(), newInits,
-                                 /*beforeBody*/ nullptr, /*afterBody*/ nullptr);
-    Block &newBeforeBlock = newWhileOp.getBefore().front();
-    Block &newAfterBlock = newWhileOp.getAfter().front();
-
-    OpBuilder::InsertionGuard g(rewriter);
-    rewriter.setInsertionPoint(yield);
-    rewriter.replaceOpWithNewOp<YieldOp>(yield, newYieldArgs);
-
-    rewriter.mergeBlocks(&beforeBlock, &newBeforeBlock,
-                         newBeforeBlock.getArguments());
-    rewriter.mergeBlocks(&afterBlock, &newAfterBlock,
-                         newAfterBlock.getArguments());
-    rewriter.replaceOp(op, newWhileOp.getResults());
     return success();
   }
 };

@@ -40,7 +40,7 @@ define i32 @test_step_1_flags(i32 %n) {
 ; DEFAULT-NEXT:    %b = sub i32 %n.minus.1, %i
 ; DEFAULT-NEXT:    --> {(-1 + %n),+,-1}<nsw><%loop> U: full-set S: full-set Exits: 0 LoopDispositions: { %loop: Computable }
 ; DEFAULT-NEXT:    %c = sub i32 2147483647, %i
-; DEFAULT-NEXT:    --> {2147483647,+,-1}<nw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: (-2147483648 + (-1 * %n)) LoopDispositions: { %loop: Computable }
+; DEFAULT-NEXT:    --> {2147483647,+,-1}<nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: (-2147483648 + (-1 * %n)) LoopDispositions: { %loop: Computable }
 ; DEFAULT-NEXT:    %i.next = add nuw nsw i32 %i, 1
 ; DEFAULT-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %n LoopDispositions: { %loop: Computable }
 ; DEFAULT-NEXT:    %j.next = add nsw i32 %j, -1
@@ -66,7 +66,7 @@ define i32 @test_step_1_flags(i32 %n) {
 ; EXPENSIVE_SHARPENING-NEXT:    %b = sub i32 %n.minus.1, %i
 ; EXPENSIVE_SHARPENING-NEXT:    --> {(-1 + %n),+,-1}<nsw><%loop> U: [0,2147483647) S: [0,2147483647) Exits: 0 LoopDispositions: { %loop: Computable }
 ; EXPENSIVE_SHARPENING-NEXT:    %c = sub i32 2147483647, %i
-; EXPENSIVE_SHARPENING-NEXT:    --> {2147483647,+,-1}<nw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: (-2147483648 + (-1 * %n)) LoopDispositions: { %loop: Computable }
+; EXPENSIVE_SHARPENING-NEXT:    --> {2147483647,+,-1}<nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: (-2147483648 + (-1 * %n)) LoopDispositions: { %loop: Computable }
 ; EXPENSIVE_SHARPENING-NEXT:    %i.next = add nuw nsw i32 %i, 1
 ; EXPENSIVE_SHARPENING-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %n LoopDispositions: { %loop: Computable }
 ; EXPENSIVE_SHARPENING-NEXT:    %j.next = add nsw i32 %j, -1

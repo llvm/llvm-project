@@ -43560,8 +43560,11 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     // TESTPS/TESTPD only demands the sign bits of ALL the elements.
     KnownBits KnownSrc;
     APInt SignMask = APInt::getSignMask(OpVT.getScalarSizeInBits());
-    return SimplifyDemandedBits(Op0, SignMask, KnownSrc, TLO, Depth + 1) ||
-           SimplifyDemandedBits(Op1, SignMask, KnownSrc, TLO, Depth + 1);
+    bool AssumeSingleUse = (Op0 == Op1) && Op->isOnlyUserOf(Op0.getNode());
+    return SimplifyDemandedBits(Op0, SignMask, KnownSrc, TLO, Depth + 1,
+                                AssumeSingleUse) ||
+           SimplifyDemandedBits(Op1, SignMask, KnownSrc, TLO, Depth + 1,
+                                AssumeSingleUse);
   }
   case X86ISD::BEXTR:
   case X86ISD::BEXTRI: {
@@ -47427,6 +47430,17 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
       return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Result,
                          EFLAGS.getOperand(1));
     }
+  }
+
+  // MOVMSKPS(V) !=/== 0 -> TESTPS(V,V)
+  // MOVMSKPD(V) !=/== 0 -> TESTPD(V,V)
+  // iff every element is referenced.
+  if (NumElts <= CmpBits && IsAnyOf && Subtarget.hasAVX() && IsOneUse &&
+      (NumEltBits == 32 || NumEltBits == 64)) {
+    MVT FloatSVT = MVT::getFloatingPointVT(NumEltBits);
+    MVT FloatVT = MVT::getVectorVT(FloatSVT, NumElts);
+    SDValue V = DAG.getBitcast(FloatVT, Vec);
+    return DAG.getNode(X86ISD::TESTP, SDLoc(EFLAGS), MVT::i32, V, V);
   }
 
   return SDValue();
