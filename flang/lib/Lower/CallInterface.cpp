@@ -878,7 +878,7 @@ private:
     if ((obj.type.attrs() & shapeRequiringBox).any())
       // Need to pass shape/coshape info in fir.box.
       return true;
-    if (obj.type.type().IsPolymorphic())
+    if (obj.type.type().IsPolymorphic() && !obj.type.type().IsAssumedType())
       // Need to pass dynamic type info in fir.box.
       return true;
     if (const Fortran::semantics::DerivedTypeSpec *derived =
@@ -965,14 +965,7 @@ private:
     mlir::Type boxType = fir::wrapInClassOrBoxType(
         type, obj.type.type().IsPolymorphic(), obj.type.type().IsAssumedType());
 
-    if (obj.type.type().IsAssumedType() && isBindC) {
-      mlir::Type voidPtrType = fir::ReferenceType::get(
-          mlir::NoneType::get(&interface.converter.getMLIRContext()));
-      addFirOperand(voidPtrType, nextPassedArgPosition(), Property::BaseAddress,
-                    attrs);
-      addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
-    } else if (obj.attrs.test(Attrs::Allocatable) ||
-               obj.attrs.test(Attrs::Pointer)) {
+    if (obj.attrs.test(Attrs::Allocatable) || obj.attrs.test(Attrs::Pointer)) {
       // Pass as fir.ref<fir.box> or fir.ref<fir.class>
       mlir::Type boxRefType = fir::ReferenceType::get(boxType);
       addFirOperand(boxRefType, nextPassedArgPosition(), Property::MutableBox,
