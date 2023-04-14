@@ -319,6 +319,12 @@ TEST_F(DefineOutlineTest, ApplyTest) {
             };)cpp",
           "  Foo::Foo(int) {}\n",
       },
+      // Destrctors
+      {
+          "class A { ~A^(){} };",
+          "class A { ~A(); };",
+          "A::~A(){} ",
+      },
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Test);
@@ -531,6 +537,18 @@ TEST_F(DefineOutlineTest, QualifyFunctionName) {
           // FIXME: Take using namespace directives in the source file into
           // account. This can be spelled as b::foo instead.
           "using namespace a;void a::b::foo() {} ",
+      },
+      {
+          "namespace a { class A { ~A^(){} }; }",
+          "",
+          "namespace a { class A { ~A(); }; }",
+          "a::A::~A(){} ",
+      },
+      {
+          "namespace a { class A { ~A^(){} }; }",
+          "namespace a{}",
+          "namespace a { class A { ~A(); }; }",
+          "namespace a{A::~A(){} }",
       },
   };
   llvm::StringMap<std::string> EditedFiles;
