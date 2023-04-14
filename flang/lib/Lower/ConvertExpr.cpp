@@ -1844,8 +1844,22 @@ public:
         const Fortran::evaluate::Symbol *assumedTypeSym =
             arg.value()->GetAssumedTypeDummy();
         auto symBox = symMap.lookupSymbol(*assumedTypeSym);
-        operands.emplace_back(
-            converter.getSymbolExtendedValue(*assumedTypeSym, &symMap));
+        ExtValue exv =
+            converter.getSymbolExtendedValue(*assumedTypeSym, &symMap);
+        if (argLowering) {
+          fir::ArgLoweringRule argRules =
+              fir::lowerIntrinsicArgumentAs(*argLowering, arg.index());
+          // Note: usages of TYPE(*) is limited by C710 but C_LOC and
+          // IS_CONTIGUOUS may require an assumed size TYPE(*) to be passed to
+          // the intrinsic library utility as a fir.box.
+          if (argRules.lowerAs == fir::LowerIntrinsicArgAs::Box &&
+              !fir::getBase(exv).getType().isa<fir::BaseBoxType>()) {
+            operands.emplace_back(
+                fir::factory::createBoxValue(builder, loc, exv));
+            continue;
+          }
+        }
+        operands.emplace_back(std::move(exv));
         continue;
       }
       if (!expr) {

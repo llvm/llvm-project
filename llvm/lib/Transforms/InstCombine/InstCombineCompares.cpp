@@ -899,10 +899,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
   return transformToIndexedCompare(GEPLHS, RHS, Cond, DL);
 }
 
-Instruction *InstCombinerImpl::foldAllocaCmp(ICmpInst &ICI,
-                                             const AllocaInst *Alloca) {
-  assert(ICI.isEquality() && "Cannot fold non-equality comparison.");
-
+bool InstCombinerImpl::foldAllocaCmp(AllocaInst *Alloca) {
   // It would be tempting to fold away comparisons between allocas and any
   // pointer not based on that alloca (e.g. an argument). However, even
   // though such pointers cannot alias, they can still compare equal.
@@ -911,21 +908,34 @@ Instruction *InstCombinerImpl::foldAllocaCmp(ICmpInst &ICI,
   // doesn't escape we can argue that it's impossible to guess its value, and we
   // can therefore act as if any such guesses are wrong.
   //
-  // The code below checks that the alloca doesn't escape, and that it's only
-  // used in a comparison once (the current instruction). The
-  // single-comparison-use condition ensures that we're trivially folding all
-  // comparisons against the alloca consistently, and avoids the risk of
-  // erroneously folding a comparison of the pointer with itself.
+  // However, we need to ensure that this folding is consistent: We can't fold
+  // one comparison to false, and then leave a different comparison against the
+  // same value alone (as it might evaluate to true at runtime, leading to a
+  // contradiction). As such, this code ensures that all comparisons are folded
+  // at the same time, and there are no other escapes.
 
   struct CmpCaptureTracker : public CaptureTracker {
+    AllocaInst *Alloca;
     bool Captured = false;
-    unsigned NumCmps = 0;
+    /// The value of the map is a bit mask of which icmp operands the alloca is
+    /// used in.
+    SmallMapVector<ICmpInst *, unsigned, 4> ICmps;
+
+    CmpCaptureTracker(AllocaInst *Alloca) : Alloca(Alloca) {}
 
     void tooManyUses() override { Captured = true; }
 
     bool captured(const Use *U) override {
-      if (isa<ICmpInst>(U->getUser()) && ++NumCmps == 1) {
-        // Ignore one icmp capture.
+      auto *ICmp = dyn_cast<ICmpInst>(U->getUser());
+      // We need to check that U is based *only* on the alloca, and doesn't
+      // have other contributions from a select/phi operand.
+      // TODO: We could check whether getUnderlyingObjects() reduces to one
+      // object, which would allow looking through phi nodes.
+      if (ICmp && ICmp->isEquality() && getUnderlyingObject(*U) == Alloca) {
+        // Collect equality icmps of the alloca, and don't treat them as
+        // captures.
+        auto Res = ICmps.insert({ICmp, 0});
+        Res.first->second |= 1u << U->getOperandNo();
         return false;
       }
 
@@ -934,14 +944,36 @@ Instruction *InstCombinerImpl::foldAllocaCmp(ICmpInst &ICI,
     }
   };
 
-  CmpCaptureTracker Tracker;
+  CmpCaptureTracker Tracker(Alloca);
   PointerMayBeCaptured(Alloca, &Tracker);
   if (Tracker.Captured)
-    return nullptr;
+    return false;
 
-  auto *Res = ConstantInt::get(ICI.getType(),
-                               !CmpInst::isTrueWhenEqual(ICI.getPredicate()));
-  return replaceInstUsesWith(ICI, Res);
+  bool Changed = false;
+  for (auto [ICmp, Operands] : Tracker.ICmps) {
+    switch (Operands) {
+    case 1:
+    case 2: {
+      // The alloca is only used in one icmp operand. Assume that the
+      // equality is false.
+      auto *Res = ConstantInt::get(
+          ICmp->getType(), ICmp->getPredicate() == ICmpInst::ICMP_NE);
+      replaceInstUsesWith(*ICmp, Res);
+      eraseInstFromFunction(*ICmp);
+      Changed = true;
+      break;
+    }
+    case 3:
+      // Both icmp operands are based on the alloca, so this is comparing
+      // pointer offsets, without leaking any information about the address
+      // of the alloca. Ignore such comparisons.
+      break;
+    default:
+      llvm_unreachable("Cannot happen");
+    }
+  }
+
+  return Changed;
 }
 
 /// Fold "icmp pred (X+C), X".
@@ -6500,11 +6532,11 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Op0->getType()->isPointerTy() && I.isEquality()) {
     assert(Op1->getType()->isPointerTy() && "Comparing pointer with non-pointer?");
     if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(Op0)))
-      if (Instruction *New = foldAllocaCmp(I, Alloca))
-        return New;
+      if (foldAllocaCmp(Alloca))
+        return nullptr;
     if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(Op1)))
-      if (Instruction *New = foldAllocaCmp(I, Alloca))
-        return New;
+      if (foldAllocaCmp(Alloca))
+        return nullptr;
   }
 
   if (Instruction *Res = foldICmpBitCast(I))

@@ -1946,11 +1946,13 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       DVI->replaceUsesOfWith(Alloca, G);
 
     for (Instruction *I : UsersToUpdate) {
-      // It is meaningless to remain the lifetime intrinsics refer for the
+      // It is meaningless to retain the lifetime intrinsics refer for the
       // member of coroutine frames and the meaningless lifetime intrinsics
       // are possible to block further optimizations.
-      if (I->isLifetimeStartOrEnd())
+      if (I->isLifetimeStartOrEnd()) {
+        I->eraseFromParent();
         continue;
+      }
 
       I->replaceUsesOfWith(Alloca, G);
     }
