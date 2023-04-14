@@ -351,6 +351,10 @@ public:
   void printAsOperand(raw_ostream &os, bool printType = true);
   void printAsOperand(raw_ostream &os, AsmState &state);
 
+  /// NOTE: Do not call this function, it is only used to be compatible with the
+  /// LLVM loop analysis machinery.
+  bool isLegalToHoistInto() const { return false; };
+
 private:
   /// Pair of the parent object that owns this block and a bit that signifies if
   /// the operations within this block have a valid ordering.

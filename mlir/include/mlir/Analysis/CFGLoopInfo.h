@@ -18,7 +18,17 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/LoopInfoImpl.h"
+
+namespace mlir {
+class CFGLoop;
+class CFGLoopInfo;
+} // namespace mlir
+
+namespace llvm {
+// Implementation in LLVM's LoopInfoImpl.h
+extern template class LoopBase<mlir::Block, mlir::CFGLoop>;
+extern template class LoopInfoBase<mlir::Block, mlir::CFGLoop>;
+} // namespace llvm
 
 namespace mlir {
 
@@ -38,6 +48,9 @@ class CFGLoopInfo : public llvm::LoopInfoBase<mlir::Block, mlir::CFGLoop> {
 public:
   CFGLoopInfo(const llvm::DominatorTreeBase<mlir::Block, false> &domTree);
 };
+
+raw_ostream &operator<<(raw_ostream &os, mlir::Block &block);
+
 } // namespace mlir
 
 #endif // MLIR_ANALYSIS_LOOPINFO_H
