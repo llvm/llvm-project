@@ -453,6 +453,62 @@ public:
   }
 };
 
+/// Creates a custom subclass of mlir.ir.Value, implementing a casting
+/// constructor and type checking methods.
+class mlir_value_subclass : public pure_subclass {
+public:
+  using IsAFunctionTy = bool (*)(MlirValue);
+
+  /// Subclasses by looking up the super-class dynamically.
+  mlir_value_subclass(py::handle scope, const char *valueClassName,
+                      IsAFunctionTy isaFunction)
+      : mlir_value_subclass(
+            scope, valueClassName, isaFunction,
+            py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir")).attr("Value")) {
+  }
+
+  /// Subclasses with a provided mlir.ir.Value super-class. This must
+  /// be used if the subclass is being defined in the same extension module
+  /// as the mlir.ir class (otherwise, it will trigger a recursive
+  /// initialization).
+  mlir_value_subclass(py::handle scope, const char *valueClassName,
+                      IsAFunctionTy isaFunction, const py::object &superCls)
+      : pure_subclass(scope, valueClassName, superCls) {
+    // Casting constructor. Note that it hard, if not impossible, to properly
+    // call chain to parent `__init__` in pybind11 due to its special handling
+    // for init functions that don't have a fully constructed self-reference,
+    // which makes it impossible to forward it to `__init__` of a superclass.
+    // Instead, provide a custom `__new__` and call that of a superclass, which
+    // eventually calls `__init__` of the superclass. Since attribute subclasses
+    // have no additional members, we can just return the instance thus created
+    // without amending it.
+    std::string captureValueName(
+        valueClassName); // As string in case if valueClassName is not static.
+    py::cpp_function newCf(
+        [superCls, isaFunction, captureValueName](py::object cls,
+                                                  py::object otherValue) {
+          MlirValue rawValue = py::cast<MlirValue>(otherValue);
+          if (!isaFunction(rawValue)) {
+            auto origRepr = py::repr(otherValue).cast<std::string>();
+            throw std::invalid_argument((llvm::Twine("Cannot cast value to ") +
+                                         captureValueName + " (from " +
+                                         origRepr + ")")
+                                            .str());
+          }
+          py::object self = superCls.attr("__new__")(cls, otherValue);
+          return self;
+        },
+        py::name("__new__"), py::arg("cls"), py::arg("cast_from_value"));
+    thisClass.attr("__new__") = newCf;
+
+    // 'isinstance' method.
+    def_staticmethod(
+        "isinstance",
+        [isaFunction](MlirValue other) { return isaFunction(other); },
+        py::arg("other_value"));
+  }
+};
+
 } // namespace adaptors
 } // namespace python
 } // namespace mlir
