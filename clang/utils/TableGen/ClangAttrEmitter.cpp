@@ -2403,6 +2403,13 @@ static void emitClangAttrAcceptsExprPack(RecordKeeper &Records,
   OS << "#endif // CLANG_ATTR_ACCEPTS_EXPR_PACK\n\n";
 }
 
+static void emitFormInitializer(raw_ostream &OS,
+                                const FlattenedSpelling &Spelling,
+                                StringRef SpellingIndex) {
+  OS << "{AttributeCommonInfo::AS_" << Spelling.variety() << ", "
+     << SpellingIndex << "}";
+}
+
 static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
                            bool Header) {
   std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr");
@@ -2620,14 +2627,9 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
       if (Header)
         OS << " = {}";
       if (Spellings.size() > 1) {
-        OS << ", AttributeCommonInfo::Syntax Syntax";
+        OS << ", Spelling S";
         if (Header)
-          OS << " = AttributeCommonInfo::AS_" << Spellings[0].variety();
-      }
-      if (!ElideSpelling) {
-        OS << ", " << R.getName() << "Attr::Spelling S";
-        if (Header)
-          OS << " = static_cast<Spelling>(SpellingNotCalculated)";
+          OS << " = " << SemanticToSyntacticMap[0];
       }
       OS << ")";
       if (Header) {
@@ -2643,15 +2645,31 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
       else
         OS << "NoSemaHandlerAttribute";
 
-      if (Spellings.size() == 0)
+      if (Spellings.size() == 0) {
         OS << ", AttributeCommonInfo::AS_Implicit";
-      else if (Spellings.size() == 1)
-        OS << ", AttributeCommonInfo::AS_" << Spellings[0].variety();
-      else
-        OS << ", Syntax";
+      } else if (Spellings.size() == 1) {
+        OS << ", ";
+        emitFormInitializer(OS, Spellings[0], "0");
+      } else {
+        OS << ", (\n";
+        std::set<std::string> Uniques;
+        unsigned Idx = 0;
+        for (auto I = Spellings.begin(), E = Spellings.end(); I != E;
+             ++I, ++Idx) {
+          const FlattenedSpelling &S = *I;
+          const auto &Name = SemanticToSyntacticMap[Idx];
+          if (Uniques.insert(Name).second) {
+            OS << "    S == " << Name << " ? AttributeCommonInfo::Form";
+            emitFormInitializer(OS, S, Name);
+            OS << " :\n";
+          }
+        }
+        OS << "    (llvm_unreachable(\"Unknown attribute spelling!\"), "
+           << " AttributeCommonInfo::Form";
+        emitFormInitializer(OS, Spellings[0], "0");
+        OS << "))";
+      }
 
-      if (!ElideSpelling)
-        OS << ", S";
       OS << ");\n";
       OS << "  return Create";
       if (Implicit)
