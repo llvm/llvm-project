@@ -239,6 +239,87 @@ def OpenACC_SerialOp : OpenACC_Op<"serial", [AttrSizedOperandSegments]> {
 }
 
 //===----------------------------------------------------------------------===//
+// 2.5.1 kernels Construct
+//===----------------------------------------------------------------------===//
+
+def OpenACC_KernelsOp : OpenACC_Op<"kernels", [AttrSizedOperandSegments]> {
+  let summary = "kernels construct";
+  let description = [{
+    The "acc.kernels" operation represents a kernels construct block. It has
+    one region to be compiled into a sequence of kernels for execution on the
+    current device.
+
+    Example:
+
+    ```mlir
+    acc.kernels num_gangs(%c10) num_workers(%c10)
+        private(%c : memref<10xf32>) {
+      // kernels region
+    }
+    ```
+  }];
+
+  let arguments = (ins Optional<IntOrIndex>:$async,
+                       UnitAttr:$asyncAttr,
+                       Variadic<IntOrIndex>:$waitOperands,
+                       UnitAttr:$waitAttr,
+                       Optional<IntOrIndex>:$numGangs,
+                       Optional<IntOrIndex>:$numWorkers,
+                       Optional<IntOrIndex>:$vectorLength,
+                       Optional<I1>:$ifCond,
+                       Optional<I1>:$selfCond,
+                       UnitAttr:$selfAttr,
+                       Variadic<AnyType>:$copyOperands,
+                       Variadic<AnyType>:$copyinOperands,
+                       Variadic<AnyType>:$copyinReadonlyOperands,
+                       Variadic<AnyType>:$copyoutOperands,
+                       Variadic<AnyType>:$copyoutZeroOperands,
+                       Variadic<AnyType>:$createOperands,
+                       Variadic<AnyType>:$createZeroOperands,
+                       Variadic<AnyType>:$noCreateOperands,
+                       Variadic<AnyType>:$presentOperands,
+                       Variadic<AnyType>:$devicePtrOperands,
+                       Variadic<AnyType>:$attachOperands,
+                       OptionalAttr<DefaultValueAttr>:$defaultAttr);
+
+  let regions = (region AnyRegion:$region);
+
+  let extraClassDeclaration = [{
+    /// The number of data operands.
+    unsigned getNumDataOperands();
+
+    /// The i-th data operand passed.
+    Value getDataOperand(unsigned i);
+  }];
+
+  let assemblyFormat = [{
+    oilist(
+        `attach` `(` $attachOperands `:` type($attachOperands) `)`
+      | `async` `(` $async `:` type($async) `)`
+      | `copy` `(` $copyOperands `:` type($copyOperands) `)`
+      | `copyin` `(` $copyinOperands `:` type($copyinOperands) `)`
+      | `copyin_readonly` `(` $copyinReadonlyOperands `:`
+          type($copyinReadonlyOperands) `)`
+      | `copyout` `(` $copyoutOperands `:` type($copyoutOperands) `)`
+      | `copyout_zero` `(` $copyoutZeroOperands `:`
+          type($copyoutZeroOperands) `)`
+      | `create` `(` $createOperands `:` type($createOperands) `)`
+      | `create_zero` `(` $createZeroOperands `:` type($createZeroOperands) `)`
+      | `deviceptr` `(` $devicePtrOperands `:` type($devicePtrOperands) `)`
+      | `no_create` `(` $noCreateOperands `:` type($noCreateOperands) `)`
+      | `num_gangs` `(` $numGangs `:` type($numGangs) `)`
+      | `num_workers` `(` $numWorkers `:` type($numWorkers) `)`
+      | `present` `(` $presentOperands `:` type($presentOperands) `)`
+      | `vector_length` `(` $vectorLength `:` type($vectorLength) `)`
+      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `self` `(` $selfCond `)`
+      | `if` `(` $ifCond `)`
+    )
+    $region attr-dict-with-keyword
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // 2.6.5 data Construct
 //===----------------------------------------------------------------------===//
 
