@@ -42,6 +42,7 @@ struct UnimplementedFeature {
   static bool setGlobalVisibility() { return false; }
   static bool hiddenVisibility() { return false; }
   static bool protectedVisibility() { return false; }
+  static bool addCompilerUsedGlobal() { return false; }
 
   // Sanitizers
   static bool reportGlobalToASan() { return false; }

@@ -1460,51 +1460,50 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &CGVT,
                                mlir::cir::isLocalLinkage(Linkage));
   components.finishAndSetAsInitializer(VTable);
 
-  llvm_unreachable("NYI");
+  // Set the correct linkage.
+  VTable.setLinkage(Linkage);
 
-  // // Set the correct linkage.
-  // VTable->setLinkage(Linkage);
+  if (CGM.supportsCOMDAT() && mlir::cir::isWeakForLinker(Linkage)) {
+    assert(!UnimplementedFeature::setComdat());
+  }
 
-  // if (CGM.supportsCOMDAT() && VTable->isWeakForLinker())
-  //   VTable->setComdat(CGM.getModule().getOrInsertComdat(VTable->getName()));
+  // Set the right visibility.
+  CGM.setGVProperties(VTable, RD);
 
-  // // Set the right visibility.
-  // CGM.setGVProperties(VTable, RD);
+  // If this is the magic class __cxxabiv1::__fundamental_type_info,
+  // we will emit the typeinfo for the fundamental types. This is the
+  // same behaviour as GCC.
+  const DeclContext *DC = RD->getDeclContext();
+  if (RD->getIdentifier() &&
+      RD->getIdentifier()->isStr("__fundamental_type_info") &&
+      isa<NamespaceDecl>(DC) && cast<NamespaceDecl>(DC)->getIdentifier() &&
+      cast<NamespaceDecl>(DC)->getIdentifier()->isStr("__cxxabiv1") &&
+      DC->getParent()->isTranslationUnit()) {
+    llvm_unreachable("NYI");
+    // EmitFundamentalRTTIDescriptors(RD);
+  }
 
-  // // If this is the magic class __cxxabiv1::__fundamental_type_info,
-  // // we will emit the typeinfo for the fundamental types. This is the
-  // // same behaviour as GCC.
-  // const DeclContext *DC = RD->getDeclContext();
-  // if (RD->getIdentifier() &&
-  //     RD->getIdentifier()->isStr("__fundamental_type_info") &&
-  //     isa<NamespaceDecl>(DC) && cast<NamespaceDecl>(DC)->getIdentifier() &&
-  //     cast<NamespaceDecl>(DC)->getIdentifier()->isStr("__cxxabiv1") &&
-  //     DC->getParent()->isTranslationUnit())
-  //   EmitFundamentalRTTIDescriptors(RD);
+  // Always emit type metadata on non-available_externally definitions, and on
+  // available_externally definitions if we are performing whole program
+  // devirtualization. For WPD we need the type metadata on all vtable
+  // definitions to ensure we associate derived classes with base classes
+  // defined in headers but with a strong definition only in a shared
+  // library.
+  if (!VTable.isDeclarationForLinker() ||
+      CGM.getCodeGenOpts().WholeProgramVTables) {
+    CGM.buildVTableTypeMetadata(RD, VTable, VTLayout);
+    // For available_externally definitions, add the vtable to
+    // @llvm.compiler.used so that it isn't deleted before whole program
+    // analysis.
+    if (VTable.isDeclarationForLinker()) {
+      llvm_unreachable("NYI");
+      assert(CGM.getCodeGenOpts().WholeProgramVTables);
+      assert(!UnimplementedFeature::addCompilerUsedGlobal());
+    }
+  }
 
-  // // Always emit type metadata on non-available_externally definitions, and
-  // on
-  // // available_externally definitions if we are performing whole program
-  // // devirtualization. For WPD we need the type metadata on all vtable
-  // // definitions to ensure we associate derived classes with base classes
-  // // defined in headers but with a strong definition only in a shared
-  // library. if (!VTable->isDeclarationForLinker() ||
-  //     CGM.getCodeGenOpts().WholeProgramVTables) {
-  //   CGM.EmitVTableTypeMetadata(RD, VTable, VTLayout);
-  //   // For available_externally definitions, add the vtable to
-  //   // @llvm.compiler.used so that it isn't deleted before whole program
-  //   // analysis.
-  //   if (VTable->isDeclarationForLinker()) {
-  //     assert(CGM.getCodeGenOpts().WholeProgramVTables);
-  //     CGM.addCompilerUsedGlobal(VTable);
-  //   }
-  // }
-
-  // if (VTContext.isRelativeLayout()) {
-  //   CGVT.RemoveHwasanMetadata(VTable);
-  //   if (!VTable->isDSOLocal())
-  //     CGVT.GenerateRelativeVTableAlias(VTable, VTable->getName());
-  // }
+  if (VTContext.isRelativeLayout())
+    llvm_unreachable("NYI");
 }
 
 /// What sort of uniqueness rules should we use for the RTTI for the
