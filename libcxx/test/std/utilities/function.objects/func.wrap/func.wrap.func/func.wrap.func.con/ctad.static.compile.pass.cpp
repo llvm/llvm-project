@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// XFAIL: clang-14, clang-15, gcc-12, apple-clang-14
+// XFAIL: clang-15, gcc-12, apple-clang-14
 
 // checks that CTAD for std::function works properly with static operator() overloads
 
