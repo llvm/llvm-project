@@ -69,7 +69,6 @@ namespace {
         return;
 
       (void) llvm::createAAEvalPass();
-      (void) llvm::createAlignmentFromAssumptionsPass();
       (void) llvm::createBasicAAWrapperPass();
       (void) llvm::createSCEVAAWrapperPass();
       (void) llvm::createTypeBasedAAWrapperPass();
