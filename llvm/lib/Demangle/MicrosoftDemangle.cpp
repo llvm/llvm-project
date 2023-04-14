@@ -41,7 +41,9 @@ struct NodeList {
 
 static bool isMemberPointer(StringView MangledName, bool &Error) {
   Error = false;
-  switch (MangledName.popFront()) {
+  const char F = MangledName.front();
+  MangledName.remove_prefix(1);
+  switch (F) {
   case '$':
     // This is probably an rvalue reference (e.g. $$Q), and you cannot have an
     // rvalue reference to a member.
@@ -226,7 +228,9 @@ demanglePointerCVQualifiers(StringView &MangledName) {
   if (MangledName.consumeFront("$$Q"))
     return std::make_pair(Q_None, PointerAffinity::RValueReference);
 
-  switch (MangledName.popFront()) {
+  const char F = MangledName.front();
+  MangledName.remove_prefix(1);
+  switch (F) {
   case 'A':
     return std::make_pair(Q_None, PointerAffinity::Reference);
   case 'P':
@@ -282,7 +286,8 @@ Demangler::demangleSpecialTableSymbolNode(StringView &MangledName,
     Error = true;
     return nullptr;
   }
-  char Front = MangledName.popFront();
+  char Front = MangledName.front();
+  MangledName.remove_prefix(1);
   if (Front != '6' && Front != '7') {
     Error = true;
     return nullptr;
@@ -672,9 +677,11 @@ Demangler::demangleFunctionIdentifierCode(StringView &MangledName,
     Error = true;
     return nullptr;
   }
+  const char CH = MangledName.front();
   switch (Group) {
   case FunctionIdentifierCodeGroup::Basic:
-    switch (char CH = MangledName.popFront()) {
+    MangledName.remove_prefix(1);
+    switch (CH) {
     case '0':
     case '1':
       return demangleStructorIdentifier(MangledName, CH == '1');
@@ -685,10 +692,12 @@ Demangler::demangleFunctionIdentifierCode(StringView &MangledName,
           translateIntrinsicFunctionCode(CH, Group));
     }
   case FunctionIdentifierCodeGroup::Under:
+    MangledName.remove_prefix(1);
     return Arena.alloc<IntrinsicFunctionIdentifierNode>(
-        translateIntrinsicFunctionCode(MangledName.popFront(), Group));
+        translateIntrinsicFunctionCode(CH, Group));
   case FunctionIdentifierCodeGroup::DoubleUnder:
-    switch (char CH = MangledName.popFront()) {
+    MangledName.remove_prefix(1);
+    switch (CH) {
     case 'K':
       return demangleLiteralOperatorIdentifier(MangledName);
     default:
@@ -1033,8 +1042,11 @@ static uint8_t rebasedHexDigitToNumber(char C) {
 
 uint8_t Demangler::demangleCharLiteral(StringView &MangledName) {
   assert(!MangledName.empty());
-  if (!MangledName.startsWith('?'))
-    return MangledName.popFront();
+  if (!MangledName.startsWith('?')) {
+    const uint8_t F = MangledName.front();
+    MangledName.remove_prefix(1);
+    return F;
+  }
 
   MangledName.remove_prefix(1);
   if (MangledName.empty())
@@ -1280,6 +1292,7 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
   bool IsWcharT = false;
   bool IsNegative = false;
   size_t CrcEndPos = 0;
+  char F;
 
   EncodedStringLiteralNode *Result = Arena.alloc<EncodedStringLiteralNode>();
 
@@ -1290,7 +1303,9 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
     goto StringLiteralError;
 
   // Char Type (regular or wchar_t)
-  switch (MangledName.popFront()) {
+  F = MangledName.front();
+  MangledName.remove_prefix(1);
+  switch (F) {
   case '1':
     IsWcharT = true;
     DEMANGLE_FALLTHROUGH;
@@ -1588,7 +1603,9 @@ Demangler::demangleNameScopeChain(StringView &MangledName,
 }
 
 FuncClass Demangler::demangleFunctionClass(StringView &MangledName) {
-  switch (MangledName.popFront()) {
+  const char F = MangledName.front();
+  MangledName.remove_prefix(1);
+  switch (F) {
   case '9':
     return FuncClass(FC_ExternC | FC_NoParameterList);
   case 'A':
@@ -1649,7 +1666,9 @@ FuncClass Demangler::demangleFunctionClass(StringView &MangledName) {
       VFlag = FuncClass(VFlag | FC_VirtualThisAdjustEx);
     if (MangledName.empty())
       break;
-    switch (MangledName.popFront()) {
+    const char F = MangledName.front();
+    MangledName.remove_prefix(1);
+    switch (F) {
     case '0':
       return FuncClass(FC_Private | FC_Virtual | VFlag);
     case '1':
@@ -1676,7 +1695,9 @@ CallingConv Demangler::demangleCallingConvention(StringView &MangledName) {
     return CallingConv::None;
   }
 
-  switch (MangledName.popFront()) {
+  const char F = MangledName.front();
+  MangledName.remove_prefix(1);
+  switch (F) {
   case 'A':
   case 'B':
     return CallingConv::Cdecl;
@@ -1712,7 +1733,9 @@ CallingConv Demangler::demangleCallingConvention(StringView &MangledName) {
 StorageClass Demangler::demangleVariableStorageClass(StringView &MangledName) {
   assert(MangledName.front() >= '0' && MangledName.front() <= '4');
 
-  switch (MangledName.popFront()) {
+  const char F = MangledName.front();
+  MangledName.remove_prefix(1);
+  switch (F) {
   case '0':
     return StorageClass::PrivateStatic;
   case '1':
@@ -1734,7 +1757,9 @@ Demangler::demangleQualifiers(StringView &MangledName) {
     return std::make_pair(Q_None, false);
   }
 
-  switch (MangledName.popFront()) {
+  const char F = MangledName.front();
+  MangledName.remove_prefix(1);
+  switch (F) {
   // Member qualifiers
   case 'Q':
     return std::make_pair(Q_None, true);
@@ -1899,7 +1924,7 @@ Demangler::demangleFunctionEncoding(StringView &MangledName) {
 
 CustomTypeNode *Demangler::demangleCustomType(StringView &MangledName) {
   assert(MangledName.startsWith('?'));
-  MangledName.popFront();
+  MangledName.remove_prefix(1);
 
   CustomTypeNode *CTN = Arena.alloc<CustomTypeNode>();
   CTN->Identifier = demangleUnqualifiedTypeName(MangledName, /*Memorize=*/true);
@@ -1915,7 +1940,9 @@ PrimitiveTypeNode *Demangler::demanglePrimitiveType(StringView &MangledName) {
   if (MangledName.consumeFront("$$T"))
     return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Nullptr);
 
-  switch (MangledName.popFront()) {
+  const char F = MangledName.front();
+  MangledName.remove_prefix(1);
+  switch (F) {
   case 'X':
     return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Void);
   case 'D':
@@ -1947,7 +1974,9 @@ PrimitiveTypeNode *Demangler::demanglePrimitiveType(StringView &MangledName) {
       Error = true;
       return nullptr;
     }
-    switch (MangledName.popFront()) {
+    const char F = MangledName.front();
+    MangledName.remove_prefix(1);
+    switch (F) {
     case 'N':
       return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Bool);
     case 'J':
@@ -1973,7 +2002,9 @@ PrimitiveTypeNode *Demangler::demanglePrimitiveType(StringView &MangledName) {
 TagTypeNode *Demangler::demangleClassType(StringView &MangledName) {
   TagTypeNode *TT = nullptr;
 
-  switch (MangledName.popFront()) {
+  const char F = MangledName.front();
+  MangledName.remove_prefix(1);
+  switch (F) {
   case 'T':
     TT = Arena.alloc<TagTypeNode>(TagKind::Union);
     break;
@@ -2062,7 +2093,7 @@ Qualifiers Demangler::demanglePointerExtQualifiers(StringView &MangledName) {
 
 ArrayTypeNode *Demangler::demangleArrayType(StringView &MangledName) {
   assert(MangledName.front() == 'Y');
-  MangledName.popFront();
+  MangledName.remove_prefix(1);
 
   uint64_t Rank = 0;
   bool IsNegative = false;
@@ -2211,7 +2242,8 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
       // H - multiple inheritance     <name> <number>
       // I - virtual inheritance      <name> <number> <number>
       // J - unspecified inheritance  <name> <number> <number> <number>
-      char InheritanceSpecifier = MangledName.popFront();
+      char InheritanceSpecifier = MangledName.front();
+      MangledName.remove_prefix(1);
       SymbolNode *S = nullptr;
       if (MangledName.startsWith('?')) {
         S = parse(MangledName);
@@ -2253,7 +2285,8 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
 
       // Data member pointer.
       MangledName.remove_prefix(1);
-      char InheritanceSpecifier = MangledName.popFront();
+      char InheritanceSpecifier = MangledName.front();
+      MangledName.remove_prefix(1);
 
       switch (InheritanceSpecifier) {
       case 'G':

@@ -5,8 +5,15 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   )
 
+set(LLVM_TARGET_DEFINITIONS Opts.td)
+tablegen(LLVM Opts.inc -gen-opt-parser-defs)
+add_public_tablegen_target(ScanDepsOptsTableGen)
+
 add_clang_tool(clang-scan-deps
   ClangScanDeps.cpp
+
+  DEPENDS
+  ScanDepsOptsTableGen
   )
 
 set(CLANG_SCAN_DEPS_LIB_DEPS

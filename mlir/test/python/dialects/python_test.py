@@ -2,6 +2,7 @@
 
 from mlir.ir import *
 import mlir.dialects.python_test as test
+import mlir.dialects.tensor as tensor
 
 def run(f):
   print("\nTEST:", f.__name__)
@@ -302,3 +303,30 @@ def testCustomType():
       pass
     else:
       raise
+
+
+@run
+# CHECK-LABEL: TEST: testTensorValue
+def testTensorValue():
+  with Context() as ctx, Location.unknown():
+    test.register_python_test_dialect(ctx)
+
+    i8 = IntegerType.get_signless(8)
+
+    class Tensor(test.TestTensorValue):
+      def __str__(self):
+        return super().__str__().replace("Value", "Tensor")
+
+    module = Module.create()
+    with InsertionPoint(module.body):
+      t = tensor.EmptyOp([10, 10], i8).result
+
+      # CHECK: Value(%{{.*}} = tensor.empty() : tensor<10x10xi8>)
+      print(Value(t))
+
+      tt = Tensor(t)
+      # CHECK: Tensor(%{{.*}} = tensor.empty() : tensor<10x10xi8>)
+      print(tt)
+
+      # CHECK: False
+      print(tt.is_null())
