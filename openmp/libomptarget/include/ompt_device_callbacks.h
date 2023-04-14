@@ -28,8 +28,6 @@
 
 #include <omp-tools.h>
 
-#define DEBUG_PREFIX "OMPT"
-
 //****************************************************************************
 // macros
 //****************************************************************************
@@ -240,6 +238,7 @@ public:
   }
 
   void init() {
+    num_devices = 0;
     enabled = false;
     tracing_enabled = false;
     tracing_type_enabled = 0;
@@ -333,7 +332,10 @@ public:
     return parent_dyn_lib;
   }
 
-  void prepare_devices(int number_of_devices) { resize(number_of_devices); };
+  void prepare_devices(int number_of_devices) {
+    num_devices = number_of_devices;
+    resize(number_of_devices);
+  }
 
   void register_callbacks(ompt_function_lookup_t lookup) {
     enabled = true;
@@ -365,7 +367,10 @@ public:
     ompt_callback_buffer_complete_fn = callback;
   }
 
+  int lookup_device_id(ompt_device *device);
+
 private:
+  int num_devices;
   bool enabled;
   std::atomic<bool> tracing_enabled;
   std::atomic<uint64_t> tracing_type_enabled;

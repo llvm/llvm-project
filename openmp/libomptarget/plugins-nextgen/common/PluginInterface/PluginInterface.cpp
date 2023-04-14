@@ -33,7 +33,24 @@ using namespace target;
 using namespace plugin;
 
 #ifdef OMPT_SUPPORT
-#include "ompt_device_callbacks.h"
+extern void setOmptTimestamp(uint64_t Start, uint64_t End);
+extern void setOmptGrantedNumTeams(uint64_t NumTeams);
+#include <ompt_device_callbacks.h>
+#define OMPT_IF_ENABLED(stmts)                                                 \
+  do {                                                                         \
+    if (ompt_device_callbacks.is_enabled()) {                                  \
+      stmts                                                                    \
+    }                                                                          \
+  } while (0)
+#define OMPT_IF_TRACING_ENABLED(stmts)                                         \
+  do {                                                                         \
+    if (ompt_device_callbacks.is_tracing_enabled()) {                          \
+      stmts                                                                    \
+    }                                                                          \
+  } while (0)
+#else
+#define OMPT_IF_ENABLED(stmts)
+#define OMPT_IF_TRACING_ENABLED(stmts)
 #endif
 
 GenericPluginTy *Plugin::SpecificPlugin = nullptr;
@@ -42,6 +59,23 @@ namespace llvm::omp::target::plugin {
 // Used for kernel tracing implementation
 int PrintKernelTrace = 0;
 } // namespace llvm::omp::target::plugin
+
+extern uint64_t getSystemTimestampInNs();
+
+/// RAII used for timing certain plugin functionality and transferring the
+/// information to libomptarget
+struct OmptTimestampRAII {
+  OmptTimestampRAII() { OMPT_IF_TRACING_ENABLED(setStart();); }
+  ~OmptTimestampRAII() { OMPT_IF_ENABLED(setTimestamp();); }
+
+private:
+  uint64_t StartTime = 0;
+  void setStart() { StartTime = getSystemTimestampInNs(); }
+  void setTimestamp() {
+    uint64_t EndTime = getSystemTimestampInNs();
+    setOmptTimestamp(StartTime, EndTime);
+  }
+};
 
 // TODO: Fix any thread safety issues for multi-threaded kernel recording.
 struct RecordReplayTy {
@@ -282,6 +316,8 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
           printLaunchInfo(GenericDevice, KernelArgs, NumThreads, NumBlocks))
     return Err;
 
+  OMPT_IF_TRACING_ENABLED(setOmptGrantedNumTeams(NumBlocks););
+
   return launchImpl(GenericDevice, NumThreads, NumBlocks, KernelArgs,
                     KernelArgsPtr, AsyncInfoWrapper);
 }
@@ -452,11 +488,11 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   if (auto Err = initImpl(Plugin))
     return Err;
 
-#ifdef OMPT_SUPPORT
-  ompt_device_callbacks.prepare_devices(Plugin.getNumDevices());
-  ompt_device_callbacks.ompt_callback_device_initialize(
-      DeviceId, getComputeUnitKind().c_str());
-#endif
+  OMPT_IF_ENABLED(
+      ompt_device_callbacks.prepare_devices(Plugin.getNumDevices());
+      ompt_device_callbacks.compute_parent_dyn_lib("libomptarget.so");
+      ompt_device_callbacks.ompt_callback_device_initialize(
+          DeviceId, getComputeUnitKind().c_str()););
 
   // Read and reinitialize the envars that depend on the device initialization.
   // Notice these two envars may change the stack size and heap size of the
@@ -509,10 +545,8 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
   if (RecordReplay.isRecordingOrReplaying())
     RecordReplay.deinit();
 
-#ifdef OMPT_SUPPORT
-  for (int i = 0; i < Plugin.getNumDevices(); ++i)
-    ompt_device_callbacks.ompt_callback_device_finalize(i);
-#endif
+  OMPT_IF_ENABLED(
+      ompt_device_callbacks.ompt_callback_device_finalize(DeviceId););
 
   return deinitImpl();
 }
@@ -553,14 +587,14 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   if (auto Err = registerOffloadEntries(*Image))
     return std::move(Err);
 
-#ifdef OMPT_SUPPORT
-  size_t Bytes = getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
-  ompt_device_callbacks.ompt_callback_device_load(
-      DeviceId, nullptr /* FileName */, 0 /* File Offset */,
-      nullptr /* VmaInFile */, Bytes /* ImgSize */,
-      InputTgtImage->ImageStart /* HostAddr */, nullptr /* DeviceAddr */,
-      0 /* FIXME: ModuleId */);
-#endif
+  OMPT_IF_ENABLED(
+      size_t Bytes =
+          getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
+      ompt_device_callbacks.ompt_callback_device_load(
+          DeviceId, /*FileName=*/nullptr, /*File Offset=*/0,
+          /*VmaInFile=*/nullptr, /*ImgSize=*/Bytes,
+          /*HostAddr=*/InputTgtImage->ImageStart, /*DeviceAddr=*/nullptr,
+          /* FIXME: ModuleId=*/0););
 
   // Return the pointer to the table of entries.
   return Image->getOffloadEntryTable();
@@ -1348,6 +1382,8 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
 
 void *__tgt_rtl_data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
                            int32_t Kind) {
+  // If OMPT is enabled, collect start and end times for the allocation.
+  OmptTimestampRAII Ts;
   auto AllocOrErr = Plugin::get().getDevice(DeviceId).dataAlloc(
       Size, HostPtr, (TargetAllocTy)Kind);
   if (!AllocOrErr) {
@@ -1366,6 +1402,8 @@ void *__tgt_rtl_data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
 }
 
 int32_t __tgt_rtl_data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind) {
+  // If OMPT is enabled, collect start and end times for the data delete.
+  OmptTimestampRAII Ts;
   auto Err =
       Plugin::get().getDevice(DeviceId).dataDelete(TgtPtr, (TargetAllocTy)Kind);
   if (Err) {
@@ -1624,10 +1662,6 @@ int32_t __tgt_rtl_init_async_info(int32_t DeviceId,
            DPxPTR(*AsyncInfoPtr), DeviceId, toString(std::move(Err)).data());
     return OFFLOAD_FAIL;
   }
-
-  // OMPT_IF_BUILT_AND_ENABLED(
-  //     DeviceInfo().doOmptDeviceInitialize(DeviceId, GetInfoName));
-
   return OFFLOAD_SUCCESS;
 }
 

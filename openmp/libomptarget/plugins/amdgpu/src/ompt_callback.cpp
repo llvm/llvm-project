@@ -18,11 +18,12 @@
 #include <mutex>
 #include <string.h>
 #include <sys/time.h>
-// #include <vector>
 
 //****************************************************************************
 // local includes
 //****************************************************************************
+
+#include "llvm/Support/ErrorHandling.h"
 
 #include <hsa/hsa_ext_amd.h>
 
@@ -319,6 +320,13 @@ ompt_device *ompt_device_callbacks_t::lookup_device(int device_num) {
   return &devices[device_num];
 }
 
+int ompt_device_callbacks_t::lookup_device_id(ompt_device *device) {
+  for (int i = 0; i < num_devices; ++i)
+    if (device == &devices[i])
+      return i;
+  llvm_unreachable("Lookup device id failed");
+}
+
 ompt_interface_fn_t
 ompt_device_callbacks_t::lookup(const char *interface_function_name) {
 #define macro(fn)                                                              \
@@ -379,6 +387,8 @@ static int ompt_device_init(ompt_function_lookup_t lookup,
   // overflow
   double host_avg = host_ref_b * 0.5 + host_ref_a * 0.5;
   uint64_t device_avg = device_ref_b * 0.5 + device_ref_a * 0.5;
+  DP("Translate time: H1=%f D1=%lu H2=%f D2=%lu\n", host_ref_a, device_ref_a,
+     host_ref_b, device_ref_b);
   HostToDeviceRate = host_avg / device_avg;
   DP("OMPT: Translate time HostToDeviceSlope: %f\n", HostToDeviceSlope);
 

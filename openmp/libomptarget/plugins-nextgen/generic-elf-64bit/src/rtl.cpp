@@ -35,6 +35,21 @@
 #define TARGET_ELF_ID 0
 #endif
 
+#ifdef OMPT_SUPPORT
+void setOmptAsyncCopyProfile(bool Enable) {
+  // TODO
+}
+
+void setGlobalOmptKernelProfile(int DeviceId, int Enable) {
+  // TODO
+}
+
+uint64_t getSystemTimestampInNs() {
+  // TODO
+  return 0;
+}
+#endif
+
 namespace llvm {
 namespace omp {
 namespace target {

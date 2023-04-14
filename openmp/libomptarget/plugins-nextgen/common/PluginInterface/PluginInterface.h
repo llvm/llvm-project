@@ -67,6 +67,9 @@ struct AsyncInfoWrapperTy {
     return reinterpret_cast<Ty &>(AsyncInfoPtr->Queue);
   }
 
+  /// Indicate whether synchronous behavior is explicitly requested.
+  bool isSynchronous() const { return AsyncInfoPtr == &LocalAsyncInfo; }
+
   /// Indicate whether there is queue.
   bool hasQueue() const { return (AsyncInfoPtr->Queue != nullptr); }
 

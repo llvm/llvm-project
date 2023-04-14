@@ -16,6 +16,7 @@
 #include <deque>
 #include <mutex>
 #include <string>
+#include <sys/time.h>
 #include <system_error>
 #include <unistd.h>
 #include <unordered_map>
@@ -58,7 +59,100 @@
 #endif
 
 #ifdef OMPT_SUPPORT
+#include <ompt_device_callbacks.h>
+#define OMPT_IF_ENABLED(stmts)                                                 \
+  do {                                                                         \
+    if (ompt_device_callbacks.is_enabled()) {                                  \
+      stmts                                                                    \
+    }                                                                          \
+  } while (0)
+#define OMPT_IF_TRACING_ENABLED(stmts)                                         \
+  do {                                                                         \
+    if (ompt_device_callbacks.is_tracing_enabled()) {                          \
+      stmts                                                                    \
+    }                                                                          \
+  } while (0)
+#else
+#define OMPT_IF_ENABLED(stmts)
+#define OMPT_IF_TRACING_ENABLED(stmts)
+#endif
+
+#ifdef OMPT_SUPPORT
+extern bool OmptEnabled;
 extern void OmptCallbackInit();
+extern void setOmptTimestamp(uint64_t Start, uint64_t End);
+extern void setOmptHostToDeviceRate(double Rate);
+
+/// HSA system clock frequency
+double TicksToTime = 1.0;
+
+/// Enable/disable async copy profiling.
+void setOmptAsyncCopyProfile(bool Enable) {
+  hsa_status_t Status = hsa_amd_profiling_async_copy_enable(Enable);
+  if (Status != HSA_STATUS_SUCCESS)
+    DP("Error enabling async copy profiling\n");
+}
+
+/// Compute system timestamp conversion factor, modeled after ROCclr.
+void setOmptTicksToTime() {
+  uint64_t TicksFrequency = 1;
+  hsa_status_t Status =
+      hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &TicksFrequency);
+  if (Status == HSA_STATUS_SUCCESS)
+    TicksToTime = (double)1e9 / (double)TicksFrequency;
+  else
+    DP("Error calling hsa_system_get_info for timestamp frequency\n");
+}
+
+/// Get the current HSA-based device timestamp.
+uint64_t getSystemTimestampInNs() {
+  uint64_t TimeStamp = 0;
+  hsa_status_t Status =
+      hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP, &TimeStamp);
+  if (Status != HSA_STATUS_SUCCESS)
+    DP("Error calling hsa_system_get_info for timestamp\n");
+  return TimeStamp * TicksToTime;
+}
+
+/// @brief Helper to get the host time
+/// @return  CLOCK_REALTIME seconds as double
+static double getTimeOfDay() {
+  double TimeVal = .0;
+  struct timeval tval;
+  int rc = gettimeofday(&tval, NULL);
+  if (rc) {
+    // XXX: Error case: What to do?
+  } else {
+    TimeVal = static_cast<double>(tval.tv_sec) +
+              1.0E-06 * static_cast<double>(tval.tv_usec);
+  }
+  return TimeVal;
+}
+
+/// Get the first timepoints on host and device.
+void startH2DTimeRate(double *HTime, uint64_t *DTime) {
+  *HTime = getTimeOfDay();
+  *DTime = getSystemTimestampInNs() + 1; // +1 to avoid divide by zero.
+}
+
+/// Get the second timepoints on host and device and compute the rate
+/// required for translating device time to host time.
+void completeH2DTimeRate(double HostRef1, uint64_t DeviceRef1) {
+  double HostRef2 = getTimeOfDay();
+  uint64_t DeviceRef2 =
+      getSystemTimestampInNs() + 1; // +1 to avoid divide by zero.
+
+  // Multiply with .5 to reduce value range and potential risk of potential
+  // overflow
+  double HostAvg = HostRef2 * 0.5 + HostRef1 * 0.5;
+  uint64_t DeviceAvg = DeviceRef2 * 0.5 + DeviceRef1 * 0.5;
+  DP("Translate time: H1=%f D1=%lu H2=%f D2=%lu\n", HostRef1, DeviceRef1,
+     HostRef2, DeviceRef2);
+  double HostToDeviceRate = HostAvg / DeviceAvg;
+  setOmptHostToDeviceRate(HostToDeviceRate);
+  DP("OMPT: Translate time HostToDeviceRate: %f\n", HostToDeviceRate);
+}
+
 #endif
 
 namespace llvm {
@@ -874,6 +968,13 @@ private:
     AMDGPUSignalManagerTy *SignalManager;
   };
 
+  /// Utility struct holding arguments for OMPT-based kernel timing.
+  struct OmptKernelTimingArgsTy {
+    hsa_agent_t Agent;
+    AMDGPUSignalTy *Signal;
+    double TicksToTime;
+  };
+
   /// The stream is composed of N stream's slots. The struct below represents
   /// the fields of each slot. Each slot has a signal and an optional action
   /// function. When appending an HSA asynchronous operation to the stream, one
@@ -893,6 +994,10 @@ private:
     /// to nullptr when there is no action to perform.
     Error (*ActionFunction)(void *);
 
+    /// The OMPT action that must be performed after the operation's completion.
+    /// Set to nullptr when there is no action to perform.
+    Error (*OmptActionFunction)(void *);
+
     /// Space for the action's arguments. A pointer to these arguments is passed
     /// to the action function. Notice the space of arguments is limited.
     union {
@@ -901,8 +1006,14 @@ private:
       ReleaseSignalArgsTy ReleaseSignalArgs;
     } ActionArgs;
 
+    /// Space for the OMPT action's arguments. A pointer to these arguments is
+    /// passed to the action function.
+    OmptKernelTimingArgsTy OmptKernelTimingArgs;
+
     /// Create an empty slot.
-    StreamSlotTy() : Signal(nullptr), ActionFunction(nullptr) {}
+    StreamSlotTy()
+        : Signal(nullptr), ActionFunction(nullptr),
+          OmptActionFunction(nullptr) {}
 
     /// Schedule a host memory copy action on the slot.
     Error schedHostMemoryCopy(void *Dst, const void *Src, size_t Size) {
@@ -927,9 +1038,21 @@ private:
       return Plugin::success();
     }
 
+    /// Schedule OMPT kernel timing on the slot.
+    Error schedOmptKernelTiming(hsa_agent_t Agent, AMDGPUSignalTy *Signal,
+                                double TicksToTime) {
+      OmptActionFunction = timeKernelInNs;
+      OmptKernelTimingArgs = OmptKernelTimingArgsTy{Agent, Signal, TicksToTime};
+      return Plugin::success();
+    }
+
     // Perform the action if needed.
     Error performAction() {
-      if (!ActionFunction)
+      if (!ActionFunction
+#ifdef OMPT_SUPPORT
+          && !OmptActionFunction
+#endif
+      )
         return Plugin::success();
 
       // Perform the action.
@@ -946,8 +1069,18 @@ private:
         return Plugin::error("Unknown action function!");
       }
 
-      // Invalidate the action.
+      OMPT_IF_TRACING_ENABLED(
+          if (OmptActionFunction == timeKernelInNs) {
+            if (auto Err = timeKernelInNs(&OmptKernelTimingArgs))
+              return Err;
+          } else { return Plugin::error("Unknown ompt action function!"); });
+
+      // Invalidate the actions.
       ActionFunction = nullptr;
+
+#ifdef OMPT_SUPPORT
+      OmptActionFunction = nullptr;
+#endif
 
       return Plugin::success();
     }
@@ -1120,6 +1253,21 @@ private:
     return Plugin::success();
   }
 
+  static Error timeKernelInNs(void *Data) {
+    OmptKernelTimingArgsTy *Args =
+        reinterpret_cast<OmptKernelTimingArgsTy *>(Data);
+    assert(Args && "Invalid arguments");
+    assert(Args->Signal && "Invalid signal");
+    DP("Getting kernel dispatch timing for OMPT trace records\n");
+    hsa_amd_profiling_dispatch_time_t TimeRec;
+    hsa_status_t Status = hsa_amd_profiling_get_dispatch_time(
+        Args->Agent, Args->Signal->get(), &TimeRec);
+    ::setOmptTimestamp(TimeRec.start * Args->TicksToTime,
+                       TimeRec.end * Args->TicksToTime);
+    return Plugin::check(Status,
+                         "Error in hsa_amd_profiling_get_dispatch_time");
+  }
+
 public:
   /// Create an empty stream associated with a specific device.
   AMDGPUStreamTy(AMDGPUDeviceTy &Device);
@@ -1151,6 +1299,11 @@ public:
     // Setup the post action to release the kernel args buffer.
     if (auto Err = Slots[Curr].schedReleaseBuffer(KernelArgs, MemoryManager))
       return Err;
+
+    // Setup the post action to collect kernel execution timing.
+    OMPT_IF_TRACING_ENABLED(
+        if (auto Err = Slots[Curr].schedOmptKernelTiming(
+                Agent, OutputSignal, TicksToTime)) return Err;);
 
     // Push the kernel with the output signal and an input signal (optional)
     return Queue.pushKernelLaunch(Kernel, KernelArgs, NumThreads, NumBlocks,
@@ -1667,6 +1820,20 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = initMemoryPools())
       return Err;
 
+    OMPT_IF_ENABLED(::setOmptTicksToTime(););
+
+#ifdef OMPT_SUPPORT
+    // At init we capture two time points for host and device to calculate the
+    // "average time" of those two times.
+    // libomp uses the CLOCK_REALTIME (via gettimeofday) to get
+    // the value for omp_get_wtime. So we use the same clock here to calculate
+    // the rate and convert device time to omp_get_wtime via translate_time.
+    double HostRef1 = 0;
+    uint64_t DeviceRef1 = 0;
+#endif
+    // Take the first timepoints.
+    OMPT_IF_ENABLED(startH2DTimeRate(&HostRef1, &DeviceRef1););
+
     char GPUName[64];
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_NAME, GPUName))
       return Err;
@@ -1751,6 +1918,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
               1, // memory size
           AMDGPU_X86_64_SystemConfiguration::page_size);
     }
+
+    // Take the second timepoints and compute the required metadata.
+    OMPT_IF_ENABLED(completeH2DTimeRate(HostRef1, DeviceRef1););
 
     return Plugin::success();
   }
@@ -2033,7 +2203,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     void *PinnedHstPtr = nullptr;
 
     // For large transfers use synchronous behavior.
-    if (Size >= OMPX_MaxAsyncCopyBytes) {
+    // If OMPT is enabled or synchronous behavior is explicitly requested:
+    if (OmptEnabled || AsyncInfoWrapper.isSynchronous() ||
+        Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
           return Err;
@@ -2057,6 +2229,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
       if (auto Err = Signal.wait())
         return Err;
+
+      OMPT_IF_TRACING_ENABLED(recordCopyTimingInNs(Signal.get()););
 
       if (auto Err = Signal.deinit())
         return Err;
@@ -2090,7 +2264,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     void *PinnedHstPtr = nullptr;
 
     // For large transfers use synchronous behavior.
-    if (Size >= OMPX_MaxAsyncCopyBytes) {
+    // If OMPT is enabled or synchronous behavior is explicitly requested:
+    if (OmptEnabled || AsyncInfoWrapper.isSynchronous() ||
+        Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
           return Err;
@@ -2114,6 +2290,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
       if (auto Err = Signal.wait())
         return Err;
+
+      OMPT_IF_TRACING_ENABLED(recordCopyTimingInNs(Signal.get()););
 
       if (auto Err = Signal.deinit())
         return Err;
@@ -2233,6 +2411,20 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
+  /// Get the HSA system timestamps for the input signal associated with an
+  /// async copy and pass the information to libomptarget
+  void recordCopyTimingInNs(hsa_signal_t signal) {
+    hsa_amd_profiling_async_copy_time_t time_rec;
+    hsa_status_t Status =
+        hsa_amd_profiling_get_async_copy_time(signal, &time_rec);
+    if (Status != HSA_STATUS_SUCCESS) {
+      DP("Error while getting async copy time\n");
+      return;
+    }
+    ::setOmptTimestamp(time_rec.start * TicksToTime,
+                       time_rec.end * TicksToTime);
+  }
+
   /// Getters and setters for stack and heap sizes.
   Error getDeviceStackSize(uint64_t &Value) override {
     Value = 0;
@@ -2279,6 +2471,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     uint32_t Current = NextQueue.fetch_add(1, std::memory_order_relaxed);
     return Queues[Current % Queues.size()];
+  }
+
+  /// Enable/disable profiling of the HSA queues.
+  void setOmptQueueProfile(int Enable) {
+    for (auto &Q : Queues)
+      hsa_amd_profiling_set_profiler_enabled(Q.getHsaQueue(), Enable);
   }
 
 private:
@@ -2965,3 +3163,22 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
 } // namespace target
 } // namespace omp
 } // namespace llvm
+
+#ifdef OMPT_SUPPORT
+namespace llvm::omp::target::plugin {
+
+/// Enable/disable kernel profiling for the given device.
+void setOmptQueueProfile(int DeviceId, int Enable) {
+  AMDGPUPluginTy &Plugin = Plugin::get<AMDGPUPluginTy>();
+  static_cast<AMDGPUDeviceTy &>(Plugin.getDevice(DeviceId))
+      .setOmptQueueProfile(Enable);
+}
+
+} // namespace llvm::omp::target::plugin
+
+/// Enable/disable kernel profiling for the given device.
+void setGlobalOmptKernelProfile(int DeviceId, int Enable) {
+  llvm::omp::target::plugin::setOmptQueueProfile(DeviceId, Enable);
+}
+
+#endif
