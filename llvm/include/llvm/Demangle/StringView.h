@@ -72,20 +72,6 @@ public:
     return *(end() - 1);
   }
 
-  bool consumeFront(char C) {
-    if (!startsWith(C))
-      return false;
-    remove_prefix(1);
-    return true;
-  }
-
-  bool consumeFront(StringView S) {
-    if (!startsWith(S))
-      return false;
-    remove_prefix(S.size());
-    return true;
-  }
-
   bool startsWith(char C) const { return !empty() && *begin() == C; }
 
   bool startsWith(StringView Str) const {
