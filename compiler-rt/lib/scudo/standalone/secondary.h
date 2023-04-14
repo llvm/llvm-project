@@ -122,7 +122,29 @@ bool mapSecondary(const Options &Options, uptr CommitBase, uptr CommitSize,
   Flags |= MAP_RESIZABLE;
   Flags |= MAP_ALLOWNOMEM;
 
-  const uptr MaxUnusedCacheBytes = MaxUnusedCachePages * getPageSizeCached();
+  const uptr PageSize = getPageSizeCached();
+  if (SCUDO_TRUSTY) {
+    /*
+     * On Trusty we need AllocPos to be usable for shared memory, which cannot
+     * cross multiple mappings. This means we need to split around AllocPos
+     * and not over it. We can only do this if the address is page-aligned.
+     */
+    const uptr TaggedSize = AllocPos - CommitBase;
+    if (useMemoryTagging<Config>(Options) && isAligned(TaggedSize, PageSize)) {
+      DCHECK_GT(TaggedSize, 0);
+      return MemMap.remap(CommitBase, TaggedSize, "scudo:secondary",
+                          MAP_MEMTAG | Flags) &&
+             MemMap.remap(AllocPos, CommitSize - TaggedSize, "scudo:secondary",
+                          Flags);
+    } else {
+      const uptr RemapFlags =
+          (useMemoryTagging<Config>(Options) ? MAP_MEMTAG : 0) | Flags;
+      return MemMap.remap(CommitBase, CommitSize, "scudo:secondary",
+                          RemapFlags);
+    }
+  }
+
+  const uptr MaxUnusedCacheBytes = MaxUnusedCachePages * PageSize;
   if (useMemoryTagging<Config>(Options) && CommitSize > MaxUnusedCacheBytes) {
     const uptr UntaggedPos = Max(AllocPos, CommitBase + MaxUnusedCacheBytes);
     return MemMap.remap(CommitBase, UntaggedPos - CommitBase, "scudo:secondary",
