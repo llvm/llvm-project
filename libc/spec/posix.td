@@ -1077,6 +1077,11 @@ def POSIX : StandardSpec<"POSIX"> {
               RetValSpec<IntType>,
               [ArgSpec<FILEPtr>]
           >,
+          FunctionSpec<
+              "getchar_unlocked",
+              RetValSpec<IntType>,
+              [ArgSpec<VoidType>]
+          >,
       ]
   >;
 
