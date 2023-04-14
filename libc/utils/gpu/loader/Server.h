@@ -42,6 +42,12 @@ void handle_server() {
     });
     break;
   }
+  case __llvm_libc::rpc::Opcode::TEST_INCREMENT: {
+    port->recv_and_send([](__llvm_libc::rpc::Buffer *buffer) {
+      reinterpret_cast<uint64_t *>(buffer->data)[0] += 1;
+    });
+    break;
+  }
   default:
     port->recv([](__llvm_libc::rpc::Buffer *) { /* no-op */ });
     return;
