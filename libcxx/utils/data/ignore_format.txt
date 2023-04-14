@@ -141,6 +141,7 @@ libcxx/include/__algorithm/ranges_minmax.h
 libcxx/include/__algorithm/ranges_mismatch.h
 libcxx/include/__algorithm/ranges_move_backward.h
 libcxx/include/__algorithm/ranges_move.h
+libcxx/include/__algorithm/ranges_next_permutation.h
 libcxx/include/__algorithm/ranges_none_of.h
 libcxx/include/__algorithm/ranges_nth_element.h
 libcxx/include/__algorithm/ranges_partial_sort_copy.h
@@ -205,6 +206,7 @@ libcxx/include/__algorithm/sort_heap.h
 libcxx/include/__algorithm/stable_partition.h
 libcxx/include/__algorithm/stable_sort.h
 libcxx/include/__algorithm/swap_ranges.h
+libcxx/include/__algorithm/three_way_comp_ref_type.h
 libcxx/include/__algorithm/transform.h
 libcxx/include/__algorithm/uniform_random_bit_generator_adaptor.h
 libcxx/include/__algorithm/unwrap_iter.h
@@ -252,6 +254,7 @@ libcxx/include/__chrono/literals.h
 libcxx/include/__chrono/monthday.h
 libcxx/include/__chrono/month.h
 libcxx/include/__chrono/month_weekday.h
+libcxx/include/__chrono/statically_widen.h
 libcxx/include/__chrono/steady_clock.h
 libcxx/include/__chrono/system_clock.h
 libcxx/include/__chrono/time_point.h
@@ -271,6 +274,7 @@ libcxx/include/__compare/compare_weak_order_fallback.h
 libcxx/include/__compare/ordering.h
 libcxx/include/__compare/partial_order.h
 libcxx/include/__compare/strong_order.h
+libcxx/include/__compare/synth_three_way.h
 libcxx/include/__compare/three_way_comparable.h
 libcxx/include/__compare/weak_order.h
 libcxx/include/complex
@@ -309,9 +313,11 @@ libcxx/include/__debug
 libcxx/include/__debug_utils/randomize_range.h
 libcxx/include/deque
 libcxx/include/errno.h
+libcxx/include/__exception/exception_ptr.h
 libcxx/include/execution
 libcxx/include/expected
 libcxx/include/__expected/expected.h
+libcxx/include/__expected/unexpected.h
 libcxx/include/experimental/__config
 libcxx/include/experimental/iterator
 libcxx/include/experimental/map
@@ -369,6 +375,8 @@ libcxx/include/__format/formatter_output.h
 libcxx/include/__format/formatter_pointer.h
 libcxx/include/__format/formatter_string.h
 libcxx/include/__format/parser_std_format_spec.h
+libcxx/include/__format/range_default_formatter.h
+libcxx/include/__format/range_formatter.h
 libcxx/include/__format/unicode.h
 libcxx/include/forward_list
 libcxx/include/fstream
@@ -432,6 +440,7 @@ libcxx/include/__iterator/istreambuf_iterator.h
 libcxx/include/__iterator/istream_iterator.h
 libcxx/include/__iterator/iterator.h
 libcxx/include/__iterator/iterator_traits.h
+libcxx/include/__iterator/iterator_with_data.h
 libcxx/include/__iterator/iter_move.h
 libcxx/include/__iterator/iter_swap.h
 libcxx/include/__iterator/mergeable.h
@@ -545,12 +554,15 @@ libcxx/include/__random/weibull_distribution.h
 libcxx/include/ranges
 libcxx/include/__ranges/access.h
 libcxx/include/__ranges/all.h
+libcxx/include/__ranges/as_rvalue_view.h
 libcxx/include/__ranges/common_view.h
 libcxx/include/__ranges/concepts.h
 libcxx/include/__ranges/copyable_box.h
 libcxx/include/__ranges/counted.h
 libcxx/include/__ranges/data.h
 libcxx/include/__ranges/drop_view.h
+libcxx/include/__ranges/drop_while_view.h
+libcxx/include/__ranges/elements_view.h
 libcxx/include/__ranges/empty.h
 libcxx/include/__ranges/empty_view.h
 libcxx/include/__ranges/enable_view.h
@@ -568,8 +580,10 @@ libcxx/include/__ranges/rend.h
 libcxx/include/__ranges/reverse_view.h
 libcxx/include/__ranges/single_view.h
 libcxx/include/__ranges/size.h
+libcxx/include/__ranges/split_view.h
 libcxx/include/__ranges/subrange.h
 libcxx/include/__ranges/take_view.h
+libcxx/include/__ranges/take_while_view.h
 libcxx/include/__ranges/transform_view.h
 libcxx/include/__ranges/view_interface.h
 libcxx/include/__ranges/views.h
@@ -610,6 +624,9 @@ libcxx/include/__support/solaris/xlocale.h
 libcxx/include/__support/win32/locale_win32.h
 libcxx/include/__support/xlocale/__nop_locale_mgmt.h
 libcxx/include/__system_error/errc.h
+libcxx/include/__system_error/error_category.h
+libcxx/include/__system_error/error_code.h
+libcxx/include/__system_error/error_condition.h
 libcxx/include/thread
 libcxx/include/__threading_support
 libcxx/include/__thread/poll_with_backoff.h
@@ -793,9 +810,9 @@ libcxx/src/include/ryu/ryu.h
 libcxx/src/include/sso_allocator.h
 libcxx/src/ios.cpp
 libcxx/src/iostream.cpp
-libcxx/src/legacy_debug_handler.cpp
 libcxx/src/locale.cpp
 libcxx/src/memory.cpp
+libcxx/src/memory_resource.cpp
 libcxx/src/mutex.cpp
 libcxx/src/mutex_destructor.cpp
 libcxx/src/new.cpp
