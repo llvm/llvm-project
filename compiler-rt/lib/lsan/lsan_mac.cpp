@@ -70,7 +70,6 @@ void lsan_register_worker_thread(int parent_tid) {
   if (GetCurrentThread() == kInvalidTid) {
     u32 tid = ThreadCreate(parent_tid, true);
     ThreadStart(tid, GetTid());
-    SetCurrentThread(tid);
   }
 }
 
