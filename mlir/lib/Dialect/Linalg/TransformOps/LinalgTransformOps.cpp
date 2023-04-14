@@ -38,6 +38,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include <type_traits>
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -3214,18 +3215,27 @@ transform::HoistRedundantTensorSubsetsOp::applyToOne(
 //===----------------------------------------------------------------------===//
 // InsertSliceToCopyOp
 //===----------------------------------------------------------------------===//
+template <typename OpTy>
+DiagnosedSilenceableFailure doit(RewriterBase &rewriter, OpTy target,
+                                 transform::ApplyToEachResultList &results,
+                                 transform::TransformState &state) {
+  static_assert(llvm::is_one_of<OpTy, tensor::InsertSliceOp,
+                                tensor::ParallelInsertSliceOp>() &&
+                "wrong op type");
 
-DiagnosedSilenceableFailure transform::InsertSliceToCopyOp::applyToOne(
-    tensor::InsertSliceOp target, transform::ApplyToEachResultList &results,
-    transform::TransformState &state) {
-  if (auto copySource = target.getSource().getDefiningOp<linalg::CopyOp>()) {
+  if (auto copySource =
+          target.getSource().template getDefiningOp<linalg::CopyOp>()) {
     results.push_back(copySource);
     return DiagnosedSilenceableFailure::success();
   }
 
-  TrackingListener listener(state, *this);
-  IRRewriter rewriter(target->getContext(), &listener);
-  rewriter.setInsertionPoint(target);
+  // If we are inside an InParallel region, temporarily set the insertion point
+  // outside: only tensor.parallel_insert_slice ops are allowed in there.
+  if constexpr (std::is_same_v<OpTy, tensor::ParallelInsertSliceOp>) {
+    rewriter.setInsertionPoint(
+        target->template getParentOfType<scf::InParallelOp>());
+  }
+
   Value extracted = rewriter.create<tensor::ExtractSliceOp>(
       target.getLoc(), target.getDest(), target.getMixedOffsets(),
       target.getMixedSizes(), target.getMixedStrides());
@@ -3233,12 +3243,33 @@ DiagnosedSilenceableFailure transform::InsertSliceToCopyOp::applyToOne(
                      .create<linalg::CopyOp>(target.getLoc(),
                                              target.getSource(), extracted)
                      .getResult(0);
-  rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
+  // Reset the insertion point.
+  rewriter.setInsertionPoint(target);
+  rewriter.replaceOpWithNewOp<OpTy>(
       target, copied, target.getDest(), target.getMixedOffsets(),
       target.getMixedSizes(), target.getMixedStrides());
 
   results.push_back(copied.getDefiningOp());
   return DiagnosedSilenceableFailure::success();
+}
+
+DiagnosedSilenceableFailure transform::InsertSliceToCopyOp::applyToOne(
+    Operation *targetOp, transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+
+  TrackingListener listener(state, *this);
+  IRRewriter rewriter(targetOp->getContext(), &listener);
+  rewriter.setInsertionPoint(targetOp);
+  if (auto target = dyn_cast<tensor::InsertSliceOp>(targetOp))
+    return doit(rewriter, target, results, state);
+  if (auto target = dyn_cast<tensor::ParallelInsertSliceOp>(targetOp))
+    return doit(rewriter, target, results, state);
+
+  DiagnosedSilenceableFailure diag =
+      emitSilenceableError()
+      << "only InsertSliceOp and ParallelInsertSliceOp ops are supported";
+  diag.attachNote(targetOp->getLoc()) << "target op";
+  return diag;
 }
 
 //===----------------------------------------------------------------------===//
