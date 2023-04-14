@@ -230,6 +230,11 @@ public:
   /// of the given class.
   mlir::cir::GlobalLinkageKind getVTableLinkage(const CXXRecordDecl *RD);
 
+  /// Emit type metadata for the given vtable using the given layout.
+  void buildVTableTypeMetadata(const CXXRecordDecl *RD,
+                               mlir::cir::GlobalOp VTable,
+                               const VTableLayout &VTLayout);
+
   /// Get the address of the RTTI descriptor for the given type.
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc, QualType Ty,
                                           bool ForEH = false);

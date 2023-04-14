@@ -1123,6 +1123,12 @@ def GlobalOp : CIR_Op<"global", [Symbol]> {
     bool hasAvailableExternallyLinkage() {
       return mlir::cir::isAvailableExternallyLinkage(getLinkage());
     }
+    bool isDeclarationForLinker() {
+      if (hasAvailableExternallyLinkage())
+        return true;
+
+      return isDeclaration();
+    }
   }];
 
   let skipDefaultBuilders = 1;

@@ -2103,6 +2103,14 @@ bool CIRGenModule::shouldOpportunisticallyEmitVTables() {
   return codeGenOpts.OptimizationLevel > 0;
 }
 
+void CIRGenModule::buildVTableTypeMetadata(const CXXRecordDecl *RD,
+                                           mlir::cir::GlobalOp VTable,
+                                           const VTableLayout &VTLayout) {
+  if (!getCodeGenOpts().LTOUnit)
+    return;
+  llvm_unreachable("NYI");
+}
+
 mlir::Attribute CIRGenModule::getAddrOfRTTIDescriptor(mlir::Location loc,
                                                       QualType Ty, bool ForEH) {
   // Return a bogus pointer if RTTI is disabled, unless it's for EH.

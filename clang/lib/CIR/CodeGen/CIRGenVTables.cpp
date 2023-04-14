@@ -154,7 +154,6 @@ void CIRGenVTables::GenerateClassData(const CXXRecordDecl *RD) {
     llvm_unreachable("NYI");
 
   CGM.getCXXABI().emitVTableDefinitions(*this, RD);
-  llvm_unreachable("NYI");
 }
 
 static void AddPointerLayoutOffset(CIRGenModule &CGM,
@@ -163,9 +162,6 @@ static void AddPointerLayoutOffset(CIRGenModule &CGM,
   assert(offset.getQuantity() == 0 && "NYI");
   builder.add(mlir::cir::NullAttr::get(CGM.getBuilder().getContext(),
                                        CGM.getBuilder().getInt8PtrTy()));
-  // builder.add(llvm::ConstantExpr::getIntToPtr(
-  //     llvm::ConstantInt::get(CGM.PtrDiffTy, offset.getQuantity()),
-  //     CGM.Int8PtrTy));
 }
 
 static void AddRelativeLayoutOffset(CIRGenModule &CGM,
@@ -320,7 +316,7 @@ void CIRGenVTables::createVTableInitializer(ConstantStructBuilder &builder,
                          nextVTableThunkIndex, addressPoints[vtableIndex],
                          vtableHasLocalLinkage);
     }
-    vtableElem.finishAndAddTo(builder);
+    vtableElem.finishAndAddTo(rtti.getContext(), builder);
   }
 }
 
