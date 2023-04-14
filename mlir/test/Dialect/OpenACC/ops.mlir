@@ -37,7 +37,7 @@ func.func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x
 //  CHECK-NEXT:   %{{.*}} = arith.constant 10 : index
 //  CHECK-NEXT:   %{{.*}} = arith.constant 1 : index
 //  CHECK-NEXT:   [[ASYNC:%.*]] = arith.constant 1 : i64
-//  CHECK-NEXT:   acc.parallel async([[ASYNC]]: i64) {
+//  CHECK-NEXT:   acc.parallel async([[ASYNC]] : i64) {
 //  CHECK-NEXT:     acc.loop gang vector {
 //  CHECK-NEXT:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //  CHECK-NEXT:         scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
@@ -164,7 +164,7 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 // CHECK-NEXT:   [[NUMGANG:%.*]] = arith.constant 10 : i64
 // CHECK-NEXT:   [[NUMWORKERS:%.*]] = arith.constant 10 : i64
 // CHECK-NEXT:   acc.data present(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>) {
-// CHECK-NEXT:     acc.parallel num_gangs([[NUMGANG]]: i64) num_workers([[NUMWORKERS]]: i64) private([[ARG2]]: memref<10xf32>) {
+// CHECK-NEXT:     acc.parallel num_gangs([[NUMGANG]] : i64) num_workers([[NUMWORKERS]] : i64) private([[ARG2]] : memref<10xf32>) {
 // CHECK-NEXT:       acc.loop gang {
 // CHECK-NEXT:         scf.for %{{.*}} = [[C0]] to [[C10]] step [[C1]] {
 // CHECK-NEXT:           acc.loop worker {
@@ -370,7 +370,7 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
   }
   acc.parallel wait(%idxValue: index) {
   }
-  acc.parallel wait(%i64value: i64, %i32value: i32, %idxValue: index) {
+  acc.parallel wait(%i64value, %i32value, %idxValue : i64, i32, index) {
   }
   acc.parallel num_gangs(%i64value: i64) {
   }
@@ -390,21 +390,21 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
   }
   acc.parallel vector_length(%idxValue: index) {
   }
-  acc.parallel copyin(%a: memref<10xf32>, %b: memref<10xf32>) {
+  acc.parallel copyin(%a, %b : memref<10xf32>, memref<10xf32>) {
   }
-  acc.parallel copyin_readonly(%a: memref<10xf32>, %b: memref<10xf32>) {
+  acc.parallel copyin_readonly(%a, %b : memref<10xf32>, memref<10xf32>) {
   }
-  acc.parallel copyin(%a: memref<10xf32>) copyout_zero(%b: memref<10xf32>, %c: memref<10x10xf32>) {
+  acc.parallel copyin(%a: memref<10xf32>) copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) {
   }
-  acc.parallel copyout(%b: memref<10xf32>, %c: memref<10x10xf32>) create(%a: memref<10xf32>) {
+  acc.parallel copyout(%b, %c : memref<10xf32>, memref<10x10xf32>) create(%a: memref<10xf32>) {
   }
-  acc.parallel copyout_zero(%b: memref<10xf32>, %c: memref<10x10xf32>) create_zero(%a: memref<10xf32>) {
+  acc.parallel copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) create_zero(%a: memref<10xf32>) {
   }
-  acc.parallel no_create(%a: memref<10xf32>) present(%b: memref<10xf32>, %c: memref<10x10xf32>) {
+  acc.parallel no_create(%a: memref<10xf32>) present(%b, %c : memref<10xf32>, memref<10x10xf32>) {
   }
-  acc.parallel deviceptr(%a: memref<10xf32>) attach(%b: memref<10xf32>, %c: memref<10x10xf32>) {
+  acc.parallel deviceptr(%a: memref<10xf32>) attach(%b, %c : memref<10xf32>, memref<10x10xf32>) {
   }
-  acc.parallel private(%a: memref<10xf32>, %c: memref<10x10xf32>) firstprivate(%b: memref<10xf32>) {
+  acc.parallel private(%a, %c : memref<10xf32>, memref<10x10xf32>) firstprivate(%b: memref<10xf32>) {
   }
   acc.parallel {
   } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -423,53 +423,53 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
 // CHECK:      [[I64VALUE:%.*]] = arith.constant 1 : i64
 // CHECK:      [[I32VALUE:%.*]] = arith.constant 1 : i32
 // CHECK:      [[IDXVALUE:%.*]] = arith.constant 1 : index
-// CHECK:      acc.parallel async([[I64VALUE]]: i64) {
+// CHECK:      acc.parallel async([[I64VALUE]] : i64) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel async([[I32VALUE]]: i32) {
+// CHECK:      acc.parallel async([[I32VALUE]] : i32) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel async([[IDXVALUE]]: index) {
+// CHECK:      acc.parallel async([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel wait([[I64VALUE]]: i64) {
+// CHECK:      acc.parallel wait([[I64VALUE]] : i64) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel wait([[I32VALUE]]: i32) {
+// CHECK:      acc.parallel wait([[I32VALUE]] : i32) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel wait([[IDXVALUE]]: index) {
+// CHECK:      acc.parallel wait([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel wait([[I64VALUE]]: i64, [[I32VALUE]]: i32, [[IDXVALUE]]: index) {
+// CHECK:      acc.parallel wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_gangs([[I64VALUE]]: i64) {
+// CHECK:      acc.parallel num_gangs([[I64VALUE]] : i64) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_gangs([[I32VALUE]]: i32) {
+// CHECK:      acc.parallel num_gangs([[I32VALUE]] : i32) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_gangs([[IDXVALUE]]: index) {
+// CHECK:      acc.parallel num_gangs([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_workers([[I64VALUE]]: i64) {
+// CHECK:      acc.parallel num_workers([[I64VALUE]] : i64) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_workers([[I32VALUE]]: i32) {
+// CHECK:      acc.parallel num_workers([[I32VALUE]] : i32) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_workers([[IDXVALUE]]: index) {
+// CHECK:      acc.parallel num_workers([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel vector_length([[I64VALUE]]: i64) {
+// CHECK:      acc.parallel vector_length([[I64VALUE]] : i64) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel vector_length([[I32VALUE]]: i32) {
+// CHECK:      acc.parallel vector_length([[I32VALUE]] : i32) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel vector_length([[IDXVALUE]]: index) {
+// CHECK:      acc.parallel vector_length([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel copyin([[ARGA]]: memref<10xf32>, [[ARGB]]: memref<10xf32>) {
+// CHECK:      acc.parallel copyin([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel copyin_readonly([[ARGA]]: memref<10xf32>, [[ARGB]]: memref<10xf32>) {
+// CHECK:      acc.parallel copyin_readonly([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel copyin([[ARGA]]: memref<10xf32>) copyout_zero([[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) {
+// CHECK:      acc.parallel copyin([[ARGA]] : memref<10xf32>) copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel copyout([[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) create([[ARGA]]: memref<10xf32>) {
+// CHECK:      acc.parallel copyout([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create([[ARGA]] : memref<10xf32>) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel copyout_zero([[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) create_zero([[ARGA]]: memref<10xf32>) {
+// CHECK:      acc.parallel copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create_zero([[ARGA]] : memref<10xf32>) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel no_create([[ARGA]]: memref<10xf32>) present([[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) {
+// CHECK:      acc.parallel no_create([[ARGA]] : memref<10xf32>) present([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel deviceptr([[ARGA]]: memref<10xf32>) attach([[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) {
+// CHECK:      acc.parallel attach([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) deviceptr([[ARGA]] : memref<10xf32>) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel private([[ARGA]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) firstprivate([[ARGB]]: memref<10xf32>) {
+// CHECK:      acc.parallel firstprivate([[ARGB]] : memref<10xf32>) private([[ARGA]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.parallel {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -480,6 +480,108 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
 // CHECK:      acc.parallel {
 // CHECK-NEXT: } attributes {waitAttr}
 // CHECK:      acc.parallel {
+// CHECK-NEXT: } attributes {selfAttr}
+
+// -----
+
+// -----
+
+func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
+  %i64value = arith.constant 1 : i64
+  %i32value = arith.constant 1 : i32
+  %idxValue = arith.constant 1 : index
+  acc.serial async(%i64value: i64) {
+  }
+  acc.serial async(%i32value: i32) {
+  }
+  acc.serial async(%idxValue: index) {
+  }
+  acc.serial wait(%i64value: i64) {
+  }
+  acc.serial wait(%i32value: i32) {
+  }
+  acc.serial wait(%idxValue: index) {
+  }
+  acc.serial wait(%i64value, %i32value, %idxValue : i64, i32, index) {
+  }
+  acc.serial copyin(%a, %b : memref<10xf32>, memref<10xf32>) {
+  }
+  acc.serial copyin_readonly(%a, %b : memref<10xf32>, memref<10xf32>) {
+  }
+  acc.serial copyin(%a: memref<10xf32>) copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) {
+  }
+  acc.serial copyout(%b, %c : memref<10xf32>, memref<10x10xf32>) create(%a: memref<10xf32>) {
+  }
+  acc.serial copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) create_zero(%a: memref<10xf32>) {
+  }
+  acc.serial no_create(%a: memref<10xf32>) present(%b, %c : memref<10xf32>, memref<10x10xf32>) {
+  }
+  acc.serial deviceptr(%a: memref<10xf32>) attach(%b, %c : memref<10xf32>, memref<10x10xf32>) {
+  }
+  acc.serial private(%a, %c : memref<10xf32>, memref<10x10xf32>) firstprivate(%b: memref<10xf32>) {
+  }
+  acc.serial {
+  } attributes {defaultAttr = #acc<defaultvalue none>}
+  acc.serial {
+  } attributes {defaultAttr = #acc<defaultvalue present>}
+  acc.serial {
+  } attributes {asyncAttr}
+  acc.serial {
+  } attributes {waitAttr}
+  acc.serial {
+  } attributes {selfAttr}
+  acc.serial {
+    acc.yield
+  } attributes {selfAttr}
+  return
+}
+
+// CHECK:      func @testserialop([[ARGA:%.*]]: memref<10xf32>, [[ARGB:%.*]]: memref<10xf32>, [[ARGC:%.*]]: memref<10x10xf32>) {
+// CHECK:      [[I64VALUE:%.*]] = arith.constant 1 : i64
+// CHECK:      [[I32VALUE:%.*]] = arith.constant 1 : i32
+// CHECK:      [[IDXVALUE:%.*]] = arith.constant 1 : index
+// CHECK:      acc.serial async([[I64VALUE]] : i64) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial async([[I32VALUE]] : i32) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial async([[IDXVALUE]] : index) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial wait([[I64VALUE]] : i64) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial wait([[I32VALUE]] : i32) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial wait([[IDXVALUE]] : index) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial copyin([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial copyin_readonly([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial copyin([[ARGA]] : memref<10xf32>) copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial copyout([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create([[ARGA]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create_zero([[ARGA]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial no_create([[ARGA]] : memref<10xf32>) present([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial attach([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) deviceptr([[ARGA]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial firstprivate([[ARGB]] : memref<10xf32>) private([[ARGA]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial {
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+// CHECK:      acc.serial {
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
+// CHECK:      acc.serial {
+// CHECK-NEXT: } attributes {asyncAttr}
+// CHECK:      acc.serial {
+// CHECK-NEXT: } attributes {waitAttr}
+// CHECK:      acc.serial {
+// CHECK-NEXT: } attributes {selfAttr}
+// CHECK:      acc.serial {
+// CHECK:        acc.yield
 // CHECK-NEXT: } attributes {selfAttr}
 
 // -----

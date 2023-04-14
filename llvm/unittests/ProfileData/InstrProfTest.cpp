@@ -39,6 +39,14 @@ ErrorEquals(instrprof_error Expected, Error E) {
   return ::testing::AssertionFailure() << "error: " << FoundMsg << "\n";
 }
 
+namespace llvm {
+bool operator==(const TemporalProfTraceTy &lhs,
+                const TemporalProfTraceTy &rhs) {
+  return lhs.Weight == rhs.Weight &&
+         lhs.FunctionNameRefs == rhs.FunctionNameRefs;
+}
+} // end namespace llvm
+
 namespace {
 
 struct InstrProfTest : ::testing::Test {
@@ -234,13 +242,15 @@ TEST_F(InstrProfTest, test_merge_temporal_prof_traces_truncated) {
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::TemporalProfile),
                     Succeeded());
 
-  auto LargeTrace = {IndexedInstrProf::ComputeHash("foo"),
-                     IndexedInstrProf::ComputeHash("bar"),
-                     IndexedInstrProf::ComputeHash("goo")};
-  auto SmallTrace = {IndexedInstrProf::ComputeHash("foo"),
-                     IndexedInstrProf::ComputeHash("bar")};
+  TemporalProfTraceTy LargeTrace, SmallTrace;
+  LargeTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("foo"),
+                                 IndexedInstrProf::ComputeHash("bar"),
+                                 IndexedInstrProf::ComputeHash("goo")};
+  SmallTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("foo"),
+                                 IndexedInstrProf::ComputeHash("bar")};
 
-  Writer.addTemporalProfileTraces({LargeTrace, SmallTrace}, 2);
+  SmallVector<TemporalProfTraceTy, 4> Traces = {LargeTrace, SmallTrace};
+  Writer.addTemporalProfileTraces(Traces, 2);
 
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
@@ -261,11 +271,13 @@ TEST_F(InstrProfTest, test_merge_traces_from_writer) {
   ASSERT_THAT_ERROR(Writer2.mergeProfileKind(InstrProfKind::TemporalProfile),
                     Succeeded());
 
-  auto FooTrace = {IndexedInstrProf::ComputeHash("foo")};
-  auto BarTrace = {IndexedInstrProf::ComputeHash("bar")};
+  TemporalProfTraceTy FooTrace, BarTrace;
+  FooTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("foo")};
+  BarTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("bar")};
 
-  Writer.addTemporalProfileTraces({FooTrace}, 1);
-  Writer2.addTemporalProfileTraces({BarTrace}, 1);
+  SmallVector<TemporalProfTraceTy, 4> Traces1({FooTrace}), Traces2({BarTrace});
+  Writer.addTemporalProfileTraces(Traces1, 1);
+  Writer2.addTemporalProfileTraces(Traces2, 1);
   Writer.mergeRecordsFromWriter(std::move(Writer2), Err);
 
   auto Profile = Writer.writeBuffer();
@@ -284,15 +296,20 @@ TEST_F(InstrProfTest, test_merge_traces_sampled) {
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::TemporalProfile),
                     Succeeded());
 
-  auto FooTrace = {IndexedInstrProf::ComputeHash("foo")};
-  auto BarTrace = {IndexedInstrProf::ComputeHash("bar")};
-  auto GooTrace = {IndexedInstrProf::ComputeHash("Goo")};
+  TemporalProfTraceTy FooTrace, BarTrace, GooTrace;
+  FooTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("foo")};
+  BarTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("bar")};
+  GooTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("Goo")};
 
   // Add some sampled traces
-  Writer.addTemporalProfileTraces({FooTrace, BarTrace, GooTrace}, 5);
+  SmallVector<TemporalProfTraceTy, 4> SampledTraces = {FooTrace, BarTrace,
+                                                       GooTrace};
+  Writer.addTemporalProfileTraces(SampledTraces, 5);
   // Add some unsampled traces
-  Writer.addTemporalProfileTraces({BarTrace, GooTrace}, 2);
-  Writer.addTemporalProfileTraces({FooTrace}, 1);
+  SmallVector<TemporalProfTraceTy, 4> UnsampledTraces = {BarTrace, GooTrace};
+  Writer.addTemporalProfileTraces(UnsampledTraces, 2);
+  UnsampledTraces = {FooTrace};
+  Writer.addTemporalProfileTraces(UnsampledTraces, 1);
 
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));

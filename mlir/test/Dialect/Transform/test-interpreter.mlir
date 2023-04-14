@@ -1411,7 +1411,7 @@ module attributes { transform.with_named_sequence } {
 module attributes { transform.with_named_sequence } {
   transform.named_sequence @match(%arg: !transform.any_op {transform.readonly}) {
     // expected-error @below {{expected operations in the match part to implement MatchOpInterface}}
-    transform.test_print_remark_at_operand %arg, "remark" : !transform.any_op
+    "test.unknown_op"() : () -> ()
     transform.yield
   }
   transform.named_sequence @action() {
@@ -1422,5 +1422,130 @@ module attributes { transform.with_named_sequence } {
   ^bb0(%root: !transform.any_op):
     transform.foreach_match in %root
       @match -> @action : (!transform.any_op) -> !transform.any_op
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @match_func(%arg0: !transform.any_op {transform.readonly}) 
+    -> !transform.any_op {
+    transform.match.operation_name %arg0 ["func.func"] : !transform.any_op
+    transform.yield %arg0 : !transform.any_op
+  }
+
+  transform.named_sequence @print_func(%arg0: !transform.any_op {transform.readonly}) {
+    transform.test_print_remark_at_operand %arg0, "matched func" : !transform.any_op
+    transform.yield
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb(%arg0: !transform.any_op):
+    transform.foreach_match in %arg0 @match_func -> @print_func : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+
+  // expected-remark @below {{matched func}}
+  func.func @payload() {
+    return
+  }
+
+  // expected-remark @below {{matched func}}
+  func.func private @declaration()
+
+  "test.something_else"() : () -> ()
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @eq_1(%arg0: !transform.any_op {transform.readonly}) 
+    -> !transform.any_op {
+    transform.match.operation_name %arg0 ["func.func"] : !transform.any_op
+    %0 = transform.test_produce_param_with_number_of_test_ops %arg0 : !transform.any_op
+    %1 = transform.param.constant 1 : i32 -> !transform.test_dialect_param
+    transform.match.param.cmpi eq %0, %1 : !transform.test_dialect_param
+    transform.test_print_remark_at_operand %arg0, "matched == 1" : !transform.any_op
+    transform.yield %arg0 : !transform.any_op
+  }
+
+  transform.named_sequence @ne_0(%arg0: !transform.any_op {transform.readonly}) 
+    -> !transform.any_op {
+    transform.match.operation_name %arg0 ["func.func"] : !transform.any_op
+    %0 = transform.test_produce_param_with_number_of_test_ops %arg0 : !transform.any_op
+    %1 = transform.param.constant 0 : i32 -> !transform.test_dialect_param
+    transform.match.param.cmpi ne %0, %1 : !transform.test_dialect_param
+    transform.test_print_remark_at_operand %arg0, "matched != 0" : !transform.any_op
+    transform.yield %arg0 : !transform.any_op
+  }
+
+  transform.named_sequence @gt_m1(%arg0: !transform.any_op {transform.readonly}) 
+    -> !transform.any_op {
+    transform.match.operation_name %arg0 ["func.func"] : !transform.any_op
+    %0 = transform.test_produce_param_with_number_of_test_ops %arg0 : !transform.any_op
+    %1 = transform.param.constant -1 : i32 -> !transform.test_dialect_param
+    transform.match.param.cmpi gt %0, %1 : !transform.test_dialect_param
+    transform.test_print_remark_at_operand %arg0, "matched > -1" : !transform.any_op
+    transform.yield %arg0 : !transform.any_op
+  }
+
+  transform.named_sequence @ge_1(%arg0: !transform.any_op {transform.readonly}) 
+    -> !transform.any_op {
+    transform.match.operation_name %arg0 ["func.func"] : !transform.any_op
+    %0 = transform.test_produce_param_with_number_of_test_ops %arg0 : !transform.any_op
+    %1 = transform.param.constant 1 : i32 -> !transform.test_dialect_param
+    transform.match.param.cmpi ge %0, %1 : !transform.test_dialect_param
+    transform.test_print_remark_at_operand %arg0, "matched >= 1" : !transform.any_op
+    transform.yield %arg0 : !transform.any_op
+  }
+
+  transform.named_sequence @lt_1(%arg0: !transform.any_op {transform.readonly}) 
+    -> !transform.any_op {
+    transform.match.operation_name %arg0 ["func.func"] : !transform.any_op
+    %0 = transform.test_produce_param_with_number_of_test_ops %arg0 : !transform.any_op
+    %1 = transform.param.constant 1 : i32 -> !transform.test_dialect_param
+    transform.match.param.cmpi lt %0, %1 : !transform.test_dialect_param
+    transform.test_print_remark_at_operand %arg0, "matched < 1" : !transform.any_op
+    transform.yield %arg0 : !transform.any_op
+  }
+
+  transform.named_sequence @le_1(%arg0: !transform.any_op {transform.readonly}) 
+    -> !transform.any_op {
+    transform.match.operation_name %arg0 ["func.func"] : !transform.any_op
+    %0 = transform.test_produce_param_with_number_of_test_ops %arg0 : !transform.any_op
+    %1 = transform.param.constant 1 : i32 -> !transform.test_dialect_param
+    transform.match.param.cmpi le %0, %1 : !transform.test_dialect_param
+    transform.test_print_remark_at_operand %arg0, "matched <= 1" : !transform.any_op
+    transform.yield %arg0 : !transform.any_op
+  }
+
+  transform.named_sequence @do_nothing(%arg0: !transform.any_op {transform.readonly}) {
+    transform.yield
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb(%arg0: !transform.any_op):
+    %0 = transform.foreach_match in %arg0 @eq_1 -> @do_nothing : (!transform.any_op) -> !transform.any_op
+    %1 = transform.foreach_match in %0 @ne_0 -> @do_nothing : (!transform.any_op) -> !transform.any_op
+    %2 = transform.foreach_match in %1 @gt_m1 -> @do_nothing : (!transform.any_op) -> !transform.any_op
+    %3 = transform.foreach_match in %2 @ge_1 -> @do_nothing : (!transform.any_op) -> !transform.any_op
+    %4 = transform.foreach_match in %3 @lt_1 -> @do_nothing : (!transform.any_op) -> !transform.any_op
+    %5 = transform.foreach_match in %4 @le_1 -> @do_nothing : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+
+  // expected-remark @below {{matched > -1}}
+  // expected-remark @below {{matched < 1}}
+  // expected-remark @below {{matched <= 1}}
+  func.func private @declaration()
+
+  // expected-remark @below {{matched == 1}}
+  // expected-remark @below {{matched != 0}}
+  // expected-remark @below {{matched > -1}}
+  // expected-remark @below {{matched >= 1}}
+  // expected-remark @below {{matched <= 1}}
+  func.func @definition() {
+    "test.something"() : () -> ()
+    return
   }
 }

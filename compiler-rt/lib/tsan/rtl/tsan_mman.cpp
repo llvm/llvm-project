@@ -352,7 +352,7 @@ void *user_pvalloc(ThreadState *thr, uptr pc, uptr sz) {
   return SetErrnoOnNull(user_alloc_internal(thr, pc, sz, PageSize));
 }
 
-const void *user_alloc_begin(const void *p) {
+static const void *user_alloc_begin(const void *p) {
   if (p == nullptr || !IsAppMem((uptr)p))
     return nullptr;
   void *beg = allocator()->GetBlockBegin(p);

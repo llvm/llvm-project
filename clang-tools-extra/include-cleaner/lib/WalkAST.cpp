@@ -21,6 +21,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Casting.h"
@@ -81,9 +82,10 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
     if (llvm::isa_and_present<UsingShadowDecl, TypeAliasTemplateDecl>(ND))
       return ND;
     // This is the underlying decl used by TemplateSpecializationType, can be
-    // null when type is dependent if so fallback to primary template.
+    // null when type is dependent or not resolved to a pattern yet.
+    // If so, fallback to primary template.
     CXXRecordDecl *TD = TST->getAsCXXRecordDecl();
-    if (!TD)
+    if (!TD || TD->getTemplateSpecializationKind() == TSK_Undeclared)
       return ND;
     // We ignore explicit instantiations. This might imply marking the wrong
     // declaration as used in specific cases, but seems like the right trade-off

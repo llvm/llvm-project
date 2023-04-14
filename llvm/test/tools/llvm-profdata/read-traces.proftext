@@ -6,15 +6,15 @@
 # RUN: llvm-profdata show --temporal-profile-traces %t.1.proftext | FileCheck %s
 
 # CHECK: Temporal Profile Traces (samples=3 seen=3):
-# CHECK: Temporal Profile Trace 0 (count=3):
+# CHECK: Temporal Profile Trace 0 (weight=1 count=3):
 # CHECK:   foo
 # CHECK:   bar
 # CHECK:   goo
-# CHECK: Temporal Profile Trace 1 (count=3):
+# CHECK: Temporal Profile Trace 1 (weight=3 count=3):
 # CHECK:   foo
 # CHECK:   goo
 # CHECK:   bar
-# CHECK: Temporal Profile Trace 2 (count=1):
+# CHECK: Temporal Profile Trace 2 (weight=1 count=1):
 # CHECK:   goo
 
 # Header
@@ -24,8 +24,14 @@
 3
 # Trace Stream Size:
 3
+# Weight
+1
 foo, bar, goo
+# Weight
+3
 foo,goo,bar,
+# Weight
+1
 goo
 
 foo

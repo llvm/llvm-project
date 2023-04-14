@@ -88,7 +88,7 @@ public:
 
   /// Add \p SrcTraces using reservoir sampling where \p SrcStreamSize is the
   /// total number of temporal profiling traces the source has seen.
-  void addTemporalProfileTraces(SmallVector<TemporalProfTraceTy> SrcTraces,
+  void addTemporalProfileTraces(SmallVectorImpl<TemporalProfTraceTy> &SrcTraces,
                                 uint64_t SrcStreamSize);
 
   /// Add a memprof record for a function identified by its \p Id.

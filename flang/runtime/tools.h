@@ -13,6 +13,7 @@
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/memory.h"
+#include <cstring>
 #include <functional>
 #include <map>
 #include <type_traits>
@@ -355,6 +356,25 @@ using AccumulationType = CppTypeFor<CAT,
     CAT == TypeCategory::Real || CAT == TypeCategory::Complex
         ? std::max(KIND, static_cast<int>(sizeof(double)))
         : KIND>;
+
+// memchr() for any character type
+template <typename CHAR>
+static inline const CHAR *FindCharacter(
+    const CHAR *data, CHAR ch, std::size_t chars) {
+  const CHAR *end{data + chars};
+  for (const CHAR *p{data}; p < end; ++p) {
+    if (*p == ch) {
+      return p;
+    }
+  }
+  return nullptr;
+}
+
+template <>
+inline const char *FindCharacter(const char *data, char ch, std::size_t chars) {
+  return reinterpret_cast<const char *>(
+      std::memchr(data, static_cast<int>(ch), chars));
+}
 
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_TOOLS_H_

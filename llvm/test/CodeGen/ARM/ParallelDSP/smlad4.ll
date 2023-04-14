@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=arm-none-none-eabi -mcpu=cortex-m33 < %s -arm-parallel-dsp -S | FileCheck %s
+; RUN: opt -mtriple=armv8m.main-none-none-eabi -mattr=+dsp < %s -arm-parallel-dsp -S | FileCheck %s
 ;
 ; The loads are not narrow loads: check that the rewrite isn't triggered.
 ;

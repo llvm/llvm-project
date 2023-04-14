@@ -11,9 +11,6 @@
 // Apple platforms don't provide <uchar.h> yet, so these tests fail.
 // XFAIL: target={{.+}}-apple-{{.+}}
 
-// The system-provided <uchar.h> seems to be broken on AIX
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <cuchar>
 
 #include <cuchar>

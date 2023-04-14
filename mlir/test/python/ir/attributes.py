@@ -248,7 +248,7 @@ def testOpaqueAttr():
     oattr = OpaqueAttr(Attribute.parse("#pytest_dummy.dummyattr<>"))
     # CHECK: oattr value: pytest_dummy
     print("oattr value:", oattr.dialect_namespace)
-    # CHECK: oattr value: dummyattr<>
+    # CHECK: oattr value: b'dummyattr<>'
     print("oattr value:", oattr.data)
 
     # Test factory methods.
@@ -265,6 +265,8 @@ def testStringAttr():
     sattr = StringAttr(Attribute.parse('"stringattr"'))
     # CHECK: sattr value: stringattr
     print("sattr value:", sattr.value)
+    # CHECK: sattr value: b'stringattr'
+    print("sattr value:", sattr.value_bytes)
 
     # Test factory methods.
     # CHECK: default_get: "foobar"
