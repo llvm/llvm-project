@@ -267,7 +267,7 @@ std::string_view Demangler::copyString(std::string_view Borrowed) {
   // This is not a micro-optimization, it avoids UB, should Borrowed be an null
   // buffer.
   if (Borrowed.size())
-    std::memcpy(Stable, Borrowed.begin(), Borrowed.size());
+    std::memcpy(Stable, &*Borrowed.begin(), Borrowed.size());
 
   return {Stable, Borrowed.size()};
 }
@@ -791,7 +791,7 @@ SymbolNode *Demangler::demangleMD5Name(std::string_view &MangledName) {
     Error = true;
     return nullptr;
   }
-  const char *Start = MangledName.begin();
+  const char *Start = &*MangledName.begin();
   MangledName.remove_prefix(MD5Last + 1);
 
   // There are two additional special cases for MD5 names:
@@ -2377,7 +2377,7 @@ void Demangler::dumpBackReferences() {
     T->output(OB, OF_Default);
 
     std::string_view B = OB;
-    std::printf("  [%d] - %.*s\n", (int)I, (int)B.size(), B.begin());
+    std::printf("  [%d] - %.*s\n", (int)I, (int)B.size(), &*B.begin());
   }
   std::free(OB.getBuffer());
 
@@ -2386,7 +2386,7 @@ void Demangler::dumpBackReferences() {
   std::printf("%d name backreferences\n", (int)Backrefs.NamesCount);
   for (size_t I = 0; I < Backrefs.NamesCount; ++I) {
     std::printf("  [%d] - %.*s\n", (int)I, (int)Backrefs.Names[I]->Name.size(),
-                Backrefs.Names[I]->Name.begin());
+                &*Backrefs.Names[I]->Name.begin());
   }
   if (Backrefs.NamesCount > 0)
     std::printf("\n");
@@ -2400,7 +2400,7 @@ char *llvm::microsoftDemangle(const char *MangledName, size_t *NMangled,
   std::string_view Name{MangledName};
   SymbolNode *AST = D.parse(Name);
   if (!D.Error && NMangled)
-    *NMangled = Name.begin() - MangledName;
+    *NMangled = &*Name.begin() - MangledName;
 
   if (Flags & MSDF_DumpBackrefs)
     D.dumpBackReferences();

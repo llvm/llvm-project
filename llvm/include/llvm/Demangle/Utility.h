@@ -108,7 +108,7 @@ public:
   OutputBuffer &operator+=(std::string_view R) {
     if (size_t Size = R.size()) {
       grow(Size);
-      std::memcpy(Buffer + CurrentPosition, R.begin(), Size);
+      std::memcpy(Buffer + CurrentPosition, &*R.begin(), Size);
       CurrentPosition += Size;
     }
     return *this;
@@ -125,7 +125,7 @@ public:
 
     grow(Size);
     std::memmove(Buffer + Size, Buffer, CurrentPosition);
-    std::memcpy(Buffer, R.begin(), Size);
+    std::memcpy(Buffer, &*R.begin(), Size);
     CurrentPosition += Size;
 
     return *this;
