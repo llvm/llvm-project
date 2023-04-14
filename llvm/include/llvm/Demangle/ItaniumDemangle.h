@@ -1583,7 +1583,7 @@ public:
     if (isInstantiation()) {
       // The instantiations are typedefs that drop the "basic_" prefix.
       assert(SV.startsWith("basic_"));
-      SV = SV.dropFront(sizeof("basic_") - 1);
+      SV.remove_prefix(sizeof("basic_") - 1);
     }
     return SV;
   }
@@ -1838,7 +1838,7 @@ public:
       OB += "0";
     } else if (Offset[0] == 'n') {
       OB += "-";
-      OB += Offset.dropFront();
+      OB += Offset.substr(1);
     } else {
       OB += Offset;
     }
@@ -2264,7 +2264,7 @@ public:
     OB.printClose();
 
     if (Integer[0] == 'n')
-      OB << "-" << Integer.dropFront(1);
+      OB << '-' << Integer.substr(1);
     else
       OB << Integer;
   }
@@ -2287,10 +2287,9 @@ public:
       OB.printClose();
     }
 
-    if (Value[0] == 'n') {
-      OB += '-';
-      OB += Value.dropFront(1);
-    } else
+    if (Value[0] == 'n')
+      OB << '-' << Value.substr(1);
+    else
       OB += Value;
 
     if (Type.size() <= 3)
@@ -2632,7 +2631,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
       if (Kind < Unnameable) {
         assert(Res.startsWith("operator") &&
                "operator name does not start with 'operator'");
-        Res = Res.dropFront(sizeof("operator") - 1);
+        Res.remove_prefix(sizeof("operator") - 1);
         Res.consumeFront(' ');
       }
       return Res;
@@ -3706,7 +3705,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseQualifiedType() {
 
     // extension            ::= U <objc-name> <objc-type>  # objc-type<identifier>
     if (Qual.startsWith("objcproto")) {
-      StringView ProtoSourceName = Qual.dropFront(std::strlen("objcproto"));
+      StringView ProtoSourceName = Qual.substr(std::strlen("objcproto"));
       StringView Proto;
       {
         ScopedOverride<const char *> SaveFirst(First, ProtoSourceName.begin()),
