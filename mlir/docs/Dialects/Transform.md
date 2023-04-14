@@ -431,6 +431,10 @@ ops rather than having the methods directly act on the payload IR.
 
 [include "Dialects/MemRefTransformOps.md"]
 
+## Structured (Linalg) Match Operations
+
+[include "Dialects/LinalgStructuredMatchOps.md"]
+
 ## Structured (Linalg) Transform Operations
 
 [include "Dialects/LinalgStructuredTransformOps.md"]

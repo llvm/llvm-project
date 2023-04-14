@@ -137,9 +137,8 @@ define i32 @smin(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[ICMP1]], <vscale x 8 x i32> %[[LOAD1]]
 ; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[ICMP2]], <vscale x 8 x i32> %[[LOAD2]]
 ; CHECK: middle.block:
-; CHECK: %[[ICMP:.*]] = icmp slt <vscale x 8 x i32> %[[SEL1]], %[[SEL2]]
-; CHECK-NEXT: %[[SEL:.*]] = select <vscale x 8 x i1> %[[ICMP]], <vscale x 8 x i32> %[[SEL1]], <vscale x 8 x i32> %[[SEL2]]
-; CHECK-NEXT: call i32 @llvm.vector.reduce.smin.nxv8i32(<vscale x 8 x i32>  %[[SEL]])
+; CHECK: %[[RDX:.*]] = call <vscale x 8 x i32> @llvm.smin.nxv8i32(<vscale x 8 x i32> %[[SEL1]], <vscale x 8 x i32> %[[SEL2]])
+; CHECK-NEXT: call i32 @llvm.vector.reduce.smin.nxv8i32(<vscale x 8 x i32>  %[[RDX]])
 entry:
   br label %for.body
 
@@ -171,9 +170,8 @@ define i32 @umax(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[ICMP1]], <vscale x 8 x i32> %[[LOAD1]]
 ; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[ICMP2]], <vscale x 8 x i32> %[[LOAD2]]
 ; CHECK: middle.block:
-; CHECK: %[[ICMP:.*]] = icmp ugt <vscale x 8 x i32> %[[SEL1]], %[[SEL2]]
-; CHECK-NEXT: %[[SEL:.*]] = select <vscale x 8 x i1> %[[ICMP]], <vscale x 8 x i32> %[[SEL1]], <vscale x 8 x i32> %[[SEL2]]
-; CHECK-NEXT: call i32 @llvm.vector.reduce.umax.nxv8i32(<vscale x 8 x i32>  %[[SEL]])
+; CHECK: %[[RDX:.*]] = call <vscale x 8 x i32> @llvm.umax.nxv8i32(<vscale x 8 x i32> %[[SEL1]], <vscale x 8 x i32> %[[SEL2]])
+; CHECK-NEXT: call i32 @llvm.vector.reduce.umax.nxv8i32(<vscale x 8 x i32>  %[[RDX]])
 entry:
   br label %for.body
 

@@ -1164,7 +1164,7 @@ IgnoreObjectResult IgnoreObject(const void *p) {
 // ---------------------- Interface ---------------- {{{1
 using namespace __asan;
 
-const void *AllocationBegin(const void *p) {
+static const void *AllocationBegin(const void *p) {
   AsanChunk *m = __asan::instance.GetAsanChunkByAddr((uptr)p);
   if (!m)
     return nullptr;

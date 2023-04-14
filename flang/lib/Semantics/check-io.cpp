@@ -327,8 +327,8 @@ void IoChecker::Enter(const parser::InputItem &spec) {
   CheckForDefinableVariable(*var, "Input");
   if (auto expr{AnalyzeExpr(context_, *var)}) {
     CheckForBadIoType(*expr,
-        flags_.test(Flag::FmtOrNml) ? GenericKind::DefinedIo::ReadFormatted
-                                    : GenericKind::DefinedIo::ReadUnformatted,
+        flags_.test(Flag::FmtOrNml) ? common::DefinedIo::ReadFormatted
+                                    : common::DefinedIo::ReadUnformatted,
         var->GetSource());
   }
 }
@@ -618,9 +618,8 @@ void IoChecker::Enter(const parser::OutputItem &item) {
             "Output item must not be a procedure"_err_en_US); // C1233
       }
       CheckForBadIoType(*expr,
-          flags_.test(Flag::FmtOrNml)
-              ? GenericKind::DefinedIo::WriteFormatted
-              : GenericKind::DefinedIo::WriteUnformatted,
+          flags_.test(Flag::FmtOrNml) ? common::DefinedIo::WriteFormatted
+                                      : common::DefinedIo::WriteUnformatted,
           parser::FindSourceLocation(item));
     }
   }
@@ -769,7 +768,7 @@ void IoChecker::Leave(const parser::ReadStmt &readStmt) {
   }
   if (const parser::Name * namelist{FindNamelist(readStmt.controls)}) {
     if (namelist->symbol) {
-      CheckNamelist(*namelist->symbol, GenericKind::DefinedIo::ReadFormatted,
+      CheckNamelist(*namelist->symbol, common::DefinedIo::ReadFormatted,
           namelist->source);
     }
   }
@@ -812,7 +811,7 @@ void IoChecker::Leave(const parser::WriteStmt &writeStmt) {
   }
   if (const parser::Name * namelist{FindNamelist(writeStmt.controls)}) {
     if (namelist->symbol) {
-      CheckNamelist(*namelist->symbol, GenericKind::DefinedIo::WriteFormatted,
+      CheckNamelist(*namelist->symbol, common::DefinedIo::WriteFormatted,
           namelist->source);
     }
   }
@@ -1038,7 +1037,7 @@ void IoChecker::CheckForPureSubprogram() const { // C1597
 // Seeks out an allocatable or pointer ultimate component that is not
 // nested in a nonallocatable/nonpointer component with a specific
 // defined I/O procedure.
-static const Symbol *FindUnsafeIoDirectComponent(GenericKind::DefinedIo which,
+static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope) {
   if (HasDefinedIo(which, derived, &scope)) {
     return nullptr;
@@ -1069,7 +1068,7 @@ static const Symbol *FindUnsafeIoDirectComponent(GenericKind::DefinedIo which,
 // For a type that does not have a defined I/O subroutine, finds a direct
 // component that is a witness to an accessibility violation outside the module
 // in which the type was defined.
-static const Symbol *FindInaccessibleComponent(GenericKind::DefinedIo which,
+static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope) {
   if (const Scope * dtScope{derived.scope()}) {
     if (const Scope * module{FindModuleContaining(*dtScope)}) {
@@ -1111,7 +1110,7 @@ static const Symbol *FindInaccessibleComponent(GenericKind::DefinedIo which,
 
 // Fortran 2018, 12.6.3 paragraphs 5 & 7
 parser::Message *IoChecker::CheckForBadIoType(const evaluate::DynamicType &type,
-    GenericKind::DefinedIo which, parser::CharBlock where) const {
+    common::DefinedIo which, parser::CharBlock where) const {
   if (type.IsUnlimitedPolymorphic()) {
     return &context_.Say(
         where, "I/O list item may not be unlimited polymorphic"_err_en_US);
@@ -1141,15 +1140,15 @@ parser::Message *IoChecker::CheckForBadIoType(const evaluate::DynamicType &type,
   return nullptr;
 }
 
-void IoChecker::CheckForBadIoType(const SomeExpr &expr,
-    GenericKind::DefinedIo which, parser::CharBlock where) const {
+void IoChecker::CheckForBadIoType(const SomeExpr &expr, common::DefinedIo which,
+    parser::CharBlock where) const {
   if (auto type{expr.GetType()}) {
     CheckForBadIoType(*type, which, where);
   }
 }
 
 parser::Message *IoChecker::CheckForBadIoType(const Symbol &symbol,
-    GenericKind::DefinedIo which, parser::CharBlock where) const {
+    common::DefinedIo which, parser::CharBlock where) const {
   if (auto type{evaluate::DynamicType::From(symbol)}) {
     if (auto *msg{CheckForBadIoType(*type, which, where)}) {
       evaluate::AttachDeclaration(*msg, symbol);
@@ -1159,8 +1158,8 @@ parser::Message *IoChecker::CheckForBadIoType(const Symbol &symbol,
   return nullptr;
 }
 
-void IoChecker::CheckNamelist(const Symbol &namelist,
-    GenericKind::DefinedIo which, parser::CharBlock namelistLocation) const {
+void IoChecker::CheckNamelist(const Symbol &namelist, common::DefinedIo which,
+    parser::CharBlock namelistLocation) const {
   const auto &details{namelist.GetUltimate().get<NamelistDetails>()};
   for (const Symbol &object : details.objects()) {
     context_.CheckIndexVarRedefine(namelistLocation, object);

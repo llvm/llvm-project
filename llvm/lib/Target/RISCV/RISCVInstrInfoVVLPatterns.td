@@ -205,6 +205,11 @@ def SDT_RISCVI2FPOp_RM_VL  : SDTypeProfile<1, 4, [
   SDTCisVT<4, XLenVT> // Rounding mode
 ]>;
 
+def SDT_RISCVSETCCOP_VL : SDTypeProfile<1, 6, [
+  SDTCVecEltisVT<0, i1>, SDTCisVec<1>, SDTCisSameNumEltsAs<0, 1>,
+  SDTCisSameAs<1, 2>, SDTCisVT<3, OtherVT>, SDTCisSameAs<0, 4>,
+  SDTCisSameAs<0, 5>, SDTCisVT<6, XLenVT>]>;
+
 // Float -> Int
 def riscv_vfcvt_xu_f_vl : SDNode<"RISCVISD::VFCVT_XU_F_VL", SDT_RISCVFP2IOp_VL>;
 def riscv_vfcvt_x_f_vl : SDNode<"RISCVISD::VFCVT_X_F_VL", SDT_RISCVFP2IOp_VL>;
@@ -242,15 +247,15 @@ def any_riscv_uint_to_fp_vl : PatFrags<(ops node:$src, node:$mask, node:$vl),
 
 def riscv_vfround_noexcept_vl: SDNode<"RISCVISD::VFROUND_NOEXCEPT_VL", SDT_RISCVFPUnOp_VL>;
 
-def riscv_setcc_vl : SDNode<"RISCVISD::SETCC_VL",
-                            SDTypeProfile<1, 6, [SDTCVecEltisVT<0, i1>,
-                                                 SDTCisVec<1>,
-                                                 SDTCisSameNumEltsAs<0, 1>,
-                                                 SDTCisSameAs<1, 2>,
-                                                 SDTCisVT<3, OtherVT>,
-                                                 SDTCisSameAs<0, 4>,
-                                                 SDTCisSameAs<0, 5>,
-                                                 SDTCisVT<6, XLenVT>]>>;
+def riscv_setcc_vl : SDNode<"RISCVISD::SETCC_VL", SDT_RISCVSETCCOP_VL>;
+def riscv_strict_fsetcc_vl : SDNode<"RISCVISD::STRICT_FSETCC_VL", SDT_RISCVSETCCOP_VL, [SDNPHasChain]>;
+def riscv_strict_fsetccs_vl : SDNode<"RISCVISD::STRICT_FSETCCS_VL", SDT_RISCVSETCCOP_VL, [SDNPHasChain]>;
+def any_riscv_fsetcc_vl : PatFrags<(ops node:$lhs, node:$rhs, node:$cc, node:$merge, node:$mask, node:$vl),
+                            [(riscv_setcc_vl node:$lhs, node:$rhs, node:$cc, node:$merge, node:$mask, node:$vl),
+                             (riscv_strict_fsetcc_vl node:$lhs, node:$rhs, node:$cc, node:$merge, node:$mask, node:$vl)]>;
+def any_riscv_fsetccs_vl : PatFrags<(ops node:$lhs, node:$rhs, node:$cc, node:$merge, node:$mask, node:$vl),
+                            [(riscv_setcc_vl node:$lhs, node:$rhs, node:$cc, node:$merge, node:$mask, node:$vl),
+                             (riscv_strict_fsetccs_vl node:$lhs, node:$rhs, node:$cc, node:$merge, node:$mask, node:$vl)]>;
 
 def riscv_vrgather_vx_vl : SDNode<"RISCVISD::VRGATHER_VX_VL",
                                   SDTypeProfile<1, 5, [SDTCisVec<0>,
@@ -916,36 +921,36 @@ multiclass VPatIntegerSetCCVL_VIPlus1_Swappable<VTypeInfo vti,
                                 vti.Log2SEW)>;
 }
 
-multiclass VPatFPSetCCVL_VV_VF_FV<CondCode cc,
+multiclass VPatFPSetCCVL_VV_VF_FV<SDPatternOperator vop, CondCode cc,
                                   string inst_name,
                                   string swapped_op_inst_name> {
   foreach fvti = AllFloatVectors in {
-    def : Pat<(fvti.Mask (riscv_setcc_vl (fvti.Vector fvti.RegClass:$rs1),
-                                         fvti.RegClass:$rs2,
-                                         cc,
-                                         VR:$merge,
-                                         (fvti.Mask V0),
-                                         VLOpFrag)),
+    def : Pat<(fvti.Mask (vop (fvti.Vector fvti.RegClass:$rs1),
+                               fvti.RegClass:$rs2,
+                               cc,
+                               VR:$merge,
+                               (fvti.Mask V0),
+                               VLOpFrag)),
               (!cast<Instruction>(inst_name#"_VV_"#fvti.LMul.MX#"_MASK")
                   VR:$merge, fvti.RegClass:$rs1,
                   fvti.RegClass:$rs2, (fvti.Mask V0),
                   GPR:$vl, fvti.Log2SEW)>;
-    def : Pat<(fvti.Mask (riscv_setcc_vl (fvti.Vector fvti.RegClass:$rs1),
-                                         (SplatFPOp fvti.ScalarRegClass:$rs2),
-                                         cc,
-                                         VR:$merge,
-                                         (fvti.Mask V0),
-                                         VLOpFrag)),
+    def : Pat<(fvti.Mask (vop (fvti.Vector fvti.RegClass:$rs1),
+                              (SplatFPOp fvti.ScalarRegClass:$rs2),
+                              cc,
+                              VR:$merge,
+                              (fvti.Mask V0),
+                              VLOpFrag)),
               (!cast<Instruction>(inst_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_MASK")
                   VR:$merge, fvti.RegClass:$rs1,
                   fvti.ScalarRegClass:$rs2, (fvti.Mask V0),
                   GPR:$vl, fvti.Log2SEW)>;
-    def : Pat<(fvti.Mask (riscv_setcc_vl (SplatFPOp fvti.ScalarRegClass:$rs2),
-                                         (fvti.Vector fvti.RegClass:$rs1),
-                                         cc,
-                                         VR:$merge,
-                                         (fvti.Mask V0),
-                                         VLOpFrag)),
+    def : Pat<(fvti.Mask (vop (SplatFPOp fvti.ScalarRegClass:$rs2),
+                              (fvti.Vector fvti.RegClass:$rs1),
+                              cc,
+                              VR:$merge,
+                              (fvti.Mask V0),
+                              VLOpFrag)),
               (!cast<Instruction>(swapped_op_inst_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_MASK")
                   VR:$merge, fvti.RegClass:$rs1,
                   fvti.ScalarRegClass:$rs2, (fvti.Mask V0),
@@ -1851,17 +1856,22 @@ defm : VPatBinaryFPVL_VV_VF<riscv_fminnum_vl, "PseudoVFMIN">;
 defm : VPatBinaryFPVL_VV_VF<riscv_fmaxnum_vl, "PseudoVFMAX">;
 
 // 13.13. Vector Floating-Point Compare Instructions
-defm : VPatFPSetCCVL_VV_VF_FV<SETEQ,  "PseudoVMFEQ", "PseudoVMFEQ">;
-defm : VPatFPSetCCVL_VV_VF_FV<SETOEQ, "PseudoVMFEQ", "PseudoVMFEQ">;
-
-defm : VPatFPSetCCVL_VV_VF_FV<SETNE,  "PseudoVMFNE", "PseudoVMFNE">;
-defm : VPatFPSetCCVL_VV_VF_FV<SETUNE, "PseudoVMFNE", "PseudoVMFNE">;
-
-defm : VPatFPSetCCVL_VV_VF_FV<SETLT,  "PseudoVMFLT", "PseudoVMFGT">;
-defm : VPatFPSetCCVL_VV_VF_FV<SETOLT, "PseudoVMFLT", "PseudoVMFGT">;
-
-defm : VPatFPSetCCVL_VV_VF_FV<SETLE,  "PseudoVMFLE", "PseudoVMFGE">;
-defm : VPatFPSetCCVL_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
+defm : VPatFPSetCCVL_VV_VF_FV<any_riscv_fsetcc_vl, SETEQ,
+                              "PseudoVMFEQ", "PseudoVMFEQ">;
+defm : VPatFPSetCCVL_VV_VF_FV<any_riscv_fsetcc_vl, SETOEQ,
+                              "PseudoVMFEQ", "PseudoVMFEQ">;
+defm : VPatFPSetCCVL_VV_VF_FV<any_riscv_fsetcc_vl, SETNE,
+                              "PseudoVMFNE", "PseudoVMFNE">;
+defm : VPatFPSetCCVL_VV_VF_FV<any_riscv_fsetcc_vl, SETUNE,
+                              "PseudoVMFNE", "PseudoVMFNE">;
+defm : VPatFPSetCCVL_VV_VF_FV<any_riscv_fsetccs_vl, SETLT,
+                              "PseudoVMFLT", "PseudoVMFGT">;
+defm : VPatFPSetCCVL_VV_VF_FV<any_riscv_fsetccs_vl, SETOLT,
+                              "PseudoVMFLT", "PseudoVMFGT">;
+defm : VPatFPSetCCVL_VV_VF_FV<any_riscv_fsetccs_vl, SETLE,
+                              "PseudoVMFLE", "PseudoVMFGE">;
+defm : VPatFPSetCCVL_VV_VF_FV<any_riscv_fsetccs_vl, SETOLE,
+                              "PseudoVMFLE", "PseudoVMFGE">;
 
 foreach vti = AllFloatVectors in {
   // 13.8. Vector Floating-Point Square-Root Instruction

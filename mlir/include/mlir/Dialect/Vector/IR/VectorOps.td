@@ -2322,6 +2322,11 @@ def Vector_CreateMaskOp :
     ```
   }];
 
+  let builders = [
+    // Build with mixed static/dynamic operands.
+    OpBuilder<(ins "VectorType":$type, "ArrayRef<OpFoldResult>":$mixedOperands)>
+  ];
+
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
   let assemblyFormat = "$operands attr-dict `:` type(results)";

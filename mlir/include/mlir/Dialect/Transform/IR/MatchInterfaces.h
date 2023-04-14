@@ -63,6 +63,52 @@ public:
     return cast<OpTy>(this->getOperation())
         .matchOperation(payload[0], results, state);
   }
+
+  void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+    onlyReadsHandle(this->getOperation()->getOperands(), effects);
+    producesHandle(this->getOperation()->getResults(), effects);
+    onlyReadsPayload(effects);
+  }
+};
+
+template <typename OpTy>
+class SingleValueMatcherOpTrait
+    : public OpTrait::TraitBase<OpTy, SingleValueMatcherOpTrait> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    // This must be a dynamic assert because interface registration is dynamic.
+    assert(isa<MatchOpInterface>(op) &&
+           "SingleValueMatchOpTrait is only available on operations with "
+           "MatchOpInterface");
+
+    Value operandHandle = cast<OpTy>(op).getOperandHandle();
+    if (!operandHandle.getType().isa<TransformValueHandleTypeInterface>()) {
+      return op->emitError() << "SingleValueMatchOpTrait requires an operand "
+                                "of TransformValueHandleTypeInterface";
+    }
+
+    return success();
+  }
+
+  DiagnosedSilenceableFailure apply(TransformResults &results,
+                                    TransformState &state) {
+    Value operandHandle = cast<OpTy>(this->getOperation()).getOperandHandle();
+    ValueRange payload = state.getPayloadValues(operandHandle);
+    if (payload.size() != 1) {
+      return emitDefiniteFailure(this->getOperation()->getLoc())
+             << "SingleValueMatchOpTrait requires the value handle to point to "
+                "a single payload value";
+    }
+
+    return cast<OpTy>(this->getOperation())
+        .matchValue(payload[0], results, state);
+  }
+
+  void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+    onlyReadsHandle(this->getOperation()->getOperands(), effects);
+    producesHandle(this->getOperation()->getResults(), effects);
+    onlyReadsPayload(effects);
+  }
 };
 
 } // namespace transform

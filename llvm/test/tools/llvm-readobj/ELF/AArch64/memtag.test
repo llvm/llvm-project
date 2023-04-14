@@ -307,6 +307,19 @@ Sections:
 # SIZE-MISMATCH-SAME: SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC section size (0xa)
 
 #########################################
+## Ensure that GLOBALSSZ tag is stored in a 64-bit integer even on 32-bit machines.
+#########################################
+
+# RUN: yaml2obj --docnum=3 %s -o %t \
+# RUN:   -D DT_AARCH64_MEMTAG_GLOBALSSZ=0x100000001 \
+# RUN:   -D GLOBALS_SECTION_CONTENTS=11
+# RUN: llvm-readelf --memtag %t 2>&1 | FileCheck %s --check-prefixes=SIZE-MISMATCH2
+# RUN: llvm-readobj --memtag %t 2>&1 | FileCheck %s --check-prefixes=SIZE-MISMATCH2
+
+# SIZE-MISMATCH2:      warning: {{.*}} mismatch between DT_AARCH64_MEMTAG_GLOBALSSZ (0x100000001) and
+# SIZE-MISMATCH2-SAME: SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC section size (0x1)
+
+#########################################
 ## Ensure that we fail if DT_AARCH64_MEMTAG_GLOBALS doesn't agree with the address of the section.
 #########################################
 

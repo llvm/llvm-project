@@ -1417,11 +1417,12 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
       return true;
 
     return false;
+  }
 
-  } else if (AS == AMDGPUAS::PRIVATE_ADDRESS) {
+  if (AS == AMDGPUAS::PRIVATE_ADDRESS)
     return isLegalMUBUFAddressingMode(AM);
-  } else if (AS == AMDGPUAS::LOCAL_ADDRESS ||
-             AS == AMDGPUAS::REGION_ADDRESS) {
+
+  if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
     if (AS == AMDGPUAS::REGION_ADDRESS && !AMDGPU::hasGDS(*Subtarget))
       return false;
 
@@ -1439,8 +1440,9 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
       return true;
 
     return false;
-  } else if (AS == AMDGPUAS::FLAT_ADDRESS ||
-             AS == AMDGPUAS::UNKNOWN_ADDRESS_SPACE) {
+  }
+
+  if (AS == AMDGPUAS::FLAT_ADDRESS || AS == AMDGPUAS::UNKNOWN_ADDRESS_SPACE) {
     // For an unknown address space, this usually means that this is for some
     // reason being used for pure arithmetic, and not based on some addressing
     // computation. We don't have instructions that compute pointers with any

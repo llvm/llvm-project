@@ -117,38 +117,125 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
   let regions = (region AnyRegion:$region);
 
   let extraClassDeclaration = [{
-    static StringRef getAsyncKeyword() { return "async"; }
-    static StringRef getAsyncAttrName() { return "asyncAttr"; }
-    static StringRef getWaitKeyword() { return "wait"; }
-    static StringRef getWaitAttrName() { return "waitAttr"; }
-    static StringRef getNumGangsKeyword() { return "num_gangs"; }
-    static StringRef getNumWorkersKeyword() { return "num_workers"; }
-    static StringRef getVectorLengthKeyword() { return "vector_length"; }
-    static StringRef getIfKeyword() { return "if"; }
-    static StringRef getSelfKeyword() { return "self"; }
-    static StringRef getSelfAttrName() { return "selfAttr"; }
-    static StringRef getReductionKeyword() { return "reduction"; }
-    static StringRef getCopyKeyword() { return "copy"; }
-    static StringRef getCopyinKeyword() { return "copyin"; }
-    static StringRef getCopyinReadonlyKeyword() { return "copyin_readonly"; }
-    static StringRef getCopyoutKeyword() { return "copyout"; }
-    static StringRef getCopyoutZeroKeyword() { return "copyout_zero"; }
-    static StringRef getCreateKeyword() { return "create"; }
-    static StringRef getCreateZeroKeyword() { return "create_zero"; }
-    static StringRef getNoCreateKeyword() { return "no_create"; }
-    static StringRef getPresentKeyword() { return "present"; }
-    static StringRef getDevicePtrKeyword() { return "deviceptr"; }
-    static StringRef getAttachKeyword() { return "attach"; }
-    static StringRef getPrivateKeyword() { return "private"; }
-    static StringRef getFirstPrivateKeyword() { return "firstprivate"; }
-
     /// The number of data operands.
     unsigned getNumDataOperands();
 
     /// The i-th data operand passed.
     Value getDataOperand(unsigned i);
   }];
-  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat = [{
+    oilist(
+        `attach` `(` $attachOperands `:` type($attachOperands) `)`
+      | `async` `(` $async `:` type($async) `)`
+      | `copy` `(` $copyOperands `:` type($copyOperands) `)`
+      | `copyin` `(` $copyinOperands `:` type($copyinOperands) `)`
+      | `copyin_readonly` `(` $copyinReadonlyOperands `:`
+          type($copyinReadonlyOperands) `)`
+      | `copyout` `(` $copyoutOperands `:` type($copyoutOperands) `)`
+      | `copyout_zero` `(` $copyoutZeroOperands `:`
+          type($copyoutZeroOperands) `)`
+      | `create` `(` $createOperands `:` type($createOperands) `)`
+      | `create_zero` `(` $createZeroOperands `:`
+          type($createZeroOperands) `)`
+      | `deviceptr` `(` $devicePtrOperands `:` type($devicePtrOperands) `)`
+      | `firstprivate` `(` $gangFirstPrivateOperands `:`
+            type($gangFirstPrivateOperands) `)`
+      | `no_create` `(` $noCreateOperands `:` type($noCreateOperands) `)`
+      | `num_gangs` `(` $numGangs `:` type($numGangs) `)`
+      | `num_workers` `(` $numWorkers `:` type($numWorkers) `)`
+      | `private` `(` $gangPrivateOperands `:` type($gangPrivateOperands) `)`
+      | `present` `(` $presentOperands `:` type($presentOperands) `)`
+      | `vector_length` `(` $vectorLength `:` type($vectorLength) `)`
+      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `self` `(` $selfCond `)`
+      | `if` `(` $ifCond `)`
+      | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
+    )
+    $region attr-dict-with-keyword
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// 2.5.2 serial Construct
+//===----------------------------------------------------------------------===//
+
+def OpenACC_SerialOp : OpenACC_Op<"serial", [AttrSizedOperandSegments]> {
+  let summary = "serial construct";
+  let description = [{
+    The "acc.serial" operation represents a serial construct block. It has
+    one region to be executed in serial on the current device.
+
+    Example:
+
+    ```mlir
+    acc.serial private(%c : memref<10xf32>) {
+      // serial region
+    }
+    ```
+  }];
+
+  let arguments = (ins Optional<IntOrIndex>:$async,
+                       UnitAttr:$asyncAttr,
+                       Variadic<IntOrIndex>:$waitOperands,
+                       UnitAttr:$waitAttr,
+                       Optional<I1>:$ifCond,
+                       Optional<I1>:$selfCond,
+                       UnitAttr:$selfAttr,
+                       OptionalAttr<OpenACC_ReductionOpAttr>:$reductionOp,
+                       Variadic<AnyType>:$reductionOperands,
+                       Variadic<AnyType>:$copyOperands,
+                       Variadic<AnyType>:$copyinOperands,
+                       Variadic<AnyType>:$copyinReadonlyOperands,
+                       Variadic<AnyType>:$copyoutOperands,
+                       Variadic<AnyType>:$copyoutZeroOperands,
+                       Variadic<AnyType>:$createOperands,
+                       Variadic<AnyType>:$createZeroOperands,
+                       Variadic<AnyType>:$noCreateOperands,
+                       Variadic<AnyType>:$presentOperands,
+                       Variadic<AnyType>:$devicePtrOperands,
+                       Variadic<AnyType>:$attachOperands,
+                       Variadic<AnyType>:$gangPrivateOperands,
+                       Variadic<AnyType>:$gangFirstPrivateOperands,
+                       OptionalAttr<DefaultValueAttr>:$defaultAttr);
+
+  let regions = (region AnyRegion:$region);
+
+  let extraClassDeclaration = [{
+    /// The number of data operands.
+    unsigned getNumDataOperands();
+
+    /// The i-th data operand passed.
+    Value getDataOperand(unsigned i);
+  }];
+
+  let assemblyFormat = [{
+    oilist(
+        `attach` `(` $attachOperands `:` type($attachOperands) `)`
+      | `async` `(` $async `:` type($async) `)`
+      | `copy` `(` $copyOperands `:` type($copyOperands) `)`
+      | `copyin` `(` $copyinOperands `:` type($copyinOperands) `)`
+      | `copyin_readonly` `(` $copyinReadonlyOperands `:`
+          type($copyinReadonlyOperands) `)`
+      | `copyout` `(` $copyoutOperands `:` type($copyoutOperands) `)`
+      | `copyout_zero` `(` $copyoutZeroOperands `:`
+          type($copyoutZeroOperands) `)`
+      | `create` `(` $createOperands `:` type($createOperands) `)`
+      | `create_zero` `(` $createZeroOperands `:`
+          type($createZeroOperands) `)`
+      | `deviceptr` `(` $devicePtrOperands `:` type($devicePtrOperands) `)`
+      | `firstprivate` `(` $gangFirstPrivateOperands `:`
+            type($gangFirstPrivateOperands) `)`
+      | `no_create` `(` $noCreateOperands `:` type($noCreateOperands) `)`
+      | `private` `(` $gangPrivateOperands `:` type($gangPrivateOperands) `)`
+      | `present` `(` $presentOperands `:` type($presentOperands) `)`
+      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `self` `(` $selfCond `)`
+      | `if` `(` $ifCond `)`
+      | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
+    )
+    $region attr-dict-with-keyword
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -410,7 +497,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop", [AttrSizedOperandSegments]> {
 
 // Yield operation for the acc.loop and acc.parallel operations.
 def OpenACC_YieldOp : OpenACC_Op<"yield", [Terminator,
-    ParentOneOf<["ParallelOp, LoopOp"]>]> {
+    ParentOneOf<["ParallelOp, LoopOp, SerialOp"]>]> {
   let summary = "Acc yield and termination operation";
 
   let description = [{
