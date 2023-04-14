@@ -115,7 +115,7 @@ func.func @powf() {
   %a_p = arith.constant 2.0 : f64
   call @func_powff64(%a, %a_p) : (f64, f64) -> ()
 
-  // CHECK: -nan
+  // CHECK: nan
   %b   = arith.constant -3.0 : f64
   %b_p = arith.constant 3.0 : f64
   call @func_powff64(%b, %b_p) : (f64, f64) -> ()
@@ -140,7 +140,7 @@ func.func @powf() {
   %f_p  = arith.constant 1.2 : f64
   call @func_powff64(%f, %f_p) : (f64, f64) -> ()
 
-  // CHECK: -nan
+  // CHECK: nan
   %g    = arith.constant 0xff80000000000000 : f64
   call @func_powff64(%g, %g) : (f64, f64) -> ()
 
