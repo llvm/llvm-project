@@ -16,10 +16,6 @@ namespace __llvm_libc {
 
 void write_to_stderr(cpp::string_view msg);
 
-LIBC_INLINE void write_to_stderr(const char *msg) {
-  write_to_stderr(cpp::string_view(msg));
-}
-
 } // namespace __llvm_libc
 
 #endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_LINUX_IO_H
