@@ -57,6 +57,11 @@ ENUM_CLASS(IoSpecKind, Access, Action, Advance, Asynchronous, Blank, Decimal,
     Dispose, // nonstandard
 )
 
+// Defined I/O variants
+ENUM_CLASS(
+    DefinedIo, ReadFormatted, ReadUnformatted, WriteFormatted, WriteUnformatted)
+const char *AsFortran(DefinedIo);
+
 // Floating-point rounding modes; these are packed into a byte to save
 // room in the runtime's format processing context structure.
 enum class RoundingMode : std::uint8_t {
@@ -75,5 +80,6 @@ static constexpr int maxRank{15};
 
 // Fortran names may have up to 63 characters (See Fortran 2018 C601).
 static constexpr int maxNameLen{63};
+
 } // namespace Fortran::common
 #endif // FORTRAN_COMMON_FORTRAN_H_

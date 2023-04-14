@@ -121,30 +121,29 @@ private:
   void CheckBindCFunctionResult(const Symbol &);
   // Check functions for defined I/O procedures
   void CheckDefinedIoProc(
-      const Symbol &, const GenericDetails &, GenericKind::DefinedIo);
+      const Symbol &, const GenericDetails &, common::DefinedIo);
   bool CheckDioDummyIsData(const Symbol &, const Symbol *, std::size_t);
-  void CheckDioDummyIsDerived(const Symbol &, const Symbol &,
-      GenericKind::DefinedIo ioKind, const Symbol &);
+  void CheckDioDummyIsDerived(
+      const Symbol &, const Symbol &, common::DefinedIo ioKind, const Symbol &);
   void CheckDioDummyIsDefaultInteger(const Symbol &, const Symbol &);
   void CheckDioDummyIsScalar(const Symbol &, const Symbol &);
   void CheckDioDummyAttrs(const Symbol &, const Symbol &, Attr);
   void CheckDioDtvArg(
-      const Symbol &, const Symbol *, GenericKind::DefinedIo, const Symbol &);
+      const Symbol &, const Symbol *, common::DefinedIo, const Symbol &);
   void CheckGenericVsIntrinsic(const Symbol &, const GenericDetails &);
   void CheckDefaultIntegerArg(const Symbol &, const Symbol *, Attr);
   void CheckDioAssumedLenCharacterArg(
       const Symbol &, const Symbol *, std::size_t, Attr);
   void CheckDioVlistArg(const Symbol &, const Symbol *, std::size_t);
-  void CheckDioArgCount(
-      const Symbol &, GenericKind::DefinedIo ioKind, std::size_t);
+  void CheckDioArgCount(const Symbol &, common::DefinedIo ioKind, std::size_t);
   struct TypeWithDefinedIo {
     const DerivedTypeSpec &type;
-    GenericKind::DefinedIo ioKind;
+    common::DefinedIo ioKind;
     const Symbol &proc;
     const Symbol &generic;
   };
-  void CheckAlreadySeenDefinedIo(const DerivedTypeSpec &,
-      GenericKind::DefinedIo, const Symbol &, const Symbol &generic);
+  void CheckAlreadySeenDefinedIo(const DerivedTypeSpec &, common::DefinedIo,
+      const Symbol &, const Symbol &generic);
   void CheckModuleProcedureDef(const Symbol &);
 
   SemanticsContext &context_;
@@ -1426,7 +1425,7 @@ void CheckHelper::CheckGeneric(
     const Symbol &symbol, const GenericDetails &details) {
   CheckSpecifics(symbol, details);
   common::visit(common::visitors{
-                    [&](const GenericKind::DefinedIo &io) {
+                    [&](const common::DefinedIo &io) {
                       CheckDefinedIoProc(symbol, details, io);
                     },
                     [&](const GenericKind::OtherKind &other) {
@@ -2498,13 +2497,13 @@ bool CheckHelper::CheckDioDummyIsData(
 }
 
 void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
-    GenericKind::DefinedIo ioKind, const Symbol &proc, const Symbol &generic) {
-  // Check for conflict between non-type-bound UDDTIO and type-bound generics.
-  // It's okay to have two or more distinct derived type I/O procedures
-  // for the same type if they're coming from distinct non-type-bound
-  // interfaces.  (The non-type-bound interfaces would have been merged into
-  // a single generic -- with errors where indistinguishable --  if both were
-  // visible in the same scope.)
+    common::DefinedIo ioKind, const Symbol &proc, const Symbol &generic) {
+  // Check for conflict between non-type-bound defined I/O and type-bound
+  // generics. It's okay to have two or more distinct defined I/O procedures for
+  // the same type if they're coming from distinct non-type-bound interfaces.
+  // (The non-type-bound interfaces would have been merged into a single generic
+  //  -- with errors where indistinguishable --  when both were visible from the
+  // same scope.)
   if (generic.owner().IsDerivedType()) {
     return;
   }
@@ -2528,7 +2527,7 @@ void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
 }
 
 void CheckHelper::CheckDioDummyIsDerived(const Symbol &subp, const Symbol &arg,
-    GenericKind::DefinedIo ioKind, const Symbol &generic) {
+    common::DefinedIo ioKind, const Symbol &generic) {
   if (const DeclTypeSpec *type{arg.GetType()}) {
     if (const DerivedTypeSpec *derivedType{type->AsDerived()}) {
       CheckAlreadySeenDefinedIo(*derivedType, ioKind, subp, generic);
@@ -2573,13 +2572,13 @@ void CheckHelper::CheckDioDummyIsScalar(const Symbol &subp, const Symbol &arg) {
 }
 
 void CheckHelper::CheckDioDtvArg(const Symbol &subp, const Symbol *arg,
-    GenericKind::DefinedIo ioKind, const Symbol &generic) {
+    common::DefinedIo ioKind, const Symbol &generic) {
   // Dtv argument looks like: dtv-type-spec, INTENT(INOUT) :: dtv
   if (CheckDioDummyIsData(subp, arg, 0)) {
     CheckDioDummyIsDerived(subp, *arg, ioKind, generic);
     CheckDioDummyAttrs(subp, *arg,
-        ioKind == GenericKind::DefinedIo::ReadFormatted ||
-                ioKind == GenericKind::DefinedIo::ReadUnformatted
+        ioKind == common::DefinedIo::ReadFormatted ||
+                ioKind == common::DefinedIo::ReadUnformatted
             ? Attr::INTENT_INOUT
             : Attr::INTENT_IN);
   }
@@ -2668,10 +2667,10 @@ void CheckHelper::CheckDioVlistArg(
 }
 
 void CheckHelper::CheckDioArgCount(
-    const Symbol &subp, GenericKind::DefinedIo ioKind, std::size_t argCount) {
+    const Symbol &subp, common::DefinedIo ioKind, std::size_t argCount) {
   const std::size_t requiredArgCount{
-      (std::size_t)(ioKind == GenericKind::DefinedIo::ReadFormatted ||
-                  ioKind == GenericKind::DefinedIo::WriteFormatted
+      (std::size_t)(ioKind == common::DefinedIo::ReadFormatted ||
+                  ioKind == common::DefinedIo::WriteFormatted
               ? 6
               : 4)};
   if (argCount != requiredArgCount) {
@@ -2704,7 +2703,7 @@ void CheckHelper::CheckDioDummyAttrs(
 
 // Enforce semantics for defined input/output procedures (12.6.4.8.2) and C777
 void CheckHelper::CheckDefinedIoProc(const Symbol &symbol,
-    const GenericDetails &details, GenericKind::DefinedIo ioKind) {
+    const GenericDetails &details, common::DefinedIo ioKind) {
   for (auto ref : details.specificProcs()) {
     const Symbol &ultimate{ref->GetUltimate()};
     const auto *binding{ultimate.detailsIf<ProcBindingDetails>()};
@@ -2730,8 +2729,8 @@ void CheckHelper::CheckDefinedIoProc(const Symbol &symbol,
           CheckDefaultIntegerArg(specific, arg, Attr::INTENT_IN);
           break;
         case 2:
-          if (ioKind == GenericKind::DefinedIo::ReadFormatted ||
-              ioKind == GenericKind::DefinedIo::WriteFormatted) {
+          if (ioKind == common::DefinedIo::ReadFormatted ||
+              ioKind == common::DefinedIo::WriteFormatted) {
             // CHARACTER (LEN=*), INTENT(IN) :: iotype
             CheckDioAssumedLenCharacterArg(
                 specific, arg, argCount, Attr::INTENT_IN);
@@ -2741,8 +2740,8 @@ void CheckHelper::CheckDefinedIoProc(const Symbol &symbol,
           }
           break;
         case 3:
-          if (ioKind == GenericKind::DefinedIo::ReadFormatted ||
-              ioKind == GenericKind::DefinedIo::WriteFormatted) {
+          if (ioKind == common::DefinedIo::ReadFormatted ||
+              ioKind == common::DefinedIo::WriteFormatted) {
             // INTEGER, INTENT(IN) :: v_list(:)
             CheckDioVlistArg(specific, arg, argCount);
           } else {
