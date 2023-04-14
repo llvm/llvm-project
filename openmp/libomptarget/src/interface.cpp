@@ -48,8 +48,8 @@ public:
         DeviceId(-1), Kind(ompt_target), ScopeKind(ompt_scope_begin) {}
   OMPTInvokeWrapper(void *CodePtr, void *ReturnFramePtr, int64_t DeviceId,
                     ompt_target_t Kind, ompt_scope_endpoint_t ScopeKind)
-      : CodePtr(CodePtr), ReturnFramePtr(ReturnFramePtr), DeviceId(DeviceId),
-        Kind(Kind), ScopeKind(ScopeKind) {}
+      : IsNullOpt(false), CodePtr(CodePtr), ReturnFramePtr(ReturnFramePtr),
+        DeviceId(DeviceId), Kind(Kind), ScopeKind(ScopeKind) {}
 
   void setDeviceId(int64_t DevId) { DeviceId = DevId; }
 
