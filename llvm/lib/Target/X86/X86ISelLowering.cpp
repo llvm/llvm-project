@@ -43784,8 +43784,11 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     // TESTPS/TESTPD only demands the sign bits of ALL the elements.
     KnownBits KnownSrc;
     APInt SignMask = APInt::getSignMask(OpVT.getScalarSizeInBits());
-    return SimplifyDemandedBits(Op0, SignMask, KnownSrc, TLO, Depth + 1) ||
-           SimplifyDemandedBits(Op1, SignMask, KnownSrc, TLO, Depth + 1);
+    bool AssumeSingleUse = (Op0 == Op1) && Op->isOnlyUserOf(Op0.getNode());
+    return SimplifyDemandedBits(Op0, SignMask, KnownSrc, TLO, Depth + 1,
+                                AssumeSingleUse) ||
+           SimplifyDemandedBits(Op1, SignMask, KnownSrc, TLO, Depth + 1,
+                                AssumeSingleUse);
   }
   case X86ISD::BEXTR:
   case X86ISD::BEXTRI: {
