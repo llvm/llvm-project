@@ -498,6 +498,14 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
       RegName.consume_back(".h");
 
   O << RegName;
+
+  if (PrintReg != RegNo) {
+    StringRef RegName(getRegisterName(RegNo));
+    if (!Keep16BitSuffixes)
+      if (!RegName.consume_back(".l"))
+        RegName.consume_back(".h");
+    O << " /*" << RegName << "*/";
+  }
 }
 
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
