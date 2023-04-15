@@ -37,6 +37,19 @@ namespace dr1004 { // dr1004: 5
   Third<A<int> > t; // expected-note {{in instantiation of default argument}}
 }
 
+namespace dr1042 { // dr1042: 3.5
+#if __cplusplus >= 201402L
+  // C++14 added an attribute that we can test the semantics of.
+  using foo [[deprecated]] = int; // expected-note {{'foo' has been explicitly marked deprecated here}}
+  foo f = 12; // expected-warning {{'foo' is deprecated}}
+#elif __cplusplus >= 201103L
+  // C++11 did not have any attributes that could be applied to an alias
+  // declaration, so the best we can test is that we accept an empty attribute
+  // list in this mode.
+  using foo [[]] = int;
+#endif
+}
+
 namespace dr1048 { // dr1048: 3.6
   struct A {};
   const A f();
@@ -83,18 +96,5 @@ namespace dr1070 { // dr1070: 3.5
     std::initializer_list<double> c;
   };
   C c = {};
-#endif
-}
-
-namespace dr1042 { // dr1042: 3.5
-#if __cplusplus >= 201402L
-  // C++14 added an attribute that we can test the semantics of.
-  using foo [[deprecated]] = int; // expected-note {{'foo' has been explicitly marked deprecated here}}
-  foo f = 12; // expected-warning {{'foo' is deprecated}}
-#elif __cplusplus >= 201103L
-  // C++11 did not have any attributes that could be applied to an alias
-  // declaration, so the best we can test is that we accept an empty attribute
-  // list in this mode.
-  using foo [[]] = int;
 #endif
 }
