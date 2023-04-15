@@ -33,6 +33,7 @@ public:
     ParsedName name;
     llvm::StringRef arguments;
     llvm::StringRef qualifiers;
+    llvm::StringRef return_type;
   };
 
   // Treats given text as a function definition and parses it.

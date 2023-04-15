@@ -241,6 +241,17 @@ public:
                              llvm::StringRef elements,
                              llvm::StringRef element_format);
 
+  /// For each variable in 'args' this function writes the variable
+  /// name and it's pretty-printed value representation to 'out_stream'
+  /// in following format:
+  ///
+  /// \verbatim
+  /// name_1=repr_1, name_2=repr_2 ...
+  /// \endverbatim
+  static void PrettyPrintFunctionArguments(Stream &out_stream,
+                                           VariableList const &args,
+                                           ExecutionContextScope *exe_scope);
+
 protected:
   static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
                               uint32_t depth);
