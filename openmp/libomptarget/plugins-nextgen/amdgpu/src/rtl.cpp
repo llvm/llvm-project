@@ -2204,6 +2204,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
+    // isSynchronous is disbled for now, causes perf issue in 534.hpgmg
     if (OmptEnabled || AsyncInfoWrapper.isSynchronous() ||
         Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())
@@ -2265,6 +2266,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
+    // isSynchronous is disbled for now, causes perf issue in 534.hpgmg
     if (OmptEnabled || AsyncInfoWrapper.isSynchronous() ||
         Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())

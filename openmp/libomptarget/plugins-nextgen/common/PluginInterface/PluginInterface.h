@@ -68,7 +68,8 @@ struct AsyncInfoWrapperTy {
   }
 
   /// Indicate whether synchronous behavior is explicitly requested.
-  bool isSynchronous() const { return AsyncInfoPtr == &LocalAsyncInfo; }
+  // disabling for now as it kills 534.hpgmp performance
+  bool isSynchronous() const { return false && AsyncInfoPtr == &LocalAsyncInfo; }
 
   /// Indicate whether there is queue.
   bool hasQueue() const { return (AsyncInfoPtr->Queue != nullptr); }
