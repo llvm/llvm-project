@@ -92,17 +92,31 @@ define i32 @unswitch_trivial_select_cmp_outside(i32 %x) {
 ; CHECK:       entry.split.us:
 ; CHECK-NEXT:    br label [[LOOP_US:%.*]]
 ; CHECK:       loop.us:
-; CHECK-NEXT:    [[P_US:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT_US]] ], [ 35, [[LOOP_US]] ]
-; CHECK-NEXT:    br label [[LOOP_US]]
+; CHECK-NEXT:    [[P_US:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT_US]] ], [ 35, [[TMP1:%.*]] ]
+; CHECK-NEXT:    [[C_FR_US:%.*]] = freeze i1 true
+; CHECK-NEXT:    br label [[TMP0:%.*]]
+; CHECK:       0:
+; CHECK-NEXT:    br label [[TMP1]]
+; CHECK:       1:
+; CHECK-NEXT:    [[UNSWITCHED_SELECT_US:%.*]] = phi i1 [ true, [[TMP0]] ]
+; CHECK-NEXT:    br i1 [[UNSWITCHED_SELECT_US]], label [[LOOP_US]], label [[EXIT_SPLIT_US:%.*]]
+; CHECK:       exit.split.us:
+; CHECK-NEXT:    [[LCSSA_US:%.*]] = phi i32 [ [[P_US]], [[TMP1]] ]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT]] ]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 false, i1 true, i1 false
-; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT]] ], [ 35, [[TMP2:%.*]] ]
+; CHECK-NEXT:    [[C_FR:%.*]] = freeze i1 false
+; CHECK-NEXT:    br label [[TMP2]]
+; CHECK:       2:
+; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT_SPLIT:%.*]]
+; CHECK:       exit.split:
+; CHECK-NEXT:    [[LCSSA:%.*]] = phi i32 [ [[P]], [[TMP2]] ]
+; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[LCSSA:%.*]] = phi i32 [ [[P]], [[LOOP]] ]
-; CHECK-NEXT:    ret i32 [[LCSSA]]
+; CHECK-NEXT:    [[DOTUS_PHI:%.*]] = phi i32 [ [[LCSSA]], [[EXIT_SPLIT]] ], [ [[LCSSA_US]], [[EXIT_SPLIT_US]] ]
+; CHECK-NEXT:    ret i32 [[DOTUS_PHI]]
 ;
 entry:
   %c = icmp ult i32 %x, 100
