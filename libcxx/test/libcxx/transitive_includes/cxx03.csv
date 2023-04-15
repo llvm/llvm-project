@@ -1,6 +1,5 @@
 algorithm atomic
 algorithm bit
-algorithm chrono
 algorithm climits
 algorithm concepts
 algorithm cstddef
@@ -854,6 +853,7 @@ thread chrono
 thread compare
 thread cstddef
 thread cstdint
+thread cstdlib
 thread cstring
 thread ctime
 thread functional
