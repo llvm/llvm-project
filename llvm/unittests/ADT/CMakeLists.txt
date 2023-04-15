@@ -79,6 +79,7 @@ add_llvm_unittest(ADTTests
   StringRefTest.cpp
   StringSetTest.cpp
   StringSwitchTest.cpp
+  StringViewExtrasTest.cpp
   TinyPtrVectorTest.cpp
   TwineTest.cpp
   TypeSwitchTest.cpp
