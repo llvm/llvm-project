@@ -1504,6 +1504,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
             TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
           if (FuncInfo->allocateVGPRSpillToAGPR(MF, FI,
                                                 TRI->isAGPR(MRI, VReg))) {
+            assert(RS != nullptr);
             // FIXME: change to enterBasicBlockEnd()
             RS->enterBasicBlock(MBB);
             TRI->eliminateFrameIndex(MI, 0, FIOp, RS);

@@ -56,19 +56,20 @@ void ThreadContextLsanBase::ThreadStart(u32 tid, tid_t os_id,
   thread_registry->StartThread(tid, os_id, thread_type, arg);
 }
 
-void ThreadFinish() { thread_registry->FinishThread(GetCurrentThread()); }
+void ThreadFinish() { thread_registry->FinishThread(GetCurrentThreadId()); }
 
 ThreadContext *CurrentThreadContext() {
   if (!thread_registry)
     return nullptr;
-  if (GetCurrentThread() == kInvalidTid)
+  if (GetCurrentThreadId() == kInvalidTid)
     return nullptr;
   // No lock needed when getting current thread.
-  return (ThreadContext *)thread_registry->GetThreadLocked(GetCurrentThread());
+  return (ThreadContext *)thread_registry->GetThreadLocked(
+      GetCurrentThreadId());
 }
 
 void EnsureMainThreadIDIsCorrect() {
-  if (GetCurrentThread() == kMainTid)
+  if (GetCurrentThreadId() == kMainTid)
     CurrentThreadContext()->os_id = GetTid();
 }
 

@@ -16,16 +16,13 @@
 #ifndef DEMANGLE_UTILITY_H
 #define DEMANGLE_UTILITY_H
 
-#include "DemangleConfig.h"
-
+#include "StringView.h"
 #include <array>
-#include <cassert>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
 #include <limits>
-#include <string_view>
 
 DEMANGLE_NAMESPACE_BEGIN
 
@@ -67,8 +64,7 @@ class OutputBuffer {
     if (isNeg)
       *--TempPtr = '-';
 
-    return operator+=(
-        std::string_view(TempPtr, Temp.data() + Temp.size() - TempPtr));
+    return operator+=(StringView(TempPtr, Temp.data() + Temp.size() - TempPtr));
   }
 
 public:
@@ -81,9 +77,7 @@ public:
   OutputBuffer(const OutputBuffer &) = delete;
   OutputBuffer &operator=(const OutputBuffer &) = delete;
 
-  operator std::string_view() const {
-    return std::string_view(Buffer, CurrentPosition);
-  }
+  operator StringView() const { return StringView(Buffer, CurrentPosition); }
 
   /// If a ParameterPackExpansion (or similar type) is encountered, the offset
   /// into the pack that we're currently printing.
@@ -105,10 +99,10 @@ public:
     *this += Close;
   }
 
-  OutputBuffer &operator+=(std::string_view R) {
+  OutputBuffer &operator+=(StringView R) {
     if (size_t Size = R.size()) {
       grow(Size);
-      std::memcpy(Buffer + CurrentPosition, &*R.begin(), Size);
+      std::memcpy(Buffer + CurrentPosition, R.begin(), Size);
       CurrentPosition += Size;
     }
     return *this;
@@ -120,18 +114,18 @@ public:
     return *this;
   }
 
-  OutputBuffer &prepend(std::string_view R) {
+  OutputBuffer &prepend(StringView R) {
     size_t Size = R.size();
 
     grow(Size);
     std::memmove(Buffer + Size, Buffer, CurrentPosition);
-    std::memcpy(Buffer, &*R.begin(), Size);
+    std::memcpy(Buffer, R.begin(), Size);
     CurrentPosition += Size;
 
     return *this;
   }
 
-  OutputBuffer &operator<<(std::string_view R) { return (*this += R); }
+  OutputBuffer &operator<<(StringView R) { return (*this += R); }
 
   OutputBuffer &operator<<(char C) { return (*this += C); }
 

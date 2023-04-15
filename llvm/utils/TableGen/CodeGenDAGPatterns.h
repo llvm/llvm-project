@@ -820,9 +820,8 @@ public:   // Higher level manipulation routines.
   /// InlinePatternFragments - If \p T pattern refers to any pattern
   /// fragments, return the set of inlined versions (this can be more than
   /// one if a PatFrags record has multiple alternatives).
-  static void
-  InlinePatternFragments(const TreePatternNodePtr &T, TreePattern &TP,
-                         std::vector<TreePatternNodePtr> &OutAlternatives);
+  void InlinePatternFragments(TreePattern &TP,
+                              std::vector<TreePatternNodePtr> &OutAlternatives);
 
   /// ApplyTypeConstraints - Apply all of the type constraints relevant to
   /// this node and its children in the tree.  This returns true if it makes a
@@ -952,7 +951,7 @@ public:
     std::vector<TreePatternNodePtr> Copy;
     Trees.swap(Copy);
     for (const TreePatternNodePtr &C : Copy)
-      TreePatternNode::InlinePatternFragments(C, *this, Trees);
+      C->InlinePatternFragments(*this, Trees);
   }
 
   /// InferAllTypes - Infer/propagate as many types throughout the expression

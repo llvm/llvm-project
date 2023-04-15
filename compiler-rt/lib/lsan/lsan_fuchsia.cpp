@@ -99,7 +99,7 @@ void *__sanitizer_before_thread_create_hook(thrd_t thread, bool detached,
   OnCreatedArgs args;
   args.stack_begin = reinterpret_cast<uptr>(stack_base);
   args.stack_end = args.stack_begin + stack_size;
-  u32 parent_tid = GetCurrentThread();
+  u32 parent_tid = GetCurrentThreadId();
   u32 tid = ThreadCreate(parent_tid, detached, &args);
   return reinterpret_cast<void *>(static_cast<uptr>(tid));
 }
