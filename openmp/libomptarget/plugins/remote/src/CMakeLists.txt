@@ -10,7 +10,7 @@
 #
 ##===----------------------------------------------------------------------===##
 
-cmake_minimum_required(VERSION 3.20.0)
+cmake_minimum_required(VERSION 3.13.4)
 
 # Define the suffix for the runtime messaging dumps.
 add_definitions(-DTARGET_NAME=RPC)
