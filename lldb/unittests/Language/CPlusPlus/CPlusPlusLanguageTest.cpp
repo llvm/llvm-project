@@ -181,7 +181,11 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
 
       {"auto Foo[abi:abc]<int>::operator<<<Foo[abi:abc]<int>>(int) &",
        "Foo[abi:abc]<int>", "operator<<<Foo[abi:abc]<int>>", "(int)", "&",
-       "Foo[abi:abc]<int>::operator<<<Foo[abi:abc]<int>>"}};
+       "Foo[abi:abc]<int>::operator<<<Foo[abi:abc]<int>>"},
+
+      {"auto A::operator<=>[abi:tag]<A::B>()", "A",
+       "operator<=>[abi:tag]<A::B>", "()", "",
+       "A::operator<=>[abi:tag]<A::B>"}};
 
   for (const auto &test : test_cases) {
     CPlusPlusLanguage::MethodName method(ConstString(test.input));
@@ -202,7 +206,6 @@ TEST(CPlusPlusLanguage, InvalidMethodNameParsing) {
   std::string test_cases[] = {
       "int Foo::operator[]<[10>()",
       "Foo::operator bool[10]()",
-      "auto A::operator<=>[abi:tag]<A::B>()",
       "auto A::operator<<<(int)",
       "auto A::operator>>>(int)",
       "auto A::operator<<<Type[abi:tag]<>(int)",
@@ -331,10 +334,9 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
   EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
       "f<A<B><C>>", context, basename));
 
-  // We expect these cases to fail until we turn on C++2a
-  EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
+  EXPECT_TRUE(CPlusPlusLanguage::ExtractContextAndIdentifier(
       "A::operator<=><A::B>", context, basename));
-  EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
+  EXPECT_TRUE(CPlusPlusLanguage::ExtractContextAndIdentifier(
       "operator<=><A::B>", context, basename));
 }
 
