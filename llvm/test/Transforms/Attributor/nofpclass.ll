@@ -97,7 +97,7 @@ define <2 x double> @returned_strange_constant_vector_elt() {
 
 ; Test a vector element that's an undef/poison
 define <3 x double> @returned_undef_constant_vector_elt() {
-; CHECK-LABEL: define <3 x double> @returned_undef_constant_vector_elt() {
+; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) <3 x double> @returned_undef_constant_vector_elt() {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret <3 x double> <double -0.000000e+00, double poison, double undef>
 ;
@@ -106,7 +106,7 @@ define <3 x double> @returned_undef_constant_vector_elt() {
 }
 
 define <2 x double> @returned_qnan_zero_vector() {
-; CHECK-LABEL: define noundef <2 x double> @returned_qnan_zero_vector() {
+; CHECK-LABEL: define noundef nofpclass(snan inf nzero sub norm) <2 x double> @returned_qnan_zero_vector() {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0.000000e+00>
 ;
@@ -883,4 +883,28 @@ define float @returned_extractvalue([4 x float] nofpclass(nan) %array) {
 ;
   %extract = extractvalue [4 x float] %array, 0
   ret float %extract
+}
+
+define float @return_nofpclass_freeze_nan_arg(float nofpclass(nan) %arg) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define noundef nofpclass(nan) float @return_nofpclass_freeze_nan_arg
+; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[ARG]]
+; CHECK-NEXT:    ret float [[FREEZE]]
+;
+  %freeze = freeze float %arg
+  ret float %freeze
+}
+
+define float @return_nofpclass_extractelement_freeze_pinf_arg(<2 x float> nofpclass(pinf) %arg) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define noundef nofpclass(pinf) float @return_nofpclass_extractelement_freeze_pinf_arg
+; CHECK-SAME: (<2 x float> nofpclass(pinf) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[FREEZE:%.*]] = freeze <2 x float> [[ARG]]
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <2 x float> [[FREEZE]], i32 0
+; CHECK-NEXT:    ret float [[ELT]]
+;
+  %freeze = freeze <2 x float> %arg
+  %elt = extractelement <2 x float> %freeze, i32 0
+  ret float %elt
 }

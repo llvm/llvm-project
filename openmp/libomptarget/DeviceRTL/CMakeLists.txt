@@ -62,16 +62,21 @@ set(LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES ${all_capabilities} CACHE STRING
   "List of CUDA Compute Capabilities to be used to compile the NVPTX DeviceRTL.")
 string(TOLOWER ${LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES} LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES)
 
-if (LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES STREQUAL "all")
-  set(nvptx_sm_list ${all_capabilities})
-elseif(LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES STREQUAL "auto")
-  if (NOT LIBOMPTARGET_DEP_CUDA_FOUND)
-    libomptarget_error_say("[NVPTX] Cannot auto detect compute capability as CUDA not found.")
+if(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "all")
+  set(LIBOMPTARGET_DEVICE_ARCHITECTURES ${all_gpu_architectures})
+elseif(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "auto" OR
+       LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "native")
+  if(NOT LIBOMPTARGET_NVPTX_ARCH AND NOT LIBOMPTARGET_AMDGPU_ARCH)
+    libomptarget_error_say(
+      "Could not find 'amdgpu-arch' and 'nvptx-arch' tools required for 'auto'")
+  elseif(NOT LIBOMPTARGET_FOUND_NVIDIA_GPU AND NOT LIBOMPTARGET_FOUND_AMDGPU_GPU)
+    libomptarget_error_say("No AMD or NVIDIA GPU found on the system when using 'auto'")
   endif()
   set(nvptx_sm_list ${LIBOMPTARGET_DEP_CUDA_ARCH})
 else()
   string(REPLACE "," ";" nvptx_sm_list "${LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES}")
 endif()
+list(REMOVE_DUPLICATES LIBOMPTARGET_DEVICE_ARCHITECTURES)
 
 # Check all SM values
 foreach(sm ${nvptx_sm_list})
