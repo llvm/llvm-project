@@ -335,7 +335,7 @@ func.func @insert_slice_full_overwrite(%t: tensor<10xf32>, %b: tensor<10xf32>) -
 
 // CHECK-LABEL: func @dim_not_reading(
 //  CHECK-SAME:     %[[t:.*]]: memref<?xf32
-func.func @dim_not_reading(%t: tensor<?xf32>, %f: f32, %pos: index) 
+func.func @dim_not_reading(%t: tensor<?xf32>, %f: f32, %pos: index)
     -> (tensor<?xf32>, index)
 {
   %c0 = arith.constant 0 : index
@@ -369,4 +369,32 @@ func.func @cast_retains_buffer_layout(
   // equivalent. Therefore, we currently loose some static type information
   // in the caller.
   return %casted, %slice : tensor<10xf32>, tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @parallel_insert_slice_source_out_of_place
+func.func @parallel_insert_slice_source_out_of_place(%in: tensor<1xf32>, %out: tensor<100xf32>, %f: f32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %num_threads = arith.constant 50 : index
+
+  // CHECK: scf.forall {{.*}} {
+  %result = scf.forall (%thread_idx) in (%num_threads) shared_outs (%o = %out) -> tensor<100xf32> {
+      // The tensor.insert must bufferize out-of-place.
+      // CHECK: memref.alloc
+      // CHECK: memref.store
+      %insert = tensor.insert %f into %in[%c0] : tensor<1xf32>
+      %r = tensor.extract %in[%c0] : tensor<1xf32>
+      vector.print %r : f32
+
+      // CHECK: memref.copy
+      // CHECK: memref.dealloc
+      scf.forall.in_parallel {
+        tensor.parallel_insert_slice %insert into %o[%thread_idx][1][1] :
+          tensor<1xf32> into tensor<100xf32>
+      }
+  }
+  // CHECK: }
+  return
 }
