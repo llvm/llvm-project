@@ -58,7 +58,8 @@ static std::mutex get_record_type_mutex;
 /// Object maintaining all the callbacks in the plugin
 ompt_device_callbacks_t ompt_device_callbacks;
 
-static double HostToDeviceRate = .0;
+static double HostToDeviceSlope = .0;
+static double HostToDeviceOffset = .0;
 
 typedef ompt_set_result_t (*libomptarget_ompt_set_trace_ompt_t)(
     ompt_device_t *device, unsigned int enable, unsigned int etype);
@@ -272,7 +273,7 @@ OMPT_API_ROUTINE double ompt_translate_time(ompt_device_t *device,
                                             ompt_device_time_t device_time) {
   // We do not need to account for clock-skew / drift. So simple linear
   // translation using the host to device rate we obtained.
-  double TranslatedTime = device_time * HostToDeviceRate;
+  double TranslatedTime = device_time * HostToDeviceSlope + HostToDeviceOffset;
   DP("OMPT: Translate time: %f\n", TranslatedTime);
 
   return TranslatedTime;
@@ -305,7 +306,10 @@ void setOmptTimestamp(uint64_t StartTime, uint64_t EndTime) {
   ompt_set_timestamp_fn(StartTime, EndTime);
 }
 
-void setOmptHostToDeviceRate(double Rate) { HostToDeviceRate = Rate; }
+void setOmptHostToDeviceRate(double Slope, double Offset) {
+  HostToDeviceSlope = Slope;
+  HostToDeviceOffset = Offset;
+}
 
 /// Libomptarget function that will be used to set num_teams in trace records.
 typedef void (*libomptarget_ompt_set_granted_teams_t)(uint32_t);

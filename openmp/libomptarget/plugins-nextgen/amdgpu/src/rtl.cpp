@@ -81,7 +81,7 @@
 extern bool OmptEnabled;
 extern void OmptCallbackInit();
 extern void setOmptTimestamp(uint64_t Start, uint64_t End);
-extern void setOmptHostToDeviceRate(double Rate);
+extern void setOmptHostToDeviceRate(double Slope, double Offset);
 
 /// HSA system clock frequency
 double TicksToTime = 1.0;
@@ -132,25 +132,23 @@ static double getTimeOfDay() {
 /// Get the first timepoints on host and device.
 void startH2DTimeRate(double *HTime, uint64_t *DTime) {
   *HTime = getTimeOfDay();
-  *DTime = getSystemTimestampInNs() + 1; // +1 to avoid divide by zero.
+  *DTime = getSystemTimestampInNs();
 }
 
 /// Get the second timepoints on host and device and compute the rate
 /// required for translating device time to host time.
 void completeH2DTimeRate(double HostRef1, uint64_t DeviceRef1) {
   double HostRef2 = getTimeOfDay();
-  uint64_t DeviceRef2 =
-      getSystemTimestampInNs() + 1; // +1 to avoid divide by zero.
-
-  // Multiply with .5 to reduce value range and potential risk of potential
-  // overflow
-  double HostAvg = HostRef2 * 0.5 + HostRef1 * 0.5;
-  uint64_t DeviceAvg = DeviceRef2 * 0.5 + DeviceRef1 * 0.5;
-  DP("Translate time: H1=%f D1=%lu H2=%f D2=%lu\n", HostRef1, DeviceRef1,
-     HostRef2, DeviceRef2);
-  double HostToDeviceRate = HostAvg / DeviceAvg;
-  setOmptHostToDeviceRate(HostToDeviceRate);
-  DP("OMPT: Translate time HostToDeviceRate: %f\n", HostToDeviceRate);
+  uint64_t DeviceRef2 = getSystemTimestampInNs();
+  // Assume host (h) timing is related to device (d) timing as
+  // h = m.d + o, where m is the slope and o is the offset.
+  // Calculate slope and offset from the two host and device timepoints.
+  double HostDiff = HostRef2 - HostRef1;
+  uint64_t DeviceDiff = DeviceRef2 - DeviceRef1;
+  double Slope = DeviceDiff != 0 ? (HostDiff / DeviceDiff) : HostDiff;
+  double Offset = HostRef1 - Slope * DeviceRef1;
+  setOmptHostToDeviceRate(Slope, Offset);
+  DP("OMPT: Translate time Slope: %f Offset: %f\n", Slope, Offset);
 }
 
 #endif
@@ -1823,11 +1821,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     OMPT_IF_ENABLED(::setOmptTicksToTime(););
 
 #ifdef OMPT_SUPPORT
-    // At init we capture two time points for host and device to calculate the
-    // "average time" of those two times.
+    // At init we capture two time points for host and device. The two
+    // timepoints are spaced out to help smooth out their accuracy
+    // differences.
     // libomp uses the CLOCK_REALTIME (via gettimeofday) to get
     // the value for omp_get_wtime. So we use the same clock here to calculate
-    // the rate and convert device time to omp_get_wtime via translate_time.
+    // the slope/offset and convert device time to omp_get_wtime via
+    // translate_time.
     double HostRef1 = 0;
     uint64_t DeviceRef1 = 0;
 #endif
