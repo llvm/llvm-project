@@ -2026,7 +2026,7 @@ ParseResult AffineForOp::parse(OpAsmParser &parser, OperationState &result) {
                               result.attributes))
       return failure();
 
-    if (stepAttr.getValue().getSExtValue() < 0)
+    if (stepAttr.getValue().isNegative())
       return parser.emitError(
           stepLoc,
           "expected step to be representable as a positive signed integer");

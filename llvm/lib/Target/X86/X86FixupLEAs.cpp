@@ -463,10 +463,8 @@ void FixupLEAPass::checkRegUsage(MachineBasicBlock::iterator &LeaI,
   Register IndexReg = LeaI->getOperand(1 + X86::AddrIndexReg).getReg();
   Register AluDestReg = AluI->getOperand(0).getReg();
 
-  MachineBasicBlock::iterator CurInst = std::next(LeaI);
-  while (CurInst != AluI) {
-    for (unsigned I = 0, E = CurInst->getNumOperands(); I != E; ++I) {
-      MachineOperand &Opnd = CurInst->getOperand(I);
+  for (MachineInstr &CurInst : llvm::make_range(std::next(LeaI), AluI)) {
+    for (MachineOperand &Opnd : CurInst.operands()) {
       if (!Opnd.isReg())
         continue;
       Register Reg = Opnd.getReg();
@@ -485,7 +483,6 @@ void FixupLEAPass::checkRegUsage(MachineBasicBlock::iterator &LeaI,
           *KilledIndex = &Opnd;
       }
     }
-    ++CurInst;
   }
 }
 

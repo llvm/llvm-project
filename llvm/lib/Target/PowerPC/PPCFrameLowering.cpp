@@ -395,8 +395,7 @@ void PPCFrameLowering::replaceFPWithRealFP(MachineFunction &MF) const {
   for (MachineBasicBlock &MBB : MF)
     for (MachineBasicBlock::iterator MBBI = MBB.end(); MBBI != MBB.begin();) {
       --MBBI;
-      for (unsigned I = 0, E = MBBI->getNumOperands(); I != E; ++I) {
-        MachineOperand &MO = MBBI->getOperand(I);
+      for (MachineOperand &MO : MBBI->operands()) {
         if (!MO.isReg())
           continue;
 
