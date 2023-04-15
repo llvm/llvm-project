@@ -510,6 +510,8 @@ void NarrowingConversionsCheck::handleBinaryOperator(const ASTContext &Context,
   const BuiltinType *RhsType = getBuiltinType(Rhs);
   if (RhsType == nullptr || LhsType == nullptr)
     return;
+  if (LhsType == RhsType)
+    return;
   if (RhsType->getKind() == BuiltinType::Bool && LhsType->isSignedInteger())
     return handleBooleanToSignedIntegral(Context, SourceLoc, Lhs, Rhs);
   if (RhsType->isInteger() && LhsType->getKind() == BuiltinType::Bool)
@@ -548,6 +550,8 @@ void NarrowingConversionsCheck::handleImplicitCast(
   const Expr &Lhs = Cast;
   const Expr &Rhs = *Cast.getSubExpr();
   if (Lhs.isInstantiationDependent() || Rhs.isInstantiationDependent())
+    return;
+  if (getBuiltinType(Lhs) == getBuiltinType(Rhs))
     return;
   if (handleConditionalOperator(Context, Lhs, Rhs))
     return;

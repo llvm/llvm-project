@@ -748,8 +748,7 @@ bool Module::LookupInfo::NameMatchesLookupInfo(
   // relatively inexpensive since no demangling is actually occuring. See
   // Mangled::SetValue for more context.
   const bool function_name_may_be_mangled =
-      Mangled::GetManglingScheme(function_name.GetStringRef()) !=
-      Mangled::eManglingSchemeNone;
+      Mangled::GetManglingScheme(function_name) != Mangled::eManglingSchemeNone;
   ConstString demangled_function_name = function_name;
   if (function_name_may_be_mangled) {
     Mangled mangled_function_name(function_name);
@@ -760,11 +759,10 @@ bool Module::LookupInfo::NameMatchesLookupInfo(
   // Otherwise just check that the demangled function name contains the
   // demangled user-provided name.
   if (Language *language = Language::FindPlugin(language_type))
-    return language->DemangledNameContainsPath(m_name.GetStringRef(),
-                                               demangled_function_name);
+    return language->DemangledNameContainsPath(m_name, demangled_function_name);
 
-  llvm::StringRef function_name_ref = demangled_function_name.GetStringRef();
-  return function_name_ref.contains(m_name.GetStringRef());
+  llvm::StringRef function_name_ref = demangled_function_name;
+  return function_name_ref.contains(m_name);
 }
 
 void Module::LookupInfo::Prune(SymbolContextList &sc_list,
@@ -803,7 +801,7 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
         CPlusPlusLanguage::MethodName cpp_method(full_name);
         if (cpp_method.IsValid()) {
           if (cpp_method.GetContext().empty()) {
-            if (cpp_method.GetBasename().compare(m_name.GetStringRef()) != 0) {
+            if (cpp_method.GetBasename().compare(m_name) != 0) {
               sc_list.RemoveContextAtIndex(i);
               continue;
             }
@@ -1026,8 +1024,8 @@ void Module::FindTypes(
       FindTypes_Impl(name, CompilerDeclContext(), UINT_MAX,
                      searched_symbol_files, typesmap);
       if (exact_match) {
-        typesmap.RemoveMismatchedTypes(type_scope, name.GetStringRef(),
-                                       type_class, exact_match);
+        typesmap.RemoveMismatchedTypes(type_scope, name, type_class,
+                                       exact_match);
       }
     }
   }
@@ -1132,7 +1130,7 @@ void Module::ReportWarningOptimization(
     return;
 
   StreamString ss;
-  ss << file_name.GetStringRef()
+  ss << file_name
      << " was compiled with optimization - stepping may behave "
         "oddly; variables may not be available.";
   Debugger::ReportWarning(std::string(ss.GetString()), debugger_id,
@@ -1668,7 +1666,7 @@ uint32_t Module::Hash() {
   llvm::raw_string_ostream id_strm(identifier);
   id_strm << m_arch.GetTriple().str() << '-' << m_file.GetPath();
   if (m_object_name)
-    id_strm << '(' << m_object_name.GetStringRef() << ')';
+    id_strm << '(' << m_object_name << ')';
   if (m_object_offset > 0)
     id_strm << m_object_offset;
   const auto mtime = llvm::sys::toTimeT(m_object_mod_time);
@@ -1682,7 +1680,7 @@ std::string Module::GetCacheKey() {
   llvm::raw_string_ostream strm(key);
   strm << m_arch.GetTriple().str() << '-' << m_file.GetFilename();
   if (m_object_name)
-    strm << '(' << m_object_name.GetStringRef() << ')';
+    strm << '(' << m_object_name << ')';
   strm << '-' << llvm::format_hex(Hash(), 10);
   return strm.str();
 }

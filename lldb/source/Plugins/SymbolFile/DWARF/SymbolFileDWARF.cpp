@@ -2324,12 +2324,19 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
 }
 
 bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext &decl_ctx,
-                                       const DWARFDIE &die) {
+                                       const DWARFDIE &die,
+                                       bool only_root_namespaces) {
   // If we have no parent decl context to match this DIE matches, and if the
   // parent decl context isn't valid, we aren't trying to look for any
   // particular decl context so any die matches.
-  if (!decl_ctx.IsValid())
+  if (!decl_ctx.IsValid()) {
+    // ...But if we are only checking root decl contexts, confirm that the
+    // 'die' is a top-level context.
+    if (only_root_namespaces)
+      return die.GetParent().Tag() == dwarf::DW_TAG_compile_unit;
+
     return true;
+  }
 
   if (die) {
     if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetCU())) {
@@ -2632,7 +2639,8 @@ void SymbolFileDWARF::FindTypes(
 
 CompilerDeclContext
 SymbolFileDWARF::FindNamespace(ConstString name,
-                               const CompilerDeclContext &parent_decl_ctx) {
+                               const CompilerDeclContext &parent_decl_ctx,
+                               bool only_root_namespaces) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   Log *log = GetLog(DWARFLog::Lookups);
 
@@ -2648,7 +2656,7 @@ SymbolFileDWARF::FindNamespace(ConstString name,
     return namespace_decl_ctx;
 
   m_index->GetNamespaces(name, [&](DWARFDIE die) {
-    if (!DIEInDeclContext(parent_decl_ctx, die))
+    if (!DIEInDeclContext(parent_decl_ctx, die, only_root_namespaces))
       return true; // The containing decl contexts don't match
 
     DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetCU());

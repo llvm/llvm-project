@@ -52,6 +52,12 @@ static cl::opt<bool>
                        cl::desc("Break large PHI nodes for DAGISel"),
                        cl::ReallyHidden, cl::init(true));
 
+static cl::opt<bool>
+    ForceScalarizeLargePHIs("amdgpu-codegenprepare-force-break-large-phis",
+                            cl::desc("For testing purposes, always break large "
+                                     "PHIs even if it isn't profitable."),
+                            cl::ReallyHidden, cl::init(false));
+
 static cl::opt<unsigned> ScalarizeLargePHIsThreshold(
     "amdgpu-codegenprepare-break-large-phis-threshold",
     cl::desc("Minimum type size in bits for breaking large PHI nodes"),
@@ -1394,6 +1400,50 @@ bool AMDGPUCodeGenPrepare::visitSelectInst(SelectInst &I) {
   return Changed;
 }
 
+// Helper for breaking large PHIs that returns true when an extractelement on V
+// is likely to be folded away by the DAG combiner.
+static bool isInterestingPHIIncomingValue(Value *V, FixedVectorType *FVT) {
+  InsertElementInst *IE = dyn_cast<InsertElementInst>(V);
+
+  // Constants & InsertElements chains are interesting.
+  if (!IE)
+    return isa<Constant>(V);
+
+  // Check if this is a simple chain of insertelement that fills the vector. If
+  // that's the case, we can break up this PHI node profitably because the
+  // extractelement we will insert will get folded out.
+  BasicBlock *BB = IE->getParent();
+  BitVector EltsCovered(FVT->getNumElements());
+  InsertElementInst *Next = IE;
+  while (Next && !EltsCovered.all()) {
+    ConstantInt *Idx = dyn_cast<ConstantInt>(Next->getOperand(2));
+
+    // Non constant index/out of bounds index -> folding is unlikely.
+    // Note that this is more of a sanity check - canonical IR should
+    // already have replaced those with poison.
+    if (!Idx || Idx->getSExtValue() >= FVT->getNumElements())
+      return false;
+
+    EltsCovered.set(Idx->getSExtValue());
+
+    // If the insertelement chain ends with a constant, it's fine.
+    if (isa<Constant>(Next->getOperand(0)))
+      return true;
+
+    Next = dyn_cast<InsertElementInst>(Next->getOperand(0));
+
+    // If the chain is spread across basic blocks, the DAG combiner
+    // won't see it in its entirety and is unlikely to be able to fold
+    // evevrything away.
+    if (Next && Next->getParent() != BB)
+      return false;
+  }
+
+  // All elements covered, all of the extract elements will likely be
+  // combined.
+  return EltsCovered.all();
+}
+
 bool AMDGPUCodeGenPrepare::visitPHINode(PHINode &I) {
   // Break-up fixed-vector PHIs into smaller pieces.
   // Default threshold is 32, so it breaks up any vector that's >32 bits into
@@ -1411,6 +1461,24 @@ bool AMDGPUCodeGenPrepare::visitPHINode(PHINode &I) {
   FixedVectorType *FVT = dyn_cast<FixedVectorType>(I.getType());
   if (!FVT || DL->getTypeSizeInBits(FVT) <= ScalarizeLargePHIsThreshold)
     return false;
+
+  // Try to avoid unprofitable cases:
+  // - Don't break PHIs that have no interesting incoming values. That is, where
+  // there is no clear opportunity to fold the "extractelement" instructions we
+  // would add.
+  //   - Note: IC does not run after this pass, so we're only interested in the
+  //     folding that the DAG combiner can do.
+  // - For simplicity, don't break PHIs that are used by other PHIs because it'd
+  // require us to determine if the whole "chain" can be converted or not. e.g.
+  // if we broke this PHI but not its user, we would actually make things worse.
+  if (!ForceScalarizeLargePHIs) {
+    if (none_of(
+            I.incoming_values(),
+            [&](Value *V) { return isInterestingPHIIncomingValue(V, FVT); }) ||
+        any_of(I.users(), [&](User *U) { return isa<PHINode>(U); })) {
+      return false;
+    }
+  }
 
   struct VectorSlice {
     Type *Ty = nullptr;

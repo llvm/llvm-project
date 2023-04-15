@@ -409,6 +409,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fprintf
     libc.src.stdio.getc
     libc.src.stdio.getc_unlocked
+    libc.src.stdio.getchar
+    libc.src.stdio.getchar_unlocked
     libc.src.stdio.printf
     libc.src.stdio.sscanf
     libc.src.stdio.scanf

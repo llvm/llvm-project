@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: clang-14, clang-15
+// UNSUPPORTED: clang-15
 // UNSUPPORTED: apple-clang-14
 
 #include <source_location>

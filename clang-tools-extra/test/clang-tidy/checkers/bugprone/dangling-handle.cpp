@@ -52,7 +52,8 @@ class basic_string {
   basic_string();
   basic_string(const char*);
 
-  operator basic_string_view() const noexcept;
+  typedef basic_string_view str_view;
+  operator str_view() const noexcept;
 
   ~basic_string();
 };
@@ -193,3 +194,4 @@ void Negatives(std::string_view default_arg = ReturnsAString()) {
 
   TakesAStringView(std::string());
 }
+

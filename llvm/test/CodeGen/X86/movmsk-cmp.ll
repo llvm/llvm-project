@@ -575,8 +575,7 @@ define i1 @allzeros_v4i32_sign(<4 x i32> %arg) {
 ;
 ; AVX-LABEL: allzeros_v4i32_sign:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovmskps %xmm0, %eax
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    vtestps %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %tmp = icmp slt <4 x i32> %arg, zeroinitializer
@@ -619,8 +618,7 @@ define i1 @allzeros_v8i32_sign(<8 x i32> %arg) {
 ;
 ; AVX-LABEL: allzeros_v8i32_sign:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovmskps %ymm0, %eax
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    vtestps %ymm0, %ymm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -779,8 +777,7 @@ define i1 @allzeros_v4i64_sign(<4 x i64> %arg) {
 ;
 ; AVX-LABEL: allzeros_v4i64_sign:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovmskpd %ymm0, %eax
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    vtestpd %ymm0, %ymm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -865,8 +862,7 @@ define i1 @allzeros_v8i64_sign(<8 x i64> %arg) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovmskps %xmm0, %eax
-; AVX1-NEXT:    testl %eax, %eax
+; AVX1-NEXT:    vtestps %xmm0, %xmm0
 ; AVX1-NEXT:    sete %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -874,8 +870,7 @@ define i1 @allzeros_v8i64_sign(<8 x i64> %arg) {
 ; AVX2-LABEL: allzeros_v8i64_sign:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vmovmskps %ymm0, %eax
-; AVX2-NEXT:    testl %eax, %eax
+; AVX2-NEXT:    vtestps %ymm0, %ymm0
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -3347,8 +3342,7 @@ define i1 @allzeros_v8f32_nnan(<8 x float> %a0) {
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX1OR2-NEXT:    vcmpneqps %ymm1, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vmovmskps %ymm0, %eax
-; AVX1OR2-NEXT:    testl %eax, %eax
+; AVX1OR2-NEXT:    vtestps %ymm0, %ymm0
 ; AVX1OR2-NEXT:    setne %al
 ; AVX1OR2-NEXT:    vzeroupper
 ; AVX1OR2-NEXT:    retq
@@ -3876,8 +3870,7 @@ define i1 @movmsk_or_v2f64(<2 x double> %x, <2 x double> %y) {
 ; AVX1OR2-LABEL: movmsk_or_v2f64:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vcmplepd %xmm0, %xmm1, %xmm0
-; AVX1OR2-NEXT:    vmovmskpd %xmm0, %eax
-; AVX1OR2-NEXT:    testl %eax, %eax
+; AVX1OR2-NEXT:    vtestpd %xmm0, %xmm0
 ; AVX1OR2-NEXT:    setne %al
 ; AVX1OR2-NEXT:    retq
 ;

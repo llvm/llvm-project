@@ -5,9 +5,9 @@ declare float @llvm.sin.f32(float)
 declare float @llvm.cos.f32(float)
 
 define float @ret_sin(float %arg) {
-; CHECK-LABEL: define float @ret_sin
+; CHECK-LABEL: define nofpclass(inf) float @ret_sin
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.sin.f32(float [[ARG]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.sin.f32(float [[ARG]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.sin.f32(float %arg)
@@ -15,9 +15,9 @@ define float @ret_sin(float %arg) {
 }
 
 define float @ret_cos(float %arg) {
-; CHECK-LABEL: define float @ret_cos
+; CHECK-LABEL: define nofpclass(inf) float @ret_cos
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.cos.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.cos.f32(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.cos.f32(float %arg)
@@ -25,9 +25,9 @@ define float @ret_cos(float %arg) {
 }
 
 define float @ret_sin_noinf(float nofpclass(inf) %arg) {
-; CHECK-LABEL: define float @ret_sin_noinf
+; CHECK-LABEL: define nofpclass(inf) float @ret_sin_noinf
 ; CHECK-SAME: (float nofpclass(inf) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.sin.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.sin.f32(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.sin.f32(float %arg)
@@ -35,9 +35,9 @@ define float @ret_sin_noinf(float nofpclass(inf) %arg) {
 }
 
 define float @ret_cos_noinf(float nofpclass(inf) %arg) {
-; CHECK-LABEL: define float @ret_cos_noinf
+; CHECK-LABEL: define nofpclass(inf) float @ret_cos_noinf
 ; CHECK-SAME: (float nofpclass(inf) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.cos.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.cos.f32(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.cos.f32(float %arg)
@@ -45,9 +45,9 @@ define float @ret_cos_noinf(float nofpclass(inf) %arg) {
 }
 
 define float @ret_sin_nonan(float nofpclass(nan) %arg) {
-; CHECK-LABEL: define float @ret_sin_nonan
+; CHECK-LABEL: define nofpclass(inf) float @ret_sin_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.sin.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.sin.f32(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.sin.f32(float %arg)
@@ -55,9 +55,9 @@ define float @ret_sin_nonan(float nofpclass(nan) %arg) {
 }
 
 define float @ret_cos_nonan(float nofpclass(nan) %arg) {
-; CHECK-LABEL: define float @ret_cos_nonan
+; CHECK-LABEL: define nofpclass(inf) float @ret_cos_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.cos.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.cos.f32(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.cos.f32(float %arg)
@@ -65,9 +65,9 @@ define float @ret_cos_nonan(float nofpclass(nan) %arg) {
 }
 
 define float @ret_sin_nonan_noinf(float nofpclass(nan inf) %arg) {
-; CHECK-LABEL: define float @ret_sin_nonan_noinf
+; CHECK-LABEL: define nofpclass(nan inf) float @ret_sin_nonan_noinf
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.sin.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.sin.f32(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.sin.f32(float %arg)
@@ -75,9 +75,9 @@ define float @ret_sin_nonan_noinf(float nofpclass(nan inf) %arg) {
 }
 
 define float @ret_cos_nonan_noinf(float nofpclass(nan inf) %arg) {
-; CHECK-LABEL: define float @ret_cos_nonan_noinf
+; CHECK-LABEL: define nofpclass(nan inf) float @ret_cos_nonan_noinf
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.cos.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.cos.f32(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.cos.f32(float %arg)
@@ -86,9 +86,9 @@ define float @ret_cos_nonan_noinf(float nofpclass(nan inf) %arg) {
 
 
 define float @ret_sin_noqnan(float nofpclass(qnan) %arg) {
-; CHECK-LABEL: define float @ret_sin_noqnan
+; CHECK-LABEL: define nofpclass(inf) float @ret_sin_noqnan
 ; CHECK-SAME: (float nofpclass(qnan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.sin.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.sin.f32(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.sin.f32(float %arg)
@@ -96,9 +96,9 @@ define float @ret_sin_noqnan(float nofpclass(qnan) %arg) {
 }
 
 define float @ret_cos_noqnan(float nofpclass(qnan) %arg) {
-; CHECK-LABEL: define float @ret_cos_noqnan
+; CHECK-LABEL: define nofpclass(inf) float @ret_cos_noqnan
 ; CHECK-SAME: (float nofpclass(qnan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.cos.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.cos.f32(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.cos.f32(float %arg)

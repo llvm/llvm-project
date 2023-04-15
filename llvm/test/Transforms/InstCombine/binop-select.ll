@@ -5,6 +5,7 @@ declare void @use(i32)
 declare void @use_f32(float)
 declare void @use_v2f16(<2 x half>)
 declare void @use_v2i8(<2 x i8>)
+declare i32 @llvm.sadd.sat.i32(i32, i32)
 
 define i32 @test1(i1 %c, i32 %x, i32 %y) {
 ; CHECK-LABEL: @test1(
@@ -67,6 +68,45 @@ define i32 @test5(i1 %c, i32 %x, i32 %y) {
   %cond = select i1 %c, i32 %x, i32 0
   %add = add i32 %cond, %x
   ret i32 %add
+}
+
+define i32 @test_sub_deduce_true(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sub_deduce_true(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 9
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[C]], i32 15, i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %c = icmp eq i32 %x, 9
+  %cond = select i1 %c, i32 6, i32 %y
+  %sub = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %cond)
+  ret i32 %sub
+}
+
+define i32 @test_sub_deduce_true_no_const_fold(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sub_deduce_true_no_const_fold(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 9
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[C]], i32 [[Y:%.*]], i32 6
+; CHECK-NEXT:    [[SUB:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[X]], i32 [[COND]])
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %c = icmp eq i32 %x, 9
+  %cond = select i1 %c, i32 %y, i32 6
+  %sub = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %cond)
+  ret i32 %sub
+}
+
+define i32 @test_sub_deduce_false(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sub_deduce_false(
+; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq i32 [[X:%.*]], 9
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[C_NOT]], i32 16, i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %c = icmp ne i32 %x, 9
+  %cond = select i1 %c, i32 %y, i32 7
+  %sub = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %cond)
+  ret i32 %sub
 }
 
 define i32 @test6(i1 %c, i32 %x, i32 %y) {

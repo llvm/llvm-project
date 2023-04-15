@@ -468,7 +468,7 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr,
     res = REAL(pthread_create)(th, attr, __lsan_thread_start_func, &p);
   }
   if (res == 0) {
-    int tid = ThreadCreate(GetCurrentThread(), IsStateDetached(detached));
+    int tid = ThreadCreate(GetCurrentThreadId(), IsStateDetached(detached));
     CHECK_NE(tid, kMainTid);
     atomic_store(&p.tid, tid, memory_order_release);
     while (atomic_load(&p.tid, memory_order_acquire) != 0)

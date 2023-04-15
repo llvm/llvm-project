@@ -1,10 +1,10 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent \
-# RUN:     -filetype=obj -o %t/elf_sm_pic_reloc.o %s
+# RUN:     -filetype=obj -o %t/elf_got_plt_opt.o %s
 # RUN: llvm-jitlink -noexec \
 # RUN:     -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
 # RUN:     -abs extern_in_range32=0xffe00000 \
-# RUN:     -check %s %t/elf_sm_pic_reloc.o
+# RUN:     -check %s %t/elf_got_plt_opt.o
 #
 
 

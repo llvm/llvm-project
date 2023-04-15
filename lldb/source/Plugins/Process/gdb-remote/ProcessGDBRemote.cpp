@@ -4201,8 +4201,7 @@ void ParseFlags(
 
             // If no fields overlap, use them.
             if (overlap == fields.end()) {
-              if (registers_flags_types.find(*id) !=
-                  registers_flags_types.end()) {
+              if (registers_flags_types.contains(*id)) {
                 // In theory you could define some flag set, use it with a
                 // register then redefine it. We do not know if anyone does
                 // that, or what they would expect to happen in that case.

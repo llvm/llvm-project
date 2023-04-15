@@ -551,14 +551,15 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<int32_t, 8> operandSegments;
   addOperand(operands, operandSegments, async);
   addOperands(operands, operandSegments, waitOperands);
-  if constexpr (std::is_same_v<Op, mlir::acc::ParallelOp>) {
+  if constexpr (!std::is_same_v<Op, mlir::acc::SerialOp>) {
     addOperand(operands, operandSegments, numGangs);
     addOperand(operands, operandSegments, numWorkers);
     addOperand(operands, operandSegments, vectorLength);
   }
   addOperand(operands, operandSegments, ifCond);
   addOperand(operands, operandSegments, selfCond);
-  addOperands(operands, operandSegments, reductionOperands);
+  if constexpr (!std::is_same_v<Op, mlir::acc::KernelsOp>)
+    addOperands(operands, operandSegments, reductionOperands);
   addOperands(operands, operandSegments, copyOperands);
   addOperands(operands, operandSegments, copyinOperands);
   addOperands(operands, operandSegments, copyinReadonlyOperands);
@@ -570,11 +571,18 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
   addOperands(operands, operandSegments, presentOperands);
   addOperands(operands, operandSegments, devicePtrOperands);
   addOperands(operands, operandSegments, attachOperands);
-  addOperands(operands, operandSegments, privateOperands);
-  addOperands(operands, operandSegments, firstprivateOperands);
+  if constexpr (!std::is_same_v<Op, mlir::acc::KernelsOp>) {
+    addOperands(operands, operandSegments, privateOperands);
+    addOperands(operands, operandSegments, firstprivateOperands);
+  }
 
-  Op computeOp = createRegionOp<Op, mlir::acc::YieldOp>(
-      firOpBuilder, currentLocation, operands, operandSegments);
+  Op computeOp;
+  if constexpr (std::is_same_v<Op, mlir::acc::KernelsOp>)
+    computeOp = createRegionOp<Op, mlir::acc::TerminatorOp>(
+        firOpBuilder, currentLocation, operands, operandSegments);
+  else
+    computeOp = createRegionOp<Op, mlir::acc::YieldOp>(
+        firOpBuilder, currentLocation, operands, operandSegments);
 
   if (addAsyncAttr)
     computeOp.setAsyncAttrAttr(firOpBuilder.getUnitAttr());
@@ -697,7 +705,8 @@ genACC(Fortran::lower::AbstractConverter &converter,
     createComputeOp<mlir::acc::SerialOp>(
         converter, currentLocation, semanticsContext, stmtCtx, accClauseList);
   } else if (blockDirective.v == llvm::acc::ACCD_kernels) {
-    TODO(currentLocation, "kernels construct lowering");
+    createComputeOp<mlir::acc::KernelsOp>(
+        converter, currentLocation, semanticsContext, stmtCtx, accClauseList);
   } else if (blockDirective.v == llvm::acc::ACCD_host_data) {
     TODO(currentLocation, "host_data construct lowering");
   }
@@ -720,7 +729,10 @@ genACC(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::StatementContext stmtCtx;
 
   if (combinedDirective.v == llvm::acc::ACCD_kernels_loop) {
-    TODO(currentLocation, "OpenACC Kernels Loop construct not lowered yet!");
+    createComputeOp<mlir::acc::KernelsOp>(
+        converter, currentLocation, semanticsContext, stmtCtx, accClauseList);
+    createLoopOp(converter, currentLocation, semanticsContext, stmtCtx,
+                 accClauseList);
   } else if (combinedDirective.v == llvm::acc::ACCD_parallel_loop) {
     createComputeOp<mlir::acc::ParallelOp>(
         converter, currentLocation, semanticsContext, stmtCtx, accClauseList);

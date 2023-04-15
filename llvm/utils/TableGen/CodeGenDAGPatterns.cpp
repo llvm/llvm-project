@@ -2010,13 +2010,13 @@ bool TreePatternNode::isIsomorphicTo(const TreePatternNode *N,
 TreePatternNodePtr TreePatternNode::clone() const {
   TreePatternNodePtr New;
   if (isLeaf()) {
-    New = std::make_shared<TreePatternNode>(getLeafValue(), getNumTypes());
+    New = makeIntrusiveRefCnt<TreePatternNode>(getLeafValue(), getNumTypes());
   } else {
     std::vector<TreePatternNodePtr> CChildren;
     CChildren.reserve(Children.size());
     for (unsigned i = 0, e = getNumChildren(); i != e; ++i)
       CChildren.push_back(getChild(i)->clone());
-    New = std::make_shared<TreePatternNode>(getOperator(), std::move(CChildren),
+    New = makeIntrusiveRefCnt<TreePatternNode>(getOperator(), std::move(CChildren),
                                             getNumTypes());
   }
   New->setName(getName());
@@ -2071,31 +2071,30 @@ void TreePatternNode::SubstituteFormalArguments(
 /// fragments, return the set of inlined versions (this can be more than
 /// one if a PatFrags record has multiple alternatives).
 void TreePatternNode::InlinePatternFragments(
-  const TreePatternNodePtr &T, TreePattern &TP,
-  std::vector<TreePatternNodePtr> &OutAlternatives) {
+    TreePattern &TP, std::vector<TreePatternNodePtr> &OutAlternatives) {
 
   if (TP.hasError())
     return;
 
-  if (T->isLeaf()) {
-    OutAlternatives.push_back(T);  // nothing to do.
+  if (isLeaf()) {
+    OutAlternatives.push_back(this); // nothing to do.
     return;
   }
 
-  Record *Op = T->getOperator();
+  Record *Op = getOperator();
 
   if (!Op->isSubClassOf("PatFrags")) {
-    if (T->getNumChildren() == 0) {
-      OutAlternatives.push_back(T);
+    if (getNumChildren() == 0) {
+      OutAlternatives.push_back(this);
       return;
     }
 
     // Recursively inline children nodes.
     std::vector<std::vector<TreePatternNodePtr>> ChildAlternatives(
-        T->getNumChildren());
-    for (unsigned i = 0, e = T->getNumChildren(); i != e; ++i) {
-      TreePatternNodePtr Child = T->getChildShared(i);
-      InlinePatternFragments(Child, TP, ChildAlternatives[i]);
+        getNumChildren());
+    for (unsigned i = 0, e = getNumChildren(); i != e; ++i) {
+      TreePatternNodePtr Child = getChildShared(i);
+      Child->InlinePatternFragments(TP, ChildAlternatives[i]);
       // If there are no alternatives for any child, there are no
       // alternatives for this expression as whole.
       if (ChildAlternatives[i].empty())
@@ -2119,19 +2118,19 @@ void TreePatternNode::InlinePatternFragments(
       NewChildren.reserve(ChildAlternatives.size());
       for (unsigned i = 0, e = ChildAlternatives.size(); i != e; ++i)
         NewChildren.push_back(ChildAlternatives[i][Idxs[i]]);
-      TreePatternNodePtr R = std::make_shared<TreePatternNode>(
-          T->getOperator(), std::move(NewChildren), T->getNumTypes());
+      TreePatternNodePtr R = makeIntrusiveRefCnt<TreePatternNode>(
+          getOperator(), std::move(NewChildren), getNumTypes());
 
       // Copy over properties.
-      R->setName(T->getName());
-      R->setNamesAsPredicateArg(T->getNamesAsPredicateArg());
-      R->setPredicateCalls(T->getPredicateCalls());
-      R->setGISelFlagsRecord(T->getGISelFlagsRecord());
-      R->setTransformFn(T->getTransformFn());
-      for (unsigned i = 0, e = T->getNumTypes(); i != e; ++i)
-        R->setType(i, T->getExtType(i));
-      for (unsigned i = 0, e = T->getNumResults(); i != e; ++i)
-        R->setResultIndex(i, T->getResultIndex(i));
+      R->setName(getName());
+      R->setNamesAsPredicateArg(getNamesAsPredicateArg());
+      R->setPredicateCalls(getPredicateCalls());
+      R->setGISelFlagsRecord(getGISelFlagsRecord());
+      R->setTransformFn(getTransformFn());
+      for (unsigned i = 0, e = getNumTypes(); i != e; ++i)
+        R->setType(i, getExtType(i));
+      for (unsigned i = 0, e = getNumResults(); i != e; ++i)
+        R->setResultIndex(i, getResultIndex(i));
 
       // Register alternative.
       OutAlternatives.push_back(R);
@@ -2157,7 +2156,7 @@ void TreePatternNode::InlinePatternFragments(
   TreePattern *Frag = TP.getDAGPatterns().getPatternFragment(Op);
 
   // Verify that we are passing the right number of operands.
-  if (Frag->getNumArgs() != T->getNumChildren()) {
+  if (Frag->getNumArgs() != getNumChildren()) {
     TP.error("'" + Op->getName() + "' fragment requires " +
              Twine(Frag->getNumArgs()) + " operands!");
     return;
@@ -2171,7 +2170,7 @@ void TreePatternNode::InlinePatternFragments(
   // Compute the map of formal to actual arguments.
   std::map<std::string, TreePatternNodePtr> ArgMap;
   for (unsigned i = 0, e = Frag->getNumArgs(); i != e; ++i) {
-    TreePatternNodePtr Child = T->getChildShared(i);
+    TreePatternNodePtr Child = getChildShared(i);
     if (Scope != 0) {
       Child = Child->clone();
       Child->addNameAsPredicateArg(ScopedName(Scope, Frag->getArgName(i)));
@@ -2192,20 +2191,20 @@ void TreePatternNode::InlinePatternFragments(
 
     // Transfer types.  Note that the resolved alternative may have fewer
     // (but not more) results than the PatFrags node.
-    FragTree->setName(T->getName());
+    FragTree->setName(getName());
     for (unsigned i = 0, e = FragTree->getNumTypes(); i != e; ++i)
-      FragTree->UpdateNodeType(i, T->getExtType(i), TP);
+      FragTree->UpdateNodeType(i, getExtType(i), TP);
 
     if (Op->isSubClassOf("GISelFlags"))
       FragTree->setGISelFlagsRecord(Op);
 
     // Transfer in the old predicates.
-    for (const TreePredicateCall &Pred : T->getPredicateCalls())
+    for (const TreePredicateCall &Pred : getPredicateCalls())
       FragTree->addPredicateCall(Pred);
 
     // The fragment we inlined could have recursive inlining that is needed.  See
     // if there are any pattern fragments in it and inline them as needed.
-    InlinePatternFragments(FragTree, TP, OutAlternatives);
+    FragTree->InlinePatternFragments(TP, OutAlternatives);
   }
 }
 
@@ -2862,7 +2861,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
         OpName);
 
     // Input argument?
-    TreePatternNodePtr Res = std::make_shared<TreePatternNode>(DI, 1);
+    TreePatternNodePtr Res = makeIntrusiveRefCnt<TreePatternNode>(DI, 1);
     if (R->getName() == "node" && !OpName.empty()) {
       if (OpName.empty())
         error("'node' argument requires a name to match with operand list");
@@ -2877,7 +2876,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
   if (isa<UnsetInit>(TheInit)) {
     if (OpName.empty())
       error("'?' argument requires a name to match with operand list");
-    TreePatternNodePtr Res = std::make_shared<TreePatternNode>(TheInit, 1);
+    TreePatternNodePtr Res = makeIntrusiveRefCnt<TreePatternNode>(TheInit, 1);
     Args.push_back(std::string(OpName));
     Res->setName(OpName);
     return Res;
@@ -2888,7 +2887,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
       error("Constant int or bit argument should not have a name!");
     if (isa<BitInit>(TheInit))
       TheInit = TheInit->convertInitializerTo(IntRecTy::get(RK));
-    return std::make_shared<TreePatternNode>(TheInit, 1);
+    return makeIntrusiveRefCnt<TreePatternNode>(TheInit, 1);
   }
 
   if (BitsInit *BI = dyn_cast<BitsInit>(TheInit)) {
@@ -2992,7 +2991,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
     else // Otherwise, no chain.
       Operator = getDAGPatterns().get_intrinsic_wo_chain_sdnode();
 
-    Children.insert(Children.begin(), std::make_shared<TreePatternNode>(
+    Children.insert(Children.begin(), makeIntrusiveRefCnt<TreePatternNode>(
                                           IntInit::get(RK, IID), 1));
   }
 
@@ -3018,7 +3017,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
   }
 
   TreePatternNodePtr Result =
-      std::make_shared<TreePatternNode>(Operator, std::move(Children),
+      makeIntrusiveRefCnt<TreePatternNode>(Operator, std::move(Children),
                                         NumResults);
   Result->setName(OpName);
 
@@ -3903,7 +3902,7 @@ void CodeGenDAGPatterns::parseInstructionPattern(
       OpNode->setTransformFn(nullptr);
       std::vector<TreePatternNodePtr> Children;
       Children.push_back(OpNode);
-      OpNode = std::make_shared<TreePatternNode>(Xform, std::move(Children),
+      OpNode = makeIntrusiveRefCnt<TreePatternNode>(Xform, std::move(Children),
                                                  OpNode->getNumTypes());
     }
 
@@ -3914,7 +3913,7 @@ void CodeGenDAGPatterns::parseInstructionPattern(
     I.error("Input operand $" + InstInputs.begin()->first +
             " occurs in pattern but not in operands list!");
 
-  TreePatternNodePtr ResultPattern = std::make_shared<TreePatternNode>(
+  TreePatternNodePtr ResultPattern = makeIntrusiveRefCnt<TreePatternNode>(
       I.getRecord(), std::move(ResultNodeOperands),
       GetNumNodeResults(I.getRecord(), *this));
   // Copy fully inferred output node types to instruction result pattern.
@@ -4234,7 +4233,7 @@ static TreePatternNodePtr PromoteXForms(TreePatternNodePtr N) {
       N->setTransformFn(nullptr);
       std::vector<TreePatternNodePtr> Children;
       Children.push_back(PromoteXForms(N));
-      return std::make_shared<TreePatternNode>(Xform, std::move(Children),
+      return makeIntrusiveRefCnt<TreePatternNode>(Xform, std::move(Children),
                                                N->getNumTypes());
   }
 
@@ -4522,7 +4521,7 @@ static void CombineChildVariants(
     std::vector<TreePatternNodePtr> NewChildren;
     for (unsigned i = 0, e = ChildVariants.size(); i != e; ++i)
       NewChildren.push_back(ChildVariants[i][Idxs[i]]);
-    TreePatternNodePtr R = std::make_shared<TreePatternNode>(
+    TreePatternNodePtr R = makeIntrusiveRefCnt<TreePatternNode>(
         Orig->getOperator(), std::move(NewChildren), Orig->getNumTypes());
 
     // Copy over properties.
