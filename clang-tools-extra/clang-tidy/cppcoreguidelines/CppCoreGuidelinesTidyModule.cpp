@@ -14,7 +14,6 @@
 #include "../modernize/AvoidCArraysCheck.h"
 #include "../modernize/UseOverrideCheck.h"
 #include "../readability/MagicNumbersCheck.h"
-#include "AvoidCaptureDefaultWhenCapturingThisCheck.h"
 #include "AvoidCapturingLambdaCoroutinesCheck.h"
 #include "AvoidConstOrRefDataMembersCheck.h"
 #include "AvoidDoWhileCheck.h"
@@ -24,6 +23,7 @@
 #include "InitVariablesCheck.h"
 #include "InterfacesGlobalInitCheck.h"
 #include "MacroUsageCheck.h"
+#include "MisleadingCaptureDefaultByValueCheck.h"
 #include "NarrowingConversionsCheck.h"
 #include "NoMallocCheck.h"
 #include "OwningMemoryCheck.h"
@@ -50,8 +50,6 @@ namespace cppcoreguidelines {
 class CppCoreGuidelinesModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<AvoidCaptureDefaultWhenCapturingThisCheck>(
-        "cppcoreguidelines-avoid-capture-default-when-capturing-this");
     CheckFactories.registerCheck<AvoidCapturingLambdaCoroutinesCheck>(
         "cppcoreguidelines-avoid-capturing-lambda-coroutines");
     CheckFactories.registerCheck<modernize::AvoidCArraysCheck>(
@@ -76,6 +74,8 @@ public:
         "cppcoreguidelines-interfaces-global-init");
     CheckFactories.registerCheck<MacroUsageCheck>(
         "cppcoreguidelines-macro-usage");
+    CheckFactories.registerCheck<MisleadingCaptureDefaultByValueCheck>(
+        "cppcoreguidelines-misleading-capture-default-by-value");
     CheckFactories.registerCheck<NarrowingConversionsCheck>(
         "cppcoreguidelines-narrowing-conversions");
     CheckFactories.registerCheck<NoMallocCheck>("cppcoreguidelines-no-malloc");

@@ -112,17 +112,17 @@ New checks
   This check relies heavily on, but is not exclusive to, the functions from
   the *Annex K. "Bounds-checking interfaces"* of C11.
 
-- New :doc:`cppcoreguidelines-avoid-capture-default-when-capturing-this
-  <clang-tidy/checks/cppcoreguidelines/avoid-capture-default-when-capturing-this>` check.
-
-  Warns when lambda specify a capture default and capture ``this``.
-
 - New :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>` check.
 
   Flags C++20 coroutine lambdas with non-empty capture lists that may cause
   use-after-free errors and suggests avoiding captures or ensuring the lambda
   closure object has a guaranteed lifetime.
+
+- New :doc:`cppcoreguidelines-misleading-capture-default-by-value
+  <clang-tidy/checks/cppcoreguidelines/misleading-capture-default-by-value>` check.
+
+  Warns when lambda specify a by-value capture default and capture ``this``.
 
 - New :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
   <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check.
@@ -173,6 +173,10 @@ Changes in existing checks
   unnecessary ``std::string::c_str()`` and ``std::string::data()`` calls in
   arguments to ``std::print``, ``std::format`` or other functions listed in
   the ``StringParameterFunction`` check option.
+
+- Improved :doc:`bugprone-dangling-handle
+  <clang-tidy/checks/bugprone/dangling-handle>` check enhancing detection of
+  handles behind type aliases.
 
 - Deprecated check-local options `HeaderFileExtensions`
   in :doc:`bugprone-dynamic-static-initializers
@@ -245,6 +249,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-equals-default>` check for special member
   functions containing macros or preprocessor directives, and out-of-line special
   member functions in unions.
+
+- Improved :doc:`modernize-use-override
+  <clang-tidy/checks/modernize/use-override>` check with new
+  `IgnoreTemplateInstantiations` option to optionally ignore virtual function
+  overrides that are part of template instantiations.
 
 - Fixed reading `HungarianNotation.CString.*` options in
   :doc:`readability-identifier-naming
