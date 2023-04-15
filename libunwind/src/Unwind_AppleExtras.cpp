@@ -9,10 +9,13 @@
 
 #include "config.h"
 
+#include <TargetConditionals.h>
+
 
 // static linker symbols to prevent wrong two level namespace for _Unwind symbols
 #if defined(__arm__)
-   #define NOT_HERE_BEFORE_5_0(sym)     \
+#  if defined(__USING_SJLJ_EXCEPTIONS__) && TARGET_OS_IOS
+#     define NOT_HERE_BEFORE_5_0(sym)     \
        extern const char sym##_tmp30 __asm("$ld$hide$os3.0$_" #sym ); \
        __attribute__((visibility("default"))) const char sym##_tmp30 = 0; \
        extern const char sym##_tmp31 __asm("$ld$hide$os3.1$_" #sym ); \
@@ -27,22 +30,27 @@
           __attribute__((visibility("default"))) const char sym##_tmp42 = 0; \
        extern const char sym##_tmp43 __asm("$ld$hide$os4.3$_" #sym ); \
           __attribute__((visibility("default"))) const char sym##_tmp43 = 0;
-#elif defined(__aarch64__)
-  #define NOT_HERE_BEFORE_10_6(sym)
-  #define NEVER_HERE(sym)
-#else
-  #define NOT_HERE_BEFORE_10_6(sym) \
+#  else // defined(__USING_SJLJ_EXCEPTIONS__) && TARGET_OS_IOS
+#     define NOT_HERE_BEFORE_5_0(sym)
+#     define NOT_HERE_BEFORE_10_6(sym)
+#     define NEVER_HERE(sym)
+#  endif // defined(__USING_SJLJ_EXCEPTIONS__) && TARGET_OS_IOS
+#elif TARGET_OS_OSX && !defined(__aarch64__)
+#  define NOT_HERE_BEFORE_10_6(sym) \
     extern const char sym##_tmp4 __asm("$ld$hide$os10.4$_" #sym ); \
           __attribute__((visibility("default"))) const char sym##_tmp4 = 0; \
     extern const char sym##_tmp5 __asm("$ld$hide$os10.5$_" #sym ); \
           __attribute__((visibility("default"))) const char sym##_tmp5 = 0;
-  #define NEVER_HERE(sym) \
+#  define NEVER_HERE(sym) \
     extern const char sym##_tmp4 __asm("$ld$hide$os10.4$_" #sym ); \
           __attribute__((visibility("default"))) const char sym##_tmp4 = 0; \
     extern const char sym##_tmp5 __asm("$ld$hide$os10.5$_" #sym ); \
           __attribute__((visibility("default"))) const char sym##_tmp5 = 0; \
     extern const char sym##_tmp6 __asm("$ld$hide$os10.6$_" #sym ); \
           __attribute__((visibility("default"))) const char sym##_tmp6 = 0;
+#else
+#  define NOT_HERE_BEFORE_10_6(sym)
+#  define NEVER_HERE(sym)
 #endif
 
 

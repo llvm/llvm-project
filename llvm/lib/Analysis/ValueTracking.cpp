@@ -2670,9 +2670,9 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     return isKnownNonZero(I->getOperand(0), Depth, Q);
 
   case Instruction::Shl: {
-    // shl nuw can't remove any non-zero bits.
+    // shl nsw/nuw can't remove any non-zero bits.
     const OverflowingBinaryOperator *BO = cast<OverflowingBinaryOperator>(V);
-    if (Q.IIQ.hasNoUnsignedWrap(BO))
+    if (Q.IIQ.hasNoUnsignedWrap(BO) || Q.IIQ.hasNoSignedWrap(BO))
       return isKnownNonZero(I->getOperand(0), Depth, Q);
 
     // shl X, Y != 0 if X is odd.  Note that the value of the shift is undefined
@@ -2681,6 +2681,16 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth, Q);
     if (Known.One[0])
       return true;
+
+    if (!Known.isUnknown()) {
+      KnownBits KnownCnt =
+          computeKnownBits(I->getOperand(1), DemandedElts, Depth, Q);
+
+      if (KnownCnt.getMaxValue().ult(Known.getBitWidth()) &&
+          !Known.One.shl(KnownCnt.getMaxValue()).isZero())
+        return true;
+    }
+
     break;
   }
   case Instruction::LShr:

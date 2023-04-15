@@ -10,11 +10,13 @@
 int main() {
   std::function<int()> f;
   {
-    int x = 0;
+    volatile int x = 0;
     f = [&x]() __attribute__((noinline)) {
       return x; // BOOM
       // CHECK: ERROR: HWAddressSanitizer: tag-mismatch
-      // CHECK: #0 0x{{.*}} in {{.*}}use-after-scope-capture.cpp:[[@LINE-2]]
+      // We cannot assert the line, after the argument promotion pass this crashes
+      // in the BOOM line below instead, when the ref gets turned into a value.
+      // CHECK: 0x{{.*}} in {{.*}}use-after-scope-capture.cpp
       // CHECK: Cause: stack tag-mismatch
     };
   }

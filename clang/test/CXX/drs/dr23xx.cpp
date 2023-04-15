@@ -171,6 +171,8 @@ void g() {
 } //namespace dr2303
 #endif
 
+// dr2331: na
+
 namespace dr2370 { // dr2370: no
 namespace N {
 typedef int type;

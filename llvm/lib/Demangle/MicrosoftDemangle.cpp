@@ -33,7 +33,6 @@ static bool startsWithDigit(StringView S) {
   return !S.empty() && std::isdigit(S.front());
 }
 
-
 struct NodeList {
   Node *N = nullptr;
   NodeList *Next = nullptr;
