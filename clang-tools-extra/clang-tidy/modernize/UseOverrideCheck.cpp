@@ -18,24 +18,35 @@ namespace clang::tidy::modernize {
 UseOverrideCheck::UseOverrideCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoreDestructors(Options.get("IgnoreDestructors", false)),
+      IgnoreTemplateInstantiations(
+          Options.get("IgnoreTemplateInstantiations", false)),
       AllowOverrideAndFinal(Options.get("AllowOverrideAndFinal", false)),
       OverrideSpelling(Options.get("OverrideSpelling", "override")),
       FinalSpelling(Options.get("FinalSpelling", "final")) {}
 
 void UseOverrideCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreDestructors", IgnoreDestructors);
+  Options.store(Opts, "IgnoreTemplateInstantiations",
+                IgnoreTemplateInstantiations);
   Options.store(Opts, "AllowOverrideAndFinal", AllowOverrideAndFinal);
   Options.store(Opts, "OverrideSpelling", OverrideSpelling);
   Options.store(Opts, "FinalSpelling", FinalSpelling);
 }
 
 void UseOverrideCheck::registerMatchers(MatchFinder *Finder) {
-  if (IgnoreDestructors)
-    Finder->addMatcher(
-        cxxMethodDecl(isOverride(), unless(cxxDestructorDecl())).bind("method"),
-        this);
-  else
-    Finder->addMatcher(cxxMethodDecl(isOverride()).bind("method"), this);
+
+  auto IgnoreDestructorMatcher =
+      IgnoreDestructors ? cxxMethodDecl(unless(cxxDestructorDecl()))
+                        : cxxMethodDecl();
+  auto IgnoreTemplateInstantiationsMatcher =
+      IgnoreTemplateInstantiations
+          ? cxxMethodDecl(unless(ast_matchers::isTemplateInstantiation()))
+          : cxxMethodDecl();
+  Finder->addMatcher(cxxMethodDecl(isOverride(),
+                                   IgnoreTemplateInstantiationsMatcher,
+                                   IgnoreDestructorMatcher)
+                         .bind("method"),
+                     this);
 }
 
 // Re-lex the tokens to get precise locations to insert 'override' and remove
