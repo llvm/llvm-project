@@ -8815,7 +8815,8 @@ public:
       return;
 
     AttributeCommonInfo ToI(ToAttrName, ToScopeName, ToAttrRange, ToScopeLoc,
-                            FromAttr->getParsedKind(), FromAttr->getForm());
+                            FromAttr->getParsedKind(), FromAttr->getSyntax(),
+                            FromAttr->getAttributeSpellingListIndex());
     // The "SemanticSpelling" is not needed to be passed to the constructor.
     // That value is recalculated from the SpellingListIndex if needed.
     ToAttr = T::Create(Importer.getToContext(),

@@ -3096,10 +3096,9 @@ Attr *ASTRecordReader::readAttr() {
   unsigned Syntax = Record.readInt();
   unsigned SpellingIndex = Record.readInt();
 
-  AttributeCommonInfo Info(
-      AttrName, ScopeName, AttrRange, ScopeLoc,
-      AttributeCommonInfo::Kind(ParsedKind),
-      {AttributeCommonInfo::Syntax(Syntax), SpellingIndex});
+  AttributeCommonInfo Info(AttrName, ScopeName, AttrRange, ScopeLoc,
+                           AttributeCommonInfo::Kind(ParsedKind),
+                           AttributeCommonInfo::Syntax(Syntax), SpellingIndex);
 
 #include "clang/Serialization/AttrPCHRead.inc"
 

@@ -845,6 +845,7 @@ void Sema::ActOnPragmaUnused(const Token &IdTok, Scope *curScope,
     Diag(PragmaLoc, diag::warn_used_but_marked_unused) << Name;
 
   VD->addAttr(UnusedAttr::CreateImplicit(Context, IdTok.getLocation(),
+                                         AttributeCommonInfo::AS_Pragma,
                                          UnusedAttr::GNU_unused));
 }
 

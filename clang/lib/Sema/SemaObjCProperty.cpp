@@ -2508,7 +2508,8 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
 
     if (const SectionAttr *SA = property->getAttr<SectionAttr>())
       GetterMethod->addAttr(SectionAttr::CreateImplicit(
-          Context, SA->getName(), Loc, SectionAttr::GNU_section));
+          Context, SA->getName(), Loc, AttributeCommonInfo::AS_GNU,
+          SectionAttr::GNU_section));
 
     ProcessAPINotes(GetterMethod);
 
@@ -2582,7 +2583,8 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
       CD->addDecl(SetterMethod);
       if (const SectionAttr *SA = property->getAttr<SectionAttr>())
         SetterMethod->addAttr(SectionAttr::CreateImplicit(
-            Context, SA->getName(), Loc, SectionAttr::GNU_section));
+            Context, SA->getName(), Loc, AttributeCommonInfo::AS_GNU,
+            SectionAttr::GNU_section));
 
       ProcessAPINotes(SetterMethod);
 

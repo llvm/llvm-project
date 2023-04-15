@@ -71,6 +71,7 @@ struct BuiltinTypeDeclBuilder {
 
     // Don't let anyone derive from built-in types.
     Record->addAttr(FinalAttr::CreateImplicit(AST, SourceRange(),
+                                              AttributeCommonInfo::AS_Keyword,
                                               FinalAttr::Keyword_final));
   }
 
@@ -285,7 +286,8 @@ struct BuiltinTypeDeclBuilder {
     MethodDecl->setLexicalDeclContext(Record);
     MethodDecl->setAccess(AccessSpecifier::AS_public);
     MethodDecl->addAttr(AlwaysInlineAttr::CreateImplicit(
-        AST, SourceRange(), AlwaysInlineAttr::CXX11_clang_always_inline));
+        AST, SourceRange(), AttributeCommonInfo::AS_Keyword,
+        AlwaysInlineAttr::CXX11_clang_always_inline));
     Record->addDecl(MethodDecl);
 
     return *this;
