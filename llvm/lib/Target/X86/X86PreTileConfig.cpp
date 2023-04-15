@@ -98,8 +98,8 @@ struct BBInfo {
 };
 
 class X86PreTileConfig : public MachineFunctionPass {
-  MachineRegisterInfo *MRI;
-  const MachineLoopInfo *MLI;
+  MachineRegisterInfo *MRI = nullptr;
+  const MachineLoopInfo *MLI = nullptr;
   SmallSet<MachineInstr *, 8> DefVisited;
   DenseMap<MachineBasicBlock *, BBInfo> BBVisitedInfo;
   DenseMap<MachineBasicBlock *, SmallVector<MIRef, 8>> ShapeBBs;
