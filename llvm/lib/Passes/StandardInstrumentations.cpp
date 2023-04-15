@@ -726,8 +726,7 @@ void PrintIRInstrumentation::printAfterPass(StringRef PassID, Any IR) {
 }
 
 void PrintIRInstrumentation::printAfterPassInvalidated(StringRef PassID) {
-  StringRef PassName = PIC->getPassNameForClassName(PassID);
-  if (!shouldPrintAfterPass(PassName))
+  if (!shouldPrintAfterPass(PassID))
     return;
 
   if (isIgnored(PassID))
