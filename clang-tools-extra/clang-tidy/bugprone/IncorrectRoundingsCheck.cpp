@@ -17,13 +17,17 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+static llvm::APFloat getHalf(const llvm::fltSemantics &Semantics) {
+  return llvm::APFloat(Semantics, 1U) / llvm::APFloat(Semantics, 2U);
+}
+
 namespace {
 AST_MATCHER(FloatingLiteral, floatHalf) {
-  const auto &Literal = Node.getValue();
+  const llvm::APFloat Literal = Node.getValue();
   if ((&Node.getSemantics()) == &llvm::APFloat::IEEEsingle())
-    return Literal.convertToFloat() == 0.5f;
+    return Literal == getHalf(llvm::APFloat::IEEEsingle());
   if ((&Node.getSemantics()) == &llvm::APFloat::IEEEdouble())
-    return Literal.convertToDouble() == 0.5;
+    return Literal == getHalf(llvm::APFloat::IEEEdouble());
   return false;
 }
 } // namespace
