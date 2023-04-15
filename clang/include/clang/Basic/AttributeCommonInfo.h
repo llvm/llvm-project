@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_BASIC_ATTRIBUTECOMMONINFO_H
 #define LLVM_CLANG_BASIC_ATTRIBUTECOMMONINFO_H
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TokenKinds.h"
 
 namespace clang {
 class IdentifierInfo;
@@ -87,6 +88,8 @@ public:
     constexpr Form(Syntax SyntaxUsed,
                    unsigned SpellingIndex = SpellingNotCalculated)
         : SyntaxUsed(SyntaxUsed), SpellingIndex(SpellingIndex) {}
+    constexpr Form(tok::TokenKind)
+        : SyntaxUsed(AS_Keyword), SpellingIndex(SpellingNotCalculated) {}
 
     Syntax getSyntax() const { return Syntax(SyntaxUsed); }
     unsigned getSpellingIndex() const { return SpellingIndex; }

@@ -1370,9 +1370,9 @@ void Parser::ParseMicrosoftInheritanceClassAttributes(ParsedAttributes &attrs) {
                      tok::kw___multiple_inheritance,
                      tok::kw___virtual_inheritance)) {
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
+    auto Kind = Tok.getKind();
     SourceLocation AttrNameLoc = ConsumeToken();
-    attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
-                 ParsedAttr::AS_Keyword);
+    attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0, Kind);
   }
 }
 
