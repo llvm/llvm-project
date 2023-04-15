@@ -3291,6 +3291,79 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
                                 Masked);
 }
 
+// Transform:
+//
+//   1 << (C - ctlz(X >> 1))
+//
+// into
+//
+//   (1 << (C - 1)) >> ctlz(X)
+//
+// The caller must guarantee that X is nonzero.
+//
+// TODO: Relax the requirement that X be nonzero.  We just need to require X to
+// be nonzero or the second argument of CTLZ to be true (that is, returning
+// poison on zero).
+static Instruction *foldBitFloorNonzero(Value *N, Value *X,
+                                        InstCombiner::BuilderTy &Builder) {
+  Type *NType = N->getType();
+  unsigned BitWidth = NType->getScalarSizeInBits();
+
+  // Match C - ctlz(X >> 1), where C is in (0, BitWidth].
+  // TODO: Handle C in [0, BitWidth] (with 0 included in the range), in which
+  // case 1 << C - ctlz(X >> 1) is equivalent to
+  // (1 << ((C - 1) & (BitWidth - 1))) >> ctlz(X).
+  const APInt *C = nullptr;
+  Value *CTLZ;
+  if (!match(N, m_OneUse(m_Shl(m_One(),
+                               m_OneUse(m_Sub(m_APInt(C), m_Value(CTLZ)))))) ||
+      !(C->ugt(0) && C->ule(BitWidth)) ||
+      !match(CTLZ, m_OneUse(m_Intrinsic<Intrinsic::ctlz>(
+                       m_OneUse(m_LShr(m_Specific(X), m_One())), m_Zero()))))
+    return nullptr;
+
+  APInt ShiftedBit = APInt::getOneBitSet(BitWidth, C->getZExtValue() - 1);
+
+  // Build ShiftedBit >> CTLZ.
+  Value *NewCTLZ =
+      Builder.CreateIntrinsic(Intrinsic::ctlz, {CTLZ->getType()},
+                              {X, cast<Instruction>(CTLZ)->getOperand(1)});
+  auto *Shift = cast<Instruction>(
+      Builder.CreateLShr(ConstantInt::get(NType, ShiftedBit), NewCTLZ));
+  Shift->setIsExact();
+  return Shift;
+}
+
+// Transform:
+//
+//   X == 0 ? 0 : (1 << (C1 - ctlz(X >> 1)))
+//
+// into
+//
+//   X == 0 ? 0 : (C2 >> ctlz(X))
+//
+// where C2 is computed by foldBitFloorNonzero based on C1.  The caller is
+// responsible for replacing one of the select operands.
+static Instruction *foldBitFloor(SelectInst &SI,
+                                 InstCombiner::BuilderTy &Builder) {
+  Value *TrueVal = SI.getTrueValue();
+  Value *FalseVal = SI.getFalseValue();
+
+  ICmpInst::Predicate Pred;
+  Value *Cond0;
+  if (!match(SI.getCondition(), m_ICmp(Pred, m_Value(Cond0), m_Zero())) ||
+      !ICmpInst::isEquality(Pred))
+    return nullptr;
+
+  if (Pred == ICmpInst::ICMP_NE)
+    std::swap(TrueVal, FalseVal);
+
+  if (!match(TrueVal, m_Zero()))
+    return nullptr;
+
+  return foldBitFloorNonzero(FalseVal, Cond0, Builder);
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -3720,6 +3793,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   if (Instruction *I = foldBitCeil(SI, Builder))
     return I;
+
+  if (Instruction *I = foldBitFloor(SI, Builder))
+    return replaceOperand(SI, match(SI.getTrueValue(), m_Zero()) ? 2 : 1, I);
 
   return nullptr;
 }

@@ -932,8 +932,7 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
   case X86::EH_RETURN:
   case X86::EH_RETURN64: {
     SmallSet<uint16_t, 8> Uses;
-    for (unsigned I = 0, E = MBBI->getNumOperands(); I != E; ++I) {
-      MachineOperand &MO = MBBI->getOperand(I);
+    for (MachineOperand &MO : MBBI->operands()) {
       if (!MO.isReg() || MO.isDef())
         continue;
       Register Reg = MO.getReg();

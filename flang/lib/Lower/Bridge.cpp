@@ -313,12 +313,7 @@ public:
               [&](Fortran::lower::pft::FunctionLikeUnit &f) { lowerFunc(f); },
               [&](Fortran::lower::pft::ModuleLikeUnit &m) { lowerMod(m); },
               [&](Fortran::lower::pft::BlockDataUnit &b) {},
-              [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {
-                setCurrentPosition(
-                    d.get<Fortran::parser::CompilerDirective>().source);
-                mlir::emitWarning(toLocation(),
-                                  "ignoring all compiler directives");
-              },
+              [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
           },
           u);
     }
@@ -2003,7 +1998,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::CompilerDirective &) {
-    mlir::emitWarning(toLocation(), "ignoring all compiler directives");
+    // TODO
   }
 
   void genFIR(const Fortran::parser::OpenACCConstruct &acc) {

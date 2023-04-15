@@ -209,6 +209,26 @@ Value SerialOp::getDataOperand(unsigned i) {
 }
 
 //===----------------------------------------------------------------------===//
+// KernelsOp
+//===----------------------------------------------------------------------===//
+
+unsigned KernelsOp::getNumDataOperands() {
+  return getCopyOperands().size() + getCopyinOperands().size() +
+         getCopyinReadonlyOperands().size() + getCopyoutOperands().size() +
+         getCopyoutZeroOperands().size() + getCreateOperands().size() +
+         getCreateZeroOperands().size() + getNoCreateOperands().size() +
+         getPresentOperands().size() + getDevicePtrOperands().size() +
+         getAttachOperands().size();
+}
+
+Value KernelsOp::getDataOperand(unsigned i) {
+  unsigned numOptional = getAsync() ? 1 : 0;
+  numOptional += getIfCond() ? 1 : 0;
+  numOptional += getSelfCond() ? 1 : 0;
+  return getOperand(getWaitOperands().size() + numOptional + i);
+}
+
+//===----------------------------------------------------------------------===//
 // LoopOp
 //===----------------------------------------------------------------------===//
 

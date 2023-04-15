@@ -155,6 +155,32 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getchar
+  SRCS
+    getchar.cpp
+  HDRS
+    getchar.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  getchar_unlocked
+  SRCS
+    getc_unlocked.cpp
+  HDRS
+    getc_unlocked.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
   fgets
   SRCS
     fgets.cpp

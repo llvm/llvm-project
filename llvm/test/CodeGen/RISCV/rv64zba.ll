@@ -986,9 +986,9 @@ define i64 @mul81(i64 %a) {
 define i64 @mul4098(i64 %a) {
 ; RV64I-LABEL: mul4098:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, 2
-; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 1
+; RV64I-NEXT:    slli a0, a0, 12
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: mul4098:
@@ -1003,9 +1003,9 @@ define i64 @mul4098(i64 %a) {
 define i64 @mul4100(i64 %a) {
 ; RV64I-LABEL: mul4100:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, 4
-; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 2
+; RV64I-NEXT:    slli a0, a0, 12
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: mul4100:
@@ -1020,9 +1020,9 @@ define i64 @mul4100(i64 %a) {
 define i64 @mul4104(i64 %a) {
 ; RV64I-LABEL: mul4104:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, 8
-; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 3
+; RV64I-NEXT:    slli a0, a0, 12
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: mul4104:
