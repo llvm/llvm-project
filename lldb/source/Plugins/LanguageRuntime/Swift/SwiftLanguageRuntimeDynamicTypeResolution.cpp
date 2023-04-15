@@ -17,6 +17,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
@@ -3123,31 +3124,30 @@ TypeAndOrName SwiftLanguageRuntimeImpl::FixUpDynamicType(
 
 bool SwiftLanguageRuntimeImpl::IsTaggedPointer(lldb::addr_t addr,
                                                CompilerType type) {
-  swift::CanType swift_can_type = GetCanonicalSwiftType(type);
-  if (!swift_can_type)
+  Demangler dem;
+  auto *root = dem.demangleSymbol(type.GetMangledTypeName().GetStringRef());
+  using Kind = Node::Kind;
+  auto *unowned_node = swift_demangle::nodeAtPath(
+      root, {Kind::TypeMangling, Kind::Type, Kind::Unowned});
+  if (!unowned_node)
     return false;
-  switch (swift_can_type->getKind()) {
-  case swift::TypeKind::UnownedStorage: {
-    Target &target = m_process.GetTarget();
-    llvm::Triple triple = target.GetArchitecture().GetTriple();
-    // On Darwin the Swift runtime stores unowned references to
-    // Objective-C objects as a pointer to a struct that has the
-    // actual object pointer at offset zero. The least significant bit
-    // of the reference pointer indicates whether the reference refers
-    // to an Objective-C or Swift object.
-    //
-    // This is a property of the Swift runtime(!). In the future it
-    // may be necessary to check for the version of the Swift runtime
-    // (or indirectly by looking at the version of the remote
-    // operating system) to determine how to interpret references.
-    if (triple.isOSDarwin())
-      // Check whether this is a reference to an Objective-C object.
-      if ((addr & 1) == 1)
-        return true;
-  } break;
-  default:
-    break;
-  }
+
+  Target &target = m_process.GetTarget();
+  llvm::Triple triple = target.GetArchitecture().GetTriple();
+  // On Darwin the Swift runtime stores unowned references to
+  // Objective-C objects as a pointer to a struct that has the
+  // actual object pointer at offset zero. The least significant bit
+  // of the reference pointer indicates whether the reference refers
+  // to an Objective-C or Swift object.
+  //
+  // This is a property of the Swift runtime(!). In the future it
+  // may be necessary to check for the version of the Swift runtime
+  // (or indirectly by looking at the version of the remote
+  // operating system) to determine how to interpret references.
+  if (triple.isOSDarwin())
+    // Check whether this is a reference to an Objective-C object.
+    if ((addr & 1) == 1)
+      return true;
   return false;
 }
 
