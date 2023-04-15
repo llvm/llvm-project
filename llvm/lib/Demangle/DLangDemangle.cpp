@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Demangle/StringView.h"
 #include "llvm/Demangle/Utility.h"
 
 #include <cctype>
@@ -22,6 +23,7 @@
 
 using namespace llvm;
 using llvm::itanium_demangle::OutputBuffer;
+using llvm::itanium_demangle::StringView;
 
 namespace {
 
@@ -528,7 +530,7 @@ const char *Demangler::parseLName(OutputBuffer *Demangled, const char *Mangled,
     break;
   }
 
-  *Demangled << std::string_view(Mangled, Len);
+  *Demangled << StringView(Mangled, Len);
   Mangled += Len;
 
   return Mangled;

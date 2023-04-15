@@ -78,8 +78,8 @@ struct DumpVisitor {
   }
 
   void printStr(const char *S) { fprintf(stderr, "%s", S); }
-  void print(std::string_view SV) {
-    fprintf(stderr, "\"%.*s\"", (int)SV.size(), &*SV.begin());
+  void print(StringView SV) {
+    fprintf(stderr, "\"%.*s\"", (int)SV.size(), SV.begin());
   }
   void print(const Node *N) {
     if (N)
