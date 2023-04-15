@@ -34,8 +34,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
@@ -47,30 +45,6 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "demanded-bits"
-
-char DemandedBitsWrapperPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(DemandedBitsWrapperPass, "demanded-bits",
-                      "Demanded bits analysis", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(DemandedBitsWrapperPass, "demanded-bits",
-                    "Demanded bits analysis", false, false)
-
-DemandedBitsWrapperPass::DemandedBitsWrapperPass() : FunctionPass(ID) {
-  initializeDemandedBitsWrapperPassPass(*PassRegistry::getPassRegistry());
-}
-
-void DemandedBitsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesCFG();
-  AU.addRequired<AssumptionCacheTracker>();
-  AU.addRequired<DominatorTreeWrapperPass>();
-  AU.setPreservesAll();
-}
-
-void DemandedBitsWrapperPass::print(raw_ostream &OS, const Module *M) const {
-  DB->print(OS);
-}
 
 static bool isAlwaysLive(Instruction *I) {
   return I->isTerminator() || isa<DbgInfoIntrinsic>(I) || I->isEHPad() ||
@@ -308,17 +282,6 @@ void DemandedBits::determineLiveOperandBits(
       AB = AOut;
     break;
   }
-}
-
-bool DemandedBitsWrapperPass::runOnFunction(Function &F) {
-  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  DB.emplace(F, AC, DT);
-  return false;
-}
-
-void DemandedBitsWrapperPass::releaseMemory() {
-  DB.reset();
 }
 
 void DemandedBits::performAnalysis() {
@@ -603,10 +566,6 @@ APInt DemandedBits::determineLiveOperandBitsSub(unsigned OperandNo,
   NRHS.One = RHS.Zero;
   return determineLiveOperandBitsAddCarry(OperandNo, AOut, LHS, NRHS, false,
                                           true);
-}
-
-FunctionPass *llvm::createDemandedBitsWrapperPass() {
-  return new DemandedBitsWrapperPass();
 }
 
 AnalysisKey DemandedBitsAnalysis::Key;

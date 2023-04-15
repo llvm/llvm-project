@@ -25,7 +25,8 @@ handleFrom(const ast_matchers::internal::Matcher<RecordDecl> &IsAHandle,
   return expr(
       anyOf(cxxConstructExpr(hasDeclaration(cxxMethodDecl(ofClass(IsAHandle))),
                              hasArgument(0, Arg)),
-            cxxMemberCallExpr(hasType(cxxRecordDecl(IsAHandle)),
+            cxxMemberCallExpr(hasType(hasUnqualifiedDesugaredType(recordType(
+                                  hasDeclaration(cxxRecordDecl(IsAHandle))))),
                               callee(memberExpr(member(cxxConversionDecl()))),
                               on(Arg))));
 }

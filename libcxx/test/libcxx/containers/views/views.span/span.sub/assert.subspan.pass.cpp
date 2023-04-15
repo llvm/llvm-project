@@ -38,7 +38,7 @@ int main(int, char**) {
         TEST_LIBCPP_ASSERT_FAILURE(s.subspan(4), "span<T>::subspan(offset, count): offset out of range");
         TEST_LIBCPP_ASSERT_FAILURE(s.subspan<4>(), "span<T>::subspan<Offset, Count>(): Offset out of range");
 
-        TEST_LIBCPP_ASSERT_FAILURE(s.subspan(0, 4), "span<T>::subspan(offset, count): count out of range");
+        TEST_LIBCPP_ASSERT_FAILURE(s.subspan(0, 4), "span<T>::subspan(offset, count): offset + count out of range");
         TEST_LIBCPP_ASSERT_FAILURE((s.subspan<0, 4>()), "span<T>::subspan<Offset, Count>(): Offset + Count out of range");
 
         TEST_LIBCPP_ASSERT_FAILURE(s.subspan(1, 3), "span<T>::subspan(offset, count): offset + count out of range");
@@ -50,7 +50,7 @@ int main(int, char**) {
         TEST_LIBCPP_ASSERT_FAILURE(s.subspan(4), "span<T, N>::subspan(offset, count): offset out of range");
         // s.subspan<4>() caught at compile-time (tested in libcxx/test/std/containers/views/views.span/span.sub/subspan.verify.cpp)
 
-        TEST_LIBCPP_ASSERT_FAILURE(s.subspan(0, 4), "span<T, N>::subspan(offset, count): count out of range");
+        TEST_LIBCPP_ASSERT_FAILURE(s.subspan(0, 4), "span<T, N>::subspan(offset, count): offset + count out of range");
         // s.subspan<0, 4>() caught at compile-time (tested in libcxx/test/std/containers/views/views.span/span.sub/subspan.verify.cpp)
 
         TEST_LIBCPP_ASSERT_FAILURE(s.subspan(1, 3), "span<T, N>::subspan(offset, count): offset + count out of range");

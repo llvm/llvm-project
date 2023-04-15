@@ -47656,6 +47656,17 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
     }
   }
 
+  // MOVMSKPS(V) !=/== 0 -> TESTPS(V,V)
+  // MOVMSKPD(V) !=/== 0 -> TESTPD(V,V)
+  // iff every element is referenced.
+  if (NumElts <= CmpBits && IsAnyOf && Subtarget.hasAVX() && IsOneUse &&
+      (NumEltBits == 32 || NumEltBits == 64)) {
+    MVT FloatSVT = MVT::getFloatingPointVT(NumEltBits);
+    MVT FloatVT = MVT::getVectorVT(FloatSVT, NumElts);
+    SDValue V = DAG.getBitcast(FloatVT, Vec);
+    return DAG.getNode(X86ISD::TESTP, SDLoc(EFLAGS), MVT::i32, V, V);
+  }
+
   return SDValue();
 }
 

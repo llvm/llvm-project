@@ -303,6 +303,10 @@ Bug Fixes in This Version
 - Fix a failed assertion due to an invalid source location when trying to form
   a coverage report for an unresolved constructor expression.
   (`#62105 <https://github.com/llvm/llvm-project/issues/62105>`_)
+- Fix defaulted equality operator so that it does not attempt to compare unnamed
+  bit-fields. This fixes:
+  (`#61355 <https://github.com/llvm/llvm-project/issues/61335>`_) and
+  (`#61417 <https://github.com/llvm/llvm-project/issues/61417>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

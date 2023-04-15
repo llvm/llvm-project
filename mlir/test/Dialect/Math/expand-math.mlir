@@ -207,3 +207,16 @@ func.func @roundf_func(%a: f64) -> f64 {
   %ret = math.round %a : f64
   return %ret : f64
 }
+
+// -----
+
+// CHECK-LABEL:   func @powf_func
+// CHECK-SAME:    ([[ARG0:%.+]]: f64, [[ARG1:%.+]]: f64)
+func.func @powf_func(%a: f64, %b: f64) ->f64 {
+  // CHECK-DAG: [[LOG:%.+]] = math.log [[ARG0]]
+  // CHECK-DAG: [[MULT:%.+]] = arith.mulf [[LOG]], [[ARG1]]
+  // CHECK-DAG: [[EXPR:%.+]] = math.exp [[MULT]]
+  // CHECK: return [[EXPR]]
+  %ret = math.powf %a, %b : f64
+  return %ret : f64
+}

@@ -531,9 +531,9 @@ struct AbiTagAttr : Node {
   Node *Base;
   StringView Tag;
 
-  AbiTagAttr(Node* Base_, StringView Tag_)
-      : Node(KAbiTagAttr, Base_->RHSComponentCache,
-             Base_->ArrayCache, Base_->FunctionCache),
+  AbiTagAttr(Node *Base_, StringView Tag_)
+      : Node(KAbiTagAttr, Base_->RHSComponentCache, Base_->ArrayCache,
+             Base_->FunctionCache),
         Base(Base_), Tag(Tag_) {}
 
   template<typename Fn> void match(Fn F) const { F(Base, Tag); }
@@ -1579,11 +1579,11 @@ public:
   template<typename Fn> void match(Fn F) const { F(SSK); }
 
   StringView getBaseName() const override {
-    auto SV = ExpandedSpecialSubstitution::getBaseName ();
+    auto SV = ExpandedSpecialSubstitution::getBaseName();
     if (isInstantiation()) {
       // The instantiations are typedefs that drop the "basic_" prefix.
       assert(SV.startsWith("basic_"));
-      SV = SV.dropFront(sizeof("basic_") - 1);
+      SV.remove_prefix(sizeof("basic_") - 1);
     }
     return SV;
   }
@@ -1838,7 +1838,7 @@ public:
       OB += "0";
     } else if (Offset[0] == 'n') {
       OB += "-";
-      OB += Offset.dropFront();
+      OB += Offset.substr(1);
     } else {
       OB += Offset;
     }
@@ -2264,7 +2264,7 @@ public:
     OB.printClose();
 
     if (Integer[0] == 'n')
-      OB << "-" << Integer.dropFront(1);
+      OB << '-' << Integer.substr(1);
     else
       OB << Integer;
   }
@@ -2287,10 +2287,9 @@ public:
       OB.printClose();
     }
 
-    if (Value[0] == 'n') {
-      OB += '-';
-      OB += Value.dropFront(1);
-    } else
+    if (Value[0] == 'n')
+      OB << '-' << Value.substr(1);
+    else
       OB += Value;
 
     if (Type.size() <= 3)
@@ -2350,7 +2349,7 @@ public:
 #endif
       char num[FloatData<Float>::max_demangled_size] = {0};
       int n = snprintf(num, sizeof(num), FloatData<Float>::spec, value);
-      OB += StringView(num, num + n);
+      OB += StringView(num, n);
     }
   }
 };
@@ -2478,7 +2477,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   }
 
   bool consumeIf(StringView S) {
-    if (StringView(First, Last).startsWith(S)) {
+    if (StringView(First, Last - First).startsWith(S)) {
       First += S.size();
       return true;
     }
@@ -2632,8 +2631,9 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
       if (Kind < Unnameable) {
         assert(Res.startsWith("operator") &&
                "operator name does not start with 'operator'");
-        Res = Res.dropFront(sizeof("operator") - 1);
-        Res.consumeFront(' ');
+        Res.remove_prefix(sizeof("operator") - 1);
+        if (Res.startsWith(' '))
+          Res.remove_prefix(1);
       }
       return Res;
     }
@@ -2934,7 +2934,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseSourceName(NameState *) {
     return nullptr;
   if (numLeft() < Length || Length == 0)
     return nullptr;
-  StringView Name(First, First + Length);
+  StringView Name(First, Length);
   First += Length;
   if (Name.startsWith("_GLOBAL__N"))
     return make<NameType>("(anonymous namespace)");
@@ -3471,7 +3471,7 @@ AbstractManglingParser<Alloc, Derived>::parseNumber(bool AllowNegative) {
     return StringView();
   while (numLeft() != 0 && std::isdigit(*First))
     ++First;
-  return StringView(Tmp, First);
+  return StringView(Tmp, First - Tmp);
 }
 
 // <positive length number> ::= [0-9]*
@@ -3492,7 +3492,7 @@ StringView AbstractManglingParser<Alloc, Derived>::parseBareSourceName() {
   size_t Int = 0;
   if (parsePositiveInteger(&Int) || numLeft() < Int)
     return StringView();
-  StringView R(First, First + Int);
+  StringView R(First, Int);
   First += Int;
   return R;
 }
@@ -3706,7 +3706,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseQualifiedType() {
 
     // extension            ::= U <objc-name> <objc-type>  # objc-type<identifier>
     if (Qual.startsWith("objcproto")) {
-      StringView ProtoSourceName = Qual.dropFront(std::strlen("objcproto"));
+      StringView ProtoSourceName = Qual.substr(std::strlen("objcproto"));
       StringView Proto;
       {
         ScopedOverride<const char *> SaveFirst(First, ProtoSourceName.begin()),
@@ -5144,7 +5144,7 @@ Node *AbstractManglingParser<Alloc, Derived>::parseFloatingLiteral() {
   const size_t N = FloatData<Float>::mangled_size;
   if (numLeft() <= N)
     return nullptr;
-  StringView Data(First, First + N);
+  StringView Data(First, N);
   for (char C : Data)
     if (!std::isxdigit(C))
       return nullptr;
@@ -5464,7 +5464,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parse() {
     if (Encoding == nullptr)
       return nullptr;
     if (look() == '.') {
-      Encoding = make<DotSuffix>(Encoding, StringView(First, Last));
+      Encoding = make<DotSuffix>(Encoding, StringView(First, Last - First));
       First = Last;
     }
     if (numLeft() != 0)

@@ -19,16 +19,19 @@ bool MemMapDefault::mapImpl(uptr Addr, uptr Size, const char *Name,
   if (MappedAddr == nullptr)
     return false;
   Base = reinterpret_cast<uptr>(MappedAddr);
+  MappedBase = Base;
   Capacity = Size;
   return true;
 }
 
 void MemMapDefault::unmapImpl(uptr Addr, uptr Size) {
   if (Size == Capacity) {
-    Base = Capacity = 0;
+    Base = MappedBase = Capacity = 0;
   } else {
-    if (Base == Addr)
+    if (Base == Addr) {
       Base = Addr + Size;
+      MappedBase = MappedBase == 0 ? Base : Max(MappedBase, Base);
+    }
     Capacity -= Size;
   }
 
@@ -37,13 +40,17 @@ void MemMapDefault::unmapImpl(uptr Addr, uptr Size) {
 
 bool MemMapDefault::remapImpl(uptr Addr, uptr Size, const char *Name,
                               uptr Flags) {
-  void *RemappedAddr =
+  void *RemappedPtr =
       ::scudo::map(reinterpret_cast<void *>(Addr), Size, Name, Flags, &Data);
-  return reinterpret_cast<uptr>(RemappedAddr) == Addr;
+  const uptr RemappedAddr = reinterpret_cast<uptr>(RemappedPtr);
+  MappedBase = MappedBase == 0 ? RemappedAddr : Min(MappedBase, RemappedAddr);
+  return RemappedAddr == Addr;
 }
 
 void MemMapDefault::releaseAndZeroPagesToOSImpl(uptr From, uptr Size) {
-  return ::scudo::releasePagesToOS(Base, From - Base, Size, &Data);
+  DCHECK_NE(MappedBase, 0U);
+  DCHECK_GE(From, MappedBase);
+  return ::scudo::releasePagesToOS(MappedBase, From - MappedBase, Size, &Data);
 }
 
 void MemMapDefault::setMemoryPermissionImpl(uptr Addr, uptr Size, uptr Flags) {

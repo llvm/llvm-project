@@ -17,6 +17,7 @@
 #include "CodeGenIntrinsics.h"
 #include "CodeGenTarget.h"
 #include "SDNodeProperties.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -42,7 +43,7 @@ class TreePatternNode;
 class CodeGenDAGPatterns;
 
 /// Shared pointer for TreePatternNode.
-using TreePatternNodePtr = std::shared_ptr<TreePatternNode>;
+using TreePatternNodePtr = IntrusiveRefCntPtr<TreePatternNode>;
 
 /// This represents a set of MVTs. Since the underlying type for the MVT
 /// is uint8_t, there are at most 256 values. To reduce the number of memory
@@ -623,7 +624,7 @@ struct TreePredicateCall {
   }
 };
 
-class TreePatternNode {
+class TreePatternNode : public RefCountedBase<TreePatternNode> {
   /// The type of each node result.  Before and during type inference, each
   /// result may be a set of possible types.  After (successful) type inference,
   /// each is a single concrete type.
@@ -819,9 +820,8 @@ public:   // Higher level manipulation routines.
   /// InlinePatternFragments - If \p T pattern refers to any pattern
   /// fragments, return the set of inlined versions (this can be more than
   /// one if a PatFrags record has multiple alternatives).
-  static void
-  InlinePatternFragments(const TreePatternNodePtr &T, TreePattern &TP,
-                         std::vector<TreePatternNodePtr> &OutAlternatives);
+  void InlinePatternFragments(TreePattern &TP,
+                              std::vector<TreePatternNodePtr> &OutAlternatives);
 
   /// ApplyTypeConstraints - Apply all of the type constraints relevant to
   /// this node and its children in the tree.  This returns true if it makes a
@@ -951,7 +951,7 @@ public:
     std::vector<TreePatternNodePtr> Copy;
     Trees.swap(Copy);
     for (const TreePatternNodePtr &C : Copy)
-      TreePatternNode::InlinePatternFragments(C, *this, Trees);
+      C->InlinePatternFragments(*this, Trees);
   }
 
   /// InferAllTypes - Infer/propagate as many types throughout the expression

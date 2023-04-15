@@ -100,9 +100,68 @@ func.func @roundf() {
   return
 }
 
+// -------------------------------------------------------------------------- //
+// pow.
+// -------------------------------------------------------------------------- //
+func.func @func_powff64(%a : f64, %b : f64) {
+  %r = math.powf %a, %b : f64
+  vector.print %r : f64
+  return
+}
+
+func.func @powf() {
+  // CHECK: 16
+  %a   = arith.constant 4.0 : f64
+  %a_p = arith.constant 2.0 : f64
+  call @func_powff64(%a, %a_p) : (f64, f64) -> ()
+
+  // CHECK: nan
+  %b   = arith.constant -3.0 : f64
+  %b_p = arith.constant 3.0 : f64
+  call @func_powff64(%b, %b_p) : (f64, f64) -> ()
+
+  // CHECK: 2.343
+  %c   = arith.constant 2.343 : f64
+  %c_p = arith.constant 1.000 : f64
+  call @func_powff64(%c, %c_p) : (f64, f64) -> ()
+
+  // CHECK: 0.176171
+  %d   = arith.constant 4.25 : f64
+  %d_p = arith.constant -1.2  : f64
+  call @func_powff64(%d, %d_p) : (f64, f64) -> ()
+
+  // CHECK: 1
+  %e   = arith.constant 4.385 : f64
+  %e_p = arith.constant 0.00 : f64
+  call @func_powff64(%e, %e_p) : (f64, f64) -> ()
+
+  // CHECK: 6.62637
+  %f    = arith.constant 4.835 : f64
+  %f_p  = arith.constant 1.2 : f64
+  call @func_powff64(%f, %f_p) : (f64, f64) -> ()
+
+  // CHECK: nan
+  %g    = arith.constant 0xff80000000000000 : f64
+  call @func_powff64(%g, %g) : (f64, f64) -> ()
+
+  // CHECK: nan
+  %h = arith.constant 0x7fffffffffffffff : f64
+  call @func_powff64(%h, %h) : (f64, f64) -> ()
+
+  // CHECK: nan
+  %i = arith.constant 1.0 : f64
+  call @func_powff64(%i, %h) : (f64, f64) -> ()
+
+  // CHECK: inf
+  %j   = arith.constant 29385.0 : f64
+  %j_p = arith.constant 23598.0 : f64
+  call @func_powff64(%j, %j_p) : (f64, f64) -> () 
+  return
+}
 
 func.func @main() {
   call @exp2f() : () -> ()
   call @roundf() : () -> ()
+  call @powf() : () -> ()
   return
 }

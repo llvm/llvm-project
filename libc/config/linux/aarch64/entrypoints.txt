@@ -396,6 +396,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fwrite
     libc.src.stdio.fwrite_unlocked
     libc.src.stdio.fprintf
+    libc.src.stdio.getchar
+    libc.src.stdio.getchar_unlocked
     libc.src.stdio.printf
     libc.src.stdio.putc
     libc.src.stdio.putchar

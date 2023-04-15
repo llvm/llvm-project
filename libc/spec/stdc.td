@@ -581,6 +581,11 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<FILEPtr>]
           >,
           FunctionSpec<
+              "getchar",
+              RetValSpec<IntType>,
+              [ArgSpec<VoidType>]
+          >,
+          FunctionSpec<
               "putc",
               RetValSpec<IntType>,
               [ArgSpec<IntType>,

@@ -104,57 +104,6 @@ class ELFLinkGraphBuilder_x86_64 : public ELFLinkGraphBuilder<object::ELF64LE> {
 private:
   using ELFT = object::ELF64LE;
 
-  enum ELFX86RelocationKind : Edge::Kind {
-    Branch32 = Edge::FirstRelocation,
-    Pointer32,
-    Pointer32Signed,
-    Pointer64,
-    PCRel32,
-    PCRel32GOTLoad,
-    PCRel32GOTLoadRelaxable,
-    PCRel32REXGOTLoadRelaxable,
-    PCRel32TLV,
-    PCRel64GOT,
-    GOTOFF64,
-    GOT64,
-    Delta64,
-  };
-
-  static Expected<ELFX86RelocationKind> getRelocationKind(const uint32_t Type) {
-    switch (Type) {
-    case ELF::R_X86_64_32:
-      return ELFX86RelocationKind::Pointer32;
-    case ELF::R_X86_64_32S:
-      return ELFX86RelocationKind::Pointer32Signed;
-    case ELF::R_X86_64_PC32:
-      return ELFX86RelocationKind::PCRel32;
-    case ELF::R_X86_64_PC64:
-    case ELF::R_X86_64_GOTPC64:
-      return ELFX86RelocationKind::Delta64;
-    case ELF::R_X86_64_64:
-      return ELFX86RelocationKind::Pointer64;
-    case ELF::R_X86_64_GOTPCREL:
-      return ELFX86RelocationKind::PCRel32GOTLoad;
-    case ELF::R_X86_64_GOTPCRELX:
-      return ELFX86RelocationKind::PCRel32GOTLoadRelaxable;
-    case ELF::R_X86_64_REX_GOTPCRELX:
-      return ELFX86RelocationKind::PCRel32REXGOTLoadRelaxable;
-    case ELF::R_X86_64_GOTPCREL64:
-      return ELFX86RelocationKind::PCRel64GOT;
-    case ELF::R_X86_64_GOT64:
-      return ELFX86RelocationKind::GOT64;
-    case ELF::R_X86_64_GOTOFF64:
-      return ELFX86RelocationKind::GOTOFF64;
-    case ELF::R_X86_64_PLT32:
-      return ELFX86RelocationKind::Branch32;
-    case ELF::R_X86_64_TLSGD:
-      return ELFX86RelocationKind::PCRel32TLV;
-    }
-    return make_error<JITLinkError>(
-        "Unsupported x86-64 relocation type " + formatv("{0:d}: ", Type) +
-        object::getELFRelocationTypeName(ELF::EM_X86_64, Type));
-  }
-
   Error addRelocations() override {
     LLVM_DEBUG(dbgs() << "Processing relocations:\n");
 
@@ -195,65 +144,60 @@ private:
           inconvertibleErrorCode());
 
     // Validate the relocation kind.
-    auto ELFRelocKind = getRelocationKind(Rel.getType(false));
-    if (!ELFRelocKind)
-      return ELFRelocKind.takeError();
-
     int64_t Addend = Rel.r_addend;
     Edge::Kind Kind = Edge::Invalid;
-    switch (*ELFRelocKind) {
-    case PCRel32:
+
+    auto ELFReloc = Rel.getType(false);
+    switch (ELFReloc) {
+    case ELF::R_X86_64_PC32:
       Kind = x86_64::Delta32;
       break;
-    case Delta64:
+    case ELF::R_X86_64_PC64:
+    case ELF::R_X86_64_GOTPC64:
       Kind = x86_64::Delta64;
       break;
-    case Pointer32:
+    case ELF::R_X86_64_32:
       Kind = x86_64::Pointer32;
       break;
-    case Pointer32Signed:
+    case ELF::R_X86_64_32S:
       Kind = x86_64::Pointer32Signed;
       break;
-    case Pointer64:
+    case ELF::R_X86_64_64:
       Kind = x86_64::Pointer64;
       break;
-    case PCRel32GOTLoad: {
+    case ELF::R_X86_64_GOTPCREL:
       Kind = x86_64::RequestGOTAndTransformToDelta32;
       break;
-    }
-    case PCRel32REXGOTLoadRelaxable: {
+    case ELF::R_X86_64_REX_GOTPCRELX:
       Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable;
       Addend = 0;
       break;
-    }
-    case PCRel32TLV: {
+    case ELF::R_X86_64_TLSGD:
       Kind = x86_64::RequestTLSDescInGOTAndTransformToDelta32;
       break;
-    }
-    case PCRel32GOTLoadRelaxable: {
+    case ELF::R_X86_64_GOTPCRELX:
       Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable;
       Addend = 0;
       break;
-    }
-    case PCRel64GOT: {
+    case ELF::R_X86_64_GOTPCREL64:
       Kind = x86_64::RequestGOTAndTransformToDelta64;
       break;
-    }
-    case GOT64: {
+    case ELF::R_X86_64_GOT64:
       Kind = x86_64::RequestGOTAndTransformToDelta64FromGOT;
       break;
-    }
-    case GOTOFF64: {
+    case ELF::R_X86_64_GOTOFF64:
       Kind = x86_64::Delta64FromGOT;
       break;
-    }
-    case Branch32: {
+    case ELF::R_X86_64_PLT32:
       Kind = x86_64::BranchPCRel32;
       // BranchPCRel32 implicitly handles the '-4' PC adjustment, so we have to
       // adjust the addend by '+4' to compensate.
       Addend += 4;
       break;
-    }
+    default:
+      return make_error<JITLinkError>(
+          "In " + G->getName() + ": Unsupported x86-64 relocation type " +
+          object::getELFRelocationTypeName(ELF::EM_X86_64, ELFReloc));
     }
 
     auto FixupAddress = orc::ExecutorAddr(FixupSection.sh_addr) + Rel.r_offset;

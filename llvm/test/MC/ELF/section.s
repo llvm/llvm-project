@@ -268,6 +268,14 @@ bar:
 // CHECK-NEXT:       SHF_WRITE
 // CHECK-NEXT:     ]
 
+.section .large,"l"
+// CHECK:        Section {
+// CHECK:          Name: .large
+// CHECK-NEXT:     Type: SHT_PROGBITS
+// CHECK-NEXT:     Flags [
+// CHECK-NEXT:       SHF_X86_64_LARGE
+// CHECK-NEXT:     ]
+
 // Test SHT_LLVM_ODRTAB
 
 .section .odrtab,"e",@llvm_odrtab

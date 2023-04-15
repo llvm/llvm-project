@@ -16,9 +16,10 @@ For general information on debugging OpenMP target offloading applications, see
 LLVM/OpenMP Host Runtime (``libomp``)
 -------------------------------------
 
-An `early (2015) design document <https://openmp.llvm.org/Reference.pdf>`_ for
-the LLVM/OpenMP host runtime, aka.  `libomp.so`, is available as a `pdf
-<https://openmp.llvm.org/Reference.pdf>`_.
+An `early (2015) design document
+<https://raw.githubusercontent.com/llvm/llvm-project/main/openmp/runtime/doc/Reference.pdf>`_
+for the LLVM/OpenMP host runtime, aka.  `libomp.so`, is available as a `pdf
+<https://raw.githubusercontent.com/llvm/llvm-project/main/openmp/runtime/doc/Reference.pdf>`_.
 
 .. _libomp_environment_vars:
 

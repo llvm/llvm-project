@@ -1028,21 +1028,29 @@ Instruction *InstCombinerImpl::foldBinopOfSextBoolToSelect(BinaryOperator &BO) {
   return SelectInst::Create(X, TVal, FVal);
 }
 
-static Constant *constantFoldOperationIntoSelectOperand(
-    Instruction &I, SelectInst *SI, Value *SO) {
-  auto *ConstSO = dyn_cast<Constant>(SO);
-  if (!ConstSO)
-    return nullptr;
-
+static Constant *constantFoldOperationIntoSelectOperand(Instruction &I,
+                                                        SelectInst *SI,
+                                                        bool IsTrueArm) {
   SmallVector<Constant *> ConstOps;
   for (Value *Op : I.operands()) {
-    if (Op == SI)
-      ConstOps.push_back(ConstSO);
-    else if (auto *C = dyn_cast<Constant>(Op))
-      ConstOps.push_back(C);
-    else
+    CmpInst::Predicate Pred;
+    Constant *C = nullptr;
+    if (Op == SI) {
+      C = dyn_cast<Constant>(IsTrueArm ? SI->getTrueValue()
+                                       : SI->getFalseValue());
+    } else if (match(SI->getCondition(),
+                     m_ICmp(Pred, m_Specific(Op), m_Constant(C))) &&
+               Pred == (IsTrueArm ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE)) {
+      // Pass
+    } else {
+      C = dyn_cast<Constant>(Op);
+    }
+    if (C == nullptr)
       return nullptr;
+
+    ConstOps.push_back(C);
   }
+
   return ConstantFoldInstOperands(&I, ConstOps, I.getModule()->getDataLayout());
 }
 
@@ -1085,8 +1093,8 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   }
 
   // Make sure that one of the select arms constant folds successfully.
-  Value *NewTV = constantFoldOperationIntoSelectOperand(Op, SI, TV);
-  Value *NewFV = constantFoldOperationIntoSelectOperand(Op, SI, FV);
+  Value *NewTV = constantFoldOperationIntoSelectOperand(Op, SI, /*IsTrueArm*/ true);
+  Value *NewFV = constantFoldOperationIntoSelectOperand(Op, SI, /*IsTrueArm*/ false);
   if (!NewTV && !NewFV)
     return nullptr;
 

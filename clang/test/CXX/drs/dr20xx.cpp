@@ -59,6 +59,34 @@ namespace dr2026 { // dr2026: 11
   }
 }
 
+namespace dr2061 { // dr2061: yes
+#if __cplusplus >= 201103L
+  namespace A {
+    inline namespace b {
+      namespace C {
+        // 'f' is the example from the DR.  'S' is an example where if we didn't
+        // properly handle the two being the same, we would get an incomplete
+        // type error during attempted instantiation.
+        template<typename T> void f();
+        template<typename T> struct S;
+      }
+    }
+  }
+
+  namespace A {
+    namespace C {
+      template<> void f<int>() { }
+      template<> struct S<int> { };
+    }
+  }
+
+  void use() {
+    A::C::f<int>();
+    A::C::S<int> s;
+  }
+#endif // C++11
+}
+
 namespace dr2076 { // dr2076: 13
 #if __cplusplus >= 201103L
   namespace std_example {
@@ -319,32 +347,4 @@ namespace dr2094 { // dr2094: 5
 
   static_assert(__is_trivially_assignable(A, const A&), "");
   static_assert(__is_trivially_assignable(B, const B&), "");
-}
-
-namespace dr2061 { // dr2061: yes
-#if __cplusplus >= 201103L
-  namespace A {
-    inline namespace b {
-      namespace C {
-        // 'f' is the example from the DR.  'S' is an example where if we didn't
-        // properly handle the two being the same, we would get an incomplete
-        // type error during attempted instantiation.
-        template<typename T> void f();
-        template<typename T> struct S;
-      }
-    }
-  }
-
-  namespace A {
-    namespace C {
-      template<> void f<int>() { }
-      template<> struct S<int> { };
-    }
-  }
-
-  void use() {
-    A::C::f<int>();
-    A::C::S<int> s;
-  }
-#endif // C++11
 }
