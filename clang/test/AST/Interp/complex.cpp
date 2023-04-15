@@ -49,8 +49,21 @@ static_assert(__real(I3) == 15, "");
 static_assert(__imag(I3) == 15, "");
 #endif
 
-
-
-
 /// FIXME: This should work in the new interpreter as well.
 // constexpr _Complex _BitInt(8) A = 0;// = {4};
+
+namespace CastToBool {
+  constexpr _Complex int F = {0, 1};
+  static_assert(F, "");
+  constexpr _Complex int F2 = {1, 0};
+  static_assert(F2, "");
+  constexpr _Complex int F3 = {0, 0};
+  static_assert(!F3, "");
+
+  constexpr _Complex unsigned char F4 = {0, 1};
+  static_assert(F4, "");
+  constexpr _Complex unsigned char F5 = {1, 0};
+  static_assert(F5, "");
+  constexpr _Complex unsigned char F6 = {0, 0};
+  static_assert(!F6, "");
+}
