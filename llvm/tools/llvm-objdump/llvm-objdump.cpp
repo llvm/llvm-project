@@ -1412,8 +1412,31 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   SourcePrinter &SP, bool InlineRelocs) {
   DisassemblerTarget *DT = &PrimaryTarget;
   bool PrimaryIsThumb = false;
-  if (isArmElf(Obj))
-    PrimaryIsThumb = PrimaryTarget.SubtargetInfo->checkFeatures("+thumb-mode");
+  SmallVector<std::pair<uint64_t, uint64_t>, 0> CHPECodeMap;
+
+  if (SecondaryTarget) {
+    if (isArmElf(Obj)) {
+      PrimaryIsThumb =
+          PrimaryTarget.SubtargetInfo->checkFeatures("+thumb-mode");
+    } else if (const auto *COFFObj = dyn_cast<COFFObjectFile>(&Obj)) {
+      const chpe_metadata *CHPEMetadata = COFFObj->getCHPEMetadata();
+      if (CHPEMetadata && CHPEMetadata->CodeMapCount) {
+        uintptr_t CodeMapInt;
+        cantFail(COFFObj->getRvaPtr(CHPEMetadata->CodeMap, CodeMapInt));
+        auto CodeMap = reinterpret_cast<const chpe_range_entry *>(CodeMapInt);
+
+        for (uint32_t i = 0; i < CHPEMetadata->CodeMapCount; ++i) {
+          if (CodeMap[i].getType() == chpe_range_type::Amd64 &&
+              CodeMap[i].Length) {
+            // Store x86_64 CHPE code ranges.
+            uint64_t Start = CodeMap[i].getStart() + COFFObj->getImageBase();
+            CHPECodeMap.emplace_back(Start, Start + CodeMap[i].Length);
+          }
+        }
+        llvm::sort(CHPECodeMap);
+      }
+    }
+  }
 
   std::map<SectionRef, std::vector<RelocationRef>> RelocMap;
   if (InlineRelocs)
@@ -1902,6 +1925,24 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
               DT = PrimaryIsThumb ? &PrimaryTarget : &*SecondaryTarget;
             }
           }
+        } else if (!CHPECodeMap.empty()) {
+          uint64_t Address = SectionAddr + Index;
+          auto It = partition_point(
+              CHPECodeMap,
+              [Address](const std::pair<uint64_t, uint64_t> &Entry) {
+                return Entry.first <= Address;
+              });
+          if (It != CHPECodeMap.begin() && Address < (It - 1)->second) {
+            DT = &*SecondaryTarget;
+          } else {
+            DT = &PrimaryTarget;
+            // X64 disassembler range may have left Index unaligned, so
+            // make sure that it's aligned when we switch back to ARM64
+            // code.
+            Index = llvm::alignTo(Index, 4);
+            if (Index >= End)
+              break;
+          }
         }
 
         if (DumpARMELFData) {
@@ -2210,6 +2251,24 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
       else
         Features.AddFeature("+thumb-mode");
       SecondaryTarget.emplace(PrimaryTarget, Features);
+    }
+  } else if (const auto *COFFObj = dyn_cast<COFFObjectFile>(Obj)) {
+    const chpe_metadata *CHPEMetadata = COFFObj->getCHPEMetadata();
+    if (CHPEMetadata && CHPEMetadata->CodeMapCount) {
+      // Set up x86_64 disassembler for ARM64EC binaries.
+      Triple X64Triple(TripleName);
+      X64Triple.setArch(Triple::ArchType::x86_64);
+
+      std::string Error;
+      const Target *X64Target =
+          TargetRegistry::lookupTarget("", X64Triple, Error);
+      if (X64Target) {
+        SubtargetFeatures X64Features;
+        SecondaryTarget.emplace(X64Target, *Obj, X64Triple.getTriple(), "",
+                                X64Features);
+      } else {
+        reportWarning(Error, Obj->getFileName());
+      }
     }
   }
 
