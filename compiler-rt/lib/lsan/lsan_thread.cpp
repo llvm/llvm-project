@@ -25,9 +25,12 @@ namespace __lsan {
 
 static ThreadRegistry *thread_registry;
 
+static Mutex mu_for_thread_context;
+static LowLevelAllocator allocator_for_thread_context;
+
 static ThreadContextBase *CreateThreadContext(u32 tid) {
-  void *mem = MmapOrDie(sizeof(ThreadContext), "ThreadContext");
-  return new (mem) ThreadContext(tid);
+  Lock lock(&mu_for_thread_context);
+  return new (allocator_for_thread_context) ThreadContext(tid);
 }
 
 void InitializeThreadRegistry() {
