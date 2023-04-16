@@ -320,7 +320,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
       auto &C = S.getASTContext();
       ParsedAttr *SNA = AP.create(&C.Idents.get("swift_name"), SourceRange(),
                                   nullptr, SourceLocation(), nullptr, nullptr,
-                                  nullptr, ParsedAttr::AS_GNU);
+                                  nullptr, ParsedAttr::Form::GNU());
 
       if (!S.DiagnoseSwiftName(D, info.SwiftName, D->getLocation(), *SNA, /*IsAsync=*/false)) {
         return nullptr;
