@@ -1948,7 +1948,7 @@ Value *getSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
     Opcodes.insert(Opcodes.begin(), {dwarf::DW_OP_LLVM_arg, 0});
     CurrentLocOps = 1;
   }
-  for (auto Offset : VariableOffsets) {
+  for (const auto &Offset : VariableOffsets) {
     AdditionalValues.push_back(Offset.first);
     assert(Offset.second.isStrictlyPositive() &&
            "Expected strictly positive multiplier for offset.");

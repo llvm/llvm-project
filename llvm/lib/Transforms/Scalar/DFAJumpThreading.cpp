@@ -582,7 +582,7 @@ private:
         continue;
 
       PathsType SuccPaths = paths(Succ, Visited, PathDepth + 1);
-      for (PathType Path : SuccPaths) {
+      for (const PathType &Path : SuccPaths) {
         PathType NewPath(Path);
         NewPath.push_front(BB);
         Res.push_back(NewPath);
@@ -935,7 +935,7 @@ private:
     SSAUpdaterBulk SSAUpdate;
     SmallVector<Use *, 16> UsesToRename;
 
-    for (auto KV : NewDefs) {
+    for (const auto &KV : NewDefs) {
       Instruction *I = KV.first;
       BasicBlock *BB = I->getParent();
       std::vector<Instruction *> Cloned = KV.second;
