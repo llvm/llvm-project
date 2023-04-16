@@ -1657,6 +1657,26 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_VerilogInstancePortLParen);
   EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_VerilogInstancePortLParen);
   EXPECT_TOKEN(Tokens[11], tok::l_paren, TT_VerilogInstancePortLParen);
+
+  // Condition parentheses.
+  Tokens = Annotate("assert (x);");
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_ConditionLParen);
+  Tokens = Annotate("assert #0 (x);");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_ConditionLParen);
+  Tokens = Annotate("assert final (x);");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_ConditionLParen);
+  Tokens = Annotate("foreach (x[x]) continue;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_ConditionLParen);
+  Tokens = Annotate("repeat (x[x]) continue;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_ConditionLParen);
+  Tokens = Annotate("case (x) endcase;");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_ConditionLParen);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
@@ -1686,6 +1706,22 @@ TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
   EXPECT_TOKEN(Tokens[11], tok::l_brace, TT_Unknown);
   EXPECT_TOKEN(Tokens[12], tok::r_brace, TT_Unknown);
   EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_FunctionLBrace);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsConditionParens) {
+  auto Tokens = annotate("if (x) {}");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_ConditionLParen);
+  Tokens = annotate("if constexpr (x) {}");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_ConditionLParen);
+  Tokens = annotate("if CONSTEXPR (x) {}");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_ConditionLParen);
+  Tokens = annotate("if (x) {} else if (x) {}");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_ConditionLParen);
+  EXPECT_TOKEN(Tokens[8], tok::l_paren, TT_ConditionLParen);
 }
 
 } // namespace
