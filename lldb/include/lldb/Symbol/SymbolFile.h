@@ -334,8 +334,17 @@ public:
   virtual llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language) = 0;
 
+  /// Finds a namespace of name \ref name and whose parent
+  /// context is \ref parent_decl_ctx.
+  ///
+  /// If \code{.cpp} !parent_decl_ctx.IsValid() \endcode
+  /// then this function will consider all namespaces that
+  /// match the name. If \ref only_root_namespaces is
+  /// true, only consider in the search those DIEs that
+  /// represent top-level namespaces.
   virtual CompilerDeclContext
-  FindNamespace(ConstString name, const CompilerDeclContext &parent_decl_ctx) {
+  FindNamespace(ConstString name, const CompilerDeclContext &parent_decl_ctx,
+                bool only_root_namespaces = false) {
     return CompilerDeclContext();
   }
 

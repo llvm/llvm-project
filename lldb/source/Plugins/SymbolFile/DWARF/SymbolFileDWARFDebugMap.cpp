@@ -1266,13 +1266,14 @@ void SymbolFileDWARFDebugMap::FindTypes(
 }
 
 CompilerDeclContext SymbolFileDWARFDebugMap::FindNamespace(
-    lldb_private::ConstString name,
-    const CompilerDeclContext &parent_decl_ctx) {
+    lldb_private::ConstString name, const CompilerDeclContext &parent_decl_ctx,
+    bool only_root_namespaces) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   CompilerDeclContext matching_namespace;
 
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
-    matching_namespace = oso_dwarf->FindNamespace(name, parent_decl_ctx);
+    matching_namespace =
+        oso_dwarf->FindNamespace(name, parent_decl_ctx, only_root_namespaces);
 
     return (bool)matching_namespace;
   });
