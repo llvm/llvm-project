@@ -10,4 +10,4 @@ add_llvm_component_library(LLVMMSP430AsmParser
 
   ADD_TO_COMPONENT
   MSP430
-)
+  )

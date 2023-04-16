@@ -3,11 +3,11 @@ add_llvm_component_library(LLVMRISCVTargetMCA
 
   LINK_COMPONENTS
   MC
+  MCA
   MCParser
   RISCVDesc
   RISCVInfo
   Support
-  MCA
 
   ADD_TO_COMPONENT
   RISCV

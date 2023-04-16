@@ -16,4 +16,4 @@ add_llvm_component_library(LLVMWebAssemblyDesc
 
   ADD_TO_COMPONENT
   WebAssembly
-)
+  )

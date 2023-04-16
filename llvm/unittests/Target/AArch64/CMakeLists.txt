@@ -5,9 +5,9 @@ include_directories(
 
 set(LLVM_LINK_COMPONENTS
   AArch64CodeGen
-  AArch64Utils
   AArch64Desc
   AArch64Info
+  AArch64Utils
   AsmParser
   CodeGen
   Core

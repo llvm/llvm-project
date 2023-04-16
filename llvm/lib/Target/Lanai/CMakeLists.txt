@@ -47,7 +47,7 @@ add_llvm_target(LanaiCodeGen
 
   ADD_TO_COMPONENT
   Lanai
-)
+  )
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)

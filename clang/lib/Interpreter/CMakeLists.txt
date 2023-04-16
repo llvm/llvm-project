@@ -21,13 +21,12 @@ add_clang_library(clangInterpreter
   clangAST
   clangAnalysis
   clangBasic
+  clangCodeGen
   clangDriver
-  clangEdit
   clangFrontend
+  clangFrontendTool
   clangLex
   clangParse
   clangSema
   clangSerialization
-  clangCodeGen
-  clangFrontendTool
   )
