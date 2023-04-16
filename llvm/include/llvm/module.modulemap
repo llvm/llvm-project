@@ -29,6 +29,8 @@ module LLVM_Backend {
     exclude header "CodeGen/LinkAllAsmWriterComponents.h"
     exclude header "CodeGen/LinkAllCodegenComponents.h"
 
+    exclude header "CodeGen/CodeGenPassBuilder.h"
+
     // These are intended for (repeated) textual inclusion.
     textual header "CodeGen/DIEValue.def"
     textual header "CodeGen/MachinePassRegistry.def"
@@ -411,11 +413,23 @@ module LLVM_Utils {
     module * { export * }
   }
 
+  module Demangle {
+    requires cplusplus
+
+    umbrella "Demangle"
+    module * { export * }
+
+    textual header "Demangle/ItaniumNodes.def"
+  }
+
   module Support {
     requires cplusplus
 
     umbrella "Support"
     module * { export * }
+
+    // Exclude this; deprecated.
+    exclude header "Support/Host.h"
 
     // Exclude this; it should only be used on Windows.
     exclude header "Support/Windows/WindowsSupport.h"

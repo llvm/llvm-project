@@ -1657,9 +1657,9 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           // max(a1=x) or max(a2=x)
           const auto kwA1{dummy[0].keyword};
           const auto kwA2{dummy[1].keyword};
-          if (maxMinKeywords.begin()->ToString().compare(kwA1) == 0) {
+          if (maxMinKeywords.begin()->ToString() == kwA1) {
             messages.Say("missing mandatory 'a2=' argument"_err_en_US);
-          } else if (maxMinKeywords.begin()->ToString().compare(kwA2) == 0) {
+          } else if (maxMinKeywords.begin()->ToString() == kwA2) {
             messages.Say("missing mandatory 'a1=' argument"_err_en_US);
           } else {
             messages.Say(

@@ -758,7 +758,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   auto UpdateCallers = [&](ContextNode *Node,
                            DenseSet<const ContextEdge *> &Visited,
                            auto &&UpdateCallers) -> void {
-    for (auto Edge : Node->CallerEdges) {
+    for (const auto &Edge : Node->CallerEdges) {
       auto Inserted = Visited.insert(Edge.get());
       if (!Inserted.second)
         continue;
@@ -1119,7 +1119,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       // not fully matching stack contexts. To do this, subtract any context ids
       // found in caller nodes of the last node found above.
       if (Ids.back() != getLastStackId(Call)) {
-        for (auto PE : LastNode->CallerEdges) {
+        for (const auto &PE : LastNode->CallerEdges) {
           set_subtract(StackSequenceContextIds, PE->getContextIds());
           if (StackSequenceContextIds.empty())
             break;

@@ -550,7 +550,7 @@ private:
   }
 
   template <class _Fp, class... _Fs>
-  static constexpr void __std_visit_visitor_return_type_check() {
+  static _LIBCPP_HIDE_FROM_ABI constexpr void __std_visit_visitor_return_type_check() {
     static_assert(
         __all<is_same_v<_Fp, _Fs>...>::value,
         "`std::visit` requires the visitor to have a single return type.");
@@ -676,7 +676,7 @@ struct __variant {
 
 private:
   template <class _Visitor, class... _Values>
-  static constexpr void __std_visit_exhaustive_visitor_check() {
+  static _LIBCPP_HIDE_FROM_ABI constexpr void __std_visit_exhaustive_visitor_check() {
     static_assert(is_invocable_v<_Visitor, _Values...>,
                   "`std::visit` requires the visitor to be exhaustive.");
   }
@@ -1037,10 +1037,10 @@ protected:
       __a.__value = _VSTD::forward<_Arg>(__arg);
     } else {
       struct {
-        void operator()(true_type) const {
+        _LIBCPP_HIDE_FROM_ABI void operator()(true_type) const {
           __this->__emplace<_Ip>(_VSTD::forward<_Arg>(__arg));
         }
-        void operator()(false_type) const {
+        _LIBCPP_HIDE_FROM_ABI void operator()(false_type) const {
           __this->__emplace<_Ip>(_Tp(_VSTD::forward<_Arg>(__arg)));
         }
         __assignment* __this;
@@ -1158,10 +1158,10 @@ class _LIBCPP_TEMPLATE_VIS __impl
 
 public:
   using __base_type::__base_type; // get in_place_index_t constructor & friends
-  __impl(__impl const&) = default;
-  __impl(__impl&&) = default;
-  __impl& operator=(__impl const&) = default;
-  __impl& operator=(__impl&&) = default;
+  _LIBCPP_HIDE_FROM_ABI __impl(__impl const&) = default;
+  _LIBCPP_HIDE_FROM_ABI __impl(__impl&&) = default;
+  _LIBCPP_HIDE_FROM_ABI __impl& operator=(__impl const&) = default;
+  _LIBCPP_HIDE_FROM_ABI __impl& operator=(__impl&&) = default;
 
   template <size_t _Ip, class _Arg>
   _LIBCPP_HIDE_FROM_ABI
@@ -1326,8 +1326,8 @@ public:
   constexpr variant() noexcept(is_nothrow_default_constructible_v<__first_type>)
       : __impl_(in_place_index<0>) {}
 
-  constexpr variant(const variant&) = default;
-  constexpr variant(variant&&) = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr variant(const variant&) = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr variant(variant&&) = default;
 
   template <
       class _Arg,
@@ -1396,10 +1396,10 @@ public:
       is_nothrow_constructible_v<_Tp, initializer_list< _Up>&, _Args...>)
       : __impl_(in_place_index<_Ip>, __il, _VSTD::forward<_Args>(__args)...) {}
 
-  ~variant() = default;
+  _LIBCPP_HIDE_FROM_ABI ~variant() = default;
 
-  constexpr variant& operator=(const variant&) = default;
-  constexpr variant& operator=(variant&&) = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr variant& operator=(const variant&) = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr variant& operator=(variant&&) = default;
 
   template <
       class _Arg,

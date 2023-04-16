@@ -620,8 +620,7 @@ static bool LinearizeExprTree(Instruction *I,
 
   // The leaves, repeated according to their weights, represent the linearized
   // form of the expression.
-  for (unsigned i = 0, e = LeafOrder.size(); i != e; ++i) {
-    Value *V = LeafOrder[i];
+  for (Value *V : LeafOrder) {
     LeafMap::iterator It = Leaves.find(V);
     if (It == Leaves.end())
       // Node initially thought to be a leaf wasn't.
@@ -1507,8 +1506,7 @@ Value *ReassociatePass::OptimizeXor(Instruction *I,
   // Step 4: Reassemble the Ops
   if (Changed) {
     Ops.clear();
-    for (unsigned int i = 0, e = Opnds.size(); i < e; i++) {
-      XorOpnd &O = Opnds[i];
+    for (const XorOpnd &O : Opnds) {
       if (O.isInvalid())
         continue;
       ValueEntry VE(getRank(O.getValue()), O.getValue());
@@ -1644,8 +1642,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
 
     // Add one to FactorOccurrences for each unique factor in this op.
     SmallPtrSet<Value*, 8> Duplicates;
-    for (unsigned i = 0, e = Factors.size(); i != e; ++i) {
-      Value *Factor = Factors[i];
+    for (Value *Factor : Factors) {
       if (!Duplicates.insert(Factor).second)
         continue;
 

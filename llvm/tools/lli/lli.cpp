@@ -25,9 +25,7 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
-#include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
-#include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericRTDyldMemoryManager.h"
@@ -935,15 +933,15 @@ int runOrcJIT(const char *ProgName) {
     Builder.setObjectLinkingLayerCreator([&EPC, &P](orc::ExecutionSession &ES,
                                                     const Triple &TT) {
       auto L = std::make_unique<orc::ObjectLinkingLayer>(ES, EPC->getMemMgr());
-      if (P != LLJITPlatform::ExecutorNative) {
+      if (P != LLJITPlatform::ExecutorNative)
         L->addPlugin(std::make_unique<orc::EHFrameRegistrationPlugin>(
             ES, ExitOnErr(orc::EPCEHFrameRegistrar::Create(ES))));
-        L->addPlugin(std::make_unique<orc::DebugObjectManagerPlugin>(
-            ES, ExitOnErr(orc::createJITLoaderGDBRegistrar(ES)), true, true));
-      }
       return L;
     });
   }
+
+  // Enable debugging of JIT'd code (only works on JITLink for ELF and MachO).
+  Builder.setEnableDebuggerSupport(true);
 
   auto J = ExitOnErr(Builder.create());
 

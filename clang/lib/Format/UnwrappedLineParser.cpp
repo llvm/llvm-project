@@ -1881,7 +1881,7 @@ void UnwrappedLineParser::parseStructuralElement(
         }
       }
 
-      if (FormatTok->is(Keywords.kw_interface)) {
+      if (!Style.isCpp() && FormatTok->is(Keywords.kw_interface)) {
         if (parseStructLike())
           return;
         break;

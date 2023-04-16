@@ -52,7 +52,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       if (auto *VPPhi = dyn_cast<VPWidenPHIRecipe>(&Ingredient)) {
         auto *Phi = cast<PHINode>(VPPhi->getUnderlyingValue());
         if (const auto *II = GetIntOrFpInductionDescriptor(Phi)) {
-          VPValue *Start = Plan->getOrAddVPValue(II->getStartValue());
+          VPValue *Start = Plan->getVPValueOrAddLiveIn(II->getStartValue());
           VPValue *Step =
               vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
           NewRecipe =
@@ -68,13 +68,15 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         // Create VPWidenMemoryInstructionRecipe for loads and stores.
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           NewRecipe = new VPWidenMemoryInstructionRecipe(
-              *Load, Plan->getOrAddVPValue(getLoadStorePointerOperand(Inst)),
+              *Load,
+              Plan->getVPValueOrAddLiveIn(getLoadStorePointerOperand(Inst)),
               nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/);
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           NewRecipe = new VPWidenMemoryInstructionRecipe(
-              *Store, Plan->getOrAddVPValue(getLoadStorePointerOperand(Inst)),
-              Plan->getOrAddVPValue(Store->getValueOperand()), nullptr /*Mask*/,
-              false /*Consecutive*/, false /*Reverse*/);
+              *Store,
+              Plan->getVPValueOrAddLiveIn(getLoadStorePointerOperand(Inst)),
+              Plan->getVPValueOrAddLiveIn(Store->getValueOperand()),
+              nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/);
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe =
               new VPWidenGEPRecipe(GEP, Plan->mapToVPValues(GEP->operands()));
@@ -520,7 +522,8 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
     VPValue *Step =
         vputils::getOrCreateVPValueForSCEVExpr(Plan, ID.getStep(), SE);
     VPValue *BaseIV = CanonicalIV;
-    if (!CanonicalIV->isCanonical(ID, ResultTy)) {
+    if (!CanonicalIV->isCanonical(ID.getKind(), WideIV->getStartValue(), Step,
+                                  ResultTy)) {
       BaseIV = new VPDerivedIVRecipe(ID, WideIV->getStartValue(), CanonicalIV,
                                      Step, ResultTy);
       HeaderVPBB->insert(BaseIV->getDefiningRecipe(), IP);
@@ -599,9 +602,9 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
     return;
 
   LLVMContext &Ctx = SE.getContext();
-  auto *BOC =
-      new VPInstruction(VPInstruction::BranchOnCond,
-                        {Plan.getOrAddExternalDef(ConstantInt::getTrue(Ctx))});
+  auto *BOC = new VPInstruction(
+      VPInstruction::BranchOnCond,
+      {Plan.getVPValueOrAddLiveIn(ConstantInt::getTrue(Ctx))});
   Term->eraseFromParent();
   ExitingVPBB->appendRecipe(BOC);
   Plan.setVF(BestVF);

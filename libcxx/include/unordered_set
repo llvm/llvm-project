@@ -551,7 +551,7 @@ public:
     {
         _VSTD::__debug_db_insert_c(this);
     }
-    explicit unordered_set(size_type __n, const hasher& __hf = hasher(),
+    explicit _LIBCPP_HIDE_FROM_ABI unordered_set(size_type __n, const hasher& __hf = hasher(),
                            const key_equal& __eql = key_equal());
 #if _LIBCPP_STD_VER >= 14
     inline _LIBCPP_INLINE_VISIBILITY
@@ -561,16 +561,16 @@ public:
     unordered_set(size_type __n, const hasher& __hf, const allocator_type& __a)
         : unordered_set(__n, __hf, key_equal(), __a) {}
 #endif
-    unordered_set(size_type __n, const hasher& __hf, const key_equal& __eql,
+    _LIBCPP_HIDE_FROM_ABI unordered_set(size_type __n, const hasher& __hf, const key_equal& __eql,
                   const allocator_type& __a);
     template <class _InputIterator>
-        unordered_set(_InputIterator __first, _InputIterator __last);
+    _LIBCPP_HIDE_FROM_ABI unordered_set(_InputIterator __first, _InputIterator __last);
     template <class _InputIterator>
-        unordered_set(_InputIterator __first, _InputIterator __last,
+    _LIBCPP_HIDE_FROM_ABI unordered_set(_InputIterator __first, _InputIterator __last,
                       size_type __n, const hasher& __hf = hasher(),
                       const key_equal& __eql = key_equal());
     template <class _InputIterator>
-        unordered_set(_InputIterator __first, _InputIterator __last,
+    _LIBCPP_HIDE_FROM_ABI unordered_set(_InputIterator __first, _InputIterator __last,
                       size_type __n, const hasher& __hf, const key_equal& __eql,
                       const allocator_type& __a);
 #if _LIBCPP_STD_VER >= 14
@@ -580,24 +580,24 @@ public:
                     size_type __n, const allocator_type& __a)
             : unordered_set(__first, __last, __n, hasher(), key_equal(), __a) {}
     template <class _InputIterator>
-        unordered_set(_InputIterator __first, _InputIterator __last,
+    _LIBCPP_HIDE_FROM_ABI unordered_set(_InputIterator __first, _InputIterator __last,
                       size_type __n, const hasher& __hf, const allocator_type& __a)
             : unordered_set(__first, __last, __n, __hf, key_equal(), __a) {}
 #endif
     _LIBCPP_INLINE_VISIBILITY
     explicit unordered_set(const allocator_type& __a);
-    unordered_set(const unordered_set& __u);
-    unordered_set(const unordered_set& __u, const allocator_type& __a);
+    _LIBCPP_HIDE_FROM_ABI unordered_set(const unordered_set& __u);
+    _LIBCPP_HIDE_FROM_ABI unordered_set(const unordered_set& __u, const allocator_type& __a);
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     unordered_set(unordered_set&& __u)
         _NOEXCEPT_(is_nothrow_move_constructible<__table>::value);
-    unordered_set(unordered_set&& __u, const allocator_type& __a);
-    unordered_set(initializer_list<value_type> __il);
-    unordered_set(initializer_list<value_type> __il, size_type __n,
+    _LIBCPP_HIDE_FROM_ABI unordered_set(unordered_set&& __u, const allocator_type& __a);
+    _LIBCPP_HIDE_FROM_ABI unordered_set(initializer_list<value_type> __il);
+    _LIBCPP_HIDE_FROM_ABI unordered_set(initializer_list<value_type> __il, size_type __n,
                   const hasher& __hf = hasher(),
                   const key_equal& __eql = key_equal());
-    unordered_set(initializer_list<value_type> __il, size_type __n,
+    _LIBCPP_HIDE_FROM_ABI unordered_set(initializer_list<value_type> __il, size_type __n,
                   const hasher& __hf, const key_equal& __eql,
                   const allocator_type& __a);
 #if _LIBCPP_STD_VER >= 14
@@ -866,13 +866,13 @@ public:
 
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
-    bool __dereferenceable(const const_iterator* __i) const
+    _LIBCPP_HIDE_FROM_ABI bool __dereferenceable(const const_iterator* __i) const
         {return __table_.__dereferenceable(__i);}
-    bool __decrementable(const const_iterator* __i) const
+    _LIBCPP_HIDE_FROM_ABI bool __decrementable(const const_iterator* __i) const
         {return __table_.__decrementable(__i);}
-    bool __addable(const const_iterator* __i, ptrdiff_t __n) const
+    _LIBCPP_HIDE_FROM_ABI bool __addable(const const_iterator* __i, ptrdiff_t __n) const
         {return __table_.__addable(__i, __n);}
-    bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const
+    _LIBCPP_HIDE_FROM_ABI bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const
         {return __table_.__addable(__i, __n);}
 
 #endif // _LIBCPP_ENABLE_DEBUG_MODE
@@ -1206,9 +1206,9 @@ public:
     {
         _VSTD::__debug_db_insert_c(this);
     }
-    explicit unordered_multiset(size_type __n, const hasher& __hf = hasher(),
+    explicit _LIBCPP_HIDE_FROM_ABI unordered_multiset(size_type __n, const hasher& __hf = hasher(),
                                 const key_equal& __eql = key_equal());
-    unordered_multiset(size_type __n, const hasher& __hf,
+    _LIBCPP_HIDE_FROM_ABI unordered_multiset(size_type __n, const hasher& __hf,
                        const key_equal& __eql, const allocator_type& __a);
 #if _LIBCPP_STD_VER >= 14
     inline _LIBCPP_INLINE_VISIBILITY
@@ -1219,13 +1219,13 @@ public:
         : unordered_multiset(__n, __hf, key_equal(), __a) {}
 #endif
     template <class _InputIterator>
-        unordered_multiset(_InputIterator __first, _InputIterator __last);
+    _LIBCPP_HIDE_FROM_ABI unordered_multiset(_InputIterator __first, _InputIterator __last);
     template <class _InputIterator>
-        unordered_multiset(_InputIterator __first, _InputIterator __last,
+    _LIBCPP_HIDE_FROM_ABI unordered_multiset(_InputIterator __first, _InputIterator __last,
                       size_type __n, const hasher& __hf = hasher(),
                       const key_equal& __eql = key_equal());
     template <class _InputIterator>
-        unordered_multiset(_InputIterator __first, _InputIterator __last,
+    _LIBCPP_HIDE_FROM_ABI unordered_multiset(_InputIterator __first, _InputIterator __last,
                       size_type __n , const hasher& __hf,
                       const key_equal& __eql, const allocator_type& __a);
 #if _LIBCPP_STD_VER >= 14
@@ -1242,18 +1242,18 @@ public:
 #endif
     _LIBCPP_INLINE_VISIBILITY
     explicit unordered_multiset(const allocator_type& __a);
-    unordered_multiset(const unordered_multiset& __u);
-    unordered_multiset(const unordered_multiset& __u, const allocator_type& __a);
+    _LIBCPP_HIDE_FROM_ABI unordered_multiset(const unordered_multiset& __u);
+    _LIBCPP_HIDE_FROM_ABI unordered_multiset(const unordered_multiset& __u, const allocator_type& __a);
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     unordered_multiset(unordered_multiset&& __u)
         _NOEXCEPT_(is_nothrow_move_constructible<__table>::value);
-    unordered_multiset(unordered_multiset&& __u, const allocator_type& __a);
-    unordered_multiset(initializer_list<value_type> __il);
-    unordered_multiset(initializer_list<value_type> __il, size_type __n,
+    _LIBCPP_HIDE_FROM_ABI unordered_multiset(unordered_multiset&& __u, const allocator_type& __a);
+    _LIBCPP_HIDE_FROM_ABI unordered_multiset(initializer_list<value_type> __il);
+    _LIBCPP_HIDE_FROM_ABI unordered_multiset(initializer_list<value_type> __il, size_type __n,
                        const hasher& __hf = hasher(),
                        const key_equal& __eql = key_equal());
-    unordered_multiset(initializer_list<value_type> __il, size_type __n,
+    _LIBCPP_HIDE_FROM_ABI unordered_multiset(initializer_list<value_type> __il, size_type __n,
                        const hasher& __hf, const key_equal& __eql,
                        const allocator_type& __a);
 #if _LIBCPP_STD_VER >= 14
@@ -1280,7 +1280,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     unordered_multiset& operator=(unordered_multiset&& __u)
         _NOEXCEPT_(is_nothrow_move_assignable<__table>::value);
-    unordered_multiset& operator=(initializer_list<value_type> __il);
+    _LIBCPP_HIDE_FROM_ABI unordered_multiset& operator=(initializer_list<value_type> __il);
 #endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1504,13 +1504,13 @@ public:
 
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
-    bool __dereferenceable(const const_iterator* __i) const
+    _LIBCPP_HIDE_FROM_ABI bool __dereferenceable(const const_iterator* __i) const
         {return __table_.__dereferenceable(__i);}
-    bool __decrementable(const const_iterator* __i) const
+    _LIBCPP_HIDE_FROM_ABI bool __decrementable(const const_iterator* __i) const
         {return __table_.__decrementable(__i);}
-    bool __addable(const const_iterator* __i, ptrdiff_t __n) const
+    _LIBCPP_HIDE_FROM_ABI bool __addable(const const_iterator* __i, ptrdiff_t __n) const
         {return __table_.__addable(__i, __n);}
-    bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const
+    _LIBCPP_HIDE_FROM_ABI bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const
         {return __table_.__addable(__i, __n);}
 
 #endif // _LIBCPP_ENABLE_DEBUG_MODE

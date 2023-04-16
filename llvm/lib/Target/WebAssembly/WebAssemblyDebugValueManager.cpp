@@ -334,7 +334,6 @@ void WebAssemblyDebugValueManager::sink(MachineInstr *Insert) {
     DV->setDebugValueUndef();
 
   DbgValues.swap(NewDbgValues);
-  return;
 }
 
 // Clone 'Def', and also clone its eligible DBG_VALUEs to the place before
