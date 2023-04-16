@@ -987,11 +987,7 @@ public:
 
   // Check for presence of header handle in the header stack.
   bool isHeaderHandleInStack(HeaderHandle H) const {
-    for (auto I = HeaderStack.begin(), E = HeaderStack.end(); I != E; ++I) {
-      if (*I == H)
-        return true;
-    }
-    return false;
+    return llvm::is_contained(HeaderStack, H);
   }
 
   // Get the handle of a header inclusion path entry.

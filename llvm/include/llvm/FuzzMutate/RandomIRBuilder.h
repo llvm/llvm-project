@@ -18,11 +18,16 @@
 #include <random>
 
 namespace llvm {
+class AllocaInst;
 class BasicBlock;
+class Function;
+class GlobalVariable;
 class Instruction;
 class LLVMContext;
 class Type;
 class Value;
+class Module;
+
 namespace fuzzerop {
 class SourcePred;
 }
@@ -38,6 +43,23 @@ struct RandomIRBuilder {
 
   // TODO: Try to make this a bit less of a random mishmash of functions.
 
+  /// Create a stack memory at the head of the function, store \c Init to the
+  /// memory if provided.
+  AllocaInst *createStackMemory(Function *F, Type *Ty, Value *Init = nullptr);
+  /// Find or create a global variable. It will be initialized by random
+  /// constants that satisfies \c Pred. It will also report whether this global
+  /// variable found or created.
+  std::pair<GlobalVariable *, bool>
+  findOrCreateGlobalVariable(Module *M, ArrayRef<Value *> Srcs,
+                             fuzzerop::SourcePred Pred);
+  enum SourceType {
+    SrcFromInstInCurBlock,
+    FunctionArgument,
+    InstInDominator,
+    SrcFromGlobalVariable,
+    NewConstOrStack,
+    EndOfValueSource,
+  };
   /// Find a "source" for some operation, which will be used in one of the
   /// operation's operands. This either selects an instruction in \c Insts or
   /// returns some new arbitrary Value.
@@ -54,11 +76,22 @@ struct RandomIRBuilder {
   Value *newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
                    ArrayRef<Value *> Srcs, fuzzerop::SourcePred Pred,
                    bool allowConstant = true);
+
+  enum SinkType {
+    /// TODO: Also consider pointers in function argument.
+    SinkToInstInCurBlock,
+    PointersInDominator,
+    InstInDominatee,
+    NewStore,
+    SinkToGlobalVariable,
+    EndOfValueSink,
+  };
   /// Find a viable user for \c V in \c Insts, which should all be contained in
   /// \c BB. This may also create some new instruction in \c BB and use that.
-  void connectToSink(BasicBlock &BB, ArrayRef<Instruction *> Insts, Value *V);
+  Instruction *connectToSink(BasicBlock &BB, ArrayRef<Instruction *> Insts,
+                             Value *V);
   /// Create a user for \c V in \c BB.
-  void newSink(BasicBlock &BB, ArrayRef<Instruction *> Insts, Value *V);
+  Instruction *newSink(BasicBlock &BB, ArrayRef<Instruction *> Insts, Value *V);
   Value *findPointer(BasicBlock &BB, ArrayRef<Instruction *> Insts,
                      ArrayRef<Value *> Srcs, fuzzerop::SourcePred Pred);
   Type *chooseType(LLVMContext &Context, ArrayRef<Value *> Srcs,

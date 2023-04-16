@@ -13,11 +13,88 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 using namespace fuzzerop;
+
+/// Return a vector of Blocks that dominates this block, excluding current
+/// block.
+static std::vector<BasicBlock *> getDominators(BasicBlock *BB) {
+  std::vector<BasicBlock *> ret;
+  DominatorTree DT(*BB->getParent());
+  DomTreeNode *Node = DT[BB]->getIDom();
+  while (Node && Node->getBlock()) {
+    ret.push_back(Node->getBlock());
+    // Get parent block.
+    Node = Node->getIDom();
+  }
+  return ret;
+}
+
+/// Return a vector of Blocks that is dominated by this block, excluding current
+/// block
+static std::vector<BasicBlock *> getDominatees(BasicBlock *BB) {
+  DominatorTree DT(*BB->getParent());
+  std::vector<BasicBlock *> ret;
+  for (DomTreeNode *Child : DT[BB]->children())
+    ret.push_back(Child->getBlock());
+  uint64_t Idx = 0;
+  while (Idx < ret.size()) {
+    DomTreeNode *Node = DT[ret[Idx]];
+    Idx++;
+    for (DomTreeNode *Child : Node->children())
+      ret.push_back(Child->getBlock());
+  }
+  return ret;
+}
+
+AllocaInst *RandomIRBuilder::createStackMemory(Function *F, Type *Ty,
+                                               Value *Init) {
+  /// TODO: For all Allocas, maybe allocate an array.
+  BasicBlock *EntryBB = &F->getEntryBlock();
+  DataLayout DL(F->getParent());
+  AllocaInst *Alloca = new AllocaInst(Ty, DL.getAllocaAddrSpace(), "A",
+                                      &*EntryBB->getFirstInsertionPt());
+  if (Init)
+    new StoreInst(Init, Alloca, Alloca->getNextNode());
+  return Alloca;
+}
+
+std::pair<GlobalVariable *, bool>
+RandomIRBuilder::findOrCreateGlobalVariable(Module *M, ArrayRef<Value *> Srcs,
+                                            fuzzerop::SourcePred Pred) {
+  auto MatchesPred = [&Srcs, &Pred](GlobalVariable *GV) {
+    // Can't directly compare GV's type, as it would be a pointer to the actual
+    // type.
+    return Pred.matches(Srcs, UndefValue::get(GV->getValueType()));
+  };
+  bool DidCreate = false;
+  SmallVector<GlobalVariable *, 4> GlobalVars;
+  for (GlobalVariable &GV : M->globals()) {
+    GlobalVars.push_back(&GV);
+  }
+  auto RS = makeSampler(Rand, make_filter_range(GlobalVars, MatchesPred));
+  RS.sample(nullptr, 1);
+  GlobalVariable *GV = RS.getSelection();
+  if (!GV) {
+    DidCreate = true;
+    using LinkageTypes = GlobalVariable::LinkageTypes;
+    auto TRS = makeSampler<Constant *>(Rand);
+    TRS.sample(Pred.generate(Srcs, KnownTypes));
+    Constant *Init = TRS.getSelection();
+    Type *Ty = Init->getType();
+    GV = new GlobalVariable(*M, Ty, false, LinkageTypes::ExternalLinkage, Init,
+                            "G", nullptr,
+                            GlobalValue::ThreadLocalMode::NotThreadLocal,
+                            M->getDataLayout().getDefaultGlobalsAddressSpace());
+  }
+  return {GV, DidCreate};
+}
 
 Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
                                            ArrayRef<Instruction *> Insts) {
@@ -29,15 +106,83 @@ Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
                                            ArrayRef<Value *> Srcs,
                                            SourcePred Pred,
                                            bool allowConstant) {
-  auto MatchesPred = [&Srcs, &Pred](Instruction *Inst) {
-    return Pred.matches(Srcs, Inst);
-  };
-  auto RS = makeSampler(Rand, make_filter_range(Insts, MatchesPred));
-  // Also consider choosing no source, meaning we want a new one.
-  RS.sample(nullptr, /*Weight=*/1);
-  if (Instruction *Src = RS.getSelection())
-    return Src;
-  return newSource(BB, Insts, Srcs, Pred, allowConstant);
+  auto MatchesPred = [&Srcs, &Pred](Value *V) { return Pred.matches(Srcs, V); };
+  SmallVector<uint64_t, 8> SrcTys;
+  for (uint64_t i = 0; i < EndOfValueSource; i++)
+    SrcTys.push_back(i);
+  std::shuffle(SrcTys.begin(), SrcTys.end(), Rand);
+  for (uint64_t SrcTy : SrcTys) {
+    switch (SrcTy) {
+    case SrcFromInstInCurBlock: {
+      auto RS = makeSampler(Rand, make_filter_range(Insts, MatchesPred));
+      if (!RS.isEmpty()) {
+        return RS.getSelection();
+      }
+      break;
+    }
+    case FunctionArgument: {
+      Function *F = BB.getParent();
+      SmallVector<Argument *, 8> Args;
+      for (uint64_t i = 0; i < F->arg_size(); i++) {
+        Args.push_back(F->getArg(i));
+      }
+      auto RS = makeSampler(Rand, make_filter_range(Args, MatchesPred));
+      if (!RS.isEmpty()) {
+        return RS.getSelection();
+      }
+      break;
+    }
+    case InstInDominator: {
+      auto Dominators = getDominators(&BB);
+      std::shuffle(Dominators.begin(), Dominators.end(), Rand);
+      for (BasicBlock *Dom : Dominators) {
+        SmallVector<Instruction *, 16> Instructions;
+        for (Instruction &I : *Dom) {
+          Instructions.push_back(&I);
+        }
+        auto RS =
+            makeSampler(Rand, make_filter_range(Instructions, MatchesPred));
+        // Also consider choosing no source, meaning we want a new one.
+        if (!RS.isEmpty()) {
+          return RS.getSelection();
+        }
+      }
+      break;
+    }
+    case SrcFromGlobalVariable: {
+      Module *M = BB.getParent()->getParent();
+      auto [GV, DidCreate] = findOrCreateGlobalVariable(M, Srcs, Pred);
+      Type *Ty = GV->getValueType();
+      LoadInst *LoadGV = nullptr;
+      if (BB.getTerminator()) {
+        LoadGV = new LoadInst(Ty, GV, "LGV", &*BB.getFirstInsertionPt());
+      } else {
+        LoadGV = new LoadInst(Ty, GV, "LGV", &BB);
+      }
+      // Because we might be generating new values, we have to check if it
+      // matches again.
+      if (DidCreate) {
+        if (Pred.matches(Srcs, LoadGV)) {
+          return LoadGV;
+        }
+        LoadGV->eraseFromParent();
+        // If no one is using this GlobalVariable, delete it too.
+        if (GV->use_empty()) {
+          GV->eraseFromParent();
+        }
+      }
+      break;
+    }
+    case NewConstOrStack: {
+      return newSource(BB, Insts, Srcs, Pred, allowConstant);
+    }
+    default:
+    case EndOfValueSource: {
+      llvm_unreachable("EndOfValueSource executed");
+    }
+    }
+  }
+  llvm_unreachable("Can't find a source");
 }
 
 Value *RandomIRBuilder::newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
@@ -76,12 +221,7 @@ Value *RandomIRBuilder::newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
   if (!allowConstant && isa<Constant>(newSrc)) {
     Type *Ty = newSrc->getType();
     Function *F = BB.getParent();
-    BasicBlock *EntryBB = &F->getEntryBlock();
-    /// TODO: For all Allocas, maybe allocate an array.
-    DataLayout DL(BB.getParent()->getParent());
-    AllocaInst *Alloca = new AllocaInst(Ty, DL.getProgramAddressSpace(), "A",
-                                        EntryBB->getTerminator());
-    new StoreInst(newSrc, Alloca, EntryBB->getTerminator());
+    AllocaInst *Alloca = createStackMemory(F, Ty, newSrc);
     if (BB.getTerminator()) {
       newSrc = new LoadInst(Ty, Alloca, /*ArrLen,*/ "L", BB.getTerminator());
     } else {
@@ -119,48 +259,106 @@ static bool isCompatibleReplacement(const Instruction *I, const Use &Operand,
     if (OperandNo >= 1)
       return false;
     break;
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr: {
+    const CallBase *II = cast<CallBase>(I);
+    const Function *Callee = II->getCalledFunction();
+    return !Callee->hasParamAttribute(OperandNo, Attribute::ImmArg);
+  }
   default:
     break;
   }
   return true;
 }
 
-void RandomIRBuilder::connectToSink(BasicBlock &BB,
-                                    ArrayRef<Instruction *> Insts, Value *V) {
-  auto RS = makeSampler<Use *>(Rand);
-  for (auto &I : Insts) {
-    if (isa<IntrinsicInst>(I))
-      // TODO: Replacing operands of intrinsics would be interesting, but
-      // there's no easy way to verify that a given replacement is valid given
-      // that intrinsics can impose arbitrary constraints.
-      continue;
-    for (Use &U : I->operands())
-      if (isCompatibleReplacement(I, U, V))
-        RS.sample(&U, 1);
+Instruction *RandomIRBuilder::connectToSink(BasicBlock &BB,
+                                            ArrayRef<Instruction *> Insts,
+                                            Value *V) {
+  SmallVector<uint64_t, 8> SinkTys;
+  for (uint64_t i = 0; i < EndOfValueSink; i++)
+    SinkTys.push_back(i);
+  std::shuffle(SinkTys.begin(), SinkTys.end(), Rand);
+  auto findSinkAndConnect =
+      [this, V](ArrayRef<Instruction *> Instructions) -> Instruction * {
+    auto RS = makeSampler<Use *>(Rand);
+    for (auto &I : Instructions) {
+      for (Use &U : I->operands())
+        if (isCompatibleReplacement(I, U, V))
+          RS.sample(&U, 1);
+    }
+    if (!RS.isEmpty()) {
+      Use *Sink = RS.getSelection();
+      User *U = Sink->getUser();
+      unsigned OpNo = Sink->getOperandNo();
+      U->setOperand(OpNo, V);
+      return cast<Instruction>(U);
+    }
+    return nullptr;
+  };
+  Instruction *Sink = nullptr;
+  for (uint64_t SinkTy : SinkTys) {
+    switch (SinkTy) {
+    case SinkToInstInCurBlock:
+      Sink = findSinkAndConnect(Insts);
+      if (Sink)
+        return Sink;
+      break;
+    case PointersInDominator: {
+      auto Dominators = getDominators(&BB);
+      std::shuffle(Dominators.begin(), Dominators.end(), Rand);
+      for (BasicBlock *Dom : Dominators) {
+        for (Instruction &I : *Dom) {
+          if (PointerType *PtrTy = dyn_cast<PointerType>(I.getType()))
+            return new StoreInst(V, &I, Insts.back());
+        }
+      }
+      break;
+    }
+    case InstInDominatee: {
+      auto Dominatees = getDominatees(&BB);
+      std::shuffle(Dominatees.begin(), Dominatees.end(), Rand);
+      for (BasicBlock *Dominee : Dominatees) {
+        std::vector<Instruction *> Instructions;
+        for (Instruction &I : *Dominee)
+          Instructions.push_back(&I);
+        Sink = findSinkAndConnect(Instructions);
+        if (Sink) {
+          return Sink;
+        }
+      }
+      break;
+    }
+    case NewStore:
+      /// TODO: allocate a new stack memory.
+      return newSink(BB, Insts, V);
+    case SinkToGlobalVariable: {
+      Module *M = BB.getParent()->getParent();
+      auto [GV, DidCreate] =
+          findOrCreateGlobalVariable(M, {}, fuzzerop::onlyType(V->getType()));
+      return new StoreInst(V, GV, Insts.back());
+    }
+    case EndOfValueSink:
+    default:
+      llvm_unreachable("EndOfValueSink executed");
+    }
   }
-  // Also consider choosing no sink, meaning we want a new one.
-  RS.sample(nullptr, /*Weight=*/1);
-
-  if (Use *Sink = RS.getSelection()) {
-    User *U = Sink->getUser();
-    unsigned OpNo = Sink->getOperandNo();
-    U->setOperand(OpNo, V);
-    return;
-  }
-  newSink(BB, Insts, V);
+  llvm_unreachable("Can't find a sink");
 }
 
-void RandomIRBuilder::newSink(BasicBlock &BB, ArrayRef<Instruction *> Insts,
-                              Value *V) {
+Instruction *RandomIRBuilder::newSink(BasicBlock &BB,
+                                      ArrayRef<Instruction *> Insts, Value *V) {
   Value *Ptr = findPointer(BB, Insts, {V}, matchFirstType());
   if (!Ptr) {
-    if (uniform(Rand, 0, 1))
-      Ptr = new AllocaInst(V->getType(), 0, "A", &*BB.getFirstInsertionPt());
-    else
+    if (uniform(Rand, 0, 1)) {
+      Type *Ty = V->getType();
+      Ptr = createStackMemory(BB.getParent(), Ty, UndefValue::get(Ty));
+    } else {
       Ptr = UndefValue::get(PointerType::get(V->getType(), 0));
+    }
   }
 
-  new StoreInst(V, Ptr, Insts.back());
+  return new StoreInst(V, Ptr, Insts.back());
 }
 
 Value *RandomIRBuilder::findPointer(BasicBlock &BB,
