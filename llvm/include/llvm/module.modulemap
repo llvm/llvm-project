@@ -411,6 +411,15 @@ module LLVM_Utils {
     module * { export * }
   }
 
+  module Demangle {
+    requires cplusplus
+
+    umbrella "Demangle"
+    module * { export * }
+
+    textual header "Demangle/ItaniumNodes.def"
+  }
+
   module Support {
     requires cplusplus
 
