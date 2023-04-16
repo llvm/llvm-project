@@ -129,6 +129,12 @@ private:
                             Block &BlockToFix) {
     using Base = ELFLinkGraphBuilder<ELFT>;
 
+    auto ELFReloc = Rel.getType(false);
+
+    // R_X86_64_NONE is a no-op.
+    if (LLVM_UNLIKELY(ELFReloc == ELF::R_X86_64_NONE))
+      return Error::success();
+
     uint32_t SymbolIndex = Rel.getSymbol(false);
     auto ObjSymbol = Base::Obj.getRelocationSymbol(Rel, Base::SymTabSec);
     if (!ObjSymbol)
@@ -147,7 +153,6 @@ private:
     int64_t Addend = Rel.r_addend;
     Edge::Kind Kind = Edge::Invalid;
 
-    auto ELFReloc = Rel.getType(false);
     switch (ELFReloc) {
     case ELF::R_X86_64_PC32:
       Kind = x86_64::Delta32;
@@ -161,6 +166,9 @@ private:
       break;
     case ELF::R_X86_64_16:
       Kind = x86_64::Pointer16;
+      break;
+    case ELF::R_X86_64_8:
+      Kind = x86_64::Pointer8;
       break;
     case ELF::R_X86_64_32S:
       Kind = x86_64::Pointer32Signed;

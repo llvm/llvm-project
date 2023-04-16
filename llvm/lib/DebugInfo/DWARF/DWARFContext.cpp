@@ -844,8 +844,6 @@ void fixupIndexV4(const DWARFObject &DObj, DWARFContext &C,
                                         Twine::utohexstr(CUOff.getOffset())),
                             errs());
   }
-
-  return;
 }
 
 void fixupIndexV5(const DWARFObject &DObj, DWARFContext &C,

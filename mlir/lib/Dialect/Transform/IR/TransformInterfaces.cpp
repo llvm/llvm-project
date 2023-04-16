@@ -495,7 +495,7 @@ void transform::TransformState::recordValueHandleInvalidationByOpHandleOne(
 
   for (Operation *ancestor : potentialAncestors) {
     Operation *definingOp;
-    std::optional<unsigned> resultNo = std::nullopt;
+    std::optional<unsigned> resultNo;
     unsigned argumentNo, blockNo, regionNo;
     if (auto opResult = payloadValue.dyn_cast<OpResult>()) {
       definingOp = opResult.getOwner();
@@ -1495,7 +1495,7 @@ LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
         });
   };
 
-  std::optional<unsigned> firstConsumedOperand = std::nullopt;
+  std::optional<unsigned> firstConsumedOperand;
   for (OpOperand &operand : op->getOpOperands()) {
     auto range = effectsOn(operand.get());
     if (range.empty()) {

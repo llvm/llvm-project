@@ -77,7 +77,7 @@ protected:
 
     ValueBoundsConstraintSet &cstr;
     Value value;
-    std::optional<int64_t> dim = std::nullopt;
+    std::optional<int64_t> dim;
   };
 
 public:
