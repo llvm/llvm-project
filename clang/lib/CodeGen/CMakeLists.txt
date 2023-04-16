@@ -1,4 +1,5 @@
 set(LLVM_LINK_COMPONENTS
+  AggressiveInstCombine
   Analysis
   BitReader
   BitWriter
@@ -12,7 +13,6 @@ set(LLVM_LINK_COMPONENTS
   IPO
   IRPrinter
   IRReader
-  AggressiveInstCombine
   InstCombine
   Instrumentation
   LTO
@@ -93,8 +93,8 @@ add_clang_library(clangCodeGen
   intrinsics_gen
 
   LINK_LIBS
-  clangAnalysis
   clangAST
+  clangAnalysis
   clangBasic
   clangFrontend
   clangLex

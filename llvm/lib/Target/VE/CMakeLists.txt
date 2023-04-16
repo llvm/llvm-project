@@ -35,10 +35,10 @@ add_llvm_target(VECodeGen
   Core
   MC
   SelectionDAG
-  VEDesc
-  VEInfo
   Support
   Target
+  VEDesc
+  VEInfo
 
   ADD_TO_COMPONENT
   VE

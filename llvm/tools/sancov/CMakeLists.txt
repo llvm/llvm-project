@@ -8,8 +8,8 @@ set(LLVM_LINK_COMPONENTS
   MCDisassembler
   Object
   Support
-  TargetParser
   Symbolize
+  TargetParser
   )
 
 add_llvm_tool(sancov
