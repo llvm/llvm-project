@@ -406,13 +406,13 @@ public:
         return *this;
     }
 
-    void lock();
-    bool try_lock();
+    _LIBCPP_HIDE_FROM_ABI void lock();
+    _LIBCPP_HIDE_FROM_ABI bool try_lock();
     template <class Rep, class Period>
-        bool try_lock_for(const chrono::duration<Rep, Period>& __rel_time);
+    _LIBCPP_HIDE_FROM_ABI bool try_lock_for(const chrono::duration<Rep, Period>& __rel_time);
     template <class Clock, class Duration>
-        bool try_lock_until(const chrono::time_point<Clock, Duration>& __abs_time);
-    void unlock();
+    _LIBCPP_HIDE_FROM_ABI bool try_lock_until(const chrono::time_point<Clock, Duration>& __abs_time);
+    _LIBCPP_HIDE_FROM_ABI void unlock();
 
     // Setters
     _LIBCPP_INLINE_VISIBILITY

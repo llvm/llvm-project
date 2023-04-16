@@ -3,9 +3,11 @@ tablegen(LLVM Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(DwarfutilTableGen)
 
 set(LLVM_LINK_COMPONENTS
-  DebugInfoDWARF
+  AllTargetsCodeGens
+  AllTargetsDescs
+  AllTargetsInfos
   DWARFLinker
-  DWARFLinkerParallel
+  DebugInfoDWARF
   MC
   ObjCopy
   Object
@@ -13,9 +15,6 @@ set(LLVM_LINK_COMPONENTS
   Support
   Target
   TargetParser
-  AllTargetsCodeGens
-  AllTargetsDescs
-  AllTargetsInfos
   )
 
 add_llvm_tool(llvm-dwarfutil

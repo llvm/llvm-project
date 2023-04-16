@@ -170,8 +170,7 @@ struct TargetRegionEntryInfo {
   unsigned Line;
   unsigned Count;
 
-  TargetRegionEntryInfo()
-      : ParentName(""), DeviceID(0), FileID(0), Line(0), Count(0) {}
+  TargetRegionEntryInfo() : DeviceID(0), FileID(0), Line(0), Count(0) {}
   TargetRegionEntryInfo(StringRef ParentName, unsigned DeviceID,
                         unsigned FileID, unsigned Line, unsigned Count = 0)
       : ParentName(ParentName), DeviceID(DeviceID), FileID(FileID), Line(Line),

@@ -39,7 +39,7 @@ class year_month_weekday {
     chrono::month           __m_;
     chrono::weekday_indexed __wdi_;
 public:
-    _LIBCPP_HIDE_FROM_ABI year_month_weekday() = default;
+    year_month_weekday() = default;
     _LIBCPP_HIDE_FROM_ABI constexpr year_month_weekday(const chrono::year& __yval, const chrono::month& __mval,
                                const chrono::weekday_indexed& __wdival) noexcept
         : __y_{__yval}, __m_{__mval}, __wdi_{__wdival} {}

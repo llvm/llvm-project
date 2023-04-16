@@ -446,7 +446,7 @@ class _LIBCPP_EXCEPTION_ABI ios_base::failure
 public:
     explicit failure(const string& __msg, const error_code& __ec = io_errc::stream);
     explicit failure(const char* __msg, const error_code& __ec = io_errc::stream);
-    failure(const failure&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI failure(const failure&) _NOEXCEPT = default;
     ~failure() _NOEXCEPT override;
 };
 
