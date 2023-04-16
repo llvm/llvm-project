@@ -2646,7 +2646,7 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
         OS << "NoSemaHandlerAttribute";
 
       if (Spellings.size() == 0) {
-        OS << ", AttributeCommonInfo::AS_Implicit";
+        OS << ", AttributeCommonInfo::Form::Implicit()";
       } else if (Spellings.size() == 1) {
         OS << ", ";
         emitFormInitializer(OS, Spellings[0], "0");

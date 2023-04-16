@@ -749,7 +749,7 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA,
       }
 
       ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, nullptr,
-                            nullptr, SourceLocation(), ParsedAttr::AS_GNU,
+                            nullptr, SourceLocation(), ParsedAttr::Form::GNU(),
                             nullptr);
 
       if (HasFunScope)
@@ -758,7 +758,7 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA,
       // If there are multiple decls, then the decl cannot be within the
       // function scope.
       ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, nullptr,
-                            nullptr, SourceLocation(), ParsedAttr::AS_GNU,
+                            nullptr, SourceLocation(), ParsedAttr::Form::GNU(),
                             nullptr);
     }
   } else {
