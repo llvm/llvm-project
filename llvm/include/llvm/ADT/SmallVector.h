@@ -37,9 +37,10 @@ template <typename T> class ArrayRef;
 template <typename IteratorT> class iterator_range;
 
 template <class Iterator>
-using EnableIfConvertibleToInputIterator = std::enable_if_t<std::is_convertible<
-    typename std::iterator_traits<Iterator>::iterator_category,
-    std::input_iterator_tag>::value>;
+using EnableIfConvertibleToInputIterator =
+    std::enable_if_t<std::is_convertible_v<
+        typename std::iterator_traits<Iterator>::iterator_category,
+        std::input_iterator_tag>>;
 
 /// This is all the stuff common to all SmallVectors.
 ///
@@ -207,10 +208,9 @@ protected:
     this->assertSafeToReferenceAfterResize(From, 0);
     this->assertSafeToReferenceAfterResize(To - 1, 0);
   }
-  template <
-      class ItTy,
-      std::enable_if_t<!std::is_same<std::remove_const_t<ItTy>, T *>::value,
-                       bool> = false>
+  template <class ItTy,
+            std::enable_if_t<!std::is_same_v<std::remove_const_t<ItTy>, T *>,
+                             bool> = false>
   void assertSafeToReferenceAfterClear(ItTy, ItTy) {}
 
   /// Check whether any part of the range will be invalidated by growing.
@@ -220,10 +220,9 @@ protected:
     this->assertSafeToAdd(From, To - From);
     this->assertSafeToAdd(To - 1, To - From);
   }
-  template <
-      class ItTy,
-      std::enable_if_t<!std::is_same<std::remove_const_t<ItTy>, T *>::value,
-                       bool> = false>
+  template <class ItTy,
+            std::enable_if_t<!std::is_same_v<std::remove_const_t<ItTy>, T *>,
+                             bool> = false>
   void assertSafeToAddRange(ItTy, ItTy) {}
 
   /// Reserve enough space to add one element, and return the updated element
@@ -328,7 +327,7 @@ public:
 /// trivially assignable.
 template <typename T, bool = (is_trivially_copy_constructible<T>::value) &&
                              (is_trivially_move_constructible<T>::value) &&
-                             std::is_trivially_destructible<T>::value>
+                             std::is_trivially_destructible_v<T>>
 class SmallVectorTemplateBase : public SmallVectorTemplateCommon<T> {
   friend class SmallVectorTemplateCommon<T>;
 
@@ -514,7 +513,7 @@ protected:
   template <typename T1, typename T2>
   static void uninitialized_copy(
       T1 *I, T1 *E, T2 *Dest,
-      std::enable_if_t<std::is_same<std::remove_const_t<T1>, T2>::value> * =
+      std::enable_if_t<std::is_same_v<std::remove_const_t<T1>, T2>> * =
           nullptr) {
     // Use memcpy for PODs iterated by pointers (which includes SmallVector
     // iterators): std::uninitialized_copy optimizes to memmove, but we can
@@ -1232,7 +1231,7 @@ public:
   }
 
   template <typename U,
-            typename = std::enable_if_t<std::is_convertible<U, T>::value>>
+            typename = std::enable_if_t<std::is_convertible_v<U, T>>>
   explicit SmallVector(ArrayRef<U> A) : SmallVectorImpl<T>(N) {
     this->append(A.begin(), A.end());
   }
