@@ -6581,7 +6581,6 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
   legalizeOperands(*NewInstr, MDT);
   if (NewDstReg)
     addUsersToMoveToVALUWorklist(NewDstReg, MRI, Worklist);
-  return;
 }
 
 // Add/sub require special handling to deal with carry outs.
