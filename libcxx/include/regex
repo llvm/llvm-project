@@ -1005,7 +1005,7 @@ class _LIBCPP_EXCEPTION_ABI regex_error
     regex_constants::error_type __code_;
 public:
     explicit regex_error(regex_constants::error_type __ecode);
-    regex_error(const regex_error&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI regex_error(const regex_error&) _NOEXCEPT = default;
     ~regex_error() _NOEXCEPT override;
     _LIBCPP_INLINE_VISIBILITY
     regex_constants::error_type code() const {return __code_;}
@@ -1470,7 +1470,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     __end_state() {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -1536,7 +1536,7 @@ public:
     explicit __empty_state(__node<_CharT>* __s)
         : base(__s) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -1562,7 +1562,7 @@ public:
     explicit __empty_non_own_state(__node<_CharT>* __s)
         : base(__s) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -1588,7 +1588,7 @@ public:
     explicit __repeat_one_loop(__node<_CharT>* __s)
         : base(__s) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -1614,7 +1614,7 @@ public:
     explicit __owns_two_states(__node<_CharT>* __s1, base* __s2)
         : base(__s1), __second_(__s2) {}
 
-    virtual ~__owns_two_states();
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual ~__owns_two_states();
 
     _LIBCPP_INLINE_VISIBILITY
     base*  second() const {return __second_;}
@@ -1657,8 +1657,8 @@ public:
           __mexp_begin_(__mexp_begin), __mexp_end_(__mexp_end),
           __greedy_(__greedy) {}
 
-    virtual void __exec(__state& __s) const;
-    virtual void __exec_split(bool __second, __state& __s) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state& __s) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec_split(bool __second, __state& __s) const;
 
 private:
     _LIBCPP_INLINE_VISIBILITY
@@ -1750,8 +1750,8 @@ public:
                          __owns_one_state<_CharT>* __s2)
         : base(__s1, __s2) {}
 
-    virtual void __exec(__state& __s) const;
-    virtual void __exec_split(bool __second, __state& __s) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state& __s) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec_split(bool __second, __state& __s) const;
 };
 
 template <class _CharT>
@@ -1788,7 +1788,7 @@ public:
     explicit __begin_marked_subexpression(unsigned __mexp, __node<_CharT>* __s)
         : base(__s), __mexp_(__mexp) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -1816,7 +1816,7 @@ public:
     explicit __end_marked_subexpression(unsigned __mexp, __node<_CharT>* __s)
         : base(__s), __mexp_(__mexp) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -1845,7 +1845,7 @@ public:
     explicit __back_ref(unsigned __mexp, __node<_CharT>* __s)
         : base(__s), __mexp_(__mexp) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -1896,7 +1896,7 @@ public:
                               __node<_CharT>* __s)
         : base(__s), __traits_(__traits), __mexp_(__mexp) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT, class _Traits>
@@ -1951,7 +1951,7 @@ public:
                               __node<_CharT>* __s)
         : base(__s), __traits_(__traits), __mexp_(__mexp) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT, class _Traits>
@@ -2006,7 +2006,7 @@ public:
                              __node<_CharT>* __s)
         : base(__s), __traits_(__traits), __invert_(__invert) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT, class _Traits>
@@ -2082,7 +2082,7 @@ public:
     __l_anchor_multiline(bool __multiline, __node<_CharT>* __s)
         : base(__s), __multiline_(__multiline) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -2126,7 +2126,7 @@ public:
     __r_anchor_multiline(bool __multiline, __node<_CharT>* __s)
         : base(__s), __multiline_(__multiline) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -2166,7 +2166,7 @@ public:
     __match_any(__node<_CharT>* __s)
         : base(__s) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -2228,7 +2228,7 @@ public:
     __match_char(_CharT __c, __node<_CharT>* __s)
         : base(__s), __c_(__c) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -2268,7 +2268,7 @@ public:
     __match_char_icase(const _Traits& __traits, _CharT __c, __node<_CharT>* __s)
         : base(__s), __traits_(__traits), __c_(__traits.translate_nocase(__c)) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT, class _Traits>
@@ -2309,7 +2309,7 @@ public:
     __match_char_collate(const _Traits& __traits, _CharT __c, __node<_CharT>* __s)
         : base(__s), __traits_(__traits), __c_(__traits.translate(__c)) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT, class _Traits>
@@ -2364,7 +2364,7 @@ public:
           __negate_(__negate), __icase_(__icase), __collate_(__collate),
           __might_have_digraph_(__traits_.getloc().name() != "C") {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 
     _LIBCPP_INLINE_VISIBILITY
     bool __negated() const {return __negate_;}
@@ -3156,7 +3156,7 @@ public:
     __lookahead(const basic_regex<_CharT, _Traits>& __exp, bool __invert, __node<_CharT>* __s, unsigned __mexp)
         : base(__s), __exp_(__exp), __mexp_(__mexp), __invert_(__invert) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT, class _Traits>

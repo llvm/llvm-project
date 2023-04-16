@@ -575,7 +575,7 @@ protected:
   /// no dSYM file is being used, this file index will be set to a
   /// valid value that can be used in DIERef objects which will contain
   /// an index that identifies the .DWO or .o file.
-  std::optional<uint64_t> m_file_index = std::nullopt;
+  std::optional<uint64_t> m_file_index;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARF_H

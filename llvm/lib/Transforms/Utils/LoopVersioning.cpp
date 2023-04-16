@@ -210,7 +210,7 @@ void LoopVersioning::prepareNoAliasMetadata() {
   // Finally, transform the above to actually map to scope list which is what
   // the metadata uses.
 
-  for (auto Pair : GroupToNonAliasingScopes)
+  for (const auto &Pair : GroupToNonAliasingScopes)
     GroupToNonAliasingScopeList[Pair.first] = MDNode::get(Context, Pair.second);
 }
 

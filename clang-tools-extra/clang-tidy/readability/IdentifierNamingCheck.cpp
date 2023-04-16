@@ -337,10 +337,10 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
         Type.replace(Pos, Kw.size(), "");
       }
     }
-    TypeName = Type.erase(0, Type.find_first_not_of(" "));
+    TypeName = Type.erase(0, Type.find_first_not_of(' '));
 
     // Remove template parameters
-    const size_t Pos = Type.find("<");
+    const size_t Pos = Type.find('<');
     if (Pos != std::string::npos) {
       TypeName = Type.erase(Pos, Type.size() - Pos);
     }
@@ -377,14 +377,14 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
       }
     }
 
-    TypeName = Type.erase(0, Type.find_first_not_of(" "));
+    TypeName = Type.erase(0, Type.find_first_not_of(' '));
     if (!RedundantRemoved) {
-      std::size_t FoundSpace = Type.find(" ");
+      std::size_t FoundSpace = Type.find(' ');
       if (FoundSpace != std::string::npos)
         Type = Type.substr(0, FoundSpace);
     }
 
-    TypeName = Type.erase(0, Type.find_first_not_of(" "));
+    TypeName = Type.erase(0, Type.find_first_not_of(' '));
 
     QualType QT = VD->getType();
     if (!QT.isNull() && QT->isArrayType())
@@ -586,7 +586,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getDataTypePrefix(
       if (PrefixStr.empty())
         PrefixStr = HNOption.DerivedType.lookup("Array");
     } else if (QT->isReferenceType()) {
-      size_t Pos = ModifiedTypeName.find_last_of("&");
+      size_t Pos = ModifiedTypeName.find_last_of('&');
       if (Pos != std::string::npos)
         ModifiedTypeName = ModifiedTypeName.substr(0, Pos);
     }
@@ -653,7 +653,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
   std::string Name = ED->getName().str();
   if (std::string::npos != Name.find("enum")) {
     Name = Name.substr(strlen("enum"), Name.length() - strlen("enum"));
-    Name = Name.erase(0, Name.find_first_not_of(" "));
+    Name = Name.erase(0, Name.find_first_not_of(' '));
   }
 
   static llvm::Regex Splitter(

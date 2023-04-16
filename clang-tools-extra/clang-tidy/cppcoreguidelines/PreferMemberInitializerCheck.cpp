@@ -129,9 +129,11 @@ PreferMemberInitializerCheck::PreferMemberInitializerCheck(
     : ClangTidyCheck(Name, Context),
       IsUseDefaultMemberInitEnabled(
           Context->isCheckEnabled("modernize-use-default-member-init")),
-      UseAssignment(OptionsView("modernize-use-default-member-init",
-                                Context->getOptions().CheckOptions, Context)
-                        .get("UseAssignment", false)) {}
+      UseAssignment(
+          Options.get("UseAssignment",
+                      OptionsView("modernize-use-default-member-init",
+                                  Context->getOptions().CheckOptions, Context)
+                          .get("UseAssignment", false))) {}
 
 void PreferMemberInitializerCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

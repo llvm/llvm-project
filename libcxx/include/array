@@ -233,14 +233,14 @@ struct _LIBCPP_TEMPLATE_VIS array
         return __elems_[__n];
     }
 
-    _LIBCPP_CONSTEXPR_SINCE_CXX17 reference at(size_type __n)
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reference at(size_type __n)
     {
         if (__n >= _Size)
             __throw_out_of_range("array::at");
         return __elems_[__n];
     }
 
-    _LIBCPP_CONSTEXPR_SINCE_CXX14 const_reference at(size_type __n) const
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const_reference at(size_type __n) const
     {
         if (__n >= _Size)
             __throw_out_of_range("array::at");

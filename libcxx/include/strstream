@@ -146,7 +146,7 @@ class _LIBCPP_TYPE_VIS strstreambuf
 {
 public:
 #ifndef _LIBCPP_CXX03_LANG
-    strstreambuf() : strstreambuf(0) {}
+    _LIBCPP_HIDE_FROM_ABI strstreambuf() : strstreambuf(0) {}
     explicit strstreambuf(streamsize __alsize);
 #else
     explicit strstreambuf(streamsize __alsize = 0);
