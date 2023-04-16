@@ -58,9 +58,9 @@ private:
   };
 
   // The node for the allocation at the root.
-  CallStackTrieNode *Alloc;
+  CallStackTrieNode *Alloc = nullptr;
   // The allocation's leaf stack id.
-  uint64_t AllocStackId;
+  uint64_t AllocStackId = 0;
 
   void deleteTrieNode(CallStackTrieNode *Node) {
     if (!Node)
@@ -77,7 +77,7 @@ private:
                      bool CalleeHasAmbiguousCallerContext);
 
 public:
-  CallStackTrie() : Alloc(nullptr), AllocStackId(0) {}
+  CallStackTrie() = default;
   ~CallStackTrie() { deleteTrieNode(Alloc); }
 
   bool empty() const { return Alloc == nullptr; }
