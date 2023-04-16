@@ -220,7 +220,7 @@ private:
 
   /// Creates a spirv::SpecConstantOp.
   spirv::SpecConstantOp createSpecConstant(Location loc, uint32_t resultID,
-                                           Attribute defaultValue);
+                                           TypedAttr defaultValue);
 
   /// Processes the OpVariable instructions at current `offset` into `binary`.
   /// It is expected that this method is used for variables that are to be

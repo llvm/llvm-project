@@ -296,7 +296,7 @@ public:
       padConstant = rewriter.createOrFold<tensor::ExtractOp>(
           loc, padOp.getPadConst(), ValueRange({}));
     } else {
-      Attribute constantAttr;
+      TypedAttr constantAttr;
       if (elementTy.isa<FloatType>()) {
         constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
       } else if (elementTy.isa<IntegerType>() && !padOp.getQuantizationInfo()) {
