@@ -159,6 +159,9 @@ private:
     case ELF::R_X86_64_32:
       Kind = x86_64::Pointer32;
       break;
+    case ELF::R_X86_64_16:
+      Kind = x86_64::Pointer16;
+      break;
     case ELF::R_X86_64_32S:
       Kind = x86_64::Pointer32Signed;
       break;
