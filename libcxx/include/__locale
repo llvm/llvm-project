@@ -163,7 +163,7 @@ public:
     // locale operations:
     string name() const;
     bool operator==(const locale&) const;
-    bool operator!=(const locale& __y) const {return !(*this == __y);}
+    _LIBCPP_HIDE_FROM_ABI bool operator!=(const locale& __y) const {return !(*this == __y);}
     template <class _CharT, class _Traits, class _Allocator>
       _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
       bool operator()(const basic_string<_CharT, _Traits, _Allocator>&,

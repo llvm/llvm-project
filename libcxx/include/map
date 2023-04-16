@@ -605,7 +605,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Key& __x, const _CP& __y) const
         {return static_cast<const _Compare&>(*this)(__x, __y.__get_value().first);}
-    void swap(__map_value_compare& __y)
+    _LIBCPP_HIDE_FROM_ABI void swap(__map_value_compare& __y)
         _NOEXCEPT_(__is_nothrow_swappable<_Compare>::value)
     {
       using _VSTD::swap;
@@ -1117,7 +1117,7 @@ public:
         {
         }
 
-    map(map&& __m, const allocator_type& __a);
+    _LIBCPP_HIDE_FROM_ABI map(map&& __m, const allocator_type& __a);
 
     _LIBCPP_INLINE_VISIBILITY
     map& operator=(map&& __m)
@@ -1211,13 +1211,13 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     size_type max_size() const _NOEXCEPT {return __tree_.max_size();}
 
-    mapped_type& operator[](const key_type& __k);
+    _LIBCPP_HIDE_FROM_ABI mapped_type& operator[](const key_type& __k);
 #ifndef _LIBCPP_CXX03_LANG
-    mapped_type& operator[](key_type&& __k);
+    _LIBCPP_HIDE_FROM_ABI mapped_type& operator[](key_type&& __k);
 #endif
 
-          mapped_type& at(const key_type& __k);
-    const mapped_type& at(const key_type& __k) const;
+    _LIBCPP_HIDE_FROM_ABI mapped_type& at(const key_type& __k);
+    _LIBCPP_HIDE_FROM_ABI const mapped_type& at(const key_type& __k) const;
 
     _LIBCPP_INLINE_VISIBILITY
     allocator_type get_allocator() const _NOEXCEPT {return allocator_type(__tree_.__alloc());}
@@ -1556,7 +1556,7 @@ private:
     typedef unique_ptr<__node, _Dp> __node_holder;
 
 #ifdef _LIBCPP_CXX03_LANG
-    __node_holder __construct_node_with_key(const key_type& __k);
+    _LIBCPP_HIDE_FROM_ABI __node_holder __construct_node_with_key(const key_type& __k);
 #endif
 };
 
@@ -1917,7 +1917,7 @@ public:
         {
         }
 
-    multimap(multimap&& __m, const allocator_type& __a);
+    _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m, const allocator_type& __a);
 
     _LIBCPP_INLINE_VISIBILITY
     multimap& operator=(multimap&& __m)

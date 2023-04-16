@@ -82,15 +82,15 @@ public:
     typedef void                                 pointer;
     typedef void                                 reference;
 
-    ostream_joiner(ostream_type& __os, _Delim&& __d)
+    _LIBCPP_HIDE_FROM_ABI ostream_joiner(ostream_type& __os, _Delim&& __d)
         : __output_iter_(_VSTD::addressof(__os)), __delim_(_VSTD::move(__d)), __first_(true) {}
 
-    ostream_joiner(ostream_type& __os, const _Delim& __d)
+    _LIBCPP_HIDE_FROM_ABI ostream_joiner(ostream_type& __os, const _Delim& __d)
         : __output_iter_(_VSTD::addressof(__os)), __delim_(__d), __first_(true) {}
 
 
     template<typename _Tp>
-    ostream_joiner& operator=(const _Tp& __v)
+    _LIBCPP_HIDE_FROM_ABI ostream_joiner& operator=(const _Tp& __v)
     {
         if (!__first_)
             *__output_iter_ << __delim_;
@@ -99,9 +99,9 @@ public:
         return *this;
     }
 
-    ostream_joiner& operator*()     _NOEXCEPT { return *this; }
-    ostream_joiner& operator++()    _NOEXCEPT { return *this; }
-    ostream_joiner& operator++(int) _NOEXCEPT { return *this; }
+    _LIBCPP_HIDE_FROM_ABI ostream_joiner& operator*()     _NOEXCEPT { return *this; }
+    _LIBCPP_HIDE_FROM_ABI ostream_joiner& operator++()    _NOEXCEPT { return *this; }
+    _LIBCPP_HIDE_FROM_ABI ostream_joiner& operator++(int) _NOEXCEPT { return *this; }
 
 private:
     ostream_type*   __output_iter_;

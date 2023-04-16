@@ -82,7 +82,7 @@ namespace ranges {
 
   private:
     static constexpr bool _MustProvideSizeAtConstruction = !_StoreSize; // just to improve compiler diagnostics
-    struct _Empty { constexpr _Empty(auto) noexcept { } };
+    struct _Empty { _LIBCPP_HIDE_FROM_ABI constexpr _Empty(auto) noexcept { } };
     using _Size = conditional_t<_StoreSize, make_unsigned_t<iter_difference_t<_Iter>>, _Empty>;
     _LIBCPP_NO_UNIQUE_ADDRESS _Iter __begin_ = _Iter();
     _LIBCPP_NO_UNIQUE_ADDRESS _Sent __end_ = _Sent();

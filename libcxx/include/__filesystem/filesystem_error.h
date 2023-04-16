@@ -60,7 +60,7 @@ public:
   _LIBCPP_INLINE_VISIBILITY
   const path& path2() const noexcept { return __storage_->__p2_; }
 
-  filesystem_error(const filesystem_error&) = default;
+  _LIBCPP_HIDE_FROM_ABI filesystem_error(const filesystem_error&) = default;
   ~filesystem_error() override; // key function
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL

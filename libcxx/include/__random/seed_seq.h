@@ -53,7 +53,7 @@ public:
 
     // generating functions
     template<class _RandomAccessIterator>
-        void generate(_RandomAccessIterator __first, _RandomAccessIterator __last);
+    _LIBCPP_HIDE_FROM_ABI void generate(_RandomAccessIterator __first, _RandomAccessIterator __last);
 
     // property functions
     _LIBCPP_INLINE_VISIBILITY
@@ -71,7 +71,7 @@ public:
 
 private:
     template<class _InputIterator>
-    void __init(_InputIterator __first, _InputIterator __last);
+    _LIBCPP_HIDE_FROM_ABI void __init(_InputIterator __first, _InputIterator __last);
 
     vector<result_type> __v_;
 };
