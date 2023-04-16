@@ -128,7 +128,7 @@ int main(int Argc, char **Argv) {
     ExitOnErr(
         createStringError(inconvertibleErrorCode(), "missing --cas=<path>"));
 
-  std::unique_ptr<ObjectStore> CAS;
+  std::shared_ptr<ObjectStore> CAS;
   std::unique_ptr<ActionCache> AC;
   std::optional<StringRef> CASFilePath;
   if (sys::path::is_absolute(CASPath)) {
@@ -139,7 +139,7 @@ int main(int Argc, char **Argv) {
   }
   assert(CAS);
 
-  std::unique_ptr<ObjectStore> UpstreamCAS;
+  std::shared_ptr<ObjectStore> UpstreamCAS;
   if (!UpstreamCASPath.empty())
     UpstreamCAS = ExitOnErr(createCASFromIdentifier(UpstreamCASPath));
 

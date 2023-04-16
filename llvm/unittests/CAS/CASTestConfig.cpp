@@ -62,7 +62,7 @@ std::unique_ptr<unittest::cas::MockEnv> createGRPCEnv(StringRef Socket,
                                                       StringRef TempDir);
 
 static TestingAndDir createGRPCCAS(int I) {
-  std::unique_ptr<ObjectStore> CAS;
+  std::shared_ptr<ObjectStore> CAS;
   unittest::TempDir Temp("daemon", /*Unique=*/true);
   SmallString<100> DaemonPath(Temp.path());
   sys::path::append(DaemonPath, "grpc");

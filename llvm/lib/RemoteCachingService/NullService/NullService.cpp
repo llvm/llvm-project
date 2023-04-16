@@ -32,7 +32,7 @@ static Error unsupportedError() {
       "RemoteCachingService (LLVM_CAS_ENABLE_REMOTE_CACHE) is disabled");
 }
 
-Expected<std::unique_ptr<ObjectStore>>
+Expected<std::shared_ptr<ObjectStore>>
 cas::createGRPCRelayCAS(const Twine &Path) {
   return unsupportedError();
 }
