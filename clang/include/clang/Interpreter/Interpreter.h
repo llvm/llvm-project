@@ -19,6 +19,7 @@
 #include "clang/AST/GlobalDecl.h"
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Error.h"
 
 #include <memory>
@@ -78,18 +79,18 @@ public:
   /// Link a dynamic library
   llvm::Error LoadDynamicLibrary(const char *name);
 
-  /// \returns the \c JITTargetAddress of a \c GlobalDecl. This interface uses
+  /// \returns the \c ExecutorAddr of a \c GlobalDecl. This interface uses
   /// the CodeGenModule's internal mangling cache to avoid recomputing the
   /// mangled name.
-  llvm::Expected<llvm::JITTargetAddress> getSymbolAddress(GlobalDecl GD) const;
+  llvm::Expected<llvm::orc::ExecutorAddr> getSymbolAddress(GlobalDecl GD) const;
 
-  /// \returns the \c JITTargetAddress of a given name as written in the IR.
-  llvm::Expected<llvm::JITTargetAddress>
+  /// \returns the \c ExecutorAddr of a given name as written in the IR.
+  llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddress(llvm::StringRef IRName) const;
 
-  /// \returns the \c JITTargetAddress of a given name as written in the object
+  /// \returns the \c ExecutorAddr of a given name as written in the object
   /// file.
-  llvm::Expected<llvm::JITTargetAddress>
+  llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
 };
 } // namespace clang
