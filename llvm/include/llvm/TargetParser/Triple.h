@@ -1105,6 +1105,9 @@ public:
   /// Get the canonical name for the \p Kind environment.
   static StringRef getEnvironmentTypeName(EnvironmentType Kind);
 
+  /// Get the name for the \p Object format.
+  static StringRef getObjectFormatTypeName(ObjectFormatType ObjectFormat);
+
   /// @}
   /// @name Static helpers for converting alternate architecture names.
   /// @{
