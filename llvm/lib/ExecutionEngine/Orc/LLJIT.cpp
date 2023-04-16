@@ -10,6 +10,8 @@
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
+#include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
+#include "llvm/ExecutionEngine/Orc/DebuggerSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
@@ -704,6 +706,14 @@ Error LLJITBuilderState::prepareForConstruction() {
       dbgs() << "\n";
   });
 
+  // Create DL if not specified.
+  if (!DL) {
+    if (auto DLOrErr = JTMB->getDefaultDataLayoutForTarget())
+      DL = std::move(*DLOrErr);
+    else
+      return DLOrErr.takeError();
+  }
+
   // If neither ES nor EPC has been set then create an EPC instance.
   if (!ES && !EPC) {
     LLVM_DEBUG({
@@ -761,6 +771,30 @@ Error LLJITBuilderState::prepareForConstruction() {
         return std::move(ObjLinkingLayer);
       };
     }
+  }
+
+  // If we need a process JITDylib but no setup function has been given then
+  // create a default one.
+  if (!SetupProcessSymbolsJITDylib &&
+      (LinkProcessSymbolsByDefault || EnableDebuggerSupport)) {
+
+    LLVM_DEBUG({
+      dbgs() << "Creating default Process JD setup function (neeeded for";
+      if (LinkProcessSymbolsByDefault)
+        dbgs() << " <link-process-syms-by-default>";
+      if (EnableDebuggerSupport)
+        dbgs() << " <debugger-support>";
+      dbgs() << ")\n";
+    });
+
+    SetupProcessSymbolsJITDylib = [this](JITDylib &JD) -> Error {
+      auto G = orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
+          DL->getGlobalPrefix());
+      if (!G)
+        return G.takeError();
+      JD.addGenerator(std::move(*G));
+      return Error::success();
+    };
   }
 
   return Error::success();
@@ -906,7 +940,7 @@ LLJIT::createCompileFunction(LLJITBuilderState &S,
 }
 
 LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
-    : DL(""), TT(S.JTMB->getTargetTriple()) {
+    : DL(std::move(*S.DL)), TT(S.JTMB->getTargetTriple()) {
 
   ErrorAsOutParameter _(&Err);
 
@@ -923,15 +957,6 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
       Err = EPC.takeError();
       return;
     }
-  }
-
-  if (S.DL)
-    DL = std::move(*S.DL);
-  else if (auto DLOrErr = S.JTMB->getDefaultDataLayoutForTarget())
-    DL = std::move(*DLOrErr);
-  else {
-    Err = DLOrErr.takeError();
-    return;
   }
 
   auto ObjLayer = createObjectLinkingLayer(S, *ES);
@@ -972,21 +997,51 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     });
   }
 
-  if (S.LinkProcessSymbolsByDefault && !S.SetupProcessSymbolsJITDylib)
-    S.SetupProcessSymbolsJITDylib = [this](JITDylib &JD) -> Error {
-      auto G = orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
-          DL.getGlobalPrefix());
-      if (!G)
-        return G.takeError();
-      JD.addGenerator(std::move(*G));
-      return Error::success();
-    };
-
   if (S.SetupProcessSymbolsJITDylib) {
     ProcessSymbols = &ES->createBareJITDylib("<Process Symbols>");
     if (auto Err2 = S.SetupProcessSymbolsJITDylib(*ProcessSymbols)) {
       Err = std::move(Err2);
       return;
+    }
+  }
+
+  if (S.EnableDebuggerSupport) {
+    if (auto *OLL = dyn_cast<ObjectLinkingLayer>(ObjLinkingLayer.get())) {
+      switch (TT.getObjectFormat()) {
+      case Triple::ELF: {
+        auto Registrar = createJITLoaderGDBRegistrar(*ES);
+        if (!Registrar) {
+          Err = Registrar.takeError();
+          return;
+        }
+        OLL->addPlugin(std::make_unique<DebugObjectManagerPlugin>(
+            *ES, std::move(*Registrar), true, true));
+        break;
+      }
+      case Triple::MachO: {
+        assert(ProcessSymbols && "ProcessSymbols JD should be available when "
+                                 "EnableDebuggerSupport is set");
+        auto DS =
+            GDBJITDebugInfoRegistrationPlugin::Create(*ES, *ProcessSymbols, TT);
+        if (!DS) {
+          Err = DS.takeError();
+          return;
+        }
+        OLL->addPlugin(std::move(*DS));
+        break;
+      }
+      default:
+        LLVM_DEBUG({
+          dbgs() << "Cannot enable LLJIT debugger support: "
+                 << Triple::getObjectFormatTypeName(TT.getObjectFormat())
+                 << " not supported.\n";
+        });
+      }
+    } else {
+      LLVM_DEBUG({
+        dbgs() << "Cannot enable LLJIT debugger support: "
+                  " debugger support is only available when using JITLink.\n";
+      });
     }
   }
 
