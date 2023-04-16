@@ -187,8 +187,7 @@ static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
 // if the direction matrix, after the same permutation is applied to its
 // columns, has no ">" direction as the leftmost non-"=" direction in any row.
 static bool isLexicographicallyPositive(std::vector<char> &DV) {
-  for (unsigned Level = 0; Level < DV.size(); ++Level) {
-    unsigned char Direction = DV[Level];
+  for (unsigned char Direction : DV) {
     if (Direction == '<')
       return true;
     if (Direction == '>' || Direction == '*')
