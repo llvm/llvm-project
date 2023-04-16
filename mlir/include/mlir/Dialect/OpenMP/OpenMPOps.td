@@ -1618,7 +1618,7 @@ def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol,
       if (getAtomicReductionRegion().empty())
         return {};
 
-      return getAtomicReductionRegion().front().getArgument(0).getType();
+      return cast<PointerLikeType>(getAtomicReductionRegion().front().getArgument(0).getType());
     }
   }];
   let hasRegionVerifier = 1;

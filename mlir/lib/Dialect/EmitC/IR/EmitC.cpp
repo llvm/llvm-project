@@ -121,7 +121,7 @@ LogicalResult emitc::ConstantOp::verify() {
   if (getValueAttr().isa<emitc::OpaqueAttr>())
     return success();
 
-  TypedAttr value = getValueAttr();
+  auto value = cast<TypedAttr>(getValueAttr());
   Type type = getType();
   if (!value.getType().isa<NoneType>() && type != value.getType())
     return emitOpError() << "requires attribute's type (" << value.getType()
@@ -177,7 +177,7 @@ LogicalResult emitc::VariableOp::verify() {
   if (getValueAttr().isa<emitc::OpaqueAttr>())
     return success();
 
-  TypedAttr value = getValueAttr();
+  auto value = cast<TypedAttr>(getValueAttr());
   Type type = getType();
   if (!value.getType().isa<NoneType>() && type != value.getType())
     return emitOpError() << "requires attribute's type (" << value.getType()

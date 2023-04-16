@@ -78,9 +78,9 @@ public:
   using Attribute::Attribute;
 
   /// Allow implicit conversion to ElementsAttr.
-  operator ElementsAttr() const {
-    return *this ? cast<ElementsAttr>() : nullptr;
-  }
+  operator ElementsAttr() const { return cast_if_present<ElementsAttr>(*this); }
+  /// Allow implicit conversion to TypedAttr.
+  operator TypedAttr() const { return ElementsAttr(*this); }
 
   /// Type trait used to check if the given type T is a potentially valid C++
   /// floating point type that can be used to access the underlying element
@@ -842,9 +842,10 @@ public:
 
   static BoolAttr get(MLIRContext *context, bool value);
 
-  /// Enable conversion to IntegerAttr. This uses conversion vs. inheritance to
-  /// avoid bringing in all of IntegerAttrs methods.
+  /// Enable conversion to IntegerAttr and its interfaces. This uses conversion
+  /// vs. inheritance to avoid bringing in all of IntegerAttrs methods.
   operator IntegerAttr() const { return IntegerAttr(impl); }
+  operator TypedAttr() const { return IntegerAttr(impl); }
 
   /// Return the boolean value of this attribute.
   bool getValue() const;
