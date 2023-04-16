@@ -1711,17 +1711,15 @@ template <class ..._Types, size_t ..._I0, class _Tuple0>
 struct __tuple_cat_return_ref_imp<tuple<_Types...>, __tuple_indices<_I0...>, _Tuple0>
 {
     typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tuple0> _T0;
-    typedef tuple<_Types..., typename __apply_cv<_Tuple0,
-                          typename tuple_element<_I0, _T0>::type>::type&&...> type;
+    typedef tuple<_Types..., __apply_cv_t<_Tuple0, typename tuple_element<_I0, _T0>::type>&&...> type;
 };
 
 template <class ..._Types, size_t ..._I0, class _Tuple0, class _Tuple1, class ..._Tuples>
 struct __tuple_cat_return_ref_imp<tuple<_Types...>, __tuple_indices<_I0...>,
                                   _Tuple0, _Tuple1, _Tuples...>
     : public __tuple_cat_return_ref_imp<
-         tuple<_Types..., typename __apply_cv<_Tuple0,
-               typename tuple_element<_I0,
-                  __libcpp_remove_reference_t<_Tuple0> >::type>::type&&...>,
+         tuple<_Types..., __apply_cv_t<_Tuple0,
+                                       typename tuple_element<_I0, __libcpp_remove_reference_t<_Tuple0>>::type>&&...>,
          typename __make_tuple_indices<tuple_size<__libcpp_remove_reference_t<_Tuple1> >::value>::type,
          _Tuple1, _Tuples...>
 {
@@ -1761,13 +1759,9 @@ struct __tuple_cat<tuple<_Types...>, __tuple_indices<_I0...>, __tuple_indices<_J
         (void)__t; // avoid unused parameter warning on GCC when _I0 is empty
         typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tuple0> _T0;
         typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tuple1> _T1;
-        return __tuple_cat<
-            tuple<_Types...,
-                  typename __apply_cv<_Tuple0, typename tuple_element<
-                                                   _J0, _T0>::type>::type&&...>,
-            typename __make_tuple_indices<sizeof...(_Types) +
-                                          tuple_size<_T0>::value>::type,
-            typename __make_tuple_indices<tuple_size<_T1>::value>::type>()(
+        return __tuple_cat<tuple<_Types..., __apply_cv_t<_Tuple0, typename tuple_element<_J0, _T0>::type>&&...>,
+                           typename __make_tuple_indices<sizeof...(_Types) + tuple_size<_T0>::value>::type,
+                           typename __make_tuple_indices<tuple_size<_T1>::value>::type>()(
             _VSTD::forward_as_tuple(
                 _VSTD::forward<_Types>(_VSTD::get<_I0>(__t))...,
                 _VSTD::get<_J0>(_VSTD::forward<_Tuple0>(__t0))...),
