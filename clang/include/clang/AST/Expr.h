@@ -593,12 +593,12 @@ public:
   struct EvalStatus {
     /// Whether the evaluated expression has side effects.
     /// For example, (f() && 0) can be folded, but it still has side effects.
-    bool HasSideEffects;
+    bool HasSideEffects = false;
 
     /// Whether the evaluation hit undefined behavior.
     /// For example, 1.0 / 0.0 can be folded to Inf, but has undefined behavior.
     /// Likewise, INT_MAX + 1 can be folded to INT_MIN, but has UB.
-    bool HasUndefinedBehavior;
+    bool HasUndefinedBehavior = false;
 
     /// Diag - If this is non-null, it will be filled in with a stack of notes
     /// indicating why evaluation failed (or why it failed to produce a constant
@@ -607,10 +607,9 @@ public:
     /// foldable. If the expression is foldable, but not a constant expression,
     /// the notes will describes why it isn't a constant expression. If the
     /// expression *is* a constant expression, no notes will be produced.
-    SmallVectorImpl<PartialDiagnosticAt> *Diag;
+    SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr;
 
-    EvalStatus()
-        : HasSideEffects(false), HasUndefinedBehavior(false), Diag(nullptr) {}
+    EvalStatus() = default;
 
     // hasSideEffects - Return true if the evaluated expression has
     // side effects.
