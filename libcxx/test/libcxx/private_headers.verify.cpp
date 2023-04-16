@@ -609,7 +609,6 @@ END-SCRIPT
 #include <__system_error/system_error.h> // expected-error@*:* {{use of private header from outside its module: '__system_error/system_error.h'}}
 #include <__thread/poll_with_backoff.h> // expected-error@*:* {{use of private header from outside its module: '__thread/poll_with_backoff.h'}}
 #include <__thread/timed_backoff_policy.h> // expected-error@*:* {{use of private header from outside its module: '__thread/timed_backoff_policy.h'}}
-#include <__tuple/apply_cv.h> // expected-error@*:* {{use of private header from outside its module: '__tuple/apply_cv.h'}}
 #include <__tuple/make_tuple_types.h> // expected-error@*:* {{use of private header from outside its module: '__tuple/make_tuple_types.h'}}
 #include <__tuple/pair_like.h> // expected-error@*:* {{use of private header from outside its module: '__tuple/pair_like.h'}}
 #include <__tuple/sfinae_helpers.h> // expected-error@*:* {{use of private header from outside its module: '__tuple/sfinae_helpers.h'}}
