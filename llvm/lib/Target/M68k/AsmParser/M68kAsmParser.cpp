@@ -133,7 +133,6 @@ class M68kOperand : public MCParsedAsmOperand {
   SMLoc Start, End;
   union {
     StringRef Token;
-    int64_t Imm;
     const MCExpr *Expr;
     M68kMemOp MemOp;
   };
@@ -1069,9 +1068,12 @@ void M68kOperand::print(raw_ostream &OS) const {
     OS << "token '" << Token << "'";
     break;
 
-  case KindTy::Imm:
-    OS << "immediate " << Imm;
+  case KindTy::Imm: {
+    int64_t Value;
+    Expr->evaluateAsAbsolute(Value);
+    OS << "immediate " << Value;
     break;
+  }
 
   case KindTy::MemOp:
     MemOp.print(OS);
