@@ -67,6 +67,7 @@ add_llvm_target(PowerPCCodeGen
   BinaryFormat
   CodeGen
   Core
+  GlobalISel
   MC
   PowerPCDesc
   PowerPCInfo
@@ -76,7 +77,6 @@ add_llvm_target(PowerPCCodeGen
   Target
   TargetParser
   TransformUtils
-  GlobalISel
 
   ADD_TO_COMPONENT
   PowerPC

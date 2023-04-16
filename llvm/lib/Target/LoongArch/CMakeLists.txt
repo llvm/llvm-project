@@ -32,9 +32,9 @@ add_llvm_target(LoongArchCodeGen
   AsmPrinter
   CodeGen
   Core
-  MC
   LoongArchDesc
   LoongArchInfo
+  MC
   Scalar
   SelectionDAG
   Support

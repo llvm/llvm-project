@@ -2,11 +2,11 @@ set(LLVM_LINK_COMPONENTS
   BinaryFormat
   InterfaceStub
   Object
+  ObjectYAML
+  Option
   Support
   TargetParser
   TextAPI
-  ObjectYAML
-  Option
   )
 
 set(LLVM_TARGET_DEFINITIONS Opts.td)

@@ -61,7 +61,7 @@ add_llvm_target(NVPTXCodeGen
 
   ADD_TO_COMPONENT
   NVPTX
-)
+  )
 
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)

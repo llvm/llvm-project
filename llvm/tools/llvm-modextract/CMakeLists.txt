@@ -1,8 +1,8 @@
 set(LLVM_LINK_COMPONENTS
-  IRReader
   BitReader
   BitWriter
   Core
+  IRReader
   Support
   )
 

@@ -12,10 +12,10 @@ add_llvm_component_library(LLVMPowerPCDesc
   PPCXCOFFStreamer.cpp
 
   LINK_COMPONENTS
+  BinaryFormat
   MC
   PowerPCInfo
   Support
-  BinaryFormat
   TargetParser
 
   ADD_TO_COMPONENT
