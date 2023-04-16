@@ -107,6 +107,9 @@ bool RISCVGatherScatterLowering::isLegalTypeAndAlignment(Type *DataType,
 
 // TODO: Should we consider the mask when looking for a stride?
 static std::pair<Value *, Value *> matchStridedConstant(Constant *StartC) {
+  if (!isa<FixedVectorType>(StartC->getType()))
+    return std::make_pair(nullptr, nullptr);
+
   unsigned NumElts = cast<FixedVectorType>(StartC->getType())->getNumElements();
 
   // Check that the start value is a strided constant.

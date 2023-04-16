@@ -246,7 +246,7 @@ llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   return llvm::Error::success();
 }
 
-llvm::Expected<llvm::JITTargetAddress>
+llvm::Expected<llvm::orc::ExecutorAddr>
 Interpreter::getSymbolAddress(GlobalDecl GD) const {
   if (!IncrExecutor)
     return llvm::make_error<llvm::StringError>("Operation failed. "
@@ -256,7 +256,7 @@ Interpreter::getSymbolAddress(GlobalDecl GD) const {
   return getSymbolAddress(MangledName);
 }
 
-llvm::Expected<llvm::JITTargetAddress>
+llvm::Expected<llvm::orc::ExecutorAddr>
 Interpreter::getSymbolAddress(llvm::StringRef IRName) const {
   if (!IncrExecutor)
     return llvm::make_error<llvm::StringError>("Operation failed. "
@@ -266,7 +266,7 @@ Interpreter::getSymbolAddress(llvm::StringRef IRName) const {
   return IncrExecutor->getSymbolAddress(IRName, IncrementalExecutor::IRName);
 }
 
-llvm::Expected<llvm::JITTargetAddress>
+llvm::Expected<llvm::orc::ExecutorAddr>
 Interpreter::getSymbolAddressFromLinkerName(llvm::StringRef Name) const {
   if (!IncrExecutor)
     return llvm::make_error<llvm::StringError>("Operation failed. "

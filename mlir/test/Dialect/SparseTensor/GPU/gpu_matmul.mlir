@@ -8,7 +8,8 @@
 //
 // Compute matrix matrix C = AB
 //
-// CHECK-LABEL: gpu.func @kernel(
+// CHECK-LABEL: gpu.module @sparse_kernels
+// CHECK-LABEL: gpu.func @kernel0(
 // CHECK-SAME:        %[[VAL_0:.*0]]: index,
 // CHECK-SAME:        %[[VAL_1:.*1]]: index,
 // CHECK-SAME:        %[[VAL_2:.*2]]: memref<?xindex>,
@@ -51,7 +52,7 @@
 // CHECK:       gpu.host_register
 // CHECK:       gpu.host_register
 // CHECK:       gpu.host_register
-// CHECK:       gpu.launch_func  @sparsekernels::@kernel blocks
+// CHECK:       gpu.launch_func @sparse_kernels::@kernel0 blocks
 //
 func.func @matmul(%A: tensor<?x?xf64, #CSR>, %B: tensor<?x?xf64>, %C_in: tensor<?x?xf64>) -> tensor<?x?xf64> {
   %C_out = linalg.matmul

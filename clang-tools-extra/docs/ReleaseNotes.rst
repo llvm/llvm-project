@@ -101,6 +101,8 @@ Improvements to clang-tidy
 - Support specifying `Checks` as a YAML list in the `.clang-tidy` configuration
   file.
 
+- Fix a potential crash when using the `--dump-config` option.
+
 New checks
 ^^^^^^^^^^
 
