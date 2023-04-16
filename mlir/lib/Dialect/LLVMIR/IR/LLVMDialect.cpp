@@ -732,7 +732,7 @@ static bool isTypeCompatibleWithAtomicOp(Type type, bool isPointerTypeAllowed) {
   if (type.isa<LLVMPointerType>())
     return isPointerTypeAllowed;
 
-  std::optional<unsigned> bitWidth = std::nullopt;
+  std::optional<unsigned> bitWidth;
   if (auto floatType = type.dyn_cast<FloatType>()) {
     if (!isCompatibleFloatingPointType(type))
       return false;
