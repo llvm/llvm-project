@@ -77,7 +77,7 @@ struct ForOpInterface
 
     // Check if computed bound equals the corresponding iter_arg.
     Value singleValue = nullptr;
-    std::optional<int64_t> singleDim = std::nullopt;
+    std::optional<int64_t> singleDim;
     if (auto dimExpr = bound.getResult(0).dyn_cast<AffineDimExpr>()) {
       int64_t idx = dimExpr.getPosition();
       singleValue = boundOperands[idx].first;
