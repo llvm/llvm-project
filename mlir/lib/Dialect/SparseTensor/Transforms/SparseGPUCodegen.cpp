@@ -40,24 +40,36 @@ static void markAsGPUContainer(ModuleOp topModule) {
                      UnitAttr::get(topModule->getContext()));
 }
 
-/// Constructs a new GPU module (for GPU kernels) inside the given top module.
-static gpu::GPUModuleOp genGPUModule(OpBuilder &builder, ModuleOp topModule,
-                                     StringRef name) {
+/// Constructs a new GPU module (for GPU kernels) inside the given top module,
+/// or returns an existing GPU module if one was built previously.
+static gpu::GPUModuleOp genGPUModule(OpBuilder &builder, ModuleOp topModule) {
+  for (auto op : topModule.getBodyRegion().getOps<gpu::GPUModuleOp>())
+    return op; // existing
   markAsGPUContainer(topModule);
   builder.setInsertionPointToStart(&topModule.getBodyRegion().front());
-  return builder.create<gpu::GPUModuleOp>(topModule->getLoc(), name);
+  return builder.create<gpu::GPUModuleOp>(topModule->getLoc(),
+                                          "sparse_kernels");
 }
 
 /// Constructs a new GPU kernel in the given GPU module.
 static gpu::GPUFuncOp genGPUFunc(OpBuilder &builder, gpu::GPUModuleOp gpuModule,
-                                 StringRef name, SmallVectorImpl<Value> &args) {
+                                 SmallVectorImpl<Value> &args) {
+  // Get a unique kernel name. Not very creative,
+  // but we simply try kernel0, kernel1, etc.
+  unsigned kernelNumber = 0;
+  SmallString<16> kernelName;
+  do {
+    kernelName.clear();
+    ("kernel" + Twine(kernelNumber++)).toStringRef(kernelName);
+  } while (gpuModule.lookupSymbol(kernelName));
+  // Then we insert a new kernel with given arguments into the module.
   builder.setInsertionPointToStart(&gpuModule.getBodyRegion().front());
   SmallVector<Type> argsTp;
   for (unsigned i = 0, e = args.size(); i < e; i++)
     argsTp.push_back(args[i].getType());
   FunctionType type = FunctionType::get(gpuModule->getContext(), argsTp, {});
   auto gpuFunc =
-      builder.create<gpu::GPUFuncOp>(gpuModule->getLoc(), name, type);
+      builder.create<gpu::GPUFuncOp>(gpuModule->getLoc(), kernelName, type);
   gpuFunc->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
                    builder.getUnitAttr());
   return gpuFunc;
@@ -208,12 +220,9 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
       args.push_back(genHostRegisterMemref(rewriter, loc, b));
     auto saveIp = rewriter.saveInsertionPoint();
     // Set up GPU module and construct GPU function.
-    //
-    // TODO: only generate once, avoid name conflict
-    //
     ModuleOp topModule = forallOp->getParentOfType<ModuleOp>();
-    auto gpuModule = genGPUModule(rewriter, topModule, "sparsekernels");
-    auto gpuFunc = genGPUFunc(rewriter, gpuModule, "kernel", args);
+    auto gpuModule = genGPUModule(rewriter, topModule);
+    auto gpuFunc = genGPUFunc(rewriter, gpuModule, args);
     genGPUCode(rewriter, gpuFunc, forallOp, constants, scalars, buffers);
     // Generate code that launches the kernel.
     rewriter.restoreInsertionPoint(saveIp);

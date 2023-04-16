@@ -1514,7 +1514,7 @@ public:
           InstructionCost Cost = (ActiveBits + PopCount - 2) *
                                  thisT()->getArithmeticInstrCost(
                                      Instruction::FMul, RetTy, CostKind);
-          if (RHSC->getSExtValue() < 0)
+          if (RHSC->isNegative())
             Cost += thisT()->getArithmeticInstrCost(Instruction::FDiv, RetTy,
                                                     CostKind);
           return Cost;
