@@ -218,7 +218,7 @@ def Builtin_DenseArray : Builtin_Attr<"DenseArray"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
-    "DenseIntOrFPElements", [ElementsAttrInterface, TypedAttrInterface],
+    "DenseIntOrFPElements", [ElementsAttrInterface],
     "DenseElementsAttr"
   > {
   let summary = "An Attribute containing a dense multi-dimensional array of "
@@ -359,7 +359,7 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseStringElementsAttr : Builtin_Attr<
-    "DenseStringElements", [ElementsAttrInterface, TypedAttrInterface],
+    "DenseStringElements", [ElementsAttrInterface],
     "DenseElementsAttr"
   > {
   let summary = "An Attribute containing a dense multi-dimensional array of "
@@ -430,7 +430,7 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements", [
-    ElementsAttrInterface, TypedAttrInterface
+    ElementsAttrInterface
   ]> {
   let summary = "An Attribute containing a dense multi-dimensional array "
                 "backed by a resource";
@@ -804,7 +804,7 @@ def Builtin_OpaqueAttr : Builtin_Attr<"Opaque", [TypedAttrInterface]> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_SparseElementsAttr : Builtin_Attr<
-    "SparseElements", [ElementsAttrInterface, TypedAttrInterface]
+    "SparseElements", [ElementsAttrInterface]
   > {
   let summary = "An opaque representation of a multi-dimensional array";
   let description = [{
