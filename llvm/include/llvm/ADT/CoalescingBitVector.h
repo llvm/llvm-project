@@ -36,7 +36,7 @@ namespace llvm {
 ///
 /// \tparam IndexT - The type of the index into the bitvector.
 template <typename IndexT> class CoalescingBitVector {
-  static_assert(std::is_unsigned<IndexT>::value,
+  static_assert(std::is_unsigned_v<IndexT>,
                 "Index must be an unsigned integer.");
 
   using ThisT = CoalescingBitVector<IndexT>;

@@ -166,7 +166,7 @@ using is_detected = typename detail::detector<void, Op, Args...>::value_t;
 ///   * To access the number of arguments: Traits::num_args
 ///   * To access the type of an argument: Traits::arg_t<Index>
 ///   * To access the type of the result:  Traits::result_t
-template <typename T, bool isClass = std::is_class<T>::value>
+template <typename T, bool isClass = std::is_class_v<T>>
 struct function_traits : public function_traits<decltype(&T::operator())> {};
 
 /// Overload for class function types.
@@ -265,9 +265,9 @@ using TypeAtIndex = std::tuple_element_t<I, std::tuple<Ts...>>;
 /// Helper which adds two underlying types of enumeration type.
 /// Implicit conversion to a common type is accepted.
 template <typename EnumTy1, typename EnumTy2,
-          typename UT1 = std::enable_if_t<std::is_enum<EnumTy1>::value,
+          typename UT1 = std::enable_if_t<std::is_enum_v<EnumTy1>,
                                           std::underlying_type_t<EnumTy1>>,
-          typename UT2 = std::enable_if_t<std::is_enum<EnumTy2>::value,
+          typename UT2 = std::enable_if_t<std::is_enum_v<EnumTy2>,
                                           std::underlying_type_t<EnumTy2>>>
 constexpr auto addEnumValues(EnumTy1 LHS, EnumTy2 RHS) {
   return static_cast<UT1>(LHS) + static_cast<UT2>(RHS);
@@ -638,9 +638,9 @@ template <> struct fwd_or_bidi_tag_impl<true> {
 /// of \p IterT does not derive from bidirectional_iterator_tag, and to
 /// bidirectional_iterator_tag otherwise.
 template <typename IterT> struct fwd_or_bidi_tag {
-  using type = typename fwd_or_bidi_tag_impl<std::is_base_of<
+  using type = typename fwd_or_bidi_tag_impl<std::is_base_of_v<
       std::bidirectional_iterator_tag,
-      typename std::iterator_traits<IterT>::iterator_category>::value>::type;
+      typename std::iterator_traits<IterT>::iterator_category>>::type;
 };
 
 } // namespace detail
@@ -1421,8 +1421,9 @@ public:
   }
 
   /// Allow conversion to any type accepting an iterator_range.
-  template <typename RangeT, typename = std::enable_if_t<std::is_constructible<
-                                 RangeT, iterator_range<iterator>>::value>>
+  template <typename RangeT,
+            typename = std::enable_if_t<
+                std::is_constructible_v<RangeT, iterator_range<iterator>>>>
   operator RangeT() const {
     return RangeT(iterator_range<iterator>(*this));
   }
@@ -1500,7 +1501,7 @@ namespace detail {
 /// always be a reference, to avoid returning a reference to a temporary.
 template <typename EltTy, typename FirstTy> class first_or_second_type {
 public:
-  using type = std::conditional_t<std::is_reference<EltTy>::value, FirstTy,
+  using type = std::conditional_t<std::is_reference_v<EltTy>, FirstTy,
                                   std::remove_reference_t<FirstTy>>;
 };
 } // end namespace detail
@@ -1774,12 +1775,13 @@ inline void sort(Container &&C, Compare Comp) {
 /// Get the size of a range. This is a wrapper function around std::distance
 /// which is only enabled when the operation is O(1).
 template <typename R>
-auto size(R &&Range,
-          std::enable_if_t<
-              std::is_base_of<std::random_access_iterator_tag,
-                              typename std::iterator_traits<decltype(
-                                  Range.begin())>::iterator_category>::value,
-              void> * = nullptr) {
+auto size(
+    R &&Range,
+    std::enable_if_t<
+        std::is_base_of_v<std::random_access_iterator_tag,
+                          typename std::iterator_traits<
+                              decltype(Range.begin())>::iterator_category>,
+        void> * = nullptr) {
   return std::distance(Range.begin(), Range.end());
 }
 
@@ -2167,11 +2169,11 @@ void replace(Container &Cont, typename Container::iterator ContIt,
 ///              [&](StringRef name) { os << name; },
 ///              [&] { os << ", "; });
 /// \endcode
-template <typename ForwardIterator, typename UnaryFunctor,
-          typename NullaryFunctor,
-          typename = std::enable_if_t<
-              !std::is_constructible<StringRef, UnaryFunctor>::value &&
-              !std::is_constructible<StringRef, NullaryFunctor>::value>>
+template <
+    typename ForwardIterator, typename UnaryFunctor, typename NullaryFunctor,
+    typename =
+        std::enable_if_t<!std::is_constructible_v<StringRef, UnaryFunctor> &&
+                         !std::is_constructible_v<StringRef, NullaryFunctor>>>
 inline void interleave(ForwardIterator begin, ForwardIterator end,
                        UnaryFunctor each_fn, NullaryFunctor between_fn) {
   if (begin == end)
@@ -2186,8 +2188,8 @@ inline void interleave(ForwardIterator begin, ForwardIterator end,
 
 template <typename Container, typename UnaryFunctor, typename NullaryFunctor,
           typename = std::enable_if_t<
-              !std::is_constructible<StringRef, UnaryFunctor>::value &&
-              !std::is_constructible<StringRef, NullaryFunctor>::value>>
+              !std::is_constructible_v<StringRef, UnaryFunctor> &&
+              !std::is_constructible_v<StringRef, NullaryFunctor>>>
 inline void interleave(const Container &c, UnaryFunctor each_fn,
                        NullaryFunctor between_fn) {
   interleave(c.begin(), c.end(), each_fn, between_fn);
@@ -2490,11 +2492,11 @@ bool hasNItems(
     IterTy &&Begin, IterTy &&End, unsigned N,
     Pred &&ShouldBeCounted =
         [](const decltype(*std::declval<IterTy>()) &) { return true; },
-    std::enable_if_t<
-        !std::is_base_of<std::random_access_iterator_tag,
+    std::enable_if_t<!std::is_base_of_v<
+                         std::random_access_iterator_tag,
                          typename std::iterator_traits<std::remove_reference_t<
-                             decltype(Begin)>>::iterator_category>::value,
-        void> * = nullptr) {
+                             decltype(Begin)>>::iterator_category>,
+                     void> * = nullptr) {
   for (; N; ++Begin) {
     if (Begin == End)
       return false; // Too few.
@@ -2515,11 +2517,11 @@ bool hasNItemsOrMore(
     IterTy &&Begin, IterTy &&End, unsigned N,
     Pred &&ShouldBeCounted =
         [](const decltype(*std::declval<IterTy>()) &) { return true; },
-    std::enable_if_t<
-        !std::is_base_of<std::random_access_iterator_tag,
+    std::enable_if_t<!std::is_base_of_v<
+                         std::random_access_iterator_tag,
                          typename std::iterator_traits<std::remove_reference_t<
-                             decltype(Begin)>>::iterator_category>::value,
-        void> * = nullptr) {
+                             decltype(Begin)>>::iterator_category>,
+                     void> * = nullptr) {
   for (; N; ++Begin) {
     if (Begin == End)
       return false; // Too few.
