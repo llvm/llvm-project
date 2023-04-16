@@ -101,13 +101,13 @@ MachineRegisterInfo::constrainRegAttrs(Register Reg,
     const auto RegCB = getRegClassOrRegBank(Reg);
     if (RegCB.isNull())
       setRegClassOrRegBank(Reg, ConstrainingRegCB);
-    else if (RegCB.is<const TargetRegisterClass *>() !=
-             ConstrainingRegCB.is<const TargetRegisterClass *>())
+    else if (isa<const TargetRegisterClass *>(RegCB) !=
+             isa<const TargetRegisterClass *>(ConstrainingRegCB))
       return false;
-    else if (RegCB.is<const TargetRegisterClass *>()) {
+    else if (isa<const TargetRegisterClass *>(RegCB)) {
       if (!::constrainRegClass(
-              *this, Reg, RegCB.get<const TargetRegisterClass *>(),
-              ConstrainingRegCB.get<const TargetRegisterClass *>(), MinNumRegs))
+              *this, Reg, cast<const TargetRegisterClass *>(RegCB),
+              cast<const TargetRegisterClass *>(ConstrainingRegCB), MinNumRegs))
         return false;
     } else if (RegCB != ConstrainingRegCB)
       return false;
