@@ -27,11 +27,11 @@ add_clang_unittest(ClangAnalysisFlowSensitiveTests
 
 clang_target_link_libraries(ClangAnalysisFlowSensitiveTests
   PRIVATE
+  clangAST
+  clangASTMatchers
   clangAnalysis
   clangAnalysisFlowSensitive
   clangAnalysisFlowSensitiveModels
-  clangAST
-  clangASTMatchers
   clangBasic
   clangFrontend
   clangLex

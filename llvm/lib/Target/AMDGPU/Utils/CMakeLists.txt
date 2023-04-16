@@ -7,9 +7,9 @@ add_llvm_component_library(LLVMAMDGPUUtils
 
   LINK_COMPONENTS
   Analysis
+  BinaryFormat
   Core
   MC
-  BinaryFormat
   Support
   TargetParser
 

@@ -2762,7 +2762,7 @@ static int CalculateUnswitchCostMultiplier(
   // Count amount of clones that all the candidates might cause during
   // unswitching. Branch/guard counts as 1, switch counts as log2 of its cases.
   int UnswitchedClones = 0;
-  for (auto Candidate : UnswitchCandidates) {
+  for (const auto &Candidate : UnswitchCandidates) {
     const Instruction *CI = Candidate.TI;
     const BasicBlock *CondBlock = CI->getParent();
     bool SkipExitingSuccessors = DT.dominates(CondBlock, Latch);
