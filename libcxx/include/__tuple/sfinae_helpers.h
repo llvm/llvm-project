@@ -123,14 +123,14 @@ using __tuple_like_with_size _LIBCPP_NODEBUG = __tuple_like_with_size_imp<
 
 struct _LIBCPP_TYPE_VIS __check_tuple_constructor_fail {
 
-    static constexpr bool __enable_explicit_default() { return false; }
-    static constexpr bool __enable_implicit_default() { return false; }
+    static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_explicit_default() { return false; }
+    static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_implicit_default() { return false; }
     template <class ...>
-    static constexpr bool __enable_explicit() { return false; }
+    static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_explicit() { return false; }
     template <class ...>
-    static constexpr bool __enable_implicit() { return false; }
+    static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_implicit() { return false; }
     template <class ...>
-    static constexpr bool __enable_assign() { return false; }
+    static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_assign() { return false; }
 };
 #endif // !defined(_LIBCPP_CXX03_LANG)
 

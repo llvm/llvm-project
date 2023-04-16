@@ -520,7 +520,8 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
     VPValue *Step =
         vputils::getOrCreateVPValueForSCEVExpr(Plan, ID.getStep(), SE);
     VPValue *BaseIV = CanonicalIV;
-    if (!CanonicalIV->isCanonical(ID, ResultTy)) {
+    if (!CanonicalIV->isCanonical(ID.getKind(), WideIV->getStartValue(), Step,
+                                  ResultTy)) {
       BaseIV = new VPDerivedIVRecipe(ID, WideIV->getStartValue(), CanonicalIV,
                                      Step, ResultTy);
       HeaderVPBB->insert(BaseIV->getDefiningRecipe(), IP);

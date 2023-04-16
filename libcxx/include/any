@@ -325,7 +325,7 @@ private:
       const void* __fallback_info);
 
     union _Storage {
-        constexpr _Storage() : __ptr(nullptr) {}
+        _LIBCPP_HIDE_FROM_ABI constexpr _Storage() : __ptr(nullptr) {}
         void *  __ptr;
         __any_imp::_Buffer __buf;
     };
