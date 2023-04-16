@@ -101,7 +101,7 @@ void IoChecker::Enter(const parser::ConnectSpec &spec) {
 // Ignore trailing spaces (12.5.6.2 p1) and convert to upper case
 static std::string Normalize(const std::string &value) {
   auto upper{parser::ToUpperCaseLetters(value)};
-  std::size_t lastNonBlank{upper.find_last_not_of(" ")};
+  std::size_t lastNonBlank{upper.find_last_not_of(' ')};
   upper.resize(lastNonBlank == std::string::npos ? 0 : lastNonBlank + 1);
   return upper;
 }
