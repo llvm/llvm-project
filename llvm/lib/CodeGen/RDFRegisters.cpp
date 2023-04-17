@@ -97,8 +97,8 @@ PhysicalRegisterInfo::PhysicalRegisterInfo(const TargetRegisterInfo &tri,
   for (uint32_t U = 0, NU = TRI.getNumRegUnits(); U != NU; ++U) {
     BitVector AS(TRI.getNumRegs());
     for (MCRegUnitRootIterator R(U, &TRI); R.isValid(); ++R)
-      for (MCSuperRegIterator S(*R, &TRI, true); S.isValid(); ++S)
-        AS.set(*S);
+      for (MCPhysReg S : TRI.superregs_inclusive(*R))
+        AS.set(S);
     AliasInfos[U].Regs = AS;
   }
 }

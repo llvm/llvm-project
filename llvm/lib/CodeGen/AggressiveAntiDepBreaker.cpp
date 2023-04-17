@@ -246,9 +246,8 @@ void AggressiveAntiDepBreaker::GetPassthruRegs(
     if ((MO.isDef() && MI.isRegTiedToUseOperand(i)) ||
         IsImplicitDefUse(MI, MO)) {
       const Register Reg = MO.getReg();
-      for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
-           SubRegs.isValid(); ++SubRegs)
-        PassthruRegs.insert(*SubRegs);
+      for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
+        PassthruRegs.insert(SubReg);
     }
   }
 }
@@ -322,8 +321,7 @@ void AggressiveAntiDepBreaker::HandleLastUse(unsigned Reg, unsigned KillIdx,
     // was not live because otherwise, regardless whether we have an explicit
     // use of the subregister, the subregister's contents are needed for the
     // uses of the superregister.
-    for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs) {
-      unsigned SubregReg = *SubRegs;
+    for (MCPhysReg SubregReg : TRI->subregs(Reg)) {
       if (!State->IsLive(SubregReg)) {
         KillIndices[SubregReg] = KillIdx;
         DefIndices[SubregReg] = ~0u;

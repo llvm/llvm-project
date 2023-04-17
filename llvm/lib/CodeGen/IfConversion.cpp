@@ -1516,8 +1516,8 @@ static void UpdatePredRedefs(MachineInstr &MI, LivePhysRegs &Redefs) {
       MIB.addReg(Reg, RegState::Implicit);
     else {
       bool HasLiveSubReg = false;
-      for (MCSubRegIterator S(Reg, TRI); S.isValid(); ++S) {
-        if (!LiveBeforeMI.count(*S))
+      for (MCPhysReg S : TRI->subregs(Reg)) {
+        if (!LiveBeforeMI.count(S))
           continue;
         HasLiveSubReg = true;
         break;
@@ -1958,17 +1958,15 @@ bool IfConverter::IfConvertDiamondCommon(
         } else if (!RedefsByFalse.count(Reg)) {
           // These are defined before ctrl flow reach the 'false' instructions.
           // They cannot be modified by the 'true' instructions.
-          for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
-               SubRegs.isValid(); ++SubRegs)
-            ExtUses.insert(*SubRegs);
+          for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
+            ExtUses.insert(SubReg);
         }
       }
 
       for (MCPhysReg Reg : Defs) {
         if (!ExtUses.count(Reg)) {
-          for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
-               SubRegs.isValid(); ++SubRegs)
-            RedefsByFalse.insert(*SubRegs);
+          for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
+            RedefsByFalse.insert(SubReg);
         }
       }
     }
