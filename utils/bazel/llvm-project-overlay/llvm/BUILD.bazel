@@ -674,6 +674,16 @@ gentbl(
     ]),
 )
 
+gentbl(
+    name = "vt_gen",
+    tbl_outs = [("-gen-vt", "include/llvm/CodeGen/GenVT.inc")],
+    tblgen = ":llvm-min-tblgen",
+    td_file = "include/llvm/CodeGen/ValueTypes.td",
+    td_srcs = [
+        "include/llvm/CodeGen/ValueTypes.td",
+    ],
+)
+
 # Note that the intrinsics are not currently set up so they can be pruned for
 # disabled targets.
 llvm_target_intrinsics_list = [
@@ -1679,6 +1689,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Support",
+        ":vt_gen",
     ],
 )
 
