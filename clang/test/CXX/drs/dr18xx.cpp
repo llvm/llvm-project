@@ -168,3 +168,31 @@ void dr1891() { // dr1891: 4
   b = static_cast<B&&>(b); // expected-error {{copy assignment operator is implicitly deleted}}
 #endif
 }
+
+namespace dr1894 { // dr1894: 3.8
+                   // NB: reusing part of dr407 test
+namespace A {
+  struct S {};
+}
+namespace B {
+  typedef int S;
+}
+namespace E {
+  typedef A::S S;
+  using A::S;
+  struct S s;
+}
+namespace F {
+  typedef A::S S;
+}
+namespace G {
+  using namespace A;
+  using namespace F;
+  struct S s;
+}
+namespace H {
+  using namespace F;
+  using namespace A;
+  struct S s;
+}
+}
