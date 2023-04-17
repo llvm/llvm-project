@@ -59,8 +59,8 @@ static void dump_type_value(lldb_private::CompilerType &fields_type, T value,
   vobj_sp->Dump(strm, dump_options);
 }
 
-void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream *s,
-                                     const RegisterInfo *reg_info,
+void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
+                                     const RegisterInfo &reg_info,
                                      bool prefix_with_name,
                                      bool prefix_with_alt_name, Format format,
                                      uint32_t reg_name_right_align_at,
@@ -83,38 +83,38 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream *s,
     format_string.Printf("%%s");
   std::string fmt = std::string(format_string.GetString());
   if (prefix_with_name) {
-    if (reg_info->name) {
-      s->Printf(fmt.c_str(), reg_info->name);
+    if (reg_info.name) {
+      s.Printf(fmt.c_str(), reg_info.name);
       name_printed = true;
-    } else if (reg_info->alt_name) {
-      s->Printf(fmt.c_str(), reg_info->alt_name);
+    } else if (reg_info.alt_name) {
+      s.Printf(fmt.c_str(), reg_info.alt_name);
       prefix_with_alt_name = false;
       name_printed = true;
     }
   }
   if (prefix_with_alt_name) {
     if (name_printed)
-      s->PutChar('/');
-    if (reg_info->alt_name) {
-      s->Printf(fmt.c_str(), reg_info->alt_name);
+      s.PutChar('/');
+    if (reg_info.alt_name) {
+      s.Printf(fmt.c_str(), reg_info.alt_name);
       name_printed = true;
     } else if (!name_printed) {
       // No alternate name but we were asked to display a name, so show the
       // main name
-      s->Printf(fmt.c_str(), reg_info->name);
+      s.Printf(fmt.c_str(), reg_info.name);
       name_printed = true;
     }
   }
   if (name_printed)
-    s->PutCString(" = ");
+    s.PutCString(" = ");
 
   if (format == eFormatDefault)
-    format = reg_info->format;
+    format = reg_info.format;
 
-  DumpDataExtractor(data, s,
+  DumpDataExtractor(data, &s,
                     0,                    // Offset in "data"
                     format,               // Format to use when dumping
-                    reg_info->byte_size,  // item_byte_size
+                    reg_info.byte_size,   // item_byte_size
                     1,                    // item_count
                     UINT32_MAX,           // num_per_line
                     LLDB_INVALID_ADDRESS, // base_addr
@@ -122,21 +122,21 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream *s,
                     0,                    // item_bit_offset
                     exe_scope);
 
-  if (!print_flags || !reg_info->flags_type || !exe_scope || !target_sp ||
-      (reg_info->byte_size != 4 && reg_info->byte_size != 8))
+  if (!print_flags || !reg_info.flags_type || !exe_scope || !target_sp ||
+      (reg_info.byte_size != 4 && reg_info.byte_size != 8))
     return;
 
   CompilerType fields_type = target_sp->GetRegisterType(
-      reg_info->name, *reg_info->flags_type, reg_info->byte_size);
+      reg_info.name, *reg_info.flags_type, reg_info.byte_size);
 
   // Use a new stream so we can remove a trailing newline later.
   StreamString fields_stream;
 
-  if (reg_info->byte_size == 4) {
-    dump_type_value(fields_type, reg_val.GetAsUInt32(), exe_scope, *reg_info,
+  if (reg_info.byte_size == 4) {
+    dump_type_value(fields_type, reg_val.GetAsUInt32(), exe_scope, reg_info,
                     fields_stream);
   } else {
-    dump_type_value(fields_type, reg_val.GetAsUInt64(), exe_scope, *reg_info,
+    dump_type_value(fields_type, reg_val.GetAsUInt64(), exe_scope, reg_info,
                     fields_stream);
   }
 
@@ -150,7 +150,7 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream *s,
   llvm::StringRef fields_str = fields_stream.GetString().drop_back();
 
   // End the line that contains "    foo = 0x12345678".
-  s->EOL();
+  s.EOL();
 
   // Then split the value lines and indent each one.
   bool first = true;
@@ -158,18 +158,18 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream *s,
     std::pair<llvm::StringRef, llvm::StringRef> split = fields_str.split('\n');
     fields_str = split.second;
     // Indent as far as the register name did.
-    s->Printf(fmt.c_str(), "");
+    s.Printf(fmt.c_str(), "");
 
     // Lines after the first won't have " = " so compensate for that.
     if (!first)
-      (*s) << "   ";
+      s << "   ";
     first = false;
 
-    (*s) << split.first;
+    s << split.first;
 
     // On the last line we don't want a newline because the command will add
     // one too.
     if (fields_str.size())
-      s->EOL();
+      s.EOL();
   }
 }

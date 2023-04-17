@@ -274,7 +274,6 @@ bool MIRProfileLoader::doInitialization(Module &M) {
   Reader = std::move(ReaderOrErr.get());
   Reader->setModule(&M);
   ProfileIsValid = (Reader->read() == sampleprof_error::success);
-  Reader->getSummary();
 
   return true;
 }

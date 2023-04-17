@@ -629,8 +629,8 @@ LogicalResult mlir::structFuncArgTypeConverter(LLVMTypeConverter &converter,
 LogicalResult mlir::barePtrFuncArgTypeConverter(LLVMTypeConverter &converter,
                                                 Type type,
                                                 SmallVectorImpl<Type> &result) {
-  auto llvmTy =
-      converter.convertCallingConventionType(type, /*useBarePtrCallConv=*/true);
+  auto llvmTy = converter.convertCallingConventionType(
+      type, /*useBarePointerCallConv=*/true);
   if (!llvmTy)
     return failure();
 

@@ -10385,7 +10385,8 @@ enum OverloadCandidateSelect {
 };
 
 static std::pair<OverloadCandidateKind, OverloadCandidateSelect>
-ClassifyOverloadCandidate(Sema &S, NamedDecl *Found, FunctionDecl *Fn,
+ClassifyOverloadCandidate(Sema &S, const NamedDecl *Found,
+                          const FunctionDecl *Fn,
                           OverloadCandidateRewriteKind CRK,
                           std::string &Description) {
 
@@ -10409,7 +10410,7 @@ ClassifyOverloadCandidate(Sema &S, NamedDecl *Found, FunctionDecl *Fn,
     if (CRK & CRK_Reversed)
       return oc_reversed_binary_operator;
 
-    if (CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(Fn)) {
+    if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(Fn)) {
       if (!Ctor->isImplicit()) {
         if (isa<ConstructorUsingShadowDecl>(Found))
           return oc_inherited_constructor;
@@ -10428,7 +10429,7 @@ ClassifyOverloadCandidate(Sema &S, NamedDecl *Found, FunctionDecl *Fn,
       return oc_implicit_copy_constructor;
     }
 
-    if (CXXMethodDecl *Meth = dyn_cast<CXXMethodDecl>(Fn)) {
+    if (const auto *Meth = dyn_cast<CXXMethodDecl>(Fn)) {
       // This actually gets spelled 'candidate function' for now, but
       // it doesn't hurt to split it out.
       if (!Meth->isImplicit())
@@ -10450,10 +10451,10 @@ ClassifyOverloadCandidate(Sema &S, NamedDecl *Found, FunctionDecl *Fn,
   return std::make_pair(Kind, Select);
 }
 
-void MaybeEmitInheritedConstructorNote(Sema &S, Decl *FoundDecl) {
+void MaybeEmitInheritedConstructorNote(Sema &S, const Decl *FoundDecl) {
   // FIXME: It'd be nice to only emit a note once per using-decl per overload
   // set.
-  if (auto *Shadow = dyn_cast<ConstructorUsingShadowDecl>(FoundDecl))
+  if (const auto *Shadow = dyn_cast<ConstructorUsingShadowDecl>(FoundDecl))
     S.Diag(FoundDecl->getLocation(),
            diag::note_ovl_candidate_inherited_constructor)
       << Shadow->getNominatedBaseClass();
@@ -10560,7 +10561,7 @@ bool Sema::checkAddressOfFunctionIsAvailable(const FunctionDecl *Function,
 
 // Don't print candidates other than the one that matches the calling
 // convention of the call operator, since that is guaranteed to exist.
-static bool shouldSkipNotingLambdaConversionDecl(FunctionDecl *Fn) {
+static bool shouldSkipNotingLambdaConversionDecl(const FunctionDecl *Fn) {
   const auto *ConvD = dyn_cast<CXXConversionDecl>(Fn);
 
   if (!ConvD)
@@ -10580,7 +10581,7 @@ static bool shouldSkipNotingLambdaConversionDecl(FunctionDecl *Fn) {
 }
 
 // Notes the location of an overload candidate.
-void Sema::NoteOverloadCandidate(NamedDecl *Found, FunctionDecl *Fn,
+void Sema::NoteOverloadCandidate(const NamedDecl *Found, const FunctionDecl *Fn,
                                  OverloadCandidateRewriteKind RewriteKind,
                                  QualType DestType, bool TakingAddress) {
   if (TakingAddress && !checkAddressOfCandidateIsAvailable(*this, Fn))

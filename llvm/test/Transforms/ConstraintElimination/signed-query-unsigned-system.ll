@@ -39,7 +39,7 @@ define i1 @sgt_0_unsigned_a_sgt_0(i8 %a) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_SGT_0]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[A]] to i16
 ; CHECK-NEXT:    [[T:%.*]] = icmp sgt i16 [[EXT]], 0
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a.sgt.0 = icmp sgt i8 %a, 0
   call void @llvm.assume(i1 %a.sgt.0)

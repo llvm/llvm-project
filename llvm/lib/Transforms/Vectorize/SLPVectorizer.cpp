@@ -87,7 +87,6 @@
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include "llvm/Transforms/Vectorize.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>

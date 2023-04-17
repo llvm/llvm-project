@@ -580,7 +580,7 @@ define i1 @sgt_known_pos(i8 %idx) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[IDX]], 2
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i8 [[IDX]], 1
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[IDX]], 3
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_1]]
 ; CHECK-NEXT:    ret i1 [[RES_2]]
@@ -602,7 +602,7 @@ define i1 @sgt_to_ugt(i8 %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[A]], 2
-; CHECK-NEXT:    ret i1 [[T_1]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp = icmp sgt i8 %a, 2
@@ -617,7 +617,7 @@ define i1 @sgt_to_ugt_less(i8 %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[A]], 1
-; CHECK-NEXT:    ret i1 [[T_1]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp = icmp sgt i8 %a, 2
@@ -634,7 +634,7 @@ define i1 @sgt_to_ugt_var(i8 %a, i8 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_2]])
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[T_1]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp = icmp sgt i8 %a, %b

@@ -175,7 +175,6 @@ void initializeLazyBranchProbabilityInfoPassPass(PassRegistry&);
 void initializeLazyMachineBlockFrequencyInfoPassPass(PassRegistry&);
 void initializeLazyValueInfoPrinterPass(PassRegistry&);
 void initializeLazyValueInfoWrapperPassPass(PassRegistry&);
-void initializeLegacyDivergenceAnalysisPass(PassRegistry&);
 void initializeLegacyLICMPassPass(PassRegistry&);
 void initializeLegacyLoopSinkPassPass(PassRegistry&);
 void initializeLegalizerPass(PassRegistry&);

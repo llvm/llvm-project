@@ -3058,6 +3058,15 @@ SDValue DAGCombiner::visitADDLikeCommutative(SDValue N0, SDValue N1,
     }
   }
 
+  // add (mul x, C), x -> mul x, C+1
+  if (N0.getOpcode() == ISD::MUL && N0.getOperand(0) == N1 &&
+      isConstantOrConstantVector(N0.getOperand(1), /*NoOpaques=*/true) &&
+      N0.hasOneUse()) {
+    SDValue NewC = DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(1),
+                               DAG.getConstant(1, DL, VT));
+    return DAG.getNode(ISD::MUL, DL, VT, N0.getOperand(0), NewC);
+  }
+
   // If the target's bool is represented as 0/1, prefer to make this 'sub 0/1'
   // rather than 'add 0/-1' (the zext should get folded).
   // add (sext i1 Y), X --> sub X, (zext i1 Y)

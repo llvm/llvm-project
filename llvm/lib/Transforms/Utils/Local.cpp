@@ -2990,7 +2990,7 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
 
   for (BasicBlock::iterator II = BB->begin(), IE = BB->end(); II != IE;) {
     Instruction *I = &*II;
-    I->dropUBImplyingAttrsAndUnknownMetadata();
+    I->dropUBImplyingAttrsAndMetadata();
     if (I->isUsedByMetadata())
       dropDebugUsers(*I);
     if (I->isDebugOrPseudoInst()) {

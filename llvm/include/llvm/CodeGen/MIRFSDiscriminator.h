@@ -30,7 +30,7 @@ class MachineFunction;
 
 using namespace sampleprof;
 class MIRAddFSDiscriminators : public MachineFunctionPass {
-  MachineFunction *MF;
+  MachineFunction *MF = nullptr;
   unsigned LowBit;
   unsigned HighBit;
 

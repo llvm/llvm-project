@@ -339,9 +339,9 @@ public:
 };
 
 class MachineCopyPropagation : public MachineFunctionPass {
-  const TargetRegisterInfo *TRI;
-  const TargetInstrInfo *TII;
-  const MachineRegisterInfo *MRI;
+  const TargetRegisterInfo *TRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  const MachineRegisterInfo *MRI = nullptr;
 
   // Return true if this is a copy instruction and false otherwise.
   bool UseCopyInstr;

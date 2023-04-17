@@ -30,7 +30,7 @@ static constexpr long mmapSyscallNumber = SYS_mmap2;
 #elif SYS_mmap
 static constexpr long mmapSyscallNumber = SYS_mmap;
 #else
-#error "Target platform does not have SYS_mmap or SYS_mmap2 defined"
+#error "mmap and mmap2 syscalls not available."
 #endif
 
 AppProperties app;

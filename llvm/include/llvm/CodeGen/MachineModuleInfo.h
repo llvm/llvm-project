@@ -84,7 +84,7 @@ class MachineModuleInfo {
   MCContext *ExternalContext = nullptr;
 
   /// This is the LLVM Module being worked on.
-  const Module *TheModule;
+  const Module *TheModule = nullptr;
 
   /// This is the object-file-format-specific implementation of
   /// MachineModuleInfoImpl, which lets targets accumulate whatever info they
