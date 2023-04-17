@@ -5751,6 +5751,12 @@ const NoteType CoreNoteTypes[] = {
      "NT_ARM_HW_BREAK (AArch hardware breakpoint registers)"},
     {ELF::NT_ARM_HW_WATCH,
      "NT_ARM_HW_WATCH (AArch hardware watchpoint registers)"},
+    {ELF::NT_ARM_SVE, "NT_ARM_SVE (AArch64 SVE registers)"},
+    {ELF::NT_ARM_PAC_MASK,
+     "NT_ARM_PAC_MASK (AArch64 Pointer Authentication code masks)"},
+    {ELF::NT_ARM_SSVE, "NT_ARM_SSVE (AArch64 Streaming SVE registers)"},
+    {ELF::NT_ARM_ZA, "NT_ARM_ZA (AArch64 SME ZA registers)"},
+    {ELF::NT_ARM_ZT, "NT_ARM_ZT (AArch64 SME ZT registers)"},
 
     {ELF::NT_FILE, "NT_FILE (mapped files)"},
     {ELF::NT_PRXFPREG, "NT_PRXFPREG (user_xfpregs structure)"},
