@@ -11,11 +11,11 @@
 # SEEN2: Temporal Profile Traces (samples=2 seen=2):
 # SEEN3: Temporal Profile Traces (samples=2 seen=3):
 # SEEN4: Temporal Profile Traces (samples=2 seen=4):
-# SAMPLE1: Temporal Profile Trace 0 (count=3):
+# SAMPLE1: Temporal Profile Trace 0 (weight=1 count=3):
 # SAMPLE1:   a
 # SAMPLE1:   b
 # SAMPLE1:   c
-# SAMPLE2: Temporal Profile Trace 1 (count=3):
+# SAMPLE2: Temporal Profile Trace 1 (weight=1 count=3):
 # SAMPLE2:   a
 # SAMPLE2:   b
 # SAMPLE2:   c
@@ -26,6 +26,8 @@
 # Num Traces
 1
 # Trace Stream Size:
+1
+# Weight
 1
 a, b, c
 

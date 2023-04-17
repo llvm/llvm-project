@@ -336,7 +336,10 @@ enum class instrprof_error {
 
 /// An ordered list of functions identified by their NameRef found in
 /// INSTR_PROF_DATA
-using TemporalProfTraceTy = std::vector<uint64_t>;
+struct TemporalProfTraceTy {
+  uint64_t Weight = 1;
+  std::vector<uint64_t> FunctionNameRefs;
+};
 
 inline std::error_code make_error_code(instrprof_error E) {
   return std::error_code(static_cast<int>(E), instrprof_category());
