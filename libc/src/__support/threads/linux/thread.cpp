@@ -33,10 +33,10 @@ namespace __llvm_libc {
 
 #ifdef SYS_mmap2
 static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap2;
-#elif SYS_mmap
+#elif defined(SYS_mmap)
 static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap;
 #else
-#error "SYS_mmap or SYS_mmap2 not available on the target platform"
+#error "mmap or mmap2 syscalls not available."
 #endif
 
 static constexpr size_t NAME_SIZE_MAX = 16; // Includes the null terminator

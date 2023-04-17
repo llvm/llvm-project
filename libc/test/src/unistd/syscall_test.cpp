@@ -41,7 +41,7 @@ TEST(LlvmLibcSyscallTest, SymlinkCreateDestroy) {
 #elif defined(SYS_symlinkat)
   ASSERT_GE(__llvm_libc::syscall(SYS_symlinkat, LINK_VAL, AT_FDCWD, LINK), 0l);
 #else
-#error "Symlink syscalls not available."
+#error "symlink and symlinkat syscalls not available."
 #endif
   ASSERT_EQ(libc_errno, 0);
 
@@ -61,7 +61,7 @@ TEST(LlvmLibcSyscallTest, SymlinkCreateDestroy) {
 #elif defined(SYS_unlinkat)
   ASSERT_GE(__llvm_libc::syscall(SYS_unlinkat, AT_FDCWD, LINK, 0), 0l);
 #else
-#error "Unlink syscalls not available."
+#error "unlink and unlinkat syscalls not available."
 #endif
   ASSERT_EQ(libc_errno, 0);
 }
@@ -79,7 +79,7 @@ TEST(LlvmLibcSyscallTest, FileReadWrite) {
   int fd = __llvm_libc::syscall(SYS_openat, AT_FDCWD, TEST_FILE,
                                 O_WRONLY | O_CREAT, S_IRWXU);
 #else
-#error "Open syscalls not available to available."
+#error "open and openat syscalls not available."
 #endif
   ASSERT_GT(fd, 0);
   ASSERT_EQ(libc_errno, 0);
@@ -115,7 +115,7 @@ TEST(LlvmLibcSyscallTest, FileLinkCreateDestroy) {
   int write_fd = __llvm_libc::syscall(SYS_openat, AT_FDCWD, TEST_FILE_PATH,
                                       O_WRONLY | O_CREAT, S_IRWXU);
 #else
-#error "Open syscalls not available to available."
+#error "open and openat syscalls not available."
 #endif
   ASSERT_GT(write_fd, 0);
   ASSERT_EQ(libc_errno, 0);
@@ -129,7 +129,7 @@ TEST(LlvmLibcSyscallTest, FileLinkCreateDestroy) {
   int dir_fd =
       __llvm_libc::syscall(SYS_openat, AT_FDCWD, TEST_DIR, O_DIRECTORY, 0);
 #else
-#error "Open syscalls not available to available."
+#error "open and openat syscalls not available."
 #endif
   ASSERT_GT(dir_fd, 0);
   ASSERT_EQ(libc_errno, 0);
@@ -144,7 +144,7 @@ TEST(LlvmLibcSyscallTest, FileLinkCreateDestroy) {
   int link_fd = __llvm_libc::syscall(SYS_openat, AT_FDCWD, TEST_FILE_LINK_PATH,
                                      O_PATH, 0);
 #else
-#error "Open syscalls not available to available."
+#error "open and openat syscalls not available."
 #endif
   ASSERT_GT(link_fd, 0);
   ASSERT_EQ(libc_errno, 0);
@@ -155,7 +155,7 @@ TEST(LlvmLibcSyscallTest, FileLinkCreateDestroy) {
   ASSERT_GE(__llvm_libc::syscall(SYS_unlinkat, AT_FDCWD, TEST_FILE_PATH, 0),
             0l);
 #else
-#error "Unlink syscalls not available."
+#error "unlink and unlinkat syscalls not available."
 #endif
   ASSERT_EQ(libc_errno, 0);
 
@@ -165,7 +165,7 @@ TEST(LlvmLibcSyscallTest, FileLinkCreateDestroy) {
   ASSERT_GE(
       __llvm_libc::syscall(SYS_unlinkat, AT_FDCWD, TEST_FILE_LINK_PATH, 0), 0l);
 #else
-#error "Unlink syscalls not available."
+#error "unlink and unlinkat syscalls not available."
 #endif
   ASSERT_EQ(libc_errno, 0);
 
