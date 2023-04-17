@@ -4458,6 +4458,22 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     break;
   }
+  case Instruction::FMul: {
+    KnownFPClass KnownLHS, KnownRHS;
+    computeKnownFPClass(Op->getOperand(1), DemandedElts, fcNan | fcInf,
+                        KnownRHS, Depth + 1, Q, TLI);
+    if (KnownRHS.isKnownNeverNaN() && KnownRHS.isKnownNeverInfinity()) {
+      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcNan | fcInf,
+                          KnownLHS, Depth + 1, Q, TLI);
+
+      // Zero multiplied with infinity produces NaN.
+      // FIXME: If neither side can be zero fmul never produces NaN.
+      if (KnownLHS.isKnownNeverNaN() && KnownLHS.isKnownNeverInfinity())
+        Known.knownNot(fcNan);
+    }
+
+    break;
+  }
   case Instruction::SIToFP:
   case Instruction::UIToFP: {
     // Cannot produce nan

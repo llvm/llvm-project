@@ -1575,6 +1575,23 @@ TEST_F(ComputeKnownFPClassTest, FSub) {
   expectKnownFPClass(fcAllFlags, std::nullopt, A5);
 }
 
+TEST_F(ComputeKnownFPClassTest, FMul) {
+  parseAssembly(
+      "define float @test(float nofpclass(nan inf) %nnan.ninf, float nofpclass(nan) %nnan, float nofpclass(qnan) %no.qnan, float %unknown) {\n"
+      "  %A = fmul float %nnan.ninf, %nnan.ninf"
+      "  %A2 = fmul float %nnan.ninf, %nnan"
+      "  %A3 = fmul float %nnan, %nnan.ninf"
+      "  %A4 = fmul float %nnan.ninf, %no.qnan"
+      "  %A5 = fmul float %nnan, %nnan"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcFinite | fcInf, std::nullopt, A);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A2);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A3);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A4);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A5);
+}
+
 TEST_F(ValueTrackingTest, isNonZeroRecurrence) {
   parseAssembly(R"(
     define i1 @test(i8 %n, i8 %r) {
