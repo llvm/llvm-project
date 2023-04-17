@@ -2673,38 +2673,49 @@ unsigned ObjectFileELF::ApplyRelocations(
     Symbol *symbol = nullptr;
 
     if (hdr->Is32Bit()) {
-      switch (reloc_type(rel)) {
-      case R_386_32:
-        symbol = symtab->FindSymbolByID(reloc_symbol(rel));
-        if (symbol) {
-          addr_t f_offset =
-              rel_section->GetFileOffset() + ELFRelocation::RelocOffset32(rel);
-          DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
-          // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
-          WritableDataBuffer *data_buffer =
-              llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
-          uint32_t *dst = reinterpret_cast<uint32_t *>(
-              data_buffer->GetBytes() + f_offset);
+      switch (hdr->e_machine) {
+      case llvm::ELF::EM_386:
+        switch (reloc_type(rel)) {
+        case R_386_32:
+          symbol = symtab->FindSymbolByID(reloc_symbol(rel));
+          if (symbol) {
+            addr_t f_offset =
+                rel_section->GetFileOffset() + ELFRelocation::RelocOffset32(rel);
+            DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
+            // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
+            WritableDataBuffer *data_buffer =
+                llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
+            uint32_t *dst = reinterpret_cast<uint32_t *>(
+                data_buffer->GetBytes() + f_offset);
 
-          addr_t value = symbol->GetAddressRef().GetFileAddress();
-          if (rel.IsRela()) {
-            value += ELFRelocation::RelocAddend32(rel);
+            addr_t value = symbol->GetAddressRef().GetFileAddress();
+            if (rel.IsRela()) {
+              value += ELFRelocation::RelocAddend32(rel);
+            } else {
+              value += *dst;
+            }
+            *dst = value;
           } else {
-            value += *dst;
+            GetModule()->ReportError(".rel{0}[{1}] unknown symbol id: {2:d}",
+                                    rel_section->GetName().AsCString(), i,
+                                    reloc_symbol(rel));
           }
-          *dst = value;
-        } else {
-          GetModule()->ReportError(".rel{0}[{1}] unknown symbol id: {2:d}",
+          break;
+        case R_386_NONE:
+        case R_386_PC32:
+          GetModule()->ReportError("unsupported i386 relocation:"
+                                   " .rel{0}[{1}], type {2}",
                                    rel_section->GetName().AsCString(), i,
-                                   reloc_symbol(rel));
+                                   reloc_type(rel));
+          break;
+        default:
+          assert(false && "unexpected relocation type");
+          break;
         }
         break;
-      case R_386_PC32:
       default:
-        GetModule()->ReportError("unsupported 32-bit relocation:"
-                                 " .rel{0}[{1}], type {2}",
-                                 rel_section->GetName().AsCString(), i,
-                                 reloc_type(rel));
+        GetModule()->ReportError("unsupported 32-bit ELF machine arch: {0}", hdr->e_machine);
+        break;
       }
     } else {
       switch (hdr->e_machine) {
@@ -2750,7 +2761,8 @@ unsigned ObjectFileELF::ApplyRelocations(
         }
         break;
       default:
-        assert(false && "unsupported machine");
+        GetModule()->ReportError("unsupported 64-bit ELF machine arch: {0}", hdr->e_machine);
+        break;
       }
     }
   }
