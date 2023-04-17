@@ -2,7 +2,7 @@ set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   AsmPrinter
   BinaryFormat
-  CodeGen
+  CodeGenTypes
   DebugInfoDWARF
   MC
   Object

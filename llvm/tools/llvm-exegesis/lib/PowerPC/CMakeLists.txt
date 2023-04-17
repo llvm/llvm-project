@@ -4,7 +4,7 @@ include_directories(
   )
 
 set(LLVM_LINK_COMPONENTS
-  CodeGen
+  CodeGenTypes
   Core
   Exegesis
   MC

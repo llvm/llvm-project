@@ -32,6 +32,7 @@ add_llvm_target(XCoreCodeGen
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   MC
   SelectionDAG

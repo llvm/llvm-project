@@ -2,7 +2,7 @@ add_llvm_component_library(LLVMVEDisassembler
   VEDisassembler.cpp
 
   LINK_COMPONENTS
-  CodeGen
+  CodeGenTypes
   MC
   MCDisassembler
   Support

@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   AsmParser
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   FileCheck
   MC

@@ -66,6 +66,7 @@ add_llvm_target(PowerPCCodeGen
   AsmPrinter
   BinaryFormat
   CodeGen
+  CodeGenTypes
   Core
   GlobalISel
   MC

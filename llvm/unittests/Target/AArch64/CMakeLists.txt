@@ -10,6 +10,7 @@ set(LLVM_LINK_COMPONENTS
   AArch64Utils
   AsmParser
   CodeGen
+  CodeGenTypes
   Core
   GlobalISel
   MC

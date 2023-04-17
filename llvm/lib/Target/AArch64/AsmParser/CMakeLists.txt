@@ -7,7 +7,7 @@ add_llvm_component_library(LLVMAArch64AsmParser
   AArch64Desc
   AArch64Info
   AArch64Utils
-  CodeGen
+  CodeGenTypes
   MC
   MCParser
   Support

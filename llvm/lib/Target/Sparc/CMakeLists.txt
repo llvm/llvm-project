@@ -32,6 +32,7 @@ add_llvm_target(SparcCodeGen
   LINK_COMPONENTS
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   MC
   SelectionDAG

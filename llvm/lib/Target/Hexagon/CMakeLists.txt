@@ -72,6 +72,7 @@ add_llvm_target(HexagonCodeGen
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   HexagonAsmParser
   HexagonDesc
