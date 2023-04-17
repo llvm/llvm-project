@@ -56,6 +56,8 @@ public:
                              const DumpValueObjectOptions &, Stream &)>
       DeclPrintingHelper;
 
+  typedef std::function<bool(ConstString)> ChildPrintingDecider;
+
   static const DumpValueObjectOptions DefaultOptions() {
     static DumpValueObjectOptions g_default_options;
 
@@ -72,6 +74,8 @@ public:
   DumpValueObjectOptions &SetMaximumDepth(uint32_t depth, bool is_default);
 
   DumpValueObjectOptions &SetDeclPrintingHelper(DeclPrintingHelper helper);
+
+  DumpValueObjectOptions &SetChildPrintingDecider(ChildPrintingDecider decider);
 
   DumpValueObjectOptions &SetShowTypes(bool show = false);
 
@@ -139,6 +143,7 @@ public:
   lldb::LanguageType m_varformat_language = lldb::eLanguageTypeUnknown;
   PointerDepth m_max_ptr_depth;
   DeclPrintingHelper m_decl_printing_helper;
+  ChildPrintingDecider m_child_printing_decider;
   PointerAsArraySettings m_pointer_as_array;
   bool m_use_synthetic : 1;
   bool m_scope_already_checked : 1;

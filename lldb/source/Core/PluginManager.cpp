@@ -875,6 +875,45 @@ void PluginManager::AutoCompleteProcessName(llvm::StringRef name,
   }
 }
 
+#pragma mark RegisterTypeBuilder
+
+struct RegisterTypeBuilderInstance
+    : public PluginInstance<RegisterTypeBuilderCreateInstance> {
+  RegisterTypeBuilderInstance(llvm::StringRef name, llvm::StringRef description,
+                              CallbackType create_callback)
+      : PluginInstance<RegisterTypeBuilderCreateInstance>(name, description,
+                                                          create_callback) {}
+};
+
+typedef PluginInstances<RegisterTypeBuilderInstance>
+    RegisterTypeBuilderInstances;
+
+static RegisterTypeBuilderInstances &GetRegisterTypeBuilderInstances() {
+  static RegisterTypeBuilderInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(
+    llvm::StringRef name, llvm::StringRef description,
+    RegisterTypeBuilderCreateInstance create_callback) {
+  return GetRegisterTypeBuilderInstances().RegisterPlugin(name, description,
+                                                          create_callback);
+}
+
+bool PluginManager::UnregisterPlugin(
+    RegisterTypeBuilderCreateInstance create_callback) {
+  return GetRegisterTypeBuilderInstances().UnregisterPlugin(create_callback);
+}
+
+lldb::RegisterTypeBuilderSP
+PluginManager::GetRegisterTypeBuilder(Target &target) {
+  const auto &instances = GetRegisterTypeBuilderInstances().GetInstances();
+  // We assume that RegisterTypeBuilderClang is the only instance of this plugin
+  // type and is always present.
+  assert(instances.size());
+  return instances[0].create_callback(target);
+}
+
 #pragma mark ScriptInterpreter
 
 struct ScriptInterpreterInstance

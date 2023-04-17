@@ -82,6 +82,8 @@ typedef lldb::PlatformSP (*PlatformCreateInstance)(bool force,
 typedef lldb::ProcessSP (*ProcessCreateInstance)(
     lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
     const FileSpec *crash_file_path, bool can_connect);
+typedef lldb::RegisterTypeBuilderSP (*RegisterTypeBuilderCreateInstance)(
+    Target &target);
 typedef lldb::ScriptInterpreterSP (*ScriptInterpreterCreateInstance)(
     Debugger &debugger);
 typedef SymbolFile *(*SymbolFileCreateInstance)(lldb::ObjectFileSP objfile_sp);
