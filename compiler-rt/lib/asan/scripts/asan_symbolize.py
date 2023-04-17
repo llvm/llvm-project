@@ -26,9 +26,9 @@ import getopt
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
-from distutils.spawn import find_executable
 
 symbolizers = {}
 demangle = False
@@ -155,7 +155,7 @@ class Addr2LineSymbolizer(Symbolizer):
     addr2line_tool = 'addr2line'
     if binutils_prefix:
       addr2line_tool = binutils_prefix + addr2line_tool
-    logging.debug('addr2line binary is %s' % find_executable(addr2line_tool))
+    logging.debug('addr2line binary is %s' % shutil.which(addr2line_tool))
     cmd = [addr2line_tool, '-fi']
     if demangle:
       cmd += ['--demangle']
