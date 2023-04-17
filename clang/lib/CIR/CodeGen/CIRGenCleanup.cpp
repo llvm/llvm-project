@@ -51,6 +51,103 @@ void CIRGenFunction::buildCXXTemporary(const CXXTemporary *Temporary,
               /*useEHCleanup*/ true);
 }
 
+void CIRGenFunction::initFullExprCleanupWithFlag(Address ActiveFlag) {
+  // Set that as the active flag in the cleanup.
+  EHCleanupScope &cleanup = cast<EHCleanupScope>(*EHStack.begin());
+  assert(!cleanup.hasActiveFlag() && "cleanup already has active flag?");
+  cleanup.setActiveFlag(ActiveFlag);
+
+  if (cleanup.isNormalCleanup())
+    cleanup.setTestFlagInNormalCleanup();
+  if (cleanup.isEHCleanup())
+    cleanup.setTestFlagInEHCleanup();
+}
+
+/// Pops a cleanup block. If the block includes a normal cleanup, the
+/// current insertion point is threaded through the cleanup, as are
+/// any branch fixups on the cleanup.
+void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
+  assert(!EHStack.empty() && "cleanup stack is empty!");
+  assert(isa<EHCleanupScope>(*EHStack.begin()) && "top not a cleanup!");
+  [[maybe_unused]] EHCleanupScope &Scope =
+      cast<EHCleanupScope>(*EHStack.begin());
+  assert(Scope.getFixupDepth() <= EHStack.getNumBranchFixups());
+
+  // Remember activation information.
+  [[maybe_unused]] bool IsActive = Scope.isActive();
+  [[maybe_unused]] Address NormalActiveFlag =
+      Scope.shouldTestFlagInNormalCleanup() ? Scope.getActiveFlag()
+                                            : Address::invalid();
+  [[maybe_unused]] Address EHActiveFlag = Scope.shouldTestFlagInEHCleanup()
+                                              ? Scope.getActiveFlag()
+                                              : Address::invalid();
+  llvm_unreachable("NYI");
+}
+
+/// Pops cleanup blocks until the given savepoint is reached.
+void CIRGenFunction::PopCleanupBlocks(
+    EHScopeStack::stable_iterator Old,
+    std::initializer_list<mlir::Value *> ValuesToReload) {
+  assert(Old.isValid());
+
+  bool HadBranches = false;
+  while (EHStack.stable_begin() != Old) {
+    EHCleanupScope &Scope = cast<EHCleanupScope>(*EHStack.begin());
+    HadBranches |= Scope.hasBranches();
+
+    // As long as Old strictly encloses the scope's enclosing normal
+    // cleanup, we're going to emit another normal cleanup which
+    // fallthrough can propagate through.
+    bool FallThroughIsBranchThrough =
+        Old.strictlyEncloses(Scope.getEnclosingNormalCleanup());
+
+    PopCleanupBlock(FallThroughIsBranchThrough);
+  }
+
+  // If we didn't have any branches, the insertion point before cleanups must
+  // dominate the current insertion point and we don't need to reload any
+  // values.
+  if (!HadBranches)
+    return;
+
+  llvm_unreachable("NYI");
+}
+
+/// Pops cleanup blocks until the given savepoint is reached, then add the
+/// cleanups from the given savepoint in the lifetime-extended cleanups stack.
+void CIRGenFunction::PopCleanupBlocks(
+    EHScopeStack::stable_iterator Old, size_t OldLifetimeExtendedSize,
+    std::initializer_list<mlir::Value *> ValuesToReload) {
+  PopCleanupBlocks(Old, ValuesToReload);
+
+  // Move our deferred cleanups onto the EH stack.
+  for (size_t I = OldLifetimeExtendedSize,
+              E = LifetimeExtendedCleanupStack.size();
+       I != E;
+       /**/) {
+    // Alignment should be guaranteed by the vptrs in the individual cleanups.
+    assert((I % alignof(LifetimeExtendedCleanupHeader) == 0) &&
+           "misaligned cleanup stack entry");
+
+    LifetimeExtendedCleanupHeader &Header =
+        reinterpret_cast<LifetimeExtendedCleanupHeader &>(
+            LifetimeExtendedCleanupStack[I]);
+    I += sizeof(Header);
+
+    EHStack.pushCopyOfCleanup(
+        Header.getKind(), &LifetimeExtendedCleanupStack[I], Header.getSize());
+    I += Header.getSize();
+
+    if (Header.isConditional()) {
+      Address ActiveFlag =
+          reinterpret_cast<Address &>(LifetimeExtendedCleanupStack[I]);
+      initFullExprCleanupWithFlag(ActiveFlag);
+      I += sizeof(ActiveFlag);
+    }
+  }
+  LifetimeExtendedCleanupStack.resize(OldLifetimeExtendedSize);
+}
+
 //===----------------------------------------------------------------------===//
 // EHScopeStack
 //===----------------------------------------------------------------------===//

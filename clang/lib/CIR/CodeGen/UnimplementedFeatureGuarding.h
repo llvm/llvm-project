@@ -46,6 +46,7 @@ struct UnimplementedFeature {
 
   // Sanitizers
   static bool reportGlobalToASan() { return false; }
+  static bool emitAsanPrologueOrEpilogue() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
 
   // ObjC

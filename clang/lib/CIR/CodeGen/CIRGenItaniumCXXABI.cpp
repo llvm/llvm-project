@@ -373,7 +373,7 @@ void CIRGenItaniumCXXABI::buildCXXStructor(GlobalDecl GD) {
   // of the destructor is trivial.
   if (DD && GD.getDtorType() == Dtor_Base &&
       CIRGenType != StructorCIRGen::COMDAT)
-    llvm_unreachable("NYI");
+    return;
 
   // FIXME: The deleting destructor is equivalent to the selected operator
   // delete if:

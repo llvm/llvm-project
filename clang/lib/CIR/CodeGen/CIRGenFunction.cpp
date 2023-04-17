@@ -488,7 +488,7 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
     // Generate the body of the function.
     // TODO: PGO.assignRegionCounters
     if (isa<CXXDestructorDecl>(FD))
-      llvm_unreachable("NYI");
+      buildDestructorBody(Args);
     else if (isa<CXXConstructorDecl>(FD))
       buildConstructorBody(Args);
     else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
