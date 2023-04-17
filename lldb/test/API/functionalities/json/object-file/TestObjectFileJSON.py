@@ -19,8 +19,7 @@ class TestObjectFileJSON(TestBase):
 
     def emitJSON(self, data, path):
         json_object = json.dumps(data, indent=4)
-        json_object_file = self.getBuildArtifact("a.json")
-        with open(json_object_file, "w") as outfile:
+        with open(path, "w") as outfile:
             outfile.write(json_object)
 
     def toModuleSpec(self, path):
@@ -55,10 +54,10 @@ class TestObjectFileJSON(TestBase):
             "uuid": str(uuid.uuid4()),
         }
 
-        json_object_file = self.getBuildArtifact("a.json")
-        self.emitJSON(data, json_object_file)
+        json_object_file_b = self.getBuildArtifact("b.json")
+        self.emitJSON(data, json_object_file_b)
 
-        module = target.AddModule(self.toModuleSpec(json_object_file))
+        module = target.AddModule(self.toModuleSpec(json_object_file_b))
         self.assertFalse(module.IsValid())
 
         data = {
@@ -82,11 +81,10 @@ class TestObjectFileJSON(TestBase):
             ],
         }
 
-        # Sleep to ensure the new file has a different timestamp
-        time.sleep(2)
-        self.emitJSON(data, json_object_file)
+        json_object_file_c = self.getBuildArtifact("c.json")
+        self.emitJSON(data, json_object_file_c)
 
-        module = target.AddModule(self.toModuleSpec(json_object_file))
+        module = target.AddModule(self.toModuleSpec(json_object_file_c))
         self.assertTrue(module.IsValid())
 
         section = module.GetSectionAtIndex(0)
