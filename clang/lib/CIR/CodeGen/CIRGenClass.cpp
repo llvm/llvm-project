@@ -944,3 +944,124 @@ void CIRGenFunction::destroyCXXObject(CIRGenFunction &CGF, Address addr,
   // CGF.buildCXXDestructorCall(dtor, Dtor_Complete, /*for vbase*/ false,
   //                            /*Delegating=*/false, addr, type);
 }
+
+/// Emits the body of the current destructor.
+void CIRGenFunction::buildDestructorBody(FunctionArgList &Args) {
+  const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CurGD.getDecl());
+  CXXDtorType DtorType = CurGD.getDtorType();
+
+  // For an abstract class, non-base destructors are never used (and can't
+  // be emitted in general, because vbase dtors may not have been validated
+  // by Sema), but the Itanium ABI doesn't make them optional and Clang may
+  // in fact emit references to them from other compilations, so emit them
+  // as functions containing a trap instruction.
+  if (DtorType != Dtor_Base && Dtor->getParent()->isAbstract()) {
+    llvm_unreachable("NYI");
+  }
+
+  Stmt *Body = Dtor->getBody();
+  if (Body)
+    assert(!UnimplementedFeature::incrementProfileCounter());
+
+  // The call to operator delete in a deleting destructor happens
+  // outside of the function-try-block, which means it's always
+  // possible to delegate the destructor body to the complete
+  // destructor.  Do so.
+  if (DtorType == Dtor_Deleting) {
+    RunCleanupsScope DtorEpilogue(*this);
+    llvm_unreachable("NYI");
+    // EnterDtorCleanups(Dtor, Dtor_Deleting);
+    // if (HaveInsertPoint()) {
+    //   QualType ThisTy = Dtor->getThisObjectType();
+    //   EmitCXXDestructorCall(Dtor, Dtor_Complete, /*ForVirtualBase=*/false,
+    //                         /*Delegating=*/false, LoadCXXThisAddress(),
+    //                         ThisTy);
+    // }
+    // return;
+  }
+
+  // If the body is a function-try-block, enter the try before
+  // anything else.
+  bool isTryBody = (Body && isa<CXXTryStmt>(Body));
+  if (isTryBody) {
+    llvm_unreachable("NYI");
+    // EnterCXXTryStmt(*cast<CXXTryStmt>(Body), true);
+  }
+  assert(!UnimplementedFeature::emitAsanPrologueOrEpilogue());
+
+  // Enter the epilogue cleanups.
+  llvm_unreachable("NYI");
+  // RunCleanupsScope DtorEpilogue(*this);
+
+  // If this is the complete variant, just invoke the base variant;
+  // the epilogue will destruct the virtual bases.  But we can't do
+  // this optimization if the body is a function-try-block, because
+  // we'd introduce *two* handler blocks.  In the Microsoft ABI, we
+  // always delegate because we might not have a definition in this TU.
+  switch (DtorType) {
+  case Dtor_Comdat:
+    llvm_unreachable("not expecting a COMDAT");
+  case Dtor_Deleting:
+    llvm_unreachable("already handled deleting case");
+
+  case Dtor_Complete:
+    llvm_unreachable("NYI");
+    // assert((Body || getTarget().getCXXABI().isMicrosoft()) &&
+    //        "can't emit a dtor without a body for non-Microsoft ABIs");
+
+    // // Enter the cleanup scopes for virtual bases.
+    // EnterDtorCleanups(Dtor, Dtor_Complete);
+
+    // if (!isTryBody) {
+    //   QualType ThisTy = Dtor->getThisObjectType();
+    //   EmitCXXDestructorCall(Dtor, Dtor_Base, /*ForVirtualBase=*/false,
+    //                         /*Delegating=*/false, LoadCXXThisAddress(),
+    //                         ThisTy);
+    //   break;
+    // }
+
+    // Fallthrough: act like we're in the base variant.
+    [[fallthrough]];
+
+  case Dtor_Base:
+    llvm_unreachable("NYI");
+    assert(Body);
+
+    // // Enter the cleanup scopes for fields and non-virtual bases.
+    // EnterDtorCleanups(Dtor, Dtor_Base);
+
+    // // Initialize the vtable pointers before entering the body.
+    // if (!CanSkipVTablePointerInitialization(*this, Dtor)) {
+    //   // Insert the llvm.launder.invariant.group intrinsic before
+    //   initializing
+    //   // the vptrs to cancel any previous assumptions we might have made.
+    //   if (CGM.getCodeGenOpts().StrictVTablePointers &&
+    //       CGM.getCodeGenOpts().OptimizationLevel > 0)
+    //     CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
+    //   InitializeVTablePointers(Dtor->getParent());
+    // }
+
+    // if (isTryBody)
+    //   EmitStmt(cast<CXXTryStmt>(Body)->getTryBlock());
+    // else if (Body)
+    //   EmitStmt(Body);
+    // else {
+    //   assert(Dtor->isImplicit() && "bodyless dtor not implicit");
+    //   // nothing to do besides what's in the epilogue
+    // }
+    // // -fapple-kext must inline any call to this dtor into
+    // // the caller's body.
+    // if (getLangOpts().AppleKext)
+    //   CurFn->addFnAttr(llvm::Attribute::AlwaysInline);
+
+    // break;
+  }
+
+  // Jump out through the epilogue cleanups.
+  llvm_unreachable("NYI");
+  // DtorEpilogue.ForceCleanup();
+
+  // Exit the try if applicable.
+  if (isTryBody)
+    llvm_unreachable("NYI");
+}

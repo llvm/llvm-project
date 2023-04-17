@@ -511,6 +511,7 @@ public:
 
   /// Tracks function scope overall cleanup handling.
   EHScopeStack EHStack;
+  llvm::SmallVector<char, 256> LifetimeExtendedCleanupStack;
 
   /// A mapping from NRVO variables to the flags used to indicate
   /// when the NRVO has been applied to this variable.
@@ -1089,8 +1090,8 @@ public:
 
   void buildCtorPrologue(const clang::CXXConstructorDecl *CD,
                          clang::CXXCtorType Type, FunctionArgList &Args);
-
   void buildConstructorBody(FunctionArgList &Args);
+  void buildDestructorBody(FunctionArgList &Args);
 
   static bool
   IsConstructorDelegationValid(const clang::CXXConstructorDecl *Ctor);
@@ -1309,6 +1310,38 @@ public:
   ///
   /// Cleanups
   /// --------
+
+  /// Header for data within LifetimeExtendedCleanupStack.
+  struct LifetimeExtendedCleanupHeader {
+    /// The size of the following cleanup object.
+    unsigned Size;
+    /// The kind of cleanup to push: a value from the CleanupKind enumeration.
+    unsigned Kind : 31;
+    /// Whether this is a conditional cleanup.
+    unsigned IsConditional : 1;
+
+    size_t getSize() const { return Size; }
+    CleanupKind getKind() const { return (CleanupKind)Kind; }
+    bool isConditional() const { return IsConditional; }
+  };
+
+  /// Takes the old cleanup stack size and emits the cleanup blocks
+  /// that have been added.
+  void
+  PopCleanupBlocks(EHScopeStack::stable_iterator OldCleanupStackSize,
+                   std::initializer_list<mlir::Value *> ValuesToReload = {});
+
+  /// Takes the old cleanup stack size and emits the cleanup blocks
+  /// that have been added, then adds all lifetime-extended cleanups from
+  /// the given position to the stack.
+  void
+  PopCleanupBlocks(EHScopeStack::stable_iterator OldCleanupStackSize,
+                   size_t OldLifetimeExtendedStackSize,
+                   std::initializer_list<mlir::Value *> ValuesToReload = {});
+
+  /// Will pop the cleanup entry on the stack and process all branch fixups.
+  void PopCleanupBlock(bool FallThroughIsBranchThrough = false);
+
   typedef void Destroyer(CIRGenFunction &CGF, Address addr, QualType ty);
 
   static Destroyer destroyCXXObject;
@@ -1373,6 +1406,77 @@ public:
     // EHStack.pushCleanupTuple<CleanupType>(kind, Saved);
     // initFullExprCleanup();
   }
+
+  /// Set up the last cleanup that was pushed as a conditional
+  /// full-expression cleanup.
+  void initFullExprCleanup() {
+    initFullExprCleanupWithFlag(createCleanupActiveFlag());
+  }
+
+  void initFullExprCleanupWithFlag(Address ActiveFlag);
+  Address createCleanupActiveFlag();
+
+  /// Enters a new scope for capturing cleanups, all of which
+  /// will be executed once the scope is exited.
+  class RunCleanupsScope {
+    EHScopeStack::stable_iterator CleanupStackDepth, OldCleanupScopeDepth;
+    size_t LifetimeExtendedCleanupStackSize;
+    bool OldDidCallStackSave;
+
+  protected:
+    bool PerformCleanup;
+
+  private:
+    RunCleanupsScope(const RunCleanupsScope &) = delete;
+    void operator=(const RunCleanupsScope &) = delete;
+
+  protected:
+    CIRGenFunction &CGF;
+
+  public:
+    /// Enter a new cleanup scope.
+    explicit RunCleanupsScope(CIRGenFunction &CGF)
+        : PerformCleanup(true), CGF(CGF) {
+      CleanupStackDepth = CGF.EHStack.stable_begin();
+      LifetimeExtendedCleanupStackSize =
+          CGF.LifetimeExtendedCleanupStack.size();
+      OldDidCallStackSave = CGF.DidCallStackSave;
+      CGF.DidCallStackSave = false;
+      OldCleanupScopeDepth = CGF.CurrentCleanupScopeDepth;
+      CGF.CurrentCleanupScopeDepth = CleanupStackDepth;
+    }
+
+    /// Exit this cleanup scope, emitting any accumulated cleanups.
+    ~RunCleanupsScope() {
+      if (PerformCleanup)
+        ForceCleanup();
+    }
+
+    /// Determine whether this scope requires any cleanups.
+    bool requiresCleanups() const {
+      return CGF.EHStack.stable_begin() != CleanupStackDepth;
+    }
+
+    /// Force the emission of cleanups now, instead of waiting
+    /// until this object is destroyed.
+    /// \param ValuesToReload - A list of values that need to be available at
+    /// the insertion point after cleanup emission. If cleanup emission created
+    /// a shared cleanup block, these value pointers will be rewritten.
+    /// Otherwise, they not will be modified.
+    void
+    ForceCleanup(std::initializer_list<mlir::Value *> ValuesToReload = {}) {
+      assert(PerformCleanup && "Already forced cleanup");
+      CGF.DidCallStackSave = OldDidCallStackSave;
+      CGF.PopCleanupBlocks(CleanupStackDepth, LifetimeExtendedCleanupStackSize,
+                           ValuesToReload);
+      PerformCleanup = false;
+      CGF.CurrentCleanupScopeDepth = OldCleanupScopeDepth;
+    }
+  };
+
+  // Cleanup stack depth of the RunCleanupsScope that was pushed most recently.
+  EHScopeStack::stable_iterator CurrentCleanupScopeDepth =
+      EHScopeStack::stable_end();
 
   /// CIR build helpers
   /// -----------------
