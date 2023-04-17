@@ -23,7 +23,7 @@ LLVM_LIBC_FUNCTION(int, access, (const char *path, int mode)) {
 #elif defined(SYS_faccessat)
   long ret = __llvm_libc::syscall_impl(SYS_faccessat, AT_FDCWD, path, mode, 0);
 #else
-#error "access syscalls not available."
+#error "access and faccessat syscalls not available."
 #endif
 
   if (ret < 0) {

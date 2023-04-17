@@ -13,12 +13,15 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <iterator>
 #include <optional>
@@ -884,6 +887,77 @@ void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
                             mlir::Value var_is_present) {
   return build(builder, odsState, {var.getType(), builder.getI1Type()}, var,
                var_is_present);
+}
+
+//===----------------------------------------------------------------------===//
+// ShapeOfOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::ShapeOfOp::build(mlir::OpBuilder &builder,
+                             mlir::OperationState &result, mlir::Value expr) {
+  hlfir::ExprType exprTy = expr.getType().cast<hlfir::ExprType>();
+  mlir::Type type = fir::ShapeType::get(builder.getContext(), exprTy.getRank());
+  build(builder, result, type, expr);
+}
+
+std::size_t hlfir::ShapeOfOp::getRank() {
+  mlir::Type resTy = getResult().getType();
+  fir::ShapeType shape = resTy.cast<fir::ShapeType>();
+  return shape.getRank();
+}
+
+mlir::LogicalResult hlfir::ShapeOfOp::verify() {
+  mlir::Value expr = getExpr();
+  hlfir::ExprType exprTy = expr.getType().cast<hlfir::ExprType>();
+  std::size_t exprRank = exprTy.getShape().size();
+
+  if (exprRank == 0)
+    return emitOpError("cannot get the shape of a shape-less expression");
+
+  std::size_t shapeRank = getRank();
+  if (shapeRank != exprRank)
+    return emitOpError("result rank and expr rank do not match");
+
+  return mlir::success();
+}
+
+mlir::LogicalResult
+hlfir::ShapeOfOp::canonicalize(ShapeOfOp shapeOf,
+                               mlir::PatternRewriter &rewriter) {
+  // if extent information is available at compile time, immediately fold the
+  // hlfir.shape_of into a fir.shape
+  mlir::Location loc = shapeOf.getLoc();
+  hlfir::ExprType expr = shapeOf.getExpr().getType().cast<hlfir::ExprType>();
+
+  mlir::Value shape = hlfir::genExprShape(rewriter, loc, expr);
+  if (!shape)
+    // shape information is not available at compile time
+    return mlir::LogicalResult::failure();
+
+  rewriter.replaceAllUsesWith(shapeOf.getResult(), shape);
+  rewriter.eraseOp(shapeOf);
+  return mlir::LogicalResult::success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetExtent
+//===----------------------------------------------------------------------===//
+
+void hlfir::GetExtentOp::build(mlir::OpBuilder &builder,
+                               mlir::OperationState &result, mlir::Value shape,
+                               unsigned dim) {
+  mlir::Type indexTy = builder.getIndexType();
+  mlir::IntegerAttr dimAttr = mlir::IntegerAttr::get(indexTy, dim);
+  build(builder, result, indexTy, shape, dimAttr);
+}
+
+mlir::LogicalResult hlfir::GetExtentOp::verify() {
+  fir::ShapeType shapeTy = getShape().getType().cast<fir::ShapeType>();
+  std::uint64_t rank = shapeTy.getRank();
+  llvm::APInt dim = getDim();
+  if (dim.sge(rank))
+    return emitOpError("dimension index out of bounds");
+  return mlir::success();
 }
 
 #define GET_OP_CLASSES
