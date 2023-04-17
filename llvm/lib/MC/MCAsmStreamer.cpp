@@ -772,6 +772,9 @@ bool MCAsmStreamer::emitSymbolAttribute(MCSymbol *Symbol,
   case MCSA_Memtag:
     OS << "\t.memtag\t";
     break;
+  case MCSA_WeakAntiDep:
+    OS << "\t.weak_anti_dep\t";
+    break;
   }
 
   Symbol->print(OS, MAI);
