@@ -701,6 +701,12 @@ genACC(Fortran::lower::AbstractConverter &converter,
   } else if (blockDirective.v == llvm::acc::ACCD_data) {
     genACCDataOp(converter, currentLocation, semanticsContext, stmtCtx,
                  accClauseList);
+  } else if (blockDirective.v == llvm::acc::ACCD_serial) {
+    TODO(currentLocation, "serial construct lowering");
+  } else if (blockDirective.v == llvm::acc::ACCD_kernels) {
+    TODO(currentLocation, "kernels construct lowering");
+  } else if (blockDirective.v == llvm::acc::ACCD_host_data) {
+    TODO(currentLocation, "host_data construct lowering");
   }
 }
 
