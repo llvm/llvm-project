@@ -376,8 +376,17 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   }
   StringRef Tool = ArgV[1];
   void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
-  if (Tool == "-cc1")
+  if (Tool == "-cc1") {
+    if (std::getenv("CLANG_CACHE_TEST_DETERMINISTIC_OUTPUTS")) {
+      // Perform the compile twice in order to catch differences in the output.
+      int RC = cc1_main(ArrayRef(ArgV).slice(1), ArgV[0], GetExecutablePathVP);
+      if (RC != 0)
+        return RC;
+      // FIXME: cc1_main should possibly clean up global state itself.
+      llvm::remove_fatal_error_handler();
+    }
     return cc1_main(ArrayRef(ArgV).slice(1), ArgV[0], GetExecutablePathVP);
+  }
 #if LLVM_ON_UNIX
   if (Tool == "-cc1depscand")
     return cc1depscand_main(ArrayRef(ArgV).slice(2), ArgV[0],

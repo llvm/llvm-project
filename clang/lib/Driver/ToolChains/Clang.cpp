@@ -4543,6 +4543,24 @@ void Clang::AddPrefixMappingOptions(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
+static void addCachingOptions(ArgStringList &CmdArgs) {
+  if (std::getenv("CLANG_CACHE_TEST_DETERMINISTIC_OUTPUTS"))
+    CmdArgs.push_back("-fcache-disable-replay");
+
+  if (std::getenv("CLANG_CACHE_REDACT_TIME_MACROS")) {
+    // Remove use of these macros to get reproducible outputs. This can
+    // accompany CLANG_CACHE_TEST_DETERMINISTIC_OUTPUTS to avoid fatal errors
+    // when the source uses these macros.
+    CmdArgs.push_back("-Wno-builtin-macro-redefined");
+    CmdArgs.push_back("-D__DATE__=\"redacted\"");
+    CmdArgs.push_back("-D__TIMESTAMP__=\"redacted\"");
+    CmdArgs.push_back("-D__TIME__=\"redacted\"");
+  }
+
+  if (std::getenv("CLANG_CACHE_CHECK_REPRODUCIBLE_CACHING_ISSUES"))
+    CmdArgs.push_back("-Werror=reproducible-caching");
+}
+
 void Clang::ConstructJob(Compilation &C, const JobAction &Job,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
@@ -5914,6 +5932,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
 
   // Handle -fdepscan-prefix-map-* options
   AddPrefixMappingOptions(Args, CmdArgs, D, Sysroot);
+
+  // Handle compile caching options.
+  addCachingOptions(CmdArgs);
 
   // Don't warn about "clang -c -DPIC -fPIC test.i" because libtool.m4 assumes
   // that "The compiler can only warn and ignore the option if not recognized".

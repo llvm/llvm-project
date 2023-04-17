@@ -2,9 +2,18 @@
 
 // This compiles twice with replay disabled, ensuring that we get the same outputs for the same key.
 
+// Under clang-cache
+
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas CLANG_CACHE_TEST_DETERMINISTIC_OUTPUTS=1 CLANG_CACHE_REDACT_TIME_MACROS=1 %clang-cache \
 // RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -Rcompile-job-cache 2> %t/out.txt
 // RUN: FileCheck %s --check-prefix=CACHE-SKIPPED --input-file=%t/out.txt
+
+// Under clang driver
+
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas CLANG_CACHE_TEST_DETERMINISTIC_OUTPUTS=1 CLANG_CACHE_REDACT_TIME_MACROS=1 \
+// RUN: %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -Rcompile-job-cache \
+// RUN:   -fdepscan=inline -Xclang -fcas-path -Xclang %t/cas 2> %t/out_driver.txt
+// RUN: FileCheck %s --check-prefix=CACHE-SKIPPED --input-file=%t/out_driver.txt
 
 // CACHE-SKIPPED: remark: compile job cache skipped
 // CACHE-SKIPPED: remark: compile job cache skipped
