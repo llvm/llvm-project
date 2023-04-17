@@ -672,6 +672,15 @@ public:
     LocalDeclMap.insert({VD, Addr});
   }
 
+  /// True if an insertion point is defined. If not, this indicates that the
+  /// current code being emitted is unreachable.
+  /// FIXME(cir): we need to inspect this and perhaps use a cleaner mechanism
+  /// since we don't yet force null insertion point to designate behavior (like
+  /// LLVM's codegen does) and we probably shouldn't.
+  bool HaveInsertPoint() const {
+    return builder.getInsertionBlock() != nullptr;
+  }
+
   /// Whether any type-checking sanitizers are enabled. If \c false, calls to
   /// buildTypeCheck can be skipped.
   bool sanitizePerformTypeCheck() const;
@@ -1093,6 +1102,9 @@ public:
                          clang::CXXCtorType Type, FunctionArgList &Args);
   void buildConstructorBody(FunctionArgList &Args);
   void buildDestructorBody(FunctionArgList &Args);
+  void buildCXXDestructorCall(const CXXDestructorDecl *D, CXXDtorType Type,
+                              bool ForVirtualBase, bool Delegating,
+                              Address This, QualType ThisTy);
 
   /// Enter the cleanups necessary to complete the given phase of destruction
   /// for a destructor. The end result should call destructors on members and

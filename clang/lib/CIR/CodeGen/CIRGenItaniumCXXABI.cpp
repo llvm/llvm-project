@@ -110,6 +110,10 @@ public:
   void buildCXXConstructors(const clang::CXXConstructorDecl *D) override;
   void buildCXXDestructors(const clang::CXXDestructorDecl *D) override;
   void buildCXXStructor(clang::GlobalDecl GD) override;
+  void buildDestructorCall(CIRGenFunction &CGF, const CXXDestructorDecl *DD,
+                           CXXDtorType Type, bool ForVirtualBase,
+                           bool Delegating, Address This,
+                           QualType ThisTy) override;
 
   bool canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const override;
   mlir::cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *RD,
@@ -1532,4 +1536,10 @@ CIRGenItaniumCXXABI::classifyRTTIUniqueness(
   // enable string-comparisons.
   assert(Linkage == mlir::cir::GlobalLinkageKind::WeakODRLinkage);
   return RUK_NonUniqueVisible;
+}
+
+void CIRGenItaniumCXXABI::buildDestructorCall(
+    CIRGenFunction &CGF, const CXXDestructorDecl *DD, CXXDtorType Type,
+    bool ForVirtualBase, bool Delegating, Address This, QualType ThisTy) {
+  llvm_unreachable("NYI");
 }

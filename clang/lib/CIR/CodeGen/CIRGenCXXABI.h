@@ -135,6 +135,13 @@ public:
   /// Emit dtor variants required by this ABI.
   virtual void buildCXXDestructors(const clang::CXXDestructorDecl *D) = 0;
 
+  /// Emit the destructor call.
+  virtual void buildDestructorCall(CIRGenFunction &CGF,
+                                   const CXXDestructorDecl *DD,
+                                   CXXDtorType Type, bool ForVirtualBase,
+                                   bool Delegating, Address This,
+                                   QualType ThisTy) = 0;
+
   /// Get the address of the vtable for the given record decl which should be
   /// used for the vptr at the given offset in RD.
   virtual mlir::cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *RD,

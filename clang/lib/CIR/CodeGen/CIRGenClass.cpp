@@ -969,15 +969,14 @@ void CIRGenFunction::buildDestructorBody(FunctionArgList &Args) {
   // destructor.  Do so.
   if (DtorType == Dtor_Deleting) {
     RunCleanupsScope DtorEpilogue(*this);
-    llvm_unreachable("NYI");
-    // EnterDtorCleanups(Dtor, Dtor_Deleting);
-    // if (HaveInsertPoint()) {
-    //   QualType ThisTy = Dtor->getThisObjectType();
-    //   EmitCXXDestructorCall(Dtor, Dtor_Complete, /*ForVirtualBase=*/false,
-    //                         /*Delegating=*/false, LoadCXXThisAddress(),
-    //                         ThisTy);
-    // }
-    // return;
+    EnterDtorCleanups(Dtor, Dtor_Deleting);
+    if (HaveInsertPoint()) {
+      QualType ThisTy = Dtor->getFunctionObjectParameterType();
+      buildCXXDestructorCall(Dtor, Dtor_Complete, /*ForVirtualBase=*/false,
+                             /*Delegating=*/false, LoadCXXThisAddress(),
+                             ThisTy);
+    }
+    return;
   }
 
   // If the body is a function-try-block, enter the try before
@@ -987,7 +986,8 @@ void CIRGenFunction::buildDestructorBody(FunctionArgList &Args) {
     llvm_unreachable("NYI");
     // EnterCXXTryStmt(*cast<CXXTryStmt>(Body), true);
   }
-  assert(!UnimplementedFeature::emitAsanPrologueOrEpilogue());
+  if (UnimplementedFeature::emitAsanPrologueOrEpilogue())
+    llvm_unreachable("NYI");
 
   // Enter the epilogue cleanups.
   llvm_unreachable("NYI");
@@ -1119,4 +1119,13 @@ void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
   }
 
   llvm_unreachable("NYI");
+}
+
+void CIRGenFunction::buildCXXDestructorCall(const CXXDestructorDecl *DD,
+                                            CXXDtorType Type,
+                                            bool ForVirtualBase,
+                                            bool Delegating, Address This,
+                                            QualType ThisTy) {
+  CGM.getCXXABI().buildDestructorCall(*this, DD, Type, ForVirtualBase,
+                                      Delegating, This, ThisTy);
 }
