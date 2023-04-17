@@ -126,9 +126,6 @@ int main(int argc, const char **argv) {
         SymbolOffsets.push_back(Info.Offset);
       NewNames.push_back(Info.NewName);
     }
-  } else {
-    errs() << "clang-rename: input must be provided.\n";
-    return 1;
   }
 
   // Check the arguments for correctness.
