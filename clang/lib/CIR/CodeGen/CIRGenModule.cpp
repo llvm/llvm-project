@@ -872,7 +872,7 @@ void CIRGenModule::buildGlobalDefinition(GlobalDecl GD, mlir::Operation *Op) {
         buildGlobalFunctionDefinition(GD, Op);
 
       if (Method->isVirtual())
-        llvm_unreachable("NYI");
+        getVTables().buildThunks(GD);
 
       return;
     }

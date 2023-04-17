@@ -410,3 +410,21 @@ CIRGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
 
   llvm_unreachable("Invalid TemplateSpecializationKind!");
 }
+
+void CIRGenVTables::buildThunks(GlobalDecl GD) {
+  const CXXMethodDecl *MD =
+      cast<CXXMethodDecl>(GD.getDecl())->getCanonicalDecl();
+
+  // We don't need to generate thunks for the base destructor.
+  if (isa<CXXDestructorDecl>(MD) && GD.getDtorType() == Dtor_Base)
+    return;
+
+  const VTableContextBase::ThunkInfoVectorTy *ThunkInfoVector =
+      VTContext->getThunkInfo(GD);
+
+  if (!ThunkInfoVector)
+    return;
+
+  for ([[maybe_unused]] const ThunkInfo &Thunk : *ThunkInfoVector)
+    llvm_unreachable("NYI");
+}

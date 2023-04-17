@@ -146,8 +146,8 @@ public:
   //                          llvm::GlobalVariable::LinkageTypes Linkage,
   //                          const CXXRecordDecl *RD);
 
-  //   /// EmitThunks - Emit the associated thunks for the given global decl.
-  //   void EmitThunks(GlobalDecl GD);
+  /// Emit the associated thunks for the given global decl.
+  void buildThunks(GlobalDecl GD);
 
   /// Generate all the class data required to be generated upon definition of a
   /// KeyFunction. This includes the vtable, the RTTI data structure (if RTTI
