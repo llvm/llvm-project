@@ -170,7 +170,7 @@
 //            Number of samples to get to the desrired percentile.
 //
 // NAME TABLE
-//    SIZE (uint32_t)
+//    SIZE (uint64_t)
 //        Number of entries in the name table.
 //    NAMES
 //        A NUL-separated list of SIZE strings.
@@ -182,7 +182,7 @@
 //        NOTE: This field should only be present for top-level functions
 //              (i.e., not inlined into any caller). Inlined function calls
 //              have no prologue, so they don't need this.
-//    NAME_IDX (uint32_t)
+//    NAME_IDX (uint64_t)
 //        Index into the name table indicating the function name.
 //    SAMPLES (uint64_t)
 //        Total number of samples collected in this function.
@@ -204,7 +204,7 @@
 //            represent all the actual functions called at runtime.
 //          CALL_TARGETS
 //            A list of NUM_CALLS entries for each called function:
-//               NAME_IDX (uint32_t)
+//               NAME_IDX (uint64_t)
 //                  Index into the name table with the callee name.
 //               SAMPLES (uint64_t)
 //                  Number of samples collected at the call site.
@@ -624,7 +624,7 @@ protected:
   ErrorOr<StringRef> readString();
 
   /// Read the string index and check whether it overflows the table.
-  template <typename T> inline ErrorOr<uint32_t> readStringIndex(T &Table);
+  template <typename T> inline ErrorOr<size_t> readStringIndex(T &Table);
 
   /// Return true if we've reached the end of file.
   bool at_eof() const { return Data >= End; }
@@ -705,7 +705,7 @@ private:
 
 protected:
   std::vector<SecHdrTableEntry> SecHdrTable;
-  std::error_code readSecHdrTableEntry(uint32_t Idx);
+  std::error_code readSecHdrTableEntry(uint64_t Idx);
   std::error_code readSecHdrTable();
 
   std::error_code readFuncMetadata(bool ProfileHasAttribute);
