@@ -1431,3 +1431,16 @@ define <vscale x 8 x double> @vfcopynsign_exttrunc_vf_nxv8f64_nxv8f32(<vscale x 
   %r = call <vscale x 8 x double> @llvm.copysign.nxv8f64(<vscale x 8 x double> %vm, <vscale x 8 x double> %eneg)
   ret <vscale x 8 x double> %r
 }
+
+define <vscale x 2 x float> @fptrunc_of_copysign_nxv2f32_nxv2f64(<vscale x 2 x double> %X, <vscale x 2 x double> %Y) {
+; CHECK-LABEL: fptrunc_of_copysign_nxv2f32_nxv2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vfsgnj.vv v10, v8, v10
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfncvt.f.f.w v8, v10
+; CHECK-NEXT:    ret
+  %copy = call fast <vscale x 2 x double> @llvm.copysign.nxv2f64(<vscale x 2 x double> %X, <vscale x 2 x double> %Y)
+  %trunc = fptrunc <vscale x 2 x double> %copy to <vscale x 2 x float>
+  ret <vscale x 2 x float> %trunc
+}
