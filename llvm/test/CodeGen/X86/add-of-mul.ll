@@ -5,8 +5,7 @@ define i32 @test_scalar(i32 %x) {
 ; CHECK-LABEL: test_scalar:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal (%rdi,%rdi,2), %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    leal (,%rdi,4), %eax
 ; CHECK-NEXT:    retq
   %mul = mul i32 %x, 3
   %add = add i32 %mul, %x
@@ -17,8 +16,7 @@ define i32 @test_scalar_commuted(i32 %x) {
 ; CHECK-LABEL: test_scalar_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal (%rdi,%rdi,2), %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    leal (,%rdi,4), %eax
 ; CHECK-NEXT:    retq
   %mul = mul i32 %x, 3
   %add = add i32 %x, %mul
@@ -28,8 +26,7 @@ define i32 @test_scalar_commuted(i32 %x) {
 define <4 x i32> @test_vector(<4 x i32> %x) {
 ; CHECK-LABEL: test_vector:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    paddd %xmm0, %xmm0
-; CHECK-NEXT:    paddd %xmm0, %xmm0
+; CHECK-NEXT:    pslld $2, %xmm0
 ; CHECK-NEXT:    retq
   %mul = mul <4 x i32> %x, <i32 3, i32 3, i32 3, i32 3>
   %add = add <4 x i32> %mul, %x
@@ -39,8 +36,7 @@ define <4 x i32> @test_vector(<4 x i32> %x) {
 define ptr @test_ptr(ptr %p) {
 ; CHECK-LABEL: test_ptr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    leaq (%rdi,%rdi,2), %rax
-; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    leaq (,%rdi,4), %rax
 ; CHECK-NEXT:    retq
   %addr = ptrtoint ptr %p to i64
   %mul = mul i64 %addr, 3
