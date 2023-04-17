@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -split-input-file -pass-pipeline="builtin.module(convert-math-to-funcs{convert-ctlz})" | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -pass-pipeline="builtin.module(convert-math-to-funcs{convert-ctlz=false})" | FileCheck --check-prefix=NOCVT %s
 
 // Check a golden-path i32 conversion
 
@@ -38,6 +39,7 @@
 // CHECK:           }
 // CHECK:           return %[[OUT]] : i32
 // CHECK:         }
+// NOCVT-NOT: __mlir_math_ctlz_i32
 func.func @main(%arg0: i32) {
   %0 = math.ctlz %arg0 : i32
   func.return
@@ -83,6 +85,7 @@ func.func @main(%arg0: i32) {
 // CHECK:           }
 // CHECK:           return %[[OUT]] : i8
 // CHECK:         }
+// NOCVT-NOT: __mlir_math_ctlz_i32
 func.func @main(%arg0: i8) {
   %0 = math.ctlz %arg0 : i8
   func.return

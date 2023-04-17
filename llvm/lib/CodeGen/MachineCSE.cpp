@@ -68,12 +68,12 @@ static cl::opt<int>
 namespace {
 
   class MachineCSE : public MachineFunctionPass {
-    const TargetInstrInfo *TII;
-    const TargetRegisterInfo *TRI;
-    AliasAnalysis *AA;
-    MachineDominatorTree *DT;
-    MachineRegisterInfo *MRI;
-    MachineBlockFrequencyInfo *MBFI;
+    const TargetInstrInfo *TII = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    AliasAnalysis *AA = nullptr;
+    MachineDominatorTree *DT = nullptr;
+    MachineRegisterInfo *MRI = nullptr;
+    MachineBlockFrequencyInfo *MBFI = nullptr;
 
   public:
     static char ID; // Pass identification

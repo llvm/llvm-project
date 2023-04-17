@@ -117,9 +117,9 @@ template <typename T, unsigned Bits> struct BitPatterns {
 /// type so it can be packed and unpacked into a `bits` sized integer,
 /// `Compressor` is specialized on signed-ness so no runtime cost is incurred.
 /// The `pack` method also checks that the passed in `UserValue` is valid.
-template <typename T, unsigned Bits, bool = std::is_unsigned<T>::value>
+template <typename T, unsigned Bits, bool = std::is_unsigned_v<T>>
 struct Compressor {
-  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
+  static_assert(std::is_unsigned_v<T>, "T must be unsigned");
   using BP = BitPatterns<T, Bits>;
 
   static T pack(T UserValue, T UserMaxValue) {
@@ -132,7 +132,7 @@ struct Compressor {
 };
 
 template <typename T, unsigned Bits> struct Compressor<T, Bits, false> {
-  static_assert(std::is_signed<T>::value, "T must be signed");
+  static_assert(std::is_signed_v<T>, "T must be signed");
   using BP = BitPatterns<T, Bits>;
 
   static T pack(T UserValue, T UserMaxValue) {
@@ -154,8 +154,7 @@ template <typename T, unsigned Bits> struct Compressor<T, Bits, false> {
 /// Impl is where Bifield description and Storage are put together to interact
 /// with values.
 template <typename Bitfield, typename StorageType> struct Impl {
-  static_assert(std::is_unsigned<StorageType>::value,
-                "Storage must be unsigned");
+  static_assert(std::is_unsigned_v<StorageType>, "Storage must be unsigned");
   using IntegerType = typename Bitfield::IntegerType;
   using C = Compressor<IntegerType, Bitfield::Bits>;
   using BP = BitPatterns<StorageType, Bitfield::Bits>;
@@ -193,8 +192,7 @@ template <typename Bitfield, typename StorageType> struct Impl {
 /// consistent semantics, this excludes typed enums and `bool` that are replaced
 /// with their unsigned counterparts. The correct type is restored in the public
 /// API.
-template <typename T, bool = std::is_enum<T>::value>
-struct ResolveUnderlyingType {
+template <typename T, bool = std::is_enum_v<T>> struct ResolveUnderlyingType {
   using type = std::underlying_type_t<T>;
 };
 template <typename T> struct ResolveUnderlyingType<T, false> {
@@ -217,7 +215,7 @@ struct Bitfield {
   /// \tparam Size      The size of the field.
   /// \tparam MaxValue  For enums the maximum enum allowed.
   template <typename T, unsigned Offset, unsigned Size,
-            T MaxValue = std::is_enum<T>::value
+            T MaxValue = std::is_enum_v<T>
                              ? T(0) // coupled with static_assert below
                              : std::numeric_limits<T>::max()>
   struct Element {
@@ -236,12 +234,11 @@ struct Bitfield {
     static_assert(Bits > 0, "Bits must be non zero");
     static constexpr size_t TypeBits = sizeof(IntegerType) * CHAR_BIT;
     static_assert(Bits <= TypeBits, "Bits may not be greater than T size");
-    static_assert(!std::is_enum<T>::value || MaxValue != T(0),
+    static_assert(!std::is_enum_v<T> || MaxValue != T(0),
                   "Enum Bitfields must provide a MaxValue");
-    static_assert(!std::is_enum<T>::value ||
-                      std::is_unsigned<IntegerType>::value,
+    static_assert(!std::is_enum_v<T> || std::is_unsigned_v<IntegerType>,
                   "Enum must be unsigned");
-    static_assert(std::is_integral<IntegerType>::value &&
+    static_assert(std::is_integral_v<IntegerType> &&
                       std::numeric_limits<IntegerType>::is_integer,
                   "IntegerType must be an integer type");
 

@@ -671,6 +671,107 @@ TEST_F(FormatTestVerilog, If) {
                "  x = x;");
   verifyFormat("(* x, x = \"x\" *) if (x)\n"
                "  x = x;");
+
+  // Assert are treated similar to if.  But the else parts should not be
+  // chained.
+  verifyFormat("assert (x);");
+  verifyFormat("assert (x)\n"
+               "  $info();");
+  verifyFormat("assert (x)\n"
+               "  $info();\n"
+               "else\n"
+               "  $error();");
+  verifyFormat("assert (x)\n"
+               "else\n"
+               "  $error();");
+  verifyFormat("assert (x)\n"
+               "else begin\n"
+               "end");
+  verifyFormat("assert (x)\n"
+               "else\n"
+               "  if (x)\n"
+               "    $error();");
+  verifyFormat("assert (x)\n"
+               "  $info();\n"
+               "else\n"
+               "  if (x)\n"
+               "    $error();");
+  verifyFormat("assert (x)\n"
+               "  $info();\n"
+               "else\n"
+               "  if (x)\n"
+               "    $error();\n"
+               "  else\n"
+               "    $error();");
+  verifyFormat("assert (x)\n"
+               "  $info();\n"
+               "else\n"
+               "  if (x)\n"
+               "    $error();\n"
+               "  else if (x)\n"
+               "    $error();\n"
+               "  else\n"
+               "    $error();");
+  // The body is optional for asserts.  The next line should not be indented if
+  // the statement already ended with a semicolon.
+  verifyFormat("assert (x);\n"
+               "x = x;");
+  verifyFormat("if (x)\n"
+               "  assert (x);\n"
+               "else if (x) begin\n"
+               "end else begin\n"
+               "end");
+  verifyFormat("if (x)\n"
+               "  assert (x);\n"
+               "else begin\n"
+               "end");
+  verifyFormat("if (x)\n"
+               "  assert (x)\n"
+               "  else begin\n"
+               "  end");
+  // Other keywords.
+  verifyFormat("assume (x)\n"
+               "  $info();");
+  verifyFormat("cover (x)\n"
+               "  $info();");
+  verifyFormat("restrict (x)\n"
+               "  $info();");
+  verifyFormat("assert #0 (x)\n"
+               "  $info();");
+  verifyFormat("assert final (x)\n"
+               "  $info();");
+  verifyFormat("cover #0 (x)\n"
+               "  $info();");
+  verifyFormat("cover final (x)\n"
+               "  $info();");
+
+  // The space around parentheses options should work.
+  auto Style = getDefaultStyle();
+  verifyFormat("if (x)\n"
+               "  x = x;\n"
+               "else if (x)\n"
+               "  x = x;",
+               Style);
+  verifyFormat("assert (x);", Style);
+  verifyFormat("assert #0 (x);", Style);
+  verifyFormat("assert (x)\n"
+               "else\n"
+               "  if (x)\n"
+               "    x = x;",
+               Style);
+  Style.SpacesInConditionalStatement = true;
+  verifyFormat("if ( x )\n"
+               "  x = x;\n"
+               "else if ( x )\n"
+               "  x = x;",
+               Style);
+  verifyFormat("assert ( x );", Style);
+  verifyFormat("assert #0 ( x );", Style);
+  verifyFormat("assert ( x )\n"
+               "else\n"
+               "  if ( x )\n"
+               "    x = x;",
+               Style);
 }
 
 TEST_F(FormatTestVerilog, Instantiation) {
@@ -741,6 +842,25 @@ TEST_F(FormatTestVerilog, Instantiation) {
   verifyFormat("ffnand //\n"
                "    ff1(.q(), .qbar(out1), .clear(in1), .preset(in2)),\n"
                "    ff1(.q(), .qbar(out1), .clear(in1), .preset(in2));",
+               Style);
+}
+
+TEST_F(FormatTestVerilog, Loop) {
+  verifyFormat("foreach (x[x])\n"
+               "  x = x;");
+  verifyFormat("repeat (x)\n"
+               "  x = x;");
+  verifyFormat("foreach (x[x]) begin\n"
+               "end");
+  verifyFormat("repeat (x) begin\n"
+               "end");
+  auto Style = getDefaultStyle();
+  Style.SpacesInConditionalStatement = true;
+  verifyFormat("foreach ( x[x] )\n"
+               "  x = x;",
+               Style);
+  verifyFormat("repeat ( x )\n"
+               "  x = x;",
                Style);
 }
 

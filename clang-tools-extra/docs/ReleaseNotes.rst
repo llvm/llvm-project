@@ -174,6 +174,11 @@ New check aliases
   <clang-tidy/checks/cert/msc33-c>` to :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` was added.
 
+- New alias :doc:`cppcoreguidelines-use-default-member-init
+  <clang-tidy/checks/cppcoreguidelines/use-default-member-init>` to
+  :doc:`modernize-use-default-member-init
+  <clang-tidy/checks/modernize/use-default-member-init>` was added.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Improved :doc:`readability-redundant-string-cstr
@@ -214,6 +219,11 @@ Changes in existing checks
 
 - Deprecated :doc:`cert-dcl21-cpp
   <clang-tidy/checks/cert/dcl21-cpp>` check.
+
+- Deprecated C.48 enforcement from :doc:`cppcoreguidelines-prefer-member-initializer
+  <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`. Please use
+  :doc:`cppcoreguidelines-use-default-member-init
+  <clang-tidy/checks/cppcoreguidelines/use-default-member-init>` instead.
 
 - Deprecated check-local options `HeaderFileExtensions`
   in :doc:`google-build-namespaces

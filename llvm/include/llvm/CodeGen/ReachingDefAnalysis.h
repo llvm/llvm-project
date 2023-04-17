@@ -68,8 +68,8 @@ struct PointerLikeTypeTraits<ReachingDef> {
 /// This class provides the reaching def analysis.
 class ReachingDefAnalysis : public MachineFunctionPass {
 private:
-  MachineFunction *MF;
-  const TargetRegisterInfo *TRI;
+  MachineFunction *MF = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
   LoopTraversal::TraversalOrder TraversedMBBOrder;
   unsigned NumRegUnits;
   /// Instruction that defined each register, relative to the beginning of the

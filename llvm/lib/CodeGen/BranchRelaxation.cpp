@@ -81,9 +81,9 @@ class BranchRelaxation : public MachineFunctionPass {
   std::unique_ptr<RegScavenger> RS;
   LivePhysRegs LiveRegs;
 
-  MachineFunction *MF;
-  const TargetRegisterInfo *TRI;
-  const TargetInstrInfo *TII;
+  MachineFunction *MF = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
 
   bool relaxBranchInstructions();
   void scanFunction();

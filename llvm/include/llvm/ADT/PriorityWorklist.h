@@ -109,7 +109,7 @@ public:
 
   /// Insert a sequence of new elements into the PriorityWorklist.
   template <typename SequenceT>
-  std::enable_if_t<!std::is_convertible<SequenceT, T>::value>
+  std::enable_if_t<!std::is_convertible_v<SequenceT, T>>
   insert(SequenceT &&Input) {
     if (std::begin(Input) == std::end(Input))
       // Nothing to do for an empty input sequence.
