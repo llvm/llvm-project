@@ -132,7 +132,8 @@ def TestSucceedIfOperandOfOpKind
 
 def TestPrintRemarkAtOperandOp
   : Op<Transform_Dialect, "test_print_remark_at_operand",
-       [DeclareOpInterfaceMethods<TransformOpInterface>,
+       [MatchOpInterface,
+        DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let arguments = (ins
     TransformHandleTypeInterface:$operand,
@@ -340,16 +341,22 @@ def TestReportNumberOfTrackedHandlesNestedUnder
 
 def TestPrintParamOp
   : Op<Transform_Dialect, "test_print_param",
-       [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+       [MatchOpInterface,
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
         DeclareOpInterfaceMethods<TransformOpInterface>]> {
-  let arguments = (ins TransformParamTypeInterface:$param);
-  let assemblyFormat = "$param attr-dict `:` type($param)";
+  let arguments = (ins TransformParamTypeInterface:$param,
+                       Optional<TransformHandleTypeInterface>:$anchor,
+                       OptionalAttr<StrAttr>:$message);
+  let assemblyFormat = "$param (`,` $message^)?  (`at` $anchor^)?"
+                       "attr-dict `:` type($param) (`,` type($anchor)^)?";
   let cppNamespace = "::mlir::test";
 }
 
 def TestAddToParamOp
   : Op<Transform_Dialect, "test_add_to_param",
-       [MemoryEffectsOpInterface, ParamProducerTransformOpTrait,
+       [MatchOpInterface, 
+        MemoryEffectsOpInterface,
+        ParamProducerTransformOpTrait,
         DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let arguments = (ins Optional<TestTransformTestDialectParamType>:$param,
                        I32Attr:$addendum);
@@ -360,7 +367,9 @@ def TestAddToParamOp
 
 def TestProduceParamWithNumberOfTestOps
   : Op<Transform_Dialect, "test_produce_param_with_number_of_test_ops",
-       [MemoryEffectsOpInterface, ParamProducerTransformOpTrait,
+       [MatchOpInterface,
+        MemoryEffectsOpInterface,
+        ParamProducerTransformOpTrait,
         DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let arguments = (ins TransformHandleTypeInterface:$handle);
   let results = (outs TestTransformTestDialectParamType:$result);
