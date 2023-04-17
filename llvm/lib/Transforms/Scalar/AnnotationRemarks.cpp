@@ -16,7 +16,6 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/MemoryOpRemark.h"
 
 using namespace llvm;

@@ -7,6 +7,8 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -relocation-model=pic | FileCheck -check-prefix=NoEMU %s
 ; RUN: llc < %s -mtriple=i386-linux-android -relocation-model=pic | FileCheck -check-prefix=X86 %s
 ; RUN: llc < %s -mtriple=x86_64-linux-android -relocation-model=pic | FileCheck -check-prefix=X64 %s
+; RUN: llc < %s -mtriple=i386-linux-ohos -relocation-model=pic | FileCheck -check-prefix=X86 %s
+; RUN: llc < %s -mtriple=x86_64-linux-ohos -relocation-model=pic | FileCheck -check-prefix=X64 %s
 
 ; NoEMU-NOT: __emutls
 

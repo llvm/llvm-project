@@ -24,7 +24,7 @@
 // Return explicit extents. If the base is a fir.box, this won't read it to
 // return the extents and will instead return an empty vector.
 static llvm::SmallVector<mlir::Value>
-getExplicitExtentsFromShape(mlir::Value shape) {
+getExplicitExtentsFromShape(mlir::Value shape, fir::FirOpBuilder &builder) {
   llvm::SmallVector<mlir::Value> result;
   auto *shapeOp = shape.getDefiningOp();
   if (auto s = mlir::dyn_cast_or_null<fir::ShapeOp>(shapeOp)) {
@@ -35,15 +35,23 @@ getExplicitExtentsFromShape(mlir::Value shape) {
     result.append(e.begin(), e.end());
   } else if (mlir::dyn_cast_or_null<fir::ShiftOp>(shapeOp)) {
     return {};
+  } else if (auto s = mlir::dyn_cast_or_null<hlfir::ShapeOfOp>(shapeOp)) {
+    fir::ShapeType shapeTy = shape.getType().cast<fir::ShapeType>();
+    result.reserve(shapeTy.getRank());
+    for (unsigned i = 0; i < shapeTy.getRank(); ++i) {
+      auto op = builder.create<hlfir::GetExtentOp>(shape.getLoc(), shape, i);
+      result.emplace_back(op.getResult());
+    }
   } else {
     TODO(shape.getLoc(), "read fir.shape to get extents");
   }
   return result;
 }
 static llvm::SmallVector<mlir::Value>
-getExplicitExtents(fir::FortranVariableOpInterface var) {
+getExplicitExtents(fir::FortranVariableOpInterface var,
+                   fir::FirOpBuilder &builder) {
   if (mlir::Value shape = var.getShape())
-    return getExplicitExtentsFromShape(var.getShape());
+    return getExplicitExtentsFromShape(var.getShape(), builder);
   return {};
 }
 
@@ -385,7 +393,7 @@ hlfir::genBounds(mlir::Location loc, fir::FirOpBuilder &builder,
   assert((shape.getType().isa<fir::ShapeShiftType>() ||
           shape.getType().isa<fir::ShapeType>()) &&
          "shape must contain extents");
-  auto extents = getExplicitExtentsFromShape(shape);
+  auto extents = getExplicitExtentsFromShape(shape, builder);
   auto lowers = getExplicitLboundsFromShape(shape);
   assert(lowers.empty() || lowers.size() == extents.size());
   mlir::Type idxTy = builder.getIndexType();
@@ -440,7 +448,7 @@ llvm::SmallVector<mlir::Value> getVariableExtents(mlir::Location loc,
   llvm::SmallVector<mlir::Value> extents;
   if (fir::FortranVariableOpInterface varIface =
           variable.getIfVariableInterface()) {
-    extents = getExplicitExtents(varIface);
+    extents = getExplicitExtents(varIface, builder);
     if (!extents.empty())
       return extents;
   }
@@ -483,7 +491,7 @@ mlir::Value hlfir::genShape(mlir::Location loc, fir::FirOpBuilder &builder,
         return builder.create<fir::ShapeOp>(loc, s.getExtents());
   }
   if (entity.getType().isa<hlfir::ExprType>())
-    TODO(loc, "get shape from HLFIR expr without producer holding the shape");
+    return builder.create<hlfir::ShapeOfOp>(loc, entity.getBase());
   // There is no shape lying around for this entity. Retrieve the extents and
   // build a new fir.shape.
   return builder.create<fir::ShapeOp>(loc,
@@ -493,7 +501,8 @@ mlir::Value hlfir::genShape(mlir::Location loc, fir::FirOpBuilder &builder,
 llvm::SmallVector<mlir::Value>
 hlfir::getIndexExtents(mlir::Location loc, fir::FirOpBuilder &builder,
                        mlir::Value shape) {
-  llvm::SmallVector<mlir::Value> extents = getExplicitExtentsFromShape(shape);
+  llvm::SmallVector<mlir::Value> extents =
+      getExplicitExtentsFromShape(shape, builder);
   mlir::Type indexType = builder.getIndexType();
   for (auto &extent : extents)
     extent = builder.createConvert(loc, indexType, extent);
@@ -504,7 +513,7 @@ mlir::Value hlfir::genExtent(mlir::Location loc, fir::FirOpBuilder &builder,
                              hlfir::Entity entity, unsigned dim) {
   entity = followShapeInducingSource(entity);
   if (auto shape = tryRetrievingShapeOrShift(entity)) {
-    auto extents = getExplicitExtentsFromShape(shape);
+    auto extents = getExplicitExtentsFromShape(shape, builder);
     if (!extents.empty()) {
       assert(extents.size() > dim && "bad inquiry");
       return extents[dim];

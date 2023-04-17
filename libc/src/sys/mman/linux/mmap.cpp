@@ -33,10 +33,10 @@ LLVM_LIBC_FUNCTION(void *, mmap,
 #ifdef SYS_mmap2
   offset /= EXEC_PAGESIZE;
   long syscall_number = SYS_mmap2;
-#elif SYS_mmap
+#elif defined(SYS_mmap)
   long syscall_number = SYS_mmap;
 #else
-#error "Target platform does not have SYS_mmap or SYS_mmap2 defined"
+#error "mmap or mmap2 syscalls not available."
 #endif
 
   long ret_val =

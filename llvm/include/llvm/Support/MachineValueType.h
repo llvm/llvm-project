@@ -534,6 +534,14 @@ namespace llvm {
       return getVectorVT(EltVT, EltCnt.divideCoefficientBy(2));
     }
 
+    // Return a VT for a vector type with the same element type but
+    // double the number of elements.
+    MVT getDoubleNumVectorElementsVT() const {
+      MVT EltVT = getVectorElementType();
+      auto EltCnt = getVectorElementCount();
+      return MVT::getVectorVT(EltVT, EltCnt * 2);
+    }
+
     /// Returns true if the given vector is a power of 2.
     bool isPow2VectorType() const {
       unsigned NElts = getVectorMinNumElements();

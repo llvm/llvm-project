@@ -168,7 +168,7 @@ define void @load_dereferenceable_not_dominating(ptr %p) {
 define void @load_ptr_nonnull_to_i64(ptr %p) {
 ; CHECK-LABEL: define void @load_ptr_nonnull_to_i64
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8, !nonnull !6
+; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8
 ; CHECK-NEXT:    [[VAL_INT:%.*]] = ptrtoint ptr [[VAL]] to i64
 ; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
 ; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
@@ -253,7 +253,7 @@ define void @load_ptr_dereferenceable_or_null_to_i64(ptr %p) {
 define void @load_ptr_nonnull_to_i32(ptr %p) {
 ; CHECK-LABEL: define void @load_ptr_nonnull_to_i32
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8, !nonnull !6
+; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8
 ; CHECK-NEXT:    [[VAL_INT:%.*]] = ptrtoint ptr [[VAL]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[VAL_INT]] to i32
 ; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
@@ -271,7 +271,7 @@ define void @load_ptr_nonnull_to_i32(ptr %p) {
 define void @load_i64_range_to_i32_range(ptr %p) {
 ; CHECK-LABEL: define void @load_i64_range_to_i32_range
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[P]], align 8, !range [[RNG8:![0-9]+]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[P]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[VAL]] to i32
 ; CHECK-NEXT:    call void @use.i64(i64 [[VAL]])
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP1]])
@@ -305,5 +305,4 @@ define void @load_i64_range_to_i32_range(ptr %p) {
 ; CHECK: [[RNG5]] = !{i32 3, i32 4, i32 5, i32 2}
 ; CHECK: [[META6:![0-9]+]] = !{}
 ; CHECK: [[META7:![0-9]+]] = !{i64 10}
-; CHECK: [[RNG8]] = !{i64 0, i64 10}
 ;.
