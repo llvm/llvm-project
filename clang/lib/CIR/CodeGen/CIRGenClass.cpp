@@ -1065,3 +1065,58 @@ void CIRGenFunction::buildDestructorBody(FunctionArgList &Args) {
   if (isTryBody)
     llvm_unreachable("NYI");
 }
+
+namespace {
+[[maybe_unused]] mlir::Value
+LoadThisForDtorDelete(CIRGenFunction &CGF, const CXXDestructorDecl *DD) {
+  if (Expr *ThisArg = DD->getOperatorDeleteThisArg())
+    return CGF.buildScalarExpr(ThisArg);
+  return CGF.LoadCXXThis();
+}
+
+/// Call the operator delete associated with the current destructor.
+struct CallDtorDelete final : EHScopeStack::Cleanup {
+  CallDtorDelete() {}
+
+  void Emit(CIRGenFunction &CGF, Flags flags) override {
+    [[maybe_unused]] const CXXDestructorDecl *Dtor =
+        cast<CXXDestructorDecl>(CGF.CurCodeDecl);
+    [[maybe_unused]] const CXXRecordDecl *ClassDecl = Dtor->getParent();
+    llvm_unreachable("NYI");
+    // CGF.EmitDeleteCall(Dtor->getOperatorDelete(),
+    //                    LoadThisForDtorDelete(CGF, Dtor),
+    //                    CGF.getContext().getTagDeclType(ClassDecl));
+  }
+};
+} // namespace
+
+/// Emit all code that comes at the end of class's destructor. This is to call
+/// destructors on members and base classes in reverse order of their
+/// construction.
+///
+/// For a deleting destructor, this also handles the case where a destroying
+/// operator delete completely overrides the definition.
+void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
+                                       CXXDtorType DtorType) {
+  assert((!DD->isTrivial() || DD->hasAttr<DLLExportAttr>()) &&
+         "Should not emit dtor epilogue for non-exported trivial dtor!");
+
+  // The deleting-destructor phase just needs to call the appropriate
+  // operator delete that Sema picked up.
+  if (DtorType == Dtor_Deleting) {
+    assert(DD->getOperatorDelete() &&
+           "operator delete missing - EnterDtorCleanups");
+    if (CXXStructorImplicitParamValue) {
+      llvm_unreachable("NYI");
+    } else {
+      if (DD->getOperatorDelete()->isDestroyingOperatorDelete()) {
+        llvm_unreachable("NYI");
+      } else {
+        EHStack.pushCleanup<CallDtorDelete>(NormalAndEHCleanup);
+      }
+    }
+    return;
+  }
+
+  llvm_unreachable("NYI");
+}

@@ -541,6 +541,11 @@ public:
   clang::CharUnits CXXABIThisAlignment;
   clang::CharUnits CXXThisAlignment;
 
+  /// When generating code for a constructor or destructor, this will hold the
+  /// implicit argument (e.g. VTT).
+  ImplicitParamDecl *CXXStructorImplicitParamDecl{};
+  mlir::Value CXXStructorImplicitParamValue{};
+
   /// The value of 'this' to sue when evaluating CXXDefaultInitExprs within this
   /// expression.
   Address CXXDefaultInitExprThis = Address::invalid();
@@ -555,10 +560,6 @@ public:
 
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *, 4> FnArgs;
-
-  /// CXXStructorImplicitParamDecl - When generating code for a constructor or
-  /// destructor, this will hold the implicit argument (e.g. VTT).
-  clang::ImplicitParamDecl *CXXStructorImplicitParamDecl = nullptr;
 
   // The CallExpr within the current statement that the musttail attribute
   // applies to. nullptr if there is no 'musttail' on the current statement.
@@ -1092,6 +1093,11 @@ public:
                          clang::CXXCtorType Type, FunctionArgList &Args);
   void buildConstructorBody(FunctionArgList &Args);
   void buildDestructorBody(FunctionArgList &Args);
+
+  /// Enter the cleanups necessary to complete the given phase of destruction
+  /// for a destructor. The end result should call destructors on members and
+  /// base classes in reverse order of their construction.
+  void EnterDtorCleanups(const CXXDestructorDecl *Dtor, CXXDtorType Type);
 
   static bool
   IsConstructorDelegationValid(const clang::CXXConstructorDecl *Ctor);
