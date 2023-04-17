@@ -1148,7 +1148,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 ///    1 * x = x
 static int getOperationIdentity(llvm::StringRef reductionOpName,
                                 mlir::Location loc) {
-  if (reductionOpName.contains("add") || reductionOpName.contains("or"))
+  if (reductionOpName.contains("add") || reductionOpName.contains("or") ||
+      reductionOpName.contains("neqv"))
     return 0;
   if (reductionOpName.contains("multiply") || reductionOpName.contains("and") ||
       reductionOpName.contains("eqv"))
@@ -1324,6 +1325,16 @@ static omp::ReductionDeclareOp createReductionDecl(
     reductionOp = builder.createConvert(loc, type, cmpiOp);
     break;
   }
+  case Fortran::parser::DefinedOperator::IntrinsicOperator::NEQV: {
+    Value op1I1 = builder.createConvert(loc, builder.getI1Type(), op1);
+    Value op2I1 = builder.createConvert(loc, builder.getI1Type(), op2);
+
+    Value cmpiOp = builder.create<mlir::arith::CmpIOp>(
+        loc, arith::CmpIPredicate::ne, op1I1, op2I1);
+
+    reductionOp = builder.createConvert(loc, type, cmpiOp);
+    break;
+  }
   default:
     TODO(loc, "Reduction of some intrinsic operators is not supported");
   }
@@ -1421,6 +1432,8 @@ static std::string getReductionName(
     return "eqv_reduction";
   case Fortran::parser::DefinedOperator::IntrinsicOperator::OR:
     return "or_reduction";
+  case Fortran::parser::DefinedOperator::IntrinsicOperator::NEQV:
+    return "neqv_reduction";
   default:
     reductionName = "other_reduction";
     break;
@@ -1529,6 +1542,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         case Fortran::parser::DefinedOperator::IntrinsicOperator::AND:
         case Fortran::parser::DefinedOperator::IntrinsicOperator::EQV:
         case Fortran::parser::DefinedOperator::IntrinsicOperator::OR:
+        case Fortran::parser::DefinedOperator::IntrinsicOperator::NEQV:
           break;
 
         default:
@@ -2294,6 +2308,7 @@ void Fortran::lower::genOpenMPReduction(
         case Fortran::parser::DefinedOperator::IntrinsicOperator::AND:
         case Fortran::parser::DefinedOperator::IntrinsicOperator::EQV:
         case Fortran::parser::DefinedOperator::IntrinsicOperator::OR:
+        case Fortran::parser::DefinedOperator::IntrinsicOperator::NEQV:
           break;
         default:
           continue;
@@ -2352,7 +2367,8 @@ void Fortran::lower::genOpenMPReduction(
                     // Match the pattern here.
                     mlir::Operation *reductionOp =
                         findReductionChain(loadVal, &reductionVal);
-                    if (reductionOp == nullptr) continue;
+                    if (reductionOp == nullptr)
+                      continue;
                     assert(mlir::isa<mlir::arith::SelectOp>(reductionOp) &&
                            "Selection Op not found in reduction intrinsic");
                     mlir::Operation *compareOp =
