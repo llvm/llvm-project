@@ -3074,7 +3074,7 @@ void Parser::ParsePtrauthQualifier(ParsedAttributes &attrs) {
   attrs.addNew(kwName, SourceRange(kwLoc, endLoc),
                /*scope*/ nullptr, SourceLocation(),
                argExprs.data(), argExprs.size(),
-               ParsedAttr::Form::Keyword());
+               ParsedAttr::Form::Keyword(false));
 }
 
 ExprResult Parser::ParseExtIntegerArgument() {

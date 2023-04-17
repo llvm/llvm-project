@@ -134,7 +134,7 @@ static AttributeCommonInfo getDummyAttrInfo() {
   return AttributeCommonInfo(SourceRange(),
                              AttributeCommonInfo::UnknownAttribute,
                              {AttributeCommonInfo::AS_GNU,
-                             /*Spelling*/0});
+                             /*Spelling*/0, /*IsAlignas*/false});
 }
 
 namespace {
@@ -688,7 +688,8 @@ static void ProcessAPINotes(Sema &S, TypedefNameDecl *D,
         AttributeCommonInfo syntaxInfo{SourceRange(),
                                        AttributeCommonInfo::AT_SwiftNewType,
                                        {AttributeCommonInfo::AS_GNU,
-                                       SwiftNewTypeAttr::GNU_swift_wrapper}};
+                                       SwiftNewTypeAttr::GNU_swift_wrapper,
+                                       /*IsAlignas*/false}};
         return new (S.Context) SwiftNewTypeAttr(S.Context, syntaxInfo, kind);
     });
   }
