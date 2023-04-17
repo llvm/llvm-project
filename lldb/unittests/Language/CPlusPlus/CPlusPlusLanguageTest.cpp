@@ -207,7 +207,7 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "Foo[abi:abc]<int>", "operator<<<Foo[abi:abc]<int>>", "(int)", "&",
        "Foo[abi:abc]<int>::operator<<<Foo[abi:abc]<int>>"},
 
-      {"auto A::operator<=>[abi:tag]<A::B>()", "A",
+      {"auto A::operator<=>[abi:tag]<A::B>()", "auto", "A",
        "operator<=>[abi:tag]<A::B>", "()", "",
        "A::operator<=>[abi:tag]<A::B>"}};
 
