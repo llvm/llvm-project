@@ -3058,11 +3058,9 @@ static bool SimplifyTree(TreePatternNodePtr &N) {
 
   // Walk all children.
   bool MadeChange = false;
-  for (unsigned i = 0, e = N->getNumChildren(); i != e; ++i) {
-    TreePatternNodePtr Child = N->getChildShared(i);
-    MadeChange |= SimplifyTree(Child);
-    N->setChild(i, std::move(Child));
-  }
+  for (unsigned i = 0, e = N->getNumChildren(); i != e; ++i)
+    MadeChange |= SimplifyTree(N->getChildSharedPtr(i));
+
   return MadeChange;
 }
 
