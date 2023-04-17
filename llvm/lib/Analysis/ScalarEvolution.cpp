@@ -3192,9 +3192,20 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
           for (const SCEV *AddRecOp : AddRec->operands())
             Operands.push_back(getMulExpr(Ops[0], AddRecOp, SCEV::FlagAnyWrap,
                                           Depth + 1));
-
+          // Let M be the minimum representable signed value. AddRec with nsw
+          // multiplied by -1 can have signed overflow if and only if it takes a
+          // value of M: M * (-1) would stay M and (M + 1) * (-1) would be the
+          // maximum signed value. In all other cases signed overflow is
+          // impossible.
+          auto FlagsMask = SCEV::FlagNW;
+          if (hasFlags(AddRec->getNoWrapFlags(), SCEV::FlagNSW)) {
+            auto MinInt =
+                APInt::getSignedMinValue(getTypeSizeInBits(AddRec->getType()));
+            if (getSignedRangeMin(AddRec) != MinInt)
+              FlagsMask = setFlags(FlagsMask, SCEV::FlagNSW);
+          }
           return getAddRecExpr(Operands, AddRec->getLoop(),
-                               AddRec->getNoWrapFlags(SCEV::FlagNW));
+                               AddRec->getNoWrapFlags(FlagsMask));
         }
       }
     }
