@@ -21,12 +21,24 @@ class FunctionPass;
 class Pass;
 
 //===----------------------------------------------------------------------===//
+// createMetaRenamerPass - Rename everything with metasyntatic names.
+//
+ModulePass *createMetaRenamerPass();
+
+//===----------------------------------------------------------------------===//
 //
 // LowerInvoke - This pass removes invoke instructions, converting them to call
 // instructions.
 //
 FunctionPass *createLowerInvokePass();
 extern char &LowerInvokePassID;
+
+//===----------------------------------------------------------------------===//
+//
+// InstructionNamer - Give any unnamed non-void instructions "tmp" names.
+//
+FunctionPass *createInstructionNamerPass();
+extern char &InstructionNamerID;
 
 //===----------------------------------------------------------------------===//
 //
