@@ -35,7 +35,7 @@ struct use_integral_formatter
 
 template <typename T>
 struct use_char_formatter
-    : public std::integral_constant<bool, std::is_same<T, char>::value> {};
+    : public std::integral_constant<bool, std::is_same_v<T, char>> {};
 
 template <typename T>
 struct is_cstring
@@ -46,16 +46,17 @@ struct is_cstring
 template <typename T>
 struct use_string_formatter
     : public std::integral_constant<bool,
-                                    std::is_convertible<T, llvm::StringRef>::value> {};
+                                    std::is_convertible_v<T, llvm::StringRef>> {
+};
 
 template <typename T>
 struct use_pointer_formatter
-    : public std::integral_constant<bool, std::is_pointer<T>::value &&
+    : public std::integral_constant<bool, std::is_pointer_v<T> &&
                                               !is_cstring<T>::value> {};
 
 template <typename T>
 struct use_double_formatter
-    : public std::integral_constant<bool, std::is_floating_point<T>::value> {};
+    : public std::integral_constant<bool, std::is_floating_point_v<T>> {};
 
 class HelperFunctions {
 protected:

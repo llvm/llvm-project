@@ -106,7 +106,7 @@ inline double getSwappedBytes(double C) {
 }
 
 template <typename T>
-inline std::enable_if_t<std::is_enum<T>::value, T> getSwappedBytes(T C) {
+inline std::enable_if_t<std::is_enum_v<T>, T> getSwappedBytes(T C) {
   return static_cast<T>(
       llvm::byteswap(static_cast<std::underlying_type_t<T>>(C)));
 }
