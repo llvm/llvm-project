@@ -660,3 +660,91 @@ define float @pass_nofpclass_inf_through_memory(float nofpclass(inf) %arg) {
   %ret = call float @returned_load(ptr %alloca)
   ret float %ret
 }
+
+define float @uitofp_i32_to_f32(i32 %arg) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @uitofp_i32_to_f32
+; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CVT:%.*]] = uitofp i32 [[ARG]] to float
+; CHECK-NEXT:    ret float [[CVT]]
+;
+  %cvt = uitofp i32 %arg to float
+  ret float %cvt
+}
+
+define float @sitofp_i32_to_f32(i32 %arg) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan inf) float @sitofp_i32_to_f32
+; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CVT:%.*]] = sitofp i32 [[ARG]] to float
+; CHECK-NEXT:    ret float [[CVT]]
+;
+  %cvt = sitofp i32 %arg to float
+  ret float %cvt
+}
+
+define <2 x float> @uitofp_v2i32_to_v2f32(<2 x i32> %arg) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) <2 x float> @uitofp_v2i32_to_v2f32
+; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CVT:%.*]] = uitofp <2 x i32> [[ARG]] to <2 x float>
+; CHECK-NEXT:    ret <2 x float> [[CVT]]
+;
+  %cvt = uitofp <2 x i32> %arg to <2 x float>
+  ret <2 x float> %cvt
+}
+
+define <2 x float> @sitofp_v2i32_to_v2i32(<2 x i32> %arg) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan inf) <2 x float> @sitofp_v2i32_to_v2i32
+; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CVT:%.*]] = sitofp <2 x i32> [[ARG]] to <2 x float>
+; CHECK-NEXT:    ret <2 x float> [[CVT]]
+;
+  %cvt = sitofp <2 x i32> %arg to <2 x float>
+  ret <2 x float> %cvt
+}
+
+define half @uitofp_i17_to_f16(i17 %arg) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) half @uitofp_i17_to_f16
+; CHECK-SAME: (i17 [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CVT:%.*]] = uitofp i17 [[ARG]] to half
+; CHECK-NEXT:    ret half [[CVT]]
+;
+  %cvt = uitofp i17 %arg to half
+  ret half %cvt
+}
+
+define half @sitofp_i17_to_f16(i17 %arg) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan) half @sitofp_i17_to_f16
+; CHECK-SAME: (i17 [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CVT:%.*]] = sitofp i17 [[ARG]] to half
+; CHECK-NEXT:    ret half [[CVT]]
+;
+  %cvt = sitofp i17 %arg to half
+  ret half %cvt
+}
+
+define <2 x half> @uitofp_v2i17_to_v2f16(<2 x i17> %arg) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) <2 x half> @uitofp_v2i17_to_v2f16
+; CHECK-SAME: (<2 x i17> [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CVT:%.*]] = uitofp <2 x i17> [[ARG]] to <2 x half>
+; CHECK-NEXT:    ret <2 x half> [[CVT]]
+;
+  %cvt = uitofp <2 x i17> %arg to <2 x half>
+  ret <2 x half> %cvt
+}
+
+define <2 x half> @sitofp_v2i17_to_v2i17(<2 x i17> %arg) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan) <2 x half> @sitofp_v2i17_to_v2i17
+; CHECK-SAME: (<2 x i17> [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CVT:%.*]] = sitofp <2 x i17> [[ARG]] to <2 x half>
+; CHECK-NEXT:    ret <2 x half> [[CVT]]
+;
+  %cvt = sitofp <2 x i17> %arg to <2 x half>
+  ret <2 x half> %cvt
+}
