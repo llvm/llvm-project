@@ -349,6 +349,14 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
                      Builder.getInt64(PseudoProbeFullDistributionFactor)};
     auto *Probe = Builder.CreateCall(ProbeFn, Args);
     AssignDebugLoc(Probe);
+    // Reset the dwarf discriminator if the debug location comes with any. The
+    // discriminator field may be used by FS-AFDO later in the pipeline.
+    if (auto DIL = Probe->getDebugLoc()) {
+      if (DIL->getDiscriminator()) {
+        DIL = DIL->cloneWithDiscriminator(0);
+        Probe->setDebugLoc(DIL);
+      }
+    }
   }
 
   // Probe both direct calls and indirect calls. Direct calls are probed so that
@@ -361,12 +369,13 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
                         ? (uint32_t)PseudoProbeType::DirectCall
                         : (uint32_t)PseudoProbeType::IndirectCall;
     AssignDebugLoc(Call);
-    // Levarge the 32-bit discriminator field of debug data to store the ID and
-    // type of a callsite probe. This gets rid of the dependency on plumbing a
-    // customized metadata through the codegen pipeline.
-    uint32_t V = PseudoProbeDwarfDiscriminator::packProbeData(
-        Index, Type, 0, PseudoProbeDwarfDiscriminator::FullDistributionFactor);
     if (auto DIL = Call->getDebugLoc()) {
+      // Levarge the 32-bit discriminator field of debug data to store the ID
+      // and type of a callsite probe. This gets rid of the dependency on
+      // plumbing a customized metadata through the codegen pipeline.
+      uint32_t V = PseudoProbeDwarfDiscriminator::packProbeData(
+          Index, Type, 0,
+          PseudoProbeDwarfDiscriminator::FullDistributionFactor);
       DIL = DIL->cloneWithDiscriminator(V);
       Call->setDebugLoc(DIL);
     }
