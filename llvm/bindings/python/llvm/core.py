@@ -31,7 +31,6 @@ __all__ = [
     "BasicBlock",
     "Instruction",
     "Context",
-    "PassRegistry"
 ]
 
 lib = get_library()
@@ -440,48 +439,10 @@ class Context(LLVMObject):
     def GetGlobalContext(cls):
         return Context(lib.LLVMGetGlobalContext())
 
-class PassRegistry(LLVMObject):
-    """Represents an opaque pass registry object."""
-
-    def __init__(self):
-        LLVMObject.__init__(self,
-                            lib.LLVMGetGlobalPassRegistry())
-
 def register_library(library):
     # Initialization/Shutdown declarations.
-    library.LLVMInitializeCore.argtypes = [PassRegistry]
-    library.LLVMInitializeCore.restype = None
-
-    library.LLVMInitializeTransformUtils.argtypes = [PassRegistry]
-    library.LLVMInitializeTransformUtils.restype = None
-
-    library.LLVMInitializeScalarOpts.argtypes = [PassRegistry]
-    library.LLVMInitializeScalarOpts.restype = None
-
-    library.LLVMInitializeVectorization.argtypes = [PassRegistry]
-    library.LLVMInitializeVectorization.restype = None
-
-    library.LLVMInitializeInstCombine.argtypes = [PassRegistry]
-    library.LLVMInitializeInstCombine.restype = None
-
-    library.LLVMInitializeIPO.argtypes = [PassRegistry]
-    library.LLVMInitializeIPO.restype = None
-
-    library.LLVMInitializeAnalysis.argtypes = [PassRegistry]
-    library.LLVMInitializeAnalysis.restype = None
-
-    library.LLVMInitializeCodeGen.argtypes = [PassRegistry]
-    library.LLVMInitializeCodeGen.restype = None
-
-    library.LLVMInitializeTarget.argtypes = [PassRegistry]
-    library.LLVMInitializeTarget.restype = None
-
     library.LLVMShutdown.argtypes = []
     library.LLVMShutdown.restype = None
-
-    # Pass Registry declarations.
-    library.LLVMGetGlobalPassRegistry.argtypes = []
-    library.LLVMGetGlobalPassRegistry.restype = c_object_p
 
     # Context declarations.
     library.LLVMContextCreate.argtypes = []
@@ -613,16 +574,6 @@ def register_enumerations():
 
 def initialize_llvm():
     Context.GetGlobalContext()
-    p = PassRegistry()
-    lib.LLVMInitializeCore(p)
-    lib.LLVMInitializeTransformUtils(p)
-    lib.LLVMInitializeScalarOpts(p)
-    lib.LLVMInitializeVectorization(p)
-    lib.LLVMInitializeInstCombine(p)
-    lib.LLVMInitializeIPO(p)
-    lib.LLVMInitializeAnalysis(p)
-    lib.LLVMInitializeCodeGen(p)
-    lib.LLVMInitializeTarget(p)
 
 register_library(lib)
 Enums = register_enumerations()

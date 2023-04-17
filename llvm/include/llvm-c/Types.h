@@ -126,9 +126,6 @@ typedef struct LLVMOpaqueModuleProvider *LLVMModuleProviderRef;
 /** @see llvm::PassManagerBase */
 typedef struct LLVMOpaquePassManager *LLVMPassManagerRef;
 
-/** @see llvm::PassRegistry */
-typedef struct LLVMOpaquePassRegistry *LLVMPassRegistryRef;
-
 /**
  * Used to get the users and usees of a Value.
  *
