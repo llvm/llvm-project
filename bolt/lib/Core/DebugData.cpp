@@ -1166,7 +1166,7 @@ void DebugStrOffsetsWriter::initialize(
          "Dwarf String Offsets Byte Size is not supported.");
   uint32_t Index = 0;
   for (uint64_t Offset = 0; Offset < Contr->Size; Offset += DwarfOffsetByteSize)
-    IndexToAddressMap[Index++] = *reinterpret_cast<const uint32_t *>(
+    IndexToAddressMap[Index++] = support::endian::read32le(
         StrOffsetsSection.Data.data() + Contr->Base + Offset);
 }
 
