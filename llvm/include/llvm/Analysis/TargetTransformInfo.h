@@ -2550,16 +2550,16 @@ public:
                          TTI::TargetCostKind CostKind) override {
     return Impl.getMinMaxReductionCost(Ty, CondTy, IsUnsigned, FMF, CostKind);
   }
-  InstructionCost getExtendedReductionCost(
-      unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
-      FastMathFlags FMF,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) override {
+  InstructionCost
+  getExtendedReductionCost(unsigned Opcode, bool IsUnsigned, Type *ResTy,
+                           VectorType *Ty, FastMathFlags FMF,
+                           TTI::TargetCostKind CostKind) override {
     return Impl.getExtendedReductionCost(Opcode, IsUnsigned, ResTy, Ty, FMF,
                                          CostKind);
   }
-  InstructionCost getMulAccReductionCost(
-      bool IsUnsigned, Type *ResTy, VectorType *Ty,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) override {
+  InstructionCost
+  getMulAccReductionCost(bool IsUnsigned, Type *ResTy, VectorType *Ty,
+                         TTI::TargetCostKind CostKind) override {
     return Impl.getMulAccReductionCost(IsUnsigned, ResTy, Ty, CostKind);
   }
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
