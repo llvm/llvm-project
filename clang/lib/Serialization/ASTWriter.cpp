@@ -3849,12 +3849,6 @@ public:
 
 } // namespace
 
-bool ASTWriter::isLookupResultExternal(StoredDeclsList &Result,
-                                       DeclContext *DC) {
-  return Result.hasExternalDecls() &&
-         DC->hasNeedToReconcileExternalVisibleStorage();
-}
-
 bool ASTWriter::isLookupResultEntirelyExternal(StoredDeclsList &Result,
                                                DeclContext *DC) {
   for (auto *D : Result.getLookupResult())
@@ -3885,20 +3879,17 @@ ASTWriter::GenerateNameLookupTable(const DeclContext *ConstDC,
   // order.
   SmallVector<DeclarationName, 16> Names;
 
-  // We also build up small sets of the constructor and conversion function
-  // names which are visible.
-  llvm::SmallPtrSet<DeclarationName, 8> ConstructorNameSet, ConversionNameSet;
+  // We also track whether we're writing out the DeclarationNameKey for
+  // constructors or conversion functions.
+  bool IncludeConstructorNames = false;
+  bool IncludeConversionNames = false;
 
-  for (auto &Lookup : *DC->buildLookup()) {
-    auto &Name = Lookup.first;
-    auto &Result = Lookup.second;
-
+  for (auto &[Name, Result] : *DC->buildLookup()) {
     // If there are no local declarations in our lookup result, we
     // don't need to write an entry for the name at all. If we can't
     // write out a lookup set without performing more deserialization,
     // just skip this entry.
-    if (isLookupResultExternal(Result, DC) &&
-        isLookupResultEntirelyExternal(Result, DC))
+    if (isLookupResultEntirelyExternal(Result, DC))
       continue;
 
     // We also skip empty results. If any of the results could be external and
@@ -3915,24 +3906,20 @@ ASTWriter::GenerateNameLookupTable(const DeclContext *ConstDC,
     // results for them. This in almost certainly a bug in Clang's name lookup,
     // but that is likely to be hard or impossible to fix and so we tolerate it
     // here by omitting lookups with empty results.
-    if (Lookup.second.getLookupResult().empty())
+    if (Result.getLookupResult().empty())
       continue;
 
-    switch (Lookup.first.getNameKind()) {
+    switch (Name.getNameKind()) {
     default:
-      Names.push_back(Lookup.first);
+      Names.push_back(Name);
       break;
 
     case DeclarationName::CXXConstructorName:
-      assert(isa<CXXRecordDecl>(DC) &&
-             "Cannot have a constructor name outside of a class!");
-      ConstructorNameSet.insert(Name);
+      IncludeConstructorNames = true;
       break;
 
     case DeclarationName::CXXConversionFunctionName:
-      assert(isa<CXXRecordDecl>(DC) &&
-             "Cannot have a conversion function name outside of a class!");
-      ConversionNameSet.insert(Name);
+      IncludeConversionNames = true;
       break;
     }
   }
@@ -3940,55 +3927,34 @@ ASTWriter::GenerateNameLookupTable(const DeclContext *ConstDC,
   // Sort the names into a stable order.
   llvm::sort(Names);
 
-  if (auto *D = dyn_cast<CXXRecordDecl>(DC)) {
+  if (IncludeConstructorNames || IncludeConversionNames) {
     // We need to establish an ordering of constructor and conversion function
-    // names, and they don't have an intrinsic ordering.
+    // names, and they don't have an intrinsic ordering. We also need to write
+    // out all constructor and conversion function results if we write out any
+    // of them, because they're all tracked under the same lookup key.
+    llvm::SmallPtrSet<DeclarationName, 8> AddedNames;
+    for (Decl *ChildD : cast<CXXRecordDecl>(DC)->decls()) {
+      if (auto *ChildND = dyn_cast<NamedDecl>(ChildD)) {
+        auto Name = ChildND->getDeclName();
+        switch (Name.getNameKind()) {
+        default:
+          continue;
 
-    // First we try the easy case by forming the current context's constructor
-    // name and adding that name first. This is a very useful optimization to
-    // avoid walking the lexical declarations in many cases, and it also
-    // handles the only case where a constructor name can come from some other
-    // lexical context -- when that name is an implicit constructor merged from
-    // another declaration in the redecl chain. Any non-implicit constructor or
-    // conversion function which doesn't occur in all the lexical contexts
-    // would be an ODR violation.
-    auto ImplicitCtorName = Context->DeclarationNames.getCXXConstructorName(
-        Context->getCanonicalType(Context->getRecordType(D)));
-    if (ConstructorNameSet.erase(ImplicitCtorName))
-      Names.push_back(ImplicitCtorName);
-
-    // If we still have constructors or conversion functions, we walk all the
-    // names in the decl and add the constructors and conversion functions
-    // which are visible in the order they lexically occur within the context.
-    if (!ConstructorNameSet.empty() || !ConversionNameSet.empty())
-      for (Decl *ChildD : cast<CXXRecordDecl>(DC)->decls())
-        if (auto *ChildND = dyn_cast<NamedDecl>(ChildD)) {
-          auto Name = ChildND->getDeclName();
-          switch (Name.getNameKind()) {
-          default:
+        case DeclarationName::CXXConstructorName:
+          if (!IncludeConstructorNames)
             continue;
+          break;
 
-          case DeclarationName::CXXConstructorName:
-            if (ConstructorNameSet.erase(Name))
-              Names.push_back(Name);
-            break;
-
-          case DeclarationName::CXXConversionFunctionName:
-            if (ConversionNameSet.erase(Name))
-              Names.push_back(Name);
-            break;
-          }
-
-          if (ConstructorNameSet.empty() && ConversionNameSet.empty())
-            break;
+        case DeclarationName::CXXConversionFunctionName:
+          if (!IncludeConversionNames)
+            continue;
+          break;
         }
-
-    assert(ConstructorNameSet.empty() && "Failed to find all of the visible "
-                                         "constructors by walking all the "
-                                         "lexical members of the context.");
-    assert(ConversionNameSet.empty() && "Failed to find all of the visible "
-                                        "conversion functions by walking all "
-                                        "the lexical members of the context.");
+        // We should include lookup results for this name.
+        if (AddedNames.insert(Name).second)
+          Names.push_back(Name);
+      }
+    }
   }
 
   // Next we need to do a lookup with each name into this decl context to fully
