@@ -21,7 +21,6 @@ using namespace mlir;
 using namespace mlir::python;
 
 using llvm::SmallVector;
-using llvm::Twine;
 
 //------------------------------------------------------------------------------
 // Docstrings (trivial, non-duplicated docstrings are included inline).
