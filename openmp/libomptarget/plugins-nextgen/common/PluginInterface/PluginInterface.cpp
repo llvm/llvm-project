@@ -206,7 +206,7 @@ AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
       AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {
   // Mark the success as checked. Otherwise, it would produce an error when
   // re-assigned another error value.
-  !Err;
+  (void)!Err;
 }
 
 Error AsyncInfoWrapperTy::finalize() {
