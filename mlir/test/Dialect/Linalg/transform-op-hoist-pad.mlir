@@ -161,12 +161,13 @@ func.func @pad_and_hoist_init(
   //      CHECK: scf.for %{{.*}} -> (tensor<24x25xf32>) {
   //      CHECK:   %[[PADDED:.*]] = tensor.pad %{{.*}} 
   //      CHECK:     : tensor<?x25xf32> to tensor<5x25xf32>
-  //      CHECK:   scf.for %{{.*}} iter_args(%[[INNER_PADDED:[0-9a-zA-Z]*]] = %[[PADDED]]) -> (tensor<5x25xf32>)
+  //      CHECK:   %[[SCF_YIELD:.*]] = scf.for %{{.*}} iter_args(%[[INNER_PADDED:[0-9a-zA-Z]*]] = %[[PADDED]]) -> (tensor<5x25xf32>)
   //      CHECK:     %[[RES:.*]] = linalg.matmul {{.*}} outs(%[[INNER_PADDED]]
   // CHECK-SAME:       : tensor<5x25xf32>
   //      CHECK:     scf.yield %[[RES]] : tensor<5x25xf32>
-  //      CHECK:   %[[CAST:.*]] = tensor.cast %{{.*}} : tensor<5x25xf32> to tensor<?x25xf32>
-  //      CHECK:   tensor.insert_slice %[[CAST]] into %{{.*}}[%{{.*}}, 0] [%{{.*}}, 25] [1, 1]
+  //      CHECK:   %[[EXTRACTED:.*]] = tensor.extract_slice %[[SCF_YIELD]][%{{.*}}, 0] [%{{.*}}, 25] [1, 1]
+  // CHECK-SAME:     : tensor<5x25xf32> to tensor<?x25xf32>
+  //      CHECK:   tensor.insert_slice %[[EXTRACTED]] into %{{.*}}[%{{.*}}, 0] [%{{.*}}, 25] [1, 1]
   // CHECK-SAME:     : tensor<?x25xf32> into tensor<24x25xf32>
   %0 = linalg.matmul ins(%arg0, %arg1 : tensor<24x12xf32>, tensor<12x25xf32>) outs(%arg2 : tensor<24x25xf32>) -> tensor<24x25xf32>
   func.return %0 : tensor<24x25xf32>
