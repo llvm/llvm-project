@@ -9590,8 +9590,8 @@ its two operands.
 
 .. note::
 
-The instruction is implemented as a call to libm's '``fmod``'
-for some targets, and using the instruction may thus require linking libm.
+	The instruction is implemented as a call to libm's '``fmod``'
+	for some targets, and using the instruction may thus require linking libm.
 
 
 Arguments:
