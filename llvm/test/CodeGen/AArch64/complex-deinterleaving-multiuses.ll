@@ -299,50 +299,34 @@ entry:
 define void @mul_add_common_mul_add_mul(<4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double> %d, <4 x double> %e, <4 x double> %f, <4 x double> %g, <4 x double> %h, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: mul_add_common_mul_add_mul:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldp q17, q16, [sp, #96]
-; CHECK-NEXT:    zip2 v20.2d, v4.2d, v5.2d
-; CHECK-NEXT:    zip2 v21.2d, v6.2d, v7.2d
-; CHECK-NEXT:    zip1 v4.2d, v4.2d, v5.2d
-; CHECK-NEXT:    zip1 v5.2d, v6.2d, v7.2d
-; CHECK-NEXT:    ldp q19, q18, [sp, #64]
-; CHECK-NEXT:    zip2 v23.2d, v17.2d, v16.2d
-; CHECK-NEXT:    fmul v6.2d, v21.2d, v20.2d
-; CHECK-NEXT:    zip1 v16.2d, v17.2d, v16.2d
-; CHECK-NEXT:    zip2 v22.2d, v19.2d, v18.2d
-; CHECK-NEXT:    zip1 v18.2d, v19.2d, v18.2d
-; CHECK-NEXT:    fneg v6.2d, v6.2d
-; CHECK-NEXT:    fmul v20.2d, v5.2d, v20.2d
-; CHECK-NEXT:    fmul v7.2d, v22.2d, v23.2d
-; CHECK-NEXT:    fmla v6.2d, v4.2d, v5.2d
-; CHECK-NEXT:    zip2 v5.2d, v2.2d, v3.2d
-; CHECK-NEXT:    fneg v7.2d, v7.2d
-; CHECK-NEXT:    zip1 v2.2d, v2.2d, v3.2d
-; CHECK-NEXT:    fmla v7.2d, v18.2d, v16.2d
-; CHECK-NEXT:    fadd v19.2d, v7.2d, v6.2d
-; CHECK-NEXT:    fmla v20.2d, v4.2d, v21.2d
-; CHECK-NEXT:    zip2 v4.2d, v0.2d, v1.2d
-; CHECK-NEXT:    ldp q7, q6, [sp]
-; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    fmla v20.2d, v18.2d, v23.2d
-; CHECK-NEXT:    fmul v1.2d, v2.2d, v4.2d
-; CHECK-NEXT:    fmla v20.2d, v22.2d, v16.2d
-; CHECK-NEXT:    mov v3.16b, v19.16b
-; CHECK-NEXT:    fmla v1.2d, v0.2d, v5.2d
-; CHECK-NEXT:    fmla v3.2d, v4.2d, v5.2d
-; CHECK-NEXT:    ldp q16, q4, [sp, #32]
-; CHECK-NEXT:    fneg v17.2d, v3.2d
-; CHECK-NEXT:    zip1 v3.2d, v7.2d, v6.2d
-; CHECK-NEXT:    zip2 v6.2d, v7.2d, v6.2d
-; CHECK-NEXT:    zip1 v5.2d, v16.2d, v4.2d
-; CHECK-NEXT:    fmla v17.2d, v0.2d, v2.2d
-; CHECK-NEXT:    fsub v18.2d, v1.2d, v20.2d
-; CHECK-NEXT:    zip2 v0.2d, v16.2d, v4.2d
-; CHECK-NEXT:    fmla v19.2d, v3.2d, v5.2d
-; CHECK-NEXT:    st2 { v17.2d, v18.2d }, [x0]
-; CHECK-NEXT:    fmls v19.2d, v6.2d, v0.2d
-; CHECK-NEXT:    fmla v20.2d, v6.2d, v5.2d
-; CHECK-NEXT:    fmla v20.2d, v3.2d, v0.2d
-; CHECK-NEXT:    st2 { v19.2d, v20.2d }, [x1]
+; CHECK-NEXT:    ldp q17, q16, [sp, #64]
+; CHECK-NEXT:    movi v20.2d, #0000000000000000
+; CHECK-NEXT:    movi v21.2d, #0000000000000000
+; CHECK-NEXT:    movi v24.2d, #0000000000000000
+; CHECK-NEXT:    movi v25.2d, #0000000000000000
+; CHECK-NEXT:    ldp q19, q18, [sp, #96]
+; CHECK-NEXT:    fcmla v24.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v25.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v20.2d, v19.2d, v17.2d, #0
+; CHECK-NEXT:    fcmla v24.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla v21.2d, v18.2d, v16.2d, #0
+; CHECK-NEXT:    ldp q23, q22, [sp, #32]
+; CHECK-NEXT:    fcmla v20.2d, v19.2d, v17.2d, #90
+; CHECK-NEXT:    fcmla v25.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla v21.2d, v18.2d, v16.2d, #90
+; CHECK-NEXT:    fcmla v20.2d, v6.2d, v4.2d, #0
+; CHECK-NEXT:    ldp q1, q0, [sp]
+; CHECK-NEXT:    fcmla v21.2d, v7.2d, v5.2d, #0
+; CHECK-NEXT:    fcmla v20.2d, v6.2d, v4.2d, #90
+; CHECK-NEXT:    fcmla v21.2d, v7.2d, v5.2d, #90
+; CHECK-NEXT:    fsub v2.2d, v24.2d, v20.2d
+; CHECK-NEXT:    fcmla v20.2d, v1.2d, v23.2d, #0
+; CHECK-NEXT:    fsub v3.2d, v25.2d, v21.2d
+; CHECK-NEXT:    fcmla v21.2d, v0.2d, v22.2d, #0
+; CHECK-NEXT:    fcmla v20.2d, v1.2d, v23.2d, #90
+; CHECK-NEXT:    stp q2, q3, [x0]
+; CHECK-NEXT:    fcmla v21.2d, v0.2d, v22.2d, #90
+; CHECK-NEXT:    stp q20, q21, [x1]
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 2>

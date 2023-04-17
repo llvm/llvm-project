@@ -118,19 +118,8 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @simple_add_270_false(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: simple_add_270_false:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f32 s8, s4
-; CHECK-NEXT:    vmov.f32 s12, s1
-; CHECK-NEXT:    vmov.f32 s4, s5
-; CHECK-NEXT:    vmov.f32 s9, s6
-; CHECK-NEXT:    vmov.f32 s13, s3
-; CHECK-NEXT:    vmov.f32 s1, s2
-; CHECK-NEXT:    vsub.f32 q2, q3, q2
-; CHECK-NEXT:    vmov.f32 s5, s7
-; CHECK-NEXT:    vadd.f32 q1, q1, q0
-; CHECK-NEXT:    vmov.f32 s1, s8
-; CHECK-NEXT:    vmov.f32 s0, s4
-; CHECK-NEXT:    vmov.f32 s2, s5
-; CHECK-NEXT:    vmov.f32 s3, s9
+; CHECK-NEXT:    vcadd.f32 q2, q0, q1, #270
+; CHECK-NEXT:    vmov q0, q2
 ; CHECK-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>
