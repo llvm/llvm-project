@@ -30,9 +30,9 @@ template <typename Ptr> struct PunnedPointer {
 
   // Asserts that allow us to let the compiler implement the destructor and
   // copy/move constructors
-  static_assert(std::is_trivially_destructible<Ptr>::value, "");
-  static_assert(std::is_trivially_copy_constructible<Ptr>::value, "");
-  static_assert(std::is_trivially_move_constructible<Ptr>::value, "");
+  static_assert(std::is_trivially_destructible_v<Ptr>, "");
+  static_assert(std::is_trivially_copy_constructible_v<Ptr>, "");
+  static_assert(std::is_trivially_move_constructible_v<Ptr>, "");
 
   explicit constexpr PunnedPointer(intptr_t i = 0) { *this = i; }
 
