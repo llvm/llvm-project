@@ -681,7 +681,7 @@ int memprof_posix_memalign(void **memptr, uptr alignment, uptr size,
   return 0;
 }
 
-const void *memprof_malloc_begin(const void *p) {
+static const void *memprof_malloc_begin(const void *p) {
   u64 user_requested_size;
   MemprofChunk *m =
       instance.GetMemprofChunkByAddr((uptr)p, user_requested_size);
