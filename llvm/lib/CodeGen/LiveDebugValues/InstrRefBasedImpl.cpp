@@ -1544,12 +1544,12 @@ std::optional<ValueIDNum> InstrRefBasedLDV::getValueForInstrRef(
       if (Size != MainRegSize || Offset) {
         // Enumerate all subregisters, searching.
         Register NewReg = 0;
-        for (MCSubRegIterator SRI(Reg, TRI, false); SRI.isValid(); ++SRI) {
-          unsigned Subreg = TRI->getSubRegIndex(Reg, *SRI);
+        for (MCPhysReg SR : TRI->subregs(Reg)) {
+          unsigned Subreg = TRI->getSubRegIndex(Reg, SR);
           unsigned SubregSize = TRI->getSubRegIdxSize(Subreg);
           unsigned SubregOffset = TRI->getSubRegIdxOffset(Subreg);
           if (SubregSize == Size && SubregOffset == Offset) {
-            NewReg = *SRI;
+            NewReg = SR;
             break;
           }
         }
@@ -2066,12 +2066,12 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
     };
 
     // Then, transfer subreg bits.
-    for (MCSubRegIterator SRI(Reg, TRI, false); SRI.isValid(); ++SRI) {
+    for (MCPhysReg SR : TRI->subregs(Reg)) {
       // Ensure this reg is tracked,
-      (void)MTracker->lookupOrTrackRegister(*SRI);
-      unsigned SubregIdx = TRI->getSubRegIndex(Reg, *SRI);
+      (void)MTracker->lookupOrTrackRegister(SR);
+      unsigned SubregIdx = TRI->getSubRegIndex(Reg, SR);
       unsigned SpillID = MTracker->getLocID(Loc, SubregIdx);
-      DoTransfer(*SRI, SpillID);
+      DoTransfer(SR, SpillID);
     }
 
     // Directly lookup size of main source reg, and transfer.
@@ -2101,10 +2101,10 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
       MTracker->setReg(DestReg, ReadValue);
     };
 
-    for (MCSubRegIterator SRI(Reg, TRI, false); SRI.isValid(); ++SRI) {
-      unsigned Subreg = TRI->getSubRegIndex(Reg, *SRI);
+    for (MCPhysReg SR : TRI->subregs(Reg)) {
+      unsigned Subreg = TRI->getSubRegIndex(Reg, SR);
       unsigned SpillID = MTracker->getLocID(*Loc, Subreg);
-      DoTransfer(*SRI, SpillID);
+      DoTransfer(SR, SpillID);
     }
 
     // Directly look up this registers slot idx by size, and transfer.

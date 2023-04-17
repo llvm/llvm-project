@@ -334,11 +334,11 @@ void ScheduleDAGInstrs::addPhysRegDeps(SUnit *SU, unsigned OperIdx) {
     addPhysRegDataDeps(SU, OperIdx);
 
     // Clear previous uses and defs of this register and its subergisters.
-    for (MCSubRegIterator SubReg(Reg, TRI, true); SubReg.isValid(); ++SubReg) {
-      if (Uses.contains(*SubReg))
-        Uses.eraseAll(*SubReg);
+    for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg)) {
+      if (Uses.contains(SubReg))
+        Uses.eraseAll(SubReg);
       if (!MO.isDead())
-        Defs.eraseAll(*SubReg);
+        Defs.eraseAll(SubReg);
     }
     if (MO.isDead() && SU->isCall) {
       // Calls will not be reordered because of chain dependencies (see
