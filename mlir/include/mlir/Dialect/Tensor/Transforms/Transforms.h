@@ -41,12 +41,6 @@ void populateExpandOpsPatterns(RewritePatternSet &patterns);
 /// ops into `patterns`.
 void populateFoldTensorSubsetOpPatterns(RewritePatternSet &patterns);
 
-/// Populates `patterns` with patterns to wrap a tensor.pad op with an scf.if op
-/// to separate the cases where we don't need padding (all pad sizes are
-/// actually zeros) and where we indeed need padding.
-void populateSplitPaddingPatterns(RewritePatternSet &patterns,
-                                  PatternBenefit baseBenefit = 1);
-
 /// Collects patterns to merge consecutive tensor.insert_slice/extract_slice
 /// into one. These patterns are in in this separate entry point because the
 /// bufferization is sensitive over IR structure, particularly those
