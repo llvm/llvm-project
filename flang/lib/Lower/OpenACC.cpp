@@ -397,12 +397,13 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
   }
 }
 
-static mlir::acc::ParallelOp
-createParallelOp(Fortran::lower::AbstractConverter &converter,
-                 mlir::Location currentLocation,
-                 Fortran::semantics::SemanticsContext &semanticsContext,
-                 Fortran::lower::StatementContext &stmtCtx,
-                 const Fortran::parser::AccClauseList &accClauseList) {
+template <typename Op>
+static Op
+createComputeOp(Fortran::lower::AbstractConverter &converter,
+                mlir::Location currentLocation,
+                Fortran::semantics::SemanticsContext &semanticsContext,
+                Fortran::lower::StatementContext &stmtCtx,
+                const Fortran::parser::AccClauseList &accClauseList) {
 
   // Parallel operation operands
   mlir::Value async;
@@ -550,9 +551,11 @@ createParallelOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<int32_t, 8> operandSegments;
   addOperand(operands, operandSegments, async);
   addOperands(operands, operandSegments, waitOperands);
-  addOperand(operands, operandSegments, numGangs);
-  addOperand(operands, operandSegments, numWorkers);
-  addOperand(operands, operandSegments, vectorLength);
+  if constexpr (std::is_same_v<Op, mlir::acc::ParallelOp>) {
+    addOperand(operands, operandSegments, numGangs);
+    addOperand(operands, operandSegments, numWorkers);
+    addOperand(operands, operandSegments, vectorLength);
+  }
   addOperand(operands, operandSegments, ifCond);
   addOperand(operands, operandSegments, selfCond);
   addOperands(operands, operandSegments, reductionOperands);
@@ -570,28 +573,17 @@ createParallelOp(Fortran::lower::AbstractConverter &converter,
   addOperands(operands, operandSegments, privateOperands);
   addOperands(operands, operandSegments, firstprivateOperands);
 
-  mlir::acc::ParallelOp parallelOp =
-      createRegionOp<mlir::acc::ParallelOp, mlir::acc::YieldOp>(
-          firOpBuilder, currentLocation, operands, operandSegments);
+  Op computeOp = createRegionOp<Op, mlir::acc::YieldOp>(
+      firOpBuilder, currentLocation, operands, operandSegments);
 
   if (addAsyncAttr)
-    parallelOp.setAsyncAttrAttr(firOpBuilder.getUnitAttr());
+    computeOp.setAsyncAttrAttr(firOpBuilder.getUnitAttr());
   if (addWaitAttr)
-    parallelOp.setWaitAttrAttr(firOpBuilder.getUnitAttr());
+    computeOp.setWaitAttrAttr(firOpBuilder.getUnitAttr());
   if (addSelfAttr)
-    parallelOp.setSelfAttrAttr(firOpBuilder.getUnitAttr());
+    computeOp.setSelfAttrAttr(firOpBuilder.getUnitAttr());
 
-  return parallelOp;
-}
-
-static void
-genACCParallelOp(Fortran::lower::AbstractConverter &converter,
-                 mlir::Location currentLocation,
-                 Fortran::semantics::SemanticsContext &semanticsContext,
-                 Fortran::lower::StatementContext &stmtCtx,
-                 const Fortran::parser::AccClauseList &accClauseList) {
-  createParallelOp(converter, currentLocation, semanticsContext, stmtCtx,
-                   accClauseList);
+  return computeOp;
 }
 
 static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
@@ -696,30 +688,19 @@ genACC(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::StatementContext stmtCtx;
 
   if (blockDirective.v == llvm::acc::ACCD_parallel) {
-    genACCParallelOp(converter, currentLocation, semanticsContext, stmtCtx,
-                     accClauseList);
+    createComputeOp<mlir::acc::ParallelOp>(
+        converter, currentLocation, semanticsContext, stmtCtx, accClauseList);
   } else if (blockDirective.v == llvm::acc::ACCD_data) {
     genACCDataOp(converter, currentLocation, semanticsContext, stmtCtx,
                  accClauseList);
   } else if (blockDirective.v == llvm::acc::ACCD_serial) {
-    TODO(currentLocation, "serial construct lowering");
+    createComputeOp<mlir::acc::SerialOp>(
+        converter, currentLocation, semanticsContext, stmtCtx, accClauseList);
   } else if (blockDirective.v == llvm::acc::ACCD_kernels) {
     TODO(currentLocation, "kernels construct lowering");
   } else if (blockDirective.v == llvm::acc::ACCD_host_data) {
     TODO(currentLocation, "host_data construct lowering");
   }
-}
-
-static void
-genACCParallelLoopOps(Fortran::lower::AbstractConverter &converter,
-                      mlir::Location currentLocation,
-                      Fortran::semantics::SemanticsContext &semanticsContext,
-                      Fortran::lower::StatementContext &stmtCtx,
-                      const Fortran::parser::AccClauseList &accClauseList) {
-  createParallelOp(converter, currentLocation, semanticsContext, stmtCtx,
-                   accClauseList);
-  createLoopOp(converter, currentLocation, semanticsContext, stmtCtx,
-               accClauseList);
 }
 
 static void
@@ -741,10 +722,15 @@ genACC(Fortran::lower::AbstractConverter &converter,
   if (combinedDirective.v == llvm::acc::ACCD_kernels_loop) {
     TODO(currentLocation, "OpenACC Kernels Loop construct not lowered yet!");
   } else if (combinedDirective.v == llvm::acc::ACCD_parallel_loop) {
-    genACCParallelLoopOps(converter, currentLocation, semanticsContext, stmtCtx,
-                          accClauseList);
+    createComputeOp<mlir::acc::ParallelOp>(
+        converter, currentLocation, semanticsContext, stmtCtx, accClauseList);
+    createLoopOp(converter, currentLocation, semanticsContext, stmtCtx,
+                 accClauseList);
   } else if (combinedDirective.v == llvm::acc::ACCD_serial_loop) {
-    TODO(currentLocation, "OpenACC Serial Loop construct not lowered yet!");
+    createComputeOp<mlir::acc::SerialOp>(
+        converter, currentLocation, semanticsContext, stmtCtx, accClauseList);
+    createLoopOp(converter, currentLocation, semanticsContext, stmtCtx,
+                 accClauseList);
   } else {
     llvm::report_fatal_error("Unknown combined construct encountered");
   }
