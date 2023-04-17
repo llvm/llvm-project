@@ -2,7 +2,7 @@ add_llvm_component_library(LLVMRISCVTargetMCA
   RISCVCustomBehaviour.cpp
 
   LINK_COMPONENTS
-  CodeGen
+  CodeGenTypes
   MC
   MCA
   MCParser

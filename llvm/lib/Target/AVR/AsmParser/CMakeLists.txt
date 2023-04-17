@@ -4,7 +4,7 @@ add_llvm_component_library(LLVMAVRAsmParser
   LINK_COMPONENTS
   AVRDesc
   AVRInfo
-  CodeGen
+  CodeGenTypes
   MC
   MCParser
   Support

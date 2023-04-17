@@ -39,6 +39,7 @@ add_llvm_target(SPIRVCodeGen
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   Demangle
   GlobalISel
