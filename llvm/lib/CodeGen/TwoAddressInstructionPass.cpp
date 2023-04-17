@@ -87,18 +87,18 @@ static cl::opt<unsigned> MaxDataFlowEdge(
 namespace {
 
 class TwoAddressInstructionPass : public MachineFunctionPass {
-  MachineFunction *MF;
-  const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
-  const InstrItineraryData *InstrItins;
-  MachineRegisterInfo *MRI;
-  LiveVariables *LV;
-  LiveIntervals *LIS;
-  AliasAnalysis *AA;
+  MachineFunction *MF = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
+  const InstrItineraryData *InstrItins = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
+  LiveVariables *LV = nullptr;
+  LiveIntervals *LIS = nullptr;
+  AliasAnalysis *AA = nullptr;
   CodeGenOpt::Level OptLevel;
 
   // The current basic block being processed.
-  MachineBasicBlock *MBB;
+  MachineBasicBlock *MBB = nullptr;
 
   // Keep track the distance of a MI from the start of the current basic block.
   DenseMap<MachineInstr*, unsigned> DistanceMap;

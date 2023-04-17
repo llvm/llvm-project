@@ -31,8 +31,8 @@ namespace {
   class DeadMachineInstructionElim : public MachineFunctionPass {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
-    const MachineRegisterInfo *MRI;
-    const TargetInstrInfo *TII;
+    const MachineRegisterInfo *MRI = nullptr;
+    const TargetInstrInfo *TII = nullptr;
     LiveRegUnits LivePhysRegs;
 
   public:

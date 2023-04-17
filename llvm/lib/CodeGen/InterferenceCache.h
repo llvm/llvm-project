@@ -54,7 +54,7 @@ class LLVM_LIBRARY_VISIBILITY InterferenceCache {
     unsigned RefCount = 0;
 
     /// MF - The current function.
-    MachineFunction *MF;
+    MachineFunction *MF = nullptr;
 
     /// Indexes - Mapping block numbers to SlotIndex ranges.
     SlotIndexes *Indexes = nullptr;

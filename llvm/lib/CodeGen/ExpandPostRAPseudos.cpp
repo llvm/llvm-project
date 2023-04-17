@@ -28,8 +28,8 @@ using namespace llvm;
 namespace {
 struct ExpandPostRA : public MachineFunctionPass {
 private:
-  const TargetRegisterInfo *TRI;
-  const TargetInstrInfo *TII;
+  const TargetRegisterInfo *TRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
 
 public:
   static char ID; // Pass identification, replacement for typeid
