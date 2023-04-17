@@ -69,7 +69,7 @@ public:
   MachineOptimizationRemarkEmitter *ORE = nullptr;
   const MachineLoopInfo *MLI = nullptr;
   const MachineDominatorTree *MDT = nullptr;
-  const InstrItineraryData *InstrItins;
+  const InstrItineraryData *InstrItins = nullptr;
   const TargetInstrInfo *TII = nullptr;
   RegisterClassInfo RegClassInfo;
   bool disabledByPragma = false;

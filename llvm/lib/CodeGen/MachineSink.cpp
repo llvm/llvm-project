@@ -115,15 +115,15 @@ STATISTIC(NumPostRACopySink, "Number of copies sunk after RA");
 namespace {
 
   class MachineSinking : public MachineFunctionPass {
-    const TargetInstrInfo *TII;
-    const TargetRegisterInfo *TRI;
-    MachineRegisterInfo  *MRI;     // Machine register information
-    MachineDominatorTree *DT;      // Machine dominator tree
-    MachinePostDominatorTree *PDT; // Machine post dominator tree
-    MachineCycleInfo *CI;
-    MachineBlockFrequencyInfo *MBFI;
-    const MachineBranchProbabilityInfo *MBPI;
-    AliasAnalysis *AA;
+    const TargetInstrInfo *TII = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    MachineRegisterInfo *MRI = nullptr;      // Machine register information
+    MachineDominatorTree *DT = nullptr;      // Machine dominator tree
+    MachinePostDominatorTree *PDT = nullptr; // Machine post dominator tree
+    MachineCycleInfo *CI = nullptr;
+    MachineBlockFrequencyInfo *MBFI = nullptr;
+    const MachineBranchProbabilityInfo *MBPI = nullptr;
+    AliasAnalysis *AA = nullptr;
     RegisterClassInfo RegClassInfo;
 
     // Remember which edges have been considered for breaking.

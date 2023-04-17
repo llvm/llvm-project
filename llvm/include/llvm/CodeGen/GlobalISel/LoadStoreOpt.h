@@ -69,11 +69,11 @@ private:
   /// on the given MachineFunction.
   std::function<bool(const MachineFunction &)> DoNotRunPass;
 
-  MachineRegisterInfo *MRI;
-  const TargetLowering *TLI;
-  MachineFunction *MF;
-  AliasAnalysis *AA;
-  const LegalizerInfo *LI;
+  MachineRegisterInfo *MRI = nullptr;
+  const TargetLowering *TLI = nullptr;
+  MachineFunction *MF = nullptr;
+  AliasAnalysis *AA = nullptr;
+  const LegalizerInfo *LI = nullptr;
 
   MachineIRBuilder Builder;
 

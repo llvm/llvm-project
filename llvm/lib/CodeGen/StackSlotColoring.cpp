@@ -59,10 +59,10 @@ STATISTIC(NumDead,       "Number of trivially dead stack accesses eliminated");
 namespace {
 
   class StackSlotColoring : public MachineFunctionPass {
-    LiveStacks* LS;
-    MachineFrameInfo *MFI;
-    const TargetInstrInfo  *TII;
-    const MachineBlockFrequencyInfo *MBFI;
+    LiveStacks *LS = nullptr;
+    MachineFrameInfo *MFI = nullptr;
+    const TargetInstrInfo *TII = nullptr;
+    const MachineBlockFrequencyInfo *MBFI = nullptr;
 
     // SSIntervals - Spill slot intervals.
     std::vector<LiveInterval*> SSIntervals;

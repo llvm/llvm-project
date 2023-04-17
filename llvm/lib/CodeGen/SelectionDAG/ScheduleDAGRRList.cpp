@@ -1744,12 +1744,12 @@ protected:
   bool SrcOrder;
 
   // SUnits - The SUnits for the current graph.
-  std::vector<SUnit> *SUnits;
+  std::vector<SUnit> *SUnits = nullptr;
 
   MachineFunction &MF;
-  const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
-  const TargetLowering *TLI;
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
+  const TargetLowering *TLI = nullptr;
   ScheduleDAGRRList *scheduleDAG = nullptr;
 
   // SethiUllmanNumbers - The SethiUllman number for each node.
