@@ -516,10 +516,6 @@ private:
   /// Holds the phi nodes that are fixed-order recurrences.
   RecurrenceSet FixedOrderRecurrences;
 
-  /// Holds instructions that need to sink past other instructions to handle
-  /// fixed-order recurrences.
-  MapVector<Instruction *, Instruction *> SinkAfter;
-
   /// Holds the widest induction type encountered.
   Type *WidestIndTy = nullptr;
 
