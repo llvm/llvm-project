@@ -63,7 +63,7 @@ static pthread_once_t key_once = PTHREAD_ONCE_INIT;
 // so we can't destroy it until it's been used and reset.
 void restore_tid_data(void *ptr) {
   thread_local_data_t *data = (thread_local_data_t *)ptr;
-  if (data->current_thread_id)
+  if (data->current_thread)
     pthread_setspecific(key, data);
 }
 
