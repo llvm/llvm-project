@@ -403,8 +403,8 @@ private:
   bool isUndefInput(const DeadLaneDetector &DLD, const MachineOperand &MO,
                     bool *CrossCopy) const;
 
-  const MachineRegisterInfo *MRI;
-  const TargetRegisterInfo *TRI;
+  const MachineRegisterInfo *MRI = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
 };
 
 } // end anonymous namespace

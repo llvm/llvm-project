@@ -206,6 +206,26 @@ define i32 @testpdnzc_256_signbit_multiuse(<4 x double> %c, i32 %a, i32 %b) {
   ret i32 %t6
 }
 
+define i1 @PR62171(<4 x double> %a0, <4 x double> %a1) {
+; CHECK-LABEL: PR62171:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vtestpd %ymm0, %ymm0
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %cmp = fcmp oeq <4 x double> %a0, %a1
+  %sext = sext <4 x i1> %cmp to <4 x i64>
+  %extract = shufflevector <4 x i64> %sext, <4 x i64> poison, <2 x i32> <i32 0, i32 1>
+  %extract1 = shufflevector <4 x i64> %sext, <4 x i64> poison, <2 x i32> <i32 2, i32 3>
+  %or = or <2 x i64> %extract, %extract1
+  %or1 = bitcast <2 x i64> %or to <16 x i8>
+  %msk = icmp slt <16 x i8> %or1, zeroinitializer
+  %msk1 = bitcast <16 x i1> %msk to i16
+  %not = icmp eq i16 %msk1, 0
+  ret i1 %not
+}
+
 declare i32 @llvm.x86.avx.vtestz.pd(<2 x double>, <2 x double>) nounwind readnone
 declare i32 @llvm.x86.avx.vtestc.pd(<2 x double>, <2 x double>) nounwind readnone
 declare i32 @llvm.x86.avx.vtestnzc.pd(<2 x double>, <2 x double>) nounwind readnone

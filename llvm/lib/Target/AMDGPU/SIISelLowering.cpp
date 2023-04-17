@@ -1423,10 +1423,8 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
     return isLegalMUBUFAddressingMode(AM);
 
-  if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
-    if (AS == AMDGPUAS::REGION_ADDRESS && !AMDGPU::hasGDS(*Subtarget))
-      return false;
-
+  if (AS == AMDGPUAS::LOCAL_ADDRESS ||
+      (AS == AMDGPUAS::REGION_ADDRESS && Subtarget->hasGDS())) {
     // Basic, single offset DS instructions allow a 16-bit unsigned immediate
     // field.
     // XXX - If doing a 4-byte aligned 8-byte type access, we effectively have

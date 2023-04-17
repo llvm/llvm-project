@@ -2167,7 +2167,7 @@ bool hasPackedD16(const MCSubtargetInfo &STI) {
 }
 
 bool hasGDS(const MCSubtargetInfo &STI) {
-  return isNotGFX12Plus(STI);
+  return STI.hasFeature(AMDGPU::FeatureGDS);
 }
 
 unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler) {

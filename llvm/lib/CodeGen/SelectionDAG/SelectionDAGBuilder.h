@@ -247,7 +247,7 @@ public:
   SelectionDAG &DAG;
   AAResults *AA = nullptr;
   AssumptionCache *AC = nullptr;
-  const TargetLibraryInfo *LibInfo;
+  const TargetLibraryInfo *LibInfo = nullptr;
 
   class SDAGSwitchLowering : public SwitchCG::SwitchLowering {
   public:
@@ -261,7 +261,7 @@ public:
     }
 
   private:
-    SelectionDAGBuilder *SDB;
+    SelectionDAGBuilder *SDB = nullptr;
   };
 
   // Data related to deferred switch lowerings. Used to construct additional
@@ -283,7 +283,7 @@ public:
   SwiftErrorValueTracking &SwiftError;
 
   /// Garbage collection metadata for the function.
-  GCFunctionInfo *GFI;
+  GCFunctionInfo *GFI = nullptr;
 
   /// Map a landing pad to the call site indexes.
   DenseMap<MachineBasicBlock *, SmallVector<unsigned, 4>> LPadToCallSiteMap;
@@ -292,7 +292,7 @@ public:
   /// a tail call. In this case, no subsequent DAG nodes should be created.
   bool HasTailCall = false;
 
-  LLVMContext *Context;
+  LLVMContext *Context = nullptr;
 
   SelectionDAGBuilder(SelectionDAG &dag, FunctionLoweringInfo &funcinfo,
                       SwiftErrorValueTracking &swifterror, CodeGenOpt::Level ol)

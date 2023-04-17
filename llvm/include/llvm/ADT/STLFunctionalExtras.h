@@ -54,13 +54,13 @@ public:
   function_ref(
       Callable &&callable,
       // This is not the copy-constructor.
-      std::enable_if_t<!std::is_same<remove_cvref_t<Callable>,
-                                     function_ref>::value> * = nullptr,
+      std::enable_if_t<!std::is_same_v<remove_cvref_t<Callable>, function_ref>>
+          * = nullptr,
       // Functor must be callable and return a suitable type.
-      std::enable_if_t<std::is_void<Ret>::value ||
-                       std::is_convertible<decltype(std::declval<Callable>()(
-                                               std::declval<Params>()...)),
-                                           Ret>::value> * = nullptr)
+      std::enable_if_t<std::is_void_v<Ret> ||
+                       std::is_convertible_v<decltype(std::declval<Callable>()(
+                                                 std::declval<Params>()...)),
+                                             Ret>> * = nullptr)
       : callback(callback_fn<std::remove_reference_t<Callable>>),
         callable(reinterpret_cast<intptr_t>(&callable)) {}
 

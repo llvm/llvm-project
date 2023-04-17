@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Vectorize.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/PassRegistry.h"
 

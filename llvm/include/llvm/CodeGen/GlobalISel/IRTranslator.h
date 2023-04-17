@@ -67,7 +67,7 @@ public:
 
 private:
   /// Interface used to lower the everything related to calls.
-  const CallLowering *CLI;
+  const CallLowering *CLI = nullptr;
 
   /// This class contains the mapping between the Values to vreg related data.
   class ValueToVRegInfo {
@@ -553,24 +553,24 @@ private:
   std::unique_ptr<MachineIRBuilder> EntryBuilder;
 
   // The MachineFunction currently being translated.
-  MachineFunction *MF;
+  MachineFunction *MF = nullptr;
 
   /// MachineRegisterInfo used to create virtual registers.
   MachineRegisterInfo *MRI = nullptr;
 
-  const DataLayout *DL;
+  const DataLayout *DL = nullptr;
 
   /// Current target configuration. Controls how the pass handles errors.
-  const TargetPassConfig *TPC;
+  const TargetPassConfig *TPC = nullptr;
 
   CodeGenOpt::Level OptLevel;
 
   /// Current optimization remark emitter. Used to report failures.
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
-  AAResults *AA;
-  AssumptionCache *AC;
-  const TargetLibraryInfo *LibInfo;
+  AAResults *AA = nullptr;
+  AssumptionCache *AC = nullptr;
+  const TargetLibraryInfo *LibInfo = nullptr;
   FunctionLoweringInfo FuncInfo;
 
   // True when either the Target Machine specifies no optimizations or the
