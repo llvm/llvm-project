@@ -516,7 +516,7 @@ function(add_integration_test test_name)
   target_link_libraries(
     ${fq_build_target_name}
     # The NVIDIA 'nvlink' linker does not currently support static libraries.
-    $<$<NOT:$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_GPU}>>:${fq_target_name}.__libc__>
+    $<$<NOT:$<BOOL:${LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX}>>:${fq_target_name}.__libc__>
     libc.startup.${LIBC_TARGET_OS}.crt1
     libc.test.IntegrationTest.test)
   add_dependencies(${fq_build_target_name}
