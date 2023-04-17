@@ -121,3 +121,19 @@ TEST(RegisterFlagsTest, RegisterFlagsPadding) {
                 make_field(20, 21), make_field(12, 19), make_field(8, 11),
                 make_field(0, 7)});
 }
+
+TEST(RegisterFieldsTest, ReverseFieldOrder) {
+  // Unchanged
+  RegisterFlags rf("", 4, {make_field(0, 31)});
+  ASSERT_EQ(0x12345678ULL, rf.ReverseFieldOrder(0x12345678));
+
+  // Swap the two halves around.
+  RegisterFlags rf2("", 4, {make_field(16, 31), make_field(0, 15)});
+  ASSERT_EQ(0x56781234ULL, rf2.ReverseFieldOrder(0x12345678));
+
+  // Many small fields.
+  RegisterFlags rf3("", 4,
+                    {make_field(31, 31), make_field(30, 30), make_field(29, 29),
+                     make_field(28, 28)});
+  ASSERT_EQ(0x00000005ULL, rf3.ReverseFieldOrder(0xA0000000));
+}

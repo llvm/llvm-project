@@ -71,6 +71,23 @@ public:
   RegisterFlags(std::string id, unsigned size,
                 const std::vector<Field> &fields);
 
+  // Reverse the order of the fields, keeping their values the same.
+  // For example a field from bit 31 to 30 with value 0b10 will become bits
+  // 1 to 0, with the same 0b10 value.
+  // Use this when you are going to show the register using a bitfield struct
+  // type. If that struct expects MSB first and you are on little endian where
+  // LSB would be first, this corrects that (and vice versa for big endian).
+  template <typename T> T ReverseFieldOrder(T value) const {
+    T ret = 0;
+    unsigned shift = 0;
+    for (auto field : GetFields()) {
+      ret |= field.GetValue(value) << shift;
+      shift += field.GetSizeInBits();
+    }
+
+    return ret;
+  }
+
   const std::vector<Field> &GetFields() const { return m_fields; }
   const std::string &GetID() const { return m_id; }
   unsigned GetSize() const { return m_size; }
