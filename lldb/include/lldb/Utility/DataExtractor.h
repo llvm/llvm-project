@@ -843,7 +843,9 @@ public:
   /// \param[in] addr_size
   ///     The size in bytes to use when extracting addresses.
   void SetAddressByteSize(uint32_t addr_size) {
-    assert(addr_size == 2 || addr_size == 4 || addr_size == 8);
+#ifdef LLDB_CONFIGURATION_DEBUG
+    assert(addr_size == 4 || addr_size == 8);
+#endif
     m_addr_size = addr_size;
   }
 
