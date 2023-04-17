@@ -339,6 +339,13 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
               SemanticHighlighting->getBoolean("semanticHighlighting"))
         R.TheiaSemanticHighlighting = *SemanticHighlightingSupport;
     }
+    if (auto *InactiveRegions =
+            TextDocument->getObject("inactiveRegionsCapabilities")) {
+      if (auto InactiveRegionsSupport =
+              InactiveRegions->getBoolean("inactiveRegions")) {
+        R.InactiveRegions = *InactiveRegionsSupport;
+      }
+    }
     if (TextDocument->getObject("semanticTokens"))
       R.SemanticTokens = true;
     if (auto *Diagnostics = TextDocument->getObject("publishDiagnostics")) {
@@ -1173,6 +1180,12 @@ bool fromJSON(const llvm::json::Value &Params, SemanticTokensDeltaParams &R,
   llvm::json::ObjectMapper O(Params, P);
   return O && O.map("textDocument", R.textDocument) &&
          O.map("previousResultId", R.previousResultId);
+}
+
+llvm::json::Value toJSON(const InactiveRegionsParams &InactiveRegions) {
+  return llvm::json::Object{
+      {"textDocument", InactiveRegions.TextDocument},
+      {"regions", std::move(InactiveRegions.InactiveRegions)}};
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &O,
