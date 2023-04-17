@@ -482,7 +482,8 @@ Value UnrankedMemRefDescriptor::offset(OpBuilder &builder, Location loc,
                                        LLVM::LLVMPointerType elemPtrType) {
   Value offsetPtr =
       offsetBasePtr(builder, loc, typeConverter, memRefDescPtr, elemPtrType);
-  return builder.create<LLVM::LoadOp>(loc, offsetPtr);
+  return builder.create<LLVM::LoadOp>(loc, typeConverter.getIndexType(),
+                                      offsetPtr);
 }
 
 void UnrankedMemRefDescriptor::setOffset(OpBuilder &builder, Location loc,
