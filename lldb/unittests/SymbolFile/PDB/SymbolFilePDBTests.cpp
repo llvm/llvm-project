@@ -456,7 +456,8 @@ TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
   symfile->ParseDeclsForContext(CompilerDeclContext(
       clang_ast_ctx, static_cast<clang::DeclContext *>(tu)));
 
-  auto ns_namespace = symfile->FindNamespace(ConstString("NS"), CompilerDeclContext());
+  auto ns_namespace =
+      symfile->FindNamespace(ConstString("NS"), CompilerDeclContext(), true);
   EXPECT_TRUE(ns_namespace.IsValid());
 
   symfile->FindTypes(ConstString("NSClass"), ns_namespace, 0, searched_files,

@@ -1057,18 +1057,15 @@ bool AVRExpandPseudo::expand<AVR::AtomicFence>(Block &MBB, BlockIt MBBI) {
 
 template <>
 bool AVRExpandPseudo::expand<AVR::STSWKRr>(Block &MBB, BlockIt MBBI) {
+  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
   MachineInstr &MI = *MBBI;
   Register SrcLoReg, SrcHiReg;
   Register SrcReg = MI.getOperand(1).getReg();
   bool SrcIsKill = MI.getOperand(1).isKill();
-  unsigned OpLo = AVR::STSKRr;
-  unsigned OpHi = AVR::STSKRr;
   TRI->splitReg(SrcReg, SrcLoReg, SrcHiReg);
 
-  // Write the high byte first in case this address belongs to a special
-  // I/O address with a special temporary register.
-  auto MIBHI = buildMI(MBB, MBBI, OpHi);
-  auto MIBLO = buildMI(MBB, MBBI, OpLo);
+  auto MIB0 = buildMI(MBB, MBBI, AVR::STSKRr);
+  auto MIB1 = buildMI(MBB, MBBI, AVR::STSKRr);
 
   switch (MI.getOperand(0).getType()) {
   case MachineOperand::MO_GlobalAddress: {
@@ -1076,26 +1073,50 @@ bool AVRExpandPseudo::expand<AVR::STSWKRr>(Block &MBB, BlockIt MBBI) {
     int64_t Offs = MI.getOperand(0).getOffset();
     unsigned TF = MI.getOperand(0).getTargetFlags();
 
-    MIBLO.addGlobalAddress(GV, Offs, TF);
-    MIBHI.addGlobalAddress(GV, Offs + 1, TF);
+    if (STI.hasLowByteFirst()) {
+      // Write the low byte first for XMEGA devices.
+      MIB0.addGlobalAddress(GV, Offs, TF);
+      MIB1.addGlobalAddress(GV, Offs + 1, TF);
+    } else {
+      // Write the high byte first for traditional devices.
+      MIB0.addGlobalAddress(GV, Offs + 1, TF);
+      MIB1.addGlobalAddress(GV, Offs, TF);
+    }
+
     break;
   }
   case MachineOperand::MO_Immediate: {
     unsigned Imm = MI.getOperand(0).getImm();
 
-    MIBLO.addImm(Imm);
-    MIBHI.addImm(Imm + 1);
+    if (STI.hasLowByteFirst()) {
+      // Write the low byte first for XMEGA devices.
+      MIB0.addImm(Imm);
+      MIB1.addImm(Imm + 1);
+    } else {
+      // Write the high byte first for traditional devices.
+      MIB0.addImm(Imm + 1);
+      MIB1.addImm(Imm);
+    }
+
     break;
   }
   default:
     llvm_unreachable("Unknown operand type!");
   }
 
-  MIBLO.addReg(SrcLoReg, getKillRegState(SrcIsKill));
-  MIBHI.addReg(SrcHiReg, getKillRegState(SrcIsKill));
-
-  MIBLO.setMemRefs(MI.memoperands());
-  MIBHI.setMemRefs(MI.memoperands());
+  if (STI.hasLowByteFirst()) {
+    // Write the low byte first for XMEGA devices.
+    MIB0.addReg(SrcLoReg, getKillRegState(SrcIsKill))
+        .setMemRefs(MI.memoperands());
+    MIB1.addReg(SrcHiReg, getKillRegState(SrcIsKill))
+        .setMemRefs(MI.memoperands());
+  } else {
+    // Write the high byte first for traditional devices.
+    MIB0.addReg(SrcHiReg, getKillRegState(SrcIsKill))
+        .setMemRefs(MI.memoperands());
+    MIB1.addReg(SrcLoReg, getKillRegState(SrcIsKill))
+        .setMemRefs(MI.memoperands());
+  }
 
   MI.eraseFromParent();
   return true;
@@ -1126,16 +1147,27 @@ bool AVRExpandPseudo::expand<AVR::STWPtrRr>(Block &MBB, BlockIt MBBI) {
   } else {
     Register SrcLoReg, SrcHiReg;
     TRI->splitReg(SrcReg, SrcLoReg, SrcHiReg);
-    buildMI(MBB, MBBI, AVR::STPtrRr)
-        .addReg(DstReg, getUndefRegState(DstIsUndef))
-        .addReg(SrcLoReg, getKillRegState(SrcIsKill))
-        .setMemRefs(MI.memoperands());
-
-    buildMI(MBB, MBBI, AVR::STDPtrQRr)
-        .addReg(DstReg, getUndefRegState(DstIsUndef))
-        .addImm(1)
-        .addReg(SrcHiReg, getKillRegState(SrcIsKill))
-        .setMemRefs(MI.memoperands());
+    if (STI.hasLowByteFirst()) {
+      buildMI(MBB, MBBI, AVR::STPtrRr)
+          .addReg(DstReg, getUndefRegState(DstIsUndef))
+          .addReg(SrcLoReg, getKillRegState(SrcIsKill))
+          .setMemRefs(MI.memoperands());
+      buildMI(MBB, MBBI, AVR::STDPtrQRr)
+          .addReg(DstReg, getUndefRegState(DstIsUndef))
+          .addImm(1)
+          .addReg(SrcHiReg, getKillRegState(SrcIsKill))
+          .setMemRefs(MI.memoperands());
+    } else {
+      buildMI(MBB, MBBI, AVR::STDPtrQRr)
+          .addReg(DstReg, getUndefRegState(DstIsUndef))
+          .addImm(1)
+          .addReg(SrcHiReg, getKillRegState(SrcIsKill))
+          .setMemRefs(MI.memoperands());
+      buildMI(MBB, MBBI, AVR::STPtrRr)
+          .addReg(DstReg, getUndefRegState(DstIsUndef))
+          .addReg(SrcLoReg, getKillRegState(SrcIsKill))
+          .setMemRefs(MI.memoperands());
+    }
   }
 
   MI.eraseFromParent();
@@ -1252,23 +1284,32 @@ bool AVRExpandPseudo::expand<AVR::STDWPtrQRr>(Block &MBB, BlockIt MBBI) {
           .addImm(Imm + 2);
     }
   } else {
-    unsigned OpLo = AVR::STDPtrQRr;
-    unsigned OpHi = AVR::STDPtrQRr;
     Register SrcLoReg, SrcHiReg;
     TRI->splitReg(SrcReg, SrcLoReg, SrcHiReg);
 
-    auto MIBLO = buildMI(MBB, MBBI, OpLo)
-                     .addReg(DstReg)
-                     .addImm(Imm)
-                     .addReg(SrcLoReg, getKillRegState(SrcIsKill));
-
-    auto MIBHI = buildMI(MBB, MBBI, OpHi)
-                     .addReg(DstReg, getKillRegState(DstIsKill))
-                     .addImm(Imm + 1)
-                     .addReg(SrcHiReg, getKillRegState(SrcIsKill));
-
-    MIBLO.setMemRefs(MI.memoperands());
-    MIBHI.setMemRefs(MI.memoperands());
+    if (STI.hasLowByteFirst()) {
+      buildMI(MBB, MBBI, AVR::STDPtrQRr)
+          .addReg(DstReg)
+          .addImm(Imm)
+          .addReg(SrcLoReg, getKillRegState(SrcIsKill))
+          .setMemRefs(MI.memoperands());
+      buildMI(MBB, MBBI, AVR::STDPtrQRr)
+          .addReg(DstReg, getKillRegState(DstIsKill))
+          .addImm(Imm + 1)
+          .addReg(SrcHiReg, getKillRegState(SrcIsKill))
+          .setMemRefs(MI.memoperands());
+    } else {
+      buildMI(MBB, MBBI, AVR::STDPtrQRr)
+          .addReg(DstReg)
+          .addImm(Imm + 1)
+          .addReg(SrcHiReg, getKillRegState(SrcIsKill))
+          .setMemRefs(MI.memoperands());
+      buildMI(MBB, MBBI, AVR::STDPtrQRr)
+          .addReg(DstReg, getKillRegState(DstIsKill))
+          .addImm(Imm)
+          .addReg(SrcLoReg, getKillRegState(SrcIsKill))
+          .setMemRefs(MI.memoperands());
+    }
   }
 
   MI.eraseFromParent();
@@ -1347,27 +1388,28 @@ bool AVRExpandPseudo::expand<AVR::INWRdA>(Block &MBB, BlockIt MBBI) {
 
 template <>
 bool AVRExpandPseudo::expand<AVR::OUTWARr>(Block &MBB, BlockIt MBBI) {
+  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
   MachineInstr &MI = *MBBI;
   Register SrcLoReg, SrcHiReg;
   unsigned Imm = MI.getOperand(0).getImm();
   Register SrcReg = MI.getOperand(1).getReg();
   bool SrcIsKill = MI.getOperand(1).isKill();
-  unsigned OpLo = AVR::OUTARr;
-  unsigned OpHi = AVR::OUTARr;
   TRI->splitReg(SrcReg, SrcLoReg, SrcHiReg);
 
   // Since we add 1 to the Imm value for the high byte below, and 63 is the
   // highest Imm value allowed for the instruction, 62 is the limit here.
   assert(Imm <= 62 && "Address is out of range");
 
-  // 16 bit I/O writes need the high byte first
-  auto MIBHI = buildMI(MBB, MBBI, OpHi)
-                   .addImm(Imm + 1)
-                   .addReg(SrcHiReg, getKillRegState(SrcIsKill));
-
-  auto MIBLO = buildMI(MBB, MBBI, OpLo)
-                   .addImm(Imm)
-                   .addReg(SrcLoReg, getKillRegState(SrcIsKill));
+  // 16 bit I/O writes need the high byte first on normal AVR devices,
+  // and in reverse order for the XMEGA/XMEGA3/XMEGAU families.
+  auto MIBHI = buildMI(MBB, MBBI, AVR::OUTARr)
+                   .addImm(STI.hasLowByteFirst() ? Imm : Imm + 1)
+                   .addReg(STI.hasLowByteFirst() ? SrcLoReg : SrcHiReg,
+                           getKillRegState(SrcIsKill));
+  auto MIBLO = buildMI(MBB, MBBI, AVR::OUTARr)
+                   .addImm(STI.hasLowByteFirst() ? Imm + 1 : Imm)
+                   .addReg(STI.hasLowByteFirst() ? SrcHiReg : SrcLoReg,
+                           getKillRegState(SrcIsKill));
 
   MIBLO.setMemRefs(MI.memoperands());
   MIBHI.setMemRefs(MI.memoperands());
