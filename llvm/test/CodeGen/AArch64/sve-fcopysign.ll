@@ -259,30 +259,48 @@ define <vscale x 8 x half> @test_copysign_v8f16_v8f32(<vscale x 8 x half> %a, <v
 ;========== FCOPYSIGN_EXTEND_ROUND
 
 define <vscale x 4 x half> @test_copysign_nxv4f32_nxv4f16(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
-; CHECK-LABEL: test_copysign_nxv4f32_nxv4f16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
-; CHECK-NEXT:    fcvt z1.h, p0/m, z1.s
-; CHECK-NEXT:    and z1.h, z1.h, #0x8000
-; CHECK-NEXT:    and z0.h, z0.h, #0x7fff
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    ret
+; CHECK-NO-EXTEND-ROUND-LABEL: test_copysign_nxv4f32_nxv4f16:
+; CHECK-NO-EXTEND-ROUND:       // %bb.0:
+; CHECK-NO-EXTEND-ROUND-NEXT:    and z1.s, z1.s, #0x80000000
+; CHECK-NO-EXTEND-ROUND-NEXT:    and z0.s, z0.s, #0x7fffffff
+; CHECK-NO-EXTEND-ROUND-NEXT:    ptrue p0.s
+; CHECK-NO-EXTEND-ROUND-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NO-EXTEND-ROUND-NEXT:    fcvt z0.h, p0/m, z0.s
+; CHECK-NO-EXTEND-ROUND-NEXT:    ret
+;
+; CHECK-EXTEND-ROUND-LABEL: test_copysign_nxv4f32_nxv4f16:
+; CHECK-EXTEND-ROUND:       // %bb.0:
+; CHECK-EXTEND-ROUND-NEXT:    ptrue p0.s
+; CHECK-EXTEND-ROUND-NEXT:    fcvt z0.h, p0/m, z0.s
+; CHECK-EXTEND-ROUND-NEXT:    fcvt z1.h, p0/m, z1.s
+; CHECK-EXTEND-ROUND-NEXT:    and z1.h, z1.h, #0x8000
+; CHECK-EXTEND-ROUND-NEXT:    and z0.h, z0.h, #0x7fff
+; CHECK-EXTEND-ROUND-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-EXTEND-ROUND-NEXT:    ret
   %t1 = call <vscale x 4 x float> @llvm.copysign.v4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b)
   %t2 = fptrunc <vscale x 4 x float> %t1 to <vscale x 4 x half>
   ret <vscale x 4 x half> %t2
 }
 
 define <vscale x 2 x float> @test_copysign_nxv2f64_nxv2f32(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
-; CHECK-LABEL: test_copysign_nxv2f64_nxv2f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    fcvt z0.s, p0/m, z0.d
-; CHECK-NEXT:    fcvt z1.s, p0/m, z1.d
-; CHECK-NEXT:    and z1.s, z1.s, #0x80000000
-; CHECK-NEXT:    and z0.s, z0.s, #0x7fffffff
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    ret
+; CHECK-NO-EXTEND-ROUND-LABEL: test_copysign_nxv2f64_nxv2f32:
+; CHECK-NO-EXTEND-ROUND:       // %bb.0:
+; CHECK-NO-EXTEND-ROUND-NEXT:    and z1.d, z1.d, #0x8000000000000000
+; CHECK-NO-EXTEND-ROUND-NEXT:    and z0.d, z0.d, #0x7fffffffffffffff
+; CHECK-NO-EXTEND-ROUND-NEXT:    ptrue p0.d
+; CHECK-NO-EXTEND-ROUND-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NO-EXTEND-ROUND-NEXT:    fcvt z0.s, p0/m, z0.d
+; CHECK-NO-EXTEND-ROUND-NEXT:    ret
+;
+; CHECK-EXTEND-ROUND-LABEL: test_copysign_nxv2f64_nxv2f32:
+; CHECK-EXTEND-ROUND:       // %bb.0:
+; CHECK-EXTEND-ROUND-NEXT:    ptrue p0.d
+; CHECK-EXTEND-ROUND-NEXT:    fcvt z0.s, p0/m, z0.d
+; CHECK-EXTEND-ROUND-NEXT:    fcvt z1.s, p0/m, z1.d
+; CHECK-EXTEND-ROUND-NEXT:    and z1.s, z1.s, #0x80000000
+; CHECK-EXTEND-ROUND-NEXT:    and z0.s, z0.s, #0x7fffffff
+; CHECK-EXTEND-ROUND-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-EXTEND-ROUND-NEXT:    ret
   %t1 = call <vscale x 2 x double> @llvm.copysign.v2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b)
   %t2 = fptrunc <vscale x 2 x double> %t1 to <vscale x 2 x float>
   ret <vscale x 2 x float> %t2
