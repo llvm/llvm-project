@@ -23,7 +23,7 @@ class Descriptor;
 
 namespace Fortran::runtime::io {
 
-class NonTbpDefinedIoTable;
+struct NonTbpDefinedIoTable;
 class NamelistGroup;
 class IoStatementState;
 using Cookie = IoStatementState *;
