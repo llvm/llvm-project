@@ -47433,9 +47433,7 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
 
     // TESTZ(OR(LO(X),HI(X)),OR(LO(Y),HI(Y))) -> TESTZ(X,Y)
     // TODO: Add COND_NE handling?
-    // TODO: Add TESTP handling
-    if (CC == X86::COND_E && OpVT.is128BitVector() && Subtarget.hasAVX() && 
-        EFLAGS.getOpcode() == X86ISD::PTEST) {
+    if (CC == X86::COND_E && OpVT.is128BitVector() && Subtarget.hasAVX()) {
       SDValue Src0 = peekThroughBitcasts(Op0);
       SDValue Src1 = peekThroughBitcasts(Op1);
       if (Src0.getOpcode() == ISD::OR && Src1.getOpcode() == ISD::OR) {
@@ -47443,10 +47441,12 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
                                  peekThroughBitcasts(Src0.getOperand(1)), true);
         Src1 = getSplitVectorSrc(peekThroughBitcasts(Src1.getOperand(0)),
                                  peekThroughBitcasts(Src1.getOperand(1)), true);
-        if (Src0 && Src1)
+        if (Src0 && Src1) {
+          EVT OpVT2 = OpVT.getDoubleNumVectorElementsVT(*DAG.getContext());
           return DAG.getNode(EFLAGS.getOpcode(), SDLoc(EFLAGS), VT,
-                             DAG.getBitcast(MVT::v4i64, Src0),
-                             DAG.getBitcast(MVT::v4i64, Src1));
+                             DAG.getBitcast(OpVT2, Src0),
+                             DAG.getBitcast(OpVT2, Src1));
+        }
       }
     }
   }
