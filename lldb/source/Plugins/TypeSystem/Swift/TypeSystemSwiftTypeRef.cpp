@@ -2279,19 +2279,21 @@ bool TypeSystemSwiftTypeRef::IsVoidType(opaque_compiler_type_t type) {
 // AST related queries
 uint32_t TypeSystemSwiftTypeRef::GetPointerByteSize() {
   auto impl = [&]() -> uint32_t {
-    if (auto *module = GetModule()) {
-      auto &triple = module->GetArchitecture().GetTriple();
-      if (triple.isArch64Bit())
-        return 8;
-      if (triple.isArch32Bit())
-        return 4;
-      if (triple.isArch16Bit())
-        return 2;
-    }
-    // An expression context has no module. Since it's for expression
-    // evaluation we might as well defer to the SwiftASTContext.
-    if (auto *swift_ast_context = GetSwiftASTContext())
-      return swift_ast_context->GetPointerByteSize();
+    llvm::Triple triple;
+    if (auto *module = GetModule())
+      triple = module->GetArchitecture().GetTriple();
+    else if (auto target_sp = GetTargetWP().lock())
+      triple = target_sp->GetArchitecture().GetTriple();
+    else
+      assert(false && "Expected module or target");
+
+    if (triple.isArch64Bit())
+      return 8;
+    if (triple.isArch32Bit())
+      return 4;
+    if (triple.isArch16Bit())
+      return 2;
+
     return 0;
   };
   VALIDATE_AND_RETURN_STATIC(impl, GetPointerByteSize);
