@@ -481,7 +481,7 @@ mlir::cir::GlobalOp
 CIRGenItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
                                      CharUnits VPtrOffset) {
   assert(VPtrOffset.isZero() && "Itanium ABI only supports zero vptr offsets");
-  auto vtable = VTables[RD];
+  mlir::cir::GlobalOp &vtable = VTables[RD];
   if (vtable)
     return vtable;
 
