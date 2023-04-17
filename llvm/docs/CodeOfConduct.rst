@@ -1,3 +1,7 @@
+..
+   This work is licensed under a Creative Commons Attribution 3.0 Unported License.
+   SPDX-License-Identifier: CC-BY-3.0
+
 ==============================
 LLVM Community Code of Conduct
 ==============================
@@ -166,12 +170,21 @@ Questions?
 If you have questions, please feel free to contact the LLVM Foundation Code of
 Conduct Committee by emailing conduct@llvm.org.
 
+Thanks!
+=======
 
-(This text is based on the `Django Project`_ Code of Conduct, which is in turn
-based on wording from the `Speak Up! project`_.)
+This text is based on the `Django Project`_ Code of Conduct, which is in turn
+based on wording from the `Speak Up! project`_.
+
+License
+=======
+
+All content on this page is licensed under a `Creative Commons Attribution 3.0
+Unported License`_.
 
 .. _Django Project: https://www.djangoproject.com/conduct/
 .. _Speak Up! project: http://speakup.io/coc.html
 .. _sexual and gender-based violence:
 .. _hate crimes: https://hatecrime.osce.org
 .. _hate speech: https://www.un.org/en/genocideprevention/documents/UN%20Strategy%20and%20Plan%20of%20Action%20on%20Hate%20Speech%2018%20June%20SYNOPSIS.pdf
+.. _Creative Commons Attribution 3.0 Unported License: http://creativecommons.org/licenses/by/3.0/
