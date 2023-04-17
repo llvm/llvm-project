@@ -1342,3 +1342,65 @@ define i8 @replace_false_op_eq42_neg_and(i8 %x) {
   %sel = select i1 %eq42, i8 0, i8 %and
   ret i8 %sel
 }
+
+; (x << k) ? 2^k * x : 0 --> 2^k * x
+
+define i32 @select_icmp_and_shl(i32 %x) {
+; CHECK-LABEL: @select_icmp_and_shl(
+; CHECK-NEXT:    [[SHL_MASK:%.*]] = and i32 [[X:%.*]], 1073741823
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[SHL_MASK]], 0
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[X]], 2
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 0, i32 [[MUL]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %shl.mask = and i32 %x, 1073741823
+  %tobool.not = icmp eq i32 %shl.mask, 0
+  %mul = shl i32 %x, 2
+  %cond = select i1 %tobool.not, i32 0, i32 %mul
+  ret i32 %cond
+}
+
+define <2 x i32> @select_icmp_and_shl_vect(<2 x i32> %x) {
+; CHECK-LABEL: @select_icmp_and_shl_vect(
+; CHECK-NEXT:    [[SHL_MASK:%.*]] = and <2 x i32> [[X:%.*]], <i32 1073741823, i32 1073741823>
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq <2 x i32> [[SHL_MASK]], zeroinitializer
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[X]], <i32 2, i32 2>
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[TOBOOL_NOT]], <2 x i32> zeroinitializer, <2 x i32> [[MUL]]
+; CHECK-NEXT:    ret <2 x i32> [[COND]]
+;
+  %shl.mask = and <2 x i32> %x, <i32 1073741823, i32 1073741823>
+  %tobool.not = icmp eq <2 x i32> %shl.mask, zeroinitializer
+  %mul = shl <2 x i32> %x, <i32 2, i32 2>
+  %cond = select <2 x i1> %tobool.not, <2 x i32> zeroinitializer, <2 x i32> %mul
+  ret <2 x i32> %cond
+}
+
+define i32 @select_icmp_and_shl2(i32 %x) {
+; CHECK-LABEL: @select_icmp_and_shl2(
+; CHECK-NEXT:    [[SHL_MASK:%.*]] = and i32 [[X:%.*]], 1073741823
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i32 [[SHL_MASK]], 0
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[X]], 2
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 [[MUL]], i32 0
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %shl.mask = and i32 %x, 1073741823
+  %tobool.not = icmp ne i32 %shl.mask, 0
+  %mul = shl i32 %x, 2
+  %cond = select i1 %tobool.not, i32 %mul, i32 0
+  ret i32 %cond
+}
+
+define <2 x i32> @select_icmp_and_shl2_vect(<2 x i32> %x) {
+; CHECK-LABEL: @select_icmp_and_shl2_vect(
+; CHECK-NEXT:    [[SHL_MASK:%.*]] = and <2 x i32> [[X:%.*]], <i32 1073741823, i32 1073741823>
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne <2 x i32> [[SHL_MASK]], zeroinitializer
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[X]], <i32 2, i32 2>
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[TOBOOL_NOT]], <2 x i32> [[MUL]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[COND]]
+;
+  %shl.mask = and <2 x i32> %x, <i32 1073741823, i32 1073741823>
+  %tobool.not = icmp ne <2 x i32> %shl.mask, zeroinitializer
+  %mul = shl <2 x i32> %x, <i32 2, i32 2>
+  %cond = select <2 x i1> %tobool.not, <2 x i32> %mul, <2 x i32> zeroinitializer
+  ret <2 x i32> %cond
+}
