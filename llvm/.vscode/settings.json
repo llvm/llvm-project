@@ -1,0 +1,18 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}",
+    "cmake.buildDirectory": "${workspaceFolder}/../build",
+    "cmake.configureSettings": {
+        "LLVM_ENABLE_PROJECTS": [],
+        "CMAKE_EXPORT_COMPILE_COMMANDS": 1,
+        "LLVM_ENABLE_LDD": "On",
+        "LLVM_CCACHE_BUILD": "On",
+        "LLVM_CCACHE_MAXSIZE": "20G",
+        "LLVM_ENABLE_IDE": "On",
+        "LLVM_ENABLE_ASSERTIONS": "On",
+        "LLVM_LIT_ARGS": "-v --xunit-xml-output test-results.xml",
+        "PYTHON_EXECUTABLE": "/usr/bin/python3"
+    },
+    "files.associations": {
+        "*.inc": "cpp"
+    }
+}
