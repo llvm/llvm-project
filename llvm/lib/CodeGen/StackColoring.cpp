@@ -407,8 +407,8 @@ namespace {
 /// StackColoring - A machine pass for merging disjoint stack allocations,
 /// marked by the LIFETIME_START and LIFETIME_END pseudo instructions.
 class StackColoring : public MachineFunctionPass {
-  MachineFrameInfo *MFI;
-  MachineFunction *MF;
+  MachineFrameInfo *MFI = nullptr;
+  MachineFunction *MF = nullptr;
 
   /// A class representing liveness information for a single basic block.
   /// Each bit in the BitVector represents the liveness property
@@ -448,7 +448,7 @@ class StackColoring : public MachineFunctionPass {
   VNInfo::Allocator VNInfoAllocator;
 
   /// SlotIndex analysis object.
-  SlotIndexes *Indexes;
+  SlotIndexes *Indexes = nullptr;
 
   /// The list of lifetime markers found. These markers are to be removed
   /// once the coloring is done.
