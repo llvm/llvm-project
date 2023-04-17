@@ -35,7 +35,7 @@ LLVM_LIBC_FUNCTION(int, dup2, (int oldfd, int newfd)) {
   }
   long ret = __llvm_libc::syscall_impl(SYS_dup3, oldfd, newfd, 0);
 #else
-#error "SYS_dup2 and SYS_dup3 not available for the target."
+#error "dup2 and dup3 syscalls not available."
 #endif
   if (ret < 0) {
     libc_errno = -ret;

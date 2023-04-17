@@ -24,7 +24,7 @@ LLVM_LIBC_FUNCTION(int, link, (const char *path1, const char *path2)) {
   long ret = __llvm_libc::syscall_impl(SYS_linkat, AT_FDCWD, path1, AT_FDCWD,
                                        path2, 0);
 #else
-#error "SYS_link or SYS_linkat not available."
+#error "link or linkat syscalls not available."
 #endif
   if (ret < 0) {
     libc_errno = -ret;
