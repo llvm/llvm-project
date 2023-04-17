@@ -421,7 +421,7 @@ function(add_integration_test test_name)
     "INTEGRATION_TEST"
     "" # No optional arguments
     "SUITE" # Single value arguments
-    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
   )
 
@@ -533,6 +533,7 @@ function(add_integration_test test_name)
     ${fq_target_name}
     COMMAND ${INTEGRATION_TEST_ENV}
             $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_GPU}>:${gpu_loader_exe}>
+            ${INTEGRATION_TEST_LOADER_ARGS}
             $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS}
     COMMENT "Running integration test ${fq_target_name}"
   )
