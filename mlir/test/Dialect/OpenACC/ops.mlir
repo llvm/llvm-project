@@ -586,6 +586,103 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 
 // -----
 
+
+func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
+  %i64value = arith.constant 1 : i64
+  %i32value = arith.constant 1 : i32
+  %idxValue = arith.constant 1 : index
+  acc.kernels async(%i64value: i64) {
+  }
+  acc.kernels async(%i32value: i32) {
+  }
+  acc.kernels async(%idxValue: index) {
+  }
+  acc.kernels wait(%i64value: i64) {
+  }
+  acc.kernels wait(%i32value: i32) {
+  }
+  acc.kernels wait(%idxValue: index) {
+  }
+  acc.kernels wait(%i64value, %i32value, %idxValue : i64, i32, index) {
+  }
+  acc.kernels copyin(%a, %b : memref<10xf32>, memref<10xf32>) {
+  }
+  acc.kernels copyin_readonly(%a, %b : memref<10xf32>, memref<10xf32>) {
+  }
+  acc.kernels copyin(%a: memref<10xf32>) copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) {
+  }
+  acc.kernels copyout(%b, %c : memref<10xf32>, memref<10x10xf32>) create(%a: memref<10xf32>) {
+  }
+  acc.kernels copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) create_zero(%a: memref<10xf32>) {
+  }
+  acc.kernels no_create(%a: memref<10xf32>) present(%b, %c : memref<10xf32>, memref<10x10xf32>) {
+  }
+  acc.kernels deviceptr(%a: memref<10xf32>) attach(%b, %c : memref<10xf32>, memref<10x10xf32>) {
+  }
+  acc.kernels {
+  } attributes {defaultAttr = #acc<defaultvalue none>}
+  acc.kernels {
+  } attributes {defaultAttr = #acc<defaultvalue present>}
+  acc.kernels {
+  } attributes {asyncAttr}
+  acc.kernels {
+  } attributes {waitAttr}
+  acc.kernels {
+  } attributes {selfAttr}
+  acc.kernels {
+    acc.terminator
+  } attributes {selfAttr}
+  return
+}
+
+// CHECK:      func @testserialop([[ARGA:%.*]]: memref<10xf32>, [[ARGB:%.*]]: memref<10xf32>, [[ARGC:%.*]]: memref<10x10xf32>) {
+// CHECK:      [[I64VALUE:%.*]] = arith.constant 1 : i64
+// CHECK:      [[I32VALUE:%.*]] = arith.constant 1 : i32
+// CHECK:      [[IDXVALUE:%.*]] = arith.constant 1 : index
+// CHECK:      acc.kernels async([[I64VALUE]] : i64) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels async([[I32VALUE]] : i32) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels async([[IDXVALUE]] : index) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels wait([[I64VALUE]] : i64) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels wait([[I32VALUE]] : i32) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels wait([[IDXVALUE]] : index) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels copyin([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels copyin_readonly([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels copyin([[ARGA]] : memref<10xf32>) copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels copyout([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create([[ARGA]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create_zero([[ARGA]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels no_create([[ARGA]] : memref<10xf32>) present([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels attach([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) deviceptr([[ARGA]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels {
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+// CHECK:      acc.kernels {
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
+// CHECK:      acc.kernels {
+// CHECK-NEXT: } attributes {asyncAttr}
+// CHECK:      acc.kernels {
+// CHECK-NEXT: } attributes {waitAttr}
+// CHECK:      acc.kernels {
+// CHECK-NEXT: } attributes {selfAttr}
+// CHECK:      acc.kernels {
+// CHECK:        acc.terminator
+// CHECK-NEXT: } attributes {selfAttr}
+
+// -----
+
 func.func @testdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
   %ifCond = arith.constant true
   acc.data if(%ifCond) present(%a : memref<10xf32>) {
