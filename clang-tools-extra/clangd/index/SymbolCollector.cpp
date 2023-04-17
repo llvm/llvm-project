@@ -205,11 +205,11 @@ public:
 
   // Returns a canonical URI for the file \p FE.
   // We attempt to make the path absolute first.
-  const std::string &toURI(const FileEntry *FE) {
+  const std::string &toURI(const FileEntryRef FE) {
     auto R = CacheFEToURI.try_emplace(FE);
     if (R.second) {
       auto CanonPath = getCanonicalPath(FE, SM);
-      R.first->second = &toURIInternal(CanonPath ? *CanonPath : FE->getName());
+      R.first->second = &toURIInternal(CanonPath ? *CanonPath : FE.getName());
     }
     return *R.first->second;
   }
@@ -218,7 +218,7 @@ public:
   // If the file is in the FileManager, use that to canonicalize the path.
   // We attempt to make the path absolute in any case.
   const std::string &toURI(llvm::StringRef Path) {
-    if (auto File = SM.getFileManager().getFile(Path))
+    if (auto File = SM.getFileManager().getFileRef(Path))
       return toURI(*File);
     return toURIInternal(Path);
   }
@@ -373,7 +373,7 @@ private:
   }
 
   llvm::StringRef getIncludeHeaderUncached(FileID FID) {
-    const FileEntry *FE = SM.getFileEntryForID(FID);
+    const auto FE = SM.getFileEntryRefForID(FID);
     if (!FE || FE->getName().empty())
       return "";
     llvm::StringRef Filename = FE->getName();
@@ -392,13 +392,13 @@ private:
     // Framework headers are spelled as <FrameworkName/Foo.h>, not
     // "path/FrameworkName.framework/Headers/Foo.h".
     auto &HS = PP->getHeaderSearchInfo();
-    if (const auto *HFI = HS.getExistingFileInfo(FE, /*WantExternal*/ false))
+    if (const auto *HFI = HS.getExistingFileInfo(*FE, /*WantExternal*/ false))
       if (!HFI->Framework.empty())
         if (auto Spelling =
-                getFrameworkHeaderIncludeSpelling(FE, HFI->Framework, HS))
+                getFrameworkHeaderIncludeSpelling(*FE, HFI->Framework, HS))
           return *Spelling;
 
-    if (!tooling::isSelfContainedHeader(FE, PP->getSourceManager(),
+    if (!tooling::isSelfContainedHeader(*FE, PP->getSourceManager(),
                                         PP->getHeaderSearchInfo())) {
       // A .inc or .def file is often included into a real header to define
       // symbols (e.g. LLVM tablegen files).
@@ -409,7 +409,7 @@ private:
       return "";
     }
     // Standard case: just insert the file itself.
-    return toURI(FE);
+    return toURI(*FE);
   }
 };
 
@@ -417,12 +417,12 @@ private:
 std::optional<SymbolLocation>
 SymbolCollector::getTokenLocation(SourceLocation TokLoc) {
   const auto &SM = ASTCtx->getSourceManager();
-  auto *FE = SM.getFileEntryForID(SM.getFileID(TokLoc));
+  const auto FE = SM.getFileEntryRefForID(SM.getFileID(TokLoc));
   if (!FE)
     return std::nullopt;
 
   SymbolLocation Result;
-  Result.FileURI = HeaderFileURIs->toURI(FE).c_str();
+  Result.FileURI = HeaderFileURIs->toURI(*FE).c_str();
   auto Range = getTokenRange(TokLoc, SM, ASTCtx->getLangOpts());
   Result.Start = Range.first;
   Result.End = Range.second;
@@ -635,10 +635,10 @@ bool SymbolCollector::handleDeclOccurrence(
 void SymbolCollector::handleMacros(const MainFileMacros &MacroRefsToIndex) {
   assert(HeaderFileURIs && PP);
   const auto &SM = PP->getSourceManager();
-  const auto *MainFileEntry = SM.getFileEntryForID(SM.getMainFileID());
-  assert(MainFileEntry);
+  const auto MainFileEntryRef = SM.getFileEntryRefForID(SM.getMainFileID());
+  assert(MainFileEntryRef);
 
-  const std::string &MainFileURI = HeaderFileURIs->toURI(MainFileEntry);
+  const std::string &MainFileURI = HeaderFileURIs->toURI(*MainFileEntryRef);
   // Add macro references.
   for (const auto &IDToRefs : MacroRefsToIndex.MacroRefs) {
     for (const auto &MacroRef : IDToRefs.second) {
@@ -987,12 +987,12 @@ void SymbolCollector::addRef(SymbolID ID, const SymbolRef &SR) {
   const auto &SM = ASTCtx->getSourceManager();
   // FIXME: use the result to filter out references.
   shouldIndexFile(SR.FID);
-  if (const auto *FE = SM.getFileEntryForID(SR.FID)) {
+  if (const auto FE = SM.getFileEntryRefForID(SR.FID)) {
     auto Range = getTokenRange(SR.Loc, SM, ASTCtx->getLangOpts());
     Ref R;
     R.Location.Start = Range.first;
     R.Location.End = Range.second;
-    R.Location.FileURI = HeaderFileURIs->toURI(FE).c_str();
+    R.Location.FileURI = HeaderFileURIs->toURI(*FE).c_str();
     R.Kind = toRefKind(SR.Roles, SR.Spelled);
     R.Container = getSymbolIDCached(SR.Container);
     Refs.insert(ID, R);
