@@ -37,20 +37,10 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $sgpr34_sgpr35 = S_MOV_B64 0
   ; GFX90A-NEXT:   renamable $vcc = S_AND_B64 $exec, renamable $sgpr30_sgpr31, implicit-def dead $scc
   ; GFX90A-NEXT:   $vgpr24 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   $vgpr24_lo16 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   $vgpr24_hi16 = IMPLICIT_DEF
   ; GFX90A-NEXT:   $agpr0 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   $agpr0_lo16 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   $agpr0_hi16 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   $vgpr26_lo16 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   $vgpr26_hi16 = IMPLICIT_DEF
   ; GFX90A-NEXT:   $vgpr26 = IMPLICIT_DEF
   ; GFX90A-NEXT:   $vgpr20 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   $vgpr20_lo16 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   $vgpr20_hi16 = IMPLICIT_DEF
   ; GFX90A-NEXT:   $vgpr22 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   $vgpr22_lo16 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   $vgpr22_hi16 = IMPLICIT_DEF
   ; GFX90A-NEXT:   S_CBRANCH_VCCNZ %bb.58, implicit $vcc
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.2:
@@ -583,11 +573,7 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $vgpr63, dead renamable $vcc = V_ADDC_U32_e64 0, $vgpr41, killed $vcc, 0, implicit $exec
   ; GFX90A-NEXT:   renamable $vcc = S_AND_B64 $exec, renamable $sgpr48_sgpr49, implicit-def dead $scc
   ; GFX90A-NEXT:   $agpr0 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   $agpr0_lo16 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   $agpr0_hi16 = IMPLICIT_DEF
   ; GFX90A-NEXT:   $vgpr14 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   $vgpr14_lo16 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   $vgpr14_hi16 = IMPLICIT_DEF
   ; GFX90A-NEXT:   S_CBRANCH_VCCNZ %bb.48, implicit $vcc
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.44:
