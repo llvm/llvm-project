@@ -727,6 +727,9 @@ public:
   const TreePatternNodePtr &getChildShared(unsigned N) const {
     return Children[N];
   }
+  TreePatternNodePtr &getChildSharedPtr(unsigned N) {
+    return Children[N];
+  }
   void setChild(unsigned i, TreePatternNodePtr N) { Children[i] = N; }
 
   /// hasChild - Return true if N is any of our children.
