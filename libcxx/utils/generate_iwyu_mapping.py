@@ -56,11 +56,12 @@ def generate_map(include):
         elif i == '__pstl_memory': continue
         elif i == '__pstl_numeric': continue
         elif i == '__split_buffer': public = ['deque', 'vector']
+        elif i == '__std_mbstate_t.h': continue
         elif i == '__threading_support': public = ['atomic', 'mutex', 'semaphore', 'thread']
         elif i == '__tree': public = ['map', 'set']
         elif i == '__undef_macros': continue
         elif i == '__verbose_abort': continue
-        else: panic()
+        else: panic(i)
 
         for p in public:
             result.append(f'{generate(f"<{i}>", p)},')
