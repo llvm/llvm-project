@@ -1105,6 +1105,10 @@ public:
   void buildCXXDestructorCall(const CXXDestructorDecl *D, CXXDtorType Type,
                               bool ForVirtualBase, bool Delegating,
                               Address This, QualType ThisTy);
+  RValue buildCXXDestructorCall(GlobalDecl Dtor, const CIRGenCallee &Callee,
+                                mlir::Value This, QualType ThisTy,
+                                mlir::Value ImplicitParam,
+                                QualType ImplicitParamTy, const CallExpr *E);
 
   /// Enter the cleanups necessary to complete the given phase of destruction
   /// for a destructor. The end result should call destructors on members and
@@ -1132,6 +1136,13 @@ public:
                          bool BaseIsNonVirtualPrimaryBase,
                          const clang::CXXRecordDecl *VTableClass,
                          VisitedVirtualBasesSetTy &VBases, VPtrsVector &vptrs);
+
+  /// Return the VTT parameter that should be passed to a base
+  /// constructor/destructor with virtual bases.
+  /// FIXME: VTTs are Itanium ABI-specific, so the definition should move
+  /// to CIRGenItaniumCXXABI.cpp together with all the references to VTT.
+  mlir::Value GetVTTParameter(GlobalDecl GD, bool ForVirtualBase,
+                              bool Delegating);
 
   /// Source location information about the default argument or member
   /// initializer expression we're evaluating, if any.

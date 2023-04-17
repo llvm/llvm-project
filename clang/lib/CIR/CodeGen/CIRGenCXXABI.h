@@ -130,6 +130,14 @@ public:
   /// taken care of by the caller.
   virtual bool isThisCompleteObject(clang::GlobalDecl GD) const = 0;
 
+  /// Get the implicit (second) parameter that comes after the "this" pointer,
+  /// or nullptr if there is isn't one.
+  virtual mlir::Value getCXXDestructorImplicitParam(CIRGenFunction &CGF,
+                                                    const CXXDestructorDecl *DD,
+                                                    CXXDtorType Type,
+                                                    bool ForVirtualBase,
+                                                    bool Delegating) = 0;
+
   /// Emit constructor variants required by this ABI.
   virtual void buildCXXConstructors(const clang::CXXConstructorDecl *D) = 0;
   /// Emit dtor variants required by this ABI.

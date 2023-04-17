@@ -1129,3 +1129,28 @@ void CIRGenFunction::buildCXXDestructorCall(const CXXDestructorDecl *DD,
   CGM.getCXXABI().buildDestructorCall(*this, DD, Type, ForVirtualBase,
                                       Delegating, This, ThisTy);
 }
+
+mlir::Value CIRGenFunction::GetVTTParameter(GlobalDecl GD, bool ForVirtualBase,
+                                            bool Delegating) {
+  if (!CGM.getCXXABI().NeedsVTTParameter(GD)) {
+    // This constructor/destructor does not need a VTT parameter.
+    return nullptr;
+  }
+
+  const CXXRecordDecl *RD = cast<CXXMethodDecl>(CurCodeDecl)->getParent();
+  const CXXRecordDecl *Base = cast<CXXMethodDecl>(GD.getDecl())->getParent();
+
+  if (Delegating) {
+    llvm_unreachable("NYI");
+  } else if (RD == Base) {
+    llvm_unreachable("NYI");
+  } else {
+    llvm_unreachable("NYI");
+  }
+
+  if (CGM.getCXXABI().NeedsVTTParameter(CurGD)) {
+    llvm_unreachable("NYI");
+  } else {
+    llvm_unreachable("NYI");
+  }
+}
