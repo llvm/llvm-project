@@ -156,23 +156,6 @@ static cl::opt<unsigned>
                          cl::desc("livedebugvalues-stack-ws-limit"),
                          cl::init(250));
 
-// BEGIN SWIFT
-static bool isSwiftAsyncContext(const MachineFunction &MF, Register Reg) {
-  const llvm::Function &F = MF.getFunction();
-  if (!MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::TracksLiveness))
-    return false;
-  unsigned I = 0;
-  for (auto R : MF.getRegInfo().liveins()) {
-    if (R.first == (unsigned)Reg &&
-        F.hasParamAttribute(I, Attribute::SwiftAsync))
-      return true;
-    ++I;
-  }
-  return false;
-}
-// END SWIFT
-
 DbgOpID DbgOpID::UndefID = DbgOpID(0xffffffff);
 
 /// Tracker for converting machine value locations and variable values into

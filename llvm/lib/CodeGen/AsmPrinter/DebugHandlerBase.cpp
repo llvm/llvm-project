@@ -299,6 +299,7 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
         Entries.front().getInstr()->getDebugVariable();
     if (DIVar->isParameter() &&
         getDISubprogram(DIVar->getScope())->describes(&MF->getFunction())) {
+
       if (!IsDescribedByReg(Entries.front().getInstr()))
         LabelsBeforeInsn[Entries.front().getInstr()] = Asm->getFunctionBegin();
       if (Entries.front().getInstr()->getDebugExpression()->isFragment()) {

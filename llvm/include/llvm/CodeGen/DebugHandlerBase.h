@@ -101,7 +101,8 @@ protected:
 
   /// Ensure that a label will be emitted before MI.
   void requestLabelBeforeInsn(const MachineInstr *MI) {
-    LabelsBeforeInsn.insert(std::make_pair(MI, nullptr));
+    if (!LabelsBeforeInsn.count(MI))
+      LabelsBeforeInsn.insert(std::make_pair(MI, nullptr));
   }
 
   /// Ensure that a label will be emitted after MI.
