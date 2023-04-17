@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -181,6 +182,25 @@ void DbgValueHistoryMap::trimLocationRanges(
       // Only DBG_VALUEs can open location ranges so skip anything else.
       if (!EI->isDbgValue())
         continue;
+
+      // BEGIN SWIFT
+      // Swift async function handling.
+      {
+        bool skipAsyncEntryValue = false;
+        auto &MI = *EI->getInstr();
+        auto *Expr = MI.getDebugExpression();
+        for (const MachineOperand &MO : MI.debug_operands()) {
+          if (MO.isReg() && MO.getReg() != 0)
+            if (Expr && Expr->isEntryValue() &&
+                isSwiftAsyncContext(MF, MO.getReg())) {
+              skipAsyncEntryValue = true;
+              break;
+            }
+        }
+        if (skipAsyncEntryValue)
+          continue;
+      }
+      // END SWIFT
 
       // Index of the entry which closes this range.
       EntryIndex EndIndex = EI->getEndIndex();
