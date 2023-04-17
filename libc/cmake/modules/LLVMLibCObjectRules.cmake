@@ -64,6 +64,50 @@ function(_get_common_compile_options output_var flags)
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
 
+# Obtains NVPTX specific arguments for compilation.
+# The PTX feature is primarily based on the CUDA toolchain version. We want to
+# be able to target NVPTX without an existing architecture, so we need to set
+# this manually. This simply sets the PTX feature to the minimum required for
+# the features we wish to use on that target.
+# Adjust as needed for desired PTX features.
+function(get_nvptx_compile_options output_var gpu_arch)
+  list(APPEND nvptx_options "-march=${gpu_arch}")
+  if(${gpu_arch} STREQUAL "sm_35")
+    list(APPEND nvptx_options "--cuda-feature=+ptx42")
+  elseif(${gpu_arch} STREQUAL "sm_37")
+    list(APPEND nvptx_options "--cuda-feature=+ptx43")
+  elseif(${gpu_arch} STREQUAL "sm_50")
+    list(APPEND nvptx_options "--cuda-feature=+ptx43")
+  elseif(${gpu_arch} STREQUAL "sm_52")
+    list(APPEND nvptx_options "--cuda-feature=+ptx43")
+  elseif(${gpu_arch} STREQUAL "sm_53")
+    list(APPEND nvptx_options "--cuda-feature=+ptx43")
+  elseif(${gpu_arch} STREQUAL "sm_60")
+    list(APPEND nvptx_options "--cuda-feature=+ptx50")
+  elseif(${gpu_arch} STREQUAL "sm_61")
+    list(APPEND nvptx_options "--cuda-feature=+ptx50")
+  elseif(${gpu_arch} STREQUAL "sm_62")
+    list(APPEND nvptx_options "--cuda-feature=+ptx50")
+  elseif(${gpu_arch} STREQUAL "sm_70")
+    list(APPEND nvptx_options "--cuda-feature=+ptx63")
+  elseif(${gpu_arch} STREQUAL "sm_72")
+    list(APPEND nvptx_options "--cuda-feature=+ptx63")
+  elseif(${gpu_arch} STREQUAL "sm_75")
+    list(APPEND nvptx_options "--cuda-feature=+ptx63")
+  elseif(${gpu_arch} STREQUAL "sm_80")
+    list(APPEND nvptx_options "--cuda-feature=+ptx72")
+  elseif(${gpu_arch} STREQUAL "sm_86")
+    list(APPEND nvptx_options "--cuda-feature=+ptx72")
+  else()
+    message(FATAL_ERROR "Unknown Nvidia GPU architecture '${gpu_arch}'")
+  endif()
+
+  if(LIBC_CUDA_ROOT)
+    list(APPEND nvptx_options "--cuda-path=${LIBC_CUDA_ROOT}")
+  endif()
+  set(${output_var} ${nvptx_options} PARENT_SCOPE)
+endfunction()
+
 # Builds the object target for the GPU.
 # This compiles the target for all supported architectures and embeds it into
 # host binary for installing. The internal target contains the GPU code directly
@@ -103,7 +147,8 @@ function(_build_gpu_objects fq_target_name internal_target_name)
         list(APPEND compile_options "-mcpu=${gpu_arch}")
       elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
         set(gpu_target_triple "nvptx64-nvidia-cuda")
-        list(APPEND compile_options "-march=${gpu_arch}")
+        get_nvptx_compile_options(nvptx_options ${gpu_arch})
+        list(APPEND compile_options "${nvptx_options}")
       else()
         message(FATAL_ERROR "Unknown GPU architecture '${gpu_arch}'")
       endif()
@@ -200,9 +245,8 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
       target_compile_options(${internal_target_name} PRIVATE -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto)
     elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-      target_compile_options(${internal_target_name} PRIVATE
-                             -march=${LIBC_GPU_TARGET_ARCHITECTURE}
-                             --cuda-path=${LIBC_CUDA_ROOT})
+      get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
+      target_compile_options(${internal_target_name} PRIVATE ${nvptx_options})
     endif()
     target_include_directories(${internal_target_name} PRIVATE ${include_dirs})
     if(full_deps_list)
