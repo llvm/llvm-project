@@ -179,6 +179,6 @@ contains
   end subroutine assumed_type_dummy_array
 
   ! CHECK-LABEL: func.func @assumed_type_dummy_array(
-  ! CHECK-SAME: %{{.*}}: !fir.ref<none>
+  ! CHECK-SAME: %{{.*}}: !fir.box<!fir.array<?xnone>>
 
 end module
