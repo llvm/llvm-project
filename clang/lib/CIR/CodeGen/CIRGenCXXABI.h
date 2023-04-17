@@ -162,6 +162,10 @@ public:
   virtual bool useThunkForDtorVariant(const CXXDestructorDecl *Dtor,
                                       CXXDtorType DT) const = 0;
 
+  virtual mlir::cir::GlobalLinkageKind
+  getCXXDestructorLinkage(GVALinkage Linkage, const CXXDestructorDecl *Dtor,
+                          CXXDtorType DT) const;
+
   /// Get the address point of the vtable for the given base subobject.
   virtual mlir::Value
   getVTableAddressPoint(BaseSubobject Base,
