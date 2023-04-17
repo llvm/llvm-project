@@ -107,6 +107,11 @@ public:
   void addImplicitStructorParams(CIRGenFunction &CGF, QualType &ResTy,
                                  FunctionArgList &Params) override;
 
+  mlir::Value getCXXDestructorImplicitParam(CIRGenFunction &CGF,
+                                            const CXXDestructorDecl *DD,
+                                            CXXDtorType Type,
+                                            bool ForVirtualBase,
+                                            bool Delegating) override;
   void buildCXXConstructors(const clang::CXXConstructorDecl *D) override;
   void buildCXXDestructors(const clang::CXXDestructorDecl *D) override;
   void buildCXXStructor(clang::GlobalDecl GD) override;
@@ -1541,5 +1546,24 @@ CIRGenItaniumCXXABI::classifyRTTIUniqueness(
 void CIRGenItaniumCXXABI::buildDestructorCall(
     CIRGenFunction &CGF, const CXXDestructorDecl *DD, CXXDtorType Type,
     bool ForVirtualBase, bool Delegating, Address This, QualType ThisTy) {
-  llvm_unreachable("NYI");
+  GlobalDecl GD(DD, Type);
+  auto VTT =
+      getCXXDestructorImplicitParam(CGF, DD, Type, ForVirtualBase, Delegating);
+  QualType VTTTy = getContext().getPointerType(getContext().VoidPtrTy);
+  CIRGenCallee Callee;
+  if (getContext().getLangOpts().AppleKext && Type != Dtor_Base &&
+      DD->isVirtual())
+    llvm_unreachable("NYI");
+  else
+    Callee = CIRGenCallee::forDirect(CGM.getAddrOfCXXStructor(GD), GD);
+
+  CGF.buildCXXDestructorCall(GD, Callee, This.getPointer(), ThisTy, VTT, VTTTy,
+                             nullptr);
+}
+
+mlir::Value CIRGenItaniumCXXABI::getCXXDestructorImplicitParam(
+    CIRGenFunction &CGF, const CXXDestructorDecl *DD, CXXDtorType Type,
+    bool ForVirtualBase, bool Delegating) {
+  GlobalDecl GD(DD, Type);
+  return CGF.GetVTTParameter(GD, ForVirtualBase, Delegating);
 }

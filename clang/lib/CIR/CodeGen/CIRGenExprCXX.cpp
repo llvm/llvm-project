@@ -325,3 +325,30 @@ void CIRGenFunction::buildCXXConstructExpr(const CXXConstructExpr *E,
 mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
   assert(0 && "not implemented");
 }
+
+RValue CIRGenFunction::buildCXXDestructorCall(GlobalDecl Dtor,
+                                              const CIRGenCallee &Callee,
+                                              mlir::Value This, QualType ThisTy,
+                                              mlir::Value ImplicitParam,
+                                              QualType ImplicitParamTy,
+                                              const CallExpr *CE) {
+  const CXXMethodDecl *DtorDecl = cast<CXXMethodDecl>(Dtor.getDecl());
+
+  assert(!ThisTy.isNull());
+  assert(ThisTy->getAsCXXRecordDecl() == DtorDecl->getParent() &&
+         "Pointer/Object mixup");
+
+  LangAS SrcAS = ThisTy.getAddressSpace();
+  LangAS DstAS = DtorDecl->getMethodQualifiers().getAddressSpace();
+  if (SrcAS != DstAS) {
+    llvm_unreachable("NYI");
+  }
+
+  CallArgList Args;
+  commonBuildCXXMemberOrOperatorCall(*this, DtorDecl, This, ImplicitParam,
+                                     ImplicitParamTy, CE, Args, nullptr);
+  assert((CE || currSrcLoc) && "expected source location");
+  return buildCall(CGM.getTypes().arrangeCXXStructorDeclaration(Dtor), Callee,
+                   ReturnValueSlot(), Args, nullptr, CE && CE == MustTailCall,
+                   CE ? getLoc(CE->getExprLoc()) : *currSrcLoc);
+}
