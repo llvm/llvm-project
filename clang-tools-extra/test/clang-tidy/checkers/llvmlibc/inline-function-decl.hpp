@@ -60,6 +60,14 @@ public:
   }
 };
 
+LIBC_INLINE void lambda() {
+// CHECK-MESSAGES-NOT: :[[@LINE+4]]:3: warning: '__invoke' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+// CHECK-MESSAGES-NOT: :[[@LINE+3]]:3: warning: 'operator void (*)()' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+// CHECK-MESSAGES-NOT: :[[@LINE+2]]:3: warning: '~(lambda at [[FILENAME:.+]])' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+// CHECK-MESSAGES-NOT: :[[@LINE+1]]:6: warning: 'operator()' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+  [](){};
+}
+
 } // namespace __llvm_libc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_TEST_CLANG_TIDY_CHECKERS_LLVMLIBC_INLINEFUNCTIONDECL_H
