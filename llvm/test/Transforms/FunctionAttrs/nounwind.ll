@@ -130,7 +130,7 @@ declare void @abort() nounwind
 @catch_ty = external global ptr
 
 define void @catch_specific_landingpad() personality ptr @__gxx_personality_v0 {
-; CHECK: Function Attrs: noreturn nounwind
+; CHECK: Function Attrs: noreturn
 ; CHECK-LABEL: define {{[^@]+}}@catch_specific_landingpad
 ; CHECK-SAME: () #[[ATTR3:[0-9]+]] personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    invoke void @do_throw()
@@ -159,7 +159,7 @@ unreachable:
 define void @catch_all_landingpad() personality ptr @__gxx_personality_v0 {
 ; CHECK: Function Attrs: noreturn nounwind
 ; CHECK-LABEL: define {{[^@]+}}@catch_all_landingpad
-; CHECK-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+; CHECK-SAME: () #[[ATTR4:[0-9]+]] personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    invoke void @do_throw()
 ; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       lpad:
@@ -184,7 +184,7 @@ unreachable:
 }
 
 define void @filter_specific_landingpad() personality ptr @__gxx_personality_v0 {
-; CHECK: Function Attrs: noreturn nounwind
+; CHECK: Function Attrs: noreturn
 ; CHECK-LABEL: define {{[^@]+}}@filter_specific_landingpad
 ; CHECK-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    invoke void @do_throw()
@@ -213,7 +213,7 @@ unreachable:
 define void @filter_none_landingpad() personality ptr @__gxx_personality_v0 {
 ; CHECK: Function Attrs: noreturn nounwind
 ; CHECK-LABEL: define {{[^@]+}}@filter_none_landingpad
-; CHECK-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+; CHECK-SAME: () #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    invoke void @do_throw()
 ; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       lpad:
@@ -238,7 +238,7 @@ unreachable:
 }
 
 define void @cleanup_landingpad() personality ptr @__gxx_personality_v0 {
-; CHECK: Function Attrs: noreturn nounwind
+; CHECK: Function Attrs: noreturn
 ; CHECK-LABEL: define {{[^@]+}}@cleanup_landingpad
 ; CHECK-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    invoke void @do_throw()
@@ -265,7 +265,7 @@ unreachable:
 }
 
 define void @cleanuppad() personality ptr @__gxx_personality_v0 {
-; CHECK: Function Attrs: noreturn nounwind
+; CHECK: Function Attrs: noreturn
 ; CHECK-LABEL: define {{[^@]+}}@cleanuppad
 ; CHECK-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    invoke void @do_throw()
@@ -290,7 +290,7 @@ unreachable:
 }
 
 define void @catchswitch_cleanuppad() personality ptr @__gxx_personality_v0 {
-; CHECK: Function Attrs: noreturn nounwind
+; CHECK: Function Attrs: noreturn
 ; CHECK-LABEL: define {{[^@]+}}@catchswitch_cleanuppad
 ; CHECK-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    invoke void @do_throw()
