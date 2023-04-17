@@ -30,20 +30,12 @@ high_target:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
 // CHECK-NEXT:     2000:       bl      0x200c <__AArch64AbsLongThunk_high_target>
-// CHECK-NEXT:     2004:       bl      0x201c <__AArch64AbsLongThunk_>
+// CHECK-NEXT:     2004:       bl      0x2010 <__AArch64AbsLongThunk_>
 // CHECK-NEXT:                 ret
 // CHECK: <__AArch64AbsLongThunk_high_target>:
-// CHECK-NEXT:     200c:       ldr     x16, 0x2014
-// CHECK-NEXT:                 br      x16
-// CHECK: <$d>:
-// CHECK-NEXT:     2014:       00 20 00 08     .word   0x08002000
-// CHECK-NEXT:     2018:       00 00 00 00     .word   0x00000000
-// CHECK:      <__AArch64AbsLongThunk_>:
-// CHECK-NEXT:     201c:       ldr x16, 0x2024
-// CHECK-NEXT:     2020:       br x16
-// CHECK:      <$d>:
-// CHECK-NEXT:     2024:       04 20 00 08     .word   0x08002004
-// CHECK-NEXT:     2028:       00 00 00 00     .word   0x00000000
+// CHECK-NEXT:     200c:       b       0x8002000 <high_target>
+// CHECK: <__AArch64AbsLongThunk_>:
+// CHECK-NEXT:     2010:       b       0x8002004 <high_target+0x4>
 // CHECK: Disassembly of section .text_high:
 // CHECK-EMPTY:
 // CHECK-NEXT: <high_target>:
@@ -56,10 +48,8 @@ high_target:
 /// Local thunk symbols.
 // NM-NEXT: t __AArch64AbsLongThunk_high_target
 // NM-NEXT: t $x
-// NM-NEXT: t $d
 // NM-NEXT: t __AArch64AbsLongThunk_{{$}}
 // NM-NEXT: t $x
-// NM-NEXT: t $d
 /// Global symbols.
 // NM-NEXT: T _start
 // NM-NEXT: T high_target

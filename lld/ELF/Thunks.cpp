@@ -44,21 +44,45 @@ using namespace lld::elf;
 
 namespace {
 
-// AArch64 long range Thunks
-class AArch64ABSLongThunk final : public Thunk {
+// Base class for AArch64 thunks.
+//
+// An AArch64 thunk may be either short or long. A short thunk is simply a
+// branch (B) instruction, and it may be used to call AArch64 functions when the
+// distance from the thunk to the target is less than 128MB. Long thunks can
+// branch to any virtual address and they are implemented in the derived
+// classes. This class tries to create a short thunk if the target is in range,
+// otherwise it creates a long thunk.
+class AArch64Thunk : public Thunk {
 public:
-  AArch64ABSLongThunk(Symbol &dest, int64_t addend) : Thunk(dest, addend) {}
-  uint32_t size() override { return 16; }
+  AArch64Thunk(Symbol &dest, int64_t addend) : Thunk(dest, addend) {}
+  bool getMayUseShortThunk();
   void writeTo(uint8_t *buf) override;
-  void addSymbols(ThunkSection &isec) override;
+
+private:
+  bool mayUseShortThunk = true;
+  virtual void writeLong(uint8_t *buf) = 0;
 };
 
-class AArch64ADRPThunk final : public Thunk {
+// AArch64 long range Thunks.
+class AArch64ABSLongThunk final : public AArch64Thunk {
 public:
-  AArch64ADRPThunk(Symbol &dest, int64_t addend) : Thunk(dest, addend) {}
-  uint32_t size() override { return 12; }
-  void writeTo(uint8_t *buf) override;
+  AArch64ABSLongThunk(Symbol &dest, int64_t addend)
+      : AArch64Thunk(dest, addend) {}
+  uint32_t size() override { return getMayUseShortThunk() ? 4 : 16; }
   void addSymbols(ThunkSection &isec) override;
+
+private:
+  void writeLong(uint8_t *buf) override;
+};
+
+class AArch64ADRPThunk final : public AArch64Thunk {
+public:
+  AArch64ADRPThunk(Symbol &dest, int64_t addend) : AArch64Thunk(dest, addend) {}
+  uint32_t size() override { return getMayUseShortThunk() ? 4 : 12; }
+  void addSymbols(ThunkSection &isec) override;
+
+private:
+  void writeLong(uint8_t *buf) override;
 };
 
 // Base class for ARM thunks.
@@ -461,14 +485,34 @@ void Thunk::setOffset(uint64_t newOffset) {
   offset = newOffset;
 }
 
-// AArch64 long range Thunks
-
+// AArch64 Thunk base class.
 static uint64_t getAArch64ThunkDestVA(const Symbol &s, int64_t a) {
   uint64_t v = s.isInPlt() ? s.getPltVA() : s.getVA(a);
   return v;
 }
 
-void AArch64ABSLongThunk::writeTo(uint8_t *buf) {
+bool AArch64Thunk::getMayUseShortThunk() {
+  if (!mayUseShortThunk)
+    return false;
+  uint64_t s = getAArch64ThunkDestVA(destination, addend);
+  uint64_t p = getThunkTargetSym()->getVA();
+  mayUseShortThunk = llvm::isInt<28>(s - p);
+  return mayUseShortThunk;
+}
+
+void AArch64Thunk::writeTo(uint8_t *buf) {
+  if (!getMayUseShortThunk()) {
+    writeLong(buf);
+    return;
+  }
+  uint64_t s = getAArch64ThunkDestVA(destination, addend);
+  uint64_t p = getThunkTargetSym()->getVA();
+  write32(buf, 0x14000000); // b S
+  target->relocateNoSym(buf, R_AARCH64_CALL26, s - p);
+}
+
+// AArch64 long range Thunks.
+void AArch64ABSLongThunk::writeLong(uint8_t *buf) {
   const uint8_t data[] = {
     0x50, 0x00, 0x00, 0x58, //     ldr x16, L0
     0x00, 0x02, 0x1f, 0xd6, //     br  x16
@@ -484,7 +528,8 @@ void AArch64ABSLongThunk::addSymbols(ThunkSection &isec) {
   addSymbol(saver().save("__AArch64AbsLongThunk_" + destination.getName()),
             STT_FUNC, 0, isec);
   addSymbol("$x", STT_NOTYPE, 0, isec);
-  addSymbol("$d", STT_NOTYPE, 8, isec);
+  if (!getMayUseShortThunk())
+    addSymbol("$d", STT_NOTYPE, 8, isec);
 }
 
 // This Thunk has a maximum range of 4Gb, this is sufficient for all programs
@@ -492,7 +537,7 @@ void AArch64ABSLongThunk::addSymbols(ThunkSection &isec) {
 // clang and gcc do not support the large code model for position independent
 // code so it is safe to use this for position independent thunks without
 // worrying about the destination being more than 4Gb away.
-void AArch64ADRPThunk::writeTo(uint8_t *buf) {
+void AArch64ADRPThunk::writeLong(uint8_t *buf) {
   const uint8_t data[] = {
       0x10, 0x00, 0x00, 0x90, // adrp x16, Dest R_AARCH64_ADR_PREL_PG_HI21(Dest)
       0x10, 0x02, 0x00, 0x91, // add  x16, x16, R_AARCH64_ADD_ABS_LO12_NC(Dest)
