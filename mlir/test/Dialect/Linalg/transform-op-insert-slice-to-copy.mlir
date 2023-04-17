@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-transform-dialect-interpreter %s --split-input-file | FileCheck %s
+// RUN: mlir-opt -test-transform-dialect-interpreter %s --split-input-file --allow-unregistered-dialect | FileCheck %s
 
 // CHECK-LABEL: func @insert_slice_to_copy
     // CHECK-SAME: %[[I:.*]]: tensor<2x3xf32>
@@ -108,3 +108,30 @@ transform.sequence failures(propagate) {
   transform.cast %1 : !transform.any_op to !transform.op<"linalg.copy">
 }
 
+// -----
+
+// CHECK-LABEL: func @parallel_insert_slice_to_copy
+func.func @parallel_insert_slice_to_copy(%out : tensor<?x?xf32>, %sz0: index, %sz1: index) {
+  %0 = scf.forall (%arg0, %arg1) in (27, 8) shared_outs(%arg2 = %out) -> (tensor<?x?xf32>) {
+    %t = "make_me_a_tensor"() : () -> (tensor<?x?xf32> )
+
+    //      CHECK: tensor.extract_slice
+    //      CHECK: linalg.copy
+    //      CHECK: scf.forall.in_parallel
+    //      CHECK:   tensor.parallel_insert_slice
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %t into %arg2[0, 0] [%sz0, %sz1] [1, 1] 
+        : tensor<?x?xf32> into tensor<?x?xf32>
+    }
+  }
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %arg1
+    : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.insert_slice_to_copy %0
+    : (!transform.any_op) -> !transform.any_op
+  transform.cast %1 : !transform.any_op to !transform.op<"linalg.copy">
+}
