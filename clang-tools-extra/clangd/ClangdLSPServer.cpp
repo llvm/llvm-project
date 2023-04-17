@@ -494,6 +494,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     BackgroundIndexProgressState = BackgroundIndexProgress::Empty;
   BackgroundIndexSkipCreate = Params.capabilities.ImplicitProgressCreation;
   Opts.ImplicitCancellation = !Params.capabilities.CancelsStaleRequests;
+  Opts.PublishInactiveRegions = Params.capabilities.InactiveRegions;
 
   if (Opts.UseDirBasedCDB) {
     DirectoryBasedGlobalCompilationDatabase::Options CDBOpts(TFS);
@@ -582,6 +583,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
       {"memoryUsageProvider", true},           // clangd extension
       {"compilationDatabase",                  // clangd extension
        llvm::json::Object{{"automaticReload", true}}},
+      {"inactiveRegionsProvider", true}, // clangd extension
       {"callHierarchyProvider", true},
       {"clangdInlayHintsProvider", true},
       {"inlayHintProvider", true},
@@ -1625,6 +1627,8 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
 
   ApplyWorkspaceEdit = Bind.outgoingMethod("workspace/applyEdit");
   PublishDiagnostics = Bind.outgoingNotification("textDocument/publishDiagnostics");
+  if (Caps.InactiveRegions)
+    PublishInactiveRegions = Bind.outgoingNotification("textDocument/inactiveRegions");
   ShowMessage = Bind.outgoingNotification("window/showMessage");
   NotifyFileStatus = Bind.outgoingNotification("textDocument/clangd.fileStatus");
   CreateWorkDoneProgress = Bind.outgoingMethod("window/workDoneProgress/create");
@@ -1720,6 +1724,15 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,
 
   // Send a notification to the LSP client.
   PublishDiagnostics(Notification);
+}
+
+void ClangdLSPServer::onInactiveRegionsReady(
+    PathRef File, std::vector<Range> InactiveRegions) {
+  InactiveRegionsParams Notification;
+  Notification.TextDocument = {URIForFile::canonicalize(File, /*TUPath=*/File)};
+  Notification.InactiveRegions = std::move(InactiveRegions);
+
+  PublishInactiveRegions(Notification);
 }
 
 void ClangdLSPServer::onBackgroundIndexProgress(
