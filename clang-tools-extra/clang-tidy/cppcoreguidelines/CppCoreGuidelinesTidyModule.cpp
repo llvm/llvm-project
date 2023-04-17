@@ -12,6 +12,7 @@
 #include "../misc/NonPrivateMemberVariablesInClassesCheck.h"
 #include "../misc/UnconventionalAssignOperatorCheck.h"
 #include "../modernize/AvoidCArraysCheck.h"
+#include "../modernize/UseDefaultMemberInitCheck.h"
 #include "../modernize/UseOverrideCheck.h"
 #include "../readability/MagicNumbersCheck.h"
 #include "AvoidCapturingLambdaCoroutinesCheck.h"
@@ -110,6 +111,8 @@ public:
     CheckFactories.registerCheck<SpecialMemberFunctionsCheck>(
         "cppcoreguidelines-special-member-functions");
     CheckFactories.registerCheck<SlicingCheck>("cppcoreguidelines-slicing");
+    CheckFactories.registerCheck<modernize::UseDefaultMemberInitCheck>(
+        "cppcoreguidelines-use-default-member-init");
     CheckFactories.registerCheck<misc::UnconventionalAssignOperatorCheck>(
         "cppcoreguidelines-c-copy-assignment-signature");
     CheckFactories.registerCheck<VirtualClassDestructorCheck>(
