@@ -19,6 +19,7 @@
 #include "SDNodeProperties.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
@@ -633,13 +634,10 @@ class TreePatternNode : public RefCountedBase<TreePatternNode> {
   /// The index of each result in results of the pattern.
   std::vector<unsigned> ResultPerm;
 
-  /// Operator - The Record for the operator if this is an interior node (not
-  /// a leaf).
-  Record *Operator;
-
-  /// Val - The init value (e.g. the "GPRC" record, or "7") for a leaf.
-  ///
-  Init *Val;
+  /// OperatorOrVal - The Record for the operator if this is an interior node
+  /// (not a leaf) or the init value (e.g. the "GPRC" record, or "7") for a
+  /// leaf.
+  PointerUnion<Record *, Init *> OperatorOrVal;
 
   /// Name - The name given to this node with the :$foo notation.
   ///
@@ -664,14 +662,13 @@ class TreePatternNode : public RefCountedBase<TreePatternNode> {
 public:
   TreePatternNode(Record *Op, std::vector<TreePatternNodePtr> Ch,
                   unsigned NumResults)
-      : Operator(Op), Val(nullptr), TransformFn(nullptr),
-        Children(std::move(Ch)) {
+      : OperatorOrVal(Op), TransformFn(nullptr), Children(std::move(Ch)) {
     Types.resize(NumResults);
     ResultPerm.resize(NumResults);
     std::iota(ResultPerm.begin(), ResultPerm.end(), 0);
   }
-  TreePatternNode(Init *val, unsigned NumResults)    // leaf ctor
-    : Operator(nullptr), Val(val), TransformFn(nullptr) {
+  TreePatternNode(Init *val, unsigned NumResults) // leaf ctor
+      : OperatorOrVal(val), TransformFn(nullptr) {
     Types.resize(NumResults);
     ResultPerm.resize(NumResults);
     std::iota(ResultPerm.begin(), ResultPerm.end(), 0);
@@ -691,7 +688,7 @@ public:
     NamesAsPredicateArg.push_back(N);
   }
 
-  bool isLeaf() const { return Val != nullptr; }
+  bool isLeaf() const { return isa<Init *>(OperatorOrVal); }
 
   // Type accessors.
   unsigned getNumTypes() const { return Types.size(); }
@@ -719,8 +716,14 @@ public:
   unsigned getResultIndex(unsigned ResNo) const { return ResultPerm[ResNo]; }
   void setResultIndex(unsigned ResNo, unsigned RI) { ResultPerm[ResNo] = RI; }
 
-  Init *getLeafValue() const { assert(isLeaf()); return Val; }
-  Record *getOperator() const { assert(!isLeaf()); return Operator; }
+  Init *getLeafValue() const {
+    assert(isLeaf());
+    return cast<Init *>(OperatorOrVal);
+  }
+  Record *getOperator() const {
+    assert(!isLeaf());
+    return cast<Record *>(OperatorOrVal);
+  }
 
   unsigned getNumChildren() const { return Children.size(); }
   TreePatternNode *getChild(unsigned N) const { return Children[N].get(); }
