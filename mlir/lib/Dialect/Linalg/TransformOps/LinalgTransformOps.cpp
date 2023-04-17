@@ -3098,6 +3098,16 @@ DiagnosedSilenceableFailure transform::MaskedVectorizeOp::apply(
   // TODO: Check that the correct number of vectorSizes was provided.
 
   for (Operation *target : targets) {
+    if (auto padOp = dyn_cast<tensor::PadOp>(target)) {
+      FailureOr<vector::TransferWriteOp> maybeWriteOp =
+          maskedVectorize(rewriter, padOp, vectorSizes);
+      if (failed(maybeWriteOp)) {
+        return mlir::emitSilenceableFailure(target->getLoc())
+               << "failed to vectorize padOp";
+      }
+      continue;
+    }
+
     auto linalgOp = dyn_cast<LinalgOp>(target);
     if (!linalgOp) {
       return mlir::emitSilenceableFailure(target->getLoc())
@@ -3107,7 +3117,7 @@ DiagnosedSilenceableFailure transform::MaskedVectorizeOp::apply(
     if (failed(linalg::vectorize(rewriter, linalgOp, vectorSizes,
                                  getVectorizeNdExtract()))) {
       return mlir::emitSilenceableFailure(target->getLoc())
-             << "failed to vectorize op";
+             << "failed to vectorize linalg op";
     }
   }
 
