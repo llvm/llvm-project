@@ -23,8 +23,8 @@ using namespace clang::interp;
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC)
-    : Caller(Caller), S(S), Func(Func), RetPC(RetPC),
-      ArgSize(Func ? Func->getArgSize() : 0),
+    : Caller(Caller), S(S), Depth(Caller ? Caller->Depth + 1 : 0), Func(Func),
+      RetPC(RetPC), ArgSize(Func ? Func->getArgSize() : 0),
       Args(static_cast<char *>(S.Stk.top())), FrameOffset(S.Stk.size()) {
   if (!Func)
     return;

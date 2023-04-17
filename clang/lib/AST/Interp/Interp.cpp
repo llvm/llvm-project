@@ -341,6 +341,17 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   return true;
 }
 
+bool CheckCallDepth(InterpState &S, CodePtr OpPC) {
+  if ((S.Current->getDepth() + 1) > S.getLangOpts().ConstexprCallDepth) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_depth_limit_exceeded)
+        << S.getLangOpts().ConstexprCallDepth;
+    return false;
+  }
+
+  return true;
+}
+
 bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This) {
   if (!This.isZero())
     return true;
